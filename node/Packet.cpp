@@ -1,0 +1,64 @@
+/*
+ * ZeroTier One - Global Peer to Peer Ethernet
+ * Copyright (C) 2012-2013  ZeroTier Networks LLC
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * ZeroTier may be used and distributed under the terms of the GPLv3, which
+ * are available at: http://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * If you would like to embed ZeroTier into a commercial application or
+ * redistribute it in a modified binary form, please contact ZeroTier Networks
+ * LLC. Start here: http://www.zerotier.com/
+ */
+
+#include "Packet.hpp"
+
+namespace ZeroTier {
+
+const char *Packet::verbString(Verb v)
+	throw()
+{
+	switch(v) {
+		case VERB_NOP: return "NOP";
+		case VERB_HELLO: return "HELLO";
+		case VERB_ERROR: return "ERROR";
+		case VERB_OK: return "OK";
+		case VERB_WHOIS: return "WHOIS";
+		case VERB_RENDEZVOUS: return "RENDEZVOUS";
+		case VERB_FRAME: return "FRAME";
+		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
+		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
+	}
+	return "(unknown)";
+}
+
+const char *Packet::errorString(ErrorCode e)
+	throw()
+{
+	switch(e) {
+		case ERROR_NONE: return "NONE";
+		case ERROR_INVALID_REQUEST: return "INVALID_REQUEST";
+		case ERROR_BAD_PROTOCOL_VERSION: return "BAD_PROTOCOL_VERSION";
+		case ERROR_NOT_FOUND: return "NOT_FOUND";
+		case ERROR_IDENTITY_COLLISION: return "IDENTITY_COLLISION";
+		case ERROR_IDENTITY_INVALID: return "IDENTITY_INVALID";
+		case ERROR_UNSUPPORTED_OPERATION: return "UNSUPPORTED_OPERATION";
+	}
+	return "(unknown)";
+}
+
+} // namespace ZeroTier

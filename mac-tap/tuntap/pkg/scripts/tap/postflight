@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# old versions resided in /System/Library, remove.
+rm -r /System/Library/Extensions/tap.kext
+
+# unload an old extension (might fail)
+kextunload /Library/Extensions/tap.kext
+
+# Fix ownership and permissions. PackageMaker gets this wrong *sigh*
+chown -R root:wheel /Library/Extensions/tap.kext
+chmod -R u=rwX,g=rX,o=rX /Library/Extensions/tap.kext
+
+# load the new version
+kextload /Library/Extensions/tap.kext
+

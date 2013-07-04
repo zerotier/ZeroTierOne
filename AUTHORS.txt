@@ -1,0 +1,32 @@
+This file will track authors and contributors to ZeroTier's code base.
+People who contribute code that is accepted into the master (trunk) branch
+will be credited here.
+
+--
+
+Adam Ierymenko [adam.ierymenko@zerotier.com]
+ * Principal author and maintainer of ZeroTier One, author of all
+   code prior to ZeroTier's open source release.
+ * Maintainer of master branch, release manager.
+
+--
+
+ZeroTier One includes or links with the following third party software:
+
+ * LZ4 compression algorithm by Yann Collet (BSD license)
+   http://code.google.com/p/lz4/
+
+ * JsonCPP by Baptiste Lepilleur (public domain)
+   http://jsoncpp.sourceforge.net
+
+ * http-parser, a simple C http parser library (MIT license)
+   https://github.com/joyent/http-parser
+
+ * OpenSSL libcrypto (BSD-style OpenSSL license)
+   http://www.openssl.org/
+
+ * TunTapOSX by Mattias Nissler (with tiny modifications) (BSD license)
+   http://tuntaposx.sourceforge.net
+
+ * Salsa20 stream cipher by D. J. Bernstein (public domain)
+   http://cr.yp.to/snuffle.html

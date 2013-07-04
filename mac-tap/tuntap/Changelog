@@ -1,0 +1,141 @@
+
+November 1, 2011:
+ o Make the netmask address family fix work without knowledge of the struct
+   ifaddr definition. This fixes a crash on Lion, where the layout of the
+   structure has been changed, but at the cost of the fix no longer working for
+   IPv6. I think this is OK though, since mDNSResponder has been fixed on
+   Leopard and beyond to no longer require the hack.
+ o Proper multicast address checking for tun; multicast should now work reliably
+   with IP and IPv6 on tun also.
+ o A quite comprehensive test suite has been added that allows for quick release
+   testing.
+ o PPC support has been dropped due to XCode 4 no longer supporting PPC arch.
+
+September 13, 2009:
+ o Change linker options to produce 64 bit kext bundle for Snow Leopard.
+ o Switch from kmem_alloc and friends to OSAlloc for memory allocation and
+   avoid the delay() call. Respective symbols are not available on 64 bit
+   kernels anymore.
+
+September 5, 2009:
+ o Initial Snow Leopard port. Thanks to various people contributing patches in
+   the bugtracker. The new official version can only be compiled on Snow
+   Leopard but has been tested to work on all Tiger, Leopard and Snow Leopard
+ o Clean up unused locking code and switch to rwlocks even for simple mutexes,
+   which avoids a symbol incompatibility for Tiger and Leopard.
+ o Clean up compilation flags in the Makefiles.
+
+July 4, 2008:
+ o Adapt the former Leopard package to also be installable on Tiger systems.
+   This obsoletes the Tiger version, both Leopard and Tiger are now supported
+   by a single package.
+
+June 7, 2008:
+ o Protect the selwakeup() call by the lock. This fixes incorrect select()
+   behaviour, thanks to Roland Wendelin for reporting this.
+ o Fix tuntap_mbuf_queue::size initialization
+ o Use a proper wait condition for synchronization when detaching the network
+   interface. The old code would crash if the if_detached() handler was called
+   from a different thread than unregister_interface().
+
+January 21, 2008:
+ o Work around an issue in the Darwin kernel. When unregistering an interface,
+   addresses are not properly removed from the interface. This leads to
+   crashes and other problems when reusing the interface. Introduce an ugly
+   hack that tries to remove all interface addresses when shutting the
+   interface down.
+ o Fix a small mbuf leak that could occur when the output queue was full.
+   Thanks to Oleg Dolgov for reporting this.
+
+December 21, 2007:
+ o Fix paths in the startup item postflight scripts
+ o Check if_ioctl arguments more defensively after a report of a panic after
+   receiving a NULL arg.
+
+November 14, 2007:
+ o I have done a complete rework of the installer package generation. The
+   package is now edited in PackageMaker. The distribution package can still
+   be built from the commandline though.
+ o Fix incorrect permission & ownership of the installed files.
+
+Oktober 11, 2007:
+ o Fix the permissions of the postflight scripts. Installer packages should work
+   again.
+ o Drop the kmod and kmodc++ in the linker command, they seem to be unneeded
+   with Leopard.
+
+September 20, 2007:
+ o Initial Leopard port, it's basically the latest Tiger version with some
+   Leopard-related fixes and s/Tiger/Leopard/g
+ o I have switched to a proper version management system (git) and could
+   remove some of the CVS hacks subsequently.
+ o The installation packages have been reworked a bit, they now install into
+   /System/Extensions and /System/StartupItems directly by using
+   DestinationPaths.
+
+May 13, 2006:
+ o This version is not stable, it may crash, sorry.
+ o Universal binaries that run on ppc and intel macs.
+ o Adds tap MAC address randomization
+ o Redesigned locking.
+ o Better multicast support
+ o mDNSResponder workaround, so that the tap interfaces should get picked up
+   now. Note that we are fixing ifconfig/kernel behaviour here.
+ o All tapX and tunX devices are visible in /dev at all times, network
+   interfaces still created dynamically, though.
+ o Startup items moved to /Library/StartupItems
+
+May 17, 2005:
+ o Initial Tiger port. We now have KPI-style interfaces. I guess the Tiger
+   version is little slower than the Panther version because of all the
+   wrapping and hiding in the kernel.
+ o The kernel extensions moved to /Library/Extensions. That is the place where
+   non-Apple kexts are supposed to live.
+
+April 21, 2005:
+ o I added support in tun for AF prepending like some BSDs do. Thanks to Dennis
+   kSchneider for mailing the initial patch. You can also set the value of
+   AF_INET6 to be used.
+ o I finally found that major bug causing crashes (especially on multiprocessor
+   machines). It also caused a memory leak (lost mbufs), and might have caused
+   performance/througput/data-loss problems. Everyone is recommended to upgrade.
+
+April 6, 2005:
+ o I rewrote the common part concerning the tun and tap initialization and
+   cleanup. This should make the code more maintainable (less duplication).
+ o The devices now reinitialize to the state they were started in when they
+   are closed by an application. This concerns IP addresses for example.
+ o I changed the package building system to use PackageMaker.app in batch
+   mode. The packages also check for version 10.3 now, so nobody should be
+   able to install tun/tap on 10.2 using installer packages. Furthermore I
+   have sprinkled some warnings telling you not to use tun/tap on SMP machines
+   over the installation process ;-)
+ o Some minor locking fixes.
+
+November 19, 2004:
+ o Jamie Wood reported that the packet queue in the driver could be considered
+   empty even if there were packets in it. This was probably caused by a
+   synchronization problem that should be fixed now. People encountering
+   timeouts etc. should try the new version.
+ o I finally implemented support for changing the interface MTU. The driver
+   enforces the MTU when writing packets to the character device now. However,
+   packets coming from the kernel are not checked.
+
+September 9, 2004:
+ o Marcello Teodori told me that the tun driver wasn't working with openvpn.
+   The problem was the fcntl call, fixed that. Should work now. Thanks
+   Marcello!
+ o changed the tun driver not to prepend the address family field before each
+   and every packet (which is the behaviour of OpenBSD). As there is currently
+   only IPv4 and IPv6 support there is no problem with the standard tun
+   approach used on other OSes. This should make the driver much more
+   compatible.
+ o Did a script and makefile support so that the installer packages can now be 
+   built from the command prompt. Unfortunately this might break things
+   someday as I am not using the 'official' way to build the packages
+ o Cleaned up installer packages a little.
+
+August 24, 2004:
+ o initial version put online
+ o basic tun/tap support, tap working with qemu
+

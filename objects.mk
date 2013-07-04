@@ -1,0 +1,31 @@
+OBJS=\
+	ext/http-parser/http_parser.o \
+	ext/huffandpuff/huffman.o \
+	ext/jsoncpp/src/json_reader.o \
+	ext/jsoncpp/src/json_value.o \
+	ext/jsoncpp/src/json_writer.o \
+	ext/kissdb/kissdb.o \
+	ext/lz4/lz4hc.o \
+	ext/lz4/lz4.o \
+	node/Defaults.o \
+	node/Demarc.o \
+	node/EllipticCurveKeyPair.o \
+	node/EthernetTap.o \
+	node/HMAC.o \
+	node/Http.o \
+	node/Identity.o \
+	node/InetAddress.o \
+	node/Logger.o \
+	node/Network.o \
+	node/Node.o \
+	node/NodeConfig.o \
+	node/Packet.o \
+	node/Pack.o \
+	node/Peer.o \
+	node/Salsa20.o \
+	node/Switch.o \
+	node/SysEnv.o \
+	node/Thread.o \
+	node/Topology.o \
+	node/UdpSocket.o \
+	node/Utils.o

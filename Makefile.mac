@@ -1,0 +1,63 @@
+CC=gcc
+CXX=g++
+
+INCLUDES=-Iext/bin/libcrypto/include -Iext/jsoncpp/include
+DEFS=-DZT_ARCH="x86_combined" -DZT_OSNAME="mac" -DZT_TRACE
+
+# Uncomment for a release optimized universal binary build
+CFLAGS=-arch i386 -arch x86_64 -Wall -O6 -ftree-vectorize -pthread -mmacosx-version-min=10.6 -DNDEBUG $(INCLUDES) $(DEFS)
+STRIP=strip
+
+# Uncomment for a debug build
+#CFLAGS=-Wall -g -pthread -DZT_TRACE -DZT_LOG_STDOUT $(INCLUDES) $(DEFS)
+#STRIP=echo
+
+CXXFLAGS=$(CFLAGS) -fno-rtti
+
+# We statically link against libcrypto since Apple has apparently decided
+# to deprecate it and may remove it in future OS releases.
+LIBS=ext/bin/libcrypto/mac-x86_combined/libcrypto.a
+
+include objects.mk
+
+all: one launcher mac-tap
+
+one:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-one
+
+selftest: $(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-selftest
+
+idtool: $(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-idtool
+
+packtool: $(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-packtool packtool.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-packtool
+
+mac-tap: FORCE
+	cd mac-tap/tuntap ; make tap.kext
+
+install-mac-tap: FORCE
+	mkdir -p /Library/Application\ Support/ZeroTier/One
+	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
+	cp -R mac-tap/tuntap/tap.kext /Library/Application\ Support/ZeroTier/One
+	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
+
+launcher: FORCE
+	$(CC) -Os -arch i386 -arch x86_64 -o zerotier-launcher launcher.c
+	$(STRIP) zerotier-launcher
+
+launcher-fakebin:
+	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REV
+	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REV
+
+clean:
+	rm -rf *.dSYM
+	rm -f $(OBJS) zerotier-*
+	cd mac-tap/tuntap ; make clean
+
+FORCE:

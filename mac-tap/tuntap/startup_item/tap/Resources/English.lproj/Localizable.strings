@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
+<plist version="0.9">
+<dict>
+	<key>ethertap device kernel extension</key>
+	<string>ethertap kernel extension</string>
+	<key>Initializing tap devices</key>
+	<string>Initializing tap devices</string>
+</dict>
+</plist>
+

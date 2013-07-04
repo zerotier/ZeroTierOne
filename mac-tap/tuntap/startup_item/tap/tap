@@ -1,0 +1,33 @@
+#!/bin/sh
+
+##
+# load the tap kext
+##
+
+. /etc/rc.common
+
+StartService ()
+{
+	ConsoleMessage "Initializing tap devices"
+
+	if [ -d /Library/Extensions/tap.kext ]; then
+		kextload /Library/Extensions/tap.kext
+	fi
+}
+
+StopService ()
+{
+	if [ -d /Library/Extensions/tap.kext ]; then
+		kextunload /Library/Extensions/tap.kext
+	fi
+}
+
+RestartService ()
+{
+	if [ -d /Library/Extensions/tap.kext ]; then
+		kextunload /Library/Extensions/tap.kext
+		kextload /Library/Extensions/tap.kext
+	fi
+}
+
+RunService "$1"

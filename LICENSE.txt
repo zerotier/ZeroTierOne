@@ -1,0 +1,13 @@
+ZeroTier One is licensed under the terms of the GNU General Public License
+version 3, which are available here:
+
+http://gplv3.fsf.org/
+
+Modification and redistribution of ZeroTier One is permitted in source form.
+Binary distribution is permitted provided all copyright notices remain
+intact and any modifications to the source code are also distributed.
+
+ZeroTier One may not be embedded into any closed-source application (e.g. via
+linking), nor may closed-source derivatives be created, without a separately
+negotiated license from ZeroTier Networks LLC. See the terms of the GPLv3 for
+details.

@@ -1,0 +1,12 @@
+
+tun/tap driver installer
+========================
+
+This binary distribution contains a single installer package. Just open it to
+install TunTap on your computer. The installer allows to customize which parts
+of the package are installed in case you only need either tun or tap.
+
+Unless you really know what you are doing, you should also install the startup
+item. If you do not install it, you will have to load the kernel extensions
+manually after each reboot using kextload.
+

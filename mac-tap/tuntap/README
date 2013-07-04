@@ -1,0 +1,85 @@
+
+tun/tap driver for Mac OS X
+===========================
+
+This is an experimental IP tunnel/ethertap driver for Mac OS X/Darwin. It
+provides /dev/tunX and /dev/tapX devices. The maximum number of devices can be
+configured at compile time, it is currently set to 16. That should be enough in
+most cases.
+
+The driver ships as two kernel extensions, one for tap and one for tun. They are
+located in /Library/Extensions and can also be loaded and unloaded by hand. If
+you install the startup item, the system will load them automatically at
+startup (tun and tap startup items get installed in /Library/StartupItems).
+
+Operation & Programming notes
+=============================
+
+tapX are ethertap devices which provide an interface to the kernel's ethernet
+layer. Packets can be read from and written to the /dev/tapX character devices
+one at a time (same name as the interface that shows up in ifconfig). 
+
+tunX are IP tunnel devices. These can be used to exchange IP packets with the
+kernel. You will get single packets for each read() and should write() packets
+one at a time to /dev/tunX.
+
+There are some special ioctls with the tun devices that allow you to have them
+prepend the address family of the packet when reading it from /dev/tunX. Using
+this mode the driver also expects you put this 4-byte address family field
+(network byte order) in front of the packets you write to /dev/tunX.
+
+Here are the ioctls to setup up address prepending mode (for convenience there
+also is a header called tun_ioctls.h in the source package that you can use)
+Set the int argument to one if you want to have AF prepending, use 0 if you want
+to switch it off.
+
+#define TUNSIFHEAD  _IOW('t', 96, int)
+#define TUNGIFHEAD  _IOR('t', 97, int)
+
+Prepending mode is off by default. Currently it is not recommended to switch the
+mode while packets are in flight on the device.
+
+The character devices are always visible in the filesystem as /dev/tunX and
+/dev/tapX. The number of available character devices is a compile time constant
+and is currently fixed to 16. Each character devices is associated with a
+network interface of the same name. The network interfaces are only created when
+the corresponding character device is opened by a program and will be removed
+when the character device is closed.
+
+The character devices currently provide a pretty minimal interface. Whole
+packets are read and written using a singe read/write call. File descriptors
+opened on the devices can also be select()ed and support O_NONBLOCK.
+Asynchronous i/o and some ioctls are currently unimplemented, but implementing
+them shouldn't be very hard. Do it yourself or contact me if you can't live
+without.
+
+There is another limitation imposed by the Darwin 8 kernel. It concerns the
+poll() system call; Darwin currently does *not* support that for (character)
+devices. Use select() instead.
+
+The interfaces can be configured using ifconfig, the tap devices also support
+setting the MAC address to be used. Both tun and tap should be ready for IPv6.
+Just setup addresses and routing as you would do with other interfaces.
+
+Please contact me if you find any bugs or have suggestions.
+
+Enjoy!
+
+Mattias
+<mattias.nissler@gmx.de>
+
+
+Uninstalling
+============
+
+The installer packages for OS X currently don't have support for uninstall as
+the installer doesn't provide it. Remove the following directories if you want
+to completely remove the files installed:
+
+/Library/Extensions/tap.kext
+/Library/Extensions/tun.kext
+/Library/StartupItems/tap
+/Library/StartupItems/tun
+
+Unload the the kernel extensions or reboot and you're done.
+

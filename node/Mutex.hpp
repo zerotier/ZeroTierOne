@@ -1,0 +1,197 @@
+/*
+ * ZeroTier One - Global Peer to Peer Ethernet
+ * Copyright (C) 2012-2013  ZeroTier Networks LLC
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * --
+ *
+ * ZeroTier may be used and distributed under the terms of the GPLv3, which
+ * are available at: http://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * If you would like to embed ZeroTier into a commercial application or
+ * redistribute it in a modified binary form, please contact ZeroTier Networks
+ * LLC. Start here: http://www.zerotier.com/
+ */
+
+#ifndef _ZT_MUTEX_HPP
+#define _ZT_MUTEX_HPP
+
+#include "NonCopyable.hpp"
+
+#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+
+#include <stdlib.h>
+#include <pthread.h>
+
+namespace ZeroTier {
+
+class Mutex : NonCopyable
+{
+public:
+	Mutex()
+		throw()
+	{
+		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
+	}
+
+	~Mutex()
+	{
+		pthread_mutex_destroy(&_mh);
+	}
+
+	inline void lock()
+		throw()
+	{
+		pthread_mutex_lock(&_mh);
+	}
+
+	inline void unlock()
+		throw()
+	{
+		pthread_mutex_unlock(&_mh);
+	}
+
+	inline void lock() const
+		throw()
+	{
+		(const_cast <Mutex *> (this))->lock();
+	}
+
+	inline void unlock() const
+		throw()
+	{
+		(const_cast <Mutex *> (this))->unlock();
+	}
+
+	/**
+	 * Uses C++ contexts and constructor/destructor to lock/unlock automatically
+	 */
+	class Lock : NonCopyable
+	{
+	public:
+		Lock(Mutex &m) 
+			throw() :
+			_m(&m)
+		{
+			m.lock();
+		}
+
+		Lock(const Mutex &m) 
+			throw() :
+			_m(const_cast<Mutex *>(&m))
+		{
+			_m->lock();
+		}
+
+		~Lock()
+		{
+			_m->unlock();
+		}
+
+	private:
+		Mutex *const _m;
+	};
+
+private:
+	pthread_mutex_t _mh;
+};
+
+} // namespace ZeroTier
+
+#endif // Apple / Linux
+
+#ifdef _WIN32
+
+#include <stdlib.h>
+#include <Windows.h>
+
+namespace ZeroTier {
+
+class Mutex : NonCopyable
+{
+public:
+	Mutex()
+		throw()
+	{
+		InitializeCriticalSection(&_cs);
+	}
+
+	~Mutex()
+	{
+		DeleteCriticalSection(&_cs);
+	}
+
+	inline void lock()
+		throw()
+	{
+		EnterCriticalSection(&_cs);
+	}
+
+	inline void unlock()
+		throw()
+	{
+		LeaveCriticalSection(&_cs);
+	}
+
+	inline void lock() const
+		throw()
+	{
+		(const_cast <Mutex *> (this))->lock();
+	}
+
+	inline void unlock() const
+		throw()
+	{
+		(const_cast <Mutex *> (this))->unlock();
+	}
+
+	/**
+	 * Uses C++ contexts and constructor/destructor to lock/unlock automatically
+	 */
+	class Lock : NonCopyable
+	{
+	public:
+		Lock(Mutex &m)
+			throw() :
+			_m(&m)
+		{
+			m.lock();
+		}
+
+		Lock(const Mutex &m)
+			throw() :
+			_m(const_cast<Mutex *>(&m))
+		{
+			_m->lock();
+		}
+
+		~Lock()
+		{
+			_m->unlock();
+		}
+
+	private:
+		Mutex *const _m;
+	};
+
+private:
+	CRITICAL_SECTION _cs;
+};
+
+} // namespace ZeroTier
+
+#endif // _WIN32
+
+#endif

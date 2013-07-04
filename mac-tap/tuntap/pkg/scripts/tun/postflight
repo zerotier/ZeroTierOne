@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# old versions resided in /System/Library, remove.
+rm -r /System/Library/Extensions/tun.kext
+
+# unload an old extension (might fail)
+kextunload /Library/Extensions/tun.kext
+
+# Fix ownership. The installer gets this wrong *sigh*
+chown -R root:wheel /Library/Extensions/tun.kext
+chmod -R u=rwX,g=rX,o=rX /Library/Extensions/tun.kext
+
+# load the new version
+kextload /Library/Extensions/tun.kext
+

@@ -1,0 +1,8 @@
+zerotier-*
+Makefile
+*.o
+.DS_Store
+.Apple*
+*.dSYM
+mac-tap/tuntap/src/tap/tap
+mac-tap/tuntap/tap.kext

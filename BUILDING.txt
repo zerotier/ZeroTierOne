@@ -1,0 +1,19 @@
+Building ZeroTier One on different platforms:
+
+(See RUNNING.txt for what to do next.)
+
+-- MacOS
+
+make -f Makefile.mac
+
+Edit Makefile.mac if you want to change between debug or release build.
+
+-- Linux
+
+make -f Makefile.linux
+
+Edit Makefile.linux if you want to change between debug or release build.
+
+-- Windows
+
+TBD

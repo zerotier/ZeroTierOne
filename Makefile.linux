@@ -1,0 +1,54 @@
+CC=gcc
+CXX=g++
+
+INCLUDES=-Iext/bin/libcrypto/include -Iext/jsoncpp/include
+ARCH=$(shell uname -m)
+DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux" -DZT_TRACE
+
+# Uncomment for a release optimized build
+CFLAGS=-Wall -O6 -fno-unroll-loops -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+STRIP=strip --strip-all
+
+# Uncomment for a debug build
+#CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE -DZT_LOG_STDOUT $(DEFS)
+#STRIP=echo
+
+CXXFLAGS=$(CFLAGS) -fno-rtti
+
+# We statically link against libcrypto because RedHat-derived distributions do
+# not ship the elliptic curve algorithms. If we didn't we'd have to build
+# separate binaries for the RedHat and Debian universes to distribute via
+# auto-update. This way we get one Linux binary for all systems of a given
+# architecture.
+LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a
+
+include objects.mk
+
+all:	one launcher
+
+one:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-one
+
+selftest:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-selftest
+
+idtool:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-idtool
+
+packtool:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-packtool packtool.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-packtool
+
+launcher:
+	$(CC) -Os -o zerotier-launcher launcher.c
+	$(STRIP) zerotier-launcher
+
+launcher-fakebin:
+	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REVISION=3 -o zerotier-launcher-fakebin-123 launcher-fakebin.c
+	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REVISION=4 -o zerotier-launcher-fakebin-124 launcher-fakebin.c
+
+clean:
+	rm -f $(OBJS) zerotier-*

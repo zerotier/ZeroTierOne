@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>@@CFBUNDLEDEVELOPMENTREGION@@</string>
+	<key>CFBundleExecutable</key>
+	<string>@@CFBUNDLEEXECUTABLE@@</string>
+	<key>CFBundleIdentifier</key>
+	<string>@@CFBUNDLEIDENTIFIER@@</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>@@CFBUNDLEEXECUTABLE@@</string>
+	<key>CFBundlePackageType</key>
+	<string>@@CFBUNDLEPACKAGETYPE@@</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@@CFBUNDLEVERSION@@</string>
+	<key>CFBundleSignature</key>
+	<string>@@CFBUNDLESIGNATURE@@</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>OSBundleLibraries</key>
+	<dict>
+		<key>com.apple.kpi.mach</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.bsd</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.libkern</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.unsupported</key>
+		<string>8.0</string>
+	</dict>
+</dict>
+</plist>
+

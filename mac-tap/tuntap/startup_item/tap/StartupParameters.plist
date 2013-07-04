@@ -1,0 +1,6 @@
+{
+  Description     = "ethertap device kernel extension";
+  Provides        = ("ethertap");
+  Requires        = ("Network Configuration");
+  OrderPreference = "None";
+}

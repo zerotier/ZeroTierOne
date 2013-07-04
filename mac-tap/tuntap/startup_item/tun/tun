@@ -1,0 +1,33 @@
+#!/bin/sh
+
+##
+# load the tun kext
+##
+
+. /etc/rc.common
+
+StartService ()
+{
+	ConsoleMessage "Initializing tun devices"
+
+	if [ -d /Library/Extensions/tun.kext ]; then
+		kextload /Library/Extensions/tun.kext
+	fi
+}
+
+StopService ()
+{
+	if [ -d /Library/Extensions/tun.kext ]; then
+		kextunload /Library/Extensions/tun.kext
+	fi
+}
+
+RestartService ()
+{
+	if [ -d /Library/Extensions/tun.kext ]; then
+		kextunload /Library/Extensions/tun.kext
+		kextload /Library/Extensions/tun.kext
+	fi
+}
+
+RunService "$1"
