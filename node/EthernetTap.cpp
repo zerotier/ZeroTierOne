@@ -180,7 +180,7 @@ bool EthernetTap::addIP(const InetAddress &ip)
 {
 	Mutex::Lock _l(_ips_m);
 
-	if (!ip.isValid())
+	if (!ip)
 		return false;
 	if (_ips.count(ip) > 0)
 		return true;
