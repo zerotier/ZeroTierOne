@@ -15,7 +15,7 @@ At present there is only one virtual LAN and you are dumped there by default. It
 
 ZeroTier One is licensed under the GNU General Public License version 3. Anyone wishing to embed this in a commercial product or create a derivative product should contact [ZeroTier Networks LLC](https://www.zerotier.com/) to obtain a commercial license.
 
-Check out the [blog](https://www.zerotier.com/blog.html) for announcements, in-depth articles, and related thoughts. There is also a [Google group](https://groups.google.com/forum/#!forum/zerotier-one-users) for questions and discussion.
+Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth articles, and related thoughts. There is also a [Google group](https://groups.google.com/forum/#!forum/zerotier-one-users) for questions and discussion.
 
 ----
 **FAQ**
