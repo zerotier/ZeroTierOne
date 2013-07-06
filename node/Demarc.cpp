@@ -93,9 +93,9 @@ bool Demarc::bindLocalUdp(unsigned int localPort)
 	uint64_t v4p = ((uint64_t)PORT_TYPE_UDP_SOCKET_V4 << 60) | (uint64_t)localPort;
 	uint64_t v6p = ((uint64_t)PORT_TYPE_UDP_SOCKET_V6 << 60) | (uint64_t)localPort;
 	if ((_ports.count((Port)v4p))||(_ports.count((Port)v6p)))
-		return true;
+		return true; // port already bound
 
-	UdpSocket *v4;
+	UdpSocket *v4 = (UdpSocket *)0;
 	try {
 		DemarcPortObj *v4r = &(_ports[(Port)v4p]);
 		v4r->port = (Port)v4p;
@@ -104,10 +104,10 @@ bool Demarc::bindLocalUdp(unsigned int localPort)
 		v4r->type = PORT_TYPE_UDP_SOCKET_V4;
 	} catch ( ... ) {
 		_ports.erase((Port)v4p);
-		return false;
+		v4 = (UdpSocket *)0;
 	}
 
-	UdpSocket *v6;
+	UdpSocket *v6 = (UdpSocket *)0;
 	try {
 		DemarcPortObj *v6r = &(_ports[(Port)v6p]);
 		v6r->port = (Port)v6p;
@@ -115,13 +115,11 @@ bool Demarc::bindLocalUdp(unsigned int localPort)
 		v6r->obj = v6 = new UdpSocket(localPort,true,&Demarc::_CBudpSocketPacketHandler,v6r);
 		v6r->type = PORT_TYPE_UDP_SOCKET_V6;
 	} catch ( ... ) {
-		delete v4;
-		_ports.erase((Port)v4p);
 		_ports.erase((Port)v6p);
-		return false;
+		v6 = (UdpSocket *)0;
 	}
 
-	return true;
+	return ((v4)||(v6));
 }
 
 Demarc::Port Demarc::pick(const InetAddress &to) const
