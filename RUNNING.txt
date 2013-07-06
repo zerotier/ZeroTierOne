@@ -9,7 +9,7 @@ By convention, ZeroTier One will keep its state here on mac:
 ZeroTier ships with a kernel extension for its own tap device, which it
 stores in the above directory. To install this from source, type:
 
-sudo make install-mac-tap
+sudo make -f Makefile.mac install-mac-tap
 
 This will create the ZeroTier One home above if it does not exist and install
 the kext there. Note that the kext must be owned by root:wheel. The make
