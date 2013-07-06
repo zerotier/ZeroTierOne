@@ -31,6 +31,10 @@
 #include "Logger.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Mutex.hpp"
+#include "MulticastGroup.hpp"
+
+// ff:ff:ff:ff:ff:ff with no ADI
+static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
 /* ======================================================================== */
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
@@ -336,6 +340,8 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	}
 
 	bool changed = false;
+
+	newGroups.insert(_blindWildcardMulticastGroup); // always join this
 
 	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
 		if (!groups.count(*mg)) {
@@ -657,6 +663,8 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	}
 
 	bool changed = false;
+
+	newGroups.insert(_blindWildcardMulticastGroup); // always join this
 
 	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
 		if (!groups.count(*mg)) {

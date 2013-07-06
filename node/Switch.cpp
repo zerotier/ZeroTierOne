@@ -252,9 +252,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to.isMulticast()) {
 		MulticastGroup mg(to,0);
 
-		// Handle special cases: IPv4 ARP
-		if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
-			mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
+		if (to.isBroadcast()) {
+			// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
+			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
+				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
+		}
 
 		// Remember this message's CRC, but don't drop if we've already seen it
 		// since it's our own.
