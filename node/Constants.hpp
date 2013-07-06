@@ -254,6 +254,11 @@ error_no_ZT_ARCH
 #define ZT_AUTOCONFIGURE_CHECK_DELAY 15000
 
 /**
+ * Delay between updates of status file in home directory
+ */
+#define ZT_STATUS_OUTPUT_PERIOD 120000
+
+/**
  * Minimum delay in Node service loop
  * 
  * This is the shortest of the check delays/periods.

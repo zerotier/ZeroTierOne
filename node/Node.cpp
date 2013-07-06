@@ -74,8 +74,9 @@ struct _NodeImpl
 	RuntimeEnvironment renv;
 	std::string reasonForTerminationStr;
 	Node::ReasonForTermination reasonForTermination;
-	bool started;
-	bool running;
+	volatile bool started;
+	volatile bool running;
+	volatile bool updateStatusNow;
 	volatile bool terminateNow;
 
 	// Helper used to rapidly terminate from run()
@@ -104,6 +105,7 @@ Node::Node(const char *hp,const char *urlPrefix,const char *configAuthorityIdent
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
+	impl->updateStatusNow = false;
 	impl->terminateNow = false;
 }
 
@@ -236,6 +238,8 @@ Node::ReasonForTermination Node::run()
 	}
 
 	try {
+		std::string statusPath(_r->homePath + ZT_PATH_SEPARATOR_S + "status");
+
 		uint64_t lastPingCheck = 0;
 		uint64_t lastTopologyClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
@@ -243,6 +247,7 @@ Node::ReasonForTermination Node::run()
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastMulticastAnnounceAll = 0;
+		uint64_t lastStatusUpdate = 0;
 		long lastDelayDelta = 0;
 
 		LOG("%s starting version %s",_r->identity.address().toString().c_str(),versionString());
@@ -373,6 +378,20 @@ Node::ReasonForTermination Node::run()
 				_r->topology->clean(); // happens in background
 			}
 
+			if (((now - lastStatusUpdate) >= ZT_STATUS_OUTPUT_PERIOD)||(impl->updateStatusNow)) {
+				lastStatusUpdate = now;
+				impl->updateStatusNow = false;
+				FILE *statusf = ::fopen(statusPath.c_str(),"w");
+				if (statusf) {
+					try {
+						_r->topology->eachPeer(Topology::DumpPeerStatistics(statusf));
+					} catch ( ... ) {
+						TRACE("unexpected exception updating status dump");
+					}
+					::fclose(statusf);
+				}
+			}
+
 			try {
 				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
@@ -391,11 +410,6 @@ Node::ReasonForTermination Node::run()
 	return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"normal termination");
 }
 
-/**
- * Obtain a human-readable reason for node termination
- *
- * @return Reason for node termination or NULL if run() has not returned
- */
 const char *Node::reasonForTermination() const
 	throw()
 {
@@ -404,17 +418,16 @@ const char *Node::reasonForTermination() const
 	return ((_NodeImpl *)_impl)->reasonForTerminationStr.c_str();
 }
 
-/**
- * Cause run() to return with NODE_NORMAL_TERMINATION
- *
- * This can be called from a signal handler or another thread to signal a
- * running node to shut down. Shutdown may take a few seconds, so run()
- * may not return instantly. Multiple calls are ignored.
- */
 void Node::terminate()
 	throw()
 {
 	((_NodeImpl *)_impl)->terminateNow = true;
+}
+
+void Node::updateStatusNow()
+	throw()
+{
+	((_NodeImpl *)_impl)->updateStatusNow = true;
 }
 
 class _VersionStringMaker

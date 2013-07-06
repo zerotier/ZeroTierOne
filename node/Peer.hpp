@@ -233,6 +233,46 @@ public:
 	}
 
 	/**
+	 * @return IPv4 direct address or null InetAddress if none
+	 */
+	inline InetAddress ipv4Path() const
+		throw()
+	{
+		return _ipv4p.addr;
+	}
+
+	/**
+	 * @return IPv6 direct address or null InetAddress if none
+	 */
+	inline InetAddress ipv6Path() const
+		throw()
+	{
+		return _ipv4p.addr;
+	}
+
+	/**
+	 * @return IPv4 direct address or null InetAddress if none
+	 */
+	inline InetAddress ipv4ActivePath(uint64_t now) const
+		throw()
+	{
+		if (_ipv4p.isActive(now))
+			return _ipv4p.addr;
+		return InetAddress();
+	}
+
+	/**
+	 * @return IPv6 direct address or null InetAddress if none
+	 */
+	inline InetAddress ipv6ActivePath(uint64_t now) const
+		throw()
+	{
+		if (_ipv6p.isActive(now))
+			return _ipv6p.addr;
+		return InetAddress();
+	}
+
+	/**
 	 * @return 256-bit encryption key
 	 */
 	inline const unsigned char *cryptKey() const

@@ -2,6 +2,10 @@ Building ZeroTier One on different platforms:
 
 (See RUNNING.txt for what to do next.)
 
+Developers note: there is currently no management of dependencies on *nix
+platforms, so you should make clean ; make if you change a header. Will
+do this eventually.
+
 -- MacOS
 
 make -f Makefile.mac

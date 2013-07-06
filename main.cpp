@@ -70,12 +70,18 @@ static void sighandlerQuit(int sig)
 static void sighandlerUsr(int sig)
 {
 }
+static void sighandlerHup(int sig)
+{
+	Node *n = node;
+	if (n)
+		n->updateStatusNow();
+}
 #endif
 
 int main(int argc,char **argv)
 {
 #ifndef _WIN32
-	signal(SIGHUP,SIG_IGN);
+	signal(SIGHUP,&sighandlerHup);
 	signal(SIGPIPE,SIG_IGN);
 	signal(SIGUSR1,&sighandlerUsr);
 	signal(SIGUSR2,&sighandlerUsr);

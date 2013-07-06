@@ -99,6 +99,12 @@ public:
 		throw();
 
 	/**
+	 * Update the status file in the home directory on next service loop
+	 */
+	void updateStatusNow()
+		throw();
+
+	/**
 	 * Get the ZeroTier version in major.minor.revision string format
 	 * 
 	 * @return Version in string form
