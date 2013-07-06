@@ -5,7 +5,7 @@ INCLUDES=-Iext/bin/libcrypto/include -Iext/jsoncpp/include
 DEFS=-DZT_ARCH="x86_combined" -DZT_OSNAME="mac" -DZT_TRACE
 
 # Uncomment for a release optimized universal binary build
-CFLAGS=-arch i386 -arch x86_64 -Wall -O6 -ftree-vectorize -pthread -mmacosx-version-min=10.6 -DNDEBUG $(INCLUDES) $(DEFS)
+CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -ftree-vectorize -pthread -mmacosx-version-min=10.6 -DNDEBUG $(INCLUDES) $(DEFS)
 STRIP=strip
 
 # Uncomment for a debug build
