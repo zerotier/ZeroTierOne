@@ -478,7 +478,8 @@ EthernetTap::~EthernetTap()
 	delete [] _putBuf;
 }
 
-static bool ___removeIp(const char *_dev,std::set<InetAddress> &_ips,const InetAddress &ip)
+// Helper function to actually remove IP from network device, execs ifconfig
+static bool ___removeIp(const char *_dev,const InetAddress &ip)
 {
 	int cpid;
 	if ((cpid = (int)fork()) == 0) {
@@ -487,11 +488,9 @@ static bool ___removeIp(const char *_dev,std::set<InetAddress> &_ips,const InetA
 	} else {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
-		if (exitcode == 0) {
-			_ips.erase(ip);
-			return true;
-		} else return false;
+		return (exitcode == 0);
 	}
+	return false; // never reached, make compiler shut up about return value
 }
 
 bool EthernetTap::addIP(const InetAddress &ip)
@@ -501,13 +500,17 @@ bool EthernetTap::addIP(const InetAddress &ip)
 	if (!ip)
 		return false;
 	if (_ips.count(ip) > 0)
-		return true;
+		return true; // IP/netmask already assigned
 
 	// Remove and reconfigure if address is the same but netmask is different
 	for(std::set<InetAddress>::iterator i(_ips.begin());i!=_ips.end();++i) {
-		if (i->ipsEqual(ip)) {
-			___removeIp(_dev,_ips,*i);
-			break;
+		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
+			if (___removeIp(_dev,*i)) {
+				_ips.erase(i);
+				break;
+			} else {
+				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
+			}
 		}
 	}
 
@@ -530,8 +533,12 @@ bool EthernetTap::addIP(const InetAddress &ip)
 bool EthernetTap::removeIP(const InetAddress &ip)
 {
 	Mutex::Lock _l(_ips_m);
-	if (_ips.count(ip) > 0)
-		return ___removeIp(_dev,_ips,ip);
+	if (_ips.count(ip) > 0) {
+		if (___removeIp(_dev,ip)) {
+			_ips.erase(ip);
+			return true;
+		}
+	}
 	return false;
 }
 

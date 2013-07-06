@@ -36,7 +36,7 @@
 namespace ZeroTier {
 
 /**
- * A multicast group composed of a multicast MAC and a 64-bit ADI field
+ * A multicast group composed of a multicast MAC and a 32-bit ADI field
  *
  * ADI stands for additional distinguishing information. ADI is primarily for
  * adding additional information to broadcast (ff:ff:ff:ff:ff:ff) memberships,

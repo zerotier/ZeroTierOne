@@ -333,40 +333,40 @@ public:
 		VERB_NOP = 0,
 
 		/* Announcement of a node's existence:
-		 *	 <[1] protocol version>
+		 *   <[1] protocol version>
 		 *   <[1] software major version>
 		 *   <[1] software minor version>
 		 *   <[2] software revision>
-		 *	 <[8] timestamp (ms since epoch)>
-		 *	 <[...] binary serialized identity (see Identity)>
+		 *   <[8] timestamp (ms since epoch)>
+		 *   <[...] binary serialized identity (see Identity)>
 		 *
 		 * OK payload:
-		 *	 <[8] timestamp (echoed from original HELLO)>
+		 *   <[8] timestamp (echoed from original HELLO)>
 		 *
 		 * ERROR has no payload.
 		 */
 		VERB_HELLO = 1,
 
 		/* Error response:
-		 *	 <[1] in-re verb>
-		 *	 <[8] in-re packet ID>
-		 *	 <[1] error code>
-		 *	 <[...] error-dependent payload>
+		 *   <[1] in-re verb>
+		 *   <[8] in-re packet ID>
+		 *   <[1] error code>
+		 *   <[...] error-dependent payload>
 		 */
 		VERB_ERROR = 2,
 
 		/* Success response:
-		 *	 <[1] in-re verb>
-		 *	 <[8] in-re packet ID>
-		 *	 <[...] request-specific payload>
+		 *   <[1] in-re verb>
+		 *   <[8] in-re packet ID>
+		 *   <[...] request-specific payload>
 		 */
 		VERB_OK = 3,
 
 		/* Query an identity by address:
-		 *	 <[5] address to look up>
+		 *   <[5] address to look up>
 		 *
 		 * OK response payload:
-		 *	 <[...] binary serialized identity>
+		 *   <[...] binary serialized identity>
 		 *
 		 * Error payload will be address queried.
 		 */
@@ -400,8 +400,8 @@ public:
 
 		/* A ZT-to-ZT unicast ethernet frame:
 		 *   <[8] 64-bit network ID>
-		 *	 <[2] 16-bit ethertype>
-		 *	 <[...] ethernet payload>
+		 *   <[2] 16-bit ethertype>
+		 *   <[...] ethernet payload>
 		 *
 		 * MAC addresses are derived from the packet's source and destination
 		 * ZeroTier addresses. ZeroTier does not support VLANs or other extensions
