@@ -314,6 +314,19 @@ void Switch::sendHELLO(const Address &dest)
 	send(outp,false);
 }
 
+bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &addr)
+{
+	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
+	outp.append((unsigned char)ZT_PROTO_VERSION);
+	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
+	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
+	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+	outp.append(Utils::now());
+	_r->identity.serialize(outp,false);
+	outp.hmacSet(dest->macKey());
+	return _r->demarc->send(localPort,addr,outp.data(),outp.size(),-1);
+}
+
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
 {
 	SharedPtr<Peer> p1p = _r->topology->getPeer(p1);
@@ -394,11 +407,8 @@ unsigned long Switch::doTimerTasks()
 			if (now >= i->second.fireAtTime) {
 				SharedPtr<Peer> withPeer = _r->topology->getPeer(i->first);
 				if (withPeer) {
-					TRACE("sending NAT-T NOP to %s(%s)",i->first.toString().c_str(),i->second.inaddr.toString().c_str());
-					Packet outp(i->first,_r->identity.address(),Packet::VERB_NOP);
-					outp.append("ZT",2); // arbitrary payload
-					outp.hmacSet(withPeer->macKey());
-					_r->demarc->send(i->second.localPort,i->second.inaddr,outp.data(),outp.size(),-1);
+					TRACE("sending NAT-T HELLO to %s(%s)",i->first.toString().c_str(),i->second.inaddr.toString().c_str());
+					sendHELLO(withPeer,i->second.localPort,i->second.inaddr);
 				}
 				_rendezvousQueue.erase(i++);
 			} else {
