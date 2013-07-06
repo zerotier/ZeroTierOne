@@ -1,6 +1,6 @@
 This file will track authors and contributors to ZeroTier's code base.
-People who contribute code that is accepted into the master (trunk) branch
-will be credited here.
+People who contribute new code or bug fixes that are accepted into
+the master (trunk) branch will be credited here.
 
 --
 
