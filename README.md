@@ -89,4 +89,6 @@ Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth arti
 
 ----
 
+<a href="http://flattr.com/thing/1611614/ZeroTier-Networks" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
+
 (c)2012-2013 [ZeroTier Networks LLC](https://www.zerotier.com/)
