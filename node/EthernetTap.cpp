@@ -470,7 +470,7 @@ EthernetTap::EthernetTap(const RuntimeEnvironment *renv,const MAC &mac,unsigned 
 		waitpid(cpid,&exitcode,0);
 		if (exitcode) {
 			::close(_fd);
-			throw std::runtime_error("ifconfig failure setting link-layer address and activating tap interface");
+			throw std::runtime_error("ipconfig failure enabling IPv6 link-local addressing");
 		}
 	}
 

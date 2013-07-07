@@ -283,31 +283,6 @@ std::string Utils::base64Decode(const char *data,unsigned int len)
 	return out.substr(0,outLen);
 }
 
-const char *Utils::etherTypeName(const unsigned int etherType)
-{
-	static char tmp[6];
-	switch(etherType) {
-		case ZT_ETHERTYPE_IPV4:
-			return "IPV4";
-		case ZT_ETHERTYPE_ARP:
-			return "ARP";
-		case ZT_ETHERTYPE_RARP:
-			return "RARP";
-		case ZT_ETHERTYPE_ATALK:
-			return "ATALK";
-		case ZT_ETHERTYPE_AARP:
-			return "AARP";
-		case ZT_ETHERTYPE_IPX_A:
-			return "IPX_A";
-		case ZT_ETHERTYPE_IPX_B:
-			return "IPX_B";
-		case ZT_ETHERTYPE_IPV6:
-			return "IPV6";
-	}
-	sprintf(tmp,"%.4x",etherType);
-	return tmp; // technically not thread safe, but we're only going to see this in debugging if ever
-}
-
 std::string Utils::hex(const void *data,unsigned int len)
 {
 	std::string r;

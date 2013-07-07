@@ -44,16 +44,6 @@
 
 #include "Constants.hpp"
 
-/* Ethernet frame types that might be relevant to us */
-#define ZT_ETHERTYPE_IPV4 0x0800
-#define ZT_ETHERTYPE_ARP 0x0806
-#define ZT_ETHERTYPE_RARP 0x8035
-#define ZT_ETHERTYPE_ATALK 0x809b
-#define ZT_ETHERTYPE_AARP 0x80f3
-#define ZT_ETHERTYPE_IPX_A 0x8137
-#define ZT_ETHERTYPE_IPX_B 0x8138
-#define ZT_ETHERTYPE_IPV6 0x86dd
-
 /**
  * Maximum compression/decompression block size (do not change)
  */
@@ -67,12 +57,6 @@ namespace ZeroTier {
 class Utils
 {
 public:
-	/**
-	 * @param etherType Ethernet type ID
-	 * @return Name of Ethernet protocol (e.g. ARP, IPV4)
-	 */
-	static const char *etherTypeName(const unsigned int etherType);
-
 	/**
 	 * @param data Data to convert to hex
 	 * @param len Length of data
