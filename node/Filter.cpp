@@ -39,11 +39,16 @@ bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int l
 	if ((!_etherType)||(_etherType(etype))) { // ethertype is ANY, or matches
 		// Ethertype determines meaning of protocol and port
 		switch(etype) {
+			default:
+				if ((!_protocol)&&(!_port))
+					return true; // match other ethertypes if protocol and port are ANY, since we don't know what to do with them
+				break;
+
 			case ZT_ETHERTYPE_IPV4:
 				if (len > 20) {
 					if ((!_protocol)||(_protocol(((const uint8_t *)data)[9]))) { // IP protocol
 						if (!_port)
-							return true; // protocol matches, port is ANY
+							return true; // protocol matches or is ANY, port is ANY
 
 						// Don't match on fragments beyond fragment 0. If we've blocked
 						// fragment 0, further fragments will fall on deaf ears anyway.
@@ -71,6 +76,52 @@ bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int l
 			case ZT_ETHERTYPE_IPV6:
 				if (len > 40) {
 					// see: http://stackoverflow.com/questions/17518951/is-the-ipv6-header-really-this-nutty
+					int nextHeader = ((const uint8_t *)data)[6];
+					unsigned int pos = 40;
+					while ((pos < len)&&(nextHeader >= 0)&&(nextHeader != 59)) { // 59 == no next header
+						fprintf(stderr,"[rule] V6: start header parse, header %.2x pos %d\n",nextHeader,pos);
+
+						switch(nextHeader) {
+							case 0: // hop-by-hop options
+							case 60: // destination options
+							case 43: // routing
+							case 135: // mobility (mobile IPv6 options)
+								if (_protocol((unsigned int)nextHeader))
+									return true; // match if our goal was to match any of these
+								nextHeader = ((const uint8_t *)data)[pos];
+								pos += 8 + (8 * ((const uint8_t *)data)[pos + 1]);
+								break;
+							case 44: // fragment
+								if (_protocol(44))
+									return true; // match if our goal was to match fragments
+								nextHeader = ((const uint8_t *)data)[pos];
+								pos += 8;
+								break;
+							case ZT_IPPROTO_AH: // AH
+								return _protocol(ZT_IPPROTO_AH); // true if AH is matched protocol, otherwise false since packet will be IPsec
+							case ZT_IPPROTO_ESP: // ESP
+								return _protocol(ZT_IPPROTO_ESP); // true if ESP is matched protocol, otherwise false since packet will be IPsec
+							case ZT_IPPROTO_ICMPV6:
+								if (_protocol(ZT_IPPROTO_ICMPV6)) { // only match ICMPv6 if specified
+									if ((!_port)||(_port(((const uint8_t *)data)[pos])))
+										return true; // protocol matches, port is ANY or matches ICMP type
+								}
+								break;
+							case ZT_IPPROTO_TCP:
+							case ZT_IPPROTO_UDP:
+							case ZT_IPPROTO_SCTP:
+							case ZT_IPPROTO_UDPLITE:
+								// If we encounter any of these, match if protocol matches or is wildcard as
+								// we'll consider these the "real payload" if present.
+								if ((!_protocol)||(_protocol(nextHeader))) {
+									if ((!_port)||(_port(((const uint16_t *)data)[(pos / 2) + 1])))
+										return true; // protocol matches or is ANY, port is ANY or matches
+								}
+								break;
+						}
+
+						fprintf(stderr,"[rule] V6: end header parse, next header %.2x, new pos %d\n",nextHeader,pos);
+					}
 				}
 				break;
 		}
@@ -98,6 +149,61 @@ void Filter::add(const Rule &r,const Action &a)
 		}
 	}
 	_chain.push_back(Entry(r,a));
+}
+
+std::string Filter::toString(const char *sep) const
+{
+	char buf[256];
+
+	if (!sep)
+		sep = ",";
+
+	std::string s;
+
+	Mutex::Lock _l(_chain_m);
+	for(std::vector<Entry>::const_iterator i(_chain.begin());i!=_chain.end();++i) {
+		bool first = (i == _chain.begin());
+
+		s.push_back('[');
+
+		if (i->rule.etherType()) {
+			sprintf(buf,"%u-%u",i->rule.etherType().start,i->rule.etherType().end);
+			s.append(buf);
+		} else s.push_back('*');
+
+		s.push_back(';');
+
+		if (i->rule.protocol()) {
+			sprintf(buf,"%u-%u",i->rule.protocol().start,i->rule.protocol().end);
+			s.append(buf);
+		} else s.push_back('*');
+
+		s.push_back(';');
+
+		if (i->rule.port()) {
+			sprintf(buf,"%u-%u",i->rule.port().start,i->rule.port().end);
+			s.append(buf);
+		} else s.push_back('*');
+
+		s.append("]:");
+
+		switch(i->action) {
+			case ACTION_DENY:
+				s.append("DENY");
+				break;
+			case ACTION_ALLOW:
+				s.append("ALLOW");
+				break;
+			case ACTION_LOG:
+				s.append("LOG");
+				break;
+		}
+
+		if (!first)
+			s.append(sep);
+	}
+
+	return s;
 }
 
 const char *Filter::etherTypeName(const unsigned int etherType)

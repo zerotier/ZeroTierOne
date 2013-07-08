@@ -41,6 +41,7 @@
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "Demarc.hpp"
+#include "Filter.hpp"
 
 #include "../version.h"
 
@@ -233,7 +234,7 @@ Switch_onRemotePacket_complete_packet_handler:
 void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
 	if (from != network->tap().mac()) {
-		LOG("ignored tap: %s -> %s %s (bridging is not supported)",from.toString().c_str(),to.toString().c_str(),Utils::etherTypeName(etherType));
+		LOG("ignored tap: %s -> %s %s (bridging is not supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
 		return;
 	}
 
@@ -245,7 +246,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	if ((etherType != ZT_ETHERTYPE_ARP)&&(etherType != ZT_ETHERTYPE_IPV4)&&(etherType != ZT_ETHERTYPE_IPV6)) {
-		LOG("ignored tap: %s -> %s %s (not a supported etherType)",from.toString().c_str(),to.toString().c_str(),Utils::etherTypeName(etherType));
+		LOG("ignored tap: %s -> %s %s (not a supported etherType)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
 		return;
 	}
 
@@ -277,10 +278,10 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.compress();
 			send(outp,true);
 		} else {
-			TRACE("UNICAST: %s -> %s %s (dropped, destination not a member of closed network %llu)",from.toString().c_str(),to.toString().c_str(),Utils::etherTypeName(etherType),network->id());
+			TRACE("UNICAST: %s -> %s %s (dropped, destination not a member of closed network %llu)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType),network->id());
 		}
 	} else {
-		TRACE("UNICAST: %s -> %s %s (dropped, destination MAC not ZeroTier)",from.toString().c_str(),to.toString().c_str(),Utils::etherTypeName(etherType));
+		TRACE("UNICAST: %s -> %s %s (dropped, destination MAC not ZeroTier)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
 	}
 }
 

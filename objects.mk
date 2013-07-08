@@ -11,6 +11,7 @@ OBJS=\
 	node/Demarc.o \
 	node/EllipticCurveKeyPair.o \
 	node/EthernetTap.o \
+	node/Filter.o \
 	node/HMAC.o \
 	node/Http.o \
 	node/Identity.o \

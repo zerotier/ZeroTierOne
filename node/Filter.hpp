@@ -258,7 +258,7 @@ public:
 		throw()
 	{
 		Mutex::Lock _l(_chain_m);
-		return _chain.length();
+		return _chain.size();
 	}
 
 	/**
@@ -268,10 +268,18 @@ public:
 		throw()
 	{
 		Mutex::Lock _l(_chain_m);
-		if (i < _chain.length())
+		if (i < _chain.size())
 			return _chain[i];
 		return Entry();
 	}
+
+	/**
+	 * Get a string representation of this filter
+	 *
+	 * @param sep Separator between filter rules, or NULL for comma (default)
+	 * @return Human-readable string
+	 */
+	std::string toString(const char *sep = (const char *)0) const;
 
 	/**
 	 * @param etherType Ethernet type ID
