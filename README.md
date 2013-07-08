@@ -47,6 +47,9 @@ Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth arti
 **Q:** Can you see my traffic? What about other users? Can you sniff the LAN?  
 **A:** No. All unicast (direct computer to computer) traffic is encrypted end-to-end (even if it's being relayed), and the ZeroTier virtual LAN behaves like a LAN with a secure enterprise-grade switch that does not allow unicast conversations to be sniffed. Multicast and broadcast traffic will of course be seen by many recipients, but that's the idea.
 
+**Q:** What about privacy? Does this hide my location on the network?  
+**A:** ZeroTier is not a connection anonymizer. Other than encryption, it doesn't do anything special to hide your identity or network location. If you want strong privacy protection there are already very advanced tools like [Tor](https://www.torproject.org) for that, and this isn't trying to duplicate their functionality. At the same time, ZT does not do anything special to harm your privacy either. It's not spyware or snoop-ware.
+
 **Q:** You say "almost unlimited size." Isn't multicast and broadcast traffic eventually going to be too much? What happens then?  
 **A:** ZeroTier One uses an algorithm called *implicit social switching*. The overall maximum number of recipients for a multicast is limited, so if there are too many listeners to a given multicast address then obviously not everyone will receive every message. So who does? Social switching causes multicasts to propagate in the direction of peers to whom you have recently communicated. As a result, multicasts tend to propagate along lines of association. The people most likely to get your service announcements are those with whom you frequently connect.
 

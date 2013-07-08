@@ -30,27 +30,50 @@
 #include "RuntimeEnvironment.hpp"
 #include "Logger.hpp"
 #include "Filter.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
 bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int len) const
 {
-	if ((_etherType >= 0)&&(etype != (unsigned int)_etherType))
-		return false; // ethertype mismatch
+	if ((!_etherType)||(_etherType(etype))) { // ethertype is ANY, or matches
+		// Ethertype determines meaning of protocol and port
+		switch(etype) {
+			case ZT_ETHERTYPE_IPV4:
+				if (len > 20) {
+					if ((!_protocol)||(_protocol(((const uint8_t *)data)[9]))) { // IP protocol
+						if (!_port)
+							return true; // protocol matches, port is ANY
 
-	switch(etype) {
-		case ZT_ETHERTYPE_IPV4:
-			if (len < 20)
-				return false; // invalid packets don't match
-			if ((_protocol >= 0)&&(((const uint8_t *)data)[9] != (uint8_t)(_protocol & 0xff)))
-				return false; // IP protocol # mismatch
+						// Don't match on fragments beyond fragment 0. If we've blocked
+						// fragment 0, further fragments will fall on deaf ears anyway.
+						if ((Utils::ntoh(((const uint16_t *)data)[3]) & 0x1fff))
+							return false;
 
-			switch(((const uint8_t *)data)[9]) {
-			}
+						// Internet header length determines where data begins, in multiples of 32 bits
+						unsigned int ihl = 4 * (((const uint8_t *)data)[0] & 0x0f);
 
-			break;
-		case ZT_ETHERTYPE_IPV6
-			break;
+						switch(((const uint8_t *)data)[9]) { // port's meaning depends on IP protocol
+							case ZT_IPPROTO_ICMP:
+								return _port(((const uint8_t *)data)[ihl]); // port = ICMP type
+							case ZT_IPPROTO_TCP:
+							case ZT_IPPROTO_UDP:
+							case ZT_IPPROTO_SCTP:
+							case ZT_IPPROTO_UDPLITE:
+								return _port(((const uint16_t *)data)[(ihl / 2) + 1]); // destination port
+						}
+
+						return false; // no match on port
+					}
+				}
+				break;
+
+			case ZT_ETHERTYPE_IPV6:
+				if (len > 40) {
+					// see: http://stackoverflow.com/questions/17518951/is-the-ipv6-header-really-this-nutty
+				}
+				break;
+		}
 	}
 
 	return false;

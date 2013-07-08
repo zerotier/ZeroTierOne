@@ -36,7 +36,7 @@
 
 #include "Mutex.hpp"
 #include "Range.hpp"
- 
+
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
 #define ZT_ETHERTYPE_ARP 0x0806
@@ -52,7 +52,6 @@
 #define ZT_IPPROTO_IGMP 0x02
 #define ZT_IPPROTO_TCP 0x06
 #define ZT_IPPROTO_UDP 0x11
-#define ZT_IPPROTO_RDP 0x1b
 #define ZT_IPPROTO_GRE 0x2f
 #define ZT_IPPROTO_ESP 0x32
 #define ZT_IPPROTO_AH 0x33
@@ -65,6 +64,60 @@
 #define ZT_IPPROTO_FC 0x85
 #define ZT_IPPROTO_UDPLITE 0x88
 #define ZT_IPPROTO_HIP 0x8b
+
+/* IPv4 ICMP types */
+#define ZT_ICMP_ECHO_REPLY 0
+#define ZT_ICMP_DESTINATION_UNREACHABLE 3
+#define ZT_ICMP_SOURCE_QUENCH 4
+#define ZT_ICMP_REDIRECT 5
+#define ZT_ICMP_ALTERNATE_HOST_ADDRESS 6
+#define ZT_ICMP_ECHO_REQUEST 8
+#define ZT_ICMP_ROUTER_ADVERTISEMENT 9
+#define ZT_ICMP_ROUTER_SOLICITATION 10
+#define ZT_ICMP_TIME_EXCEEDED 11
+#define ZT_ICMP_BAD_IP_HEADER 12
+#define ZT_ICMP_TIMESTAMP 13
+#define ZT_ICMP_TIMESTAMP_REPLY 14
+#define ZT_ICMP_INFORMATION_REQUEST 15
+#define ZT_ICMP_INFORMATION_REPLY 16
+#define ZT_ICMP_ADDRESS_MASK_REQUEST 17
+#define ZT_ICMP_ADDRESS_MASK_REPLY 18
+#define ZT_ICMP_TRACEROUTE 30
+#define ZT_ICMP_MOBILE_HOST_REDIRECT 32
+#define ZT_ICMP_MOBILE_REGISTRATION_REQUEST 35
+#define ZT_ICMP_MOBILE_REGISTRATION_REPLY 36
+
+/* IPv6 ICMP types */
+#define ZT_ICMP6_DESTINATION_UNREACHABLE 1
+#define ZT_ICMP6_PACKET_TOO_BIG 2
+#define ZT_ICMP6_TIME_EXCEEDED 3
+#define ZT_ICMP6_PARAMETER_PROBLEM 4
+#define ZT_ICMP6_ECHO_REQUEST 128
+#define ZT_ICMP6_ECHO_REPLY 129
+#define ZT_ICMP6_MULTICAST_LISTENER_QUERY 130
+#define ZT_ICMP6_MULTICAST_LISTENER_REPORT 131
+#define ZT_ICMP6_MULTICAST_LISTENER_DONE 132
+#define ZT_ICMP6_ROUTER_SOLICITATION 133
+#define ZT_ICMP6_ROUTER_ADVERTISEMENT 134
+#define ZT_ICMP6_NEIGHBOR_SOLICITATION 135
+#define ZT_ICMP6_NEIGHBOR_ADVERTISEMENT 136
+#define ZT_ICMP6_REDIRECT_MESSAGE 137
+#define ZT_ICMP6_ROUTER_RENUMBERING 138
+#define ZT_ICMP6_NODE_INFORMATION_QUERY 139
+#define ZT_ICMP6_NODE_INFORMATION_RESPONSE 140
+#define ZT_ICMP6_INV_NEIGHBOR_SOLICITATION 141
+#define ZT_ICMP6_INV_NEIGHBOR_ADVERTISEMENT 142
+#define ZT_ICMP6_MLDV2 143
+#define ZT_ICMP6_HOME_AGENT_ADDRESS_DISCOVERY_REQUEST 144
+#define ZT_ICMP6_HOME_AGENT_ADDRESS_DISCOVERY_REPLY 145
+#define ZT_ICMP6_MOBILE_PREFIX_SOLICITATION 146
+#define ZT_ICMP6_MOBILE_PREFIX_ADVERTISEMENT 147
+#define ZT_ICMP6_CERTIFICATION_PATH_SOLICITATION 148
+#define ZT_ICMP6_CERTIFICATION_PATH_ADVERTISEMENT 149
+#define ZT_ICMP6_MULTICAST_ROUTER_ADVERTISEMENT 151
+#define ZT_ICMP6_MULTICAST_ROUTER_SOLICITATION 152
+#define ZT_ICMP6_MULTICAST_ROUTER_TERMINATION 153
+#define ZT_ICMP6_RPL_CONTROL_MESSAGE 155
 
 namespace ZeroTier {
 
@@ -86,30 +139,30 @@ public:
 	public:
 		Rule()
 			throw() :
-			_etherType(-1),
-			_protocol(-1),
-			_port(-1)
+			_etherType(),
+			_protocol(),
+			_port()
 		{
 		}
 
 		/**
 		 * Construct a new rule
 		 *
-		 * @param etype Ethernet type or negative for ANY
-		 * @param prot Protocol or negative for ANY (meaning depends on ethertype, e.g. IP protocol numbers)
-		 * @param prt Port or negative for ANY (only applies to some protocols)
+		 * @param etype Ethernet type or empty range for ANY
+		 * @param prot Protocol or empty range for ANY (meaning depends on ethertype, e.g. IP protocol numbers)
+		 * @param prt Port or empty range for ANY (only applies to some protocols)
 		 */
-		Rule(int etype,int prot,int prt)
+		Rule(const Range<unsigned int> &etype,const Range<unsigned int> &prot,const Range<unsigned int> &prt)
 			throw() :
-			_etherType((etype >= 0) ? etype : -1),
-			_protocol((prot >= 0) ? prot : -1),
-			_port((prt >= 0) ? prt : -1)
+			_etherType(etype),
+			_protocol(prot),
+			_port(prt)
 		{
 		}
 
-		inline int etherType() const throw() { return _etherType; }
-		inline int protocol() const throw() { return _protocol; }
-		inline int port() const throw() { return _port; }
+		inline const Range<unsigned int> &etherType() const throw() { return _etherType; }
+		inline const Range<unsigned int> &protocol() const throw() { return _protocol; }
+		inline const Range<unsigned int> &port() const throw() { return _port; }
 
 		/**
 		 * Test this rule against a frame
@@ -143,9 +196,9 @@ public:
 		inline bool operator>=(const Rule &r) const throw() { return !(*this < r); }
 
 	private:
-		int _etherType;
-		int _protocol;
-		int _port;
+		Range<unsigned int> _etherType;
+		Range<unsigned int> _protocol;
+		Range<unsigned int> _port;
 	};
 
 	/**
