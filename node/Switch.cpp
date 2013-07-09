@@ -770,7 +770,7 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 
 								if ((fromMac.isZeroTier())&&(network->isAllowed(Address(fromMac)))) {
 									if (_checkAndUpdateMulticastHistory(fromMac,mg.mac(),packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id(),now)) {
-										TRACE("dropped duplicate MULTICAST_FRAME: %s -> %s (adi: %.8lx), %u bytes, net: %llu",fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
+										TRACE("dropped duplicate MULTICAST_FRAME from %s: %s -> %s (adi: %.8lx), %u bytes, net: %llu",source.toString().c_str(),fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
 									} else {
 										//TRACE("MULTICAST_FRAME: %s -> %s (adi: %.8lx), %u bytes, net: %llu",fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
 										network->tap().put(fromMac,mg.mac(),etherType,packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD);
