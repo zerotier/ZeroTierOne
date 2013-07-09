@@ -167,21 +167,27 @@ std::string Filter::toString(const char *sep) const
 		s.push_back('[');
 
 		if (i->rule.etherType()) {
-			sprintf(buf,"%u-%u",i->rule.etherType().start,i->rule.etherType().end);
+			if (i->rule.etherType().magnitude() > 1)
+				sprintf(buf,"%u-%u",i->rule.etherType().start,i->rule.etherType().end);
+			else sprintf(buf,"%u",i->rule.etherType().start);
 			s.append(buf);
 		} else s.push_back('*');
 
 		s.push_back(';');
 
 		if (i->rule.protocol()) {
-			sprintf(buf,"%u-%u",i->rule.protocol().start,i->rule.protocol().end);
+			if (i->rule.protocol().magnitude() > 1)
+				sprintf(buf,"%u-%u",i->rule.protocol().start,i->rule.protocol().end);
+			else sprintf(buf,"%u",i->rule.protocol().start);
 			s.append(buf);
 		} else s.push_back('*');
 
 		s.push_back(';');
 
 		if (i->rule.port()) {
-			sprintf(buf,"%u-%u",i->rule.port().start,i->rule.port().end);
+			if (i->rule.port().magnitude() > 1)
+				sprintf(buf,"%u-%u",i->rule.port().start,i->rule.port().end);
+			else sprintf(buf,"%u",i->rule.port().start);
 			s.append(buf);
 		} else s.push_back('*');
 
