@@ -291,6 +291,8 @@ static int testNet()
 	std::cout << "[net] GET http://www.google.com/" << std::endl;
 	new Http::Request(Http::HTTP_METHOD_GET,"http://www.google.com/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
 	testHttpDoneCondition.wait();
+
+	return 0;
 }
 
 int main(int argc,char **argv)

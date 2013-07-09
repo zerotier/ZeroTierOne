@@ -32,49 +32,29 @@ namespace ZeroTier {
 
 Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	throw(std::runtime_error) :
-	Thread(),
 	_r(renv),
 	_id(id),
-	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU),
+	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,this),
 	_members(),
 	_open(false),
 	_lock()
 {
-	TRACE("new network %llu created, TAP device: %s",id,_tap.deviceName().c_str());
-	start();
 }
 
 Network::~Network()
 {
-	_tap.close();
-	join();
-	TRACE("network %llu (%s) closed",_id,_tap.deviceName().c_str());
 }
 
-void Network::main()
-	throw()
+void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
-	Buffer<4096> buf;
-	MAC from,to;
-	unsigned int etherType = 0;
-
-	while (_tap.open()) {
-		unsigned int len = _tap.get(from,to,etherType,buf.data());
-		if (len) {
-			buf.setSize(len);
-			try {
-				if (!*__refCount)
-					break; // sanity check
-				_r->sw->onLocalEthernet(SharedPtr<Network>(this),from,to,etherType,buf);
-			} catch (std::exception &exc) {
-				TRACE("unexpected exception handling local packet: %s",exc.what());
-			} catch ( ... ) {
-				TRACE("unexpected exception handling local packet");
-			}
-		} else break;
+	const RuntimeEnvironment *_r = ((Network *)arg)->_r;
+	try {
+		_r->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
+	} catch (std::exception &exc) {
+		TRACE("unexpected exception handling local packet: %s",exc.what());
+	} catch ( ... ) {
+		TRACE("unexpected exception handling local packet");
 	}
-
-	TRACE("network %llu thread terminating",_id);
 }
 
 } // namespace ZeroTier

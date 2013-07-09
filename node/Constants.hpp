@@ -28,10 +28,55 @@
 #ifndef _ZT_CONSTANTS_HPP
 #define _ZT_CONSTANTS_HPP
 
-// Assume these are little-endian, since we don't support old PPC MACs
-// and all newer Mac or Windows systems are either x86_32, x86_64, or
-// ARM in little-endian mode.
-#if defined(__APPLE__) || defined(_WIN32)
+//
+// This include file also auto-detects and canonicalizes some environment
+// information defines:
+//
+// __LINUX__
+// __APPLE__
+// __UNIX_LIKE__ - any "unix like" OS (BSD, posix, etc.)
+// __WINDOWS__
+//
+// Also makes sure __BYTE_ORDER is defined reasonably.
+//
+
+// Canonicalize Linux... is this necessary? Do it anyway to be defensive.
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifndef __LINUX__
+#define __LINUX__
+#ifndef __UNIX_LIKE__
+#define __UNIX_LIKE__
+#endif
+#endif
+#endif
+
+// TODO: Android is what? Linux technically, but does it define it?
+
+// OSX and iOS are unix-like OSes far as we're concerned
+#ifdef __APPLE__
+#ifndef __UNIX_LIKE__
+#define __UNIX_LIKE__
+#endif
+#endif
+
+// Linux has endian.h
+#ifdef __LINUX__
+#include <endian.h>
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef __WINDOWS__
+#define __WINDOWS__
+#endif
+#undef __UNIX_LIKE__
+#define ZT_PATH_SEPARATOR '\\'
+#define ZT_PATH_SEPARATOR_S "\\"
+#define ZT_EOL_S "\r\n"
+#endif
+
+// Assume these are little-endian. PPC is not supported for OSX, and ARM
+// runs in little-endian mode for these OS families.
+#if defined(__APPLE__) || defined(__WINDOWS__)
 #undef __BYTE_ORDER
 #undef __LITTLE_ENDIAN
 #undef __BIG_ENDIAN
@@ -40,31 +85,21 @@
 #define __BYTE_ORDER 1234
 #endif
 
-// Linux has endian.h, which should tell us
-#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
-#include <endian.h>
-#endif
-
-#ifndef __BYTE_ORDER
-error_no_byte_order_defined
-#endif
-
-#ifndef ZT_OSNAME
-error_no_ZT_OSNAME
-#endif
-
-#ifndef ZT_ARCH
-error_no_ZT_ARCH
-#endif
-
-#ifdef _WIN32
-#define ZT_PATH_SEPARATOR '\\'
-#define ZT_PATH_SEPARATOR_S "\\"
-#define ZT_EOL_S "\r\n"
-#else
+#ifdef __UNIX_LIKE__
 #define ZT_PATH_SEPARATOR '/'
 #define ZT_PATH_SEPARATOR_S "/"
 #define ZT_EOL_S "\n"
+#endif
+
+// Error out if required symbols are missing
+#ifndef __BYTE_ORDER
+error_no_byte_order_defined;
+#endif
+#ifndef ZT_OSNAME
+error_no_ZT_OSNAME_defined;
+#endif
+#ifndef ZT_ARCH
+error_no_ZT_ARCH_defined;
 #endif
 
 /**

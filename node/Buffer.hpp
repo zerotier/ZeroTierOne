@@ -388,7 +388,7 @@ public:
 		return !(*this < b);
 	}
 
-protected:
+private:
 	unsigned int _l;
 	char ZT_VAR_MAY_ALIAS _b[C];
 };

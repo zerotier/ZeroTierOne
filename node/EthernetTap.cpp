@@ -30,15 +30,17 @@
 #include "EthernetTap.hpp"
 #include "Logger.hpp"
 #include "RuntimeEnvironment.hpp"
+#include "Utils.hpp"
 #include "Mutex.hpp"
-#include "MulticastGroup.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
-/* ======================================================================== */
-#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
-/* ======================================================================== */
+//
+// TAP implementation for *nix OSes, with some specialization for different flavors
+//
+
+#ifdef __UNIX_LIKE__ /////////////////////////////////////////////////////////
 
 #include <stdint.h>
 #include <stdio.h>
@@ -52,9 +54,12 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <net/if_arp.h>
 #include <arpa/inet.h>
+
+#ifdef __LINUX__
 
 #include <linux/if.h>
 #include <linux/if_tun.h>
@@ -64,22 +69,48 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 #define ZT_ETHERTAP_IP_COMMAND "/sbin/ip"
 #define ZT_ETHERTAP_SYSCTL_COMMAND "/sbin/sysctl"
 
+#endif // __LINUX__
+
+#ifdef __APPLE__
+
+#include <sys/uio.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <net/route.h>
+#include <net/if_dl.h>
+#include <ifaddrs.h>
+
+#define ZT_ETHERTAP_IFCONFIG "/sbin/ifconfig"
+#define ZT_MAC_KEXTLOAD "/sbin/kextload"
+#define ZT_MAC_IPCONFIG "/usr/sbin/ipconfig"
+
+#endif // __APPLE__
+
 namespace ZeroTier {
 
+// Only permit one tap to be opened concurrently across the entire process
 static Mutex __tapCreateLock;
 
-EthernetTap::EthernetTap(const RuntimeEnvironment *renv,const MAC &mac,unsigned int mtu) 
+#ifdef __LINUX__
+EthernetTap::EthernetTap(
+	const RuntimeEnvironment *renv,
+	const MAC &mac,
+	unsigned int mtu,
+	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+	void *arg)
 	throw(std::runtime_error) :
 	_mac(mac),
 	_mtu(mtu),
 	_r(renv),
-	_putBuf((unsigned char *)0),
-	_getBuf((unsigned char *)0),
-	_fd(0),
-	_isReading(false)
+	_handler(handler),
+	_arg(arg),
+	_fd(0)
 {
 	char procpath[128];
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
+
+	if (mtu > 4096)
+		throw std::runtime_error("max tap MTU is 4096");
 
 	_fd = ::open("/dev/net/tun",O_RDWR);
 	if (_fd <= 0)
@@ -152,36 +183,135 @@ EthernetTap::EthernetTap(const RuntimeEnvironment *renv,const MAC &mac,unsigned 
 
 	::close(sock);
 
-	_putBuf = new unsigned char[((mtu + 16) * 2)];
-	_getBuf = _putBuf + (mtu + 16);
+	::pipe(_shutdownSignalPipe);
 
 	TRACE("tap %s created",_dev);
+
+	start();
 }
+#endif // __LINUX__
+
+#ifdef __APPLE__
+EthernetTap::EthernetTap(
+	const RuntimeEnvironment *renv,
+	const MAC &mac,
+	unsigned int mtu,
+	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+	void *arg)
+	throw(std::runtime_error) :
+	_mac(mac),
+	_mtu(mtu),
+	_r(renv),
+	_handler(handler),
+	_arg(arg),
+	_fd(0)
+{
+	char devpath[64],ethaddr[64],mtustr[16];
+	struct stat tmp;
+	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
+
+	if (mtu > 4096)
+		throw std::runtime_error("max tap MTU is 4096");
+
+	// Check for existence of ZT tap devices, try to load module if not there
+	if (stat("/dev/zt0",&tmp)) {
+		int kextpid;
+		char tmp[4096];
+		strcpy(tmp,_r->homePath.c_str());
+		if ((kextpid = (int)fork()) == 0) {
+			chdir(tmp);
+			execl(ZT_MAC_KEXTLOAD,ZT_MAC_KEXTLOAD,"-q","-repository",tmp,"tap.kext",(const char *)0);
+			exit(-1);
+		} else {
+			int exitcode = -1;
+			waitpid(kextpid,&exitcode,0);
+			usleep(500);
+		}
+	}
+	if (stat("/dev/zt0",&tmp))
+		throw std::runtime_error("/dev/zt# tap devices do not exist and unable to load kernel extension");
+
+	// Open the first available device (ones in use will fail with resource busy)
+	for(int i=0;i<256;++i) {
+		sprintf(devpath,"/dev/zt%d",i);
+		if (stat(devpath,&tmp))
+			throw std::runtime_error("no more TAP devices available");
+		_fd = ::open(devpath,O_RDWR);
+		if (_fd > 0) {
+			sprintf(_dev,"zt%d",i);
+			break;
+		}
+	}
+	if (_fd <= 0)
+		throw std::runtime_error("unable to open TAP device or no more devices available");
+
+	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
+		::close(_fd);
+		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
+	}
+
+	sprintf(ethaddr,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	sprintf(mtustr,"%u",mtu);
+
+	// Configure MAC address and MTU, bring interface up
+	long cpid;
+	if ((cpid = (long)fork()) == 0) {
+		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
+		exit(-1);
+	} else {
+		int exitcode = -1;
+		waitpid(cpid,&exitcode,0);
+		if (exitcode) {
+			::close(_fd);
+			throw std::runtime_error("ifconfig failure setting link-layer address and activating tap interface");
+		}
+	}
+
+	whack(); // turns on IPv6 on OSX
+
+	::pipe(_shutdownSignalPipe);
+
+	start();
+}
+#endif // __APPLE__
 
 EthernetTap::~EthernetTap()
 {
-	this->close();
-	delete [] _putBuf;
+	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
+	join();
+	::close(_fd);
 }
 
+#ifdef __APPLE__
 void EthernetTap::whack()
 {
-	// Linux requires nothing here
+	long cpid = (long)fork();
+	if (cpid == 0) {
+		execl(ZT_MAC_IPCONFIG,ZT_MAC_IPCONFIG,"set",_dev,"AUTOMATIC-V6",(const char *)0);
+		exit(-1);
+	} else {
+		int exitcode = -1;
+		waitpid(cpid,&exitcode,0);
+		if (exitcode) {
+			LOG("%s: ipconfig set AUTOMATIC-V6 failed",_dev);
+		}
+	}
 }
+#else
+void EthernetTap::whack() {}
+#endif // __APPLE__ / !__APPLE__
 
-static bool ___removeIp(const char *_dev,std::set<InetAddress> &_ips,const InetAddress &ip)
+#ifdef __LINUX__
+static bool ___removeIp(const char *_dev,const InetAddress &ip)
 {
-	long cpid;
-	if ((cpid = (long)fork()) == 0) {
+	long cpid = (long)fork();
+	if (cpid == 0) {
 		execl(ZT_ETHERTAP_IP_COMMAND,ZT_ETHERTAP_IP_COMMAND,"addr","del",ip.toString().c_str(),"dev",_dev,(const char *)0);
 		exit(1); /* not reached unless exec fails */
 	} else {
 		int exitcode = 1;
 		waitpid(cpid,&exitcode,0);
-		if (exitcode == 0) {
-			_ips.erase(ip);
-			return true;
-		} else return false;
+		return (exitcode == 0);
 	}
 }
 
@@ -197,13 +327,17 @@ bool EthernetTap::addIP(const InetAddress &ip)
 	// Remove and reconfigure if address is the same but netmask is different
 	for(std::set<InetAddress>::iterator i(_ips.begin());i!=_ips.end();++i) {
 		if (i->ipsEqual(ip)) {
-			___removeIp(_dev,_ips,*i);
-			break;
+			if (___removeIp(_dev,*i)) {
+				_ips.erase(i);
+				break;
+			} else {
+				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
+			}
 		}
 	}
 
-	int cpid;
-	if ((cpid = (int)fork()) == 0) {
+	long cpid;
+	if ((cpid = (long)fork()) == 0) {
 		execl(ZT_ETHERTAP_IP_COMMAND,ZT_ETHERTAP_IP_COMMAND,"addr","add",ip.toString().c_str(),"dev",_dev,(const char *)0);
 		exit(-1);
 	} else {
@@ -217,97 +351,101 @@ bool EthernetTap::addIP(const InetAddress &ip)
 
 	return false;
 }
+#endif // __LINUX__
+
+#ifdef __APPLE__
+static bool ___removeIp(const char *_dev,const InetAddress &ip)
+{
+	int cpid;
+	if ((cpid = (int)fork()) == 0) {
+		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+		exit(-1);
+	} else {
+		int exitcode = -1;
+		waitpid(cpid,&exitcode,0);
+		return (exitcode == 0);
+	}
+	return false; // never reached, make compiler shut up about return value
+}
+
+bool EthernetTap::addIP(const InetAddress &ip)
+{
+	Mutex::Lock _l(_ips_m);
+
+	if (!ip)
+		return false;
+	if (_ips.count(ip) > 0)
+		return true; // IP/netmask already assigned
+
+	// Remove and reconfigure if address is the same but netmask is different
+	for(std::set<InetAddress>::iterator i(_ips.begin());i!=_ips.end();++i) {
+		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
+			if (___removeIp(_dev,*i)) {
+				_ips.erase(i);
+				break;
+			} else {
+				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
+			}
+		}
+	}
+
+	int cpid;
+	if ((cpid = (int)fork()) == 0) {
+		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
+		exit(-1);
+	} else {
+		int exitcode = -1;
+		waitpid(cpid,&exitcode,0);
+		if (exitcode == 0) {
+			_ips.insert(ip);
+			return true;
+		}
+	}
+
+	return false;
+}
+#endif // __APPLE__
 
 bool EthernetTap::removeIP(const InetAddress &ip)
 {
 	Mutex::Lock _l(_ips_m);
-	if (_ips.count(ip) > 0)
-		return ___removeIp(_dev,_ips,ip);
+	if (_ips.count(ip) > 0) {
+		if (___removeIp(_dev,ip)) {
+			_ips.erase(ip);
+			return true;
+		}
+	}
 	return false;
 }
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
+	char putBuf[4096 + 14];
 	if ((_fd > 0)&&(len <= _mtu)) {
 		for(int i=0;i<6;++i)
-			_putBuf[i] = to.data[i];
+			putBuf[i] = to.data[i];
 		for(int i=0;i<6;++i)
-			_putBuf[i+6] = from.data[i];
-		*((uint16_t *)(_putBuf + 12)) = htons((uint16_t)etherType);
-		memcpy(_putBuf + 14,data,len);
-		::write(_fd,_putBuf,len + 14);
-	}
-}
-
-unsigned int EthernetTap::get(MAC &from,MAC &to,unsigned int &etherType,void *buf)
-{
-	for(;;) {
-		if (_fd > 0) {
-			_isReading_m.lock();
-			_isReading = true;
-			_isReadingThreadId = pthread_self();
-			_isReading_m.unlock();
-
-			int n = (int)::read(_fd,_getBuf,_mtu + 14);
-
-			_isReading_m.lock();
-			_isReading = false;
-			_isReading_m.unlock();
-
-			if (n > 14) {
-				for(int i=0;i<6;++i)
-					to.data[i] = _getBuf[i];
-				for(int i=0;i<6;++i)
-					from.data[i] = _getBuf[i + 6];
-				etherType = ntohs(((uint16_t *)_getBuf)[6]);
-				n -= 14;
-				memcpy(buf,_getBuf + 14,n);
-				return (unsigned int)n;
-			} else if (n < 0) {
-				if (_fd <= 0)
-					break;
-				else if ((errno == EINTR)||(errno == ETIMEDOUT))
-					continue;
-				else {
-					TRACE("unexpected error reading from tap: %s",strerror(errno));
-					::close(_fd);
-					_fd = 0;
-					break;
-				}
-			} else {
-				TRACE("incomplete read from tap: %d bytes",n);
-				continue;
-			}
+			putBuf[i+6] = from.data[i];
+		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
+		memcpy(putBuf + 14,data,len);
+		len += 14;
+		int n = ::write(_fd,putBuf,len);
+		if (n <= 0) {
+			LOG("error writing packet to Ethernet tap device: %s",strerror(errno));
+		} else if (n != (int)len) {
+			// Saw this gremlin once, so log it if we see it again... OSX tap
+			// or something seems to have goofy issues with certain MTUs.
+			LOG("ERROR: write underrun: %s tap write() wrote %d of %u bytes of frame",_dev,n,len);
 		}
 	}
-	return 0;
 }
 
-std::string EthernetTap::deviceName()
+std::string EthernetTap::deviceName() const
 {
 	return std::string(_dev);
 }
 
-bool EthernetTap::open() const
-{
-	return (_fd > 0);
-}
-
-void EthernetTap::close()
-{
-	Mutex::Lock _l(__tapCreateLock); // also prevent create during close()
-	if (_fd > 0) {
-		int f = _fd;
-		_fd = 0;
-		::close(f);
-
-		_isReading_m.lock();
-		if (_isReading)
-			pthread_kill(_isReadingThreadId,SIGUSR2);
-		_isReading_m.unlock();
-	}
-}
-
+#ifdef __LINUX__
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	char *ptr,*ptr2;
@@ -363,290 +501,9 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 	return changed;
 }
+#endif __LINUX__
 
-} // namespace ZeroTier
-
-/* ======================================================================== */
-#elif defined(__APPLE__) /* ----------------------------------------------- */
-/* ======================================================================== */
-
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <sys/uio.h>
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <net/route.h>
-#include <net/if_dl.h>
-#include <ifaddrs.h>
-
-#define ZT_ETHERTAP_IFCONFIG "/sbin/ifconfig"
-#define ZT_MAC_KEXTLOAD "/sbin/kextload"
-#define ZT_MAC_IPCONFIG "/usr/sbin/ipconfig"
-
-namespace ZeroTier {
-
-static Mutex __tapCreateLock;
-
-EthernetTap::EthernetTap(const RuntimeEnvironment *renv,const MAC &mac,unsigned int mtu)
-	throw(std::runtime_error) :
-	_mac(mac),
-	_mtu(mtu),
-	_r(renv),
-	_putBuf((unsigned char *)0),
-	_getBuf((unsigned char *)0),
-	_fd(0),
-	_isReading(false)
-{
-	char devpath[64],ethaddr[64],mtustr[16];
-	struct stat tmp;
-	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
-
-	// Check for existence of ZT tap devices, try to load module if not there
-	if (stat("/dev/zt0",&tmp)) {
-		int kextpid;
-		char tmp[4096];
-		strcpy(tmp,_r->homePath.c_str());
-		if ((kextpid = (int)fork()) == 0) {
-			chdir(tmp);
-			execl(ZT_MAC_KEXTLOAD,ZT_MAC_KEXTLOAD,"-q","-repository",tmp,"tap.kext",(const char *)0);
-			exit(-1);
-		} else {
-			int exitcode = -1;
-			waitpid(kextpid,&exitcode,0);
-			usleep(500);
-		}
-	}
-	if (stat("/dev/zt0",&tmp))
-		throw std::runtime_error("/dev/zt# tap devices do not exist and unable to load kernel extension");
-
-	// Open the first available device (ones in use will fail with resource busy)
-	for(int i=0;i<256;++i) {
-		sprintf(devpath,"/dev/zt%d",i);
-		if (stat(devpath,&tmp))
-			throw std::runtime_error("no more TAP devices available");
-		_fd = ::open(devpath,O_RDWR);
-		if (_fd > 0) {
-			sprintf(_dev,"zt%d",i);
-			break;
-		}
-	}
-	if (_fd <= 0)
-		throw std::runtime_error("unable to open TAP device or no more devices available");
-
-	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
-		::close(_fd);
-		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
-	}
-
-	sprintf(ethaddr,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	sprintf(mtustr,"%u",mtu);
-
-	// Configure MAC address and MTU, bring interface up
-	int cpid;
-	if ((cpid = (int)fork()) == 0) {
-		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
-		exit(-1);
-	} else {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		if (exitcode) {
-			::close(_fd);
-			throw std::runtime_error("ifconfig failure setting link-layer address and activating tap interface");
-		}
-	}
-
-	whack(); // turns on IPv6 on OSX
-
-	_putBuf = new unsigned char[((mtu + 14) * 2)];
-	_getBuf = _putBuf + (mtu + 14);
-}
-
-EthernetTap::~EthernetTap()
-{
-	this->close();
-	delete [] _putBuf;
-}
-
-void EthernetTap::whack()
-{
-	int cpid = fork();
-	if (cpid == 0) {
-		execl(ZT_MAC_IPCONFIG,ZT_MAC_IPCONFIG,"set",_dev,"AUTOMATIC-V6",(const char *)0);
-		exit(-1);
-	} else {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		if (exitcode) {
-			LOG("%s: ipconfig set AUTOMATIC-V6 failed",_dev);
-		}
-	}
-}
-
-// Helper function to actually remove IP from network device, execs ifconfig
-static bool ___removeIp(const char *_dev,const InetAddress &ip)
-{
-	int cpid;
-	if ((cpid = (int)fork()) == 0) {
-		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
-		exit(-1);
-	} else {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		return (exitcode == 0);
-	}
-	return false; // never reached, make compiler shut up about return value
-}
-
-bool EthernetTap::addIP(const InetAddress &ip)
-{
-	Mutex::Lock _l(_ips_m);
-
-	if (!ip)
-		return false;
-	if (_ips.count(ip) > 0)
-		return true; // IP/netmask already assigned
-
-	// Remove and reconfigure if address is the same but netmask is different
-	for(std::set<InetAddress>::iterator i(_ips.begin());i!=_ips.end();++i) {
-		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
-			if (___removeIp(_dev,*i)) {
-				_ips.erase(i);
-				break;
-			} else {
-				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
-			}
-		}
-	}
-
-	int cpid;
-	if ((cpid = (int)fork()) == 0) {
-		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
-		exit(-1);
-	} else {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		if (exitcode == 0) {
-			_ips.insert(ip);
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool EthernetTap::removeIP(const InetAddress &ip)
-{
-	Mutex::Lock _l(_ips_m);
-	if (_ips.count(ip) > 0) {
-		if (___removeIp(_dev,ip)) {
-			_ips.erase(ip);
-			return true;
-		}
-	}
-	return false;
-}
-
-void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
-{
-	if ((_fd > 0)&&(len <= _mtu)) {
-		for(int i=0;i<6;++i)
-			_putBuf[i] = to.data[i];
-		for(int i=0;i<6;++i)
-			_putBuf[i+6] = from.data[i];
-		*((uint16_t *)(_putBuf + 12)) = htons((uint16_t)etherType);
-		memcpy(_putBuf + 14,data,len);
-		len += 14;
-		int n = (int)::write(_fd,_putBuf,len);
-		if (n <= 0) {
-			LOG("error writing packet to Ethernet tap device: %s",strerror(errno));
-		} else if (n != (int)len) {
-			// Saw this gremlin once, so log it if we see it again... OSX tap
-			// or something seems to have goofy issues with certain MTUs.
-			LOG("WARNING: Apple gremlin: tap write() wrote %d of %u bytes of frame",n,len);
-		}
-	}
-}
-
-unsigned int EthernetTap::get(MAC &from,MAC &to,unsigned int &etherType,void *buf)
-{
-	for(;;) {
-		if (_fd > 0) {
-			_isReading_m.lock();
-			_isReading = true;
-			_isReadingThreadId = pthread_self();
-			_isReading_m.unlock();
-
-			int n = (int)::read(_fd,_getBuf,_mtu + 14);
-
-			_isReading_m.lock();
-			_isReading = false;
-			_isReading_m.unlock();
-
-			if (n > 14) {
-				for(int i=0;i<6;++i)
-					to.data[i] = _getBuf[i];
-				for(int i=0;i<6;++i)
-					from.data[i] = _getBuf[i + 6];
-				etherType = ntohs(((uint16_t *)_getBuf)[6]);
-				n -= 14;
-				memcpy(buf,_getBuf + 14,n);
-				return (unsigned int)n;
-			} else if (n < 0) {
-				if (_fd <= 0)
-					break;
-				else if ((errno == EINTR)||(errno == ETIMEDOUT))
-					continue;
-				else {
-					TRACE("unexpected error reading from tap: %s",strerror(errno));
-					::close(_fd);
-					_fd = 0;
-					break;
-				}
-			} else {
-				TRACE("incomplete read from tap: %d bytes",n);
-				continue;
-			}
-		}
-	}
-	return 0;
-}
-
-std::string EthernetTap::deviceName()
-{
-	return std::string(_dev);
-}
-
-bool EthernetTap::open() const
-{
-	return (_fd > 0);
-}
-
-void EthernetTap::close()
-{
-	Mutex::Lock _l(__tapCreateLock); // also prevent create during close()
-	if (_fd > 0) {
-		int f = _fd;
-		_fd = 0;
-		::close(f);
-
-		_isReading_m.lock();
-		if (_isReading)
-			pthread_kill(_isReadingThreadId,SIGUSR2);
-		_isReading_m.unlock();
-	}
-}
-
+#ifdef __APPLE__
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	std::set<MulticastGroup> newGroups;
@@ -690,13 +547,54 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 	return changed;
 }
+#endif // __APPLE__
+
+void EthernetTap::main()
+	throw()
+{
+	fd_set readfds,nullfds;
+	MAC to,from;
+	char getBuf[4096 + 14];
+	Buffer<4096> data;
+
+	FD_ZERO(&readfds);
+	FD_ZERO(&nullfds);
+	int nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
+
+	for(;;) {
+		FD_SET(_shutdownSignalPipe[0],&readfds);
+		FD_SET(_fd,&readfds);
+		select(nfds,&readfds,&nullfds,&nullfds,(struct timeval *)0);
+
+		if (FD_ISSET(_shutdownSignalPipe[0],&readfds)) // writes to shutdown pipe terminate thread
+			break;
+
+		if (FD_ISSET(_fd,&readfds)) {
+			int n = (int)::read(_fd,getBuf,_mtu + 14);
+
+			if (n > 14) {
+				for(int i=0;i<6;++i)
+					to.data[i] = (unsigned char)getBuf[i];
+				for(int i=0;i<6;++i)
+					from.data[i] = (unsigned char)getBuf[i + 6];
+				data.copyFrom(getBuf + 14,(unsigned int)n - 14);
+				_handler(_arg,from,to,ntohs(((const uint16_t *)getBuf)[6]),data);
+			} else if (n < 0) {
+				if ((errno != EINTR)&&(errno != ETIMEDOUT)) {
+					TRACE("unexpected error reading from tap: %s",strerror(errno));
+					break;
+				}
+			}
+		}
+	}
+}
 
 } // namespace ZeroTier
 
-/* ======================================================================== */
-#elif defined(_WIN32) /* -------------------------------------------------- */
-/* ======================================================================== */
+#endif // __UNIX_LIKE__ //////////////////////////////////////////////////////
 
-/* ======================================================================== */
-#endif
-/* ======================================================================== */
+#ifdef __WINDOWS__
+
+// TODO
+
+#endif // __WINDOWS__

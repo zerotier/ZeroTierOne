@@ -36,14 +36,13 @@
 #include <set>
 #include <string>
 #include <stdexcept>
-#include "Array.hpp"
-#include "Utils.hpp"
-#include "InetAddress.hpp"
-#include "NonCopyable.hpp"
-#include "MAC.hpp"
 #include "Constants.hpp"
+#include "InetAddress.hpp"
+#include "MAC.hpp"
 #include "Mutex.hpp"
 #include "MulticastGroup.hpp"
+#include "Thread.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -52,21 +51,35 @@ class RuntimeEnvironment;
 /**
  * System ethernet tap device
  */
-class EthernetTap : NonCopyable
+class EthernetTap : protected Thread
 {
 public:
 	/**
 	 * Construct a new TAP device
 	 *
+	 * Handler arguments: arg,from,to,etherType,data
+	 * 
 	 * @param renv Runtime environment
 	 * @param mac MAC address of device
 	 * @param mtu MTU of device
+	 * @param handler Handler function to be called when data is received from the tap
+	 * @param arg First argument to handler function
 	 * @throws std::runtime_error Unable to allocate device
 	 */
-	EthernetTap(const RuntimeEnvironment *renv,const MAC &mac,unsigned int mtu)
+	EthernetTap(
+		const RuntimeEnvironment *renv,
+		const MAC &mac,
+		unsigned int mtu,
+		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void *arg)
 		throw(std::runtime_error);
 
-	~EthernetTap();
+	/**
+	 * Close tap and shut down thread
+	 *
+	 * This may block for a few seconds while thread exits.
+	 */
+	virtual ~EthernetTap();
 
 	/**
 	 * Perform OS dependent actions on network configuration change detection
@@ -138,30 +151,9 @@ public:
 	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 
 	/**
-	 * Get the next packet from the interface, blocking if none is available.
-	 *
-	 * @param from Filled with MAC address of source (normally our own)
-	 * @param to Filled with MAC address of destination
-	 * @param etherType Filled with Ethernet frame type
-	 * @param buf Buffer to fill (must have room for MTU bytes)
-	 * @return Number of bytes read or 0 if none
-	 */
-	unsigned int get(MAC &from,MAC &to,unsigned int &etherType,void *buf);
-
-	/**
 	 * @return OS-specific device or connection name
 	 */
-	std::string deviceName();
-
-	/**
-	 * @return True if tap is open
-	 */
-	bool open() const;
-
-	/**
-	 * Close this tap, invalidating the object and causing get() to abort
-	 */
-	void close();
+	std::string deviceName() const;
 
 	/**
 	 * Fill or modify a set to contain multicast groups for this device
@@ -177,6 +169,10 @@ public:
 	 */
 	bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
+protected:
+	virtual void main()
+		throw();
+
 private:
 	const MAC _mac;
 	const unsigned int _mtu;
@@ -186,20 +182,14 @@ private:
 	std::set<InetAddress> _ips;
 	Mutex _ips_m;
 
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
+	void *_arg;
 
+#ifdef __UNIX_LIKE__
 	char _dev[16];
-	unsigned char *_putBuf;
-	unsigned char *_getBuf;
 	int _fd;
-
-	bool _isReading;
-	pthread_t _isReadingThreadId;
-	Mutex _isReading_m;
-
-#elif defined(_WIN32) /* -------------------------------------------------- */
-
-#endif /* ----------------------------------------------------------------- */
+	int _shutdownSignalPipe[2];
+#endif
 };
 
 } // namespace ZeroTier

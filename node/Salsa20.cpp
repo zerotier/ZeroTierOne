@@ -5,6 +5,7 @@
  */
 
 #include "Salsa20.hpp"
+#include "Constants.hpp"
 
 #define ROTATE(v,c) (((v) << (c)) | ((v) >> (32 - (c))))
 #define XOR(v,w) ((v) ^ (w))

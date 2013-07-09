@@ -40,8 +40,8 @@
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Thread.hpp"
 #include "MulticastGroup.hpp"
+#include "NonCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -50,16 +50,16 @@ class NodeConfig;
 /**
  * Local network endpoint
  */
-class Network : protected Thread
+class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
 	friend class NodeConfig;
 
 private:
-	virtual ~Network();
-
 	Network(const RuntimeEnvironment *renv,uint64_t id)
 		throw(std::runtime_error);
+
+	~Network();
 
 public:
 	/**
@@ -141,11 +141,9 @@ public:
 		return _multicastGroups;
 	}
 
-protected:
-	virtual void main()
-		throw();
-
 private:
+	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
+
 	const RuntimeEnvironment *_r;
 	uint64_t _id;
 	EthernetTap _tap;

@@ -263,13 +263,13 @@ public:
 			setSize(fragLen + ZT_PROTO_MIN_FRAGMENT_LENGTH);
 
 			// NOTE: this copies both the IV/packet ID and the destination address.
-			memcpy(_b + ZT_PACKET_FRAGMENT_IDX_PACKET_ID,p.data() + ZT_PACKET_IDX_IV,13);
+			memcpy(field(ZT_PACKET_FRAGMENT_IDX_PACKET_ID,13),p.data() + ZT_PACKET_IDX_IV,13);
 
-			_b[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] = ZT_PACKET_FRAGMENT_INDICATOR;
-			_b[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO] = (char)(((fragTotal & 0xf) << 4) | (fragNo & 0xf));
-			_b[ZT_PACKET_FRAGMENT_IDX_HOPS] = 0;
+			(*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] = ZT_PACKET_FRAGMENT_INDICATOR;
+			(*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO] = (char)(((fragTotal & 0xf) << 4) | (fragNo & 0xf));
+			(*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = 0;
 
-			memcpy(_b + ZT_PACKET_FRAGMENT_IDX_PAYLOAD,p.data() + fragStart,fragLen);
+			memcpy(field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,fragLen),p.data() + fragStart,fragLen);
 		}
 
 		/**
@@ -277,12 +277,12 @@ public:
 		 * 
 		 * @return Destination ZT address
 		 */
-		inline Address destination() const { return Address(_b + ZT_PACKET_FRAGMENT_IDX_DEST); }
+		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH)); }
 
 		/**
 		 * @return True if fragment is of a valid length
 		 */
-		inline bool lengthValid() const { return (_l >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
+		inline bool lengthValid() const { return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
 
 		/**
 		 * @return ID of packet this is a fragment of
@@ -292,36 +292,38 @@ public:
 		/**
 		 * @return Total number of fragments in packet
 		 */
-		inline unsigned int totalFragments() const { return (((unsigned int)_b[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO] >> 4) & 0xf); }
+		inline unsigned int totalFragments() const { return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf); }
 
 		/**
 		 * @return Fragment number of this fragment
 		 */
-		inline unsigned int fragmentNumber() const { return ((unsigned int)_b[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO] & 0xf); }
+		inline unsigned int fragmentNumber() const { return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf); }
 
 		/**
 		 * @return Fragment ZT hop count
 		 */
-		inline unsigned int hops() const { return (unsigned int)_b[ZT_PACKET_FRAGMENT_IDX_HOPS]; }
+		inline unsigned int hops() const { return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]); }
 
 		/**
 		 * Increment this packet's hop count
 		 */
 		inline void incrementHops()
 		{
-			_b[ZT_PACKET_FRAGMENT_IDX_HOPS] = (_b[ZT_PACKET_FRAGMENT_IDX_HOPS] + 1) & ZT_PROTO_MAX_HOPS;
+			(*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = (((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]) + 1) & ZT_PROTO_MAX_HOPS;
 		}
-
-		/**
-		 * @return Fragment payload
-		 */
-		inline unsigned char *payload() { return (unsigned char *)(_b + ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
-		inline const unsigned char *payload() const { return (const unsigned char *)(_b + ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
 
 		/**
 		 * @return Length of payload in bytes
 		 */
-		inline unsigned int payloadLength() const { return ((_l > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (_l - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
+		inline unsigned int payloadLength() const { return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
+
+		/**
+		 * @return Raw packet payload
+		 */
+		inline const unsigned char *payload() const
+		{
+			return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD);
+		}
 	};
 
 	/**
@@ -495,8 +497,8 @@ public:
 	Packet() :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
-		Utils::getSecureRandom(_b + ZT_PACKET_IDX_IV,8);
-		_b[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
+		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
 	}
 
 	/**
@@ -509,10 +511,10 @@ public:
 	Packet(const Address &dest,const Address &source,const Verb v) :
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
-		Utils::getSecureRandom(_b + ZT_PACKET_IDX_IV,8);
+		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
 		setDestination(dest);
 		setSource(source);
-		_b[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
 		setVerb(v);
 	}
 
@@ -526,10 +528,10 @@ public:
 	inline void reset(const Address &dest,const Address &source,const Verb v)
 	{
 		setSize(ZT_PROTO_MIN_PACKET_LENGTH);
-		Utils::getSecureRandom(_b + ZT_PACKET_IDX_IV,8);
+		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
 		setDestination(dest);
 		setSource(source);
-		_b[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
 		setVerb(v);
 	}
 
@@ -540,8 +542,9 @@ public:
 	 */
 	inline void setDestination(const Address &dest)
 	{
+		unsigned char *d = field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH);
 		for(unsigned int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			_b[i + ZT_PACKET_IDX_DEST] = dest[i];
+			d[i] = dest[i];
 	}
 
 	/**
@@ -551,8 +554,9 @@ public:
 	 */
 	inline void setSource(const Address &source)
 	{
+		unsigned char *s = field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH);
 		for(unsigned int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			_b[i + ZT_PACKET_IDX_SOURCE] = source[i];
+			s[i] = source[i];
 	}
 
 	/**
@@ -560,29 +564,29 @@ public:
 	 * 
 	 * @return Destination ZT address
 	 */
-	inline Address destination() const { return Address(_b + ZT_PACKET_IDX_DEST); }
+	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH)); }
 
 	/**
 	 * Get this packet's source
 	 * 
 	 * @return Source ZT address
 	 */
-	inline Address source() const { return Address(_b + ZT_PACKET_IDX_SOURCE); }
+	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH)); }
 
 	/**
 	 * @return True if packet is of valid length
 	 */
-	inline bool lengthValid() const { return (_l >= ZT_PROTO_MIN_PACKET_LENGTH); }
+	inline bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
 
 	/**
 	 * @return True if packet is encrypted
 	 */
-	inline bool encrypted() const { return (((unsigned char)_b[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_ENCRYPTED)); }
+	inline bool encrypted() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_ENCRYPTED)); }
 
 	/**
 	 * @return True if packet is fragmented (expect fragments)
 	 */
-	inline bool fragmented() const { return (((unsigned char)_b[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED)); }
+	inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED)); }
 
 	/**
 	 * Set this packet's fragmented flag
@@ -592,26 +596,26 @@ public:
 	inline void setFragmented(bool f)
 	{
 		if (f)
-			_b[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_FRAGMENTED;
-		else _b[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_FRAGMENTED);
+			(*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_FRAGMENTED;
+		else (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_FRAGMENTED);
 	}
 
 	/**
 	 * @return True if compressed (result only valid if unencrypted)
 	 */
-	inline bool compressed() const { return (((unsigned char)_b[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED)); }
+	inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED)); }
 
 	/**
 	 * @return ZeroTier forwarding hops (0 to 7)
 	 */
-	inline unsigned int hops() const { return ((unsigned int)_b[ZT_PACKET_IDX_FLAGS] & 0x07); }
+	inline unsigned int hops() const { return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07); }
 
 	/**
 	 * Increment this packet's hop count
 	 */
 	inline void incrementHops()
 	{
-		_b[ZT_PACKET_IDX_FLAGS] = (char)((unsigned char)_b[ZT_PACKET_IDX_FLAGS] & 0xf8) | (((unsigned char)_b[ZT_PACKET_IDX_FLAGS] + 1) & 0x07);
+		(*this)[ZT_PACKET_IDX_FLAGS] = (char)((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & 0xf8) | (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] + 1) & 0x07);
 	}
 
 	/**
@@ -629,23 +633,25 @@ public:
 	 * 
 	 * @param v New packet verb
 	 */
-	inline void setVerb(Verb v) { _b[ZT_PACKET_IDX_VERB] = (char)v; }
+	inline void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
 
 	/**
 	 * @return Packet verb (not including flag bits)
 	 */
-	inline Verb verb() const { return (Verb)(_b[ZT_PACKET_IDX_VERB] & 0x1f); }
+	inline Verb verb() const { return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f); }
 
 	/**
 	 * @return Length of packet payload
 	 */
-	inline unsigned int payloadLength() const throw() { return ((_l < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (_l - ZT_PROTO_MIN_PACKET_LENGTH)); }
+	inline unsigned int payloadLength() const { return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH)); }
 
 	/**
-	 * @return Packet payload
+	 * @return Raw packet payload
 	 */
-	inline unsigned char *payload() throw() { return (unsigned char *)(_b + ZT_PACKET_IDX_PAYLOAD); }
-	inline const unsigned char *payload() const throw() { return (const unsigned char *)(_b + ZT_PACKET_IDX_PAYLOAD); }
+	inline const unsigned char *payload() const
+	{
+		return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
+	}
 
 	/**
 	 * Compute the HMAC of this packet's payload and set HMAC field
@@ -655,13 +661,13 @@ public:
 	 * @param key 256-bit (32 byte) key
 	 */
 	inline void hmacSet(const void *key)
-		throw()
 	{
 		unsigned char mac[32];
 		unsigned char key2[32];
 		_mangleKey((const unsigned char *)key,key2);
-		HMAC::sha256(key2,sizeof(key2),_b + ZT_PACKET_IDX_VERB,(_l >= ZT_PACKET_IDX_VERB) ? (_l - ZT_PACKET_IDX_VERB) : 0,mac);
-		memcpy(_b + ZT_PACKET_IDX_HMAC,mac,8);
+		unsigned int hmacLen = (size() >= ZT_PACKET_IDX_VERB) ? (size() - ZT_PACKET_IDX_VERB) : 0;
+		HMAC::sha256(key2,sizeof(key2),field(ZT_PACKET_IDX_VERB,hmacLen),hmacLen,mac);
+		memcpy(field(ZT_PACKET_IDX_HMAC,8),mac,8);
 	}
 
 	/**
@@ -672,15 +678,15 @@ public:
 	 * @param key 256-bit (32 byte) key
 	 */
 	inline bool hmacVerify(const void *key) const
-		throw()
 	{
 		unsigned char mac[32];
 		unsigned char key2[32];
-		if (_l < ZT_PACKET_IDX_VERB)
+		if (size() < ZT_PACKET_IDX_VERB)
 			return false; // incomplete packets fail
 		_mangleKey((const unsigned char *)key,key2);
-		HMAC::sha256(key2,sizeof(key2),_b + ZT_PACKET_IDX_VERB,_l - ZT_PACKET_IDX_VERB,mac);
-		return (!memcmp(_b + ZT_PACKET_IDX_HMAC,mac,8));
+		unsigned int hmacLen = size() - ZT_PACKET_IDX_VERB;
+		HMAC::sha256(key2,sizeof(key2),field(ZT_PACKET_IDX_VERB,hmacLen),hmacLen,mac);
+		return (!memcmp(field(ZT_PACKET_IDX_HMAC,8),mac,8));
 	}
 
 	/**
@@ -689,13 +695,16 @@ public:
 	 * @param key 256-bit (32 byte) key
 	 */
 	inline void encrypt(const void *key)
-		throw()
 	{
-		_b[ZT_PACKET_IDX_FLAGS] |= ZT_PROTO_FLAG_ENCRYPTED;
+		(*this)[ZT_PACKET_IDX_FLAGS] |= ZT_PROTO_FLAG_ENCRYPTED;
 		unsigned char key2[32];
-		_mangleKey((const unsigned char *)key,key2);
-		Salsa20 s20(key2,256,_b + ZT_PACKET_IDX_IV);
-		s20.encrypt(_b + ZT_PACKET_IDX_VERB,_b + ZT_PACKET_IDX_VERB,(_l >= ZT_PACKET_IDX_VERB) ? (_l - ZT_PACKET_IDX_VERB) : 0);
+		if (size() >= ZT_PACKET_IDX_VERB) {
+			_mangleKey((const unsigned char *)key,key2);
+			Salsa20 s20(key2,256,field(ZT_PACKET_IDX_IV,8));
+			unsigned int encLen = size() - ZT_PACKET_IDX_VERB;
+			unsigned char *const encBuf = field(ZT_PACKET_IDX_VERB,encLen);
+			s20.encrypt(encBuf,encBuf,encLen);
+		}
 	}
 
 	/**
@@ -704,13 +713,16 @@ public:
 	 * @param key 256-bit (32 byte) key
 	 */
 	inline void decrypt(const void *key)
-		throw()
 	{
 		unsigned char key2[32];
-		_mangleKey((const unsigned char *)key,key2);
-		Salsa20 s20(key2,256,_b + ZT_PACKET_IDX_IV);
-		s20.decrypt(_b + ZT_PACKET_IDX_VERB,_b + ZT_PACKET_IDX_VERB,(_l >= ZT_PACKET_IDX_VERB) ? (_l - ZT_PACKET_IDX_VERB) : 0);
-		_b[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
+		if (size() >= ZT_PACKET_IDX_VERB) {
+			_mangleKey((const unsigned char *)key,key2);
+			Salsa20 s20(key2,256,field(ZT_PACKET_IDX_IV,8));
+			unsigned int decLen = size() - ZT_PACKET_IDX_VERB;
+			unsigned char *const decBuf = field(ZT_PACKET_IDX_VERB,decLen);
+			s20.decrypt(decBuf,decBuf,decLen);
+		}
+		(*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
 	}
 
 	/**
@@ -724,20 +736,19 @@ public:
 	 * @return True if compression occurred
 	 */
 	inline bool compress()
-		throw()
 	{
 		unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH * 2];
-		if ((!compressed())&&(_l > (ZT_PACKET_IDX_PAYLOAD + 32))) {
-			int pl = (int)(_l - ZT_PACKET_IDX_PAYLOAD);
-			int cl = LZ4_compress((const char *)(_b + ZT_PACKET_IDX_PAYLOAD),(char *)buf,pl);
+		if ((!compressed())&&(size() > (ZT_PACKET_IDX_PAYLOAD + 32))) {
+			int pl = (int)(size() - ZT_PACKET_IDX_PAYLOAD);
+			int cl = LZ4_compress((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl);
 			if ((cl > 0)&&(cl < pl)) {
-				_b[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
-				memcpy(_b + ZT_PACKET_IDX_PAYLOAD,buf,cl);
-				_l = (unsigned int)cl + ZT_PACKET_IDX_PAYLOAD;
+				(*this)[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
+				setSize((unsigned int)cl + ZT_PACKET_IDX_PAYLOAD);
+				memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)cl),buf,cl);
 				return true;
 			}
 		}
-		_b[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
+		(*this)[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
 		return false;
 	}
 
@@ -750,18 +761,18 @@ public:
 	 * @return True if data is now decompressed and valid, false on error
 	 */
 	inline bool uncompress()
-		throw()
 	{
 		unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH];
-		if ((compressed())&&(_l >= ZT_PROTO_MIN_PACKET_LENGTH)) {
-			if (_l > ZT_PACKET_IDX_PAYLOAD) {
-				int ucl = LZ4_uncompress_unknownOutputSize((const char *)(_b + ZT_PACKET_IDX_PAYLOAD),(char *)buf,_l - ZT_PACKET_IDX_PAYLOAD,sizeof(buf));
+		if ((compressed())&&(size() >= ZT_PROTO_MIN_PACKET_LENGTH)) {
+			if (size() > ZT_PACKET_IDX_PAYLOAD) {
+				unsigned int compLen = size() - ZT_PACKET_IDX_PAYLOAD;
+				int ucl = LZ4_uncompress_unknownOutputSize((const char *)field(ZT_PACKET_IDX_PAYLOAD,compLen),(char *)buf,compLen,sizeof(buf));
 				if ((ucl > 0)&&(ucl <= (int)(capacity() - ZT_PACKET_IDX_PAYLOAD))) {
-					memcpy(_b + ZT_PACKET_IDX_PAYLOAD,buf,ucl);
-					_l = (unsigned int)ucl + ZT_PACKET_IDX_PAYLOAD;
+					setSize((unsigned int)ucl + ZT_PACKET_IDX_PAYLOAD);
+					memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)ucl),buf,ucl);
 				} else return false;
 			}
-			_b[ZT_PACKET_IDX_VERB] &= ~ZT_PROTO_VERB_FLAG_COMPRESSED;
+			(*this)[ZT_PACKET_IDX_VERB] &= ~ZT_PROTO_VERB_FLAG_COMPRESSED;
 		}
 		return true;
 	}
@@ -788,19 +799,18 @@ private:
 	 * @param out Output buffer (32 bytes)
 	 */
 	inline void _mangleKey(const unsigned char *in,unsigned char *out) const
-		throw()
 	{
 		// Random IV (Salsa20 also uses the IV natively, but HMAC doesn't), and
 		// destination and source addresses. Using dest and source addresses
 		// gives us a (likely) different key space for a->b vs b->a.
 		for(unsigned int i=0;i<18;++i) // 8 + (ZT_ADDRESS_LENGTH * 2) == 18
-			out[i] = in[i] ^ (unsigned char)_b[i];
+			out[i] = in[i] ^ (unsigned char)(*this)[i];
 		// Flags, but masking off hop count which is altered by forwarding nodes
-		out[18] = in[18] ^ ((unsigned char)_b[ZT_PACKET_IDX_FLAGS] & 0xf8);
+		out[18] = in[18] ^ ((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & 0xf8);
 		// Raw packet size in bytes -- each raw packet size defines a possibly
 		// different space of keys.
-		out[19] = in[19] ^ (unsigned char)(_l & 0xff);
-		out[20] = in[20] ^ (unsigned char)((_l >> 8) & 0xff); // little endian
+		out[19] = in[19] ^ (unsigned char)(size() & 0xff);
+		out[20] = in[20] ^ (unsigned char)((size() >> 8) & 0xff); // little endian
 		// Rest of raw key is used unchanged
 		for(unsigned int i=21;i<32;++i)
 			out[i] = in[i];
