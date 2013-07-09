@@ -501,7 +501,7 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 	return changed;
 }
-#endif __LINUX__
+#endif // __LINUX__
 
 #ifdef __APPLE__
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
