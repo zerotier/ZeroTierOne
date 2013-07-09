@@ -242,7 +242,7 @@ unsigned int Topology::pickMulticastPropagationPeers(uint64_t nwid,const Address
 			if (g != mgm->second.end()) {
 				uint64_t now = Utils::now();
 				for(std::map< Address,uint64_t >::iterator m(g->second.begin());m!=g->second.end();) {
-					if ((now - m->second) < ZT_MULTICAST_LIKE_EXPIRE) {
+					if (((now - m->second) < ZT_MULTICAST_LIKE_EXPIRE)&&(m->first != exclude)) {
 						std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.find(m->first));
 						if (p != _activePeers.end()) {
 							possiblePeers[numPossiblePeers++] = p->second;

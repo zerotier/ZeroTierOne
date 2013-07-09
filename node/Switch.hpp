@@ -171,7 +171,7 @@ private:
 	static void _CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result);
 	static void _CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result); // arg == this
 
-	void _propagateMulticast(const SharedPtr<Network> &network,unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,unsigned int mcLoadFactor,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
+	void _propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,unsigned int mcLoadFactor,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
 	PacketServiceAttemptResult _tryHandleRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet);
 	void _doHELLO(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet);
 	void _requestWhois(const Address &addr);

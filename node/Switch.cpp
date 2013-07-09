@@ -266,7 +266,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		// Start multicast propagation with empty bloom filter
 		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE];
 		memset(bloom,0,sizeof(bloom));
-		_propagateMulticast(network,bloom,mg,0,0,from,etherType,data.data(),data.size());
+		_propagateMulticast(network,_r->identity.address(),bloom,mg,0,0,from,etherType,data.data(),data.size());
 	} else if (to.isZeroTier()) {
 		// Simple unicast frame from us to another node
 		Address toZT(to.data + 1);
@@ -568,10 +568,10 @@ void Switch::_CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::Pe
 	}
 }
 
-void Switch::_propagateMulticast(const SharedPtr<Network> &network,unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,unsigned int mcLoadFactor,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
+void Switch::_propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,unsigned int mcLoadFactor,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
 {
 	SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
-	unsigned int np = _r->topology->pickMulticastPropagationPeers(network->id(),Address(),bloom,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE * 8,ZT_MULTICAST_PROPAGATION_BREADTH,mg,propPeers);
+	unsigned int np = _r->topology->pickMulticastPropagationPeers(network->id(),upstream,bloom,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE * 8,ZT_MULTICAST_PROPAGATION_BREADTH,mg,propPeers);
 
 	for(unsigned int i=0;i<np;++i)
 		Utils::bloomAdd(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE,propPeers[i]->address().sum());
@@ -774,13 +774,7 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 									} else {
 										//TRACE("MULTICAST_FRAME: %s -> %s (adi: %.8lx), %u bytes, net: %llu",fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
 										network->tap().put(fromMac,mg.mac(),etherType,packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD);
-
-										// TODO: implement load factor based propagation rate limitation
-										// How it will work: each node will adjust loadFactor based on
-										// its current load of multicast traffic. Then it will probabilistically
-										// fail to propagate, with the probability being based on load factor.
-										// This will need some in-the-field testing and tuning to get right.
-										_propagateMulticast(network,bloom,mg,hops+1,loadFactor,fromMac,etherType,packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD);
+										_propagateMulticast(network,source,bloom,mg,hops+1,loadFactor,fromMac,etherType,packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD);
 									}
 								} else {
 									TRACE("dropped MULTICAST_FRAME from %s: ultimate sender %s not a member of closed network %llu",source.toString().c_str(),fromMac.toString().c_str(),network->id());
