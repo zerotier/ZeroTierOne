@@ -273,11 +273,12 @@ Node::ReasonForTermination Node::run()
 				lastNetworkFingerprintCheck = now;
 				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint();
 				if (fp != networkConfigurationFingerprint) {
-					LOG("netconf fingerprint change: %.16llx != %.16llx, pinging all peers",networkConfigurationFingerprint,fp);
+					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
 					pingAll = true;
 					lastAutoconfigureCheck = 0; // check autoconf after network config change
 					lastMulticastCheck = 0; // check multicast group membership after network config change
+					_r->nc->whackAllTaps(); // call whack() on all tap devices
 				}
 			}
 

@@ -69,6 +69,11 @@ public:
 	~EthernetTap();
 
 	/**
+	 * Perform OS dependent actions on network configuration change detection
+	 */
+	void whack();
+
+	/**
 	 * @return MAC address of this interface
 	 */
 	inline const MAC &mac() const throw() { return _mac; }

@@ -164,6 +164,11 @@ EthernetTap::~EthernetTap()
 	delete [] _putBuf;
 }
 
+void EthernetTap::whack()
+{
+	// Linux requires nothing here
+}
+
 static bool ___removeIp(const char *_dev,std::set<InetAddress> &_ips,const InetAddress &ip)
 {
 	long cpid;
@@ -461,18 +466,7 @@ EthernetTap::EthernetTap(const RuntimeEnvironment *renv,const MAC &mac,unsigned 
 		}
 	}
 
-	// OSX seems to require that IPv6 be turned on on tap devices
-	if ((cpid = (int)fork()) == 0) {
-		execl(ZT_MAC_IPCONFIG,ZT_MAC_IPCONFIG,"set",_dev,"AUTOMATIC-V6",(const char *)0);
-		exit(-1);
-	} else {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		if (exitcode) {
-			::close(_fd);
-			throw std::runtime_error("ipconfig failure enabling IPv6 link-local addressing");
-		}
-	}
+	whack(); // turns on IPv6 on OSX
 
 	_putBuf = new unsigned char[((mtu + 14) * 2)];
 	_getBuf = _putBuf + (mtu + 14);
@@ -482,6 +476,21 @@ EthernetTap::~EthernetTap()
 {
 	this->close();
 	delete [] _putBuf;
+}
+
+void EthernetTap::whack()
+{
+	int cpid = fork();
+	if (cpid == 0) {
+		execl(ZT_MAC_IPCONFIG,ZT_MAC_IPCONFIG,"set",_dev,"AUTOMATIC-V6",(const char *)0);
+		exit(-1);
+	} else {
+		int exitcode = -1;
+		waitpid(cpid,&exitcode,0);
+		if (exitcode) {
+			LOG("%s: ipconfig set AUTOMATIC-V6 failed",_dev);
+		}
+	}
 }
 
 // Helper function to actually remove IP from network device, execs ifconfig
