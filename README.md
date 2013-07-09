@@ -50,9 +50,6 @@ Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth arti
 **Q:** What about privacy? Does this hide my location on the network?  
 **A:** ZeroTier is not a connection anonymizer. Other than encryption, it doesn't do anything special to hide your identity or network location. If you want strong privacy protection there are already very advanced tools like [Tor](https://www.torproject.org) for that, and this isn't trying to duplicate their functionality. At the same time, ZT does not do anything special to harm your privacy either. It's not spyware or snoop-ware.
 
-**Q:** You say "almost unlimited size." Isn't multicast and broadcast traffic eventually going to be too much? What happens then?  
-**A:** ZeroTier One uses an algorithm called *implicit social switching*. The overall maximum number of recipients for a multicast is limited, so if there are too many listeners to a given multicast address then obviously not everyone will receive every message. So who does? Social switching causes multicasts to propagate in the direction of peers to whom you have recently communicated. As a result, multicasts tend to propagate along lines of association. The people most likely to get your service announcements are those with whom you frequently connect.
-
 **Q:** Is this designed to replace IP, BGP, IPv6, routers, etc.?  
 **A:** No. Its purpose is to act as a collaboration tool, a VPN alternative, a network mobility tool, a testbed for the development of software that takes advantage of fully open networking, a virtual LAN party for gamers, and so on, but it's not intended (or able) to replace the core of the Internet.
 
@@ -92,6 +89,7 @@ Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth arti
 
 ----
 
-<a href="http://flattr.com/thing/1611614/ZeroTier-Networks" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
+<a href="http://flattr.com/thing/1611614/ZeroTier-Networks" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>  
+[![githalytics.com alpha](https://cruel-carlota.pagodabox.com/59b2cbb9c154bf84bddb4b714402e548 "githalytics.com")](http://githalytics.com/zerotier/ZeroTierOne)
 
 (c)2012-2013 [ZeroTier Networks LLC](https://www.zerotier.com/)
