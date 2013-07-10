@@ -42,6 +42,7 @@
 #include "RuntimeEnvironment.hpp"
 #include "MulticastGroup.hpp"
 #include "NonCopyable.hpp"
+#include "MAC.hpp"
 
 namespace ZeroTier {
 
@@ -109,6 +110,19 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		return ((_open)||(_members.count(addr) > 0));
+	}
+
+	/**
+	 * Shortcut to check open(), whether MAC is ZeroTier, then isMember()
+	 *
+	 * @param mac MAC address to check
+	 * @return True if MAC is allowed
+	 */
+	inline bool isAllowed(const MAC &mac) const
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		return ((_open)||((mac.isZeroTier())&&(_members.count(Address(mac)) > 0)));
 	}
 
 	/**

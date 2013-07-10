@@ -44,6 +44,7 @@
 #include "Network.hpp"
 #include "SharedPtr.hpp"
 #include "Demarc.hpp"
+#include "Multicaster.hpp"
 
 namespace ZeroTier {
 
@@ -171,7 +172,7 @@ private:
 	static void _CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result);
 	static void _CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result); // arg == this
 
-	void _propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,unsigned int mcLoadFactor,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
+	void _propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,const unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
 	PacketServiceAttemptResult _tryHandleRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet);
 	void _doHELLO(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet);
 	void _requestWhois(const Address &addr);
@@ -179,39 +180,9 @@ private:
 	PacketServiceAttemptResult _trySend(const Packet &packet,bool encrypt);
 	void _retryPendingFor(const Address &addr);
 
-	// Updates entry for crc in multicast history, returns true if already
-	// present in history and not expired.
-	inline bool _checkAndUpdateMulticastHistory(const MAC &fromMac,const MAC &toMulticastMac,const void *payload,unsigned int len,const uint64_t nwid,const uint64_t now)
-	{
-		uint64_t crc = Utils::crc64(0,fromMac.data,6);
-		crc = Utils::crc64(crc,toMulticastMac.data,6);
-		crc = Utils::crc64(crc,payload,len);
-		crc += nwid; // also include network ID
-
-		uint64_t earliest = 0xffffffffffffffffULL;
-		unsigned long earliestIdx = 0;
-		for(unsigned int i=0;i<ZT_MULTICAST_DEDUP_HISTORY_LENGTH;++i) {
-			if (_multicastHistory[i][0] == crc) {
-				uint64_t then = _multicastHistory[i][1];
-				_multicastHistory[i][1] = now;
-				return ((now - then) < ZT_MULTICAST_DEDUP_HISTORY_EXPIRE);
-			} else if (_multicastHistory[i][1] < earliest) {
-				earliest = _multicastHistory[i][1];
-				earliestIdx = i;
-			}
-		}
-
-		_multicastHistory[earliestIdx][0] = crc; // replace oldest entry
-		_multicastHistory[earliestIdx][1] = now;
-
-		return false;
-	}
-
 	const RuntimeEnvironment *const _r;
 
-	// Multicast packet CRC64's for packets we've received recently, to reject
-	// duplicates during propagation. [0] is CRC64, [1] is time.
-	uint64_t _multicastHistory[ZT_MULTICAST_DEDUP_HISTORY_LENGTH][2];
+	Multicaster _multicaster;
 
 	struct WhoisRequest
 	{

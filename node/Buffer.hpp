@@ -241,6 +241,22 @@ public:
 	}
 
 	/**
+	 * Append a run of bytes
+	 *
+	 * @param c Character value to append
+	 * @param n Number of times to append
+	 * @throws std::out_of_range Attempt to append beyond capacity
+	 */
+	inline void append(unsigned char c,unsigned int n)
+		throw(std::out_of_range)
+	{
+		if ((_l + n) > C)
+			throw std::out_of_range("Buffer: append beyond capacity");
+		for(unsigned int i=0;i<n;++i)
+			_b[_l++] = (char)c;
+	}
+
+	/**
 	 * Append a C-array of bytes
 	 * 
 	 * @param b Data

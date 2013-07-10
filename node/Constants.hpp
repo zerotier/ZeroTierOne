@@ -243,6 +243,11 @@ error_no_ZT_ARCH_defined;
 #define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 8000
 
 /**
+ * Number of bits to randomly "decay" in bloom filter per hop
+ */
+#define ZT_MULTICAST_BLOOM_FILTER_DECAY_RATE 2
+
+/**
  * Period between announcements of all multicast 'likes' in ms
  *
  * Announcement occurs when a multicast group is locally joined, but all

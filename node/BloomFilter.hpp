@@ -46,6 +46,9 @@ template<unsigned int B>
 class BloomFilter
 {
 public:
+	/**
+	 * Construct an empty filter
+	 */
 	BloomFilter()
 		throw()
 	{
@@ -53,14 +56,27 @@ public:
 	}
 
 	/**
+	 * Construct from a raw filter
+	 *
+	 * @param b Raw filter bits, must be exactly bytes() in length, or NULL to construct empty
+	 */
+	BloomFilter(const void *b)
+		throw()
+	{
+		if (b)
+			memcpy(_field,b,sizeof(_field));
+		else memset(_field,0,sizeof(_field));
+	}
+
+	/**
 	 * @return Size of filter in bits
 	 */
-	inline unsigned int bits() const throw() { return B; }
+	static inline unsigned int bits() throw() { return B; }
 
 	/**
 	 * @return Size of filter in bytes
 	 */
-	inline unsigned int bytes() const throw() { return (B / 8); }
+	static inline unsigned int bytes() throw() { return (B / 8); }
 
 	/**
 	 * @return Pointer to portable array of bytes of bytes() length representing filter
@@ -78,12 +94,17 @@ public:
 
 	/**
 	 * @param n Value to set
+	 * @return True if corresponding bit was already set before this operation
 	 */
-	inline void add(unsigned int n)
+	inline bool set(unsigned int n)
 		throw()
 	{
 		n %= B;
-		_field[n / 8] |= (1 << (n % 8));
+		unsigned char *const x = _field + (n / 8);
+		const unsigned char m = (1 << (n % 8));
+		bool already = ((*x & m));
+		*x |= m;
+		return already;
 	}
 
 	/**
@@ -98,20 +119,13 @@ public:
 	}
 
 	/**
-	 * Clear one or more random bits
-	 *
-	 * This is used to apply probabilistic decay and hence "fuzziness" to
-	 * a bloom filter over time.
-	 *
-	 * @param bits Number of bits to clear
+	 * Clear a random bit in this bloom filter
 	 */
-	inline void decay(unsigned int bits)
+	inline void decay()
 		throw()
 	{
-		for(unsigned int i=0;i<bits;++i) {
-			unsigned int rn = Utils::randomInt<unsigned int>();
-			_field[(rn >> 7) % (B / 8)] &= ~((unsigned char)(1 << (rn & 7)));
-		}
+		const unsigned int rn = Utils::randomInt<unsigned int>();
+		_field[(rn >> 3) % (B / 8)] &= ~((unsigned char)(1 << (rn & 7)));
 	}
 
 private:

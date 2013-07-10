@@ -50,7 +50,6 @@ namespace ZeroTier {
 Switch::Switch(const RuntimeEnvironment *renv) :
 	_r(renv)
 {
-	memset(_multicastHistory,0,sizeof(_multicastHistory));
 }
 
 Switch::~Switch()
@@ -259,14 +258,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
-		// Remember this message's CRC, but don't drop if we've already seen it
-		// since it's our own.
-		_checkAndUpdateMulticastHistory(from,mg.mac(),data.data(),data.size(),network->id(),Utils::now());
-
-		// Start multicast propagation with empty bloom filter
-		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE];
-		memset(bloom,0,sizeof(bloom));
-		_propagateMulticast(network,_r->identity.address(),bloom,mg,0,0,from,etherType,data.data(),data.size());
+		_propagateMulticast(network,_r->identity.address(),(const unsigned char *)0,mg,0,from,etherType,data.data(),data.size());
 	} else if (to.isZeroTier()) {
 		// Simple unicast frame from us to another node
 		Address toZT(to.data + 1);
@@ -568,22 +560,23 @@ void Switch::_CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::Pe
 	}
 }
 
-void Switch::_propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,unsigned int mcLoadFactor,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
+void Switch::_propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,const unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
 {
-	SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
-	unsigned int np = _r->topology->pickMulticastPropagationPeers(network->id(),upstream,bloom,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE * 8,ZT_MULTICAST_PROPAGATION_BREADTH,mg,propPeers);
+	if (mcHops > ZT_MULTICAST_PROPAGATION_DEPTH)
+		return;
 
-	for(unsigned int i=0;i<np;++i)
-		Utils::bloomAdd(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE,propPeers[i]->address().sum());
+	Multicaster::MulticastBloomFilter newBloom(bloom); // bloom will be NULL if starting fresh
+	SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
+	unsigned int np = _multicaster.pickNextPropagationPeers(*(_r->topology),network->id(),mg,upstream,newBloom,ZT_MULTICAST_PROPAGATION_BREADTH,propPeers,Utils::now());
 
 	for(unsigned int i=0;i<np;++i) {
 		Packet outp(propPeers[i]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
-		outp.append(network->id());
+		outp.append((uint64_t)network->id());
 		outp.append(mg.mac().data,6);
 		outp.append((uint32_t)mg.adi());
-		outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE);
+		outp.append(newBloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE);
 		outp.append((uint8_t)mcHops);
-		outp.append((uint16_t)mcLoadFactor);
+		outp.append((unsigned char)0,2); // reserved, 0
 		outp.append(from.data,6);
 		outp.append((uint16_t)etherType);
 		outp.append(data,len);
@@ -761,21 +754,22 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 						if (network->isAllowed(source)) {
 							if (packet.size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD) {
 								MulticastGroup mg(MAC(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MULTICAST_MAC,6)),packet.at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
-								unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE];
-								memcpy(bloom,packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE);
 								unsigned int hops = packet[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOPS];
-								unsigned int loadFactor = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_LOAD_FACTOR);
 								MAC fromMac(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FROM_MAC,6));
 								unsigned int etherType = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+								unsigned int payloadLen = packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD;
+								unsigned char *payload = packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,payloadLen);
 
-								if ((fromMac.isZeroTier())&&(network->isAllowed(Address(fromMac)))) {
-									if (_checkAndUpdateMulticastHistory(fromMac,mg.mac(),packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id(),now)) {
-										TRACE("dropped duplicate MULTICAST_FRAME from %s: %s -> %s (adi: %.8lx), %u bytes, net: %llu",source.toString().c_str(),fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
+								if (fromMac == network->tap().mac()) {
+									TRACE("dropped boomerang MULTICAST_FRAME from %s",source.toString().c_str());
+								} if (network->isAllowed(fromMac)) {
+									if (_multicaster.checkAndUpdateMulticastHistory(fromMac,mg,payload,payloadLen,network->id(),now)) {
+										// TODO: check if allowed etherType
+										network->tap().put(fromMac,mg.mac(),etherType,payload,payloadLen);
 									} else {
-										//TRACE("MULTICAST_FRAME: %s -> %s (adi: %.8lx), %u bytes, net: %llu",fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
-										network->tap().put(fromMac,mg.mac(),etherType,packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD);
-										_propagateMulticast(network,source,bloom,mg,hops+1,loadFactor,fromMac,etherType,packet.data() + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD);
+										TRACE("duplicate MULTICAST_FRAME from %s: %s -> %s (adi: %.8lx), %u bytes, net: %llu",source.toString().c_str(),fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
 									}
+									_propagateMulticast(network,source,packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE),mg,hops+1,fromMac,etherType,payload,payloadLen);
 								} else {
 									TRACE("dropped MULTICAST_FRAME from %s: ultimate sender %s not a member of closed network %llu",source.toString().c_str(),fromMac.toString().c_str(),network->id());
 								}
@@ -804,7 +798,7 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 								MAC mac(packet.field(ptr,6)); ptr += 6;
 								uint32_t adi = packet.at<uint32_t>(ptr); ptr += 4;
 								TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source.toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
-								_r->topology->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source,now);
+								_multicaster.likesMulticastGroup(nwid,MulticastGroup(mac,adi),source,now);
 								++numAccepted;
 							} else {
 								TRACE("ignored MULTICAST_LIKE from %s: not a member of closed network %llu",source.toString().c_str(),nwid);

@@ -122,7 +122,9 @@
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
+// Size of bloom filter used in multicast propagation
 #define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE 32
+#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS 256
 
 // Field incides for parsing verbs
 #define ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION (ZT_PACKET_IDX_PAYLOAD)
@@ -419,7 +421,7 @@ public:
 		 *   <[4] multicast additional distinguishing information (ADI)>
 		 *   <[32] multicast propagation bloom filter>
 		 *   <[1] 8-bit strict propagation hop count>
-		 *   <[2] 16-bit average peer multicast bandwidth load>
+		 *   <[2] reserved, must be 0>
 		 *   <[6] source Ethernet address>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>

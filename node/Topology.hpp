@@ -167,30 +167,6 @@ public:
 	void clean();
 
 	/**
-	 * Pick peers for multicast propagation
-	 *
-	 * @param nwid Network ID
-	 * @param exclude Peer to exclude or zero address for none
-	 * @param propagationBloom Propgation bloom filter
-	 * @param propagationBloomSize Size of propagation bloom filter in BITS
-	 * @param count Number of peers desired (propagation breadth)
-	 * @param mg Multicast group
-	 * @param peers Array to receive peers (must be at least [count])
-	 * @return Number of peers actually picked
-	 */
-	unsigned int pickMulticastPropagationPeers(uint64_t nwid,const Address &exclude,const void *propagationBloom,unsigned int propagationBloomSize,unsigned int count,const MulticastGroup &mg,SharedPtr<Peer> *peers);
-
-	/**
-	 * Add or update last 'like' time for an address's membership in a multicast group
-	 *
-	 * @param nwid Network ID
-	 * @param mg Multicast group
-	 * @param addr ZeroTier address
-	 * @param now Current time
-	 */
-	void likesMulticastGroup(uint64_t nwid,const MulticastGroup &mg,const Address &addr,uint64_t now);
-
-	/**
 	 * Apply a function or function object to all peers
 	 *
 	 * @param f Function to apply
@@ -359,10 +335,6 @@ private:
 
 	KISSDB _dbm;
 	Mutex _dbm_m;
-
-	// Multicast group members by network ID, then multicast group
-	std::map< uint64_t,std::map< MulticastGroup,std::map< Address,uint64_t > > > _multicastGroupMembers;
-	Mutex _multicastGroupMembers_m;
 };
 
 } // namespace ZeroTier
