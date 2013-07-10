@@ -461,38 +461,6 @@ public:
 	}
 
 	/**
-	 * Add a value to a bloom filter
-	 *
-	 * Note that bloom filter methods depend on n being evenly distributed, so
-	 * it's the job of the caller to implement any hashing.
-	 *
-	 * @param bits Bloom filter data (must be filterSize / 8 bytes in length)
-	 * @param filterSize Size of bloom filter in BITS
-	 * @param n Number to add
-	 */
-	static inline void bloomAdd(void *bits,unsigned int filterSize,unsigned int n)
-		throw()
-	{
-		n %= filterSize;
-		((unsigned char *)bits)[n / 8] |= (0x80 >> (n % 8));
-	}
-
-	/**
-	 * Test for a value in a bloom filter
-	 *
-	 * @param bits Bloom filter data (must be filterSize / 8 bytes in length)
-	 * @param filterSize Size of bloom filter in BITS
-	 * @param n Number to test
-	 * @return True if number might be in filter
-	 */
-	static inline bool bloomContains(const void *bits,unsigned int filterSize,unsigned int n)
-		throw()
-	{
-		n %= filterSize;
-		return ((((const unsigned char *)bits)[n / 8] & (0x80 >> (n % 8))));
-	}
-
-	/**
 	 * Compute CRC64
 	 *
 	 * @param crc Previous CRC (0 to start)
