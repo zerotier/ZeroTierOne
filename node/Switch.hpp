@@ -45,6 +45,7 @@
 #include "SharedPtr.hpp"
 #include "Demarc.hpp"
 #include "Multicaster.hpp"
+#include "PacketDecoder.hpp"
 
 namespace ZeroTier {
 
@@ -154,9 +155,8 @@ public:
 	 * Request WHOIS on a given address
 	 *
 	 * @param addr Address to look up
-	 * @param pd Packet decoder to link to request or NULL for none
 	 */
-	void requestWhois(const Address &addr,const SharedPtr<PacketDecoder> &pd);
+	void requestWhois(const Address &addr);
 
 private:
 	struct _CBaddPeerFromHello_Data
@@ -192,11 +192,6 @@ private:
 		const InetAddress &fromAddr,
 		const Buffer<4096> &data);
 
-	void _doHELLO(
-		Demarc::Port localPort,
-		const InetAddress &fromAddr,
-		Packet &packet);
-
 	Address _sendWhoisRequest(
 		const Address &addr,
 		const Address *peersAlreadyConsulted,
@@ -214,10 +209,12 @@ private:
 		uint64_t lastSent;
 		Address peersConsulted[ZT_MAX_WHOIS_RETRIES]; // by retry
 		unsigned int retries; // 0..ZT_MAX_WHOIS_RETRIES
-		std::set< SharedPtr<PacketDecoder> > waitingPackets;
 	};
 	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
+
+	std::multimap< Address,SharedPtr<PacketDecoder> > _rxQueue;
+	Mutex _rxQueue_m;
 
 	struct TXQueueEntry
 	{
@@ -231,13 +228,13 @@ private:
 		Packet packet; // unencrypted/untagged for TX queue
 		bool encrypt;
 	};
-	std::map< uint64_t,TXQueueEntry > _txQueue;
+	std::multimap< Address,TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
 
 	struct DefragQueueEntry
 	{
 		uint64_t creationTime;
-		Packet frag0;
+		SharedPtr<PacketDecoder> frag0;
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB

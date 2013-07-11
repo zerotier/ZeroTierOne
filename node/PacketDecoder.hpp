@@ -52,7 +52,7 @@ public:
 	template<unsigned int C2>
 	PacketDecoder(const Buffer<C2> &b,Demarc::Port localPort,const InetAddress &remoteAddress)
  		throw(std::out_of_range) :
- 		Packet(b) :
+ 		Packet(b),
  		_receiveTime(Utils::now()),
  		_localPort(localPort),
  		_remoteAddress(remoteAddress),
@@ -76,6 +76,8 @@ public:
 	inline uint64_t receiveTime() const throw() { return _receiveTime; }
 
 private:
+	void _doHELLO(Demarc::Port localPort,const InetAddress &fromAddr);
+
 	uint64_t _receiveTime;
 	Demarc::Port _localPort;
 	InetAddress _remoteAddress;
