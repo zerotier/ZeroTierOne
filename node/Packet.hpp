@@ -45,8 +45,13 @@
 
 /**
  * Protocol version
+ *
+ * 1 - 0.2.0 ... 0.2.5
+ * 2 - 0.3.0 ...
+ *   * Added signature and originating peer to multicast frame
+ *   * Double size of multicast frame bloom filter
  */
-#define ZT_PROTO_VERSION 1
+#define ZT_PROTO_VERSION 2
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
@@ -123,8 +128,8 @@
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
 // Size of bloom filter used in multicast propagation
-#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE 32
-#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS 256
+#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS 512
+#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES 64
 
 // Field incides for parsing verbs
 #define ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION (ZT_PACKET_IDX_PAYLOAD)
@@ -148,15 +153,18 @@
 #define ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MULTICAST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MULTICAST_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOPS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM + ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_LOAD_FACTOR (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOPS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FROM_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_LOAD_FACTOR + 2)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FROM_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS + 5)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI + 4)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER + 64)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH + 2)
 
 // Field indices for parsing OK and ERROR payloads of replies
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
@@ -415,20 +423,8 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/* A multicast frame:
-		 *   <[8] 64-bit network ID>
-		 *   <[6] destination multicast Ethernet address>
-		 *   <[4] multicast additional distinguishing information (ADI)>
-		 *   <[32] multicast propagation bloom filter>
-		 *   <[1] 8-bit strict propagation hop count>
-		 *   <[2] reserved, must be 0>
-		 *   <[6] source Ethernet address>
-		 *   <[2] 16-bit ethertype>
-		 *   <[...] ethernet payload>
-		 *
-		 * No OK or ERROR is generated.
-		 */
-		VERB_MULTICAST_FRAME = 7,
+		/* 7 - old VERB_MULTICAST_FRAME, might be reused once all old 0.2
+		 * clients are off the net. */
 
 		/* Announce interest in multicast group(s):
 		 *   <[8] 64-bit network ID>
@@ -438,7 +434,36 @@ public:
 		 *
 		 * OK is generated on successful receipt.
 		 */
-		VERB_MULTICAST_LIKE = 8
+		VERB_MULTICAST_LIKE = 8,
+
+		/* A multicast frame:
+		 *   <[1] flags, currently unused and must be 0>
+		 *   <[8] 64-bit network ID>
+		 *   <[5] ZeroTier address of original submitter of this multicast>
+		 *   <[6] source MAC address>
+		 *   <[6] destination multicast Ethernet address>
+		 *   <[4] multicast additional distinguishing information (ADI)>
+		 *   <[64] multicast propagation bloom filter>
+		 *   <[1] 8-bit propagation hop count>
+		 *   <[2] 16-bit ethertype>
+		 *   <[2] 16-bit length of payload>
+		 *   <[2] 16-bit length of signature>
+		 *   <[...] ethernet payload>
+		 *   <[...] ECDSA signature>
+		 *
+		 * The signature is made using the key of the original submitter, and
+		 * can be used to authenticate the submitter for security and rate
+		 * control purposes. Fields in the signature are: network ID, source
+		 * MAC, destination MAC, multicast ADI, ethertype, and payload. All
+		 * integers are hashed in big-endian byte order. A zero byte is added
+		 * to the hash between each field.
+		 *
+		 * In the future flags could indicate additional fields appended to the
+		 * end or a different signature algorithm.
+		 *
+		 * No OK or ERROR is generated.
+		 */
+		VERB_MULTICAST_FRAME = 9
 	};
 
 	/**

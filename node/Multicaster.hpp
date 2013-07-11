@@ -31,11 +31,14 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <openssl/sha.h>
+
 #include <utility>
 #include <algorithm>
 #include <map>
 #include <set>
 #include <vector>
+#include <string>
 
 #include "Constants.hpp"
 #include "Buffer.hpp"
@@ -46,6 +49,7 @@
 #include "Address.hpp"
 #include "SharedPtr.hpp"
 #include "BloomFilter.hpp"
+#include "Identity.hpp"
 
 // Maximum sample size to pick during choice of multicast propagation peers
 #define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE 64
@@ -68,8 +72,47 @@ public:
 	typedef BloomFilter<ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS> MulticastBloomFilter;
 
 	Multicaster()
+		throw()
 	{
 		memset(_multicastHistory,0,sizeof(_multicastHistory));
+	}
+
+	/**
+	 * Generate a signature of a multicast packet using an identity
+	 *
+	 * @param id Identity to sign with (must have secret key portion)
+	 * @param from MAC address of sender
+	 * @param to Multicast group
+	 * @param etherType 16-bit ethernet type
+	 * @param data Ethernet frame data
+	 * @param len Length of frame
+	 * @return ECDSA signature
+	 */
+	static inline std::string signMulticastPacket(const Identity &id,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len)
+	{
+		unsigned char digest[32];
+		_hashMulticastPacketForSig(from,to,etherType,data,len,digest);
+		return id.sign(digest);
+	}
+
+	/**
+	 * Verify a signature from a multicast packet
+	 *
+	 * @param id Identity of original signer
+	 * @param from MAC address of sender
+	 * @param to Multicast group
+	 * @param etherType 16-bit ethernet type
+	 * @param data Ethernet frame data
+	 * @param len Length of frame
+	 * @param signature ECDSA signature
+	 * @param siglen Length of signature in bytes
+	 * @return ECDSA signature
+	 */
+	static bool verifyMulticastPacket(const Identity &id,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,const void *signature,unsigned int siglen)
+	{
+		unsigned char digest[32];
+		_hashMulticastPacketForSig(from,to,etherType,data,len,digest);
+		return id.verify(digest,signature,siglen);
 	}
 
 	/**
@@ -256,6 +299,29 @@ private:
 			return (p1->lastUnicastFrame() >= p2->lastUnicastFrame());
 		}
 	};
+
+	static inline void _hashMulticastPacketForSig(const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,unsigned char *digest)
+		throw()
+	{
+		unsigned char zero = 0;
+		SHA256_CTX sha;
+		SHA256_Init(&sha);
+		uint64_t _nwid = Utils::hton(network->id());
+		SHA256_Update(&sha,(unsigned char *)&_nwid,sizeof(_nwid));
+		SHA256_Update(&sha,&zero,1);
+		SHA256_Update(&sha,(unsigned char *)from.data,6);
+		SHA256_Update(&sha,&zero,1);
+		SHA256_Update(&sha,(unsigned char *)mg.mac().data,6);
+		SHA256_Update(&sha,&zero,1);
+		uint32_t _adi = Utils::hton(mg.adi());
+		SHA256_Update(&sha,(unsigned char *)&_adi,sizeof(_adi));
+		SHA256_Update(&sha,&zero,1);
+		uint16_t _etype = Utils::hton((uint16_t)etherType);
+		SHA256_Update(&sha,(unsigned char *)&_etype,sizeof(_etype));
+		SHA256_Update(&sha,&zero,1);
+		SHA256_Update(&sha,(unsigned char *)data,len);
+		SHA256_Final(digest,&sha);
+	}
 
 	// [0] - CRC, [1] - timestamp
 	uint64_t _multicastHistory[ZT_MULTICAST_DEDUP_HISTORY_LENGTH][2];

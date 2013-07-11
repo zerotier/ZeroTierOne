@@ -219,8 +219,6 @@ Switch_onRemotePacket_complete_packet_handler:
 					qe->second.localPort = localPort;
 					qe->second.fromAddr = fromAddr;
 				}
-				if (r == PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN)
-					_requestWhois(source);
 			}
 		}
 	} catch (std::exception &ex) {
@@ -569,17 +567,30 @@ void Switch::_propagateMulticast(const SharedPtr<Network> &network,const Address
 	SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
 	unsigned int np = _multicaster.pickNextPropagationPeers(*(_r->topology),network->id(),mg,upstream,newBloom,ZT_MULTICAST_PROPAGATION_BREADTH,propPeers,Utils::now());
 
+	if (!np)
+		return;
+
+	std::string signature(Multicaster::signMulticastPacket(_r->identity,from,mg,etherType,data,len));
+	if (!signature.length()) {
+		TRACE("failure signing multicast message!");
+		return;
+	}
+
 	for(unsigned int i=0;i<np;++i) {
 		Packet outp(propPeers[i]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
+		outp.append((uint8_t)0);
 		outp.append((uint64_t)network->id());
+		outp.append(_r->identity.address().data(),ZT_ADDRESS_LENGTH);
+		outp.append(from.data,6);
 		outp.append(mg.mac().data,6);
 		outp.append((uint32_t)mg.adi());
 		outp.append(newBloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE);
 		outp.append((uint8_t)mcHops);
-		outp.append((unsigned char)0,2); // reserved, 0
-		outp.append(from.data,6);
 		outp.append((uint16_t)etherType);
+		outp.append((uint16_t)len);
+		outp.append((uint16_t)signature.length());
 		outp.append(data,len);
+		outp.append(signature.data(),signature.length());
 		outp.compress();
 		send(outp,true);
 	}
@@ -747,45 +758,6 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 					TRACE("dropped FRAME from %s: unexpected exception: (unknown)",source.toString().c_str());
 				}
 				break;
-			case Packet::VERB_MULTICAST_FRAME:
-				try {
-					SharedPtr<Network> network(_r->nc->network(packet.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID)));
-					if (network) {
-						if (network->isAllowed(source)) {
-							if (packet.size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD) {
-								MulticastGroup mg(MAC(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MULTICAST_MAC,6)),packet.at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
-								unsigned int hops = packet[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOPS];
-								MAC fromMac(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FROM_MAC,6));
-								unsigned int etherType = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-								unsigned int payloadLen = packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD;
-								unsigned char *payload = packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,payloadLen);
-
-								if (fromMac == network->tap().mac()) {
-									TRACE("dropped boomerang MULTICAST_FRAME from %s",source.toString().c_str());
-								} if (network->isAllowed(fromMac)) {
-									if (_multicaster.checkAndUpdateMulticastHistory(fromMac,mg,payload,payloadLen,network->id(),now)) {
-										// TODO: check if allowed etherType
-										network->tap().put(fromMac,mg.mac(),etherType,payload,payloadLen);
-									} else {
-										TRACE("duplicate MULTICAST_FRAME from %s: %s -> %s (adi: %.8lx), %u bytes, net: %llu",source.toString().c_str(),fromMac.toString().c_str(),mg.mac().toString().c_str(),(unsigned long)mg.adi(),packet.size() - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,network->id());
-									}
-									_propagateMulticast(network,source,packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE),mg,hops+1,fromMac,etherType,payload,payloadLen);
-								} else {
-									TRACE("dropped MULTICAST_FRAME from %s: ultimate sender %s not a member of closed network %llu",source.toString().c_str(),fromMac.toString().c_str(),network->id());
-								}
-							}
-						} else {
-							TRACE("dropped MULTICAST_FRAME from %s: not a member of closed network %llu",source.toString().c_str(),network->id());
-						}
-					} else {
-						TRACE("dropped MULTICAST_FRAME from %s: network %llu unknown",source.toString().c_str(),packet.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID));
-					}
-				} catch (std::exception &ex) {
-					TRACE("dropped MULTICAST_FRAME from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
-				} catch ( ... ) {
-					TRACE("dropped MULTICAST_FRAME from %s: unexpected exception: (unknown)",source.toString().c_str());
-				}
-				break;
 			case Packet::VERB_MULTICAST_LIKE:
 				try {
 					unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
@@ -821,6 +793,62 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 					TRACE("dropped MULTICAST_LIKE from %s: unexpected exception: (unknown)",source.toString().c_str());
 				}
 				break;
+			case Packet::VERB_MULTICAST_FRAME:
+				try {
+					SharedPtr<Network> network(_r->nc->network(packet.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID)));
+					if (network) {
+						if (network->isAllowed(source)) {
+							if (packet.size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD) {
+								Address originalSubmitterAddress(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH));
+								if (originalSubmitterAddress == _r->identity.address()) {
+									TRACE("dropped boomerang MULTICAST_FRAME received from %s",source.toString().c_str());
+								} else {
+									SharedPtr<Peer> originalSubmitter(_r->topology->getPeer(originalSubmitterAddress));
+									if (!originalSubmitter) {
+										// If we don't know the original submitter, try to look them up
+										// and abort.
+										// TODO: need to rearchitect how we wait for and handle whois
+										// responses so they trigger a re-eval of this packet instantly.
+										_requestWhois(originalSubmitterAddress);
+										return PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN;
+									} else {
+										MAC fromMac(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
+										MulticastGroup mg(MAC(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),packet.at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
+										unsigned int hops = packet[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT];
+										unsigned int etherType = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+										unsigned int datalen = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH);
+										unsigned int signaturelen = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH);
+										unsigned char *dataAndSignature = packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,datalen + signaturelen);
+
+										if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),fromMac,mg,etherType,data,datalen,dataAndSignature + datalen,signaturelen)) {
+											if (network->isAllowed(originalSubmitterAddress)) {
+												if (_multicaster.checkAndUpdateMulticastHistory(fromMac,mg,payload,payloadLen,network->id(),now)) {
+													// TODO: check if allowed etherType
+													network->tap().put(fromMac,mg.mac(),etherType,payload,payloadLen);
+												} else {
+												}
+												_propagateMulticast(network,source,packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE),mg,hops+1,fromMac,etherType,payload,payloadLen);
+											} else {
+											}
+										} else {
+										}
+									}
+								}
+							} else {
+							}
+						} else {
+							TRACE("dropped MULTICAST_FRAME from %s: not a member of closed network %llu",source.toString().c_str(),network->id());
+						}
+					} else {
+						TRACE("dropped MULTICAST_FRAME from %s: network %llu unknown or we are not a member",source.toString().c_str(),packet.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID));
+					}
+				} catch (std::exception &ex) {
+					TRACE("dropped MULTICAST_FRAME from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
+				} catch ( ... ) {
+					TRACE("dropped MULTICAST_FRAME from %s: unexpected exception: (unknown)",source.toString().c_str());
+				}
+				break;
+				break;
 			default:
 				TRACE("ignored unrecognized verb %.2x from %s",(unsigned int)packet.verb(),source.toString().c_str());
 				break;
@@ -828,7 +856,10 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 
 		// Update peer timestamps and learn new links
 		peer->onReceive(_r,localPort,fromAddr,latency,packet.hops(),packet.verb(),now);
-	} else return PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN;
+	} else {
+		_requestWhois(source);
+		return PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN;
+	}
 
 	return PACKET_SERVICE_ATTEMPT_OK;
 }

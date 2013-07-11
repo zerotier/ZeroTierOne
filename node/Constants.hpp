@@ -240,7 +240,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Expiration time in ms for multicast history items
  */
-#define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 8000
+#define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 4000
 
 /**
  * Number of bits to randomly "decay" in bloom filter per hop

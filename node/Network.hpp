@@ -113,19 +113,6 @@ public:
 	}
 
 	/**
-	 * Shortcut to check open(), whether MAC is ZeroTier, then isMember()
-	 *
-	 * @param mac MAC address to check
-	 * @return True if MAC is allowed
-	 */
-	inline bool isAllowed(const MAC &mac) const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return ((_open)||((mac.isZeroTier())&&(_members.count(Address(mac)) > 0)));
-	}
-
-	/**
 	 * @return True if network is open (no membership required)
 	 */
 	inline bool open() const
