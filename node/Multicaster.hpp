@@ -81,6 +81,7 @@ public:
 	 * Generate a signature of a multicast packet using an identity
 	 *
 	 * @param id Identity to sign with (must have secret key portion)
+	 * @param nwid Network ID
 	 * @param from MAC address of sender
 	 * @param to Multicast group
 	 * @param etherType 16-bit ethernet type
@@ -88,10 +89,10 @@ public:
 	 * @param len Length of frame
 	 * @return ECDSA signature
 	 */
-	static inline std::string signMulticastPacket(const Identity &id,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len)
+	static inline std::string signMulticastPacket(const Identity &id,uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len)
 	{
 		unsigned char digest[32];
-		_hashMulticastPacketForSig(from,to,etherType,data,len,digest);
+		_hashMulticastPacketForSig(nwid,from,to,etherType,data,len,digest);
 		return id.sign(digest);
 	}
 
@@ -99,6 +100,7 @@ public:
 	 * Verify a signature from a multicast packet
 	 *
 	 * @param id Identity of original signer
+	 * @param nwid Network ID
 	 * @param from MAC address of sender
 	 * @param to Multicast group
 	 * @param etherType 16-bit ethernet type
@@ -108,11 +110,11 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return ECDSA signature
 	 */
-	static bool verifyMulticastPacket(const Identity &id,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,const void *signature,unsigned int siglen)
+	static bool verifyMulticastPacket(const Identity &id,uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,const void *signature,unsigned int siglen)
 	{
 		unsigned char digest[32];
-		_hashMulticastPacketForSig(from,to,etherType,data,len,digest);
-		return id.verify(digest,signature,siglen);
+		_hashMulticastPacketForSig(nwid,from,to,etherType,data,len,digest);
+		return id.verifySignature(digest,signature,siglen);
 	}
 
 	/**
@@ -183,6 +185,7 @@ public:
 	 * @param topology Topology object or mock thereof
 	 * @param nwid Network ID
 	 * @param mg Multicast group
+	 * @param originalSubmitter Original submitter of multicast message to network
 	 * @param upstream Address from which message originated, or null (0) address if none
 	 * @param bf Bloom filter, updated in place with sums of addresses in chosen peers and/or decay
 	 * @param max Maximum number of peers to pick
@@ -197,6 +200,7 @@ public:
 		T &topology,
 		uint64_t nwid,
 		const MulticastGroup &mg,
+		const Address &originalSubmitter,
 		const Address &upstream,
 		MulticastBloomFilter &bf,
 		unsigned int max,
@@ -240,12 +244,15 @@ public:
 					}
 
 					// If it's not expired and it's from our random sample, add it to the set of peers
-					// to consider.
-					P peer = topology.getPeer(channelMemberEntry->first);
-					if (peer) {
-						toConsider[sampleSize++] = peer;
-						if (sampleSize >= ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)
-							break; // abort if we have enough candidates
+					// to consider. Exclude immediate upstream and original submitter, since we know for
+					// a fact they've already seen this.
+					if ((channelMemberEntry->first != originalSubmitter)&&(channelMemberEntry->first != upstream)) {
+						P peer = topology.getPeer(channelMemberEntry->first);
+						if (peer) {
+							toConsider[sampleSize++] = peer;
+							if (sampleSize >= ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)
+								break; // abort if we have enough candidates
+						}
 					}
 					++channelMemberEntry;
 				}
@@ -264,7 +271,10 @@ public:
 		// Decay a few random bits in bloom filter to probabilistically eliminate
 		// false positives as we go. The odds of decaying an already-set bit
 		// increases as the bloom filter saturates, so in the early hops of
-		// propagation this likely won't have any effect.
+		// propagation this likely won't have any effect. This allows peers with
+		// bloom filter collisions to be reconsidered, but at positions on the
+		// network graph likely to be hops away from the original origin of the
+		// message.
 		for(unsigned int i=0;i<ZT_MULTICAST_BLOOM_FILTER_DECAY_RATE;++i)
 			bf.decay();
 
@@ -278,8 +288,7 @@ public:
 
 		// Add a supernode if there's nowhere else to go. Supernodes know of all multicast
 		// LIKEs and so can act to bridge sparse multicast groups. We do not remember them
-		// in the bloom filter, since such bridging may very well need to happen more than
-		// once.
+		// in the bloom filter.
 		if (!picked) {
 			P peer = topology.getBestSupernode();
 			if (peer)
@@ -300,20 +309,20 @@ private:
 		}
 	};
 
-	static inline void _hashMulticastPacketForSig(const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,unsigned char *digest)
+	static inline void _hashMulticastPacketForSig(uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,unsigned char *digest)
 		throw()
 	{
 		unsigned char zero = 0;
 		SHA256_CTX sha;
 		SHA256_Init(&sha);
-		uint64_t _nwid = Utils::hton(network->id());
+		uint64_t _nwid = Utils::hton(nwid);
 		SHA256_Update(&sha,(unsigned char *)&_nwid,sizeof(_nwid));
 		SHA256_Update(&sha,&zero,1);
 		SHA256_Update(&sha,(unsigned char *)from.data,6);
 		SHA256_Update(&sha,&zero,1);
-		SHA256_Update(&sha,(unsigned char *)mg.mac().data,6);
+		SHA256_Update(&sha,(unsigned char *)to.mac().data,6);
 		SHA256_Update(&sha,&zero,1);
-		uint32_t _adi = Utils::hton(mg.adi());
+		uint32_t _adi = Utils::hton(to.adi());
 		SHA256_Update(&sha,(unsigned char *)&_adi,sizeof(_adi));
 		SHA256_Update(&sha,&zero,1);
 		uint16_t _etype = Utils::hton((uint16_t)etherType);

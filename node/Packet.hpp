@@ -563,6 +563,18 @@ public:
 	}
 
 	/**
+	 * Generate a new IV / packet ID in place
+	 *
+	 * This can be used to re-use a packet buffer multiple times to send
+	 * technically different but otherwise identical copies of the same
+	 * packet.
+	 */
+	inline void newInitializationVector()
+	{
+		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
+	}
+
+	/**
 	 * Set this packet's destination
 	 * 
 	 * @param dest ZeroTier address of destination

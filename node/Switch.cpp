@@ -59,179 +59,25 @@ Switch::~Switch()
 void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
 	Packet packet;
-
 	try {
 		if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
-			// Message is long enough to be a Packet or Packet::Fragment
-
 			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
-				// Looks like a Packet::Fragment
-				Packet::Fragment fragment(data);
-
-				Address destination(fragment.destination());
-				if (destination != _r->identity.address()) {
-					// Fragment is not for us, so try to relay it
-
-					if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
-						fragment.incrementHops();
-
-						SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-						if ((!relayTo)||(!relayTo->send(_r,fragment.data(),fragment.size(),true,Packet::VERB_NOP,Utils::now()))) {
-							relayTo = _r->topology->getBestSupernode();
-							if (relayTo)
-								relayTo->send(_r,fragment.data(),fragment.size(),true,Packet::VERB_NOP,Utils::now());
-						}
-					} else {
-						TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
-					}
-				} else {
-					// Fragment looks like ours
-
-					uint64_t pid = fragment.packetId();
-					unsigned int fno = fragment.fragmentNumber();
-					unsigned int tf = fragment.totalFragments();
-
-					if ((tf <= ZT_MAX_PACKET_FRAGMENTS)&&(fno < ZT_MAX_PACKET_FRAGMENTS)&&(fno > 0)&&(tf > 1)) {
-						// Fragment appears basically sane. Its fragment number must be
-						// 1 or more, since a Packet with fragmented bit set is fragment 0.
-						// Total fragments must be more than 1, otherwise why are we
-						// seeing a Packet::Fragment?
-
-						Mutex::Lock _l(_defragQueue_m);
-						std::map< uint64_t,DefragQueueEntry >::iterator dqe(_defragQueue.find(pid));
-
-						if (dqe == _defragQueue.end()) {
-							// We received a Packet::Fragment without its head, so queue it and wait
-
-							DefragQueueEntry &dq = _defragQueue[pid];
-							dq.creationTime = Utils::now();
-							dq.frags[fno - 1] = fragment;
-							dq.totalFragments = tf; // total fragment count is known
-							dq.haveFragments = 1 << fno; // we have only this fragment
-							//TRACE("fragment (%u/%u) of %.16llx from %s",fno + 1,tf,pid,fromAddr.toString().c_str());
-						} else if (!(dqe->second.haveFragments & (1 << fno))) {
-							// We have other fragments and maybe the head, so add this one and check
-
-							dqe->second.frags[fno - 1] = fragment;
-							dqe->second.totalFragments = tf;
-							//TRACE("fragment (%u/%u) of %.16llx from %s",fno + 1,tf,pid,fromAddr.toString().c_str());
-
-							if (Utils::countBits(dqe->second.haveFragments |= (1 << fno)) == tf) {
-								// We have all fragments -- assemble and process full Packet
-
-								//TRACE("packet %.16llx is complete, assembling and processing...",pid);
-								packet = dqe->second.frag0;
-								for(unsigned int f=1;f<tf;++f)
-									packet.append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
-								_defragQueue.erase(dqe);
-
-								goto Switch_onRemotePacket_complete_packet_handler;
-							}
-						} // else this is a duplicate fragment, ignore
-					}
-				}
-
+				_handleRemotePacketFragment(localPort,fromAddr,data);
 			} else if (data.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
-				// Looks like a Packet -- either unfragmented or a fragmented packet head
-				packet = data;
-
-				Address destination(packet.destination());
-				if (destination != _r->identity.address()) {
-					// Packet is not for us, so try to relay it
-
-					if (packet.hops() < ZT_RELAY_MAX_HOPS) {
-						packet.incrementHops();
-
-						SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-						if ((relayTo)&&(relayTo->send(_r,packet.data(),packet.size(),true,Packet::VERB_NOP,Utils::now()))) {
-							// TODO: don't unite immediately, wait until the peers have exchanged a packet or two
-							unite(packet.source(),destination,false); // periodically try to get them to talk directly
-						} else {
-							relayTo = _r->topology->getBestSupernode();
-							if (relayTo)
-								relayTo->send(_r,packet.data(),packet.size(),true,Packet::VERB_NOP,Utils::now());
-						}
-					} else {
-						TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet.source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
-					}
-				} else if (packet.fragmented()) {
-					// Packet is the head of a fragmented packet series
-
-					uint64_t pid = packet.packetId();
-					Mutex::Lock _l(_defragQueue_m);
-					std::map< uint64_t,DefragQueueEntry >::iterator dqe(_defragQueue.find(pid));
-
-					if (dqe == _defragQueue.end()) {
-						// If we have no other fragments yet, create an entry and save the head
-
-						DefragQueueEntry &dq = _defragQueue[pid];
-						dq.creationTime = Utils::now();
-						dq.frag0 = packet;
-						dq.totalFragments = 0; // 0 == unknown, waiting for Packet::Fragment
-						dq.haveFragments = 1; // head is first bit (left to right)
-						//TRACE("fragment (0/?) of %.16llx from %s",pid,fromAddr.toString().c_str());
-					} else if (!(dqe->second.haveFragments & 1)) {
-						// If we have other fragments but no head, see if we are complete with the head
-
-						if ((dqe->second.totalFragments)&&(Utils::countBits(dqe->second.haveFragments |= 1) == dqe->second.totalFragments)) {
-							// We have all fragments -- assemble and process full Packet
-
-							//TRACE("packet %.16llx is complete, assembling and processing...",pid);
-							// packet already contains head, so append fragments
-							for(unsigned int f=1;f<dqe->second.totalFragments;++f)
-								packet.append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
-							_defragQueue.erase(dqe);
-
-							goto Switch_onRemotePacket_complete_packet_handler;
-						} else {
-							// Still waiting on more fragments, so queue the head
-
-							dqe->second.frag0 = packet;
-						}
-					} // else this is a duplicate head, ignore
-				} else {
-					// Packet is unfragmented, so just process it
-					goto Switch_onRemotePacket_complete_packet_handler;
-				}
-
-			}
-		}
-
-		// If we made it here and didn't jump over, we either queued a fragment
-		// or dropped an invalid or duplicate one. (The goto looks easier to
-		// understand than having a million returns up there.)
-		return;
-
-Switch_onRemotePacket_complete_packet_handler:
-		// Packets that get here are ours and are fully assembled. Don't worry -- if
-		// they are corrupt HMAC authentication will reject them later.
-
-		{
-			//TRACE("%s : %s -> %s",fromAddr.toString().c_str(),packet.source().toString().c_str(),packet.destination().toString().c_str());
-			PacketServiceAttemptResult r = _tryHandleRemotePacket(localPort,fromAddr,packet);
-			if (r != PACKET_SERVICE_ATTEMPT_OK) {
-				Address source(packet.source());
-				{
-					Mutex::Lock _l(_rxQueue_m);
-					std::multimap< Address,RXQueueEntry >::iterator qe(_rxQueue.insert(std::pair< Address,RXQueueEntry >(source,RXQueueEntry())));
-					qe->second.creationTime = Utils::now();
-					qe->second.packet = packet;
-					qe->second.localPort = localPort;
-					qe->second.fromAddr = fromAddr;
-				}
+				_handleRemotePacketHead(localPort,fromAddr,data);
 			}
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped packet from %s: %s",fromAddr.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped packet from %s: unexpected exception",fromAddr.toString().c_str());
+		TRACE("dropped packet from %s: unknown exception",fromAddr.toString().c_str());
 	}
 }
 
 void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
 	if (from != network->tap().mac()) {
-		LOG("ignored tap: %s -> %s %s (bridging is not supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
+		LOG("ignored tap: %s -> %s %s (bridging is not (yet?) supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
 		return;
 	}
 
@@ -256,7 +102,49 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
-		_propagateMulticast(network,_r->identity.address(),(const unsigned char *)0,mg,0,from,etherType,data.data(),data.size());
+		Multicaster::MulticastBloomFilter newbf;
+		SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
+		unsigned int np = _multicaster.pickNextPropagationPeers(
+			*(_r->topology),
+			network->id(),
+			mg,
+			_r->identity.address(),
+			Address(),
+			newbf,
+			ZT_MULTICAST_PROPAGATION_BREADTH,
+			propPeers,
+			Utils::now());
+
+		if (!np)
+			return;
+
+		std::string signature(Multicaster::signMulticastPacket(_r->identity,network->id(),from,mg,etherType,data,len));
+		if (!signature.length()) {
+			TRACE("failure signing multicast message!");
+			return;
+		}
+
+		Packet outpTmpl(propPeers[0]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
+		outpTmpl.append((uint8_t)0);
+		outpTmpl.append((uint64_t)network->id());
+		outpTmpl.append(_r->identity.address().data(),ZT_ADDRESS_LENGTH);
+		outpTmpl.append(from.data,6);
+		outpTmpl.append(mg.mac().data,6);
+		outpTmpl.append((uint32_t)mg.adi());
+		outpTmpl.append(newBloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE);
+		outpTmpl.append((uint8_t)0); // 0 hops
+		outpTmpl.append((uint16_t)etherType);
+		outpTmpl.append((uint16_t)len);
+		outpTmpl.append((uint16_t)signature.length());
+		outpTmpl.append(data,len);
+		outpTmpl.append(signature.data(),signature.length());
+		outpTmpl.compress();
+		send(outpTmpl,true);
+		for(unsigned int i=1;i<np;++i) {
+			outpTmpl.newInitializationVector();
+			outpTmpl.setDestination(propPeers[i]->address());
+			send(outpTmpl,true);
+		}
 	} else if (to.isZeroTier()) {
 		// Simple unicast frame from us to another node
 		Address toZT(to.data + 1);
@@ -278,18 +166,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 void Switch::send(const Packet &packet,bool encrypt)
 {
 	//TRACE("%.16llx %s -> %s (size: %u) (enc: %s)",packet.packetId(),Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(encrypt ? "yes" : "no"));
-
-	PacketServiceAttemptResult r = _trySend(packet,encrypt);
-	if (r != PACKET_SERVICE_ATTEMPT_OK) {
-		{
-			Mutex::Lock _l(_txQueue_m);
-			std::multimap< Address,TXQueueEntry >::iterator qe(_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry())));
-			qe->second.creationTime = Utils::now();
-			qe->second.packet = packet;
-			qe->second.encrypt = encrypt;
-		}
-		if (r == PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN)
-			_requestWhois(packet.destination());
+	if (!_trySend(packet,encrypt)) {
+		Mutex::Lock _l(_txQueue_m);
+		_txQueue.insert(std::pair< uint64_t,TXQueueEntry >(packet.packetId(),TXQueueEntry(Utils::now(),packet,encrypt)));
 	}
 }
 
@@ -432,8 +311,8 @@ unsigned long Switch::doTimerTasks()
 
 	{
 		Mutex::Lock _l(_txQueue_m);
-		for(std::multimap< Address,TXQueueEntry >::iterator i(_txQueue.begin());i!=_txQueue.end();) {
-			if (_trySend(i->second.packet,i->second.encrypt) == PACKET_SERVICE_ATTEMPT_OK)
+		for(std::map< uint64_t,TXQueueEntry >::iterator i(_txQueue.begin());i!=_txQueue.end();) {
+			if (_trySend(i->second.packet,i->second.encrypt))
 				_txQueue.erase(i++);
 			else if ((now - i->second.creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				TRACE("TX %s -> %s timed out",i->second.packet.source().toString().c_str(),i->second.packet.destination().toString().c_str());
@@ -443,8 +322,10 @@ unsigned long Switch::doTimerTasks()
 	}
 	{
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::multimap< Address,RXQueueEntry >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
-			if ((now - i->second.creationTime) > ZT_RECEIVE_QUEUE_TIMEOUT) {
+		for(std::map< uint64_t,RXQueueEntry >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
+			if (_tryHandleRemotePacket(i->second.localPort,i->second.fromAddr,i->second.packet))
+				_rxQueue.erase(i++);
+			else if ((now - i->second.creationTime) > ZT_RECEIVE_QUEUE_TIMEOUT) {
 				TRACE("RX from %s timed out waiting for WHOIS",i->second.packet.source().toString().c_str());
 				_rxQueue.erase(i++);
 			} else ++i;
@@ -499,6 +380,17 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 	}
 }
 
+void Switch::requestWhois(const Address &addr,const SharedPtr<PacketDecoder> &pd)
+{
+	TRACE("requesting WHOIS for %s",addr.toString().c_str());
+	_sendWhoisRequest(addr,(const Address *)0,0);
+	Mutex::Lock _l(_outstandingWhoisRequests_m);
+	std::pair< std::map< Address,WhoisRequest >::iterator,bool > entry(_outstandingWhoisRequests.insert(std::pair<Address,WhoisRequest>(addr,WhoisRequest())));
+	entry.first->second.lastSent = Utils::now();
+	entry.first->second.retries = 0; // reset retry count if entry already existed
+	entry.first->second.waitingPackets.insert(pd);
+}
+
 void Switch::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result)
 {
 	_CBaddPeerFromHello_Data *req = (_CBaddPeerFromHello_Data *)arg;
@@ -508,6 +400,8 @@ void Switch::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::Pe
 		case Topology::PEER_VERIFY_ACCEPTED_NEW:
 		case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
 		case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS: {
+			req->parent->_finishWhoisRequest(p); // terminate any outstanding WHOIS too
+
 			Packet outp(req->source,_r->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_HELLO);
 			outp.append(req->helloPacketId);
@@ -516,6 +410,7 @@ void Switch::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::Pe
 			outp.hmacSet(p->macKey());
 			req->parent->_r->demarc->send(req->localPort,req->fromAddr,outp.data(),outp.size(),-1);
 		}	break;
+
 		case Topology::PEER_VERIFY_REJECTED_INVALID_IDENTITY: {
 			Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_HELLO);
@@ -525,6 +420,7 @@ void Switch::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::Pe
 			outp.hmacSet(p->macKey());
 			req->parent->_r->demarc->send(req->localPort,req->fromAddr,outp.data(),outp.size(),-1);
 		}	break;
+
 		case Topology::PEER_VERIFY_REJECTED_DUPLICATE:
 		case Topology::PEER_VERIFY_REJECTED_DUPLICATE_TRIAGED: {
 			Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
@@ -542,65 +438,180 @@ void Switch::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::Pe
 
 void Switch::_CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result)
 {
-	Switch *d = (Switch *)arg;
-
 	switch(result) {
 		case Topology::PEER_VERIFY_ACCEPTED_NEW:
 		case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
 		case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS:
-			d->_outstandingWhoisRequests_m.lock();
-			d->_outstandingWhoisRequests.erase(p->identity().address());
-			d->_outstandingWhoisRequests_m.unlock();
-			d->_retryPendingFor(p->identity().address());
+			((Switch *)arg)->_finishWhoisRequest(p);
 			break;
 		default:
 			break;
 	}
 }
 
-void Switch::_propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,const unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
+void Switch::_finishWhoisRequest(
+	const SharedPtr<Peer> &peer)
 {
-	if (mcHops > ZT_MULTICAST_PROPAGATION_DEPTH)
-		return;
-
-	Multicaster::MulticastBloomFilter newBloom(bloom); // bloom will be NULL if starting fresh
-	SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
-	unsigned int np = _multicaster.pickNextPropagationPeers(*(_r->topology),network->id(),mg,upstream,newBloom,ZT_MULTICAST_PROPAGATION_BREADTH,propPeers,Utils::now());
-
-	if (!np)
-		return;
-
-	std::string signature(Multicaster::signMulticastPacket(_r->identity,from,mg,etherType,data,len));
-	if (!signature.length()) {
-		TRACE("failure signing multicast message!");
-		return;
-	}
-
-	for(unsigned int i=0;i<np;++i) {
-		Packet outp(propPeers[i]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
-		outp.append((uint8_t)0);
-		outp.append((uint64_t)network->id());
-		outp.append(_r->identity.address().data(),ZT_ADDRESS_LENGTH);
-		outp.append(from.data,6);
-		outp.append(mg.mac().data,6);
-		outp.append((uint32_t)mg.adi());
-		outp.append(newBloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE);
-		outp.append((uint8_t)mcHops);
-		outp.append((uint16_t)etherType);
-		outp.append((uint16_t)len);
-		outp.append((uint16_t)signature.length());
-		outp.append(data,len);
-		outp.append(signature.data(),signature.length());
-		outp.compress();
-		send(outp,true);
+	Mutex::Lock _l(_outstandingWhoisRequests_m);
+	std::map< Address,WhoisRequest >::iterator wr(_outstandingWhoisRequests.find(peer->address()));
+	if (wr != _outstandingWhoisRequests.end()) {
+		for(std::set<uint64_t>::iterator pid(wr->second.waitingPackets.begin());pid!=wr->second.waitingPackets.end();++pid) {
+			{
+				Mutex::Lock _l(_txQueue_m);
+				std::map< uint64_t,TXQueueEntry >::iterator txitem(_txQueue.find(*pid));
+				if (txitem != _txQueue.end()) {
+					if (_trySend(txitem->second.packet,txitem->second.encrypt))
+						_txQueue.erase(txitem);
+				}
+			}
+			{
+				Mutex::Lock _l(_rxQueue_m);
+				std::map< uint64_t,RXQueueEntry >::iterator rxitem(_rxQueue.find(*pid));
+				if (rxitem != _rxQueue.end()) {
+					if (_tryHandleRemotePacket(rxitem->second.localPort,rxitem->second.fromAddr,rxitem->second.packet))
+						_rxQueue.erase(rxitem);
+				}
+			}
+		}
+		_outstandingWhoisRequests.erase(wr);
 	}
 }
 
-Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet)
+void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
-	// NOTE: We assume any packet that's made it here is for us. If it's not it
-	// will fail HMAC validation and be discarded anyway, amounting to a second
-	// layer of sanity checking.
+	Packet::Fragment fragment(data);
+
+	Address destination(fragment.destination());
+	if (destination != _r->identity.address()) {
+		// Fragment is not for us, so try to relay it
+
+		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
+			fragment.incrementHops();
+
+			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
+			if ((!relayTo)||(!relayTo->send(_r,fragment.data(),fragment.size(),true,Packet::VERB_NOP,Utils::now()))) {
+				relayTo = _r->topology->getBestSupernode();
+				if (relayTo)
+					relayTo->send(_r,fragment.data(),fragment.size(),true,Packet::VERB_NOP,Utils::now());
+			}
+		} else {
+			TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
+		}
+	} else {
+		// Fragment looks like ours
+
+		uint64_t pid = fragment.packetId();
+		unsigned int fno = fragment.fragmentNumber();
+		unsigned int tf = fragment.totalFragments();
+
+		if ((tf <= ZT_MAX_PACKET_FRAGMENTS)&&(fno < ZT_MAX_PACKET_FRAGMENTS)&&(fno > 0)&&(tf > 1)) {
+			// Fragment appears basically sane. Its fragment number must be
+			// 1 or more, since a Packet with fragmented bit set is fragment 0.
+			// Total fragments must be more than 1, otherwise why are we
+			// seeing a Packet::Fragment?
+
+			Mutex::Lock _l(_defragQueue_m);
+			std::map< uint64_t,DefragQueueEntry >::iterator dqe(_defragQueue.find(pid));
+
+			if (dqe == _defragQueue.end()) {
+				// We received a Packet::Fragment without its head, so queue it and wait
+
+				DefragQueueEntry &dq = _defragQueue[pid];
+				dq.creationTime = Utils::now();
+				dq.frags[fno - 1] = fragment;
+				dq.totalFragments = tf; // total fragment count is known
+				dq.haveFragments = 1 << fno; // we have only this fragment
+				//TRACE("fragment (%u/%u) of %.16llx from %s",fno + 1,tf,pid,fromAddr.toString().c_str());
+			} else if (!(dqe->second.haveFragments & (1 << fno))) {
+				// We have other fragments and maybe the head, so add this one and check
+
+				dqe->second.frags[fno - 1] = fragment;
+				dqe->second.totalFragments = tf;
+				//TRACE("fragment (%u/%u) of %.16llx from %s",fno + 1,tf,pid,fromAddr.toString().c_str());
+
+				if (Utils::countBits(dqe->second.haveFragments |= (1 << fno)) == tf) {
+					// We have all fragments -- assemble and process full Packet
+
+					//TRACE("packet %.16llx is complete, assembling and processing...",pid);
+					Packet packet(dqe->second.frag0);
+					for(unsigned int f=1;f<tf;++f)
+						packet.append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
+					_defragQueue.erase(dqe);
+
+					_handleRemotePacket(localPort,fromAddr,packet);
+				}
+			} // else this is a duplicate fragment, ignore
+		}
+	}
+}
+
+bool Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
+{
+	Packet packet(data);
+
+	Address destination(packet.destination());
+	if (destination != _r->identity.address()) {
+		// Packet is not for us, so try to relay it
+
+		if (packet.hops() < ZT_RELAY_MAX_HOPS) {
+			packet.incrementHops();
+
+			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
+			if ((relayTo)&&(relayTo->send(_r,packet.data(),packet.size(),true,Packet::VERB_NOP,Utils::now()))) {
+				// TODO: don't unite immediately, wait until the peers have exchanged a packet or two
+				unite(packet.source(),destination,false); // periodically try to get them to talk directly
+			} else {
+				relayTo = _r->topology->getBestSupernode();
+				if (relayTo)
+					relayTo->send(_r,packet.data(),packet.size(),true,Packet::VERB_NOP,Utils::now());
+			}
+		} else {
+			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet.source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
+		}
+	} else if (packet.fragmented()) {
+		// Packet is the head of a fragmented packet series
+
+		uint64_t pid = packet.packetId();
+		Mutex::Lock _l(_defragQueue_m);
+		std::map< uint64_t,DefragQueueEntry >::iterator dqe(_defragQueue.find(pid));
+
+		if (dqe == _defragQueue.end()) {
+			// If we have no other fragments yet, create an entry and save the head
+
+			DefragQueueEntry &dq = _defragQueue[pid];
+			dq.creationTime = Utils::now();
+			dq.frag0 = packet;
+			dq.totalFragments = 0; // 0 == unknown, waiting for Packet::Fragment
+			dq.haveFragments = 1; // head is first bit (left to right)
+			//TRACE("fragment (0/?) of %.16llx from %s",pid,fromAddr.toString().c_str());
+		} else if (!(dqe->second.haveFragments & 1)) {
+			// If we have other fragments but no head, see if we are complete with the head
+
+			if ((dqe->second.totalFragments)&&(Utils::countBits(dqe->second.haveFragments |= 1) == dqe->second.totalFragments)) {
+				// We have all fragments -- assemble and process full Packet
+
+				//TRACE("packet %.16llx is complete, assembling and processing...",pid);
+				// packet already contains head, so append fragments
+				for(unsigned int f=1;f<dqe->second.totalFragments;++f)
+					packet.append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
+				_defragQueue.erase(dqe);
+
+				_handleRemotePacket(localPort,fromAddr,packet);
+			} else {
+				// Still waiting on more fragments, so queue the head
+
+				dqe->second.frag0 = packet;
+			}
+		} // else this is a duplicate head, ignore
+	} else {
+		// Packet is unfragmented, so just process it
+		_handleRemotePacket(localPort,fromAddr,packet);
+	}
+}
+
+//////////////////// OBSOLETE
+bool Switch::_tryHandleRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet)
+{
 
 	Address source(packet.source());
 
@@ -610,7 +621,7 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 		// a HELLO for someone for whom we don't have a Peer record.
 		TRACE("HELLO from %s(%s)",source.toString().c_str(),fromAddr.toString().c_str());
 		_doHELLO(localPort,fromAddr,packet);
-		return PACKET_SERVICE_ATTEMPT_OK;
+		return true;
 	}
 
 	SharedPtr<Peer> peer = _r->topology->getPeer(source);
@@ -620,23 +631,29 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 
 		if (!packet.hmacVerify(peer->macKey())) {
 			TRACE("dropped packet from %s(%s), HMAC authentication failed (size: %u)",source.toString().c_str(),fromAddr.toString().c_str(),packet.size());
-			return PACKET_SERVICE_ATTEMPT_OK;
+			return true;
 		}
+
 		if (packet.encrypted()) {
 			packet.decrypt(peer->cryptKey());
-		} else if (packet.verb() != Packet::VERB_NOP) {
-			TRACE("ODD: %s from %s wasn't encrypted",Packet::verbString(packet.verb()),source.toString().c_str());
+		} else {
+			// Unencrypted is tolerated in case we want to run this on
+			// devices where squeezing out cycles matters. HMAC is
+			// what's really important.
+			TRACE("ODD: %s from %s(%s) wasn't encrypted",Packet::verbString(packet.verb()),source.toString().c_str(),fromAddr.toString().c_str());
 		}
+
 		if (!packet.uncompress()) {
 			TRACE("dropped packet from %s(%s), compressed data invalid",source.toString().c_str(),fromAddr.toString().c_str());
-			return PACKET_SERVICE_ATTEMPT_OK;
+			return true;
 		}
 
 		switch(packet.verb()) {
-			case Packet::VERB_NOP: // these are sent for NAT-t
-				TRACE("NOP from %s(%s) (probably NAT-t)",source.toString().c_str(),fromAddr.toString().c_str());
+			case Packet::VERB_NOP:
+				TRACE("NOP from %s(%s)",source.toString().c_str(),fromAddr.toString().c_str());
 				break;
-			case Packet::VERB_HELLO: // usually they're handled up top, but technically an encrypted HELLO is legal
+			case Packet::VERB_HELLO:
+				// HELLO is normally handled up top, but this is legal. Pointless, but legal.
 				_doHELLO(localPort,fromAddr,packet);
 				break;
 			case Packet::VERB_ERROR:
@@ -644,13 +661,17 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 #ifdef ZT_TRACE
 					Packet::Verb inReVerb = (Packet::Verb)packet[ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB];
 					Packet::ErrorCode errorCode = (Packet::ErrorCode)packet[ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE];
-					TRACE("ERROR %s from %s in-re %s",Packet::errorString(errorCode),source.toString().c_str(),Packet::verbString(inReVerb));
+					TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),source.toString().c_str(),fromAddr.toString().c_str(),Packet::verbString(inReVerb));
 #endif
-					// TODO: handle key errors, such as duplicate identity
+					// TODO:
+					// The fact is that the protocol works fine without error handling.
+					// The only error that really needs to be handled here is duplicate
+					// identity collision, which if it comes from a supernode should cause
+					// us to restart and regenerate a new identity.
 				} catch (std::exception &ex) {
-					TRACE("dropped ERROR from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
+					TRACE("dropped ERROR from %s(%s): unexpected exception: %s",source.toString().c_str(),fromAddr.toString().c_str(),ex.what());
 				} catch ( ... ) {
-					TRACE("dropped ERROR from %s: unexpected exception: (unknown)",source.toString().c_str());
+					TRACE("dropped ERROR from %s(%s): unexpected exception: (unknown)",source.toString().c_str(),fromAddr.toString().c_str());
 				}
 				break;
 			case Packet::VERB_OK:
@@ -658,8 +679,9 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 					Packet::Verb inReVerb = (Packet::Verb)packet[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
 					switch(inReVerb) {
 						case Packet::VERB_HELLO:
+							// OK from HELLO permits computation of latency.
 							latency = std::min((unsigned int)(now - packet.at<uint64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP)),(unsigned int)0xffff);
-							TRACE("OK(HELLO), latency to %s: %u",source.toString().c_str(),latency);
+							TRACE("%s(%s): OK(HELLO), latency: %u",source.toString().c_str(),fromAddr.toString().c_str(),latency);
 							break;
 						case Packet::VERB_WHOIS:
 							// Right now we only query supernodes for WHOIS and only accept
@@ -667,19 +689,21 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 							// do something to prevent WHOIS cache poisoning such as
 							// using the packet ID field in the OK packet to match with the
 							// original query. Technically we should be doing this anyway.
+							TRACE("%s(%s): OK(%s)",source.toString().c_str(),fromAddr.toString().c_str(),Packet::verbString(inReVerb));
 							if (_r->topology->isSupernode(source))
 								_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,Identity(packet,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY))),&Switch::_CBaddPeerFromWhois,this);
 							break;
 						default:
+							TRACE("%s(%s): OK(%s)",source.toString().c_str(),fromAddr.toString().c_str(),Packet::verbString(inReVerb));
 							break;
 					}
 				} catch (std::exception &ex) {
-					TRACE("dropped OK from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
+					TRACE("dropped OK from %s(%s): unexpected exception: %s",source.toString().c_str(),fromAddr.toString().c_str(),ex.what());
 				} catch ( ... ) {
-					TRACE("dropped OK from %s: unexpected exception: (unknown)",source.toString().c_str());
+					TRACE("dropped OK from %s(%s): unexpected exception: (unknown)",source.toString().c_str(),fromAddr.toString().c_str());
 				}
 				break;
-			case Packet::VERB_WHOIS: {
+			case Packet::VERB_WHOIS:
 				if (packet.payloadLength() == ZT_ADDRESS_LENGTH) {
 					SharedPtr<Peer> p(_r->topology->getPeer(Address(packet.payload())));
 					if (p) {
@@ -703,9 +727,9 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 						TRACE("sent WHOIS ERROR to %s for %s (not found)",source.toString().c_str(),Address(packet.payload()).toString().c_str());
 					}
 				} else {
-					TRACE("dropped WHOIS from %s: missing or invalid address",source.toString().c_str());
+					TRACE("dropped WHOIS from %s(%s): missing or invalid address",source.toString().c_str(),fromAddr.toString().c_str());
 				}
-			}	break;
+				break;
 			case Packet::VERB_RENDEZVOUS:
 				try {
 					Address with(packet.field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH));
@@ -724,15 +748,15 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 								_rendezvousQueue[with] = qe;
 							}
 						} else {
-							TRACE("dropped corrupt RENDEZVOUS from %s (bad address or port)",source.toString().c_str());
+							TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",source.toString().c_str(),fromAddr.toString().c_str());
 						}
 					} else {
-						TRACE("ignored RENDEZVOUS from %s for unknown peer %s",source.toString().c_str(),with.toString().c_str());
+						TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",source.toString().c_str(),fromAddr.toString().c_str(),with.toString().c_str());
 					}
 				} catch (std::exception &ex) {
-					TRACE("dropped RENDEZVOUS from %s: %s",source.toString().c_str(),ex.what());
+					TRACE("dropped RENDEZVOUS from %s(%s): %s",source.toString().c_str(),fromAddr.toString().c_str(),ex.what());
 				} catch ( ... ) {
-					TRACE("dropped RENDEZVOUS from %s: unexpected exception",source.toString().c_str());
+					TRACE("dropped RENDEZVOUS from %s(%s): unexpected exception",source.toString().c_str(),fromAddr.toString().c_str());
 				}
 				break;
 			case Packet::VERB_FRAME:
@@ -747,21 +771,23 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 								network->tap().put(source.toMAC(),network->tap().mac(),etherType,packet.data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,packet.size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
 							}
 						} else {
-							TRACE("dropped FRAME from %s: not a member of closed network %llu",source.toString().c_str(),network->id());
+							TRACE("dropped FRAME from %s(%s): not a member of closed network %llu",source.toString().c_str(),fromAddr.toString().c_str(),network->id());
 						}
 					} else {
-						TRACE("dropped FRAME from %s: network %llu unknown",source.toString().c_str(),packet.at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
+						TRACE("dropped FRAME from %s(%s): network %llu unknown",source.toString().c_str(),fromAddr.toString().c_str(),packet.at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 					}
 				} catch (std::exception &ex) {
-					TRACE("dropped FRAME from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
+					TRACE("dropped FRAME from %s(%s): unexpected exception: %s",source.toString().c_str(),fromAddr.toString().c_str(),ex.what());
 				} catch ( ... ) {
-					TRACE("dropped FRAME from %s: unexpected exception: (unknown)",source.toString().c_str());
+					TRACE("dropped FRAME from %s(%s): unexpected exception: (unknown)",source.toString().c_str(),fromAddr.toString().c_str());
 				}
 				break;
 			case Packet::VERB_MULTICAST_LIKE:
 				try {
 					unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
 					unsigned int numAccepted = 0;
+
+					// Iterate through 18-byte network,MAC,ADI tuples:
 					while ((ptr + 18) <= packet.size()) {
 						uint64_t nwid = packet.at<uint64_t>(ptr); ptr += 8;
 						SharedPtr<Network> network(_r->nc->network(nwid));
@@ -773,10 +799,10 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 								_multicaster.likesMulticastGroup(nwid,MulticastGroup(mac,adi),source,now);
 								++numAccepted;
 							} else {
-								TRACE("ignored MULTICAST_LIKE from %s: not a member of closed network %llu",source.toString().c_str(),nwid);
+								TRACE("ignored MULTICAST_LIKE from %s(%s): not a member of closed network %llu",source.toString().c_str(),fromAddr.toString().c_str(),nwid);
 							}
 						} else {
-							TRACE("ignored MULTICAST_LIKE from %s: network %llu unknown",source.toString().c_str(),nwid);
+							TRACE("ignored MULTICAST_LIKE from %s(%s): network %llu unknown or we are not a member",source.toString().c_str(),fromAddr.toString().c_str(),nwid);
 						}
 					}
 
@@ -788,9 +814,9 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 					outp.hmacSet(peer->macKey());
 					_r->demarc->send(localPort,fromAddr,outp.data(),outp.size(),-1);
 				} catch (std::exception &ex) {
-					TRACE("dropped MULTICAST_LIKE from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
+					TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source.toString().c_str(),fromAddr.toString().c_str(),ex.what());
 				} catch ( ... ) {
-					TRACE("dropped MULTICAST_LIKE from %s: unexpected exception: (unknown)",source.toString().c_str());
+					TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: (unknown)",source.toString().c_str(),fromAddr.toString().c_str());
 				}
 				break;
 			case Packet::VERB_MULTICAST_FRAME:
@@ -800,68 +826,75 @@ Switch::PacketServiceAttemptResult Switch::_tryHandleRemotePacket(Demarc::Port l
 						if (network->isAllowed(source)) {
 							if (packet.size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD) {
 								Address originalSubmitterAddress(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH));
+								MAC fromMac(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
+								MulticastGroup mg(MAC(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),packet.at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
+								unsigned int hops = packet[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT];
+								unsigned int etherType = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+								unsigned int datalen = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH);
+								unsigned int signaturelen = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH);
+								unsigned char *dataAndSignature = packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,datalen + signaturelen);
+
+								bool isDuplicate = _multicaster.checkAndUpdateMulticastHistory(fromMac,mg,payload,payloadLen,network->id(),now);
+
 								if (originalSubmitterAddress == _r->identity.address()) {
-									TRACE("dropped boomerang MULTICAST_FRAME received from %s",source.toString().c_str());
-								} else {
+									// Technically should not happen, since the original submitter is
+									// excluded from consideration as a propagation recipient.
+									TRACE("dropped boomerang MULTICAST_FRAME received from %s(%s)",source.toString().c_str(),fromAddr.toString().c_str());
+								} else if ((!isDuplicate)||(_r->topology.isSupernode(_r->identity.address()))) {
+									// If I am a supernode, I will repeatedly propagate duplicates. That's
+									// because supernodes are used to bridge sparse multicast groups. Non-
+									// supernodes will ignore duplicates completely.
 									SharedPtr<Peer> originalSubmitter(_r->topology->getPeer(originalSubmitterAddress));
 									if (!originalSubmitter) {
-										// If we don't know the original submitter, try to look them up
-										// and abort.
-										// TODO: need to rearchitect how we wait for and handle whois
-										// responses so they trigger a re-eval of this packet instantly.
-										_requestWhois(originalSubmitterAddress);
-										return PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN;
+										TRACE("requesting WHOIS on original multicast frame submitter %s",originalSubmitterAddress.toString().c_str());
+										_requestWhois(originalSubmitterAddress,packet.packetId());
+										return false;
+									} else if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),fromMac,mg,etherType,data,datalen,dataAndSignature + datalen,signaturelen)) {
+										if (!isDuplicate)
+											network->tap().put(fromMac,mg.mac(),etherType,payload,payloadLen);
+										_propagateMulticast(network,originalSubmitterAddress,source,packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE),mg,hops+1,fromMac,etherType,payload,payloadLen);
 									} else {
-										MAC fromMac(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
-										MulticastGroup mg(MAC(packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),packet.at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
-										unsigned int hops = packet[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT];
-										unsigned int etherType = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-										unsigned int datalen = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH);
-										unsigned int signaturelen = packet.at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH);
-										unsigned char *dataAndSignature = packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,datalen + signaturelen);
-
-										if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),fromMac,mg,etherType,data,datalen,dataAndSignature + datalen,signaturelen)) {
-											if (network->isAllowed(originalSubmitterAddress)) {
-												if (_multicaster.checkAndUpdateMulticastHistory(fromMac,mg,payload,payloadLen,network->id(),now)) {
-													// TODO: check if allowed etherType
-													network->tap().put(fromMac,mg.mac(),etherType,payload,payloadLen);
-												} else {
-												}
-												_propagateMulticast(network,source,packet.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE),mg,hops+1,fromMac,etherType,payload,payloadLen);
-											} else {
-											}
-										} else {
-										}
+										LOG("rejected MULTICAST_FRAME from %s(%s) due to failed signature check (claims original sender %s)",source.toString().c_str(),fromAddr.toString().c_str(),originalSubmitterAddress.toString().c_str());
 									}
+								} else {
+									TRACE("dropped redundant MULTICAST_FRAME from %s(%s)",source.toString().c_str(),fromAddr.toString().c_str());
 								}
 							} else {
+								TRACE("dropped MULTICAST_FRAME from %s(%s): invalid short packet",source.toString().c_str(),fromAddr.toString().c_str());
 							}
 						} else {
-							TRACE("dropped MULTICAST_FRAME from %s: not a member of closed network %llu",source.toString().c_str(),network->id());
+							TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of closed network %llu",source.toString().c_str(),fromAddr.toString().c_str(),network->id());
 						}
 					} else {
-						TRACE("dropped MULTICAST_FRAME from %s: network %llu unknown or we are not a member",source.toString().c_str(),packet.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID));
+						TRACE("dropped MULTICAST_FRAME from %s(%s): network %llu unknown or we are not a member",source.toString().c_str(),fromAddr.toString().c_str(),packet.at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID));
 					}
 				} catch (std::exception &ex) {
-					TRACE("dropped MULTICAST_FRAME from %s: unexpected exception: %s",source.toString().c_str(),ex.what());
+					TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source.toString().c_str(),fromAddr.toString().c_str(),ex.what());
 				} catch ( ... ) {
-					TRACE("dropped MULTICAST_FRAME from %s: unexpected exception: (unknown)",source.toString().c_str());
+					TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source.toString().c_str(),fromAddr.toString().c_str());
 				}
 				break;
-				break;
 			default:
-				TRACE("ignored unrecognized verb %.2x from %s",(unsigned int)packet.verb(),source.toString().c_str());
+				// This might be something from a new or old version of the protocol.
+				// Technically it passed HMAC so the packet is still valid, but we
+				// ignore it.
+				TRACE("ignored unrecognized verb %.2x from %s(%s)",(unsigned int)packet.verb(),source.toString().c_str(),fromAddr.toString().c_str());
 				break;
 		}
 
-		// Update peer timestamps and learn new links
+		// Update peer timestamps and learn new links. This must only ever
+		// be called on an authenticated and technically valid packet, since
+		// we only learn paths to peers over the WAN by hearing directly
+		// from them over those paths. (Or by having them authoritatively
+		// and statically defined, like with supernodes, but that's done
+		// elsewhere.)
 		peer->onReceive(_r,localPort,fromAddr,latency,packet.hops(),packet.verb(),now);
 	} else {
-		_requestWhois(source);
-		return PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN;
+		_requestWhois(source,packet.packetId());
+		return false;
 	}
 
-	return PACKET_SERVICE_ATTEMPT_OK;
+	return true;
 }
 
 void Switch::_doHELLO(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet)
@@ -948,16 +981,6 @@ void Switch::_doHELLO(Demarc::Port localPort,const InetAddress &fromAddr,Packet 
 	}
 }
 
-void Switch::_requestWhois(const Address &addr)
-{
-	TRACE("requesting WHOIS for %s",addr.toString().c_str());
-	_sendWhoisRequest(addr,(const Address *)0,0);
-	Mutex::Lock _l(_outstandingWhoisRequests_m);
-	std::pair< std::map< Address,WhoisRequest >::iterator,bool > entry(_outstandingWhoisRequests.insert(std::pair<Address,WhoisRequest>(addr,WhoisRequest())));
-	entry.first->second.lastSent = Utils::now();
-	entry.first->second.retries = 0; // reset retry count if entry already existed
-}
-
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
 	SharedPtr<Peer> supernode(_r->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted));
@@ -972,7 +995,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 	return Address();
 }
 
-Switch::PacketServiceAttemptResult Switch::_trySend(const Packet &packet,bool encrypt)
+bool Switch::_trySend(const Packet &packet,bool encrypt)
 {
 	SharedPtr<Peer> peer(_r->topology->getPeer(packet.destination()));
 	if (peer) {
@@ -987,7 +1010,7 @@ Switch::PacketServiceAttemptResult Switch::_trySend(const Packet &packet,bool en
 			isRelay = true;
 			via = _r->topology->getBestSupernode();
 			if (!via)
-				return PACKET_SERVICE_ATTEMPT_SEND_FAILED;
+				return false;
 		}
 
 		Packet tmp(packet);
@@ -1015,40 +1038,20 @@ Switch::PacketServiceAttemptResult Switch::_trySend(const Packet &packet,bool en
 					Packet::Fragment frag(tmp,fragStart,chunkSize,f + 1,totalFragments);
 					if (!via->send(_r,frag.data(),frag.size(),isRelay,verb,now)) {
 						TRACE("WARNING: packet send to %s failed on later fragment #%u (check IP layer buffer sizes?)",via->address().toString().c_str(),f + 1);
-						return PACKET_SERVICE_ATTEMPT_SEND_FAILED;
+						return false;
 					}
 					fragStart += chunkSize;
 					remaining -= chunkSize;
 				}
 			}
 
-			return PACKET_SERVICE_ATTEMPT_OK;
+			return true;
 		}
-		return PACKET_SERVICE_ATTEMPT_SEND_FAILED;
+		return false;
 	}
-	return PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN;
-}
 
-void Switch::_retryPendingFor(const Address &addr)
-{
-	{
-		Mutex::Lock _l(_txQueue_m);
-		std::pair< std::multimap< Address,TXQueueEntry >::iterator,std::multimap< Address,TXQueueEntry >::iterator > eqrange = _txQueue.equal_range(addr);
-		for(std::multimap< Address,TXQueueEntry >::iterator i(eqrange.first);i!=eqrange.second;) {
-			if (_trySend(i->second.packet,i->second.encrypt) == PACKET_SERVICE_ATTEMPT_OK)
-				_txQueue.erase(i++);
-			else ++i;
-		}
-	}
-	{
-		Mutex::Lock _l(_rxQueue_m);
-		std::pair< std::multimap< Address,RXQueueEntry >::iterator,std::multimap< Address,RXQueueEntry >::iterator > eqrange = _rxQueue.equal_range(addr);
-		for(std::multimap< Address,RXQueueEntry >::iterator i(eqrange.first);i!=eqrange.second;) {
-			if (_tryHandleRemotePacket(i->second.localPort,i->second.fromAddr,i->second.packet) == PACKET_SERVICE_ATTEMPT_OK)
-				_rxQueue.erase(i++);
-			else ++i;
-		}
-	}
+	_requestWhois(packet.destination(),packet.packetId());
+	return false;
 }
 
 } // namespace ZeroTier

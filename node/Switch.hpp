@@ -150,15 +150,15 @@ public:
 	 */
 	void announceMulticastGroups(const std::map< SharedPtr<Network>,std::set<MulticastGroup> > &allMemberships);
 
-private:
-	// Returned by _send() and _processRemotePacket() to indicate what happened
-	enum PacketServiceAttemptResult
-	{
-		PACKET_SERVICE_ATTEMPT_OK,
-		PACKET_SERVICE_ATTEMPT_PEER_UNKNOWN,
-		PACKET_SERVICE_ATTEMPT_SEND_FAILED
-	};
+	/**
+	 * Request WHOIS on a given address
+	 *
+	 * @param addr Address to look up
+	 * @param pd Packet decoder to link to request or NULL for none
+	 */
+	void requestWhois(const Address &addr,const SharedPtr<PacketDecoder> &pd);
 
+private:
 	struct _CBaddPeerFromHello_Data
 	{
 		Switch *parent;
@@ -169,19 +169,44 @@ private:
 		uint64_t helloPacketId;
 		uint64_t helloTimestamp;
 	};
-	static void _CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result);
-	static void _CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result); // arg == this
+	static void _CBaddPeerFromHello(
+		void *arg, // _CBaddPeerFromHello_Data
+		const SharedPtr<Peer> &p,
+		Topology::PeerVerifyResult result);
 
-	void _propagateMulticast(const SharedPtr<Network> &network,const Address &upstream,const unsigned char *bloom,const MulticastGroup &mg,unsigned int mcHops,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
-	PacketServiceAttemptResult _tryHandleRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet);
-	void _doHELLO(Demarc::Port localPort,const InetAddress &fromAddr,Packet &packet);
-	void _requestWhois(const Address &addr);
-	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
-	PacketServiceAttemptResult _trySend(const Packet &packet,bool encrypt);
-	void _retryPendingFor(const Address &addr);
+	static void _CBaddPeerFromWhois(
+		void *arg, // this (Switch)
+		const SharedPtr<Peer> &p,
+		Topology::PeerVerifyResult result);
+
+	void _finishWhoisRequest(
+		const SharedPtr<Peer> &peer);
+
+	void _handleRemotePacketFragment(
+		Demarc::Port localPort,
+		const InetAddress &fromAddr,
+		const Buffer<4096> &data);
+
+	void _handleRemotePacketHead(
+		Demarc::Port localPort,
+		const InetAddress &fromAddr,
+		const Buffer<4096> &data);
+
+	void _doHELLO(
+		Demarc::Port localPort,
+		const InetAddress &fromAddr,
+		Packet &packet);
+
+	Address _sendWhoisRequest(
+		const Address &addr,
+		const Address *peersAlreadyConsulted,
+		unsigned int numPeersAlreadyConsulted);
+
+	bool _trySend(
+		const Packet &packet,
+		bool encrypt);
 
 	const RuntimeEnvironment *const _r;
-
 	Multicaster _multicaster;
 
 	struct WhoisRequest
@@ -189,28 +214,25 @@ private:
 		uint64_t lastSent;
 		Address peersConsulted[ZT_MAX_WHOIS_RETRIES]; // by retry
 		unsigned int retries; // 0..ZT_MAX_WHOIS_RETRIES
+		std::set< SharedPtr<PacketDecoder> > waitingPackets;
 	};
 	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
 	struct TXQueueEntry
 	{
+		TXQueueEntry() {}
+		TXQueueEntry(uint64_t ct,const Packet &p,bool enc) :
+			creationTime(ct),
+			packet(p),
+			encrypt(enc) {}
+
 		uint64_t creationTime;
 		Packet packet; // unencrypted/untagged for TX queue
 		bool encrypt;
 	};
-	std::multimap< Address,TXQueueEntry > _txQueue; // by destination address
+	std::map< uint64_t,TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
-
-	struct RXQueueEntry
-	{
-		uint64_t creationTime;
-		Demarc::Port localPort;
-		Packet packet; // encrypted/tagged
-		InetAddress fromAddr;
-	};
-	std::multimap< Address,RXQueueEntry > _rxQueue; // by source address
-	Mutex _rxQueue_m;
 
 	struct DefragQueueEntry
 	{
