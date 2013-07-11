@@ -76,7 +76,14 @@ public:
 	inline uint64_t receiveTime() const throw() { return _receiveTime; }
 
 private:
-	void _doHELLO(Demarc::Port localPort,const InetAddress &fromAddr);
+	bool _doERROR(const RuntimeEnvironment *_r);
+	bool _doHELLO(const RuntimeEnvironment *_r);
+	bool _doOK(const RuntimeEnvironment *_r);
+	bool _doWHOIS(const RuntimeEnvironment *_r);
+	bool _doRENDEZVOUS(const RuntimeEnvironment *_r);
+	bool _doFRAME(const RuntimeEnvironment *_r);
+	bool _doMULTICAST_LIKE(const RuntimeEnvironment *_r);
+	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r);
 
 	uint64_t _receiveTime;
 	Demarc::Port _localPort;

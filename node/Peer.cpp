@@ -43,7 +43,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
-void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &fromAddr,unsigned int latency,unsigned int hops,Packet::Verb verb,uint64_t now)
+void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &fromAddr,unsigned int hops,Packet::Verb verb,uint64_t now)
 {
 	if (!hops) { // direct packet
 		WanPath *wp = (fromAddr.isV4() ? &_ipv4p : &_ipv6p);
@@ -51,8 +51,6 @@ void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const I
 		wp->lastReceive = now;
 		if (verb == Packet::VERB_FRAME)
 			wp->lastUnicastFrame = now;
-		if (latency)
-			wp->latency = latency;
 		wp->localPort = localPort;
 		if (!wp->fixed)
 			wp->addr = fromAddr;

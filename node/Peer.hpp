@@ -113,12 +113,11 @@ public:
 	 * @param _r Runtime environment
 	 * @param localPort Local port on which packet was received
 	 * @param fromAddr Internet address of sender
-	 * @param latency Latency or 0 if unknown
 	 * @param hops ZeroTier (not IP) hops
 	 * @param verb Packet verb
 	 * @param now Current time
 	 */
-	void onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &fromAddr,unsigned int latency,unsigned int hops,Packet::Verb verb,uint64_t now);
+	void onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &fromAddr,unsigned int hops,Packet::Verb verb,uint64_t now);
 
 	/**
 	 * Send a UDP packet to this peer
@@ -211,6 +210,24 @@ public:
 		} else if (_ipv6p.latency)
 			return _ipv6p.latency;
 		return 0;
+	}
+
+	/**
+	 * @param latency measurment for IPv4 path
+	 */
+	void setV4Latency(unsigned int latency)
+	{
+		_ipv4p.latency = latency;
+		_dirty = true;
+	}
+
+	/**
+	 * @param latency Latency measurment for IPv6 path
+	 */
+	void setV6Latency(unsigned int latency)
+	{
+		_ipv6p.latency = latency;
+		_dirty = true;
 	}
 
 	/**
