@@ -36,6 +36,7 @@
 #include "Utils.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
+#include "Peer.hpp"
 
 namespace ZeroTier {
 
@@ -56,7 +57,7 @@ public:
  		_receiveTime(Utils::now()),
  		_localPort(localPort),
  		_remoteAddress(remoteAddress),
- 		_step(DECODE_STEP_START),
+ 		_step(DECODE_STEP_WAITING_FOR_SENDER_LOOKUP),
  		__refCount()
 	{
 	}
@@ -76,21 +77,40 @@ public:
 	inline uint64_t receiveTime() const throw() { return _receiveTime; }
 
 private:
-	bool _doERROR(const RuntimeEnvironment *_r);
+	struct _CBaddPeerFromHello_Data
+	{
+		const RuntimeEnvironment *renv;
+		Address source;
+		InetAddress remoteAddress;
+		int localPort;
+		unsigned int vMajor,vMinor,vRevision;
+		uint64_t helloPacketId;
+		uint64_t helloTimestamp;
+	};
+	static void _CBaddPeerFromHello(
+		void *arg, // _CBaddPeerFromHello_Data
+		const SharedPtr<Peer> &p,
+		Topology::PeerVerifyResult result);
+
+	static void _CBaddPeerFromWhois(
+		void *arg, // RuntimeEnvironment
+		const SharedPtr<Peer> &p,
+		Topology::PeerVerifyResult result);
+
+	bool _doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doHELLO(const RuntimeEnvironment *_r);
-	bool _doOK(const RuntimeEnvironment *_r);
-	bool _doWHOIS(const RuntimeEnvironment *_r);
-	bool _doRENDEZVOUS(const RuntimeEnvironment *_r);
-	bool _doFRAME(const RuntimeEnvironment *_r);
-	bool _doMULTICAST_LIKE(const RuntimeEnvironment *_r);
-	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r);
+	bool _doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 
 	uint64_t _receiveTime;
 	Demarc::Port _localPort;
 	InetAddress _remoteAddress;
 
 	enum {
-		DECODE_STEP_START,
 		DECODE_STEP_WAITING_FOR_SENDER_LOOKUP, // on initial receipt, we need peer's identity
 		DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP // this only applies to MULTICAST_FRAME
 	} _step;

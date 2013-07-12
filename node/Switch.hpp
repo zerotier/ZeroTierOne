@@ -31,6 +31,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <list>
 
 #include "Mutex.hpp"
 #include "MAC.hpp"
@@ -135,6 +136,14 @@ public:
 	bool unite(const Address &p1,const Address &p2,bool force);
 
 	/**
+	 * Send NAT traversal messages to peer at the given candidate address
+	 *
+	 * @param peer Peer to contact
+	 * @param atAddr Address of peer
+	 */
+	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr);
+
+	/**
 	 * Perform retries and other periodic timer tasks
 	 * 
 	 * @return Number of milliseconds until doTimerTasks() should be run again
@@ -158,30 +167,16 @@ public:
 	 */
 	void requestWhois(const Address &addr);
 
+	/**
+	 * Run any processes that are waiting for this peer
+	 *
+	 * Called when we learn of a peer's identity from HELLO, OK(WHOIS), etc.
+	 *
+	 * @param peer New peer
+	 */
+	void doAnythingWaitingForPeer(const SharedPtr<Peer> &peer);
+
 private:
-	struct _CBaddPeerFromHello_Data
-	{
-		Switch *parent;
-		Address source;
-		InetAddress fromAddr;
-		int localPort;
-		unsigned int vMajor,vMinor,vRevision;
-		uint64_t helloPacketId;
-		uint64_t helloTimestamp;
-	};
-	static void _CBaddPeerFromHello(
-		void *arg, // _CBaddPeerFromHello_Data
-		const SharedPtr<Peer> &p,
-		Topology::PeerVerifyResult result);
-
-	static void _CBaddPeerFromWhois(
-		void *arg, // this (Switch)
-		const SharedPtr<Peer> &p,
-		Topology::PeerVerifyResult result);
-
-	void _finishWhoisRequest(
-		const SharedPtr<Peer> &peer);
-
 	void _handleRemotePacketFragment(
 		Demarc::Port localPort,
 		const InetAddress &fromAddr,
@@ -202,7 +197,6 @@ private:
 		bool encrypt);
 
 	const RuntimeEnvironment *const _r;
-	Multicaster _multicaster;
 
 	struct WhoisRequest
 	{
@@ -213,7 +207,7 @@ private:
 	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
-	std::multimap< Address,SharedPtr<PacketDecoder> > _rxQueue;
+	std::list< SharedPtr<PacketDecoder> > _rxQueue;
 	Mutex _rxQueue_m;
 
 	struct TXQueueEntry
@@ -244,15 +238,6 @@ private:
 
 	std::map< Array< Address,2 >,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
-
-	struct RendezvousQueueEntry
-	{
-		InetAddress inaddr;
-		uint64_t fireAtTime;
-		Demarc::Port localPort;
-	};
-	std::map< Address,RendezvousQueueEntry > _rendezvousQueue;
-	Mutex _rendezvousQueue_m;
 };
 
 } // namespace ZeroTier

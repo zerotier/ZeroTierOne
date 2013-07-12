@@ -39,6 +39,7 @@ class Demarc;
 class Switch;
 class Topology;
 class SysEnv;
+class Multicaster;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -60,6 +61,7 @@ public:
 		log((Logger *)0),
 		nc((NodeConfig *)0),
 		demarc((Demarc *)0),
+		multicaster((Multicaster *)0),
 		sw((Switch *)0),
 		topology((Topology *)0)
 	{
@@ -77,6 +79,7 @@ public:
 	Logger *log; // may be null
 	NodeConfig *nc;
 	Demarc *demarc;
+	Multicaster *multicaster;
 	Switch *sw;
 	Topology *topology;
 	SysEnv *sysEnv;

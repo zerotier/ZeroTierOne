@@ -213,21 +213,18 @@ public:
 	}
 
 	/**
-	 * @param latency measurment for IPv4 path
+	 * @param addr Remote address
+	 * @param latency Latency measurment
 	 */
-	void setV4Latency(unsigned int latency)
+	void setLatency(const InetAddress &addr,unsigned int latency)
 	{
-		_ipv4p.latency = latency;
-		_dirty = true;
-	}
-
-	/**
-	 * @param latency Latency measurment for IPv6 path
-	 */
-	void setV6Latency(unsigned int latency)
-	{
-		_ipv6p.latency = latency;
-		_dirty = true;
+		if (addr == _ipv4p.addr) {
+			_ipv4p.latency = latency;
+			_dirty = true;
+		} else if (addr == _ipv6p.addr) {
+			_ipv6p.latency = latency;
+			_dirty = true;
+		}
 	}
 
 	/**
@@ -305,6 +302,20 @@ public:
 		throw()
 	{
 		return (_keys + 32); // mac key is second 32-byte key
+	}
+
+	/**
+	 * Set the remote version of the peer (not persisted)
+	 *
+	 * @param vmaj Major version
+	 * @param vmin Minor version
+	 * @param vrev Revision
+	 */
+	inline void setRemoteVersion(unsigned int vmaj,unsigned int vmin,unsigned int vrev)
+	{
+		_vMajor = vmaj;
+		_vMinor = vmin;
+		_vRevision = vrev;
 	}
 
 	/**
@@ -482,6 +493,7 @@ private:
 
 	// Fields below this line are not persisted with serialize()
 
+	unsigned int _vMajor,_vMinor,_vRevision;
 	bool _dirty;
 
 	AtomicCounter __refCount;

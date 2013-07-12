@@ -64,6 +64,7 @@
 #include "Network.hpp"
 #include "MulticastGroup.hpp"
 #include "Mutex.hpp"
+#include "Multicaster.hpp"
 
 #include "../version.h"
 
@@ -116,6 +117,7 @@ Node::~Node()
 	delete impl->renv.sysEnv;
 	delete impl->renv.topology;
 	delete impl->renv.sw;
+	delete impl->renv.multicaster;
 	delete impl->renv.demarc;
 	delete impl->renv.nc;
 	delete impl->renv.log;
@@ -211,6 +213,7 @@ Node::ReasonForTermination Node::run()
 		// watcher.
 		_r->nc = new NodeConfig(_r,_r->autoconfUrlPrefix + _r->identity.address().toString());
 		_r->demarc = new Demarc(_r);
+		_r->multicaster = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
 		_r->sysEnv = new SysEnv(_r);

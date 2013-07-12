@@ -21,6 +21,7 @@ OBJS=\
 	node/Node.o \
 	node/NodeConfig.o \
 	node/Packet.o \
+	node/PacketDecoder.o \
 	node/Pack.o \
 	node/Peer.o \
 	node/Salsa20.o \

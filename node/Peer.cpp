@@ -30,6 +30,9 @@
 namespace ZeroTier {
 
 Peer::Peer() :
+	_vMajor(0),
+	_vMinor(0),
+	_vRevision(0),
 	_dirty(false)
 {
 }
@@ -37,6 +40,9 @@ Peer::Peer() :
 Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
 	_id(peerIdentity),
+	_vMajor(0),
+	_vMinor(0),
+	_vRevision(0),
 	_dirty(true)
 {
 	if (!myIdentity.agree(peerIdentity,_keys,sizeof(_keys)))
