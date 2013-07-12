@@ -50,6 +50,14 @@ class PacketDecoder : public Packet
 	friend class SharedPtr<PacketDecoder>;
 
 public:
+	/**
+	 * Create a new packet-in-decode
+	 *
+	 * @param b Source buffer with raw packet data
+	 * @param localPort Local port on which packet was received
+	 * @param remoteAddress Address from which packet came
+	 * @throws std::out_of_range Range error processing packet
+	 */
 	template<unsigned int C2>
 	PacketDecoder(const Buffer<C2> &b,Demarc::Port localPort,const InetAddress &remoteAddress)
  		throw(std::out_of_range) :
@@ -65,8 +73,15 @@ public:
 	/**
 	 * Attempt to decode this packet
 	 *
+	 * Note that this returns 'true' if processing is complete. This says nothing
+	 * about whether the packet was valid. A rejection is 'complete.'
+	 *
+	 * Once true is returned, this should not be called again.
+	 *
 	 * @param _r Runtime environment
-	 * @return True if decoding and processing is complete, false on failure (try again)
+	 * @return True if decoding and processing is complete, false if caller should try again
+	 * @throws std::out_of_range Range error processing packet (should be discarded)
+	 * @throws std::runtime_error Other error processing packet (should be discarded)
 	 */
 	bool tryDecode(const RuntimeEnvironment *_r)
 		throw(std::out_of_range,std::runtime_error);
@@ -97,6 +112,8 @@ private:
 		const SharedPtr<Peer> &p,
 		Topology::PeerVerifyResult result);
 
+	// These are called internally to handle packet contents once it has
+	// been authenticated, decrypted, decompressed, and classified.
 	bool _doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doHELLO(const RuntimeEnvironment *_r);
 	bool _doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);

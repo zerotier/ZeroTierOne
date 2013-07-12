@@ -51,7 +51,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 		if (_step == DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP) {
 			// This means we've already decoded, decrypted, decompressed, and
 			// validated, and we're processing a MULTICAST_FRAME. We're waiting
-			// for a lookup on the frame's original submitter.
+			// for a lookup on the frame's original submitter. So try again and
+			// see if we have it.
 			return _doMULTICAST_FRAME(_r,peer);
 		}
 
@@ -65,7 +66,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 		} else {
 			// Unencrypted is tolerated in case we want to run this on
 			// devices where squeezing out cycles matters. HMAC is
-			// what's really important.
+			// what's really important. But log it in debug to catch any
+			// packets being mistakenly sent in the clear.
 			TRACE("ODD: %s from %s(%s) wasn't encrypted",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
 
@@ -108,6 +110,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return true;
 		}
 	} else {
+		_step = DECODE_STEP_WAITING_FOR_SENDER_LOOKUP;
 		_r->sw->requestWhois(source());
 		return false;
 	}
