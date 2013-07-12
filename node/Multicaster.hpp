@@ -287,12 +287,11 @@ public:
 		}
 
 		// Add a supernode if there's nowhere else to go. Supernodes know of all multicast
-		// LIKEs and so can act to bridge sparse multicast groups. We do not remember them
-		// in the bloom filter.
+		// LIKEs and so can act to bridge sparse multicast groups.
 		if (!picked) {
 			Address avoid[2];
 			avoid[0] = upstream;
-			avoid[1] = originalSubmitter;
+			avoid[1] = originalSubmitter; // otherwise supernodes will play ping pong
 			P peer = topology.getBestSupernode(avoid,2,true);
 			if (peer)
 				peers[picked++] = peer;

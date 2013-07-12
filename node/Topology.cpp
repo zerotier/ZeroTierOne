@@ -115,6 +115,7 @@ void Topology::addPeer(const SharedPtr<Peer> &candidate,void (*callback)(void *,
 SharedPtr<Peer> Topology::getPeer(const Address &zta)
 {
 	if (zta == _r->identity.address()) {
+		abort();
 		TRACE("BUG: ignored attempt to getPeer() for self, returned NULL");
 		return SharedPtr<Peer>();
 	}
