@@ -64,9 +64,6 @@ void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,c
 				_handleRemotePacketFragment(localPort,fromAddr,data);
 			else if (data.size() > ZT_PROTO_MIN_PACKET_LENGTH)
 				_handleRemotePacketHead(localPort,fromAddr,data);
-			else {
-				TRACE("dropped runt packet from %s",fromAddr.toString().c_str());
-			}
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped packet from %s: %s",fromAddr.toString().c_str(),ex.what());
@@ -83,9 +80,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	if (to == network->tap().mac()) {
-		// Right thing to do? Will this ever happen?
-		TRACE("weird OS behavior: ethernet frame received from self, reflecting");
-		network->tap().put(from,to,etherType,data.data(),data.size());
+		LOG("%s: weird: ethernet frame received from self, ignoring (bridge loop?)",network->tap().deviceName().c_str());
 		return;
 	}
 
@@ -103,7 +98,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
-		Multicaster::MulticastBloomFilter newbf;
+		Multicaster::MulticastBloomFilter bloom;
 		SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
 		unsigned int np = _r->multicaster->pickNextPropagationPeers(
 			*(_r->topology),
@@ -111,7 +106,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			mg,
 			_r->identity.address(),
 			Address(),
-			newbf,
+			bloom,
 			ZT_MULTICAST_PROPAGATION_BREADTH,
 			propPeers,
 			Utils::now());
@@ -132,7 +127,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		outpTmpl.append(from.data,6);
 		outpTmpl.append(mg.mac().data,6);
 		outpTmpl.append((uint32_t)mg.adi());
-		outpTmpl.append(newbf.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES);
+		outpTmpl.append(bloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES);
 		outpTmpl.append((uint8_t)0); // 0 hops
 		outpTmpl.append((uint16_t)etherType);
 		outpTmpl.append((uint16_t)data.size());
@@ -148,7 +143,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 	} else if (to.isZeroTier()) {
 		// Simple unicast frame from us to another node
-		Address toZT(to.data + 1);
+		Address toZT(to);
 		if (network->isAllowed(toZT)) {
 			Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
