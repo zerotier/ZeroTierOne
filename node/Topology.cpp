@@ -25,6 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include <algorithm>
 #include "Topology.hpp"
 #include "NodeConfig.hpp"
 
@@ -145,23 +146,32 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	return SharedPtr<Peer>();
 }
 
-SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount) const
+SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const
 {
 	SharedPtr<Peer> bestSupernode;
-	unsigned long bestSupernodeLatency = 0xffff;
+	unsigned int bestSupernodeLatency = 0xffff;
 	uint64_t now = Utils::now();
 
 	Mutex::Lock _l(_supernodes_m);
+
+	if (_supernodePeers.empty())
+		return bestSupernode;
 
 	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();) {
 		for(unsigned int i=0;i<avoidCount;++i) {
 			if (avoid[i] == (*sn)->address())
 				goto skip_and_try_next_supernode;
 		}
-		if ((*sn)->hasActiveDirectPath(now)) { // only consider those that responded to pings
+		if ((*sn)->hasActiveDirectPath(now)) {
 			unsigned int l = (*sn)->latency();
-			if ((l)&&(l <= bestSupernodeLatency)) {
-				bestSupernodeLatency = l;
+			if (bestSupernode) {
+				if ((l)&&(l < bestSupernodeLatency)) {
+					bestSupernodeLatency = l;
+					bestSupernode = *sn;
+				}
+			} else {
+				if (l)
+					bestSupernodeLatency = l;
 				bestSupernode = *sn;
 			}
 		}
@@ -169,14 +179,20 @@ skip_and_try_next_supernode:
 		++sn;
 	}
 
-	if (bestSupernode)
+	if ((bestSupernode)||(strictAvoid))
 		return bestSupernode;
 
 	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
-		if ((*sn)->hasActiveDirectPath(now)) { // only consider those that responded to pings
+		if ((*sn)->hasActiveDirectPath(now)) {
 			unsigned int l = (*sn)->latency();
-			if ((l)&&(l <= bestSupernodeLatency)) {
-				bestSupernodeLatency = l;
+			if (bestSupernode) {
+				if ((l)&&(l < bestSupernodeLatency)) {
+					bestSupernodeLatency = l;
+					bestSupernode = *sn;
+				}
+			} else {
+				if (l)
+					bestSupernodeLatency = l;
 				bestSupernode = *sn;
 			}
 		}
@@ -185,16 +201,7 @@ skip_and_try_next_supernode:
 	if (bestSupernode)
 		return bestSupernode;
 
-	uint64_t bestSupernodeLastDirectReceive = 0;
-	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
-		uint64_t l = (*sn)->lastDirectReceive();
-		if (l > bestSupernodeLastDirectReceive) {
-			bestSupernodeLastDirectReceive = l;
-			bestSupernode = *sn;
-		}
-	}
-
-	return bestSupernode;
+	return _supernodePeers[Utils::randomInt<unsigned int>() % _supernodePeers.size()];
 }
 
 void Topology::clean()

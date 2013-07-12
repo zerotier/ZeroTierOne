@@ -557,7 +557,7 @@ void Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &f
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> supernode(_r->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted));
+	SharedPtr<Peer> supernode(_r->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
 	if (supernode) {
 		Packet outp(supernode->address(),_r->identity.address(),Packet::VERB_WHOIS);
 		outp.append(addr.data(),ZT_ADDRESS_LENGTH);

@@ -266,7 +266,7 @@ public:
 		// Sort in descending order of most recent direct unicast frame, picking
 		// peers with whom we have recently communicated. This is "implicit social
 		// switching."
-		std::sort(&(toConsider[0]),&(toConsider[sampleSize]),PeerPropagationPrioritySortOrder<P>());
+		std::sort(toConsider,toConsider + sampleSize,PeerPropagationPrioritySortOrder<P>());
 
 		// Decay a few random bits in bloom filter to probabilistically eliminate
 		// false positives as we go. The odds of decaying an already-set bit
@@ -290,7 +290,10 @@ public:
 		// LIKEs and so can act to bridge sparse multicast groups. We do not remember them
 		// in the bloom filter.
 		if (!picked) {
-			P peer = topology.getBestSupernode();
+			Address avoid[2];
+			avoid[0] = upstream;
+			avoid[1] = originalSubmitter;
+			P peer = topology.getBestSupernode(avoid,2,true);
 			if (peer)
 				peers[picked++] = peer;
 		}
@@ -305,7 +308,7 @@ private:
 	{
 		inline bool operator()(const P &p1,const P &p2) const
 		{
-			return (p1->lastUnicastFrame() >= p2->lastUnicastFrame());
+			return (p1->lastUnicastFrame() > p2->lastUnicastFrame());
 		}
 	};
 

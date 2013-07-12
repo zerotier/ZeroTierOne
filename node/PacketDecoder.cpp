@@ -472,6 +472,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 									propPeers,
 									Utils::now());
 
+								setSource(_r->identity.address());
 								(*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT] = hops;
 								compress();
 

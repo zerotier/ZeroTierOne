@@ -134,7 +134,7 @@ public:
 	 */
 	inline SharedPtr<Peer> getBestSupernode() const
 	{
-		return getBestSupernode((const Address *)0,0);
+		return getBestSupernode((const Address *)0,0,false);
 	}
 
 	/**
@@ -146,9 +146,10 @@ public:
 	 * 
 	 * @param avoid Nodes to avoid
 	 * @param avoidCount Number of nodes to avoid
+	 * @param strictAvoid If false, consider avoided supernodes anyway if no non-avoid supernodes are available
 	 * @return Supernode or NULL if none
 	 */
-	SharedPtr<Peer> getBestSupernode(const Address *avoid,unsigned int avoidCount) const;
+	SharedPtr<Peer> getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const;
 
 	/**
 	 * @param zta ZeroTier address

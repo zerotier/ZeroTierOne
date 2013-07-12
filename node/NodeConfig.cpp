@@ -152,7 +152,7 @@ void NodeConfig::__CBautoconfHandler(const std::string &lastModified,const std::
 									if (rawAddr.length() == ZT_ADDRESS_LENGTH) {
 										Address addr(rawAddr.data());
 										if ((addr)&&(!addr.isReserved())) {
-											TRACE("network %llu member: %s",nwid,addr.toString().c_str());
+											//TRACE("network %llu member: %s",nwid,addr.toString().c_str());
 											nw->_members.insert(addr);
 										}
 									}
