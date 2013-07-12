@@ -238,6 +238,23 @@ private:
 
 	std::map< Array< Address,2 >,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
+
+	struct ContactQueueEntry
+	{
+		ContactQueueEntry() {}
+		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,Demarc::Port lp,const InetAddress &a) :
+			peer(p),
+			fireAtTime(ft),
+			localPort(lp),
+			inaddr(a) {}
+
+		SharedPtr<Peer> peer;
+		uint64_t fireAtTime;
+		Demarc::Port localPort;
+		InetAddress inaddr;
+	};
+	std::list<ContactQueueEntry> _contactQueue;
+	Mutex _contactQueue_m;
 };
 
 } // namespace ZeroTier

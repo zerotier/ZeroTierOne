@@ -267,24 +267,31 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	return true;
 }
 
+void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
+{
+	Demarc::Port fromPort = _r->demarc->pick(atAddr);
+	_r->demarc->send(fromPort,atAddr,"\0",1,ZT_FIREWALL_OPENER_HOPS);
+	Mutex::Lock _l(_contactQueue_m);
+	_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_RENDEZVOUS_NAT_T_DELAY,fromPort,atAddr));
+	// TODO: there needs to be a mechanism to interrupt Node's waiting to
+	// make sure the fire happens at the right time, but it's not critical.
+}
+
 unsigned long Switch::doTimerTasks()
 {
 	unsigned long nextDelay = ~((unsigned long)0); // big number, caller will cap return value
 	uint64_t now = Utils::now();
 
 	{
-		Mutex::Lock _l(_rendezvousQueue_m);
-		for(std::map< Address,RendezvousQueueEntry >::iterator i(_rendezvousQueue.begin());i!=_rendezvousQueue.end();) {
-			if (now >= i->second.fireAtTime) {
-				SharedPtr<Peer> withPeer = _r->topology->getPeer(i->first);
-				if (withPeer) {
-					TRACE("sending NAT-T HELLO to %s(%s)",i->first.toString().c_str(),i->second.inaddr.toString().c_str());
-					sendHELLO(withPeer,i->second.localPort,i->second.inaddr);
-				}
-				_rendezvousQueue.erase(i++);
+		Mutex::Lock _l(_contactQueue_m);
+		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
+			if (now >= qi->fireAtTime) {
+				TRACE("sending NAT-T HELLO to %s(%s)",qi->peer->address().toString().c_str(),qi->inaddr.toString().c_str());
+				sendHELLO(qi->peer,qi->localPort,qi->inaddr);
+				_contactQueue.erase(qi++);
 			} else {
-				nextDelay = std::min(nextDelay,(unsigned long)(i->second.fireAtTime - now));
-				++i;
+				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));
+				++qi;
 			}
 		}
 	}
@@ -325,8 +332,8 @@ unsigned long Switch::doTimerTasks()
 	{
 		Mutex::Lock _l(_rxQueue_m);
 		for(std::list< SharedPtr<PacketDecoder> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
-			if ((now - i->second->receiveTime()) > ZT_RECEIVE_QUEUE_TIMEOUT) {
-				TRACE("RX %s -> %s timed out",i->second->source().toString().c_str(),i->second->destination().toString().c_str());
+			if ((now - (*i)->receiveTime()) > ZT_RECEIVE_QUEUE_TIMEOUT) {
+				TRACE("RX %s -> %s timed out",(*i)->source().toString().c_str(),(*i)->destination().toString().c_str());
 				_rxQueue.erase(i++);
 			} else ++i;
 		}
@@ -401,8 +408,8 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 
 	{
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<PacketDecoder> >::iterator rxi(_rxQueue.begin());rxi!=rxQueue.end();) {
-			if (rxi->second->tryDecode(_r))
+		for(std::list< SharedPtr<PacketDecoder> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
+			if ((*rxi)->tryDecode(_r))
 				_rxQueue.erase(rxi++);
 			else ++rxi;
 		}
