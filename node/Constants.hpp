@@ -235,7 +235,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Length of circular ring buffer history of multicast packets
  */
-#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 4096
+#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 1024
 
 /**
  * Expiration time in ms for multicast history items

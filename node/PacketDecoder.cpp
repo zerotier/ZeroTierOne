@@ -291,7 +291,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 					_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,Identity(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY))),&PacketDecoder::_CBaddPeerFromWhois,const_cast<void *>((const void *)_r));
 				break;
 			default:
-				TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
+				//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
 				break;
 		}
 	} catch (std::exception &ex) {
@@ -336,13 +336,14 @@ bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<P
 {
 	try {
 		Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH));
-		if (_r->topology->getPeer(with)) {
+		SharedPtr<Peer> withPeer(_r->topology->getPeer(with));
+		if (withPeer) {
 			unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 			unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 				InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 				TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",source().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-				_r->sw->contact(peer,atAddr);
+				_r->sw->contact(withPeer,atAddr);
 			} else {
 				TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			}
@@ -398,7 +399,7 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 				if (network->isAllowed(source())) {
 					MAC mac(field(ptr,6)); ptr += 6;
 					uint32_t adi = at<uint32_t>(ptr); ptr += 4;
-					TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source().toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
+					//TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source().toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
 					_r->multicaster->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source(),now);
 					++numAccepted;
 				} else {
@@ -441,7 +442,9 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					unsigned int signaturelen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH);
 					unsigned char *dataAndSignature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,datalen + signaturelen);
 
-					bool isDuplicate = _r->multicaster->checkAndUpdateMulticastHistory(fromMac,mg,dataAndSignature,datalen,network->id(),Utils::now());
+					uint64_t mccrc = Multicaster::computeMulticastDedupCrc(network->id(),fromMac,mg,etherType,dataAndSignature,datalen);
+					uint64_t now = Utils::now();
+					bool isDuplicate = _r->multicaster->checkDuplicate(mccrc,now);
 
 					if (originalSubmitterAddress == _r->identity.address()) {
 						// Technically should not happen, since the original submitter is
@@ -458,10 +461,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 							_step = DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP;
 							return false;
 						} else if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),network->id(),fromMac,mg,etherType,dataAndSignature,datalen,dataAndSignature + datalen,signaturelen)) {
+							_r->multicaster->addToDedupHistory(mccrc,now);
+
 							if (!isDuplicate)
 								network->tap().put(fromMac,mg.mac(),etherType,dataAndSignature,datalen);
 
 							if (++hops < ZT_MULTICAST_PROPAGATION_DEPTH) {
+								Address upstream(source()); // save this since we mangle it
+
 								Multicaster::MulticastBloomFilter bloom(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES));
 								SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
 								unsigned int np = _r->multicaster->pickNextPropagationPeers(
@@ -469,11 +476,16 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 									network->id(),
 									mg,
 									originalSubmitterAddress,
-									source(),
+									upstream,
 									bloom,
 									ZT_MULTICAST_PROPAGATION_BREADTH,
 									propPeers,
-									Utils::now());
+									now);
+
+								// In a bit of a hack, we re-use this packet to repeat it
+								// to our multicast propagation recipients. Afterwords we
+								// return true just to be sure this is the end of this
+								// packet's life cycle, since it is now mangled.
 
 								setSource(_r->identity.address());
 								(*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT] = hops;
@@ -481,13 +493,15 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 								compress();
 
 								for(unsigned int i=0;i<np;++i) {
-									TRACE("propagating multicast from original node %s via %s toward %s",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),propPeers[i]->address().toString().c_str());
+									TRACE("propagating multicast from original node %s: %s -> %s",originalSubmitterAddress.toString().c_str(),upstream.toString().c_str(),propPeers[i]->address().toString().c_str());
 									// Re-use this packet to re-send multicast frame to everyone
 									// downstream from us.
 									newInitializationVector();
 									setDestination(propPeers[i]->address());
 									_r->sw->send(*this,true);
 								}
+
+								return true;
 							} else {
 								TRACE("terminating MULTICAST_FRAME propagation from %s(%s): max depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 							}

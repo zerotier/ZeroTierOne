@@ -399,7 +399,7 @@ Node::ReasonForTermination Node::run()
 			try {
 				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
-				Thread::sleep(delay);
+				_r->mainLoopWaitCondition.wait(delay);
 				lastDelayDelta = (long)(Utils::now() - start) - (long)delay;
 			} catch (std::exception &exc) {
 				LOG("unexpected exception running Switch doTimerTasks: %s",exc.what());
@@ -426,12 +426,14 @@ void Node::terminate()
 	throw()
 {
 	((_NodeImpl *)_impl)->terminateNow = true;
+	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
 }
 
 void Node::updateStatusNow()
 	throw()
 {
 	((_NodeImpl *)_impl)->updateStatusNow = true;
+	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
 }
 
 class _VersionStringMaker

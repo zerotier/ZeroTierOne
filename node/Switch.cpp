@@ -161,6 +161,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 void Switch::send(const Packet &packet,bool encrypt)
 {
+	if (packet.destination() == _r->identity.address()) {
+		TRACE("BUG: caught attempt to send() to self, ignored");
+		return;
+	}
+
 	//TRACE("%.16llx %s -> %s (size: %u) (enc: %s)",packet.packetId(),Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(encrypt ? "yes" : "no"));
 	if (!_trySend(packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
@@ -195,6 +200,9 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
 {
+	if ((p1 == _r->identity.address())||(p2 == _r->identity.address()))
+		return false;
+
 	SharedPtr<Peer> p1p = _r->topology->getPeer(p1);
 	if (!p1p)
 		return false;
@@ -266,10 +274,15 @@ void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
 	Demarc::Port fromPort = _r->demarc->pick(atAddr);
 	_r->demarc->send(fromPort,atAddr,"\0",1,ZT_FIREWALL_OPENER_HOPS);
-	Mutex::Lock _l(_contactQueue_m);
-	_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_RENDEZVOUS_NAT_T_DELAY,fromPort,atAddr));
-	// TODO: there needs to be a mechanism to interrupt Node's waiting to
-	// make sure the fire happens at the right time, but it's not critical.
+
+	{
+		Mutex::Lock _l(_contactQueue_m);
+		_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_RENDEZVOUS_NAT_T_DELAY,fromPort,atAddr));
+	}
+
+	// Kick main loop out of wait so that it can pick up this
+	// change to our scheduled timer tasks.
+	_r->mainLoopWaitCondition.signal();
 }
 
 unsigned long Switch::doTimerTasks()
@@ -424,8 +437,8 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
 	Packet::Fragment fragment(data);
-
 	Address destination(fragment.destination());
+
 	if (destination != _r->identity.address()) {
 		// Fragment is not for us, so try to relay it
 		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
@@ -493,6 +506,8 @@ void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddres
 void Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
 	SharedPtr<PacketDecoder> packet(new PacketDecoder(data,localPort,fromAddr));
+
+	Address source(packet->source());
 	Address destination(packet->destination());
 
 	if (destination != _r->identity.address()) {
@@ -502,9 +517,15 @@ void Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &f
 
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
 			if ((relayTo)&&(relayTo->send(_r,packet->data(),packet->size(),true,Packet::VERB_NOP,Utils::now()))) {
-				unite(packet->source(),destination,false); // periodically try to get them to talk directly
+				unite(source,destination,false); // periodically try to get them to talk directly
 			} else {
-				relayTo = _r->topology->getBestSupernode();
+				// Relay via a supernode if there's no direct path, but pass
+				// source to getBestSupernode() to avoid just in case this is
+				// being passed from another supernode so that we don't just
+				// pass it back to where it came from. This can happen if a
+				// supernode for some reason lacks a direct path to a peer that
+				// it wants to talk to, such as because of Internet weather.
+				relayTo = _r->topology->getBestSupernode(&source,1,true);
 				if (relayTo)
 					relayTo->send(_r,packet->data(),packet->size(),true,Packet::VERB_NOP,Utils::now());
 			}

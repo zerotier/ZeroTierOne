@@ -52,7 +52,7 @@
 #include "Identity.hpp"
 
 // Maximum sample size to pick during choice of multicast propagation peers
-#define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE 64
+#define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE 32
 
 namespace ZeroTier {
 
@@ -75,6 +75,7 @@ public:
 		throw()
 	{
 		memset(_multicastHistory,0,sizeof(_multicastHistory));
+		_multicastHistoryPtr = 0;
 	}
 
 	/**
@@ -131,52 +132,65 @@ public:
 	}
 
 	/**
-	 * Check multicast history to see if this is a duplicate, and add/update entry
+	 * Compute the CRC64 code for multicast deduplication
 	 *
-	 * @param from Ultimate sending MAC address
-	 * @param to Destination multicast group
-	 * @param payload Multicast packet payload
-	 * @param len Length of packet
 	 * @param nwid Network ID
-	 * @param now Current time
-	 * @return True if this appears to be a duplicate to within history expiration time
+	 * @param from Sender MAC
+	 * @param to Destination multicast group
+	 * @param etherType Ethernet frame type
+	 * @param payload Multicast frame data
+	 * @param len Length of frame
 	 */
-	inline bool checkAndUpdateMulticastHistory(
+	static inline uint64_t computeMulticastDedupCrc(
+		uint64_t nwid,
 		const MAC &from,
 		const MulticastGroup &to,
+		unsigned int etherType,
 		const void *payload,
-		unsigned int len,
-		const uint64_t nwid,
-		const uint64_t now)
+		unsigned int len)
 		throw()
 	{
-		// Note: CRCs aren't transmitted over the network, so portability and
-		// byte order don't matter. This calculation can be changed. We just
-		// want a unique code.
+		// This CRC is only used locally, so byte order issues and
+		// such don't matter. It can also be changed without protocol
+		// impact.
 		uint64_t crc = Utils::crc64(0,from.data,6);
 		crc = Utils::crc64(crc,to.mac().data,6);
 		crc ^= (uint64_t)to.adi();
+		crc ^= (uint64_t)etherType;
 		crc = Utils::crc64(crc,payload,len);
 		crc ^= nwid; // also include network ID in CRC
+		return crc;
+	}
 
-		// Replace existing entry or pick one to replace with new entry
-		uint64_t earliest = 0xffffffffffffffffULL;
-		unsigned long earliestIdx = 0;
+	/**
+	 * Check multicast history to see if this is a duplicate
+	 *
+	 * @param crc Multicast CRC
+	 * @param now Current time
+	 * @return True if this appears to be a duplicate to within history expiration time
+	 */
+	inline bool checkDuplicate(uint64_t crc,uint64_t now) const
+		throw()
+	{
 		for(unsigned int i=0;i<ZT_MULTICAST_DEDUP_HISTORY_LENGTH;++i) {
-			if (_multicastHistory[i][0] == crc) {
-				uint64_t then = _multicastHistory[i][1];
-				_multicastHistory[i][1] = now;
-				return ((now - then) < ZT_MULTICAST_DEDUP_HISTORY_EXPIRE);
-			} else if (_multicastHistory[i][1] < earliest) {
-				earliest = _multicastHistory[i][1];
-				earliestIdx = i;
-			}
+			if ((_multicastHistory[i][0] == crc)&&((now - _multicastHistory[i][1]) < ZT_MULTICAST_DEDUP_HISTORY_EXPIRE))
+				return true;
 		}
-
-		_multicastHistory[earliestIdx][0] = crc; // replace oldest entry
-		_multicastHistory[earliestIdx][1] = now;
-
 		return false;
+	}
+
+	/**
+	 * Add a multicast CRC to the multicast deduplication history
+	 *
+	 * @param crc Multicast CRC
+	 * @param now Current time
+	 */
+	inline void addToDedupHistory(uint64_t crc,uint64_t now)
+		throw()
+	{
+		unsigned int mhi = ++_multicastHistoryPtr % ZT_MULTICAST_DEDUP_HISTORY_LENGTH;
+		_multicastHistory[mhi][0] = crc;
+		_multicastHistory[mhi][1] = now;
 	}
 
 	/**
@@ -248,7 +262,7 @@ public:
 					// a fact they've already seen this.
 					if ((channelMemberEntry->first != originalSubmitter)&&(channelMemberEntry->first != upstream)) {
 						P peer = topology.getPeer(channelMemberEntry->first);
-						if (peer) {
+						if ((peer)&&(peer->hasActiveDirectPath(now))) {
 							toConsider[sampleSize++] = peer;
 							if (sampleSize >= ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)
 								break; // abort if we have enough candidates
@@ -289,10 +303,7 @@ public:
 		// Add a supernode if there's nowhere else to go. Supernodes know of all multicast
 		// LIKEs and so can act to bridge sparse multicast groups.
 		if (!picked) {
-			Address avoid[2];
-			avoid[0] = upstream;
-			avoid[1] = originalSubmitter; // otherwise supernodes will play ping pong
-			P peer = topology.getBestSupernode(avoid,2,true);
+			P peer = topology.getBestSupernode(&originalSubmitter,1,true);
 			if (peer)
 				peers[picked++] = peer;
 		}
@@ -334,8 +345,9 @@ private:
 		SHA256_Final(digest,&sha);
 	}
 
-	// [0] - CRC, [1] - timestamp
+	// ring buffer: [0] - CRC, [1] - timestamp
 	uint64_t _multicastHistory[ZT_MULTICAST_DEDUP_HISTORY_LENGTH][2];
+	volatile unsigned int _multicastHistoryPtr;
 
 	// A multicast channel, essentially a pub/sub channel. It consists of a
 	// network ID and a multicast group within that network.

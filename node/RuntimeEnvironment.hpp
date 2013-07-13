@@ -30,6 +30,7 @@
 
 #include <string>
 #include "Identity.hpp"
+#include "Condition.hpp"
 
 namespace ZeroTier {
 
@@ -72,6 +73,9 @@ public:
 	std::string configAuthorityIdentityStr;
 	std::string ownershipVerificationSecret;
 	std::string ownershipVerificationSecretHash; // base64 of SHA-256 X16 rounds
+
+	// signal() to prematurely interrupt main loop wait
+	Condition mainLoopWaitCondition;
 
 	Identity configAuthority;
 	Identity identity;
