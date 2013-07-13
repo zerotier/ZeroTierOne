@@ -36,11 +36,11 @@
 /**
  * Minor version: 8-bit (0-255)
  */
-#define ZEROTIER_ONE_VERSION_MINOR 2
+#define ZEROTIER_ONE_VERSION_MINOR 3
 
 /**
  * Revision: 16-bit (0-65535)
  */
-#define ZEROTIER_ONE_VERSION_REVISION 5
+#define ZEROTIER_ONE_VERSION_REVISION 0
 
 #endif
