@@ -88,6 +88,14 @@ public:
 		return *this;
 	}
 
+	inline void swap(SharedPtr &with)
+		throw()
+	{
+		T *tmp = _ptr;
+		_ptr = with._ptr;
+		with._ptr = tmp;
+	}
+
 	inline operator bool() const throw() { return (_ptr); }
 	inline T &operator*() const throw() { return *_ptr; }
 	inline T *operator->() const throw() { return _ptr; }

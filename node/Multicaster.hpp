@@ -50,6 +50,7 @@
 #include "SharedPtr.hpp"
 #include "BloomFilter.hpp"
 #include "Identity.hpp"
+#include "CMWC4096.hpp"
 
 // Maximum sample size to pick during choice of multicast propagation peers
 #define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE (ZT_MULTICAST_PROPAGATION_BREADTH * 8)
@@ -211,6 +212,7 @@ public:
 	 */
 	template<typename T,typename P>
 	inline unsigned int pickNextPropagationPeers(
+		CMWC4096 &prng,
 		T &topology,
 		uint64_t nwid,
 		const MulticastGroup &mg,

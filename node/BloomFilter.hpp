@@ -115,11 +115,12 @@ public:
 
 	/**
 	 * Clear a random bit in this bloom filter
+	 *
+	 * @param rn Random number
 	 */
-	inline void decay()
+	inline void decay(unsigned int rn)
 		throw()
 	{
-		const unsigned int rn = Utils::randomInt<unsigned int>();
 		_field[(rn >> 3) % (B / 8)] &= ~((unsigned char)(1 << (rn & 7)));
 	}
 

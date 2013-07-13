@@ -31,6 +31,7 @@
 #include <string>
 #include "Identity.hpp"
 #include "Condition.hpp"
+#include "CMWC4096.hpp"
 
 namespace ZeroTier {
 
@@ -76,6 +77,9 @@ public:
 
 	// signal() to prematurely interrupt main loop wait
 	Condition mainLoopWaitCondition;
+
+	// non-cryptographic fast PRNG
+	CMWC4096 prng;
 
 	Identity configAuthority;
 	Identity identity;

@@ -201,7 +201,7 @@ skip_and_try_next_supernode:
 	if (bestSupernode)
 		return bestSupernode;
 
-	return _supernodePeers[Utils::randomInt<unsigned int>() % _supernodePeers.size()];
+	return _supernodePeers[_r->prng.next32() % _supernodePeers.size()];
 }
 
 void Topology::clean()

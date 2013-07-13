@@ -143,7 +143,7 @@ Demarc::Port Demarc::pick(const InetAddress &to) const
 			}
 		}
 		if (possibilities.size())
-			return possibilities[Utils::randomInt<unsigned int>() % possibilities.size()]->first;
+			return possibilities[_r->prng.next32() % possibilities.size()]->first;
 		else return NULL_PORT;
 	} catch ( ... ) {
 		return NULL_PORT;
@@ -174,7 +174,7 @@ Demarc::Port Demarc::send(Demarc::Port fromPort,const InetAddress &to,const void
 				}
 			}
 			if (possibilities.size())
-				pe = possibilities[Utils::randomInt<unsigned int>() % possibilities.size()];
+				pe = possibilities[_r->prng.next32() % possibilities.size()];
 			else {
 				_ports_m.unlock();
 				return NULL_PORT;

@@ -87,18 +87,6 @@ public:
 	static void getSecureRandom(void *buf,unsigned int bytes);
 
 	/**
-	 * @tparam T Integer type to fill and return
-	 * @return Random int using secure random source
-	 */
-	template<typename T>
-	static inline T randomInt()
-	{
-		T foo = 0; // prevents valgrind warnings
-		getSecureRandom(&foo,sizeof(foo));
-		return foo;
-	}
-
-	/**
 	 * Set modes on a file to something secure
 	 * 
 	 * This locks a file so that only the owner can access it. What it actually

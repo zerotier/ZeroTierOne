@@ -193,8 +193,11 @@ Node::ReasonForTermination Node::run()
 		std::string ovsPath(_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine");
 		if (((Utils::now() - Utils::getLastModified(ovsPath.c_str())) >= ZT_OVS_GENERATE_NEW_IF_OLDER_THAN)||(!Utils::readFile(ovsPath.c_str(),_r->ownershipVerificationSecret))) {
 			_r->ownershipVerificationSecret = "";
-			for(unsigned int i=0;i<24;++i)
-				_r->ownershipVerificationSecret.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Utils::randomInt<unsigned int>() % 62]);
+			unsigned int securern = 0;
+			for(unsigned int i=0;i<24;++i) {
+				Utils::getSecureRandom(&securern,sizeof(securern));
+				_r->ownershipVerificationSecret.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[securern % 62]);
+			}
 			_r->ownershipVerificationSecret.append(ZT_EOL_S);
 			if (!Utils::writeFile(ovsPath.c_str(),_r->ownershipVerificationSecret))
 				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write 'thisdeviceismine' (home path not writable?)");
