@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include "Utils.hpp"
 
+namespace ZeroTier {
+
 /** 
  * Complement Multiply With Carry random number generator
  *
@@ -72,10 +74,18 @@ public:
 		return ((((uint64_t)next32()) << 32) ^ (uint64_t)next32());
 	}
 
+	inline double nextDouble()
+		throw()
+	{
+		return ((double)(next32()) / 4294967296.0);
+	}
+
 private:
 	uint32_t Q[4096];
 	uint32_t c;
 	uint32_t i;
 };
+
+} // namespace ZeroTier
 
 #endif

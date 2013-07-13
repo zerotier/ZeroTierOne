@@ -30,6 +30,11 @@
 namespace ZeroTier {
 
 Peer::Peer() :
+	_id(),
+	_ipv4p(),
+	_ipv6p(),
+	_lastUnicastFrame(0),
+	_lastMulticastFrame(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -40,6 +45,10 @@ Peer::Peer() :
 Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
 	_id(peerIdentity),
+	_ipv4p(),
+	_ipv6p(),
+	_lastUnicastFrame(0),
+	_lastMulticastFrame(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -49,29 +58,31 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
-void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &fromAddr,unsigned int hops,Packet::Verb verb,uint64_t now)
+void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &remoteAddr,unsigned int hops,Packet::Verb verb,uint64_t now)
 {
 	if (!hops) { // direct packet
-		WanPath *wp = (fromAddr.isV4() ? &_ipv4p : &_ipv6p);
-
+		WanPath *wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
 		wp->lastReceive = now;
-		if (verb == Packet::VERB_FRAME)
-			wp->lastUnicastFrame = now;
 		wp->localPort = localPort;
 		if (!wp->fixed)
-			wp->addr = fromAddr;
+			wp->addr = remoteAddr;
+		_dirty = true;
+	}
 
+	if (verb == Packet::VERB_FRAME) {
+		_lastUnicastFrame = now;
+		_dirty = true;
+	} else if (verb == Packet::VERB_MULTICAST_FRAME) {
+		_lastMulticastFrame = now;
 		_dirty = true;
 	}
 }
 
-bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,bool relay,Packet::Verb verb,uint64_t now)
+bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	if ((_ipv6p.isActive(now))||((!(_ipv4p.addr))&&(_ipv6p.addr))) {
 		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,data,len,-1)) {
 			_ipv6p.lastSend = now;
-			if (verb == Packet::VERB_FRAME)
-				_ipv6p.lastUnicastFrame = now;
 			_dirty = true;
 			return true;
 		}
@@ -80,14 +91,23 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,b
 	if (_ipv4p.addr) {
 		if (_r->demarc->send(_ipv4p.localPort,_ipv4p.addr,data,len,-1)) {
 			_ipv4p.lastSend = now;
-			if (verb == Packet::VERB_FRAME)
-				_ipv4p.lastUnicastFrame = now;
 			_dirty = true;
 			return true;
 		}
 	}
 
 	return false;
+}
+
+void Peer::onSent(const RuntimeEnvironment *_r,bool relay,Packet::Verb verb,uint64_t now)
+{
+	if (verb == Packet::VERB_FRAME) {
+		_lastUnicastFrame = now;
+		_dirty = true;
+	} else if (verb == Packet::VERB_MULTICAST_FRAME) {
+		_lastMulticastFrame = now;
+		_dirty = true;
+	}
 }
 
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)

@@ -53,15 +53,16 @@
 #define ZT_PEER_MAX_SERIALIZED_LENGTH ( \
 	64 + \
 	IDENTITY_MAX_BINARY_SERIALIZED_LENGTH + \
-	(( \
-		(sizeof(uint64_t) * 5) + \
+	( ( \
+		(sizeof(uint64_t) * 4) + \
 		sizeof(uint16_t) + \
 		1 + \
 		sizeof(uint16_t) + \
 		16 + \
 		1 \
 	) * 2) + \
-	64 \
+	sizeof(uint64_t) + \
+	sizeof(uint64_t) \
 )
 
 namespace ZeroTier {
@@ -110,32 +111,42 @@ public:
 	/**
 	 * Must be called on authenticated packet receive from this peer
 	 * 
+	 * This must be called only after a packet has passed authentication
+	 * checking. Packets that fail are silently discarded.
+	 *
 	 * @param _r Runtime environment
 	 * @param localPort Local port on which packet was received
-	 * @param fromAddr Internet address of sender
+	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
 	 * @param verb Packet verb
 	 * @param now Current time
 	 */
-	void onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &fromAddr,unsigned int hops,Packet::Verb verb,uint64_t now);
+	void onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &remoteAddr,unsigned int hops,Packet::Verb verb,uint64_t now);
 
 	/**
-	 * Send a UDP packet to this peer
-	 * 
-	 * If the active link is timed out (no receives for ping timeout ms), then
-	 * the active link number is incremented after send. This causes sends to
-	 * cycle through links if there is no clear active link. This also happens
-	 * if the send fails for some reason.
+	 * Send a packet to this peer
 	 * 
 	 * @param _r Runtime environment
 	 * @param data Data to send
 	 * @param len Length of packet
-	 * @param relay This is a relay on behalf of another peer (verb is ignored)
-	 * @param verb Packet verb (if not relay)
 	 * @param now Current time
 	 * @return True if packet appears to have been sent, false on local failure
 	 */
-	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,bool relay,Packet::Verb verb,uint64_t now);
+	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
+
+	/**
+	 * Must be called after a packet is successfully sent to this peer
+	 *
+	 * Note that 'relay' means we've sent a packet *from* this node to this
+	 * peer by relaying it, not that we have relayed a packet from somewhere
+	 * else to this peer. In the latter case this is not called.
+	 *
+	 * @param _r Runtime environment
+	 * @param relay If true, packet was sent indirectly via a relay
+	 * @param verb Packet verb
+	 * @param now Current time
+	 */
+	void onSent(const RuntimeEnvironment *_r,bool relay,Packet::Verb verb,uint64_t now);
 
 	/**
 	 * Send firewall opener to active link
@@ -194,7 +205,25 @@ public:
 	uint64_t lastUnicastFrame() const
 		throw()
 	{
-		return std::max(_ipv4p.lastUnicastFrame,_ipv6p.lastUnicastFrame);
+		return _lastUnicastFrame;
+	}
+
+	/**
+	 * @return Time of most recent multicast frame
+	 */
+	uint64_t lastMulticastFrame() const
+		throw()
+	{
+		return _lastMulticastFrame;
+	}
+
+	/**
+	 * @return Time of most recent frame of any kind (unicast or multicast)
+	 */
+	uint64_t lastFrame() const
+		throw()
+	{
+		return std::max(_lastUnicastFrame,_lastMulticastFrame);
 	}
 
 	/**
@@ -340,11 +369,13 @@ public:
 	inline void serialize(Buffer<C> &b)
 		throw(std::out_of_range)
 	{
-		b.append((unsigned char)1); // version
+		b.append((unsigned char)2); // version
 		b.append(_keys,sizeof(_keys));
 		_id.serialize(b,false);
 		_ipv4p.serialize(b);
 		_ipv6p.serialize(b);
+		b.append(_lastUnicastFrame);
+		b.append(_lastMulticastFrame);
 	}
 
 	template<unsigned int C>
@@ -353,14 +384,19 @@ public:
 	{
 		unsigned int p = startAt;
 
-		if (b[p++] != 1)
+		if (b[p++] != 2)
 			throw std::invalid_argument("Peer: deserialize(): version mismatch");
 
 		memcpy(_keys,b.field(p,sizeof(_keys)),sizeof(_keys)); p += sizeof(_keys);
 		p += _id.deserialize(b,p);
 		p += _ipv4p.deserialize(b,p);
 		p += _ipv6p.deserialize(b,p);
+		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 
+		_vMajor = 0;
+		_vMinor = 0;
+		_vRevision = 0;
 		_dirty = false;
 
 		return (p - startAt);
@@ -400,7 +436,6 @@ private:
 		WanPath() :
 			lastSend(0),
 			lastReceive(0),
-			lastUnicastFrame(0),
 			lastFirewallOpener(0),
 			localPort(Demarc::ANY_PORT),
 			latency(0),
@@ -421,7 +456,6 @@ private:
 		{
 			b.append(lastSend);
 			b.append(lastReceive);
-			b.append(lastUnicastFrame);
 			b.append(lastFirewallOpener);
 			b.append(Demarc::portToInt(localPort));
 			b.append((uint16_t)latency);
@@ -451,7 +485,6 @@ private:
 
 			lastSend = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-			lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			lastFirewallOpener = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			localPort = Demarc::intToPort(b.template at<uint64_t>(p)); p += sizeof(uint64_t);
 			latency = b.template at<uint16_t>(p); p += sizeof(uint16_t);
@@ -477,9 +510,8 @@ private:
 
 		uint64_t lastSend;
 		uint64_t lastReceive;
-		uint64_t lastUnicastFrame;
 		uint64_t lastFirewallOpener;
-		Demarc::Port localPort; // ANY_PORT if not defined
+		Demarc::Port localPort; // ANY_PORT if not defined (size: uint64_t)
 		unsigned int latency; // 0 if never determined
 		InetAddress addr; // null InetAddress if path is undefined
 		bool fixed; // do not learn address from received packets
@@ -491,6 +523,9 @@ private:
 	WanPath _ipv4p;
 	WanPath _ipv6p;
 
+	uint64_t _lastUnicastFrame;
+	uint64_t _lastMulticastFrame;
+
 	// Fields below this line are not persisted with serialize()
 
 	unsigned int _vMajor,_vMinor,_vRevision;
@@ -500,5 +535,14 @@ private:
 };
 
 } // namespace ZeroTier
+
+// Add a swap() for shared ptr's to peers to speed up peer sorts
+namespace std {
+	template<>
+	inline void swap(ZeroTier::SharedPtr<ZeroTier::Peer> &a,ZeroTier::SharedPtr<ZeroTier::Peer> &b)
+	{
+		a.swap(b);
+	}
+}
 
 #endif

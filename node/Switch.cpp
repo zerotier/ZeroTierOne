@@ -101,6 +101,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		Multicaster::MulticastBloomFilter bloom;
 		SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
 		unsigned int np = _r->multicaster->pickNextPropagationPeers(
+			*(_r->prng),
 			*(_r->topology),
 			network->id(),
 			mg,
@@ -187,15 +188,20 @@ void Switch::sendHELLO(const Address &dest)
 
 bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &addr)
 {
+	uint64_t now = Utils::now();
 	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-	outp.append(Utils::now());
+	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.hmacSet(dest->macKey());
-	return _r->demarc->send(localPort,addr,outp.data(),outp.size(),-1);
+	if (_r->demarc->send(localPort,addr,outp.data(),outp.size(),-1)) {
+		dest->onSent(_r,false,Packet::VERB_HELLO,now);
+		return true;
+	}
+	return false;
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
@@ -249,7 +255,8 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 		}
 		outp.encrypt(p1p->cryptKey());
 		outp.hmacSet(p1p->macKey());
-		p1p->send(_r,outp.data(),outp.size(),false,Packet::VERB_RENDEZVOUS,now);
+		if (p1p->send(_r,outp.data(),outp.size(),now))
+			p1p->onSent(_r,false,Packet::VERB_RENDEZVOUS,now);
 	}
 	{	// tell p2 where to find p1
 		Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
@@ -264,7 +271,8 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 		}
 		outp.encrypt(p2p->cryptKey());
 		outp.hmacSet(p2p->macKey());
-		p2p->send(_r,outp.data(),outp.size(),false,Packet::VERB_RENDEZVOUS,now);
+		if (p2p->send(_r,outp.data(),outp.size(),now))
+			p2p->onSent(_r,false,Packet::VERB_RENDEZVOUS,now);
 	}
 
 	return true;
@@ -443,12 +451,11 @@ void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddres
 		// Fragment is not for us, so try to relay it
 		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 			fragment.incrementHops();
-
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-			if ((!relayTo)||(!relayTo->send(_r,fragment.data(),fragment.size(),true,Packet::VERB_NOP,Utils::now()))) {
+			if ((!relayTo)||(!relayTo->send(_r,fragment.data(),fragment.size(),Utils::now()))) {
 				relayTo = _r->topology->getBestSupernode();
 				if (relayTo)
-					relayTo->send(_r,fragment.data(),fragment.size(),true,Packet::VERB_NOP,Utils::now());
+					relayTo->send(_r,fragment.data(),fragment.size(),Utils::now());
 			}
 		} else {
 			TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
@@ -516,18 +523,19 @@ void Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &f
 			packet->incrementHops();
 
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-			if ((relayTo)&&(relayTo->send(_r,packet->data(),packet->size(),true,Packet::VERB_NOP,Utils::now()))) {
-				unite(source,destination,false); // periodically try to get them to talk directly
+			if ((relayTo)&&(relayTo->send(_r,packet->data(),packet->size(),Utils::now()))) {
+				// If we've relayed, this periodically tries to get them to
+				// talk directly to save our bandwidth.
+				unite(source,destination,false);
 			} else {
-				// Relay via a supernode if there's no direct path, but pass
-				// source to getBestSupernode() to avoid just in case this is
-				// being passed from another supernode so that we don't just
-				// pass it back to where it came from. This can happen if a
-				// supernode for some reason lacks a direct path to a peer that
-				// it wants to talk to, such as because of Internet weather.
+				// If we've received a packet not for us and we don't have
+				// a direct path to its recipient, pass it to (another)
+				// supernode. This can happen due to Internet weather -- the
+				// most direct supernode may not be reachable, yet another
+				// further away may be.
 				relayTo = _r->topology->getBestSupernode(&source,1,true);
 				if (relayTo)
-					relayTo->send(_r,packet->data(),packet->size(),true,Packet::VERB_NOP,Utils::now());
+					relayTo->send(_r,packet->data(),packet->size(),Utils::now());
 			}
 		} else {
 			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet->source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -584,8 +592,11 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		outp.append(addr.data(),ZT_ADDRESS_LENGTH);
 		outp.encrypt(supernode->cryptKey());
 		outp.hmacSet(supernode->macKey());
-		supernode->send(_r,outp.data(),outp.size(),false,Packet::VERB_WHOIS,Utils::now());
-		return supernode->address();
+		uint64_t now = Utils::now();
+		if (supernode->send(_r,outp.data(),outp.size(),now)) {
+			supernode->onSent(_r,false,Packet::VERB_WHOIS,now);
+			return supernode->address();
+		}
 	}
 	return Address();
 }
@@ -618,8 +629,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 			tmp.encrypt(peer->cryptKey());
 		tmp.hmacSet(peer->macKey());
 
-		Packet::Verb verb = packet.verb();
-		if (via->send(_r,tmp.data(),chunkSize,isRelay,verb,now)) {
+		if (via->send(_r,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {
 				// Too big for one bite, fragment the rest
 				unsigned int fragStart = chunkSize;
@@ -632,15 +642,15 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				for(unsigned int f=0;f<fragsRemaining;++f) {
 					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 					Packet::Fragment frag(tmp,fragStart,chunkSize,f + 1,totalFragments);
-					if (!via->send(_r,frag.data(),frag.size(),isRelay,verb,now)) {
+					if (!via->send(_r,frag.data(),frag.size(),now)) {
 						TRACE("WARNING: packet send to %s failed on later fragment #%u (check IP layer buffer sizes?)",via->address().toString().c_str(),f + 1);
-						return false;
 					}
 					fragStart += chunkSize;
 					remaining -= chunkSize;
 				}
 			}
 
+			via->onSent(_r,isRelay,packet.verb(),now);
 			return true;
 		}
 		return false;

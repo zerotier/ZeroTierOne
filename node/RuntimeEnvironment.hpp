@@ -31,7 +31,6 @@
 #include <string>
 #include "Identity.hpp"
 #include "Condition.hpp"
-#include "CMWC4096.hpp"
 
 namespace ZeroTier {
 
@@ -42,6 +41,7 @@ class Switch;
 class Topology;
 class SysEnv;
 class Multicaster;
+class CMWC4096;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -61,6 +61,7 @@ public:
 	RuntimeEnvironment() :
 		identity(),
 		log((Logger *)0),
+		prng((CMWC4096 *)0),
 		nc((NodeConfig *)0),
 		demarc((Demarc *)0),
 		multicaster((Multicaster *)0),
@@ -78,13 +79,11 @@ public:
 	// signal() to prematurely interrupt main loop wait
 	Condition mainLoopWaitCondition;
 
-	// non-cryptographic fast PRNG
-	CMWC4096 prng;
-
 	Identity configAuthority;
 	Identity identity;
 
 	Logger *log; // may be null
+	CMWC4096 *prng;
 	NodeConfig *nc;
 	Demarc *demarc;
 	Multicaster *multicaster;

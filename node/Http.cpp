@@ -173,7 +173,7 @@ void Http::Request::main()
 				addrList->sort();
 				addrList->unique();
 				unsigned int i = 0,k = 0;
-				k = _r->prng.next32() % addrList->size();
+				k = rand() % addrList->size();
 				std::list<InetAddress>::iterator a(addrList->begin());
 				while (i++ != k) ++a;
 				addr = &(*a);

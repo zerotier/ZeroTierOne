@@ -65,6 +65,7 @@
 #include "MulticastGroup.hpp"
 #include "Mutex.hpp"
 #include "Multicaster.hpp"
+#include "CMWC4096.hpp"
 
 #include "../version.h"
 
@@ -120,6 +121,7 @@ Node::~Node()
 	delete impl->renv.multicaster;
 	delete impl->renv.demarc;
 	delete impl->renv.nc;
+	delete impl->renv.prng;
 	delete impl->renv.log;
 
 	delete impl;
@@ -152,6 +154,8 @@ Node::ReasonForTermination Node::run()
 #endif
 
 		TRACE("initializing...");
+
+		_r->prng = new CMWC4096();
 
 		if (!_r->configAuthority.fromString(_r->configAuthorityIdentityStr))
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"configuration authority identity is not valid");

@@ -234,7 +234,7 @@ public:
 		// network graph likely to be hops away from the original origin of the
 		// message.
 		for(unsigned int i=0;i<ZT_MULTICAST_BLOOM_FILTER_DECAY_RATE;++i)
-			bf.decay();
+			bf.decay((unsigned int)prng.next32());
 
 		{
 			Mutex::Lock _l(_multicastMemberships_m);
@@ -261,8 +261,7 @@ public:
 					// Skip some fraction of entries so that our sampling will be randomly distributed,
 					// since there is no other good way to sample randomly from a map.
 					if (numEntriesPermittedToSkip) {
-						double skipThis = (double)(Utils::randomInt<uint32_t>()) / 4294967296.0;
-						if (skipThis <= skipWhatFraction) {
+						if (prng.nextDouble() <= skipWhatFraction) {
 							--numEntriesPermittedToSkip;
 							++channelMemberEntry;
 							continue;

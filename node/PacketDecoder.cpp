@@ -472,6 +472,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 								Multicaster::MulticastBloomFilter bloom(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES));
 								SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
 								unsigned int np = _r->multicaster->pickNextPropagationPeers(
+									*(_r->prng),
 									*(_r->topology),
 									network->id(),
 									mg,

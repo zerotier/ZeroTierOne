@@ -28,6 +28,7 @@
 #include <algorithm>
 #include "Topology.hpp"
 #include "NodeConfig.hpp"
+#include "CMWC4096.hpp"
 
 namespace ZeroTier {
 
@@ -201,7 +202,7 @@ skip_and_try_next_supernode:
 	if (bestSupernode)
 		return bestSupernode;
 
-	return _supernodePeers[_r->prng.next32() % _supernodePeers.size()];
+	return _supernodePeers[_r->prng->next32() % _supernodePeers.size()];
 }
 
 void Topology::clean()
