@@ -113,11 +113,11 @@ public:
 	 * Send a HELLO announcement immediately to the indicated address
 	 *
 	 * @param localPort Originating local port or ANY_PORT to pick
-	 * @param addr IP address to send to
+	 * @param remoteAddr IP address to send to
 	 * @param dest Destination peer
 	 * @return True if send appears successful
 	 */
-	bool sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &addr);
+	bool sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr);
 
 	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect

@@ -37,7 +37,6 @@
 #include "InetAddress.hpp"
 #include "Topology.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Defaults.hpp"
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "Demarc.hpp"
@@ -66,9 +65,9 @@ void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,c
 				_handleRemotePacketHead(localPort,fromAddr,data);
 		}
 	} catch (std::exception &ex) {
-		TRACE("dropped packet from %s: %s",fromAddr.toString().c_str(),ex.what());
+		TRACE("dropped packet from %s: unexpected exception: %s",fromAddr.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped packet from %s: unknown exception",fromAddr.toString().c_str());
+		TRACE("dropped packet from %s: unexpected exception: (unknown)",fromAddr.toString().c_str());
 	}
 }
 
@@ -78,9 +77,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		LOG("ignored tap: %s -> %s %s (bridging is not (yet?) supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
 		return;
 	}
-
 	if (to == network->tap().mac()) {
-		LOG("%s: weird: ethernet frame received from self, ignoring (bridge loop?)",network->tap().deviceName().c_str());
+		LOG("%s: frame received from self, ignoring (bridge loop?)",network->tap().deviceName().c_str());
 		return;
 	}
 
@@ -93,6 +91,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
+			// Handle broadcast special cases
+
 			// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
 			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
@@ -186,9 +186,10 @@ void Switch::sendHELLO(const Address &dest)
 	send(outp,false);
 }
 
-bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &addr)
+bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr)
 {
 	uint64_t now = Utils::now();
+
 	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
@@ -197,7 +198,8 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.hmacSet(dest->macKey());
-	if (_r->demarc->send(localPort,addr,outp.data(),outp.size(),-1)) {
+
+	if (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1)) {
 		dest->onSent(_r,false,Packet::VERB_HELLO,now);
 		return true;
 	}
@@ -451,6 +453,7 @@ void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddres
 		// Fragment is not for us, so try to relay it
 		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 			fragment.incrementHops();
+
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(_r,fragment.data(),fragment.size(),Utils::now()))) {
 				relayTo = _r->topology->getBestSupernode();
@@ -592,6 +595,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		outp.append(addr.data(),ZT_ADDRESS_LENGTH);
 		outp.encrypt(supernode->cryptKey());
 		outp.hmacSet(supernode->macKey());
+
 		uint64_t now = Utils::now();
 		if (supernode->send(_r,outp.data(),outp.size(),now)) {
 			supernode->onSent(_r,false,Packet::VERB_WHOIS,now);
