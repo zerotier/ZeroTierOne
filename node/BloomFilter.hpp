@@ -94,17 +94,12 @@ public:
 
 	/**
 	 * @param n Value to set
-	 * @return True if corresponding bit was already set before this operation
 	 */
-	inline bool set(unsigned int n)
+	inline void set(unsigned int n)
 		throw()
 	{
 		n %= B;
-		unsigned char *const x = _field + (n / 8);
-		const unsigned char m = (1 << (n % 8));
-		bool already = ((*x & m));
-		*x |= m;
-		return already;
+		_field[n / 8] |= (1 << (n % 8));
 	}
 
 	/**

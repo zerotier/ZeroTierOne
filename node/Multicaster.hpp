@@ -52,7 +52,7 @@
 #include "Identity.hpp"
 
 // Maximum sample size to pick during choice of multicast propagation peers
-#define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE 32
+#define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE (ZT_MULTICAST_PROPAGATION_BREADTH * 8)
 
 namespace ZeroTier {
 
@@ -224,6 +224,16 @@ public:
 		P toConsider[ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE];
 		unsigned int sampleSize = 0;
 
+		// Decay a few random bits in bloom filter to probabilistically eliminate
+		// false positives as we go. The odds of decaying an already-set bit
+		// increases as the bloom filter saturates, so in the early hops of
+		// propagation this likely won't have any effect. This allows peers with
+		// bloom filter collisions to be reconsidered, but at positions on the
+		// network graph likely to be hops away from the original origin of the
+		// message.
+		for(unsigned int i=0;i<ZT_MULTICAST_BLOOM_FILTER_DECAY_RATE;++i)
+			bf.decay();
+
 		{
 			Mutex::Lock _l(_multicastMemberships_m);
 
@@ -259,13 +269,15 @@ public:
 
 					// If it's not expired and it's from our random sample, add it to the set of peers
 					// to consider. Exclude immediate upstream and original submitter, since we know for
-					// a fact they've already seen this.
+					// a fact they've already seen this. Also exclude things in the bloom filter.
 					if ((channelMemberEntry->first != originalSubmitter)&&(channelMemberEntry->first != upstream)) {
-						P peer = topology.getPeer(channelMemberEntry->first);
-						if ((peer)&&(peer->hasActiveDirectPath(now))) {
-							toConsider[sampleSize++] = peer;
-							if (sampleSize >= ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)
-								break; // abort if we have enough candidates
+						if (!bf.contains(channelMemberEntry->first.sum())) {
+							P peer = topology.getPeer(channelMemberEntry->first);
+							if ((peer)&&(peer->hasActiveDirectPath(now))) {
+								toConsider[sampleSize++] = peer;
+								if (sampleSize >= ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)
+									break; // abort if we have enough candidates
+							}
 						}
 					}
 					++channelMemberEntry;
@@ -282,22 +294,11 @@ public:
 		// switching."
 		std::sort(toConsider,toConsider + sampleSize,PeerPropagationPrioritySortOrder<P>());
 
-		// Decay a few random bits in bloom filter to probabilistically eliminate
-		// false positives as we go. The odds of decaying an already-set bit
-		// increases as the bloom filter saturates, so in the early hops of
-		// propagation this likely won't have any effect. This allows peers with
-		// bloom filter collisions to be reconsidered, but at positions on the
-		// network graph likely to be hops away from the original origin of the
-		// message.
-		for(unsigned int i=0;i<ZT_MULTICAST_BLOOM_FILTER_DECAY_RATE;++i)
-			bf.decay();
-
-		// Pick peers not in the bloom filter, setting bloom filter bits accordingly to
-		// remember and pass on these picks.
+		// Pick the best N peers
 		unsigned int picked = 0;
 		for(unsigned int i=0;((i<sampleSize)&&(picked < max));++i) {
-			if (!bf.set(toConsider[i]->address().sum()))
-				peers[picked++] = toConsider[i];
+			peers[picked++] = toConsider[i];
+			bf.set(toConsider[i]->address().sum());
 		}
 
 		// Add a supernode if there's nowhere else to go. Supernodes know of all multicast
