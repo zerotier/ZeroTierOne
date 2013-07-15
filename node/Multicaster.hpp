@@ -263,7 +263,10 @@ public:
 		// Add a supernode if there are fewer than the desired
 		// number of recipients.
 		if (chosen < max) {
-			P peer = topology.getBestSupernode(&originalSubmitter,1,true);
+			Address avoid[2];
+			avoid[0] = originalSubmitter;
+			avoid[1] = upstream;
+			P peer = topology.getBestSupernode(avoid,2,true);
 			if (peer)
 				peers[chosen++] = peer;
 		}
