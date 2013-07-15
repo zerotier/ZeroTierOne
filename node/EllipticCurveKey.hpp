@@ -65,6 +65,7 @@ public:
 		throw() :
 		_bytes(0)
 	{
+		memset(_key,0,sizeof(_key));
 	}
 
 	EllipticCurveKey(const void *data,unsigned int len)

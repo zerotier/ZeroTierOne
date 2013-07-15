@@ -55,7 +55,20 @@ public:
 };
 static _EC_Group ZT_EC_GROUP;
 
-/* Key derivation function */
+/**
+ * Key derivation function
+ *
+ * TODO:
+ * If/when we document the protocol, this will have to be documented as
+ * well. It's a fairly standard KDF that uses SHA-256 to transform the
+ * raw EC key. It's generally considered good crypto practice to do this
+ * to eliminate the possibility of leaking information from EC exchange to
+ * downstream algorithms.
+ *
+ * In our code it is used to produce a two 32-bit keys. One key is used
+ * for Salsa20 and the other for HMAC-SHA-256. They are generated together
+ * as a single 64-bit key.
+ */
 static void *_zt_EC_KDF(const void *in,size_t inlen,void *out,size_t *outlen)
 {
 	SHA256_CTX sha;
@@ -130,9 +143,8 @@ bool EllipticCurveKeyPair::generate()
 			fread(tmp,sizeof(tmp),1,rf);
 			fclose(rf);
 		} else {
-			fprintf(stderr,"WARNING: cannot open /dev/urandom\n");
-			for(unsigned int i=0;i<sizeof(tmp);++i)
-				tmp[i] = (unsigned char)(rand() >> 3);
+			fprintf(stderr,"FATAL: could not open /dev/urandom\n");
+			exit(-1);
 		}
 		RAND_seed(tmp,sizeof(tmp));
 #else
