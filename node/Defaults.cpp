@@ -66,11 +66,16 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	return sn;
 }
 
+static inline Filter _mkDefaultNodeFilter()
+{
+}
+
 Defaults::Defaults()
 	throw(std::runtime_error) :
 	supernodes(_mkSupernodeMap()),
 	configUrlPrefix("http://api.zerotier.com/one/nc/"),
-	configAuthority("f9f34184ac:1:AwGgrWjb8dARXzruqxiy1+Qf+gz4iM5IMfQTCWrJXkwERdvbvxTPZvtIyitw4gS90TGIxW+e7uJxweg9Vyq5lZJBrg==:QeEQLm9ymLC3EcnIw2OUqufUwb2wgHSAg6wQOXKyhT779p/8Hz5485PZLJCbr/aVHjwzop8APJk9B45Zm0Mb/LEhQTBMH2jvc7qqoYnMCNCO9jpADeMJwMW5e1VFgIObWl9uNjhRbf5/m8dZcn0pKKGwjSoP1QTeVWOC8GkZhE25bUWj")
+	configAuthority("f9f34184ac:1:AwGgrWjb8dARXzruqxiy1+Qf+gz4iM5IMfQTCWrJXkwERdvbvxTPZvtIyitw4gS90TGIxW+e7uJxweg9Vyq5lZJBrg==:QeEQLm9ymLC3EcnIw2OUqufUwb2wgHSAg6wQOXKyhT779p/8Hz5485PZLJCbr/aVHjwzop8APJk9B45Zm0Mb/LEhQTBMH2jvc7qqoYnMCNCO9jpADeMJwMW5e1VFgIObWl9uNjhRbf5/m8dZcn0pKKGwjSoP1QTeVWOC8GkZhE25bUWj"),
+	defaultNodeFilter(_mkDefaultNodeFilter())
 {
 }
 

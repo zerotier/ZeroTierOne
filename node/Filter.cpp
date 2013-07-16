@@ -25,6 +25,9 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 
 #include "RuntimeEnvironment.hpp"
@@ -34,21 +37,19 @@
 
 namespace ZeroTier {
 
+const char *const Filter::UNKNOWN_NAME = "(unknown)";
+
 bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int len) const
+	throw(std::invalid_argument)
 {
 	if ((!_etherType)||(_etherType(etype))) { // ethertype is ANY, or matches
 		// Ethertype determines meaning of protocol and port
 		switch(etype) {
-			default:
-				if ((!_protocol)&&(!_port))
-					return true; // match other ethertypes if protocol and port are ANY, since we don't know what to do with them
-				break;
-
 			case ZT_ETHERTYPE_IPV4:
 				if (len > 20) {
-					if ((!_protocol)||(_protocol(((const uint8_t *)data)[9]))) { // IP protocol
-						if (!_port)
-							return true; // protocol matches or is ANY, port is ANY
+					if ((!_protocol)||(_protocol(((const uint8_t *)data)[9]))) { // protocol is ANY or match
+						if (!_port) // port is ANY
+							return true;
 
 						// Don't match on fragments beyond fragment 0. If we've blocked
 						// fragment 0, further fragments will fall on deaf ears anyway.
@@ -60,22 +61,27 @@ bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int l
 
 						switch(((const uint8_t *)data)[9]) { // port's meaning depends on IP protocol
 							case ZT_IPPROTO_ICMP:
-								return _port(((const uint8_t *)data)[ihl]); // port = ICMP type
+								// For ICMP, port is ICMP type
+								return _port(((const uint8_t *)data)[ihl]);
 							case ZT_IPPROTO_TCP:
 							case ZT_IPPROTO_UDP:
 							case ZT_IPPROTO_SCTP:
 							case ZT_IPPROTO_UDPLITE:
-								return _port(((const uint16_t *)data)[(ihl / 2) + 1]); // destination port
+								// For these, port is destination port. Protocol designers were
+								// nice enough to put the field in the same place.
+								return _port(((const uint16_t *)data)[(ihl / 2) + 1]);
+							default:
+								// port has no meaning for other IP types, so ignore it
+								return true;
 						}
 
 						return false; // no match on port
 					}
-				}
+				} else throw std::invalid_argument("undersized IPv4 packet");
 				break;
 
 			case ZT_ETHERTYPE_IPV6:
 				if (len > 40) {
-					// see: http://stackoverflow.com/questions/17518951/is-the-ipv6-header-really-this-nutty
 					int nextHeader = ((const uint8_t *)data)[6];
 					unsigned int pos = 40;
 					while ((pos < len)&&(nextHeader >= 0)&&(nextHeader != 59)) { // 59 == no next header
@@ -102,9 +108,11 @@ bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int l
 							case ZT_IPPROTO_ESP: // ESP
 								return _protocol(ZT_IPPROTO_ESP); // true if ESP is matched protocol, otherwise false since packet will be IPsec
 							case ZT_IPPROTO_ICMPV6:
-								if (_protocol(ZT_IPPROTO_ICMPV6)) { // only match ICMPv6 if specified
+								// Only match ICMPv6 if we've selected it specifically
+								if (_protocol(ZT_IPPROTO_ICMPV6)) {
+									// Port is interpreted as ICMPv6 type
 									if ((!_port)||(_port(((const uint8_t *)data)[pos])))
-										return true; // protocol matches, port is ANY or matches ICMP type
+										return true;
 								}
 								break;
 							case ZT_IPPROTO_TCP:
@@ -118,25 +126,75 @@ bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int l
 										return true; // protocol matches or is ANY, port is ANY or matches
 								}
 								break;
+							default: {
+								char foo[128];
+								sprintf(foo,"unrecognized IPv6 header type %d",(int)nextHeader);
+								throw std::invalid_argument(foo);
+							}
 						}
 
 						fprintf(stderr,"[rule] V6: end header parse, next header %.2x, new pos %d\n",nextHeader,pos);
 					}
-				}
+				} else throw std::invalid_argument("undersized IPv6 packet");
 				break;
+
+			default:
+				// For other ethertypes, protocol and port are ignored. What would they mean?
+				return true;
 		}
 	}
 
 	return false;
 }
 
-Filter::Filter(const RuntimeEnvironment *renv) :
-	_r(renv)
+std::string Filter::Rule::toString() const
 {
-}
+	char buf[128];
+	std::string s;
 
-Filter::~Filter()
-{
+	switch(_etherType.magnitude()) {
+		case 0:
+			s.push_back('*');
+			break;
+		case 1:
+			sprintf(buf,"%u",_etherType.start);
+			s.append(buf);
+			break;
+		default:
+			sprintf(buf,"%u-%u",_etherType.start,_etherType.end);
+			s.append(buf);
+			break;
+	}
+	s.push_back('/');
+	switch(_protocol.magnitude()) {
+		case 0:
+			s.push_back('*');
+			break;
+		case 1:
+			sprintf(buf,"%u",_protocol.start);
+			s.append(buf);
+			break;
+		default:
+			sprintf(buf,"%u-%u",_protocol.start,_protocol.end);
+			s.append(buf);
+			break;
+	}
+	s.push_back('/');
+	switch(_port.magnitude()) {
+		case 0:
+			s.push_back('*');
+			break;
+		case 1:
+			sprintf(buf,"%u",_port.start);
+			s.append(buf);
+			break;
+		default:
+			sprintf(buf,"%u-%u",_port.start,_port.end);
+			s.append(buf);
+			break;
+	}
+
+	return s;
 }
 
 void Filter::add(const Rule &r,const Action &a)
@@ -153,60 +211,18 @@ void Filter::add(const Rule &r,const Action &a)
 
 std::string Filter::toString(const char *sep) const
 {
-	char buf[256];
-
 	if (!sep)
 		sep = ",";
 
 	std::string s;
 
+	bool first = true;
 	Mutex::Lock _l(_chain_m);
 	for(std::vector<Entry>::const_iterator i(_chain.begin());i!=_chain.end();++i) {
-		bool first = (i == _chain.begin());
-
-		s.push_back('[');
-
-		if (i->rule.etherType()) {
-			if (i->rule.etherType().magnitude() > 1)
-				sprintf(buf,"%u-%u",i->rule.etherType().start,i->rule.etherType().end);
-			else sprintf(buf,"%u",i->rule.etherType().start);
-			s.append(buf);
-		} else s.push_back('*');
-
-		s.push_back(';');
-
-		if (i->rule.protocol()) {
-			if (i->rule.protocol().magnitude() > 1)
-				sprintf(buf,"%u-%u",i->rule.protocol().start,i->rule.protocol().end);
-			else sprintf(buf,"%u",i->rule.protocol().start);
-			s.append(buf);
-		} else s.push_back('*');
-
-		s.push_back(';');
-
-		if (i->rule.port()) {
-			if (i->rule.port().magnitude() > 1)
-				sprintf(buf,"%u-%u",i->rule.port().start,i->rule.port().end);
-			else sprintf(buf,"%u",i->rule.port().start);
-			s.append(buf);
-		} else s.push_back('*');
-
-		s.append("]:");
-
-		switch(i->action) {
-			case ACTION_DENY:
-				s.append("DENY");
-				break;
-			case ACTION_ALLOW:
-				s.append("ALLOW");
-				break;
-			case ACTION_LOG:
-				s.append("LOG");
-				break;
-		}
-
-		if (!first)
-			s.append(sep);
+		s.append(i->rule.toString());
+		if (first)
+			first = false;
+		else s.append(sep);
 	}
 
 	return s;
@@ -215,27 +231,137 @@ std::string Filter::toString(const char *sep) const
 const char *Filter::etherTypeName(const unsigned int etherType)
 	throw()
 {
-	static char tmp[6];
 	switch(etherType) {
-		case ZT_ETHERTYPE_IPV4:
-			return "IPV4";
-		case ZT_ETHERTYPE_ARP:
-			return "ARP";
-		case ZT_ETHERTYPE_RARP:
-			return "RARP";
-		case ZT_ETHERTYPE_ATALK:
-			return "ATALK";
-		case ZT_ETHERTYPE_AARP:
-			return "AARP";
-		case ZT_ETHERTYPE_IPX_A:
-			return "IPX_A";
-		case ZT_ETHERTYPE_IPX_B:
-			return "IPX_B";
-		case ZT_ETHERTYPE_IPV6:
-			return "IPV6";
+		case ZT_ETHERTYPE_IPV4:  return "ETHERTYPE_IPV4";
+		case ZT_ETHERTYPE_ARP:   return "ETHERTYPE_ARP";
+		case ZT_ETHERTYPE_RARP:  return "ETHERTYPE_RARP";
+		case ZT_ETHERTYPE_ATALK: return "ETHERTYPE_ATALK";
+		case ZT_ETHERTYPE_AARP:  return "ETHERTYPE_AARP";
+		case ZT_ETHERTYPE_IPX_A: return "ETHERTYPE_IPX_A";
+		case ZT_ETHERTYPE_IPX_B: return "ETHERTYPE_IPX_B";
+		case ZT_ETHERTYPE_IPV6:  return "ETHERTYPE_IPV6";
 	}
-	sprintf(tmp,"%.4x",etherType);
-	return tmp; // technically not thread safe, but we're only going to see this in debugging if ever
+	return UNKNOWN_NAME;
+}
+
+const char *Filter::ipProtocolName(const unsigned int ipp)
+	throw()
+{
+	switch(ipp) {
+		case ZT_IPPROTO_ICMP:    return "IPPROTO_ICMP";
+		case ZT_IPPROTO_IGMP:    return "IPPROTO_IGMP";
+		case ZT_IPPROTO_TCP:     return "IPPROTO_TCP";
+		case ZT_IPPROTO_UDP:     return "IPPROTO_UDP";
+		case ZT_IPPROTO_GRE:     return "IPPROTO_GRE";
+		case ZT_IPPROTO_ESP:     return "IPPROTO_ESP";
+		case ZT_IPPROTO_AH:      return "IPPROTO_AH";
+		case ZT_IPPROTO_ICMPV6:  return "IPPROTO_ICMPV6";
+		case ZT_IPPROTO_OSPF:    return "IPPROTO_OSPF";
+		case ZT_IPPROTO_IPIP:    return "IPPROTO_IPIP";
+		case ZT_IPPROTO_IPCOMP:  return "IPPROTO_IPCOMP";
+		case ZT_IPPROTO_L2TP:    return "IPPROTO_L2TP";
+		case ZT_IPPROTO_SCTP:    return "IPPROTO_SCTP";
+		case ZT_IPPROTO_FC:      return "IPPROTO_FC";
+		case ZT_IPPROTO_UDPLITE: return "IPPROTO_UDPLITE";
+		case ZT_IPPROTO_HIP:     return "IPPROTO_HIP";
+	}
+	return UNKNOWN_NAME;
+}
+
+const char *Filter::icmpTypeName(const unsigned int icmpType)
+	throw()
+{
+	switch(icmpType) {
+		case ZT_ICMP_ECHO_REPLY:                  return "ICMP_ECHO_REPLY";
+		case ZT_ICMP_DESTINATION_UNREACHABLE:     return "ICMP_DESTINATION_UNREACHABLE";
+		case ZT_ICMP_SOURCE_QUENCH:               return "ICMP_SOURCE_QUENCH";
+		case ZT_ICMP_REDIRECT:                    return "ICMP_REDIRECT";
+		case ZT_ICMP_ALTERNATE_HOST_ADDRESS:      return "ICMP_ALTERNATE_HOST_ADDRESS";
+		case ZT_ICMP_ECHO_REQUEST:                return "ICMP_ECHO_REQUEST";
+		case ZT_ICMP_ROUTER_ADVERTISEMENT:        return "ICMP_ROUTER_ADVERTISEMENT";
+		case ZT_ICMP_ROUTER_SOLICITATION:         return "ICMP_ROUTER_SOLICITATION";
+		case ZT_ICMP_TIME_EXCEEDED:               return "ICMP_TIME_EXCEEDED";
+		case ZT_ICMP_BAD_IP_HEADER:               return "ICMP_BAD_IP_HEADER";
+		case ZT_ICMP_TIMESTAMP:                   return "ICMP_TIMESTAMP";
+		case ZT_ICMP_TIMESTAMP_REPLY:             return "ICMP_TIMESTAMP_REPLY";
+		case ZT_ICMP_INFORMATION_REQUEST:         return "ICMP_INFORMATION_REQUEST";
+		case ZT_ICMP_INFORMATION_REPLY:           return "ICMP_INFORMATION_REPLY";
+		case ZT_ICMP_ADDRESS_MASK_REQUEST:        return "ICMP_ADDRESS_MASK_REQUEST";
+		case ZT_ICMP_ADDRESS_MASK_REPLY:          return "ICMP_ADDRESS_MASK_REPLY";
+		case ZT_ICMP_TRACEROUTE:                  return "ICMP_TRACEROUTE";
+		case ZT_ICMP_MOBILE_HOST_REDIRECT:        return "ICMP_MOBILE_HOST_REDIRECT";
+		case ZT_ICMP_MOBILE_REGISTRATION_REQUEST: return "ICMP_MOBILE_REGISTRATION_REQUEST";
+		case ZT_ICMP_MOBILE_REGISTRATION_REPLY:   return "ICMP_MOBILE_REGISTRATION_REPLY";
+	}
+	return UNKNOWN_NAME;
+}
+
+const char *Filter::icmp6TypeName(const unsigned int icmp6Type)
+	throw()
+{
+	switch(icmp6Type) {
+		case ZT_ICMP6_DESTINATION_UNREACHABLE:              return "ICMP6_DESTINATION_UNREACHABLE";
+		case ZT_ICMP6_PACKET_TOO_BIG:                       return "ICMP6_PACKET_TOO_BIG";
+		case ZT_ICMP6_TIME_EXCEEDED:                        return "ICMP6_TIME_EXCEEDED";
+		case ZT_ICMP6_PARAMETER_PROBLEM:                    return "ICMP6_PARAMETER_PROBLEM";
+		case ZT_ICMP6_ECHO_REQUEST:                         return "ICMP6_ECHO_REQUEST";
+		case ZT_ICMP6_ECHO_REPLY:                           return "ICMP6_ECHO_REPLY";
+		case ZT_ICMP6_MULTICAST_LISTENER_QUERY:             return "ICMP6_MULTICAST_LISTENER_QUERY";
+		case ZT_ICMP6_MULTICAST_LISTENER_REPORT:            return "ICMP6_MULTICAST_LISTENER_REPORT";
+		case ZT_ICMP6_MULTICAST_LISTENER_DONE:              return "ICMP6_MULTICAST_LISTENER_DONE";
+		case ZT_ICMP6_ROUTER_SOLICITATION:                  return "ICMP6_ROUTER_SOLICITATION";
+		case ZT_ICMP6_ROUTER_ADVERTISEMENT:                 return "ICMP6_ROUTER_ADVERTISEMENT";
+		case ZT_ICMP6_NEIGHBOR_SOLICITATION:                return "ICMP6_NEIGHBOR_SOLICITATION";
+		case ZT_ICMP6_NEIGHBOR_ADVERTISEMENT:               return "ICMP6_NEIGHBOR_ADVERTISEMENT";
+		case ZT_ICMP6_REDIRECT_MESSAGE:                     return "ICMP6_REDIRECT_MESSAGE";
+		case ZT_ICMP6_ROUTER_RENUMBERING:                   return "ICMP6_ROUTER_RENUMBERING";
+		case ZT_ICMP6_NODE_INFORMATION_QUERY:               return "ICMP6_NODE_INFORMATION_QUERY";
+		case ZT_ICMP6_NODE_INFORMATION_RESPONSE:            return "ICMP6_NODE_INFORMATION_RESPONSE";
+		case ZT_ICMP6_INV_NEIGHBOR_SOLICITATION:            return "ICMP6_INV_NEIGHBOR_SOLICITATION";
+		case ZT_ICMP6_INV_NEIGHBOR_ADVERTISEMENT:           return "ICMP6_INV_NEIGHBOR_ADVERTISEMENT";
+		case ZT_ICMP6_MLDV2:                                return "ICMP6_MLDV2";
+		case ZT_ICMP6_HOME_AGENT_ADDRESS_DISCOVERY_REQUEST: return "ICMP6_HOME_AGENT_ADDRESS_DISCOVERY_REQUEST";
+		case ZT_ICMP6_HOME_AGENT_ADDRESS_DISCOVERY_REPLY:   return "ICMP6_HOME_AGENT_ADDRESS_DISCOVERY_REPLY";
+		case ZT_ICMP6_MOBILE_PREFIX_SOLICITATION:           return "ICMP6_MOBILE_PREFIX_SOLICITATION";
+		case ZT_ICMP6_MOBILE_PREFIX_ADVERTISEMENT:          return "ICMP6_MOBILE_PREFIX_ADVERTISEMENT";
+		case ZT_ICMP6_CERTIFICATION_PATH_SOLICITATION:      return "ICMP6_CERTIFICATION_PATH_SOLICITATION";
+		case ZT_ICMP6_CERTIFICATION_PATH_ADVERTISEMENT:     return "ICMP6_CERTIFICATION_PATH_ADVERTISEMENT";
+		case ZT_ICMP6_MULTICAST_ROUTER_ADVERTISEMENT:       return "ICMP6_MULTICAST_ROUTER_ADVERTISEMENT";
+		case ZT_ICMP6_MULTICAST_ROUTER_SOLICITATION:        return "ICMP6_MULTICAST_ROUTER_SOLICITATION";
+		case ZT_ICMP6_MULTICAST_ROUTER_TERMINATION:         return "ICMP6_MULTICAST_ROUTER_TERMINATION";
+		case ZT_ICMP6_RPL_CONTROL_MESSAGE:                  return "ICMP6_RPL_CONTROL_MESSAGE";
+	}
+	return UNKNOWN_NAME;
+}
+
+Filter::Action Filter::operator()(const RuntimeEnvironment *_r,unsigned int etherType,const void *frame,unsigned int len) const
+{
+	Mutex::Lock _l(_chain_m);
+
+	int ruleNo = 0;
+	for(std::vector<Entry>::const_iterator r(_chain.begin());r!=_chain.end();++r,++ruleNo) {
+		try {
+			if (r->rule(etherType,frame,len)) {
+				switch(r->action) {
+					case ACTION_ALLOW:
+					case ACTION_DENY:
+						return r->action;
+					case ACTION_LOG:
+						break;
+					default:
+						break;
+				}
+			}
+		} catch (std::invalid_argument &exc) {
+			LOG("filter: unable to parse packet on rule %s (%d): %s",r->rule.toString().c_str(),ruleNo,exc.what());
+			return ACTION_UNPARSEABLE;
+		} catch ( ... ) {
+			LOG("filter: unable to parse packet on rule %s (%d): unknown exception",r->rule.toString().c_str(),ruleNo);
+			return ACTION_UNPARSEABLE;
+		}
+	}
+
+	return ACTION_ALLOW;
 }
 
 } // namespace ZeroTier
