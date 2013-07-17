@@ -118,6 +118,11 @@ error_no_ZT_ARCH_defined;
 #define ZT_DEFAULT_UDP_PORT 8993
 
 /**
+ * Local control port, also used for multiple invocation check
+ */
+#define ZT_CONTROL_UDP_PORT 39393
+
+/**
  * Default payload MTU for UDP packets
  *
  * In the future we might support UDP path MTU discovery, but for now we
@@ -150,13 +155,6 @@ error_no_ZT_ARCH_defined;
  * messages such as multicast propagation or future support for bridging.
  */
 #define ZT_IF_MTU 2800
-
-/**
- * Maximum number of networks we can be a member of
- *
- * This is a safe value that's within the tap device limit on all known OSes.
- */
-#define ZT_MAX_NETWORK_MEMBERSHIPS 16
 
 /**
  * Maximum number of packet fragments we'll support
@@ -233,19 +231,14 @@ error_no_ZT_ARCH_defined;
 #define ZT_MULTICAST_PROPAGATION_DEPTH 7
 
 /**
- * Length of circular ring buffer history of multicast packets
+ * Length of ring buffer history of recent multicast packets
  */
 #define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 1024
 
 /**
- * Expiration time in ms for multicast history items
+ * Expiration time in ms for multicast deduplication history items
  */
 #define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 4000
-
-/**
- * Number of bits to randomly "decay" in bloom filter per hop
- */
-#define ZT_MULTICAST_BLOOM_FILTER_DECAY_RATE 2
 
 /**
  * Period between announcements of all multicast 'likes' in ms
@@ -280,23 +273,6 @@ error_no_ZT_ARCH_defined;
  * Delay between pings (actually HELLOs) to direct links
  */
 #define ZT_PEER_DIRECT_PING_DELAY 120000
-
-/**
- * Period between rechecks of autoconfigure URL
- *
- * This is in the absence of an external message ordering a recheck.
- */
-#define ZT_AUTOCONFIGURE_INTERVAL 3600000
-
-/**
- * Period between autoconfigure attempts if no successful autoconfig
- */
-#define ZT_AUTOCONFIGURE_CHECK_DELAY 15000
-
-/**
- * Delay between updates of status file in home directory
- */
-#define ZT_STATUS_OUTPUT_PERIOD 120000
 
 /**
  * Minimum delay in Node service loop
@@ -347,10 +323,5 @@ error_no_ZT_ARCH_defined;
  * Delay in milliseconds between firewall opener and real packet for NAT-t
  */
 #define ZT_RENDEZVOUS_NAT_T_DELAY 500
-
-/**
- * Generate a new ownership verify secret on launch if older than this
- */
-#define ZT_OVS_GENERATE_NEW_IF_OLDER_THAN 86400000
 
 #endif

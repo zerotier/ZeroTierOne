@@ -271,35 +271,6 @@ public:
 		std::vector< SharedPtr<Peer> > &_v;
 	};
 
-	/**
-	 * Dump peer I/O statistics to an open FILE (for status reporting and debug)
-	 */
-	class DumpPeerStatistics
-	{
-	public:
-		DumpPeerStatistics(FILE *out) :
-			_out(out),
-			_now(Utils::now())
-		{
-			fprintf(_out,"Peer       Direct IPv4           Direct IPv6                                         Latency(ms)"ZT_EOL_S);
-		}
-
-		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-		{
-			InetAddress v4(p->ipv4ActivePath(_now));
-			InetAddress v6(p->ipv6ActivePath(_now));
-			fprintf(_out,"%-10s %-21s %-51s %u"ZT_EOL_S,
-				p->address().toString().c_str(),
-				((v4) ? v4.toString().c_str() : "(none)"),
-				((v6) ? v6.toString().c_str() : "(none)"),
-				p->latency());
-		}
-
-	private:
-		FILE *_out;
-		uint64_t _now;
-	};
-
 protected:
 	virtual void main()
 		throw();

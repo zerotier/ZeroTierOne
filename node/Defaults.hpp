@@ -55,16 +55,6 @@ public:
 	 * Supernodes on the ZeroTier network
 	 */
 	const std::map< Identity,std::vector<InetAddress> > supernodes;
-
-	/**
-	 * URL prefix for autoconfiguration
-	 */
-	const std::string configUrlPrefix;
-
-	/**
-	 * Identity used to encrypt and authenticate configuration from URL
-	 */
-	const std::string configAuthority;
 };
 
 extern const Defaults ZT_DEFAULTS;

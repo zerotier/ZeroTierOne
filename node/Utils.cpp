@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include "Utils.hpp"
 #include "Mutex.hpp"
 
@@ -528,6 +529,22 @@ std::string Utils::trim(const std::string &s)
 		else break;
 	}
 	return s.substr(start,end - start);
+}
+
+void Utils::stdsprintf(std::string &s,const char *fmt,...)
+	throw(std::bad_alloc,std::length_error)
+{
+	char buf[65536];
+	va_list ap;
+
+	va_start(ap,fmt);
+	int n = vsnprintf(buf,sizeof(buf),fmt,ap);
+	va_end(ap);
+
+	if ((n >= (int)sizeof(buf))||(n < 0))
+		throw std::length_error("printf result too large");
+
+	s.append(buf);
 }
 
 } // namespace ZeroTier

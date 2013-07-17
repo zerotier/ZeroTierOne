@@ -27,34 +27,48 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+
 #include <memory>
 #include <string>
 
-#include <json/json.h>
+#include <openssl/sha.h>
 
 #include "NodeConfig.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Defaults.hpp"
 #include "Utils.hpp"
 #include "Logger.hpp"
+#include "Topology.hpp"
+#include "Demarc.hpp"
+#include "InetAddress.hpp"
+#include "Peer.hpp"
+#include "Salsa20.hpp"
+#include "HMAC.hpp"
 
 namespace ZeroTier {
 
-NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const std::string &url) :
+NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
+	throw(std::runtime_error) :
 	_r(renv),
-	_lastAutoconfigure(0),
-	_lastAutoconfigureLastModified(),
-	_url(url),
-	_autoconfigureLock(),
-	_networks(),
-	_networks_m()
+	_authToken(authToken),
+	_controlSocket(true,ZT_CONTROL_UDP_PORT,false,&_CBcontrolPacketHandler,this)
 {
+	SHA256_CTX sha;
+
+	SHA256_Init(&sha);
+	SHA256_Update(&sha,_authToken.data(),_authToken.length());
+	SHA256_Final(_keys,&sha); // first 32 bytes of keys[]: Salsa20 key
+
+	SHA256_Init(&sha);
+	SHA256_Update(&sha,_keys,32);
+	SHA256_Update(&sha,_authToken.data(),_authToken.length());
+	SHA256_Final(_keys + 32,&sha); // second 32 bytes of keys[]: HMAC key
 }
 
 NodeConfig::~NodeConfig()
 {
-	_autoconfigureLock.lock(); // wait for any autoconfs to finish
-	_autoconfigureLock.unlock();
 }
 
 void NodeConfig::whackAllTaps()
@@ -65,150 +79,128 @@ void NodeConfig::whackAllTaps()
 		n->second->tap().whack();
 }
 
-void NodeConfig::refreshConfiguration()
+// Macro used in execute()
+#undef _P
+#define _P(f,...) { r.push_back(std::string()); Utils::stdsprintf(r.back(),(f),##__VA_ARGS__); }
+
+// Used with Topology::eachPeer to dump peer stats
+class _DumpPeerStatistics
 {
-	_autoconfigureLock.lock(); // unlocked when handler gets called
-
-	TRACE("refreshing autoconfigure URL %s (if modified since: '%s')",_url.c_str(),_lastAutoconfigureLastModified.c_str());
-
-	std::map<std::string,std::string> reqHeaders;
-	reqHeaders["X-ZT-ID"] = _r->identity.toString(false);
-	reqHeaders["X-ZT-OVSH"] = _r->ownershipVerificationSecretHash;
-	if (_lastAutoconfigureLastModified.length())
-		reqHeaders["If-Modified-Since"] = _lastAutoconfigureLastModified;
-
-	new Http::Request(Http::HTTP_METHOD_GET,_url,reqHeaders,std::string(),&NodeConfig::_CBautoconfHandler,this);
-}
-
-void NodeConfig::__CBautoconfHandler(const std::string &lastModified,const std::string &body)
-{
-	try {
-		Json::Value root;
-		Json::Reader reader;
-
-		std::string dec(_r->identity.decrypt(_r->configAuthority,body.data(),body.length()));
-		if (!dec.length()) {
-			LOG("autoconfigure from %s failed: data did not decrypt as from config authority %s",_url.c_str(),_r->configAuthority.address().toString().c_str());
-			return;
-		}
-		TRACE("decrypted autoconf: %s",dec.c_str());
-
-		if (!reader.parse(dec,root,false)) {
-			LOG("autoconfigure from %s failed: JSON parse error: %s",_url.c_str(),reader.getFormattedErrorMessages().c_str());
-			return;
-		}
-
-		if (!root.isObject()) {
-			LOG("autoconfigure from %s failed: not a JSON object",_url.c_str());
-			return;
-		}
-
-		// Configure networks
-		const Json::Value &networks = root["_networks"];
-		if (networks.isArray()) {
-			Mutex::Lock _l(_networks_m);
-			for(unsigned int ni=0;ni<networks.size();++ni) {
-				if (networks[ni].isObject()) {
-					const Json::Value &nwid_ = networks[ni]["id"];
-					uint64_t nwid = nwid_.isNumeric() ? (uint64_t)nwid_.asUInt64() : (uint64_t)strtoull(networks[ni]["id"].asString().c_str(),(char **)0,10);
-
-					if (nwid) {
-						SharedPtr<Network> nw;
-						std::map< uint64_t,SharedPtr<Network> >::iterator nwent(_networks.find(nwid));
-						if (nwent != _networks.end())
-							nw = nwent->second;
-						else {
-							try {
-								nw = SharedPtr<Network>(new Network(_r,nwid));
-								_networks[nwid] = nw;
-							} catch (std::exception &exc) {
-								LOG("unable to create network %llu: %s",nwid,exc.what());
-							} catch ( ... ) {
-								LOG("unable to create network %llu: unknown exception",nwid);
-							}
-						}
-
-						if (nw) {
-							Mutex::Lock _l2(nw->_lock);
-							nw->_open = networks[ni]["isOpen"].asBool();
-
-							// Ensure that TAP device has all the right IP addresses
-							// TODO: IPv6 might work a tad differently
-							std::set<InetAddress> allIps;
-							const Json::Value &addresses = networks[ni]["_addresses"];
-							if (addresses.isArray()) {
-								for(unsigned int ai=0;ai<addresses.size();++ai) {
-									if (addresses[ai].isString()) {
-										InetAddress addr(addresses[ai].asString());
-										if (addr) {
-											TRACE("network %llu IP/netmask: %s",nwid,addr.toString().c_str());
-											allIps.insert(addr);
-										}
-									}
-								}
-							}
-							nw->_tap.setIps(allIps);
-
-							// NOTE: the _members field is optional for open networks,
-							// since members of open nets do not need to check membership
-							// of packet senders and mutlicasters.
-							const Json::Value &members = networks[ni]["_members"];
-							nw->_members.clear();
-							if (members.isArray()) {
-								for(unsigned int mi=0;mi<members.size();++mi) {
-									std::string rawAddr(Utils::unhex(members[mi].asString()));
-									if (rawAddr.length() == ZT_ADDRESS_LENGTH) {
-										Address addr(rawAddr.data());
-										if ((addr)&&(!addr.isReserved())) {
-											//TRACE("network %llu member: %s",nwid,addr.toString().c_str());
-											nw->_members.insert(addr);
-										}
-									}
-								}
-							}
-						}
-					} else {
-						TRACE("ignored networks[%u], 'id' field missing");
-					}
-				} else {
-					TRACE("ignored networks[%u], not a JSON object",ni);
-				}
-			}
-		}
-
-		_lastAutoconfigure = Utils::now();
-		_lastAutoconfigureLastModified = lastModified;
-	} catch (std::exception &exc) {
-		TRACE("exception parsing autoconf URL response: %s",exc.what());
-	} catch ( ... ) {
-		TRACE("unexpected exception parsing autoconf URL response");
+public:
+	_DumpPeerStatistics(std::vector<std::string> &out) :
+		r(out),
+		_now(Utils::now())
+	{
 	}
-}
 
-bool NodeConfig::_CBautoconfHandler(Http::Request *req,void *arg,const std::string &url,int code,const std::map<std::string,std::string> &headers,const std::string &body)
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	{
+		InetAddress v4(p->ipv4ActivePath(_now));
+		InetAddress v6(p->ipv6ActivePath(_now));
+		_P("200 listpeers %s %s %s %u",
+			p->address().toString().c_str(),
+			((v4) ? v4.toString().c_str() : "(none)"),
+			((v6) ? v6.toString().c_str() : "(none)"),
+			(((v4)||(v6)) ? p->latency() : 0));
+	}
+
+private:
+	std::vector<std::string> &r;
+	uint64_t _now;
+};
+
+std::vector<std::string> NodeConfig::execute(const char *command)
 {
-#ifdef ZT_TRACE
-	const RuntimeEnvironment *_r = ((NodeConfig *)arg)->_r;
-#endif
+	std::vector<std::string> r;
+	std::vector<std::string> cmd(Utils::split(command,"\r\n \t","\\","'"));
 
-	if (code == 200) {
-		TRACE("200 got autoconfigure response from %s: %u bytes",url.c_str(),(unsigned int)body.length());
+	//
+	// Not coincidentally, response type codes correspond with HTTP
+	// status codes.
+	//
 
-		std::map<std::string,std::string>::const_iterator lm(headers.find("Last-Modified"));
-		if (lm != headers.end())
-			((NodeConfig *)arg)->__CBautoconfHandler(lm->second,body);
-		else ((NodeConfig *)arg)->__CBautoconfHandler(std::string(),body);
-	} else if (code == 304) {
-		TRACE("304 autoconfigure deferred, remote URL %s not modified",url.c_str());
-		((NodeConfig *)arg)->_lastAutoconfigure = Utils::now(); // still considered a success
-	} else if (code == 409) { // conflict, ID address in use by another ID
-		TRACE("%d autoconfigure failed from %s",code,url.c_str());
+	if ((cmd.empty())||(cmd[0] == "help")) {
+		_P("200 help help");
+		_P("200 help listpeers");
+		_P("200 help listnetworks");
+		_P("200 help join <network ID> [<network invitation code>]");
+		_P("200 help leave <network ID>");
+	} else if (cmd[0] == "listpeers") {
+		_r->topology->eachPeer(_DumpPeerStatistics(r));
+	} else if (cmd[0] == "listnetworks") {
+		Mutex::Lock _l(_networks_m);
+		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.begin());nw!=_networks.end();++nw) {
+			_P("200 listnetworks %llu %s %s",
+				nw->first,
+				nw->second->tap().deviceName().c_str(),
+				(nw->second->open() ? "public" : "private"));
+		}
+	} else if (cmd[0] == "join") {
+		_P("404 join Not implemented yet.");
+	} else if (cmd[0] == "leave") {
+		_P("404 leave Not implemented yet.");
 	} else {
-		TRACE("%d autoconfigure failed from %s",code,url.c_str());
+		_P("404 %s No such command. Use 'help' for help.",cmd[0].c_str());
 	}
 
-	((NodeConfig *)arg)->_autoconfigureLock.unlock();
-	return false; // causes Request to delete itself
+	return r;
+}
+
+void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
+{
+	char hmacKey[32];
+	char hmac[32];
+	char buf[131072];
+	NodeConfig *nc = (NodeConfig *)arg;
+	const RuntimeEnvironment *_r = nc->_r;
+
+	try {
+		// Minimum length
+		if (len < 24)
+			return;
+		if (len >= sizeof(buf)) // only up to len - 24 bytes are used on receive/decrypt
+			return;
+
+		// Compare first 16 bytes of HMAC, which is after IV in packet
+		memcpy(hmacKey,nc->_keys + 32,32);
+		*((uint64_t *)hmacKey) ^= *((const uint64_t *)data); // include IV in HMAC
+		HMAC::sha256(hmacKey,32,((const unsigned char *)data) + 24,len - 24,hmac);
+		if (memcmp(hmac,((const unsigned char *)data) + 8,16))
+			return;
+
+		// Decrypt payload if we passed HMAC
+		Salsa20 s20(nc->_keys,256,data); // first 64 bits of data are IV
+		s20.decrypt(((const unsigned char *)data) + 24,buf,len - 24);
+
+		// Null-terminate string for execute()
+		buf[len - 24] = (char)0;
+
+		// Execute command
+		std::vector<std::string> r(nc->execute(buf));
+
+		// Result packet contains a series of null-terminated results
+		unsigned int resultLen = 24;
+		for(std::vector<std::string>::iterator i(r.begin());i!=r.end();++i) {
+			if ((resultLen + i->length() + 1) >= sizeof(buf))
+				return; // result too long
+			memcpy(buf + resultLen,i->c_str(),i->length() + 1);
+			resultLen += i->length() + 1;
+		}
+
+		// Generate result packet IV
+		Utils::getSecureRandom(buf,8);
+
+		// Generate result packet HMAC
+		memcpy(hmacKey,nc->_keys + 32,32);
+		*((uint64_t *)hmacKey) ^= *((const uint64_t *)buf); // include IV in HMAC
+		HMAC::sha256(hmacKey,32,((const unsigned char *)buf) + 24,resultLen - 24,hmac);
+		memcpy(buf + 8,hmac,16);
+
+		// Send encrypted result back to requester
+		sock->send(remoteAddr,buf,resultLen,-1);
+	} catch ( ... ) {
+		TRACE("unexpected exception parsing control packet or generating response");
+	}
 }
 
 } // namespace ZeroTier

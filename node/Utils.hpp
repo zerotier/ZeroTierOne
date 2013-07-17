@@ -34,6 +34,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+
 #include <string>
 #include <stdexcept>
 #include <vector>
@@ -390,6 +391,18 @@ public:
 	 * @return Trimmed string
 	 */
 	static std::string trim(const std::string &s);
+
+	/**
+	 * Like sprintf, but appends to std::string
+	 *
+	 * @param s String to append to
+	 * @param fmt Printf format string
+	 * @param ... Format arguments
+	 * @throws std::bad_alloc Memory allocation failure
+	 * @throws std::length_error Format + args exceeds internal buffer maximum
+	 */
+	static void stdsprintf(std::string &s,const char *fmt,...)
+		throw(std::bad_alloc,std::length_error);
 
 	/**
 	 * Count the number of bits set in an integer

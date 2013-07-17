@@ -1,9 +1,6 @@
 OBJS=\
 	ext/http-parser/http_parser.o \
 	ext/huffandpuff/huffman.o \
-	ext/jsoncpp/src/json_reader.o \
-	ext/jsoncpp/src/json_value.o \
-	ext/jsoncpp/src/json_writer.o \
 	ext/kissdb/kissdb.o \
 	ext/lz4/lz4hc.o \
 	ext/lz4/lz4.o \

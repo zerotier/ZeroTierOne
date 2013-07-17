@@ -31,11 +31,14 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
+#include <stdexcept>
 #include <stdint.h>
 #include "SharedPtr.hpp"
 #include "Network.hpp"
 #include "Utils.hpp"
 #include "Http.hpp"
+#include "UdpSocket.hpp"
 
 namespace ZeroTier {
 
@@ -49,9 +52,11 @@ class NodeConfig
 public:
 	/**
 	 * @param renv Runtime environment
-	 * @param url Autoconfiguration URL (http:// or file://)
+	 * @param authToken Configuration authentication token
+	 * @throws std::runtime_error Unable to bind to local control port
 	 */
-	NodeConfig(const RuntimeEnvironment *renv,const std::string &url);
+	NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
+		throw(std::runtime_error);
 
 	~NodeConfig();
 
@@ -106,32 +111,22 @@ public:
 	}
 
 	/**
-	 * @return Time of last successful autoconfigure or refresh
+	 * Execute a command
+	 *
+	 * @param command Command and arguments separated by whitespace (must already be trimmed of CR+LF, etc.)
+	 * @return One or more command results (lines of output)
 	 */
-	inline uint64_t lastAutoconfigure() const { return _lastAutoconfigure; }
-
-	/**
-	 * @return Autoconfiguration URL
-	 */
-	inline const std::string &url() const { return _url; }
-
-	/**
-	 * Refresh configuration from autoconf URL
-	 */
-	void refreshConfiguration();
+	std::vector<std::string> execute(const char *command);
 
 private:
-	void __CBautoconfHandler(const std::string &lastModified,const std::string &body);
-	static bool _CBautoconfHandler(Http::Request *req,void *arg,const std::string &url,int code,const std::map<std::string,std::string> &headers,const std::string &body);
+	static void _CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len);
 
 	const RuntimeEnvironment *_r;
 
-	volatile uint64_t _lastAutoconfigure;
+	const std::string _authToken;
+	unsigned char _keys[64]; // Salsa20 key, HMAC key
 
-	std::string _lastAutoconfigureLastModified;
-	std::string _url;
-	Mutex _autoconfigureLock;
-
+	UdpSocket _controlSocket;
 	std::map< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 };
