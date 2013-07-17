@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+
 #include <stdint.h>
 #include "SharedPtr.hpp"
 #include "Network.hpp"
@@ -45,7 +46,20 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * Node configuration holder and fetcher
+ * Node configuration endpoint
+ *
+ * Packet format for local UDP configuration packets:
+ *  [8] random initialization vector
+ *  [16] first 16 bytes of HMAC-SHA-256 of payload
+ *  [4] arbitrary tag, echoed in response
+ *  [...] payload
+ *
+ * For requests, the payload consists of a single ASCII command. For
+ * responses, the payload consists of one or more response lines delimited
+ * by NULL (0) characters. The tag field is replicated in the result
+ * packet.
+ *
+ * TODO: further document use of keys, encryption...
  */
 class NodeConfig
 {

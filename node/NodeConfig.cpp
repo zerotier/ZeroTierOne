@@ -156,30 +156,30 @@ void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAdd
 
 	try {
 		// Minimum length
-		if (len < 24)
+		if (len < 28)
 			return;
-		if (len >= sizeof(buf)) // only up to len - 24 bytes are used on receive/decrypt
+		if (len >= sizeof(buf)) // only up to len - 28 bytes are used on receive/decrypt
 			return;
 
 		// Compare first 16 bytes of HMAC, which is after IV in packet
 		memcpy(hmacKey,nc->_keys + 32,32);
 		*((uint64_t *)hmacKey) ^= *((const uint64_t *)data); // include IV in HMAC
-		HMAC::sha256(hmacKey,32,((const unsigned char *)data) + 24,len - 24,hmac);
+		HMAC::sha256(hmacKey,32,((const unsigned char *)data) + 28,len - 28,hmac);
 		if (memcmp(hmac,((const unsigned char *)data) + 8,16))
 			return;
 
 		// Decrypt payload if we passed HMAC
 		Salsa20 s20(nc->_keys,256,data); // first 64 bits of data are IV
-		s20.decrypt(((const unsigned char *)data) + 24,buf,len - 24);
+		s20.decrypt(((const unsigned char *)data) + 28,buf,len - 28);
 
 		// Null-terminate string for execute()
-		buf[len - 24] = (char)0;
+		buf[len - 28] = (char)0;
 
 		// Execute command
 		std::vector<std::string> r(nc->execute(buf));
 
 		// Result packet contains a series of null-terminated results
-		unsigned int resultLen = 24;
+		unsigned int resultLen = 28;
 		for(std::vector<std::string>::iterator i(r.begin());i!=r.end();++i) {
 			if ((resultLen + i->length() + 1) >= sizeof(buf))
 				return; // result too long
@@ -193,8 +193,11 @@ void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAdd
 		// Generate result packet HMAC
 		memcpy(hmacKey,nc->_keys + 32,32);
 		*((uint64_t *)hmacKey) ^= *((const uint64_t *)buf); // include IV in HMAC
-		HMAC::sha256(hmacKey,32,((const unsigned char *)buf) + 24,resultLen - 24,hmac);
+		HMAC::sha256(hmacKey,32,((const unsigned char *)buf) + 28,resultLen - 28,hmac);
 		memcpy(buf + 8,hmac,16);
+
+		// Copy arbitrary tag from original packet
+		memcpy(buf + 24,((const unsigned char *)data) + 24,4);
 
 		// Send encrypted result back to requester
 		sock->send(remoteAddr,buf,resultLen,-1);
