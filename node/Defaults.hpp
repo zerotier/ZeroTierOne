@@ -34,7 +34,6 @@
 #include <map>
 #include "Identity.hpp"
 #include "InetAddress.hpp"
-#include "Filter.hpp"
 
 namespace ZeroTier {
 
@@ -66,11 +65,6 @@ public:
 	 * Identity used to encrypt and authenticate configuration from URL
 	 */
 	const std::string configAuthority;
-
-	/**
-	 * Default node filter for this platform
-	 */
-	const Filter defaultNodeFilter;
 };
 
 extern const Defaults ZT_DEFAULTS;

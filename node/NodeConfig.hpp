@@ -81,13 +81,7 @@ public:
 	/**
 	 * Call whack() on all networks' tap devices
 	 */
-	inline void whackAllTaps()
-	{
-		std::vector< SharedPtr<Network> > nwlist;
-		Mutex::Lock _l(_networks_m);
-		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-			n->second->tap().whack();
-	}
+	void whackAllTaps();
 
 	/**
 	 * @param nwid Network ID

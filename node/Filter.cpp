@@ -38,6 +38,7 @@
 namespace ZeroTier {
 
 const char *const Filter::UNKNOWN_NAME = "(unknown)";
+const Range<unsigned int> Filter::ANY;
 
 bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int len) const
 	throw(std::invalid_argument)
@@ -338,19 +339,23 @@ Filter::Action Filter::operator()(const RuntimeEnvironment *_r,unsigned int ethe
 {
 	Mutex::Lock _l(_chain_m);
 
+	TRACE("starting match against %d rules",(int)_chain.size());
+
 	int ruleNo = 0;
 	for(std::vector<Entry>::const_iterator r(_chain.begin());r!=_chain.end();++r,++ruleNo) {
 		try {
 			if (r->rule(etherType,frame,len)) {
+				TRACE("match: %s",r->rule.toString().c_str());
+
 				switch(r->action) {
 					case ACTION_ALLOW:
 					case ACTION_DENY:
 						return r->action;
-					case ACTION_LOG:
-						break;
 					default:
 						break;
 				}
+			} else {
+				TRACE("no match: %s",r->rule.toString().c_str());
 			}
 		} catch (std::invalid_argument &exc) {
 			LOG("filter: unable to parse packet on rule %s (%d): %s",r->rule.toString().c_str(),ruleNo,exc.what());

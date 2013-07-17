@@ -139,6 +139,11 @@ public:
 	static const char *const UNKNOWN_NAME;
 
 	/**
+	 * An empty range as a more idiomatic way of specifying a wildcard match
+	 */
+	static const Range<unsigned int> ANY;
+
+	/**
 	 * A filter rule
 	 *
 	 * This behaves as an immutable value object.
@@ -222,10 +227,9 @@ public:
 	 */
 	enum Action
 	{
-		ACTION_DENY = 1,
-		ACTION_ALLOW = 2,
-		ACTION_LOG = 3,
-		ACTION_UNPARSEABLE = 4
+		ACTION_DENY = 0,
+		ACTION_ALLOW = 1,
+		ACTION_UNPARSEABLE = 2
 	};
 
 	/**
@@ -328,10 +332,6 @@ public:
 
 	/**
 	 * Match against an Ethernet frame
-	 *
-	 * Note that ACTION_LOG rules do not terminate rule evaluation and
-	 * ACTION_LOG is never returned here as a result. It's primarily for
-	 * debugging and rule testing.
 	 *
 	 * @param _r Runtime environment
 	 * @param etherType Ethernet frame type

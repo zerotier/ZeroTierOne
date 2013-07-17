@@ -57,6 +57,14 @@ NodeConfig::~NodeConfig()
 	_autoconfigureLock.unlock();
 }
 
+void NodeConfig::whackAllTaps()
+{
+	std::vector< SharedPtr<Network> > nwlist;
+	Mutex::Lock _l(_networks_m);
+	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+		n->second->tap().whack();
+}
+
 void NodeConfig::refreshConfiguration()
 {
 	_autoconfigureLock.lock(); // unlocked when handler gets called
