@@ -58,11 +58,8 @@ public:
 	 * The node is not executed until run() is called.
 	 *
 	 * @param hp Home directory path
-	 * @param url URL prefix for autoconfiguration (http and file permitted)
-	 * @param configAuthorityIdentity Public identity used to encrypt/authenticate configuration from this URL (ASCII string format)
-	 * @throws std::invalid_argument Invalid argument supplied to constructor
 	 */
-	Node(const char *hp,const char *urlPrefix,const char *configAuthorityIdentity)
+	Node(const char *hp)
 		throw();
 
 	~Node();
@@ -96,12 +93,6 @@ public:
 	 * may not return instantly. Multiple calls are ignored.
 	 */
 	void terminate()
-		throw();
-
-	/**
-	 * Update the status file in the home directory on next service loop
-	 */
-	void updateStatusNow()
 		throw();
 
 	/**

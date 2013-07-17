@@ -89,7 +89,7 @@ UdpSocket::UdpSocket(
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port = htons(localPort);
 		if (localOnly)
-			memcpy(&(sin6.sin6_addr.s6_addr),InetAddress::LO6.rawIpBytes(),16);
+			memcpy(&(sin6.sin6_addr.s6_addr),InetAddress::LO6.rawIpData(),16);
 		else memcpy(&(sin6.sin6_addr),&in6addr_any,sizeof(struct in6_addr));
 		if (::bind(_sock,(const struct sockaddr *)&sin6,sizeof(sin6))) {
 			::close(_sock);
@@ -113,7 +113,7 @@ UdpSocket::UdpSocket(
 		sin.sin_family = AF_INET;
 		sin.sin_port = htons(localPort);
 		if (localOnly)
-			memcpy(&(sin.sin_addr.s_addr),InetAddress::LO4.rawIpBytes(),4);
+			memcpy(&(sin.sin_addr.s_addr),InetAddress::LO4.rawIpData(),4);
 		else sin.sin_addr.s_addr = INADDR_ANY;
 		if (::bind(_sock,(const struct sockaddr *)&sin,sizeof(sin))) {
 			::close(_sock);

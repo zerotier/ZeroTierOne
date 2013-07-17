@@ -46,7 +46,6 @@
 
 #include "node/Node.hpp"
 #include "node/Utils.hpp"
-#include "node/Defaults.hpp"
 
 #include "launcher.h"
 
@@ -67,24 +66,15 @@ static void sighandlerQuit(int sig)
 		n->terminate();
 	else exit(0);
 }
-static void sighandlerUsr(int sig)
-{
-}
-static void sighandlerHup(int sig)
-{
-	Node *n = node;
-	if (n)
-		n->updateStatusNow();
-}
 #endif
 
 int main(int argc,char **argv)
 {
 #ifndef _WIN32
-	signal(SIGHUP,&sighandlerHup);
+	signal(SIGHUP,SIG_IGN);
 	signal(SIGPIPE,SIG_IGN);
-	signal(SIGUSR1,&sighandlerUsr);
-	signal(SIGUSR2,&sighandlerUsr);
+	signal(SIGUSR1,SIG_IGN);
+	signal(SIGUSR2,SIG_IGN);
 	signal(SIGALRM,SIG_IGN);
 	signal(SIGINT,&sighandlerQuit);
 	signal(SIGTERM,&sighandlerQuit);
@@ -124,13 +114,16 @@ int main(int argc,char **argv)
 
 	int exitCode = ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
 
-	node = new Node(homeDir,ZT_DEFAULTS.configUrlPrefix.c_str(),ZT_DEFAULTS.configAuthority.c_str());
+	node = new Node(homeDir);
+	const char *termReason = (char *)0;
 	switch(node->run()) {
 		case Node::NODE_RESTART_FOR_RECONFIGURATION:
 			exitCode = ZT_EXEC_RETURN_VALUE_PLEASE_RESTART;
 			break;
 		case Node::NODE_UNRECOVERABLE_ERROR:
 			exitCode = ZT_EXEC_RETURN_VALUE_UNRECOVERABLE_ERROR;
+			termReason = node->reasonForTermination();
+			fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
 			break;
 		case Node::NODE_NEW_VERSION_AVAILABLE:
 			exitCode = ZT_EXEC_RETURN_VALUE_TERMINATED_FOR_UPGRADE;

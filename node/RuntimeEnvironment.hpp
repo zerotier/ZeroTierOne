@@ -59,7 +59,6 @@ class RuntimeEnvironment
 {
 public:
 	RuntimeEnvironment() :
-		identity(),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		nc((NodeConfig *)0),
@@ -71,15 +70,10 @@ public:
 	}
 
 	std::string homePath;
-	std::string autoconfUrlPrefix;
-	std::string configAuthorityIdentityStr;
-	std::string ownershipVerificationSecret;
-	std::string ownershipVerificationSecretHash; // base64 of SHA-256 X16 rounds
 
 	// signal() to prematurely interrupt main loop wait
 	Condition mainLoopWaitCondition;
 
-	Identity configAuthority;
 	Identity identity;
 
 	Logger *log; // may be null

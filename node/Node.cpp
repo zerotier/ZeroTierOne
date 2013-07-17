@@ -37,14 +37,14 @@
 #include <vector>
 #include <string>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/file.h>
 #endif
-
-#include <openssl/sha.h>
 
 #include "Condition.hpp"
 #include "Node.hpp"
@@ -78,7 +78,6 @@ struct _NodeImpl
 	Node::ReasonForTermination reasonForTermination;
 	volatile bool started;
 	volatile bool running;
-	volatile bool updateStatusNow;
 	volatile bool terminateNow;
 
 	// Helper used to rapidly terminate from run()
@@ -94,20 +93,17 @@ struct _NodeImpl
 	}
 };
 
-Node::Node(const char *hp,const char *urlPrefix,const char *configAuthorityIdentity)
+Node::Node(const char *hp)
 	throw() :
 	_impl(new _NodeImpl)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 
 	impl->renv.homePath = hp;
-	impl->renv.autoconfUrlPrefix = urlPrefix;
-	impl->renv.configAuthorityIdentityStr = configAuthorityIdentity;
 
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
-	impl->updateStatusNow = false;
 	impl->terminateNow = false;
 }
 
@@ -155,10 +151,8 @@ Node::ReasonForTermination Node::run()
 
 		TRACE("initializing...");
 
+		// Create non-crypto PRNG right away in case other code in init wants to use it
 		_r->prng = new CMWC4096();
-
-		if (!_r->configAuthority.fromString(_r->configAuthorityIdentityStr))
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"configuration authority identity is not valid");
 
 		bool gotId = false;
 		std::string identitySecretPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
@@ -188,37 +182,35 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(identitySecretPath.c_str(),false);
 
-		// Generate ownership verification secret, which can be presented to
-		// a controlling web site (like ours) to prove ownership of a node and
-		// permit its configuration to be centrally modified. When ZeroTier One
-		// requests its config it sends a hash of this secret, and so the
-		// config server can verify this hash to determine if the secret the
-		// user presents is correct.
-		std::string ovsPath(_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine");
-		if (((Utils::now() - Utils::getLastModified(ovsPath.c_str())) >= ZT_OVS_GENERATE_NEW_IF_OLDER_THAN)||(!Utils::readFile(ovsPath.c_str(),_r->ownershipVerificationSecret))) {
-			_r->ownershipVerificationSecret = "";
-			unsigned int securern = 0;
+		// Clean up some obsolete files if present -- this will be removed later
+		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "status").c_str());
+		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine").c_str());
+
+		// Load or generate config authentication secret
+		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
+		std::string configAuthToken;
+		if (!Utils::readFile(configAuthTokenPath.c_str(),configAuthToken)) {
+			configAuthToken = "";
+			unsigned int sr = 0;
 			for(unsigned int i=0;i<24;++i) {
-				Utils::getSecureRandom(&securern,sizeof(securern));
-				_r->ownershipVerificationSecret.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[securern % 62]);
+				Utils::getSecureRandom(&sr,sizeof(sr));
+				configAuthToken.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[sr % 62]);
 			}
-			_r->ownershipVerificationSecret.append(ZT_EOL_S);
-			if (!Utils::writeFile(ovsPath.c_str(),_r->ownershipVerificationSecret))
-				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write 'thisdeviceismine' (home path not writable?)");
+			if (!Utils::writeFile(configAuthTokenPath.c_str(),configAuthToken))
+				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write authtoken.secret (home path not writable?)");
 		}
-		Utils::lockDownFile(ovsPath.c_str(),false);
-		_r->ownershipVerificationSecret = Utils::trim(_r->ownershipVerificationSecret); // trim off CR file is saved with
-		unsigned char ovsDig[32];
-		SHA256_CTX sha;
-		SHA256_Init(&sha);
-		SHA256_Update(&sha,_r->ownershipVerificationSecret.data(),_r->ownershipVerificationSecret.length());
-		SHA256_Final(ovsDig,&sha);
-		_r->ownershipVerificationSecretHash = Utils::base64Encode(ovsDig,32);
+		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
 		// Create the core objects in RuntimeEnvironment: node config, demarcation
 		// point, switch, network topology database, and system environment
 		// watcher.
-		_r->nc = new NodeConfig(_r,_r->autoconfUrlPrefix + _r->identity.address().toString());
+		try {
+			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
+		} catch ( ... ) {
+			// An exception here currently means that another instance of ZeroTier
+			// One is running.
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound");
+		}
 		_r->demarc = new Demarc(_r);
 		_r->multicaster = new Multicaster();
 		_r->sw = new Switch(_r);
@@ -248,8 +240,6 @@ Node::ReasonForTermination Node::run()
 	}
 
 	try {
-		std::string statusPath(_r->homePath + ZT_PATH_SEPARATOR_S + "status");
-
 		uint64_t lastPingCheck = 0;
 		uint64_t lastTopologyClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
@@ -257,7 +247,6 @@ Node::ReasonForTermination Node::run()
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastMulticastAnnounceAll = 0;
-		uint64_t lastStatusUpdate = 0;
 		long lastDelayDelta = 0;
 
 		LOG("%s starting version %s",_r->identity.address().toString().c_str(),versionString());
@@ -290,16 +279,6 @@ Node::ReasonForTermination Node::run()
 					lastMulticastCheck = 0; // check multicast group membership after network config change
 					_r->nc->whackAllTaps(); // call whack() on all tap devices
 				}
-			}
-
-			if ((now - lastAutoconfigureCheck) >= ZT_AUTOCONFIGURE_CHECK_DELAY) {
-				// It seems odd to only do this simple check every so often, but the purpose is to
-				// delay between calls to refreshConfiguration() enough that the previous attempt
-				// has time to either succeed or fail. Otherwise we'll block the whole loop, since
-				// config update is guarded by a Mutex.
-				lastAutoconfigureCheck = now;
-				if ((now - _r->nc->lastAutoconfigure()) >= ZT_AUTOCONFIGURE_INTERVAL)
-					_r->nc->refreshConfiguration(); // happens in background
 			}
 
 			// Periodically check for changes in our local multicast subscriptions and broadcast
@@ -389,20 +368,6 @@ Node::ReasonForTermination Node::run()
 				_r->topology->clean(); // happens in background
 			}
 
-			if (((now - lastStatusUpdate) >= ZT_STATUS_OUTPUT_PERIOD)||(impl->updateStatusNow)) {
-				lastStatusUpdate = now;
-				impl->updateStatusNow = false;
-				FILE *statusf = ::fopen(statusPath.c_str(),"w");
-				if (statusf) {
-					try {
-						_r->topology->eachPeer(Topology::DumpPeerStatistics(statusf));
-					} catch ( ... ) {
-						TRACE("unexpected exception updating status dump");
-					}
-					::fclose(statusf);
-				}
-			}
-
 			try {
 				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
@@ -433,13 +398,6 @@ void Node::terminate()
 	throw()
 {
 	((_NodeImpl *)_impl)->terminateNow = true;
-	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
-}
-
-void Node::updateStatusNow()
-	throw()
-{
-	((_NodeImpl *)_impl)->updateStatusNow = true;
 	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
 }
 
