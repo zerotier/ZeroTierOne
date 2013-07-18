@@ -45,6 +45,7 @@
 #include "node/Peer.hpp"
 #include "node/Http.hpp"
 #include "node/Condition.hpp"
+#include "node/NodeConfig.hpp"
 
 using namespace ZeroTier;
 
@@ -263,6 +264,38 @@ static int testOther()
 			std::cout << Utils::hex(dec.data(),dec.length()) << std::endl;
 			return -1;
 		}
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[other] Testing command bus encode/decode... "; std::cout.flush();
+	try {
+		static char key[32] = { 0 };
+		for(unsigned int k=0;k<1000;++k) {
+			std::vector<std::string> original;
+			for(unsigned int i=0,j=rand() % 256,l=(rand() % 1024)+1;i<j;++i)
+				original.push_back(std::string(l,'x'));
+			std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets(NodeConfig::encodeControlMessage(key,1,original));
+			//std::cout << packets.size() << ' '; std::cout.flush();
+			std::vector<std::string> after;
+			for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator i(packets.begin());i!=packets.end();++i) {
+				unsigned long convId = 9999;
+				if (!NodeConfig::decodeControlMessagePacket(key,i->data(),i->size(),convId,after)) {
+					std::cout << "FAIL (decode)" << std::endl;
+					return -1;
+				}
+				if (convId != 1) {
+					std::cout << "FAIL (conversation ID)" << std::endl;
+					return -1;
+				}
+			}
+			if (after != original) {
+				std::cout << "FAIL (compare)" << std::endl;
+				return -1;
+			}
+		}
+	} catch (std::exception &exc) {
+		std::cout << "FAIL (" << exc.what() << ")" << std::endl;
+		return -1;
 	}
 	std::cout << "PASS" << std::endl;
 

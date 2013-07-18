@@ -156,14 +156,14 @@ std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMe
 		if (((i + 1) >= payload.size())||((packet.size() + payload[i + 1].length() + 1) >= packet.capacity())) {
 			Utils::getSecureRandom(packet.field(8,8),8);
 
+			Salsa20 s20(key,256,packet.field(8,8));
+			s20.encrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
+
 			memcpy(keytmp,key,32);
 			for(unsigned int i=0;i<32;++i)
 				keytmp[i] ^= 0x77; // use a different permutation of key for HMAC than for Salsa20
 			HMAC::sha256(keytmp,32,packet.field(16,packet.size() - 16),packet.size() - 16,hmac);
 			memcpy(packet.field(0,8),hmac,8);
-
-			Salsa20 s20(key,256,packet.field(8,8));
-			s20.encrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
 
 			packets.push_back(packet);
 
@@ -200,7 +200,6 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 
 		const char *pl = ((const char *)packet.data()) + 20;
 		unsigned int pll = packet.size() - 20;
-		payload.clear();
 		for(unsigned int i=0;i<pll;) {
 			unsigned int eos = i;
 			while ((eos < pll)&&(pl[eos]))

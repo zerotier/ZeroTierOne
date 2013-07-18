@@ -156,11 +156,13 @@ public:
 	/**
 	 * Decode a packet from the control bus
 	 *
+	 * Note that 'payload' is appended to. Existing data is not cleared.
+	 *
 	 * @param key 32 byte key
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param conversationId Result parameter filled with conversation ID on success
-	 * @param payload Result parameter filled with payload on success
+	 * @param payload Result parameter to which results are appended
 	 * @return True on success, false on invalid packet or packet that failed authentication
 	 */
 	static bool decodeControlMessagePacket(const void *key,const void *data,unsigned int len,unsigned long &conversationId,std::vector<std::string> &payload);
