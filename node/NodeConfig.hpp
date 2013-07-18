@@ -40,17 +40,25 @@
 #include "Utils.hpp"
 #include "Http.hpp"
 #include "UdpSocket.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 
 /**
+ * Maximum size of a packet for node configuration
+ */
+#define ZT_NODECONFIG_MAX_PACKET_SIZE 4096
+
+/**
  * Node configuration endpoint
  *
  * Packet format for local UDP configuration packets:
- *  [8] random initialization vector
  *  [16] first 16 bytes of HMAC-SHA-256 of payload
+ *  [ -- begin HMAC'ed envelope -- ]
+ *  [8] random initialization vector
+ *  [ -- begin cryptographic envelope -- ]
  *  [4] arbitrary tag, echoed in response
  *  [...] payload
  *
@@ -58,8 +66,6 @@ class RuntimeEnvironment;
  * responses, the payload consists of one or more response lines delimited
  * by NULL (0) characters. The tag field is replicated in the result
  * packet.
- *
- * TODO: further document use of keys, encryption...
  */
 class NodeConfig
 {
@@ -132,14 +138,39 @@ public:
 	 */
 	std::vector<std::string> execute(const char *command);
 
+	/**
+	 * Armor payload for control bus
+	 *
+	 * Note that no single element of payload can be longer than the max packet
+	 * size. If this occurs out_of_range is thrown.
+	 *
+	 * @param key 32 byte key
+	 * @param conversationId 32-bit conversation ID (bits beyond 32 are ignored)
+	 * @param payload One or more strings to encode in packet
+	 * @return One or more transport armored packets (if payload too big)
+	 * @throws std::out_of_range An element of payload is too big
+	 */
+	static std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload)
+		throw(std::out_of_range);
+
+	/**
+	 * Decode a packet from the control bus
+	 *
+	 * @param key 32 byte key
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param conversationId Result parameter filled with conversation ID on success
+	 * @param payload Result parameter filled with payload on success
+	 * @return True on success, false on invalid packet or packet that failed authentication
+	 */
+	static bool decodeControlMessagePacket(const void *key,const void *data,unsigned int len,unsigned long &conversationId,std::vector<std::string> &payload);
+
 private:
 	static void _CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len);
 
 	const RuntimeEnvironment *_r;
 
-	const std::string _authToken;
-	unsigned char _keys[64]; // Salsa20 key, HMAC key
-
+	unsigned char _controlSocketKey[32];
 	UdpSocket _controlSocket;
 	std::map< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;

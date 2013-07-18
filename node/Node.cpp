@@ -57,6 +57,8 @@
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "Pack.hpp"
+#include "Salsa20.hpp"
+#include "HMAC.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
 #include "Defaults.hpp"
@@ -70,6 +72,69 @@
 #include "../version.h"
 
 namespace ZeroTier {
+
+struct _LocalClientImpl
+{
+	unsigned char key[32];
+	UdpSocket *sock;
+	void (*resultHandler)(void *,unsigned long,const char *);
+	void *arg;
+	Mutex inUseLock;
+};
+
+static void _CBlocalClientHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
+{
+	_LocalClientImpl *impl = (_LocalClientImpl *)arg;
+	Mutex::Lock _l(impl->inUseLock);
+}
+
+Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+	throw() :
+	_impl((void *)0)
+{
+	_LocalClientImpl *impl = new _LocalClientImpl;
+
+	UdpSocket *sock = (UdpSocket *)0;
+	for(unsigned int i=0;i<5000;++i) {
+		try {
+			sock = new UdpSocket(true,32768 + (rand() % 20000),false,&_CBlocalClientHandler,impl);
+			break;
+		} catch ( ... ) {
+			sock = (UdpSocket *)0;
+		}
+	}
+
+	// If socket fails to bind, there's a big problem like missing IPv4 stack
+	if (sock) {
+		SHA256_CTX sha;
+		SHA256_Init(&sha);
+		SHA256_Update(&sha,authToken,strlen(authToken));
+		SHA256_Final(impl->key,&sha);
+
+		impl->sock = sock;
+		impl->resultHandler = resultHandler;
+		impl->arg = arg;
+		_impl = impl;
+	} else delete impl;
+}
+
+Node::LocalClient::~LocalClient()
+{
+	if (_impl) {
+		((_LocalClientImpl *)_impl)->inUseLock.lock();
+		delete ((_LocalClientImpl *)_impl)->sock;
+		((_LocalClientImpl *)_impl)->inUseLock.unlock();
+		delete ((_LocalClientImpl *)_impl);
+	}
+}
+
+unsigned long Node::LocalClient::send(const char *command)
+	throw()
+{
+	uint32_t convId = (uint32_t)rand();
+
+	return convId;
+}
 
 struct _NodeImpl
 {

@@ -52,19 +52,12 @@ namespace ZeroTier {
 NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
 	throw(std::runtime_error) :
 	_r(renv),
-	_authToken(authToken),
 	_controlSocket(true,ZT_CONTROL_UDP_PORT,false,&_CBcontrolPacketHandler,this)
 {
 	SHA256_CTX sha;
-
 	SHA256_Init(&sha);
-	SHA256_Update(&sha,_authToken.data(),_authToken.length());
-	SHA256_Final(_keys,&sha); // first 32 bytes of keys[]: Salsa20 key
-
-	SHA256_Init(&sha);
-	SHA256_Update(&sha,_keys,32);
-	SHA256_Update(&sha,_authToken.data(),_authToken.length());
-	SHA256_Final(_keys + 32,&sha); // second 32 bytes of keys[]: HMAC key
+	SHA256_Update(&sha,authToken,strlen(authToken));
+	SHA256_Final(_controlSocketKey,&sha);
 }
 
 NodeConfig::~NodeConfig()
@@ -146,64 +139,86 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 	return r;
 }
 
-void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
+std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload)
+	throw(std::out_of_range)
 {
-	char hmacKey[32];
 	char hmac[32];
-	char buf[131072];
-	NodeConfig *nc = (NodeConfig *)arg;
-	const RuntimeEnvironment *_r = nc->_r;
+	char keytmp[32];
+	std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets;
+	Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> packet;
+
+	packet.setSize(16); // HMAC and IV
+	packet.append((uint32_t)(conversationId & 0xffffffff));
+	for(unsigned int i=0;i<payload.size();++i) {
+		packet.append(payload[i]); // will throw if too big
+		packet.append((unsigned char)0);
+
+		if (((i + 1) >= payload.size())||((packet.size() + payload[i + 1].length() + 1) >= packet.capacity())) {
+			Utils::getSecureRandom(packet.field(8,8),8);
+
+			memcpy(keytmp,key,32);
+			for(unsigned int i=0;i<32;++i)
+				keytmp[i] ^= 0x77; // use a different permutation of key for HMAC than for Salsa20
+			HMAC::sha256(keytmp,32,packet.field(16,packet.size() - 16),packet.size() - 16,hmac);
+			memcpy(packet.field(0,8),hmac,8);
+
+			Salsa20 s20(key,256,packet.field(8,8));
+			s20.encrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
+
+			packets.push_back(packet);
+
+			packet.setSize(16); // HMAC and IV
+			packet.append((uint32_t)(conversationId & 0xffffffff));
+		}
+	}
+
+	return packets;
+}
+
+bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,unsigned int len,unsigned long &conversationId,std::vector<std::string> &payload)
+{
+	char hmac[32];
+	char keytmp[32];
 
 	try {
-		// Minimum length
-		if (len < 28)
-			return;
-		if (len >= sizeof(buf)) // only up to len - 28 bytes are used on receive/decrypt
-			return;
+		if (len < 20)
+			return false;
 
-		// Compare first 16 bytes of HMAC, which is after IV in packet
-		memcpy(hmacKey,nc->_keys + 32,32);
-		*((uint64_t *)hmacKey) ^= *((const uint64_t *)data); // include IV in HMAC
-		HMAC::sha256(hmacKey,32,((const unsigned char *)data) + 28,len - 28,hmac);
-		if (memcmp(hmac,((const unsigned char *)data) + 8,16))
-			return;
+		Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> packet(data,len);
 
-		// Decrypt payload if we passed HMAC
-		Salsa20 s20(nc->_keys,256,data); // first 64 bits of data are IV
-		s20.decrypt(((const unsigned char *)data) + 28,buf,len - 28);
+		memcpy(keytmp,key,32);
+		for(unsigned int i=0;i<32;++i)
+			keytmp[i] ^= 0x77; // use a different permutation of key for HMAC than for Salsa20
+		HMAC::sha256(keytmp,32,packet.field(16,packet.size() - 16),packet.size() - 16,hmac);
+		if (memcmp(packet.field(0,8),hmac,8))
+			return false;
 
-		// Null-terminate string for execute()
-		buf[len - 28] = (char)0;
+		Salsa20 s20(key,256,packet.field(8,8));
+		s20.decrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
 
-		// Execute command
-		std::vector<std::string> r(nc->execute(buf));
+		conversationId = packet.at<uint32_t>(16);
 
-		// Result packet contains a series of null-terminated results
-		unsigned int resultLen = 28;
-		for(std::vector<std::string>::iterator i(r.begin());i!=r.end();++i) {
-			if ((resultLen + i->length() + 1) >= sizeof(buf))
-				return; // result too long
-			memcpy(buf + resultLen,i->c_str(),i->length() + 1);
-			resultLen += i->length() + 1;
+		const char *pl = ((const char *)packet.data()) + 20;
+		unsigned int pll = packet.size() - 20;
+		payload.clear();
+		for(unsigned int i=0;i<pll;) {
+			unsigned int eos = i;
+			while ((eos < pll)&&(pl[eos]))
+				++eos;
+			if (eos > i) {
+				payload.push_back(std::string(pl + i,eos - i));
+				i = eos + 1;
+			} else break;
 		}
 
-		// Generate result packet IV
-		Utils::getSecureRandom(buf,8);
-
-		// Generate result packet HMAC
-		memcpy(hmacKey,nc->_keys + 32,32);
-		*((uint64_t *)hmacKey) ^= *((const uint64_t *)buf); // include IV in HMAC
-		HMAC::sha256(hmacKey,32,((const unsigned char *)buf) + 28,resultLen - 28,hmac);
-		memcpy(buf + 8,hmac,16);
-
-		// Copy arbitrary tag from original packet
-		memcpy(buf + 24,((const unsigned char *)data) + 24,4);
-
-		// Send encrypted result back to requester
-		sock->send(remoteAddr,buf,resultLen,-1);
+		return true;
 	} catch ( ... ) {
-		TRACE("unexpected exception parsing control packet or generating response");
+		return false;
 	}
+}
+
+void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
+{
 }
 
 } // namespace ZeroTier
