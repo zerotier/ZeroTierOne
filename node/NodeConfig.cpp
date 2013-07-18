@@ -218,6 +218,20 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 
 void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
 {
+	NodeConfig *nc = (NodeConfig *)arg;
+	try {
+		unsigned long convId = 0;
+		std::vector<std::string> commands;
+
+		if (!decodeControlMessagePacket(nc->_controlSocketKey,data,len,convId,commands))
+			return;
+
+		for(std::vector<std::string>::iterator c(commands.begin());c!=commands.end();++c) {
+			std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > resultPackets(encodeControlMessage(nc->_controlSocketKey,convId,nc->execute(c->c_str())));
+			for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator p(resultPackets.begin());p!=resultPackets.end();++p)
+				sock->send(remoteAddr,p->data(),p->size(),-1);
+		}
+	} catch ( ... ) {}
 }
 
 } // namespace ZeroTier

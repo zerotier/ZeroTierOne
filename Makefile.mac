@@ -20,11 +20,15 @@ LIBS=ext/bin/libcrypto/mac-x86_combined/libcrypto.a
 
 include objects.mk
 
-all: one launcher mac-tap
+all: one cli launcher mac-tap
 
 one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
+
+cli:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-cli cli.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-cli
 
 selftest: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)

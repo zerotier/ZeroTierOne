@@ -79,13 +79,27 @@ struct _LocalClientImpl
 	UdpSocket *sock;
 	void (*resultHandler)(void *,unsigned long,const char *);
 	void *arg;
+	InetAddress localDestAddr;
 	Mutex inUseLock;
 };
 
 static void _CBlocalClientHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
 {
 	_LocalClientImpl *impl = (_LocalClientImpl *)arg;
+	if (!impl)
+		return;
+	if (!impl->resultHandler)
+		return; // sanity check
 	Mutex::Lock _l(impl->inUseLock);
+
+	try {
+		unsigned long convId = 0;
+		std::vector<std::string> results;
+		if (!NodeConfig::decodeControlMessagePacket(impl->key,data,len,convId,results))
+			return;
+		for(std::vector<std::string>::iterator r(results.begin());r!=results.end();++r)
+			impl->resultHandler(impl->arg,convId,r->c_str());
+	} catch ( ... ) {}
 }
 
 Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
@@ -114,6 +128,8 @@ Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void 
 		impl->sock = sock;
 		impl->resultHandler = resultHandler;
 		impl->arg = arg;
+		impl->localDestAddr = InetAddress::LO4;
+		impl->localDestAddr.setPort(ZT_CONTROL_UDP_PORT);
 		_impl = impl;
 	} else delete impl;
 }
@@ -131,9 +147,27 @@ Node::LocalClient::~LocalClient()
 unsigned long Node::LocalClient::send(const char *command)
 	throw()
 {
-	uint32_t convId = (uint32_t)rand();
+	if (!_impl)
+		return 0;
+	_LocalClientImpl *impl = (_LocalClientImpl *)_impl;
+	Mutex::Lock _l(impl->inUseLock);
 
-	return convId;
+	try {
+		uint32_t convId = (uint32_t)rand();
+		if (!convId)
+			convId = 1;
+
+		std::vector<std::string> tmp;
+		tmp.push_back(std::string(command));
+		std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets(NodeConfig::encodeControlMessage(impl->key,convId,tmp));
+
+		for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator p(packets.begin());p!=packets.end();++p)
+			impl->sock->send(impl->localDestAddr,p->data(),p->size(),-1);
+
+		return convId;
+	} catch ( ... ) {
+		return 0;
+	}
 }
 
 struct _NodeImpl
