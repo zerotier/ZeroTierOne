@@ -261,7 +261,16 @@ public:
 			bf.set((peers[chosen++] = *i)->address().sum());
 
 		// Add a supernode if there are fewer than the desired
-		// number of recipients.
+		// number of recipients. Note that we do not use the bloom
+		// filter to track visits to supernodes, intentionally
+		// allowing multicasts to ping pong between supernodes.
+		// Supernodes propagate even messages they've already seen,
+		// while regular nodes do not. Thus this ping-ponging will
+		// cause the supernodes to pick new starting points for
+		// peer to peer graph traversal multiple times. It's a
+		// simple, stateless way to increase supernode-driven
+		// propagation of a multicast in the event that peer to
+		// peer connectivity for its group is sparse.
 		if (chosen < max) {
 			Address avoid[2];
 			avoid[0] = originalSubmitter;

@@ -219,12 +219,17 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
 {
 	NodeConfig *nc = (NodeConfig *)arg;
+	const RuntimeEnvironment *_r = nc->_r;
+
 	try {
 		unsigned long convId = 0;
 		std::vector<std::string> commands;
 
-		if (!decodeControlMessagePacket(nc->_controlSocketKey,data,len,convId,commands))
+		if (!decodeControlMessagePacket(nc->_controlSocketKey,data,len,convId,commands)) {
+			TRACE("control bus packet from %s failed decode, discarded",remoteAddr.toString().c_str());
 			return;
+		}
+		TRACE("control bus packet from %s, contains %d commands",remoteAddr.toString().c_str(),(int)commands.size());
 
 		for(std::vector<std::string>::iterator c(commands.begin());c!=commands.end();++c) {
 			std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > resultPackets(encodeControlMessage(nc->_controlSocketKey,convId,nc->execute(c->c_str())));

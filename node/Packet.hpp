@@ -449,7 +449,7 @@ public:
 		 *   <[2] 16-bit length of payload>
 		 *   <[2] 16-bit length of signature>
 		 *   <[...] ethernet payload>
-		 *   <[...] ECDSA signature>
+		 *   <[...] ECDSA signature of SHA-256 hash (see below)>
 		 *
 		 * The signature is made using the key of the original submitter, and
 		 * can be used to authenticate the submitter for security and rate
