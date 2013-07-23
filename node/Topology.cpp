@@ -39,7 +39,8 @@ namespace ZeroTier {
 Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath)
 	throw(std::runtime_error) :
 	Thread(),
-	_r(renv)
+	_r(renv),
+	_amSupernode(false)
 {
 	if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWCREAT,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE)) {
 		if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWREPLACE,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE))
@@ -77,9 +78,11 @@ Topology::~Topology()
 void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
 {
 	Mutex::Lock _l(_supernodes_m);
+
 	_supernodes = sn;
 	_supernodeAddresses.clear();
 	_supernodePeers.clear();
+
 	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
 		if (i->first != _r->identity) {
 			SharedPtr<Peer> p(getPeer(i->first.address()));
@@ -93,6 +96,8 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 		}
 		_supernodeAddresses.insert(i->first.address());
 	}
+
+	_amSupernode = (_supernodes.find(_r->identity) != _supernodes.end());
 }
 
 void Topology::addPeer(const SharedPtr<Peer> &candidate,void (*callback)(void *,const SharedPtr<Peer> &,Topology::PeerVerifyResult),void *arg)

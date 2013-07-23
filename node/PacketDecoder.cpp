@@ -450,19 +450,28 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 						// Technically should not happen, since the original submitter is
 						// excluded from consideration as a propagation recipient.
 						TRACE("dropped boomerang MULTICAST_FRAME received from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
-					} else if ((!isDuplicate)||(_r->topology->isSupernode(_r->identity.address()))) {
+					} else if ((!isDuplicate)||(_r->topology->amSupernode())) {
+						//
 						// If I am a supernode, I will repeatedly propagate duplicates. That's
 						// because supernodes are used to bridge sparse multicast groups. Non-
 						// supernodes will ignore duplicates completely.
+						//
+						// TODO: supernodes should keep a local bloom filter too and OR it with
+						// the bloom from the packet in order to pick different recipients each
+						// time a multicast returns to them for repropagation.
+						//
+
 						SharedPtr<Peer> originalSubmitter(_r->topology->getPeer(originalSubmitterAddress));
 						if (!originalSubmitter) {
 							TRACE("requesting WHOIS on original multicast frame submitter %s",originalSubmitterAddress.toString().c_str());
 							_r->sw->requestWhois(originalSubmitterAddress);
 							_step = DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP;
-							return false;
+							return false; // try again if/when we get OK(WHOIS)
 						} else if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),network->id(),fromMac,mg,etherType,dataAndSignature,datalen,dataAndSignature + datalen,signaturelen)) {
 							_r->multicaster->addToDedupHistory(mccrc,now);
 
+							// Even if we are a supernode, we still don't repeatedly inject
+							// duplicates into our own tap.
 							if (!isDuplicate)
 								network->tap().put(fromMac,mg.mac(),etherType,dataAndSignature,datalen);
 
@@ -494,7 +503,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 								compress();
 
 								for(unsigned int i=0;i<np;++i) {
-									TRACE("propagating multicast from original node %s: %s -> %s",originalSubmitterAddress.toString().c_str(),upstream.toString().c_str(),propPeers[i]->address().toString().c_str());
+									//TRACE("propagating multicast from original node %s: %s -> %s",originalSubmitterAddress.toString().c_str(),upstream.toString().c_str(),propPeers[i]->address().toString().c_str());
 									// Re-use this packet to re-send multicast frame to everyone
 									// downstream from us.
 									newInitializationVector();
@@ -504,7 +513,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 								return true;
 							} else {
-								TRACE("terminating MULTICAST_FRAME propagation from %s(%s): max depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
+								//TRACE("terminating MULTICAST_FRAME propagation from %s(%s): max depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 							}
 						} else {
 							LOG("rejected MULTICAST_FRAME from %s(%s) due to failed signature check (claims original sender %s)",source().toString().c_str(),_remoteAddress.toString().c_str(),originalSubmitterAddress.toString().c_str());

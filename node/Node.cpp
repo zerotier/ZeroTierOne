@@ -415,11 +415,9 @@ Node::ReasonForTermination Node::run()
 			if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
 				lastPingCheck = now;
 				try {
-					if (_r->topology->isSupernode(_r->identity.address())) {
-						// The only difference in how supernodes behave is here: they only
-						// actively ping each other and only passively listen for pings
-						// from anyone else. They also don't send firewall openers, since
-						// they're never firewalled.
+					if (_r->topology->amSupernode()) {
+						// Supernodes do not ping anyone but each other. They also don't
+						// send firewall openers, since they aren't ever firewalled.
 						std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 						for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
 							if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)

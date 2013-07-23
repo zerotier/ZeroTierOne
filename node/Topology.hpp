@@ -163,6 +163,11 @@ public:
 	}
 
 	/**
+	 * @return True if this node's identity is in the supernode set
+	 */
+	inline bool amSupernode() const { return _amSupernode; }
+
+	/**
 	 * Clean and flush database now (runs in the background)
 	 */
 	void clean();
@@ -304,6 +309,9 @@ private:
 	std::set< Address > _supernodeAddresses;
 	std::vector< SharedPtr<Peer> > _supernodePeers;
 	Mutex _supernodes_m;
+
+	// Set to true if my identity is in _supernodes
+	volatile bool _amSupernode;
 
 	KISSDB _dbm;
 	Mutex _dbm_m;
