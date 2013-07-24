@@ -237,7 +237,7 @@ void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAdd
 				sock->send(remoteAddr,p->data(),p->size(),-1);
 		}
 	} catch ( ... ) {
-		TRACE("exception handling control bus packet from %s",remoteAddr.toString.c_str());
+		TRACE("exception handling control bus packet from %s",remoteAddr.toString().c_str());
 	}
 }
 

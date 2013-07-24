@@ -102,6 +102,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doMULTICAST_LIKE(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
+			case Packet::VERB_RPC:
+				return _doRPC(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed HMAC so the packet is still valid, but we
@@ -536,6 +538,10 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
+}
+
+bool PacketDecoder::_doRPC(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
 }
 
 } // namespace ZeroTier

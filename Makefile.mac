@@ -13,10 +13,7 @@ STRIP=strip
 #STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
-
-# We statically link against libcrypto since Apple has apparently decided
-# to deprecate it and may remove it in future OS releases.
-LIBS=ext/bin/libcrypto/mac-x86_combined/libcrypto.a
+LIBS=-lcrypto
 
 include objects.mk
 
