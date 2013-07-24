@@ -236,7 +236,9 @@ void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAdd
 			for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator p(resultPackets.begin());p!=resultPackets.end();++p)
 				sock->send(remoteAddr,p->data(),p->size(),-1);
 		}
-	} catch ( ... ) {}
+	} catch ( ... ) {
+		TRACE("exception handling control bus packet from %s",remoteAddr.toString.c_str());
+	}
 }
 
 } // namespace ZeroTier
