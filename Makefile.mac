@@ -13,7 +13,7 @@ STRIP=strip
 #STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
-LIBS=-lcrypto
+LIBS=-lcrypto -ldl
 
 include objects.mk
 

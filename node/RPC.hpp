@@ -35,6 +35,7 @@
 #include <vector>
 #include <utility>
 
+#include "Constants.hpp"
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 #include "Address.hpp"
@@ -69,13 +70,13 @@ class RuntimeEnvironment;
 class RPC : NonCopyable
 {
 public:
-#ifndef _WIN32
+#ifndef __WINDOWS__
 	/**
 	 * A local service accessible by RPC, non-Windows only for now
 	 *
 	 * Each service DLL must export these functions:
 	 *
-	 * void ZeroTierPluginInit();
+	 * int ZeroTierPluginInit();
 	 * int ZeroTierPluginDo(unsigned int,const unsigned int *,const void **,const unsigned int **,const void ***);
 	 * void ZeroTierPluginFree(int,const unsigned int *,const void **);
 	 * void ZeroTierPluginDestroy();
@@ -115,11 +116,14 @@ public:
 		 * @return Results from DLL
 		 * @throws std::runtime_error Error calling DLL
 		 */
-		std::vector<std::string> operator()(const std::vector<std::string> &args)
-			throw(std::runtime_error);
+		std::pair< int,std::vector<std::string> > operator()(const std::vector<std::string> &args);
 
 	private:
-		void *_dlhandle;
+		void *_handle;
+		void *_init;
+		void *_do;
+		void *_free;
+		void *_destroy;
 	};
 #endif
 
@@ -133,8 +137,7 @@ public:
 	 * @param args Arguments to method
 	 * @return Return value of method, and results (negative first item and empty vector means error)
 	 */
-	std::pair< int,std::vector<std::string> > callLocal(const std::string &name,const std::vector<std::string> &args)
-		throw();
+	std::pair< int,std::vector<std::string> > callLocal(const std::string &name,const std::vector<std::string> &args);
 
 	/**
 	 * Call a remote service
@@ -152,7 +155,7 @@ public:
 		const std::vector<std::string> &args,
 		void (*handler)(void *,uint64_t,const Address &,int,const std::vector<std::string> &),
 		void *arg)
-		throw(std::invalid_argument);
+		throw(std::invalid_argument,std::out_of_range);
 
 	/**
 	 * Periodically called to clean up, such as by expiring remote calls
@@ -169,8 +172,6 @@ private:
 	{
 		uint64_t callTime;
 		Address peer;
-		std::string name;
-		std::vector<std::string> &args;
 		void (*handler)(void *,uint64_t,const Address &,int,const std::vector<std::string> &);
 		void *arg;
 	};

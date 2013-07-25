@@ -466,7 +466,7 @@ public:
 		VERB_MULTICAST_FRAME = 9,
 
 		/* Call a plugin via RPC:
-		 *   <[1] length of function name>
+		 *   <[2] length of function name>
 		 *   <[...] function name>
 		 *   [<[2] length of argument>]
 		 *   [<[...] argument>]
