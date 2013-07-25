@@ -42,6 +42,7 @@ class Topology;
 class SysEnv;
 class Multicaster;
 class CMWC4096;
+class RPC;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -65,7 +66,9 @@ public:
 		demarc((Demarc *)0),
 		multicaster((Multicaster *)0),
 		sw((Switch *)0),
-		topology((Topology *)0)
+		topology((Topology *)0),
+		sysEnv((SysEnv *)0),
+		rpc((RPC *)0)
 	{
 	}
 
@@ -76,6 +79,9 @@ public:
 
 	Identity identity;
 
+	// Order matters a bit here. These are constructed in this order
+	// and then deleted in the opposite order on Node exit.
+
 	Logger *log; // may be null
 	CMWC4096 *prng;
 	NodeConfig *nc;
@@ -84,6 +90,7 @@ public:
 	Switch *sw;
 	Topology *topology;
 	SysEnv *sysEnv;
+	RPC *rpc;
 };
 
 } // namespace ZeroTier

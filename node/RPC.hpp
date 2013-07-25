@@ -140,6 +140,16 @@ public:
 	std::pair< int,std::vector<std::string> > callLocal(const std::string &name,const std::vector<std::string> &args);
 
 	/**
+	 * Load a plugin
+	 *
+	 * @param name Name of RPC function
+	 * @param path Path to plugin DLL
+	 * @throws std::invalid_argument Unable to properly load or resolve symbol(s) in DLL
+	 */
+	void loadLocal(const char *name,const char *path)
+		throw(std::invalid_argument);
+
+	/**
 	 * Call a remote service
 	 *
 	 * @param peer Peer to call on
@@ -165,8 +175,10 @@ public:
 private:
 	const RuntimeEnvironment *_r;
 
+#ifndef __WINDOWS__
 	std::map<std::string,LocalService *> _rpcServices;
 	Mutex _rpcServices_m;
+#endif
 
 	struct RemoteCallOutstanding
 	{

@@ -37,6 +37,8 @@
 
 namespace ZeroTier {
 
+#ifndef __WINDOWS__
+
 RPC::LocalService::LocalService(const char *dllPath)
 	throw(std::invalid_argument) :
 	_handle((void *)0),
@@ -111,6 +113,8 @@ std::pair< int,std::vector<std::string> > RPC::LocalService::operator()(const st
 	return std::pair< int,std::vector<std::string> >(rcount,results);
 }
 
+#endif // __WINDOWS__
+
 RPC::RPC(const RuntimeEnvironment *renv) :
 	_r(renv)
 {
@@ -123,17 +127,35 @@ RPC::~RPC()
 			co->second.handler(co->second.arg,co->first,co->second.peer,ZT_RPC_ERROR_CANCELLED,std::vector<std::string>());
 	}
 
+#ifndef __WINDOWS__
 	for(std::map<std::string,LocalService *>::iterator s(_rpcServices.begin());s!=_rpcServices.end();++s)
 		delete s->second;
+#endif
 }
 
 std::pair< int,std::vector<std::string> > RPC::callLocal(const std::string &name,const std::vector<std::string> &args)
 {
+#ifdef __WINDOWS__
+	return std::pair< int,std::vector<std::string> >(ZT_RPC_ERROR_NOT_FOUND,std::vector<std::string>());
+#else
 	Mutex::Lock _l(_rpcServices_m);
 	std::map<std::string,LocalService *>::iterator s(_rpcServices.find(name));
 	if (s == _rpcServices.end())
 		return std::pair< int,std::vector<std::string> >(ZT_RPC_ERROR_NOT_FOUND,std::vector<std::string>());
 	return ((*(s->second))(args));
+#endif
+}
+
+void RPC::loadLocal(const char *name,const char *path)
+	throw(std::invalid_argument)
+{
+#ifdef __WINDOWS__
+	throw std::invalid_argument("RPC plugins not supported on Windows (yet?)");
+#else
+	LocalService *s = new LocalService(path);
+	Mutex::Lock _l(_rpcServices_m);
+	_rpcServices[std::string(name)] = s;
+#endif
 }
 
 uint64_t RPC::callRemote(

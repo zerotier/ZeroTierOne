@@ -38,6 +38,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <map>
 
 #include "../ext/lz4/lz4.h"
 #include "../ext/lz4/lz4hc.h"
@@ -58,6 +59,16 @@ namespace ZeroTier {
 class Utils
 {
 public:
+	/**
+	 * List a directory's contents
+	 *
+	 * @param path Path to list
+	 * @param files Set to fill with files
+	 * @param directories Set to fill with directories
+	 * @return Map of entries and whether or not they are also directories (empty on failure)
+	 */
+	static std::map<std::string,bool> listDirectory(const char *path);
+
 	/**
 	 * @param data Data to convert to hex
 	 * @param len Length of data
