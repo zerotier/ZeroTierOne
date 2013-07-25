@@ -62,7 +62,7 @@ const Pack::Entry *Pack::put(const std::string &name,const std::string &content)
 	SHA256_Update(&sha,content.data(),content.length());
 	SHA256_Final(e.sha256,&sha);
 
-	e.signedBy.zero();
+	e.signedBy = 0;
 	e.signature.assign((const char *)0,0);
 
 	return &e;
@@ -81,7 +81,7 @@ std::string Pack::serialize() const
 		entry.push_back(e->second.name);
 		entry.push_back(e->second.content);
 		entry.push_back(std::string((const char *)e->second.sha256,sizeof(e->second.sha256)));
-		entry.push_back(std::string((const char *)e->second.signedBy.data(),e->second.signedBy.size()));
+		entry.push_back(e->second.signedBy.toBinaryString());
 		entry.push_back(e->second.signature);
 		archive.push_back(entry.serialize());
 	}
@@ -123,8 +123,8 @@ bool Pack::deserialize(const void *sd,unsigned int sdlen)
 		memcpy(e.sha256,dig,32);
 
 		if (entry[3].length() == ZT_ADDRESS_LENGTH)
-			e.signedBy = entry[3].data();
-		else e.signedBy.zero();
+			e.signedBy.setTo(entry[3].data());
+		else e.signedBy = 0;
 		e.signature = entry[4];
 	}
 	return true;

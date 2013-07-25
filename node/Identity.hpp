@@ -307,7 +307,7 @@ public:
 	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
 		throw(std::out_of_range)
 	{
-		b.append(_address.data(),ZT_ADDRESS_LENGTH);
+		_address.appendTo(b);
 		b.append((unsigned char)IDENTITY_TYPE_NIST_P_521);
 		b.append((unsigned char)(_publicKey.size() & 0xff));
 		b.append(_publicKey.data(),_publicKey.size());

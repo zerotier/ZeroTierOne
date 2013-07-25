@@ -28,70 +28,131 @@
 #ifndef _ZT_ADDRESS_HPP
 #define _ZT_ADDRESS_HPP
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <string>
 #include "Utils.hpp"
 #include "MAC.hpp"
 #include "Constants.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
 /**
- * ZeroTier address, which doubles as the last 5 octets of the MAC on taps
- *
- * Natural sort order will differ on big vs. little endian machines, but that
- * won't matter when it's used as a local map/set key.
+ * A ZeroTier address
  */
 class Address
 {
-private:
-	union {
-		unsigned char o[ZT_ADDRESS_LENGTH];
-		uint64_t v;
-	} _a;
-
 public:
 	Address()
-		throw()
+		throw() :
+		_a(0)
 	{
-		_a.v = 0;
 	}
 
 	Address(const Address &a)
-		throw()
+		throw() :
+		_a(a._a)
 	{
-		_a.v = a._a.v;
+	}
+
+	Address(uint64_t a)
+		throw() :
+		_a(a & 0xffffffffffULL)
+	{
 	}
 
 	/**
-	 * Create from a ZeroTier MAC
-	 *
-	 * @param m MAC (assumed to be a ZeroTier MAC)
-	 */
-	Address(const MAC &m)
-		throw()
-	{
-		_a.v = 0;
-		for(int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			_a.o[i] = m.data[i + 1];
-	}
-
-	/**
-	 * @param bits Raw address -- 5 bytes in length
+	 * @param bits Raw address -- 5 bytes, big-endian byte order
 	 */
 	Address(const void *bits)
 		throw()
 	{
-		_a.v = 0;
-		for(int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			_a.o[i] = ((const unsigned char *)bits)[i];
+		setTo(bits);
 	}
 
 	inline Address &operator=(const Address &a)
 		throw()
 	{
-		_a.v = a._a.v;
+		_a = a._a;
 		return *this;
+	}
+
+	inline Address &operator=(const uint64_t a)
+		throw()
+	{
+		_a = (a & 0xffffffffffULL);
+		return *this;
+	}
+
+	/**
+	 * @param bits Raw address -- 5 bytes, big-endian byte order
+	 */
+	inline void setTo(const void *bits)
+		throw()
+	{
+		const unsigned char *b = (const unsigned char *)bits;
+		uint64_t a = ((uint64_t)*b++) << 32;
+		a |= ((uint64_t)*b++) << 24;
+		a |= ((uint64_t)*b++) << 16;
+		a |= ((uint64_t)*b++) << 8;
+		a |= ((uint64_t)*b);
+		_a = a;
+	}
+
+	/**
+	 * @param bits Buffer to hold 5-byte address in big-endian byte order
+	 */
+	inline void copyTo(void *bits) const
+		throw()
+	{
+		unsigned char *b = (unsigned char *)bits;
+		*(b++) = (unsigned char)((_a >> 32) & 0xff);
+		*(b++) = (unsigned char)((_a >> 24) & 0xff);
+		*(b++) = (unsigned char)((_a >> 16) & 0xff);
+		*(b++) = (unsigned char)((_a >> 8) & 0xff);
+		*b = (unsigned char)(_a & 0xff);
+	}
+
+	/**
+	 * Append to a buffer in big-endian byte order
+	 *
+	 * @param b Buffer to append to
+	 */
+	template<unsigned int C>
+	inline void appendTo(Buffer<C> &b) const
+		throw(std::out_of_range)
+	{
+		b.append((unsigned char)((_a >> 32) & 0xff));
+		b.append((unsigned char)((_a >> 24) & 0xff));
+		b.append((unsigned char)((_a >> 16) & 0xff));
+		b.append((unsigned char)((_a >> 8) & 0xff));
+		b.append((unsigned char)(_a & 0xff));
+	}
+
+	/**
+	 * @return String containing address as 5 binary bytes
+	 */
+	inline std::string toBinaryString() const
+	{
+		std::string b;
+		b.push_back((char)((_a >> 32) & 0xff));
+		b.push_back((char)((_a >> 24) & 0xff));
+		b.push_back((char)((_a >> 16) & 0xff));
+		b.push_back((char)((_a >> 8) & 0xff));
+		b.push_back((char)(_a & 0xff));
+		return b;
+	}
+
+	/**
+	 * @return Integer containing address (0 to 2^40)
+	 */
+	inline uint64_t toInt() const
+		throw()
+	{
+		return _a;
 	}
 
 	/**
@@ -103,9 +164,7 @@ public:
 		throw()
 	{
 		MAC m;
-		m.data[0] = ZT_MAC_FIRST_OCTET;
-		for(int i=1;i<6;++i)
-			m.data[i] = _a.o[i - 1];
+		copyTo(m.data);
 		return m;
 	}
 
@@ -114,18 +173,15 @@ public:
 	 */
 	inline std::string toString() const
 	{
-		return Utils::hex(_a.o,ZT_ADDRESS_LENGTH);
+		char buf[16];
+		sprintf(buf,"%.10llx",_a);
+		return std::string(buf);
 	};
-
-	/**
-	 * Set address to zero
-	 */
-	inline void zero() throw() { _a.v = 0; }
 
 	/**
 	 * @return True if this address is not zero
 	 */
-	inline operator bool() const throw() { return (_a.v); }
+	inline operator bool() const throw() { return (_a); }
 
 	/**
 	 * @return Sum of all bytes in address
@@ -133,10 +189,7 @@ public:
 	inline unsigned int sum() const
 		throw()
 	{
-		unsigned int s = 0;
-		for(unsigned int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			s += _a.o[i];
-		return s;
+		return (unsigned int)(((_a >> 32) & 0xff) + ((_a >> 24) & 0xff) + ((_a >> 16) & 0xff) + ((_a >> 8) & 0xff) + (_a & 0xff));
 	}
 
 	/**
@@ -151,23 +204,24 @@ public:
 	inline bool isReserved() const
 		throw()
 	{
-		return ((!_a.v)||(_a.o[0] == ZT_ADDRESS_RESERVED_PREFIX));
+		return ((!_a)||((_a >> 32) == ZT_ADDRESS_RESERVED_PREFIX));
 	}
 
-	inline unsigned char *data() throw() { return _a.o; }
-	inline const unsigned char *data() const throw() { return _a.o; }
+	/**
+	 * @param i Value from 0 to 4 (inclusive)
+	 * @return Byte at said position (address interpreted in big-endian order)
+	 */
+	inline unsigned char operator[](unsigned int i) const throw() { return (unsigned char)((_a >> (32 - (i * 8))) & 0xff); }
 
-	inline unsigned int size() const throw() { return ZT_ADDRESS_LENGTH; }
+	inline bool operator==(const Address &a) const throw() { return (_a == a._a); }
+	inline bool operator!=(const Address &a) const throw() { return (_a != a._a); }
+	inline bool operator>(const Address &a) const throw() { return (_a > a._a); }
+	inline bool operator<(const Address &a) const throw() { return (_a < a._a); }
+	inline bool operator>=(const Address &a) const throw() { return (_a >= a._a); }
+	inline bool operator<=(const Address &a) const throw() { return (_a <= a._a); }
 
-	inline unsigned char &operator[](unsigned int i) throw() { return _a.o[i]; }
-	inline unsigned char operator[](unsigned int i) const throw() { return _a.o[i]; }
-
-	inline bool operator==(const Address &a) const throw() { return (_a.v == a._a.v); }
-	inline bool operator!=(const Address &a) const throw() { return (_a.v != a._a.v); }
-	inline bool operator<(const Address &a) const throw() { return (_a.v < a._a.v); }
-	inline bool operator>(const Address &a) const throw() { return (_a.v > a._a.v); }
-	inline bool operator<=(const Address &a) const throw() { return (_a.v <= a._a.v); }
-	inline bool operator>=(const Address &a) const throw() { return (_a.v >= a._a.v); }
+private:
+	uint64_t _a;
 };
 
 } // namespace ZeroTier
