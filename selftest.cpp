@@ -45,6 +45,7 @@
 #include "node/Peer.hpp"
 #include "node/Condition.hpp"
 #include "node/NodeConfig.hpp"
+#include "node/Dictionary.hpp"
 
 using namespace ZeroTier;
 
@@ -295,6 +296,29 @@ static int testOther()
 	} catch (std::exception &exc) {
 		std::cout << "FAIL (" << exc.what() << ")" << std::endl;
 		return -1;
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
+	for(int k=0;k<10000;++k) {
+		Dictionary a,b;
+		int nk = rand() % 32;
+		for(int q=0;q<nk;++q) {
+			std::string k,v;
+			int kl = (rand() % 512);
+			int vl = (rand() % 512);
+			for(int i=0;i<kl;++i)
+				k.push_back((char)rand());
+			for(int i=0;i<vl;++i)
+				v.push_back((char)rand());
+			a[k] = v;
+		}
+		std::string aser = a.toString();
+		b.fromString(aser);
+		if (a != b) {
+			std::cout << "FAIL!" << std::endl;
+			return -1;
+		}
 	}
 	std::cout << "PASS" << std::endl;
 
