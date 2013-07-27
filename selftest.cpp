@@ -43,7 +43,6 @@
 #include "node/HMAC.hpp"
 #include "node/MAC.hpp"
 #include "node/Peer.hpp"
-#include "node/Http.hpp"
 #include "node/Condition.hpp"
 #include "node/NodeConfig.hpp"
 
@@ -302,39 +301,12 @@ static int testOther()
 	return 0;
 }
 
-static Condition testHttpDoneCondition;
-
-static bool testHttpHandler(Http::Request *req,void *arg,const std::string &url,int code,const std::map<std::string,std::string> &headers,const std::string &body)
-{
-	if (code)
-		std::cout << "[net] " << url << " " << code << " bytes: " << body.length() << std::endl;
-	else std::cout << "[net] " << url << " FAILED: " << body << std::endl;
-	testHttpDoneCondition.signal();
-	return false;
-}
-
-static int testNet()
-{
-	std::cout << "[net] GET http://www.uc.edu/" << std::endl;
-	new Http::Request(Http::HTTP_METHOD_GET,"http://www.uc.edu/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
-	testHttpDoneCondition.wait();
-	std::cout << "[net] GET http://zerotier.com/" << std::endl;
-	new Http::Request(Http::HTTP_METHOD_GET,"http://zerotier.com/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
-	testHttpDoneCondition.wait();
-	std::cout << "[net] GET http://www.google.com/" << std::endl;
-	new Http::Request(Http::HTTP_METHOD_GET,"http://www.google.com/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
-	testHttpDoneCondition.wait();
-
-	return 0;
-}
-
 int main(int argc,char **argv)
 {
 	int r = 0;
 
 	srand(time(0));
 
-	r |= testNet();
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();

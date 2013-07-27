@@ -42,7 +42,6 @@
 
 #include "../ext/lz4/lz4.h"
 #include "../ext/lz4/lz4hc.h"
-#include "../ext/huffandpuff/huffman.h"
 
 #include "Constants.hpp"
 
@@ -176,7 +175,6 @@ public:
 	template<typename I,typename O>
 	static inline void compress(I begin,I end,O out)
 	{
-		char huffheap[HUFFHEAP_SIZE];
 		unsigned int bufLen = LZ4_compressBound(ZT_COMPRESSION_BLOCK_SIZE);
 		char *buf = new char[bufLen * 2];
 		char *buf2 = buf + bufLen;
@@ -210,16 +208,9 @@ public:
 					continue;
 				}
 
-				unsigned long huffCompressedLen = huffman_compress((const unsigned char *)buf2,lz4CompressedLen,(unsigned char *)buf,bufLen,huffheap);
-				if ((!huffCompressedLen)||((int)huffCompressedLen >= lz4CompressedLen)) {
-					l = hton((uint32_t)lz4CompressedLen); // lz4 only
-					out((const void *)&l,4);
-					out((const void *)buf2,(unsigned int)lz4CompressedLen);
-				} else {
-					l = hton((uint32_t)0x80000000 | (uint32_t)huffCompressedLen); // lz4 with huffman
-					out((const void *)&l,4);
-					out((const void *)buf,(unsigned int)huffCompressedLen);
-				}
+				l = hton((uint32_t)lz4CompressedLen); // lz4 only
+				out((const void *)&l,4);
+				out((const void *)buf2,(unsigned int)lz4CompressedLen);
 			}
 
 			delete [] buf;
@@ -242,7 +233,6 @@ public:
 	template<typename I,typename O>
 	static inline bool decompress(I begin,I end,O out)
 	{
-		char huffheap[HUFFHEAP_SIZE];
 		volatile char i32c[4];
 		void *const i32cp = (void *)i32c;
 		unsigned int bufLen = LZ4_compressBound(ZT_COMPRESSION_BLOCK_SIZE);
@@ -279,23 +269,10 @@ public:
 						return false;
 					}
 
-					if ((_compressedSize & 0x80000000)) { // lz4 and huffman
-						unsigned long lz4CompressedSize = huffman_decompress((const unsigned char *)buf,compressedSize,(unsigned char *)buf2,bufLen,huffheap);
-						if (lz4CompressedSize) {
-							if (LZ4_uncompress_unknownOutputSize(buf2,buf,lz4CompressedSize,bufLen) != (int)originalSize) {
-								delete [] buf;
-								return false;
-							} else out((const void *)buf,(unsigned int)originalSize);
-						} else {
-							delete [] buf;
-							return false;
-						}
-					} else { // lz4 only
-						if (LZ4_uncompress_unknownOutputSize(buf,buf2,compressedSize,bufLen) != (int)originalSize) {
-							delete [] buf;
-							return false;
-						} else out((const void *)buf2,(unsigned int)originalSize);
-					}
+					if (LZ4_uncompress_unknownOutputSize(buf,buf2,compressedSize,bufLen) != (int)originalSize) {
+						delete [] buf;
+						return false;
+					} else out((const void *)buf2,(unsigned int)originalSize);
 				} else { // stored
 					if (originalSize > bufLen) {
 						delete [] buf;
