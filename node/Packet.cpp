@@ -42,6 +42,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_FRAME: return "FRAME";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
+		case VERB_NETWORK_PERMISSION_CERTIFICATE: return "NETWORK_PERMISSION_CERTIFICATE";
 	}
 	return "(unknown)";
 }
@@ -57,6 +58,8 @@ const char *Packet::errorString(ErrorCode e)
 		case ERROR_IDENTITY_COLLISION: return "IDENTITY_COLLISION";
 		case ERROR_IDENTITY_INVALID: return "IDENTITY_INVALID";
 		case ERROR_UNSUPPORTED_OPERATION: return "UNSUPPORTED_OPERATION";
+		case ERROR_NO_NETWORK_CERTIFICATE_ON_FILE: return "NO_NETWORK_CERTIFICATE_ON_FILE";
+		case ERROR_OBJECT_EXPIRED: return "OBJECT_EXPIRED";
 	}
 	return "(unknown)";
 }

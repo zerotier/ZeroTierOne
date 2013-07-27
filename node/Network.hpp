@@ -49,7 +49,20 @@ namespace ZeroTier {
 class NodeConfig;
 
 /**
- * Local membership to a network
+ * A virtual LAN
+ *
+ * Networks can be open or closed.
+ *
+ * Open networks do not track membership. Anyone is allowed to communicate
+ * over them.
+ *
+ * Closed networks track membership by way of timestamped signatures. When
+ * the network requests its configuration, one of the fields returned is
+ * a signature for the identity of the peer on the network. This signature
+ * includes a timestamp. When a peer communicates with other peers on a
+ * closed network, it periodically (and pre-emptively) propagates this
+ * signature to the peers with which it is communicating. Peers reject
+ * packets with an error if no recent signature is on file.
  */
 class Network : NonCopyable
 {

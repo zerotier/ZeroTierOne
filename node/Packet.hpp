@@ -463,7 +463,22 @@ public:
 		 *
 		 * No OK or ERROR is generated.
 		 */
-		VERB_MULTICAST_FRAME = 9
+		VERB_MULTICAST_FRAME = 9,
+
+		/* Network permission certificate:
+		 *   <[8] 64-bit network ID>
+		 *   <[1] flags (currently unused, must be 0)>
+		 *   <[8] certificate timestamp>
+		 *   <[8] 16-bit length of signature>
+		 *   <[...] ECDSA signature of my binary serialized identity and timestamp>
+		 *
+		 * This message is used to send ahead of time a certificate proving
+		 * this node has permission to communicate on a private network.
+		 *
+		 * OK is generated on acceptance. ERROR is returned on failure. In both
+		 * cases the payload is the network ID.
+		 */
+		VERB_NETWORK_PERMISSION_CERTIFICATE = 10
 	};
 
 	/**
@@ -490,7 +505,13 @@ public:
 		ERROR_IDENTITY_INVALID = 5,
 
 		/* Verb or use case not supported/enabled by this node */
-		ERROR_UNSUPPORTED_OPERATION = 6
+		ERROR_UNSUPPORTED_OPERATION = 6,
+
+		/* Message to private network rejected -- no unexpired certificate on file */
+		ERROR_NO_NETWORK_CERTIFICATE_ON_FILE = 7,
+
+		/* Object is expired (e.g. network certificate) */
+		ERROR_OBJECT_EXPIRED = 8
 	};
 
 	/**
