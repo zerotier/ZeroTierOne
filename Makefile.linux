@@ -38,10 +38,6 @@ idtool:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-idtool
 
-packtool:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-packtool packtool.cpp $(OBJS) $(LIBS)
-	$(STRIP) zerotier-packtool
-
 launcher:
 	$(CC) -Os -o zerotier-launcher launcher.c
 	$(STRIP) zerotier-launcher
