@@ -50,14 +50,6 @@ class NodeConfig;
 
 /**
  * Local membership to a network
- *
- * Networks configure themselves via RPC by accessing the function
- * com.zerotier.one.Network.bootstrap at any supernode. This returns
- * a series of key/value pairs that includes the IP address
- * information for this node on the network and -- for closed
- * networks -- a URL to retreive the network's membership list.
- * A SHA-256 hash is also included to verify the return from this
- * URL query.
  */
 class Network : NonCopyable
 {

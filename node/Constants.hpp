@@ -324,9 +324,4 @@ error_no_ZT_ARCH_defined;
  */
 #define ZT_RENDEZVOUS_NAT_T_DELAY 500
 
-/**
- * Timeout for remote RPC calls
- */
-#define ZT_RPC_TIMEOUT 10000
-
 #endif

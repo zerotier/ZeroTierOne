@@ -463,26 +463,7 @@ public:
 		 *
 		 * No OK or ERROR is generated.
 		 */
-		VERB_MULTICAST_FRAME = 9,
-
-		/* Call a plugin via RPC:
-		 *   <[2] length of function name>
-		 *   <[...] function name>
-		 *   [<[2] length of argument>]
-		 *   [<[...] argument>]
-		 *   [... additional length/argument pairs ...]
-		 *
-		 * This generates ERROR_NOT_FOUND if the specified function was not
-		 * found. Otherwise it generates an OK message. The OK message has
-		 * the same format as the request, except arguments are replaced
-		 * by results.
-		 *
-		 * This can be used to implement simple RPC. No retransmission or
-		 * other guarantees are made, so it behaves like UDP-based RPC
-		 * protocols. Plugins are typically run by supernodes and are used
-		 * to implement network lookup and other services.
-		 */
-		VERB_RPC = 10
+		VERB_MULTICAST_FRAME = 9
 	};
 
 	/**

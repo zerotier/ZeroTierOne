@@ -42,7 +42,6 @@ class Topology;
 class SysEnv;
 class Multicaster;
 class CMWC4096;
-class RPC;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -67,8 +66,7 @@ public:
 		multicaster((Multicaster *)0),
 		sw((Switch *)0),
 		topology((Topology *)0),
-		sysEnv((SysEnv *)0),
-		rpc((RPC *)0)
+		sysEnv((SysEnv *)0)
 	{
 	}
 
@@ -90,7 +88,6 @@ public:
 	Switch *sw;
 	Topology *topology;
 	SysEnv *sysEnv;
-	RPC *rpc;
 };
 
 } // namespace ZeroTier

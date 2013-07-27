@@ -42,7 +42,6 @@ const char *Packet::verbString(Verb v)
 		case VERB_FRAME: return "FRAME";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
-		case VERB_RPC: return "RPC";
 	}
 	return "(unknown)";
 }

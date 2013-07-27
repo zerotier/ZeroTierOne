@@ -68,7 +68,6 @@
 #include "Mutex.hpp"
 #include "Multicaster.hpp"
 #include "CMWC4096.hpp"
-#include "RPC.hpp"
 
 #include "../version.h"
 
@@ -211,7 +210,6 @@ Node::~Node()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 
-	delete impl->renv.rpc;
 	delete impl->renv.sysEnv;
 	delete impl->renv.topology;
 	delete impl->renv.sw;
@@ -317,7 +315,6 @@ Node::ReasonForTermination Node::run()
 		_r->sw = new Switch(_r);
 		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
 		_r->sysEnv = new SysEnv(_r);
-		_r->rpc = new RPC(_r);
 
 		// TODO: make configurable
 		bool boundPort = false;
@@ -339,25 +336,6 @@ Node::ReasonForTermination Node::run()
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,exc.what());
 	} catch ( ... ) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unknown exception during initialization");
-	}
-
-	try {
-		std::map<std::string,bool> pluginsd(Utils::listDirectory((_r->homePath + ZT_PATH_SEPARATOR_S + "plugins.d").c_str()));
-		for(std::map<std::string,bool>::iterator ppath(pluginsd.begin());ppath!=pluginsd.end();++ppath) {
-			if (!ppath->second) {
-				try {
-					std::string funcName(ppath->first.substr(0,ppath->first.rfind('.')));
-					LOG("loading plugins.d/%s as RPC function %s",ppath->first.c_str(),funcName.c_str());
-					_r->rpc->loadLocal(funcName.c_str(),(_r->homePath + ZT_PATH_SEPARATOR_S + "plugins.d" + ZT_PATH_SEPARATOR_S + ppath->first).c_str());
-				} catch (std::exception &exc) {
-					LOG("failed to load plugin plugins.d/%s: %s",ppath->first.c_str(),exc.what());
-				} catch ( ... ) {
-					LOG("failed to load plugin plugins.d/%s: (unknown exception)",ppath->first.c_str());
-				}
-			}
-		}
-	} catch ( ... ) {
-		TRACE("unknown exception attempting to enumerate and load plugins");
 	}
 
 	try {

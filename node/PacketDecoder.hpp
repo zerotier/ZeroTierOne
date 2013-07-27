@@ -122,7 +122,6 @@ private:
 	bool _doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
-	bool _doRPC(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 
 	uint64_t _receiveTime;
 	Demarc::Port _localPort;
