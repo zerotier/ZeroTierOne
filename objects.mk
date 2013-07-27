@@ -1,5 +1,4 @@
 OBJS=\
-	ext/http-parser/http_parser.o \
 	ext/huffandpuff/huffman.o \
 	ext/kissdb/kissdb.o \
 	ext/lz4/lz4hc.o \
@@ -10,7 +9,6 @@ OBJS=\
 	node/EthernetTap.o \
 	node/Filter.o \
 	node/HMAC.o \
-	node/Http.o \
 	node/Identity.o \
 	node/InetAddress.o \
 	node/Logger.o \
