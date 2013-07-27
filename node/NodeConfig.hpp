@@ -38,7 +38,6 @@
 #include "SharedPtr.hpp"
 #include "Network.hpp"
 #include "Utils.hpp"
-#include "Http.hpp"
 #include "UdpSocket.hpp"
 #include "Buffer.hpp"
 
