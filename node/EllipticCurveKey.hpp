@@ -71,10 +71,13 @@ public:
 	EllipticCurveKey(const void *data,unsigned int len)
 		throw()
 	{
-		if (len <= ZT_EC_MAX_BYTES) {
-			_bytes = len;
-			memcpy(_key,data,len);
-		} else _bytes = 0;
+		set(data,len);
+	}
+
+	EllipticCurveKey(const std::string &data)
+		throw()
+	{
+		set(data.data(),data.length());
 	}
 
 	EllipticCurveKey(const EllipticCurveKey &k)

@@ -56,6 +56,9 @@ launcher-fakebin:
 	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REV
 	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REV
 
+makekeypair: $(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-makekeypair makekeypair.cpp $(OBJS) $(LIBS)
+
 clean:
 	rm -rf *.dSYM
 	rm -f $(OBJS) zerotier-*
