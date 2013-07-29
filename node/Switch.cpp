@@ -386,7 +386,7 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 		Packet outp((*p)->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 		for(std::map< SharedPtr<Network>,std::set<MulticastGroup> >::const_iterator nwmgs(allMemberships.begin());nwmgs!=allMemberships.end();++nwmgs) {
-			if ((nwmgs->first->open())||(_r->topology->isSupernode((*p)->address()))||(nwmgs->first->isMember((*p)->address()))) {
+			if ((_r->topology->isSupernode((*p)->address()))||(nwmgs->first->isAllowed((*p)->address()))) {
 				for(std::set<MulticastGroup>::iterator mg(nwmgs->second.begin());mg!=nwmgs->second.end();++mg) {
 					if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 						send(outp,true);

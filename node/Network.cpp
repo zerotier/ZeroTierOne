@@ -103,8 +103,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	throw(std::runtime_error) :
 	_r(renv),
 	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,this),
-	_id(id),
-	_isOpen(false)
+	_id(id)
 {
 }
 
@@ -114,10 +113,42 @@ Network::~Network()
 
 void Network::setConfiguration(const Network::Config &conf)
 {
+	Mutex::Lock _l(_lock);
+	_configuration = conf;
+	_myCertificate = conf.certificateOfMembership();
 }
 
 void Network::requestConfiguration()
 {
+}
+
+bool Network::isAllowed(const Address &peer) const
+{
+	try {
+		Mutex::Lock _l(_lock);
+		if (_configuration.isOpen())
+			return true;
+		std::map<Address,Certificate>::const_iterator pc(_membershipCertificates.find(peer));
+		if (pc == _membershipCertificates.end())
+			return false;
+		return _myCertificate.qualifyMembership(pc->second);
+	} catch (std::exception &exc) {
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
+		return false;
+	} catch ( ... ) {
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer.toString().c_str());
+		return false;
+	}
+}
+
+void Network::clean()
+{
+	Mutex::Lock _l(_lock);
+	for(std::map<Address,Certificate>::iterator i=(_membershipCertificates.begin());i!=_membershipCertificates.end();) {
+		if (_myCertificate.qualifyMembership(i->second))
+			++i;
+		else _membershipCertificates.erase(i++);
+	}
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)

@@ -208,6 +208,30 @@ public:
 		{
 		}
 
+		inline void setNetworkId(uint64_t id)
+		{
+			char buf[32];
+			sprintf(buf,"%llu",id);
+			(*this)["nwid"] = buf;
+		}
+
+		inline uint64_t networkId() const
+			throw(std::invalid_argument)
+		{
+			return strtoull(get("nwid").c_str(),(char **)0,10);
+		}
+
+		inline void setPeerAddress(Address &a)
+		{
+			(*this)["peer"] = a.toString();
+		}
+
+		inline Address peerAddress() const
+			throw(std::invalid_argument)
+		{
+			return Address(get("peer"));
+		}
+
 		/**
 		 * @return Certificate of membership for this network, or empty cert if none
 		 */
@@ -221,7 +245,7 @@ public:
 		 */
 		inline bool isOpen() const
 		{
-			return (get("isOpen","0") == "1");
+			return (get("isOpen") == "1");
 		}
 
 		/**
@@ -304,8 +328,12 @@ public:
 	inline bool isOpen() const
 		throw()
 	{
-		Mutex::Lock _l(_lock);
-		return _isOpen;
+		try {
+			Mutex::Lock _l(_lock);
+			return _configuration.isOpen();
+		} catch ( ... ) {
+			return false;
+		}
 	}
 
 	/**
@@ -343,6 +371,27 @@ public:
 	 */
 	void requestConfiguration();
 
+	/**
+	 * Add or update a peer's membership certificate
+	 *
+	 * The certificate must already have been validated via signature checking.
+	 *
+	 * @param peer Peer that owns certificate
+	 * @param cert Certificate itself
+	 */
+	inline void addMembershipCertificate(const Address &peer,const Certificate &cert)
+	{
+		Mutex::Lock _l(_lock);
+		_membershipCertificates[peer] = cert;
+	}
+
+	bool isAllowed(const Address &peer) const;
+
+	/**
+	 * Perform periodic database cleaning such as removing expired membership certificates
+	 */
+	void clean();
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -350,10 +399,11 @@ private:
 
 	EthernetTap _tap;
 	std::set<MulticastGroup> _multicastGroups;
-
+	std::map<Address,Certificate> _membershipCertificates;
+	Config _configuration;
+	Certificate _myCertificate;
+	uint64_t _lastCertificateUpdate;
 	uint64_t _id;
-	bool _isOpen;
-
 	Mutex _lock;
 
 	AtomicCounter __refCount;

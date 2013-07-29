@@ -537,10 +537,7 @@ public:
 		ERROR_UNSUPPORTED_OPERATION = 6,
 
 		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NO_MEMBER_CERTIFICATE_ON_FILE = 7,
-
-		/* Membership certificate no longer qualified for membership in network */
-		ERROR_MEMBER_CERTIFICATE_UNQUALIFIED = 8
+		ERROR_NO_MEMBER_CERTIFICATE = 7
 	};
 
 	/**

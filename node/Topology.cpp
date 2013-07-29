@@ -133,7 +133,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	}
 
 	unsigned char ztatmp[ZT_ADDRESS_LENGTH];
-	zta.copyTo(ztatmp);
+	zta.copyTo(ztatmp,ZT_ADDRESS_LENGTH);
 
 	Buffer<ZT_KISSDB_VALUE_SIZE> b(ZT_KISSDB_VALUE_SIZE);
 	_dbm_m.lock();
@@ -309,7 +309,7 @@ void Topology::main()
 						if (p->second->getAndResetDirty()) {
 							try {
 								uint64_t atmp[ZT_ADDRESS_LENGTH];
-								p->second->identity().address().copyTo(atmp);
+								p->second->identity().address().copyTo(atmp,ZT_ADDRESS_LENGTH);
 								Buffer<ZT_PEER_MAX_SERIALIZED_LENGTH> b;
 								p->second->serialize(b);
 								b.zeroUnused();
@@ -340,7 +340,7 @@ void Topology::_reallyAddPeer(const SharedPtr<Peer> &p)
 	}
 	try {
 		uint64_t atmp[ZT_ADDRESS_LENGTH];
-		p->address().copyTo(atmp);
+		p->address().copyTo(atmp,ZT_ADDRESS_LENGTH);
 		Buffer<ZT_PEER_MAX_SERIALIZED_LENGTH> b;
 		p->serialize(b);
 		b.zeroUnused();
