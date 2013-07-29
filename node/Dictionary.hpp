@@ -30,6 +30,7 @@
 
 #include <string>
 #include <map>
+#include <stdexcept>
 #include "Constants.hpp"
 
 namespace ZeroTier {
@@ -38,11 +39,76 @@ namespace ZeroTier {
  * Simple key/value dictionary with string serialization
  *
  * The serialization format is a flat key=value with backslash escape.
- * It does not support comments or other syntactic complexities.
+ * It does not support comments or other syntactic complexities. It is
+ * human-readable if the keys and values in the dictionary are also
+ * human-readable. Otherwise it might contain unprintable characters.
  */
 class Dictionary : public std::map<std::string,std::string>
 {
 public:
+	Dictionary()
+	{
+	}
+
+	/**
+	 * @param s String-serialized dictionary
+	 */
+	Dictionary(const char *s)
+	{
+		fromString(s);
+	}
+
+	/**
+	 * @param s String-serialized dictionary
+	 */
+	Dictionary(const std::string &s)
+	{
+		fromString(s.c_str());
+	}
+
+	/**
+	 * Get a key, throwing an exception if it is not present
+	 *
+	 * @param key Key to look up
+	 * @return Reference to value
+	 * @throws std::invalid_argument Key not found
+	 */
+	inline const std::string &get(const std::string &key) const
+		throw(std::invalid_argument)
+	{
+		const_iterator e(find(key));
+		if (e == end())
+			throw std::invalid_argument(std::string("missing required field: ")+key);
+		return e->second;
+	}
+
+	/**
+	 * Get a key, returning a default if not present
+	 *
+	 * @param key Key to look up
+	 * @param dfl Default if not present
+	 * @return Value or default
+	 */
+	inline const std::string &get(const std::string &key,const std::string &dfl) const
+	{
+		const_iterator e(find(key));
+		if (e == end())
+			return dfl;
+		return e->second;
+	}
+
+	/**
+	 * @param key Key to check
+	 * @return True if dictionary contains key
+	 */
+	inline bool contains(const std::string &key) const
+	{
+		return (find(key) != end());
+	}
+
+	/**
+	 * @return String-serialized dictionary
+	 */
 	inline std::string toString() const
 	{
 		std::string s;
@@ -57,6 +123,11 @@ public:
 		return s;
 	}
 
+	/**
+	 * Clear and initialize from a string
+	 *
+	 * @param s String-serialized dictionary
+	 */
 	inline void fromString(const char *s)
 	{
 		clear();

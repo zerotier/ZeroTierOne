@@ -64,13 +64,28 @@ public:
 	{
 	}
 
-	/**
-	 * @param bits Raw address -- 5 bytes, big-endian byte order
-	 */
-	Address(const void *bits)
+	Address(const char *s)
 		throw()
 	{
-		setTo(bits);
+		unsigned char foo[ZT_ADDRESS_LENGTH];
+		setTo(foo,Utils::unhex(s,foo,ZT_ADDRESS_LENGTH));
+	}
+
+	Address(const std::string &s)
+		throw()
+	{
+		unsigned char foo[ZT_ADDRESS_LENGTH];
+		setTo(foo,Utils::unhex(s.c_str(),foo,ZT_ADDRESS_LENGTH));
+	}
+
+	/**
+	 * @param bits Raw address -- 5 bytes, big-endian byte order
+	 * @param len Length of array
+	 */
+	Address(const void *bits,unsigned int len)
+		throw()
+	{
+		setTo(bits,len);
 	}
 
 	inline Address &operator=(const Address &a)
@@ -89,10 +104,15 @@ public:
 
 	/**
 	 * @param bits Raw address -- 5 bytes, big-endian byte order
+	 * @param len Length of array
 	 */
-	inline void setTo(const void *bits)
+	inline void setTo(const void *bits,unsigned int len)
 		throw()
 	{
+		if (len < ZT_ADDRESS_LENGTH) {
+			_a = 0;
+			return;
+		}
 		const unsigned char *b = (const unsigned char *)bits;
 		uint64_t a = ((uint64_t)*b++) << 32;
 		a |= ((uint64_t)*b++) << 24;
@@ -104,10 +124,13 @@ public:
 
 	/**
 	 * @param bits Buffer to hold 5-byte address in big-endian byte order
+	 * @param len Length of array
 	 */
-	inline void copyTo(void *bits) const
+	inline void copyTo(void *bits,unsigned int len) const
 		throw()
 	{
+		if (len < ZT_ADDRESS_LENGTH)
+			return;
 		unsigned char *b = (unsigned char *)bits;
 		*(b++) = (unsigned char)((_a >> 32) & 0xff);
 		*(b++) = (unsigned char)((_a >> 24) & 0xff);
@@ -164,7 +187,8 @@ public:
 		throw()
 	{
 		MAC m;
-		copyTo(m.data);
+		m.data[0] = ZT_MAC_FIRST_OCTET;
+		copyTo(m.data + 1,ZT_ADDRESS_LENGTH);
 		return m;
 	}
 

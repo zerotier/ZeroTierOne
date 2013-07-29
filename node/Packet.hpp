@@ -287,7 +287,7 @@ public:
 		 * 
 		 * @return Destination ZT address
 		 */
-		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH)); }
+		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 		/**
 		 * @return True if fragment is of a valid length
@@ -468,8 +468,9 @@ public:
 		/* Network permission certificate:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags (currently unused, must be 0)>
-		 *   <[8] certificate timestamp>
-		 *   <[8] 16-bit length of signature>
+		 *   <[2] 16-bit length of qualifying fields>
+		 *   <[...] string-serialized dictionary of qualifying fields>
+		 *   <[2] 16-bit length of signature>
 		 *   <[...] ECDSA signature of my binary serialized identity and timestamp>
 		 *
 		 * This message is used to send ahead of time a certificate proving
@@ -478,7 +479,38 @@ public:
 		 * OK is generated on acceptance. ERROR is returned on failure. In both
 		 * cases the payload is the network ID.
 		 */
-		VERB_NETWORK_PERMISSION_CERTIFICATE = 10
+		VERB_NETWORK_PERMISSION_CERTIFICATE = 10,
+
+		/* Network configuration request:
+		 *   <[8] 64-bit network ID>
+		 *
+		 * This message requests network configuration from a node capable of
+		 * providing it. Such nodes run the netconf service, which must be
+		 * installed into the ZeroTier home directory.
+		 *
+		 * OK response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[...] network configuration dictionary>
+		 *
+		 * OK returns a Dictionary (string serialized) containing the network's
+		 * configuration and IP address assignment information for the querying
+		 * node.
+		 *
+		 * ERROR may be NOT_FOUND if no such network is known, or
+		 * UNSUPPORTED_OPERATION if the netconf service isn't available. The
+		 * payload will be the network ID.
+		 */
+		VERB_NETWORK_CONFIG_REQUEST = 11,
+
+		/* Network configuration refresh request:
+		 *   <[8] 64-bit network ID>
+		 *
+		 * This message can be sent by the network configuration master node
+		 * to request that nodes refresh their network configuration.
+		 *
+		 * It is only a hint and does not presently elicit a response.
+		 */
+		VERB_NETWORK_CONFIG_REFRESH = 12
 	};
 
 	/**
@@ -508,10 +540,7 @@ public:
 		ERROR_UNSUPPORTED_OPERATION = 6,
 
 		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NO_NETWORK_CERTIFICATE_ON_FILE = 7,
-
-		/* Object is expired (e.g. network certificate) */
-		ERROR_OBJECT_EXPIRED = 8
+		ERROR_NO_NETWORK_CERTIFICATE_ON_FILE = 7
 	};
 
 	/**
@@ -624,14 +653,14 @@ public:
 	 * 
 	 * @return Destination ZT address
 	 */
-	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH)); }
+	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's source
 	 * 
 	 * @return Source ZT address
 	 */
-	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH)); }
+	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * @return True if packet is of valid length

@@ -126,7 +126,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 			_P("200 listnetworks %llu %s %s",
 				nw->first,
 				nw->second->tap().deviceName().c_str(),
-				(nw->second->open() ? "public" : "private"));
+				(nw->second->isOpen() ? "public" : "private"));
 		}
 	} else if (cmd[0] == "join") {
 		_P("404 join Not implemented yet.");

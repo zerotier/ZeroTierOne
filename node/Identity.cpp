@@ -58,7 +58,7 @@ void Identity::generate()
 	// invalid. Of course, deep verification of address/key relationship is
 	// required to cover the more elaborate address claim jump attempt case.
 	unsigned char atmp[ZT_ADDRESS_LENGTH];
-	_address.copyTo(atmp);
+	_address.copyTo(atmp,ZT_ADDRESS_LENGTH);
 	SHA256_CTX sha;
 	unsigned char dig[32];
 	unsigned char idtype = IDENTITY_TYPE_NIST_P_521,zero = 0;
@@ -76,7 +76,7 @@ void Identity::generate()
 bool Identity::locallyValidate(bool doAddressDerivationCheck) const
 {
 	unsigned char atmp[ZT_ADDRESS_LENGTH];
-	_address.copyTo(atmp);
+	_address.copyTo(atmp,ZT_ADDRESS_LENGTH);
 	SHA256_CTX sha;
 	unsigned char dig[32];
 	unsigned char idtype = IDENTITY_TYPE_NIST_P_521,zero = 0;
@@ -222,7 +222,7 @@ Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 
 	delete [] ram;
 
-	return Address(dig); // first 5 bytes of dig[]
+	return Address(dig,ZT_ADDRESS_LENGTH); // first 5 bytes of dig[]
 }
 
 std::string Identity::encrypt(const Identity &to,const void *data,unsigned int len) const

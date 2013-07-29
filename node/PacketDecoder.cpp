@@ -102,6 +102,12 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doMULTICAST_LIKE(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
+			case Packet::VERB_NETWORK_PERMISSION_CERTIFICATE:
+				return _doNETWORK_PERMISSION_CERTIFICATE(_r,peer);
+			case Packet::VERB_NETWORK_CONFIG_REQUEST:
+				return _doNETWORK_CONFIG_REQUEST(_r,peer);
+			case Packet::VERB_NETWORK_CONFIG_REFRESH:
+				return _doNETWORK_CONFIG_REFRESH(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed HMAC so the packet is still valid, but we
@@ -536,6 +542,18 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
+}
+
+bool PacketDecoder::_doNETWORK_PERMISSION_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+}
+
+bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+}
+
+bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
 }
 
 } // namespace ZeroTier

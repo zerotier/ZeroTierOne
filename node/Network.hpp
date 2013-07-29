@@ -30,28 +30,37 @@
 
 #include <string>
 #include <set>
+#include <map>
 #include <vector>
 #include <stdexcept>
+
+#include "Constants.hpp"
+#include "Utils.hpp"
 #include "EthernetTap.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
-#include "InetAddress.hpp"
-#include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
-#include "RuntimeEnvironment.hpp"
 #include "MulticastGroup.hpp"
 #include "NonCopyable.hpp"
 #include "MAC.hpp"
+#include "Dictionary.hpp"
+#include "Identity.hpp"
+#include "InetAddress.hpp"
 
 namespace ZeroTier {
 
+class RuntimeEnvironment;
 class NodeConfig;
 
 /**
  * A virtual LAN
  *
- * Networks can be open or closed.
+ * Networks can be open or closed. Each network has an ID whose most
+ * significant 40 bits are the ZeroTier address of the node that should
+ * be contacted for network configuration. The least significant 24
+ * bits are arbitrary, allowing up to 2^24 networks per managing
+ * node.
  *
  * Open networks do not track membership. Anyone is allowed to communicate
  * over them.
@@ -69,7 +78,183 @@ class Network : NonCopyable
 	friend class SharedPtr<Network>;
 	friend class NodeConfig;
 
+public:
+	/**
+	 * A certificate of network membership
+	 */
+	class Certificate : private Dictionary
+	{
+	public:
+		Certificate()
+		{
+		}
+
+		Certificate(const char *s) :
+			Dictionary(s)
+		{
+		}
+
+		Certificate(const std::string &s) :
+			Dictionary(s)
+		{
+		}
+
+		/**
+		 * @return Read-only underlying dictionary
+		 */
+		inline const Dictionary &dictionary() const { return *this; }
+
+		inline void setNetworkId(uint64_t id)
+		{
+			char buf[32];
+			sprintf(buf,"%llu",id);
+			(*this)["nwid"] = buf;
+		}
+
+		inline uint64_t networkId() const
+			throw(std::invalid_argument)
+		{
+			return strtoull(get("nwid").c_str(),(char **)0,10);
+		}
+
+		inline void setPeerAddress(Address &a)
+		{
+			(*this)["peer"] = a.toString();
+		}
+
+		inline Address peerAddress() const
+			throw(std::invalid_argument)
+		{
+			return Address(get("peer"));
+		}
+
+		/**
+		 * Set the timestamp and max-delta
+		 *
+		 * @param ts Timestamp in ms since epoch
+		 * @param maxDelta Maximum difference between two peers on the same network
+		 */
+		inline void setTimestamp(uint64_t ts,uint64_t maxDelta)
+		{
+			char foo[32];
+			sprintf(foo,"%llu",ts);
+			(*this)["ts"] = foo;
+			sprintf(foo,"%llu",maxDelta);
+			(*this)["~ts"] = foo;
+		}
+
+		/**
+		 * Set or update the sig field to contain a signature
+		 *
+		 * @param with Signing identity -- the identity of this network's controller
+		 */
+		void sign(const Identity &with);
+
+		/**
+		 * Check if another peer is indeed a current member of this network
+		 *
+		 * Fields with companion ~fields are compared with the defined maximum
+		 * delta in this certificate. Fields without ~fields are compared for
+		 * equality.
+		 *
+		 * This does not verify the certificate's signature! The signature
+		 * must be verified first.
+		 * 
+		 * @param mc Peer membership certificate
+		 * @return True if mc's membership in this network is current
+		 */
+		bool qualifyMembership(const Certificate &mc) const;
+	};
+
+	/**
+	 * A network configuration for a given node
+	 */
+	class Config : private Dictionary
+	{
+	public:
+		Config()
+		{
+		}
+
+		Config(const char *s) :
+			Dictionary(s)
+		{
+		}
+
+		Config(const std::string &s) :
+			Dictionary(s)
+		{
+		}
+
+		/**
+		 * @return Certificate of membership for this network, or empty cert if none
+		 */
+		inline Certificate certificateOfMembership() const
+		{
+			return Certificate(get("com",""));
+		}
+
+		/**
+		 * @return True if this is an open non-access-controlled network
+		 */
+		inline bool isOpen() const
+		{
+			return (get("isOpen","0") == "1");
+		}
+
+		/**
+		 * @return All static addresses / netmasks, IPv4 or IPv6
+		 */
+		inline std::set<InetAddress> staticAddresses() const
+		{
+			std::set<InetAddress> sa;
+			std::vector<std::string> ips(Utils::split(get("ipv4Static","").c_str(),",","",""));
+			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
+				sa.insert(InetAddress(*i));
+			ips = Utils::split(get("ipv6Static","").c_str(),",","","");
+			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
+				sa.insert(InetAddress(*i));
+			return sa;
+		}
+
+		/**
+		 * Set static IPv4 and IPv6 addresses
+		 *
+		 * This sets the ipv4Static and ipv6Static fields to comma-delimited
+		 * lists of assignments. The port field in InetAddress must be the
+		 * number of bits in the netmask.
+		 *
+		 * @param begin Start of container or array of addresses (InetAddress)
+		 * @param end End of container or array of addresses (InetAddress)
+		 * @tparam I Type of container or array
+		 */
+		template<typename I>
+		inline void setStaticInetAddresses(const I &begin,const I &end)
+		{
+			std::string v4;
+			std::string v6;
+			for(I i(begin);i!=end;++i) {
+				if (i->isV4()) {
+					if (v4.length())
+						v4.push_back(',');
+					v4.append(i->toString());
+				} else if (i->isV6()) {
+					if (v6.length())
+						v6.push_back(',');
+					v6.append(i->toString());
+				}
+			}
+			if (v4.length())
+				(*this)["ipv4Static"] = v4;
+			else erase("ipv4Static");
+			if (v6.length())
+				(*this)["ipv6Static"] = v6;
+			else erase("ipv6Static");
+		}
+	};
+
 private:
+	// Only NodeConfig can create, only SharedPtr can delete
 	Network(const RuntimeEnvironment *renv,uint64_t id)
 		throw(std::runtime_error);
 
@@ -87,56 +272,22 @@ public:
 	inline EthernetTap &tap() throw() { return _tap; }
 
 	/**
-	 * Get this network's members
-	 * 
-	 * If this is an open network, membership isn't relevant and this doesn't
-	 * mean much. If it's a closed network, frames will only be exchanged to/from
-	 * members.
-	 * 
-	 * @return Members of this network
+	 * @return Address of network's controlling node
 	 */
-	inline std::set<Address> members() const
-	{
-		Mutex::Lock _l(_lock);
-		return _members;
-	}
-
-	/**
-	 * @param addr Address to check
-	 * @return True if address is a member
-	 */
-	inline bool isMember(const Address &addr) const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return (_members.count(addr) > 0);
-	}
-
-	/**
-	 * Shortcut to check open() and then isMember()
-	 * 
-	 * @param addr Address to check
-	 * @return True if network is open or if address is a member
-	 */
-	inline bool isAllowed(const Address &addr) const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return ((_open)||(_members.count(addr) > 0));
-	}
+	inline Address controller() throw() { return Address(_id >> 24); }
 
 	/**
 	 * @return True if network is open (no membership required)
 	 */
-	inline bool open() const
+	inline bool isOpen() const
 		throw()
 	{
 		Mutex::Lock _l(_lock);
-		return _open;
+		return _isOpen;
 	}
 
 	/**
-	 * Update internal multicast group set and return true if changed
+	 * Update multicast groups for this network's tap
 	 *
 	 * @return True if internal multicast group set has changed
 	 */
@@ -147,7 +298,7 @@ public:
 	}
 
 	/**
-	 * @return Latest set of multicast groups
+	 * @return Latest set of multicast groups for this network's tap
 	 */
 	inline std::set<MulticastGroup> multicastGroups() const
 	{
@@ -155,15 +306,32 @@ public:
 		return _multicastGroups;
 	}
 
+	/**
+	 * Set or update this network's configuration
+	 *
+	 * This is called by PacketDecoder when an update comes over the wire, or
+	 * internally when an old config is reloaded from disk.
+	 *
+	 * @param conf Configuration in key/value dictionary form
+	 */
+	void setConfiguration(const Config &conf);
+
+	/**
+	 * Causes this network to request an updated configuration from its master node now
+	 */
+	void requestConfiguration();
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
 	const RuntimeEnvironment *_r;
-	uint64_t _id;
+
 	EthernetTap _tap;
-	std::set<Address> _members;
 	std::set<MulticastGroup> _multicastGroups;
-	bool _open;
+
+	uint64_t _id;
+	bool _isOpen;
+
 	Mutex _lock;
 
 	AtomicCounter __refCount;
