@@ -465,21 +465,17 @@ public:
 		 */
 		VERB_MULTICAST_FRAME = 9,
 
-		/* Network permission certificate:
+		/* Network member certificate for sending peer:
 		 *   <[8] 64-bit network ID>
-		 *   <[1] flags (currently unused, must be 0)>
-		 *   <[2] 16-bit length of qualifying fields>
-		 *   <[...] string-serialized dictionary of qualifying fields>
+		 *   <[2] 16-bit length of certificate>
+		 *   <[...] string-serialized certificate dictionary>
 		 *   <[2] 16-bit length of signature>
-		 *   <[...] ECDSA signature of my binary serialized identity and timestamp>
-		 *
-		 * This message is used to send ahead of time a certificate proving
-		 * this node has permission to communicate on a private network.
+		 *   <[...] ECDSA signature of certificate>
 		 *
 		 * OK is generated on acceptance. ERROR is returned on failure. In both
 		 * cases the payload is the network ID.
 		 */
-		VERB_NETWORK_PERMISSION_CERTIFICATE = 10,
+		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
 
 		/* Network configuration request:
 		 *   <[8] 64-bit network ID>
@@ -506,7 +502,8 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *
 		 * This message can be sent by the network configuration master node
-		 * to request that nodes refresh their network configuration.
+		 * to request that nodes refresh their network configuration. It can
+		 * thus be used to "push" updates.
 		 *
 		 * It is only a hint and does not presently elicit a response.
 		 */
@@ -540,7 +537,10 @@ public:
 		ERROR_UNSUPPORTED_OPERATION = 6,
 
 		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NO_NETWORK_CERTIFICATE_ON_FILE = 7
+		ERROR_NO_MEMBER_CERTIFICATE_ON_FILE = 7,
+
+		/* Membership certificate no longer qualified for membership in network */
+		ERROR_MEMBER_CERTIFICATE_UNQUALIFIED = 8
 	};
 
 	/**

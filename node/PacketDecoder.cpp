@@ -102,8 +102,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doMULTICAST_LIKE(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
-			case Packet::VERB_NETWORK_PERMISSION_CERTIFICATE:
-				return _doNETWORK_PERMISSION_CERTIFICATE(_r,peer);
+			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE:
+				return _doNETWORK_MEMBERSHIP_CERTIFICATE(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REQUEST:
 				return _doNETWORK_CONFIG_REQUEST(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REFRESH:
@@ -311,7 +311,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	if (payloadLength() == ZT_ADDRESS_LENGTH) {
-		SharedPtr<Peer> p(_r->topology->getPeer(Address(payload())));
+		SharedPtr<Peer> p(_r->topology->getPeer(Address(payload(),ZT_ADDRESS_LENGTH)));
 		if (p) {
 			Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -320,7 +320,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.encrypt(peer->cryptKey());
 			outp.hmacSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload()).toString().c_str());
+			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		} else {
 			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -330,7 +330,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.encrypt(peer->cryptKey());
 			outp.hmacSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload()).toString().c_str());
+			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		}
 	} else {
 		TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -341,7 +341,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH));
+		Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		SharedPtr<Peer> withPeer(_r->topology->getPeer(with));
 		if (withPeer) {
 			unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
@@ -439,7 +439,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			if (network->isAllowed(source())) {
 				if (size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD) {
 
-					Address originalSubmitterAddress(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH));
+					Address originalSubmitterAddress(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 					MAC fromMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
 					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
 					unsigned int hops = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT];
@@ -544,7 +544,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 	return true;
 }
 
-bool PacketDecoder::_doNETWORK_PERMISSION_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 }
 

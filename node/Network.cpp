@@ -37,23 +37,19 @@
 
 namespace ZeroTier {
 
-void Network::Certificate::sign(const Identity &with)
+void Network::Certificate::_shaForSignature(unsigned char *dig) const
 {
-	unsigned char dig[32];
 	SHA256_CTX sha;
 	SHA256_Init(&sha);
 	unsigned char zero = 0;
 	for(const_iterator i(begin());i!=end();++i) {
-		if (i->first != "sig") {
-			SHA256_Update(&sha,&zero,1);
-			SHA256_Update(&sha,(const unsigned char *)i->first.data(),i->first.length());
-			SHA256_Update(&sha,&zero,1);
-			SHA256_Update(&sha,(const unsigned char *)i->second.data(),i->second.length());
-			SHA256_Update(&sha,&zero,1);
-		}
+		SHA256_Update(&sha,&zero,1);
+		SHA256_Update(&sha,(const unsigned char *)i->first.data(),i->first.length());
+		SHA256_Update(&sha,&zero,1);
+		SHA256_Update(&sha,(const unsigned char *)i->second.data(),i->second.length());
+		SHA256_Update(&sha,&zero,1);
 	}
 	SHA256_Final(dig,&sha);
-	(*this)["sig"] = with.sign(dig);
 }
 
 static const std::string _DELTA_PREFIX("~");
@@ -71,7 +67,7 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 
 			const_iterator deltaField(find(_DELTA_PREFIX + myField->first));
 			if (deltaField == end()) {
-				// If there is no delta, compare for equality (e.g. node, nwid)
+				// If there is no delta, compare on simple equality
 				if (myField->second != theirField->second)
 					return false;
 			} else {

@@ -129,7 +129,7 @@ public:
 		}
 
 		/**
-		 * Set the timestamp and max-delta
+		 * Set the timestamp and timestamp max-delta
 		 *
 		 * @param ts Timestamp in ms since epoch
 		 * @param maxDelta Maximum difference between two peers on the same network
@@ -144,11 +144,31 @@ public:
 		}
 
 		/**
-		 * Set or update the sig field to contain a signature
+		 * Sign this certificate
 		 *
 		 * @param with Signing identity -- the identity of this network's controller
+		 * @return Signature or empty string on failure
 		 */
-		void sign(const Identity &with);
+		inline std::string sign(const Identity &with) const
+		{
+			unsigned char dig[32];
+			_shaForSignature(dig);
+			return with.sign(dig);
+		}
+
+		/**
+		 * Verify this certificate's signature
+		 *
+		 * @param with Signing identity -- the identity of this network's controller
+		 * @param sig Signature
+		 * @param siglen Length of signature in bytes
+		 */
+		inline bool verify(const Identity &with,const void *sig,unsigned int siglen) const
+		{
+			unsigned char dig[32];
+			_shaForSignature(dig);
+			return with.verifySignature(dig,sig,siglen);
+		}
 
 		/**
 		 * Check if another peer is indeed a current member of this network
@@ -157,13 +177,15 @@ public:
 		 * delta in this certificate. Fields without ~fields are compared for
 		 * equality.
 		 *
-		 * This does not verify the certificate's signature! The signature
-		 * must be verified first.
+		 * This does not verify the certificate's signature!
 		 * 
 		 * @param mc Peer membership certificate
 		 * @return True if mc's membership in this network is current
 		 */
 		bool qualifyMembership(const Certificate &mc) const;
+
+	private:
+		void _shaForSignature(unsigned char *dig) const;
 	};
 
 	/**

@@ -340,7 +340,7 @@ public:
 
 		unsigned int p = startAt;
 
-		_address = b.field(p,ZT_ADDRESS_LENGTH);
+		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 
 		if (b[p++] != IDENTITY_TYPE_NIST_P_521)
