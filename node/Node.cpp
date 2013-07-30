@@ -339,7 +339,7 @@ Node::ReasonForTermination Node::run()
 
 	try {
 		uint64_t lastPingCheck = 0;
-		uint64_t lastTopologyClean = Utils::now(); // don't need to do this immediately
+		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t lastAutoconfigureCheck = 0;
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
@@ -459,9 +459,10 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			if ((now - lastTopologyClean) >= ZT_TOPOLOGY_CLEAN_PERIOD) {
-				lastTopologyClean = now;
-				_r->topology->clean(); // happens in background
+			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
+				lastClean = now;
+				_r->topology->clean();
+				_r->nc->cleanAllNetworks();
 			}
 
 			try {

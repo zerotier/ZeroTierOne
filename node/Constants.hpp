@@ -183,9 +183,9 @@ error_no_ZT_ARCH_defined;
 #define ZT_MAC_FIRST_OCTET 0x32
 
 /**
- * How often Topology::clean() is called in ms
+ * How often Topology::clean() and Network::clean() are called in ms
  */
-#define ZT_TOPOLOGY_CLEAN_PERIOD 300000
+#define ZT_DB_CLEAN_PERIOD 300000
 
 /**
  * Delay between WHOIS retries in ms

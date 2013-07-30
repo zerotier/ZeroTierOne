@@ -34,6 +34,7 @@
 #include "NodeConfig.hpp"
 #include "Network.hpp"
 #include "Switch.hpp"
+#include "Packet.hpp"
 
 namespace ZeroTier {
 
@@ -103,6 +104,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	throw(std::runtime_error) :
 	_r(renv),
 	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,this),
+	_lastConfigUpdate(0),
 	_id(id)
 {
 }
@@ -114,16 +116,23 @@ Network::~Network()
 void Network::setConfiguration(const Network::Config &conf)
 {
 	Mutex::Lock _l(_lock);
-	_configuration = conf;
-	_myCertificate = conf.certificateOfMembership();
+	if ((conf.networkId() == _id)&&(conf.peerAddress() == _r->identity.address())) { // sanity check
+		_configuration = conf;
+		_myCertificate = conf.certificateOfMembership();
+		_lastConfigUpdate = Utils::now();
+	}
 }
 
 void Network::requestConfiguration()
 {
+	Packet outp(controller(),_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
+	outp.append((uint64_t)_id);
+	_r->sw->send(outp,true);
 }
 
 bool Network::isAllowed(const Address &peer) const
 {
+	// Exceptions can occur if we do not yet have *our* configuration.
 	try {
 		Mutex::Lock _l(_lock);
 		if (_configuration.isOpen())

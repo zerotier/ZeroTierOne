@@ -392,6 +392,15 @@ public:
 	 */
 	void clean();
 
+	/**
+	 * @return Time of last updated configuration or 0 if none
+	 */
+	inline uint64_t lastConfigUpdate() const
+		throw()
+	{
+		return _lastConfigUpdate;
+	}
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -402,7 +411,7 @@ private:
 	std::map<Address,Certificate> _membershipCertificates;
 	Config _configuration;
 	Certificate _myCertificate;
-	uint64_t _lastCertificateUpdate;
+	uint64_t _lastConfigUpdate;
 	uint64_t _id;
 	Mutex _lock;
 

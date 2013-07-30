@@ -72,6 +72,13 @@ void NodeConfig::whackAllTaps()
 		n->second->tap().whack();
 }
 
+void NodeConfig::cleanAllNetworks()
+{
+	Mutex::Lock _l(_networks_m);
+	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+		n->second->clean();
+}
+
 // Macro used in execute()
 #undef _P
 #define _P(f,...) { r.push_back(std::string()); Utils::stdsprintf(r.back(),(f),##__VA_ARGS__); }

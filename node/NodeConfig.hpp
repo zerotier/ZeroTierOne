@@ -108,6 +108,11 @@ public:
 	void whackAllTaps();
 
 	/**
+	 * Call clean() on all networks
+	 */
+	void cleanAllNetworks();
+
+	/**
 	 * @param nwid Network ID
 	 * @return True if this network exists
 	 */
