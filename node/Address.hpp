@@ -198,7 +198,7 @@ public:
 	inline std::string toString() const
 	{
 		char buf[16];
-		sprintf(buf,"%.10llx",_a);
+		sprintf(buf,"%.10llx",(unsigned long long)_a);
 		return std::string(buf);
 	};
 

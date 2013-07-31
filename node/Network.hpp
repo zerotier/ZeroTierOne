@@ -107,14 +107,14 @@ public:
 		inline void setNetworkId(uint64_t id)
 		{
 			char buf[32];
-			sprintf(buf,"%llu",id);
+			sprintf(buf,"%.16llx",(unsigned long long)id);
 			(*this)["nwid"] = buf;
 		}
 
 		inline uint64_t networkId() const
 			throw(std::invalid_argument)
 		{
-			return strtoull(get("nwid").c_str(),(char **)0,10);
+			return strtoull(get("nwid").c_str(),(char **)0,16);
 		}
 
 		inline void setPeerAddress(Address &a)
@@ -137,9 +137,9 @@ public:
 		inline void setTimestamp(uint64_t ts,uint64_t maxDelta)
 		{
 			char foo[32];
-			sprintf(foo,"%llu",ts);
+			sprintf(foo,"%llu",(unsigned long long)ts);
 			(*this)["ts"] = foo;
-			sprintf(foo,"%llu",maxDelta);
+			sprintf(foo,"%llu",(unsigned long long)maxDelta);
 			(*this)["~ts"] = foo;
 		}
 
@@ -211,14 +211,14 @@ public:
 		inline void setNetworkId(uint64_t id)
 		{
 			char buf[32];
-			sprintf(buf,"%llu",id);
+			sprintf(buf,"%.16llx",(unsigned long long)id);
 			(*this)["nwid"] = buf;
 		}
 
 		inline uint64_t networkId() const
 			throw(std::invalid_argument)
 		{
-			return strtoull(get("nwid").c_str(),(char **)0,10);
+			return strtoull(get("nwid").c_str(),(char **)0,16);
 		}
 
 		inline void setPeerAddress(Address &a)
