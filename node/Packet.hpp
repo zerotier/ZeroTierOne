@@ -468,8 +468,8 @@ public:
 		/* Network member certificate for sending peer:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of certificate>
-		 *   <[...] string-serialized certificate dictionary>
 		 *   <[2] 16-bit length of signature>
+		 *   <[...] string-serialized certificate dictionary>
 		 *   <[...] ECDSA signature of certificate>
 		 *
 		 * OK is generated on acceptance. ERROR is returned on failure. In both
@@ -479,6 +479,8 @@ public:
 
 		/* Network configuration request:
 		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of request meta-data dictionary>
+		 *   <[...] string-serialized request meta-data>
 		 *
 		 * This message requests network configuration from a node capable of
 		 * providing it. Such nodes run the netconf service, which must be
@@ -486,11 +488,14 @@ public:
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of network configuration dictionary>
 		 *   <[...] network configuration dictionary>
 		 *
 		 * OK returns a Dictionary (string serialized) containing the network's
 		 * configuration and IP address assignment information for the querying
-		 * node.
+		 * node. It also contains a membership certificate that the querying
+		 * node can push to other peers to demonstrate its right to speak on
+		 * a given network.
 		 *
 		 * ERROR may be NOT_FOUND if no such network is known, or
 		 * UNSUPPORTED_OPERATION if the netconf service isn't available. The
@@ -505,7 +510,8 @@ public:
 		 * to request that nodes refresh their network configuration. It can
 		 * thus be used to "push" updates.
 		 *
-		 * It is only a hint and does not presently elicit a response.
+		 * It does not generate an OK or ERROR message, and is treated only as
+		 * a hint to refresh now.
 		 */
 		VERB_NETWORK_CONFIG_REFRESH = 12
 	};
