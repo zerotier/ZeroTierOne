@@ -47,7 +47,6 @@ static void *__m_thread_main(void *ptr)
 namespace ZeroTier {
 
 Thread::Thread() :
-	suicidalThread(false),
 	_impl(malloc(sizeof(pthread_t))),
 	_running()
 {
@@ -84,10 +83,6 @@ void Thread::__intl_run()
 	for(;;) {
 		_notInit = false;
 		this->main();
-		if (suicidalThread) {
-			delete this;
-			return;
-		}
 		if (_notInit) // UGLY ASS HACK: see main()
 			usleep(50);
 		else break;
@@ -127,7 +122,6 @@ struct __m_thread_info
 namespace ZeroTier {
 
 Thread::Thread() :
-	suicidalThread(false),
 	_impl(malloc(sizeof(__m_thread_info))),
 	_running()
 {
@@ -162,10 +156,6 @@ void Thread::__intl_run()
 	for(;;) {
 		_notInit = false;
 		this->main();
-		if (suicidalThread) {
-			delete this;
-			return;
-		}
 		if (_notInit)
 			Thread::sleep(50);
 		else break;

@@ -78,11 +78,6 @@ protected:
 	virtual void main()
 		throw();
 
-	/**
-	 * Subclasses can set to true to cause Thread to delete itself on exit
-	 */
-	volatile bool suicidalThread;
-
 private:
 	void *_impl;
 	AtomicCounter _running;
