@@ -18,6 +18,7 @@ OBJS=\
 	node/PacketDecoder.o \
 	node/Peer.o \
 	node/Salsa20.o \
+	node/Service.o \
 	node/Switch.o \
 	node/SysEnv.o \
 	node/Thread.o \

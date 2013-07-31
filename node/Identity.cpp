@@ -123,7 +123,7 @@ bool Identity::fromString(const char *str)
 	std::string b(Utils::unhex(fields[0]));
 	if (b.length() != ZT_ADDRESS_LENGTH)
 		return false;
-	_address = b.data();
+	_address.setTo(b.data(),ZT_ADDRESS_LENGTH);
 
 	b = Utils::base64Decode(fields[2]);
 	if ((!b.length())||(b.length() > ZT_EC_MAX_BYTES))
