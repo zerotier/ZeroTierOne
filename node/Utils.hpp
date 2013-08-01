@@ -120,6 +120,15 @@ public:
 	static uint64_t getLastModified(const char *path);
 
 	/**
+	 * @param path Path to check
+	 * @return True if file or directory exists at path location
+	 */
+	static inline bool fileExists(const char *path)
+	{
+		return (getLastModified(path) != 0);
+	}
+
+	/**
 	 * @param t64 Time in ms since epoch
 	 * @return RFC1123 date string
 	 */

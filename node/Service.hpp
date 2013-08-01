@@ -72,7 +72,11 @@ public:
 	 * @param handler Handler function to call when service generates output
 	 * @param arg First argument to service
 	 */
-	Service(const RuntimeEnvironment *renv,const char *name,const char *path,void (*handler)(void *,Service &,const Dictionary &),void *arg);
+	Service(const RuntimeEnvironment *renv,
+	        const char *name,
+	        const char *path,
+	        void (*handler)(void *,Service &,const Dictionary &),
+	        void *arg);
 
 	virtual ~Service();
 

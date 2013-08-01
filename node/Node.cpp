@@ -67,6 +67,7 @@
 #include "Mutex.hpp"
 #include "Multicaster.hpp"
 #include "CMWC4096.hpp"
+#include "Service.hpp"
 
 #include "../version.h"
 
@@ -191,6 +192,10 @@ struct _NodeImpl
 	}
 };
 
+static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictionary &msg)
+{
+}
+
 Node::Node(const char *hp)
 	throw() :
 	_impl(new _NodeImpl)
@@ -208,6 +213,10 @@ Node::Node(const char *hp)
 Node::~Node()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
+
+#ifndef __WINDOWS__
+	delete impl->renv.netconfService;
+#endif
 
 	delete impl->renv.sysEnv;
 	delete impl->renv.topology;
@@ -336,6 +345,18 @@ Node::ReasonForTermination Node::run()
 	} catch ( ... ) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unknown exception during initialization");
 	}
+
+#ifndef __WINDOWS__
+	try {
+		std::string netconfServicePath(_r->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
+		if (Utils::fileExists(netconfServicePath.c_str())) {
+			LOG("netconf.d/netconfi.service appears to exist, starting...");
+			_r->netconfService = new Service(_r,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
+		}
+	} catch ( ... ) {
+		LOG("unexpected exception attempting to start services");
+	}
+#endif
 
 	try {
 		uint64_t lastPingCheck = 0;

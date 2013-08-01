@@ -29,6 +29,7 @@
 #define _ZT_RUNTIMEENVIRONMENT_HPP
 
 #include <string>
+#include "Constants.hpp"
 #include "Identity.hpp"
 #include "Condition.hpp"
 
@@ -42,6 +43,7 @@ class Topology;
 class SysEnv;
 class Multicaster;
 class CMWC4096;
+class Service;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -67,6 +69,9 @@ public:
 		sw((Switch *)0),
 		topology((Topology *)0),
 		sysEnv((SysEnv *)0)
+#ifndef __WINDOWS__
+		,netconfService((Service *)0)
+#endif
 	{
 	}
 
@@ -88,6 +93,10 @@ public:
 	Switch *sw;
 	Topology *topology;
 	SysEnv *sysEnv;
+
+#ifndef __WINDOWS__
+	Service *netconfService; // may be null
+#endif
 };
 
 } // namespace ZeroTier
