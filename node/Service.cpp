@@ -109,8 +109,13 @@ bool Service::send(const Dictionary &msg)
 void Service::main()
 	throw()
 {
+	char buf[4096];
 	fd_set readfds,writefds,exceptfds;
 	struct timeval tv;
+
+	std::string stderrBuf;
+	std::string stdoutBuf;
+	unsigned int stdoutExpecting = 0;
 
 	while (_run) {
 		if (_pid <= 0) {
@@ -133,10 +138,15 @@ void Service::main()
 				_childStdin = in[1];
 				_childStdout = out[0];
 				_childStderr = err[0];
+				fcntl(_childStdout,F_SETFL,O_NONBLOCK);
+				fcntl(_childStderr,F_SETFL,O_NONBLOCK);
 			} else {
 				dup2(in[0],STDIN_FILENO);
 				dup2(out[1],STDOUT_FILENO);
 				dup2(err[1],STDERR_FILENO);
+				close(in[1]);
+				close(out[0]);
+				close(err[0]);
 				execl(_path.c_str(),_path.c_str(),_r->homePath.c_str(),(const char *)0);
 				exit(-1);
 			}
@@ -179,9 +189,42 @@ void Service::main()
 		}
 
 		if ((_childStderr > 0)&&(FD_ISSET(_childStderr,&readfds))) {
+			int n = (int)read(_childStderr,buf,sizeof(buf));
+			for(int i=0;i<n;++i) {
+				if ((buf[i] == '\r')||(buf[i] == '\n')) {
+					stderrBuf = Utils::trim(stderrBuf);
+					if (stderrBuf.length())
+						LOG("service %s: %s",_name.c_str(),stderrBuf.c_str());
+					stderrBuf = "";
+				} else stderrBuf.push_back(buf[i]);
+			}
 		}
 
 		if ((_childStdout > 0)&&(FD_ISSET(_childStdout,&readfds))) {
+			int n = (int)read(_childStdout,buf,sizeof(buf));
+			for(int i=0;i<n;++i) {
+				stdoutBuf.push_back(buf[i]);
+				if (stdoutExpecting) {
+					if (stdoutBuf.length() == stdoutExpecting) {
+						try {
+							_handler(_arg,*this,Dictionary(stdoutBuf));
+						} catch ( ... ) {
+							LOG("unexpected exception handling message from service %s",_name.c_str());
+						}
+						stdoutBuf = "";
+						stdoutExpecting = 0;
+					}
+				} else if (stdoutBuf.length() == 4) {
+					stdoutExpecting = Utils::ntoh(*((const uint32_t *)stdoutBuf.data()));
+					stdoutBuf = "";
+					if (stdoutExpecting > ZT_SERVICE_MAX_MESSAGE_SIZE) {
+						LOG("message size overrun from service %s: %u bytes -- restarting service",_name.c_str(),stdoutExpecting);
+						stdoutExpecting = 0;
+						kill(_pid,SIGKILL);
+						break;
+					}
+				}
+			}
 		}
 	}
 }
