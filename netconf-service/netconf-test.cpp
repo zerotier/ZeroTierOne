@@ -42,11 +42,13 @@
 #include "../node/Identity.hpp"
 #include "../node/RuntimeEnvironment.hpp"
 #include "../node/Logger.hpp"
+#include "../node/Thread.hpp"
 
 using namespace ZeroTier;
 
 static void svcHandler(void *arg,Service &svc,const Dictionary &msg)
 {
+	std::cout << msg.toString();
 }
 
 int main(int argc,char **argv)
@@ -59,8 +61,23 @@ int main(int argc,char **argv)
 
 	std::vector<Identity> population;
 	for(;;) {
+		Identity id;
 		if ((population.empty())||(rand() < (RAND_MAX / 4))) {
+			id.generate();
+			population.push_back(id);
+			std::cout << "Testing with new identity: " << id.address().toString() << std::endl;
 		} else {
+			id = population[rand() % population.size()];
+			Thread::sleep(1000);
+			std::cout << "Testing with existing identity: " << id.address().toString() << std::endl;
 		}
+
+		Dictionary request;
+		request["type"] = "netconf-request";
+		request["peerId"] = id.toString(false);
+		request["nwid"] = "6c92786fee000001";
+		request["requestId"] = "12345";
+
+		svc.send(request);
 	}
 }

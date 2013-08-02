@@ -55,6 +55,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -71,24 +72,34 @@
 #include "../node/Dictionary.hpp"
 #include "../node/Identity.hpp"
 #include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
 
 using namespace ZeroTier;
 using namespace mysqlpp;
 
+static Mutex stdoutWriteLock;
 static Connection *dbCon = (Connection *)0;
 static char mysqlHost[64],mysqlPort[64],mysqlDatabase[64],mysqlUser[64],mysqlPassword[64];
 
 static void connectOrReconnect()
 {
 	for(;;) {
-		if (dbCon)
-			delete dbCon;
-		dbCon = new Connection(mysqlDatabase,mysqlHost,mysqlUser,mysqlPassword,(unsigned int)strtol(mysqlPort,(char **)0,10));
-		if (dbCon->connected())
-			break;
-		else {
-			fprintf(stderr,"Unable to connect to database server.\n");
-			usleep(1000);
+		delete dbCon;
+		try {
+			dbCon = new Connection(mysqlDatabase,mysqlHost,mysqlUser,mysqlPassword,(unsigned int)strtol(mysqlPort,(char **)0,10));
+			if (dbCon->connected()) {
+				fprintf(stderr,"(re?)-connected to mysql server successfully\n");
+				break;
+			} else {
+				fprintf(stderr,"unable to connect to database server (connection closed), trying again in 1s...\n");
+				usleep(1000000);
+			}
+		} catch (std::exception &exc) {
+			fprintf(stderr,"unable to connect to database server (%s), trying again in 1s...\n",exc.what());
+			usleep(1000000);
+		} catch ( ... ) {
+			fprintf(stderr,"unable to connect to database server (unknown exception), trying again in 1s...\n");
+			usleep(1000000);
 		}
 	}
 }
@@ -98,7 +109,7 @@ int main(int argc,char **argv)
 	{
 		char *ee = getenv("ZT_NETCONF_MYSQL_HOST");
 		if (!ee) {
-			fprintf(stderr,"Missing environment variable: ZT_NETCONF_MYSQL_HOST\n");
+			fprintf(stderr,"missing environment variable: ZT_NETCONF_MYSQL_HOST\n");
 			return -1;
 		}
 		strcpy(mysqlHost,ee);
@@ -108,57 +119,66 @@ int main(int argc,char **argv)
 		else strcpy(mysqlPort,ee);
 		ee = getenv("ZT_NETCONF_MYSQL_DATABASE");
 		if (!ee) {
-			fprintf(stderr,"Missing environment variable: ZT_NETCONF_MYSQL_DATABASE\n");
+			fprintf(stderr,"missing environment variable: ZT_NETCONF_MYSQL_DATABASE\n");
 			return -1;
 		}
 		strcpy(mysqlDatabase,ee);
 		ee = getenv("ZT_NETCONF_MYSQL_USER");
 		if (!ee) {
-			fprintf(stderr,"Missing environment variable: ZT_NETCONF_MYSQL_USER\n");
+			fprintf(stderr,"missing environment variable: ZT_NETCONF_MYSQL_USER\n");
 			return -1;
 		}
 		strcpy(mysqlUser,ee);
 		ee = getenv("ZT_NETCONF_MYSQL_PASSWORD");
 		if (!ee) {
-			fprintf(stderr,"Missing environment variable: ZT_NETCONF_MYSQL_PASSWORD\n");
+			fprintf(stderr,"missing environment variable: ZT_NETCONF_MYSQL_PASSWORD\n");
 			return -1;
 		}
 		strcpy(mysqlPassword,ee);
 	}
 
-	char buf[4096];
+	char buf[131072];
 	std::string dictBuf;
 
 	connectOrReconnect();
 	for(;;) {
-		if (read(STDIN_FILENO,buf,4) != 4) {
-			fprintf(stderr,"Error reading frame size from stdin\n");
-			return -1;
+		for(int l=0;l<4;) {
+			int n = (int)read(STDIN_FILENO,buf + l,4 - l);
+			if (n < 0) {
+				fprintf(stderr,"error reading frame size from stdin: %s\n",strerror(errno));
+				return -1;
+			}
+			l += n;
 		}
 		unsigned int fsize = (unsigned int)ntohl(*((const uint32_t *)buf));
+
 		while (dictBuf.length() < fsize) {
 			int n = (int)read(STDIN_FILENO,buf,std::min((int)sizeof(buf),(int)(fsize - dictBuf.length())));
+			if (n < 0) {
+				fprintf(stderr,"error reading frame from stdin: %s\n",strerror(errno));
+				return -1;
+			}
 			for(int i=0;i<n;++i)
 				dictBuf.push_back(buf[i]);
 		}
-		Dictionary msg(dictBuf);
+		Dictionary request(dictBuf);
 		dictBuf = "";
 
 		if (!dbCon->connected())
 			connectOrReconnect();
 
 		try {
-			const std::string &command = msg.get("command");
-			if (command == "config") { // NETWORK_CONFIG_REQUEST packet
-				Identity peerIdentity(msg.get("peerIdentity"));
-				uint64_t nwid = strtoull(msg.get("nwid").c_str(),(char **)0,16);
+			const std::string &reqType = request.get("type");
+			if (reqType == "netconf-request") { // NETWORK_CONFIG_REQUEST packet
+				Identity peerIdentity(request.get("peerId"));
+				uint64_t nwid = strtoull(request.get("nwid").c_str(),(char **)0,16);
 				Dictionary meta;
-				if (msg.contains("meta"))
-					meta.fromString(msg.get("meta"));
+				if (request.contains("meta"))
+					meta.fromString(request.get("meta"));
 
 				// Do quick signature check / sanity check
 				if (!peerIdentity.locallyValidate(false)) {
-					fprintf(stderr,"identity failed signature check: %s",peerIdentity.toString(false).c_str());
+					fprintf(stderr,"identity failed signature check: %s\n",peerIdentity.toString(false).c_str());
 					continue;
 				}
 
@@ -176,14 +196,20 @@ int main(int argc,char **argv)
 						}
 					} else {
 						q = dbCon->query();
-						uint64_t now = Utils::now();
-						q << "INSERT INTO Node (id,creationTime,lastSeen,identity) VALUES (" << peerIdentity.address().toInt() << "," << now << "," << now << "," << peerIdentity.toString(false) << ")";
+						q << "INSERT INTO Node (id,creationTime,lastSeen,identity) VALUES (" << peerIdentity.address().toInt() << "," << Utils::now() << ",0," << quote << peerIdentity.toString(false) << ")";
 						if (!q.exec()) {
-							fprintf(stderr,"Error inserting Node row for peer %s, aborting netconf request",peerIdentity.address().toString().c_str());
+							fprintf(stderr,"error inserting Node row for peer %s, aborting netconf request\n",peerIdentity.address().toString().c_str());
 							continue;
 						}
 						// TODO: launch background validation
 					}
+				}
+
+				// Update lastSeen
+				{
+					Query q = dbCon->query();
+					q << "UPDATE Node SET lastSeen = " << Utils::now() << " WHERE id = " << peerIdentity.address().toInt();
+					q.exec();
 				}
 
 				bool isOpen = false;
@@ -278,20 +304,26 @@ int main(int argc,char **argv)
 				if (ipv6Static.length())
 					netconf["ipv6Static"] = ipv6Static;
 
-				Dictionary resp;
-				resp["peer"] = peerIdentity.address().toString();
-				resp["nwid"] = msg.get("nwid");
-				resp["requestId"] = msg.get("requestId");
-				resp["netconf"] = netconf.toString();
-				std::string respm = resp.toString();
-				uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
-				write(STDOUT_FILENO,&respml,4);
-				write(STDOUT_FILENO,respm.data(),respm.length());
+				{
+					Dictionary response;
+					response["peer"] = peerIdentity.address().toString();
+					response["nwid"] = request.get("nwid");
+					response["type"] = "netconf-response";
+					response["requestId"] = request.get("requestId");
+					response["netconf"] = netconf.toString();
+					std::string respm = response.toString();
+					uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
+
+					stdoutWriteLock.lock();
+					write(STDOUT_FILENO,&respml,4);
+					write(STDOUT_FILENO,respm.data(),respm.length());
+					stdoutWriteLock.unlock();
+				}
 			}
 		} catch (std::exception &exc) {
-			fprintf(stderr,"unexpected exception handling message: %s",exc.what());
+			fprintf(stderr,"unexpected exception handling message: %s\n",exc.what());
 		} catch ( ... ) {
-			fprintf(stderr,"unexpected exception handling message: unknown exception");
+			fprintf(stderr,"unexpected exception handling message: unknown exception\n");
 		}
 	}
 }

@@ -75,7 +75,7 @@ void Thread::join()
 
 void Thread::sleep(unsigned long ms)
 {
-	usleep(ms);
+	usleep(ms * 1000);
 }
 
 void Thread::__intl_run()

@@ -36,6 +36,7 @@
 #include <signal.h>
 #include <time.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -109,7 +110,7 @@ bool Service::send(const Dictionary &msg)
 void Service::main()
 	throw()
 {
-	char buf[4096];
+	char buf[131072];
 	fd_set readfds,writefds,exceptfds;
 	struct timeval tv;
 
@@ -126,27 +127,30 @@ void Service::main()
 			pipe(out);
 			pipe(err);
 
-			long pid = fork();
+			long pid = vfork();
 			if (pid < 0) {
 				LOG("service %s terminating: could not fork!",_name.c_str());
 				return;
 			} else if (pid) {
-				close(in[1]);
-				close(out[0]);
-				close(err[0]);
+				// Parent
+				close(in[0]);
+				close(out[1]);
+				close(err[1]);
 				Thread::sleep(500); // give child time to start
 				_childStdin = in[1];
 				_childStdout = out[0];
 				_childStderr = err[0];
 				fcntl(_childStdout,F_SETFL,O_NONBLOCK);
 				fcntl(_childStderr,F_SETFL,O_NONBLOCK);
+				_pid = pid;
 			} else {
-				dup2(in[0],STDIN_FILENO);
-				dup2(out[1],STDOUT_FILENO);
-				dup2(err[1],STDERR_FILENO);
+				// Child
 				close(in[1]);
 				close(out[0]);
 				close(err[0]);
+				dup2(in[0],STDIN_FILENO);
+				dup2(out[1],STDOUT_FILENO);
+				dup2(err[1],STDERR_FILENO);
 				execl(_path.c_str(),_path.c_str(),_r->homePath.c_str(),(const char *)0);
 				exit(-1);
 			}
@@ -168,6 +172,8 @@ void Service::main()
 				continue;
 			}
 		}
+
+		// If we've made it here, _pid is running last we checked.
 
 		FD_ZERO(&readfds);
 		FD_ZERO(&writefds);

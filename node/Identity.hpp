@@ -104,7 +104,7 @@ public:
 		_keyPair((EllipticCurveKeyPair *)0)
 	{
 		if (!fromString(str))
-			throw std::invalid_argument("invalid string-serialized identity");
+			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
 	}
 
 	Identity(const std::string &str)
@@ -112,7 +112,7 @@ public:
 		_keyPair((EllipticCurveKeyPair *)0)
 	{
 		if (!fromString(str))
-			throw std::invalid_argument("invalid string-serialized identity");
+			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
 	}
 
 	template<unsigned int C>
