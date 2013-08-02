@@ -219,6 +219,22 @@ int main(int argc,char **argv)
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0)
 						isOpen = ((int)rs[0]["isOpen"] > 0);
+					else {
+						Dictionary response;
+						response["peer"] = peerIdentity.address().toString();
+						response["nwid"] = request.get("nwid");
+						response["type"] = "netconf-response";
+						response["requestId"] = request.get("requestId");
+						response["error"] = "NOT_FOUND";
+						std::string respm = response.toString();
+						uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
+
+						stdoutWriteLock.lock();
+						write(STDOUT_FILENO,&respml,4);
+						write(STDOUT_FILENO,respm.data(),respm.length());
+						stdoutWriteLock.unlock();
+						continue;
+					}
 				}
 
 				Dictionary netconf;

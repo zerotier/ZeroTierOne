@@ -25,6 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "PacketDecoder.hpp"
@@ -32,6 +33,7 @@
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "Filter.hpp"
+#include "Service.hpp"
 
 namespace ZeroTier {
 
@@ -546,14 +548,64 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
+	// TODO: not implemented yet, will be needed for private networks.
+
+	return true;
 }
 
 bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
+	char tmp[128];
+	try {
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
+#ifndef __WINDOWS__
+		if (_r->netconfService) {
+			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
+			std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
+
+			Dictionary request;
+			request["type"] = "netconf-request";
+			request["peerId"] = peer->identity().toString(false);
+			sprintf(tmp,"%llx",(unsigned long long)nwid);
+			request["nwid"] = tmp;
+			sprintf(tmp,"%llx",(unsigned long long)packetId());
+			request["requestId"] = tmp;
+			_r->netconfService->send(request);
+		} else {
+#endif // !__WINDOWS__
+			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+			outp.append(packetId());
+			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
+			outp.append(nwid);
+			outp.encrypt(peer->cryptKey());
+			outp.hmacSet(peer->macKey());
+			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+			TRACE("sent ERROR(NETWORK_CONFIG_REQUEST,UNSUPPORTED_OPERATION) to %s(%s)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+#ifndef __WINDOWS__
+		}
+#endif // !__WINDOWS__
+	} catch (std::exception &exc) {
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
 }
 
 bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
+	try {
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REFRESH_IDX_NETWORK_ID);
+		SharedPtr<Network> nw(_r->nc->network(nwid));
+		if ((nw)&&(source() == nw->controller())) // only respond to requests from controller
+			nw->requestConfiguration();
+	} catch (std::exception &exc) {
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
 }
 
 } // namespace ZeroTier

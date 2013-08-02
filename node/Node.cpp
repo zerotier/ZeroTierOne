@@ -50,6 +50,7 @@
 #include "Node.hpp"
 #include "Topology.hpp"
 #include "Demarc.hpp"
+#include "Packet.hpp"
 #include "Switch.hpp"
 #include "Utils.hpp"
 #include "EthernetTap.hpp"
@@ -192,9 +193,54 @@ struct _NodeImpl
 	}
 };
 
+#ifndef __WINDOWS__
 static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictionary &msg)
 {
+	if (!renv)
+		return; // sanity check
+	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)renv;
+
+	try {
+		const std::string &type = msg.get("type");
+		if (type == "netconf-response") {
+			uint64_t inRePacketId = strtoull(msg.get("requestId").c_str(),(char **)0,16);
+			SharedPtr<Network> network = _r->nc->network(strtoull(msg.get("nwid").c_str(),(char **)0,16));
+			Address peerAddress(msg.get("peer").c_str());
+
+			if ((network)&&(peerAddress)) {
+				if (msg.contains("error")) {
+					Packet::ErrorCode errCode = Packet::ERROR_INVALID_REQUEST;
+					const std::string &err = msg.get("error");
+					if (err == "NOT_FOUND")
+						errCode = Packet::ERROR_NOT_FOUND;
+
+					Packet outp(peerAddress,_r->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(inRePacketId);
+					outp.append((unsigned char)errCode);
+					outp.append(network->id());
+					_r->sw->send(outp,true);
+				} else if (msg.contains("netconf")) {
+					const std::string &netconf = msg.get("netconf");
+					if (netconf.length() < 2048) { // sanity check
+						Packet outp(peerAddress,_r->identity.address(),Packet::VERB_OK);
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(inRePacketId);
+						outp.append(network->id());
+						outp.append((uint16_t)netconf.length());
+						outp.append(netconf.data(),netconf.length());
+						_r->sw->send(outp,true);
+					}
+				}
+			}
+		}
+	} catch (std::exception &exc) {
+		LOG("unexpected exception parsing response from netconf service: %s",exc.what());
+	} catch ( ... ) {
+		LOG("unexpected exception parsing response from netconf service: unknown exception");
+	}
 }
+#endif // !__WINDOWS__
 
 Node::Node(const char *hp)
 	throw() :
