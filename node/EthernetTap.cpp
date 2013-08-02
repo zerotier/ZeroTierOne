@@ -218,7 +218,7 @@ EthernetTap::EthernetTap(
 		int kextpid;
 		char tmp[4096];
 		strcpy(tmp,_r->homePath.c_str());
-		if ((kextpid = (int)fork()) == 0) {
+		if ((kextpid = (int)vfork()) == 0) {
 			chdir(tmp);
 			execl(ZT_MAC_KEXTLOAD,ZT_MAC_KEXTLOAD,"-q","-repository",tmp,"tap.kext",(const char *)0);
 			exit(-1);
@@ -255,7 +255,7 @@ EthernetTap::EthernetTap(
 
 	// Configure MAC address and MTU, bring interface up
 	long cpid;
-	if ((cpid = (long)fork()) == 0) {
+	if ((cpid = (long)vfork()) == 0) {
 		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
 		exit(-1);
 	} else {
@@ -285,7 +285,7 @@ EthernetTap::~EthernetTap()
 #ifdef __APPLE__
 void EthernetTap::whack()
 {
-	long cpid = (long)fork();
+	long cpid = (long)vfork();
 	if (cpid == 0) {
 		execl(ZT_MAC_IPCONFIG,ZT_MAC_IPCONFIG,"set",_dev,"AUTOMATIC-V6",(const char *)0);
 		exit(-1);
@@ -304,7 +304,7 @@ void EthernetTap::whack() {}
 #ifdef __LINUX__
 static bool ___removeIp(const char *_dev,const InetAddress &ip)
 {
-	long cpid = (long)fork();
+	long cpid = (long)vfork();
 	if (cpid == 0) {
 		execl(ZT_ETHERTAP_IP_COMMAND,ZT_ETHERTAP_IP_COMMAND,"addr","del",ip.toString().c_str(),"dev",_dev,(const char *)0);
 		exit(1); /* not reached unless exec fails */
@@ -337,7 +337,7 @@ bool EthernetTap::addIP(const InetAddress &ip)
 	}
 
 	long cpid;
-	if ((cpid = (long)fork()) == 0) {
+	if ((cpid = (long)vfork()) == 0) {
 		execl(ZT_ETHERTAP_IP_COMMAND,ZT_ETHERTAP_IP_COMMAND,"addr","add",ip.toString().c_str(),"dev",_dev,(const char *)0);
 		exit(-1);
 	} else {
@@ -357,7 +357,7 @@ bool EthernetTap::addIP(const InetAddress &ip)
 static bool ___removeIp(const char *_dev,const InetAddress &ip)
 {
 	int cpid;
-	if ((cpid = (int)fork()) == 0) {
+	if ((cpid = (int)vfork()) == 0) {
 		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
 		exit(-1);
 	} else {
@@ -390,7 +390,7 @@ bool EthernetTap::addIP(const InetAddress &ip)
 	}
 
 	int cpid;
-	if ((cpid = (int)fork()) == 0) {
+	if ((cpid = (int)vfork()) == 0) {
 		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
 		exit(-1);
 	} else {
