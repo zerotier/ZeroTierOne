@@ -35,6 +35,8 @@ namespace ZeroTier {
 
 /**
  * An elliptic curve key pair supporting generation and key agreement
+ *
+ * This is basically OpenSSL libcrypto glue.
  */
 class EllipticCurveKeyPair
 {

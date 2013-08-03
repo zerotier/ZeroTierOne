@@ -25,6 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "PacketDecoder.hpp"
@@ -32,6 +33,7 @@
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "Filter.hpp"
+#include "Service.hpp"
 
 namespace ZeroTier {
 
@@ -102,6 +104,12 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doMULTICAST_LIKE(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
+			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE:
+				return _doNETWORK_MEMBERSHIP_CERTIFICATE(_r,peer);
+			case Packet::VERB_NETWORK_CONFIG_REQUEST:
+				return _doNETWORK_CONFIG_REQUEST(_r,peer);
+			case Packet::VERB_NETWORK_CONFIG_REFRESH:
+				return _doNETWORK_CONFIG_REFRESH(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed HMAC so the packet is still valid, but we
@@ -305,7 +313,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	if (payloadLength() == ZT_ADDRESS_LENGTH) {
-		SharedPtr<Peer> p(_r->topology->getPeer(Address(payload())));
+		SharedPtr<Peer> p(_r->topology->getPeer(Address(payload(),ZT_ADDRESS_LENGTH)));
 		if (p) {
 			Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -314,7 +322,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.encrypt(peer->cryptKey());
 			outp.hmacSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload()).toString().c_str());
+			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		} else {
 			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -324,7 +332,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.encrypt(peer->cryptKey());
 			outp.hmacSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload()).toString().c_str());
+			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		}
 	} else {
 		TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -335,7 +343,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH));
+		Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		SharedPtr<Peer> withPeer(_r->topology->getPeer(with));
 		if (withPeer) {
 			unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
@@ -433,7 +441,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			if (network->isAllowed(source())) {
 				if (size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD) {
 
-					Address originalSubmitterAddress(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH));
+					Address originalSubmitterAddress(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 					MAC fromMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
 					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
 					unsigned int hops = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT];
@@ -450,19 +458,28 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 						// Technically should not happen, since the original submitter is
 						// excluded from consideration as a propagation recipient.
 						TRACE("dropped boomerang MULTICAST_FRAME received from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
-					} else if ((!isDuplicate)||(_r->topology->isSupernode(_r->identity.address()))) {
+					} else if ((!isDuplicate)||(_r->topology->amSupernode())) {
+						//
 						// If I am a supernode, I will repeatedly propagate duplicates. That's
 						// because supernodes are used to bridge sparse multicast groups. Non-
 						// supernodes will ignore duplicates completely.
+						//
+						// TODO: supernodes should keep a local bloom filter too and OR it with
+						// the bloom from the packet in order to pick different recipients each
+						// time a multicast returns to them for repropagation.
+						//
+
 						SharedPtr<Peer> originalSubmitter(_r->topology->getPeer(originalSubmitterAddress));
 						if (!originalSubmitter) {
 							TRACE("requesting WHOIS on original multicast frame submitter %s",originalSubmitterAddress.toString().c_str());
 							_r->sw->requestWhois(originalSubmitterAddress);
 							_step = DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP;
-							return false;
+							return false; // try again if/when we get OK(WHOIS)
 						} else if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),network->id(),fromMac,mg,etherType,dataAndSignature,datalen,dataAndSignature + datalen,signaturelen)) {
 							_r->multicaster->addToDedupHistory(mccrc,now);
 
+							// Even if we are a supernode, we still don't repeatedly inject
+							// duplicates into our own tap.
 							if (!isDuplicate)
 								network->tap().put(fromMac,mg.mac(),etherType,dataAndSignature,datalen);
 
@@ -494,7 +511,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 								compress();
 
 								for(unsigned int i=0;i<np;++i) {
-									TRACE("propagating multicast from original node %s: %s -> %s",originalSubmitterAddress.toString().c_str(),upstream.toString().c_str(),propPeers[i]->address().toString().c_str());
+									//TRACE("propagating multicast from original node %s: %s -> %s",originalSubmitterAddress.toString().c_str(),upstream.toString().c_str(),propPeers[i]->address().toString().c_str());
 									// Re-use this packet to re-send multicast frame to everyone
 									// downstream from us.
 									newInitializationVector();
@@ -504,7 +521,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 								return true;
 							} else {
-								TRACE("terminating MULTICAST_FRAME propagation from %s(%s): max depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
+								//TRACE("terminating MULTICAST_FRAME propagation from %s(%s): max depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 							}
 						} else {
 							LOG("rejected MULTICAST_FRAME from %s(%s) due to failed signature check (claims original sender %s)",source().toString().c_str(),_remoteAddress.toString().c_str(),originalSubmitterAddress.toString().c_str());
@@ -525,6 +542,68 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
+}
+
+bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	// TODO: not implemented yet, will be needed for private networks.
+
+	return true;
+}
+
+bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	char tmp[128];
+	try {
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
+#ifndef __WINDOWS__
+		if (_r->netconfService) {
+			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
+			std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
+
+			Dictionary request;
+			request["type"] = "netconf-request";
+			request["peerId"] = peer->identity().toString(false);
+			sprintf(tmp,"%llx",(unsigned long long)nwid);
+			request["nwid"] = tmp;
+			sprintf(tmp,"%llx",(unsigned long long)packetId());
+			request["requestId"] = tmp;
+			_r->netconfService->send(request);
+		} else {
+#endif // !__WINDOWS__
+			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+			outp.append(packetId());
+			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
+			outp.append(nwid);
+			outp.encrypt(peer->cryptKey());
+			outp.hmacSet(peer->macKey());
+			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+			TRACE("sent ERROR(NETWORK_CONFIG_REQUEST,UNSUPPORTED_OPERATION) to %s(%s)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+#ifndef __WINDOWS__
+		}
+#endif // !__WINDOWS__
+	} catch (std::exception &exc) {
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
+}
+
+bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	try {
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REFRESH_IDX_NETWORK_ID);
+		SharedPtr<Network> nw(_r->nc->network(nwid));
+		if ((nw)&&(source() == nw->controller())) // only respond to requests from controller
+			nw->requestConfiguration();
+	} catch (std::exception &exc) {
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }

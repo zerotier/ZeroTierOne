@@ -100,7 +100,7 @@ bool Demarc::bindLocalUdp(unsigned int localPort)
 		DemarcPortObj *v4r = &(_ports[(Port)v4p]);
 		v4r->port = (Port)v4p;
 		v4r->parent = this;
-		v4r->obj = v4 = new UdpSocket(localPort,false,&Demarc::_CBudpSocketPacketHandler,v4r);
+		v4r->obj = v4 = new UdpSocket(false,localPort,false,&Demarc::_CBudpSocketPacketHandler,v4r);
 		v4r->type = PORT_TYPE_UDP_SOCKET_V4;
 	} catch ( ... ) {
 		_ports.erase((Port)v4p);
@@ -112,7 +112,7 @@ bool Demarc::bindLocalUdp(unsigned int localPort)
 		DemarcPortObj *v6r = &(_ports[(Port)v6p]);
 		v6r->port = (Port)v6p;
 		v6r->parent = this;
-		v6r->obj = v6 = new UdpSocket(localPort,true,&Demarc::_CBudpSocketPacketHandler,v6r);
+		v6r->obj = v6 = new UdpSocket(false,localPort,true,&Demarc::_CBudpSocketPacketHandler,v6r);
 		v6r->type = PORT_TYPE_UDP_SOCKET_V6;
 	} catch ( ... ) {
 		_ports.erase((Port)v6p);

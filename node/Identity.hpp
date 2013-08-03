@@ -104,7 +104,7 @@ public:
 		_keyPair((EllipticCurveKeyPair *)0)
 	{
 		if (!fromString(str))
-			throw std::invalid_argument("invalid string-serialized identity");
+			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
 	}
 
 	Identity(const std::string &str)
@@ -112,7 +112,7 @@ public:
 		_keyPair((EllipticCurveKeyPair *)0)
 	{
 		if (!fromString(str))
-			throw std::invalid_argument("invalid string-serialized identity");
+			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
 	}
 
 	template<unsigned int C>
@@ -307,7 +307,7 @@ public:
 	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
 		throw(std::out_of_range)
 	{
-		b.append(_address.data(),ZT_ADDRESS_LENGTH);
+		_address.appendTo(b);
 		b.append((unsigned char)IDENTITY_TYPE_NIST_P_521);
 		b.append((unsigned char)(_publicKey.size() & 0xff));
 		b.append(_publicKey.data(),_publicKey.size());
@@ -340,7 +340,7 @@ public:
 
 		unsigned int p = startAt;
 
-		_address = b.field(p,ZT_ADDRESS_LENGTH);
+		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 
 		if (b[p++] != IDENTITY_TYPE_NIST_P_521)

@@ -42,6 +42,9 @@ const char *Packet::verbString(Verb v)
 		case VERB_FRAME: return "FRAME";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
+		case VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return "NETWORK_MEMBERSHIP_CERTIFICATE";
+		case VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
+		case VERB_NETWORK_CONFIG_REFRESH: return "NETWORK_CONFIG_REFRESH";
 	}
 	return "(unknown)";
 }
@@ -57,6 +60,7 @@ const char *Packet::errorString(ErrorCode e)
 		case ERROR_IDENTITY_COLLISION: return "IDENTITY_COLLISION";
 		case ERROR_IDENTITY_INVALID: return "IDENTITY_INVALID";
 		case ERROR_UNSUPPORTED_OPERATION: return "UNSUPPORTED_OPERATION";
+		case ERROR_NO_MEMBER_CERTIFICATE: return "NO_MEMBER_CERTIFICATE";
 	}
 	return "(unknown)";
 }

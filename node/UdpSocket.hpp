@@ -46,6 +46,7 @@ public:
 	/**
 	 * Create and bind a local UDP socket
 	 *
+	 * @param localOnly If true, bind to loopback address only
 	 * @param localPort Local port to listen to
 	 * @param ipv6 If true, bind this as an IPv6 socket, otherwise IPv4
 	 * @param packetHandler Function to call when packets are read
@@ -53,6 +54,7 @@ public:
 	 * @throws std::runtime_error Unable to bind
 	 */
 	UdpSocket(
+		bool localOnly,
 		int localPort,
 		bool ipv6,
 		void (*packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int),

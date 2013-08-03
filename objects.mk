@@ -1,9 +1,4 @@
 OBJS=\
-	ext/http-parser/http_parser.o \
-	ext/huffandpuff/huffman.o \
-	ext/jsoncpp/src/json_reader.o \
-	ext/jsoncpp/src/json_value.o \
-	ext/jsoncpp/src/json_writer.o \
 	ext/kissdb/kissdb.o \
 	ext/lz4/lz4hc.o \
 	ext/lz4/lz4.o \
@@ -13,7 +8,6 @@ OBJS=\
 	node/EthernetTap.o \
 	node/Filter.o \
 	node/HMAC.o \
-	node/Http.o \
 	node/Identity.o \
 	node/InetAddress.o \
 	node/Logger.o \
@@ -22,9 +16,9 @@ OBJS=\
 	node/NodeConfig.o \
 	node/Packet.o \
 	node/PacketDecoder.o \
-	node/Pack.o \
 	node/Peer.o \
 	node/Salsa20.o \
+	node/Service.o \
 	node/Switch.o \
 	node/SysEnv.o \
 	node/Thread.o \

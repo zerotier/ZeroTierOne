@@ -39,7 +39,8 @@ namespace ZeroTier {
 Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath)
 	throw(std::runtime_error) :
 	Thread(),
-	_r(renv)
+	_r(renv),
+	_amSupernode(false)
 {
 	if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWCREAT,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE)) {
 		if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWREPLACE,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE))
@@ -77,9 +78,11 @@ Topology::~Topology()
 void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
 {
 	Mutex::Lock _l(_supernodes_m);
+
 	_supernodes = sn;
 	_supernodeAddresses.clear();
 	_supernodePeers.clear();
+
 	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
 		if (i->first != _r->identity) {
 			SharedPtr<Peer> p(getPeer(i->first.address()));
@@ -93,6 +96,8 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 		}
 		_supernodeAddresses.insert(i->first.address());
 	}
+
+	_amSupernode = (_supernodes.find(_r->identity) != _supernodes.end());
 }
 
 void Topology::addPeer(const SharedPtr<Peer> &candidate,void (*callback)(void *,const SharedPtr<Peer> &,Topology::PeerVerifyResult),void *arg)
@@ -127,9 +132,12 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 			return ap->second;
 	}
 
+	unsigned char ztatmp[ZT_ADDRESS_LENGTH];
+	zta.copyTo(ztatmp,ZT_ADDRESS_LENGTH);
+
 	Buffer<ZT_KISSDB_VALUE_SIZE> b(ZT_KISSDB_VALUE_SIZE);
 	_dbm_m.lock();
-	if (!KISSDB_get(&_dbm,zta.data(),b.data())) {
+	if (!KISSDB_get(&_dbm,ztatmp,b.data())) {
 		_dbm_m.unlock();
 
 		SharedPtr<Peer> p(new Peer());
@@ -300,11 +308,13 @@ void Topology::main()
 					for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();++p) {
 						if (p->second->getAndResetDirty()) {
 							try {
+								uint64_t atmp[ZT_ADDRESS_LENGTH];
+								p->second->identity().address().copyTo(atmp,ZT_ADDRESS_LENGTH);
 								Buffer<ZT_PEER_MAX_SERIALIZED_LENGTH> b;
 								p->second->serialize(b);
 								b.zeroUnused();
 								_dbm_m.lock();
-								if (KISSDB_put(&_dbm,p->second->identity().address().data(),b.data())) {
+								if (KISSDB_put(&_dbm,atmp,b.data())) {
 									TRACE("error writing %s to peer.db",p->second->identity().address().toString().c_str());
 								}
 								_dbm_m.unlock();
@@ -329,11 +339,13 @@ void Topology::_reallyAddPeer(const SharedPtr<Peer> &p)
 		_activePeers[p->identity().address()] = p;
 	}
 	try {
+		uint64_t atmp[ZT_ADDRESS_LENGTH];
+		p->address().copyTo(atmp,ZT_ADDRESS_LENGTH);
 		Buffer<ZT_PEER_MAX_SERIALIZED_LENGTH> b;
 		p->serialize(b);
 		b.zeroUnused();
 		_dbm_m.lock();
-		if (KISSDB_put(&_dbm,p->identity().address().data(),b.data())) {
+		if (KISSDB_put(&_dbm,atmp,b.data())) {
 			TRACE("error writing %s to peerdb",p->address().toString().c_str());
 		} else p->getAndResetDirty();
 		_dbm_m.unlock();

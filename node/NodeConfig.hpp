@@ -31,27 +31,51 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
+#include <stdexcept>
+
 #include <stdint.h>
 #include "SharedPtr.hpp"
 #include "Network.hpp"
 #include "Utils.hpp"
-#include "Http.hpp"
+#include "UdpSocket.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 
 /**
- * Node configuration holder and fetcher
+ * Maximum size of a packet for node configuration
+ */
+#define ZT_NODECONFIG_MAX_PACKET_SIZE 4096
+
+/**
+ * Node configuration endpoint
+ *
+ * Packet format for local UDP configuration packets:
+ *  [16] first 16 bytes of HMAC-SHA-256 of payload
+ *  [ -- begin HMAC'ed envelope -- ]
+ *  [8] random initialization vector
+ *  [ -- begin cryptographic envelope -- ]
+ *  [4] arbitrary tag, echoed in response
+ *  [...] payload
+ *
+ * For requests, the payload consists of a single ASCII command. For
+ * responses, the payload consists of one or more response lines delimited
+ * by NULL (0) characters. The tag field is replicated in the result
+ * packet.
  */
 class NodeConfig
 {
 public:
 	/**
 	 * @param renv Runtime environment
-	 * @param url Autoconfiguration URL (http:// or file://)
+	 * @param authToken Configuration authentication token
+	 * @throws std::runtime_error Unable to bind to local control port
 	 */
-	NodeConfig(const RuntimeEnvironment *renv,const std::string &url);
+	NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
+		throw(std::runtime_error);
 
 	~NodeConfig();
 
@@ -81,13 +105,12 @@ public:
 	/**
 	 * Call whack() on all networks' tap devices
 	 */
-	inline void whackAllTaps()
-	{
-		std::vector< SharedPtr<Network> > nwlist;
-		Mutex::Lock _l(_networks_m);
-		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-			n->second->tap().whack();
-	}
+	void whackAllTaps();
+
+	/**
+	 * Call clean() on all networks
+	 */
+	void cleanAllNetworks();
 
 	/**
 	 * @param nwid Network ID
@@ -112,32 +135,49 @@ public:
 	}
 
 	/**
-	 * @return Time of last successful autoconfigure or refresh
+	 * Execute a command
+	 *
+	 * @param command Command and arguments separated by whitespace (must already be trimmed of CR+LF, etc.)
+	 * @return One or more command results (lines of output)
 	 */
-	inline uint64_t lastAutoconfigure() const { return _lastAutoconfigure; }
+	std::vector<std::string> execute(const char *command);
 
 	/**
-	 * @return Autoconfiguration URL
+	 * Armor payload for control bus
+	 *
+	 * Note that no single element of payload can be longer than the max packet
+	 * size. If this occurs out_of_range is thrown.
+	 *
+	 * @param key 32 byte key
+	 * @param conversationId 32-bit conversation ID (bits beyond 32 are ignored)
+	 * @param payload One or more strings to encode in packet
+	 * @return One or more transport armored packets (if payload too big)
+	 * @throws std::out_of_range An element of payload is too big
 	 */
-	inline const std::string &url() const { return _url; }
+	static std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload)
+		throw(std::out_of_range);
 
 	/**
-	 * Refresh configuration from autoconf URL
+	 * Decode a packet from the control bus
+	 *
+	 * Note that 'payload' is appended to. Existing data is not cleared.
+	 *
+	 * @param key 32 byte key
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param conversationId Result parameter filled with conversation ID on success
+	 * @param payload Result parameter to which results are appended
+	 * @return True on success, false on invalid packet or packet that failed authentication
 	 */
-	void refreshConfiguration();
+	static bool decodeControlMessagePacket(const void *key,const void *data,unsigned int len,unsigned long &conversationId,std::vector<std::string> &payload);
 
 private:
-	void __CBautoconfHandler(const std::string &lastModified,const std::string &body);
-	static bool _CBautoconfHandler(Http::Request *req,void *arg,const std::string &url,int code,const std::map<std::string,std::string> &headers,const std::string &body);
+	static void _CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len);
 
 	const RuntimeEnvironment *_r;
 
-	volatile uint64_t _lastAutoconfigure;
-
-	std::string _lastAutoconfigureLastModified;
-	std::string _url;
-	Mutex _autoconfigureLock;
-
+	unsigned char _controlSocketKey[32];
+	UdpSocket _controlSocket;
 	std::map< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 };

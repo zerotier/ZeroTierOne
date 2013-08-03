@@ -41,6 +41,44 @@ class Node
 {
 public:
 	/**
+	 * Client for controlling a local ZeroTier One node
+	 */
+	class LocalClient
+	{
+	public:
+		/**
+		 * Create a new node config client
+		 *
+		 * @param authToken Authentication token
+		 * @param resultHandler Function to call when commands provide results
+		 */
+		LocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+			throw();
+
+		~LocalClient();
+
+		/**
+		 * Send a command to the local node
+		 *
+		 * Note that the returned conversation ID will never be 0. A return value
+		 * of 0 indicates a fatal error such as failure to bind to any local UDP
+		 * port.
+		 *
+		 * @param command
+		 * @return Conversation ID that will be provided to result handler when/if results are sent back
+		 */
+		unsigned long send(const char *command)
+			throw();
+
+	private:
+		// LocalClient is not copyable
+		LocalClient(const LocalClient&);
+		const LocalClient& operator=(const LocalClient&);
+
+		void *_impl;
+	};
+
+	/**
 	 * Returned by node main if/when it terminates
 	 */
 	enum ReasonForTermination
@@ -58,11 +96,8 @@ public:
 	 * The node is not executed until run() is called.
 	 *
 	 * @param hp Home directory path
-	 * @param url URL prefix for autoconfiguration (http and file permitted)
-	 * @param configAuthorityIdentity Public identity used to encrypt/authenticate configuration from this URL (ASCII string format)
-	 * @throws std::invalid_argument Invalid argument supplied to constructor
 	 */
-	Node(const char *hp,const char *urlPrefix,const char *configAuthorityIdentity)
+	Node(const char *hp)
 		throw();
 
 	~Node();
@@ -99,12 +134,6 @@ public:
 		throw();
 
 	/**
-	 * Update the status file in the home directory on next service loop
-	 */
-	void updateStatusNow()
-		throw();
-
-	/**
 	 * Get the ZeroTier version in major.minor.revision string format
 	 * 
 	 * @return Version in string form
@@ -117,6 +146,10 @@ public:
 	static unsigned int versionRevision() throw();
 
 private:
+	// Nodes are not copyable
+	Node(const Node&);
+	const Node& operator=(const Node&);
+
 	void *const _impl; // private implementation
 };
 

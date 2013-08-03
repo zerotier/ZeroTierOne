@@ -28,14 +28,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "Utils.hpp"
-#include "Mutex.hpp"
+#include <stdarg.h>
 
 #if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #endif
 
 #ifdef _WIN32
@@ -44,6 +44,9 @@
 
 #include <sys/stat.h>
 #include <openssl/rand.h>
+
+#include "Utils.hpp"
+#include "Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -212,6 +215,29 @@ const char Utils::base64DecMap[128] = {
 
 static const char *DAY_NAMES[7] = { "Sun","Mon","Tue","Wed","Thu","Fri","Sat" };
 static const char *MONTH_NAMES[12] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
+
+std::map<std::string,bool> Utils::listDirectory(const char *path)
+{
+	struct dirent de;
+	struct dirent *dptr;
+	std::map<std::string,bool> r;
+
+	DIR *d = opendir(path);
+	if (!d)
+		return r;
+
+	dptr = (struct dirent *)0;
+	for(;;) {
+		if (readdir_r(d,&de,&dptr))
+			break;
+		if (dptr) {
+			if ((!strcmp(dptr->d_name,"."))&&(!strcmp(dptr->d_name,"..")))
+				r[std::string(dptr->d_name)] = (dptr->d_type == DT_DIR);
+		} else break;
+	}
+
+	return r;
+}
 
 std::string Utils::base64Encode(const void *data,unsigned int len)
 {
@@ -528,6 +554,22 @@ std::string Utils::trim(const std::string &s)
 		else break;
 	}
 	return s.substr(start,end - start);
+}
+
+void Utils::stdsprintf(std::string &s,const char *fmt,...)
+	throw(std::bad_alloc,std::length_error)
+{
+	char buf[65536];
+	va_list ap;
+
+	va_start(ap,fmt);
+	int n = vsnprintf(buf,sizeof(buf),fmt,ap);
+	va_end(ap);
+
+	if ((n >= (int)sizeof(buf))||(n < 0))
+		throw std::length_error("printf result too large");
+
+	s.append(buf);
 }
 
 } // namespace ZeroTier

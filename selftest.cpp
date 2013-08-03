@@ -43,8 +43,9 @@
 #include "node/HMAC.hpp"
 #include "node/MAC.hpp"
 #include "node/Peer.hpp"
-#include "node/Http.hpp"
 #include "node/Condition.hpp"
+#include "node/NodeConfig.hpp"
+#include "node/Dictionary.hpp"
 
 using namespace ZeroTier;
 
@@ -266,31 +267,60 @@ static int testOther()
 	}
 	std::cout << "PASS" << std::endl;
 
-	return 0;
-}
+	std::cout << "[other] Testing command bus encode/decode... "; std::cout.flush();
+	try {
+		static char key[32] = { 0 };
+		for(unsigned int k=0;k<1000;++k) {
+			std::vector<std::string> original;
+			for(unsigned int i=0,j=rand() % 256,l=(rand() % 1024)+1;i<j;++i)
+				original.push_back(std::string(l,'x'));
+			std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets(NodeConfig::encodeControlMessage(key,1,original));
+			//std::cout << packets.size() << ' '; std::cout.flush();
+			std::vector<std::string> after;
+			for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator i(packets.begin());i!=packets.end();++i) {
+				unsigned long convId = 9999;
+				if (!NodeConfig::decodeControlMessagePacket(key,i->data(),i->size(),convId,after)) {
+					std::cout << "FAIL (decode)" << std::endl;
+					return -1;
+				}
+				if (convId != 1) {
+					std::cout << "FAIL (conversation ID)" << std::endl;
+					return -1;
+				}
+			}
+			if (after != original) {
+				std::cout << "FAIL (compare)" << std::endl;
+				return -1;
+			}
+		}
+	} catch (std::exception &exc) {
+		std::cout << "FAIL (" << exc.what() << ")" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS" << std::endl;
 
-static Condition testHttpDoneCondition;
-
-static bool testHttpHandler(Http::Request *req,void *arg,const std::string &url,int code,const std::map<std::string,std::string> &headers,const std::string &body)
-{
-	if (code)
-		std::cout << "[net] " << url << " " << code << " bytes: " << body.length() << std::endl;
-	else std::cout << "[net] " << url << " FAILED: " << body << std::endl;
-	testHttpDoneCondition.signal();
-	return false;
-}
-
-static int testNet()
-{
-	std::cout << "[net] GET http://www.uc.edu/" << std::endl;
-	new Http::Request(Http::HTTP_METHOD_GET,"http://www.uc.edu/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
-	testHttpDoneCondition.wait();
-	std::cout << "[net] GET http://zerotier.com/" << std::endl;
-	new Http::Request(Http::HTTP_METHOD_GET,"http://zerotier.com/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
-	testHttpDoneCondition.wait();
-	std::cout << "[net] GET http://www.google.com/" << std::endl;
-	new Http::Request(Http::HTTP_METHOD_GET,"http://www.google.com/",Http::EMPTY_HEADERS,std::string(),&testHttpHandler,(void *)0);
-	testHttpDoneCondition.wait();
+	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
+	for(int k=0;k<10000;++k) {
+		Dictionary a,b;
+		int nk = rand() % 32;
+		for(int q=0;q<nk;++q) {
+			std::string k,v;
+			int kl = (rand() % 512);
+			int vl = (rand() % 512);
+			for(int i=0;i<kl;++i)
+				k.push_back((char)rand());
+			for(int i=0;i<vl;++i)
+				v.push_back((char)rand());
+			a[k] = v;
+		}
+		std::string aser = a.toString();
+		b.fromString(aser);
+		if (a != b) {
+			std::cout << "FAIL!" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
 
 	return 0;
 }
@@ -301,7 +331,6 @@ int main(int argc,char **argv)
 
 	srand(time(0));
 
-	r |= testNet();
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();

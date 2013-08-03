@@ -159,7 +159,7 @@ int main(int argc,char **argv)
 		}
 
 		std::string signature(Utils::base64Decode(argv[4],strlen(argv[4])));
-		if ((signature.length() > ZEROTIER_ADDRESS_LENGTH)&&(id.verifySignature(inf.data(),inf.length(),signature))) {
+		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verifySignature(inf.data(),inf.length(),signature.data(),signature.length()))) {
 			std::cout << argv[3] << " signature valid" << std::endl;
 		} else {
 			std::cerr << argv[3] << " signature check FAILED" << std::endl;

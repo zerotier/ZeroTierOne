@@ -34,13 +34,14 @@
 #include <time.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <map>
 
 #include "../ext/lz4/lz4.h"
 #include "../ext/lz4/lz4hc.h"
-#include "../ext/huffandpuff/huffman.h"
 
 #include "Constants.hpp"
 
@@ -57,6 +58,16 @@ namespace ZeroTier {
 class Utils
 {
 public:
+	/**
+	 * List a directory's contents
+	 *
+	 * @param path Path to list
+	 * @param files Set to fill with files
+	 * @param directories Set to fill with directories
+	 * @return Map of entries and whether or not they are also directories (empty on failure)
+	 */
+	static std::map<std::string,bool> listDirectory(const char *path);
+
 	/**
 	 * @param data Data to convert to hex
 	 * @param len Length of data
@@ -107,6 +118,15 @@ public:
 	 * @return Last modification time in ms since epoch or 0 if not found
 	 */
 	static uint64_t getLastModified(const char *path);
+
+	/**
+	 * @param path Path to check
+	 * @return True if file or directory exists at path location
+	 */
+	static inline bool fileExists(const char *path)
+	{
+		return (getLastModified(path) != 0);
+	}
 
 	/**
 	 * @param t64 Time in ms since epoch
@@ -164,7 +184,6 @@ public:
 	template<typename I,typename O>
 	static inline void compress(I begin,I end,O out)
 	{
-		char huffheap[HUFFHEAP_SIZE];
 		unsigned int bufLen = LZ4_compressBound(ZT_COMPRESSION_BLOCK_SIZE);
 		char *buf = new char[bufLen * 2];
 		char *buf2 = buf + bufLen;
@@ -198,16 +217,9 @@ public:
 					continue;
 				}
 
-				unsigned long huffCompressedLen = huffman_compress((const unsigned char *)buf2,lz4CompressedLen,(unsigned char *)buf,bufLen,huffheap);
-				if ((!huffCompressedLen)||((int)huffCompressedLen >= lz4CompressedLen)) {
-					l = hton((uint32_t)lz4CompressedLen); // lz4 only
-					out((const void *)&l,4);
-					out((const void *)buf2,(unsigned int)lz4CompressedLen);
-				} else {
-					l = hton((uint32_t)0x80000000 | (uint32_t)huffCompressedLen); // lz4 with huffman
-					out((const void *)&l,4);
-					out((const void *)buf,(unsigned int)huffCompressedLen);
-				}
+				l = hton((uint32_t)lz4CompressedLen); // lz4 only
+				out((const void *)&l,4);
+				out((const void *)buf2,(unsigned int)lz4CompressedLen);
 			}
 
 			delete [] buf;
@@ -230,7 +242,6 @@ public:
 	template<typename I,typename O>
 	static inline bool decompress(I begin,I end,O out)
 	{
-		char huffheap[HUFFHEAP_SIZE];
 		volatile char i32c[4];
 		void *const i32cp = (void *)i32c;
 		unsigned int bufLen = LZ4_compressBound(ZT_COMPRESSION_BLOCK_SIZE);
@@ -267,23 +278,10 @@ public:
 						return false;
 					}
 
-					if ((_compressedSize & 0x80000000)) { // lz4 and huffman
-						unsigned long lz4CompressedSize = huffman_decompress((const unsigned char *)buf,compressedSize,(unsigned char *)buf2,bufLen,huffheap);
-						if (lz4CompressedSize) {
-							if (LZ4_uncompress_unknownOutputSize(buf2,buf,lz4CompressedSize,bufLen) != (int)originalSize) {
-								delete [] buf;
-								return false;
-							} else out((const void *)buf,(unsigned int)originalSize);
-						} else {
-							delete [] buf;
-							return false;
-						}
-					} else { // lz4 only
-						if (LZ4_uncompress_unknownOutputSize(buf,buf2,compressedSize,bufLen) != (int)originalSize) {
-							delete [] buf;
-							return false;
-						} else out((const void *)buf2,(unsigned int)originalSize);
-					}
+					if (LZ4_uncompress_unknownOutputSize(buf,buf2,compressedSize,bufLen) != (int)originalSize) {
+						delete [] buf;
+						return false;
+					} else out((const void *)buf2,(unsigned int)originalSize);
 				} else { // stored
 					if (originalSize > bufLen) {
 						delete [] buf;
@@ -390,6 +388,18 @@ public:
 	 * @return Trimmed string
 	 */
 	static std::string trim(const std::string &s);
+
+	/**
+	 * Like sprintf, but appends to std::string
+	 *
+	 * @param s String to append to
+	 * @param fmt Printf format string
+	 * @param ... Format arguments
+	 * @throws std::bad_alloc Memory allocation failure
+	 * @throws std::length_error Format + args exceeds internal buffer maximum
+	 */
+	static void stdsprintf(std::string &s,const char *fmt,...)
+		throw(std::bad_alloc,std::length_error);
 
 	/**
 	 * Count the number of bits set in an integer

@@ -132,27 +132,34 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES 64
 
 // Field incides for parsing verbs
+
 #define ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION (ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION + 1)
 #define ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION (ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION + 1)
 #define ZT_PROTO_VERB_HELLO_IDX_REVISION (ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION + 1)
 #define ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP (ZT_PROTO_VERB_HELLO_IDX_REVISION + 2)
 #define ZT_PROTO_VERB_HELLO_IDX_IDENTITY (ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP + 8)
+
 #define ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID (ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB + 1)
 #define ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE (ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID + 8)
 #define ZT_PROTO_VERB_ERROR_IDX_PAYLOAD (ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE + 1)
+
 #define ZT_PROTO_VERB_OK_IDX_IN_RE_VERB (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID (ZT_PROTO_VERB_OK_IDX_IN_RE_VERB + 1)
 #define ZT_PROTO_VERB_OK_IDX_PAYLOAD (ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID + 8)
+
 #define ZT_PROTO_VERB_WHOIS_IDX_ZTADDRESS (ZT_PACKET_IDX_PAYLOAD)
+
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT (ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS + 5)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN (ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT + 2)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS (ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN + 1)
+
 #define ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
+
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
@@ -165,6 +172,12 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH + 2)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH + 2)
+
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN + 2)
+
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REFRESH_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 
 // Field indices for parsing OK and ERROR payloads of replies
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
@@ -287,7 +300,7 @@ public:
 		 * 
 		 * @return Destination ZT address
 		 */
-		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH)); }
+		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 		/**
 		 * @return True if fragment is of a valid length
@@ -449,7 +462,7 @@ public:
 		 *   <[2] 16-bit length of payload>
 		 *   <[2] 16-bit length of signature>
 		 *   <[...] ethernet payload>
-		 *   <[...] ECDSA signature>
+		 *   <[...] ECDSA signature of SHA-256 hash (see below)>
 		 *
 		 * The signature is made using the key of the original submitter, and
 		 * can be used to authenticate the submitter for security and rate
@@ -463,7 +476,57 @@ public:
 		 *
 		 * No OK or ERROR is generated.
 		 */
-		VERB_MULTICAST_FRAME = 9
+		VERB_MULTICAST_FRAME = 9,
+
+		/* Network member certificate for sending peer:
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of certificate>
+		 *   <[2] 16-bit length of signature>
+		 *   <[...] string-serialized certificate dictionary>
+		 *   <[...] ECDSA signature of certificate>
+		 *
+		 * OK is generated on acceptance. ERROR is returned on failure. In both
+		 * cases the payload is the network ID.
+		 */
+		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
+
+		/* Network configuration request:
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of request meta-data dictionary>
+		 *   <[...] string-serialized request meta-data>
+		 *
+		 * This message requests network configuration from a node capable of
+		 * providing it. Such nodes run the netconf service, which must be
+		 * installed into the ZeroTier home directory.
+		 *
+		 * OK response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of network configuration dictionary>
+		 *   <[...] network configuration dictionary>
+		 *
+		 * OK returns a Dictionary (string serialized) containing the network's
+		 * configuration and IP address assignment information for the querying
+		 * node. It also contains a membership certificate that the querying
+		 * node can push to other peers to demonstrate its right to speak on
+		 * a given network.
+		 *
+		 * ERROR may be NOT_FOUND if no such network is known, or
+		 * UNSUPPORTED_OPERATION if the netconf service isn't available. The
+		 * payload will be the network ID.
+		 */
+		VERB_NETWORK_CONFIG_REQUEST = 11,
+
+		/* Network configuration refresh request:
+		 *   <[8] 64-bit network ID>
+		 *
+		 * This message can be sent by the network configuration master node
+		 * to request that nodes refresh their network configuration. It can
+		 * thus be used to "push" updates.
+		 *
+		 * It does not generate an OK or ERROR message, and is treated only as
+		 * a hint to refresh now.
+		 */
+		VERB_NETWORK_CONFIG_REFRESH = 12
 	};
 
 	/**
@@ -490,7 +553,10 @@ public:
 		ERROR_IDENTITY_INVALID = 5,
 
 		/* Verb or use case not supported/enabled by this node */
-		ERROR_UNSUPPORTED_OPERATION = 6
+		ERROR_UNSUPPORTED_OPERATION = 6,
+
+		/* Message to private network rejected -- no unexpired certificate on file */
+		ERROR_NO_MEMBER_CERTIFICATE = 7
 	};
 
 	/**
@@ -603,14 +669,14 @@ public:
 	 * 
 	 * @return Destination ZT address
 	 */
-	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH)); }
+	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's source
 	 * 
 	 * @return Source ZT address
 	 */
-	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH)); }
+	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * @return True if packet is of valid length

@@ -29,6 +29,7 @@
 #define _ZT_RUNTIMEENVIRONMENT_HPP
 
 #include <string>
+#include "Constants.hpp"
 #include "Identity.hpp"
 #include "Condition.hpp"
 
@@ -42,6 +43,7 @@ class Topology;
 class SysEnv;
 class Multicaster;
 class CMWC4096;
+class Service;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -59,28 +61,29 @@ class RuntimeEnvironment
 {
 public:
 	RuntimeEnvironment() :
-		identity(),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		nc((NodeConfig *)0),
 		demarc((Demarc *)0),
 		multicaster((Multicaster *)0),
 		sw((Switch *)0),
-		topology((Topology *)0)
+		topology((Topology *)0),
+		sysEnv((SysEnv *)0)
+#ifndef __WINDOWS__
+		,netconfService((Service *)0)
+#endif
 	{
 	}
 
 	std::string homePath;
-	std::string autoconfUrlPrefix;
-	std::string configAuthorityIdentityStr;
-	std::string ownershipVerificationSecret;
-	std::string ownershipVerificationSecretHash; // base64 of SHA-256 X16 rounds
 
 	// signal() to prematurely interrupt main loop wait
 	Condition mainLoopWaitCondition;
 
-	Identity configAuthority;
 	Identity identity;
+
+	// Order matters a bit here. These are constructed in this order
+	// and then deleted in the opposite order on Node exit.
 
 	Logger *log; // may be null
 	CMWC4096 *prng;
@@ -90,6 +93,10 @@ public:
 	Switch *sw;
 	Topology *topology;
 	SysEnv *sysEnv;
+
+#ifndef __WINDOWS__
+	Service *netconfService; // may be null
+#endif
 };
 
 } // namespace ZeroTier

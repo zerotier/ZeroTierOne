@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <stdexcept>
 
 #include "Mutex.hpp"
 #include "Range.hpp"
@@ -130,6 +131,19 @@ class Filter
 {
 public:
 	/**
+	 * Value returned by etherTypeName, etc. on unknown
+	 *
+	 * These static methods return precisely this, so a pointer equality
+	 * check will work.
+	 */
+	static const char *const UNKNOWN_NAME;
+
+	/**
+	 * An empty range as a more idiomatic way of specifying a wildcard match
+	 */
+	static const Range<unsigned int> ANY;
+
+	/**
 	 * A filter rule
 	 *
 	 * This behaves as an immutable value object.
@@ -171,8 +185,15 @@ public:
 		 * @param data Ethernet frame data
 		 * @param len Length of ethernet frame
 		 * @return True if rule matches
+		 * @throws std::invalid_argument Frame invalid or not parseable
 		 */
-		bool operator()(unsigned int etype,const void *data,unsigned int len) const;
+		bool operator()(unsigned int etype,const void *data,unsigned int len) const
+			throw(std::invalid_argument);
+
+		/**
+		 * @return Human readable representation of rule
+		 */
+		std::string toString() const;
 
 		inline bool operator==(const Rule &r) const throw() { return ((_etherType == r._etherType)&&(_protocol == r._protocol)&&(_port == r._port)); }
 		inline bool operator!=(const Rule &r) const throw() { return !(*this == r); }
@@ -208,7 +229,7 @@ public:
 	{
 		ACTION_DENY = 0,
 		ACTION_ALLOW = 1,
-		ACTION_LOG = 2
+		ACTION_UNPARSEABLE = 2
 	};
 
 	/**
@@ -227,8 +248,27 @@ public:
 		Action action;
 	};
 
-	Filter(const RuntimeEnvironment *renv);
-	~Filter();
+	Filter() :
+		_chain(),
+		_chain_m()
+	{
+	}
+
+	Filter(const Filter &f) :
+		_chain(),
+		_chain_m()
+	{
+		Mutex::Lock _l(f._chain_m);
+		_chain = f._chain;
+	}
+
+	inline Filter &operator=(const Filter &f)
+	{
+		Mutex::Lock _l1(_chain_m);
+		Mutex::Lock _l2(f._chain_m);
+		_chain = f._chain;
+		return *this;
+	}
 
 	/**
 	 * Remove all filter entries
@@ -281,16 +321,27 @@ public:
 	 */
 	std::string toString(const char *sep = (const char *)0) const;
 
-	/**
-	 * @param etherType Ethernet type ID
-	 * @return Name of Ethernet protocol (e.g. ARP, IPV4)
-	 */
 	static const char *etherTypeName(const unsigned int etherType)
 		throw();
+	static const char *ipProtocolName(const unsigned int ipp)
+		throw();
+	static const char *icmpTypeName(const unsigned int icmpType)
+		throw();
+	static const char *icmp6TypeName(const unsigned int icmp6Type)
+		throw();
+
+	/**
+	 * Match against an Ethernet frame
+	 *
+	 * @param _r Runtime environment
+	 * @param etherType Ethernet frame type
+	 * @param frame Ethernet frame data
+	 * @param len Length of frame in bytes
+	 * @return Action if matched or ACTION_ALLOW if not matched
+	 */
+	Action operator()(const RuntimeEnvironment *_r,unsigned int etherType,const void *frame,unsigned int len) const;
 
 private:
-	const RuntimeEnvironment *_r;
-
 	std::vector<Entry> _chain;
 	Mutex _chain_m;
 };

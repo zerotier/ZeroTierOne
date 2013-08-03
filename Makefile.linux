@@ -21,7 +21,7 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 # separate binaries for the RedHat and Debian universes to distribute via
 # auto-update. This way we get one Linux binary for all systems of a given
 # architecture.
-LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a
+LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a -lm
 
 include objects.mk
 
@@ -38,10 +38,6 @@ selftest:	$(OBJS)
 idtool:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-idtool
-
-packtool:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-packtool packtool.cpp $(OBJS) $(LIBS)
-	$(STRIP) zerotier-packtool
 
 launcher:
 	$(CC) -Os -o zerotier-launcher launcher.c

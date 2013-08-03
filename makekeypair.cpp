@@ -25,40 +25,23 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_DEFAULTS_HPP
-#define _ZT_DEFAULTS_HPP
-
-#include <stdexcept>
+#include <iostream>
 #include <string>
-#include <vector>
-#include <map>
-#include "Identity.hpp"
-#include "InetAddress.hpp"
+#include "node/EllipticCurveKeyPair.hpp"
+#include "node/EllipticCurveKey.hpp"
+#include "node/Utils.hpp"
 
-namespace ZeroTier {
+using namespace ZeroTier;
 
-/**
- * Static configuration defaults
- * 
- * These are the default values that ship baked into the ZeroTier binary. They
- * define the basic parameters required for it to connect to the rest of the
- * network and obtain software updates.
- */
-class Defaults
+int main(int argc,char **argv)
 {
-public:
-	Defaults()
-		throw(std::runtime_error);
-	~Defaults() {}
+	std::cout << "[generating]" << std::endl;
 
-	/**
-	 * Supernodes on the ZeroTier network
-	 */
-	const std::map< Identity,std::vector<InetAddress> > supernodes;
-};
+	EllipticCurveKeyPair kp;
+	kp.generate();
 
-extern const Defaults ZT_DEFAULTS;
+	std::cout << "PUBLIC: " << kp.pub().toHex() << std::endl;
+	std::cout << "PRIVATE: " << kp.priv().toHex() << std::endl;
 
-} // namespace ZeroTier
-
-#endif
+	return 0;
+}

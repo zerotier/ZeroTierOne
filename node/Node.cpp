@@ -37,26 +37,28 @@
 #include <vector>
 #include <string>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/file.h>
 #endif
 
-#include <openssl/sha.h>
-
 #include "Condition.hpp"
 #include "Node.hpp"
 #include "Topology.hpp"
 #include "Demarc.hpp"
+#include "Packet.hpp"
 #include "Switch.hpp"
 #include "Utils.hpp"
 #include "EthernetTap.hpp"
 #include "Logger.hpp"
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "Pack.hpp"
+#include "Salsa20.hpp"
+#include "HMAC.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
 #include "Defaults.hpp"
@@ -66,10 +68,108 @@
 #include "Mutex.hpp"
 #include "Multicaster.hpp"
 #include "CMWC4096.hpp"
+#include "Service.hpp"
 
 #include "../version.h"
 
 namespace ZeroTier {
+
+struct _LocalClientImpl
+{
+	unsigned char key[32];
+	UdpSocket *sock;
+	void (*resultHandler)(void *,unsigned long,const char *);
+	void *arg;
+	InetAddress localDestAddr;
+	Mutex inUseLock;
+};
+
+static void _CBlocalClientHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
+{
+	_LocalClientImpl *impl = (_LocalClientImpl *)arg;
+	if (!impl)
+		return;
+	if (!impl->resultHandler)
+		return; // sanity check
+	Mutex::Lock _l(impl->inUseLock);
+
+	try {
+		unsigned long convId = 0;
+		std::vector<std::string> results;
+		if (!NodeConfig::decodeControlMessagePacket(impl->key,data,len,convId,results))
+			return;
+		for(std::vector<std::string>::iterator r(results.begin());r!=results.end();++r)
+			impl->resultHandler(impl->arg,convId,r->c_str());
+	} catch ( ... ) {}
+}
+
+Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+	throw() :
+	_impl((void *)0)
+{
+	_LocalClientImpl *impl = new _LocalClientImpl;
+
+	UdpSocket *sock = (UdpSocket *)0;
+	for(unsigned int i=0;i<5000;++i) {
+		try {
+			sock = new UdpSocket(true,32768 + (rand() % 20000),false,&_CBlocalClientHandler,impl);
+			break;
+		} catch ( ... ) {
+			sock = (UdpSocket *)0;
+		}
+	}
+
+	// If socket fails to bind, there's a big problem like missing IPv4 stack
+	if (sock) {
+		SHA256_CTX sha;
+		SHA256_Init(&sha);
+		SHA256_Update(&sha,authToken,strlen(authToken));
+		SHA256_Final(impl->key,&sha);
+
+		impl->sock = sock;
+		impl->resultHandler = resultHandler;
+		impl->arg = arg;
+		impl->localDestAddr = InetAddress::LO4;
+		impl->localDestAddr.setPort(ZT_CONTROL_UDP_PORT);
+		_impl = impl;
+	} else delete impl;
+}
+
+Node::LocalClient::~LocalClient()
+{
+	if (_impl) {
+		((_LocalClientImpl *)_impl)->inUseLock.lock();
+		delete ((_LocalClientImpl *)_impl)->sock;
+		((_LocalClientImpl *)_impl)->inUseLock.unlock();
+		delete ((_LocalClientImpl *)_impl);
+	}
+}
+
+unsigned long Node::LocalClient::send(const char *command)
+	throw()
+{
+	if (!_impl)
+		return 0;
+	_LocalClientImpl *impl = (_LocalClientImpl *)_impl;
+	Mutex::Lock _l(impl->inUseLock);
+
+	try {
+		uint32_t convId = (uint32_t)rand();
+		if (!convId)
+			convId = 1;
+
+		std::vector<std::string> tmp;
+		tmp.push_back(std::string(command));
+		std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets(NodeConfig::encodeControlMessage(impl->key,convId,tmp));
+
+		for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator p(packets.begin());p!=packets.end();++p)
+			impl->sock->send(impl->localDestAddr,p->data(),p->size(),-1);
+
+		return convId;
+	} catch ( ... ) {
+		return 0;
+	}
+}
 
 struct _NodeImpl
 {
@@ -78,7 +178,6 @@ struct _NodeImpl
 	Node::ReasonForTermination reasonForTermination;
 	volatile bool started;
 	volatile bool running;
-	volatile bool updateStatusNow;
 	volatile bool terminateNow;
 
 	// Helper used to rapidly terminate from run()
@@ -94,26 +193,76 @@ struct _NodeImpl
 	}
 };
 
-Node::Node(const char *hp,const char *urlPrefix,const char *configAuthorityIdentity)
+#ifndef __WINDOWS__
+static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictionary &msg)
+{
+	if (!renv)
+		return; // sanity check
+	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)renv;
+
+	try {
+		const std::string &type = msg.get("type");
+		if (type == "netconf-response") {
+			uint64_t inRePacketId = strtoull(msg.get("requestId").c_str(),(char **)0,16);
+			SharedPtr<Network> network = _r->nc->network(strtoull(msg.get("nwid").c_str(),(char **)0,16));
+			Address peerAddress(msg.get("peer").c_str());
+
+			if ((network)&&(peerAddress)) {
+				if (msg.contains("error")) {
+					Packet::ErrorCode errCode = Packet::ERROR_INVALID_REQUEST;
+					const std::string &err = msg.get("error");
+					if (err == "NOT_FOUND")
+						errCode = Packet::ERROR_NOT_FOUND;
+
+					Packet outp(peerAddress,_r->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(inRePacketId);
+					outp.append((unsigned char)errCode);
+					outp.append(network->id());
+					_r->sw->send(outp,true);
+				} else if (msg.contains("netconf")) {
+					const std::string &netconf = msg.get("netconf");
+					if (netconf.length() < 2048) { // sanity check
+						Packet outp(peerAddress,_r->identity.address(),Packet::VERB_OK);
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(inRePacketId);
+						outp.append(network->id());
+						outp.append((uint16_t)netconf.length());
+						outp.append(netconf.data(),netconf.length());
+						_r->sw->send(outp,true);
+					}
+				}
+			}
+		}
+	} catch (std::exception &exc) {
+		LOG("unexpected exception parsing response from netconf service: %s",exc.what());
+	} catch ( ... ) {
+		LOG("unexpected exception parsing response from netconf service: unknown exception");
+	}
+}
+#endif // !__WINDOWS__
+
+Node::Node(const char *hp)
 	throw() :
 	_impl(new _NodeImpl)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 
 	impl->renv.homePath = hp;
-	impl->renv.autoconfUrlPrefix = urlPrefix;
-	impl->renv.configAuthorityIdentityStr = configAuthorityIdentity;
 
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
-	impl->updateStatusNow = false;
 	impl->terminateNow = false;
 }
 
 Node::~Node()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
+
+#ifndef __WINDOWS__
+	delete impl->renv.netconfService;
+#endif
 
 	delete impl->renv.sysEnv;
 	delete impl->renv.topology;
@@ -155,10 +304,8 @@ Node::ReasonForTermination Node::run()
 
 		TRACE("initializing...");
 
+		// Create non-crypto PRNG right away in case other code in init wants to use it
 		_r->prng = new CMWC4096();
-
-		if (!_r->configAuthority.fromString(_r->configAuthorityIdentityStr))
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"configuration authority identity is not valid");
 
 		bool gotId = false;
 		std::string identitySecretPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
@@ -188,37 +335,35 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(identitySecretPath.c_str(),false);
 
-		// Generate ownership verification secret, which can be presented to
-		// a controlling web site (like ours) to prove ownership of a node and
-		// permit its configuration to be centrally modified. When ZeroTier One
-		// requests its config it sends a hash of this secret, and so the
-		// config server can verify this hash to determine if the secret the
-		// user presents is correct.
-		std::string ovsPath(_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine");
-		if (((Utils::now() - Utils::getLastModified(ovsPath.c_str())) >= ZT_OVS_GENERATE_NEW_IF_OLDER_THAN)||(!Utils::readFile(ovsPath.c_str(),_r->ownershipVerificationSecret))) {
-			_r->ownershipVerificationSecret = "";
-			unsigned int securern = 0;
+		// Clean up some obsolete files if present -- this will be removed later
+		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "status").c_str());
+		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine").c_str());
+
+		// Load or generate config authentication secret
+		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
+		std::string configAuthToken;
+		if (!Utils::readFile(configAuthTokenPath.c_str(),configAuthToken)) {
+			configAuthToken = "";
+			unsigned int sr = 0;
 			for(unsigned int i=0;i<24;++i) {
-				Utils::getSecureRandom(&securern,sizeof(securern));
-				_r->ownershipVerificationSecret.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[securern % 62]);
+				Utils::getSecureRandom(&sr,sizeof(sr));
+				configAuthToken.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[sr % 62]);
 			}
-			_r->ownershipVerificationSecret.append(ZT_EOL_S);
-			if (!Utils::writeFile(ovsPath.c_str(),_r->ownershipVerificationSecret))
-				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write 'thisdeviceismine' (home path not writable?)");
+			if (!Utils::writeFile(configAuthTokenPath.c_str(),configAuthToken))
+				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write authtoken.secret (home path not writable?)");
 		}
-		Utils::lockDownFile(ovsPath.c_str(),false);
-		_r->ownershipVerificationSecret = Utils::trim(_r->ownershipVerificationSecret); // trim off CR file is saved with
-		unsigned char ovsDig[32];
-		SHA256_CTX sha;
-		SHA256_Init(&sha);
-		SHA256_Update(&sha,_r->ownershipVerificationSecret.data(),_r->ownershipVerificationSecret.length());
-		SHA256_Final(ovsDig,&sha);
-		_r->ownershipVerificationSecretHash = Utils::base64Encode(ovsDig,32);
+		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
 		// Create the core objects in RuntimeEnvironment: node config, demarcation
 		// point, switch, network topology database, and system environment
 		// watcher.
-		_r->nc = new NodeConfig(_r,_r->autoconfUrlPrefix + _r->identity.address().toString());
+		try {
+			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
+		} catch ( ... ) {
+			// An exception here currently means that another instance of ZeroTier
+			// One is running.
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound");
+		}
 		_r->demarc = new Demarc(_r);
 		_r->multicaster = new Multicaster();
 		_r->sw = new Switch(_r);
@@ -247,17 +392,26 @@ Node::ReasonForTermination Node::run()
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unknown exception during initialization");
 	}
 
+#ifndef __WINDOWS__
 	try {
-		std::string statusPath(_r->homePath + ZT_PATH_SEPARATOR_S + "status");
+		std::string netconfServicePath(_r->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
+		if (Utils::fileExists(netconfServicePath.c_str())) {
+			LOG("netconf.d/netconfi.service appears to exist, starting...");
+			_r->netconfService = new Service(_r,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
+		}
+	} catch ( ... ) {
+		LOG("unexpected exception attempting to start services");
+	}
+#endif
 
+	try {
 		uint64_t lastPingCheck = 0;
-		uint64_t lastTopologyClean = Utils::now(); // don't need to do this immediately
+		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t lastAutoconfigureCheck = 0;
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastMulticastAnnounceAll = 0;
-		uint64_t lastStatusUpdate = 0;
 		long lastDelayDelta = 0;
 
 		LOG("%s starting version %s",_r->identity.address().toString().c_str(),versionString());
@@ -290,16 +444,6 @@ Node::ReasonForTermination Node::run()
 					lastMulticastCheck = 0; // check multicast group membership after network config change
 					_r->nc->whackAllTaps(); // call whack() on all tap devices
 				}
-			}
-
-			if ((now - lastAutoconfigureCheck) >= ZT_AUTOCONFIGURE_CHECK_DELAY) {
-				// It seems odd to only do this simple check every so often, but the purpose is to
-				// delay between calls to refreshConfiguration() enough that the previous attempt
-				// has time to either succeed or fail. Otherwise we'll block the whole loop, since
-				// config update is guarded by a Mutex.
-				lastAutoconfigureCheck = now;
-				if ((now - _r->nc->lastAutoconfigure()) >= ZT_AUTOCONFIGURE_INTERVAL)
-					_r->nc->refreshConfiguration(); // happens in background
 			}
 
 			// Periodically check for changes in our local multicast subscriptions and broadcast
@@ -337,11 +481,9 @@ Node::ReasonForTermination Node::run()
 			if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
 				lastPingCheck = now;
 				try {
-					if (_r->topology->isSupernode(_r->identity.address())) {
-						// The only difference in how supernodes behave is here: they only
-						// actively ping each other and only passively listen for pings
-						// from anyone else. They also don't send firewall openers, since
-						// they're never firewalled.
+					if (_r->topology->amSupernode()) {
+						// Supernodes do not ping anyone but each other. They also don't
+						// send firewall openers, since they aren't ever firewalled.
 						std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 						for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
 							if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)
@@ -384,23 +526,10 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			if ((now - lastTopologyClean) >= ZT_TOPOLOGY_CLEAN_PERIOD) {
-				lastTopologyClean = now;
-				_r->topology->clean(); // happens in background
-			}
-
-			if (((now - lastStatusUpdate) >= ZT_STATUS_OUTPUT_PERIOD)||(impl->updateStatusNow)) {
-				lastStatusUpdate = now;
-				impl->updateStatusNow = false;
-				FILE *statusf = ::fopen(statusPath.c_str(),"w");
-				if (statusf) {
-					try {
-						_r->topology->eachPeer(Topology::DumpPeerStatistics(statusf));
-					} catch ( ... ) {
-						TRACE("unexpected exception updating status dump");
-					}
-					::fclose(statusf);
-				}
+			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
+				lastClean = now;
+				_r->topology->clean();
+				_r->nc->cleanAllNetworks();
 			}
 
 			try {
@@ -433,13 +562,6 @@ void Node::terminate()
 	throw()
 {
 	((_NodeImpl *)_impl)->terminateNow = true;
-	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
-}
-
-void Node::updateStatusNow()
-	throw()
-{
-	((_NodeImpl *)_impl)->updateStatusNow = true;
 	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
 }
 

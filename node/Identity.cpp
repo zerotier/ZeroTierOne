@@ -57,11 +57,13 @@ void Identity::generate()
 	// the address of an identity will be detected as its signature will be
 	// invalid. Of course, deep verification of address/key relationship is
 	// required to cover the more elaborate address claim jump attempt case.
+	unsigned char atmp[ZT_ADDRESS_LENGTH];
+	_address.copyTo(atmp,ZT_ADDRESS_LENGTH);
 	SHA256_CTX sha;
 	unsigned char dig[32];
 	unsigned char idtype = IDENTITY_TYPE_NIST_P_521,zero = 0;
 	SHA256_Init(&sha);
-	SHA256_Update(&sha,_address.data(),ZT_ADDRESS_LENGTH);
+	SHA256_Update(&sha,atmp,ZT_ADDRESS_LENGTH);
 	SHA256_Update(&sha,&zero,1);
 	SHA256_Update(&sha,&idtype,1);
 	SHA256_Update(&sha,&zero,1);
@@ -73,11 +75,13 @@ void Identity::generate()
 
 bool Identity::locallyValidate(bool doAddressDerivationCheck) const
 {
+	unsigned char atmp[ZT_ADDRESS_LENGTH];
+	_address.copyTo(atmp,ZT_ADDRESS_LENGTH);
 	SHA256_CTX sha;
 	unsigned char dig[32];
 	unsigned char idtype = IDENTITY_TYPE_NIST_P_521,zero = 0;
 	SHA256_Init(&sha);
-	SHA256_Update(&sha,_address.data(),ZT_ADDRESS_LENGTH);
+	SHA256_Update(&sha,atmp,ZT_ADDRESS_LENGTH);
 	SHA256_Update(&sha,&zero,1);
 	SHA256_Update(&sha,&idtype,1);
 	SHA256_Update(&sha,&zero,1);
@@ -119,7 +123,7 @@ bool Identity::fromString(const char *str)
 	std::string b(Utils::unhex(fields[0]));
 	if (b.length() != ZT_ADDRESS_LENGTH)
 		return false;
-	_address = b.data();
+	_address.setTo(b.data(),ZT_ADDRESS_LENGTH);
 
 	b = Utils::base64Decode(fields[2]);
 	if ((!b.length())||(b.length() > ZT_EC_MAX_BYTES))
@@ -218,7 +222,7 @@ Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 
 	delete [] ram;
 
-	return Address(dig); // first 5 bytes of dig[]
+	return Address(dig,ZT_ADDRESS_LENGTH); // first 5 bytes of dig[]
 }
 
 std::string Identity::encrypt(const Identity &to,const void *data,unsigned int len) const

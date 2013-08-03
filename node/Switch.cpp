@@ -124,7 +124,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		Packet outpTmpl(propPeers[0]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
 		outpTmpl.append((uint8_t)0);
 		outpTmpl.append((uint64_t)network->id());
-		outpTmpl.append(_r->identity.address().data(),ZT_ADDRESS_LENGTH);
+		_r->identity.address().appendTo(outpTmpl);
 		outpTmpl.append(from.data,6);
 		outpTmpl.append(mg.mac().data,6);
 		outpTmpl.append((uint32_t)mg.adi());
@@ -246,7 +246,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 	{	// tell p1 where to find p2
 		Packet outp(p1,_r->identity.address(),Packet::VERB_RENDEZVOUS);
-		outp.append(p2.data(),ZT_ADDRESS_LENGTH);
+		p2.appendTo(outp);
 		outp.append((uint16_t)cg.first.port());
 		if (cg.first.isV6()) {
 			outp.append((unsigned char)16);
@@ -262,7 +262,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	}
 	{	// tell p2 where to find p1
 		Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
-		outp.append(p1.data(),ZT_ADDRESS_LENGTH);
+		p1.appendTo(outp);
 		outp.append((uint16_t)cg.second.port());
 		if (cg.second.isV6()) {
 			outp.append((unsigned char)16);
@@ -386,7 +386,7 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 		Packet outp((*p)->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 		for(std::map< SharedPtr<Network>,std::set<MulticastGroup> >::const_iterator nwmgs(allMemberships.begin());nwmgs!=allMemberships.end();++nwmgs) {
-			if ((nwmgs->first->open())||(_r->topology->isSupernode((*p)->address()))||(nwmgs->first->isMember((*p)->address()))) {
+			if ((_r->topology->isSupernode((*p)->address()))||(nwmgs->first->isAllowed((*p)->address()))) {
 				for(std::set<MulticastGroup>::iterator mg(nwmgs->second.begin());mg!=nwmgs->second.end();++mg) {
 					if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 						send(outp,true);
@@ -592,7 +592,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 	SharedPtr<Peer> supernode(_r->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
 	if (supernode) {
 		Packet outp(supernode->address(),_r->identity.address(),Packet::VERB_WHOIS);
-		outp.append(addr.data(),ZT_ADDRESS_LENGTH);
+		addr.appendTo(outp);
 		outp.encrypt(supernode->cryptKey());
 		outp.hmacSet(supernode->macKey());
 

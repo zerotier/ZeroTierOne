@@ -49,6 +49,9 @@ class UdpSocket;
  * about what they actually are.
  *
  * All ports are closed when this class is destroyed.
+ *
+ * Its name "demarcation point" comes from the telco/cable terminology for
+ * the box where wires terminate at a customer's property.
  */
 class Demarc
 {
