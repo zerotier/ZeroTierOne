@@ -243,6 +243,8 @@ int main(int argc,char **argv)
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
 				netconf["nwid"] = buf;
 				netconf["isOpen"] = (isOpen ? "1" : "0");
+				sprintf(buf,"%llx",(unsigned long long)Utils::now());
+				netconf["ts"] = buf;
 
 				if (!isOpen) {
 					// TODO: handle closed networks, look up private membership,

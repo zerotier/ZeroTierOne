@@ -2,17 +2,16 @@ CC=gcc
 CXX=g++
 
 INCLUDES=-Iext/bin/libcrypto/include -Iext/jsoncpp/include
-LDFLAGS=-ldl
 ARCH=$(shell uname -m)
 DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux" -DZT_TRACE
 
 # Uncomment for a release optimized build
-CFLAGS=-Wall -O3 -fno-unroll-loops -fstack-protector -pthread $(INCLUDES) $(LDFLAGS) -DNDEBUG $(DEFS)
-STRIP=strip --strip-all
+#CFLAGS=-Wall -O3 -fno-unroll-loops -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+#STRIP=strip --strip-all
 
 # Uncomment for a debug build
-#CFLAGS=-Wall -g -pthread $(INCLUDES) $(LDFLAGS) -DZT_TRACE -DZT_LOG_STDOUT $(DEFS)
-#STRIP=echo
+CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE -DZT_LOG_STDOUT $(DEFS)
+STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
@@ -21,7 +20,7 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 # separate binaries for the RedHat and Debian universes to distribute via
 # auto-update. This way we get one Linux binary for all systems of a given
 # architecture.
-LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a -lm
+LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a -lm -ldl
 
 include objects.mk
 

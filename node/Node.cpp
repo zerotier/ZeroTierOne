@@ -229,6 +229,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 						outp.append(network->id());
 						outp.append((uint16_t)netconf.length());
 						outp.append(netconf.data(),netconf.length());
+						outp.compress();
 						_r->sw->send(outp,true);
 					}
 				}
@@ -408,7 +409,6 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
-		uint64_t lastAutoconfigureCheck = 0;
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastMulticastAnnounceAll = 0;
@@ -418,39 +418,34 @@ Node::ReasonForTermination Node::run()
 
 		while (!impl->terminateNow) {
 			uint64_t now = Utils::now();
-			bool pingAll = false; // set to true to force a ping of *all* known direct links
+			bool resynchronize = false;
 
 			// Detect sleep/wake by looking for delay loop pauses that are longer
 			// than we intended to pause.
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {
-				lastNetworkFingerprintCheck = 0; // force network environment check
-				lastMulticastCheck = 0; // force multicast group check on taps
-				pingAll = true;
-
+				resynchronize = true;
 				LOG("probable suspend/resume detected, pausing a moment for things to settle...");
 				Thread::sleep(ZT_SLEEP_WAKE_SETTLE_TIME);
 			}
 
 			// Periodically check our network environment, sending pings out to all
 			// our direct links if things look like we got a different address.
-			if ((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY) {
+			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
 				lastNetworkFingerprintCheck = now;
 				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint();
 				if (fp != networkConfigurationFingerprint) {
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
-					pingAll = true;
-					lastAutoconfigureCheck = 0; // check autoconf after network config change
-					lastMulticastCheck = 0; // check multicast group membership after network config change
-					_r->nc->whackAllTaps(); // call whack() on all tap devices
+					resynchronize = true;
+					_r->nc->whackAllTaps(); // call whack() on all tap devices -- hack, might go away
 				}
 			}
 
 			// Periodically check for changes in our local multicast subscriptions and broadcast
 			// those changes to peers.
-			if ((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD) {
+			if ((resynchronize)||((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD)) {
 				lastMulticastCheck = now;
-				bool announceAll = ((now - lastMulticastAnnounceAll) >= ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD);
+				bool announceAll = ((resynchronize)||((now - lastMulticastAnnounceAll) >= ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD));
 				try {
 					std::map< SharedPtr<Network>,std::set<MulticastGroup> > toAnnounce;
 					{
@@ -478,12 +473,13 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
+			if ((resynchronize)||((now - lastPingCheck) >= ZT_PING_CHECK_DELAY)) {
 				lastPingCheck = now;
 				try {
 					if (_r->topology->amSupernode()) {
-						// Supernodes do not ping anyone but each other. They also don't
-						// send firewall openers, since they aren't ever firewalled.
+						// Supernodes are so super they don't even have to ping out. Everyone
+						// comes to them! They're also never firewalled, so they don't
+						// send firewall openers.
 						std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 						for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
 							if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)
@@ -492,8 +488,8 @@ Node::ReasonForTermination Node::run()
 					} else {
 						std::vector< SharedPtr<Peer> > needPing,needFirewallOpener;
 
-						if (pingAll) {
-							_r->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(needPing));
+						if (resynchronize) {
+							_r->topology->eachPeer(Topology::CollectPeersWithDirectPath(needPing));
 						} else {
 							_r->topology->eachPeer(Topology::CollectPeersThatNeedPing(needPing));
 							_r->topology->eachPeer(Topology::CollectPeersThatNeedFirewallOpener(needFirewallOpener));

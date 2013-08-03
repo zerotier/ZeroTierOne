@@ -80,7 +80,7 @@ class Network : NonCopyable
 
 public:
 	/**
-	 * A certificate of network membership
+	 * A certificate of network membership for private network participation
 	 */
 	class Certificate : private Dictionary
 	{
@@ -237,7 +237,10 @@ public:
 		 */
 		inline Certificate certificateOfMembership() const
 		{
-			return Certificate(get("com",""));
+			const_iterator cm(find("com"));
+			if (cm == end())
+				return Certificate();
+			else return Certificate(cm->second);
 		}
 
 		/**
@@ -321,6 +324,16 @@ public:
 	 * @return Address of network's controlling node
 	 */
 	inline Address controller() throw() { return Address(_id >> 24); }
+
+	/**
+	 * @return Network ID in hexadecimal form
+	 */
+	inline std::string toString()
+	{
+		char buf[64];
+		sprintf(buf,"%.16llx",(unsigned long long)_id);
+		return std::string(buf);
+	}
 
 	/**
 	 * @return True if network is open (no membership required)
@@ -407,12 +420,16 @@ private:
 	const RuntimeEnvironment *_r;
 
 	EthernetTap _tap;
+
 	std::set<MulticastGroup> _multicastGroups;
 	std::map<Address,Certificate> _membershipCertificates;
+
 	Config _configuration;
 	Certificate _myCertificate;
-	uint64_t _lastConfigUpdate;
+
 	uint64_t _id;
+	volatile uint64_t _lastConfigUpdate;
+
 	Mutex _lock;
 
 	AtomicCounter __refCount;

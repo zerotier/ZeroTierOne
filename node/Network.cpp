@@ -57,7 +57,8 @@ static const std::string _DELTA_PREFIX("~");
 bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) const
 {
 	// Note: optimization probably needed here, probably via some kind of
-	// memoization / dynamic programming.
+	// memoization / dynamic programming. But make it work first, then make
+	// it fast.
 
 	for(const_iterator myField(begin());myField!=end();++myField) {
 		if (!((myField->first.length() > 1)&&(myField->first[0] == '~'))) { // ~fields are max delta range specs
@@ -104,8 +105,8 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	throw(std::runtime_error) :
 	_r(renv),
 	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,this),
-	_lastConfigUpdate(0),
-	_id(id)
+	_id(id),
+	_lastConfigUpdate(0)
 {
 }
 
@@ -143,20 +144,23 @@ bool Network::isAllowed(const Address &peer) const
 		return _myCertificate.qualifyMembership(pc->second);
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
-		return false;
 	} catch ( ... ) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer.toString().c_str());
-		return false;
 	}
+	return false;
 }
 
 void Network::clean()
 {
 	Mutex::Lock _l(_lock);
-	for(std::map<Address,Certificate>::iterator i=(_membershipCertificates.begin());i!=_membershipCertificates.end();) {
-		if (_myCertificate.qualifyMembership(i->second))
-			++i;
-		else _membershipCertificates.erase(i++);
+	if (_configuration.isOpen())
+		_membershipCertificates.clear();
+	else {
+		for(std::map<Address,Certificate>::iterator i=(_membershipCertificates.begin());i!=_membershipCertificates.end();) {
+			if (_myCertificate.qualifyMembership(i->second))
+				++i;
+			else _membershipCertificates.erase(i++);
+		}
 	}
 }
 

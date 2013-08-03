@@ -298,6 +298,20 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 				if (_r->topology->isSupernode(source()))
 					_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,Identity(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY))),&PacketDecoder::_CBaddPeerFromWhois,const_cast<void *>((const void *)_r));
 				break;
+			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
+				SharedPtr<Network> nw(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
+				if ((nw)&&(nw->controller() == source())) {
+					unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
+					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
+					if (dict.length()) {
+						Network::Config netconf(dict);
+						if ((netconf.networkId() == nw->id())&&(netconf.peerAddress() == _r->identity.address())) { // sanity check
+							LOG("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
+							nw->setConfiguration(netconf);
+						}
+					}
+				}
+			}	break;
 			default:
 				//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
 				break;
