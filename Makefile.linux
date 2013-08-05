@@ -24,11 +24,15 @@ LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a -lm -ldl
 
 include objects.mk
 
-all:	one launcher
+all:	one cli launcher
 
 one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
+
+cli:	$(OBJS)
+	$(CXX) $(CXXFLAGS) -o zerotier-cli cli.cpp $(OBJS) $(LIBS)
+	$(STRIP) zerotier-cli
 
 selftest:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)

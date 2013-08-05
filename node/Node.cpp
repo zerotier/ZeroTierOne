@@ -426,7 +426,7 @@ Node::ReasonForTermination Node::run()
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {
 				resynchronize = true;
 				LOG("probable suspend/resume detected, pausing a moment for things to settle...");
-				Thread::sleep(ZT_SLEEP_WAKE_SETTLE_TIME);
+				Thread<Node>::sleep(ZT_SLEEP_WAKE_SETTLE_TIME);
 			}
 
 			// Periodically check our network environment, sending pings out to all

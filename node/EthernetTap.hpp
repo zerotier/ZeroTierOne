@@ -51,7 +51,7 @@ class RuntimeEnvironment;
 /**
  * System ethernet tap device
  */
-class EthernetTap : protected Thread
+class EthernetTap
 {
 public:
 	/**
@@ -79,7 +79,7 @@ public:
 	 *
 	 * This may block for a few seconds while thread exits.
 	 */
-	virtual ~EthernetTap();
+	~EthernetTap();
 
 	/**
 	 * Perform OS dependent actions on network configuration change detection
@@ -169,8 +169,10 @@ public:
 	 */
 	bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
-protected:
-	virtual void main()
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
 		throw();
 
 private:
@@ -178,6 +180,7 @@ private:
 	const unsigned int _mtu;
 
 	const RuntimeEnvironment *_r;
+	Thread<EthernetTap> _thread;
 
 	std::set<InetAddress> _ips;
 	Mutex _ips_m;

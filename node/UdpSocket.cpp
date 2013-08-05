@@ -55,7 +55,6 @@ UdpSocket::UdpSocket(
 	void (*packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int),
 	void *arg)
 	throw(std::runtime_error) :
-	Thread(),
 	_packetHandler(packetHandler),
 	_arg(arg),
 	_localPort(localPort),
@@ -121,7 +120,7 @@ UdpSocket::UdpSocket(
 		}
 	}
 
-	start();
+	_thread = Thread<UdpSocket>::start(this);
 }
 
 UdpSocket::~UdpSocket()
@@ -146,7 +145,7 @@ bool UdpSocket::send(const InetAddress &to,const void *data,unsigned int len,int
 	}
 }
 
-void UdpSocket::main()
+void UdpSocket::threadMain()
 	throw()
 {
 	char buf[32768];

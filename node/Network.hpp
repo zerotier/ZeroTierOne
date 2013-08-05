@@ -99,10 +99,10 @@ public:
 		{
 		}
 
-		/**
-		 * @return Read-only underlying dictionary
-		 */
-		inline const Dictionary &dictionary() const { return *this; }
+		inline std::string toString() const
+		{
+			return Dictionary::toString();
+		}
 
 		inline void setNetworkId(uint64_t id)
 		{
@@ -208,22 +208,15 @@ public:
 		{
 		}
 
-		inline void setNetworkId(uint64_t id)
+		inline std::string toString() const
 		{
-			char buf[32];
-			sprintf(buf,"%.16llx",(unsigned long long)id);
-			(*this)["nwid"] = buf;
+			return Dictionary::toString();
 		}
 
 		inline uint64_t networkId() const
 			throw(std::invalid_argument)
 		{
 			return strtoull(get("nwid").c_str(),(char **)0,16);
-		}
-
-		inline void setPeerAddress(Address &a)
-		{
-			(*this)["peer"] = a.toString();
 		}
 
 		inline Address peerAddress() const
@@ -264,41 +257,6 @@ public:
 			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
 				sa.insert(InetAddress(*i));
 			return sa;
-		}
-
-		/**
-		 * Set static IPv4 and IPv6 addresses
-		 *
-		 * This sets the ipv4Static and ipv6Static fields to comma-delimited
-		 * lists of assignments. The port field in InetAddress must be the
-		 * number of bits in the netmask.
-		 *
-		 * @param begin Start of container or array of addresses (InetAddress)
-		 * @param end End of container or array of addresses (InetAddress)
-		 * @tparam I Type of container or array
-		 */
-		template<typename I>
-		inline void setStaticInetAddresses(const I &begin,const I &end)
-		{
-			std::string v4;
-			std::string v6;
-			for(I i(begin);i!=end;++i) {
-				if (i->isV4()) {
-					if (v4.length())
-						v4.push_back(',');
-					v4.append(i->toString());
-				} else if (i->isV6()) {
-					if (v6.length())
-						v6.push_back(',');
-					v6.append(i->toString());
-				}
-			}
-			if (v4.length())
-				(*this)["ipv4Static"] = v4;
-			else erase("ipv4Static");
-			if (v6.length())
-				(*this)["ipv6Static"] = v6;
-			else erase("ipv6Static");
 		}
 	};
 

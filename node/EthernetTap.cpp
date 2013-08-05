@@ -187,7 +187,7 @@ EthernetTap::EthernetTap(
 
 	TRACE("tap %s created",_dev);
 
-	start();
+	_thread = Thread<EthernetTap>::start(this);
 }
 #endif // __LINUX__
 
@@ -271,14 +271,14 @@ EthernetTap::EthernetTap(
 
 	::pipe(_shutdownSignalPipe);
 
-	start();
+	_thread = Thread<EthernetTap>::start(this);
 }
 #endif // __APPLE__
 
 EthernetTap::~EthernetTap()
 {
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	join();
+	Thread<EthernetTap>::join(_thread);
 	::close(_fd);
 }
 
@@ -549,7 +549,7 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 }
 #endif // __APPLE__
 
-void EthernetTap::main()
+void EthernetTap::threadMain()
 	throw()
 {
 	fd_set readfds,nullfds;

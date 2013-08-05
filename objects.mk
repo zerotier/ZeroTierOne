@@ -21,7 +21,6 @@ OBJS=\
 	node/Service.o \
 	node/Switch.o \
 	node/SysEnv.o \
-	node/Thread.o \
 	node/Topology.o \
 	node/UdpSocket.o \
 	node/Utils.o

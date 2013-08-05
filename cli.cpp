@@ -113,7 +113,7 @@ int main(int argc,char **argv)
 
 	lastResultTime = Utils::now();
 	while ((Utils::now() - lastResultTime) < 300)
-		Thread::sleep(50);
+		Thread<void>::sleep(50);
 
 	if (!numResults) {
 		fprintf(stdout,"ERROR: no results received. Is ZeroTier One running?"ZT_EOL_S);

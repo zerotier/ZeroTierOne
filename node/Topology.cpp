@@ -38,7 +38,6 @@ namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath)
 	throw(std::runtime_error) :
-	Thread(),
 	_r(renv),
 	_amSupernode(false)
 {
@@ -55,7 +54,7 @@ Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath)
 
 	Utils::lockDownFile(dbpath,false); // node.db caches secrets
 
-	start();
+	_thread = Thread<Topology>::start(this);
 }
 
 Topology::~Topology()
@@ -68,10 +67,7 @@ Topology::~Topology()
 		_peerDeepVerifyJobs.back().type = _PeerDeepVerifyJob::EXIT_THREAD;
 	}
 	_peerDeepVerifyJobs_c.signal();
-
-	while (running())
-		Thread::sleep(10); // wait for thread to terminate without join()
-
+	Thread<Topology>::join(_thread);
 	KISSDB_close(&_dbm);
 }
 
@@ -223,7 +219,7 @@ void Topology::clean()
 	_peerDeepVerifyJobs_c.signal();
 }
 
-void Topology::main()
+void Topology::threadMain()
 	throw()
 {
 	for(;;) {

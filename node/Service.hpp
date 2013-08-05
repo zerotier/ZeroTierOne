@@ -60,7 +60,7 @@ class RuntimeEnvironment;
  * logged via the standard Logger instance. If the subprocess dies, an
  * attempt is made to restart it every second.
  */
-class Service : protected Thread
+class Service
 {
 public:
 	/**
@@ -78,7 +78,7 @@ public:
 	        void (*handler)(void *,Service &,const Dictionary &),
 	        void *arg);
 
-	virtual ~Service();
+	~Service();
 
 	/**
 	 * Send a message to service subprocess
@@ -106,12 +106,15 @@ public:
 		return (_pid > 0);
 	}
 
-protected:
-	virtual void main()
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
 		throw();
 
 private:
 	const RuntimeEnvironment *_r;
+	Thread<Service> _thread;
 	std::string _path;
 	std::string _name;
 	void *_arg;

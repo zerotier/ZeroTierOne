@@ -40,7 +40,7 @@ namespace ZeroTier {
  *
  * The socket listens in a background thread and sends packets to Switch.
  */
-class UdpSocket : protected Thread
+class UdpSocket
 {
 public:
 	/**
@@ -61,7 +61,7 @@ public:
 		void *arg)
 		throw(std::runtime_error);
 
-	virtual ~UdpSocket();
+	~UdpSocket();
 
 	/**
 	 * @return Locally bound port
@@ -87,11 +87,14 @@ public:
 	bool send(const InetAddress &to,const void *data,unsigned int len,int hopLimit)
 		throw();
 
-protected:
-	virtual void main()
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
 		throw();
 
 private:
+	Thread<UdpSocket> _thread;
 	void (*_packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int);
 	void *_arg;
 	int _localPort;

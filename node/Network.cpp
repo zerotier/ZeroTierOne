@@ -108,6 +108,8 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	_id(id),
 	_lastConfigUpdate(0)
 {
+	if (controller() == _r->identity.address())
+		throw std::runtime_error("configuration error: cannot add a network for which I am the netconf master");
 }
 
 Network::~Network()
@@ -118,6 +120,7 @@ void Network::setConfiguration(const Network::Config &conf)
 {
 	Mutex::Lock _l(_lock);
 	if ((conf.networkId() == _id)&&(conf.peerAddress() == _r->identity.address())) { // sanity check
+		TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
 		_configuration = conf;
 		_myCertificate = conf.certificateOfMembership();
 		_lastConfigUpdate = Utils::now();
@@ -126,6 +129,11 @@ void Network::setConfiguration(const Network::Config &conf)
 
 void Network::requestConfiguration()
 {
+	if (controller() == _r->identity.address()) {
+		LOG("unable to request network configuration for network %.16llx: I am the network master, cannot query self",(unsigned long long)_id);
+		return;
+	}
+	TRACE("requesting netconf for network %.16llx from netconf master %s",(unsigned long long)_id,controller().toString().c_str());
 	Packet outp(controller(),_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	_r->sw->send(outp,true);

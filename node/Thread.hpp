@@ -28,62 +28,104 @@
 #ifndef _ZT_THREAD_HPP
 #define _ZT_THREAD_HPP
 
-#include "NonCopyable.hpp"
+#include <stdexcept>
+
+#include "Constants.hpp"
 #include "AtomicCounter.hpp"
+
+#ifdef __WINDOWS__
+
+todo need windows;
+
+#else
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+#include <unistd.h>
 
 namespace ZeroTier {
 
+template<typename C>
+static void *___zt_threadMain(void *instance)
+{
+	try {
+		((C *)instance)->threadMain();
+	} catch ( ... ) {}
+	return (void *)0;
+}
+
 /**
- * Wrapper for OS-dependent thread functions like pthread_create, etc.
+ * A thread of a given class type
+ *
+ * @tparam C Class using Thread
  */
-class Thread : NonCopyable
+template<typename C>
+class Thread
 {
 public:
-	Thread();
-	virtual ~Thread();
+	Thread()
+		throw()
+	{
+		memset(&_tid,0,sizeof(_tid));
+	}
+
+	Thread(const Thread &t)
+		throw()
+	{
+		memcpy(&_tid,&(t._tid),sizeof(_tid));
+	}
+
+	inline Thread &operator=(const Thread &t)
+		throw()
+	{
+		memcpy(&_tid,&(t._tid),sizeof(_tid));
+		return *this;
+	}
 
 	/**
-	 * Start thread -- can only be called once
-	 */
-	void start();
-
-	/**
-	 * Wait for thread to terminate
+	 * Start a new thread
 	 *
-	 * More than one thread should not simultaneously use join().
+	 * @param instance Instance whose threadMain() method gets called by new thread
+	 * @return Thread identifier
+	 * @throws std::runtime_error Unable to create thread
 	 */
-	void join();
+	static inline Thread start(C *instance)
+		throw(std::runtime_error)
+	{
+		Thread t;
+		if (pthread_create(&t._tid,(const pthread_attr_t *)0,&___zt_threadMain<C>,instance))
+			throw std::runtime_error("pthread_create() failed, unable to create thread");
+		return t;
+	}
 
 	/**
-	 * @return True if thread is running
+	 * Join to a thread, waiting for it to terminate
+	 *
+	 * @param t Thread to join
 	 */
-	inline bool running() const { return (*_running > 0); }
-
-	/**
-	 * Internal bounce method; do not call or override
-	 */
-	void __intl_run();
+	static inline void join(const Thread &t)
+	{
+		pthread_join(t._tid,(void **)0);
+	}
 
 	/**
 	 * Sleep the current thread
 	 *
-	 * @param ms Milliseconds to sleep
+	 * @param ms Number of milliseconds to sleep
 	 */
-	static void sleep(unsigned long ms);
-
-protected:
-	/**
-	 * Override to set a thread main function
-	 */
-	virtual void main()
-		throw();
+	static inline void sleep(unsigned long ms)
+	{
+		usleep(ms * 1000);
+	}
 
 private:
-	void *_impl;
-	AtomicCounter _running;
-	volatile bool _notInit;
+	pthread_t _tid;
 };
 
 } // namespace ZeroTier
+
+#endif // __WINDOWS__ / !__WINDOWS__
 
 #endif

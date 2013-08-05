@@ -55,7 +55,7 @@ class RuntimeEnvironment;
 /**
  * Database of network topology
  */
-class Topology : protected Thread
+class Topology
 {
 public:
 	/**
@@ -74,7 +74,7 @@ public:
 	Topology(const RuntimeEnvironment *renv,const char *dbpath)
 		throw(std::runtime_error);
 
-	virtual ~Topology();
+	~Topology();
 
 	/**
 	 * Set up supernodes for this network
@@ -276,8 +276,10 @@ public:
 		std::vector< SharedPtr<Peer> > &_v;
 	};
 
-protected:
-	virtual void main()
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
 		throw();
 
 private:
@@ -297,6 +299,7 @@ private:
 	};
 
 	const RuntimeEnvironment *const _r;
+	Thread<Topology> _thread;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;
