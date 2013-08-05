@@ -65,7 +65,7 @@ public:
  		_receiveTime(Utils::now()),
  		_localPort(localPort),
  		_remoteAddress(remoteAddress),
- 		_step(DECODE_STEP_WAITING_FOR_SENDER_LOOKUP),
+ 		_step(DECODE_WAITING_FOR_SENDER_LOOKUP),
  		__refCount()
 	{
 	}
@@ -131,8 +131,8 @@ private:
 	InetAddress _remoteAddress;
 
 	enum {
-		DECODE_STEP_WAITING_FOR_SENDER_LOOKUP, // on initial receipt, we need peer's identity
-		DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP // this only applies to MULTICAST_FRAME
+		DECODE_WAITING_FOR_SENDER_LOOKUP, // on initial receipt, we need peer's identity
+		DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP,
 	} _step;
 
 	AtomicCounter __refCount;

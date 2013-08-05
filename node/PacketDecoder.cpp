@@ -35,6 +35,21 @@
 #include "Filter.hpp"
 #include "Service.hpp"
 
+/*
+ * The big picture:
+ *
+ * tryDecode() gets called for a given fully-assembled packet until it returns
+ * true or the packet's time to live has been exceeded. The state machine must
+ * therefore be re-entrant if it ever returns false. Take care here!
+ *
+ * Stylistic note:
+ *
+ * There's a lot of unnecessary if nesting. It's mostly to allow TRACE to
+ * print informative messages on every possible reason something gets
+ * rejected or fails. Sometimes it also makes code more explicit and thus
+ * easier to understand.
+ */
+
 namespace ZeroTier {
 
 bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
@@ -50,14 +65,15 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 
 	SharedPtr<Peer> peer = _r->topology->getPeer(source());
 	if (peer) {
-		if (_step == DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP) {
-			// This means we've already decoded, decrypted, decompressed, and
-			// validated, and we're processing a MULTICAST_FRAME. We're waiting
-			// for a lookup on the frame's original submitter. So try again and
-			// see if we have it.
+		// Resume saved state?
+		if (_step == DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP) {
+			// In this state we have already authenticated and decrypted the
+			// packet and are waiting for the lookup of the original sender
+			// for a multicast frame. So check to see if we've got it.
 			return _doMULTICAST_FRAME(_r,peer);
 		}
 
+		// No saved state? Verify MAC before we proceed.
 		if (!hmacVerify(peer->macKey())) {
 			TRACE("dropped packet from %s(%s), HMAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
 			return true;
@@ -80,8 +96,9 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 
 		Packet::Verb v = verb();
 
-		// Validated packets that have passed HMAC can result in us learning a new
-		// path to this peer.
+		// Once a packet is determined to be basically valid, it can be used
+		// to passively learn a new network path to the sending peer. It
+		// also results in statistics updates.
 		peer->onReceive(_r,_localPort,_remoteAddress,hops(),v,Utils::now());
 
 		switch(v) {
@@ -89,7 +106,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				TRACE("NOP from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			case Packet::VERB_HELLO:
-				return _doHELLO(_r);
+				return _doHELLO(_r); // encrypted HELLO is technically allowed, but kind of pointless... :)
 			case Packet::VERB_ERROR:
 				return _doERROR(_r,peer);
 			case Packet::VERB_OK:
@@ -118,7 +135,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return true;
 		}
 	} else {
-		_step = DECODE_STEP_WAITING_FOR_SENDER_LOOKUP;
+		_step = DECODE_WAITING_FOR_SENDER_LOOKUP; // should already be this...
 		_r->sw->requestWhois(source());
 		return false;
 	}
@@ -213,27 +230,26 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 		uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 		Identity id(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
+		// Create a new candidate peer that we might decide to add to our
+		// database. We create it now since we want its keys to send replies
+		// even in the error case, and the code for keying is in Peer.
 		SharedPtr<Peer> candidate(new Peer(_r->identity,id));
 		candidate->setPathAddress(_remoteAddress,false);
 
-		// Initial sniff test
-		if (id.address().isReserved()) {
-			TRACE("rejected HELLO from %s(%s): identity has reserved address",source().toString().c_str(),_remoteAddress.toString().c_str());
+		// The initial sniff test... is the identity valid, and is it
+		// the sender's identity?
+		if ((id.address().isReserved())||(id.address() != source())) {
+#ifdef ZT_TRACE
+			if (id.address().isReserved()) {
+				TRACE("rejected HELLO from %s(%s): identity has reserved address",source().toString().c_str(),_remoteAddress.toString().c_str());
+			} else {
+				TRACE("rejected HELLO from %s(%s): identity is not for sender of packet (HELLO is a self-announcement)",source().toString().c_str(),_remoteAddress.toString().c_str());
+			}
+#endif
 			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_HELLO);
 			outp.append(packetId());
-			outp.append((unsigned char)Packet::ERROR_IDENTITY_INVALID);
-			outp.encrypt(candidate->cryptKey());
-			outp.hmacSet(candidate->macKey());
-			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			return true;
-		}
-		if (id.address() != source()) {
-			TRACE("rejected HELLO from %s(%s): identity is not for sender of packet (HELLO is a self-announcement)",source().toString().c_str(),_remoteAddress.toString().c_str());
-			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-			outp.append((unsigned char)Packet::VERB_HELLO);
-			outp.append(packetId());
-			outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
+			outp.append((unsigned char)((id.address().isReserved()) ? Packet::ERROR_IDENTITY_INVALID : Packet::ERROR_INVALID_REQUEST));
 			outp.encrypt(candidate->cryptKey());
 			outp.hmacSet(candidate->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
@@ -257,7 +273,9 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			return true;
 		}
 
-		// Otherwise we call addPeer() and set up a callback to handle the verdict
+		// Otherwise we call addPeer() and set up a callback to handle the verdict.
+		// Topology evaluates the peer in the background, possibly doing the entire
+		// expensive analysis before determining whether to add it to the database.
 		_CBaddPeerFromHello_Data *arg = new _CBaddPeerFromHello_Data;
 		arg->renv = _r;
 		arg->source = source();
@@ -288,19 +306,21 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 				TRACE("%s(%s): OK(HELLO), latency: %u",source().toString().c_str(),_remoteAddress.toString().c_str(),latency);
 				peer->setLatency(_remoteAddress,latency);
 			}	break;
-			case Packet::VERB_WHOIS:
-				// Right now we only query supernodes for WHOIS and only accept
-				// OK back from them. If we query other nodes, we'll have to
-				// do something to prevent WHOIS cache poisoning such as
-				// using the packet ID field in the OK packet to match with the
-				// original query. Technically we should be doing this anyway.
+			case Packet::VERB_WHOIS: {
 				TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
-				if (_r->topology->isSupernode(source()))
+				if (_r->topology->isSupernode(source())) {
+					// Right now, only supernodes are queried for WHOIS so we only
+					// accept OK(WHOIS) from supernodes. Otherwise peers could
+					// potentially cache-poison. A more elegant but memory-intensive
+					// solution would be to remember packet IDs of WHOIS requests.
 					_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,Identity(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY))),&PacketDecoder::_CBaddPeerFromWhois,const_cast<void *>((const void *)_r));
-				break;
+				}
+			} break;
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				SharedPtr<Network> nw(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
 				if ((nw)&&(nw->controller() == source())) {
+					// Only accept OK(NETWORK_CONFIG_REQUEST) from masters for
+					// networks we have.
 					unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
@@ -357,20 +377,38 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		SharedPtr<Peer> withPeer(_r->topology->getPeer(with));
-		if (withPeer) {
-			unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
-			unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
-			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
-				InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-				TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",source().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-				_r->sw->contact(withPeer,atAddr);
+		//
+		// At the moment, we only obey RENDEZVOUS if it comes from a designated
+		// supernode. If relay offloading is implemented to scale the net, this
+		// will need reconsideration.
+		//
+		// The reason is that RENDEZVOUS could technically be used to cause a
+		// peer to send a weird encrypted UDP packet to an arbitrary IP:port.
+		// The sender of RENDEZVOUS has no control over the content of this
+		// packet, but it's still maybe something we want to not allow just
+		// anyone to order due to possible DDOS or network forensic implications.
+		// So if we diversify relays, we'll need some way of deciding whether the
+		// sender is someone we should trust with a RENDEZVOUS hint. Or maybe
+		// we just need rate limiting to prevent DDOS and amplification attacks.
+		//
+		if (_r->topology->isSupernode(source())) {
+			Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			SharedPtr<Peer> withPeer(_r->topology->getPeer(with));
+			if (withPeer) {
+				unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
+				unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
+				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
+					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
+					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",source().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
+					_r->sw->contact(withPeer,atAddr);
+				} else {
+					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",source().toString().c_str(),_remoteAddress.toString().c_str());
+				}
 			} else {
-				TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",source().toString().c_str(),_remoteAddress.toString().c_str());
+				TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",source().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
 			}
 		} else {
-			TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",source().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
+			TRACE("ignored RENDEZVOUS from %s(%s): source not supernode",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped RENDEZVOUS from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
@@ -487,7 +525,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 						if (!originalSubmitter) {
 							TRACE("requesting WHOIS on original multicast frame submitter %s",originalSubmitterAddress.toString().c_str());
 							_r->sw->requestWhois(originalSubmitterAddress);
-							_step = DECODE_STEP_WAITING_FOR_ORIGINAL_SUBMITTER_LOOKUP;
+							_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP;
 							return false; // try again if/when we get OK(WHOIS)
 						} else if (Multicaster::verifyMulticastPacket(originalSubmitter->identity(),network->id(),fromMac,mg,etherType,dataAndSignature,datalen,dataAndSignature + datalen,signaturelen)) {
 							_r->multicaster->addToDedupHistory(mccrc,now);
@@ -538,7 +576,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 								//TRACE("terminating MULTICAST_FRAME propagation from %s(%s): max depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 							}
 						} else {
-							LOG("rejected MULTICAST_FRAME from %s(%s) due to failed signature check (claims original sender %s)",source().toString().c_str(),_remoteAddress.toString().c_str(),originalSubmitterAddress.toString().c_str());
+							LOG("rejected MULTICAST_FRAME from %s(%s) due to failed signature check (falsely claims origin %s)",source().toString().c_str(),_remoteAddress.toString().c_str(),originalSubmitterAddress.toString().c_str());
 						}
 					} else {
 						TRACE("dropped redundant MULTICAST_FRAME from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -575,9 +613,10 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 #ifndef __WINDOWS__
 		if (_r->netconfService) {
 			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-			std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
 
 			Dictionary request;
+			if (dictLen)
+				request["meta"] = std::string((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
 			request["type"] = "netconf-request";
 			request["peerId"] = peer->identity().toString(false);
 			sprintf(tmp,"%llx",(unsigned long long)nwid);
