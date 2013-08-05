@@ -97,11 +97,11 @@ public:
 	{
 		InetAddress v4(p->ipv4ActivePath(_now));
 		InetAddress v6(p->ipv6ActivePath(_now));
-		_P("200 listpeers %s %s %s %u",
+		_P("200 listpeers %s %s %s %d",
 			p->address().toString().c_str(),
 			((v4) ? v4.toString().c_str() : "(none)"),
 			((v6) ? v6.toString().c_str() : "(none)"),
-			(((v4)||(v6)) ? p->latency() : 0));
+			(((v4)||(v6)) ? (int)p->latency() : -1));
 	}
 
 private:
@@ -129,11 +129,20 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_r->topology->eachPeer(_DumpPeerStatistics(r));
 	} else if (cmd[0] == "listnetworks") {
 		Mutex::Lock _l(_networks_m);
+		_P("200 listnetworks <nwid> <type> <dev> <ips>");
 		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.begin());nw!=_networks.end();++nw) {
-			_P("200 listnetworks %llu %s %s",
-				nw->first,
+			std::string tmp;
+			std::set<InetAddress> ips(nw->second->tap().ips());
+			for(std::set<InetAddress>::iterator i(ips.begin());i!=ips.end();++i) {
+				if (tmp.length())
+					tmp.push_back(',');
+				tmp.append(i->toString());
+			}
+			_P("200 listnetworks %.16llx %s %s %s",
+				(unsigned long long)nw->first,
+				(nw->second->isOpen() ? "public" : "private"),
 				nw->second->tap().deviceName().c_str(),
-				(nw->second->isOpen() ? "public" : "private"));
+				tmp.c_str());
 		}
 	} else if (cmd[0] == "join") {
 		_P("404 join Not implemented yet.");
@@ -142,6 +151,8 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 	} else {
 		_P("404 %s No such command. Use 'help' for help.",cmd[0].c_str());
 	}
+
+	r.push_back(std::string()); // terminate with empty line
 
 	return r;
 }
@@ -154,8 +165,9 @@ std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMe
 	std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets;
 	Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> packet;
 
-	packet.setSize(16); // HMAC and IV
+	packet.setSize(16); // room for HMAC and IV
 	packet.append((uint32_t)(conversationId & 0xffffffff));
+
 	for(unsigned int i=0;i<payload.size();++i) {
 		packet.append(payload[i]); // will throw if too big
 		packet.append((unsigned char)0);
@@ -174,7 +186,7 @@ std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMe
 
 			packets.push_back(packet);
 
-			packet.setSize(16); // HMAC and IV
+			packet.setSize(16); // room for HMAC and IV
 			packet.append((uint32_t)(conversationId & 0xffffffff));
 		}
 	}
@@ -211,7 +223,7 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 			unsigned int eos = i;
 			while ((eos < pll)&&(pl[eos]))
 				++eos;
-			if (eos > i) {
+			if (eos >= i) {
 				payload.push_back(std::string(pl + i,eos - i));
 				i = eos + 1;
 			} else break;

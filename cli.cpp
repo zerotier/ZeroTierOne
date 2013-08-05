@@ -37,6 +37,7 @@
 #include "node/Constants.hpp"
 #include "node/Utils.hpp"
 #include "node/Thread.hpp"
+#include "node/Condition.hpp"
 
 using namespace ZeroTier;
 
@@ -51,14 +52,15 @@ static void printHelp(FILE *out,const char *exename)
 	fprintf(out,"Use the 'help' command to get help from ZeroTier One itself."ZT_EOL_S);
 }
 
-static volatile uint64_t lastResultTime = 0ULL;
 static volatile unsigned int numResults = 0;
+static Condition doneCondition;
 
 static void resultHandler(void *arg,unsigned long id,const char *line)
 {
-	lastResultTime = Utils::now();
 	++numResults;
-	fprintf(stdout,"%s"ZT_EOL_S,line);
+	if (strlen(line))
+		fprintf(stdout,"%s"ZT_EOL_S,line);
+	else doneCondition.signal();
 }
 
 int main(int argc,char **argv)
@@ -118,9 +120,7 @@ int main(int argc,char **argv)
 	Node::LocalClient client(authToken.c_str(),&resultHandler,(void *)0);
 	client.send(command.c_str());
 
-	lastResultTime = Utils::now();
-	while ((Utils::now() - lastResultTime) < 300)
-		Thread<void>::sleep(50);
+	doneCondition.wait(1000);
 
 	if (!numResults) {
 		fprintf(stdout,"ERROR: no results received. Is ZeroTier One running?"ZT_EOL_S);

@@ -98,7 +98,7 @@ private:
 	void (*_packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int);
 	void *_arg;
 	int _localPort;
-	int _sock;
+	volatile int _sock;
 	bool _v6;
 	Mutex _sendLock;
 };

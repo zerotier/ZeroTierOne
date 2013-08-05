@@ -52,19 +52,6 @@ class RuntimeEnvironment;
 
 /**
  * Node configuration endpoint
- *
- * Packet format for local UDP configuration packets:
- *  [16] first 16 bytes of HMAC-SHA-256 of payload
- *  [ -- begin HMAC'ed envelope -- ]
- *  [8] random initialization vector
- *  [ -- begin cryptographic envelope -- ]
- *  [4] arbitrary tag, echoed in response
- *  [...] payload
- *
- * For requests, the payload consists of a single ASCII command. For
- * responses, the payload consists of one or more response lines delimited
- * by NULL (0) characters. The tag field is replicated in the result
- * packet.
  */
 class NodeConfig
 {

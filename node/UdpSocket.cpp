@@ -125,7 +125,13 @@ UdpSocket::UdpSocket(
 
 UdpSocket::~UdpSocket()
 {
-	close(_sock);
+	int s = _sock;
+	_sock = 0;
+	if (s > 0) {
+		::shutdown(s,SHUT_RDWR);
+		::close(s);
+	}
+	Thread<UdpSocket>::join(_thread);
 }
 
 bool UdpSocket::send(const InetAddress &to,const void *data,unsigned int len,int hopLimit)
@@ -148,19 +154,22 @@ bool UdpSocket::send(const InetAddress &to,const void *data,unsigned int len,int
 void UdpSocket::threadMain()
 	throw()
 {
-	char buf[32768];
+	char buf[65536];
 	InetAddress from;
 	socklen_t salen;
 	int n;
 
-	for(;;) {
+	while (_sock > 0) {
 		salen = from.saddrSpaceLen();
 		n = (int)recvfrom(_sock,buf,sizeof(buf),0,from.saddr(),&salen);
 		if (n < 0) {
 			if ((errno != EINTR)&&(errno != ETIMEDOUT))
 				break;
-		} else if (n > 0)
-			_packetHandler(this,_arg,from,buf,(unsigned int)n);
+		} else if (n > 0) {
+			try {
+				_packetHandler(this,_arg,from,buf,(unsigned int)n);
+			} catch ( ... ) {} // should never be thrown from here anyway...
+		}
 	}
 }
 
