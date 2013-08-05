@@ -69,9 +69,10 @@ int main(int argc,char **argv)
 	}
 
 	std::string authToken;
-
+	std::string command;
+	bool pastSwitches = false;
 	for(int i=1;i<argc;++i) {
-		if (argv[i][0] == '-') {
+		if ((argv[i][0] == '-')&&(!pastSwitches)) {
 			if (strlen(argv[i]) <= 1) {
 				printHelp(stdout,argv[0]);
 				return -1;
@@ -89,6 +90,11 @@ int main(int argc,char **argv)
 				default:
 					return -1;
 			}
+		} else {
+			pastSwitches = true;
+			if (command.length())
+				command.push_back(' ');
+			command.append(argv[i]);
 		}
 	}
 
@@ -109,7 +115,8 @@ int main(int argc,char **argv)
 		return -2;
 	}
 
-	Node::LocalClient(authToken.c_str(),&resultHandler,(void *)0);
+	Node::LocalClient client(authToken.c_str(),&resultHandler,(void *)0);
+	client.send(command.c_str());
 
 	lastResultTime = Utils::now();
 	while ((Utils::now() - lastResultTime) < 300)
