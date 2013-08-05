@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include "NonCopyable.hpp"
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -37,7 +39,7 @@ class RuntimeEnvironment;
 /**
  * Local system environment monitoring utilities
  */
-class SysEnv
+class SysEnv : NonCopyable
 {
 public:
 	SysEnv(const RuntimeEnvironment *renv);

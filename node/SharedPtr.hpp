@@ -43,6 +43,9 @@ namespace ZeroTier {
  *
  * Because this is introspective, it is safe to apply to a naked pointer
  * multiple times provided there is always at least one holding SharedPtr.
+ *
+ * Once C++11 is ubiquitous, this and a few other things like Thread might get
+ * torn out for their standard equivalents.
  */
 template<typename T>
 class SharedPtr

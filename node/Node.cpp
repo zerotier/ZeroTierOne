@@ -406,6 +406,7 @@ Node::ReasonForTermination Node::run()
 #endif
 
 	try {
+		uint64_t lastNetworkAutoconfCheck = 0;
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
@@ -438,6 +439,17 @@ Node::ReasonForTermination Node::run()
 					networkConfigurationFingerprint = fp;
 					resynchronize = true;
 					_r->nc->whackAllTaps(); // call whack() on all tap devices -- hack, might go away
+				}
+			}
+
+			// Request configuration for unconfigured nets, or nets with out of date
+			// configuration information.
+			if ((resynchronize)||((now - lastNetworkAutoconfCheck) >= ZT_NETWORK_AUTOCONF_CHECK_DELAY)) {
+				lastNetworkAutoconfCheck = now;
+				std::vector< SharedPtr<Network> > nets(_r->nc->networks());
+				for(std::vector< SharedPtr<Network> >::iterator n(nets.begin());n!=nets.end();++n) {
+					if ((now - (*n)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)
+						(*n)->requestConfiguration();
 				}
 			}
 
@@ -477,9 +489,9 @@ Node::ReasonForTermination Node::run()
 				lastPingCheck = now;
 				try {
 					if (_r->topology->amSupernode()) {
-						// Supernodes are so super they don't even have to ping out. Everyone
-						// comes to them! They're also never firewalled, so they don't
-						// send firewall openers.
+						// Supernodes are so super they don't even have to ping out, since
+						// all nodes ping them. They're also never firewalled so they
+						// don't need firewall openers. They just ping each other.
 						std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 						for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
 							if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)
@@ -532,7 +544,7 @@ Node::ReasonForTermination Node::run()
 				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
 				_r->mainLoopWaitCondition.wait(delay);
-				lastDelayDelta = (long)(Utils::now() - start) - (long)delay;
+				lastDelayDelta = (long)(Utils::now() - start) - (long)delay; // used to detect sleep/wake
 			} catch (std::exception &exc) {
 				LOG("unexpected exception running Switch doTimerTasks: %s",exc.what());
 			} catch ( ... ) {

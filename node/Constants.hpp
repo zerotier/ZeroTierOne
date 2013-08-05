@@ -275,6 +275,24 @@ error_no_ZT_ARCH_defined;
 #define ZT_PEER_DIRECT_PING_DELAY 120000
 
 /**
+ * Delay in ms between firewall opener packets to direct links
+ *
+ * This should be lower than the UDP conversation entry timeout in most
+ * stateful firewalls.
+ */
+#define ZT_FIREWALL_OPENER_DELAY 50000
+
+/**
+ * Delay between requests for updated network autoconf information
+ */
+#define ZT_NETWORK_AUTOCONF_DELAY 120000
+
+/**
+ * Delay in core loop between checks of network autoconf newness
+ */
+#define ZT_NETWORK_AUTOCONF_CHECK_DELAY 7000
+
+/**
  * Minimum delay in Node service loop
  * 
  * This is the shortest of the check delays/periods.
@@ -287,14 +305,6 @@ error_no_ZT_ARCH_defined;
  * A link that hasn't spoken in this long is simply considered inactive.
  */
 #define ZT_PEER_LINK_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 1000)
-
-/**
- * Delay in ms between firewall opener packets to direct links
- *
- * This should be lower than the UDP conversation entry timeout in most
- * stateful firewalls.
- */
-#define ZT_FIREWALL_OPENER_DELAY 50000
 
 /**
  * IP hops (a.k.a. TTL) to set for firewall opener packets
