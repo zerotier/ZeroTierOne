@@ -46,8 +46,7 @@
  *
  * There's a lot of unnecessary if nesting. It's mostly to allow TRACE to
  * print informative messages on every possible reason something gets
- * rejected or fails. Sometimes it also makes code more explicit and thus
- * easier to understand.
+ * rejected or fails.
  */
 
 namespace ZeroTier {
@@ -79,6 +78,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			return true;
 		}
 
+		// If MAC authentication passed, decrypt and uncompress
 		if (encrypted()) {
 			decrypt(peer->cryptKey());
 		} else {
@@ -88,7 +88,6 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			// packets being mistakenly sent in the clear.
 			TRACE("ODD: %s from %s(%s) wasn't encrypted",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
-
 		if (!uncompress()) {
 			TRACE("dropped packet from %s(%s), compressed data invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
@@ -146,41 +145,45 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 	_CBaddPeerFromHello_Data *req = (_CBaddPeerFromHello_Data *)arg;
 	const RuntimeEnvironment *_r = req->renv;
 
-	switch(result) {
-		case Topology::PEER_VERIFY_ACCEPTED_NEW:
-		case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
-		case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS: {
-			_r->sw->doAnythingWaitingForPeer(p);
+	try {
+		switch(result) {
+			case Topology::PEER_VERIFY_ACCEPTED_NEW:
+			case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
+			case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS: {
+				_r->sw->doAnythingWaitingForPeer(p);
 
-			Packet outp(req->source,_r->identity.address(),Packet::VERB_OK);
-			outp.append((unsigned char)Packet::VERB_HELLO);
-			outp.append(req->helloPacketId);
-			outp.append(req->helloTimestamp);
-			outp.encrypt(p->cryptKey());
-			outp.hmacSet(p->macKey());
-			_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
-		}	break;
+				Packet outp(req->source,_r->identity.address(),Packet::VERB_OK);
+				outp.append((unsigned char)Packet::VERB_HELLO);
+				outp.append(req->helloPacketId);
+				outp.append(req->helloTimestamp);
+				outp.encrypt(p->cryptKey());
+				outp.hmacSet(p->macKey());
+				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
+			}	break;
 
-		case Topology::PEER_VERIFY_REJECTED_INVALID_IDENTITY: {
-			Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
-			outp.append((unsigned char)Packet::VERB_HELLO);
-			outp.append(req->helloPacketId);
-			outp.append((unsigned char)Packet::ERROR_IDENTITY_INVALID);
-			outp.encrypt(p->cryptKey());
-			outp.hmacSet(p->macKey());
-			_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
-		}	break;
+			case Topology::PEER_VERIFY_REJECTED_INVALID_IDENTITY: {
+				Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
+				outp.append((unsigned char)Packet::VERB_HELLO);
+				outp.append(req->helloPacketId);
+				outp.append((unsigned char)Packet::ERROR_IDENTITY_INVALID);
+				outp.encrypt(p->cryptKey());
+				outp.hmacSet(p->macKey());
+				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
+			}	break;
 
-		case Topology::PEER_VERIFY_REJECTED_DUPLICATE:
-		case Topology::PEER_VERIFY_REJECTED_DUPLICATE_TRIAGED: {
-			Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
-			outp.append((unsigned char)Packet::VERB_HELLO);
-			outp.append(req->helloPacketId);
-			outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-			outp.encrypt(p->cryptKey());
-			outp.hmacSet(p->macKey());
-			_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
-		}	break;
+			case Topology::PEER_VERIFY_REJECTED_DUPLICATE:
+			case Topology::PEER_VERIFY_REJECTED_DUPLICATE_TRIAGED: {
+				Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
+				outp.append((unsigned char)Packet::VERB_HELLO);
+				outp.append(req->helloPacketId);
+				outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+				outp.encrypt(p->cryptKey());
+				outp.hmacSet(p->macKey());
+				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
+			}	break;
+		}
+	} catch ( ... ) {
+		TRACE("unexpected exception in addPeer() result callback for peer received via HELLO");
 	}
 
 	delete req;
@@ -188,14 +191,19 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 
 void PacketDecoder::_CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result)
 {
-	switch(result) {
-		case Topology::PEER_VERIFY_ACCEPTED_NEW:
-		case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
-		case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS:
-			((const RuntimeEnvironment *)arg)->sw->doAnythingWaitingForPeer(p);
-			break;
-		default:
-			break;
+	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)arg;
+	try {
+		switch(result) {
+			case Topology::PEER_VERIFY_ACCEPTED_NEW:
+			case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
+			case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS:
+				_r->sw->doAnythingWaitingForPeer(p);
+				break;
+			default:
+				break;
+		}
+	} catch ( ... ) {
+		TRACE("unexpected exception in addPeer() result callback for peer received via OK(WHOIS)");
 	}
 }
 
@@ -377,20 +385,20 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		//
-		// At the moment, we only obey RENDEZVOUS if it comes from a designated
-		// supernode. If relay offloading is implemented to scale the net, this
-		// will need reconsideration.
-		//
-		// The reason is that RENDEZVOUS could technically be used to cause a
-		// peer to send a weird encrypted UDP packet to an arbitrary IP:port.
-		// The sender of RENDEZVOUS has no control over the content of this
-		// packet, but it's still maybe something we want to not allow just
-		// anyone to order due to possible DDOS or network forensic implications.
-		// So if we diversify relays, we'll need some way of deciding whether the
-		// sender is someone we should trust with a RENDEZVOUS hint. Or maybe
-		// we just need rate limiting to prevent DDOS and amplification attacks.
-		//
+		/*
+		 * At the moment, we only obey RENDEZVOUS if it comes from a designated
+		 * supernode. If relay offloading is implemented to scale the net, this
+		 * will need reconsideration.
+		 *
+		 * The reason is that RENDEZVOUS could technically be used to cause a
+		 * peer to send a weird encrypted UDP packet to an arbitrary IP:port.
+		 * The sender of RENDEZVOUS has no control over the content of this
+		 * packet, but it's still maybe something we want to not allow just
+		 * anyone to order due to possible DDOS or network forensic implications.
+		 * So if we diversify relays, we'll need some way of deciding whether the
+		 * sender is someone we should trust with a RENDEZVOUS hint. Or maybe
+		 * we just need rate limiting to prevent DDOS and amplification attacks.
+		 */
 		if (_r->topology->isSupernode(source())) {
 			Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 			SharedPtr<Peer> withPeer(_r->topology->getPeer(with));
@@ -455,20 +463,15 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 		while ((ptr + 18) <= size()) {
 			uint64_t nwid = at<uint64_t>(ptr); ptr += 8;
 			SharedPtr<Network> network(_r->nc->network(nwid));
-			if (network) {
-				if (network->isAllowed(source())) {
-					MAC mac(field(ptr,6)); ptr += 6;
-					uint32_t adi = at<uint32_t>(ptr); ptr += 4;
-					//TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source().toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
-					_r->multicaster->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source(),now);
-					++numAccepted;
-				} else {
-					ptr += 10;
-					TRACE("ignored MULTICAST_LIKE from %s(%s): not a member of closed network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
-				}
+			if ((network)&&(network->isAllowed(source()))) {
+				MAC mac(field(ptr,6)); ptr += 6;
+				uint32_t adi = at<uint32_t>(ptr); ptr += 4;
+				//TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source().toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
+				_r->multicaster->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source(),now);
+				++numAccepted;
 			} else {
 				ptr += 10;
-				TRACE("ignored MULTICAST_LIKE from %s(%s): network %.16llx unknown or we are not a member",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
+				TRACE("ignored MULTICAST_LIKE from %s(%s): network %.16llx unknown, or sender is not a member of network",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
 			}
 		}
 
