@@ -176,40 +176,6 @@ public:
 	inline bool hasPrivate() const throw() { return (_keyPair); }
 
 	/**
-	 * Encrypt a block of data to send to another identity
-	 *
-	 * This identity must have a secret key.
-	 *
-	 * The encrypted data format is:
-	 *   <[8] Salsa20 initialization vector>
-	 *   <[8] first 8 bytes of HMAC-SHA-256 of ciphertext>
-	 *   <[...] encrypted compressed data>
-	 *
-	 * Keying is accomplished using agree() (KDF function is in the
-	 * EllipticCurveKeyPair.cpp source) to generate 64 bytes of key. The first
-	 * 32 bytes are used as the Salsa20 key, and the last 32 bytes are used
-	 * as the HMAC key.
-	 *
-	 * @param to Identity of recipient of encrypted message
-	 * @param data Data to encrypt
-	 * @param len Length of data
-	 * @return Encrypted data or empty string on failure
-	 */
-	std::string encrypt(const Identity &to,const void *data,unsigned int len) const;
-
-	/**
-	 * Decrypt a message encrypted with encrypt()
-	 *
-	 * This identity must have a secret key.
-	 *
-	 * @param from Identity of sender of encrypted message
-	 * @param cdata Encrypted message
-	 * @param len Length of encrypted message
-	 * @return Decrypted data or empty string on failure
-	 */
-	std::string decrypt(const Identity &from,const void *cdata,unsigned int len) const;
-
-	/**
 	 * Shortcut method to perform key agreement with another identity
 	 *
 	 * This identity must have its private portion.

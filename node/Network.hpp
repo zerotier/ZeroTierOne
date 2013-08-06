@@ -267,26 +267,29 @@ public:
 
 private:
 	// Only NodeConfig can create, only SharedPtr can delete
-	Network(const RuntimeEnvironment *renv,uint64_t id)
-		throw(std::runtime_error);
+
+	// Actual construction happens in newInstance()
+	Network()
+		throw() :
+		_tap((EthernetTap *)0)
+	{
+	}
 
 	~Network();
 
 	/**
-	 * Called by NodeConfig after create
+	 * Create a new Network instance and restore any saved state
 	 *
-	 * This is called separately to avoid a rather evil race condition.
-	 * If config is restored in the constructor, then it's possible that
-	 * the tap will be assigned an IP and will start getting packets
-	 * before SharedPtr<Network> has gotten the pointer from the initial
-	 * object construct. That causes SharedPtr<Network> in the static
-	 * method that handles tap traffic to delete the object, resulting
-	 * in all sorts of utter madness. C++ is crazy like that.
+	 * If there is no saved state, a dummy .conf is created on disk to remember
+	 * this network across restarts.
 	 *
-	 * Actually the way we're using SharedPtr<Network> is hacky and
-	 * ugly, so it's our fault sorta.
+	 * @param renv Runtime environment
+	 * @param id Network ID
+	 * @return Reference counted pointer to new network
+	 * @throws std::runtime_error Unable to create tap device or other fatal error
 	 */
-	void restoreState();
+	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,uint64_t id)
+		throw(std::runtime_error);
 
 	/**
 	 * Causes all persistent disk presence to be erased on delete
@@ -305,7 +308,7 @@ public:
 	/**
 	 * @return Ethernet tap
 	 */
-	inline EthernetTap &tap() throw() { return _tap; }
+	inline EthernetTap &tap() throw() { return *_tap; }
 
 	/**
 	 * @return Address of network's controlling node
@@ -344,7 +347,7 @@ public:
 	inline bool updateMulticastGroups()
 	{
 		Mutex::Lock _l(_lock);
-		return _tap.updateMulticastGroups(_multicastGroups);
+		return _tap->updateMulticastGroups(_multicastGroups);
 	}
 
 	/**
@@ -403,11 +406,12 @@ public:
 
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
+	void _restoreState();
 
 	const RuntimeEnvironment *_r;
 
 	// Tap and tap multicast memberships
-	EthernetTap _tap;
+	EthernetTap *_tap;
 	std::set<MulticastGroup> _multicastGroups;
 
 	// Membership certificates supplied by peers

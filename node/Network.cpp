@@ -104,20 +104,10 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 	return true;
 }
 
-Network::Network(const RuntimeEnvironment *renv,uint64_t id)
-	throw(std::runtime_error) :
-	_r(renv),
-	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,this),
-	_id(id),
-	_lastConfigUpdate(0),
-	_destroyOnDelete(false)
-{
-	if (controller() == _r->identity.address())
-		throw std::runtime_error("cannot add a network for which I am the netconf master");
-}
-
 Network::~Network()
 {
+	delete _tap;
+
 	if (_destroyOnDelete) {
 		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
 		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
@@ -129,26 +119,25 @@ Network::~Network()
 	}
 }
 
-void Network::restoreState()
+SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t id)
+	throw(std::runtime_error)
 {
-	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
-	std::string confs;
-	if (Utils::readFile(confPath.c_str(),confs)) {
-		try {
-			if (confs.length()) {
-				Config conf(confs);
-				if (conf.containsAllFields())
-					setConfiguration(conf);
-			}
-		} catch ( ... ) {} // ignore invalid config on disk, we will re-request
-	} else {
-		// If the conf file isn't present, "touch" it so we'll remember
-		// the existence of this network.
-		FILE *tmp = fopen(confPath.c_str(),"w");
-		if (tmp)
-			fclose(tmp);
-	}
-	// TODO: restore membership certs
+	// We construct Network via a static method to ensure that it is immediately
+	// wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet
+	// tap device, a SharedPtr<> wrap can occur in the Ethernet frame handler
+	// that then causes the Network instance to be deleted before it is finished
+	// being constructed. C++ edge cases, how I love thee.
+	SharedPtr<Network> nw(new Network());
+	nw->_r = renv;
+	nw->_tap = new EthernetTap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
+	nw->_id = id;
+	nw->_lastConfigUpdate = 0;
+	nw->_destroyOnDelete = false;
+	if (nw->controller() == renv->identity.address()) // sanity check, this isn't supported for now
+		throw std::runtime_error("cannot add a network for which I am the netconf master");
+	nw->_restoreState();
+	nw->requestConfiguration();
+	return nw;
 }
 
 void Network::setConfiguration(const Network::Config &conf)
@@ -160,7 +149,7 @@ void Network::setConfiguration(const Network::Config &conf)
 		_myCertificate = conf.certificateOfMembership();
 		_lastConfigUpdate = Utils::now();
 
-		_tap.setIps(conf.staticAddresses());
+		_tap->setIps(conf.staticAddresses());
 
 		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
 		if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
@@ -210,11 +199,13 @@ bool Network::isAllowed(const Address &peer) const
 
 void Network::clean()
 {
+	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
+
 	Mutex::Lock _l(_lock);
-	if (_configuration.isOpen())
+	if (_configuration.isOpen()) {
 		_membershipCertificates.clear();
-	else {
-		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
+		unlink(mcdbPath.c_str());
+	} else {
 		FILE *mcdb = fopen(mcdbPath.c_str(),"wb");
 		bool writeError = false;
 		if (!mcdb) {
@@ -261,6 +252,28 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 	} catch ( ... ) {
 		TRACE("unexpected exception handling local packet");
 	}
+}
+
+void Network::_restoreState()
+{
+	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+	std::string confs;
+	if (Utils::readFile(confPath.c_str(),confs)) {
+		try {
+			if (confs.length()) {
+				Config conf(confs);
+				if (conf.containsAllFields())
+					setConfiguration(conf);
+			}
+		} catch ( ... ) {} // ignore invalid config on disk, we will re-request
+	} else {
+		// If the conf file isn't present, "touch" it so we'll remember
+		// the existence of this network.
+		FILE *tmp = fopen(confPath.c_str(),"w");
+		if (tmp)
+			fclose(tmp);
+	}
+	// TODO: restore membership certs
 }
 
 } // namespace ZeroTier

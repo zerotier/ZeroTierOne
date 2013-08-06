@@ -76,10 +76,8 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
 
 	for(std::set<uint64_t>::iterator nwid(nwids.begin());nwid!=nwids.end();++nwid) {
 		try {
-			SharedPtr<Network> nw(new Network(_r,*nwid));
+			SharedPtr<Network> nw(Network::newInstance(_r,*nwid));
 			_networks[*nwid] = nw;
-			nw->restoreState();
-			nw->requestConfiguration();
 		} catch (std::exception &exc) {
 			LOG("unable to create network %.16llx: %s",(unsigned long long)*nwid,exc.what());
 		} catch ( ... ) {
@@ -181,10 +179,8 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 					_P("400 already a member of %.16llx",(unsigned long long)nwid);
 				} else {
 					try {
-						SharedPtr<Network> nw(new Network(_r,nwid));
+						SharedPtr<Network> nw(Network::newInstance(_r,nwid));
 						_networks[nwid] = nw;
-						nw->restoreState();
-						nw->requestConfiguration();
 						_P("200 join %.16llx OK",(unsigned long long)nwid);
 					} catch (std::exception &exc) {
 						_P("500 join %.16llx ERROR: %s",(unsigned long long)nwid,exc.what());
