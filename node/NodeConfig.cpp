@@ -123,11 +123,12 @@ public:
 	{
 		InetAddress v4(p->ipv4ActivePath(_now));
 		InetAddress v6(p->ipv6ActivePath(_now));
-		_P("200 listpeers %s %s %s %d",
+		_P("200 listpeers %s %s %s %u %s",
 			p->address().toString().c_str(),
-			((v4) ? v4.toString().c_str() : "(none)"),
-			((v6) ? v6.toString().c_str() : "(none)"),
-			(((v4)||(v6)) ? (int)p->latency() : -1));
+			((v4) ? v4.toString().c_str() : "-"),
+			((v6) ? v6.toString().c_str() : "-"),
+			(((v4)||(v6)) ? p->latency() : 0),
+			p->remoteVersion().c_str());
 	}
 
 private:
@@ -149,13 +150,14 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_P("200 help help");
 		_P("200 help listpeers");
 		_P("200 help listnetworks");
-		_P("200 help join <network ID> [<network invitation code>]");
+		_P("200 help join <network ID>");
 		_P("200 help leave <network ID>");
 	} else if (cmd[0] == "listpeers") {
+		_P("200 listpeers <ztaddr> <ipv4> <ipv6> <latency> <version>");
 		_r->topology->eachPeer(_DumpPeerStatistics(r));
 	} else if (cmd[0] == "listnetworks") {
 		Mutex::Lock _l(_networks_m);
-		_P("200 listnetworks <nwid> <type> <dev> <ips>");
+		_P("200 listnetworks <nwid> <status> <type> <dev> <ips>");
 		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.begin());nw!=_networks.end();++nw) {
 			std::string tmp;
 			std::set<InetAddress> ips(nw->second->tap().ips());
@@ -164,7 +166,9 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 					tmp.push_back(',');
 				tmp.append(i->toString());
 			}
-			_P("200 listnetworks %.16llx %s %s %s",
+			// TODO: display network status, such as "permission denied to closed
+			// network" or "waiting".
+			_P("200 listnetworks %.16llx OK %s %s %s",
 				(unsigned long long)nw->first,
 				(nw->second->isOpen() ? "public" : "private"),
 				nw->second->tap().deviceName().c_str(),

@@ -348,6 +348,19 @@ public:
 	}
 
 	/**
+	 * @return Remote version in string form or '?' if unknown
+	 */
+	inline std::string remoteVersion() const
+	{
+		if ((_vMajor)||(_vMinor)||(_vRevision)) {
+			char tmp[32];
+			sprintf(tmp,"%u.%u.%u",_vMajor,_vMinor,_vRevision);
+			return std::string(tmp);
+		}
+		return std::string("?");
+	}
+
+	/**
 	 * Get and reset dirty flag
 	 * 
 	 * @return Previous value of dirty flag before reset
