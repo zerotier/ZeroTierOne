@@ -72,7 +72,7 @@ void NodeConfig::whackAllTaps()
 		n->second->tap().whack();
 }
 
-void NodeConfig::cleanAllNetworks()
+void NodeConfig::clean()
 {
 	Mutex::Lock _l(_networks_m);
 	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
@@ -145,9 +145,39 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 				tmp.c_str());
 		}
 	} else if (cmd[0] == "join") {
-		_P("404 join Not implemented yet.");
+		if (cmd.size() > 1) {
+			uint64_t nwid = strtoull(cmd[1].c_str(),(char **)0,16);
+			if (nwid > 0) {
+				Mutex::Lock _l(_networks_m);
+				try {
+					SharedPtr<Network> nw(new Network(_r,nwid));
+					_networks[nwid] = nw;
+					_P("200 join %.16llx OK",(unsigned long long)nwid);
+				} catch (std::exception &exc) {
+					_P("500 join %.16llx ERROR: %s",(unsigned long long)nwid,exc.what());
+				} catch ( ... ) {
+					_P("500 join %.16llx ERROR: (unknown exception)",(unsigned long long)nwid);
+				}
+			} else {
+				_P("400 join requires a network ID (>0) in hexadecimal format");
+			}
+		} else {
+			_P("400 join requires a network ID (>0) in hexadecimal format");
+		}
 	} else if (cmd[0] == "leave") {
-		_P("404 leave Not implemented yet.");
+		if (cmd.size() > 1) {
+			Mutex::Lock _l(_networks_m);
+			uint64_t nwid = strtoull(cmd[1].c_str(),(char **)0,16);
+			std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+			if (nw == _networks.end()) {
+				_P("404 leave %.16llx ERROR: not a member of that network",(unsigned long long)nwid);
+			} else {
+				nw->second->destroyOnDelete();
+				_networks.erase(nw);
+			}
+		} else {
+			_P("400 leave requires a network ID (>0) in hexadecimal format");
+		}
 	} else {
 		_P("404 %s No such command. Use 'help' for help.",cmd[0].c_str());
 	}

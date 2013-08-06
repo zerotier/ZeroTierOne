@@ -114,7 +114,7 @@ EthernetTap::EthernetTap(
 
 	_fd = ::open("/dev/net/tun",O_RDWR);
 	if (_fd <= 0)
-		throw std::runtime_error("could not open TUN/TAP device");
+		throw std::runtime_error(std::string("could not open TUN/TAP device: ") + strerror(errno));
 
 	struct ifreq ifr;
 	memset(&ifr,0,sizeof(ifr));

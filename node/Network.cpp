@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -35,6 +37,7 @@
 #include "Network.hpp"
 #include "Switch.hpp"
 #include "Packet.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -106,14 +109,44 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	_r(renv),
 	_tap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,this),
 	_id(id),
-	_lastConfigUpdate(0)
+	_lastConfigUpdate(0),
+	_destroyOnDelete(false)
 {
 	if (controller() == _r->identity.address())
 		throw std::runtime_error("configuration error: cannot add a network for which I am the netconf master");
+
+	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+	std::string confs;
+	if (Utils::readFile(confPath.c_str(),confs)) {
+		try {
+			if (confs.length()) {
+				Config conf(confs);
+				if (conf.containsAllFields())
+					setConfiguration(Config(conf));
+			}
+		} catch ( ... ) {} // ignore invalid config on disk, we will re-request
+	} else {
+		// If the conf file isn't present, "touch" it so we'll remember
+		// the existence of this network.
+		FILE *tmp = fopen(confPath.c_str(),"w");
+		if (tmp)
+			fclose(tmp);
+	}
+
+	requestConfiguration();
 }
 
 Network::~Network()
 {
+	if (_destroyOnDelete) {
+		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
+		unlink(confPath.c_str());
+		unlink(mcdbPath.c_str());
+	} else {
+		// Causes flush of membership certs to disk
+		clean();
+	}
 }
 
 void Network::setConfiguration(const Network::Config &conf)
@@ -124,6 +157,11 @@ void Network::setConfiguration(const Network::Config &conf)
 		_configuration = conf;
 		_myCertificate = conf.certificateOfMembership();
 		_lastConfigUpdate = Utils::now();
+
+		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+		if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
+			LOG("error: unable to write network configuration file at: %s",confPath.c_str());
+		}
 	}
 }
 
@@ -136,7 +174,15 @@ void Network::requestConfiguration()
 	TRACE("requesting netconf for network %.16llx from netconf master %s",(unsigned long long)_id,controller().toString().c_str());
 	Packet outp(controller(),_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
+	outp.append((uint16_t)0); // no meta-data
 	_r->sw->send(outp,true);
+}
+
+void Network::addMembershipCertificate(const Address &peer,const Certificate &cert)
+{
+	Mutex::Lock _l(_lock);
+	if (!_configuration.isOpen())
+		_membershipCertificates[peer] = cert;
 }
 
 bool Network::isAllowed(const Address &peer) const
@@ -164,10 +210,39 @@ void Network::clean()
 	if (_configuration.isOpen())
 		_membershipCertificates.clear();
 	else {
+		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
+		FILE *mcdb = fopen(mcdbPath.c_str(),"wb");
+		bool writeError = false;
+		if (!mcdb) {
+			LOG("error: unable to open membership cert database at: %s",mcdbPath.c_str());
+		} else {
+			if ((writeError)||(fwrite("MCDB0",5,1,mcdb) != 1)) // version
+				writeError = true;
+		}
+
 		for(std::map<Address,Certificate>::iterator i=(_membershipCertificates.begin());i!=_membershipCertificates.end();) {
-			if (_myCertificate.qualifyMembership(i->second))
+			if (_myCertificate.qualifyMembership(i->second)) {
+				if ((!writeError)&&(mcdb)) {
+					char tmp[ZT_ADDRESS_LENGTH];
+					i->first.copyTo(tmp,ZT_ADDRESS_LENGTH);
+					if ((writeError)||(fwrite(tmp,ZT_ADDRESS_LENGTH,1,mcdb) != 1))
+						writeError = true;
+					std::string c(i->second.toString());
+					uint32_t cl = Utils::hton((uint32_t)c.length());
+					if ((writeError)||(fwrite(&cl,sizeof(cl),1,mcdb) != 1))
+						writeError = true;
+					if ((writeError)||(fwrite(c.data(),c.length(),1,mcdb) != 1))
+						writeError = true;
+				}
 				++i;
-			else _membershipCertificates.erase(i++);
+			} else _membershipCertificates.erase(i++);
+		}
+
+		if (mcdb)
+			fclose(mcdb);
+		if (writeError) {
+			unlink(mcdbPath.c_str());
+			LOG("error: unable to write to membership cert database at: %s",mcdbPath.c_str());
 		}
 	}
 }

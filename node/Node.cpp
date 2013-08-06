@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 #endif
 
 #include "Condition.hpp"
@@ -340,6 +341,9 @@ Node::ReasonForTermination Node::run()
 		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "status").c_str());
 		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine").c_str());
 
+		// Make sure networks.d exists
+		mkdir((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),0700);
+
 		// Load or generate config authentication secret
 		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
 		std::string configAuthToken;
@@ -504,7 +508,6 @@ Node::ReasonForTermination Node::run()
 							_r->topology->eachPeer(Topology::CollectPeersWithDirectPath(needPing));
 						} else {
 							_r->topology->eachPeer(Topology::CollectPeersThatNeedPing(needPing));
-							_r->topology->eachPeer(Topology::CollectPeersThatNeedFirewallOpener(needFirewallOpener));
 						}
 
 						for(std::vector< SharedPtr<Peer> >::iterator p(needPing.begin());p!=needPing.end();++p) {
@@ -517,6 +520,7 @@ Node::ReasonForTermination Node::run()
 							}
 						}
 
+						_r->topology->eachPeer(Topology::CollectPeersThatNeedFirewallOpener(needFirewallOpener));
 						for(std::vector< SharedPtr<Peer> >::iterator p(needFirewallOpener.begin());p!=needFirewallOpener.end();++p) {
 							try {
 								(*p)->sendFirewallOpener(_r,now);
@@ -537,7 +541,7 @@ Node::ReasonForTermination Node::run()
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
 				_r->topology->clean();
-				_r->nc->cleanAllNetworks();
+				_r->nc->clean();
 			}
 
 			try {

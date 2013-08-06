@@ -68,7 +68,7 @@ class Multicaster
 {
 public:
 	/**
-	 * 256-bit simple bloom filter included with multicast frame packets
+	 * Simple bit field bloom filter included with multicast frame packets
 	 */
 	typedef BloomFilter<ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS> MulticastBloomFilter;
 

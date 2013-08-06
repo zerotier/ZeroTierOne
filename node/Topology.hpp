@@ -200,7 +200,7 @@ public:
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if ((p->hasDirectPath())&&((_now - p->lastFirewallOpener()) >= ZT_FIREWALL_OPENER_DELAY))
+			if ((p->hasDirectPath())&&((_now - std::max(p->lastFirewallOpener(),p->lastDirectSend())) >= ZT_FIREWALL_OPENER_DELAY))
 				_v.push_back(p);
 		}
 
@@ -223,7 +223,7 @@ public:
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if (((p->hasActiveDirectPath(_now))||(t.isSupernode(p->address())))&&((_now - p->lastDirectSend()) >= ZT_PEER_DIRECT_PING_DELAY))
+			if ( ((t.isSupernode(p->address()))&&((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY)) || ((p->hasActiveDirectPath(_now))&&((_now - p->lastDirectSend()) >= ZT_PEER_DIRECT_PING_DELAY)) )
 				_v.push_back(p);
 		}
 

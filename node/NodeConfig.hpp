@@ -95,9 +95,9 @@ public:
 	void whackAllTaps();
 
 	/**
-	 * Call clean() on all networks
+	 * Perform cleanup and possibly update saved state
 	 */
-	void cleanAllNetworks();
+	void clean();
 
 	/**
 	 * @param nwid Network ID

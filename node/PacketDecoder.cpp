@@ -610,6 +610,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 	char tmp[128];
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
+		TRACE("NETWORK_CONFIG_REQUEST for %.16llx from %s",(unsigned long long)nwid,source().toString().c_str());
 #ifndef __WINDOWS__
 		if (_r->netconfService) {
 			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);

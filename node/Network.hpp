@@ -208,6 +208,11 @@ public:
 		{
 		}
 
+		inline bool containsAllFields() const
+		{
+			return (contains("nwid")&&contains("peer"));
+		}
+
 		inline std::string toString() const
 		{
 			return Dictionary::toString();
@@ -241,7 +246,7 @@ public:
 		 */
 		inline bool isOpen() const
 		{
-			return (get("isOpen") == "1");
+			return (get("isOpen","0") == "1");
 		}
 
 		/**
@@ -266,6 +271,14 @@ private:
 		throw(std::runtime_error);
 
 	~Network();
+
+	/**
+	 * Causes all persistent disk presence to be erased on delete
+	 */
+	inline void destroyOnDelete()
+	{
+		_destroyOnDelete = true;
+	}
 
 public:
 	/**
@@ -350,16 +363,16 @@ public:
 	 * @param peer Peer that owns certificate
 	 * @param cert Certificate itself
 	 */
-	inline void addMembershipCertificate(const Address &peer,const Certificate &cert)
-	{
-		Mutex::Lock _l(_lock);
-		_membershipCertificates[peer] = cert;
-	}
+	void addMembershipCertificate(const Address &peer,const Certificate &cert);
 
+	/**
+	 * @param peer Peer address to check
+	 * @return True if peer is allowed to communicate on this network
+	 */
 	bool isAllowed(const Address &peer) const;
 
 	/**
-	 * Perform periodic database cleaning such as removing expired membership certificates
+	 * Perform cleanup and possibly save state
 	 */
 	void clean();
 
@@ -377,16 +390,20 @@ private:
 
 	const RuntimeEnvironment *_r;
 
+	// Tap and tap multicast memberships
 	EthernetTap _tap;
-
 	std::set<MulticastGroup> _multicastGroups;
+
+	// Membership certificates supplied by peers
 	std::map<Address,Certificate> _membershipCertificates;
 
+	// Configuration from network master node
 	Config _configuration;
 	Certificate _myCertificate;
 
 	uint64_t _id;
 	volatile uint64_t _lastConfigUpdate;
+	volatile bool _destroyOnDelete;
 
 	Mutex _lock;
 
