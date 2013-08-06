@@ -231,7 +231,7 @@ std::map<std::string,bool> Utils::listDirectory(const char *path)
 		if (readdir_r(d,&de,&dptr))
 			break;
 		if (dptr) {
-			if ((!strcmp(dptr->d_name,"."))&&(!strcmp(dptr->d_name,"..")))
+			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,"..")))
 				r[std::string(dptr->d_name)] = (dptr->d_type == DT_DIR);
 		} else break;
 	}

@@ -32,6 +32,8 @@
 
 #include <memory>
 #include <string>
+#include <map>
+#include <set>
 
 #include <openssl/sha.h>
 
@@ -58,6 +60,32 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
 	SHA256_Init(&sha);
 	SHA256_Update(&sha,authToken,strlen(authToken));
 	SHA256_Final(_controlSocketKey,&sha);
+
+	std::map<std::string,bool> networksDotD(Utils::listDirectory((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
+	std::set<uint64_t> nwids;
+	for(std::map<std::string,bool>::iterator d(networksDotD.begin());d!=networksDotD.end();++d) {
+		if (!d->second) {
+			std::string::size_type dot = d->first.rfind(".conf");
+			if (dot != std::string::npos) {
+				uint64_t nwid = strtoull(d->first.substr(0,dot).c_str(),(char **)0,16);
+				if (nwid > 0)
+					nwids.insert(nwid);
+			}
+		}
+	}
+
+	for(std::set<uint64_t>::iterator nwid(nwids.begin());nwid!=nwids.end();++nwid) {
+		try {
+			SharedPtr<Network> nw(new Network(_r,*nwid));
+			_networks[*nwid] = nw;
+			nw->restoreState();
+			nw->requestConfiguration();
+		} catch (std::exception &exc) {
+			LOG("unable to create network %.16llx: %s",(unsigned long long)*nwid,exc.what());
+		} catch ( ... ) {
+			LOG("unable to create network %.16llx: (unknown exception)",(unsigned long long)*nwid);
+		}
+	}
 }
 
 NodeConfig::~NodeConfig()
@@ -149,14 +177,20 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 			uint64_t nwid = strtoull(cmd[1].c_str(),(char **)0,16);
 			if (nwid > 0) {
 				Mutex::Lock _l(_networks_m);
-				try {
-					SharedPtr<Network> nw(new Network(_r,nwid));
-					_networks[nwid] = nw;
-					_P("200 join %.16llx OK",(unsigned long long)nwid);
-				} catch (std::exception &exc) {
-					_P("500 join %.16llx ERROR: %s",(unsigned long long)nwid,exc.what());
-				} catch ( ... ) {
-					_P("500 join %.16llx ERROR: (unknown exception)",(unsigned long long)nwid);
+				if (_networks.count(nwid)) {
+					_P("400 already a member of %.16llx",(unsigned long long)nwid);
+				} else {
+					try {
+						SharedPtr<Network> nw(new Network(_r,nwid));
+						_networks[nwid] = nw;
+						nw->restoreState();
+						nw->requestConfiguration();
+						_P("200 join %.16llx OK",(unsigned long long)nwid);
+					} catch (std::exception &exc) {
+						_P("500 join %.16llx ERROR: %s",(unsigned long long)nwid,exc.what());
+					} catch ( ... ) {
+						_P("500 join %.16llx ERROR: (unknown exception)",(unsigned long long)nwid);
+					}
 				}
 			} else {
 				_P("400 join requires a network ID (>0) in hexadecimal format");

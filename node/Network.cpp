@@ -113,27 +113,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t id)
 	_destroyOnDelete(false)
 {
 	if (controller() == _r->identity.address())
-		throw std::runtime_error("configuration error: cannot add a network for which I am the netconf master");
-
-	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
-	std::string confs;
-	if (Utils::readFile(confPath.c_str(),confs)) {
-		try {
-			if (confs.length()) {
-				Config conf(confs);
-				if (conf.containsAllFields())
-					setConfiguration(Config(conf));
-			}
-		} catch ( ... ) {} // ignore invalid config on disk, we will re-request
-	} else {
-		// If the conf file isn't present, "touch" it so we'll remember
-		// the existence of this network.
-		FILE *tmp = fopen(confPath.c_str(),"w");
-		if (tmp)
-			fclose(tmp);
-	}
-
-	requestConfiguration();
+		throw std::runtime_error("cannot add a network for which I am the netconf master");
 }
 
 Network::~Network()
@@ -149,14 +129,38 @@ Network::~Network()
 	}
 }
 
+void Network::restoreState()
+{
+	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+	std::string confs;
+	if (Utils::readFile(confPath.c_str(),confs)) {
+		try {
+			if (confs.length()) {
+				Config conf(confs);
+				if (conf.containsAllFields())
+					setConfiguration(conf);
+			}
+		} catch ( ... ) {} // ignore invalid config on disk, we will re-request
+	} else {
+		// If the conf file isn't present, "touch" it so we'll remember
+		// the existence of this network.
+		FILE *tmp = fopen(confPath.c_str(),"w");
+		if (tmp)
+			fclose(tmp);
+	}
+	// TODO: restore membership certs
+}
+
 void Network::setConfiguration(const Network::Config &conf)
 {
 	Mutex::Lock _l(_lock);
 	if ((conf.networkId() == _id)&&(conf.peerAddress() == _r->identity.address())) { // sanity check
-		TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
+		//TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
 		_configuration = conf;
 		_myCertificate = conf.certificateOfMembership();
 		_lastConfigUpdate = Utils::now();
+
+		_tap.setIps(conf.staticAddresses());
 
 		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
 		if (!Utils::writeFile(confPath.c_str(),conf.toString())) {

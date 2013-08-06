@@ -202,13 +202,14 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)renv;
 
 	try {
+		//TRACE("from netconf:\n%s",msg.toString().c_str());
 		const std::string &type = msg.get("type");
 		if (type == "netconf-response") {
 			uint64_t inRePacketId = strtoull(msg.get("requestId").c_str(),(char **)0,16);
-			SharedPtr<Network> network = _r->nc->network(strtoull(msg.get("nwid").c_str(),(char **)0,16));
+			uint64_t nwid = strtoull(msg.get("nwid").c_str(),(char **)0,16);
 			Address peerAddress(msg.get("peer").c_str());
 
-			if ((network)&&(peerAddress)) {
+			if (peerAddress) {
 				if (msg.contains("error")) {
 					Packet::ErrorCode errCode = Packet::ERROR_INVALID_REQUEST;
 					const std::string &err = msg.get("error");
@@ -219,7 +220,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 					outp.append(inRePacketId);
 					outp.append((unsigned char)errCode);
-					outp.append(network->id());
+					outp.append(nwid);
 					_r->sw->send(outp,true);
 				} else if (msg.contains("netconf")) {
 					const std::string &netconf = msg.get("netconf");
@@ -227,7 +228,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 						Packet outp(peerAddress,_r->identity.address(),Packet::VERB_OK);
 						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 						outp.append(inRePacketId);
-						outp.append(network->id());
+						outp.append(nwid);
 						outp.append((uint16_t)netconf.length());
 						outp.append(netconf.data(),netconf.length());
 						outp.compress();
@@ -266,12 +267,12 @@ Node::~Node()
 	delete impl->renv.netconfService;
 #endif
 
+	delete impl->renv.nc;
 	delete impl->renv.sysEnv;
 	delete impl->renv.topology;
 	delete impl->renv.sw;
 	delete impl->renv.multicaster;
 	delete impl->renv.demarc;
-	delete impl->renv.nc;
 	delete impl->renv.prng;
 	delete impl->renv.log;
 
@@ -362,6 +363,11 @@ Node::ReasonForTermination Node::run()
 		// Create the core objects in RuntimeEnvironment: node config, demarcation
 		// point, switch, network topology database, and system environment
 		// watcher.
+		_r->demarc = new Demarc(_r);
+		_r->multicaster = new Multicaster();
+		_r->sw = new Switch(_r);
+		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
+		_r->sysEnv = new SysEnv(_r);
 		try {
 			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
 		} catch ( ... ) {
@@ -369,11 +375,6 @@ Node::ReasonForTermination Node::run()
 			// One is running.
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound");
 		}
-		_r->demarc = new Demarc(_r);
-		_r->multicaster = new Multicaster();
-		_r->sw = new Switch(_r);
-		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
-		_r->sysEnv = new SysEnv(_r);
 
 		// TODO: make configurable
 		bool boundPort = false;

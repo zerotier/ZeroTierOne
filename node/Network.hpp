@@ -273,6 +273,22 @@ private:
 	~Network();
 
 	/**
+	 * Called by NodeConfig after create
+	 *
+	 * This is called separately to avoid a rather evil race condition.
+	 * If config is restored in the constructor, then it's possible that
+	 * the tap will be assigned an IP and will start getting packets
+	 * before SharedPtr<Network> has gotten the pointer from the initial
+	 * object construct. That causes SharedPtr<Network> in the static
+	 * method that handles tap traffic to delete the object, resulting
+	 * in all sorts of utter madness. C++ is crazy like that.
+	 *
+	 * Actually the way we're using SharedPtr<Network> is hacky and
+	 * ugly, so it's our fault sorta.
+	 */
+	void restoreState();
+
+	/**
 	 * Causes all persistent disk presence to be erased on delete
 	 */
 	inline void destroyOnDelete()

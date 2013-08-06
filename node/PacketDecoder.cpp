@@ -463,10 +463,12 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 					_r->multicaster->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source(),now);
 					++numAccepted;
 				} else {
-					TRACE("ignored MULTICAST_LIKE from %s(%s): not a member of closed network %llu",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid);
+					ptr += 10;
+					TRACE("ignored MULTICAST_LIKE from %s(%s): not a member of closed network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
 				}
 			} else {
-				TRACE("ignored MULTICAST_LIKE from %s(%s): network %llu unknown or we are not a member",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid);
+				ptr += 10;
+				TRACE("ignored MULTICAST_LIKE from %s(%s): network %.16llx unknown or we are not a member",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
 			}
 		}
 
@@ -610,7 +612,6 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 	char tmp[128];
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
-		TRACE("NETWORK_CONFIG_REQUEST for %.16llx from %s",(unsigned long long)nwid,source().toString().c_str());
 #ifndef __WINDOWS__
 		if (_r->netconfService) {
 			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
@@ -624,6 +625,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 			request["nwid"] = tmp;
 			sprintf(tmp,"%llx",(unsigned long long)packetId());
 			request["requestId"] = tmp;
+			//TRACE("to netconf:\n%s",request.toString().c_str());
 			_r->netconfService->send(request);
 		} else {
 #endif // !__WINDOWS__
@@ -635,7 +637,6 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 			outp.encrypt(peer->cryptKey());
 			outp.hmacSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent ERROR(NETWORK_CONFIG_REQUEST,UNSUPPORTED_OPERATION) to %s(%s)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 #ifndef __WINDOWS__
 		}
 #endif // !__WINDOWS__
