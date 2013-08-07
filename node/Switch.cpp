@@ -144,7 +144,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 	} else if (to.isZeroTier()) {
 		// Simple unicast frame from us to another node
-		Address toZT(to);
+		Address toZT(to.data + 1,ZT_ADDRESS_LENGTH);
 		if (network->isAllowed(toZT)) {
 			Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
@@ -167,7 +167,8 @@ void Switch::send(const Packet &packet,bool encrypt)
 		return;
 	}
 
-	//TRACE("%.16llx %s -> %s (size: %u) (enc: %s)",packet.packetId(),Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(encrypt ? "yes" : "no"));
+	//TRACE(">> %.16llx %s -> %s (size: %u) (enc: %s)",(unsigned long long)packet.packetId(),packet.source().toString().c_str(),packet.destination().toString().c_str(),packet.size(),(encrypt ? "yes" : "no"));
+
 	if (!_trySend(packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
 		_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry(Utils::now(),packet,encrypt)));
@@ -519,6 +520,8 @@ void Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &f
 
 	Address source(packet->source());
 	Address destination(packet->destination());
+
+	//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
 	if (destination != _r->identity.address()) {
 		// Packet is not for us, so try to relay it
