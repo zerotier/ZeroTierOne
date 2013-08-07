@@ -74,6 +74,13 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
 		}
 	}
 
+	// TODO:
+	// This might go away eventually. This causes the LAN called Earth to be
+	// automatically joined if there are no other networks. This is for backward
+	// compatibility with the expectations of previous alpha users.
+	if (nwids.empty())
+		nwids.insert(0x6c92786fee000001ULL);
+
 	for(std::set<uint64_t>::iterator nwid(nwids.begin());nwid!=nwids.end();++nwid) {
 		try {
 			SharedPtr<Network> nw(Network::newInstance(_r,*nwid));
