@@ -267,6 +267,21 @@ error_no_ZT_ARCH_defined;
 #define ZT_MULTICAST_LOCAL_POLL_PERIOD 10000
 
 /**
+ * Default bytes per second limit for multicasts per peer on a network
+ */
+#define ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND 50.0
+
+/**
+ * Default balance preload for multicast rate limiters on a network
+ */
+#define ZT_MULTICAST_DEFAULT_RATE_PRELOAD 25.0
+
+/**
+ * Absolute maximum balance for multicast rate limiters
+ */
+#define ZT_MULTICAST_DEFAULT_RATE_MAX 75.0
+
+/**
  * Delay between scans of the topology active peer DB for peers that need ping
  */
 #define ZT_PING_CHECK_DELAY 7000

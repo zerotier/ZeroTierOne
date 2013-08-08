@@ -47,6 +47,7 @@
 #include "Dictionary.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
+#include "RateLimiter.hpp"
 
 namespace ZeroTier {
 
@@ -426,6 +427,25 @@ public:
 	 */
 	Status status() const;
 
+	/**
+	 * Invoke multicast rate limiter gate for a given address
+	 *
+	 * @param addr Address to check
+	 * @param bytes Bytes address wishes to send us / propagate
+	 * @return True if allowed, false if overshot rate limit
+	 */
+	inline bool multicastRateGate(const Address &addr,unsigned int bytes)
+	{
+		Mutex::Lock _l(_lock);
+		std::map<Address,RateLimiter>::iterator rl(_multicastRateLimiters.find(addr));
+		if (rl == _multicastRateLimiters.end()) {
+			RateLimiter &newrl = _multicastRateLimiters[addr];
+			newrl.init(ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND,ZT_MULTICAST_DEFAULT_RATE_PRELOAD,ZT_MULTICAST_DEFAULT_RATE_MAX);
+			return newrl.gate((double)bytes);
+		}
+		return rl->second.gate((double)bytes);
+	}
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 	void _restoreState();
@@ -438,6 +458,9 @@ private:
 
 	// Membership certificates supplied by peers
 	std::map<Address,Certificate> _membershipCertificates;
+
+	// Rate limiters for each multicasting peer
+	std::map<Address,RateLimiter> _multicastRateLimiters;
 
 	// Configuration from network master node
 	Config _configuration;

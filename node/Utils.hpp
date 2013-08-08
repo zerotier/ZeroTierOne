@@ -348,6 +348,17 @@ public:
 	};
 
 	/**
+	 * @return Current time in seconds since epoch, to the highest available resolution
+	 */
+	static inline double nowf()
+		throw()
+	{
+		struct timeval tv;
+		gettimeofday(&tv,(struct timezone *)0);
+		return ( ((double)tv.tv_sec) + (((double)tv.tv_usec) / 1000000.0) );
+	}
+
+	/**
 	 * Read the full contents of a file into a string buffer
 	 *
 	 * The buffer isn't cleared, so if it already contains data the file's data will

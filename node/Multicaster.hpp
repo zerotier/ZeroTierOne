@@ -63,6 +63,9 @@ namespace ZeroTier {
  * This is written as a generic class so that it can be mocked and tested
  * in simulation. It also always takes 'now' as an argument, permitting
  * running in simulated time.
+ *
+ * This does not handle network permission or rate limiting, only the
+ * propagation algorithm.
  */
 class Multicaster
 {
@@ -328,6 +331,7 @@ private:
 	// Address and time of last LIKE
 	typedef std::pair<Address,uint64_t> MulticastMembership;
 
+	// Network : MulticastGroup -> vector<Address : time of last LIKE>
 	std::map< MulticastChannel,std::vector<MulticastMembership> > _multicastMemberships;
 	Mutex _multicastMemberships_m;
 };
