@@ -226,9 +226,16 @@ error_no_ZT_ARCH_defined;
  * the sum of BREADTH^i where I is from 1 to DEPTH. This ignores the effect
  * of the rate limiting algorithm or bloom filter collisions.
  *
- * 7 results in a max of 21844 recipients for a given multicast.
+ * 5 results in a max of 1364 recipients for a given multicast. With a limit
+ * of 50 bytes/sec (average) for multicast, this results in a worst case of
+ * around 68kb/sec of multicast traffic. FYI the average multicast traffic
+ * from a Mac seems to be about ~25bytes/sec. Windows measurements are TBD.
+ * Linux is quieter than Mac.
+ *
+ * This are eventually going to become per-network tunable parameters, along
+ * with per-network peer multicast rate limits.
  */
-#define ZT_MULTICAST_PROPAGATION_DEPTH 7
+#define ZT_MULTICAST_PROPAGATION_DEPTH 5
 
 /**
  * Length of ring buffer history of recent multicast packets
