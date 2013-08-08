@@ -94,7 +94,7 @@ public:
 		throw();
 
 private:
-	Thread<UdpSocket> _thread;
+	Thread _thread;
 	void (*_packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int);
 	void *_arg;
 	int _localPort;

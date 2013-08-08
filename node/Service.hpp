@@ -114,7 +114,7 @@ public:
 
 private:
 	const RuntimeEnvironment *_r;
-	Thread<Service> _thread;
+	Thread _thread;
 	std::string _path;
 	std::string _name;
 	void *_arg;

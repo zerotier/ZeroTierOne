@@ -62,7 +62,7 @@ Service::Service(const RuntimeEnvironment *renv,const char *name,const char *pat
 	_childStderr(0),
 	_run(true)
 {
-	_thread = Thread<Service>::start(this);
+	_thread = Thread::start(this);
 }
 
 Service::~Service()
@@ -77,14 +77,14 @@ Service::~Service()
 				pid = 0;
 				break;
 			}
-			Thread<Service>::sleep(100);
+			Thread::sleep(100);
 		}
 		if (pid > 0) {
 			::kill(pid,SIGKILL);
 			waitpid(pid,&st,0);
 		}
 	}
-	Thread<Service>::join(_thread);
+	Thread::join(_thread);
 }
 
 bool Service::send(const Dictionary &msg)
@@ -136,7 +136,7 @@ void Service::threadMain()
 				close(in[0]);
 				close(out[1]);
 				close(err[1]);
-				Thread<Service>::sleep(500); // give child time to start
+				Thread::sleep(500); // give child time to start
 				_childStdin = in[1];
 				_childStdout = out[0];
 				_childStderr = err[0];
@@ -168,7 +168,7 @@ void Service::threadMain()
 
 				LOG("service %s exited with exit code: %d, delaying 1s to attempt relaunch",_name.c_str(),st);
 
-				Thread<Service>::sleep(1000); // wait to relaunch
+				Thread::sleep(1000); // wait to relaunch
 				continue;
 			}
 		}

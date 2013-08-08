@@ -57,11 +57,8 @@ static void *___zt_threadMain(void *instance)
 }
 
 /**
- * A thread of a given class type
- *
- * @tparam C Class using Thread
+ * A thread identifier, and static methods to start and join threads
  */
-template<typename C>
 class Thread
 {
 public:
@@ -90,7 +87,9 @@ public:
 	 * @param instance Instance whose threadMain() method gets called by new thread
 	 * @return Thread identifier
 	 * @throws std::runtime_error Unable to create thread
+	 * @tparam C Class containing threadMain()
 	 */
+	template<typename C>
 	static inline Thread start(C *instance)
 		throw(std::runtime_error)
 	{

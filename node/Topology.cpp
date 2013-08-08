@@ -54,7 +54,7 @@ Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath)
 
 	Utils::lockDownFile(dbpath,false); // node.db caches secrets
 
-	_thread = Thread<Topology>::start(this);
+	_thread = Thread::start(this);
 }
 
 Topology::~Topology()
@@ -67,7 +67,7 @@ Topology::~Topology()
 		_peerDeepVerifyJobs.back().type = _PeerDeepVerifyJob::EXIT_THREAD;
 	}
 	_peerDeepVerifyJobs_c.signal();
-	Thread<Topology>::join(_thread);
+	Thread::join(_thread);
 	KISSDB_close(&_dbm);
 }
 

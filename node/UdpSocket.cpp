@@ -120,7 +120,7 @@ UdpSocket::UdpSocket(
 		}
 	}
 
-	_thread = Thread<UdpSocket>::start(this);
+	_thread = Thread::start(this);
 }
 
 UdpSocket::~UdpSocket()
@@ -131,7 +131,7 @@ UdpSocket::~UdpSocket()
 		::shutdown(s,SHUT_RDWR);
 		::close(s);
 	}
-	Thread<UdpSocket>::join(_thread);
+	Thread::join(_thread);
 }
 
 bool UdpSocket::send(const InetAddress &to,const void *data,unsigned int len,int hopLimit)

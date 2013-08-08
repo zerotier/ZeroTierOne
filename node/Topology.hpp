@@ -299,7 +299,7 @@ private:
 	};
 
 	const RuntimeEnvironment *const _r;
-	Thread<Topology> _thread;
+	Thread _thread;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;

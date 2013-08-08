@@ -187,7 +187,7 @@ EthernetTap::EthernetTap(
 
 	TRACE("tap %s created",_dev);
 
-	_thread = Thread<EthernetTap>::start(this);
+	_thread = Thread::start(this);
 }
 #endif // __LINUX__
 
@@ -271,14 +271,14 @@ EthernetTap::EthernetTap(
 
 	::pipe(_shutdownSignalPipe);
 
-	_thread = Thread<EthernetTap>::start(this);
+	_thread = Thread::start(this);
 }
 #endif // __APPLE__
 
 EthernetTap::~EthernetTap()
 {
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
-	Thread<EthernetTap>::join(_thread);
+	Thread::join(_thread);
 	::close(_fd);
 }
 

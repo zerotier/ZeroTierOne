@@ -180,7 +180,7 @@ private:
 	const unsigned int _mtu;
 
 	const RuntimeEnvironment *_r;
-	Thread<EthernetTap> _thread;
+	Thread _thread;
 
 	std::set<InetAddress> _ips;
 	Mutex _ips_m;
