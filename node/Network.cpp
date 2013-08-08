@@ -111,8 +111,8 @@ Network::~Network()
 	if (_destroyOnDelete) {
 		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
 		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
-		unlink(confPath.c_str());
-		unlink(mcdbPath.c_str());
+		Utils::rm(confPath);
+		Utils::rm(mcdbPath);
 	} else {
 		// Causes flush of membership certs to disk
 		clean();
@@ -204,7 +204,7 @@ void Network::clean()
 	Mutex::Lock _l(_lock);
 	if (_configuration.isOpen()) {
 		_membershipCertificates.clear();
-		unlink(mcdbPath.c_str());
+		Utils::rm(mcdbPath);
 	} else {
 		FILE *mcdb = fopen(mcdbPath.c_str(),"wb");
 		bool writeError = false;
@@ -236,7 +236,7 @@ void Network::clean()
 		if (mcdb)
 			fclose(mcdb);
 		if (writeError) {
-			unlink(mcdbPath.c_str());
+			Utils::rm(mcdbPath);
 			LOG("error: unable to write to membership cert database at: %s",mcdbPath.c_str());
 		}
 	}

@@ -339,8 +339,8 @@ Node::ReasonForTermination Node::run()
 		Utils::lockDownFile(identitySecretPath.c_str(),false);
 
 		// Clean up some obsolete files if present -- this will be removed later
-		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "status").c_str());
-		unlink((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine").c_str());
+		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "status"));
+		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine"));
 
 		// Make sure networks.d exists
 		mkdir((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),0700);

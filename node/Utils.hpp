@@ -43,6 +43,12 @@
 #include "../ext/lz4/lz4.h"
 #include "../ext/lz4/lz4hc.h"
 
+#ifdef __WINDOWS__
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 #include "Constants.hpp"
 
 /**
@@ -58,6 +64,27 @@ namespace ZeroTier {
 class Utils
 {
 public:
+	/**
+	 * Delete a file
+	 *
+	 * @param path Path to delete
+	 * @return True if delete was successful
+	 */
+	static inline bool rm(const char *path)
+		throw()
+	{
+#ifdef __WINDOWS__
+		foo;
+#else
+		return (unlink(path) == 0);
+#endif
+	}
+	static inline bool rm(const std::string &path)
+		throw()
+	{
+		return rm(path.c_str());
+	}
+
 	/**
 	 * List a directory's contents
 	 *
