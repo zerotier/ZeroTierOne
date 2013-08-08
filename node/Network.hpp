@@ -265,6 +265,23 @@ public:
 		}
 	};
 
+	/**
+	 * Status for networks
+	 */
+	enum Status
+	{
+		NETWORK_WAITING_FOR_FIRST_AUTOCONF,
+		NETWORK_OK,
+		NETWORK_ACCESS_DENIED
+	};
+
+	/**
+	 * @param s Status
+	 * @return String description
+	 */
+	static const char *statusString(const Status s)
+		throw();
+
 private:
 	// Only NodeConfig can create, only SharedPtr can delete
 
@@ -403,6 +420,11 @@ public:
 	{
 		return _lastConfigUpdate;
 	}
+
+	/**
+	 * @return Status of this network
+	 */
+	Status status() const;
 
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);

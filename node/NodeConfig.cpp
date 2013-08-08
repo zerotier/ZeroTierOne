@@ -175,11 +175,12 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 			}
 			// TODO: display network status, such as "permission denied to closed
 			// network" or "waiting".
-			_P("200 listnetworks %.16llx OK %s %s %s",
+			_P("200 listnetworks %.16llx %s %s %s %s",
 				(unsigned long long)nw->first,
-				(nw->second->isOpen() ? "public" : "private"),
+				Network::statusString(nw->second->status()),
+				(nw->second->isOpen() ? "open" : "private"),
 				nw->second->tap().deviceName().c_str(),
-				tmp.c_str());
+				((tmp.length() > 0) ? tmp.c_str() : "-"));
 		}
 	} else if (cmd[0] == "join") {
 		if (cmd.size() > 1) {

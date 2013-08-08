@@ -104,6 +104,17 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 	return true;
 }
 
+const char *Network::statusString(const Status s)
+	throw()
+{
+	switch(s) {
+		case NETWORK_WAITING_FOR_FIRST_AUTOCONF: return "WAITING_FOR_FIRST_AUTOCONF";
+		case NETWORK_OK: return "OK";
+		case NETWORK_ACCESS_DENIED: return "ACCESS_DENIED";
+	}
+	return "(invalid)";
+}
+
 Network::~Network()
 {
 	delete _tap;
@@ -202,6 +213,7 @@ void Network::clean()
 	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
 
 	Mutex::Lock _l(_lock);
+
 	if (_configuration.isOpen()) {
 		_membershipCertificates.clear();
 		Utils::rm(mcdbPath);
@@ -240,6 +252,14 @@ void Network::clean()
 			LOG("error: unable to write to membership cert database at: %s",mcdbPath.c_str());
 		}
 	}
+}
+
+Network::Status Network::status() const
+{
+	Mutex::Lock _l(_lock);
+	if (_configuration.containsAllFields())
+		return NETWORK_OK;
+	return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
