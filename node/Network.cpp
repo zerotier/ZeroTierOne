@@ -139,6 +139,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	// that then causes the Network instance to be deleted before it is finished
 	// being constructed. C++ edge cases, how I love thee.
 	SharedPtr<Network> nw(new Network());
+	nw->_ready = false; // disable handling of Ethernet frames during construct
 	nw->_r = renv;
 	nw->_rlLimit.bytesPerSecond = ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND;
 	nw->_rlLimit.maxBalance = ZT_MULTICAST_DEFAULT_RATE_MAX_BALANCE;
@@ -150,6 +151,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	if (nw->controller() == renv->identity.address()) // sanity check, this isn't supported for now
 		throw std::runtime_error("cannot add a network for which I am the netconf master");
 	nw->_restoreState();
+	nw->_ready = true; // enable handling of Ethernet frames
 	nw->requestConfiguration();
 	return nw;
 }
@@ -267,6 +269,8 @@ Network::Status Network::status() const
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
+	if (!((Network *)arg)->_ready)
+		return;
 	const RuntimeEnvironment *_r = ((Network *)arg)->_r;
 	try {
 		_r->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);

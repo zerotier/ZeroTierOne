@@ -472,6 +472,7 @@ private:
 	uint64_t _id;
 	volatile uint64_t _lastConfigUpdate;
 	volatile bool _destroyOnDelete;
+	volatile bool _ready;
 
 	Mutex _lock;
 

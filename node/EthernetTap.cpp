@@ -557,6 +557,10 @@ void EthernetTap::threadMain()
 	char getBuf[4096 + 14];
 	Buffer<4096> data;
 
+	// Wait for a moment after startup -- wait for Network to finish
+	// constructing itself.
+	Thread::sleep(500);
+
 	FD_ZERO(&readfds);
 	FD_ZERO(&nullfds);
 	int nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
