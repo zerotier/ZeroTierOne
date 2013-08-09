@@ -274,12 +274,17 @@ error_no_ZT_ARCH_defined;
 /**
  * Default balance preload for multicast rate limiters on a network
  */
-#define ZT_MULTICAST_DEFAULT_RATE_PRELOAD 25.0
+#define ZT_MULTICAST_DEFAULT_RATE_PRELOAD 15000.0
 
 /**
- * Absolute maximum balance for multicast rate limiters
+ * Default maximum balance for multicast rate limiters
  */
-#define ZT_MULTICAST_DEFAULT_RATE_MAX 75.0
+#define ZT_MULTICAST_DEFAULT_RATE_MAX_BALANCE 15000.0
+
+/**
+ * Default minimum balance for multicast rate limiters (max debt)
+ */
+#define ZT_MULTICAST_DEFAULT_RATE_MIN_BALANCE -15000.0
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping

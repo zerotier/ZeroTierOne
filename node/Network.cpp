@@ -140,6 +140,9 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	// being constructed. C++ edge cases, how I love thee.
 	SharedPtr<Network> nw(new Network());
 	nw->_r = renv;
+	nw->_rlLimit.bytesPerSecond = ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND;
+	nw->_rlLimit.maxBalance = ZT_MULTICAST_DEFAULT_RATE_MAX_BALANCE;
+	nw->_rlLimit.minBalance = ZT_MULTICAST_DEFAULT_RATE_MIN_BALANCE;
 	nw->_tap = new EthernetTap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;

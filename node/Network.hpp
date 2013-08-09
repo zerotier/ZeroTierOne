@@ -440,10 +440,10 @@ public:
 		std::map<Address,RateLimiter>::iterator rl(_multicastRateLimiters.find(addr));
 		if (rl == _multicastRateLimiters.end()) {
 			RateLimiter &newrl = _multicastRateLimiters[addr];
-			newrl.init(ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND,ZT_MULTICAST_DEFAULT_RATE_PRELOAD,ZT_MULTICAST_DEFAULT_RATE_MAX);
-			return newrl.gate((double)bytes);
+			newrl.init(ZT_MULTICAST_DEFAULT_RATE_PRELOAD);
+			return newrl.gate(_rlLimit,(double)bytes);
 		}
-		return rl->second.gate((double)bytes);
+		return rl->second.gate(_rlLimit,(double)bytes);
 	}
 
 private:
@@ -451,6 +451,9 @@ private:
 	void _restoreState();
 
 	const RuntimeEnvironment *_r;
+
+	// Rate limits for this network
+	RateLimiter::Limit _rlLimit;
 
 	// Tap and tap multicast memberships
 	EthernetTap *_tap;

@@ -47,6 +47,31 @@ class RateLimiter
 {
 public:
 	/**
+	 * Limits to apply to a rate limiter
+	 *
+	 * Since many rate limiters may share the same fixed limit values,
+	 * save memory by breaking this out into a struct parameter that
+	 * can be passed into RateLimiter's methods.
+	 */
+	struct Limit
+	{
+		/**
+		 * Speed in bytes per second, or rate of balance accrual
+		 */
+		double bytesPerSecond;
+
+		/**
+		 * Maximum balance that can ever be accrued (should be > 0.0)
+		 */
+		double maxBalance;
+
+		/**
+		 * Minimum balance, or maximum allowable "debt" (should be <= 0.0)
+		 */
+		double minBalance;
+	};
+
+	/**
 	 * Create an uninitialized rate limiter
 	 *
 	 * init() must be called before this is used.
@@ -54,70 +79,58 @@ public:
 	RateLimiter() throw() {}
 
 	/**
-	 * @param bytesPerSecond Bytes per second to permit (average)
 	 * @param preload Initial balance to place in account
-	 * @param max Maximum balance to permit to ever accrue (max burst)
 	 */
-	RateLimiter(double bytesPerSecond,double preload,double max)
+	RateLimiter(double preload)
 		throw()
 	{
-		init(bytesPerSecond,preload,max);
+		init(preload);
 	}
 
 	/**
 	 * Initialize or re-initialize rate limiter
 	 *
-	 * @param bytesPerSecond Bytes per second to permit (average)
 	 * @param preload Initial balance to place in account
-	 * @param max Maximum balance to permit to ever accrue (max burst)
 	 */
-	inline void init(double bytesPerSecond,double preload,double max)
+	inline void init(double preload)
 		throw()
 	{
-		_bytesPerSecond = bytesPerSecond;
 		_lastTime = Utils::nowf();
 		_balance = preload;
-		_max = max;
 	}
 
 	/**
-	 * Update balance based on current clock
+	 * Update balance based on current clock and supplied Limits bytesPerSecond and maxBalance
 	 *
-	 * This can be called at any time to check the current balance without
-	 * affecting the behavior of gate().
-	 *
+	 * @param lim Current limits in effect
 	 * @return New balance
 	 */
-	inline double updateBalance()
+	inline double updateBalance(const Limit &lim)
 		throw()
 	{
-		double now = Utils::nowf();
-		double b = _balance = fmin(_max,_balance + (_bytesPerSecond * (now - _lastTime)));
-		_lastTime = now;
-		return b;
+		double lt = _lastTime;
+		double now = _lastTime = Utils::nowf();
+		return (_balance = fmin(lim.maxBalance,_balance + (lim.bytesPerSecond * (now - lt))));
 	}
 
 	/**
-	 * Test balance and update / deduct if there is enough to transfer 'bytes'
+	 * Update balance and test if a block of 'bytes' should be permitted to be transferred
 	 *
+	 * @param lim Current limits in effect
 	 * @param bytes Number of bytes that we wish to transfer
-	 * @return True if balance was sufficient (balance is updated), false if not (balance unchanged)
+	 * @return True if balance was sufficient
 	 */
-	inline bool gate(double bytes)
+	inline bool gate(const Limit &lim,double bytes)
 		throw()
 	{
-		if (updateBalance() >= bytes) {
-			_balance -= bytes;
-			return true;
-		}
-		return false;
+		bool allow = (updateBalance(lim) >= bytes);
+		_balance = fmax(lim.minBalance,_balance - bytes);
+		return allow;
 	}
 
 private:
-	double _bytesPerSecond;
 	double _lastTime;
 	double _balance;
-	double _max;
 };
 
 } // namespace ZeroTier
