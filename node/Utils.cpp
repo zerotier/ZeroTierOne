@@ -30,20 +30,23 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#include "Constants.hpp"
+
+#ifdef __UNIX_LIKE__
 #include <unistd.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/uio.h>
 #include <dirent.h>
 #endif
 
-#ifdef _WIN32
+#ifdef __WINDOWS__
 #include <Windows.h>
 #endif
 
 #include <sys/stat.h>
-#include <openssl/rand.h>
 
 #include "Utils.hpp"
 #include "Mutex.hpp"
@@ -375,26 +378,36 @@ unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
 
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
-	unsigned char tmp[16384];
-	while (!RAND_bytes((unsigned char *)buf,bytes)) {
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
-		FILE *rf = fopen("/dev/urandom","r");
-		if (rf) {
-			fread(tmp,sizeof(tmp),1,rf);
-			fclose(rf);
-			RAND_seed(tmp,sizeof(tmp));
-		} else {
-			fprintf(stderr,"FATAL: could not open /dev/urandom\n");
-			exit(-1);
+#ifdef __UNIX_LIKE__
+	static Mutex randomLock;
+	static char randbuf[32768];
+	static unsigned int randptr = sizeof(randbuf);
+
+	Mutex::Lock _l(randomLock);
+	for(unsigned int i=0;i<bytes;++i) {
+		if (randptr >= sizeof(randbuf)) {
+			int fd = ::open("/dev/urandom",O_RDONLY);
+			if (fd < 0) {
+				fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom: %s"ZT_EOL_S,strerror(errno));
+				exit(-1);
+			}
+			if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
+				fprintf(stderr,"FATAL ERROR: unable to read from /dev/urandom"ZT_EOL_S);
+				exit(-1);
+			}
+			::close(fd);
+			randptr = 0;
 		}
-#else
-#ifdef _WIN32
-		error need win32;
-#else
-		error;
-#endif
-#endif
+		((char *)buf)[i] = randbuf[randptr++];
 	}
+
+#else // !__UNIX_LIKE__
+#ifdef __WINDOWS__
+	probably use windows capi...;
+#else // !__WINDOWS__
+	no getSecureRandom() implementation!
+#endif // __WINDOWS__
+#endif // __UNIX_LIKE__
 }
 
 void Utils::lockDownFile(const char *path,bool isDir)

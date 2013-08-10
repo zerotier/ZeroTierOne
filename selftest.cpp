@@ -64,6 +64,9 @@ static int testCrypto()
 	unsigned char buf1[16384];
 	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
+	//Utils::getSecureRandom(buf1,1024);
+	//std::cout << "[crypto] getSecureRandom() -> " << Utils::hex(buf1,1024) << std::endl;
+
 	std::cout << "[crypto] Testing ECDSA... "; std::cout.flush();
 	for(unsigned int k=0;k<64;++k) {
 		EllipticCurveKeyPair kp;
