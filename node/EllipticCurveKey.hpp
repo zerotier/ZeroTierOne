@@ -30,6 +30,7 @@
 
 #include <string>
 #include <algorithm>
+#include <stdexcept>
 #include <string.h>
 #include "Utils.hpp"
 
@@ -69,39 +70,24 @@ public:
 	}
 
 	EllipticCurveKey(const void *data,unsigned int len)
-		throw()
+		throw(std::out_of_range)
 	{
 		set(data,len);
 	}
 
 	EllipticCurveKey(const std::string &data)
-		throw()
+		throw(std::out_of_range)
 	{
 		set(data.data(),data.length());
 	}
 
-	EllipticCurveKey(const EllipticCurveKey &k)
-		throw()
-	{
-		_bytes = k._bytes;
-		memcpy(_key,k._key,_bytes);
-	}
-
-	inline EllipticCurveKey &operator=(const EllipticCurveKey &k)
-		throw()
-	{
-		_bytes = k._bytes;
-		memcpy(_key,k._key,_bytes);
-		return *this;
-	}
-
 	inline void set(const void *data,unsigned int len)
-		throw()
+		throw(std::out_of_range)
 	{
 		if (len <= ZT_EC_MAX_BYTES) {
 			_bytes = len;
 			memcpy(_key,data,len);
-		} else _bytes = 0;
+		} else throw std::out_of_range("key too large");
 	}
 
 	inline const unsigned char *data() const throw() { return _key; }
