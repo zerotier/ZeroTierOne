@@ -34,7 +34,9 @@
 #include <stdexcept>
 #include <iostream>
 
-#ifdef _WIN32
+#include "node/Constants.hpp"
+
+#ifdef __WINDOWS__
 #include <Windows.h>
 #else
 #include <unistd.h>
@@ -44,12 +46,44 @@
 #include <signal.h>
 #endif
 
+#include <openssl/rand.h>
+
 #include "node/Node.hpp"
 #include "node/Utils.hpp"
 
 #include "launcher.h"
 
 using namespace ZeroTier;
+
+// ---------------------------------------------------------------------------
+// Override libcrypto default RAND_ with Utils::getSecureRandom(), which uses
+// a system strong random source. This is because OpenSSL libcrypto's default
+// RAND_ implementation uses uninitialized memory as one of its entropy
+// sources, which plays havoc with all kinds of debuggers and auditing tools.
+
+static void _zeroTier_rand_cleanup() {}
+static void _zeroTier_rand_add(const void *buf, int num, double add_entropy) {}
+static int _zeroTier_rand_status() { return 1; }
+static void _zeroTier_rand_seed(const void *buf, int num) {}
+static int _zeroTier_rand_bytes(unsigned char *buf, int num)
+{
+	Utils::getSecureRandom(buf,num);
+	return 1;
+}
+static RAND_METHOD _zeroTierRandMethod = {
+	_zeroTier_rand_seed,
+	_zeroTier_rand_bytes,
+	_zeroTier_rand_cleanup,
+	_zeroTier_rand_add,
+	_zeroTier_rand_bytes,
+	_zeroTier_rand_status
+};
+static void _initLibCrypto()
+{
+	RAND_set_rand_method(&_zeroTierRandMethod);
+}
+
+// ---------------------------------------------------------------------------
 
 static Node *node = (Node *)0;
 
@@ -80,6 +114,8 @@ int main(int argc,char **argv)
 	signal(SIGTERM,&sighandlerQuit);
 	signal(SIGQUIT,&sighandlerQuit);
 #endif
+
+	_initLibCrypto();
 
 	if (argc < 2) {
 		printHelp(argv[0],stderr);

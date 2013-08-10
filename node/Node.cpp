@@ -37,16 +37,6 @@
 #include <vector>
 #include <string>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-#endif
-
 #include "Condition.hpp"
 #include "Node.hpp"
 #include "Topology.hpp"
@@ -70,6 +60,16 @@
 #include "Multicaster.hpp"
 #include "CMWC4096.hpp"
 #include "Service.hpp"
+
+#ifdef __WINDOWS__
+#include <Windows.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#endif
 
 #include "../version.h"
 

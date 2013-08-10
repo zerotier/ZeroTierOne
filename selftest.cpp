@@ -47,7 +47,39 @@
 #include "node/NodeConfig.hpp"
 #include "node/Dictionary.hpp"
 
+#include <openssl/rand.h>
+
 using namespace ZeroTier;
+
+// ---------------------------------------------------------------------------
+// Override libcrypto default RAND_ with Utils::getSecureRandom(), which uses
+// a system strong random source. This is because OpenSSL libcrypto's default
+// RAND_ implementation uses uninitialized memory as one of its entropy
+// sources, which plays havoc with all kinds of debuggers and auditing tools.
+
+static void _zeroTier_rand_cleanup() {}
+static void _zeroTier_rand_add(const void *buf, int num, double add_entropy) {}
+static int _zeroTier_rand_status() { return 1; }
+static void _zeroTier_rand_seed(const void *buf, int num) {}
+static int _zeroTier_rand_bytes(unsigned char *buf, int num)
+{
+	Utils::getSecureRandom(buf,num);
+	return 1;
+}
+static RAND_METHOD _zeroTierRandMethod = {
+	_zeroTier_rand_seed,
+	_zeroTier_rand_bytes,
+	_zeroTier_rand_cleanup,
+	_zeroTier_rand_add,
+	_zeroTier_rand_bytes,
+	_zeroTier_rand_status
+};
+static void _initLibCrypto()
+{
+	RAND_set_rand_method(&_zeroTierRandMethod);
+}
+
+// ---------------------------------------------------------------------------
 
 static unsigned char fuzzbuf[1048576];
 
@@ -332,6 +364,7 @@ int main(int argc,char **argv)
 {
 	int r = 0;
 
+	_initLibCrypto();
 	srand(time(0));
 
 	r |= testCrypto();
