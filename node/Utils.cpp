@@ -221,9 +221,20 @@ static const char *MONTH_NAMES[12] = { "Jan","Feb","Mar","Apr","May","Jun","Jul"
 
 std::map<std::string,bool> Utils::listDirectory(const char *path)
 {
+	std::map<std::string,bool> r;
+
+#ifdef __WINDOWS__
+	HANDLE hFind;
+	WIN32_FIND_DATA ffd;
+	if ((hFind = FindFirstFile((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+		do {
+			r[std::string(ffd.cFileName)] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+		} while (FindNextFile(hFind,&ffd));
+		FindClose(hFind);
+	}
+#else
 	struct dirent de;
 	struct dirent *dptr;
-	std::map<std::string,bool> r;
 
 	DIR *d = opendir(path);
 	if (!d)
@@ -238,6 +249,7 @@ std::map<std::string,bool> Utils::listDirectory(const char *path)
 				r[std::string(dptr->d_name)] = (dptr->d_type == DT_DIR);
 		} else break;
 	}
+#endif
 
 	return r;
 }
@@ -434,10 +446,42 @@ std::string Utils::toRfc1123(uint64_t t64)
 	struct tm t;
 	char buf[128];
 	time_t utc = (time_t)(t64 / 1000ULL);
+#ifdef __WINDOWS__
+	gmtime_s(&t,&utc);
+#else
 	gmtime_r(&utc,&t);
+#endif
 	sprintf(buf,"%3s, %02d %3s %4d %02d:%02d:%02d GMT",DAY_NAMES[t.tm_wday],t.tm_mday,MONTH_NAMES[t.tm_mon],t.tm_year + 1900,t.tm_hour,t.tm_min,t.tm_sec);
 	return std::string(buf);
 }
+
+#ifdef __WINDOWS__
+static int is_leap(unsigned y) {
+        y += 1900;
+        return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
+}
+static time_t timegm(struct tm *tm) {
+        static const unsigned ndays[2][12] = {
+                {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
+                {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+        };
+        time_t res = 0;
+        int i;
+        for (i = 70; i < tm->tm_year; ++i)
+                res += is_leap(i) ? 366 : 365;
+
+        for (i = 0; i < tm->tm_mon; ++i)
+                res += ndays[is_leap(tm->tm_year)][i];
+        res += tm->tm_mday - 1;
+        res *= 24;
+        res += tm->tm_hour;
+        res *= 60;
+        res += tm->tm_min;
+        res *= 60;
+        res += tm->tm_sec;
+        return res;
+}
+#endif
 
 uint64_t Utils::fromRfc1123(const char *tstr)
 {
@@ -453,15 +497,25 @@ uint64_t Utils::fromRfc1123(const char *tstr)
 
 	wdays[3] = '\0';
 	for(t.tm_wday=0;t.tm_wday<7;++t.tm_wday) {
+#ifdef __WINDOWS__
+		if (!_stricmp(DAY_NAMES[t.tm_wday],wdays))
+			break;
+#else
 		if (!strcasecmp(DAY_NAMES[t.tm_wday],wdays))
 			break;
+#endif
 	}
 	if (t.tm_wday == 7)
 		return 0;
 	mons[3] = '\0';
 	for(t.tm_mon=0;t.tm_mon<12;++t.tm_mon) {
+#ifdef __WINDOWS__
+		if (!_stricmp(MONTH_NAMES[t.tm_mday],mons))
+			break;
+#else
 		if (!strcasecmp(MONTH_NAMES[t.tm_mday],mons))
 			break;
+#endif
 	}
 	if (t.tm_mon == 12)
 		return 0;
@@ -471,6 +525,7 @@ uint64_t Utils::fromRfc1123(const char *tstr)
 	t.tm_isdst = 0; // ignored by timegm
 
 	time_t utc = timegm(&t);
+
 	return ((utc > 0) ? (1000ULL * (uint64_t)utc) : 0ULL);
 }
 

@@ -49,6 +49,10 @@
 #include "Salsa20.hpp"
 #include "HMAC.hpp"
 
+#ifdef __WINDOWS__
+#define strtoull _strtoui64
+#endif
+
 namespace ZeroTier {
 
 NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)

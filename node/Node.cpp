@@ -343,7 +343,11 @@ Node::ReasonForTermination Node::run()
 		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine"));
 
 		// Make sure networks.d exists
+#ifdef __WINDOWS__
+		CreateDirectory((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),NULL);
+#else
 		mkdir((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),0700);
+#endif
 
 		// Load or generate config authentication secret
 		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");

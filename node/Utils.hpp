@@ -32,8 +32,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
-#include <sys/time.h>
-#include <arpa/inet.h>
 
 #include <string>
 #include <stdexcept>
@@ -44,9 +42,12 @@
 #include "../ext/lz4/lz4hc.h"
 
 #ifdef __WINDOWS__
-#include <windows.h>
+#include <Windows.h>
+#include <WinSock2.h>
 #else
 #include <unistd.h>
+#include <sys/time.h>
+#include <arpa/inet.h>
 #endif
 
 #include "Constants.hpp"
@@ -74,7 +75,7 @@ public:
 		throw()
 	{
 #ifdef __WINDOWS__
-		foo;
+		DeleteFile(path);
 #else
 		return (unlink(path) == 0);
 #endif
@@ -342,9 +343,20 @@ public:
 	static inline uint64_t now()
 		throw()
 	{
+#ifdef __WINDOWS__
+		FILETIME ft;
+		SYSTEMTIME st;
+		ULARGE_INTEGER tmp;
+		GetSystemTime(&st);
+		SystemTimeToFileTime(&st,&ft);
+		tmp.LowPart = ft.dwLowDateTime;
+		tmp.HighPart = ft.dwHighDateTime;
+		return ( ((tmp.QuadPart - 116444736000000000ULL) / 10000L) + st.wMilliseconds );
+#else
 		struct timeval tv;
 		gettimeofday(&tv,(struct timezone *)0);
 		return ( (1000ULL * (uint64_t)tv.tv_sec) + (uint64_t)(tv.tv_usec / 1000) );
+#endif
 	};
 
 	/**
@@ -353,9 +365,20 @@ public:
 	static inline double nowf()
 		throw()
 	{
+#ifdef __WINDOWS__
+		FILETIME ft;
+		SYSTEMTIME st;
+		ULARGE_INTEGER tmp;
+		GetSystemTime(&st);
+		SystemTimeToFileTime(&st,&ft);
+		tmp.LowPart = ft.dwLowDateTime;
+		tmp.HighPart = ft.dwHighDateTime;
+		return (((double)(tmp.QuadPart - 116444736000000000ULL)) / 10000000.0);
+#else
 		struct timeval tv;
 		gettimeofday(&tv,(struct timezone *)0);
 		return ( ((double)tv.tv_sec) + (((double)tv.tv_usec) / 1000000.0) );
+#endif
 	}
 
 	/**

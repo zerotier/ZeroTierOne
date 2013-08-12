@@ -30,16 +30,22 @@
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <sys/socket.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
 #include <set>
 #include <string>
 
+#include "Constants.hpp"
 #include "SysEnv.hpp"
 #include "Utils.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
+
+#ifdef __UNIX_LIKE__
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <signal.h>
+#endif
 
 #ifdef __APPLE__
 #include <sys/sysctl.h>
@@ -48,11 +54,9 @@
 #include <net/route.h>
 #endif
 
-#ifdef _WIN32
+#ifdef __WINDOWS__
 #include <Windows.h>
-#else
-#include <unistd.h>
-#include <signal.h>
+#include <WinSock2.h>
 #endif
 
 namespace ZeroTier {
@@ -210,10 +214,15 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 
 #endif // __linux__
 
-#ifdef _WIN32
+#ifdef __WINDOWS__
 
-not implemented yet;
+uint64_t SysEnv::getNetworkConfigurationFingerprint()
+	throw()
+{
+	// TODO: windows version
+	return 1;
+}
 
-#endif // _WIN32
+#endif // __WINDOWS__
 
 } // namespace ZeroTier

@@ -25,7 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

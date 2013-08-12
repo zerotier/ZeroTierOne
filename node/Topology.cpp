@@ -26,6 +26,7 @@
  */
 
 #include <algorithm>
+
 #include "Topology.hpp"
 #include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
