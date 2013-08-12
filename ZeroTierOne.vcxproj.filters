@@ -15,27 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cli.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="idtool.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="makekeypair.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="selftest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="launcher-fakebin.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="launcher.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ext\kissdb\kissdb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -52,42 +31,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ext\lz4\lz4hc.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\lock.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\mem.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tuntap.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tuntap_mgr.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tap\kmod.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tap\tap.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tun\kmod.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tun\tun.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tun\tun_inet6_proto.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="mac-tap\tuntap\src\tun\tun_inet_proto.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="netconf-service\netconf-test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="netconf-service\netconf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="node\Defaults.cpp">
@@ -158,9 +101,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="launcher.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -399,27 +339,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ext\lz4\lz4hc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\lock.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\mem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\tuntap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\util.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\tap\tap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\tun\tun.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="mac-tap\tuntap\src\tun\tun_ioctls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="node\Address.hpp">

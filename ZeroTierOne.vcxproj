@@ -1,12 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
+    <ProjectConfiguration Include="Debug_32|Win32">
+      <Configuration>Debug_32</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -15,86 +11,44 @@
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_32|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v110</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug_32|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_32|Win32'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_32|Win32'">
     <ClCompile>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;ZEROTIERONE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;__WINDOWS__;_WINDOWS;_USRDLL;ZEROTIERONE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <TargetMachine>MachineX86</TargetMachine>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-    </Link>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;ZEROTIERONE_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-    </ClCompile>
-    <Link>
-      <TargetMachine>MachineX86</TargetMachine>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cli.cpp" />
     <ClCompile Include="ext\kissdb\kissdb.c" />
     <ClCompile Include="ext\lz4\bench.c" />
     <ClCompile Include="ext\lz4\fuzzer.c" />
     <ClCompile Include="ext\lz4\lz4.c" />
     <ClCompile Include="ext\lz4\lz4demo.c" />
     <ClCompile Include="ext\lz4\lz4hc.c" />
-    <ClCompile Include="idtool.cpp" />
-    <ClCompile Include="launcher-fakebin.c" />
-    <ClCompile Include="launcher.c" />
-    <ClCompile Include="mac-tap\tuntap\src\lock.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\mem.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tap\kmod.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tap\tap.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tuntap.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tuntap_mgr.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tun\kmod.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tun\tun.cc" />
-    <ClCompile Include="mac-tap\tuntap\src\tun\tun_inet6_proto.c" />
-    <ClCompile Include="mac-tap\tuntap\src\tun\tun_inet_proto.c" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="makekeypair.cpp" />
-    <ClCompile Include="netconf-service\netconf-test.cpp" />
-    <ClCompile Include="netconf-service\netconf.cpp" />
     <ClCompile Include="node\Defaults.cpp" />
     <ClCompile Include="node\Demarc.cpp" />
     <ClCompile Include="node\EllipticCurveKeyPair.cpp" />
@@ -117,7 +71,6 @@
     <ClCompile Include="node\Topology.cpp" />
     <ClCompile Include="node\UdpSocket.cpp" />
     <ClCompile Include="node\Utils.cpp" />
-    <ClCompile Include="selftest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ext\bin\libcrypto\include\openssl\aes.h" />
@@ -199,14 +152,6 @@
     <ClInclude Include="ext\lz4\bench.h" />
     <ClInclude Include="ext\lz4\lz4.h" />
     <ClInclude Include="ext\lz4\lz4hc.h" />
-    <ClInclude Include="launcher.h" />
-    <ClInclude Include="mac-tap\tuntap\src\lock.h" />
-    <ClInclude Include="mac-tap\tuntap\src\mem.h" />
-    <ClInclude Include="mac-tap\tuntap\src\tap\tap.h" />
-    <ClInclude Include="mac-tap\tuntap\src\tuntap.h" />
-    <ClInclude Include="mac-tap\tuntap\src\tun\tun.h" />
-    <ClInclude Include="mac-tap\tuntap\src\tun\tun_ioctls.h" />
-    <ClInclude Include="mac-tap\tuntap\src\util.h" />
     <ClInclude Include="node\Address.hpp" />
     <ClInclude Include="node\Array.hpp" />
     <ClInclude Include="node\AtomicCounter.hpp" />
