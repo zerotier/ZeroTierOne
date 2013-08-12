@@ -229,6 +229,9 @@ static int testPacket()
 	unsigned char salsaKey[32],hmacKey[32];
 	Packet a,b;
 
+	a.zeroAll();
+	b.zeroAll();
+
 	for(unsigned int i=0;i<32;++i) {
 		salsaKey[i] = (unsigned char)rand();
 		hmacKey[i] = (unsigned char)rand();
@@ -236,12 +239,15 @@ static int testPacket()
 
 	std::cout << "[packet] Testing Packet encoder/decoder... ";
 
-	a = Packet();
-	a.setVerb(Packet::VERB_HELLO);
+	a.reset(Address(),Address(),Packet::VERB_HELLO);
 	for(int i=0;i<32;++i)
 		a.append("supercalifragilisticexpealidocious",strlen("supercalifragilisticexpealidocious"));
 
 	b = a;
+	if (a != b) {
+		std::cout << "FAIL (assign)" << std::endl;
+		return -1;
+	}
 
 	a.compress();
 	unsigned int complen = a.size();

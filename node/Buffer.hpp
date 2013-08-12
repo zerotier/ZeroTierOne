@@ -124,7 +124,7 @@ public:
 	{
 		if (b._l > C)
 			throw std::out_of_range("Buffer: assignment from buffer larger than capacity");
-		memcpy(this,&b,sizeof(_l) + b._l); // one memcpy for all fields
+		memcpy(_b,b._b,_l = b._l);
 		return *this;
 	}
 
@@ -355,6 +355,15 @@ public:
 		throw()
 	{
 		memset(_b + _l,0,C - _l);
+	}
+
+	/**
+	 * Unconditionally zero buffer's underlying memory
+	 */
+	inline void zeroAll()
+		throw()
+	{
+		memset(_b,0,sizeof(_b));
 	}
 
 	/**
