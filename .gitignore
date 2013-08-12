@@ -6,3 +6,8 @@ zerotier-*
 *.dSYM
 mac-tap/tuntap/src/tap/tap
 mac-tap/tuntap/tap.kext
+/ZeroTierOne.vcxproj.user
+/ZeroTierOne.sdf
+
+/ZeroTierOne.v11.suo
+/ZeroTierOne.opensdf
