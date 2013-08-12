@@ -29,6 +29,8 @@
 #define _ZT_UDPSOCKET_HPP
 
 #include <stdexcept>
+
+#include "Constants.hpp"
 #include "Thread.hpp"
 #include "InetAddress.hpp"
 #include "Mutex.hpp"

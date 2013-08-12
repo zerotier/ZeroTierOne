@@ -28,9 +28,10 @@
 #ifndef _ZT_MUTEX_HPP
 #define _ZT_MUTEX_HPP
 
+#include "Constants.hpp"
 #include "NonCopyable.hpp"
 
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifdef __UNIX_LIKE__
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -112,7 +113,7 @@ private:
 
 #endif // Apple / Linux
 
-#ifdef _WIN32
+#ifdef __WINDOWS__
 
 #include <stdlib.h>
 #include <Windows.h>
@@ -157,9 +158,6 @@ public:
 		(const_cast <Mutex *> (this))->unlock();
 	}
 
-	/**
-	 * Uses C++ contexts and constructor/destructor to lock/unlock automatically
-	 */
 	class Lock : NonCopyable
 	{
 	public:

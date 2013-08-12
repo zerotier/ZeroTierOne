@@ -28,9 +28,57 @@
 #ifndef _ZT_CONDITION_HPP
 #define _ZT_CONDITION_HPP
 
+#include "Constants.hpp"
 #include "NonCopyable.hpp"
 
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifdef __WINDOWS__
+
+#include <Windows.h>
+#include <stdlib.h>
+
+#include "Utils.hpp"
+
+namespace ZeroTier {
+
+class Condition : NonCopyable
+{
+public:
+	Condition()
+		throw()
+	{
+		_sem = CreateSemaphore(NULL,0,1,NULL);
+	}
+
+	~Condition()
+	{
+		CloseHandle(_sem);
+	}
+
+	inline void wait() const
+		throw()
+	{
+		WaitForSingleObject(_sem,INFINITE);
+	}
+
+	inline void wait(unsigned long ms) const
+		throw()
+	{
+		WaitForSingleObject(_sem,(DWORD)ms);
+	}
+
+	inline void signal() const
+		throw()
+	{
+		ReleaseSemaphore(_sem,1,NULL);
+	}
+
+private:
+	HANDLE _sem;
+};
+
+} // namespace ZeroTier
+
+#else // !__WINDOWS__
 
 #include <time.h>
 #include <stdlib.h>
@@ -88,20 +136,6 @@ private:
 
 } // namespace ZeroTier
 
-#endif // Apple / Linux
-
-#ifdef _WIN32
-
-#include <stdlib.h>
-#include <Windows.h>
-
-namespace ZeroTier {
-
-error need windoze;
-// On Windows this will probably be implemented via Semaphores
-
-} // namespace ZeroTier
-
-#endif // _WIN32
+#endif // !__WINDOWS__
 
 #endif

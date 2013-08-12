@@ -35,7 +35,57 @@
 
 #ifdef __WINDOWS__
 
-todo need windows;
+#include <Windows.h>
+#include <string.h>
+
+namespace ZeroTier {
+
+template<typename C>
+static DWORD WINAPI ___zt_threadMain(LPVOID lpParam)
+{
+	try {
+		((C *)lpParam)->threadMain();
+	} catch ( ... ) {}
+	return 0;
+}
+
+class Thread
+{
+public:
+	Thread()
+		throw()
+	{
+		_th = NULL;
+	}
+
+	template<typename C>
+	static inline Thread start(C *instance)
+		throw(std::runtime_error)
+	{
+		Thread t;
+		t._th = CreateThread(NULL,0,&___zt_threadMain<C>,(LPVOID)instance,0,&t._tid);
+		if (t._th == NULL)
+			throw std::runtime_error("CreateThread() failed");
+		return t;
+	}
+
+	static inline void join(const Thread &t)
+	{
+		if (t._th != NULL)
+			WaitForSingleObject(t._th,INFINITE);
+	}
+
+	static inline void sleep(unsigned long ms)
+	{
+		Sleep((DWORD)ms);
+	}
+
+private:
+	HANDLE _th;
+	DWORD _tid;
+};
+
+} // namespace ZeroTier
 
 #else
 
