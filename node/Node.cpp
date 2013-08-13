@@ -220,8 +220,8 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 				if (msg.contains("error")) {
 					Packet::ErrorCode errCode = Packet::ERROR_INVALID_REQUEST;
 					const std::string &err = msg.get("error");
-					if (err == "NOT_FOUND")
-						errCode = Packet::ERROR_NOT_FOUND;
+					if (err == "OBJ_NOT_FOUND")
+						errCode = Packet::ERROR_OBJ_NOT_FOUND;
 
 					Packet outp(peerAddress,_r->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);

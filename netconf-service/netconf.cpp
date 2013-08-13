@@ -225,7 +225,7 @@ int main(int argc,char **argv)
 						response["nwid"] = request.get("nwid");
 						response["type"] = "netconf-response";
 						response["requestId"] = request.get("requestId");
-						response["error"] = "NOT_FOUND";
+						response["error"] = "OBJ_NOT_FOUND";
 						std::string respm = response.toString();
 						uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
 
