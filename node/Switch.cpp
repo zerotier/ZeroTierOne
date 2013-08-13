@@ -32,6 +32,13 @@
 #include <utility>
 #include <stdexcept>
 
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
+
 #include "Switch.hpp"
 #include "Node.hpp"
 #include "EthernetTap.hpp"

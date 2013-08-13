@@ -28,10 +28,12 @@
 #ifndef _ZT_PEER_HPP
 #define _ZT_PEER_HPP
 
+#include <stdint.h>
+
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
-#include <stdint.h>
+
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"

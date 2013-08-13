@@ -38,19 +38,19 @@
 #include <vector>
 #include <map>
 
+#include "Constants.hpp"
+
 #include "../ext/lz4/lz4.h"
 #include "../ext/lz4/lz4hc.h"
 
 #ifdef __WINDOWS__
-#include <Windows.h>
 #include <WinSock2.h>
+#include <Windows.h>
 #else
 #include <unistd.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
 #endif
-
-#include "Constants.hpp"
 
 /**
  * Maximum compression/decompression block size (do not change)
@@ -75,7 +75,7 @@ public:
 		throw()
 	{
 #ifdef __WINDOWS__
-		DeleteFile(path);
+		return (DeleteFile(path) != FALSE);
 #else
 		return (unlink(path) == 0);
 #endif

@@ -97,7 +97,7 @@ private:
 		const RuntimeEnvironment *renv;
 		Address source;
 		InetAddress remoteAddress;
-		int localPort;
+		Demarc::Port localPort;
 		unsigned int vMajor,vMinor,vRevision;
 		uint64_t helloPacketId;
 		uint64_t helloTimestamp;

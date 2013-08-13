@@ -28,10 +28,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <string>
 
+#include "Constants.hpp"
 #include "InetAddress.hpp"
 
 namespace ZeroTier {
@@ -62,13 +61,21 @@ std::string InetAddress::toString() const
 
 	switch(_sa.saddr.sa_family) {
 		case AF_INET:
+#ifdef __WINDOWS__
+			if (inet_ntop(AF_INET,(PVOID)&(_sa.sin.sin_addr.s_addr),buf,sizeof(buf))) {
+#else
 			if (inet_ntop(AF_INET,(const void *)&(_sa.sin.sin_addr.s_addr),buf,sizeof(buf))) {
+#endif
 				sprintf(buf2,"%s/%u",buf,(unsigned int)ntohs(_sa.sin.sin_port));
 				return std::string(buf2);
 			}
 			break;
 		case AF_INET6:
+#ifdef __WINDOWS__
+			if (inet_ntop(AF_INET6,(PVOID)&(_sa.sin6.sin6_addr.s6_addr),buf,sizeof(buf))) {
+#else
 			if (inet_ntop(AF_INET6,(const void *)&(_sa.sin6.sin6_addr.s6_addr),buf,sizeof(buf))) {
+#endif
 				sprintf(buf2,"%s/%u",buf,(unsigned int)ntohs(_sa.sin6.sin6_port));
 				return std::string(buf2);
 			}
@@ -97,12 +104,22 @@ std::string InetAddress::toIpString() const
 
 	switch(_sa.saddr.sa_family) {
 		case AF_INET:
+#ifdef __WINDOWS__
+			if (inet_ntop(AF_INET,(PVOID)&(_sa.sin.sin_addr.s_addr),buf,sizeof(buf)))
+				return std::string(buf);
+#else
 			if (inet_ntop(AF_INET,(const void *)&(_sa.sin.sin_addr.s_addr),buf,sizeof(buf)))
 				return std::string(buf);
+#endif
 			break;
 		case AF_INET6:
+#ifdef __WINDOWS__
+			if (inet_ntop(AF_INET6,(PVOID)&(_sa.sin6.sin6_addr.s6_addr),buf,sizeof(buf)))
+				return std::string(buf);
+#else
 			if (inet_ntop(AF_INET6,(const void *)&(_sa.sin6.sin6_addr.s6_addr),buf,sizeof(buf)))
 				return std::string(buf);
+#endif
 			break;
 	}
 

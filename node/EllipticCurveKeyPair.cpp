@@ -29,6 +29,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
+
 #include <openssl/bn.h>
 #include <openssl/obj_mac.h>
 #include <openssl/rand.h>
@@ -129,31 +136,8 @@ const EllipticCurveKeyPair &EllipticCurveKeyPair::operator=(const EllipticCurveK
 
 bool EllipticCurveKeyPair::generate()
 {
-	unsigned char tmp[16384];
 	EC_KEY *key;
 	int len;
-
-	// Make sure OpenSSL libcrypto has sufficient randomness (on most
-	// platforms it auto-seeds, so this is a sanity check).
-	if (!RAND_status()) {
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
-		FILE *rf = fopen("/dev/urandom","r");
-		if (rf) {
-			fread(tmp,sizeof(tmp),1,rf);
-			fclose(rf);
-		} else {
-			fprintf(stderr,"FATAL: could not open /dev/urandom\n");
-			exit(-1);
-		}
-		RAND_seed(tmp,sizeof(tmp));
-#else
-#ifdef _WIN32
-		error need win32;
-#else
-		error;
-#endif
-#endif
-	}
 
 	key = EC_KEY_new();
 	if (!key) return false;

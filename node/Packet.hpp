@@ -551,7 +551,7 @@ public:
 		ERROR_BAD_PROTOCOL_VERSION = 2,
 
 		/* Unknown object queried (e.g. with WHOIS) */
-		ERROR_NOT_FOUND = 3,
+		ERROR_OBJ_NOT_FOUND = 3,
 
 		/* HELLO pushed an identity whose address is already claimed */
 		ERROR_IDENTITY_COLLISION = 4,
@@ -693,12 +693,12 @@ public:
 	/**
 	 * @return True if packet is encrypted
 	 */
-	inline bool encrypted() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_ENCRYPTED)); }
+	inline bool encrypted() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_ENCRYPTED) != 0); }
 
 	/**
 	 * @return True if packet is fragmented (expect fragments)
 	 */
-	inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED)); }
+	inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
 
 	/**
 	 * Set this packet's fragmented flag
@@ -715,7 +715,7 @@ public:
 	/**
 	 * @return True if compressed (result only valid if unencrypted)
 	 */
-	inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED)); }
+	inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
 
 	/**
 	 * @return ZeroTier forwarding hops (0 to 7)

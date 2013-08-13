@@ -110,7 +110,7 @@ public:
 		throw()
 	{
 		n %= B;
-		return (_field[n / 8] & (1 << (n % 8)));
+		return ((_field[n / 8] & (1 << (n % 8))) != 0);
 	}
 
 	/**

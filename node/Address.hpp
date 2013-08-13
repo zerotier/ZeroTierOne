@@ -205,7 +205,7 @@ public:
 	/**
 	 * @return True if this address is not zero
 	 */
-	inline operator bool() const throw() { return (_a); }
+	inline operator bool() const throw() { return (_a != 0); }
 
 	/**
 	 * @return Sum of all bytes in address

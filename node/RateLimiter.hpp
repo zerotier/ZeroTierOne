@@ -29,7 +29,14 @@
 #define _ZT_RATELIMITER_HPP
 
 #include <math.h>
+
+#include "Constants.hpp"
 #include "Utils.hpp"
+
+#ifdef __WINDOWS__
+#define fmin(a,b) (((a) <= (b)) ? (a) : (b))
+#define fmax(a,b) (((a) >= (b)) ? (a) : (b))
+#endif
 
 namespace ZeroTier {
 

@@ -68,6 +68,9 @@
 #ifndef __WINDOWS__
 #define __WINDOWS__
 #endif
+#define NOMINMAX
+#pragma warning(disable : 4290)
+#pragma warning(disable : 4996)
 #undef __UNIX_LIKE__
 #define ZT_PATH_SEPARATOR '\\'
 #define ZT_PATH_SEPARATOR_S "\\"
@@ -96,10 +99,22 @@
 error_no_byte_order_defined;
 #endif
 #ifndef ZT_OSNAME
-error_no_ZT_OSNAME_defined;
+#ifdef __WINDOWS__
+#define ZT_OSNAME "windows"
+#else
+no ZT_OSNAME defined;
+#endif
 #endif
 #ifndef ZT_ARCH
+#ifdef __WINDOWS__
+#ifdef _WIN64
+#define ZT_ARCH "x64"
+#else
+#define ZT_ARCH "x86"
+#endif
+#else
 error_no_ZT_ARCH_defined;
+#endif
 #endif
 
 /**

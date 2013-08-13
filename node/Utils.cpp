@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 
 #include "Constants.hpp"
 
@@ -37,19 +38,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/uio.h>
 #include <dirent.h>
 #endif
 
-#ifdef __WINDOWS__
-#include <Windows.h>
-#endif
-
-#include <sys/stat.h>
-
 #include "Utils.hpp"
 #include "Mutex.hpp"
+#include "Salsa20.hpp"
 
 namespace ZeroTier {
 
@@ -390,14 +385,18 @@ unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
 
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
-#ifdef __UNIX_LIKE__
 	static Mutex randomLock;
 	static char randbuf[32768];
 	static unsigned int randptr = sizeof(randbuf);
+#ifdef __WINDOWS__
+	static Salsa20 s20;
+	volatile bool s20Initialized = false;
+#endif
 
 	Mutex::Lock _l(randomLock);
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randptr >= sizeof(randbuf)) {
+#ifdef __UNIX_LIKE__
 			int fd = ::open("/dev/urandom",O_RDONLY);
 			if (fd < 0) {
 				fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom: %s"ZT_EOL_S,strerror(errno));
@@ -408,18 +407,32 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				exit(-1);
 			}
 			::close(fd);
+#else
+#ifdef __WINDOWS__
+			if (!s20Initialized) {
+				s20Initialized = true;
+				char ktmp[32];
+				char ivtmp[8];
+				for(int i=0;i<32;++i) ktmp[i] = (char)rand();
+				for(int i=0;i<8;++i) ivtmp[i] = (char)rand();
+				double now = Utils::nowf();
+				memcpy(ktmp,&now,sizeof(now));
+				DWORD tmp = GetCurrentProcessId();
+				memcpy(ktmp + sizeof(double),&tmp,sizeof(tmp));
+				tmp = GetTickCount();
+				memcpy(ktmp + sizeof(double) + sizeof(DWORD),&tmp,sizeof(tmp));
+				s20.init(ktmp,256,ivtmp);
+				for(int i=0;i<sizeof(randbuf);++i) randbuf[i] = (char)rand();
+			}
+			s20.encrypt(randbuf,randbuf,sizeof(randbuf));
+#else
+no getSecureRandom() implementation;
+#endif
+#endif
 			randptr = 0;
 		}
 		((char *)buf)[i] = randbuf[randptr++];
 	}
-
-#else // !__UNIX_LIKE__
-#ifdef __WINDOWS__
-	probably use windows capi...;
-#else // !__WINDOWS__
-	no getSecureRandom() implementation!
-#endif // __WINDOWS__
-#endif // __UNIX_LIKE__
 }
 
 void Utils::lockDownFile(const char *path,bool isDir)
@@ -428,7 +441,7 @@ void Utils::lockDownFile(const char *path,bool isDir)
 	chmod(path,isDir ? 0700 : 0600);
 #else
 #ifdef _WIN32
-	error need win32;
+	// TODO: windows ACL hell...
 #endif
 #endif
 }

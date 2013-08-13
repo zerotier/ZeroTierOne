@@ -94,7 +94,14 @@ public:
 	inline reference back() throw() { return data[S-1]; }
 	inline const_reference back() const throw() { return data[S-1]; }
 
-	inline bool operator==(const Array &k) const throw() { return std::equal(begin(),end(),k.begin()); }
+	inline bool operator==(const Array &k) const throw()
+	{
+		for(unsigned long i=0;i<S;++i) {
+			if (data[i] != k.data[i])
+				return false;
+		}
+		return true;
+	}
 	inline bool operator<(const Array &k) const throw() { return std::lexicographical_compare(begin(),end(),k.begin(),k.end()); }
 	inline bool operator!=(const Array &k) const throw() { return !(*this == k); }
 	inline bool operator>(const Array &k) const throw() { return (k < *this); }

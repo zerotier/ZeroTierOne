@@ -99,7 +99,7 @@ public:
 		with._ptr = tmp;
 	}
 
-	inline operator bool() const throw() { return (_ptr); }
+	inline operator bool() const throw() { return (_ptr != (T *)0); }
 	inline T &operator*() const throw() { return *_ptr; }
 	inline T *operator->() const throw() { return _ptr; }
 

@@ -86,9 +86,15 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 					if (fabs(my - their) > delta)
 						return false;
 				} else {
+#ifdef __WINDOWS__
+					int64_t my = _strtoi64(myField->second.c_str(),(char **)0,10);
+					int64_t their = _strtoi64(theirField->second.c_str(),(char **)0,10);
+					int64_t delta = _strtoi64(deltaField->second.c_str(),(char **)0,10);
+#else
 					int64_t my = strtoll(myField->second.c_str(),(char **)0,10);
 					int64_t their = strtoll(theirField->second.c_str(),(char **)0,10);
 					int64_t delta = strtoll(deltaField->second.c_str(),(char **)0,10);
+#endif
 					if (my > their) {
 						if ((my - their) > delta)
 							return false;

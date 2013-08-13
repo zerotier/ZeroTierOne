@@ -26,6 +26,14 @@
  */
 
 #include <vector>
+
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
+
 #include "Demarc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Logger.hpp"
@@ -82,7 +90,7 @@ bool Demarc::has(Port p) const
 	throw()
 {
 	Mutex::Lock _l(_ports_m);
-	return (_ports.count(p));
+	return (_ports.count(p) != 0);
 }
 
 bool Demarc::bindLocalUdp(unsigned int localPort)

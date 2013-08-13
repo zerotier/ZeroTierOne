@@ -37,6 +37,13 @@
 
 #include <openssl/sha.h>
 
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
+
 #include "NodeConfig.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Defaults.hpp"

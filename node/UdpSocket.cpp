@@ -33,10 +33,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifdef _WIN32
-#include <Windows.h>
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <WS2tcpip.h>
+#include <Windows.h>
 #else
 #include <sys/socket.h>
 #include <arpa/inet.h>

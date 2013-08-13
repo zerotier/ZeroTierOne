@@ -46,10 +46,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ext\kissdb\kissdb.c" />
-    <ClCompile Include="ext\lz4\bench.c" />
-    <ClCompile Include="ext\lz4\fuzzer.c" />
     <ClCompile Include="ext\lz4\lz4.c" />
-    <ClCompile Include="ext\lz4\lz4demo.c" />
     <ClCompile Include="ext\lz4\lz4hc.c" />
     <ClCompile Include="node\Defaults.cpp" />
     <ClCompile Include="node\Demarc.cpp" />
@@ -151,7 +148,6 @@
     <ClInclude Include="ext\bin\libcrypto\include\openssl\x509v3.h" />
     <ClInclude Include="ext\bin\libcrypto\include\openssl\x509_vfy.h" />
     <ClInclude Include="ext\kissdb\kissdb.h" />
-    <ClInclude Include="ext\lz4\bench.h" />
     <ClInclude Include="ext\lz4\lz4.h" />
     <ClInclude Include="ext\lz4\lz4hc.h" />
     <ClInclude Include="node\Address.hpp" />

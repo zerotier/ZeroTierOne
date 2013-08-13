@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
+
 #include <map>
 #include <set>
 #include <utility>
@@ -36,6 +38,13 @@
 #include <list>
 #include <vector>
 #include <string>
+
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
 
 #include "Condition.hpp"
 #include "Node.hpp"
@@ -46,7 +55,6 @@
 #include "Utils.hpp"
 #include "EthernetTap.hpp"
 #include "Logger.hpp"
-#include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "Salsa20.hpp"
 #include "HMAC.hpp"
@@ -68,7 +76,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/file.h>
-#include <sys/stat.h>
 #endif
 
 #include "../version.h"

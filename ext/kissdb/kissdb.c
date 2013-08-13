@@ -15,7 +15,12 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <inttypes.h>
+#include <stdint.h>
+
+#ifdef _WIN32
+#define fseeko _fseeki64
+#define ftello _ftelli64
+#endif
 
 #define KISSDB_HEADER_SIZE ((sizeof(uint64_t) * 3) + 4)
 
@@ -321,6 +326,8 @@ int KISSDB_Iterator_next(KISSDB_Iterator *dbi,void *kbuf,void *vbuf)
 }
 
 #ifdef KISSDB_TEST
+
+#include <inttypes.h>
 
 int main(int argc,char **argv)
 {

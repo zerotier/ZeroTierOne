@@ -369,7 +369,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
 			outp.append(packetId());
-			outp.append((unsigned char)Packet::ERROR_NOT_FOUND);
+			outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 			outp.append(payload(),ZT_ADDRESS_LENGTH);
 			outp.encrypt(peer->cryptKey());
 			outp.hmacSet(peer->macKey());
@@ -612,11 +612,11 @@ bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *
 
 bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
-	char tmp[128];
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
 #ifndef __WINDOWS__
 		if (_r->netconfService) {
+			char tmp[128];
 			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
 
 			Dictionary request;

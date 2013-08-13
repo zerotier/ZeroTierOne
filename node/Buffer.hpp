@@ -28,12 +28,15 @@
 #ifndef _ZT_BUFFER_HPP
 #define _ZT_BUFFER_HPP
 
+#include <string.h>
+#include <stdint.h>
+
 #include <stdexcept>
 #include <string>
 #include <algorithm>
 #include <utility>
-#include <string.h>
-#include <stdint.h>
+
+#include "Constants.hpp"
 #include "Utils.hpp"
 
 #ifdef __GNUC__

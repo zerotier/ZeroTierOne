@@ -173,7 +173,7 @@ public:
 	/**
 	 * @return True if this identity has its private portion
 	 */
-	inline bool hasPrivate() const throw() { return (_keyPair); }
+	inline bool hasPrivate() const throw() { return (_keyPair != (EllipticCurveKeyPair *)0); }
 
 	/**
 	 * Shortcut method to perform key agreement with another identity
@@ -356,7 +356,7 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const throw() { return (_publicKey.size()); }
+	inline operator bool() const throw() { return (_publicKey.size() != 0); }
 
 	inline bool operator==(const Identity &id) const
 		throw()

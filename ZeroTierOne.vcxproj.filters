@@ -18,16 +18,7 @@
     <ClCompile Include="ext\kissdb\kissdb.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ext\lz4\bench.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ext\lz4\fuzzer.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ext\lz4\lz4.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ext\lz4\lz4demo.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ext\lz4\lz4hc.c">
@@ -330,9 +321,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ext\kissdb\kissdb.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ext\lz4\bench.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ext\lz4\lz4.h">

@@ -30,8 +30,20 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <netinet/in.h>
+#include <stdint.h>
+
 #include <string>
+
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <Windows.h>
+#else
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 
 namespace ZeroTier {
 

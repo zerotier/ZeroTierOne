@@ -115,7 +115,11 @@ public:
 		inline uint64_t networkId() const
 			throw(std::invalid_argument)
 		{
+#ifdef __WINDOWS__
+			return _strtoui64(get("nwid").c_str(),(char **)0,16);
+#else
 			return strtoull(get("nwid").c_str(),(char **)0,16);
+#endif
 		}
 
 		inline void setPeerAddress(Address &a)
@@ -222,7 +226,11 @@ public:
 		inline uint64_t networkId() const
 			throw(std::invalid_argument)
 		{
+#ifdef __WINDOWS__
+			return _strtoui64(get("nwid").c_str(),(char **)0,16);
+#else
 			return strtoull(get("nwid").c_str(),(char **)0,16);
+#endif
 		}
 
 		inline Address peerAddress() const
