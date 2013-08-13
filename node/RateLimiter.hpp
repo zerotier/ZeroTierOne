@@ -135,6 +135,15 @@ public:
 		return allow;
 	}
 
+	/**
+	 * @return Current balance
+	 */
+	inline double balance() const
+		throw()
+	{
+		return _balance;
+	}
+
 private:
 	double _lastTime;
 	double _balance;

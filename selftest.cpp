@@ -33,6 +33,7 @@
 #include <string>
 #include <vector>
 
+#include "node/Constants.hpp"
 #include "node/InetAddress.hpp"
 #include "node/EllipticCurveKey.hpp"
 #include "node/EllipticCurveKeyPair.hpp"
@@ -46,6 +47,7 @@
 #include "node/Condition.hpp"
 #include "node/NodeConfig.hpp"
 #include "node/Dictionary.hpp"
+#include "node/RateLimiter.hpp"
 
 #include <openssl/rand.h>
 
@@ -366,6 +368,32 @@ static int testOther()
 	return 0;
 }
 
+static int testRateLimiter()
+{
+	RateLimiter limiter;
+	RateLimiter::Limit limit;
+
+	std::cout << "[ratelimiter] preload: 10000.0, rate: 1000.0/sec, max: 15000.0, min: -7500.0" << std::endl;
+	limit.bytesPerSecond = 1000.0;
+	limit.maxBalance = 15000.0;
+	limit.minBalance = -7500.0;
+	limiter.init(10000.0);
+	for(int i=0;i<25;++i) {
+		Thread::sleep(100);
+		std::cout << "[ratelimiter] delayed 0.1s, gate(1000.0): " << (limiter.gate(limit,1000.0) ? "OK" : "BLOCK");
+		std::cout << " (new balance afterwords: " << limiter.balance() << ")" << std::endl;
+	}
+	std::cout << "[ratelimiter] delaying 15s..." << std::endl;
+	Thread::sleep(15000);
+	for(int i=0;i<20;++i) {
+		Thread::sleep(1000);
+		std::cout << "[ratelimiter] delayed 1s, gate(2000.0): " << (limiter.gate(limit,2000.0) ? "OK" : "BLOCK");
+		std::cout << " (new balance afterwords: " << limiter.balance() << ")" << std::endl;
+	}
+
+	return 0;
+}
+
 int main(int argc,char **argv)
 {
 	int r = 0;
@@ -377,6 +405,7 @@ int main(int argc,char **argv)
 	r |= testPacket();
 	r |= testOther();
 	r |= testIdentity();
+	r |= testRateLimiter();
 
 	if (r)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
