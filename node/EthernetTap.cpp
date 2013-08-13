@@ -25,8 +25,10 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include <iostream>
 #include <string>
+#include <map>
+
+#include "Constants.hpp"
 #include "EthernetTap.hpp"
 #include "Logger.hpp"
 #include "RuntimeEnvironment.hpp"
@@ -59,31 +61,81 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 #include <net/if_arp.h>
 #include <arpa/inet.h>
 
-#ifdef __LINUX__
+// Command identifiers used with command finder static (on various *nixes)
+#define ZT_UNIX_IP_COMMAND 1
+#define ZT_UNIX_IFCONFIG_COMMAND 2
+#define ZT_MAC_KEXTLOAD_COMMAND 3
+#define ZT_MAC_IPCONFIG_COMMAND 4
 
+// Finds external commands on startup
+class _CommandFinder
+{
+public:
+	_CommandFinder()
+	{
+		_findCmd(ZT_UNIX_IFCONFIG_COMMAND,"ifconfig");
+#ifdef __LINUX__
+		_findCmd(ZT_UNIX_IP_COMMAND,"ip");
+#endif
+#ifdef __APPLE__
+		_findCmd(ZT_MAC_KEXTLOAD_COMMAND,"kextload");
+		_findCmd(ZT_MAC_IPCONFIG_COMMAND,"ipconfig");
+#endif
+	}
+
+	// returns NULL if command was not found
+	inline const char *operator[](int id) const
+		throw()
+	{
+		std::map<int,std::string>::const_iterator c(_paths.find(id));
+		if (c == _paths.end())
+			return (const char *)0;
+		return c->second.c_str();
+	}
+
+private:
+	inline void _findCmd(int id,const char *name)
+	{
+		char tmp[4096];
+		sprintf(tmp,"/sbin/%s",name);
+		if (ZeroTier::Utils::fileExists(tmp)) {
+			_paths[id] = tmp;
+			return;
+		}
+		sprintf(tmp,"/usr/sbin/%s",name);
+		if (ZeroTier::Utils::fileExists(tmp)) {
+			_paths[id] = tmp;
+			return;
+		}
+		sprintf(tmp,"/bin/%s",name);
+		if (ZeroTier::Utils::fileExists(tmp)) {
+			_paths[id] = tmp;
+			return;
+		}
+		sprintf(tmp,"/usr/bin/%s",name);
+		if (ZeroTier::Utils::fileExists(tmp)) {
+			_paths[id] = tmp;
+			return;
+		}
+	}
+	std::map<int,std::string> _paths;
+};
+static const _CommandFinder UNIX_COMMANDS;
+
+#ifdef __LINUX__
 #include <linux/if.h>
 #include <linux/if_tun.h>
 #include <linux/if_addr.h>
 #include <linux/if_ether.h>
-
-#define ZT_ETHERTAP_IP_COMMAND "/sbin/ip"
-#define ZT_ETHERTAP_SYSCTL_COMMAND "/sbin/sysctl"
-
 #endif // __LINUX__
 
 #ifdef __APPLE__
-
 #include <sys/uio.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <net/route.h>
 #include <net/if_dl.h>
 #include <ifaddrs.h>
-
-#define ZT_ETHERTAP_IFCONFIG "/sbin/ifconfig"
-#define ZT_MAC_KEXTLOAD "/sbin/kextload"
-#define ZT_MAC_IPCONFIG "/usr/sbin/ipconfig"
-
 #endif // __APPLE__
 
 namespace ZeroTier {
@@ -214,14 +266,15 @@ EthernetTap::EthernetTap(
 		throw std::runtime_error("max tap MTU is 4096");
 
 	// Check for existence of ZT tap devices, try to load module if not there
-	if (stat("/dev/zt0",&tmp)) {
-		int kextpid;
+	const char *kextload = UNIX_COMMANDS[ZT_MAC_KEXTLOAD_COMMAND];
+	if ((stat("/dev/zt0",&tmp))&&(kextload)) {
+		long kextpid;
 		char tmp[4096];
 		strcpy(tmp,_r->homePath.c_str());
-		if ((kextpid = (int)vfork()) == 0) {
+		if ((kextpid = (long)vfork()) == 0) {
 			chdir(tmp);
-			execl(ZT_MAC_KEXTLOAD,ZT_MAC_KEXTLOAD,"-q","-repository",tmp,"tap.kext",(const char *)0);
-			exit(-1);
+			execl(kextload,kextload,"-q","-repository",tmp,"tap.kext",(const char *)0);
+			_exit(-1);
 		} else {
 			int exitcode = -1;
 			waitpid(kextpid,&exitcode,0);
@@ -250,14 +303,19 @@ EthernetTap::EthernetTap(
 		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
 	}
 
-	sprintf(ethaddr,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	sprintf(mtustr,"%u",mtu);
+	const char *ifconfig = UNIX_COMMANDS[ZT_UNIX_IFCONFIG_COMMAND];
+	if (!ifconfig) {
+		::close(_fd);
+		throw std::runtime_error("unable to find 'ifconfig' command on system");
+	}
 
 	// Configure MAC address and MTU, bring interface up
+	sprintf(ethaddr,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	sprintf(mtustr,"%u",mtu);
 	long cpid;
 	if ((cpid = (long)vfork()) == 0) {
-		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
-		exit(-1);
+		execl(ifconfig,ifconfig,_dev,"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
+		_exit(-1);
 	} else {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
@@ -285,15 +343,15 @@ EthernetTap::~EthernetTap()
 #ifdef __APPLE__
 void EthernetTap::whack()
 {
-	long cpid = (long)vfork();
-	if (cpid == 0) {
-		execl(ZT_MAC_IPCONFIG,ZT_MAC_IPCONFIG,"set",_dev,"AUTOMATIC-V6",(const char *)0);
-		exit(-1);
-	} else {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		if (exitcode) {
-			LOG("%s: ipconfig set AUTOMATIC-V6 failed",_dev);
+	const char *ipconfig = UNIX_COMMANDS[ZT_MAC_IPCONFIG_COMMAND];
+	if (ipconfig) {
+		long cpid = (long)vfork();
+		if (cpid == 0) {
+			execl(ipconfig,ipconfig,"set",_dev,"AUTOMATIC-V6",(const char *)0);
+			_exit(-1);
+		} else {
+			int exitcode = -1;
+			waitpid(cpid,&exitcode,0);
 		}
 	}
 }
@@ -304,12 +362,15 @@ void EthernetTap::whack() {}
 #ifdef __LINUX__
 static bool ___removeIp(const char *_dev,const InetAddress &ip)
 {
+	const char *ipcmd = UNIX_COMMANDS[ZT_UNIX_IP_COMMAND];
+	if (!ipcmd)
+		return false;
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		execl(ZT_ETHERTAP_IP_COMMAND,ZT_ETHERTAP_IP_COMMAND,"addr","del",ip.toString().c_str(),"dev",_dev,(const char *)0);
-		exit(1); /* not reached unless exec fails */
+		execl(ipcmd,ipcmd,"addr","del",ip.toString().c_str(),"dev",_dev,(const char *)0);
+		_exit(-1);
 	} else {
-		int exitcode = 1;
+		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
 	}
@@ -317,6 +378,12 @@ static bool ___removeIp(const char *_dev,const InetAddress &ip)
 
 bool EthernetTap::addIP(const InetAddress &ip)
 {
+	const char *ipcmd = UNIX_COMMANDS[ZT_UNIX_IP_COMMAND];
+	if (!ipcmd) {
+		LOG("ERROR: could not configure IP address for %s: unable to find 'ip' command on system (checked /sbin, /bin, /usr/sbin, /usr/bin)",_dev);
+		return false;
+	}
+
 	Mutex::Lock _l(_ips_m);
 
 	if (!ip)
@@ -338,8 +405,8 @@ bool EthernetTap::addIP(const InetAddress &ip)
 
 	long cpid;
 	if ((cpid = (long)vfork()) == 0) {
-		execl(ZT_ETHERTAP_IP_COMMAND,ZT_ETHERTAP_IP_COMMAND,"addr","add",ip.toString().c_str(),"dev",_dev,(const char *)0);
-		exit(-1);
+		execl(ipcmd,ipcmd,"addr","add",ip.toString().c_str(),"dev",_dev,(const char *)0);
+		_exit(-1);
 	} else {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
@@ -356,10 +423,13 @@ bool EthernetTap::addIP(const InetAddress &ip)
 #ifdef __APPLE__
 static bool ___removeIp(const char *_dev,const InetAddress &ip)
 {
-	int cpid;
-	if ((cpid = (int)vfork()) == 0) {
-		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
-		exit(-1);
+	const char *ifconfig = UNIX_COMMANDS[ZT_UNIX_IFCONFIG_COMMAND];
+	if (!ifconfig)
+		return false;
+	long cpid;
+	if ((cpid = (long)vfork()) == 0) {
+		execl(ifconfig,ifconfig,_dev,"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+		_exit(-1);
 	} else {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
@@ -370,6 +440,12 @@ static bool ___removeIp(const char *_dev,const InetAddress &ip)
 
 bool EthernetTap::addIP(const InetAddress &ip)
 {
+	const char *ifconfig = UNIX_COMMANDS[ZT_UNIX_IFCONFIG_COMMAND];
+	if (!ifconfig) {
+		LOG("ERROR: could not configure IP address for %s: unable to find 'ifconfig' command on system (checked /sbin, /bin, /usr/sbin, /usr/bin)",_dev);
+		return false;
+	}
+
 	Mutex::Lock _l(_ips_m);
 
 	if (!ip)
@@ -389,10 +465,10 @@ bool EthernetTap::addIP(const InetAddress &ip)
 		}
 	}
 
-	int cpid;
-	if ((cpid = (int)vfork()) == 0) {
-		execl(ZT_ETHERTAP_IFCONFIG,ZT_ETHERTAP_IFCONFIG,_dev,ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
-		exit(-1);
+	long cpid;
+	if ((cpid = (long)vfork()) == 0) {
+		execl(ifconfig,ifconfig,_dev,ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
+		_exit(-1);
 	} else {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
