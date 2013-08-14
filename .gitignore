@@ -10,3 +10,6 @@ mac-tap/tuntap/tap.kext
 /ipch
 /ZeroTierOne.v11.suo
 /ZeroTierOne.opensdf
+/vsprojects/SelfTest/Debug
+/vsprojects/SelfTest/SelfTest.vcxproj.user
+/Debug

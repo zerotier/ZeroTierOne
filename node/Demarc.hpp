@@ -64,12 +64,12 @@ public:
 	/**
 	 * Port identifier used to refer to any port
 	 */
-	static const Port ANY_PORT = (Port)0xffffffffffffffffULL;
+	static const Port ANY_PORT;
 
 	/**
 	 * Port identifier used to refer to null port / port not found
 	 */
-	static const Port NULL_PORT = (Port)0;
+	static const Port NULL_PORT;
 
 	Demarc(const RuntimeEnvironment *renv);
 	~Demarc();

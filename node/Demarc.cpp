@@ -44,8 +44,8 @@
 
 namespace ZeroTier {
 
-const Demarc::Port Demarc::ANY_PORT;
-const Demarc::Port Demarc::NULL_PORT;
+const Demarc::Port Demarc::ANY_PORT = (Port)0xffffffffffffffffULL;
+const Demarc::Port Demarc::NULL_PORT = (Port)0;
 
 Demarc::Demarc(const RuntimeEnvironment *renv) :
 	_r(renv)

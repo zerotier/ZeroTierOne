@@ -51,6 +51,10 @@
 
 #include <openssl/rand.h>
 
+#ifdef __WINDOWS__
+#include <tchar.h>
+#endif
+
 using namespace ZeroTier;
 
 // ---------------------------------------------------------------------------
@@ -394,12 +398,16 @@ static int testRateLimiter()
 	return 0;
 }
 
+#ifdef __WINDOWS__
+int _tmain(int argc, _TCHAR* argv[])
+#else
 int main(int argc,char **argv)
+#endif
 {
 	int r = 0;
 
 	_initLibCrypto();
-	srand(time(0));
+	srand((unsigned int)time(0));
 
 	r |= testCrypto();
 	r |= testPacket();

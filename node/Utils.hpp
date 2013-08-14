@@ -75,7 +75,7 @@ public:
 		throw()
 	{
 #ifdef __WINDOWS__
-		return (DeleteFile(path) != FALSE);
+		return (DeleteFileA(path) != FALSE);
 #else
 		return (unlink(path) == 0);
 #endif

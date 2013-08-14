@@ -220,11 +220,11 @@ std::map<std::string,bool> Utils::listDirectory(const char *path)
 
 #ifdef __WINDOWS__
 	HANDLE hFind;
-	WIN32_FIND_DATA ffd;
-	if ((hFind = FindFirstFile((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
+	WIN32_FIND_DATAA ffd;
+	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
 			r[std::string(ffd.cFileName)] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
-		} while (FindNextFile(hFind,&ffd));
+		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
 	}
 #else

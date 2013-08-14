@@ -351,7 +351,7 @@ Node::ReasonForTermination Node::run()
 
 		// Make sure networks.d exists
 #ifdef __WINDOWS__
-		CreateDirectory((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),NULL);
+		CreateDirectoryA((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),NULL);
 #else
 		mkdir((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),0700);
 #endif
