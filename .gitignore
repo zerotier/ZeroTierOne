@@ -13,3 +13,5 @@ mac-tap/tuntap/tap.kext
 /vsprojects/SelfTest/Debug
 /vsprojects/SelfTest/SelfTest.vcxproj.user
 /Debug
+/Release
+/vsprojects/SelfTest/Release

@@ -71,6 +71,7 @@
 #define NOMINMAX
 #pragma warning(disable : 4290)
 #pragma warning(disable : 4996)
+#pragma warning(disable : 4101)
 #undef __UNIX_LIKE__
 #define ZT_PATH_SEPARATOR '\\'
 #define ZT_PATH_SEPARATOR_S "\\"

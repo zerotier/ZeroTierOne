@@ -675,6 +675,64 @@ void EthernetTap::threadMain()
 
 #ifdef __WINDOWS__
 
-// TODO
+#include <WinSock2.h>
+#include <Windows.h>
+#include <ws2ipdef.h>
+
+namespace ZeroTier {
+
+EthernetTap::EthernetTap(
+	const RuntimeEnvironment *renv,
+	const MAC &mac,
+	unsigned int mtu,
+	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+	void *arg)
+	throw(std::runtime_error) :
+	_mac(mac),
+	_mtu(mtu),
+	_r(renv),
+	_handler(handler),
+	_arg(arg)
+{
+}
+
+EthernetTap::~EthernetTap()
+{
+}
+
+void EthernetTap::whack()
+{
+}
+
+bool EthernetTap::addIP(const InetAddress &ip)
+{
+	return false;
+}
+
+bool EthernetTap::removeIP(const InetAddress &ip)
+{
+	return false;
+}
+
+void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+{
+}
+
+std::string EthernetTap::deviceName() const
+{
+	return std::string();
+}
+
+bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
+{
+	return false;
+}
+
+void EthernetTap::threadMain()
+	throw()
+{
+}
+
+} // namespace ZeroTier
 
 #endif // __WINDOWS__
