@@ -1,0 +1,65 @@
+# Build TAP-Windows driver.
+# Build Command: build -cef
+
+MAJORCOMP=ntos
+MINORCOMP=ndis
+
+TARGETNAME=@PRODUCT_TAP_WIN_COMPONENT_ID@
+TARGETTYPE=DRIVER
+TARGETPATH=.
+TARGETLIBS=$(DDK_LIB_PATH)\ndis.lib $(DDK_LIB_PATH)\ntstrsafe.lib
+INCLUDES=$(DDK_INCLUDE_PATH) ..
+
+# The TAP version numbers here must be >=
+# PRODUCT_TAP_WIN32_MIN_x values defined in version.m4
+C_DEFINES=
+C_DEFINES=$(C_DEFINES) @EXTRA_C_DEFINES@
+C_DEFINES=$(C_DEFINES) -DTAP_DRIVER_MAJOR_VERSION=@PRODUCT_TAP_WIN_MAJOR@
+C_DEFINES=$(C_DEFINES) -DTAP_DRIVER_MINOR_VERSION=@PRODUCT_TAP_WIN_MINOR@
+
+# Produce the same symbolic information for both free & checked builds.
+# This will allow us to perform full source-level debugging on both
+# builds without affecting the free build's performance.
+!IF "$(DDKBUILDENV)" != "chk"
+NTDEBUGTYPE=both
+USE_PDB=1
+!ELSE
+NTDEBUGTYPE=both
+USE_PDB=1
+!ENDIF
+
+# Set compiler optimizations:
+# /Ox - Full optimization enabled
+# /Os - favor speed over size when optimizing
+# /Od - Disable all optimizations
+# /Oi - Enable optimization for intrinsic functions
+# /Fc - Generate mixed assembler/source code files
+#
+# For both checked and free builds, make sure that any intrinsic
+# functions are compiled correctly. To do this, ensure that /Oi
+# is selected for both free and checked builds. There is a bug in
+# VC++ 6.0 (at least through SP4) where, if you specify any
+# intrinsic functions in your code with "#pragma intrinsic" but
+# you don't have the /Oi optimization enabled, neither a call
+# to the function, nor the intrinsic inline version of the function
+# will end up in your object code. This bug only applies to free
+# builds, but just to be safe we'll make sure that the flag is
+# enabled for all builds.
+
+!IF "$(DDKBUILDENV)" != "chk"
+MSC_OPTIMIZATION=/Ox /Oi /Fc
+!ELSE
+MSC_OPTIMIZATION=/Od /Oi /Fc
+!ENDIF
+
+# Generate a linker map file just in case we need one for debugging
+LINKER_FLAGS=$(LINKER_FLAGS) /INCREMENTAL:NO /MAP /MAPINFO:EXPORTS
+
+# Generate a browser information file for use in IDE development
+#BROWSER_INFO=1
+#BROWSERFILE=$(TARGETNAME).BSC -n
+
+# Abort compilation on warnings by adding /WX
+MSC_WARNING_LEVEL=/W3
+
+SOURCES=tapdrvr.c resource.rc
