@@ -148,6 +148,7 @@ EthernetTap::EthernetTap(
 	const RuntimeEnvironment *renv,
 	const MAC &mac,
 	unsigned int mtu,
+	const char *desc,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg)
 	throw(std::runtime_error) :
@@ -248,6 +249,7 @@ EthernetTap::EthernetTap(
 	const RuntimeEnvironment *renv,
 	const MAC &mac,
 	unsigned int mtu,
+	const char *desc,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg)
 	throw(std::runtime_error) :

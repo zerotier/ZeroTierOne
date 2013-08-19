@@ -62,6 +62,7 @@ public:
 	 * @param renv Runtime environment
 	 * @param mac MAC address of device
 	 * @param mtu MTU of device
+	 * @param desc If non-NULL, a description (not used on all OSes)
 	 * @param handler Handler function to be called when data is received from the tap
 	 * @param arg First argument to handler function
 	 * @throws std::runtime_error Unable to allocate device
@@ -70,6 +71,7 @@ public:
 		const RuntimeEnvironment *renv,
 		const MAC &mac,
 		unsigned int mtu,
+		const char *desc,
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 		void *arg)
 		throw(std::runtime_error);

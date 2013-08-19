@@ -150,7 +150,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	nw->_rlLimit.bytesPerSecond = ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND;
 	nw->_rlLimit.maxBalance = ZT_MULTICAST_DEFAULT_RATE_MAX_BALANCE;
 	nw->_rlLimit.minBalance = ZT_MULTICAST_DEFAULT_RATE_MIN_BALANCE;
-	nw->_tap = new EthernetTap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
+	nw->_tap = new EthernetTap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,(const char *)0,&_CBhandleTapData,nw.ptr());
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
 	nw->_destroyOnDelete = false;
