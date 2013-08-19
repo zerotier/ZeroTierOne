@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SelfTest", "vsprojects\SelfTest\SelfTest.vcxproj", "{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EthTapDevelopment", "vsprojects\EthTapDevelopment\EthTapDevelopment.vcxproj", "{055CA606-B5C0-443A-8741-60EB753A3F3C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -55,36 +53,6 @@ Global
 		{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}.Win8 Release|Win32.Build.0 = Release|Win32
 		{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}.Win8 Release|Win32.Deploy.0 = Release|Win32
 		{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}.Win8 Release|x64.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Debug|Win32.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Debug|Win32.Build.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Debug|x64.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Release|Win32.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Release|Win32.Build.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Release|x64.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Debug|Win32.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Debug|Win32.Build.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Debug|Win32.Deploy.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Debug|x64.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Release|Win32.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Release|Win32.Build.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Release|Win32.Deploy.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Vista Release|x64.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Debug|Win32.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Debug|Win32.Build.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Debug|Win32.Deploy.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Debug|x64.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Release|Win32.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Release|Win32.Build.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Release|Win32.Deploy.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win7 Release|x64.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Debug|Win32.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Debug|Win32.Build.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Debug|Win32.Deploy.0 = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Debug|x64.ActiveCfg = Debug|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Release|Win32.ActiveCfg = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Release|Win32.Build.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Release|Win32.Deploy.0 = Release|Win32
-		{055CA606-B5C0-443A-8741-60EB753A3F3C}.Win8 Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

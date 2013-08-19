@@ -6,12 +6,13 @@ zerotier-*
 *.dSYM
 mac-tap/tuntap/src/tap/tap
 mac-tap/tuntap/tap.kext
-/ZeroTierOne.sdf
 /ipch
+/ZeroTierOne.sdf
 /ZeroTierOne.v11.suo
-/ZeroTierOne.opensdf
 /vsprojects/SelfTest/Debug
-/vsprojects/SelfTest/SelfTest.vcxproj.user
+/vsprojects/SelfTest/Release
 /Debug
 /Release
-/vsprojects/SelfTest/Release
+*.log
+*.opensdf
+*.user
