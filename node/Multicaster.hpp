@@ -208,6 +208,7 @@ public:
 	/**
 	 * Choose peers to send a propagating multicast to
 	 *
+	 * @param prng Random source
 	 * @param topology Topology object or mock thereof
 	 * @param nwid Network ID
 	 * @param mg Multicast group
@@ -236,49 +237,37 @@ public:
 	{
 		typename std::set< P,_PeerPropagationPrioritySortOrder<P> > toConsider;
 
-		// Pick up to ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE peers that have
-		// subscribed to this channel and that are not in bloom filter.
-		// Pick randomly from subscribers, but place into a set that is
-		// sorted in descending order of time of most recent unicast
-		// frame transfer. (Implicit social ordering.) Also ignore original
-		// submitter and upstream, since we know these have seen this
-		// message.
+		/* Pick up to ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE peers that meet
+		 * our minimal criteria for this multicast group and place them
+		 * into a set that is sorted in descending order of time of most
+		 * recent unicast frame transfer (implicit social ordering). */
 		{
 			Mutex::Lock _l(_multicastMemberships_m);
 			std::map< MulticastChannel,std::vector<MulticastMembership> >::iterator mm(_multicastMemberships.find(MulticastChannel(nwid,mg)));
 			if ((mm != _multicastMemberships.end())&&(!mm->second.empty())) {
 				for(unsigned int stries=0;stries<ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE;++stries) {
 					MulticastMembership &m = mm->second[prng.next32() % mm->second.size()];
-					if (((now - m.second) < ZT_MULTICAST_LIKE_EXPIRE)&&(!bf.contains(m.first.sum()))&&(m.first != originalSubmitter)&&(m.first != upstream)) {
+					if (
+					     ((now - m.second) < ZT_MULTICAST_LIKE_EXPIRE)&& /* LIKE is not expired */
+					     (!bf.contains(m.first.sum()))&&                 /* Not in propagation bloom */
+					     (m.first != originalSubmitter)&&                /* Not the original submitter */
+					     (m.first != upstream) ) {                       /* Not where the frame came from */
 						P peer(topology.getPeer(m.first));
 						if (peer)
-							toConsider.insert(peer);
+							toConsider.insert(peer); /* Consider propagating to this peer */
 					}
 				}
 			}
 		}
 
-		// The first peers in toConsider will be the 'best'
+		/* The first peers in toConsider will be the "best" */
 		unsigned int chosen = 0;
 		for(typename std::set< P,_PeerPropagationPrioritySortOrder<P> >::iterator i(toConsider.begin());((i!=toConsider.end())&&(chosen < max));++i)
 			bf.set((peers[chosen++] = *i)->address().sum());
 
-		// Add a supernode if there are fewer than the desired
-		// number of recipients. Note that we do not use the bloom
-		// filter to track visits to supernodes, intentionally
-		// allowing multicasts to ping pong between supernodes.
-		// Supernodes propagate even messages they've already seen,
-		// while regular nodes do not. Thus this ping-ponging will
-		// cause the supernodes to pick new starting points for
-		// peer to peer graph traversal multiple times. It's a
-		// simple, stateless way to increase supernode-driven
-		// propagation of a multicast in the event that peer to
-		// peer connectivity for its group is sparse.
-		if (chosen < max) {
-			Address avoid[2];
-			avoid[0] = originalSubmitter;
-			avoid[1] = upstream;
-			P peer = topology.getBestSupernode(avoid,2,true);
+		/* Tack on a supernode if we have no next hops */
+		if (!chosen) {
+			P peer = topology.getBestSupernode();
 			if (peer)
 				peers[chosen++] = peer;
 		}
