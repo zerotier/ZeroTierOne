@@ -251,8 +251,9 @@ public:
 					if (peer) {
 						unsigned int chk = 0;
 						while (chk < chosen) {
-							if (peers[chk++] == peer)
+							if (peers[chk] == peer)
 								break;
+							++chk;
 						}
 						if (chk == chosen) { /* not already picked */
 							peers[chosen++] = peer;
@@ -262,7 +263,7 @@ public:
 				}
 			}
 		}
-		return 0;
+		return chosen;
 	}
 
 	/**
@@ -327,7 +328,9 @@ public:
 
 		/* Tack on a supernode if we have no next hops */
 		if (!chosen) {
-			P peer = topology.getBestSupernode();
+			Address exclude[1];
+			exclude[0] = originalSubmitter; // if it came from a supernode, don't boomerang
+			P peer = topology.getBestSupernode(exclude,1,true);
 			if (peer)
 				peers[chosen++] = peer;
 		}
