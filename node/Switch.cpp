@@ -108,7 +108,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Multicaster::MulticastBloomFilter bloom;
 		SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
-		unsigned int np = _r->multicaster->pickNextPropagationPeers(
+		unsigned int np = _r->multicaster->pickSocialPropagationPeers(
 			*(_r->prng),
 			*(_r->topology),
 			network->id(),

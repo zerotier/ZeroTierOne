@@ -206,7 +206,7 @@ public:
 	}
 
 	/**
-	 * Choose peers to send a propagating multicast to
+	 * Choose peers for multicast propagation via random selection
 	 *
 	 * @param prng Random source
 	 * @param topology Topology object or mock thereof
@@ -223,7 +223,67 @@ public:
 	 * @tparam P Type of peers, which is SharedPtr<Peer> in running code or a mock in simulation (mock must behave like a pointer type)
 	 */
 	template<typename T,typename P>
-	inline unsigned int pickNextPropagationPeers(
+	inline unsigned int pickRandomPropagationPeers(
+		CMWC4096 &prng,
+		T &topology,
+		uint64_t nwid,
+		const MulticastGroup &mg,
+		const Address &originalSubmitter,
+		const Address &upstream,
+		MulticastBloomFilter &bf,
+		unsigned int max,
+		P *peers,
+		uint64_t now)
+	{
+		unsigned int chosen = 0;
+		Mutex::Lock _l(_multicastMemberships_m);
+		std::map< MulticastChannel,std::vector<MulticastMembership> >::iterator mm(_multicastMemberships.find(MulticastChannel(nwid,mg)));
+		if ((mm != _multicastMemberships.end())&&(!mm->second.empty())) {
+			for(unsigned int stries=0;((stries<ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)&&(chosen < max));++stries) {
+				MulticastMembership &m = mm->second[prng.next32() % mm->second.size()];
+				unsigned int sum = m.first.sum();
+				if (
+				     ((now - m.second) < ZT_MULTICAST_LIKE_EXPIRE)&& /* LIKE is not expired */
+				     (!bf.contains(sum))&&                           /* Not in propagation bloom */
+				     (m.first != originalSubmitter)&&                /* Not the original submitter */
+				     (m.first != upstream) ) {                       /* Not where the frame came from */
+					P peer(topology.getPeer(m.first));
+					if (peer) {
+						unsigned int chk = 0;
+						while (chk < chosen) {
+							if (peers[chk++] == peer)
+								break;
+						}
+						if (chk == chosen) { /* not already picked */
+							peers[chosen++] = peer;
+							bf.set(sum);
+						}
+					}
+				}
+			}
+		}
+		return 0;
+	}
+
+	/**
+	 * Choose peers for multicast propagation via implicit social switching
+	 *
+	 * @param prng Random source
+	 * @param topology Topology object or mock thereof
+	 * @param nwid Network ID
+	 * @param mg Multicast group
+	 * @param originalSubmitter Original submitter of multicast message to network
+	 * @param upstream Address from which message originated, or null (0) address if none
+	 * @param bf Bloom filter, updated in place with sums of addresses in chosen peers and/or decay
+	 * @param max Maximum number of peers to pick
+	 * @param peers Array of objects of type P to fill with up to [max] peers
+	 * @param now Current timestamp
+	 * @return Number of peers actually stored in peers array
+	 * @tparam T Type of topology, which is Topology in running code or a mock in simulation
+	 * @tparam P Type of peers, which is SharedPtr<Peer> in running code or a mock in simulation (mock must behave like a pointer type)
+	 */
+	template<typename T,typename P>
+	inline unsigned int pickSocialPropagationPeers(
 		CMWC4096 &prng,
 		T &topology,
 		uint64_t nwid,
