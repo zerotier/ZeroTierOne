@@ -679,12 +679,17 @@ void EthernetTap::threadMain()
 
 #include <WinSock2.h>
 #include <Windows.h>
+#include <iphlpapi.h>
 #include <ws2ipdef.h>
+#include <WS2tcpip.h>
+#include <tchar.h>
+#include <winreg.h>
 
 namespace ZeroTier {
 
 EthernetTap::EthernetTap(
 	const RuntimeEnvironment *renv,
+	const char *tag,
 	const MAC &mac,
 	unsigned int mtu,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
@@ -696,6 +701,31 @@ EthernetTap::EthernetTap(
 	_handler(handler),
 	_arg(arg)
 {
+	HKEY nwAdapters;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_ALL_ACCESS,&nwAdapters) != ERROR_SUCCESS)
+		throw std::runtime_error("unable to open registry key for network adapter enumeration");
+
+	for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
+		char subkeyName[1024];
+		char subkeyClass[1024];
+		DWORD subkeyNameLen = sizeof(subkeyName);
+		DWORD subkeyClassLen = sizeof(subkeyClass);
+		FILETIME lastWriteTime;
+		switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
+			case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
+			case ERROR_SUCCESS: {
+				DWORD type = 0;
+				char data[1024];
+				DWORD dataLen = sizeof(data);
+				if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+					data[dataLen] = '\0';
+					printf("%s: %s\r\n",subkeyName,data);
+				}
+			}	break;
+		}
+	}
+
+	RegCloseKey(nwAdapters);	
 }
 
 EthernetTap::~EthernetTap()
