@@ -118,6 +118,7 @@ public:
 	 * @return Number of characters actually written
 	 */
 	static unsigned int unhex(const char *hex,void *buf,unsigned int len);
+	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),buf,len); }
 
 	/**
 	 * @param buf Buffer to fill

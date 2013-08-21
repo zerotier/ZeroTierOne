@@ -146,9 +146,9 @@ static Mutex __tapCreateLock;
 #ifdef __LINUX__
 EthernetTap::EthernetTap(
 	const RuntimeEnvironment *renv,
+	const char *tag,
 	const MAC &mac,
 	unsigned int mtu,
-	const char *desc,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg)
 	throw(std::runtime_error) :
@@ -247,9 +247,9 @@ EthernetTap::EthernetTap(
 #ifdef __APPLE__
 EthernetTap::EthernetTap(
 	const RuntimeEnvironment *renv,
+	const char *tag,
 	const MAC &mac,
 	unsigned int mtu,
-	const char *desc,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg)
 	throw(std::runtime_error) :

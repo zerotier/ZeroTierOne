@@ -139,6 +139,9 @@ Network::~Network()
 SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t id)
 	throw(std::runtime_error)
 {
+	char tag[32];
+	sprintf(tag,"%.16llx",(unsigned long long)id);
+
 	// We construct Network via a static method to ensure that it is immediately
 	// wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet
 	// tap device, a SharedPtr<> wrap can occur in the Ethernet frame handler
@@ -150,7 +153,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	nw->_rlLimit.bytesPerSecond = ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND;
 	nw->_rlLimit.maxBalance = ZT_MULTICAST_DEFAULT_RATE_MAX_BALANCE;
 	nw->_rlLimit.minBalance = ZT_MULTICAST_DEFAULT_RATE_MIN_BALANCE;
-	nw->_tap = new EthernetTap(renv,renv->identity.address().toMAC(),ZT_IF_MTU,(const char *)0,&_CBhandleTapData,nw.ptr());
+	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
 	nw->_destroyOnDelete = false;

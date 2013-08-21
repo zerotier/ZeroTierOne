@@ -60,6 +60,7 @@ public:
 	 * Handler arguments: arg,from,to,etherType,data
 	 * 
 	 * @param renv Runtime environment
+	 * @param tag A tag used to identify persistent taps at the OS layer (e.g. nwid in hex)
 	 * @param mac MAC address of device
 	 * @param mtu MTU of device
 	 * @param desc If non-NULL, a description (not used on all OSes)
@@ -69,9 +70,9 @@ public:
 	 */
 	EthernetTap(
 		const RuntimeEnvironment *renv,
+		const char *tag,
 		const MAC &mac,
 		unsigned int mtu,
-		const char *desc,
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 		void *arg)
 		throw(std::runtime_error);
