@@ -27,6 +27,8 @@
 
 #include <string>
 #include <map>
+#include <set>
+#include <algorithm>
 
 #include "Constants.hpp"
 #include "EthernetTap.hpp"
@@ -687,6 +689,8 @@ void EthernetTap::threadMain()
 
 namespace ZeroTier {
 
+static Mutex _systemTapInitLock;
+
 EthernetTap::EthernetTap(
 	const RuntimeEnvironment *renv,
 	const char *tag,
@@ -701,31 +705,125 @@ EthernetTap::EthernetTap(
 	_handler(handler),
 	_arg(arg)
 {
+	char subkeyName[1024];
+	char subkeyClass[1024];
+	char data[1024];
+
+	Mutex::Lock _l(_systemTapInitLock); // only do one at a time, process-wide
+
 	HKEY nwAdapters;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_ALL_ACCESS,&nwAdapters) != ERROR_SUCCESS)
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
 		throw std::runtime_error("unable to open registry key for network adapter enumeration");
 
+	std::string myDeviceInstanceId;
+	std::set<std::string> existingDeviceInstances;
+
+	// Enumerate all Microsoft Loopback Adapter instances and look for one
+	// that matches our tag.
 	for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
-		char subkeyName[1024];
-		char subkeyClass[1024];
+		DWORD type;
+		DWORD dataLen;
 		DWORD subkeyNameLen = sizeof(subkeyName);
 		DWORD subkeyClassLen = sizeof(subkeyClass);
 		FILETIME lastWriteTime;
 		switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
 			case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
-			case ERROR_SUCCESS: {
-				DWORD type = 0;
-				char data[1024];
-				DWORD dataLen = sizeof(data);
-				if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+			case ERROR_SUCCESS:
+				type = 0;
+				dataLen = sizeof(data);
+				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 					data[dataLen] = '\0';
-					printf("%s: %s\r\n",subkeyName,data);
+					if (!strcmpi(data,"*msloop")) {
+						std::string instanceId;
+						type = 0;
+						dataLen = sizeof(data);
+						if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+							instanceId.assign(data,dataLen);
+							existingDeviceInstances.insert(instanceId);
+						}
+
+						if ((myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)) {
+							type = 0;
+							dataLen = sizeof(data);
+							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+								data[dataLen] = '\0';
+								if (!strcmp(data,tag)) {
+									type = 0;
+									dataLen = sizeof(data);
+									if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+										myDeviceInstanceId = instanceId;
+										subkeyIndex = -1; // break outer loop
+									}
+								}
+							}
+						}
+					}
 				}
-			}	break;
+				break;
+		}
+	}
+
+	// If there is no device, try to create one
+	if (myDeviceInstanceId.length() == 0) {
+		// Execute devcon to install an instance of the Microsoft Loopback Adapter
+#ifdef _WIN64
+		std::string devcon(_r->homePath + "\\devcon64.exe");
+#else
+		BOOL f64 = FALSE;
+		std::string devcon(_r->homePath + ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe"));
+#endif
+		char windir[4096];
+		windir[0] = '\0';
+		GetWindowsDirectoryA(windir,sizeof(windir));
+		STARTUPINFOA startupInfo;
+		startupInfo.cb = sizeof(startupInfo);
+		PROCESS_INFORMATION processInfo;
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (!CreateProcessA(NULL,(LPSTR)(devcon + " install " + windir + "\\inf\\netloop.inf *msloop").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			RegCloseKey(nwAdapters);
+			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+		}
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+
+		// Scan for that new instance by looking for adapters of type
+		// *msloop that we did not already see on the first scan.
+		for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
+			DWORD type;
+			DWORD dataLen;
+			DWORD subkeyNameLen = sizeof(subkeyName);
+			DWORD subkeyClassLen = sizeof(subkeyClass);
+			FILETIME lastWriteTime;
+			switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
+				case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
+				case ERROR_SUCCESS:
+					type = 0;
+					dataLen = sizeof(data);
+					if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+						data[dataLen] = '\0';
+						if (!strcmpi(data,"*msloop")) {
+							type = 0;
+							dataLen = sizeof(data);
+							if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+								if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
+									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,strlen(tag)+1);
+									myDeviceInstanceId.assign(data,dataLen);
+									subkeyIndex = -1; // break outer loop
+								}
+							}
+						}
+					}
+					break;
+			}
 		}
 	}
 
 	RegCloseKey(nwAdapters);	
+
+	if (myDeviceInstanceId.length() == 0)
+		throw std::runtime_error("unable to create new loopback adapter for tap");
 }
 
 EthernetTap::~EthernetTap()

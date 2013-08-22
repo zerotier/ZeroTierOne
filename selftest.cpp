@@ -29,11 +29,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#include <stdexcept>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "node/Constants.hpp"
+#include "node/RuntimeEnvironment.hpp"
 #include "node/InetAddress.hpp"
 #include "node/EllipticCurveKey.hpp"
 #include "node/EllipticCurveKeyPair.hpp"
@@ -48,6 +51,7 @@
 #include "node/NodeConfig.hpp"
 #include "node/Dictionary.hpp"
 #include "node/RateLimiter.hpp"
+#include "node/EthernetTap.hpp"
 
 #include <openssl/rand.h>
 
@@ -404,6 +408,16 @@ int _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
+	try {
+		RuntimeEnvironment renv;
+		renv.homePath = "C:";
+		EthernetTap tap(&renv,"test12345",MAC(),2800,NULL,NULL);
+		return 0;
+	} catch (std::exception &exc) {
+		std::cout << exc.what() << std::endl;
+		return 0;
+	}
+/*
 	int r = 0;
 
 	_initLibCrypto();
@@ -419,4 +433,5 @@ int main(int argc,char **argv)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
 
 	return r;
+*/
 }
