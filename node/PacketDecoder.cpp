@@ -105,7 +105,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				TRACE("NOP from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			case Packet::VERB_HELLO:
-				return _doHELLO(_r); // encrypted HELLO is technically allowed, but kind of pointless... :)
+				return _doHELLO(_r);
 			case Packet::VERB_ERROR:
 				return _doERROR(_r,peer);
 			case Packet::VERB_OK:
@@ -238,29 +238,16 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 		uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 		Identity id(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
-		// Create a new candidate peer that we might decide to add to our
-		// database. We create it now since we want its keys to send replies
-		// even in the error case, and the code for keying is in Peer.
-		SharedPtr<Peer> candidate(new Peer(_r->identity,id));
-		candidate->setPathAddress(_remoteAddress,false);
-
-		// The initial sniff test... is the identity valid, and is it
-		// the sender's identity?
+		// Initial sniff test for valid addressing and that this is indeed the
+		// submitter's identity.
 		if ((id.address().isReserved())||(id.address() != source())) {
 #ifdef ZT_TRACE
 			if (id.address().isReserved()) {
-				TRACE("rejected HELLO from %s(%s): identity has reserved address",source().toString().c_str(),_remoteAddress.toString().c_str());
+				TRACE("dropped HELLO from %s(%s): identity has reserved address",source().toString().c_str(),_remoteAddress.toString().c_str());
 			} else {
-				TRACE("rejected HELLO from %s(%s): identity is not for sender of packet (HELLO is a self-announcement)",source().toString().c_str(),_remoteAddress.toString().c_str());
+				TRACE("dropped HELLO from %s(%s): identity is not for sender of packet (HELLO is a self-announcement)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			}
 #endif
-			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-			outp.append((unsigned char)Packet::VERB_HELLO);
-			outp.append(packetId());
-			outp.append((unsigned char)((id.address().isReserved()) ? Packet::ERROR_IDENTITY_INVALID : Packet::ERROR_INVALID_REQUEST));
-			outp.encrypt(candidate->cryptKey());
-			outp.hmacSet(candidate->macKey());
-			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			return true;
 		}
 
@@ -281,9 +268,9 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			return true;
 		}
 
-		// Otherwise we call addPeer() and set up a callback to handle the verdict.
-		// Topology evaluates the peer in the background, possibly doing the entire
-		// expensive analysis before determining whether to add it to the database.
+		SharedPtr<Peer> candidate(new Peer(_r->identity,id));
+		candidate->setPathAddress(_remoteAddress,false);
+
 		_CBaddPeerFromHello_Data *arg = new _CBaddPeerFromHello_Data;
 		arg->renv = _r;
 		arg->source = source();
@@ -319,16 +306,15 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 				if (_r->topology->isSupernode(source())) {
 					// Right now, only supernodes are queried for WHOIS so we only
 					// accept OK(WHOIS) from supernodes. Otherwise peers could
-					// potentially cache-poison. A more elegant but memory-intensive
-					// solution would be to remember packet IDs of WHOIS requests.
+					// potentially cache-poison.
 					_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,Identity(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY))),&PacketDecoder::_CBaddPeerFromWhois,const_cast<void *>((const void *)_r));
 				}
 			} break;
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				SharedPtr<Network> nw(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
 				if ((nw)&&(nw->controller() == source())) {
-					// Only accept OK(NETWORK_CONFIG_REQUEST) from masters for
-					// networks we have.
+					// OK(NETWORK_CONFIG_REQUEST) is only accepted from a network's
+					// controller.
 					unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
@@ -396,8 +382,7 @@ bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<P
 		 * packet, but it's still maybe something we want to not allow just
 		 * anyone to order due to possible DDOS or network forensic implications.
 		 * So if we diversify relays, we'll need some way of deciding whether the
-		 * sender is someone we should trust with a RENDEZVOUS hint. Or maybe
-		 * we just need rate limiting to prevent DDOS and amplification attacks.
+		 * sender is someone we should trust with a RENDEZVOUS hint.
 		 */
 		if (_r->topology->isSupernode(source())) {
 			Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
@@ -469,10 +454,7 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 				//TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source().toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
 				_r->multicaster->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source(),now);
 				++numAccepted;
-			} else {
-				ptr += 10;
-				TRACE("ignored MULTICAST_LIKE from %s(%s): network %.16llx unknown, or sender is not a member of network",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
-			}
+			} else ptr += 10;
 		}
 
 		Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
@@ -537,12 +519,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			bool isDuplicate = _r->multicaster->checkDuplicate(mccrc,now);
 
 			if (!isDuplicate) {
-				if (network->multicastRateGate(originalSubmitterAddress,datalen)) {
+				//if (network->multicastRateGate(originalSubmitterAddress,datalen)) {
 					network->tap().put(fromMac,mg.mac(),etherType,dataAndSignature,datalen);
-				} else {
-					TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): sender rate limit exceeded",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-					return true;
-				}
+				//} else {
+				//	TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): sender rate limit exceeded",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
+				//	return true;
+				//}
 
 				/* It's important that we do this *after* rate limit checking,
 				 * otherwise supernodes could be used to execute a flood by
