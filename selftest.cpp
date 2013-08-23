@@ -408,18 +408,19 @@ int _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
-	/* For testing windows tap
+	///* For testing windows tap
 	try {
 		RuntimeEnvironment renv;
 		renv.homePath = "C:";
-		EthernetTap tap(&renv,"test12345",MAC(),2800,NULL,NULL);
+		EthernetTap tap(&renv,"test12345",MAC(0x32),2800,NULL,NULL);
 		Thread::sleep(100000000);
 	} catch (std::exception &exc) {
 		std::cout << exc.what() << std::endl;
 		return 0;
 	}
-	*/
+	//*/
 
+	/*
 	int r = 0;
 
 	_initLibCrypto();
@@ -435,4 +436,5 @@ int main(int argc,char **argv)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
 
 	return r;
+	*/
 }

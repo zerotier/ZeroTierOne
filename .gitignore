@@ -16,3 +16,5 @@ mac-tap/tuntap/tap.kext
 *.log
 *.opensdf
 *.user
+/Win8Release
+/vsprojects/TapDriver/Win8Release

@@ -43,33 +43,21 @@
 #include "InetAddress.hpp"
 #include "MAC.hpp"
 #include "Mutex.hpp"
+#include "Condition.hpp"
 #include "MulticastGroup.hpp"
 #include "Thread.hpp"
 #include "Buffer.hpp"
 #include "Array.hpp"
 
-#ifdef __WINDOWS__
-#include <pcap/pcap.h>
-#include <pcap/bpf.h>
-#include <Win32-Extensions.h>
-#endif
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-#ifdef __WINDOWS__
-class _WinEthernetTapPcapIOThread;
-#endif
 
 /**
  * System ethernet tap device
  */
 class EthernetTap
 {
-#ifdef __WINDOWS__
-	friend class _WinEthernetTapPcapIOThread;
-#endif
-
 public:
 	/**
 	 * Construct a new TAP device
@@ -189,13 +177,11 @@ public:
 	 */
 	bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
-#ifdef __UNIX_LIKE__
 	/**
 	 * Thread main method; do not call elsewhere
 	 */
 	void threadMain()
 		throw();
-#endif
 
 private:
 	const MAC _mac;
@@ -217,11 +203,10 @@ private:
 #endif
 
 #ifdef __WINDOWS__
-	pcap_t *_pcap;
 	std::string _myDeviceInstanceId;
 	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;
-	static void _pcapHandler(u_char *user,const struct pcap_pkthdr *pkt_header,const u_char *pkt_data);
+	Condition _injectPending_c;
 #endif
 };
 
