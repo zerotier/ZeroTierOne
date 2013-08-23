@@ -408,6 +408,7 @@ int _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
+	/* For testing windows tap
 	try {
 		RuntimeEnvironment renv;
 		renv.homePath = "C:";
@@ -417,7 +418,8 @@ int main(int argc,char **argv)
 		std::cout << exc.what() << std::endl;
 		return 0;
 	}
-/*
+	*/
+
 	int r = 0;
 
 	_initLibCrypto();
@@ -433,5 +435,4 @@ int main(int argc,char **argv)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
 
 	return r;
-*/
 }
