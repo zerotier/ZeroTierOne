@@ -679,6 +679,8 @@ void EthernetTap::threadMain()
 
 #ifdef __WINDOWS__
 
+#include <queue>
+
 #include <WinSock2.h>
 #include <Windows.h>
 #include <iphlpapi.h>
@@ -689,6 +691,165 @@ void EthernetTap::threadMain()
 
 namespace ZeroTier {
 
+/* Background thread that handles I/O to/from all running
+ * EthernetTap instances using WinPcap -- this must be
+ * managed from a single thread because of the need to
+ * "reboot" npf every time a new interface is added. */
+class _WinEthernetTapPcapIOThread
+{
+public:
+	_WinEthernetTapPcapIOThread()
+	{
+		scManager = OpenSCManager(NULL,NULL,SC_MANAGER_ALL_ACCESS);
+		if (scManager == NULL)
+			fprintf(stderr,"ZeroTier One: WARNING: unable to OpenSCManager(), tap will have issues with new devices!\r\n");
+		updateSem = CreateSemaphore(NULL,0,1,NULL); // binary
+		run = true;
+		needReload = false;
+		thread = Thread::start(this);
+	}
+
+	~_WinEthernetTapPcapIOThread()
+	{
+		run = false;
+		needReload = false;
+		ReleaseSemaphore(updateSem,1,NULL);
+		Thread::join(thread);
+		CloseHandle(updateSem);
+		if (scManager != NULL)
+			CloseServiceHandle(scManager);
+	}
+
+	void threadMain()
+		throw()
+	{
+		HANDLE *objects = new HANDLE[1];
+		objects[0] = updateSem;
+		DWORD numObjects = 1;
+
+		for(;;) {
+			if (!run) {
+				delete [] objects;
+				return;
+			}
+
+			printf("waiting on: %d\r\n",(int)numObjects);
+			WaitForMultipleObjects(numObjects,objects,FALSE,INFINITE);
+
+			{
+				Mutex::Lock _l(taps_m);
+
+				for(std::list<EthernetTap *>::iterator tapptr(taps.begin());tapptr!=taps.end();++tapptr) {
+					EthernetTap *tap = *tapptr;
+					if (tap->_pcap) {
+						{
+							Mutex::Lock _l2(tap->_injectPending_m);
+							while (!tap->_injectPending.empty()) {
+								pcap_sendpacket(tap->_pcap,(const u_char *)(tap->_injectPending.front().first.data),tap->_injectPending.front().second);
+								tap->_injectPending.pop();
+							}
+						}
+						printf("dispatch: %s\r\n",tap->_myDeviceInstanceId.c_str());
+						pcap_dispatch(tap->_pcap,-1,&EthernetTap::_pcapHandler,(u_char *)tap);
+					}
+				}
+
+				if (needReload) {
+					// Close all taps and restart WinPcap driver to scan for possible new
+					// interfaces... yuck. This is done because WinPcap does not support
+					// hot plug, so if we've added a new loopback adapter it won't show
+					// up without this full system refresh.
+					needReload = false;
+
+					for(std::list<EthernetTap *>::iterator tapptr(taps.begin());tapptr!=taps.end();++tapptr) {
+						if ((*tapptr)->_pcap) {
+							pcap_close((*tapptr)->_pcap);
+							(*tapptr)->_pcap = (pcap_t *)0;
+						}
+					}
+
+					if (scManager != NULL) {
+						Thread::sleep(250);
+						SC_HANDLE npfService = OpenServiceA(scManager,"npf",SERVICE_ALL_ACCESS);
+						if (npfService != NULL) {
+							SERVICE_STATUS sstatus;
+							memset(&sstatus,0,sizeof(SERVICE_STATUS));
+							ControlService(npfService,SERVICE_CONTROL_STOP,&sstatus);
+							printf("service restart\r\n");
+							CloseServiceHandle(npfService);
+						}
+						Thread::sleep(250);
+					}
+
+					delete [] objects;
+					objects = new HANDLE[taps.size() + 1];
+					objects[0] = updateSem;
+					numObjects = 1;
+
+					pcap_if_t *alldevs;
+					char pcaperrbuf[PCAP_ERRBUF_SIZE+1];
+					if (pcap_findalldevs(&alldevs,pcaperrbuf) != -1) {
+						for(std::list<EthernetTap *>::iterator tapptr(taps.begin());tapptr!=taps.end();++tapptr) {
+							EthernetTap *tap = *tapptr;
+							pcap_if_t *mydev = (pcap_if_t *)0;
+							for(mydev=alldevs;(mydev);mydev=mydev->next) {
+								if (strstr(mydev->name,tap->_myDeviceInstanceId.c_str()))
+									break;
+							}
+							if (mydev) {
+								tap->_pcap = pcap_open_live(mydev->name,65535,1,0,pcaperrbuf);
+								pcap_setnonblock(tap->_pcap,1,pcaperrbuf);
+								if (tap->_pcap) {
+									printf("pcap opened: %s\r\n",mydev->name);
+									objects[numObjects++] = pcap_getevent(tap->_pcap);
+								}
+							} else {
+								tap->_pcap = (pcap_t *)0;
+							}
+						}
+						pcap_freealldevs(alldevs);
+					}
+				}
+			}
+
+			if (!run) {
+				delete [] objects;
+				return;
+			}
+		}
+	}
+
+	inline void addTap(EthernetTap *t)
+	{
+		Mutex::Lock _l(taps_m);
+		taps.push_back(t);
+		needReload = true;
+		ReleaseSemaphore(updateSem,1,NULL);
+	}
+
+	inline void removeTap(EthernetTap *t)
+	{
+		Mutex::Lock _l(taps_m);
+		for(std::list<EthernetTap *>::iterator tapptr(taps.begin());tapptr!=taps.end();++tapptr) {
+			if (*tapptr == t) {
+				taps.erase(tapptr);
+				break;
+			}
+		}
+		needReload = true;
+		ReleaseSemaphore(updateSem,1,NULL);
+	}
+
+	std::list<EthernetTap *> taps;
+	Mutex taps_m;
+	SC_HANDLE scManager;
+	HANDLE updateSem;
+	volatile bool run;
+	volatile bool needReload;
+	Thread thread;
+};
+
+static _WinEthernetTapPcapIOThread _pcapIoThread;
 static Mutex _systemTapInitLock;
 
 EthernetTap::EthernetTap(
@@ -703,7 +864,8 @@ EthernetTap::EthernetTap(
 	_mtu(mtu),
 	_r(renv),
 	_handler(handler),
-	_arg(arg)
+	_arg(arg),
+	_pcap((pcap_t *)0)
 {
 	char subkeyName[1024];
 	char subkeyClass[1024];
@@ -715,7 +877,6 @@ EthernetTap::EthernetTap(
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
 		throw std::runtime_error("unable to open registry key for network adapter enumeration");
 
-	std::string myDeviceInstanceId;
 	std::set<std::string> existingDeviceInstances;
 
 	// Enumerate all Microsoft Loopback Adapter instances and look for one
@@ -742,7 +903,7 @@ EthernetTap::EthernetTap(
 							existingDeviceInstances.insert(instanceId);
 						}
 
-						if ((myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)) {
+						if ((_myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)) {
 							type = 0;
 							dataLen = sizeof(data);
 							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
@@ -751,7 +912,7 @@ EthernetTap::EthernetTap(
 									type = 0;
 									dataLen = sizeof(data);
 									if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-										myDeviceInstanceId = instanceId;
+										_myDeviceInstanceId = instanceId;
 										subkeyIndex = -1; // break outer loop
 									}
 								}
@@ -764,13 +925,13 @@ EthernetTap::EthernetTap(
 	}
 
 	// If there is no device, try to create one
-	if (myDeviceInstanceId.length() == 0) {
+	if (_myDeviceInstanceId.length() == 0) {
 		// Execute devcon to install an instance of the Microsoft Loopback Adapter
 #ifdef _WIN64
-		std::string devcon(_r->homePath + "\\devcon64.exe");
+		const char *devcon = "\\devcon64.exe";
 #else
 		BOOL f64 = FALSE;
-		std::string devcon(_r->homePath + ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe"));
+		const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
 #endif
 		char windir[4096];
 		windir[0] = '\0';
@@ -780,7 +941,7 @@ EthernetTap::EthernetTap(
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(devcon + " install " + windir + "\\inf\\netloop.inf *msloop").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" install " + windir + "\\inf\\netloop.inf *msloop").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
 		}
@@ -809,7 +970,7 @@ EthernetTap::EthernetTap(
 							if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 								if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
 									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,strlen(tag)+1);
-									myDeviceInstanceId.assign(data,dataLen);
+									_myDeviceInstanceId.assign(data,dataLen);
 									subkeyIndex = -1; // break outer loop
 								}
 							}
@@ -822,12 +983,18 @@ EthernetTap::EthernetTap(
 
 	RegCloseKey(nwAdapters);	
 
-	if (myDeviceInstanceId.length() == 0)
+	if (_myDeviceInstanceId.length() == 0)
 		throw std::runtime_error("unable to create new loopback adapter for tap");
+
+	// pcap is opened and managed by the pcap I/O thread
+	_pcapIoThread.addTap(this);
 }
 
 EthernetTap::~EthernetTap()
 {
+	_pcapIoThread.removeTap(this);
+	if (_pcap)
+		pcap_close(_pcap);
 }
 
 void EthernetTap::whack()
@@ -846,21 +1013,38 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
+	if (len > (ZT_IF_MTU))
+		return;
+
+	{
+		Mutex::Lock _l(_injectPending_m);
+		_injectPending.push( std::pair<Array<char,ZT_IF_MTU + 32>,unsigned int>(Array<char,ZT_IF_MTU + 32>(),len + 14) );
+		char *d = _injectPending.back().first.data;
+		memcpy(d,to.data,6);
+		memcpy(d + 6,from.data,6);
+		*((uint16_t *)(d + 12)) = Utils::hton(etherType);
+		memcpy(d + 14,data,len);
+	}
+
+	ReleaseSemaphore(_pcapIoThread.updateSem,1,NULL);
 }
 
 std::string EthernetTap::deviceName() const
 {
-	return std::string();
+	return _myDeviceInstanceId;
 }
 
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
+	// TODO
 	return false;
 }
 
-void EthernetTap::threadMain()
-	throw()
+void EthernetTap::_pcapHandler(u_char *user,const struct pcap_pkthdr *pkt_header,const u_char *pkt_data)
 {
+	printf("got packet: %d\r\n",(int)pkt_header->len);
+	if (pkt_header->len > 14)
+		((EthernetTap *)user)->_handler(((EthernetTap *)user)->_arg,MAC(pkt_data + 6),MAC(pkt_data),Utils::ntoh(*((const uint16_t *)(pkt_data + 12))),Buffer<4096>(pkt_data + 14,pkt_header->len - 14));
 }
 
 } // namespace ZeroTier

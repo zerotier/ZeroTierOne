@@ -412,7 +412,7 @@ int main(int argc,char **argv)
 		RuntimeEnvironment renv;
 		renv.homePath = "C:";
 		EthernetTap tap(&renv,"test12345",MAC(),2800,NULL,NULL);
-		return 0;
+		Thread::sleep(100000000);
 	} catch (std::exception &exc) {
 		std::cout << exc.what() << std::endl;
 		return 0;
