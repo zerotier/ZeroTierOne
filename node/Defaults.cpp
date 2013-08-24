@@ -25,8 +25,18 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "Defaults.hpp"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "Constants.hpp"
+#include "Defaults.hpp"
+#include "Utils.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
 
 namespace ZeroTier {
 
@@ -66,8 +76,32 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	return sn;
 }
 
+static inline std::string _mkDefaultHomePath()
+{
+#ifdef __UNIX_LIKE__
+#ifdef __APPLE__
+	return std::string("/Library/Application\ Support/ZeroTier/One");
+#else
+	return std::string("/var/lib/zerotier-one");
+#endif
+#else
+#ifdef __WINDOWS__
+	OSVERSIONINFO vi;
+	memset (&vi,0,sizeof(vi));
+	vi.dwOSVersionInfoSize = sizeof(vi);
+	GetVersionEx(&vi);
+	if (vi.dwMajorVersion < 6)
+		return std::string("C:\\Documents and Settings\\All Users\\Application Data\\ZeroTier\\One");
+	return std::string("C:\\ProgramData\\ZeroTier\\One");
+#else
+	// unknown platform
+#endif
+#endif
+}
+
 Defaults::Defaults()
 	throw(std::runtime_error) :
+	defaultHomePath(_mkDefaultHomePath()),
 	supernodes(_mkSupernodeMap())
 {
 }

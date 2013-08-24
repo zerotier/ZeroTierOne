@@ -22,5 +22,8 @@ ZeroTier One includes or links with the following third party software:
  * TunTapOSX by Mattias Nissler (with tiny modifications) (BSD license)
    http://tuntaposx.sourceforge.net
 
+ * tap-windows by the OpenVPN project (forked for ZT1) (GPL)
+   https://github.com/OpenVPN/tap-windows
+
  * Salsa20 stream cipher by D. J. Bernstein (public domain)
    http://cr.yp.to/snuffle.html

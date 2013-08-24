@@ -52,6 +52,11 @@ public:
 	~Defaults() {}
 
 	/**
+	 * Default home path for this platform
+	 */
+	const std::string defaultHomePath;
+
+	/**
 	 * Supernodes on the ZeroTier network
 	 */
 	const std::map< Identity,std::vector<InetAddress> > supernodes;

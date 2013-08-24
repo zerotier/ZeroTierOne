@@ -258,8 +258,9 @@ Node::Node(const char *hp)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 
-	impl->renv.homePath = hp;
-
+	if (hp)
+		impl->renv.homePath = hp;
+	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
