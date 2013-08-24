@@ -13,6 +13,9 @@ Provider = "ZeroTier Networks"
 [Manufacturer]
 %Provider%=ztTap100,NTamd64
 
+[ztTap100]
+%DeviceDescription%=ztTap100.ndi,ztTap100
+
 [ztTap100.NTamd64]
 %DeviceDescription%=ztTap100.ndi,ztTap100
 
@@ -56,7 +59,7 @@ HKR, Ndi\params\AllowNonAdmin,        Optional,  0, "0"
 HKR, Ndi\params\AllowNonAdmin\enum,   "0",       0, "Not Allowed"
 HKR, Ndi\params\AllowNonAdmin\enum,   "1",       0, "Allowed"
 
-[tap0901.service]
+[ztTap100.service]
 DisplayName = %DeviceDescription%
 ServiceType = 1
 StartType = 3
