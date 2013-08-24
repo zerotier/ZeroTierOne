@@ -123,9 +123,26 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">
+    <TargetName>ztTap100</TargetName>
+  </PropertyGroup>
   <PropertyGroup>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
+    <TargetName>ztTap100</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">
+    <TargetName>ztTap100</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
+    <TargetName>ztTap100</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
+    <TargetName>ztTap100</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
+    <TargetName>ztTap100</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -138,9 +155,42 @@
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">C:\WinDDK\7600.16385.1\lib\wnet\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\i386\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">C:\WinDDK\7600.16385.1\lib\wnet\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\i386\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">C:\WinDDK\7600.16385.1\lib\wnet\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\i386\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">C:\WinDDK\7600.16385.1\lib\wnet\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\i386\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">C:\WinDDK\7600.16385.1\lib\wnet\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\i386\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">C:\WinDDK\7600.16385.1\lib\wnet\i386\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\i386\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Inf Include="TapDriver.inf" />
+    <Inf Include="ztTap100.inf" />
   </ItemGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
