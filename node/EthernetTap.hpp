@@ -49,6 +49,11 @@
 #include "Buffer.hpp"
 #include "Array.hpp"
 
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -195,18 +200,23 @@ private:
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
 
-#ifdef __UNIX_LIKE__
 	Thread _thread;
+
+#ifdef __UNIX_LIKE__
 	char _dev[16];
 	int _fd;
 	int _shutdownSignalPipe[2];
 #endif
 
 #ifdef __WINDOWS__
+	HANDLE _tap;
+	OVERLAPPED _tapOvlRead,_tapOvlWrite;
+	char _tapReadBuf[ZT_IF_MTU + 32];
+	HANDLE _injectSemaphore;
 	std::string _myDeviceInstanceId;
 	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;
-	Condition _injectPending_c;
+	volatile bool _run;
 #endif
 };
 

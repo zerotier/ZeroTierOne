@@ -692,6 +692,9 @@ void EthernetTap::threadMain()
 #include <WS2tcpip.h>
 #include <tchar.h>
 #include <winreg.h>
+#include <wchar.h>
+
+#include "..\vsprojects\TapDriver\tap-windows.h"
 
 namespace ZeroTier {
 
@@ -709,7 +712,10 @@ EthernetTap::EthernetTap(
 	_mtu(mtu),
 	_r(renv),
 	_handler(handler),
-	_arg(arg)
+	_arg(arg),
+	_tap(INVALID_HANDLE_VALUE),
+	_injectSemaphore(INVALID_HANDLE_VALUE),
+	_run(true)
 {
 	char subkeyName[4096];
 	char subkeyClass[4096];
@@ -724,8 +730,7 @@ EthernetTap::EthernetTap(
 	std::set<std::string> existingDeviceInstances;
 	std::string mySubkeyName;
 
-	// Enumerate all Microsoft Loopback Adapter instances and look for one
-	// that matches our tag.
+	// Enumerate tap instances and look for one tagged with this tag
 	for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
 		DWORD type;
 		DWORD dataLen;
@@ -739,7 +744,7 @@ EthernetTap::EthernetTap(
 				dataLen = sizeof(data);
 				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 					data[dataLen] = '\0';
-					if (!strcmpi(data,"*msloop")) {
+					if (!strnicmp(data,"zttap",5)) {
 						std::string instanceId;
 						type = 0;
 						dataLen = sizeof(data);
@@ -754,13 +759,9 @@ EthernetTap::EthernetTap(
 							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 								data[dataLen] = '\0';
 								if (!strcmp(data,tag)) {
-									type = 0;
-									dataLen = sizeof(data);
-									if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-										_myDeviceInstanceId = instanceId;
-										mySubkeyName = subkeyName;
-										subkeyIndex = -1; // break outer loop
-									}
+									_myDeviceInstanceId = instanceId;
+									mySubkeyName = subkeyName;
+									subkeyIndex = -1; // break outer loop
 								}
 							}
 						}
@@ -779,24 +780,21 @@ EthernetTap::EthernetTap(
 		BOOL f64 = FALSE;
 		const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
 #endif
-		char windir[4096];
-		windir[0] = '\0';
-		GetWindowsDirectoryA(windir,sizeof(windir));
 		STARTUPINFOA startupInfo;
 		startupInfo.cb = sizeof(startupInfo);
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" install " + windir + "\\inf\\netloop.inf *msloop").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" install \"" + _r->homePath + "\\ztTap100.inf\" ztTap100").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
 		}
 		WaitForSingleObject(processInfo.hProcess,INFINITE);
 		CloseHandle(processInfo.hProcess);
 		CloseHandle(processInfo.hThread);
-
-		// Scan for that new instance by looking for adapters of type
-		// *msloop that we did not already see on the first scan.
+ 
+		// Scan for the new instance by simply looking for taps that weren't
+		// there originally.
 		for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
 			DWORD type;
 			DWORD dataLen;
@@ -810,7 +808,7 @@ EthernetTap::EthernetTap(
 					dataLen = sizeof(data);
 					if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 						data[dataLen] = '\0';
-						if (!strcmpi(data,"*msloop")) {
+						if (!strnicmp(data,"zttap",5)) {
 							type = 0;
 							dataLen = sizeof(data);
 							if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
@@ -830,26 +828,48 @@ EthernetTap::EthernetTap(
 
 	if (_myDeviceInstanceId.length() > 0) {
 		char tmps[4096];
-		sprintf_s(tmps,"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]);
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,strlen(tmps)+1);
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,strlen(tmps)+1);
+		unsigned int tmpsl = sprintf_s(tmps,"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]) + 1;
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
 		DWORD tmp = mtu;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = 0;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"DriverDesc",REG_SZ,"ZeroTier One Virtual LAN",25);
 	}
 
 	RegCloseKey(nwAdapters);	
 
 	if (_myDeviceInstanceId.length() == 0)
-		throw std::runtime_error("unable to create new loopback adapter for tap");
+		throw std::runtime_error("unable to create new tap adapter");
 
-	//Thread::start(this);
+	wchar_t tapPath[4096];
+	swprintf_s(tapPath,L"\\\\.\\Global\\%S.tap",_myDeviceInstanceId.c_str());
+	_tap = CreateFile(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
+	if (_tap == INVALID_HANDLE_VALUE)
+		throw std::runtime_error("unable to open tap in \\\\.\\Global\\ namespace");
+
+	uint32_t tmpi = 1;
+	DWORD bytesReturned = 0;
+	DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
+
+	memset(&_tapOvlRead,0,sizeof(_tapOvlRead));
+	_tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+	memset(&_tapOvlWrite,0,sizeof(_tapOvlWrite));
+	_tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+
+	_injectSemaphore = CreateSemaphore(NULL,0,1,NULL);
+	_thread = Thread::start(this);
 }
 
 EthernetTap::~EthernetTap()
 {
+	_run = false;
+	ReleaseSemaphore(_injectSemaphore,1,NULL);
+	Thread::join(_thread);
+	CloseHandle(_tap);
+	CloseHandle(_tapOvlRead.hEvent);
+	CloseHandle(_tapOvlWrite.hEvent);
+	CloseHandle(_injectSemaphore);
 }
 
 void EthernetTap::whack()
@@ -881,7 +901,7 @@ void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const
 		memcpy(d + 14,data,len);
 	}
 
-	//ReleaseSemaphore(_pcapIoThread.updateSem,1,NULL);
+	ReleaseSemaphore(_injectSemaphore,1,NULL);
 }
 
 std::string EthernetTap::deviceName() const
@@ -898,6 +918,51 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 void EthernetTap::threadMain()
 	throw()
 {
+	HANDLE wait4[3];
+	wait4[0] = _injectSemaphore;
+	wait4[1] = _tapOvlRead.hEvent;
+	wait4[2] = _tapOvlWrite.hEvent;
+
+	ReadFile(_tap,_tapReadBuf,sizeof(_tapReadBuf),NULL,&_tapOvlRead);
+	bool writeInProgress = false;
+
+	for(;;) {
+		if (!_run) break;
+		WaitForMultipleObjectsEx(3,wait4,FALSE,INFINITE,TRUE);
+		if (!_run) break;
+
+		if (HasOverlappedIoCompleted(&_tapOvlRead)) {
+			DWORD bytesRead = 0;
+			if (GetOverlappedResult(_tap,&_tapOvlRead,&bytesRead,FALSE)) {
+				if (bytesRead > 14) {
+					MAC to(_tapReadBuf);
+					MAC from(_tapReadBuf + 6);
+					unsigned int etherType = Utils::ntoh(*((const uint16_t *)(_tapReadBuf + 12)));
+					Buffer<4096> tmp(_tapReadBuf + 14,bytesRead - 14);
+					printf("GOT FRAME: %u bytes: %s\r\n",(unsigned int)bytesRead,Utils::hex(_tapReadBuf,bytesRead).c_str());
+					//_handler(_arg,from,to,etherType,tmp);
+				}
+			}
+			ReadFile(_tap,_tapReadBuf,sizeof(_tapReadBuf),NULL,&_tapOvlRead);
+		}
+
+		if (writeInProgress) {
+			if (HasOverlappedIoCompleted(&_tapOvlWrite)) {
+				writeInProgress = false;
+				_injectPending_m.lock();
+				_injectPending.pop();
+			} else continue; // still writing, so skip code below and wait
+		} else _injectPending_m.lock();
+
+		if (!_injectPending.empty()) {
+			WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&_tapOvlWrite);
+			writeInProgress = true;
+		}
+
+		_injectPending_m.unlock();
+	}
+
+	CancelIo(_tap);
 }
 
 } // namespace ZeroTier

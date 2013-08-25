@@ -18,3 +18,5 @@ mac-tap/tuntap/tap.kext
 *.opensdf
 *.user
 *.cache
+
+/vsprojects/SelfTest/SelfTest.aps

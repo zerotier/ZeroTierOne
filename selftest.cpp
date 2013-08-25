@@ -411,7 +411,7 @@ int main(int argc,char **argv)
 	///* For testing windows tap
 	try {
 		RuntimeEnvironment renv;
-		renv.homePath = "C:";
+		renv.homePath = "C:\\ProgramData\\ZeroTier\\One";
 		EthernetTap tap(&renv,"test12345",MAC(0x32),2800,NULL,NULL);
 		Thread::sleep(100000000);
 	} catch (std::exception &exc) {
