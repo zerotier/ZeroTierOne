@@ -219,7 +219,8 @@ private:
 	char _tapReadBuf[ZT_IF_MTU + 32];
 	HANDLE _injectSemaphore;
 	GUID _deviceGuid;
-	std::string _myDeviceInstanceId;
+	std::string _myDeviceInstanceId; // NetCfgInstanceId, a GUID
+	std::string _myDeviceInstanceIdPath; // DeviceInstanceID, another kind of "instance ID"
 	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;
 	volatile bool _run;

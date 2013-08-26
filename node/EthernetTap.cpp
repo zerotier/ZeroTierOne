@@ -750,6 +750,13 @@ EthernetTap::EthernetTap(
 	if (mtu > ZT_IF_MTU)
 		throw std::runtime_error("MTU too large for Windows tap");
 
+#ifdef _WIN64
+		const char *devcon = "\\devcon64.exe";
+#else
+		BOOL f64 = FALSE;
+		const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
+#endif
+
 	Mutex::Lock _l(_systemTapInitLock); // only init one tap at a time, process-wide
 
 	HKEY nwAdapters;
@@ -782,13 +789,20 @@ EthernetTap::EthernetTap(
 							existingDeviceInstances.insert(instanceId);
 						}
 
-						if ((_myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)) {
+						std::string instanceIdPath;
+						type = 0;
+						dataLen = sizeof(data);
+						if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+							instanceIdPath.assign(data,dataLen);
+
+						if ((_myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)&&(instanceIdPath.length() != 0)) {
 							type = 0;
 							dataLen = sizeof(data);
 							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 								data[dataLen] = '\0';
 								if (!strcmp(data,tag)) {
 									_myDeviceInstanceId = instanceId;
+									_myDeviceInstanceIdPath = instanceIdPath;
 									mySubkeyName = subkeyName;
 									subkeyIndex = -1; // break outer loop
 								}
@@ -803,12 +817,6 @@ EthernetTap::EthernetTap(
 	// If there is no device, try to create one
 	if (_myDeviceInstanceId.length() == 0) {
 		// Execute devcon to install an instance of the Microsoft Loopback Adapter
-#ifdef _WIN64
-		const char *devcon = "\\devcon64.exe";
-#else
-		BOOL f64 = FALSE;
-		const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
-#endif
 		STARTUPINFOA startupInfo;
 		startupInfo.cb = sizeof(startupInfo);
 		PROCESS_INFORMATION processInfo;
@@ -844,6 +852,10 @@ EthernetTap::EthernetTap(
 								if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
 									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,(DWORD)(strlen(tag)+1));
 									_myDeviceInstanceId.assign(data,dataLen);
+									type = 0;
+									dataLen = sizeof(data);
+									if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+										_myDeviceInstanceIdPath.assign(data,dataLen);
 									mySubkeyName = subkeyName;
 									subkeyIndex = -1; // break outer loop
 								}
@@ -885,6 +897,37 @@ EthernetTap::EthernetTap(
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
 	}
 
+	// Disable and enable interface to ensure settings take effect
+	{
+		STARTUPINFOA startupInfo;
+		startupInfo.cb = sizeof(startupInfo);
+		PROCESS_INFORMATION processInfo;
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" disable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			RegCloseKey(nwAdapters);
+			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+		}
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+	}
+	{
+		STARTUPINFOA startupInfo;
+		startupInfo.cb = sizeof(startupInfo);
+		PROCESS_INFORMATION processInfo;
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" enable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			RegCloseKey(nwAdapters);
+			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+		}
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+	}
+
+	// Open the tap, which is in this weird Windows analog of /dev
 #ifdef UNICODE
 	wchar_t tapPath[4096];
 	swprintf_s(tapPath,L"\\\\.\\Global\\%S.tap",_myDeviceInstanceId.c_str());
