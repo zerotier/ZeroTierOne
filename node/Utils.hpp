@@ -102,7 +102,7 @@ public:
 	 * @return Hexadecimal string
 	 */
 	static std::string hex(const void *data,unsigned int len);
-	static inline std::string hex(const std::string &data) { return hex(data.data(),data.length()); }
+	static inline std::string hex(const std::string &data) { return hex(data.data(),(unsigned int)data.length()); }
 
 	/**
 	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored)
@@ -413,7 +413,7 @@ public:
 	 */
 	static inline bool writeFile(const char *path,const std::string &s)
 	{
-		return writeFile(path,s.data(),s.length());
+		return writeFile(path,s.data(),(unsigned int)s.length());
 	}
 
 	/**
@@ -422,7 +422,7 @@ public:
 	 * @return Base64-encoded string
 	 */
 	static std::string base64Encode(const void *data,unsigned int len);
-	inline static std::string base64Encode(const std::string &data) { return base64Encode(data.data(),data.length()); }
+	inline static std::string base64Encode(const std::string &data) { return base64Encode(data.data(),(unsigned int)data.length()); }
 
 	/**
 	 * @param data Base64-encoded string
@@ -430,7 +430,7 @@ public:
 	 * @return Decoded binary date
 	 */
 	static std::string base64Decode(const char *data,unsigned int len);
-	inline static std::string base64Decode(const std::string &data) { return base64Decode(data.data(),data.length()); }
+	inline static std::string base64Decode(const std::string &data) { return base64Decode(data.data(),(unsigned int)data.length()); }
 
 	/**
 	 * Split a string by delimiter, with optional escape and quote characters

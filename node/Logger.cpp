@@ -107,7 +107,12 @@ void Logger::trace(const char *module,unsigned int line,const char *fmt,...)
 
 		if (_log) {
 			time_t now = time(0);
+#ifdef __WINDOWS__
+			ctime_s(tmp,sizeof(tmp),&now);
+			char *nowstr = tmp;
+#else
 			char *nowstr = ctime_r(&now,tmp);
+#endif
 			for(char *c=nowstr;*c;++c) {
 				if (*c == '\n')
 					*c = '\0';

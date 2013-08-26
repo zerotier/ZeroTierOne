@@ -11,6 +11,9 @@ mac-tap/tuntap/tap.kext
 /ZeroTierOne.v11.suo
 /vsprojects/SelfTest/Debug
 /vsprojects/SelfTest/Release
+/vsprojects/ZeroTierOne/Debug
+/vsprojects/ZeroTierOne/Release
+/vsprojects/ZeroTierOne/x64
 /vsprojects/TapDriver/Win32
 /vsprojects/TapDriver/x64
 /Build/*
@@ -18,5 +21,6 @@ mac-tap/tuntap/tap.kext
 *.opensdf
 *.user
 *.cache
-
+*.obj
+*.tlog
 /vsprojects/SelfTest/SelfTest.aps

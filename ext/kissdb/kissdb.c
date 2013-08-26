@@ -179,7 +179,7 @@ int KISSDB_get(KISSDB *db,const void *key,void *vbuf)
 			kptr = (const uint8_t *)key;
 			klen = db->key_size;
 			while (klen) {
-				n = fread(tmp,1,(klen > sizeof(tmp)) ? sizeof(tmp) : klen,db->f);
+				n = (long)fread(tmp,1,(klen > sizeof(tmp)) ? sizeof(tmp) : klen,db->f);
 				if (n > 0) {
 					if (memcmp(kptr,tmp,n))
 						goto get_no_match_next_hash_table;
@@ -224,7 +224,7 @@ int KISSDB_put(KISSDB *db,const void *key,const void *value)
 			kptr = (const uint8_t *)key;
 			klen = db->key_size;
 			while (klen) {
-				n = fread(tmp,1,(klen > sizeof(tmp)) ? sizeof(tmp) : klen,db->f);
+				n = (long)fread(tmp,1,(klen > sizeof(tmp)) ? sizeof(tmp) : klen,db->f);
 				if (n > 0) {
 					if (memcmp(kptr,tmp,n))
 						goto put_no_match_next_hash_table;

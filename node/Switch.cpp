@@ -142,7 +142,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		outpTmpl.append((uint16_t)data.size());
 		outpTmpl.append((uint16_t)signature.length());
 		outpTmpl.append(data.data(),data.size());
-		outpTmpl.append(signature.data(),signature.length());
+		outpTmpl.append(signature.data(),(unsigned int)signature.length());
 		outpTmpl.compress();
 		send(outpTmpl,true);
 		for(unsigned int i=1;i<np;++i) {

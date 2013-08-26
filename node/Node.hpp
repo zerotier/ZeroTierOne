@@ -163,5 +163,17 @@ extern const unsigned char EMBEDDED_VERSION_STAMP[20];
 
 } // namespace ZeroTier
 
-#endif
+extern "C" {
 
+// Functions with C-style linkage for easy DLL symbol table
+// lookup. These just create instances of Node and LocalClient.
+
+ZeroTier::Node *zeroTierCreateNode(const char *hp);
+void zeroTierDeleteNode(ZeroTier::Node *n);
+
+ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg);
+void zeroTierDeleteLocalClient(ZeroTier::Node::LocalClient *lc);
+
+} // extern "C"
+
+#endif

@@ -35,6 +35,10 @@
 #include "InetAddress.hpp"
 #include "Mutex.hpp"
 
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#endif
+
 namespace ZeroTier {
 
 /**
@@ -100,7 +104,11 @@ private:
 	void (*_packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int);
 	void *_arg;
 	int _localPort;
+#ifdef __WINDOWS__
+	volatile SOCKET _sock;
+#else
 	volatile int _sock;
+#endif
 	bool _v6;
 	Mutex _sendLock;
 };

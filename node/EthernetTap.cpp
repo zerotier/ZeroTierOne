@@ -693,10 +693,36 @@ void EthernetTap::threadMain()
 #include <tchar.h>
 #include <winreg.h>
 #include <wchar.h>
+#include <nldef.h>
+#include <netioapi.h>
 
 #include "..\vsprojects\TapDriver\tap-windows.h"
 
 namespace ZeroTier {
+
+// Helper function to get an adapter's LUID and index from its GUID. The LUID is
+// constant but the index can change, so go ahead and just look them both up by
+// the GUID which is constant. (The GUID is the instance ID in the registry.)
+static inline std::pair<NET_LUID,NET_IFINDEX> _findAdapterByGuid(const GUID &guid)
+	throw(std::runtime_error)
+{
+	MIB_IF_TABLE2 *ift = (MIB_IF_TABLE2 *)0;
+
+	if (GetIfTable2Ex(MibIfTableRaw,&ift) != NO_ERROR)
+		throw std::runtime_error("GetIfTable2Ex() failed");
+
+	for(ULONG i=0;i<ift->NumEntries;++i) {
+		if (ift->Table[i].InterfaceGuid == guid) {
+			std::pair<NET_LUID,NET_IFINDEX> tmp(ift->Table[i].InterfaceLuid,ift->Table[i].InterfaceIndex);
+			FreeMibTable(&ift);
+			return tmp;
+		}
+	}
+
+	FreeMibTable(&ift);
+
+	throw std::runtime_error("interface not found");
+}
 
 static Mutex _systemTapInitLock;
 
@@ -720,6 +746,9 @@ EthernetTap::EthernetTap(
 	char subkeyName[4096];
 	char subkeyClass[4096];
 	char data[4096];
+
+	if (mtu > ZT_IF_MTU)
+		throw std::runtime_error("MTU too large for Windows tap");
 
 	Mutex::Lock _l(_systemTapInitLock); // only init one tap at a time, process-wide
 
@@ -813,7 +842,7 @@ EthernetTap::EthernetTap(
 							dataLen = sizeof(data);
 							if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
 								if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
-									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,strlen(tag)+1);
+									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,(DWORD)(strlen(tag)+1));
 									_myDeviceInstanceId.assign(data,dataLen);
 									mySubkeyName = subkeyName;
 									subkeyIndex = -1; // break outer loop
@@ -842,8 +871,27 @@ EthernetTap::EthernetTap(
 	if (_myDeviceInstanceId.length() == 0)
 		throw std::runtime_error("unable to create new tap adapter");
 
+	{
+		char nobraces[128];
+		const char *nbtmp1 = _myDeviceInstanceId.c_str();
+		char *nbtmp2 = nobraces;
+		while (*nbtmp1) {
+			if ((*nbtmp1 != '{')&&(*nbtmp1 != '}'))
+				*nbtmp2++ = *nbtmp1;
+			++nbtmp1;
+		}
+		*nbtmp2 = (char)0;
+		if (UuidFromStringA((RPC_CSTR)nobraces,&_deviceGuid) != RPC_S_OK)
+			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
+	}
+
+#ifdef UNICODE
 	wchar_t tapPath[4096];
 	swprintf_s(tapPath,L"\\\\.\\Global\\%S.tap",_myDeviceInstanceId.c_str());
+#else
+	char tapPath[4096];
+	sprintf_s(tapPath,"\\\\.\\Global\\%s.tap",_myDeviceInstanceId.c_str());
+#endif
 	_tap = CreateFile(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 	if (_tap == INVALID_HANDLE_VALUE)
 		throw std::runtime_error("unable to open tap in \\\\.\\Global\\ namespace");
@@ -878,12 +926,102 @@ void EthernetTap::whack()
 
 bool EthernetTap::addIP(const InetAddress &ip)
 {
+	Mutex::Lock _l(_ips_m);
+
+	if (_ips.count(ip))
+		return true;
+
+	if (!ip.port())
+		return false;
+
+	try {
+		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
+		MIB_UNICASTIPADDRESS_ROW ipr;
+
+		InitializeUnicastIpAddressEntry(&ipr);
+		if (ip.isV4()) {
+			ipr.Address.Ipv4.sin_family = AF_INET;
+			ipr.Address.Ipv4.sin_addr.S_un.S_addr = *((const uint32_t *)ip.rawIpData());
+			ipr.OnLinkPrefixLength = ip.port();
+		} else if (ip.isV6()) {
+		} else return false;
+
+		ipr.PrefixOrigin = IpPrefixOriginManual;
+		ipr.SuffixOrigin = IpSuffixOriginManual;
+		ipr.ValidLifetime = 0xffffffff;
+		ipr.PreferredLifetime = 0xffffffff;
+
+		ipr.InterfaceLuid = ifidx.first;
+		ipr.InterfaceIndex = ifidx.second;
+
+		if (CreateUnicastIpAddressEntry(&ipr) == NO_ERROR) {
+			_ips.insert(ip);
+			return true;
+		}
+	} catch ( ... ) {}
+
 	return false;
 }
 
 bool EthernetTap::removeIP(const InetAddress &ip)
 {
+	try {
+		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
+		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
+
+		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
+			for(DWORD i=0;i<ipt->NumEntries;++i) {
+				if ((ipt->Table[i].InterfaceLuid.Value == ifidx.first.Value)&&(ipt->Table[i].InterfaceIndex == ifidx.second)) {
+					InetAddress addr;
+					switch(ipt->Table[i].Address.si_family) {
+						case AF_INET:
+							addr.set(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
+							break;
+						case AF_INET6:
+							addr.set(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
+							break;
+					}
+					if (addr == ip) {
+						DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
+						FreeMibTable(&ipt);
+						Mutex::Lock _l(_ips_m);
+						_ips.erase(ip);
+						return true;
+					}
+				}
+			}
+			FreeMibTable(&ipt);
+		}
+	} catch ( ... ) {}
 	return false;
+}
+
+std::set<InetAddress> EthernetTap::allIps() const
+{
+	std::set<InetAddress> addrs;
+
+	try {
+		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
+		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
+
+		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
+			for(DWORD i=0;i<ipt->NumEntries;++i) {
+				if ((ipt->Table[i].InterfaceLuid.Value == ifidx.first.Value)&&(ipt->Table[i].InterfaceIndex == ifidx.second)) {
+					switch(ipt->Table[i].Address.si_family) {
+						case AF_INET:
+							addrs.insert(InetAddress(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength));
+							break;
+						case AF_INET6:
+							addrs.insert(InetAddress(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength));
+							break;
+					}
+				}
+			}
+			FreeMibTable(&ipt);
+		}
+	} catch ( ... ) {}
+
+	return addrs;
 }
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
@@ -939,8 +1077,8 @@ void EthernetTap::threadMain()
 					MAC from(_tapReadBuf + 6);
 					unsigned int etherType = Utils::ntoh(*((const uint16_t *)(_tapReadBuf + 12)));
 					Buffer<4096> tmp(_tapReadBuf + 14,bytesRead - 14);
-					printf("GOT FRAME: %u bytes: %s\r\n",(unsigned int)bytesRead,Utils::hex(_tapReadBuf,bytesRead).c_str());
-					//_handler(_arg,from,to,etherType,tmp);
+					//printf("GOT FRAME: %u bytes: %s\r\n",(unsigned int)bytesRead,Utils::hex(_tapReadBuf,bytesRead).c_str());
+					_handler(_arg,from,to,etherType,tmp);
 				}
 			}
 			ReadFile(_tap,_tapReadBuf,sizeof(_tapReadBuf),NULL,&_tapOvlRead);

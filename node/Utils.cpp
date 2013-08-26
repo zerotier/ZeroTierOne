@@ -501,7 +501,7 @@ uint64_t Utils::fromRfc1123(const char *tstr)
 	struct tm t;
 	char wdays[128],mons[128];
 
-	int l = strlen(tstr);
+	int l = (int)strlen(tstr);
 	if ((l < 29)||(l > 64))
 		return 0;
 	int assigned = sscanf(tstr,"%3s, %02d %3s %4d %02d:%02d:%02d GMT",wdays,&t.tm_mday,mons,&t.tm_year,&t.tm_hour,&t.tm_min,&t.tm_sec);
@@ -620,7 +620,7 @@ std::vector<std::string> Utils::split(const char *s,const char *const sep,const 
 
 std::string Utils::trim(const std::string &s)
 {
-	unsigned long end = s.length();
+	unsigned long end = (unsigned long)s.length();
 	while (end) {
 		char c = s[end - 1];
 		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))

@@ -153,7 +153,7 @@ bool EllipticCurveKeyPair::generate()
 	}
 
 	memset(_priv._key,0,sizeof(_priv._key));
-	len = BN_num_bytes(EC_KEY_get0_private_key(key));
+	len = (int)BN_num_bytes(EC_KEY_get0_private_key(key));
 	if ((len > ZT_EC_PRIME_BYTES)||(len < 0)) {
 		EC_KEY_free(key);
 		return false;
@@ -162,7 +162,7 @@ bool EllipticCurveKeyPair::generate()
 	_priv._bytes = ZT_EC_PRIME_BYTES;
 
 	memset(_pub._key,0,sizeof(_pub._key));
-	len = EC_POINT_point2oct(ZT_EC_GROUP.g,EC_KEY_get0_public_key(key),POINT_CONVERSION_COMPRESSED,_pub._key,sizeof(_pub._key),0);
+	len = (int)EC_POINT_point2oct(ZT_EC_GROUP.g,EC_KEY_get0_public_key(key),POINT_CONVERSION_COMPRESSED,_pub._key,sizeof(_pub._key),0);
 	if (len != ZT_EC_PUBLIC_KEY_BYTES) {
 		EC_KEY_free(key);
 		return false;

@@ -135,6 +135,11 @@ public:
 	}
 
 	/**
+	 * @return Set of IP addresses / netmasks included any we did not assign, link-local, etc.
+	 */
+	std::set<InetAddress> allIps() const;
+
+	/**
 	 * Set this tap's IP addresses to exactly this set of IPs
 	 *
 	 * New IPs are created, ones not in this list are removed.
@@ -213,6 +218,7 @@ private:
 	OVERLAPPED _tapOvlRead,_tapOvlWrite;
 	char _tapReadBuf[ZT_IF_MTU + 32];
 	HANDLE _injectSemaphore;
+	GUID _deviceGuid;
 	std::string _myDeviceInstanceId;
 	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;

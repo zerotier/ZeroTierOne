@@ -258,7 +258,7 @@ Node::Node(const char *hp)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 
-	if (hp)
+	if ((hp)&&(strlen(hp) > 0))
 		impl->renv.homePath = hp;
 	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
 	impl->reasonForTermination = Node::NODE_RUNNING;
@@ -382,10 +382,10 @@ Node::ReasonForTermination Node::run()
 		_r->sysEnv = new SysEnv(_r);
 		try {
 			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
-		} catch ( ... ) {
+		} catch (std::exception &exc) {
 			// An exception here currently means that another instance of ZeroTier
 			// One is running.
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound");
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,(std::string("another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound: ") + exc.what()).c_str());
 		}
 
 		// TODO: make configurable
@@ -618,3 +618,27 @@ const unsigned char EMBEDDED_VERSION_STAMP[20] = {
 };
 
 } // namespace ZeroTier
+
+extern "C" {
+
+ZeroTier::Node *zeroTierCreateNode(const char *hp)
+{
+	return new ZeroTier::Node(hp);
+}
+
+void zeroTierDeleteNode(ZeroTier::Node *n)
+{
+	delete n;
+}
+
+ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+{
+	return new ZeroTier::Node::LocalClient(authToken,resultHandler,arg);
+}
+
+void zeroTierDeleteLocalClient(ZeroTier::Node::LocalClient *lc)
+{
+	delete lc;
+}
+
+} // extern "C"

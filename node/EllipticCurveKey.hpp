@@ -78,7 +78,7 @@ public:
 	EllipticCurveKey(const std::string &data)
 		throw(std::out_of_range)
 	{
-		set(data.data(),data.length());
+		set(data.data(),(unsigned int)data.length());
 	}
 
 	inline void set(const void *data,unsigned int len)

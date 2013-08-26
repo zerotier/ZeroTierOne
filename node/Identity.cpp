@@ -88,7 +88,7 @@ bool Identity::locallyValidate(bool doAddressDerivationCheck) const
 	SHA256_Update(&sha,&zero,1);
 	SHA256_Final(dig,&sha);
 
-	return ((EllipticCurveKeyPair::verify(dig,_publicKey,_signature.data(),_signature.length()))&&((!doAddressDerivationCheck)||(deriveAddress(_publicKey.data(),_publicKey.size()) == _address)));
+	return ((EllipticCurveKeyPair::verify(dig,_publicKey,_signature.data(),(unsigned int)_signature.length()))&&((!doAddressDerivationCheck)||(deriveAddress(_publicKey.data(),_publicKey.size()) == _address)));
 }
 
 std::string Identity::toString(bool includePrivate) const
@@ -98,7 +98,7 @@ std::string Identity::toString(bool includePrivate) const
 	r.append(":1:"); // 1 == IDENTITY_TYPE_NIST_P_521
 	r.append(Utils::base64Encode(_publicKey.data(),_publicKey.size()));
 	r.push_back(':');
-	r.append(Utils::base64Encode(_signature.data(),_signature.length()));
+	r.append(Utils::base64Encode(_signature.data(),(unsigned int)_signature.length()));
 	if ((includePrivate)&&(_keyPair)) {
 		r.push_back(':');
 		r.append(Utils::base64Encode(_keyPair->priv().data(),_keyPair->priv().size()));
@@ -127,7 +127,7 @@ bool Identity::fromString(const char *str)
 	b = Utils::base64Decode(fields[2]);
 	if ((!b.length())||(b.length() > ZT_EC_MAX_BYTES))
 		return false;
-	_publicKey.set(b.data(),b.length());
+	_publicKey.set(b.data(),(unsigned int)b.length());
 
 	_signature = Utils::base64Decode(fields[3]);
 	if (!_signature.length())
@@ -137,7 +137,7 @@ bool Identity::fromString(const char *str)
 		b = Utils::base64Decode(fields[4]);
 		if ((!b.length())||(b.length() > ZT_EC_MAX_BYTES))
 			return false;
-		_keyPair = new EllipticCurveKeyPair(_publicKey,EllipticCurveKey(b.data(),b.length()));
+		_keyPair = new EllipticCurveKeyPair(_publicKey,EllipticCurveKey(b.data(),(unsigned int)b.length()));
 	}
 
 	return true;

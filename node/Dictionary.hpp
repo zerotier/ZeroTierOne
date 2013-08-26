@@ -114,9 +114,9 @@ public:
 		std::string s;
 
 		for(const_iterator kv(begin());kv!=end();++kv) {
-			_appendEsc(kv->first.data(),kv->first.length(),s);
+			_appendEsc(kv->first.data(),(unsigned int)kv->first.length(),s);
 			s.push_back('=');
-			_appendEsc(kv->second.data(),kv->second.length(),s);
+			_appendEsc(kv->second.data(),(unsigned int)kv->second.length(),s);
 			s.append(ZT_EOL_S);
 		}
 

@@ -232,7 +232,7 @@ void Topology::threadMain()
 		}
 		_PeerDeepVerifyJob job(_peerDeepVerifyJobs.front());
 		_peerDeepVerifyJobs.pop_front();
-		unsigned long queueRemaining = _peerDeepVerifyJobs.size();
+		unsigned long queueRemaining = (unsigned long)_peerDeepVerifyJobs.size();
 		_peerDeepVerifyJobs_m.unlock();
 
 		switch(job.type) {

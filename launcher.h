@@ -32,17 +32,6 @@
 #define ZT_LAUNCHER_VERSION_MINOR 0
 #define ZT_LAUNCHER_VERSION_REVISION 1
 
-/* Default locations of data directories on operating systems */
-#ifdef __APPLE__ /* MacOS likes purdy paths, none of this 1970s /var stuff */
-#define ZT_DEFAULT_HOME "/Library/Application Support/ZeroTier/One"
-#else
-#ifdef _WIN32    /* Winbloze */
-need windoze;
-#else            /* Unix/Linux */
-#define ZT_DEFAULT_HOME "/var/lib/zerotier-one"
-#endif
-#endif
-
 /**
  * Normal termination
  * 

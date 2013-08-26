@@ -63,7 +63,11 @@ UdpSocket::UdpSocket(
 	_packetHandler(packetHandler),
 	_arg(arg),
 	_localPort(localPort),
+#ifdef __WINDOWS__
+	_sock(INVALID_SOCKET),
+#else
 	_sock(0),
+#endif
 	_v6(ipv6)
 {
 #ifdef __WINDOWS__
@@ -77,8 +81,13 @@ UdpSocket::UdpSocket(
 
 	if (ipv6) {
 		_sock = socket(AF_INET6,SOCK_DGRAM,0);
+#ifdef __WINDOWS__
+		if (_sock == INVALID_SOCKET)
+			throw std::runtime_error("unable to create IPv6 SOCK_DGRAM socket");
+#else
 		if (_sock <= 0)
 			throw std::runtime_error("unable to create IPv6 SOCK_DGRAM socket");
+#endif
 
 #ifdef __WINDOWS__
 		yes = TRUE; setsockopt(_sock,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&yes,sizeof(yes));
@@ -115,8 +124,13 @@ UdpSocket::UdpSocket(
 		}
 	} else {
 		_sock = socket(AF_INET,SOCK_DGRAM,0);
+#ifdef __WINDOWS__
+		if (_sock == INVALID_SOCKET)
+			throw std::runtime_error("unable to create IPv4 SOCK_DGRAM socket");
+#else
 		if (_sock <= 0)
 			throw std::runtime_error("unable to create IPv4 SOCK_DGRAM socket");
+#endif
 
 #ifdef __WINDOWS__
 		no = FALSE; setsockopt(_sock,SOL_SOCKET,SO_REUSEADDR,(const char *)&no,sizeof(no));
@@ -154,16 +168,19 @@ UdpSocket::UdpSocket(
 UdpSocket::~UdpSocket()
 {
 	int s = _sock;
-	_sock = 0;
-	if (s > 0) {
 #ifdef __WINDOWS__
+	_sock = INVALID_SOCKET;
+	if (s != INVALID_SOCKET) {
 		::shutdown(s,SD_BOTH);
 		::closesocket(s);
+	}
 #else
+	_sock = 0;
+	if (s > 0) {
 		::shutdown(s,SHUT_RDWR);
 		::close(s);
-#endif
 	}
+#endif
 	Thread::join(_thread);
 }
 

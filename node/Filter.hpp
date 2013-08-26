@@ -298,7 +298,7 @@ public:
 		throw()
 	{
 		Mutex::Lock _l(_chain_m);
-		return _chain.size();
+		return (unsigned int)_chain.size();
 	}
 
 	/**

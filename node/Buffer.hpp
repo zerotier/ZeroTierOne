@@ -284,7 +284,7 @@ public:
 	inline void append(const std::string &s)
 		throw(std::out_of_range)
 	{
-		append(s.data(),s.length());
+		append(s.data(),(unsigned int)s.length());
 	}
 
 	/**

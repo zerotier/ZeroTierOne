@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver Package", "vsproj
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA} = {689210B1-467C-4850-BB7D-2E10D5B4A3DA}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "vsprojects\ZeroTierOne\ZeroTierOne.vcxproj", "{B00A4957-5977-4AC1-9EF4-571DC27EADA2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -156,6 +158,39 @@ Global
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win8 Release|x64.ActiveCfg = Win8 Release|x64
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win8 Release|x64.Build.0 = Win8 Release|x64
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win8 Release|x64.Deploy.0 = Win8 Release|x64
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Debug|Win32.Build.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Debug|Win32.Deploy.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Debug|x64.ActiveCfg = Debug|x64
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Debug|x64.Build.0 = Debug|x64
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Release|Win32.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Release|Win32.Build.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Release|Win32.Deploy.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Release|x64.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Debug|Win32.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Debug|Win32.Build.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Debug|Win32.Deploy.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Debug|x64.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Release|Win32.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Release|Win32.Build.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Release|Win32.Deploy.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Vista Release|x64.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|Win32.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|Win32.Build.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|Win32.Deploy.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Debug|x64.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.Build.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.Deploy.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x64.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|Win32.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|Win32.Build.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|Win32.Deploy.0 = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|x64.ActiveCfg = Debug|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Release|Win32.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Release|Win32.Build.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Release|Win32.Deploy.0 = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -30,14 +30,17 @@
 #include <string.h>
 #include <time.h>
 #include <errno.h>
+
 #include <string>
 #include <stdexcept>
-#include <iostream>
 
 #include "node/Constants.hpp"
 
 #ifdef __WINDOWS__
+#include <WinSock2.h>
 #include <Windows.h>
+#include <tchar.h>
+#include <wchar.h>
 #else
 #include <unistd.h>
 #include <pwd.h>
@@ -48,8 +51,10 @@
 
 #include <openssl/rand.h>
 
-#include "node/Node.hpp"
+#include "node/Constants.hpp"
+#include "node/Defaults.hpp"
 #include "node/Utils.hpp"
+#include "node/Node.hpp"
 
 #include "launcher.h"
 
@@ -89,10 +94,10 @@ static Node *node = (Node *)0;
 
 static void printHelp(const char *cn,FILE *out)
 {
-	fprintf(out,"ZeroTier One version %d.%d.%d\n(c)2012-2013 ZeroTier Networks LLC\nLicensed under the GNU General Public License v3\n\nUsage: %s <home directory>\n",Node::versionMajor(),Node::versionMinor(),Node::versionRevision(),cn);
+	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2012-2013 ZeroTier Networks LLC"ZT_EOL_S"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S"Usage: %s [home directory]"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision(),cn);
 }
 
-#ifndef _WIN32
+#ifdef __UNIX_LIKE__
 static void sighandlerQuit(int sig)
 {
 	Node *n = node;
@@ -102,9 +107,13 @@ static void sighandlerQuit(int sig)
 }
 #endif
 
+#ifdef __WINDOWS__
+int _tmain(int argc, _TCHAR* argv[])
+#else
 int main(int argc,char **argv)
+#endif
 {
-#ifndef _WIN32
+#ifdef __UNIX_LIKE__
 	signal(SIGHUP,SIG_IGN);
 	signal(SIGPIPE,SIG_IGN);
 	signal(SIGUSR1,SIG_IGN);
@@ -115,17 +124,19 @@ int main(int argc,char **argv)
 	signal(SIGQUIT,&sighandlerQuit);
 #endif
 
-	_initLibCrypto();
+#ifdef __WINDOWS__
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2,2),&wsaData);
+#endif
 
-	if (argc < 2) {
-		printHelp(argv[0],stderr);
-		return ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
-	}
+	_initLibCrypto();
 
 	const char *homeDir = (const char *)0;
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
+				case 'h':
+				case '?':
 				default:
 					printHelp(argv[0],stderr);
 					return ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
@@ -140,11 +151,10 @@ int main(int argc,char **argv)
 		}
 	}
 
-	if ((!homeDir)||(strlen(homeDir) <= 0)) {
-		printHelp(argv[0],stderr);
-		return ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
-	}
-#ifndef _WIN32
+	if ((!homeDir)||(strlen(homeDir) == 0))
+		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
+
+#ifdef __UNIX_LIKE__
 	mkdir(homeDir,0755); // will fail if it already exists
 #endif
 
