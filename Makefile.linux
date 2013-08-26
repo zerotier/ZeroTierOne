@@ -24,7 +24,7 @@ LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a -lm -ldl
 
 include objects.mk
 
-all:	one cli launcher
+all:	one cli
 
 one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
@@ -41,14 +41,6 @@ selftest:	$(OBJS)
 idtool:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-idtool
-
-launcher:
-	$(CC) -Os -o zerotier-launcher launcher.c
-	$(STRIP) zerotier-launcher
-
-launcher-fakebin:
-	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REVISION=3 -o zerotier-launcher-fakebin-123 launcher-fakebin.c
-	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REVISION=4 -o zerotier-launcher-fakebin-124 launcher-fakebin.c
 
 clean:
 	rm -f $(OBJS) zerotier-*

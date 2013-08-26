@@ -80,7 +80,7 @@ static inline std::string _mkDefaultHomePath()
 {
 #ifdef __UNIX_LIKE__
 #ifdef __APPLE__
-	return std::string("/Library/Application\ Support/ZeroTier/One");
+	return std::string("/Library/Application Support/ZeroTier/One");
 #else
 	return std::string("/var/lib/zerotier-one");
 #endif

@@ -17,7 +17,7 @@ LIBS=-lcrypto -lm
 
 include objects.mk
 
-all: one cli launcher mac-tap
+all: one cli mac-tap
 
 one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
@@ -43,14 +43,6 @@ install-mac-tap: FORCE
 	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
 	cp -R mac-tap/tuntap/tap.kext /Library/Application\ Support/ZeroTier/One
 	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
-
-launcher: FORCE
-	$(CC) -Os -arch i386 -arch x86_64 -o zerotier-launcher launcher.c
-	$(STRIP) zerotier-launcher
-
-launcher-fakebin:
-	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REV
-	$(CC) $(CFLAGS) -DZEROTIER_FAKE_VERSION_MAJOR=1 -DZEROTIER_FAKE_VERSION_MINOR=2 -DZEROTIER_FAKE_VERSION_REV
 
 makekeypair: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-makekeypair makekeypair.cpp $(OBJS) $(LIBS)
