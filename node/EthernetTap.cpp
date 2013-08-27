@@ -1096,6 +1096,7 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 
 std::set<InetAddress> EthernetTap::allIps() const
 {
+	static const InetAddress ifLoopback("fe80::1",64);
 	std::set<InetAddress> addrs;
 
 	try {
@@ -1109,9 +1110,11 @@ std::set<InetAddress> EthernetTap::allIps() const
 						case AF_INET:
 							addrs.insert(InetAddress(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength));
 							break;
-						case AF_INET6:
-							addrs.insert(InetAddress(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength));
-							break;
+						case AF_INET6: {
+							InetAddress ip(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
+							if (ip != ifLoopback) // don't include fe80::1
+								addrs.insert(ip);
+						}	break;
 					}
 				}
 			}
@@ -1147,8 +1150,30 @@ std::string EthernetTap::deviceName() const
 
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
-	// TODO
-	return false;
+	std::set<MulticastGroup> newGroups;
+
+	std::set<InetAddress> ipaddrs(allIps());
+	for(std::set<InetAddress>::const_iterator i(ipaddrs.begin());i!=ipaddrs.end();++i)
+		newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
+
+	bool changed = false;
+
+	newGroups.insert(_blindWildcardMulticastGroup); // always join this
+
+	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
+		if (!groups.count(*mg)) {
+			groups.insert(*mg);
+			changed = true;
+		}
+	}
+	for(std::set<MulticastGroup>::iterator mg(groups.begin());mg!=groups.end();) {
+		if (!newGroups.count(*mg)) {
+			groups.erase(mg++);
+			changed = true;
+		} else ++mg;
+	}
+
+	return changed;
 }
 
 void EthernetTap::threadMain()
