@@ -108,6 +108,23 @@ static void sighandlerQuit(int sig)
 #endif
 
 #ifdef __WINDOWS__
+static BOOL WINAPI _handlerRoutine(DWORD dwCtrlType)
+{
+	switch(dwCtrlType) {
+		case CTRL_C_EVENT:
+		case CTRL_BREAK_EVENT:
+		case CTRL_CLOSE_EVENT:
+		case CTRL_SHUTDOWN_EVENT:
+			Node *n = node;
+			if (n)
+				n->terminate();
+			return TRUE;
+	}
+	return FALSE;
+}
+#endif
+
+#ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])
 #else
 int main(int argc,char **argv)
@@ -127,6 +144,7 @@ int main(int argc,char **argv)
 #ifdef __WINDOWS__
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2,2),&wsaData);
+	SetConsoleCtrlHandler(&_handlerRoutine,TRUE);
 #endif
 
 	_initLibCrypto();

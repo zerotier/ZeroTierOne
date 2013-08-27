@@ -1017,7 +1017,7 @@ void EthernetTap::setDisplayName(const char *dn)
 {
 	HKEY ifp;
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,(std::string("SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\") + _myDeviceInstanceId).c_str(),0,KEY_READ|KEY_WRITE,&ifp) == ERROR_SUCCESS) {
-		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,strlen(dn)+1);
+		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,(DWORD)(strlen(dn)+1));
 		RegCloseKey(ifp);
 	}
 }
