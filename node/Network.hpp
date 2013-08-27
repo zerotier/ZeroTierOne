@@ -233,6 +233,15 @@ public:
 #endif
 		}
 
+		inline std::string name() const
+		{
+			if (contains("name"))
+				return get("name");
+			char buf[32];
+			sprintf(buf,"%.16llx",(unsigned long long)networkId());
+			return std::string(buf);
+		}
+
 		inline Address peerAddress() const
 			throw(std::invalid_argument)
 		{

@@ -175,6 +175,7 @@ void Network::setConfiguration(const Network::Config &conf)
 		_lastConfigUpdate = Utils::now();
 
 		_tap->setIps(conf.staticAddresses());
+		_tap->setDisplayName((std::string("ZeroTier One [") + conf.name() + "]").c_str());
 
 		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
 		if (!Utils::writeFile(confPath.c_str(),conf.toString())) {

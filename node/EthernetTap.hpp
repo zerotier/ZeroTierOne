@@ -100,6 +100,31 @@ public:
 	void whack();
 
 	/**
+	 * Set whether or not DHCP is enabled (disabled by default)
+	 *
+	 * @param dhcp DHCP status
+	 * @return New state of DHCP (may be false even on 'true' if DHCP enable failed)
+	 */
+	bool setDhcpEnabled(bool dhcp);
+
+	/**
+	 * Set whether or not DHCP6 is enabled (disabled by default)
+	 *
+	 * @param dhcp DHCP6 status
+	 * @return New state of DHCP6 (may be false even on 'true' if DHCP enable failed)
+	 */
+	bool setDhcp6Enabled(bool dhcp);
+
+	/**
+	 * Set the user display name for this connection
+	 *
+	 * This does nothing on platforms that don't have this concept.
+	 *
+	 * @param dn User display name
+	 */
+	void setDisplayName(const char *dn);
+
+	/**
 	 * @return MAC address of this interface
 	 */
 	inline const MAC &mac() const throw() { return _mac; }
@@ -204,6 +229,9 @@ private:
 
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
+
+	bool _dhcp;
+	bool _dhcp6;
 
 	Thread _thread;
 

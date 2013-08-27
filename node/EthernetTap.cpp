@@ -739,6 +739,8 @@ EthernetTap::EthernetTap(
 	_r(renv),
 	_handler(handler),
 	_arg(arg),
+	_dhcp(false),
+	_dhcp6(false),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
 	_run(true)
@@ -901,6 +903,9 @@ EthernetTap::EthernetTap(
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
 	}
 
+	setDhcpEnabled(false);
+	setDhcp6Enabled(false);
+
 	// Disable and enable interface to ensure registry settings take effect
 	{
 		STARTUPINFOA startupInfo;
@@ -987,6 +992,34 @@ EthernetTap::~EthernetTap()
 
 void EthernetTap::whack()
 {
+}
+
+bool EthernetTap::setDhcpEnabled(bool dhcp)
+{
+	HKEY tcpIpInterfaces;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+		_dhcp = dhcp;
+		DWORD enable = (dhcp ? 1 : 0);
+		RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
+		RegCloseKey(tcpIpInterfaces);
+	} else _dhcp = false;
+
+	return _dhcp;
+}
+
+bool EthernetTap::setDhcp6Enabled(bool dhcp)
+{
+	// TODO
+	return _dhcp6;
+}
+
+void EthernetTap::setDisplayName(const char *dn)
+{
+	HKEY ifp;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,(std::string("SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\") + _myDeviceInstanceId).c_str(),0,KEY_READ|KEY_WRITE,&ifp) == ERROR_SUCCESS) {
+		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,strlen(dn)+1);
+		RegCloseKey(ifp);
+	}
 }
 
 bool EthernetTap::addIP(const InetAddress &ip)
