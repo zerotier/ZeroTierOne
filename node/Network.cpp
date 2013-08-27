@@ -282,6 +282,8 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 	if (!((Network *)arg)->_ready)
 		return;
 	const RuntimeEnvironment *_r = ((Network *)arg)->_r;
+	if (_r->shutdownInProgress)
+		return;
 	try {
 		_r->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
 	} catch (std::exception &exc) {

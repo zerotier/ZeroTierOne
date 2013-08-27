@@ -61,6 +61,7 @@ class RuntimeEnvironment
 {
 public:
 	RuntimeEnvironment() :
+		shutdownInProgress(false),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		demarc((Demarc *)0),
@@ -82,14 +83,16 @@ public:
 
 	Identity identity;
 
+	volatile bool shutdownInProgress;
+
 	// Order matters a bit here. These are constructed in this order
 	// and then deleted in the opposite order on Node exit.
 
 	Logger *log; // may be null
 	CMWC4096 *prng;
-	Demarc *demarc;
 	Multicaster *multicaster;
 	Switch *sw;
+	Demarc *demarc;
 	Topology *topology;
 	SysEnv *sysEnv;
 	NodeConfig *nc;

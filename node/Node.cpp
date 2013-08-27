@@ -188,15 +188,31 @@ struct _NodeImpl
 	volatile bool running;
 	volatile bool terminateNow;
 
-	// Helper used to rapidly terminate from run()
+	// run() calls this on all return paths
 	inline Node::ReasonForTermination terminateBecause(Node::ReasonForTermination r,const char *rstr)
 	{
 		RuntimeEnvironment *_r = &renv;
 		LOG("terminating: %s",rstr);
 
+		renv.shutdownInProgress = true;
+		Thread::sleep(500);
+
+#ifndef __WINDOWS__
+		delete renv.netconfService;
+#endif
+		delete renv.nc;
+		delete renv.sysEnv;
+		delete renv.topology;
+		delete renv.demarc;
+		delete renv.sw;
+		delete renv.multicaster;
+		delete renv.prng;
+		delete renv.log;
+
 		reasonForTerminationStr = rstr;
 		reasonForTermination = r;
 		running = false;
+
 		return r;
 	}
 };
@@ -257,7 +273,6 @@ Node::Node(const char *hp)
 	_impl(new _NodeImpl)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-
 	if ((hp)&&(strlen(hp) > 0))
 		impl->renv.homePath = hp;
 	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
@@ -269,34 +284,9 @@ Node::Node(const char *hp)
 
 Node::~Node()
 {
-	_NodeImpl *impl = (_NodeImpl *)_impl;
-
-#ifndef __WINDOWS__
-	delete impl->renv.netconfService;
-#endif
-
-	delete impl->renv.nc;
-	delete impl->renv.sysEnv;
-	delete impl->renv.topology;
-	delete impl->renv.sw;
-	delete impl->renv.multicaster;
-	delete impl->renv.demarc;
-	delete impl->renv.prng;
-	delete impl->renv.log;
-
-	delete impl;
+	delete (_NodeImpl *)_impl;
 }
 
-/**
- * Execute node in current thread
- *
- * This does not return until the node shuts down. Shutdown may be caused
- * by an internally detected condition such as a new upgrade being
- * available or a fatal error, or it may be signaled externally using
- * the terminate() method.
- *
- * @return Reason for termination
- */
 Node::ReasonForTermination Node::run()
 	throw()
 {
@@ -375,9 +365,9 @@ Node::ReasonForTermination Node::run()
 		// Create the core objects in RuntimeEnvironment: node config, demarcation
 		// point, switch, network topology database, and system environment
 		// watcher.
-		_r->demarc = new Demarc(_r);
 		_r->multicaster = new Multicaster();
 		_r->sw = new Switch(_r);
+		_r->demarc = new Demarc(_r);
 		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
 		_r->sysEnv = new SysEnv(_r);
 		try {

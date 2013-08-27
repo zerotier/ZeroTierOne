@@ -210,7 +210,8 @@ Demarc::Port Demarc::send(Demarc::Port fromPort,const InetAddress &to,const void
 
 void Demarc::_CBudpSocketPacketHandler(UdpSocket *sock,void *arg,const InetAddress &from,const void *data,unsigned int len)
 {
-	((DemarcPortObj *)arg)->parent->_r->sw->onRemotePacket(((DemarcPortObj *)arg)->port,from,Buffer<4096>(data,len));
+	if (!((DemarcPortObj *)arg)->parent->_r->shutdownInProgress)
+		((DemarcPortObj *)arg)->parent->_r->sw->onRemotePacket(((DemarcPortObj *)arg)->port,from,Buffer<4096>(data,len));
 }
 
 } // namespace ZeroTier
