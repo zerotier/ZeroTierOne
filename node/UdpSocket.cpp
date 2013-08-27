@@ -167,14 +167,15 @@ UdpSocket::UdpSocket(
 
 UdpSocket::~UdpSocket()
 {
-	int s = _sock;
 #ifdef __WINDOWS__
+	SOCKET s = _sock;
 	_sock = INVALID_SOCKET;
 	if (s != INVALID_SOCKET) {
 		::shutdown(s,SD_BOTH);
 		::closesocket(s);
 	}
 #else
+	int s = _sock;
 	_sock = 0;
 	if (s > 0) {
 		::shutdown(s,SHUT_RDWR);

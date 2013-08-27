@@ -714,7 +714,7 @@ static inline std::pair<NET_LUID,NET_IFINDEX> _findAdapterByGuid(const GUID &gui
 	for(ULONG i=0;i<ift->NumEntries;++i) {
 		if (ift->Table[i].InterfaceGuid == guid) {
 			std::pair<NET_LUID,NET_IFINDEX> tmp(ift->Table[i].InterfaceLuid,ift->Table[i].InterfaceIndex);
-			FreeMibTable(&ift);
+			FreeMibTable(ift);
 			return tmp;
 		}
 	}
@@ -751,10 +751,10 @@ EthernetTap::EthernetTap(
 		throw std::runtime_error("MTU too large for Windows tap");
 
 #ifdef _WIN64
-		const char *devcon = "\\devcon64.exe";
+	const char *devcon = "\\devcon64.exe";
 #else
-		BOOL f64 = FALSE;
-		const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
+	BOOL f64 = FALSE;
+	const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
 #endif
 
 	Mutex::Lock _l(_systemTapInitLock); // only init one tap at a time, process-wide
@@ -961,6 +961,26 @@ EthernetTap::~EthernetTap()
 	CloseHandle(_tapOvlRead.hEvent);
 	CloseHandle(_tapOvlWrite.hEvent);
 	CloseHandle(_injectSemaphore);
+
+	// Disable network device on shutdown
+#ifdef _WIN64
+	const char *devcon = "\\devcon64.exe";
+#else
+	BOOL f64 = FALSE;
+	const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
+#endif
+	{
+		STARTUPINFOA startupInfo;
+		startupInfo.cb = sizeof(startupInfo);
+		PROCESS_INFORMATION processInfo;
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" disable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+	}
 }
 
 void EthernetTap::whack()
@@ -1026,7 +1046,7 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 					}
 					if (addr == ip) {
 						DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
-						FreeMibTable(&ipt);
+						FreeMibTable(ipt);
 						Mutex::Lock _l(_ips_m);
 						_ips.erase(ip);
 						return true;
@@ -1060,7 +1080,7 @@ std::set<InetAddress> EthernetTap::allIps() const
 					}
 				}
 			}
-			FreeMibTable(&ipt);
+			FreeMibTable(ipt);
 		}
 	} catch ( ... ) {}
 
