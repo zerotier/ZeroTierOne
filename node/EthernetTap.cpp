@@ -867,6 +867,7 @@ EthernetTap::EthernetTap(
 		}
 	}
 
+	// If we have a device, configure it
 	if (_myDeviceInstanceId.length() > 0) {
 		char tmps[4096];
 		unsigned int tmpsl = sprintf_s(tmps,"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]) + 1;
@@ -878,11 +879,14 @@ EthernetTap::EthernetTap(
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 	}
 
+	// Done with registry
 	RegCloseKey(nwAdapters);	
 
+	// If we didn't get a device, we can't start
 	if (_myDeviceInstanceId.length() == 0)
 		throw std::runtime_error("unable to create new tap adapter");
 
+	// Convert device GUID junk... blech
 	{
 		char nobraces[128];
 		const char *nbtmp1 = _myDeviceInstanceId.c_str();
@@ -897,7 +901,7 @@ EthernetTap::EthernetTap(
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
 	}
 
-	// Disable and enable interface to ensure settings take effect
+	// Disable and enable interface to ensure registry settings take effect
 	{
 		STARTUPINFOA startupInfo;
 		startupInfo.cb = sizeof(startupInfo);
@@ -928,26 +932,24 @@ EthernetTap::EthernetTap(
 	}
 
 	// Open the tap, which is in this weird Windows analog of /dev
-#ifdef UNICODE
-	wchar_t tapPath[4096];
-	swprintf_s(tapPath,L"\\\\.\\Global\\%S.tap",_myDeviceInstanceId.c_str());
-#else
 	char tapPath[4096];
 	sprintf_s(tapPath,"\\\\.\\Global\\%s.tap",_myDeviceInstanceId.c_str());
-#endif
-	_tap = CreateFile(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
+	_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 	if (_tap == INVALID_HANDLE_VALUE)
 		throw std::runtime_error("unable to open tap in \\\\.\\Global\\ namespace");
 
+	// Set media status to enabled
 	uint32_t tmpi = 1;
 	DWORD bytesReturned = 0;
 	DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
 
+	// Initialized overlapped I/O structures and related events
 	memset(&_tapOvlRead,0,sizeof(_tapOvlRead));
 	_tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 	memset(&_tapOvlWrite,0,sizeof(_tapOvlWrite));
 	_tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 
+	// Start background thread that actually performs I/O
 	_injectSemaphore = CreateSemaphore(NULL,0,1,NULL);
 	_thread = Thread::start(this);
 }

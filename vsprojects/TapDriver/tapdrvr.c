@@ -62,7 +62,7 @@
 // Duplicates the functionality of OpenVPN's
 // --allow-nonadmin directive.
 //========================================================
-#define ENABLE_NONADMIN 1
+//#define ENABLE_NONADMIN 1
 
 #if defined(DDKVER_MAJOR) && DDKVER_MAJOR < 5600
 #include <ndis.h>
@@ -551,6 +551,7 @@ NDIS_STATUS AdapterCreate
 	   l_Adapter->m_MAC[0], l_Adapter->m_MAC[1], l_Adapter->m_MAC[2],
 	   l_Adapter->m_MAC[3], l_Adapter->m_MAC[4], l_Adapter->m_MAC[5]));
 
+#if 0
   //==================
   // Set broadcast MAC
   //==================
@@ -559,6 +560,7 @@ NDIS_STATUS AdapterCreate
     for (i = 0; i < sizeof (MACADDR); ++i)
       l_Adapter->m_MAC_Broadcast[i] = 0xFF;
   }
+#endif
 
   //====================================
   // Initialize TAP device
@@ -1480,6 +1482,7 @@ static IPV6ADDR IPV6_NS_TARGET_UNICAST =
 	{ 0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08 };
 
+#if 0
 BOOLEAN
 HandleIPv6NeighborDiscovery( TapAdapterPointer p_Adapter, UCHAR * m_Data )
 {
@@ -1581,6 +1584,7 @@ HandleIPv6NeighborDiscovery( TapAdapterPointer p_Adapter, UCHAR * m_Data )
 
     return TRUE;				// all fine
 }
+#endif
 
 //====================================================================
 //                               Adapter Transmission
@@ -1662,6 +1666,7 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
     IPv4PacketSizeVerify (l_PacketBuffer->m_Data, l_PacketLength, FALSE, "TX", &l_Adapter->m_TxTrunc);
 #endif
 
+#if 0
     //=====================================================
     // Are we running in DHCP server masquerade mode?
     //
@@ -1687,7 +1692,9 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 			    l_Adapter->m_dhcp_server_mac))
 	      goto no_queue;
 	  }
+#endif
 
+#if 0
 	// DHCP packet?
 	else if (l_PacketLength >= sizeof (ETH_HEADER) + sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP)
 		 && eth->proto == htons (ETH_P_IP)
@@ -1715,6 +1722,7 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 	      goto no_queue;
 	  }
       }
+#endif
 
     //===============================================
     // In Point-To-Point mode, check to see whether
@@ -1723,7 +1731,8 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
     // (to be handled locally), and the rest is forwarded
     // all other protocols are dropped
     //===============================================
-    if (l_Adapter->m_tun)
+#if 0
+	if (l_Adapter->m_tun)
       {
 	ETH_HEADER *e;
 
@@ -1790,8 +1799,9 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 	    l_PacketBuffer->m_SizeFlags |= TP_TUN;
 	  }
       }
+#endif
 
-    //===============================================
+	//===============================================
     // Push packet onto queue to wait for read from
     // userspace.
     //===============================================
@@ -2051,6 +2061,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	    }
 #endif
 
+#if 0
 	  case TAP_WIN_IOCTL_CONFIG_TUN:
 	    {
 	      if (l_IrpSp->Parameters.DeviceIoControl.InputBufferLength >=
@@ -2097,7 +2108,9 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	      
 	      break;
 	    }
+#endif
 
+#if 0
 	  case TAP_WIN_IOCTL_CONFIG_POINT_TO_POINT: // Obsoleted by TAP_WIN_IOCTL_CONFIG_TUN
 	    {
 	      if (l_IrpSp->Parameters.DeviceIoControl.InputBufferLength >=
@@ -2136,6 +2149,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	      
 	      break;
 	    }
+#endif
 
 	  case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
 	    {
@@ -2154,6 +2168,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	      break;
 	    }
 
+#if 0
 	  case TAP_WIN_IOCTL_CONFIG_DHCP_MASQ:
 	    {
 	      if (l_IrpSp->Parameters.DeviceIoControl.InputBufferLength >=
@@ -2220,6 +2235,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	      
 	      break;
 	    }
+#endif
 
 	  default:
 	    {
@@ -2370,6 +2386,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	    p_IRP->IoStatus.Status = l_Status = STATUS_UNSUCCESSFUL;
 	    p_IRP->IoStatus.Information = 0;
 	  }
+#if 0
 	else if (!l_Adapter->m_tun && ((l_IrpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
 	  {
 	    __try
@@ -2414,6 +2431,8 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		p_IRP->IoStatus.Information = 0;
 	      }
 	  }
+#endif
+#if 0
 	else if (l_Adapter->m_tun && ((l_IrpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
 	  {
 	    __try
@@ -2467,6 +2486,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		p_IRP->IoStatus.Information = 0;
 	      }
 	  }
+#endif
 	else
 	  {
 	    DEBUGP (("[%s] Bad buffer size in IRP_MJ_WRITE, len=%d\n",
@@ -2827,7 +2847,8 @@ SetMediaStatus (TapAdapterPointer p_Adapter, BOOLEAN state)
 VOID
 CheckIfDhcpAndTunMode (TapAdapterPointer p_Adapter)
 {
-  if (p_Adapter->m_tun && p_Adapter->m_dhcp_enabled)
+#if 0
+	if (p_Adapter->m_tun && p_Adapter->m_dhcp_enabled)
     {
       if ((p_Adapter->m_dhcp_server_ip & p_Adapter->m_remoteNetmask) == p_Adapter->m_remoteNetwork)
 	{
@@ -2835,8 +2856,10 @@ CheckIfDhcpAndTunMode (TapAdapterPointer p_Adapter)
 	  p_Adapter->m_dhcp_server_arp = FALSE;
 	}
     }
+#endif
 }
 
+#if 0
 //===================================================
 // Generate an ARP reply message for specific kinds
 // ARP queries.
@@ -2855,7 +2878,7 @@ ProcessARP (TapAdapterPointer p_Adapter,
   if (src->m_Proto == htons (ETH_P_ARP)
       && MAC_EQUAL (src->m_MAC_Source, p_Adapter->m_MAC)
       && MAC_EQUAL (src->m_ARP_MAC_Source, p_Adapter->m_MAC)
-      && MAC_EQUAL (src->m_MAC_Destination, p_Adapter->m_MAC_Broadcast)
+	  && MAC_EQUAL (src->m_MAC_Destination, p_Adapter->m_MAC_Broadcast)
       && src->m_ARP_Operation == htons (ARP_REQUEST)
       && src->m_MAC_AddressType == htons (MAC_ADDR_TYPE)
       && src->m_MAC_AddressSize == sizeof (MACADDR)
@@ -2902,6 +2925,7 @@ ProcessARP (TapAdapterPointer p_Adapter,
   else
     return FALSE;
 }
+#endif
 
 //===============================================================
 // Used in cases where internally generated packets such as
@@ -3003,6 +3027,7 @@ InjectPacketNow (TapAdapterPointer p_Adapter,
 //===================================================================
 VOID ResetTapAdapterState (TapAdapterPointer p_Adapter)
 {
+#if 0
   // Point-To-Point
   p_Adapter->m_tun = FALSE;
   p_Adapter->m_localIP = 0;
@@ -3023,6 +3048,7 @@ VOID ResetTapAdapterState (TapAdapterPointer p_Adapter)
   p_Adapter->m_dhcp_received_discover = FALSE;
   p_Adapter->m_dhcp_bad_requests = 0;
   NdisZeroMemory (p_Adapter->m_dhcp_server_mac, sizeof (MACADDR));
+#endif
 }
 
 #if ENABLE_NONADMIN

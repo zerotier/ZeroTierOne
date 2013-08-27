@@ -22,6 +22,8 @@
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if 0
+
 //=========================
 // Code to set DHCP options
 //=========================
@@ -597,3 +599,5 @@ DumpDHCP (const ETH_HEADER *eth,
 }
 
 #endif /* DBG */
+
+#endif

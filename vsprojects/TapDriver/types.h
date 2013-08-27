@@ -136,6 +136,7 @@ typedef struct _TapAdapter
   // Adapter power state
   char m_DeviceState;
 
+#if 0
   // Info for point-to-point mode
   BOOLEAN m_tun;
   IPADDR m_localIP;
@@ -145,7 +146,9 @@ typedef struct _TapAdapter
   ETH_HEADER m_UserToTap;
   ETH_HEADER m_UserToTap_IPv6;		// same as UserToTap but proto=ipv6
   MACADDR m_MAC_Broadcast;
+#endif
 
+#if 0
   // Used for DHCP server masquerade
   BOOLEAN m_dhcp_enabled;
   IPADDR m_dhcp_addr;
@@ -158,6 +161,7 @@ typedef struct _TapAdapter
   ULONG m_dhcp_user_supplied_options_buffer_len;
   BOOLEAN m_dhcp_received_discover;
   ULONG m_dhcp_bad_requests;
+#endif
 
   // Help to tear down the adapter by keeping
   // some state information on allocated

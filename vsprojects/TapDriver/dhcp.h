@@ -22,6 +22,8 @@
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if 0
+
 #pragma pack(1)
 
 //===================================================
@@ -160,5 +162,7 @@ DumpDHCP (const ETH_HEADER *eth,
 	  const UDPHDR *udp,
 	  const DHCP *dhcp,
 	  const int optlen);
+
+#endif
 
 #endif

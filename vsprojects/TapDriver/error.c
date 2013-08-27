@@ -324,7 +324,8 @@ DumpPacket (const char *prefix,
 	       && blen - hlen >= (sizeof (UDPHDR)))
 	{
 	  const UDPHDR *udp = (UDPHDR *) (data + sizeof (ETH_HEADER) + hlen);
-	  
+
+#if 0
 	  // DHCP packet?
 	  if ((udp->dest == htons (BOOTPC_PORT) || udp->dest == htons (BOOTPS_PORT))
 	      && blen - hlen >= (sizeof (UDPHDR) + sizeof (DHCP)))
@@ -346,6 +347,7 @@ DumpPacket (const char *prefix,
 	      DumpDHCP (eth, ip, udp, dhcp, optlen);
 	      did = TRUE;
 	    }
+#endif
 
 	  if (!did)
 	    {
