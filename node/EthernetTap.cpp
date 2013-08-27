@@ -260,6 +260,8 @@ EthernetTap::EthernetTap(
 	_r(renv),
 	_handler(handler),
 	_arg(arg),
+	_dhcp(false),
+	_dhcp6(false),
 	_fd(0)
 {
 	char devpath[64],ethaddr[64],mtustr[16];
@@ -362,6 +364,21 @@ void EthernetTap::whack()
 #else
 void EthernetTap::whack() {}
 #endif // __APPLE__ / !__APPLE__
+
+bool EthernetTap::setDhcpEnabled(bool dhcp)
+{
+	// TODO
+	return _dhcp;
+}
+
+bool EthernetTap::setDhcp6Enabled(bool dhcp)
+{
+	return _dhcp6;
+}
+
+void EthernetTap::setDisplayName(const char *dn)
+{
+}
 
 #ifdef __LINUX__
 static bool ___removeIp(const char *_dev,const InetAddress &ip)
@@ -496,6 +513,12 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 		}
 	}
 	return false;
+}
+
+std::set<InetAddress> EthernetTap::allIps() const
+{
+	// TODO
+	return ips();
 }
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
