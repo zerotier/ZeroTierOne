@@ -207,7 +207,7 @@ int main(int argc,char **argv)
 				std::string name,desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT name,desc,isOpen FROM Network WHERE id = " << nwid;
+					q << "SELECT name,`desc`,isOpen FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						name = rs[0]["name"].c_str();
