@@ -81,29 +81,6 @@ static Mutex stdoutWriteLock;
 static Connection *dbCon = (Connection *)0;
 static char mysqlHost[64],mysqlPort[64],mysqlDatabase[64],mysqlUser[64],mysqlPassword[64];
 
-static void connectOrReconnect()
-{
-	for(;;) {
-		delete dbCon;
-		try {
-			dbCon = new Connection(mysqlDatabase,mysqlHost,mysqlUser,mysqlPassword,(unsigned int)strtol(mysqlPort,(char **)0,10));
-			if (dbCon->connected()) {
-				fprintf(stderr,"(re?)-connected to mysql server successfully\n");
-				break;
-			} else {
-				fprintf(stderr,"unable to connect to database server (connection closed), trying again in 1s...\n");
-				usleep(1000000);
-			}
-		} catch (std::exception &exc) {
-			fprintf(stderr,"unable to connect to database server (%s), trying again in 1s...\n",exc.what());
-			usleep(1000000);
-		} catch ( ... ) {
-			fprintf(stderr,"unable to connect to database server (unknown exception), trying again in 1s...\n");
-			usleep(1000000);
-		}
-	}
-}
-
 int main(int argc,char **argv)
 {
 	{
@@ -140,7 +117,20 @@ int main(int argc,char **argv)
 	char buf[131072];
 	std::string dictBuf;
 
-	connectOrReconnect();
+	try {
+		dbCon = new Connection(mysqlDatabase,mysqlHost,mysqlUser,mysqlPassword,(unsigned int)strtol(mysqlPort,(char **)0,10));
+		if (dbCon->connected()) {
+			fprintf(stderr,"connected to mysql server successfully\n");
+			break;
+		} else {
+			fprintf(stderr,"unable to connect to database server\n");
+			return -1;
+		}
+	} catch (std::exception &exc) {
+		fprintf(stderr,"unable to connect to database server: %s\n",exc.what());
+		return -1;
+	}
+
 	for(;;) {
 		for(int l=0;l<4;) {
 			int n = (int)read(STDIN_FILENO,buf + l,4 - l);
@@ -164,8 +154,10 @@ int main(int argc,char **argv)
 		Dictionary request(dictBuf);
 		dictBuf = "";
 
-		if (!dbCon->connected())
-			connectOrReconnect();
+		if (!dbCon->connected()) {
+			fprintf(stderr,"connection to database server lost\n");
+			return -1;
+		}
 
 		try {
 			const std::string &reqType = request.get("type");
@@ -213,13 +205,16 @@ int main(int argc,char **argv)
 				}
 
 				bool isOpen = false;
+				std::string name,desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT isOpen FROM Network WHERE id = " << nwid;
+					q << "SELECT name,desc,isOpen FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
-					if (rs.num_rows() > 0)
+					if (rs.num_rows() > 0) {
+						name = rs[0]["name"].c_str();
+						desc = rs[0]["desc"].c_str();
 						isOpen = ((int)rs[0]["isOpen"] > 0);
-					else {
+					} else {
 						Dictionary response;
 						response["peer"] = peerIdentity.address().toString();
 						response["nwid"] = request.get("nwid");
@@ -243,6 +238,8 @@ int main(int argc,char **argv)
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
 				netconf["nwid"] = buf;
 				netconf["isOpen"] = (isOpen ? "1" : "0");
+				netconf["name"] = name;
+				netconf["desc"] = desc;
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
 

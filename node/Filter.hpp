@@ -29,13 +29,14 @@
 #define _ZT_FILTER_HPP
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
 #include <string>
 #include <vector>
 #include <utility>
 #include <stdexcept>
 
-#include "Mutex.hpp"
 #include "Range.hpp"
 
 /* Ethernet frame types that might be relevant to us */
@@ -125,7 +126,11 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * A simple Ethernet frame level filter supporting basic IP port DENY
+ * A simple Ethernet frame level filter
+ *
+ * This doesn't specify actions, since it's used as a deny filter. The rule
+ * in ZT1 is "that which is not explicitly prohibited is allowed." (Except for
+ * ethertypes, which are handled by a whitelist.)
  */
 class Filter
 {
@@ -145,8 +150,6 @@ public:
 
 	/**
 	 * A filter rule
-	 *
-	 * This behaves as an immutable value object.
 	 */
 	class Rule
 	{
@@ -158,6 +161,15 @@ public:
 			_port()
 		{
 		}
+
+		/**
+		 * Construct a rule from a string-serialized value
+		 *
+		 * @param s String formatted rule, such as returned by toString()
+		 * @throws std::invalid_argument String formatted rule is not valid
+		 */
+		Rule(const char *s)
+			throw(std::invalid_argument);
 
 		/**
 		 * Construct a new rule
@@ -191,6 +203,8 @@ public:
 			throw(std::invalid_argument);
 
 		/**
+		 * Serialize rule as string
+		 *
 		 * @return Human readable representation of rule
 		 */
 		std::string toString() const;
@@ -222,104 +236,35 @@ public:
 		Range<unsigned int> _port;
 	};
 
-	/**
-	 * Action if a rule matches
-	 */
-	enum Action
-	{
-		ACTION_DENY = 0,
-		ACTION_ALLOW = 1,
-		ACTION_UNPARSEABLE = 2
-	};
+	Filter() {}
 
 	/**
-	 * Entry in filter chain
+	 * @param s String-serialized filter representation
 	 */
-	struct Entry
+	Filter(const char *s)
+		throw(std::invalid_argument);
+
+	/**
+	 * @return Comma-delimited list of string-format rules
+	 */
+	std::string toString() const;
+
+	/**
+	 * Add a rule to this filter
+	 *
+	 * @param r Rule to add to filter
+	 */
+	void add(const Rule &r);
+
+	inline bool operator()(unsigned int etype,const void *data,unsigned int len) const
+		throw(std::invalid_argument)
 	{
-		Entry() {}
-		Entry(const Rule &r,const Action &a) :
-			rule(r),
-			action(a)
-		{
+		for(std::vector<Rule>::const_iterator r(_rules.begin());r!=_rules.end();++r) {
+			if ((*r)(etype,data,len))
+				return true;
 		}
-
-		Rule rule;
-		Action action;
-	};
-
-	Filter() :
-		_chain(),
-		_chain_m()
-	{
+		return false;
 	}
-
-	Filter(const Filter &f) :
-		_chain(),
-		_chain_m()
-	{
-		Mutex::Lock _l(f._chain_m);
-		_chain = f._chain;
-	}
-
-	inline Filter &operator=(const Filter &f)
-	{
-		Mutex::Lock _l1(_chain_m);
-		Mutex::Lock _l2(f._chain_m);
-		_chain = f._chain;
-		return *this;
-	}
-
-	/**
-	 * Remove all filter entries
-	 */
-	inline void clear()
-	{
-		Mutex::Lock _l(_chain_m);
-		_chain.clear();
-	}
-
-	/**
-	 * Append a rule/action pair to this chain
-	 *
-	 * If an identical rule already exists it is removed and a new entry is
-	 * added to the end with the new action. (Two identical rules with the
-	 * same action wouldn't make sense.)
-	 *
-	 * @param r Rule to add
-	 * @param a Action if rule matches
-	 */
-	void add(const Rule &r,const Action &a);
-
-	/**
-	 * @return Number of rules in filter chain
-	 */
-	inline unsigned int length() const
-		throw()
-	{
-		Mutex::Lock _l(_chain_m);
-		return (unsigned int)_chain.size();
-	}
-
-	/**
-	 * @return Entry in filter chain or null entry if out of bounds
-	 */
-	inline Entry operator[](const unsigned int i) const
-		throw()
-	{
-		Mutex::Lock _l(_chain_m);
-		if (i < _chain.size())
-			return _chain[i];
-		return Entry();
-	}
-
-	/**
-	 * Get a string representation of this filter
-	 *
-	 * @param sep Separator between filter rules, or NULL for comma (default)
-	 * @return Human-readable string
-	 */
-	std::string toString(const char *sep = (const char *)0) const;
 
 	static const char *etherTypeName(const unsigned int etherType)
 		throw();
@@ -330,20 +275,8 @@ public:
 	static const char *icmp6TypeName(const unsigned int icmp6Type)
 		throw();
 
-	/**
-	 * Match against an Ethernet frame
-	 *
-	 * @param _r Runtime environment
-	 * @param etherType Ethernet frame type
-	 * @param frame Ethernet frame data
-	 * @param len Length of frame in bytes
-	 * @return Action if matched or ACTION_ALLOW if not matched
-	 */
-	Action operator()(const RuntimeEnvironment *_r,unsigned int etherType,const void *frame,unsigned int len) const;
-
 private:
-	std::vector<Entry> _chain;
-	Mutex _chain_m;
+	std::vector<Rule> _rules;
 };
 
 } // namespace ZeroTier

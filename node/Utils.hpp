@@ -444,6 +444,46 @@ public:
 	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
 
 	/**
+	 * Tokenize a string
+	 *
+	 * @param str String to split
+	 * @param delim Delimiters
+	 * @param saveptr Pointer to a char * for temporary reentrant storage
+	 */
+	static inline char *stok(char *str,const char *delim,char **saveptr)
+		throw()
+	{
+#ifdef __WINDOWS__
+		return strtok_s(str,delim,saveptr);
+#else
+		return strtok_r(str,delim,saveptr);
+#endif
+	}
+
+	/**
+	 * Perform a safe C string copy
+	 *
+	 * @param dest Destination buffer
+	 * @param len Length of buffer
+	 * @param src Source string
+	 * @return True on success, false on overflow (buffer will still be 0-terminated)
+	 */
+	static inline bool scopy(char *dest,unsigned int len,const char *src)
+		throw()
+	{
+		if (!len)
+			return false; // sanity check
+		char *end = dest + len;
+		while ((*dest++ = *src++)) {
+			if (dest == end) {
+				dest[len - 1] = (char)0;
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Trim whitespace from the start and end of a string
 	 *
 	 * @param s String to trim

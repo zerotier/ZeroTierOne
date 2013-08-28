@@ -30,6 +30,8 @@
 #include <string.h>
 #include <stdint.h>
 
+#include <algorithm>
+
 #include "RuntimeEnvironment.hpp"
 #include "Logger.hpp"
 #include "Filter.hpp"
@@ -39,6 +41,61 @@ namespace ZeroTier {
 
 const char *const Filter::UNKNOWN_NAME = "(unknown)";
 const Range<unsigned int> Filter::ANY;
+
+static inline Range<unsigned int> __parseRange(char *r)
+	throw(std::invalid_argument)
+{
+	char *saveptr = (char *)0;
+	unsigned int a = 0;
+	unsigned int b = 0;
+	unsigned int fn = 0;
+	for(char *f=Utils::stok(r,"-",&saveptr);(f);f=Utils::stok((char *)0,"-",&saveptr)) {
+		if (*f) {
+			switch(fn++) {
+				case 0:
+					if (*f != '*')
+						a = b = (unsigned int)strtoul(f,(char **)0,10);
+					break;
+				case 1:
+					if (*f != '*')
+						b = (unsigned int)strtoul(f,(char **)0,10);
+					break;
+				default:
+					throw std::invalid_argument("rule range must be <int>, <int>-<int>, or *");
+			}
+		}
+	}
+	return Range<unsigned int>(a,b);
+}
+
+Filter::Rule::Rule(const char *s)
+	throw(std::invalid_argument)
+{
+	char *saveptr = (char *)0;
+	char tmp[256];
+	if (!Utils::scopy(tmp,sizeof(tmp),s))
+		throw std::invalid_argument("rule string too long");
+	unsigned int fn = 0;
+	for(char *f=Utils::stok(tmp,";",&saveptr);(f);f=Utils::stok((char *)0,";",&saveptr)) {
+		if (*f) {
+			switch(fn++) {
+				case 0:
+					_etherType = __parseRange(f);
+					break;
+				case 1:
+					_protocol = __parseRange(f);
+					break;
+				case 2:
+					_port = __parseRange(f);
+					break;
+				default:
+					throw std::invalid_argument("rule string has unknown extra fields");
+			}
+		}
+	}
+	if (fn != 3)
+		throw std::invalid_argument("rule string must contain 3 fields");
+}
 
 bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int len) const
 	throw(std::invalid_argument)
@@ -166,7 +223,7 @@ std::string Filter::Rule::toString() const
 			s.append(buf);
 			break;
 	}
-	s.push_back('/');
+	s.push_back(';');
 	switch(_protocol.magnitude()) {
 		case 0:
 			s.push_back('*');
@@ -180,7 +237,7 @@ std::string Filter::Rule::toString() const
 			s.append(buf);
 			break;
 	}
-	s.push_back('/');
+	s.push_back(';');
 	switch(_port.magnitude()) {
 		case 0:
 			s.push_back('*');
@@ -198,35 +255,48 @@ std::string Filter::Rule::toString() const
 	return s;
 }
 
-void Filter::add(const Rule &r,const Action &a)
+Filter::Filter(const char *s)
+	throw(std::invalid_argument)
 {
-	Mutex::Lock _l(_chain_m);
-	for(std::vector<Entry>::iterator i(_chain.begin());i!=_chain.end();++i) {
-		if (i->rule == r) {
-			_chain.erase(i);
-			break;
+	char tmp[16384];
+	if (!Utils::scopy(tmp,sizeof(tmp),s))
+		throw std::invalid_argument("filter string too long");
+	char *saveptr = (char *)0;
+	unsigned int fn = 0;
+	for(char *f=Utils::stok(tmp,"-",&saveptr);(f);f=Utils::stok((char *)0,"-",&saveptr)) {
+		try {
+			_rules.push_back(Rule(f));
+			++fn;
+		} catch (std::invalid_argument &exc) {
+			char tmp[256];
+			sprintf(tmp,"invalid rule at index %u: %s",fn,exc.what());
+			throw std::invalid_argument(tmp);
 		}
 	}
-	_chain.push_back(Entry(r,a));
+	std::sort(_rules.begin(),_rules.end());
 }
 
-std::string Filter::toString(const char *sep) const
+std::string Filter::toString() const
 {
-	if (!sep)
-		sep = ",";
-
 	std::string s;
 
-	bool first = true;
-	Mutex::Lock _l(_chain_m);
-	for(std::vector<Entry>::const_iterator i(_chain.begin());i!=_chain.end();++i) {
-		s.append(i->rule.toString());
-		if (first)
-			first = false;
-		else s.append(sep);
+	for(std::vector<Rule>::const_iterator r(_rules.begin());r!=_rules.end();++r) {
+		if (s.length() > 0)
+			s.push_back(',');
+		s.append(r->toString());
 	}
 
 	return s;
+}
+
+void Filter::add(const Rule &r)
+{
+	for(std::vector<Rule>::iterator rr(_rules.begin());rr!=_rules.end();++rr) {
+		if (r == *rr)
+			return;
+	}
+	_rules.push_back(r);
+	std::sort(_rules.begin(),_rules.end());
 }
 
 const char *Filter::etherTypeName(const unsigned int etherType)
@@ -333,40 +403,6 @@ const char *Filter::icmp6TypeName(const unsigned int icmp6Type)
 		case ZT_ICMP6_RPL_CONTROL_MESSAGE:                  return "ICMP6_RPL_CONTROL_MESSAGE";
 	}
 	return UNKNOWN_NAME;
-}
-
-Filter::Action Filter::operator()(const RuntimeEnvironment *_r,unsigned int etherType,const void *frame,unsigned int len) const
-{
-	Mutex::Lock _l(_chain_m);
-
-	TRACE("starting match against %d rules",(int)_chain.size());
-
-	int ruleNo = 0;
-	for(std::vector<Entry>::const_iterator r(_chain.begin());r!=_chain.end();++r,++ruleNo) {
-		try {
-			if (r->rule(etherType,frame,len)) {
-				TRACE("match: %s",r->rule.toString().c_str());
-
-				switch(r->action) {
-					case ACTION_ALLOW:
-					case ACTION_DENY:
-						return r->action;
-					default:
-						break;
-				}
-			} else {
-				TRACE("no match: %s",r->rule.toString().c_str());
-			}
-		} catch (std::invalid_argument &exc) {
-			LOG("filter: unable to parse packet on rule %s (%d): %s",r->rule.toString().c_str(),ruleNo,exc.what());
-			return ACTION_UNPARSEABLE;
-		} catch ( ... ) {
-			LOG("filter: unable to parse packet on rule %s (%d): unknown exception",r->rule.toString().c_str(),ruleNo);
-			return ACTION_UNPARSEABLE;
-		}
-	}
-
-	return ACTION_ALLOW;
 }
 
 } // namespace ZeroTier

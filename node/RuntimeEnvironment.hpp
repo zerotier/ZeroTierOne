@@ -64,9 +64,9 @@ public:
 		shutdownInProgress(false),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
-		demarc((Demarc *)0),
 		multicaster((Multicaster *)0),
 		sw((Switch *)0),
+		demarc((Demarc *)0),
 		topology((Topology *)0),
 		sysEnv((SysEnv *)0),
 		nc((NodeConfig *)0)
