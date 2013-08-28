@@ -150,10 +150,8 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	SharedPtr<Network> nw(new Network());
 	nw->_ready = false; // disable handling of Ethernet frames during construct
 	nw->_r = renv;
-	nw->_rlLimit.bytesPerSecond = ZT_MULTICAST_DEFAULT_BYTES_PER_SECOND;
-	nw->_rlLimit.maxBalance = ZT_MULTICAST_DEFAULT_RATE_MAX_BALANCE;
-	nw->_rlLimit.minBalance = ZT_MULTICAST_DEFAULT_RATE_MIN_BALANCE;
 	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
+	memset(nw->_etWhitelist,0,sizeof(nw->_etWhitelist));
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
 	nw->_destroyOnDelete = false;
@@ -176,6 +174,11 @@ void Network::setConfiguration(const Network::Config &conf)
 
 		_tap->setIps(conf.staticAddresses());
 		_tap->setDisplayName((std::string("ZeroTier One [") + conf.name() + "]").c_str());
+
+		memset(_etWhitelist,0,sizeof(_etWhitelist));
+		std::set<unsigned int> wl(conf.etherTypes());
+		for(std::set<unsigned int>::const_iterator t(wl.begin());t!=wl.end();++t)
+			_etWhitelist[*t / 8] |= (unsigned char)(1 << (*t % 8));
 
 		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
 		if (!Utils::writeFile(confPath.c_str(),conf.toString())) {

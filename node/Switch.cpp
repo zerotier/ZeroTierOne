@@ -85,13 +85,14 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		LOG("ignored tap: %s -> %s %s (bridging is not (yet?) supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
 		return;
 	}
+
 	if (to == network->tap().mac()) {
-		LOG("%s: frame received from self, ignoring (bridge loop?)",network->tap().deviceName().c_str());
+		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tap().deviceName().c_str());
 		return;
 	}
 
-	if ((etherType != ZT_ETHERTYPE_ARP)&&(etherType != ZT_ETHERTYPE_IPV4)&&(etherType != ZT_ETHERTYPE_IPV6)) {
-		LOG("ignored tap: %s -> %s %s (not a supported etherType)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
+	if (!network->permitsEtherType(etherType)) {
+		LOG("ignored tap: %s -> %s: ethernet type %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 

@@ -268,6 +268,24 @@ public:
 		}
 
 		/**
+		 * @return Network ethertype whitelist
+		 */
+		inline std::set<unsigned int> etherTypes() const
+		{
+			char tmp[16384];
+			char *saveptr = (char *)0;
+			std::set<unsigned int> et;
+			if (!Utils::scopy(tmp,sizeof(tmp),get("etherTypes","").c_str()))
+				return et; // sanity check
+			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+				unsigned int t = Utils::stoui(f);
+				if (t)
+					et.insert(t);
+			}
+			return et;
+		}
+
+		/**
 		 * @return All static addresses / netmasks, IPv4 or IPv6
 		 */
 		inline std::set<InetAddress> staticAddresses() const
@@ -445,22 +463,17 @@ public:
 	Status status() const;
 
 	/**
-	 * Invoke multicast rate limiter gate for a given address
-	 *
-	 * @param addr Address to check
-	 * @param bytes Bytes address wishes to send us / propagate
-	 * @return True if allowed, false if overshot rate limit
+	 * @param etherType Ethernet frame type
+	 * @return True if network permits this type
 	 */
-	inline bool multicastRateGate(const Address &addr,unsigned int bytes)
+	inline bool permitsEtherType(unsigned int etherType) const
+		throw()
 	{
-		Mutex::Lock _l(_lock);
-		std::map<Address,RateLimiter>::iterator rl(_multicastRateLimiters.find(addr));
-		if (rl == _multicastRateLimiters.end()) {
-			RateLimiter &newrl = _multicastRateLimiters[addr];
-			newrl.init(ZT_MULTICAST_DEFAULT_RATE_PRELOAD);
-			return newrl.gate(_rlLimit,(double)bytes);
-		}
-		return rl->second.gate(_rlLimit,(double)bytes);
+		if (!etherType)
+			return false;
+		else if (etherType > 65535)
+			return false;
+		else return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType % 8))) != 0);
 	}
 
 private:
@@ -468,9 +481,6 @@ private:
 	void _restoreState();
 
 	const RuntimeEnvironment *_r;
-
-	// Rate limits for this network
-	RateLimiter::Limit _rlLimit;
 
 	// Tap and tap multicast memberships
 	EthernetTap *_tap;
@@ -485,6 +495,9 @@ private:
 	// Configuration from network master node
 	Config _configuration;
 	Certificate _myCertificate;
+
+	// Ethertype whitelist bit field, set from config, for really fast lookup
+	unsigned char _etWhitelist[65536 / 8];
 
 	uint64_t _id;
 	volatile uint64_t _lastConfigUpdate;

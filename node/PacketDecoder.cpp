@@ -418,10 +418,10 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 		if (network) {
 			if (network->isAllowed(source())) {
 				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-				if ((etherType != ZT_ETHERTYPE_ARP)&&(etherType != ZT_ETHERTYPE_IPV4)&&(etherType != ZT_ETHERTYPE_IPV6)) {
-					TRACE("dropped FRAME from %s: unsupported ethertype",source().toString().c_str());
-				} else if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
+				if (network->permitsEtherType(etherType)) {
 					network->tap().put(source().toMAC(),network->tap().mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+				} else if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
+					TRACE("dropped FRAME from %s: ethernet type %u not allowed on network %.16llx",source().toString().c_str(),etherType,(unsigned long long)network->id());
 				}
 			} else {
 				TRACE("dropped FRAME from %s(%s): not a member of closed network %llu",source().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
@@ -509,8 +509,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				return true;
 			}
 
-			if (++hops >= ZT_MULTICAST_PROPAGATION_DEPTH) {
-				TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): max depth reached",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
+			if (!network->permitsEtherType(etherType)) {
+				LOG("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): ethernet type %s not allowed on network %.16llx",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str(),Filter::etherTypeName(etherType),(unsigned long long)network->id());
 				return true;
 			}
 
@@ -531,6 +531,11 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				 * first bouncing a multicast off a supernode and then flooding
 				 * it with retransmits. */
 				_r->multicaster->addToDedupHistory(mccrc,now);
+			}
+
+			if (++hops >= ZT_MULTICAST_PROPAGATION_DEPTH) {
+				TRACE("not propagating MULTICAST_FRAME from original submitter %s, received from %s(%s): max depth reached",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
 			}
 
 			Address upstream(source()); // save this since we might mangle it below

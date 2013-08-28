@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 
 #include <string>
@@ -458,6 +459,38 @@ public:
 #else
 		return strtok_r(str,delim,saveptr);
 #endif
+	}
+
+	// String to int converters (and hex string to int)
+	static inline unsigned int stoui(const char *s)
+		throw()
+	{
+		return (unsigned int)strtoul(s,(char **)0,10);
+	}
+	static inline unsigned long stoul(const char *s)
+		throw()
+	{
+		return strtoul(s,(char **)0,10);
+	}
+	static inline unsigned long long stoull(const char *s)
+		throw()
+	{
+		return strtoull(s,(char **)0,10);
+	}
+	static inline unsigned int hstoui(const char *s)
+		throw()
+	{
+		return (unsigned int)strtoul(s,(char **)0,16);
+	}
+	static inline unsigned long hstoul(const char *s)
+		throw()
+	{
+		return strtoul(s,(char **)0,16);
+	}
+	static inline unsigned long long hstoull(const char *s)
+		throw()
+	{
+		return strtoull(s,(char **)0,16);
 	}
 
 	/**
