@@ -121,7 +121,6 @@ int main(int argc,char **argv)
 		dbCon = new Connection(mysqlDatabase,mysqlHost,mysqlUser,mysqlPassword,(unsigned int)strtol(mysqlPort,(char **)0,10));
 		if (dbCon->connected()) {
 			fprintf(stderr,"connected to mysql server successfully\n");
-			break;
 		} else {
 			fprintf(stderr,"unable to connect to database server\n");
 			return -1;
@@ -232,6 +231,18 @@ int main(int argc,char **argv)
 					}
 				}
 
+				std::string etherTypeWhitelist;
+				{
+					Query q = dbCon->query();
+					q << "SELECT DISTINCT etherType FROM NetworkEthertypes WHERE Network_id = " << nwid;
+					StoreQueryResult rs = q.store();
+					for(unsigned long i=0;i<rs.num_rows();++i) {
+						if (etherTypeWhitelist.length() > 0)
+							etherTypeWhitelist.push_back(',');
+						etherTypeWhitelist.append(rs[i]["etherType"].c_str());
+					}
+				}
+
 				Dictionary netconf;
 
 				netconf["peer"] = peerIdentity.address().toString();
@@ -240,6 +251,7 @@ int main(int argc,char **argv)
 				netconf["isOpen"] = (isOpen ? "1" : "0");
 				netconf["name"] = name;
 				netconf["desc"] = desc;
+				netconf["etherTypes"] = etherTypeWhitelist;
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
 

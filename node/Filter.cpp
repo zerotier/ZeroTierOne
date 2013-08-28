@@ -263,7 +263,7 @@ Filter::Filter(const char *s)
 		throw std::invalid_argument("filter string too long");
 	char *saveptr = (char *)0;
 	unsigned int fn = 0;
-	for(char *f=Utils::stok(tmp,"-",&saveptr);(f);f=Utils::stok((char *)0,"-",&saveptr)) {
+	for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
 		try {
 			_rules.push_back(Rule(f));
 			++fn;
