@@ -16,6 +16,8 @@ mac-tap/tuntap/tap.kext
 /vsprojects/ZeroTierOne/x64
 /vsprojects/TapDriver/Win32
 /vsprojects/TapDriver/x64
+/vsprojects/InstallerUpdater/obj
+/vsprojects/Service/obj
 /Build/*
 *.log
 *.opensdf
