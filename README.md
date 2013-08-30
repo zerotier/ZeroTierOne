@@ -5,9 +5,9 @@ ZeroTier One creates flat virtual Ethernet networks of almost unlimited size. [V
 
 This code is presently in **ALPHA** testing. That means that the protocol spec may change in incompatible ways, and it certainly has bugs. Testers should "git pull," rebuild, and restart fairly often. If things mysteriously stop working, do that.
 
-See BUILDING.txt and RUNNING.txt for instructions. It currently builds on Mac and Linux. A Windows port is coming soon. Nice packages/installers and auto-update are also coming when alpha transitions to beta.
+See BUILDING.txt and RUNNING.txt for instructions. It currently builds on Mac and Linux. A Windows port is well along the way to completion. Nice packages/installers and auto-update are coming when alpha transitions to beta.
 
-Note that this won't work if your firewall does not allow outbound UDP. It must allow UDP conversations on port 8993 at a minimum.
+Note that this won't work if your firewall does not allow outbound UDP. It must allow two way UDP conversations on port 8993 at a minimum.
 
 At present there is only one virtual LAN and you are dumped there by default. It's called Earth, and is exactly what it sounds like. The ability to create and join additional networks is coming soon. Once you're on, visit [earth.zerotier.net](http://earth.zerotier.net/) to see your Earth LAN IP address and other information.
 
@@ -30,7 +30,7 @@ Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth arti
 **A:** Yes. IPv6 link-local addresses (those in the fe80::/10 block) are auto-assigned and should work fine. No other IPv6 addresses are assigned *yet*, but there are plans to do interesting things in this area in the future.
 
 **Q:** I don't want a giant Ethernet party line. Can I leave it and create private LANs instead?  
-**A:** Yes, soon. A GUI to configure such things is in development. But for now there's only Earth.
+**A:** Yes, soon you'll be able to create private networks and use them as a VPN alternative.
 
 **Q:** Are you going to charge for this?  
 **A:** Public virtual LANs will remain free. We intend to charge for private networks in some way, but the exact model is TBD. Other cloud-supported paid features are also TBD.
@@ -57,39 +57,7 @@ Check out the [blog](http://blog.zerotier.com/) for announcements, in-depth arti
 **A:** Not currently, as foreign Ethernet frames are not forwarded. This may be possible in a future version.
 
 ----
-**Status**
 
-*What works:*
- * Network auto-configuration via JSON API with identity based authentication and encryption
- * End-to-end encryption with automatic key exchange
- * Ethernet multicast with implicit social propagation (though the algorithm will certainly be getting tweaked as we go)
-   * IPv4 ARP works (see MulticastGroup.hpp for details)
-   * IPv6 neighbor discovery protocol works, thus IPv6 link-local addressing on the ZeroTier device also works
-   * mDNS (though if the LAN gets big you will not see everyone, just people nearby on your implicit social graph)
-   * IP-level multicast ought to "just work," though it may take up to a minute or so for a new join to propagate
- * NAT traversal works pretty well, at least behind relatively sane unrestrictive firewalls/routers. You can see this by pinging another node and watching, after a few seconds, the latency drop dramatically since you're no longer relaying. If it doesn't your firewall might block such things. Additional NAT traversal strategies are coming.
- * Changes in your local network configuration are generally detected and will cause peers to be re-acquired.
-
-*Known immediate issues:*
- * Multiple network support is in but there is no interface to configure it, hence it is useless. But in alpha it'll be nice to shove everyone onto "Earth" in order to stress test that little "almost unlimited size" boast.
- * There is no multiple-launch protection yet and multiple instances on the same system do not work well due to route conflicts. Take care that zerotier-one is not running before launching it again. The command "sudo killall zerotier-one" is helpful.
- * Sometimes ZeroTier One doesn't like to terminate when asked nicely. This is related to issues with the tap device closing down properly. If it hangs around after a TERM signal, send it a KILL (9) signal.
- * The locally bound UDP port isn't configurable yet. It's 8993 by default.
- * Known security issues:
-   * There is no rate limit for multicast. Please be nice during alpha testing and don't flood.
-   * There is no filtering. Whether or not to try to do port-level filtering is not yet decided, as technically the local OS firewall and OS service configuration should do this and ZeroTier is not about re-inventing wheels. But certain things *will*need to be filtered by ZT1 itself. These include certain ICMP and ICMPv6 messages: router advertisement, router solicitation, source redirect, etc. DHCP and BOOTP should probably also be filtered at a minimum.
-   * ARP and IPv6 NDP want extra security measures to prevent poisoning and spoofing. The best mechanism is being researched.
- * If a supernode goes down, this takes quite a while to be detected and things will go dead. Fast recovery from relay failure is in the works.
- * If by a one in 2^40 chance two people generate the same ZeroTier address, this is currently not handled. It's unlikely and also hard (as in cryptographically hard) to do intentionally. See comments in Identity.cpp for details.
-
-*What doesn't work and might not work for a while, if ever:*
- * Only ARP, IPv4, and IPv6 frames are allowed. The ability to permit other ethertypes on user-created networks may be added later to allow things like old games that use IPX or private networks to remote administer weird hardware.
- * Bridging of the ZeroTier device to other networks will not work, and may never. This is TBD.
- * VLAN tagged frames will not work and probably never will, as higher level network provisioning handles that concept.
-
-----
-
-<a href="http://flattr.com/thing/1611614/ZeroTier-Networks" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>  
 [![githalytics.com alpha](https://cruel-carlota.pagodabox.com/59b2cbb9c154bf84bddb4b714402e548 "githalytics.com")](http://githalytics.com/zerotier/ZeroTierOne)
 
 (c)2012-2013 [ZeroTier Networks LLC](https://www.zerotier.com/)
