@@ -47,7 +47,6 @@
 #include "Dictionary.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
-#include "RateLimiter.hpp"
 
 namespace ZeroTier {
 
@@ -488,9 +487,6 @@ private:
 
 	// Membership certificates supplied by peers
 	std::map<Address,Certificate> _membershipCertificates;
-
-	// Rate limiters for each multicasting peer
-	std::map<Address,RateLimiter> _multicastRateLimiters;
 
 	// Configuration from network master node
 	Config _configuration;

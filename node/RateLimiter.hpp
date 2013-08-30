@@ -107,41 +107,18 @@ public:
 	}
 
 	/**
-	 * Update balance based on current clock and supplied Limits bytesPerSecond and maxBalance
+	 * Update balance based on current clock and supplied Limit
 	 *
 	 * @param lim Current limits in effect
-	 * @return New balance
+	 * @param deduct Amount to deduct, or 0.0 to just update
+	 * @return New balance with deduction applied
 	 */
-	inline double updateBalance(const Limit &lim)
+	inline double update(const Limit &lim,double deduct)
 		throw()
 	{
 		double lt = _lastTime;
 		double now = _lastTime = Utils::nowf();
-		return (_balance = fmin(lim.maxBalance,_balance + (lim.bytesPerSecond * (now - lt))));
-	}
-
-	/**
-	 * Update balance and test if a block of 'bytes' should be permitted to be transferred
-	 *
-	 * @param lim Current limits in effect
-	 * @param bytes Number of bytes that we wish to transfer
-	 * @return True if balance was sufficient
-	 */
-	inline bool gate(const Limit &lim,double bytes)
-		throw()
-	{
-		bool allow = (updateBalance(lim) >= bytes);
-		_balance = fmax(lim.minBalance,_balance - bytes);
-		return allow;
-	}
-
-	/**
-	 * @return Current balance
-	 */
-	inline double balance() const
-		throw()
-	{
-		return _balance;
+		return (_balance = fmax(lim.minBalance,fmin(lim.maxBalance,(_balance + (lim.bytesPerSecond * (now - lt))) - deduct)));
 	}
 
 private:
