@@ -44,9 +44,6 @@ install-mac-tap: FORCE
 	cp -R mac-tap/tuntap/tap.kext /Library/Application\ Support/ZeroTier/One
 	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
 
-makekeypair: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-makekeypair makekeypair.cpp $(OBJS) $(LIBS)
-
 clean:
 	rm -rf *.dSYM
 	rm -f $(OBJS) zerotier-*
