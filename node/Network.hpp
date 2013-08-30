@@ -107,7 +107,7 @@ public:
 		inline void setNetworkId(uint64_t id)
 		{
 			char buf[32];
-			sprintf(buf,"%.16llx",(unsigned long long)id);
+			Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)id);
 			(*this)["nwid"] = buf;
 		}
 
@@ -141,9 +141,9 @@ public:
 		inline void setTimestamp(uint64_t ts,uint64_t maxDelta)
 		{
 			char foo[32];
-			sprintf(foo,"%llu",(unsigned long long)ts);
+			Utils::snprintf(foo,sizeof(foo),"%llu",(unsigned long long)ts);
 			(*this)["ts"] = foo;
-			sprintf(foo,"%llu",(unsigned long long)maxDelta);
+			Utils::snprintf(foo,sizeof(foo),"%llu",(unsigned long long)maxDelta);
 			(*this)["~ts"] = foo;
 		}
 
@@ -237,7 +237,7 @@ public:
 			if (contains("name"))
 				return get("name");
 			char buf[32];
-			sprintf(buf,"%.16llx",(unsigned long long)networkId());
+			Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)networkId());
 			return std::string(buf);
 		}
 
@@ -373,7 +373,7 @@ public:
 	inline std::string toString()
 	{
 		char buf[64];
-		sprintf(buf,"%.16llx",(unsigned long long)_id);
+		Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)_id);
 		return std::string(buf);
 	}
 

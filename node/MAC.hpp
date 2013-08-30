@@ -30,8 +30,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "Array.hpp"
+
 #include "Constants.hpp"
+#include "Array.hpp"
 #include "Utils.hpp"
 
 namespace ZeroTier {
@@ -150,7 +151,7 @@ public:
 	inline std::string toString() const
 	{
 		char tmp[32];
-		sprintf(tmp,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)data[0],(int)data[1],(int)data[2],(int)data[3],(int)data[4],(int)data[5]);
+		Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)data[0],(int)data[1],(int)data[2],(int)data[3],(int)data[4],(int)data[5]);
 		return std::string(tmp);
 	}
 };

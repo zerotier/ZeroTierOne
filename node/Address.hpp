@@ -32,7 +32,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
 #include <string>
+
 #include "Utils.hpp"
 #include "MAC.hpp"
 #include "Constants.hpp"
@@ -198,7 +200,7 @@ public:
 	inline std::string toString() const
 	{
 		char buf[16];
-		sprintf(buf,"%.10llx",(unsigned long long)_a);
+		Utils::snprintf(buf,sizeof(buf),"%.10llx",(unsigned long long)_a);
 		return std::string(buf);
 	};
 

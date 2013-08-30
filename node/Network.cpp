@@ -140,7 +140,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	throw(std::runtime_error)
 {
 	char tag[32];
-	sprintf(tag,"%.16llx",(unsigned long long)id);
+	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)id);
 
 	// We construct Network via a static method to ensure that it is immediately
 	// wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet

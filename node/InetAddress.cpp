@@ -32,6 +32,7 @@
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -66,7 +67,7 @@ std::string InetAddress::toString() const
 #else
 			if (inet_ntop(AF_INET,(const void *)&(_sa.sin.sin_addr.s_addr),buf,sizeof(buf))) {
 #endif
-				sprintf(buf2,"%s/%u",buf,(unsigned int)ntohs(_sa.sin.sin_port));
+				Utils::snprintf(buf2,sizeof(buf2),"%s/%u",buf,(unsigned int)ntohs(_sa.sin.sin_port));
 				return std::string(buf2);
 			}
 			break;
@@ -76,7 +77,7 @@ std::string InetAddress::toString() const
 #else
 			if (inet_ntop(AF_INET6,(const void *)&(_sa.sin6.sin6_addr.s6_addr),buf,sizeof(buf))) {
 #endif
-				sprintf(buf2,"%s/%u",buf,(unsigned int)ntohs(_sa.sin6.sin6_port));
+				Utils::snprintf(buf2,sizeof(buf2),"%s/%u",buf,(unsigned int)ntohs(_sa.sin6.sin6_port));
 				return std::string(buf2);
 			}
 			break;

@@ -68,15 +68,14 @@ Demarc::~Demarc()
 }
 
 std::string Demarc::describe(Demarc::Port p)
-	throw()
 {
 	char buf[64];
 	switch ((DemarcPortType)(((uint64_t)p) >> 60)) {
 		case PORT_TYPE_UDP_SOCKET_V4:
-			sprintf(buf,"udp/4/%d",(int)((uint64_t)p & 0xffff));
+			Utils::snprintf(buf,sizeof(buf),"udp/4/%d",(int)((uint64_t)p & 0xffff));
 			return std::string(buf);
 		case PORT_TYPE_UDP_SOCKET_V6:
-			sprintf(buf,"udp/6/%d",(int)((uint64_t)p & 0xffff));
+			Utils::snprintf(buf,sizeof(buf),"udp/6/%d",(int)((uint64_t)p & 0xffff));
 			return std::string(buf);
 		case PORT_TYPE_LOCAL_ETHERNET:
 			return std::string("ethernet");

@@ -464,7 +464,7 @@ std::string Utils::toRfc1123(uint64_t t64)
 #else
 	gmtime_r(&utc,&t);
 #endif
-	sprintf(buf,"%3s, %02d %3s %4d %02d:%02d:%02d GMT",DAY_NAMES[t.tm_wday],t.tm_mday,MONTH_NAMES[t.tm_mon],t.tm_year + 1900,t.tm_hour,t.tm_min,t.tm_sec);
+	Utils::snprintf(buf,sizeof(buf),"%3s, %02d %3s %4d %02d:%02d:%02d GMT",DAY_NAMES[t.tm_wday],t.tm_mday,MONTH_NAMES[t.tm_mon],t.tm_year + 1900,t.tm_hour,t.tm_min,t.tm_sec);
 	return std::string(buf);
 }
 
@@ -651,6 +651,24 @@ void Utils::stdsprintf(std::string &s,const char *fmt,...)
 		throw std::length_error("printf result too large");
 
 	s.append(buf);
+}
+
+unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)
+	throw(std::length_error)
+{
+	va_list ap;
+
+	va_start(ap,fmt);
+	int n = (int)vsnprintf(buf,len,fmt,ap);
+	va_end(ap);
+
+	if ((n >= (int)len)||(n < 0)) {
+		if (len)
+			buf[len - 1] = (char)0;
+		throw std::length_error("buf[] overflow in Utils::snprintf");
+	}
+
+	return (unsigned int)n;
 }
 
 } // namespace ZeroTier

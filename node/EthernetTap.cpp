@@ -36,6 +36,7 @@
 #include "RuntimeEnvironment.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
+#include "Utils.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
@@ -99,22 +100,22 @@ private:
 	inline void _findCmd(int id,const char *name)
 	{
 		char tmp[4096];
-		sprintf(tmp,"/sbin/%s",name);
+		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/sbin/%s",name);
 		if (ZeroTier::Utils::fileExists(tmp)) {
 			_paths[id] = tmp;
 			return;
 		}
-		sprintf(tmp,"/usr/sbin/%s",name);
+		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/usr/sbin/%s",name);
 		if (ZeroTier::Utils::fileExists(tmp)) {
 			_paths[id] = tmp;
 			return;
 		}
-		sprintf(tmp,"/bin/%s",name);
+		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/bin/%s",name);
 		if (ZeroTier::Utils::fileExists(tmp)) {
 			_paths[id] = tmp;
 			return;
 		}
-		sprintf(tmp,"/usr/bin/%s",name);
+		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/usr/bin/%s",name);
 		if (ZeroTier::Utils::fileExists(tmp)) {
 			_paths[id] = tmp;
 			return;
@@ -178,8 +179,8 @@ EthernetTap::EthernetTap(
 		int devno = 0;
 		struct stat sbuf;
 		do {
-			sprintf(ifr.ifr_name,"zt%d",devno++);
-			sprintf(procpath,"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
+			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"zt%d",devno++);
+			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		} while (stat(procpath,&sbuf) == 0);
 	}
 
@@ -292,12 +293,12 @@ EthernetTap::EthernetTap(
 
 	// Open the first available device (ones in use will fail with resource busy)
 	for(int i=0;i<256;++i) {
-		sprintf(devpath,"/dev/zt%d",i);
+		Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
 		if (stat(devpath,&tmp))
 			throw std::runtime_error("no more TAP devices available");
 		_fd = ::open(devpath,O_RDWR);
 		if (_fd > 0) {
-			sprintf(_dev,"zt%d",i);
+			Utils::snprintf(_dev,sizeof(_dev),"zt%d",i);
 			break;
 		}
 	}
@@ -316,8 +317,8 @@ EthernetTap::EthernetTap(
 	}
 
 	// Configure MAC address and MTU, bring interface up
-	sprintf(ethaddr,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	sprintf(mtustr,"%u",mtu);
+	Utils::snprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
+	Utils::snprintf(mtustr,sizeof(mtustr),"%u",mtu);
 	long cpid;
 	if ((cpid = (long)vfork()) == 0) {
 		execl(ifconfig,ifconfig,_dev,"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
@@ -895,7 +896,7 @@ EthernetTap::EthernetTap(
 	// If we have a device, configure it
 	if (_myDeviceInstanceId.length() > 0) {
 		char tmps[4096];
-		unsigned int tmpsl = sprintf_s(tmps,"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]) + 1;
+		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]) + 1;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
 		DWORD tmp = mtu;
@@ -961,7 +962,7 @@ EthernetTap::EthernetTap(
 
 	// Open the tap, which is in this weird Windows analog of /dev
 	char tapPath[4096];
-	sprintf_s(tapPath,"\\\\.\\Global\\%s.tap",_myDeviceInstanceId.c_str());
+	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_myDeviceInstanceId.c_str());
 	_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 	if (_tap == INVALID_HANDLE_VALUE)
 		throw std::runtime_error("unable to open tap in \\\\.\\Global\\ namespace");

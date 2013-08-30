@@ -186,7 +186,7 @@ bool Filter::Rule::operator()(unsigned int etype,const void *data,unsigned int l
 								break;
 							default: {
 								char foo[128];
-								sprintf(foo,"unrecognized IPv6 header type %d",(int)nextHeader);
+								Utils::snprintf(foo,sizeof(foo),"unrecognized IPv6 header type %d",(int)nextHeader);
 								throw std::invalid_argument(foo);
 							}
 						}
@@ -215,11 +215,11 @@ std::string Filter::Rule::toString() const
 			s.push_back('*');
 			break;
 		case 1:
-			sprintf(buf,"%u",_etherType.start);
+			Utils::snprintf(buf,sizeof(buf),"%u",_etherType.start);
 			s.append(buf);
 			break;
 		default:
-			sprintf(buf,"%u-%u",_etherType.start,_etherType.end);
+			Utils::snprintf(buf,sizeof(buf),"%u-%u",_etherType.start,_etherType.end);
 			s.append(buf);
 			break;
 	}
@@ -229,11 +229,11 @@ std::string Filter::Rule::toString() const
 			s.push_back('*');
 			break;
 		case 1:
-			sprintf(buf,"%u",_protocol.start);
+			Utils::snprintf(buf,sizeof(buf),"%u",_protocol.start);
 			s.append(buf);
 			break;
 		default:
-			sprintf(buf,"%u-%u",_protocol.start,_protocol.end);
+			Utils::snprintf(buf,sizeof(buf),"%u-%u",_protocol.start,_protocol.end);
 			s.append(buf);
 			break;
 	}
@@ -243,11 +243,11 @@ std::string Filter::Rule::toString() const
 			s.push_back('*');
 			break;
 		case 1:
-			sprintf(buf,"%u",_port.start);
+			Utils::snprintf(buf,sizeof(buf),"%u",_port.start);
 			s.append(buf);
 			break;
 		default:
-			sprintf(buf,"%u-%u",_port.start,_port.end);
+			Utils::snprintf(buf,sizeof(buf),"%u-%u",_port.start,_port.end);
 			s.append(buf);
 			break;
 	}
@@ -269,7 +269,7 @@ Filter::Filter(const char *s)
 			++fn;
 		} catch (std::invalid_argument &exc) {
 			char tmp[256];
-			sprintf(tmp,"invalid rule at index %u: %s",fn,exc.what());
+			Utils::snprintf(tmp,sizeof(tmp),"invalid rule at index %u: %s",fn,exc.what());
 			throw std::invalid_argument(tmp);
 		}
 	}

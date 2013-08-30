@@ -356,7 +356,7 @@ public:
 	{
 		if ((_vMajor)||(_vMinor)||(_vRevision)) {
 			char tmp[32];
-			sprintf(tmp,"%u.%u.%u",_vMajor,_vMinor,_vRevision);
+			Utils::snprintf(tmp,sizeof(tmp),"%u.%u.%u",_vMajor,_vMinor,_vRevision);
 			return std::string(tmp);
 		}
 		return std::string("?");

@@ -537,6 +537,18 @@ public:
 		throw(std::bad_alloc,std::length_error);
 
 	/**
+	 * Variant of snprintf that is portable and throws an exception
+	 *
+	 * @param buf Buffer to write to
+	 * @param len Length of buffer in bytes
+	 * @param fmt Format string
+	 * @param ... Format arguments
+	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
+	 */
+	static unsigned int snprintf(char *buf,unsigned int len,const char *fmt,...)
+		throw(std::length_error);
+
+	/**
 	 * Count the number of bits set in an integer
 	 *
 	 * @param v 32-bit integer

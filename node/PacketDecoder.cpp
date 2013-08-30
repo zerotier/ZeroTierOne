@@ -635,9 +635,9 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 				request["meta"] = std::string((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
 			request["type"] = "netconf-request";
 			request["peerId"] = peer->identity().toString(false);
-			sprintf(tmp,"%llx",(unsigned long long)nwid);
+			Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)nwid);
 			request["nwid"] = tmp;
-			sprintf(tmp,"%llx",(unsigned long long)packetId());
+			Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)packetId());
 			request["requestId"] = tmp;
 			//TRACE("to netconf:\n%s",request.toString().c_str());
 			_r->netconfService->send(request);

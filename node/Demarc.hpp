@@ -83,8 +83,7 @@ public:
 	 * @param p Port
 	 * @return Human-readable description of port
 	 */
-	static std::string describe(Port p)
-		throw();
+	static std::string describe(Port p);
 
 	/**
 	 * @param p Port to check
