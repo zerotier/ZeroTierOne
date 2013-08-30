@@ -380,7 +380,7 @@ private:
 	// network ID and a multicast group within that network.
 	typedef std::pair<uint64_t,MulticastGroup> MulticastChannel;
 
-	// Address and time of last LIKE
+	// A membership in a multicast channel, an address and time of last LIKE
 	typedef std::pair<Address,uint64_t> MulticastMembership;
 
 	// Network : MulticastGroup -> vector<Address : time of last LIKE>

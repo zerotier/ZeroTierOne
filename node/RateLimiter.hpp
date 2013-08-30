@@ -41,29 +41,28 @@
 namespace ZeroTier {
 
 /**
- * Burstable rate limiter
+ * Data transfer accounting used for multicast groups
  *
- * This limits a transfer rate to a maximum bytes per second using an
- * accounting method based on a balance rather than accumulating an
- * average rate. The result is a burstable rate limit rather than a
- * continuous rate limit; the link being limited may use all its balance
- * at once or slowly over time. Balance constantly replenishes over time
- * up to a configurable maximum balance.
+ * This is used to apply a bank account model to multicast groups. Each
+ * multicast packet counts against a balance, which accrues at a given
+ * rate in bytes per second. Debt is possible. These parameters are
+ * configurable.
+ *
+ * A bank account model permits bursting behavior, which correctly models
+ * how OSes and apps typically use multicast. It's common for things to
+ * spew lots of multicast messages at once, wait a while, then do it
+ * again. A consistent bandwidth limit model doesn't fit.
  */
 class RateLimiter
 {
 public:
 	/**
-	 * Limits to apply to a rate limiter
-	 *
-	 * Since many rate limiters may share the same fixed limit values,
-	 * save memory by breaking this out into a struct parameter that
-	 * can be passed into RateLimiter's methods.
+	 * Rate and min/max to apply on rate limiter update
 	 */
-	struct Limit
+	struct Rate
 	{
 		/**
-		 * Speed in bytes per second, or rate of balance accrual
+		 * Rate of balance accrual in bytes per second
 		 */
 		double bytesPerSecond;
 
@@ -86,6 +85,8 @@ public:
 	RateLimiter() throw() {}
 
 	/**
+	 * Create an initialize rate limiter
+	 *
 	 * @param preload Initial balance to place in account
 	 */
 	RateLimiter(double preload)
@@ -107,18 +108,18 @@ public:
 	}
 
 	/**
-	 * Update balance based on current clock and supplied Limit
+	 * Update balance based on current clock and supplied rate
 	 *
 	 * @param lim Current limits in effect
 	 * @param deduct Amount to deduct, or 0.0 to just update
 	 * @return New balance with deduction applied
 	 */
-	inline double update(const Limit &lim,double deduct)
+	inline double update(const Rate &r,double deduct)
 		throw()
 	{
 		double lt = _lastTime;
 		double now = _lastTime = Utils::nowf();
-		return (_balance = fmax(lim.minBalance,fmin(lim.maxBalance,(_balance + (lim.bytesPerSecond * (now - lt))) - deduct)));
+		return (_balance = fmax(r.minBalance,fmin(r.maxBalance,(_balance + (r.bytesPerSecond * (now - lt))) - deduct)));
 	}
 
 private:

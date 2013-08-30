@@ -38,7 +38,7 @@ namespace ZeroTier {
  *
  * This actually isn't a total filter, in that it does not contain a hashing
  * algorithm. It's up to the caller to hash/sum the items being remembered
- * so that the distribution of 'n' is random.
+ * so that the distribution of 'n' is random across the filter's size range.
  *
  * @tparam B Size in BITS, must be a multiple of 8
  */
