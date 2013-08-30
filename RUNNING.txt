@@ -16,8 +16,9 @@ the kext there. Note that the kext must be owned by root:wheel. The make
 rule for install-mac-tap takes care of that.
 
 Next, simply run the binary. It must be run as root to open the tap device.
+If run with no options, it will use the default home directory above.
 
-sudo ./zerotier-one '/Library/Application Support/ZeroTier/One' &
+sudo ./zerotier-one &
 
 Type "ifconfig" and look for the new interface, which should be called
 "zt0." The strange IPv4 address it has is your "zero4" address. Visit
@@ -37,11 +38,15 @@ We use the Linux native tap driver, so no special drivers are needed. Just
 type:
 
 sudo mkdir /var/lib/zerotier-one
-sudo ./zerotier-one /var/lib/zerotier-one &
+sudo ./zerotier-one &
+
+When run with no options, ZT1 uses its default home path on the current
+platform.
 
 Type ifconfig and you should see an interface like "zt0." Then try
 http://zerotier.net or ping zerotier.net to check your connection.
 
 -- Windows
 
-TBD
+To run for manual testing, build the ZeroTierOne VS2012 project and run it
+in an administrator-privileged command prompt window.

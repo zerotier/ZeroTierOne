@@ -1,15 +1,8 @@
-This file will track authors and contributors to ZeroTier's code base.
-People who contribute new code or bug fixes that are accepted into
-the master (trunk) branch will be credited here.
+ZeroTier One is designed and written by Adam Ierymenko, with a few bug
+fixes and other contributions from other users. Information about all
+contributors can be found on the GitHub home page at:
 
---
-
-Adam Ierymenko [adam.ierymenko@zerotier.com]
- * Principal author and maintainer of ZeroTier One, author of all
-   code prior to ZeroTier's open source release.
- * Maintainer of master branch, release manager.
-
---
+https://github.com/zerotier/ZeroTierOne
 
 ZeroTier One includes or links with the following third party software:
 
