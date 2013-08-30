@@ -55,6 +55,7 @@
 #include "Peer.hpp"
 #include "Salsa20.hpp"
 #include "HMAC.hpp"
+#include "Node.hpp"
 
 #ifdef __WINDOWS__
 #define strtoull _strtoui64
@@ -170,6 +171,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_P("200 help listnetworks");
 		_P("200 help join <network ID>");
 		_P("200 help leave <network ID>");
+		_P("200 help terminate [<reason>]");
 	} else if (cmd[0] == "listpeers") {
 		_P("200 listpeers <ztaddr> <ipv4> <ipv6> <latency> <version>");
 		_r->topology->eachPeer(_DumpPeerStatistics(r));
@@ -231,6 +233,10 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		} else {
 			_P("400 leave requires a network ID (>0) in hexadecimal format");
 		}
+	} else if (cmd[0] == "terminate") {
+		if (cmd.size() > 1)
+			_r->node->terminate(Node::NODE_NORMAL_TERMINATION,cmd[1].c_str());
+		else _r->node->terminate(Node::NODE_NORMAL_TERMINATION,(const char *)0);
 	} else {
 		_P("404 %s No such command. Use 'help' for help.",cmd[0].c_str());
 	}

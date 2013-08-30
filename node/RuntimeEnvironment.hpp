@@ -44,6 +44,7 @@ class SysEnv;
 class Multicaster;
 class CMWC4096;
 class Service;
+class Node;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -96,7 +97,7 @@ public:
 	Topology *topology;
 	SysEnv *sysEnv;
 	NodeConfig *nc;
-
+	Node *node;
 #ifndef __WINDOWS__
 	Service *netconfService; // may be null
 #endif

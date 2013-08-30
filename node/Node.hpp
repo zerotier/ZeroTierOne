@@ -86,8 +86,7 @@ public:
 		NODE_RUNNING = 0,
 		NODE_NORMAL_TERMINATION = 1,
 		NODE_RESTART_FOR_RECONFIGURATION = 2,
-		NODE_UNRECOVERABLE_ERROR = 3,
-		NODE_NEW_VERSION_AVAILABLE = 4
+		NODE_UNRECOVERABLE_ERROR = 3
 	};
 
 	/**
@@ -124,13 +123,16 @@ public:
 		throw();
 
 	/**
-	 * Cause run() to return with NODE_NORMAL_TERMINATION
+	 * Cause run() to return
 	 *
 	 * This can be called from a signal handler or another thread to signal a
 	 * running node to shut down. Shutdown may take a few seconds, so run()
 	 * may not return instantly. Multiple calls are ignored.
+	 *
+	 * @param reason Reason for termination
+	 * @param reasonText Text to be returned by reasonForTermination()
 	 */
-	void terminate()
+	void terminate(ReasonForTermination reason,const char *reasonText)
 		throw();
 
 	/**

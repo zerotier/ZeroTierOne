@@ -45,8 +45,6 @@ static void printHelp(char *pn)
 	std::cout << "\tgetpublic <identity.secret>" << std::endl;
 	std::cout << "\tsign <identity.secret> <file>" << std::endl;
 	std::cout << "\tverify <identity.secret/public> <file> <signature>" << std::endl;
-	std::cout << "\tencrypt <identity.secret> <identity.public (recipient)> [<file>] [<outfile>]" << std::endl;
-	std::cout << "\tdecrypt <identity.secret> <identity.public (sender)> [<file>] [<outfile>]" << std::endl;
 }
 
 static Identity getIdFromArg(char *arg)
@@ -165,130 +163,6 @@ int main(int argc,char **argv)
 			std::cerr << argv[3] << " signature check FAILED" << std::endl;
 			return -1;
 		}
-	} else if (!strcmp(argv[1],"encrypt")) {
-		if (argc < 4) {
-			printHelp(argv[0]);
-			return -1;
-		}
-
-		Identity from = getIdFromArg(argv[2]);
-		if (!from) {
-			std::cerr << "Identity argument invalid or file unreadable: " << argv[2] << std::endl;
-			return -1;
-		}
-		if (!from.hasPrivate()) {
-			std::cerr << argv[2] << " must contain a secret key" << std::endl;
-			return -1;
-		}
-
-		Identity to = getIdFromArg(argv[3]);
-		if (!to) {
-			std::cerr << "Identity argument invalid or file unreadable: " << argv[3] << std::endl;
-			return -1;
-		}
-
-		FILE *inf;
-		if (argc > 4) {
-			inf = fopen(argv[4],"r");
-			if (!inf) {
-				std::cerr << "Could not open input file " << argv[4] << std::endl;
-				return -1;
-			}
-		} else inf = stdin;
-		int inbuflen = 131072;
-		char *inbuf = (char *)malloc(inbuflen);
-		if (!inbuf) {
-			std::cerr << "Could not malloc()" << std::endl;
-			return -1;
-		}
-		int inlen = 0;
-		int n;
-		while ((n = (int)fread(inbuf + inlen,1,inbuflen - inlen,inf)) > 0) {
-			inlen += n;
-			if ((inbuflen - inlen) < 1024) {
-				inbuf = (char *)realloc(inbuf,inbuflen += 131072);
-				if (!inbuf) {
-					std::cerr << "Could not malloc()" << std::endl;
-					return -1;
-				}
-			}
-		}
-		if (inf != stdin)
-			fclose(inf);
-
-		std::string crypted(from.encrypt(to,inbuf,inlen));
-		if (!crypted.length()) {
-			std::cerr << "Failure encrypting data, check from/to identities" << std::endl;
-			return -1;
-		}
-
-		if (argc > 5)
-			Utils::writeFile(argv[5],crypted.data(),crypted.length());
-		else fwrite(crypted.data(),1,crypted.length(),stdout);
-
-		free(inbuf);
-	} else if (!strcmp(argv[1],"decrypt")) {
-		if (argc < 4) {
-			printHelp(argv[0]);
-			return -1;
-		}
-
-		Identity to = getIdFromArg(argv[2]);
-		if (!to) {
-			std::cerr << "Identity argument invalid or file unreadable: " << argv[2] << std::endl;
-			return -1;
-		}
-
-		if (!to.hasPrivate()) {
-			std::cerr << argv[2] << " must contain a secret key" << std::endl;
-			return -1;
-		}
-
-		Identity from = getIdFromArg(argv[3]);
-		if (!from) {
-			std::cerr << "Identity argument invalid or file unreadable: " << argv[3] << std::endl;
-			return -1;
-		}
-
-		FILE *inf;
-		if (argc > 4) {
-			inf = fopen(argv[4],"r");
-			if (!inf) {
-				std::cerr << "Could not open input file " << argv[4] << std::endl;
-				return -1;
-			}
-		} else inf = stdin;
-		int inbuflen = 131072;
-		char *inbuf = (char *)malloc(inbuflen);
-		if (!inbuf) {
-			std::cerr << "Could not malloc()" << std::endl;
-			return -1;
-		}
-		int inlen = 0;
-		int n;
-		while ((n = (int)fread(inbuf + inlen,1,inbuflen - inlen,inf)) > 0) {
-			inlen += n;
-			if ((inbuflen - inlen) < 1024) {
-				inbuf = (char *)realloc(inbuf,inbuflen += 131072);
-				if (!inbuf) {
-					std::cerr << "Could not malloc()" << std::endl;
-					return -1;
-				}
-			}
-		}
-		if (inf != stdin)
-			fclose(inf);
-
-		std::string dec(to.decrypt(from,inbuf,inlen));
-		free(inbuf);
-		if (!dec.length()) {
-			std::cerr << "Failure decrypting data, check from/to identities" << std::endl;
-			return -1;
-		}
-
-		if (argc > 5)
-			Utils::writeFile(argv[5],dec.data(),dec.length());
-		else fwrite(dec.data(),1,dec.length(),stdout);
 	} else {
 		printHelp(argv[0]);
 		return -1;

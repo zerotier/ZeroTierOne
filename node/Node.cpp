@@ -183,19 +183,19 @@ struct _NodeImpl
 {
 	RuntimeEnvironment renv;
 	std::string reasonForTerminationStr;
-	Node::ReasonForTermination reasonForTermination;
+	volatile Node::ReasonForTermination reasonForTermination;
 	volatile bool started;
 	volatile bool running;
-	volatile bool terminateNow;
 
-	// run() calls this on all return paths
-	inline Node::ReasonForTermination terminateBecause(Node::ReasonForTermination r,const char *rstr)
+	inline Node::ReasonForTermination terminate()
 	{
 		RuntimeEnvironment *_r = &renv;
-		LOG("terminating: %s",rstr);
+		LOG("terminating: %s",reasonForTerminationStr.c_str());
 
 		renv.shutdownInProgress = true;
 		Thread::sleep(500);
+
+		running = false;
 
 #ifndef __WINDOWS__
 		delete renv.netconfService;
@@ -209,11 +209,14 @@ struct _NodeImpl
 		delete renv.prng;
 		delete renv.log;
 
+		return reasonForTermination;
+	}
+
+	inline Node::ReasonForTermination terminateBecause(Node::ReasonForTermination r,const char *rstr)
+	{
 		reasonForTerminationStr = rstr;
 		reasonForTermination = r;
-		running = false;
-
-		return r;
+		return terminate();
 	}
 };
 
@@ -279,7 +282,6 @@ Node::Node(const char *hp)
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
-	impl->terminateNow = false;
 }
 
 Node::~Node()
@@ -377,6 +379,7 @@ Node::ReasonForTermination Node::run()
 			// One is running.
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,(std::string("another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound: ") + exc.what()).c_str());
 		}
+		_r->node = this;
 
 		// TODO: make configurable
 		bool boundPort = false;
@@ -424,7 +427,7 @@ Node::ReasonForTermination Node::run()
 
 		LOG("%s starting version %s",_r->identity.address().toString().c_str(),versionString());
 
-		while (!impl->terminateNow) {
+		while (impl->reasonForTermination == NODE_RUNNING) {
 			uint64_t now = Utils::now();
 			bool resynchronize = false;
 
@@ -562,7 +565,7 @@ Node::ReasonForTermination Node::run()
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unexpected exception during outer main I/O loop");
 	}
 
-	return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"normal termination");
+	return impl->terminate();
 }
 
 const char *Node::reasonForTermination() const
@@ -573,10 +576,11 @@ const char *Node::reasonForTermination() const
 	return ((_NodeImpl *)_impl)->reasonForTerminationStr.c_str();
 }
 
-void Node::terminate()
+void Node::terminate(ReasonForTermination reason,const char *reasonText)
 	throw()
 {
-	((_NodeImpl *)_impl)->terminateNow = true;
+	((_NodeImpl *)_impl)->reasonForTermination = reason;
+	((_NodeImpl *)_impl)->reasonForTerminationStr = ((reasonText) ? reasonText : "");
 	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
 }
 

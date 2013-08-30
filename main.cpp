@@ -56,8 +56,6 @@
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
 
-#include "launcher.h"
-
 using namespace ZeroTier;
 
 // ---------------------------------------------------------------------------
@@ -102,7 +100,7 @@ static void sighandlerQuit(int sig)
 {
 	Node *n = node;
 	if (n)
-		n->terminate();
+		n->terminate(Node::NODE_NORMAL_TERMINATION,"terminated by signal");
 	else exit(0);
 }
 #endif
@@ -117,7 +115,7 @@ static BOOL WINAPI _handlerRoutine(DWORD dwCtrlType)
 		case CTRL_SHUTDOWN_EVENT:
 			Node *n = node;
 			if (n)
-				n->terminate();
+				n->terminate(Node::NODE_NORMAL_TERMINATION,"terminated by signal");
 			return TRUE;
 	}
 	return FALSE;
@@ -157,12 +155,12 @@ int main(int argc,char **argv)
 				case '?':
 				default:
 					printHelp(argv[0],stderr);
-					return ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
+					return 0;
 			}
 		} else {
 			if (homeDir) {
 				printHelp(argv[0],stderr);
-				return ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
+				return 0;
 			}
 			homeDir = argv[i];
 			break;
@@ -176,21 +174,15 @@ int main(int argc,char **argv)
 	mkdir(homeDir,0755); // will fail if it already exists
 #endif
 
-	int exitCode = ZT_EXEC_RETURN_VALUE_NORMAL_TERMINATION;
+	int exitCode = 0;
 
 	node = new Node(homeDir);
 	const char *termReason = (char *)0;
 	switch(node->run()) {
-		case Node::NODE_RESTART_FOR_RECONFIGURATION:
-			exitCode = ZT_EXEC_RETURN_VALUE_PLEASE_RESTART;
-			break;
 		case Node::NODE_UNRECOVERABLE_ERROR:
-			exitCode = ZT_EXEC_RETURN_VALUE_UNRECOVERABLE_ERROR;
+			exitCode = -1;
 			termReason = node->reasonForTermination();
 			fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
-			break;
-		case Node::NODE_NEW_VERSION_AVAILABLE:
-			exitCode = ZT_EXEC_RETURN_VALUE_TERMINATED_FOR_UPGRADE;
 			break;
 		default:
 			break;
