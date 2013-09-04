@@ -110,6 +110,9 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 	return true;
 }
 
+// A low default global rate, fast enough for something like ARP
+const Network::MulticastRates::Rate Network::MulticastRates::GLOBAL_DEFAULT_RATE(256.0,-32.0,256.0,64.0);
+
 const char *Network::statusString(const Status s)
 	throw()
 {
@@ -166,24 +169,31 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 void Network::setConfiguration(const Network::Config &conf)
 {
 	Mutex::Lock _l(_lock);
-	if ((conf.networkId() == _id)&&(conf.peerAddress() == _r->identity.address())) { // sanity check
-		//TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
-		_configuration = conf;
-		_myCertificate = conf.certificateOfMembership();
-		_lastConfigUpdate = Utils::now();
+	try {
+		if (conf.networkId() == _id) { // sanity check
+			//TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
+			_configuration = conf;
+			_myCertificate = conf.certificateOfMembership();
+			_lastConfigUpdate = Utils::now();
 
-		_tap->setIps(conf.staticAddresses());
-		_tap->setDisplayName((std::string("ZeroTier One [") + conf.name() + "]").c_str());
+			_tap->setIps(conf.staticAddresses());
+			_tap->setDisplayName((std::string("ZeroTier One [") + conf.name() + "]").c_str());
 
-		memset(_etWhitelist,0,sizeof(_etWhitelist));
-		std::set<unsigned int> wl(conf.etherTypes());
-		for(std::set<unsigned int>::const_iterator t(wl.begin());t!=wl.end();++t)
-			_etWhitelist[*t / 8] |= (unsigned char)(1 << (*t % 8));
+			memset(_etWhitelist,0,sizeof(_etWhitelist));
+			std::set<unsigned int> wl(conf.etherTypes());
+			for(std::set<unsigned int>::const_iterator t(wl.begin());t!=wl.end();++t)
+				_etWhitelist[*t / 8] |= (unsigned char)(1 << (*t % 8));
 
-		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
-		if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
-			LOG("error: unable to write network configuration file at: %s",confPath.c_str());
+			std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+			if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
+				LOG("error: unable to write network configuration file at: %s",confPath.c_str());
+			}
 		}
+	} catch ( ... ) {
+		_configuration = Config();
+		_myCertificate = Certificate();
+		_lastConfigUpdate = 0;
+		LOG("unexpected exception handling config for network %.16llx, retrying fetch...",(unsigned long long)_id);
 	}
 }
 
@@ -275,7 +285,7 @@ void Network::clean()
 Network::Status Network::status() const
 {
 	Mutex::Lock _l(_lock);
-	if (_configuration.containsAllFields())
+	if (_configuration)
 		return NETWORK_OK;
 	return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
 }
@@ -302,11 +312,8 @@ void Network::_restoreState()
 	std::string confs;
 	if (Utils::readFile(confPath.c_str(),confs)) {
 		try {
-			if (confs.length()) {
-				Config conf(confs);
-				if (conf.containsAllFields())
-					setConfiguration(conf);
-			}
+			if (confs.length())
+				setConfiguration(Config(confs));
 		} catch ( ... ) {} // ignore invalid config on disk, we will re-request
 	} else {
 		// If the conf file isn't present, "touch" it so we'll remember

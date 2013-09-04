@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_RATELIMITER_HPP
-#define _ZT_RATELIMITER_HPP
+#ifndef _ZT_BWACCOUNT_HPP
+#define _ZT_BWACCOUNT_HPP
 
 #include <math.h>
 
@@ -41,7 +41,7 @@
 namespace ZeroTier {
 
 /**
- * Data transfer accounting used for multicast groups
+ * Bandwidth account used for rate limiting multicast groups
  *
  * This is used to apply a bank account model to multicast groups. Each
  * multicast packet counts against a balance, which accrues at a given
@@ -53,13 +53,13 @@ namespace ZeroTier {
  * spew lots of multicast messages at once, wait a while, then do it
  * again. A consistent bandwidth limit model doesn't fit.
  */
-class RateLimiter
+class BandwidthAccount
 {
 public:
 	/**
-	 * Rate and min/max to apply on rate limiter update
+	 * Rate of balance accrual and min/max
 	 */
-	struct Rate
+	struct Accrual
 	{
 		/**
 		 * Rate of balance accrual in bytes per second
@@ -78,25 +78,25 @@ public:
 	};
 
 	/**
-	 * Create an uninitialized rate limiter
+	 * Create an uninitialized account
 	 *
 	 * init() must be called before this is used.
 	 */
-	RateLimiter() throw() {}
+	BandwidthAccount() throw() {}
 
 	/**
-	 * Create an initialize rate limiter
+	 * Create and initialize
 	 *
 	 * @param preload Initial balance to place in account
 	 */
-	RateLimiter(double preload)
+	BandwidthAccount(double preload)
 		throw()
 	{
 		init(preload);
 	}
 
 	/**
-	 * Initialize or re-initialize rate limiter
+	 * Initialize or re-initialize account
 	 *
 	 * @param preload Initial balance to place in account
 	 */
@@ -108,18 +108,18 @@ public:
 	}
 
 	/**
-	 * Update balance based on current clock and supplied rate
+	 * Update balance by accruing and then deducting
 	 *
-	 * @param lim Current limits in effect
+	 * @param ar Current rate of accrual
 	 * @param deduct Amount to deduct, or 0.0 to just update
 	 * @return New balance with deduction applied
 	 */
-	inline double update(const Rate &r,double deduct)
+	inline double update(const Accrual &ar,double deduct)
 		throw()
 	{
 		double lt = _lastTime;
 		double now = _lastTime = Utils::nowf();
-		return (_balance = fmax(r.minBalance,fmin(r.maxBalance,(_balance + (r.bytesPerSecond * (now - lt))) - deduct)));
+		return (_balance = fmax(ar.minBalance,fmin(ar.maxBalance,(_balance + (ar.bytesPerSecond * (now - lt))) - deduct)));
 	}
 
 private:

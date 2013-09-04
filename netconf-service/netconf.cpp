@@ -245,13 +245,14 @@ int main(int argc,char **argv)
 
 				Dictionary netconf;
 
-				netconf["peer"] = peerIdentity.address().toString();
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
 				netconf["nwid"] = buf;
-				netconf["isOpen"] = (isOpen ? "1" : "0");
+				netconf["isOpen"] = (isOpen ? "1" : "0"); // TODO: remove, old name
+				netconf["o"] = (isOpen ? "1" : "0");
 				netconf["name"] = name;
 				netconf["desc"] = desc;
-				netconf["etherTypes"] = etherTypeWhitelist;
+				netconf["etherTypes"] = etherTypeWhitelist; // TODO: remove, old name
+				netconf["et"] = etherTypeWhitelist;
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
 
@@ -326,12 +327,16 @@ int main(int argc,char **argv)
 					}
 				}
 
-				if (ipv4Static.length())
-					netconf["ipv4Static"] = ipv4Static;
-				if (ipv6Static.length())
-					netconf["ipv6Static"] = ipv6Static;
+				// Add static assignments to netconf, if any
+				if (ipv4Static.length()) {
+					netconf["ipv4Static"] = ipv4Static; // TODO: remove, old name
+					netconf["v4s"] = ipv4Static;
+				}
+				if (ipv6Static.length()) {
+					netconf["v6s"] = ipv6Static;
+				}
 
-				{
+				{ // Create and send service bus response with payload attached as 'netconf'
 					Dictionary response;
 					response["peer"] = peerIdentity.address().toString();
 					response["nwid"] = request.get("nwid");

@@ -47,6 +47,7 @@
 #include "Dictionary.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
+#include "BandwidthAccount.hpp"
 
 namespace ZeroTier {
 
@@ -85,24 +86,10 @@ public:
 	class Certificate : private Dictionary
 	{
 	public:
-		Certificate()
-		{
-		}
-
-		Certificate(const char *s) :
-			Dictionary(s)
-		{
-		}
-
-		Certificate(const std::string &s) :
-			Dictionary(s)
-		{
-		}
-
-		inline std::string toString() const
-		{
-			return Dictionary::toString();
-		}
+		Certificate() {}
+		Certificate(const char *s) : Dictionary(s) {}
+		Certificate(const std::string &s) : Dictionary(s) {}
+		inline std::string toString() const { return Dictionary::toString(); }
 
 		inline void setNetworkId(uint64_t id)
 		{
@@ -193,58 +180,159 @@ public:
 	};
 
 	/**
+	 * Preload and rates of accrual for multicast group bandwidth limits
+	 *
+	 * Key is multicast group in lower case hex format: MAC (without :s) /
+	 * ADI (hex). Value is a comma-delimited list of: preload, min, max,
+	 * rate of accrual for bandwidth accounts. A key called '*' indicates
+	 * the default for unlisted groups.
+	 */
+	class MulticastRates : private Dictionary
+	{
+	public:
+		/**
+		 * Preload and accrual parameter tuple
+		 */
+		struct Rate
+		{
+			Rate() {}
+			Rate(double pl,double minr,double maxr,double bps)
+			{
+				preload = pl;
+				accrual.bytesPerSecond = bps;
+				accrual.maxBalance = maxr;
+				accrual.minBalance = minr;
+			}
+
+			double preload;
+			BandwidthAccount::Accrual accrual;
+		};
+
+		MulticastRates() {}
+		MulticastRates(const char *s) : Dictionary(s) {}
+		MulticastRates(const std::string &s) : Dictionary(s) {}
+		inline std::string toString() const { return Dictionary::toString(); }
+
+		/**
+		 * A very minimal default rate, fast enough for ARP
+		 */
+		static const Rate GLOBAL_DEFAULT_RATE;
+
+		/**
+		 * @return Default rate, or GLOBAL_DEFAULT_RATE if not specified
+		 */
+		Rate defaultRate() const
+		{
+			Rate r;
+			const_iterator dfl(find("*"));
+			if (dfl == end())
+				return GLOBAL_DEFAULT_RATE;
+			return _toRate(dfl->second);
+		}
+
+		/**
+		 * Get the rate for a given multicast group
+		 *
+		 * @param mg Multicast group
+		 * @return Rate or default() rate if not specified
+		 */
+		Rate get(const MulticastGroup &mg) const
+		{
+			const_iterator r(find(mg.toString()));
+			if (r == end())
+				return defaultRate();
+			return _toRate(r->second);
+		}
+
+	private:
+		static inline Rate _toRate(const std::string &s)
+		{
+			char tmp[16384];
+			Utils::scopy(tmp,sizeof(tmp),s.c_str());
+			Rate r;
+			r.preload = 0.0;
+			r.accrual.bytesPerSecond = 0.0;
+			r.accrual.maxBalance = 0.0;
+			r.accrual.minBalance = 0.0;
+			char *saveptr = (char *)0;
+			unsigned int fn = 0;
+			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
+				switch(fn++) {
+					case 0:
+						r.preload = Utils::strToDouble(f);
+						break;
+					case 1:
+						r.accrual.minBalance = Utils::strToDouble(f);
+						break;
+					case 2:
+						r.accrual.maxBalance = Utils::strToDouble(f);
+						break;
+					case 3:
+						r.accrual.bytesPerSecond = Utils::strToDouble(f);
+						break;
+				}
+			}
+			return r;
+		}
+	};
+
+	/**
 	 * A network configuration for a given node
+	 *
+	 * Configuration fields:
+	 *
+	 * nwid=<hex network ID> (required)
+	 * name=short name
+	 * desc=long(er) description
+	 * com=Certificate (serialized dictionary)
+	 * mr=MulticastRates (serialized dictionary)
+	 * o=open network? (1 or 0, default false if missing)
+	 * et=ethertype whitelist (comma-delimited list of ethertypes in decimal)
+	 * v4s=IPv4 static assignments / netmasks (comma-delimited)
+	 * v6s=IPv6 static assignments / netmasks (comma-delimited)
 	 */
 	class Config : private Dictionary
 	{
 	public:
-		Config()
-		{
-		}
+		Config() {}
+		Config(const char *s) : Dictionary(s) {}
+		Config(const std::string &s) : Dictionary(s) {}
+		inline std::string toString() const { return Dictionary::toString(); }
 
-		Config(const char *s) :
-			Dictionary(s)
-		{
-		}
+		/**
+		 * @return True if configuration is valid and contains required fields
+		 */
+		inline operator bool() const throw() { return (find("nwid") != end()); }
 
-		Config(const std::string &s) :
-			Dictionary(s)
-		{
-		}
-
-		inline bool containsAllFields() const
-		{
-			return (contains("nwid")&&contains("peer"));
-		}
-
-		inline std::string toString() const
-		{
-			return Dictionary::toString();
-		}
-
+		/**
+		 * @return Network ID
+		 * @throws std::invalid_argument Network ID field missing
+		 */
 		inline uint64_t networkId() const
 			throw(std::invalid_argument)
 		{
-#ifdef __WINDOWS__
-			return _strtoui64(get("nwid").c_str(),(char **)0,16);
-#else
-			return strtoull(get("nwid").c_str(),(char **)0,16);
-#endif
+			return Utils::hexStrToU64(get("nwid").c_str());
 		}
 
+		/**
+		 * Get this network's short name, or its ID in hex if unspecified
+		 *
+		 * @return Short name of this network (e.g. "earth")
+		 */
 		inline std::string name() const
 		{
-			if (contains("name"))
-				return get("name");
-			char buf[32];
-			Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)networkId());
-			return std::string(buf);
+			const_iterator n(find("name"));
+			if (n == end())
+				return get("nwid");
+			return n->second;
 		}
 
-		inline Address peerAddress() const
-			throw(std::invalid_argument)
+		/**
+		 * @return Long description of network or empty string if not present
+		 */
+		inline std::string desc() const
 		{
-			return Address(get("peer"));
+			return get("desc",std::string());
 		}
 
 		/**
@@ -259,11 +347,27 @@ public:
 		}
 
 		/**
+		 * @return Multicast rates for this network
+		 */
+		inline MulticastRates multicastRates() const
+		{
+			const_iterator mr(find("mr"));
+			if (mr == end())
+				return MulticastRates();
+			else return MulticastRates(mr->second);
+		}
+
+		/**
 		 * @return True if this is an open non-access-controlled network
 		 */
 		inline bool isOpen() const
 		{
-			return (get("isOpen","0") == "1");
+			const_iterator o(find("o"));
+			if (o == end())
+				return false;
+			else if (!o->second.length())
+				return false;
+			else return (o->second[0] == '1');
 		}
 
 		/**
@@ -274,10 +378,10 @@ public:
 			char tmp[16384];
 			char *saveptr = (char *)0;
 			std::set<unsigned int> et;
-			if (!Utils::scopy(tmp,sizeof(tmp),get("etherTypes","").c_str()))
-				return et; // sanity check
+			if (!Utils::scopy(tmp,sizeof(tmp),get("et","").c_str()))
+				return et; // sanity check, packet can't really be that big
 			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-				unsigned int t = Utils::stoui(f);
+				unsigned int t = Utils::strToUInt(f);
 				if (t)
 					et.insert(t);
 			}
@@ -290,10 +394,10 @@ public:
 		inline std::set<InetAddress> staticAddresses() const
 		{
 			std::set<InetAddress> sa;
-			std::vector<std::string> ips(Utils::split(get("ipv4Static","").c_str(),",","",""));
+			std::vector<std::string> ips(Utils::split(get("v4s","").c_str(),",","",""));
 			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
 				sa.insert(InetAddress(*i));
-			ips = Utils::split(get("ipv6Static","").c_str(),",","","");
+			ips = Utils::split(get("v6s","").c_str(),",","","");
 			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
 				sa.insert(InetAddress(*i));
 			return sa;
@@ -462,6 +566,8 @@ public:
 	Status status() const;
 
 	/**
+	 * Determine whether frames of a given ethernet type are allowed on this network
+	 *
 	 * @param etherType Ethernet frame type
 	 * @return True if network permits this type
 	 */
@@ -475,17 +581,26 @@ public:
 		else return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType % 8))) != 0);
 	}
 
+	inline bool updateAndCheckMulticastBalance(const Address &a,const MulticastGroup &mg,unsigned int bytes)
+	{
+		Mutex::Lock _l(_lock);
+		std::map< std::pair<Address,MulticastGroup>,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(std::pair<Address,MulticastGroup>(a,mg)));
+	}
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 	void _restoreState();
 
 	const RuntimeEnvironment *_r;
 
-	// Tap and tap multicast memberships
+	// Multicast bandwidth accounting for peers on this network
+	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;
+
+	// Tap and tap multicast memberships for this node on this network
 	EthernetTap *_tap;
 	std::set<MulticastGroup> _multicastGroups;
 
-	// Membership certificates supplied by peers
+	// Membership certificates supplied by other peers on this network
 	std::map<Address,Certificate> _membershipCertificates;
 
 	// Configuration from network master node

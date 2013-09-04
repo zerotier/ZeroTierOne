@@ -461,36 +461,49 @@ public:
 #endif
 	}
 
-	// String to int converters (and hex string to int)
-	static inline unsigned int stoui(const char *s)
+	// String to number converters
+	static inline unsigned int strToUInt(const char *s)
 		throw()
 	{
 		return (unsigned int)strtoul(s,(char **)0,10);
 	}
-	static inline unsigned long stoul(const char *s)
+	static inline unsigned long strToULong(const char *s)
 		throw()
 	{
 		return strtoul(s,(char **)0,10);
 	}
-	static inline unsigned long long stoull(const char *s)
+	static inline unsigned long long strToU64(const char *s)
 		throw()
 	{
+#ifdef __WINDOWS__
+		return _strtoui64(s,(char **)0,10);
+#else
 		return strtoull(s,(char **)0,10);
+#endif
 	}
-	static inline unsigned int hstoui(const char *s)
+	static inline unsigned int hexStrToUInt(const char *s)
 		throw()
 	{
 		return (unsigned int)strtoul(s,(char **)0,16);
 	}
-	static inline unsigned long hstoul(const char *s)
+	static inline unsigned long hexStrToULong(const char *s)
 		throw()
 	{
 		return strtoul(s,(char **)0,16);
 	}
-	static inline unsigned long long hstoull(const char *s)
+	static inline unsigned long long hexStrToU64(const char *s)
 		throw()
 	{
+#ifdef __WINDOWS__
+		return _strtoui64(s,(char **)0,16);
+#else
 		return strtoull(s,(char **)0,16);
+#endif
+	}
+	static inline double strToDouble(const char *s)
+		throw()
+	{
+		return strtod(s,(char **)0);
 	}
 
 	/**
