@@ -80,21 +80,15 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 				// indicates a floating point comparison. Otherwise an integer
 				// comparison occurs.
 				if (deltaField->second.find('.') != std::string::npos) {
-					double my = strtod(myField->second.c_str(),(char **)0);
-					double their = strtod(theirField->second.c_str(),(char **)0);
-					double delta = strtod(deltaField->second.c_str(),(char **)0);
+					double my = Utils::strToDouble(myField->second.c_str());
+					double their = Utils::strToDouble(theirField->second.c_str());
+					double delta = Utils::strToDouble(deltaField->second.c_str());
 					if (fabs(my - their) > delta)
 						return false;
 				} else {
-#ifdef __WINDOWS__
-					int64_t my = _strtoi64(myField->second.c_str(),(char **)0,10);
-					int64_t their = _strtoi64(theirField->second.c_str(),(char **)0,10);
-					int64_t delta = _strtoi64(deltaField->second.c_str(),(char **)0,10);
-#else
-					int64_t my = strtoll(myField->second.c_str(),(char **)0,10);
-					int64_t their = strtoll(theirField->second.c_str(),(char **)0,10);
-					int64_t delta = strtoll(deltaField->second.c_str(),(char **)0,10);
-#endif
+					uint64_t my = Utils::hexStrToU64(myField->second.c_str());
+					uint64_t their = Utils::hexStrToU64(theirField->second.c_str());
+					uint64_t delta = Utils::hexStrToU64(deltaField->second.c_str());
 					if (my > their) {
 						if ((my - their) > delta)
 							return false;

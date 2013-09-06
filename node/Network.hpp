@@ -91,49 +91,6 @@ public:
 		Certificate(const std::string &s) : Dictionary(s) {}
 		inline std::string toString() const { return Dictionary::toString(); }
 
-		inline void setNetworkId(uint64_t id)
-		{
-			char buf[32];
-			Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)id);
-			(*this)["nwid"] = buf;
-		}
-
-		inline uint64_t networkId() const
-			throw(std::invalid_argument)
-		{
-#ifdef __WINDOWS__
-			return _strtoui64(get("nwid").c_str(),(char **)0,16);
-#else
-			return strtoull(get("nwid").c_str(),(char **)0,16);
-#endif
-		}
-
-		inline void setPeerAddress(Address &a)
-		{
-			(*this)["peer"] = a.toString();
-		}
-
-		inline Address peerAddress() const
-			throw(std::invalid_argument)
-		{
-			return Address(get("peer"));
-		}
-
-		/**
-		 * Set the timestamp and timestamp max-delta
-		 *
-		 * @param ts Timestamp in ms since epoch
-		 * @param maxDelta Maximum difference between two peers on the same network
-		 */
-		inline void setTimestamp(uint64_t ts,uint64_t maxDelta)
-		{
-			char foo[32];
-			Utils::snprintf(foo,sizeof(foo),"%llu",(unsigned long long)ts);
-			(*this)["ts"] = foo;
-			Utils::snprintf(foo,sizeof(foo),"%llu",(unsigned long long)maxDelta);
-			(*this)["~ts"] = foo;
-		}
-
 		/**
 		 * Sign this certificate
 		 *
@@ -381,7 +338,7 @@ public:
 			if (!Utils::scopy(tmp,sizeof(tmp),get("et","").c_str()))
 				return et; // sanity check, packet can't really be that big
 			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-				unsigned int t = Utils::strToUInt(f);
+				unsigned int t = Utils::hexStrToUInt(f);
 				if (t)
 					et.insert(t);
 			}

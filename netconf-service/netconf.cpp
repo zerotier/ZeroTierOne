@@ -231,10 +231,22 @@ int main(int argc,char **argv)
 					}
 				}
 
-				std::string etherTypeWhitelist;
+				std::string etherTypeWhitelistOld;
 				{
 					Query q = dbCon->query();
 					q << "SELECT DISTINCT etherType FROM NetworkEthertypes WHERE Network_id = " << nwid;
+					StoreQueryResult rs = q.store();
+					for(unsigned long i=0;i<rs.num_rows();++i) {
+						if (etherTypeWhitelistOld.length() > 0)
+							etherTypeWhitelistOld.push_back(',');
+						etherTypeWhitelistOld.append(rs[i]["etherType"].c_str());
+					}
+				}
+
+				std::string etherTypeWhitelist;
+				{
+					Query q = dbCon->query();
+					q << "SELECT DISTINCT LOWER(HEX(etherType)) AS etherType FROM NetworkEthertypes WHERE Network_id = " << nwid;
 					StoreQueryResult rs = q.store();
 					for(unsigned long i=0;i<rs.num_rows();++i) {
 						if (etherTypeWhitelist.length() > 0)
@@ -251,7 +263,7 @@ int main(int argc,char **argv)
 				netconf["o"] = (isOpen ? "1" : "0");
 				netconf["name"] = name;
 				netconf["desc"] = desc;
-				netconf["etherTypes"] = etherTypeWhitelist; // TODO: remove, old name
+				netconf["etherTypes"] = etherTypeWhitelistOld; // TODO: remove, old name
 				netconf["et"] = etherTypeWhitelist;
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
