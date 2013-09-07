@@ -32,6 +32,7 @@
 #include <math.h>
 
 #include <algorithm>
+#include <utility>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -97,15 +98,17 @@ public:
 	 * Update balance by accruing and then deducting
 	 *
 	 * @param deduct Amount to deduct, or 0.0 to just update
-	 * @return New balance with deduction applied
+	 * @return New balance with deduction applied, and whether or not deduction fit
 	 */
-	inline int32_t update(int32_t deduct)
+	inline std::pair<int32_t,bool> update(int32_t deduct)
 		throw()
 	{
 		double lt = _lastTime;
 		double now = Utils::nowf();
 		_lastTime = now;
-		return (_balance = std::max(_minBalance,std::min(_maxBalance,(int32_t)round(((double)_balance) + (((double)_accrual) * (now - lt))) - deduct)));
+		int32_t newbal = (int32_t)round((double)_balance + ((double)_accrual * (now - lt))) - deduct;
+		bool fits = (newbal > 0);
+		return std::pair<int32_t,bool>((_balance = std::max(_minBalance,std::min(_maxBalance,newbal))),fits);
 	}
 
 private:

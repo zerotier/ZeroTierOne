@@ -91,7 +91,7 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 }
 
 // A low default global rate, fast enough for something like ARP
-const Network::MulticastRates::Rate Network::MulticastRates::GLOBAL_DEFAULT_RATE(256.0,-32.0,256.0,64.0);
+const Network::MulticastRates::Rate Network::MulticastRates::GLOBAL_DEFAULT_RATE(128,-32,128,64);
 
 const char *Network::statusString(const Status s)
 	throw()
@@ -154,6 +154,7 @@ void Network::setConfiguration(const Network::Config &conf)
 			//TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
 			_configuration = conf;
 			_myCertificate = conf.certificateOfMembership();
+			_mcRates = conf.multicastRates();
 			_lastConfigUpdate = Utils::now();
 
 			_tap->setIps(conf.staticAddresses());

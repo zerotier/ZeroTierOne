@@ -100,11 +100,16 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
-			// Handle broadcast special cases
-
 			// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
 			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
+		}
+
+		// Check our own multicasts against the global rate for this network
+		// just to be polite.
+		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
+			LOG("didn't send local multicast %u byte multicast packet to network %.16llx: not within budget for multicast group %s",(unsigned int)data.size(),(unsigned long long)network->id(),mg.toString().c_str());
+			return;
 		}
 
 		Multicaster::MulticastBloomFilter bloom;

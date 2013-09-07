@@ -553,7 +553,7 @@ public:
 			MulticastRates::Rate r(_mcRates.get(mg));
 			bal = _multicastRateAccounts.insert(std::make_pair(k,BandwidthAccount(r.preload,r.minBalance,r.maxBalance,r.accrual))).first;
 		}
-		return (bal->second.update((int32_t)bytes) < (int32_t)bytes);
+		return bal->second.update((int32_t)bytes).second;
 	}
 
 private:
@@ -574,8 +574,8 @@ private:
 
 	// Configuration from network master node
 	Config _configuration;
-	Certificate _myCertificate;
-	MulticastRates _mcRates;
+	Certificate _myCertificate; // memoized from _configuration
+	MulticastRates _mcRates; // memoized from _configuration
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];
