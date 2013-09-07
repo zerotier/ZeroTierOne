@@ -76,27 +76,13 @@ bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) con
 				if (myField->second != theirField->second)
 					return false;
 			} else {
-				// Otherwise compare range with max delta. Presence of a dot in delta
-				// indicates a floating point comparison. Otherwise an integer
-				// comparison occurs.
-				if (deltaField->second.find('.') != std::string::npos) {
-					double my = Utils::strToDouble(myField->second.c_str());
-					double their = Utils::strToDouble(theirField->second.c_str());
-					double delta = Utils::strToDouble(deltaField->second.c_str());
-					if (fabs(my - their) > delta)
-						return false;
-				} else {
-					uint64_t my = Utils::hexStrToU64(myField->second.c_str());
-					uint64_t their = Utils::hexStrToU64(theirField->second.c_str());
-					uint64_t delta = Utils::hexStrToU64(deltaField->second.c_str());
-					if (my > their) {
-						if ((my - their) > delta)
-							return false;
-					} else {
-						if ((their - my) > delta)
-							return false;
-					}
-				}
+				// Otherwise compare the absolute value of the difference between
+				// the two values against the max delta.
+				int64_t my = Utils::hexStrTo64(myField->second.c_str());
+				int64_t their = Utils::hexStrTo64(theirField->second.c_str());
+				int64_t delta = Utils::hexStrTo64(deltaField->second.c_str());
+				if (llabs((long long)(my - their)) > delta)
+					return false;
 			}
 		}
 	}

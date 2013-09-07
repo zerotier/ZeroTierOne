@@ -28,15 +28,13 @@
 #ifndef _ZT_BWACCOUNT_HPP
 #define _ZT_BWACCOUNT_HPP
 
+#include <stdint.h>
 #include <math.h>
+
+#include <algorithm>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
-
-#ifdef __WINDOWS__
-#define fmin(a,b) (((a) <= (b)) ? (a) : (b))
-#define fmax(a,b) (((a) >= (b)) ? (a) : (b))
-#endif
 
 namespace ZeroTier {
 
@@ -57,27 +55,6 @@ class BandwidthAccount
 {
 public:
 	/**
-	 * Rate of balance accrual and min/max
-	 */
-	struct Accrual
-	{
-		/**
-		 * Rate of balance accrual in bytes per second
-		 */
-		double bytesPerSecond;
-
-		/**
-		 * Maximum balance that can ever be accrued (should be > 0.0)
-		 */
-		double maxBalance;
-
-		/**
-		 * Minimum balance, or maximum allowable "debt" (should be <= 0.0)
-		 */
-		double minBalance;
-	};
-
-	/**
 	 * Create an uninitialized account
 	 *
 	 * init() must be called before this is used.
@@ -88,43 +65,55 @@ public:
 	 * Create and initialize
 	 *
 	 * @param preload Initial balance to place in account
+	 * @param minb Minimum allowed balance (or maximum debt) (<= 0)
+	 * @param maxb Maximum allowed balance (> 0)
+	 * @param acc Rate of accrual in bytes per second
 	 */
-	BandwidthAccount(double preload)
+	BandwidthAccount(int32_t preload,int32_t minb,int32_t maxb,int32_t acc)
 		throw()
 	{
-		init(preload);
+		init(preload,minb,maxb,acc);
 	}
 
 	/**
 	 * Initialize or re-initialize account
 	 *
 	 * @param preload Initial balance to place in account
+	 * @param minb Minimum allowed balance (or maximum debt) (<= 0)
+	 * @param maxb Maximum allowed balance (> 0)
+	 * @param acc Rate of accrual in bytes per second
 	 */
-	inline void init(double preload)
+	inline void init(int32_t preload,int32_t minb,int32_t maxb,int32_t acc)
 		throw()
 	{
 		_lastTime = Utils::nowf();
 		_balance = preload;
+		_minBalance = minb;
+		_maxBalance = maxb;
+		_accrual = acc;
 	}
 
 	/**
 	 * Update balance by accruing and then deducting
 	 *
-	 * @param ar Current rate of accrual
 	 * @param deduct Amount to deduct, or 0.0 to just update
 	 * @return New balance with deduction applied
 	 */
-	inline double update(const Accrual &ar,double deduct)
+	inline int32_t update(int32_t deduct)
 		throw()
 	{
 		double lt = _lastTime;
-		double now = _lastTime = Utils::nowf();
-		return (_balance = fmax(ar.minBalance,fmin(ar.maxBalance,(_balance + (ar.bytesPerSecond * (now - lt))) - deduct)));
+		double now = Utils::nowf();
+		_lastTime = now;
+		return (_balance = std::max(_minBalance,std::min(_maxBalance,(int32_t)round(((double)_balance) + (((double)_accrual) * (now - lt))) - deduct)));
 	}
 
 private:
 	double _lastTime;
-	double _balance;
+	int32_t _balance;
+	int32_t _minBalance;
+	int32_t _maxBalance;
+	int32_t _accrual;
 };
 
 } // namespace ZeroTier

@@ -142,7 +142,8 @@ public:
 	 * Key is multicast group in lower case hex format: MAC (without :s) /
 	 * ADI (hex). Value is a comma-delimited list of: preload, min, max,
 	 * rate of accrual for bandwidth accounts. A key called '*' indicates
-	 * the default for unlisted groups.
+	 * the default for unlisted groups. Values are in hexadecimal and may
+	 * be prefixed with '-' to indicate a negative value.
 	 */
 	class MulticastRates : private Dictionary
 	{
@@ -153,16 +154,17 @@ public:
 		struct Rate
 		{
 			Rate() {}
-			Rate(double pl,double minr,double maxr,double bps)
+			Rate(int32_t pl,int32_t minb,int32_t maxb,int32_t acc)
 			{
 				preload = pl;
-				accrual.bytesPerSecond = bps;
-				accrual.maxBalance = maxr;
-				accrual.minBalance = minr;
+				minBalance = minb;
+				maxBalance = maxb;
+				accrual = acc;
 			}
-
-			double preload;
-			BandwidthAccount::Accrual accrual;
+			int32_t preload;
+			int32_t minBalance;
+			int32_t maxBalance;
+			int32_t accrual;
 		};
 
 		MulticastRates() {}
@@ -178,7 +180,7 @@ public:
 		/**
 		 * @return Default rate, or GLOBAL_DEFAULT_RATE if not specified
 		 */
-		Rate defaultRate() const
+		inline Rate defaultRate() const
 		{
 			Rate r;
 			const_iterator dfl(find("*"));
@@ -193,7 +195,7 @@ public:
 		 * @param mg Multicast group
 		 * @return Rate or default() rate if not specified
 		 */
-		Rate get(const MulticastGroup &mg) const
+		inline Rate get(const MulticastGroup &mg) const
 		{
 			const_iterator r(find(mg.toString()));
 			if (r == end())
@@ -206,26 +208,22 @@ public:
 		{
 			char tmp[16384];
 			Utils::scopy(tmp,sizeof(tmp),s.c_str());
-			Rate r;
-			r.preload = 0.0;
-			r.accrual.bytesPerSecond = 0.0;
-			r.accrual.maxBalance = 0.0;
-			r.accrual.minBalance = 0.0;
+			Rate r(0,0,0,0);
 			char *saveptr = (char *)0;
 			unsigned int fn = 0;
 			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
 				switch(fn++) {
 					case 0:
-						r.preload = Utils::strToDouble(f);
+						r.preload = (int32_t)Utils::hexStrToLong(f);
 						break;
 					case 1:
-						r.accrual.minBalance = Utils::strToDouble(f);
+						r.minBalance = (int32_t)Utils::hexStrToLong(f);
 						break;
 					case 2:
-						r.accrual.maxBalance = Utils::strToDouble(f);
+						r.maxBalance = (int32_t)Utils::hexStrToLong(f);
 						break;
 					case 3:
-						r.accrual.bytesPerSecond = Utils::strToDouble(f);
+						r.accrual = (int32_t)Utils::hexStrToLong(f);
 						break;
 				}
 			}
@@ -538,10 +536,24 @@ public:
 		else return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType % 8))) != 0);
 	}
 
+	/**
+	 * Update multicast balance for an address and multicast group, return whether packet is allowed
+	 *
+	 * @param a Address that wants to send/relay packet
+	 * @param mg Multicast group
+	 * @param bytes Size of packet
+	 * @return True if packet is within budget
+	 */
 	inline bool updateAndCheckMulticastBalance(const Address &a,const MulticastGroup &mg,unsigned int bytes)
 	{
 		Mutex::Lock _l(_lock);
-		std::map< std::pair<Address,MulticastGroup>,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(std::pair<Address,MulticastGroup>(a,mg)));
+		std::pair<Address,MulticastGroup> k(a,mg);
+		std::map< std::pair<Address,MulticastGroup>,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(k));
+		if (bal == _multicastRateAccounts.end()) {
+			MulticastRates::Rate r(_mcRates.get(mg));
+			bal = _multicastRateAccounts.insert(std::make_pair(k,BandwidthAccount(r.preload,r.minBalance,r.maxBalance,r.accrual))).first;
+		}
+		return (bal->second.update((int32_t)bytes) < (int32_t)bytes);
 	}
 
 private:
@@ -563,6 +575,7 @@ private:
 	// Configuration from network master node
 	Config _configuration;
 	Certificate _myCertificate;
+	MulticastRates _mcRates;
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];

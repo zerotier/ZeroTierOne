@@ -461,24 +461,44 @@ public:
 #endif
 	}
 
-	// String to number converters
+	// String to number converters -- defined here to permit portability
+	// ifdefs for platforms that lack some of the strtoXX functions.
 	static inline unsigned int strToUInt(const char *s)
 		throw()
 	{
 		return (unsigned int)strtoul(s,(char **)0,10);
+	}
+	static inline int strToInt(const char *s)
+		throw()
+	{
+		return (int)strtol(s,(char **)0,10);
 	}
 	static inline unsigned long strToULong(const char *s)
 		throw()
 	{
 		return strtoul(s,(char **)0,10);
 	}
+	static inline long strToLong(const char *s)
+		throw()
+	{
+		return strtol(s,(char **)0,10);
+	}
 	static inline unsigned long long strToU64(const char *s)
 		throw()
 	{
 #ifdef __WINDOWS__
-		return _strtoui64(s,(char **)0,10);
+		return (unsigned long long)_strtoui64(s,(char **)0,10);
 #else
 		return strtoull(s,(char **)0,10);
+#endif
+	}
+	static inline long long strTo64(const char *s)
+		throw()
+	{
+#ifdef __WINDOWS__
+		return (long long)_strtoi64(s,(char **)0,10);
+#else
+		return strtoll(s,(char **)0,10);
 #endif
 	}
 	static inline unsigned int hexStrToUInt(const char *s)
@@ -486,18 +506,37 @@ public:
 	{
 		return (unsigned int)strtoul(s,(char **)0,16);
 	}
+	static inline int hexStrToInt(const char *s)
+		throw()
+	{
+		return (int)strtol(s,(char **)0,16);
+	}
 	static inline unsigned long hexStrToULong(const char *s)
 		throw()
 	{
 		return strtoul(s,(char **)0,16);
 	}
+	static inline long hexStrToLong(const char *s)
+		throw()
+	{
+		return strtol(s,(char **)0,16);
+	}
 	static inline unsigned long long hexStrToU64(const char *s)
 		throw()
 	{
 #ifdef __WINDOWS__
-		return _strtoui64(s,(char **)0,16);
+		return (unsigned long long)_strtoui64(s,(char **)0,16);
 #else
 		return strtoull(s,(char **)0,16);
+#endif
+	}
+	static inline long long hexStrTo64(const char *s)
+		throw()
+	{
+#ifdef __WINDOWS__
+		return (long long)_strtoi64(s,(char **)0,16);
+#else
+		return strtoll(s,(char **)0,16);
 #endif
 	}
 	static inline double strToDouble(const char *s)
