@@ -114,7 +114,7 @@ int main(int argc,char **argv)
 		strcpy(mysqlPassword,ee);
 	}
 
-	char buf[131072];
+	char buf[131072],buf2[131072];
 	std::string dictBuf;
 
 	try {
@@ -255,6 +255,30 @@ int main(int argc,char **argv)
 					}
 				}
 
+				Dictionary multicastRates;
+				{
+					Query q = dbCon->query();
+					q << "SELECT DISTINCT multicastGroupMac,multicastGroupAdi,preload,maxBalance,accrual FROM NetworkMulticastRates WHERE Network_id = " << nwid;
+					StoreQueryResult rs = q.store();
+					for(unsigned long i=0;i<rs.num_rows();++i) {
+						long preload = (long)rs[i]["preload"];
+						long maxBalance = (long)rs[i]["maxBalance"];
+						long accrual = (long)rs[i]["accrual"];
+						sprintf(buf2,"%s%lx,%s%lx,%s%lx",
+							((preload < 0) ? "-" : ""),
+							preload,
+							((maxBalance < 0) ? "-" : ""),
+							maxBalance,
+							((accrual < 0) ? "-" : ""),
+							accrual);
+						unsigned long long mac = (unsigned long long)rs[i]["multicastGroupMac"];
+						if (mac) {
+							sprintf(buf,"%.12llx/%lx",(mac & 0xffffffffffffULL),(unsigned long)rs[i]["multicastGroupAdi"]);
+							multicastRates[buf] = buf2;
+						} else multicastRates["*"] = buf2;
+					}
+				}
+
 				Dictionary netconf;
 
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
@@ -265,6 +289,7 @@ int main(int argc,char **argv)
 				netconf["desc"] = desc;
 				netconf["etherTypes"] = etherTypeWhitelistOld; // TODO: remove, old name
 				netconf["et"] = etherTypeWhitelist;
+				netconf["mr"] = multicastRates.toString();
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
 

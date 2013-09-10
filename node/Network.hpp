@@ -82,6 +82,32 @@ class Network : NonCopyable
 public:
 	/**
 	 * A certificate of network membership for private network participation
+	 *
+	 * Certificates consist of a dictionary containing one or more values with
+	 * optional max delta paramters. A max delta paramter defines the maximum
+	 * absolute value of the difference between each set of two values in order
+	 * for two certificates to match. If there is no max delta parameter, each
+	 * value is compared for straightforward string equality. Values must be
+	 * in hexadecimal (and may be negative) for max delta comparison purposes.
+	 * Decimals are not allowed, so decimal values must be multiplied by some
+	 * factor to convert them to integers with the required relative precision.
+	 * Math is done in 64-bit, allowing plenty of room for this.
+	 *
+	 * This allows membership in a network to be defined not only in terms of
+	 * absolute parameters but also relative comparisons. For example, a network
+	 * could be created that defined membership in terms of a geographic radius.
+	 * Its certificates would contain latitude, longitude, and a max delta for
+	 * each defining the radius.
+	 *
+	 * Max deltas are prefixed by "~". For example, a max delta for "longitude"
+	 * would be "~longitude".
+	 *
+	 * One value and its associated max delta is just about always present: a
+	 * timestamp. This represents the time the certificate was issued by the
+	 * netconf controller. Each peer requests netconf updates periodically with
+	 * new certificates, so this causes peers that are no longer members of the
+	 * network to lose the ability to communicate with their certificate's "ts"
+	 * field differs from everyone else's "ts" by more than "~ts".
 	 */
 	class Certificate : private Dictionary
 	{
