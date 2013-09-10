@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-INCLUDES=-Iext/bin/libcrypto/include -Iext/jsoncpp/include
+INCLUDES=-Iext/bin/libcrypto/include
 ARCH=$(shell uname -m)
 DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux" -DZT_TRACE
 

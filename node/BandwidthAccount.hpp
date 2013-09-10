@@ -31,9 +31,6 @@
 #include <stdint.h>
 #include <math.h>
 
-#include <algorithm>
-#include <utility>
-
 #include "Constants.hpp"
 #include "Utils.hpp"
 
@@ -66,30 +63,27 @@ public:
 	 * Create and initialize
 	 *
 	 * @param preload Initial balance to place in account
-	 * @param minb Minimum allowed balance (or maximum debt) (<= 0)
 	 * @param maxb Maximum allowed balance (> 0)
 	 * @param acc Rate of accrual in bytes per second
 	 */
-	BandwidthAccount(int32_t preload,int32_t minb,int32_t maxb,int32_t acc)
+	BandwidthAccount(int32_t preload,int32_t maxb,int32_t acc)
 		throw()
 	{
-		init(preload,minb,maxb,acc);
+		init(preload,maxb,acc);
 	}
 
 	/**
 	 * Initialize or re-initialize account
 	 *
 	 * @param preload Initial balance to place in account
-	 * @param minb Minimum allowed balance (or maximum debt) (<= 0)
 	 * @param maxb Maximum allowed balance (> 0)
 	 * @param acc Rate of accrual in bytes per second
 	 */
-	inline void init(int32_t preload,int32_t minb,int32_t maxb,int32_t acc)
+	inline void init(int32_t preload,int32_t maxb,int32_t acc)
 		throw()
 	{
 		_lastTime = Utils::nowf();
 		_balance = preload;
-		_minBalance = minb;
 		_maxBalance = maxb;
 		_accrual = acc;
 	}
@@ -98,23 +92,22 @@ public:
 	 * Update balance by accruing and then deducting
 	 *
 	 * @param deduct Amount to deduct, or 0.0 to just update
-	 * @return New balance with deduction applied, and whether or not deduction fit
+	 * @return New balance after deduction -- if negative, it didn't fit
 	 */
-	inline std::pair<int32_t,bool> update(int32_t deduct)
+	inline int32_t update(int32_t deduct)
 		throw()
 	{
 		double lt = _lastTime;
 		double now = Utils::nowf();
 		_lastTime = now;
 		int32_t newbal = (int32_t)round((double)_balance + ((double)_accrual * (now - lt))) - deduct;
-		bool fits = (newbal > 0);
-		return std::pair<int32_t,bool>((_balance = std::max(_minBalance,std::min(_maxBalance,newbal))),fits);
+		_balance = std::max((int32_t)0,std::min(_maxBalance,newbal));
+		return newbal;
 	}
 
 private:
 	double _lastTime;
 	int32_t _balance;
-	int32_t _minBalance;
 	int32_t _maxBalance;
 	int32_t _accrual;
 };

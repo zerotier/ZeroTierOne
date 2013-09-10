@@ -166,10 +166,9 @@ public:
 	 * Preload and rates of accrual for multicast group bandwidth limits
 	 *
 	 * Key is multicast group in lower case hex format: MAC (without :s) /
-	 * ADI (hex). Value is a comma-delimited list of: preload, min, max,
-	 * rate of accrual for bandwidth accounts. A key called '*' indicates
-	 * the default for unlisted groups. Values are in hexadecimal and may
-	 * be prefixed with '-' to indicate a negative value.
+	 * ADI (hex). Value is preload, maximum balance, and rate of accrual in
+	 * hex. These are signed hex numbers, so a negative value can be prefixed
+	 * with '-'.
 	 */
 	class MulticastRates : private Dictionary
 	{
@@ -180,15 +179,13 @@ public:
 		struct Rate
 		{
 			Rate() {}
-			Rate(int32_t pl,int32_t minb,int32_t maxb,int32_t acc)
+			Rate(int32_t pl,int32_t maxb,int32_t acc)
 			{
 				preload = pl;
-				minBalance = minb;
 				maxBalance = maxb;
 				accrual = acc;
 			}
 			int32_t preload;
-			int32_t minBalance;
 			int32_t maxBalance;
 			int32_t accrual;
 		};
@@ -234,7 +231,7 @@ public:
 		{
 			char tmp[16384];
 			Utils::scopy(tmp,sizeof(tmp),s.c_str());
-			Rate r(0,0,0,0);
+			Rate r(0,0,0);
 			char *saveptr = (char *)0;
 			unsigned int fn = 0;
 			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
@@ -243,12 +240,9 @@ public:
 						r.preload = (int32_t)Utils::hexStrToLong(f);
 						break;
 					case 1:
-						r.minBalance = (int32_t)Utils::hexStrToLong(f);
-						break;
-					case 2:
 						r.maxBalance = (int32_t)Utils::hexStrToLong(f);
 						break;
-					case 3:
+					case 2:
 						r.accrual = (int32_t)Utils::hexStrToLong(f);
 						break;
 				}
@@ -577,9 +571,9 @@ public:
 		std::map< std::pair<Address,MulticastGroup>,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(k));
 		if (bal == _multicastRateAccounts.end()) {
 			MulticastRates::Rate r(_mcRates.get(mg));
-			bal = _multicastRateAccounts.insert(std::make_pair(k,BandwidthAccount(r.preload,r.minBalance,r.maxBalance,r.accrual))).first;
+			bal = _multicastRateAccounts.insert(std::pair< std::pair<Address,MulticastGroup>,BandwidthAccount >(k,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
 		}
-		return bal->second.update((int32_t)bytes).second;
+		return (bal->second.update((int32_t)bytes) >= 0);
 	}
 
 private:
