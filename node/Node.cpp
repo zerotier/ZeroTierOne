@@ -305,7 +305,7 @@ Node::ReasonForTermination Node::run()
 		_r->log = new Logger((_r->homePath + ZT_PATH_SEPARATOR_S + "node.log").c_str(),(const char *)0,131072);
 #endif
 
-		TRACE("initializing...");
+		LOG("%s starting version %s",_r->identity.address().toString().c_str(),versionString());
 
 		// Create non-crypto PRNG right away in case other code in init wants to use it
 		_r->prng = new CMWC4096();
@@ -424,8 +424,6 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastMulticastAnnounceAll = 0;
 		long lastDelayDelta = 0;
-
-		LOG("%s starting version %s",_r->identity.address().toString().c_str(),versionString());
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
 			uint64_t now = Utils::now();

@@ -178,7 +178,6 @@ void Network::setConfiguration(const Network::Config &conf)
 	Mutex::Lock _l(_lock);
 	try {
 		if (conf.networkId() == _id) { // sanity check
-			//TRACE("network %.16llx got netconf:\n%s",(unsigned long long)_id,conf.toString().c_str());
 			_configuration = conf;
 			_myCertificate = conf.certificateOfMembership();
 			_mcRates = conf.multicastRates();
