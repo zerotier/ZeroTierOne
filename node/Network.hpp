@@ -170,94 +170,11 @@ public:
 	};
 
 	/**
-	 * A certificate of network membership for private network participation
-	 *
-	 * Certificates consist of a dictionary containing one or more values with
-	 * optional max delta paramters. A max delta paramter defines the maximum
-	 * absolute value of the difference between each set of two values in order
-	 * for two certificates to match. If there is no max delta parameter, each
-	 * value is compared for straightforward string equality. Values must be
-	 * in hexadecimal (and may be negative) for max delta comparison purposes.
-	 * Decimals are not allowed, so decimal values must be multiplied by some
-	 * factor to convert them to integers with the required relative precision.
-	 * Math is done in 64-bit, allowing plenty of room for this.
-	 *
-	 * This allows membership in a network to be defined not only in terms of
-	 * absolute parameters but also relative comparisons. For example, a network
-	 * could be created that defined membership in terms of a geographic radius.
-	 * Its certificates would contain latitude, longitude, and a max delta for
-	 * each defining the radius.
-	 *
-	 * Max deltas are prefixed by "~". For example, a max delta for "longitude"
-	 * would be "~longitude".
-	 *
-	 * One value and its associated max delta is just about always present: a
-	 * timestamp. This represents the time the certificate was issued by the
-	 * netconf controller. Each peer requests netconf updates periodically with
-	 * new certificates, so this causes peers that are no longer members of the
-	 * network to lose the ability to communicate with their certificate's "ts"
-	 * field differs from everyone else's "ts" by more than "~ts".
-	 */
-	class Certificate : private Dictionary
-	{
-	public:
-		Certificate() {}
-		Certificate(const char *s) : Dictionary(s) {}
-		Certificate(const std::string &s) : Dictionary(s) {}
-		inline std::string toString() const { return Dictionary::toString(); }
-
-		/**
-		 * Sign this certificate
-		 *
-		 * @param with Signing identity -- the identity of this network's controller
-		 * @return Signature or empty string on failure
-		 */
-		inline std::string sign(const Identity &with) const
-		{
-			unsigned char dig[32];
-			_shaForSignature(dig);
-			return with.sign(dig);
-		}
-
-		/**
-		 * Verify this certificate's signature
-		 *
-		 * @param with Signing identity -- the identity of this network's controller
-		 * @param sig Signature
-		 * @param siglen Length of signature in bytes
-		 */
-		inline bool verify(const Identity &with,const void *sig,unsigned int siglen) const
-		{
-			unsigned char dig[32];
-			_shaForSignature(dig);
-			return with.verifySignature(dig,sig,siglen);
-		}
-
-		/**
-		 * Check if another peer is indeed a current member of this network
-		 *
-		 * Fields with companion ~fields are compared with the defined maximum
-		 * delta in this certificate. Fields without ~fields are compared for
-		 * equality.
-		 *
-		 * This does not verify the certificate's signature!
-		 * 
-		 * @param mc Peer membership certificate
-		 * @return True if mc's membership in this network is current
-		 */
-		bool qualifyMembership(const Certificate &mc) const;
-
-	private:
-		void _shaForSignature(unsigned char *dig) const;
-	};
-
-	/**
 	 * Preload and rates of accrual for multicast group bandwidth limits
 	 *
 	 * Key is multicast group in lower case hex format: MAC (without :s) /
 	 * ADI (hex). Value is preload, maximum balance, and rate of accrual in
-	 * hex. These are signed hex numbers, so a negative value can be prefixed
-	 * with '-'.
+	 * hex.
 	 */
 	class MulticastRates : private Dictionary
 	{
@@ -402,12 +319,12 @@ public:
 		/**
 		 * @return Certificate of membership for this network, or empty cert if none
 		 */
-		inline Certificate certificateOfMembership() const
+		inline CertificateOfMembership certificateOfMembership() const
 		{
 			const_iterator cm(find("com"));
 			if (cm == end())
-				return Certificate();
-			else return Certificate(cm->second);
+				return CertificateOfMembership();
+			else return CertificateOfMembership(cm->second);
 		}
 
 		/**
@@ -602,7 +519,7 @@ public:
 	 * @param peer Peer that owns certificate
 	 * @param cert Certificate itself
 	 */
-	void addMembershipCertificate(const Address &peer,const Certificate &cert);
+	void addMembershipCertificate(const Address &peer,const CertificateOfMembership &cert);
 
 	/**
 	 * @param peer Peer address to check
@@ -679,11 +596,11 @@ private:
 	std::set<MulticastGroup> _multicastGroups;
 
 	// Membership certificates supplied by other peers on this network
-	std::map<Address,Certificate> _membershipCertificates;
+	std::map<Address,CertificateOfMembership> _membershipCertificates;
 
 	// Configuration from network master node
 	Config _configuration;
-	Certificate _myCertificate; // memoized from _configuration
+	CertificateOfMembership _myCertificate; // memoized from _configuration
 	MulticastRates _mcRates; // memoized from _configuration
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup

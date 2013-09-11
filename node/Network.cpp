@@ -199,7 +199,7 @@ void Network::setConfiguration(const Network::Config &conf)
 		}
 	} catch ( ... ) {
 		_configuration = Config();
-		_myCertificate = Certificate();
+		_myCertificate = CertificateOfMembership();
 		_lastConfigUpdate = 0;
 		LOG("unexpected exception handling config for network %.16llx, retrying fetch...",(unsigned long long)_id);
 	}
@@ -218,7 +218,7 @@ void Network::requestConfiguration()
 	_r->sw->send(outp,true);
 }
 
-void Network::addMembershipCertificate(const Address &peer,const Certificate &cert)
+void Network::addMembershipCertificate(const Address &peer,const CertificateOfMembership &cert)
 {
 	Mutex::Lock _l(_lock);
 	if (!_configuration.isOpen())
@@ -232,10 +232,10 @@ bool Network::isAllowed(const Address &peer) const
 		Mutex::Lock _l(_lock);
 		if (_configuration.isOpen())
 			return true;
-		std::map<Address,Certificate>::const_iterator pc(_membershipCertificates.find(peer));
+		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
 		if (pc == _membershipCertificates.end())
 			return false;
-		return _myCertificate.qualifyMembership(pc->second);
+		return _myCertificate.compare(pc->second);
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -263,8 +263,8 @@ void Network::clean()
 				writeError = true;
 		}
 
-		for(std::map<Address,Certificate>::iterator i=(_membershipCertificates.begin());i!=_membershipCertificates.end();) {
-			if (_myCertificate.qualifyMembership(i->second)) {
+		for(std::map<Address,CertificateOfMembership>::iterator i=(_membershipCertificates.begin());i!=_membershipCertificates.end();) {
+			if (_myCertificate.compare(i->second)) {
 				if ((!writeError)&&(mcdb)) {
 					char tmp[ZT_ADDRESS_LENGTH];
 					i->first.copyTo(tmp,ZT_ADDRESS_LENGTH);
