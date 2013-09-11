@@ -66,7 +66,7 @@ public:
 	 * @param maxb Maximum allowed balance (> 0)
 	 * @param acc Rate of accrual in bytes per second
 	 */
-	BandwidthAccount(int32_t preload,int32_t maxb,int32_t acc)
+	BandwidthAccount(uint32_t preload,uint32_t maxb,uint32_t acc)
 		throw()
 	{
 		init(preload,maxb,acc);
@@ -79,7 +79,7 @@ public:
 	 * @param maxb Maximum allowed balance (> 0)
 	 * @param acc Rate of accrual in bytes per second
 	 */
-	inline void init(int32_t preload,int32_t maxb,int32_t acc)
+	inline void init(uint32_t preload,uint32_t maxb,uint32_t acc)
 		throw()
 	{
 		_lastTime = Utils::nowf();
@@ -89,27 +89,43 @@ public:
 	}
 
 	/**
-	 * Update balance by accruing and then deducting
+	 * Update and retrieve balance of this account
 	 *
-	 * @param deduct Amount to deduct, or 0.0 to just update
-	 * @return New balance after deduction -- if negative, it didn't fit
+	 * @return New balance updated from current clock
 	 */
-	inline int32_t update(int32_t deduct)
+	inline uint32_t update()
 		throw()
 	{
 		double lt = _lastTime;
 		double now = Utils::nowf();
 		_lastTime = now;
-		int32_t newbal = (int32_t)round((double)_balance + ((double)_accrual * (now - lt))) - deduct;
-		_balance = std::max((int32_t)0,std::min(_maxBalance,newbal));
-		return newbal;
+		return (_balance = std::min(_maxBalance,(uint32_t)round((double)_balance + ((double)_accrual * (now - lt)))));
+	}
+
+	/**
+	 * Update balance and conditionally deduct
+	 *
+	 * If the deduction amount fits, it is deducted after update. Otherwise
+	 * balance is updated and false is returned.
+	 *
+	 * @param amt Amount to deduct
+	 * @return True if amount fit within balance and was deducted
+	 */
+	inline bool deduct(uint32_t amt)
+		throw()
+	{
+		if (update() >= amt) {
+			_balance -= amt;
+			return true;
+		}
+		return false;
 	}
 
 private:
 	double _lastTime;
-	int32_t _balance;
-	int32_t _maxBalance;
-	int32_t _accrual;
+	uint32_t _balance;
+	uint32_t _maxBalance;
+	uint32_t _accrual;
 };
 
 } // namespace ZeroTier

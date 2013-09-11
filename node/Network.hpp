@@ -34,6 +34,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <algorithm>
 #include <stdexcept>
 
 #include "Constants.hpp"
@@ -185,15 +186,15 @@ public:
 		struct Rate
 		{
 			Rate() {}
-			Rate(int32_t pl,int32_t maxb,int32_t acc)
+			Rate(uint32_t pl,uint32_t maxb,uint32_t acc)
 			{
 				preload = pl;
 				maxBalance = maxb;
 				accrual = acc;
 			}
-			int32_t preload;
-			int32_t maxBalance;
-			int32_t accrual;
+			uint32_t preload;
+			uint32_t maxBalance;
+			uint32_t accrual;
 		};
 
 		MulticastRates() {}
@@ -243,13 +244,13 @@ public:
 			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
 				switch(fn++) {
 					case 0:
-						r.preload = (int32_t)Utils::hexStrToLong(f);
+						r.preload = (uint32_t)Utils::hexStrToULong(f);
 						break;
 					case 1:
-						r.maxBalance = (int32_t)Utils::hexStrToLong(f);
+						r.maxBalance = (uint32_t)Utils::hexStrToULong(f);
 						break;
 					case 2:
-						r.accrual = (int32_t)Utils::hexStrToLong(f);
+						r.accrual = (uint32_t)Utils::hexStrToULong(f);
 						break;
 				}
 			}
@@ -579,7 +580,7 @@ public:
 			MulticastRates::Rate r(_mcRates.get(mg));
 			bal = _multicastRateAccounts.insert(std::pair< std::pair<Address,MulticastGroup>,BandwidthAccount >(k,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
 		}
-		return (bal->second.update((int32_t)bytes) >= 0);
+		return bal->second.deduct(bytes);
 	}
 
 private:
