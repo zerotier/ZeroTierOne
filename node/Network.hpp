@@ -456,7 +456,7 @@ public:
 	/**
 	 * @return Network ID in hexadecimal form
 	 */
-	inline std::string toString()
+	inline std::string idString()
 	{
 		char buf[64];
 		Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)_id);

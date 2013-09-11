@@ -136,8 +136,8 @@ Network::~Network()
 	delete _tap;
 
 	if (_destroyOnDelete) {
-		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
-		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
+		std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
+		std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
 		Utils::rm(confPath);
 		Utils::rm(mcdbPath);
 	} else {
@@ -192,7 +192,7 @@ void Network::setConfiguration(const Network::Config &conf)
 			for(std::set<unsigned int>::const_iterator t(wl.begin());t!=wl.end();++t)
 				_etWhitelist[*t / 8] |= (unsigned char)(1 << (*t % 8));
 
-			std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+			std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
 			if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
 				LOG("error: unable to write network configuration file at: %s",confPath.c_str());
 			}
@@ -246,7 +246,7 @@ bool Network::isAllowed(const Address &peer) const
 
 void Network::clean()
 {
-	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".mcerts");
+	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
 
 	Mutex::Lock _l(_lock);
 
@@ -316,7 +316,7 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 
 void Network::_restoreState()
 {
-	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + toString() + ".conf");
+	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
 	std::string confs;
 	if (Utils::readFile(confPath.c_str(),confs)) {
 		try {
