@@ -319,7 +319,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
 						Network::Config netconf(dict);
-						LOG("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
+						TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
 						nw->setConfiguration(netconf);
 					}
 				}
