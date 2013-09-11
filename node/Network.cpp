@@ -41,50 +41,77 @@
 
 namespace ZeroTier {
 
-void Network::Certificate::_shaForSignature(unsigned char *dig) const
+void Network::CertificateOfMembership::addParameter(uint64_t id,uint64_t value,uint64_t maxDelta)
 {
-	SHA256_CTX sha;
-	SHA256_Init(&sha);
-	unsigned char zero = 0;
-	for(const_iterator i(begin());i!=end();++i) {
-		SHA256_Update(&sha,&zero,1);
-		SHA256_Update(&sha,(const unsigned char *)i->first.data(),i->first.length());
-		SHA256_Update(&sha,&zero,1);
-		SHA256_Update(&sha,(const unsigned char *)i->second.data(),i->second.length());
-		SHA256_Update(&sha,&zero,1);
-	}
-	SHA256_Final(dig,&sha);
+	_params.push_back(_Parameter(id,value,maxDelta));
+	std::sort(_params.begin(),_params.end(),_SortByIdComparison());
 }
 
-static const std::string _DELTA_PREFIX("~");
-bool Network::Certificate::qualifyMembership(const Network::Certificate &mc) const
+std::string Network::CertificateOfMembership::toString() const
 {
-	// Note: optimization probably needed here, probably via some kind of
-	// memoization / dynamic programming. But make it work first, then make
-	// it fast.
+	uint64_t tmp[3000];
+	unsigned long n = 0;
+	for(std::vector<_Parameter>::const_iterator p(_params.begin());p!=_params.end();++p) {
+		tmp[n++] = Utils::hton(p->id);
+		tmp[n++] = Utils::hton(p->value);
+		tmp[n++] = Utils::hton(p->maxDelta);
+		if (n >= 3000)
+			break; // sanity check -- certificates will never even approach this size
+	}
+	return Utils::hex(tmp,sizeof(uint64_t) * n);
+}
 
-	for(const_iterator myField(begin());myField!=end();++myField) {
-		if (!((myField->first.length() > 1)&&(myField->first[0] == '~'))) { // ~fields are max delta range specs
-			// If they lack the same field, comparison fails.
-			const_iterator theirField(mc.find(myField->first));
-			if (theirField == mc.end())
+void Network::CertificateOfMembership::fromString(const char *s)
+{
+	std::string tmp(Utils::unhex(s));
+	_params.clear();
+	const char *ptr = tmp.data();
+	unsigned long remaining = tmp.length();
+	while (remaining >= 24) {
+		_Parameter p;
+		p.id = Utils::ntoh(*((const uint64_t *)(ptr)));
+		p.value = Utils::ntoh(*((const uint64_t *)(ptr + 8)));
+		p.maxDelta = Utils::ntoh(*((const uint64_t *)(ptr + 16)));
+		_params.push_back(p);
+		ptr += 24;
+		remaining -= 24;
+	}
+}
+
+bool Network::CertificateOfMembership::compare(const CertificateOfMembership &other) const
+	throw()
+{
+	unsigned long myidx = 0;
+	unsigned long otheridx = 0;
+
+	while (myidx < _params.size()) {
+		// Fail if we're at the end of other, since this means the field is
+		// missing.
+		if (otheridx >= other._params.size())
+			return false;
+
+		// Seek to corresponding tuple in other, ignoring tuples that
+		// we may not have. If we run off the end of other, the tuple is
+		// missing. This works because tuples are sorted by ID.
+		while (other._params[otheridx].id != _params[myidx].id) {
+			++otheridx;
+			if (otheridx >= other._params.size())
 				return false;
-
-			const_iterator deltaField(find(_DELTA_PREFIX + myField->first));
-			if (deltaField == end()) {
-				// If there is no delta, compare on simple equality
-				if (myField->second != theirField->second)
-					return false;
-			} else {
-				// Otherwise compare the absolute value of the difference between
-				// the two values against the max delta.
-				int64_t my = Utils::hexStrTo64(myField->second.c_str());
-				int64_t their = Utils::hexStrTo64(theirField->second.c_str());
-				int64_t delta = Utils::hexStrTo64(deltaField->second.c_str());
-				if (llabs((long long)(my - their)) > delta)
-					return false;
-			}
 		}
+
+		// Compare to determine if the absolute value of the difference
+		// between these two parameters is within our maxDelta.
+		uint64_t a = _params[myidx].value;
+		uint64_t b = other._params[myidx].value;
+		if (a >= b) {
+			if ((a - b) > _params[myidx].maxDelta)
+				return false;
+		} else {
+			if ((b - a) > _params[myidx].maxDelta)
+				return false;
+		}
+
+		++myidx;
 	}
 
 	return true;

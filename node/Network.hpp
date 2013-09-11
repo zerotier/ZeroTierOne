@@ -28,6 +28,8 @@
 #ifndef _ZT_NETWORK_HPP
 #define _ZT_NETWORK_HPP
 
+#include <stdint.h>
+
 #include <string>
 #include <set>
 #include <map>
@@ -80,6 +82,93 @@ class Network : NonCopyable
 	friend class NodeConfig;
 
 public:
+	/**
+	 * Certificate of network membership
+	 *
+	 * The COM consists of a series of three-element 64-bit tuples. These values
+	 * are an id, a value, and a maximum delta. The ID is arbitrary and should be
+	 * assigned using a scheme that makes every ID globally unique for a given
+	 * type of parameter. ID 0 is reserved for the always-present timestamp
+	 * parameter. The value is parameter-specific. The maximum delta is the
+	 * maximum difference that is permitted between two values for determining
+	 * whether a certificate permits two peers to speak to one another. A value
+	 * of zero indicates that the values must equal.
+	 *
+	 * Certificates of membership must be signed by the netconf master for the
+	 * network in question. This permits members to verify these certs against
+	 * the netconf master's public key before testing them.
+	 */
+	class CertificateOfMembership
+	{
+	public:
+		CertificateOfMembership() throw() {}
+		CertificateOfMembership(const char *s) { fromString(s); }
+		CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
+
+		/**
+		 * Add a paramter to this certificate
+		 *
+		 * @param id Parameter ID
+		 * @param value Parameter value
+		 * @param maxDelta Parameter maximum difference with others
+		 */
+		void addParameter(uint64_t id,uint64_t value,uint64_t maxDelta);
+
+		/**
+		 * @return Hex-serialized representation of this certificate (minus signature)
+		 */
+		std::string toString() const;
+
+		/**
+		 * Set this certificate equal to the hex-serialized string
+		 *
+		 * Invalid strings will result in invalid or undefined certificate
+		 * contents. These will subsequently fail validation and comparison.
+		 *
+		 * @param s String to deserialize
+		 */
+		void fromString(const char *s);
+		inline void fromString(const std::string &s) { fromString(s.c_str()); }
+
+		/**
+		 * Compare two certificates for parameter agreement
+		 *
+		 * This compares this certificate with the other and returns true if all
+		 * paramters in this cert are present in the other and if they agree to
+		 * within this cert's max delta value for each given parameter.
+		 *
+		 * @param other Cert to compare with
+		 * @return True if certs agree and 'other' may be communicated with
+		 */
+		bool compare(const CertificateOfMembership &other) const
+			throw();
+
+	private:
+		struct _Parameter
+		{
+			_Parameter() throw() {}
+			_Parameter(uint64_t i,uint64_t v,uint64_t m) throw() :
+				id(i),
+				value(v),
+				maxDelta(m) {}
+			uint64_t id;
+			uint64_t value;
+			uint64_t maxDelta;
+		};
+
+		// Used with std::sort to ensure that _params are sorted
+		struct _SortByIdComparison
+		{
+			inline bool operator()(const _Parameter &a,const _Parameter &b) const
+				throw()
+			{
+				return (a.id < b.id);
+			}
+		};
+
+		std::vector<_Parameter> _params;
+	};
+
 	/**
 	 * A certificate of network membership for private network participation
 	 *
