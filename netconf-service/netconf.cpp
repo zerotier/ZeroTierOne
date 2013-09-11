@@ -292,6 +292,7 @@ int main(int argc,char **argv)
 				netconf["mr"] = multicastRates.toString();
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
+				netconf["peer"] = peerIdentity.address().toString();
 
 				if (!isOpen) {
 					// TODO: handle closed networks, look up private membership,
