@@ -105,10 +105,16 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
-		// Check our own multicasts against the global rate for this network
-		// just to be polite.
+		uint64_t crc = Multicaster::computeMulticastDedupCrc(network->id(),from,mg,etherType,data.data(),data.size());
+		uint64_t now = Utils::now();
+
+		if (_r->multicaster->checkDuplicate(crc,now)) {
+			LOG("%s/%.16llx: multicast group %s: dropped %u bytes, duplicate multicast in too short a time frame",network->tap().deviceName().c_str(),(unsigned long long)network->id(),mg.toString().c_str(),(unsigned int)data.size());
+			return;
+		}
+		_r->multicaster->addToDedupHistory(crc,now);
 		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
-			LOG("didn't send local multicast %u byte multicast packet to network %.16llx: not within budget for multicast group %s",(unsigned int)data.size(),(unsigned long long)network->id(),mg.toString().c_str());
+			LOG("%s/%.16llx: multicast group %s: dropped %u bytes, out of budget",network->tap().deviceName().c_str(),(unsigned long long)network->id(),mg.toString().c_str(),(unsigned int)data.size());
 			return;
 		}
 
@@ -124,7 +130,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			bloom,
 			ZT_MULTICAST_PROPAGATION_BREADTH,
 			propPeers,
-			Utils::now());
+			now);
 
 		if (!np)
 			return;

@@ -117,8 +117,7 @@ bool Network::CertificateOfMembership::compare(const CertificateOfMembership &ot
 	return true;
 }
 
-// A low default global rate, fast enough for something like ARP
-const Network::MulticastRates::Rate Network::MulticastRates::GLOBAL_DEFAULT_RATE(128,128,64);
+const Network::MulticastRates::Rate Network::MulticastRates::GLOBAL_DEFAULT_RATE(65535,65535,64);
 
 const char *Network::statusString(const Status s)
 	throw()

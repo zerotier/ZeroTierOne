@@ -261,7 +261,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Expiration time in ms for multicast deduplication history items
  */
-#define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 4000
+#define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 2000
 
 /**
  * Period between announcements of all multicast 'likes' in ms
