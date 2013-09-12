@@ -581,6 +581,9 @@ public:
 			bal = _multicastRateAccounts.insert(std::pair< std::pair<Address,MulticastGroup>,BandwidthAccount >(k,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
 		}
 		return bal->second.deduct(bytes);
+		//bool tmp = bal->second.deduct(bytes);
+		//printf("%s: BAL: %u\n",mg.toString().c_str(),(unsigned int)bal->second.balance());
+		//return tmp;
 	}
 
 private:

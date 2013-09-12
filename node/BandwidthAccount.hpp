@@ -121,6 +121,15 @@ public:
 		return false;
 	}
 
+	/**
+	 * @return Most recent balance without update
+	 */
+	inline uint32_t balance() const
+		throw()
+	{
+		return _balance;
+	}
+
 private:
 	double _lastTime;
 	uint32_t _balance;
