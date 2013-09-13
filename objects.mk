@@ -18,6 +18,7 @@ OBJS=\
 	node/Packet.o \
 	node/PacketDecoder.o \
 	node/Peer.o \
+	node/Poly1305.o \
 	node/Salsa20.o \
 	node/Service.o \
 	node/SHA512.o \
