@@ -273,6 +273,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 
 		SharedPtr<Peer> candidate(new Peer(_r->identity,id));
 		candidate->setPathAddress(_remoteAddress,false);
+		candidate->setRemoteVersion(vMajor,vMinor,vRevision);
 
 		_CBaddPeerFromHello_Data *arg = new _CBaddPeerFromHello_Data;
 		arg->renv = _r;
@@ -290,6 +291,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+
 	return true;
 }
 
