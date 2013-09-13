@@ -32,14 +32,31 @@
 
 namespace ZeroTier {
 
+#define ZT_C25519_PUBLIC_KEY_LEN 64
+
+#define ZT_C25519_PRIVATE_KEY_LEN 64
+
+#define ZT_C25519_SIGNATURE_LEN 96
+
 /**
  * C25519 elliptic curve key agreement and signing
  */
 class C25519
 {
 public:
-	typedef Array<unsigned char,64> Public; // crypto key, signing key
-	typedef Array<unsigned char,96> Private; // crypto key, signing key (64 bytes)
+	/**
+	 * Public key (both crypto and signing)
+	 */
+	typedef Array<unsigned char,64> Public; // crypto key, signing key (both 32 bytes)
+
+	/**
+	 * Private key (both crypto and signing)
+	 */
+	typedef Array<unsigned char,64> Private; // crypto key, signing key (both 32 bytes)
+
+	/**
+	 * Public/private key pair
+	 */
 	typedef struct {
 		Public pub;
 		Private priv;
@@ -48,7 +65,8 @@ public:
 	/**
 	 * Generate a C25519 elliptic curve key pair
 	 */
-	static Pair generate();
+	static Pair generate()
+		throw();
 
 	/**
 	 * Perform C25519 ECC key agreement
@@ -61,7 +79,14 @@ public:
 	 * @param keybuf Buffer to fill
 	 * @param keylen Number of key bytes to generate
 	 */
-	static void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen);
+	static void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen)
+		throw();
+
+	static void sign(const Pair &mine,const void *msg,unsigned int len,void *signature)
+		throw();
+
+	static bool verify(const Public &their,const void *msg,unsigned int len,const void *signature)
+		throw();
 };
 
 } // namespace ZeroTier

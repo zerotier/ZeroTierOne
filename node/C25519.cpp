@@ -2171,8 +2171,7 @@ static int crypto_sign(
   unsigned char hmg[crypto_hash_sha512_BYTES];
   unsigned char hram[crypto_hash_sha512_BYTES];
 
-  //crypto_hash_sha512(extsk, sk, 32);
-  SHA512::hash(extsk,sk,32);
+  crypto_hash_sha512(extsk, sk, 32);
   extsk[0] &= 248;
   extsk[31] &= 127;
   extsk[31] |= 64;
@@ -2256,18 +2255,38 @@ static int crypto_sign_open(
 //////////////////////////////////////////////////////////////////////////////
 
 C25519::Pair C25519::generate()
+  throw()
 {
+  unsigned char extsk[64];
+  sc25519 scsk;
+  ge25519 gepk;
 	Pair kp;
+
 	Utils::getSecureRandom(kp.priv.data,kp.priv.size());
 
 	// First 32 bytes of pub and priv are the keys for C25519 key
 	// agreement. This generates the public portion from the private.
 	crypto_scalarmult_base(kp.pub.data,kp.priv.data);
 
+  // Second 32 bytes of pub and priv are the keys for ed25519
+  // signing and verification.
+  SHA512::hash(extsk,kp.priv.data + 32,32);
+  extsk[0] &= 248;
+  extsk[31] &= 127;
+  extsk[31] |= 64;
+  sc25519_from32bytes(&scsk,extsk);
+  ge25519_scalarmult_base(&gepk,&scsk);
+  ge25519_pack(kp.pub.data + 32,&gepk);
+  // In NaCl, the public key is crammed into the next 32 bytes
+  // of the private key for signing since both keys are required
+  // to sign. In this case we just get it from public, so we
+  // leave that out of private.
+
 	return kp;
 }
 
 void C25519::agree(const C25519::Pair &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
+  throw()
 {
 	unsigned char rawkey[32];
 	unsigned char digest[64];
@@ -2281,6 +2300,64 @@ void C25519::agree(const C25519::Pair &mine,const C25519::Public &their,void *ke
 		}
 		((unsigned char *)keybuf)[i++] = digest[k++];
 	}
+}
+
+void C25519::sign(const C25519::Pair &mine,const void *msg,unsigned int len,void *signature)
+  throw()
+{
+  sc25519 sck, scs, scsk;
+  ge25519 ger;
+  unsigned char r[32];
+  unsigned char s[32];
+  unsigned char extsk[64];
+  unsigned char hmg[crypto_hash_sha512_BYTES];
+  unsigned char hram[crypto_hash_sha512_BYTES];
+  unsigned char *sig = (unsigned char *)signature; // 96 bytes
+  unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
+
+  SHA512::hash(digest,msg,len);
+
+  SHA512::hash(extsk,mine.priv.data + 32,32);
+  extsk[0] &= 248;
+  extsk[31] &= 127;
+  extsk[31] |= 64;
+
+  for(unsigned int i=0;i<32;i++)
+    sig[32 + i] = extsk[32 + i];
+  for(unsigned int i=0;i<32;i++)
+    sig[64 + i] = digest[i];
+
+  SHA512::hash(hmg,sig + 32,64);
+  //crypto_hash_sha512(hmg, sm+32, mlen+32); /* Generate k as h(extsk[32],...,extsk[63],m) */
+
+  /* Computation of R */
+  sc25519_from64bytes(&sck, hmg);
+  ge25519_scalarmult_base(&ger, &sck);
+  ge25519_pack(r, &ger);
+  
+  /* Computation of s */
+  for(unsigned int i=0;i<32;i++)
+    sig[i] = r[i];
+
+  get_hram(hram,sig,mine.pub.data + 32,sig,96);
+
+  sc25519_from64bytes(&scs, hram);
+  sc25519_from32bytes(&scsk, extsk);
+  sc25519_mul(&scs, &scs, &scsk);
+  
+  sc25519_add(&scs, &scs, &sck);
+
+  sc25519_to32bytes(s,&scs); /* cat s */
+  for(unsigned int i=0;i<32;i++)
+    sig[32 + i] = s[i]; 
+}
+
+bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
+  throw()
+{
+  unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
+
+  SHA512::hash(digest,msg,len);
 }
 
 } // namespace ZeroTier
