@@ -374,6 +374,10 @@ public:
 		 *
 		 * OK payload:
 		 *   <[8] timestamp (echoed from original HELLO)>
+		 *   <[1] protocol version>
+		 *   <[1] software major version>
+		 *   <[1] software minor version>
+		 *   <[2] software revision>
 		 *
 		 * ERROR has no payload.
 		 */

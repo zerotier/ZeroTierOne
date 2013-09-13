@@ -151,11 +151,14 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 			case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
 			case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS: {
 				_r->sw->doAnythingWaitingForPeer(p);
-
 				Packet outp(req->source,_r->identity.address(),Packet::VERB_OK);
 				outp.append((unsigned char)Packet::VERB_HELLO);
 				outp.append(req->helloPacketId);
 				outp.append(req->helloTimestamp);
+				outp.append((unsigned char)ZT_PROTO_VERSION);
+				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
+				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
+				outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 				outp.encrypt(p->cryptKey());
 				outp.hmacSet(p->macKey());
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
