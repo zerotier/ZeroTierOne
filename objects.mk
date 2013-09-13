@@ -2,6 +2,7 @@ OBJS=\
 	ext/kissdb/kissdb.o \
 	ext/lz4/lz4hc.o \
 	ext/lz4/lz4.o \
+	node/C25519.o \
 	node/Defaults.o \
 	node/Demarc.o \
 	node/EllipticCurveKeyPair.o \
@@ -19,6 +20,7 @@ OBJS=\
 	node/Peer.o \
 	node/Salsa20.o \
 	node/Service.o \
+	node/SHA512.o \
 	node/Switch.o \
 	node/SysEnv.o \
 	node/Topology.o \

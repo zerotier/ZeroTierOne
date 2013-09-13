@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "../version.h"
+
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"

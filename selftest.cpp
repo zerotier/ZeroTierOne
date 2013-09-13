@@ -50,8 +50,9 @@
 #include "node/Condition.hpp"
 #include "node/NodeConfig.hpp"
 #include "node/Dictionary.hpp"
-#include "node/RateLimiter.hpp"
 #include "node/EthernetTap.hpp"
+#include "node/SHA512.hpp"
+#include "node/C25519.hpp"
 
 #include <openssl/rand.h>
 
@@ -93,10 +94,6 @@ static void _initLibCrypto()
 
 static unsigned char fuzzbuf[1048576];
 
-static const char *hmacShaTV0Key = "key";
-static const char *hmacShaTV0Msg = "The quick brown fox jumps over the lazy dog";
-static const unsigned char hmacShaTV0Mac[32] = { 0xf7,0xbc,0x83,0xf4,0x30,0x53,0x84,0x24,0xb1,0x32,0x98,0xe6,0xaa,0x6f,0xb1,0x43,0xef,0x4d,0x59,0xa1,0x49,0x46,0x17,0x59,0x97,0x47,0x9d,0xbc,0x2d,0x1a,0x3c,0xd8 };
-
 static const unsigned char s20TV0Key[32] = { 0x0f,0x62,0xb5,0x08,0x5b,0xae,0x01,0x54,0xa7,0xfa,0x4d,0xa0,0xf3,0x46,0x99,0xec,0x3f,0x92,0xe5,0x38,0x8b,0xde,0x31,0x84,0xd7,0x2a,0x7d,0xd0,0x23,0x76,0xc9,0x1c };
 static const unsigned char s20TV0Iv[8] = { 0x28,0x8f,0xf6,0x5d,0xc4,0x2b,0x92,0xf9 };
 static const unsigned char s20TV0Ks[64] = { 0x5e,0x5e,0x71,0xf9,0x01,0x99,0x34,0x03,0x04,0xab,0xb2,0x2a,0x37,0xb6,0x62,0x5b,0xf8,0x83,0xfb,0x89,0xce,0x3b,0x21,0xf5,0x4a,0x10,0xb8,0x10,0x66,0xef,0x87,0xda,0x30,0xb7,0x76,0x99,0xaa,0x73,0x79,0xda,0x59,0x5c,0x77,0xdd,0x59,0x54,0x2d,0xa2,0x08,0xe5,0x95,0x4f,0x89,0xe4,0x0e,0xb7,0xaa,0x80,0xa8,0x4a,0x61,0x76,0x66,0x3f };
@@ -106,29 +103,22 @@ static int testCrypto()
 	unsigned char buf1[16384];
 	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
-	//Utils::getSecureRandom(buf1,1024);
-	//std::cout << "[crypto] getSecureRandom() -> " << Utils::hex(buf1,1024) << std::endl;
-
-	std::cout << "[crypto] Testing ECDSA... "; std::cout.flush();
-	for(unsigned int k=0;k<64;++k) {
-		EllipticCurveKeyPair kp;
-		kp.generate();
-		for(int i=0;i<32;++i)
-			buf1[i] = (unsigned char)rand();
-		std::string sig = kp.sign(buf1);
-		if (!EllipticCurveKeyPair::verify(buf1,kp.pub(),sig.data(),sig.length())) {
+	std::cout << "[crypto] Testing C25519 ECC key agreement... "; std::cout.flush();
+	for(unsigned int i=0;i<100;++i) {
+		C25519::Pair p1 = C25519::generate();
+		C25519::Pair p2 = C25519::generate();
+		C25519::Pair p3 = C25519::generate();
+		C25519::agree(p1,p2.pub,buf1,64);
+		C25519::agree(p2,p1.pub,buf2,64);
+		C25519::agree(p3,p1.pub,buf3,64);
+		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL" << std::endl;
 			return -1;
 		}
-	}
-	std::cout << "PASS" << std::endl;
-
-	std::cout << "[crypto] Testing HMAC-SHA256... "; std::cout.flush();
-	memset(buf1,0,sizeof(buf1));
-	HMAC::sha256(hmacShaTV0Key,strlen(hmacShaTV0Key),hmacShaTV0Msg,strlen(hmacShaTV0Msg),buf1);
-	if (memcmp(buf1,hmacShaTV0Mac,32)) {
-		std::cout << "FAIL (test vector 0) (" << Utils::hex(buf1,32) << ")" << std::endl;
-		return -1;
+		if (!memcmp(buf2,buf3,64)) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
 	}
 	std::cout << "PASS" << std::endl;
 
