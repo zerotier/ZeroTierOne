@@ -434,6 +434,7 @@ static void fe25519_pack(unsigned char r[32], const fe25519 *x)
     r[i] = y.v[i];
 }
 
+#if 0
 static int fe25519_iszero(const fe25519 *x)
 {
   int i;
@@ -445,6 +446,7 @@ static int fe25519_iszero(const fe25519 *x)
     r &= equal(t.v[i],0);
   return r;
 }
+#endif
 
 static int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
 {
@@ -764,11 +766,13 @@ static void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
   barrett_reduce(r, t);
 }
 
+#if 0
 static void shortsc25519_from16bytes(shortsc25519 *r, const unsigned char x[16])
 {
   int i;
   for(i=0;i<16;i++) r->v[i] = x[i];
 }
+#endif
 
 static void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 {
@@ -778,6 +782,7 @@ static void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
   barrett_reduce(r, t);
 }
 
+#if 0
 static void sc25519_from_shortsc(sc25519 *r, const shortsc25519 *x)
 {
   int i;
@@ -786,6 +791,7 @@ static void sc25519_from_shortsc(sc25519 *r, const shortsc25519 *x)
   for(i=0;i<16;i++)
     r->v[16+i] = 0;
 }
+#endif
 
 static void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 {
@@ -793,6 +799,7 @@ static void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
   for(i=0;i<32;i++) r[i] = x->v[i];
 }
 
+#if 0
 static int sc25519_iszero_vartime(const sc25519 *x)
 {
   int i;
@@ -800,7 +807,9 @@ static int sc25519_iszero_vartime(const sc25519 *x)
     if(x->v[i] != 0) return 0;
   return 1;
 }
+#endif
 
+#if 0
 static int sc25519_isshort_vartime(const sc25519 *x)
 {
   int i;
@@ -808,7 +817,9 @@ static int sc25519_isshort_vartime(const sc25519 *x)
     if(x->v[i] != 0) return 0;
   return 1;
 }
+#endif
 
+#if 0
 static int sc25519_lt_vartime(const sc25519 *x, const sc25519 *y)
 {
   int i;
@@ -819,6 +830,7 @@ static int sc25519_lt_vartime(const sc25519 *x, const sc25519 *y)
   }
   return 0;
 }
+#endif
 
 static void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
@@ -833,6 +845,7 @@ static void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
   reduce_add_sub(r);
 }
 
+#if 0
 static void sc25519_sub_nored(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
   crypto_uint32 b = 0;
@@ -845,6 +858,7 @@ static void sc25519_sub_nored(sc25519 *r, const sc25519 *x, const sc25519 *y)
     b = (t >> 8) & 1;
   }
 }
+#endif
 
 static void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
@@ -867,12 +881,14 @@ static void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
   barrett_reduce(r, t);
 }
 
+#if 0
 static void sc25519_mul_shortsc(sc25519 *r, const sc25519 *x, const shortsc25519 *y)
 {
   sc25519 t;
   sc25519_from_shortsc(&t, y);
   sc25519_mul(r, x, &t);
 }
+#endif
 
 static void sc25519_window3(signed char r[85], const sc25519 *s)
 {
@@ -911,6 +927,7 @@ static void sc25519_window3(signed char r[85], const sc25519 *s)
   r[84] += carry;
 }
 
+#if 0
 static void sc25519_window5(signed char r[51], const sc25519 *s)
 {
   char carry;
@@ -947,6 +964,7 @@ static void sc25519_window5(signed char r[51], const sc25519 *s)
   }
   r[50] += carry;
 }
+#endif
 
 static void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
 {
@@ -2048,6 +2066,7 @@ static void ge25519_pack(unsigned char r[32], const ge25519_p3 *p)
   r[31] ^= fe25519_getparity(&tx) << 7;
 }
 
+#if 0
 static int ge25519_isneutral_vartime(const ge25519_p3 *p)
 {
   int ret = 1;
@@ -2055,12 +2074,14 @@ static int ge25519_isneutral_vartime(const ge25519_p3 *p)
   if(!fe25519_iseq_vartime(&p->y, &p->z)) ret = 0;
   return ret;
 }
+#endif
 
 /* computes [s1]p1 + [s2]p2 */
 static void ge25519_double_scalarmult_vartime(ge25519_p3 *r, const ge25519_p3 *p1, const sc25519 *s1, const ge25519_p3 *p2, const sc25519 *s2)
 {
   ge25519_p1p1 tp1p1;
   ge25519_p3 pre[16];
+  char *pre5 = (char *)(&(pre[5])); // eliminate type punning warning
   unsigned char b[127];
   int i;
 
@@ -2075,7 +2096,7 @@ static void ge25519_double_scalarmult_vartime(ge25519_p3 *r, const ge25519_p3 *p
   add_p1p1(&tp1p1,&pre[3], &pre[4]);      p1p1_to_p3( &pre[7], &tp1p1); /* 01 11 */
   dbl_p1p1(&tp1p1,(ge25519_p2 *)p2);      p1p1_to_p3( &pre[8], &tp1p1); /* 10 00 */
   add_p1p1(&tp1p1,&pre[1], &pre[8]);      p1p1_to_p3( &pre[9], &tp1p1); /* 10 01 */
-  dbl_p1p1(&tp1p1,(ge25519_p2 *)&pre[5]); p1p1_to_p3(&pre[10], &tp1p1); /* 10 10 */
+  dbl_p1p1(&tp1p1,(ge25519_p2 *)pre5);    p1p1_to_p3(&pre[10], &tp1p1); /* 10 10 */
   add_p1p1(&tp1p1,&pre[3], &pre[8]);      p1p1_to_p3(&pre[11], &tp1p1); /* 10 11 */
   add_p1p1(&tp1p1,&pre[4], &pre[8]);      p1p1_to_p3(&pre[12], &tp1p1); /* 11 00 */
   add_p1p1(&tp1p1,&pre[1],&pre[12]);      p1p1_to_p3(&pre[13], &tp1p1); /* 11 01 */
@@ -2312,7 +2333,7 @@ void C25519::sign(const C25519::Pair &mine,const void *msg,unsigned int len,void
   unsigned char extsk[64];
   unsigned char hmg[crypto_hash_sha512_BYTES];
   unsigned char hram[crypto_hash_sha512_BYTES];
-  unsigned char *sig = (unsigned char *)signature; // 96 bytes
+  unsigned char *sig = (unsigned char *)signature;
   unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 
   SHA512::hash(digest,msg,len);
@@ -2355,9 +2376,32 @@ void C25519::sign(const C25519::Pair &mine,const void *msg,unsigned int len,void
 bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len,const void *signature)
   throw()
 {
+  unsigned char t2[32];
+  ge25519 get1, get2;
+  sc25519 schram, scs;
+  unsigned char hram[crypto_hash_sha512_BYTES];
+  unsigned char m[96];
   unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
+  const unsigned char *sig = (const unsigned char *)signature;
 
+  // First check the message's integrity
   SHA512::hash(digest,msg,len);
+  if (!Utils::secureEq(sig + 64,digest,32))
+    return false;
+
+  if (ge25519_unpackneg_vartime(&get1,their.data + 32))
+    return false;
+
+  get_hram(hram,sig,their.data + 32,m,96);
+
+  sc25519_from64bytes(&schram, hram);
+
+  sc25519_from32bytes(&scs, sig+32);
+
+  ge25519_double_scalarmult_vartime(&get2, &get1, &schram, &ge25519_base, &scs);
+  ge25519_pack(t2, &get2);
+
+  return Utils::secureEq(sig,t2,32);
 }
 
 } // namespace ZeroTier

@@ -112,12 +112,48 @@ static int testCrypto()
 		C25519::agree(p2,p1.pub,buf2,64);
 		C25519::agree(p3,p1.pub,buf3,64);
 		if (memcmp(buf1,buf2,64)) {
-			std::cout << "FAIL" << std::endl;
+			std::cout << "FAIL (1)" << std::endl;
 			return -1;
 		}
 		if (!memcmp(buf2,buf3,64)) {
 			std::cout << "FAIL (2)" << std::endl;
 			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
+	C25519::Pair didntSign = C25519::generate();
+	for(unsigned int i=0;i<10;++i) {
+		C25519::Pair p1 = C25519::generate();
+		for(unsigned int k=0;k<sizeof(buf1);++k)
+			buf1[k] = (unsigned char)rand();
+		C25519::Signature sig = C25519::sign(p1,buf1,sizeof(buf1));
+		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
+			std::cout << "FAIL (1)" << std::endl;
+			return -1;
+		}
+		++buf1[17];
+		if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
+		--buf1[17];
+		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
+			std::cout << "FAIL (3)" << std::endl;
+			return -1;
+		}
+		if (C25519::verify(didntSign.pub,buf1,sizeof(buf1),sig)) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
+		for(unsigned int k=0;k<64;++k) {
+			C25519::Signature sig2(sig);
+			sig2.data[rand() % sig2.size()] ^= (unsigned char)(1 << (rand() & 7));
+			if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
+				std::cout << "FAIL (5)" << std::endl;
+				return -1;
+			}
 		}
 	}
 	std::cout << "PASS" << std::endl;
