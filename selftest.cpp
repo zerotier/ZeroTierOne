@@ -53,8 +53,7 @@
 #include "node/EthernetTap.hpp"
 #include "node/SHA512.hpp"
 #include "node/C25519.hpp"
-
-#include <openssl/rand.h>
+#include "node/Poly1305.hpp"
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -62,49 +61,47 @@
 
 using namespace ZeroTier;
 
-// ---------------------------------------------------------------------------
-// Override libcrypto default RAND_ with Utils::getSecureRandom(), which uses
-// a system strong random source. This is because OpenSSL libcrypto's default
-// RAND_ implementation uses uninitialized memory as one of its entropy
-// sources, which plays havoc with all kinds of debuggers and auditing tools.
-
-static void _zeroTier_rand_cleanup() {}
-static void _zeroTier_rand_add(const void *buf, int num, double add_entropy) {}
-static int _zeroTier_rand_status() { return 1; }
-static void _zeroTier_rand_seed(const void *buf, int num) {}
-static int _zeroTier_rand_bytes(unsigned char *buf, int num)
-{
-	Utils::getSecureRandom(buf,num);
-	return 1;
-}
-static RAND_METHOD _zeroTierRandMethod = {
-	_zeroTier_rand_seed,
-	_zeroTier_rand_bytes,
-	_zeroTier_rand_cleanup,
-	_zeroTier_rand_add,
-	_zeroTier_rand_bytes,
-	_zeroTier_rand_status
-};
-static void _initLibCrypto()
-{
-	RAND_set_rand_method(&_zeroTierRandMethod);
-}
-
-// ---------------------------------------------------------------------------
+#include "selftest-crypto-vectors.hpp"
 
 static unsigned char fuzzbuf[1048576];
-
-static const unsigned char s20TV0Key[32] = { 0x0f,0x62,0xb5,0x08,0x5b,0xae,0x01,0x54,0xa7,0xfa,0x4d,0xa0,0xf3,0x46,0x99,0xec,0x3f,0x92,0xe5,0x38,0x8b,0xde,0x31,0x84,0xd7,0x2a,0x7d,0xd0,0x23,0x76,0xc9,0x1c };
-static const unsigned char s20TV0Iv[8] = { 0x28,0x8f,0xf6,0x5d,0xc4,0x2b,0x92,0xf9 };
-static const unsigned char s20TV0Ks[64] = { 0x5e,0x5e,0x71,0xf9,0x01,0x99,0x34,0x03,0x04,0xab,0xb2,0x2a,0x37,0xb6,0x62,0x5b,0xf8,0x83,0xfb,0x89,0xce,0x3b,0x21,0xf5,0x4a,0x10,0xb8,0x10,0x66,0xef,0x87,0xda,0x30,0xb7,0x76,0x99,0xaa,0x73,0x79,0xda,0x59,0x5c,0x77,0xdd,0x59,0x54,0x2d,0xa2,0x08,0xe5,0x95,0x4f,0x89,0xe4,0x0e,0xb7,0xaa,0x80,0xa8,0x4a,0x61,0x76,0x66,0x3f };
 
 static int testCrypto()
 {
 	unsigned char buf1[16384];
 	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
+	std::cout << "[crypto] Testing C25519 against test vectors... "; std::cout.flush();
+	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
+		C25519::Pair p1,p2;
+		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,p1.pub.size());
+		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,p1.priv.size());
+		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,p2.pub.size());
+		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,p2.priv.size());
+		C25519::agree(p1,p2.pub,buf1,64);
+		C25519::agree(p2,p1.pub,buf2,64);
+		if (memcmp(buf1,buf2,64)) {
+			std::cout << "FAIL (1)" << std::endl;
+			return -1;
+		}
+		if (memcmp(buf1,C25519_TEST_VECTORS[k].agreement,64)) {
+			std::cout << "FAIL (2)" << std::endl;
+			return -1;
+		}
+		C25519::Signature sig1 = C25519::sign(p1,buf1,64);
+		if (memcmp(sig1.data,C25519_TEST_VECTORS[k].agreementSignedBy1,64)) {
+			std::cout << "FAIL (3)" << std::endl;
+			return -1;
+		}
+		C25519::Signature sig2 = C25519::sign(p2,buf1,64);
+		if (memcmp(sig2.data,C25519_TEST_VECTORS[k].agreementSignedBy2,64)) {
+			std::cout << "FAIL (4)" << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
 	std::cout << "[crypto] Testing C25519 ECC key agreement... "; std::cout.flush();
-	for(unsigned int i=0;i<100;++i) {
+	for(unsigned int i=0;i<50;++i) {
 		C25519::Pair p1 = C25519::generate();
 		C25519::Pair p2 = C25519::generate();
 		C25519::Pair p3 = C25519::generate();
@@ -410,7 +407,43 @@ int main(int argc,char **argv)
 {
 	int r = 0;
 
-	_initLibCrypto();
+	// Code to generate the C25519 test vectors -- did this once and then
+	// put these up top so that we can ensure that every platform produces
+	// the same result.
+	/*
+	for(int k=0;k<32;++k) {
+		C25519::Pair p1 = C25519::generate();
+		C25519::Pair p2 = C25519::generate();
+		unsigned char agg[64];
+		C25519::agree(p1,p2.pub,agg,64);
+		C25519::Signature sig1 = C25519::sign(p1,agg,64);
+		C25519::Signature sig2 = C25519::sign(p2,agg,64);
+		printf("{{");
+		for(int i=0;i<64;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p1.pub.data[i]);
+		printf("},{");
+		for(int i=0;i<64;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p1.priv.data[i]);
+		printf("},{");
+		for(int i=0;i<64;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p2.pub.data[i]);
+		printf("},{");
+		for(int i=0;i<64;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p2.priv.data[i]);
+		printf("},{");
+		for(int i=0;i<64;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)agg[i]);
+		printf("},{");
+		for(int i=0;i<96;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)sig1.data[i]);
+		printf("},{");
+		for(int i=0;i<96;++i)
+			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)sig2.data[i]);
+		printf("}}\n");
+	}
+	exit(0);
+	*/
+
 	srand((unsigned int)time(0));
 
 	r |= testCrypto();

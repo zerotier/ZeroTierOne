@@ -138,7 +138,7 @@ static int crypto_onetimeauth(unsigned char *out,const unsigned char *in,unsigne
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-void Poly1305::computeAuthCode(void *auth,const void *data,unsigned int len,const void *key)
+void Poly1305::mac(void *auth,const void *data,unsigned int len,const void *key)
 	throw()
 {
 	crypto_onetimeauth((unsigned char *)auth,(const unsigned char *)data,len,(const unsigned char *)key);

@@ -30,8 +30,16 @@
 
 namespace ZeroTier {
 
+#define ZT_POLY1305_KEY_LEN 32
+#define ZT_POLY1305_MAC_LEN 16
+
 /**
  * Poly1305 one-time authentication code
+ *
+ * This takes a one-time-use 32-byte key and generates a 16-byte message
+ * authentication code. The key must never be re-used for a different
+ * message. Normally this is done by taking a base key and mangling it
+ * using a nonce and possibly other data, as in Packet.
  */
 class Poly1305
 {
@@ -44,7 +52,7 @@ public:
 	 * @param len Length of data to authenticate in bytes
 	 * @param key 32-byte one-time use key to authenticate data (must not be reused)
 	 */
-	static void computeAuthCode(void *auth,const void *data,unsigned int len,const void *key)
+	static void mac(void *auth,const void *data,unsigned int len,const void *key)
 		throw();
 };
 

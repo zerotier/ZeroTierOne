@@ -2151,6 +2151,10 @@ static void get_hram(unsigned char *hram, const unsigned char *sm, const unsigne
   SHA512::hash(hram,playground,(unsigned int)smlen);
 }
 
+// This is the original sign and verify code -- the versions in sign() and
+// verify() below the fold are slightly modified in terms of how they behave
+// in relation to the message, but the algorithms are the same.
+
 #if 0
 int crypto_sign_keypair(
     unsigned char *pk,
