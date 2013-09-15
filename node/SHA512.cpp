@@ -30,6 +30,7 @@
 #include <string.h>
 
 #include "SHA512.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -47,6 +48,10 @@ Public domain.
 
 #define uint64 uint64_t
 
+#define load_bigendian(x) Utils::ntoh(*((const uint64_t *)(x)))
+#define store_bigendian(x,u) (*((uint64_t *)(x)) = Utils::hton((u)))
+
+#if 0
 static uint64 load_bigendian(const unsigned char *x)
 {
   return
@@ -72,6 +77,7 @@ static void store_bigendian(unsigned char *x,uint64 u)
   x[1] = u; u >>= 8;
   x[0] = u;
 }
+#endif
 
 #define SHR(x,c) ((x) >> (c))
 #define ROTR(x,c) (((x) >> (c)) | ((x) << (64 - (c))))
