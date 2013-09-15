@@ -52,7 +52,7 @@ public:
 	 * @param len Length of data to authenticate in bytes
 	 * @param key 32-byte one-time use key to authenticate data (must not be reused)
 	 */
-	static void mac(void *auth,const void *data,unsigned int len,const void *key)
+	static void compute(void *auth,const void *data,unsigned int len,const void *key)
 		throw();
 };
 

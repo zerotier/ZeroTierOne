@@ -70,7 +70,28 @@ static int testCrypto()
 	unsigned char buf1[16384];
 	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
-	std::cout << "[crypto] Testing C25519 against test vectors... "; std::cout.flush();
+	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
+	SHA512::hash(buf1,sha512TV0Input,strlen(sha512TV0Input));
+	if (memcmp(buf1,sha512TV0Digest,64)) {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[crypto] Testing Poly1305... "; std::cout.flush();
+	Poly1305::compute(buf1,poly1305TV0Input,sizeof(poly1305TV0Input),poly1305TV0Key);
+	if (memcmp(buf1,poly1305TV0Tag,16)) {
+		std::cout << "FAIL (1)" << std::endl;
+		return -1;
+	}
+	Poly1305::compute(buf1,poly1305TV1Input,sizeof(poly1305TV1Input),poly1305TV1Key);
+	if (memcmp(buf1,poly1305TV1Tag,16)) {
+		std::cout << "FAIL (2)" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
 		C25519::Pair p1,p2;
 		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,p1.pub.size());
