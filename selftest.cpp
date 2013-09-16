@@ -38,13 +38,10 @@
 #include "node/Constants.hpp"
 #include "node/RuntimeEnvironment.hpp"
 #include "node/InetAddress.hpp"
-#include "node/EllipticCurveKey.hpp"
-#include "node/EllipticCurveKeyPair.hpp"
 #include "node/Utils.hpp"
 #include "node/Identity.hpp"
 #include "node/Packet.hpp"
 #include "node/Salsa20.hpp"
-#include "node/HMAC.hpp"
 #include "node/MAC.hpp"
 #include "node/Peer.hpp"
 #include "node/Condition.hpp"
@@ -322,9 +319,9 @@ static int testPacket()
 		return -1;
 	}
 
-	a.hmacSet(hmacKey);
-	if (!a.hmacVerify(hmacKey)) {
-		std::cout << "FAIL (hmacVerify)" << std::endl;
+	a.macSet(hmacKey);
+	if (!a.macVerify(hmacKey)) {
+		std::cout << "FAIL (macVerify)" << std::endl;
 		return -1;
 	}
 
@@ -334,19 +331,6 @@ static int testPacket()
 
 static int testOther()
 {
-	std::cout << "[other] Testing Base64 encode/decode... "; std::cout.flush();
-	for(unsigned int k=0;k<1000;++k) {
-		unsigned int flen = (rand() % 8194) + 1;
-		for(unsigned int i=0;i<flen;++i)
-			fuzzbuf[i] = (unsigned char)(rand() & 0xff);
-		std::string dec = Utils::base64Decode(Utils::base64Encode(fuzzbuf,flen));
-		if ((dec.length() != flen)||(memcmp(dec.data(),fuzzbuf,dec.length()))) {
-			std::cout << "FAILED!" << std::endl;
-			return -1;
-		}
-	}
-	std::cout << "PASS" << std::endl;
-
 	std::cout << "[other] Testing hex encode/decode... "; std::cout.flush();
 	for(unsigned int k=0;k<1000;++k) {
 		unsigned int flen = (rand() % 8194) + 1;
@@ -365,7 +349,7 @@ static int testOther()
 	std::cout << "[other] Testing command bus encode/decode... "; std::cout.flush();
 	try {
 		static char key[32] = { 0 };
-		for(unsigned int k=0;k<1000;++k) {
+		for(unsigned int k=0;k<100;++k) {
 			std::vector<std::string> original;
 			for(unsigned int i=0,j=rand() % 256,l=(rand() % 1024)+1;i<j;++i)
 				original.push_back(std::string(l,'x'));
@@ -395,7 +379,7 @@ static int testOther()
 	std::cout << "PASS" << std::endl;
 
 	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
-	for(int k=0;k<10000;++k) {
+	for(int k=0;k<1000;++k) {
 		Dictionary a,b;
 		int nk = rand() % 32;
 		for(int q=0;q<nk;++q) {

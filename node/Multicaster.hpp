@@ -31,10 +31,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <openssl/sha.h>
-
 #include <utility>
 #include <algorithm>
+#include <stdexcept>
 #include <map>
 #include <set>
 #include <vector>
@@ -51,6 +50,7 @@
 #include "BloomFilter.hpp"
 #include "Identity.hpp"
 #include "CMWC4096.hpp"
+#include "C25519.hpp"
 
 // Maximum sample size to pick during choice of multicast propagation peers
 #define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE (ZT_MULTICAST_PROPAGATION_BREADTH * 8)
@@ -92,13 +92,20 @@ public:
 	 * @param etherType 16-bit ethernet type
 	 * @param data Ethernet frame data
 	 * @param len Length of frame
-	 * @return ECDSA signature
+	 * @return Signature of packet data and attributes
+	 * @throws std::runtime_error Cannot sign, e.g. identity has no private key
 	 */
-	static inline std::string signMulticastPacket(const Identity &id,uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len)
+	static inline C25519::Signature signMulticastPacket(const Identity &id,uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len)
+		throw(std::runtime_error)
 	{
-		unsigned char digest[32];
-		_hashMulticastPacketForSig(nwid,from,to,etherType,data,len,digest);
-		return id.sign(digest);
+		char tmp[65536];
+		*((uint64_t *)tmp) = Utils::hton(nwid);
+		memcpy(tmp + 8,from.data,6);
+		memcpy(tmp + 14,to.mac().data,6);
+		*((uint32_t *)(tmp + 20)) = Utils::hton(to.adi());
+		*((uint16_t *)(tmp + 24)) = Utils::hton((uint16_t)etherType);
+		memcpy(tmp + 26,data,std::min((unsigned int)(sizeof(tmp) - 26),len)); // min() is a sanity check here, no packet is that big
+		return id.sign(tmp,len + 26);
 	}
 
 	/**
@@ -111,15 +118,20 @@ public:
 	 * @param etherType 16-bit ethernet type
 	 * @param data Ethernet frame data
 	 * @param len Length of frame
-	 * @param signature ECDSA signature
+	 * @param signature Signature
 	 * @param siglen Length of signature in bytes
-	 * @return ECDSA signature
+	 * @return True if signature verification was successful
 	 */
 	static bool verifyMulticastPacket(const Identity &id,uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,const void *signature,unsigned int siglen)
 	{
-		unsigned char digest[32];
-		_hashMulticastPacketForSig(nwid,from,to,etherType,data,len,digest);
-		return id.verifySignature(digest,signature,siglen);
+		char tmp[65536];
+		*((uint64_t *)tmp) = Utils::hton(nwid);
+		memcpy(tmp + 8,from.data,6);
+		memcpy(tmp + 14,to.mac().data,6);
+		*((uint32_t *)(tmp + 20)) = Utils::hton(to.adi());
+		*((uint16_t *)(tmp + 24)) = Utils::hton((uint16_t)etherType);
+		memcpy(tmp + 26,data,std::min((unsigned int)(sizeof(tmp) - 26),len)); // min() is a sanity check here, no packet is that big
+		return id.verify(tmp,len + 26,signature,siglen);
 	}
 
 	/**
@@ -348,29 +360,6 @@ private:
 			return (p1->lastUnicastFrame() > p2->lastUnicastFrame());
 		}
 	};
-
-	static inline void _hashMulticastPacketForSig(uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,unsigned char *digest)
-		throw()
-	{
-		unsigned char zero = 0;
-		SHA256_CTX sha;
-		SHA256_Init(&sha);
-		uint64_t _nwid = Utils::hton(nwid);
-		SHA256_Update(&sha,(unsigned char *)&_nwid,sizeof(_nwid));
-		SHA256_Update(&sha,&zero,1);
-		SHA256_Update(&sha,(unsigned char *)from.data,6);
-		SHA256_Update(&sha,&zero,1);
-		SHA256_Update(&sha,(unsigned char *)to.mac().data,6);
-		SHA256_Update(&sha,&zero,1);
-		uint32_t _adi = Utils::hton(to.adi());
-		SHA256_Update(&sha,(unsigned char *)&_adi,sizeof(_adi));
-		SHA256_Update(&sha,&zero,1);
-		uint16_t _etype = Utils::hton((uint16_t)etherType);
-		SHA256_Update(&sha,(unsigned char *)&_etype,sizeof(_etype));
-		SHA256_Update(&sha,&zero,1);
-		SHA256_Update(&sha,(unsigned char *)data,len);
-		SHA256_Final(digest,&sha);
-	}
 
 	// ring buffer: [0] - CRC, [1] - timestamp
 	uint64_t _multicastHistory[ZT_MULTICAST_DEDUP_HISTORY_LENGTH][2];

@@ -49,44 +49,12 @@
 #include <signal.h>
 #endif
 
-#include <openssl/rand.h>
-
 #include "node/Constants.hpp"
 #include "node/Defaults.hpp"
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
 
 using namespace ZeroTier;
-
-// ---------------------------------------------------------------------------
-// Override libcrypto default RAND_ with Utils::getSecureRandom(), which uses
-// a system strong random source. This is because OpenSSL libcrypto's default
-// RAND_ implementation uses uninitialized memory as one of its entropy
-// sources, which plays havoc with all kinds of debuggers and auditing tools.
-
-static void _zeroTier_rand_cleanup() {}
-static void _zeroTier_rand_add(const void *buf, int num, double add_entropy) {}
-static int _zeroTier_rand_status() { return 1; }
-static void _zeroTier_rand_seed(const void *buf, int num) {}
-static int _zeroTier_rand_bytes(unsigned char *buf, int num)
-{
-	Utils::getSecureRandom(buf,num);
-	return 1;
-}
-static RAND_METHOD _zeroTierRandMethod = {
-	_zeroTier_rand_seed,
-	_zeroTier_rand_bytes,
-	_zeroTier_rand_cleanup,
-	_zeroTier_rand_add,
-	_zeroTier_rand_bytes,
-	_zeroTier_rand_status
-};
-static void _initLibCrypto()
-{
-	RAND_set_rand_method(&_zeroTierRandMethod);
-}
-
-// ---------------------------------------------------------------------------
 
 static Node *node = (Node *)0;
 
@@ -144,8 +112,6 @@ int main(int argc,char **argv)
 	WSAStartup(MAKEWORD(2,2),&wsaData);
 	SetConsoleCtrlHandler(&_handlerRoutine,TRUE);
 #endif
-
-	_initLibCrypto();
 
 	const char *homeDir = (const char *)0;
 	for(int i=1;i<argc;++i) {

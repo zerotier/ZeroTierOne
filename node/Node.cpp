@@ -66,6 +66,7 @@
 #include "Mutex.hpp"
 #include "Multicaster.hpp"
 #include "CMWC4096.hpp"
+#include "SHA512.hpp"
 #include "Service.hpp"
 
 #ifdef __WINDOWS__
@@ -128,10 +129,11 @@ Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void 
 
 	// If socket fails to bind, there's a big problem like missing IPv4 stack
 	if (sock) {
-		SHA256_CTX sha;
-		SHA256_Init(&sha);
-		SHA256_Update(&sha,authToken,strlen(authToken));
-		SHA256_Final(impl->key,&sha);
+		{
+			unsigned int csk[64];
+			SHA512::hash(csk,authToken,strlen(authToken));
+			memcpy(impl->key,csk,32);
+		}
 
 		impl->sock = sock;
 		impl->resultHandler = resultHandler;

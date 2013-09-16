@@ -42,7 +42,6 @@
 #include "Demarc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "InetAddress.hpp"
-#include "EllipticCurveKey.hpp"
 #include "Packet.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
@@ -54,7 +53,7 @@
  */
 #define ZT_PEER_MAX_SERIALIZED_LENGTH ( \
 	64 + \
-	IDENTITY_MAX_BINARY_SERIALIZED_LENGTH + \
+	ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH + \
 	( ( \
 		(sizeof(uint64_t) * 4) + \
 		sizeof(uint16_t) + \

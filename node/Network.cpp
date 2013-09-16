@@ -30,8 +30,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include <openssl/sha.h>
-
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
 #include "Network.hpp"

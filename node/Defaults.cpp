@@ -52,6 +52,7 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	// Nothing special about a supernode... except that they are
 	// designated as such.
 
+#if 0
 	// cthulhu.zerotier.com - New York, New York, USA
 	addrs.clear();
 	if (!id.fromString("271ee006a0:1:AgGXs3I+9CWrEmGMxc50x3E+trwtaa2ZMXDU6ezz92fFJXzlhRKGUY/uAToHDdH9XiLxtcA+kUQAZdC4Dy2xtqXxjw==:QgH5Nlx4oWEGVrwhNocqem+3VNd4qzt7RLrmuvqZvKPRS9R70LJYJQLlKZj0ri55Pzg+Mlwy4a4nAgfnRAWA+TW6R0EjSmq72MG585XGNfWBVk3LxMvxlNWErnVNFr2BQS9yzVp4pRjPLdCW4RB3dwEHBUgJ78rwMxQ6IghVCl8CjkDapg=="))
@@ -72,6 +73,7 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.211.127.172",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
+#endif
 
 	return sn;
 }

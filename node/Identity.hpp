@@ -39,6 +39,8 @@
 #include "C25519.hpp"
 #include "Buffer.hpp"
 
+#define ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_SIGNATURE_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN)
+
 namespace ZeroTier {
 
 /**
@@ -149,6 +151,36 @@ public:
 	inline bool hasPrivate() const throw() { return (_privateKey != (C25519::Private *)0); }
 
 	/**
+	 * Sign a message with this identity (private key required)
+	 *
+	 * @param data Data to sign
+	 * @param len Length of data
+	 */
+	inline C25519::Signature sign(const void *data,unsigned int len) const
+		throw(std::runtime_error)
+	{
+		if (_privateKey)
+			return C25519::sign(*_privateKey,_publicKey,data,len);
+		throw std::runtime_error("sign() requires a private key");
+	}
+
+	/**
+	 * Verify a message signature against this identity
+	 *
+	 * @param data Data to check
+	 * @param len Length of data
+	 * @param signature Signature bytes
+	 * @param siglen Length of signature in bytes
+	 * @return True if signature validates and data integrity checks
+	 */
+	inline bool verify(const void *data,unsigned int len,const void *signature,unsigned int siglen) const
+	{
+		if (siglen != ZT_C25519_SIGNATURE_LEN)
+			return false;
+		return C25519::verify(_publicKey,data,len,signature);
+	}
+
+	/**
 	 * Shortcut method to perform key agreement with another identity
 	 *
 	 * This identity must have a private key. (Check hasPrivate())
@@ -193,8 +225,8 @@ public:
 		b.append(_publicKey.data,_publicKey.size());
 		b.append(_signature.data,_signature.size());
 		if ((_privateKey)&&(includePrivate)) {
-			b.append((unsigned char)_privateKey.size());
-			b.append(_privateKey.data,_privateKey.size());
+			b.append((unsigned char)_privateKey->size());
+			b.append(_privateKey->data,_privateKey->size());
 		} else b.append((unsigned char)0);
 	}
 
@@ -225,15 +257,15 @@ public:
 		if (b[p++] != IDENTITY_TYPE_C25519)
 			throw std::invalid_argument("Identity: deserialize(): unsupported identity type");
 
-		memcpy(_publicKey.data,field(p,_publicKey.size()),_publicKey.size());
+		memcpy(_publicKey.data,b.field(p,_publicKey.size()),_publicKey.size());
 		p += _publicKey.size();
-		memcpy(_signature.data,field(p,_signature.size()),_signature.size());
+		memcpy(_signature.data,b.field(p,_signature.size()),_signature.size());
 		p += _signature.size();
 
 		unsigned int privateKeyLength = b[p++];
 		if ((privateKeyLength)&&(privateKeyLength == ZT_C25519_PRIVATE_KEY_LEN)) {
 			_privateKey = new C25519::Private();
-			memcpy(_privateKey->data,field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
+			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
 			p += ZT_C25519_PRIVATE_KEY_LEN;
 		}
 

@@ -31,6 +31,7 @@
 #include <stdint.h>
 
 #include "Identity.hpp"
+#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -76,7 +77,7 @@ std::string Identity::toString(bool includePrivate) const
 	r.append(Utils::hex(_signature.data,_signature.size()));
 	if ((_privateKey)&&(includePrivate)) {
 		r.push_back(':');
-		r.append(Utils::hex(_privateKey.data,_privateKey.size()));
+		r.append(Utils::hex(_privateKey->data,_privateKey->size()));
 	}
 
 	return r;
@@ -129,8 +130,8 @@ bool Identity::fromString(const char *str)
 
 // These are fixed parameters and can't be changed without a new
 // identity type.
-#define ZT_IDENTITY_DERIVEADDRESS_DIGESTS 540672
-#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 4
+#define ZT_IDENTITY_DERIVEADDRESS_DIGESTS 2048
+#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 8
 
 Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 {

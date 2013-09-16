@@ -135,11 +135,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		if (!np)
 			return;
 
-		std::string signature(Multicaster::signMulticastPacket(_r->identity,network->id(),from,mg,etherType,data.data(),data.size()));
-		if (!signature.length()) {
-			TRACE("failure signing multicast message!");
-			return;
-		}
+		C25519::Signature signature(Multicaster::signMulticastPacket(_r->identity,network->id(),from,mg,etherType,data.data(),data.size()));
 
 		Packet outpTmpl(propPeers[0]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
 		outpTmpl.append((uint8_t)0);
@@ -152,9 +148,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		outpTmpl.append((uint8_t)0); // 0 hops
 		outpTmpl.append((uint16_t)etherType);
 		outpTmpl.append((uint16_t)data.size());
-		outpTmpl.append((uint16_t)signature.length());
+		outpTmpl.append((uint16_t)signature.size());
 		outpTmpl.append(data.data(),data.size());
-		outpTmpl.append(signature.data(),(unsigned int)signature.length());
+		outpTmpl.append(signature.data,(unsigned int)signature.size());
 		outpTmpl.compress();
 		send(outpTmpl,true);
 		for(unsigned int i=1;i<np;++i) {
