@@ -6,21 +6,16 @@ ARCH=$(shell uname -m)
 DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux" -DZT_TRACE
 
 # Uncomment for a release optimized build
-#CFLAGS=-Wall -O3 -fno-unroll-loops -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-#STRIP=strip --strip-all
+CFLAGS=-Wall -O3 -fno-unroll-loops -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+STRIP=strip --strip-all
 
 # Uncomment for a debug build
-CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE $(DEFS)
-STRIP=echo
+#CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE $(DEFS)
+#STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
-# We statically link against libcrypto because RedHat-derived distributions do
-# not ship the elliptic curve algorithms. If we didn't we'd have to build
-# separate binaries for the RedHat and Debian universes to distribute via
-# auto-update. This way we get one Linux binary for all systems of a given
-# architecture.
-LIBS=ext/bin/libcrypto/linux-$(ARCH)/libcrypto.a -lm -ldl
+LIBS=-lm
 
 include objects.mk
 

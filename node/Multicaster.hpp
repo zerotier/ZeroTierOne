@@ -99,10 +99,11 @@ public:
 		throw(std::runtime_error)
 	{
 		char tmp[65536];
-		*((uint64_t *)tmp) = Utils::hton(nwid);
+		void *tmp2 = (void *)tmp;
+		*((uint64_t *)tmp2) = Utils::hton((uint64_t)nwid);
 		memcpy(tmp + 8,from.data,6);
 		memcpy(tmp + 14,to.mac().data,6);
-		*((uint32_t *)(tmp + 20)) = Utils::hton(to.adi());
+		*((uint32_t *)(tmp + 20)) = Utils::hton((uint32_t)to.adi());
 		*((uint16_t *)(tmp + 24)) = Utils::hton((uint16_t)etherType);
 		memcpy(tmp + 26,data,std::min((unsigned int)(sizeof(tmp) - 26),len)); // min() is a sanity check here, no packet is that big
 		return id.sign(tmp,len + 26);
@@ -125,7 +126,8 @@ public:
 	static bool verifyMulticastPacket(const Identity &id,uint64_t nwid,const MAC &from,const MulticastGroup &to,unsigned int etherType,const void *data,unsigned int len,const void *signature,unsigned int siglen)
 	{
 		char tmp[65536];
-		*((uint64_t *)tmp) = Utils::hton(nwid);
+		void *tmp2 = (void *)tmp;
+		*((uint64_t *)tmp2) = Utils::hton(nwid);
 		memcpy(tmp + 8,from.data,6);
 		memcpy(tmp + 14,to.mac().data,6);
 		*((uint32_t *)(tmp + 20)) = Utils::hton(to.adi());

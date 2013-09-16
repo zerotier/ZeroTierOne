@@ -32,6 +32,7 @@
 
 #include "Identity.hpp"
 #include "SHA512.hpp"
+#include "Salsa20.hpp"
 
 namespace ZeroTier {
 
@@ -130,8 +131,8 @@ bool Identity::fromString(const char *str)
 
 // These are fixed parameters and can't be changed without a new
 // identity type.
-#define ZT_IDENTITY_DERIVEADDRESS_DIGESTS 2048
-#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 8
+#define ZT_IDENTITY_DERIVEADDRESS_MEMORY 16777216
+#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 32
 
 Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 {
@@ -149,24 +150,26 @@ Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 	 * to similar concepts.
 	 */
 
-	unsigned char finalDigest[ZT_SHA512_DIGEST_LEN];
-	unsigned char *digests = new unsigned char[ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS];
+	unsigned char *ram = new unsigned char[ZT_IDENTITY_DERIVEADDRESS_MEMORY];
+	for(unsigned int i=0;i<ZT_IDENTITY_DERIVEADDRESS_MEMORY;++i)
+		ram[i] = ((const unsigned char *)keyBytes)[i % keyLen];
 
-	SHA512::hash(finalDigest,keyBytes,keyLen);
-	for(unsigned int i=0;i<(unsigned int)sizeof(digests);++i)
-		digests[i] = ((const unsigned char *)keyBytes)[i % keyLen];
+	unsigned char salsaKey[ZT_SHA512_DIGEST_LEN];
+	SHA512::hash(salsaKey,keyBytes,keyLen);
 
+	uint64_t nonce = 0;
 	for(unsigned int r=0;r<ZT_IDENTITY_DERIVEADDRESS_ROUNDS;++r) {
-		for(unsigned int i=0;i<(ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS);++i)
-			digests[i] ^= finalDigest[i % ZT_SHA512_DIGEST_LEN];
-		for(unsigned int d=0;d<ZT_IDENTITY_DERIVEADDRESS_DIGESTS;++d)
-			SHA512::hash(digests + (ZT_SHA512_DIGEST_LEN * d),digests,ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS);
-		SHA512::hash(finalDigest,digests,ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS);
+		nonce = Utils::crc64(nonce,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
+		Salsa20 s20(salsaKey,256,&nonce);
+		s20.encrypt(ram,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
 	}
 
-	delete [] digests;
+	unsigned char finalDigest[ZT_SHA512_DIGEST_LEN];
+	SHA512::hash(finalDigest,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
 
-	return Address(finalDigest,ZT_ADDRESS_LENGTH); // first 5 bytes of dig[]
+	delete [] ram;
+
+	return Address(finalDigest,ZT_ADDRESS_LENGTH);
 }
 
 } // namespace ZeroTier
