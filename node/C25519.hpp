@@ -77,13 +77,18 @@ public:
 	 * Actual key bytes are generated from one or more SHA-512 digests of
 	 * the raw result of key agreement.
 	 *
-	 * @param mine My key pair including secret
+	 * @param mine My private key
 	 * @param their Their public key
 	 * @param keybuf Buffer to fill
 	 * @param keylen Number of key bytes to generate
 	 */
-	static void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen)
+	static void agree(const Private &mine,const Public &their,void *keybuf,unsigned int keylen)
 		throw();
+	static inline void agree(const Pair &mine,const Public &their,void *keybuf,unsigned int keylen)
+		throw()
+	{
+		agree(mine.priv,their,keybuf,keylen);
+	}
 
 	/**
 	 * Sign a message with a sender's key pair
@@ -98,27 +103,41 @@ public:
 	 * produces a signature of fixed 96-byte length based on the hash of an
 	 * arbitrary-length message.
 	 *
-	 * @param Key pair to sign with
+	 * @param myPrivate My private key
+	 * @param myPublic My public key
 	 * @param msg Message to sign
 	 * @param len Length of message in bytes
 	 * @param signature Buffer to fill with signature -- MUST be 96 bytes in length
 	 */
-	static void sign(const Pair &mine,const void *msg,unsigned int len,void *signature)
+	static void sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len,void *signature)
 		throw();
+	static inline void sign(const Pair &mine,const void *msg,unsigned int len,void *signature)
+		throw()
+	{
+		sign(mine.priv,mine.pub,msg,len,signature);
+	}
 
 	/**
 	 * Sign a message with a sender's key pair
 	 *
-	 * @param Key pair to sign with
+	 * @param myPrivate My private key
+	 * @param myPublic My public key
 	 * @param msg Message to sign
 	 * @param len Length of message in bytes
 	 * @return Signature
 	 */
-	static Signature sign(const Pair &mine,const void *msg,unsigned int len)
+	static inline Signature sign(const Private &myPrivate,const Public &myPublic,const void *msg,unsigned int len)
 		throw()
 	{
 		Signature sig;
-		sign(mine,msg,len,sig.data);
+		sign(myPrivate,myPublic,msg,len,sig.data);
+		return sig;
+	}
+	static inline Signature sign(const Pair &mine,const void *msg,unsigned int len)
+		throw()
+	{
+		Signature sig;
+		sign(mine.priv,mine.pub,msg,len,sig.data);
 		return sig;
 	}
 

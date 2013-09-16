@@ -2311,13 +2311,13 @@ C25519::Pair C25519::generate()
 	return kp;
 }
 
-void C25519::agree(const C25519::Pair &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
+void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
   throw()
 {
 	unsigned char rawkey[32];
 	unsigned char digest[64];
 
-	crypto_scalarmult(rawkey,mine.priv.data,their.data);
+	crypto_scalarmult(rawkey,mine.data,their.data);
 	SHA512::hash(digest,rawkey,32);
 	for(unsigned int i=0,k=0;i<keylen;) {
 		if (k == 64) {
@@ -2328,7 +2328,7 @@ void C25519::agree(const C25519::Pair &mine,const C25519::Public &their,void *ke
 	}
 }
 
-void C25519::sign(const C25519::Pair &mine,const void *msg,unsigned int len,void *signature)
+void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
   throw()
 {
   sc25519 sck, scs, scsk;
@@ -2343,7 +2343,7 @@ void C25519::sign(const C25519::Pair &mine,const void *msg,unsigned int len,void
 
   SHA512::hash(digest,msg,len);
 
-  SHA512::hash(extsk,mine.priv.data + 32,32);
+  SHA512::hash(extsk,myPrivate.data + 32,32);
   extsk[0] &= 248;
   extsk[31] &= 127;
   extsk[31] |= 64;
@@ -2365,7 +2365,7 @@ void C25519::sign(const C25519::Pair &mine,const void *msg,unsigned int len,void
   for(unsigned int i=0;i<32;i++)
     sig[i] = r[i];
 
-  get_hram(hram,sig,mine.pub.data + 32,sig,96);
+  get_hram(hram,sig,myPublic.data + 32,sig,96);
 
   sc25519_from64bytes(&scs, hram);
   sc25519_from32bytes(&scsk, extsk);

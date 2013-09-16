@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 
-INCLUDES=-Iext/bin/libcrypto/include
+INCLUDES=
 DEFS=-DZT_ARCH="x86_combined" -DZT_OSNAME="mac" -DZT_TRACE
 
 # Uncomment for a release optimized universal binary build

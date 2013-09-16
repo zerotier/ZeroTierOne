@@ -5,10 +5,8 @@ OBJS=\
 	node/C25519.o \
 	node/Defaults.o \
 	node/Demarc.o \
-	node/EllipticCurveKeyPair.o \
 	node/EthernetTap.o \
 	node/Filter.o \
-	node/HMAC.o \
 	node/Identity.o \
 	node/InetAddress.o \
 	node/Logger.o \

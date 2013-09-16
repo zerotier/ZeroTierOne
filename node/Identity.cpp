@@ -30,130 +30,60 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <openssl/sha.h>
-
 #include "Identity.hpp"
-#include "Salsa20.hpp"
-#include "HMAC.hpp"
-#include "Utils.hpp"
 
 namespace ZeroTier {
 
 void Identity::generate()
 {
-	delete [] _keyPair;
-
-	// Generate key pair and derive address
+	C25519::Pair kp;
 	do {
-		_keyPair = new EllipticCurveKeyPair();
-		_keyPair->generate();
-		_address = deriveAddress(_keyPair->pub().data(),_keyPair->pub().size());
+		kp = C25519::generate();
+		_address = deriveAddress(kp.pub.data,kp.pub.size());
 	} while (_address.isReserved());
-	_publicKey = _keyPair->pub();
 
-	// Sign address, key type, and public key with private key (with a zero
-	// byte between each field). Including this extra data means simply editing
-	// the address of an identity will be detected as its signature will be
-	// invalid. Of course, deep verification of address/key relationship is
-	// required to cover the more elaborate address claim jump attempt case.
-	unsigned char atmp[ZT_ADDRESS_LENGTH];
-	_address.copyTo(atmp,ZT_ADDRESS_LENGTH);
-	SHA256_CTX sha;
-	unsigned char dig[32];
-	unsigned char idtype = IDENTITY_TYPE_NIST_P_521,zero = 0;
-	SHA256_Init(&sha);
-	SHA256_Update(&sha,atmp,ZT_ADDRESS_LENGTH);
-	SHA256_Update(&sha,&zero,1);
-	SHA256_Update(&sha,&idtype,1);
-	SHA256_Update(&sha,&zero,1);
-	SHA256_Update(&sha,_publicKey.data(),_publicKey.size());
-	SHA256_Update(&sha,&zero,1);
-	SHA256_Final(dig,&sha);
-	_signature = _keyPair->sign(dig);
+	_publicKey = kp.pub;
+	if (!_privateKey)
+		_privateKey = new C25519::Private();
+	*_privateKey = kp.priv;
+
+	unsigned char tmp[ZT_ADDRESS_LENGTH + ZT_C25519_PUBLIC_KEY_LEN];
+	_address.copyTo(tmp,ZT_ADDRESS_LENGTH);
+	memcpy(tmp + ZT_ADDRESS_LENGTH,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
+	_signature = C25519::sign(kp,tmp,sizeof(tmp));
 }
 
 bool Identity::locallyValidate(bool doAddressDerivationCheck) const
 {
-	unsigned char atmp[ZT_ADDRESS_LENGTH];
-	_address.copyTo(atmp,ZT_ADDRESS_LENGTH);
-	SHA256_CTX sha;
-	unsigned char dig[32];
-	unsigned char idtype = IDENTITY_TYPE_NIST_P_521,zero = 0;
-	SHA256_Init(&sha);
-	SHA256_Update(&sha,atmp,ZT_ADDRESS_LENGTH);
-	SHA256_Update(&sha,&zero,1);
-	SHA256_Update(&sha,&idtype,1);
-	SHA256_Update(&sha,&zero,1);
-	SHA256_Update(&sha,_publicKey.data(),_publicKey.size());
-	SHA256_Update(&sha,&zero,1);
-	SHA256_Final(dig,&sha);
-
-	return ((EllipticCurveKeyPair::verify(dig,_publicKey,_signature.data(),(unsigned int)_signature.length()))&&((!doAddressDerivationCheck)||(deriveAddress(_publicKey.data(),_publicKey.size()) == _address)));
+	unsigned char tmp[ZT_ADDRESS_LENGTH + ZT_C25519_PUBLIC_KEY_LEN];
+	_address.copyTo(tmp,ZT_ADDRESS_LENGTH);
+	memcpy(tmp + ZT_ADDRESS_LENGTH,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
+	if (!C25519::verify(_publicKey,tmp,sizeof(tmp),_signature))
+		return false;
+	if ((doAddressDerivationCheck)&&(deriveAddress(_publicKey.data,_publicKey.size()) != _address))
+		return false;
+	return true;
 }
 
 std::string Identity::toString(bool includePrivate) const
 {
 	std::string r;
+
 	r.append(_address.toString());
-	r.append(":1:"); // 1 == IDENTITY_TYPE_NIST_P_521
-	r.append(Utils::base64Encode(_publicKey.data(),_publicKey.size()));
-	r.push_back(':');
-	r.append(Utils::base64Encode(_signature.data(),(unsigned int)_signature.length()));
-	if ((includePrivate)&&(_keyPair)) {
-		r.push_back(':');
-		r.append(Utils::base64Encode(_keyPair->priv().data(),_keyPair->priv().size()));
-	}
+	r.append(":2:"); // 2 == IDENTITY_TYPE_C25519
+
 	return r;
 }
 
 bool Identity::fromString(const char *str)
 {
-	delete _keyPair;
-	_keyPair = (EllipticCurveKeyPair *)0;
-
-	std::vector<std::string> fields(Utils::split(Utils::trim(std::string(str)).c_str(),":","",""));
-
-	if (fields.size() < 4)
-		return false;
-
-	if (fields[1] != "1")
-		return false; // version mismatch
-
-	std::string b(Utils::unhex(fields[0]));
-	if (b.length() != ZT_ADDRESS_LENGTH)
-		return false;
-	_address.setTo(b.data(),ZT_ADDRESS_LENGTH);
-
-	b = Utils::base64Decode(fields[2]);
-	if ((!b.length())||(b.length() > ZT_EC_MAX_BYTES))
-		return false;
-	_publicKey.set(b.data(),(unsigned int)b.length());
-
-	_signature = Utils::base64Decode(fields[3]);
-	if (!_signature.length())
-		return false;
-
-	if (fields.size() >= 5) {
-		b = Utils::base64Decode(fields[4]);
-		if ((!b.length())||(b.length() > ZT_EC_MAX_BYTES))
-			return false;
-		_keyPair = new EllipticCurveKeyPair(_publicKey,EllipticCurveKey(b.data(),(unsigned int)b.length()));
-	}
-
-	return true;
 }
 
-// These are core protocol parameters and can't be changed without a new
-// identity type.
+#define ZT_IDENTITY_DERIVEADDRESS_DIGESTS 540672
 #define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 4
-#define ZT_IDENTITY_DERIVEADDRESS_MEMORY 33554432
 
 Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 {
-	unsigned char dig[32];
-	Salsa20 s20a,s20b;
-	SHA256_CTX sha;
-
 	/*
 	 * Sequential memory-hard algorithm wedding address to public key
 	 *
@@ -164,64 +94,28 @@ Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 	 * that creates a costly 1:~1 mapping from key to address, hence this odd
 	 * algorithm.
 	 *
-	 * This is designed not to be parallelizable and to be resistant to
-	 * implementation on things like GPUs with tiny-memory nodes and poor
-	 * branching capability. Toward that end it throws branching and a large
-	 * memory buffer into the mix. It can only be efficiently computed by a
-	 * single core with at least ~32MB RAM.
-	 *
 	 * Search for "sequential memory hard algorithm" for academic references
 	 * to similar concepts.
-	 *
-	 * Right now this takes ~1700ms on a 2.4ghz Intel Core i5. If this could
-	 * be reduced to 1ms per derivation, it would take about 34 years to search
-	 * the entire 40-bit address space for an average of ~17 years to generate
-	 * a key colliding with a known existing address.
 	 */
 
-	// Initial starting digest
-	SHA256_Init(&sha);
-	SHA256_Update(&sha,(const unsigned char *)keyBytes,keyLen); // key
-	SHA256_Final(dig,&sha);
+	unsigned char finalDigest[ZT_SHA512_DIGEST_LEN];
+	unsigned char *digests = new unsigned char[ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS];
 
-	s20a.init(dig,256,"ZeroTier");
+	SHA512::hash(finalDigest,keyBytes,keyLen);
+	for(unsigned int i=0;i<(unsigned int)sizeof(digests);++i)
+		digests[i] = ((const unsigned char *)keyBytes)[i % keyLen];
 
-	unsigned char *ram = new unsigned char[ZT_IDENTITY_DERIVEADDRESS_MEMORY];
-
-	// Encrypt and digest a large memory buffer for several rounds
-	for(unsigned long i=0;i<ZT_IDENTITY_DERIVEADDRESS_MEMORY;++i)
-		ram[i] = (unsigned char)(i & 0xff) ^ dig[i & 31];
-	for(unsigned long r=0;r<ZT_IDENTITY_DERIVEADDRESS_ROUNDS;++r) {
-		SHA256_Init(&sha);
-
-		SHA256_Update(&sha,(const unsigned char *)keyBytes,keyLen);
-		SHA256_Update(&sha,dig,32);
-
-		for(unsigned long i=0;i<ZT_IDENTITY_DERIVEADDRESS_MEMORY;++i) {
-			if (ram[i] == 17) // Forces a branch to be required
-				ram[i] ^= dig[i & 31];
-		}
-		s20b.init(dig,256,"ZeroTier");
-		s20a.encrypt(ram,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
-		s20b.encrypt(ram,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
-		SHA256_Update(&sha,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
-
-		SHA256_Final(dig,&sha);
+	for(unsigned int r=0;r<ZT_IDENTITY_DERIVEADDRESS_ROUNDS;++r) {
+		for(unsigned int i=0;i<(ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS);++i)
+			digests[i] ^= finalDigest[i % ZT_SHA512_DIGEST_LEN];
+		for(unsigned int d=0;d<ZT_IDENTITY_DERIVEADDRESS_DIGESTS;++d)
+			SHA512::hash(digests + (ZT_SHA512_DIGEST_LEN * d),digests,ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS);
+		SHA512::hash(finalDigest,digests,ZT_SHA512_DIGEST_LEN * ZT_IDENTITY_DERIVEADDRESS_DIGESTS);
 	}
 
-	// Final digest, executed for twice our number of rounds
-	SHA256_Init(&sha);
-	for(unsigned long r=0;r<(ZT_IDENTITY_DERIVEADDRESS_ROUNDS * 2);++r) {
-		SHA256_Update(&sha,(const unsigned char *)keyBytes,keyLen);
-		SHA256_Update(&sha,ram,ZT_IDENTITY_DERIVEADDRESS_ROUNDS);
-		SHA256_Update(&sha,dig,32);
-		SHA256_Update(&sha,(const unsigned char *)keyBytes,keyLen);
-	}
-	SHA256_Final(dig,&sha);
+	delete [] digests;
 
-	delete [] ram;
-
-	return Address(dig,ZT_ADDRESS_LENGTH); // first 5 bytes of dig[]
+	return Address(finalDigest,ZT_ADDRESS_LENGTH); // first 5 bytes of dig[]
 }
 
 } // namespace ZeroTier

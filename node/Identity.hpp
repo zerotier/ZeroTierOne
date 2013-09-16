@@ -32,17 +32,12 @@
 #include <stdlib.h>
 #include <string>
 
-#include "EllipticCurveKey.hpp"
-#include "EllipticCurveKeyPair.hpp"
+#include "Constants.hpp"
 #include "Array.hpp"
 #include "Utils.hpp"
 #include "Address.hpp"
+#include "C25519.hpp"
 #include "Buffer.hpp"
-
-/**
- * Maximum length for a serialized identity
- */
-#define IDENTITY_MAX_BINARY_SERIALIZED_LENGTH ((ZT_EC_MAX_BYTES * 2) + 256)
 
 namespace ZeroTier {
 
@@ -55,22 +50,6 @@ namespace ZeroTier {
  * The address derivation algorithm makes it computationally very expensive to
  * search for a different public key that duplicates an existing address. (See
  * code for deriveAddress() for this algorithm.)
- *
- * After derivation, the address must be checked against isReserved(). If the
- * address is reserved, generation is repeated until a valid address results.
- *
- * Serialization of an identity:
- *
- * <[5] address>		- 40-bit ZeroTier network address
- * <[1] type>			- Identity type ID (rest is type-dependent)
- * <[1] key length>		- Length of public key
- * <[n] public key>		- Elliptic curve public key
- * <[1] sig length>		- Length of ECDSA self-signature
- * <[n] signature>		- ECDSA signature of first four fields
- * [<[1] key length>]	- [Optional] Length of private key
- * [<[n] private key>]	- [Optional] Private key
- *
- * Local storage of an identity also requires storage of its private key.
  */
 class Identity
 {
@@ -80,28 +59,26 @@ public:
 	 */
 	enum Type
 	{
-		/* Elliptic curve NIST-P-521 and ECDSA signature */
-		IDENTITY_TYPE_NIST_P_521 = 1
-		/* We won't need another identity type until quantum computers with
-		 * tens of thousands of qubits are a reality. */
+		IDENTITY_TYPE_NIST_P_521 = 1, // OBSOLETE -- only present in some early alpha versions
+		IDENTITY_TYPE_C25519 = 2
 	};
 
 	Identity() :
-		_keyPair((EllipticCurveKeyPair *)0)
+		_privateKey((C25519::Private *)0)
 	{
 	}
 
 	Identity(const Identity &id) :
-		_keyPair((id._keyPair) ? new EllipticCurveKeyPair(*id._keyPair) : (EllipticCurveKeyPair *)0),
-		_publicKey(id._publicKey),
 		_address(id._address),
-		_signature(id._signature)
+		_publicKey(id._publicKey),
+		_signature(id._signature),
+		_privateKey((id._privateKey) ? new C25519::Private(*(id._privateKey)) : (C25519::Private *)0)
 	{
 	}
 
 	Identity(const char *str)
 		throw(std::invalid_argument) :
-		_keyPair((EllipticCurveKeyPair *)0)
+		_privateKey((C25519::Private *)0)
 	{
 		if (!fromString(str))
 			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
@@ -109,7 +86,7 @@ public:
 
 	Identity(const std::string &str)
 		throw(std::invalid_argument) :
-		_keyPair((EllipticCurveKeyPair *)0)
+		_privateKey((C25519::Private *)0)
 	{
 		if (!fromString(str))
 			throw std::invalid_argument(std::string("invalid string-serialized identity: ") + str);
@@ -118,35 +95,36 @@ public:
 	template<unsigned int C>
 	Identity(const Buffer<C> &b,unsigned int startAt = 0)
 		throw(std::out_of_range,std::invalid_argument) :
-		_keyPair((EllipticCurveKeyPair *)0)
+		_privateKey((C25519::Private *)0)
 	{
 		deserialize(b,startAt);
 	}
 
 	~Identity()
 	{
-		delete _keyPair;
+		delete _privateKey;
 	}
 
 	inline Identity &operator=(const Identity &id)
 	{
-		_keyPair = (id._keyPair) ? new EllipticCurveKeyPair(*id._keyPair) : (EllipticCurveKeyPair *)0;
-		_publicKey = id._publicKey;
 		_address = id._address;
+		_publicKey = id._publicKey;
 		_signature = id._signature;
+		if (id._privateKey) {
+			if (!_privateKey)
+				_privateKey = new C25519::Private();
+			*_privateKey = *(id._privateKey);
+		} else {
+			delete _privateKey;
+			_privateKey = (C25519::Private *)0;
+		}
 		return *this;
 	}
 
 	/**
 	 * Generate a new identity (address, key pair)
-	 * 
-	 * This is a somewhat time consuming operation by design, as the address
-	 * is derived from the key using a purposefully expensive many-round
-	 * hash/encrypt/hash operation. This took about two seconds on a 2.4ghz
-	 * Intel Core i5 in 2013.
-	 * 
-	 * In the very unlikely event that a reserved address is created, generate
-	 * will automatically run again.
+	 *
+	 * This is a time consuming operation.
 	 */
 	void generate();
 
@@ -166,19 +144,14 @@ public:
 	bool locallyValidate(bool doAddressDerivationCheck) const;
 
 	/**
-	 * @return Private key pair or NULL if not included with this identity
+	 * @return True if this identity contains a private key
 	 */
-	inline const EllipticCurveKeyPair *privateKeyPair() const throw() { return _keyPair; }
-
-	/**
-	 * @return True if this identity has its private portion
-	 */
-	inline bool hasPrivate() const throw() { return (_keyPair != (EllipticCurveKeyPair *)0); }
+	inline bool hasPrivate() const throw() { return (_privateKey != (C25519::Private *)0); }
 
 	/**
 	 * Shortcut method to perform key agreement with another identity
 	 *
-	 * This identity must have its private portion.
+	 * This identity must have a private key. (Check hasPrivate())
 	 *
 	 * @param id Identity to agree with
 	 * @param key Result parameter to fill with key bytes
@@ -187,75 +160,17 @@ public:
 	 */
 	inline bool agree(const Identity &id,void *key,unsigned int klen) const
 	{
-		if ((id)&&(_keyPair))
-			return _keyPair->agree(id._publicKey,(unsigned char *)key,klen);
+		if (_privateKey) {
+			C25519::agree(*_privateKey,id._publicKey,key,klen);
+			return true;
+		}
 		return false;
 	}
 
 	/**
-	 * Sign a hash with this identity's private key
-	 *
-	 * @param sha256 32-byte hash to sign
-	 * @return ECDSA signature or empty string on failure or if identity has no private portion
-	 */
-	inline std::string sign(const void *sha256) const
-	{
-		if (_keyPair)
-			return _keyPair->sign(sha256);
-		return std::string();
-	}
-
-	/**
-	 * Sign a block of data with this identity's private key
-	 *
-	 * This is a shortcut to SHA-256 hashing then signing.
-	 *
-	 * @param sha256 32-byte hash to sign
-	 * @return ECDSA signature or empty string on failure or if identity has no private portion
-	 */
-	inline std::string sign(const void *data,unsigned int len) const
-	{
-		if (_keyPair)
-			return _keyPair->sign(data,len);
-		return std::string();
-	}
-
-	/**
-	 * Verify something signed with this identity's public key
-	 * 
-	 * @param sha256 32-byte hash to verify
-	 * @param sigbytes Signature bytes
-	 * @param siglen Length of signature
-	 * @return True if signature is valid
-	 */
-	inline bool verifySignature(const void *sha256,const void *sigbytes,unsigned int siglen) const
-	{
-		return EllipticCurveKeyPair::verify(sha256,_publicKey,sigbytes,siglen);
-	}
-
-	/**
-	 * Verify something signed with this identity's public key
-	 * 
-	 * @param data Data to verify
-	 * @param len Length of data to verify
-	 * @param sigbytes Signature bytes
-	 * @param siglen Length of signature
-	 * @return True if signature is valid
-	 */
-	inline bool verifySignature(const void *data,unsigned int len,const void *sigbytes,unsigned int siglen) const
-	{
-		return EllipticCurveKeyPair::verify(data,len,_publicKey,sigbytes,siglen);
-	}
-
-	/**
-	 * @return Public key (available in all identities)
-	 */
-	inline const EllipticCurveKey &publicKey() const throw() { return _publicKey; }
-
-	/**
 	 * @return Identity type
 	 */
-	inline Type type() const throw() { return IDENTITY_TYPE_NIST_P_521; }
+	inline Type type() const throw() { return IDENTITY_TYPE_C25519; }
 
 	/**
 	 * @return This identity's address
@@ -274,14 +189,12 @@ public:
 		throw(std::out_of_range)
 	{
 		_address.appendTo(b);
-		b.append((unsigned char)IDENTITY_TYPE_NIST_P_521);
-		b.append((unsigned char)(_publicKey.size() & 0xff));
-		b.append(_publicKey.data(),_publicKey.size());
-		b.append((unsigned char)(_signature.length() & 0xff));
-		b.append(_signature);
-		if ((includePrivate)&&(_keyPair)) {
-			b.append((unsigned char)(_keyPair->priv().size() & 0xff));
-			b.append(_keyPair->priv().data(),_keyPair->priv().size());
+		b.append((unsigned char)IDENTITY_TYPE_C25519);
+		b.append(_publicKey.data,_publicKey.size());
+		b.append(_signature.data,_signature.size());
+		if ((_privateKey)&&(includePrivate)) {
+			b.append((unsigned char)_privateKey.size());
+			b.append(_privateKey.data,_privateKey.size());
 		} else b.append((unsigned char)0);
 	}
 
@@ -301,33 +214,27 @@ public:
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 		throw(std::out_of_range,std::invalid_argument)
 	{
-		delete _keyPair;
-		_keyPair = (EllipticCurveKeyPair *)0;
+		delete _privateKey;
+		_privateKey = (C25519::Private *)0;
 
 		unsigned int p = startAt;
 
 		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 
-		if (b[p++] != IDENTITY_TYPE_NIST_P_521)
+		if (b[p++] != IDENTITY_TYPE_C25519)
 			throw std::invalid_argument("Identity: deserialize(): unsupported identity type");
 
-		unsigned int publicKeyLength = b[p++];
-		if (!publicKeyLength)
-			throw std::invalid_argument("Identity: deserialize(): no public key");
-		_publicKey.set(b.field(p,publicKeyLength),publicKeyLength);
-		p += publicKeyLength;
-
-		unsigned int signatureLength = b[p++];
-		if (!signatureLength)
-			throw std::invalid_argument("Identity: deserialize(): no signature");
-		_signature.assign((const char *)b.field(p,signatureLength),signatureLength);
-		p += signatureLength;
+		memcpy(_publicKey.data,field(p,_publicKey.size()),_publicKey.size());
+		p += _publicKey.size();
+		memcpy(_signature.data,field(p,_signature.size()),_signature.size());
+		p += _signature.size();
 
 		unsigned int privateKeyLength = b[p++];
-		if (privateKeyLength) {
-			_keyPair = new EllipticCurveKeyPair(_publicKey,EllipticCurveKey(b.field(p,privateKeyLength),privateKeyLength));
-			p += privateKeyLength;
+		if ((privateKeyLength)&&(privateKeyLength == ZT_C25519_PRIVATE_KEY_LEN)) {
+			_privateKey = new C25519::Private();
+			memcpy(_privateKey->data,field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
+			p += ZT_C25519_PRIVATE_KEY_LEN;
 		}
 
 		return (p - startAt);
@@ -356,27 +263,10 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const throw() { return (_publicKey.size() != 0); }
+	inline operator bool() const throw() { return (_address); }
 
-	inline bool operator==(const Identity &id) const
-		throw()
-	{
-		if (_address == id._address) {
-			if ((_keyPair)&&(id._keyPair))
-				return (*_keyPair == *id._keyPair);
-			return (_publicKey == id._publicKey);
-		}
-		return false;
-	}
-	inline bool operator<(const Identity &id) const
-		throw()
-	{
-		if (_address < id._address)
-			return true;
-		else if (_address == id._address)
-			return (_publicKey < id._publicKey);
-		return false;
-	}
+	inline bool operator==(const Identity &id) const throw() { return ((_address == id._address)&&(_publicKey == id._publicKey)); }
+	inline bool operator<(const Identity &id) const throw() { return ((_address < id._address)||((_address == id._address)&&(_publicKey < id._publicKey))); }
 	inline bool operator!=(const Identity &id) const throw() { return !(*this == id); }
 	inline bool operator>(const Identity &id) const throw() { return (id < *this); }
 	inline bool operator<=(const Identity &id) const throw() { return !(id < *this); }
@@ -386,10 +276,10 @@ private:
 	// Compute an address from public key bytes
 	static Address deriveAddress(const void *keyBytes,unsigned int keyLen);
 
-	EllipticCurveKeyPair *_keyPair;
-	EllipticCurveKey _publicKey;
 	Address _address;
-	std::string _signature;
+	C25519::Public _publicKey;
+	C25519::Signature _signature;
+	C25519::Private *_privateKey;
 };
 
 } // namespace ZeroTier
