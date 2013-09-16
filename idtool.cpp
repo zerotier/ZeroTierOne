@@ -33,6 +33,7 @@
 
 #include "node/Identity.hpp"
 #include "node/Utils.hpp"
+#include "node/C25519.hpp"
 
 using namespace ZeroTier;
 
@@ -131,13 +132,8 @@ int main(int argc,char **argv)
 			std::cerr << argv[3] << " is not readable" << std::endl;
 			return -1;
 		}
-		std::string signature = id.sign(inf.data(),inf.length());
-		if (!signature.length()) {
-			std::cerr << "Error computing SHA256 or signature (bug?)" << std::endl;
-			return -1;
-		}
-
-		std::cout << Utils::base64Encode(signature.data(),signature.length());
+		C25519::Signature signature = id.sign(inf.data(),inf.length());
+		std::cout << Utils::hex(signature.data,signature.size());
 	} else if (!strcmp(argv[1],"verify")) {
 		if (argc < 4) {
 			printHelp(argv[0]);
@@ -156,8 +152,8 @@ int main(int argc,char **argv)
 			return -1;
 		}
 
-		std::string signature(Utils::base64Decode(argv[4],strlen(argv[4])));
-		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verifySignature(inf.data(),inf.length(),signature.data(),signature.length()))) {
+		std::string signature(Utils::unhex(argv[4]));
+		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),inf.length(),signature.data(),signature.length()))) {
 			std::cout << argv[3] << " signature valid" << std::endl;
 		} else {
 			std::cerr << argv[3] << " signature check FAILED" << std::endl;

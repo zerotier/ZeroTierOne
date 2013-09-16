@@ -132,7 +132,7 @@ bool Identity::fromString(const char *str)
 // These are fixed parameters and can't be changed without a new
 // identity type.
 #define ZT_IDENTITY_DERIVEADDRESS_MEMORY 33554432
-#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 64
+#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 50
 
 Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 {
