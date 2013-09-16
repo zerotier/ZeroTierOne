@@ -572,7 +572,7 @@ public:
 		char *end = dest + len;
 		while ((*dest++ = *src++)) {
 			if (dest == end) {
-				dest[len - 1] = (char)0;
+				--dest = (char)0;
 				return false;
 			}
 		}

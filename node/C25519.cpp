@@ -33,6 +33,7 @@
 #include "C25519.hpp"
 #include "Utils.hpp"
 #include "SHA512.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -1895,9 +1896,16 @@ static void p1p1_to_p2(ge25519_p2 *r, const ge25519_p1p1 *p)
   fe25519_mul(&r->z, &p->z, &p->t);
 }
 
+static void p1p1_to_p2_2(ge25519_p3 *r, const ge25519_p1p1 *p)
+{
+  fe25519_mul(&r->x, &p->x, &p->t);
+  fe25519_mul(&r->y, &p->y, &p->z);
+  fe25519_mul(&r->z, &p->z, &p->t);
+}
+
 static void p1p1_to_p3(ge25519_p3 *r, const ge25519_p1p1 *p)
 {
-  p1p1_to_p2((ge25519_p2 *)r, p);
+  p1p1_to_p2_2(r, p);
   fe25519_mul(&r->t, &p->x, &p->y);
 }
 
