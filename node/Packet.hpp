@@ -35,7 +35,7 @@
 #include <iostream>
 
 #include "Address.hpp"
-#include "HMAC.hpp"
+#include "Poly1305.hpp"
 #include "Salsa20.hpp"
 #include "Utils.hpp"
 #include "Constants.hpp"
@@ -65,7 +65,7 @@
  * Header flag indicating that a packet is encrypted with Salsa20
  *
  * If this is not set, then the packet's payload is in the clear and the
- * HMAC is over this (since there is no ciphertext). Otherwise the HMAC is
+ * MAC is over this (since there is no ciphertext). Otherwise the MAC is
  * of the ciphertext after encryption.
  */
 #define ZT_PROTO_FLAG_ENCRYPTED 0x80
@@ -89,7 +89,7 @@
 #define ZT_PACKET_IDX_DEST 8
 #define ZT_PACKET_IDX_SOURCE 13
 #define ZT_PACKET_IDX_FLAGS 18
-#define ZT_PACKET_IDX_HMAC 19
+#define ZT_PACKET_IDX_MAC 19
 #define ZT_PACKET_IDX_VERB 27
 #define ZT_PACKET_IDX_PAYLOAD 28
 
@@ -201,7 +201,7 @@ namespace ZeroTier {
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
  *   <[1] flags (LS 5 bits) and ZT hop count (MS 3 bits)>
- *   <[8] first 8 bytes of 32-byte HMAC-SHA-256 MAC>
+ *   <[8] 8-bit MAC (currently first 8 bytes of poly1305 tag)>
  *   [... -- begin encryption envelope -- ...]
  *   <[1] encrypted flags (MS 3 bits) and verb (LS 5 bits)>
  *   [... verb-specific payload ...]
@@ -770,39 +770,39 @@ public:
 	}
 
 	/**
-	 * Compute the HMAC of this packet's payload and set HMAC field
+	 * Generate a message authenticationc code and set MAC field of packet
 	 * 
 	 * For encrypted packets, this must be called after encryption.
 	 *
 	 * @param key 256-bit (32 byte) key
 	 */
-	inline void hmacSet(const void *key)
+	inline void macSet(const void *key)
 	{
-		unsigned char mac[32];
+		unsigned char mac[16];
 		unsigned char key2[32];
 		_mangleKey((const unsigned char *)key,key2);
-		unsigned int hmacLen = (size() >= ZT_PACKET_IDX_VERB) ? (size() - ZT_PACKET_IDX_VERB) : 0;
-		HMAC::sha256(key2,sizeof(key2),field(ZT_PACKET_IDX_VERB,hmacLen),hmacLen,mac);
-		memcpy(field(ZT_PACKET_IDX_HMAC,8),mac,8);
+		unsigned int macLen = (size() >= ZT_PACKET_IDX_VERB) ? (size() - ZT_PACKET_IDX_VERB) : 0;
+		Poly1305::compute(mac,field(ZT_PACKET_IDX_VERB,macLen),macLen,key2);
+		memcpy(field(ZT_PACKET_IDX_MAC,8),mac,8);
 	}
 
 	/**
-	 * Check the HMAC of this packet's payload
+	 * Check the MAC of this packet's payload
 	 * 
 	 * For encrypted packets, this must be checked before decryption.
 	 *
 	 * @param key 256-bit (32 byte) key
 	 */
-	inline bool hmacVerify(const void *key) const
+	inline bool macVerify(const void *key) const
 	{
-		unsigned char mac[32];
+		unsigned char mac[16];
 		unsigned char key2[32];
 		if (size() < ZT_PACKET_IDX_VERB)
 			return false; // incomplete packets fail
 		_mangleKey((const unsigned char *)key,key2);
-		unsigned int hmacLen = size() - ZT_PACKET_IDX_VERB;
-		HMAC::sha256(key2,sizeof(key2),field(ZT_PACKET_IDX_VERB,hmacLen),hmacLen,mac);
-		return (!memcmp(field(ZT_PACKET_IDX_HMAC,8),mac,8));
+		unsigned int macLen = size() - ZT_PACKET_IDX_VERB;
+		Poly1305::compute(mac,field(ZT_PACKET_IDX_VERB,macLen),macLen,key2);
+		return Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8);
 	}
 
 	/**
@@ -895,38 +895,31 @@ public:
 
 private:
 	/**
-	 * Deterministically mangle a 256-bit crypto key based on packet characteristics
-	 * 
-	 * This takes the static agreed-upon input key and mangles it using
-	 * info from the packet. This serves two purposes:
-	 * 
-	 * (1) It reduces the (already minute) probability of a duplicate key /
-	 *     IV combo, which is good since keys are extremely long-lived. Another
-	 *     way of saying this is that it increases the effective IV size by
-	 *     using other parts of the packet as IV material.
-	 * (2) It causes HMAC to fail should any of the following change: ordering
-	 *     of source and dest addresses, flags, IV, or packet size. HMAC has
-	 *     no explicit scheme for AAD (additional authenticated data).
-	 * 
-	 * NOTE: this function will have to be changed if the order of any packet
-	 * fields or their sizes/padding changes in the spec.
+	 * Deterministically mangle a 256-bit crypto key based on packet
 	 *
 	 * @param in Input key (32 bytes)
 	 * @param out Output buffer (32 bytes)
 	 */
 	inline void _mangleKey(const unsigned char *in,unsigned char *out) const
 	{
-		// Random IV (Salsa20 also uses the IV natively, but HMAC doesn't), and
-		// destination and source addresses. Using dest and source addresses
-		// gives us a (likely) different key space for a->b vs b->a.
+		// IV and source/destination addresses. Salsa uses the IV natively
+		// so this is redundant there, but not harmful. But Poly1305 depends
+		// on the key being mangled with the IV. Using the source and
+		// destination addresses bifurcates the key space into a different
+		// key space for each direction of the conversation.
 		for(unsigned int i=0;i<18;++i) // 8 + (ZT_ADDRESS_LENGTH * 2) == 18
 			out[i] = in[i] ^ (unsigned char)(*this)[i];
-		// Flags, but masking off hop count which is altered by forwarding nodes
+
+		// Flags, but with hop count masked off. Hop count is altered by forwarding
+		// nodes. It's one of the only parts of a packet modifiable by people
+		// without the key.
 		out[18] = in[18] ^ ((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & 0xf8);
-		// Raw packet size in bytes -- each raw packet size defines a possibly
-		// different space of keys.
+
+		// Raw packet size in bytes -- thus each packet size defines a new
+		// key space.
 		out[19] = in[19] ^ (unsigned char)(size() & 0xff);
 		out[20] = in[20] ^ (unsigned char)((size() >> 8) & 0xff); // little endian
+
 		// Rest of raw key is used unchanged
 		for(unsigned int i=21;i<32;++i)
 			out[i] = in[i];

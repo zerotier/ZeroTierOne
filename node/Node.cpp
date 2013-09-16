@@ -57,7 +57,6 @@
 #include "Logger.hpp"
 #include "InetAddress.hpp"
 #include "Salsa20.hpp"
-#include "HMAC.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
 #include "Defaults.hpp"

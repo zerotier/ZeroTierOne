@@ -75,8 +75,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 		}
 
 		// No saved state? Verify MAC before we proceed.
-		if (!hmacVerify(peer->macKey())) {
-			TRACE("dropped packet from %s(%s), HMAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
+		if (!macVerify(peer->macKey())) {
+			TRACE("dropped packet from %s(%s), authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
 			return true;
 		}
 
@@ -85,7 +85,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			decrypt(peer->cryptKey());
 		} else {
 			// Unencrypted is tolerated in case we want to run this on
-			// devices where squeezing out cycles matters. HMAC is
+			// devices where squeezing out cycles matters. MAC is
 			// what's really important. But log it in debug to catch any
 			// packets being mistakenly sent in the clear.
 			TRACE("ODD: %s from %s(%s) wasn't encrypted",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -130,7 +130,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doNETWORK_CONFIG_REFRESH(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
-				// Technically it passed HMAC so the packet is still valid, but we
+				// Technically it passed MAC so the packet is still valid, but we
 				// ignore it.
 				TRACE("ignored unrecognized verb %.2x from %s(%s)",(unsigned int)v,source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
@@ -162,7 +162,7 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 				outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 				outp.encrypt(p->cryptKey());
-				outp.hmacSet(p->macKey());
+				outp.macSet(p->macKey());
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
 			}	break;
 
@@ -172,7 +172,7 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 				outp.append(req->helloPacketId);
 				outp.append((unsigned char)Packet::ERROR_IDENTITY_INVALID);
 				outp.encrypt(p->cryptKey());
-				outp.hmacSet(p->macKey());
+				outp.macSet(p->macKey());
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
 			}	break;
 
@@ -183,7 +183,7 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 				outp.append(req->helloPacketId);
 				outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
 				outp.encrypt(p->cryptKey());
-				outp.hmacSet(p->macKey());
+				outp.macSet(p->macKey());
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
 			}	break;
 		}
@@ -268,7 +268,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			outp.append(packetId());
 			outp.append(timestamp);
 			outp.encrypt(existingPeer->cryptKey());
-			outp.hmacSet(existingPeer->macKey());
+			outp.macSet(existingPeer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			return true;
 		}
@@ -353,7 +353,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.append(packetId());
 			p->identity().serialize(outp,false);
 			outp.encrypt(peer->cryptKey());
-			outp.hmacSet(peer->macKey());
+			outp.macSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		} else {
@@ -363,7 +363,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 			outp.append(payload(),ZT_ADDRESS_LENGTH);
 			outp.encrypt(peer->cryptKey());
-			outp.hmacSet(peer->macKey());
+			outp.macSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		}
@@ -467,7 +467,7 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 		outp.append(packetId());
 		outp.append((uint16_t)numAccepted);
 		outp.encrypt(peer->cryptKey());
-		outp.hmacSet(peer->macKey());
+		outp.macSet(peer->macKey());
 		_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
@@ -654,7 +654,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.encrypt(peer->cryptKey());
-			outp.hmacSet(peer->macKey());
+			outp.macSet(peer->macKey());
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 #ifndef __WINDOWS__
 		}

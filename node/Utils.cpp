@@ -181,36 +181,6 @@ const uint64_t Utils::crc64Table[256] = {
 	0x536fa08fdfd90e51ULL,0x29b7d047efec8728ULL
 };
 
-const char Utils::base64EncMap[64] = {
-	0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,
-	0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x4F,0x50,
-	0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,
-	0x59,0x5A,0x61,0x62,0x63,0x64,0x65,0x66,
-	0x67,0x68,0x69,0x6A,0x6B,0x6C,0x6D,0x6E,
-	0x6F,0x70,0x71,0x72,0x73,0x74,0x75,0x76,
-	0x77,0x78,0x79,0x7A,0x30,0x31,0x32,0x33,
-	0x34,0x35,0x36,0x37,0x38,0x39,0x2B,0x2F
-};
-
-const char Utils::base64DecMap[128] = {
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x00,0x3E,0x00,0x00,0x00,0x3F,
-	0x34,0x35,0x36,0x37,0x38,0x39,0x3A,0x3B,
-	0x3C,0x3D,0x00,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x00,0x01,0x02,0x03,0x04,0x05,0x06,
-	0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,
-	0x0F,0x10,0x11,0x12,0x13,0x14,0x15,0x16,
-	0x17,0x18,0x19,0x00,0x00,0x00,0x00,0x00,
-	0x00,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,0x20,
-	0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,
-	0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,0x30,
-	0x31,0x32,0x33,0x00,0x00,0x00,0x00,0x00
-};
-
 static const char *DAY_NAMES[7] = { "Sun","Mon","Tue","Wed","Thu","Fri","Sat" };
 static const char *MONTH_NAMES[12] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 
@@ -247,76 +217,6 @@ std::map<std::string,bool> Utils::listDirectory(const char *path)
 #endif
 
 	return r;
-}
-
-std::string Utils::base64Encode(const void *data,unsigned int len)
-{
-	if (!len)
-		return std::string();
-
-	std::string out;
-	unsigned int sidx = 0;
-
-	if (len > 1) {
-		while (sidx < (len - 2)) {
-			out.push_back(base64EncMap[(((const unsigned char *)data)[sidx] >> 2) & 077]);
-			out.push_back(base64EncMap[((((const unsigned char *)data)[sidx + 1] >> 4) & 017) | ((((const unsigned char *)data)[sidx] << 4) & 077)]);
-			out.push_back(base64EncMap[((((const unsigned char *)data)[sidx + 2] >> 6) & 003) | ((((const unsigned char *)data)[sidx + 1] << 2) & 077)]);
-			out.push_back(base64EncMap[((const unsigned char *)data)[sidx + 2] & 077]);
-			sidx += 3;
-		}
-	}
-	if (sidx < len) {
-		out.push_back(base64EncMap[(((const unsigned char *)data)[sidx] >> 2) & 077]);
-		if (sidx < len - 1) {
-			out.push_back(base64EncMap[((((const unsigned char *)data)[sidx + 1] >> 4) & 017) | ((((const unsigned char *)data)[sidx] << 4) & 077)]);
-			out.push_back(base64EncMap[(((const unsigned char *)data)[sidx + 1] << 2) & 077]);
-		} else out.push_back(base64EncMap[(((const unsigned char *)data)[sidx] << 4) & 077]);
-	}
-	while (out.length() < (((len + 2) / 3) * 4))
-		out.push_back('=');
-
-	return out;
-}
-
-std::string Utils::base64Decode(const char *data,unsigned int len)
-{
-	if (!len)
-		return std::string();
-	std::string out;
-
-	while ((len)&&(((const unsigned char *)data)[len-1] == '='))
-		--len;
-
-	for (unsigned idx=0;idx<len;idx++) {
-		unsigned char ch = ((const unsigned char *)data)[idx];
-		if ((ch > 47 && ch < 58) || (ch > 64 && ch < 91) || (ch > 96 && ch < 123) || ch == '+' || ch == '/' || ch == '=')
-			out.push_back(base64DecMap[ch]);
-		else return std::string();
-	}
-
-	unsigned outLen = len - ((len + 3) / 4);
-	if ((!outLen)||((((outLen + 2) / 3) * 4) < len))
-		return std::string();
-
-	unsigned sidx = 0;
-	unsigned didx = 0;
-	if (outLen > 1) {
-		while (didx < outLen - 2) {
-			out[didx] = (((out[sidx] << 2) & 255) | ((out[sidx + 1] >> 4) & 003));
-			out[didx + 1] = (((out[sidx + 1] << 4) & 255) | ((out[sidx + 2] >> 2) & 017));
-			out[didx + 2] = (((out[sidx + 2] << 6) & 255) | (out[sidx + 3] & 077));
-			sidx += 4;
-			didx += 3;
-		}
-	}
-
-	if (didx < outLen)
-		out[didx] = (((out[sidx] << 2) & 255) | ((out[sidx + 1] >> 4) & 003));
-	if (++didx < outLen)
-		out[didx] = (((out[sidx + 1] << 4) & 255) | ((out[sidx + 2] >> 2) & 017));
-
-	return out.substr(0,outLen);
 }
 
 std::string Utils::hex(const void *data,unsigned int len)

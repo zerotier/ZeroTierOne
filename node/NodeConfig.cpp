@@ -35,8 +35,6 @@
 #include <map>
 #include <set>
 
-#include <openssl/sha.h>
-
 #include "Constants.hpp"
 
 #ifdef __WINDOWS__
@@ -54,7 +52,8 @@
 #include "InetAddress.hpp"
 #include "Peer.hpp"
 #include "Salsa20.hpp"
-#include "HMAC.hpp"
+#include "Poly1305.hpp"
+#include "SHA512.hpp"
 #include "Node.hpp"
 
 #ifdef __WINDOWS__
@@ -68,10 +67,11 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
 	_r(renv),
 	_controlSocket(true,ZT_CONTROL_UDP_PORT,false,&_CBcontrolPacketHandler,this)
 {
-	SHA256_CTX sha;
-	SHA256_Init(&sha);
-	SHA256_Update(&sha,authToken,strlen(authToken));
-	SHA256_Final(_controlSocketKey,&sha);
+	{
+		unsigned int csk[64];
+		SHA512::hash(authToken,strlen(authToken));
+		memcpy(_controlSocketKey,csk,32);
+	}
 
 	std::map<std::string,bool> networksDotD(Utils::listDirectory((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
 	std::set<uint64_t> nwids;
@@ -249,12 +249,13 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload)
 	throw(std::out_of_range)
 {
-	char hmac[32];
+	char poly1305tag[ZT_POLY1305_MAC_LEN];
+	char iv[8];
 	char keytmp[32];
 	std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets;
 	Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> packet;
 
-	packet.setSize(16); // room for HMAC and IV
+	packet.setSize(16); // room for poly1305 auth tag and IV
 	packet.append((uint32_t)(conversationId & 0xffffffff));
 
 	for(unsigned int i=0;i<payload.size();++i) {
@@ -262,20 +263,21 @@ std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMe
 		packet.append((unsigned char)0);
 
 		if (((i + 1) >= payload.size())||((packet.size() + payload[i + 1].length() + 1) >= packet.capacity())) {
-			Utils::getSecureRandom(packet.field(8,8),8);
+			Utils::getSecureRandom(iv,8);
+			memcpy(packet.field(8,8),iv,8);
 
-			Salsa20 s20(key,256,packet.field(8,8));
+			Salsa20 s20(key,256,iv);
 			s20.encrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
 
 			memcpy(keytmp,key,32);
-			for(unsigned int i=0;i<32;++i)
-				keytmp[i] ^= 0x77; // use a different permutation of key for HMAC than for Salsa20
-			HMAC::sha256(keytmp,32,packet.field(16,packet.size() - 16),packet.size() - 16,hmac);
-			memcpy(packet.field(0,8),hmac,8);
+			for(unsigned int i=0;i<8;++i)
+				keytmp[i] ^= iv[i]; // can't reuse poly1305 keys, so mangle key with IV each time
+			Poly1305::compute(poly1305tag,packet.field(16,packet.size() - 16),packet.size() - 16,keytmp);
+			memcpy(packet.field(0,8),poly1305tag,8);
 
 			packets.push_back(packet);
 
-			packet.setSize(16); // room for HMAC and IV
+			packet.setSize(16); // room for poly1305 auth tag and IV
 			packet.append((uint32_t)(conversationId & 0xffffffff));
 		}
 	}
@@ -285,8 +287,9 @@ std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMe
 
 bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,unsigned int len,unsigned long &conversationId,std::vector<std::string> &payload)
 {
-	char hmac[32];
+	char poly1305tag[ZT_POLY1305_MAC_LEN];
 	char keytmp[32];
+	char iv[8];
 
 	try {
 		if (len < 20)
@@ -295,10 +298,11 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 		Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> packet(data,len);
 
 		memcpy(keytmp,key,32);
-		for(unsigned int i=0;i<32;++i)
-			keytmp[i] ^= 0x77; // use a different permutation of key for HMAC than for Salsa20
-		HMAC::sha256(keytmp,32,packet.field(16,packet.size() - 16),packet.size() - 16,hmac);
-		if (memcmp(packet.field(0,8),hmac,8))
+		memcpy(iv,packet.field(8,8),8);
+		for(unsigned int i=0;i<8;++i)
+			keytmp[i] ^= iv[i];
+		Poly1305::compute(poly1305tag,packet.field(16,packet.size() - 16),packet.size() - 16,keytmp);
+		if (!Utils::secureEq(packet.field(0,8),poly1305tag,8))
 			return false;
 
 		Salsa20 s20(key,256,packet.field(8,8));

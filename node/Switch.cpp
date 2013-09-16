@@ -218,7 +218,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 	outp.append(now);
 	_r->identity.serialize(outp,false);
-	outp.hmacSet(dest->macKey());
+	outp.macSet(dest->macKey());
 
 	if (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1)) {
 		dest->onSent(_r,false,Packet::VERB_HELLO,now);
@@ -277,7 +277,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 			outp.append(cg.first.rawIpData(),4);
 		}
 		outp.encrypt(p1p->cryptKey());
-		outp.hmacSet(p1p->macKey());
+		outp.macSet(p1p->macKey());
 		if (p1p->send(_r,outp.data(),outp.size(),now))
 			p1p->onSent(_r,false,Packet::VERB_RENDEZVOUS,now);
 	}
@@ -293,7 +293,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 			outp.append(cg.second.rawIpData(),4);
 		}
 		outp.encrypt(p2p->cryptKey());
-		outp.hmacSet(p2p->macKey());
+		outp.macSet(p2p->macKey());
 		if (p2p->send(_r,outp.data(),outp.size(),now))
 			p2p->onSent(_r,false,Packet::VERB_RENDEZVOUS,now);
 	}
@@ -617,7 +617,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		Packet outp(supernode->address(),_r->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		outp.encrypt(supernode->cryptKey());
-		outp.hmacSet(supernode->macKey());
+		outp.macSet(supernode->macKey());
 
 		uint64_t now = Utils::now();
 		if (supernode->send(_r,outp.data(),outp.size(),now)) {
@@ -654,7 +654,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		if (encrypt)
 			tmp.encrypt(peer->cryptKey());
-		tmp.hmacSet(peer->macKey());
+		tmp.macSet(peer->macKey());
 
 		if (via->send(_r,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {

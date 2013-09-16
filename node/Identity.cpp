@@ -71,14 +71,64 @@ std::string Identity::toString(bool includePrivate) const
 
 	r.append(_address.toString());
 	r.append(":2:"); // 2 == IDENTITY_TYPE_C25519
+	r.append(Utils::hex(_publicKey.data,_publicKey.size()));
+	r.push_back(':');
+	r.append(Utils::hex(_signature.data,_signature.size()));
+	if ((_privateKey)&&(includePrivate)) {
+		r.push_back(':');
+		r.append(Utils::hex(_privateKey.data,_privateKey.size()));
+	}
 
 	return r;
 }
 
 bool Identity::fromString(const char *str)
 {
+	char *saveptr = (char *)0;
+	char tmp[4096];
+	if (!Utils::scopy(tmp,sizeof(tmp),str))
+		return false;
+
+	delete _privateKey;
+	_privateKey = (C25519::Private *)0;
+
+	int fno = 0;
+	for(char *f=Utils::stok(tmp,":",&saveptr);(f);f=Utils::stok((char *)0,":",&saveptr)) {
+		switch(fno++) {
+			case 0:
+				_address = Address(f);
+				if (_address.isReserved())
+					return false;
+				break;
+			case 1:
+				if (strcmp(f,"2"))
+					return false;
+				break;
+			case 2:
+				if (Utils::unhex(f,_publicKey.data,_publicKey.size()) != _publicKey.size())
+					return false;
+				break;
+			case 3:
+				if (Utils::unhex(f,_signature.data,_signature.size()) != _signature.size())
+					return false;
+				break;
+			case 4:
+				_privateKey = new C25519::Private();
+				if (Utils::unhex(f,_privateKey->data,_privateKey->size()) != _privateKey->size())
+					return false;
+				break;
+			default:
+				return false;
+		}
+	}
+	if (fno < 4)
+		return false;
+
+	return true;
 }
 
+// These are fixed parameters and can't be changed without a new
+// identity type.
 #define ZT_IDENTITY_DERIVEADDRESS_DIGESTS 540672
 #define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 4
 
@@ -91,7 +141,7 @@ Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 	 * unfortunately cannot be used here. If that were used, it would be
 	 * equivalently costly to simply increment/vary the public key and find
 	 * a collision as it would be to find the address. We need something
-	 * that creates a costly 1:~1 mapping from key to address, hence this odd
+	 * that creates a costly 1:~1 mapping from key to address, hence this
 	 * algorithm.
 	 *
 	 * Search for "sequential memory hard algorithm" for academic references

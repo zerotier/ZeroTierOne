@@ -87,13 +87,8 @@ public:
 			p2 += 8;
 			len -= 8;
 		}
-
-		while (len) {
-			diff |= (uint64_t)(*p1 ^ *p2);
-			++p1;
-			++p2;
-			--len;
-		}
+		while (len--)
+			diff |= (uint64_t)(*p1++ ^ *p2++);
 
 		return (diff == 0ULL);
 	}
@@ -450,22 +445,6 @@ public:
 	}
 
 	/**
-	 * @param data Binary data to encode
-	 * @param len Length of data
-	 * @return Base64-encoded string
-	 */
-	static std::string base64Encode(const void *data,unsigned int len);
-	inline static std::string base64Encode(const std::string &data) { return base64Encode(data.data(),(unsigned int)data.length()); }
-
-	/**
-	 * @param data Base64-encoded string
-	 * @param len Length of encoded string
-	 * @return Decoded binary date
-	 */
-	static std::string base64Decode(const char *data,unsigned int len);
-	inline static std::string base64Decode(const std::string &data) { return base64Decode(data.data(),(unsigned int)data.length()); }
-
-	/**
 	 * Split a string by delimiter, with optional escape and quote characters
 	 *
 	 * @param s String to split
@@ -477,7 +456,7 @@ public:
 	static std::vector<std::string> split(const char *s,const char *const sep,const char *esc,const char *quot);
 
 	/**
-	 * Tokenize a string
+	 * Tokenize a string (alias for strtok_r or strtok_s depending on platform)
 	 *
 	 * @param str String to split
 	 * @param delim Delimiters
@@ -772,8 +751,6 @@ public:
 
 private:
 	static const uint64_t crc64Table[256];
-	static const char base64EncMap[64];
-	static const char base64DecMap[128];
 };
 
 } // namespace ZeroTier
