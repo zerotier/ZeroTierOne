@@ -136,20 +136,6 @@ public:
 	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
 	/**
-	 * Must be called after a packet is successfully sent to this peer
-	 *
-	 * Note that 'relay' means we've sent a packet *from* this node to this
-	 * peer by relaying it, not that we have relayed a packet from somewhere
-	 * else to this peer. In the latter case this is not called.
-	 *
-	 * @param _r Runtime environment
-	 * @param relay If true, packet was sent indirectly via a relay
-	 * @param verb Packet verb
-	 * @param now Current time
-	 */
-	void onSent(const RuntimeEnvironment *_r,bool relay,Packet::Verb verb,uint64_t now);
-
-	/**
 	 * Send firewall opener to active link
 	 * 
 	 * @param _r Runtime environment

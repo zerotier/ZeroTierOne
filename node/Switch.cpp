@@ -216,11 +216,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	_r->identity.serialize(outp,false);
 	outp.macSet(dest->macKey());
 
-	if (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1)) {
-		dest->onSent(_r,false,Packet::VERB_HELLO,now);
-		return true;
-	}
-	return false;
+	return _r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1);
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
@@ -274,8 +270,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 		}
 		outp.encrypt(p1p->cryptKey());
 		outp.macSet(p1p->macKey());
-		if (p1p->send(_r,outp.data(),outp.size(),now))
-			p1p->onSent(_r,false,Packet::VERB_RENDEZVOUS,now);
+		p1p->send(_r,outp.data(),outp.size(),now);
 	}
 	{	// tell p2 where to find p1
 		Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
@@ -290,8 +285,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 		}
 		outp.encrypt(p2p->cryptKey());
 		outp.macSet(p2p->macKey());
-		if (p2p->send(_r,outp.data(),outp.size(),now))
-			p2p->onSent(_r,false,Packet::VERB_RENDEZVOUS,now);
+		p2p->send(_r,outp.data(),outp.size(),now);
 	}
 
 	return true;
@@ -616,10 +610,8 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		outp.macSet(supernode->macKey());
 
 		uint64_t now = Utils::now();
-		if (supernode->send(_r,outp.data(),outp.size(),now)) {
-			supernode->onSent(_r,false,Packet::VERB_WHOIS,now);
+		if (supernode->send(_r,outp.data(),outp.size(),now))
 			return supernode->address();
-		}
 	}
 	return Address();
 }
@@ -672,8 +664,6 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 					remaining -= chunkSize;
 				}
 			}
-
-			via->onSent(_r,isRelay,packet.verb(),now);
 			return true;
 		}
 		return false;

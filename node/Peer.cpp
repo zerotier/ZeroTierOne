@@ -99,17 +99,6 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 	return false;
 }
 
-void Peer::onSent(const RuntimeEnvironment *_r,bool relay,Packet::Verb verb,uint64_t now)
-{
-	if (verb == Packet::VERB_FRAME) {
-		_lastUnicastFrame = now;
-		_dirty = true;
-	} else if (verb == Packet::VERB_MULTICAST_FRAME) {
-		_lastMulticastFrame = now;
-		_dirty = true;
-	}
-}
-
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;
