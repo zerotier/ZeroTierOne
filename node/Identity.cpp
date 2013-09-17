@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "Constants.hpp"
 #include "Identity.hpp"
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
@@ -160,7 +161,31 @@ Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
 	uint64_t nonce = 0;
 	for(unsigned int r=0;r<ZT_IDENTITY_DERIVEADDRESS_ROUNDS;++r) {
 		nonce = Utils::crc64(nonce,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
+#if __BYTE_ORDER == __BIG_ENDIAN
+		nonce = ( // swap to little endian -- this was written for a LE system
+			((nonce & 0x00000000000000FFULL) << 56) | 
+			((nonce & 0x000000000000FF00ULL) << 40) | 
+			((nonce & 0x0000000000FF0000ULL) << 24) | 
+			((nonce & 0x00000000FF000000ULL) <<  8) | 
+			((nonce & 0x000000FF00000000ULL) >>  8) | 
+			((nonce & 0x0000FF0000000000ULL) >> 24) | 
+			((nonce & 0x00FF000000000000ULL) >> 40) | 
+			((nonce & 0xFF00000000000000ULL) >> 56)
+		);
+#endif
 		Salsa20 s20(salsaKey,256,&nonce);
+#if __BYTE_ORDER == __BIG_ENDIAN
+		nonce = ( // swap back to big endian
+			((nonce & 0x00000000000000FFULL) << 56) | 
+			((nonce & 0x000000000000FF00ULL) << 40) | 
+			((nonce & 0x0000000000FF0000ULL) << 24) | 
+			((nonce & 0x00000000FF000000ULL) <<  8) | 
+			((nonce & 0x000000FF00000000ULL) >>  8) | 
+			((nonce & 0x0000FF0000000000ULL) >> 24) | 
+			((nonce & 0x00FF000000000000ULL) >> 40) | 
+			((nonce & 0xFF00000000000000ULL) >> 56)
+		);
+#endif
 		s20.encrypt(ram,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
 	}
 
