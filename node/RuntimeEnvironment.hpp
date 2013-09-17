@@ -29,6 +29,7 @@
 #define _ZT_RUNTIMEENVIRONMENT_HPP
 
 #include <string>
+
 #include "Constants.hpp"
 #include "Identity.hpp"
 #include "Condition.hpp"

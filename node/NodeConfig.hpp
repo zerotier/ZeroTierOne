@@ -28,13 +28,14 @@
 #ifndef _ZT_NODECONFIG_HPP
 #define _ZT_NODECONFIG_HPP
 
+#include <stdint.h>
+
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 #include <stdexcept>
 
-#include <stdint.h>
 #include "SharedPtr.hpp"
 #include "Network.hpp"
 #include "Utils.hpp"

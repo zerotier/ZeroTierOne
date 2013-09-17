@@ -29,8 +29,10 @@
 #define _ZT_LOGGER_HPP
 
 #include <stdio.h>
+
 #include <string>
 #include <stdexcept>
+
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 

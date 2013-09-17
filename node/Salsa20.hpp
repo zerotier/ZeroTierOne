@@ -8,6 +8,7 @@
 #define _ZT_SALSA20_HPP
 
 #include <stdint.h>
+
 #include "Constants.hpp"
 
 namespace ZeroTier {

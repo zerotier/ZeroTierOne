@@ -29,7 +29,9 @@
 #define _ZT_MULTICASTGROUP_HPP
 
 #include <stdint.h>
+
 #include <string>
+
 #include "MAC.hpp"
 #include "InetAddress.hpp"
 
