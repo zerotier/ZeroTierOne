@@ -318,6 +318,28 @@ public:
 		}
 
 		/**
+		 * @return Breadth for multicast propagation
+		 */
+		inline unsigned int multicastPropagationBreadth() const
+		{
+			const_iterator mcb(find("mcb"));
+			if (mcb == end())
+				return ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH;
+			return Utils::hexStrToUInt(mcb->second.c_str());
+		}
+
+		/**
+		 * @return Depth for multicast propagation
+		 */
+		inline unsigned int multicastPropagationDepth() const
+		{
+			const_iterator mcd(find("mcd"));
+			if (mcd == end())
+				return ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH;
+			return Utils::hexStrToUInt(mcd->second.c_str());
+		}
+
+		/**
 		 * @return Certificate of membership for this network, or empty cert if none
 		 */
 		inline CertificateOfMembership certificateOfMembership() const
@@ -586,6 +608,24 @@ public:
 		//return tmp;
 	}
 
+	/**
+	 * @return Breadth for multicast rumor mill propagation
+	 */
+	inline unsigned int multicastPropagationBreadth() const
+		throw()
+	{
+		return _multicastPropagationBreadth;
+	}
+
+	/**
+	 * @return Depth for multicast rumor mill propagation
+	 */
+	inline unsigned int multicastPropagationDepth() const
+		throw()
+	{
+		return _multicastPropagationDepth;
+	}
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 	void _restoreState();
@@ -606,6 +646,8 @@ private:
 	Config _configuration;
 	CertificateOfMembership _myCertificate; // memoized from _configuration
 	MulticastRates _mcRates; // memoized from _configuration
+	unsigned int _multicastPropagationBreadth; // memoized from _configuration
+	unsigned int _multicastPropagationDepth; // memoized from _configuration
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];

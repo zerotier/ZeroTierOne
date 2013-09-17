@@ -538,14 +538,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				_r->multicaster->addToDedupHistory(mccrc,now);
 			}
 
-			if (++hops >= ZT_MULTICAST_PROPAGATION_DEPTH) {
+			if (++hops >= network->multicastPropagationDepth()) {
 				TRACE("not propagating MULTICAST_FRAME from original submitter %s, received from %s(%s): max depth reached",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
 
 			Address upstream(source()); // save this since we might mangle it below
 			Multicaster::MulticastBloomFilter bloom(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES));
-			SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
+			SharedPtr<Peer> propPeers[16];
 			unsigned int np = 0;
 
 			if (_r->topology->amSupernode()) {
@@ -567,7 +567,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					originalSubmitterAddress,
 					upstream,
 					bloom,
-					ZT_MULTICAST_PROPAGATION_BREADTH,
+					std::min(network->multicastPropagationBreadth(),(unsigned int)16), // 16 is a sanity check
 					propPeers,
 					now);
 			} else if (isDuplicate) {
@@ -584,7 +584,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					originalSubmitterAddress,
 					upstream,
 					bloom,
-					ZT_MULTICAST_PROPAGATION_BREADTH,
+					std::min(network->multicastPropagationBreadth(),(unsigned int)16), // 16 is a sanity check
 					propPeers,
 					now);
 			}

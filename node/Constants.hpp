@@ -233,25 +233,12 @@ error_no_ZT_ARCH_defined;
 /**
  * Breadth of tree for rumor mill multicast propagation
  */
-#define ZT_MULTICAST_PROPAGATION_BREADTH 4
+#define ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH 3
 
 /**
  * Depth of tree for rumor mill multicast propagation
- *
- * The maximum number of peers who can receive a multicast is equal to
- * the sum of BREADTH^i where I is from 1 to DEPTH. This ignores the effect
- * of the rate limiting algorithm or bloom filter collisions.
- *
- * 5 results in a max of 1364 recipients for a given multicast. With a limit
- * of 50 bytes/sec (average) for multicast, this results in a worst case of
- * around 68kb/sec of multicast traffic. FYI the average multicast traffic
- * from a Mac seems to be about ~25bytes/sec. Windows measurements are TBD.
- * Linux is quieter than Mac.
- *
- * This are eventually going to become per-network tunable parameters, along
- * with per-network peer multicast rate limits.
  */
-#define ZT_MULTICAST_PROPAGATION_DEPTH 5
+#define ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH 6
 
 /**
  * Length of ring buffer history of recent multicast packets

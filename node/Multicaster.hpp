@@ -52,9 +52,6 @@
 #include "CMWC4096.hpp"
 #include "C25519.hpp"
 
-// Maximum sample size to pick during choice of multicast propagation peers
-#define ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE (ZT_MULTICAST_PROPAGATION_BREADTH * 8)
-
 namespace ZeroTier {
 
 /**
@@ -253,7 +250,7 @@ public:
 		Mutex::Lock _l(_multicastMemberships_m);
 		std::map< MulticastChannel,std::vector<MulticastMembership> >::iterator mm(_multicastMemberships.find(MulticastChannel(nwid,mg)));
 		if ((mm != _multicastMemberships.end())&&(!mm->second.empty())) {
-			for(unsigned int stries=0;((stries<ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE)&&(chosen < max));++stries) {
+			for(unsigned int stries=0,stmax=(max*10);((stries<stmax)&&(chosen < max));++stries) {
 				MulticastMembership &m = mm->second[prng.next32() % mm->second.size()];
 				unsigned int sum = m.first.sum();
 				if (
@@ -320,7 +317,7 @@ public:
 			Mutex::Lock _l(_multicastMemberships_m);
 			std::map< MulticastChannel,std::vector<MulticastMembership> >::iterator mm(_multicastMemberships.find(MulticastChannel(nwid,mg)));
 			if ((mm != _multicastMemberships.end())&&(!mm->second.empty())) {
-				for(unsigned int stries=0;stries<ZT_MULTICAST_PICK_MAX_SAMPLE_SIZE;++stries) {
+				for(unsigned int stries=0,stmax=(max*10);stries<stmax;++stries) {
 					MulticastMembership &m = mm->second[prng.next32() % mm->second.size()];
 					if (
 					     ((now - m.second) < ZT_MULTICAST_LIKE_EXPIRE)&& /* LIKE is not expired */

@@ -159,6 +159,8 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	nw->_ready = false; // disable handling of Ethernet frames during construct
 	nw->_r = renv;
 	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
+	nw->_multicastPropagationBreadth = 0;
+	nw->_multicastPropagationDepth = 0;
 	memset(nw->_etWhitelist,0,sizeof(nw->_etWhitelist));
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
@@ -179,6 +181,8 @@ void Network::setConfiguration(const Network::Config &conf)
 			_configuration = conf;
 			_myCertificate = conf.certificateOfMembership();
 			_mcRates = conf.multicastRates();
+			_multicastPropagationBreadth = conf.multicastPropagationBreadth();
+			_multicastPropagationDepth = conf.multicastPropagationDepth();
 			_lastConfigUpdate = Utils::now();
 
 			_tap->setIps(conf.staticAddresses());

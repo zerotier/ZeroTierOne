@@ -119,7 +119,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		Multicaster::MulticastBloomFilter bloom;
-		SharedPtr<Peer> propPeers[ZT_MULTICAST_PROPAGATION_BREADTH];
+		SharedPtr<Peer> propPeers[16];
 		unsigned int np = _r->multicaster->pickSocialPropagationPeers(
 			*(_r->prng),
 			*(_r->topology),
@@ -128,7 +128,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			_r->identity.address(),
 			Address(),
 			bloom,
-			ZT_MULTICAST_PROPAGATION_BREADTH,
+			std::min(network->multicastPropagationBreadth(),(unsigned int)16), // 16 is a sanity check
 			propPeers,
 			now);
 

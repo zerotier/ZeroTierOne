@@ -204,15 +204,19 @@ int main(int argc,char **argv)
 				}
 
 				bool isOpen = false;
+				unsigned int mcb = 3;
+				unsigned int mcd = 6;
 				std::string name,desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT name,`desc`,isOpen FROM Network WHERE id = " << nwid;
+					q << "SELECT name,`desc`,isOpen,multicastPropagationBreadth,multicastPropagationDepth FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						name = rs[0]["name"].c_str();
 						desc = rs[0]["desc"].c_str();
 						isOpen = ((int)rs[0]["isOpen"] > 0);
+						mcb = (unsigned int)rs[0]["multicastPropagationBreadth"];
+						mcd = (unsigned int)rs[0]["multicastPropagationDepth"];
 					} else {
 						Dictionary response;
 						response["peer"] = peerIdentity.address().toString();
@@ -293,6 +297,10 @@ int main(int argc,char **argv)
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
 				netconf["peer"] = peerIdentity.address().toString();
+				sprintf(buf,"%x",mcb);
+				netconf["mcb"] = mcb;
+				sprintf(buf,"%x",mcd);
+				netconf["mcd"] = mcd;
 
 				if (!isOpen) {
 					// TODO: handle closed networks, look up private membership,
