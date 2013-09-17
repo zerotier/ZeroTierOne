@@ -60,7 +60,13 @@ static Node *node = (Node *)0;
 
 static void printHelp(const char *cn,FILE *out)
 {
-	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2012-2013 ZeroTier Networks LLC"ZT_EOL_S"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S"Usage: %s [home directory]"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision(),cn);
+	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2012-2013 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
+	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
+	fprintf(out,"Available switches:"ZT_EOL_S);
+	fprintf(out," -h                - Display this help"ZT_EOL_S);
+	fprintf(out," -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
+	fprintf(out," -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
 }
 
 #ifdef __UNIX_LIKE__
@@ -114,9 +120,25 @@ int main(int argc,char **argv)
 #endif
 
 	const char *homeDir = (const char *)0;
+	unsigned int port = 0;
+	unsigned int controlPort = 0;
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
+				case 'p':
+					port = Utils::strToUInt(argv[i] + 2);
+					if (port > 65535) {
+						printHelp(argv[0],stderr);
+						return -1;
+					}
+					break;
+				case 'c':
+					controlPort = Utils::strToUInt(argv[i] + 2);
+					if (controlPort > 65535) {
+						printHelp(argv[0],stderr);
+						return -1;
+					}
+					break;
 				case 'h':
 				case '?':
 				default:
@@ -142,7 +164,7 @@ int main(int argc,char **argv)
 
 	int exitCode = 0;
 
-	node = new Node(homeDir);
+	node = new Node(homeDir,port,controlPort);
 	const char *termReason = (char *)0;
 	switch(node->run()) {
 		case Node::NODE_UNRECOVERABLE_ERROR:

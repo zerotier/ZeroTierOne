@@ -131,12 +131,12 @@ error_no_ZT_ARCH_defined;
 /**
  * Default local UDP port
  */
-#define ZT_DEFAULT_UDP_PORT 8993
+#define ZT_DEFAULT_UDP_PORT 9993
 
 /**
  * Local control port, also used for multiple invocation check
  */
-#define ZT_CONTROL_UDP_PORT 39393
+#define ZT_DEFAULT_CONTROL_UDP_PORT 39393
 
 /**
  * Default payload MTU for UDP packets

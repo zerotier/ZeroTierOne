@@ -59,9 +59,10 @@ public:
 	/**
 	 * @param renv Runtime environment
 	 * @param authToken Configuration authentication token
+	 * @param controlPort Control port for local control packet I/O
 	 * @throws std::runtime_error Unable to bind to local control port
 	 */
-	NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
+	NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort)
 		throw(std::runtime_error);
 
 	~NodeConfig();

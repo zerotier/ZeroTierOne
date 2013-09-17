@@ -88,6 +88,7 @@ struct _LocalClientImpl
 	UdpSocket *sock;
 	void (*resultHandler)(void *,unsigned long,const char *);
 	void *arg;
+	unsigned int controlPort;
 	InetAddress localDestAddr;
 	Mutex inUseLock;
 };
@@ -111,7 +112,7 @@ static void _CBlocalClientHandler(UdpSocket *sock,void *arg,const InetAddress &r
 	} catch ( ... ) {}
 }
 
-Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+Node::LocalClient::LocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
 	throw() :
 	_impl((void *)0)
 {
@@ -138,8 +139,9 @@ Node::LocalClient::LocalClient(const char *authToken,void (*resultHandler)(void 
 		impl->sock = sock;
 		impl->resultHandler = resultHandler;
 		impl->arg = arg;
+		impl->controlPort = (controlPort) ? controlPort : (unsigned int)ZT_DEFAULT_CONTROL_UDP_PORT;
 		impl->localDestAddr = InetAddress::LO4;
-		impl->localDestAddr.setPort(ZT_CONTROL_UDP_PORT);
+		impl->localDestAddr.setPort(impl->controlPort);
 		_impl = impl;
 	} else delete impl;
 }
@@ -183,6 +185,8 @@ unsigned long Node::LocalClient::send(const char *command)
 struct _NodeImpl
 {
 	RuntimeEnvironment renv;
+	unsigned int port;
+	unsigned int controlPort;
 	std::string reasonForTerminationStr;
 	volatile Node::ReasonForTermination reasonForTermination;
 	volatile bool started;
@@ -272,7 +276,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 }
 #endif // !__WINDOWS__
 
-Node::Node(const char *hp)
+Node::Node(const char *hp,unsigned int port,unsigned int controlPort)
 	throw() :
 	_impl(new _NodeImpl)
 {
@@ -280,6 +284,8 @@ Node::Node(const char *hp)
 	if ((hp)&&(strlen(hp) > 0))
 		impl->renv.homePath = hp;
 	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
+	impl->port = (port) ? port : (unsigned int)ZT_DEFAULT_UDP_PORT;
+	impl->controlPort = (controlPort) ? controlPort : (unsigned int)ZT_DEFAULT_CONTROL_UDP_PORT;
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
@@ -327,7 +333,7 @@ Node::ReasonForTermination Node::run()
 					return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.public (home path not writable?)");
 			}
 		} else {
-			LOG("no identity found, generating one... this might take a few seconds...");
+			LOG("no identity found or identity invalid, generating one... this might take a few seconds...");
 			_r->identity.generate();
 			LOG("generated new identity: %s",_r->identity.address().toString().c_str());
 			idser = _r->identity.toString(true);
@@ -365,36 +371,29 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
-		// Create the core objects in RuntimeEnvironment: node config, demarcation
-		// point, switch, network topology database, and system environment
-		// watcher.
+		// Create the objects that make up runtime state.
 		_r->multicaster = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->demarc = new Demarc(_r);
 		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
 		_r->sysEnv = new SysEnv(_r);
 		try {
-			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
+			_r->nc = new NodeConfig(_r,configAuthToken.c_str(),impl->controlPort);
 		} catch (std::exception &exc) {
-			// An exception here currently means that another instance of ZeroTier
-			// One is running.
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,(std::string("another instance of ZeroTier One appears to be running, or local control UDP port cannot be bound: ") + exc.what()).c_str());
+			char foo[1024];
+			Utils::snprintf(foo,sizeof(foo),"unable to bind to local control port %u: is another instance of ZeroTier One already running?",impl->controlPort);
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,foo);
 		}
 		_r->node = this;
 
-		// TODO: make configurable
-		bool boundPort = false;
-		for(unsigned int p=ZT_DEFAULT_UDP_PORT;p<(ZT_DEFAULT_UDP_PORT + 128);++p) {
-			if (_r->demarc->bindLocalUdp(p)) {
-				boundPort = true;
-				break;
-			}
+		// Bind local port for core I/O
+		if (!_r->demarc->bindLocalUdp(impl->port)) {
+			char foo[1024];
+			Utils::snprintf(foo,sizeof(foo),"unable to bind to global I/O port %u: is another instance of ZeroTier One already running?",impl->controlPort);
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,foo);
 		}
-		if (!boundPort)
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not bind any local UDP ports");
 
-		// TODO: bootstrap off network so we don't have to update code for
-		// changes in supernodes.
+		// Set initial supernode list
 		_r->topology->setSupernodes(ZT_DEFAULTS.supernodes);
 	} catch (std::bad_alloc &exc) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"memory allocation failure");
@@ -404,6 +403,8 @@ Node::ReasonForTermination Node::run()
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unknown exception during initialization");
 	}
 
+	// Start external service subprocesses, which is only used by special nodes
+	// right now and isn't available on Windows.
 #ifndef __WINDOWS__
 	try {
 		std::string netconfServicePath(_r->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
@@ -416,6 +417,7 @@ Node::ReasonForTermination Node::run()
 	}
 #endif
 
+	// Core I/O loop
 	try {
 		uint64_t lastNetworkAutoconfCheck = 0;
 		uint64_t lastPingCheck = 0;
@@ -614,9 +616,9 @@ const unsigned char EMBEDDED_VERSION_STAMP[20] = {
 
 extern "C" {
 
-ZeroTier::Node *zeroTierCreateNode(const char *hp)
+ZeroTier::Node *zeroTierCreateNode(const char *hp,unsigned int port,unsigned int controlPort)
 {
-	return new ZeroTier::Node(hp);
+	return new ZeroTier::Node(hp,port,controlPort);
 }
 
 void zeroTierDeleteNode(ZeroTier::Node *n)
@@ -624,9 +626,9 @@ void zeroTierDeleteNode(ZeroTier::Node *n)
 	delete n;
 }
 
-ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
 {
-	return new ZeroTier::Node::LocalClient(authToken,resultHandler,arg);
+	return new ZeroTier::Node::LocalClient(authToken,controlPort,resultHandler,arg);
 }
 
 void zeroTierDeleteLocalClient(ZeroTier::Node::LocalClient *lc)

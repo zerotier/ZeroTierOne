@@ -62,10 +62,10 @@
 
 namespace ZeroTier {
 
-NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken)
+NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort)
 	throw(std::runtime_error) :
 	_r(renv),
-	_controlSocket(true,ZT_CONTROL_UDP_PORT,false,&_CBcontrolPacketHandler,this)
+	_controlSocket(true,controlPort,false,&_CBcontrolPacketHandler,this)
 {
 	{
 		unsigned int csk[64];

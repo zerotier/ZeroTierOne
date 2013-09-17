@@ -45,9 +45,10 @@ static void printHelp(FILE *out,const char *exename)
 {
 	fprintf(out,"Usage: %s [-switches] <command>"ZT_EOL_S,exename);
 	fprintf(out,ZT_EOL_S);
-	fprintf(out,"Switches:"ZT_EOL_S);
-	fprintf(out,"  -t<token>        - Specify token on command line"ZT_EOL_S);
-	fprintf(out,"  -T<file>         - Read token from file"ZT_EOL_S);
+	fprintf(out,"Available switches:"ZT_EOL_S);
+	fprintf(out," -c<port>         - Communicate with daemon over this local port"ZT_EOL_S);
+	fprintf(out," -t<token>        - Specify token on command line"ZT_EOL_S);
+	fprintf(out," -T<file>         - Read token from file"ZT_EOL_S);
 	fprintf(out,ZT_EOL_S);
 	fprintf(out,"Use the 'help' command to get help from ZeroTier One itself."ZT_EOL_S);
 }
@@ -73,6 +74,7 @@ int main(int argc,char **argv)
 	std::string authToken;
 	std::string command;
 	bool pastSwitches = false;
+	unsigned int controlPort = 0;
 	for(int i=1;i<argc;++i) {
 		if ((argv[i][0] == '-')&&(!pastSwitches)) {
 			if (strlen(argv[i]) <= 1) {
@@ -80,6 +82,9 @@ int main(int argc,char **argv)
 				return -1;
 			}
 			switch(argv[i][1]) {
+				case 'c':
+					controlPort = Utils::strToUInt(argv[i] + 2);
+					break;
 				case 't':
 					authToken.assign(argv[i] + 2);
 					break;
@@ -129,7 +134,7 @@ int main(int argc,char **argv)
 		return -2;
 	}
 
-	Node::LocalClient client(authToken.c_str(),&resultHandler,(void *)0);
+	Node::LocalClient client(authToken.c_str(),controlPort,&resultHandler,(void *)0);
 	client.send(command.c_str());
 
 	doneCondition.wait(1000);

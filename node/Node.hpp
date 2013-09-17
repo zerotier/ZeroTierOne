@@ -50,9 +50,10 @@ public:
 		 * Create a new node config client
 		 *
 		 * @param authToken Authentication token
+		 * @param controlPort Control port or 0 for 39393 (default)
 		 * @param resultHandler Function to call when commands provide results
 		 */
-		LocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+		LocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
 			throw();
 
 		~LocalClient();
@@ -95,8 +96,10 @@ public:
 	 * The node is not executed until run() is called.
 	 *
 	 * @param hp Home directory path
+	 * @param port Port to bind for talking to the ZT1 network or 0 for 9993 (default)
+	 * @param controlPort Port to bind locally for control packets or 0 for 39393 (default)
 	 */
-	Node(const char *hp)
+	Node(const char *hp,unsigned int port,unsigned int controlPort)
 		throw();
 
 	~Node();
@@ -170,10 +173,10 @@ extern "C" {
 // Functions with C-style linkage for easy DLL symbol table
 // lookup. These just create instances of Node and LocalClient.
 
-ZeroTier::Node *zeroTierCreateNode(const char *hp);
+ZeroTier::Node *zeroTierCreateNode(const char *hp,unsigned int port,unsigned int controlPort);
 void zeroTierDeleteNode(ZeroTier::Node *n);
 
-ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,void (*resultHandler)(void *,unsigned long,const char *),void *arg);
+ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg);
 void zeroTierDeleteLocalClient(ZeroTier::Node::LocalClient *lc);
 
 } // extern "C"

@@ -50,30 +50,28 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	std::vector<InetAddress> addrs;
 
 	// Nothing special about a supernode... except that they are
-	// designated as such.
+	// designated as such and trusted to provide WHOIS lookup.
 
-#if 0
 	// cthulhu.zerotier.com - New York, New York, USA
 	addrs.clear();
-	if (!id.fromString("271ee006a0:1:AgGXs3I+9CWrEmGMxc50x3E+trwtaa2ZMXDU6ezz92fFJXzlhRKGUY/uAToHDdH9XiLxtcA+kUQAZdC4Dy2xtqXxjw==:QgH5Nlx4oWEGVrwhNocqem+3VNd4qzt7RLrmuvqZvKPRS9R70LJYJQLlKZj0ri55Pzg+Mlwy4a4nAgfnRAWA+TW6R0EjSmq72MG585XGNfWBVk3LxMvxlNWErnVNFr2BQS9yzVp4pRjPLdCW4RB3dwEHBUgJ78rwMxQ6IghVCl8CjkDapg=="))
+	if (!id.fromString("a0fa79d81c:2:0bb348bb38883a29054659a37c204f2c0b082985cb51b36fad31366dfedd616c20aacc5e33ceee2b054670639563238c4fe50bb8716c1ac7996762c0eaefbb23:b7e91f4c77815327c59ff0979f33861e665d002a357448572954c85919be61f768ee6a4d4e42318ffd9cfcc08cadedcd0277a33a950e316a1d7b5bf082919400c44cad1e725fc2035e2d7087d0c8bf51adc5875b643d759a475f899cfbf3e1a4"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.199.73.93",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
 
 	// nyarlathotep.zerotier.com - San Francisco, California, USA
 	addrs.clear();
-	if (!id.fromString("fa9be4008b:1:AwCHXEi/PJuhtOPUZxnBSMiuGvj6XeRMWu9R9aLR3JD1qluADLQzUPSP2+81Dqvgi2wkQ2cqEpOlDPeUCvtlZwdXEA==:QgH4usG/wzsoUCtO2LL3qkwugtoXEz1PUJbmUzY8vbwzc5bckmVPjMqb4q2CF71+QVPV1K6shIV2EKkBMRSS/D/44EGEwC6tjFGZqmmogaC0P1uQeukTAF4qta46YgC4YQx54/Vd/Yfl8n1Bwmgm0gBB4W1ZQir3p+wp37MGlEN0rlXxqA=="))
+	if (!id.fromString("1521e171ab:2:43bcdc31f2d75667163f3384bc8866e95ce39b4735999e7760494f6480e0fb70f45675f887f8fdfe50e47b082f3fcfc589381f78b3d3bd1dcbf888ccf14d7935:5026836a5732ed890e778f46ded38410dda51c448f82ab76dd0d2c0152bddd5f05fee2fedf8c9f4ccf1f6181f2cdc1f723c59a143a9928c560b2da652f656507f490acfe70e8f5b2a2bba0eca4ea85b03ce00480afd00d49fc756a03bb740592"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.199.97.220",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
 
 	// shub-niggurath.zerotier.com - Amsterdam, Netherlands
 	addrs.clear();
-	if (!id.fromString("48099ecd05:1:AwHO7o1FdDj1nEArfchTDa6EG7Eh2GLdiH86BhcoNv0BHJN4tmrf0Y7/2SZiQFpTTwJf93iph84Dci5+k52u/qkHTQ==:QgGbir8CNxBFFPPj8Eo3Bnp2UmbnZxu/pOq3Ke0WaLBBhHzVuwM+88g7CaDxbZ0AY2VkFc9hmE3VG+xi7g0H86yfVUIBHZnb7N+DCtf8/mphZIHNgmasakRi4hU11kGyLi1nTVTnrmCfAb7w+8SCp64Q5RNvBC/Pvz7pxSwSdjIHkVqRaeo="))
+	if (!id.fromString("11c3bddb9a:2:27e1c10a937dde0d6013e7a93755040ff93a98f5bcad809722a6dcde0b255f07da523f9eae818079be0deccbd4572d2e746fe7b8ba8ae6a7a15bdf0456062c37:5f0a7ea9615388a5532c8ce58f9352ba8950c8b3db261d60c02e1ed5a1a42a5e79bc757b38d8a94d00d8e738a6a33cd9b1586022bdff77c9c49ae16609cf5d03f0f60e36a67467c01870ccf26f61793853b93fb6eab53f65f20f623898e9d28d"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.211.127.172",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
-#endif
 
 	return sn;
 }
