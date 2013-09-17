@@ -4,6 +4,8 @@ zerotier-*
 .DS_Store
 .Apple*
 *.dSYM
+netconf-service/netconf-test
+netconf-service/netconf.service
 mac-tap/tuntap/src/tap/tap
 mac-tap/tuntap/tap.kext
 /ipch
