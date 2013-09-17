@@ -33,10 +33,10 @@
 #include <vector>
 #include <list>
 
+#include "Constants.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
 #include "NonCopyable.hpp"
-#include "Constants.hpp"
 #include "Packet.hpp"
 #include "Utils.hpp"
 #include "InetAddress.hpp"

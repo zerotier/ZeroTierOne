@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
 #include "Network.hpp"

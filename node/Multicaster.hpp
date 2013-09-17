@@ -178,7 +178,7 @@ public:
 		throw()
 	{
 		for(unsigned int i=0;i<ZT_MULTICAST_DEDUP_HISTORY_LENGTH;++i) {
-			if ((_multicastHistory[i][0] == crc)&&((now - _multicastHistory[i][1]) < ZT_MULTICAST_DEDUP_HISTORY_EXPIRE))
+			if ((_multicastHistory[i][0] == crc)&&((now - _multicastHistory[i][1]) <= ZT_MULTICAST_DEDUP_HISTORY_EXPIRE))
 				return true;
 		}
 		return false;
