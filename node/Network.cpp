@@ -251,7 +251,7 @@ void Network::clean()
 
 	Mutex::Lock _l(_lock);
 
-	if (_configuration.isOpen()) {
+	if ((!_id)||(_configuration.isOpen())) {
 		_membershipCertificates.clear();
 		Utils::rm(mcdbPath);
 	} else {
