@@ -73,7 +73,8 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 		memcpy(_controlSocketKey,csk,32);
 	}
 
-	std::map<std::string,bool> networksDotD(Utils::listDirectory((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
+	std::string networksFolder(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
+	std::map<std::string,bool> networksDotD(Utils::listDirectory(networksFolder.c_str()));
 	std::set<uint64_t> nwids;
 	for(std::map<std::string,bool>::iterator d(networksDotD.begin());d!=networksDotD.end();++d) {
 		if (!d->second) {
@@ -86,7 +87,7 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 				// config file. New one will be created.
 				if (nwid == 0x6c92786fee000001ULL) {
 					nwid = 0xbc8f9a8ee3000001ULL;
-					Utils::rm(networksDotD + ZT_PATH_SEPARATOR_S + d->first);
+					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
 				}
 
 				if (nwid > 0)
