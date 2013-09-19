@@ -298,9 +298,9 @@ int main(int argc,char **argv)
 				netconf["ts"] = buf;
 				netconf["peer"] = peerIdentity.address().toString();
 				sprintf(buf,"%x",mcb);
-				netconf["mcb"] = mcb;
+				netconf["mcb"] = buf;
 				sprintf(buf,"%x",mcd);
-				netconf["mcd"] = mcd;
+				netconf["mcd"] = buf;
 
 				if (!isOpen) {
 					// TODO: handle closed networks, look up private membership,

@@ -325,7 +325,10 @@ public:
 			const_iterator mcb(find("mcb"));
 			if (mcb == end())
 				return ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH;
-			return Utils::hexStrToUInt(mcb->second.c_str());
+			unsigned int mcb2 = Utils::hexStrToUInt(mcb->second.c_str());
+			if (mcb2)
+				return mcb2;
+			return ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH;
 		}
 
 		/**
@@ -336,7 +339,10 @@ public:
 			const_iterator mcd(find("mcd"));
 			if (mcd == end())
 				return ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH;
-			return Utils::hexStrToUInt(mcd->second.c_str());
+			unsigned int mcd2 = Utils::hexStrToUInt(mcd->second.c_str());
+			if (mcd2)
+				return mcd2;
+			return ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH;
 		}
 
 		/**
