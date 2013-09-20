@@ -45,14 +45,17 @@
 #include "../ext/lz4/lz4.h"
 
 /**
- * Protocol version
+ * Protocol version -- incremented only for MAJOR changes
  *
  * 1 - 0.2.0 ... 0.2.5
- * 2 - 0.3.0 ...
+ * 2 - 0.3.0 ... 0.4.5
  *   * Added signature and originating peer to multicast frame
  *   * Double size of multicast frame bloom filter
+ * 3 - 0.5.0 ...
+ *   * Yet another multicast redesign
+ *   * New crypto completely changes key agreement cipher
  */
-#define ZT_PROTO_VERSION 2
+#define ZT_PROTO_VERSION 3
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
@@ -161,18 +164,18 @@
 #define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
 
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS + 5)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COUNTER (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COUNTER + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE + 320)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET + 5)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_UNIQUE_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER + 5)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_UNIQUE_ID + 3)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER + 64)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_ADI + 4)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH + 2)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH + 2)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
@@ -181,6 +184,10 @@
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REFRESH_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP + 8)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_REVISION (ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION + 1)
 
 #define ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 
@@ -448,9 +455,6 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/* 7 - old VERB_MULTICAST_FRAME, might be reused once all old 0.2
-		 * clients are off the net. */
-
 		/* Announce interest in multicast group(s):
 		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast Ethernet address>
@@ -459,34 +463,72 @@ public:
 		 *
 		 * OK is generated on successful receipt.
 		 */
-		VERB_MULTICAST_LIKE = 8,
+		VERB_MULTICAST_LIKE = 7,
+
+		/* Announce receipt of a multicast to propagation magnet node:
+		 *   <[8] 64-bit multicast GUID>
+		 *
+		 * OK/ERROR are not generated.
+		 */
+		VERB_MULTICAST_GOT = 8,
 
 		/* A multicast frame:
-		 *   <[1] flags, currently unused and must be 0>
+		 *   <[2] 16-bit counter -- number of times multicast has been forwarded>
+		 *   <[320] FIFO queue of up to 64 ZT addresses, zero address terminated>
+		 *   [... start of signed portion, signed by original submitter below ...]
+		 *   <[5] ZeroTier address of propagation magnet node>
+		 *   <[5] ZeroTier address of original submitter/signer>
+		 *   <[3] 24-bit multicast ID, combined with signer address to form GUID>
 		 *   <[8] 64-bit network ID>
-		 *   <[5] ZeroTier address of original submitter of this multicast>
 		 *   <[6] source MAC address>
-		 *   <[6] destination multicast Ethernet address>
-		 *   <[4] multicast additional distinguishing information (ADI)>
-		 *   <[64] multicast propagation bloom filter>
-		 *   <[1] 8-bit propagation hop count>
-		 *   <[2] 16-bit ethertype>
+		 *   <[6] destination multicast group MAC address>
+		 *   <[4] destination multicast group 32-bit ADI field>
+		 *   <[2] 16-bit frame ethertype>
 		 *   <[2] 16-bit length of payload>
+		 *   <[...] ethernet frame payload>
+		 *   [... end of signed portion ...]
 		 *   <[2] 16-bit length of signature>
-		 *   <[...] ethernet payload>
-		 *   <[...] ECDSA signature of SHA-256 hash (see below)>
+		 *   <[...] signature (currently Ed25519/SHA-512, 96 bytes in length)>
 		 *
-		 * The signature is made using the key of the original submitter, and
-		 * can be used to authenticate the submitter for security and rate
-		 * control purposes. Fields in the signature are: network ID, source
-		 * MAC, destination MAC, multicast ADI, ethertype, and payload. All
-		 * integers are hashed in big-endian byte order. A zero byte is added
-		 * to the hash between each field.
+		 * Multicast frames are propagated using a graph exploration algorithm in
+		 * which the FIFO queue is embedded in the multicast packet.
 		 *
-		 * In the future flags could indicate additional fields appended to the
-		 * end or a different signature algorithm.
+		 * Upon receipt:
+		 *   (1) packet is possibly injected into the local TAP
+		 *   (2) send a MULTICAST_GOT message to magnet node with 64-bit
+		 *       multicast GUID
+		 *   (3) counter is incremented, STOP if >= network's max multicast
+		 *       recipient count
+		 *   (4) topmost value is removed from FIFO and saved (next hop)
+		 *   (5) FIFO is deduplicated (prevents amplification floods)
+		 *   (6) FIFO is filled with as many known peers that have LIKED this
+		 *       multicast group as possible, excluding peers to whom this
+		 *       multicast has already been sent or (if magnet node) have GOT
+		 *       this multicast
+		 *   (7) packet is sent to next hop (if possible)
 		 *
-		 * No OK or ERROR is generated.
+		 * If there was no next hop -- empty FIFO -- and no new hops are known,
+		 * the packet is sent to the magnet node. The magnet node must be aware
+		 * of all members of a given multicast group. It is the node responsible
+		 * for bridging sparse multicast groups. When other nodes receive the
+		 * multicast, they send GOT to the magnet node so that it will not
+		 * send it back to them.
+		 *
+		 * Right now the magnet is a supernode. In the future there may be
+		 * dedicated magnets and/or magnets elected via some kind of DHT or
+		 * something to act as such for given multicast groups. This latter
+		 * might happen if we evolve more toward a totally decentralized model
+		 * instead of today's partially decentralized model.
+		 *
+		 * The multicast GUID is formed by packing the original sender / signer
+		 * address into the most significant 5 bytes of a 64-bit big-endian
+		 * number, and then packing the 24-bit sender unique ID into the least
+		 * significant 3 bytes. This can be used to locally deduplicate, and
+		 * to identify the multicast in a GOT sent to the magnet. The 24-bit
+		 * ID must be unique for a given sender over recent (say, 10min) time
+		 * spans and across networks. Random or sequential values are fine.
+		 *
+		 * OK/ERROR are not generated, but GOT is sent to magnet.
 		 */
 		VERB_MULTICAST_FRAME = 9,
 
