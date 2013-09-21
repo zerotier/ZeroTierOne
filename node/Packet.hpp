@@ -466,6 +466,7 @@ public:
 		VERB_MULTICAST_LIKE = 7,
 
 		/* Announce receipt of a multicast to propagation magnet node:
+		 *   <[8] 64-bit network ID>
 		 *   <[8] 64-bit multicast GUID>
 		 *
 		 * OK/ERROR are not generated.

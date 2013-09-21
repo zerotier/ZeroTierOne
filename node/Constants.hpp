@@ -231,26 +231,6 @@ error_no_ZT_ARCH_defined;
 #define ZT_RELAY_MAX_HOPS 3
 
 /**
- * Breadth of tree for rumor mill multicast propagation
- */
-#define ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH 3
-
-/**
- * Depth of tree for rumor mill multicast propagation
- */
-#define ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH 6
-
-/**
- * Length of ring buffer history of recent multicast packets
- */
-#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 1024
-
-/**
- * Expiration time in ms for multicast deduplication history items
- */
-#define ZT_MULTICAST_DEDUP_HISTORY_EXPIRE 2000
-
-/**
  * Period between announcements of all multicast 'likes' in ms
  *
  * Announcement occurs when a multicast group is locally joined, but all
@@ -263,6 +243,11 @@ error_no_ZT_ARCH_defined;
  * Expire time for multicast 'likes' in ms
  */
 #define ZT_MULTICAST_LIKE_EXPIRE ((ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD * 2) + 1000)
+
+/**
+ * Expiration for remembered MULTICAST_GOTs, in ms
+ */
+#define ZT_MULTICAST_MAGNET_STATE_EXPIRE 30000
 
 /**
  * Time between polls of local taps for multicast membership changes
