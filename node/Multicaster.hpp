@@ -33,8 +33,7 @@
 
 #include <stdexcept>
 #include <map>
-#include <vector>
-#include <set>
+#include <list>
 #include <algorithm>
 
 #include "Constants.hpp"
@@ -63,13 +62,13 @@ public:
 	inline void likesGroup(const Address &a,const MulticastGroup &mg,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		std::map< Address,_PeerInfo >::iterator pi(_peers.find(a));
-		if (pi == _peers.end()) {
-			pi = _peers.insert(std::pair< Address,_PeerInfo >(a,_PeerInfo())).first;
-			_proximity.push_front(a);
-			pi->second.proximitySlot = _proximity.begin();
+		_SubInfo &si = _subscriptions[_Subscription(a,mg)];
+		if (!si.lastLike) { // on first LIKE, we must add to _proximity[mg]
+			std::list< Address > &p = _proximity[mg];
+			p.push_front(a);
+			si.proximitySlot = p.begin(); // list's iterators remain valid until erase()
 		}
-		pi->second.groups[mg] = now;
+		si.lastLike = now;
 	}
 
 	/**
@@ -81,10 +80,19 @@ public:
 	inline void bringCloser(const Address &a)
 	{
 		Mutex::Lock _l(_lock);
-		std::map< Address,_PeerInfo >::iterator pi(_peers.find(a));
-		if (pi != _peers.end()) {
-			if (pi->second.proximitySlot != _proximity.begin())
-				_proximity.splice(_proximity.begin(),_proximity,pi->second.proximitySlot);
+
+		// _subscriptions contains pairs of <Address,MulticastGroup>, so we can
+		// easily iterate through all subscriptions for a given address by
+		// starting with the default all-zero MulticastGroup() as lower bound
+		// and stopping when we're not looking at the right address anymore.
+		// Then we can look up _proximity and rapidly splice() the list using
+		// the saved iterator in _SubInfo.
+		std::map< _Subscription,_SubInfo >::iterator s(_subscriptions.lower_bound(_Subscription(a,MulticastGroup())));
+		while ((s != _subscriptions.end())&&(s->first.first == a)) {
+			std::map< MulticastGroup,std::list< Address > >::iterator p(_proximity.find(s->first.second));
+			if (s->second.proximitySlot != p->second.begin())
+				p->second.splice(p->second.begin(),p->second,s->second.proximitySlot);
+			++s;
 		}
 	}
 
@@ -106,7 +114,7 @@ public:
 	}
 
 	/**
-	 * Erase entries for expired LIKEs
+	 * Erase entries for expired LIKEs and GOT records
 	 */
 	inline void clean(uint64_t now)
 	{
@@ -118,21 +126,22 @@ public:
 			else ++g;
 		}
 
-		for(std::map< Address,_PeerInfo >::iterator pi(_peers.begin());pi!=_peers.end();) {
-			for(std::map< MulticastGroup,uint64_t >::iterator g(pi->second.groups.begin());g!=pi->second.groups.end();) {
-				if ((now - g->second) > ZT_MULTICAST_LIKE_EXPIRE)
-					pi->second.groups.erase(g++);
-				else ++g;
-			}
-			if (pi->second.groups.empty()) {
-				_proximity.erase(pi->second.proximitySlot);
-				_peers.erase(pi++);
-			} else ++pi;
+		for(std::map< _Subscription,_SubInfo >::iterator s(_subscriptions.begin());s!=_subscriptions.end();) {
+			if ((now - s->second.lastLike) > ZT_MULTICAST_LIKE_EXPIRE) {
+				std::map< MulticastGroup,std::list< Address > > p(_proximity.find(s->first.second));
+				p->second.erase(s->second.proximitySlot);
+				if (p->second.empty())
+					_proximity.erase(p);
+				_subscriptions.erase(s++);
+			} else ++s;
 		}
 	}
 
 	/**
 	 * Pick next hops for a multicast by proximity
+	 *
+	 * The function or function object must return true if more hops are desired
+	 * or false to stop finding new hops and return.
 	 *
 	 * @param mg Multicast group
 	 * @param mcGuid Multicast message GUID (signer and signer unique ID)
@@ -143,10 +152,13 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		std::map< uint64_t,std::pair< uint64_t,std::set< Address > > > g(_got.find(mcGuid));
-		for(std::list< Address >::iterator a(_proximity.begin());a!=_proximity.end();++a) {
-			if (((g == _got.end())||(!g->second.second.count(*a)))&&(_peers.find(*a)->second.groups.count(mg))) {
-				if (!nextHopFunc(*a))
-					break;
+		std::map< MulticastGroup,std::list< Address > > p(_proximity.find(mg));
+		if (p != _proximity.end()) {
+			for(std::list< Address >::iterator a(p->second.begin());a!=p->second.end();++a) {
+				if ((g == _got.end())||(!g->second.second.count(*a))) {
+					if (!nextHopFunc(*a))
+						break;
+				}
 			}
 		}
 	}
@@ -155,20 +167,28 @@ private:
 	// GOTs by multicast GUID: time of last GOT, addresses that GOT
 	std::map< uint64_t,std::pair< uint64_t,std::set< Address > > > _got;
 
-	// Peer proximity ordering
-	std::list< Address > _proximity;
+	// Peer proximity ordering for peers subscribed to each group
+	std::map< MulticastGroup,std::list< Address > > _proximity;
 
-	struct _PeerInfo
+	// An address and multicast group tuple
+	typedef std::pair<Address,MulticastGroup> _Subscription;
+
+	// Information about a subscription
+	struct _SubInfo
 	{
-		// Groups and time of last LIKE for each group
-		std::map< MulticastGroup,uint64_t > groups;
+		_SubInfo() :
+			lastLike(0),
+			proximitySlot() {}
 
-		// Peer's slot in _proximity
+		// Time of last MULTICAST_LIKE for this group
+		uint64_t lastLike;
+
+		// Slot in corresponding list in _proximity
 		std::list< Address >::iterator proximitySlot;
 	};
 
-	// Time of last LIKE for each address's group subscriptions
-	std::map< Address,_PeerInfo > _peers;
+	// Peer subscriptions to multicast groups
+	std::map< _Subscription,_SubInfo > _subscriptions;
 
 	Mutex _lock;
 };
