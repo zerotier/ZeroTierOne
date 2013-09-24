@@ -147,6 +147,7 @@ Network::~Network()
 SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t id)
 	throw(std::runtime_error)
 {
+	// Tag to identify tap device -- used on some OSes like Windows
 	char tag[32];
 	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)id);
 
@@ -159,8 +160,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	nw->_ready = false; // disable handling of Ethernet frames during construct
 	nw->_r = renv;
 	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
-	nw->_multicastPropagationBreadth = 0;
-	nw->_multicastPropagationDepth = 0;
+	nw->_isOpen = false;
 	memset(nw->_etWhitelist,0,sizeof(nw->_etWhitelist));
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
@@ -179,28 +179,39 @@ void Network::setConfiguration(const Network::Config &conf)
 	try {
 		if (conf.networkId() == _id) { // sanity check
 			_configuration = conf;
+
+			// Grab some things from conf for faster lookup and memoize them
 			_myCertificate = conf.certificateOfMembership();
 			_mcRates = conf.multicastRates();
-			_multicastPropagationBreadth = conf.multicastPropagationBreadth();
-			_multicastPropagationDepth = conf.multicastPropagationDepth();
+			_staticAddresses = conf.staticAddresses();
+			_isOpen = conf.isOpen();
+
 			_lastConfigUpdate = Utils::now();
 
-			_tap->setIps(conf.staticAddresses());
+			_tap->setIps(_staticAddresses);
 			_tap->setDisplayName((std::string("ZeroTier One [") + conf.name() + "]").c_str());
 
+			// Expand ethertype whitelist into fast-lookup bit field
 			memset(_etWhitelist,0,sizeof(_etWhitelist));
 			std::set<unsigned int> wl(conf.etherTypes());
 			for(std::set<unsigned int>::const_iterator t(wl.begin());t!=wl.end();++t)
 				_etWhitelist[*t / 8] |= (unsigned char)(1 << (*t % 8));
 
+			// Save most recent configuration to disk in networks.d
 			std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
 			if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
 				LOG("error: unable to write network configuration file at: %s",confPath.c_str());
 			}
 		}
 	} catch ( ... ) {
+		// If conf is invalid, reset everything
 		_configuration = Config();
+
 		_myCertificate = CertificateOfMembership();
+		_mcRates = MulticastRates();
+		_staticAddresses.clear();
+		_isOpen = false;
+
 		_lastConfigUpdate = 0;
 		LOG("unexpected exception handling config for network %.16llx, retrying fetch...",(unsigned long long)_id);
 	}
@@ -209,9 +220,11 @@ void Network::setConfiguration(const Network::Config &conf)
 void Network::requestConfiguration()
 {
 	if (controller() == _r->identity.address()) {
+		// FIXME: Right now the netconf master cannot be a member of its own nets
 		LOG("unable to request network configuration for network %.16llx: I am the network master, cannot query self",(unsigned long long)_id);
 		return;
 	}
+
 	TRACE("requesting netconf for network %.16llx from netconf master %s",(unsigned long long)_id,controller().toString().c_str());
 	Packet outp(controller(),_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
@@ -222,7 +235,7 @@ void Network::requestConfiguration()
 void Network::addMembershipCertificate(const Address &peer,const CertificateOfMembership &cert)
 {
 	Mutex::Lock _l(_lock);
-	if (!_configuration.isOpen())
+	if (!_isOpen)
 		_membershipCertificates[peer] = cert;
 }
 
@@ -231,7 +244,7 @@ bool Network::isAllowed(const Address &peer) const
 	// Exceptions can occur if we do not yet have *our* configuration.
 	try {
 		Mutex::Lock _l(_lock);
-		if (_configuration.isOpen())
+		if (_isOpen)
 			return true;
 		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
 		if (pc == _membershipCertificates.end())
@@ -249,9 +262,11 @@ void Network::clean()
 {
 	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
 
+	_multicaster.clean(Utils::now());
+
 	Mutex::Lock _l(_lock);
 
-	if ((!_id)||(_configuration.isOpen())) {
+	if ((!_id)||(_isOpen)) {
 		_membershipCertificates.clear();
 		Utils::rm(mcdbPath);
 	} else {

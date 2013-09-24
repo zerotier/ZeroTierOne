@@ -814,75 +814,68 @@ public:
 	}
 
 	/**
-	 * Generate a message authenticationc code and set MAC field of packet
-	 * 
-	 * For encrypted packets, this must be called after encryption.
+	 * Armor packet for transport
 	 *
-	 * @param key 256-bit (32 byte) key
+	 * @param key 32-byte key
+	 * @param encryptPayload If true, encrypt packet payload, else just MAC
 	 */
-	inline void macSet(const void *key)
+	inline void armor(const void *key,bool encryptPayload)
 	{
+		unsigned char mangledKey[32];
+		unsigned char macKey[32];
 		unsigned char mac[16];
-		unsigned char key2[32];
-		_mangleKey((const unsigned char *)key,key2);
-		unsigned int macLen = (size() >= ZT_PACKET_IDX_VERB) ? (size() - ZT_PACKET_IDX_VERB) : 0;
-		Poly1305::compute(mac,field(ZT_PACKET_IDX_VERB,macLen),macLen,key2);
+		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
+		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
+
+		// Set flag now, since it affects key mangle function
+		if (encryptPayload)
+			(*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_ENCRYPTED;
+		else (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
+
+		_mangleKey((const unsigned char *)key,mangledKey);
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
+
+		// MAC key is always the first 32 bytes of the Salsa20 key stream
+		// This is the same technique DJB's NaCl library uses to use poly1305
+		memset(macKey,0,sizeof(macKey));
+		s20.encrypt(macKey,macKey,sizeof(macKey));
+
+		if (encryptPayload)
+			s20.encrypt(payload,payload,payloadLen);
+
+		Poly1305::compute(mac,payload,payloadLen,macKey);
 		memcpy(field(ZT_PACKET_IDX_MAC,8),mac,8);
 	}
 
 	/**
-	 * Check the MAC of this packet's payload
-	 * 
-	 * For encrypted packets, this must be checked before decryption.
+	 * Verify and (if encrypted) decrypt packet
 	 *
-	 * @param key 256-bit (32 byte) key
+	 * @param key 32-byte key
+	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
-	inline bool macVerify(const void *key) const
+	inline bool dearmor(const void *key)
 	{
+		unsigned char mangledKey[32];
+		unsigned char macKey[32];
 		unsigned char mac[16];
-		unsigned char key2[32];
-		if (size() < ZT_PACKET_IDX_VERB)
-			return false; // incomplete packets fail
-		_mangleKey((const unsigned char *)key,key2);
-		unsigned int macLen = size() - ZT_PACKET_IDX_VERB;
-		Poly1305::compute(mac,field(ZT_PACKET_IDX_VERB,macLen),macLen,key2);
-		return Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8);
-	}
+		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
+		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
 
-	/**
-	 * Encrypt this packet
-	 * 
-	 * @param key 256-bit (32 byte) key
-	 */
-	inline void encrypt(const void *key)
-	{
-		(*this)[ZT_PACKET_IDX_FLAGS] |= ZT_PROTO_FLAG_ENCRYPTED;
-		unsigned char key2[32];
-		if (size() >= ZT_PACKET_IDX_VERB) {
-			_mangleKey((const unsigned char *)key,key2);
-			Salsa20 s20(key2,256,field(ZT_PACKET_IDX_IV,8));
-			unsigned int encLen = size() - ZT_PACKET_IDX_VERB;
-			unsigned char *const encBuf = field(ZT_PACKET_IDX_VERB,encLen);
-			s20.encrypt(encBuf,encBuf,encLen);
-		}
-	}
+		_mangleKey((const unsigned char *)key,mangledKey);
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
 
-	/**
-	 * Decrypt this packet
-	 * 
-	 * @param key 256-bit (32 byte) key
-	 */
-	inline void decrypt(const void *key)
-	{
-		unsigned char key2[32];
-		if (size() >= ZT_PACKET_IDX_VERB) {
-			_mangleKey((const unsigned char *)key,key2);
-			Salsa20 s20(key2,256,field(ZT_PACKET_IDX_IV,8));
-			unsigned int decLen = size() - ZT_PACKET_IDX_VERB;
-			unsigned char *const decBuf = field(ZT_PACKET_IDX_VERB,decLen);
-			s20.decrypt(decBuf,decBuf,decLen);
+		memset(macKey,0,sizeof(macKey));
+		s20.encrypt(macKey,macKey,sizeof(macKey));
+		Poly1305::compute(mac,payload,payloadLen,macKey);
+		if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
+			return false;
+
+		if (((*this)[ZT_PACKET_IDX_FLAGS] & (char)ZT_PROTO_FLAG_ENCRYPTED)) {
+			s20.decrypt(payload,payload,payloadLen);
+			(*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
 		}
-		(*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
+
+		return true;
 	}
 
 	/**
@@ -932,7 +925,7 @@ public:
 					memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)ucl),buf,ucl);
 				} else return false;
 			}
-			(*this)[ZT_PACKET_IDX_VERB] &= ~ZT_PROTO_VERB_FLAG_COMPRESSED;
+			(*this)[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
 		}
 		return true;
 	}
@@ -946,11 +939,8 @@ private:
 	 */
 	inline void _mangleKey(const unsigned char *in,unsigned char *out) const
 	{
-		// IV and source/destination addresses. Salsa uses the IV natively
-		// so this is redundant there, but not harmful. But Poly1305 depends
-		// on the key being mangled with the IV. Using the source and
-		// destination addresses bifurcates the key space into a different
-		// key space for each direction of the conversation.
+		// IV and source/destination addresses. Using the addresses divides the
+		// key space into two halves-- A->B and B->A (since order will change).
 		for(unsigned int i=0;i<18;++i) // 8 + (ZT_ADDRESS_LENGTH * 2) == 18
 			out[i] = in[i] ^ (unsigned char)(*this)[i];
 

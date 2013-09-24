@@ -52,7 +52,7 @@
  * Max length of serialized peer record
  */
 #define ZT_PEER_MAX_SERIALIZED_LENGTH ( \
-	64 + \
+	32 + \
 	ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH + \
 	( ( \
 		(sizeof(uint64_t) * 4) + \
@@ -187,7 +187,7 @@ public:
 	}
 
 	/**
-	 * @return Time of most recent unicast frame (actual data transferred)
+	 * @return Time of most recent unicast frame received
 	 */
 	uint64_t lastUnicastFrame() const
 		throw()
@@ -196,7 +196,7 @@ public:
 	}
 
 	/**
-	 * @return Time of most recent multicast frame
+	 * @return Time of most recent multicast frame received
 	 */
 	uint64_t lastMulticastFrame() const
 		throw()
@@ -305,19 +305,10 @@ public:
 	/**
 	 * @return 256-bit encryption key
 	 */
-	inline const unsigned char *cryptKey() const
+	inline const unsigned char *key() const
 		throw()
 	{
-		return _keys; // crypt key is first 32-byte key
-	}
-
-	/**
-	 * @return 256-bit MAC (message authentication code) key
-	 */
-	inline const unsigned char *macKey() const
-		throw()
-	{
-		return (_keys + 32); // mac key is second 32-byte key
+		return _key;
 	}
 
 	/**
@@ -369,8 +360,8 @@ public:
 	inline void serialize(Buffer<C> &b)
 		throw(std::out_of_range)
 	{
-		b.append((unsigned char)2); // version
-		b.append(_keys,sizeof(_keys));
+		b.append((unsigned char)3); // version
+		b.append(_key,sizeof(_key));
 		_id.serialize(b,false);
 		_ipv4p.serialize(b);
 		_ipv6p.serialize(b);
@@ -384,10 +375,10 @@ public:
 	{
 		unsigned int p = startAt;
 
-		if (b[p++] != 2)
+		if (b[p++] != 3)
 			throw std::invalid_argument("Peer: deserialize(): version mismatch");
 
-		memcpy(_keys,b.field(p,sizeof(_keys)),sizeof(_keys)); p += sizeof(_keys);
+		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
 		p += _id.deserialize(b,p);
 		p += _ipv4p.deserialize(b,p);
 		p += _ipv6p.deserialize(b,p);
@@ -517,7 +508,7 @@ private:
 		bool fixed; // do not learn address from received packets
 	};
 
-	unsigned char _keys[32 * 2]; // crypt key[32], mac key[32]
+	unsigned char _key[32]; // shared secret key agreed upon between identities
 	Identity _id;
 
 	WanPath _ipv4p;

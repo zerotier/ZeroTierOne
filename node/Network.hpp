@@ -319,34 +319,6 @@ public:
 		}
 
 		/**
-		 * @return Breadth for multicast propagation
-		 */
-		inline unsigned int multicastPropagationBreadth() const
-		{
-			const_iterator mcb(find("mcb"));
-			if (mcb == end())
-				return ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH;
-			unsigned int mcb2 = Utils::hexStrToUInt(mcb->second.c_str());
-			if (mcb2)
-				return mcb2;
-			return ZT_MULTICAST_DEFAULT_PROPAGATION_BREADTH;
-		}
-
-		/**
-		 * @return Depth for multicast propagation
-		 */
-		inline unsigned int multicastPropagationDepth() const
-		{
-			const_iterator mcd(find("mcd"));
-			if (mcd == end())
-				return ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH;
-			unsigned int mcd2 = Utils::hexStrToUInt(mcd->second.c_str());
-			if (mcd2)
-				return mcd2;
-			return ZT_MULTICAST_DEFAULT_PROPAGATION_DEPTH;
-		}
-
-		/**
 		 * @return Certificate of membership for this network, or empty cert if none
 		 */
 		inline CertificateOfMembership certificateOfMembership() const
@@ -462,6 +434,7 @@ private:
 	 * Causes all persistent disk presence to be erased on delete
 	 */
 	inline void destroyOnDelete()
+		throw()
 	{
 		_destroyOnDelete = true;
 	}
@@ -498,12 +471,8 @@ public:
 	inline bool isOpen() const
 		throw()
 	{
-		try {
-			Mutex::Lock _l(_lock);
-			return _configuration.isOpen();
-		} catch ( ... ) {
-			return false;
-		}
+		Mutex::Lock _l(_lock);
+		return _isOpen;
 	}
 
 	/**
@@ -616,21 +585,12 @@ public:
 	}
 
 	/**
-	 * @return Breadth for multicast rumor mill propagation
+	 * @return Multicaster for this network
 	 */
-	inline unsigned int multicastPropagationBreadth() const
+	inline Multicaster &multicaster()
 		throw()
 	{
-		return _multicastPropagationBreadth;
-	}
-
-	/**
-	 * @return Depth for multicast rumor mill propagation
-	 */
-	inline unsigned int multicastPropagationDepth() const
-		throw()
-	{
-		return _multicastPropagationDepth;
+		return _multicaster;
 	}
 
 private:
@@ -653,11 +613,14 @@ private:
 	Config _configuration;
 	CertificateOfMembership _myCertificate; // memoized from _configuration
 	MulticastRates _mcRates; // memoized from _configuration
-	unsigned int _multicastPropagationBreadth; // memoized from _configuration
-	unsigned int _multicastPropagationDepth; // memoized from _configuration
+	std::set<InetAddress> _staticAddresses; // memoized from _configuration
+	bool _isOpen; // memoized from _configuration
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];
+
+	// Multicast propagation database
+	Multicaster _multicaster;
 
 	uint64_t _id;
 	volatile uint64_t _lastConfigUpdate;

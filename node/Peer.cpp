@@ -54,7 +54,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_vRevision(0),
 	_dirty(true)
 {
-	if (!myIdentity.agree(peerIdentity,_keys,sizeof(_keys)))
+	if (!myIdentity.agree(peerIdentity,_key,sizeof(_key)))
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
