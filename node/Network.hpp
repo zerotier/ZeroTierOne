@@ -51,6 +51,7 @@
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
+#include "Multicaster.hpp"
 
 namespace ZeroTier {
 
