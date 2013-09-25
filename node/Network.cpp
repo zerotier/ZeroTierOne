@@ -157,6 +157,8 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	// that then causes the Network instance to be deleted before it is finished
 	// being constructed. C++ edge cases, how I love thee.
 	SharedPtr<Network> nw(new Network());
+	memset(nw->_multicastHistory,0,sizeof(nw->_multicastHistory));
+	nw->_multicastHistoryPtr = 0;
 	nw->_ready = false; // disable handling of Ethernet frames during construct
 	nw->_r = renv;
 	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());

@@ -195,6 +195,28 @@ public:
 	}
 
 	/**
+	 * @param mac MAC address to check
+	 * @return True if this address would have this MAC
+	 */
+	inline bool wouldHaveMac(const MAC &mac) const
+		throw()
+	{
+		if (mac.data[0] != ZT_MAC_FIRST_OCTET)
+			return false;
+		if (mac.data[1] != (unsigned char)((_a >> 32) & 0xff))
+			return false;
+		if (mac.data[2] != (unsigned char)((_a >> 24) & 0xff))
+			return false;
+		if (mac.data[3] != (unsigned char)((_a >> 16) & 0xff))
+			return false;
+		if (mac.data[4] != (unsigned char)((_a >> 8) & 0xff))
+			return false;
+		if (mac.data[5] != (unsigned char)(_a & 0xff))
+			return false;
+		return true;
+	}
+
+	/**
 	 * @return Hexadecimal string
 	 */
 	inline std::string toString() const

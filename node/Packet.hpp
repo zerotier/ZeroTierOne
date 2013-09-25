@@ -167,9 +167,10 @@
 #define ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_MULTICAST_GOT_IDX_MULTICAST_GUID (ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID + 8)
 
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COUNTER (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COUNTER + 2)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE + 320)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT + 4)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE 320
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET + 5)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_UNIQUE_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER + 5)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_UNIQUE_ID + 3)
@@ -464,7 +465,7 @@ public:
 		 *   <[4] multicast additional distinguishing information (ADI)>
 		 *   [... additional tuples of network/address/adi ...]
 		 *
-		 * OK is generated on successful receipt.
+		 * OK/ERROR are not generated.
 		 */
 		VERB_MULTICAST_LIKE = 7,
 
@@ -477,7 +478,7 @@ public:
 		VERB_MULTICAST_GOT = 8,
 
 		/* A multicast frame:
-		 *   <[2] 16-bit counter -- number of times multicast has been forwarded>
+		 *   <[4] 32-bit forwarding counter>
 		 *   <[320] FIFO queue of up to 64 ZT addresses, zero address terminated>
 		 *   [... start of signed portion, signed by original submitter below ...]
 		 *   <[5] ZeroTier address of propagation magnet node>
@@ -501,10 +502,9 @@ public:
 		 *   (1) packet is possibly injected into the local TAP
 		 *   (2) send a MULTICAST_GOT message to magnet node with 64-bit
 		 *       multicast GUID
-		 *   (3) counter is incremented, STOP if >= network's max multicast
-		 *       recipient count
+		 *   (3) forwarding counter is incremented, STOP of max exceeded
 		 *   (4) topmost value is removed from FIFO and saved (next hop)
-		 *   (5) FIFO is deduplicated (prevents amplification floods)
+		 *   (5) deduplicate FIFO (helps prevent floods)
 		 *   (6) FIFO is filled with as many known peers that have LIKED this
 		 *       multicast group as possible, excluding peers to whom this
 		 *       multicast has already been sent or (if magnet node) have GOT

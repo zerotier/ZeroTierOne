@@ -422,29 +422,17 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 {
 	try {
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		unsigned int numAccepted = 0;
+		if (ptr >= size())
+			return true;
 		uint64_t now = Utils::now();
+		Address src(source());
 
-		// Iterate through 18-byte network,MAC,ADI tuples:
-		while ((ptr + 18) <= size()) {
-			uint64_t nwid = at<uint64_t>(ptr); ptr += 8;
-			SharedPtr<Network> network(_r->nc->network(nwid));
-			if ((network)&&(network->isAllowed(source()))) {
-				MAC mac(field(ptr,6)); ptr += 6;
-				uint32_t adi = at<uint32_t>(ptr); ptr += 4;
-				//TRACE("peer %s likes multicast group %s:%.8lx on network %llu",source().toString().c_str(),mac.toString().c_str(),(unsigned long)adi,nwid);
-				_r->multicaster->likesMulticastGroup(nwid,MulticastGroup(mac,adi),source(),now);
-				++numAccepted;
-			} else ptr += 10;
+		// Iterate through 18-byte network,MAC,ADI tuples
+		for(;;) {
+			_r->mc->likesGroup(at<uint64_t>(ptr),src,MulticastGroup(MAC(field(ptr + 8,6)),at<uint32_t>(ptr + 14)),now);
+			if ((ptr += 18) >= size())
+				break;
 		}
-
-		Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
-		outp.append((unsigned char)Packet::VERB_MULTICAST_LIKE);
-		outp.append(packetId());
-		outp.append((uint16_t)numAccepted);
-		outp.encrypt(peer->cryptKey());
-		outp.macSet(peer->macKey());
-		_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -463,6 +451,7 @@ bool PacketDecoder::_doMULTICAST_GOT(const RuntimeEnvironment *_r,const SharedPt
 	}
 
 	try {
+		_r->mc->got(at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID),source(),at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GOT_IDX_MULTICAST_GUID));
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_GOT from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -472,145 +461,150 @@ bool PacketDecoder::_doMULTICAST_GOT(const RuntimeEnvironment *_r,const SharedPt
 	return true;
 }
 
+// Function object used in _doMULTICAST_FRAME
+struct _doMULTICAST_FRAME_fillQueueWithNextHops
+{
+	_doMULTICAST_FRAME_fillQueueWithNextHops(char *nq,unsigned int want)
+		ptr(nq),
+		need(want) {}
+
+	inline bool operator()(const Address &a) const
+		throw()
+	{
+		a.copyTo(ptr,ZT_ADDRESS_LENGTH);
+		ptr += ZT_ADDRESS_LENGTH;
+		return (--need != 0);
+	}
+
+	char *ptr;
+	unsigned int need;
+};
+
 bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID)));
-		if ((network)&&(network->isAllowed(source()))) {
-			Address originalSubmitterAddress(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		unsigned int forwardCount = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT);
+		char *queue = (char *)field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE);
+		Address magnet(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		Address submitterAddr(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
+		SharedPtr<Peer> submitter(_r->topology->getPeer(submitterAddr));
+		if (!submitter) {
+			_r->sw->requestWhois(submitterAddr);
+			_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
+			return false;
+		}
+		uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER); // 40-bit sender address + 24-bit sender unique ID
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
+		MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
+		MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_ADI));
+		unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+		unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH);
+		unsigned char *frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,frameLen);
+		unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD + frameLen);
+		unsigned char *signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD + frameLen + 2,signatureLen);
 
-			if (originalSubmitterAddress.isReserved()) {
-				TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): invalid original submitter address",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
+		unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET) + frameLen;
+		if (!submitter->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET,signedPartLen),signedPartLen,signature,signatureLen)) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),submitterAddr.toString().c_str());
+			return true;
+		}
+
+		SharedPtr<Network> network(_r->nc->network(nwid));
+		if (network) {
+			if (!network->isAllowed(submitterAddr)) {
+			} else if (!dest.mac().isMulticast()) {
+			} else if ((!network->permitsBridging())&&(!submitterAddr.wouldHaveMac(sourceMac))) {
+			} else if (!network->permitsEtherType(etherType)) {
+			} else if (network->multicastDeduplicate(guid)) {
+			} else if (network->updateAndCheckMulticastBalance(submitterAddr,dest,frameLen)) {
+				network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
 			}
-			if (originalSubmitterAddress == _r->identity.address()) {
-				TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): boomerang!",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
-			}
+		}
 
-			SharedPtr<Peer> originalSubmitter(_r->topology->getPeer(originalSubmitterAddress));
-			if (!originalSubmitter) {
-				TRACE("requesting WHOIS on original multicast frame submitter %s",originalSubmitterAddress.toString().c_str());
-				_r->sw->requestWhois(originalSubmitterAddress);
-				_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP;
-				return false; // try again if/when we get OK(WHOIS)
-			}
+		if (magnet != _r->identity.address()) {
+			Packet outp(magnet,_r->identity.address(),Packet::VERB_MULTICAST_GOT);
+			outp.append(nwid);
+			outp.append(guid);
+			_r->sw->send(outp,true);
+		}
 
-			MAC fromMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
-			MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ADI));
-			unsigned int hops = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT];
-			unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-			unsigned int datalen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH);
-			unsigned int signaturelen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SIGNATURE_LENGTH);
-			unsigned char *dataAndSignature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,datalen + signaturelen);
+		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT,(uint32_t)++forwardCount);
 
-			if (!Multicaster::verifyMulticastPacket(originalSubmitter->identity(),network->id(),fromMac,mg,etherType,dataAndSignature,datalen,dataAndSignature + datalen,signaturelen)) {
-				LOG("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): FAILED SIGNATURE CHECK (spoofed original submitter?)",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
-			}
+		char newQueue[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE + ZT_ADDRESS_LENGTH]; // room for an extra if we need a nextHop
+		unsigned int newQueueLen = 0;
 
-			if (!network->permitsEtherType(etherType)) {
-				LOG("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): ethernet type %s not allowed on network %.16llx",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str(),Filter::etherTypeName(etherType),(unsigned long long)network->id());
-				return true;
-			}
+		// Top of FIFO is next hop (if there is one)
+		Address nextHop(queue,ZT_ADDRESS_LENGTH);
 
-			uint64_t mccrc = Multicaster::computeMulticastDedupCrc(network->id(),fromMac,mg,etherType,dataAndSignature,datalen);
-			uint64_t now = Utils::now();
-			bool isDuplicate = _r->multicaster->checkDuplicate(mccrc,now);
-
-			if (!isDuplicate) {
-				//if (network->multicastRateGate(originalSubmitterAddress,datalen)) {
-					network->tap().put(fromMac,mg.mac(),etherType,dataAndSignature,datalen);
-				//} else {
-				//	TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): sender rate limit exceeded",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-				//	return true;
-				//}
-
-				/* It's important that we do this *after* rate limit checking,
-				 * otherwise supernodes could be used to execute a flood by
-				 * first bouncing a multicast off a supernode and then flooding
-				 * it with retransmits. */
-				_r->multicaster->addToDedupHistory(mccrc,now);
-			}
-
-			if (++hops >= network->multicastPropagationDepth()) {
-				TRACE("not propagating MULTICAST_FRAME from original submitter %s, received from %s(%s): max depth reached",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
-			}
-
-			Address upstream(source()); // save this since we might mangle it below
-			Multicaster::MulticastBloomFilter bloom(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES));
-			SharedPtr<Peer> propPeers[16];
-			unsigned int np = 0;
-
-			if (_r->topology->amSupernode()) {
-				/* Supernodes behave differently here from ordinary nodes, as their
-				 * role in the network is to bridge gaps between unconnected islands
-				 * in a multicast propagation graph. Instead of using the ordinary
-				 * multicast peer picker, supernodes propagate to random unvisited
-				 * peers. They will also repeatedly propagate duplicate multicasts to
-				 * new peers, while regular nodes simply discard them. This allows
-				 * such gaps to be bridged more than once by ping-ponging off the
-				 * same supernode -- a simple way to implement this without requiring
-				 * that supernodes maintain a lot of state at the cost of a small
-				 * amount of bandwidth. */
-				np = _r->multicaster->pickRandomPropagationPeers(
-					*(_r->prng),
-					*(_r->topology),
-					network->id(),
-					mg,
-					originalSubmitterAddress,
-					upstream,
-					bloom,
-					std::min(network->multicastPropagationBreadth(),(unsigned int)16), // 16 is a sanity check
-					propPeers,
-					now);
-			} else if (isDuplicate) {
-				TRACE("dropped MULTICAST_FRAME from original submitter %s, received from %s(%s): duplicate",originalSubmitterAddress.toString().c_str(),source().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
-			} else {
-				/* Regular peers only propagate non-duplicate packets, and do so
-				 * according to ordinary propagation priority rules. */
-				np = _r->multicaster->pickSocialPropagationPeers(
-					*(_r->prng),
-					*(_r->topology),
-					network->id(),
-					mg,
-					originalSubmitterAddress,
-					upstream,
-					bloom,
-					std::min(network->multicastPropagationBreadth(),(unsigned int)16), // 16 is a sanity check
-					propPeers,
-					now);
-			}
-
-			/* Re-use *this* packet to repeat it to our propagation
-			 * recipients, which invalidates its current contents and
-			 * state. */
-
-			if (np) {
-				setSource(_r->identity.address());
-				(*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_HOP_COUNT] = hops;
-				memcpy(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_BLOOM_FILTER,ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES),bloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES);
-				compress();
-				for(unsigned int i=0;i<np;++i) {
-					newInitializationVector();
-					setDestination(propPeers[i]->address());
-					_r->sw->send(*this,true);
+		// Deduplicate the rest of the queue[], adding them to newQueue
+		if (nextHop) { // there was a next hop, so there was something there
+			char firstByteSeen[256];
+			for(unsigned int j=0;j<(256 / 8);++j)
+				((uint64_t *)firstByteSeen)[j] = 0;
+			for(unsigned int i=ZT_ADDRESS_LENGTH;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE;i+=ZT_ADDRESS_LENGTH) {
+				char *qs = queue + i;
+				if (Utils::isZero(qs,ZT_ADDRESS_LENGTH)) // zero terminates queue
+					break;
+				bool isdup = false;
+				if (firstByteSeen[(unsigned int)queue[i]]) {
+					for(unsigned int i2=ZT_ADDRESS_LENGTH;i2<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE;i2+=ZT_ADDRESS_LENGTH) {
+						if ((i2 != i)&&(!memcmp(qs,queue + i2,ZT_ADDRESS_LENGTH))) {
+							isdup = true;
+							break;
+						}
+					}
+				} else firstByteSeen[(unsigned int)queue[i]] = 1;
+				if (!isdup) {
+					char *nq = newQueue + (newQueueLen++ * ZT_ADDRESS_LENGTH);
+					for(unsigned int j=0;j<ZT_ADDRESS_LENGTH;++j)
+						nq[j] = qs[j];
 				}
 			}
-
-			/* Just to be safe, return true here to terminate processing as we
-			 * have thoroughly destroyed our state by doing the above. */
-			return true;
-		} else {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): network %.16llx unknown or sender not allowed",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
 		}
+
+		// Get next hops, including an extra if we don't have a next hop yet
+		unsigned int needQueueItems = ((ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE / ZT_ADDRESS_LENGTH) - newQueueLen);
+		if (!nextHop)
+			++needQueueItems;
+		if (needQueueItems)
+			newQueueLen += _r->mc->getNextHops(nwid,dest,guid,_doMULTICAST_FRAME_fillQueueWithNextHops(newQueue,needQueueItems));
+
+		// Copy new queue over old queue, and pick off next hop if we need one
+		if (newQueueLen) {
+			char *nq = newQueue;
+			if (!nextHop) {
+				nextHop.setTo(nq,ZT_ADDRESS_LENGTH);
+				nq += ZT_ADDRESS_LENGTH;
+				--newQueueLen;
+			}
+			unsigned int i = 0;
+			unsigned int k = ZT_ADDRESS_LENGTH * newQueueLen;
+			while (i < k)
+				nq[i] = newQueue[i];
+			while (i < ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE)
+				nq[i] = 0;
+		} else memset(queue,0,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE);
+
+		// If there's still no next hop, it's the magnet
+		if (!nextHop)
+			nextHop = magnet;
+
+		// Send to next hop, unless it's us of course
+		if (nextHop != _r->identity.address()) {
+			newInitializationVector();
+			setDestination(nextHop);
+			setSource(_r->identity.address());
+			compress();
+			_r->sw->send(*this,true);
+		}
+
+		return true;
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+
 	return true;
 }
 

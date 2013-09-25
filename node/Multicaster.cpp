@@ -76,18 +76,20 @@ void Multicaster::bringCloser(uint64_t nwid,const Address &a)
 	}
 }
 
-void Multicaster::got(uint64_t nwid,const Address &peer,uint64_t mcGuid,uint64_t now)
+void Multicaster::got(uint64_t nwid,const Address &peer,uint64_t mcGuid)
 {
 	Mutex::Lock _l(_lock);
 	_NetInfo &n = _nets[nwid];
 	std::pair< uint64_t,std::set<Address> > &g = n.got[mcGuid];
-	g.first = now;
+	g.first = Utils::now();
 	g.second.insert(peer);
 }
 
-void Multicaster::clean(uint64_t now)
+void Multicaster::clean()
 {
 	Mutex::Lock _l(_lock);
+
+	uint64_t now = Utils::now();
 
 	for(std::map< uint64_t,_NetInfo >::iterator n(_nets.begin());n!=_nets.end();) {
 		for(std::map< uint64_t,std::pair< uint64_t,std::set<Address> > >::iterator g(n->second.got.begin());g!=n->second.got.end();) {

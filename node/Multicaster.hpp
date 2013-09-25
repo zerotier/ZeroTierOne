@@ -80,14 +80,13 @@ public:
 	 * @param nwid Network ID
 	 * @param mcGuid Multicast GUID
 	 * @param peer Peer that GOT multicast
-	 * @param now Current time
 	 */
-	void got(uint64_t nwid,const Address &peer,uint64_t mcGuid,uint64_t now);
+	void got(uint64_t nwid,const Address &peer,uint64_t mcGuid);
 
 	/**
 	 * Erase entries for expired LIKEs and GOT records
 	 */
-	void clean(uint64_t now);
+	void clean();
 
 	/**
 	 * Pick next hops for a multicast by proximity
@@ -99,26 +98,31 @@ public:
 	 * @param mg Multicast group
 	 * @param mcGuid Multicast message GUID (signer and signer unique ID)
 	 * @param nextHopFunc Function to call for each address, search stops if it returns false
+	 * @return Number of results returned through function
 	 */
 	template<typename F>
-	inline void getNextHops(uint64_t nwid,const MulticastGroup &mg,uint64_t mcGuid,F nextHopFunc)
+	inline unsigned int getNextHops(uint64_t nwid,const MulticastGroup &mg,uint64_t mcGuid,F nextHopFunc)
 	{
 		Mutex::Lock _l(_lock);
 
 		std::map< uint64_t,_NetInfo >::iterator n(_nets.find(nwid));
 		if (n == _nets.end())
-			return;
+			return 0;
 		std::map< MulticastGroup,std::list< Address > >::iterator p(n->second.proximity.find(mg));
 		if (p == n->second.proximity.end())
-			return;
-		std::map< uint64_t,std::pair< uint64_t,std::set< Address > > >::iterator g(n->second.got.find(mcGuid));
+			return 0;
+		std::pair< uint64_t,std::set< Address > > &g = n->second.got[mcGuid];
+		g.first = Utils::now();
 
+		unsigned int cnt = 0;
 		for(std::list< Address >::iterator a(p->second.begin());a!=p->second.end();++a) {
-			if ((g == n->second.got.end())||(!g->second.second.count(*a))) {
+			if (g.second.insert(*a).second) {
+				++cnt;
 				if (!nextHopFunc(*a))
 					break;
 			}
 		}
+		return cnt;
 	}
 
 private:

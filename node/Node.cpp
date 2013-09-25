@@ -210,7 +210,7 @@ struct _NodeImpl
 		delete renv.topology;
 		delete renv.demarc;
 		delete renv.sw;
-		delete renv.multicaster;
+		delete renv.mc;
 		delete renv.prng;
 		delete renv.log;
 
@@ -372,7 +372,7 @@ Node::ReasonForTermination Node::run()
 		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
 		// Create the objects that make up runtime state.
-		_r->multicaster = new Multicaster();
+		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->demarc = new Demarc(_r);
 		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
@@ -547,6 +547,7 @@ Node::ReasonForTermination Node::run()
 
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
+				_r->mc->clean();
 				_r->topology->clean();
 				_r->nc->clean();
 			}

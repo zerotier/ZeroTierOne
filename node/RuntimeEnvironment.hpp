@@ -45,6 +45,7 @@ class SysEnv;
 class CMWC4096;
 class Service;
 class Node;
+class Multicaster;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -65,6 +66,7 @@ public:
 		shutdownInProgress(false),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
+		mc((Multicaster *)0),
 		sw((Switch *)0),
 		demarc((Demarc *)0),
 		topology((Topology *)0),
@@ -90,6 +92,7 @@ public:
 
 	Logger *log; // may be null
 	CMWC4096 *prng;
+	Multicaster *mc;
 	Switch *sw;
 	Demarc *demarc;
 	Topology *topology;
