@@ -29,6 +29,8 @@
 
 namespace ZeroTier {
 
+const unsigned char Packet::ZERO_KEY[32] { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+
 const char *Packet::verbString(Verb v)
 	throw()
 {

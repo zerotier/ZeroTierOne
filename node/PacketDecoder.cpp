@@ -37,20 +37,6 @@
 #include "Filter.hpp"
 #include "Service.hpp"
 
-/*
- * The big picture:
- *
- * tryDecode() gets called for a given fully-assembled packet until it returns
- * true or the packet's time to live has been exceeded. The state machine must
- * therefore be re-entrant if it ever returns false. Take care here!
- *
- * Stylistic note:
- *
- * There's a lot of unnecessary if nesting. It's mostly to allow TRACE to
- * print informative messages on every possible reason something gets
- * rejected or fails.
- */
-
 namespace ZeroTier {
 
 bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
@@ -58,15 +44,15 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 {
 	if ((!encrypted())&&(verb() == Packet::VERB_HELLO)) {
 		// Unencrypted HELLOs are handled here since they are used to
-		// populate our identity cache in the first place. Thus we might get
-		// a HELLO for someone for whom we don't have a Peer record.
+		// populate our identity cache in the first place. _doHELLO() is special
+		// in that it contains its own authentication logic.
 		TRACE("HELLO from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
 		return _doHELLO(_r);
 	}
 
 	SharedPtr<Peer> peer = _r->topology->getPeer(source());
 	if (peer) {
-		// Resume saved state?
+		// Resume saved intermediate decode state?
 		if (_step == DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP) {
 			// In this state we have already authenticated and decrypted the
 			// packet and are waiting for the lookup of the original sender
@@ -74,21 +60,9 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			return _doMULTICAST_FRAME(_r,peer);
 		}
 
-		// No saved state? Verify MAC before we proceed.
-		if (!macVerify(peer->macKey())) {
-			TRACE("dropped packet from %s(%s), authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
+		if (!dearmor(peer->key())) {
+			TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
 			return true;
-		}
-
-		// If MAC authentication passed, decrypt and uncompress
-		if (encrypted()) {
-			decrypt(peer->cryptKey());
-		} else {
-			// Unencrypted is tolerated in case we want to run this on
-			// devices where squeezing out cycles matters. MAC is
-			// what's really important. But log it in debug to catch any
-			// packets being mistakenly sent in the clear.
-			TRACE("ODD: %s from %s(%s) wasn't encrypted",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
 		if (!uncompress()) {
 			TRACE("dropped packet from %s(%s), compressed data invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -107,7 +81,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				TRACE("NOP from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			case Packet::VERB_HELLO:
-				return _doHELLO(_r);
+				return _doHELLO(_r); // legal, but why? :)
 			case Packet::VERB_ERROR:
 				return _doERROR(_r,peer);
 			case Packet::VERB_OK:
@@ -120,6 +94,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doFRAME(_r,peer);
 			case Packet::VERB_MULTICAST_LIKE:
 				return _doMULTICAST_LIKE(_r,peer);
+			case Packet::VERB_MULTICAST_GOT:
+				return _doMULTICAST_GOT(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
 			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE:
@@ -474,6 +450,25 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+
+	return true;
+}
+
+bool PacketDecoder::_doMULTICAST_GOT(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	// Right now only supernodes act as propagation hubs
+	if (!_r->topology->amSupernode()) {
+		TRACE("dropped MULTICAST_GOT from %s: I am not a supernode",source().toString().c_str());
+		return true;
+	}
+
+	try {
+	} catch (std::exception &ex) {
+		TRACE("dropped MULTICAST_GOT from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+	} catch ( ... ) {
+		TRACE("dropped MULTICAST_GOT from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+
 	return true;
 }
 

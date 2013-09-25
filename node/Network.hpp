@@ -51,7 +51,6 @@
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
-#include "Multicaster.hpp"
 
 namespace ZeroTier {
 
@@ -584,15 +583,6 @@ public:
 		//return tmp;
 	}
 
-	/**
-	 * @return Multicaster for this network
-	 */
-	inline Multicaster &multicaster()
-		throw()
-	{
-		return _multicaster;
-	}
-
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 	void _restoreState();
@@ -618,9 +608,6 @@ private:
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];
-
-	// Multicast propagation database
-	Multicaster _multicaster;
 
 	uint64_t _id;
 	volatile uint64_t _lastConfigUpdate;

@@ -164,6 +164,9 @@
 #define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
 
+#define ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_GOT_IDX_MULTICAST_GUID (ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID + 8)
+
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COUNTER (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COUNTER + 2)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE + 320)
@@ -836,9 +839,8 @@ public:
 		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
 
 		// MAC key is always the first 32 bytes of the Salsa20 key stream
-		// This is the same technique DJB's NaCl library uses to use poly1305
-		memset(macKey,0,sizeof(macKey));
-		s20.encrypt(macKey,macKey,sizeof(macKey));
+		// This is the same construction DJB's NaCl library uses
+		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
 
 		if (encryptPayload)
 			s20.encrypt(payload,payload,payloadLen);
@@ -864,8 +866,7 @@ public:
 		_mangleKey((const unsigned char *)key,mangledKey);
 		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
 
-		memset(macKey,0,sizeof(macKey));
-		s20.encrypt(macKey,macKey,sizeof(macKey));
+		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
 		Poly1305::compute(mac,payload,payloadLen,macKey);
 		if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
 			return false;
@@ -931,6 +932,8 @@ public:
 	}
 
 private:
+	static const unsigned char ZERO_KEY[32];
+
 	/**
 	 * Deterministically mangle a 256-bit crypto key based on packet
 	 *

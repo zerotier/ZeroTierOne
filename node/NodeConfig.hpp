@@ -167,6 +167,7 @@ private:
 
 	unsigned char _controlSocketKey[32];
 	UdpSocket _controlSocket;
+
 	std::map< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 };

@@ -262,8 +262,6 @@ void Network::clean()
 {
 	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
 
-	_multicaster.clean(Utils::now());
-
 	Mutex::Lock _l(_lock);
 
 	if ((!_id)||(_isOpen)) {

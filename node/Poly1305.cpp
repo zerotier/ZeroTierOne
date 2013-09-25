@@ -90,7 +90,7 @@ static void mulmod(unsigned int h[17],const unsigned int r[17])
   squeeze(h);
 }
 
-static int crypto_onetimeauth(unsigned char *out,const unsigned char *in,unsigned long long inlen,const unsigned char *k)
+static inline int crypto_onetimeauth(unsigned char *out,const unsigned char *in,unsigned long long inlen,const unsigned char *k)
 {
   unsigned int j;
   unsigned int r[17];

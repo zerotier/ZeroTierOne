@@ -56,10 +56,6 @@
 #include "SHA512.hpp"
 #include "Node.hpp"
 
-#ifdef __WINDOWS__
-#define strtoull _strtoui64
-#endif
-
 namespace ZeroTier {
 
 NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort)

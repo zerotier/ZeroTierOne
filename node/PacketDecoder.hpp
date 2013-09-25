@@ -38,6 +38,22 @@
 #include "AtomicCounter.hpp"
 #include "Peer.hpp"
 
+/*
+ * The big picture:
+ *
+ * tryDecode gets called for a given fully-assembled packet until it returns
+ * true or the packet's time to live has been exceeded, in which case it is
+ * discarded as failed decode. Any exception thrown by tryDecode also causes
+ * the packet to be discarded.
+ *
+ * Thus a return of false from tryDecode() indicates that it should be called
+ * again. Logic is very simple as to when, and it's in doAnythingWaitingForPeer
+ * in Switch. This might be expanded to be more fine grained in the future.
+ *
+ * A return value of true indicates that the packet is done. tryDecode must
+ * never be called again after that.
+ */
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -76,7 +92,8 @@ public:
 	 * Note that this returns 'true' if processing is complete. This says nothing
 	 * about whether the packet was valid. A rejection is 'complete.'
 	 *
-	 * Once true is returned, this should not be called again.
+	 * Once true is returned, this must not be called again. The packet's state
+	 * may no longer be valid.
 	 *
 	 * @param _r Runtime environment
 	 * @return True if decoding and processing is complete, false if caller should try again
@@ -87,7 +104,7 @@ public:
 		throw(std::out_of_range,std::runtime_error);
 
 	/**
-	 * @return Time of packet receipt
+	 * @return Time of packet receipt / start of decode
 	 */
 	inline uint64_t receiveTime() const throw() { return _receiveTime; }
 
@@ -121,6 +138,7 @@ private:
 	bool _doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doMULTICAST_GOT(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
