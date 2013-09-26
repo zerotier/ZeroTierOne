@@ -231,6 +231,11 @@ error_no_ZT_ARCH_defined;
 #define ZT_RELAY_MAX_HOPS 3
 
 /**
+ * Size of multicast deduplication ring buffer in 64-bit ints
+ */
+#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 512
+
+/**
  * Period between announcements of all multicast 'likes' in ms
  *
  * Announcement occurs when a multicast group is locally joined, but all
@@ -243,11 +248,6 @@ error_no_ZT_ARCH_defined;
  * Expire time for multicast 'likes' in ms
  */
 #define ZT_MULTICAST_LIKE_EXPIRE ((ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD * 2) + 1000)
-
-/**
- * Expiration for remembered MULTICAST_GOTs, in ms
- */
-#define ZT_MULTICAST_MAGNET_STATE_EXPIRE 30000
 
 /**
  * Time between polls of local taps for multicast membership changes

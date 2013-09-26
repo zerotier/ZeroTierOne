@@ -98,14 +98,9 @@
 #define ZT_PACKET_IDX_PAYLOAD 28
 
 /**
- * ZeroTier packet buffer size
- * 
- * This can be changed. This provides enough room for MTU-size packet
- * payloads plus some overhead. The subtraction of sizeof(unsigned int)
- * makes it an even multiple of 1024 (see Buffer), which might reduce
- * memory use a little.
+ * Packet buffer size (can be changed)
  */
-#define ZT_PROTO_MAX_PACKET_LENGTH (3072 - sizeof(unsigned int))
+#define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_UDP_DEFAULT_PAYLOAD_MTU)
 
 /**
  * Minimum viable packet length (also length of header)
@@ -164,22 +159,37 @@
 #define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
 
-#define ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_GOT_IDX_MULTICAST_GUID (ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID + 8)
-
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE 320
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET + 5)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_UNIQUE_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER + 5)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER_UNIQUE_ID + 3)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_DEPTH 2
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_DEPTH)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO 320
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM 1024
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_NETWORK_ID 8
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_NETWORK_ID)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM_NONCE 2
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM_NONCE)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX_BITS 1
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX_BITS)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX 2
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN 5
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN_MCID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN_MCID 3
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GUID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_GUID 8
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN_MCID + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN_MCID)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC 6
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC 6
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_ADI 4
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_ADI)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE 2
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN 2
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PAYLOAD_LEN)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
@@ -459,35 +469,23 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/* Announce interest in multicast group(s):
-		 *   <[8] 64-bit network ID>
-		 *   <[6] multicast Ethernet address>
-		 *   <[4] multicast additional distinguishing information (ADI)>
-		 *   [... additional tuples of network/address/adi ...]
-		 *
-		 * OK/ERROR are not generated.
-		 */
-		VERB_MULTICAST_LIKE = 7,
-
-		/* Announce receipt of a multicast to propagation magnet node:
-		 *   <[8] 64-bit network ID>
-		 *   <[8] 64-bit multicast GUID>
-		 *
-		 * OK/ERROR are not generated.
-		 */
-		VERB_MULTICAST_GOT = 8,
+		/* TODO: not implemented yet */
+		VERB_PROXY_FRAME = 7,
 
 		/* A multicast frame:
-		 *   <[4] 32-bit forwarding counter>
-		 *   <[320] FIFO queue of up to 64 ZT addresses, zero address terminated>
-		 *   [... start of signed portion, signed by original submitter below ...]
-		 *   <[5] ZeroTier address of propagation magnet node>
-		 *   <[5] ZeroTier address of original submitter/signer>
-		 *   <[3] 24-bit multicast ID, combined with signer address to form GUID>
+		 *   <[2] 16-bit propagation depth>
+		 *   <[320] propagation FIFO>
+		 *   <[1024] propagation bloom filter>
+		 *   [... begin signed portion ...]
 		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit random propagation bloom filter nonce>
+		 *   <[1] number of significant bits in propagation restrict prefix>
+		 *   <[2] 16-bit propagation restriction prefix (left to right)>
+		 *   <[5] ZeroTier address of node of origin>
+		 *   <[3] 24-bit multicast ID, together with origin forms GUID>
 		 *   <[6] source MAC address>
 		 *   <[6] destination multicast group MAC address>
-		 *   <[4] destination multicast group 32-bit ADI field>
+		 *   <[4] destination multicast group ADI field>
 		 *   <[2] 16-bit frame ethertype>
 		 *   <[2] 16-bit length of payload>
 		 *   <[...] ethernet frame payload>
@@ -495,46 +493,57 @@ public:
 		 *   <[2] 16-bit length of signature>
 		 *   <[...] signature (currently Ed25519/SHA-512, 96 bytes in length)>
 		 *
-		 * Multicast frames are propagated using a graph exploration algorithm in
-		 * which the FIFO queue is embedded in the multicast packet.
+		 * When a multicast frame is received:
 		 *
-		 * Upon receipt:
-		 *   (1) packet is possibly injected into the local TAP
-		 *   (2) send a MULTICAST_GOT message to magnet node with 64-bit
-		 *       multicast GUID
-		 *   (3) forwarding counter is incremented, STOP of max exceeded
-		 *   (4) topmost value is removed from FIFO and saved (next hop)
-		 *   (5) deduplicate FIFO (helps prevent floods)
-		 *   (6) FIFO is filled with as many known peers that have LIKED this
-		 *       multicast group as possible, excluding peers to whom this
-		 *       multicast has already been sent or (if magnet node) have GOT
-		 *       this multicast
-		 *   (7) packet is sent to next hop (if possible)
+		 * (1) Check the signature of the signed portion of packet, discard on fail
+		 * (2) Check for duplicate multicast, STOP if duplicate
+		 * (3) Check rate limits, STOP if over limit
+		 * (4) Inject into tap if member of network and packet passes other checks
+		 * (5) Increment propagation depth, STOP if over limit
+		 * (6) Pop topmost element off FIFO -- this is next hop
+		 * (7) Push suggested next hops onto FIFO until full -- set corresponding
+		 *     bits in bloom filter
+		 * (8) Send to next hop, or to a supernode if none
 		 *
-		 * If there was no next hop -- empty FIFO -- and no new hops are known,
-		 * the packet is sent to the magnet node. The magnet node must be aware
-		 * of all members of a given multicast group. It is the node responsible
-		 * for bridging sparse multicast groups. When other nodes receive the
-		 * multicast, they send GOT to the magnet node so that it will not
-		 * send it back to them.
+		 * When choosing next hops, exclude addresses corresponding to bits already
+		 * set in the bloom filter and addresses outside the propagation restrict
+		 * prefix.
 		 *
-		 * Right now the magnet is a supernode. In the future there may be
-		 * dedicated magnets and/or magnets elected via some kind of DHT or
-		 * something to act as such for given multicast groups. This latter
-		 * might happen if we evolve more toward a totally decentralized model
-		 * instead of today's partially decentralized model.
+		 * Algorithm for setting bits in bloom filter:
 		 *
-		 * The multicast GUID is formed by packing the original sender / signer
-		 * address into the most significant 5 bytes of a 64-bit big-endian
-		 * number, and then packing the 24-bit sender unique ID into the least
-		 * significant 3 bytes. This can be used to locally deduplicate, and
-		 * to identify the multicast in a GOT sent to the magnet. The 24-bit
-		 * ID must be unique for a given sender over recent (say, 10min) time
-		 * spans and across networks. Random or sequential values are fine.
+		 * (1) Place the address in the least significant 40 bits of a 64-bit int.
+		 * (2) Add the bloom filter nonce to this value.
+		 * (3) XOR the least significant 13 bits of this value with the next most
+		 *     significant 13 bits and so on, 4 times.
+		 * (4) This value ANDed with 0x1fff is the bit to set in the bloom filter.
+		 * (5) Set this bit via: byte[bit >> 3] |= (0x80 >> (bit & 7))
 		 *
-		 * OK/ERROR are not generated, but GOT is sent to magnet.
+		 * To check bits in bloom filter perform the same computation but mask the
+		 * bit instead of ORing it.
+		 *
+		 * Propagation occurs within a restrict prefix. The restrict prefix is
+		 * applied to the least significant 16 bits of an address. The original
+		 * sender of the multicast sets the restrict prefix and sends 2^N copies
+		 * of the multicast frame, one for each address prefix. This permits
+		 * propagation to be partitioned into realms, and places the majority of
+		 * the burden for this upon the sender.
+		 *
+		 * OK/ERROR are not generated.
 		 */
-		VERB_MULTICAST_FRAME = 9,
+		VERB_MULTICAST_FRAME = 8,
+
+		/* Announce interest in multicast group(s):
+		 *   <[8] 64-bit network ID>
+		 *   <[6] multicast Ethernet address>
+		 *   <[4] multicast additional distinguishing information (ADI)>
+		 *   [... additional tuples of network/address/adi ...]
+		 *
+		 * LIKEs are sent to peers with whom you have a direct peer to peer
+		 * connection, and always including supernodes.
+		 *
+		 * OK/ERROR are not generated.
+		 */
+		VERB_MULTICAST_LIKE = 9,
 
 		/* Network member certificate for sending peer:
 		 *   <[8] 64-bit network ID>

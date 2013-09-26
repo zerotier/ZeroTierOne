@@ -41,6 +41,7 @@
 #include "Mutex.hpp"
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -73,20 +74,32 @@ public:
 	void bringCloser(uint64_t nwid,const Address &a);
 
 	/**
-	 * Indicate that a peer reported that it GOT a multicast
-	 *
-	 * This only happens on magnet nodes for a propagation.
-	 *
-	 * @param nwid Network ID
-	 * @param mcGuid Multicast GUID
-	 * @param peer Peer that GOT multicast
-	 */
-	void got(uint64_t nwid,const Address &peer,uint64_t mcGuid);
-
-	/**
 	 * Erase entries for expired LIKEs and GOT records
 	 */
 	void clean();
+
+	/**
+	 * Multicast deduplicator
+	 *
+	 * This checks to see if a multicast GUID has been seen before. If not, it
+	 * adds it to the history and returns false.
+	 *
+	 * @param nwid Network ID
+	 * @param mcGuid Multicast GUID (sender address + sender unique ID)
+	 * @return True if multicast IS a duplicate, false otherwise
+	 */
+	inline bool deduplicate(uint64_t nwid,uint64_t mcGuid)
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		_NetInfo &n = _nets[nwid];
+		for(unsigned int i=0;i<ZT_MULTICAST_DEDUP_HISTORY_LENGTH;++i) {
+			if (n.multicastHistory[i] == mcGuid)
+				return true;
+		}
+		n.multicastHistory[n.multicastHistoryPtr++ % ZT_NETWORK_MULTICAST_DEDUP_HISTORY_LENGTH] = mcGuid;
+		return false;
+	}
 
 	/**
 	 * Pick next hops for a multicast by proximity
@@ -96,12 +109,11 @@ public:
 	 *
 	 * @param nwid Network ID
 	 * @param mg Multicast group
-	 * @param mcGuid Multicast message GUID (signer and signer unique ID)
 	 * @param nextHopFunc Function to call for each address, search stops if it returns false
 	 * @return Number of results returned through function
 	 */
 	template<typename F>
-	inline unsigned int getNextHops(uint64_t nwid,const MulticastGroup &mg,uint64_t mcGuid,F nextHopFunc)
+	inline unsigned int getNextHops(uint64_t nwid,const MulticastGroup &mg,F nextHopFunc)
 	{
 		Mutex::Lock _l(_lock);
 
@@ -111,16 +123,11 @@ public:
 		std::map< MulticastGroup,std::list< Address > >::iterator p(n->second.proximity.find(mg));
 		if (p == n->second.proximity.end())
 			return 0;
-		std::pair< uint64_t,std::set< Address > > &g = n->second.got[mcGuid];
-		g.first = Utils::now();
 
 		unsigned int cnt = 0;
 		for(std::list< Address >::iterator a(p->second.begin());a!=p->second.end();++a) {
-			if (g.second.insert(*a).second) {
-				++cnt;
-				if (!nextHopFunc(*a))
-					break;
-			}
+			if (!nextHopFunc(*a))
+				break;
 		}
 		return cnt;
 	}
@@ -141,13 +148,21 @@ private:
 	};
 
 	// An address and multicast group tuple
-	typedef std::pair<Address,MulticastGroup> _Subscription;
+	typedef std::pair< Address,MulticastGroup > _Subscription;
 
 	// Multicast info for a given network
 	struct _NetInfo
 	{
-		// GOTs by multicast GUID: time of last GOT, addresses that GOT
-		std::map< uint64_t,std::pair< uint64_t,std::set< Address > > > got;
+		_NetInfo()
+			throw()
+		{
+			memset(multicastHistory,0,sizeof(multicastHistory));
+			multicastHistoryPtr = 0;
+		}
+
+		// Ring buffer of most recently injected multicast packet GUIDs
+		uint64_t multicastHistory[ZT_MULTICAST_DEDUP_HISTORY_LENGTH];
+		unsigned int multicastHistoryPtr;
 
 		// Peer proximity ordering for peers subscribed to each group
 		std::map< MulticastGroup,std::list< Address > > proximity;

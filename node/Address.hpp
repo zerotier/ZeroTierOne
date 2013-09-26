@@ -232,15 +232,6 @@ public:
 	inline operator bool() const throw() { return (_a != 0); }
 
 	/**
-	 * @return Sum of all bytes in address
-	 */
-	inline unsigned int sum() const
-		throw()
-	{
-		return (unsigned int)(((_a >> 32) & 0xff) + ((_a >> 24) & 0xff) + ((_a >> 16) & 0xff) + ((_a >> 8) & 0xff) + (_a & 0xff));
-	}
-
-	/**
 	 * Check if this address is reserved
 	 * 
 	 * The all-zero null address and any address beginning with 0xff are

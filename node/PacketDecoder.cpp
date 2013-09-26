@@ -461,53 +461,93 @@ bool PacketDecoder::_doMULTICAST_GOT(const RuntimeEnvironment *_r,const SharedPt
 	return true;
 }
 
-// Function object used in _doMULTICAST_FRAME
-struct _doMULTICAST_FRAME_fillQueueWithNextHops
+// Function used in _doMULTICAST_FRAME
+static inline unsigned int _bloomBit(const Address &a,uint16_t bloomNonce)
+	throw()
 {
-	_doMULTICAST_FRAME_fillQueueWithNextHops(char *nq,unsigned int want)
-		ptr(nq),
-		need(want) {}
+	uint64_t a = a.toInt() + (uint64_t)bloomNonce;
+	unsigned int bit = (unsigned int)(a & 0x1fff);
+	bit ^= (unsigned int)((a >> 13) & 0x1fff);
+	bit ^= (unsigned int)((a >> 26) & 0x1fff);
+	bit ^= (unsigned int)((a >> 39) & 0x1fff);
+	return bit;
+}
+
+// Function object used in _doMULTICAST_FRAME
+struct _PushNextHops
+{
+	_PushNextHops(unsigned char **ptr_,unsigned char *end_,unsigned char *bloom_,uint16_t bloomNonce_const Address &origin_)
+		ptr(ptr_),
+		end(end_),
+		bloom(bloom_),
+		origin(origin_),
+		bloomNonce(bloomNonce_) throw() {}
 
 	inline bool operator()(const Address &a) const
 		throw()
 	{
-		a.copyTo(ptr,ZT_ADDRESS_LENGTH);
-		ptr += ZT_ADDRESS_LENGTH;
-		return (--need != 0);
+		if (a == origin)
+			return true;
+
+		unsigned int bb = _bloomBit(a,bloomNonce);
+		unsigned char *bbyte = bloom + (bb >> 3);
+		unsigned char bmask = 0x80 >> (bb & 7);
+		if ((*bbyte & bmask))
+			return true;
+		else *bbyte |= bmask;
+
+		a.copyTo(*ptr,ZT_ADDRESS_LENGTH);
+		*ptr += ZT_ADDRESS_LENGTH;
+
+		return (*ptr != end);
 	}
 
-	char *ptr;
-	unsigned int need;
+	unsigned char **ptr;
+	unsigned char *end;
+	unsigned char *bloom;
+	Address origin;
+	uint16_t bloomNonce;
 };
 
 bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		unsigned int forwardCount = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT);
-		char *queue = (char *)field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_QUEUE,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE);
-		Address magnet(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-		Address submitterAddr(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
-		SharedPtr<Peer> submitter(_r->topology->getPeer(submitterAddr));
-		if (!submitter) {
-			_r->sw->requestWhois(submitterAddr);
+		Address origin(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
+		SharedPtr<Peer> originPeer(_r->topology->getPeer(origin));
+		if (!originPeer) {
+			_r->sw->requestWhois(origin);
 			_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
 			return false;
 		}
-		uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SUBMITTER); // 40-bit sender address + 24-bit sender unique ID
-		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
-		MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6));
-		MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_MAC,6)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DESTINATION_ADI));
-		unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-		unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LENGTH);
-		unsigned char *frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD,frameLen);
-		unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD + frameLen);
-		unsigned char *signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD + frameLen + 2,signatureLen);
 
-		unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET) + frameLen;
-		if (!submitter->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_MAGNET,signedPartLen),signedPartLen,signature,signatureLen)) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),submitterAddr.toString().c_str());
+		uint16_t depth = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
+		unsigned char *fifo = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
+		unsigned char *bloom = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
+		uint16_t bloomNonce = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE);
+		unsigned int prefixBits = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS];
+		uint16_t prefix = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX);
+		uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GUID);
+		MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC));
+		MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
+		unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+		unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN);
+		unsigned char *frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
+		unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
+		unsigned char *signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
+
+		unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID) + frameLen;
+		if (!submitter->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID,signedPartLen),signedPartLen,signature,signatureLen)) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 			return true;
 		}
+
+		if (_r->mc->deduplicate(nwid,guid)) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+
+		bool rateLimitsExceeded = false;
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
 		if (network) {
@@ -515,79 +555,42 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			} else if (!dest.mac().isMulticast()) {
 			} else if ((!network->permitsBridging())&&(!submitterAddr.wouldHaveMac(sourceMac))) {
 			} else if (!network->permitsEtherType(etherType)) {
-			} else if (network->multicastDeduplicate(guid)) {
 			} else if (network->updateAndCheckMulticastBalance(submitterAddr,dest,frameLen)) {
 				network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
-			}
+			} else rateLimitsExceeded = true;
 		}
 
-		if (magnet != _r->identity.address()) {
-			Packet outp(magnet,_r->identity.address(),Packet::VERB_MULTICAST_GOT);
-			outp.append(nwid);
-			outp.append(guid);
-			_r->sw->send(outp,true);
+		if ((rateLimitsExceeded)&&(!_r->topology->amSupernode())) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): rate limit exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+			return true;
 		}
 
-		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FORWARD_COUNT,(uint32_t)++forwardCount);
+		++depth; // TODO: implement max depth
+		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)depth);
 
-		char newQueue[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE + ZT_ADDRESS_LENGTH]; // room for an extra if we need a nextHop
-		unsigned int newQueueLen = 0;
-
-		// Top of FIFO is next hop (if there is one)
-		Address nextHop(queue,ZT_ADDRESS_LENGTH);
-
-		// Deduplicate the rest of the queue[], adding them to newQueue
-		if (nextHop) { // there was a next hop, so there was something there
-			char firstByteSeen[256];
-			for(unsigned int j=0;j<(256 / 8);++j)
-				((uint64_t *)firstByteSeen)[j] = 0;
-			for(unsigned int i=ZT_ADDRESS_LENGTH;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE;i+=ZT_ADDRESS_LENGTH) {
-				char *qs = queue + i;
-				if (Utils::isZero(qs,ZT_ADDRESS_LENGTH)) // zero terminates queue
-					break;
-				bool isdup = false;
-				if (firstByteSeen[(unsigned int)queue[i]]) {
-					for(unsigned int i2=ZT_ADDRESS_LENGTH;i2<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE;i2+=ZT_ADDRESS_LENGTH) {
-						if ((i2 != i)&&(!memcmp(qs,queue + i2,ZT_ADDRESS_LENGTH))) {
-							isdup = true;
-							break;
-						}
-					}
-				} else firstByteSeen[(unsigned int)queue[i]] = 1;
-				if (!isdup) {
-					char *nq = newQueue + (newQueueLen++ * ZT_ADDRESS_LENGTH);
-					for(unsigned int j=0;j<ZT_ADDRESS_LENGTH;++j)
-						nq[j] = qs[j];
-				}
-			}
+		// New FIFO with room for one extra, since head will be next hop
+		unsigned char newFifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
+		unsigned char *newFifoPtr = newFifo;
+		unsigned char *newFifoEnd = newFifoPtr + sizeof(newFifo);
+		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;) {
+			unsigned char zm = 0;
+			unsigned int j = i;
+			i += ZT_ADDRESS_LENGTH;
+			while (j != i)
+				zm |= (*(newFifoPtr++) = fifo[j++]);
+			if (!zm) // stop at zero address
+				break;
 		}
 
-		// Get next hops, including an extra if we don't have a next hop yet
-		unsigned int needQueueItems = ((ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE / ZT_ADDRESS_LENGTH) - newQueueLen);
-		if (!nextHop)
-			++needQueueItems;
-		if (needQueueItems)
-			newQueueLen += _r->mc->getNextHops(nwid,dest,guid,_doMULTICAST_FRAME_fillQueueWithNextHops(newQueue,needQueueItems));
+		// Fill remaining part of new fifo
+		_r->mc->getNextHops(nwid,dest,_PushNextHops(&newFifoPtr,newFifoEnd,bloom,bloomNonce,origin));
 
-		// Copy new queue over old queue, and pick off next hop if we need one
-		if (newQueueLen) {
-			char *nq = newQueue;
-			if (!nextHop) {
-				nextHop.setTo(nq,ZT_ADDRESS_LENGTH);
-				nq += ZT_ADDRESS_LENGTH;
-				--newQueueLen;
-			}
-			unsigned int i = 0;
-			unsigned int k = ZT_ADDRESS_LENGTH * newQueueLen;
-			while (i < k)
-				nq[i] = newQueue[i];
-			while (i < ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE)
-				nq[i] = 0;
-		} else memset(queue,0,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_QUEUE);
+		// Zero-terminate new FIFO if not completely full
+		while (newFifoPtr != newFifoEnd)
+			*(newFifoPtr++) = (unsigned char)0;
 
-		// If there's still no next hop, it's the magnet
-		if (!nextHop)
-			nextHop = magnet;
+		// First element in newFifo[] is next hop
+		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);
 
 		// Send to next hop, unless it's us of course
 		if (nextHop != _r->identity.address()) {

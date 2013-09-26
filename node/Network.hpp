@@ -52,8 +52,6 @@
 #include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
 
-#define ZT_NETWORK_MULTICAST_DEDUP_HISTORY_LENGTH 256
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -586,27 +584,6 @@ public:
 	}
 
 	/**
-	 * Multicast deduplicator
-	 *
-	 * This checks to see if a multicast GUID has been seen before. If not, it
-	 * adds it to the history and returns false.
-	 *
-	 * @param mcGuid Multicast GUID (sender address + sender unique ID)
-	 * @return True if multicast IS a duplicate, false otherwise
-	 */
-	inline bool multicastDeduplicate(uint64_t mcGuid)
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		for(unsigned int i=0;i<ZT_NETWORK_MULTICAST_DEDUP_HISTORY_LENGTH;++i) {
-			if (_multicastHistory[i] == mcGuid)
-				return true;
-		}
-		_multicastHistory[_multicastHistoryPtr++ % ZT_NETWORK_MULTICAST_DEDUP_HISTORY_LENGTH] = mcGuid;
-		return false;
-	}
-
-	/**
 	 * @return True if this network allows bridging
 	 */
 	inline bool permitsBridging() const
@@ -620,10 +597,6 @@ private:
 	void _restoreState();
 
 	const RuntimeEnvironment *_r;
-
-	// Ring buffer of most recently injected multicast packet GUIDs
-	uint64_t _multicastHistory[ZT_NETWORK_MULTICAST_DEDUP_HISTORY_LENGTH];
-	unsigned int _multicastHistoryPtr;
 
 	// Multicast bandwidth accounting for peers on this network
 	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;

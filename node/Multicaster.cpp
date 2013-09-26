@@ -76,15 +76,6 @@ void Multicaster::bringCloser(uint64_t nwid,const Address &a)
 	}
 }
 
-void Multicaster::got(uint64_t nwid,const Address &peer,uint64_t mcGuid)
-{
-	Mutex::Lock _l(_lock);
-	_NetInfo &n = _nets[nwid];
-	std::pair< uint64_t,std::set<Address> > &g = n.got[mcGuid];
-	g.first = Utils::now();
-	g.second.insert(peer);
-}
-
 void Multicaster::clean()
 {
 	Mutex::Lock _l(_lock);
@@ -92,14 +83,8 @@ void Multicaster::clean()
 	uint64_t now = Utils::now();
 
 	for(std::map< uint64_t,_NetInfo >::iterator n(_nets.begin());n!=_nets.end();) {
-		for(std::map< uint64_t,std::pair< uint64_t,std::set<Address> > >::iterator g(n->second.got.begin());g!=n->second.got.end();) {
-			if ((now - g->second.first) > ZT_MULTICAST_MAGNET_STATE_EXPIRE)
-				n->second.got.erase(g++);
-			else ++g;
-		}
-
 		for(std::map< _Subscription,_SubInfo >::iterator s(n->second.subscriptions.begin());s!=n->second.subscriptions.end();) {
-			if ((now - s->second.lastLike) > ZT_MULTICAST_LIKE_EXPIRE) {
+			if ((now - s->second.lastLike) >= ZT_MULTICAST_LIKE_EXPIRE) {
 				std::map< MulticastGroup,std::list< Address > >::iterator p(n->second.proximity.find(s->first.second));
 				p->second.erase(s->second.proximitySlot);
 				if (p->second.empty())
