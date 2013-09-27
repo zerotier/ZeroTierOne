@@ -165,7 +165,10 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO 320
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM 1024
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FLAGS 1
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FLAGS)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_NETWORK_ID 8
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_NETWORK_ID)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM_NONCE 2
@@ -189,7 +192,7 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE 2
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN 2
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PAYLOAD_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PAYLOAD_LEN)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
@@ -465,7 +468,8 @@ public:
 		 * ZeroTier addresses. ZeroTier does not support VLANs or other extensions
 		 * beyond core Ethernet.
 		 *
-		 * No OK or ERROR is generated.
+		 * ERROR may be generated if a membership certificate is needed for a
+		 * closed network. Payload will be network ID.
 		 */
 		VERB_FRAME = 6,
 
@@ -477,10 +481,11 @@ public:
 		 *   <[320] propagation FIFO>
 		 *   <[1024] propagation bloom filter>
 		 *   [... begin signed portion ...]
+		 *   <[1] 8-bit flags, currently unused and must be 0>
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit random propagation bloom filter nonce>
 		 *   <[1] number of significant bits in propagation restrict prefix>
-		 *   <[2] 16-bit propagation restriction prefix (left to right)>
+		 *   <[2] 16-bit propagation restriction prefix (sig bits right to left)>
 		 *   <[5] ZeroTier address of node of origin>
 		 *   <[3] 24-bit multicast ID, together with origin forms GUID>
 		 *   <[6] source MAC address>
@@ -524,11 +529,10 @@ public:
 		 * Propagation occurs within a restrict prefix. The restrict prefix is
 		 * applied to the least significant 16 bits of an address. The original
 		 * sender of the multicast sets the restrict prefix and sends 2^N copies
-		 * of the multicast frame, one for each address prefix. This permits
-		 * propagation to be partitioned into realms, and places the majority of
-		 * the burden for this upon the sender.
+		 * of the multicast frame, one for each address prefix.
 		 *
-		 * OK/ERROR are not generated.
+		 * ERROR may be generated if a membership certificate is needed for a
+		 * closed network. Payload will be network ID.
 		 */
 		VERB_MULTICAST_FRAME = 8,
 
@@ -550,7 +554,7 @@ public:
 		 *   <[2] 16-bit length of certificate>
 		 *   <[2] 16-bit length of signature>
 		 *   <[...] string-serialized certificate dictionary>
-		 *   <[...] ECDSA signature of certificate>
+		 *   <[...] signature of certificate>
 		 *
 		 * OK is generated on acceptance. ERROR is returned on failure. In both
 		 * cases the payload is the network ID.

@@ -204,19 +204,15 @@ int main(int argc,char **argv)
 				}
 
 				bool isOpen = false;
-				unsigned int mcb = 3;
-				unsigned int mcd = 6;
 				std::string name,desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT name,`desc`,isOpen,multicastPropagationBreadth,multicastPropagationDepth FROM Network WHERE id = " << nwid;
+					q << "SELECT name,`desc`,isOpen FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						name = rs[0]["name"].c_str();
 						desc = rs[0]["desc"].c_str();
 						isOpen = ((int)rs[0]["isOpen"] > 0);
-						mcb = (unsigned int)rs[0]["multicastPropagationBreadth"];
-						mcd = (unsigned int)rs[0]["multicastPropagationDepth"];
 					} else {
 						Dictionary response;
 						response["peer"] = peerIdentity.address().toString();
@@ -232,18 +228,6 @@ int main(int argc,char **argv)
 						write(STDOUT_FILENO,respm.data(),respm.length());
 						stdoutWriteLock.unlock();
 						continue;
-					}
-				}
-
-				std::string etherTypeWhitelistOld;
-				{
-					Query q = dbCon->query();
-					q << "SELECT DISTINCT etherType FROM NetworkEthertypes WHERE Network_id = " << nwid;
-					StoreQueryResult rs = q.store();
-					for(unsigned long i=0;i<rs.num_rows();++i) {
-						if (etherTypeWhitelistOld.length() > 0)
-							etherTypeWhitelistOld.push_back(',');
-						etherTypeWhitelistOld.append(rs[i]["etherType"].c_str());
 					}
 				}
 
@@ -287,20 +271,14 @@ int main(int argc,char **argv)
 
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
 				netconf["nwid"] = buf;
-				netconf["isOpen"] = (isOpen ? "1" : "0"); // TODO: remove, old name
 				netconf["o"] = (isOpen ? "1" : "0");
 				netconf["name"] = name;
 				netconf["desc"] = desc;
-				netconf["etherTypes"] = etherTypeWhitelistOld; // TODO: remove, old name
 				netconf["et"] = etherTypeWhitelist;
 				netconf["mr"] = multicastRates.toString();
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
 				netconf["ts"] = buf;
 				netconf["peer"] = peerIdentity.address().toString();
-				sprintf(buf,"%x",mcb);
-				netconf["mcb"] = buf;
-				sprintf(buf,"%x",mcd);
-				netconf["mcd"] = buf;
 
 				if (!isOpen) {
 					// TODO: handle closed networks, look up private membership,

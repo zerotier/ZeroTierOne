@@ -233,7 +233,26 @@ error_no_ZT_ARCH_defined;
 /**
  * Size of multicast deduplication ring buffer in 64-bit ints
  */
-#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 512
+#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 1024
+
+/**
+ * Maximum propagation depth for multicasts
+ *
+ * TODO: in the future make this configurable per-network.
+ */
+#define ZT_MULTICAST_MAX_PROPAGATION_DEPTH 128
+
+/**
+ * Number of frames to send when originating a multicast
+ *
+ * This MUST be a power of two.
+ */
+#define ZT_MULTICAST_NUM_PROPAGATION_PREFIXES 4
+
+/**
+ * Power of two used for ZT_MULTICAST_NUM_PROPAGATION_PREFIXES
+ */
+#define ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS 2
 
 /**
  * Period between announcements of all multicast 'likes' in ms

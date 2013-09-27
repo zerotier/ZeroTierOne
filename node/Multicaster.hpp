@@ -97,7 +97,7 @@ public:
 			if (n.multicastHistory[i] == mcGuid)
 				return true;
 		}
-		n.multicastHistory[n.multicastHistoryPtr++ % ZT_NETWORK_MULTICAST_DEDUP_HISTORY_LENGTH] = mcGuid;
+		n.multicastHistory[n.multicastHistoryPtr++ % ZT_MULTICAST_DEDUP_HISTORY_LENGTH] = mcGuid;
 		return false;
 	}
 
@@ -110,27 +110,91 @@ public:
 	 * @param nwid Network ID
 	 * @param mg Multicast group
 	 * @param nextHopFunc Function to call for each address, search stops if it returns false
-	 * @return Number of results returned through function
 	 */
 	template<typename F>
-	inline unsigned int getNextHops(uint64_t nwid,const MulticastGroup &mg,F nextHopFunc)
+	inline void getNextHops(uint64_t nwid,const MulticastGroup &mg,F nextHopFunc)
 	{
 		Mutex::Lock _l(_lock);
 
 		std::map< uint64_t,_NetInfo >::iterator n(_nets.find(nwid));
 		if (n == _nets.end())
-			return 0;
+			return;
 		std::map< MulticastGroup,std::list< Address > >::iterator p(n->second.proximity.find(mg));
 		if (p == n->second.proximity.end())
-			return 0;
+			return;
 
-		unsigned int cnt = 0;
 		for(std::list< Address >::iterator a(p->second.begin());a!=p->second.end();++a) {
 			if (!nextHopFunc(*a))
 				break;
 		}
-		return cnt;
 	}
+
+	/**
+	 * Functor to add addresses to multicast frame propagation queues
+	 *
+	 * This function object checks the origin, bloom filter, and restriction
+	 * prefix for each address and if all these pass it adds the address and
+	 * increments the pointer pointed to by ptr. It stops (returns false) when
+	 * *ptr reaches end. It's used in PacketDecoder and Switch with getNextHops()
+	 * to compose multicast frame headers.
+	 */
+	class AddToPropagationQueue
+	{
+	public:
+		/**
+		 * @param ptr Pointer to pointer to current position in queue
+		 * @param end End of queue
+		 * @param bloom Bloom filter field (must be 1024 bytes in length)
+		 * @param bloomNonce Random nonce for bloom filter randomization
+		 * @param origin Originating address
+		 * @param prefixBits Number of bits in propagation restriction prefix
+		 * @param prefix Propagation restrition prefix
+		 */
+		AddToPropagationQueue(unsigned char **ptr,unsigned char *end,unsigned char *bloom,uint16_t bloomNonce,const Address &origin,unsigned int prefixBits,unsigned int prefix)
+			throw() :
+			_origin(origin),
+			_bloomNonce((uint64_t)bloomNonce),
+			_ptr(ptr),
+			_end(end),
+			_bloom(bloom),
+			_prefix(prefix),
+			_prefixBits(std::min(prefixBits,(unsigned int)16)) {}
+
+		inline bool operator()(const Address &a)
+			throw()
+		{
+			// Exclude original sender -- obviously they've already seen it
+			if (a == _origin)
+				return true;
+
+			// Prefixes match if N least significant bits in address are equal to the
+			// prefix. (e.g. 0 bits and 0 prefix would match all, 1 bit and 0 prefix
+			// would match addresses with LSB == 0)
+			if (((unsigned int)a.toInt() & (0xffff >> (16 - _prefixBits))) != _prefix)
+				return true;
+
+			// Exclude addresses remembered in bloom filter -- or else remember them
+			uint64_t aint = a.toInt() + _bloomNonce;
+			const unsigned int bit = (unsigned int)(aint ^ (aint >> 13) ^ (aint >> 26) ^ (aint >> 39)) & 0x1fff;
+			unsigned char *const bbyte = _bloom + (bit >> 3); // note: bloom filter size == 1024 is hard-coded here
+			const unsigned char bmask = 0x80 >> (bit & 7);
+			if ((*bbyte & bmask))
+				return true;
+			else *bbyte |= bmask;
+
+			a.copyTo(*_ptr,ZT_ADDRESS_LENGTH);
+			return ((*_ptr += ZT_ADDRESS_LENGTH) != _end);
+		}
+
+	private:
+		const Address _origin;
+		const uint64_t _bloomNonce;
+		unsigned char **const _ptr;
+		unsigned char *const _end;
+		unsigned char *const _bloom;
+		const unsigned int _prefix;
+		const unsigned int _prefixBits;
+	};
 
 private:
 	// Information about a subscription

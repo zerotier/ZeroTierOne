@@ -41,6 +41,7 @@
 #include "InetAddress.hpp"
 #include "Switch.hpp"
 #include "Buffer.hpp"
+#include "CMWC4096.hpp"
 
 namespace ZeroTier {
 

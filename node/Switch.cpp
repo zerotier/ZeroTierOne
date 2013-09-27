@@ -49,13 +49,15 @@
 #include "NodeConfig.hpp"
 #include "Demarc.hpp"
 #include "Filter.hpp"
+#include "CMWC4096.hpp"
 
 #include "../version.h"
 
 namespace ZeroTier {
 
 Switch::Switch(const RuntimeEnvironment *renv) :
-	_r(renv)
+	_r(renv),
+	_multicastIdCounter((unsigned int)renv->prng->next32()) // start a random spot to minimize possible collisions on startup
 {
 }
 
@@ -81,18 +83,18 @@ void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,c
 
 void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
-	if (from != network->tap().mac()) {
-		LOG("ignored tap: %s -> %s %s (bridging is not (yet?) supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
-		return;
-	}
-
 	if (to == network->tap().mac()) {
 		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tap().deviceName().c_str());
 		return;
 	}
 
+	if (from != network->tap().mac()) {
+		LOG("ignored tap: %s -> %s %s (bridging not supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
+		return;
+	}
+
 	if (!network->permitsEtherType(etherType)) {
-		LOG("ignored tap: %s -> %s: ethernet type %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType),(unsigned long long)network->id());
+		LOG("ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 
@@ -105,58 +107,55 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
-		uint64_t crc = Multicaster::computeMulticastDedupCrc(network->id(),from,mg,etherType,data.data(),data.size());
-		uint64_t now = Utils::now();
+		unsigned int mcid = ++_multicastIdCounter & 0xffffff;
+		uint16_t bloomNonce = (uint16_t)_r->prng->next32(); // doesn't need to be cryptographically strong
+		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
+		unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
+		for(unsigned int prefix=0;prefix<ZT_MULTICAST_NUM_PROPAGATION_PREFIXES;++prefix) {
+			memset(bloom,0,sizeof(bloom));
 
-		if (_r->multicaster->checkDuplicate(crc,now)) {
-			LOG("%s/%.16llx: multicast group %s: dropped %u bytes, duplicate multicast in too short a time frame",network->tap().deviceName().c_str(),(unsigned long long)network->id(),mg.toString().c_str(),(unsigned int)data.size());
-			return;
-		}
-		_r->multicaster->addToDedupHistory(crc,now);
-		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
-			LOG("%s/%.16llx: multicast group %s: dropped %u bytes, out of budget",network->tap().deviceName().c_str(),(unsigned long long)network->id(),mg.toString().c_str(),(unsigned int)data.size());
-			return;
-		}
+			unsigned char *fifoPtr = fifo;
+			unsigned char *fifoEnd = fifo + sizeof(fifo);
 
-		Multicaster::MulticastBloomFilter bloom;
-		SharedPtr<Peer> propPeers[16];
-		unsigned int np = _r->multicaster->pickSocialPropagationPeers(
-			*(_r->prng),
-			*(_r->topology),
-			network->id(),
-			mg,
-			_r->identity.address(),
-			Address(),
-			bloom,
-			std::min(network->multicastPropagationBreadth(),(unsigned int)16), // 16 is a sanity check
-			propPeers,
-			now);
+			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS,prefix));
+			while (fifoPtr != fifoEnd)
+				*(fifoPtr++) = (unsigned char)0;
 
-		if (!np)
-			return;
+			Address firstHop(fifo,ZT_ADDRESS_LENGTH); // fifo is +1 in size, with first element being used here
+			if (!firstHop) {
+				SharedPtr<Peer> sn(_r->topology->getBestSupernode());
+				if (sn)
+					firstHop = sn->address();
+				else break;
+			}
 
-		C25519::Signature signature(Multicaster::signMulticastPacket(_r->identity,network->id(),from,mg,etherType,data.data(),data.size()));
+			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
+			outp.append((uint16_t)0);
+			outp.append(fifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO); // remainder of fifo is loaded into packet
+			outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
+			outp.append((unsigned char)0);
+			outp.append(network->id());
+			outp.append(bloomNonce);
+			outp.append((unsigned char)ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS);
+			outp.append((uint16_t)prefix);
+			_r->identity.address().appendTo(outp);
+			outp.append((unsigned char)((mcid >> 16) & 0xff));
+			outp.append((unsigned char)((mcid >> 8) & 0xff));
+			outp.append((unsigned char)(mcid & 0xff));
+			outp.append(from.data,6);
+			outp.append(mg.mac().data,6);
+			outp.append(mg.adi());
+			outp.append((uint16_t)etherType);
+			outp.append((uint16_t)data.size());
+			outp.append(data);
 
-		Packet outpTmpl(propPeers[0]->address(),_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
-		outpTmpl.append((uint8_t)0);
-		outpTmpl.append((uint64_t)network->id());
-		_r->identity.address().appendTo(outpTmpl);
-		outpTmpl.append(from.data,6);
-		outpTmpl.append(mg.mac().data,6);
-		outpTmpl.append((uint32_t)mg.adi());
-		outpTmpl.append(bloom.data(),ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES);
-		outpTmpl.append((uint8_t)0); // 0 hops
-		outpTmpl.append((uint16_t)etherType);
-		outpTmpl.append((uint16_t)data.size());
-		outpTmpl.append((uint16_t)signature.size());
-		outpTmpl.append(data.data(),data.size());
-		outpTmpl.append(signature.data,(unsigned int)signature.size());
-		outpTmpl.compress();
-		send(outpTmpl,true);
-		for(unsigned int i=1;i<np;++i) {
-			outpTmpl.newInitializationVector();
-			outpTmpl.setDestination(propPeers[i]->address());
-			send(outpTmpl,true);
+			unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
+			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
+			outp.append((uint16_t)sig.size());
+			outp.append(sig.data,sig.size());
+
+			outp.compress();
+			send(outp,true);
 		}
 	} else if (to.isZeroTier()) {
 		// Simple unicast frame from us to another node
@@ -206,7 +205,6 @@ void Switch::sendHELLO(const Address &dest)
 bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr)
 {
 	uint64_t now = Utils::now();
-
 	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
@@ -214,8 +212,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 	outp.append(now);
 	_r->identity.serialize(outp,false);
-	outp.macSet(dest->macKey());
-
+	outp.armor(dest->key(),false);
 	return _r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1);
 }
 
@@ -268,8 +265,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 			outp.append((unsigned char)4);
 			outp.append(cg.first.rawIpData(),4);
 		}
-		outp.encrypt(p1p->cryptKey());
-		outp.macSet(p1p->macKey());
+		outp.armor(p1p->key(),true);
 		p1p->send(_r,outp.data(),outp.size(),now);
 	}
 	{	// tell p2 where to find p1
@@ -283,8 +279,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 			outp.append((unsigned char)4);
 			outp.append(cg.second.rawIpData(),4);
 		}
-		outp.encrypt(p2p->cryptKey());
-		outp.macSet(p2p->macKey());
+		outp.armor(p2p->key(),true);
 		p2p->send(_r,outp.data(),outp.size(),now);
 	}
 
@@ -606,9 +601,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 	if (supernode) {
 		Packet outp(supernode->address(),_r->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
-		outp.encrypt(supernode->cryptKey());
-		outp.macSet(supernode->macKey());
-
+		outp.armor(supernode->key(),true);
 		uint64_t now = Utils::now();
 		if (supernode->send(_r,outp.data(),outp.size(),now))
 			return supernode->address();
@@ -623,13 +616,10 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 	if (peer) {
 		uint64_t now = Utils::now();
 
-		bool isRelay;
 		SharedPtr<Peer> via;
 		if ((_r->topology->isSupernode(peer->address()))||(peer->hasActiveDirectPath(now))) {
-			isRelay = false;
 			via = peer;
 		} else {
-			isRelay = true;
 			via = _r->topology->getBestSupernode();
 			if (!via)
 				return false;
@@ -640,9 +630,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 		unsigned int chunkSize = std::min(tmp.size(),(unsigned int)ZT_UDP_DEFAULT_PAYLOAD_MTU);
 		tmp.setFragmented(chunkSize < tmp.size());
 
-		if (encrypt)
-			tmp.encrypt(peer->cryptKey());
-		tmp.macSet(peer->macKey());
+		tmp.armor(peer->key(),encrypt);
 
 		if (via->send(_r,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {

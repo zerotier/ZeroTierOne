@@ -197,6 +197,7 @@ private:
 		bool encrypt);
 
 	const RuntimeEnvironment *const _r;
+	volatile unsigned int _multicastIdCounter;
 
 	struct WhoisRequest
 	{

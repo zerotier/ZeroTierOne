@@ -92,12 +92,12 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doRENDEZVOUS(_r,peer);
 			case Packet::VERB_FRAME:
 				return _doFRAME(_r,peer);
-			case Packet::VERB_MULTICAST_LIKE:
-				return _doMULTICAST_LIKE(_r,peer);
-			case Packet::VERB_MULTICAST_GOT:
-				return _doMULTICAST_GOT(_r,peer);
+			case Packet::VERB_PROXY_FRAME:
+				return _doPROXY_FRAME(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
+			case Packet::VERB_MULTICAST_LIKE:
+				return _doMULTICAST_LIKE(_r,peer);
 			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE:
 				return _doNETWORK_MEMBERSHIP_CERTIFICATE(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REQUEST:
@@ -137,8 +137,7 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 				outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-				outp.encrypt(p->cryptKey());
-				outp.macSet(p->macKey());
+				outp.armor(p->key(),true);
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
 			}	break;
 
@@ -147,8 +146,7 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 				outp.append((unsigned char)Packet::VERB_HELLO);
 				outp.append(req->helloPacketId);
 				outp.append((unsigned char)Packet::ERROR_IDENTITY_INVALID);
-				outp.encrypt(p->cryptKey());
-				outp.macSet(p->macKey());
+				outp.armor(p->key(),true);
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
 			}	break;
 
@@ -158,8 +156,7 @@ void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topol
 				outp.append((unsigned char)Packet::VERB_HELLO);
 				outp.append(req->helloPacketId);
 				outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-				outp.encrypt(p->cryptKey());
-				outp.macSet(p->macKey());
+				outp.armor(p->key(),true);
 				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
 			}	break;
 		}
@@ -191,16 +188,26 @@ void PacketDecoder::_CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topol
 bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-#ifdef ZT_TRACE
 		Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB];
 		Packet::ErrorCode errorCode = (Packet::ErrorCode)(*this)[ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE];
 		TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
-#endif
-		// TODO (sorta):
-		// The fact is that the protocol works fine without error handling.
-		// The only error that really needs to be handled here is duplicate
-		// identity collision, which if it comes from a supernode should cause
-		// us to restart and regenerate a new identity.
+
+		switch(errorCode) {
+			case Packet::ERROR_OBJ_NOT_FOUND:
+				if (inReVerb == Packet::VERB_WHOIS) {
+					// TODO: abort WHOIS if sender is a supernode
+				}
+				break;
+			case Packet::ERROR_IDENTITY_COLLISION:
+			case Packet::ERROR_IDENTITY_INVALID:
+				// TODO: if it comes from a supernode, regenerate a new identity
+				break;
+			case Packet::ERROR_NO_MEMBER_CERTIFICATE:
+				// TODO: send member certificate
+				break;
+			default:
+				break;
+		}
 	} catch (std::exception &ex) {
 		TRACE("dropped ERROR from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -243,8 +250,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			outp.append((unsigned char)Packet::VERB_HELLO);
 			outp.append(packetId());
 			outp.append(timestamp);
-			outp.encrypt(existingPeer->cryptKey());
-			outp.macSet(existingPeer->macKey());
+			outp.armor(existingPeer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			return true;
 		}
@@ -281,8 +287,12 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 			case Packet::VERB_HELLO: {
 				// OK from HELLO permits computation of latency.
 				unsigned int latency = std::min((unsigned int)(Utils::now() - at<uint64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP)),(unsigned int)0xffff);
-				TRACE("%s(%s): OK(HELLO), latency: %u",source().toString().c_str(),_remoteAddress.toString().c_str(),latency);
+				unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION];
+				unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION];
+				unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
+				TRACE("%s(%s): OK(HELLO), latency: %u, version %u.%u.%u",source().toString().c_str(),_remoteAddress.toString().c_str(),latency,vMajor,vMinor,vRevision);
 				peer->setLatency(_remoteAddress,latency);
+				peer->setRemoteVersion(vMajor,vMinor,vRevision);
 			}	break;
 			case Packet::VERB_WHOIS: {
 				TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
@@ -328,8 +338,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.append((unsigned char)Packet::VERB_WHOIS);
 			outp.append(packetId());
 			p->identity().serialize(outp,false);
-			outp.encrypt(peer->cryptKey());
-			outp.macSet(peer->macKey());
+			outp.armor(peer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		} else {
@@ -338,8 +347,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.append(packetId());
 			outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 			outp.append(payload(),ZT_ADDRESS_LENGTH);
-			outp.encrypt(peer->cryptKey());
-			outp.macSet(peer->macKey());
+			outp.armor(peer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		}
@@ -404,8 +412,21 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				} else if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 					TRACE("dropped FRAME from %s: ethernet type %u not allowed on network %.16llx",source().toString().c_str(),etherType,(unsigned long long)network->id());
 				}
+
+				// Source moves "closer" to us in multicast propagation priority when
+				// we receive unicast frames from it. This is called "implicit social
+				// ordering" in other docs.
+				_r->mc->bringCloser(network->id(),source());
 			} else {
 				TRACE("dropped FRAME from %s(%s): not a member of closed network %llu",source().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
+
+				Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+				outp.append((unsigned char)Packet::VERB_FRAME);
+				outp.append(packetId());
+				outp.append((unsigned char)Packet::ERROR_NO_MEMBER_CERTIFICATE);
+				outp.append(network->id());
+				outp.armor(peer->key(),true);
+				_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			}
 		} else {
 			TRACE("dropped FRAME from %s(%s): network %llu unknown",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
@@ -415,6 +436,149 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	} catch ( ... ) {
 		TRACE("dropped FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+	return true;
+}
+
+bool PacketDecoder::_doPROXY_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	// TODO: bridging is not implemented yet
+	return true;
+}
+
+bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	try {
+		Address origin(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
+		SharedPtr<Peer> originPeer(_r->topology->getPeer(origin));
+		if (!originPeer) {
+			_r->sw->requestWhois(origin);
+			_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
+			return false;
+		}
+
+		uint16_t depth = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
+		unsigned char *fifo = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
+		unsigned char *bloom = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
+		uint16_t bloomNonce = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE);
+		unsigned int prefixBits = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS];
+		unsigned int prefix = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX);
+		uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GUID);
+		MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC));
+		MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
+		unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+		unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN);
+		unsigned char *frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
+		unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
+		unsigned char *signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
+
+		unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + frameLen;
+		if (!originPeer->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen,signature,signatureLen)) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+			return true;
+		}
+
+		if (!dest.mac().isMulticast()) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): %s is not a multicast/broadcast address",source().toString().c_str(),_remoteAddress.toString().c_str(),dest.mac().toString().c_str());
+			return true;
+		}
+
+		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+
+		bool rateLimitsExceeded = false;
+
+		SharedPtr<Network> network(_r->nc->network(nwid));
+		if (network) {
+			if (!network->isAllowed(origin)) {
+				TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
+
+				Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+				outp.append((unsigned char)Packet::VERB_FRAME);
+				outp.append(packetId());
+				outp.append((unsigned char)Packet::ERROR_NO_MEMBER_CERTIFICATE);
+				outp.append(nwid);
+				outp.armor(peer->key(),true);
+				_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+
+				// We do not terminate here, since if the member just has an out of
+				// date cert or hasn't sent us a cert yet we still want to propagate
+				// the message so multicast works.
+			} else if ((!network->permitsBridging())&&(!origin.wouldHaveMac(sourceMac))) {
+				TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
+			} else if (!network->permitsEtherType(etherType)) {
+				TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
+			} else if (network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
+				network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
+			} else {
+				rateLimitsExceeded = true;
+			}
+		}
+
+		// We can only really know if rate limit was exceeded if we're a member of
+		// this network. This will nearly always be true for anyone getting a
+		// multicast except supernodes, so the net effect will be to truncate
+		// multicast propagation if the rate limit is exceeded.
+		if (rateLimitsExceeded) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+			return true;
+		}
+
+		if (++depth > ZT_MULTICAST_MAX_PROPAGATION_DEPTH) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)depth);
+
+		// New FIFO with room for one extra, since head will be next hop
+		unsigned char newFifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
+		unsigned char *newFifoPtr = newFifo;
+		unsigned char *newFifoEnd = newFifoPtr + sizeof(newFifo);
+		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;) {
+			unsigned int j = i;
+			i += ZT_ADDRESS_LENGTH;
+			unsigned char zm = 0;
+			while (j != i)
+				zm |= (*(newFifoPtr++) = fifo[j++]);
+			if (!zm) // stop at zero address
+				break;
+		}
+
+		// Add any next hops we know about to FIFO
+		_r->mc->getNextHops(nwid,dest,Multicaster::AddToPropagationQueue(&newFifoPtr,newFifoEnd,bloom,bloomNonce,origin,prefixBits,prefix));
+
+		// Zero-terminate new FIFO if not completely full
+		while (newFifoPtr != newFifoEnd)
+			*(newFifoPtr++) = (unsigned char)0;
+
+		// First element in newFifo[] is next hop
+		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);
+		if (!nextHop)
+			nextHop = _r->topology->getBestSupernode(&origin,1,true); // exclude origin in case it's itself a supernode
+		if ((!nextHop)||(nextHop == _r->identity.address())) { // check against our addr is a sanity check
+			TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+
+		// The rest of newFifo[] goes back into the packet
+		memcpy(fifo,newFifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
+
+		// Send to next hop, reusing this packet as scratch space
+		newInitializationVector();
+		setDestination(nextHop);
+		setSource(_r->identity.address());
+		compress(); // note: bloom filters and empty FIFOs are highly compressable!
+		_r->sw->send(*this,true);
+
+		return true;
+	} catch (std::exception &ex) {
+		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+	} catch ( ... ) {
+		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+
 	return true;
 }
 
@@ -442,179 +606,9 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 	return true;
 }
 
-bool PacketDecoder::_doMULTICAST_GOT(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
-{
-	// Right now only supernodes act as propagation hubs
-	if (!_r->topology->amSupernode()) {
-		TRACE("dropped MULTICAST_GOT from %s: I am not a supernode",source().toString().c_str());
-		return true;
-	}
-
-	try {
-		_r->mc->got(at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GOT_IDX_NETWORK_ID),source(),at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GOT_IDX_MULTICAST_GUID));
-	} catch (std::exception &ex) {
-		TRACE("dropped MULTICAST_GOT from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
-	} catch ( ... ) {
-		TRACE("dropped MULTICAST_GOT from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
-	}
-
-	return true;
-}
-
-// Function used in _doMULTICAST_FRAME
-static inline unsigned int _bloomBit(const Address &a,uint16_t bloomNonce)
-	throw()
-{
-	uint64_t a = a.toInt() + (uint64_t)bloomNonce;
-	unsigned int bit = (unsigned int)(a & 0x1fff);
-	bit ^= (unsigned int)((a >> 13) & 0x1fff);
-	bit ^= (unsigned int)((a >> 26) & 0x1fff);
-	bit ^= (unsigned int)((a >> 39) & 0x1fff);
-	return bit;
-}
-
-// Function object used in _doMULTICAST_FRAME
-struct _PushNextHops
-{
-	_PushNextHops(unsigned char **ptr_,unsigned char *end_,unsigned char *bloom_,uint16_t bloomNonce_const Address &origin_)
-		ptr(ptr_),
-		end(end_),
-		bloom(bloom_),
-		origin(origin_),
-		bloomNonce(bloomNonce_) throw() {}
-
-	inline bool operator()(const Address &a) const
-		throw()
-	{
-		if (a == origin)
-			return true;
-
-		unsigned int bb = _bloomBit(a,bloomNonce);
-		unsigned char *bbyte = bloom + (bb >> 3);
-		unsigned char bmask = 0x80 >> (bb & 7);
-		if ((*bbyte & bmask))
-			return true;
-		else *bbyte |= bmask;
-
-		a.copyTo(*ptr,ZT_ADDRESS_LENGTH);
-		*ptr += ZT_ADDRESS_LENGTH;
-
-		return (*ptr != end);
-	}
-
-	unsigned char **ptr;
-	unsigned char *end;
-	unsigned char *bloom;
-	Address origin;
-	uint16_t bloomNonce;
-};
-
-bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
-{
-	try {
-		Address origin(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
-		SharedPtr<Peer> originPeer(_r->topology->getPeer(origin));
-		if (!originPeer) {
-			_r->sw->requestWhois(origin);
-			_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
-			return false;
-		}
-
-		uint16_t depth = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
-		unsigned char *fifo = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
-		unsigned char *bloom = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
-		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
-		uint16_t bloomNonce = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE);
-		unsigned int prefixBits = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS];
-		uint16_t prefix = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX);
-		uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GUID);
-		MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC));
-		MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
-		unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-		unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN);
-		unsigned char *frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
-		unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
-		unsigned char *signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
-
-		unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID) + frameLen;
-		if (!submitter->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID,signedPartLen),signedPartLen,signature,signatureLen)) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
-			return true;
-		}
-
-		if (_r->mc->deduplicate(nwid,guid)) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-
-		bool rateLimitsExceeded = false;
-
-		SharedPtr<Network> network(_r->nc->network(nwid));
-		if (network) {
-			if (!network->isAllowed(submitterAddr)) {
-			} else if (!dest.mac().isMulticast()) {
-			} else if ((!network->permitsBridging())&&(!submitterAddr.wouldHaveMac(sourceMac))) {
-			} else if (!network->permitsEtherType(etherType)) {
-			} else if (network->updateAndCheckMulticastBalance(submitterAddr,dest,frameLen)) {
-				network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
-			} else rateLimitsExceeded = true;
-		}
-
-		if ((rateLimitsExceeded)&&(!_r->topology->amSupernode())) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): rate limit exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
-			return true;
-		}
-
-		++depth; // TODO: implement max depth
-		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)depth);
-
-		// New FIFO with room for one extra, since head will be next hop
-		unsigned char newFifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
-		unsigned char *newFifoPtr = newFifo;
-		unsigned char *newFifoEnd = newFifoPtr + sizeof(newFifo);
-		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;) {
-			unsigned char zm = 0;
-			unsigned int j = i;
-			i += ZT_ADDRESS_LENGTH;
-			while (j != i)
-				zm |= (*(newFifoPtr++) = fifo[j++]);
-			if (!zm) // stop at zero address
-				break;
-		}
-
-		// Fill remaining part of new fifo
-		_r->mc->getNextHops(nwid,dest,_PushNextHops(&newFifoPtr,newFifoEnd,bloom,bloomNonce,origin));
-
-		// Zero-terminate new FIFO if not completely full
-		while (newFifoPtr != newFifoEnd)
-			*(newFifoPtr++) = (unsigned char)0;
-
-		// First element in newFifo[] is next hop
-		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);
-
-		// Send to next hop, unless it's us of course
-		if (nextHop != _r->identity.address()) {
-			newInitializationVector();
-			setDestination(nextHop);
-			setSource(_r->identity.address());
-			compress();
-			_r->sw->send(*this,true);
-		}
-
-		return true;
-	} catch (std::exception &ex) {
-		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
-	} catch ( ... ) {
-		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
-	}
-
-	return true;
-}
-
 bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	// TODO: not implemented yet, will be needed for private networks.
-
 	return true;
 }
 
@@ -645,8 +639,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 			outp.append(packetId());
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
-			outp.encrypt(peer->cryptKey());
-			outp.macSet(peer->macKey());
+			outp.armor(peer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 #ifndef __WINDOWS__
 		}

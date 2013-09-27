@@ -93,7 +93,7 @@ void Multicaster::clean()
 			} else ++s;
 		}
 
-		if (n->second.got.empty()&&n->second.proximity.empty()&&n->second.subscriptions.empty())
+		if (n->second.proximity.empty()&&n->second.subscriptions.empty())
 			_nets.erase(n++);
 		else ++n;
 	}
