@@ -321,18 +321,9 @@ static int testPacket()
 		return -1;
 	}
 
-	a.compress();
-	a.encrypt(salsaKey);
-	a.decrypt(salsaKey);
-	a.uncompress();
-	if (a != b) {
-		std::cout << "FAIL (encrypt-decrypt)" << std::endl;
-		return -1;
-	}
-
-	a.macSet(hmacKey);
-	if (!a.macVerify(hmacKey)) {
-		std::cout << "FAIL (macVerify)" << std::endl;
+	a.armor(salsaKey,true);
+	if (!a.dearmor(salsaKey)) {
+		std::cout << "FAIL (encrypt-decrypt/verify)" << std::endl;
 		return -1;
 	}
 
