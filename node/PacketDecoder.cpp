@@ -576,8 +576,11 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 		// First element in newFifo[] is next hop
 		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);
-		if (!nextHop)
-			nextHop = _r->topology->getBestSupernode(&origin,1,true); // exclude origin in case it's itself a supernode
+		if (!nextHop) {
+			SharedPtr<Peer> supernode(_r->topology->getBestSupernode(&origin,1,true));
+			if (supernode)
+				nextHop = supernode->address();
+		}
 		if ((!nextHop)||(nextHop == _r->identity.address())) { // check against our addr is a sanity check
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
