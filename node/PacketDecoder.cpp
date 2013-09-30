@@ -250,6 +250,10 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			outp.append((unsigned char)Packet::VERB_HELLO);
 			outp.append(packetId());
 			outp.append(timestamp);
+			outp.append((unsigned char)ZT_PROTO_VERSION);
+			outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
+			outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
+			outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 			outp.armor(existingPeer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			return true;
