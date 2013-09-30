@@ -576,7 +576,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 		// First element in newFifo[] is next hop
 		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);
-		if (!nextHop) {
+		if ((!nextHop)&&(!_r->topology->amSupernode())) {
 			SharedPtr<Peer> supernode(_r->topology->getBestSupernode(&origin,1,true));
 			if (supernode)
 				nextHop = supernode->address();
@@ -588,6 +588,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 		// The rest of newFifo[] goes back into the packet
 		memcpy(fifo,newFifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
+
+		//TRACE("forwarding MULTICAST_FRAME from %s(%s) to %s, original sender %s, current depth: %u",source().toString().c_str(),_remoteAddress.toString().c_str(),nextHop.toString().c_str(),origin.toString().c_str(),depth);
 
 		// Send to next hop, reusing this packet as scratch space
 		newInitializationVector();
