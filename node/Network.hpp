@@ -266,12 +266,20 @@ public:
 	 * nwid=<hex network ID> (required)
 	 * name=short name
 	 * desc=long(er) description
-	 * com=Certificate (serialized dictionary)
+	 * com=Serialized certificate of membership
 	 * mr=MulticastRates (serialized dictionary)
+	 * md=multicast propagation depth
+	 * mpb=multicast propagation prefix bits (2^mpb packets are sent by origin)
 	 * o=open network? (1 or 0, default false if missing)
 	 * et=ethertype whitelist (comma-delimited list of ethertypes in decimal)
 	 * v4s=IPv4 static assignments / netmasks (comma-delimited)
 	 * v6s=IPv6 static assignments / netmasks (comma-delimited)
+	 *
+	 * Notes:
+	 *
+	 * If zero appears in the 'et' list, the sense is inverted. It becomes an
+	 * ethertype blacklist instead of a whitelist and anything not blacklisted
+	 * is permitted.
 	 */
 	class Config : private Dictionary
 	{
@@ -337,6 +345,34 @@ public:
 			if (mr == end())
 				return MulticastRates();
 			else return MulticastRates(mr->second);
+		}
+
+		/**
+		 * @return Number of bits in propagation prefix for this network
+		 */
+		inline unsigned int multicastPrefixBits() const
+		{
+			const_iterator mpb(find("mpb"));
+			if (mpb == end())
+				return ZT_DEFAULT_MULTICAST_PREFIX_BITS;
+			unsigned int tmp = Utils::hexStrToUInt(mpb->second.c_str());
+			if (tmp)
+				return tmp;
+			else return ZT_DEFAULT_MULTICAST_PREFIX_BITS;
+		}
+
+		/**
+		 * @return Maximum multicast propagation depth for this network
+		 */
+		inline unsigned int multicastDepth() const
+		{
+			const_iterator md(find("md"));
+			if (md == end())
+				return ZT_DEFAULT_MULTICAST_DEPTH;
+			unsigned int tmp = Utils::hexStrToUInt(md->second.c_str());
+			if (tmp)
+				return tmp;
+			else return ZT_DEFAULT_MULTICAST_DEPTH;
 		}
 
 		/**
@@ -557,7 +593,9 @@ public:
 			return false;
 		else if (etherType > 65535)
 			return false;
-		else return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType % 8))) != 0);
+		else if ((_etWhitelist[0] & 1)) // if type 0 is in the whitelist, sense is inverted from whitelist to blacklist
+			return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType & 7))) == 0);
+		else return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType & 7))) != 0);
 	}
 
 	/**
@@ -592,6 +630,24 @@ public:
 		return false; // TODO: bridging not implemented yet
 	}
 
+	/**
+	 * @return Bits in multicast restriciton prefix
+	 */
+	inline unsigned int multicastPrefixBits() const
+		throw()
+	{
+		return _multicastPrefixBits;
+	}
+
+	/**
+	 * @return Max depth (TTL) for a multicast frame
+	 */
+	inline unsigned int multicastDepth() const
+		throw()
+	{
+		return _multicastDepth;
+	}
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 	void _restoreState();
@@ -614,6 +670,8 @@ private:
 	MulticastRates _mcRates; // memoized from _configuration
 	std::set<InetAddress> _staticAddresses; // memoized from _configuration
 	bool _isOpen; // memoized from _configuration
+	unsigned int _multicastPrefixBits; // memoized from _configuration
+	unsigned int _multicastDepth; // memoized from _configuration
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];

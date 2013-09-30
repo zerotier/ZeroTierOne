@@ -485,6 +485,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		}
 
 		bool rateLimitsExceeded = false;
+		unsigned int maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
 
 		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
 			// Ordinary frames will drop duplicates. Supernodes keep propagating
@@ -502,6 +503,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// for the same frame would not be fair.
 			SharedPtr<Network> network(_r->nc->network(nwid));
 			if (network) {
+				maxDepth = network->multicastDepth(); // pull from network config if available
 				if (!network->isAllowed(origin)) {
 					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
 
@@ -541,7 +543,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
-		if (++depth > ZT_MULTICAST_MAX_PROPAGATION_DEPTH) {
+		if (++depth > maxDepth) {
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}

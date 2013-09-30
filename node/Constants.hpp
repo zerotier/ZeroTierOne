@@ -236,23 +236,19 @@ error_no_ZT_ARCH_defined;
 #define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 1024
 
 /**
- * Maximum propagation depth for multicasts
- *
- * TODO: in the future make this configurable per-network.
+ * Default number of bits in multicast propagation prefix
  */
-#define ZT_MULTICAST_MAX_PROPAGATION_DEPTH 128
+#define ZT_DEFAULT_MULTICAST_PREFIX_BITS 2
 
 /**
- * Number of frames to send when originating a multicast
- *
- * This MUST be a power of two.
+ * Default max depth (TTL) for multicast propagation
  */
-#define ZT_MULTICAST_NUM_PROPAGATION_PREFIXES 4
+#define ZT_DEFAULT_MULTICAST_DEPTH 64
 
 /**
- * Power of two used for ZT_MULTICAST_NUM_PROPAGATION_PREFIXES
+ * Global maximum for multicast propagation depth
  */
-#define ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS 2
+#define ZT_MULTICAST_GLOBAL_MAX_DEPTH 500
 
 /**
  * Period between announcements of all multicast 'likes' in ms

@@ -161,6 +161,8 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	nw->_r = renv;
 	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
 	nw->_isOpen = false;
+	nw->_multicastPrefixBits = ZT_DEFAULT_MULTICAST_PREFIX_BITS;
+	nw->_multicastDepth = ZT_DEFAULT_MULTICAST_DEPTH;
 	memset(nw->_etWhitelist,0,sizeof(nw->_etWhitelist));
 	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
@@ -185,6 +187,8 @@ void Network::setConfiguration(const Network::Config &conf)
 			_mcRates = conf.multicastRates();
 			_staticAddresses = conf.staticAddresses();
 			_isOpen = conf.isOpen();
+			_multicastPrefixBits = conf.multicastPrefixBits();
+			_multicastDepth = conf.multicastDepth();
 
 			_lastConfigUpdate = Utils::now();
 

@@ -111,13 +111,14 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		uint16_t bloomNonce = (uint16_t)_r->prng->next32(); // doesn't need to be cryptographically strong
 		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
 		unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
-		for(unsigned int prefix=0;prefix<ZT_MULTICAST_NUM_PROPAGATION_PREFIXES;++prefix) {
+
+		for(unsigned int prefix=0,np=((unsigned int)2 << (network->multicastPrefixBits() - 1));prefix<np;++prefix) {
 			memset(bloom,0,sizeof(bloom));
 
 			unsigned char *fifoPtr = fifo;
 			unsigned char *fifoEnd = fifo + sizeof(fifo);
 
-			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS,prefix));
+			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),network->multicastPrefixBits(),prefix));
 			while (fifoPtr != fifoEnd)
 				*(fifoPtr++) = (unsigned char)0;
 
@@ -136,7 +137,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((unsigned char)0);
 			outp.append(network->id());
 			outp.append(bloomNonce);
-			outp.append((unsigned char)ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS);
+			outp.append((unsigned char)network->multicastPrefixBits());
 			outp.append((unsigned char)prefix);
 			_r->identity.address().appendTo(outp);
 			outp.append((unsigned char)((mcid >> 16) & 0xff));
