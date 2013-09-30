@@ -451,6 +451,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		Address origin(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
 		SharedPtr<Peer> originPeer(_r->topology->getPeer(origin));
 		if (!originPeer) {
+			// We must have the origin's identity in order to authenticate a multicast
 			_r->sw->requestWhois(origin);
 			_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
 			return false;
@@ -462,7 +463,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
 		uint16_t bloomNonce = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE);
 		unsigned int prefixBits = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS];
-		unsigned int prefix = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX);
+		unsigned int prefix = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX];
 		uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GUID);
 		MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC));
 		MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
@@ -483,37 +484,47 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			return true;
 		}
 
-		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-
 		bool rateLimitsExceeded = false;
 
-		SharedPtr<Network> network(_r->nc->network(nwid));
-		if (network) {
-			if (!network->isAllowed(origin)) {
-				TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
+		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
+			// Ordinary frames will drop duplicates. Supernodes keep propagating
+			// them since they're used as hubs to link disparate clusters of
+			// members of the same multicast group.
+			if (!_r->topology->amSupernode()) {
+				TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
+			}
+		} else {
+			// Supernodes however won't do this more than once. If the supernode
+			// does happen to be a member of the network -- which is usually not
+			// true -- we don't want to see a ton of copies of the same frame on
+			// its tap device. Also double or triple counting bandwidth metrics
+			// for the same frame would not be fair.
+			SharedPtr<Network> network(_r->nc->network(nwid));
+			if (network) {
+				if (!network->isAllowed(origin)) {
+					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
 
-				Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-				outp.append((unsigned char)Packet::VERB_FRAME);
-				outp.append(packetId());
-				outp.append((unsigned char)Packet::ERROR_NO_MEMBER_CERTIFICATE);
-				outp.append(nwid);
-				outp.armor(peer->key(),true);
-				_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_FRAME);
+					outp.append(packetId());
+					outp.append((unsigned char)Packet::ERROR_NO_MEMBER_CERTIFICATE);
+					outp.append(nwid);
+					outp.armor(peer->key(),true);
+					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 
-				// We do not terminate here, since if the member just has an out of
-				// date cert or hasn't sent us a cert yet we still want to propagate
-				// the message so multicast works.
-			} else if ((!network->permitsBridging())&&(!origin.wouldHaveMac(sourceMac))) {
-				TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
-			} else if (!network->permitsEtherType(etherType)) {
-				TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
-			} else if (network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
-				network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
-			} else {
-				rateLimitsExceeded = true;
+					// We do not terminate here, since if the member just has an out of
+					// date cert or hasn't sent us a cert yet we still want to propagate
+					// the message so multicast works.
+				} else if ((!network->permitsBridging())&&(!origin.wouldHaveMac(sourceMac))) {
+					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
+				} else if (!network->permitsEtherType(etherType)) {
+					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
+				} else if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
+					rateLimitsExceeded = true;
+				} else {
+					network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
+				}
 			}
 		}
 
@@ -526,8 +537,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			return true;
 		}
 
+		if (depth == 0xffff) {
+			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
 		if (++depth > ZT_MULTICAST_MAX_PROPAGATION_DEPTH) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
+			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
 		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)depth);

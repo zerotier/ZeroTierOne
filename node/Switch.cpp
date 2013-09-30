@@ -137,7 +137,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append(network->id());
 			outp.append(bloomNonce);
 			outp.append((unsigned char)ZT_MULTICAST_NUM_PROPAGATION_PREFIX_BITS);
-			outp.append((uint16_t)prefix);
+			outp.append((unsigned char)prefix);
 			_r->identity.address().appendTo(outp);
 			outp.append((unsigned char)((mcid >> 16) & 0xff));
 			outp.append((unsigned char)((mcid >> 8) & 0xff));

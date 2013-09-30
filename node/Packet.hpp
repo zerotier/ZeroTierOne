@@ -175,7 +175,7 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM_NONCE)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX_BITS 1
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX_BITS)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX 2
+#define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX 1
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_PREFIX)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN 5
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN_MCID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN)
@@ -477,7 +477,7 @@ public:
 		VERB_PROXY_FRAME = 7,
 
 		/* A multicast frame:
-		 *   <[2] 16-bit propagation depth>
+		 *   <[2] 16-bit propagation depth or 0xffff for "do not forward">
 		 *   <[320] propagation FIFO>
 		 *   <[1024] propagation bloom filter>
 		 *   [... begin signed portion ...]
@@ -485,7 +485,7 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit random propagation bloom filter nonce>
 		 *   <[1] number of significant bits in propagation restrict prefix>
-		 *   <[2] 16-bit propagation restriction prefix (sig bits right to left)>
+		 *   <[1] propagation restriction prefix (sig bits right to left)>
 		 *   <[5] ZeroTier address of node of origin>
 		 *   <[3] 24-bit multicast ID, together with origin forms GUID>
 		 *   <[6] source MAC address>
