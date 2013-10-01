@@ -62,8 +62,8 @@
 		16 + \
 		1 \
 	) * 2) + \
-	sizeof(uint64_t) + \
-	sizeof(uint64_t) \
+	(sizeof(uint64_t) * 3) + \
+	(sizeof(uint16_t) * 3) \
 )
 
 namespace ZeroTier {
@@ -211,6 +211,15 @@ public:
 		throw()
 	{
 		return std::max(_lastUnicastFrame,_lastMulticastFrame);
+	}
+
+	/**
+	 * @return Time we last announced state TO this peer, such as multicast LIKEs
+	 */
+	uint64_t lastAnnouncedTo() const
+		throw()
+	{
+		return _lastAnnouncedTo;
 	}
 
 	/**
@@ -367,6 +376,10 @@ public:
 		_ipv6p.serialize(b);
 		b.append(_lastUnicastFrame);
 		b.append(_lastMulticastFrame);
+		b.append(_lastAnnouncedTo);
+		b.append((uint16_t)_vMajor);
+		b.append((uint16_t)_vMinor);
+		b.append((uint16_t)_vRevision);
 	}
 
 	template<unsigned int C>
@@ -384,10 +397,11 @@ public:
 		p += _ipv6p.deserialize(b,p);
 		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 
-		_vMajor = 0;
-		_vMinor = 0;
-		_vRevision = 0;
 		_dirty = false;
 
 		return (p - startAt);
@@ -516,12 +530,12 @@ private:
 
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
-
-	// Fields below this line are not persisted with serialize()
-
+	uint64_t _lastAnnouncedTo;
 	unsigned int _vMajor,_vMinor,_vRevision;
-	bool _dirty;
 
+	// Fields below this line are not persisted with serialize() ---------------
+
+	bool _dirty;
 	AtomicCounter __refCount;
 };
 

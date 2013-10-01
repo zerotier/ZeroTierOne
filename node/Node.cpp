@@ -425,7 +425,6 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
 		uint64_t lastMulticastCheck = 0;
-		uint64_t lastMulticastAnnounceAll = 0;
 		long lastDelayDelta = 0;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
@@ -468,27 +467,15 @@ Node::ReasonForTermination Node::run()
 			// those changes to peers.
 			if ((resynchronize)||((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD)) {
 				lastMulticastCheck = now;
-				bool announceAll = ((resynchronize)||((now - lastMulticastAnnounceAll) >= ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD));
 				try {
 					std::map< SharedPtr<Network>,std::set<MulticastGroup> > toAnnounce;
-					{
-						std::vector< SharedPtr<Network> > networks(_r->nc->networks());
-						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw) {
-							if (((*nw)->updateMulticastGroups())||(announceAll))
-								toAnnounce.insert(std::pair< SharedPtr<Network>,std::set<MulticastGroup> >(*nw,(*nw)->multicastGroups()));
-						}
+					std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+					for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw) {
+						if ((*nw)->updateMulticastGroups())
+							toAnnounce.insert(std::pair< SharedPtr<Network>,std::set<MulticastGroup> >(*nw,(*nw)->multicastGroups()));
 					}
-
-					if (toAnnounce.size()) {
+					if (toAnnounce.size())
 						_r->sw->announceMulticastGroups(toAnnounce);
-
-						// Only update lastMulticastAnnounceAll if we've announced something. This keeps
-						// the announceAll condition true during startup when there are no multicast
-						// groups until there is at least one. Technically this shouldn't be required as
-						// updateMulticastGroups() should return true on any change, but why not?
-						if (announceAll)
-							lastMulticastAnnounceAll = now;
-					}
 				} catch (std::exception &exc) {
 					LOG("unexpected exception announcing multicast groups: %s",exc.what());
 				} catch ( ... ) {

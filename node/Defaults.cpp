@@ -101,6 +101,9 @@ static inline std::string _mkDefaultHomePath()
 
 Defaults::Defaults()
 	throw(std::runtime_error) :
+#ifdef ZT_TRACE_MULTICAST
+	multicastTraceWatcher(ZT_TRACE_MULTICAST),
+#endif
 	defaultHomePath(_mkDefaultHomePath()),
 	supernodes(_mkSupernodeMap())
 {

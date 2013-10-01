@@ -400,6 +400,7 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 						outp.reset((*p)->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
 					}
 
+					// network ID, MAC, ADI
 					outp.append((uint64_t)nwmgs->first->id());
 					outp.append(mg->mac().data,6);
 					outp.append((uint32_t)mg->adi());
@@ -410,6 +411,30 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 		if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
 			send(outp,true);
 	}
+}
+
+void Switch::announceMulticastGroups(const SharedPtr<Peer> &peer)
+{
+	Packet outp(peer->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
+	std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+	for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
+		if (((*n)->isAllowed(peer->address()))||(_r->topology->isSupernode(peer->address()))) {
+			std::set<MulticastGroup> mgs((*n)->multicastGroups());
+			for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
+				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+					send(outp,true);
+					outp.reset(peer->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
+				}
+
+				// network ID, MAC, ADI
+				outp.append((uint64_t)(*n)->id());
+				outp.append(mg->mac().data,6);
+				outp.append((uint32_t)mg->adi());
+			}
+		}
+	}
+	if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
+		send(outp,true);
 }
 
 void Switch::requestWhois(const Address &addr)

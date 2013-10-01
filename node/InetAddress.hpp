@@ -109,6 +109,12 @@ public:
 		this->fromString(ipSlashPort);
 	}
 
+	InetAddress(const char *ipSlashPort)
+		throw()
+	{
+		this->fromString(std::string(ipSlashPort));
+	}
+
 	inline InetAddress &operator=(const InetAddress &a)
 		throw()
 	{

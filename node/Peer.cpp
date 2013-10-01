@@ -26,6 +26,7 @@
  */
 
 #include "Peer.hpp"
+#include "Switch.hpp"
 
 namespace ZeroTier {
 
@@ -66,6 +67,12 @@ void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const I
 		wp->localPort = localPort;
 		if (!wp->fixed)
 			wp->addr = remoteAddr;
+
+		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+			_lastAnnouncedTo = now;
+			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
+		}
+
 		_dirty = true;
 	}
 

@@ -28,6 +28,7 @@
 #include "../version.h"
 
 #include "Constants.hpp"
+#include "Defaults.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "PacketDecoder.hpp"
@@ -36,6 +37,7 @@
 #include "NodeConfig.hpp"
 #include "Filter.hpp"
 #include "Service.hpp"
+#include "Demarc.hpp"
 
 namespace ZeroTier {
 
@@ -461,7 +463,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			return false;
 		}
 
-		uint16_t depth = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
+		unsigned int depth = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
 		unsigned char *fifo = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
 		unsigned char *bloom = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
@@ -482,6 +484,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 			return true;
 		}
+
+#ifdef ZT_TRACE_MULTICAST
+		char mct[256];
+		Utils::snprintf(mct,sizeof(mct),"%s <- %.16llx %.16llx %s via %s depth:%u len:%u",_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),depth,frameLen);
+		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 
 		if (!dest.mac().isMulticast()) {
 			TRACE("dropped MULTICAST_FRAME from %s(%s): %s is not a multicast/broadcast address",source().toString().c_str(),_remoteAddress.toString().c_str(),dest.mac().toString().c_str());
@@ -589,7 +597,11 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		// The rest of newFifo[] goes back into the packet
 		memcpy(fifo,newFifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
 
-		//TRACE("forwarding MULTICAST_FRAME from %s(%s) to %s, original sender %s, current depth: %u",source().toString().c_str(),_remoteAddress.toString().c_str(),nextHop.toString().c_str(),origin.toString().c_str(),depth);
+#ifdef ZT_TRACE_MULTICAST
+		char mct[256];
+		Utils::snprintf(mct,sizeof(mct),"%s -> %.16llx %.16llx %s via %s",_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),nextHop.toString().c_str());
+		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 
 		// Send to next hop, reusing this packet as scratch space
 		newInitializationVector();

@@ -251,18 +251,9 @@ error_no_ZT_ARCH_defined;
 #define ZT_MULTICAST_GLOBAL_MAX_DEPTH 500
 
 /**
- * Period between announcements of all multicast 'likes' in ms
- *
- * Announcement occurs when a multicast group is locally joined, but all
- * memberships are periodically re-broadcast. If they're not they will
- * expire.
- */
-#define ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD 120000
-
-/**
  * Expire time for multicast 'likes' in ms
  */
-#define ZT_MULTICAST_LIKE_EXPIRE ((ZT_MULTICAST_LIKE_ANNOUNCE_ALL_PERIOD * 2) + 1000)
+#define ZT_MULTICAST_LIKE_EXPIRE 120000
 
 /**
  * Time between polls of local taps for multicast membership changes

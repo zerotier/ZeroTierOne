@@ -153,12 +153,24 @@ public:
 	/**
 	 * Announce multicast group memberships
 	 *
-	 * This efficiently announces memberships, sending single packets with
-	 * many LIKEs.
+	 * This announces all the groups for all the networks in the supplied map to
+	 * all peers with whom we have an active direct link. Only isAllowed() peers
+	 * and supernodes get announcements for each given network.
 	 *
 	 * @param allMemberships Memberships for a number of networks
 	 */
 	void announceMulticastGroups(const std::map< SharedPtr<Network>,std::set<MulticastGroup> > &allMemberships);
+
+	/**
+	 * Announce multicast group memberships
+	 *
+	 * This announces all current multicast memberships to a single peer. Only
+	 * memberships for networks where the peer isAllowed() are included, unless
+	 * the peer is a supernode.
+	 *
+	 * @param peer Peer to announce all memberships to
+	 */
+	void announceMulticastGroups(const SharedPtr<Peer> &peer);
 
 	/**
 	 * Request WHOIS on a given address

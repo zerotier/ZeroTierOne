@@ -33,6 +33,7 @@
 #include <vector>
 #include <map>
 
+#include "Constants.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 
@@ -51,6 +52,13 @@ public:
 	Defaults()
 		throw(std::runtime_error);
 	~Defaults() {}
+
+#ifdef ZT_TRACE_MULTICAST
+	/**
+	 * Host to send UDP multicast trace messages to (human readable)
+	 */
+	const InetAddress multicastTraceWatcher;
+#endif
 
 	/**
 	 * Default home path for this platform
