@@ -154,11 +154,11 @@ public:
 			throw() :
 			_origin(origin),
 			_bloomNonce((uint64_t)bloomNonce),
+			_prefixMask(0xffffffffffffffffULL >> (64 - prefixBits)),
+			_prefix((uint64_t)prefix & _prefixMask),
 			_ptr(ptr),
 			_end(end),
-			_bloom(bloom),
-			_prefix(prefix),
-			_prefixBits(std::min(prefixBits,(unsigned int)16)) {}
+			_bloom(bloom) {}
 
 		inline bool operator()(const Address &a)
 			throw()
@@ -167,10 +167,8 @@ public:
 			if (a == _origin)
 				return true;
 
-			// Prefixes match if N least significant bits in address are equal to the
-			// prefix. (e.g. 0 bits and 0 prefix would match all, 1 bit and 0 prefix
-			// would match addresses with LSB == 0)
-			if (((unsigned int)a.toInt() & (0xffff >> (16 - _prefixBits))) != _prefix)
+			// Exclude addresses not in this prefix domain
+			if ((a.toInt() & _prefixMask) != _prefix)
 				return true;
 
 			// Exclude addresses remembered in bloom filter -- or else remember them
@@ -189,11 +187,11 @@ public:
 	private:
 		const Address _origin;
 		const uint64_t _bloomNonce;
+		const uint64_t _prefixMask;
+		const uint64_t _prefix;
 		unsigned char **const _ptr;
 		unsigned char *const _end;
 		unsigned char *const _bloom;
-		const unsigned int _prefix;
-		const unsigned int _prefixBits;
 	};
 
 private:
