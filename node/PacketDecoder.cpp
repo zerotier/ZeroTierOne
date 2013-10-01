@@ -487,7 +487,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 #ifdef ZT_TRACE_MULTICAST
 		char mct[256];
-		Utils::snprintf(mct,sizeof(mct),"%s <- %.16llx %.16llx %s via %s depth:%u len:%u",_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),depth,frameLen);
+		Utils::snprintf(mct,sizeof(mct),"%c %s <- %.16llx %.16llx %s via %s depth:%u len:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),depth,frameLen);
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
@@ -599,7 +599,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 #ifdef ZT_TRACE_MULTICAST
 		char mct[256];
-		Utils::snprintf(mct,sizeof(mct),"%s -> %.16llx %.16llx %s via %s",_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),nextHop.toString().c_str());
+		Utils::snprintf(mct,sizeof(mct),"%c %s -> %.16llx %.16llx %s via %s",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),nextHop.toString().c_str());
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 

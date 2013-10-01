@@ -67,6 +67,8 @@ public:
 	/**
 	 * Bring a peer closer in terms of propagation priority
 	 *
+	 * This gets called from PacketDecoder when a unicast frame is received.
+	 *
 	 * @param nwid Network ID
 	 * @param a Address to bring closer (e.g. due to unicast message)
 	 * @param now Current time
