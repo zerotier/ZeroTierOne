@@ -3,6 +3,7 @@ CXX=g++
 
 INCLUDES=
 DEFS=-DZT_ARCH="x86_combined" -DZT_OSNAME="mac" -DZT_TRACE
+LIBS=-lm
 
 # Uncomment for a release optimized universal binary build
 CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -ftree-vectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG $(INCLUDES) $(DEFS)
@@ -13,7 +14,6 @@ STRIP=strip
 #STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
-LIBS=-lm
 
 include objects.mk
 

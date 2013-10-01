@@ -564,7 +564,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		// New FIFO with room for one extra, since head will be next hop
 		unsigned char newFifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
 		unsigned char *newFifoPtr = newFifo;
-		unsigned char *newFifoEnd = newFifoPtr + sizeof(newFifo);
+		unsigned char *const newFifoEnd = newFifoPtr + sizeof(newFifo);
 		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;) {
 			unsigned int j = i;
 			i += ZT_ADDRESS_LENGTH;
