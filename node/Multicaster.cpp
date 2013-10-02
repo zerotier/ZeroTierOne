@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include <stdio.h>
+
 #include "Constants.hpp"
 #include "Multicaster.hpp"
 #include "Utils.hpp"

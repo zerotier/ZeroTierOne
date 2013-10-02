@@ -107,27 +107,27 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
-		unsigned int mcid = ++_multicastIdCounter & 0xffffff;
-		uint16_t bloomNonce = (uint16_t)_r->prng->next32(); // doesn't need to be cryptographically strong
+		const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
+		const uint16_t bloomNonce = (uint16_t)(_r->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
 		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
 		unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
+		unsigned char *const fifoEnd = fifo + sizeof(fifo);
+		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
+		const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
 
 		for(unsigned int prefix=0,np=((unsigned int)2 << (network->multicastPrefixBits() - 1));prefix<np;++prefix) {
 			memset(bloom,0,sizeof(bloom));
 
 			unsigned char *fifoPtr = fifo;
-			unsigned char *fifoEnd = fifo + sizeof(fifo);
-
 			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),network->multicastPrefixBits(),prefix));
 			while (fifoPtr != fifoEnd)
 				*(fifoPtr++) = (unsigned char)0;
 
 			Address firstHop(fifo,ZT_ADDRESS_LENGTH); // fifo is +1 in size, with first element being used here
 			if (!firstHop) {
-				SharedPtr<Peer> sn(_r->topology->getBestSupernode());
-				if (sn)
-					firstHop = sn->address();
-				else break;
+				if (supernode)
+					firstHop = supernode->address();
+				else continue;
 			}
 
 			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
@@ -150,7 +150,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)data.size());
 			outp.append(data);
 
-			unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
 			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
 			outp.append((uint16_t)sig.size());
 			outp.append(sig.data,sig.size());

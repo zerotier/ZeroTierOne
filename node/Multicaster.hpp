@@ -177,7 +177,7 @@ public:
 			uint64_t aint = a.toInt() + _bloomNonce;
 			const unsigned int bit = (unsigned int)(aint ^ (aint >> 13) ^ (aint >> 26) ^ (aint >> 39)) & 0x1fff;
 			unsigned char *const bbyte = _bloom + (bit >> 3); // note: bloom filter size == 1024 is hard-coded here
-			const unsigned char bmask = 0x80 >> (bit & 7);
+			const unsigned char bmask = 1 << (bit & 7);
 			if ((*bbyte & bmask))
 				return true;
 			else *bbyte |= bmask;

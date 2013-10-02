@@ -162,7 +162,7 @@ public:
 	/**
 	 * @return Last successfully sent firewall opener
 	 */
-	uint64_t lastFirewallOpener() const
+	inline uint64_t lastFirewallOpener() const
 		throw()
 	{
 		return std::max(_ipv4p.lastFirewallOpener,_ipv6p.lastFirewallOpener);
@@ -171,7 +171,7 @@ public:
 	/**
 	 * @return Time of last direct packet receive
 	 */
-	uint64_t lastDirectReceive() const
+	inline uint64_t lastDirectReceive() const
 		throw()
 	{
 		return std::max(_ipv4p.lastReceive,_ipv6p.lastReceive);
@@ -180,7 +180,7 @@ public:
 	/**
 	 * @return Time of last direct packet send
 	 */
-	uint64_t lastDirectSend() const
+	inline uint64_t lastDirectSend() const
 		throw()
 	{
 		return std::max(_ipv4p.lastSend,_ipv6p.lastSend);
@@ -189,7 +189,7 @@ public:
 	/**
 	 * @return Time of most recent unicast frame received
 	 */
-	uint64_t lastUnicastFrame() const
+	inline uint64_t lastUnicastFrame() const
 		throw()
 	{
 		return _lastUnicastFrame;
@@ -198,7 +198,7 @@ public:
 	/**
 	 * @return Time of most recent multicast frame received
 	 */
-	uint64_t lastMulticastFrame() const
+	inline uint64_t lastMulticastFrame() const
 		throw()
 	{
 		return _lastMulticastFrame;
@@ -207,7 +207,7 @@ public:
 	/**
 	 * @return Time of most recent frame of any kind (unicast or multicast)
 	 */
-	uint64_t lastFrame() const
+	inline uint64_t lastFrame() const
 		throw()
 	{
 		return std::max(_lastUnicastFrame,_lastMulticastFrame);
@@ -216,16 +216,28 @@ public:
 	/**
 	 * @return Time we last announced state TO this peer, such as multicast LIKEs
 	 */
-	uint64_t lastAnnouncedTo() const
+	inline uint64_t lastAnnouncedTo() const
 		throw()
 	{
 		return _lastAnnouncedTo;
 	}
 
 	/**
+	 * Set the time of last announcement
+	 *
+	 * @param t Time, typically current
+	 */
+	inline void setLastAnnouncedTo(const uint64_t t)
+		throw()
+	{
+		_lastAnnouncedTo = t;
+		_dirty = true;
+	}
+
+	/**
 	 * @return Lowest of measured latencies of all paths or 0 if unknown
 	 */
-	unsigned int latency() const
+	inline unsigned int latency() const
 		throw()
 	{
 		if (_ipv4p.latency) {
@@ -241,7 +253,7 @@ public:
 	 * @param addr Remote address
 	 * @param latency Latency measurment
 	 */
-	void setLatency(const InetAddress &addr,unsigned int latency)
+	inline void setLatency(const InetAddress &addr,unsigned int latency)
 	{
 		if (addr == _ipv4p.addr) {
 			_ipv4p.latency = latency;
