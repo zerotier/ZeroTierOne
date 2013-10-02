@@ -126,6 +126,26 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 	return sent;
 }
 
+bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
+{
+	bool sent = false;
+	if (_ipv4p.addr) {
+		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv4p.localPort,_ipv4p.addr)) {
+			_ipv4p.lastSend = now;
+			_dirty = true;
+			sent = true;
+		}
+	}
+	if (_ipv6p.addr) {
+		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.localPort,_ipv6p.addr)) {
+			_ipv6p.lastSend = now;
+			_dirty = true;
+			sent = true;
+		}
+	}
+	return sent;
+}
+
 void Peer::setPathAddress(const InetAddress &addr,bool fixed)
 {
 	if (addr.isV4()) {

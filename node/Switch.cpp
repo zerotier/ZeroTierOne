@@ -379,7 +379,7 @@ unsigned long Switch::doTimerTasks()
 void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set<MulticastGroup> > &allMemberships)
 {
 	std::vector< SharedPtr<Peer> > directPeers;
-	_r->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(directPeers));
+	_r->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(directPeers,Utils::now()));
 
 #ifdef ZT_TRACE
 	unsigned int totalMulticastGroups = 0;

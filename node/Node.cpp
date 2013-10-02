@@ -496,34 +496,10 @@ Node::ReasonForTermination Node::run()
 								_r->sw->sendHELLO((*p)->address());
 						}
 					} else {
-						std::vector< SharedPtr<Peer> > needPing,needFirewallOpener;
-
-						if (resynchronize) {
-							_r->topology->eachPeer(Topology::CollectPeersWithDirectPath(needPing));
-						} else {
-							_r->topology->eachPeer(Topology::CollectPeersThatNeedPing(needPing));
-						}
-
-						for(std::vector< SharedPtr<Peer> >::iterator p(needPing.begin());p!=needPing.end();++p) {
-							try {
-								_r->sw->sendHELLO((*p)->address());
-							} catch (std::exception &exc) {
-								LOG("unexpected exception sending HELLO to %s: %s",(*p)->address().toString().c_str());
-							} catch ( ... ) {
-								LOG("unexpected exception sending HELLO to %s: (unknown)",(*p)->address().toString().c_str());
-							}
-						}
-
-						_r->topology->eachPeer(Topology::CollectPeersThatNeedFirewallOpener(needFirewallOpener));
-						for(std::vector< SharedPtr<Peer> >::iterator p(needFirewallOpener.begin());p!=needFirewallOpener.end();++p) {
-							try {
-								(*p)->sendFirewallOpener(_r,now);
-							} catch (std::exception &exc) {
-								LOG("unexpected exception sending firewall opener to %s: %s",(*p)->address().toString().c_str(),exc.what());
-							} catch ( ... ) {
-								LOG("unexpected exception sending firewall opener to %s: (unknown)",(*p)->address().toString().c_str());
-							}
-						}
+						if (resynchronize)
+							_r->topology->eachPeer(Topology::PingAllActivePeers(_r,now));
+						else _r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
+						_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
 					}
 				} catch (std::exception &exc) {
 					LOG("unexpected exception running ping check cycle: %s",exc.what());

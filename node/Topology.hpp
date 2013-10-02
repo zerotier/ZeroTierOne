@@ -190,90 +190,109 @@ public:
 	/**
 	 * Function object to collect peers that need a firewall opener sent
 	 */
-	class CollectPeersThatNeedFirewallOpener
+	class OpenPeersThatNeedFirewallOpener
 	{
 	public:
-		CollectPeersThatNeedFirewallOpener(std::vector< SharedPtr<Peer> > &v) :
-			_now(Utils::now()),
-			_v(v)
+		OpenPeersThatNeedFirewallOpener(const RuntimeEnvironment *renv,uint64_t now) throw() :
+			_now(now),
+			_r(renv)
 		{
 		}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
 			if ((p->hasDirectPath())&&((_now - std::max(p->lastFirewallOpener(),p->lastDirectSend())) >= ZT_FIREWALL_OPENER_DELAY))
-				_v.push_back(p);
+				p->sendFirewallOpener(_r,_now);
 		}
 
 	private:
 		uint64_t _now;
-		std::vector< SharedPtr<Peer> > &_v;
+		const RuntimeEnvironment *_r;
 	};
 
 	/**
 	 * Function object to collect peers that need a ping sent
 	 */
-	class CollectPeersThatNeedPing
+	class PingPeersThatNeedPing
 	{
 	public:
-		CollectPeersThatNeedPing(std::vector< SharedPtr<Peer> > &v) :
-			_now(Utils::now()),
-			_v(v)
+		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
+			_now(now),
+			_r(renv)
 		{
 		}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if ( ((t.isSupernode(p->address()))&&((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY)) || ((p->hasActiveDirectPath(_now))&&((_now - p->lastDirectSend()) >= ZT_PEER_DIRECT_PING_DELAY)) )
-				_v.push_back(p);
+			if ( 
+				   ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) &&
+				   (
+				     (
+				       (p->hasDirectPath())&&
+				       ((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)
+				     ) ||
+			       (t.isSupernode(p->address()))
+				   )
+				 ) {
+				p->sendPing(_r,_now);
+			}
 		}
 
 	private:
 		uint64_t _now;
-		std::vector< SharedPtr<Peer> > &_v;
+		const RuntimeEnvironment *_r;
 	};
 
 	/**
-	 * Function object to collect peers with active links (and supernodes)
+	 * Function object to collect peers that we're talking to
 	 */
-	class CollectPeersWithActiveDirectPath
+	class PingAllActivePeers
 	{
 	public:
-		CollectPeersWithActiveDirectPath(std::vector< SharedPtr<Peer> > &v) :
-			_now(Utils::now()),
-			_v(v)
+		PingAllActivePeers(const RuntimeEnvironment *renv,uint64_t now) throw() :
+			_now(now),
+			_r(renv)
 		{
 		}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if ((p->hasActiveDirectPath(_now))||(t.isSupernode(p->address())))
-				_v.push_back(p);
+			if ( 
+				   (
+				     (p->hasDirectPath())&&
+				     ((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)
+				   ) ||
+			     (t.isSupernode(p->address()))
+				 ) {
+				p->sendPing(_r,_now);
+			}
 		}
 
 	private:
 		uint64_t _now;
-		std::vector< SharedPtr<Peer> > &_v;
+		const RuntimeEnvironment *_r;
 	};
 
 	/**
 	 * Function object to collect peers with any known direct path
 	 */
-	class CollectPeersWithDirectPath
+	class CollectPeersWithActiveDirectPath
 	{
 	public:
-		CollectPeersWithDirectPath(std::vector< SharedPtr<Peer> > &v) :
+		CollectPeersWithActiveDirectPath(std::vector< SharedPtr<Peer> > &v,uint64_t now) throw() :
+			_now(now),
 			_v(v)
 		{
 		}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if (p->hasDirectPath())
+			if (p->hasActiveDirectPath(_now))
 				_v.push_back(p);
 		}
 
 	private:
+		uint64_t _now;
 		std::vector< SharedPtr<Peer> > &_v;
 	};
 

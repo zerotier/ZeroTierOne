@@ -188,7 +188,7 @@ error_no_ZT_ARCH_defined;
  * very unlikely, as the transfer rate would have to be fast enough to fill
  * system memory in this time.
  */
-#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 1500
+#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 1000
 
 /**
  * First byte of MAC addresses derived from ZeroTier addresses
@@ -206,7 +206,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Delay between WHOIS retries in ms
  */
-#define ZT_WHOIS_RETRY_DELAY 500
+#define ZT_WHOIS_RETRY_DELAY 350
 
 /**
  * Maximum identity WHOIS retries
@@ -233,7 +233,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Size of multicast deduplication ring buffer in 64-bit ints
  */
-#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 1024
+#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 512
 
 /**
  * Default number of bits in multicast propagation prefix
@@ -247,6 +247,8 @@ error_no_ZT_ARCH_defined;
 
 /**
  * Global maximum for multicast propagation depth
+ *
+ * This is kind of an insane value, meant as a sanity check.
  */
 #define ZT_MULTICAST_GLOBAL_MAX_DEPTH 500
 

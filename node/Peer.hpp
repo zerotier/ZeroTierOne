@@ -145,6 +145,15 @@ public:
 	bool sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now);
 
 	/**
+	 * Send HELLO to a peer using one or both active link types
+	 * 
+	 * @param _r Runtime environment
+	 * @param now Current time
+	 * @return True if send appears successful for at least one address type
+	 */
+	bool sendPing(const RuntimeEnvironment *_r,uint64_t now);
+
+	/**
 	 * Set an address to reach this peer
 	 *
 	 * @param addr Address to set
@@ -223,18 +232,6 @@ public:
 	}
 
 	/**
-	 * Set the time of last announcement
-	 *
-	 * @param t Time, typically current
-	 */
-	inline void setLastAnnouncedTo(const uint64_t t)
-		throw()
-	{
-		_lastAnnouncedTo = t;
-		_dirty = true;
-	}
-
-	/**
 	 * @return Lowest of measured latencies of all paths or 0 if unknown
 	 */
 	inline unsigned int latency() const
@@ -274,8 +271,9 @@ public:
 	}
 
 	/**
+	 * @return True if this peer has at least one direct IP address path that looks active
+	 *
 	 * @param now Current time
-	 * @return True if hasDirectPath() is true and at least one path is active
 	 */
 	inline bool hasActiveDirectPath(uint64_t now) const
 		throw()

@@ -524,7 +524,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// for the same frame would not be fair.
 			SharedPtr<Network> network(_r->nc->network(nwid));
 			if (network) {
-				maxDepth = network->multicastDepth(); // pull from network config if available
+				maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,network->multicastDepth());
 				if (!network->isAllowed(origin)) {
 					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
 
