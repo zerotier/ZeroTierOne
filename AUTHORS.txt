@@ -4,19 +4,18 @@ contributors can be found on the GitHub home page at:
 
 https://github.com/zerotier/ZeroTierOne
 
-ZeroTier One includes or links with the following third party software:
+ZeroTier One includes the following third party code:
 
  * LZ4 compression algorithm by Yann Collet (BSD license)
    http://code.google.com/p/lz4/
 
- * OpenSSL libcrypto (BSD-style OpenSSL license)
-   http://www.openssl.org/
-
- * TunTapOSX by Mattias Nissler (with tiny modifications) (BSD license)
+ * TunTapOSX by Mattias Nissler (forked for ZT1) (BSD license)
    http://tuntaposx.sourceforge.net
 
  * tap-windows by the OpenVPN project (forked for ZT1) (GPL)
    https://github.com/OpenVPN/tap-windows
 
- * Salsa20 stream cipher by D. J. Bernstein (public domain)
-   http://cr.yp.to/snuffle.html
+ * Salsa20 stream cipher, Curve25519 elliptic curve cipher, Ed25519
+   digital signature algorithm, and Poly1305 MAC algorithm, all by
+   Daniel J. Bernstein (public domain)
+   http://cr.yp.to/

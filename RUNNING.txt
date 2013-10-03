@@ -1,6 +1,6 @@
-Running ZeroTier One from a source build:
+First build it -- see BUILDING.txt -- then...
 
--- MacOS
+-- MacOS --
 
 By convention, ZeroTier One will keep its state here on mac:
 
@@ -20,13 +20,12 @@ If run with no options, it will use the default home directory above.
 
 sudo ./zerotier-one &
 
-Type "ifconfig" and look for the new interface, which should be called
-"zt0." The strange IPv4 address it has is your "zero4" address. Visit
-http://zerotier.net/ to check your connection.
+Finally, join the Earth network (the big public LAN and the only net for now):
 
-Kill it with something like:
+sudo zerotier-cli join bc8f9a8ee3000001
 
-sudo killall zerotier-one
+Try pinging earth.zerotier.net and going to http://earth.zerotier.net/ in a
+browser to see if you're online.
 
 -- Linux
 
@@ -34,19 +33,25 @@ On Linux, the default ZeroTier home is:
 
 /var/lib/zerotier-one
 
-We use the Linux native tap driver, so no special drivers are needed. Just
-type:
+Just type:
 
 sudo mkdir /var/lib/zerotier-one
 sudo ./zerotier-one &
 
 When run with no options, ZT1 uses its default home path on the current
-platform.
+platform. Note that ZT1 requires the Linux tap driver, so it must be
+available in the kernel or as a module. In most Linux distributions it's
+included out of the box and should just work.
 
-Type ifconfig and you should see an interface like "zt0." Then try
-http://zerotier.net or ping zerotier.net to check your connection.
+Finally, join the Earth network (the big public LAN and the only net for now):
+
+sudo zerotier-cli join bc8f9a8ee3000001
+
+Try pinging earth.zerotier.net and going to http://earth.zerotier.net/ in a
+browser to see if you're online.
 
 -- Windows
 
-To run for manual testing, build the ZeroTierOne VS2012 project and run it
-in an administrator-privileged command prompt window.
+Port in progress, and it's going to pretty much always be more painful to
+build than *nix systems. Just wait for the binary release unless you're
+brave, in which case you can load the VS2012 solution and play around.
