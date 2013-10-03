@@ -438,14 +438,17 @@ void Switch::announceMulticastGroups(const SharedPtr<Peer> &peer)
 
 void Switch::requestWhois(const Address &addr)
 {
-	TRACE("requesting WHOIS for %s",addr.toString().c_str());
+	//TRACE("requesting WHOIS for %s",addr.toString().c_str());
+	bool inserted = false;
 	{
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
 		std::pair< std::map< Address,WhoisRequest >::iterator,bool > entry(_outstandingWhoisRequests.insert(std::pair<Address,WhoisRequest>(addr,WhoisRequest())));
-		entry.first->second.lastSent = Utils::now();
+		if ((inserted = entry.second))
+			entry.first->second.lastSent = Utils::now();
 		entry.first->second.retries = 0; // reset retry count if entry already existed
 	}
-	_sendWhoisRequest(addr,(const Address *)0,0);
+	if (inserted)
+		_sendWhoisRequest(addr,(const Address *)0,0);
 }
 
 void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)

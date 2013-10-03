@@ -238,7 +238,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Default number of bits in multicast propagation prefix
  */
-#define ZT_DEFAULT_MULTICAST_PREFIX_BITS 2
+#define ZT_DEFAULT_MULTICAST_PREFIX_BITS 1
 
 /**
  * Default max depth (TTL) for multicast propagation

@@ -350,7 +350,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			p->identity().serialize(outp,false);
 			outp.armor(peer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
+			//TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		} else {
 			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -359,7 +359,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			outp.append(payload(),ZT_ADDRESS_LENGTH);
 			outp.armor(peer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
+			//TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 		}
 	} else {
 		TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -495,7 +495,13 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 #ifdef ZT_TRACE_MULTICAST
 		char mct[256];
-		Utils::snprintf(mct,sizeof(mct),"%c %s <- %.16llx %.16llx %s via %s depth:%u len:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),depth,frameLen);
+		unsigned int startingFifoItems = 0;
+		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;i+=ZT_ADDRESS_LENGTH) {
+			if (Utils::isZero(fifo + i,ZT_ADDRESS_LENGTH))
+				break;
+			else ++startingFifoItems;
+		}
+		Utils::snprintf(mct,sizeof(mct),"%c %s <- %.16llx %.16llx %s via %s depth:%u len:%u fifo:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),depth,frameLen,startingFifoItems);
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
@@ -590,7 +596,13 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		}
 
 		// Add any next hops we know about to FIFO
+#ifdef ZT_TRACE_MULTICAST
+		unsigned char *beforeAdd = newFifoPtr;
+#endif
 		_r->mc->getNextHops(nwid,dest,Multicaster::AddToPropagationQueue(&newFifoPtr,newFifoEnd,bloom,bloomNonce,origin,prefixBits,prefix));
+#ifdef ZT_TRACE_MULTICAST
+		unsigned int numAdded = (unsigned int)(newFifoPtr - beforeAdd) / ZT_ADDRESS_LENGTH;
+#endif
 
 		// Zero-terminate new FIFO if not completely full
 		while (newFifoPtr != newFifoEnd)
@@ -604,7 +616,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				nextHop = supernode->address();
 		}
 		if ((!nextHop)||(nextHop == _r->identity.address())) { // check against our addr is a sanity check
-			TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
+			//TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
 
@@ -612,8 +624,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		memcpy(fifo,newFifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
 
 #ifdef ZT_TRACE_MULTICAST
-		char mct[256];
-		Utils::snprintf(mct,sizeof(mct),"%c %s -> %.16llx %.16llx %s via %s",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),nextHop.toString().c_str());
+		Utils::snprintf(mct,sizeof(mct),"%c %s -> %.16llx %.16llx %s to next hop %s +fifo:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),nextHop.toString().c_str(),numAdded);
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
