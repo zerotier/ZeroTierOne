@@ -501,7 +501,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				break;
 			else ++startingFifoItems;
 		}
-		Utils::snprintf(mct,sizeof(mct),"%c %s <- %.16llx %.16llx %s via %s depth:%u len:%u fifo:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),depth,frameLen,startingFifoItems);
+		Utils::snprintf(mct,sizeof(mct),"%c %s <- %.16llx %.16llx %s via %s prefix:%u depth:%u len:%u fifo:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),prefix,depth,frameLen,startingFifoItems);
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
@@ -519,6 +519,10 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// them since they're used as hubs to link disparate clusters of
 			// members of the same multicast group.
 			if (!_r->topology->amSupernode()) {
+#ifdef ZT_TRACE_MULTICAST
+				Utils::snprintf(mct,sizeof(mct),"%c %s dropped %.16llx: duplicate",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+				_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 				TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
@@ -562,15 +566,27 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		// multicast except supernodes, so the net effect will be to truncate
 		// multicast propagation if the rate limit is exceeded.
 		if (rateLimitsExceeded) {
+#ifdef ZT_TRACE_MULTICAST
+			Utils::snprintf(mct,sizeof(mct),"%c %s dropped %.16llx: rate limits exceeded",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 			TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 			return true;
 		}
 
 		if (depth == 0xffff) {
+#ifdef ZT_TRACE_MULTICAST
+			Utils::snprintf(mct,sizeof(mct),"%c %s not forwarding %.16llx: depth == 0xffff (do not forward)",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
 		if (++depth > maxDepth) {
+#ifdef ZT_TRACE_MULTICAST
+			Utils::snprintf(mct,sizeof(mct),"%c %s not forwarding %.16llx: max propagation depth reached",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
@@ -616,6 +632,10 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				nextHop = supernode->address();
 		}
 		if ((!nextHop)||(nextHop == _r->identity.address())) { // check against our addr is a sanity check
+#ifdef ZT_TRACE_MULTICAST
+			Utils::snprintf(mct,sizeof(mct),"%c %s not forwarding %.16llx: no next hop",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 			//TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
