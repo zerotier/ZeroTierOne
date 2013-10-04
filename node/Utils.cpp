@@ -283,6 +283,37 @@ unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
 	return l;
 }
 
+unsigned int Utils::unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
+	throw()
+{
+	int n = 1;
+	unsigned char c,b = 0;
+	unsigned int l = 0;
+	const char *const end = hex + hexlen;
+
+	while (hex != end) {
+		c = (unsigned char)*(hex++);
+		if ((c >= 48)&&(c <= 57)) { // 0..9
+			if ((n ^= 1)) {
+				if (l >= len) break;
+				((unsigned char *)buf)[l++] = (b | (c - 48));
+			} else b = (c - 48) << 4;
+		} else if ((c >= 65)&&(c <= 70)) { // A..F
+			if ((n ^= 1)) {
+				if (l >= len) break;
+				((unsigned char *)buf)[l++] = (b | (c - (65 - 10)));
+			} else b = (c - (65 - 10)) << 4;
+		} else if ((c >= 97)&&(c <= 102)) { // a..f
+			if ((n ^= 1)) {
+				if (l >= len) break;
+				((unsigned char *)buf)[l++] = (b | (c - (97 - 10)));
+			} else b = (c - (97 - 10)) << 4;
+		}
+	}
+
+	return l;
+}
+
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex randomLock;

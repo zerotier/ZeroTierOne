@@ -181,6 +181,19 @@ public:
 	}
 
 	/**
+	 * Verify a message signature against this identity
+	 *
+	 * @param data Data to check
+	 * @param len Length of data
+	 * @param signature Signature
+	 * @return True if signature validates and data integrity checks
+	 */
+	inline bool verify(const void *data,unsigned int len,const C25519::Signature &signature) const
+	{
+		return C25519::verify(_publicKey,data,len,signature);
+	}
+
+	/**
 	 * Shortcut method to perform key agreement with another identity
 	 *
 	 * This identity must have a private key. (Check hasPrivate())

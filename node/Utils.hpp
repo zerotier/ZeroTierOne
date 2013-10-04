@@ -149,6 +149,16 @@ public:
 	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),buf,len); }
 
 	/**
+	 * @param hex Hexadecimal ASCII
+	 * @param hexlen Length of hex ASCII
+	 * @param buf Buffer to fill
+	 * @param len Length of buffer
+	 * @return Number of bytes actually written to buffer
+	 */
+	static unsigned int unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
+		throw();
+
+	/**
 	 * @param buf Buffer to fill
 	 * @param bytes Number of random bytes to generate
 	 */

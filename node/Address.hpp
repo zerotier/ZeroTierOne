@@ -232,6 +232,15 @@ public:
 	inline operator bool() const throw() { return (_a != 0); }
 
 	/**
+	 * Set to null/zero
+	 */
+	inline void zero()
+		throw()
+	{
+		_a = 0;
+	}
+
+	/**
 	 * Check if this address is reserved
 	 * 
 	 * The all-zero null address and any address beginning with 0xff are
