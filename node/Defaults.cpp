@@ -53,6 +53,7 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	// designated as such and trusted to provide WHOIS lookup.
 
 	// cthulhu.zerotier.com - New York, New York, USA
+#if 0
 	addrs.clear();
 	if (!id.fromString("a0fa79d81c:2:0bb348bb38883a29054659a37c204f2c0b082985cb51b36fad31366dfedd616c20aacc5e33ceee2b054670639563238c4fe50bb8716c1ac7996762c0eaefbb23:b7e91f4c77815327c59ff0979f33861e665d002a357448572954c85919be61f768ee6a4d4e42318ffd9cfcc08cadedcd0277a33a950e316a1d7b5bf082919400c44cad1e725fc2035e2d7087d0c8bf51adc5875b643d759a475f899cfbf3e1a4"))
 		throw std::runtime_error("invalid identity in Defaults");
@@ -72,6 +73,7 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.211.127.172",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
+#endif
 
 	return sn;
 }

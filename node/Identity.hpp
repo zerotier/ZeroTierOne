@@ -61,8 +61,7 @@ public:
 	 */
 	enum Type
 	{
-		IDENTITY_TYPE_NIST_P_521 = 1, // OBSOLETE -- only present in some early alpha versions
-		IDENTITY_TYPE_C25519 = 2
+		IDENTITY_TYPE_C25519 = 0
 	};
 
 	Identity() :
@@ -73,7 +72,6 @@ public:
 	Identity(const Identity &id) :
 		_address(id._address),
 		_publicKey(id._publicKey),
-		_signature(id._signature),
 		_privateKey((id._privateKey) ? new C25519::Private(*(id._privateKey)) : (C25519::Private *)0)
 	{
 	}
@@ -111,7 +109,6 @@ public:
 	{
 		_address = id._address;
 		_publicKey = id._publicKey;
-		_signature = id._signature;
 		if (id._privateKey) {
 			if (!_privateKey)
 				_privateKey = new C25519::Private();
@@ -236,7 +233,6 @@ public:
 		_address.appendTo(b);
 		b.append((unsigned char)IDENTITY_TYPE_C25519);
 		b.append(_publicKey.data,_publicKey.size());
-		b.append(_signature.data,_signature.size());
 		if ((_privateKey)&&(includePrivate)) {
 			b.append((unsigned char)_privateKey->size());
 			b.append(_privateKey->data,_privateKey->size());
@@ -252,7 +248,7 @@ public:
 	 * @param b Buffer containing serialized data
 	 * @param startAt Index within buffer of serialized data (default: 0)
 	 * @return Length of serialized data read from buffer
-	 * @throws std::out_of_range Buffer too small
+	 * @throws std::out_of_range Serialized data invalid
 	 * @throws std::invalid_argument Serialized data invalid
 	 */
 	template<unsigned int C>
@@ -272,8 +268,6 @@ public:
 
 		memcpy(_publicKey.data,b.field(p,_publicKey.size()),_publicKey.size());
 		p += _publicKey.size();
-		memcpy(_signature.data,b.field(p,_signature.size()),_signature.size());
-		p += _signature.size();
 
 		unsigned int privateKeyLength = b[p++];
 		if ((privateKeyLength)&&(privateKeyLength == ZT_C25519_PRIVATE_KEY_LEN)) {
@@ -318,12 +312,8 @@ public:
 	inline bool operator>=(const Identity &id) const throw() { return !(*this < id); }
 
 private:
-	// Compute an address from public key bytes
-	static Address deriveAddress(const void *keyBytes,unsigned int keyLen);
-
 	Address _address;
 	C25519::Public _publicKey;
-	C25519::Signature _signature;
 	C25519::Private *_privateKey;
 };
 

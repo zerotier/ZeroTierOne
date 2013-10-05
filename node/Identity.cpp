@@ -34,37 +34,50 @@
 #include "Identity.hpp"
 #include "SHA512.hpp"
 #include "Salsa20.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
+/*
+ * This is the hashcash criterion
+ */
+struct _Identity_generate_cond
+{
+	_Identity_generate_cond() throw() {}
+	_Identity_generate_cond(char *sb) throw() : sha512buf(sb) {}
+
+	inline bool operator()(const C25519::Pair &kp) const
+		throw()
+	{
+		SHA512::hash(sha512buf,kp.pub.data,kp.pub.size());
+
+		if ((!sha512buf[0])&&(!(sha512buf[1] & 0xf0)))
+			return true;
+
+		return false;
+	}
+
+	char *sha512buf;
+};
+
 void Identity::generate()
 {
+	char sha512buf[64];
+
 	C25519::Pair kp;
 	do {
-		kp = C25519::generate();
-		_address = deriveAddress(kp.pub.data,kp.pub.size());
+		kp = C25519::generateSatisfying(_Identity_generate_cond(sha512buf));
+		_address.setTo(sha512buf + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
 	} while (_address.isReserved());
 
 	_publicKey = kp.pub;
 	if (!_privateKey)
 		_privateKey = new C25519::Private();
 	*_privateKey = kp.priv;
-
-	unsigned char tmp[ZT_ADDRESS_LENGTH + ZT_C25519_PUBLIC_KEY_LEN];
-	_address.copyTo(tmp,ZT_ADDRESS_LENGTH);
-	memcpy(tmp + ZT_ADDRESS_LENGTH,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
-	_signature = C25519::sign(kp,tmp,sizeof(tmp));
 }
 
 bool Identity::locallyValidate(bool doAddressDerivationCheck) const
 {
-	unsigned char tmp[ZT_ADDRESS_LENGTH + ZT_C25519_PUBLIC_KEY_LEN];
-	_address.copyTo(tmp,ZT_ADDRESS_LENGTH);
-	memcpy(tmp + ZT_ADDRESS_LENGTH,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
-	if (!C25519::verify(_publicKey,tmp,sizeof(tmp),_signature))
-		return false;
-	if ((doAddressDerivationCheck)&&(deriveAddress(_publicKey.data,_publicKey.size()) != _address))
-		return false;
 	return true;
 }
 
@@ -73,10 +86,8 @@ std::string Identity::toString(bool includePrivate) const
 	std::string r;
 
 	r.append(_address.toString());
-	r.append(":2:"); // 2 == IDENTITY_TYPE_C25519
+	r.append(":0:"); // 0 == IDENTITY_TYPE_C25519
 	r.append(Utils::hex(_publicKey.data,_publicKey.size()));
-	r.push_back(':');
-	r.append(Utils::hex(_signature.data,_signature.size()));
 	if ((_privateKey)&&(includePrivate)) {
 		r.push_back(':');
 		r.append(Utils::hex(_privateKey->data,_privateKey->size()));
@@ -104,7 +115,7 @@ bool Identity::fromString(const char *str)
 					return false;
 				break;
 			case 1:
-				if (strcmp(f,"2"))
+				if (f[0] != '0')
 					return false;
 				break;
 			case 2:
@@ -112,10 +123,6 @@ bool Identity::fromString(const char *str)
 					return false;
 				break;
 			case 3:
-				if (Utils::unhex(f,_signature.data,_signature.size()) != _signature.size())
-					return false;
-				break;
-			case 4:
 				_privateKey = new C25519::Private();
 				if (Utils::unhex(f,_privateKey->data,_privateKey->size()) != _privateKey->size())
 					return false;
@@ -128,73 +135,6 @@ bool Identity::fromString(const char *str)
 		return false;
 
 	return true;
-}
-
-// These are fixed parameters and can't be changed without a new
-// identity type.
-#define ZT_IDENTITY_DERIVEADDRESS_MEMORY 33554432
-#define ZT_IDENTITY_DERIVEADDRESS_ROUNDS 50
-
-Address Identity::deriveAddress(const void *keyBytes,unsigned int keyLen)
-{
-	/*
-	 * Sequential memory-hard algorithm wedding address to public key
-	 *
-	 * Conventional hashcash with long computations and quick verifications
-	 * unfortunately cannot be used here. If that were used, it would be
-	 * equivalently costly to simply increment/vary the public key and find
-	 * a collision as it would be to find the address. We need something
-	 * that creates a costly 1:~1 mapping from key to address, hence this
-	 * algorithm.
-	 *
-	 * Search for "sequential memory hard algorithm" for academic references
-	 * to similar concepts.
-	 */
-
-	unsigned char *ram = new unsigned char[ZT_IDENTITY_DERIVEADDRESS_MEMORY];
-	for(unsigned int i=0;i<ZT_IDENTITY_DERIVEADDRESS_MEMORY;++i)
-		ram[i] = ((const unsigned char *)keyBytes)[i % keyLen];
-
-	unsigned char salsaKey[ZT_SHA512_DIGEST_LEN];
-	SHA512::hash(salsaKey,keyBytes,keyLen);
-
-	uint64_t nonce = 0;
-	for(unsigned int r=0;r<ZT_IDENTITY_DERIVEADDRESS_ROUNDS;++r) {
-		nonce = Utils::crc64(nonce,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
-#if __BYTE_ORDER == __BIG_ENDIAN
-		nonce = ( // swap to little endian -- this was written for a LE system
-			((nonce & 0x00000000000000FFULL) << 56) | 
-			((nonce & 0x000000000000FF00ULL) << 40) | 
-			((nonce & 0x0000000000FF0000ULL) << 24) | 
-			((nonce & 0x00000000FF000000ULL) <<  8) | 
-			((nonce & 0x000000FF00000000ULL) >>  8) | 
-			((nonce & 0x0000FF0000000000ULL) >> 24) | 
-			((nonce & 0x00FF000000000000ULL) >> 40) | 
-			((nonce & 0xFF00000000000000ULL) >> 56)
-		);
-#endif
-		Salsa20 s20(salsaKey,256,&nonce);
-#if __BYTE_ORDER == __BIG_ENDIAN
-		nonce = ( // swap back to big endian
-			((nonce & 0x00000000000000FFULL) << 56) | 
-			((nonce & 0x000000000000FF00ULL) << 40) | 
-			((nonce & 0x0000000000FF0000ULL) << 24) | 
-			((nonce & 0x00000000FF000000ULL) <<  8) | 
-			((nonce & 0x000000FF00000000ULL) >>  8) | 
-			((nonce & 0x0000FF0000000000ULL) >> 24) | 
-			((nonce & 0x00FF000000000000ULL) >> 40) | 
-			((nonce & 0xFF00000000000000ULL) >> 56)
-		);
-#endif
-		s20.encrypt(ram,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
-	}
-
-	unsigned char finalDigest[ZT_SHA512_DIGEST_LEN];
-	SHA512::hash(finalDigest,ram,ZT_IDENTITY_DERIVEADDRESS_MEMORY);
-
-	delete [] ram;
-
-	return Address(finalDigest,ZT_ADDRESS_LENGTH);
 }
 
 } // namespace ZeroTier

@@ -101,7 +101,8 @@ public:
 		Utils::getSecureRandom(priv,kp.priv.size());
 		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
-			++*((uint64_t *)priv);
+			++(((uint64_t *)priv)[1]);
+			--(((uint64_t *)priv)[2]);
 			_calcPubDH(kp); // keep regenerating bytes 0-31 until satisfied
 		} while (!cond(kp));
 		return kp;

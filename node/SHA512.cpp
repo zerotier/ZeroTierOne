@@ -121,7 +121,7 @@ static void store_bigendian(unsigned char *x,uint64 u)
   b = a; \
   a = T1 + T2;
 
-int crypto_hashblocks(unsigned char *statebytes,const unsigned char *in,unsigned long long inlen)
+static inline int crypto_hashblocks(unsigned char *statebytes,const unsigned char *in,unsigned long long inlen)
 {
   uint64 state[8];
   uint64 a;
