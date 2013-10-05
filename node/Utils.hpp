@@ -678,22 +678,6 @@ public:
 		return ((*aptr & mask) == (*aptr & mask));
 	}
 
-	/**
-	 * Compute CRC64
-	 *
-	 * @param crc Previous CRC (0 to start)
-	 * @param s String to add to crc
-	 * @param l Length of string in bytes
-	 * @return New CRC
-	 */
-	static inline uint64_t crc64(uint64_t crc,const void *s,unsigned int l)
-		throw()
-	{
-		for(unsigned int i=0;i<l;++i)
-			crc = crc64Table[(uint8_t)crc ^ ((const uint8_t *)s)[i]] ^ (crc >> 8);
-		return crc;
-	}
-
 	static inline uint8_t hton(uint8_t n) throw() { return n; }
 	static inline int8_t hton(int8_t n) throw() { return n; }
 	static inline uint16_t hton(uint16_t n) throw() { return htons(n); }
@@ -758,9 +742,6 @@ public:
 	 * Hexadecimal characters 0-f
 	 */
 	static const char HEXCHARS[16];
-
-private:
-	static const uint64_t crc64Table[256];
 };
 
 } // namespace ZeroTier

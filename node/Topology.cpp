@@ -244,7 +244,7 @@ void Topology::threadMain()
 				 * since this means either malicious intent or broken software. */
 				TRACE("verifying peer: %s",job.candidate->identity().address().toString().c_str());
 
-				if ((job.candidate->identity())&&(!job.candidate->identity().address().isReserved())&&(job.candidate->identity().locallyValidate(false))) {
+				if ((job.candidate->identity())&&(!job.candidate->identity().address().isReserved())&&(job.candidate->identity().locallyValidate())) {
 					// Peer passes sniff test, so check to see if we've already got
 					// one with the same address.
 
@@ -271,11 +271,11 @@ void Topology::threadMain()
 							// existing claimant, and toss the imposter. If both verify, the
 							// one we already have wins.
 
-							if (!job.candidate->identity().locallyValidate(true)) {
+							if (!job.candidate->identity().locallyValidate()) {
 								LOG("Topology: IMPOSTER %s rejected",job.candidate->identity().address().toString().c_str());
 								if (job.callback)
 									job.callback(job.arg,job.candidate,PEER_VERIFY_REJECTED_INVALID_IDENTITY);
-							} else if (!existingPeer->identity().locallyValidate(true)) {
+							} else if (!existingPeer->identity().locallyValidate()) {
 								LOG("Topology: previous IMPOSTER %s displaced by valid identity!",job.candidate->identity().address().toString().c_str());
 								_reallyAddPeer(job.candidate);
 								if (job.callback)

@@ -207,18 +207,27 @@ static int testIdentity()
 	Identity id;
 	Buffer<512> buf;
 
-#if 0
-	std::cout << "[identity] Fully validate known-good identity... "; std::cout.flush();
-	if (!id.fromString("b487ffe552:2:9b121d26968a86eceea96d689dfb364a13f645aea9530c6d0c00c457569751340e8ff9ddf46be38190dcdd6178ff555cc48012a47280fbdece35799d8c445104:902474096fc914f0d6320a9d19b9e52d23bcf652e98b3930432d07a8271be0e19a813d1e77ee24db3454ce0c6c4a35e18a3adc0d06ee3bf086b38bd26ff95b085b4f1fd1d4ce423b15bc362cd5f13079b58252fd38b98b67b45203bb81423780:24f7ce86df8e242e4d7d04b657cf37eddc1aa7b34b6f38821c35fe393a4a381e0eef6e7b8b4ceab35a51e6ab0b6cbeb7c7282bc21c0c60cb6a512e454ecd45c5")) {
+	std::cout << "[identity] Validate known-good identity... "; std::cout.flush();
+	if (!id.fromString("0614d4a18e:0:ad2020bb575ace4397c490c9143718b43c9e78d3be72e1793a7380e45491d45ab7180443cca8f4f08ba5ea7e3466e76751039cb2554c19cf6540df7babed4037:6dcd4d5edf3b00659baea6ac75fabc9f82ada9a4e8d5618e663505ef16a301b3d0ff4cf6c663bbd0989dac42dcf2df29862fc83ee1d1a032d723d777bb78d08b")) {
 		std::cout << "FAIL (1)" << std::endl;
 		return -1;
 	}
-	if (!id.locallyValidate(true)) {
+	if (!id.locallyValidate()) {
 		std::cout << "FAIL (2)" << std::endl;
 		return -1;
 	}
 	std::cout << "PASS" << std::endl;
-#endif
+
+	std::cout << "[identity] Validate known-bad identity... "; std::cout.flush();
+	if (!id.fromString("0615d4a18e:0:ad2020bb575ace4397c490c9143718b43c9e78d3be72e1793a7380e45491d45ab7180443cca8f4f08ba5ea7e3466e76751039cb2554c19cf6540df7babed4037:6dcd4d5edf3b00659baea6ac75fabc9f82ada9a4e8d5618e663505ef16a301b3d0ff4cf6c663bbd0989dac42dcf2df29862fc83ee1d1a032d723d777bb78d08b")) {
+		std::cout << "FAIL (1)" << std::endl;
+		return -1;
+	}
+	if (id.locallyValidate()) {
+		std::cout << "FAIL (2)" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS (i.e. it failed)" << std::endl;
 
 	for(unsigned int k=0;k<4;++k) {
 		std::cout << "[identity] Generate identity... "; std::cout.flush();
@@ -227,7 +236,7 @@ static int testIdentity()
 		uint64_t genend = Utils::now();
 		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true) << std::endl;
 		std::cout << "[identity] Locally validate identity: ";
-		if (id.locallyValidate(false)) {
+		if (id.locallyValidate()) {
 			std::cout << "PASS" << std::endl;
 		} else {
 			std::cout << "FAIL" << std::endl;
@@ -241,7 +250,7 @@ static int testIdentity()
 		id.serialize(buf,true);
 		id2.deserialize(buf);
 		std::cout << "[identity] Serialize and deserialize (w/private): ";
-		if ((id == id2)&&(id2.locallyValidate(false))) {
+		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
 		} else {
 			std::cout << "FAIL" << std::endl;
@@ -255,7 +264,7 @@ static int testIdentity()
 		id.serialize(buf,false);
 		id2.deserialize(buf);
 		std::cout << "[identity] Serialize and deserialize (no private): ";
-		if ((id == id2)&&(id2.locallyValidate(false))) {
+		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
 		} else {
 			std::cout << "FAIL" << std::endl;
@@ -267,7 +276,7 @@ static int testIdentity()
 		Identity id2;
 		id2.fromString(id.toString(true).c_str());
 		std::cout << "[identity] Serialize and deserialize (ASCII w/private): ";
-		if ((id == id2)&&(id2.locallyValidate(false))) {
+		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
 		} else {
 			std::cout << "FAIL" << std::endl;
@@ -279,7 +288,7 @@ static int testIdentity()
 		Identity id2;
 		id2.fromString(id.toString(false).c_str());
 		std::cout << "[identity] Serialize and deserialize (ASCII no private): ";
-		if ((id == id2)&&(id2.locallyValidate(false))) {
+		if ((id == id2)&&(id2.locallyValidate())) {
 			std::cout << "PASS" << std::endl;
 		} else {
 			std::cout << "FAIL" << std::endl;

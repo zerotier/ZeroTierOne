@@ -36,6 +36,8 @@
 #include "Salsa20.hpp"
 #include "Utils.hpp"
 
+#define ZT_IDENTITY_SHA_BYTE1_MASK 0xf8
+
 namespace ZeroTier {
 
 /*
@@ -51,7 +53,7 @@ struct _Identity_generate_cond
 	{
 		SHA512::hash(sha512buf,kp.pub.data,kp.pub.size());
 
-		if ((!sha512buf[0])&&(!(sha512buf[1] & 0xf0)))
+		if ((!sha512buf[0])&&(!(sha512buf[1] & ZT_IDENTITY_SHA_BYTE1_MASK)))
 			return true;
 
 		return false;
@@ -76,9 +78,20 @@ void Identity::generate()
 	*_privateKey = kp.priv;
 }
 
-bool Identity::locallyValidate(bool doAddressDerivationCheck) const
+bool Identity::locallyValidate() const
 {
-	return true;
+	char sha512buf[64];
+	char addrb[5];
+	_address.copyTo(addrb,5);
+	SHA512::hash(sha512buf,_publicKey.data,_publicKey.size());
+	return (
+		(!sha512buf[0])&&
+		(!(sha512buf[1] & ZT_IDENTITY_SHA_BYTE1_MASK))&&
+		(sha512buf[59] == addrb[0])&&
+		(sha512buf[60] == addrb[1])&&
+		(sha512buf[61] == addrb[2])&&
+		(sha512buf[62] == addrb[3])&&
+		(sha512buf[63] == addrb[4]));
 }
 
 std::string Identity::toString(bool includePrivate) const

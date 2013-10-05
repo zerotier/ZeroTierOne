@@ -128,19 +128,11 @@ public:
 	void generate();
 
 	/**
-	 * Performs local validation, with two levels available
-	 * 
-	 * With the parameter false, this performs self-signature verification
-	 * which checks the basic integrity of the key and identity. Setting the
-	 * parameter to true performs a fairly time consuming computation to
-	 * check that the address was properly derived from the key. This is
-	 * normally not done unless a conflicting identity is received, in
-	 * which case the invalid identity is thrown out.
-	 * 
-	 * @param doAddressDerivationCheck If true, do the time-consuming address check
+	 * Check the validity of this identity's pairing of key to address
+	 *
 	 * @return True if validation check passes
 	 */
-	bool locallyValidate(bool doAddressDerivationCheck) const;
+	bool locallyValidate() const;
 
 	/**
 	 * @return True if this identity contains a private key
