@@ -36,39 +36,54 @@
 #include "Salsa20.hpp"
 #include "Utils.hpp"
 
-// Mask for second byte in hashcash criterion -- making it require
-// 13 0 bits at the start of the hash.
-#define ZT_IDENTITY_SHA_BYTE1_MASK 0xf8
+// These can't be changed without a new identity type. They define the
+// parameters of the hashcash hashing/searching algorithm.
+#define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 5
+#define ZT_IDENTITY_GEN_MEMORY 8388608
 
 namespace ZeroTier {
+
+static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *sha512digest)
+{
+	unsigned char genmem[ZT_IDENTITY_GEN_MEMORY];
+
+	// Step 1: hash key to generate Salsa20 key and nonce
+	SHA512::hash(sha512digest,publicKey,publicKeyBytes);
+
+	// Step 2: copy key into genmen[], zero rest, encrypt with Salsa20
+	Salsa20 s20(sha512digest,256,((char *)sha512digest) + 32);
+	memcpy(genmem,publicKey,publicKeyBytes);
+	memset(genmem + publicKeyBytes,0,ZT_IDENTITY_GEN_MEMORY - publicKeyBytes);
+	s20.encrypt(genmem,genmem,ZT_IDENTITY_GEN_MEMORY);
+
+	// Step 3: hash the encrypted public key and the rest of the
+	// genmem[] bytes of Salsa20 key stream to yield the final hash.
+	SHA512::hash(sha512digest,genmem,ZT_IDENTITY_GEN_MEMORY);
+}
 
 struct _Identity_generate_cond
 {
 	_Identity_generate_cond() throw() {}
-	_Identity_generate_cond(char *sb) throw() : sha512buf(sb) {}
+	_Identity_generate_cond(unsigned char *sb) throw() : sha512digest(sb) {}
 
 	inline bool operator()(const C25519::Pair &kp) const
 		throw()
 	{
-		SHA512::hash(sha512buf,kp.pub.data,kp.pub.size());
-
-		if ((!sha512buf[0])&&(!(sha512buf[1] & ZT_IDENTITY_SHA_BYTE1_MASK)))
-			return true;
-
-		return false;
+		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),sha512digest);
+		return (sha512digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
 
-	char *sha512buf;
+	unsigned char *sha512digest;
 };
 
 void Identity::generate()
 {
-	char sha512buf[64];
+	unsigned char sha512digest[64];
 
 	C25519::Pair kp;
 	do {
-		kp = C25519::generateSatisfying(_Identity_generate_cond(sha512buf));
-		_address.setTo(sha512buf + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
+		kp = C25519::generateSatisfying(_Identity_generate_cond(sha512digest));
+		_address.setTo(sha512digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
 	} while (_address.isReserved());
 
 	_publicKey = kp.pub;
@@ -81,18 +96,20 @@ bool Identity::locallyValidate() const
 {
 	if (_address.isReserved())
 		return false;
-	char sha512buf[64];
-	char addrb[5];
+
+	unsigned char sha512digest[64];
+	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),sha512digest);
+
+	unsigned char addrb[5];
 	_address.copyTo(addrb,5);
-	SHA512::hash(sha512buf,_publicKey.data,_publicKey.size());
+	
 	return (
-		(!sha512buf[0])&&
-		(!(sha512buf[1] & ZT_IDENTITY_SHA_BYTE1_MASK))&&
-		(sha512buf[59] == addrb[0])&&
-		(sha512buf[60] == addrb[1])&&
-		(sha512buf[61] == addrb[2])&&
-		(sha512buf[62] == addrb[3])&&
-		(sha512buf[63] == addrb[4]));
+		(sha512digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
+		(sha512digest[59] == addrb[0])&&
+		(sha512digest[60] == addrb[1])&&
+		(sha512digest[61] == addrb[2])&&
+		(sha512digest[62] == addrb[3])&&
+		(sha512digest[63] == addrb[4]));
 }
 
 std::string Identity::toString(bool includePrivate) const
@@ -145,7 +162,7 @@ bool Identity::fromString(const char *str)
 				return false;
 		}
 	}
-	if (fno < 4)
+	if (fno < 3)
 		return false;
 
 	return true;

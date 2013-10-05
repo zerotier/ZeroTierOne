@@ -35,9 +35,9 @@
 
 #include <string>
 
+#include "Constants.hpp"
 #include "Utils.hpp"
 #include "MAC.hpp"
-#include "Constants.hpp"
 #include "Buffer.hpp"
 
 namespace ZeroTier {

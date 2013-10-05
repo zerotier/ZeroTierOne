@@ -31,7 +31,6 @@
 #include <math.h>
 
 #include <algorithm>
-#include <utility>
 
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"

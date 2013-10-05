@@ -93,7 +93,7 @@ int main(int argc,char **argv)
 			return -1;
 		}
 
-		if (!id.locallyValidate(true)) {
+		if (!id.locallyValidate()) {
 			std::cerr << argv[2] << " FAILED validation." << std::endl;
 			return -1;
 		} else std::cout << argv[2] << " is a valid identity (full check performed)" << std::endl;
