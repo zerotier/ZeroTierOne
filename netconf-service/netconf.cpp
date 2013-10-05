@@ -168,15 +168,15 @@ int main(int argc,char **argv)
 					meta.fromString(request.get("meta"));
 
 				// Do quick signature check / sanity check
-				if (!peerIdentity.locallyValidate(false)) {
-					fprintf(stderr,"identity failed signature check: %s\n",peerIdentity.toString(false).c_str());
+				if (!peerIdentity.locallyValidate()) {
+					fprintf(stderr,"identity failed validity check: %s\n",peerIdentity.toString(false).c_str());
 					continue;
 				}
 
 				// Save identity if unknown
 				{
 					Query q = dbCon->query();
-					q << "SELECT identity,identityValidated FROM Node WHERE id = " << peerIdentity.address().toInt();
+					q << "SELECT identity FROM Node WHERE id = " << peerIdentity.address().toInt();
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						if (rs[0]["identity"] != peerIdentity.toString(false)) {
