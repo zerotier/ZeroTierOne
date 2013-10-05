@@ -29,6 +29,7 @@
 #define _ZT_C25519_HPP
 
 #include "Array.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -37,7 +38,7 @@ namespace ZeroTier {
 #define ZT_C25519_SIGNATURE_LEN 96
 
 /**
- * C25519 elliptic curve key agreement and signing
+ * A combined Curve25519 ECDH and Ed25519 signature engine
  */
 class C25519
 {
@@ -68,8 +69,43 @@ public:
 	/**
 	 * Generate a C25519 elliptic curve key pair
 	 */
-	static Pair generate()
-		throw();
+	static inline Pair generate()
+		throw()
+	{
+		Pair kp;
+		Utils::getSecureRandom(kp.priv.data,kp.priv.size());
+		_calcPubDH(kp);
+		_calcPubED(kp);
+		return kp;
+	}
+
+	/**
+	 * Generate a key pair satisfying a condition
+	 *
+	 * This begins with a random keypair from a random secret key and then
+	 * iteratively increments the random secret until cond(kp) returns true.
+	 * This is used to compute key pairs in which the public key, its hash
+	 * or some other aspect of it satisfies some condition, such as for a
+	 * hashcash criteria.
+	 *
+	 * @param cond Condition function or function object
+	 * @return Key pair where cond(kp) returns true
+	 * @tparam F Type of 'cond'
+	 */
+	template<typename F>
+	static inline Pair generateSatisfying(F cond)
+		throw()
+	{
+		Pair kp;
+		void *const priv = (void *)kp.priv.data;
+		Utils::getSecureRandom(priv,kp.priv.size());
+		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
+		do {
+			++*((uint64_t *)priv);
+			_calcPubDH(kp); // keep regenerating bytes 0-31 until satisfied
+		} while (!cond(kp));
+		return kp;
+	}
 
 	/**
 	 * Perform C25519 ECC key agreement
@@ -167,6 +203,17 @@ public:
 	{
 		return verify(their,msg,len,signature.data);
 	}
+
+private:
+	// derive first 32 bytes of kp.pub from first 32 bytes of kp.priv
+	// this is the ECDH key
+	static void _calcPubDH(Pair &kp)
+		throw();
+
+	// derive 2nd 32 bytes of kp.pub from 2nd 32 bytes of kp.priv
+	// this is the Ed25519 sign/verify key
+	static void _calcPubED(Pair &kp)
+		throw();
 };
 
 } // namespace ZeroTier

@@ -31,7 +31,6 @@
 
 #include "Constants.hpp"
 #include "C25519.hpp"
-#include "Utils.hpp"
 #include "SHA512.hpp"
 #include "Buffer.hpp"
 
@@ -2288,37 +2287,6 @@ static int crypto_sign_open(
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-C25519::Pair C25519::generate()
-  throw()
-{
-  unsigned char extsk[64];
-  sc25519 scsk;
-  ge25519 gepk;
-	Pair kp;
-
-	Utils::getSecureRandom(kp.priv.data,kp.priv.size());
-
-	// First 32 bytes of pub and priv are the keys for C25519 key
-	// agreement. This generates the public portion from the private.
-	crypto_scalarmult_base(kp.pub.data,kp.priv.data);
-
-  // Second 32 bytes of pub and priv are the keys for ed25519
-  // signing and verification.
-  SHA512::hash(extsk,kp.priv.data + 32,32);
-  extsk[0] &= 248;
-  extsk[31] &= 127;
-  extsk[31] |= 64;
-  sc25519_from32bytes(&scsk,extsk);
-  ge25519_scalarmult_base(&gepk,&scsk);
-  ge25519_pack(kp.pub.data + 32,&gepk);
-  // In NaCl, the public key is crammed into the next 32 bytes
-  // of the private key for signing since both keys are required
-  // to sign. In this case we just get it from public, so we
-  // leave that out of private.
-
-	return kp;
-}
-
 void C25519::agree(const C25519::Private &mine,const C25519::Public &their,void *keybuf,unsigned int keylen)
   throw()
 {
@@ -2415,6 +2383,36 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
   ge25519_pack(t2, &get2);
 
   return Utils::secureEq(sig,t2,32);
+}
+
+void C25519::_calcPubDH(C25519::Pair &kp)
+  throw()
+{
+  // First 32 bytes of pub and priv are the keys for ECDH key
+  // agreement. This generates the public portion from the private.
+  crypto_scalarmult_base(kp.pub.data,kp.priv.data);
+}
+
+void C25519::_calcPubED(C25519::Pair &kp)
+  throw()
+{
+  unsigned char extsk[64];
+  sc25519 scsk;
+  ge25519 gepk;
+
+  // Second 32 bytes of pub and priv are the keys for ed25519
+  // signing and verification.
+  SHA512::hash(extsk,kp.priv.data + 32,32);
+  extsk[0] &= 248;
+  extsk[31] &= 127;
+  extsk[31] |= 64;
+  sc25519_from32bytes(&scsk,extsk);
+  ge25519_scalarmult_base(&gepk,&scsk);
+  ge25519_pack(kp.pub.data + 32,&gepk);
+  // In NaCl, the public key is crammed into the next 32 bytes
+  // of the private key for signing since both keys are required
+  // to sign. In this version we just get it from kp.pub, so we
+  // leave that out of private.
 }
 
 } // namespace ZeroTier
