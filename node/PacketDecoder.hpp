@@ -109,26 +109,6 @@ public:
 	inline uint64_t receiveTime() const throw() { return _receiveTime; }
 
 private:
-	struct _CBaddPeerFromHello_Data
-	{
-		const RuntimeEnvironment *renv;
-		Address source;
-		InetAddress remoteAddress;
-		Demarc::Port localPort;
-		unsigned int vMajor,vMinor,vRevision;
-		uint64_t helloPacketId;
-		uint64_t helloTimestamp;
-	};
-	static void _CBaddPeerFromHello(
-		void *arg, // _CBaddPeerFromHello_Data
-		const SharedPtr<Peer> &p,
-		Topology::PeerVerifyResult result);
-
-	static void _CBaddPeerFromWhois(
-		void *arg, // RuntimeEnvironment
-		const SharedPtr<Peer> &p,
-		Topology::PeerVerifyResult result);
-
 	// These are called internally to handle packet contents once it has
 	// been authenticated, decrypted, decompressed, and classified.
 	bool _doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);

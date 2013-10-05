@@ -51,11 +51,13 @@
  * 2 - 0.3.0 ... 0.4.5
  *   * Added signature and originating peer to multicast frame
  *   * Double size of multicast frame bloom filter
- * 3 - 0.5.0 ...
+ * 3 - 0.5.0 ... 0.6.0
  *   * Yet another multicast redesign
  *   * New crypto completely changes key agreement cipher
+ * 4 - 0.6.0 ...
+ *   * New identity format based on hashcash design
  */
-#define ZT_PROTO_VERSION 3
+#define ZT_PROTO_VERSION 4
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
@@ -620,14 +622,11 @@ public:
 		/* HELLO pushed an identity whose address is already claimed */
 		ERROR_IDENTITY_COLLISION = 4,
 
-		/* Identity was not valid */
-		ERROR_IDENTITY_INVALID = 5,
-
 		/* Verb or use case not supported/enabled by this node */
-		ERROR_UNSUPPORTED_OPERATION = 6,
+		ERROR_UNSUPPORTED_OPERATION = 5,
 
 		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NO_MEMBER_CERTIFICATE = 7
+		ERROR_NO_MEMBER_CERTIFICATE = 6
 	};
 
 	/**

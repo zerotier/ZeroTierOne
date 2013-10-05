@@ -36,13 +36,12 @@
 #include "Salsa20.hpp"
 #include "Utils.hpp"
 
+// Mask for second byte in hashcash criterion -- making it require
+// 13 0 bits at the start of the hash.
 #define ZT_IDENTITY_SHA_BYTE1_MASK 0xf8
 
 namespace ZeroTier {
 
-/*
- * This is the hashcash criterion
- */
 struct _Identity_generate_cond
 {
 	_Identity_generate_cond() throw() {}
@@ -80,6 +79,8 @@ void Identity::generate()
 
 bool Identity::locallyValidate() const
 {
+	if (_address.isReserved())
+		return false;
 	char sha512buf[64];
 	char addrb[5];
 	_address.copyTo(addrb,5);

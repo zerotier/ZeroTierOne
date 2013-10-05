@@ -33,18 +33,14 @@
 
 #include <map>
 #include <set>
-#include <list>
 #include <vector>
 #include <stdexcept>
 
+#include "Constants.hpp"
 #include "Address.hpp"
 #include "Peer.hpp"
 #include "Mutex.hpp"
-#include "Condition.hpp"
 #include "InetAddress.hpp"
-#include "Constants.hpp"
-#include "Thread.hpp"
-#include "MulticastGroup.hpp"
 #include "Utils.hpp"
 
 #include "../ext/kissdb/kissdb.h"
@@ -59,19 +55,6 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	/**
-	 * Result of peer add/verify
-	 */
-	enum PeerVerifyResult
-	{
-		PEER_VERIFY_ACCEPTED_NEW,                       /* new peer */
-		PEER_VERIFY_ACCEPTED_ALREADY_HAVE,              /* we already knew ye */
-		PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS, /* you booted out an impostor */
-		PEER_VERIFY_REJECTED_INVALID_IDENTITY,          /* identity is invalid or validation failed */
-		PEER_VERIFY_REJECTED_DUPLICATE,                 /* someone equally valid already has your address */
-		PEER_VERIFY_REJECTED_DUPLICATE_TRIAGED          /* you look duplicate and I'm too busy to deep verify */
-	};
-
 	Topology(const RuntimeEnvironment *renv,const char *dbpath)
 		throw(std::runtime_error);
 
@@ -85,22 +68,15 @@ public:
 	void setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn);
 
 	/**
-	 * Add a peer to this network
-	 * 
-	 * Verification and adding actually occurs in the background, since in
-	 * rare cases it can be somewhat CPU-intensive. The callback will be
-	 * called (from the background thread) when add is complete.
-	 * 
-	 * The peer given to the callback may not be the same object provided
-	 * as a candidate if the candidate was an exact duplicate of a peer we
-	 * already have.
+	 * Add a peer to database
 	 *
-	 * @param candidate New candidate peer to be added
-	 * @param callback Callback to call when peer verification is complete
-	 * @param arg First argument to callback
-	 * @return Verification result or PEER_VERIFY__IN_PROGRESS if occurring in background
+	 * This will not replace existing peers. In that case the existing peer
+	 * record is returned.
+	 *
+	 * @param peer Peer to add
+	 * @return New or existing peer (should replace 'peer')
 	 */
-	void addPeer(const SharedPtr<Peer> &candidate,void (*callback)(void *,const SharedPtr<Peer> &,PeerVerifyResult),void *arg);
+	SharedPtr<Peer> addPeer(const SharedPtr<Peer> &peer);
 
 	/**
 	 * Get a peer from its address
@@ -169,7 +145,7 @@ public:
 	inline bool amSupernode() const { return _amSupernode; }
 
 	/**
-	 * Clean and flush database now (runs in the background)
+	 * Clean and flush database
 	 */
 	void clean();
 
@@ -296,37 +272,11 @@ public:
 		std::vector< SharedPtr<Peer> > &_v;
 	};
 
-	/**
-	 * Thread main method; do not call elsewhere
-	 */
-	void threadMain()
-		throw();
-
 private:
-	void _reallyAddPeer(const SharedPtr<Peer> &p);
-
-	// A job for the background deep verify thread (also does cache cleaning, flushing, etc.)
-	struct _PeerDeepVerifyJob
-	{
-		void (*callback)(void *,const SharedPtr<Peer> &,Topology::PeerVerifyResult);
-		void *arg;
-		SharedPtr<Peer> candidate;
-		enum {
-			VERIFY_PEER,
-			CLEAN_CACHE,
-			EXIT_THREAD
-		} type;
-	};
-
 	const RuntimeEnvironment *const _r;
-	Thread _thread;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;
-
-	std::list< _PeerDeepVerifyJob > _peerDeepVerifyJobs;
-	Mutex _peerDeepVerifyJobs_m;
-	Condition _peerDeepVerifyJobs_c;
 
 	std::map< Identity,std::vector<InetAddress> > _supernodes;
 	std::set< Address > _supernodeAddresses;

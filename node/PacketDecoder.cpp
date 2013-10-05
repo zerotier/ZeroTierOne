@@ -124,73 +124,6 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 	}
 }
 
-void PacketDecoder::_CBaddPeerFromHello(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result)
-{
-	_CBaddPeerFromHello_Data *req = (_CBaddPeerFromHello_Data *)arg;
-	const RuntimeEnvironment *_r = req->renv;
-
-	try {
-		switch(result) {
-			case Topology::PEER_VERIFY_ACCEPTED_NEW:
-			case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
-			case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS: {
-				_r->sw->doAnythingWaitingForPeer(p);
-				Packet outp(req->source,_r->identity.address(),Packet::VERB_OK);
-				outp.append((unsigned char)Packet::VERB_HELLO);
-				outp.append(req->helloPacketId);
-				outp.append(req->helloTimestamp);
-				outp.append((unsigned char)ZT_PROTO_VERSION);
-				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
-				outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
-				outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-				outp.armor(p->key(),true);
-				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
-			}	break;
-
-			case Topology::PEER_VERIFY_REJECTED_INVALID_IDENTITY: {
-				Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
-				outp.append((unsigned char)Packet::VERB_HELLO);
-				outp.append(req->helloPacketId);
-				outp.append((unsigned char)Packet::ERROR_IDENTITY_INVALID);
-				outp.armor(p->key(),true);
-				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
-			}	break;
-
-			case Topology::PEER_VERIFY_REJECTED_DUPLICATE:
-			case Topology::PEER_VERIFY_REJECTED_DUPLICATE_TRIAGED: {
-				Packet outp(req->source,_r->identity.address(),Packet::VERB_ERROR);
-				outp.append((unsigned char)Packet::VERB_HELLO);
-				outp.append(req->helloPacketId);
-				outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-				outp.armor(p->key(),true);
-				_r->demarc->send(req->localPort,req->remoteAddress,outp.data(),outp.size(),-1);
-			}	break;
-		}
-	} catch ( ... ) {
-		TRACE("unexpected exception in addPeer() result callback for peer received via HELLO");
-	}
-
-	delete req;
-}
-
-void PacketDecoder::_CBaddPeerFromWhois(void *arg,const SharedPtr<Peer> &p,Topology::PeerVerifyResult result)
-{
-	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)arg;
-	try {
-		switch(result) {
-			case Topology::PEER_VERIFY_ACCEPTED_NEW:
-			case Topology::PEER_VERIFY_ACCEPTED_ALREADY_HAVE:
-			case Topology::PEER_VERIFY_ACCEPTED_DISPLACED_INVALID_ADDRESS:
-				_r->sw->doAnythingWaitingForPeer(p);
-				break;
-			default:
-				break;
-		}
-	} catch ( ... ) {
-		TRACE("unexpected exception in addPeer() result callback for peer received via OK(WHOIS)");
-	}
-}
-
 bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
@@ -205,7 +138,6 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				}
 				break;
 			case Packet::ERROR_IDENTITY_COLLISION:
-			case Packet::ERROR_IDENTITY_INVALID:
 				// TODO: if it comes from a supernode, regenerate a new identity
 				break;
 			case Packet::ERROR_NO_MEMBER_CERTIFICATE:
@@ -225,67 +157,59 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 {
 	try {
-		//unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
+		unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
 		unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 		unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 		Identity id(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 
-		// Initial sniff test for valid addressing and that this is indeed the
-		// submitter's identity.
-		if ((id.address().isReserved())||(id.address() != source())) {
-#ifdef ZT_TRACE
-			if (id.address().isReserved()) {
-				TRACE("dropped HELLO from %s(%s): identity has reserved address",source().toString().c_str(),_remoteAddress.toString().c_str());
-			} else {
-				TRACE("dropped HELLO from %s(%s): identity is not for sender of packet (HELLO is a self-announcement)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		if (protoVersion != ZT_PROTO_VERSION) {
+			TRACE("dropped HELLO from %s(%s): protocol version mismatch (%u, expected %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),protoVersion,(unsigned int)ZT_PROTO_VERSION);
+			return true;
+		}
+
+		if (!id.locallyValidate()) {
+			TRACE("dropped HELLO from %s(%s): identity invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+
+		SharedPtr<Peer> peer(_r->topology->getPeer(id.address()));
+		if (peer) {
+			if (peer->identity() != id) {
+				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
+				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
+					TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
+
+					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_HELLO);
+					outp.append(packetId());
+					outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+					outp.armor(key,true);
+					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+				}
+				return true;
 			}
-#endif
-			return true;
-		}
+		} else peer = _r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,id)));
 
-		// Is this a HELLO for a peer we already know? If so just update its
-		// packet receive stats and send an OK.
-		SharedPtr<Peer> existingPeer(_r->topology->getPeer(id.address()));
-		if ((existingPeer)&&(existingPeer->identity() == id)) {
-			existingPeer->onReceive(_r,_localPort,_remoteAddress,hops(),Packet::VERB_HELLO,Utils::now());
-			existingPeer->setRemoteVersion(vMajor,vMinor,vRevision);
+		peer->onReceive(_r,_localPort,_remoteAddress,hops(),Packet::VERB_HELLO,Utils::now());
+		peer->setRemoteVersion(vMajor,vMinor,vRevision);
 
-			Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
-			outp.append((unsigned char)Packet::VERB_HELLO);
-			outp.append(packetId());
-			outp.append(timestamp);
-			outp.append((unsigned char)ZT_PROTO_VERSION);
-			outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
-			outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
-			outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-			outp.armor(existingPeer->key(),true);
-			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-			return true;
-		}
-
-		SharedPtr<Peer> candidate(new Peer(_r->identity,id));
-		candidate->setPathAddress(_remoteAddress,false);
-		candidate->setRemoteVersion(vMajor,vMinor,vRevision);
-
-		_CBaddPeerFromHello_Data *arg = new _CBaddPeerFromHello_Data;
-		arg->renv = _r;
-		arg->source = source();
-		arg->remoteAddress = _remoteAddress;
-		arg->localPort = _localPort;
-		arg->vMajor = vMajor;
-		arg->vMinor = vMinor;
-		arg->vRevision = vRevision;
-		arg->helloPacketId = packetId();
-		arg->helloTimestamp = timestamp;
-		_r->topology->addPeer(candidate,&PacketDecoder::_CBaddPeerFromHello,arg);
+		Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
+		outp.append((unsigned char)Packet::VERB_HELLO);
+		outp.append(packetId());
+		outp.append(timestamp);
+		outp.append((unsigned char)ZT_PROTO_VERSION);
+		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
+		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
+		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+		outp.armor(peer->key(),true);
+		_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 	} catch (std::exception &ex) {
 		TRACE("dropped HELLO from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
-
 	return true;
 }
 
@@ -305,12 +229,13 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 				peer->setRemoteVersion(vMajor,vMinor,vRevision);
 			}	break;
 			case Packet::VERB_WHOIS: {
-				TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
+				// Right now only supernodes are allowed to send OK(WHOIS) to prevent
+				// poisoning attacks. Further decentralization will require some other
+				// kind of trust mechanism.
 				if (_r->topology->isSupernode(source())) {
-					// Right now, only supernodes are queried for WHOIS so we only
-					// accept OK(WHOIS) from supernodes. Otherwise peers could
-					// potentially cache-poison.
-					_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,Identity(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY))),&PacketDecoder::_CBaddPeerFromWhois,const_cast<void *>((const void *)_r));
+					Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
+					if (id.locallyValidate())
+						_r->sw->doAnythingWaitingForPeer(_r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,id))));
 				}
 			} break;
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {

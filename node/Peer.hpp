@@ -34,10 +34,10 @@
 #include <utility>
 #include <stdexcept>
 
+#include "Constants.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
-#include "Constants.hpp"
 #include "Logger.hpp"
 #include "Demarc.hpp"
 #include "RuntimeEnvironment.hpp"
@@ -52,7 +52,7 @@
  * Max length of serialized peer record
  */
 #define ZT_PEER_MAX_SERIALIZED_LENGTH ( \
-	32 + \
+	ZT_PEER_SECRET_KEY_LENGTH + \
 	ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH + \
 	( ( \
 		(sizeof(uint64_t) * 4) + \
@@ -532,7 +532,7 @@ private:
 		bool fixed; // do not learn address from received packets
 	};
 
-	unsigned char _key[32]; // shared secret key agreed upon between identities
+	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 
 	WanPath _ipv4p;
