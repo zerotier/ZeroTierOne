@@ -43,10 +43,9 @@
 
 namespace ZeroTier {
 
-static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *sha512digest)
+// A memory-hard composition of SHA-512 and Salsa20 for hashcash hashing
+static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *sha512digest,unsigned char *genmem)
 {
-	unsigned char genmem[ZT_IDENTITY_GEN_MEMORY];
-
 	// Step 1: hash key to generate Salsa20 key and nonce
 	SHA512::hash(sha512digest,publicKey,publicKeyBytes);
 
@@ -61,28 +60,29 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 	SHA512::hash(sha512digest,genmem,ZT_IDENTITY_GEN_MEMORY);
 }
 
+// Hashcash generation halting condition -- halt when first byte is less than
+// threshold value.
 struct _Identity_generate_cond
 {
 	_Identity_generate_cond() throw() {}
-	_Identity_generate_cond(unsigned char *sb) throw() : sha512digest(sb) {}
-
+	_Identity_generate_cond(unsigned char *sb,unsigned char *gm) throw() : sha512digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
 		throw()
 	{
-		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),sha512digest);
+		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),sha512digest,genmem);
 		return (sha512digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
-
-	unsigned char *sha512digest;
+	unsigned char *sha512digest,*genmem;
 };
 
 void Identity::generate()
 {
 	unsigned char sha512digest[64];
+	unsigned char *genmem = new unsigned char[ZT_IDENTITY_GEN_MEMORY];
 
 	C25519::Pair kp;
 	do {
-		kp = C25519::generateSatisfying(_Identity_generate_cond(sha512digest));
+		kp = C25519::generateSatisfying(_Identity_generate_cond(sha512digest,genmem));
 		_address.setTo(sha512digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
 	} while (_address.isReserved());
 
@@ -90,6 +90,8 @@ void Identity::generate()
 	if (!_privateKey)
 		_privateKey = new C25519::Private();
 	*_privateKey = kp.priv;
+
+	delete [] genmem;
 }
 
 bool Identity::locallyValidate() const
@@ -98,7 +100,9 @@ bool Identity::locallyValidate() const
 		return false;
 
 	unsigned char sha512digest[64];
-	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),sha512digest);
+	unsigned char *genmem = new unsigned char[ZT_IDENTITY_GEN_MEMORY];
+	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),sha512digest,genmem);
+	delete [] genmem;
 
 	unsigned char addrb[5];
 	_address.copyTo(addrb,5);
