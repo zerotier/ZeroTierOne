@@ -135,11 +135,7 @@ public:
 			COM_RESERVED_ID_NETWORK_ID = 1 // network ID, max delta always 0
 		};
 
-		CertificateOfMembership()
-		{
-			memset(_signature.data,0,_signature.size());
-		}
-
+		CertificateOfMembership() { memset(_signature.data,0,_signature.size()); }
 		CertificateOfMembership(const char *s) { fromString(s); }
 		CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
 
@@ -205,20 +201,12 @@ public:
 		/**
 		 * @return True if signed
 		 */
-		inline bool isSigned() const
-			throw()
-		{
-			return (_signedBy);
-		}
+		inline bool isSigned() const throw() { return (_signedBy); }
 
 		/**
 		 * @return Address that signed this certificate or null address if none
 		 */
-		inline const Address &signedBy() const
-			throw()
-		{
-			return _signedBy;
-		}
+		inline const Address &signedBy() const throw() { return _signedBy; }
 
 	private:
 		struct _Qualifier

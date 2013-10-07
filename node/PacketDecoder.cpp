@@ -140,7 +140,7 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			case Packet::ERROR_IDENTITY_COLLISION:
 				// TODO: if it comes from a supernode, regenerate a new identity
 				break;
-			case Packet::ERROR_NO_MEMBER_CERTIFICATE:
+			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE:
 				// TODO: send member certificate
 				break;
 			default:
@@ -358,7 +358,7 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 				outp.append((unsigned char)Packet::VERB_FRAME);
 				outp.append(packetId());
-				outp.append((unsigned char)Packet::ERROR_NO_MEMBER_CERTIFICATE);
+				outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 				outp.append(network->id());
 				outp.armor(peer->key(),true);
 				_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
@@ -466,7 +466,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_FRAME);
 					outp.append(packetId());
-					outp.append((unsigned char)Packet::ERROR_NO_MEMBER_CERTIFICATE);
+					outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
 					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);

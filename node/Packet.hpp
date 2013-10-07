@@ -626,7 +626,7 @@ public:
 		ERROR_UNSUPPORTED_OPERATION = 5,
 
 		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NO_MEMBER_CERTIFICATE = 6
+		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 6
 	};
 
 	/**
