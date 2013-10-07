@@ -41,7 +41,7 @@ static void printHelp(char *pn)
 {
 	std::cout << "Usage: " << pn << " <command> [<args>]" << std::endl << std::endl;
 	std::cout << "Commands:" << std::endl;
-	std::cout << "\tgenerate [<identity.secret>]" << std::endl;
+	std::cout << "\tgenerate [<identity.secret>] [<identity.public>]" << std::endl;
 	std::cout << "\tvalidate <identity.secret/public>" << std::endl;
 	std::cout << "\tgetpublic <identity.secret>" << std::endl;
 	std::cout << "\tsign <identity.secret> <file>" << std::endl;
@@ -80,6 +80,13 @@ int main(int argc,char **argv)
 				std::cerr << "Error writing to " << argv[2] << std::endl;
 				return -1;
 			} else std::cout << argv[2] << " written" << std::endl;
+			if (argc >= 4) {
+				idser = id.toString(false);
+				if (!Utils::writeFile(argv[3],idser)) {
+					std::cerr << "Error writing to " << argv[3] << std::endl;
+					return -1;
+				} else std::cout << argv[3] << " written" << std::endl;
+			}
 		} else std::cout << idser;
 	} else if (!strcmp(argv[1],"validate")) {
 		if (argc < 3) {
