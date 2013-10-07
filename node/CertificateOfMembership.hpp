@@ -33,8 +33,10 @@
 
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 #include "Constants.hpp"
+#include "Buffer.hpp"
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Identity.hpp"
@@ -86,7 +88,7 @@ public:
 	 * IDs below 65536 should be considered reserved for future global
 	 * assignment here.
 	 */
-	enum ReservedIds
+	enum ReservedId
 	{
 		COM_RESERVED_ID_TIMESTAMP = 0, // timestamp, max delta defines cert life
 		COM_RESERVED_ID_NETWORK_ID = 1 // network ID, max delta always 0
@@ -95,6 +97,19 @@ public:
 	CertificateOfMembership() { memset(_signature.data,0,_signature.size()); }
 	CertificateOfMembership(const char *s) { fromString(s); }
 	CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
+
+	/**
+	 * @return Maximum delta for mandatory timestamp field or 0 if field missing
+	 */
+	inline uint64_t timestampMaxDelta() const
+		throw()
+	{
+		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
+			if (q->id == COM_RESERVED_ID_TIMESTAMP)
+				return q->maxDelta;
+		}
+		return 0ULL;
+	}
 
 	/**
 	 * Add or update a qualifier in this certificate
@@ -106,6 +121,7 @@ public:
 	 * @param maxDelta Qualifier maximum allowed difference (absolute value of difference)
 	 */
 	void setQualifier(uint64_t id,uint64_t value,uint64_t maxDelta);
+	inline void setQualifier(ReservedId id,uint64_t value,uint64_t maxDelta) { setQualifier((uint64_t)id,value,maxDelta); }
 
 	/**
 	 * @return String-serialized representation of this certificate
@@ -164,6 +180,55 @@ public:
 	 * @return Address that signed this certificate or null address if none
 	 */
 	inline const Address &signedBy() const throw() { return _signedBy; }
+
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+		throw(std::out_of_range)
+	{
+		b.append((unsigned char)COM_UINT64_ED25519);
+		b.append((uint32_t)_qualifiers.size());
+		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
+			b.append(q->id);
+			b.append(q->value);
+			b.append(q->maxDelta);
+		}
+		_signedBy.appendTo(b);
+		if (_signedBy)
+			b.append(_signature.data,_signature.size());
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+		throw(std::out_of_range,std::invalid_argument)
+	{
+		unsigned int p = startAt;
+
+		_qualifiers.clear();
+		_signedBy.zero();
+
+		if (b[p++] != COM_UINT64_ED25519)
+			throw std::invalid_argument("unknown certificate of membership type");
+
+		unsigned int numq = b.template at<uint32_t>(p); p += sizeof(uint32_t);
+		for(unsigned int i=0;i<numq;++i) {
+			_qualifiers.push_back(_Qualifier(
+					b.template at<uint64_t>(p),
+					b.template at<uint64_t>(p + 8),
+					b.template at<uint64_t>(p + 16)
+				));
+			p += 24;
+		}
+
+		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		p += ZT_ADDRESS_LENGTH;
+
+		if (_signedBy) {
+			memcpy(_signature.data,b.field(p,_signature.size()),_signature.size());
+			p += _signature.size();
+		}
+
+		return (p - startAt);
+	}
 
 private:
 	struct _Qualifier

@@ -51,6 +51,8 @@ std::string CertificateOfMembership::toString() const
 {
 	std::string s;
 
+	s.append("1:"); // COM_UINT64_ED25519
+
 	uint64_t *buf = new uint64_t[_qualifiers.size() * 3];
 	try {
 		unsigned int ptr = 0;
@@ -85,6 +87,13 @@ void CertificateOfMembership::fromString(const char *s)
 	memset(_signature.data,0,_signature.size());
 
 	unsigned int colonAt = 0;
+	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
+
+	if (!((colonAt == 1)&&(s[0] == '1'))) // COM_UINT64_ED25519?
+		return;
+
+	s += colonAt + 1;
+	colonAt = 0;
 	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
 
 	if (colonAt) {

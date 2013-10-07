@@ -470,6 +470,15 @@ public:
 	void addMembershipCertificate(const Address &peer,const CertificateOfMembership &cert);
 
 	/**
+	 * Push our membership certificate to a peer
+	 *
+	 * @param peer Destination peer address
+	 * @param force If true, push even if we've already done so within required time frame
+	 * @param now Current time
+	 */
+	void pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
+
+	/**
 	 * @param peer Peer address to check
 	 * @return True if peer is allowed to communicate on this network
 	 */
@@ -483,11 +492,7 @@ public:
 	/**
 	 * @return Time of last updated configuration or 0 if none
 	 */
-	inline uint64_t lastConfigUpdate() const
-		throw()
-	{
-		return _lastConfigUpdate;
-	}
+	inline uint64_t lastConfigUpdate() const throw() { return _lastConfigUpdate; }
 
 	/**
 	 * @return Status of this network
@@ -530,9 +535,6 @@ public:
 			bal = _multicastRateAccounts.insert(std::pair< std::pair<Address,MulticastGroup>,BandwidthAccount >(k,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
 		}
 		return bal->second.deduct(bytes);
-		//bool tmp = bal->second.deduct(bytes);
-		//printf("%s: BAL: %u\n",mg.toString().c_str(),(unsigned int)bal->second.balance());
-		//return tmp;
 	}
 
 	/**
@@ -547,20 +549,12 @@ public:
 	/**
 	 * @return Bits in multicast restriciton prefix
 	 */
-	inline unsigned int multicastPrefixBits() const
-		throw()
-	{
-		return _multicastPrefixBits;
-	}
+	inline unsigned int multicastPrefixBits() const throw() { return _multicastPrefixBits; }
 
 	/**
 	 * @return Max depth (TTL) for a multicast frame
 	 */
-	inline unsigned int multicastDepth() const
-		throw()
-	{
-		return _multicastDepth;
-	}
+	inline unsigned int multicastDepth() const throw() { return _multicastDepth; }
 
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
@@ -578,19 +572,25 @@ private:
 	// Membership certificates supplied by other peers on this network
 	std::map<Address,CertificateOfMembership> _membershipCertificates;
 
-	// Configuration from network master node
+	// The last time we sent a membership certificate to a given peer
+	std::map<Address,uint64_t> _lastPushedMembershipCertificate;
+
+	// Configuration from network master node -- and some memoized fields from
+	// the most recent _configuration we have.
 	Config _configuration;
-	CertificateOfMembership _myCertificate; // memoized from _configuration
-	MulticastRates _mcRates; // memoized from _configuration
-	std::set<InetAddress> _staticAddresses; // memoized from _configuration
-	bool _isOpen; // memoized from _configuration
-	unsigned int _multicastPrefixBits; // memoized from _configuration
-	unsigned int _multicastDepth; // memoized from _configuration
+	CertificateOfMembership _myCertificate;
+	MulticastRates _mcRates;
+	std::set<InetAddress> _staticAddresses;
+	bool _isOpen;
+	unsigned int _multicastPrefixBits;
+	unsigned int _multicastDepth;
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];
 
+	// Network ID -- master node is most significant 40 bits
 	uint64_t _id;
+
 	volatile uint64_t _lastConfigUpdate;
 	volatile bool _destroyOnDelete;
 	volatile bool _ready;

@@ -553,10 +553,7 @@ public:
 
 		/* Network member certificate for sending peer:
 		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit length of certificate>
-		 *   <[2] 16-bit length of signature>
-		 *   <[...] string-serialized certificate dictionary>
-		 *   <[...] signature of certificate>
+		 *   <[...] serialized certificate of membership>
 		 *
 		 * OK is generated on acceptance. ERROR is returned on failure. In both
 		 * cases the payload is the network ID.
