@@ -3,6 +3,7 @@ OBJS=\
 	ext/lz4/lz4hc.o \
 	ext/lz4/lz4.o \
 	node/C25519.o \
+	node/CertificateOfMembership.o \
 	node/Defaults.o \
 	node/Demarc.o \
 	node/EthernetTap.o \
