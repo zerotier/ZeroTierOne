@@ -323,6 +323,8 @@ Node::ReasonForTermination Node::run()
 		std::string idser;
 		if (Utils::readFile(identitySecretPath.c_str(),idser))
 			gotId = _r->identity.fromString(idser);
+		if ((gotId)&&(!_r->identity.locallyValidate()))
+			gotId = false;
 		if (gotId) {
 			// Make sure identity.public matches identity.secret
 			idser = std::string();
@@ -419,7 +421,7 @@ Node::ReasonForTermination Node::run()
 
 	// Core I/O loop
 	try {
-		uint64_t lastNetworkAutoconfCheck = 0;
+		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;

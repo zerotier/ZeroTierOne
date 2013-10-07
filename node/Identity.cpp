@@ -90,26 +90,26 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 struct _Identity_generate_cond
 {
 	_Identity_generate_cond() throw() {}
-	_Identity_generate_cond(unsigned char *sb,char *gm) throw() : sha512digest(sb),genmem(gm) {}
+	_Identity_generate_cond(unsigned char *sb,char *gm) throw() : digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
 		throw()
 	{
-		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),sha512digest,genmem);
-		return (sha512digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
+		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),digest,genmem);
+		return (digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
-	unsigned char *sha512digest;
+	unsigned char *digest;
 	char *genmem;
 };
 
 void Identity::generate()
 {
-	unsigned char sha512digest[64];
+	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 
 	C25519::Pair kp;
 	do {
-		kp = C25519::generateSatisfying(_Identity_generate_cond(sha512digest,genmem));
-		_address.setTo(sha512digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
+		kp = C25519::generateSatisfying(_Identity_generate_cond(digest,genmem));
+		_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
 	} while (_address.isReserved());
 
 	_publicKey = kp.pub;
@@ -125,21 +125,21 @@ bool Identity::locallyValidate() const
 	if (_address.isReserved())
 		return false;
 
-	unsigned char sha512digest[64];
+	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),sha512digest,genmem);
+	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),digest,genmem);
 	delete [] genmem;
 
 	unsigned char addrb[5];
 	_address.copyTo(addrb,5);
 	
 	return (
-		(sha512digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
-		(sha512digest[59] == addrb[0])&&
-		(sha512digest[60] == addrb[1])&&
-		(sha512digest[61] == addrb[2])&&
-		(sha512digest[62] == addrb[3])&&
-		(sha512digest[63] == addrb[4]));
+		(digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
+		(digest[59] == addrb[0])&&
+		(digest[60] == addrb[1])&&
+		(digest[61] == addrb[2])&&
+		(digest[62] == addrb[3])&&
+		(digest[63] == addrb[4]));
 }
 
 std::string Identity::toString(bool includePrivate) const
@@ -176,7 +176,7 @@ bool Identity::fromString(const char *str)
 					return false;
 				break;
 			case 1:
-				if (f[0] != '0')
+				if ((f[0] != '0')||(f[1]))
 					return false;
 				break;
 			case 2:

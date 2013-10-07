@@ -78,11 +78,13 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 			if (dot != std::string::npos) {
 				uint64_t nwid = strtoull(d->first.substr(0,dot).c_str(),(char **)0,16);
 
-				// TODO: remove legacy code -- this changes the network
-				// ID for Earth if it's subscribed. Also deletes old
-				// config file. New one will be created.
+				// TODO: remove legacy code once out of beta
 				if (nwid == 0x6c92786fee000001ULL) {
 					nwid = 0xbc8f9a8ee3000001ULL;
+					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
+				}
+				if (nwid == 0xbc8f9a8ee3000001ULL) {
+					nwid = 0x8D93FBE886000001ULL;
 					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
 				}
 
