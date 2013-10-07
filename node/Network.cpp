@@ -169,30 +169,6 @@ void Network::addMembershipCertificate(const Address &peer,const CertificateOfMe
 		_membershipCertificates[peer] = cert;
 }
 
-void Network::pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
-{
-	Mutex::Lock _l(_lock);
-
-	if (_isOpen)
-		return;
-
-	uint64_t timestampMaxDelta = _myCertificate.timestampMaxDelta();
-	if (!timestampMaxDelta) {
-		LOG("unable to push my certificate to %s for network %.16llx: certificate invalid, missing required timestamp field",peer.toString().c_str(),_id);
-		return; // required field missing!
-	}
-
-	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
-	if ((force)||((now - lastPushed) > (timestampMaxDelta / 2))) {
-		lastPushed = now;
-
-		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		outp.append((uint64_t)_id);
-		_myCertificate.serialize(outp);
-		_r->sw->send(outp,true);
-	}
-}
-
 bool Network::isAllowed(const Address &peer) const
 {
 	// Exceptions can occur if we do not yet have *our* configuration.
@@ -279,6 +255,25 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 		TRACE("unexpected exception handling local packet: %s",exc.what());
 	} catch ( ... ) {
 		TRACE("unexpected exception handling local packet");
+	}
+}
+
+void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
+{
+	uint64_t timestampMaxDelta = _myCertificate.timestampMaxDelta();
+	if (!timestampMaxDelta) {
+		LOG("unable to push my certificate to %s for network %.16llx: certificate invalid, missing required timestamp field",peer.toString().c_str(),_id);
+		return; // required field missing!
+	}
+
+	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
+	if ((force)||((now - lastPushed) > (timestampMaxDelta / 2))) {
+		lastPushed = now;
+
+		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+		outp.append((uint64_t)_id);
+		_myCertificate.serialize(outp);
+		_r->sw->send(outp,true);
 	}
 }
 

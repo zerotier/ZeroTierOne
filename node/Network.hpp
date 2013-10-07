@@ -476,7 +476,36 @@ public:
 	 * @param force If true, push even if we've already done so within required time frame
 	 * @param now Current time
 	 */
-	void pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
+	inline void pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		if (!_isOpen)
+			_pushMembershipCertificate(peer,force,now);
+	}
+
+	/**
+	 * Push membership certificate to a packed zero-terminated array of addresses
+	 *
+	 * This pushes to all peers in peers[] (length must be a multiple of 5) until
+	 * len is reached or a null address is encountered.
+	 *
+	 * @param peers Packed array of 5-byte big-endian addresses
+	 * @param len Length of peers[] in total, MUST be a multiple of 5
+	 * @param force If true, push even if we've already done so within required time frame
+	 * @param now Current time
+	 */
+	inline void pushMembershipCertificate(const void *peers,unsigned int len,bool force,uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		if (!_isOpen) {
+			for(unsigned int i=0;i<len;i+=ZT_ADDRESS_LENGTH) {
+				Address a((char *)peers + i,ZT_ADDRESS_LENGTH);
+				if (a)
+					_pushMembershipCertificate(a,force,now);
+				else break;
+			}
+		}
+	}
 
 	/**
 	 * @param peer Peer address to check
@@ -558,6 +587,7 @@ public:
 
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
+	void _pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
 	void _restoreState();
 
 	const RuntimeEnvironment *_r;

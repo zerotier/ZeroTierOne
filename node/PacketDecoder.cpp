@@ -438,6 +438,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 		bool rateLimitsExceeded = false;
 		unsigned int maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
+		SharedPtr<Network> network(_r->nc->network(nwid));
 
 		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
 			// Ordinary frames will drop duplicates. Supernodes keep propagating
@@ -457,7 +458,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// true -- we don't want to see a ton of copies of the same frame on
 			// its tap device. Also double or triple counting bandwidth metrics
 			// for the same frame would not be fair.
-			SharedPtr<Network> network(_r->nc->network(nwid));
 			if (network) {
 				maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,network->multicastDepth());
 				if (!network->isAllowed(origin)) {
@@ -549,6 +549,11 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		while (newFifoPtr != newFifoEnd)
 			*(newFifoPtr++) = (unsigned char)0;
 
+		// If we're forwarding a packet within a private network that we are
+		// a member of, also propagate our cert forward if needed.
+		if (network)
+			network->pushMembershipCertificate(newFifo,sizeof(newFifo),false,Utils::now());
+
 		// First element in newFifo[] is next hop
 		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);
 		if ((!nextHop)&&(!_r->topology->amSupernode())) {
@@ -593,17 +598,18 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		if (ptr >= size())
-			return true;
-		uint64_t now = Utils::now();
 		Address src(source());
+		uint64_t now = Utils::now();
 
 		// Iterate through 18-byte network,MAC,ADI tuples
-		for(;;) {
-			_r->mc->likesGroup(at<uint64_t>(ptr),src,MulticastGroup(MAC(field(ptr + 8,6)),at<uint32_t>(ptr + 14)),now);
-			if ((ptr += 18) >= size())
-				break;
+		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
+			uint64_t nwid = at<uint64_t>(ptr);
+			SharedPtr<Network> network(_r->nc->network(nwid));
+			if ((_r->topology->amSupernode())||((network)&&(network->isAllowed(peer->address())))) {
+				_r->mc->likesGroup(nwid,src,MulticastGroup(MAC(field(ptr + 8,6)),at<uint32_t>(ptr + 14)),now);
+				if (network)
+					network->pushMembershipCertificate(peer->address(),false,now);
+			}
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());

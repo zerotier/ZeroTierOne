@@ -114,6 +114,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		unsigned char *const fifoEnd = fifo + sizeof(fifo);
 		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
 		const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
+		uint64_t now = Utils::now();
 
 		for(unsigned int prefix=0,np=((unsigned int)2 << (network->multicastPrefixBits() - 1));prefix<np;++prefix) {
 			memset(bloom,0,sizeof(bloom));
@@ -129,6 +130,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 					firstHop = supernode->address();
 				else continue;
 			}
+
+			// If network is not open, make sure all recipients have our membership
+			// certificate if we haven't sent it recently. As the multicast goes
+			// further down the line, peers beyond the first batch will ask us for
+			// our membership certificate if they need it.
+			network->pushMembershipCertificate(fifo,sizeof(fifo),false,now);
 
 			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
 			outp.append((uint16_t)0);
@@ -161,6 +168,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		// Simple unicast frame from us to another node
 		Address toZT(to.data + 1,ZT_ADDRESS_LENGTH);
 		if (network->isAllowed(toZT)) {
+			network->pushMembershipCertificate(toZT,false,Utils::now());
+
 			Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
 			outp.append(network->id());
 			outp.append((uint16_t)etherType);
@@ -388,10 +397,13 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 	TRACE("announcing %u multicast groups for %u networks to %u peers",totalMulticastGroups,(unsigned int)allMemberships.size(),(unsigned int)directPeers.size());
 #endif
 
+	uint64_t now = Utils::now();
 	for(std::vector< SharedPtr<Peer> >::iterator p(directPeers.begin());p!=directPeers.end();++p) {
 		Packet outp((*p)->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 		for(std::map< SharedPtr<Network>,std::set<MulticastGroup> >::const_iterator nwmgs(allMemberships.begin());nwmgs!=allMemberships.end();++nwmgs) {
+			nwmgs->first->pushMembershipCertificate((*p)->address(),false,now);
+
 			if ((_r->topology->isSupernode((*p)->address()))||(nwmgs->first->isAllowed((*p)->address()))) {
 				for(std::set<MulticastGroup>::iterator mg(nwmgs->second.begin());mg!=nwmgs->second.end();++mg) {
 					if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
@@ -416,8 +428,11 @@ void Switch::announceMulticastGroups(const SharedPtr<Peer> &peer)
 {
 	Packet outp(peer->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
 	std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+	uint64_t now = Utils::now();
 	for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
 		if (((*n)->isAllowed(peer->address()))||(_r->topology->isSupernode(peer->address()))) {
+			(*n)->pushMembershipCertificate(peer->address(),false,now);
+
 			std::set<MulticastGroup> mgs((*n)->multicastGroups());
 			for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
