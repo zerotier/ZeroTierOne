@@ -38,26 +38,51 @@
 
 // These can't be changed without a new identity type. They define the
 // parameters of the hashcash hashing/searching algorithm.
+
+// Hashcash halting criteria
 #define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 5
+
+// Amount of memory for memory-hardness
 #define ZT_IDENTITY_GEN_MEMORY 8388608
+
+// Step distance for mixing genmem[]
+#define ZT_IDENTITY_GEN_MEMORY_MIX_STEP 128
 
 namespace ZeroTier {
 
 // A memory-hard composition of SHA-512 and Salsa20 for hashcash hashing
-static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *sha512digest,unsigned char *genmem)
+static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
 {
-	// Step 1: hash key to generate Salsa20 key and nonce
-	SHA512::hash(sha512digest,publicKey,publicKeyBytes);
+	// Hash publicKey[] to obtain Salsa20 key
+	SHA512::hash(digest,publicKey,publicKeyBytes);
 
-	// Step 2: copy key into genmen[], zero rest, encrypt with Salsa20
-	Salsa20 s20(sha512digest,256,((char *)sha512digest) + 32);
-	memcpy(genmem,publicKey,publicKeyBytes);
-	memset(genmem + publicKeyBytes,0,ZT_IDENTITY_GEN_MEMORY - publicKeyBytes);
+	// Generate genmem[] bytes of Salsa20 key stream
+	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
+	Salsa20 s20(digest,256,(char *)digest + 32);
 	s20.encrypt(genmem,genmem,ZT_IDENTITY_GEN_MEMORY);
 
-	// Step 3: hash the encrypted public key and the rest of the
-	// genmem[] bytes of Salsa20 key stream to yield the final hash.
-	SHA512::hash(sha512digest,genmem,ZT_IDENTITY_GEN_MEMORY);
+	// Do something to genmem[] that iteratively makes every value
+	// possibly dependent on every other value with a nontrivial
+	// probability.
+	for(unsigned int i=0;i<ZT_IDENTITY_GEN_MEMORY;i+=ZT_IDENTITY_GEN_MEMORY_MIX_STEP) {
+		s20.encrypt((char *)genmem + i,(char *)genmem + i,8);
+		uint64_t x = *((uint64_t *)((char *)genmem + i));
+		if ((x / 7ULL) < 0x1249249249249249ULL) {
+			s20.encrypt(&x,&x,8); // also causes PRNG state to depend on genmem[]'s state
+			for(unsigned int k=0;k<8;++k,x>>=8)
+				++((unsigned char *)genmem)[(uintptr_t)x % ZT_IDENTITY_GEN_MEMORY];
+		} else {
+			for(unsigned int k=0;k<8;++k,x>>=8)
+				--((unsigned char *)genmem)[(uintptr_t)x % ZT_IDENTITY_GEN_MEMORY];
+		}
+	}
+
+	// Mix in publicKey[] again, ensuring all entropy is used
+	for(unsigned int i=0;i<publicKeyBytes;++i)
+		((unsigned char *)genmem)[i] ^= ((const unsigned char *)publicKey)[i];
+
+	// Compute final digest from final genmem[]
+	SHA512::hash(digest,genmem,ZT_IDENTITY_GEN_MEMORY);
 }
 
 // Hashcash generation halting condition -- halt when first byte is less than
@@ -65,20 +90,21 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 struct _Identity_generate_cond
 {
 	_Identity_generate_cond() throw() {}
-	_Identity_generate_cond(unsigned char *sb,unsigned char *gm) throw() : sha512digest(sb),genmem(gm) {}
+	_Identity_generate_cond(unsigned char *sb,char *gm) throw() : sha512digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
 		throw()
 	{
 		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),sha512digest,genmem);
 		return (sha512digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
-	unsigned char *sha512digest,*genmem;
+	unsigned char *sha512digest;
+	char *genmem;
 };
 
 void Identity::generate()
 {
 	unsigned char sha512digest[64];
-	unsigned char *genmem = new unsigned char[ZT_IDENTITY_GEN_MEMORY];
+	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 
 	C25519::Pair kp;
 	do {
@@ -100,7 +126,7 @@ bool Identity::locallyValidate() const
 		return false;
 
 	unsigned char sha512digest[64];
-	unsigned char *genmem = new unsigned char[ZT_IDENTITY_GEN_MEMORY];
+	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),sha512digest,genmem);
 	delete [] genmem;
 
