@@ -93,6 +93,7 @@ void Network::CertificateOfMembership::fromString(const char *s)
 {
 	_qualifiers.clear();
 	_signedBy.zero();
+	memset(_signature.data,0,_signature.size());
 
 	unsigned int colonAt = 0;
 	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;

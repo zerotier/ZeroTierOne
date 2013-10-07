@@ -40,13 +40,13 @@
 // parameters of the hashcash hashing/searching algorithm.
 
 // Hashcash halting criteria
-#define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 5
+#define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 7
 
 // Amount of memory for memory-hardness
 #define ZT_IDENTITY_GEN_MEMORY 8388608
 
 // Step distance for mixing genmem[]
-#define ZT_IDENTITY_GEN_MEMORY_MIX_STEP 128
+#define ZT_IDENTITY_GEN_MEMORY_MIX_STEP 1024
 
 namespace ZeroTier {
 

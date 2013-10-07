@@ -135,7 +135,11 @@ public:
 			COM_RESERVED_ID_NETWORK_ID = 1 // network ID, max delta always 0
 		};
 
-		CertificateOfMembership() {}
+		CertificateOfMembership()
+		{
+			memset(_signature.data,0,_signature.size());
+		}
+
 		CertificateOfMembership(const char *s) { fromString(s); }
 		CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
 
