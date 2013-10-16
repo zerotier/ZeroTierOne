@@ -180,6 +180,13 @@ public:
 	void requestWhois(const Address &addr);
 
 	/**
+	 * Cancel WHOIS for an address
+	 *
+	 * @param addr Address to cancel
+	 */
+	void cancelWhoisRequest(const Address &addr);
+
+	/**
 	 * Run any processes that are waiting for this peer
 	 *
 	 * Called when we learn of a peer's identity from HELLO, OK(WHOIS), etc.

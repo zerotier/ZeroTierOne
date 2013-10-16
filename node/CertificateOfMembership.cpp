@@ -163,15 +163,10 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) c
 
 		// Compare to determine if the absolute value of the difference
 		// between these two parameters is within our maxDelta.
-		uint64_t a = _qualifiers[myidx].value;
-		uint64_t b = other._qualifiers[myidx].value;
-		if (a >= b) {
-			if ((a - b) > _qualifiers[myidx].maxDelta)
-				return false;
-		} else {
-			if ((b - a) > _qualifiers[myidx].maxDelta)
-				return false;
-		}
+		const uint64_t a = _qualifiers[myidx].value;
+		const uint64_t b = other._qualifiers[myidx].value;
+		if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[myidx].maxDelta)
+			return false;
 
 		++myidx;
 	}

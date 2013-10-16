@@ -161,19 +161,23 @@ int main(int argc,char **argv)
 		try {
 			const std::string &reqType = request.get("type");
 			if (reqType == "netconf-request") { // NETWORK_CONFIG_REQUEST packet
+				// Deserialize querying peer identity and network ID
 				Identity peerIdentity(request.get("peerId"));
 				uint64_t nwid = strtoull(request.get("nwid").c_str(),(char **)0,16);
+				std::string fromAddr(request.get("from"));
+
+				// Meta-information from node, such as (future) geo-location stuff
 				Dictionary meta;
 				if (request.contains("meta"))
 					meta.fromString(request.get("meta"));
 
-				// Do quick signature check / sanity check
+				// Check validity of node's identity, ignore request on failure
 				if (!peerIdentity.locallyValidate()) {
 					fprintf(stderr,"identity failed validity check: %s\n",peerIdentity.toString(false).c_str());
 					continue;
 				}
 
-				// Save identity if unknown
+				// Save node's identity if unknown
 				{
 					Query q = dbCon->query();
 					q << "SELECT identity FROM Node WHERE id = " << peerIdentity.address().toInt();
@@ -196,17 +200,21 @@ int main(int argc,char **argv)
 					}
 				}
 
-				// Update lastSeen
+				// Update lastSeen for Node, which is always updated on a netconf request
 				{
 					Query q = dbCon->query();
 					q << "UPDATE Node SET lastSeen = " << Utils::now() << " WHERE id = " << peerIdentity.address().toInt();
 					q.exec();
 				}
 
+				// Look up core network information
 				bool isOpen = false;
-				unsigned int mpb = 0;
-				unsigned int md = 0;
-				std::string name,desc;
+				unsigned int multicastPrefixBits = 0;
+				unsigned int multicastDepth = 0;
+				bool emulateArp = false;
+				bool emulateNdp = false;
+				std::string name;
+				std::string desc;
 				{
 					Query q = dbCon->query();
 					q << "SELECT name,`desc`,isOpen,multicastPrefixBits,multicastDepth FROM Network WHERE id = " << nwid;
@@ -215,8 +223,10 @@ int main(int argc,char **argv)
 						name = rs[0]["name"].c_str();
 						desc = rs[0]["desc"].c_str();
 						isOpen = ((int)rs[0]["isOpen"] > 0);
-						mpb = (unsigned int)rs[0]["multicastPrefixBits"];
-						md = (unsigned int)rs[0]["multicastDepth"];
+						emulateArp = ((int)rs[0]["emulateArp"] > 0);
+						emulateNdp = ((int)rs[0]["emulateNdp"] > 0);
+						multicastPrefixBits = (unsigned int)rs[0]["multicastPrefixBits"];
+						multicastDepth = (unsigned int)rs[0]["multicastDepth"];
 					} else {
 						Dictionary response;
 						response["peer"] = peerIdentity.address().toString();
@@ -231,10 +241,34 @@ int main(int argc,char **argv)
 						write(STDOUT_FILENO,&respml,4);
 						write(STDOUT_FILENO,respm.data(),respm.length());
 						stdoutWriteLock.unlock();
-						continue;
+						continue; // ABORT, wait for next request
 					}
 				}
 
+				// Check membership if this is a closed network
+				if (!isOpen) {
+					Query q = dbCon->query();
+					q << "SELECT Node_id FROM NetworkNodes WHERE Network_id = " << nwid << " AND Node_id = " << peerIdentity.address().toInt();
+					StoreQueryResult rs = q.store();
+					if (!rs.num_rows()) {
+						Dictionary response;
+						response["peer"] = peerIdentity.address().toString();
+						response["nwid"] = request.get("nwid");
+						response["type"] = "netconf-response";
+						response["requestId"] = request.get("requestId");
+						response["error"] = "ACCESS_DENIED";
+						std::string respm = response.toString();
+						uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
+
+						stdoutWriteLock.lock();
+						write(STDOUT_FILENO,&respml,4);
+						write(STDOUT_FILENO,respm.data(),respm.length());
+						stdoutWriteLock.unlock();
+						continue; // ABORT, wait for next request
+					}
+				}
+
+				// Get list of etherTypes in comma-delimited hex format
 				std::string etherTypeWhitelist;
 				{
 					Query q = dbCon->query();
@@ -247,6 +281,7 @@ int main(int argc,char **argv)
 					}
 				}
 
+				// Get multicast group rates in dictionary format
 				Dictionary multicastRates;
 				{
 					Query q = dbCon->query();
@@ -267,40 +302,16 @@ int main(int argc,char **argv)
 						if (mac) {
 							sprintf(buf,"%.12llx/%lx",(mac & 0xffffffffffffULL),(unsigned long)rs[i]["multicastGroupAdi"]);
 							multicastRates[buf] = buf2;
-						} else multicastRates["*"] = buf2;
+						} else { // zero MAC indicates default for unmatching multicast groups
+							multicastRates["*"] = buf2;
+						}
 					}
 				}
 
-				Dictionary netconf;
-
-				sprintf(buf,"%.16llx",(unsigned long long)nwid);
-				netconf["nwid"] = buf;
-				netconf["o"] = (isOpen ? "1" : "0");
-				netconf["name"] = name;
-				netconf["desc"] = desc;
-				netconf["et"] = etherTypeWhitelist;
-				netconf["mr"] = multicastRates.toString();
-				sprintf(buf,"%llx",(unsigned long long)Utils::now());
-				netconf["ts"] = buf;
-				netconf["peer"] = peerIdentity.address().toString();
-				if (mpb) {
-					sprintf(buf,"%x",mpb);
-					netconf["mpb"] = buf;
-				}
-				if (md) {
-					sprintf(buf,"%x",md);
-					netconf["md"] = buf;
-				}
-
-				if (!isOpen) {
-					// TODO: handle closed networks, look up private membership,
-					// generate signed cert.
-				}
-
-				std::string ipv4Static,ipv6Static;
-
+				// Check for (or assign?) static IP address assignments
+				std::string ipv4Static;
+				std::string ipv6Static;
 				{
-					// Check for IPv4 static assignments
 					Query q = dbCon->query();
 					q << "SELECT INET_NTOA(ip) AS ip,netmaskBits FROM IPv4Static WHERE Node_id = " << peerIdentity.address().toInt() << " AND Network_id = " << nwid;
 					StoreQueryResult rs = q.store();
@@ -363,16 +374,42 @@ int main(int argc,char **argv)
 					}
 				}
 
-				// Add static assignments to netconf, if any
-				if (ipv4Static.length()) {
-					netconf["ipv4Static"] = ipv4Static; // TODO: remove, old name
-					netconf["v4s"] = ipv4Static;
-				}
-				if (ipv6Static.length()) {
-					netconf["v6s"] = ipv6Static;
+				// Update activity table for this network to indicate peer's participation
+				{
+					Query q = dbCon->query();
+					q << "INSERT INTO NetworkActivity (Network_id,Node_id,lastActivityTime,lastActivityFrom) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << Utils::now() << "," << fromAddr << ") ON DUPLICATE KEY UPDATE lastActivityTime = VALUES(lastActivityTime),lastActivityFrom = VALUES(lastActivityFrom)";
+					q.exec();
 				}
 
-				{ // Create and send service bus response with payload attached as 'netconf'
+				// Assemble response dictionary to send to peer
+				Dictionary netconf;
+				sprintf(buf,"%.16llx",(unsigned long long)nwid);
+				netconf["nwid"] = buf;
+				netconf["peer"] = peerIdentity.address().toString();
+				netconf["name"] = name;
+				netconf["desc"] = desc;
+				netconf["o"] = (isOpen ? "1" : "0");
+				netconf["et"] = etherTypeWhitelist;
+				netconf["mr"] = multicastRates.toString();
+				sprintf(buf,"%llx",(unsigned long long)Utils::now());
+				netconf["ts"] = buf;
+				netconf["eARP"] = (emulateArp ? "1" : "0");
+				netconf["eNDP"] = (emulateNdp ? "1" : "0");
+				if (multicastPrefixBits) {
+					sprintf(buf,"%x",multicastPrefixBits);
+					netconf["mpb"] = buf;
+				}
+				if (multicastDepth) {
+					sprintf(buf,"%x",multicastDepth);
+					netconf["md"] = buf;
+				}
+				if (ipv4Static.length())
+					netconf["v4s"] = ipv4Static;
+				if (ipv6Static.length())
+					netconf["v6s"] = ipv6Static;
+
+				// Send netconf as service bus response
+				{
 					Dictionary response;
 					response["peer"] = peerIdentity.address().toString();
 					response["nwid"] = request.get("nwid");
@@ -386,6 +423,8 @@ int main(int argc,char **argv)
 					write(STDOUT_FILENO,&respml,4);
 					write(STDOUT_FILENO,respm.data(),respm.length());
 					stdoutWriteLock.unlock();
+
+					// LOOP, wait for next request
 				}
 			}
 		} catch (std::exception &exc) {

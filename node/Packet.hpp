@@ -56,6 +56,9 @@
  *   * New crypto completely changes key agreement cipher
  * 4 - 0.6.0 ...
  *   * New identity format based on hashcash design
+ *
+ * This isn't going to change again for a long time unless your
+ * author wakes up again at 4am with another great idea. :P
  */
 #define ZT_PROTO_VERSION 4
 
@@ -195,6 +198,8 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN 2
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN)
+
+#define ZT_PROTO_VERB_NETWORK_MEMBERSHIP_CERTIFICATE_IDX_CERTIFICATE (ZT_PACKET_IDX_PAYLOAD)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
@@ -551,12 +556,12 @@ public:
 		 */
 		VERB_MULTICAST_LIKE = 9,
 
-		/* Network member certificate for sending peer:
-		 *   <[8] 64-bit network ID>
+		/* Network member certificate:
 		 *   <[...] serialized certificate of membership>
 		 *
-		 * OK is generated on acceptance. ERROR is returned on failure. In both
-		 * cases the payload is the network ID.
+		 * Certificate contains network ID, peer it was issued for, etc.
+		 *
+		 * OK/ERROR are not generated.
 		 */
 		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
 
@@ -623,7 +628,10 @@ public:
 		ERROR_UNSUPPORTED_OPERATION = 5,
 
 		/* Message to private network rejected -- no unexpired certificate on file */
-		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 6
+		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 6,
+
+		/* Tried to join network, but you're not a member */
+		ERROR_NETWORK_ACCESS_DENIED = 7
 	};
 
 	/**

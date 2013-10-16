@@ -131,6 +131,7 @@ private:
 	enum {
 		DECODE_WAITING_FOR_SENDER_LOOKUP, // on initial receipt, we need peer's identity
 		DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP,
+		DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP
 	} _step;
 
 	AtomicCounter __refCount;

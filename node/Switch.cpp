@@ -466,6 +466,12 @@ void Switch::requestWhois(const Address &addr)
 		_sendWhoisRequest(addr,(const Address *)0,0);
 }
 
+void Switch::cancelWhoisRequest(const Address &addr)
+{
+	Mutex::Lock _l(_outstandingWhoisRequests_m);
+	_outstandingWhoisRequests.erase(addr);
+}
+
 void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 {
 	{

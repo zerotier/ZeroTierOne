@@ -251,6 +251,28 @@ public:
 		}
 
 		/**
+		 * @return True if this network emulates IPv4 ARP for assigned addresses
+		 */
+		inline bool emulateArp() const
+		{
+			const_iterator e(find("eARP"));
+			if (e == end())
+				return false;
+			else return (e->second == "1");
+		}
+
+		/**
+		 * @return True if this network emulates IPv6 NDP for assigned addresses
+		 */
+		inline bool emulateNdp() const
+		{
+			const_iterator e(find("eNDP"));
+			if (e == end())
+				return false;
+			else return (e->second == "1");
+		}
+
+		/**
 		 * @return Multicast rates for this network
 		 */
 		inline MulticastRates multicastRates() const
@@ -343,7 +365,8 @@ public:
 	{
 		NETWORK_WAITING_FOR_FIRST_AUTOCONF,
 		NETWORK_OK,
-		NETWORK_ACCESS_DENIED
+		NETWORK_ACCESS_DENIED,
+		NETWORK_NOT_FOUND
 	};
 
 	/**
@@ -425,6 +448,26 @@ public:
 	}
 
 	/**
+	 * @return True if this network emulates IPv4 ARP for assigned addresses
+	 */
+	inline bool emulateArp() const
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		return _emulateArp;
+	}
+
+	/**
+	 * @return True if this network emulates IPv6 NDP for assigned addresses
+	 */
+	inline bool emulateNdp() const
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		return _emulateNdp;
+	}
+
+	/**
 	 * Update multicast groups for this network's tap
 	 *
 	 * @return True if internal multicast group set has changed
@@ -451,8 +494,9 @@ public:
 	 * internally when an old config is reloaded from disk.
 	 *
 	 * @param conf Configuration in key/value dictionary form
+	 * @param saveToDisk IF true (default), write config to disk
 	 */
-	void setConfiguration(const Config &conf);
+	void setConfiguration(const Config &conf,bool saveToDisk = true);
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
@@ -460,14 +504,13 @@ public:
 	void requestConfiguration();
 
 	/**
-	 * Add or update a peer's membership certificate
+	 * Add or update a membership certificate
 	 *
 	 * The certificate must already have been validated via signature checking.
 	 *
-	 * @param peer Peer that owns certificate
-	 * @param cert Certificate itself
+	 * @param cert Certificate of membership
 	 */
-	void addMembershipCertificate(const Address &peer,const CertificateOfMembership &cert);
+	void addMembershipCertificate(const CertificateOfMembership &cert);
 
 	/**
 	 * Push our membership certificate to a peer
@@ -523,10 +566,35 @@ public:
 	 */
 	inline uint64_t lastConfigUpdate() const throw() { return _lastConfigUpdate; }
 
+	/** 
+	 * Force this network's status to a particular state based on config reply
+	 */
+	inline void forceStatusTo(const Status s)
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		_status = s;
+	}
+
 	/**
 	 * @return Status of this network
 	 */
-	Status status() const;
+	inline Status status() const
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		return _status;
+	}
+
+	/**
+	 * @return True if this network is in "OK" status and can accept traffic from us
+	 */
+	inline bool isUp() const
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		return ((_status == NETWORK_OK)&&(_ready));
+	}
 
 	/**
 	 * Determine whether frames of a given ethernet type are allowed on this network
@@ -567,9 +635,10 @@ public:
 	}
 
 	/**
+	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
 	 * @return True if this network allows bridging
 	 */
-	inline bool permitsBridging() const
+	inline bool permitsBridging(const Address &fromPeer) const
 		throw()
 	{
 		return false; // TODO: bridging not implemented yet
@@ -589,6 +658,7 @@ private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 	void _pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
 	void _restoreState();
+	void _dumpMulticastCerts();
 
 	const RuntimeEnvironment *_r;
 
@@ -612,8 +682,13 @@ private:
 	MulticastRates _mcRates;
 	std::set<InetAddress> _staticAddresses;
 	bool _isOpen;
+	bool _emulateArp;
+	bool _emulateNdp;
 	unsigned int _multicastPrefixBits;
 	unsigned int _multicastDepth;
+
+	// Network status
+	Status _status;
 
 	// Ethertype whitelist bit field, set from config, for really fast lookup
 	unsigned char _etWhitelist[65536 / 8];

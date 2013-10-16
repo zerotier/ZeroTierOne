@@ -50,10 +50,8 @@ namespace ZeroTier {
  * These contain an id, a value, and a maximum delta.
  *
  * The ID is arbitrary and should be assigned using a scheme that makes
- * every ID globally unique. ID 0 is reserved for the always-present
- * validity timestamp and range, and ID 1 is reserved for the always-present
- * network ID. IDs less than 65536 are reserved for future global
- * assignment.
+ * every ID globally unique. IDs beneath 65536 are reserved for global
+ * assignment by ZeroTier Networks.
  *
  * The value's meaning is ID-specific and isn't important here. What's
  * important is the value and the third member of the tuple: the maximum
@@ -83,20 +81,106 @@ public:
 	};
 
 	/**
-	 * Reserved COM IDs
+	 * Reserved qualifier IDs
 	 *
 	 * IDs below 65536 should be considered reserved for future global
 	 * assignment here.
+	 *
+	 * Addition of new required fields requires that code in hasRequiredFields
+	 * be updated as well.
 	 */
 	enum ReservedId
 	{
-		COM_RESERVED_ID_TIMESTAMP = 0, // timestamp, max delta defines cert life
-		COM_RESERVED_ID_NETWORK_ID = 1 // network ID, max delta always 0
+		/**
+		 * Timestamp of certificate issue in milliseconds since epoch
+		 *
+		 * maxDelta here defines certificate lifetime, and certs are lazily
+		 * pushed to other peers on a net with a frequency of 1/2 this time.
+		 */
+		COM_RESERVED_ID_TIMESTAMP = 0,
+
+		/**
+		 * Network ID for which certificate was issued
+		 *
+		 * maxDelta here is zero, since this must match.
+		 */
+		COM_RESERVED_ID_NETWORK_ID = 1,
+
+		/**
+		 * ZeroTier address to whom certificate was issued
+		 *
+		 * maxDelta will be 0xffffffffffffffff here since it's permitted to differ
+		 * from peers obviously.
+		 */
+		COM_RESERVED_ID_ISSUED_TO = 2
 	};
 
+	/**
+	 * Create an empty certificate
+	 */
 	CertificateOfMembership() { memset(_signature.data,0,_signature.size()); }
+
+	/**
+	 * Create from required fields common to all networks
+	 *
+	 * @param timestamp Timestamp of cert
+	 * @param timestampMaxDelta Maximum variation between timestamps on this net
+	 * @param nwid Network ID
+	 * @param issuedTo Certificate recipient
+	 */
+	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
+	{
+		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_TIMESTAMP,timestamp,timestampMaxDelta));
+		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_NETWORK_ID,nwid,0));
+		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_ISSUED_TO,issuedTo.toInt(),0xffffffffffffffffULL));
+		memset(_signature.data,0,_signature.size());
+	}
+
+	/**
+	 * Create from string-serialized data
+	 *
+	 * @param s String-serialized COM
+	 */
 	CertificateOfMembership(const char *s) { fromString(s); }
+
+	/**
+	 * Create from string-serialized data
+	 *
+	 * @param s String-serialized COM
+	 */
 	CertificateOfMembership(const std::string &s) { fromString(s.c_str()); }
+
+	/**
+	 * Create from binary-serialized COM in buffer
+	 *
+	 * @param b Buffer to deserialize from
+	 * @param startAt Position to start in buffer
+	 */
+	template<unsigned int C>
+	CertificateOfMembership(const Buffer<C> &b,unsigned int startAt = 0)
+		throw(std::out_of_range,std::invalid_argument)
+	{
+		deserialize(b,startAt);
+	}
+
+	/**
+	 * Check for presence of all required fields common to all networks
+	 *
+	 * @return True if all required fields are present
+	 */
+	inline bool hasRequiredFields() const
+		throw()
+	{
+		if (_qualifiers.size() < 3)
+			return false;
+		if (_qualifiers[0].id != COM_RESERVED_ID_TIMESTAMP)
+			return false;
+		if (_qualifiers[1].id != COM_RESERVED_ID_NETWORK_ID)
+			return false;
+		if (_qualifiers[2].id != COM_RESERVED_ID_ISSUED_TO)
+			return false;
+		return true;
+	}
 
 	/**
 	 * @return Maximum delta for mandatory timestamp field or 0 if field missing
@@ -107,6 +191,45 @@ public:
 		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
 			if (q->id == COM_RESERVED_ID_TIMESTAMP)
 				return q->maxDelta;
+		}
+		return 0ULL;
+	}
+
+	/**
+	 * @return Timestamp for this cert in ms since epoch (according to netconf's clock)
+	 */
+	inline Address timestamp() const
+		throw()
+	{
+		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
+			if (q->id == COM_RESERVED_ID_TIMESTAMP)
+				return Address(q->value);
+		}
+		return Address();
+	}
+
+	/**
+	 * @return Address to which this cert was issued
+	 */
+	inline Address issuedTo() const
+		throw()
+	{
+		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
+			if (q->id == COM_RESERVED_ID_ISSUED_TO)
+				return Address(q->value);
+		}
+		return Address();
+	}
+
+	/**
+	 * @return Network ID for which this cert was issued
+	 */
+	inline uint64_t networkId() const
+		throw()
+	{
+		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
+			if (q->id == COM_RESERVED_ID_NETWORK_ID)
+				return q->value;
 		}
 		return 0ULL;
 	}
@@ -186,7 +309,7 @@ public:
 		throw(std::out_of_range)
 	{
 		b.append((unsigned char)COM_UINT64_ED25519);
-		b.append((uint32_t)_qualifiers.size());
+		b.append((uint16_t)_qualifiers.size());
 		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
 			b.append(q->id);
 			b.append(q->value);
@@ -209,10 +332,15 @@ public:
 		if (b[p++] != COM_UINT64_ED25519)
 			throw std::invalid_argument("unknown certificate of membership type");
 
-		unsigned int numq = b.template at<uint32_t>(p); p += sizeof(uint32_t);
+		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		uint64_t lastId = 0;
 		for(unsigned int i=0;i<numq;++i) {
+			uint64_t tmp = b.template at<uint64_t>(p);
+			if (tmp < lastId)
+				throw std::invalid_argument("certificate qualifiers are not sorted");
+			else lastId = tmp;
 			_qualifiers.push_back(_Qualifier(
-					b.template at<uint64_t>(p),
+					tmp,
 					b.template at<uint64_t>(p + 8),
 					b.template at<uint64_t>(p + 16)
 				));
@@ -247,8 +375,8 @@ private:
 		inline bool operator<(const _Qualifier &q) const throw() { return (id < q.id); } // for sort
 	};
 
-	std::vector<_Qualifier> _qualifiers; // sorted by id and unique
 	Address _signedBy;
+	std::vector<_Qualifier> _qualifiers; // sorted by id and unique
 	C25519::Signature _signature;
 };
 

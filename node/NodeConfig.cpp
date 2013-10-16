@@ -125,7 +125,7 @@ void NodeConfig::clean()
 		n->second->clean();
 }
 
-// Macro used in execute()
+// Macro used in execute() to push lines onto the return packet
 #undef _P
 #define _P(f,...) { r.push_back(std::string()); Utils::stdsprintf(r.back(),(f),##__VA_ARGS__); }
 
@@ -161,18 +161,30 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 	std::vector<std::string> r;
 	std::vector<std::string> cmd(Utils::split(command,"\r\n \t","\\","'"));
 
-	//
-	// Not coincidentally, response type codes correspond with HTTP
-	// status codes.
-	//
+	/* Not coincidentally, response type codes correspond with HTTP
+	 * status codes. Technically a little arbitrary, but would maybe
+	 * make things easier if we wanted to slap some kind of web API
+	 * in front of this thing. */
 
 	if ((cmd.empty())||(cmd[0] == "help")) {
 		_P("200 help help");
+		_P("200 help info");
 		_P("200 help listpeers");
 		_P("200 help listnetworks");
 		_P("200 help join <network ID>");
 		_P("200 help leave <network ID>");
 		_P("200 help terminate [<reason>]");
+	} else if (cmd[0] == "info") {
+		bool isOnline = false;
+		uint64_t now = Utils::now();
+		std::vector< SharedPtr<Peer> > snp(_r->topology->supernodePeers());
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn(snp.begin());sn!=snp.end();++sn) {
+			if ((*sn)->hasActiveDirectPath(now)) {
+				isOnline = true;
+				break;
+			}
+		}
+		_P("200 info %s %s %s",_r->identity.address().toString().c_str(),(isOnline ? "ONLINE" : "OFFLINE"),Node::versionString());
 	} else if (cmd[0] == "listpeers") {
 		_P("200 listpeers <ztaddr> <ipv4> <ipv6> <latency> <version>");
 		_r->topology->eachPeer(_DumpPeerStatistics(r));
@@ -187,8 +199,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 					tmp.push_back(',');
 				tmp.append(i->toString());
 			}
-			// TODO: display network status, such as "permission denied to closed
-			// network" or "waiting".
+
 			_P("200 listnetworks %.16llx %s %s %s %s",
 				(unsigned long long)nw->first,
 				Network::statusString(nw->second->status()),
@@ -202,7 +213,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 			if (nwid > 0) {
 				Mutex::Lock _l(_networks_m);
 				if (_networks.count(nwid)) {
-					_P("400 already a member of %.16llx",(unsigned long long)nwid);
+					_P("409 already a member of %.16llx",(unsigned long long)nwid);
 				} else {
 					try {
 						SharedPtr<Network> nw(Network::newInstance(_r,nwid));

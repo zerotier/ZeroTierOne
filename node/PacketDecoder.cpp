@@ -64,6 +64,10 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			// packet and are waiting for the lookup of the original sender
 			// for a multicast frame. So check to see if we've got it.
 			return _doMULTICAST_FRAME(_r,peer);
+		} else if (_step == DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP) {
+			// In this state we have already authenticated and decoded the
+			// packet and we're waiting for the identity of the cert's signer.
+			return _doNETWORK_MEMBERSHIP_CERTIFICATE(_r,peer);
 		}
 
 		if (!dearmor(peer->key())) {
@@ -134,15 +138,22 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 		switch(errorCode) {
 			case Packet::ERROR_OBJ_NOT_FOUND:
 				if (inReVerb == Packet::VERB_WHOIS) {
-					// TODO: abort WHOIS if sender is a supernode
+					if (_r->topology->isSupernode(source()))
+						_r->sw->cancelWhoisRequest(Address(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
 				}
 				break;
 			case Packet::ERROR_IDENTITY_COLLISION:
 				// TODO: if it comes from a supernode, regenerate a new identity
+				// if (_r->topology->isSupernode(source())) {}
 				break;
-			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE:
-				// TODO: send member certificate
-				break;
+			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
+				// TODO: this allows anyone to request a membership cert, which is
+				// harmless until these contain possibly privacy-sensitive info.
+				// Then we'll need to be more careful.
+				SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				if (network)
+					network->pushMembershipCertificate(source(),true,Utils::now());
+			}	break;
 			default:
 				break;
 		}
@@ -177,6 +188,9 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 		SharedPtr<Peer> peer(_r->topology->getPeer(id.address()));
 		if (peer) {
 			if (peer->identity() != id) {
+				// Sorry, someone beat you to that address. What are the odds?
+				// Well actually they're around two in 2^40. You should play
+				// the lottery.
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -189,8 +203,11 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 				}
 				return true;
-			}
-		} else peer = _r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,id)));
+			} // else continue and send OK since we already know thee...
+		} else {
+			// Learn a new peer
+			peer = _r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,id)));
+		}
 
 		peer->onReceive(_r,_localPort,_remoteAddress,hops(),Packet::VERB_HELLO,Utils::now());
 		peer->setRemoteVersion(vMajor,vMinor,vRevision);
@@ -217,6 +234,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 {
 	try {
 		Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
+		//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
 		switch(inReVerb) {
 			case Packet::VERB_HELLO: {
 				// OK from HELLO permits computation of latency.
@@ -252,9 +270,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 					}
 				}
 			}	break;
-			default:
-				//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
-				break;
+			default: break;
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped OK from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
@@ -412,9 +428,16 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
 		const unsigned char *const signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
 
+		// Check multicast signature to verify original sender
 		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + frameLen;
 		if (!originPeer->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen,signature,signatureLen)) {
 			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+			return true;
+		}
+
+		// Security check to prohibit multicasts that are really Ethernet unicasts
+		if (!dest.mac().isMulticast()) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): %s is not a multicast/broadcast address",source().toString().c_str(),_remoteAddress.toString().c_str(),dest.mac().toString().c_str());
 			return true;
 		}
 
@@ -430,18 +453,11 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
-		// Security check to prohibit multicasts that are really Ethernet unicasts
-		if (!dest.mac().isMulticast()) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): %s is not a multicast/broadcast address",source().toString().c_str(),_remoteAddress.toString().c_str(),dest.mac().toString().c_str());
-			return true;
-		}
-
-		bool rateLimitsExceeded = false;
 		unsigned int maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
 		SharedPtr<Network> network(_r->nc->network(nwid));
 
 		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
-			// Ordinary frames will drop duplicates. Supernodes keep propagating
+			// Ordinary nodes will drop duplicates. Supernodes keep propagating
 			// them since they're used as hubs to link disparate clusters of
 			// members of the same multicast group.
 			if (!_r->topology->amSupernode()) {
@@ -453,16 +469,19 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				return true;
 			}
 		} else {
-			// Supernodes however won't do this more than once. If the supernode
-			// does happen to be a member of the network -- which is usually not
-			// true -- we don't want to see a ton of copies of the same frame on
-			// its tap device. Also double or triple counting bandwidth metrics
-			// for the same frame would not be fair.
+			// If we are actually a member of this network (will just about always
+			// be the case unless we're a supernode), check to see if we should
+			// inject the packet. This also gives us an opportunity to check things
+			// like multicast bandwidth constraints.
 			if (network) {
 				maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,network->multicastDepth());
+				if (!maxDepth)
+					maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
+
 				if (!network->isAllowed(origin)) {
 					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
 
+					// Tell them we need a certificate
 					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_FRAME);
 					outp.append(packetId());
@@ -473,30 +492,33 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 					// We do not terminate here, since if the member just has an out of
 					// date cert or hasn't sent us a cert yet we still want to propagate
-					// the message so multicast works.
-				} else if ((!network->permitsBridging())&&(!origin.wouldHaveMac(sourceMac))) {
-					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
+					// the message so multicast keeps working downstream.
+				} else if ((!network->permitsBridging(origin))&&(!origin.wouldHaveMac(sourceMac))) {
+					// This *does* terminate propagation, since it's technically a
+					// security violation of the network's bridging policy. But if we
+					// were to keep propagating it wouldn't hurt anything, just waste
+					// bandwidth as everyone else would reject it too.
+					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
+					return true;
 				} else if (!network->permitsEtherType(etherType)) {
-					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
+					// Ditto for this-- halt propagation if this is for an ethertype
+					// this network doesn't allow. Same principle as bridging test.
+					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
+					return true;
 				} else if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
-					rateLimitsExceeded = true;
+					// Rate limits can only be checked by members of this network, but
+					// there should be enough of them that over-limit multicasts get
+					// their propagation aborted.
+#ifdef ZT_TRACE_MULTICAST
+					Utils::snprintf(mct,sizeof(mct),"%c %s dropped %.16llx: rate limits exceeded",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
+					TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+					return true;
 				} else {
 					network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
 				}
 			}
-		}
-
-		// We can only really know if rate limit was exceeded if we're a member of
-		// this network. This will nearly always be true for anyone getting a
-		// multicast except supernodes, so the net effect will be to truncate
-		// multicast propagation if the rate limit is exceeded.
-		if (rateLimitsExceeded) {
-#ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),"%c %s dropped %.16llx: rate limits exceeded",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
-			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
-#endif
-			TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
-			return true;
 		}
 
 		if (depth == 0xffff) {
@@ -550,7 +572,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			*(newFifoPtr++) = (unsigned char)0;
 
 		// If we're forwarding a packet within a private network that we are
-		// a member of, also propagate our cert forward if needed.
+		// a member of, also propagate our cert if needed. This propagates
+		// it to everyone including people who will receive this multicast.
 		if (network)
 			network->pushMembershipCertificate(newFifo,sizeof(newFifo),false,Utils::now());
 
@@ -616,13 +639,52 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
-
 	return true;
 }
 
 bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
-	// TODO: not implemented yet, will be needed for private networks.
+	try {
+		CertificateOfMembership com(*this,ZT_PROTO_VERB_NETWORK_MEMBERSHIP_CERTIFICATE_IDX_CERTIFICATE);
+		if (!com.hasRequiredFields()) {
+			TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): invalid cert: at least one required field is missing",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		} else if (com.signedBy()) {
+			SharedPtr<Peer> signer(_r->topology->getPeer(com.signedBy()));
+			if (signer) {
+				if (com.verify(signer->identity())) {
+					uint64_t nwid = com.networkId();
+					SharedPtr<Network> network(_r->nc->network(nwid));
+					if (network) {
+						if (network->controller() == signer) {
+							network->addMembershipCertificate(com);
+							return true;
+						} else {
+							TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): signer %s is not the controller for network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),signer->address().toString().c_str(),(unsigned long long)nwid);
+							return true;
+						}
+					} else {
+						TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): not a member of network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
+						return true;
+					}
+				} else {
+					TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): failed signature verification for signer %s",source().toString().c_str(),_remoteAddress.toString().c_str(),signer->address().toString().c_str());
+					return true;
+				}
+			} else {
+				_r->sw->requestWhois(com.signedBy());
+				_step = DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP;
+				return false;
+			}
+		} else {
+			TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): invalid cert: no signature",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+	} catch (std::exception &ex) {
+		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+	} catch ( ... ) {
+		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
 	return true;
 }
 
@@ -644,6 +706,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 			request["nwid"] = tmp;
 			Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)packetId());
 			request["requestId"] = tmp;
+			request["from"] = _remoteAddress.toString();
 			//TRACE("to netconf:\n%s",request.toString().c_str());
 			_r->netconfService->send(request);
 		} else {
