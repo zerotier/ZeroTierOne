@@ -245,11 +245,13 @@ int main(int argc,char **argv)
 				unsigned int multicastDepth = 0;
 				bool emulateArp = false;
 				bool emulateNdp = false;
+				unsigned int arpCacheTtl = 0;
+				unsigned int ndpCacheTtl = 0;
 				std::string name;
 				std::string desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT name,`desc`,isOpen,multicastPrefixBits,multicastDepth,emulateArp,emulateNdp FROM Network WHERE id = " << nwid;
+					q << "SELECT name,`desc`,isOpen,multicastPrefixBits,multicastDepth,emulateArp,emulateNdp,arpCacheTtl,ndpCacheTtl FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						name = rs[0]["name"].c_str();
@@ -257,6 +259,8 @@ int main(int argc,char **argv)
 						isOpen = ((int)rs[0]["isOpen"] > 0);
 						emulateArp = ((int)rs[0]["emulateArp"] > 0);
 						emulateNdp = ((int)rs[0]["emulateNdp"] > 0);
+						arpCacheTtl = (unsigned int)rs[0]["arpCacheTtl"];
+						ndpCacheTtl = (unsigned int)rs[0]["ndpCacheTtl"];
 						multicastPrefixBits = (unsigned int)rs[0]["multicastPrefixBits"];
 						multicastDepth = (unsigned int)rs[0]["multicastDepth"];
 					} else {
@@ -427,6 +431,10 @@ int main(int argc,char **argv)
 				netconf["ts"] = buf;
 				netconf["eARP"] = (emulateArp ? "1" : "0");
 				netconf["eNDP"] = (emulateNdp ? "1" : "0");
+				sprintf(buf,"%x",arpCacheTtl);
+				netconf["cARP"] = buf;
+				sprintf(buf,"%x",ndpCacheTtl);
+				netconf["cNDP"] = buf;
 				if (multicastPrefixBits) {
 					sprintf(buf,"%x",multicastPrefixBits);
 					netconf["mpb"] = buf;

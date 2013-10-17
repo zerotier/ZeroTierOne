@@ -273,6 +273,28 @@ public:
 		}
 
 		/**
+		 * @return ARP cache TTL in seconds or 0 for no ARP caching
+		 */
+		inline unsigned int arpCacheTtl() const
+		{
+			const_iterator ttl(find("cARP"));
+			if (ttl == end())
+				return 0;
+			return Utils::hexStrToUInt(ttl->second.c_str());
+		}
+
+		/**
+		 * @return NDP cache TTL in seconds or 0 for no NDP caching
+		 */
+		inline unsigned int ndpCacheTtl() const
+		{
+			const_iterator ttl(find("cNDP"));
+			if (ttl == end())
+				return 0;
+			return Utils::hexStrToUInt(ttl->second.c_str());
+		}
+
+		/**
 		 * @return Multicast rates for this network
 		 */
 		inline MulticastRates multicastRates() const
@@ -684,6 +706,8 @@ private:
 	bool _isOpen;
 	bool _emulateArp;
 	bool _emulateNdp;
+	unsigned int _arpCacheTtl;
+	unsigned int _ndpCacheTtl;
 	unsigned int _multicastPrefixBits;
 	unsigned int _multicastDepth;
 

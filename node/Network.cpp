@@ -91,6 +91,8 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	nw->_isOpen = false;
 	nw->_emulateArp = false;
 	nw->_emulateNdp = false;
+	nw->_arpCacheTtl = 0;
+	nw->_ndpCacheTtl = 0;
 	nw->_multicastPrefixBits = ZT_DEFAULT_MULTICAST_PREFIX_BITS;
 	nw->_multicastDepth = ZT_DEFAULT_MULTICAST_DEPTH;
 	nw->_status = NETWORK_WAITING_FOR_FIRST_AUTOCONF;
@@ -120,6 +122,8 @@ void Network::setConfiguration(const Network::Config &conf,bool saveToDisk)
 			_isOpen = conf.isOpen();
 			_emulateArp = conf.emulateArp();
 			_emulateNdp = conf.emulateNdp();
+			_arpCacheTtl = conf.arpCacheTtl();
+			_ndpCacheTtl = conf.ndpCacheTtl();
 			_multicastPrefixBits = conf.multicastPrefixBits();
 			_multicastDepth = conf.multicastDepth();
 
@@ -153,6 +157,8 @@ void Network::setConfiguration(const Network::Config &conf,bool saveToDisk)
 		_isOpen = false;
 		_emulateArp = false;
 		_emulateNdp = false;
+		_arpCacheTtl = 0;
+		_ndpCacheTtl = 0;
 		_status = NETWORK_WAITING_FOR_FIRST_AUTOCONF;
 
 		_lastConfigUpdate = 0;
