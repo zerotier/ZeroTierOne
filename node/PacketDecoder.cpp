@@ -140,6 +140,10 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				if (inReVerb == Packet::VERB_WHOIS) {
 					if (_r->topology->isSupernode(source()))
 						_r->sw->cancelWhoisRequest(Address(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
+				} else if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
+					SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+					if ((network)&&(network->controller() == source()))
+						network->forceStatusTo(Network::NETWORK_NOT_FOUND);
 				}
 				break;
 			case Packet::ERROR_IDENTITY_COLLISION:
@@ -153,6 +157,11 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if (network)
 					network->pushMembershipCertificate(source(),true,Utils::now());
+			}	break;
+			case Packet::ERROR_NETWORK_ACCESS_DENIED: {
+				SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+				if ((network)&&(network->controller() == source()))
+					network->forceStatusTo(Network::NETWORK_ACCESS_DENIED);
 			}	break;
 			default:
 				break;
@@ -732,10 +741,13 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REFRESH_IDX_NETWORK_ID);
-		SharedPtr<Network> nw(_r->nc->network(nwid));
-		if ((nw)&&(source() == nw->controller())) // only respond to requests from controller
-			nw->requestConfiguration();
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
+		while ((ptr + sizeof(uint64_t)) <= size()) {
+			uint64_t nwid = at<uint64_t>(ptr); ptr += sizeof(uint64_t);
+			SharedPtr<Network> nw(_r->nc->network(nwid));
+			if ((nw)&&(source() == nw->controller())) // only respond to requests from controller
+				nw->requestConfiguration();
+		}
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {

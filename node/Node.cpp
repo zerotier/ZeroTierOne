@@ -269,6 +269,34 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 					}
 				}
 			}
+		} else if (type == "netconf-push") {
+			if (msg.contains("to")) {
+				Dictionary to(msg.get("to")); // key: peer address, value: comma-delimited network list
+				for(Dictionary::iterator t(to.begin());t!=to.end();++t) {
+					Address ztaddr(t->first);
+					if (ztaddr) {
+						Packet outp(ztaddr,_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
+
+						char *saveptr = (char *)0;
+						// Note: this loop trashes t->second, which is quasi-legal C++ but
+						// shouldn't break anything as long as we don't try to use 'to'
+						// for anything interesting after doing this.
+						for(char *p=Utils::stok(const_cast<char *>(t->second.c_str()),",",&saveptr);(p);p=Utils::stok((char *)0,",",&saveptr)) {
+							uint64_t nwid = Utils::hexStrToU64(p);
+							if (nwid) {
+								if ((outp.size() + sizeof(uint64_t)) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+									_r->sw->send(outp,true);
+									outp.reset(ztaddr,_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
+								}
+								outp.append(nwid);
+							}
+						}
+
+						if (outp.payloadLength())
+							_r->sw->send(outp,true);
+					}
+				}
+			}
 		}
 	} catch (std::exception &exc) {
 		LOG("unexpected exception parsing response from netconf service: %s",exc.what());

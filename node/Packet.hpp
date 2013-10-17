@@ -205,8 +205,6 @@
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN + 2)
 
-#define ZT_PROTO_VERB_NETWORK_CONFIG_REFRESH_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP + 8)
 #define ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION + 1)
@@ -592,7 +590,7 @@ public:
 		VERB_NETWORK_CONFIG_REQUEST = 11,
 
 		/* Network configuration refresh request:
-		 *   <[8] 64-bit network ID>
+		 *   <[...] array of 64-bit network IDs>
 		 *
 		 * This message can be sent by the network configuration master node
 		 * to request that nodes refresh their network configuration. It can

@@ -158,6 +158,40 @@ int main(int argc,char **argv)
 			return -1;
 		}
 
+		// Check QNetworkConfigRefresh (MEMORY table) and push network
+		// config refreshes to queued peer/network pairs.
+		try {
+			Dictionary to;
+			{
+				Query q = dbCon->query();
+				q << "SELECT LOWER(HEX(Node_id)) AS Node_id,LOWER(HEX(Network_id)) AS Network_id FROM QNetworkConfigRefresh";
+				StoreQueryResult rs = q.store();
+				for(unsigned long i=0;i<rs.num_rows();++i) {
+					std::string &nwids = to[rs[i]["Node_id"]];
+					if (nwids.length())
+						nwids.push_back(',');
+					nwids.append(rs[i]["Network_id"]);
+				}
+			}
+
+			{
+				Query q = dbCon->query();
+				q << "DELETE FROM QNetworkConfigRefresh";
+				q.exec();
+			}
+
+			Dictionary response;
+			response["type"] = "netconf-push";
+			response["to"] = to.toString();
+			std::string respm = response.toString();
+			uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
+
+			stdoutWriteLock.lock();
+			write(STDOUT_FILENO,&respml,4);
+			write(STDOUT_FILENO,respm.data(),respm.length());
+			stdoutWriteLock.unlock();
+		} catch ( ... ) {}
+
 		try {
 			const std::string &reqType = request.get("type");
 			if (reqType == "netconf-request") { // NETWORK_CONFIG_REQUEST packet
