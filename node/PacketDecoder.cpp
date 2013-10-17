@@ -39,7 +39,6 @@
 #include "Switch.hpp"
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
-#include "Filter.hpp"
 #include "Service.hpp"
 #include "Demarc.hpp"
 

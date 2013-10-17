@@ -7,7 +7,6 @@ OBJS=\
 	node/Defaults.o \
 	node/Demarc.o \
 	node/EthernetTap.o \
-	node/Filter.o \
 	node/Identity.o \
 	node/InetAddress.o \
 	node/Logger.o \

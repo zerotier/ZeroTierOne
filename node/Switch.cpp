@@ -48,7 +48,6 @@
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "Demarc.hpp"
-#include "Filter.hpp"
 #include "CMWC4096.hpp"
 
 #include "../version.h"
@@ -89,12 +88,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	if (from != network->tap().mac()) {
-		LOG("ignored tap: %s -> %s %s (bridging not supported)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
+		LOG("ignored tap: %s -> %s %s (bridging not supported)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 		return;
 	}
 
 	if (!network->permitsEtherType(etherType)) {
-		LOG("ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType),(unsigned long long)network->id());
+		LOG("ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 
@@ -177,10 +176,10 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.compress();
 			send(outp,true);
 		} else {
-			TRACE("UNICAST: %s -> %s %s (dropped, destination not a member of closed network %llu)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType),network->id());
+			TRACE("UNICAST: %s -> %s %s (dropped, destination not a member of closed network %llu)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 		}
 	} else {
-		TRACE("UNICAST: %s -> %s %s (dropped, destination MAC not ZeroTier)",from.toString().c_str(),to.toString().c_str(),Filter::etherTypeName(etherType));
+		TRACE("UNICAST: %s -> %s %s (dropped, destination MAC not ZeroTier)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 	}
 }
 
@@ -499,6 +498,22 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 			else ++txi;
 		}
 	}
+}
+
+const char *Switch::etherTypeName(const unsigned int etherType)
+	throw()
+{
+	switch(etherType) {
+		case ZT_ETHERTYPE_IPV4:  return "IPV4";
+		case ZT_ETHERTYPE_ARP:   return "ARP";
+		case ZT_ETHERTYPE_RARP:  return "RARP";
+		case ZT_ETHERTYPE_ATALK: return "ATALK";
+		case ZT_ETHERTYPE_AARP:  return "AARP";
+		case ZT_ETHERTYPE_IPX_A: return "IPX_A";
+		case ZT_ETHERTYPE_IPX_B: return "IPX_B";
+		case ZT_ETHERTYPE_IPV6:  return "IPV6";
+	}
+	return "UNKNOWN";
 }
 
 void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
