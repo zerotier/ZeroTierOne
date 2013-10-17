@@ -164,7 +164,7 @@ int main(int argc,char **argv)
 			Dictionary to;
 			{
 				Query q = dbCon->query();
-				q << "SELECT LOWER(HEX(Node_id)) AS Node_id,LOWER(HEX(Network_id)) AS Network_id FROM QNetworkConfigRefresh";
+				q << "SELECT DISTINCT LOWER(HEX(Node_id)) AS Node_id,LOWER(HEX(Network_id)) AS Network_id FROM QNetworkConfigRefresh";
 				StoreQueryResult rs = q.store();
 				for(unsigned long i=0;i<rs.num_rows();++i) {
 					std::string &nwids = to[rs[i]["Node_id"]];
