@@ -27,7 +27,7 @@ CFLAGS = -Wall -mkernel -force_cpusubtype_ALL \
 CCFLAGS = $(CFLAGS)
 LDFLAGS = -Wall -mkernel -nostdlib -r -lcc_kext -arch i386 -arch x86_64 -Xlinker -kext
 
-CCP = llvm-g++
+CCP = $(shell if [ -f /usr/bin/llvm-g++ ]; then echo llvm-g++; else echo g++; fi)
 CC = gcc
 
 all: $(KMOD_BIN) bundle

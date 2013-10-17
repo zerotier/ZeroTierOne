@@ -447,14 +447,28 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		}
 
 #ifdef ZT_TRACE_MULTICAST
-		char mct[256];
+		char mct[1024],mctdepth[1024];
 		unsigned int startingFifoItems = 0;
 		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;i+=ZT_ADDRESS_LENGTH) {
 			if (Utils::isZero(fifo + i,ZT_ADDRESS_LENGTH))
 				break;
 			else ++startingFifoItems;
 		}
-		Utils::snprintf(mct,sizeof(mct),"%c %s <- %.16llx %.16llx %s via %s prefix:%u depth:%u len:%u fifo:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),source().toString().c_str(),prefix,depth,frameLen,startingFifoItems);
+		for(unsigned int i=0;i<depth;++i)
+			mctdepth[i] = ' ';
+		mctdepth[depth] = 0;
+		Utils::snprintf(mct,sizeof(mct),
+			"%.16llx %.2u %.3u%s %c %s <- %s via %s len:%u fifosize:%u",
+			guid,
+			prefix,
+			depth,
+			mctdepth,
+			(_r->topology->amSupernode() ? 'S' : '-'),
+			_r->identity.address().toString().c_str(),
+			origin.toString().c_str(),
+			source().toString().c_str(),
+			frameLen,
+			startingFifoItems);
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
@@ -467,7 +481,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// members of the same multicast group.
 			if (!_r->topology->amSupernode()) {
 #ifdef ZT_TRACE_MULTICAST
-				Utils::snprintf(mct,sizeof(mct),"%c %s dropped %.16llx: duplicate",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+				Utils::snprintf(mct,sizeof(mct),
+					"%.16llx %.2u %.3u%s %c %s dropped: duplicate",
+					guid,
+					prefix,
+					depth,
+					mctdepth,
+					(_r->topology->amSupernode() ? 'S' : '-'),
+					_r->identity.address().toString().c_str());
 				_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 				TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -503,11 +524,33 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					// security violation of the network's bridging policy. But if we
 					// were to keep propagating it wouldn't hurt anything, just waste
 					// bandwidth as everyone else would reject it too.
+#ifdef ZT_TRACE_MULTICAST
+					Utils::snprintf(mct,sizeof(mct),
+						"%.16llx %.2u %.3u%s %c %s dropped: bridging not allowed",
+						guid,
+						prefix,
+						depth,
+						mctdepth,
+						(_r->topology->amSupernode() ? 'S' : '-'),
+						_r->identity.address().toString().c_str());
+					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
 					return true;
 				} else if (!network->permitsEtherType(etherType)) {
 					// Ditto for this-- halt propagation if this is for an ethertype
 					// this network doesn't allow. Same principle as bridging test.
+#ifdef ZT_TRACE_MULTICAST
+					Utils::snprintf(mct,sizeof(mct),
+						"%.16llx %.2u %.3u%s %c %s dropped: ethertype not allowed",
+						guid,
+						prefix,
+						depth,
+						mctdepth,
+						(_r->topology->amSupernode() ? 'S' : '-'),
+						_r->identity.address().toString().c_str());
+					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+#endif
 					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
 					return true;
 				} else if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
@@ -515,7 +558,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					// there should be enough of them that over-limit multicasts get
 					// their propagation aborted.
 #ifdef ZT_TRACE_MULTICAST
-					Utils::snprintf(mct,sizeof(mct),"%c %s dropped %.16llx: rate limits exceeded",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+					Utils::snprintf(mct,sizeof(mct),
+						"%.16llx %.2u %.3u%s %c %s dropped: rate limits exceeded",
+						guid,
+						prefix,
+						depth,
+						mctdepth,
+						(_r->topology->amSupernode() ? 'S' : '-'),
+						_r->identity.address().toString().c_str());
 					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 					TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
@@ -528,7 +578,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 		if (depth == 0xffff) {
 #ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),"%c %s not forwarding %.16llx: depth == 0xffff (do not forward)",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			Utils::snprintf(mct,sizeof(mct),
+				"%.16llx %.2u %.3u%s %c %s not forwarding: depth == 0xffff (do not forward)",
+				guid,
+				prefix,
+				depth,
+				mctdepth,
+				(_r->topology->amSupernode() ? 'S' : '-'),
+				_r->identity.address().toString().c_str());
 			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -536,7 +593,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		}
 		if (++depth > maxDepth) {
 #ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),"%c %s not forwarding %.16llx: max propagation depth reached",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			Utils::snprintf(mct,sizeof(mct),
+				"%.16llx %.2u %.3u%s %c %s not forwarding: max propagation depth reached",
+				guid,
+				prefix,
+				depth,
+				mctdepth,
+				(_r->topology->amSupernode() ? 'S' : '-'),
+				_r->identity.address().toString().c_str());
 			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -591,7 +655,14 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		}
 		if ((!nextHop)||(nextHop == _r->identity.address())) { // check against our addr is a sanity check
 #ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),"%c %s not forwarding %.16llx: no next hop",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),guid);
+			Utils::snprintf(mct,sizeof(mct),
+				"%.16llx %.2u %.3u%s %c %s not forwarding: no next hop",
+				guid,
+				prefix,
+				depth,
+				mctdepth,
+				(_r->topology->amSupernode() ? 'S' : '-'),
+				_r->identity.address().toString().c_str());
 			_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 			//TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -602,7 +673,17 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		memcpy(fifo,newFifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
 
 #ifdef ZT_TRACE_MULTICAST
-		Utils::snprintf(mct,sizeof(mct),"%c %s -> %.16llx %.16llx %s to next hop %s +fifo:%u",(_r->topology->amSupernode() ? 'S' : '-'),_r->identity.address().toString().c_str(),nwid,guid,origin.toString().c_str(),nextHop.toString().c_str(),numAdded);
+		Utils::snprintf(mct,sizeof(mct),
+			"%.16llx %.2u %.3u%s %c %s -> origin %s, sending to next hop %s, +fifosize:%u",
+			guid,
+			prefix,
+			depth,
+			mctdepth,
+			(_r->topology->amSupernode() ? 'S' : '-'),
+			_r->identity.address().toString().c_str(),
+			origin.toString().c_str(),
+			nextHop.toString().c_str(),
+			numAdded);
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
