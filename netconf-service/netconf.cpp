@@ -220,8 +220,6 @@ int main(int argc,char **argv)
 						if (rs[0]["identity"] != peerIdentity.toString(false)) {
 							// TODO: handle collisions...
 							continue;
-						} else if ((int)rs[0]["identityValidated"] == 0) {
-							// TODO: launch background validation
 						}
 					} else {
 						q = dbCon->query();
@@ -251,7 +249,7 @@ int main(int argc,char **argv)
 				std::string desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT name,`desc`,isOpen,multicastPrefixBits,multicastDepth FROM Network WHERE id = " << nwid;
+					q << "SELECT name,`desc`,isOpen,multicastPrefixBits,multicastDepth,emulateArp,emulateNdp FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						name = rs[0]["name"].c_str();
@@ -411,7 +409,7 @@ int main(int argc,char **argv)
 				// Update activity table for this network to indicate peer's participation
 				{
 					Query q = dbCon->query();
-					q << "INSERT INTO NetworkActivity (Network_id,Node_id,lastActivityTime,lastActivityFrom) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << Utils::now() << "," << fromAddr << ") ON DUPLICATE KEY UPDATE lastActivityTime = VALUES(lastActivityTime),lastActivityFrom = VALUES(lastActivityFrom)";
+					q << "INSERT INTO NetworkActivity (Network_id,Node_id,lastActivityTime,lastActivityFrom) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << Utils::now() << "," << quote << fromAddr << ") ON DUPLICATE KEY UPDATE lastActivityTime = VALUES(lastActivityTime),lastActivityFrom = VALUES(lastActivityFrom)";
 					q.exec();
 				}
 
