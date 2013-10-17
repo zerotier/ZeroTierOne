@@ -167,7 +167,7 @@ int main(int argc,char **argv)
 				q << "SELECT DISTINCT LOWER(HEX(Node_id)) AS Node_id,LOWER(HEX(Network_id)) AS Network_id FROM QNetworkConfigRefresh";
 				StoreQueryResult rs = q.store();
 				for(unsigned long i=0;i<rs.num_rows();++i) {
-					std::string &nwids = to[rs[i]["Node_id"]];
+					std::string &nwids = to[rs[i]["Node_id"].c_str()];
 					if (nwids.length())
 						nwids.push_back(',');
 					nwids.append(rs[i]["Network_id"]);
