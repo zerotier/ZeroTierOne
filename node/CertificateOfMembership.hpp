@@ -198,14 +198,14 @@ public:
 	/**
 	 * @return Timestamp for this cert in ms since epoch (according to netconf's clock)
 	 */
-	inline Address timestamp() const
+	inline uint64_t timestamp() const
 		throw()
 	{
 		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
 			if (q->id == COM_RESERVED_ID_TIMESTAMP)
-				return Address(q->value);
+				return q->value;
 		}
-		return Address();
+		return 0ULL;
 	}
 
 	/**

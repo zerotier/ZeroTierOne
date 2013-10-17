@@ -265,6 +265,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 	{	// tell p1 where to find p2
 		Packet outp(p1,_r->identity.address(),Packet::VERB_RENDEZVOUS);
+		outp.append((unsigned char)0);
 		p2.appendTo(outp);
 		outp.append((uint16_t)cg.first.port());
 		if (cg.first.isV6()) {
@@ -279,6 +280,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	}
 	{	// tell p2 where to find p1
 		Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
+		outp.append((unsigned char)0);
 		p1.appendTo(outp);
 		outp.append((uint16_t)cg.second.port());
 		if (cg.second.isV6()) {

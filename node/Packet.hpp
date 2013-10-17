@@ -155,7 +155,8 @@
 
 #define ZT_PROTO_VERB_WHOIS_IDX_ZTADDRESS (ZT_PACKET_IDX_PAYLOAD)
 
-#define ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_RENDEZVOUS_IDX_FLAGS (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS (ZT_PROTO_VERB_RENDEZVOUS_IDX_FLAGS + 1)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT (ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS + 5)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN (ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT + 2)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS (ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN + 1)
@@ -198,8 +199,6 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN 2
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN)
-
-#define ZT_PROTO_VERB_NETWORK_MEMBERSHIP_CERTIFICATE_IDX_CERTIFICATE (ZT_PACKET_IDX_PAYLOAD)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
@@ -434,11 +433,13 @@ public:
 		 * OK response payload:
 		 *   <[...] binary serialized identity>
 		 *
-		 * Error payload will be address queried.
+		 * ERROR response payload:
+		 *   <[5] address>
 		 */
 		VERB_WHOIS = 4,
 
 		/* Meet another node at a given protocol address:
+		 *   <[1] flags (unused, currently 0)>
 		 *   <[5] ZeroTier address of peer that might be found at this address>
 		 *   <[2] 16-bit protocol address port>
 		 *   <[1] protocol address length (4 for IPv4, 16 for IPv6)>
@@ -470,8 +471,7 @@ public:
 		 *   <[...] ethernet payload>
 		 *
 		 * MAC addresses are derived from the packet's source and destination
-		 * ZeroTier addresses. ZeroTier does not support VLANs or other extensions
-		 * beyond core Ethernet.
+		 * ZeroTier addresses.
 		 *
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
@@ -479,7 +479,7 @@ public:
 		VERB_FRAME = 6,
 
 		/* TODO: not implemented yet */
-		VERB_PROXY_FRAME = 7,
+		VERB_BRIDGED_FRAME = 7,
 
 		/* A multicast frame:
 		 *   <[2] 16-bit propagation depth or 0xffff for "do not forward">
@@ -556,6 +556,7 @@ public:
 
 		/* Network member certificate:
 		 *   <[...] serialized certificate of membership>
+		 *   [ ... additional certificates may follow ...]
 		 *
 		 * Certificate contains network ID, peer it was issued for, etc.
 		 *
@@ -583,9 +584,8 @@ public:
 		 * node can push to other peers to demonstrate its right to speak on
 		 * a given network.
 		 *
-		 * ERROR may be NOT_FOUND if no such network is known, or
-		 * UNSUPPORTED_OPERATION if the netconf service isn't available. The
-		 * payload will be the network ID.
+		 * ERROR response payload:
+		 *   <[8] 64-bit network ID>
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 11,
 
@@ -594,7 +594,8 @@ public:
 		 *
 		 * This message can be sent by the network configuration master node
 		 * to request that nodes refresh their network configuration. It can
-		 * thus be used to "push" updates.
+		 * thus be used to "push" updates so that network config changes will
+		 * take effect quickly.
 		 *
 		 * It does not generate an OK or ERROR message, and is treated only as
 		 * a hint to refresh now.

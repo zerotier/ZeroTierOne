@@ -102,8 +102,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doRENDEZVOUS(_r,peer);
 			case Packet::VERB_FRAME:
 				return _doFRAME(_r,peer);
-			case Packet::VERB_PROXY_FRAME:
-				return _doPROXY_FRAME(_r,peer);
+			case Packet::VERB_BRIDGED_FRAME:
+				return _doBRIDGED_FRAME(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
 			case Packet::VERB_MULTICAST_LIKE:
@@ -151,9 +151,6 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				// if (_r->topology->isSupernode(source())) {}
 				break;
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
-				// TODO: this allows anyone to request a membership cert, which is
-				// harmless until these contain possibly privacy-sensitive info.
-				// Then we'll need to be more careful.
 				SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if (network)
 					network->pushMembershipCertificate(source(),true,Utils::now());
@@ -399,7 +396,7 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	return true;
 }
 
-bool PacketDecoder::_doPROXY_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool PacketDecoder::_doBRIDGED_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	// TODO: bridging is not implemented yet
 	return true;
@@ -654,40 +651,44 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
-		CertificateOfMembership com(*this,ZT_PROTO_VERB_NETWORK_MEMBERSHIP_CERTIFICATE_IDX_CERTIFICATE);
-		if (!com.hasRequiredFields()) {
-			TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): invalid cert: at least one required field is missing",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		} else if (com.signedBy()) {
-			SharedPtr<Peer> signer(_r->topology->getPeer(com.signedBy()));
-			if (signer) {
-				if (com.verify(signer->identity())) {
-					uint64_t nwid = com.networkId();
-					SharedPtr<Network> network(_r->nc->network(nwid));
-					if (network) {
-						if (network->controller() == signer) {
-							network->addMembershipCertificate(com);
-							return true;
+		CertificateOfMembership com;
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
+		while (ptr < size()) {
+			ptr += com.deserialize(*this,ptr);
+			if (!com.hasRequiredFields()) {
+				TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): invalid cert: at least one required field is missing",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
+			} else if (com.signedBy()) {
+				SharedPtr<Peer> signer(_r->topology->getPeer(com.signedBy()));
+				if (signer) {
+					if (com.verify(signer->identity())) {
+						uint64_t nwid = com.networkId();
+						SharedPtr<Network> network(_r->nc->network(nwid));
+						if (network) {
+							if (network->controller() == signer) {
+								network->addMembershipCertificate(com);
+								return true;
+							} else {
+								TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): signer %s is not the controller for network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),signer->address().toString().c_str(),(unsigned long long)nwid);
+								return true;
+							}
 						} else {
-							TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): signer %s is not the controller for network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),signer->address().toString().c_str(),(unsigned long long)nwid);
+							TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): not a member of network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
 							return true;
 						}
 					} else {
-						TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): not a member of network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)nwid);
+						TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): failed signature verification for signer %s",source().toString().c_str(),_remoteAddress.toString().c_str(),signer->address().toString().c_str());
 						return true;
 					}
 				} else {
-					TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): failed signature verification for signer %s",source().toString().c_str(),_remoteAddress.toString().c_str(),signer->address().toString().c_str());
-					return true;
+					_r->sw->requestWhois(com.signedBy());
+					_step = DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP;
+					return false;
 				}
 			} else {
-				_r->sw->requestWhois(com.signedBy());
-				_step = DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP;
-				return false;
+				TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): invalid cert: no signature",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
 			}
-		} else {
-			TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): invalid cert: no signature",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());

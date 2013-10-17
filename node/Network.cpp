@@ -178,10 +178,14 @@ void Network::requestConfiguration()
 void Network::addMembershipCertificate(const CertificateOfMembership &cert)
 {
 	Mutex::Lock _l(_lock);
+
 	// We go ahead and accept certs provisionally even if _isOpen is true, since
 	// that might be changed in short order if the user is fiddling in the UI.
 	// These will be purged on clean() for open networks eventually.
-	_membershipCertificates[cert.issuedTo()] = cert;
+
+	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
+	if (cert.timestamp() >= old.timestamp())
+		old = cert;
 }
 
 bool Network::isAllowed(const Address &peer) const
@@ -299,30 +303,38 @@ void Network::_restoreState()
 
 		_membershipCertificates.clear();
 
-		try {
-			FILE *mcdb = fopen(mcdbPath.c_str(),"rb");
-			if (mcdb) {
-				for(;;) {
-					long rlen = (long)fread(buf.data() + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
-					if (rlen <= 0)
-						break;
-					buf.setSize(buf.size() + (unsigned int)rlen);
-					unsigned int ptr = 0;
-					while ((ptr < (ZT_NETWORK_CERT_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
-						ptr += com.deserialize(buf,ptr);
-						if (com.issuedTo())
-							_membershipCertificates[com.issuedTo()] = com;
+		FILE *mcdb = fopen(mcdbPath.c_str(),"rb");
+		if (mcdb) {
+			try {
+				char magic[6];
+				if ((fread(magic,6,1,mcdb) == 1)&&(!memcmp("ZTMCD0",magic,6))) {
+					for(;;) {
+						long rlen = (long)fread(buf.data() + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
+						if (rlen <= 0)
+							break;
+						buf.setSize(buf.size() + (unsigned int)rlen);
+						unsigned int ptr = 0;
+						while ((ptr < (ZT_NETWORK_CERT_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
+							ptr += com.deserialize(buf,ptr);
+							if (com.issuedTo())
+								_membershipCertificates[com.issuedTo()] = com;
+						}
+						if (ptr) {
+							memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);
+							buf.setSize(buf.size() - ptr);
+						}
 					}
-					if (ptr) {
-						memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);
-						buf.setSize(buf.size() - ptr);
-					}
+					fclose(mcdb);
+				} else {
+					fclose(mcdb);
+					Utils::rm(mcdbPath);
 				}
+			} catch ( ... ) {
+				// Membership cert dump file invalid. We'll re-learn them off the net.
+				_membershipCertificates.clear();
+				fclose(mcdb);
+				Utils::rm(mcdbPath);
 			}
-		} catch ( ... ) {
-			// Membership cert dump file invalid. We'll re-learn them off the net.
-			_membershipCertificates.clear();
-			Utils::rm(mcdbPath);
 		}
 	}
 }
