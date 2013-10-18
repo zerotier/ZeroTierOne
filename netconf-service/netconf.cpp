@@ -73,6 +73,7 @@
 #include "../node/Identity.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/NetworkConfig.hpp"
 
 using namespace ZeroTier;
 using namespace mysqlpp;
@@ -198,7 +199,7 @@ int main(int argc,char **argv)
 				// Deserialize querying peer identity and network ID
 				Identity peerIdentity(request.get("peerId"));
 				uint64_t nwid = strtoull(request.get("nwid").c_str(),(char **)0,16);
-				std::string fromAddr(request.get("from"));
+				std::string fromAddr(request.get("from",""));
 
 				// Meta-information from node, such as (future) geo-location stuff
 				Dictionary meta;
@@ -412,41 +413,51 @@ int main(int argc,char **argv)
 
 				// Update activity table for this network to indicate peer's participation
 				{
-					Query q = dbCon->query();
-					q << "INSERT INTO NetworkActivity (Network_id,Node_id,lastActivityTime,lastActivityFrom) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << Utils::now() << "," << quote << fromAddr << ") ON DUPLICATE KEY UPDATE lastActivityTime = VALUES(lastActivityTime),lastActivityFrom = VALUES(lastActivityFrom)";
-					q.exec();
+					if (fromAddr.length()) {
+						Query q = dbCon->query();
+						q << "INSERT INTO NetworkActivity (Network_id,Node_id,lastActivityTime,lastActivityFrom) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << Utils::now() << "," << quote << fromAddr << ") ON DUPLICATE KEY UPDATE lastActivityTime = VALUES(lastActivityTime),lastActivityFrom = VALUES(lastActivityFrom)";
+						q.exec();
+					} else {
+						Query q = dbCon->query();
+						q << "INSERT INTO NetworkActivity (Network_id,Node_id,lastActivityTime) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << Utils::now() << ") ON DUPLICATE KEY UPDATE lastActivityTime = VALUES(lastActivityTime)";
+						q.exec();
+					}
 				}
 
 				// Assemble response dictionary to send to peer
 				Dictionary netconf;
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
-				netconf["nwid"] = buf;
-				netconf["peer"] = peerIdentity.address().toString();
-				netconf["name"] = name;
-				netconf["desc"] = desc;
-				netconf["o"] = (isOpen ? "1" : "0");
-				netconf["et"] = etherTypeWhitelist;
-				netconf["mr"] = multicastRates.toString();
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = buf;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = peerIdentity.address().toString();
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_NAME] = name;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_DESC] = desc;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_IS_OPEN] = (isOpen ? "1" : "0");
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = etherTypeWhitelist;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = multicastRates.toString();
 				sprintf(buf,"%llx",(unsigned long long)Utils::now());
-				netconf["ts"] = buf;
-				netconf["eARP"] = (emulateArp ? "1" : "0");
-				netconf["eNDP"] = (emulateNdp ? "1" : "0");
-				sprintf(buf,"%x",arpCacheTtl);
-				netconf["cARP"] = buf;
-				sprintf(buf,"%x",ndpCacheTtl);
-				netconf["cNDP"] = buf;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = buf;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_EMULATE_ARP] = (emulateArp ? "1" : "0");
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_EMULATE_NDP] = (emulateNdp ? "1" : "0");
+				if (arpCacheTtl) {
+					sprintf(buf,"%x",arpCacheTtl);
+					netconf[ZT_NETWORKCONFIG_DICT_KEY_ARP_CACHE_TTL] = buf;
+				}
+				if (ndpCachettl) {
+					sprintf(buf,"%x",ndpCacheTtl);
+					netconf[ZT_NETWORKCONFIG_DICT_KEY_NDP_CACHE_TTL] = buf;
+				}
 				if (multicastPrefixBits) {
 					sprintf(buf,"%x",multicastPrefixBits);
-					netconf["mpb"] = buf;
+					netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS] = buf;
 				}
 				if (multicastDepth) {
 					sprintf(buf,"%x",multicastDepth);
-					netconf["md"] = buf;
+					netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH] = buf;
 				}
 				if (ipv4Static.length())
-					netconf["v4s"] = ipv4Static;
+					netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = ipv4Static;
 				if (ipv6Static.length())
-					netconf["v6s"] = ipv6Static;
+					netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = ipv6Static;
 
 				// Send netconf as service bus response
 				{

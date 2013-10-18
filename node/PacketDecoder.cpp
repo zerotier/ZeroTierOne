@@ -796,7 +796,8 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 			request["nwid"] = tmp;
 			Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)packetId());
 			request["requestId"] = tmp;
-			request["from"] = _remoteAddress.toString();
+			if (!hops())
+				request["from"] = _remoteAddress.toString();
 			//TRACE("to netconf:\n%s",request.toString().c_str());
 			_r->netconfService->send(request);
 		} else {
