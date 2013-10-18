@@ -62,8 +62,7 @@
 
 namespace ZeroTier {
 
-SysEnv::SysEnv(const RuntimeEnvironment *renv) :
-	_r(renv)
+SysEnv::SysEnv(const RuntimeEnvironment *renv)
 {
 }
 
