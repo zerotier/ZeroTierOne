@@ -143,12 +143,18 @@ public:
 	{
 		InetAddress v4(p->ipv4ActivePath(_now));
 		InetAddress v6(p->ipv6ActivePath(_now));
-		_P("200 listpeers %s %s %s %u %s",
-			p->address().toString().c_str(),
-			((v4) ? v4.toString().c_str() : "-"),
-			((v6) ? v6.toString().c_str() : "-"),
-			(((v4)||(v6)) ? p->latency() : 0),
-			p->remoteVersion().c_str());
+		if ((v4)||(v6)) {
+			_P("200 listpeers %s %s %s %u %s",
+				p->address().toString().c_str(),
+				((v4) ? v4.toString().c_str() : "-"),
+				((v6) ? v6.toString().c_str() : "-"),
+				p->latency(),
+				p->remoteVersion().c_str());
+		} else {
+			_P("200 listpeers %s - - - %s",
+				p->address().toString().c_str(),
+				p->remoteVersion().c_str());
+		}
 	}
 
 private:
@@ -200,10 +206,11 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 				tmp.append(i->toString());
 			}
 
+			SharedPtr<NetworkConfig> nconf(nw->second->config2());
 			_P("200 listnetworks %.16llx %s %s %s %s",
 				(unsigned long long)nw->first,
 				Network::statusString(nw->second->status()),
-				(nw->second->isOpen() ? "open" : "private"),
+				((nconf) ? (nconf->isOpen() ? "public" : "private") : "?"),
 				nw->second->tap().deviceName().c_str(),
 				((tmp.length() > 0) ? tmp.c_str() : "-"));
 		}

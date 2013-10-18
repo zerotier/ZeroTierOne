@@ -269,9 +269,8 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 					unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
-						Network::Config netconf(dict);
+						nw->setConfiguration(Dictionary(dict));
 						TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
-						nw->setConfiguration(netconf);
 					}
 				}
 			}	break;
@@ -363,7 +362,7 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 		if (network) {
 			if (network->isAllowed(source())) {
 				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-				if (network->permitsEtherType(etherType)) {
+				if (network->config()->permitsEtherType(etherType)) {
 					network->tap().put(source().toMAC(),network->tap().mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
 				} else if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 					TRACE("dropped FRAME from %s: ethernet type %u not allowed on network %.16llx",source().toString().c_str(),etherType,(unsigned long long)network->id());
@@ -500,78 +499,81 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// inject the packet. This also gives us an opportunity to check things
 			// like multicast bandwidth constraints.
 			if (network) {
-				maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,network->multicastDepth());
-				if (!maxDepth)
-					maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
+				SharedPtr<NetworkConfig> nconf(network->config2());
+				if (nconf) {
+					maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,nconf->multicastDepth());
+					if (!maxDepth)
+						maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
 
-				if (!network->isAllowed(origin)) {
-					TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
+					if (!network->isAllowed(origin)) {
+						TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
 
-					// Tell them we need a certificate
-					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_FRAME);
-					outp.append(packetId());
-					outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-					outp.append(nwid);
-					outp.armor(peer->key(),true);
-					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+						// Tell them we need a certificate
+						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+						outp.append((unsigned char)Packet::VERB_FRAME);
+						outp.append(packetId());
+						outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+						outp.append(nwid);
+						outp.armor(peer->key(),true);
+						_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 
-					// We do not terminate here, since if the member just has an out of
-					// date cert or hasn't sent us a cert yet we still want to propagate
-					// the message so multicast keeps working downstream.
-				} else if ((!network->permitsBridging(origin))&&(!origin.wouldHaveMac(sourceMac))) {
-					// This *does* terminate propagation, since it's technically a
-					// security violation of the network's bridging policy. But if we
-					// were to keep propagating it wouldn't hurt anything, just waste
-					// bandwidth as everyone else would reject it too.
+						// We do not terminate here, since if the member just has an out of
+						// date cert or hasn't sent us a cert yet we still want to propagate
+						// the message so multicast keeps working downstream.
+					} else if ((!nconf->permitsBridging(origin))&&(!origin.wouldHaveMac(sourceMac))) {
+						// This *does* terminate propagation, since it's technically a
+						// security violation of the network's bridging policy. But if we
+						// were to keep propagating it wouldn't hurt anything, just waste
+						// bandwidth as everyone else would reject it too.
 #ifdef ZT_TRACE_MULTICAST
-					Utils::snprintf(mct,sizeof(mct),
-						"%.16llx %.2u %.3u%s %c %s dropped: bridging not allowed",
-						guid,
-						prefix,
-						depth,
-						mctdepth,
-						(_r->topology->amSupernode() ? 'S' : '-'),
-						_r->identity.address().toString().c_str());
-					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+						Utils::snprintf(mct,sizeof(mct),
+							"%.16llx %.2u %.3u%s %c %s dropped: bridging not allowed",
+							guid,
+							prefix,
+							depth,
+							mctdepth,
+							(_r->topology->amSupernode() ? 'S' : '-'),
+							_r->identity.address().toString().c_str());
+						_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
-					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
-					return true;
-				} else if (!network->permitsEtherType(etherType)) {
-					// Ditto for this-- halt propagation if this is for an ethertype
-					// this network doesn't allow. Same principle as bridging test.
+						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),sourceMac.toString().c_str(),origin.toString().c_str());
+						return true;
+					} else if (!nconf->permitsEtherType(etherType)) {
+						// Ditto for this-- halt propagation if this is for an ethertype
+						// this network doesn't allow. Same principle as bridging test.
 #ifdef ZT_TRACE_MULTICAST
-					Utils::snprintf(mct,sizeof(mct),
-						"%.16llx %.2u %.3u%s %c %s dropped: ethertype not allowed",
-						guid,
-						prefix,
-						depth,
-						mctdepth,
-						(_r->topology->amSupernode() ? 'S' : '-'),
-						_r->identity.address().toString().c_str());
-					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+						Utils::snprintf(mct,sizeof(mct),
+							"%.16llx %.2u %.3u%s %c %s dropped: ethertype not allowed",
+							guid,
+							prefix,
+							depth,
+							mctdepth,
+							(_r->topology->amSupernode() ? 'S' : '-'),
+							_r->identity.address().toString().c_str());
+						_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
-					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
-					return true;
-				} else if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
-					// Rate limits can only be checked by members of this network, but
-					// there should be enough of them that over-limit multicasts get
-					// their propagation aborted.
+						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
+						return true;
+					} else if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
+						// Rate limits can only be checked by members of this network, but
+						// there should be enough of them that over-limit multicasts get
+						// their propagation aborted.
 #ifdef ZT_TRACE_MULTICAST
-					Utils::snprintf(mct,sizeof(mct),
-						"%.16llx %.2u %.3u%s %c %s dropped: rate limits exceeded",
-						guid,
-						prefix,
-						depth,
-						mctdepth,
-						(_r->topology->amSupernode() ? 'S' : '-'),
-						_r->identity.address().toString().c_str());
-					_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
+						Utils::snprintf(mct,sizeof(mct),
+							"%.16llx %.2u %.3u%s %c %s dropped: rate limits exceeded",
+							guid,
+							prefix,
+							depth,
+							mctdepth,
+							(_r->topology->amSupernode() ? 'S' : '-'),
+							_r->identity.address().toString().c_str());
+						_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
-					TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
-					return true;
-				} else {
-					network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
+						TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+						return true;
+					} else {
+						network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
+					}
 				}
 			}
 		}

@@ -82,6 +82,10 @@ void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,c
 
 void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
+	SharedPtr<NetworkConfig> nconf(network->config2());
+	if (!nconf)
+		return;
+
 	if (to == network->tap().mac()) {
 		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tap().deviceName().c_str());
 		return;
@@ -92,7 +96,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 	}
 
-	if (!network->permitsEtherType(etherType)) {
+	if (!nconf->permitsEtherType(etherType)) {
 		LOG("ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
@@ -115,11 +119,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
 		uint64_t now = Utils::now();
 
-		for(unsigned int prefix=0,np=((unsigned int)2 << (network->multicastPrefixBits() - 1));prefix<np;++prefix) {
+		for(unsigned int prefix=0,np=((unsigned int)2 << (nconf->multicastPrefixBits() - 1));prefix<np;++prefix) {
 			memset(bloom,0,sizeof(bloom));
 
 			unsigned char *fifoPtr = fifo;
-			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),network->multicastPrefixBits(),prefix));
+			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),nconf->multicastPrefixBits(),prefix));
 			while (fifoPtr != fifoEnd)
 				*(fifoPtr++) = (unsigned char)0;
 
@@ -143,7 +147,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((unsigned char)0);
 			outp.append(network->id());
 			outp.append(bloomNonce);
-			outp.append((unsigned char)network->multicastPrefixBits());
+			outp.append((unsigned char)nconf->multicastPrefixBits());
 			outp.append((unsigned char)prefix);
 			_r->identity.address().appendTo(outp);
 			outp.append((unsigned char)((mcid >> 16) & 0xff));

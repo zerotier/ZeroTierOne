@@ -105,7 +105,7 @@ public:
 	 * @param etherType Ethernet frame type to check
 	 * @return True if allowed on this network
 	 */
-	inline bool allowsEtherType(unsigned int etherType)
+	inline bool permitsEtherType(unsigned int etherType)
 		throw()
 	{
 		if ((!etherType)||(etherType > 0xffff)) // sanity checks
