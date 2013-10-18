@@ -48,6 +48,9 @@
 // Step distance for mixing genmem[]
 #define ZT_IDENTITY_GEN_MEMORY_MIX_STEP 1024
 
+// Rounds used for Salsa20 step
+#define ZT_IDENTITY_GEN_SALSA20_ROUNDS 20
+
 namespace ZeroTier {
 
 // A memory-hard composition of SHA-512 and Salsa20 for hashcash hashing
@@ -58,7 +61,7 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 
 	// Generate genmem[] bytes of Salsa20 key stream
 	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
-	Salsa20 s20(digest,256,(char *)digest + 32);
+	Salsa20 s20(digest,256,(char *)digest + 32,ZT_IDENTITY_GEN_SALSA20_ROUNDS);
 	s20.encrypt(genmem,genmem,ZT_IDENTITY_GEN_MEMORY);
 
 	// Do something to genmem[] that iteratively makes every value

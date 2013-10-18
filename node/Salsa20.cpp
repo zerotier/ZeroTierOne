@@ -29,7 +29,7 @@ namespace ZeroTier {
 static const char *sigma = "expand 32-byte k";
 static const char *tau = "expand 16-byte k";
 
-void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
+void Salsa20::init(const void *key,unsigned int kbits,const void *iv,unsigned int rounds)
 	throw()
 {
 	const char *constants;
@@ -59,6 +59,8 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv)
 	_state[5] = U8TO32_LITTLE(constants + 4);
 	_state[10] = U8TO32_LITTLE(constants + 8);
 	_state[15] = U8TO32_LITTLE(constants + 12);
+
+	_roundsDiv2 = rounds / 2;
 }
 
 void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
@@ -114,7 +116,8 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		x13 = j13;
 		x14 = j14;
 		x15 = j15;
-		for (i = 20;i > 0;i -= 2) {
+		//for (i = 20;i > 0;i -= 2) {
+		for(i=0;i<_roundsDiv2;++i) {
 			 x4 = XOR( x4,ROTATE(PLUS( x0,x12), 7));
 			 x8 = XOR( x8,ROTATE(PLUS( x4, x0), 9));
 			x12 = XOR(x12,ROTATE(PLUS( x8, x4),13));

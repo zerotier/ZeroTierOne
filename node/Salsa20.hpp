@@ -14,7 +14,7 @@
 namespace ZeroTier {
 
 /**
- * Salsa20/20 stream cipher
+ * Salsa20 stream cipher
  */
 class Salsa20
 {
@@ -25,11 +25,12 @@ public:
 	 * @param key Key bits
 	 * @param kbits Number of key bits: 128 or 256 (recommended)
 	 * @param iv 64-bit initialization vector
+	 * @param rounds Number of rounds: 8, 12, or 20
 	 */
-	Salsa20(const void *key,unsigned int kbits,const void *iv)
+	Salsa20(const void *key,unsigned int kbits,const void *iv,unsigned int rounds)
 		throw()
 	{
-		init(key,kbits,iv);
+		init(key,kbits,iv,rounds);
 	}
 
 	/**
@@ -38,8 +39,9 @@ public:
 	 * @param key Key bits
 	 * @param kbits Number of key bits: 128 or 256 (recommended)
 	 * @param iv 64-bit initialization vector
+	 * @param rounds Number of rounds: 8, 12, or 20
 	 */
-	void init(const void *key,unsigned int kbits,const void *iv)
+	void init(const void *key,unsigned int kbits,const void *iv,unsigned int rounds)
 		throw();
 
 	/**
@@ -67,6 +69,7 @@ public:
 
 private:
 	uint32_t _state[16];
+	unsigned int _roundsDiv2;
 };
 
 } // namespace ZeroTier

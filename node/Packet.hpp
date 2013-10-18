@@ -92,6 +92,11 @@
  */
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
 
+/**
+ * Rounds used for Salsa20 encryption in ZT
+ */
+#define ZT_PROTO_SALSA20_ROUNDS 12
+
 // Indices of fields in normal packet header -- do not change as this
 // might require both code rework and will break compatibility.
 #define ZT_PACKET_IDX_IV 0
@@ -852,7 +857,7 @@ public:
 		else (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
 
 		_mangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
 
 		// MAC key is always the first 32 bytes of the Salsa20 key stream
 		// This is the same construction DJB's NaCl library uses
@@ -880,7 +885,7 @@ public:
 		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
 
 		_mangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8));
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
 
 		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
 		Poly1305::compute(mac,payload,payloadLen,macKey);

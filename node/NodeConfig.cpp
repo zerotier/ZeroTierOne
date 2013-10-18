@@ -49,6 +49,7 @@
 #include "Logger.hpp"
 #include "Topology.hpp"
 #include "Demarc.hpp"
+#include "Packet.hpp"
 #include "InetAddress.hpp"
 #include "Peer.hpp"
 #include "Salsa20.hpp"
@@ -283,7 +284,7 @@ std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMe
 			Utils::getSecureRandom(iv,8);
 			memcpy(packet.field(8,8),iv,8);
 
-			Salsa20 s20(key,256,iv);
+			Salsa20 s20(key,256,iv,ZT_PROTO_SALSA20_ROUNDS);
 			s20.encrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
 
 			memcpy(keytmp,key,32);
@@ -322,7 +323,7 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 		if (!Utils::secureEq(packet.field(0,8),poly1305tag,8))
 			return false;
 
-		Salsa20 s20(key,256,packet.field(8,8));
+		Salsa20 s20(key,256,packet.field(8,8),ZT_PROTO_SALSA20_ROUNDS);
 		s20.decrypt(packet.field(16,packet.size() - 16),packet.field(16,packet.size() - 16),packet.size() - 16);
 
 		conversationId = packet.at<uint32_t>(16);

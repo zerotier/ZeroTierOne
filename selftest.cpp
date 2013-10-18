@@ -180,21 +180,29 @@ static int testCrypto()
 		memset(buf2,0,sizeof(buf2));
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
-		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.init("12345678123456781234567812345678",256,"12345678",20);
 		s20.encrypt(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.init("12345678123456781234567812345678",256,"12345678",20);
 		s20.decrypt(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
 		}
 	}
-	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
+	Salsa20 s20(s20TV0Key,256,s20TV0Iv,20);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
 	s20.encrypt(buf1,buf2,64);
 	if (memcmp(buf2,s20TV0Ks,64)) {
 		std::cout << "FAIL (test vector 0)" << std::endl;
+		return -1;
+	}
+	s20.init(s2012TV0Key,256,s2012TV0Iv,12);
+	memset(buf1,0,sizeof(buf1));
+	memset(buf2,0,sizeof(buf2));
+	s20.encrypt(buf1,buf2,64);
+	if (memcmp(buf2,s2012TV0Ks,64)) {
+		std::cout << "FAIL (test vector 1)" << std::endl;
 		return -1;
 	}
 	std::cout << "PASS" << std::endl;
