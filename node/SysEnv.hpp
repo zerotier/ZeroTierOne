@@ -48,8 +48,7 @@ public:
 	/**
 	 * @return Fingerprint of currently running network environment
 	 */
-	uint64_t getNetworkConfigurationFingerprint()
-		throw();
+	uint64_t getNetworkConfigurationFingerprint();
 
 private:
 	const RuntimeEnvironment *_r;

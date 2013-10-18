@@ -94,7 +94,6 @@ bool Demarc::has(Port p) const
 }
 
 bool Demarc::bindLocalUdp(unsigned int localPort)
-	throw()
 {
 	Mutex::Lock _l(_ports_m);
 

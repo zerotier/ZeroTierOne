@@ -100,8 +100,7 @@ public:
 	 * @throws std::out_of_range Range error processing packet (should be discarded)
 	 * @throws std::runtime_error Other error processing packet (should be discarded)
 	 */
-	bool tryDecode(const RuntimeEnvironment *_r)
-		throw(std::out_of_range,std::runtime_error);
+	bool tryDecode(const RuntimeEnvironment *_r);
 
 	/**
 	 * @return Time of packet receipt / start of decode

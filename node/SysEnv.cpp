@@ -74,7 +74,6 @@ SysEnv::~SysEnv()
 #ifdef __APPLE__
 
 uint64_t SysEnv::getNetworkConfigurationFingerprint()
-	throw()
 {
 	int mib[6];
 	size_t needed;
@@ -141,7 +140,6 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 
 uint64_t SysEnv::getNetworkConfigurationFingerprint()
-	throw()
 {
 	char buf[16384];
 	uint64_t fingerprint = 5381; // djb2 hash algorithm is used below
@@ -218,7 +216,6 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 #ifdef __WINDOWS__
 
 uint64_t SysEnv::getNetworkConfigurationFingerprint()
-	throw()
 {
 	// TODO: windows version
 	return 1;

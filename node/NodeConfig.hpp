@@ -63,8 +63,7 @@ public:
 	 * @param controlPort Control port for local control packet I/O
 	 * @throws std::runtime_error Unable to bind to local control port
 	 */
-	NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort)
-		throw(std::runtime_error);
+	NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort);
 
 	~NodeConfig();
 
@@ -143,8 +142,7 @@ public:
 	 * @return One or more transport armored packets (if payload too big)
 	 * @throws std::out_of_range An element of payload is too big
 	 */
-	static std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload)
-		throw(std::out_of_range);
+	static std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload);
 
 	/**
 	 * Decode a packet from the control bus

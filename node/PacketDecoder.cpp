@@ -45,7 +45,6 @@
 namespace ZeroTier {
 
 bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
-	throw(std::out_of_range,std::runtime_error)
 {
 	if ((!encrypted())&&(verb() == Packet::VERB_HELLO)) {
 		// Unencrypted HELLOs are handled here since they are used to

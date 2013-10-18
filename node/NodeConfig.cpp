@@ -58,8 +58,7 @@
 
 namespace ZeroTier {
 
-NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort)
-	throw(std::runtime_error) :
+NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort) :
 	_r(renv),
 	_controlSocket(true,controlPort,false,&_CBcontrolPacketHandler,this)
 {
@@ -266,7 +265,6 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 }
 
 std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > NodeConfig::encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload)
-	throw(std::out_of_range)
 {
 	char poly1305tag[ZT_POLY1305_MAC_LEN];
 	char iv[8];

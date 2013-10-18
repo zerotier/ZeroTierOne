@@ -43,7 +43,6 @@ namespace ZeroTier {
 const Defaults ZT_DEFAULTS;
 
 static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
-	throw(std::runtime_error)
 {
 	std::map< Identity,std::vector<InetAddress> > sn;
 	Identity id;
@@ -99,8 +98,7 @@ static inline std::string _mkDefaultHomePath()
 #endif
 }
 
-Defaults::Defaults()
-	throw(std::runtime_error) :
+Defaults::Defaults() :
 #ifdef ZT_TRACE_MULTICAST
 	multicastTraceWatcher(ZT_TRACE_MULTICAST),
 #endif

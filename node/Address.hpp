@@ -150,25 +150,12 @@ public:
 	inline void appendTo(Buffer<C> &b) const
 		throw(std::out_of_range)
 	{
-		b.append((unsigned char)((_a >> 32) & 0xff));
-		b.append((unsigned char)((_a >> 24) & 0xff));
-		b.append((unsigned char)((_a >> 16) & 0xff));
-		b.append((unsigned char)((_a >> 8) & 0xff));
-		b.append((unsigned char)(_a & 0xff));
-	}
-
-	/**
-	 * @return String containing address as 5 binary bytes
-	 */
-	inline std::string toBinaryString() const
-	{
-		std::string b;
-		b.push_back((char)((_a >> 32) & 0xff));
-		b.push_back((char)((_a >> 24) & 0xff));
-		b.push_back((char)((_a >> 16) & 0xff));
-		b.push_back((char)((_a >> 8) & 0xff));
-		b.push_back((char)(_a & 0xff));
-		return b;
+		unsigned char *p = (unsigned char *)b.appendField(ZT_ADDRESS_LENGTH);
+		*(p++) = (unsigned char)((_a >> 32) & 0xff);
+		*(p++) = (unsigned char)((_a >> 24) & 0xff);
+		*(p++) = (unsigned char)((_a >> 16) & 0xff);
+		*(p++) = (unsigned char)((_a >> 8) & 0xff);
+		*p = (unsigned char)(_a & 0xff);
 	}
 
 	/**
@@ -201,19 +188,12 @@ public:
 	inline bool wouldHaveMac(const MAC &mac) const
 		throw()
 	{
-		if (mac.data[0] != ZT_MAC_FIRST_OCTET)
-			return false;
-		if (mac.data[1] != (unsigned char)((_a >> 32) & 0xff))
-			return false;
-		if (mac.data[2] != (unsigned char)((_a >> 24) & 0xff))
-			return false;
-		if (mac.data[3] != (unsigned char)((_a >> 16) & 0xff))
-			return false;
-		if (mac.data[4] != (unsigned char)((_a >> 8) & 0xff))
-			return false;
-		if (mac.data[5] != (unsigned char)(_a & 0xff))
-			return false;
-		return true;
+		return ((mac.data[0] != ZT_MAC_FIRST_OCTET)||
+		        (mac.data[1] != (unsigned char)((_a >> 32) & 0xff))||
+		        (mac.data[2] != (unsigned char)((_a >> 24) & 0xff))||
+		        (mac.data[3] != (unsigned char)((_a >> 16) & 0xff))||
+		        (mac.data[4] != (unsigned char)((_a >> 8) & 0xff))||
+		        (mac.data[5] != (unsigned char)(_a & 0xff)));
 	}
 
 	/**
@@ -234,11 +214,7 @@ public:
 	/**
 	 * Set to null/zero
 	 */
-	inline void zero()
-		throw()
-	{
-		_a = 0;
-	}
+	inline void zero() throw() { _a = 0; }
 
 	/**
 	 * Check if this address is reserved

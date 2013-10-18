@@ -49,9 +49,7 @@ namespace ZeroTier {
 class Defaults
 {
 public:
-	Defaults()
-		throw(std::runtime_error);
-	~Defaults() {}
+	Defaults();
 
 #ifdef ZT_TRACE_MULTICAST
 	/**

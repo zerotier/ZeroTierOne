@@ -302,6 +302,25 @@ public:
 	}
 
 	/**
+	 * Increment size and return pointer to field of specified size
+	 *
+	 * The memory isn't actually written, so this is a shortcut for a multi-step
+	 * process involving getting the current pointer and adding size.
+	 *
+	 * @param l Length of field to append
+	 * @return Pointer to beginning of appended field of length 'l'
+	 */
+	inline char *appendField(unsigned int l)
+		throw(std::out_of_range)
+	{
+		if ((_l + l) > C)
+			throw std::out_of_range("Buffer: append beyond capacity");
+		char *r = _b + _l;
+		_l += l;
+		return r;
+	}
+
+	/**
 	 * Increment size by a given number of bytes
 	 * 
 	 * The contents of new space are undefined.

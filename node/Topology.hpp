@@ -55,9 +55,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,const char *dbpath)
-		throw(std::runtime_error);
-
+	Topology(const RuntimeEnvironment *renv,const char *dbpath);
 	~Topology();
 
 	/**

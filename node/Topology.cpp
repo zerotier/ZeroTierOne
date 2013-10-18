@@ -37,8 +37,7 @@ namespace ZeroTier {
 #define ZT_KISSDB_KEY_SIZE ZT_ADDRESS_LENGTH
 #define ZT_KISSDB_VALUE_SIZE ZT_PEER_MAX_SERIALIZED_LENGTH
 
-Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath)
-	throw(std::runtime_error) :
+Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath) :
 	_r(renv),
 	_amSupernode(false)
 {

@@ -100,8 +100,7 @@ public:
 	 * @param localPort Local IP port
 	 * @return True if successfully bound, or if already bound
 	 */
-	bool bindLocalUdp(unsigned int localPort)
-		throw();
+	bool bindLocalUdp(unsigned int localPort);
 
 	/**
 	 * Pick a port to send to an address of a given type
