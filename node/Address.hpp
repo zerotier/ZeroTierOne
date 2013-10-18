@@ -188,12 +188,12 @@ public:
 	inline bool wouldHaveMac(const MAC &mac) const
 		throw()
 	{
-		return ((mac.data[0] != ZT_MAC_FIRST_OCTET)||
-		        (mac.data[1] != (unsigned char)((_a >> 32) & 0xff))||
-		        (mac.data[2] != (unsigned char)((_a >> 24) & 0xff))||
-		        (mac.data[3] != (unsigned char)((_a >> 16) & 0xff))||
-		        (mac.data[4] != (unsigned char)((_a >> 8) & 0xff))||
-		        (mac.data[5] != (unsigned char)(_a & 0xff)));
+		return ((mac.data[0] == ZT_MAC_FIRST_OCTET)&&
+		        (mac.data[1] == (unsigned char)((_a >> 32) & 0xff))&&
+		        (mac.data[2] == (unsigned char)((_a >> 24) & 0xff))&&
+		        (mac.data[3] == (unsigned char)((_a >> 16) & 0xff))&&
+		        (mac.data[4] == (unsigned char)((_a >> 8) & 0xff))&&
+		        (mac.data[5] == (unsigned char)(_a & 0xff)));
 	}
 
 	/**

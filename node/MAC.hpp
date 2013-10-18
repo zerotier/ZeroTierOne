@@ -140,6 +140,9 @@ public:
 		Utils::unhex(s,data,6);
 	}
 
+	/**
+	 * @return MAC address in standard :-delimited hex format
+	 */
 	inline std::string toString() const
 	{
 		char tmp[32];
