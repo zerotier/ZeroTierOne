@@ -14,6 +14,10 @@ STRIP=strip --strip-all
 #CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE $(DEFS)
 #STRIP=echo
 
+# Uncomment for gprof profile build
+#CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
+#STRIP=echo
+
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
