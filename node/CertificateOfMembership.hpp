@@ -164,6 +164,15 @@ public:
 	}
 
 	/**
+	 * @return True if there's something here
+	 */
+	inline operator bool() const
+		throw()
+	{
+		return (_qualifiers.size() != 0);
+	}
+
+	/**
 	 * Check for presence of all required fields common to all networks
 	 *
 	 * @return True if all required fields are present

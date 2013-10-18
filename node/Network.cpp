@@ -30,22 +30,16 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include <algorithm>
-
-#include "Constants.hpp"
+#include "Network.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
-#include "Network.hpp"
 #include "Switch.hpp"
 #include "Packet.hpp"
-#include "Utils.hpp"
 #include "Buffer.hpp"
 
 #define ZT_NETWORK_CERT_WRITE_BUF_SIZE 524288
 
 namespace ZeroTier {
-
-const Network::MulticastRates::Rate Network::MulticastRates::GLOBAL_DEFAULT_RATE(65535,65535,64);
 
 const char *Network::statusString(const Status s)
 	throw()
@@ -73,7 +67,6 @@ Network::~Network()
 }
 
 SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t id)
-	throw(std::runtime_error)
 {
 	// Tag to identify tap device -- used on some OSes like Windows
 	char tag[32];
@@ -85,59 +78,35 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 	// that then causes the Network instance to be deleted before it is finished
 	// being constructed. C++ edge cases, how I love thee.
 	SharedPtr<Network> nw(new Network());
+	nw->_id = id;
 	nw->_ready = false; // disable handling of Ethernet frames during construct
 	nw->_r = renv;
 	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
-	nw->_isOpen = false;
-	nw->_emulateArp = false;
-	nw->_emulateNdp = false;
-	nw->_arpCacheTtl = 0;
-	nw->_ndpCacheTtl = 0;
-	nw->_multicastPrefixBits = ZT_DEFAULT_MULTICAST_PREFIX_BITS;
-	nw->_multicastDepth = ZT_DEFAULT_MULTICAST_DEPTH;
-	nw->_status = NETWORK_WAITING_FOR_FIRST_AUTOCONF;
-	memset(nw->_etWhitelist,0,sizeof(nw->_etWhitelist));
-	nw->_id = id;
 	nw->_lastConfigUpdate = 0;
+	nw->_status = NETWORK_WAITING_FOR_FIRST_AUTOCONF;
 	nw->_destroyOnDelete = false;
 	if (nw->controller() == renv->identity.address()) // netconf masters can't really join networks
 		throw std::runtime_error("cannot join a network for which I am the netconf master");
 	nw->_restoreState();
 	nw->_ready = true; // enable handling of Ethernet frames
 	nw->requestConfiguration();
+
 	return nw;
 }
 
-void Network::setConfiguration(const Network::Config &conf,bool saveToDisk)
+void Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
-	Mutex::Lock _l(_lock);
 	try {
-		if (conf.networkId() == _id) { // sanity check
-			_configuration = conf;
+		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf));
+		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == _r->identity.address())) {
+			Mutex::Lock _l(_lock);
+			_config = newConfig;
 
-			// Grab some things from conf for faster lookup and memoize them
-			_myCertificate = conf.certificateOfMembership();
-			_mcRates = conf.multicastRates();
-			_staticAddresses = conf.staticAddresses();
-			_isOpen = conf.isOpen();
-			_emulateArp = conf.emulateArp();
-			_emulateNdp = conf.emulateNdp();
-			_arpCacheTtl = conf.arpCacheTtl();
-			_ndpCacheTtl = conf.ndpCacheTtl();
-			_multicastPrefixBits = conf.multicastPrefixBits();
-			_multicastDepth = conf.multicastDepth();
+			if (newConfig->staticIps().size())
+				_tap->setIps(newConfig->staticIps());
+			_tap->setDisplayName((std::string("ZeroTier One [") + newConfig->name() + "]").c_str());
 
 			_lastConfigUpdate = Utils::now();
-
-			_tap->setIps(_staticAddresses);
-			_tap->setDisplayName((std::string("ZeroTier One [") + conf.name() + "]").c_str());
-
-			// Expand ethertype whitelist into fast-lookup bit field (more memoization)
-			memset(_etWhitelist,0,sizeof(_etWhitelist));
-			std::set<unsigned int> wl(conf.etherTypes());
-			for(std::set<unsigned int>::const_iterator t(wl.begin());t!=wl.end();++t)
-				_etWhitelist[*t / 8] |= (unsigned char)(1 << (*t % 8));
-
 			_status = NETWORK_OK;
 
 			if (saveToDisk) {
@@ -146,23 +115,13 @@ void Network::setConfiguration(const Network::Config &conf,bool saveToDisk)
 					LOG("error: unable to write network configuration file at: %s",confPath.c_str());
 				}
 			}
+		} else {
+			LOG("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
 		}
+	} catch (std::exception &exc) {
+		LOG("ignored invalid configuration for network %.16llx (%s)",(unsigned long long)_id,exc.what());
 	} catch ( ... ) {
-		// If conf is invalid, reset everything
-		_configuration = Config();
-
-		_myCertificate = CertificateOfMembership();
-		_mcRates = MulticastRates();
-		_staticAddresses.clear();
-		_isOpen = false;
-		_emulateArp = false;
-		_emulateNdp = false;
-		_arpCacheTtl = 0;
-		_ndpCacheTtl = 0;
-		_status = NETWORK_WAITING_FOR_FIRST_AUTOCONF;
-
-		_lastConfigUpdate = 0;
-		LOG("unexpected exception handling config for network %.16llx, retrying fetch...",(unsigned long long)_id);
+		LOG("ignored invalid configuration for network %.16llx (unknown exception)",(unsigned long long)_id);
 	}
 }
 
@@ -196,15 +155,18 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert)
 
 bool Network::isAllowed(const Address &peer) const
 {
-	// Exceptions can occur if we do not yet have *our* configuration.
 	try {
 		Mutex::Lock _l(_lock);
-		if (_isOpen)
-			return true; // network is public
+
+		if (!_config)
+			return false;
+		if (_config->isOpen())
+			return true;
+
 		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
 		if (pc == _membershipCertificates.end())
 			return false; // no certificate on file
-		return _myCertificate.agreesWith(pc->second); // is other cert valid against ours?
+		return _config->com().agreesWith(pc->second); // is other cert valid against ours?
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -216,22 +178,21 @@ bool Network::isAllowed(const Address &peer) const
 void Network::clean()
 {
 	Mutex::Lock _l(_lock);
-	uint64_t timestampMaxDelta = _myCertificate.timestampMaxDelta();
-	if (_isOpen) {
+	if ((_config)&&(_config->isOpen())) {
 		// Open (public) networks do not track certs or cert pushes at all.
 		_membershipCertificates.clear();
 		_lastPushedMembershipCertificate.clear();
-	} else if (timestampMaxDelta) {
+	} else if (_config) {
 		// Clean certificates that are no longer valid from the cache.
 		for(std::map<Address,CertificateOfMembership>::iterator c=(_membershipCertificates.begin());c!=_membershipCertificates.end();) {
-			if (_myCertificate.agreesWith(c->second))
+			if (_config->com().agreesWith(c->second))
 				++c;
 			else _membershipCertificates.erase(c++);
 		}
 
 		// Clean entries from the last pushed tracking map if they're so old as
 		// to be no longer relevant.
-		uint64_t forgetIfBefore = Utils::now() - (timestampMaxDelta * 3);
+		uint64_t forgetIfBefore = Utils::now() - (_config->com().timestampMaxDelta() * 3ULL);
 		for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
 			if (lp->second < forgetIfBefore)
 				_lastPushedMembershipCertificate.erase(lp++);
@@ -260,7 +221,7 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 
 void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
 {
-	uint64_t timestampMaxDelta = _myCertificate.timestampMaxDelta();
+	uint64_t timestampMaxDelta = _config->com().timestampMaxDelta();
 	if (!timestampMaxDelta)
 		return; // still waiting on my own cert
 
@@ -269,7 +230,7 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 		lastPushed = now;
 
 		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_myCertificate.serialize(outp);
+		_config->com().serialize(outp);
 		_r->sw->send(outp,true);
 	}
 }
@@ -291,7 +252,7 @@ void Network::_restoreState()
 		if (Utils::readFile(confPath.c_str(),confs)) {
 			try {
 				if (confs.length())
-					setConfiguration(Config(confs),false);
+					setConfiguration(Dictionary(confs),false);
 			} catch ( ... ) {} // ignore invalid config on disk, we will re-request from netconf master
 		} else {
 			// If the conf file isn't present, "touch" it so we'll remember
@@ -303,7 +264,7 @@ void Network::_restoreState()
 	}
 
 	// Read most recent multicast cert dump
-	if ((!_isOpen)&&(Utils::fileExists(mcdbPath.c_str()))) {
+	if ((_config)&&(!_config->isOpen())&&(Utils::fileExists(mcdbPath.c_str()))) {
 		CertificateOfMembership com;
 		Mutex::Lock _l(_lock);
 
@@ -314,10 +275,10 @@ void Network::_restoreState()
 			try {
 				char magic[6];
 				if ((fread(magic,6,1,mcdb) == 1)&&(!memcmp("ZTMCD0",magic,6))) {
-					for(;;) {
+					long rlen = 0;
+					do {
 						long rlen = (long)fread(buf.data() + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
-						if (rlen <= 0)
-							break;
+						if (rlen < 0) rlen = 0;
 						buf.setSize(buf.size() + (unsigned int)rlen);
 						unsigned int ptr = 0;
 						while ((ptr < (ZT_NETWORK_CERT_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
@@ -329,7 +290,7 @@ void Network::_restoreState()
 							memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);
 							buf.setSize(buf.size() - ptr);
 						}
-					}
+					} while (rlen > 0);
 					fclose(mcdb);
 				} else {
 					fclose(mcdb);
@@ -351,7 +312,10 @@ void Network::_dumpMulticastCerts()
 	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
 	Mutex::Lock _l(_lock);
 
-	if ((!_id)||(_isOpen)) {
+	if (!_config)
+		return;
+
+	if ((!_id)||(_config->isOpen())) {
 		Utils::rm(mcdbPath);
 		return;
 	}

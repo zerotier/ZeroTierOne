@@ -38,6 +38,7 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
+#include "NonCopyable.hpp"
 #include "Utils.hpp"
 #include "EthernetTap.hpp"
 #include "Address.hpp"
@@ -45,12 +46,12 @@
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
 #include "MulticastGroup.hpp"
-#include "NonCopyable.hpp"
 #include "MAC.hpp"
 #include "Dictionary.hpp"
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
+#include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 
 namespace ZeroTier {
@@ -68,320 +69,43 @@ class NodeConfig;
  * node.
  *
  * Open networks do not track membership. Anyone is allowed to communicate
- * over them.
- *
- * Closed networks track membership by way of timestamped signatures. When
- * the network requests its configuration, one of the fields returned is
- * a signature for the identity of the peer on the network. This signature
- * includes a timestamp. When a peer communicates with other peers on a
- * closed network, it periodically (and pre-emptively) propagates this
- * signature to the peers with which it is communicating. Peers reject
- * packets with an error if no recent signature is on file.
+ * over them. For closed networks, each peer must distribute a certificate
+ * regularly that proves that they are allowed to communicate.
  */
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
 	friend class NodeConfig;
 
+private:
+	// Only NodeConfig can create, only SharedPtr can delete
+
+	// Actual construction happens in newInstance()
+	Network() throw() : _tap((EthernetTap *)0) {}
+
+	~Network();
+
+	/**
+	 * Create a new Network instance and restore any saved state
+	 *
+	 * If there is no saved state, a dummy .conf is created on disk to remember
+	 * this network across restarts.
+	 *
+	 * @param renv Runtime environment
+	 * @param id Network ID
+	 * @return Reference counted pointer to new network
+	 * @throws std::runtime_error Unable to create tap device or other fatal error
+	 */
+	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,uint64_t id);
+
+	/**
+	 * Causes all persistent disk presence to be erased on delete
+	 */
+	inline void destroyOnDelete() throw() { _destroyOnDelete = true; }
+
 public:
 	/**
-	 * Preload and rates of accrual for multicast group bandwidth limits
-	 *
-	 * Key is multicast group in lower case hex format: MAC (without :s) /
-	 * ADI (hex). Value is preload, maximum balance, and rate of accrual in
-	 * hex.
-	 */
-	class MulticastRates : private Dictionary
-	{
-	public:
-		/**
-		 * Preload and accrual parameter tuple
-		 */
-		struct Rate
-		{
-			Rate() {}
-			Rate(uint32_t pl,uint32_t maxb,uint32_t acc)
-			{
-				preload = pl;
-				maxBalance = maxb;
-				accrual = acc;
-			}
-			uint32_t preload;
-			uint32_t maxBalance;
-			uint32_t accrual;
-		};
-
-		MulticastRates() {}
-		MulticastRates(const char *s) : Dictionary(s) {}
-		MulticastRates(const std::string &s) : Dictionary(s) {}
-		inline std::string toString() const { return Dictionary::toString(); }
-
-		/**
-		 * A very minimal default rate, fast enough for ARP
-		 */
-		static const Rate GLOBAL_DEFAULT_RATE;
-
-		/**
-		 * @return Default rate, or GLOBAL_DEFAULT_RATE if not specified
-		 */
-		inline Rate defaultRate() const
-		{
-			Rate r;
-			const_iterator dfl(find("*"));
-			if (dfl == end())
-				return GLOBAL_DEFAULT_RATE;
-			return _toRate(dfl->second);
-		}
-
-		/**
-		 * Get the rate for a given multicast group
-		 *
-		 * @param mg Multicast group
-		 * @return Rate or default() rate if not specified
-		 */
-		inline Rate get(const MulticastGroup &mg) const
-		{
-			const_iterator r(find(mg.toString()));
-			if (r == end())
-				return defaultRate();
-			return _toRate(r->second);
-		}
-
-	private:
-		static inline Rate _toRate(const std::string &s)
-		{
-			char tmp[16384];
-			Utils::scopy(tmp,sizeof(tmp),s.c_str());
-			Rate r(0,0,0);
-			char *saveptr = (char *)0;
-			unsigned int fn = 0;
-			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-				switch(fn++) {
-					case 0:
-						r.preload = (uint32_t)Utils::hexStrToULong(f);
-						break;
-					case 1:
-						r.maxBalance = (uint32_t)Utils::hexStrToULong(f);
-						break;
-					case 2:
-						r.accrual = (uint32_t)Utils::hexStrToULong(f);
-						break;
-				}
-			}
-			return r;
-		}
-	};
-
-	/**
-	 * A network configuration for a given node
-	 *
-	 * Configuration fields:
-	 *
-	 * nwid=<hex network ID> (required)
-	 * name=short name
-	 * desc=long(er) description
-	 * com=Serialized certificate of membership
-	 * mr=MulticastRates (serialized dictionary)
-	 * md=multicast propagation depth
-	 * mpb=multicast propagation prefix bits (2^mpb packets are sent by origin)
-	 * o=open network? (1 or 0, default false if missing)
-	 * et=ethertype whitelist (comma-delimited list of ethertypes in decimal)
-	 * v4s=IPv4 static assignments / netmasks (comma-delimited)
-	 * v6s=IPv6 static assignments / netmasks (comma-delimited)
-	 *
-	 * Notes:
-	 *
-	 * If zero appears in the 'et' list, the sense is inverted. It becomes an
-	 * ethertype blacklist instead of a whitelist and anything not blacklisted
-	 * is permitted.
-	 */
-	class Config : private Dictionary
-	{
-	public:
-		Config() {}
-		Config(const char *s) : Dictionary(s) {}
-		Config(const std::string &s) : Dictionary(s) {}
-		inline std::string toString() const { return Dictionary::toString(); }
-
-		/**
-		 * @return True if configuration is valid and contains required fields
-		 */
-		inline operator bool() const throw() { return (find("nwid") != end()); }
-
-		/**
-		 * @return Network ID
-		 * @throws std::invalid_argument Network ID field missing
-		 */
-		inline uint64_t networkId() const
-			throw(std::invalid_argument)
-		{
-			return Utils::hexStrToU64(get("nwid").c_str());
-		}
-
-		/**
-		 * Get this network's short name, or its ID in hex if unspecified
-		 *
-		 * @return Short name of this network (e.g. "earth")
-		 */
-		inline std::string name() const
-		{
-			const_iterator n(find("name"));
-			if (n == end())
-				return get("nwid");
-			return n->second;
-		}
-
-		/**
-		 * @return Long description of network or empty string if not present
-		 */
-		inline std::string desc() const
-		{
-			return get("desc",std::string());
-		}
-
-		/**
-		 * @return Certificate of membership for this network, or empty cert if none
-		 */
-		inline CertificateOfMembership certificateOfMembership() const
-		{
-			const_iterator cm(find("com"));
-			if (cm == end())
-				return CertificateOfMembership();
-			else return CertificateOfMembership(cm->second);
-		}
-
-		/**
-		 * @return True if this network emulates IPv4 ARP for assigned addresses
-		 */
-		inline bool emulateArp() const
-		{
-			const_iterator e(find("eARP"));
-			if (e == end())
-				return false;
-			else return (e->second == "1");
-		}
-
-		/**
-		 * @return True if this network emulates IPv6 NDP for assigned addresses
-		 */
-		inline bool emulateNdp() const
-		{
-			const_iterator e(find("eNDP"));
-			if (e == end())
-				return false;
-			else return (e->second == "1");
-		}
-
-		/**
-		 * @return ARP cache TTL in seconds or 0 for no ARP caching
-		 */
-		inline unsigned int arpCacheTtl() const
-		{
-			const_iterator ttl(find("cARP"));
-			if (ttl == end())
-				return 0;
-			return Utils::hexStrToUInt(ttl->second.c_str());
-		}
-
-		/**
-		 * @return NDP cache TTL in seconds or 0 for no NDP caching
-		 */
-		inline unsigned int ndpCacheTtl() const
-		{
-			const_iterator ttl(find("cNDP"));
-			if (ttl == end())
-				return 0;
-			return Utils::hexStrToUInt(ttl->second.c_str());
-		}
-
-		/**
-		 * @return Multicast rates for this network
-		 */
-		inline MulticastRates multicastRates() const
-		{
-			const_iterator mr(find("mr"));
-			if (mr == end())
-				return MulticastRates();
-			else return MulticastRates(mr->second);
-		}
-
-		/**
-		 * @return Number of bits in propagation prefix for this network
-		 */
-		inline unsigned int multicastPrefixBits() const
-		{
-			const_iterator mpb(find("mpb"));
-			if (mpb == end())
-				return ZT_DEFAULT_MULTICAST_PREFIX_BITS;
-			unsigned int tmp = Utils::hexStrToUInt(mpb->second.c_str());
-			if (tmp)
-				return tmp;
-			else return ZT_DEFAULT_MULTICAST_PREFIX_BITS;
-		}
-
-		/**
-		 * @return Maximum multicast propagation depth for this network
-		 */
-		inline unsigned int multicastDepth() const
-		{
-			const_iterator md(find("md"));
-			if (md == end())
-				return ZT_DEFAULT_MULTICAST_DEPTH;
-			unsigned int tmp = Utils::hexStrToUInt(md->second.c_str());
-			if (tmp)
-				return tmp;
-			else return ZT_DEFAULT_MULTICAST_DEPTH;
-		}
-
-		/**
-		 * @return True if this is an open non-access-controlled network
-		 */
-		inline bool isOpen() const
-		{
-			const_iterator o(find("o"));
-			if (o == end())
-				return false;
-			else if (!o->second.length())
-				return false;
-			else return (o->second[0] == '1');
-		}
-
-		/**
-		 * @return Network ethertype whitelist
-		 */
-		inline std::set<unsigned int> etherTypes() const
-		{
-			char tmp[16384];
-			char *saveptr = (char *)0;
-			std::set<unsigned int> et;
-			if (!Utils::scopy(tmp,sizeof(tmp),get("et","").c_str()))
-				return et; // sanity check, packet can't really be that big
-			for(char *f=Utils::stok(tmp,",",&saveptr);(f);f=Utils::stok((char *)0,",",&saveptr)) {
-				unsigned int t = Utils::hexStrToUInt(f);
-				if (t)
-					et.insert(t);
-			}
-			return et;
-		}
-
-		/**
-		 * @return All static addresses / netmasks, IPv4 or IPv6
-		 */
-		inline std::set<InetAddress> staticAddresses() const
-		{
-			std::set<InetAddress> sa;
-			std::vector<std::string> ips(Utils::split(get("v4s","").c_str(),",","",""));
-			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
-				sa.insert(InetAddress(*i));
-			ips = Utils::split(get("v6s","").c_str(),",","","");
-			for(std::vector<std::string>::const_iterator i(ips.begin());i!=ips.end();++i)
-				sa.insert(InetAddress(*i));
-			return sa;
-		}
-	};
-
-	/**
-	 * Status for networks
+	 * Possible network states
 	 */
 	enum Status
 	{
@@ -398,42 +122,6 @@ public:
 	static const char *statusString(const Status s)
 		throw();
 
-private:
-	// Only NodeConfig can create, only SharedPtr can delete
-
-	// Actual construction happens in newInstance()
-	Network()
-		throw() :
-		_tap((EthernetTap *)0)
-	{
-	}
-
-	~Network();
-
-	/**
-	 * Create a new Network instance and restore any saved state
-	 *
-	 * If there is no saved state, a dummy .conf is created on disk to remember
-	 * this network across restarts.
-	 *
-	 * @param renv Runtime environment
-	 * @param id Network ID
-	 * @return Reference counted pointer to new network
-	 * @throws std::runtime_error Unable to create tap device or other fatal error
-	 */
-	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,uint64_t id)
-		throw(std::runtime_error);
-
-	/**
-	 * Causes all persistent disk presence to be erased on delete
-	 */
-	inline void destroyOnDelete()
-		throw()
-	{
-		_destroyOnDelete = true;
-	}
-
-public:
 	/**
 	 * @return Network ID
 	 */
@@ -457,36 +145,6 @@ public:
 		char buf[64];
 		Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)_id);
 		return std::string(buf);
-	}
-
-	/**
-	 * @return True if network is open (no membership required)
-	 */
-	inline bool isOpen() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return _isOpen;
-	}
-
-	/**
-	 * @return True if this network emulates IPv4 ARP for assigned addresses
-	 */
-	inline bool emulateArp() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return _emulateArp;
-	}
-
-	/**
-	 * @return True if this network emulates IPv6 NDP for assigned addresses
-	 */
-	inline bool emulateNdp() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return _emulateNdp;
 	}
 
 	/**
@@ -518,7 +176,7 @@ public:
 	 * @param conf Configuration in key/value dictionary form
 	 * @param saveToDisk IF true (default), write config to disk
 	 */
-	void setConfiguration(const Config &conf,bool saveToDisk = true);
+	void setConfiguration(const Dictionary &conf,bool saveToDisk = true);
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
@@ -528,7 +186,8 @@ public:
 	/**
 	 * Add or update a membership certificate
 	 *
-	 * The certificate must already have been validated via signature checking.
+	 * This cert must have been signature checked first. Certs older than the
+	 * cert on file are ignored and the newer cert remains in the database.
 	 *
 	 * @param cert Certificate of membership
 	 */
@@ -544,7 +203,7 @@ public:
 	inline void pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		if (!_isOpen)
+		if ((_config)&&(!_config->isOpen()))
 			_pushMembershipCertificate(peer,force,now);
 	}
 
@@ -562,7 +221,7 @@ public:
 	inline void pushMembershipCertificate(const void *peers,unsigned int len,bool force,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		if (!_isOpen) {
+		if ((_config)&&(!_config->isOpen())) {
 			for(unsigned int i=0;i<len;i+=ZT_ADDRESS_LENGTH) {
 				Address a((char *)peers + i,ZT_ADDRESS_LENGTH);
 				if (a)
@@ -615,25 +274,7 @@ public:
 		throw()
 	{
 		Mutex::Lock _l(_lock);
-		return ((_status == NETWORK_OK)&&(_ready));
-	}
-
-	/**
-	 * Determine whether frames of a given ethernet type are allowed on this network
-	 *
-	 * @param etherType Ethernet frame type
-	 * @return True if network permits this type
-	 */
-	inline bool permitsEtherType(unsigned int etherType) const
-		throw()
-	{
-		if (!etherType)
-			return false;
-		else if (etherType > 65535)
-			return false;
-		else if ((_etWhitelist[0] & 1)) // if type 0 is in the whitelist, sense is inverted from whitelist to blacklist
-			return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType & 7))) == 0);
-		else return ((_etWhitelist[etherType / 8] & (unsigned char)(1 << (etherType & 7))) != 0);
+		return ((_config)&&(_status == NETWORK_OK)&&(_ready));
 	}
 
 	/**
@@ -647,80 +288,68 @@ public:
 	inline bool updateAndCheckMulticastBalance(const Address &a,const MulticastGroup &mg,unsigned int bytes)
 	{
 		Mutex::Lock _l(_lock);
+		if (!_config)
+			return false;
 		std::pair<Address,MulticastGroup> k(a,mg);
 		std::map< std::pair<Address,MulticastGroup>,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(k));
 		if (bal == _multicastRateAccounts.end()) {
-			MulticastRates::Rate r(_mcRates.get(mg));
+			NetworkConfig::MulticastRate r(_config->multicastRate(mg));
 			bal = _multicastRateAccounts.insert(std::pair< std::pair<Address,MulticastGroup>,BandwidthAccount >(k,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
 		}
 		return bal->second.deduct(bytes);
 	}
 
 	/**
-	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
-	 * @return True if this network allows bridging
+	 * Get current network config or throw exception
+	 *
+	 * This version never returns null. Instead it throws a runtime error if
+	 * there is no current configuration. Callers should check isUp() first or
+	 * use config2() to get with the potential for null.
+	 *
+	 * Since it never returns null, it's safe to config()->whatever().
+	 *
+	 * @return Network configuration (never null)
+	 * @throws std::runtime_error Network configuration unavailable
 	 */
-	inline bool permitsBridging(const Address &fromPeer) const
-		throw()
+	inline SharedPtr<NetworkConfig> config() const
 	{
-		return false; // TODO: bridging not implemented yet
+		Mutex::Lock _l(_lock);
+		if (_config)
+			return _config;
+		throw std::runtime_error("no configuration");
 	}
 
 	/**
-	 * @return Bits in multicast restriciton prefix
+	 * @return Network configuration -- may be NULL
 	 */
-	inline unsigned int multicastPrefixBits() const throw() { return _multicastPrefixBits; }
-
-	/**
-	 * @return Max depth (TTL) for a multicast frame
-	 */
-	inline unsigned int multicastDepth() const throw() { return _multicastDepth; }
+	inline SharedPtr<NetworkConfig> config2() const
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		return _config;
+	}
 
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
+
 	void _pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
 	void _restoreState();
 	void _dumpMulticastCerts();
 
+	uint64_t _id;
+
 	const RuntimeEnvironment *_r;
 
-	// Multicast bandwidth accounting for peers on this network
-	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;
-
-	// Tap and tap multicast memberships for this node on this network
 	EthernetTap *_tap;
 	std::set<MulticastGroup> _multicastGroups;
 
-	// Membership certificates supplied by other peers on this network
+	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;
 	std::map<Address,CertificateOfMembership> _membershipCertificates;
-
-	// The last time we sent a membership certificate to a given peer
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate;
-
-	// Configuration from network master node -- and some memoized fields from
-	// the most recent _configuration we have.
-	Config _configuration;
-	CertificateOfMembership _myCertificate;
-	MulticastRates _mcRates;
-	std::set<InetAddress> _staticAddresses;
-	bool _isOpen;
-	bool _emulateArp;
-	bool _emulateNdp;
-	unsigned int _arpCacheTtl;
-	unsigned int _ndpCacheTtl;
-	unsigned int _multicastPrefixBits;
-	unsigned int _multicastDepth;
-
-	// Network status
-	Status _status;
-
-	// Ethertype whitelist bit field, set from config, for really fast lookup
-	unsigned char _etWhitelist[65536 / 8];
-
-	// Network ID -- master node is most significant 40 bits
-	uint64_t _id;
+	SharedPtr<NetworkConfig> _config;
 
 	volatile uint64_t _lastConfigUpdate;
+	volatile Status _status;
 	volatile bool _destroyOnDelete;
 	volatile bool _ready;
 

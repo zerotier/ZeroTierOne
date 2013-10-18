@@ -42,6 +42,7 @@
 #include "SharedPtr.hpp"
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
+#include "CertificateOfMembership.hpp"
 
 namespace ZeroTier {
 
@@ -63,6 +64,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
+#define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
 
 /**
  * Network configuration received from netconf master nodes
@@ -97,10 +99,7 @@ public:
 	 * @param d Dictionary containing configuration
 	 * @throws std::invalid_argument Invalid configuration
 	 */
-	NetworkConfig(const Dictionary &d)
-	{
-		_fromDictionary(d);
-	}
+	NetworkConfig(const Dictionary &d) { _fromDictionary(d); }
 
 	/**
 	 * @param etherType Ethernet frame type to check
@@ -131,6 +130,17 @@ public:
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::set<InetAddress> &staticIps() const throw() { return _staticIps; }
 	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
+	inline const CertificateOfMembership &com() const throw() { return _com; }
+
+	/**
+	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
+	 * @return True if this network allows bridging
+	 */
+	inline bool permitsBridging(const Address &fromPeer) const
+		throw()
+	{
+		return false; // TODO: bridging not implemented yet
+	}
 
 	/**
 	 * @param mg Multicast group
@@ -160,6 +170,7 @@ private:
 	std::string _description;
 	std::set<InetAddress> _staticIps;
 	std::map<MulticastGroup,MulticastRate> _multicastRates;
+	CertificateOfMembership _com;
 
 	AtomicCounter __refCount;
 };

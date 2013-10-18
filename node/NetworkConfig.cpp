@@ -70,6 +70,13 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 {
 	// NOTE: d.get(name) throws if not found, d.get(name,default) returns default
 
+	memset(_etWhitelist,0,sizeof(_etWhitelist));
+	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES).c_str(),",","",""));
+	for(std::vector<std::string>::const_iterator et(ets.begin());et!=ets.end();++et) {
+		unsigned int tmp = Utils::hexStrToUInt(et->c_str()) & 0xffff;
+		_etWhitelist[tmp >> 3] |= (1 << (tmp & 7));
+	}
+
 	_nwid = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID).c_str());
 	if (!_nwid)
 		throw std::invalid_argument("configuration contains zero network ID");
