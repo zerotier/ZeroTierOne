@@ -248,7 +248,7 @@ error_no_ZT_ARCH_defined;
 /**
  * Default max depth (TTL) for multicast propagation
  */
-#define ZT_DEFAULT_MULTICAST_DEPTH 64
+#define ZT_DEFAULT_MULTICAST_DEPTH 32
 
 /**
  * Global maximum for multicast propagation depth

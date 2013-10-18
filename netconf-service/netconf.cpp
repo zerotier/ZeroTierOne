@@ -432,7 +432,7 @@ int main(int argc,char **argv)
 					sprintf(buf,"%x",arpCacheTtl);
 					netconf[ZT_NETWORKCONFIG_DICT_KEY_ARP_CACHE_TTL] = buf;
 				}
-				if (ndpCachettl) {
+				if (ndpCacheTtl) {
 					sprintf(buf,"%x",ndpCacheTtl);
 					netconf[ZT_NETWORKCONFIG_DICT_KEY_NDP_CACHE_TTL] = buf;
 				}

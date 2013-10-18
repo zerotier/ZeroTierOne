@@ -92,6 +92,11 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
 	_description = d.get(ZT_NETWORKCONFIG_DICT_KEY_DESC,std::string());
 
+	if (!_multicastPrefixBits)
+		_multicastPrefixBits = ZT_DEFAULT_MULTICAST_PREFIX_BITS;
+	if (!_multicastDepth)
+		_multicastDepth = ZT_DEFAULT_MULTICAST_DEPTH;
+
 	std::string ipAddrs(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC,std::string()));
 	std::string v6s(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC,std::string()));
 	if (v6s.length()) {
