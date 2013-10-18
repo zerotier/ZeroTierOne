@@ -12,6 +12,7 @@ OBJS=\
 	node/Logger.o \
 	node/Multicaster.o \
 	node/Network.o \
+	node/NetworkConfig.o \
 	node/Node.o \
 	node/NodeConfig.o \
 	node/Packet.o \

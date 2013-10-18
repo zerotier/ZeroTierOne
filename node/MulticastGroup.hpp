@@ -69,6 +69,16 @@ public:
 	{
 	}
 
+	MulticastGroup(const char *s)
+	{
+		fromString(s);
+	}
+
+	MulticastGroup(const std::string &s)
+	{
+		fromString(s.c_str());
+	}
+
 	/**
 	 * Derive the multicast group used for address resolution (ARP/NDP) for an IP
 	 *
@@ -110,6 +120,24 @@ public:
 		char buf[64];
 		Utils::snprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%lx",(unsigned int)_mac.data[0],(unsigned int)_mac.data[1],(unsigned int)_mac.data[2],(unsigned int)_mac.data[3],(unsigned int)_mac.data[4],(unsigned int)_mac.data[5],(unsigned long)_adi);
 		return std::string(buf);
+	}
+
+	/**
+	 * Parse a human-readable multicast group
+	 *
+	 * @param s Multicast group in hex MAC/ADI format
+	 */
+	inline void fromString(const char *s)
+	{
+		char hex[17];
+		unsigned int hexlen = 0;
+		while ((*s)&&(*s != '/')&&(hexlen < sizeof(hex) - 1))
+			hex[hexlen++] = *s;
+		hex[hexlen] = (char)0;
+		_mac.fromString(hex);
+		if (*s == '/')
+			_adi = (uint32_t)Utils::hexStrToULong(++s);
+		else _adi = 0;
 	}
 
 	/**

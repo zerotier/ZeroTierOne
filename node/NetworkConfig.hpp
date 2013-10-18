@@ -28,18 +28,25 @@
 #ifndef _ZT_NETWORKCONFIG_HPP
 #define _ZT_NETWORKCONFIG_HPP
 
+#include <stdint.h>
+
+#include <map>
 #include <set>
 #include <string>
 #include <stdexcept>
 
+#include "Constants.hpp"
 #include "Dictionary.hpp"
 #include "InetAddress.hpp"
 #include "AtomicCounter.hpp"
 #include "SharedPtr.hpp"
+#include "MulticastGroup.hpp"
+#include "Address.hpp"
 
 namespace ZeroTier {
 
-// These are short to fit in packets with plenty of room to spare
+// These dictionary keys are short so they don't take up much room in
+// netconf response packets.
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
@@ -70,11 +77,27 @@ public:
 	friend class SharedPtr<NetworkConfig>;
 
 	/**
+	 * Tuple of multicast rate parameters
+	 */
+	struct MulticastRate
+	{
+		MulticastRate() throw() {}
+		MulticastRate(uint32_t pl,uint32_t maxb,uint32_t acc) throw() : preload(pl),maxBalance(maxb),accrual(acc) {}
+		uint32_t preload;
+		uint32_t maxBalance;
+		uint32_t accrual;
+	};
+
+	/**
+	 * A hard-coded default multicast rate for networks that don't specify
+	 */
+	static const MulticastRate DEFAULT_MULTICAST_RATE;
+
+	/**
 	 * @param d Dictionary containing configuration
 	 * @throws std::invalid_argument Invalid configuration
 	 */
 	NetworkConfig(const Dictionary &d)
-		throw(std::invalid_argument)
 	{
 		_fromDictionary(d);
 	}
@@ -107,14 +130,20 @@ public:
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::set<InetAddress> &staticIps() const throw() { return _staticIps; }
-	inline const MulticastRateTable &multicastRates() const throw() { return _multicastRates; }
+	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
+
+	/**
+	 * @param mg Multicast group
+	 * @return Multicast rate or DEFAULT_MULTICAST_RATE if not set
+	 */
+	const MulticastRate &multicastRate(const MulticastGroup &mg) const
+		throw();
 
 private:
 	NetworkConfig() {}
 	~NetworkConfig() {}
 
-	void _fromDictionary(const Dictionary &d)
-		throw(std::invalid_argument);
+	void _fromDictionary(const Dictionary &d);
 
 	unsigned char _etWhitelist[65536 / 8];
 	uint64_t _nwid;
@@ -130,7 +159,7 @@ private:
 	std::string _name;
 	std::string _description;
 	std::set<InetAddress> _staticIps;
-	MulticastRateTable _multicastRates;
+	std::map<MulticastGroup,MulticastRate> _multicastRates;
 
 	AtomicCounter __refCount;
 };
@@ -138,3 +167,4 @@ private:
 } // namespace ZeroTier
 
 #endif
+

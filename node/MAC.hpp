@@ -135,17 +135,9 @@ public:
 	 * @param s String hex representation (with or without :'s)
 	 * @return True if string decoded into a full-length MAC
 	 */
-	inline bool fromString(const char *s)
+	inline void fromString(const char *s)
 	{
-		std::string b(Utils::unhex(s));
-		if (b.length() == 6) {
-			for(unsigned int i=0;i<6;++i)
-				data[i] = (unsigned char)b[i];
-			return true;
-		}
-		for(unsigned int i=0;i<6;++i)
-			data[i] = 0;
-		return false;
+		Utils::unhex(s,data,6);
 	}
 
 	inline std::string toString() const

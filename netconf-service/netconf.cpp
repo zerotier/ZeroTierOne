@@ -325,23 +325,13 @@ int main(int argc,char **argv)
 					q << "SELECT DISTINCT multicastGroupMac,multicastGroupAdi,preload,maxBalance,accrual FROM NetworkMulticastRates WHERE Network_id = " << nwid;
 					StoreQueryResult rs = q.store();
 					for(unsigned long i=0;i<rs.num_rows();++i) {
-						long preload = (long)rs[i]["preload"];
-						long maxBalance = (long)rs[i]["maxBalance"];
-						long accrual = (long)rs[i]["accrual"];
-						sprintf(buf2,"%s%lx,%s%lx,%s%lx",
-							((preload < 0) ? "-" : ""),
-							preload,
-							((maxBalance < 0) ? "-" : ""),
-							maxBalance,
-							((accrual < 0) ? "-" : ""),
-							accrual);
+						unsigned long preload = (unsigned long)rs[i]["preload"];
+						unsigned long maxBalance = (unsigned long)rs[i]["maxBalance"];
+						unsigned long accrual = (unsigned long)rs[i]["accrual"];
 						unsigned long long mac = (unsigned long long)rs[i]["multicastGroupMac"];
-						if (mac) {
-							sprintf(buf,"%.12llx/%lx",(mac & 0xffffffffffffULL),(unsigned long)rs[i]["multicastGroupAdi"]);
-							multicastRates[buf] = buf2;
-						} else { // zero MAC indicates default for unmatching multicast groups
-							multicastRates["*"] = buf2;
-						}
+						sprintf(buf,"%.12llx/%lx",(mac & 0xffffffffffffULL),(unsigned long)rs[i]["multicastGroupAdi"]);
+						sprintf(buf2,"%lx,%lx,%lx",preload,maxBalance,accrual);
+						multicastRates[buf] = buf2;
 					}
 				}
 
