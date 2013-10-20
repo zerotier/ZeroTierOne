@@ -39,8 +39,8 @@
 // These can't be changed without a new identity type. They define the
 // parameters of the hashcash hashing/searching algorithm.
 
-#define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 7
-#define ZT_IDENTITY_GEN_MEMORY 4194304
+#define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 17
+#define ZT_IDENTITY_GEN_MEMORY 2097152
 #define ZT_IDENTITY_GEN_SALSA20_ROUNDS 20
 
 namespace ZeroTier {
