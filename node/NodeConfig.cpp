@@ -87,6 +87,10 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 					nwid = 0x8D93FBE886000001ULL;
 					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
 				}
+				if (nwid == 0x8D93FBE886000001ULL) {
+					nwid = 0x8056c2e21c000001ULL;
+					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
+				}
 
 				if (nwid > 0)
 					nwids.insert(nwid);
