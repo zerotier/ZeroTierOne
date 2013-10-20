@@ -66,12 +66,13 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 
 	// Do something to genmem[] that iteratively makes every value
 	// possibly dependent on every other value with a nontrivial
-	// probability.
+	// probability. Continue to use already-initialized Salsa20 as
+	// a random source.
 	for(unsigned int i=0;i<ZT_IDENTITY_GEN_MEMORY;i+=ZT_IDENTITY_GEN_MEMORY_MIX_STEP) {
-		s20.encrypt((char *)genmem + i,(char *)genmem + i,8);
-		uint64_t x = *((uint64_t *)((char *)genmem + i));
-		if ((x / 7ULL) < 0x1249249249249249ULL) {
-			s20.encrypt(&x,&x,8); // also causes PRNG state to depend on genmem[]'s state
+		s20.encrypt((char *)genmem + i,(char *)genmem + i,64);
+		uint64_t x = Utils::ntoh(*((uint64_t *)((char *)genmem + i)));
+		if (!(x & 3)) {
+			s20.encrypt((char *)genmem + i,(char *)genmem + i,64); // also makes future salsa20 state content-dependent
 			for(unsigned int k=0;k<8;++k,x>>=8)
 				++((unsigned char *)genmem)[(uintptr_t)x % ZT_IDENTITY_GEN_MEMORY];
 		} else {
@@ -135,7 +136,7 @@ bool Identity::locallyValidate() const
 
 	unsigned char addrb[5];
 	_address.copyTo(addrb,5);
-	
+
 	return (
 		(digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN)&&
 		(digest[59] == addrb[0])&&
