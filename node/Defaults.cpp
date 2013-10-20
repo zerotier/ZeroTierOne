@@ -53,21 +53,21 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 
 	// cthulhu.zerotier.com - New York, New York, USA
 	addrs.clear();
-	if (!id.fromString("d2ba4048c3:0:cfa02701eb69e2f2c64aa498151e57f82c172036967186c93f2afbe45a64d64306f88fa1225724f6f87beabd6a0feb18c746cf4691867542e18b894390692303"))
+	if (!id.fromString("21e93d708a:0:f6bfe55675a3e66f6169eefc73187a64693a994ede68eba75c9ea65818730a2b03da67a41ce7023a68e5fcd44087529c123e802f510ee00dc9162244ccd63a88"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.199.73.93",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
 
 	// nyarlathotep.zerotier.com - San Francisco, California, USA
 	addrs.clear();
-	if (!id.fromString("80eb92f707:0:7f0209663d815438dead321ec78c65c27fec6feeb8ccd9acc152c59066740521e45d1a1cbc5186e3773178429c4b26ab0df2c78f3e822540d70456724797f23f"))
+	if (!id.fromString("d383d43143:0:7f6fe9386bf67de895869a8a949dad651c1003d3ffb382e9971f9a1ab1513f451ecfe00c6a1c45998ab9fc9a4b4f88f06651d9323752d75eaa2a44a10125e79d"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.199.97.220",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
 
 	// shub-niggurath.zerotier.com - Amsterdam, Netherlands
 	addrs.clear();
-	if (!id.fromString("34594c9086:0:2ac70c00cc03a078a2a8f889d61e72397f8cd684a6daecbe6350f24e0193790e118805a1673eaf57ce9f7b41f45525c995289c406461c739ccad2c93efa36746"))
+	if (!id.fromString("b6179d3e54:0:e4c7ac071b0ed0820da9cec34a5269398e7fa304bf7ded8faef8f929b247be1a6e0acc0f1ff8e6159f53fc94a797b05e27357891db854f693025e94582d8206d"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(InetAddress("198.211.127.172",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;

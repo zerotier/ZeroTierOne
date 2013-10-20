@@ -472,6 +472,8 @@ int main(int argc,char **argv)
 	exit(0);
 	*/
 
+	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+
 	srand((unsigned int)time(0));
 
 	r |= testCrypto();

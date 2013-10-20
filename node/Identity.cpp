@@ -39,16 +39,8 @@
 // These can't be changed without a new identity type. They define the
 // parameters of the hashcash hashing/searching algorithm.
 
-// Hashcash halting criteria
 #define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 7
-
-// Amount of memory for memory-hardness
-#define ZT_IDENTITY_GEN_MEMORY 8388608
-
-// Step distance for mixing genmem[]
-#define ZT_IDENTITY_GEN_MEMORY_MIX_STEP 1024
-
-// Rounds used for Salsa20 step
+#define ZT_IDENTITY_GEN_MEMORY 4194304
 #define ZT_IDENTITY_GEN_SALSA20_ROUNDS 20
 
 namespace ZeroTier {
@@ -56,37 +48,37 @@ namespace ZeroTier {
 // A memory-hard composition of SHA-512 and Salsa20 for hashcash hashing
 static inline void _computeMemoryHardHash(const void *publicKey,unsigned int publicKeyBytes,void *digest,void *genmem)
 {
-	// Hash publicKey[] to obtain Salsa20 key
+	// Digest publicKey[] to obtain initial digest
 	SHA512::hash(digest,publicKey,publicKeyBytes);
 
-	// Generate genmem[] bytes of Salsa20 key stream
+	// Initialize genmem[] using Salsa20 in a CBC-like configuration since
+	// ordinary Salsa20 is randomly seekable. This is good for a cipher
+	// but is not what we want for sequential memory-harndess.
 	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
 	Salsa20 s20(digest,256,(char *)digest + 32,ZT_IDENTITY_GEN_SALSA20_ROUNDS);
-	s20.encrypt(genmem,genmem,ZT_IDENTITY_GEN_MEMORY);
-
-	// Do something to genmem[] that iteratively makes every value
-	// possibly dependent on every other value with a nontrivial
-	// probability. Continue to use already-initialized Salsa20 as
-	// a random source.
-	for(unsigned int i=0;i<ZT_IDENTITY_GEN_MEMORY;i+=ZT_IDENTITY_GEN_MEMORY_MIX_STEP) {
+	s20.encrypt((char *)genmem,(char *)genmem,64);
+	for(unsigned long i=64;i<ZT_IDENTITY_GEN_MEMORY;i+=64) {
+		unsigned long k = i - 64;
+		*((uint64_t *)((char *)genmem + i)) = *((uint64_t *)((char *)genmem + k));
+		*((uint64_t *)((char *)genmem + i + 8)) = *((uint64_t *)((char *)genmem + k + 8));
+		*((uint64_t *)((char *)genmem + i + 16)) = *((uint64_t *)((char *)genmem + k + 16));
+		*((uint64_t *)((char *)genmem + i + 24)) = *((uint64_t *)((char *)genmem + k + 24));
+		*((uint64_t *)((char *)genmem + i + 32)) = *((uint64_t *)((char *)genmem + k + 32));
+		*((uint64_t *)((char *)genmem + i + 40)) = *((uint64_t *)((char *)genmem + k + 40));
+		*((uint64_t *)((char *)genmem + i + 48)) = *((uint64_t *)((char *)genmem + k + 48));
+		*((uint64_t *)((char *)genmem + i + 56)) = *((uint64_t *)((char *)genmem + k + 56));
 		s20.encrypt((char *)genmem + i,(char *)genmem + i,64);
-		uint64_t x = Utils::ntoh(*((uint64_t *)((char *)genmem + i)));
-		if (!(x & 3)) {
-			s20.encrypt((char *)genmem + i,(char *)genmem + i,64); // also makes future salsa20 state content-dependent
-			for(unsigned int k=0;k<8;++k,x>>=8)
-				++((unsigned char *)genmem)[(uintptr_t)x % ZT_IDENTITY_GEN_MEMORY];
-		} else {
-			for(unsigned int k=0;k<8;++k,x>>=8)
-				--((unsigned char *)genmem)[(uintptr_t)x % ZT_IDENTITY_GEN_MEMORY];
-		}
 	}
 
-	// Mix in publicKey[] again, ensuring all entropy is used
-	for(unsigned int i=0;i<publicKeyBytes;++i)
-		((unsigned char *)genmem)[i] ^= ((const unsigned char *)publicKey)[i];
-
-	// Compute final digest from final genmem[]
-	SHA512::hash(digest,genmem,ZT_IDENTITY_GEN_MEMORY);
+	// Render final digest using genmem as a lookup table
+	for(unsigned long i=0;i<(ZT_IDENTITY_GEN_MEMORY / sizeof(uint64_t));) {
+		unsigned long idx1 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (64 / sizeof(uint64_t)));
+		unsigned long idx2 = (unsigned long)(Utils::ntoh(((uint64_t *)genmem)[i++]) % (ZT_IDENTITY_GEN_MEMORY / sizeof(uint64_t)));
+		uint64_t tmp = ((uint64_t *)genmem)[idx2];
+		((uint64_t *)genmem)[idx2] = ((uint64_t *)digest)[idx1];
+		((uint64_t *)digest)[idx1] = tmp;
+		s20.encrypt(digest,digest,64);
+	}
 }
 
 // Hashcash generation halting condition -- halt when first byte is less than
