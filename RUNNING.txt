@@ -22,7 +22,7 @@ sudo ./zerotier-one &
 
 Finally, join the Earth network (the big public LAN and the only net for now):
 
-sudo zerotier-cli join bc8f9a8ee3000001
+sudo zerotier-cli join 8056c2e21c000001
 
 Try pinging earth.zerotier.net and going to http://earth.zerotier.net/ in a
 browser to see if you're online.
