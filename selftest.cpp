@@ -215,7 +215,6 @@ static int testIdentity()
 	Identity id;
 	Buffer<512> buf;
 
-#if 0
 	std::cout << "[identity] Validate known-good identity... "; std::cout.flush();
 	if (!id.fromString(KNOWN_GOOD_IDENTITY)) {
 		std::cout << "FAIL (1)" << std::endl;
@@ -237,7 +236,6 @@ static int testIdentity()
 		return -1;
 	}
 	std::cout << "PASS (i.e. it failed)" << std::endl;
-#endif
 
 	for(unsigned int k=0;k<4;++k) {
 		std::cout << "[identity] Generate identity... "; std::cout.flush();
