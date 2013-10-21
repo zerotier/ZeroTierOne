@@ -280,7 +280,7 @@ error_no_byte_order_defined;
 /**
  * Delay between requests for updated network autoconf information
  */
-#define ZT_NETWORK_AUTOCONF_DELAY 120000
+#define ZT_NETWORK_AUTOCONF_DELAY 60000
 
 /**
  * Delay in core loop between checks of network autoconf newness
