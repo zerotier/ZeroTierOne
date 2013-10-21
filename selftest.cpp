@@ -552,14 +552,11 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
-	r |= testCertificate();
-	/*
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();
 	r |= testIdentity();
 	r |= testCertificate();
-	*/
 
 	if (r)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
