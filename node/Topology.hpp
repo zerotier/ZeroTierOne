@@ -53,7 +53,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv);
+	Topology(const RuntimeEnvironment *renv,bool enablePermanentIdCaching);
 	~Topology();
 
 	/**
@@ -81,6 +81,25 @@ public:
 	 * @return Peer or NULL if not found
 	 */
 	SharedPtr<Peer> getPeer(const Address &zta);
+
+	/**
+	 * Get an identity if cached or available in a peer record
+	 *
+	 * @param zta ZeroTier address
+	 * @return Identity or NULL-identity if not found
+	 */
+	Identity getIdentity(const Address &zta);
+
+	/**
+	 * Save identity in permanent store, or do nothing if disabled
+	 *
+	 * This is called automatically by addPeer(), so it should not need to be
+	 * called manually anywhere else. The private part of the identity, if
+	 * present, is NOT cached by this.
+	 *
+	 * @param id Identity to save
+	 */
+	void saveIdentity(const Identity &id);
 
 	/**
 	 * @return Current network supernodes
@@ -273,6 +292,8 @@ private:
 
 	void _dumpPeers();
 	void _loadPeers();
+
+	std::string _idCacheBase; // empty if identity caching disabled
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;

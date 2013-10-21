@@ -408,7 +408,7 @@ Node::ReasonForTermination Node::run()
 		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->demarc = new Demarc(_r);
-		_r->topology = new Topology(_r);
+		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
 		_r->sysEnv = new SysEnv(_r);
 		try {
 			_r->nc = new NodeConfig(_r,configAuthToken.c_str(),impl->controlPort);

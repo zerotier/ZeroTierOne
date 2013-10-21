@@ -189,16 +189,16 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			return true;
 		}
 
+		// Do we already have this peer?
 		SharedPtr<Peer> peer(_r->topology->getPeer(id.address()));
 		if (peer) {
+			// Check to make sure this isn't a colliding identity (different key,
+			// but same address). The odds are spectacularly low but it could happen.
+			// Could also be a sign of someone doing something nasty.
 			if (peer->identity() != id) {
-				// Sorry, someone beat you to that address. What are the odds?
-				// Well actually they're around two in 2^40. You should play
-				// the lottery.
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
-
 					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_HELLO);
 					outp.append(packetId());
@@ -209,7 +209,26 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 				return true;
 			} // else continue and send OK since we already know thee...
 		} else {
-			// Learn a new peer
+			// If we don't have a peer record on file, check the identity cache (if
+			// we have one) to see if we have a cached identity. Then check that for
+			// collision before adding a new peer.
+			Identity alreadyHaveCachedId(_r->topology->getIdentity(id.address()));
+			if ((alreadyHaveCachedId)&&(id != alreadyHaveCachedId)) {
+				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
+				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
+					TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
+					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_HELLO);
+					outp.append(packetId());
+					outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+					outp.armor(key,true);
+					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+				}
+				return true;
+			}
+
+			// Learn a new peer if it's new. This also adds it to the identity
+			// cache if that's enabled.
 			peer = _r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,id)));
 		}
 

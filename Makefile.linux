@@ -2,8 +2,7 @@ CC=gcc
 CXX=g++
 
 INCLUDES=
-ARCH=$(shell uname -m)
-DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux"
+DEFS=
 LIBS=
 
 # Uncomment for a release optimized build

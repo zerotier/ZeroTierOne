@@ -35,10 +35,12 @@
 
 namespace ZeroTier {
 
-Topology::Topology(const RuntimeEnvironment *renv) :
+Topology::Topology(const RuntimeEnvironment *renv,bool enablePermanentIdCaching) :
 	_r(renv),
 	_amSupernode(false)
 {
+	if (enablePermanentIdCaching)
+		_idCacheBase = (_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d");
 	_loadPeers();
 }
 
@@ -83,6 +85,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 	Mutex::Lock _l(_activePeers_m);
 	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
 	p->setLastUsed(now);
+	saveIdentity(p->identity());
 	return p;
 }
 
@@ -100,6 +103,32 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		return ap->second;
 	}
 	return SharedPtr<Peer>();
+}
+
+Identity Topology::getIdentity(const Address &zta)
+{
+	SharedPtr<Peer> p(getPeer(zta));
+	if (p)
+		return p->identity();
+	if (_idCacheBase.length()) {
+		std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + zta.toString());
+		std::string ids;
+		if (Utils::readFile(idcPath.c_str(),ids)) {
+			try {
+				return Identity(ids);
+			} catch ( ... ) {} // ignore invalid IDs
+		}
+	}
+	return Identity();
+}
+
+void Topology::saveIdentity(const Identity &id)
+{
+	if ((id)&&(_idCacheBase.length())) {
+		std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + id.address().toString());
+		if (!Utils::fileExists(idcPath.c_str()))
+			Utils::writeFile(idcPath.c_str(),id.toString(false));
+	}
 }
 
 SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const
@@ -244,6 +273,7 @@ void Topology::_loadPeers()
 					SharedPtr<Peer> p(new Peer());
 					ptr += p->deserialize(buf,ptr);
 					_activePeers[p->address()] = p;
+					saveIdentity(p->identity());
 				}
 				if (ptr) {
 					memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);

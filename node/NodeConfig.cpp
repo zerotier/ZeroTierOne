@@ -353,7 +353,9 @@ bool NodeConfig::decodeControlMessagePacket(const void *key,const void *data,uns
 void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
 {
 	NodeConfig *nc = (NodeConfig *)arg;
+#ifdef ZT_TRACE
 	const RuntimeEnvironment *_r = nc->_r;
+#endif
 
 	try {
 		unsigned long convId = 0;
