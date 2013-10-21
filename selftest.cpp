@@ -51,6 +51,7 @@
 #include "node/SHA512.hpp"
 #include "node/C25519.hpp"
 #include "node/Poly1305.hpp"
+#include "node/CertificateOfMembership.hpp"
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -307,6 +308,81 @@ static int testIdentity()
 	return 0;
 }
 
+static int testCertificate()
+{
+	Identity authority;
+	std::cout << "[certificate] Generating identity to act as authority... "; std::cout.flush();
+	authority.generate();
+	std::cout << authority.address().toString() << std::endl;
+
+	Identity idA,idB;
+	std::cout << "[certificate] Generating identities A and B... "; std::cout.flush();
+	idA.generate();
+	idB.generate();
+	std::cout << idA.address().toString() << ", " << idB.address().toString() << std::endl;
+
+	std::cout << "[certificate] Generating certificates A and B...";
+	CertificateOfMembership cA(10000,100,1,idA.address());
+	CertificateOfMembership cB(10099,100,1,idB.address());
+	std::cout << std::endl;
+
+	std::cout << "[certificate] Signing certificates A and B with authority...";
+	cA.sign(authority);
+	cB.sign(authority);
+	std::cout << std::endl;
+
+	//std::cout << "[certificate] A: " << cA.toString() << std::endl;
+	//std::cout << "[certificate] B: " << cB.toString() << std::endl;
+
+	std::cout << "[certificate] A agrees with B and B with A... ";
+	if (cA.agreesWith(cB))
+		std::cout << "yes, ";
+	else {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+	if (cB.agreesWith(cA))
+		std::cout << "yes." << std::endl;
+	else {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+
+	std::cout << "[certificate] Testing string serialization... ";
+	CertificateOfMembership copyA(cA.toString());
+	CertificateOfMembership copyB(cB.toString());
+	if (copyA != cA) {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+	if (copyB != cB) {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[certificate] Generating two certificates that should not agree...";
+	cA = CertificateOfMembership(10000,100,1,idA.address());
+	cB = CertificateOfMembership(10101,100,1,idB.address());
+	std::cout << std::endl;
+
+	std::cout << "[certificate] A agrees with B and B with A... ";
+	if (!cA.agreesWith(cB))
+		std::cout << "no, ";
+	else {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+	if (!cB.agreesWith(cA))
+		std::cout << "no." << std::endl;
+	else {
+		std::cout << "FAIL" << std::endl;
+		return -1;
+	}
+
+	return 0;
+}
+
 static int testPacket()
 {
 	unsigned char salsaKey[32],hmacKey[32];
@@ -476,10 +552,14 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
+	r |= testCertificate();
+	/*
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();
 	r |= testIdentity();
+	r |= testCertificate();
+	*/
 
 	if (r)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;

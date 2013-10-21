@@ -367,6 +367,24 @@ public:
 		return (p - startAt);
 	}
 
+	inline bool operator==(const CertificateOfMembership &c) const
+		throw()
+	{
+		if (_signedBy != c._signedBy)
+			return false;
+		// We have to compare in depth manually since == only compares id
+		if (_qualifiers.size() != c._qualifiers.size())
+			return false;
+		for(unsigned long i=0;i<_qualifiers.size();++i) {
+			const _Qualifier &a = _qualifiers[i];
+			const _Qualifier &b = c._qualifiers[i];
+			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta))
+				return false;
+		}
+		return (_signature == c._signature);
+	}
+	inline bool operator!=(const CertificateOfMembership &c) const throw() { return (!(*this == c)); }
+
 private:
 	struct _Qualifier
 	{
