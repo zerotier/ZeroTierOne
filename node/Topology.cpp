@@ -31,16 +31,21 @@
 #include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
 
+#define ZT_PEER_WRITE_BUF_SIZE 131072
+
 namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv) :
 	_r(renv),
 	_amSupernode(false)
 {
+	_loadPeers();
 }
 
 Topology::~Topology()
 {
+	clean();
+	_dumpPeers();
 }
 
 void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
@@ -159,6 +164,103 @@ skip_and_try_next_supernode:
 
 void Topology::clean()
 {
+	uint64_t now = Utils::now();
+	Mutex::Lock _l(_activePeers_m);
+	Mutex::Lock _l2(_supernodes_m);
+	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
+		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(!_supernodeAddresses.count(p->second->address())))
+			_activePeers.erase(p++);
+		else ++p;
+	}
+}
+
+void Topology::_dumpPeers()
+{
+	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
+	std::string pdpath(_r->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
+	Mutex::Lock _l(_activePeers_m);
+
+	FILE *pd = fopen(pdpath.c_str(),"wb");
+	if (!pd)
+		return;
+	if (fwrite("ZTPD0",5,1,pd) != 1) {
+		fclose(pd);
+		Utils::rm(pdpath);
+		return;
+	}
+
+	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();++p) {
+		try {
+			p->second->serialize(buf);
+			if (buf.size() >= (ZT_PEER_WRITE_BUF_SIZE / 2)) {
+				if (fwrite(buf.data(),buf.size(),1,pd) != 1) {
+					fclose(pd);
+					Utils::rm(pdpath);
+					return;
+				}
+				buf.clear();
+			}
+		} catch ( ... ) {
+			fclose(pd);
+			Utils::rm(pdpath);
+			return;
+		}
+	}
+
+	if (buf.size()) {
+		if (fwrite(buf.data(),buf.size(),1,pd) != 1) {
+			fclose(pd);
+			Utils::rm(pdpath);
+			return;
+		}
+	}
+
+	fclose(pd);
+	Utils::lockDownFile(pdpath.c_str(),false);
+}
+
+void Topology::_loadPeers()
+{
+	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
+	std::string pdpath(_r->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
+	Mutex::Lock _l(_activePeers_m);
+
+	_activePeers.clear();
+
+	FILE *pd = fopen(pdpath.c_str(),"rb");
+	if (!pd)
+		return;
+
+	try {
+		char magic[5];
+		if ((fread(magic,5,1,pd) == 1)&&(!memcmp("ZTPD0",magic,5))) {
+			long rlen = 0;
+			do {
+				long rlen = (long)fread(buf.data() + buf.size(),1,ZT_PEER_WRITE_BUF_SIZE - buf.size(),pd);
+				if (rlen < 0) rlen = 0;
+				buf.setSize(buf.size() + (unsigned int)rlen);
+				unsigned int ptr = 0;
+				while ((ptr < (ZT_PEER_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
+					SharedPtr<Peer> p(new Peer());
+					ptr += p->deserialize(buf,ptr);
+					_activePeers[p->address()] = p;
+				}
+				if (ptr) {
+					memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);
+					buf.setSize(buf.size() - ptr);
+				}
+			} while (rlen > 0);
+			fclose(pd);
+		} else {
+			fclose(pd);
+			Utils::rm(pdpath);
+		}
+	} catch ( ... ) {
+		// Membership cert dump file invalid. We'll re-learn them off the net.
+		_activePeers.clear();
+		fclose(pd);
+		Utils::rm(pdpath);
+	}
 }
 
 } // namespace ZeroTier

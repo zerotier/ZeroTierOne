@@ -209,6 +209,11 @@ error_no_ZT_ARCH_defined;
 #define ZT_DB_CLEAN_PERIOD 300000
 
 /**
+ * How long to remember peers in RAM if they haven't been used
+ */
+#define ZT_PEER_IN_MEMORY_EXPIRATION 600000
+
+/**
  * Delay between WHOIS retries in ms
  */
 #define ZT_WHOIS_RETRY_DELAY 350

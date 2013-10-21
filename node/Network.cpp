@@ -37,7 +37,7 @@
 #include "Packet.hpp"
 #include "Buffer.hpp"
 
-#define ZT_NETWORK_CERT_WRITE_BUF_SIZE 524288
+#define ZT_NETWORK_CERT_WRITE_BUF_SIZE 131072
 
 namespace ZeroTier {
 
@@ -324,6 +324,7 @@ void Network::_dumpMulticastCerts()
 	if (!mcdb)
 		return;
 	if (fwrite("ZTMCD0",6,1,mcdb) != 1) {
+		fclose(mcdb);
 		Utils::rm(mcdbPath);
 		return;
 	}

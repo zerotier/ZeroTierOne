@@ -3,7 +3,7 @@ CXX=g++
 
 INCLUDES=
 ARCH=$(shell uname -m)
-DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux" -DZT_TRACE
+DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux"
 LIBS=
 
 # Uncomment for a release optimized build

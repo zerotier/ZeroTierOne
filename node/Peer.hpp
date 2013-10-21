@@ -349,7 +349,6 @@ public:
 
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b)
-		throw(std::out_of_range)
 	{
 		b.append((unsigned char)4); // version
 		b.append(_key,sizeof(_key));
@@ -367,7 +366,6 @@ public:
 
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-		throw(std::out_of_range,std::invalid_argument)
 	{
 		unsigned int p = startAt;
 

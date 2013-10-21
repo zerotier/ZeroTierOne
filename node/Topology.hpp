@@ -271,6 +271,9 @@ public:
 private:
 	const RuntimeEnvironment *const _r;
 
+	void _dumpPeers();
+	void _loadPeers();
+
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;
 
