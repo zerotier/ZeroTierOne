@@ -380,6 +380,7 @@ Node::ReasonForTermination Node::run()
 		// Clean up some obsolete files if present -- this will be removed later
 		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "status"));
 		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine"));
+		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db"));
 
 		// Make sure networks.d exists
 #ifdef __WINDOWS__
@@ -407,7 +408,7 @@ Node::ReasonForTermination Node::run()
 		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->demarc = new Demarc(_r);
-		_r->topology = new Topology(_r,(_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db").c_str());
+		_r->topology = new Topology(_r);
 		_r->sysEnv = new SysEnv(_r);
 		try {
 			_r->nc = new NodeConfig(_r,configAuthToken.c_str(),impl->controlPort);

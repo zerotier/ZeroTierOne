@@ -256,13 +256,15 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (b[p++] != IDENTITY_TYPE_C25519)
-			throw std::invalid_argument("Identity: deserialize(): unsupported identity type");
+			throw std::invalid_argument("unsupported identity type");
 
 		memcpy(_publicKey.data,b.field(p,_publicKey.size()),_publicKey.size());
 		p += _publicKey.size();
 
-		unsigned int privateKeyLength = b[p++];
-		if ((privateKeyLength)&&(privateKeyLength == ZT_C25519_PRIVATE_KEY_LEN)) {
+		unsigned int privateKeyLength = (unsigned int)b[p++];
+		if (privateKeyLength) {
+			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN)
+				throw std::invalid_argument("invalid private key");
 			_privateKey = new C25519::Private();
 			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
 			p += ZT_C25519_PRIVATE_KEY_LEN;

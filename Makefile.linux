@@ -7,7 +7,7 @@ DEFS=-DZT_ARCH="$(ARCH)" -DZT_OSNAME="linux" -DZT_TRACE
 LIBS=
 
 # Uncomment for a release optimized build
-CFLAGS=-Wall -O3 -fno-unroll-loops -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+CFLAGS=-Wall -O3 -fno-unroll-loops -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 STRIP=strip --strip-all
 
 # Uncomment for a debug build

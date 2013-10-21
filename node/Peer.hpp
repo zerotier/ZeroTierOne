@@ -48,24 +48,6 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-/**
- * Max length of serialized peer record
- */
-#define ZT_PEER_MAX_SERIALIZED_LENGTH ( \
-	ZT_PEER_SECRET_KEY_LENGTH + \
-	ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH + \
-	( ( \
-		(sizeof(uint64_t) * 4) + \
-		sizeof(uint16_t) + \
-		1 + \
-		sizeof(uint16_t) + \
-		16 + \
-		1 \
-	) * 2) + \
-	(sizeof(uint64_t) * 3) + \
-	(sizeof(uint16_t) * 3) \
-)
-
 namespace ZeroTier {
 
 /**
@@ -98,6 +80,16 @@ public:
 	 */
 	Peer(const Identity &myIdentity,const Identity &peerIdentity)
 		throw(std::runtime_error);
+
+	/**
+	 * @return Time peer record was last used in any way
+	 */
+	inline uint64_t lastUsed() const throw() { return _lastUsed; }
+
+	/**
+	 * @param now New time of last use
+	 */
+	inline void setLastUsed(uint64_t now) throw() { _lastUsed = now; }
 
 	/**
 	 * @return This peer's ZT address (short for identity().address())
@@ -254,10 +246,8 @@ public:
 	{
 		if (addr == _ipv4p.addr) {
 			_ipv4p.latency = latency;
-			_dirty = true;
 		} else if (addr == _ipv6p.addr) {
 			_ipv6p.latency = latency;
-			_dirty = true;
 		}
 	}
 
@@ -357,33 +347,16 @@ public:
 		return std::string("?");
 	}
 
-	/**
-	 * Get and reset dirty flag
-	 * 
-	 * @return Previous value of dirty flag before reset
-	 */
-	inline bool getAndResetDirty()
-		throw()
-	{
-		bool d = _dirty;
-		_dirty = false;
-		return d;
-	}
-
-	/**
-	 * @return Current value of dirty flag
-	 */
-	inline bool dirty() const throw() { return _dirty; }
-
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b)
 		throw(std::out_of_range)
 	{
-		b.append((unsigned char)3); // version
+		b.append((unsigned char)4); // version
 		b.append(_key,sizeof(_key));
 		_id.serialize(b,false);
 		_ipv4p.serialize(b);
 		_ipv6p.serialize(b);
+		b.append(_lastUsed);
 		b.append(_lastUnicastFrame);
 		b.append(_lastMulticastFrame);
 		b.append(_lastAnnouncedTo);
@@ -398,21 +371,20 @@ public:
 	{
 		unsigned int p = startAt;
 
-		if (b[p++] != 3)
+		if (b[p++] != 4)
 			throw std::invalid_argument("Peer: deserialize(): version mismatch");
 
 		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
 		p += _id.deserialize(b,p);
 		p += _ipv4p.deserialize(b,p);
 		p += _ipv6p.deserialize(b,p);
+		_lastUsed = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-
-		_dirty = false;
 
 		return (p - startAt);
 	}
@@ -538,14 +510,12 @@ private:
 	WanPath _ipv4p;
 	WanPath _ipv6p;
 
+	uint64_t _lastUsed;
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
 	unsigned int _vMajor,_vMinor,_vRevision;
 
-	// Fields below this line are not persisted with serialize() ---------------
-
-	bool _dirty;
 	AtomicCounter __refCount;
 };
 

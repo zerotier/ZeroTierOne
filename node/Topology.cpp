@@ -33,32 +33,14 @@
 
 namespace ZeroTier {
 
-#define ZT_KISSDB_HASH_TABLE_SIZE 32768
-#define ZT_KISSDB_KEY_SIZE ZT_ADDRESS_LENGTH
-#define ZT_KISSDB_VALUE_SIZE ZT_PEER_MAX_SERIALIZED_LENGTH
-
-Topology::Topology(const RuntimeEnvironment *renv,const char *dbpath) :
+Topology::Topology(const RuntimeEnvironment *renv) :
 	_r(renv),
 	_amSupernode(false)
 {
-	if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWCREAT,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE)) {
-		if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWREPLACE,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE))
-			throw std::runtime_error("unable to open peer database (rw/create)");
-	}
-
-	if ((_dbm.key_size != ZT_KISSDB_KEY_SIZE)||(_dbm.value_size != ZT_KISSDB_VALUE_SIZE)||(_dbm.hash_table_size != ZT_KISSDB_HASH_TABLE_SIZE)) {
-		KISSDB_close(&_dbm);
-		if (KISSDB_open(&_dbm,dbpath,KISSDB_OPEN_MODE_RWREPLACE,ZT_KISSDB_HASH_TABLE_SIZE,ZT_KISSDB_KEY_SIZE,ZT_KISSDB_VALUE_SIZE))
-			throw std::runtime_error("unable to open peer database (recreate)");
-	}
-
-	Utils::lockDownFile(dbpath,false); // node.db caches secrets
 }
 
 Topology::~Topology()
 {
-	// Flush last changes to disk
-	clean();
 }
 
 void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
@@ -68,6 +50,7 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 	_supernodes = sn;
 	_supernodeAddresses.clear();
 	_supernodePeers.clear();
+	uint64_t now = Utils::now();
 
 	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
 		if (i->first != _r->identity) {
@@ -76,6 +59,7 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 				p = addPeer(SharedPtr<Peer>(new Peer(_r->identity,i->first)));
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
 				p->setPathAddress(*j,true);
+			p->setLastUsed(now);
 			_supernodePeers.push_back(p);
 		}
 		_supernodeAddresses.insert(i->first.address());
@@ -90,27 +74,11 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 		TRACE("BUG: addNewPeer() caught and ignored attempt to add peer for self");
 		throw std::logic_error("cannot add peer for self");
 	}
-
-	SharedPtr<Peer> actualPeer;
-	{
-		Mutex::Lock _l(_activePeers_m);
-		actualPeer = _activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second;
-	}
-
-	uint64_t atmp[ZT_ADDRESS_LENGTH];
-	actualPeer->address().copyTo(atmp,ZT_ADDRESS_LENGTH);
-
-	Buffer<ZT_PEER_MAX_SERIALIZED_LENGTH> b;
-	actualPeer->serialize(b);
-	b.zeroUnused();
-
-	_dbm_m.lock();
-	if (KISSDB_put(&_dbm,atmp,b.data())) {
-		TRACE("error writing %s to peerdb",actualPeer->address().toString().c_str());
-	} else actualPeer->getAndResetDirty();
-	_dbm_m.unlock();
-
-	return actualPeer;
+	uint64_t now = Utils::now();
+	Mutex::Lock _l(_activePeers_m);
+	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
+	p->setLastUsed(now);
+	return p;
 }
 
 SharedPtr<Peer> Topology::getPeer(const Address &zta)
@@ -119,34 +87,13 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		TRACE("BUG: ignored attempt to getPeer() for self, returned NULL");
 		return SharedPtr<Peer>();
 	}
-
-	{
-		Mutex::Lock _l(_activePeers_m);
-		std::map< Address,SharedPtr<Peer> >::const_iterator ap(_activePeers.find(zta));
-		if ((ap != _activePeers.end())&&(ap->second))
-			return ap->second;
+	uint64_t now = Utils::now();
+	Mutex::Lock _l(_activePeers_m);
+	std::map< Address,SharedPtr<Peer> >::const_iterator ap(_activePeers.find(zta));
+	if ((ap != _activePeers.end())&&(ap->second)) {
+		ap->second->setLastUsed(now);
+		return ap->second;
 	}
-
-	unsigned char ztatmp[ZT_ADDRESS_LENGTH];
-	zta.copyTo(ztatmp,ZT_ADDRESS_LENGTH);
-
-	Buffer<ZT_KISSDB_VALUE_SIZE> b(ZT_KISSDB_VALUE_SIZE);
-	_dbm_m.lock();
-	if (!KISSDB_get(&_dbm,ztatmp,b.data())) {
-		_dbm_m.unlock();
-
-		SharedPtr<Peer> p(new Peer());
-		try {
-			p->deserialize(b,0);
-			Mutex::Lock _l(_activePeers_m);
-			_activePeers[zta] = p;
-			return p;
-		} catch ( ... ) {
-			TRACE("unexpected exception deserializing peer %s from peerdb",zta.toString().c_str());
-			return SharedPtr<Peer>();
-		}
-	} else _dbm_m.unlock();
-
 	return SharedPtr<Peer>();
 }
 
@@ -183,8 +130,11 @@ skip_and_try_next_supernode:
 		++sn;
 	}
 
-	if ((bestSupernode)||(strictAvoid))
+	if (bestSupernode) {
+		bestSupernode->setLastUsed(now);
 		return bestSupernode;
+	} else if (strictAvoid)
+		return SharedPtr<Peer>();
 
 	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
 		if ((*sn)->hasActiveDirectPath(now)) {
@@ -203,36 +153,12 @@ skip_and_try_next_supernode:
 	}
 
 	if (bestSupernode)
-		return bestSupernode;
-
-	return _supernodePeers[_r->prng->next32() % _supernodePeers.size()];
+		bestSupernode->setLastUsed(now);
+	return bestSupernode;
 }
 
 void Topology::clean()
 {
-	TRACE("cleaning caches and flushing modified peers to disk...");
-
-	Mutex::Lock _l(_activePeers_m);
-	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();++p) {
-		if (p->second->getAndResetDirty()) {
-			try {
-				uint64_t atmp[ZT_ADDRESS_LENGTH];
-				p->second->identity().address().copyTo(atmp,ZT_ADDRESS_LENGTH);
-
-				Buffer<ZT_PEER_MAX_SERIALIZED_LENGTH> b;
-				p->second->serialize(b);
-				b.zeroUnused();
-
-				_dbm_m.lock();
-				if (KISSDB_put(&_dbm,atmp,b.data())) {
-					TRACE("error writing %s to peer.db",p->second->identity().address().toString().c_str());
-				}
-				_dbm_m.unlock();
-			} catch ( ... ) {
-				TRACE("unexpected exception flushing %s to peer.db",p->second->identity().address().toString().c_str());
-			}
-		}
-	}
 }
 
 } // namespace ZeroTier

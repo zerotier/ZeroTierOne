@@ -43,8 +43,6 @@
 #include "InetAddress.hpp"
 #include "Utils.hpp"
 
-#include "../ext/kissdb/kissdb.h"
-
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -55,7 +53,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,const char *dbpath);
+	Topology(const RuntimeEnvironment *renv);
 	~Topology();
 
 	/**
@@ -283,9 +281,6 @@ private:
 
 	// Set to true if my identity is in _supernodes
 	volatile bool _amSupernode;
-
-	KISSDB _dbm;
-	Mutex _dbm_m;
 };
 
 } // namespace ZeroTier

@@ -34,12 +34,13 @@ Peer::Peer() :
 	_id(),
 	_ipv4p(),
 	_ipv6p(),
+	_lastUsed(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
+	_lastAnnouncedTo(0),
 	_vMajor(0),
 	_vMinor(0),
-	_vRevision(0),
-	_dirty(false)
+	_vRevision(0)
 {
 }
 
@@ -48,12 +49,13 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_id(peerIdentity),
 	_ipv4p(),
 	_ipv6p(),
+	_lastUsed(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
+	_lastAnnouncedTo(0),
 	_vMajor(0),
 	_vMinor(0),
-	_vRevision(0),
-	_dirty(true)
+	_vRevision(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
@@ -72,16 +74,12 @@ void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const I
 			_lastAnnouncedTo = now;
 			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
 		}
-
-		_dirty = true;
 	}
 
 	if (verb == Packet::VERB_FRAME) {
 		_lastUnicastFrame = now;
-		_dirty = true;
 	} else if (verb == Packet::VERB_MULTICAST_FRAME) {
 		_lastMulticastFrame = now;
-		_dirty = true;
 	}
 }
 
@@ -90,7 +88,6 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 	if ((_ipv6p.isActive(now))||((!(_ipv4p.addr))&&(_ipv6p.addr))) {
 		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,data,len,-1)) {
 			_ipv6p.lastSend = now;
-			_dirty = true;
 			return true;
 		}
 	}
@@ -98,7 +95,6 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 	if (_ipv4p.addr) {
 		if (_r->demarc->send(_ipv4p.localPort,_ipv4p.addr,data,len,-1)) {
 			_ipv4p.lastSend = now;
-			_dirty = true;
 			return true;
 		}
 	}
@@ -112,14 +108,12 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 	if (_ipv4p.addr) {
 		if (_r->demarc->send(_ipv4p.localPort,_ipv4p.addr,"\0",1,ZT_FIREWALL_OPENER_HOPS)) {
 			_ipv4p.lastFirewallOpener = now;
-			_dirty = true;
 			sent = true;
 		}
 	}
 	if (_ipv6p.addr) {
 		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,"\0",1,ZT_FIREWALL_OPENER_HOPS)) {
 			_ipv6p.lastFirewallOpener = now;
-			_dirty = true;
 			sent = true;
 		}
 	}
@@ -132,14 +126,12 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 	if (_ipv4p.addr) {
 		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv4p.localPort,_ipv4p.addr)) {
 			_ipv4p.lastSend = now;
-			_dirty = true;
 			sent = true;
 		}
 	}
 	if (_ipv6p.addr) {
 		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.localPort,_ipv6p.addr)) {
 			_ipv6p.lastSend = now;
-			_dirty = true;
 			sent = true;
 		}
 	}
@@ -151,11 +143,9 @@ void Peer::setPathAddress(const InetAddress &addr,bool fixed)
 	if (addr.isV4()) {
 		_ipv4p.addr = addr;
 		_ipv4p.fixed = fixed;
-		_dirty = true;
 	} else if (addr.isV6()) {
 		_ipv6p.addr = addr;
 		_ipv6p.fixed = fixed;
-		_dirty = true;
 	}
 }
 
@@ -165,15 +155,12 @@ void Peer::clearFixedFlag(InetAddress::AddressType t)
 		case InetAddress::TYPE_NULL:
 			_ipv4p.fixed = false;
 			_ipv6p.fixed = false;
-			_dirty = true;
 			break;
 		case InetAddress::TYPE_IPV4:
 			_ipv4p.fixed = false;
-			_dirty = true;
 			break;
 		case InetAddress::TYPE_IPV6:
 			_ipv6p.fixed = false;
-			_dirty = true;
 			break;
 	}
 }

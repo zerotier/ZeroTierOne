@@ -1,5 +1,4 @@
 OBJS=\
-	ext/kissdb/kissdb.o \
 	ext/lz4/lz4hc.o \
 	ext/lz4/lz4.o \
 	node/C25519.o \
