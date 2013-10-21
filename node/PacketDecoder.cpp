@@ -305,12 +305,12 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	if (payloadLength() == ZT_ADDRESS_LENGTH) {
-		SharedPtr<Peer> p(_r->topology->getPeer(Address(payload(),ZT_ADDRESS_LENGTH)));
-		if (p) {
+		Identity id(_r->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
+		if (id) {
 			Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_WHOIS);
 			outp.append(packetId());
-			p->identity().serialize(outp,false);
+			id.serialize(outp,false);
 			outp.armor(peer->key(),true);
 			_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
 			//TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
