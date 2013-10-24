@@ -444,6 +444,10 @@ Node::ReasonForTermination Node::run()
 		if (Utils::fileExists(netconfServicePath.c_str())) {
 			LOG("netconf.d/netconfi.service appears to exist, starting...");
 			_r->netconfService = new Service(_r,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
+			Dictionary initMessage;
+			initMessage["type"] = "netconf-init";
+			initMessage["netconfId"] = _r->identity.toString(true);
+			_r->netconfService->send(initMessage);
 		}
 	} catch ( ... ) {
 		LOG("unexpected exception attempting to start services");
