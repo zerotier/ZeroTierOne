@@ -86,6 +86,9 @@ void CertificateOfMembership::fromString(const char *s)
 	_signedBy.zero();
 	memset(_signature.data,0,_signature.size());
 
+	if (!*s)
+		return;
+
 	unsigned int colonAt = 0;
 	while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
 

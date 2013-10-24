@@ -221,12 +221,14 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 
 void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
 {
-	uint64_t timestampMaxDelta = _config->com().timestampMaxDelta();
-	if (!timestampMaxDelta)
+	uint64_t pushTimeout = _config->com().timestampMaxDelta() / 2;
+	if (!pushTimeout)
 		return; // still waiting on my own cert
+	if (pushTimeout > 1000)
+		pushTimeout -= 1000;
 
 	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
-	if ((force)||((now - lastPushed) > (timestampMaxDelta / 2))) {
+	if ((force)||((now - lastPushed) > pushTimeout)) {
 		lastPushed = now;
 
 		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);

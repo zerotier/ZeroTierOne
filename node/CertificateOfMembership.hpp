@@ -265,6 +265,7 @@ public:
 	 *
 	 * Invalid strings will result in invalid or undefined certificate
 	 * contents. These will subsequently fail validation and comparison.
+	 * Empty strings will result in an empty certificate.
 	 *
 	 * @param s String to deserialize
 	 */

@@ -203,7 +203,7 @@ public:
 	inline void pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		if ((_config)&&(!_config->isOpen()))
+		if ((_config)&&(!_config->isOpen())&&(_config->com()))
 			_pushMembershipCertificate(peer,force,now);
 	}
 
@@ -214,15 +214,17 @@ public:
 	 * len is reached or a null address is encountered.
 	 *
 	 * @param peers Packed array of 5-byte big-endian addresses
-	 * @param len Length of peers[] in total, MUST be a multiple of 5
+	 * @param len Length of peers[] in total (bytes, not addresses)
 	 * @param force If true, push even if we've already done so within required time frame
 	 * @param now Current time
 	 */
 	inline void pushMembershipCertificate(const void *peers,unsigned int len,bool force,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		if ((_config)&&(!_config->isOpen())) {
+		if ((_config)&&(!_config->isOpen())&&(_config->com())) {
 			for(unsigned int i=0;i<len;i+=ZT_ADDRESS_LENGTH) {
+				if ((i + ZT_ADDRESS_LENGTH) > len)
+					break;
 				Address a((char *)peers + i,ZT_ADDRESS_LENGTH);
 				if (a)
 					_pushMembershipCertificate(a,force,now);

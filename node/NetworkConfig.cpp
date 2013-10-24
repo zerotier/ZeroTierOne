@@ -128,6 +128,8 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		if (params.size() >= 3)
 			_multicastRates[MulticastGroup(i->first)] = MulticastRate(Utils::hexStrToUInt(params[0].c_str()),Utils::hexStrToUInt(params[1].c_str()),Utils::hexStrToUInt(params[2].c_str()));
 	}
+
+	_com.fromString(d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP,std::string()));
 }
 
 } // namespace ZeroTier
