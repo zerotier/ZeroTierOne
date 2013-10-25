@@ -142,6 +142,9 @@ void Network::requestConfiguration()
 
 void Network::addMembershipCertificate(const CertificateOfMembership &cert)
 {
+	if (!cert) // sanity check
+		return;
+
 	Mutex::Lock _l(_lock);
 
 	// We go ahead and accept certs provisionally even if _isOpen is true, since
@@ -149,8 +152,10 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert)
 	// These will be purged on clean() for open networks eventually.
 
 	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
-	if (cert.timestamp() >= old.timestamp())
+	if (cert.timestamp() >= old.timestamp()) {
+		TRACE("got new certificate for %s on network %.16llx",cert.issuedTo().toString().c_str(),cert.networkId());
 		old = cert;
+	}
 }
 
 bool Network::isAllowed(const Address &peer) const
@@ -230,6 +235,7 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
 	if ((force)||((now - lastPushed) > pushTimeout)) {
 		lastPushed = now;
+		TRACE("pushing membership cert for %.16llx to %s",(unsigned long long)_id,peer.toString().c_str());
 
 		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 		_config->com().serialize(outp);

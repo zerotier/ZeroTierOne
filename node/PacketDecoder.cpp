@@ -847,8 +847,10 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 		while ((ptr + sizeof(uint64_t)) <= size()) {
 			uint64_t nwid = at<uint64_t>(ptr); ptr += sizeof(uint64_t);
 			SharedPtr<Network> nw(_r->nc->network(nwid));
-			if ((nw)&&(source() == nw->controller())) // only respond to requests from controller
+			if ((nw)&&(source() == nw->controller())) { // only respond to requests from controller
+				TRACE("NETWORK_CONFIG_REFRESH from %s, refreshing network %.16llx",source().toString().c_str(),nwid);
 				nw->requestConfiguration();
+			}
 		}
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());

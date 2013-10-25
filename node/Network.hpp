@@ -322,6 +322,8 @@ public:
 	}
 
 	/**
+	 * Get current network config or return NULL
+	 *
 	 * @return Network configuration -- may be NULL
 	 */
 	inline SharedPtr<NetworkConfig> config2() const
