@@ -436,7 +436,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		unsigned char *const bloom = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
 
 		// These fields don't -- they're signed by the original sender
-		// const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
+		const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
 		const uint16_t bloomNonce = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM_NONCE);
 		const unsigned int prefixBits = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS];
@@ -449,6 +449,27 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned char *const frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
 		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
 		const unsigned char *const signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
+
+		SharedPtr<Network> network(_r->nc->network(nwid));
+
+		// Grab, verify, and learn certificate if any -- provided we are a member of this network
+		// Note: we can do this before verification of the actual packet, since the certificate
+		// has its own separate signature.
+		if (((flags & ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE))&&(network)) {
+			CertificateOfMembership originCom(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2 + signatureLen);
+			Address signedBy(originCom.signedBy());
+			if ((originCom.networkId() == nwid)&&(signedBy == network->controller())) {
+				SharedPtr<Peer> signingPeer(_r->topology->getPeer(signedBy));
+				if (!signingPeer) {
+					// Technically this shouldn't happen, but handle it anyway...
+					_r->sw->requestWhois(signedBy);
+					_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
+					return false;
+				} else if (originCom.verify(signingPeer->identity())) {
+					network->addMembershipCertificate(originCom);
+				}
+			}
+		}
 
 		// Check multicast signature to verify original sender
 		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + frameLen;
@@ -490,7 +511,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 #endif
 
 		unsigned int maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
-		SharedPtr<Network> network(_r->nc->network(nwid));
 
 		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
 			// Ordinary nodes will drop duplicates. Supernodes keep propagating
@@ -659,12 +679,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		// Zero-terminate new FIFO if not completely full
 		while (newFifoPtr != newFifoEnd)
 			*(newFifoPtr++) = (unsigned char)0;
-
-		// If we're forwarding a packet within a private network that we are
-		// a member of, also propagate our cert if needed. This propagates
-		// it to everyone including people who will receive this multicast.
-		if (network)
-			network->pushMembershipCertificate(newFifo,sizeof(newFifo),false,Utils::now());
 
 		// First element in newFifo[] is next hop
 		Address nextHop(newFifo,ZT_ADDRESS_LENGTH);

@@ -205,6 +205,8 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN 2
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN)
 
+#define ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE 0x01
+
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN + 2)
@@ -507,6 +509,11 @@ public:
 		 *   [... end of signed portion ...]
 		 *   <[2] 16-bit length of signature>
 		 *   <[...] signature (currently Ed25519/SHA-512, 96 bytes in length)>
+		 *  [<[...] network membership certificate (optional)>]
+		 *
+		 * Flags:
+		 *   0x01 - Multicast frame includes network membership certificate
+		 *          for original sender for this network.
 		 *
 		 * When a multicast frame is received:
 		 *

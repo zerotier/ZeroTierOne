@@ -117,7 +117,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		unsigned char *const fifoEnd = fifo + sizeof(fifo);
 		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
 		const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
-		uint64_t now = Utils::now();
 
 		for(unsigned int prefix=0,np=((unsigned int)2 << (nconf->multicastPrefixBits() - 1));prefix<np;++prefix) {
 			memset(bloom,0,sizeof(bloom));
@@ -134,17 +133,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				else continue;
 			}
 
-			// If network is not open, make sure all recipients have our membership
-			// certificate if we haven't sent it recently. As the multicast goes
-			// further down the line, peers beyond the first batch will ask us for
-			// our membership certificate if they need it.
-			network->pushMembershipCertificate(fifo,sizeof(fifo),false,now);
-
 			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
 			outp.append((uint16_t)0);
 			outp.append(fifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO); // remainder of fifo is loaded into packet
 			outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
-			outp.append((unsigned char)0);
+			outp.append((nconf->com()) ? (unsigned char)ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE : (unsigned char)0);
 			outp.append(network->id());
 			outp.append(bloomNonce);
 			outp.append((unsigned char)nconf->multicastPrefixBits());
@@ -163,6 +156,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
 			outp.append((uint16_t)sig.size());
 			outp.append(sig.data,sig.size());
+
+			if (nconf->com())
+				nconf->com().serialize(outp);
 
 			outp.compress();
 			send(outp,true);
@@ -193,8 +189,6 @@ void Switch::send(const Packet &packet,bool encrypt)
 		TRACE("BUG: caught attempt to send() to self, ignored");
 		return;
 	}
-
-	//TRACE(">> %.16llx %s -> %s (size: %u) (enc: %s)",(unsigned long long)packet.packetId(),packet.source().toString().c_str(),packet.destination().toString().c_str(),packet.size(),(encrypt ? "yes" : "no"));
 
 	if (!_trySend(packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
