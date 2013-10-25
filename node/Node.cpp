@@ -235,7 +235,13 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 	try {
 		//TRACE("from netconf:\n%s",msg.toString().c_str());
 		const std::string &type = msg.get("type");
-		if (type == "netconf-response") {
+		if (type == "ready") {
+			LOG("received 'ready' from netconf.service, sending netconf-init with identity information...");
+			Dictionary initMessage;
+			initMessage["type"] = "netconf-init";
+			initMessage["netconfId"] = _r->identity.toString(true);
+			_r->netconfService->send(initMessage);
+		} else if (type == "netconf-response") {
 			uint64_t inRePacketId = strtoull(msg.get("requestId").c_str(),(char **)0,16);
 			uint64_t nwid = strtoull(msg.get("nwid").c_str(),(char **)0,16);
 			Address peerAddress(msg.get("peer").c_str());
@@ -442,7 +448,7 @@ Node::ReasonForTermination Node::run()
 	try {
 		std::string netconfServicePath(_r->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
 		if (Utils::fileExists(netconfServicePath.c_str())) {
-			LOG("netconf.d/netconfi.service appears to exist, starting...");
+			LOG("netconf.d/netconf.service appears to exist, starting...");
 			_r->netconfService = new Service(_r,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
 			Dictionary initMessage;
 			initMessage["type"] = "netconf-init";

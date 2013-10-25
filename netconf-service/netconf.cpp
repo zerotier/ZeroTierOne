@@ -134,6 +134,19 @@ int main(int argc,char **argv)
 		return -1;
 	}
 
+	// Send ready message to tell parent that the service is up, and to
+	// solicit netconf-init.
+	{
+		Dictionary response;
+		response["type"] = "ready";
+		std::string respm = response.toString();
+		uint32_t respml = (uint32_t)htonl((uint32_t)respm.length());
+		stdoutWriteLock.lock();
+		write(STDOUT_FILENO,&respml,4);
+		write(STDOUT_FILENO,respm.data(),respm.length());
+		stdoutWriteLock.unlock();
+	}
+
 	for(;;) {
 		for(int l=0;l<4;) {
 			int n = (int)read(STDIN_FILENO,buf + l,4 - l);
@@ -200,13 +213,19 @@ int main(int argc,char **argv)
 			const std::string &reqType = request.get("type");
 			if (reqType == "netconf-init") { // initialization to set things like netconf's identity
 				Identity netconfId(request.get("netconfId"));
-				if ((netconfId)&&(netconfId.hasPrivate()))
+				if ((netconfId)&&(netconfId.hasPrivate())) {
 					signingIdentity = netconfId;
-				else {
+					fprintf(stderr,"got netconf signing identity: %s\n",signingIdentity.toString(false).c_str());
+				} else {
 					fprintf(stderr,"netconfId invalid or lacks private key\n");
 					return -1;
 				}
 			} else if (reqType == "netconf-request") { // NETWORK_CONFIG_REQUEST packet
+				if (!signingIdentity) {
+					fprintf(stderr,"no signing identity; missing netconf-init?\n");
+					return -1;
+				}
+
 				// Deserialize querying peer identity and network ID
 				Identity peerIdentity(request.get("peerId"));
 				uint64_t nwid = strtoull(request.get("nwid").c_str(),(char **)0,16);
@@ -459,7 +478,7 @@ int main(int argc,char **argv)
 					netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = ipv4Static;
 				if (ipv6Static.length())
 					netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = ipv6Static;
-				if ((!isOpen)&&(authenticated)&&(signingIdentity)&&(signingIdentity.hasPrivate())) {
+				if ((!isOpen)&&(authenticated)) {
 					CertificateOfMembership com(Utils::now(),ZT_NETWORK_AUTOCONF_DELAY * 3,nwid,peerIdentity.address());
 					com.sign(signingIdentity);
 					netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
