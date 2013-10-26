@@ -3,5 +3,5 @@ fair game to redistribute. It's packaged with OpenVPN and several
 other things and also distributed in source code form as an example
 program by Microsoft.
 
-It's used to automatically install the Microsoft Loopback Adapter
-or remove it when no longer needed.
+It's called by zerotier-one.exe to automagically install and remove
+instances of the tap device.
