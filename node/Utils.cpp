@@ -186,31 +186,41 @@ unsigned int Utils::unhex(const char *hex,unsigned int hexlen,void *buf,unsigned
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
 	static Mutex randomLock;
-	static char randbuf[32768];
+	static char randbuf[16384];
 	static unsigned int randptr = sizeof(randbuf);
-#ifdef __WINDOWS__
 	static Salsa20 s20;
-	volatile bool s20Initialized = false;
-#endif
+	static bool randInitialized = false;
 
 	Mutex::Lock _l(randomLock);
+
+	// A Salsa20 instance is used to mangle whatever our base
+	// random source happens to be.
+	if (!randInitialized) {
+		memset(randbuf,0,sizeof(randbuf));
+		char s20key[33];
+		uint64_t s20iv = now();
+		Utils::snprintf(s20key,sizeof(s20key),"%.16llx%.16llx",(unsigned long long)now(),(unsigned long long)((void *)&s20iv));
+		s20.init(s20key,256,&s20iv,8);
+	}
+
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randptr >= sizeof(randbuf)) {
 #ifdef __UNIX_LIKE__
-			int fd = ::open("/dev/urandom",O_RDONLY);
-			if (fd < 0) {
-				fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom: %s"ZT_EOL_S,strerror(errno));
-				exit(-1);
+			{
+				int fd = ::open("/dev/urandom",O_RDONLY);
+				if (fd < 0) {
+					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom: %s"ZT_EOL_S,strerror(errno));
+					exit(-1);
+				}
+				if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
+					fprintf(stderr,"FATAL ERROR: unable to read from /dev/urandom"ZT_EOL_S);
+					exit(-1);
+				}
+				::close(fd);
 			}
-			if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
-				fprintf(stderr,"FATAL ERROR: unable to read from /dev/urandom"ZT_EOL_S);
-				exit(-1);
-			}
-			::close(fd);
 #else
 #ifdef __WINDOWS__
-			if (!s20Initialized) {
-				s20Initialized = true;
+			{
 				char ktmp[32];
 				char ivtmp[8];
 				for(int i=0;i<32;++i) ktmp[i] = (char)rand();
@@ -218,17 +228,17 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 				double now = Utils::nowf();
 				memcpy(ktmp,&now,sizeof(now));
 				DWORD tmp = GetCurrentProcessId();
-				memcpy(ktmp + sizeof(double),&tmp,sizeof(tmp));
+				memcpy(ktmp + sizeof(now),&tmp,sizeof(tmp));
 				tmp = GetTickCount();
-				memcpy(ktmp + sizeof(double) + sizeof(DWORD),&tmp,sizeof(tmp));
-				s20.init(ktmp,256,ivtmp);
-				for(int i=0;i<sizeof(randbuf);++i) randbuf[i] = (char)rand();
+				memcpy(ktmp + sizeof(now) + sizeof(DWORD),&tmp,sizeof(tmp));
+				Salsa20 s20tmp(ktmp,256,ivtmp,8);
+				s20tmp.encrypt(randbuf,randbuf,sizeof(randbuf));
 			}
-			s20.encrypt(randbuf,randbuf,sizeof(randbuf));
 #else
 no getSecureRandom() implementation;
 #endif
 #endif
+			s20.encrypt(randbuf,randbuf,sizeof(randbuf));
 			randptr = 0;
 		}
 		((char *)buf)[i] = randbuf[randptr++];
