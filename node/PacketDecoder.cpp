@@ -112,6 +112,10 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doNETWORK_CONFIG_REQUEST(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REFRESH:
 				return _doNETWORK_CONFIG_REFRESH(_r,peer);
+			case Packet::VERB_FILE_INFO_REQUEST:
+				return _doFILE_INFO_REQUEST(_r,peer);
+			case Packet::VERB_FILE_BLOCK_REQUEST:
+				return _doFILE_BLOCK_REQUEST(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed MAC so the packet is still valid, but we
@@ -871,6 +875,16 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+	return true;
+}
+
+bool PacketDecoder::_doFILE_INFO_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	return true;
+}
+
+bool PacketDecoder::_doFILE_BLOCK_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
 	return true;
 }
 
