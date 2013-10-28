@@ -55,7 +55,7 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	addrs.clear();
 	if (!id.fromString("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5"))
 		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(InetAddress("198.199.73.93",ZT_DEFAULT_UDP_PORT));
+	addrs.push_back(InetAddress("162.243.77.111",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
 
 	// nyarlathotep.zerotier.com - San Francisco, California, USA
