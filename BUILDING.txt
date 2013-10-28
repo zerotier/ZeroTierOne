@@ -20,18 +20,4 @@ Edit Makefile.linux if you want to change between debug or release build.
 
 -- Windows
 
-Right now Windows builds using Visual Studio 2012. Technically it should also
-build with other tools, but VS2012 is what your author is using.
-
-Load the ZeroTierOne.sln solution. Typically you won't need to worry about
-any projects other than ZeroTierOne, Service, and InstallerUpdater. SelfTest
-builds the selftest program which can be used to test many aspects of the
-core code base. TapDriver builds the Ethernet tap driver, which shouldn't
-be something end users need to do and requires a driver signing key to create
-a publishable driver that users can load without big red warnings.
-
-To just test ZeroTier One itself, build ZeroTierOne and run the binary in
-an administrator-mode command window.
-
-Instructions for doing a full build will be forthcoming once all the details
-are worked out. Windows is still a work in progress.
+Here be dragons.

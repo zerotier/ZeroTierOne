@@ -7,7 +7,7 @@ By convention, ZeroTier One will keep its state here on mac:
 /Library/Application Support/ZeroTier/One
 
 ZeroTier ships with a kernel extension for its own tap device, which it
-stores in the above directory. To install this from source, type:
+stores in the above directory. To install this, type:
 
 sudo make -f Makefile.mac install-mac-tap
 

@@ -28,9 +28,9 @@ CCFLAGS = $(CFLAGS)
 LDFLAGS = -Wall -mkernel -nostdlib -r -lcc_kext -arch i386 -arch x86_64 -Xlinker -kext
 
 #CCP = g++
+#CC = gcc
 CCP = $(HOME)/Code/llvm-g++-Xcode4.6.2/bin/llvm-g++
-
-CC = gcc
+CC = $(HOME)/Code/llvm-g++-Xcode4.6.2/bin/llvm-gcc
 
 all: $(KMOD_BIN) bundle
 
