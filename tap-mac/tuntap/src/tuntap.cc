@@ -648,7 +648,9 @@ tuntap_interface::cdev_write(uio_t uio, int ioflag)
 	mb = first;
 	while (uio_resid(uio) > 0) {
 		/* copy a chunk. enforce mtu (don't know if this is correct behaviour) */
-		chunk_len = min(ifnet_mtu(ifp), min(uio_resid(uio), mlen));
+		// ... evidently not :) -- Adam Ierymenko <adam.ierymenko@zerotier.com>
+		//chunk_len = min(ifnet_mtu(ifp), min(uio_resid(uio), mlen));
+		chunk_len = min(uio_resid(uio),mlen);
 		error = uiomove((caddr_t) mbuf_data(mb), chunk_len, uio);
 		if (error) {
 			log(LOG_ERR, "tuntap: could not copy data from userspace: %d\n", error);
@@ -664,7 +666,9 @@ tuntap_interface::cdev_write(uio_t uio, int ioflag)
 		copied += chunk_len;
 
 		/* if done, break the loop */
-		if (uio_resid(uio) <= 0 || copied >= ifnet_mtu(ifp))
+		//if (uio_resid(uio) <= 0 || copied >= ifnet_mtu(ifp))
+		//	break;
+		if (uio_resid(uio) <= 0)
 			break;
 
 		/* allocate a new mbuf if the current is filled */

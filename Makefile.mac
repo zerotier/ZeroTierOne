@@ -17,7 +17,7 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
 
-all: one cli mac-tap
+all: one cli
 
 one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)

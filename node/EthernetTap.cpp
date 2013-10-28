@@ -533,6 +533,7 @@ void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
+
 		int n = ::write(_fd,putBuf,len);
 		if (n <= 0) {
 			LOG("error writing packet to Ethernet tap device: %s",strerror(errno));
@@ -658,7 +659,8 @@ void EthernetTap::threadMain()
 {
 	fd_set readfds,nullfds;
 	MAC to,from;
-	char getBuf[4096 + 14];
+	int n,nfds,r;
+	char getBuf[8194];
 	Buffer<4096> data;
 
 	// Wait for a moment after startup -- wait for Network to finish
@@ -667,8 +669,9 @@ void EthernetTap::threadMain()
 
 	FD_ZERO(&readfds);
 	FD_ZERO(&nullfds);
-	int nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
+	nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
 
+	r = 0;
 	for(;;) {
 		FD_SET(_shutdownSignalPipe[0],&readfds);
 		FD_SET(_fd,&readfds);
@@ -678,19 +681,30 @@ void EthernetTap::threadMain()
 			break;
 
 		if (FD_ISSET(_fd,&readfds)) {
-			int n = (int)::read(_fd,getBuf,_mtu + 14);
-
-			if (n > 14) {
-				for(int i=0;i<6;++i)
-					to.data[i] = (unsigned char)getBuf[i];
-				for(int i=0;i<6;++i)
-					from.data[i] = (unsigned char)getBuf[i + 6];
-				data.copyFrom(getBuf + 14,(unsigned int)n - 14);
-				_handler(_arg,from,to,ntohs(((const uint16_t *)getBuf)[6]),data);
-			} else if (n < 0) {
+			n = (int)::read(_fd,getBuf + r,sizeof(getBuf) - r);
+			if (n < 0) {
 				if ((errno != EINTR)&&(errno != ETIMEDOUT)) {
 					TRACE("unexpected error reading from tap: %s",strerror(errno));
 					break;
+				}
+			} else {
+				// Some tap drivers like to send the ethernet frame and the
+				// payload in two chunks, so handle that by accumulating
+				// data until we have at least a frame.
+				r += n;
+				if (r > 14) {
+					if (r > (_mtu + 14)) // sanity check for weird TAP behavior on some platforms
+						r = _mtu + 14;
+					for(int i=0;i<6;++i)
+						to.data[i] = (unsigned char)getBuf[i];
+					for(int i=0;i<6;++i)
+						from.data[i] = (unsigned char)getBuf[i + 6];
+					unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
+					if (etherType != 0x8100) { // VLAN tagged frames are not supported!
+						data.copyFrom(getBuf + 14,(unsigned int)r - 14);
+						_handler(_arg,from,to,etherType,data);
+					}
+					r = 0;
 				}
 			}
 		}
