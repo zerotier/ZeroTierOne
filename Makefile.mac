@@ -35,18 +35,18 @@ idtool: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-idtool
 
-mac-tap: FORCE
-	cd mac-tap/tuntap ; make tap.kext
+#mac-tap: FORCE
+#	cd mac-tap/tuntap ; make tap.kext
 
-install-mac-tap: FORCE
-	mkdir -p /Library/Application\ Support/ZeroTier/One
-	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
-	cp -R mac-tap/tuntap/tap.kext /Library/Application\ Support/ZeroTier/One
-	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
+#install-mac-tap: FORCE
+#	mkdir -p /Library/Application\ Support/ZeroTier/One
+#	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
+#	cp -R mac-tap/tuntap/tap.kext /Library/Application\ Support/ZeroTier/One
+#	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
 
 clean:
 	rm -rf *.dSYM
 	rm -f $(OBJS) zerotier-*
-	cd mac-tap/tuntap ; make clean
+	cd tap-mac/tuntap ; make clean
 
 FORCE:

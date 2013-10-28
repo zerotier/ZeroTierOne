@@ -34,8 +34,7 @@
 
 #define TAP_IF_COUNT			16	/* max number of tap interfaces */
 
-// ZeroTier default MTU, see Constants.hpp
-#define TAP_MTU				2800
+#define TAP_MTU				4000
 
 #define TAP_LLADDR			tap_lladdr
 

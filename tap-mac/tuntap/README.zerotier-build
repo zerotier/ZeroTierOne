@@ -1,0 +1,18 @@
+Building the tap for both x86_64 and i386 requires an older version of the
+Xcode tools than what now ships for Mavericks (10.9). The newer version
+does not support creating i386 kernel images.
+
+These can be obtained from:
+
+https://developer.apple.com/downloads
+
+It requires a bit of a dance to unpack the package and obtain an unpacked
+tree, but once it's there you can change the line in tap/Makefile and
+build for both architectures.
+
+This will go on until i386 is thoroughly legacy, at which point we'll
+probably start just supporting x86_64. But that might be a while. We want
+to support old Macs through their entire useful life.
+
+Since this build is irritating, a pre-built copy is packaged in ext/ and
+is installed by 'make install'. So users shouldn't have to build this.
