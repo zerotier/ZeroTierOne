@@ -41,6 +41,6 @@
 /**
  * Revision: 16-bit (0-65535)
  */
-#define ZEROTIER_ONE_VERSION_REVISION 1
+#define ZEROTIER_ONE_VERSION_REVISION 2
 
 #endif
