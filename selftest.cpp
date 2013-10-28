@@ -68,6 +68,11 @@ static int testCrypto()
 	unsigned char buf1[16384];
 	unsigned char buf2[sizeof(buf1)],buf3[sizeof(buf1)];
 
+	for(int i=0;i<3;++i) {
+		Utils::getSecureRandom(buf1,64);
+		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64) << std::endl;
+	}
+
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
 	SHA512::hash(buf1,sha512TV0Input,strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
@@ -120,17 +125,22 @@ static int testCrypto()
 	std::cout << "PASS" << std::endl;
 
 	std::cout << "[crypto] Testing C25519 ECC key agreement... "; std::cout.flush();
-	for(unsigned int i=0;i<50;++i) {
+	for(unsigned int i=0;i<100;++i) {
+		memset(buf1,64,sizeof(buf1));
+		memset(buf2,64,sizeof(buf2));
+		memset(buf3,64,sizeof(buf3));
 		C25519::Pair p1 = C25519::generate();
 		C25519::Pair p2 = C25519::generate();
 		C25519::Pair p3 = C25519::generate();
 		C25519::agree(p1,p2.pub,buf1,64);
 		C25519::agree(p2,p1.pub,buf2,64);
 		C25519::agree(p3,p1.pub,buf3,64);
+		// p1<>p2 should equal p1<>p2
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
 			return -1;
 		}
+		// p2<>p1 should not equal p3<>p1
 		if (!memcmp(buf2,buf3,64)) {
 			std::cout << "FAIL (2)" << std::endl;
 			return -1;

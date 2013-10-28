@@ -196,6 +196,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	// A Salsa20 instance is used to mangle whatever our base
 	// random source happens to be.
 	if (!randInitialized) {
+		randInitialized = true;
 		memset(randbuf,0,sizeof(randbuf));
 		char s20key[33];
 		uint64_t s20iv = now();
