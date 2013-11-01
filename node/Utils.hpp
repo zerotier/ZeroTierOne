@@ -118,8 +118,6 @@ public:
 	 * List a directory's contents
 	 *
 	 * @param path Path to list
-	 * @param files Set to fill with files
-	 * @param directories Set to fill with directories
 	 * @return Map of entries and whether or not they are also directories (empty on failure)
 	 */
 	static std::map<std::string,bool> listDirectory(const char *path);
@@ -194,6 +192,12 @@ public:
 	{
 		return (getLastModified(path) != 0);
 	}
+
+	/**
+	 * @param path Path to file
+	 * @return File size or -1 if nonexistent or other failure
+	 */
+	static int64_t getFileSize(const char *path);
 
 	/**
 	 * @param t64 Time in ms since epoch

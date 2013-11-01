@@ -265,6 +265,16 @@ uint64_t Utils::getLastModified(const char *path)
 	return (((uint64_t)s.st_mtime) * 1000ULL);
 }
 
+static int64_t getFileSize(const char *path)
+{
+	struct stat s;
+	if (stat(path,&s))
+		return -1;
+	if (S_ISREG(s.st_mode))
+		return s.st_size;
+	return -1;
+}
+
 std::string Utils::toRfc1123(uint64_t t64)
 {
 	struct tm t;

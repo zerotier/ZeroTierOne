@@ -67,6 +67,11 @@ public:
 	 * Supernodes on the ZeroTier network
 	 */
 	const std::map< Identity,std::vector<InetAddress> > supernodes;
+
+	/**
+	 * Identities permitted to sign software updates
+	 */
+	const std::map< Address,Identity > updateAuthorities;
 };
 
 extern const Defaults ZT_DEFAULTS;

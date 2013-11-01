@@ -46,6 +46,7 @@ class CMWC4096;
 class Service;
 class Node;
 class Multicaster;
+class Updater;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -71,24 +72,29 @@ public:
 		demarc((Demarc *)0),
 		topology((Topology *)0),
 		sysEnv((SysEnv *)0),
-		nc((NodeConfig *)0)
+		nc((NodeConfig *)0),
+		updater((Updater *)0)
 #ifndef __WINDOWS__
 		,netconfService((Service *)0)
 #endif
 	{
 	}
 
+	// home of saved state, identity, etc.
 	std::string homePath;
 
-	// signal() to prematurely interrupt main loop wait
+	// signal() to prematurely interrupt main loop wait to cause loop to run
+	// again and detect some kind of change, exit, etc.
 	Condition mainLoopWaitCondition;
 
 	Identity identity;
 
+	// hacky... want to get rid of this flag...
 	volatile bool shutdownInProgress;
 
 	// Order matters a bit here. These are constructed in this order
-	// and then deleted in the opposite order on Node exit.
+	// and then deleted in the opposite order on Node exit. The order ensures
+	// that things that are needed are there before they're needed.
 
 	Logger *log; // may be null
 	CMWC4096 *prng;
@@ -99,6 +105,7 @@ public:
 	SysEnv *sysEnv;
 	NodeConfig *nc;
 	Node *node;
+	Updater *updater; // may be null if updates are disabled
 #ifndef __WINDOWS__
 	Service *netconfService; // may be null
 #endif

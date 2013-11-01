@@ -617,7 +617,7 @@ public:
 		 */
 		VERB_NETWORK_CONFIG_REFRESH = 12,
 
-		/* Request information about a shared file:
+		/* Request information about a shared file (for software updates):
 		 *   <[1] flags, currently unused and must be 0>
 		 *   <[2] 16-bit length of filename>
 		 *   <[...] name of file being requested>
