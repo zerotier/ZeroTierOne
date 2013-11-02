@@ -29,6 +29,10 @@
 #include "RuntimeEnvironment.hpp"
 #include "Logger.hpp"
 #include "Defaults.hpp"
+#include "Utils.hpp"
+#include "Topology.hpp"
+
+#include "../version.h"
 
 namespace ZeroTier {
 
@@ -112,10 +116,106 @@ void Updater::refreshShared()
 
 void Updater::getUpdateIfThisIsNewer(unsigned int vMajor,unsigned int vMinor,unsigned int revision)
 {
+	if (vMajor < ZEROTIER_ONE_VERSION_MAJOR)
+		return;
+	else if (vMajor == ZEROTIER_ONE_VERSION_MAJOR) {
+		if (vMinor < ZEROTIER_ONE_VERSION_MINOR)
+			return;
+		else if (vMinor == ZEROTIER_ONE_VERSION_MINOR) {
+			if (revision <= ZEROTIER_ONE_VERSION_REVISION)
+				return;
+		}
+	}
+
+	std::string updateFilename(generateUpdateFilename());
+	if (!updateFilename.length()) {
+		TRACE("a new update to %u.%u.%u is available, but this platform doesn't support auto updates",vMajor,vMinor,revision);
+		return;
+	}
+
+	std::vector< SharedPtr<Peer> > peers;
+	_r->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(peers,Utils::now()));
+
+	TRACE("new update available to %u.%u.%u, looking for %s from %u peers",vMajor,vMinor,revision,updateFilename.c_str(),(unsigned int)peers.size());
+
+	if (!peers.size())
+		return;
+
+	for(std::vector< SharedPtr<Peer> >::iterator p(peers.begin());p!=peers.end();++p) {
+		Packet outp(p->address(),_r->identity.address(),Packet::VERB_FILE_INFO_REQUEST);
+		outp.append((unsigned char)0);
+		outp.append((uint16_t)updateFilename.length());
+		outp.append(updateFilename.data(),updateFilename.length());
+		_r->sw->send(outp,true);
+	}
 }
 
 void Updater::retryIfNeeded()
 {
+}
+
+void Updater::handleChunk(const void *sha512First16,unsigned long at,const void *chunk,unsigned long len)
+{
+}
+
+std::string Updater::generateUpdateFilename(unsigned int vMajor,unsigned int vMinor,unsigned int revision)
+{
+	// Not supported... yet? Get it first cause it might identify as Linux too.
+#ifdef __ANDROID__
+#define _updSupported 1
+	return std::string();
+#endif
+
+	// Linux on x86 and possibly in the future ARM
+#ifdef __LINUX__
+#if defined(__i386) || defined(__i486) || defined(__i586) || defined(__i686) || defined(__amd64) || defined(__x86_64) || defined(i386)
+#define _updSupported 1
+	char buf[128];
+	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-linux-%s-update",vMajor,vMinor,revision,(sizeof(void *) == 8) ? "x64" : "x86");
+	return std::string(buf);
+#endif
+/*
+#if defined(__arm__) || defined(__arm) || defined(__aarch64__)
+#define _updSupported 1
+	char buf[128];
+	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-linux-%s-update",vMajor,vMinor,revision,(sizeof(void *) == 8) ? "arm64" : "arm32");
+	return std::string(buf);
+#endif
+*/
+#endif
+
+	// Apple stuff... only Macs so far...
+#ifdef __APPLE__
+#define _updSupported 1
+#if defined(__powerpc) || defined(__powerpc__) || defined(__ppc__) || defined(__ppc64) || defined(__ppc64__) || defined(__powerpc64__)
+	return std::string();
+#endif
+#if defined(TARGET_IPHONE_SIMULATOR) || defined(TARGET_OS_IPHONE)
+	return std::string();
+#endif
+	char buf[128];
+	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-mac-x86combined-update",vMajor,vMinor,revision);
+	return std::string(buf);
+#endif
+
+	// ???
+#ifndef _updSupported
+	return std::string();
+#endif
+}
+
+bool Updater::parseUpdateFilename(const char *filename,unsigned int &vMajor,unsigned int &vMinor,unsigned int &revision)
+{
+	std::vector<std::string> byDash(Utils::split(filename,"-","",""));
+	if (byDash.size() < 2)
+		return false;
+	std::vector<std::string> byUnderscore(Utils::split(byDash[1].c_str(),"_","",""));
+	if (byUnderscore.size() < 3)
+		return false;
+	vMajor = Utils::strToUInt(byUnderscore[0].c_str());
+	vMinor = Utils::strToUInt(byUnderscore[1].c_str());
+	revision = Utils::strToUInt(byUnderscore[2].c_str());
+	return true;
 }
 
 } // namespace ZeroTier

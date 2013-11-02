@@ -54,6 +54,7 @@
 
 // OSX and iOS are unix-like OSes far as we're concerned
 #ifdef __APPLE__
+#include <TargetConditionals.h>
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif

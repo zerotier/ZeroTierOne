@@ -111,6 +111,29 @@ public:
 	 */
 	void retryIfNeeded();
 
+	/**
+	 * Called when a chunk is received
+	 *
+	 * @param sha512First16 First 16 bytes of SHA-512 hash
+	 * @param at Position of chunk
+	 * @param chunk Chunk data
+	 * @param len Length of chunk
+	 */
+	void handleChunk(const void *sha512First16,unsigned long at,const void *chunk,unsigned long len);
+
+	/**
+	 * @return Canonical update filename for this platform or empty string if unsupported
+	 */
+	static std::string generateUpdateFilename(unsigned int vMajor,unsigned int vMinor,unsigned int revision);
+
+	/**
+	 * Parse an updater filename and extract version info
+	 *
+	 * @param filename Filename to parse
+	 * @return True if info was extracted and value-result parameters set
+	 */
+	static bool parseUpdateFilename(const char *filename,unsigned int &vMajor,unsigned int &vMinor,unsigned int &revision);
+
 private:
 	struct _Download
 	{
@@ -151,7 +174,7 @@ private:
 			return true;
 		}
 
-		std::vector<char> data;
+		std::string data;
 		std::vector<bool> haveChunks;
 		std::vector<Address> peersThatHave;
 		std::string filename;
