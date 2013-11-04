@@ -38,6 +38,7 @@
 #include <iterator>
 #include <stdexcept>
 #include <string>
+#include <list>
 
 #include "Constants.hpp"
 #include "Packet.hpp"
@@ -55,10 +56,10 @@
 #define ZT_UPDATER_MAX_SUPPORTED_SIZE (1024 * 1024 * 16)
 
 // Retry timeout in ms.
-#define ZT_UPDATER_RETRY_TIMEOUT 30000
+#define ZT_UPDATER_RETRY_TIMEOUT 15000
 
-// After this long, look for a new set of peers that have the download shared.
-#define ZT_UPDATER_REPOLL_TIMEOUT 60000
+// After this long, look for a new peer to download from
+#define ZT_UPDATER_PEER_TIMEOUT 65000
 
 namespace ZeroTier {
 
@@ -67,10 +68,12 @@ class RuntimeEnvironment;
 /**
  * Software update downloader and executer
  *
- * FYI: downloads occur via the protocol rather than out of band via http so
+ * Downloads occur via the ZT1 protocol rather than out of band via http so
  * that ZeroTier One can be run in secure jailed environments where it is the
- * only protocol permitted over the "real" Internet. This is required for a
- * number of potentially popular use cases.
+ * only protocol permitted over the "real" Internet. This is wanted for a
+ * number of potentially popular use cases, like private LANs that connect
+ * nodes in hostile environments or playing attack/defend on the future CTF
+ * network.
  *
  * The protocol is a simple chunk-pulling "trivial FTP" like thing that should
  * be suitable for core engine software updates. Software updates themselves
@@ -84,6 +87,19 @@ class RuntimeEnvironment;
 class Updater
 {
 public:
+	/**
+	 * Contains information about a shared update available to other peers
+	 */
+	struct SharedUpdate
+	{
+		std::string fullPath;
+		std::string filename;
+		unsigned char sha512[64];
+		C25519::Signature sig;
+		Address signedBy;
+		unsigned long size;
+	};
+
 	Updater(const RuntimeEnvironment *renv);
 	~Updater();
 
@@ -108,18 +124,72 @@ public:
 
 	/**
 	 * Called periodically from main loop
+	 *
+	 * This retries downloads if they're stalled and performs other cleanup.
 	 */
 	void retryIfNeeded();
 
 	/**
 	 * Called when a chunk is received
 	 *
-	 * @param sha512First16 First 16 bytes of SHA-512 hash
+	 * If the chunk is a final chunk and we now have an update, this may result
+	 * in the commencement of the update process and the shutdown of ZT1.
+	 *
+	 * @param from Originating peer
+	 * @param sha512 Up to 64 bytes of hash to match
+	 * @param shalen Length of sha512[]
 	 * @param at Position of chunk
 	 * @param chunk Chunk data
 	 * @param len Length of chunk
 	 */
-	void handleChunk(const void *sha512First16,unsigned long at,const void *chunk,unsigned long len);
+	void handleChunk(const Address &from,const void *sha512,unsigned int shalen,unsigned long at,const void *chunk,unsigned long len);
+
+	/**
+	 * Called when a reply to a search for an update is received
+	 *
+	 * This checks SHA-512 hash signature and version as parsed from filename
+	 * before starting the transfer.
+	 *
+	 * @param from Node that sent reply saying it has the file
+	 * @param filename Name of file (can be parsed for version info)
+	 * @param sha512 64-byte SHA-512 hash of file's contents
+	 * @param filesize Size of file in bytes
+	 * @param signedBy Address of signer of hash
+	 * @param signature Signature (currently must be Ed25519)
+	 * @param siglen Length of signature in bytes
+	 */
+	void handleAvailable(const Address &from,const char *filename,const void *sha512,unsigned long filesize,const Address &signedBy,const void *signature,unsigned int siglen);
+
+	/**
+	 * Get data about a shared update if found
+	 *
+	 * @param filename File name
+	 * @param update Empty structure to be filled with update info
+	 * @return True if found (if false, 'update' is unmodified)
+	 */
+	bool findSharedUpdate(const char *filename,SharedUpdate &update) const;
+
+	/**
+	 * Get data about a shared update if found
+	 *
+	 * @param sha512 Up to 64 bytes of hash to match
+	 * @param shalen Length of sha512[]
+	 * @param update Empty structure to be filled with update info
+	 * @return True if found (if false, 'update' is unmodified)
+	 */
+	bool findSharedUpdate(const void *sha512,unsigned int shalen,SharedUpdate &update) const;
+
+	/**
+	 * Get a chunk of a shared update
+	 *
+	 * @param sha512 Up to 64 bytes of hash to match
+	 * @param shalen Length of sha512[]
+	 * @param at Position in file
+	 * @param chunk Buffer to store data
+	 * @param chunklen Number of bytes to get
+	 * @return True if chunk[] was successfully filled, false if not found or other error
+	 */
+	bool getSharedChunk(const void *sha512,unsigned int shalen,unsigned long at,void *chunk,unsigned long chunklen) const;
 
 	/**
 	 * @return Canonical update filename for this platform or empty string if unsupported
@@ -135,48 +205,13 @@ public:
 	static bool parseUpdateFilename(const char *filename,unsigned int &vMajor,unsigned int &vMinor,unsigned int &revision);
 
 private:
+	void _requestNextChunk();
+
 	struct _Download
 	{
-		_Download(const void *s512,const std::string &fn,unsigned long len,unsigned int vMajor,unsigned int vMinor,unsigned int rev)
-		{
-			data.resize(len);
-			haveChunks.resize((len / ZT_UPDATER_CHUNK_SIZE) + 1,false);
-			filename = fn;
-			memcpy(sha512,s512,64);
-			lastChunkSize = len % ZT_UPDATER_CHUNK_SIZE;
-			versionMajor = vMajor;
-			versionMinor = vMinor;
-			revision = rev;
-		}
-
-		long nextChunk() const
-		{
-			std::vector<bool>::const_iterator ptr(std::find(haveChunks.begin(),haveChunks.end(),false));
-			if (ptr != haveChunks.end())
-				return std::distance(haveChunks.begin(),ptr);
-			else return -1;
-		}
-
-		bool gotChunk(unsigned long at,const void *chunk,unsigned long len)
-		{
-			unsigned long whichChunk = at / ZT_UPDATER_CHUNK_SIZE;
-			if (at != (ZT_UPDATER_CHUNK_SIZE * whichChunk))
-				return false; // not at chunk boundary
-			if (whichChunk >= haveChunks.size())
-				return false; // overflow
-			if ((whichChunk == (haveChunks.size() - 1))&&(len != lastChunkSize))
-				return false; // last chunk, size wrong
-			else if (len != ZT_UPDATER_CHUNK_SIZE)
-				return false; // chunk size wrong
-			for(unsigned long i=0;i<len;++i)
-				data[at + i] = ((const char *)chunk)[i];
-			haveChunks[whichChunk] = true;
-			return true;
-		}
-
 		std::string data;
 		std::vector<bool> haveChunks;
-		std::vector<Address> peersThatHave;
+		std::list<Address> peersThatHave; // excluding current
 		std::string filename;
 		unsigned char sha512[64];
 		Address currentlyReceivingFrom;
@@ -185,18 +220,9 @@ private:
 		unsigned int versionMajor,versionMinor,revision;
 	};
 
-	struct _Shared
-	{
-		std::string filename;
-		unsigned char sha512[64];
-		C25519::Signature sig;
-		Address signedBy;
-		unsigned long size;
-	};
-
 	const RuntimeEnvironment *_r;
 	_Download *_download;
-	std::map< Array<unsigned char,16>,_Shared > _sharedUpdates;
+	std::list<SharedUpdate> _sharedUpdates; // usually not more than 1 or 2 of these
 	Mutex _lock;
 };
 

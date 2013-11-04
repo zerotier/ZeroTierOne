@@ -265,7 +265,7 @@ uint64_t Utils::getLastModified(const char *path)
 	return (((uint64_t)s.st_mtime) * 1000ULL);
 }
 
-static int64_t getFileSize(const char *path)
+int64_t Utils::getFileSize(const char *path)
 {
 	struct stat s;
 	if (stat(path,&s))

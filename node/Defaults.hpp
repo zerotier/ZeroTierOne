@@ -70,6 +70,12 @@ public:
 
 	/**
 	 * Identities permitted to sign software updates
+	 *
+	 * ZTN can keep multiple signing identities and rotate them, keeping some in
+	 * "cold storage" and obsoleting others gradually.
+	 *
+	 * If you don't build with ZT_OFFICIAL_BUILD, this isn't used since your
+	 * build will not auto-update.
 	 */
 	const std::map< Address,Identity > updateAuthorities;
 };

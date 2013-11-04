@@ -31,6 +31,8 @@
 #include "Defaults.hpp"
 #include "Utils.hpp"
 #include "Topology.hpp"
+#include "Switch.hpp"
+#include "SHA512.hpp"
 
 #include "../version.h"
 
@@ -69,8 +71,9 @@ void Updater::refreshShared()
 		if (Utils::readFile(nfoPath.c_str(),buf)) {
 			Dictionary nfo(buf);
 
-			_Shared shared;
-			shared.filename = fullPath;
+			SharedUpdate shared;
+			shared.fullPath = fullPath;
+			shared.filename = u->first;
 
 			std::string sha512(Utils::unhex(nfo.get("sha512",std::string())));
 			if (sha512.length() < sizeof(shared.sha512)) {
@@ -104,9 +107,7 @@ void Updater::refreshShared()
 			}
 			shared.size = (unsigned long)fs;
 
-			Array<unsigned char,16> first16Bytes;
-			memcpy(first16Bytes.data,sha512.data(),16);
-			_sharedUpdates[first16Bytes] = shared;
+			_sharedUpdates.push_back(shared);
 		} else {
 			TRACE("skipped shareable update due to missing companion .nfo: %s",fullPath.c_str());
 			continue;
@@ -127,9 +128,9 @@ void Updater::getUpdateIfThisIsNewer(unsigned int vMajor,unsigned int vMinor,uns
 		}
 	}
 
-	std::string updateFilename(generateUpdateFilename());
+	std::string updateFilename(generateUpdateFilename(vMajor,vMinor,revision));
 	if (!updateFilename.length()) {
-		TRACE("a new update to %u.%u.%u is available, but this platform doesn't support auto updates",vMajor,vMinor,revision);
+		TRACE("an update to %u.%u.%u is available, but this platform or build doesn't support auto-update",vMajor,vMinor,revision);
 		return;
 	}
 
@@ -138,11 +139,8 @@ void Updater::getUpdateIfThisIsNewer(unsigned int vMajor,unsigned int vMinor,uns
 
 	TRACE("new update available to %u.%u.%u, looking for %s from %u peers",vMajor,vMinor,revision,updateFilename.c_str(),(unsigned int)peers.size());
 
-	if (!peers.size())
-		return;
-
 	for(std::vector< SharedPtr<Peer> >::iterator p(peers.begin());p!=peers.end();++p) {
-		Packet outp(p->address(),_r->identity.address(),Packet::VERB_FILE_INFO_REQUEST);
+		Packet outp((*p)->address(),_r->identity.address(),Packet::VERB_FILE_INFO_REQUEST);
 		outp.append((unsigned char)0);
 		outp.append((uint16_t)updateFilename.length());
 		outp.append(updateFilename.data(),updateFilename.length());
@@ -152,14 +150,167 @@ void Updater::getUpdateIfThisIsNewer(unsigned int vMajor,unsigned int vMinor,uns
 
 void Updater::retryIfNeeded()
 {
+	Mutex::Lock _l(_lock);
+
+	if (_download) {
+		uint64_t elapsed = Utils::now() - _download->lastChunkReceivedAt;
+		if ((elapsed >= ZT_UPDATER_PEER_TIMEOUT)||(!_download->currentlyReceivingFrom)) {
+			if (_download->peersThatHave.empty()) {
+				// Search for more sources if we have no more possibilities queued
+				_download->currentlyReceivingFrom.zero();
+
+				std::vector< SharedPtr<Peer> > peers;
+				_r->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(peers,Utils::now()));
+
+				for(std::vector< SharedPtr<Peer> >::iterator p(peers.begin());p!=peers.end();++p) {
+					Packet outp((*p)->address(),_r->identity.address(),Packet::VERB_FILE_INFO_REQUEST);
+					outp.append((unsigned char)0);
+					outp.append((uint16_t)_download->filename.length());
+					outp.append(_download->filename.data(),_download->filename.length());
+					_r->sw->send(outp,true);
+				}
+			} else {
+				// If that peer isn't answering, try the next queued source
+				_download->currentlyReceivingFrom = _download->peersThatHave.front();
+				_download->peersThatHave.pop_front();
+			}
+		} else if (elapsed >= ZT_UPDATER_RETRY_TIMEOUT) {
+			// Re-request next chunk we don't have from current source
+			_requestNextChunk();
+		}
+	}
 }
 
-void Updater::handleChunk(const void *sha512First16,unsigned long at,const void *chunk,unsigned long len)
+void Updater::handleChunk(const Address &from,const void *sha512,unsigned int shalen,unsigned long at,const void *chunk,unsigned long len)
 {
+	Mutex::Lock _l(_lock);
+
+	if (!_download) {
+		TRACE("got chunk from %s while no download is in progress, ignored",from.toString().c_str());
+		return;
+	}
+
+	if (memcmp(_download->sha512,sha512,(shalen > 64) ? 64 : shalen)) {
+		TRACE("got chunk from %s for wrong download (SHA mismatch), ignored",from.toString().c_str());
+		return;
+	}
+
+	unsigned long whichChunk = at / ZT_UPDATER_CHUNK_SIZE;
+
+	if (at != (ZT_UPDATER_CHUNK_SIZE * whichChunk))
+		return; // not at chunk boundary
+	if (whichChunk >= _download->haveChunks.size())
+		return; // overflow
+	if ((whichChunk == (_download->haveChunks.size() - 1))&&(len != _download->lastChunkSize))
+		return; // last chunk, size wrong
+	else if (len != ZT_UPDATER_CHUNK_SIZE)
+		return; // chunk size wrong
+
+	for(unsigned long i=0;i<len;++i)
+		_download->data[at + i] = ((const char *)chunk)[i];
+
+	_download->haveChunks[whichChunk] = true;
+	_download->lastChunkReceivedAt = Utils::now();
+
+	_requestNextChunk();
+}
+
+void Updater::handleAvailable(const Address &from,const char *filename,const void *sha512,unsigned long filesize,const Address &signedBy,const void *signature,unsigned int siglen)
+{
+	unsigned int vMajor = 0,vMinor = 0,revision = 0;
+	if (!parseUpdateFilename(filename,vMajor,vMinor,revision)) {
+		TRACE("rejected offer of %s from %s: could not parse version information",filename,from.toString().c_str());
+		return;
+	}
+
+	if (filesize > ZT_UPDATER_MAX_SUPPORTED_SIZE) {
+		TRACE("rejected offer of %s from %s: file too large (%u)",filename,from.toString().c_str(),(unsigned int)filesize);
+		return;
+	}
+
+	if (vMajor < ZEROTIER_ONE_VERSION_MAJOR)
+		return;
+	else if (vMajor == ZEROTIER_ONE_VERSION_MAJOR) {
+		if (vMinor < ZEROTIER_ONE_VERSION_MINOR)
+			return;
+		else if (vMinor == ZEROTIER_ONE_VERSION_MINOR) {
+			if (revision <= ZEROTIER_ONE_VERSION_REVISION)
+				return;
+		}
+	}
+
+	Mutex::Lock _l(_lock);
+
+	if (_download) {
+		// If a download is in progress, only accept this as another source if
+		// it matches the size, hash, and version. Also check if this is a newer
+		// version and if so replace download with this.
+	} else {
+		// If there is no download in progress, create one provided the signature
+		// for the SHA-512 hash verifies as being from a valid signer.
+	}
+}
+
+bool Updater::findSharedUpdate(const char *filename,SharedUpdate &update) const
+{
+	Mutex::Lock _l(_lock);
+	for(std::list<SharedUpdate>::const_iterator u(_sharedUpdates.begin());u!=_sharedUpdates.end();++u) {
+		if (u->filename == filename) {
+			update = *u;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Updater::findSharedUpdate(const void *sha512,unsigned int shalen,SharedUpdate &update) const
+{
+	if (!shalen)
+		return false;
+	Mutex::Lock _l(_lock);
+	for(std::list<SharedUpdate>::const_iterator u(_sharedUpdates.begin());u!=_sharedUpdates.end();++u) {
+		if (!memcmp(u->sha512,sha512,(shalen > 64) ? 64 : shalen)) {
+			update = *u;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Updater::getSharedChunk(const void *sha512,unsigned int shalen,unsigned long at,void *chunk,unsigned long chunklen) const
+{
+	if (!chunklen)
+		return true;
+	if (!shalen)
+		return false;
+	Mutex::Lock _l(_lock);
+	for(std::list<SharedUpdate>::const_iterator u(_sharedUpdates.begin());u!=_sharedUpdates.end();++u) {
+		if (!memcmp(u->sha512,sha512,(shalen > 64) ? 64 : shalen)) {
+			FILE *f = fopen(u->fullPath.c_str(),"rb");
+			if (!f)
+				return false;
+			if (!fseek(f,(long)at,SEEK_SET)) {
+				fclose(f);
+				return false;
+			}
+			if (fread(chunk,chunklen,1,f) != 1) {
+				fclose(f);
+				return false;
+			}
+			fclose(f);
+			return true;
+		}
+	}
+	return false;
 }
 
 std::string Updater::generateUpdateFilename(unsigned int vMajor,unsigned int vMinor,unsigned int revision)
 {
+	// Defining ZT_OFFICIAL_BUILD enables this cascade of macros, which will
+	// make your build auto-update itself if it's for an officially supported
+	// architecture. The signing identity for auto-updates is in Defaults.
+#ifdef ZT_OFFICIAL_BUILD
+
 	// Not supported... yet? Get it first cause it might identify as Linux too.
 #ifdef __ANDROID__
 #define _updSupported 1
@@ -202,6 +353,10 @@ std::string Updater::generateUpdateFilename(unsigned int vMajor,unsigned int vMi
 #ifndef _updSupported
 	return std::string();
 #endif
+
+#else
+	return std::string();
+#endif // ZT_OFFICIAL_BUILD
 }
 
 bool Updater::parseUpdateFilename(const char *filename,unsigned int &vMajor,unsigned int &vMinor,unsigned int &revision)
@@ -216,6 +371,43 @@ bool Updater::parseUpdateFilename(const char *filename,unsigned int &vMajor,unsi
 	vMinor = Utils::strToUInt(byUnderscore[1].c_str());
 	revision = Utils::strToUInt(byUnderscore[2].c_str());
 	return true;
+}
+
+void Updater::_requestNextChunk()
+{
+	// assumes _lock is locked
+
+	if (!_download)
+		return;
+
+	unsigned long whichChunk = 0;
+	std::vector<bool>::iterator ptr(std::find(_download->haveChunks.begin(),_download->haveChunks.end(),false));
+	if (ptr == _download->haveChunks.end()) {
+		unsigned char digest[64];
+		SHA512::hash(digest,_download->data.data(),_download->data.length());
+		if (memcmp(digest,_download->sha512,64)) {
+			LOG("retrying download of %s -- SHA-512 mismatch, file corrupt!",_download->filename.c_str());
+			std::fill(_download->haveChunks.begin(),_download->haveChunks.end(),false);
+			whichChunk = 0;
+		} else {
+			LOG("successfully downloaded and authenticated %s, launching update...",_download->filename.c_str());
+			delete _download;
+			_download = (_Download *)0;
+			return;
+		}
+	} else {
+		whichChunk = std::distance(_download->haveChunks.begin(),ptr);
+	}
+
+	TRACE("requesting chunk %u/%u of %s from %s",(unsigned int)whichChunk,(unsigned int)_download->haveChunks.size(),_download->filename.c_str()_download->currentlyReceivingFrom.toString().c_str());
+
+	Packet outp(_download->currentlyReceivingFrom,_r->identity.address(),Packet::VERB_FILE_BLOCK_REQUEST);
+	outp.append(_download->sha512,16);
+	outp.append((uint32_t)(whichChunk * ZT_UPDATER_CHUNK_SIZE));
+	if (whichChunk == (_download->haveChunks.size() - 1))
+		outp.append((uint16_t)_download->lastChunkSize);
+	else outp.append((uint16_t)ZT_UPDATER_CHUNK_SIZE);
+	_r->sw->send(outp,true);
 }
 
 } // namespace ZeroTier

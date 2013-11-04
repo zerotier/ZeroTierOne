@@ -619,12 +619,12 @@ public:
 
 		/* Request information about a shared file (for software updates):
 		 *   <[1] flags, currently unused and must be 0>
-		 *   <[2] 16-bit length of filename>
+		 *   <[1] 8-bit length of filename>
 		 *   <[...] name of file being requested>
 		 *
 		 * OK response payload (indicates that we have and will share):
 		 *   <[1] flags, currently unused and must be 0>
-		 *   <[2] 16-bit length of filename>
+		 *   <[1] 8-bit length of filename>
 		 *   <[...] name of file being requested>
 		 *   <[64] full length SHA-512 hash of file contents>
 		 *   <[4] 32-bit length of file in bytes>
@@ -635,6 +635,10 @@ public:
 		 * ERROR response payload:
 		 *   <[2] 16-bit length of filename>
 		 *   <[...] name of file being requested>
+		 *
+		 * This is used for distribution of software updates and in the future may
+		 * be used for anything else that needs to be globally distributed. It
+		 * is not designed for end-user use for other purposes.
 		 *
 		 * Support is optional. Nodes should return UNSUPPORTED_OPERATION if
 		 * not supported or enabled.
@@ -656,6 +660,10 @@ public:
 		 *   <[16] first 16 bytes of SHA-512 of file being requested>
 		 *   <[4] 32-bit index of desired chunk>
 		 *   <[2] 16-bit length of desired chunk>
+		 *
+		 * This is used for distribution of software updates and in the future may
+		 * be used for anything else that needs to be globally distributed. It
+		 * is not designed for end-user use for other purposes.
 		 *
 		 * Support is optional. Nodes should return UNSUPPORTED_OPERATION if
 		 * not supported or enabled.
