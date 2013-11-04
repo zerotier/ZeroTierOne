@@ -44,6 +44,5 @@ install-mac-tap: FORCE
 clean:
 	rm -rf *.dSYM
 	rm -f $(OBJS) zerotier-*
-	cd tap-mac/tuntap ; make clean
 
 FORCE:
