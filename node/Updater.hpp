@@ -154,11 +154,11 @@ public:
 	 * @param filename Name of file (can be parsed for version info)
 	 * @param sha512 64-byte SHA-512 hash of file's contents
 	 * @param filesize Size of file in bytes
-	 * @param signedBy Address of signer of hash
+	 * @param signedBy Address of signer of filename+hash
 	 * @param signature Signature (currently must be Ed25519)
 	 * @param siglen Length of signature in bytes
 	 */
-	void handleAvailable(const Address &from,const char *filename,const void *sha512,unsigned long filesize,const Address &signedBy,const void *signature,unsigned int siglen);
+	void handlePeerHasFile(const Address &from,const char *filename,const void *sha512,unsigned long filesize,const Address &signedBy,const void *signature,unsigned int siglen);
 
 	/**
 	 * Get data about a shared update if found
@@ -203,6 +203,17 @@ public:
 	 * @return True if info was extracted and value-result parameters set
 	 */
 	static bool parseUpdateFilename(const char *filename,unsigned int &vMajor,unsigned int &vMinor,unsigned int &revision);
+
+    /**
+     * Compare major, minor, and revision components of a version
+     * 
+     * @return True if the first set is greater than the second
+     */
+    static inline bool compareVersions(unsigned int vmaj1,unsigned int vmin1,unsigned int rev1,unsigned int vmaj2,unsigned int vmin2,unsigned int rev2)
+        throw()
+    {
+        return ( ((((uint64_t)(vmaj1 & 0xffff)) << 32) | (((uint64_t)(vmin1 & 0xffff)) << 16) | (((uint64_t)(rev1 & 0xffff)))) > ((((uint64_t)(vmaj2 & 0xffff)) << 32) | (((uint64_t)(vmin2 & 0xffff)) << 16) | (((uint64_t)(rev2 & 0xffff)))) );
+    }
 
 private:
 	void _requestNextChunk();

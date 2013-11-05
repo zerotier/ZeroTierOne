@@ -107,6 +107,7 @@ void Updater::refreshShared()
 			}
 			shared.size = (unsigned long)fs;
 
+			LOG("sharing software update %s to other peers",shared.filename.c_str());
 			_sharedUpdates.push_back(shared);
 		} else {
 			TRACE("skipped shareable update due to missing companion .nfo: %s",fullPath.c_str());
@@ -117,16 +118,8 @@ void Updater::refreshShared()
 
 void Updater::getUpdateIfThisIsNewer(unsigned int vMajor,unsigned int vMinor,unsigned int revision)
 {
-	if (vMajor < ZEROTIER_ONE_VERSION_MAJOR)
+	if (!compareVersions(vMajor,vMinor,revision,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION))
 		return;
-	else if (vMajor == ZEROTIER_ONE_VERSION_MAJOR) {
-		if (vMinor < ZEROTIER_ONE_VERSION_MINOR)
-			return;
-		else if (vMinor == ZEROTIER_ONE_VERSION_MINOR) {
-			if (revision <= ZEROTIER_ONE_VERSION_REVISION)
-				return;
-		}
-	}
 
 	std::string updateFilename(generateUpdateFilename(vMajor,vMinor,revision));
 	if (!updateFilename.length()) {
@@ -157,6 +150,7 @@ void Updater::retryIfNeeded()
 		if ((elapsed >= ZT_UPDATER_PEER_TIMEOUT)||(!_download->currentlyReceivingFrom)) {
 			if (_download->peersThatHave.empty()) {
 				// Search for more sources if we have no more possibilities queued
+				TRACE("all sources for %s timed out, searching for more...",_download->filename.c_str());
 				_download->currentlyReceivingFrom.zero();
 
 				std::vector< SharedPtr<Peer> > peers;
@@ -173,6 +167,7 @@ void Updater::retryIfNeeded()
 				// If that peer isn't answering, try the next queued source
 				_download->currentlyReceivingFrom = _download->peersThatHave.front();
 				_download->peersThatHave.pop_front();
+				_requestNextChunk();
 			}
 		} else if (elapsed >= ZT_UPDATER_RETRY_TIMEOUT) {
 			// Re-request next chunk we don't have from current source
@@ -197,14 +192,15 @@ void Updater::handleChunk(const Address &from,const void *sha512,unsigned int sh
 
 	unsigned long whichChunk = at / ZT_UPDATER_CHUNK_SIZE;
 
-	if (at != (ZT_UPDATER_CHUNK_SIZE * whichChunk))
-		return; // not at chunk boundary
-	if (whichChunk >= _download->haveChunks.size())
-		return; // overflow
-	if ((whichChunk == (_download->haveChunks.size() - 1))&&(len != _download->lastChunkSize))
-		return; // last chunk, size wrong
-	else if (len != ZT_UPDATER_CHUNK_SIZE)
-		return; // chunk size wrong
+	if (
+	     (at != (ZT_UPDATER_CHUNK_SIZE * whichChunk))||
+	     (whichChunk >= _download->haveChunks.size())||
+	     ((whichChunk == (_download->haveChunks.size() - 1))&&(len != _download->lastChunkSize))||
+	     (len != ZT_UPDATER_CHUNK_SIZE)
+	   ) {
+		TRACE("got chunk from %s at invalid position or invalid size, ignored",from.toString().c_str());
+		return;
+	}
 
 	for(unsigned long i=0;i<len;++i)
 		_download->data[at + i] = ((const char *)chunk)[i];
@@ -215,39 +211,92 @@ void Updater::handleChunk(const Address &from,const void *sha512,unsigned int sh
 	_requestNextChunk();
 }
 
-void Updater::handleAvailable(const Address &from,const char *filename,const void *sha512,unsigned long filesize,const Address &signedBy,const void *signature,unsigned int siglen)
+void Updater::handlePeerHasFile(const Address &from,const char *filename,const void *sha512,unsigned long filesize,const Address &signedBy,const void *signature,unsigned int siglen)
 {
 	unsigned int vMajor = 0,vMinor = 0,revision = 0;
 	if (!parseUpdateFilename(filename,vMajor,vMinor,revision)) {
-		TRACE("rejected offer of %s from %s: could not parse version information",filename,from.toString().c_str());
+		TRACE("rejected offer of %s from %s: could not extract version information from filename",filename,from.toString().c_str());
 		return;
 	}
 
 	if (filesize > ZT_UPDATER_MAX_SUPPORTED_SIZE) {
-		TRACE("rejected offer of %s from %s: file too large (%u)",filename,from.toString().c_str(),(unsigned int)filesize);
+		TRACE("rejected offer of %s from %s: file too large (%u > %u)",filename,from.toString().c_str(),(unsigned int)filesize,(unsigned int)ZT_UPDATER_MAX_SUPPORTED_SIZE);
 		return;
 	}
 
-	if (vMajor < ZEROTIER_ONE_VERSION_MAJOR)
+	if (!compareVersions(vMajor,vMinor,revision,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION)) {
+		TRACE("rejected offer of %s from %s: version older than mine",filename,from.toString().c_str());
 		return;
-	else if (vMajor == ZEROTIER_ONE_VERSION_MAJOR) {
-		if (vMinor < ZEROTIER_ONE_VERSION_MINOR)
-			return;
-		else if (vMinor == ZEROTIER_ONE_VERSION_MINOR) {
-			if (revision <= ZEROTIER_ONE_VERSION_REVISION)
-				return;
-		}
 	}
 
 	Mutex::Lock _l(_lock);
 
 	if (_download) {
-		// If a download is in progress, only accept this as another source if
-		// it matches the size, hash, and version. Also check if this is a newer
-		// version and if so replace download with this.
-	} else {
-		// If there is no download in progress, create one provided the signature
-		// for the SHA-512 hash verifies as being from a valid signer.
+		if ((_download->filename == filename)&&(_download->data.length() == filesize)&&(!memcmp(sha512,_download->sha512,64))) {
+			// Learn another source for the current download if this is the
+			// same file.
+			LOG("learned new source for %s: %s",filename,from.toString().c_str());
+			if (!_download->currentlyReceivingFrom) {
+				_download->currentlyReceivingFrom = from;
+				_requestNextChunk();
+			} else _download->peersThatHave.push_back(from);
+			return;
+		} else {
+			// If there's a download, compare versions... only proceed if this
+			// file being offered is newer.
+			if (!compareVersions(vMajor,vMinor,revision,_download->versionMajor,_download->versionMinor,_download->revision)) {
+				TRACE("rejected offer of %s from %s: already downloading newer version %s",filename,from.toString().c_str(),_download->filename.c_str());
+				return;
+			}
+		}
+	}
+
+	// If we have no download OR if this was a different file, check its
+	// validity via signature and then see if it's newer. If so start a new
+	// download for it.
+	{
+		std::string nameAndSha(filename);
+		nameAndSha.append((const char *)sha512,64);
+		std::map< Address,Identity >::const_iterator uauth(ZT_DEFAULTS.updateAuthorities.find(signedBy));
+		if (uauth == ZT_DEFAULTS.updateAuthorities.end()) {
+			LOG("rejected offer of %s from %s: failed authentication: unknown signer %s",filename,from.toString().c_str(),signedBy.toString().c_str());
+			return;
+		}
+		if (!uauth->second.verify(nameAndSha.data(),nameAndSha.length(),signature,siglen)) {
+			LOG("rejected offer of %s from %s: failed authentication: signature from %s invalid",filename,from.toString().c_str(),signedBy.toString().c_str());
+			return;
+		}
+	}
+
+	// Replace existing download if any.
+	delete _download;
+	_download = (_Download *)0;
+
+	// Create and initiate new download
+	_download = new _Download;
+	try {
+		LOG("beginning download of software update %s from %s (%u bytes, signed by authorized identity %s)",filename,from.toString().c_str(),(unsigned int)filesize,signedBy.toString().c_str());
+
+		_download->data.assign(filesize,(char)0);
+		_download->haveChunks.resize((filesize / ZT_UPDATER_CHUNK_SIZE) + 1,false);
+		_download->filename = filename;
+		memcpy(_download->sha512,sha512,64);
+		_download->currentlyReceivingFrom = from;
+		_download->lastChunkReceivedAt = 0;
+		_download->lastChunkSize = filesize % ZT_UPDATER_CHUNK_SIZE;
+		_download->versionMajor = vMajor;
+		_download->versionMinor = vMinor;
+		_download->revision = revision;
+
+		_requestNextChunk();
+	} catch (std::exception &exc) {
+		delete _download;
+		_download = (_Download *)0;
+		LOG("unable to begin download of %s from %s: %s",filename,from.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		delete _download;
+		_download = (_Download *)0;
+		LOG("unable to begin download of %s from %s: unknown exception",filename,from.toString().c_str());
 	}
 }
 

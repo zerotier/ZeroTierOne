@@ -629,8 +629,8 @@ public:
 		 *   <[64] full length SHA-512 hash of file contents>
 		 *   <[4] 32-bit length of file in bytes>
 		 *   <[5] Signing ZeroTier One identity address>
-		 *   <[2] 16-bit length of signature of SHA-512 hash>
-		 *   <[...] signature of SHA-512 hash>
+		 *   <[2] 16-bit length of signature of filename + SHA-512 hash>
+		 *   <[...] signature of filename + SHA-512 hash>
 		 *
 		 * ERROR response payload:
 		 *   <[2] 16-bit length of filename>
