@@ -1,4 +1,4 @@
-zerotier-*
+/zerotier-*
 /Makefile
 *.o
 .DS_Store
@@ -20,6 +20,7 @@ mac-tap/tuntap/tap.kext
 /vsprojects/TapDriver/x64
 /vsprojects/InstallerUpdater/obj
 /vsprojects/Service/obj
+/vsprojects/SelfTest/SelfTest.aps
 /Build/*
 *.log
 *.opensdf
@@ -27,4 +28,4 @@ mac-tap/tuntap/tap.kext
 *.cache
 *.obj
 *.tlog
-/vsprojects/SelfTest/SelfTest.aps
+/installer-build

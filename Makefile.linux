@@ -44,5 +44,6 @@ file2lz4c: ext/lz4/lz4hc.o FORCE
 
 clean:
 	rm -f $(OBJS) file2lz4c zerotier-*
+	rm -rf installer-build
 
 FORCE:

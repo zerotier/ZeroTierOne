@@ -160,23 +160,42 @@ int main(int argc,char **argv)
 
 #ifdef __UNIX_LIKE__
 	mkdir(homeDir,0755); // will fail if it already exists
+	{
+		char pidpath[4096];
+		Utils::snrpintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
+		FILE *pf = fopen(pidpath,"w");
+		if (pf) {
+			fprintf(pf,"%ld",(long)getpid());
+			fclose(pf);
+		}
+	}
 #endif
 
 	int exitCode = 0;
 
-	node = new Node(homeDir,port,controlPort);
-	const char *termReason = (char *)0;
-	switch(node->run()) {
-		case Node::NODE_UNRECOVERABLE_ERROR:
-			exitCode = -1;
-			termReason = node->reasonForTermination();
-			fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
-			break;
-		default:
-			break;
+	try {
+		node = new Node(homeDir,port,controlPort);
+		const char *termReason = (char *)0;
+		switch(node->run()) {
+			case Node::NODE_UNRECOVERABLE_ERROR:
+				exitCode = -1;
+				termReason = node->reasonForTermination();
+				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
+				break;
+			default:
+				break;
+		}
+		delete node;
+		node = (Node *)0;
+	} catch ( ... ) {}
+
+#ifdef __UNIX_LIKE__
+	{
+		char pidpath[4096];
+		Utils::snrpintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
+		Utils::rm(pidpath);
 	}
-	delete node;
-	node = (Node *)0;
+#endif
 
 	return exitCode;
 }

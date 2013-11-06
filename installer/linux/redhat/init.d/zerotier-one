@@ -1,0 +1,115 @@
+#!/bin/sh
+#
+# zerotier-one   Virtual distributed Ethernet service
+#
+# chkconfig: 2345 90 60
+# description: ZeroTier One provides public and private distributed ethernet \
+#              networks. See https://www.zerotier.com/ for more information.
+
+### BEGIN INIT INFO
+# Provides: zerotier-one
+# Required-Start: $local_fs $network
+# Required-Stop: $local_fs
+# Default-Start:  2345
+# Default-Stop: 90
+# Short-Description: start ZeroTier One
+# Description: ZeroTier One provides public and private distributed ethernet \
+#              networks. See https://www.zerotier.com/ for more information.
+### END INIT INFO
+
+RETVAL=0
+prog="zerotier-one"
+exec="/var/lib/zerotier-one/zerotier-one"
+lockfile="/var/lock/subsys/zerotier-one"
+pidfile="/var/lib/zerotier-one/zerotier-one.pid"
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+start() {
+	if [ $UID -ne 0 ] ; then
+		echo "User has insufficient privilege."
+		exit 4
+	fi
+	[ -x $exec ] || exit 5
+	echo -n $"Starting $prog: "
+	daemon $exec
+	retval=$?
+	echo
+	[ $retval -eq 0 ] && touch $lockfile
+}
+
+stop() {
+	if [ $UID -ne 0 ] ; then
+		echo "User has insufficient privilege."
+		exit 4
+	fi
+	echo -n $"Stopping $prog: "
+	pid=0
+	if [ -f "$pidfile" ]; then
+		pid=`cat $pidfile`
+	fi
+	if [ "$pid" -gt 0 ]; then
+		kill -TERM $pid
+		RETVAL=3
+	else
+		failure $"Stopping $prog"
+	fi
+	retval=$?
+	echo
+	[ $retval -eq 0 ] && rm -f $lockfile
+}
+
+restart() {
+	stop
+	start
+}
+
+reload() {
+	stop
+	start
+}
+
+force_reload() {
+	restart
+}
+
+rh_status() {
+	status -p $pidfile $prog
+}
+
+rh_status_q() {
+	rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+	start)
+		rh_status_q && exit 0
+		$1
+		;;
+	stop)
+		rh_status_q || exit 0
+		$1
+		;;
+	restart)
+		$1
+		;;
+	reload)
+		rh_status_q || exit 7
+		$1
+		;;
+	force-reload)
+		force_reload
+		;;
+	status)
+		rh_status
+		;;
+	condrestart|try-restart)
+		rh_status_q || exit 0
+		restart
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+		exit 2
+esac
+exit $?
