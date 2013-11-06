@@ -76,28 +76,14 @@ void Updater::refreshShared()
 			shared.filename = u->first;
 
 			std::string sha512(Utils::unhex(sig.get("sha512",std::string())));
-			if (sha512.length() < sizeof(shared.sha512)) {
+			std::string signature(Utils::unhex(sig.get("sha512_ed25519",std::string())));
+			Address signedBy(sig.get("signedBy",std::string()));
+			if ((sha512.length() < sizeof(shared.sha512))||(signature.length() < shared.sig.size())||(!signedBy)) {
 				TRACE("skipped shareable update due to missing fields in companion .sig: %s",fullPath.c_str());
 				continue;
 			}
 			memcpy(shared.sha512,sha512.data(),sizeof(shared.sha512));
-
-			std::string signature(Utils::unhex(sig.get("sha512sig_ed25519",std::string())));
-			if (signature.length() < shared.sig.size()) {
-				TRACE("skipped shareable update due to missing fields in companion .sig: %s",fullPath.c_str());
-				continue;
-			}
 			memcpy(shared.sig.data,signature.data(),shared.sig.size());
-
-			// Check signature to guard against updates.d being used as a data
-			// exfiltration mechanism. We will only share properly signed updates,
-			// nothing else.
-			Address signedBy(sig.get("signedBy",std::string()));
-			std::map< Address,Identity >::const_iterator authority(ZT_DEFAULTS.updateAuthorities.find(signedBy));
-			if ((authority == ZT_DEFAULTS.updateAuthorities.end())||(!authority->second.verify(shared.sha512,64,shared.sig))) {
-				TRACE("skipped shareable update: not signed by valid authority or signature invalid: %s",fullPath.c_str());
-				continue;
-			}
 			shared.signedBy = signedBy;
 
 			int64_t fs = Utils::getFileSize(fullPath.c_str());

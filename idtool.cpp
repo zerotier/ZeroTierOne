@@ -34,6 +34,8 @@
 #include "node/Identity.hpp"
 #include "node/Utils.hpp"
 #include "node/C25519.hpp"
+#include "node/SHA512.hpp"
+#include "node/Dictionary.hpp"
 
 using namespace ZeroTier;
 
@@ -46,6 +48,7 @@ static void printHelp(char *pn)
 	std::cout << "\tgetpublic <identity.secret>" << std::endl;
 	std::cout << "\tsign <identity.secret> <file>" << std::endl;
 	std::cout << "\tverify <identity.secret/public> <file> <signature>" << std::endl;
+	std::cout << "\tsignupdate <identity.secret> <update>" << std::endl;
 }
 
 static Identity getIdFromArg(char *arg)
@@ -166,6 +169,41 @@ int main(int argc,char **argv)
 			std::cerr << argv[3] << " signature check FAILED" << std::endl;
 			return -1;
 		}
+	} else if (!strcmp(argv[1],"signupdate")) {
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			std::cerr << "Identity argument invalid or file unreadable: " << argv[2] << std::endl;
+			return -1;
+		}
+
+		std::string update;
+		if (!Utils::readFile(argv[3],update)) {
+			std::cerr << argv[3] << " is not readable" << std::endl;
+			return -1;
+		}
+
+		unsigned char sha512[64];
+		SHA512::hash(sha512,update.data(),update.length());
+
+		char *atLastSep = strrchr(argv[3],ZT_PATH_SEPARATOR);
+		std::string nameAndSha((atLastSep) ? (atLastSep + 1) : argv[3]);
+		std::cout << "Signing filename '" << nameAndSha << "' plus SHA-512 digest " << Utils::hex(sha512,64) << std::endl;
+		nameAndSha.append((const char *)sha512,64);
+		C25519::Signature signature(id.sign(nameAndSha.data(),nameAndSha.length()));
+
+		Dictionary sig;
+		sig["sha512"] = Utils::hex(sha512,64);
+		sig["sha512_ed25519"] = Utils::hex(signature.data,signature.size());
+		sig["signedBy"] = id.address().toString();
+		std::cout << "-- .sig file contents:" << std::endl << sig.toString() << "--" << std::endl;
+
+		std::string sigPath(argv[3]);
+		sigPath.append(".sig");
+		if (!Utils::writeFile(sigPath.c_str(),sig.toString())) {
+			std::cerr << "Could not write " << sigPath << std::endl;
+			return -1;
+		}
+		std::cout << "Wrote " << sigPath << std::endl;
 	} else {
 		printHelp(argv[0]);
 		return -1;
