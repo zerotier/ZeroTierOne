@@ -55,6 +55,11 @@
 // zerotier-one binary (or zerotier-one.exe for Windows)
 #include "installer-build/zerotier-one.build.c"
 
+// Unix uninstall script
+#ifdef __UNIX_LIKE__
+#include "installer-build/uninstall.sh.build.c"
+#endif
+
 // Linux init.d script
 #ifdef __LINUX__
 #include "installer-build/redhat__init.d__zerotier-one.build.c"
