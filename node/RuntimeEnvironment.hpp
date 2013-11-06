@@ -80,23 +80,28 @@ public:
 	{
 	}
 
-	// home of saved state, identity, etc.
+	// Full path to home folder
 	std::string homePath;
 
-	// signal() to prematurely interrupt main loop wait to cause loop to run
-	// again and detect some kind of change, exit, etc.
+	// Main loop waits on this condition when it delays between runs, so
+	// signaling this will prematurely wake it.
 	Condition mainLoopWaitCondition;
 
+	// This node's identity
 	Identity identity;
 
-	// hacky... want to get rid of this flag...
+	// Indicates that we are shutting down -- this is hacky, want to factor out
 	volatile bool shutdownInProgress;
 
-	// Order matters a bit here. These are constructed in this order
-	// and then deleted in the opposite order on Node exit. The order ensures
-	// that things that are needed are there before they're needed.
+	/*
+	 * Order matters a bit here. These are constructed in this order
+	 * and then deleted in the opposite order on Node exit. The order ensures
+	 * that things that are needed are there before they're needed.
+	 *
+	 * These are constant and never null after startup unless indicated.
+	 */
 
-	Logger *log; // may be null
+	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
 	Multicaster *mc;
 	Switch *sw;
@@ -105,9 +110,9 @@ public:
 	SysEnv *sysEnv;
 	NodeConfig *nc;
 	Node *node;
-	Updater *updater; // may be null if updates are disabled
+	Updater *updater; // null if auto-updates are disabled
 #ifndef __WINDOWS__
-	Service *netconfService; // may be null
+	Service *netconfService; // null if no netconf service running
 #endif
 };
 

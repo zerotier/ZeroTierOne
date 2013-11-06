@@ -61,38 +61,38 @@ void Updater::refreshShared()
 	for(std::map<std::string,bool>::iterator u(ud.begin());u!=ud.end();++u) {
 		if (u->second)
 			continue; // skip directories
-		if ((u->first.length() >= 4)&&(!strcasecmp(u->first.substr(u->first.length() - 4).c_str(),".nfo")))
-			continue; // skip .nfo companion files
+		if ((u->first.length() >= 4)&&(!strcasecmp(u->first.substr(u->first.length() - 4).c_str(),".sig")))
+			continue; // skip .sig companion files
 
 		std::string fullPath(updatesPath + ZT_PATH_SEPARATOR_S + u->first);
-		std::string nfoPath(fullPath + ".nfo");
+		std::string sigPath(fullPath + ".sig");
 
 		std::string buf;
-		if (Utils::readFile(nfoPath.c_str(),buf)) {
-			Dictionary nfo(buf);
+		if (Utils::readFile(sigPath.c_str(),buf)) {
+			Dictionary sig(buf);
 
 			SharedUpdate shared;
 			shared.fullPath = fullPath;
 			shared.filename = u->first;
 
-			std::string sha512(Utils::unhex(nfo.get("sha512",std::string())));
+			std::string sha512(Utils::unhex(sig.get("sha512",std::string())));
 			if (sha512.length() < sizeof(shared.sha512)) {
-				TRACE("skipped shareable update due to missing fields in companion .nfo: %s",fullPath.c_str());
+				TRACE("skipped shareable update due to missing fields in companion .sig: %s",fullPath.c_str());
 				continue;
 			}
 			memcpy(shared.sha512,sha512.data(),sizeof(shared.sha512));
 
-			std::string sig(Utils::unhex(nfo.get("sha512sig_ed25519",std::string())));
-			if (sig.length() < shared.sig.size()) {
-				TRACE("skipped shareable update due to missing fields in companion .nfo: %s",fullPath.c_str());
+			std::string signature(Utils::unhex(sig.get("sha512sig_ed25519",std::string())));
+			if (signature.length() < shared.sig.size()) {
+				TRACE("skipped shareable update due to missing fields in companion .sig: %s",fullPath.c_str());
 				continue;
 			}
-			memcpy(shared.sig.data,sig.data(),shared.sig.size());
+			memcpy(shared.sig.data,signature.data(),shared.sig.size());
 
 			// Check signature to guard against updates.d being used as a data
 			// exfiltration mechanism. We will only share properly signed updates,
 			// nothing else.
-			Address signedBy(nfo.get("signedBy",std::string()));
+			Address signedBy(sig.get("signedBy",std::string()));
 			std::map< Address,Identity >::const_iterator authority(ZT_DEFAULTS.updateAuthorities.find(signedBy));
 			if ((authority == ZT_DEFAULTS.updateAuthorities.end())||(!authority->second.verify(shared.sha512,64,shared.sig))) {
 				TRACE("skipped shareable update: not signed by valid authority or signature invalid: %s",fullPath.c_str());
@@ -110,7 +110,7 @@ void Updater::refreshShared()
 			LOG("sharing software update %s to other peers",shared.filename.c_str());
 			_sharedUpdates.push_back(shared);
 		} else {
-			TRACE("skipped shareable update due to missing companion .nfo: %s",fullPath.c_str());
+			TRACE("skipped shareable update due to missing companion .sig: %s",fullPath.c_str());
 			continue;
 		}
 	}
