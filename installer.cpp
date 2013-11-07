@@ -62,8 +62,7 @@
 
 // Linux init.d script
 #ifdef __LINUX__
-#include "installer-build/redhat__init_d__zerotier_one.c"
-#include "installer-build/debian__init_d__zerotier_one.c"
+#include "installer-build/init_d__zerotier_one.c"
 #endif
 
 // Apple Tap device driver
@@ -99,6 +98,11 @@ static bool _instFile(const void *lz4,int decompressedLen,const char *path)
 	unsigned char *data = unlzr(lz4,decompressedLen);
 	if (!data)
 		return false;
+#ifdef __WINDOWS__
+	DeleteFileA(path);
+#else
+	unlink(path);
+#endif
 	FILE *f = fopen(path,"w");
 	if (!f) {
 		delete [] data;
@@ -107,7 +111,11 @@ static bool _instFile(const void *lz4,int decompressedLen,const char *path)
 	if (fwrite(data,decompressedLen,1,f) != 1) {
 		fclose(f);
 		delete [] data;
-		Utils::rm(path);
+#ifdef __WINDOWS__
+		DeleteFileA(path);
+#else
+		unlink(path);
+#endif
 		return false;
 	}
 	fclose(f);
@@ -134,11 +142,14 @@ int main(int argc,char **argv)
 	const char *zthome;
 #ifdef __APPLE__
 	mkdir("/Library/Application Support/ZeroTier",0755);
+	chmod("/Library/Application Support/ZeroTier",0755);
+	chown("/Library/Application Support/ZeroTier",0,0);
 	mkdir(zthome = "/Library/Application Support/ZeroTier/One",0755);
 #else
 	mkdir("/var/lib",0755);
 	mkdir(zthome = "/var/lib/zerotier-one",0755);
 #endif
+	chmod(zthome,0755);
 	chown(zthome,0,0);
 
 	sprintf(buf,"%s/zerotier-one",zthome);
@@ -146,7 +157,7 @@ int main(int argc,char **argv)
 		fprintf(stderr,"Unable to write %s\n",buf);
 		return 1;
 	}
-	chmod(buf,0700);
+	chmod(buf,0755);
 	chown(buf,0,0);
 	fprintf(stdout,"%s\n",buf);
 
@@ -191,27 +202,20 @@ int main(int argc,char **argv)
 #endif
 
 #ifdef __LINUX__
-	struct stat st;
-	if (stat("/etc/redhat-release",&st) == 0) {
-		// Redhat-derived distribution
-		sprintf(buf,"/etc/init.d/zerotier-one");
-		if (!instFile(redhat__init_d__zerotier_one,buf)) {
-			fprintf(stderr,"Unable to write %s\n",buf);
-			return 1;
-		}
-		chmod(buf,0755);
-		fprintf(stdout,"%s (version for RedHat-derived distros)\n",buf);
+	sprintf(buf,"/etc/init.d/zerotier-one");
+	if (!instFile(init_d__zerotier_one,buf)) {
+		fprintf(stderr,"Unable to write %s\n",buf);
+		return 1;
 	}
-	if (stat("/etc/debian_version",&st) == 0) {
-		// Debian-derived distribution
-		sprintf(buf,"/etc/init.d/zerotier-one");
-		if (!instFile(debian__init_d__zerotier_one,buf)) {
-			fprintf(stderr,"Unable to write %s\n",buf);
-			return 1;
-		}
-		chmod(buf,0755);
-		fprintf(stdout,"%s (version for Debian-derived distros)\n",buf);
-	}
+	chown(buf,0,0);
+	chmod(buf,0755);
+	fprintf(stdout,"%s\n",buf);
+
+	symlink("/etc/init.d/zerotier-one","/etc/rc0.d/K89zerotier-one");
+	symlink("/etc/init.d/zerotier-one","/etc/rc2.d/S11zerotier-one");
+	symlink("/etc/init.d/zerotier-one","/etc/rc3.d/S11zerotier-one");
+	symlink("/etc/init.d/zerotier-one","/etc/rc4.d/S11zerotier-one");
+	symlink("/etc/init.d/zerotier-one","/etc/rc5.d/S11zerotier-one");
 #endif
 
 #endif // __UNIX_LIKE__

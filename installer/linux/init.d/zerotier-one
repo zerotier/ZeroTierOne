@@ -2,7 +2,7 @@
 #
 # zerotier-one   Virtual distributed Ethernet service
 #
-# chkconfig: 2345 90 60
+# chkconfig: 2345 11 89
 # description: ZeroTier One provides public and private distributed ethernet \
 #              networks. See https://www.zerotier.com/ for more information.
 
