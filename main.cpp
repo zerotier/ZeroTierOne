@@ -149,6 +149,11 @@ static int main(int argc,char **argv)
 		}
 	}
 
+	if (!command.length()) {
+		printHelp(stdout,argv[0]);
+		return -1;
+	}
+
 	if (!authToken.length()) {
 		const char *home = getenv("HOME");
 		if (home) {
