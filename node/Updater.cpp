@@ -357,14 +357,14 @@ std::string Updater::generateUpdateFilename(unsigned int vMajor,unsigned int vMi
 #if defined(__i386) || defined(__i486) || defined(__i586) || defined(__i686) || defined(__amd64) || defined(__x86_64) || defined(i386)
 #define _updSupported 1
 	char buf[128];
-	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-linux-%s-update",vMajor,vMinor,revision,(sizeof(void *) == 8) ? "x64" : "x86");
+	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-linux-%s-install",vMajor,vMinor,revision,(sizeof(void *) == 8) ? "x64" : "x86");
 	return std::string(buf);
 #endif
 /*
 #if defined(__arm__) || defined(__arm) || defined(__aarch64__)
 #define _updSupported 1
 	char buf[128];
-	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-linux-%s-update",vMajor,vMinor,revision,(sizeof(void *) == 8) ? "arm64" : "arm32");
+	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-linux-%s-install",vMajor,vMinor,revision,(sizeof(void *) == 8) ? "arm64" : "arm32");
 	return std::string(buf);
 #endif
 */
@@ -380,7 +380,7 @@ std::string Updater::generateUpdateFilename(unsigned int vMajor,unsigned int vMi
 	return std::string();
 #endif
 	char buf[128];
-	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-mac-x86combined-update",vMajor,vMinor,revision);
+	Utils::snprintf(buf,sizeof(buf),"zt1-%u_%u_%u-mac-x86combined-install",vMajor,vMinor,revision);
 	return std::string(buf);
 #endif
 

@@ -29,3 +29,4 @@ mac-tap/tuntap/tap.kext
 *.obj
 *.tlog
 /installer-build
+/zt1-*-install

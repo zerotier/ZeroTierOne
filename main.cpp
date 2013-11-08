@@ -162,7 +162,7 @@ int main(int argc,char **argv)
 	mkdir(homeDir,0755); // will fail if it already exists
 	{
 		char pidpath[4096];
-		Utils::snrpintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
+		Utils::snprintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
 		FILE *pf = fopen(pidpath,"w");
 		if (pf) {
 			fprintf(pf,"%ld",(long)getpid());
@@ -192,7 +192,7 @@ int main(int argc,char **argv)
 #ifdef __UNIX_LIKE__
 	{
 		char pidpath[4096];
-		Utils::snrpintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
+		Utils::snprintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
 		Utils::rm(pidpath);
 	}
 #endif
