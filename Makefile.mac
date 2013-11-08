@@ -17,15 +17,11 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
 
-all: one cli
+all: one
 
 one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
-
-cli:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-cli cli.cpp $(OBJS) $(LIBS)
-	$(STRIP) zerotier-cli
 
 selftest: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)

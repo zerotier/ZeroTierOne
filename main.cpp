@@ -53,6 +53,7 @@
 #include "node/Defaults.hpp"
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
+#include "node/Condition.hpp"
 
 using namespace ZeroTier;
 
@@ -67,7 +68,130 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out," -h                - Display this help"ZT_EOL_S);
 	fprintf(out," -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
 	fprintf(out," -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
+	fprintf(out," -q                - Send a query to a running service (zerotier-cli)");
 }
+
+namespace ZeroTierCLI { // ----------------------------------------------------
+
+static void printHelp(FILE *out,const char *exename)
+{
+	fprintf(out,"Usage: %s [-switches] <command>"ZT_EOL_S,exename);
+	fprintf(out,ZT_EOL_S);
+	fprintf(out,"Available switches:"ZT_EOL_S);
+	fprintf(out," -c<port>         - Communicate with daemon over this local port"ZT_EOL_S);
+	fprintf(out," -t<token>        - Specify token on command line"ZT_EOL_S);
+	fprintf(out," -T<file>         - Read token from file"ZT_EOL_S);
+	fprintf(out,ZT_EOL_S);
+	fprintf(out,"Use the 'help' command to get help from ZeroTier One itself."ZT_EOL_S);
+}
+
+static volatile unsigned int numResults = 0;
+static Condition doneCondition;
+
+static void resultHandler(void *arg,unsigned long id,const char *line)
+{
+	++numResults;
+	if (strlen(line))
+		fprintf(stdout,"%s"ZT_EOL_S,line);
+	else doneCondition.signal();
+}
+
+// Runs instead of rest of main() if process is called zerotier-cli or if
+// -q is specified as an option.
+#ifdef __WINDOWS__
+static int main(int argc,_TCHAR* argv[])
+#else
+static int main(int argc,char **argv)
+#endif
+{
+	if (argc <= 1) {
+		printHelp(stdout,argv[0]);
+		return -1;
+	}
+
+	std::string authToken;
+	std::string command;
+	bool pastSwitches = false;
+	unsigned int controlPort = 0;
+	for(int i=1;i<argc;++i) {
+		if ((argv[i][0] == '-')&&(!pastSwitches)) {
+			if (strlen(argv[i]) <= 1) {
+				printHelp(stdout,argv[0]);
+				return -1;
+			}
+			switch(argv[i][1]) {
+				case 'q': // does nothing, for invocation without binary path name aliasing
+					if (argv[i][2]) {
+						printHelp(argv[0],stderr);
+						return 0;
+					}
+					break;
+				case 'c':
+					controlPort = Utils::strToUInt(argv[i] + 2);
+					break;
+				case 't':
+					authToken.assign(argv[i] + 2);
+					break;
+				case 'T':
+					if (!Utils::readFile(argv[i] + 2,authToken)) {
+						fprintf(stdout,"FATAL ERROR: unable to read token from '%s'"ZT_EOL_S,argv[i] + 2);
+						return -2;
+					}
+					break;
+				default:
+					return -1;
+			}
+		} else {
+			pastSwitches = true;
+			if (command.length())
+				command.push_back(' ');
+			command.append(argv[i]);
+		}
+	}
+
+	if (!authToken.length()) {
+		const char *home = getenv("HOME");
+		if (home) {
+			std::string dotZeroTierAuthToken(home);
+			dotZeroTierAuthToken.push_back(ZT_PATH_SEPARATOR);
+			dotZeroTierAuthToken.append(".zerotierOneAuthToken");
+			if (!Utils::readFile(dotZeroTierAuthToken.c_str(),authToken)) {
+#ifndef __WINDOWS__
+#ifdef __APPLE__
+				const char *systemAuthTokenPath = "/Library/Application Support/ZeroTier/One/authtoken.secret";
+#else
+				const char *systemAuthTokenPath = "/var/lib/zerotier-one/authtoken.secret";
+#endif
+				if (!Utils::readFile(systemAuthTokenPath,authToken)) {
+					fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s' or '%s'"ZT_EOL_S,dotZeroTierAuthToken.c_str(),systemAuthTokenPath);
+					return -2;
+				}
+#else // __WINDOWS__
+				fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s'"ZT_EOL_S,dotZeroTierAuthToken.c_str());
+				return -2;
+#endif // __WINDOWS__
+			}
+		}
+	}
+	if (!authToken.length()) {
+		fprintf(stdout,"FATAL ERROR: could not find auth token"ZT_EOL_S);
+		return -2;
+	}
+
+	Node::LocalClient client(authToken.c_str(),controlPort,&resultHandler,(void *)0);
+	client.send(command.c_str());
+
+	doneCondition.wait(1000);
+
+	if (!numResults) {
+		fprintf(stdout,"ERROR: no results received. Is ZeroTier One running?"ZT_EOL_S);
+		return -1;
+	}
+
+	return 0;
+}
+
+} // namespace ZeroTierCLI ----------------------------------------------------
 
 #ifdef __UNIX_LIKE__
 static void sighandlerQuit(int sig)
@@ -119,6 +243,9 @@ int main(int argc,char **argv)
 	SetConsoleCtrlHandler(&_handlerRoutine,TRUE);
 #endif
 
+	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
+		return ZeroTierCLI::main(argc,argv);
+
 	const char *homeDir = (const char *)0;
 	unsigned int port = 0;
 	unsigned int controlPort = 0;
@@ -139,6 +266,11 @@ int main(int argc,char **argv)
 						return -1;
 					}
 					break;
+				case 'q':
+					if (argv[i][2]) {
+						printHelp(argv[0],stderr);
+						return 0;
+					} else return ZeroTierCLI::main(argc,argv);
 				case 'h':
 				case '?':
 				default:
