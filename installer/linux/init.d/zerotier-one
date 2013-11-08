@@ -56,7 +56,7 @@ fi
 
 case "$1" in
 	start)
-		if [ $running -eq 0 ]; then
+		if [ $running -gt 0 ]; then
 			echo "ZeroTier One already running."
 			exit 0
 		fi

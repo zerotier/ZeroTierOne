@@ -90,7 +90,7 @@
 static unsigned char *_unlz4(const void *lz4,int decompressedLen)
 {
 	unsigned char *buf = new unsigned char[decompressedLen];
-	if (LZ4_decompress_fast((const char *)lz4,(char *)buf,decompressedLen) != decompressedLen) {
+	if (LZ4_decompress_fast((const char *)lz4,(char *)buf,decompressedLen) <= 0) {
 		delete [] buf;
 		return (unsigned char *)0;
 	}
@@ -173,6 +173,10 @@ int main(int argc,char **argv)
 	chown(buf,0,0);
 	printf("write %s\n",buf);
 
+	unlink("/usr/bin/zerotier-cli");
+	symlink(buf,"/usr/bin/zerotier-cli");
+	printf("link %s /usr/bin/zerotier-cli\n",buf);
+
 	sprintf(buf,"%s/uninstall.sh",zthome);
 	if (!putBlob(uninstall_sh,buf)) {
 		printf("! unable to write %s\n",buf);
@@ -236,6 +240,8 @@ int main(int argc,char **argv)
 	printf("link /etc/init.d/zerotier-one /etc/rc4.d/S11zerotier-one\n");
 	symlink("/etc/init.d/zerotier-one","/etc/rc5.d/S11zerotier-one");
 	printf("link /etc/init.d/zerotier-one /etc/rc5.d/S11zerotier-one\n");
+	symlink("/etc/init.d/zerotier-one","/etc/rc6.d/S11zerotier-one");
+	printf("link /etc/init.d/zerotier-one /etc/rc6.d/S11zerotier-one\n");
 #endif
 
 	printf("# Done!\n");

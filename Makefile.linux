@@ -38,6 +38,9 @@ idtool:	$(OBJS)
 file2lz4c: ext/lz4/lz4hc.o FORCE
 	$(CXX) $(CXXFLAGS) -o file2lz4c file2lz4c.cpp node/Utils.cpp node/Salsa20.cpp ext/lz4/lz4hc.o
 
+installer: one FORCE
+	./buildinstaller.sh
+
 clean:
 	rm -f $(OBJS) file2lz4c zerotier-* zt1-*-install
 	rm -rf installer-build

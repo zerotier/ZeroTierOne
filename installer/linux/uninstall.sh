@@ -9,7 +9,7 @@ fi
 
 echo
 
-echo "Going to uninstall zerotier-one, hit CTRL+C to abort."
+echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
 echo "Waiting 5 seconds..."
 sleep 5
 
@@ -18,14 +18,17 @@ killall -q -TERM zerotier-one
 sleep 2
 killall -q -KILL zerotier-one
 
-echo "Erasing binary and support files..."
-cd /var/lib/zerotier-one
-rm -fv zerotier-one *.persist authtoken.secret identity.public *.log
-rm -rfv updates.d networks.d iddb.d
-
-echo "Removing init items..."
+echo "Removing SysV init items..."
 rm -fv /etc/init.d/zerotier-one
 find /etc/rc*.d -name '???zerotier-one' -print0 | xargs -0 rm -fv
+
+echo "Erasing binary and support files..."
+cd /var/lib/zerotier-one
+rm -fv zerotier-one *.persist authtoken.secret identity.public *.log *.pid
+rm -rfv updates.d networks.d iddb.d
+
+echo "Erasing anything installed into system bin directories..."
+rm -fv /usr/local/bin/zerotier-* /usr/bin/zerotier-*
 
 echo "Done."
 echo

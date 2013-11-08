@@ -30,3 +30,4 @@ mac-tap/tuntap/tap.kext
 *.tlog
 /installer-build
 /zt1-*-install
+/file2lz4c

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-make -j 4 one file2lz4c
+make file2lz4c
 
 if [ ! -f file2lz4c ]; then
 	echo "Build of file2lz4c utility failed, aborting installer build."
@@ -8,7 +8,7 @@ if [ ! -f file2lz4c ]; then
 fi
 
 if [ ! -f zerotier-one ]; then
-	echo "Build of zerotier-one failed, aborting installer build."
+	echo "Could not find 'zerotier-one' binary, please build before running this script."
 	exit 2
 fi
 
@@ -50,9 +50,9 @@ case "$system" in
 		./file2lz4c installer/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
 		./file2lz4c installer/linux/init.d/zerotier-one linux__init_d__zerotier_one >installer-build/linux__init_d__zerotier_one.h
 
-		ls -l installer-build
-
 		g++ -Os -o "zt1-${vmajor}_${vminor}_${revision}-linux-${machine}-install" installer.cpp ext/lz4/lz4.o ext/lz4/lz4hc.o
+
+		ls -l zt1-*-install
 
 		;;
 

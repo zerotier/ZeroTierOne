@@ -69,8 +69,8 @@ int main(int argc,char **argv)
 	for(int i=0;i<complen;++i) {
 		if (!(i % 15))
 			std::cout << std::endl << '\t';
-		Utils::snprintf(tmp,sizeof(tmp),"%.2x",(unsigned int)compbuf[i]);
-		std::cout << "0x" << tmp;
+		Utils::snprintf(tmp,sizeof(tmp),"0x%.2x",(unsigned int)compbuf[i]);
+		std::cout << tmp;
 		if (i != (complen - 1))
 			std::cout << ',';
 	}
