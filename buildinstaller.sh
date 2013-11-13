@@ -1,14 +1,16 @@
 #!/bin/bash
 
-make file2lz4c
-
-if [ ! -f file2lz4c ]; then
-	echo "Build of file2lz4c utility failed, aborting installer build."
-	exit 2
-fi
+# This script builds the installer for *nix systems. Windows must do everything
+# completely differently, as usual.
 
 if [ ! -f zerotier-one ]; then
 	echo "Could not find 'zerotier-one' binary, please build before running this script."
+	exit 2
+fi
+
+make -j 2 file2lz4c
+if [ ! -f file2lz4c ]; then
+	echo "Build of file2lz4c utility failed, aborting installer build."
 	exit 2
 fi
 
@@ -34,6 +36,9 @@ mkdir installer-build
 case "$system" in
 
 	Linux)
+		# Canonicalize $machine for some architectures... we use x86
+		# and x64 for Intel stuff. ARM and others should be fine if
+		# we ever ship officially for those.
 		case "$machine" in
 			i386|i486|i586|i686)
 				machine="x86"
@@ -42,9 +47,10 @@ case "$system" in
 				machine="x64"
 				;;
 			*)
-				echo "Unknonwn machine type: $machine"
+				echo "Unsupported machine type: $machine"
 				exit 2
 		esac
+
 		echo "Assembling Linux installer for $machine and ZT1 version $vmajor.$vminor.$revision"
 
 		./file2lz4c installer/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h

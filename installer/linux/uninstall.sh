@@ -37,3 +37,5 @@ echo "as identity.secret and can be manually deleted if you wish. Save it if"
 echo "you wish to re-use the address of this node, as it cannot be regenerated."
 
 echo
+
+exit 0
