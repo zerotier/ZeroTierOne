@@ -1,4 +1,5 @@
 /zerotier-*
+/ZeroTierUI/*.user
 /Makefile
 *.o
 .DS_Store
