@@ -1,4 +1,5 @@
 /zerotier-*
+/build-ZeroTierUI-*
 /ZeroTierUI/*.user
 /Makefile
 *.o
