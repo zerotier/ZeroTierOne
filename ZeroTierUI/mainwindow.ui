@@ -19,6 +19,9 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>6</number>
+    </property>
     <property name="leftMargin">
      <number>6</number>
     </property>
@@ -39,11 +42,17 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="toolTip">
+       <string/>
+      </property>
       <property name="horizontalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
       <property name="widgetResizable">
        <bool>true</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
       </property>
       <widget class="QWidget" name="scrollAreaWidgetContents">
        <property name="geometry">
@@ -51,7 +60,7 @@
          <x>0</x>
          <y>0</y>
          <width>654</width>
-         <height>222</height>
+         <height>236</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -80,49 +89,79 @@
        </sizepolicy>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+       <property name="spacing">
+        <number>6</number>
+       </property>
+       <property name="sizeConstraint">
+        <enum>QLayout::SetDefaultConstraint</enum>
+       </property>
        <property name="leftMargin">
-        <number>2</number>
+        <number>0</number>
        </property>
        <property name="topMargin">
         <number>0</number>
        </property>
        <property name="rightMargin">
-        <number>2</number>
+        <number>0</number>
        </property>
        <property name="bottomMargin">
         <number>0</number>
        </property>
        <item>
-        <widget class="QLabel" name="statusLabel">
+        <widget class="QToolButton" name="statusAndAddressButton">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="text">
-          <string>OFFLINE (0 direct peers)</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="networkIdLineEdit">
          <property name="font">
           <font>
            <family>Courier</family>
            <pointsize>12</pointsize>
           </font>
          </property>
-         <property name="frame">
-          <bool>true</bool>
+         <property name="toolTip">
+          <string>Click to Copy Address to Clipboard</string>
          </property>
-         <property name="placeholderText">
-          <string>[Network ID, e.g. 8056c2e21c000001]</string>
+         <property name="styleSheet">
+          <string notr="true">border: 0;</string>
+         </property>
+         <property name="text">
+          <string>0000000000    (OFFLINE, 0 peers)</string>
+         </property>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextOnly</enum>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="joinNetworkButton">
+        <widget class="QLineEdit" name="networkIdLineEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <family>Courier</family>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Enter Hexadecimal Network ID</string>
+         </property>
+         <property name="frame">
+          <bool>true</bool>
+         </property>
+         <property name="placeholderText">
+          <string>(Numeric ID of Network to Join)</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="joinNetworkButton">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -131,22 +170,27 @@
          </property>
          <property name="font">
           <font>
-           <weight>75</weight>
-           <bold>true</bold>
+           <family>Courier</family>
+           <pointsize>12</pointsize>
+           <weight>50</weight>
+           <bold>false</bold>
            <underline>false</underline>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Join Network</string>
          </property>
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
+         <property name="styleSheet">
+          <string notr="true"/>
+         </property>
          <property name="text">
-          <string>+ Join</string>
+          <string>Join</string>
          </property>
-         <property name="default">
-          <bool>false</bool>
-         </property>
-         <property name="flat">
-          <bool>true</bool>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextOnly</enum>
          </property>
         </widget>
        </item>
@@ -171,41 +215,26 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionAbout_2"/>
+    <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionJoin_Network_2"/>
+    <addaction name="actionJoin_Network"/>
     <addaction name="actionShow_Detailed_Status"/>
     <addaction name="separator"/>
-    <addaction name="actionExit_2"/>
+    <addaction name="actionExit"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
   </widget>
-  <action name="actionJoin_Network">
-   <property name="text">
-    <string>Join Network</string>
-   </property>
-  </action>
-  <action name="actionExit">
-   <property name="text">
-    <string>Exit</string>
-   </property>
-  </action>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
    </property>
   </action>
-  <action name="actionAbout_2">
-   <property name="text">
-    <string>About</string>
-   </property>
-  </action>
-  <action name="actionJoin_Network_2">
+  <action name="actionJoin_Network">
    <property name="text">
     <string>Join Network</string>
    </property>
@@ -215,7 +244,7 @@
     <string>Show Detailed Status</string>
    </property>
   </action>
-  <action name="actionExit_2">
+  <action name="actionExit">
    <property name="text">
     <string>Exit</string>
    </property>
@@ -225,5 +254,22 @@
  <resources>
   <include location="resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>333</x>
+     <y>149</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
