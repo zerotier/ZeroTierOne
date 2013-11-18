@@ -2,7 +2,30 @@
 #include "aboutwindow.h"
 #include "ui_mainwindow.h"
 
+#include <string>
+#include <map>
+#include <vector>
+
 #include <QClipboard>
+#include <QMutex>
+
+static std::map< unsigned long,std::vector<std::string> > ztReplies;
+static QMutex ztReplies_m;
+static void handleZTMessage(void *arg,unsigned long id,const char *line)
+{
+	ztReplies_m.lock();
+	if (*line) {
+		ztReplies[id].push_back(std::string(line));
+		ztReplies_m.unlock();
+	} else {
+		std::vector<std::string> resp(ztReplies[id]);
+		ztReplies.erase(id);
+		ztReplies_m.unlock();
+	}
+}
+
+// Globally visible
+ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),

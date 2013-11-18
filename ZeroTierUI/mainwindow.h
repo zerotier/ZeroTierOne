@@ -3,9 +3,15 @@
 
 #include <QMainWindow>
 
+#include "../node/Node.hpp"
+
 namespace Ui {
 class MainWindow;
 }
+
+// Globally visible instance of local client for communicating with ZT1
+// Can be null if not connected, or will point to current
+extern ZeroTier::Node::LocalClient *zeroTierClient;
 
 class MainWindow : public QMainWindow
 {
