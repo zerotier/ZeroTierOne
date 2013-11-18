@@ -64,6 +64,9 @@
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <property name="leftMargin">
          <number>0</number>
         </property>
@@ -128,7 +131,7 @@
           <string notr="true">border: 0;</string>
          </property>
          <property name="text">
-          <string>0000000000    (OFFLINE, 0 peers)</string>
+          <string>0000000000    (OFFLINE, 0 peers)   </string>
          </property>
          <property name="toolButtonStyle">
           <enum>Qt::ToolButtonTextOnly</enum>

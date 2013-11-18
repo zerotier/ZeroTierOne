@@ -1,16 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SelfTest", "vsprojects\SelfTest\SelfTest.vcxproj", "{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SelfTest", "SelfTest\SelfTest.vcxproj", "{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver", "vsprojects\TapDriver\TapDriver.vcxproj", "{689210B1-467C-4850-BB7D-2E10D5B4A3DA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver", "TapDriver\TapDriver.vcxproj", "{689210B1-467C-4850-BB7D-2E10D5B4A3DA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver Package", "vsprojects\TapDriver Package\TapDriver Package.vcxproj", "{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver Package", "TapDriver Package\TapDriver Package.vcxproj", "{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}"
 	ProjectSection(ProjectDependencies) = postProject
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA} = {689210B1-467C-4850-BB7D-2E10D5B4A3DA}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "vsprojects\ZeroTierOne\ZeroTierOne.vcxproj", "{B00A4957-5977-4AC1-9EF4-571DC27EADA2}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "ZeroTierOne\ZeroTierOne.vcxproj", "{B00A4957-5977-4AC1-9EF4-571DC27EADA2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -19,7 +19,8 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     network.h \
-    aboutwindow.h
+    aboutwindow.h \
+    ../node/Node.hpp
 
 FORMS    += mainwindow.ui \
     network.ui \
