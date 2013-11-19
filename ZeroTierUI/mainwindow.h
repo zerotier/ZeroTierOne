@@ -4,6 +4,7 @@
 #include <QMainWindow>
 
 #include "../node/Node.hpp"
+#include "../node/Utils.hpp"
 
 namespace Ui {
 class MainWindow;
@@ -11,7 +12,7 @@ class MainWindow;
 
 // Globally visible instance of local client for communicating with ZT1
 // Can be null if not connected, or will point to current
-extern ZeroTier::Node::LocalClient *zeroTierClient;
+extern ZeroTier::Node::LocalClient *volatile zeroTierClient;
 
 class MainWindow : public QMainWindow
 {
@@ -20,6 +21,9 @@ class MainWindow : public QMainWindow
 public:
 	explicit MainWindow(QWidget *parent = 0);
 	~MainWindow();
+
+protected:
+	virtual void timerEvent(QTimerEvent *event);
 
 private slots:
 	void on_joinNetworkButton_clicked();

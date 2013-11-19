@@ -5,9 +5,15 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <stdexcept>
 
 #include <QClipboard>
 #include <QMutex>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QMessageBox>
+#include <QDebug>
 
 static std::map< unsigned long,std::vector<std::string> > ztReplies;
 static QMutex ztReplies_m;
@@ -17,7 +23,7 @@ static void handleZTMessage(void *arg,unsigned long id,const char *line)
 	if (*line) {
 		ztReplies[id].push_back(std::string(line));
 		ztReplies_m.unlock();
-	} else {
+	} else { // empty lines conclude transmissions
 		std::vector<std::string> resp(ztReplies[id]);
 		ztReplies.erase(id);
 		ztReplies_m.unlock();
@@ -25,18 +31,48 @@ static void handleZTMessage(void *arg,unsigned long id,const char *line)
 }
 
 // Globally visible
-ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
+ZeroTier::Node::LocalClient *volatile zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
 	ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
+	this->startTimer(500);
+	this->setEnabled(false); // first timer actually enables controls
 }
 
 MainWindow::~MainWindow()
 {
 	delete ui;
+}
+
+void MainWindow::timerEvent(QTimerEvent *event)
+{
+	QMainWindow::timerEvent(event);
+
+	if (!this->isEnabled())
+		this->setEnabled(true);
+
+	if (!zeroTierClient) {
+		std::string dotAuthFile((QDir::homePath() + QDir::separator() + ".zeroTierOneAuthToken").toStdString());
+		std::string authToken;
+		if (!ZeroTier::Utils::readFile(dotAuthFile.c_str(),authToken)) {
+#ifdef __APPLE__
+			QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Applications/ZeroTier One (Authenticate).app");
+			if (!QFile::exists(authHelperPath)) {
+				// Allow this to also work from the source tree if it's run from there.
+				// This is for debugging purposes but shouldn't harm the live release
+				// in any way.
+				//authHelperPath = QCoreApplication::applicationFilePath() + "/../ZeroTierUI/helpers/mac/ZeroTier One (Authenticate).app";
+				if (!QFile::exists(authHelperPath)) {
+					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
+					QApplication::exit(1);
+				}
+			}
+#endif
+		}
+	}
 }
 
 void MainWindow::on_joinNetworkButton_clicked()
