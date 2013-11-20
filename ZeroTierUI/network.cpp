@@ -29,14 +29,14 @@ void Network::setStatus(const std::string &status)
 	ui->statusLabel->setText(QString(status.c_str()));
 }
 
-void Network::setNetworkName(const std::string &status)
+void Network::setNetworkName(const std::string &name)
 {
-	ui->nameLabel->setText(QString(status.c_str()));
+	ui->nameLabel->setText(QString(name.c_str()));
 }
 
 void Network::setNetworkType(const std::string &type)
 {
-	ui->networkTypeLabel->setText(QString(status.c_str()));
+	ui->networkTypeLabel->setText(QString(type.c_str()));
 	if (type == "?")
 		ui->networkTypeLabel->setToolTip("Waiting for configuration...");
 	else if (type == "public")
@@ -69,13 +69,12 @@ void Network::setIps(const std::string &commaSeparatedList)
 	ips = tmp;
 
 	for(QStringList::iterator i(ips.begin());i!=ips.end();++i) {
-		if (ui->ipListWidget->findItems(*i).size() == 0)
+		if (ui->ipListWidget->findItems(*i,Qt::MatchCaseSensitive).size() == 0)
 			ui->ipListWidget->addItem(*i);
 	}
 
-	QList<QListWidgetItem *> inList(ui->ipListWidget->items());
-	for(QList<QListWidgetItem *>::iterator i(inList.begin());i!=inList.end();++i) {
-		QListWidgetItem *item = *i;
+	for(int i=0;i<ui->ipListWidget->count();++i) {
+		QListWidgetItem *item = ui->ipListWidget->item(i);
 		if (!ips.contains(item->text()))
 			ui->ipListWidget->removeItemWidget(item);
 	}

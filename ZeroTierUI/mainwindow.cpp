@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 #include "aboutwindow.h"
+#include "network.h"
 #include "ui_mainwindow.h"
 
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include <stdexcept>
 
@@ -16,6 +18,7 @@
 #include <QDebug>
 #include <QProcess>
 #include <QStringList>
+#include <QVBoxLayout>
 
 // Globally visible
 ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
@@ -127,11 +130,48 @@ void MainWindow::customEvent(QEvent *event)
 		if (hdr.size() >= 5)
 			this->myVersion = hdr[4].c_str();
 	} else if (hdr[1] == "listnetworks") {
-		const QObjectList &existingNetworks = ui->networksScrollAreaContentWidget->children();
+		std::set<std::string> networkIds;
 
+		// Add/update network widgets in scroll area
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
 			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
+			// 200 listnetworks <nwid> <name> <status> <type> <dev> <ips>
+			if ((l.size() == 8)&&(l[2].length() == 16)) {
+				networkIds.insert(l[2]);
+				Network *nw = (Network *)0;
+				for(QObjectList::const_iterator n(ui->networksScrollAreaContentWidget->children().begin());n!=ui->networksScrollAreaContentWidget->children().end();++n) {
+					Network *n2 = (Network *)*n;
+					if ((n2)&&(n2->networkId() == l[2])) {
+						nw = n2;
+						break;
+					}
+				}
+				if (!nw) {
+					nw = new Network(ui->networksScrollAreaContentWidget,l[2]);
+				}
+				nw->setNetworkName(l[3]);
+				nw->setStatus(l[4]);
+				nw->setNetworkType(l[5]);
+				nw->setNetworkDeviceName(l[6]);
+				nw->setIps(l[7]);
+			}
 		}
+
+		// Remove widgets for networks no longer in the list
+		for(QObjectList::const_iterator n(ui->networksScrollAreaContentWidget->children().begin());n!=ui->networksScrollAreaContentWidget->children().end();++n) {
+			Network *n2 = (Network *)*n;
+			if ((n2)&&(!networkIds.count(n2->networkId())))
+				n2->deleteLater();
+		}
+
+		// Update layout
+		QVBoxLayout *layout = new QVBoxLayout();
+		layout->setSpacing(0);
+		layout->setMargin(0);
+		for(QObjectList::const_iterator n(ui->networksScrollAreaContentWidget->children().begin());n!=ui->networksScrollAreaContentWidget->children().end();++n)
+			layout->addWidget((QWidget *)*n);
+		delete ui->networksScrollAreaContentWidget->layout();
+		ui->networksScrollAreaContentWidget->setLayout(layout);
 	} else if (hdr[1] == "listpeers") {
 		this->numPeers = 0;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
@@ -212,6 +252,8 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 			default: break;
 		}
 	}
+	if (newText.size() > 16)
+		newText.truncate(16);
 	ui->networkIdLineEdit->setText(newText);
 }
 

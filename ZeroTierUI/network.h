@@ -14,7 +14,7 @@ class Network : public QWidget
 	Q_OBJECT
 
 public:
-	explicit Network(QWidget *parent = 0,const std::string &nwid);
+	explicit Network(QWidget *parent = 0,const std::string &nwid = std::string());
 	virtual ~Network();
 
 	void setStatus(const std::string &status);
