@@ -13,7 +13,7 @@ class AboutWindow : public QDialog
 
 public:
 	explicit AboutWindow(QWidget *parent = 0);
-	~AboutWindow();
+	virtual ~AboutWindow();
 
 private slots:
 	void on_uninstallButton_clicked();

@@ -127,6 +127,11 @@ void MainWindow::customEvent(QEvent *event)
 		if (hdr.size() >= 5)
 			this->myVersion = hdr[4].c_str();
 	} else if (hdr[1] == "listnetworks") {
+		const QObjectList &existingNetworks = ui->networksScrollAreaContentWidget->children();
+
+		for(unsigned long i=1;i<m->ztMessage.size();++i) {
+			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
+		}
 	} else if (hdr[1] == "listpeers") {
 		this->numPeers = 0;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
@@ -151,6 +156,18 @@ void MainWindow::customEvent(QEvent *event)
 
 void MainWindow::on_joinNetworkButton_clicked()
 {
+	QString toJoin(ui->networkIdLineEdit->text());
+	ui->networkIdLineEdit->setText(QString());
+
+	if (!zeroTierClient) // sanity check
+		return;
+
+	if (toJoin.size() != 16) {
+		QMessageBox::information(this,"Invalid Network ID","The network ID you entered was not valid. Enter a 16-digit hexadecimal network ID, like '8056c2e21c000001'.",QMessageBox::Ok,QMessageBox::NoButton);
+		return;
+	}
+
+	zeroTierClient->send((QString("join ") + toJoin).toStdString());
 }
 
 void MainWindow::on_actionAbout_triggered()
@@ -163,10 +180,6 @@ void MainWindow::on_actionJoin_Network_triggered()
 {
 	// Does the same thing as clicking join button on main UI
 	on_joinNetworkButton_clicked();
-}
-
-void MainWindow::on_actionShow_Detailed_Status_triggered()
-{
 }
 
 void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)

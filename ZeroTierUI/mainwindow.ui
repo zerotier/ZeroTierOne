@@ -54,7 +54,7 @@
       <property name="alignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
       </property>
-      <widget class="QWidget" name="scrollAreaWidgetContents">
+      <widget class="QWidget" name="networksScrollAreaContentWidget">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -225,7 +225,6 @@
      <string>File</string>
     </property>
     <addaction name="actionJoin_Network"/>
-    <addaction name="actionShow_Detailed_Status"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -240,11 +239,6 @@
   <action name="actionJoin_Network">
    <property name="text">
     <string>Join Network</string>
-   </property>
-  </action>
-  <action name="actionShow_Detailed_Status">
-   <property name="text">
-    <string>Show Detailed Status</string>
    </property>
   </action>
   <action name="actionExit">

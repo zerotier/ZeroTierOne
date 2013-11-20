@@ -28,6 +28,9 @@
 #ifndef _ZT_NODE_HPP
 #define _ZT_NODE_HPP
 
+#include <string>
+#include <vector>
+
 namespace ZeroTier {
 
 /**
@@ -70,6 +73,7 @@ public:
 		 */
 		unsigned long send(const char *command)
 			throw();
+		inline unsigned long send(const std::string &command) throw() { return send(command.c_str()); }
 
 		/**
 		 * Split a line of results by space
