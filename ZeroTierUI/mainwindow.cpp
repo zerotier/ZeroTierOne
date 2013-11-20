@@ -14,6 +14,8 @@
 #include <QFile>
 #include <QMessageBox>
 #include <QDebug>
+#include <QProcess>
+#include <QStringList>
 
 static std::map< unsigned long,std::vector<std::string> > ztReplies;
 static QMutex ztReplies_m;
@@ -38,40 +40,51 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
-	this->startTimer(500);
-	this->setEnabled(false); // first timer actually enables controls
+	this->startTimer(1000);
+	this->setEnabled(false); // gets enabled when updates are received
 }
 
 MainWindow::~MainWindow()
 {
 	delete ui;
+	delete zeroTierClient;
+	zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 }
 
 void MainWindow::timerEvent(QTimerEvent *event)
 {
 	QMainWindow::timerEvent(event);
 
-	if (!this->isEnabled())
-		this->setEnabled(true);
-
 	if (!zeroTierClient) {
 		std::string dotAuthFile((QDir::homePath() + QDir::separator() + ".zeroTierOneAuthToken").toStdString());
 		std::string authToken;
 		if (!ZeroTier::Utils::readFile(dotAuthFile.c_str(),authToken)) {
 #ifdef __APPLE__
-			QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Applications/ZeroTier One (Authenticate).app");
+			// Run the little AppleScript hack that asks for admin credentials and
+			// then installs the auth token file in the current user's home.
+			QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
 			if (!QFile::exists(authHelperPath)) {
 				// Allow this to also work from the source tree if it's run from there.
-				// This is for debugging purposes but shouldn't harm the live release
+				// This is for debugging purposes and shouldn't harm the live release
 				// in any way.
-				//authHelperPath = QCoreApplication::applicationFilePath() + "/../ZeroTierUI/helpers/mac/ZeroTier One (Authenticate).app";
+				authHelperPath = QCoreApplication::applicationDirPath() + "/../../../../ZeroTierUI/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet";
 				if (!QFile::exists(authHelperPath)) {
 					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
 					QApplication::exit(1);
+					return;
 				}
 			}
+			QProcess::execute(authHelperPath,QStringList());
 #endif
+
+			if (!ZeroTier::Utils::readFile(dotAuthFile.c_str(),authToken)) {
+				QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One.\n\nTo do so manually, copy 'authtoken.secret' from the ZeroTier One home directory to '.zeroTierOneAuthToken' in your home directory and set file modes on this file to only be readable by you (e.g. 0600 on Mac or Linux systems).",QMessageBox::Ok,QMessageBox::NoButton);
+				QApplication::exit(1);
+				return;
+			}
 		}
+
+		zeroTierClient = new ZeroTier::Node::LocalClient(authToken.c_str(),0,&handleZTMessage,this);
 	}
 }
 

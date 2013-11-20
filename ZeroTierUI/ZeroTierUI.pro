@@ -8,7 +8,7 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = ZeroTierUI
+TARGET = "ZeroTier One"
 TEMPLATE = app
 
 # ZeroTier One must be built before building this, since it links in the
@@ -25,7 +25,7 @@ HEADERS  += mainwindow.h \
 		aboutwindow.h \
 		../node/Node.hpp \
 		../node/Utils.hpp \
-    ../node/Defaults.hpp
+		../node/Defaults.hpp
 
 FORMS    += mainwindow.ui \
 		network.ui \
