@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QEvent>
+#include <QString>
 
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
@@ -12,18 +14,31 @@ class MainWindow;
 
 // Globally visible instance of local client for communicating with ZT1
 // Can be null if not connected, or will point to current
-extern ZeroTier::Node::LocalClient *volatile zeroTierClient;
+extern ZeroTier::Node::LocalClient *zeroTierClient;
 
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT
 
 public:
+	class ZTMessageEvent : public QEvent
+	{
+	public:
+		ZTMessageEvent(const std::vector<std::string> &m) :
+			QEvent(QEvent::User),
+			ztMessage(m)
+		{
+		}
+
+		std::vector<std::string> ztMessage;
+	};
+
 	explicit MainWindow(QWidget *parent = 0);
-	~MainWindow();
+	virtual ~MainWindow();
 
 protected:
 	virtual void timerEvent(QTimerEvent *event);
+	virtual void customEvent(QEvent *event);
 
 private slots:
 	void on_joinNetworkButton_clicked();
@@ -35,6 +50,11 @@ private slots:
 
 private:
 	Ui::MainWindow *ui;
+
+	QString myAddress;
+	QString myStatus;
+	QString myVersion;
+	unsigned int numPeers;
 };
 
 #endif // MAINWINDOW_H

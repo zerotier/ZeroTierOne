@@ -71,6 +71,15 @@ public:
 		unsigned long send(const char *command)
 			throw();
 
+		/**
+		 * Split a line of results by space
+		 *
+		 * @param line Line to split
+		 * @return Vector of fields
+		 */
+		static std::vector<std::string> splitLine(const char *line);
+		static inline std::vector<std::string> splitLine(const std::string &line) { return splitLine(line.c_str()); }
+
 	private:
 		// LocalClient is not copyable
 		LocalClient(const LocalClient&);
@@ -140,7 +149,7 @@ public:
 
 	/**
 	 * Get the ZeroTier version in major.minor.revision string format
-	 * 
+	 *
 	 * @return Version in string form
 	 */
 	static const char *versionString()

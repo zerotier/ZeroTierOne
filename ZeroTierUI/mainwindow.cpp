@@ -17,23 +17,31 @@
 #include <QProcess>
 #include <QStringList>
 
-static std::map< unsigned long,std::vector<std::string> > ztReplies;
-static QMutex ztReplies_m;
+// Globally visible
+ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
+
+// Main window instance for app
+static MainWindow *mainWindow = (MainWindow *)0;
+
 static void handleZTMessage(void *arg,unsigned long id,const char *line)
 {
+	static std::map< unsigned long,std::vector<std::string> > ztReplies;
+	static QMutex ztReplies_m;
+
 	ztReplies_m.lock();
 	if (*line) {
 		ztReplies[id].push_back(std::string(line));
 		ztReplies_m.unlock();
 	} else { // empty lines conclude transmissions
-		std::vector<std::string> resp(ztReplies[id]);
-		ztReplies.erase(id);
-		ztReplies_m.unlock();
+		std::map< unsigned long,std::vector<std::string> >::iterator r(ztReplies.find(id));
+		if (r != ztReplies.end()) {
+			MainWindow::ZTMessageEvent *event = new MainWindow::ZTMessageEvent(r->second);
+			ztReplies.erase(r);
+			ztReplies_m.unlock();
+			QCoreApplication::postEvent(mainWindow,event); // must post since this may be another thread
+		} else ztReplies_m.unlock();
 	}
 }
-
-// Globally visible
-ZeroTier::Node::LocalClient *volatile zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
@@ -42,6 +50,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->setupUi(this);
 	this->startTimer(1000);
 	this->setEnabled(false); // gets enabled when updates are received
+	mainWindow = this;
 }
 
 MainWindow::~MainWindow()
@@ -49,6 +58,7 @@ MainWindow::~MainWindow()
 	delete ui;
 	delete zeroTierClient;
 	zeroTierClient = (ZeroTier::Node::LocalClient *)0;
+	mainWindow = (MainWindow *)0;
 }
 
 void MainWindow::timerEvent(QTimerEvent *event)
@@ -85,6 +95,57 @@ void MainWindow::timerEvent(QTimerEvent *event)
 		}
 
 		zeroTierClient = new ZeroTier::Node::LocalClient(authToken.c_str(),0,&handleZTMessage,this);
+	}
+
+	zeroTierClient->send("info");
+	zeroTierClient->send("listnetworks");
+	zeroTierClient->send("listpeers");
+}
+
+void MainWindow::customEvent(QEvent *event)
+{
+	ZTMessageEvent *m = (ZTMessageEvent *)event; // only one custom event type so far
+
+	if (m->ztMessage.size() == 0)
+		return;
+
+	std::vector<std::string> hdr(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[0]));
+	if (hdr.size() < 2)
+		return;
+	if (hdr[0] != "200")
+		return;
+
+	// Enable main window on valid communication with service
+	if (!this->isEnabled())
+		this->setEnabled(true);
+
+	if (hdr[1] == "info") {
+		if (hdr.size() >= 3)
+			this->myAddress = hdr[2].c_str();
+		if (hdr.size() >= 4)
+			this->myStatus = hdr[3].c_str();
+		if (hdr.size() >= 5)
+			this->myVersion = hdr[4].c_str();
+	} else if (hdr[1] == "listnetworks") {
+	} else if (hdr[1] == "listpeers") {
+		this->numPeers = 0;
+		for(unsigned long i=1;i<m->ztMessage.size();++i) {
+			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
+			if ((l.size() >= 5)&&((l[3] != "-")||(l[4] != "-")))
+				++this->numPeers; // number of direct peers online -- check for active IPv4 and/or IPv6 address
+		}
+	}
+
+	if (this->myAddress.size()) {
+		QString st(this->myAddress);
+		st += "    (";
+		st += this->myStatus;
+		st += ", ";
+		st += QString::number(this->numPeers);
+		st += " peers)";
+		while (st.size() < 38)
+			st += QChar::Space;
+		ui->statusAndAddressButton->setText(st);
 	}
 }
 
@@ -143,5 +204,5 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 
 void MainWindow::on_statusAndAddressButton_clicked()
 {
-	//	QApplication::clipboard()->setText(ui->myAddressCopyButton->text());
+	QApplication::clipboard()->setText(this->myAddress);
 }

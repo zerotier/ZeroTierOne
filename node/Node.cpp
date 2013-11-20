@@ -182,6 +182,11 @@ unsigned long Node::LocalClient::send(const char *command)
 	}
 }
 
+std::vector<std::string> Node::LocalClient::splitLine(const char *line)
+{
+	return Utils::split(line," ","\\","\"");
+}
+
 struct _NodeImpl
 {
 	RuntimeEnvironment renv;
