@@ -246,7 +246,7 @@ no getSecureRandom() implementation;
 
 void Utils::lockDownFile(const char *path,bool isDir)
 {
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifdef __UNIX_LIKE__
 	chmod(path,isDir ? 0700 : 0600);
 #else
 #ifdef _WIN32
@@ -261,6 +261,16 @@ uint64_t Utils::getLastModified(const char *path)
 	if (stat(path,&s))
 		return 0;
 	return (((uint64_t)s.st_mtime) * 1000ULL);
+}
+
+bool Utils::fileExists(const char *path,bool followLinks)
+{
+	struct stat s;
+#ifdef __UNIX_LIKE__
+	if (!followLinks)
+		return (lstat(path,&s) == 0);
+#endif
+	return (stat(path,&s) == 0);
 }
 
 int64_t Utils::getFileSize(const char *path)

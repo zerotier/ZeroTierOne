@@ -177,12 +177,10 @@ public:
 
 	/**
 	 * @param path Path to check
+	 * @param followLinks Follow links (on platforms with that concept)
 	 * @return True if file or directory exists at path location
 	 */
-	static inline bool fileExists(const char *path)
-	{
-		return (getLastModified(path) != 0);
-	}
+	static bool fileExists(const char *path,bool followLinks = true);
 
 	/**
 	 * @param path Path to file

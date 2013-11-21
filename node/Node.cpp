@@ -467,6 +467,7 @@ Node::ReasonForTermination Node::run()
 
 	// Core I/O loop
 	try {
+		std::string shutdownIfUnreadablePath(_r->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
@@ -476,6 +477,13 @@ Node::ReasonForTermination Node::run()
 		long lastDelayDelta = 0;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
+			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
+				FILE *tmpf = fopen(shutdownIfUnreadablePath.c_str(),"r");
+				if (!tmpf)
+					return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable was not readable");
+				fclose(tmpf);
+			}
+
 			uint64_t now = Utils::now();
 			bool resynchronize = false;
 
