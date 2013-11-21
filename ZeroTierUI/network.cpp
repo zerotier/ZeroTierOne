@@ -17,6 +17,10 @@ Network::Network(QWidget *parent,const std::string &nwid) :
 {
 	ui->setupUi(this);
 	ui->networkIdPushButton->setText(QString(nwid.c_str()));
+	QFontMetrics fm(ui->ipListWidget->font());
+	int lineHeight = ui->ipListWidget->spacing() + fm.height();
+	ui->ipListWidget->setMinimumHeight(lineHeight * 3);
+	ui->ipListWidget->setMaximumHeight(lineHeight * 3);
 }
 
 Network::~Network()

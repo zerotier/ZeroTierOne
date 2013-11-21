@@ -8,6 +8,7 @@
 #include <set>
 #include <vector>
 #include <stdexcept>
+#include <utility>
 
 #include <QClipboard>
 #include <QMutex>
@@ -130,48 +131,48 @@ void MainWindow::customEvent(QEvent *event)
 		if (hdr.size() >= 5)
 			this->myVersion = hdr[4].c_str();
 	} else if (hdr[1] == "listnetworks") {
-		std::set<std::string> networkIds;
-
-		// Add/update network widgets in scroll area
+		std::map< std::string,std::vector<std::string> > byNwid;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
 			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
 			// 200 listnetworks <nwid> <name> <status> <type> <dev> <ips>
-			if ((l.size() == 8)&&(l[2].length() == 16)) {
-				networkIds.insert(l[2]);
-				Network *nw = (Network *)0;
-				for(QObjectList::const_iterator n(ui->networksScrollAreaContentWidget->children().begin());n!=ui->networksScrollAreaContentWidget->children().end();++n) {
-					Network *n2 = (Network *)*n;
-					if ((n2)&&(n2->networkId() == l[2])) {
-						nw = n2;
-						break;
-					}
-				}
-				if (!nw) {
-					nw = new Network(ui->networksScrollAreaContentWidget,l[2]);
-				}
+			if ((l.size() == 8)&&(l[2].length() == 16))
+				byNwid[l[2]] = l;
+		}
+
+		std::map< std::string,std::pair<int,Network *> > existingByNwid;
+		for(int r=0;r<ui->networkListWidget->count();++r) {
+			Network *nw = (Network *)ui->networkListWidget->itemWidget(ui->networkListWidget->item(r));
+			existingByNwid[nw->networkId()] = std::make_pair(r,nw);
+		}
+
+		for(std::map< std::string,std::pair<int,Network *> >::iterator i(existingByNwid.begin());i!=existingByNwid.end();++i) {
+			if (byNwid.count(i->first)) {
+				std::vector<std::string> &l = byNwid[i->first];
+				i->second.second->setNetworkName(l[3]);
+				i->second.second->setStatus(l[4]);
+				i->second.second->setNetworkType(l[5]);
+				i->second.second->setNetworkDeviceName(l[6]);
+				i->second.second->setIps(l[7]);
+			} else {
+				delete ui->networkListWidget->takeItem(i->second.first);
+			}
+		}
+
+		for(std::map< std::string,std::vector<std::string> >::iterator i(byNwid.begin());i!=byNwid.end();++i) {
+			if (!existingByNwid.count(i->first)) {
+				std::vector<std::string> &l = i->second;
+				Network *nw = new Network((QWidget *)0,i->first);
 				nw->setNetworkName(l[3]);
 				nw->setStatus(l[4]);
 				nw->setNetworkType(l[5]);
 				nw->setNetworkDeviceName(l[6]);
 				nw->setIps(l[7]);
+				QListWidgetItem *item = new QListWidgetItem();
+				item->setSizeHint(nw->sizeHint());
+				ui->networkListWidget->addItem(item);
+				ui->networkListWidget->setItemWidget(item,nw);
 			}
 		}
-
-		// Remove widgets for networks no longer in the list
-		for(QObjectList::const_iterator n(ui->networksScrollAreaContentWidget->children().begin());n!=ui->networksScrollAreaContentWidget->children().end();++n) {
-			Network *n2 = (Network *)*n;
-			if ((n2)&&(!networkIds.count(n2->networkId())))
-				n2->deleteLater();
-		}
-
-		// Update layout
-		QVBoxLayout *layout = new QVBoxLayout();
-		layout->setSpacing(0);
-		layout->setMargin(0);
-		for(QObjectList::const_iterator n(ui->networksScrollAreaContentWidget->children().begin());n!=ui->networksScrollAreaContentWidget->children().end();++n)
-			layout->addWidget((QWidget *)*n);
-		delete ui->networksScrollAreaContentWidget->layout();
-		ui->networksScrollAreaContentWidget->setLayout(layout);
 	} else if (hdr[1] == "listpeers") {
 		this->numPeers = 0;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
