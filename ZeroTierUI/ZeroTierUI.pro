@@ -1,15 +1,11 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2013-11-13T15:03:09
-#
-#-------------------------------------------------
-
-QT       += core gui
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
+QT       += core gui widgets
 TARGET = "ZeroTier One"
 TEMPLATE = app
+
+win32:RC_FILE = ZeroTierUI.rc
+mac:ICON = zt1icon.icns
+mac:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
+mac:QMAKE_INFO_PLIST = Info.plist
 
 # ZeroTier One must be built before building this, since it links in the
 # client code and some stuff from Utils to talk to the running service.
