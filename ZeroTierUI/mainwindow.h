@@ -45,8 +45,7 @@ protected:
 private slots:
 	void on_joinNetworkButton_clicked();
 	void on_actionAbout_triggered();
-	void on_actionJoin_Network_triggered();
-	void on_networkIdLineEdit_textChanged(const QString &arg1);
+	void on_networkIdLineEdit_textChanged(const QString &text);
 	void on_statusAndAddressButton_clicked();
 
 private:
@@ -56,6 +55,7 @@ private:
 	QString myStatus;
 	QString myVersion;
 	unsigned int numPeers;
+	unsigned int cyclesSinceResponseFromService;
 };
 
 #endif // MAINWINDOW_H

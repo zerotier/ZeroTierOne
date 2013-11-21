@@ -200,7 +200,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_r->topology->eachPeer(_DumpPeerStatistics(r));
 	} else if (cmd[0] == "listnetworks") {
 		Mutex::Lock _l(_networks_m);
-		_P("200 listnetworks <nwid> <name> <status> <type> <dev> <ips>");
+		_P("200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>");
 		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.begin());nw!=_networks.end();++nw) {
 			std::string tmp;
 			std::set<InetAddress> ips(nw->second->tap().ips());
@@ -211,10 +211,17 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 			}
 
 			SharedPtr<NetworkConfig> nconf(nw->second->config2());
-			_P("200 listnetworks %.16llx %s %s %s %s %s",
+
+			long long age = (nconf) ? ((long long)Utils::now() - (long long)nconf->timestamp()) : (long long)0;
+			if (age < 0)
+				age = 0;
+			age /= 1000;
+
+			_P("200 listnetworks %.16llx %s %s %lld %s %s %s",
 				(unsigned long long)nw->first,
 				((nconf) ? nconf->name().c_str() : "?"),
 				Network::statusString(nw->second->status()),
+				age,
 				((nconf) ? (nconf->isOpen() ? "public" : "private") : "?"),
 				nw->second->tap().deviceName().c_str(),
 				((tmp.length() > 0) ? tmp.c_str() : "-"));

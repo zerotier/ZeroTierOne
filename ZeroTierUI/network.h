@@ -17,7 +17,7 @@ public:
 	explicit Network(QWidget *parent = 0,const std::string &nwid = std::string());
 	virtual ~Network();
 
-	void setStatus(const std::string &status);
+	void setStatus(const std::string &status,const std::string &age);
 	void setNetworkName(const std::string &name);
 	void setNetworkType(const std::string &type);
 	void setNetworkDeviceName(const std::string &dev);

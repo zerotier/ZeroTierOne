@@ -28,9 +28,12 @@ Network::~Network()
 	delete ui;
 }
 
-void Network::setStatus(const std::string &status)
+void Network::setStatus(const std::string &status,const std::string &age)
 {
 	ui->statusLabel->setText(QString(status.c_str()));
+	if (status == "OK")
+		ui->ageLabel->setText(QString("(configuration is ") + age.c_str() + " seconds old)");
+	else ui->ageLabel->setText(QString());
 }
 
 void Network::setNetworkName(const std::string &name)

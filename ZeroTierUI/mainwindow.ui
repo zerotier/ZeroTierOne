@@ -110,7 +110,7 @@
           <string notr="true">border: 0;</string>
          </property>
          <property name="text">
-          <string>0000000000    (OFFLINE, 0 peers)     </string>
+          <string>0000000000    (OFFLINE, v0.0.0, 0 peers)     </string>
          </property>
          <property name="toolButtonStyle">
           <enum>Qt::ToolButtonTextOnly</enum>
@@ -203,7 +203,6 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionJoin_Network"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -213,11 +212,6 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
-   </property>
-  </action>
-  <action name="actionJoin_Network">
-   <property name="text">
-    <string>Join Network</string>
    </property>
   </action>
   <action name="actionExit">

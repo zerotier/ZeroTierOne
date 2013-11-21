@@ -52,9 +52,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
-	this->startTimer(1000);
+	this->startTimer(1000); // poll service every second
 	this->setEnabled(false); // gets enabled when updates are received
 	mainWindow = this;
+	this->cyclesSinceResponseFromService = 0;
 }
 
 MainWindow::~MainWindow()
@@ -101,6 +102,11 @@ void MainWindow::timerEvent(QTimerEvent *event)
 		zeroTierClient = new ZeroTier::Node::LocalClient(authToken.c_str(),0,&handleZTMessage,this);
 	}
 
+	// TODO: do something more user-friendly here... or maybe try to restart
+	// the service?
+	if (++this->cyclesSinceResponseFromService == 3)
+		QMessageBox::critical(this,"No Response from Service","The ZeroTier One service does not appear to be running.",QMessageBox::Ok,QMessageBox::NoButton);
+
 	zeroTierClient->send("info");
 	zeroTierClient->send("listnetworks");
 	zeroTierClient->send("listpeers");
@@ -119,9 +125,7 @@ void MainWindow::customEvent(QEvent *event)
 	if (hdr[0] != "200")
 		return;
 
-	// Enable main window on valid communication with service
-	if (!this->isEnabled())
-		this->setEnabled(true);
+	this->cyclesSinceResponseFromService = 0;
 
 	if (hdr[1] == "info") {
 		if (hdr.size() >= 3)
@@ -134,8 +138,8 @@ void MainWindow::customEvent(QEvent *event)
 		std::map< std::string,std::vector<std::string> > byNwid;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
 			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
-			// 200 listnetworks <nwid> <name> <status> <type> <dev> <ips>
-			if ((l.size() == 8)&&(l[2].length() == 16))
+			// 200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>
+			if ((l.size() == 9)&&(l[2].length() == 16))
 				byNwid[l[2]] = l;
 		}
 
@@ -149,10 +153,10 @@ void MainWindow::customEvent(QEvent *event)
 			if (byNwid.count(i->first)) {
 				std::vector<std::string> &l = byNwid[i->first];
 				i->second.second->setNetworkName(l[3]);
-				i->second.second->setStatus(l[4]);
-				i->second.second->setNetworkType(l[5]);
-				i->second.second->setNetworkDeviceName(l[6]);
-				i->second.second->setIps(l[7]);
+				i->second.second->setStatus(l[4],l[5]);
+				i->second.second->setNetworkType(l[6]);
+				i->second.second->setNetworkDeviceName(l[7]);
+				i->second.second->setIps(l[8]);
 			} else {
 				delete ui->networkListWidget->takeItem(i->second.first);
 			}
@@ -163,10 +167,10 @@ void MainWindow::customEvent(QEvent *event)
 				std::vector<std::string> &l = i->second;
 				Network *nw = new Network((QWidget *)0,i->first);
 				nw->setNetworkName(l[3]);
-				nw->setStatus(l[4]);
-				nw->setNetworkType(l[5]);
-				nw->setNetworkDeviceName(l[6]);
-				nw->setIps(l[7]);
+				nw->setStatus(l[4],l[5]);
+				nw->setNetworkType(l[6]);
+				nw->setNetworkDeviceName(l[7]);
+				nw->setIps(l[8]);
 				QListWidgetItem *item = new QListWidgetItem();
 				item->setSizeHint(nw->sizeHint());
 				ui->networkListWidget->addItem(item);
@@ -186,12 +190,22 @@ void MainWindow::customEvent(QEvent *event)
 		QString st(this->myAddress);
 		st += "    (";
 		st += this->myStatus;
+		st += ", v";
+		st += this->myVersion;
 		st += ", ";
 		st += QString::number(this->numPeers);
 		st += " peers)";
-		while (st.size() < 38)
+		while (st.size() < 45)
 			st += QChar::Space;
 		ui->statusAndAddressButton->setText(st);
+	}
+
+	if (this->myStatus == "ONLINE") {
+		if (!this->isEnabled())
+			this->setEnabled(true);
+	} else {
+		if (this->isEnabled())
+			this->setEnabled(false);
 	}
 }
 
@@ -215,12 +229,6 @@ void MainWindow::on_actionAbout_triggered()
 {
 	AboutWindow *about = new AboutWindow(this);
 	about->show();
-}
-
-void MainWindow::on_actionJoin_Network_triggered()
-{
-	// Does the same thing as clicking join button on main UI
-	on_joinNetworkButton_clicked();
 }
 
 void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
