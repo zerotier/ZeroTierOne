@@ -99,7 +99,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to Copy to Clipboard</string>
+         <string>Click to Copy Network ID to Clipboard</string>
         </property>
         <property name="styleSheet">
          <string notr="true">border: 0; padding: 0; margin: 0; text-align: left;</string>
