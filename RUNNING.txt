@@ -55,3 +55,24 @@ browser to see if you're online.
 Port in progress, and it's going to pretty much always be more painful to
 build than *nix systems. Just wait for the binary release unless you're
 brave, in which case you can load the VS2012 solution and play around.
+
+-- Open UDP port 9993
+
+As noted in README.md, to actually function properly, you need to open
+UDP port 9993 in your firewall. Following are instructions to open UDP port
+9993 for specific operating systems.
+
+--- Ubuntu (version 12.04 and possibly other versions, too)
+
+Follow the Ubuntu documentation about UFW https://help.ubuntu.com/community/UFW
+
+Check if your UFW is active.
+
+sudo ufw status verbose
+
+If it is active, open UDP port 9993
+
+sudo ufw allow 9993/udp
+
+You should now be able to ping and browse earth.zerotier.net
+
