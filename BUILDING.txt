@@ -18,6 +18,18 @@ make -f Makefile.linux
 
 Edit Makefile.linux if you want to change between debug or release build.
 
+If you are building ext/tap-mac you will need a different version of the
+OSX gcc compiler chain than what currently ships (clang). We've got a copy
+available here:
+
+http://download.zerotier.com/dev/llvm-g++-Xcode4.6.2.tar.bz2
+
+Un-tar this into ext/ (it's excluded in .gitignore) and then 'make' in
+ext/tap-mac/tuntap/src/tap.
+
+Most users should not need to build tap-mac, since a binary is included
+in ext/bin.
+
 -- Windows
 
 Here be dragons.
