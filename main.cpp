@@ -54,6 +54,8 @@
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
 #include "node/Condition.hpp"
+#include "node/C25519.hpp"
+#include "node/Identity.hpp"
 
 using namespace ZeroTier;
 
@@ -68,10 +70,11 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out," -h                - Display this help"ZT_EOL_S);
 	fprintf(out," -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
 	fprintf(out," -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
-	fprintf(out," -q                - Send a query to a running service (zerotier-cli)");
+	fprintf(out," -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
+	fprintf(out," -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
 }
 
-namespace ZeroTierCLI { // ----------------------------------------------------
+namespace ZeroTierCLI { // ---------------------------------------------------
 
 static void printHelp(FILE *out,const char *exename)
 {
@@ -196,7 +199,154 @@ static int main(int argc,char **argv)
 	return 0;
 }
 
-} // namespace ZeroTierCLI ----------------------------------------------------
+} // namespace ZeroTierCLI ---------------------------------------------------
+
+namespace ZeroTierIdTool { // ------------------------------------------------
+
+static void printHelp(FILE *out,const char *pn)
+{
+	fprintf(out,"Usage: %s <command> [<args>]"ZT_EOL_S""ZT_EOL_S"Commands:"ZT_EOL_S,pn);
+	fprintf(out,"  generate [<identity.secret>] [<identity.public>]"ZT_EOL_S);
+	fprintf(out,"  validate <identity.secret/public>"ZT_EOL_S);
+	fprintf(out,"  getpublic <identity.secret>"ZT_EOL_S);
+	fprintf(out,"  sign <identity.secret> <file>"ZT_EOL_S);
+	fprintf(out,"  verify <identity.secret/public> <file> <signature>"ZT_EOL_S);
+}
+
+static Identity getIdFromArg(char *arg)
+{
+	Identity id;
+	if ((strlen(arg) > 32)&&(arg[10] == ':')) { // identity is a literal on the command line
+		if (id.fromString(arg))
+			return id;
+	} else { // identity is to be read from a file
+		std::string idser;
+		if (Utils::readFile(arg,idser)) {
+			if (id.fromString(idser))
+				return id;
+		}
+	}
+	return Identity();
+}
+
+// Runs instead of rest of main() if process is called zerotier-idtool or if
+// -i is specified as an option.
+#ifdef __WINDOWS__
+static int main(int argc,_TCHAR* argv[])
+#else
+static int main(int argc,char **argv)
+#endif
+{
+	if (argc < 2) {
+		printHelp(stderr,argv[0]);
+		return -1;
+	}
+
+	if (!strcmp(argv[1],"generate")) {
+		Identity id;
+		id.generate();
+		std::string idser = id.toString(true);
+		if (argc >= 3) {
+			if (!Utils::writeFile(argv[2],idser)) {
+				fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[2]);
+				return -1;
+			} else printf("%s written"ZT_EOL_S,argv[2]);
+			if (argc >= 4) {
+				idser = id.toString(false);
+				if (!Utils::writeFile(argv[3],idser)) {
+					fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[3]);
+					return -1;
+				} else printf("%s written"ZT_EOL_S,argv[3]);
+			}
+		} else printf("%s",idser.c_str());
+	} else if (!strcmp(argv[1],"validate")) {
+		if (argc < 3) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		if (!id.locallyValidate()) {
+			fprintf(stderr,"%s FAILED validation."ZT_EOL_S,argv[2]);
+			return -1;
+		} else printf("%s is a valid identity"ZT_EOL_S,argv[2]);
+	} else if (!strcmp(argv[1],"getpublic")) {
+		if (argc < 3) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		printf("%s",id.toString(false).c_str());
+	} else if (!strcmp(argv[1],"sign")) {
+		if (argc < 4) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		if (!id.hasPrivate()) {
+			fprintf(stderr,"%s does not contain a private key (must use private to sign)"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		std::string inf;
+		if (!Utils::readFile(argv[3],inf)) {
+			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
+			return -1;
+		}
+		C25519::Signature signature = id.sign(inf.data(),inf.length());
+		printf("%s",Utils::hex(signature.data,signature.size()).c_str());
+	} else if (!strcmp(argv[1],"verify")) {
+		if (argc < 4) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		std::string inf;
+		if (!Utils::readFile(argv[3],inf)) {
+			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
+			return -1;
+		}
+
+		std::string signature(Utils::unhex(argv[4]));
+		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),inf.length(),signature.data(),signature.length()))) {
+			printf("%s signature valid"ZT_EOL_S,argv[3]);
+		} else {
+			fprintf(stderr,"%s signature check FAILED"ZT_EOL_S,argv[3]);
+			return -1;
+		}
+	} else {
+		printHelp(stderr,argv[0]);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+} // namespace ZeroTierIdTool ------------------------------------------------
 
 #ifdef __UNIX_LIKE__
 static void sighandlerQuit(int sig)
@@ -250,6 +400,8 @@ int main(int argc,char **argv)
 
 	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
 		return ZeroTierCLI::main(argc,argv);
+	if ((strstr(argv[0],"zerotier-idtool"))||(strstr(argv[0],"ZEROTIER-IDTOOL")))
+		return ZeroTierIdTool::main(argc,argv);
 
 	const char *homeDir = (const char *)0;
 	unsigned int port = 0;
@@ -276,6 +428,11 @@ int main(int argc,char **argv)
 						printHelp(argv[0],stderr);
 						return 0;
 					} else return ZeroTierCLI::main(argc,argv);
+				case 'i':
+					if (argv[i][2]) {
+						printHelp(argv[0],stderr);
+						return 0;
+					} else return ZeroTierIdTool::main(argc,argv);
 				case 'h':
 				case '?':
 				default:

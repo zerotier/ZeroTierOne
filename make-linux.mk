@@ -27,6 +27,7 @@ one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
+	ln -sf zerotier-one zerotier-idtool
 
 selftest:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)

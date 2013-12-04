@@ -23,14 +23,11 @@ one:	$(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
+	ln -sf zerotier-one zerotier-idtool
 
 selftest: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
-
-idtool: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
-	$(STRIP) zerotier-idtool
 
 install-mac-tap: FORCE
 	mkdir -p /Library/Application\ Support/ZeroTier/One
