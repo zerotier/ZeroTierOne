@@ -25,5 +25,4 @@ OBJS=\
 	node/SysEnv.o \
 	node/Topology.o \
 	node/UdpSocket.o \
-	node/Updater.o \
 	node/Utils.o

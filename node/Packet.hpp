@@ -615,60 +615,7 @@ public:
 		 * It does not generate an OK or ERROR message, and is treated only as
 		 * a hint to refresh now.
 		 */
-		VERB_NETWORK_CONFIG_REFRESH = 12,
-
-		/* Request information about a shared file (for software updates):
-		 *   <[1] flags, currently unused and must be 0>
-		 *   <[1] 8-bit length of filename>
-		 *   <[...] name of file being requested>
-		 *
-		 * OK response payload (indicates that we have and will share):
-		 *   <[1] flags, currently unused and must be 0>
-		 *   <[1] 8-bit length of filename>
-		 *   <[...] name of file being requested>
-		 *   <[64] full length SHA-512 hash of file contents>
-		 *   <[4] 32-bit length of file in bytes>
-		 *   <[5] Signing ZeroTier One identity address>
-		 *   <[2] 16-bit length of signature of filename + SHA-512 hash>
-		 *   <[...] signature of filename + SHA-512 hash>
-		 *
-		 * ERROR response payload:
-		 *   <[2] 16-bit length of filename>
-		 *   <[...] name of file being requested>
-		 *
-		 * This is used for distribution of software updates and in the future may
-		 * be used for anything else that needs to be globally distributed. It
-		 * is not designed for end-user use for other purposes.
-		 *
-		 * Support is optional. Nodes should return UNSUPPORTED_OPERATION if
-		 * not supported or enabled.
-		 */
-		VERB_FILE_INFO_REQUEST = 13,
-
-		/* Request a piece of a shared file
-		 *   <[16] first 16 bytes of SHA-512 of file being requested>
-		 *   <[4] 32-bit index of desired chunk>
-		 *   <[2] 16-bit length of desired chunk>
-		 *
-		 * OK response payload:
-		 *   <[16] first 16 bytes of SHA-512 of file being requested>
-		 *   <[4] 32-bit index of desired chunk>
-		 *   <[2] 16-bit length of desired chunk>
-		 *   <[...] the chunk>
-		 *
-		 * ERROR response payload:
-		 *   <[16] first 16 bytes of SHA-512 of file being requested>
-		 *   <[4] 32-bit index of desired chunk>
-		 *   <[2] 16-bit length of desired chunk>
-		 *
-		 * This is used for distribution of software updates and in the future may
-		 * be used for anything else that needs to be globally distributed. It
-		 * is not designed for end-user use for other purposes.
-		 *
-		 * Support is optional. Nodes should return UNSUPPORTED_OPERATION if
-		 * not supported or enabled.
-		 */
-		VERB_FILE_BLOCK_REQUEST = 14
+		VERB_NETWORK_CONFIG_REFRESH = 12
 	};
 
 	/**
