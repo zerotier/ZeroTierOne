@@ -67,11 +67,12 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
 	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out," -h                - Display this help"ZT_EOL_S);
-	fprintf(out," -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
-	fprintf(out," -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
-	fprintf(out," -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
-	fprintf(out," -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
+	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
+	fprintf(out,"  -v                - Show version"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
+	fprintf(out,"  -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
+	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
+	fprintf(out,"  -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
 }
 
 namespace ZeroTierCLI { // ---------------------------------------------------
@@ -81,9 +82,9 @@ static void printHelp(FILE *out,const char *exename)
 	fprintf(out,"Usage: %s [-switches] <command>"ZT_EOL_S,exename);
 	fprintf(out,ZT_EOL_S);
 	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out," -c<port>         - Communicate with daemon over this local port"ZT_EOL_S);
-	fprintf(out," -t<token>        - Specify token on command line"ZT_EOL_S);
-	fprintf(out," -T<file>         - Read token from file"ZT_EOL_S);
+	fprintf(out,"  -c<port>         - Communicate with daemon over this local port"ZT_EOL_S);
+	fprintf(out,"  -t<token>        - Specify token on command line"ZT_EOL_S);
+	fprintf(out,"  -T<file>         - Read token from file"ZT_EOL_S);
 	fprintf(out,ZT_EOL_S);
 	fprintf(out,"Use the 'help' command to get help from ZeroTier One itself."ZT_EOL_S);
 }
@@ -416,6 +417,9 @@ int main(int argc,char **argv)
 						return -1;
 					}
 					break;
+				case 'v':
+					printf("%s"ZT_EOL_S,Node::versionString());
+					return 0;
 				case 'c':
 					controlPort = Utils::strToUInt(argv[i] + 2);
 					if (controlPort > 65535) {
