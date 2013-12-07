@@ -65,34 +65,54 @@ using namespace ZeroTier;
 static unsigned char fuzzbuf[1048576];
 
 static Condition webDoneCondition;
+static std::string webSha512ShouldBe;
 static void testHttpHandler(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
 {
-	if (code == 200)
-		std::cout << "got " << body.length() << " bytes, response code " << code << std::endl;
-	else std::cout << "ERROR " << code << ": " << body << std::endl;
+	unsigned char sha[64];
+	if (code == 200) {
+		SHA512::hash(sha,body.data(),body.length());
+		if (webSha512ShouldBe == Utils::hex(sha,64))
+			std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 OK" << std::endl;
+		else std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 FAILED!" << std::endl;
+	} else std::cout << "ERROR " << code << ": " << body << std::endl;
 	webDoneCondition.signal();
 }
 
 static int testHttp()
 {
+	webSha512ShouldBe = "221b348c8278ad2063c158fb15927c35dc6bb42880daf130d0574025f88ec350811c34fae38a014b576d3ef5c98af32bb540e68204810db87a51fa9b239ea567";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/1k ... "; std::cout.flush();
 	HttpClient::GET("http://download.zerotier.com/dev/1k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
 	webDoneCondition.wait();
 
+	webSha512ShouldBe = "342e1a058332aad2d7a5412c1d9cd4ad02b4038178ca0c3ed9d34e3cf0905c118b684e5d2a935a158195d453d7d69e9c6e201e252620fb53f29611794a5d4b0c";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/2k ... "; std::cout.flush();
 	HttpClient::GET("http://download.zerotier.com/dev/2k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
 	webDoneCondition.wait();
 
+	webSha512ShouldBe = "439562e1471dd6bdb558cb680f38dd7742e521497e280cb1456a31f74b9216b7d98145b3896c2f68008e6ac0c1662a4cb70562caeac294c5d01f378b22a21292";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/4k ... "; std::cout.flush();
 	HttpClient::GET("http://download.zerotier.com/dev/4k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
 	webDoneCondition.wait();
 
+	webSha512ShouldBe = "fbd3901a9956158b9d290efa1af4fff459d8c03187c98b0e630d10a19fab61940e668652257763973f6cde34f2aa81574f9a50b1979b675b45ddd18d69a4ceb8";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/8k ... "; std::cout.flush();
 	HttpClient::GET("http://download.zerotier.com/dev/8k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
 	webDoneCondition.wait();
 
+	webSha512ShouldBe = "098ae593f8c3a962f385f9f008ec2116ad22eea8bc569fc88a06a0193480fdfb27470345c427116d19179fb2a74df21d95fe5f1df575a9f2d10d99595708b765";
+	std::cout << "[http] fetching http://download.zerotier.com/dev/4m ... "; std::cout.flush();
+	HttpClient::GET("http://download.zerotier.com/dev/4m",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	webSha512ShouldBe = "";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/NOEXIST ... "; std::cout.flush();
 	HttpClient::GET("http://download.zerotier.com/dev/NOEXIST",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	webSha512ShouldBe = "";
+	std::cout << "[http] fetching http://1.1.1.1/SHOULD_TIME_OUT ... "; std::cout.flush();
+	HttpClient::GET("http://1.1.1.1/SHOULD_TIME_OUT",HttpClient::NO_HEADERS,4,&testHttpHandler,(void *)0);
 	webDoneCondition.wait();
 
 	return 0;
