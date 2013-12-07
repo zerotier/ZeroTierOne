@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_RUNTIMEENVIRONMENT_HPP
-#define _ZT_RUNTIMEENVIRONMENT_HPP
+#ifndef ZT_RUNTIMEENVIRONMENT_HPP
+#define ZT_RUNTIMEENVIRONMENT_HPP
 
 #include <string>
 

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_C25519_HPP
-#define _ZT_C25519_HPP
+#ifndef ZT_C25519_HPP
+#define ZT_C25519_HPP
 
 #include "Array.hpp"
 #include "Utils.hpp"

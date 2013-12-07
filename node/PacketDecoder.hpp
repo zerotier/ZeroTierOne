@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_PACKETDECODER_HPP
-#define _ZT_PACKETDECODER_HPP
+#ifndef ZT_PACKETDECODER_HPP
+#define ZT_PACKETDECODER_HPP
 
 #include <stdexcept>
 

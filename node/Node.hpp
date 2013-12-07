@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_NODE_HPP
-#define _ZT_NODE_HPP
+#ifndef ZT_NODE_HPP
+#define ZT_NODE_HPP
 
 #include <string>
 #include <vector>
@@ -170,14 +170,6 @@ private:
 
 	void *const _impl; // private implementation
 };
-
-/**
- * An embedded version code that can be searched for in the binary
- *
- * This shouldn't be used by users, but is exported to make certain that
- * the linker actually includes it in the image.
- */
-extern const unsigned char EMBEDDED_VERSION_STAMP[20];
 
 } // namespace ZeroTier
 

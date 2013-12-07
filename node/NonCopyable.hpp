@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _NONCOPYABLE_HPP__
-#define _NONCOPYABLE_HPP__
+#ifndef ZT_NONCOPYABLE_HPP__
+#define ZT_NONCOPYABLE_HPP__
 
 namespace ZeroTier {
 

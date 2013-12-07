@@ -623,15 +623,6 @@ unsigned int Node::versionMajor() throw() { return ZEROTIER_ONE_VERSION_MAJOR; }
 unsigned int Node::versionMinor() throw() { return ZEROTIER_ONE_VERSION_MINOR; }
 unsigned int Node::versionRevision() throw() { return ZEROTIER_ONE_VERSION_REVISION; }
 
-// Scanned for by loader and/or updater to determine a binary's version
-const unsigned char EMBEDDED_VERSION_STAMP[20] = {
-	0x6d,0xfe,0xff,0x01,0x90,0xfa,0x89,0x57,0x88,0xa1,0xaa,0xdc,0xdd,0xde,0xb0,0x33,
-	ZEROTIER_ONE_VERSION_MAJOR,
-	ZEROTIER_ONE_VERSION_MINOR,
-	(unsigned char)(((unsigned int)ZEROTIER_ONE_VERSION_REVISION) & 0xff), /* little-endian */
-	(unsigned char)((((unsigned int)ZEROTIER_ONE_VERSION_REVISION) >> 8) & 0xff)
-};
-
 } // namespace ZeroTier
 
 extern "C" {

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_DICTIONARY_HPP
-#define _ZT_DICTIONARY_HPP
+#ifndef ZT_DICTIONARY_HPP
+#define ZT_DICTIONARY_HPP
 
 #include <string>
 #include <map>

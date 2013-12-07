@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_CONSTANTS_HPP
-#define _ZT_CONSTANTS_HPP
+#ifndef ZT_CONSTANTS_HPP
+#define ZT_CONSTANTS_HPP
 
 //
 // This include file also auto-detects and canonicalizes some environment

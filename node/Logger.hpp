@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_LOGGER_HPP
-#define _ZT_LOGGER_HPP
+#ifndef ZT_LOGGER_HPP
+#define ZT_LOGGER_HPP
 
 #include <stdio.h>
 

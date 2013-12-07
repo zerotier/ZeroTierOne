@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_SYSENV_HPP
-#define _ZT_SYSENV_HPP
+#ifndef ZT_SYSENV_HPP
+#define ZT_SYSENV_HPP
 
 #include <stdint.h>
 

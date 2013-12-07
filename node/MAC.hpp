@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_MAC_HPP
-#define _ZT_MAC_HPP
+#ifndef ZT_MAC_HPP
+#define ZT_MAC_HPP
 
 #include <stdio.h>
 #include <stdlib.h>

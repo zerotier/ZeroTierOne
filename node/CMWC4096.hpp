@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_CMWC4096_HPP
-#define _ZT_CMWC4096_HPP
+#ifndef ZT_CMWC4096_HPP
+#define ZT_CMWC4096_HPP
 
 #include <stdint.h>
 #include "Utils.hpp"

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_N_SWITCH_HPP
-#define _ZT_N_SWITCH_HPP
+#ifndef ZT_N_SWITCH_HPP
+#define ZT_N_SWITCH_HPP
 
 #include <map>
 #include <set>

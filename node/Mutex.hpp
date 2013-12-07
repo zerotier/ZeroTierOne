@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_MUTEX_HPP
-#define _ZT_MUTEX_HPP
+#ifndef ZT_MUTEX_HPP
+#define ZT_MUTEX_HPP
 
 #include "Constants.hpp"
 #include "NonCopyable.hpp"

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_NODECONFIG_HPP
-#define _ZT_NODECONFIG_HPP
+#ifndef ZT_NODECONFIG_HPP
+#define ZT_NODECONFIG_HPP
 
 #include <stdint.h>
 

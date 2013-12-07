@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_TOPOLOGY_HPP
-#define _ZT_TOPOLOGY_HPP
+#ifndef ZT_TOPOLOGY_HPP
+#define ZT_TOPOLOGY_HPP
 
 #include <stdio.h>
 #include <string.h>

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_SHAREDPTR_HPP
-#define _ZT_SHAREDPTR_HPP
+#ifndef ZT_SHAREDPTR_HPP
+#define ZT_SHAREDPTR_HPP
 
 #include "Mutex.hpp"
 #include "AtomicCounter.hpp"

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_ADDRESS_HPP
-#define _ZT_ADDRESS_HPP
+#ifndef ZT_ADDRESS_HPP
+#define ZT_ADDRESS_HPP
 
 #include <stdio.h>
 #include <stdlib.h>

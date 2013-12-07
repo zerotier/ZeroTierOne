@@ -4,8 +4,8 @@
  * This therefore is public domain.
  */
 
-#ifndef _ZT_SALSA20_HPP
-#define _ZT_SALSA20_HPP
+#ifndef ZT_SALSA20_HPP
+#define ZT_SALSA20_HPP
 
 #include <stdint.h>
 

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_N_PACKET_HPP
-#define _ZT_N_PACKET_HPP
+#ifndef ZT_N_PACKET_HPP
+#define ZT_N_PACKET_HPP
 
 #include <stdint.h>
 #include <string.h>

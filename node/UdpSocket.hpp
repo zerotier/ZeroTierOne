@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_UDPSOCKET_HPP
-#define _ZT_UDPSOCKET_HPP
+#ifndef ZT_UDPSOCKET_HPP
+#define ZT_UDPSOCKET_HPP
 
 #include <stdexcept>
 

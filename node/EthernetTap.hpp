@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_ETHERNETTAP_HPP
-#define _ZT_ETHERNETTAP_HPP
+#ifndef ZT_ETHERNETTAP_HPP
+#define ZT_ETHERNETTAP_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
