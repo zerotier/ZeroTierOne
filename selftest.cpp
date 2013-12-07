@@ -52,6 +52,7 @@
 #include "node/C25519.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
+#include "node/HttpClient.hpp"
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -62,6 +63,40 @@ using namespace ZeroTier;
 #include "selftest-crypto-vectors.hpp"
 
 static unsigned char fuzzbuf[1048576];
+
+static Condition webDoneCondition;
+static void testHttpHandler(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
+{
+	if (code == 200)
+		std::cout << "got " << body.length() << " bytes, response code " << code << std::endl;
+	else std::cout << "ERROR " << code << ": " << body << std::endl;
+	webDoneCondition.signal();
+}
+
+static int testHttp()
+{
+	std::cout << "[http] fetching http://download.zerotier.com/dev/1k ... "; std::cout.flush();
+	HttpClient::GET("http://download.zerotier.com/dev/1k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	std::cout << "[http] fetching http://download.zerotier.com/dev/2k ... "; std::cout.flush();
+	HttpClient::GET("http://download.zerotier.com/dev/2k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	std::cout << "[http] fetching http://download.zerotier.com/dev/4k ... "; std::cout.flush();
+	HttpClient::GET("http://download.zerotier.com/dev/4k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	std::cout << "[http] fetching http://download.zerotier.com/dev/8k ... "; std::cout.flush();
+	HttpClient::GET("http://download.zerotier.com/dev/8k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	std::cout << "[http] fetching http://download.zerotier.com/dev/NOEXIST ... "; std::cout.flush();
+	HttpClient::GET("http://download.zerotier.com/dev/NOEXIST",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
+	webDoneCondition.wait();
+
+	return 0;
+}
 
 static int testCrypto()
 {
@@ -562,6 +597,7 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
+	r |= testHttp();
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();

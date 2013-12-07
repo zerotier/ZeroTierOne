@@ -52,12 +52,18 @@
 
 namespace ZeroTier {
 
+const std::map<std::string,std::string> HttpClient::NO_HEADERS;
+
 #ifdef __UNIX_LIKE__
 
 // The *nix implementation calls 'curl' externally rather than linking to it.
 // This makes it an optional dependency that can be avoided in tiny systems
 // provided you don't want to have automatic software updates... or want to
 // do them via another method.
+
+#ifdef __APPLE__
+// TODO: get proxy configuration
+#endif
 
 // Paths where "curl" may be found on the system
 #define NUM_CURL_PATHS 5
@@ -117,11 +123,12 @@ public:
 			headerArgs.back().append(h->second);
 		}
 		for(std::vector<std::string>::iterator h(headerArgs.begin());h!=headerArgs.end();++h) {
-			if (argPtr >= (1024 - 3)) // leave room for terminating NULL
+			if (argPtr >= (1024 - 4)) // leave room for terminating NULL and URL
 				break;
 			curlArgs[argPtr++] = const_cast <char *>("-H");
 			curlArgs[argPtr++] = const_cast <char *>(h->c_str());
 		}
+		curlArgs[argPtr++] = const_cast <char *>(_url.c_str());
 		curlArgs[argPtr] = (char *)0;
 
 		int curlStdout[2];
@@ -166,7 +173,8 @@ public:
 					int n = (int)::read(curlStdout[0],buf,sizeof(buf));
 					if (n > 0)
 						_body.append(buf,n);
-					else break;
+					else if (n < 0)
+						break;
 					if (_body.length() > CURL_MAX_MESSAGE_LENGTH) {
 						::kill(pid,SIGKILL);
 						tooLong = true;
@@ -215,8 +223,8 @@ public:
 						if (!headers.back().length()) {
 							headers.pop_back();
 							break;
-						}
-					} else if (c != '\r') // \r's shouldn't be present but ignore them if they are
+						} else headers.push_back(std::string());
+					} else if (c != '\r')
 						headers.back().push_back(c);
 				}
 				if (headers.empty()||(!headers.front().length())) {
@@ -233,14 +241,6 @@ public:
 					return;
 				}
 				++scPos;
-				size_t msgPos = headers.front().find(' ',scPos);
-				if (msgPos == std::string::npos)
-					msgPos = headers.front().length();
-				if ((msgPos - scPos) != 3) {
-					_handler(_arg,-1,_url,false,"invalid HTTP response (no response code)");
-					delete this;
-					return;
-				}
 				unsigned int rcode = Utils::strToUInt(headers.front().substr(scPos,3).c_str());
 				if ((!rcode)||(rcode > 999)) {
 					_handler(_arg,-1,_url,false,"invalid HTTP response (invalid response code)");
@@ -251,7 +251,9 @@ public:
 				// Serve up the resulting data to the handler
 				if (rcode == 200)
 					_handler(_arg,rcode,_url,false,_body.substr(idx));
-				else _handler(_arg,rcode,_url,false,headers.front().substr(scPos+3));
+				else if ((scPos + 4) < headers.front().length())
+					_handler(_arg,rcode,_url,false,headers.front().substr(scPos+4));
+				else _handler(_arg,rcode,_url,false,"(no status message from server)");
 			}
 
 			delete this;
@@ -284,6 +286,7 @@ HttpClient::Request HttpClient::_do(
 	void (*handler)(void *,int,const std::string &,bool,const std::string &),
 	void *arg)
 {
+	return (HttpClient::Request)(new P_Req(method,url,headers,timeout,handler,arg));
 }
 
 #endif

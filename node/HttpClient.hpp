@@ -58,6 +58,11 @@ public:
 	typedef void * Request;
 
 	/**
+	 * Empty map for convenience use
+	 */
+	static const std::map<std::string,std::string> NO_HEADERS;
+
+	/**
 	 * Request a URL using the GET method
 	 */
 	static inline Request GET(
