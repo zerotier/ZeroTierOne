@@ -122,13 +122,18 @@ static inline std::map< Address,Identity > _mkUpdateAuth()
 	return ua;
 }
 
+static inline std::string _mkUpdateUrl()
+{
+}
+
 Defaults::Defaults() :
 #ifdef ZT_TRACE_MULTICAST
 	multicastTraceWatcher(ZT_TRACE_MULTICAST),
 #endif
 	defaultHomePath(_mkDefaultHomePath()),
 	supernodes(_mkSupernodeMap()),
-	updateAuthorities(_mkUpdateAuth())
+	updateAuthorities(_mkUpdateAuth()),
+	updateLatestNfoURL(_mkUpdateUrl())
 {
 }
 

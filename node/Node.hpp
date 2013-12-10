@@ -97,9 +97,24 @@ public:
 	 */
 	enum ReasonForTermination
 	{
+		/**
+		 * Node is currently in run()
+		 */
 		NODE_RUNNING = 0,
+
+		/**
+		 * Node is shutting down for normal reasons, including a signal
+		 */
 		NODE_NORMAL_TERMINATION = 1,
-		NODE_RESTART_FOR_RECONFIGURATION = 2,
+
+		/**
+		 * An upgrade is available. Its path is in reasonForTermination().
+		 */
+		NODE_RESTART_FOR_UPGRADE = 2,
+
+		/**
+		 * A serious unrecoverable error has occurred.
+		 */
 		NODE_UNRECOVERABLE_ERROR = 3
 	};
 

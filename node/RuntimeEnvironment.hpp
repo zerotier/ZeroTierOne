@@ -46,7 +46,7 @@ class CMWC4096;
 class Service;
 class Node;
 class Multicaster;
-class Updater;
+class SoftwareUpdater;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -73,7 +73,7 @@ public:
 		topology((Topology *)0),
 		sysEnv((SysEnv *)0),
 		nc((NodeConfig *)0),
-		updater((Updater *)0)
+		updater((SoftwareUpdater *)0)
 #ifndef __WINDOWS__
 		,netconfService((Service *)0)
 #endif
@@ -110,7 +110,7 @@ public:
 	SysEnv *sysEnv;
 	NodeConfig *nc;
 	Node *node;
-	Updater *updater; // null if auto-updates are disabled
+	SoftwareUpdater *updater; // null if software updates are not enabled
 #ifndef __WINDOWS__
 	Service *netconfService; // null if no netconf service running
 #endif

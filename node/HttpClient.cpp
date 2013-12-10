@@ -112,6 +112,12 @@ public:
 			return;
 		}
 
+		if (!_url.length()) {
+			_handler(_arg,-1,_url,false,"cannot fetch empty URL");
+			delete this;
+			return;
+		}
+
 		curlArgs[0] = const_cast <char *>(curlPath.c_str());
 		curlArgs[1] = const_cast <char *>("-D");
 		curlArgs[2] = const_cast <char *>("-"); // append headers before output
@@ -171,9 +177,11 @@ public:
 
 				if (FD_ISSET(curlStdout[0],&readfds)) {
 					int n = (int)::read(curlStdout[0],buf,sizeof(buf));
-					if (n > 0)
+					if (n > 0) {
 						_body.append(buf,n);
-					else if (n < 0)
+						// Reset timeout when data is read...
+						timesOutAt = Utils::now() + ((unsigned long long)_timeout * 1000ULL);
+					} else if (n < 0)
 						break;
 					if (_body.length() > CURL_MAX_MESSAGE_LENGTH) {
 						::kill(pid,SIGKILL);

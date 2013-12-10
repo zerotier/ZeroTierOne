@@ -78,6 +78,11 @@ public:
 	 * build will not auto-update.
 	 */
 	const std::map< Address,Identity > updateAuthorities;
+
+	/**
+	 * URL to latest .nfo for software updates
+	 */
+	const std::string updateLatestNfoURL;
 };
 
 extern const Defaults ZT_DEFAULTS;

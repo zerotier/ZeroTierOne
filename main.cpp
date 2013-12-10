@@ -44,6 +44,7 @@
 #else
 #include <unistd.h>
 #include <pwd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
@@ -473,13 +474,21 @@ int main(int argc,char **argv)
 
 	try {
 		node = new Node(homeDir,port,controlPort);
-		const char *termReason = (char *)0;
 		switch(node->run()) {
-			case Node::NODE_UNRECOVERABLE_ERROR:
+			case Node::NODE_NODE_RESTART_FOR_UPGRADE: {
+#ifdef __UNIX_LIKE__
+				const char *upgPath = node->reasonForTermination();
+				if (upgPath)
+					execl(upgPath,upgPath,"-s",(char *)0); // -s = (re)start after install/upgrade
 				exitCode = -1;
-				termReason = node->reasonForTermination();
+				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s",argv[0],(upgPath) ? upgPath : "(unknown path)");
+#endif
+			}	break;
+			case Node::NODE_UNRECOVERABLE_ERROR: {
+				exitCode = -1;
+				const char *termReason = node->reasonForTermination();
 				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
-				break;
+			}	break;
 			default:
 				break;
 		}

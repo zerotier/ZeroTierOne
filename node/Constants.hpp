@@ -330,4 +330,14 @@ error_no_byte_order_defined;
  */
 #define ZT_RENDEZVOUS_NAT_T_DELAY 500
 
+/**
+ * Minimum interval between attempts to do a software update
+ */
+#define ZT_UPDATE_MIN_INTERVAL 120000
+
+/**
+ * Update HTTP timeout in seconds
+ */
+#define ZT_UPDATE_HTTP_TIMEOUT 30
+
 #endif
