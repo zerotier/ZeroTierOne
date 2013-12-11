@@ -5,6 +5,10 @@ INCLUDES=
 DEFS=
 LIBS=
 
+ifeq ($(ZT_AUTO_UPDATE),1)
+	DEFS+=-DZT_AUTO_UPDATE
+endif
+
 # Uncomment for a release optimized build
 CFLAGS=-Wall -O3 -fno-unroll-loops -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 STRIP=strip --strip-all

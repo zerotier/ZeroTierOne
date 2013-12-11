@@ -2,8 +2,12 @@ CC=clang
 CXX=clang++
 
 INCLUDES=
-DEFS=-DZT_AUTO_UPDATE
+DEFS=
 LIBS=-lm
+
+ifeq ($(ZT_AUTO_UPDATE),1)
+	DEFS+=-DZT_AUTO_UPDATE
+endif
 
 # Uncomment for a release optimized universal binary build
 CFLAGS=-arch i386 -arch x86_64 -Wall -O4 -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)

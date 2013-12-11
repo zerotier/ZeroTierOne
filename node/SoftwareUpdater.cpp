@@ -176,6 +176,8 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 	::close(fd);
 	::chmod(updatePath.c_str(),0755);
 
+	upd->_status = UPDATE_STATUS_IDLE;
+
 	_r->node->terminate(Node::NODE_RESTART_FOR_UPGRADE,updatePath.c_str());
 #endif
 
