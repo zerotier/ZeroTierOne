@@ -475,7 +475,7 @@ int main(int argc,char **argv)
 	try {
 		node = new Node(homeDir,port,controlPort);
 		switch(node->run()) {
-			case Node::NODE_NODE_RESTART_FOR_UPGRADE: {
+			case Node::NODE_RESTART_FOR_UPGRADE: {
 #ifdef __UNIX_LIKE__
 				const char *upgPath = node->reasonForTermination();
 				if (upgPath)

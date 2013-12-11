@@ -122,8 +122,26 @@ static inline std::map< Address,Identity > _mkUpdateAuth()
 	return ua;
 }
 
-static inline std::string _mkUpdateUrl()
+static inline const char *_mkUpdateUrl()
 {
+#if defined(__LINUX__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
+	if (sizeof(void *) == 8)
+		return "http://download.zerotier.com/update/linux/x64/latest.nfo";
+	else return "http://download.zerotier.com/update/linux/x86/latest.nfo";
+#define GOT_UPDATE_URL
+#endif
+
+#ifdef __APPLE__
+	// TODO: iOS?
+	return "http://download.zerotier.com/update/mac/combined/latest.nfo";
+#define GOT_UPDATE_URL
+#endif
+
+	// TODO: Windows
+
+#ifndef GOT_UPDATE_URL
+	return "";
+#endif
 }
 
 Defaults::Defaults() :
