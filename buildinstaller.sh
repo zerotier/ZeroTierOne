@@ -53,8 +53,8 @@ case "$system" in
 
 		echo "Assembling Linux installer for $machine and ZT1 version $vmajor.$vminor.$revision"
 
-		./file2lz4c installer/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
-		./file2lz4c installer/linux/init.d/zerotier-one linux__init_d__zerotier_one >installer-build/linux__init_d__zerotier_one.h
+		./file2lz4c ext/installfiles/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
+		./file2lz4c ext/installfiles/linux/init.d/zerotier-one linux__init_d__zerotier_one >installer-build/linux__init_d__zerotier_one.h
 
 		g++ -Os -o "zt1-${vmajor}_${vminor}_${revision}-linux-${machine}-install" installer.cpp ext/lz4/lz4.o ext/lz4/lz4hc.o
 
