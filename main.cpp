@@ -415,7 +415,7 @@ int main(int argc,char **argv)
 					port = Utils::strToUInt(argv[i] + 2);
 					if (port > 65535) {
 						printHelp(argv[0],stderr);
-						return -1;
+						return 1;
 					}
 					break;
 				case 'v':
@@ -425,7 +425,7 @@ int main(int argc,char **argv)
 					controlPort = Utils::strToUInt(argv[i] + 2);
 					if (controlPort > 65535) {
 						printHelp(argv[0],stderr);
-						return -1;
+						return 1;
 					}
 					break;
 				case 'q':
@@ -458,6 +458,10 @@ int main(int argc,char **argv)
 		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
 
 #ifdef __UNIX_LIKE__
+	if (getuid()) {
+		fprintf(stderr,"%s: must be run as root (uid==0)\n",argv[0]);
+		return 1;
+	}
 	mkdir(homeDir,0755); // will fail if it already exists
 	{
 		char pidpath[4096];
@@ -480,12 +484,12 @@ int main(int argc,char **argv)
 				const char *upgPath = node->reasonForTermination();
 				if (upgPath)
 					execl(upgPath,upgPath,"-s",(char *)0); // -s = (re)start after install/upgrade
-				exitCode = -1;
-				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s",argv[0],(upgPath) ? upgPath : "(unknown path)");
+				exitCode = 2;
+				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
 #endif
 			}	break;
 			case Node::NODE_UNRECOVERABLE_ERROR: {
-				exitCode = -1;
+				exitCode = 3;
 				const char *termReason = node->reasonForTermination();
 				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
 			}	break;
