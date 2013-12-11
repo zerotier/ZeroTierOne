@@ -36,7 +36,6 @@
 #include <stdint.h>
 
 #include "node/Constants.hpp"
-
 #include "version.h"
 
 #ifdef __WINDOWS__
@@ -46,6 +45,7 @@
 #else
 #include <unistd.h>
 #include <pwd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
@@ -97,21 +97,26 @@ static unsigned char *_unlz4(const void *lz4,int decompressedLen)
 	return buf;
 }
 
-static bool _putBlob(const void *lz4,int decompressedLen,const char *path)
+static bool _putBlob(const void *lz4,int decompressedLen,const char *path,bool executable,bool protect,bool preserveOwnership)
 {
 	unsigned char *data = _unlz4(lz4,decompressedLen);
 	if (!data)
 		return false;
+
 #ifdef __WINDOWS__
 	DeleteFileA(path);
 #else
+	struct stat oldModes;
+	bool hasOldModes = (stat(path,&oldModes) == 0);
 	unlink(path);
 #endif
-	FILE *f = fopen(path,"w");
+
+	FILE *f = fopen(path,"wb");
 	if (!f) {
 		delete [] data;
 		return false;
 	}
+
 	if (fwrite(data,decompressedLen,1,f) != 1) {
 		fclose(f);
 		delete [] data;
@@ -122,12 +127,30 @@ static bool _putBlob(const void *lz4,int decompressedLen,const char *path)
 #endif
 		return false;
 	}
+
 	fclose(f);
+
+#ifdef __WINDOWS__
+#else
+	if (executable) {
+		if (protect)
+			chmod(path,0700);
+		else chmod(path,0755);
+	} else {
+		if (protect)
+			chmod(path,0600);
+		else chmod(path,0644);
+	}
+	if (preserveOwnership&&hasOldModes)
+		chown(path,oldModes.st_uid,oldModes.st_gid);
+	else chown(path,0,0);
+#endif
+
 	delete [] data;
 	return true;
 }
 
-#define putBlob(name,path) _putBlob(name,name##_UNCOMPRESSED_LEN,path)
+#define putBlob(name,path,exec,prot,pres) _putBlob((name),(name##_UNCOMPRESSED_LEN),(path),(exec),(prot),(pres))
 
 // ----------------------------------------------------------------------------
 
@@ -148,6 +171,7 @@ int main(int argc,char **argv)
 
 	printf("# ZeroTier One installer/updater starting...\n");
 
+	// Create home folder
 	const char *zthome;
 #ifdef __APPLE__
 	mkdir("/Library/Application Support/ZeroTier",0755);
@@ -164,29 +188,29 @@ int main(int argc,char **argv)
 	chown(zthome,0,0);
 	printf("mkdir %s\n",zthome);
 
+	// Write main ZT1 binary
 	sprintf(buf,"%s/zerotier-one",zthome);
-	if (!putBlob(zerotier_one,buf)) {
+	if (!putBlob(zerotier_one,buf,true,false,false)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
-	chmod(buf,0755);
-	chown(buf,0,0);
 	printf("write %s\n",buf);
 
+	// Create command line interface symlink
 	unlink("/usr/bin/zerotier-cli");
 	symlink(buf,"/usr/bin/zerotier-cli");
 	printf("link %s /usr/bin/zerotier-cli\n",buf);
 
+	// Write uninstall script into home folder
 	sprintf(buf,"%s/uninstall.sh",zthome);
-	if (!putBlob(uninstall_sh,buf)) {
+	if (!putBlob(uninstall_sh,buf,true,false,false)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
-	chmod(buf,0755);
-	chown(buf,0,0);
 	printf("write %s\n",buf);
 
 #ifdef __APPLE__
+	// Write tap.kext into home folder
 	sprintf(buf,"%s/tap.kext");
 	mkdir(buf,0755);
 	chmod(buf,0755);
@@ -203,31 +227,28 @@ int main(int argc,char **argv)
 	chown(buf,0,0);
 	printf("mkdir %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/Info.plist",zthome);
-	if (!putBlob(tap_mac__Info_plist,buf)) {
+	if (!putBlob(tap_mac__Info_plist,buf,false,false,false)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
-	chmod(buf,0644);
-	chown(buf,0,0);
 	printf("write %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/MacOS/tap",zthome);
-	if (!putBlob(tap_mac__tap,buf)) {
+	if (!putBlob(tap_mac__tap,buf,true,false,false)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
-	chmod(buf,0755);
-	chown(buf,0,0);
 	printf("write %s\n",buf);
+
+	// Write or update GUI application into /Applications
 #endif
 
 #ifdef __LINUX__
+	// Write Linux init script
 	sprintf(buf,"/etc/init.d/zerotier-one");
-	if (!putBlob(linux__init_d__zerotier_one,buf)) {
+	if (!putBlob(linux__init_d__zerotier_one,buf,true,false,false)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
-	chown(buf,0,0);
-	chmod(buf,0755);
 	printf("write %s\n",buf);
 
 	symlink("/etc/init.d/zerotier-one","/etc/rc0.d/K89zerotier-one");
