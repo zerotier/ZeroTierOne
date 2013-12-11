@@ -2,7 +2,7 @@ CC=clang
 CXX=clang++
 
 INCLUDES=
-DEFS=
+DEFS=-DZT_AUTO_UPDATE
 LIBS=-lm
 
 # Uncomment for a release optimized universal binary build

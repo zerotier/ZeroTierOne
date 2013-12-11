@@ -56,6 +56,7 @@
 #include "Poly1305.hpp"
 #include "SHA512.hpp"
 #include "Node.hpp"
+#include "SoftwareUpdater.hpp"
 
 namespace ZeroTier {
 
@@ -184,6 +185,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_P("200 help join <network ID>");
 		_P("200 help leave <network ID>");
 		_P("200 help terminate [<reason>]");
+		_P("200 help updatecheck");
 	} else if (cmd[0] == "info") {
 		bool isOnline = false;
 		uint64_t now = Utils::now();
@@ -268,6 +270,13 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		if (cmd.size() > 1)
 			_r->node->terminate(Node::NODE_NORMAL_TERMINATION,cmd[1].c_str());
 		else _r->node->terminate(Node::NODE_NORMAL_TERMINATION,(const char *)0);
+	} else if (cmd[0] == "updatecheck") {
+		if (_r->updater) {
+			_P("200 checking for software updates now at: %s",ZT_DEFAULTS.updateLatestNfoURL.c_str());
+			_r->updater->checkNow();
+		} else {
+			_P("500 software updates are not enabled");
+		}
 	} else {
 		_P("404 %s No such command. Use 'help' for help.",cmd[0].c_str());
 	}

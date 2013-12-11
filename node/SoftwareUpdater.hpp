@@ -75,11 +75,25 @@ public:
 	}
 
 	/**
+	 * Check for updates now regardless of last check time or version
+	 */
+	inline void checkNow()
+	{
+		Mutex::Lock _l(_lock);
+		if (_status == UPDATE_STATUS_IDLE) {
+			_lastUpdateAttempt = Utils::now();
+			_status = UPDATE_STATUS_GETTING_NFO;
+			HttpClient::GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
+		}
+	}
+
+	/**
 	 * Pack three-component version into a 64-bit integer
 	 *
 	 * @param vmaj Major version (0..65535)
 	 * @param vmin Minor version (0..65535)
 	 * @param rev Revision (0..65535)
+	 * @return Version packed into an easily comparable 64-bit integer
 	 */
 	static inline uint64_t packVersion(unsigned int vmaj,unsigned int vmin,unsigned int rev)
 		throw()

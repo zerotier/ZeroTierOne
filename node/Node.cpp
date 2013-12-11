@@ -68,6 +68,7 @@
 #include "CMWC4096.hpp"
 #include "SHA512.hpp"
 #include "Service.hpp"
+#include "SoftwareUpdater.hpp"
 
 #ifdef __WINDOWS__
 #include <Windows.h>
@@ -210,6 +211,7 @@ struct _NodeImpl
 #ifndef __WINDOWS__
 		delete renv.netconfService;
 #endif
+		delete renv.updater;
 		delete renv.nc;
 		delete renv.sysEnv;
 		delete renv.topology;
@@ -429,6 +431,10 @@ Node::ReasonForTermination Node::run()
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,foo);
 		}
 		_r->node = this;
+#ifdef ZT_AUTO_UPDATE
+		if (ZT_DEFAULTS.updateLatestNfoURL.length())
+			_r->updater = new SoftwareUpdater(_r);
+#endif
 
 		// Bind local port for core I/O
 		if (!_r->demarc->bindLocalUdp(impl->port)) {
