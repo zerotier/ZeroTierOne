@@ -43,6 +43,6 @@ file2lz4c: ext/lz4/lz4hc.o FORCE
 	$(CXX) $(CXXFLAGS) -o file2lz4c file2lz4c.cpp node/Utils.cpp node/Salsa20.cpp ext/lz4/lz4hc.o
 
 clean:
-	rm -rf *.dSYM build-ZeroTierUI-* $(OBJS) file2lz4c zerotier-* installer-build
+	rm -rf *.dSYM build-ZeroTierUI-* $(OBJS) file2lz4c zerotier-* installer-build zt1-*-install
 
 FORCE:

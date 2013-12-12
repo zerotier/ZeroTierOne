@@ -57,13 +57,19 @@ case "$system" in
 		./file2lz4c ext/installfiles/linux/init.d/zerotier-one linux__init_d__zerotier_one >installer-build/linux__init_d__zerotier_one.h
 
 		g++ -Os -o "zt1-${vmajor}_${vminor}_${revision}-linux-${machine}-install" installer.cpp ext/lz4/lz4.o ext/lz4/lz4hc.o
-
 		ls -l zt1-*-install
 
 		;;
 
 	Darwin)
 		echo "Assembling OSX installer for x86/x64 (combined) and ZT1 version $vmajor.$vminor.$revision"
+
+		./file2lz4c ext/installfiles/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
+		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/Info.plist tap_mac__Info_plist >installer-build/tap_mac__Info_plist.h
+		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/MacOS/tap tap_mac__tap >installer-build/tap_mac__tap.h
+
+		g++ -Os -arch i386 -o "zt1-${vmajor}_${vminor}_${revision}-mac-combined-install" installer.cpp ext/lz4/lz4.o ext/lz4/lz4hc.o
+		ls -l zt1-*-install
 
 		;;
 

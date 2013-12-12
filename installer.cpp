@@ -211,17 +211,17 @@ int main(int argc,char **argv)
 
 #ifdef __APPLE__
 	// Write tap.kext into home folder
-	sprintf(buf,"%s/tap.kext");
+	sprintf(buf,"%s/tap.kext",zthome);
 	mkdir(buf,0755);
 	chmod(buf,0755);
 	chown(buf,0,0);
 	printf("mkdir %s\n",buf);
-	sprintf(buf,"%s/tap.kext/Contents");
+	sprintf(buf,"%s/tap.kext/Contents",zthome);
 	mkdir(buf,0755);
 	chmod(buf,0755);
 	chown(buf,0,0);
 	printf("mkdir %s\n",buf);
-	sprintf(buf,"%s/tap.kext/Contents/MacOS");
+	sprintf(buf,"%s/tap.kext/Contents/MacOS",zthome);
 	mkdir(buf,0755);
 	chmod(buf,0755);
 	chown(buf,0,0);
