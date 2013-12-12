@@ -151,7 +151,6 @@ unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
 }
 
 unsigned int Utils::unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
-	throw()
 {
 	int n = 1;
 	unsigned char c,b = 0;
@@ -191,7 +190,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	Mutex::Lock _l(randomLock);
 
-	// A Salsa20 instance is used to mangle whatever our base
+	// A Salsa20/8 instance is used to further mangle whatever our base
 	// random source happens to be.
 	if (!randInitialized) {
 		randInitialized = true;
@@ -208,7 +207,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			{
 				int fd = ::open("/dev/urandom",O_RDONLY);
 				if (fd < 0) {
-					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom: %s"ZT_EOL_S,strerror(errno));
+					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom"ZT_EOL_S);
 					exit(-1);
 				}
 				if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
@@ -220,17 +219,20 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 #else
 #ifdef __WINDOWS__
 			{
-				char ktmp[32];
-				char ivtmp[8];
-				for(int i=0;i<32;++i) ktmp[i] = (char)rand();
-				for(int i=0;i<8;++i) ivtmp[i] = (char)rand();
-				double now = Utils::nowf();
-				memcpy(ktmp,&now,sizeof(now));
-				DWORD tmp = GetCurrentProcessId();
-				memcpy(ktmp + sizeof(now),&tmp,sizeof(tmp));
-				tmp = GetTickCount();
-				memcpy(ktmp + sizeof(now) + sizeof(DWORD),&tmp,sizeof(tmp));
-				Salsa20 s20tmp(ktmp,256,ivtmp,8);
+				struct {
+					double nowf;
+					DWORD processId;
+					DWORD tickCount;
+					uint64_t nowi;
+					char padding[32];
+				} keyMaterial;
+				keyMaterial.nowf = Utils::nowf();
+				keyMaterial.processId = GetCurrentProcessId();
+				keyMaterial.tickCount = GetTickCount();
+				keyMaterial.nowi = Utils::now();
+				for(int i=0;i<sizeof(keyMaterial.padding);++i)
+					keyMaterial.padding[i] = (char)rand();
+				Salsa20 s20tmp(&keyMaterial,256,&(keyMaterial.nowi),8);
 				s20tmp.encrypt(randbuf,randbuf,sizeof(randbuf));
 			}
 #else

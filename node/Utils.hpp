@@ -106,7 +106,9 @@ public:
 	 * List a directory's contents
 	 * 
 	 * Keys in returned map are filenames only and don't include the leading
-	 * path. Pseudo-paths like . and .. are not returned.
+	 * path. Pseudo-paths like . and .. are not returned. Values are true if
+	 * the item is a directory, false if it's a file. More detailed attributes
+	 * aren't supported since the code that uses this doesn't need them.
 	 *
 	 * @param path Path to list
 	 * @return Map of entries and whether or not they are also directories (empty on failure)
@@ -114,6 +116,8 @@ public:
 	static std::map<std::string,bool> listDirectory(const char *path);
 
 	/**
+	 * Convert binary data to hexadecimal
+	 *
 	 * @param data Data to convert to hex
 	 * @param len Length of data
 	 * @return Hexadecimal string
@@ -122,6 +126,11 @@ public:
 	static inline std::string hex(const std::string &data) { return hex(data.data(),(unsigned int)data.length()); }
 
 	/**
+	 * Convert hexadecimal to binary data
+	 *
+	 * This ignores all non-hex characters, just stepping over them and
+	 * continuing. Upper and lower case are supported for letters a-f.
+	 *
 	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored)
 	 * @return Binary data
 	 */
@@ -129,6 +138,11 @@ public:
 	static inline std::string unhex(const std::string &hex) { return unhex(hex.c_str()); }
 
 	/**
+	 * Convert hexadecimal to binary data
+	 *
+	 * This ignores all non-hex characters, just stepping over them and
+	 * continuing. Upper and lower case are supported for letters a-f.
+	 *
 	 * @param hex Hexadecimal ASCII
 	 * @param buf Buffer to fill
 	 * @param len Length of buffer
@@ -138,16 +152,25 @@ public:
 	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),buf,len); }
 
 	/**
+	 * Convert hexadecimal to binary data
+	 *
+	 * This ignores all non-hex characters, just stepping over them and
+	 * continuing. Upper and lower case are supported for letters a-f.
+	 *
 	 * @param hex Hexadecimal ASCII
 	 * @param hexlen Length of hex ASCII
 	 * @param buf Buffer to fill
 	 * @param len Length of buffer
 	 * @return Number of bytes actually written to buffer
 	 */
-	static unsigned int unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
-		throw();
+	static unsigned int unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len);
 
 	/**
+	 * Generate secure random bytes
+	 *
+	 * This will try to use whatever OS sources of entropy are available. It's
+	 * guarded by an internal mutex so it's thread-safe.
+	 *
 	 * @param buf Buffer to fill
 	 * @param bytes Number of random bytes to generate
 	 */

@@ -48,6 +48,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #endif
 
 namespace ZeroTier {
@@ -68,7 +69,6 @@ const std::map<std::string,std::string> HttpClient::NO_HEADERS;
 // Paths where "curl" may be found on the system
 #define NUM_CURL_PATHS 5
 static const char *CURL_PATHS[NUM_CURL_PATHS] = { "/usr/bin/curl","/bin/curl","/usr/local/bin/curl","/usr/sbin/curl","/sbin/curl" };
-static const std::string CURL_IN_HOME(ZT_DEFAULTS.defaultHomePath + "/curl");
 
 // Maximum message length
 #define CURL_MAX_MESSAGE_LENGTH (1024 * 1024 * 64)
@@ -101,10 +101,6 @@ public:
 				curlPath = CURL_PATHS[i];
 				break;
 			}
-		}
-		if (!curlPath.length()) {
-			if (Utils::fileExists(CURL_IN_HOME.c_str()))
-				curlPath = CURL_IN_HOME;
 		}
 		if (!curlPath.length()) {
 			_handler(_arg,-1,_url,false,"unable to locate 'curl' binary in /usr/bin, /bin, /usr/local/bin, /usr/sbin, or /sbin");
@@ -201,6 +197,19 @@ public:
 				}
 
 				if (waitpid(pid,&exitCode,WNOHANG) > 0) {
+					for(;;) {
+						// Drain output...
+						int n = (int)::read(curlStdout[0],buf,sizeof(buf));
+						if (n <= 0)
+							break;
+						else {
+							_body.append(buf,n);
+							if (_body.length() > CURL_MAX_MESSAGE_LENGTH) {
+								tooLong = true;
+								break;
+							}
+						}
+					}
 					pid = 0;
 					break;
 				}
