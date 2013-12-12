@@ -66,6 +66,24 @@ static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2012-2013 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+#ifdef ZT_AUTO_UPDATE
+	fprintf(out,"Auto-update enabled build, will update from URL:"ZT_EOL_S);
+	fprintf(out,"  %s"ZT_EOL_S,ZT_DEFAULTS.updateLatestNfoURL.c_str());
+	fprintf(out,"Update authentication signing authorities: "ZT_EOL_S);
+	int no = 0;
+	for(std::map< Address,Identity >::const_iterator sa(ZT_DEFAULTS.updateAuthorities.begin());sa!=ZT_DEFAULTS.updateAuthorities.end();++sa) {
+		if (no == 0)
+			fprintf(out,"  %s",sa->first.toString().c_str());
+		else fprintf(out,", %s",sa->first.toString().c_str());
+		if (++no == 6) {
+			fprintf(out,ZT_EOL_S);
+			no = 0;
+		}
+	}
+	fprintf(out,ZT_EOL_S""ZT_EOL_S);
+#else
+	fprintf(out,"Auto-updates not enabled on this build. You must update manually."ZT_EOL_S""ZT_EOL_S);
+#endif
 	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
