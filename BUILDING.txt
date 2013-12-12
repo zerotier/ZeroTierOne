@@ -6,17 +6,13 @@ Developers note: there is currently no management of dependencies on *nix
 platforms, so you should make clean ; make if you change a header. Will
 do this eventually.
 
--- MacOS
-
-make -f Makefile.mac
-
-Edit Makefile.mac if you want to change between debug or release build.
-
 -- Linux
 
-make -f Makefile.linux
+make
 
-Edit Makefile.linux if you want to change between debug or release build.
+-- MacOS
+
+make
 
 If you are building ext/tap-mac you will need a different version of the
 OSX gcc compiler chain than what currently ships (clang). We've got a copy
