@@ -25,8 +25,11 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_NODE_HPP
-#define _ZT_NODE_HPP
+#ifndef ZT_NODE_HPP
+#define ZT_NODE_HPP
+
+#include <string>
+#include <vector>
 
 namespace ZeroTier {
 
@@ -70,6 +73,16 @@ public:
 		 */
 		unsigned long send(const char *command)
 			throw();
+		inline unsigned long send(const std::string &command) throw() { return send(command.c_str()); }
+
+		/**
+		 * Split a line of results by space
+		 *
+		 * @param line Line to split
+		 * @return Vector of fields
+		 */
+		static std::vector<std::string> splitLine(const char *line);
+		static inline std::vector<std::string> splitLine(const std::string &line) { return splitLine(line.c_str()); }
 
 	private:
 		// LocalClient is not copyable
@@ -84,9 +97,24 @@ public:
 	 */
 	enum ReasonForTermination
 	{
+		/**
+		 * Node is currently in run()
+		 */
 		NODE_RUNNING = 0,
+
+		/**
+		 * Node is shutting down for normal reasons, including a signal
+		 */
 		NODE_NORMAL_TERMINATION = 1,
-		NODE_RESTART_FOR_RECONFIGURATION = 2,
+
+		/**
+		 * An upgrade is available. Its path is in reasonForTermination().
+		 */
+		NODE_RESTART_FOR_UPGRADE = 2,
+
+		/**
+		 * A serious unrecoverable error has occurred.
+		 */
 		NODE_UNRECOVERABLE_ERROR = 3
 	};
 
@@ -140,7 +168,7 @@ public:
 
 	/**
 	 * Get the ZeroTier version in major.minor.revision string format
-	 * 
+	 *
 	 * @return Version in string form
 	 */
 	static const char *versionString()
@@ -157,14 +185,6 @@ private:
 
 	void *const _impl; // private implementation
 };
-
-/**
- * An embedded version code that can be searched for in the binary
- *
- * This shouldn't be used by users, but is exported to make certain that
- * the linker actually includes it in the image.
- */
-extern const unsigned char EMBEDDED_VERSION_STAMP[20];
 
 } // namespace ZeroTier
 

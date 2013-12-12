@@ -44,6 +44,7 @@
 #else
 #include <unistd.h>
 #include <pwd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
@@ -53,6 +54,9 @@
 #include "node/Defaults.hpp"
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
+#include "node/Condition.hpp"
+#include "node/C25519.hpp"
+#include "node/Identity.hpp"
 
 using namespace ZeroTier;
 
@@ -62,12 +66,307 @@ static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2012-2013 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+#ifdef ZT_AUTO_UPDATE
+	fprintf(out,"Auto-update enabled build, will update from URL:"ZT_EOL_S);
+	fprintf(out,"  %s"ZT_EOL_S,ZT_DEFAULTS.updateLatestNfoURL.c_str());
+	fprintf(out,"Update authentication signing authorities: "ZT_EOL_S);
+	int no = 0;
+	for(std::map< Address,Identity >::const_iterator sa(ZT_DEFAULTS.updateAuthorities.begin());sa!=ZT_DEFAULTS.updateAuthorities.end();++sa) {
+		if (no == 0)
+			fprintf(out,"  %s",sa->first.toString().c_str());
+		else fprintf(out,", %s",sa->first.toString().c_str());
+		if (++no == 6) {
+			fprintf(out,ZT_EOL_S);
+			no = 0;
+		}
+	}
+	fprintf(out,ZT_EOL_S""ZT_EOL_S);
+#else
+	fprintf(out,"Auto-updates not enabled on this build. You must update manually."ZT_EOL_S""ZT_EOL_S);
+#endif
 	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out," -h                - Display this help"ZT_EOL_S);
-	fprintf(out," -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
-	fprintf(out," -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
+	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
+	fprintf(out,"  -v                - Show version"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
+	fprintf(out,"  -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
+	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
+	fprintf(out,"  -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
 }
+
+namespace ZeroTierCLI { // ---------------------------------------------------
+
+static void printHelp(FILE *out,const char *exename)
+{
+	fprintf(out,"Usage: %s [-switches] <command>"ZT_EOL_S,exename);
+	fprintf(out,ZT_EOL_S);
+	fprintf(out,"Available switches:"ZT_EOL_S);
+	fprintf(out,"  -c<port>         - Communicate with daemon over this local port"ZT_EOL_S);
+	fprintf(out,"  -t<token>        - Specify token on command line"ZT_EOL_S);
+	fprintf(out,"  -T<file>         - Read token from file"ZT_EOL_S);
+	fprintf(out,ZT_EOL_S);
+	fprintf(out,"Use the 'help' command to get help from ZeroTier One itself."ZT_EOL_S);
+}
+
+static volatile unsigned int numResults = 0;
+static Condition doneCondition;
+
+static void resultHandler(void *arg,unsigned long id,const char *line)
+{
+	++numResults;
+	if (strlen(line))
+		fprintf(stdout,"%s"ZT_EOL_S,line);
+	else doneCondition.signal();
+}
+
+// Runs instead of rest of main() if process is called zerotier-cli or if
+// -q is specified as an option.
+#ifdef __WINDOWS__
+static int main(int argc,_TCHAR* argv[])
+#else
+static int main(int argc,char **argv)
+#endif
+{
+	if (argc <= 1) {
+		printHelp(stdout,argv[0]);
+		return -1;
+	}
+
+	std::string authToken;
+	std::string command;
+	bool pastSwitches = false;
+	unsigned int controlPort = 0;
+	for(int i=1;i<argc;++i) {
+		if ((argv[i][0] == '-')&&(!pastSwitches)) {
+			if (strlen(argv[i]) <= 1) {
+				printHelp(stdout,argv[0]);
+				return -1;
+			}
+			switch(argv[i][1]) {
+				case 'q': // does nothing, for invocation without binary path name aliasing
+					if (argv[i][2]) {
+						printHelp(argv[0],stderr);
+						return 0;
+					}
+					break;
+				case 'c':
+					controlPort = Utils::strToUInt(argv[i] + 2);
+					break;
+				case 't':
+					authToken.assign(argv[i] + 2);
+					break;
+				case 'T':
+					if (!Utils::readFile(argv[i] + 2,authToken)) {
+						fprintf(stdout,"FATAL ERROR: unable to read token from '%s'"ZT_EOL_S,argv[i] + 2);
+						return -2;
+					}
+					break;
+				default:
+					return -1;
+			}
+		} else {
+			pastSwitches = true;
+			if (command.length())
+				command.push_back(' ');
+			command.append(argv[i]);
+		}
+	}
+
+	if (!command.length()) {
+		printHelp(stdout,argv[0]);
+		return -1;
+	}
+
+	if (!authToken.length()) {
+		const char *home = getenv("HOME");
+		if (home) {
+			std::string dotZeroTierAuthToken(home);
+			dotZeroTierAuthToken.push_back(ZT_PATH_SEPARATOR);
+			dotZeroTierAuthToken.append(".zerotierOneAuthToken");
+			if (!Utils::readFile(dotZeroTierAuthToken.c_str(),authToken)) {
+#ifndef __WINDOWS__
+#ifdef __APPLE__
+				const char *systemAuthTokenPath = "/Library/Application Support/ZeroTier/One/authtoken.secret";
+#else
+				const char *systemAuthTokenPath = "/var/lib/zerotier-one/authtoken.secret";
+#endif
+				if (!Utils::readFile(systemAuthTokenPath,authToken)) {
+					fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s' or '%s'"ZT_EOL_S,dotZeroTierAuthToken.c_str(),systemAuthTokenPath);
+					return -2;
+				}
+#else // __WINDOWS__
+				fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s'"ZT_EOL_S,dotZeroTierAuthToken.c_str());
+				return -2;
+#endif // __WINDOWS__
+			}
+		}
+	}
+	if (!authToken.length()) {
+		fprintf(stdout,"FATAL ERROR: could not find auth token"ZT_EOL_S);
+		return -2;
+	}
+
+	Node::LocalClient client(authToken.c_str(),controlPort,&resultHandler,(void *)0);
+	client.send(command.c_str());
+
+	doneCondition.wait(1000);
+
+	if (!numResults) {
+		fprintf(stdout,"ERROR: no results received. Is ZeroTier One running?"ZT_EOL_S);
+		return -1;
+	}
+
+	return 0;
+}
+
+} // namespace ZeroTierCLI ---------------------------------------------------
+
+namespace ZeroTierIdTool { // ------------------------------------------------
+
+static void printHelp(FILE *out,const char *pn)
+{
+	fprintf(out,"Usage: %s <command> [<args>]"ZT_EOL_S""ZT_EOL_S"Commands:"ZT_EOL_S,pn);
+	fprintf(out,"  generate [<identity.secret>] [<identity.public>]"ZT_EOL_S);
+	fprintf(out,"  validate <identity.secret/public>"ZT_EOL_S);
+	fprintf(out,"  getpublic <identity.secret>"ZT_EOL_S);
+	fprintf(out,"  sign <identity.secret> <file>"ZT_EOL_S);
+	fprintf(out,"  verify <identity.secret/public> <file> <signature>"ZT_EOL_S);
+}
+
+static Identity getIdFromArg(char *arg)
+{
+	Identity id;
+	if ((strlen(arg) > 32)&&(arg[10] == ':')) { // identity is a literal on the command line
+		if (id.fromString(arg))
+			return id;
+	} else { // identity is to be read from a file
+		std::string idser;
+		if (Utils::readFile(arg,idser)) {
+			if (id.fromString(idser))
+				return id;
+		}
+	}
+	return Identity();
+}
+
+// Runs instead of rest of main() if process is called zerotier-idtool or if
+// -i is specified as an option.
+#ifdef __WINDOWS__
+static int main(int argc,_TCHAR* argv[])
+#else
+static int main(int argc,char **argv)
+#endif
+{
+	if (argc < 2) {
+		printHelp(stderr,argv[0]);
+		return -1;
+	}
+
+	if (!strcmp(argv[1],"generate")) {
+		Identity id;
+		id.generate();
+		std::string idser = id.toString(true);
+		if (argc >= 3) {
+			if (!Utils::writeFile(argv[2],idser)) {
+				fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[2]);
+				return -1;
+			} else printf("%s written"ZT_EOL_S,argv[2]);
+			if (argc >= 4) {
+				idser = id.toString(false);
+				if (!Utils::writeFile(argv[3],idser)) {
+					fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[3]);
+					return -1;
+				} else printf("%s written"ZT_EOL_S,argv[3]);
+			}
+		} else printf("%s",idser.c_str());
+	} else if (!strcmp(argv[1],"validate")) {
+		if (argc < 3) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		if (!id.locallyValidate()) {
+			fprintf(stderr,"%s FAILED validation."ZT_EOL_S,argv[2]);
+			return -1;
+		} else printf("%s is a valid identity"ZT_EOL_S,argv[2]);
+	} else if (!strcmp(argv[1],"getpublic")) {
+		if (argc < 3) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		printf("%s",id.toString(false).c_str());
+	} else if (!strcmp(argv[1],"sign")) {
+		if (argc < 4) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		if (!id.hasPrivate()) {
+			fprintf(stderr,"%s does not contain a private key (must use private to sign)"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		std::string inf;
+		if (!Utils::readFile(argv[3],inf)) {
+			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
+			return -1;
+		}
+		C25519::Signature signature = id.sign(inf.data(),inf.length());
+		printf("%s",Utils::hex(signature.data,signature.size()).c_str());
+	} else if (!strcmp(argv[1],"verify")) {
+		if (argc < 4) {
+			printHelp(stderr,argv[0]);
+			return -1;
+		}
+
+		Identity id = getIdFromArg(argv[2]);
+		if (!id) {
+			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
+			return -1;
+		}
+
+		std::string inf;
+		if (!Utils::readFile(argv[3],inf)) {
+			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
+			return -1;
+		}
+
+		std::string signature(Utils::unhex(argv[4]));
+		if ((signature.length() > ZT_ADDRESS_LENGTH)&&(id.verify(inf.data(),inf.length(),signature.data(),signature.length()))) {
+			printf("%s signature valid"ZT_EOL_S,argv[3]);
+		} else {
+			fprintf(stderr,"%s signature check FAILED"ZT_EOL_S,argv[3]);
+			return -1;
+		}
+	} else {
+		printHelp(stderr,argv[0]);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+} // namespace ZeroTierIdTool ------------------------------------------------
 
 #ifdef __UNIX_LIKE__
 static void sighandlerQuit(int sig)
@@ -119,6 +418,11 @@ int main(int argc,char **argv)
 	SetConsoleCtrlHandler(&_handlerRoutine,TRUE);
 #endif
 
+	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
+		return ZeroTierCLI::main(argc,argv);
+	if ((strstr(argv[0],"zerotier-idtool"))||(strstr(argv[0],"ZEROTIER-IDTOOL")))
+		return ZeroTierIdTool::main(argc,argv);
+
 	const char *homeDir = (const char *)0;
 	unsigned int port = 0;
 	unsigned int controlPort = 0;
@@ -129,16 +433,29 @@ int main(int argc,char **argv)
 					port = Utils::strToUInt(argv[i] + 2);
 					if (port > 65535) {
 						printHelp(argv[0],stderr);
-						return -1;
+						return 1;
 					}
 					break;
+				case 'v':
+					printf("%s"ZT_EOL_S,Node::versionString());
+					return 0;
 				case 'c':
 					controlPort = Utils::strToUInt(argv[i] + 2);
 					if (controlPort > 65535) {
 						printHelp(argv[0],stderr);
-						return -1;
+						return 1;
 					}
 					break;
+				case 'q':
+					if (argv[i][2]) {
+						printHelp(argv[0],stderr);
+						return 0;
+					} else return ZeroTierCLI::main(argc,argv);
+				case 'i':
+					if (argv[i][2]) {
+						printHelp(argv[0],stderr);
+						return 0;
+					} else return ZeroTierIdTool::main(argc,argv);
 				case 'h':
 				case '?':
 				default:
@@ -159,24 +476,55 @@ int main(int argc,char **argv)
 		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
 
 #ifdef __UNIX_LIKE__
+	if (getuid()) {
+		fprintf(stderr,"%s: must be run as root (uid==0)\n",argv[0]);
+		return 1;
+	}
 	mkdir(homeDir,0755); // will fail if it already exists
+	{
+		char pidpath[4096];
+		Utils::snprintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
+		FILE *pf = fopen(pidpath,"w");
+		if (pf) {
+			fprintf(pf,"%ld",(long)getpid());
+			fclose(pf);
+		}
+	}
 #endif
 
 	int exitCode = 0;
 
-	node = new Node(homeDir,port,controlPort);
-	const char *termReason = (char *)0;
-	switch(node->run()) {
-		case Node::NODE_UNRECOVERABLE_ERROR:
-			exitCode = -1;
-			termReason = node->reasonForTermination();
-			fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
-			break;
-		default:
-			break;
+	try {
+		node = new Node(homeDir,port,controlPort);
+		switch(node->run()) {
+			case Node::NODE_RESTART_FOR_UPGRADE: {
+#ifdef __UNIX_LIKE__
+				const char *upgPath = node->reasonForTermination();
+				if (upgPath)
+					execl(upgPath,upgPath,"-s",(char *)0); // -s = (re)start after install/upgrade
+				exitCode = 2;
+				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+#endif
+			}	break;
+			case Node::NODE_UNRECOVERABLE_ERROR: {
+				exitCode = 3;
+				const char *termReason = node->reasonForTermination();
+				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
+			}	break;
+			default:
+				break;
+		}
+		delete node;
+		node = (Node *)0;
+	} catch ( ... ) {}
+
+#ifdef __UNIX_LIKE__
+	{
+		char pidpath[4096];
+		Utils::snprintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
+		Utils::rm(pidpath);
 	}
-	delete node;
-	node = (Node *)0;
+#endif
 
 	return exitCode;
 }

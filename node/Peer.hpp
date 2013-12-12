@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_PEER_HPP
-#define _ZT_PEER_HPP
+#ifndef ZT_PEER_HPP
+#define ZT_PEER_HPP
 
 #include <stdint.h>
 

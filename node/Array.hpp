@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_ARRAY_HPP
-#define _ZT_ARRAY_HPP
+#ifndef ZT_ARRAY_HPP
+#define ZT_ARRAY_HPP
 
 #include <string>
 #include <algorithm>

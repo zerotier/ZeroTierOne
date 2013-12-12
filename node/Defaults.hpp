@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_DEFAULTS_HPP
-#define _ZT_DEFAULTS_HPP
+#ifndef ZT_DEFAULTS_HPP
+#define ZT_DEFAULTS_HPP
 
 #include <stdexcept>
 #include <string>
@@ -67,6 +67,22 @@ public:
 	 * Supernodes on the ZeroTier network
 	 */
 	const std::map< Identity,std::vector<InetAddress> > supernodes;
+
+	/**
+	 * Identities permitted to sign software updates
+	 *
+	 * ZTN can keep multiple signing identities and rotate them, keeping some in
+	 * "cold storage" and obsoleting others gradually.
+	 *
+	 * If you don't build with ZT_OFFICIAL_BUILD, this isn't used since your
+	 * build will not auto-update.
+	 */
+	const std::map< Address,Identity > updateAuthorities;
+
+	/**
+	 * URL to latest .nfo for software updates
+	 */
+	const std::string updateLatestNfoURL;
 };
 
 extern const Defaults ZT_DEFAULTS;

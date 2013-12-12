@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_ATOMICCOUNTER_HPP
-#define _ZT_ATOMICCOUNTER_HPP
+#ifndef ZT_ATOMICCOUNTER_HPP
+#define ZT_ATOMICCOUNTER_HPP
 
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"

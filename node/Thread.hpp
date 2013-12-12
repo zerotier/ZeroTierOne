@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_THREAD_HPP
-#define _ZT_THREAD_HPP
+#ifndef ZT_THREAD_HPP
+#define ZT_THREAD_HPP
 
 #include <stdexcept>
 

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_MULTICASTGROUP_HPP
-#define _ZT_MULTICASTGROUP_HPP
+#ifndef ZT_MULTICASTGROUP_HPP
+#define ZT_MULTICASTGROUP_HPP
 
 #include <stdint.h>
 

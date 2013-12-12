@@ -693,7 +693,7 @@ void EthernetTap::threadMain()
 				// data until we have at least a frame.
 				r += n;
 				if (r > 14) {
-					if (r > (_mtu + 14)) // sanity check for weird TAP behavior on some platforms
+					if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
 						r = _mtu + 14;
 					for(int i=0;i<6;++i)
 						to.data[i] = (unsigned char)getBuf[i];

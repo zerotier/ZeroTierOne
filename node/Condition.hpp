@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_CONDITION_HPP
-#define _ZT_CONDITION_HPP
+#ifndef ZT_CONDITION_HPP
+#define ZT_CONDITION_HPP
 
 #include "Constants.hpp"
 #include "NonCopyable.hpp"

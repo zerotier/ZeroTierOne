@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_SERVICE_HPP
-#define _ZT_SERVICE_HPP
+#ifndef ZT_SERVICE_HPP
+#define ZT_SERVICE_HPP
 
 #include <string>
 #include <stdexcept>

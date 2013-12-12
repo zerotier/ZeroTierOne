@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_RUNTIMEENVIRONMENT_HPP
-#define _ZT_RUNTIMEENVIRONMENT_HPP
+#ifndef ZT_RUNTIMEENVIRONMENT_HPP
+#define ZT_RUNTIMEENVIRONMENT_HPP
 
 #include <string>
 
@@ -46,6 +46,7 @@ class CMWC4096;
 class Service;
 class Node;
 class Multicaster;
+class SoftwareUpdater;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -71,26 +72,36 @@ public:
 		demarc((Demarc *)0),
 		topology((Topology *)0),
 		sysEnv((SysEnv *)0),
-		nc((NodeConfig *)0)
+		nc((NodeConfig *)0),
+		updater((SoftwareUpdater *)0)
 #ifndef __WINDOWS__
 		,netconfService((Service *)0)
 #endif
 	{
 	}
 
+	// Full path to home folder
 	std::string homePath;
 
-	// signal() to prematurely interrupt main loop wait
+	// Main loop waits on this condition when it delays between runs, so
+	// signaling this will prematurely wake it.
 	Condition mainLoopWaitCondition;
 
+	// This node's identity
 	Identity identity;
 
+	// Indicates that we are shutting down -- this is hacky, want to factor out
 	volatile bool shutdownInProgress;
 
-	// Order matters a bit here. These are constructed in this order
-	// and then deleted in the opposite order on Node exit.
+	/*
+	 * Order matters a bit here. These are constructed in this order
+	 * and then deleted in the opposite order on Node exit. The order ensures
+	 * that things that are needed are there before they're needed.
+	 *
+	 * These are constant and never null after startup unless indicated.
+	 */
 
-	Logger *log; // may be null
+	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
 	Multicaster *mc;
 	Switch *sw;
@@ -99,8 +110,9 @@ public:
 	SysEnv *sysEnv;
 	NodeConfig *nc;
 	Node *node;
+	SoftwareUpdater *updater; // null if software updates are not enabled
 #ifndef __WINDOWS__
-	Service *netconfService; // may be null
+	Service *netconfService; // null if no netconf service running
 #endif
 };
 

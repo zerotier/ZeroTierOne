@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_SHA512_HPP
-#define _ZT_SHA512_HPP
+#ifndef ZT_SHA512_HPP
+#define ZT_SHA512_HPP
 
 #define ZT_SHA512_DIGEST_LEN 64
 

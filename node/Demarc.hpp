@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_DEMARC_HPP
-#define _ZT_DEMARC_HPP
+#ifndef ZT_DEMARC_HPP
+#define ZT_DEMARC_HPP
 
 #include <stdlib.h>
 #include <stdint.h>

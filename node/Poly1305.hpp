@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_POLY1305_HPP
-#define _ZT_POLY1305_HPP
+#ifndef ZT_POLY1305_HPP
+#define ZT_POLY1305_HPP
 
 namespace ZeroTier {
 

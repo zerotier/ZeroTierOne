@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_MULTICASTER_HPP
-#define _ZT_MULTICASTER_HPP
+#ifndef ZT_MULTICASTER_HPP
+#define ZT_MULTICASTER_HPP
 
 #include <stdint.h>
 #include <string.h>

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_BWACCOUNT_HPP
-#define _ZT_BWACCOUNT_HPP
+#ifndef ZT_BWACCOUNT_HPP
+#define ZT_BWACCOUNT_HPP
 
 #include <stdint.h>
 #include <math.h>

@@ -1,5 +1,8 @@
-zerotier-*
-/Makefile
+/ext/llvm-g++-Xcode4.6.2
+/ext/llvm-g++-Xcode4.6.2.tar.bz2
+/zerotier-*
+/build-ZeroTierUI-*
+/ZeroTierUI/*.user
 *.o
 .DS_Store
 .Apple*
@@ -20,6 +23,7 @@ mac-tap/tuntap/tap.kext
 /vsprojects/TapDriver/x64
 /vsprojects/InstallerUpdater/obj
 /vsprojects/Service/obj
+/vsprojects/SelfTest/SelfTest.aps
 /Build/*
 *.log
 *.opensdf
@@ -27,4 +31,6 @@ mac-tap/tuntap/tap.kext
 *.cache
 *.obj
 *.tlog
-/vsprojects/SelfTest/SelfTest.aps
+/installer-build
+/zt1-*-install
+/file2lz4c

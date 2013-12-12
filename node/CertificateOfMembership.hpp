@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_CERTIFICATEOFMEMBERSHIP_HPP
-#define _ZT_CERTIFICATEOFMEMBERSHIP_HPP
+#ifndef ZT_CERTIFICATEOFMEMBERSHIP_HPP
+#define ZT_CERTIFICATEOFMEMBERSHIP_HPP
 
 #include <stdint.h>
 #include <string.h>

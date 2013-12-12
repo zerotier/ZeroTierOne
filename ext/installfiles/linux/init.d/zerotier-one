@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# zerotier-one   Virtual distributed Ethernet service
+#
+# chkconfig: 2345 11 89
+# description: ZeroTier One provides public and private distributed ethernet \
+#              networks. See https://www.zerotier.com/ for more information.
+
+### BEGIN INIT INFO
+# Provides: zerotier-one
+# Required-Start: $local_fs $network
+# Required-Stop: $local_fs
+# Default-Start:  2345
+# Default-Stop: 90
+# Short-Description: start ZeroTier One
+# Description: ZeroTier One provides public and private distributed ethernet \
+#              networks. See https://www.zerotier.com/ for more information.
+### END INIT INFO
+
+#
+# This script is written to avoid distro-specific dependencies, so it does not
+# use the rc bash script libraries found on some systems. It should work on
+# just about anything, even systems using Upstart. Upstart native support may
+# come in the future.
+#
+
+zthome=/var/lib/zerotier-one
+
+# Add $zthome to path so we can invoke zerotier-one naked, makes it look
+# better in a ps listing.
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:$zthome
+
+if [ "$UID" -ne 0 ]; then
+	echo "Init script must be called as root."
+	exit 4
+fi
+
+if [ ! -f "$zthome/zerotier-one" ]; then
+	echo "ZeroTier One is not installed in $zthome."
+	exit 5
+fi
+
+pid=0
+if [ -f "$zthome/zerotier-one.pid" ]; then
+	pid=`cat $zthome/zerotier-one.pid`
+fi
+
+running=0
+if [ "$pid" -gt 0 ]; then
+	if [ "`readlink -nf /proc/$pid/exe`" = "$zthome/zerotier-one" ]; then
+		running=1
+	else
+		rm -f "$zthome/zerotier-one.pid"
+	fi
+fi
+
+case "$1" in
+	start)
+		if [ $running -gt 0 ]; then
+			echo "ZeroTier One already running."
+			exit 0
+		fi
+		echo "Starting ZeroTier One..."
+		nohup zerotier-one >>/dev/null 2>&1 &
+		disown %1
+		exit 0
+		;;
+	stop)
+		if [ $running -gt 0 ]; then
+			echo "Stopping ZeroTier One..."
+			kill -TERM $pid
+		else
+			echo "ZeroTier One is not running."
+		fi
+		;;
+	restart|reload|force-reload|condrestart|try-restart)
+		echo "Restarting ZeroTier One..."
+		if [ $running -gt 0 ]; then
+			kill -TERM $pid
+		fi
+		while [ -f "$zthome/zerotier-one.pid" ]; do sleep 1; done
+		nohup zerotier-one >>/dev/null 2>&1 &
+		disown %1
+		;;
+	status)
+		if [ $running -gt 0 ]; then
+			exit 0
+		else
+			exit 3
+		fi
+		;;
+	*)
+		echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+		exit 2
+esac
+
+exit 0

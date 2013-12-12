@@ -50,9 +50,6 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
-static const char *DAY_NAMES[7] = { "Sun","Mon","Tue","Wed","Thu","Fri","Sat" };
-static const char *MONTH_NAMES[12] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
-
 std::map<std::string,bool> Utils::listDirectory(const char *path)
 {
 	std::map<std::string,bool> r;
@@ -62,7 +59,8 @@ std::map<std::string,bool> Utils::listDirectory(const char *path)
 	WIN32_FIND_DATAA ffd;
 	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
-			r[std::string(ffd.cFileName)] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,"..")))
+				r[std::string(ffd.cFileName)] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
 	}
@@ -153,7 +151,6 @@ unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
 }
 
 unsigned int Utils::unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
-	throw()
 {
 	int n = 1;
 	unsigned char c,b = 0;
@@ -193,7 +190,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	Mutex::Lock _l(randomLock);
 
-	// A Salsa20 instance is used to mangle whatever our base
+	// A Salsa20/8 instance is used to further mangle whatever our base
 	// random source happens to be.
 	if (!randInitialized) {
 		randInitialized = true;
@@ -210,7 +207,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			{
 				int fd = ::open("/dev/urandom",O_RDONLY);
 				if (fd < 0) {
-					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom: %s"ZT_EOL_S,strerror(errno));
+					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom"ZT_EOL_S);
 					exit(-1);
 				}
 				if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
@@ -222,17 +219,20 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 #else
 #ifdef __WINDOWS__
 			{
-				char ktmp[32];
-				char ivtmp[8];
-				for(int i=0;i<32;++i) ktmp[i] = (char)rand();
-				for(int i=0;i<8;++i) ivtmp[i] = (char)rand();
-				double now = Utils::nowf();
-				memcpy(ktmp,&now,sizeof(now));
-				DWORD tmp = GetCurrentProcessId();
-				memcpy(ktmp + sizeof(now),&tmp,sizeof(tmp));
-				tmp = GetTickCount();
-				memcpy(ktmp + sizeof(now) + sizeof(DWORD),&tmp,sizeof(tmp));
-				Salsa20 s20tmp(ktmp,256,ivtmp,8);
+				struct {
+					double nowf;
+					DWORD processId;
+					DWORD tickCount;
+					uint64_t nowi;
+					char padding[32];
+				} keyMaterial;
+				keyMaterial.nowf = Utils::nowf();
+				keyMaterial.processId = GetCurrentProcessId();
+				keyMaterial.tickCount = GetTickCount();
+				keyMaterial.nowi = Utils::now();
+				for(int i=0;i<sizeof(keyMaterial.padding);++i)
+					keyMaterial.padding[i] = (char)rand();
+				Salsa20 s20tmp(&keyMaterial,256,&(keyMaterial.nowi),8);
 				s20tmp.encrypt(randbuf,randbuf,sizeof(randbuf));
 			}
 #else
@@ -248,7 +248,7 @@ no getSecureRandom() implementation;
 
 void Utils::lockDownFile(const char *path,bool isDir)
 {
-#if defined(__APPLE__) || defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifdef __UNIX_LIKE__
 	chmod(path,isDir ? 0700 : 0600);
 #else
 #ifdef _WIN32
@@ -265,92 +265,24 @@ uint64_t Utils::getLastModified(const char *path)
 	return (((uint64_t)s.st_mtime) * 1000ULL);
 }
 
-std::string Utils::toRfc1123(uint64_t t64)
+bool Utils::fileExists(const char *path,bool followLinks)
 {
-	struct tm t;
-	char buf[128];
-	time_t utc = (time_t)(t64 / 1000ULL);
-#ifdef __WINDOWS__
-	gmtime_s(&t,&utc);
-#else
-	gmtime_r(&utc,&t);
+	struct stat s;
+#ifdef __UNIX_LIKE__
+	if (!followLinks)
+		return (lstat(path,&s) == 0);
 #endif
-	Utils::snprintf(buf,sizeof(buf),"%3s, %02d %3s %4d %02d:%02d:%02d GMT",DAY_NAMES[t.tm_wday],t.tm_mday,MONTH_NAMES[t.tm_mon],t.tm_year + 1900,t.tm_hour,t.tm_min,t.tm_sec);
-	return std::string(buf);
+	return (stat(path,&s) == 0);
 }
 
-#ifdef __WINDOWS__
-static int is_leap(unsigned y) {
-        y += 1900;
-        return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
-}
-static time_t timegm(struct tm *tm) {
-        static const unsigned ndays[2][12] = {
-                {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31},
-                {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-        };
-        time_t res = 0;
-        int i;
-        for (i = 70; i < tm->tm_year; ++i)
-                res += is_leap(i) ? 366 : 365;
-
-        for (i = 0; i < tm->tm_mon; ++i)
-                res += ndays[is_leap(tm->tm_year)][i];
-        res += tm->tm_mday - 1;
-        res *= 24;
-        res += tm->tm_hour;
-        res *= 60;
-        res += tm->tm_min;
-        res *= 60;
-        res += tm->tm_sec;
-        return res;
-}
-#endif
-
-uint64_t Utils::fromRfc1123(const char *tstr)
+int64_t Utils::getFileSize(const char *path)
 {
-	struct tm t;
-	char wdays[128],mons[128];
-
-	int l = (int)strlen(tstr);
-	if ((l < 29)||(l > 64))
-		return 0;
-	int assigned = sscanf(tstr,"%3s, %02d %3s %4d %02d:%02d:%02d GMT",wdays,&t.tm_mday,mons,&t.tm_year,&t.tm_hour,&t.tm_min,&t.tm_sec);
-	if (assigned != 7)
-		return 0;
-
-	wdays[3] = '\0';
-	for(t.tm_wday=0;t.tm_wday<7;++t.tm_wday) {
-#ifdef __WINDOWS__
-		if (!_stricmp(DAY_NAMES[t.tm_wday],wdays))
-			break;
-#else
-		if (!strcasecmp(DAY_NAMES[t.tm_wday],wdays))
-			break;
-#endif
-	}
-	if (t.tm_wday == 7)
-		return 0;
-	mons[3] = '\0';
-	for(t.tm_mon=0;t.tm_mon<12;++t.tm_mon) {
-#ifdef __WINDOWS__
-		if (!_stricmp(MONTH_NAMES[t.tm_mday],mons))
-			break;
-#else
-		if (!strcasecmp(MONTH_NAMES[t.tm_mday],mons))
-			break;
-#endif
-	}
-	if (t.tm_mon == 12)
-		return 0;
-
-	t.tm_wday = 0; // ignored by timegm
-	t.tm_yday = 0; // ignored by timegm
-	t.tm_isdst = 0; // ignored by timegm
-
-	time_t utc = timegm(&t);
-
-	return ((utc > 0) ? (1000ULL * (uint64_t)utc) : 0ULL);
+	struct stat s;
+	if (stat(path,&s))
+		return -1;
+	if (S_ISREG(s.st_mode))
+		return s.st_size;
+	return -1;
 }
 
 bool Utils::readFile(const char *path,std::string &buf)

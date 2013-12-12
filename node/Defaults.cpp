@@ -98,12 +98,60 @@ static inline std::string _mkDefaultHomePath()
 #endif
 }
 
+static inline std::map< Address,Identity > _mkUpdateAuth()
+{
+	std::map< Address,Identity > ua;
+
+	{ // 0001
+		Identity id("e9bc3707b5:0:c4cef17bde99eadf9748c4fd11b9b06dc5cd8eb429227811d2c336e6b96a8d329e8abd0a4f45e47fe1bcebf878c004c822d952ff77fc2833af4c74e65985c435");
+		ua[id.address()] = id;
+	}
+	{ // 0002
+		Identity id("56520eaf93:0:7d858b47988b34399a9a31136de07b46104d7edb4a98fa1d6da3e583d3a33e48be531532b886f0b12cd16794a66ab9220749ec5112cbe96296b18fe0cc79ca05");
+		ua[id.address()] = id;
+	}
+	{ // 0003
+		Identity id("7c195de2e0:0:9f659071c960f9b0f0b96f9f9ecdaa27c7295feed9c79b7db6eedcc11feb705e6dd85c70fa21655204d24c897865b99eb946b753a2bbcf2be5f5e006ae618c54");
+		ua[id.address()] = id;
+	}
+	{ // 0004
+		Identity id("415f4cfde7:0:54118e87777b0ea5d922c10b337c4f4bd1db7141845bd54004b3255551a6e356ba6b9e1e85357dbfafc45630b8faa2ebf992f31479e9005f0472685f2d8cbd6e");
+		ua[id.address()] = id;
+	}
+
+	return ua;
+}
+
+static inline const char *_mkUpdateUrl()
+{
+#if defined(__LINUX__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
+	if (sizeof(void *) == 8)
+		return "http://download.zerotier.com/update/linux/x64/latest.nfo";
+	else return "http://download.zerotier.com/update/linux/x86/latest.nfo";
+#define GOT_UPDATE_URL
+#endif
+
+#ifdef __APPLE__
+	// TODO: iOS?
+	return "http://download.zerotier.com/update/mac/combined/latest.nfo";
+#define GOT_UPDATE_URL
+#endif
+
+	// TODO: Windows
+
+#ifndef GOT_UPDATE_URL
+	return "";
+#endif
+}
+
 Defaults::Defaults() :
 #ifdef ZT_TRACE_MULTICAST
 	multicastTraceWatcher(ZT_TRACE_MULTICAST),
 #endif
 	defaultHomePath(_mkDefaultHomePath()),
-	supernodes(_mkSupernodeMap())
+	supernodes(_mkSupernodeMap()),
+	updateAuthorities(_mkUpdateAuth()),
+	updateLatestNfoURL(_mkUpdateUrl())
 {
 }
 

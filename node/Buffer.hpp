@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_BUFFER_HPP
-#define _ZT_BUFFER_HPP
+#ifndef ZT_BUFFER_HPP
+#define ZT_BUFFER_HPP
 
 #include <string.h>
 #include <stdint.h>

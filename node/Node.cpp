@@ -68,6 +68,7 @@
 #include "CMWC4096.hpp"
 #include "SHA512.hpp"
 #include "Service.hpp"
+#include "SoftwareUpdater.hpp"
 
 #ifdef __WINDOWS__
 #include <Windows.h>
@@ -182,6 +183,11 @@ unsigned long Node::LocalClient::send(const char *command)
 	}
 }
 
+std::vector<std::string> Node::LocalClient::splitLine(const char *line)
+{
+	return Utils::split(line," ","\\","\"");
+}
+
 struct _NodeImpl
 {
 	RuntimeEnvironment renv;
@@ -205,6 +211,7 @@ struct _NodeImpl
 #ifndef __WINDOWS__
 		delete renv.netconfService;
 #endif
+		delete renv.updater;
 		delete renv.nc;
 		delete renv.sysEnv;
 		delete renv.topology;
@@ -424,6 +431,10 @@ Node::ReasonForTermination Node::run()
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,foo);
 		}
 		_r->node = this;
+#ifdef ZT_AUTO_UPDATE
+		if (ZT_DEFAULTS.updateLatestNfoURL.length())
+			_r->updater = new SoftwareUpdater(_r);
+#endif
 
 		// Bind local port for core I/O
 		if (!_r->demarc->bindLocalUdp(impl->port)) {
@@ -462,6 +473,7 @@ Node::ReasonForTermination Node::run()
 
 	// Core I/O loop
 	try {
+		std::string shutdownIfUnreadablePath(_r->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
@@ -471,6 +483,13 @@ Node::ReasonForTermination Node::run()
 		long lastDelayDelta = 0;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
+			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
+				FILE *tmpf = fopen(shutdownIfUnreadablePath.c_str(),"r");
+				if (!tmpf)
+					return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable was not readable");
+				fclose(tmpf);
+			}
+
 			uint64_t now = Utils::now();
 			bool resynchronize = false;
 
@@ -609,15 +628,6 @@ const char *Node::versionString() throw() { return __versionString.vs; }
 unsigned int Node::versionMajor() throw() { return ZEROTIER_ONE_VERSION_MAJOR; }
 unsigned int Node::versionMinor() throw() { return ZEROTIER_ONE_VERSION_MINOR; }
 unsigned int Node::versionRevision() throw() { return ZEROTIER_ONE_VERSION_REVISION; }
-
-// Scanned for by loader and/or updater to determine a binary's version
-const unsigned char EMBEDDED_VERSION_STAMP[20] = {
-	0x6d,0xfe,0xff,0x01,0x90,0xfa,0x89,0x57,0x88,0xa1,0xaa,0xdc,0xdd,0xde,0xb0,0x33,
-	ZEROTIER_ONE_VERSION_MAJOR,
-	ZEROTIER_ONE_VERSION_MINOR,
-	(unsigned char)(((unsigned int)ZEROTIER_ONE_VERSION_REVISION) & 0xff), /* little-endian */
-	(unsigned char)((((unsigned int)ZEROTIER_ONE_VERSION_REVISION) >> 8) & 0xff)
-};
 
 } // namespace ZeroTier
 

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_UTILS_HPP
-#define _ZT_UTILS_HPP
+#ifndef ZT_UTILS_HPP
+#define ZT_UTILS_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,9 +41,6 @@
 
 #include "Constants.hpp"
 
-#include "../ext/lz4/lz4.h"
-#include "../ext/lz4/lz4hc.h"
-
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
@@ -52,11 +49,6 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #endif
-
-/**
- * Maximum compression/decompression block size (do not change)
- */
-#define ZT_COMPRESSION_BLOCK_SIZE 16777216
 
 namespace ZeroTier {
 
@@ -108,23 +100,24 @@ public:
 		return (unlink(path) == 0);
 #endif
 	}
-	static inline bool rm(const std::string &path)
-		throw()
-	{
-		return rm(path.c_str());
-	}
+	static inline bool rm(const std::string &path) throw() { return rm(path.c_str()); }
 
 	/**
 	 * List a directory's contents
+	 * 
+	 * Keys in returned map are filenames only and don't include the leading
+	 * path. Pseudo-paths like . and .. are not returned. Values are true if
+	 * the item is a directory, false if it's a file. More detailed attributes
+	 * aren't supported since the code that uses this doesn't need them.
 	 *
 	 * @param path Path to list
-	 * @param files Set to fill with files
-	 * @param directories Set to fill with directories
 	 * @return Map of entries and whether or not they are also directories (empty on failure)
 	 */
 	static std::map<std::string,bool> listDirectory(const char *path);
 
 	/**
+	 * Convert binary data to hexadecimal
+	 *
 	 * @param data Data to convert to hex
 	 * @param len Length of data
 	 * @return Hexadecimal string
@@ -133,6 +126,11 @@ public:
 	static inline std::string hex(const std::string &data) { return hex(data.data(),(unsigned int)data.length()); }
 
 	/**
+	 * Convert hexadecimal to binary data
+	 *
+	 * This ignores all non-hex characters, just stepping over them and
+	 * continuing. Upper and lower case are supported for letters a-f.
+	 *
 	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored)
 	 * @return Binary data
 	 */
@@ -140,6 +138,11 @@ public:
 	static inline std::string unhex(const std::string &hex) { return unhex(hex.c_str()); }
 
 	/**
+	 * Convert hexadecimal to binary data
+	 *
+	 * This ignores all non-hex characters, just stepping over them and
+	 * continuing. Upper and lower case are supported for letters a-f.
+	 *
 	 * @param hex Hexadecimal ASCII
 	 * @param buf Buffer to fill
 	 * @param len Length of buffer
@@ -149,16 +152,25 @@ public:
 	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),buf,len); }
 
 	/**
+	 * Convert hexadecimal to binary data
+	 *
+	 * This ignores all non-hex characters, just stepping over them and
+	 * continuing. Upper and lower case are supported for letters a-f.
+	 *
 	 * @param hex Hexadecimal ASCII
 	 * @param hexlen Length of hex ASCII
 	 * @param buf Buffer to fill
 	 * @param len Length of buffer
 	 * @return Number of bytes actually written to buffer
 	 */
-	static unsigned int unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
-		throw();
+	static unsigned int unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len);
 
 	/**
+	 * Generate secure random bytes
+	 *
+	 * This will try to use whatever OS sources of entropy are available. It's
+	 * guarded by an internal mutex so it's thread-safe.
+	 *
 	 * @param buf Buffer to fill
 	 * @param bytes Number of random bytes to generate
 	 */
@@ -188,193 +200,16 @@ public:
 
 	/**
 	 * @param path Path to check
+	 * @param followLinks Follow links (on platforms with that concept)
 	 * @return True if file or directory exists at path location
 	 */
-	static inline bool fileExists(const char *path)
-	{
-		return (getLastModified(path) != 0);
-	}
+	static bool fileExists(const char *path,bool followLinks = true);
 
 	/**
-	 * @param t64 Time in ms since epoch
-	 * @return RFC1123 date string
+	 * @param path Path to file
+	 * @return File size or -1 if nonexistent or other failure
 	 */
-	static std::string toRfc1123(uint64_t t64);
-
-	/**
-	 * @param tstr Time in RFC1123 string format
-	 * @return Time in ms since epoch
-	 */
-	static uint64_t fromRfc1123(const char *tstr);
-	static inline uint64_t fromRfc1123(const std::string &tstr) { return fromRfc1123(tstr.c_str()); }
-
-	/**
-	 * String append output function object for use with compress/decompress
-	 */
-	class StringAppendOutput
-	{
-	public:
-		StringAppendOutput(std::string &s) : _s(s) {}
-		inline void operator()(const void *data,unsigned int len) { _s.append((const char *)data,len); }
-	private:
-		std::string &_s;
-	};
-
-	/**
-	 * STDIO FILE append output function object for compress/decompress
-	 *
-	 * Throws std::runtime_error on write error.
-	 */
-	class FILEAppendOutput
-	{
-	public:
-		FILEAppendOutput(FILE *f) : _f(f) {}
-		inline void operator()(const void *data,unsigned int len)
-			throw(std::runtime_error)
-		{
-			if ((int)fwrite(data,1,len,_f) != (int)len)
-				throw std::runtime_error("write failed");
-		}
-	private:
-		FILE *_f;
-	};
-
-	/**
-	 * Compress data
-	 *
-	 * O must be a function or function object that takes the following
-	 * arguments: (const void *data,unsigned int len)
-	 *
-	 * @param in Input iterator that reads bytes (char, uint8_t, etc.)
-	 * @param out Output iterator that writes bytes
-	 */
-	template<typename I,typename O>
-	static inline void compress(I begin,I end,O out)
-	{
-		unsigned int bufLen = LZ4_compressBound(ZT_COMPRESSION_BLOCK_SIZE);
-		char *buf = new char[bufLen * 2];
-		char *buf2 = buf + bufLen;
-
-		try {
-			I inp(begin);
-			for(;;) {
-				unsigned int readLen = 0;
-				while ((readLen < ZT_COMPRESSION_BLOCK_SIZE)&&(inp != end)) {
-					buf[readLen++] = (char)*inp;
-					++inp;
-				}
-				if (!readLen)
-					break;
-
-				uint32_t l = hton((uint32_t)readLen);
-				out((const void *)&l,4); // original size
-
-				if (readLen < 32) { // don't bother compressing itty bitty blocks
-					l = 0; // stored
-					out((const void *)&l,4);
-					out((const void *)buf,readLen);
-					continue;
-				}
-
-				int lz4CompressedLen = LZ4_compressHC(buf,buf2,(int)readLen);
-				if ((lz4CompressedLen <= 0)||(lz4CompressedLen >= (int)readLen)) {
-					l = 0; // stored
-					out((const void *)&l,4);
-					out((const void *)buf,readLen);
-					continue;
-				}
-
-				l = hton((uint32_t)lz4CompressedLen); // lz4 only
-				out((const void *)&l,4);
-				out((const void *)buf2,(unsigned int)lz4CompressedLen);
-			}
-
-			delete [] buf;
-		} catch ( ... ) {
-			delete [] buf;
-			throw;
-		}
-	}
-
-	/**
-	 * Decompress data
-	 *
-	 * O must be a function or function object that takes the following
-	 * arguments: (const void *data,unsigned int len)
-	 *
-	 * @param in Input iterator that reads bytes (char, uint8_t, etc.)
-	 * @param out Output iterator that writes bytes
-	 * @return False on decompression error
-	 */
-	template<typename I,typename O>
-	static inline bool decompress(I begin,I end,O out)
-	{
-		volatile char i32c[4];
-		void *const i32cp = (void *)i32c;
-		unsigned int bufLen = LZ4_compressBound(ZT_COMPRESSION_BLOCK_SIZE);
-		char *buf = new char[bufLen * 2];
-		char *buf2 = buf + bufLen;
-
-		try {
-			I inp(begin);
-			while (inp != end) {
-				i32c[0] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				i32c[1] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				i32c[2] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				i32c[3] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				unsigned int originalSize = ntoh(*((const uint32_t *)i32cp));
-				i32c[0] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				i32c[1] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				i32c[2] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				i32c[3] = (char)*inp; if (++inp == end) { delete [] buf; return false; }
-				uint32_t _compressedSize = ntoh(*((const uint32_t *)i32cp));
-				unsigned int compressedSize = _compressedSize & 0x7fffffff;
-
-				if (compressedSize) {
-					if (compressedSize > bufLen) {
-						delete [] buf;
-						return false;
-					}
-					unsigned int readLen = 0;
-					while ((readLen < compressedSize)&&(inp != end)) {
-						buf[readLen++] = (char)*inp;
-						++inp;
-					}
-					if (readLen != compressedSize) {
-						delete [] buf;
-						return false;
-					}
-
-					if (LZ4_uncompress_unknownOutputSize(buf,buf2,compressedSize,bufLen) != (int)originalSize) {
-						delete [] buf;
-						return false;
-					} else out((const void *)buf2,(unsigned int)originalSize);
-				} else { // stored
-					if (originalSize > bufLen) {
-						delete [] buf;
-						return false;
-					}
-					unsigned int readLen = 0;
-					while ((readLen < originalSize)&&(inp != end)) {
-						buf[readLen++] = (char)*inp;
-						++inp;
-					}
-					if (readLen != originalSize) {
-						delete [] buf;
-						return false;
-					}
-
-					out((const void *)buf,(unsigned int)originalSize);
-				}
-			}
-
-			delete [] buf;
-			return true;
-		} catch ( ... ) {
-			delete [] buf;
-			throw;
-		}
-	}
+	static int64_t getFileSize(const char *path);
 
 	/**
 	 * @return Current time in milliseconds since epoch
@@ -678,6 +513,7 @@ public:
 		return ((*aptr & mask) == (*aptr & mask));
 	}
 
+	// Byte swappers for big/little endian conversion
 	static inline uint8_t hton(uint8_t n) throw() { return n; }
 	static inline int8_t hton(int8_t n) throw() { return n; }
 	static inline uint16_t hton(uint16_t n) throw() { return htons(n); }

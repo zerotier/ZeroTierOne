@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef _ZT_CONSTANTS_HPP
-#define _ZT_CONSTANTS_HPP
+#ifndef ZT_CONSTANTS_HPP
+#define ZT_CONSTANTS_HPP
 
 //
 // This include file also auto-detects and canonicalizes some environment
@@ -54,6 +54,7 @@
 
 // OSX and iOS are unix-like OSes far as we're concerned
 #ifdef __APPLE__
+#include <TargetConditionals.h>
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif
@@ -328,5 +329,15 @@ error_no_byte_order_defined;
  * Delay in milliseconds between firewall opener and real packet for NAT-t
  */
 #define ZT_RENDEZVOUS_NAT_T_DELAY 500
+
+/**
+ * Minimum interval between attempts to do a software update
+ */
+#define ZT_UPDATE_MIN_INTERVAL 120000
+
+/**
+ * Update HTTP timeout in seconds
+ */
+#define ZT_UPDATE_HTTP_TIMEOUT 30
 
 #endif
