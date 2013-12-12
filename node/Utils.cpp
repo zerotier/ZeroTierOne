@@ -207,11 +207,11 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			{
 				int fd = ::open("/dev/urandom",O_RDONLY);
 				if (fd < 0) {
-					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom"ZT_EOL_S);
+					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom%s",ZT_EOL_S);
 					exit(-1);
 				}
 				if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
-					fprintf(stderr,"FATAL ERROR: unable to read from /dev/urandom"ZT_EOL_S);
+					fprintf(stderr,"FATAL ERROR: unable to read from /dev/urandom%s",ZT_EOL_S);
 					exit(-1);
 				}
 				::close(fd);

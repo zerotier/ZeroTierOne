@@ -1,6 +1,6 @@
-#include "network.h"
+#include "networkwidget.h"
 #include "mainwindow.h"
-#include "ui_network.h"
+#include "ui_networkwidget.h"
 
 #include <QClipboard>
 #include <QString>
@@ -10,9 +10,9 @@
 #include <QList>
 #include <QMessageBox>
 
-Network::Network(QWidget *parent,const std::string &nwid) :
+NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 	QWidget(parent),
-	ui(new Ui::Network),
+	ui(new Ui::NetworkWidget),
 	networkIdStr(nwid)
 {
 	ui->setupUi(this);
@@ -23,12 +23,12 @@ Network::Network(QWidget *parent,const std::string &nwid) :
 	ui->ipListWidget->setMaximumHeight(lineHeight * 3);
 }
 
-Network::~Network()
+NetworkWidget::~NetworkWidget()
 {
 	delete ui;
 }
 
-void Network::setStatus(const std::string &status,const std::string &age)
+void NetworkWidget::setStatus(const std::string &status,const std::string &age)
 {
 	ui->statusLabel->setText(QString(status.c_str()));
 	if (status == "OK")
@@ -36,12 +36,12 @@ void Network::setStatus(const std::string &status,const std::string &age)
 	else ui->ageLabel->setText(QString());
 }
 
-void Network::setNetworkName(const std::string &name)
+void NetworkWidget::setNetworkName(const std::string &name)
 {
 	ui->nameLabel->setText(QString(name.c_str()));
 }
 
-void Network::setNetworkType(const std::string &type)
+void NetworkWidget::setNetworkType(const std::string &type)
 {
 	ui->networkTypeLabel->setText(QString(type.c_str()));
 	if (type == "?")
@@ -53,12 +53,12 @@ void Network::setNetworkType(const std::string &type)
 	else ui->networkTypeLabel->setToolTip(QString());
 }
 
-void Network::setNetworkDeviceName(const std::string &dev)
+void NetworkWidget::setNetworkDeviceName(const std::string &dev)
 {
 	ui->deviceLabel->setText(QString(dev.c_str()));
 }
 
-void Network::setIps(const std::string &commaSeparatedList)
+void NetworkWidget::setIps(const std::string &commaSeparatedList)
 {
 	QStringList ips(QString(commaSeparatedList.c_str()).split(QChar(','),QString::SkipEmptyParts));
 	if (commaSeparatedList == "-")
@@ -87,12 +87,12 @@ void Network::setIps(const std::string &commaSeparatedList)
 	}
 }
 
-const std::string &Network::networkId()
+const std::string &NetworkWidget::networkId()
 {
 	return networkIdStr;
 }
 
-void Network::on_leaveNetworkButton_clicked()
+void NetworkWidget::on_leaveNetworkButton_clicked()
 {
 	if (QMessageBox::question(this,"Leave Network?",QString("Are you sure you want to leave network '") + networkIdStr.c_str() + "'?",QMessageBox::No,QMessageBox::Yes) == QMessageBox::Yes) {
 		zeroTierClient->send((QString("leave ") + networkIdStr.c_str()).toStdString());
@@ -100,7 +100,7 @@ void Network::on_leaveNetworkButton_clicked()
 	}
 }
 
-void Network::on_networkIdPushButton_clicked()
+void NetworkWidget::on_networkIdPushButton_clicked()
 {
 	QApplication::clipboard()->setText(ui->networkIdPushButton->text());
 }

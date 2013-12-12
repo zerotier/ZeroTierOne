@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include "aboutwindow.h"
-#include "network.h"
+#include "networkwidget.h"
 #include "ui_mainwindow.h"
 
 #include <string>
@@ -143,13 +143,13 @@ void MainWindow::customEvent(QEvent *event)
 				byNwid[l[2]] = l;
 		}
 
-		std::map< std::string,std::pair<int,Network *> > existingByNwid;
+		std::map< std::string,std::pair<int,NetworkWidget *> > existingByNwid;
 		for(int r=0;r<ui->networkListWidget->count();++r) {
-			Network *nw = (Network *)ui->networkListWidget->itemWidget(ui->networkListWidget->item(r));
+			NetworkWidget *nw = (NetworkWidget *)ui->networkListWidget->itemWidget(ui->networkListWidget->item(r));
 			existingByNwid[nw->networkId()] = std::make_pair(r,nw);
 		}
 
-		for(std::map< std::string,std::pair<int,Network *> >::iterator i(existingByNwid.begin());i!=existingByNwid.end();++i) {
+		for(std::map< std::string,std::pair<int,NetworkWidget *> >::iterator i(existingByNwid.begin());i!=existingByNwid.end();++i) {
 			if (byNwid.count(i->first)) {
 				std::vector<std::string> &l = byNwid[i->first];
 				i->second.second->setNetworkName(l[3]);
@@ -165,7 +165,7 @@ void MainWindow::customEvent(QEvent *event)
 		for(std::map< std::string,std::vector<std::string> >::iterator i(byNwid.begin());i!=byNwid.end();++i) {
 			if (!existingByNwid.count(i->first)) {
 				std::vector<std::string> &l = i->second;
-				Network *nw = new Network((QWidget *)0,i->first);
+				NetworkWidget *nw = new NetworkWidget((QWidget *)0,i->first);
 				nw->setNetworkName(l[3]);
 				nw->setStatus(l[4],l[5]);
 				nw->setNetworkType(l[6]);

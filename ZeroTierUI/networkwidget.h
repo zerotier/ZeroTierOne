@@ -6,16 +6,16 @@
 #include <QWidget>
 
 namespace Ui {
-class Network;
+class NetworkWidget;
 }
 
-class Network : public QWidget
+class NetworkWidget : public QWidget
 {
 	Q_OBJECT
 
 public:
-	explicit Network(QWidget *parent = 0,const std::string &nwid = std::string());
-	virtual ~Network();
+	explicit NetworkWidget(QWidget *parent = 0,const std::string &nwid = std::string());
+	virtual ~NetworkWidget();
 
 	void setStatus(const std::string &status,const std::string &age);
 	void setNetworkName(const std::string &name);
@@ -30,7 +30,7 @@ private slots:
 	void on_networkIdPushButton_clicked();
 
 private:
-	Ui::Network *ui;
+	Ui::NetworkWidget *ui;
 	std::string networkIdStr;
 };
 
