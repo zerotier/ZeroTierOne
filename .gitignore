@@ -34,3 +34,4 @@ mac-tap/tuntap/tap.kext
 /installer-build
 /zt1-*-install
 /file2lz4c
+.qmake.stash

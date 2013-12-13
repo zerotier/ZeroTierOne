@@ -3,7 +3,7 @@ CXX=clang++
 
 INCLUDES=
 DEFS=
-LIBS=-lm
+LIBS=
 
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE

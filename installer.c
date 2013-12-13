@@ -48,34 +48,35 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <signal.h>
 #endif
 
 #include "ext/lz4/lz4.h"
 #include "ext/lz4/lz4hc.h"
 
-// Include Lz4 comrpessed blobs -----------------------------------------------
+/* Include LZ4 comrpessed blobs ********************************************/
 
-// zerotier-one binary (or zerotier-one.exe for Windows)
+/* zerotier-one binary (or zerotier-one.exe for Windows) */
 #include "installer-build/zerotier_one.h"
 
-// Unix uninstall script, installed in home for user to remove
+/* Unix uninstall script, installed in home for user to remove */
 #ifdef __UNIX_LIKE__
 #include "installer-build/uninstall_sh.h"
 #endif
 
-// Linux init.d script
+/* Linux init.d script */
 #ifdef __LINUX__
 #include "installer-build/linux__init_d__zerotier_one.h"
 #endif
 
-// Apple Tap device driver
+/* Apple Tap device driver and /Applications app */
 #ifdef __APPLE__
 #include "installer-build/tap_mac__Info_plist.h"
 #include "installer-build/tap_mac__tap.h"
 #endif
 
-// Windows Tap device drivers for x86 and x64 (installer will be x86)
+/* Windows Tap device drivers for x86 and x64 (installer will be x86) */
 #ifdef __WINDOWS__
 #include "installer-build/tap_windows__x64__ztTap100_sys.h"
 #include "installer-build/tap_windows__x64__ztTap100_inf.h"
@@ -85,52 +86,55 @@
 #include "installer-build/tap_windows__devcon64_exe.h"
 #endif
 
-// ----------------------------------------------------------------------------
+/***************************************************************************/
 
 static unsigned char *_unlz4(const void *lz4,int decompressedLen)
 {
-	unsigned char *buf = new unsigned char[decompressedLen];
+	unsigned char *buf = (unsigned char *)malloc(decompressedLen);
+	if (!buf)
+		return (unsigned char *)0;
 	if (LZ4_decompress_fast((const char *)lz4,(char *)buf,decompressedLen) <= 0) {
-		delete [] buf;
+		free(buf);
 		return (unsigned char *)0;
 	}
 	return buf;
 }
 
-static bool _putBlob(const void *lz4,int decompressedLen,const char *path,bool executable,bool protect,bool preserveOwnership)
+static int _putBlob(const void *lz4,int decompressedLen,const char *path,int executable,int protect,int preserveOwnership)
 {
 	unsigned char *data = _unlz4(lz4,decompressedLen);
 	if (!data)
-		return false;
+		return 0;
 
 #ifdef __WINDOWS__
 	DeleteFileA(path);
 #else
 	struct stat oldModes;
-	bool hasOldModes = (stat(path,&oldModes) == 0);
+	int hasOldModes = ((stat(path,&oldModes) == 0) ? 1 : 0);
 	unlink(path);
 #endif
 
 	FILE *f = fopen(path,"wb");
 	if (!f) {
-		delete [] data;
-		return false;
+		free(data);
+		return 0;
 	}
 
 	if (fwrite(data,decompressedLen,1,f) != 1) {
 		fclose(f);
-		delete [] data;
+		free(data);
 #ifdef __WINDOWS__
 		DeleteFileA(path);
 #else
 		unlink(path);
 #endif
-		return false;
+		return 0;
 	}
 
 	fclose(f);
 
 #ifdef __WINDOWS__
+	/* TODO: Windows exec/prot/etc. */
 #else
 	if (executable) {
 		if (protect)
@@ -146,13 +150,11 @@ static bool _putBlob(const void *lz4,int decompressedLen,const char *path,bool e
 	else chown(path,0,0);
 #endif
 
-	delete [] data;
-	return true;
+	free(data);
+	return 1;
 }
 
 #define putBlob(name,path,exec,prot,pres) _putBlob((name),(name##_UNCOMPRESSED_LEN),(path),(exec),(prot),(pres))
-
-// ----------------------------------------------------------------------------
 
 #ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])
@@ -160,7 +162,7 @@ int _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
-#ifdef __UNIX_LIKE__ // -------------------------------------------------------
+#ifdef __UNIX_LIKE__ /******************************************************/
 
 	char buf[4096];
 
@@ -171,7 +173,7 @@ int main(int argc,char **argv)
 
 	printf("# ZeroTier One installer/updater starting...\n");
 
-	// Create home folder
+	/* Create home folder */
 	const char *zthome;
 #ifdef __APPLE__
 	mkdir("/Library/Application Support/ZeroTier",0755);
@@ -188,29 +190,29 @@ int main(int argc,char **argv)
 	chown(zthome,0,0);
 	printf("mkdir %s\n",zthome);
 
-	// Write main ZT1 binary
+	/* Write main ZT1 binary */
 	sprintf(buf,"%s/zerotier-one",zthome);
-	if (!putBlob(zerotier_one,buf,true,false,false)) {
+	if (!putBlob(zerotier_one,buf,1,0,0)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
 	printf("write %s\n",buf);
 
-	// Create command line interface symlink
+	/* Create command line interface symlink */
 	unlink("/usr/bin/zerotier-cli");
 	symlink(buf,"/usr/bin/zerotier-cli");
 	printf("link %s /usr/bin/zerotier-cli\n",buf);
 
-	// Write uninstall script into home folder
+	/* Write uninstall script into home folder */
 	sprintf(buf,"%s/uninstall.sh",zthome);
-	if (!putBlob(uninstall_sh,buf,true,false,false)) {
+	if (!putBlob(uninstall_sh,buf,1,0,0)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
 	printf("write %s\n",buf);
 
 #ifdef __APPLE__
-	// Write tap.kext into home folder
+	/* Write tap.kext into home folder */
 	sprintf(buf,"%s/tap.kext",zthome);
 	mkdir(buf,0755);
 	chmod(buf,0755);
@@ -227,30 +229,33 @@ int main(int argc,char **argv)
 	chown(buf,0,0);
 	printf("mkdir %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/Info.plist",zthome);
-	if (!putBlob(tap_mac__Info_plist,buf,false,false,false)) {
+	if (!putBlob(tap_mac__Info_plist,buf,0,0,0)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
 	printf("write %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/MacOS/tap",zthome);
-	if (!putBlob(tap_mac__tap,buf,true,false,false)) {
+	if (!putBlob(tap_mac__tap,buf,1,0,0)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
 	printf("write %s\n",buf);
 
-	// Write or update GUI application into /Applications
+	/* Write or update GUI application into /Applications */
+
+	/* Write Apple startup item stuff, set to start on boot */
 #endif
 
 #ifdef __LINUX__
-	// Write Linux init script
+	/* Write Linux init script */
 	sprintf(buf,"/etc/init.d/zerotier-one");
-	if (!putBlob(linux__init_d__zerotier_one,buf,true,false,false)) {
+	if (!putBlob(linux__init_d__zerotier_one,buf,1,0,0)) {
 		printf("! unable to write %s\n",buf);
 		return 1;
 	}
 	printf("write %s\n",buf);
 
+	/* Link init script to all the proper places for startup/shutdown */
 	symlink("/etc/init.d/zerotier-one","/etc/rc0.d/K89zerotier-one");
 	printf("link /etc/init.d/zerotier-one /etc/rc0.d/K89zerotier-one\n");
 	symlink("/etc/init.d/zerotier-one","/etc/rc2.d/S11zerotier-one");
@@ -267,11 +272,19 @@ int main(int argc,char **argv)
 
 	printf("# Done!\n");
 
-#endif // __UNIX_LIKE__ -------------------------------------------------------
+	/* -s causes this to (re?)start ZeroTier One after install/update */
+	if ((argc > 1)&&(!strcmp(argv[1],"-s"))) {
+		sprintf(buf,"%s/zerotier-one",zthome);
+		printf("> -s specified, proceeding to exec(%s)\n",zthome);
+		execl(buf,buf,(char *)0);
+		return 3;
+	}
 
-#ifdef __WINDOWS__ // ---------------------------------------------------------
+#endif /* __UNIX_LIKE__ ****************************************************/
 
-#endif // __WINDOWS__ ---------------------------------------------------------
+#ifdef __WINDOWS__ /********************************************************/
+
+#endif /* __WINDOWS__ ******************************************************/
 
 	return 0;
 }
