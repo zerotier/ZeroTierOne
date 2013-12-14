@@ -67,7 +67,9 @@ case "$system" in
 	Darwin)
 		echo "Assembling mac installer for x86/x64 (combined) and ZT1 version $vmajor.$vminor.$revision"
 
-		./file2lz4c ext/installfiles/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
+		./file2lz4c ext/installfiles/mac/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
+		./file2lz4c ext/installfiles/mac/launch.sh mac__launch_sh >installer-build/mac__launch_sh.h
+		./file2lz4c ext/installfiles/mac/com.zerotier.one.plist mac__com_zerotier_one_plist >installer-build/mac__com_zerotier_one_plist.h
 		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/Info.plist tap_mac__Info_plist >installer-build/tap_mac__Info_plist.h
 		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/MacOS/tap tap_mac__tap >installer-build/tap_mac__tap.h
 

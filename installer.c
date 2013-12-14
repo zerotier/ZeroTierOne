@@ -72,6 +72,7 @@
 
 /* Apple Tap device driver and /Applications app */
 #ifdef __APPLE__
+#include "installer-build/mac__launch_sh.h"
 #include "installer-build/tap_mac__Info_plist.h"
 #include "installer-build/tap_mac__tap.h"
 #endif
@@ -212,6 +213,22 @@ int main(int argc,char **argv)
 	printf("write %s\n",buf);
 
 #ifdef __APPLE__
+	/* Write launcher script for Mac */
+	sprintf(buf,"%s/launch.sh",zthome);
+	if (!putBlob(mac__launch_sh,buf,1,0,0)) {
+		printf("! unable to write %s\n",buf);
+		return 1;
+	}
+	printf("write %s\n",buf);
+
+	/* Add mac to launchd */
+	sprintf(buf,"/Library/LaunchDaemons/com.zerotier.one.plist");
+	if (!putBlob(mac__com_zerotier_one_plist,buf,0,0,0)) {
+		printf("! unable to write %s\n",buf);
+		return 1;
+	}
+	printf("write %s\n",buf);
+
 	/* Write tap.kext into home folder */
 	sprintf(buf,"%s/tap.kext",zthome);
 	mkdir(buf,0755);
@@ -243,7 +260,19 @@ int main(int argc,char **argv)
 
 	/* Write or update GUI application into /Applications */
 
-	/* Write Apple startup item stuff, set to start on boot */
+	/* Load script into launchctl, start ZeroTier One */
+	printf("exec launchctl load /Library/LaunchDaemons/com.zerotier.one.plist"); fflush(stdout);
+	long launchctlpid = (long)vfork();
+	if (launchctlpid == 0) {
+		execl("/bin/launchctl","/bin/launchctl","load","/Library/LaunchDaemons/com.zerotier.one.plist",(char *)0);
+		execlp("launchctl","launchctl","load","/Library/LaunchDaemons/com.zerotier.one.plist",(char *)0); /* reached if execl() with full path fails */
+		exit(0); /* never reached on successful execl() or execlp() */
+	}
+	if (launchctlpid > 0) {
+		int exitcode = 0;
+		waitpid(launchctlpid,&exitcode,0);
+	}
+	printf("\n");
 #endif
 
 #ifdef __LINUX__
@@ -272,12 +301,12 @@ int main(int argc,char **argv)
 
 	printf("# Done!\n");
 
-	/* -s causes this to (re?)start ZeroTier One after install/update */
+	/* -s causes this to exec() itself to ZeroTier One after install/update */
 	if ((argc > 1)&&(!strcmp(argv[1],"-s"))) {
 		sprintf(buf,"%s/zerotier-one",zthome);
-		printf("> -s specified, proceeding to exec(%s)\n",zthome);
+		printf("# -s specified, proceeding to exec(%s)\n",zthome);
 		execl(buf,buf,(char *)0);
-		return 3;
+		return 3; /* never reached on successful execl() */
 	}
 
 #endif /* __UNIX_LIKE__ ****************************************************/
