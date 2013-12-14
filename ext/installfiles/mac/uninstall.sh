@@ -2,6 +2,9 @@
 
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
+ztpath="/Library/Application Support/ZeroTier/One"
+ztapp="/Applications/ZeroTier One.app"
+
 if [ "$UID" -ne 0 ]; then
 	echo "Must be run as root; try: sudo $0"
 	exit 1
@@ -13,19 +16,22 @@ echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
 echo "Waiting 5 seconds..."
 sleep 5
 
-ztpath="/Library/Application Support/ZeroTier/One"
+echo "Unloading and removing LaunchDaemons item..."
+launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
+rm -f /Library/LaunchDaemons/com.zerotier.one.plist
 
 echo "Killing any running zerotier-one service..."
 killall -TERM zerotier-one >>/dev/null 2>&1
 sleep 3
 killall -KILL zerotier-one >>/dev/null 2>&1
+sleep 1
 
 echo "Unloading kernel extension..."
 kextunload "$ztpath/tap.kext"
 
-echo "Erasing binary and support files..."
+echo "Erasing UI app, binary, and support files..."
 cd $ztpath
-rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext
+rm -rfv "$ztapp" zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh
 
 echo "Done."
 echo
