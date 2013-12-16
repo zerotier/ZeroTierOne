@@ -1,5 +1,6 @@
-CC=gcc
-CXX=g++
+# Pick clang or gcc, with preference for clang
+CC=$(shell which clang gcc cc 2>/dev/null | head -n 1)
+CXX=$(shell which clang++ g++ c++ 2>/dev/null | head -n 1)
 
 INCLUDES=
 DEFS=
@@ -10,7 +11,7 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 endif
 
 # Uncomment for a release optimized build
-CFLAGS=-Wall -O3 -fno-unroll-loops -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+CFLAGS=-Wall -O3 -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 STRIP=strip --strip-all
 
 # Uncomment for a debug build
