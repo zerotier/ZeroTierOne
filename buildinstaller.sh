@@ -58,7 +58,11 @@ case "$system" in
 
 		targ="zt1-${vmajor}_${vminor}_${revision}-linux-${machine}-install"
 
-		gcc -Os -o $targ installer.c ext/lz4/lz4.o ext/lz4/lz4hc.o
+		if [ -e /usr/bin/clang ]; then
+			clang -Os -o $targ installer.c ext/lz4/lz4.o ext/lz4/lz4hc.o
+		else
+			gcc -Os -o $targ installer.c ext/lz4/lz4.o ext/lz4/lz4hc.o
+		fi
 		strip --strip-all $targ
 		ls -l $targ
 

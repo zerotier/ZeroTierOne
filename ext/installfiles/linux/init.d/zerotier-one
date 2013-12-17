@@ -47,10 +47,8 @@ fi
 
 running=0
 if [ "$pid" -gt 0 ]; then
-	if [ "`readlink -nf /proc/$pid/exe`" = "$zthome/zerotier-one" ]; then
+	if [ -n "`ls -l /proc/$pid/exe | grep -F zerotier-one`" ]; then
 		running=1
-	else
-		rm -f "$zthome/zerotier-one.pid"
 	fi
 fi
 

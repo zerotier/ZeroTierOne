@@ -45,6 +45,7 @@
 #else
 #include <unistd.h>
 #include <pwd.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -284,9 +285,28 @@ int main(int argc,char **argv)
 	}
 	printf("write %s\n",buf);
 
+	/* Erase any previous startup/shutdown links */
+	for(int rl=0;rl<=6;++rl) {
+		sprintf(buf,"/etc/rc%d.d",rl);
+		DIR *rcd = opendir(buf);
+		if (rcd) {
+			struct dirent *d;
+			while ((d = readdir(rcd))) {
+				if (strstr(d->d_name,"zerotier-one")) {
+					sprintf(buf,"/etc/rc%d.d/%s",rl,d->d_name);
+					unlink(buf);
+					printf("rm %s\n",buf);
+				}
+			}
+			closedir(rcd);
+		}
+	}
+
 	/* Link init script to all the proper places for startup/shutdown */
 	symlink("/etc/init.d/zerotier-one","/etc/rc0.d/K89zerotier-one");
 	printf("link /etc/init.d/zerotier-one /etc/rc0.d/K89zerotier-one\n");
+	symlink("/etc/init.d/zerotier-one","/etc/rc1.d/K89zerotier-one");
+	printf("link /etc/init.d/zerotier-one /etc/rc1.d/K89zerotier-one\n");
 	symlink("/etc/init.d/zerotier-one","/etc/rc2.d/S11zerotier-one");
 	printf("link /etc/init.d/zerotier-one /etc/rc2.d/S11zerotier-one\n");
 	symlink("/etc/init.d/zerotier-one","/etc/rc3.d/S11zerotier-one");
@@ -295,8 +315,8 @@ int main(int argc,char **argv)
 	printf("link /etc/init.d/zerotier-one /etc/rc4.d/S11zerotier-one\n");
 	symlink("/etc/init.d/zerotier-one","/etc/rc5.d/S11zerotier-one");
 	printf("link /etc/init.d/zerotier-one /etc/rc5.d/S11zerotier-one\n");
-	symlink("/etc/init.d/zerotier-one","/etc/rc6.d/S11zerotier-one");
-	printf("link /etc/init.d/zerotier-one /etc/rc6.d/S11zerotier-one\n");
+	symlink("/etc/init.d/zerotier-one","/etc/rc6.d/K89zerotier-one");
+	printf("link /etc/init.d/zerotier-one /etc/rc6.d/K89zerotier-one\n");
 #endif
 
 	printf("# Done!\n");
