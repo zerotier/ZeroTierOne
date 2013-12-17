@@ -98,7 +98,11 @@
 
 static unsigned char *_unlz4(const void *lz4,int decompressedLen)
 {
-	unsigned char *buf = (unsigned char *)malloc(decompressedLen);
+	unsigned char *buf;
+
+	if (!decompressedLen)
+		return (unsigned char *)0;
+	buf = (unsigned char *)malloc(decompressedLen);
 	if (!buf)
 		return (unsigned char *)0;
 	if (LZ4_decompress_fast((const char *)lz4,(char *)buf,decompressedLen) <= 0) {
@@ -111,7 +115,7 @@ static unsigned char *_unlz4(const void *lz4,int decompressedLen)
 static int _putBlob(const void *lz4,int decompressedLen,const char *path,int executable,int protect,int preserveOwnership)
 {
 	unsigned char *data = _unlz4(lz4,decompressedLen);
-	if (!data)
+	if ((!data)&&(decompressedLen))
 		return 0;
 
 #ifdef __WINDOWS__
@@ -128,7 +132,7 @@ static int _putBlob(const void *lz4,int decompressedLen,const char *path,int exe
 		return 0;
 	}
 
-	if (fwrite(data,decompressedLen,1,f) != 1) {
+	if ((decompressedLen)&&(fwrite(data,decompressedLen,1,f) != 1)) {
 		fclose(f);
 		free(data);
 #ifdef __WINDOWS__
@@ -170,6 +174,7 @@ int _tmain(int argc, _TCHAR* argv[])
 int main(int argc,char **argv)
 #endif
 {
+	/* Installer/updater for Unix-like systems (including Mac) */
 #ifdef __UNIX_LIKE__ /******************************************************/
 
 	char buf[4096];
@@ -189,7 +194,7 @@ int main(int argc,char **argv)
 	chown("/Library/Application Support/ZeroTier",0,0);
 	printf("mkdir /Library/Application Support/ZeroTier\n");
 	mkdir(zthome = "/Library/Application Support/ZeroTier/One",0755);
-#else
+#else /* not Apple */
 	mkdir("/var/lib",0755);
 	printf("mkdir /var/lib\n");
 	mkdir(zthome = "/var/lib/zerotier-one",0755);
@@ -216,7 +221,7 @@ int main(int argc,char **argv)
 	sprintf(buf,"%s/launch.sh",zthome);
 	if (!putBlob(mac__launch_sh,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
-	/* Add mac to launchd */
+	/* Add ZT1 task to Apple's launchd */
 	sprintf(buf,"/Library/LaunchDaemons/com.zerotier.one.plist");
 	if (!putBlob(mac__com_zerotier_one_plist,buf,0,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
@@ -252,8 +257,8 @@ int main(int argc,char **argv)
 	sprintf(buf,"/Applications/ZeroTier One.app/Contents/Resources/zt1icon.icns");
 	if (!putBlob(mac_ui__contents_resources_zt1icon_icns,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
-	/* Load script into launchctl, start ZeroTier One */
-	printf("exec launchctl load /Library/LaunchDaemons/com.zerotier.one.plist"); fflush(stdout);
+	/* Load script into running launchd, start ZeroTier One */
+	printf("exec launchctl load /Library/LaunchDaemons/com.zerotier.one.plist: "); fflush(stdout);
 	long launchctlpid = (long)vfork();
 	if (launchctlpid == 0) {
 		execl("/bin/launchctl","/bin/launchctl","load","/Library/LaunchDaemons/com.zerotier.one.plist",(char *)0);
@@ -264,8 +269,8 @@ int main(int argc,char **argv)
 		int exitcode = 0;
 		waitpid(launchctlpid,&exitcode,0);
 	}
-	printf("\n");
-#endif
+	printf("installed.\n");
+#endif /* __APPLE__ */
 
 #ifdef __LINUX__
 	/* Write Linux init script */
@@ -304,7 +309,7 @@ int main(int argc,char **argv)
 	printf("link /etc/init.d/zerotier-one /etc/rc5.d/S11zerotier-one\n");
 	symlink("/etc/init.d/zerotier-one","/etc/rc6.d/K89zerotier-one");
 	printf("link /etc/init.d/zerotier-one /etc/rc6.d/K89zerotier-one\n");
-#endif
+#endif /* __LINUX__ */
 
 	printf("# Done!\n");
 
@@ -318,6 +323,7 @@ int main(int argc,char **argv)
 
 #endif /* __UNIX_LIKE__ ****************************************************/
 
+	/* Installer/updater for Windows systems */
 #ifdef __WINDOWS__ /********************************************************/
 
 #endif /* __WINDOWS__ ******************************************************/
