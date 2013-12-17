@@ -71,11 +71,17 @@
 #include "installer-build/linux__init_d__zerotier_one.h"
 #endif
 
-/* Apple Tap device driver and /Applications app */
+/* Apple Tap device driver, launchd plist, and /Applications app */
 #ifdef __APPLE__
-#include "installer-build/mac__launch_sh.h"
 #include "installer-build/tap_mac__Info_plist.h"
 #include "installer-build/tap_mac__tap.h"
+#include "installer-build/mac__launch_sh.h"
+#include "installer-build/mac__com_zerotier_one_plist.h"
+#include "installer-build/mac_ui__contents_info_plist.h"
+#include "installer-build/mac_ui__contents_macos_zerotier_one.h"
+#include "installer-build/mac_ui__contents_pkginfo.h"
+#include "installer-build/mac_ui__contents_resources_empty_lproj.h"
+#include "installer-build/mac_ui__contents_resources_zt1icon_icns.h"
 #endif
 
 /* Windows Tap device drivers for x86 and x64 (installer will be x86) */
@@ -194,11 +200,7 @@ int main(int argc,char **argv)
 
 	/* Write main ZT1 binary */
 	sprintf(buf,"%s/zerotier-one",zthome);
-	if (!putBlob(zerotier_one,buf,1,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(zerotier_one,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 	/* Create command line interface symlink */
 	unlink("/usr/bin/zerotier-cli");
@@ -207,59 +209,48 @@ int main(int argc,char **argv)
 
 	/* Write uninstall script into home folder */
 	sprintf(buf,"%s/uninstall.sh",zthome);
-	if (!putBlob(uninstall_sh,buf,1,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(uninstall_sh,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 #ifdef __APPLE__
 	/* Write launcher script for Mac */
 	sprintf(buf,"%s/launch.sh",zthome);
-	if (!putBlob(mac__launch_sh,buf,1,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(mac__launch_sh,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 	/* Add mac to launchd */
 	sprintf(buf,"/Library/LaunchDaemons/com.zerotier.one.plist");
-	if (!putBlob(mac__com_zerotier_one_plist,buf,0,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(mac__com_zerotier_one_plist,buf,0,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 	/* Write tap.kext into home folder */
 	sprintf(buf,"%s/tap.kext",zthome);
-	mkdir(buf,0755);
-	chmod(buf,0755);
-	chown(buf,0,0);
-	printf("mkdir %s\n",buf);
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents",zthome);
-	mkdir(buf,0755);
-	chmod(buf,0755);
-	chown(buf,0,0);
-	printf("mkdir %s\n",buf);
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/MacOS",zthome);
-	mkdir(buf,0755);
-	chmod(buf,0755);
-	chown(buf,0,0);
-	printf("mkdir %s\n",buf);
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/Info.plist",zthome);
-	if (!putBlob(tap_mac__Info_plist,buf,0,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(tap_mac__Info_plist,buf,0,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 	sprintf(buf,"%s/tap.kext/Contents/MacOS/tap",zthome);
-	if (!putBlob(tap_mac__tap,buf,1,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(tap_mac__tap,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 	/* Write or update GUI application into /Applications */
+	sprintf(buf,"/Applications/ZeroTier One.app");
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents");
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/MacOS");
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/Resources");
+	mkdir(buf,0755); chmod(buf,0755); chown(buf,0,0); printf("mkdir %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/Info.plist");
+	if (!putBlob(mac_ui__contents_info_plist,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/MacOS/ZeroTier One");
+	if (!putBlob(mac_ui__contents_macos_zerotier_one,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/PkgInfo");
+	if (!putBlob(mac_ui__contents_pkginfo,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/Resources/empty.lproj");
+	if (!putBlob(mac_ui__contents_resources_empty_lproj,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
+	sprintf(buf,"/Applications/ZeroTier One.app/Contents/Resources/zt1icon.icns");
+	if (!putBlob(mac_ui__contents_resources_zt1icon_icns,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 	/* Load script into launchctl, start ZeroTier One */
 	printf("exec launchctl load /Library/LaunchDaemons/com.zerotier.one.plist"); fflush(stdout);
@@ -279,11 +270,7 @@ int main(int argc,char **argv)
 #ifdef __LINUX__
 	/* Write Linux init script */
 	sprintf(buf,"/etc/init.d/zerotier-one");
-	if (!putBlob(linux__init_d__zerotier_one,buf,1,0,0)) {
-		printf("! unable to write %s\n",buf);
-		return 1;
-	}
-	printf("write %s\n",buf);
+	if (!putBlob(linux__init_d__zerotier_one,buf,1,0,0)) { printf("! unable to write %s\n",buf); return 1; } printf("write %s\n",buf);
 
 	/* Erase any previous startup/shutdown links */
 	for(int rl=0;rl<=6;++rl) {

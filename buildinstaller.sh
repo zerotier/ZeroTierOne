@@ -76,6 +76,11 @@ case "$system" in
 		./file2lz4c ext/installfiles/mac/com.zerotier.one.plist mac__com_zerotier_one_plist >installer-build/mac__com_zerotier_one_plist.h
 		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/Info.plist tap_mac__Info_plist >installer-build/tap_mac__Info_plist.h
 		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/MacOS/tap tap_mac__tap >installer-build/tap_mac__tap.h
+		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/Info.plist" mac_ui__contents_info_plist >installer-build/mac_ui__contents_info_plist.h
+		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/PkgInfo" mac_ui__contents_pkginfo >installer-build/mac_ui__contents_pkginfo.h
+		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One" mac_ui__contents_macos_zerotier_one >installer-build/mac_ui__contents_macos_zerotier_one.h
+		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/empty.lproj" mac_ui__contents_resources_empty_lproj >installer-build/mac_ui__contents_resources_empty_lproj.h
+		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/zt1icon.icns" mac_ui__contents_resources_zt1icon_icns >installer-build/mac_ui__contents_resources_zt1icon_icns.h
 
 		targ="zt1-${vmajor}_${vminor}_${revision}-mac-combined-install"
 

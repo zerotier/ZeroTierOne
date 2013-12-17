@@ -33,6 +33,11 @@ selftest: $(OBJS)
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
+mac-ui: FORCE
+	mkdir -p build-ZeroTierUI-release
+	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
+	strip "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One"
+
 install-mac-tap: FORCE
 	mkdir -p /Library/Application\ Support/ZeroTier/One
 	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
