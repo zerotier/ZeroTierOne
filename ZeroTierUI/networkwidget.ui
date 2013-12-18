@@ -19,9 +19,6 @@
   <property name="windowTitle">
    <string>Network</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <property name="spacing">
     <number>6</number>
@@ -340,6 +337,9 @@
         </property>
         <property name="toolTip">
          <string>Double-click to Copy IP Address to Clipboard.</string>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
         </property>
         <property name="editTriggers">
          <set>QAbstractItemView::NoEditTriggers</set>

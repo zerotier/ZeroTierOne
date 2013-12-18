@@ -197,16 +197,6 @@ Version: 1.0</string>
               </property>
              </spacer>
             </item>
-            <item>
-             <widget class="QPushButton" name="uninstallButton">
-              <property name="text">
-               <string>Uninstall</string>
-              </property>
-              <property name="autoDefault">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
          </item>

@@ -15,9 +15,6 @@ public:
 	explicit AboutWindow(QWidget *parent = 0);
 	virtual ~AboutWindow();
 
-private slots:
-	void on_uninstallButton_clicked();
-
 private:
 	Ui::AboutWindow *ui;
 };
