@@ -29,6 +29,8 @@ private slots:
 	void on_leaveNetworkButton_clicked();
 	void on_networkIdPushButton_clicked();
 
+	void on_ipListWidget_doubleClicked(const QModelIndex &index);
+
 private:
 	Ui::NetworkWidget *ui;
 	std::string networkIdStr;

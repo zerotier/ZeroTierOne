@@ -338,6 +338,9 @@
         <property name="focusPolicy">
          <enum>Qt::NoFocus</enum>
         </property>
+        <property name="toolTip">
+         <string>Double-click to Copy IP Address to Clipboard.</string>
+        </property>
         <property name="editTriggers">
          <set>QAbstractItemView::NoEditTriggers</set>
         </property>
