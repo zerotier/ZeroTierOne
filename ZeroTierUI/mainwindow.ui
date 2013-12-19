@@ -39,6 +39,11 @@
       <property name="focusPolicy">
        <enum>Qt::NoFocus</enum>
       </property>
+      <property name="styleSheet">
+       <string notr="true">QListWidget#networkListWidget::Item {
+	background-color: rgba(0,0,0,10);
+}s</string>
+      </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
       </property>
@@ -52,13 +57,16 @@
        <set>QAbstractItemView::NoEditTriggers</set>
       </property>
       <property name="selectionMode">
-       <enum>QAbstractItemView::SingleSelection</enum>
-      </property>
-      <property name="selectionBehavior">
-       <enum>QAbstractItemView::SelectItems</enum>
+       <enum>QAbstractItemView::NoSelection</enum>
       </property>
       <property name="verticalScrollMode">
        <enum>QAbstractItemView::ScrollPerPixel</enum>
+      </property>
+      <property name="spacing">
+       <number>5</number>
+      </property>
+      <property name="uniformItemSizes">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -70,12 +78,9 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+      <layout class="QHBoxLayout" name="horizontalLayout">
        <property name="spacing">
-        <number>6</number>
-       </property>
-       <property name="sizeConstraint">
-        <enum>QLayout::SetDefaultConstraint</enum>
+        <number>5</number>
        </property>
        <property name="leftMargin">
         <number>0</number>
@@ -90,7 +95,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QToolButton" name="statusAndAddressButton">
+        <widget class="QPushButton" name="statusAndAddressButton">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -104,16 +109,28 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Click to Copy Address to Clipboard</string>
+          <string>Click to copy your address to clipboard.</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">border: 0;</string>
+          <string notr="true">QPushButton {
+	border: 0;
+	background-color: transparent;
+}
+
+QPushButton:focus {
+	background-color: rgba(0,0,0,25);
+}
+
+QPushButton:hover {
+	background-color: rgba(0,0,0,25);
+}
+</string>
          </property>
          <property name="text">
           <string>0000000000    (OFFLINE, v0.0.0, 0 peers)     </string>
          </property>
-         <property name="toolButtonStyle">
-          <enum>Qt::ToolButtonTextOnly</enum>
+         <property name="flat">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -137,39 +154,18 @@
          <property name="maxLength">
           <number>16</number>
          </property>
-         <property name="frame">
-          <bool>false</bool>
-         </property>
          <property name="placeholderText">
           <string>(Numeric ID of Network to Join)</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QToolButton" name="joinNetworkButton">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <family>Courier</family>
-           <pointsize>12</pointsize>
-           <weight>50</weight>
-           <bold>false</bold>
-           <underline>false</underline>
-          </font>
-         </property>
+        <widget class="QPushButton" name="joinNetworkButton">
          <property name="toolTip">
           <string>Join Network</string>
          </property>
          <property name="text">
           <string>Join</string>
-         </property>
-         <property name="toolButtonStyle">
-          <enum>Qt::ToolButtonTextOnly</enum>
          </property>
         </widget>
        </item>

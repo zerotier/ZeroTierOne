@@ -105,9 +105,8 @@ void NetworkWidget::on_networkIdPushButton_clicked()
 	QApplication::clipboard()->setText(ui->networkIdPushButton->text());
 }
 
-void NetworkWidget::on_ipListWidget_doubleClicked(const QModelIndex &index)
+void NetworkWidget::on_ipListWidget_itemActivated(QListWidgetItem *item)
 {
-	QListWidgetItem *ci = ui->ipListWidget->currentItem();
-	if (ci)
-		QApplication::clipboard()->setText(ci->text());
+		if (item)
+			QApplication::clipboard()->setText(item->text());
 }

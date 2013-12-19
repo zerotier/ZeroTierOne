@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>Network</string>
   </property>
+  <property name="class" stdset="0">
+   <string>NetworkWidget</string>
+  </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <property name="spacing">
     <number>6</number>
@@ -83,12 +86,6 @@
       </item>
       <item row="2" column="1">
        <widget class="QPushButton" name="networkIdPushButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
         <property name="font">
          <font>
           <weight>75</weight>
@@ -96,10 +93,25 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Click to Copy Network ID to Clipboard</string>
+         <string>Click to copy network ID to clipboard.</string>
         </property>
         <property name="styleSheet">
-         <string notr="true">border: 0; padding: 0; margin: 0; text-align: left;</string>
+         <string notr="true">QPushButton {
+	border: 0;
+	padding: 0;
+	margin: 0;
+	text-align: left;
+	background-color: transparent;
+}
+
+QPushButton:focus {
+	background-color: rgba(0,0,0,25);
+}
+
+QPushButton:hover {
+	background-color: rgba(0,0,0,25);
+}
+</string>
         </property>
         <property name="text">
          <string>0000000000000000</string>
@@ -253,7 +265,7 @@
            </property>
            <property name="font">
             <font>
-             <pointsize>10</pointsize>
+             <pointsize>8</pointsize>
             </font>
            </property>
            <property name="text">
@@ -263,6 +275,19 @@
             <enum>Qt::PlainText</enum>
            </property>
           </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>1</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>
@@ -332,11 +357,18 @@
           <pointsize>12</pointsize>
          </font>
         </property>
-        <property name="focusPolicy">
-         <enum>Qt::NoFocus</enum>
-        </property>
         <property name="toolTip">
-         <string>Double-click to Copy IP Address to Clipboard.</string>
+         <string>Double-click IP to copy to clipboard.</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QListWidget {
+	background-color: rgba(0,0,0,10);
+}
+
+QListWidget:hover {
+	background-color: rgba(0,0,0,25);
+}
+</string>
         </property>
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
@@ -402,15 +434,12 @@
           </spacer>
          </item>
          <item>
-          <widget class="QToolButton" name="leaveNetworkButton">
+          <widget class="QPushButton" name="leaveNetworkButton">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
              <underline>false</underline>
             </font>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">padding: 0.1em; margin:0;</string>
            </property>
            <property name="text">
             <string>Leave Network</string>
@@ -425,6 +454,11 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>networkIdPushButton</tabstop>
+  <tabstop>ipListWidget</tabstop>
+  <tabstop>leaveNetworkButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

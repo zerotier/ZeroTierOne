@@ -4,6 +4,7 @@
 #include <string>
 
 #include <QWidget>
+#include <QListWidgetItem>
 
 namespace Ui {
 class NetworkWidget;
@@ -28,8 +29,7 @@ public:
 private slots:
 	void on_leaveNetworkButton_clicked();
 	void on_networkIdPushButton_clicked();
-
-	void on_ipListWidget_doubleClicked(const QModelIndex &index);
+	void on_ipListWidget_itemActivated(QListWidgetItem *item);
 
 private:
 	Ui::NetworkWidget *ui;
