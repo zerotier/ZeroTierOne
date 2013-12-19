@@ -46,7 +46,7 @@ private slots:
 	void on_joinNetworkButton_clicked();
 	void on_actionAbout_triggered();
 	void on_networkIdLineEdit_textChanged(const QString &text);
-	void on_statusAndAddressButton_clicked();
+	void on_addressButton_clicked();
 
 private:
 	Ui::MainWindow *ui;

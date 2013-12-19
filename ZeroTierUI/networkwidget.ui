@@ -22,25 +22,28 @@
   <property name="class" stdset="0">
    <string>NetworkWidget</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+  <layout class="QHBoxLayout">
    <property name="spacing">
-    <number>6</number>
+    <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>6</number>
+    <number>0</number>
    </property>
    <property name="topMargin">
-    <number>6</number>
+    <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>6</number>
+    <number>0</number>
    </property>
    <property name="bottomMargin">
-    <number>6</number>
+    <number>0</number>
    </property>
    <item>
     <widget class="QWidget" name="leftWidget" native="true">
      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="spacing">
+       <number>2</number>
+      </property>
       <property name="leftMargin">
        <number>0</number>
       </property>
@@ -63,13 +66,13 @@
         </property>
         <property name="font">
          <font>
-          <pointsize>15</pointsize>
+          <pointsize>16</pointsize>
+          <weight>75</weight>
+          <bold>true</bold>
          </font>
         </property>
-        <property name="styleSheet">
-         <string notr="true">background-color: rgba(0,0,0,25);
-padding: 0.25em;
-margin: 0;</string>
+        <property name="statusTip">
+         <string>This network's short name.</string>
         </property>
         <property name="text">
          <string>networkname</string>
@@ -133,14 +136,21 @@ margin: 0;</string>
          </item>
          <item row="2" column="1">
           <widget class="QPushButton" name="networkIdPushButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="font">
             <font>
+             <family>Courier</family>
              <weight>75</weight>
              <bold>true</bold>
             </font>
            </property>
-           <property name="toolTip">
-            <string>Click to copy network ID to clipboard.</string>
+           <property name="statusTip">
+            <string>Hexadecimal network ID; click to copy to clipboard.</string>
            </property>
            <property name="styleSheet">
             <string notr="true">QPushButton {
@@ -152,11 +162,15 @@ margin: 0;</string>
 }
 
 QPushButton:focus {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,15);
 }
 
 QPushButton:hover {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,15);
+}
+
+QPushButton:pressed {
+	background-color: rgba(0,0,0,75);
 }
 </string>
            </property>
@@ -185,6 +199,9 @@ QPushButton:hover {
              <weight>75</weight>
              <bold>true</bold>
             </font>
+           </property>
+           <property name="statusTip">
+            <string>What kind of network? Public or private?</string>
            </property>
            <property name="text">
             <string>?</string>
@@ -242,6 +259,9 @@ QPushButton:hover {
                 <bold>true</bold>
                </font>
               </property>
+              <property name="statusTip">
+               <string>Status of this network.</string>
+              </property>
               <property name="text">
                <string>?</string>
               </property>
@@ -262,6 +282,9 @@ QPushButton:hover {
                <font>
                 <pointsize>8</pointsize>
                </font>
+              </property>
+              <property name="statusTip">
+               <string>How recently did this network refresh its settings?</string>
               </property>
               <property name="text">
                <string>(configuration is 0 seconds old)</string>
@@ -305,6 +328,9 @@ QPushButton:hover {
              <bold>true</bold>
             </font>
            </property>
+           <property name="statusTip">
+            <string>The name of the network device on your system.</string>
+           </property>
            <property name="text">
             <string>?</string>
            </property>
@@ -329,10 +355,7 @@ QPushButton:hover {
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="spacing">
-       <number>3</number>
-      </property>
-      <property name="sizeConstraint">
-       <enum>QLayout::SetNoConstraint</enum>
+       <number>0</number>
       </property>
       <property name="leftMargin">
        <number>0</number>
@@ -348,10 +371,20 @@ QPushButton:hover {
       </property>
       <item>
        <widget class="QLabel" name="label_6">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="font">
          <font>
+          <pointsize>12</pointsize>
           <underline>false</underline>
          </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">padding: 0.1em 0 0.1em 0;</string>
         </property>
         <property name="text">
          <string>IP Address Assignments</string>
@@ -363,12 +396,6 @@ QPushButton:hover {
       </item>
       <item>
        <widget class="QListWidget" name="ipListWidget">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -381,16 +408,16 @@ QPushButton:hover {
           <pointsize>12</pointsize>
          </font>
         </property>
-        <property name="toolTip">
-         <string>Double-click IP to copy to clipboard.</string>
+        <property name="statusTip">
+         <string>Double-click an IP to copy it to the clipboard.</string>
         </property>
         <property name="styleSheet">
          <string notr="true">QListWidget {
-	background-color: rgba(0,0,0,10);
+	background-color: rgba(0,0,0,5);
 }
 
 QListWidget:hover {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,15);
 }
 </string>
         </property>
@@ -415,19 +442,7 @@ QListWidget:hover {
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="leaveNetworkButtonContainerWidget" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>100</width>
-          <height>0</height>
-         </size>
-        </property>
+       <widget class="QWidget" name="leaveButtonContainerWidget" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <property name="spacing">
           <number>0</number>
@@ -452,21 +467,54 @@ QListWidget:hover {
            <property name="sizeHint" stdset="0">
             <size>
              <width>40</width>
-             <height>20</height>
+             <height>1</height>
             </size>
            </property>
           </spacer>
          </item>
          <item>
           <widget class="QPushButton" name="leaveNetworkButton">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="font">
             <font>
-             <pointsize>10</pointsize>
-             <underline>false</underline>
+             <pointsize>12</pointsize>
             </font>
+           </property>
+           <property name="statusTip">
+            <string>Leave this network.</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+	border: 0;
+	padding: 0.25em;
+	margin: 0;
+	text-align: right;
+	background-color: transparent;
+}
+
+QPushButton:focus {
+	background-color: rgba(0,0,0,25);
+}
+
+QPushButton:hover {
+	background-color: rgba(0,0,0,25);
+}
+
+QPushButton:pressed {
+	background-color: rgba(0,0,0,75);
+}
+</string>
            </property>
            <property name="text">
             <string>Leave Network</string>
+           </property>
+           <property name="flat">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -480,7 +528,6 @@ QListWidget:hover {
  </widget>
  <tabstops>
   <tabstop>ipListWidget</tabstop>
-  <tabstop>leaveNetworkButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>

@@ -17,10 +17,15 @@ NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 {
 	ui->setupUi(this);
 	ui->networkIdPushButton->setText(QString(nwid.c_str()));
+
 	QFontMetrics fm(ui->ipListWidget->font());
 	int lineHeight = ui->ipListWidget->spacing() + fm.height();
-	ui->ipListWidget->setMinimumHeight(lineHeight * 3);
-	ui->ipListWidget->setMaximumHeight(lineHeight * 3);
+	ui->ipListWidget->setMinimumHeight(lineHeight * 4);
+	ui->ipListWidget->setMaximumHeight(lineHeight * 4);
+
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget* widget, widgets)
+		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 }
 
 NetworkWidget::~NetworkWidget()
@@ -38,19 +43,23 @@ void NetworkWidget::setStatus(const std::string &status,const std::string &age)
 
 void NetworkWidget::setNetworkName(const std::string &name)
 {
-	ui->nameLabel->setText(QString(name.c_str()));
+	if (name == "?") {
+		ui->nameLabel->setText((QString("( ")+this->networkId().c_str())+" )");
+	} else {
+		ui->nameLabel->setText(QString(name.c_str()));
+	}
 }
 
 void NetworkWidget::setNetworkType(const std::string &type)
 {
 	ui->networkTypeLabel->setText(QString(type.c_str()));
 	if (type == "?")
-		ui->networkTypeLabel->setToolTip("Waiting for configuration...");
+		ui->networkTypeLabel->setStatusTip("Waiting for configuration...");
 	else if (type == "public")
-		ui->networkTypeLabel->setToolTip("This network can be joined by anyone.");
+		ui->networkTypeLabel->setStatusTip("This network can be joined by anyone in the world.");
 	else if (type == "private")
-		ui->networkTypeLabel->setToolTip("This network is private, only authorized peers can join.");
-	else ui->networkTypeLabel->setToolTip(QString());
+		ui->networkTypeLabel->setStatusTip("This network is private; only authorized peers can join.");
+	else ui->networkTypeLabel->setStatusTip("Unknown network type.");
 }
 
 void NetworkWidget::setNetworkDeviceName(const std::string &dev)

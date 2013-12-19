@@ -20,19 +20,19 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <property name="spacing">
-     <number>6</number>
+     <number>0</number>
     </property>
     <property name="leftMargin">
-     <number>6</number>
+     <number>0</number>
     </property>
     <property name="topMargin">
-     <number>6</number>
+     <number>0</number>
     </property>
     <property name="rightMargin">
-     <number>6</number>
+     <number>0</number>
     </property>
     <property name="bottomMargin">
-     <number>6</number>
+     <number>0</number>
     </property>
     <item>
      <widget class="QListWidget" name="networkListWidget">
@@ -42,7 +42,9 @@
       <property name="styleSheet">
        <string notr="true">QListWidget#networkListWidget::Item {
 	background-color: rgba(0,0,0,10);
-}s</string>
+	padding: 0;
+	margin: 0 0.15em 0.15em 0.15em;
+}</string>
       </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
@@ -59,11 +61,8 @@
       <property name="selectionMode">
        <enum>QAbstractItemView::NoSelection</enum>
       </property>
-      <property name="verticalScrollMode">
-       <enum>QAbstractItemView::ScrollPerPixel</enum>
-      </property>
       <property name="spacing">
-       <number>5</number>
+       <number>0</number>
       </property>
       <property name="uniformItemSizes">
        <bool>true</bool>
@@ -72,15 +71,9 @@
     </item>
     <item>
      <widget class="QWidget" name="bottomContainerWidget" native="true">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <property name="spacing">
-        <number>5</number>
+        <number>0</number>
        </property>
        <property name="leftMargin">
         <number>0</number>
@@ -95,7 +88,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QPushButton" name="statusAndAddressButton">
+        <widget class="QPushButton" name="addressButton">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -106,28 +99,36 @@
           <font>
            <family>Courier</family>
            <pointsize>12</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
           </font>
          </property>
-         <property name="toolTip">
-          <string>Click to copy your address to clipboard.</string>
+         <property name="statusTip">
+          <string>Your 10-digit ZeroTier address; click to copy to clipboard.</string>
          </property>
          <property name="styleSheet">
           <string notr="true">QPushButton {
 	border: 0;
+	text-align: left;
+	padding: 0 5px 0 5px;
 	background-color: transparent;
 }
 
 QPushButton:focus {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,15);
 }
 
 QPushButton:hover {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,15);
 }
-</string>
+
+QPushButton:pressed {
+	background-color: rgba(0,0,0,75);
+}
+s</string>
          </property>
          <property name="text">
-          <string>0000000000    (OFFLINE, v0.0.0, 0 peers)     </string>
+          <string>##########</string>
          </property>
          <property name="flat">
           <bool>true</bool>
@@ -135,9 +136,36 @@ QPushButton:hover {
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="networkIdLineEdit">
+        <widget class="QLabel" name="statusLabel">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="statusTip">
+          <string>Your network connection status.</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">padding: 0 0.75em 0 0.75em;</string>
+         </property>
+         <property name="text">
+          <string>STATUS, etc.</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="networkIdLineEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -148,24 +176,65 @@ QPushButton:hover {
            <pointsize>12</pointsize>
           </font>
          </property>
-         <property name="toolTip">
-          <string>Enter Hexadecimal Network ID</string>
+         <property name="statusTip">
+          <string>Enter a hexadecimal network ID to join a network.</string>
          </property>
          <property name="maxLength">
           <number>16</number>
          </property>
+         <property name="frame">
+          <bool>true</bool>
+         </property>
          <property name="placeholderText">
-          <string>(Numeric ID of Network to Join)</string>
+          <string>################</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="joinNetworkButton">
-         <property name="toolTip">
-          <string>Join Network</string>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <family>Courier</family>
+           <pointsize>16</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="statusTip">
+          <string>Join this network.</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+	padding: 0 0.8em 0 0.8em;
+	margin: 0;
+	border: 0;
+	background: transparent;
+}
+
+QPushButton:focus {
+	background-color: rgba(0,0,0,25);
+}
+
+QPushButton:hover {
+	background-color: rgba(0,0,0,25);
+}
+
+QPushButton:pressed {
+	background-color: rgba(0,0,0,75);
+}
+</string>
          </property>
          <property name="text">
-          <string>Join</string>
+          <string notr="true">+</string>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -201,6 +270,13 @@ QPushButton:hover {
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar">
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
   </widget>
   <action name="actionAbout">
    <property name="text">

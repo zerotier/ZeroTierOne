@@ -56,6 +56,10 @@ MainWindow::MainWindow(QWidget *parent) :
 	this->setEnabled(false); // gets enabled when updates are received
 	mainWindow = this;
 	this->cyclesSinceResponseFromService = 0;
+
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget* widget, widgets)
+		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 }
 
 MainWindow::~MainWindow()
@@ -186,19 +190,17 @@ void MainWindow::customEvent(QEvent *event)
 		}
 	}
 
-	if (this->myAddress.size()) {
-		QString st(this->myAddress);
-		st += "    (";
-		st += this->myStatus;
-		st += ", v";
-		st += this->myVersion;
-		st += ", ";
-		st += QString::number(this->numPeers);
-		st += " peers)";
-		while (st.size() < 45)
-			st += QChar::Space;
-		ui->statusAndAddressButton->setText(st);
-	}
+	if (this->myAddress.size())
+		ui->addressButton->setText(this->myAddress);
+	else ui->addressButton->setText("??????????");
+
+	QString st(this->myStatus);
+	st += ", v";
+	st += this->myVersion;
+	st += ", ";
+	st += QString::number(this->numPeers);
+	st += " direct links to peers";
+	ui->statusLabel->setText(st);
 
 	if (this->myStatus == "ONLINE") {
 		if (!this->isEnabled())
@@ -266,7 +268,7 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 	ui->networkIdLineEdit->setText(newText);
 }
 
-void MainWindow::on_statusAndAddressButton_clicked()
+void MainWindow::on_addressButton_clicked()
 {
 	QApplication::clipboard()->setText(this->myAddress);
 }
