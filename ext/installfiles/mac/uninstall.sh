@@ -10,11 +10,20 @@ if [ "$UID" -ne 0 ]; then
 	exit 1
 fi
 
-echo
+# Run with -q to be quieter and run without delay
+quickAndQuiet=0
+if [ "$1" = "-q" ]; then
+  quickAndQuiet=1
+	echo() { :; }
+fi
 
-echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
-echo "Waiting 5 seconds..."
-sleep 5
+echo
+  
+if [ $quickAndQuiet -eq 0 ]; then  
+  echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
+  echo "Waiting 5 seconds..."
+  sleep 5
+fi
 
 echo "Unloading and removing LaunchDaemons item..."
 launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
@@ -27,11 +36,11 @@ killall -KILL zerotier-one >>/dev/null 2>&1
 sleep 1
 
 echo "Unloading kernel extension..."
-kextunload "$ztpath/tap.kext"
+kextunload "$ztpath/tap.kext" >>/dev/null 2>&1
 
 echo "Erasing UI app, binary, and support files..."
-cd $ztpath
-rm -rfv "$ztapp" zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh
+cd "$ztpath"
+rm -rfv "$ztapp" zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh networks.d updates.d shutdownIfUnreadable
 
 echo "Done."
 echo
