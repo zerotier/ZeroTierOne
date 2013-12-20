@@ -44,9 +44,11 @@ void NetworkWidget::setStatus(const std::string &status,const std::string &age)
 void NetworkWidget::setNetworkName(const std::string &name)
 {
 	if (name == "?") {
-		ui->nameLabel->setText((QString("( ")+this->networkId().c_str())+" )");
+		ui->nameLabel->setText("... waiting ...");
+		ui->nameLabel->setEnabled(false);
 	} else {
 		ui->nameLabel->setText(QString(name.c_str()));
+		ui->nameLabel->setEnabled(true);
 	}
 }
 

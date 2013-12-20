@@ -41,13 +41,12 @@
       </property>
       <property name="styleSheet">
        <string notr="true">QListWidget#networkListWidget {
-	background-color: rgba(0,0,0,33);
+	background-color: transparent;
 }
 
 QListWidget#networkListWidget::Item {
 	background-color: palette(base);
-	padding: 0;
-	margin: 0 0 0.25em 0;
+	border: 0;
 }</string>
       </property>
       <property name="frameShape">
@@ -69,7 +68,7 @@ QListWidget#networkListWidget::Item {
        <enum>QAbstractItemView::ScrollPerPixel</enum>
       </property>
       <property name="spacing">
-       <number>0</number>
+       <number>2</number>
       </property>
       <property name="uniformItemSizes">
        <bool>true</bool>
@@ -118,6 +117,7 @@ QListWidget#networkListWidget::Item {
 	border: 0;
 	text-align: left;
 	padding: 0 5px 0 5px;
+	margin: 0;
 	background-color: transparent;
 }
 
@@ -159,7 +159,9 @@ s</string>
           <string>Your network connection status.</string>
          </property>
          <property name="styleSheet">
-          <string notr="true">padding: 0 0.75em 0 0.75em;</string>
+          <string notr="true">padding: 0 0.75em 0 0.75em;
+margin: 0 4px 0 0;
+</string>
          </property>
          <property name="text">
           <string>STATUS, etc.</string>
@@ -221,15 +223,15 @@ s</string>
 	padding: 0 0.8em 0 0.8em;
 	margin: 0;
 	border: 0;
-	background: transparent;
+	background-color: rgba(0,0,0,25);
 }
 
 QPushButton:focus {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,33);
 }
 
 QPushButton:hover {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,33);
 }
 
 QPushButton:pressed {

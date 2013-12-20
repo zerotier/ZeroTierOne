@@ -27,13 +27,13 @@
     <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>5</number>
+    <number>2</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>5</number>
+    <number>2</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -137,7 +137,7 @@
          <item row="2" column="1">
           <widget class="QPushButton" name="networkIdPushButton">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -145,6 +145,7 @@
            <property name="font">
             <font>
              <family>Courier</family>
+             <pointsize>14</pointsize>
              <weight>75</weight>
              <bold>true</bold>
             </font>
@@ -158,6 +159,7 @@
 	padding: 0;
 	margin: 0;
 	text-align: left;
+	vertical-align: middle;
 	background-color: transparent;
 }
 
@@ -379,7 +381,6 @@ QPushButton:pressed {
         </property>
         <property name="font">
          <font>
-          <pointsize>12</pointsize>
           <underline>false</underline>
          </font>
         </property>
@@ -396,6 +397,12 @@ QPushButton:pressed {
       </item>
       <item>
        <widget class="QListWidget" name="ipListWidget">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="minimumSize">
          <size>
           <width>0</width>
@@ -480,29 +487,23 @@ QListWidget:hover {
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="font">
-            <font>
-             <pointsize>12</pointsize>
-            </font>
-           </property>
            <property name="statusTip">
             <string>Leave this network.</string>
            </property>
            <property name="styleSheet">
             <string notr="true">QPushButton {
-	border: 0;
 	padding: 0.25em;
-	margin: 0;
-	text-align: right;
-	background-color: transparent;
+	border: 0;
+	margin: 2px 0 2px 0;
+	background-color: rgba(0,0,0,25);
 }
 
 QPushButton:focus {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,33);
 }
 
 QPushButton:hover {
-	background-color: rgba(0,0,0,25);
+	background-color: rgba(0,0,0,33);
 }
 
 QPushButton:pressed {
