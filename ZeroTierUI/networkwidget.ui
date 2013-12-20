@@ -27,13 +27,13 @@
     <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>5</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
@@ -413,7 +413,7 @@ QPushButton:pressed {
         </property>
         <property name="styleSheet">
          <string notr="true">QListWidget {
-	background-color: rgba(0,0,0,5);
+	background-color: rgba(0,0,0,10);
 }
 
 QListWidget:hover {

@@ -40,10 +40,14 @@
        <enum>Qt::NoFocus</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">QListWidget#networkListWidget::Item {
-	background-color: rgba(0,0,0,10);
+       <string notr="true">QListWidget#networkListWidget {
+	background-color: rgba(0,0,0,33);
+}
+
+QListWidget#networkListWidget::Item {
+	background-color: palette(base);
 	padding: 0;
-	margin: 0 0.15em 0.15em 0.15em;
+	margin: 0 0 0.25em 0;
 }</string>
       </property>
       <property name="frameShape">
@@ -60,6 +64,9 @@
       </property>
       <property name="selectionMode">
        <enum>QAbstractItemView::NoSelection</enum>
+      </property>
+      <property name="verticalScrollMode">
+       <enum>QAbstractItemView::ScrollPerPixel</enum>
       </property>
       <property name="spacing">
        <number>0</number>
@@ -186,7 +193,7 @@ s</string>
           <bool>true</bool>
          </property>
          <property name="placeholderText">
-          <string>################</string>
+          <string>(Network ID)</string>
          </property>
         </widget>
        </item>

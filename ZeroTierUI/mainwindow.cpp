@@ -20,6 +20,7 @@
 #include <QProcess>
 #include <QStringList>
 #include <QVBoxLayout>
+#include <QScrollBar>
 
 // Globally visible
 ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
@@ -56,6 +57,9 @@ MainWindow::MainWindow(QWidget *parent) :
 	this->setEnabled(false); // gets enabled when updates are received
 	mainWindow = this;
 	this->cyclesSinceResponseFromService = 0;
+
+	if (ui->networkListWidget->verticalScrollBar())
+		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
 
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget* widget, widgets)
