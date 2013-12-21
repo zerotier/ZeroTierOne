@@ -21,6 +21,7 @@
 #include <QStringList>
 #include <QVBoxLayout>
 #include <QScrollBar>
+#include <QEventLoop>
 
 // Globally visible
 ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
@@ -76,7 +77,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::timerEvent(QTimerEvent *event)
 {
-	QMainWindow::timerEvent(event);
+	event->accept();
 
 	if (!zeroTierClient) {
 		std::string dotAuthFile((QDir::homePath() + QDir::separator() + ".zeroTierOneAuthToken").toStdString());
@@ -123,7 +124,6 @@ void MainWindow::timerEvent(QTimerEvent *event)
 void MainWindow::customEvent(QEvent *event)
 {
 	ZTMessageEvent *m = (ZTMessageEvent *)event; // only one custom event type so far
-
 	if (m->ztMessage.size() == 0)
 		return;
 
@@ -143,46 +143,57 @@ void MainWindow::customEvent(QEvent *event)
 		if (hdr.size() >= 5)
 			this->myVersion = hdr[4].c_str();
 	} else if (hdr[1] == "listnetworks") {
-		std::map< std::string,std::vector<std::string> > byNwid;
+		std::map< std::string,std::vector<std::string> > newNetworks;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
 			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
 			// 200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>
 			if ((l.size() == 9)&&(l[2].length() == 16))
-				byNwid[l[2]] = l;
+				newNetworks[l[2]] = l;
 		}
 
-		std::map< std::string,std::pair<int,NetworkWidget *> > existingByNwid;
-		for(int r=0;r<ui->networkListWidget->count();++r) {
-			NetworkWidget *nw = (NetworkWidget *)ui->networkListWidget->itemWidget(ui->networkListWidget->item(r));
-			existingByNwid[nw->networkId()] = std::make_pair(r,nw);
-		}
+		if (newNetworks != networks) {
+			networks = newNetworks;
 
-		for(std::map< std::string,std::pair<int,NetworkWidget *> >::iterator i(existingByNwid.begin());i!=existingByNwid.end();++i) {
-			if (byNwid.count(i->first)) {
-				std::vector<std::string> &l = byNwid[i->first];
-				i->second.second->setNetworkName(l[3]);
-				i->second.second->setStatus(l[4],l[5]);
-				i->second.second->setNetworkType(l[6]);
-				i->second.second->setNetworkDeviceName(l[7]);
-				i->second.second->setIps(l[8]);
-			} else {
-				delete ui->networkListWidget->takeItem(i->second.first);
+			for (bool removed=true;removed;) {
+				removed = false;
+				for(int r=0;r<ui->networkListWidget->count();++r) {
+					NetworkWidget *nw = (NetworkWidget *)ui->networkListWidget->itemWidget(ui->networkListWidget->item(r));
+					if (!networks.count(nw->networkId())) {
+						ui->networkListWidget->setVisible(false); // HACK to prevent an occasional crash here, discovered through hours of shotgun debugging... :P
+						delete ui->networkListWidget->takeItem(r);
+						removed = true;
+						break;
+					}
+				}
 			}
-		}
-
-		for(std::map< std::string,std::vector<std::string> >::iterator i(byNwid.begin());i!=byNwid.end();++i) {
-			if (!existingByNwid.count(i->first)) {
-				std::vector<std::string> &l = i->second;
-				NetworkWidget *nw = new NetworkWidget((QWidget *)0,i->first);
-				nw->setNetworkName(l[3]);
-				nw->setStatus(l[4],l[5]);
-				nw->setNetworkType(l[6]);
-				nw->setNetworkDeviceName(l[7]);
-				nw->setIps(l[8]);
-				QListWidgetItem *item = new QListWidgetItem();
-				item->setSizeHint(nw->sizeHint());
-				ui->networkListWidget->addItem(item);
-				ui->networkListWidget->setItemWidget(item,nw);
+			ui->networkListWidget->setVisible(true);
+			std::set<std::string> alreadyDisplayed;
+			for(int r=0;r<ui->networkListWidget->count();++r) {
+				NetworkWidget *nw = (NetworkWidget *)ui->networkListWidget->itemWidget(ui->networkListWidget->item(r));
+				if (networks.count(nw->networkId()) > 0) {
+					alreadyDisplayed.insert(nw->networkId());
+					std::vector<std::string> &l = networks[nw->networkId()];
+					nw->setNetworkName(l[3]);
+					nw->setStatus(l[4],l[5]);
+					nw->setNetworkType(l[6]);
+					nw->setNetworkDeviceName(l[7]);
+					nw->setIps(l[8]);
+				}
+			}
+			for(std::map< std::string,std::vector<std::string> >::iterator nwdata(networks.begin());nwdata!=networks.end();++nwdata) {
+				if (alreadyDisplayed.count(nwdata->first) == 0) {
+					std::vector<std::string> &l = nwdata->second;
+					NetworkWidget *nw = new NetworkWidget((QWidget *)0,nwdata->first);
+					nw->setNetworkName(l[3]);
+					nw->setStatus(l[4],l[5]);
+					nw->setNetworkType(l[6]);
+					nw->setNetworkDeviceName(l[7]);
+					nw->setIps(l[8]);
+					QListWidgetItem *item = new QListWidgetItem();
+					item->setSizeHint(nw->sizeHint());
+					ui->networkListWidget->addItem(item);
+					ui->networkListWidget->setItemWidget(item,nw);
+				}
 			}
 		}
 	} else if (hdr[1] == "listpeers") {
@@ -196,7 +207,7 @@ void MainWindow::customEvent(QEvent *event)
 
 	if (this->myAddress.size())
 		ui->addressButton->setText(this->myAddress);
-	else ui->addressButton->setText("??????????");
+	else ui->addressButton->setText("          ");
 
 	QString st(this->myStatus);
 	st += ", v";

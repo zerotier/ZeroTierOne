@@ -135,7 +135,7 @@ QPushButton:pressed {
 s</string>
          </property>
          <property name="text">
-          <string>##########</string>
+          <string>          </string>
          </property>
          <property name="flat">
           <bool>true</bool>

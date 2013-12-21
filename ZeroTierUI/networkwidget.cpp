@@ -106,8 +106,8 @@ const std::string &NetworkWidget::networkId()
 void NetworkWidget::on_leaveNetworkButton_clicked()
 {
 	if (QMessageBox::question(this,"Leave Network?",QString("Are you sure you want to leave network '") + networkIdStr.c_str() + "'?",QMessageBox::No,QMessageBox::Yes) == QMessageBox::Yes) {
-		zeroTierClient->send((QString("leave ") + networkIdStr.c_str()).toStdString());
 		this->setEnabled(false);
+		zeroTierClient->send((QString("leave ") + networkIdStr.c_str()).toStdString());
 	}
 }
 

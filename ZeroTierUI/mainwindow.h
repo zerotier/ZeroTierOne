@@ -5,6 +5,10 @@
 #include <QEvent>
 #include <QString>
 
+#include <map>
+#include <vector>
+#include <string>
+
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 
@@ -56,6 +60,7 @@ private:
 	QString myVersion;
 	unsigned int numPeers;
 	unsigned int cyclesSinceResponseFromService;
+	std::map< std::string,std::vector<std::string> > networks;
 };
 
 #endif // MAINWINDOW_H
