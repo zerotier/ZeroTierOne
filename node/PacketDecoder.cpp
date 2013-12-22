@@ -452,39 +452,61 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
 
-		// Grab, verify, and learn certificate if any -- provided we are a member of this network
-		// Note: we can do this before verification of the actual packet, since the certificate
-		// has its own separate signature.
+		/* Grab, verify, and learn certificate of network membership if any -- provided we are
+		 * a member of this network. Note: we can do this before verification of the actual
+		 * packet, since the certificate has its own separate signature. In other words a valid
+		 * COM does not imply a valid multicast; they are two separate things. The ability to
+		 * include the COM with the multicast is a performance optimization to allow peers to
+		 * distribute their COM along with their packets instead of as a separate transaction.
+		 * This causes network memberships to start working faster. */
 		if (((flags & ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE))&&(network)) {
 			CertificateOfMembership originCom(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2 + signatureLen);
-			Address signedBy(originCom.signedBy());
-			if ((originCom.networkId() == nwid)&&(signedBy == network->controller())) {
-				SharedPtr<Peer> signingPeer(_r->topology->getPeer(signedBy));
-				if (!signingPeer) {
-					// Technically this shouldn't happen, but handle it anyway...
-					_r->sw->requestWhois(signedBy);
+			Address comSignedBy(originCom.signedBy());
+			if ((originCom.networkId() == nwid)&&(comSignedBy == network->controller())) {
+				SharedPtr<Peer> comSigningPeer(_r->topology->getPeer(comSignedBy));
+				if (!comSigningPeer) {
+					// Technically this should never happen because the COM should be signed by
+					// the master for this network (in current usage) and we ought to already have
+					// that cached. But handle it anyway.
+					_r->sw->requestWhois(comSignedBy);
 					_step = DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP; // causes processing to come back here
 					return false;
-				} else if (originCom.verify(signingPeer->identity())) {
+				} else if (originCom.verify(comSigningPeer->identity())) {
+					// The certificate is valid so learn it. As explained above this does not
+					// imply validation of the multicast. That happens later. Look for a call
+					// to network->isAllowed().
 					network->addMembershipCertificate(originCom);
+				} else {
+					// Go ahead and drop the multicast though if the COM was invalid, since this
+					// obviously signifies a problem.
+					LOG("dropped MULTICAST_FRAME from %s(%s): included COM failed authentication check",source().toString().c_str(),_remoteAddress.toString().c_str());
+					return true;
 				}
+			} else {
+				// Go ahead and drop the multicast here too, since this also ought never to
+				// happen and certainly indicates a problem.
+				LOG("dropped MULTICAST_FRAME from %s(%s): included COM is not for this network",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
 			}
 		}
 
-		// Check multicast signature to verify original sender
+		// Check the multicast frame's signature to verify that its original sender is
+		// who it claims to be.
 		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + frameLen;
 		if (!originPeer->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen,signature,signatureLen)) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+			LOG("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 			return true;
 		}
 
-		// Security check to prohibit multicasts that are really Ethernet unicasts
+		// Security check to prohibit multicasts that are really Ethernet unicasts...
+		// otherwise people could do weird things like multicast out a TCP SYN.
 		if (!dest.mac().isMulticast()) {
-			TRACE("dropped MULTICAST_FRAME from %s(%s): %s is not a multicast/broadcast address",source().toString().c_str(),_remoteAddress.toString().c_str(),dest.mac().toString().c_str());
+			LOG("dropped MULTICAST_FRAME from %s(%s): %s is not a multicast/broadcast address",source().toString().c_str(),_remoteAddress.toString().c_str(),dest.mac().toString().c_str());
 			return true;
 		}
 
 #ifdef ZT_TRACE_MULTICAST
+		// This code, if enabled, sends a UDP pingback to a logger for each multicast.
 		char mct[1024],mctdepth[1024];
 		unsigned int startingFifoItems = 0;
 		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;i+=ZT_ADDRESS_LENGTH) {
@@ -510,12 +532,13 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		_r->demarc->send(Demarc::ANY_PORT,ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct),-1);
 #endif
 
+		// This gets updated later in most cases but start with the global limit.
 		unsigned int maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
 
 		if ((origin == _r->identity.address())||(_r->mc->deduplicate(nwid,guid))) {
-			// Ordinary nodes will drop duplicates. Supernodes keep propagating
-			// them since they're used as hubs to link disparate clusters of
-			// members of the same multicast group.
+			// This is a boomerang or a duplicate of a multicast we've already seen. Ordinary
+			// nodes drop these, while supernodes will keep propagating them since they can
+			// act as bridges between sparse multicast networks more than once.
 			if (!_r->topology->amSupernode()) {
 #ifdef ZT_TRACE_MULTICAST
 				Utils::snprintf(mct,sizeof(mct),
@@ -646,6 +669,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
+
+		// Update depth in packet with new incremented value
 		setAt(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)depth);
 
 		// New FIFO with room for one extra, since head will be next hop
@@ -676,7 +701,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		unsigned int numAdded = (unsigned int)(newFifoPtr - beforeAdd) / ZT_ADDRESS_LENGTH;
 #endif
 
-		// Zero-terminate new FIFO if not completely full
+		// Zero-terminate new FIFO if not completely full. We pad the remainder with
+		// zeroes because this improves data compression ratios.
 		while (newFifoPtr != newFifoEnd)
 			*(newFifoPtr++) = (unsigned char)0;
 
