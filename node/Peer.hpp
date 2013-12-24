@@ -48,6 +48,9 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
+// Increment if serialization has changed
+#define ZT_PEER_SERIALIZATION_VERSION 5
+
 namespace ZeroTier {
 
 /**
@@ -104,28 +107,37 @@ public:
 	/**
 	 * Must be called on authenticated packet receive from this peer
 	 * 
-	 * This must be called only after a packet has passed authentication
-	 * checking. Packets that fail are silently discarded.
-	 *
 	 * @param _r Runtime environment
 	 * @param localPort Local port on which packet was received
 	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
+	 * @param packetId Packet ID
 	 * @param verb Packet verb
+	 * @param inRePacketId Packet ID in reply to (for OK/ERROR, 0 otherwise)
+	 * @param inReVerb Verb in reply to (for OK/ERROR, VERB_NOP otherwise)
 	 * @param now Current time
 	 */
-	void onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &remoteAddr,unsigned int hops,Packet::Verb verb,uint64_t now);
+	void onReceive(
+		const RuntimeEnvironment *_r,
+		Demarc::Port localPort,
+		const InetAddress &remoteAddr,
+		unsigned int hops,
+		uint64_t packetId,
+		Packet::Verb verb,
+		uint64_t inRePacketId,
+		Packet::Verb inReVerb,
+		uint64_t now);
 
 	/**
-	 * Send a packet to this peer
+	 * Send a UDP packet to this peer
 	 * 
 	 * @param _r Runtime environment
 	 * @param data Data to send
 	 * @param len Length of packet
 	 * @param now Current time
-	 * @return True if packet appears to have been sent, false on local failure
+	 * @return NULL_PORT or port packet was sent from
 	 */
-	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
+	Demarc::Port send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
 	/**
 	 * Send firewall opener to active link
@@ -226,68 +238,29 @@ public:
 	/**
 	 * @return Lowest of measured latencies of all paths or 0 if unknown
 	 */
-	inline unsigned int latency() const
-		throw()
-	{
-		if (_ipv4p.latency) {
-			if (_ipv6p.latency)
-				return std::min(_ipv4p.latency,_ipv6p.latency);
-			else return _ipv4p.latency;
-		} else if (_ipv6p.latency)
-			return _ipv6p.latency;
-		return 0;
-	}
-
-	/**
-	 * @param addr Remote address
-	 * @param latency Latency measurment
-	 */
-	inline void setLatency(const InetAddress &addr,unsigned int latency)
-	{
-		if (addr == _ipv4p.addr) {
-			_ipv4p.latency = latency;
-		} else if (addr == _ipv6p.addr) {
-			_ipv6p.latency = latency;
-		}
-	}
+	inline unsigned int latency() const throw() { return _latency; }
 
 	/**
 	 * @return True if this peer has at least one direct IP address path
 	 */
-	inline bool hasDirectPath() const
-		throw()
-	{
-		return ((_ipv4p.addr)||(_ipv6p.addr));
-	}
+	inline bool hasDirectPath() const throw() { return ((_ipv4p.addr)||(_ipv6p.addr)); }
 
 	/**
 	 * @return True if this peer has at least one direct IP address path that looks active
 	 *
 	 * @param now Current time
 	 */
-	inline bool hasActiveDirectPath(uint64_t now) const
-		throw()
-	{
-		return ((_ipv4p.isActive(now))||(_ipv6p.isActive(now)));
-	}
+	inline bool hasActiveDirectPath(uint64_t now) const throw() { return ((_ipv4p.isActive(now))||(_ipv6p.isActive(now))); }
 
 	/**
 	 * @return IPv4 direct address or null InetAddress if none
 	 */
-	inline InetAddress ipv4Path() const
-		throw()
-	{
-		return _ipv4p.addr;
-	}
+	inline InetAddress ipv4Path() const throw() { return _ipv4p.addr; }
 
 	/**
 	 * @return IPv6 direct address or null InetAddress if none
 	 */
-	inline InetAddress ipv6Path() const
-		throw()
-	{
-		return _ipv4p.addr;
-	}
+	inline InetAddress ipv6Path() const throw() { return _ipv4p.addr; }
 
 	/**
 	 * @return IPv4 direct address or null InetAddress if none
@@ -312,13 +285,9 @@ public:
 	}
 
 	/**
-	 * @return 256-bit encryption key
+	 * @return 256-bit secret symmetric encryption key
 	 */
-	inline const unsigned char *key() const
-		throw()
-	{
-		return _key;
-	}
+	inline const unsigned char *key() const throw() { return _key; }
 
 	/**
 	 * Set the remote version of the peer (not persisted)
@@ -347,44 +316,22 @@ public:
 		return std::string("?");
 	}
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b)
+	/**
+	 * Called when certain packet types are sent that expect OK responses
+	 *
+	 * @param packetId ID of sent packet
+	 * @param verb Verb of sent packet
+	 * @param sentFromLocalPort Outgoing local port
+	 * @param now Current time
+	 */
+	inline void expectResponseTo(uint64_t packetId,Packet::Verb verb,Demarc::Port sentFromLocalPort,uint64_t now)
+		throw()
 	{
-		b.append((unsigned char)4); // version
-		b.append(_key,sizeof(_key));
-		_id.serialize(b,false);
-		_ipv4p.serialize(b);
-		_ipv6p.serialize(b);
-		b.append(_lastUsed);
-		b.append(_lastUnicastFrame);
-		b.append(_lastMulticastFrame);
-		b.append(_lastAnnouncedTo);
-		b.append((uint16_t)_vMajor);
-		b.append((uint16_t)_vMinor);
-		b.append((uint16_t)_vRevision);
-	}
-
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-
-		if (b[p++] != 4)
-			throw std::invalid_argument("Peer: deserialize(): version mismatch");
-
-		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
-		p += _id.deserialize(b,p);
-		p += _ipv4p.deserialize(b,p);
-		p += _ipv6p.deserialize(b,p);
-		_lastUsed = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-
-		return (p - startAt);
+		unsigned int p = _requestHistoryPtr++ % ZT_PEER_REQUEST_HISTORY_LENGTH;
+		_requestHistory[p].timestamp = now;
+		_requestHistory[p].packetId = packetId;
+		_requestHistory[p].localPort = sentFromLocalPort;
+		_requestHistory[p].verb = verb;
 	}
 
 	/**
@@ -414,7 +361,50 @@ public:
 		return std::pair<InetAddress,InetAddress>();
 	}
 
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b)
+	{
+		b.append((unsigned char)ZT_PEER_SERIALIZATION_VERSION);
+		b.append(_key,sizeof(_key));
+		_id.serialize(b,false);
+		_ipv4p.serialize(b);
+		_ipv6p.serialize(b);
+		b.append(_lastUsed);
+		b.append(_lastUnicastFrame);
+		b.append(_lastMulticastFrame);
+		b.append(_lastAnnouncedTo);
+		b.append((uint16_t)_vMajor);
+		b.append((uint16_t)_vMinor);
+		b.append((uint16_t)_vRevision);
+		b.append((uint16_t)_latency);
+	}
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+
+		if (b[p++] != ZT_PEER_SERIALIZATION_VERSION)
+			throw std::invalid_argument("Peer: deserialize(): version mismatch");
+
+		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
+		p += _id.deserialize(b,p);
+		p += _ipv4p.deserialize(b,p);
+		p += _ipv6p.deserialize(b,p);
+		_lastUsed = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		_latency = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+
+		return (p - startAt);
+	}
 private:
+	/**
+	 * A direct IP path to a peer
+	 */
 	class WanPath
 	{
 	public:
@@ -423,7 +413,6 @@ private:
 			lastReceive(0),
 			lastFirewallOpener(0),
 			localPort(Demarc::ANY_PORT),
-			latency(0),
 			addr(),
 			fixed(false)
 		{
@@ -443,7 +432,6 @@ private:
 			b.append(lastReceive);
 			b.append(lastFirewallOpener);
 			b.append(Demarc::portToInt(localPort));
-			b.append((uint16_t)latency);
 
 			b.append((unsigned char)addr.type());
 			switch(addr.type()) {
@@ -472,7 +460,6 @@ private:
 			lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			lastFirewallOpener = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			localPort = Demarc::intToPort(b.template at<uint64_t>(p)); p += sizeof(uint64_t);
-			latency = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 
 			switch ((InetAddress::AddressType)b[p++]) {
 				case InetAddress::TYPE_NULL:
@@ -497,9 +484,27 @@ private:
 		uint64_t lastReceive;
 		uint64_t lastFirewallOpener;
 		Demarc::Port localPort; // ANY_PORT if not defined (size: uint64_t)
-		unsigned int latency; // 0 if never determined
 		InetAddress addr; // null InetAddress if path is undefined
 		bool fixed; // do not learn address from received packets
+	};
+
+	/**
+	 * A history of a packet sent to a peer expecing a response (e.g. HELLO)
+	 */
+	class RequestHistoryItem
+	{
+	public:
+		RequestHistoryItem() :
+			timestamp(0),
+			packetId(0),
+			verb(Packet::VERB_NOP)
+		{
+		}
+
+		uint64_t timestamp;
+		uint64_t packetId;
+		Demarc::Port localPort;
+		Packet::Verb verb;
 	};
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
@@ -512,7 +517,12 @@ private:
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
+	unsigned int _latency; // milliseconds, 0 if not known
 	unsigned int _vMajor,_vMinor,_vRevision;
+
+	// not persisted
+	RequestHistoryItem _requestHistory[ZT_PEER_REQUEST_HISTORY_LENGTH];
+	volatile unsigned int _requestHistoryPtr;
 
 	AtomicCounter __refCount;
 };

@@ -60,6 +60,9 @@ class Demarc
 public:
 	/**
 	 * Local demarcation port
+	 *
+	 * NULL_PORT is zero so this can be used in if(port) to check for
+	 * a valid/known port.
 	 */
 	typedef uint64_t Port;
 

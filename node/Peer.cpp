@@ -28,6 +28,8 @@
 #include "Peer.hpp"
 #include "Switch.hpp"
 
+#include <algorithm>
+
 namespace ZeroTier {
 
 Peer::Peer() :
@@ -38,9 +40,11 @@ Peer::Peer() :
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
+	_latency(0),
 	_vMajor(0),
 	_vMinor(0),
-	_vRevision(0)
+	_vRevision(0),
+	_requestHistoryPtr(0)
 {
 }
 
@@ -61,18 +65,43 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
-void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const InetAddress &remoteAddr,unsigned int hops,Packet::Verb verb,uint64_t now)
+void Peer::onReceive(
+	const RuntimeEnvironment *_r,
+	Demarc::Port localPort,
+	const InetAddress &remoteAddr,
+	unsigned int hops,
+	uint64_t packetId,
+	Packet::Verb verb,
+	uint64_t inRePacketId,
+	Packet::Verb inReVerb,
+	uint64_t now)
 {
 	if (!hops) { // direct packet
-		WanPath *wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
-		wp->lastReceive = now;
-		wp->localPort = localPort;
-		if (!wp->fixed)
-			wp->addr = remoteAddr;
-
+		// Announce multicast LIKEs to peers to whom we have a direct link
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
 			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
+		}
+
+		// Do things like learn latency or endpoints on OK or ERROR replies
+		if (inReVerb != Packet::VERB_NOP) {
+			for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p) {
+				if ((_requestHistory[p].packetId == inRePacketId)&&(_requestHistory[p].verb == inReVerb)) {
+					_latency = std::min((unsigned int)(now - _requestHistory[p].timestamp),(unsigned int)0xffff);
+
+					// Only learn paths on replies to packets we have sent, otherwise paths
+					// this introduces both an asymmetry problem in NAT-t and a potential
+					// reply DOS attack.
+					WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
+					wp->lastReceive = now;
+					wp->localPort = ((localPort) ? localPort : Demarc::ANY_PORT);
+					if (!wp->fixed)
+						wp->addr = remoteAddr;
+
+					_requestHistory[p].packetId = 0;
+					break;
+				}
+			}
 		}
 	}
 
@@ -83,23 +112,23 @@ void Peer::onReceive(const RuntimeEnvironment *_r,Demarc::Port localPort,const I
 	}
 }
 
-bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
+Demarc::Port Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	if ((_ipv6p.isActive(now))||((!(_ipv4p.addr))&&(_ipv6p.addr))) {
 		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,data,len,-1)) {
 			_ipv6p.lastSend = now;
-			return true;
+			return _ipv6p.localPort;
 		}
 	}
 
 	if (_ipv4p.addr) {
 		if (_r->demarc->send(_ipv4p.localPort,_ipv4p.addr,data,len,-1)) {
 			_ipv4p.lastSend = now;
-			return true;
+			return _ipv4p.localPort;
 		}
 	}
 
-	return false;
+	return Demarc::NULL_PORT;
 }
 
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
