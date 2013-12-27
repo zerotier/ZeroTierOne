@@ -32,7 +32,7 @@
 
 #define TAP_FAMILY_NAME			((char *) "zt")
 
-#define TAP_IF_COUNT			16	/* max number of tap interfaces */
+#define TAP_IF_COUNT			32	/* max number of tap interfaces */
 
 #define TAP_MTU				2800
 
