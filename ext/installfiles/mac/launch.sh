@@ -8,7 +8,8 @@ export PATH="/bin:/usr/bin:/sbin:/usr/sbin:$zthome"
 # Uninstall if the .app has been thrown away
 if [ ! -d "$ztapp" ]; then
 	if [ -e "$zthome/uninstall.sh" ]; then
-		exec "$zthome/uninstall.sh"
+		cd "$zthome"
+		./uninstall.sh -q
 		exit
 	fi
 fi

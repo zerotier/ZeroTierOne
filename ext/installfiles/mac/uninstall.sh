@@ -18,11 +18,11 @@ if [ "$1" = "-q" ]; then
 fi
 
 echo
-  
+
 if [ $quickAndQuiet -eq 0 ]; then  
-  echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
-  echo "Waiting 5 seconds..."
-  sleep 5
+	echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
+	echo "Waiting 5 seconds..."
+	sleep 5
 fi
 
 echo "Unloading and removing LaunchDaemons item..."
