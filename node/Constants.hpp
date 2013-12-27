@@ -341,6 +341,11 @@ error_no_byte_order_defined;
 #define ZT_UPDATE_MIN_INTERVAL 120000
 
 /**
+ * Maximum interval between attempts to do a software update
+ */
+#define ZT_UPDATE_MAX_INTERVAL 28800000
+
+/**
  * Update HTTP timeout in seconds
  */
 #define ZT_UPDATE_HTTP_TIMEOUT 30

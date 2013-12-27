@@ -434,6 +434,9 @@ Node::ReasonForTermination Node::run()
 #ifdef ZT_AUTO_UPDATE
 		if (ZT_DEFAULTS.updateLatestNfoURL.length())
 			_r->updater = new SoftwareUpdater(_r);
+		else {
+			LOG("WARNING: unable to enable software updates: latest .nfo URL from ZT_DEFAULTS is empty (does this platform actually support software updates?)");
+		}
 #endif
 
 		// Bind local port for core I/O
@@ -575,6 +578,8 @@ Node::ReasonForTermination Node::run()
 				_r->mc->clean();
 				_r->topology->clean();
 				_r->nc->clean();
+				if (_r->updater)
+					_r->updater->checkIfMaxIntervalExceeded(now);
 			}
 
 			try {

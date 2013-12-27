@@ -76,6 +76,9 @@ public:
 
 	/**
 	 * Check for updates now regardless of last check time or version
+	 *
+	 * This only starts a check if one is not in progress. Otherwise it does
+	 * nothing.
 	 */
 	inline void checkNow()
 	{
@@ -85,6 +88,17 @@ public:
 			_status = UPDATE_STATUS_GETTING_NFO;
 			HttpClient::GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
 		}
+	}
+
+	/**
+	 * Check for updates now if it's been longer than ZT_UPDATE_MAX_INTERVAL
+	 *
+	 * This is called periodically from the main loop.
+	 */
+	inline void checkIfMaxIntervalExceeded(uint64_t now)
+	{
+		if ((now - _lastUpdateAttempt) >= ZT_UPDATE_MAX_INTERVAL)
+			checkNow();
 	}
 
 	/**
