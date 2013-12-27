@@ -84,7 +84,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 	}
 
 	if (code != 200) {
-		LOG("unable to check for software updates, response code %d (%s)",code,body.c_str());
+		LOG("software update check failed: server responded %d (%s)",code,body.c_str());
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
@@ -99,7 +99,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 		const std::string &url = nfo.get("url");
 
 		if (signature.length() != ZT_C25519_SIGNATURE_LEN) {
-			LOG("software update aborted: .nfo file invalid: bad Ed25519 signature");
+			LOG("software update aborted: .nfo file invalid: bad ed25519 ECC signature field");
 			upd->_status = UPDATE_STATUS_IDLE;
 			return;
 		}
@@ -126,7 +126,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 
 		HttpClient::GET(url,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionBinary,arg);
 	} catch ( ... ) {
-		LOG("software update check failed: .nfo file invalid: fields missing or invalid dictionary format");
+		LOG("software update check failed: .nfo file invalid or missing field(s)");
 		upd->_status = UPDATE_STATUS_IDLE;
 	}
 }
