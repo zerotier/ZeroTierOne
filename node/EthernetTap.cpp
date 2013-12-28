@@ -69,6 +69,7 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 #define ZT_UNIX_IFCONFIG_COMMAND 2
 #define ZT_MAC_KEXTLOAD_COMMAND 3
 #define ZT_MAC_IPCONFIG_COMMAND 4
+#define ZT_MAC_KEXTUNLOAD_COMMAND 5
 
 // Finds external commands on startup
 class _CommandFinder
@@ -83,6 +84,7 @@ public:
 #ifdef __APPLE__
 		_findCmd(ZT_MAC_KEXTLOAD_COMMAND,"kextload");
 		_findCmd(ZT_MAC_IPCONFIG_COMMAND,"ipconfig");
+		_findCmd(ZT_MAC_KEXTUNLOAD_COMMAND,"kextunload");
 #endif
 	}
 
@@ -139,6 +141,9 @@ static const _CommandFinder UNIX_COMMANDS;
 #include <net/route.h>
 #include <net/if_dl.h>
 #include <ifaddrs.h>
+
+static volatile int EthernetTap_instances = 0;
+static ZeroTier::Mutex EthernetTap_instances_m;
 #endif // __APPLE__
 
 namespace ZeroTier {
@@ -337,6 +342,10 @@ EthernetTap::EthernetTap(
 	::pipe(_shutdownSignalPipe);
 
 	_thread = Thread::start(this);
+
+	EthernetTap_instances_m.lock();
+	++EthernetTap_instances;
+	EthernetTap_instances_m.unlock();
 }
 #endif // __APPLE__
 
@@ -345,6 +354,29 @@ EthernetTap::~EthernetTap()
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
 	::close(_fd);
+
+#ifdef __APPLE__
+	EthernetTap_instances_m.lock();
+	int instances = --EthernetTap_instances;
+	EthernetTap_instances_m.unlock();
+	if (instances <= 0) {
+		// Unload OSX kernel extension on the deletion of the last EthernetTap
+		// instance.
+		const char *kextunload = UNIX_COMMANDS[ZT_MAC_KEXTUNLOAD_COMMAND];
+		if (kextunload) {
+			long kextpid;
+			char tmp[4096];
+			sprintf(tmp,"%s/tap.kext",_r->homePath.c_str());
+			if ((kextpid = (long)vfork()) == 0) {
+				execl(kextunload,kextunload,tmp,(const char *)0);
+				_exit(-1);
+			} else if (kextpid > 0) {
+				int exitcode = -1;
+				waitpid(kextpid,&exitcode,0);
+			}
+		}
+	}
+#endif // __APPLE__
 }
 
 #ifdef __APPLE__
