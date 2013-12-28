@@ -24,8 +24,7 @@ find /etc/rc*.d -name '???zerotier-one' -print0 | xargs -0 rm -fv
 
 echo "Erasing binary and support files..."
 cd /var/lib/zerotier-one
-rm -fv zerotier-one *.persist authtoken.secret identity.public *.log *.pid
-rm -rfv updates.d networks.d iddb.d
+rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.sh updates.d networks.d iddb.d
 
 echo "Erasing anything installed into system bin directories..."
 rm -fv /usr/local/bin/zerotier-* /usr/bin/zerotier-*
