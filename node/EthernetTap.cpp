@@ -270,8 +270,8 @@ EthernetTap::EthernetTap(
 	_dhcp6(false),
 	_fd(0)
 {
-	char devpath[64],ethaddr[64],mtustr[16];
-	struct stat tmp;
+	char devpath[64],ethaddr[64],mtustr[16],tmp[4096];
+	struct stat stattmp;
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
 	if (mtu > 4096)
@@ -279,27 +279,26 @@ EthernetTap::EthernetTap(
 
 	// Check for existence of ZT tap devices, try to load module if not there
 	const char *kextload = UNIX_COMMANDS[ZT_MAC_KEXTLOAD_COMMAND];
-	if ((stat("/dev/zt0",&tmp))&&(kextload)) {
-		long kextpid;
-		char tmp[4096];
+	if ((stat("/dev/zt0",&stattmp))&&(kextload)) {
 		strcpy(tmp,_r->homePath.c_str());
-		if ((kextpid = (long)vfork()) == 0) {
+		long kextpid = (long)vfork();
+		if (kextpid == 0) {
 			chdir(tmp);
 			execl(kextload,kextload,"-q","-repository",tmp,"tap.kext",(const char *)0);
 			_exit(-1);
-		} else {
+		} else if (kextpid > 0) {
 			int exitcode = -1;
 			waitpid(kextpid,&exitcode,0);
 			usleep(500);
-		}
+		} else throw std::runtime_error("unable to create subprocess with fork()");
 	}
-	if (stat("/dev/zt0",&tmp))
+	if (stat("/dev/zt0",&stattmp))
 		throw std::runtime_error("/dev/zt# tap devices do not exist and unable to load kernel extension");
 
 	// Open the first available device (ones in use will fail with resource busy)
 	for(int i=0;i<256;++i) {
 		Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
-		if (stat(devpath,&tmp))
+		if (stat(devpath,&stattmp))
 			throw std::runtime_error("no more TAP devices available");
 		_fd = ::open(devpath,O_RDWR);
 		if (_fd > 0) {
@@ -364,10 +363,10 @@ EthernetTap::~EthernetTap()
 		// instance.
 		const char *kextunload = UNIX_COMMANDS[ZT_MAC_KEXTUNLOAD_COMMAND];
 		if (kextunload) {
-			long kextpid;
 			char tmp[4096];
 			sprintf(tmp,"%s/tap.kext",_r->homePath.c_str());
-			if ((kextpid = (long)vfork()) == 0) {
+			long kextpid = (long)vfork();
+			if (kextpid == 0) {
 				execl(kextunload,kextunload,tmp,(const char *)0);
 				_exit(-1);
 			} else if (kextpid > 0) {
