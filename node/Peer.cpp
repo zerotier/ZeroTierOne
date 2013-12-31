@@ -83,18 +83,20 @@ void Peer::onReceive(
 			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
 		}
 
+		// Update last receive info for our direct path
+		WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
+		wp->lastReceive = now;
+		wp->localPort = ((localPort) ? localPort : Demarc::ANY_PORT);
+
 		// Do things like learn latency or endpoints on OK or ERROR replies
 		if (inReVerb != Packet::VERB_NOP) {
 			for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p) {
 				if ((_requestHistory[p].packetId == inRePacketId)&&(_requestHistory[p].verb == inReVerb)) {
 					_latency = std::min((unsigned int)(now - _requestHistory[p].timestamp),(unsigned int)0xffff);
 
-					// Only learn paths on replies to packets we have sent, otherwise paths
+					// Only learn paths on replies to packets we have sent, otherwise
 					// this introduces both an asymmetry problem in NAT-t and a potential
 					// reply DOS attack.
-					WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
-					wp->lastReceive = now;
-					wp->localPort = ((localPort) ? localPort : Demarc::ANY_PORT);
 					if (!wp->fixed)
 						wp->addr = remoteAddr;
 
