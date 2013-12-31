@@ -87,32 +87,19 @@ void Peer::onReceive(
 		WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
 		wp->lastReceive = now;
 		wp->localPort = ((localPort) ? localPort : Demarc::ANY_PORT);
+		if (!wp->fixed)
+			wp->addr = remoteAddr;
 
-		// Do things like learn latency or endpoints on OK or ERROR replies
+		// Learn latency from replies
 		if (inReVerb != Packet::VERB_NOP) {
 			for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p) {
 				if ((_requestHistory[p].timestamp)&&(_requestHistory[p].packetId == inRePacketId)&&(_requestHistory[p].verb == inReVerb)) {
 					_latency = std::min((unsigned int)(now - _requestHistory[p].timestamp),(unsigned int)0xffff);
-
-					// Only learn paths on replies to packets we have sent, otherwise
-					// this introduces both an asymmetry problem in NAT-t and a potential
-					// reply DOS attack.
-					if (!wp->fixed) {
-						wp->addr = remoteAddr;
-						TRACE("peer %s learned endpoint %s from %s(%s)",address().toString().c_str(),remoteAddr.toString().c_str(),Packet::verbString(verb),Packet::verbString(inReVerb));
-					}
-
 					_requestHistory[p].timestamp = 0;
 					break;
 				}
 			}
 		}
-
-		// If we get a valid packet with a different address that is not a response
-		// to a request, send a PROBE to authenticate this endpoint and determine if
-		// it is reachable.
-		if ((!wp->fixed)&&(wp->addr != remoteAddr))
-			_r->sw->sendPROBE(SharedPtr<Peer>(this),localPort,remoteAddr);
 	}
 
 	if (verb == Packet::VERB_FRAME) {

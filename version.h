@@ -41,6 +41,6 @@
 /**
  * Revision
  */
-#define ZEROTIER_ONE_VERSION_REVISION 6
+#define ZEROTIER_ONE_VERSION_REVISION 7
 
 #endif
