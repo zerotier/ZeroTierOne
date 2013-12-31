@@ -7,8 +7,11 @@ DEFS=
 LIBS=
 
 ifeq ($(ZT_AUTO_UPDATE),1)
-	DEFS+=-DZT_AUTO_UPDATE
+	DEFS+=-DZT_AUTO_UPDATE 
 endif
+
+# Uncomment to dump trace and log to stdout
+#DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 
 # Uncomment for a release optimized build
 CFLAGS=-Wall -O3 -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
