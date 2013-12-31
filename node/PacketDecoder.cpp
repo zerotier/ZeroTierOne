@@ -112,7 +112,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed MAC so the packet is still valid, but we
 				// ignore it.
-				TRACE("ignored unrecognized verb %.2x from %s(%s)",(unsigned int)v,source().toString().c_str(),_remoteAddress.toString().c_str());
+				TRACE("ignored unrecognized verb %.2x from %s(%s)",(unsigned int)verb(),source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 		}
 	} else {
@@ -277,7 +277,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 		Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
 		uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 
-		//TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
+		TRACE("%s(%s): OK(%s)",source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
 
 		switch(inReVerb) {
 			case Packet::VERB_HELLO: {

@@ -97,8 +97,10 @@ void Peer::onReceive(
 					// Only learn paths on replies to packets we have sent, otherwise
 					// this introduces both an asymmetry problem in NAT-t and a potential
 					// reply DOS attack.
-					if (!wp->fixed)
+					if (!wp->fixed) {
 						wp->addr = remoteAddr;
+						TRACE("peer %s learned endpoint %s from %s(%s)",address().toString().c_str(),remoteAddr.toString().c_str(),Packet::verbString(verb),Packet::verbString(inReVerb));
+					}
 
 					_requestHistory[p].timestamp = 0;
 					break;
