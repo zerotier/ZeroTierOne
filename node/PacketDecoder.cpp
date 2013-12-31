@@ -106,6 +106,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doNETWORK_CONFIG_REQUEST(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REFRESH:
 				return _doNETWORK_CONFIG_REFRESH(_r,peer);
+			case Packet::VERB_PROBE:
+				return _doPROBE(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed MAC so the packet is still valid, but we
@@ -195,16 +197,25 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			if (peer->identity() != id) {
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
-					TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
-					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_HELLO);
-					outp.append(packetId());
-					outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-					outp.armor(key,true);
-					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
+						TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
+						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+						outp.append((unsigned char)Packet::VERB_HELLO);
+						outp.append(packetId());
+						outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+						outp.armor(key,true);
+						_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+					} else {
+						LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
+					}
+				} else {
+					TRACE("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
 				}
 				return true;
-			} // else continue and send OK since we already know thee...
+			} else if (!dearmor(peer->key())) {
+				TRACE("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
+			} // else continue and respond
 		} else {
 			// If we don't have a peer record on file, check the identity cache (if
 			// we have one) to see if we have a cached identity. Then check that for
@@ -213,20 +224,30 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			if ((alreadyHaveCachedId)&&(id != alreadyHaveCachedId)) {
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
-					TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
-					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_HELLO);
-					outp.append(packetId());
-					outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-					outp.armor(key,true);
-					_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
+						TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
+						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+						outp.append((unsigned char)Packet::VERB_HELLO);
+						outp.append(packetId());
+						outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+						outp.armor(key,true);
+						_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+					} else {
+						LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
+					}
+				} else {
+					TRACE("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
 				}
 				return true;
 			} // else continue since identity is already known and matches
 
-			// Learn a new peer if it's new. This also adds it to the identity
-			// cache if that's enabled.
-			peer = _r->topology->addPeer(SharedPtr<Peer>(new Peer(_r->identity,id)));
+			// If this is a new peer, learn it
+			SharedPtr<Peer> newPeer(new Peer(_r->identity,id));
+			if (!dearmor(newPeer->key())) {
+				LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
+			}
+			peer = _r->topology->addPeer(newPeer);
 		}
 
 		peer->onReceive(_r,_localPort,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP,Utils::now());
@@ -904,6 +925,25 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
+}
+
+bool PacketDecoder::_doPROBE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+{
+	try {
+		uint64_t ts = at<uint64_t>(ZT_PROTO_VERB_PROBE_IDX_TIMESTAMP);
+		//uint64_t msSinceLastSend = at<uint64_t>(ZT_PROTO_VERB_PROBE_IDX_MS_SINCE_LAST_SEND);
+		Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
+		outp.append((unsigned char)Packet::VERB_PROBE);
+		outp.append(ts);
+		outp.append(peer->lastDirectSend()); // FIXME: need to refactor to also track relayed sends
+		outp.armor(peer->key(),true);
+		_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
+	} catch (std::exception &exc) {
+		TRACE("dropped PROBE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped PROBE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }

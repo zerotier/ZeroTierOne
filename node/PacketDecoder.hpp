@@ -122,6 +122,7 @@ private:
 	bool _doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doPROBE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 
 	uint64_t _receiveTime;
 	Demarc::Port _localPort;

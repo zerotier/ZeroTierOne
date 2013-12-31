@@ -49,7 +49,7 @@
 #include "Mutex.hpp"
 
 // Increment if serialization has changed
-#define ZT_PEER_SERIALIZATION_VERSION 5
+#define ZT_PEER_SERIALIZATION_VERSION 6
 
 namespace ZeroTier {
 
@@ -129,7 +129,7 @@ public:
 		uint64_t now);
 
 	/**
-	 * Send a UDP packet to this peer
+	 * Send a UDP packet to this peer directly (not via relaying)
 	 * 
 	 * @param _r Runtime environment
 	 * @param data Data to send
@@ -236,9 +236,19 @@ public:
 	}
 
 	/**
-	 * @return Lowest of measured latencies of all paths or 0 if unknown
+	 * @return Current latency or 0 if unknown (max: 65535)
 	 */
-	inline unsigned int latency() const throw() { return _latency; }
+	inline unsigned int latency() const
+		throw()
+	{
+		uint64_t now = Utils::now();
+		uint64_t latestOutstandingReq = 0;
+		for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p)
+			latestOutstandingReq = std::max(latestOutstandingReq,_requestHistory[p].timestamp);
+		if (latestOutstandingReq)
+			return std::min(std::max((unsigned int)(now - latestOutstandingReq),(unsigned int)_latency),(unsigned int)0xffff);
+		else return _latency;
+	}
 
 	/**
 	 * @return True if this peer has at least one direct IP address path
@@ -513,12 +523,12 @@ private:
 	WanPath _ipv4p;
 	WanPath _ipv6p;
 
-	uint64_t _lastUsed;
-	uint64_t _lastUnicastFrame;
-	uint64_t _lastMulticastFrame;
-	uint64_t _lastAnnouncedTo;
-	unsigned int _latency; // milliseconds, 0 if not known
+	volatile uint64_t _lastUsed;
+	volatile uint64_t _lastUnicastFrame;
+	volatile uint64_t _lastMulticastFrame;
+	volatile uint64_t _lastAnnouncedTo;
 	unsigned int _vMajor,_vMinor,_vRevision;
+	volatile unsigned int _latency;
 
 	// not persisted
 	RequestHistoryItem _requestHistory[ZT_PEER_REQUEST_HISTORY_LENGTH];

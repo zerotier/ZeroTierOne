@@ -40,10 +40,10 @@ Peer::Peer() :
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
-	_latency(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
+	_latency(0),
 	_requestHistoryPtr(0)
 {
 }
@@ -91,7 +91,7 @@ void Peer::onReceive(
 		// Do things like learn latency or endpoints on OK or ERROR replies
 		if (inReVerb != Packet::VERB_NOP) {
 			for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p) {
-				if ((_requestHistory[p].packetId == inRePacketId)&&(_requestHistory[p].verb == inReVerb)) {
+				if ((_requestHistory[p].timestamp)&&(_requestHistory[p].packetId == inRePacketId)&&(_requestHistory[p].verb == inReVerb)) {
 					_latency = std::min((unsigned int)(now - _requestHistory[p].timestamp),(unsigned int)0xffff);
 
 					// Only learn paths on replies to packets we have sent, otherwise
@@ -100,11 +100,17 @@ void Peer::onReceive(
 					if (!wp->fixed)
 						wp->addr = remoteAddr;
 
-					_requestHistory[p].packetId = 0;
+					_requestHistory[p].timestamp = 0;
 					break;
 				}
 			}
 		}
+
+		// If we get a valid packet with a different address that is not a response
+		// to a request, send a PROBE to authenticate this endpoint and determine if
+		// it is reachable.
+		if ((!wp->fixed)&&(wp->addr != remoteAddr))
+			_r->sw->sendPROBE(SharedPtr<Peer>(this),localPort,remoteAddr);
 	}
 
 	if (verb == Packet::VERB_FRAME) {

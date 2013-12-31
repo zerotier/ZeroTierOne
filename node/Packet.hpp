@@ -225,6 +225,16 @@
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN + 2)
 
+#define ZT_PROTO_VERB_PROBE_IDX_TIMESTAMP (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_PROBE_LEN_TIMESTAMP 8
+#define ZT_PROTO_VERB_PROBE_IDX_MS_SINCE_LAST_SEND (ZT_PROTO_VERB_PROBE_IDX_TIMESTAMP + ZT_PROTO_VERB_PROBE_LEN_TIMESTAMP)
+#define ZT_PROTO_VERB_PROBE_LEN_MS_SINCE_LAST_SEND 8
+
+#define ZT_PROTO_VERB_PROBE__OK__IDX_TIMESTAMP (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_PROBE__OK__LEN_TIMESTAMP 8
+#define ZT_PROTO_VERB_PROBE__OK__IDX_MS_SINCE_LAST_SEND (ZT_PROTO_VERB_PROBE_IDX_TIMESTAMP + ZT_PROTO_VERB_PROBE_LEN_TIMESTAMP)
+#define ZT_PROTO_VERB_PROBE__OK__LEN_MS_SINCE_LAST_SEND 8
+
 // ---------------------------------------------------------------------------
 
 namespace ZeroTier {
@@ -457,11 +467,7 @@ public:
 		 * send this to both peers at the same time on a periodic basis, telling
 		 * each where it might find the other on the network.
 		 *
-		 * Upon receipt, a peer sends a message such as NOP or HELLO to the other
-		 * peer. Peers only "learn" one anothers' direct addresses when they
-		 * successfully *receive* a message and authenticate it. Optionally, peers
-		 * will usually preface these messages with one or more firewall openers
-		 * to clear the path.
+		 * Upon receipt a peer sends HELLO to establish a direct link.
 		 *
 		 * Nodes should implement rate control, limiting the rate at which they
 		 * respond to these packets to prevent their use in DDOS attacks. Nodes
@@ -615,7 +621,28 @@ public:
 		 * It does not generate an OK or ERROR message, and is treated only as
 		 * a hint to refresh now.
 		 */
-		VERB_NETWORK_CONFIG_REFRESH = 12
+		VERB_NETWORK_CONFIG_REFRESH = 12,
+
+		/* Probe peer connection status:
+		 *    <[8] 64-bit timestamp>
+		 *    <[8] 64-bit milliseconds since last send to this peer>
+		 *
+		 * This message is sent to probe the status of a peer and to confirm
+		 * new link-layer addresses. Upon receipt an OK is generated which
+		 * echoes the time and responds with the number of milliseconds since
+		 * the recipient has last sent a packet to the sender.
+		 *
+		 * Using these delay times, a peer may determine if its current route
+		 * to another peer is likely dead and default to another route (e.g.
+		 * reverting to relaying).
+		 *
+		 * OK response payload:
+		 *    <[8] 64-bit timestamp echoed from request>
+		 *    <[8] 64-bit milliseconds since last send to requesitng peer>
+		 *
+		 * ERROR is not generated.
+		 */
+		VERB_PROBE = 13
 	};
 
 	/**

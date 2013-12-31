@@ -48,6 +48,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return "NETWORK_MEMBERSHIP_CERTIFICATE";
 		case VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
 		case VERB_NETWORK_CONFIG_REFRESH: return "NETWORK_CONFIG_REFRESH";
+		case VERB_PROBE: return "PROBE";
 	}
 	return "(unknown)";
 }

@@ -226,6 +226,20 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	} else return false;
 }
 
+bool Switch::sendPROBE(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr)
+{
+	uint64_t now = Utils::now();
+	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_PROBE);
+	outp.append(now);
+	outp.append(dest->lastDirectSend()); // FIXME: need to refactor to also track relayed sends
+	outp.armor(dest->key(),true);
+
+	if (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1)) {
+		dest->expectResponseTo(outp.packetId(),Packet::VERB_PROBE,localPort,now);
+		return true;
+	} else return false;
+}
+
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
 {
 	if ((p1 == _r->identity.address())||(p2 == _r->identity.address()))
