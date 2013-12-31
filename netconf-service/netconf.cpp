@@ -69,6 +69,8 @@
 
 #include <mysql++/mysql++.h>
 
+#include "../version.h"
+
 #include "../node/Constants.hpp"
 #include "../node/Dictionary.hpp"
 #include "../node/Identity.hpp"
@@ -446,6 +448,8 @@ int main(int argc,char **argv)
 
 				// Assemble response dictionary to send to peer
 				Dictionary netconf;
+				sprintf(buf,"%d.%d.%d",ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_NETCONF_SERVICE_VERSION] = buf;
 				sprintf(buf,"%.16llx",(unsigned long long)nwid);
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = buf;
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = peerIdentity.address().toString();

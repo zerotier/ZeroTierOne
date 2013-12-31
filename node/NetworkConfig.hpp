@@ -48,6 +48,7 @@ namespace ZeroTier {
 
 // These dictionary keys are short so they don't take up much room in
 // netconf response packets.
+#define ZT_NETWORKCONFIG_DICT_KEY_NETCONF_SERVICE_VERSION "ncver"
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
