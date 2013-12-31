@@ -29,17 +29,17 @@
 #define _ZT_VERSION_H
 
 /**
- * Major version: 8-bit (0-255)
+ * Major version
  */
 #define ZEROTIER_ONE_VERSION_MAJOR 0
 
 /**
- * Minor version: 8-bit (0-255)
+ * Minor version
  */
 #define ZEROTIER_ONE_VERSION_MINOR 6
 
 /**
- * Revision: 16-bit (0-65535)
+ * Revision
  */
 #define ZEROTIER_ONE_VERSION_REVISION 4
 
