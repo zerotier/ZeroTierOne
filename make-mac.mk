@@ -40,6 +40,8 @@ mac-ui: FORCE
 	mkdir -p build-ZeroTierUI-release
 	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
 	strip "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One"
+	cp -Rv ZeroTierUI/helpers "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources"
+	cd build-ZeroTierUI-release ; codesign -s '3rd Party Mac Developer Application: ZeroTier Networks LLC' "ZeroTier One.app"
 
 install-mac-tap: FORCE
 	mkdir -p /Library/Application\ Support/ZeroTier/One
