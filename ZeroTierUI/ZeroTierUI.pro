@@ -37,9 +37,9 @@ SOURCES += main.cpp\
 		../node/Topology.cpp \
 		../node/UdpSocket.cpp \
 		../node/Utils.cpp \
-    ../ext/lz4/lz4.c \
-    ../ext/lz4/lz4hc.c \
-    networkwidget.cpp
+		../ext/lz4/lz4.c \
+		../ext/lz4/lz4hc.c \
+		networkwidget.cpp
 
 HEADERS  += mainwindow.h \
 		aboutwindow.h \
@@ -86,13 +86,13 @@ HEADERS  += mainwindow.h \
 		../node/Thread.hpp \
 		../node/Topology.hpp \
 		../node/UdpSocket.hpp \
-    ../ext/lz4/lz4.h \
-    ../ext/lz4/lz4hc.h \
-    networkwidget.h
+		../ext/lz4/lz4.h \
+		../ext/lz4/lz4hc.h \
+		networkwidget.h
 
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \
-    networkwidget.ui
+		networkwidget.ui
 
 RESOURCES += \
 		resources.qrc

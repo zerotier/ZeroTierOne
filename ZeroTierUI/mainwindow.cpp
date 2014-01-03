@@ -23,6 +23,8 @@
 #include <QScrollBar>
 #include <QEventLoop>
 
+QNetworkAccessManager *nam;
+
 // Globally visible
 ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 
@@ -51,13 +53,16 @@ static void handleZTMessage(void *arg,unsigned long id,const char *line)
 
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
-	ui(new Ui::MainWindow)
+	ui(new Ui::MainWindow),
+	nam(new QNetworkAccessManager(this))
 {
 	ui->setupUi(this);
 	this->startTimer(1000); // poll service every second
 	this->setEnabled(false); // gets enabled when updates are received
 	mainWindow = this;
 	this->cyclesSinceResponseFromService = 0;
+
+	QObject::connect(nam,SIGNAL(finished(QNetworkReply*)),this,SLOT(on_networkReply(QNetworkReply*)));
 
 	if (ui->networkListWidget->verticalScrollBar())
 		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
@@ -79,30 +84,40 @@ void MainWindow::timerEvent(QTimerEvent *event)
 {
 	event->accept();
 
-#ifdef __APPLE__
-#else
-#endif
-
 	if (!zeroTierClient) {
-		std::string dotAuthFile((QDir::homePath() + QDir::separator() + ".zeroTierOneAuthToken").toStdString());
 		std::string authToken;
-		if (!ZeroTier::Utils::readFile(dotAuthFile.c_str(),authToken)) {
+		if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 #ifdef __APPLE__
-			// Run the little AppleScript hack that asks for admin credentials and
-			// then installs the auth token file in the current user's home.
-			QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
-			if (!QFile::exists(authHelperPath)) {
-				// Allow this to also work from the source tree if it's run from there.
-				// This is for debugging purposes and shouldn't harm the live release
-				// in any way.
-				authHelperPath = QCoreApplication::applicationDirPath() + "/../../../../ZeroTierUI/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet";
+			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
+				// Run the little AppleScript hack that asks for admin credentials and
+				// then installs the auth token file in the current user's home.
+				QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
 				if (!QFile::exists(authHelperPath)) {
-					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
+					// Allow this to also work from the source tree if it's run from there.
+					// This is for debugging purposes and shouldn't harm the live release
+					// in any way.
+					authHelperPath = QCoreApplication::applicationDirPath() + "/../../../../ZeroTierUI/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet";
+					if (!QFile::exists(authHelperPath)) {
+						QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+				}
+				QProcess::execute(authHelperPath,QStringList());
+			} else {
+				// Download the latest version and install it
+				this->setEnabled(false);
+
+				// Run the little AppleScript hack that asks for admin credentials and
+				// then installs the auth token file in the current user's home.
+				QString installHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Install).app/Contents/MacOS/applet");
+				if (!QFile::exists(installHelperPath)) {
+					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
 					QApplication::exit(1);
 					return;
 				}
+				QProcess::execute(installHelperPath,QStringList());
 			}
-			QProcess::execute(authHelperPath,QStringList());
 #endif
 
 			if (!ZeroTier::Utils::readFile(dotAuthFile.c_str(),authToken)) {
@@ -290,4 +305,8 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 void MainWindow::on_addressButton_clicked()
 {
 	QApplication::clipboard()->setText(this->myAddress);
+}
+
+void MainWindow::on_networkReply(QNetworkReply *reply)
+{
 }

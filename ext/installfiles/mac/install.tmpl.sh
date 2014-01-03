@@ -15,8 +15,17 @@ fi
 if [ $dryRun -gt 0 ]; then
 	alias ln="echo '>> dry run: ln'"
 	alias rm="echo '>> dry run: rm'"
+	alias mv="echo '>> dry run: mv'"
+	alias chown="echo '>> dry run: chown'"
+	alias chgrp="echo '>> dry run: chgrp'"
 	alias launchctl="echo '>> dry run: launchctl'"
 	alias zerotier-cli="echo '>> dry run: zerotier-cli'"
+fi
+
+zthome="/Library/Application Support/ZeroTier/One"
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne'`
+if [ ! -d "$ztapp" ]; then
+	ztapp="/Applications/ZeroTier One.app"
 fi
 
 scriptPath="`dirname "$0"`/`basename "$0"`"
@@ -46,9 +55,30 @@ else
 	tail -c +$blobStart "$scriptPath" | bunzip2 -c | tar -xvop -C / -f -
 fi
 
-if [ $dryRun -eq 0 -a ! -f "/Library/LaunchDaemons/com.zerotier.one.plist" ]; then
+if [ $dryRun -eq 0 -a ! -d "/Applications/ZeroTierOne_app.LATEST" ]; then
 	echo 'Archive extraction failed, cannot find zerotier-one binary.'
 	exit 2
+fi
+
+echo 'Installing/updating ZeroTier One.app...'
+
+if [ -d "$ztapp" ]; then
+	# Preserve ownership of existing .app and install new version in the
+	# same location.
+	currentAppOwner=`stat -f '%u' "$ztapp"`
+	currentAppGroup=`stat -f '%g' "$ztapp"`
+	if [ ! -z "$currentAppOwner" -a ! -z "$currentAppGroup" ]; then
+		rm -rf "$ztapp"
+		mv -f "/Application/ZeroTierOne_app.LATEST" "$ztapp"
+		chown -R $currentAppOwner "$ztapp"
+		chgrp -R $currentAppGroup "$ztapp"
+	else
+		rm -rf "$ztapp"
+		mv -f "/Application/ZeroTierOne_app.LATEST" "$ztapp"
+	fi
+else
+	# If there is no existing app, just drop the shipped one into place
+	mv -f "/Applications/ZeroTierOne_app.LATEST" "/Applications/ZeroTierOne.app"
 fi
 
 echo 'Installing zerotier-cli command line utility...'
