@@ -1,4 +1,4 @@
-QT       += core gui widgets
+QT       += core gui widgets network
 TARGET = "ZeroTier One"
 TEMPLATE = app
 

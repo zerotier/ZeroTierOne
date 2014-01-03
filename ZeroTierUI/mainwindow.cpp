@@ -79,6 +79,10 @@ void MainWindow::timerEvent(QTimerEvent *event)
 {
 	event->accept();
 
+#ifdef __APPLE__
+#else
+#endif
+
 	if (!zeroTierClient) {
 		std::string dotAuthFile((QDir::homePath() + QDir::separator() + ".zeroTierOneAuthToken").toStdString());
 		std::string authToken;

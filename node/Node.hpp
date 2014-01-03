@@ -84,6 +84,16 @@ public:
 		static std::vector<std::string> splitLine(const char *line);
 		static inline std::vector<std::string> splitLine(const std::string &line) { return splitLine(line.c_str()); }
 
+		/**
+		 * @return Default path for user-local authorization token for the current user or empty string if cannot be determined
+		 */
+		static std::string authTokenDefaultUserPath();
+
+		/**
+		 * @return Default system path for auth token on this platform
+		 */
+		static std::string authTokenDefaultSystemPath();
+
 	private:
 		// LocalClient is not copyable
 		LocalClient(const LocalClient&);

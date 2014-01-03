@@ -188,6 +188,32 @@ std::vector<std::string> Node::LocalClient::splitLine(const char *line)
 	return Utils::split(line," ","\\","\"");
 }
 
+std::string Node::LocalClient::authTokenDefaultUserPath()
+{
+	const char *home = getenv("HOME");
+	if (home) {
+#ifdef __APPLE__
+		return (std::string(home) + "/Library/Application Support/ZeroTier/One/authtoken.secret");
+#else
+		return (std::string(home) + "/.zeroTierOneAuthToken");
+#endif
+	}
+	return std::string();
+}
+
+std::string Node::LocalClient::authTokenDefaultSystemPath()
+{
+#ifdef __WINDOWS__
+	// TODO
+#else
+#ifdef __APPLE__
+	return "/Library/Application Support/ZeroTier/One/authtoken.secret";
+#else
+	return "/var/lib/zerotier-one/authtoken.secret";
+#endif
+#endif
+}
+
 struct _NodeImpl
 {
 	RuntimeEnvironment renv;

@@ -161,6 +161,9 @@ static int main(int argc,char **argv)
 						return -2;
 					}
 					break;
+				case 'h':
+					printHelp(stdout,argv[0]);
+					return 0;
 				default:
 					return -1;
 			}
@@ -178,26 +181,10 @@ static int main(int argc,char **argv)
 	}
 
 	if (!authToken.length()) {
-		const char *home = getenv("HOME");
-		if (home) {
-			std::string dotZeroTierAuthToken(home);
-			dotZeroTierAuthToken.push_back(ZT_PATH_SEPARATOR);
-			dotZeroTierAuthToken.append(".zerotierOneAuthToken");
-			if (!Utils::readFile(dotZeroTierAuthToken.c_str(),authToken)) {
-#ifndef __WINDOWS__
-#ifdef __APPLE__
-				const char *systemAuthTokenPath = "/Library/Application Support/ZeroTier/One/authtoken.secret";
-#else
-				const char *systemAuthTokenPath = "/var/lib/zerotier-one/authtoken.secret";
-#endif
-				if (!Utils::readFile(systemAuthTokenPath,authToken)) {
-					fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s' or '%s'"ZT_EOL_S,dotZeroTierAuthToken.c_str(),systemAuthTokenPath);
-					return -2;
-				}
-#else // __WINDOWS__
-				fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s'"ZT_EOL_S,dotZeroTierAuthToken.c_str());
+		if (!Utils::readFile(Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
+			if (!Utils::readFile(Node::LocalClient::authTokenDefaultSystemPath().c_str(),authToken)) {
+				fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s' or '%s'"ZT_EOL_S,Node::LocalClient::authTokenDefaultSystemPath().c_str(),Node::LocalClient::authTokenDefaultUserPath().c_str());
 				return -2;
-#endif // __WINDOWS__
 			}
 		}
 	}
