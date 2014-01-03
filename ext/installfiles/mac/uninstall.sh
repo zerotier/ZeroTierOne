@@ -13,7 +13,7 @@ fi
 # Run with -q to be quieter and run without delay
 quickAndQuiet=0
 if [ "$1" = "-q" ]; then
-  quickAndQuiet=1
+	quickAndQuiet=1
 	echo() { :; }
 fi
 

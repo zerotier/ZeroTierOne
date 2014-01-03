@@ -1,7 +1,6 @@
 /ext/llvm-g++-Xcode4.6.2
 /ext/llvm-g++-Xcode4.6.2.tar.bz2
 /zerotier-*
-/build-ZeroTierUI-*
 /ZeroTierUI/*.user
 *.o
 .DS_Store
@@ -31,8 +30,7 @@ mac-tap/tuntap/tap.kext
 *.cache
 *.obj
 *.tlog
-/installer-build
-/zt1-*-install
-/file2lz4c
+/build-*
+/ZeroTierOne-*-install
 .qmake.stash
 *.autosave
