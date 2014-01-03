@@ -1,22 +1,26 @@
 #!/bin/bash
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp="/Applications/ZeroTier One.app"
-
 export PATH="/bin:/usr/bin:/sbin:/usr/sbin:$zthome"
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne'`
 
-# Uninstall if the .app has been thrown away
-if [ ! -d "$ztapp" ]; then
-	if [ -e "$zthome/uninstall.sh" ]; then
-		cd "$zthome"
-		./uninstall.sh -q
-		exit
+# Clean all other stuff off the system if the user has trashed the .app
+if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
+	# Double-check default location just in case there is some issue with mdfind
+	ztapp="/Applications/ZeroTier One.app"
+	if [ ! -d "$ztapp" ]; then
+		if [ -e "$zthome/uninstall.sh" ]; then
+			cd "$zthome"
+			./uninstall.sh -q
+			exit
+		fi
 	fi
 fi
 
 # Create the app deletion notification symlink if it does
 # not already exist.
-if [ ! -L "$zthome/shutdownIfUnreadable" ]; then
+shutdownIfUnreadablePointsTo=`readlink "$zthome/shutdownIfUnreadable"`
+if [ -z "$shutdownIfUnreadablePointsTo" -o "$shutdownIfUnreadablePointsTo" != "$ztapp/Contents/Info.plist" ]; then
 	rm -f "$zthome/shutdownIfUnreadable"
 	ln -sf "$ztapp/Contents/Info.plist" "$zthome/shutdownIfUnreadable"
 fi

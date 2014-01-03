@@ -2,12 +2,17 @@
 
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
-ztpath="/Library/Application Support/ZeroTier/One"
-ztapp="/Applications/ZeroTier One.app"
+zthome="/Library/Application Support/ZeroTier/One"
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne'`
 
 if [ "$UID" -ne 0 ]; then
 	echo "Must be run as root; try: sudo $0"
 	exit 1
+fi
+
+# Try default location if something's up with mdfind
+if [ ! -d "$ztapp" ]; then
+	ztapp="/Applications/ZeroTier One.app"
 fi
 
 # Run with -q to be quieter and run without delay
@@ -36,15 +41,20 @@ killall -KILL zerotier-one >>/dev/null 2>&1
 sleep 1
 
 echo "Unloading kernel extension..."
-kextunload "$ztpath/tap.kext" >>/dev/null 2>&1
+kextunload "$zthome/tap.kext" >>/dev/null 2>&1
 
-echo "Erasing UI app, binary, and support files..."
-cd "$ztpath"
-rm -rfv "$ztapp" zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh networks.d updates.d shutdownIfUnreadable
+echo "Erasing GUI app (if installed)..."
+if [ -d "$ztapp" ]; then
+	rm -rfv "$ztapp"
+fi
+
+echo "Erasing service and support files..."
+cd "$zthome"
+rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh networks.d updates.d shutdownIfUnreadable
 
 echo "Done."
 echo
-echo "Your ZeroTier One identity is still preserved in $ztpath"
+echo "Your ZeroTier One identity is still in: $zthome"
 echo "as identity.secret and can be manually deleted if you wish. Save it if"
 echo "you wish to re-use the address of this node, as it cannot be regenerated."
 
