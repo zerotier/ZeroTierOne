@@ -55,6 +55,15 @@ echo 'Installing zerotier-cli command line utility...'
 
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" /usr/bin/zerotier-cli
 
+if [ ! -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then
+	echo 'Pre-creating authtoken.secret for ZeroTier service...'
+	if [ $dryRun -eq 0 ]; then
+		rm -f '/Library/Application Support/ZeroTier/One/authtoken.secret'
+		head -c 1024 /dev/urandom | md5 | head -c 24 >'/Library/Application Support/ZeroTier/One/authtoken.secret'
+		chmod 0600 '/Library/Application Support/ZeroTier/One/authtoken.secret'
+	fi
+fi
+
 echo 'Installing and (re-)starting zerotier-one service via launchctl...'
 
 if [ ! -z "`launchctl list | grep -F com.zerotier.one`" ]; then

@@ -11,7 +11,7 @@
 	<key>CFBundleIconFile</key>
 	<string>applet</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.zerotier.one.ZeroTierOneMacAuthenticateScript</string>
+	<string>com.zerotier.one.ZeroTierOneMacInstallScript</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -22,8 +22,6 @@
 	<string>1.0</string>
 	<key>CFBundleSignature</key>
 	<string>aplt</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
 	<key>LSMinimumSystemVersionByArchitecture</key>
 	<dict>
 		<key>x86_64</key>
@@ -32,7 +30,7 @@
 	<key>LSRequiresCarbon</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>(c) 2013-2014 ZeroTier Networks LLC</string>
+	<string>(c) 2013 ZeroTier Networks LLC</string>
 	<key>WindowState</key>
 	<dict>
 		<key>dividerCollapsed</key>
@@ -44,7 +42,7 @@
 		<key>positionOfDivider</key>
 		<real>333</real>
 		<key>savedFrame</key>
-		<string>36 164 602 597 0 0 1280 778 </string>
+		<string>265 106 602 597 0 0 1280 778 </string>
 		<key>selectedTabView</key>
 		<string>event log</string>
 	</dict>
