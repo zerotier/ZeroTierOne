@@ -37,7 +37,7 @@ if [ ! -r "$scriptPath" ]; then
 	fi
 fi
 
-endMarkerIndex=`grep -b -E '^################' "$scriptPath" | head -n 1 | cut -d : -f 1`
+endMarkerIndex=`grep -a -b -E '^################' "$scriptPath" | head -c 16 | cut -d : -f 1`
 if [ "$endMarkerIndex" -le 100 ]; then
 	echo 'Internal error: unable to find end of script / start of binary data marker.'
 	exit 2
@@ -55,7 +55,7 @@ else
 	tail -c +$blobStart "$scriptPath" | bunzip2 -c | tar -xvop -C / -f -
 fi
 
-if [ $dryRun -eq 0 -a ! -d "/Applications/ZeroTierOne_app.LATEST" ]; then
+if [ $dryRun -eq 0 -a ! -d "/Applications/ZeroTier One_app.LATEST" ]; then
 	echo 'Archive extraction failed, cannot find zerotier-one binary.'
 	exit 2
 fi
@@ -69,16 +69,16 @@ if [ -d "$ztapp" ]; then
 	currentAppGroup=`stat -f '%g' "$ztapp"`
 	if [ ! -z "$currentAppOwner" -a ! -z "$currentAppGroup" ]; then
 		rm -rf "$ztapp"
-		mv -f "/Application/ZeroTierOne_app.LATEST" "$ztapp"
+		mv -f "/Application/ZeroTier One_app.LATEST" "$ztapp"
 		chown -R $currentAppOwner "$ztapp"
 		chgrp -R $currentAppGroup "$ztapp"
 	else
 		rm -rf "$ztapp"
-		mv -f "/Application/ZeroTierOne_app.LATEST" "$ztapp"
+		mv -f "/Application/ZeroTier One_app.LATEST" "$ztapp"
 	fi
 else
 	# If there is no existing app, just drop the shipped one into place
-	mv -f "/Applications/ZeroTierOne_app.LATEST" "/Applications/ZeroTierOne.app"
+	mv -f "/Applications/ZeroTier One_app.LATEST" "/Applications/ZeroTier One.app"
 fi
 
 echo 'Installing zerotier-cli command line utility...'

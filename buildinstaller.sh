@@ -3,14 +3,10 @@
 # This script builds the installer for *nix systems. Windows must do everything
 # completely differently, as usual.
 
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
 if [ ! -f zerotier-one ]; then
 	echo "Could not find 'zerotier-one' binary, please build before running this script."
-	exit 2
-fi
-
-make -j 2 file2lz4c
-if [ ! -f file2lz4c ]; then
-	echo "Build of file2lz4c utility failed, aborting installer build."
 	exit 2
 fi
 
@@ -26,12 +22,8 @@ if [ -z "$vmajor" -o -z "$vminor" -o -z "$revision" ]; then
 	exit 2
 fi
 
-echo "Packaging common files: zerotier-one"
-
-rm -rf installer-build
-mkdir installer-build
-
-./file2lz4c zerotier-one zerotier_one >installer-build/zerotier_one.h
+rm -rf build-installer
+mkdir build-installer
 
 case "$system" in
 
@@ -51,44 +43,48 @@ case "$system" in
 				exit 2
 		esac
 
-		echo "Assembling Linux installer for $machine and ZT1 version $vmajor.$vminor.$revision"
+		echo "Assembling Linux installer for $machine and version $vmajor.$vminor.$revision"
 
-		./file2lz4c ext/installfiles/linux/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
-		./file2lz4c ext/installfiles/linux/init.d/zerotier-one linux__init_d__zerotier_one >installer-build/linux__init_d__zerotier_one.h
+		mkdir -p 'build-installer/var/lib/zerotier-one'
+		cp -fp 'ext/installfiles/linux/uninstall.sh' 'build-installer/var/lib/zerotier-one'
+		cp -fp 'zerotier-one' 'build-installer/var/lib/zerotier-one'
+		mkdir -p 'build-installer/etc/init.d'
+		cp -fp 'ext/installfiles/linux/init.d/zerotier-one' 'build-installer/etc/init.d'
 
-		targ="zt1-${vmajor}_${vminor}_${revision}-linux-${machine}-install"
-
-		if [ -e /usr/bin/clang ]; then
-			clang -Os -o $targ installer.c ext/lz4/lz4.o ext/lz4/lz4hc.o
-		else
-			gcc -Os -o $targ installer.c ext/lz4/lz4.o ext/lz4/lz4hc.o
-		fi
-		strip --strip-all $targ
-		ls -l $targ
+		targ="ZeroTierOneInstaller-linux-${machine}-${vmajor}_${vminor}_${revision}"
+		rm -f build-installer-tmp.tar.gz
+		cd build-installer
+		tar -cf - * | gzip -9 >../build-installer-tmp.tar.gz
+		cd ..
+		rm -f $targ
+		cat ext/installfiles/linux/install.tmpl.sh build-installer-tmp.tar.gz >$targ
+		rm -f build-installer-tmp.tar.gz
 
 		;;
 
 	Darwin)
-		echo "Assembling mac installer for x86/x64 (combined) and ZT1 version $vmajor.$vminor.$revision"
+		echo "Assembling mac installer for x86/x64 (combined) version $vmajor.$vminor.$revision"
 
-		./file2lz4c ext/installfiles/mac/uninstall.sh uninstall_sh >installer-build/uninstall_sh.h
-		./file2lz4c ext/installfiles/mac/launch.sh mac__launch_sh >installer-build/mac__launch_sh.h
-		./file2lz4c ext/installfiles/mac/com.zerotier.one.plist mac__com_zerotier_one_plist >installer-build/mac__com_zerotier_one_plist.h
-		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/Info.plist tap_mac__Info_plist >installer-build/tap_mac__Info_plist.h
-		./file2lz4c ext/bin/tap-mac/tap.kext/Contents/MacOS/tap tap_mac__tap >installer-build/tap_mac__tap.h
-		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/Info.plist" mac_ui__contents_info_plist >installer-build/mac_ui__contents_info_plist.h
-		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/PkgInfo" mac_ui__contents_pkginfo >installer-build/mac_ui__contents_pkginfo.h
-		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One" mac_ui__contents_macos_zerotier_one >installer-build/mac_ui__contents_macos_zerotier_one.h
-		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/empty.lproj" mac_ui__contents_resources_empty_lproj >installer-build/mac_ui__contents_resources_empty_lproj.h
-		./file2lz4c "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/zt1icon.icns" mac_ui__contents_resources_zt1icon_icns >installer-build/mac_ui__contents_resources_zt1icon_icns.h
+		mkdir -p 'build-installer/Applications'
+		cp -a 'build-ZeroTierUI-release/ZeroTier One.app' 'build-installer/Applications'
+		mv -f 'build-installer/Applications/ZeroTier One.app' 'build-installer/Applications/ZeroTier One_app.LATEST'
+		mkdir -p 'build-installer/Library/Application Support/ZeroTier/One'
+		cp -fp 'ext/installfiles/mac/uninstall.sh' 'build-installer/Library/Application Support/ZeroTier/One'
+		cp -fp 'ext/installfiles/mac/launch.sh' 'build-installer/Library/Application Support/ZeroTier/One'
+		cp -fp 'zerotier-one' 'build-installer/Library/Application Support/ZeroTier/One'
+		mkdir -p 'build-installer/Library/LaunchDaemons'
+		cp -fp 'ext/installfiles/mac/com.zerotier.one.plist' 'build-installer/Library/LaunchDaemons'
 
-		targ="zt1-${vmajor}_${vminor}_${revision}-mac-combined-install"
-
-		# Installer can be i386-only to save space, but installs combined
-		# x86/x64 binaries for ZT1 itself.
-		clang -Os -arch i386 -o $targ installer.c ext/lz4/lz4.o ext/lz4/lz4hc.o
-		strip $targ
-		ls -l $targ
+		targ="ZeroTierOneInstaller-mac-combined-${vmajor}_${vminor}_${revision}"
+		rm -f build-installer-tmp.tar.bz2
+		cd build-installer
+		find . -type f -name .DS_Store -print0 | xargs -0 rm -f
+		tar -cf - * | bzip2 -9 >../build-installer-tmp.tar.bz2
+		cd ..
+		rm -f $targ
+		cat ext/installfiles/mac/install.tmpl.sh build-installer-tmp.tar.bz2 >$targ
+		chmod 0755 $targ
+		rm -f build-installer-tmp.tar.bz2
 
 		;;
 

@@ -120,7 +120,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
 			}
 #endif
 
-			if (!ZeroTier::Utils::readFile(dotAuthFile.c_str(),authToken)) {
+			if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 				QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One.\n\nTo do so manually, copy 'authtoken.secret' from the ZeroTier One home directory to '.zeroTierOneAuthToken' in your home directory and set file modes on this file to only be readable by you (e.g. 0600 on Mac or Linux systems).",QMessageBox::Ok,QMessageBox::NoButton);
 				QApplication::exit(1);
 				return;
@@ -132,7 +132,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
 
 	// TODO: do something more user-friendly here... or maybe try to restart
 	// the service?
-	if (++this->cyclesSinceResponseFromService == 3)
+	if (++this->cyclesSinceResponseFromService == 4)
 		QMessageBox::critical(this,"No Response from Service","The ZeroTier One service does not appear to be running.",QMessageBox::Ok,QMessageBox::NoButton);
 
 	zeroTierClient->send("info");

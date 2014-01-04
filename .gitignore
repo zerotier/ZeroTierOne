@@ -6,10 +6,8 @@
 .DS_Store
 .Apple*
 *.dSYM
-netconf-service/netconf-test
-netconf-service/netconf.service
-mac-tap/tuntap/src/tap/tap
-mac-tap/tuntap/tap.kext
+/netconf-service/netconf-test
+/netconf-service/netconf.service
 /ipch
 /ZeroTierOne.sdf
 /ZeroTierOne.v11.suo
@@ -31,6 +29,6 @@ mac-tap/tuntap/tap.kext
 *.obj
 *.tlog
 /build-*
-/ZeroTierOne-*-install
+/ZeroTierOneInstaller-*
 .qmake.stash
 *.autosave
