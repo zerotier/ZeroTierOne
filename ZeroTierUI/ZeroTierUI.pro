@@ -39,7 +39,8 @@ SOURCES += main.cpp\
 		../node/Utils.cpp \
 		../ext/lz4/lz4.c \
 		../ext/lz4/lz4hc.c \
-		networkwidget.cpp
+		networkwidget.cpp \
+    installdialog.cpp
 
 HEADERS  += mainwindow.h \
 		aboutwindow.h \
@@ -88,11 +89,13 @@ HEADERS  += mainwindow.h \
 		../node/UdpSocket.hpp \
 		../ext/lz4/lz4.h \
 		../ext/lz4/lz4hc.h \
-		networkwidget.h
+		networkwidget.h \
+    installdialog.h
 
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \
-		networkwidget.ui
+		networkwidget.ui \
+    installdialog.ui
 
 RESOURCES += \
 		resources.qrc

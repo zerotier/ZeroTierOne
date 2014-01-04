@@ -4,10 +4,6 @@
 #include <QMainWindow>
 #include <QEvent>
 #include <QString>
-#include <QNetworkAccessManager>
-#include <QUrl>
-#include <QNetworkRequest>
-#include <QNetworkReply>
 
 #include <map>
 #include <vector>
@@ -55,15 +51,14 @@ private slots:
 	void on_actionAbout_triggered();
 	void on_networkIdLineEdit_textChanged(const QString &text);
 	void on_addressButton_clicked();
-	void on_networkReply(QNetworkReply *reply);
 
 private:
 	Ui::MainWindow *ui;
 
-	QNetworkAccessManager *nam;
 	QString myAddress;
 	QString myStatus;
 	QString myVersion;
+	int pollServiceTimerId;
 	unsigned int numPeers;
 	unsigned int cyclesSinceResponseFromService;
 	std::map< std::string,std::vector<std::string> > networks;

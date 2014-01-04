@@ -2,6 +2,7 @@
 #include "aboutwindow.h"
 #include "networkwidget.h"
 #include "ui_mainwindow.h"
+#include "installdialog.h"
 
 #include <string>
 #include <map>
@@ -54,15 +55,13 @@ static void handleZTMessage(void *arg,unsigned long id,const char *line)
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
 	ui(new Ui::MainWindow),
-	nam(new QNetworkAccessManager(this))
+	pollServiceTimerId(0)
 {
 	ui->setupUi(this);
-	this->startTimer(1000); // poll service every second
+	this->pollServiceTimerId = this->startTimer(1000);
 	this->setEnabled(false); // gets enabled when updates are received
 	mainWindow = this;
 	this->cyclesSinceResponseFromService = 0;
-
-	QObject::connect(nam,SIGNAL(finished(QNetworkReply*)),this,SLOT(on_networkReply(QNetworkReply*)));
 
 	if (ui->networkListWidget->verticalScrollBar())
 		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
@@ -84,11 +83,15 @@ void MainWindow::timerEvent(QTimerEvent *event)
 {
 	event->accept();
 
+	if (this->isHidden())
+		return;
+
 	if (!zeroTierClient) {
 		std::string authToken;
 		if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 #ifdef __APPLE__
-			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
+			//if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
+			if (false) {
 				// Run the little AppleScript hack that asks for admin credentials and
 				// then installs the auth token file in the current user's home.
 				QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
@@ -105,11 +108,18 @@ void MainWindow::timerEvent(QTimerEvent *event)
 				}
 				QProcess::execute(authHelperPath,QStringList());
 			} else {
-				// Download the latest version and install it
+				// If the service is not installed, download the installer and run it
+				// for the first time.
 				this->setEnabled(false);
+				InstallDialog *id = new InstallDialog(this);
+				id->setModal(true);
+				id->show();
+				this->setHidden(true);
+				return;
 
 				// Run the little AppleScript hack that asks for admin credentials and
 				// then installs the auth token file in the current user's home.
+				/*
 				QString installHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Install).app/Contents/MacOS/applet");
 				if (!QFile::exists(installHelperPath)) {
 					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
@@ -117,6 +127,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
 					return;
 				}
 				QProcess::execute(installHelperPath,QStringList());
+				*/
 			}
 #endif
 
@@ -305,8 +316,4 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 void MainWindow::on_addressButton_clicked()
 {
 	QApplication::clipboard()->setText(this->myAddress);
-}
-
-void MainWindow::on_networkReply(QNetworkReply *reply)
-{
 }
