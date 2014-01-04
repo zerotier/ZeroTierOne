@@ -58,6 +58,7 @@ case "$system" in
 		cd ..
 		rm -f $targ
 		cat ext/installfiles/linux/install.tmpl.sh build-installer-tmp.tar.gz >$targ
+		chmod 0755 $targ
 		rm -f build-installer-tmp.tar.gz
 
 		;;
