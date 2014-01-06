@@ -57,7 +57,8 @@ fi
 
 echo 'Installing zerotier-cli command line utility...'
 
-ln -sf /var/lib/zerotier-one /usr/bin/zerotier-cli
+rm -f /usr/bin/zerotier-cli
+ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-cli
 
 echo 'Installing and (re-)starting zerotier-one daemon...'
 
