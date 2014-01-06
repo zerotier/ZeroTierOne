@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <stdexcept>
+
 #include "../version.h"
 
 #include "SoftwareUpdater.hpp"
@@ -72,6 +74,48 @@ SoftwareUpdater::~SoftwareUpdater()
 	}
 }
 
+const char *SoftwareUpdater::parseNfo(
+	const char *nfoText,
+	unsigned int &vMajor,
+	unsigned int &vMinor,
+	unsigned int &vRevision,
+	Address &signedBy,
+	std::string &signature,
+	std::string &url)
+{
+	try {
+		Dictionary nfo(nfoText);
+
+		vMajor = Utils::strToUInt(nfo.get("vMajor").c_str());
+		vMinor = Utils::strToUInt(nfo.get("vMinor").c_str());
+		vRevision = Utils::strToUInt(nfo.get("vRevision").c_str());
+		signedBy = nfo.get("signedBy");
+		signature = Utils::unhex(nfo.get("ed25519"));
+		url = nfo.get("url");
+
+		if (signature.length() != ZT_C25519_SIGNATURE_LEN)
+			return "bad ed25519 signature, invalid length";
+		if ((url.length() <= 7)||(url.substr(0,7) != "http://"))
+			return "invalid URL, must begin with http://";
+
+		return (const char *)0;
+	} catch ( ... ) {
+		return "invalid NFO file format or one or more required fields missing";
+	}
+}
+
+bool SoftwareUpdater::validateUpdate(
+	const void *data,
+	unsigned int len,
+	const Address &signedBy,
+	const std::string &signature)
+{
+	std::map< Address,Identity >::const_iterator updateAuthority = ZT_DEFAULTS.updateAuthorities.find(signedBy);
+	if (updateAuthority == ZT_DEFAULTS.updateAuthorities.end())
+		return false;
+	return updateAuthority->second.verify(data,len,signature.data(),signature.length());
+}
+
 void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
@@ -90,35 +134,30 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 	}
 
 	try {
-		Dictionary nfo(body);
-		const unsigned int vMajor = Utils::strToUInt(nfo.get("vMajor").c_str());
-		const unsigned int vMinor = Utils::strToUInt(nfo.get("vMinor").c_str());
-		const unsigned int vRevision = Utils::strToUInt(nfo.get("vRevision").c_str());
-		const Address signedBy(nfo.get("signedBy"));
-		const std::string signature(Utils::unhex(nfo.get("ed25519")));
-		const std::string &url = nfo.get("url");
+		unsigned int vMajor = 0,vMinor = 0,vRevision = 0;
+		Address signedBy;
+		std::string signature,url;
 
-		if (signature.length() != ZT_C25519_SIGNATURE_LEN) {
-			LOG("software update aborted: .nfo file invalid: bad ed25519 ECC signature field");
-			upd->_status = UPDATE_STATUS_IDLE;
-			return;
-		}
-		if ((url.length() <= 7)||(url.substr(0,7) != "http://")) {
-			LOG("software update aborted: .nfo file invalid: update URL must begin with http://");
-			upd->_status = UPDATE_STATUS_IDLE;
-			return;
-		}
-		if (packVersion(vMajor,vMinor,vRevision) <= upd->_myVersion) {
-			LOG("software update aborted: .nfo file invalid: version on web site <= my version");
-			upd->_status = UPDATE_STATUS_IDLE;
-			return;
-		}
+		const char *err = parseNfo(body.c_str(),vMajor,vMinor,vRevision,signedBy,signature,url);
 
+		if (err) {
+			LOG("software update aborted: .nfo file error: %s",err);
+			upd->_status = UPDATE_STATUS_IDLE;
+			return;
+		}
 		if (!ZT_DEFAULTS.updateAuthorities.count(signedBy)) {
 			LOG("software update aborted: .nfo file specifies unknown signing authority");
 			upd->_status = UPDATE_STATUS_IDLE;
 			return;
 		}
+
+#ifndef ZT_ALWAYS_UPDATE /* for testing */
+		if (packVersion(vMajor,vMinor,vRevision) <= upd->_myVersion) {
+			LOG("software update aborted: .nfo file invalid: version on web site <= my version");
+			upd->_status = UPDATE_STATUS_IDLE;
+			return;
+		}
+#endif
 
 		upd->_status = UPDATE_STATUS_GETTING_FILE;
 		upd->_signedBy = signedBy;
@@ -137,16 +176,8 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)upd->_r;
 	Mutex::Lock _l(upd->_lock);
 
-	std::map< Address,Identity >::const_iterator updateAuthority = ZT_DEFAULTS.updateAuthorities.find(upd->_signedBy);
-	if (updateAuthority == ZT_DEFAULTS.updateAuthorities.end()) { // sanity check, shouldn't happen
-		LOG("software update aborted: .nfo file specifies unknown signing authority");
-		upd->_status = UPDATE_STATUS_IDLE;
-		return;
-	}
-
-	// The all-important authenticity check... :)
-	if (!updateAuthority->second.verify(body.data(),body.length(),upd->_signature.data(),upd->_signature.length())) {
-		LOG("software update aborted: update fetched from '%s' failed certificate check against signer %s",url.c_str(),updateAuthority->first.toString().c_str());
+	if (!validateUpdate(body.data(),body.length(),upd->_signedBy,upd->_signature)) {
+		LOG("software update aborted: update fetched from '%s' failed signature check (got %u bytes)",url.c_str(),(unsigned int)body.length());
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}

@@ -30,11 +30,14 @@
 
 #include <stdint.h>
 
+#include <string>
+
 #include "Constants.hpp"
 #include "Mutex.hpp"
 #include "Utils.hpp"
 #include "HttpClient.hpp"
 #include "Defaults.hpp"
+#include "Address.hpp"
 
 namespace ZeroTier {
 
@@ -114,6 +117,49 @@ public:
 	{
 		return ( ((uint64_t)(vmaj & 0xffff) << 32) | ((uint64_t)(vmin & 0xffff) << 16) | (uint64_t)(rev & 0xffff) );
 	}
+
+	/**
+	 * Parse NFO data from .nfo file on software update site
+	 *
+	 * The first argument is the NFO data, and all the remaining arguments are
+	 * result parameters to be filled with results. If an error is returned the
+	 * results in the parameters should be considered undefined.
+	 *
+	 * @param nfo NFO data
+	 * @param vMajor Result: major version
+	 * @param vMinor Result: minor version
+	 * @param vRevision Result: revision number
+	 * @param signedBy Result: signing identity
+	 * @param signature Result: Ed25519 signature data
+	 * @param url Result: URL of update binary
+	 * @return NULL on success or error message on failure
+	 */
+	static const char *parseNfo(
+		const char *nfoText,
+		unsigned int &vMajor,
+		unsigned int &vMinor,
+		unsigned int &vRevision,
+		Address &signedBy,
+		std::string &signature,
+		std::string &url);
+
+	/**
+	 * Validate an update once downloaded
+	 *
+	 * This obtains the identity corresponding to the address from the compiled-in
+	 * list of valid signing identities.
+	 *
+	 * @param data Update data
+	 * @param len Length of update data
+	 * @param signedBy Signing authority address
+	 * @param signature Signing authority signature
+	 * @return True on validation success, false if rejected
+	 */
+	static bool validateUpdate(
+		const void *data,
+		unsigned int len,
+		const Address &signedBy,
+		const std::string &signature);
 
 private:
 	static void _cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,bool onDisk,const std::string &body);

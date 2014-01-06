@@ -3,6 +3,7 @@
 #include "ui_installdialog.h"
 
 #include "../node/Defaults.hpp"
+#include "../node/SoftwareUpdater.hpp"
 
 #include <QMainWindow>
 #include <QMessageBox>
@@ -12,7 +13,8 @@
 InstallDialog::InstallDialog(QWidget *parent) :
 	QDialog(parent),
 	ui(new Ui::InstallDialog),
-	nam(new QNetworkAccessManager(this))
+	nam(new QNetworkAccessManager(this)),
+	phase(FETCHING_NFO)
 {
 	ui->setupUi(this);
 	QObject::connect(nam,SIGNAL(finished(QNetworkReply*)),this,SLOT(on_networkReply(QNetworkReply*)));
@@ -40,16 +42,41 @@ void InstallDialog::on_networkReply(QNetworkReply *reply)
 	if (reply->error() != QNetworkReply::NoError) {
 		QMessageBox::critical(this,"Download Failed",QString("Download failed: ") + reply->errorString(),QMessageBox::Ok,QMessageBox::NoButton);
 		QApplication::exit(1);
-		return;
 	} else {
 		if (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute) == 200) {
 			QByteArray installerData(reply->readAll());
-			installerData.append((char)0);
-			printf("%s\n",installerData.data());
+
+			switch(phase) {
+				case FETCHING_NFO: {
+					unsigned int vMajor = 0,vMinor = 0,vRevision = 0;
+					installerData.append((char)0);
+					const char *err = ZeroTier::SoftwareUpdater::parseNfo(installerData.data(),vMajor,vMinor,vRevision,signedBy,signature,url);
+
+					if (err) {
+						QMessageBox::critical(this,"Download Failed","Download failed: there is a problem with the software update web site.\nTry agian later. (invalid .nfo file)",QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+
+					phase = FETCHING_INSTALLER;
+					reply = nam->get(QNetworkRequest(QUrl(url.c_str())));
+					QObject::connect(reply,SIGNAL(downloadProgress(qint64,qint64)),this,SLOT(on_downloadProgress(qint64,qint64)));
+				}	break;
+				case FETCHING_INSTALLER: {
+					if (!ZeroTier::SoftwareUpdater::validateUpdate(installerData.data(),installerData.length(),signedBy,signature)) {
+						QMessageBox::critical(this,"Download Failed","Download failed: there is a problem with the software update web site.\nTry agian later. (failed signature check)",QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+				}	break;
+			}
+
+			ui->progressBar->setMinimum(0);
+			ui->progressBar->setMaximum(100);
+			ui->progressBar->setValue(0);
 		} else {
 			QMessageBox::critical(this,"Download Failed",QString("Download failed: HTTP status code ") + reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString(),QMessageBox::Ok,QMessageBox::NoButton);
 			QApplication::exit(1);
-			return;
 		}
 	}
 }

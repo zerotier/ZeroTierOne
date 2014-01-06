@@ -7,6 +7,10 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 
+#include <string>
+
+#include "../node/Address.hpp"
+
 namespace Ui {
 class InstallDialog;
 }
@@ -28,6 +32,13 @@ private slots:
 private:
 	Ui::InstallDialog *ui;
 	QNetworkAccessManager *nam;
+	enum {
+		FETCHING_NFO,
+		FETCHING_INSTALLER
+	} phase;
+
+	ZeroTier::Address signedBy;
+	std::string url,signature;
 };
 
 #endif // INSTALLDIALOG_H
