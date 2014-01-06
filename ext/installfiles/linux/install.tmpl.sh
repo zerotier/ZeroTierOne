@@ -18,14 +18,9 @@ if [ $dryRun -gt 0 ]; then
 	alias mv="echo '>> dry run: mv'"
 	alias chown="echo '>> dry run: chown'"
 	alias chgrp="echo '>> dry run: chgrp'"
-	alias launchctl="echo '>> dry run: launchctl'"
+	alias chkconfig="echo '>> dry run: chkconfig'"
 	alias zerotier-cli="echo '>> dry run: zerotier-cli'"
-fi
-
-zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne'`
-if [ ! -d "$ztapp" ]; then
-	ztapp="/Applications/ZeroTier One.app"
+	alias service="echo '>> dry run: service'"
 fi
 
 scriptPath="`dirname "$0"`/`basename "$0"`"
@@ -55,51 +50,19 @@ else
 	tail -c +$blobStart "$scriptPath" | bunzip2 -c | tar -xvop -C / -f -
 fi
 
-if [ $dryRun -eq 0 -a ! -d "/Applications/ZeroTier One_app.LATEST" ]; then
-	echo 'Archive extraction failed, cannot find zerotier-one binary.'
+if [ $dryRun -eq 0 -a ! -d "/var/lib/zerotier-one" ]; then
+	echo 'Archive extraction failed, cannot find zerotier-one binary in "/var/lib/zerotier-one".'
 	exit 2
-fi
-
-echo 'Installing/updating ZeroTier One.app...'
-
-if [ -d "$ztapp" ]; then
-	# Preserve ownership of existing .app and install new version in the
-	# same location.
-	currentAppOwner=`stat -f '%u' "$ztapp"`
-	currentAppGroup=`stat -f '%g' "$ztapp"`
-	if [ ! -z "$currentAppOwner" -a ! -z "$currentAppGroup" ]; then
-		rm -rf "$ztapp"
-		mv -f "/Application/ZeroTier One_app.LATEST" "$ztapp"
-		chown -R $currentAppOwner "$ztapp"
-		chgrp -R $currentAppGroup "$ztapp"
-	else
-		rm -rf "$ztapp"
-		mv -f "/Application/ZeroTier One_app.LATEST" "$ztapp"
-	fi
-else
-	# If there is no existing app, just drop the shipped one into place
-	mv -f "/Applications/ZeroTier One_app.LATEST" "/Applications/ZeroTier One.app"
 fi
 
 echo 'Installing zerotier-cli command line utility...'
 
-ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" /usr/bin/zerotier-cli
+ln -sf /var/lib/zerotier-one /usr/bin/zerotier-cli
 
-if [ ! -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then
-	echo 'Pre-creating authtoken.secret for ZeroTier service...'
-	if [ $dryRun -eq 0 ]; then
-		rm -f '/Library/Application Support/ZeroTier/One/authtoken.secret'
-		head -c 1024 /dev/urandom | md5 | head -c 24 >'/Library/Application Support/ZeroTier/One/authtoken.secret'
-		chmod 0600 '/Library/Application Support/ZeroTier/One/authtoken.secret'
-	fi
-fi
+echo 'Installing and (re-)starting zerotier-one daemon...'
 
-echo 'Installing and (re-)starting zerotier-one service via launchctl...'
-
-if [ ! -z "`launchctl list | grep -F com.zerotier.one`" ]; then
-	launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
-fi
-launchctl load /Library/LaunchDaemons/com.zerotier.one.plist
+chkconfig zerotier-one on
+service zerotier-one restart
 
 sleep 1
 zerotier-cli info
