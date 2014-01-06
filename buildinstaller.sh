@@ -52,6 +52,7 @@ case "$system" in
 		cp -fp 'ext/installfiles/linux/init.d/zerotier-one' 'build-installer/etc/init.d'
 
 		targ="ZeroTierOneInstaller-linux-${machine}-${vmajor}_${vminor}_${revision}"
+		# Use gzip in Linux since some minimal Linux systems do not have bunzip2
 		rm -f build-installer-tmp.tar.gz
 		cd build-installer
 		tar -cf - * | gzip -9 >../build-installer-tmp.tar.gz
@@ -60,6 +61,7 @@ case "$system" in
 		cat ext/installfiles/linux/install.tmpl.sh build-installer-tmp.tar.gz >$targ
 		chmod 0755 $targ
 		rm -f build-installer-tmp.tar.gz
+		ls -l $targ
 
 		;;
 
@@ -86,6 +88,7 @@ case "$system" in
 		cat ext/installfiles/mac/install.tmpl.sh build-installer-tmp.tar.bz2 >$targ
 		chmod 0755 $targ
 		rm -f build-installer-tmp.tar.bz2
+		ls -l $targ
 
 		;;
 

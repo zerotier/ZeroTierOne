@@ -49,6 +49,6 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) file2lz4c zerotier-* zt1-*-install installer-build build-ZeroTierUI-*
+	rm -rf $(OBJS) zerotier-* build-* ZeroTierOneInstaller-*
 
 FORCE:
