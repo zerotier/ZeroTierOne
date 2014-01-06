@@ -116,18 +116,6 @@ void MainWindow::timerEvent(QTimerEvent *event)
 				id->show();
 				this->setHidden(true);
 				return;
-
-				// Run the little AppleScript hack that asks for admin credentials and
-				// then installs the auth token file in the current user's home.
-				/*
-				QString installHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Install).app/Contents/MacOS/applet");
-				if (!QFile::exists(installHelperPath)) {
-					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
-					QApplication::exit(1);
-					return;
-				}
-				QProcess::execute(installHelperPath,QStringList());
-				*/
 			}
 #endif
 

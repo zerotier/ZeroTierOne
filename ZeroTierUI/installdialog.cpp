@@ -2,13 +2,25 @@
 #include "mainwindow.h"
 #include "ui_installdialog.h"
 
+#include "../node/Constants.hpp"
 #include "../node/Defaults.hpp"
 #include "../node/SoftwareUpdater.hpp"
+
+#ifdef __UNIX_LIKE__
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
 
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QByteArray>
 #include <QSslSocket>
+#include <QFile>
+#include <QDir>
+#include <QProcess>
 
 InstallDialog::InstallDialog(QWidget *parent) :
 	QDialog(parent),
@@ -40,7 +52,7 @@ void InstallDialog::on_networkReply(QNetworkReply *reply)
 	reply->deleteLater();
 
 	if (reply->error() != QNetworkReply::NoError) {
-		QMessageBox::critical(this,"Download Failed",QString("Download failed: ") + reply->errorString(),QMessageBox::Ok,QMessageBox::NoButton);
+		QMessageBox::critical(this,"Download Failed",QString("Download failed: ") + reply->errorString() + "\n\nAre you connected to the Internet?",QMessageBox::Ok,QMessageBox::NoButton);
 		QApplication::exit(1);
 	} else {
 		if (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute) == 200) {
@@ -68,6 +80,44 @@ void InstallDialog::on_networkReply(QNetworkReply *reply)
 						QApplication::exit(1);
 						return;
 					}
+
+#ifdef __APPLE__
+					QString zt1Caches(QDir::homePath() + "/Library/Caches/ZeroTier/One");
+					QDir::root().mkpath(zt1Caches);
+					QString instPath(zt1Caches+"/ZeroTierOneInstaller");
+
+					int outfd = ::open(instPath.toStdString().c_str(),O_CREAT|O_TRUNC|O_WRONLY,0755);
+					if (outfd <= 0) {
+						QMessageBox::critical(this,"Download Failed",QString("Installation failed: unable to write to ")+instPath,QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+					if (::write(outfd,installerData.data(),installerData.length()) != installerData.length()) {
+						QMessageBox::critical(this,"Installation Failed",QString("Installation failed: unable to write to ")+instPath,QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+					::close(outfd);
+					::chmod(instPath.toStdString().c_str(),0755);
+
+					QString installHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Install).app/Contents/MacOS/applet");
+					if (!QFile::exists(installHelperPath)) {
+						QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+					QProcess::execute(installHelperPath,QStringList());
+
+					if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
+						QMessageBox::critical(this,"Installation Failed","Installation failed. Are you sure you entered your password correctly?",QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+						return;
+					}
+
+					((QMainWindow *)this->parent())->setHidden(false);
+					this->close();
+					return;
+#endif
 				}	break;
 			}
 
@@ -85,8 +135,6 @@ void InstallDialog::on_InstallDialog_rejected()
 {
 	QApplication::exit();
 }
-
-//((QMainWindow *)this->parent())->setHidden(false);
 
 void InstallDialog::on_cancelButton_clicked()
 {
