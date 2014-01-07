@@ -75,6 +75,7 @@ case "$system" in
 		cp -fp 'ext/installfiles/mac/uninstall.sh' 'build-installer/Library/Application Support/ZeroTier/One'
 		cp -fp 'ext/installfiles/mac/launch.sh' 'build-installer/Library/Application Support/ZeroTier/One'
 		cp -fp 'zerotier-one' 'build-installer/Library/Application Support/ZeroTier/One'
+		cp -fRp ext/bin/tap-mac/* 'build-installer/Library/Application Support/ZeroTier/One'
 		mkdir -p 'build-installer/Library/LaunchDaemons'
 		cp -fp 'ext/installfiles/mac/com.zerotier.one.plist' 'build-installer/Library/LaunchDaemons'
 
