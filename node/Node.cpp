@@ -416,11 +416,6 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(identitySecretPath.c_str(),false);
 
-		// Clean up some obsolete files if present -- this will be removed later
-		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "status"));
-		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "thisdeviceismine"));
-		Utils::rm((_r->homePath + ZT_PATH_SEPARATOR_S + "peer.db"));
-
 		// Make sure networks.d exists
 #ifdef __WINDOWS__
 		CreateDirectoryA((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),NULL);
@@ -458,9 +453,9 @@ Node::ReasonForTermination Node::run()
 		}
 		_r->node = this;
 #ifdef ZT_AUTO_UPDATE
-		if (ZT_DEFAULTS.updateLatestNfoURL.length())
+		if (ZT_DEFAULTS.updateLatestNfoURL.length()) {
 			_r->updater = new SoftwareUpdater(_r);
-		else {
+		} else {
 			LOG("WARNING: unable to enable software updates: latest .nfo URL from ZT_DEFAULTS is empty (does this platform actually support software updates?)");
 		}
 #endif
@@ -502,7 +497,14 @@ Node::ReasonForTermination Node::run()
 
 	// Core I/O loop
 	try {
+		/* Shut down if this file exists but fails to open. This is used on Mac to
+		 * shut down automatically on .app deletion by symlinking this to the
+		 * Info.plist file inside the ZeroTier One application. This causes the
+		 * service to die when the user throws away the app, allowing uninstallation
+		 * in the natural Mac way. */
 		std::string shutdownIfUnreadablePath(_r->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
+
+		// Times we last did stuff... used for firing off periodic events.
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
@@ -515,7 +517,7 @@ Node::ReasonForTermination Node::run()
 			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
 				FILE *tmpf = fopen(shutdownIfUnreadablePath.c_str(),"r");
 				if (!tmpf)
-					return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable was not readable");
+					return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable exists but is not readable");
 				fclose(tmpf);
 			}
 
