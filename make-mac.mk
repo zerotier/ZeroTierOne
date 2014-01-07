@@ -65,4 +65,9 @@ install-mac-tap: FORCE
 clean:
 	rm -rf *.dSYM build-* $(OBJS) zerotier-* ZeroTierOneInstaller-*
 
+official: FORCE
+	make -j 4 ZT_OFFICIAL_RELEASE=1
+	make mac-ui ZT_OFFICIAL_RELEASE=1
+	./buildinstaller.sh
+
 FORCE:

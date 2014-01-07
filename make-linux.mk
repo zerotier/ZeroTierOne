@@ -6,6 +6,9 @@ INCLUDES=
 DEFS=
 LIBS=
 
+ifeq ($(ZT_OFFICIAL_RELEASE),1)
+	ZT_AUTO_UPDATE=1
+endif
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
@@ -50,5 +53,9 @@ installer: one FORCE
 
 clean:
 	rm -rf $(OBJS) zerotier-* build-* ZeroTierOneInstaller-*
+
+official: FORCE
+	make -j 4 ZT_OFFICIAL_RELEASE=1
+	./buildinstaller.sh
 
 FORCE:
