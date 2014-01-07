@@ -5,6 +5,14 @@ INCLUDES=
 DEFS=
 LIBS=
 
+# Disable codesign since open source users will not have ZeroTier's ADC certs
+CODESIGN=echo
+
+ifeq ($(ZT_OFFICIAL_RELEASE),1)
+	ZT_AUTO_UPDATE=1
+	DEFS+=-DZT_OFFICIAL_RELEASE 
+	CODESIGN=codesign
+endif
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
@@ -41,7 +49,12 @@ mac-ui: FORCE
 	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
 	strip "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One"
 	cp -Rv ZeroTierUI/helpers "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources"
-#	cd build-ZeroTierUI-release ; codesign -f -s '3rd Party Mac Developer Application: ZeroTier Networks LLC' "ZeroTier One.app"
+	$(CODESIGN) -f -s '3rd Party Mac Developer Application: ZeroTier Networks LLC' "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/helpers/mac/ZeroTier One (Authenticate).app"
+	$(CODESIGN) -f -s '3rd Party Mac Developer Application: ZeroTier Networks LLC' "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/helpers/mac/ZeroTier One (Install).app"
+	$(CODESIGN) -f -s '3rd Party Mac Developer Application: ZeroTier Networks LLC' "build-ZeroTierUI-release/ZeroTier One.app"
+	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/helpers/mac/ZeroTier One (Authenticate).app"
+	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/helpers/mac/ZeroTier One (Install).app"
+	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 install-mac-tap: FORCE
 	mkdir -p /Library/Application\ Support/ZeroTier/One
