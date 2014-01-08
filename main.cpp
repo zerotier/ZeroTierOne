@@ -487,8 +487,10 @@ int main(int argc,char **argv)
 			case Node::NODE_RESTART_FOR_UPGRADE: {
 #ifdef __UNIX_LIKE__
 				const char *upgPath = node->reasonForTermination();
-				if (upgPath)
-					execl(upgPath,upgPath,"-s",(char *)0); // -s = (re)start after install/upgrade
+				if (upgPath) {
+					Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
+					execl(upgPath,upgPath,(char *)0);
+				}
 				exitCode = 2;
 				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
 #endif
@@ -506,11 +508,7 @@ int main(int argc,char **argv)
 	} catch ( ... ) {}
 
 #ifdef __UNIX_LIKE__
-	{
-		char pidpath[4096];
-		Utils::snprintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
-		Utils::rm(pidpath);
-	}
+	Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
 #endif
 
 	return exitCode;

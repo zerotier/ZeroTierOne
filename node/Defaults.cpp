@@ -126,15 +126,18 @@ static inline const char *_mkUpdateUrl()
 {
 #if defined(__LINUX__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
 	if (sizeof(void *) == 8)
-		return "http://download.zerotier.com/update/linux/x64/latest.nfo";
-	else return "http://download.zerotier.com/update/linux/x86/latest.nfo";
+		return "http://download.zerotier.com/ZeroTierOneInstaller-linux-x64-LATEST.nfo";
+	else return "http://download.zerotier.com/ZeroTierOneInstaller-linux-x86-LATEST.nfo";
 #define GOT_UPDATE_URL
 #endif
 
 #ifdef __APPLE__
-	// TODO: iOS?
-	return "http://download.zerotier.com/update/mac/combined/latest.nfo";
+#ifdef TARGET_OS_IPHONE
+	// TODO
+#else
+	return "http://download.zerotier.com/ZeroTierOneInstaller-mac-combined-LATEST.nfo";
 #define GOT_UPDATE_URL
+#endif
 #endif
 
 	// TODO: Windows

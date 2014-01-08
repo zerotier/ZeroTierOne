@@ -253,6 +253,11 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 		peer->onReceive(_r,_localPort,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP,Utils::now());
 		peer->setRemoteVersion(vMajor,vMinor,vRevision);
 
+		// If a supernode has a version higher than ours, this causes a software
+		// update check to run now.
+		if ((_r->updater)&&(_r->topology->isSupernode(peer->address())))
+			_r->updater->sawRemoteVersion(vMajor,vMinor,vRevision);
+
 		Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_HELLO);
 		outp.append(packetId());
