@@ -106,16 +106,14 @@ void InstallDialog::on_networkReply(QNetworkReply *reply)
 						QApplication::exit(1);
 						return;
 					}
-					QProcess::execute(installHelperPath,QStringList());
 
-					if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
-						QMessageBox::critical(this,"Installation Failed","Installation failed. Are you sure you entered your password correctly?",QMessageBox::Ok,QMessageBox::NoButton);
-						QApplication::exit(1);
-						return;
-					}
+					// Terminate the GUI and execute the install helper instead
+					::execl(installHelperPath.toStdString().c_str(),installHelperPath.toStdString().c_str(),(const char *)0);
 
-					((QMainWindow *)this->parent())->setHidden(false);
-					this->close();
+					// We only make it here if execl() failed
+					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
+					QApplication::exit(1);
+
 					return;
 #endif
 				}	break;

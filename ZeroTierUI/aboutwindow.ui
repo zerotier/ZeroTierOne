@@ -151,13 +151,6 @@
              <bold>false</bold>
             </font>
            </property>
-           <property name="text">
-            <string>ZeroTier One GUI
-(c)2012-2013 ZeroTier Networks LLC
-
-Author(s): Adam Ierymenko
-Version: 1.0</string>
-           </property>
            <property name="textFormat">
             <enum>Qt::PlainText</enum>
            </property>

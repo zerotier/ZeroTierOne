@@ -69,6 +69,19 @@ MainWindow::MainWindow(QWidget *parent) :
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget* widget, widgets)
 		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
+
+#ifdef __APPLE__
+	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
+		// If the service is not installed, download the installer and run it
+		// for the first time.
+		this->setEnabled(false);
+		InstallDialog *id = new InstallDialog(this);
+		id->setModal(true);
+		id->show();
+		this->setHidden(true);
+		return;
+	}
+#endif
 }
 
 MainWindow::~MainWindow()
@@ -90,21 +103,15 @@ void MainWindow::timerEvent(QTimerEvent *event)
 		std::string authToken;
 		if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 #ifdef __APPLE__
-			//if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
-			if (false) {
+			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
 				// Run the little AppleScript hack that asks for admin credentials and
 				// then installs the auth token file in the current user's home.
+				QMessageBox::information(this,"Authorization Required","You must authenticate to authorize this user to\nadministrate ZeroTier One on this computer.\n\n(This only needs to be done once.)",QMessageBox::Ok,QMessageBox::NoButton);
 				QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
 				if (!QFile::exists(authHelperPath)) {
-					// Allow this to also work from the source tree if it's run from there.
-					// This is for debugging purposes and shouldn't harm the live release
-					// in any way.
-					authHelperPath = QCoreApplication::applicationDirPath() + "/../../../../ZeroTierUI/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet";
-					if (!QFile::exists(authHelperPath)) {
-						QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
-						QApplication::exit(1);
-						return;
-					}
+					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
+					QApplication::exit(1);
+					return;
 				}
 				QProcess::execute(authHelperPath,QStringList());
 			} else {

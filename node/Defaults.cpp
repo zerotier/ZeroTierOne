@@ -132,12 +132,8 @@ static inline const char *_mkUpdateUrl()
 #endif
 
 #ifdef __APPLE__
-#ifdef TARGET_OS_IPHONE
-	// TODO
-#else
 	return "http://download.zerotier.com/ZeroTierOneInstaller-mac-combined-LATEST.nfo";
 #define GOT_UPDATE_URL
-#endif
 #endif
 
 	// TODO: Windows

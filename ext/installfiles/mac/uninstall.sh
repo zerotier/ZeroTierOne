@@ -3,7 +3,7 @@
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne'`
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | sort | head -n 1`
 
 if [ "$UID" -ne 0 ]; then
 	echo "Must be run as root; try: sudo $0"

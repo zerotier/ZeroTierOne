@@ -18,8 +18,8 @@
 
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
-if [ "$#" -ne 2 ]; then
-	echo "Usage: $0 <path to secret signing identity> <path to destination folder for .nfo and installer>"
+if [ "$#" -ne 1 ]; then
+	echo "Usage: $0 <path to secret signing identity>"
 	exit 1
 fi
 
@@ -29,14 +29,9 @@ if [ ! -e zerotier-idtool ]; then
 fi
 
 secret="$1"
-dest="$2"
 
 if [ ! -e "$secret" ]; then
 	echo "Can't find $secret"
-	exit 1
-fi
-if [ ! -d "$dest" ]; then
-	echo "Can't find $dest directory"
 	exit 1
 fi
 
@@ -51,6 +46,4 @@ for inst in `ls ZeroTierOneInstaller-*-*-*_*_*`; do
 	echo "signedBy=`cat $secret | cut -d : -f 1`" >>"$nfo"
 	echo "ed25519=`./zerotier-idtool sign $secret $inst`" >>"$nfo"
 	echo "url=http://download.zerotier.com/$inst" >>"$nfo"
-	cp $inst $nfo $dest
-	rm -f $nfo
 done

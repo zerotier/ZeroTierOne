@@ -23,7 +23,7 @@ if [ $dryRun -gt 0 ]; then
 fi
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne'`
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | sort | head -n 1`
 if [ ! -d "$ztapp" ]; then
 	ztapp="/Applications/ZeroTier One.app"
 fi
