@@ -3,7 +3,7 @@
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | sort | head -n 1`
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.+[.]app$' | sort | head -n 1`
 
 if [ "$UID" -ne 0 ]; then
 	echo "Must be run as root; try: sudo $0"
@@ -50,7 +50,7 @@ fi
 
 echo "Erasing service and support files..."
 cd "$zthome"
-rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh networks.d updates.d shutdownIfUnreadable
+rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh networks.d updates.d shutdownIfUnreadable pre10.8
 
 echo "Done."
 echo

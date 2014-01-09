@@ -2,7 +2,7 @@
 
 zthome="/Library/Application Support/ZeroTier/One"
 export PATH="/bin:/usr/bin:/sbin:/usr/sbin:$zthome"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | sort | head -n 1`
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.+[.]app$' | sort | head -n 1`
 
 # Clean all other stuff off the system if the user has trashed the .app
 if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
@@ -11,8 +11,9 @@ if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
 	if [ ! -d "$ztapp" ]; then
 		if [ -e "$zthome/uninstall.sh" ]; then
 			cd "$zthome"
-			./uninstall.sh -q
-			exit
+			nohup "$zthome/uninstall.sh" >>/tmp/ZeroTierOneUninstall.log 2>&1 &
+			disown %1
+			exit 0
 		fi
 	fi
 fi
