@@ -11,7 +11,7 @@ if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
 	if [ ! -d "$ztapp" ]; then
 		if [ -e "$zthome/uninstall.sh" ]; then
 			cd "$zthome"
-			nohup "$zthome/uninstall.sh" >>/tmp/ZeroTierOneUninstall.log 2>&1 &
+			nohup "$zthome/uninstall.sh" >/tmp/ZeroTierOneUninstall.log 2>&1 &
 			disown %1
 			exit 0
 		fi
