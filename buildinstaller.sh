@@ -70,7 +70,6 @@ case "$system" in
 
 		mkdir -p 'build-installer/Applications'
 		cp -a 'build-ZeroTierUI-release/ZeroTier One.app' 'build-installer/Applications'
-		mv -f 'build-installer/Applications/ZeroTier One.app' 'build-installer/Applications/ZeroTier One_app.LATEST'
 		mkdir -p 'build-installer/Library/Application Support/ZeroTier/One'
 		cp -fp 'ext/installfiles/mac/uninstall.sh' 'build-installer/Library/Application Support/ZeroTier/One'
 		cp -fp 'ext/installfiles/mac/launch.sh' 'build-installer/Library/Application Support/ZeroTier/One'

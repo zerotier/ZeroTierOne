@@ -16,15 +16,17 @@ if [ $dryRun -gt 0 ]; then
 	alias ln="echo '>> dry run: ln'"
 	alias rm="echo '>> dry run: rm'"
 	alias mv="echo '>> dry run: mv'"
+	alias cp="echo '>> dry run: cp'"
 	alias chown="echo '>> dry run: chown'"
 	alias chgrp="echo '>> dry run: chgrp'"
+	alias chmod="echo '>> dry run: chmod'"
 	alias launchctl="echo '>> dry run: launchctl'"
 	alias zerotier-cli="echo '>> dry run: zerotier-cli'"
 fi
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.+[.]app$' | sort | head -n 1`
-if [ ! -d "$ztapp" ]; then
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*ZeroTier One[.]app$' | sort | head -n 1`
+if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
 	ztapp="/Applications/ZeroTier One.app"
 fi
 
@@ -52,34 +54,48 @@ echo 'Extracting files...'
 if [ $dryRun -gt 0 ]; then
 	echo ">> dry run: tail -c +$blobStart \"$scriptPath\" | bunzip2 -c | tar -xvop -C / -f -"
 else
-	tail -c +$blobStart "$scriptPath" | bunzip2 -c | tar -xvop -C / -f -
+	rm -rf '/tmp/_zt1tmp'
+	mkdir '/tmp/_zt1tmp'
+	tail -c +$blobStart "$scriptPath" | bunzip2 -c | tar -xop -C '/tmp/_zt1tmp' -f -
 fi
 
-if [ $dryRun -eq 0 -a ! -d "/Applications/ZeroTier One_app.LATEST" ]; then
+cd '/tmp/_zt1tmp'
+
+if [ $dryRun -eq 0 -a ! -d './Applications/ZeroTier One.app' ]; then
 	echo 'Archive extraction failed, cannot find zerotier-one binary.'
 	exit 2
 fi
 
+echo 'Installing zerotier-one service...'
+
+mkdir -p "$zthome"
+chown root:admin "$zthome"
+chmod 0750 "$zthome"
+cp -fa ./Library/Application\ Support/ZeroTier/One/* "$zthome"
+chown -R root:wheel "$zthome/tap.kext"
+chown -R root:wheel "$zthome/pre10.8/tap.kext"
+
 echo 'Installing/updating ZeroTier One.app...'
 
-if [ -d "$ztapp" ]; then
-	# Preserve ownership of existing .app and install new version in the
-	# same location.
+if [ ! -z "$ztapp" -a -d "$ztapp" ]; then
 	currentAppOwner=`stat -f '%u' "$ztapp"`
 	currentAppGroup=`stat -f '%g' "$ztapp"`
+
+	rm -rf "$ztapp"
+	mv -f './Applications/ZeroTier One.app' "$ztapp"
+
 	if [ ! -z "$currentAppOwner" -a ! -z "$currentAppGroup" ]; then
-		rm -rf "$ztapp"
-		mv -f "/Application/ZeroTier One_app.LATEST" "$ztapp"
 		chown -R $currentAppOwner "$ztapp"
 		chgrp -R $currentAppGroup "$ztapp"
-	else
-		rm -rf "$ztapp"
-		mv -f "/Application/ZeroTier One_app.LATEST" "$ztapp"
 	fi
 else
 	# If there is no existing app, just drop the shipped one into place
-	mv -f "/Applications/ZeroTier One_app.LATEST" "/Applications/ZeroTier One.app"
+	mv -f './Applications/ZeroTier One.app' "/Applications/ZeroTier One.app"
 fi
+
+# Set up symlink that watches for app deletion
+rm -f "$zthome/shutdownIfUnreadable"
+ln -sf "$ztapp/Contents/Info.plist" "$zthome/shutdownIfUnreadable"
 
 echo 'Installing zerotier-cli command line utility...'
 
@@ -96,13 +112,17 @@ fi
 
 echo 'Installing and (re-)starting zerotier-one service via launchctl...'
 
+mv -f './Library/LaunchDaemons/com.zerotier.one.plist' '/Library/LaunchDaemons/'
 if [ ! -z "`launchctl list | grep -F com.zerotier.one`" ]; then
 	launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
 fi
 launchctl load /Library/LaunchDaemons/com.zerotier.one.plist
 
 sleep 1
-zerotier-cli info
+/usr/bin/zerotier-cli info
+
+cd /tmp
+rm -rf _zt1tmp
 
 exit 0
 

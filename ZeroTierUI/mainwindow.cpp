@@ -58,17 +58,6 @@ MainWindow::MainWindow(QWidget *parent) :
 	pollServiceTimerId(0)
 {
 	ui->setupUi(this);
-	this->pollServiceTimerId = this->startTimer(1000);
-	this->setEnabled(false); // gets enabled when updates are received
-	mainWindow = this;
-	this->cyclesSinceResponseFromService = 0;
-
-	if (ui->networkListWidget->verticalScrollBar())
-		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
-
-	QWidgetList widgets = this->findChildren<QWidget*>();
-	foreach(QWidget* widget, widgets)
-		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 
 #ifdef __APPLE__
 	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
@@ -82,6 +71,18 @@ MainWindow::MainWindow(QWidget *parent) :
 		return;
 	}
 #endif
+
+	this->pollServiceTimerId = this->startTimer(1000);
+	this->setEnabled(false); // gets enabled when updates are received
+	mainWindow = this;
+	this->cyclesSinceResponseFromService = 0;
+
+	if (ui->networkListWidget->verticalScrollBar())
+		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
+
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget* widget, widgets)
+		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 }
 
 MainWindow::~MainWindow()

@@ -3,36 +3,15 @@
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.+[.]app$' | sort | head -n 1`
+ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*/ZeroTier One[.]app$' | sort | head -n 1`
+if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
+	ztapp="/Applications/ZeroTier One.app"
+fi
 
 if [ "$UID" -ne 0 ]; then
 	echo "Must be run as root; try: sudo $0"
 	exit 1
 fi
-
-# Try default location if something's up with mdfind
-if [ ! -d "$ztapp" ]; then
-	ztapp="/Applications/ZeroTier One.app"
-fi
-
-# Run with -q to be quieter and run without delay
-quickAndQuiet=0
-if [ "$1" = "-q" ]; then
-	quickAndQuiet=1
-	echo() { :; }
-fi
-
-echo
-
-if [ $quickAndQuiet -eq 0 ]; then  
-	echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
-	echo "Waiting 5 seconds..."
-	sleep 5
-fi
-
-echo "Unloading and removing LaunchDaemons item..."
-launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
-rm -f /Library/LaunchDaemons/com.zerotier.one.plist
 
 echo "Killing any running zerotier-one service..."
 killall -TERM zerotier-one >>/dev/null 2>&1
@@ -41,16 +20,23 @@ killall -KILL zerotier-one >>/dev/null 2>&1
 sleep 1
 
 echo "Unloading kernel extension..."
+kextunload "$zthome/pre10.8/tap.kext" >>/dev/null 2>&1
 kextunload "$zthome/tap.kext" >>/dev/null 2>&1
 
 echo "Erasing GUI app (if installed)..."
-if [ -d "$ztapp" ]; then
-	rm -rfv "$ztapp"
+if [ ! -z "$ztapp" -a -d "$ztapp" ]; then
+	rm -rf "$ztapp"
 fi
 
 echo "Erasing service and support files..."
+rm -f /usr/bin/zerotier-cli
 cd "$zthome"
-rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.kext *.sh networks.d updates.d shutdownIfUnreadable pre10.8
+rm -f zerotier-one *.persist identity.public *.log *.pid *.sh shutdownIfUnreadable
+rm -rf pre10.8 tap.kext updates.d networks.d
+
+echo "Removing LaunchDaemons item..."
+rm -f /Library/LaunchDaemons/com.zerotier.one.plist
+launchctl remove com.zerotier.one
 
 echo "Done."
 echo
