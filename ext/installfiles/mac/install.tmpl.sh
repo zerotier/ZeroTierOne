@@ -25,9 +25,9 @@ if [ $dryRun -gt 0 ]; then
 fi
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*ZeroTier One[.]app$' | sort | head -n 1`
-if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
-	ztapp="/Applications/ZeroTier One.app"
+ztapp="/Applications/ZeroTier One.app"
+if [ ! -d "$ztapp" ]; then
+	ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*ZeroTier One[.]app$' | grep -v -F '/build-' | grep -v -F '/Volumes/ZeroTier' | sort | head -n 1`
 fi
 
 scriptPath="`dirname "$0"`/`basename "$0"`"
@@ -62,7 +62,7 @@ fi
 cd '/tmp/_zt1tmp'
 
 if [ $dryRun -eq 0 -a ! -d './Applications/ZeroTier One.app' ]; then
-	echo 'Archive extraction failed, cannot find zerotier-one binary.'
+	echo 'Archive extraction failed, cannot find files in /tmp/_zt1tmp.'
 	exit 2
 fi
 
@@ -77,7 +77,11 @@ chown -R root:wheel "$zthome/pre10.8/tap.kext"
 
 echo 'Installing/updating ZeroTier One.app...'
 
-if [ ! -z "$ztapp" -a -d "$ztapp" ]; then
+if [ ! -z "$ztapp" -a -d "$ztapp" -a -f "$ztapp/Contents/Info.plist" ]; then
+	# Preserve ownership of current app across updates... that way the admin
+	# user who dragged it into /Applications can just trash it the way they
+	# would any other app. This works (due to mdfind up top) even if they put
+	# it somewhere non-standard on their system.
 	currentAppOwner=`stat -f '%u' "$ztapp"`
 	currentAppGroup=`stat -f '%g' "$ztapp"`
 
@@ -87,10 +91,16 @@ if [ ! -z "$ztapp" -a -d "$ztapp" ]; then
 	if [ ! -z "$currentAppOwner" -a ! -z "$currentAppGroup" ]; then
 		chown -R $currentAppOwner "$ztapp"
 		chgrp -R $currentAppGroup "$ztapp"
+	else
+		chown -R root "$ztapp"
+		chgrp -R admin "$ztapp"
 	fi
 else
 	# If there is no existing app, just drop the shipped one into place
-	mv -f './Applications/ZeroTier One.app' "/Applications/ZeroTier One.app"
+	ztapp="/Applications/ZeroTier One.app"
+	mv -f './Applications/ZeroTier One.app' "$ztapp"
+	chown -R root "$ztapp"
+	chgrp -R admin "$ztapp"
 fi
 
 # Set up symlink that watches for app deletion
@@ -99,8 +109,12 @@ ln -sf "$ztapp/Contents/Info.plist" "$zthome/shutdownIfUnreadable"
 
 echo 'Installing zerotier-cli command line utility...'
 
+rm -f /usr/bin/zerotier-cli
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" /usr/bin/zerotier-cli
 
+# This lets the install helper AppleScript thingy go ahead and authorize the
+# user after the installer is done, skiping that step for the user who did
+# the service install.
 if [ ! -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then
 	echo 'Pre-creating authtoken.secret for ZeroTier service...'
 	if [ $dryRun -eq 0 ]; then
@@ -115,6 +129,7 @@ echo 'Installing and (re-)starting zerotier-one service via launchctl...'
 mv -f './Library/LaunchDaemons/com.zerotier.one.plist' '/Library/LaunchDaemons/'
 if [ ! -z "`launchctl list | grep -F com.zerotier.one`" ]; then
 	launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
+	sleep 1
 fi
 launchctl load /Library/LaunchDaemons/com.zerotier.one.plist
 

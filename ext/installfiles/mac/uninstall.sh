@@ -3,9 +3,9 @@
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 zthome="/Library/Application Support/ZeroTier/One"
-ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*/ZeroTier One[.]app$' | sort | head -n 1`
+ztapp="/Applications/ZeroTier One.app"
 if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
-	ztapp="/Applications/ZeroTier One.app"
+	ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*ZeroTier One[.]app$' | grep -v -F '/build-' | grep -v -F '/Volumes/ZeroTier' | sort | head -n 1`
 fi
 
 if [ "$UID" -ne 0 ]; then
@@ -24,7 +24,7 @@ kextunload "$zthome/pre10.8/tap.kext" >>/dev/null 2>&1
 kextunload "$zthome/tap.kext" >>/dev/null 2>&1
 
 echo "Erasing GUI app (if installed)..."
-if [ ! -z "$ztapp" -a -d "$ztapp" ]; then
+if [ ! -z "$ztapp" -a -d "$ztapp" -a -f "$ztapp/Contents/Info.plist" ]; then
 	rm -rf "$ztapp"
 fi
 
