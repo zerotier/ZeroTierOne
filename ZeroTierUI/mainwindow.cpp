@@ -85,31 +85,17 @@ MainWindow::MainWindow(QWidget *parent) :
 	pollServiceTimerId(0)
 {
 	ui->setupUi(this);
+	if (ui->networkListWidget->verticalScrollBar())
+		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget *widget, widgets)
+		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 
-#ifdef __APPLE__
-	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
-		// If the service is not installed, download the installer and run it
-		// for the first time.
-		this->setEnabled(false);
-		InstallDialog *id = new InstallDialog(this);
-		id->setModal(true);
-		id->show();
-		this->setHidden(true);
-		return;
-	}
-#endif
+	mainWindow = this;
 
 	this->pollServiceTimerId = this->startTimer(1000);
 	this->setEnabled(false); // gets enabled when updates are received
-	mainWindow = this;
 	this->cyclesSinceResponseFromService = 0;
-
-	if (ui->networkListWidget->verticalScrollBar())
-		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
-
-	QWidgetList widgets = this->findChildren<QWidget*>();
-	foreach(QWidget* widget, widgets)
-		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 }
 
 MainWindow::~MainWindow()
@@ -132,8 +118,6 @@ void MainWindow::timerEvent(QTimerEvent *event)
 		if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 #ifdef __APPLE__
 			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
-				// Run the little AppleScript hack that asks for admin credentials and
-				// then installs the auth token file in the current user's home.
 				QMessageBox::information(this,"Authorization Required","You must authenticate to authorize this user to administrate ZeroTier One on this computer.\n\n(This only needs to be done once.)",QMessageBox::Ok,QMessageBox::NoButton);
 				QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
 				if (!QFile::exists(authHelperPath)) {
@@ -143,13 +127,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
 				}
 				QProcess::execute(authHelperPath,QStringList());
 			} else {
-				// If the service is not installed, download the installer and run it
-				// for the first time.
-				this->setEnabled(false);
-				InstallDialog *id = new InstallDialog(this);
-				id->setModal(true);
-				id->show();
-				this->setHidden(true);
+				doInstallDialog();
 				return;
 			}
 #endif
@@ -279,6 +257,14 @@ void MainWindow::customEvent(QEvent *event)
 	}
 }
 
+void MainWindow::showEvent(QShowEvent *event)
+{
+#ifdef __APPLE__
+	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one"))
+		doInstallDialog();
+#endif
+}
+
 void MainWindow::on_joinNetworkButton_clicked()
 {
 	QString toJoin(ui->networkIdLineEdit->text());
@@ -339,4 +325,16 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 void MainWindow::on_addressButton_clicked()
 {
 	QApplication::clipboard()->setText(this->myAddress);
+}
+
+void MainWindow::doInstallDialog()
+{
+#ifdef __APPLE__
+	this->setEnabled(false);
+	this->setHidden(true);
+
+	InstallDialog *id = new InstallDialog(this);
+	id->setModal(true);
+	id->show();
+#endif
 }

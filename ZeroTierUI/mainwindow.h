@@ -31,6 +31,8 @@
 #include <QMainWindow>
 #include <QEvent>
 #include <QString>
+#include <QShowEvent>
+#include <QTimerEvent>
 
 #include <map>
 #include <vector>
@@ -59,10 +61,7 @@ public:
 	public:
 		ZTMessageEvent(const std::vector<std::string> &m) :
 			QEvent(QEvent::User),
-			ztMessage(m)
-		{
-		}
-
+			ztMessage(m) {}
 		std::vector<std::string> ztMessage;
 	};
 
@@ -72,6 +71,7 @@ public:
 protected:
 	virtual void timerEvent(QTimerEvent *event);
 	virtual void customEvent(QEvent *event);
+	virtual void showEvent(QShowEvent *event);
 
 private slots:
 	void on_joinNetworkButton_clicked();
@@ -80,6 +80,8 @@ private slots:
 	void on_addressButton_clicked();
 
 private:
+	void doInstallDialog();
+
 	Ui::MainWindow *ui;
 
 	QString myAddress;
