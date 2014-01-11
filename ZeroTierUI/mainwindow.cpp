@@ -82,7 +82,7 @@ static void handleZTMessage(void *arg,unsigned long id,const char *line)
 MainWindow::MainWindow(QWidget *parent) :
 	QMainWindow(parent),
 	ui(new Ui::MainWindow),
-	pollServiceTimerId(0)
+	pollServiceTimerId(-1)
 {
 	ui->setupUi(this);
 	if (ui->networkListWidget->verticalScrollBar())
@@ -111,6 +111,8 @@ void MainWindow::timerEvent(QTimerEvent *event)
 	event->accept();
 
 	if (this->isHidden())
+		return;
+	if (pollServiceTimerId < 0)
 		return;
 
 	if (!zeroTierClient) {
@@ -331,7 +333,10 @@ void MainWindow::doInstallDialog()
 {
 #ifdef __APPLE__
 	this->setEnabled(false);
-	this->setHidden(true);
+	if (pollServiceTimerId >= 0) {
+		this->killTimer(pollServiceTimerId);
+		pollServiceTimerId = -1;
+	}
 
 	InstallDialog *id = new InstallDialog(this);
 	id->setModal(true);
