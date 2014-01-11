@@ -134,7 +134,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
 			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
 				// Run the little AppleScript hack that asks for admin credentials and
 				// then installs the auth token file in the current user's home.
-				QMessageBox::information(this,"Authorization Required","You must authenticate to authorize this user to\nadministrate ZeroTier One on this computer.\n\n(This only needs to be done once.)",QMessageBox::Ok,QMessageBox::NoButton);
+				QMessageBox::information(this,"Authorization Required","You must authenticate to authorize this user to administrate ZeroTier One on this computer.\n\n(This only needs to be done once.)",QMessageBox::Ok,QMessageBox::NoButton);
 				QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
 				if (!QFile::exists(authHelperPath)) {
 					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
@@ -155,7 +155,7 @@ void MainWindow::timerEvent(QTimerEvent *event)
 #endif
 
 			if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
-				QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One.\n\nTo do so manually, copy 'authtoken.secret' from the ZeroTier One home directory to '.zeroTierOneAuthToken' in your home directory and set file modes on this file to only be readable by you (e.g. 0600 on Mac or Linux systems).",QMessageBox::Ok,QMessageBox::NoButton);
+				QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Did you enter your password correctly?)",QMessageBox::Ok,QMessageBox::NoButton);
 				QApplication::exit(1);
 				return;
 			}
