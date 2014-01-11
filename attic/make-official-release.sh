@@ -35,6 +35,8 @@ if [ ! -e "$secret" ]; then
 	exit 1
 fi
 
+rm -f *.nfo
+
 for inst in `ls ZeroTierOneInstaller-*-*-*_*_*`; do
 	echo "Found installer: $inst"
 	nfo="$inst.nfo"
