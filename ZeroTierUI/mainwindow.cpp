@@ -238,6 +238,8 @@ void MainWindow::customEvent(QEvent *event)
 		}
 	}
 
+	ui->noNetworksLabel->setVisible(ui->networkListWidget->count() == 0);
+
 	if (this->myAddress.size())
 		ui->addressButton->setText(this->myAddress);
 	else ui->addressButton->setText("          ");
