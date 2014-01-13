@@ -90,6 +90,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget *widget, widgets)
 		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
+	ui->noNetworksLabel->setText("Connecting to Service..."); // changed when result is received
 
 	mainWindow = this;
 
@@ -238,7 +239,10 @@ void MainWindow::customEvent(QEvent *event)
 		}
 	}
 
-	ui->noNetworksLabel->setVisible(ui->networkListWidget->count() == 0);
+	if (!ui->networkListWidget->count()) {
+		ui->noNetworksLabel->setText("You Have Not Joined Any Networks");
+		ui->noNetworksLabel->setVisible(true);
+	} else ui->noNetworksLabel->setVisible(false);
 
 	if (this->myAddress.size())
 		ui->addressButton->setText(this->myAddress);
