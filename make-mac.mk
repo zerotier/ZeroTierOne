@@ -51,6 +51,7 @@ mac-ui: FORCE
 	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
 	strip "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One"
 	cp -Rv ZeroTierUI/helpers "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources"
+	find "build-ZeroTierUI-release/ZeroTier One.app" -type f -name '.DS_Store' -print0 | xargs -0 rm -f
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/helpers/mac/ZeroTier One (Authenticate).app"
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "build-ZeroTierUI-release/ZeroTier One.app/Contents/Resources/helpers/mac/ZeroTier One (Install).app"
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "build-ZeroTierUI-release/ZeroTier One.app"
