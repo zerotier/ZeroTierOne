@@ -148,6 +148,13 @@ void MainWindow::timerEvent(QTimerEvent *event)
 				fprintf(scr,"#!/bin/bash\n");
 				fprintf(scr,"export PATH=\"/bin:/usr/bin:/sbin:/usr/sbin\"\n");
 				fprintf(scr,"if [ -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then\n");
+				fprintf(scr,"  mkdir -p '%s/Library/Application Support/ZeroTier/One'\n",homePath.c_str());
+				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier'\n",(int)getuid(),homePath.c_str());
+				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier'\n",(int)getgid(),homePath.c_str());
+				fprintf(scr,"  chmod 0700 '%s/Library/Application Support/ZeroTier'\n",homePath.c_str());
+				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One'\n",(int)getuid(),homePath.c_str());
+				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One'\n",(int)getgid(),homePath.c_str());
+				fprintf(scr,"  chmod 0700 '%s/Library/Application Support/ZeroTier/One'\n",homePath.c_str());
 				fprintf(scr,"  cp -f '/Library/Application Support/ZeroTier/One/authtoken.secret' '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
 				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getuid(),homePath.c_str());
 				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getgid(),homePath.c_str());
