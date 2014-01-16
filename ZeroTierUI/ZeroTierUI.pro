@@ -3,9 +3,11 @@ TARGET = "ZeroTier One"
 TEMPLATE = app
 
 win32:RC_FILE = ZeroTierUI.rc
+
 mac:ICON = zt1icon.icns
 mac:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.6
 mac:QMAKE_INFO_PLIST = Info.plist
+mac:LIBS += -framework Cocoa
 
 SOURCES += main.cpp\
 				mainwindow.cpp \
@@ -40,7 +42,7 @@ SOURCES += main.cpp\
 		../ext/lz4/lz4.c \
 		../ext/lz4/lz4hc.c \
 		networkwidget.cpp \
-    installdialog.cpp
+		installdialog.cpp
 
 HEADERS  += mainwindow.h \
 		aboutwindow.h \
@@ -90,12 +92,16 @@ HEADERS  += mainwindow.h \
 		../ext/lz4/lz4.h \
 		../ext/lz4/lz4hc.h \
 		networkwidget.h \
-    installdialog.h
+		installdialog.h \
+		mac_doprivileged.h
 
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \
 		networkwidget.ui \
-    installdialog.ui
+		installdialog.ui
 
 RESOURCES += \
 		resources.qrc
+
+mac:OBJECTIVE_SOURCES += \
+		mac_doprivileged.mm

@@ -38,7 +38,12 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
+#endif
+
+#ifdef __APPLE__
+#include "mac_doprivileged.h"
 #endif
 
 #include <QMainWindow>
@@ -103,45 +108,61 @@ void InstallDialog::on_networkReply(QNetworkReply *reply)
 				}	break;
 				case FETCHING_INSTALLER: {
 					if (!ZeroTier::SoftwareUpdater::validateUpdate(installerData.data(),installerData.length(),signedBy,signature)) {
-						QMessageBox::critical(this,"Download Failed","Download failed: there is a problem with the software update web site.\nTry agian later. (failed signature check)",QMessageBox::Ok,QMessageBox::NoButton);
+						QMessageBox::critical(this,"Download Failed","Download failed: there is a problem with the software update web site. Try agian later. (downloaded data failed signature check)",QMessageBox::Ok,QMessageBox::NoButton);
 						QApplication::exit(1);
 						return;
 					}
 
 #ifdef __APPLE__
-					QString zt1Caches(QDir::homePath() + "/Library/Caches/ZeroTier/One");
-					QDir::root().mkpath(zt1Caches);
-					QString instPath(zt1Caches+"/ZeroTierOneInstaller");
+					{
+						std::string homePath(QDir::homePath().toStdString());
+						QString zt1Caches(QDir::homePath() + "/Library/Caches/ZeroTier/One");
+						QDir::root().mkpath(zt1Caches);
+						std::string instPath((zt1Caches + "/ZeroTierOneInstaller").toStdString());
+						std::string tmpPath((zt1Caches + "/inst.sh").toStdString());
 
-					int outfd = ::open(instPath.toStdString().c_str(),O_CREAT|O_TRUNC|O_WRONLY,0755);
-					if (outfd <= 0) {
-						QMessageBox::critical(this,"Download Failed",QString("Installation failed: unable to write to ")+instPath,QMessageBox::Ok,QMessageBox::NoButton);
-						QApplication::exit(1);
+						int outfd = ::open(instPath.c_str(),O_CREAT|O_TRUNC|O_WRONLY,0755);
+						if (outfd <= 0) {
+							QMessageBox::critical(this,"Download Failed",QString("Installation failed: unable to write to ")+instPath.c_str(),QMessageBox::Ok,QMessageBox::NoButton);
+							QApplication::exit(1);
+							return;
+						}
+						if (::write(outfd,installerData.data(),installerData.length()) != installerData.length()) {
+							QMessageBox::critical(this,"Installation Failed",QString("Installation failed: unable to write to ")+instPath.c_str(),QMessageBox::Ok,QMessageBox::NoButton);
+							QApplication::exit(1);
+							return;
+						}
+						::close(outfd);
+						chmod(instPath.c_str(),0755);
+
+						FILE *scr = fopen(tmpPath.c_str(),"w");
+						if (!scr) {
+							QMessageBox::critical(this,"Installation Failed","Cannot write script to temporary Library/Caches/ZeroTier/One folder.",QMessageBox::Ok,QMessageBox::NoButton);
+							QApplication::exit(1);
+							return;
+						}
+
+						fprintf(scr,"#!/bin/bash\n");
+						fprintf(scr,"export PATH=\"/bin:/usr/bin:/sbin:/usr/sbin\"\n");
+						fprintf(scr,"'%s'\n",instPath.c_str());
+						fprintf(scr,"if [ -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then\n");
+						fprintf(scr,"  cp -f '/Library/Application Support/ZeroTier/One/authtoken.secret' '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
+						fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getuid(),homePath.c_str());
+						fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getgid(),homePath.c_str());
+						fprintf(scr,"  chmod 0600 '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
+						fprintf(scr,"fi\n");
+						fprintf(scr,"exit 0\n");
+
+						fclose(scr);
+						chmod(tmpPath.c_str(),0755);
+
+						macExecutePrivilegedShellCommand((std::string("'")+tmpPath+"' >>/dev/null 2>&1").c_str());
+
+						unlink(tmpPath.c_str());
+						unlink(instPath.c_str());
+
 						return;
 					}
-					if (::write(outfd,installerData.data(),installerData.length()) != installerData.length()) {
-						QMessageBox::critical(this,"Installation Failed",QString("Installation failed: unable to write to ")+instPath,QMessageBox::Ok,QMessageBox::NoButton);
-						QApplication::exit(1);
-						return;
-					}
-					::close(outfd);
-					::chmod(instPath.toStdString().c_str(),0755);
-
-					QString installHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Install).app/Contents/MacOS/applet");
-					if (!QFile::exists(installHelperPath)) {
-						QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
-						QApplication::exit(1);
-						return;
-					}
-
-					// Terminate the GUI and execute the install helper instead
-					::execl(installHelperPath.toStdString().c_str(),installHelperPath.toStdString().c_str(),(const char *)0);
-
-					// We only make it here if execl() failed
-					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate install helper, cannot install service.",QMessageBox::Ok,QMessageBox::NoButton);
-					QApplication::exit(1);
-
-					return;
 #endif
 				}	break;
 			}

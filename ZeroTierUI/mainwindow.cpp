@@ -51,6 +51,15 @@
 #include <QScrollBar>
 #include <QEventLoop>
 
+#ifdef __APPLE__
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include "mac_doprivileged.h"
+#endif
+
 QNetworkAccessManager *nam;
 
 // Globally visible
@@ -121,15 +130,39 @@ void MainWindow::timerEvent(QTimerEvent *event)
 		if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 #ifdef __APPLE__
 			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
-				QMessageBox::information(this,"Authorization Required","You must authenticate to authorize this user to administrate ZeroTier One on this computer.\n\n(This only needs to be done once.)",QMessageBox::Ok,QMessageBox::NoButton);
-				QString authHelperPath(QCoreApplication::applicationDirPath() + "/../Resources/helpers/mac/ZeroTier One (Authenticate).app/Contents/MacOS/applet");
-				if (!QFile::exists(authHelperPath)) {
-					QMessageBox::critical(this,"Unable to Locate Helper","Unable to locate authorization helper, cannot obtain authentication token.",QMessageBox::Ok,QMessageBox::NoButton);
+				// Authorize user by copying auth token into local home directory
+				QMessageBox::information(this,"Authorization Needed","Administrator privileges are required to allow the current user to control ZeroTier One on this computer. (You only have to do this once.)",QMessageBox::Ok,QMessageBox::NoButton);
+
+				std::string homePath(QDir::homePath().toStdString());
+				QString zt1Caches(QDir::homePath() + "/Library/Caches/ZeroTier/One");
+				QDir::root().mkpath(zt1Caches);
+				std::string tmpPath((zt1Caches + "/auth.sh").toStdString());
+
+				FILE *scr = fopen(tmpPath.c_str(),"w");
+				if (!scr) {
+					QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Cannot write to temporary Library/Caches/ZeroTier/One folder.)",QMessageBox::Ok,QMessageBox::NoButton);
 					QApplication::exit(1);
 					return;
 				}
-				QProcess::execute(authHelperPath,QStringList());
+
+				fprintf(scr,"#!/bin/bash\n");
+				fprintf(scr,"export PATH=\"/bin:/usr/bin:/sbin:/usr/sbin\"\n");
+				fprintf(scr,"if [ -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then\n");
+				fprintf(scr,"  cp -f '/Library/Application Support/ZeroTier/One/authtoken.secret' '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
+				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getuid(),homePath.c_str());
+				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getgid(),homePath.c_str());
+				fprintf(scr,"  chmod 0600 '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
+				fprintf(scr,"fi\n");
+				fprintf(scr,"exit 0\n");
+
+				fclose(scr);
+				chmod(tmpPath.c_str(),0755);
+
+				macExecutePrivilegedShellCommand((std::string("'")+tmpPath+"' >>/dev/null 2>&1").c_str());
+
+				unlink(tmpPath.c_str());
 			} else {
+				// Install service and other support files if service isn't there
 				doInstallDialog();
 				return;
 			}
@@ -268,6 +301,7 @@ void MainWindow::customEvent(QEvent *event)
 void MainWindow::showEvent(QShowEvent *event)
 {
 #ifdef __APPLE__
+	// If service isn't installed, download and install it
 	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one"))
 		doInstallDialog();
 #endif
