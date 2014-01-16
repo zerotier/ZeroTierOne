@@ -161,6 +161,14 @@ void InstallDialog::on_networkReply(QNetworkReply *reply)
 						unlink(tmpPath.c_str());
 						unlink(instPath.c_str());
 
+						// Restart the binary with whatever updates may have occurred
+						std::string appPath(QCoreApplication::applicationFilePath().toStdString());
+						execl(appPath.c_str(),appPath.c_str(),(const char *)0);
+
+						// We only make it here if execl() fails
+						QMessageBox::critical(this,"Re-Launch Failed","An error occurred re-launching ZeroTier One.app. Try launching it manually.",QMessageBox::Ok,QMessageBox::NoButton);
+						QApplication::exit(1);
+
 						return;
 					}
 #endif
