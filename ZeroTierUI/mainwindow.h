@@ -33,6 +33,7 @@
 #include <QString>
 #include <QShowEvent>
 #include <QTimerEvent>
+#include <QSettings>
 
 #include <map>
 #include <vector>
@@ -71,7 +72,6 @@ public:
 protected:
 	virtual void timerEvent(QTimerEvent *event);
 	virtual void customEvent(QEvent *event);
-	virtual void showEvent(QShowEvent *event);
 
 private slots:
 	void on_joinNetworkButton_clicked();
@@ -80,8 +80,6 @@ private slots:
 	void on_addressButton_clicked();
 
 private:
-	void doInstallDialog();
-
 	Ui::MainWindow *ui;
 
 	QString myAddress;

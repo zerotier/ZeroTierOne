@@ -25,12 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "mainwindow.h"
-#include "aboutwindow.h"
-#include "networkwidget.h"
-#include "ui_mainwindow.h"
-#include "installdialog.h"
-
 #include <string>
 #include <map>
 #include <set>
@@ -51,6 +45,12 @@
 #include <QScrollBar>
 #include <QEventLoop>
 
+#include "main.h"
+#include "mainwindow.h"
+#include "aboutwindow.h"
+#include "networkwidget.h"
+#include "ui_mainwindow.h"
+
 #ifdef __APPLE__
 #include <stdio.h>
 #include <string.h>
@@ -60,14 +60,13 @@
 #include "mac_doprivileged.h"
 #endif
 
-QNetworkAccessManager *nam;
-
 // Globally visible
 ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 
 // Main window instance for app
 static MainWindow *mainWindow = (MainWindow *)0;
 
+// Handles message from ZeroTier One service
 static void handleZTMessage(void *arg,unsigned long id,const char *line)
 {
 	static std::map< unsigned long,std::vector<std::string> > ztReplies;
@@ -80,6 +79,8 @@ static void handleZTMessage(void *arg,unsigned long id,const char *line)
 	} else { // empty lines conclude transmissions
 		std::map< unsigned long,std::vector<std::string> >::iterator r(ztReplies.find(id));
 		if (r != ztReplies.end()) {
+			// The message is packed into an event and sent to the main window where
+			// the actual parsing code lives.
 			MainWindow::ZTMessageEvent *event = new MainWindow::ZTMessageEvent(r->second);
 			ztReplies.erase(r);
 			ztReplies_m.unlock();
@@ -93,6 +94,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui(new Ui::MainWindow),
 	pollServiceTimerId(-1)
 {
+	mainWindow = this;
+
 	ui->setupUi(this);
 	if (ui->networkListWidget->verticalScrollBar())
 		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
@@ -100,8 +103,6 @@ MainWindow::MainWindow(QWidget *parent) :
 	foreach(QWidget *widget, widgets)
 		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
 	ui->noNetworksLabel->setText("Connecting to Service..."); // changed when result is received
-
-	mainWindow = this;
 
 	this->pollServiceTimerId = this->startTimer(1000);
 	this->setEnabled(false); // gets enabled when updates are received
@@ -168,10 +169,6 @@ void MainWindow::timerEvent(QTimerEvent *event)
 				macExecutePrivilegedShellCommand((std::string("'")+tmpPath+"' >>/dev/null 2>&1").c_str());
 
 				unlink(tmpPath.c_str());
-			} else {
-				// Install service and other support files if service isn't there
-				doInstallDialog();
-				return;
 			}
 #endif
 
@@ -305,15 +302,6 @@ void MainWindow::customEvent(QEvent *event)
 	}
 }
 
-void MainWindow::showEvent(QShowEvent *event)
-{
-#ifdef __APPLE__
-	// If service isn't installed, download and install it
-	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one"))
-		doInstallDialog();
-#endif
-}
-
 void MainWindow::on_joinNetworkButton_clicked()
 {
 	QString toJoin(ui->networkIdLineEdit->text());
@@ -374,19 +362,4 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 void MainWindow::on_addressButton_clicked()
 {
 	QApplication::clipboard()->setText(this->myAddress);
-}
-
-void MainWindow::doInstallDialog()
-{
-#ifdef __APPLE__
-	this->setEnabled(false);
-	if (pollServiceTimerId >= 0) {
-		this->killTimer(pollServiceTimerId);
-		pollServiceTimerId = -1;
-	}
-
-	InstallDialog *id = new InstallDialog(this);
-	id->setModal(true);
-	id->show();
-#endif
 }

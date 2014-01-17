@@ -26,13 +26,44 @@
  */
 
 #include "mainwindow.h"
+#include "installdialog.h"
+#include "licensedialog.h"
+
 #include <QApplication>
+#include <QDir>
+#include <QString>
+
+QSettings *settings = (QSettings *)0;
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
+
+#ifdef __APPLE__
+	// If service isn't installed, download and install it
+	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
+		// InstallDialog is an alternative main window. It will re-launch the app
+		// when done.
+		InstallDialog id;
+		id.show();
+		return a.exec();
+	}
+#endif
+
+#ifdef __APPLE__
+	QString zt1AppSupport(QDir::homePath() + "/Library/Application Support/ZeroTier/One");
+	QDir::root().mkpath(zt1AppSupport);
+	settings = new QSettings(zt1AppSupport + "/ui.ini",QSettings::IniFormat);
+#else
+	settings = new QSettings("ZeroTier Networks","ZeroTier One");
+#endif
+
+	if (!settings->value("acceptedLicenseV1",false).toBool()) {
+		LicenseDialog ld;
+		ld.exec();
+	}
+
 	MainWindow w;
 	w.show();
-
 	return a.exec();
 }

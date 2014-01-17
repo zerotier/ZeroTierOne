@@ -28,7 +28,7 @@
 #ifndef INSTALLDIALOG_H
 #define INSTALLDIALOG_H
 
-#include <QDialog>
+#include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QUrl>
 #include <QNetworkRequest>
@@ -42,7 +42,7 @@ namespace Ui {
 class InstallDialog;
 }
 
-class InstallDialog : public QDialog
+class InstallDialog : public QMainWindow
 {
 	Q_OBJECT
 

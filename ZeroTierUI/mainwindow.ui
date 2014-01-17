@@ -231,7 +231,7 @@ margin: 0 4px 0 0;
 </string>
          </property>
          <property name="text">
-          <string>STATUS, etc.</string>
+          <string/>
          </property>
          <property name="textFormat">
           <enum>Qt::PlainText</enum>

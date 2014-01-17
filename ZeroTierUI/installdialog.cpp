@@ -55,7 +55,7 @@
 #include <QProcess>
 
 InstallDialog::InstallDialog(QWidget *parent) :
-	QDialog(parent),
+	QMainWindow(parent),
 	ui(new Ui::InstallDialog),
 	nam(new QNetworkAccessManager(this)),
 	phase(FETCHING_NFO)

@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>InstallDialog</class>
- <widget class="QDialog" name="InstallDialog">
-  <property name="windowModality">
-   <enum>Qt::ApplicationModal</enum>
-  </property>
+ <widget class="QMainWindow" name="InstallDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -20,12 +17,7 @@
    <iconset resource="resources.qrc">
     <normaloff>:/img/zt1icon.png</normaloff>:/img/zt1icon.png</iconset>
   </property>
-  <property name="sizeGripEnabled">
-   <bool>true</bool>
-  </property>
-  <property name="modal">
-   <bool>true</bool>
-  </property>
+	<widget class="QWidget" name="centralWidget">
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>6</number>
@@ -123,6 +115,7 @@ Please wait while the service downloads, then you will be prompted to enter an a
     </widget>
    </item>
   </layout>
+	</widget>
  </widget>
  <resources>
   <include location="resources.qrc"/>

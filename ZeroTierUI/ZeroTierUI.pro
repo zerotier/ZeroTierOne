@@ -42,7 +42,8 @@ SOURCES += main.cpp\
 		../ext/lz4/lz4.c \
 		../ext/lz4/lz4hc.c \
 		networkwidget.cpp \
-		installdialog.cpp
+		installdialog.cpp \
+    licensedialog.cpp
 
 HEADERS  += mainwindow.h \
 		aboutwindow.h \
@@ -93,12 +94,15 @@ HEADERS  += mainwindow.h \
 		../ext/lz4/lz4hc.h \
 		networkwidget.h \
 		installdialog.h \
-		mac_doprivileged.h
+		mac_doprivileged.h \
+    licensedialog.h \
+    main.h
 
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \
 		networkwidget.ui \
-		installdialog.ui
+		installdialog.ui \
+    licensedialog.ui
 
 RESOURCES += \
 		resources.qrc
