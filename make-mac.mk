@@ -57,15 +57,22 @@ mac-ui: FORCE
 install-mac-tap: FORCE
 	mkdir -p /Library/Application\ Support/ZeroTier/One
 	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
-	cp -R ext/bin/tap-mac//tap.kext /Library/Application\ Support/ZeroTier/One
+	cp -R ext/bin/tap-mac/tap.kext /Library/Application\ Support/ZeroTier/One
 	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
 
 clean:
-	rm -rf *.dSYM build-* $(OBJS) zerotier-* ZeroTierOneInstaller-*
+	rm -rf *.dSYM build-* $(OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
 
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
 	make mac-ui ZT_OFFICIAL_RELEASE=1
 	./buildinstaller.sh
+	mkdir build-ZeroTierOne-dmg
+	cd build-ZeroTierOne-dmg ; ln -sf /Applications Applications
+	cp -a "build-ZeroTierUI-release/ZeroTier One.app" build-ZeroTierOne-dmg/
+	rm -f /tmp/tmp.dmg
+	hdiutil create /tmp/tmp.dmg -ov -volname "ZeroTier One" -fs HFS+ -srcfolder ./build-ZeroTierOne-dmg
+	hdiutil convert /tmp/tmp.dmg -format UDZO -o "ZeroTier One.dmg"
+	rm -f /tmp/tmp.dmg
 
 FORCE:
