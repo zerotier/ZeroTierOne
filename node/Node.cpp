@@ -286,7 +286,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 					if (err == "OBJ_NOT_FOUND")
 						errCode = Packet::ERROR_OBJ_NOT_FOUND;
 					else if (err == "ACCESS_DENIED")
-						errCode = Packet::ERROR_NETWORK_ACCESS_DENIED;
+						errCode = Packet::ERROR_NETWORK_ACCESS_DENIED_;
 
 					Packet outp(peerAddress,_r->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
