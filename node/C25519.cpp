@@ -292,7 +292,7 @@ static int crypto_scalarmult(unsigned char *q,
 
 static const unsigned char base[32] = {9};
 
-static int crypto_scalarmult_base(unsigned char *q,
+static inline int crypto_scalarmult_base(unsigned char *q,
   const unsigned char *n)
 {
   return crypto_scalarmult(q,n,base);
@@ -1868,21 +1868,21 @@ static const ge25519_aff ge25519_base_multiples_affine[425] = {
  {{0x69, 0x3e, 0x47, 0x97, 0x2c, 0xaf, 0x52, 0x7c, 0x78, 0x83, 0xad, 0x1b, 0x39, 0x82, 0x2f, 0x02, 0x6f, 0x47, 0xdb, 0x2a, 0xb0, 0xe1, 0x91, 0x99, 0x55, 0xb8, 0x99, 0x3a, 0xa0, 0x44, 0x11, 0x51}}}
 };
 
-static void p1p1_to_p2(ge25519_p2 *r, const ge25519_p1p1 *p)
+static inline void p1p1_to_p2(ge25519_p2 *r, const ge25519_p1p1 *p)
 {
   fe25519_mul(&r->x, &p->x, &p->t);
   fe25519_mul(&r->y, &p->y, &p->z);
   fe25519_mul(&r->z, &p->z, &p->t);
 }
 
-static void p1p1_to_p2_2(ge25519_p3 *r, const ge25519_p1p1 *p)
+static inline void p1p1_to_p2_2(ge25519_p3 *r, const ge25519_p1p1 *p)
 {
   fe25519_mul(&r->x, &p->x, &p->t);
   fe25519_mul(&r->y, &p->y, &p->z);
   fe25519_mul(&r->z, &p->z, &p->t);
 }
 
-static void p1p1_to_p3(ge25519_p3 *r, const ge25519_p1p1 *p)
+static inline void p1p1_to_p3(ge25519_p3 *r, const ge25519_p1p1 *p)
 {
   p1p1_to_p2_2(r, p);
   fe25519_mul(&r->t, &p->x, &p->y);
@@ -1951,13 +1951,13 @@ static void dbl_p1p1(ge25519_p1p1 *r, const ge25519_p2 *p)
 }
 
 /* Constant-time version of: if(b) r = p */
-static void cmov_aff(ge25519_aff *r, const ge25519_aff *p, unsigned char b)
+static inline void cmov_aff(ge25519_aff *r, const ge25519_aff *p, unsigned char b)
 {
   fe25519_cmov(&r->x, &p->x, b);
   fe25519_cmov(&r->y, &p->y, b);
 }
 
-static unsigned char equal(signed char b,signed char c)
+static inline unsigned char equal(signed char b,signed char c)
 {
   unsigned char ub = b;
   unsigned char uc = c;
@@ -1965,14 +1965,14 @@ static unsigned char equal(signed char b,signed char c)
   crypto_uint32 y = x; /* 0: yes; 1..255: no */
   y -= 1; /* 4294967295: yes; 0..254: no */
   y >>= 31; /* 1: yes; 0: no */
-  return y;
+  return (unsigned char)y;
 }
 
-static unsigned char negative(signed char b)
+static inline unsigned char negative(signed char b)
 {
   unsigned long long x = b; /* 18446744073709551361..18446744073709551615: yes; 0..255: no */
   x >>= 63; /* 1: yes; 0: no */
-  return x;
+  return (unsigned char)x;
 }
 
 static void choose_t(ge25519_aff *t, unsigned long long pos, signed char b)
@@ -1988,7 +1988,7 @@ static void choose_t(ge25519_aff *t, unsigned long long pos, signed char b)
   fe25519_cmov(&t->x, &v, negative(b));
 }
 
-static void setneutral(ge25519 *r)
+static inline void setneutral(ge25519 *r)
 {
   fe25519_setzero(&r->x);
   fe25519_setone(&r->y);
@@ -2044,7 +2044,7 @@ static int ge25519_unpackneg_vartime(ge25519_p3 *r, const unsigned char p[32])
   return 0;
 }
 
-static void ge25519_pack(unsigned char r[32], const ge25519_p3 *p)
+static inline void ge25519_pack(unsigned char r[32], const ge25519_p3 *p)
 {
   fe25519 tx, ty, zi;
   fe25519_invert(&zi, &p->z); 
@@ -2127,7 +2127,7 @@ static void ge25519_scalarmult_base(ge25519_p3 *r, const sc25519 *s)
   }
 }
 
-static void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char *pk, unsigned char *playground, unsigned long long smlen)
+static inline void get_hram(unsigned char *hram, const unsigned char *sm, const unsigned char *pk, unsigned char *playground, unsigned long long smlen)
 {
   unsigned long long i;
 
