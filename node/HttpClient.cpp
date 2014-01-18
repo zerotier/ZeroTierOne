@@ -386,9 +386,13 @@ public:
 				goto closeAndReturnFromHttp;
 			}
 
-			hRequest = WinHttpOpenRequest(hConnect,L"GET",NULL,NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
+			hRequest = WinHttpOpenRequest(hConnect,L"GET",urlPath.c_str(),NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
 			if (!hRequest) {
-				_handler(_arg,-1,_url,false,"error sending request");
+				_handler(_arg,-1,_url,false,"error sending request (1)");
+				goto closeAndReturnFromHttp;
+			}
+			if (!WinHttpSendRequest(hRequest,WINHTTP_NO_ADDITIONAL_HEADERS,0,WINHTTP_NO_REQUEST_DATA,0,0,0)) {
+				_handler(_arg,-1,_url,false,"error sending request (2)");
 				goto closeAndReturnFromHttp;
 			}
 
@@ -421,6 +425,8 @@ public:
 				} while (dwSize > 0);
 
 				_handler(_arg,dwStatusCode,_url,false,_body);
+			} else {
+				_handler(_arg,-1,_url,false,"receive response failed");
 			}
 		} catch (std::bad_alloc &exc) {
 			_handler(_arg,-1,_url,false,"insufficient memory");
