@@ -51,6 +51,13 @@
 #include <sys/wait.h>
 #endif
 
+#ifdef __WINDOWS__
+#include <locale>
+#include <codecvt>
+#include <Windows.h>
+#include <winhttp.h>
+#endif
+
 namespace ZeroTier {
 
 const std::map<std::string,std::string> HttpClient::NO_HEADERS;
@@ -284,6 +291,150 @@ public:
 			::execv(curlPath.c_str(),curlArgs);
 			::exit(-1); // only reached if execv() fails
 		}
+	}
+
+	const std::string _url;
+	std::string _body;
+	std::map<std::string,std::string> _headers;
+	unsigned int _timeout;
+	void (*_handler)(void *,int,const std::string &,bool,const std::string &);
+	void *_arg;
+	Thread _myThread;
+};
+
+HttpClient::Request HttpClient::_do(
+	const char *method,
+	const std::string &url,
+	const std::map<std::string,std::string> &headers,
+	unsigned int timeout,
+	void (*handler)(void *,int,const std::string &,bool,const std::string &),
+	void *arg)
+{
+	return (HttpClient::Request)(new P_Req(method,url,headers,timeout,handler,arg));
+}
+
+#endif
+
+#ifdef __WINDOWS__
+
+#define WIN_MAX_MESSAGE_LENGTH (1024 * 1024 * 64)
+
+// Internal private thread class that performs request, notifies handler,
+// and then commits suicide by deleting itself.
+class P_Req : NonCopyable
+{
+public:
+	P_Req(const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,bool,const std::string &),void *arg) :
+		_url(url),
+		_headers(headers),
+		_timeout(timeout),
+		_handler(handler),
+		_arg(arg)
+	{
+		_myThread = Thread::start(this);
+	}
+
+	void threadMain()
+	{
+		HINTERNET hSession = (HINTERNET)0;
+		HINTERNET hConnect = (HINTERNET)0;
+		HINTERNET hRequest = (HINTERNET)0;
+
+		try {
+			hSession = WinHttpOpen(L"ZeroTier One HttpClient/1.0",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS,0);
+			if (!hSession) {
+				_handler(_arg,-1,_url,false,"WinHttpOpen() failed");
+				goto closeAndReturnFromHttp;
+			}
+			int timeoutMs = (int)_timeout * 1000;
+			WinHttpSetTimeouts(hSession,timeoutMs,timeoutMs,timeoutMs,timeoutMs);
+
+			std::wstring_convert< std::codecvt_utf8<wchar_t> > wcconv;
+			std::wstring wurl(wcconv.from_bytes(_url));
+
+			URL_COMPONENTS uc;
+			memset(&uc,0,sizeof(uc));
+			uc.dwStructSize = sizeof(uc);
+			uc.dwSchemeLength = -1;
+			uc.dwHostNameLength = -1;
+			uc.dwUrlPathLength = -1;
+			uc.dwExtraInfoLength = -1;
+			if (!WinHttpCrackUrl(wurl.c_str(),wurl.length(),0,&uc)) {
+				_handler(_arg,-1,_url,false,"unable to parse URL: WinHttpCrackUrl() failed");
+				goto closeAndReturnFromHttp;
+			}
+			if ((!uc.lpszHostName)||(!uc.lpszUrlPath)||(!uc.lpszScheme)||(uc.dwHostNameLength <= 0)||(uc.dwUrlPathLength <= 0)||(uc.dwSchemeLength <= 0)) {
+				_handler(_arg,-1,_url,false,"unable to parse URL: missing scheme, host name, or path");
+				goto closeAndReturnFromHttp;
+			}
+			std::wstring urlScheme(uc.lpszScheme,uc.dwSchemeLength);
+			std::wstring urlHostName(uc.lpszHostName,uc.dwHostNameLength);
+			std::wstring urlPath(uc.lpszUrlPath,uc.dwUrlPathLength);
+			if ((uc.lpszExtraInfo)&&(uc.dwExtraInfoLength > 0))
+				urlPath.append(uc.lpszExtraInfo,uc.dwExtraInfoLength);
+
+			if (urlScheme != L"http") {
+				_handler(_arg,-1,_url,false,"only 'http' scheme is supported");
+				goto closeAndReturnFromHttp;
+			}
+
+			hConnect = WinHttpConnect(hSession,urlHostName.c_str(),((uc.nPort > 0) ? uc.nPort : 80),0);
+			if (!hConnect) {
+				_handler(_arg,-1,_url,false,"connection failed");
+				goto closeAndReturnFromHttp;
+			}
+
+			hRequest = WinHttpOpenRequest(hConnect,L"GET",NULL,NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
+			if (!hRequest) {
+				_handler(_arg,-1,_url,false,"error sending request");
+				goto closeAndReturnFromHttp;
+			}
+
+			if (WinHttpReceiveResponse(hRequest,NULL)) {
+				DWORD dwStatusCode = 0;
+				DWORD dwTmp = sizeof(dwStatusCode);
+				WinHttpQueryHeaders(hRequest,WINHTTP_QUERY_STATUS_CODE| WINHTTP_QUERY_FLAG_NUMBER,NULL,&dwStatusCode,&dwTmp,NULL);
+
+				DWORD dwSize;
+				do {
+					dwSize = 0;
+					if (!WinHttpQueryDataAvailable(hRequest,&dwSize)) {
+						_handler(_arg,-1,_url,false,"receive error (1)");
+						goto closeAndReturnFromHttp;
+					}
+
+					char *outBuffer = new char[dwSize];
+					DWORD dwRead = 0;
+					if (!WinHttpReadData(hRequest,(LPVOID)outBuffer,dwSize,&dwRead)) {
+						_handler(_arg,-1,_url,false,"receive error (2)");
+						goto closeAndReturnFromHttp;
+					}
+
+					_body.append(outBuffer,dwRead);
+					delete [] outBuffer;
+					if (_body.length() > WIN_MAX_MESSAGE_LENGTH) {
+						_handler(_arg,-1,_url,false,"result too large");
+						goto closeAndReturnFromHttp;
+					}
+				} while (dwSize > 0);
+
+				_handler(_arg,dwStatusCode,_url,false,_body);
+			}
+		} catch (std::bad_alloc &exc) {
+			_handler(_arg,-1,_url,false,"insufficient memory");
+		} catch ( ... ) {
+			_handler(_arg,-1,_url,false,"unexpected exception");
+		}
+
+closeAndReturnFromHttp:
+		if (hRequest)
+			WinHttpCloseHandle(hRequest);
+		if (hConnect)
+			WinHttpCloseHandle(hConnect);
+		if (hSession)
+			WinHttpCloseHandle(hSession);
+		delete this;
+		return;
 	}
 
 	const std::string _url;
