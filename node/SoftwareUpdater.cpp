@@ -182,7 +182,6 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 		return;
 	}
 
-#ifdef __UNIX_LIKE__
 	size_t lastSlash = url.rfind('/');
 	if (lastSlash == std::string::npos) { // sanity check, shouldn't happen
 		LOG("software update aborted: invalid URL");
@@ -191,30 +190,36 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 	}
 	std::string updatesDir(_r->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
 	std::string updatePath(updatesDir + ZT_PATH_SEPARATOR_S + url.substr(lastSlash + 1));
+#ifdef __WINDOWS__
+	CreateDirectoryA(updatesDir.c_str(),NULL);
+#else
 	mkdir(updatesDir.c_str(),0755);
+#endif
 
-	int fd = ::open(updatePath.c_str(),O_WRONLY|O_CREAT|O_TRUNC,0755);
-	if (fd <= 0) {
+	FILE *upf = fopen(updatePath.c_str(),"wb");
+	if (!upf) {
 		LOG("software update aborted: unable to open %s for writing",updatePath.c_str());
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
-	if ((long)::write(fd,body.data(),body.length()) != (long)body.length()) {
+	if (fwrite(body.data(),body.length(),1,upf) != 1) {
 		LOG("software update aborted: unable to write to %s",updatePath.c_str());
 		upd->_status = UPDATE_STATUS_IDLE;
+		fclose(upf);
+		Utils::rm(updatePath);
 		return;
 	}
-	::close(fd);
+	fclose(upf);
+
+#ifdef __UNIX_LIKE__
 	::chmod(updatePath.c_str(),0755);
+#endif
 
+	// We exit with this reason code and the path as the text. It is the
+	// caller's responsibility (main.c) to pick this up and do the right
+	// thing.
 	upd->_status = UPDATE_STATUS_IDLE;
-
 	_r->node->terminate(Node::NODE_RESTART_FOR_UPGRADE,updatePath.c_str());
-#endif
-
-#ifdef __WINDOWS__
-	todo;
-#endif
 }
 
 } // namespace ZeroTier
