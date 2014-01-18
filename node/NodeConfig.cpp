@@ -77,7 +77,7 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 		if (!d->second) {
 			std::string::size_type dot = d->first.rfind(".conf");
 			if (dot != std::string::npos) {
-				uint64_t nwid = strtoull(d->first.substr(0,dot).c_str(),(char **)0,16);
+				uint64_t nwid = Utils::hexStrToU64(d->first.substr(0,dot).c_str());
 
 				// TODO: remove legacy code once out of beta
 				if (nwid == 0x6c92786fee000001ULL) {
@@ -230,7 +230,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		}
 	} else if (cmd[0] == "join") {
 		if (cmd.size() > 1) {
-			uint64_t nwid = strtoull(cmd[1].c_str(),(char **)0,16);
+			uint64_t nwid = Utils::hexStrToU64(cmd[1].c_str());
 			if (nwid > 0) {
 				Mutex::Lock _l(_networks_m);
 				if (_networks.count(nwid)) {
@@ -255,7 +255,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 	} else if (cmd[0] == "leave") {
 		if (cmd.size() > 1) {
 			Mutex::Lock _l(_networks_m);
-			uint64_t nwid = strtoull(cmd[1].c_str(),(char **)0,16);
+			uint64_t nwid = Utils::hexStrToU64(cmd[1].c_str());
 			std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
 			if (nw == _networks.end()) {
 				_P("404 leave %.16llx ERROR: not a member of that network",(unsigned long long)nwid);

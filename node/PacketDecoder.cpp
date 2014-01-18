@@ -151,7 +151,7 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				if (network)
 					network->pushMembershipCertificate(source(),true,Utils::now());
 			}	break;
-			case Packet::ERROR_NETWORK_ACCESS_DENIED: {
+			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
 				SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == source()))
 					network->forceStatusTo(Network::NETWORK_ACCESS_DENIED);

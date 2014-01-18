@@ -34,6 +34,10 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
+#ifdef __WINDOWS__
+#define	round(x) ((x-floor(x))>0.5 ? ceil(x) : floor(x))
+#endif
+
 namespace ZeroTier {
 
 /**

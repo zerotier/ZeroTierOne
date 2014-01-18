@@ -280,8 +280,12 @@ int64_t Utils::getFileSize(const char *path)
 	struct stat s;
 	if (stat(path,&s))
 		return -1;
+#ifdef __WINDOWS__
+	return s.st_size;
+#else
 	if (S_ISREG(s.st_mode))
 		return s.st_size;
+#endif
 	return -1;
 }
 

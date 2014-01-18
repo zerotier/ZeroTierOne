@@ -672,7 +672,7 @@ public:
 		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 6,
 
 		/* Tried to join network, but you're not a member */
-		ERROR_NETWORK_ACCESS_DENIED = 7
+		ERROR_NETWORK_ACCESS_DENIED_ = 7 /* extra _ to avoid Windows name conflict */
 	};
 
 	/**

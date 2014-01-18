@@ -4,7 +4,12 @@ D. J. Bernstein
 Public domain.
 */
 
+#include "Constants.hpp"
 #include "Poly1305.hpp"
+
+#ifdef __WINDOWS__
+#pragma warning(disable: 4146)
+#endif
 
 namespace ZeroTier {
 

@@ -91,6 +91,7 @@
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\UdpSocket.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
+    <ClCompile Include="..\..\selftest.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{DCD73B97-0F44-4044-8BA4-95B59CCAB4BD}</ProjectGuid>

@@ -112,8 +112,8 @@ public:
 		if ((!etherType)||(etherType > 0xffff)) // sanity checks
 			return false;
 		else if ((_etWhitelist[0] & 1)) // prsence of 0 in set inverts sense: whitelist becomes blacklist
-			return (!(_etWhitelist[etherType >> 3] & (1 << (etherType & 7))));
-		else return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))));
+			return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) == 0);
+		else return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) != 0);
 	}
 
 	std::set<unsigned int> allowedEtherTypes() const;

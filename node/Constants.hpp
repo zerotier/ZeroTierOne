@@ -77,6 +77,8 @@
 #define ZT_PATH_SEPARATOR '\\'
 #define ZT_PATH_SEPARATOR_S "\\"
 #define ZT_EOL_S "\r\n"
+#include <WinSock2.h>
+#include <Windows.h>
 #endif
 
 // Assume these are little-endian. PPC is not supported for OSX, and ARM

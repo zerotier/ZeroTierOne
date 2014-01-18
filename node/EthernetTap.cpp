@@ -938,7 +938,7 @@ void EthernetTap::threadMain()
 #include <nldef.h>
 #include <netioapi.h>
 
-#include "..\vsprojects\TapDriver\tap-windows.h"
+#include "..\windows\TapDriver\tap-windows.h"
 
 namespace ZeroTier {
 

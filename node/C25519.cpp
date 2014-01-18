@@ -18,6 +18,10 @@ Derived from public domain code by D. J. Bernstein.
 #include "SHA512.hpp"
 #include "Buffer.hpp"
 
+#ifdef __WINDOWS__
+#pragma warning(disable: 4146)
+#endif
+
 namespace ZeroTier {
 
 //////////////////////////////////////////////////////////////////////////////

@@ -25,20 +25,19 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "Constants.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#include <winhttp.h>
+#include <locale>
+#include <codecvt>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <vector>
-#include <utility>
-#include <algorithm>
-
-#include "Constants.hpp"
-#include "HttpClient.hpp"
-#include "Thread.hpp"
-#include "Utils.hpp"
-#include "NonCopyable.hpp"
-#include "Defaults.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -51,12 +50,15 @@
 #include <sys/wait.h>
 #endif
 
-#ifdef __WINDOWS__
-#include <locale>
-#include <codecvt>
-#include <Windows.h>
-#include <winhttp.h>
-#endif
+#include <vector>
+#include <utility>
+#include <algorithm>
+
+#include "HttpClient.hpp"
+#include "Thread.hpp"
+#include "Utils.hpp"
+#include "NonCopyable.hpp"
+#include "Defaults.hpp"
 
 namespace ZeroTier {
 
