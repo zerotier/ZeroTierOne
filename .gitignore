@@ -9,18 +9,18 @@
 /netconf-service/netconf-test
 /netconf-service/netconf.service
 /ipch
-/ZeroTierOne.sdf
-/ZeroTierOne.v11.suo
-/vsprojects/SelfTest/Debug
-/vsprojects/SelfTest/Release
-/vsprojects/ZeroTierOne/Debug
-/vsprojects/ZeroTierOne/Release
-/vsprojects/ZeroTierOne/x64
-/vsprojects/TapDriver/Win32
-/vsprojects/TapDriver/x64
-/vsprojects/InstallerUpdater/obj
-/vsprojects/Service/obj
-/vsprojects/SelfTest/SelfTest.aps
+/windows/ZeroTierOne.sdf
+/windows/ZeroTierOne.v11.suo
+/windows/SelfTest/Debug
+/windows/SelfTest/Release
+/windows/ZeroTierOne/Debug
+/windows/ZeroTierOne/Release
+/windows/ZeroTierOne/x64
+/windows/TapDriver/Win32
+/windows/TapDriver/x64
+/windows/InstallerUpdater/obj
+/windows/Service/obj
+/windows/SelfTest/SelfTest.aps
 /Build/*
 *.log
 *.opensdf
@@ -34,5 +34,3 @@
 *.autosave
 /ZeroTier One.zip
 /ZeroTier One.dmg
-/windows/ZeroTierOne.sdf
-/windows/ZeroTierOne.v11.suo
