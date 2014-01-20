@@ -40,7 +40,7 @@
 #define ETHERNET_PACKET_SIZE     (ETHERNET_MTU + ETHERNET_HEADER_SIZE)
 #define DEFAULT_PACKET_LOOKAHEAD (ETHERNET_PACKET_SIZE)
 
-#define NIC_MAX_MCAST_LIST 32  // Max length of multicast address list
+#define NIC_MAX_MCAST_LIST 128  // Max length of multicast address list
 
 #define MINIMUM_MTU 576        // USE TCP Minimum MTU
 #define MAXIMUM_MTU 65536      // IP maximum MTU

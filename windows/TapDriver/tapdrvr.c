@@ -1523,6 +1523,7 @@ NTSTATUS
 	PIO_STACK_LOCATION l_IrpSp;
 	NTSTATUS l_Status = STATUS_SUCCESS;
 	BOOLEAN accessible;
+	ULONG i,j;
 
 	l_IrpSp = IoGetCurrentIrpStackLocation (p_IRP);
 
@@ -1632,6 +1633,39 @@ NTSTATUS
 					break;
 				}
 #endif
+
+				// Allow ZeroTier One to get multicast memberships at the L2 level in a
+				// protocol-neutral manner.
+			case TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS:
+				{
+					if (&l_Adapter->m_MCLockAllocated)
+						NdisAcquireSpinLock (&l_Adapter->m_MCLock);
+					if (l_IrpSp->Parameters.DeviceIoControl.OutputBufferLength < TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE) {
+						/* output buffer too small */
+						NOTE_ERROR ();
+						p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
+					} else {
+						char *out = (char *)p_IRP->AssociatedIrp.SystemBuffer;
+						char *end = out + TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE;
+						for(i=0;i<l_Adapter->m_MCListSize;++i) {
+							if (i >= TAP_MAX_MCAST_LIST)
+								break;
+							for(j=0;j<6;++j)
+								*(out++) = l_Adapter->m_MCList.list[i].addr[j];
+							if (out >= end)
+								break;
+						}
+						while (out < end)
+							*(out++) = (char)0;
+						p_IRP->IoStatus.Information
+							= l_IrpSp->Parameters.DeviceIoControl.OutputBufferLength;
+						p_IRP->IoStatus.Status = l_Status = STATUS_SUCCESS;
+					}
+					if (&l_Adapter->m_MCLockAllocated)
+						NdisReleaseSpinLock (&l_Adapter->m_MCLock);
+
+					break;
+				}
 
 			case TAP_WIN_IOCTL_SET_MEDIA_STATUS:
 				{

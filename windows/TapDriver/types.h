@@ -82,14 +82,6 @@ typedef struct _TapExtension
   // Flags
   BOOLEAN m_TapIsRunning;
   BOOLEAN m_CalledTapDeviceFreeResources;
-
-#if 0
-  // DPC queue for deferred packet injection
-  BOOLEAN m_InjectDpcInitialized;
-  KDPC m_InjectDpc;
-  NDIS_SPIN_LOCK m_InjectLock;
-  Queue *m_InjectQueue;
-#endif
 }
 TapExtension, *TapExtensionPointer;
 
@@ -103,17 +95,6 @@ typedef struct _TapPacket
    }
 TapPacket, *TapPacketPointer;
 
-#if 0
-typedef struct _InjectPacket
-   {
-#   define INJECT_PACKET_SIZE(data_size) (sizeof (InjectPacket) + (data_size))
-#   define INJECT_PACKET_FREE(ib)  NdisFreeMemory ((ib), INJECT_PACKET_SIZE ((ib)->m_Size), 0)
-    ULONG m_Size;
-    UCHAR m_Data []; // m_Data must be the last struct member
-   }
-InjectPacket, *InjectPacketPointer;
-#endif
-
 typedef struct _TapAdapter
 {
 # define NAME(a) ((a)->m_NameAnsi.Buffer)
@@ -122,9 +103,6 @@ typedef struct _TapAdapter
   BOOLEAN m_InterfaceIsRunning;
   NDIS_HANDLE m_MiniportAdapterHandle;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
-#if PACKET_TRUNCATION_CHECK
-  LONG m_RxTrunc, m_TxTrunc;
-#endif
   NDIS_MEDIUM m_Medium;
   ULONG m_Lookahead;
   ULONG m_MTU;

@@ -146,56 +146,10 @@ VOID FlushQueues
     TapExtensionPointer p_Extension
    );
 
-VOID ResetTapAdapterState
-   (
-    TapAdapterPointer p_Adapter
-   );
-
-BOOLEAN ProcessARP
-   (
-    TapAdapterPointer p_Adapter,
-    const PARP_PACKET src,
-    const IPADDR adapter_ip,
-    const IPADDR ip_network,
-    const IPADDR ip_netmask,
-    const MACADDR mac
-   );
-
 VOID SetMediaStatus
    (
     TapAdapterPointer p_Adapter,
     BOOLEAN state
-   );
-
-VOID InjectPacketDeferred
-   (
-    TapAdapterPointer p_Adapter,
-    UCHAR *packet,
-    const unsigned int len
-   );
-
-VOID InjectPacketNow
-   (
-    TapAdapterPointer p_Adapter,
-    UCHAR *packet,
-    const unsigned int len
-   );
-
-// for KDEFERRED_ROUTINE and Static Driver Verifier
-//#include <wdm.h>
-//KDEFERRED_ROUTINE InjectPacketDpc;
-
-VOID InjectPacketDpc
-   (
-    KDPC *Dpc,
-    PVOID DeferredContext,
-    PVOID SystemArgument1,
-    PVOID SystemArgument2
-    );
-
-VOID CheckIfDhcpAndTunMode
-   (
-    TapAdapterPointer p_Adapter
    );
 
 VOID HookDispatchFunctions();
@@ -205,18 +159,5 @@ struct WIN2K_NDIS_MINIPORT_BLOCK
   unsigned char  opaque[16];
   UNICODE_STRING MiniportName;       // how mini-port refers to us
 };
-
-#if PACKET_TRUNCATION_CHECK
-
-VOID IPv4PacketSizeVerify
-   (
-    const UCHAR *data,
-    ULONG length,
-    BOOLEAN tun,
-    const char *prefix,
-    LONG *counter
-   );
-
-#endif
 
 #endif

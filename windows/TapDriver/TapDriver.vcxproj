@@ -127,6 +127,7 @@
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -135,50 +136,61 @@
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <TargetName>ztTap100</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
+    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

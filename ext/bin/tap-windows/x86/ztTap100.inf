@@ -4,7 +4,7 @@ Class=Net
 ClassGuid={4d36e972-e325-11ce-bfc1-08002be10318}
 Provider=%Provider%
 CatalogFile=ztTap100.cat
-DriverVer=08/24/2013,16.12.37.14
+DriverVer=01/20/2014,14.30.31.745
 
 
 [Strings]
