@@ -200,44 +200,6 @@ VOID CheckIfDhcpAndTunMode
 
 VOID HookDispatchFunctions();
 
-#if ENABLE_NONADMIN
-
-#if defined(DDKVER_MAJOR) && DDKVER_MAJOR < 5600
-/*
- * Better solution for use on Vista DDK, but possibly not compatible with
- * earlier DDKs:
- *
- * Eliminate the definition of SECURITY_DESCRIPTOR (and even ZwSetSecurityObject),
- * and at the top of tapdrv.c change:
- *
- * #include <ndis.h>
- * #include <ntstrsafe.h>
- * #include <ntddk.h>
- *
- * To
- *
- * #include <ntifs.h>
- * #include <ndis.h>
- * #include <ntstrsafe.h>
- */
-typedef struct _SECURITY_DESCRIPTOR {
-  unsigned char opaque[64];
-} SECURITY_DESCRIPTOR;
-
-NTSYSAPI
-NTSTATUS
-NTAPI
-ZwSetSecurityObject (
-  IN HANDLE  Handle,
-  IN SECURITY_INFORMATION  SecurityInformation,
-  IN PSECURITY_DESCRIPTOR  SecurityDescriptor);
-
-#endif
-
-VOID AllowNonAdmin (TapExtensionPointer p_Extension);
-
-#endif
-
 struct WIN2K_NDIS_MINIPORT_BLOCK
 {
   unsigned char  opaque[16];

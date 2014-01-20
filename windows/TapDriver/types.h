@@ -83,11 +83,13 @@ typedef struct _TapExtension
   BOOLEAN m_TapIsRunning;
   BOOLEAN m_CalledTapDeviceFreeResources;
 
+#if 0
   // DPC queue for deferred packet injection
   BOOLEAN m_InjectDpcInitialized;
   KDPC m_InjectDpc;
   NDIS_SPIN_LOCK m_InjectLock;
   Queue *m_InjectQueue;
+#endif
 }
 TapExtension, *TapExtensionPointer;
 
@@ -101,6 +103,7 @@ typedef struct _TapPacket
    }
 TapPacket, *TapPacketPointer;
 
+#if 0
 typedef struct _InjectPacket
    {
 #   define INJECT_PACKET_SIZE(data_size) (sizeof (InjectPacket) + (data_size))
@@ -109,6 +112,7 @@ typedef struct _InjectPacket
     UCHAR m_Data []; // m_Data must be the last struct member
    }
 InjectPacket, *InjectPacketPointer;
+#endif
 
 typedef struct _TapAdapter
 {
@@ -135,33 +139,6 @@ typedef struct _TapAdapter
 
   // Adapter power state
   char m_DeviceState;
-
-#if 0
-  // Info for point-to-point mode
-  BOOLEAN m_tun;
-  IPADDR m_localIP;
-  IPADDR m_remoteNetwork;
-  IPADDR m_remoteNetmask;
-  ETH_HEADER m_TapToUser;
-  ETH_HEADER m_UserToTap;
-  ETH_HEADER m_UserToTap_IPv6;		// same as UserToTap but proto=ipv6
-  MACADDR m_MAC_Broadcast;
-#endif
-
-#if 0
-  // Used for DHCP server masquerade
-  BOOLEAN m_dhcp_enabled;
-  IPADDR m_dhcp_addr;
-  ULONG m_dhcp_netmask;
-  IPADDR m_dhcp_server_ip;
-  BOOLEAN m_dhcp_server_arp;
-  MACADDR m_dhcp_server_mac;
-  ULONG m_dhcp_lease_time;
-  UCHAR m_dhcp_user_supplied_options_buffer[DHCP_USER_SUPPLIED_OPTIONS_BUFFER_SIZE];
-  ULONG m_dhcp_user_supplied_options_buffer_len;
-  BOOLEAN m_dhcp_received_discover;
-  ULONG m_dhcp_bad_requests;
-#endif
 
   // Help to tear down the adapter by keeping
   // some state information on allocated

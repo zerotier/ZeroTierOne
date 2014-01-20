@@ -19,9 +19,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dhcp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="error.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -40,9 +37,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dhcp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="endian.h">
