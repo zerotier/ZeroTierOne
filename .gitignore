@@ -21,7 +21,7 @@
 /windows/InstallerUpdater/obj
 /windows/Service/obj
 /windows/SelfTest/SelfTest.aps
-/Build/*
+/windows/Build
 *.log
 *.opensdf
 *.user
