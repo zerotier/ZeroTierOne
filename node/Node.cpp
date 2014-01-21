@@ -134,7 +134,7 @@ Node::LocalClient::LocalClient(const char *authToken,unsigned int controlPort,vo
 	if (sock) {
 		{
 			unsigned int csk[64];
-			SHA512::hash(csk,authToken,strlen(authToken));
+			SHA512::hash(csk,authToken,(unsigned int)strlen(authToken));
 			memcpy(impl->key,csk,32);
 		}
 

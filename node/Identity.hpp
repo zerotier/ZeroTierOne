@@ -224,10 +224,10 @@ public:
 	{
 		_address.appendTo(b);
 		b.append((unsigned char)IDENTITY_TYPE_C25519);
-		b.append(_publicKey.data,_publicKey.size());
+		b.append(_publicKey.data,(unsigned int)_publicKey.size());
 		if ((_privateKey)&&(includePrivate)) {
 			b.append((unsigned char)_privateKey->size());
-			b.append(_privateKey->data,_privateKey->size());
+			b.append(_privateKey->data,(unsigned int)_privateKey->size());
 		} else b.append((unsigned char)0);
 	}
 
@@ -258,8 +258,8 @@ public:
 		if (b[p++] != IDENTITY_TYPE_C25519)
 			throw std::invalid_argument("unsupported identity type");
 
-		memcpy(_publicKey.data,b.field(p,_publicKey.size()),_publicKey.size());
-		p += _publicKey.size();
+		memcpy(_publicKey.data,b.field(p,(unsigned int)_publicKey.size()),(unsigned int)_publicKey.size());
+		p += (unsigned int)_publicKey.size();
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
 		if (privateKeyLength) {

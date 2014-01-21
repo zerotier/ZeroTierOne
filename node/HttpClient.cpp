@@ -361,7 +361,7 @@ public:
 			uc.dwHostNameLength = -1;
 			uc.dwUrlPathLength = -1;
 			uc.dwExtraInfoLength = -1;
-			if (!WinHttpCrackUrl(wurl.c_str(),wurl.length(),0,&uc)) {
+			if (!WinHttpCrackUrl(wurl.c_str(),(DWORD)wurl.length(),0,&uc)) {
 				_handler(_arg,-1,_url,false,"unable to parse URL: WinHttpCrackUrl() failed");
 				goto closeAndReturnFromHttp;
 			}

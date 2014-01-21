@@ -66,7 +66,7 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 {
 	{
 		unsigned int csk[64];
-		SHA512::hash(csk,authToken,strlen(authToken));
+		SHA512::hash(csk,authToken,(unsigned int)strlen(authToken));
 		memcpy(_controlSocketKey,csk,32);
 	}
 

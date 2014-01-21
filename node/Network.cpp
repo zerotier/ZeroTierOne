@@ -59,6 +59,9 @@ Network::~Network()
 	if (_destroyOnDelete) {
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
+
+		// TODO: on Windows we need to also remove the tap interface since they're
+		// sticky on that platform.
 	} else {
 		// Causes flush of membership certs to disk
 		clean();

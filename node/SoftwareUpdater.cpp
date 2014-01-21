@@ -113,7 +113,7 @@ bool SoftwareUpdater::validateUpdate(
 	std::map< Address,Identity >::const_iterator updateAuthority = ZT_DEFAULTS.updateAuthorities.find(signedBy);
 	if (updateAuthority == ZT_DEFAULTS.updateAuthorities.end())
 		return false;
-	return updateAuthority->second.verify(data,len,signature.data(),signature.length());
+	return updateAuthority->second.verify(data,len,signature.data(),(unsigned int)signature.length());
 }
 
 void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
@@ -176,7 +176,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)upd->_r;
 	Mutex::Lock _l(upd->_lock);
 
-	if (!validateUpdate(body.data(),body.length(),upd->_signedBy,upd->_signature)) {
+	if (!validateUpdate(body.data(),(unsigned int)body.length(),upd->_signedBy,upd->_signature)) {
 		LOG("software update aborted: update fetched from '%s' failed signature check (got %u bytes)",url.c_str(),(unsigned int)body.length());
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;

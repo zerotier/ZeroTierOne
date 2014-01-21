@@ -74,7 +74,7 @@ std::string CertificateOfMembership::toString() const
 
 	if (_signedBy) {
 		s.push_back(':');
-		s.append(Utils::hex(_signature.data,_signature.size()));
+		s.append(Utils::hex(_signature.data,(unsigned int)_signature.size()));
 	}
 
 	return s;
@@ -132,7 +132,7 @@ void CertificateOfMembership::fromString(const char *s)
 				while ((s[colonAt])&&(s[colonAt] != ':')) ++colonAt;
 
 				if (colonAt) {
-					if (Utils::unhex(s,colonAt,_signature.data,_signature.size()) != _signature.size())
+					if (Utils::unhex(s,colonAt,_signature.data,(unsigned int)_signature.size()) != _signature.size())
 						_signedBy.zero();
 				} else _signedBy.zero();
 			} else _signedBy.zero();

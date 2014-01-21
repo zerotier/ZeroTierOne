@@ -90,7 +90,7 @@ struct _Identity_generate_cond
 	inline bool operator()(const C25519::Pair &kp) const
 		throw()
 	{
-		_computeMemoryHardHash(kp.pub.data,kp.pub.size(),digest,genmem);
+		_computeMemoryHardHash(kp.pub.data,(unsigned int)kp.pub.size(),digest,genmem);
 		return (digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
 	unsigned char *digest;
@@ -123,7 +123,7 @@ bool Identity::locallyValidate() const
 
 	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-	_computeMemoryHardHash(_publicKey.data,_publicKey.size(),digest,genmem);
+	_computeMemoryHardHash(_publicKey.data,(unsigned int)_publicKey.size(),digest,genmem);
 	delete [] genmem;
 
 	unsigned char addrb[5];
@@ -144,10 +144,10 @@ std::string Identity::toString(bool includePrivate) const
 
 	r.append(_address.toString());
 	r.append(":0:"); // 0 == IDENTITY_TYPE_C25519
-	r.append(Utils::hex(_publicKey.data,_publicKey.size()));
+	r.append(Utils::hex(_publicKey.data,(unsigned int)_publicKey.size()));
 	if ((_privateKey)&&(includePrivate)) {
 		r.push_back(':');
-		r.append(Utils::hex(_privateKey->data,_privateKey->size()));
+		r.append(Utils::hex(_privateKey->data,(unsigned int)_privateKey->size()));
 	}
 
 	return r;
@@ -176,12 +176,12 @@ bool Identity::fromString(const char *str)
 					return false;
 				break;
 			case 2:
-				if (Utils::unhex(f,_publicKey.data,_publicKey.size()) != _publicKey.size())
+				if (Utils::unhex(f,_publicKey.data,(unsigned int)_publicKey.size()) != _publicKey.size())
 					return false;
 				break;
 			case 3:
 				_privateKey = new C25519::Private();
-				if (Utils::unhex(f,_privateKey->data,_privateKey->size()) != _privateKey->size())
+				if (Utils::unhex(f,_privateKey->data,(unsigned int)_privateKey->size()) != _privateKey->size())
 					return false;
 				break;
 			default:

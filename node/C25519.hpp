@@ -73,7 +73,7 @@ public:
 		throw()
 	{
 		Pair kp;
-		Utils::getSecureRandom(kp.priv.data,kp.priv.size());
+		Utils::getSecureRandom(kp.priv.data,(unsigned int)kp.priv.size());
 		_calcPubDH(kp);
 		_calcPubED(kp);
 		return kp;
@@ -98,7 +98,7 @@ public:
 	{
 		Pair kp;
 		void *const priv = (void *)kp.priv.data;
-		Utils::getSecureRandom(priv,kp.priv.size());
+		Utils::getSecureRandom(priv,(unsigned int)kp.priv.size());
 		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
 			++(((uint64_t *)priv)[1]);

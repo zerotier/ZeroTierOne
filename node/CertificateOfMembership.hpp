@@ -327,7 +327,7 @@ public:
 		}
 		_signedBy.appendTo(b);
 		if (_signedBy)
-			b.append(_signature.data,_signature.size());
+			b.append(_signature.data,(unsigned int)_signature.size());
 	}
 
 	template<unsigned int C>
@@ -361,8 +361,8 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (_signedBy) {
-			memcpy(_signature.data,b.field(p,_signature.size()),_signature.size());
-			p += _signature.size();
+			memcpy(_signature.data,b.field(p,(unsigned int)_signature.size()),_signature.size());
+			p += (unsigned int)_signature.size();
 		}
 
 		return (p - startAt);

@@ -268,8 +268,6 @@ EthernetTap::EthernetTap(
 	_r(renv),
 	_handler(handler),
 	_arg(arg),
-	_dhcp(false),
-	_dhcp6(false),
 	_fd(0)
 {
 	char devpath[64],ethaddr[64],mtustr[16],tmp[4096];
@@ -389,7 +387,7 @@ void EthernetTap::whack()
 		if (cpid == 0) {
 			execl(ipconfig,ipconfig,"set",_dev,"AUTOMATIC-V6",(const char *)0);
 			_exit(-1);
-		} else {
+		} else if (cpid > 0) {
 			int exitcode = -1;
 			waitpid(cpid,&exitcode,0);
 		}
@@ -398,17 +396,6 @@ void EthernetTap::whack()
 #else
 void EthernetTap::whack() {}
 #endif // __APPLE__ / !__APPLE__
-
-bool EthernetTap::setDhcpEnabled(bool dhcp)
-{
-	// TODO
-	return _dhcp;
-}
-
-bool EthernetTap::setDhcp6Enabled(bool dhcp)
-{
-	return _dhcp6;
-}
 
 void EthernetTap::setDisplayName(const char *dn)
 {
@@ -810,7 +797,6 @@ static inline void _intl_freeifmaddrs(struct ifmaddrs *ifmp)
 	free(ifmp);
 }
 
-
 // --------------------------------------------------------------------------
 
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
@@ -981,8 +967,6 @@ EthernetTap::EthernetTap(
 	_r(renv),
 	_handler(handler),
 	_arg(arg),
-	_dhcp(false),
-	_dhcp6(false),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
 	_run(true)
@@ -995,10 +979,14 @@ EthernetTap::EthernetTap(
 		throw std::runtime_error("MTU too large for Windows tap");
 
 #ifdef _WIN64
-	const char *devcon = "\\devcon64.exe";
+	BOOL is64Bit = TRUE;
+	const char *devcon = "\\devcon_x64.exe";
+	const char *tapDriver = "\\tap-windows\\x64\\ztTap100.inf";
 #else
-	BOOL f64 = FALSE;
-	const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
+	BOOL is64Bit = FALSE;
+	IsWow64Process(GetCurrentProcess(),&is64Bit);
+	const char *devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
+	const char *tapDriver = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\ztTap100.inf" : "\\tap-windows\\x86\\ztTap100.inf");
 #endif
 
 	Mutex::Lock _l(_systemTapInitLock); // only init one tap at a time, process-wide
@@ -1066,7 +1054,7 @@ EthernetTap::EthernetTap(
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" install \"" + _r->homePath + "\\ztTap100.inf\" ztTap100").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" install \"" + _r->homePath + tapDriver + "\" ztTap100").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
 		}
@@ -1145,9 +1133,6 @@ EthernetTap::EthernetTap(
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
 	}
 
-	setDhcpEnabled(false);
-	setDhcp6Enabled(false);
-
 	// Disable and enable interface to ensure registry settings take effect
 	{
 		STARTUPINFOA startupInfo;
@@ -1211,48 +1196,30 @@ EthernetTap::~EthernetTap()
 	CloseHandle(_tapOvlWrite.hEvent);
 	CloseHandle(_injectSemaphore);
 
-	// Disable network device on shutdown
 #ifdef _WIN64
-	const char *devcon = "\\devcon64.exe";
+	BOOL is64Bit = TRUE;
+	const char *devcon = "\\devcon_x64.exe";
 #else
-	BOOL f64 = FALSE;
-	const char *devcon = ((IsWow64Process(GetCurrentProcess(),&f64) == TRUE) ? "\\devcon64.exe" : "\\devcon32.exe");
+	BOOL is64Bit = FALSE;
+	IsWow64Process(GetCurrentProcess(),&is64Bit);
+	const char *devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
 #endif
-	{
-		STARTUPINFOA startupInfo;
-		startupInfo.cb = sizeof(startupInfo);
-		PROCESS_INFORMATION processInfo;
-		memset(&startupInfo,0,sizeof(STARTUPINFOA));
-		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" disable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-			WaitForSingleObject(processInfo.hProcess,INFINITE);
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-		}
+
+	// Disable network device on shutdown
+	STARTUPINFOA startupInfo;
+	startupInfo.cb = sizeof(startupInfo);
+	PROCESS_INFORMATION processInfo;
+	memset(&startupInfo,0,sizeof(STARTUPINFOA));
+	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+	if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" disable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
 	}
 }
 
 void EthernetTap::whack()
 {
-}
-
-bool EthernetTap::setDhcpEnabled(bool dhcp)
-{
-	HKEY tcpIpInterfaces;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
-		_dhcp = dhcp;
-		DWORD enable = (dhcp ? 1 : 0);
-		RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
-		RegCloseKey(tcpIpInterfaces);
-	} else _dhcp = false;
-
-	return _dhcp;
-}
-
-bool EthernetTap::setDhcp6Enabled(bool dhcp)
-{
-	// TODO
-	return _dhcp6;
 }
 
 void EthernetTap::setDisplayName(const char *dn)
@@ -1394,13 +1361,42 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	std::set<MulticastGroup> newGroups;
 
+	// Ensure that groups are added for each IP... this handles the MAC:ADI
+	// groups that are created from IPv4 addresses. Some of these may end
+	// up being duplicates of what the IOCTL returns but that's okay since
+	// the set will filter these.
 	std::set<InetAddress> ipaddrs(allIps());
 	for(std::set<InetAddress>::const_iterator i(ipaddrs.begin());i!=ipaddrs.end();++i)
 		newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
 
-	bool changed = false;
+	// The ZT1 tap driver supports an IOCTL to get multicast memberships at the L2
+	// level... something Windows does not seem to expose ordinarily. This lets
+	// pretty much anything work... IPv4, IPv6, IPX, oldskool Netbios, who knows...
+	unsigned char mcastbuf[TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE];
+	DWORD bytesReturned = 0;
+	if (DeviceIoControl(_tap,TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS,(LPVOID)0,0,(LPVOID)mcastbuf,sizeof(mcastbuf),&bytesReturned,NULL)) {
+		printf("TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS: got %d bytes\n",(int)bytesReturned);
+		MAC mac;
+		DWORD i = 0;
+		while ((i + 6) <= bytesReturned) {
+			mac.data[0] = mcastbuf[i++];
+			mac.data[1] = mcastbuf[i++];
+			mac.data[2] = mcastbuf[i++];
+			mac.data[3] = mcastbuf[i++];
+			mac.data[4] = mcastbuf[i++];
+			mac.data[5] = mcastbuf[i++];
+			if (mac.isMulticast()) { // exclude the nulls that may be returned or any other junk Windows puts in there
+				newGroups.insert(MulticastGroup(mac,0));
+				printf("TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS: %s\n",mac.toString().c_str());
+			}
+		}
+	} else {
+		printf("TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS: failed\n");
+	}
 
 	newGroups.insert(_blindWildcardMulticastGroup); // always join this
+
+	bool changed = false;
 
 	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
 		if (!groups.count(*mg)) {

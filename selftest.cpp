@@ -53,6 +53,8 @@
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/HttpClient.hpp"
+#include "node/Defaults.hpp"
+#include "node/Node.hpp"
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -70,7 +72,7 @@ static void testHttpHandler(void *arg,int code,const std::string &url,bool onDis
 {
 	unsigned char sha[64];
 	if (code == 200) {
-		SHA512::hash(sha,body.data(),body.length());
+		SHA512::hash(sha,body.data(),(unsigned int)body.length());
 		if (webSha512ShouldBe == Utils::hex(sha,64))
 			std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 OK" << std::endl;
 		else std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 FAILED!" << std::endl;
@@ -129,7 +131,7 @@ static int testCrypto()
 	}
 
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
-	SHA512::hash(buf1,sha512TV0Input,strlen(sha512TV0Input));
+	SHA512::hash(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
 		std::cout << "FAIL" << std::endl;
 		return -1;
@@ -465,7 +467,7 @@ static int testPacket()
 
 	a.reset(Address(),Address(),Packet::VERB_HELLO);
 	for(int i=0;i<32;++i)
-		a.append("supercalifragilisticexpealidocious",strlen("supercalifragilisticexpealidocious"));
+		a.append("supercalifragilisticexpealidocious",(unsigned int)strlen("supercalifragilisticexpealidocious"));
 
 	b = a;
 	if (a != b) {
@@ -504,7 +506,7 @@ static int testOther()
 		if ((dec.length() != flen)||(memcmp(dec.data(),fuzzbuf,dec.length()))) {
 			std::cout << "FAILED!" << std::endl;
 			std::cout << Utils::hex(fuzzbuf,flen) << std::endl;
-			std::cout << Utils::hex(dec.data(),dec.length()) << std::endl;
+			std::cout << Utils::hex(dec.data(),(unsigned int)dec.length()) << std::endl;
 			return -1;
 		}
 	}
@@ -614,6 +616,9 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
+	std::cout << "[info] default home: " << ZT_DEFAULTS.defaultHomePath << std::endl;
+	std::cout << "[info] system authtoken.secret: " << Node::LocalClient::authTokenDefaultSystemPath() << std::endl;
+	std::cout << "[info] user authtoken.secret: " << Node::LocalClient::authTokenDefaultUserPath() << std::endl;
 
 	srand((unsigned int)time(0));
 

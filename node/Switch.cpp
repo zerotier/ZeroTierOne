@@ -155,7 +155,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
 			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,sig.size());
+			outp.append(sig.data,(unsigned int)sig.size());
 
 			if (nconf->com())
 				nconf->com().serialize(outp);
