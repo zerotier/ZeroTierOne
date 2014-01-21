@@ -34,3 +34,5 @@
 *.autosave
 /ZeroTier One.zip
 /ZeroTier One.dmg
+/windows/ZeroTierOneService/obj/Debug
+/windows/ZeroTierOneService/obj/Release
