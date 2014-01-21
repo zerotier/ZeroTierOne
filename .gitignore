@@ -21,6 +21,8 @@
 /windows/InstallerUpdater/obj
 /windows/Service/obj
 /windows/SelfTest/SelfTest.aps
+/windows/ZeroTierOneService/obj
+/windows/ZeroTierOneService/bin
 /windows/Build
 *.log
 *.opensdf
@@ -34,5 +36,3 @@
 *.autosave
 /ZeroTier One.zip
 /ZeroTier One.dmg
-/windows/ZeroTierOneService/obj/Debug
-/windows/ZeroTierOneService/obj/Release
