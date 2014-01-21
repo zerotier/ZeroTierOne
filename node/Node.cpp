@@ -44,6 +44,7 @@
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
+#include <ShlObj.h>
 #endif
 
 #include "Condition.hpp"
@@ -190,6 +191,15 @@ std::vector<std::string> Node::LocalClient::splitLine(const char *line)
 
 std::string Node::LocalClient::authTokenDefaultUserPath()
 {
+#ifdef __WINDOWS__
+
+	char buf[16384];
+	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_APPDATA,NULL,0,buf)))
+		return (std::string(buf) + "\\ZeroTier\\One\\authtoken.secret");
+	else return std::string();
+
+#else // not __WINDOWS__
+
 	const char *home = getenv("HOME");
 	if (home) {
 #ifdef __APPLE__
@@ -197,21 +207,14 @@ std::string Node::LocalClient::authTokenDefaultUserPath()
 #else
 		return (std::string(home) + "/.zeroTierOneAuthToken");
 #endif
-	}
-	return std::string();
+	} else return std::string();
+
+#endif // __WINDOWS__ or not __WINDOWS__
 }
 
 std::string Node::LocalClient::authTokenDefaultSystemPath()
 {
-#ifdef __WINDOWS__
-	// TODO
-#else
-#ifdef __APPLE__
-	return "/Library/Application Support/ZeroTier/One/authtoken.secret";
-#else
-	return "/var/lib/zerotier-one/authtoken.secret";
-#endif
-#endif
+	return (ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S"authtoken.secret");
 }
 
 struct _NodeImpl

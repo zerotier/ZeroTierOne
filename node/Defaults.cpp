@@ -36,6 +36,7 @@
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
+#include <ShlObj.h>
 #endif
 
 namespace ZeroTier {
@@ -78,24 +79,25 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 static inline std::string _mkDefaultHomePath()
 {
 #ifdef __UNIX_LIKE__
+
 #ifdef __APPLE__
 	return std::string("/Library/Application Support/ZeroTier/One");
 #else
 	return std::string("/var/lib/zerotier-one");
 #endif
-#else
+
+#else // not __UNIX_LIKE__
+
 #ifdef __WINDOWS__
-	OSVERSIONINFO vi;
-	memset (&vi,0,sizeof(vi));
-	vi.dwOSVersionInfoSize = sizeof(vi);
-	GetVersionEx(&vi);
-	if (vi.dwMajorVersion < 6)
-		return std::string("C:\\Documents and Settings\\All Users\\Application Data\\ZeroTier\\One");
-	return std::string("C:\\ProgramData\\ZeroTier\\One");
+	char buf[16384];
+	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
+		return (std::string(buf) + "\\ZeroTier\\One");
+	else return std::string("C:\\ZeroTier\\One");
 #else
 	// unknown platform
 #endif
-#endif
+
+#endif // __UNIX_LIKE__ or not...
 }
 
 static inline std::map< Address,Identity > _mkUpdateAuth()

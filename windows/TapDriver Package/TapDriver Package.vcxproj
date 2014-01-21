@@ -126,6 +126,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
@@ -143,18 +144,41 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
+    <OutDir>$(SolutionDir)\Build\TapDriverPackage\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
