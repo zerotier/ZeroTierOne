@@ -45,6 +45,7 @@ namespace ZeroTierOneService
 
         private void ztService_Exited(object sender, System.EventArgs e)
         {
+            ztService = null;
         }
 
         private string ztHome;

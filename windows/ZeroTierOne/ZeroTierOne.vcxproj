@@ -151,22 +151,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetExt>.exe</TargetExt>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
-    <TargetName>zerotier-one-x86</TargetName>
+    <TargetName>zerotier-one_x86</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetExt>.exe</TargetExt>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
-    <TargetName>zerotier-one-x86</TargetName>
+    <TargetName>zerotier-one_x86</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetExt>.exe</TargetExt>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
-    <TargetName>zerotier-one-x64</TargetName>
+    <TargetName>zerotier-one_x64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetExt>.exe</TargetExt>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(Configuration)\</OutDir>
-    <TargetName>zerotier-one-x64</TargetName>
+    <TargetName>zerotier-one_x64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
