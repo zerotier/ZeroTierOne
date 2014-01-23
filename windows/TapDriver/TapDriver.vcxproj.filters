@@ -68,7 +68,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="ztTap100.inf">
+    <Inf Include="zttap200.inf">
       <Filter>Driver Files</Filter>
     </Inf>
   </ItemGroup>

@@ -6,12 +6,4 @@
       <Extensions>inf;inv;inx;mof;mc;</Extensions>
     </Filter>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Build\x64\VistaRelease\ztTap100.sys">
-      <Filter>Driver Files</Filter>
-    </None>
-    <None Include="..\Build\Win32\VistaRelease\ztTap100.sys">
-      <Filter>Driver Files</Filter>
-    </None>
-  </ItemGroup>
 </Project>

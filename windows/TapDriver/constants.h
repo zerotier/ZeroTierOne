@@ -47,6 +47,5 @@
 
 #define PACKET_QUEUE_SIZE   64 // tap -> userspace queue size
 #define IRP_QUEUE_SIZE      16 // max number of simultaneous i/o operations from userspace
-#define INJECT_QUEUE_SIZE   16 // DHCP/ARP -> tap injection queue
 
 #define TAP_LITTLE_ENDIAN      // affects ntohs, htonl, etc. functions

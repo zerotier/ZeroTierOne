@@ -173,9 +173,10 @@
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
     <TargetName>ztTap100</TargetName>
@@ -266,7 +267,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Inf Include="ztTap100.inf" />
+    <Inf Include="zttap200.inf" />
   </ItemGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />

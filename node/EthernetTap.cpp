@@ -1168,7 +1168,7 @@ EthernetTap::EthernetTap(
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_myDeviceInstanceId.c_str());
 	_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 	if (_tap == INVALID_HANDLE_VALUE)
-		throw std::runtime_error("unable to open tap in \\\\.\\Global\\ namespace");
+		throw std::runtime_error(std::string("unable to open tap device ")+tapPath);
 
 	// Set media status to enabled
 	uint32_t tmpi = 1;
