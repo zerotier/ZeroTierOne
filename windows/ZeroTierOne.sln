@@ -216,8 +216,6 @@ Global
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win7 Release|Win32.Build.0 = Win7 Release|Win32
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win7 Release|Win32.Deploy.0 = Win7 Release|Win32
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win7 Release|x64.ActiveCfg = Win7 Release|x64
-		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win7 Release|x64.Build.0 = Win7 Release|x64
-		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win7 Release|x64.Deploy.0 = Win7 Release|x64
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win8 Debug|Any CPU.ActiveCfg = Win8 Debug|Win32
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win8 Debug|Mixed Platforms.ActiveCfg = Win8 Debug|Win32
 		{689210B1-467C-4850-BB7D-2E10D5B4A3DA}.Win8 Debug|Win32.ActiveCfg = Win8 Debug|Win32
@@ -310,8 +308,6 @@ Global
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win7 Release|Win32.Build.0 = Win7 Release|Win32
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win7 Release|Win32.Deploy.0 = Win7 Release|Win32
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win7 Release|x64.ActiveCfg = Win7 Release|x64
-		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win7 Release|x64.Build.0 = Win7 Release|x64
-		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win7 Release|x64.Deploy.0 = Win7 Release|x64
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win8 Debug|Any CPU.ActiveCfg = Win8 Debug|Win32
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win8 Debug|Mixed Platforms.ActiveCfg = Win8 Debug|Win32
 		{FDA1DD8D-1D56-4BC1-B402-FCC0B550D946}.Win8 Debug|Win32.ActiveCfg = Win8 Debug|Win32
@@ -406,7 +402,7 @@ Global
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.ActiveCfg = Release|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.Build.0 = Release|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|Win32.Deploy.0 = Release|Win32
-		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x64.ActiveCfg = Release|Win32
+		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win7 Release|x64.ActiveCfg = Release|x64
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|Any CPU.ActiveCfg = Debug|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{B00A4957-5977-4AC1-9EF4-571DC27EADA2}.Win8 Debug|Mixed Platforms.Build.0 = Debug|Win32
