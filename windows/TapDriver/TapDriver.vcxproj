@@ -163,35 +163,46 @@
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
-    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
+    <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
-    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
+    <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">
     <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
-    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
     <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
-    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
+    <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
-    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
+    <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
-    <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
+    <TimeStampServer>
+    </TimeStampServer>
+    <DiagnosticMode>true</DiagnosticMode>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -265,6 +276,30 @@
     <Link>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">C:\WinDDK\7600.16385.1\lib\wnet\amd64\ndis.lib;C:\WinDDK\7600.16385.1\lib\wnet\amd64\ntstrsafe.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <DriverSign>
+      <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">SHA1</FileDigestAlgorithm>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Vista Debug|x64'">/t "http://timestamp.digicert.com/" /d "ZeroTier One Virtual Network Port" /sha1 5809bb3255b4f32dd93619c1cf26a7df6c282a89</AdditionalOptions>
+    </DriverSign>
+    <DriverSign>
+      <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">SHA1</FileDigestAlgorithm>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|x64'">/t "http://timestamp.digicert.com/" /d "ZeroTier One Virtual Network Port" /sha1 5809bb3255b4f32dd93619c1cf26a7df6c282a89</AdditionalOptions>
+    </DriverSign>
+    <DriverSign>
+      <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">SHA1</FileDigestAlgorithm>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Vista Release|x64'">/t "http://timestamp.digicert.com/" /d "ZeroTier One Virtual Network Port" /sha1 5809bb3255b4f32dd93619c1cf26a7df6c282a89</AdditionalOptions>
+    </DriverSign>
+    <DriverSign>
+      <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">SHA1</FileDigestAlgorithm>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|x64'">/t "http://timestamp.digicert.com/" /d "ZeroTier One Virtual Network Port" /sha1 5809bb3255b4f32dd93619c1cf26a7df6c282a89</AdditionalOptions>
+    </DriverSign>
+    <DriverSign>
+      <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">SHA1</FileDigestAlgorithm>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Win7 Release|x64'">/t "http://timestamp.digicert.com/" /d "ZeroTier One Virtual Network Port" /sha1 5809bb3255b4f32dd93619c1cf26a7df6c282a89</AdditionalOptions>
+    </DriverSign>
+    <DriverSign>
+      <FileDigestAlgorithm Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">SHA1</FileDigestAlgorithm>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Win8 Release|x64'">/t "http://timestamp.digicert.com/" /d "ZeroTier One Virtual Network Port" /sha1 5809bb3255b4f32dd93619c1cf26a7df6c282a89</AdditionalOptions>
+    </DriverSign>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Inf Include="zttap200.inf" />
