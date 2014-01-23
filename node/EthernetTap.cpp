@@ -1089,6 +1089,15 @@ EthernetTap::EthernetTap(
 									if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
 										_myDeviceInstanceIdPath.assign(data,dataLen);
 									mySubkeyName = subkeyName;
+
+									// Disable DHCP by default on newly created devices
+									HKEY tcpIpInterfaces;
+									if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+										DWORD enable = 0;
+										RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
+										RegCloseKey(tcpIpInterfaces);
+									}
+
 									subkeyIndex = -1; // break outer loop
 								}
 							}
@@ -1131,14 +1140,6 @@ EthernetTap::EthernetTap(
 		*nbtmp2 = (char)0;
 		if (UuidFromStringA((RPC_CSTR)nobraces,&_deviceGuid) != RPC_S_OK)
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
-	}
-
-	// Disable DHCP -- this might get changed if/when DHCP is supported
-	HKEY tcpIpInterfaces;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
-		DWORD enable = 0;
-		RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
-		RegCloseKey(tcpIpInterfaces);
 	}
 
 	// Disable and enable interface to ensure registry settings take effect
@@ -1241,40 +1242,70 @@ void EthernetTap::setDisplayName(const char *dn)
 
 bool EthernetTap::addIP(const InetAddress &ip)
 {
-	Mutex::Lock _l(_ips_m);
-
-	if (_ips.count(ip))
-		return true;
-
-	if (!ip.port())
+	if (!ip.netmaskBits()) // sanity check... netmask of 0.0.0.0 is WUT?
 		return false;
 
+	std::set<InetAddress> haveIps(ips());
+
 	try {
-		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
-		MIB_UNICASTIPADDRESS_ROW ipr;
+		// Add IP to interface at the netlink level if not already assigned.
+		if (!haveIps.count(ip)) {
+			std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
+			MIB_UNICASTIPADDRESS_ROW ipr;
 
-		InitializeUnicastIpAddressEntry(&ipr);
-		if (ip.isV4()) {
-			ipr.Address.Ipv4.sin_family = AF_INET;
-			ipr.Address.Ipv4.sin_addr.S_un.S_addr = *((const uint32_t *)ip.rawIpData());
-			ipr.OnLinkPrefixLength = ip.port();
-		} else if (ip.isV6()) {
-		} else return false;
+			InitializeUnicastIpAddressEntry(&ipr);
+			if (ip.isV4()) {
+				ipr.Address.Ipv4.sin_family = AF_INET;
+				ipr.Address.Ipv4.sin_addr.S_un.S_addr = *((const uint32_t *)ip.rawIpData());
+				ipr.OnLinkPrefixLength = ip.port();
+			} else if (ip.isV6()) {
+				// TODO
+			} else return false;
 
-		ipr.PrefixOrigin = IpPrefixOriginManual;
-		ipr.SuffixOrigin = IpSuffixOriginManual;
-		ipr.ValidLifetime = 0xffffffff;
-		ipr.PreferredLifetime = 0xffffffff;
+			ipr.PrefixOrigin = IpPrefixOriginManual;
+			ipr.SuffixOrigin = IpSuffixOriginManual;
+			ipr.ValidLifetime = 0xffffffff;
+			ipr.PreferredLifetime = 0xffffffff;
 
-		ipr.InterfaceLuid = ifidx.first;
-		ipr.InterfaceIndex = ifidx.second;
+			ipr.InterfaceLuid = ifidx.first;
+			ipr.InterfaceIndex = ifidx.second;
 
-		if (CreateUnicastIpAddressEntry(&ipr) == NO_ERROR) {
-			_ips.insert(ip);
-			return true;
+			if (CreateUnicastIpAddressEntry(&ipr) == NO_ERROR) {
+				haveIps.insert(ip);
+			} else {
+				LOG("unable to add IP address %s to interface %s: %d",ip.toString().c_str(),deviceName().c_str(),(int)GetLastError());
+				return false;
+			}
 		}
-	} catch ( ... ) {}
 
+		// Update registry to contain all non-link-local IPs for this interface
+		std::string regMultiIps,regMultiNetmasks;
+		for(std::set<InetAddress>::const_iterator i(haveIps.begin());i!=haveIps.end();++i) {
+			if (!i->isLinkLocal()) {
+				regMultiIps.append(i->toIpString());
+				regMultiIps.push_back((char)0);
+				regMultiNetmasks.append(i->netmask().toIpString());
+				regMultiNetmasks.push_back((char)0);
+			}
+		}
+		HKEY tcpIpInterfaces;
+		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+			if (regMultiIps.length()) {
+				regMultiIps.push_back((char)0);
+				regMultiNetmasks.push_back((char)0);
+				RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"IPAddress",REG_MULTI_SZ,regMultiIps.data(),(DWORD)regMultiIps.length());
+				RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"SubnetMask",REG_MULTI_SZ,regMultiNetmasks.data(),(DWORD)regMultiNetmasks.length());
+			} else {
+				RegDeleteKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"IPAddress");
+				RegDeleteKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"SubnetMask");
+			}
+		}
+		RegCloseKey(tcpIpInterfaces);
+	} catch (std::exception &exc) {
+		LOG("unexpected exception adding IP address to %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
+	} catch ( ... ) {
+		LOG("unexpected exception adding IP address %s to %s: unknown exception",ip.toString().c_str(),deviceName().c_str());
+	}
 	return false;
 }
 
@@ -1283,7 +1314,6 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
-
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
 			for(DWORD i=0;i<ipt->NumEntries;++i) {
 				if ((ipt->Table[i].InterfaceLuid.Value == ifidx.first.Value)&&(ipt->Table[i].InterfaceIndex == ifidx.second)) {
@@ -1294,26 +1324,26 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 							break;
 						case AF_INET6:
 							addr.set(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
+							if (addr.isLinkLocal())
+								continue; // can't remove link-local IPv6 addresses
 							break;
 					}
 					if (addr == ip) {
 						DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
 						FreeMibTable(ipt);
-						Mutex::Lock _l(_ips_m);
-						_ips.erase(ip);
 						return true;
 					}
 				}
 			}
-			FreeMibTable(&ipt);
+			FreeMibTable((PVOID)ipt);
 		}
 	} catch ( ... ) {}
 	return false;
 }
 
-std::set<InetAddress> EthernetTap::allIps() const
+std::set<InetAddress> EthernetTap::ips() const
 {
-	static const InetAddress ifLoopback("fe80::1",64);
+	static const InetAddress linkLocalLoopback("fe80::1",64); // what is this and why does Windows assign it?
 	std::set<InetAddress> addrs;
 
 	try {
@@ -1324,12 +1354,14 @@ std::set<InetAddress> EthernetTap::allIps() const
 			for(DWORD i=0;i<ipt->NumEntries;++i) {
 				if ((ipt->Table[i].InterfaceLuid.Value == ifidx.first.Value)&&(ipt->Table[i].InterfaceIndex == ifidx.second)) {
 					switch(ipt->Table[i].Address.si_family) {
-						case AF_INET:
-							addrs.insert(InetAddress(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength));
-							break;
+						case AF_INET: {
+							InetAddress ip(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
+							if (ip != InetAddress::LO4)
+								addrs.insert(ip);
+						}	break;
 						case AF_INET6: {
 							InetAddress ip(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
-							if (ip != ifLoopback) // don't include fe80::1
+							if ((ip != linkLocalLoopback)&&(ip != InetAddress::LO6))
 								addrs.insert(ip);
 						}	break;
 					}
@@ -1372,8 +1404,8 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	// Ensure that groups are added for each IP... this handles the MAC:ADI
 	// groups that are created from IPv4 addresses. Some of these may end
 	// up being duplicates of what the IOCTL returns but that's okay since
-	// the set will filter these.
-	std::set<InetAddress> ipaddrs(allIps());
+	// the set<> will filter that.
+	std::set<InetAddress> ipaddrs(ips());
 	for(std::set<InetAddress>::const_iterator i(ipaddrs.begin());i!=ipaddrs.end();++i)
 		newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
 

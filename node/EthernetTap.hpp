@@ -129,24 +129,17 @@ public:
 	/**
 	 * Remove an IP from this interface
 	 *
+	 * Link-local IP addresses may not be able to be removed, depending on platform and type.
+	 *
 	 * @param ip IP and netmask (netmask stored in port field)
 	 * @return True if IP removed successfully
 	 */
 	bool removeIP(const InetAddress &ip);
 
 	/**
-	 * @return Set of IP addresses / netmasks
+	 * @return All IP addresses (V4 and V6) assigned to this interface (including link-local)
 	 */
-	inline std::set<InetAddress> ips() const
-	{
-		Mutex::Lock _l(_ips_m);
-		return _ips;
-	}
-
-	/**
-	 * @return Set of IP addresses / netmasks included any we did not assign, link-local, etc.
-	 */
-	std::set<InetAddress> allIps() const;
+	std::set<InetAddress> ips() const;
 
 	/**
 	 * Set this tap's IP addresses to exactly this set of IPs
@@ -208,15 +201,14 @@ private:
 
 	const RuntimeEnvironment *_r;
 
-	std::set<InetAddress> _ips;
-	Mutex _ips_m;
-
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
 
 	Thread _thread;
 
 #ifdef __UNIX_LIKE__
+	std::set<InetAddress> _ips;
+	Mutex _ips_m;
 	char _dev[16];
 	int _fd;
 	int _shutdownSignalPipe[2];

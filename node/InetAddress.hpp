@@ -35,6 +35,7 @@
 #include <string>
 
 #include "Constants.hpp"
+#include "Utils.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
@@ -189,6 +190,28 @@ public:
 	}
 
 	/**
+	 * @return True if this is a link-local IP address
+	 */
+	inline bool isLinkLocal() const
+		throw()
+	{
+		if (_sa.saddr.sa_family == AF_INET)
+			return ((Utils::ntoh((uint32_t)_sa.sin.sin_addr.s_addr) & 0xffff0000) == 0xa9fe0000);
+		else if (_sa.saddr.sa_family == AF_INET6) {
+			if (_sa.sin6.sin6_addr.s6_addr[0] != 0xfe) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[1] != 0x80) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[2] != 0x00) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[3] != 0x00) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[4] != 0x00) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[5] != 0x00) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[6] != 0x00) return false;
+			if (_sa.sin6.sin6_addr.s6_addr[7] != 0x00) return false;
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	 * @return ASCII IP/port format representation
 	 */
 	std::string toString() const;
@@ -231,6 +254,31 @@ public:
 		throw()
 	{
 		return port();
+	}
+
+	/**
+	 * Construct a full netmask as an InetAddress
+	 */
+	inline InetAddress netmask() const
+		throw()
+	{
+		InetAddress r(*this);
+		switch(_sa.saddr.sa_family) {
+			case AF_INET:
+				r._sa.sin.sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffff << (32 - netmaskBits())));
+				break;
+			case AF_INET6: {
+				unsigned char *bf = (unsigned char *)r._sa.sin6.sin6_addr.s6_addr;
+				signed int bitsLeft = (signed int)netmaskBits();
+				for(unsigned int i=0;i<16;++i) {
+					if (bitsLeft > 0) {
+						bf[i] = (unsigned char)((bitsLeft >= 8) ? 0xff : (0xff << (8 - bitsLeft)));
+						bitsLeft -= 8;
+					} else bf[i] = (unsigned char)0;
+				}
+			}	break;
+		}
+		return r;
 	}
 
 	/**
