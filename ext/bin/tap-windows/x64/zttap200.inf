@@ -4,7 +4,7 @@ Class=Net
 ClassGuid={4d36e972-e325-11ce-bfc1-08002be10318}
 Provider=%Provider%
 CatalogFile=zttap200.cat
-DriverVer=01/22/2014,22.4.22.918
+DriverVer=01/23/2014,15.19.17.816
 
 [Strings]
 DeviceDescription = "ZeroTier One Virtual Network Port"

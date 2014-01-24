@@ -1385,7 +1385,8 @@ void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const
 		char *d = _injectPending.back().first.data;
 		memcpy(d,to.data,6);
 		memcpy(d + 6,from.data,6);
-		*((uint16_t *)(d + 12)) = Utils::hton(etherType);
+		d[12] = (char)((etherType >> 8) & 0xff);
+		d[13] = (char)(etherType & 0xff);
 		memcpy(d + 14,data,len);
 	}
 
@@ -1475,7 +1476,6 @@ void EthernetTap::threadMain()
 					MAC from(_tapReadBuf + 6);
 					unsigned int etherType = Utils::ntoh(*((const uint16_t *)(_tapReadBuf + 12)));
 					Buffer<4096> tmp(_tapReadBuf + 14,bytesRead - 14);
-					//printf("GOT FRAME: %u bytes: %s\r\n",(unsigned int)bytesRead,Utils::hex(_tapReadBuf,bytesRead).c_str());
 					_handler(_arg,from,to,etherType,tmp);
 				}
 			}

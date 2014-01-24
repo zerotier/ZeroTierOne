@@ -1833,6 +1833,38 @@ NTSTATUS
 				p_IRP->IoStatus.Status = l_Status = STATUS_UNSUCCESSFUL;
 				p_IRP->IoStatus.Information = 0;
 			}
+			else if ((l_IrpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE)
+			{
+				__try
+				{
+					p_IRP->IoStatus.Information = l_IrpSp->Parameters.Write.Length;
+
+					DUMP_PACKET ("IRP_MJ_WRITE ETH",
+						(unsigned char *) p_IRP->AssociatedIrp.SystemBuffer,
+						l_IrpSp->Parameters.Write.Length);
+
+					NdisMEthIndicateReceive
+						(l_Adapter->m_MiniportAdapterHandle,
+						(NDIS_HANDLE) l_Adapter,
+						(PCHAR)p_IRP->AssociatedIrp.SystemBuffer,
+						ETHERNET_HEADER_SIZE,
+						(unsigned char *)p_IRP->AssociatedIrp.SystemBuffer + ETHERNET_HEADER_SIZE,
+						l_IrpSp->Parameters.Write.Length - ETHERNET_HEADER_SIZE,
+						l_IrpSp->Parameters.Write.Length - ETHERNET_HEADER_SIZE);
+
+					NdisMEthIndicateReceiveComplete (l_Adapter->m_MiniportAdapterHandle);
+
+					p_IRP->IoStatus.Status = l_Status = STATUS_SUCCESS;
+				}
+				__except (EXCEPTION_EXECUTE_HANDLER)
+				{
+					DEBUGP (("[%s] NdisMEthIndicateReceive failed in IRP_MJ_WRITE\n",
+						NAME (l_Adapter)));
+					NOTE_ERROR ();
+					p_IRP->IoStatus.Status = l_Status = STATUS_UNSUCCESSFUL;
+					p_IRP->IoStatus.Information = 0;
+				}
+			}
 			else
 			{
 				DEBUGP (("[%s] Bad buffer size in IRP_MJ_WRITE, len=%d\n",
