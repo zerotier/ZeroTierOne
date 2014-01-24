@@ -536,10 +536,10 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 	return false;
 }
 
-std::set<InetAddress> EthernetTap::allIps() const
+std::set<InetAddress> EthernetTap::ips() const
 {
-	// TODO
-	return ips();
+	Mutex::Lock _l(_ips_m);
+	return _ips;
 }
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
