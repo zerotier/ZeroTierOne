@@ -43,7 +43,7 @@ NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 	networkIdStr(nwid)
 {
 	ui->setupUi(this);
-	ui->networkIdPushButton->setText(QString(nwid.c_str()));
+	ui->networkIdButton->setText(QString(nwid.c_str()));
 
 	QFontMetrics fm(ui->ipListWidget->font());
 	int lineHeight = ui->ipListWidget->spacing() + fm.height();
@@ -64,7 +64,7 @@ void NetworkWidget::setStatus(const std::string &status,const std::string &age)
 {
 	ui->statusLabel->setText(QString(status.c_str()));
 	if (status == "OK")
-		ui->ageLabel->setText(QString("(configuration is ") + age.c_str() + " seconds old)");
+		ui->ageLabel->setText(QString("[") + age.c_str() + "s ago]");
 	else ui->ageLabel->setText(QString());
 }
 
@@ -138,9 +138,9 @@ void NetworkWidget::on_leaveNetworkButton_clicked()
 	}
 }
 
-void NetworkWidget::on_networkIdPushButton_clicked()
+void NetworkWidget::on_networkIdButton_clicked()
 {
-	QApplication::clipboard()->setText(ui->networkIdPushButton->text());
+	QApplication::clipboard()->setText(ui->networkIdButton->text());
 }
 
 void NetworkWidget::on_ipListWidget_itemActivated(QListWidgetItem *item)

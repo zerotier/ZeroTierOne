@@ -55,7 +55,7 @@ public:
 
 private slots:
 	void on_leaveNetworkButton_clicked();
-	void on_networkIdPushButton_clicked();
+	void on_networkIdButton_clicked();
 	void on_ipListWidget_itemActivated(QListWidgetItem *item);
 
 private:

@@ -39,6 +39,13 @@ int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
 
+	{
+		QFile qss(":css/stylesheet.css");
+		qss.open(QFile::ReadOnly);
+		QString style(qss.readAll());
+		a.setStyleSheet(style);
+	}
+
 #ifdef __APPLE__
 	// If service isn't installed, download and install it
 	if (!QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
@@ -51,15 +58,18 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef __APPLE__
-	QString zt1AppSupport(QDir::homePath() + "/Library/Application Support/ZeroTier/One");
-	QDir::root().mkpath(zt1AppSupport);
-	settings = new QSettings(zt1AppSupport + "/ui.ini",QSettings::IniFormat);
+	{
+		QString zt1AppSupport(QDir::homePath() + "/Library/Application Support/ZeroTier/One");
+		QDir::root().mkpath(zt1AppSupport);
+		settings = new QSettings(zt1AppSupport + "/ui.ini",QSettings::IniFormat);
+	}
 #else
 	settings = new QSettings("ZeroTier Networks","ZeroTier One");
 #endif
 
 	if (!settings->value("acceptedLicenseV1",false).toBool()) {
 		LicenseDialog ld;
+		ld.setStyleSheet(a.styleSheet());
 		ld.exec();
 	}
 

@@ -106,16 +106,6 @@
       <property name="focusPolicy">
        <enum>Qt::NoFocus</enum>
       </property>
-      <property name="styleSheet">
-       <string notr="true">QListWidget#networkListWidget {
-	background-color: transparent;
-}
-
-QListWidget#networkListWidget::Item {
-	background-color: palette(base);
-	border: 0;
-}</string>
-      </property>
       <property name="frameShape">
        <enum>QFrame::NoFrame</enum>
       </property>
@@ -135,7 +125,7 @@ QListWidget#networkListWidget::Item {
        <enum>QAbstractItemView::ScrollPerPixel</enum>
       </property>
       <property name="spacing">
-       <number>2</number>
+       <number>0</number>
       </property>
       <property name="uniformItemSizes">
        <bool>true</bool>
@@ -161,7 +151,7 @@ QListWidget#networkListWidget::Item {
         <number>0</number>
        </property>
        <item>
-        <widget class="QPushButton" name="addressButton">
+        <widget class="QToolButton" name="addressButton">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -179,33 +169,14 @@ QListWidget#networkListWidget::Item {
          <property name="statusTip">
           <string>Your 10-digit ZeroTier address; click to copy to clipboard.</string>
          </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton {
-	border: 0;
-	text-align: left;
-	padding: 0 5px 0 5px;
-	margin: 0;
-	background-color: transparent;
-}
-
-QPushButton:focus {
-	background-color: rgba(0,0,0,15);
-}
-
-QPushButton:hover {
-	background-color: rgba(0,0,0,15);
-}
-
-QPushButton:pressed {
-	background-color: rgba(0,0,0,75);
-}
-s</string>
-         </property>
          <property name="text">
-          <string/>
+          <string notr="true">----------</string>
          </property>
-         <property name="flat">
-          <bool>true</bool>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextOnly</enum>
+         </property>
+         <property name="class" stdset="0">
+          <string notr="true">clickToCopy</string>
          </property>
         </widget>
        </item>
@@ -224,11 +195,6 @@ s</string>
          </property>
          <property name="statusTip">
           <string>Your network connection status.</string>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">padding: 0 0.75em 0 0.75em;
-margin: 0 4px 0 0;
-</string>
          </property>
          <property name="text">
           <string/>
@@ -267,7 +233,7 @@ margin: 0 4px 0 0;
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="joinNetworkButton">
+        <widget class="QToolButton" name="joinNetworkButton">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
            <horstretch>0</horstretch>
@@ -285,32 +251,8 @@ margin: 0 4px 0 0;
          <property name="statusTip">
           <string>Join this network.</string>
          </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton {
-	padding: 0 0.8em 0 0.8em;
-	margin: 0;
-	border: 0;
-	background-color: rgba(0,0,0,25);
-}
-
-QPushButton:focus {
-	background-color: rgba(0,0,0,33);
-}
-
-QPushButton:hover {
-	background-color: rgba(0,0,0,33);
-}
-
-QPushButton:pressed {
-	background-color: rgba(0,0,0,75);
-}
-</string>
-         </property>
          <property name="text">
           <string notr="true">+</string>
-         </property>
-         <property name="flat">
-          <bool>true</bool>
          </property>
         </widget>
        </item>

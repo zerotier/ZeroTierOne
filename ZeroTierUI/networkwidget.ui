@@ -20,7 +20,7 @@
    <string>Network</string>
   </property>
   <property name="class" stdset="0">
-   <string>NetworkWidget</string>
+   <string notr="true">networkListItem</string>
   </property>
   <layout class="QHBoxLayout">
    <property name="spacing">
@@ -57,35 +57,74 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QLabel" name="nameLabel">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>16</pointsize>
-          <weight>75</weight>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="statusTip">
-         <string>This network's short name.</string>
-        </property>
-        <property name="text">
-         <string>networkname</string>
-        </property>
-        <property name="textFormat">
-         <enum>Qt::PlainText</enum>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-        </property>
-        <property name="textInteractionFlags">
-         <set>Qt::NoTextInteraction</set>
-        </property>
+       <widget class="QWidget" name="widget" native="true">
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QToolButton" name="networkIdButton">
+           <property name="font">
+            <font>
+             <family>Courier</family>
+             <pointsize>13</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="statusTip">
+            <string>Hexadecimal network ID; click to copy to clipboard.</string>
+           </property>
+           <property name="text">
+            <string notr="true">----------------</string>
+           </property>
+           <property name="toolButtonStyle">
+            <enum>Qt::ToolButtonTextOnly</enum>
+           </property>
+           <property name="class" stdset="0">
+            <string notr="true">clickToCopy</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="nameLabel">
+           <property name="font">
+            <font>
+             <pointsize>13</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="statusTip">
+            <string>This network's short name.</string>
+           </property>
+           <property name="text">
+            <string>networkname</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::NoTextInteraction</set>
+           </property>
+           <property name="class" stdset="0">
+            <string notr="true">networkName</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
       <item>
@@ -100,6 +139,9 @@
          <property name="fieldGrowthPolicy">
           <enum>QFormLayout::ExpandingFieldsGrow</enum>
          </property>
+         <property name="rowWrapPolicy">
+          <enum>QFormLayout::DontWrapRows</enum>
+         </property>
          <property name="labelAlignment">
           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
          </property>
@@ -107,85 +149,30 @@
           <set>Qt::AlignHCenter|Qt::AlignTop</set>
          </property>
          <property name="horizontalSpacing">
-          <number>6</number>
+          <number>4</number>
          </property>
          <property name="verticalSpacing">
           <number>2</number>
          </property>
          <property name="leftMargin">
-          <number>0</number>
+          <number>4</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
+          <number>4</number>
          </property>
          <property name="rightMargin">
           <number>0</number>
          </property>
          <property name="bottomMargin">
-          <number>0</number>
+          <number>4</number>
          </property>
          <item row="2" column="0">
-          <widget class="QLabel" name="label_2">
-           <property name="text">
-            <string>Network ID:</string>
-           </property>
-           <property name="textFormat">
-            <enum>Qt::PlainText</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QPushButton" name="networkIdPushButton">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
+          <widget class="QLabel" name="label_5">
            <property name="font">
             <font>
-             <family>Courier</family>
-             <pointsize>14</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <pointsize>12</pointsize>
             </font>
            </property>
-           <property name="statusTip">
-            <string>Hexadecimal network ID; click to copy to clipboard.</string>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-	border: 0;
-	padding: 0;
-	margin: 0;
-	text-align: left;
-	vertical-align: middle;
-	background-color: transparent;
-}
-
-QPushButton:focus {
-	background-color: rgba(0,0,0,15);
-}
-
-QPushButton:hover {
-	background-color: rgba(0,0,0,15);
-}
-
-QPushButton:pressed {
-	background-color: rgba(0,0,0,75);
-}
-</string>
-           </property>
-           <property name="text">
-            <string>0000000000000000</string>
-           </property>
-           <property name="flat">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="label_5">
            <property name="text">
             <string>Type:</string>
            </property>
@@ -194,10 +181,11 @@ QPushButton:pressed {
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
+         <item row="2" column="1">
           <widget class="QLabel" name="networkTypeLabel">
            <property name="font">
             <font>
+             <pointsize>12</pointsize>
              <weight>75</weight>
              <bold>true</bold>
             </font>
@@ -213,8 +201,13 @@ QPushButton:pressed {
            </property>
           </widget>
          </item>
-         <item row="4" column="0">
+         <item row="3" column="0">
           <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
            <property name="text">
             <string>Status:</string>
            </property>
@@ -223,7 +216,22 @@ QPushButton:pressed {
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_4">
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Device:</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
           <widget class="QWidget" name="widget" native="true">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -257,6 +265,7 @@ QPushButton:pressed {
               </property>
               <property name="font">
                <font>
+                <pointsize>12</pointsize>
                 <weight>75</weight>
                 <bold>true</bold>
                </font>
@@ -282,17 +291,20 @@ QPushButton:pressed {
               </property>
               <property name="font">
                <font>
-                <pointsize>8</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="statusTip">
                <string>How recently did this network refresh its settings?</string>
               </property>
               <property name="text">
-               <string>(configuration is 0 seconds old)</string>
+               <string>[0s ago]</string>
               </property>
               <property name="textFormat">
                <enum>Qt::PlainText</enum>
+              </property>
+              <property name="textInteractionFlags">
+               <set>Qt::NoTextInteraction</set>
               </property>
              </widget>
             </item>
@@ -312,20 +324,11 @@ QPushButton:pressed {
            </layout>
           </widget>
          </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>Device:</string>
-           </property>
-           <property name="textFormat">
-            <enum>Qt::PlainText</enum>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1">
+         <item row="4" column="1">
           <widget class="QLabel" name="deviceLabel">
            <property name="font">
             <font>
+             <pointsize>12</pointsize>
              <weight>75</weight>
              <bold>true</bold>
             </font>
@@ -388,7 +391,7 @@ QPushButton:pressed {
          <string notr="true">padding: 0.1em 0 0.1em 0;</string>
         </property>
         <property name="text">
-         <string>IP Address Assignments</string>
+         <string>IP Addresses</string>
         </property>
         <property name="textFormat">
          <enum>Qt::PlainText</enum>
@@ -418,16 +421,6 @@ QPushButton:pressed {
         <property name="statusTip">
          <string>Double-click an IP to copy it to the clipboard.</string>
         </property>
-        <property name="styleSheet">
-         <string notr="true">QListWidget {
-	background-color: rgba(0,0,0,10);
-}
-
-QListWidget:hover {
-	background-color: rgba(0,0,0,15);
-}
-</string>
-        </property>
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
         </property>
@@ -445,6 +438,9 @@ QListWidget:hover {
         </property>
         <property name="sortingEnabled">
          <bool>true</bool>
+        </property>
+        <property name="class" stdset="0">
+         <string notr="true">ipAddressList</string>
         </property>
        </widget>
       </item>
@@ -480,7 +476,7 @@ QListWidget:hover {
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="leaveNetworkButton">
+          <widget class="QToolButton" name="leaveNetworkButton">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -490,32 +486,11 @@ QListWidget:hover {
            <property name="statusTip">
             <string>Leave this network.</string>
            </property>
-           <property name="styleSheet">
-            <string notr="true">QPushButton {
-	padding: 0.25em;
-	border: 0;
-	margin: 2px 0 2px 0;
-	background-color: rgba(0,0,0,25);
-}
-
-QPushButton:focus {
-	background-color: rgba(0,0,0,33);
-}
-
-QPushButton:hover {
-	background-color: rgba(0,0,0,33);
-}
-
-QPushButton:pressed {
-	background-color: rgba(0,0,0,75);
-}
-</string>
-           </property>
            <property name="text">
             <string>Leave Network</string>
            </property>
-           <property name="flat">
-            <bool>true</bool>
+           <property name="class" stdset="0">
+            <string notr="true">leaveNetworkButton</string>
            </property>
           </widget>
          </item>

@@ -2,4 +2,7 @@
     <qresource prefix="/img">
         <file>zt1icon.png</file>
     </qresource>
+    <qresource prefix="/css">
+        <file>stylesheet.css</file>
+    </qresource>
 </RCC>

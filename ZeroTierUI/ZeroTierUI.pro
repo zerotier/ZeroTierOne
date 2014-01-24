@@ -109,3 +109,6 @@ RESOURCES += \
 
 mac:OBJECTIVE_SOURCES += \
 		mac_doprivileged.mm
+
+OTHER_FILES += \
+    stylesheet.css
