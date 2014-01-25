@@ -134,7 +134,7 @@
          <enum>QFrame::StyledPanel</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Sunken</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>

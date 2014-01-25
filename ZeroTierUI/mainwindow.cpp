@@ -99,13 +99,19 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->setupUi(this);
 	if (ui->networkListWidget->verticalScrollBar())
 		ui->networkListWidget->verticalScrollBar()->setSingleStep(8);
+
+#ifdef __APPLE__
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget *widget, widgets)
 		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
-	ui->noNetworksLabel->setText("Connecting to Service..."); // changed when result is received
+#endif
+
+	ui->noNetworksLabel->setVisible(true);
+	ui->noNetworksLabel->setText("Connecting to Service...");
+	ui->bottomContainerWidget->setVisible(false);
+	ui->networkListWidget->setVisible(false);
 
 	this->pollServiceTimerId = this->startTimer(1000);
-	this->setEnabled(false); // gets enabled when updates are received
 	this->cyclesSinceResponseFromService = 0;
 }
 
@@ -173,19 +179,25 @@ void MainWindow::timerEvent(QTimerEvent *event)
 #endif
 
 			if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
-				QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Did you enter your password correctly?)",QMessageBox::Ok,QMessageBox::NoButton);
-				QApplication::exit(1);
-				return;
+				if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultSystemPath().c_str(),authToken)) {
+					QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Did you enter your password correctly?)",QMessageBox::Ok,QMessageBox::NoButton);
+					QApplication::exit(1);
+					return;
+				}
 			}
 		}
 
 		zeroTierClient = new ZeroTier::Node::LocalClient(authToken.c_str(),0,&handleZTMessage,this);
 	}
 
-	// TODO: do something more user-friendly here... or maybe try to restart
-	// the service?
-	if (++this->cyclesSinceResponseFromService == 4)
-		QMessageBox::critical(this,"No Response from Service","The ZeroTier One service does not appear to be running.",QMessageBox::Ok,QMessageBox::NoButton);
+	if (++this->cyclesSinceResponseFromService >= 4) {
+		if (this->cyclesSinceResponseFromService == 4)
+			QMessageBox::warning(this,"Service Not Running","Can't Connect to the ZeroTier One service. Is it running?",QMessageBox::Ok);
+		ui->noNetworksLabel->setVisible(true);
+		ui->noNetworksLabel->setText("Connecting to Service...");
+		ui->bottomContainerWidget->setVisible(false);
+		ui->networkListWidget->setVisible(false);
+	}
 
 	zeroTierClient->send("info");
 	zeroTierClient->send("listnetworks");
@@ -281,6 +293,11 @@ void MainWindow::customEvent(QEvent *event)
 		ui->noNetworksLabel->setVisible(true);
 	} else ui->noNetworksLabel->setVisible(false);
 
+	if (!ui->bottomContainerWidget->isVisible())
+		ui->bottomContainerWidget->setVisible(true);
+	if (!ui->networkListWidget->isVisible())
+		ui->networkListWidget->setVisible(true);
+
 	if (this->myAddress.size())
 		ui->addressButton->setText(this->myAddress);
 	else ui->addressButton->setText("          ");
@@ -292,14 +309,6 @@ void MainWindow::customEvent(QEvent *event)
 	st += QString::number(this->numPeers);
 	st += " direct links to peers";
 	ui->statusLabel->setText(st);
-
-	if (this->myStatus == "ONLINE") {
-		if (!this->isEnabled())
-			this->setEnabled(true);
-	} else {
-		if (this->isEnabled())
-			this->setEnabled(false);
-	}
 }
 
 void MainWindow::on_joinNetworkButton_clicked()

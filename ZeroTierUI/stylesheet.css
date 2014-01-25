@@ -80,6 +80,11 @@ QLabel.networkName {
 	padding: 0;
 }
 
+#noNetworksLabel {
+        background: transparent;
+        color: #ffffff;
+}
+
 #networkListWidget {
 	background: palette(dark);
 	margin: 0 0 2px 0;

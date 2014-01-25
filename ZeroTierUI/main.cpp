@@ -59,6 +59,8 @@ int main(int argc, char *argv[])
 
 #ifdef __APPLE__
 	{
+		// Put QSettings here because this is one of the writable directories allowed
+		// in Apple's app store sandbox specs. We might end up in app store someday.
 		QString zt1AppSupport(QDir::homePath() + "/Library/Application Support/ZeroTier/One");
 		QDir::root().mkpath(zt1AppSupport);
 		settings = new QSettings(zt1AppSupport + "/ui.ini",QSettings::IniFormat);
