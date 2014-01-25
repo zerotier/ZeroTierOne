@@ -124,7 +124,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
@@ -133,31 +133,31 @@
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
-    <TargetName>ztTap100</TargetName>
+    <TargetName>zttap200</TargetName>
     <OutDir>$(SolutionDir)\Build\$(Platform)\$(ConfigurationName)\</OutDir>
     <IntDir>$(Platform)\$(ConfigurationName)\</IntDir>
     <TimeStampServer>http://timestamp.digicert.com/</TimeStampServer>

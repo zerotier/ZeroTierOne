@@ -264,6 +264,36 @@
       <Verbose>true</Verbose>
     </Inf2Cat>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vista Debug|Win32'">
+    <Inf2Cat>
+      <WindowsVersionList>2000;XP_X86;Server2003_X86;Vista_X86;Server2008_X86;7_X86;8_X86</WindowsVersionList>
+    </Inf2Cat>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Debug|Win32'">
+    <Inf2Cat>
+      <WindowsVersionList>2000;XP_X86;Server2003_X86;Vista_X86;Server2008_X86;7_X86;8_X86</WindowsVersionList>
+    </Inf2Cat>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Vista Release|Win32'">
+    <Inf2Cat>
+      <WindowsVersionList>2000;XP_X86;Server2003_X86;Vista_X86;Server2008_X86;7_X86;8_X86</WindowsVersionList>
+    </Inf2Cat>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Debug|Win32'">
+    <Inf2Cat>
+      <WindowsVersionList>2000;XP_X86;Server2003_X86;Vista_X86;Server2008_X86;7_X86;8_X86</WindowsVersionList>
+    </Inf2Cat>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win7 Release|Win32'">
+    <Inf2Cat>
+      <WindowsVersionList>2000;XP_X86;Server2003_X86;Vista_X86;Server2008_X86;7_X86;8_X86</WindowsVersionList>
+    </Inf2Cat>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Win8 Release|Win32'">
+    <Inf2Cat>
+      <WindowsVersionList>2000;XP_X86;Server2003_X86;Vista_X86;Server2008_X86;7_X86;8_X86</WindowsVersionList>
+    </Inf2Cat>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="@(Inf->'%(CopyOutput)')" Condition="'@(Inf)'!=''" />
   </ItemGroup>
