@@ -127,14 +127,9 @@ fi
 echo 'Installing and (re-)starting zerotier-one service via launchctl...'
 
 mv -f './Library/LaunchDaemons/com.zerotier.one.plist' '/Library/LaunchDaemons/'
-if [ ! -z "`launchctl list | grep -F com.zerotier.one`" ]; then
-	launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist
-	sleep 1
-fi
 launchctl load /Library/LaunchDaemons/com.zerotier.one.plist
 
-sleep 1
-/usr/bin/zerotier-cli info
+# launchctl will restart us after exit if this is an online auto-update
 
 cd /tmp
 rm -rf _zt1tmp
