@@ -190,9 +190,9 @@ void MainWindow::timerEvent(QTimerEvent *event)
 		zeroTierClient = new ZeroTier::Node::LocalClient(authToken.c_str(),0,&handleZTMessage,this);
 	}
 
-	if (++this->cyclesSinceResponseFromService >= 4) {
-		if (this->cyclesSinceResponseFromService == 4)
-			QMessageBox::warning(this,"Service Not Running","Can't Connect to the ZeroTier One service. Is it running?",QMessageBox::Ok);
+	if (++this->cyclesSinceResponseFromService >= 3) {
+		if (this->cyclesSinceResponseFromService == 3)
+			QMessageBox::warning(this,"Service Not Running","Can't connect to the ZeroTier One service. Is it running?",QMessageBox::Ok);
 		ui->noNetworksLabel->setVisible(true);
 		ui->noNetworksLabel->setText("Connecting to Service...");
 		ui->bottomContainerWidget->setVisible(false);
@@ -206,17 +206,18 @@ void MainWindow::timerEvent(QTimerEvent *event)
 
 void MainWindow::customEvent(QEvent *event)
 {
+	QMessageBox::information(this,"event","event",QMessageBox::Ok);
 	ZTMessageEvent *m = (ZTMessageEvent *)event; // only one custom event type so far
 	if (m->ztMessage.size() == 0)
 		return;
+
+	this->cyclesSinceResponseFromService = 0;
 
 	std::vector<std::string> hdr(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[0]));
 	if (hdr.size() < 2)
 		return;
 	if (hdr[0] != "200")
 		return;
-
-	this->cyclesSinceResponseFromService = 0;
 
 	if (hdr[1] == "info") {
 		if (hdr.size() >= 3)

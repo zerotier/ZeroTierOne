@@ -47,6 +47,13 @@
 #include <ShlObj.h>
 #endif
 
+#ifdef __UNIX_LIKE__
+#include <fcntl.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/file.h>
+#endif
+
 #include "Condition.hpp"
 #include "Node.hpp"
 #include "Topology.hpp"
@@ -70,15 +77,6 @@
 #include "SHA512.hpp"
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
-
-#ifdef __WINDOWS__
-#include <Windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/file.h>
-#endif
 
 #include "../version.h"
 
