@@ -1465,7 +1465,7 @@ void EthernetTap::threadMain()
 
 	for(;;) {
 		if (!_run) break;
-		WaitForMultipleObjectsEx(3,wait4,FALSE,INFINITE,TRUE);
+		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,INFINITE,TRUE);
 		if (!_run) break;
 
 		if (HasOverlappedIoCompleted(&_tapOvlRead)) {

@@ -52,7 +52,7 @@
 	<summary>
 		<codepage>1252</codepage>
 		<title>Installation Database</title>
-		<subject/>
+		<subject></subject>
 		<author>InstallShield</author>
 		<keywords>Installer,MSI,Database</keywords>
 		<comments>Contact:  Your local administrator</comments>
@@ -339,7 +339,27 @@
 		<col def="S0">ISDotNetInstallerArgsCommit</col>
 		<col def="S0">ISDotNetInstallerArgsUninstall</col>
 		<col def="S0">ISDotNetInstallerArgsRollback</col>
+		<row><td>ISX_DEFAULTCOMPONENT</td><td>{2E46459B-E8E1-4D99-9473-51BC767F4538}</td><td>PLATFORMS</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>ISX_DEFAULTCOMPONENT1</td><td>{BB5EAF06-9942-43E8-B230-77D50690F00F}</td><td>INSTALLDIR</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ISX_DEFAULTCOMPONENT2</td><td>{5E65C5F2-2127-439E-B5AD-B4372A27D717}</td><td>ZEROTIER1</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ISX_DEFAULTCOMPONENT3</td><td>{C3C7BAD0-F95C-4406-BA25-659AC3473985}</td><td>ONE</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ISX_DEFAULTCOMPONENT4</td><td>{2492CE69-39F5-4D9B-B3B6-3CE5481C1140}</td><td>TAP_WINDOWS</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ISX_DEFAULTCOMPONENT5</td><td>{EAAD99C2-234F-41A6-A884-CDFE676BA68D}</td><td>X64</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ISX_DEFAULTCOMPONENT6</td><td>{8452A03C-96B8-4A35-9B16-A8EC136EE841}</td><td>X86</td><td>2</td><td/><td/><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>Qt5Core.dll</td><td>{169B4507-77AC-4430-8BDA-F3A491C84299}</td><td>INSTALLDIR</td><td>2</td><td/><td>qt5core.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>Qt5Gui.dll</td><td>{8179238B-C754-4CE9-A2DD-C54EAD9835B2}</td><td>INSTALLDIR</td><td>2</td><td/><td>qt5gui.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>Qt5Network.dll</td><td>{FB4964EC-BD9E-46C6-8167-3575DCA4FEF3}</td><td>INSTALLDIR</td><td>2</td><td/><td>qt5network.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>Qt5Widgets.dll</td><td>{205A3CCB-CF34-4208-8944-7861AA7A71E3}</td><td>INSTALLDIR</td><td>2</td><td/><td>qt5widgets.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>WdfCoinstaller01011.dll</td><td>{181ACA78-4FCE-48F4-A2A3-3B9ADA1C9849}</td><td>X64</td><td>2</td><td/><td>wdfcoinstaller01011.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>WdfCoinstaller01011.dll1</td><td>{2C7D1A20-31A6-4F69-AA02-AFD6F51AC22B}</td><td>X86</td><td>2</td><td/><td>wdfcoinstaller01011.dll1</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>devcon_x64.exe</td><td>{4C7D90E3-6542-4BB3-A94A-96EC3AB0B936}</td><td>ONE</td><td>2</td><td/><td>devcon_x64.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>devcon_x86.exe</td><td>{3235C2E7-DCC2-47AE-925F-71A023406734}</td><td>ONE</td><td>2</td><td/><td>devcon_x86.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>icudt51.dll</td><td>{C82729DD-325C-49BB-8785-BC178306EFB2}</td><td>INSTALLDIR</td><td>2</td><td/><td>icudt51.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>icuin51.dll</td><td>{69B728BD-C848-4C87-AD9C-2C99EDFDEBED}</td><td>INSTALLDIR</td><td>2</td><td/><td>icuin51.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>icuuc51.dll</td><td>{C8B05B34-75D3-4E7D-9CA4-015DD57102A9}</td><td>INSTALLDIR</td><td>2</td><td/><td>icuuc51.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>libEGL.dll</td><td>{D90EF89D-15FD-4078-944E-0CD59F271DDD}</td><td>INSTALLDIR</td><td>2</td><td/><td>libegl.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>libGLESv2.dll</td><td>{B107C281-330A-48FE-A5B7-4FD770EF6E1E}</td><td>INSTALLDIR</td><td>2</td><td/><td>libglesv2.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>qwindows.dll</td><td>{A76236B1-D579-4C4B-A462-2C78D5E1D344}</td><td>PLATFORMS</td><td>2</td><td/><td>qwindows.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 	</table>
 
 	<table name="Condition">
@@ -1049,6 +1069,10 @@
 		<col key="yes" def="s72">Directory_</col>
 		<col key="yes" def="s72">Component_</col>
 		<row><td>INSTALLDIR</td><td>ISX_DEFAULTCOMPONENT1</td></row>
+		<row><td>ONE</td><td>ISX_DEFAULTCOMPONENT3</td></row>
+		<row><td>PLATFORMS</td><td>ISX_DEFAULTCOMPONENT</td></row>
+		<row><td>TAP_WINDOWS</td><td>ISX_DEFAULTCOMPONENT4</td></row>
+		<row><td>ZEROTIER1</td><td>ISX_DEFAULTCOMPONENT2</td></row>
 	</table>
 
 	<table name="CustomAction">
@@ -1140,12 +1164,13 @@
 		<row><td>GlobalAssemblyCache</td><td>TARGETDIR</td><td>.:Global~1|GlobalAssemblyCache</td><td/><td>0</td><td/></row>
 		<row><td>INSTALLDIR</td><td>ISMyProductDir</td><td>.</td><td/><td>0</td><td/></row>
 		<row><td>ISCommonFilesFolder</td><td>CommonFilesFolder</td><td>Instal~1|InstallShield</td><td/><td>0</td><td/></row>
-		<row><td>ISMyCompanyDir</td><td>ProgramFilesFolder</td><td>MYCOMP~1|My Company Name</td><td/><td>0</td><td/></row>
-		<row><td>ISMyProductDir</td><td>ISMyCompanyDir</td><td>MYPROD~1|My Product Name</td><td/><td>0</td><td/></row>
+		<row><td>ISMyProductDir</td><td>ZEROTIER</td><td>One</td><td/><td>0</td><td/></row>
 		<row><td>ISYourDataBaseDir</td><td>INSTALLDIR</td><td>Database</td><td/><td>0</td><td/></row>
 		<row><td>LocalAppDataFolder</td><td>TARGETDIR</td><td>.:LocalA~1|LocalAppData</td><td/><td>0</td><td/></row>
 		<row><td>MyPicturesFolder</td><td>TARGETDIR</td><td>.:MyPict~1|MyPictures</td><td/><td>0</td><td/></row>
 		<row><td>NetHoodFolder</td><td>TARGETDIR</td><td>.:NetHood</td><td/><td>0</td><td/></row>
+		<row><td>ONE</td><td>ZEROTIER1</td><td>One</td><td/><td>0</td><td/></row>
+		<row><td>PLATFORMS</td><td>INSTALLDIR</td><td>PLATFO~1|platforms</td><td/><td>0</td><td/></row>
 		<row><td>PersonalFolder</td><td>TARGETDIR</td><td>.:Personal</td><td/><td>0</td><td/></row>
 		<row><td>PrimaryVolumePath</td><td>TARGETDIR</td><td>.:Primar~1|PrimaryVolumePath</td><td/><td>0</td><td/></row>
 		<row><td>PrintHoodFolder</td><td>TARGETDIR</td><td>.:PRINTH~1|PrintHood</td><td/><td>0</td><td/></row>
@@ -1159,12 +1184,17 @@
 		<row><td>System16Folder</td><td>TARGETDIR</td><td>.:System</td><td/><td>0</td><td/></row>
 		<row><td>System64Folder</td><td>TARGETDIR</td><td>.:System64</td><td/><td>0</td><td/></row>
 		<row><td>SystemFolder</td><td>TARGETDIR</td><td>.:System32</td><td/><td>0</td><td/></row>
+		<row><td>TAP_WINDOWS</td><td>ONE</td><td>TAP-WI~1|tap-windows</td><td/><td>0</td><td/></row>
 		<row><td>TARGETDIR</td><td/><td>SourceDir</td><td/><td>0</td><td/></row>
 		<row><td>TempFolder</td><td>TARGETDIR</td><td>.:Temp</td><td/><td>0</td><td/></row>
 		<row><td>TemplateFolder</td><td>TARGETDIR</td><td>.:ShellNew</td><td/><td>0</td><td/></row>
 		<row><td>USERPROFILE</td><td>TARGETDIR</td><td>.:USERPR~1|UserProfile</td><td/><td>0</td><td/></row>
 		<row><td>WindowsFolder</td><td>TARGETDIR</td><td>.:Windows</td><td/><td>0</td><td/></row>
 		<row><td>WindowsVolume</td><td>TARGETDIR</td><td>.:WinRoot</td><td/><td>0</td><td/></row>
+		<row><td>X64</td><td>TAP_WINDOWS</td><td>x64</td><td/><td>0</td><td/></row>
+		<row><td>X86</td><td>TAP_WINDOWS</td><td>x86</td><td/><td>0</td><td/></row>
+		<row><td>ZEROTIER</td><td>ProgramFilesFolder</td><td>ZeroTier</td><td/><td>0</td><td/></row>
+		<row><td>ZEROTIER1</td><td>AppDataFolder</td><td>ZeroTier</td><td/><td>0</td><td/></row>
 	</table>
 
 	<table name="DrLocator">
@@ -1856,7 +1886,27 @@
 	<table name="FeatureComponents">
 		<col key="yes" def="s38">Feature_</col>
 		<col key="yes" def="s72">Component_</col>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT</td></row>
 		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT1</td></row>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT2</td></row>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT3</td></row>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT4</td></row>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT5</td></row>
+		<row><td>AlwaysInstall</td><td>ISX_DEFAULTCOMPONENT6</td></row>
+		<row><td>AlwaysInstall</td><td>Qt5Core.dll</td></row>
+		<row><td>AlwaysInstall</td><td>Qt5Gui.dll</td></row>
+		<row><td>AlwaysInstall</td><td>Qt5Network.dll</td></row>
+		<row><td>AlwaysInstall</td><td>Qt5Widgets.dll</td></row>
+		<row><td>AlwaysInstall</td><td>WdfCoinstaller01011.dll</td></row>
+		<row><td>AlwaysInstall</td><td>WdfCoinstaller01011.dll1</td></row>
+		<row><td>AlwaysInstall</td><td>devcon_x64.exe</td></row>
+		<row><td>AlwaysInstall</td><td>devcon_x86.exe</td></row>
+		<row><td>AlwaysInstall</td><td>icudt51.dll</td></row>
+		<row><td>AlwaysInstall</td><td>icuin51.dll</td></row>
+		<row><td>AlwaysInstall</td><td>icuuc51.dll</td></row>
+		<row><td>AlwaysInstall</td><td>libEGL.dll</td></row>
+		<row><td>AlwaysInstall</td><td>libGLESv2.dll</td></row>
+		<row><td>AlwaysInstall</td><td>qwindows.dll</td></row>
 	</table>
 
 	<table name="File">
@@ -1871,6 +1921,26 @@
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I4">ISAttributes</col>
 		<col def="S72">ISComponentSubFolder_</col>
+		<row><td>devcon_x64.exe</td><td>devcon_x64.exe</td><td>DEVCON~1.EXE|devcon_x64.exe</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\devcon\devcon_x64.exe</td><td>1</td><td/></row>
+		<row><td>devcon_x86.exe</td><td>devcon_x86.exe</td><td>DEVCON~1.EXE|devcon_x86.exe</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\devcon\devcon_x86.exe</td><td>1</td><td/></row>
+		<row><td>icudt51.dll</td><td>icudt51.dll</td><td>icudt51.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\icudt51.dll</td><td>1</td><td/></row>
+		<row><td>icuin51.dll</td><td>icuin51.dll</td><td>icuin51.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\icuin51.dll</td><td>1</td><td/></row>
+		<row><td>icuuc51.dll</td><td>icuuc51.dll</td><td>icuuc51.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\icuuc51.dll</td><td>1</td><td/></row>
+		<row><td>libegl.dll</td><td>libEGL.dll</td><td>libEGL.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\libEGL.dll</td><td>1</td><td/></row>
+		<row><td>libglesv2.dll</td><td>libGLESv2.dll</td><td>LIBGLE~1.DLL|libGLESv2.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\libGLESv2.dll</td><td>1</td><td/></row>
+		<row><td>qt5core.dll</td><td>Qt5Core.dll</td><td>Qt5Core.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\Qt5Core.dll</td><td>1</td><td/></row>
+		<row><td>qt5gui.dll</td><td>Qt5Gui.dll</td><td>Qt5Gui.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\Qt5Gui.dll</td><td>1</td><td/></row>
+		<row><td>qt5network.dll</td><td>Qt5Network.dll</td><td>QT5NET~1.DLL|Qt5Network.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\Qt5Network.dll</td><td>1</td><td/></row>
+		<row><td>qt5widgets.dll</td><td>Qt5Widgets.dll</td><td>QT5WID~1.DLL|Qt5Widgets.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\Qt5Widgets.dll</td><td>1</td><td/></row>
+		<row><td>qwindows.dll</td><td>qwindows.dll</td><td>qwindows.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\platforms\qwindows.dll</td><td>1</td><td/></row>
+		<row><td>wdfcoinstaller01011.dll</td><td>WdfCoinstaller01011.dll</td><td>WDFCOI~1.DLL|WdfCoinstaller01011.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\WdfCoinstaller01011.dll</td><td>1</td><td/></row>
+		<row><td>wdfcoinstaller01011.dll1</td><td>WdfCoinstaller01011.dll1</td><td>WDFCOI~1.DLL|WdfCoinstaller01011.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x86\WdfCoinstaller01011.dll</td><td>1</td><td/></row>
+		<row><td>zttap200.cat</td><td>ISX_DEFAULTCOMPONENT5</td><td>zttap200.cat</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\zttap200.cat</td><td>1</td><td/></row>
+		<row><td>zttap200.cat1</td><td>ISX_DEFAULTCOMPONENT6</td><td>zttap200.cat</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x86\zttap200.cat</td><td>1</td><td/></row>
+		<row><td>zttap200.inf</td><td>ISX_DEFAULTCOMPONENT5</td><td>zttap200.inf</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\zttap200.inf</td><td>1</td><td/></row>
+		<row><td>zttap200.inf1</td><td>ISX_DEFAULTCOMPONENT6</td><td>zttap200.inf</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x86\zttap200.inf</td><td>1</td><td/></row>
+		<row><td>zttap200.sys</td><td>ISX_DEFAULTCOMPONENT5</td><td>zttap200.sys</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\zttap200.sys</td><td>1</td><td/></row>
+		<row><td>zttap200.sys1</td><td>ISX_DEFAULTCOMPONENT6</td><td>zttap200.sys</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x86\zttap200.sys</td><td>1</td><td/></row>
 	</table>
 
 	<table name="FileSFPCatalog">
@@ -2012,7 +2082,27 @@
 		<col def="S0">FTPLocation</col>
 		<col def="S0">HTTPLocation</col>
 		<col def="S0">Miscellaneous</col>
+		<row><td>ISX_DEFAULTCOMPONENT</td><td/><td/><td>_22A22EA9_E4E4_4502_A013_0F88D8E4A209_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>ISX_DEFAULTCOMPONENT1</td><td/><td/><td>_CBE4A1D0_6011_42CE_8926_FC33E3807FAA_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ISX_DEFAULTCOMPONENT2</td><td/><td/><td>_0903EFCE_7FF0_41E6_BEEB_6E1A8A494440_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ISX_DEFAULTCOMPONENT3</td><td/><td/><td>_1A983E9B_AFD2_4269_827B_450B94AA25B3_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ISX_DEFAULTCOMPONENT4</td><td/><td/><td>_0F3A927F_CAA5_43EF_9855_581D4ADF86EF_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ISX_DEFAULTCOMPONENT5</td><td/><td/><td>_458AB5BA_0F58_4DF8_93F7_03D68CDDC21D_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ISX_DEFAULTCOMPONENT6</td><td/><td/><td>_D9AC7E8C_5FF9_4B25_913B_790466A0D0F8_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>Qt5Core.dll</td><td/><td/><td>_B2D6D45E_4382_4893_9096_D67333AD1C7F_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>Qt5Gui.dll</td><td/><td/><td>_23E20BDB_CAD0_44E1_8305_424FEB64CCD7_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>Qt5Network.dll</td><td/><td/><td>_D48255CD_94FF_4219_93B8_FB435E8BA5B3_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>Qt5Widgets.dll</td><td/><td/><td>_6CB4C7B2_E80E_4AC3_838C_6D1431F5AC93_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>WdfCoinstaller01011.dll</td><td/><td/><td>_25CAA8A4_34FC_4599_94AF_0124B400A2F8_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>WdfCoinstaller01011.dll1</td><td/><td/><td>_2FCC37B9_1DE6_4163_A99C_F53EA4420CCB_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>devcon_x64.exe</td><td/><td/><td>_419B108B_CB71_4DE5_ADC7_1889BE228BAC_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>devcon_x86.exe</td><td/><td/><td>_02A951D7_7BF2_4D39_85EC_032CDBD9D644_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>icudt51.dll</td><td/><td/><td>_3A5B57B7_E9D6_4B25_960E_DBA119CA8153_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>icuin51.dll</td><td/><td/><td>_69ADAC1B_3AD1_45F5_B057_212D33C17494_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>icuuc51.dll</td><td/><td/><td>_8666B8DF_170C_4782_ACFC_9C8A1304FC2F_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>libEGL.dll</td><td/><td/><td>_4C26B75E_850C_4565_AAC4_1E9576965D5E_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>libGLESv2.dll</td><td/><td/><td>_DA9BD817_C07E_4558_8F11_723DDB352DEB_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>qwindows.dll</td><td/><td/><td>_A5F1B009_8024_4EA9_A5B5_79E6E514A5E4_FILTER</td><td/><td/><td/><td/></row>
 	</table>
 
 	<table name="ISCustomActionReference">
@@ -2596,6 +2686,7 @@
 		<col def="I2">Order</col>
 		<col def="I2">ISSetupLocation</col>
 		<col def="S255">ISReleaseFlags</col>
+		<row><td>_287C5A74_B6E0_402B_9265_98CE482EF79C_</td><td>Microsoft .NET Framework 4.5 Full.prq</td><td/><td/><td/></row>
 	</table>
 
 	<table name="ISSetupType">
@@ -3974,7 +4065,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>ISTheme</td><td>InstallShield Blue.theme</td></row>
 		<row><td>ISUSLock</td><td>{1C46AFC4-D60A-4FD4-B53C-C2A31F763477}</td></row>
 		<row><td>ISUSSignature</td><td>{C55432A9-A602-4EEB-97E9-9DA69591230D}</td></row>
-		<row><td>ISVisitedViews</td><td>viewAssistant,viewISToday,viewProject,viewRealSetupDesign,viewSetupDesign,viewSetupTypes,viewUpgradePaths,viewUpdateService,viewRegistry,viewUI,viewBillboards,viewTextMessages,viewSystemSearch,viewInstallScriptStd,viewCustomActions,viewSupportFiles,viewRelease,viewDesignPatches,viewAppV,viewFeatureFiles,viewServices,viewComponentServices,viewVRoots,viewEnvironmentVariables,viewFileExtensions,viewIniFiles,viewTextFiles</td></row>
+		<row><td>ISVisitedViews</td><td>viewAssistant,viewISToday,viewProject,viewRealSetupDesign,viewSetupDesign,viewSetupTypes,viewUpgradePaths,viewUpdateService,viewRegistry,viewUI,viewBillboards,viewTextMessages,viewSystemSearch,viewInstallScriptStd,viewCustomActions,viewSupportFiles,viewRelease,viewDesignPatches,viewAppV,viewFeatureFiles,viewServices,viewComponentServices,viewVRoots,viewEnvironmentVariables,viewFileExtensions,viewIniFiles,viewTextFiles,viewDependencies,viewObjects,viewAppFiles</td></row>
 		<row><td>Limited</td><td>1</td></row>
 		<row><td>LockPermissionMode</td><td>1</td></row>
 		<row><td>MsiExecCmdLineOptions</td><td/></row>

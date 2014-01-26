@@ -251,8 +251,19 @@ void Utils::lockDownFile(const char *path,bool isDir)
 #ifdef __UNIX_LIKE__
 	chmod(path,isDir ? 0700 : 0600);
 #else
-#ifdef _WIN32
-	// TODO: windows ACL hell...
+#ifdef __WINDOWS__
+	{
+		STARTUPINFOA startupInfo;
+		startupInfo.cb = sizeof(startupInfo);
+		PROCESS_INFORMATION processInfo;
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\cacls.exe \"") + path + "\" /E /R Users").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+	}
 #endif
 #endif
 }

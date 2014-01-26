@@ -280,17 +280,13 @@ void Topology::_loadPeers()
 					buf.setSize(buf.size() - ptr);
 				}
 			} while (rlen > 0);
-			fclose(pd);
-		} else {
-			fclose(pd);
-			Utils::rm(pdpath);
 		}
 	} catch ( ... ) {
-		// Membership cert dump file invalid. We'll re-learn them off the net.
 		_activePeers.clear();
-		fclose(pd);
-		Utils::rm(pdpath);
 	}
+
+	fclose(pd);
+	Utils::rm(pdpath);
 }
 
 } // namespace ZeroTier

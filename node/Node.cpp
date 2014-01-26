@@ -419,12 +419,16 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(identitySecretPath.c_str(),false);
 
-		// Make sure networks.d exists
+		// Make sure networks.d exists and is secure
+		{
+			std::string networksDotD(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
 #ifdef __WINDOWS__
-		CreateDirectoryA((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),NULL);
+			CreateDirectoryA(networksDotD.c_str(),NULL);
 #else
-		mkdir((_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str(),0700);
+			mkdir(networksDotD.c_str(),0700);
 #endif
+			Utils::lockDownFile(networksDotD.c_str(),true);
+		}
 
 		// Load or generate config authentication secret
 		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
