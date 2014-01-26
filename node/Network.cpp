@@ -116,6 +116,8 @@ void Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 				std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
 				if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
 					LOG("error: unable to write network configuration file at: %s",confPath.c_str());
+				} else {
+					Utils::lockDownFile(confPath.c_str(),false);
 				}
 			}
 		} else {
@@ -368,6 +370,7 @@ void Network::_dumpMulticastCerts()
 	}
 
 	fclose(mcdb);
+	Utils::lockDownFile(mcdbPath.c_str(),false);
 }
 
 } // namespace ZeroTier
