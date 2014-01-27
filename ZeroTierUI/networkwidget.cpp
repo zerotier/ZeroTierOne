@@ -159,6 +159,12 @@ void NetworkWidget::on_networkIdButton_clicked()
 
 void NetworkWidget::on_ipListWidget_itemActivated(QListWidgetItem *item)
 {
-		if (item)
-			QApplication::clipboard()->setText(item->text());
+	if (item)
+		QApplication::clipboard()->setText(item->text());
+}
+
+void NetworkWidget::on_ipListWidget_currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+{
+	if (current)
+		QApplication::clipboard()->setText(current->text());
 }

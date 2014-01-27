@@ -96,6 +96,24 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="label_2">
+           <property name="font">
+            <font>
+             <pointsize>14</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>[</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::NoTextInteraction</set>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="nameLabel">
            <property name="font">
             <font>
@@ -114,7 +132,7 @@
             <enum>Qt::PlainText</enum>
            </property>
            <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
            </property>
            <property name="textInteractionFlags">
             <set>Qt::NoTextInteraction</set>
@@ -123,6 +141,37 @@
             <string notr="true">networkName</string>
            </property>
           </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="font">
+            <font>
+             <pointsize>14</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>]</string>
+           </property>
+           <property name="textFormat">
+            <enum>Qt::PlainText</enum>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::NoTextInteraction</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
          </item>
         </layout>
        </widget>
@@ -384,6 +433,7 @@
         </property>
         <property name="font">
          <font>
+          <pointsize>12</pointsize>
           <underline>false</underline>
          </font>
         </property>
@@ -419,7 +469,7 @@
          </font>
         </property>
         <property name="statusTip">
-         <string>Double-click an IP to copy it to the clipboard.</string>
+         <string>IP addresses assigned to this interface; click to copy to clipboard.</string>
         </property>
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
