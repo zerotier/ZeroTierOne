@@ -36,6 +36,7 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Buffer.hpp"
+#include "EthernetTap.hpp"
 
 #define ZT_NETWORK_CERT_WRITE_BUF_SIZE 131072
 
@@ -55,13 +56,14 @@ const char *Network::statusString(const Status s)
 
 Network::~Network()
 {
+	std::string devPersistentId(_tap->persistentId());
 	delete _tap;
+
 	if (_destroyOnDelete) {
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
-
-		// TODO: on Windows we need to also remove the tap interface since they're
-		// sticky on that platform.
+		if (devPersistentId.length())
+			EthernetTap::deletePersistentTapDevice(_r,devPersistentId.c_str());
 	} else {
 		// Causes flush of membership certs to disk
 		clean();

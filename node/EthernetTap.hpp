@@ -176,6 +176,11 @@ public:
 	std::string deviceName() const;
 
 	/**
+	 * @return OS-internal persistent device ID or empty string if not applicable to this platform or not persistent
+	 */
+	std::string persistentId() const;
+
+	/**
 	 * Fill or modify a set to contain multicast groups for this device
 	 *
 	 * This populates a set or, if already populated, modifies it to contain
@@ -194,6 +199,19 @@ public:
 	 */
 	void threadMain()
 		throw();
+
+	/**
+	 * Remove persistent tap device by device name
+	 *
+	 * This has no effect on platforms that do not have persistent taps.
+	 * On platforms like Windows with persistent devices the device is
+	 * uninstalled.
+	 *
+	 * @param _r Runtime environment
+	 * @param pdev Device name as returned by persistentId() while tap is running
+	 * @return True if a device was deleted
+	 */
+	static bool deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid);
 
 private:
 	const MAC _mac;
@@ -215,6 +233,8 @@ private:
 #endif
 
 #ifdef __WINDOWS__
+	void _syncIpsWithRegistry(const std::set<InetAddress> &haveIps);
+
 	HANDLE _tap;
 	OVERLAPPED _tapOvlRead,_tapOvlWrite;
 	char _tapReadBuf[ZT_IF_MTU + 32];

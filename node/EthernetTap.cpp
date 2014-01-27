@@ -570,6 +570,11 @@ std::string EthernetTap::deviceName() const
 	return std::string(_dev);
 }
 
+std::string EthernetTap::persistentId() const
+{
+	return std::string();
+}
+
 #ifdef __LINUX__
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
@@ -899,6 +904,11 @@ void EthernetTap::threadMain()
 			}
 		}
 	}
+}
+
+bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid)
+{
+	return false;
 }
 
 } // namespace ZeroTier
@@ -1278,31 +1288,9 @@ bool EthernetTap::addIP(const InetAddress &ip)
 			}
 		}
 
-		// Update registry to contain all non-link-local IPs for this interface
-		std::string regMultiIps,regMultiNetmasks;
-		for(std::set<InetAddress>::const_iterator i(haveIps.begin());i!=haveIps.end();++i) {
-			if (!i->isLinkLocal()) {
-				regMultiIps.append(i->toIpString());
-				regMultiIps.push_back((char)0);
-				regMultiNetmasks.append(i->netmask().toIpString());
-				regMultiNetmasks.push_back((char)0);
-			}
-		}
-		HKEY tcpIpInterfaces;
-		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
-			if (regMultiIps.length()) {
-				regMultiIps.push_back((char)0);
-				regMultiNetmasks.push_back((char)0);
-				RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"IPAddress",REG_MULTI_SZ,regMultiIps.data(),(DWORD)regMultiIps.length());
-				RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"SubnetMask",REG_MULTI_SZ,regMultiNetmasks.data(),(DWORD)regMultiNetmasks.length());
-			} else {
-				RegDeleteKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"IPAddress");
-				RegDeleteKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"SubnetMask");
-			}
-		}
-		RegCloseKey(tcpIpInterfaces);
+		_syncIpsWithRegistry(haveIps);
 	} catch (std::exception &exc) {
-		LOG("unexpected exception adding IP address to %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
+		LOG("unexpected exception adding IP address %s to %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
 	} catch ( ... ) {
 		LOG("unexpected exception adding IP address %s to %s: unknown exception",ip.toString().c_str(),deviceName().c_str());
 	}
@@ -1331,13 +1319,18 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 					if (addr == ip) {
 						DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
 						FreeMibTable(ipt);
+						_syncIpsWithRegistry(ips());
 						return true;
 					}
 				}
 			}
 			FreeMibTable((PVOID)ipt);
 		}
-	} catch ( ... ) {}
+	} catch (std::exception &exc) {
+		LOG("unexpected exception removing IP address %s from %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
+	} catch ( ... ) {
+		LOG("unexpected exception removing IP address %s from %s: unknown exception",ip.toString().c_str(),deviceName().c_str());
+	}
 	return false;
 }
 
@@ -1396,6 +1389,11 @@ void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const
 std::string EthernetTap::deviceName() const
 {
 	return _myDeviceInstanceId;
+}
+
+std::string EthernetTap::persistentId() const
+{
+	return _myDeviceInstanceIdPath;
 }
 
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
@@ -1499,6 +1497,59 @@ void EthernetTap::threadMain()
 	}
 
 	CancelIo(_tap);
+}
+
+bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid)
+{
+#ifdef _WIN64
+	BOOL is64Bit = TRUE;
+	const char *devcon = "\\devcon_x64.exe";
+#else
+	BOOL is64Bit = FALSE;
+	IsWow64Process(GetCurrentProcess(),&is64Bit);
+	const char *devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
+#endif
+
+	STARTUPINFOA startupInfo;
+	startupInfo.cb = sizeof(startupInfo);
+	PROCESS_INFORMATION processInfo;
+	memset(&startupInfo,0,sizeof(STARTUPINFOA));
+	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+	if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" remove @" + pid).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+		return true;
+	}
+
+	return false;
+}
+
+void EthernetTap::_syncIpsWithRegistry(const std::set<InetAddress> &haveIps)
+{
+	// Update registry to contain all non-link-local IPs for this interface
+	std::string regMultiIps,regMultiNetmasks;
+	for(std::set<InetAddress>::const_iterator i(haveIps.begin());i!=haveIps.end();++i) {
+		if (!i->isLinkLocal()) {
+			regMultiIps.append(i->toIpString());
+			regMultiIps.push_back((char)0);
+			regMultiNetmasks.append(i->netmask().toIpString());
+			regMultiNetmasks.push_back((char)0);
+		}
+	}
+	HKEY tcpIpInterfaces;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+		if (regMultiIps.length()) {
+			regMultiIps.push_back((char)0);
+			regMultiNetmasks.push_back((char)0);
+			RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"IPAddress",REG_MULTI_SZ,regMultiIps.data(),(DWORD)regMultiIps.length());
+			RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"SubnetMask",REG_MULTI_SZ,regMultiNetmasks.data(),(DWORD)regMultiNetmasks.length());
+		} else {
+			RegDeleteKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"IPAddress");
+			RegDeleteKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"SubnetMask");
+		}
+	}
+	RegCloseKey(tcpIpInterfaces);
 }
 
 } // namespace ZeroTier
