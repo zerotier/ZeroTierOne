@@ -11,6 +11,7 @@ QToolButton:focus {
 }
 QToolButton:hover {
 	background: palette(highlight);
+        color: palette(highlight-text);
 }
 QToolButton:pressed {
 	border: 1px solid #000000;
@@ -73,6 +74,10 @@ QLabel.networkName {
 	padding: 0 0.8em 0.1em 0;
 	margin: 0;
 	text-align: right;
+}
+
+QStatusBar {
+        background: palette(button);
 }
 
 #joinNetworkButton {

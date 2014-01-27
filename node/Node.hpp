@@ -45,6 +45,10 @@ class Node
 public:
 	/**
 	 * Client for controlling a local ZeroTier One node
+	 *
+	 * Windows note: be sure you call WSAStartup() before using this,
+	 * otherwise it will be unable to open a local UDP socket to
+	 * communicate with the service.
 	 */
 	class LocalClient
 	{

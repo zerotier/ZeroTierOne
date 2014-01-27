@@ -32,12 +32,25 @@
 #include <QApplication>
 #include <QDir>
 #include <QString>
+#include <QFont>
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <windows.h>
+#endif
 
 QSettings *settings = (QSettings *)0;
 
 int main(int argc, char *argv[])
 {
 	QApplication a(argc, argv);
+
+#ifdef __WINDOWS__
+	{
+		WSADATA wsaData;
+		WSAStartup(MAKEWORD(2,2),&wsaData);
+	}
+#endif
 
 	{
 		QFile qss(":css/stylesheet.css");

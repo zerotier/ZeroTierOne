@@ -36,6 +36,9 @@
 #include <QProcess>
 #include <QList>
 #include <QMessageBox>
+#include <QFont>
+
+#include "../node/Constants.hpp"
 
 NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 	QWidget(parent),
@@ -50,9 +53,20 @@ NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 	ui->ipListWidget->setMinimumHeight(lineHeight * 4);
 	ui->ipListWidget->setMaximumHeight(lineHeight * 4);
 
+#ifdef __APPLE__
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget* widget, widgets)
 		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
+#endif
+
+#ifdef __WINDOWS__
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget *widget, widgets) {
+		QFont font(widget->font());
+		font.setPointSizeF(font.pointSizeF() * 0.75);
+		widget->setFont(font);
+	}
+#endif
 }
 
 NetworkWidget::~NetworkWidget()

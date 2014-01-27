@@ -39,6 +39,7 @@
 #include <vector>
 #include <string>
 
+#include "../node/Constants.hpp"
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 

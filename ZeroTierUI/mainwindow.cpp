@@ -44,6 +44,7 @@
 #include <QVBoxLayout>
 #include <QScrollBar>
 #include <QEventLoop>
+#include <QFont>
 
 #include "main.h"
 #include "mainwindow.h"
@@ -104,6 +105,15 @@ MainWindow::MainWindow(QWidget *parent) :
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget *widget, widgets)
 		widget->setAttribute(Qt::WA_MacShowFocusRect,false);
+#endif
+
+#ifdef __WINDOWS__
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget *widget, widgets) {
+		QFont font(widget->font());
+		font.setPointSizeF(font.pointSizeF() * 0.75);
+		widget->setFont(font);
+	}
 #endif
 
 	ui->noNetworksLabel->setVisible(true);
@@ -206,7 +216,6 @@ void MainWindow::timerEvent(QTimerEvent *event)
 
 void MainWindow::customEvent(QEvent *event)
 {
-	QMessageBox::information(this,"event","event",QMessageBox::Ok);
 	ZTMessageEvent *m = (ZTMessageEvent *)event; // only one custom event type so far
 	if (m->ztMessage.size() == 0)
 		return;
