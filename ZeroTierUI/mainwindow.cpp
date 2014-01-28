@@ -121,7 +121,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->bottomContainerWidget->setVisible(false);
 	ui->networkListWidget->setVisible(false);
 
-	this->pollServiceTimerId = this->startTimer(1000);
+	this->firstTimerTick = true;
+	this->pollServiceTimerId = this->startTimer(200);
 	this->cyclesSinceResponseFromService = 0;
 }
 
@@ -133,14 +134,18 @@ MainWindow::~MainWindow()
 	mainWindow = (MainWindow *)0;
 }
 
-void MainWindow::timerEvent(QTimerEvent *event)
+void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code also calls this directly
 {
-	event->accept();
-
 	if (this->isHidden())
 		return;
-	if (pollServiceTimerId < 0)
+	if (this->pollServiceTimerId < 0)
 		return;
+
+	if (this->firstTimerTick) {
+		this->firstTimerTick = false;
+		this->killTimer(this->pollServiceTimerId);
+		this->pollServiceTimerId = this->startTimer(1500);
+	}
 
 	if (!zeroTierClient) {
 		std::string authToken;

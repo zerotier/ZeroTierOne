@@ -336,8 +336,6 @@ EthernetTap::EthernetTap(
 		}
 	}
 
-	whack(); // turns on IPv6 on OSX
-
 	::pipe(_shutdownSignalPipe);
 
 	_thread = Thread::start(this);
@@ -378,7 +376,7 @@ EthernetTap::~EthernetTap()
 #endif // __APPLE__
 }
 
-#ifdef __APPLE__
+/*
 void EthernetTap::whack()
 {
 	const char *ipconfig = UNIX_COMMANDS[ZT_MAC_IPCONFIG_COMMAND];
@@ -393,9 +391,7 @@ void EthernetTap::whack()
 		}
 	}
 }
-#else
-void EthernetTap::whack() {}
-#endif // __APPLE__ / !__APPLE__
+*/
 
 void EthernetTap::setDisplayName(const char *dn)
 {
@@ -979,7 +975,8 @@ EthernetTap::EthernetTap(
 	_arg(arg),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
-	_run(true)
+	_run(true),
+	_initialized(false)
 {
 	char subkeyName[4096];
 	char subkeyClass[4096];
@@ -1203,11 +1200,15 @@ EthernetTap::EthernetTap(
 	// Start background thread that actually performs I/O
 	_injectSemaphore = CreateSemaphore(NULL,0,1,NULL);
 	_thread = Thread::start(this);
+
+	// Certain functions can now work (e.g. ips())
+	_initialized = true;
 }
 
 EthernetTap::~EthernetTap()
 {
 	_run = false;
+
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
 	CloseHandle(_tap);
@@ -1237,12 +1238,10 @@ EthernetTap::~EthernetTap()
 	}
 }
 
-void EthernetTap::whack()
-{
-}
-
 void EthernetTap::setDisplayName(const char *dn)
 {
+	if (!_initialized)
+		return;
 	HKEY ifp;
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,(std::string("SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\") + _myDeviceInstanceId).c_str(),0,KEY_READ|KEY_WRITE,&ifp) == ERROR_SUCCESS) {
 		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,(DWORD)(strlen(dn)+1));
@@ -1252,6 +1251,8 @@ void EthernetTap::setDisplayName(const char *dn)
 
 bool EthernetTap::addIP(const InetAddress &ip)
 {
+	if (!_initialized)
+		return false;
 	if (!ip.netmaskBits()) // sanity check... netmask of 0.0.0.0 is WUT?
 		return false;
 
@@ -1299,6 +1300,8 @@ bool EthernetTap::addIP(const InetAddress &ip)
 
 bool EthernetTap::removeIP(const InetAddress &ip)
 {
+	if (!_initialized)
+		return false;
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
@@ -1339,6 +1342,9 @@ std::set<InetAddress> EthernetTap::ips() const
 	static const InetAddress linkLocalLoopback("fe80::1",64); // what is this and why does Windows assign it?
 	std::set<InetAddress> addrs;
 
+	if (!_initialized)
+		return addrs;
+
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
@@ -1369,6 +1375,8 @@ std::set<InetAddress> EthernetTap::ips() const
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
+	if (!_initialized)
+		return;
 	if (len > (ZT_IF_MTU))
 		return;
 
@@ -1398,6 +1406,9 @@ std::string EthernetTap::persistentId() const
 
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
+	if (!_initialized)
+		return false;
+
 	std::set<MulticastGroup> newGroups;
 
 	// Ensure that groups are added for each IP... this handles the MAC:ADI
@@ -1456,7 +1467,7 @@ void EthernetTap::threadMain()
 	HANDLE wait4[3];
 	wait4[0] = _injectSemaphore;
 	wait4[1] = _tapOvlRead.hEvent;
-	wait4[2] = _tapOvlWrite.hEvent;
+	wait4[2] = _tapOvlWrite.hEvent; // only included if writeInProgress is true
 
 	ReadFile(_tap,_tapReadBuf,sizeof(_tapReadBuf),NULL,&_tapOvlRead);
 	bool writeInProgress = false;

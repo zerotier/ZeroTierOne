@@ -115,14 +115,6 @@ NodeConfig::~NodeConfig()
 {
 }
 
-void NodeConfig::whackAllTaps()
-{
-	std::vector< SharedPtr<Network> > nwlist;
-	Mutex::Lock _l(_networks_m);
-	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-		n->second->tap().whack();
-}
-
 void NodeConfig::clean()
 {
 	Mutex::Lock _l(_networks_m);
@@ -205,7 +197,7 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_P("200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>");
 		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.begin());nw!=_networks.end();++nw) {
 			std::string tmp;
-			std::set<InetAddress> ips(nw->second->tap().ips());
+			std::set<InetAddress> ips(nw->second->ips());
 			for(std::set<InetAddress>::iterator i(ips.begin());i!=ips.end();++i) {
 				if (tmp.length())
 					tmp.push_back(',');
@@ -219,13 +211,14 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 				age = 0;
 			age /= 1000;
 
+			std::string dn(nw->second->tapDeviceName());
 			_P("200 listnetworks %.16llx %s %s %lld %s %s %s",
 				(unsigned long long)nw->first,
 				((nconf) ? nconf->name().c_str() : "?"),
 				Network::statusString(nw->second->status()),
 				age,
 				((nconf) ? (nconf->isOpen() ? "public" : "private") : "?"),
-				nw->second->tap().deviceName().c_str(),
+				(dn.length() > 0) ? dn.c_str() : "?",
 				((tmp.length() > 0) ? tmp.c_str() : "-"));
 		}
 	} else if (cmd[0] == "join") {

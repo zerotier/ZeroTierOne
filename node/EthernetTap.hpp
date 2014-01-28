@@ -95,11 +95,6 @@ public:
 	~EthernetTap();
 
 	/**
-	 * Perform OS dependent actions on network configuration change detection
-	 */
-	void whack();
-
-	/**
 	 * Set the user display name for this connection
 	 *
 	 * This does nothing on platforms that don't have this concept.
@@ -245,6 +240,7 @@ private:
 	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;
 	volatile bool _run;
+	volatile bool _initialized;
 #endif
 };
 

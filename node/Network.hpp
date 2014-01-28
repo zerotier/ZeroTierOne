@@ -53,6 +53,7 @@
 #include "BandwidthAccount.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
+#include "Thread.hpp"
 
 namespace ZeroTier {
 
@@ -91,6 +92,9 @@ private:
 	 * If there is no saved state, a dummy .conf is created on disk to remember
 	 * this network across restarts.
 	 *
+	 * This can be a time consuming operation on some platforms (cough Windows
+	 * cough).
+	 *
 	 * @param renv Runtime environment
 	 * @param id Network ID
 	 * @return Reference counted pointer to new network
@@ -109,10 +113,12 @@ public:
 	 */
 	enum Status
 	{
+		NETWORK_INITIALIZING,
 		NETWORK_WAITING_FOR_FIRST_AUTOCONF,
 		NETWORK_OK,
 		NETWORK_ACCESS_DENIED,
-		NETWORK_NOT_FOUND
+		NETWORK_NOT_FOUND,
+		NETWORK_INITIALIZATION_FAILED
 	};
 
 	/**
@@ -126,11 +132,6 @@ public:
 	 * @return Network ID
 	 */
 	inline uint64_t id() const throw() { return _id; }
-
-	/**
-	 * @return Ethernet tap
-	 */
-	inline EthernetTap &tap() throw() { return *_tap; }
 
 	/**
 	 * @return Address of network's controlling node
@@ -155,7 +156,10 @@ public:
 	inline bool updateMulticastGroups()
 	{
 		Mutex::Lock _l(_lock);
-		return _tap->updateMulticastGroups(_multicastGroups);
+		EthernetTap *t = _tap;
+		if (t)
+			return _tap->updateMulticastGroups(_multicastGroups);
+		return false;
 	}
 
 	/**
@@ -173,10 +177,34 @@ public:
 	 * This is called by PacketDecoder when an update comes over the wire, or
 	 * internally when an old config is reloaded from disk.
 	 *
+	 * This also cancels any netconf failure flags.
+	 *
+	 * The network can't accept configuration when in INITIALIZATION state,
+	 * and so in that state this will just return false.
+	 *
 	 * @param conf Configuration in key/value dictionary form
 	 * @param saveToDisk IF true (default), write config to disk
+	 * @return True if configuration was accepted
 	 */
-	void setConfiguration(const Dictionary &conf,bool saveToDisk = true);
+	bool setConfiguration(const Dictionary &conf,bool saveToDisk = true);
+
+	/**
+	 * Set netconf failure to 'access denied'.
+	 */
+	inline void setAccessDenied()
+	{
+		Mutex::Lock _l(_lock);
+		_netconfFailure = NETCONF_FAILURE_ACCESS_DENIED;
+	}
+
+	/**
+	 * Set netconf failure to 'not found'.
+	 */
+	inline void setNotFound()
+	{
+		Mutex::Lock _l(_lock);
+		_netconfFailure = NETCONF_FAILURE_NOT_FOUND;
+	}
 
 	/**
 	 * Causes this network to request an updated configuration from its master node now
@@ -223,16 +251,6 @@ public:
 	 */
 	inline uint64_t lastConfigUpdate() const throw() { return _lastConfigUpdate; }
 
-	/** 
-	 * Force this network's status to a particular state based on config reply
-	 */
-	inline void forceStatusTo(const Status s)
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		_status = s;
-	}
-
 	/**
 	 * @return Status of this network
 	 */
@@ -240,17 +258,20 @@ public:
 		throw()
 	{
 		Mutex::Lock _l(_lock);
-		return _status;
-	}
-
-	/**
-	 * @return True if this network is in "OK" status and can accept traffic from us
-	 */
-	inline bool isUp() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return ((_config)&&(_status == NETWORK_OK)&&(_ready));
+		if (_tap) {
+			switch(_netconfFailure) {
+				case NETCONF_FAILURE_ACCESS_DENIED:
+					return NETWORK_ACCESS_DENIED;
+				case NETCONF_FAILURE_NOT_FOUND:
+					return NETWORK_NOT_FOUND;
+				case NETCONF_FAILURE_NONE:
+					if (_lastConfigUpdate > 0)
+						return NETWORK_OK;
+					else return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
+			}
+		} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED)
+			return NETWORK_INITIALIZATION_FAILED;
+		else return NETWORK_INITIALIZING;
 	}
 
 	/**
@@ -307,6 +328,73 @@ public:
 		return _config;
 	}
 
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
+		throw();
+
+	/**
+	 * Inject a frame into tap (if it's created)
+	 *
+	 * @param from Origin MAC
+	 * @param to Destination MC
+	 * @param etherType Ethernet frame type
+	 * @param data Frame data
+	 * @param len Frame length
+	 */
+	inline void tapPut(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+	{
+		EthernetTap *t = _tap;
+		if (t)
+			t->put(from,to,etherType,data,len);
+	}
+
+	/**
+	 * Inject a frame into tap with local MAC as destination MAC (if it's created)
+	 *
+	 * @param from Origin MAC
+	 * @param etherType Ethernet frame type
+	 * @param data Frame data
+	 * @param len Frame length
+	 */
+	inline void tapPut(const MAC &from,unsigned int etherType,const void *data,unsigned int len)
+	{
+		EthernetTap *t = _tap;
+		if (t)
+			t->put(from,t->mac(),etherType,data,len);
+	}
+
+	/**
+	 * @return Tap device name or empty string if still initializing
+	 */
+	inline std::string tapDeviceName() const
+	{
+		EthernetTap *t = _tap;
+		if (t)
+			return t->deviceName();
+		else return std::string();
+	}
+
+	/**
+	 * @return Ethernet MAC address for this network's local interface
+	 */
+	inline const MAC &mac() const
+	{
+		return _mac;
+	}
+
+	/**
+	 * @return Set of currently assigned IP addresses
+	 */
+	inline std::set<InetAddress> ips() const
+	{
+		EthernetTap *t = _tap;
+		if (t)
+			return t->ips();
+		return std::set<InetAddress>();
+	}
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -315,22 +403,23 @@ private:
 	void _dumpMulticastCerts();
 
 	uint64_t _id;
-
+	MAC _mac;
 	const RuntimeEnvironment *_r;
-
-	EthernetTap *_tap;
+	EthernetTap *volatile _tap;
 	std::set<MulticastGroup> _multicastGroups;
-
 	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;
 	std::map<Address,CertificateOfMembership> _membershipCertificates;
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate;
 	SharedPtr<NetworkConfig> _config;
-
 	volatile uint64_t _lastConfigUpdate;
-	volatile Status _status;
 	volatile bool _destroyOnDelete;
-	volatile bool _ready;
-
+	volatile enum {
+		NETCONF_FAILURE_NONE,
+		NETCONF_FAILURE_ACCESS_DENIED,
+		NETCONF_FAILURE_NOT_FOUND,
+		NETCONF_FAILURE_INIT_FAILED
+	} _netconfFailure;
+	Thread _setupThread;
 	Mutex _lock;
 
 	AtomicCounter __refCount;

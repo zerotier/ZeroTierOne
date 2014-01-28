@@ -139,7 +139,7 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				} else if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == source()))
-						network->forceStatusTo(Network::NETWORK_NOT_FOUND);
+						network->setNotFound();
 				}
 				break;
 			case Packet::ERROR_IDENTITY_COLLISION:
@@ -154,7 +154,7 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
 				SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if ((network)&&(network->controller() == source()))
-					network->forceStatusTo(Network::NETWORK_ACCESS_DENIED);
+					network->setAccessDenied();
 			}	break;
 			default:
 				break;
@@ -416,7 +416,7 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
 				if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 					if (network->config()->permitsEtherType(etherType)) {
-						network->tap().put(source().toMAC(),network->tap().mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+						network->tapPut(source().toMAC(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
 					} else {
 						TRACE("dropped FRAME from %s: ethernet type %u not allowed on network %.16llx",source().toString().c_str(),etherType,(unsigned long long)network->id());
 						return true;
@@ -677,7 +677,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 						TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 						return true;
 					} else {
-						network->tap().put(sourceMac,dest.mac(),etherType,frame,frameLen);
+						network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
 					}
 				}
 			}

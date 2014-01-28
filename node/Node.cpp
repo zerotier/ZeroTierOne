@@ -545,7 +545,6 @@ Node::ReasonForTermination Node::run()
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
 					resynchronize = true;
-					_r->nc->whackAllTaps(); // call whack() on all tap devices -- hack, might go away
 				}
 			}
 

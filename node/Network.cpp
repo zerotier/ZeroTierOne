@@ -46,6 +46,7 @@ const char *Network::statusString(const Status s)
 	throw()
 {
 	switch(s) {
+		case NETWORK_INITIALIZING: return "INITIALIZING";
 		case NETWORK_WAITING_FOR_FIRST_AUTOCONF: return "WAITING_FOR_FIRST_AUTOCONF";
 		case NETWORK_OK: return "OK";
 		case NETWORK_ACCESS_DENIED: return "ACCESS_DENIED";
@@ -56,6 +57,8 @@ const char *Network::statusString(const Status s)
 
 Network::~Network()
 {
+	Thread::join(_setupThread);
+
 	std::string devPersistentId(_tap->persistentId());
 	delete _tap;
 
@@ -73,46 +76,50 @@ Network::~Network()
 
 SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t id)
 {
-	// Tag to identify tap device -- used on some OSes like Windows
-	char tag[32];
-	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)id);
+	/* We construct Network via a static method to ensure that it is immediately
+	 * wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet
+	 * tap device, a SharedPtr<> wrap can occur in the Ethernet frame handler
+	 * that then causes the Network instance to be deleted before it is finished
+	 * being constructed. C++ edge cases, how I love thee. */
 
-	// We construct Network via a static method to ensure that it is immediately
-	// wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet
-	// tap device, a SharedPtr<> wrap can occur in the Ethernet frame handler
-	// that then causes the Network instance to be deleted before it is finished
-	// being constructed. C++ edge cases, how I love thee.
 	SharedPtr<Network> nw(new Network());
 	nw->_id = id;
-	nw->_ready = false; // disable handling of Ethernet frames during construct
+	nw->_mac = renv->identity.address().toMAC();
 	nw->_r = renv;
-	nw->_tap = new EthernetTap(renv,tag,renv->identity.address().toMAC(),ZT_IF_MTU,&_CBhandleTapData,nw.ptr());
+	nw->_tap = (EthernetTap *)0;
 	nw->_lastConfigUpdate = 0;
-	nw->_status = NETWORK_WAITING_FOR_FIRST_AUTOCONF;
 	nw->_destroyOnDelete = false;
+	nw->_netconfFailure = NETCONF_FAILURE_NONE;
+
 	if (nw->controller() == renv->identity.address()) // netconf masters can't really join networks
 		throw std::runtime_error("cannot join a network for which I am the netconf master");
-	nw->_restoreState();
-	nw->_ready = true; // enable handling of Ethernet frames
-	nw->requestConfiguration();
+
+	nw->_setupThread = Thread::start<Network>(nw.ptr());
 
 	return nw;
 }
 
-void Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
+bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
+	Mutex::Lock _l(_lock);
+
+	EthernetTap *t = _tap;
+	if (!t) {
+		TRACE("BUG: setConfiguration() called while tap is null!");
+		return false; // can't accept config in initialization state
+	}
+
 	try {
 		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf));
 		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == _r->identity.address())) {
-			Mutex::Lock _l(_lock);
 			_config = newConfig;
 
 			if (newConfig->staticIps().size())
-				_tap->setIps(newConfig->staticIps());
-			_tap->setDisplayName((std::string("ZeroTier One [") + newConfig->name() + "]").c_str());
+				t->setIps(newConfig->staticIps());
+			t->setDisplayName((std::string("ZeroTier One [") + newConfig->name() + "]").c_str());
 
 			_lastConfigUpdate = Utils::now();
-			_status = NETWORK_OK;
+			_netconfFailure = NETCONF_FAILURE_NONE;
 
 			if (saveToDisk) {
 				std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
@@ -122,6 +129,8 @@ void Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 					Utils::lockDownFile(confPath.c_str(),false);
 				}
 			}
+
+			return true;
 		} else {
 			LOG("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
 		}
@@ -130,10 +139,15 @@ void Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 	} catch ( ... ) {
 		LOG("ignored invalid configuration for network %.16llx (unknown exception)",(unsigned long long)_id);
 	}
+
+	return false;
 }
 
 void Network::requestConfiguration()
 {
+	if (!_tap)
+		return; // don't bother requesting until we are initialized
+
 	if (controller() == _r->identity.address()) {
 		// netconf master cannot be a member of its own nets
 		LOG("unable to request network configuration for network %.16llx: I am the network master, cannot query self",(unsigned long long)_id);
@@ -190,6 +204,7 @@ bool Network::isAllowed(const Address &peer) const
 void Network::clean()
 {
 	Mutex::Lock _l(_lock);
+
 	if ((_config)&&(_config->isOpen())) {
 		// Open (public) networks do not track certs or cert pushes at all.
 		_membershipCertificates.clear();
@@ -215,7 +230,7 @@ void Network::clean()
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
-	if (!((Network *)arg)->isUp())
+	if (((Network *)arg)->status() != NETWORK_OK)
 		return;
 
 	const RuntimeEnvironment *_r = ((Network *)arg)->_r;
@@ -247,6 +262,31 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 		_config->com().serialize(outp);
 		_r->sw->send(outp,true);
+	}
+}
+
+void Network::threadMain()
+{
+	try {
+		// Setup thread -- this exits when tap is constructed. It's here
+		// because opening the tap can take some time on some platforms.
+		char tag[32];
+		Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)_id);
+		_tap = new EthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
+	} catch (std::exception &exc) {
+		LOG("network %.16llx failed to initialize: %s",_id,exc.what());
+		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
+	} catch ( ... ) {
+		LOG("network %.16llx failed to initialize: unknown error",_id);
+		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
+	}
+
+	try {
+		_restoreState();
+		requestConfiguration();
+	} catch ( ... ) {
+		TRACE("BUG: exception in network setup thread in _restoreState() or requestConfiguration()!");
+		_lastConfigUpdate = 0; // call requestConfiguration() again
 	}
 }
 

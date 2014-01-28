@@ -91,11 +91,6 @@ public:
 	}
 
 	/**
-	 * Call whack() on all networks' tap devices
-	 */
-	void whackAllTaps();
-
-	/**
 	 * Perform cleanup and possibly update saved state
 	 */
 	void clean();
@@ -117,8 +112,11 @@ public:
 	{
 		std::set<std::string> tapDevs;
 		Mutex::Lock _l(_networks_m);
-		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-			tapDevs.insert(n->second->tap().deviceName());
+		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+			std::string dn(n->second->tapDeviceName());
+			if (dn.length())
+				tapDevs.insert(dn);
+		}
 		return tapDevs;
 	}
 

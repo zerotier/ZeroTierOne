@@ -86,6 +86,7 @@ private:
 	QString myAddress;
 	QString myStatus;
 	QString myVersion;
+	bool firstTimerTick;
 	int pollServiceTimerId;
 	unsigned int numPeers;
 	unsigned int cyclesSinceResponseFromService;

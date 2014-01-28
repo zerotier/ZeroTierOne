@@ -86,12 +86,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (!nconf)
 		return;
 
-	if (to == network->tap().mac()) {
-		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tap().deviceName().c_str());
+	if (to == network->mac()) {
+		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tapDeviceName().c_str());
 		return;
 	}
-
-	if (from != network->tap().mac()) {
+	if (from != network->mac()) {
 		LOG("ignored tap: %s -> %s %s (bridging not supported)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 		return;
 	}
