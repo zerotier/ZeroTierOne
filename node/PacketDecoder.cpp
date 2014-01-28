@@ -106,8 +106,6 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doNETWORK_CONFIG_REQUEST(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REFRESH:
 				return _doNETWORK_CONFIG_REFRESH(_r,peer);
-			case Packet::VERB_PROBE:
-				return _doPROBE(_r,peer);
 			default:
 				// This might be something from a new or old version of the protocol.
 				// Technically it passed MAC so the packet is still valid, but we
@@ -930,25 +928,6 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
-	}
-	return true;
-}
-
-bool PacketDecoder::_doPROBE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
-{
-	try {
-		uint64_t ts = at<uint64_t>(ZT_PROTO_VERB_PROBE_IDX_TIMESTAMP);
-		//uint64_t msSinceLastSend = at<uint64_t>(ZT_PROTO_VERB_PROBE_IDX_MS_SINCE_LAST_SEND);
-		Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
-		outp.append((unsigned char)Packet::VERB_PROBE);
-		outp.append(ts);
-		outp.append(peer->lastDirectSend()); // FIXME: need to refactor to also track relayed sends
-		outp.armor(peer->key(),true);
-		_r->demarc->send(_localPort,_remoteAddress,outp.data(),outp.size(),-1);
-	} catch (std::exception &exc) {
-		TRACE("dropped PROBE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
-	} catch ( ... ) {
-		TRACE("dropped PROBE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }

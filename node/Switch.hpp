@@ -130,16 +130,6 @@ public:
 	bool sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr);
 
 	/**
-	 * Send a PROBE immediately to the indicated address
-	 *
-	 * @param localPort Originating local port or ANY_PORT to pick
-	 * @param remoteAddr IP address to send to
-	 * @param dest Destination peer
-	 * @return True if send appears successful
-	 */
-	bool sendPROBE(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr);
-
-	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect
 	 *
 	 * This only works if both peers are known, with known working direct
