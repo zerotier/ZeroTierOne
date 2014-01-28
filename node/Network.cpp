@@ -51,6 +51,7 @@ const char *Network::statusString(const Status s)
 		case NETWORK_OK: return "OK";
 		case NETWORK_ACCESS_DENIED: return "ACCESS_DENIED";
 		case NETWORK_NOT_FOUND: return "NOT_FOUND";
+		case NETWORK_INITIALIZATION_FAILED: return "INITIALIZATION_FAILED";
 	}
 	return "(invalid)";
 }
@@ -266,6 +267,7 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 }
 
 void Network::threadMain()
+	throw()
 {
 	try {
 		// Setup thread -- this exits when tap is constructed. It's here

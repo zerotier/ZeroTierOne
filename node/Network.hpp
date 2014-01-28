@@ -268,6 +268,8 @@ public:
 					if (_lastConfigUpdate > 0)
 						return NETWORK_OK;
 					else return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
+				case NETCONF_FAILURE_INIT_FAILED:
+					return NETWORK_INITIALIZATION_FAILED;
 			}
 		} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED)
 			return NETWORK_INITIALIZATION_FAILED;
