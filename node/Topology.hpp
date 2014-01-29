@@ -156,6 +156,15 @@ public:
 	}
 
 	/**
+	 * @return Set of supernode addresses
+	 */
+	inline std::set<Address> supernodeAddresses() const
+	{
+		Mutex::Lock _l(_supernodes_m);
+		return _supernodeAddresses;
+	}
+
+	/**
 	 * @return True if this node's identity is in the supernode set
 	 */
 	inline bool amSupernode() const { return _amSupernode; }
@@ -234,8 +243,7 @@ public:
 	/**
 	 * Function object to forget direct links to active peers and then ping them indirectly
 	 *
-	 * Note that this will include supernodes, though their direct links are not
-	 * forgotten as they are marked 'fixed'. So this resyncs with everyone.
+	 * Note that this excludes supernodes.
 	 */
 	class ResetActivePeers
 	{
@@ -243,10 +251,13 @@ public:
 		ResetActivePeers(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
 			_supernode(_r->topology->getBestSupernode()),
+			_supernodeAddresses(_r->topology->supernodeAddresses()),
 			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
+			if (_supernodeAddresses.count(p->address()))
+				return; // skip supernodes
 			p->forgetDirectPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
 			if (((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)&&(_supernode)) {
 				Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
@@ -258,6 +269,7 @@ public:
 	private:
 		uint64_t _now;
 		SharedPtr<Peer> _supernode;
+		std::set<Address> _supernodeAddresses;
 		const RuntimeEnvironment *_r;
 	};
 

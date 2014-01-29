@@ -508,13 +508,15 @@ Node::ReasonForTermination Node::run()
 		 * in the natural Mac way. */
 		std::string shutdownIfUnreadablePath(_r->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
 
-		// Times we last did stuff... used for firing off periodic events.
+		// TODO: persist some of this stuff between restarts
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
+		uint64_t lastSupernodePing = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
-		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
 		uint64_t lastMulticastCheck = 0;
+
+		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
 		long lastDelayDelta = 0;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
@@ -546,14 +548,24 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
+			// Ping supernodes separately for two reasons: (1) supernodes only ping each
+			// other, and (2) we still want to ping them first on resynchronize.
+			if ((resynchronize)||((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY)) {
+				lastSupernodePing = now;
+				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
+				for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p)
+					_r->sw->sendHELLO((*p)->address());
+			}
+
 			if (resynchronize) {
-				// If resynchronizing, forget P2P links to all peers and then send
-				// something to formerly active ones. This will relay via a supernode
-				// which will trigger a new RENDEZVOUS and a new hole punch.
+				/* If resynchronizing, forget P2P links to all peers and then send
+				 * something to formerly active ones. This will relay via a supernode
+				 * which will trigger a new RENDEZVOUS and a new hole punch. This
+				 * functor excludes supernodes, which are pinged separately above. */
 				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
 			} else {
 				// Periodically check for changes in our local multicast subscriptions
-				// and broadcast those changes to peers.
+				// and broadcast those changes to directly connected peers.
 				if ((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD) {
 					lastMulticastCheck = now;
 					try {
@@ -572,27 +584,19 @@ Node::ReasonForTermination Node::run()
 					}
 				}
 
-				// Periodically ping all our non-stale direct peers.
-				if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
-					lastPingCheck = now;
-					try {
-						if (_r->topology->amSupernode()) {
-							// Supernodes are so super they don't even have to ping out, since
-							// all nodes ping them. They're also never firewalled so they
-							// don't need firewall openers. They just ping each other.
-							std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
-							for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
-								if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)
-									_r->sw->sendHELLO((*p)->address());
-							}
-						} else {
+				// Periodically ping all our non-stale direct peers unless we're a supernode.
+				// Supernodes only ping each other (which is done above).
+				if (!_r->topology->amSupernode()) {
+					if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
+						lastPingCheck = now;
+						try {
 							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
 							_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
+						} catch (std::exception &exc) {
+							LOG("unexpected exception running ping check cycle: %s",exc.what());
+						} catch ( ... ) {
+							LOG("unexpected exception running ping check cycle: (unkonwn)");
 						}
-					} catch (std::exception &exc) {
-						LOG("unexpected exception running ping check cycle: %s",exc.what());
-					} catch ( ... ) {
-						LOG("unexpected exception running ping check cycle: (unkonwn)");
 					}
 				}
 			}
