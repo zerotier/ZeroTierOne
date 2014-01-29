@@ -62,8 +62,7 @@
 
 namespace ZeroTier {
 
-SysEnv::SysEnv(const RuntimeEnvironment *renv) :
-	_r(renv)
+SysEnv::SysEnv()
 {
 }
 
@@ -73,7 +72,7 @@ SysEnv::~SysEnv()
 
 #ifdef __APPLE__
 
-uint64_t SysEnv::getNetworkConfigurationFingerprint()
+uint64_t SysEnv::getNetworkConfigurationFingerprint(const std::set<std::string> &ignoreDevices)
 {
 	int mib[6];
 	size_t needed;
@@ -82,7 +81,8 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 	// Right now this just scans for changes in default routes. This is not
 	// totally robust -- it will miss cases where we switch from one 10.0.0.0/24
 	// network with gateway .1 to another -- but most of the time it'll pick
-	// up shifts in connectivity.
+	// up shifts in connectivity. Combined with sleep/wake detection this seems
+	// pretty solid so far on Mac for detecting when you change locations.
 
 	mib[0] = CTL_NET;
 	mib[1] = PF_ROUTE;
@@ -139,15 +139,13 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 
-uint64_t SysEnv::getNetworkConfigurationFingerprint()
+uint64_t SysEnv::getNetworkConfigurationFingerprint(const std::set<std::string> &ignoreDevices)
 {
 	char buf[16384];
 	uint64_t fingerprint = 5381; // djb2 hash algorithm is used below
 	char *t1,*t2;
 
 	try {
-		std::set<std::string> tapDevs(_r->nc->networkTapDeviceNames());
-
 		// Include default IPv4 route if available
 		int fd = open("/proc/net/route",O_RDONLY);
 		if (fd > 0) {
@@ -159,7 +157,7 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 					int fno = 0;
 					for(char *field=strtok_r(line," \t",&t2);(field);field=strtok_r((char *)0," \t",&t2)) {
 						if (fno == 0) { // device name
-							if ((tapDevs.count(std::string(field)))||(!strcmp(field,"lo")))
+							if ((ignoreDevices.count(std::string(field)))||(!strcmp(field,"lo")))
 								break;
 						} else if ((fno == 1)||(fno == 2)) { // destination, gateway
 							if (strlen(field) == 8) { // ignore header junk, use only hex route info
@@ -198,7 +196,7 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 					}
 
 					if ((v6ip)&&(devname)) {
-						if ((!(tapDevs.count(std::string(devname))))&&(strcmp(devname,"lo"))) {
+						if ((!(ignoreDevices.count(std::string(devname))))&&(strcmp(devname,"lo"))) {
 							while (*v6ip)
 								fingerprint = ((fingerprint << 5) + fingerprint) + (uint64_t)*(v6ip++);
 						}
@@ -215,7 +213,7 @@ uint64_t SysEnv::getNetworkConfigurationFingerprint()
 
 #ifdef __WINDOWS__
 
-uint64_t SysEnv::getNetworkConfigurationFingerprint()
+uint64_t SysEnv::getNetworkConfigurationFingerprint(const std::set<std::string> &ignoreDevices)
 {
 	// TODO: windows version
 	return 1;

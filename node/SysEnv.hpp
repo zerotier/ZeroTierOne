@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include <set>
+
 #include "NonCopyable.hpp"
 
 namespace ZeroTier {
@@ -42,16 +44,16 @@ class RuntimeEnvironment;
 class SysEnv : NonCopyable
 {
 public:
-	SysEnv(const RuntimeEnvironment *renv);
+	SysEnv();
 	~SysEnv();
 
 	/**
+	 * This computes a CRC-type code from gathered information about your network settings
+	 *
+	 * @param ignoreDevices Ignore these local network devices by OS-specific name (e.g. our taps)
 	 * @return Fingerprint of currently running network environment
 	 */
-	uint64_t getNetworkConfigurationFingerprint();
-
-private:
-	const RuntimeEnvironment *_r;
+	uint64_t getNetworkConfigurationFingerprint(const std::set<std::string> &ignoreDevices);
 };
 
 } // namespace ZeroTier

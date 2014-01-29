@@ -447,7 +447,7 @@ Node::ReasonForTermination Node::run()
 		_r->sw = new Switch(_r);
 		_r->demarc = new Demarc(_r);
 		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
-		_r->sysEnv = new SysEnv(_r);
+		_r->sysEnv = new SysEnv();
 		try {
 			_r->nc = new NodeConfig(_r,configAuthToken.c_str(),impl->controlPort);
 		} catch (std::exception &exc) {
@@ -513,7 +513,7 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
-		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint();
+		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
 		uint64_t lastMulticastCheck = 0;
 		long lastDelayDelta = 0;
 
@@ -538,7 +538,7 @@ Node::ReasonForTermination Node::run()
 			// If our network environment looks like it changed, also set resynchronize flag.
 			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
 				lastNetworkFingerprintCheck = now;
-				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint();
+				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
 				if (fp != networkConfigurationFingerprint) {
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
