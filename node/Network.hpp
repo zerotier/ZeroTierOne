@@ -269,11 +269,12 @@ public:
 						return NETWORK_OK;
 					else return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
 				case NETCONF_FAILURE_INIT_FAILED:
+				default:
 					return NETWORK_INITIALIZATION_FAILED;
 			}
-		} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED)
+		} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED) {
 			return NETWORK_INITIALIZATION_FAILED;
-		else return NETWORK_INITIALIZING;
+		} else return NETWORK_INITIALIZING;
 	}
 
 	/**
