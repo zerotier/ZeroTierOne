@@ -42,6 +42,7 @@
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
+#include "Packet.hpp"
 
 namespace ZeroTier {
 
@@ -186,9 +187,7 @@ public:
 	public:
 		OpenPeersThatNeedFirewallOpener(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
-			_r(renv)
-		{
-		}
+			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
@@ -209,9 +208,7 @@ public:
 	public:
 		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
-			_r(renv)
-		{
-		}
+			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
@@ -235,32 +232,32 @@ public:
 	};
 
 	/**
-	 * Function object to collect peers that we're talking to
+	 * Function object to forget direct links to active peers and then ping them indirectly
+	 *
+	 * Note that this will include supernodes, though their direct links are not
+	 * forgotten as they are marked 'fixed'. So this resyncs with everyone.
 	 */
-	class PingAllActivePeers
+	class ResetActivePeers
 	{
 	public:
-		PingAllActivePeers(const RuntimeEnvironment *renv,uint64_t now) throw() :
+		ResetActivePeers(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
-			_r(renv)
-		{
-		}
+			_supernode(_r->topology->getBestSupernode()),
+			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if ( 
-				   (
-				     (p->hasDirectPath())&&
-				     ((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)
-				   ) ||
-			     (t.isSupernode(p->address()))
-				 ) {
-				p->sendPing(_r,_now);
+			p->forgetDirectPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
+			if (((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)&&(_supernode)) {
+				Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
+				outp.armor(p->key(),false); // no need to encrypt a NOP
+				_supernode->send(_r,outp.data(),outp.size(),_now);
 			}
 		}
 
 	private:
 		uint64_t _now;
+		SharedPtr<Peer> _supernode;
 		const RuntimeEnvironment *_r;
 	};
 
@@ -272,9 +269,7 @@ public:
 	public:
 		CollectPeersWithActiveDirectPath(std::vector< SharedPtr<Peer> > &v,uint64_t now) throw() :
 			_now(now),
-			_v(v)
-		{
-		}
+			_v(v) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{

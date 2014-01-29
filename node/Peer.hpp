@@ -295,6 +295,20 @@ public:
 	}
 
 	/**
+	 * Forget direct paths
+	 *
+	 * @param fixedToo If true, also forget 'fixed' paths.
+	 */
+	inline void forgetDirectPaths(bool fixedToo)
+		throw()
+	{
+		if ((fixedToo)||(!_ipv4p.fixed))
+			_ipv4p.addr.zero();
+		if ((fixedToo)||(!_ipv6p.fixed))
+			_ipv6p.addr.zero();
+	}
+
+	/**
 	 * @return 256-bit secret symmetric encryption key
 	 */
 	inline const unsigned char *key() const throw() { return _key; }
@@ -411,6 +425,7 @@ public:
 
 		return (p - startAt);
 	}
+
 private:
 	/**
 	 * A direct IP path to a peer

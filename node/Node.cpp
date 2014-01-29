@@ -528,16 +528,14 @@ Node::ReasonForTermination Node::run()
 			uint64_t now = Utils::now();
 			bool resynchronize = false;
 
-			// Detect sleep/wake by looking for delay loop pauses that are longer
-			// than we intended to pause.
+			// If it looks like the computer slept and woke, resynchronize.
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {
 				resynchronize = true;
 				LOG("probable suspend/resume detected, pausing a moment for things to settle...");
 				Thread::sleep(ZT_SLEEP_WAKE_SETTLE_TIME);
 			}
 
-			// Periodically check our network environment, sending pings out to all
-			// our direct links if things look like we got a different address.
+			// If our network environment looks like it changed, also set resynchronize flag.
 			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
 				lastNetworkFingerprintCheck = now;
 				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint();
@@ -548,8 +546,58 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			// Request configuration for unconfigured nets, or nets with out of date
-			// configuration information.
+			if (resynchronize) {
+				// If resynchronizing, forget P2P links to all peers and then send
+				// something to formerly active ones. This will relay via a supernode
+				// which will trigger a new RENDEZVOUS and a new hole punch.
+				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
+			} else {
+				// Periodically check for changes in our local multicast subscriptions
+				// and broadcast those changes to peers.
+				if ((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD) {
+					lastMulticastCheck = now;
+					try {
+						std::map< SharedPtr<Network>,std::set<MulticastGroup> > toAnnounce;
+						std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw) {
+							if ((*nw)->updateMulticastGroups())
+								toAnnounce.insert(std::pair< SharedPtr<Network>,std::set<MulticastGroup> >(*nw,(*nw)->multicastGroups()));
+						}
+						if (toAnnounce.size())
+							_r->sw->announceMulticastGroups(toAnnounce);
+					} catch (std::exception &exc) {
+						LOG("unexpected exception announcing multicast groups: %s",exc.what());
+					} catch ( ... ) {
+						LOG("unexpected exception announcing multicast groups: (unknown)");
+					}
+				}
+
+				// Periodically ping all our non-stale direct peers.
+				if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
+					lastPingCheck = now;
+					try {
+						if (_r->topology->amSupernode()) {
+							// Supernodes are so super they don't even have to ping out, since
+							// all nodes ping them. They're also never firewalled so they
+							// don't need firewall openers. They just ping each other.
+							std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
+							for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
+								if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)
+									_r->sw->sendHELLO((*p)->address());
+							}
+						} else {
+							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
+							_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
+						}
+					} catch (std::exception &exc) {
+						LOG("unexpected exception running ping check cycle: %s",exc.what());
+					} catch ( ... ) {
+						LOG("unexpected exception running ping check cycle: (unkonwn)");
+					}
+				}
+			}
+
+			// Periodically or on resynchronize update network configurations.
 			if ((resynchronize)||((now - lastNetworkAutoconfCheck) >= ZT_NETWORK_AUTOCONF_CHECK_DELAY)) {
 				lastNetworkAutoconfCheck = now;
 				std::vector< SharedPtr<Network> > nets(_r->nc->networks());
@@ -559,51 +607,8 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			// Periodically check for changes in our local multicast subscriptions and broadcast
-			// those changes to peers.
-			if ((resynchronize)||((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD)) {
-				lastMulticastCheck = now;
-				try {
-					std::map< SharedPtr<Network>,std::set<MulticastGroup> > toAnnounce;
-					std::vector< SharedPtr<Network> > networks(_r->nc->networks());
-					for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw) {
-						if ((*nw)->updateMulticastGroups())
-							toAnnounce.insert(std::pair< SharedPtr<Network>,std::set<MulticastGroup> >(*nw,(*nw)->multicastGroups()));
-					}
-					if (toAnnounce.size())
-						_r->sw->announceMulticastGroups(toAnnounce);
-				} catch (std::exception &exc) {
-					LOG("unexpected exception announcing multicast groups: %s",exc.what());
-				} catch ( ... ) {
-					LOG("unexpected exception announcing multicast groups: (unknown)");
-				}
-			}
-
-			if ((resynchronize)||((now - lastPingCheck) >= ZT_PING_CHECK_DELAY)) {
-				lastPingCheck = now;
-				try {
-					if (_r->topology->amSupernode()) {
-						// Supernodes are so super they don't even have to ping out, since
-						// all nodes ping them. They're also never firewalled so they
-						// don't need firewall openers. They just ping each other.
-						std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
-						for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p) {
-							if ((now - (*p)->lastDirectSend()) > ZT_PEER_DIRECT_PING_DELAY)
-								_r->sw->sendHELLO((*p)->address());
-						}
-					} else {
-						if (resynchronize)
-							_r->topology->eachPeer(Topology::PingAllActivePeers(_r,now));
-						else _r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
-						_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
-					}
-				} catch (std::exception &exc) {
-					LOG("unexpected exception running ping check cycle: %s",exc.what());
-				} catch ( ... ) {
-					LOG("unexpected exception running ping check cycle: (unkonwn)");
-				}
-			}
-
+			// Do periodic cleanup, flushes of stuff to disk, software update
+			// checks, etc.
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
 				_r->mc->clean();
@@ -613,6 +618,7 @@ Node::ReasonForTermination Node::run()
 					_r->updater->checkIfMaxIntervalExceeded(now);
 			}
 
+			// Sleep for loop interval or until something interesting happens.
 			try {
 				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
