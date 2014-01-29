@@ -263,35 +263,51 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 	TRACE("unite: %s(%s) <> %s(%s)",p1.toString().c_str(),cg.second.toString().c_str(),p2.toString().c_str(),cg.first.toString().c_str());
 
-	{	// tell p1 where to find p2
-		Packet outp(p1,_r->identity.address(),Packet::VERB_RENDEZVOUS);
-		outp.append((unsigned char)0);
-		p2.appendTo(outp);
-		outp.append((uint16_t)cg.first.port());
-		if (cg.first.isV6()) {
-			outp.append((unsigned char)16);
-			outp.append(cg.first.rawIpData(),16);
+	/* Tell P1 where to find P2 and vice versa, sending the packets to P1 and
+	 * P2 in randomized order in terms of which gets sent first. This is done
+	 * since in a few cases NAT-t can be sensitive to slight timing differences
+	 * in terms of when the two peers initiate. Normally this is accounted for
+	 * by the nearly-simultaneous RENDEZVOUS kickoff from the supernode, but
+	 * given that supernodes are hosted on cloud providers this can in some
+	 * cases have a few ms of latency between packet departures. By randomizing
+	 * the order we make each attempted NAT-t favor one or the other going
+	 * first, meaning if it doesn't succeed the first time it might the second
+	 * and so forth. */
+	unsigned int alt = _r->prng->next32() & 1;
+	unsigned int completed = alt + 2;
+	while (alt != completed) {
+		if ((alt & 1) == 0) {
+			// Tell p1 where to find p2.
+			Packet outp(p1,_r->identity.address(),Packet::VERB_RENDEZVOUS);
+			outp.append((unsigned char)0);
+			p2.appendTo(outp);
+			outp.append((uint16_t)cg.first.port());
+			if (cg.first.isV6()) {
+				outp.append((unsigned char)16);
+				outp.append(cg.first.rawIpData(),16);
+			} else {
+				outp.append((unsigned char)4);
+				outp.append(cg.first.rawIpData(),4);
+			}
+			outp.armor(p1p->key(),true);
+			p1p->send(_r,outp.data(),outp.size(),now);
 		} else {
-			outp.append((unsigned char)4);
-			outp.append(cg.first.rawIpData(),4);
+			// Tell p2 where to find p1.
+			Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
+			outp.append((unsigned char)0);
+			p1.appendTo(outp);
+			outp.append((uint16_t)cg.second.port());
+			if (cg.second.isV6()) {
+				outp.append((unsigned char)16);
+				outp.append(cg.second.rawIpData(),16);
+			} else {
+				outp.append((unsigned char)4);
+				outp.append(cg.second.rawIpData(),4);
+			}
+			outp.armor(p2p->key(),true);
+			p2p->send(_r,outp.data(),outp.size(),now);
 		}
-		outp.armor(p1p->key(),true);
-		p1p->send(_r,outp.data(),outp.size(),now);
-	}
-	{	// tell p2 where to find p1
-		Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
-		outp.append((unsigned char)0);
-		p1.appendTo(outp);
-		outp.append((uint16_t)cg.second.port());
-		if (cg.second.isV6()) {
-			outp.append((unsigned char)16);
-			outp.append(cg.second.rawIpData(),16);
-		} else {
-			outp.append((unsigned char)4);
-			outp.append(cg.second.rawIpData(),4);
-		}
-		outp.armor(p2p->key(),true);
-		p2p->send(_r,outp.data(),outp.size(),now);
+		++alt; // counts up and also flips LSB
 	}
 
 	return true;
