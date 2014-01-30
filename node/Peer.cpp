@@ -77,12 +77,6 @@ void Peer::onReceive(
 	uint64_t now)
 {
 	if (!hops) { // direct packet
-		// Announce multicast LIKEs to peers to whom we have a direct link
-		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-			_lastAnnouncedTo = now;
-			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
-		}
-
 		// Update last receive info for our direct path
 		WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
 		wp->lastReceive = now;
@@ -99,6 +93,12 @@ void Peer::onReceive(
 					break;
 				}
 			}
+		}
+
+		// Announce multicast LIKEs to peers to whom we have a direct link
+		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+			_lastAnnouncedTo = now;
+			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
 		}
 	}
 
@@ -150,12 +150,14 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;
 	if (_ipv4p.addr) {
+		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv4p.addr.toString().c_str());
 		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv4p.localPort,_ipv4p.addr)) {
 			_ipv4p.lastSend = now;
 			sent = true;
 		}
 	}
 	if (_ipv6p.addr) {
+		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv6p.addr.toString().c_str());
 		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.localPort,_ipv6p.addr)) {
 			_ipv6p.lastSend = now;
 			sent = true;

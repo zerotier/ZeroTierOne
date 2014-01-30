@@ -51,7 +51,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 		// Unencrypted HELLOs are handled here since they are used to
 		// populate our identity cache in the first place. _doHELLO() is special
 		// in that it contains its own authentication logic.
-		TRACE("HELLO from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("<< HELLO from %s(%s) (normal unencrypted HELLO)",source().toString().c_str(),_remoteAddress.toString().c_str());
 		return _doHELLO(_r);
 	}
 
@@ -78,9 +78,10 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			return true;
 		}
 
+		TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
+
 		switch(verb()) {
 			case Packet::VERB_NOP:
-				TRACE("NOP from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
 				peer->onReceive(_r,_localPort,_remoteAddress,hops(),packetId(),Packet::VERB_NOP,0,Packet::VERB_NOP,Utils::now());
 				return true;
 			case Packet::VERB_HELLO:
@@ -107,11 +108,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doNETWORK_CONFIG_REQUEST(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REFRESH:
 				return _doNETWORK_CONFIG_REFRESH(_r,peer);
-			default:
-				// This might be something from a new or old version of the protocol.
-				// Technically it passed MAC so the packet is still valid, but we
-				// ignore it.
-				TRACE("ignored unrecognized verb %.2x from %s(%s)",(unsigned int)verb(),source().toString().c_str(),_remoteAddress.toString().c_str());
+			default: // ignore unknown verbs
 				return true;
 		}
 	} else {

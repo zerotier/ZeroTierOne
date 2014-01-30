@@ -256,9 +256,8 @@ public:
 	inline bool hasDirectPath() const throw() { return ((_ipv4p.addr)||(_ipv6p.addr)); }
 
 	/**
-	 * @return True if this peer has at least one direct IP address path that looks active
-	 *
 	 * @param now Current time
+	 * @return True if this peer has at least one active or fixed direct path
 	 */
 	inline bool hasActiveDirectPath(uint64_t now) const throw() { return ((_ipv4p.isActive(now))||(_ipv6p.isActive(now))); }
 
@@ -446,7 +445,7 @@ private:
 		inline bool isActive(const uint64_t now) const
 			throw()
 		{
-			return ((addr)&&((now - lastReceive) < ZT_PEER_LINK_ACTIVITY_TIMEOUT));
+			return ((addr)&&((fixed)||((now - lastReceive) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)));
 		}
 
 		template<unsigned int C>

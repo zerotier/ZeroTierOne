@@ -211,13 +211,14 @@ public:
 	};
 
 	/**
-	 * Function object to collect peers that need a ping sent
+	 * Pings all peers that need a ping sent, excluding supernodes (which are pinged separately)
 	 */
 	class PingPeersThatNeedPing
 	{
 	public:
 		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
+			_supernodeAddresses(renv->topology->supernodeAddresses()),
 			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
@@ -228,8 +229,8 @@ public:
 				     (
 				       (p->hasDirectPath())&&
 				       ((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)
-				     ) ||
-			       (t.isSupernode(p->address()))
+				     ) &&
+			       (!_supernodeAddresses.count(p->address()))
 				   )
 				 ) {
 				p->sendPing(_r,_now);
@@ -238,6 +239,7 @@ public:
 
 	private:
 		uint64_t _now;
+		std::set<Address> _supernodeAddresses;
 		const RuntimeEnvironment *_r;
 	};
 
@@ -259,10 +261,9 @@ public:
 		{
 			if (_supernodeAddresses.count(p->address()))
 				return; // skip supernodes
-			TRACE(">> %s",p->address().toString().c_str());
 			p->forgetDirectPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
 			if (((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)&&(_supernode)) {
-				TRACE("sending NOP to %s",p->address().toString().c_str());
+				TRACE("sending reset NOP to %s",p->address().toString().c_str());
 				Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
 				outp.armor(p->key(),false); // no need to encrypt a NOP
 				_supernode->send(_r,outp.data(),outp.size(),_now);

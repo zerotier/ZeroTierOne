@@ -543,7 +543,7 @@ Node::ReasonForTermination Node::run()
 				Thread::sleep(ZT_SLEEP_WAKE_SETTLE_TIME);
 			}
 
-			// If our network environment looks like it changed, also set resynchronize flag.
+			// If our network environment looks like it changed, resynchronize.
 			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
 				lastNetworkFingerprintCheck = now;
 				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
@@ -559,8 +559,9 @@ Node::ReasonForTermination Node::run()
 			if ((resynchronize)||((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY)) {
 				lastSupernodePing = now;
 				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
+				TRACE("pinging %d supernodes",(int)sns.size());
 				for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p)
-					_r->sw->sendHELLO((*p)->address());
+					(*p)->sendPing(_r,now);
 			}
 
 			if (resynchronize) {

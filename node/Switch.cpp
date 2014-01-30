@@ -700,7 +700,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 		uint64_t now = Utils::now();
 
 		SharedPtr<Peer> via;
-		if ((_r->topology->isSupernode(peer->address()))||(peer->hasActiveDirectPath(now))) {
+		if (peer->hasActiveDirectPath(now)) {
 			via = peer;
 		} else {
 			via = _r->topology->getBestSupernode();
@@ -744,6 +744,14 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				default:
 					break;
 			}
+
+#ifdef ZT_TRACE
+			if (via != peer) {
+				TRACE(">> %s to %s via %s (%d)",Packet::verbString(packet.verb()),peer->address().toString().c_str(),via->address().toString().c_str(),(int)packet.size());
+			} else {
+				TRACE(">> %s to %s (%d)",Packet::verbString(packet.verb()),peer->address().toString().c_str(),(int)packet.size());
+			}
+#endif
 
 			return true;
 		}
