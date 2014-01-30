@@ -43,6 +43,7 @@
 #include "InetAddress.hpp"
 #include "Utils.hpp"
 #include "Packet.hpp"
+#include "Logger.hpp"
 
 namespace ZeroTier {
 
@@ -250,16 +251,18 @@ public:
 	public:
 		ResetActivePeers(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
-			_supernode(_r->topology->getBestSupernode()),
-			_supernodeAddresses(_r->topology->supernodeAddresses()),
+			_supernode(renv->topology->getBestSupernode()),
+			_supernodeAddresses(renv->topology->supernodeAddresses()),
 			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
 			if (_supernodeAddresses.count(p->address()))
 				return; // skip supernodes
+			TRACE(">> %s",p->address().toString().c_str());
 			p->forgetDirectPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
 			if (((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)&&(_supernode)) {
+				TRACE("sending NOP to %s",p->address().toString().c_str());
 				Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
 				outp.armor(p->key(),false); // no need to encrypt a NOP
 				_supernode->send(_r,outp.data(),outp.size(),_now);

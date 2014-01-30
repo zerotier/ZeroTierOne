@@ -641,6 +641,7 @@ Node::ReasonForTermination Node::run()
 			}
 		}
 	} catch ( ... ) {
+		LOG("FATAL: unexpected exception in core loop: unknown exception");
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unexpected exception during outer main I/O loop");
 	}
 
