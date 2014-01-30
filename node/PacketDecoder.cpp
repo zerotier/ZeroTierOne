@@ -80,6 +80,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 
 		switch(verb()) {
 			case Packet::VERB_NOP:
+				TRACE("NOP from %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
 				peer->onReceive(_r,_localPort,_remoteAddress,hops(),packetId(),Packet::VERB_NOP,0,Packet::VERB_NOP,Utils::now());
 				return true;
 			case Packet::VERB_HELLO:
