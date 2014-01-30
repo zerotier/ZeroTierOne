@@ -224,6 +224,7 @@ struct _NodeImpl
 	volatile Node::ReasonForTermination reasonForTermination;
 	volatile bool started;
 	volatile bool running;
+	volatile bool resynchronize;
 
 	inline Node::ReasonForTermination terminate()
 	{
@@ -359,6 +360,7 @@ Node::Node(const char *hp,unsigned int port,unsigned int controlPort)
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
+	impl->resynchronize = false;
 }
 
 Node::~Node()
@@ -528,7 +530,11 @@ Node::ReasonForTermination Node::run()
 			}
 
 			uint64_t now = Utils::now();
-			bool resynchronize = false;
+			bool resynchronize = impl->resynchronize;
+			if (resynchronize) {
+				LOG("manual resynchronize ordered, resyncing with network");
+			}
+			impl->resynchronize = false;
 
 			// If it looks like the computer slept and woke, resynchronize.
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {
@@ -654,6 +660,13 @@ void Node::terminate(ReasonForTermination reason,const char *reasonText)
 {
 	((_NodeImpl *)_impl)->reasonForTermination = reason;
 	((_NodeImpl *)_impl)->reasonForTerminationStr = ((reasonText) ? reasonText : "");
+	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
+}
+
+void Node::resync()
+	throw()
+{
+	((_NodeImpl *)_impl)->resynchronize = true;
 	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
 }
 

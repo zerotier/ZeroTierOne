@@ -357,6 +357,12 @@ static int main(int argc,char **argv)
 } // namespace ZeroTierIdTool ------------------------------------------------
 
 #ifdef __UNIX_LIKE__
+static void sighandlerHup(int sig)
+{
+	Node *n = node;
+	if (n)
+		n->resync();
+}
 static void sighandlerQuit(int sig)
 {
 	Node *n = node;
@@ -569,7 +575,7 @@ int main(int argc,char **argv)
 #endif
 {
 #ifdef __UNIX_LIKE__
-	signal(SIGHUP,SIG_IGN);
+	signal(SIGHUP,&sighandlerHup);
 	signal(SIGPIPE,SIG_IGN);
 	signal(SIGUSR1,SIG_IGN);
 	signal(SIGUSR2,SIG_IGN);

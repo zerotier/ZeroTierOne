@@ -181,6 +181,12 @@ public:
 		throw();
 
 	/**
+	 * Forget p2p links and resynchronize with peers
+	 */
+	void resync()
+		throw();
+
+	/**
 	 * Get the ZeroTier version in major.minor.revision string format
 	 *
 	 * @return Version in string form
