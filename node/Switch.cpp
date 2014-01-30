@@ -67,7 +67,7 @@ Switch::~Switch()
 void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
 	try {
-		if (data.size() >= ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+		if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR)
 				_handleRemotePacketFragment(localPort,fromAddr,data);
 			else if (data.size() >= ZT_PROTO_MIN_PACKET_LENGTH)

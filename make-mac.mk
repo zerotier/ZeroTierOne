@@ -20,7 +20,7 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 endif
 
 # Uncomment to dump trace and log info to stdout (useful for debug/test)
-DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
+#DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 
 # Uncomment for a release optimized universal binary build
 CFLAGS=-arch i386 -arch x86_64 -Wall -O4 -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
