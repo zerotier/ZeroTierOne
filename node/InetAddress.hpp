@@ -36,6 +36,7 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
+#include "MAC.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
@@ -385,6 +386,35 @@ public:
 		throw()
 	{
 		_sa.saddr.sa_family = 0;
+	}
+
+	/**
+	 * @param mac MAC address seed
+	 * @return IPv6 link-local address
+	 */
+	static inline InetAddress makeIpv6LinkLocal(const MAC &mac)
+		throw()
+	{
+		InetAddress ip;
+		ip._sa.saddr.sa_family = AF_INET6;
+		ip._sa.sin6.sin6_addr.s6_addr[0] = 0xfe;
+		ip._sa.sin6.sin6_addr.s6_addr[1] = 0x80;
+		ip._sa.sin6.sin6_addr.s6_addr[2] = 0x00;
+		ip._sa.sin6.sin6_addr.s6_addr[3] = 0x00;
+		ip._sa.sin6.sin6_addr.s6_addr[4] = 0x00;
+		ip._sa.sin6.sin6_addr.s6_addr[5] = 0x00;
+		ip._sa.sin6.sin6_addr.s6_addr[6] = 0x00;
+		ip._sa.sin6.sin6_addr.s6_addr[7] = 0x00;
+		ip._sa.sin6.sin6_addr.s6_addr[8] = mac.data[0] & 0xfd;
+		ip._sa.sin6.sin6_addr.s6_addr[9] = mac.data[1];
+		ip._sa.sin6.sin6_addr.s6_addr[10] = mac.data[2];
+		ip._sa.sin6.sin6_addr.s6_addr[11] = 0xff;
+		ip._sa.sin6.sin6_addr.s6_addr[12] = 0xfe;
+		ip._sa.sin6.sin6_addr.s6_addr[13] = mac.data[3];
+		ip._sa.sin6.sin6_addr.s6_addr[14] = mac.data[4];
+		ip._sa.sin6.sin6_addr.s6_addr[15] = mac.data[5];
+		ip._sa.sin6.sin6_port = Utils::hton((uint16_t)64);
+		return ip;
 	}
 
 private:

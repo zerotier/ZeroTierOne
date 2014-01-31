@@ -68,8 +68,7 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 #define ZT_UNIX_IP_COMMAND 1
 #define ZT_UNIX_IFCONFIG_COMMAND 2
 #define ZT_MAC_KEXTLOAD_COMMAND 3
-#define ZT_MAC_IPCONFIG_COMMAND 4
-#define ZT_MAC_KEXTUNLOAD_COMMAND 5
+#define ZT_MAC_KEXTUNLOAD_COMMAND 4
 
 // Finds external commands on startup
 class _CommandFinder
@@ -83,7 +82,6 @@ public:
 #endif
 #ifdef __APPLE__
 		_findCmd(ZT_MAC_KEXTLOAD_COMMAND,"kextload");
-		_findCmd(ZT_MAC_IPCONFIG_COMMAND,"ipconfig");
 		_findCmd(ZT_MAC_KEXTUNLOAD_COMMAND,"kextunload");
 #endif
 	}
@@ -135,17 +133,80 @@ static const _CommandFinder UNIX_COMMANDS;
 #endif // __LINUX__
 
 #ifdef __APPLE__
+
 #include <sys/cdefs.h>
 #include <sys/uio.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
+#include <sys/ioctl.h>
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_dl.h>
+#include <net/if_media.h>
+struct prf_ra { // stupid OSX compile fix... in6_var defines this in a struct which namespaces it for C++
+	u_char onlink : 1;
+	u_char autonomous : 1;
+	u_char reserved : 6;
+} prf_ra;
+#include <netinet6/in6_var.h>
+#include <netinet/in.h>
+#include <netinet/in_var.h>
+#include <netinet/icmp6.h>
+#include <netinet6/nd6.h>
 #include <ifaddrs.h>
+
+// These are KERNEL_PRIVATE... why?
+#ifndef SIOCAUTOCONF_START
+#define SIOCAUTOCONF_START _IOWR('i', 132, struct in6_ifreq)    /* accept rtadvd on this interface */
+#endif
+#ifndef SIOCAUTOCONF_STOP
+#define SIOCAUTOCONF_STOP _IOWR('i', 133, struct in6_ifreq)    /* stop accepting rtadv for this interface */
+#endif
 
 static volatile int EthernetTap_instances = 0;
 static ZeroTier::Mutex EthernetTap_instances_m;
+
+static inline bool _setIpv6Stuff(const char *ifname,bool performNUD,bool acceptRouterAdverts)
+{
+	struct in6_ndireq nd;
+	struct in6_ifreq ifr;
+
+	int s = socket(AF_INET6,SOCK_DGRAM,0);
+	if (s <= 0)
+		return false;
+
+	memset(&nd,0,sizeof(nd));
+	strncpy(nd.ifname,ifname,sizeof(nd.ifname));
+
+	if (ioctl(s,SIOCGIFINFO_IN6,&nd)) {
+		close(s);
+		return false;
+	}
+
+	unsigned long oldFlags = (unsigned long)nd.ndi.flags;
+
+	if (performNUD)
+		nd.ndi.flags |= ND6_IFF_PERFORMNUD;
+	else nd.ndi.flags &= ~ND6_IFF_PERFORMNUD;
+
+	if (oldFlags != (unsigned long)nd.ndi.flags) {
+		if (ioctl(s,SIOCSIFINFO_FLAGS,&nd)) {
+			close(s);
+			return false;
+		}
+	}
+
+	memset(&ifr,0,sizeof(ifr));
+	strncpy(ifr.ifr_name,ifname,sizeof(ifr.ifr_name));
+	if (ioctl(s,acceptRouterAdverts ? SIOCAUTOCONF_START : SIOCAUTOCONF_STOP,&ifr)) {
+		close(s);
+		return false;
+	}
+
+	close(s);
+	return true;
+}
+
 #endif // __APPLE__
 
 namespace ZeroTier {
@@ -336,6 +397,8 @@ EthernetTap::EthernetTap(
 		}
 	}
 
+	_setIpv6Stuff(_dev,true,false);
+
 	::pipe(_shutdownSignalPipe);
 
 	_thread = Thread::start(this);
@@ -375,23 +438,6 @@ EthernetTap::~EthernetTap()
 	}
 #endif // __APPLE__
 }
-
-/*
-void EthernetTap::whack()
-{
-	const char *ipconfig = UNIX_COMMANDS[ZT_MAC_IPCONFIG_COMMAND];
-	if (ipconfig) {
-		long cpid = (long)vfork();
-		if (cpid == 0) {
-			execl(ipconfig,ipconfig,"set",_dev,"AUTOMATIC-V6",(const char *)0);
-			_exit(-1);
-		} else if (cpid > 0) {
-			int exitcode = -1;
-			waitpid(cpid,&exitcode,0);
-		}
-	}
-}
-*/
 
 void EthernetTap::setDisplayName(const char *dn)
 {
