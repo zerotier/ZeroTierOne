@@ -2,7 +2,12 @@ Building the tap for both x86_64 and i386 requires an older version of the
 Xcode tools than what now ships for Mavericks (10.9). The newer version
 does not support creating i386 kernel images.
 
-These can be obtained from:
+At the moment this is done on an OSX 10.6 virtual image that is used for
+building. (It doesn't have to be done often.) Then the kext is signed on
+the regular build system. That's because images built on newer OSX don't
+seem to load on 10.6 but 10.6 built kexts seem fine on 10.9. Go figure.
+
+Older Xcode can also be found at:
 
 https://developer.apple.com/downloads
 

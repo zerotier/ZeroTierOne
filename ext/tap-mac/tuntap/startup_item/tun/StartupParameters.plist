@@ -1,6 +1,0 @@
-{
-  Description     = "ip tunnel device kernel extension";
-  Provides        = ("tun");
-  Requires        = ("Network Configuration");
-  OrderPreference = "None";
-}
