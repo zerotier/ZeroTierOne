@@ -148,15 +148,23 @@ public:
 		for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i)
 			addIP(*i);
 		std::set<InetAddress> myIps(ips());
+#ifdef __APPLE__
 		bool haveV6LinkLocal = false;
 		for(std::set<InetAddress>::iterator i(myIps.begin());i!=myIps.end();++i) {
-			if ((i->isV6())&&(i->isLinkLocal()))
-				haveV6LinkLocal = true;
-			else if (!allIps.count(*i))
+			if (i->isLinkLocal()) {
+				if (i->isV6())
+					haveV6LinkLocal = true;
+			} else if (!allIps.count(*i))
 				removeIP(*i);
 		}
 		if (!haveV6LinkLocal)
 			addIP(InetAddress::makeIpv6LinkLocal(_mac));
+#else
+		for(std::set<InetAddress>::iterator i(myIps.begin());i!=myIps.end();++i) {
+			if ((!i->isLinkLocal())&&(!allIps.count(*i)))
+				removeIP(*i);
+		}
+#endif
 	}
 
 	/**
