@@ -130,6 +130,7 @@ static const _CommandFinder UNIX_COMMANDS;
 #include <linux/if_tun.h>
 #include <linux/if_addr.h>
 #include <linux/if_ether.h>
+#include <ifaddrs.h>
 #endif // __LINUX__
 
 #ifdef __APPLE__
@@ -569,7 +570,6 @@ bool EthernetTap::removeIP(const InetAddress &ip)
 	return false;
 }
 
-#ifdef __APPLE__
 std::set<InetAddress> EthernetTap::ips() const
 {
 	struct ifaddrs *ifa = (struct ifaddrs *)0;
@@ -606,11 +606,6 @@ std::set<InetAddress> EthernetTap::ips() const
 
 	return r;
 }
-#else
-std::set<InetAddress> EthernetTap::ips() const
-{
-}
-#endif
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
