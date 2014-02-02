@@ -79,6 +79,7 @@ private slots:
 	void on_actionAbout_triggered();
 	void on_networkIdLineEdit_textChanged(const QString &text);
 	void on_addressButton_clicked();
+	void on_actionQuick_Start_triggered();
 
 private:
 	Ui::MainWindow *ui;

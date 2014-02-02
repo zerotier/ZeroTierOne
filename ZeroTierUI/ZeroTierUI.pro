@@ -104,7 +104,8 @@ FORMS    += mainwindow.ui \
     aboutwindow.ui \
     networkwidget.ui \
     installdialog.ui \
-    licensedialog.ui
+    licensedialog.ui \
+    quickstartdialog.ui
 
 RESOURCES += \
 		resources.qrc

@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/img">
         <file>zt1icon.png</file>
+        <file>ZT1GUI.png</file>
     </qresource>
     <qresource prefix="/css">
         <file>stylesheet.css</file>

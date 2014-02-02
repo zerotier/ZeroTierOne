@@ -246,6 +246,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionQuick_Start"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -268,20 +269,15 @@
    <property name="text">
     <string>About</string>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>10</pointsize>
-    </font>
-   </property>
   </action>
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>10</pointsize>
-    </font>
+  </action>
+  <action name="actionQuick_Start">
+   <property name="text">
+    <string>Quick Start</string>
    </property>
   </action>
  </widget>

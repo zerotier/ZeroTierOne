@@ -51,6 +51,7 @@
 #include "aboutwindow.h"
 #include "networkwidget.h"
 #include "ui_mainwindow.h"
+#include "ui_quickstartdialog.h"
 
 #ifdef __APPLE__
 #include <stdio.h>
@@ -144,6 +145,13 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 	if (this->firstTimerTick) {
 		this->firstTimerTick = false;
 		this->killTimer(this->pollServiceTimerId);
+
+		if (!settings->value("shown_quickStart",false).toBool()) {
+			on_actionQuick_Start_triggered();
+			settings->setValue("shown_quickStart",true);
+			settings->sync();
+		}
+
 		this->pollServiceTimerId = this->startTimer(1500);
 	}
 
@@ -386,4 +394,13 @@ void MainWindow::on_networkIdLineEdit_textChanged(const QString &text)
 void MainWindow::on_addressButton_clicked()
 {
 	QApplication::clipboard()->setText(this->myAddress);
+}
+
+void MainWindow::on_actionQuick_Start_triggered()
+{
+	Ui::QuickstartDialog qd;
+	QDialog *qdd = new QDialog(this);
+	qd.setupUi(qdd);
+	qdd->setModal(false);
+	qdd->show();
 }
