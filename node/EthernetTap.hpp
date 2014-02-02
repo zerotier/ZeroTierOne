@@ -233,8 +233,6 @@ private:
 	Thread _thread;
 
 #ifdef __UNIX_LIKE__
-	std::set<InetAddress> _ips;
-	Mutex _ips_m;
 	char _dev[16];
 	int _fd;
 	int _shutdownSignalPipe[2];

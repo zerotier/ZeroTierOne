@@ -139,6 +139,8 @@ static const _CommandFinder UNIX_COMMANDS;
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -468,18 +470,17 @@ bool EthernetTap::addIP(const InetAddress &ip)
 		return false;
 	}
 
-	Mutex::Lock _l(_ips_m);
-
 	if (!ip)
 		return false;
-	if (_ips.count(ip) > 0)
+
+	std::set<InetAddress> allIps(ips());
+	if (allIps.count(ip) > 0)
 		return true;
 
 	// Remove and reconfigure if address is the same but netmask is different
-	for(std::set<InetAddress>::iterator i(_ips.begin());i!=_ips.end();++i) {
+	for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
 		if (i->ipsEqual(ip)) {
 			if (___removeIp(_dev,*i)) {
-				_ips.erase(i);
 				break;
 			} else {
 				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
@@ -491,13 +492,10 @@ bool EthernetTap::addIP(const InetAddress &ip)
 	if ((cpid = (long)vfork()) == 0) {
 		execl(ipcmd,ipcmd,"addr","add",ip.toString().c_str(),"dev",_dev,(const char *)0);
 		_exit(-1);
-	} else {
+	} else if (cpid > 0) {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
-		if (exitcode == 0) {
-			_ips.insert(ip);
-			return true;
-		} else return false;
+		return (exitcode == 0);
 	}
 
 	return false;
@@ -530,18 +528,17 @@ bool EthernetTap::addIP(const InetAddress &ip)
 		return false;
 	}
 
-	Mutex::Lock _l(_ips_m);
-
 	if (!ip)
 		return false;
-	if (_ips.count(ip) > 0)
+
+	std::set<InetAddress> allIps(ips());
+	if (allIps.count(ip) > 0)
 		return true; // IP/netmask already assigned
 
 	// Remove and reconfigure if address is the same but netmask is different
-	for(std::set<InetAddress>::iterator i(_ips.begin());i!=_ips.end();++i) {
+	for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
 		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
 			if (___removeIp(_dev,*i)) {
-				_ips.erase(i);
 				break;
 			} else {
 				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
@@ -556,10 +553,7 @@ bool EthernetTap::addIP(const InetAddress &ip)
 	} else {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
-		if (exitcode == 0) {
-			_ips.insert(ip);
-			return true;
-		}
+		return (exitcode == 0);
 	}
 
 	return false;
@@ -568,21 +562,55 @@ bool EthernetTap::addIP(const InetAddress &ip)
 
 bool EthernetTap::removeIP(const InetAddress &ip)
 {
-	Mutex::Lock _l(_ips_m);
-	if (_ips.count(ip) > 0) {
-		if (___removeIp(_dev,ip)) {
-			_ips.erase(ip);
+	if (ips().count(ip) > 0) {
+		if (___removeIp(_dev,ip))
 			return true;
-		}
 	}
 	return false;
 }
 
+#ifdef __APPLE__
 std::set<InetAddress> EthernetTap::ips() const
 {
-	Mutex::Lock _l(_ips_m);
-	return _ips;
+	struct ifaddrs *ifa = (struct ifaddrs *)0;
+	if (getifaddrs(&ifa))
+		return std::set<InetAddress>();
+
+	std::set<InetAddress> r;
+
+	struct ifaddrs *p = ifa;
+	while (p) {
+		if ((!strcmp(p->ifa_name,_dev))&&(p->ifa_addr)&&(p->ifa_netmask)&&(p->ifa_addr->sa_family == p->ifa_netmask->sa_family)) {
+			switch(p->ifa_addr->sa_family) {
+				case AF_INET: {
+					struct sockaddr_in *sin = (struct sockaddr_in *)p->ifa_addr;
+					struct sockaddr_in *nm = (struct sockaddr_in *)p->ifa_netmask;
+					r.insert(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
+				}	break;
+				case AF_INET6: {
+					struct sockaddr_in6 *sin = (struct sockaddr_in6 *)p->ifa_addr;
+					struct sockaddr_in6 *nm = (struct sockaddr_in6 *)p->ifa_netmask;
+					r.insert(InetAddress(sin->sin6_addr.s6_addr,16,
+						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[0]) +
+						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[1]) +
+						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[2]) +
+						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[3])));
+				}	break;
+			}
+		}
+		p = p->ifa_next;
+	}
+
+	if (ifa)
+		freeifaddrs(ifa);
+
+	return r;
 }
+#else
+std::set<InetAddress> EthernetTap::ips() const
+{
+}
+#endif
 
 void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
@@ -649,8 +677,8 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	}
 
 	{
-		Mutex::Lock _l(_ips_m);
-		for(std::set<InetAddress>::const_iterator i(_ips.begin());i!=_ips.end();++i)
+		std::set<InetAddress> allIps(ips());
+		for(std::set<InetAddress>::const_iterator i(allIps.begin());i!=allIps.end();++i)
 			newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
 	}
 
@@ -865,8 +893,8 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	}
 
 	{
-		Mutex::Lock _l(_ips_m);
-		for(std::set<InetAddress>::const_iterator i(_ips.begin());i!=_ips.end();++i)
+		std::set<InetAddress> allIps(ips());
+		for(std::set<InetAddress>::const_iterator i(allIps.begin());i!=allIps.end();++i)
 			newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
 	}
 
