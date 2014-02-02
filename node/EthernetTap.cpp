@@ -727,7 +727,15 @@ bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 //#define GIM_RTM_ADDR RTM_NEWMADDR
 //#endif
 
-static inline int _intl_getifmaddrs(struct ifmaddrs **pif)
+// Not in 10.6 includes so use our own
+struct _intl_ifmaddrs {
+	struct _intl_ifmaddrs *ifma_next;
+	struct sockaddr *ifma_name;
+	struct sockaddr *ifma_addr;
+	struct sockaddr *ifma_lladdr;
+};
+
+static inline int _intl_getifmaddrs(struct _intl_ifmaddrs **pif)
 {
 	int icnt = 1;
 	int dcnt = 0;
@@ -741,7 +749,7 @@ static inline int _intl_getifmaddrs(struct ifmaddrs **pif)
 	char *next;
 	char *p;
 	struct ifma_msghdr2 *ifmam;
-	struct ifmaddrs *ifa, *ift;
+	struct _intl_ifmaddrs *ifa, *ift;
 	struct rt_msghdr *rtm;
 	struct sockaddr *sa;
 
@@ -790,16 +798,16 @@ static inline int _intl_getifmaddrs(struct ifmaddrs **pif)
 		}
 	}
 
-	data = (char *)malloc(sizeof(struct ifmaddrs) * icnt + dcnt);
+	data = (char *)malloc(sizeof(struct _intl_ifmaddrs) * icnt + dcnt);
 	if (data == NULL) {
 		free(buf);
 		return (-1);
 	}
 
-	ifa = (struct ifmaddrs *)(void *)data;
-	data += sizeof(struct ifmaddrs) * icnt;
+	ifa = (struct _intl_ifmaddrs *)(void *)data;
+	data += sizeof(struct _intl_ifmaddrs) * icnt;
 
-	memset(ifa, 0, sizeof(struct ifmaddrs) * icnt);
+	memset(ifa, 0, sizeof(struct _intl_ifmaddrs) * icnt);
 	ift = ifa;
 
 	for (next = buf; next < buf + needed; next += rtm->rtm_msglen) {
@@ -867,7 +875,7 @@ static inline int _intl_getifmaddrs(struct ifmaddrs **pif)
 	return (0);
 }
 
-static inline void _intl_freeifmaddrs(struct ifmaddrs *ifmp)
+static inline void _intl_freeifmaddrs(struct _intl_ifmaddrs *ifmp)
 {
 	free(ifmp);
 }
@@ -877,9 +885,9 @@ static inline void _intl_freeifmaddrs(struct ifmaddrs *ifmp)
 bool EthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	std::set<MulticastGroup> newGroups;
-	struct ifmaddrs *ifmap = (struct ifmaddrs *)0;
+	struct _intl_ifmaddrs *ifmap = (struct _intl_ifmaddrs *)0;
 	if (!_intl_getifmaddrs(&ifmap)) {
-		struct ifmaddrs *p = ifmap;
+		struct _intl_ifmaddrs *p = ifmap;
 		while (p) {
 			if (p->ifma_addr->sa_family == AF_LINK) {
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
