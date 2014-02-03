@@ -305,6 +305,11 @@ error_no_byte_order_defined;
 #define ZT_PEER_LINK_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 1000)
 
 /**
+ * Stop relaying via peers that have not responded to direct sends in this long
+ */
+#define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
+
+/**
  * Number of outgoing verb/packetId pairs to keep for sends expecting responses
  */
 #define ZT_PEER_REQUEST_HISTORY_LENGTH 8

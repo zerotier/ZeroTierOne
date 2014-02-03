@@ -134,19 +134,31 @@ void Topology::saveIdentity(const Identity &id)
 SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const
 {
 	SharedPtr<Peer> bestSupernode;
-	unsigned int bestSupernodeLatency = 0xffff;
+	unsigned int bestSupernodeLatency = 65536;
 	uint64_t now = Utils::now();
 
 	Mutex::Lock _l(_supernodes_m);
 
-	if (_supernodePeers.empty())
-		return bestSupernode;
-
+	// First look for a best supernode by comparing latencies, but exclude
+	// supernodes that have not responded to direct messages in order to
+	// try to exclude any that are dead or unreachable.
 	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();) {
+		// Skip explicitly avoided relays
 		for(unsigned int i=0;i<avoidCount;++i) {
-			if (avoid[i] == (*sn)->address())
-				goto skip_and_try_next_supernode;
+			if (avoid[i] == (*sn)->address()) {
+				++sn;
+				continue;
+			}
 		}
+
+		// Skip possibly comatose or unreachable relays
+		uint64_t lds = (*sn)->lastDirectSend();
+		uint64_t ldr = (*sn)->lastDirectReceive();
+		if ((lds)&&(ldr > lds)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD)) {
+			++sn;
+			continue;
+		}
+
 		if ((*sn)->hasActiveDirectPath(now)) {
 			unsigned int l = (*sn)->latency();
 			if (bestSupernode) {
@@ -160,8 +172,6 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 				bestSupernode = *sn;
 			}
 		}
-skip_and_try_next_supernode:
-		++sn;
 	}
 
 	if (bestSupernode) {
@@ -170,6 +180,7 @@ skip_and_try_next_supernode:
 	} else if (strictAvoid)
 		return SharedPtr<Peer>();
 
+	// If we have nothing from above, just pick one without avoidance criteria.
 	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
 		if ((*sn)->hasActiveDirectPath(now)) {
 			unsigned int l = (*sn)->latency();
