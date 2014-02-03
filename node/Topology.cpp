@@ -172,6 +172,8 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 				bestSupernode = *sn;
 			}
 		}
+
+		++sn;
 	}
 
 	if (bestSupernode) {
