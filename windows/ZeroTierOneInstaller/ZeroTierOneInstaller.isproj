@@ -28,4 +28,10 @@
 		</TaggedOutputs> -->
 	</ItemGroup>
 	<Import Project="$(MSBuildExtensionsPath32)\InstallShield\2013Limited\InstallShield.targets"/>
+	<ItemGroup>
+		<ProjectReference Include="..\ZeroTierOneService\ZeroTierOneService.csproj">
+			<Name>ZeroTierOneService</Name>
+			<Project>{63D28112-9A56-42FA-9C3E-EF6C58AF09B3}</Project>
+		</ProjectReference>
+	</ItemGroup>
 </Project>

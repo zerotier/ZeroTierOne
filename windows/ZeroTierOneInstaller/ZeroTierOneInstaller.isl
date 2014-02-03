@@ -352,6 +352,8 @@
 		<row><td>Qt5Widgets.dll</td><td>{205A3CCB-CF34-4208-8944-7861AA7A71E3}</td><td>INSTALLDIR</td><td>2</td><td/><td>qt5widgets.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>WdfCoinstaller01011.dll</td><td>{181ACA78-4FCE-48F4-A2A3-3B9ADA1C9849}</td><td>X64</td><td>2</td><td/><td>wdfcoinstaller01011.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>WdfCoinstaller01011.dll1</td><td>{2C7D1A20-31A6-4F69-AA02-AFD6F51AC22B}</td><td>X86</td><td>2</td><td/><td>wdfcoinstaller01011.dll1</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ZeroTierOneService.Primary_output</td><td>{A3481E7F-595F-41F7-AC07-89A0DC764646}</td><td>INSTALLDIR</td><td>2</td><td/><td>zerotieroneservice.primary_o</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>ZeroTier_One.exe</td><td>{19114EA7-C188-4171-9B49-9D78674D7547}</td><td>INSTALLDIR</td><td>2</td><td/><td>zerotier_one.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>devcon_x64.exe</td><td>{4C7D90E3-6542-4BB3-A94A-96EC3AB0B936}</td><td>ONE</td><td>2</td><td/><td>devcon_x64.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>devcon_x86.exe</td><td>{3235C2E7-DCC2-47AE-925F-71A023406734}</td><td>ONE</td><td>2</td><td/><td>devcon_x86.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>icudt51.dll</td><td>{C82729DD-325C-49BB-8785-BC178306EFB2}</td><td>INSTALLDIR</td><td>2</td><td/><td>icudt51.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
@@ -360,6 +362,8 @@
 		<row><td>libEGL.dll</td><td>{D90EF89D-15FD-4078-944E-0CD59F271DDD}</td><td>INSTALLDIR</td><td>2</td><td/><td>libegl.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>libGLESv2.dll</td><td>{B107C281-330A-48FE-A5B7-4FD770EF6E1E}</td><td>INSTALLDIR</td><td>2</td><td/><td>libglesv2.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 		<row><td>qwindows.dll</td><td>{A76236B1-D579-4C4B-A462-2C78D5E1D344}</td><td>PLATFORMS</td><td>2</td><td/><td>qwindows.dll</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>zerotier_one_x64.exe</td><td>{9E0F5EAD-8E4C-4BC7-B217-71A14B8BF874}</td><td>ONE</td><td>2</td><td/><td>zerotier_one_x64.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
+		<row><td>zerotier_one_x86.exe</td><td>{427F8EB7-9E68-4B66-9A95-EF4DA965219F}</td><td>ONE</td><td>2</td><td/><td>zerotier_one_x86.exe</td><td>17</td><td/><td/><td/><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td><td>/LogFile=</td></row>
 	</table>
 
 	<table name="Condition">
@@ -1088,6 +1092,7 @@
 		<row><td>ISSelfRegisterCosting</td><td>1</td><td>ISSELFREG.DLL</td><td>ISSelfRegisterCosting</td><td/><td/></row>
 		<row><td>ISSelfRegisterFiles</td><td>3073</td><td>ISSELFREG.DLL</td><td>ISSelfRegisterFiles</td><td/><td/></row>
 		<row><td>ISSelfRegisterFinalize</td><td>1</td><td>ISSELFREG.DLL</td><td>ISSelfRegisterFinalize</td><td/><td/></row>
+		<row><td>ISSetAllUsers</td><td>257</td><td>SetAllUsers.dll</td><td>SetAllUsers</td><td/><td/></row>
 		<row><td>ISUnSelfRegisterFiles</td><td>3073</td><td>ISSELFREG.DLL</td><td>ISUnSelfRegisterFiles</td><td/><td/></row>
 		<row><td>SetARPINSTALLLOCATION</td><td>51</td><td>ARPINSTALLLOCATION</td><td>[INSTALLDIR]</td><td/><td/></row>
 		<row><td>SetAllUsersProfileNT</td><td>51</td><td>ALLUSERSPROFILE</td><td>[%SystemRoot]\Profiles\All Users</td><td/><td/></row>
@@ -1899,6 +1904,8 @@
 		<row><td>AlwaysInstall</td><td>Qt5Widgets.dll</td></row>
 		<row><td>AlwaysInstall</td><td>WdfCoinstaller01011.dll</td></row>
 		<row><td>AlwaysInstall</td><td>WdfCoinstaller01011.dll1</td></row>
+		<row><td>AlwaysInstall</td><td>ZeroTierOneService.Primary_output</td></row>
+		<row><td>AlwaysInstall</td><td>ZeroTier_One.exe</td></row>
 		<row><td>AlwaysInstall</td><td>devcon_x64.exe</td></row>
 		<row><td>AlwaysInstall</td><td>devcon_x86.exe</td></row>
 		<row><td>AlwaysInstall</td><td>icudt51.dll</td></row>
@@ -1907,6 +1914,8 @@
 		<row><td>AlwaysInstall</td><td>libEGL.dll</td></row>
 		<row><td>AlwaysInstall</td><td>libGLESv2.dll</td></row>
 		<row><td>AlwaysInstall</td><td>qwindows.dll</td></row>
+		<row><td>AlwaysInstall</td><td>zerotier_one_x64.exe</td></row>
+		<row><td>AlwaysInstall</td><td>zerotier_one_x86.exe</td></row>
 	</table>
 
 	<table name="File">
@@ -1935,6 +1944,10 @@
 		<row><td>qwindows.dll</td><td>qwindows.dll</td><td>qwindows.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\QtWin32Dlls\platforms\qwindows.dll</td><td>1</td><td/></row>
 		<row><td>wdfcoinstaller01011.dll</td><td>WdfCoinstaller01011.dll</td><td>WDFCOI~1.DLL|WdfCoinstaller01011.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\WdfCoinstaller01011.dll</td><td>1</td><td/></row>
 		<row><td>wdfcoinstaller01011.dll1</td><td>WdfCoinstaller01011.dll1</td><td>WDFCOI~1.DLL|WdfCoinstaller01011.dll</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x86\WdfCoinstaller01011.dll</td><td>1</td><td/></row>
+		<row><td>zerotier_one.exe</td><td>ZeroTier_One.exe</td><td>ZEROTI~1.EXE|ZeroTier One.exe</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\build-ZeroTierUI-Desktop_Qt_5_2_0_MSVC2012_32bit-Release\release\ZeroTier One.exe</td><td>1</td><td/></row>
+		<row><td>zerotier_one_x64.exe</td><td>zerotier_one_x64.exe</td><td>ZEROTI~1.EXE|zerotier-one_x64.exe</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\windows\Build\x64\Release\zerotier-one_x64.exe</td><td>1</td><td/></row>
+		<row><td>zerotier_one_x86.exe</td><td>zerotier_one_x86.exe</td><td>ZEROTI~1.EXE|zerotier-one_x86.exe</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\windows\Build\Win32\Release\zerotier-one_x86.exe</td><td>1</td><td/></row>
+		<row><td>zerotieroneservice.primary_o</td><td>ZeroTierOneService.Primary_output</td><td>ZeroTierOneService.Primary output</td><td>0</td><td/><td/><td/><td>1</td><td>&lt;ZeroTierOneService&gt;|Built</td><td>3</td><td/></row>
 		<row><td>zttap200.cat</td><td>ISX_DEFAULTCOMPONENT5</td><td>zttap200.cat</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\zttap200.cat</td><td>1</td><td/></row>
 		<row><td>zttap200.cat1</td><td>ISX_DEFAULTCOMPONENT6</td><td>zttap200.cat</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x86\zttap200.cat</td><td>1</td><td/></row>
 		<row><td>zttap200.inf</td><td>ISX_DEFAULTCOMPONENT5</td><td>zttap200.inf</td><td>0</td><td/><td/><td/><td>1</td><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ext\bin\tap-windows\x64\zttap200.inf</td><td>1</td><td/></row>
@@ -2095,6 +2108,8 @@
 		<row><td>Qt5Widgets.dll</td><td/><td/><td>_6CB4C7B2_E80E_4AC3_838C_6D1431F5AC93_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>WdfCoinstaller01011.dll</td><td/><td/><td>_25CAA8A4_34FC_4599_94AF_0124B400A2F8_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>WdfCoinstaller01011.dll1</td><td/><td/><td>_2FCC37B9_1DE6_4163_A99C_F53EA4420CCB_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ZeroTierOneService.Primary_output</td><td/><td/><td>_406DBE6B_9F43_495C_B77A_2EA0367BB019_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>ZeroTier_One.exe</td><td/><td/><td>_E6CC054F_69F6_4B50_B5BD_108DE01DC666_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>devcon_x64.exe</td><td/><td/><td>_419B108B_CB71_4DE5_ADC7_1889BE228BAC_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>devcon_x86.exe</td><td/><td/><td>_02A951D7_7BF2_4D39_85EC_032CDBD9D644_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>icudt51.dll</td><td/><td/><td>_3A5B57B7_E9D6_4B25_960E_DBA119CA8153_FILTER</td><td/><td/><td/><td/></row>
@@ -2103,6 +2118,8 @@
 		<row><td>libEGL.dll</td><td/><td/><td>_4C26B75E_850C_4565_AAC4_1E9576965D5E_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>libGLESv2.dll</td><td/><td/><td>_DA9BD817_C07E_4558_8F11_723DDB352DEB_FILTER</td><td/><td/><td/><td/></row>
 		<row><td>qwindows.dll</td><td/><td/><td>_A5F1B009_8024_4EA9_A5B5_79E6E514A5E4_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>zerotier_one_x64.exe</td><td/><td/><td>_F5FB3564_5C0E_4347_BAD6_7B7432EA9430_FILTER</td><td/><td/><td/><td/></row>
+		<row><td>zerotier_one_x86.exe</td><td/><td/><td>_732E3C1D_4AE4_497A_A2FB_41E122A7E144_FILTER</td><td/><td/><td/><td/></row>
 	</table>
 
 	<table name="ISCustomActionReference">
@@ -2411,6 +2428,8 @@
 		<row><td>ProgramFilesFolder</td><td/><td/><td>1</td></row>
 		<row><td>SystemFolder</td><td/><td/><td>1</td></row>
 		<row><td>WindowsFolder</td><td/><td/><td>1</td></row>
+		<row><td>ZeroTierOne</td><td>ZeroTierOne\ZeroTierOne.vcxproj</td><td/><td>2</td></row>
+		<row><td>ZeroTierOneService</td><td>ZeroTierOneService\ZeroTierOneService.csproj</td><td/><td>2</td></row>
 	</table>
 
 	<table name="ISPowerShellWrap">
@@ -3825,6 +3844,9 @@
 		<row><td>ID_STRING3</td><td>1033</td><td>contact@zerotier.com</td><td>0</td><td/><td>-1599942416</td></row>
 		<row><td>ID_STRING4</td><td>1033</td><td>https://www.zerotier.com/</td><td>0</td><td/><td>-1599936272</td></row>
 		<row><td>ID_STRING5</td><td>1033</td><td>https://www.zerotier.com/downloads.html</td><td>0</td><td/><td>-1599985392</td></row>
+		<row><td>ID_STRING6</td><td>1033</td><td>ZeroTier One</td><td>0</td><td/><td>287479504</td></row>
+		<row><td>ID_STRING7</td><td>1033</td><td>Ethernet Virtualization Service</td><td>0</td><td/><td>287442672</td></row>
+		<row><td>ID_STRING8</td><td>1033</td><td>ZEROTI~1|ZeroTier One</td><td>0</td><td/><td>287494993</td></row>
 		<row><td>IIDS_UITEXT_FeatureUninstalled</td><td>1033</td><td>This feature will remain uninstalled.</td><td>0</td><td/><td>-1599985520</td></row>
 	</table>
 
@@ -3933,6 +3955,7 @@
 		<col def="S255">ISBuildSourcePath</col>
 		<col def="I2">ISIconIndex</col>
 		<row><td>ARPPRODUCTICON.exe</td><td/><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\ZeroTierUI\zt1icon.ico</td><td>0</td></row>
+		<row><td>NewShortcut1_E532AA9A6AD9437D831F39896EC72272.exe</td><td/><td>C:\Users\api\Documents\Visual Studio 2012\Projects\ZeroTierOne\build-ZeroTierUI-Desktop_Qt_5_2_0_MSVC2012_32bit-Release\release\ZeroTier One.exe</td><td>0</td></row>
 	</table>
 
 	<table name="IniFile">
@@ -3978,6 +4001,7 @@
 		<row><td>ISSelfRegisterCosting</td><td/><td>2201</td><td/><td/></row>
 		<row><td>ISSelfRegisterFiles</td><td/><td>5601</td><td/><td/></row>
 		<row><td>ISSelfRegisterFinalize</td><td/><td>6601</td><td/><td/></row>
+		<row><td>ISSetAllUsers</td><td>Not Installed</td><td>10</td><td/><td/></row>
 		<row><td>ISUnSelfRegisterFiles</td><td/><td>2202</td><td/><td/></row>
 		<row><td>InstallFiles</td><td/><td>4000</td><td>InstallFiles</td><td/></row>
 		<row><td>InstallFinalize</td><td/><td>6600</td><td>InstallFinalize</td><td/></row>
@@ -4065,7 +4089,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>ISTheme</td><td>InstallShield Blue.theme</td></row>
 		<row><td>ISUSLock</td><td>{1C46AFC4-D60A-4FD4-B53C-C2A31F763477}</td></row>
 		<row><td>ISUSSignature</td><td>{C55432A9-A602-4EEB-97E9-9DA69591230D}</td></row>
-		<row><td>ISVisitedViews</td><td>viewAssistant,viewISToday,viewProject,viewRealSetupDesign,viewSetupDesign,viewSetupTypes,viewUpgradePaths,viewUpdateService,viewRegistry,viewUI,viewBillboards,viewTextMessages,viewSystemSearch,viewInstallScriptStd,viewCustomActions,viewSupportFiles,viewRelease,viewDesignPatches,viewAppV,viewFeatureFiles,viewServices,viewComponentServices,viewVRoots,viewEnvironmentVariables,viewFileExtensions,viewIniFiles,viewTextFiles,viewDependencies,viewObjects,viewAppFiles</td></row>
+		<row><td>ISVisitedViews</td><td>viewAssistant,viewISToday,viewProject,viewRealSetupDesign,viewSetupDesign,viewSetupTypes,viewUpgradePaths,viewUpdateService,viewRegistry,viewUI,viewBillboards,viewTextMessages,viewSystemSearch,viewInstallScriptStd,viewCustomActions,viewSupportFiles,viewRelease,viewDesignPatches,viewAppV,viewFeatureFiles,viewServices,viewComponentServices,viewVRoots,viewEnvironmentVariables,viewFileExtensions,viewIniFiles,viewTextFiles,viewDependencies,viewObjects,viewAppFiles,viewShortcuts</td></row>
 		<row><td>Limited</td><td>1</td></row>
 		<row><td>LockPermissionMode</td><td>1</td></row>
 		<row><td>MsiExecCmdLineOptions</td><td/></row>
@@ -4095,6 +4119,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>FileCost</td><td/><td>900</td><td>FileCost</td><td/></row>
 		<row><td>FindRelatedProducts</td><td/><td>430</td><td>FindRelatedProducts</td><td/></row>
 		<row><td>ISPreventDowngrade</td><td>ISFOUNDNEWERPRODUCTVERSION</td><td>450</td><td>ISPreventDowngrade</td><td/></row>
+		<row><td>ISSetAllUsers</td><td>Not Installed</td><td>10</td><td/><td/></row>
 		<row><td>InstallWelcome</td><td>Not Installed</td><td>1210</td><td>InstallWelcome</td><td/></row>
 		<row><td>IsolateComponents</td><td/><td>950</td><td>IsolateComponents</td><td/></row>
 		<row><td>LaunchConditions</td><td>Not Installed</td><td>410</td><td>LaunchConditions</td><td/></row>
@@ -4123,6 +4148,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 	<table name="LaunchCondition">
 		<col key="yes" def="s255">Condition</col>
 		<col def="l255">Description</col>
+		<row><td>(Not Version9X) And (Not VersionNT=400) And (Not VersionNT=500) And (Not VersionNT=501) And (Not VersionNT=502) And (Not VersionNT=602)</td><td>##IDPROP_EXPRESS_LAUNCH_CONDITION_OS##</td></row>
 	</table>
 
 	<table name="ListBox">
@@ -4373,6 +4399,8 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>ARPCONTACT</td><td>##ID_STRING3##</td><td/></row>
 		<row><td>ARPHELPLINK</td><td>##ID_STRING4##</td><td/></row>
 		<row><td>ARPINSTALLLOCATION</td><td/><td/></row>
+		<row><td>ARPNOMODIFY</td><td>1</td><td/></row>
+		<row><td>ARPNOREPAIR</td><td>1</td><td/></row>
 		<row><td>ARPPRODUCTICON</td><td>ARPPRODUCTICON.exe</td><td/></row>
 		<row><td>ARPSIZE</td><td/><td/></row>
 		<row><td>ARPURLINFOABOUT</td><td>##ID_STRING2##</td><td/></row>
@@ -4441,7 +4469,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>PROGMSG_IIS_ROLLBACKAPPPOOLS</td><td>##IDS_PROGMSG_IIS_ROLLBACKAPPPOOLS##</td><td/></row>
 		<row><td>PROGMSG_IIS_ROLLBACKVROOTS</td><td>##IDS_PROGMSG_IIS_ROLLBACKVROOTS##</td><td/></row>
 		<row><td>PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS</td><td>##IDS_PROGMSG_IIS_ROLLBACKWEBSERVICEEXTENSIONS##</td><td/></row>
-		<row><td>ProductCode</td><td>{95C68929-5113-4049-89EB-2A6185CA420B}</td><td/></row>
+		<row><td>ProductCode</td><td>{D90E635B-B81D-4F77-B3DE-515EA5E91452}</td><td/></row>
 		<row><td>ProductName</td><td>ZeroTier One</td><td/></row>
 		<row><td>ProductVersion</td><td>1.00.0000</td><td/></row>
 		<row><td>ProgressType0</td><td>install</td><td/></row>
@@ -4458,7 +4486,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<row><td>SecureCustomProperties</td><td>ISFOUNDNEWERPRODUCTVERSION;USERNAME;COMPANYNAME;ISX_SERIALNUM;SUPPORTDIR</td><td/></row>
 		<row><td>SelectedSetupType</td><td>##IDS__DisplayName_Typical##</td><td/></row>
 		<row><td>SetupType</td><td>Typical</td><td/></row>
-		<row><td>UpgradeCode</td><td>{6F23B4B4-1AB3-4F9D-85B1-6340199C9D9D}</td><td/></row>
+		<row><td>UpgradeCode</td><td>{A61CA7BC-62B0-45F7-A86F-7CA340142B28}</td><td/></row>
 		<row><td>_IsMaintenance</td><td>Change</td><td/></row>
 		<row><td>_IsSetupTypeMin</td><td>Typical</td><td/></row>
 	</table>
@@ -4565,6 +4593,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<col def="S255">Arguments</col>
 		<col def="I2">Wait</col>
 		<col def="s72">Component_</col>
+		<row><td>NewEvent1</td><td>ZeroTierOneService</td><td>129</td><td/><td>0</td><td>ZeroTierOneService.Primary_output</td></row>
 	</table>
 
 	<table name="ServiceInstall">
@@ -4581,6 +4610,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<col def="S255">Arguments</col>
 		<col def="s72">Component_</col>
 		<col def="L255">Description</col>
+		<row><td>NewServiceInstall1</td><td>ZeroTierOneService</td><td>##ID_STRING6##</td><td>16</td><td>2</td><td>32771</td><td/><td/><td/><td/><td/><td>ZeroTierOneService.Primary_output</td><td>##ID_STRING7##</td></row>
 	</table>
 
 	<table name="Shortcut">
@@ -4603,6 +4633,7 @@ RABWAEQALQA1AAEARQB4AHAAcgBlAHMAcwA=
 		<col def="S255">ISComments</col>
 		<col def="S255">ISShortcutName</col>
 		<col def="I4">ISAttributes</col>
+		<row><td>NewShortcut1</td><td>ProgramMenuFolder</td><td>##ID_STRING8##</td><td>ZeroTier_One.exe</td><td>[INSTALLDIR]ZeroTier One.exe</td><td/><td/><td/><td>NewShortcut1_E532AA9A6AD9437D831F39896EC72272.exe</td><td>1</td><td>1</td><td/><td/><td/><td/><td/><td/><td/><td/></row>
 	</table>
 
 	<table name="Signature">
