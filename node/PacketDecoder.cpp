@@ -282,15 +282,18 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 
 		switch(inReVerb) {
 			case Packet::VERB_HELLO: {
-				//unsigned int latency = std::min((unsigned int)(Utils::now() - at<uint64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP)),(unsigned int)0xffff);
+				unsigned int latency = std::min((unsigned int)(Utils::now() - at<uint64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP)),(unsigned int)0xffff);
 				unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION];
 				unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION];
 				unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
-				TRACE("%s(%s): OK(HELLO), version %u.%u.%u",source().toString().c_str(),_remoteAddress.toString().c_str(),vMajor,vMinor,vRevision);
+				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u",source().toString().c_str(),_remoteAddress.toString().c_str(),vMajor,vMinor,vRevision,latency);
+				peer->addDirectLatencyMeasurment(latency);
 				peer->setRemoteVersion(vMajor,vMinor,vRevision);
 
 				// If a supernode has a version higher than ours, this causes a software
-				// update check to run now.
+				// update check to run now. This might bum-rush download.zerotier.com, but
+				// it's hosted on S3 so hopefully it can take it. This should cause updates
+				// to propagate out very quickly.
 				if ((_r->updater)&&(_r->topology->isSupernode(peer->address())))
 					_r->updater->sawRemoteVersion(vMajor,vMinor,vRevision);
 			}	break;

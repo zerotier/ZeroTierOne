@@ -43,8 +43,7 @@ Peer::Peer() :
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
-	_latency(0),
-	_requestHistoryPtr(0)
+	_latency(0)
 {
 }
 
@@ -59,7 +58,8 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastAnnouncedTo(0),
 	_vMajor(0),
 	_vMinor(0),
-	_vRevision(0)
+	_vRevision(0),
+	_latency(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
@@ -83,17 +83,6 @@ void Peer::onReceive(
 		wp->localPort = ((localPort) ? localPort : Demarc::ANY_PORT);
 		if (!wp->fixed)
 			wp->addr = remoteAddr;
-
-		// Learn latency from replies
-		if (inReVerb != Packet::VERB_NOP) {
-			for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p) {
-				if ((_requestHistory[p].timestamp)&&(_requestHistory[p].packetId == inRePacketId)&&(_requestHistory[p].verb == inReVerb)) {
-					_latency = std::min((unsigned int)(now - _requestHistory[p].timestamp),(unsigned int)0xffff);
-					_requestHistory[p].timestamp = 0;
-					break;
-				}
-			}
-		}
 
 		// Announce multicast LIKEs to peers to whom we have a direct link
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
@@ -137,12 +126,14 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 			sent = true;
 		}
 	}
+
 	if (_ipv6p.addr) {
 		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,"\0",1,ZT_FIREWALL_OPENER_HOPS)) {
 			_ipv6p.lastFirewallOpener = now;
 			sent = true;
 		}
 	}
+
 	return sent;
 }
 
@@ -156,6 +147,7 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 			sent = true;
 		}
 	}
+
 	if (_ipv6p.addr) {
 		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv6p.addr.toString().c_str());
 		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.localPort,_ipv6p.addr)) {
@@ -163,6 +155,7 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 			sent = true;
 		}
 	}
+
 	return sent;
 }
 

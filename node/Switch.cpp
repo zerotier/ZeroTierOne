@@ -218,11 +218,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-
-	if (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1)) {
-		dest->expectResponseTo(outp.packetId(),Packet::VERB_HELLO,localPort,now);
-		return true;
-	} else return false;
+	return _r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1);
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
@@ -735,14 +731,6 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 					fragStart += chunkSize;
 					remaining -= chunkSize;
 				}
-			}
-
-			switch(packet.verb()) {
-				case Packet::VERB_HELLO:
-					peer->expectResponseTo(packet.packetId(),Packet::VERB_HELLO,localPort,now);
-					break;
-				default:
-					break;
 			}
 
 #ifdef ZT_TRACE

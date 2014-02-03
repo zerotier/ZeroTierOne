@@ -149,7 +149,7 @@ public:
 	bool sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now);
 
 	/**
-	 * Send HELLO to a peer using one or both active link types
+	 * Send HELLO to a peer via all active direct paths available
 	 * 
 	 * @param _r Runtime environment
 	 * @param now Current time
@@ -241,13 +241,23 @@ public:
 	inline unsigned int latency() const
 		throw()
 	{
-		uint64_t now = Utils::now();
-		uint64_t latestOutstandingReq = 0;
-		for(unsigned int p=0;p<ZT_PEER_REQUEST_HISTORY_LENGTH;++p)
-			latestOutstandingReq = std::max(latestOutstandingReq,_requestHistory[p].timestamp);
-		if (latestOutstandingReq)
-			return std::min(std::max((unsigned int)(now - latestOutstandingReq),(unsigned int)_latency),(unsigned int)0xffff);
-		else return _latency;
+		unsigned int l = _latency;
+		return std::min(l,(unsigned int)65535);
+	}
+
+	/**
+	 * Update latency with a new direct measurment
+	 *
+	 * @param l Direct latency measurment in ms
+	 */
+	inline void addDirectLatencyMeasurment(unsigned int l)
+		throw()
+	{
+		if (l > 65535) l = 65535;
+		unsigned int ol = _latency;
+		if ((ol > 0)&&(ol < 10000))
+			_latency = (ol + l) / 2;
+		else _latency = l;
 	}
 
 	/**
@@ -313,7 +323,7 @@ public:
 	inline const unsigned char *key() const throw() { return _key; }
 
 	/**
-	 * Set the remote version of the peer (not persisted)
+	 * Set the currently known remote version of this peer's client
 	 *
 	 * @param vmaj Major version
 	 * @param vmin Minor version
@@ -337,24 +347,6 @@ public:
 			return std::string(tmp);
 		}
 		return std::string("?");
-	}
-
-	/**
-	 * Called when certain packet types are sent that expect OK responses
-	 *
-	 * @param packetId ID of sent packet
-	 * @param verb Verb of sent packet
-	 * @param sentFromLocalPort Outgoing local port
-	 * @param now Current time
-	 */
-	inline void expectResponseTo(uint64_t packetId,Packet::Verb verb,Demarc::Port sentFromLocalPort,uint64_t now)
-		throw()
-	{
-		unsigned int p = _requestHistoryPtr++ % ZT_PEER_REQUEST_HISTORY_LENGTH;
-		_requestHistory[p].timestamp = now;
-		_requestHistory[p].packetId = packetId;
-		_requestHistory[p].localPort = sentFromLocalPort;
-		_requestHistory[p].verb = verb;
 	}
 
 	/**
@@ -512,25 +504,6 @@ private:
 		bool fixed; // do not learn address from received packets
 	};
 
-	/**
-	 * A history of a packet sent to a peer expecing a response (e.g. HELLO)
-	 */
-	class RequestHistoryItem
-	{
-	public:
-		RequestHistoryItem() :
-			timestamp(0),
-			packetId(0),
-			verb(Packet::VERB_NOP)
-		{
-		}
-
-		uint64_t timestamp;
-		uint64_t packetId;
-		Demarc::Port localPort;
-		Packet::Verb verb;
-	};
-
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 
@@ -541,12 +514,8 @@ private:
 	volatile uint64_t _lastUnicastFrame;
 	volatile uint64_t _lastMulticastFrame;
 	volatile uint64_t _lastAnnouncedTo;
-	unsigned int _vMajor,_vMinor,_vRevision;
+	volatile unsigned int _vMajor,_vMinor,_vRevision;
 	volatile unsigned int _latency;
-
-	// not persisted
-	RequestHistoryItem _requestHistory[ZT_PEER_REQUEST_HISTORY_LENGTH];
-	volatile unsigned int _requestHistoryPtr;
 
 	AtomicCounter __refCount;
 };
