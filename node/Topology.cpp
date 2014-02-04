@@ -154,7 +154,7 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 		// Skip possibly comatose or unreachable relays
 		uint64_t lds = (*sn)->lastDirectSend();
 		uint64_t ldr = (*sn)->lastDirectReceive();
-		if ((lds)&&(ldr > lds)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD)) {
+		if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD)) {
 			++sn;
 			continue;
 		}
