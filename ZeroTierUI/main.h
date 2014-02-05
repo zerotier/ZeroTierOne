@@ -2,6 +2,7 @@
 #define MAIN_H
 
 #include <QSettings>
+#include <QMainWindow>
 
 extern QSettings *settings;
 

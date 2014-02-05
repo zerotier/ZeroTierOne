@@ -62,6 +62,7 @@ private slots:
 private:
 	Ui::NetworkWidget *ui;
 	std::string networkIdStr;
+	bool publicWarningShown;
 };
 
 #endif // NETWORK_H

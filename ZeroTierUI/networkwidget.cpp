@@ -28,6 +28,8 @@
 #include "networkwidget.h"
 #include "mainwindow.h"
 #include "ui_networkwidget.h"
+#include "onetimedialog.h"
+#include "main.h"
 
 #include <QClipboard>
 #include <QString>
@@ -43,7 +45,8 @@
 NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 	QWidget(parent),
 	ui(new Ui::NetworkWidget),
-	networkIdStr(nwid)
+	networkIdStr(nwid),
+	publicWarningShown(false)
 {
 	ui->setupUi(this);
 	ui->networkIdButton->setText(QString(nwid.c_str()));
@@ -98,9 +101,15 @@ void NetworkWidget::setNetworkType(const std::string &type)
 	ui->networkTypeLabel->setText(QString(type.c_str()));
 	if (type == "?")
 		ui->networkTypeLabel->setStatusTip("Waiting for configuration...");
-	else if (type == "public")
+	else if (type == "public") {
+		if ((!publicWarningShown)&&(!settings->value("shown_publicWarning",false).toBool())) {
+			publicWarningShown = true;
+			OneTimeDialog *d = new OneTimeDialog(mainWindow,"shown_publicWarning","Security Notice","Security Notice:"ZT_EOL_S""ZT_EOL_S"You have joined a public network. Anyone can join these. We recommend making sure that your system's automatic software updates are enabled and turning off any shared network services that you do not want people to access.");
+			d->setModal(false);
+			d->show();
+		}
 		ui->networkTypeLabel->setStatusTip("This network can be joined by anyone in the world.");
-	else if (type == "private")
+	} else if (type == "private")
 		ui->networkTypeLabel->setStatusTip("This network is private; only authorized peers can join.");
 	else ui->networkTypeLabel->setStatusTip("Unknown network type.");
 }

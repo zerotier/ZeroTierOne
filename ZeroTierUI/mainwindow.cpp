@@ -66,7 +66,7 @@
 ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
 
 // Main window instance for app
-static MainWindow *mainWindow = (MainWindow *)0;
+QMainWindow *mainWindow = (MainWindow *)0;
 
 // Handles message from ZeroTier One service
 static void handleZTMessage(void *arg,unsigned long id,const char *line)

@@ -51,6 +51,9 @@ class MainWindow;
 // Can be null if not connected, or will point to current
 extern ZeroTier::Node::LocalClient *zeroTierClient;
 
+// Globally visible pointer to main app window
+extern QMainWindow *mainWindow;
+
 class MainWindow : public QMainWindow
 {
 	Q_OBJECT

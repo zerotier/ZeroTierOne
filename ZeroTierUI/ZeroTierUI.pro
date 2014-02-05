@@ -45,7 +45,8 @@ SOURCES += main.cpp \
     ../ext/lz4/lz4hc.c \
     networkwidget.cpp \
     installdialog.cpp \
-    licensedialog.cpp
+    licensedialog.cpp \
+    onetimedialog.cpp
 
 HEADERS  += mainwindow.h \
     aboutwindow.h \
@@ -98,14 +99,16 @@ HEADERS  += mainwindow.h \
     installdialog.h \
     mac_doprivileged.h \
     licensedialog.h \
-    main.h
+    main.h \
+    onetimedialog.h
 
 FORMS    += mainwindow.ui \
     aboutwindow.ui \
     networkwidget.ui \
     installdialog.ui \
     licensedialog.ui \
-    quickstartdialog.ui
+    quickstartdialog.ui \
+    onetimedialog.ui
 
 RESOURCES += \
 		resources.qrc
