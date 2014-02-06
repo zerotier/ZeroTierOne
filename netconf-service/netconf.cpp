@@ -277,7 +277,7 @@ int main(int argc,char **argv)
 				std::string desc;
 				{
 					Query q = dbCon->query();
-					q << "SELECT name,`desc`,isOpen,multicastPrefixBits,multicastDepth,emulateArp,emulateNdp,arpCacheTtl,ndpCacheTtl FROM Network WHERE id = " << nwid;
+					q << "SELECT * FROM Network WHERE id = " << nwid;
 					StoreQueryResult rs = q.store();
 					if (rs.num_rows() > 0) {
 						name = rs[0]["name"].c_str();
@@ -411,36 +411,38 @@ int main(int argc,char **argv)
 								uint32_t ipNet = (uint32_t)((unsigned long)rs[aaRow]["ipNet"]);
 								unsigned int netmaskBits = (unsigned int)rs[aaRow]["netmaskBits"];
 
-								uint32_t tryIp = (((uint32_t)addressBytes[1]) << 24) |
-								                 (((uint32_t)addressBytes[2]) << 16) |
-								                 (((uint32_t)addressBytes[3]) << 8) |
-								                 ((((uint32_t)addressBytes[4]) % 254) + 1);
-								tryIp &= (0xffffffff >> netmaskBits);
-								tryIp |= ipNet;
+								if ((netmaskBits > 0)&&(ipNet)) {
+									uint32_t tryIp = (((uint32_t)addressBytes[1]) << 24) |
+																	 (((uint32_t)addressBytes[2]) << 16) |
+																	 (((uint32_t)addressBytes[3]) << 8) |
+																	 ((((uint32_t)addressBytes[4]) % 254) + 1);
+									tryIp &= (0xffffffff >> netmaskBits);
+									tryIp |= ipNet;
 
-								for(int k=0;k<100000;++k) {
-									Query q2 = dbCon->query();
-									q2 << "INSERT INTO IPv4Static (Network_id,Node_id,ip,netmaskBits) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << tryIp << "," << netmaskBits << ")";
-									if (q2.exec()) {
-										sprintf(buf,"%u.%u.%u.%u",(unsigned int)((tryIp >> 24) & 0xff),(unsigned int)((tryIp >> 16) & 0xff),(unsigned int)((tryIp >> 8) & 0xff),(unsigned int)(tryIp & 0xff));
-										if (ipv4Static.length())
-											ipv4Static.push_back(',');
-										ipv4Static.append(buf);
-										ipv4Static.push_back('/');
-										sprintf(buf,"%u",netmaskBits);
-										ipv4Static.append(buf);
-										break;
-									} else { // insert will fail if IP is in use due to uniqueness constraints in DB
-										++tryIp;
-										if ((tryIp & 0xff) == 0)
-											tryIp |= 1;
-										tryIp &= (0xffffffff >> netmaskBits);
-										tryIp |= ipNet;
+									for(int k=0;k<100000;++k) {
+										Query q2 = dbCon->query();
+										q2 << "INSERT INTO IPv4Static (Network_id,Node_id,ip,netmaskBits) VALUES (" << nwid << "," << peerIdentity.address().toInt() << "," << tryIp << "," << netmaskBits << ")";
+										if (q2.exec()) {
+											sprintf(buf,"%u.%u.%u.%u",(unsigned int)((tryIp >> 24) & 0xff),(unsigned int)((tryIp >> 16) & 0xff),(unsigned int)((tryIp >> 8) & 0xff),(unsigned int)(tryIp & 0xff));
+											if (ipv4Static.length())
+												ipv4Static.push_back(',');
+											ipv4Static.append(buf);
+											ipv4Static.push_back('/');
+											sprintf(buf,"%u",netmaskBits);
+											ipv4Static.append(buf);
+											break;
+										} else { // insert will fail if IP is in use due to uniqueness constraints in DB
+											++tryIp;
+											if ((tryIp & 0xff) == 0)
+												tryIp |= 1;
+											tryIp &= (0xffffffff >> netmaskBits);
+											tryIp |= ipNet;
+										}
 									}
-								}
 
-								if (ipv4Static.length())
-									break;
+									if (ipv4Static.length())
+										break;
+								}
 							}
 						}
 					}
