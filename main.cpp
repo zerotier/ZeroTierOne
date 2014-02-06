@@ -42,6 +42,8 @@
 #include <tchar.h>
 #include <wchar.h>
 #include <lmcons.h>
+#include "windows/ZeroTierOne/ServiceInstaller.h"
+#include "windows/ZeroTierOne/ServiceBase.h"
 #else
 #include <unistd.h>
 #include <pwd.h>
@@ -93,6 +95,10 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
 	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
 	fprintf(out,"  -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
+#ifdef __WINDOWS__
+	fprintf(out,"  -I                - Install Windows service"ZT_EOL_S);
+	fprintf(out,"  -R                - Uninstall Windows service"ZT_EOL_S);
+#endif
 }
 
 namespace ZeroTierCLI { // ---------------------------------------------------

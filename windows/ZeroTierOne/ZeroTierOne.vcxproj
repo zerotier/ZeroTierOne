@@ -49,6 +49,9 @@
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\UdpSocket.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
+    <ClCompile Include="ServiceBase.cpp" />
+    <ClCompile Include="ServiceInstaller.cpp" />
+    <ClCompile Include="ZeroTierOneService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
@@ -97,6 +100,9 @@
     <ClInclude Include="..\..\node\UdpSocket.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="ServiceBase.h" />
+    <ClInclude Include="ServiceInstaller.h" />
+    <ClInclude Include="ZeroTierOneService.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ZeroTierOne.rc" />
