@@ -218,7 +218,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return _r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1);
+	return (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1) != Demarc::NULL_PORT);
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)

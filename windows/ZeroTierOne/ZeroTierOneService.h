@@ -29,17 +29,18 @@
 
 #include "ServiceBase.h"
 
+#include "../../node/Node.hpp"
+#include "../../node/Defaults.hpp"
+#include "../../node/Thread.hpp"
+#include "../../node/Mutex.hpp"
+#include "../../node/Utils.hpp"
+
 #define ZT_SERVICE_NAME "ZeroTierOneService"
 #define ZT_SERVICE_DISPLAY_NAME "ZeroTier One"
 #define ZT_SERVICE_START_TYPE SERVICE_AUTO_START
 #define ZT_SERVICE_DEPENDENCIES ""
 #define ZT_SERVICE_ACCOUNT "NT AUTHORITY\\LocalService"
 #define ZT_SERVICE_PASSWORD NULL
-
-namespace ZeroTier {
-class Node;
-class Thread;
-} // namespace ZeroTier
 
 class ZeroTierOneService : public CServiceBase
 {
@@ -60,5 +61,6 @@ protected:
 
 private:
 	ZeroTier::Node *volatile _node;
-	ZeroTier::Thread *volatile _thread;
+	ZeroTier::Mutex _lock;
+	ZeroTier::Thread _thread;
 };

@@ -27,81 +27,84 @@
 
 #pragma region Includes
 #include "ZeroTierOneService.h"
-#include "../../node/Node.hpp"
-#include "../../node/Defaults.hpp"
-#include "../../node/Thread.hpp"
 #pragma endregion
-
-using namespace ZeroTier;
 
 ZeroTierOneService::ZeroTierOneService() :
 	CServiceBase(ZT_SERVICE_NAME,TRUE,TRUE,FALSE),
-	_thread(new Thread()),
-	_node((Node *)0)
+	_node((ZeroTier::Node *)0)
 {
 }
 
 ZeroTierOneService::~ZeroTierOneService(void)
 {
-	delete _thread;
-	delete _node;
 }
 
 void ZeroTierOneService::threadMain()
 	throw()
 {
+restart_node:
 	try {
-		// Since Windows doesn't auto-restart services, we'll restart the node
-		// on normal termination.
-		for(;;) {
-			switch(_node->run()) {
-				case Node::NODE_NORMAL_TERMINATION:
-					delete _node;
-					_node = new Node(ZT_DEFAULTS.defaultHomePath.c_str(),0,0);
-					break; // restart
-				case Node::NODE_RESTART_FOR_UPGRADE: {
-				}	return; // terminate thread
-				case Node::NODE_UNRECOVERABLE_ERROR: {
-					std::string err("unrecoverable error: ");
-					const char *r = _node->reasonForTermination;
-					if (r)
-						err.append(r);
-					else err.append("(unknown error)");
-					WriteEventLogEntry(const_cast <PSTR>(err.c_str()),EVENTLOG_ERROR_TYPE);
-				}	return; // terminate thread
-				default:
-					break;
-			}
+		{
+			// start or restart
+			ZeroTier::Mutex::Lock _l(_lock);
+			delete _node;
+			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),0,0);
+		}
+		switch(_node->run()) {
+			case ZeroTier::Node::NODE_RESTART_FOR_UPGRADE: {
+			}	break;
+			case ZeroTier::Node::NODE_UNRECOVERABLE_ERROR: {
+				std::string err("ZeroTier node encountered an unrecoverable error: ");
+				const char *r = _node->reasonForTermination();
+				if (r)
+					err.append(r);
+				else err.append("(unknown error)");
+				err.append(" (restarting in 5 seconds)");
+				WriteEventLogEntry(const_cast <PSTR>(err.c_str()),EVENTLOG_ERROR_TYPE);
+				Sleep(5000);
+				goto restart_node;
+			}	break;
+			default: // includes normal termination, which will terminate thread
+				break;
 		}
 	} catch ( ... ) {
-		WriteEventLogEntry("unexpected exception in Node::run() or during restart",EVENTLOG_ERROR_TYPE);
+		// sanity check, shouldn't happen since Node::run() should catch all its own errors
+		// could also happen if we're out of memory though!
+		WriteEventLogEntry("unexpected exception (out of memory?) (trying again in 5 seconds)",EVENTLOG_ERROR_TYPE);
+		Sleep(5000);
+		goto restart_node;
 	}
+
+	_lock.lock();
+	delete _node;
+	_node = (ZeroTier::Node *)0;
+	_lock.unlock();
 }
 
 void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)
 {
+	if (_node)
+		return; // sanity check
 	try {
-		_node = new Node(ZT_DEFAULTS.defaultHomePath.c_str(),0,0);
-		*_thread = Thread::start(this);
+		_thread = ZeroTier::Thread::start(this);
 	} catch ( ... ) {
-		// shouldn't happen unless something weird occurs like out of memory...
 		throw (DWORD)ERROR_EXCEPTION_IN_SERVICE;
 	}
 }
 
 void ZeroTierOneService::OnStop()
 {
-	Node *n = _node;
-	_node = (Node *)0;
+	_lock.lock();
+	ZeroTier::Node *n = _node;
+	_lock.unlock();
 	if (n) {
-		n->terminate(Node::NODE_NORMAL_TERMINATION,"Service Shutdown");
-		Thread::join(*_thread);
-		delete n;
+		n->terminate(ZeroTier::Node::NODE_NORMAL_TERMINATION,"Windows service stopped");
+		ZeroTier::Thread::join(_thread);
 	}
 }
 
 void ZeroTierOneService::OnShutdown()
 {
-	// make sure it's stopped
+	// stop thread on system shutdown (if it hasn't happened already)
 	OnStop();
 }

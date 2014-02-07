@@ -628,6 +628,7 @@ int main(int argc,char **argv)
 	if (!winRunFromCommandLine) {
 		ZeroTierOneService zt1Service;
 		if (CServiceBase::Run(zt1Service) == TRUE) {
+			// Normal termination of service process
 			return 0;
 		} else {
 			fprintf(stderr,"%s: unable to start service (try -h for help)"ZT_EOL_S,argv[0]);
@@ -637,7 +638,6 @@ int main(int argc,char **argv)
 #endif
 	{
 		int exitCode = 0;
-
 		try {
 			node = new Node(homeDir,port,controlPort);
 			switch(node->run()) {
@@ -669,11 +669,9 @@ int main(int argc,char **argv)
 			fprintf(stderr,"%s: unexpected exception!"ZT_EOL_S,argv[0]);
 			exitCode = 3;
 		}
-
 #ifdef __UNIX_LIKE__
 		Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
 #endif
-
 		return exitCode;
 	}
 }
