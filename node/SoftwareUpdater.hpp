@@ -53,6 +53,11 @@ public:
 	~SoftwareUpdater();
 
 	/**
+	 * Remove old updates in updates.d
+	 */
+	void cleanOldUpdates();
+
+	/**
 	 * Called on each version message from a peer
 	 *
 	 * If a peer has a newer version, that causes an update to be started.

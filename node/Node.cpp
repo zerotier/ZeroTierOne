@@ -461,6 +461,7 @@ Node::ReasonForTermination Node::run()
 #ifdef ZT_AUTO_UPDATE
 		if (ZT_DEFAULTS.updateLatestNfoURL.length()) {
 			_r->updater = new SoftwareUpdater(_r);
+			_r->updater->cleanOldUpdates(); // clean out updates.d on startup
 		} else {
 			LOG("WARNING: unable to enable software updates: latest .nfo URL from ZT_DEFAULTS is empty (does this platform actually support software updates?)");
 		}

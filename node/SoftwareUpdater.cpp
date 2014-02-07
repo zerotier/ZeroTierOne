@@ -41,6 +41,7 @@
 #include "RuntimeEnvironment.hpp"
 #include "Thread.hpp"
 #include "Node.hpp"
+#include "Utils.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -71,6 +72,16 @@ SoftwareUpdater::~SoftwareUpdater()
 		if (ip)
 			Thread::sleep(500);
 		else break;
+	}
+}
+
+void SoftwareUpdater::cleanOldUpdates()
+{
+	std::string updatesDir(_r->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
+	std::map<std::string,bool> dl(Utils::listDirectory(updatesDir.c_str()));
+	for(std::map<std::string,bool>::iterator i(dl.begin());i!=dl.end();++i) {
+		if (!i->second)
+			Utils::rm(i->first.c_str());
 	}
 }
 
