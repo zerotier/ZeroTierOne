@@ -27,29 +27,81 @@
 
 #pragma region Includes
 #include "ZeroTierOneService.h"
+#include "../../node/Node.hpp"
+#include "../../node/Defaults.hpp"
+#include "../../node/Thread.hpp"
 #pragma endregion
 
+using namespace ZeroTier;
+
 ZeroTierOneService::ZeroTierOneService() :
-	CServiceBase(ZT_SERVICE_NAME,TRUE,TRUE,TRUE)
+	CServiceBase(ZT_SERVICE_NAME,TRUE,TRUE,FALSE),
+	_thread(new Thread()),
+	_node((Node *)0)
 {
 }
 
 ZeroTierOneService::~ZeroTierOneService(void)
 {
+	delete _thread;
+	delete _node;
+}
+
+void ZeroTierOneService::threadMain()
+	throw()
+{
+	try {
+		// Since Windows doesn't auto-restart services, we'll restart the node
+		// on normal termination.
+		for(;;) {
+			switch(_node->run()) {
+				case Node::NODE_NORMAL_TERMINATION:
+					delete _node;
+					_node = new Node(ZT_DEFAULTS.defaultHomePath.c_str(),0,0);
+					break; // restart
+				case Node::NODE_RESTART_FOR_UPGRADE: {
+				}	return; // terminate thread
+				case Node::NODE_UNRECOVERABLE_ERROR: {
+					std::string err("unrecoverable error: ");
+					const char *r = _node->reasonForTermination;
+					if (r)
+						err.append(r);
+					else err.append("(unknown error)");
+					WriteEventLogEntry(const_cast <PSTR>(err.c_str()),EVENTLOG_ERROR_TYPE);
+				}	return; // terminate thread
+				default:
+					break;
+			}
+		}
+	} catch ( ... ) {
+		WriteEventLogEntry("unexpected exception in Node::run() or during restart",EVENTLOG_ERROR_TYPE);
+	}
 }
 
 void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)
 {
+	try {
+		_node = new Node(ZT_DEFAULTS.defaultHomePath.c_str(),0,0);
+		*_thread = Thread::start(this);
+	} catch ( ... ) {
+		// shouldn't happen unless something weird occurs like out of memory...
+		throw (DWORD)ERROR_EXCEPTION_IN_SERVICE;
+	}
 }
 
 void ZeroTierOneService::OnStop()
 {
+	Node *n = _node;
+	_node = (Node *)0;
+	if (n) {
+		n->terminate(Node::NODE_NORMAL_TERMINATION,"Service Shutdown");
+		Thread::join(*_thread);
+		delete n;
+	}
 }
 
-void ZeroTierOneService::OnPause()
+void ZeroTierOneService::OnShutdown()
 {
-}
-
-void ZeroTierOneService::OnContinue()
-{
+	// make sure it's stopped
+	OnStop();
 }

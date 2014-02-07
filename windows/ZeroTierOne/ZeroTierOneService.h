@@ -36,15 +36,29 @@
 #define ZT_SERVICE_ACCOUNT "NT AUTHORITY\\LocalService"
 #define ZT_SERVICE_PASSWORD NULL
 
+namespace ZeroTier {
+class Node;
+class Thread;
+} // namespace ZeroTier
+
 class ZeroTierOneService : public CServiceBase
 {
 public:
     ZeroTierOneService();
     virtual ~ZeroTierOneService(void);
 
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
+		throw();
+
 protected:
     virtual void OnStart(DWORD dwArgc, PSTR *pszArgv);
     virtual void OnStop();
-    virtual void OnPause();
-    virtual void OnContinue();
+	virtual void OnShutdown();
+
+private:
+	ZeroTier::Node *volatile _node;
+	ZeroTier::Thread *volatile _thread;
 };

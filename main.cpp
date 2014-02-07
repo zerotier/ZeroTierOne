@@ -44,6 +44,7 @@
 #include <lmcons.h>
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
+#include "windows/ZeroTierOne/ZeroTierOneService.h"
 #else
 #include <unistd.h>
 #include <pwd.h>
@@ -96,8 +97,9 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
 	fprintf(out,"  -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
 #ifdef __WINDOWS__
-	fprintf(out,"  -I                - Install Windows service"ZT_EOL_S);
-	fprintf(out,"  -R                - Uninstall Windows service"ZT_EOL_S);
+	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
+	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
+	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
 #endif
 }
 
@@ -379,6 +381,7 @@ static void sighandlerQuit(int sig)
 #endif
 
 #ifdef __WINDOWS__
+// Console signal handler routine to allow CTRL+C to work, mostly for testing
 static BOOL WINAPI _handlerRoutine(DWORD dwCtrlType)
 {
 	switch(dwCtrlType) {
@@ -394,183 +397,94 @@ static BOOL WINAPI _handlerRoutine(DWORD dwCtrlType)
 	return FALSE;
 }
 
+// Returns true if this is running as the local administrator
 static BOOL IsCurrentUserLocalAdministrator(void)
 {
-   BOOL   fReturn         = FALSE;
-   DWORD  dwStatus;
-   DWORD  dwAccessMask;
-   DWORD  dwAccessDesired;
-   DWORD  dwACLSize;
-   DWORD  dwStructureSize = sizeof(PRIVILEGE_SET);
-   PACL   pACL            = NULL;
-   PSID   psidAdmin       = NULL;
+	BOOL   fReturn         = FALSE;
+	DWORD  dwStatus;
+	DWORD  dwAccessMask;
+	DWORD  dwAccessDesired;
+	DWORD  dwACLSize;
+	DWORD  dwStructureSize = sizeof(PRIVILEGE_SET);
+	PACL   pACL            = NULL;
+	PSID   psidAdmin       = NULL;
 
-   HANDLE hToken              = NULL;
-   HANDLE hImpersonationToken = NULL;
+	HANDLE hToken              = NULL;
+	HANDLE hImpersonationToken = NULL;
 
-   PRIVILEGE_SET   ps;
-   GENERIC_MAPPING GenericMapping;
+	PRIVILEGE_SET   ps;
+	GENERIC_MAPPING GenericMapping;
 
-   PSECURITY_DESCRIPTOR     psdAdmin           = NULL;
-   SID_IDENTIFIER_AUTHORITY SystemSidAuthority = SECURITY_NT_AUTHORITY;
+	PSECURITY_DESCRIPTOR     psdAdmin           = NULL;
+	SID_IDENTIFIER_AUTHORITY SystemSidAuthority = SECURITY_NT_AUTHORITY;
 
+	const DWORD ACCESS_READ  = 1;
+	const DWORD ACCESS_WRITE = 2;
 
-   /*
-      Determine if the current thread is running as a user that is a member 
+	__try
+	{
+		if (!OpenThreadToken(GetCurrentThread(), TOKEN_DUPLICATE|TOKEN_QUERY,TRUE,&hToken))
+		{
+			if (GetLastError() != ERROR_NO_TOKEN)
+				__leave;
+			if (!OpenProcessToken(GetCurrentProcess(),TOKEN_DUPLICATE|TOKEN_QUERY, &hToken))
+				__leave;
+		}
+		if (!DuplicateToken (hToken, SecurityImpersonation,&hImpersonationToken))
+			__leave;
+		if (!AllocateAndInitializeSid(&SystemSidAuthority, 2,
+			SECURITY_BUILTIN_DOMAIN_RID,
+			DOMAIN_ALIAS_RID_ADMINS,
+			0, 0, 0, 0, 0, 0, &psidAdmin))
+			__leave;
+		psdAdmin = LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
+		if (psdAdmin == NULL)
+			__leave;
+		if (!InitializeSecurityDescriptor(psdAdmin,SECURITY_DESCRIPTOR_REVISION))
+			__leave;
+		dwACLSize = sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(psidAdmin) - sizeof(DWORD);
+		pACL = (PACL)LocalAlloc(LPTR, dwACLSize);
+		if (pACL == NULL)
+			__leave;
+		if (!InitializeAcl(pACL, dwACLSize, ACL_REVISION2))
+			__leave;
+		dwAccessMask= ACCESS_READ | ACCESS_WRITE;
+		if (!AddAccessAllowedAce(pACL, ACL_REVISION2, dwAccessMask, psidAdmin))
+			__leave;
+		if (!SetSecurityDescriptorDacl(psdAdmin, TRUE, pACL, FALSE))
+			__leave;
 
-of
-      the local admins group.  To do this, create a security descriptor 
+		SetSecurityDescriptorGroup(psdAdmin, psidAdmin, FALSE);
+		SetSecurityDescriptorOwner(psdAdmin, psidAdmin, FALSE);
 
-that
-      has a DACL which has an ACE that allows only local aministrators 
+		if (!IsValidSecurityDescriptor(psdAdmin))
+			__leave;
+		dwAccessDesired = ACCESS_READ;
 
-access.
-      Then, call AccessCheck with the current thread's token and the 
+		GenericMapping.GenericRead    = ACCESS_READ;
+		GenericMapping.GenericWrite   = ACCESS_WRITE;
+		GenericMapping.GenericExecute = 0;
+		GenericMapping.GenericAll     = ACCESS_READ | ACCESS_WRITE;
 
-security
-      descriptor.  It will say whether the user could access an object if 
+		if (!AccessCheck(psdAdmin, hImpersonationToken, dwAccessDesired,
+			&GenericMapping, &ps, &dwStructureSize, &dwStatus,
+			&fReturn))
+		{
+			fReturn = FALSE;
+			__leave;
+		}
+	}
+	__finally
+	{
+		// Clean up.
+		if (pACL) LocalFree(pACL);
+		if (psdAdmin) LocalFree(psdAdmin);
+		if (psidAdmin) FreeSid(psidAdmin);
+		if (hImpersonationToken) CloseHandle (hImpersonationToken);
+		if (hToken) CloseHandle (hToken);
+	}
 
-it
-      had that security descriptor.  Note: you do not need to actually 
-
-create
-      the object.  Just checking access against the security descriptor 
-
-alone
-      will be sufficient.
-   */
-   const DWORD ACCESS_READ  = 1;
-   const DWORD ACCESS_WRITE = 2;
-
-
-   __try
-   {
-
-      /*
-         AccessCheck() requires an impersonation token.  We first get a 
-
-primary
-         token and then create a duplicate impersonation token.  The
-         impersonation token is not actually assigned to the thread, but is
-         used in the call to AccessCheck.  Thus, this function itself never
-         impersonates, but does use the identity of the thread.  If the 
-
-thread
-         was impersonating already, this function uses that impersonation 
-
-context.
-      */
-      if (!OpenThreadToken(GetCurrentThread(), TOKEN_DUPLICATE|TOKEN_QUERY, 
-
-TRUE, &hToken))
-      {
-         if (GetLastError() != ERROR_NO_TOKEN)
-            __leave;
-
-         if (!OpenProcessToken(GetCurrentProcess(), 
-
-TOKEN_DUPLICATE|TOKEN_QUERY, &hToken))
-            __leave;
-      }
-
-      if (!DuplicateToken (hToken, SecurityImpersonation, 
-
-&hImpersonationToken))
-          __leave;
-
-
-      /*
-        Create the binary representation of the well-known SID that
-        represents the local administrators group.  Then create the 
-
-security
-        descriptor and DACL with an ACE that allows only local admins 
-
-access.
-        After that, perform the access check.  This will determine whether
-        the current user is a local admin.
-      */
-      if (!AllocateAndInitializeSid(&SystemSidAuthority, 2,
-                                    SECURITY_BUILTIN_DOMAIN_RID,
-                                    DOMAIN_ALIAS_RID_ADMINS,
-                                    0, 0, 0, 0, 0, 0, &psidAdmin))
-         __leave;
-
-      psdAdmin = LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
-      if (psdAdmin == NULL)
-         __leave;
-
-      if (!InitializeSecurityDescriptor(psdAdmin, 
-
-SECURITY_DESCRIPTOR_REVISION))
-         __leave;
-
-      // Compute size needed for the ACL.
-      dwACLSize = sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) +
-                  GetLengthSid(psidAdmin) - sizeof(DWORD);
-
-      pACL = (PACL)LocalAlloc(LPTR, dwACLSize);
-      if (pACL == NULL)
-         __leave;
-
-      if (!InitializeAcl(pACL, dwACLSize, ACL_REVISION2))
-         __leave;
-
-      dwAccessMask= ACCESS_READ | ACCESS_WRITE;
-
-      if (!AddAccessAllowedAce(pACL, ACL_REVISION2, dwAccessMask, 
-
-psidAdmin))
-         __leave;
-
-      if (!SetSecurityDescriptorDacl(psdAdmin, TRUE, pACL, FALSE))
-         __leave;
-
-      /*
-         AccessCheck validates a security descriptor somewhat; set the 
-
-group
-         and owner so that enough of the security descriptor is filled out 
-
-to
-         make AccessCheck happy.
-      */
-      SetSecurityDescriptorGroup(psdAdmin, psidAdmin, FALSE);
-      SetSecurityDescriptorOwner(psdAdmin, psidAdmin, FALSE);
-
-      if (!IsValidSecurityDescriptor(psdAdmin))
-         __leave;
-
-      dwAccessDesired = ACCESS_READ;
-
-      /*
-         Initialize GenericMapping structure even though you
-         do not use generic rights.
-      */
-      GenericMapping.GenericRead    = ACCESS_READ;
-      GenericMapping.GenericWrite   = ACCESS_WRITE;
-      GenericMapping.GenericExecute = 0;
-      GenericMapping.GenericAll     = ACCESS_READ | ACCESS_WRITE;
-
-      if (!AccessCheck(psdAdmin, hImpersonationToken, dwAccessDesired,
-                       &GenericMapping, &ps, &dwStructureSize, &dwStatus,
-                       &fReturn))
-      {
-         fReturn = FALSE;
-         __leave;
-      }
-   }
-   __finally
-   {
-      // Clean up.
-      if (pACL) LocalFree(pACL);
-      if (psdAdmin) LocalFree(psdAdmin);
-      if (psidAdmin) FreeSid(psidAdmin);
-      if (hImpersonationToken) CloseHandle (hImpersonationToken);
-      if (hToken) CloseHandle (hToken);
-   }
-
-   return fReturn;
+	return fReturn;
 }
 #endif // __WINDOWS__
 
@@ -605,6 +519,9 @@ int main(int argc,char **argv)
 	const char *homeDir = (const char *)0;
 	unsigned int port = 0;
 	unsigned int controlPort = 0;
+#ifdef __WINDOWS__
+	bool winRunFromCommandLine = false;
+#endif
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
@@ -635,6 +552,35 @@ int main(int argc,char **argv)
 						printHelp(argv[0],stderr);
 						return 0;
 					} else return ZeroTierIdTool::main(argc,argv);
+#ifdef __WINDOWS__
+				case 'C':
+					winRunFromCommandLine = true;
+					break;
+				case 'I': { // install self as service
+						if (IsCurrentUserLocalAdministrator() != TRUE) {
+							fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+							return 1;
+						}
+						std::string ret(InstallService(ZT_SERVICE_NAME,ZT_SERVICE_DISPLAY_NAME,ZT_SERVICE_START_TYPE,ZT_SERVICE_DEPENDENCIES,ZT_SERVICE_ACCOUNT,ZT_SERVICE_PASSWORD));
+						if (ret.length()) {
+							fprintf(stderr,"%s: unable to install service: %s"ZT_EOL_S,argv[0],ret.c_str());
+							return 3;
+						}
+						return 0;
+					} break;
+				case 'R': { // uninstall self as service
+						if (IsCurrentUserLocalAdministrator() != TRUE) {
+							fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+							return 1;
+						}
+						std::string ret(UninstallService(ZT_SERVICE_NAME));
+						if (ret.length()) {
+							fprintf(stderr,"%s: unable to uninstall service: %s"ZT_EOL_S,argv[0],ret.c_str());
+							return 3;
+						}
+						return 0;
+					} break;
+#endif
 				case 'h':
 				case '?':
 				default:
@@ -678,52 +624,56 @@ int main(int argc,char **argv)
 #endif
 #endif
 
-	int exitCode = 0;
-
-	try {
-		node = new Node(homeDir,port,controlPort);
-		switch(node->run()) {
-			case Node::NODE_RESTART_FOR_UPGRADE: {
-				const char *upgPath = node->reasonForTermination();
-#ifdef __UNIX_LIKE__
-				// On Unix-type OSes we exec() right into the upgrade. This in turn will
-				// end with us being re-launched either via the upgrade itself or something
-				// like OSX's launchd.
-				if (upgPath) {
-					Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
-					::execl(upgPath,upgPath,(char *)0);
-				}
-				exitCode = 2;
-				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
-#else // not __UNIX_LIKE
 #ifdef __WINDOWS__
-				// On Windows the service checks updates.d and invokes updates if they are
-				// found there. This only happens after exit code 4. The Windows service
-				// will listen to stdout as well to catch the filename.
-				if (upgPath) {
-					printf("[[[ UPDATE AVAILABLE: \"%s\" ]]]\r\n",upgPath);
-					exitCode = 4;
-				} else {
-					exitCode = 2;
-				}
-#endif // __WINDOWS__
-#endif // not __UNIX_LIKE__
-			}	break;
-			case Node::NODE_UNRECOVERABLE_ERROR: {
-				exitCode = 3;
-				const char *termReason = node->reasonForTermination();
-				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
-			}	break;
-			default:
-				break;
+	if (!winRunFromCommandLine) {
+		ZeroTierOneService zt1Service;
+		if (CServiceBase::Run(zt1Service) == TRUE) {
+			return 0;
+		} else {
+			fprintf(stderr,"%s: unable to start service (try -h for help)"ZT_EOL_S,argv[0]);
+			return 1;
 		}
-		delete node;
-		node = (Node *)0;
-	} catch ( ... ) {}
+	} else
+#endif
+	{
+		int exitCode = 0;
+
+		try {
+			node = new Node(homeDir,port,controlPort);
+			switch(node->run()) {
+#ifndef __WINDOWS__
+				case Node::NODE_RESTART_FOR_UPGRADE: {
+					const char *upgPath = node->reasonForTermination();
+					// On Unix-type OSes we exec() right into the upgrade. This in turn will
+					// end with us being re-launched either via the upgrade itself or something
+					// like OSX's launchd.
+					if (upgPath) {
+						Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
+						::execl(upgPath,upgPath,(char *)0);
+					}
+					exitCode = 3;
+					fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+				}	break;
+#endif
+				case Node::NODE_UNRECOVERABLE_ERROR: {
+					exitCode = 3;
+					const char *termReason = node->reasonForTermination();
+					fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
+				}	break;
+				default:
+					break;
+			}
+			delete node;
+			node = (Node *)0;
+		} catch ( ... ) {
+			fprintf(stderr,"%s: unexpected exception!"ZT_EOL_S,argv[0]);
+			exitCode = 3;
+		}
 
 #ifdef __UNIX_LIKE__
-	Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
+		Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
 #endif
 
-	return exitCode;
+		return exitCode;
+	}
 }

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <string>
 
 //
 //   FUNCTION: InstallService
@@ -38,7 +39,8 @@
 //   NOTE: If the function fails to install the service, it prints the error 
 //   in the standard output stream for users to diagnose the problem.
 //
-void InstallService(PSTR pszServiceName, 
+// modified for ZT1 to return an error or empty string on success
+std::string InstallService(PSTR pszServiceName, 
                     PSTR pszDisplayName, 
                     DWORD dwStartType,
                     PSTR pszDependencies, 
@@ -58,4 +60,5 @@ void InstallService(PSTR pszServiceName,
 //   NOTE: If the function fails to uninstall the service, it prints the 
 //   error in the standard output stream for users to diagnose the problem.
 //
-void UninstallService(PSTR pszServiceName);
+// Also modified to return rather than print errors
+std::string UninstallService(PSTR pszServiceName);
