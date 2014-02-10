@@ -41,6 +41,7 @@
 #include "Utils.hpp"
 #include "UdpSocket.hpp"
 #include "Buffer.hpp"
+#include "Dictionary.hpp"
 
 namespace ZeroTier {
 
@@ -121,7 +122,7 @@ public:
 	}
 
 	/**
-	 * Execute a command
+	 * Execute a control command (called when stuff comes in via control bus)
 	 *
 	 * @param command Command and arguments separated by whitespace (must already be trimmed of CR+LF, etc.)
 	 * @return One or more command results (lines of output)
@@ -159,12 +160,18 @@ public:
 private:
 	static void _CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len);
 
+	void _readLocalConfig();
+	void _writeLocalConfig();
+
 	const RuntimeEnvironment *_r;
 
 	unsigned char _controlSocketKey[32];
 	UdpSocket _controlSocket;
 
-	std::map< uint64_t,SharedPtr<Network> > _networks;
+	Dictionary _localConfig; // persisted as local.conf
+	Mutex _localConfig_m;
+
+	std::map< uint64_t,SharedPtr<Network> > _networks; // persisted in networks.d/
 	Mutex _networks_m;
 };
 

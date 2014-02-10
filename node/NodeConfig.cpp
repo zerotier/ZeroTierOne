@@ -109,10 +109,13 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 			LOG("unable to create network %.16llx: (unknown exception)",(unsigned long long)*nwid);
 		}
 	}
+
+	_readLocalConfig();
 }
 
 NodeConfig::~NodeConfig()
 {
+	_writeLocalConfig();
 }
 
 void NodeConfig::clean()
@@ -121,6 +124,9 @@ void NodeConfig::clean()
 	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
 		n->second->clean();
 }
+
+/////////////////////////////////////////////////////////////////////////////
+// UDP localhost control bus
 
 // Macro used in execute() to push lines onto the return packet
 #undef _P
@@ -387,6 +393,23 @@ void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAdd
 	} catch ( ... ) {
 		TRACE("exception handling control bus packet from %s: (unknown)",remoteAddr.toString().c_str());
 	}
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+void NodeConfig::_readLocalConfig()
+{
+	std::string localDotConf(_r->homePath + ZT_PATH_SEPARATOR_S + "local.conf");
+	std::string buf;
+	if (Utils::readFile(localDotConf.c_str(),buf)) {
+		Mutex::Lock _l(_localConfig_m);
+		_localConfig.fromString(buf.c_str());
+	}
+}
+
+void NodeConfig::_writeLocalConfig()
+{
+	Utils::writeFile(((_r->homePath + ZT_PATH_SEPARATOR_S + "local.conf")).c_str(),_localConfig.toString());
 }
 
 } // namespace ZeroTier
