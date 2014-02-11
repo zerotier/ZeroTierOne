@@ -142,22 +142,18 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 	// First look for a best supernode by comparing latencies, but exclude
 	// supernodes that have not responded to direct messages in order to
 	// try to exclude any that are dead or unreachable.
-	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();) {
+	for(std::vector< SharedPtr<Peer> >::const_iterator sn(_supernodePeers.begin());sn!=_supernodePeers.end();) {
 		// Skip explicitly avoided relays
 		for(unsigned int i=0;i<avoidCount;++i) {
-			if (avoid[i] == (*sn)->address()) {
-				++sn;
-				continue;
-			}
+			if (avoid[i] == (*sn)->address())
+				goto keep_searching_for_supernodes;
 		}
 
 		// Skip possibly comatose or unreachable relays
 		uint64_t lds = (*sn)->lastDirectSend();
 		uint64_t ldr = (*sn)->lastDirectReceive();
-		if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD)) {
-			++sn;
-			continue;
-		}
+		if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
+			goto keep_searching_for_supernodes;
 
 		if ((*sn)->hasActiveDirectPath(now)) {
 			unsigned int l = (*sn)->latency();
@@ -173,6 +169,7 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 			}
 		}
 
+keep_searching_for_supernodes:
 		++sn;
 	}
 
