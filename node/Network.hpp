@@ -82,8 +82,7 @@ private:
 	// Only NodeConfig can create, only SharedPtr can delete
 
 	// Actual construction happens in newInstance()
-	Network() throw() : _tap((EthernetTap *)0) {}
-
+	Network() throw() {}
 	~Network();
 
 	/**
@@ -96,11 +95,12 @@ private:
 	 * cough).
 	 *
 	 * @param renv Runtime environment
+	 * @param nc Parent NodeConfig
 	 * @param id Network ID
 	 * @return Reference counted pointer to new network
 	 * @throws std::runtime_error Unable to create tap device or other fatal error
 	 */
-	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,uint64_t id);
+	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,NodeConfig *nc,uint64_t id);
 
 	/**
 	 * Causes all persistent disk presence to be erased on delete
@@ -406,6 +406,7 @@ private:
 	void _dumpMulticastCerts();
 
 	uint64_t _id;
+	NodeConfig *_nc;
 	MAC _mac;
 	const RuntimeEnvironment *_r;
 	EthernetTap *volatile _tap;

@@ -75,7 +75,7 @@ Network::~Network()
 	}
 }
 
-SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t id)
+SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfig *nc,uint64_t id)
 {
 	/* We construct Network via a static method to ensure that it is immediately
 	 * wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet
@@ -85,6 +85,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,uint64_t 
 
 	SharedPtr<Network> nw(new Network());
 	nw->_id = id;
+	nw->_nc = nc;
 	nw->_mac = renv->identity.address().toMAC();
 	nw->_r = renv;
 	nw->_tap = (EthernetTap *)0;
@@ -269,12 +270,31 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 void Network::threadMain()
 	throw()
 {
+	// Setup thread -- this exits when tap is constructed. It's here
+	// because opening the tap can take some time on some platforms.
+
 	try {
-		// Setup thread -- this exits when tap is constructed. It's here
-		// because opening the tap can take some time on some platforms.
-		char tag[32];
+#ifdef __WINDOWS__
+		// Windows tags interfaces by their network IDs, which are shoved into the
+		// registry to mark persistent instance of the tap device.
+		char tag[24];
 		Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)_id);
+#else
+		// Unix tries to get the same device name next time, if possible.
+		std::string tagstr;
+		char lcentry[128];
+		Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
+		tagstr = _nc->getLocalConfig(lcentry);
+		const char *tag = (tagstr.length() > 0) ? tagstr.c_str() : (const char *)0;
+#endif
+
 		_tap = new EthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
+
+#ifndef __WINDOWS__
+		std::string dn(_tap->deviceName());
+		if ((!tag)||(dn != tag))
+			_nc->putLocalConfig(lcentry,dn);
+#endif
 	} catch (std::exception &exc) {
 		LOG("network %.16llx failed to initialize: %s",_id,exc.what());
 		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;

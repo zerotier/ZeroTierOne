@@ -234,6 +234,7 @@ EthernetTap::EthernetTap(
 	_fd(0)
 {
 	char procpath[128];
+	struct stat sbuf;
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
 	if (mtu > 4096)
@@ -246,13 +247,19 @@ EthernetTap::EthernetTap(
 	struct ifreq ifr;
 	memset(&ifr,0,sizeof(ifr));
 
-	{ // pick an unused device name
+	// Try to recall our last device name, or pick an unused one if that fails.
+	bool recalledDevice = false;
+	if ((tag)&&(tag[0])) {
+		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),tag);
+		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.fr_name);
+		recalledDevice = (stat(procpath,&sbuf) != 0);
+	}
+	if (!recalledDevice) {
 		int devno = 0;
-		struct stat sbuf;
 		do {
 			Utils::snprintf(ifr.ifr_name,sizeof(ifr.ifr_name),"zt%d",devno++);
 			Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
-		} while (stat(procpath,&sbuf) == 0);
+		} while (stat(procpath,&sbuf) == 0); // try zt#++ until we find one that does not exist
 	}
 
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
@@ -359,17 +366,33 @@ EthernetTap::EthernetTap(
 	if (stat("/dev/zt0",&stattmp))
 		throw std::runtime_error("/dev/zt# tap devices do not exist and unable to load kernel extension");
 
-	// Open the first available device (ones in use will fail with resource busy)
-	for(int i=0;i<256;++i) {
-		Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
-		if (stat(devpath,&stattmp))
-			throw std::runtime_error("no more TAP devices available");
-		_fd = ::open(devpath,O_RDWR);
-		if (_fd > 0) {
-			Utils::snprintf(_dev,sizeof(_dev),"zt%d",i);
-			break;
+	// Try to reopen the last device we had, if we had one and it's still unused.
+	bool recalledDevice = false;
+	if ((tag)&&(tag[0])) {
+		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tag);
+		if (stat(devpath,&stattmp) == 0) {
+			_fd = ::open(devpath,O_RDWR);
+			if (_fd > 0) {
+				Utils::scopy(_dev,sizeof(_dev),tag);
+				recalledDevice = true;
+			}
 		}
 	}
+
+	// Open the first unused tap device if we didn't recall a previous one.
+	if (!recalledDevice) {
+		for(int i=0;i<256;++i) {
+			Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
+			if (stat(devpath,&stattmp))
+				throw std::runtime_error("no more TAP devices available");
+			_fd = ::open(devpath,O_RDWR);
+			if (_fd > 0) {
+				Utils::snprintf(_dev,sizeof(_dev),"zt%d",i);
+				break;
+			}
+		}
+	}
+
 	if (_fd <= 0)
 		throw std::runtime_error("unable to open TAP device or no more devices available");
 
