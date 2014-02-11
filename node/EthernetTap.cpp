@@ -251,7 +251,7 @@ EthernetTap::EthernetTap(
 	bool recalledDevice = false;
 	if ((tag)&&(tag[0])) {
 		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),tag);
-		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.fr_name);
+		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		recalledDevice = (stat(procpath,&sbuf) != 0);
 	}
 	if (!recalledDevice) {

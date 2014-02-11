@@ -134,8 +134,9 @@ void Topology::saveIdentity(const Identity &id)
 SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const
 {
 	SharedPtr<Peer> bestSupernode;
-	unsigned int bestSupernodeLatency = 65536;
+	unsigned int l,bestSupernodeLatency = 65536;
 	uint64_t now = Utils::now();
+	uint64_t lds,ldr;
 
 	Mutex::Lock _l(_supernodes_m);
 
@@ -150,13 +151,13 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 		}
 
 		// Skip possibly comatose or unreachable relays
-		uint64_t lds = (*sn)->lastDirectSend();
-		uint64_t ldr = (*sn)->lastDirectReceive();
+		lds = (*sn)->lastDirectSend();
+		ldr = (*sn)->lastDirectReceive();
 		if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
 			goto keep_searching_for_supernodes;
 
 		if ((*sn)->hasActiveDirectPath(now)) {
-			unsigned int l = (*sn)->latency();
+			l = (*sn)->latency();
 			if (bestSupernode) {
 				if ((l)&&(l < bestSupernodeLatency)) {
 					bestSupernodeLatency = l;
