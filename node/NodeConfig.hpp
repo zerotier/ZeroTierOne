@@ -69,6 +69,24 @@ public:
 	~NodeConfig();
 
 	/**
+	 * Store something in local configuration cache
+	 *
+	 * By convention, keys starting with _ will not be shown in the command bus
+	 * local config functions.
+	 *
+	 * @param key Configuration key
+	 * @param value Configuration value
+	 */
+	void putLocalConfig(const std::string &key,const char *value);
+	void putLocalConfig(const std::string &key,const std::string &value);
+
+	/**
+	 * @param key Configuration key
+	 * @return Value or empty string if not found
+	 */
+	std::string getLocalConfig(const std::string &key) const;
+
+	/**
 	 * @param nwid Network ID
 	 * @return Network or NULL if no network for that ID
 	 */

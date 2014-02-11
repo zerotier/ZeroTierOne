@@ -118,6 +118,29 @@ NodeConfig::~NodeConfig()
 	_writeLocalConfig();
 }
 
+void NodeConfig::putLocalConfig(const std::string &key,const char *value)
+{
+	Mutex::Lock _l(_localConfig_m);
+	_localConfig[key] = value;
+	_writeLocalConfig();
+}
+
+void NodeConfig::putLocalConfig(const std::string &key,const std::string &value)
+{
+	Mutex::Lock _l(_localConfig_m);
+	_localConfig[key] = value;
+	_writeLocalConfig();
+}
+
+std::string NodeConfig::getLocalConfig(const std::string &key) const
+{
+	Mutex::Lock _l(_localConfig_m);
+	Dictionary::const_iterator i(_localConfig.find(key));
+	if (i == _localConfig.end())
+		return std::string();
+	return i->second;
+}
+
 void NodeConfig::clean()
 {
 	Mutex::Lock _l(_networks_m);
