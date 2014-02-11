@@ -70,47 +70,34 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsi
 		memcpy(_controlSocketKey,csk,32);
 	}
 
+	{
+		Mutex::Lock _llc(_localConfig_m);
+		_readLocalConfig();
+	}
+
 	std::string networksFolder(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
 	std::map<std::string,bool> networksDotD(Utils::listDirectory(networksFolder.c_str()));
-	std::set<uint64_t> nwids;
+	std::vector<uint64_t> configuredNets;
 	for(std::map<std::string,bool>::iterator d(networksDotD.begin());d!=networksDotD.end();++d) {
 		if (!d->second) {
 			std::string::size_type dot = d->first.rfind(".conf");
 			if (dot != std::string::npos) {
 				uint64_t nwid = Utils::hexStrToU64(d->first.substr(0,dot).c_str());
-
-				// TODO: remove legacy code once out of beta
-				if (nwid == 0x6c92786fee000001ULL) {
-					nwid = 0xbc8f9a8ee3000001ULL;
-					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
-				}
-				if (nwid == 0xbc8f9a8ee3000001ULL) {
-					nwid = 0x8D93FBE886000001ULL;
-					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
-				}
-				if (nwid == 0x8D93FBE886000001ULL) {
-					nwid = 0x8056c2e21c000001ULL;
-					Utils::rm((networksFolder + ZT_PATH_SEPARATOR_S + d->first).c_str());
-				}
-
-				if (nwid > 0)
-					nwids.insert(nwid);
+				if ((nwid > 0)&&(std::find(configuredNets.begin(),configuredNets.end(),nwid) == configuredNets.end()))
+					configuredNets.push_back(nwid);
 			}
 		}
 	}
 
-	for(std::set<uint64_t>::iterator nwid(nwids.begin());nwid!=nwids.end();++nwid) {
+	for(std::vector<uint64_t>::iterator n(configuredNets.begin());n!=configuredNets.end();++n) {
 		try {
-			SharedPtr<Network> nw(Network::newInstance(_r,*nwid));
-			_networks[*nwid] = nw;
+			_networks[*n] = Network::newInstance(_r,*n);
 		} catch (std::exception &exc) {
-			LOG("unable to create network %.16llx: %s",(unsigned long long)*nwid,exc.what());
+			LOG("unable to create network %.16llx: %s",(unsigned long long)*n,exc.what());
 		} catch ( ... ) {
-			LOG("unable to create network %.16llx: (unknown exception)",(unsigned long long)*nwid);
+			LOG("unable to create network %.16llx: (unknown exception)",(unsigned long long)*n);
 		}
 	}
-
-	_readLocalConfig();
 }
 
 NodeConfig::~NodeConfig()
@@ -422,16 +409,16 @@ void NodeConfig::_CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAdd
 
 void NodeConfig::_readLocalConfig()
 {
+	// assumes _localConfig_m is locked
 	std::string localDotConf(_r->homePath + ZT_PATH_SEPARATOR_S + "local.conf");
 	std::string buf;
-	if (Utils::readFile(localDotConf.c_str(),buf)) {
-		Mutex::Lock _l(_localConfig_m);
+	if (Utils::readFile(localDotConf.c_str(),buf))
 		_localConfig.fromString(buf.c_str());
-	}
 }
 
 void NodeConfig::_writeLocalConfig()
 {
+	// assumes _localConfig_m is locked
 	Utils::writeFile(((_r->homePath + ZT_PATH_SEPARATOR_S + "local.conf")).c_str(),_localConfig.toString());
 }
 
