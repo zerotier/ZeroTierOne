@@ -613,11 +613,9 @@ std::set<InetAddress> EthernetTap::ips() const
 				case AF_INET6: {
 					struct sockaddr_in6 *sin = (struct sockaddr_in6 *)p->ifa_addr;
 					struct sockaddr_in6 *nm = (struct sockaddr_in6 *)p->ifa_netmask;
-					r.insert(InetAddress(sin->sin6_addr.s6_addr,16,
-						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[0]) +
-						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[1]) +
-						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[2]) +
-						Utils::countBits(((const uint32_t *)(nm->sin6_addr.s6_addr))[3])));
+					uint32_t b[4];
+					memcpy(b,nm->sin6_addr.s6_addr,sizeof(b));
+					r.insert(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
 				}	break;
 			}
 		}
