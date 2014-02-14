@@ -80,6 +80,15 @@ ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-cli
 echo 'Installing and (re-)starting zerotier-one daemon...'
 
 if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
+	# If this was updated or upgraded from an init.d based system, clean up the old
+	# init.d stuff before installing directly via systemd.
+	if [ -f /etc/init.d/zerotier-one ]; then
+		if [ -e /sbin/chkconfig -o -e /usr/sbin/chkconfig -o -e /bin/chkconfig -o -e /usr/bin/chkconfig ]; then
+			chkconfig zerotier-one off
+		fi
+		rm -f /etc/init.d/zerotier-one
+	fi
+
 	cp -f /tmp/systemd_zerotier-one.service "$SYSTEMDUNITDIR/zerotier-one.service"
 	systemctl enable zerotier-one
 	systemctl restart zerotier-one
