@@ -48,8 +48,9 @@ case "$system" in
 		mkdir -p 'build-installer/var/lib/zerotier-one'
 		cp -fp 'ext/installfiles/linux/uninstall.sh' 'build-installer/var/lib/zerotier-one'
 		cp -fp 'zerotier-one' 'build-installer/var/lib/zerotier-one'
-		mkdir -p 'build-installer/etc/init.d'
-		cp -fp 'ext/installfiles/linux/init.d/zerotier-one' 'build-installer/etc/init.d'
+		mkdir -p 'build-installer/tmp'
+		cp -fp 'ext/installfiles/linux/init.d/zerotier-one' 'build-installer/tmp/init.d_zerotier-one'
+		cp -fp 'ext/installfiles/linux/systemd/zerotier-one.service' 'build-installer/tmp/systemd_zerotier-one.service'
 
 		targ="ZeroTierOneInstaller-linux-${machine}-${vmajor}_${vminor}_${revision}"
 		# Use gzip in Linux since some minimal Linux systems do not have bunzip2

@@ -1,0 +1,11 @@
+[Unit]
+Description=ZeroTier One
+After=network.target
+
+[Service]
+ExecStart=/var/lib/zerotier-one/zerotier-one
+Restart=always
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

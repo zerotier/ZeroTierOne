@@ -7,6 +7,22 @@ if [ "$UID" -ne 0 ]; then
 	exit 1
 fi
 
+# Detect systemd vs. regular init
+SYSTEMDUNITDIR=
+if [ -e /bin/systemctl -o -e /usr/bin/systemctl -o -e /usr/local/bin/systemctl -o -e /sbin/systemctl -o -e /usr/sbin/systemctl ]; then
+	if [ -e /usr/bin/pkg-config ]; then
+		SYSTEMDUNITDIR=`/usr/bin/pkg-config systemd --variable=systemdsystemunitdir`
+	fi
+	if [ -z "$SYSTEMDUNITDIR" -o ! -d "$SYSTEMDUNITDIR" ]; then
+		if [ -d /usr/lib/systemd/system ]; then
+			SYSTEMDUNITDIR=/usr/lib/systemd/system
+		fi
+		if [ -d /etc/systemd/system ]; then
+			SYSTEMDUNITDIR=/etc/systemd/system
+		fi
+	fi
+fi
+
 echo
 
 echo "This will uninstall ZeroTier One, hit CTRL+C to abort."
@@ -14,20 +30,36 @@ echo "Waiting 5 seconds..."
 sleep 5
 
 echo "Killing any running zerotier-one service..."
+if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
+	systemctl stop zerotier-one
+	systemctl disable zerotier-one
+else
+	service stop zerotier-one
+fi
+sleep 1
 killall -q -TERM zerotier-one
-sleep 2
+sleep 1
 killall -q -KILL zerotier-one
 
-echo "Removing SysV init items..."
-rm -fv /etc/init.d/zerotier-one
-find /etc/rc*.d -name '???zerotier-one' -print0 | xargs -0 rm -fv
+if [ -f /etc/init.d/zerotier-one ]; then
+	echo "Removing SysV init items..."
+	rm -f /etc/init.d/zerotier-one
+	find /etc/rc*.d -name '???zerotier-one' -print0 | xargs -0 rm -f
+fi
+
+if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" -a -f "$SYSTEMDUNITDIR/zerotier-one.service" ]; then
+	echo "Removing systemd service..."
+	rm -f "$SYSTEMDUNITDIR/zerotier-one.service"
+fi
 
 echo "Erasing binary and support files..."
-cd /var/lib/zerotier-one
-rm -rfv zerotier-one *.persist authtoken.secret identity.public *.log *.pid *.sh updates.d networks.d iddb.d
+if [ -d /var/lib/zerotier-one ]; then
+	cd /var/lib/zerotier-one
+	rm -rf zerotier-one *.persist identity.public *.log *.pid *.sh updates.d networks.d iddb.d
+fi
 
 echo "Erasing anything installed into system bin directories..."
-rm -fv /usr/local/bin/zerotier-* /usr/bin/zerotier-*
+rm -f /usr/local/bin/zerotier-cli /usr/bin/zerotier-cli
 
 echo "Done."
 echo

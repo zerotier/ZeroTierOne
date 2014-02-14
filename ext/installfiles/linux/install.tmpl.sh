@@ -12,6 +12,22 @@ if [ "$UID" -ne 0 ]; then
 	dryRun=1
 fi
 
+# Detect systemd vs. regular init
+SYSTEMDUNITDIR=
+if [ -e /bin/systemctl -o -e /usr/bin/systemctl -o -e /usr/local/bin/systemctl -o -e /sbin/systemctl -o -e /usr/sbin/systemctl ]; then
+	if [ -e /usr/bin/pkg-config ]; then
+		SYSTEMDUNITDIR=`/usr/bin/pkg-config systemd --variable=systemdsystemunitdir`
+	fi
+	if [ -z "$SYSTEMDUNITDIR" -o ! -d "$SYSTEMDUNITDIR" ]; then
+		if [ -d /usr/lib/systemd/system ]; then
+			SYSTEMDUNITDIR=/usr/lib/systemd/system
+		fi
+		if [ -d /etc/systemd/system ]; then
+			SYSTEMDUNITDIR=/etc/systemd/system
+		fi
+	fi
+fi
+
 if [ $dryRun -gt 0 ]; then
 	alias ln="echo '>> dry run: ln'"
 	alias rm="echo '>> dry run: rm'"
@@ -21,6 +37,7 @@ if [ $dryRun -gt 0 ]; then
 	alias chkconfig="echo '>> dry run: chkconfig'"
 	alias zerotier-cli="echo '>> dry run: zerotier-cli'"
 	alias service="echo '>> dry run: service'"
+	alias systemctl="echo '>> dry run: systemctl'"
 fi
 
 scriptPath="`dirname "$0"`/`basename "$0"`"
@@ -62,11 +79,17 @@ ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-cli
 
 echo 'Installing and (re-)starting zerotier-one daemon...'
 
-chkconfig zerotier-one on
-service zerotier-one restart
-
-sleep 1
-zerotier-cli info
+if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
+	cp -f /tmp/systemd_zerotier-one.service "$SYSTEMDUNITDIR/zerotier-one.service"
+	systemctl enable zerotier-one
+	systemctl restart zerotier-one
+else
+	cp -f /tmp/init.d_zerotier-one /etc/init.d/zerotier-one
+	chmod 0755 /etc/init.d/zerotier-one
+	chkconfig zerotier-one on
+	service zerotier-one restart
+fi
+rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
 exit 0
 
