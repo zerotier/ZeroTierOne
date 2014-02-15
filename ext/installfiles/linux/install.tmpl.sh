@@ -106,6 +106,8 @@ else
 	service zerotier-one restart &
 fi
 
+sleep 1
+
 exit 0
 
 # Do not remove the last line or add a carriage return to it! The installer
