@@ -64,7 +64,7 @@ echo 'Extracting files...'
 if [ $dryRun -gt 0 ]; then
 	echo ">> dry run: tail -c +$blobStart \"$scriptPath\" | gunzip -c | tar -xvop -C / -f -"
 else
-	tail -c +$blobStart "$scriptPath" | gunzip -c | tar -xvop -C / -f -
+	tail -c +$blobStart "$scriptPath" | gunzip -c | tar -xvop --no-overwrite-dir -C / -f -
 fi
 
 if [ $dryRun -eq 0 -a ! -d "/var/lib/zerotier-one" ]; then
