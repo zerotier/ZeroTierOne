@@ -79,6 +79,9 @@ ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-cli
 
 echo 'Installing and (re-)starting zerotier-one daemon...'
 
+# Note: ensure that service restarts are the last thing this script actually
+# does, since these may kill the script itself. Also note the & to allow
+# them to finish independently.
 if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	# If this was updated or upgraded from an init.d based system, clean up the old
 	# init.d stuff before installing directly via systemd.
@@ -90,15 +93,18 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	fi
 
 	cp -f /tmp/systemd_zerotier-one.service "$SYSTEMDUNITDIR/zerotier-one.service"
+	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
+
 	systemctl enable zerotier-one
-	systemctl restart zerotier-one
+	systemctl restart zerotier-one &
 else
 	cp -f /tmp/init.d_zerotier-one /etc/init.d/zerotier-one
 	chmod 0755 /etc/init.d/zerotier-one
+	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
+
 	chkconfig zerotier-one on
-	service zerotier-one restart
+	service zerotier-one restart &
 fi
-rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
 exit 0
 
