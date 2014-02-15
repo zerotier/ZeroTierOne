@@ -65,6 +65,7 @@ class RuntimeEnvironment
 public:
 	RuntimeEnvironment() :
 		shutdownInProgress(false),
+		timeOfLastNetworkEnvironmentChange(0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		mc((Multicaster *)0),
@@ -92,6 +93,9 @@ public:
 
 	// Indicates that we are shutting down -- this is hacky, want to factor out
 	volatile bool shutdownInProgress;
+
+	// Time network environment (e.g. fingerprint) last changed -- used to determine online-ness
+	volatile uint64_t timeOfLastNetworkEnvironmentChange;
 
 	/*
 	 * Order matters a bit here. These are constructed in this order

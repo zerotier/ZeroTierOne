@@ -511,8 +511,7 @@ Node::ReasonForTermination Node::run()
 		 * in the natural Mac way. */
 		std::string shutdownIfUnreadablePath(_r->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
 
-		// TODO: persist some of this stuff between restarts
-		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000; // check autoconf again after 5s for startup
+		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000ULL; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
 		uint64_t lastSupernodePing = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
@@ -520,6 +519,7 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastMulticastCheck = 0;
 
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
+		_r->timeOfLastNetworkEnvironmentChange = Utils::now();
 		long lastDelayDelta = 0;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
@@ -551,6 +551,7 @@ Node::ReasonForTermination Node::run()
 				if (fp != networkConfigurationFingerprint) {
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
+					_r->timeOfLastNetworkEnvironmentChange = now;
 					resynchronize = true;
 				}
 			}

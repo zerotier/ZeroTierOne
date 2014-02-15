@@ -195,15 +195,20 @@ std::vector<std::string> NodeConfig::execute(const char *command)
 		_P("200 help terminate [<reason>]");
 		_P("200 help updatecheck");
 	} else if (cmd[0] == "info") {
+		// We are online if at least one supernode has spoken to us since the last time our
+		// network environment changed and also less than ZT_PEER_LINK_ACTIVITY_TIMEOUT ago.
 		bool isOnline = false;
 		uint64_t now = Utils::now();
+		uint64_t since = _r->timeOfLastNetworkEnvironmentChange;
 		std::vector< SharedPtr<Peer> > snp(_r->topology->supernodePeers());
 		for(std::vector< SharedPtr<Peer> >::const_iterator sn(snp.begin());sn!=snp.end();++sn) {
-			if ((*sn)->hasActiveDirectPath(now)) {
+			uint64_t lastRec = (*sn)->lastDirectReceive();
+			if ((lastRec)&&(lastRec > since)&&((now - lastRec) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)) {
 				isOnline = true;
 				break;
 			}
 		}
+
 		_P("200 info %s %s %s",_r->identity.address().toString().c_str(),(isOnline ? "ONLINE" : "OFFLINE"),Node::versionString());
 	} else if (cmd[0] == "listpeers") {
 		_P("200 listpeers <ztaddr> <ipv4> <ipv6> <latency> <version>");
