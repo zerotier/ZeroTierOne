@@ -1,15 +1,19 @@
-First build it -- see BUILDING.txt -- then...
+This guide is for those building and running from source. See BUILDING.txt
+first.
 
--- MacOS --
+The wiki at GitHub contains several pages that are probably also of interest:
+  https://github.com/zerotier/ZeroTierOne/wiki
 
-By convention, ZeroTier One will keep its state here on mac:
+--- MacOS
+
+On Mac, the default ZeroTier home is:
 
 /Library/Application Support/ZeroTier/One
 
 ZeroTier ships with a kernel extension for its own tap device, which it
 stores in the above directory. To install this, type:
 
-sudo make -f Makefile.mac install-mac-tap
+sudo make install-mac-tap
 
 This will create the ZeroTier One home above if it does not exist and install
 the kext there. Note that the kext must be owned by root:wheel. The make
@@ -20,14 +24,7 @@ If run with no options, it will use the default home directory above.
 
 sudo ./zerotier-one &
 
-Finally, join the Earth network (the big public LAN and the only net for now):
-
-sudo zerotier-cli join 8056c2e21c000001
-
-Try pinging earth.zerotier.net and going to http://earth.zerotier.net/ in a
-browser to see if you're online.
-
--- Linux
+--- LINUX
 
 On Linux, the default ZeroTier home is:
 
@@ -38,31 +35,14 @@ Just type:
 sudo mkdir /var/lib/zerotier-one
 sudo ./zerotier-one &
 
-When run with no options, ZT1 uses its default home path on the current
-platform. Note that ZT1 requires the Linux tap driver, so it must be
-available in the kernel or as a module. In most Linux distributions it's
-included out of the box and should just work.
+Your system must have the Linux tun/tap driver available (tun). All tested
+distributions so far ship with this driver as a module that will load
+automatically.
 
-Finally, join the Earth network (the big public LAN and the only net for now):
+UDP port 9993 must be open in your local firewall for this to work properly.
+How to do this varies by Linux distribution.
 
-sudo zerotier-cli join bc8f9a8ee3000001
-
-Try pinging earth.zerotier.net and going to http://earth.zerotier.net/ in a
-browser to see if you're online.
-
--- Windows
-
-Port in progress, and it's going to pretty much always be more painful to
-build than *nix systems. Just wait for the binary release unless you're
-brave, in which case you can load the VS2012 solution and play around.
-
--- Open UDP port 9993
-
-As noted in README.md, to actually function properly, you need to open
-UDP port 9993 in your firewall. Following are instructions to open UDP port
-9993 for specific operating systems.
-
---- Ubuntu (version 12.04 and possibly other versions, too)
+ - Opening port 9993 on Ubuntu
 
 Follow the Ubuntu documentation about UFW https://help.ubuntu.com/community/UFW
 
@@ -76,3 +56,19 @@ sudo ufw allow 9993/udp
 
 You should now be able to ping and browse earth.zerotier.net
 
+--- WINDOWS
+
+A windows port is in progress.
+
+--- ONCE IT'S RUNNING:
+
+To use the command line interface, see this guide:
+  https://github.com/zerotier/ZeroTierOne/wiki/Command-Line-Interface
+
+If you want to test by joining the Earth network, try:
+  sudo ./zerotier-cli join 8056c2e21c000001
+
+An interface called 'zt0' should appear and should get an IP address in
+the 28.0.0.0/7 range (28.* or 29.*) within a few seconds or so. Then try
+pinging earth.zerotier.net or navigating to http://earth.zerotier.net/ in
+a web browser.

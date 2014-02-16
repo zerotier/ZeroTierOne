@@ -8,20 +8,12 @@ do this eventually.
 
 -- Linux
 
-make
-
-That's it. Add ZT_AUTO_UPDATE=1 to the make command line to build an
-auto-update-enabled version that will update from ZeroTier's servers.
-This is disabled by default since such a build will automatically
-replace itself with our binary distributions.
+Just type 'make'. You'll need gcc and g++ installed, but ZeroTier One requires
+no other third party libraries beyond the standard libc, libstdc++, and libm.
 
 -- MacOS
 
 make
-
-The same ZT_AUTO_UPDATE=1 option as Linux supports can be used here to
-build an auto-update-enabled version. By default auto-updates are not
-enabled.
 
 If you are building ext/tap-mac you will need a different version of the
 OSX gcc compiler chain than what currently ships (clang). We've got a copy
