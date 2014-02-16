@@ -12,5 +12,3 @@ Once you are up and running, you can [create an account on the network control p
 Note that this won't work if your firewall does not allow outbound UDP. It must allow two way UDP conversations on port 9993 at a minimum.
 
 ZeroTier One is licensed under the GNU General Public License version 3. You are free to use, modify, or redistribute it under the terms of that license. If you would like to embed ZeroTier One in a closed source product or create a closed source derivative product, contact ZeroTier Networks LLC.
-
-(c)2012-2013 [ZeroTier Networks LLC](https://www.zerotier.com/)

@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2012-2013  ZeroTier Networks LLC
+ * Copyright (C) 2011-2014  ZeroTier Networks LLC
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ static Node *node = (Node *)0;
 
 static void printHelp(const char *cn,FILE *out)
 {
-	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2012-2013 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
+	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2014 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
 #ifdef ZT_AUTO_UPDATE
 	fprintf(out,"Auto-update enabled build, will update from URL:"ZT_EOL_S);
