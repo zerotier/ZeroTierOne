@@ -5,7 +5,7 @@ ZeroTier One creates flat virtual Ethernet networks of almost unlimited size. [V
 
 Follow the [ZeroTier blog](http://blog.zerotier.com/) and the [GitHub project](https://github.com/zerotier/ZeroTierOne) to stay up to date.
 
-Auto-updating binary packages that install easily [can be found here.](https://www.zerotier.com/downloads.html) If you want to build from source, clone this repository and see BUILDING.txt and RUNNING.txt.
+Auto-updating binary packages that install easily [can be found here.](https://www.zerotier.com/download.html) If you want to build from source, clone this repository and see BUILDING.txt and RUNNING.txt.
 
 Once you are up and running, you can [create an account on the network control panel](https://www.zerotier.com/networks.html) if you want to create a private network or you can join [Earth](https://www.zerotier.com/earth.html) by running (on Linux and Mac) `sudo ./zerotier-cli join 8056c2e21c000001`.
 
