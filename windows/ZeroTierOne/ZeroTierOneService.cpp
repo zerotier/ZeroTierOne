@@ -26,7 +26,14 @@
  */
 
 #pragma region Includes
+#include <WinSock2.h>
+#include <Windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "ZeroTierOneService.h"
+#include "../../node/Defaults.hpp"
+#include "../../node/Utils.hpp"
 #pragma endregion
 
 ZeroTierOneService::ZeroTierOneService() :
@@ -52,7 +59,52 @@ restart_node:
 		}
 		switch(_node->run()) {
 			case ZeroTier::Node::NODE_RESTART_FOR_UPGRADE: {
-			}	break;
+				// Shut down node
+				ZeroTier::Node *n;
+				{
+				   ZeroTier::Mutex::Lock _l(_lock);
+				   n = _node;
+				   _node = (ZeroTier::Node *)0;
+				}
+				std::string msiPath;
+				const char *msiPathTmp = n->reasonForTermination();
+				if (msiPathTmp)
+					msiPath = msiPathTmp;
+				delete n;
+
+				// Write a batch file to ensure the service is stopped
+				if ((!msiPath.length())||(!ZeroTier::Utils::fileExists(msiPath.c_str()))) {
+					WriteEventLogEntry("auto-update failed: no msi path provided by Node",EVENTLOG_ERROR_TYPE);
+					Sleep(5000);
+					goto restart_node;
+				}
+				std::string bat(ZeroTier::ZT_DEFAULTS.defaultHomePath + "\\InstallAndRestartService.bat");
+				FILE *batf = fopen(bat.c_str(),"wb");
+				if (!batf) {
+					WriteEventLogEntry("auto-update failed: unable to create InstallAndRestartService.bat",EVENTLOG_ERROR_TYPE);
+					Sleep(5000);
+					goto restart_node;
+				}
+				fprintf(batf,"TIMEOUT.EXE /T 1 /NOBREAK\r\n");
+				fprintf(batf,"NET.EXE STOP \"ZeroTier One\"\r\n");
+				fprintf(batf,"MSIEXEC.EXE /i \"%s\" /qn\r\n",msiPath.c_str());
+				fprintf(batf,"NET.EXE START \"ZeroTier One\"\r\n");
+				fclose(batf);
+
+				// Execute updater, which will update and restart service
+				STARTUPINFOA si;
+				PROCESS_INFORMATION pi;
+				memset(&si,0,sizeof(si));
+				memset(&pi,0,sizeof(pi));
+				if (!CreateProcessA(NULL,const_cast <LPSTR>((std::string("CMD.EXE /c \"") + bat + "\"").c_str()),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi)) {
+					WriteEventLogEntry("auto-update failed: unable to execute InstallAndRestartService.bat",EVENTLOG_ERROR_TYPE);
+					Sleep(5000);
+					goto restart_node;
+				}
+
+				// Terminate service to allow updater to update
+				Stop();
+			}	return;
 			case ZeroTier::Node::NODE_UNRECOVERABLE_ERROR: {
 				std::string err("ZeroTier node encountered an unrecoverable error: ");
 				const char *r = _node->reasonForTermination();
