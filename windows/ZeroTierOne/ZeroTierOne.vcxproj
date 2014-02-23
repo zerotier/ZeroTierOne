@@ -210,7 +210,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_LOG_STDOUT;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -228,7 +228,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_LOG_STDOUT;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
