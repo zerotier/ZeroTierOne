@@ -145,7 +145,10 @@ static inline const char *_mkUpdateUrl()
 #define GOT_UPDATE_URL
 #endif
 
-	// TODO: Windows
+#ifdef __WINDOWS__
+	return "http://download.zerotier.com/ZeroTierOneInstaller-windows-intel-LATEST.nfo";
+#define GOT_UPDATE_URL
+#endif
 
 #ifndef GOT_UPDATE_URL
 	return "";
