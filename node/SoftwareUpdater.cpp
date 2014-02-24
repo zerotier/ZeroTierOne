@@ -81,7 +81,7 @@ void SoftwareUpdater::cleanOldUpdates()
 	std::map<std::string,bool> dl(Utils::listDirectory(updatesDir.c_str()));
 	for(std::map<std::string,bool>::iterator i(dl.begin());i!=dl.end();++i) {
 		if (!i->second)
-			Utils::rm(i->first.c_str());
+			Utils::rm((updatesDir + ZT_PATH_SEPARATOR_S + i->first).c_str());
 	}
 }
 
