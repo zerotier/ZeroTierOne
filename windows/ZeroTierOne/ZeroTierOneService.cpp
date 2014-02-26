@@ -67,37 +67,21 @@ restart_node:
 				   _node = (ZeroTier::Node *)0;
 				}
 				std::string msiPath;
-				const char *msiPathTmp = n->reasonForTermination();
-				if (msiPathTmp)
-					msiPath = msiPathTmp;
+				if (n) {
+					const char *msiPathTmp = n->reasonForTermination();
+					if (msiPathTmp)
+						msiPath = msiPathTmp;
+				}
 				delete n;
 
-				// Write a batch file to ensure the service is stopped
 				if ((!msiPath.length())||(!ZeroTier::Utils::fileExists(msiPath.c_str()))) {
 					WriteEventLogEntry("auto-update failed: no msi path provided by Node",EVENTLOG_ERROR_TYPE);
 					Sleep(5000);
 					goto restart_node;
 				}
-				std::string bat(ZeroTier::ZT_DEFAULTS.defaultHomePath + "\\InstallAndRestartService.bat");
-				FILE *batf = fopen(bat.c_str(),"wb");
-				if (!batf) {
-					WriteEventLogEntry("auto-update failed: unable to create InstallAndRestartService.bat",EVENTLOG_ERROR_TYPE);
-					Sleep(5000);
-					goto restart_node;
-				}
-				fprintf(batf,"TIMEOUT.EXE /T 1 /NOBREAK\r\n");
-				fprintf(batf,"NET.EXE STOP \"ZeroTier One\"\r\n");
-				fprintf(batf,"MSIEXEC.EXE /i \"%s\" /qn\r\n",msiPath.c_str());
-				fprintf(batf,"NET.EXE START \"ZeroTier One\"\r\n");
-				fclose(batf);
 
-				// Execute updater, which will update and restart service
-				STARTUPINFOA si;
-				PROCESS_INFORMATION pi;
-				memset(&si,0,sizeof(si));
-				memset(&pi,0,sizeof(pi));
-				if (!CreateProcessA(NULL,const_cast <LPSTR>((std::string("CMD.EXE /c \"") + bat + "\"").c_str()),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi)) {
-					WriteEventLogEntry("auto-update failed: unable to execute InstallAndRestartService.bat",EVENTLOG_ERROR_TYPE);
+				if (!doStartUpgrade(msiPath)) {
+					WriteEventLogEntry("auto-update failed: unable to create InstallAndRestartService.bat",EVENTLOG_ERROR_TYPE);
 					Sleep(5000);
 					goto restart_node;
 				}
@@ -131,6 +115,31 @@ restart_node:
 	delete _node;
 	_node = (ZeroTier::Node *)0;
 	_lock.unlock();
+}
+
+bool ZeroTierOneService::doStartUpgrade(const std::string &msiPath)
+{
+	std::string msiLog(ZeroTier::ZT_DEFAULTS.defaultHomePath + "\\LastUpdateLog.txt");
+	ZeroTier::Utils::rm(msiLog);
+
+	std::string bat(ZeroTier::ZT_DEFAULTS.defaultHomePath + "\\InstallAndRestartService.bat");
+	FILE *batf = fopen(bat.c_str(),"wb");
+	if (!batf)
+		return false;
+	fprintf(batf,"TIMEOUT.EXE /T 1 /NOBREAK\r\n");
+	fprintf(batf,"NET.EXE STOP \"ZeroTier One\"\r\n");
+	fprintf(batf,"MSIEXEC.EXE /i \"%s\" /l* \"%s\" /qn\r\n",msiPath.c_str(),msiLog.c_str());
+	fprintf(batf,"NET.EXE START \"ZeroTier One\"\r\n");
+	fclose(batf);
+
+	STARTUPINFOA si;
+	PROCESS_INFORMATION pi;
+	memset(&si,0,sizeof(si));
+	memset(&pi,0,sizeof(pi));
+	if (!CreateProcessA(NULL,const_cast <LPSTR>((std::string("CMD.EXE /c \"") + bat + "\"").c_str()),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi))
+		return false;
+
+	return true;
 }
 
 void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)

@@ -29,6 +29,8 @@
 
 #include "ServiceBase.h"
 
+#include <string>
+
 #include "../../node/Node.hpp"
 #include "../../node/Defaults.hpp"
 #include "../../node/Thread.hpp"
@@ -53,6 +55,9 @@ public:
 	 */
 	void threadMain()
 		throw();
+
+	// Returns false on failure.
+	static bool doStartUpgrade(const std::string &msiPath);
 
 protected:
     virtual void OnStart(DWORD dwArgc, PSTR *pszArgv);

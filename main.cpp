@@ -641,7 +641,20 @@ int main(int argc,char **argv)
 		try {
 			node = new Node(homeDir,port,controlPort);
 			switch(node->run()) {
-#ifndef __WINDOWS__
+#ifdef __WINDOWS__
+				case Node::NODE_RESTART_FOR_UPGRADE: {
+					const char *upgPath = node->reasonForTermination();
+					if (upgPath) {
+						if (!ZeroTierOneService::doStartUpgrade(std::string(upgPath))) {
+							exitCode = 3;
+							fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (doStartUpgrade failed)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+						}
+					} else {
+						exitCode = 3;
+						fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (no upgrade path provided)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+					}
+				}	break;
+#else // __UNIX_LIKE__
 				case Node::NODE_RESTART_FOR_UPGRADE: {
 					const char *upgPath = node->reasonForTermination();
 					// On Unix-type OSes we exec() right into the upgrade. This in turn will
