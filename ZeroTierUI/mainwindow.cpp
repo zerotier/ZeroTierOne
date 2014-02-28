@@ -111,9 +111,11 @@ MainWindow::MainWindow(QWidget *parent) :
 #ifdef __WINDOWS__
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget *widget, widgets) {
-		QFont font(widget->font());
-		font.setPointSizeF(font.pointSizeF() * 0.75);
-		widget->setFont(font);
+		if ((typeid(*widget) != typeid(ui->menuBar))&&(typeid(*widget) != typeid(ui->menuFile))) {
+			QFont font(widget->font());
+			font.setPointSizeF(font.pointSizeF() * 0.75);
+			widget->setFont(font);
+		}
 	}
 #endif
 

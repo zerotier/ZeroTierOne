@@ -42,11 +42,15 @@
 #include "../node/Constants.hpp"
 #include "../node/Defaults.hpp"
 
+// Uncomment for testing to disable making sure Windows service is running
+//#define DISABLE_WINDOWS_SERVICE_MANAGEMENT
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <windows.h>
 #include "../windows/ZeroTierOne/ZeroTierOneService.h"
 
+#ifndef DISABLE_WINDOWS_SERVICE_MANAGEMENT
 // Returns true if started or already running, false if failed or not installed
 static bool startWindowsService()
 {
@@ -58,7 +62,7 @@ static bool startWindowsService()
 	if (schSCManager == NULL)
 		return false;
 
-	schService = OpenService(schSCManager, ZT_SERVICE_NAME, SERVICE_QUERY_STATUS | SERVICE_START);
+	schService = OpenServiceA(schSCManager, ZT_SERVICE_NAME, SERVICE_QUERY_STATUS | SERVICE_START);
 	if (schService == NULL) {
 		CloseServiceHandle(schSCManager);
 		return false;
@@ -81,8 +85,7 @@ static bool startWindowsService()
 			continue;
 		}
 
-		memset(&ssSvcStatus,0,sizeof(ssSvcStatus));
-		ControlService(schService, SERVICE_CONTROL_START, &ssSvcStatus);
+		StartService(schService,0,NULL);
 		Sleep(500);
 	}
 
@@ -90,6 +93,7 @@ static bool startWindowsService()
 	CloseServiceHandle(schSCManager);
 	return running;
 }
+#endif // !DISABLE_WINDOWS_SERVICE_MANAGEMENT
 #endif // __WINDOWS__
 
 // Globally visible settings for the app
@@ -142,7 +146,7 @@ int main(int argc, char *argv[])
 		ld.exec();
 	}
 
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__) && !defined(DISABLE_WINDOWS_SERVICE_MANAGEMENT)
 	{
 		bool winSvcInstalled = false;
 		while (!startWindowsService()) {
