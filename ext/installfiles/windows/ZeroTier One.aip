@@ -38,32 +38,56 @@
     <ROW Directory="ZeroTier_1_Dir" Directory_Parent="ProgramFilesFolder" DefaultDir="ZeroTier"/>
     <ROW Directory="ZeroTier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="ZeroTier"/>
     <ROW Directory="networks.d_Dir" Directory_Parent="One_Dir" DefaultDir="networks.d"/>
+    <ROW Directory="platforms_Dir" Directory_Parent="One_1_Dir" DefaultDir="PLATFO~1|platforms"/>
     <ROW Directory="tapwindows_Dir" Directory_Parent="One_Dir" DefaultDir="TAP-WI~1|tap-windows"/>
     <ROW Directory="updates.d_Dir" Directory_Parent="One_Dir" DefaultDir="updates.d"/>
     <ROW Directory="x64_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x64"/>
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="One" ComponentId="{5CAAC183-3291-4660-9065-438314DC5181}" Directory_="One_1_Dir" Attributes="0"/>
     <ROW Component="ProductInformation" ComponentId="{DB078D04-EA8E-4A7C-9001-89BAD932F9D9}" Directory_="APPDIR" Attributes="4" KeyPath="Version"/>
+    <ROW Component="Qt5Core.dll" ComponentId="{F6BFD713-0DD7-411C-BE9A-7A5A902814F2}" Directory_="One_1_Dir" Attributes="0" KeyPath="Qt5Core.dll"/>
+    <ROW Component="Qt5Gui.dll" ComponentId="{9005A0ED-9E05-4E7B-8083-AC57131BCF98}" Directory_="One_1_Dir" Attributes="0" KeyPath="Qt5Gui.dll"/>
+    <ROW Component="Qt5Network.dll" ComponentId="{0ECD4DCF-8E1D-4FF7-BB0D-3A9E1629AFC7}" Directory_="One_1_Dir" Attributes="0" KeyPath="Qt5Network.dll"/>
+    <ROW Component="Qt5Widgets.dll" ComponentId="{7B35E61D-D2F2-4605-AE92-9F0E0765831D}" Directory_="One_1_Dir" Attributes="0" KeyPath="Qt5Widgets.dll"/>
     <ROW Component="WdfCoinstaller01011.dll" ComponentId="{A417293D-AA26-447A-9A16-E0BCB2084CBA}" Directory_="x64_Dir" Attributes="256" KeyPath="WdfCoinstaller01011.dll"/>
     <ROW Component="WdfCoinstaller01011.dll_1" ComponentId="{C629091A-4845-4BD8-9E49-3A051FDDBEF9}" Directory_="x86_Dir" Attributes="0" KeyPath="WdfCoinstaller01011.dll_1"/>
     <ROW Component="devcon_x64.exe" ComponentId="{0711ACF9-EEF5-48B0-95D7-8421B74AE314}" Directory_="One_Dir" Attributes="256" KeyPath="devcon_x64.exe"/>
     <ROW Component="devcon_x86.exe" ComponentId="{335F6945-AC5D-40DD-B671-C9BA9C304623}" Directory_="One_Dir" Attributes="0" KeyPath="devcon_x86.exe"/>
+    <ROW Component="icudt51.dll" ComponentId="{413E1355-FEFE-4767-95A0-8A4B61B77821}" Directory_="One_1_Dir" Attributes="0" KeyPath="icudt51.dll"/>
+    <ROW Component="icuin51.dll" ComponentId="{2BD5EEFC-E613-49B6-9CC7-01E377F2C73C}" Directory_="One_1_Dir" Attributes="0" KeyPath="icuin51.dll"/>
+    <ROW Component="icuuc51.dll" ComponentId="{CCFECFF4-2B24-4A4B-8D77-2C6E6BBEEB2C}" Directory_="One_1_Dir" Attributes="0" KeyPath="icuuc51.dll"/>
+    <ROW Component="libEGL.dll" ComponentId="{D0C896BF-4145-4C0F-8CE1-577283DA7B4A}" Directory_="One_1_Dir" Attributes="0" KeyPath="libEGL.dll"/>
+    <ROW Component="libGLESv2.dll" ComponentId="{C4DD4C75-1EA8-4679-8706-0E4CD2358D3F}" Directory_="One_1_Dir" Attributes="0" KeyPath="libGLESv2.dll"/>
     <ROW Component="networks.d" ComponentId="{EF54D0DF-889F-41DC-AF5C-4E7F96AB1C8B}" Directory_="networks.d_Dir" Attributes="0"/>
+    <ROW Component="qwindows.dll" ComponentId="{5B31F279-3A03-4BED-B777-05554F7B00EF}" Directory_="platforms_Dir" Attributes="0" KeyPath="qwindows.dll"/>
     <ROW Component="updates.d" ComponentId="{E07A5480-3942-4529-A976-E7764542274C}" Directory_="updates.d_Dir" Attributes="0"/>
+    <ROW Component="zerotierone_x64.exe" ComponentId="{DFCFB72D-B055-4E60-B6D8-81FF585C2183}" Directory_="One_Dir" Attributes="256" KeyPath="zerotierone_x64.exe"/>
+    <ROW Component="zerotierone_x86.exe" ComponentId="{5D2F3366-4FE1-40A4-A81A-66C49FA11F1C}" Directory_="One_Dir" Attributes="0" KeyPath="zerotierone_x86.exe"/>
     <ROW Component="zttap200.cat" ComponentId="{CCBE3FBA-1D6E-4486-914D-7444954DE12B}" Directory_="x64_Dir" Attributes="0" KeyPath="zttap200.cat" Type="0"/>
     <ROW Component="zttap200.cat_1" ComponentId="{BA0FB826-479C-46E8-AB2C-9017D40A99D8}" Directory_="x86_Dir" Attributes="0" KeyPath="zttap200.cat_1" Type="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatsComponent">
-    <ROW Feature="MainFeature" Title="MainFeature" Description="Description" Display="1" Level="1" Directory_="APPDIR" Attributes="0" Components="One ProductInformation WdfCoinstaller01011.dll WdfCoinstaller01011.dll_1 devcon_x64.exe devcon_x86.exe networks.d updates.d zttap200.cat zttap200.cat_1"/>
+    <ROW Feature="MainFeature" Title="MainFeature" Description="Description" Display="1" Level="1" Directory_="APPDIR" Attributes="0" Components="ProductInformation Qt5Core.dll Qt5Gui.dll Qt5Network.dll Qt5Widgets.dll WdfCoinstaller01011.dll WdfCoinstaller01011.dll_1 devcon_x64.exe devcon_x86.exe icudt51.dll icuin51.dll icuuc51.dll libEGL.dll libGLESv2.dll networks.d qwindows.dll updates.d zerotierone_x64.exe zerotierone_x86.exe zttap200.cat zttap200.cat_1"/>
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
+    <ROW File="Qt5Core.dll" Component_="Qt5Core.dll" FileName="Qt5Core.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\Qt5Core.dll" SelfReg="false" NextFile="Qt5Gui.dll"/>
+    <ROW File="Qt5Gui.dll" Component_="Qt5Gui.dll" FileName="Qt5Gui.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\Qt5Gui.dll" SelfReg="false" NextFile="Qt5Network.dll"/>
+    <ROW File="Qt5Network.dll" Component_="Qt5Network.dll" FileName="QT5NET~1.DLL|Qt5Network.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\Qt5Network.dll" SelfReg="false" NextFile="Qt5Widgets.dll"/>
+    <ROW File="Qt5Widgets.dll" Component_="Qt5Widgets.dll" FileName="QT5WID~1.DLL|Qt5Widgets.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\Qt5Widgets.dll" SelfReg="false" NextFile="qwindows.dll"/>
     <ROW File="WdfCoinstaller01011.dll" Component_="WdfCoinstaller01011.dll" FileName="WDFCOI~1.DLL|WdfCoinstaller01011.dll" Attributes="0" SourcePath="..\..\bin\tap-windows\x64\WdfCoinstaller01011.dll" SelfReg="false" NextFile="zttap200.cat"/>
     <ROW File="WdfCoinstaller01011.dll_1" Component_="WdfCoinstaller01011.dll_1" FileName="WDFCOI~1.DLL|WdfCoinstaller01011.dll" Attributes="0" SourcePath="..\..\bin\tap-windows\x86\WdfCoinstaller01011.dll" SelfReg="false" NextFile="zttap200.cat_1"/>
     <ROW File="devcon_x64.exe" Component_="devcon_x64.exe" FileName="DEVCON~1.EXE|devcon_x64.exe" Attributes="0" SourcePath="..\..\bin\devcon\devcon_x64.exe" SelfReg="false" NextFile="devcon_x86.exe" DigSign="true"/>
-    <ROW File="devcon_x86.exe" Component_="devcon_x86.exe" FileName="DEVCON~2.EXE|devcon_x86.exe" Attributes="0" SourcePath="..\..\bin\devcon\devcon_x86.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="devcon_x86.exe" Component_="devcon_x86.exe" FileName="DEVCON~2.EXE|devcon_x86.exe" Attributes="0" SourcePath="..\..\bin\devcon\devcon_x86.exe" SelfReg="false" NextFile="icudt51.dll" DigSign="true"/>
+    <ROW File="icudt51.dll" Component_="icudt51.dll" FileName="icudt51.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\icudt51.dll" SelfReg="false" NextFile="icuin51.dll"/>
+    <ROW File="icuin51.dll" Component_="icuin51.dll" FileName="icuin51.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\icuin51.dll" SelfReg="false" NextFile="icuuc51.dll"/>
+    <ROW File="icuuc51.dll" Component_="icuuc51.dll" FileName="icuuc51.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\icuuc51.dll" SelfReg="false" NextFile="libEGL.dll"/>
+    <ROW File="libEGL.dll" Component_="libEGL.dll" FileName="libEGL.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\libEGL.dll" SelfReg="false" NextFile="libGLESv2.dll"/>
+    <ROW File="libGLESv2.dll" Component_="libGLESv2.dll" FileName="LIBGLE~1.DLL|libGLESv2.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\libGLESv2.dll" SelfReg="false" NextFile="Qt5Core.dll"/>
+    <ROW File="qwindows.dll" Component_="qwindows.dll" FileName="qwindows.dll" Attributes="0" SourcePath="..\..\..\..\..\..\QtWin32Dlls\platforms\qwindows.dll" SelfReg="false" NextFile="zerotierone_x86.exe"/>
+    <ROW File="zerotierone_x64.exe" Component_="zerotierone_x64.exe" FileName="ZEROTI~2.EXE|zerotier-one_x64.exe" Attributes="0" SourcePath="..\..\..\windows\Build\x64\Release\zerotier-one_x64.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="zerotierone_x86.exe" Component_="zerotierone_x86.exe" FileName="ZEROTI~1.EXE|zerotier-one_x86.exe" Attributes="0" SourcePath="..\..\..\windows\Build\Win32\Release\zerotier-one_x86.exe" SelfReg="false" NextFile="zerotierone_x64.exe" DigSign="true"/>
     <ROW File="zttap200.cat" Component_="zttap200.cat" FileName="zttap200.cat" Attributes="0" SourcePath="..\..\bin\tap-windows\x64\zttap200.cat" SelfReg="false" NextFile="zttap200.inf"/>
     <ROW File="zttap200.cat_1" Component_="zttap200.cat_1" FileName="zttap200.cat" Attributes="0" SourcePath="..\..\bin\tap-windows\x86\zttap200.cat" SelfReg="false" NextFile="zttap200.inf_1"/>
     <ROW File="zttap200.inf" Component_="zttap200.cat" FileName="zttap200.inf" Attributes="0" SourcePath="..\..\bin\tap-windows\x64\zttap200.inf" SelfReg="false" NextFile="zttap200.sys"/>
@@ -133,7 +157,6 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCreateFolderComponent">
     <ROW Directory_="networks.d_Dir" Component_="networks.d"/>
     <ROW Directory_="updates.d_Dir" Component_="updates.d"/>
-    <ROW Directory_="One_1_Dir" Component_="One"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCustActComponent">
     <ROW Action="AI_DOWNGRADE" Type="19" Target="4010"/>

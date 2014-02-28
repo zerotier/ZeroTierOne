@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <stdio.h>
+
 #include "ServiceBase.h"
 
 #include <string>
@@ -37,11 +39,23 @@
 #include "../../node/Mutex.hpp"
 #include "../../node/Utils.hpp"
 
+// Uncomment to make debugging Windows services suck slightly less hard.
+//#define ZT_DEBUG_SERVICE "C:\\ZeroTierOneServiceDebugLog.txt"
+
+#ifdef ZT_DEBUG_SERVICE
+extern FILE *SVCDBGfile;
+extern ZeroTier::Mutex SVCDBGfile_m;
+#define ZT_SVCDBG(f,...) { SVCDBGfile_m.lock(); fprintf(SVCDBGfile,f,##__VA_ARGS__); fflush(SVCDBGfile); SVCDBGfile_m.unlock(); }
+#else
+#define ZT_SVCDBG(f,...) {}
+#endif
+
 #define ZT_SERVICE_NAME "ZeroTierOneService"
 #define ZT_SERVICE_DISPLAY_NAME "ZeroTier One"
 #define ZT_SERVICE_START_TYPE SERVICE_AUTO_START
 #define ZT_SERVICE_DEPENDENCIES ""
-#define ZT_SERVICE_ACCOUNT "NT AUTHORITY\\LocalService"
+//#define ZT_SERVICE_ACCOUNT "NT AUTHORITY\\LocalService"
+#define ZT_SERVICE_ACCOUNT NULL
 #define ZT_SERVICE_PASSWORD NULL
 
 class ZeroTierOneService : public CServiceBase

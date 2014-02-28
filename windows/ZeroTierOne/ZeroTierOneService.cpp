@@ -36,19 +36,44 @@
 #include "../../node/Utils.hpp"
 #pragma endregion
 
+#ifdef ZT_DEBUG_SERVICE
+FILE *SVCDBGfile = (FILE *)0;
+ZeroTier::Mutex SVCDBGfile_m;
+#endif
+
 ZeroTierOneService::ZeroTierOneService() :
 	CServiceBase(ZT_SERVICE_NAME,TRUE,TRUE,FALSE),
 	_node((ZeroTier::Node *)0)
 {
+#ifdef ZT_DEBUG_SERVICE
+	SVCDBGfile_m.lock();
+	if (!SVCDBGfile)
+		SVCDBGfile = fopen(ZT_DEBUG_SERVICE,"a");
+	SVCDBGfile_m.unlock();
+#endif
+
+	ZT_SVCDBG("ZeroTierOneService::ZeroTierOneService()\r\n");
 }
 
 ZeroTierOneService::~ZeroTierOneService(void)
 {
+	ZT_SVCDBG("ZeroTierOneService::~ZeroTierOneService()\r\n");
+
+#ifdef ZT_DEBUG_SERVICE
+	SVCDBGfile_m.lock();
+	if (SVCDBGfile) {
+		fclose(SVCDBGfile);
+		SVCDBGfile = (FILE *)0;
+	}
+	SVCDBGfile_m.unlock();
+#endif
 }
 
 void ZeroTierOneService::threadMain()
 	throw()
 {
+	ZT_SVCDBG("ZeroTierOneService::threadMain()\r\n");
+
 restart_node:
 	try {
 		{
@@ -144,8 +169,8 @@ bool ZeroTierOneService::doStartUpgrade(const std::string &msiPath)
 
 void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)
 {
-	if (_node)
-		return; // sanity check
+	ZT_SVCDBG("ZeroTierOneService::OnStart()\r\n");
+
 	try {
 		_thread = ZeroTier::Thread::start(this);
 	} catch ( ... ) {
@@ -155,6 +180,8 @@ void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)
 
 void ZeroTierOneService::OnStop()
 {
+	ZT_SVCDBG("ZeroTierOneService::OnStop()\r\n");
+
 	_lock.lock();
 	ZeroTier::Node *n = _node;
 	_lock.unlock();
@@ -166,6 +193,8 @@ void ZeroTierOneService::OnStop()
 
 void ZeroTierOneService::OnShutdown()
 {
+	ZT_SVCDBG("ZeroTierOneService::OnShutdown()\r\n");
+
 	// stop thread on system shutdown (if it hasn't happened already)
 	OnStop();
 }

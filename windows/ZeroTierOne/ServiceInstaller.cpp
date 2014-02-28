@@ -50,15 +50,18 @@ std::string InstallService(PSTR pszServiceName,
                     PSTR pszPassword)
 {
 	std::string ret;
-    char szPath[MAX_PATH];
+    char szPathTmp[MAX_PATH],szPath[MAX_PATH];
     SC_HANDLE schSCManager = NULL;
     SC_HANDLE schService = NULL;
 
-    if (GetModuleFileName(NULL, szPath, ARRAYSIZE(szPath)) == 0)
+    if (GetModuleFileName(NULL, szPathTmp, ARRAYSIZE(szPath)) == 0)
     {
 		ret = "GetModuleFileName failed, unable to get path to self";
         goto Cleanup;
     }
+
+	// Quote path in case it contains spaces
+	_snprintf_s(szPath,sizeof(szPath),"\"%s\"",szPathTmp);
 
     // Open the local default service control manager database
     schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT | 

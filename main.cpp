@@ -382,7 +382,7 @@ static void sighandlerQuit(int sig)
 
 #ifdef __WINDOWS__
 // Console signal handler routine to allow CTRL+C to work, mostly for testing
-static BOOL WINAPI _handlerRoutine(DWORD dwCtrlType)
+static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 {
 	switch(dwCtrlType) {
 		case CTRL_C_EVENT:
@@ -508,7 +508,6 @@ int main(int argc,char **argv)
 #ifdef __WINDOWS__
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2,2),&wsaData);
-	SetConsoleCtrlHandler(&_handlerRoutine,TRUE);
 #endif
 
 	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
@@ -580,7 +579,7 @@ int main(int argc,char **argv)
 						}
 						return 0;
 					} break;
-#endif
+#endif // __WINDOWS__
 				case 'h':
 				case '?':
 				default:
@@ -596,7 +595,6 @@ int main(int argc,char **argv)
 			break;
 		}
 	}
-
 	if ((!homeDir)||(strlen(homeDir) == 0))
 		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
 
@@ -607,6 +605,7 @@ int main(int argc,char **argv)
 	}
 	mkdir(homeDir,0755); // will fail if it already exists
 	{
+		// Write .pid file to home folder
 		char pidpath[4096];
 		Utils::snprintf(pidpath,sizeof(pidpath),"%s/zerotier-one.pid",homeDir);
 		FILE *pf = fopen(pidpath,"w");
@@ -615,76 +614,78 @@ int main(int argc,char **argv)
 			fclose(pf);
 		}
 	}
-#else
-#ifdef __WINDOWS__
-	if (IsCurrentUserLocalAdministrator() != TRUE) {
-		fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
-		return 1;
-	}
-#endif
 #endif
 
 #ifdef __WINDOWS__
-	if (!winRunFromCommandLine) {
+	if (winRunFromCommandLine) {
+		// Running in "interactive" mode (mostly for debugging)
+		if (IsCurrentUserLocalAdministrator() != TRUE) {
+			fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+			return 1;
+		}
+		SetConsoleCtrlHandler(&_winConsoleCtrlHandler,TRUE);
+		// continues on to ordinary command line execution code below...
+	} else {
+		// Running from service manager
 		ZeroTierOneService zt1Service;
 		if (CServiceBase::Run(zt1Service) == TRUE) {
-			// Normal termination of service process
 			return 0;
 		} else {
 			fprintf(stderr,"%s: unable to start service (try -h for help)"ZT_EOL_S,argv[0]);
 			return 1;
 		}
-	} else
-#endif
-	{
-		int exitCode = 0;
-		try {
-			node = new Node(homeDir,port,controlPort);
-			switch(node->run()) {
-#ifdef __WINDOWS__
-				case Node::NODE_RESTART_FOR_UPGRADE: {
-					const char *upgPath = node->reasonForTermination();
-					if (upgPath) {
-						if (!ZeroTierOneService::doStartUpgrade(std::string(upgPath))) {
-							exitCode = 3;
-							fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (doStartUpgrade failed)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
-						}
-					} else {
-						exitCode = 3;
-						fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (no upgrade path provided)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
-					}
-				}	break;
-#else // __UNIX_LIKE__
-				case Node::NODE_RESTART_FOR_UPGRADE: {
-					const char *upgPath = node->reasonForTermination();
-					// On Unix-type OSes we exec() right into the upgrade. This in turn will
-					// end with us being re-launched either via the upgrade itself or something
-					// like OSX's launchd.
-					if (upgPath) {
-						Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
-						::execl(upgPath,upgPath,(char *)0);
-					}
-					exitCode = 3;
-					fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
-				}	break;
-#endif
-				case Node::NODE_UNRECOVERABLE_ERROR: {
-					exitCode = 3;
-					const char *termReason = node->reasonForTermination();
-					fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
-				}	break;
-				default:
-					break;
-			}
-			delete node;
-			node = (Node *)0;
-		} catch ( ... ) {
-			fprintf(stderr,"%s: unexpected exception!"ZT_EOL_S,argv[0]);
-			exitCode = 3;
-		}
-#ifdef __UNIX_LIKE__
-		Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
-#endif
-		return exitCode;
 	}
+#endif
+
+	int exitCode = 0;
+	try {
+		node = new Node(homeDir,port,controlPort);
+		switch(node->run()) {
+#ifdef __WINDOWS__
+			case Node::NODE_RESTART_FOR_UPGRADE: {
+				const char *upgPath = node->reasonForTermination();
+				if (upgPath) {
+					if (!ZeroTierOneService::doStartUpgrade(std::string(upgPath))) {
+						exitCode = 3;
+						fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (doStartUpgrade failed)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+					}
+				} else {
+					exitCode = 3;
+					fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (no upgrade path provided)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+				}
+			}	break;
+#else // __UNIX_LIKE__
+			case Node::NODE_RESTART_FOR_UPGRADE: {
+				const char *upgPath = node->reasonForTermination();
+				// On Unix-type OSes we exec() right into the upgrade. This in turn will
+				// end with us being re-launched either via the upgrade itself or something
+				// like OSX's launchd.
+				if (upgPath) {
+					Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
+					::execl(upgPath,upgPath,(char *)0);
+				}
+				exitCode = 3;
+				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+			}	break;
+#endif
+			case Node::NODE_UNRECOVERABLE_ERROR: {
+				exitCode = 3;
+				const char *termReason = node->reasonForTermination();
+				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
+			}	break;
+			default:
+				break;
+		}
+		delete node;
+		node = (Node *)0;
+	} catch ( ... ) {
+		fprintf(stderr,"%s: unexpected exception!"ZT_EOL_S,argv[0]);
+		exitCode = 3;
+	}
+
+#ifdef __UNIX_LIKE__
+	Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
+#endif
+
+	return exitCode;
 }

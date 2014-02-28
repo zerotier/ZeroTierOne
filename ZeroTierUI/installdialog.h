@@ -38,6 +38,8 @@
 
 #include "../node/Address.hpp"
 
+// Right now InstallDialog is only used on Mac
+
 namespace Ui {
 class InstallDialog;
 }
