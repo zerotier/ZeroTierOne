@@ -1005,6 +1005,11 @@ bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const c
 	return false;
 }
 
+int EthernetTap::cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese)
+{
+	return 0;
+}
+
 } // namespace ZeroTier
 
 #endif // __UNIX_LIKE__ //////////////////////////////////////////////////////
@@ -1094,7 +1099,7 @@ EthernetTap::EthernetTap(
 	const char *tapDriver = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap200.inf" : "\\tap-windows\\x86\\zttap200.inf");
 #endif
 
-	Mutex::Lock _l(_systemTapInitLock); // only init one tap at a time, process-wide
+	Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
 
 	HKEY nwAdapters;
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
@@ -1619,6 +1624,8 @@ bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const c
 	const char *devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
 #endif
 
+	Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
+
 	STARTUPINFOA startupInfo;
 	startupInfo.cb = sizeof(startupInfo);
 	PROCESS_INFORMATION processInfo;
@@ -1632,6 +1639,72 @@ bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const c
 	}
 
 	return false;
+}
+
+int EthernetTap::cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese,bool alsoRemoveUnassociatedDevices)
+{
+	char subkeyName[4096];
+	char subkeyClass[4096];
+	char data[4096];
+
+	std::set<std::string> instanceIdPathsToRemove;
+	{
+		Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
+
+		HKEY nwAdapters;
+		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
+			return -1;
+
+		for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
+			DWORD type;
+			DWORD dataLen;
+			DWORD subkeyNameLen = sizeof(subkeyName);
+			DWORD subkeyClassLen = sizeof(subkeyClass);
+			FILETIME lastWriteTime;
+			switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
+				case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
+				case ERROR_SUCCESS:
+					type = 0;
+					dataLen = sizeof(data);
+					if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+						data[dataLen] = '\0';
+						if (!strnicmp(data,"zttap",5)) {
+							std::string instanceIdPath;
+							type = 0;
+							dataLen = sizeof(data);
+							if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+								instanceIdPath.assign(data,dataLen);
+							if (instanceIdPath.length() != 0) {
+								type = 0;
+								dataLen = sizeof(data);
+								if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+									if (dataLen <= 0) {
+										if (alsoRemoveUnassociatedDevices)
+											instanceIdPathsToRemove.insert(instanceIdPath);
+									} else {
+										if (!exceptThese.count(std::string(data,dataLen)))
+											instanceIdPathsToRemove.insert(instanceIdPath);
+									}
+								} else if (alsoRemoveUnassociatedDevices)
+									instanceIdPathsToRemove.insert(instanceIdPath);
+							}
+						}
+					}
+					break;
+			}
+		}
+
+		RegCloseKey(nwAdapters);
+	}
+
+	int removed = 0;
+
+	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp) {
+		if (deletePersistentTapDevice(_r,iidp->c_str()))
+			++removed;
+	}
+
+	return removed;
 }
 
 void EthernetTap::_syncIpsWithRegistry(const std::set<InetAddress> &haveIps)

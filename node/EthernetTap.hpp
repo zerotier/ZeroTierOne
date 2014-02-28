@@ -221,6 +221,20 @@ public:
 	 */
 	static bool deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid);
 
+	/**
+	 * Clean persistent tap devices that are not in the supplied set
+	 *
+	 * This has no effect on platforms that do not have persistent taps.
+	 * On platforms like Windows with persistent devices the device is
+	 * uninstalled.
+	 *
+	 * @param _r Runtime environment
+	 * @param exceptThese Devices to leave in place
+	 * @param alsoRemoveUnassociatedDevices If true, remove devices not associated with any network as well
+	 * @return Number of devices deleted or -1 if an error prevented the operation from being performed
+	 */
+	static int cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese,bool alsoRemoveUnassociatedDevices);
+
 private:
 	const MAC _mac;
 	const unsigned int _mtu;
