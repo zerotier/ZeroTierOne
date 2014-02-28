@@ -1005,7 +1005,7 @@ bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const c
 	return false;
 }
 
-int EthernetTap::cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese)
+int EthernetTap::cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese,bool alsoRemoveUnassociatedDev)
 {
 	return 0;
 }
