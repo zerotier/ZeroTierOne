@@ -28,8 +28,14 @@
 #ifndef ZT_ATOMICCOUNTER_HPP
 #define ZT_ATOMICCOUNTER_HPP
 
+#include "Constants.hpp"
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
+
+#ifdef __WINDOWS__
+// <atomic> will replace this whole class eventually once it's ubiquitous
+#include <atomic>
+#endif
 
 namespace ZeroTier {
 
@@ -43,21 +49,25 @@ public:
 	 * Initialize counter at zero
 	 */
 	AtomicCounter()
-		throw() :
-		_v(0)
+		throw()
 	{
+		_v = 0;
 	}
 
-	inline int operator*() const
+	inline operator int() const
 		throw()
 	{
 #ifdef __GNUC__
-		return __sync_or_and_fetch(const_cast <int *> (&_v),0);
+		return __sync_or_and_fetch(&_v,0);
+#else
+#ifdef __WINDOWS__
+		return (int)_v;
 #else
 		_l.lock();
 		int v = _v;
 		_l.unlock();
 		return v;
+#endif
 #endif
 	}
 
@@ -67,10 +77,14 @@ public:
 #ifdef __GNUC__
 		return __sync_add_and_fetch(&_v,1);
 #else
+#ifdef __WINDOWS__
+		return ++_v;
+#else
 		_l.lock();
 		int v = ++_v;
 		_l.unlock();
 		return v;
+#endif
 #endif
 	}
 
@@ -80,31 +94,25 @@ public:
 #ifdef __GNUC__
 		return __sync_sub_and_fetch(&_v,1);
 #else
+#ifdef __WINDOWS__
+		return --_v;
+#else
 		_l.lock();
 		int v = --_v;
 		_l.unlock();
 		return v;
 #endif
+#endif
 	}
 
-	inline bool operator==(const AtomicCounter &i) const throw() { return (**this == *i); }
-	inline bool operator!=(const AtomicCounter &i) const throw() { return (**this != *i); }
-	inline bool operator>(const AtomicCounter &i) const throw() { return (**this > *i); }
-	inline bool operator<(const AtomicCounter &i) const throw() { return (**this < *i); }
-	inline bool operator>=(const AtomicCounter &i) const throw() { return (**this >= *i); }
-	inline bool operator<=(const AtomicCounter &i) const throw() { return (**this <= *i); }
-
-	inline bool operator==(const int i) const throw() { return (**this == i); }
-	inline bool operator!=(const int i) const throw() { return (**this != i); }
-	inline bool operator>(const int i) const throw() { return (**this > i); }
-	inline bool operator<(const int i) const throw() { return (**this < i); }
-	inline bool operator>=(const int i) const throw() { return (**this >= i); }
-	inline bool operator<=(const int i) const throw() { return (**this <= i); }
-
 private:
+#ifdef __WINDOWS__
+	std::atomic_int _v;
+#else
 	int _v;
 #ifndef __GNUC__
 	Mutex _l;
+#endif
 #endif
 };
 
