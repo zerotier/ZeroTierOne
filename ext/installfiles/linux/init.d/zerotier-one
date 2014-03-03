@@ -59,9 +59,7 @@ case "$1" in
 			exit 0
 		fi
 		echo "Starting ZeroTier One..."
-		nohup zerotier-one >>/dev/null 2>&1 &
-		disown %1
-		exit 0
+		zerotier-one -d
 		;;
 	stop)
 		if [ $running -gt 0 ]; then
@@ -77,8 +75,7 @@ case "$1" in
 			kill -TERM $pid
 		fi
 		while [ -f "$zthome/zerotier-one.pid" ]; do sleep 1; done
-		nohup zerotier-one >>/dev/null 2>&1 &
-		disown %1
+		zerotier-one -d
 		;;
 	status)
 		if [ $running -gt 0 ]; then
