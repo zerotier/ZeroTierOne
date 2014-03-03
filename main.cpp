@@ -95,6 +95,9 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
 	fprintf(out,"  -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
+#ifdef __UNIX_LIKE__
+	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
+#endif
 	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
 	fprintf(out,"  -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
 #ifdef __WINDOWS__
@@ -520,6 +523,9 @@ int main(int argc,char **argv)
 	const char *homeDir = (const char *)0;
 	unsigned int port = 0;
 	unsigned int controlPort = 0;
+#ifdef __UNIX_LIKE__
+	bool runAsDaemon = false;
+#endif
 #ifdef __WINDOWS__
 	bool winRunFromCommandLine = false;
 #endif
@@ -533,6 +539,11 @@ int main(int argc,char **argv)
 						return 1;
 					}
 					break;
+#ifdef __UNIX_LIKE__
+				case 'd':
+					runAsDaemon = true;
+					break;
+#endif
 				case 'v':
 					printf("%s"ZT_EOL_S,Node::versionString());
 					return 0;
@@ -617,11 +628,23 @@ int main(int argc,char **argv)
 		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
 
 #ifdef __UNIX_LIKE__
-	if (getuid()) {
-		fprintf(stderr,"%s: must be run as root (uid==0)\n",argv[0]);
+	if (getuid() != 0) {
+		fprintf(stderr,"%s: must be run as root (uid 0)\n",argv[0]);
 		return 1;
 	}
-	mkdir(homeDir,0755); // will fail if it already exists
+
+	if (runAsDaemon) {
+		long p = (long)fork();
+		if (p < 0) {
+			fprintf(stderr,"%s: could not fork"ZT_EOL_S,argv[0]);
+			return 1;
+		} else if (p > 0)
+			return 0; // forked
+		// else p == 0, so we are daemonized
+	}
+
+	mkdir(homeDir,0755); // will fail if it already exists, but that's fine
+
 	{
 		// Write .pid file to home folder
 		char pidpath[4096];
