@@ -225,6 +225,8 @@
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder]ZeroTier\One"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder]"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
+    <ROW Action="TapDriverInstall32" Type="3602" Source="zerotierone_x86.exe" Target="-D"/>
+    <ROW Action="TapDriverInstall64" Type="3602" Source="zerotierone_x64.exe" Target="-D"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="zt1icon.exe" SourcePath="..\..\..\ZeroTierUI\zt1icon.ico" Index="0"/>
@@ -243,6 +245,9 @@
     <ROW Action="AI_DATA_SETTER_1" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="AI_VerifyPrereq" Sequence="1101"/>
     <ROW Action="AI_AppSearchEx" Sequence="101"/>
+    <ROW Action="InstallFinalize" Sequence="6596" SeqType="0" MsiKey="InstallFinalize"/>
+    <ROW Action="TapDriverInstall64" Condition="( NOT Installed ) AND ( VersionNT64 )" Sequence="6402"/>
+    <ROW Action="TapDriverInstall32" Condition="( NOT Installed ) AND ( NOT VersionNT64 )" Sequence="6401"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>

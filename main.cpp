@@ -42,6 +42,7 @@
 #include <tchar.h>
 #include <wchar.h>
 #include <lmcons.h>
+#include <newdev.h>
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
 #include "windows/ZeroTierOne/ZeroTierOneService.h"
@@ -100,6 +101,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
+	fprintf(out,"  -D                - Load tap driver into system driver store (Windows)"ZT_EOL_S);
 #endif
 }
 
@@ -578,6 +580,22 @@ int main(int argc,char **argv)
 							return 3;
 						}
 						return 0;
+					} break;
+				case 'D': { // install Windows driver (since PNPUTIL.EXE seems to be weirdly unreliable)
+						std::string pathToInf;
+#ifdef _WIN64
+						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x64\\zttap200.inf";
+#else
+						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x86\\zttap200.inf";
+#endif
+						BOOL needReboot = FALSE;
+						if (DiInstallDriverA(NULL,pathToInf.c_str(),DIIRFLAG_FORCE_INF,&needReboot)) {
+							fprintf(stderr,"%s: driver successfully installed from %s"ZT_EOL_S,argv[0],pathToInf.c_str());
+							return 0;
+						} else {
+							fprintf(stderr,"%s: failed installing %s: %d"ZT_EOL_S,argv[0],pathToInf.c_str(),(int)GetLastError());
+							return 3;
+						}
 					} break;
 #endif // __WINDOWS__
 				case 'h':
