@@ -11,11 +11,16 @@
 /ipch
 /windows/ZeroTierOne.sdf
 /windows/ZeroTierOne.v11.suo
+/windows/x64
+/windows/Win32
 /windows/*/x64
 /windows/*/Win32
+/windows/ZeroTierOne/Release
 /windows/ZeroTierOneService/obj
 /windows/ZeroTierOneService/bin
 /windows/Build
+/ext/installfiles/windows/ZeroTier One-SetupFiles
+/ext/installfiles/windows/Prerequisites
 *.log
 *.opensdf
 *.user
@@ -26,10 +31,4 @@
 /ZeroTierOneInstaller-*
 .qmake.stash
 *.autosave
-/ZeroTier One.zip
 /ZeroTier One.dmg
-/windows/x64
-/windows/ZeroTierOneInstaller/ZeroTierOneInstaller
-/windows/ZeroTierOne/Release
-/ext/installfiles/windows/ZeroTier One-SetupFiles
-/ext/installfiles/windows/Prerequisites
