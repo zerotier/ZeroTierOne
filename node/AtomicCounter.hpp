@@ -58,7 +58,7 @@ public:
 		throw()
 	{
 #ifdef __GNUC__
-		return __sync_or_and_fetch(&_v,0);
+		return __sync_or_and_fetch(const_cast <volatile int *>(&_v),0);
 #else
 #ifdef __WINDOWS__
 		return (int)_v;
