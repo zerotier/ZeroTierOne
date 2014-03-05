@@ -29,15 +29,17 @@ if [ -e /bin/systemctl -o -e /usr/bin/systemctl -o -e /usr/local/bin/systemctl -
 fi
 
 if [ $dryRun -gt 0 ]; then
-	alias ln="echo '>> dry run: ln'"
-	alias rm="echo '>> dry run: rm'"
-	alias mv="echo '>> dry run: mv'"
-	alias chown="echo '>> dry run: chown'"
-	alias chgrp="echo '>> dry run: chgrp'"
-	alias chkconfig="echo '>> dry run: chkconfig'"
-	alias zerotier-cli="echo '>> dry run: zerotier-cli'"
-	alias service="echo '>> dry run: service'"
-	alias systemctl="echo '>> dry run: systemctl'"
+	alias ln="echo '>> ln'"
+	alias rm="echo '>> rm'"
+	alias mv="echo '>> mv'"
+	alias cp="echo '>> cp'"
+	alias chown="echo '>> chown'"
+	alias chgrp="echo '>> chgrp'"
+	alias chmod="echo '>> chmod'"
+	alias chkconfig="echo '>> chkconfig'"
+	alias zerotier-cli="echo '>> zerotier-cli'"
+	alias service="echo '>> service'"
+	alias systemctl="echo '>> systemctl'"
 fi
 
 scriptPath="`dirname "$0"`/`basename "$0"`"
@@ -62,7 +64,8 @@ fi
 
 echo 'Extracting files...'
 if [ $dryRun -gt 0 ]; then
-	echo ">> dry run: tail -c +$blobStart \"$scriptPath\" | gunzip -c | tar -xvop -C / -f -"
+	echo ">> tail -c +$blobStart \"$scriptPath\" | gunzip -c | tar -xvop -C / -f -"
+	tail -c +$blobStart "$scriptPath" | gunzip -c | tar -t -f - | sed 's/^/>>   /'
 else
 	tail -c +$blobStart "$scriptPath" | gunzip -c | tar -xvop --no-overwrite-dir -C / -f -
 fi
@@ -102,7 +105,39 @@ else
 	chmod 0755 /etc/init.d/zerotier-one
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
-	chkconfig zerotier-one on
+	if [ -f /sbin/chkconfig -o -f /usr/sbin/chkconfig -o -f /usr/bin/chkconfig -o -f /bin/chkconfig ]; then
+		chkconfig zerotier-one on
+	else
+		if [ -d /etc/rc0.d ]; then
+			rm -f /etc/rc0.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc0.d/K89zerotier-one
+		fi
+		if [ -d /etc/rc1.d ]; then
+			rm -f /etc/rc1.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc1.d/K89zerotier-one
+		fi
+		if [ -d /etc/rc2.d ]; then
+			rm -f /etc/rc2.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc2.d/S11zerotier-one
+		fi
+		if [ -d /etc/rc3.d ]; then
+			rm -f /etc/rc3.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc3.d/S11zerotier-one
+		fi
+		if [ -d /etc/rc4.d ]; then
+			rm -f /etc/rc4.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc4.d/S11zerotier-one
+		fi
+		if [ -d /etc/rc5.d ]; then
+			rm -f /etc/rc5.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc5.d/S11zerotier-one
+		fi
+		if [ -d /etc/rc6.d ]; then
+			rm -f /etc/rc6.d/???zerotier-one
+			ln -sf /etc/init.d/zerotier-one /etc/rc6.d/K89zerotier-one
+		fi
+	fi
+
 	service zerotier-one restart &
 fi
 

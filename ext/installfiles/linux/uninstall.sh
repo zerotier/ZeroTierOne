@@ -34,7 +34,9 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	systemctl stop zerotier-one
 	systemctl disable zerotier-one
 else
-	service stop zerotier-one
+	if [ -f /sbin/service -o -f /usr/sbin/service -o -f /bin/service -o -f /usr/bin/service ]; then
+		service stop zerotier-one
+	fi
 fi
 sleep 1
 killall -q -TERM zerotier-one
@@ -43,8 +45,11 @@ killall -q -KILL zerotier-one
 
 if [ -f /etc/init.d/zerotier-one ]; then
 	echo "Removing SysV init items..."
+	if [ -f /sbin/chkconfig -o -f /usr/sbin/chkconfig -o -f /bin/chkconfig -o -f /usr/bin/chkconfig ]; then
+		chkconfig zerotier-one off
+	fi
 	rm -f /etc/init.d/zerotier-one
-	find /etc/rc*.d -name '???zerotier-one' -print0 | xargs -0 rm -f
+	find /etc/rc*.d -type f -name '???zerotier-one' -print0 | xargs -0 rm -f
 fi
 
 if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" -a -f "$SYSTEMDUNITDIR/zerotier-one.service" ]; then
