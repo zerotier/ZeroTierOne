@@ -30,7 +30,7 @@ zthome=/var/lib/zerotier-one
 # better in a ps listing.
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin:$zthome
 
-if [ "$UID" -ne 0 ]; then
+if [ "`id -u`" -ne 0 ]; then
 	echo "Init script must be called as root."
 	exit 4
 fi
