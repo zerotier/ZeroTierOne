@@ -80,6 +80,13 @@ static inline std::map< Identity,std::vector<InetAddress> > _mkSupernodeMap()
 	addrs.push_back(InetAddress("128.199.254.204",ZT_DEFAULT_UDP_PORT));
 	sn[id] = addrs;
 
+	// shoggoth.zerotier.com - Tokyo, Japan
+	addrs.clear();
+	if (!id.fromString("48e8f875cb:0:5ca54f55e1094f65589f3e6d74158b6964d418ddac3570757128f1c6a2498322d92fcdcd47de459f4d1f9b38df2afd0c7b3fc247ba3d773c38ba35288f24988e"))
+		throw std::runtime_error("invalid identity in Defaults");
+	addrs.push_back(InetAddress("108.61.200.101",ZT_DEFAULT_UDP_PORT));
+	sn[id] = addrs;
+
 	return sn;
 }
 
