@@ -599,12 +599,13 @@ int main(int argc,char **argv)
 #else
 						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x86\\zttap200.inf";
 #endif
+						printf("Installing ZeroTier One virtual Ethernet port driver. You may be"ZT_EOL_S"prompted to authorize driver installation."ZT_EOL_S""ZT_EOL_S);
 						BOOL needReboot = FALSE;
 						if (DiInstallDriverA(NULL,pathToInf.c_str(),DIIRFLAG_FORCE_INF,&needReboot)) {
-							fprintf(stderr,"%s: driver successfully installed from %s"ZT_EOL_S,argv[0],pathToInf.c_str());
+							printf("%s: driver successfully installed from %s"ZT_EOL_S,argv[0],pathToInf.c_str());
 							return 0;
 						} else {
-							fprintf(stderr,"%s: failed installing %s: %d"ZT_EOL_S,argv[0],pathToInf.c_str(),(int)GetLastError());
+							printf("%s: failed installing %s: %d"ZT_EOL_S,argv[0],pathToInf.c_str(),(int)GetLastError());
 							return 3;
 						}
 					} break;

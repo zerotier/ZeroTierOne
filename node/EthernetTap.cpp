@@ -1108,117 +1108,129 @@ EthernetTap::EthernetTap(
 	std::set<std::string> existingDeviceInstances;
 	std::string mySubkeyName;
 
-	// Enumerate tap instances and look for one tagged with this tag
-	for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
+	// Look for the tap instance that corresponds with our interface tag (network ID)
+	for(DWORD subkeyIndex=0;;++subkeyIndex) {
 		DWORD type;
 		DWORD dataLen;
 		DWORD subkeyNameLen = sizeof(subkeyName);
 		DWORD subkeyClassLen = sizeof(subkeyClass);
 		FILETIME lastWriteTime;
-		switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
-			case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
-			case ERROR_SUCCESS:
-				type = 0;
-				dataLen = sizeof(data);
-				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-					data[dataLen] = '\0';
-					if (!strnicmp(data,"zttap",5)) {
-						std::string instanceId;
+		if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
+			type = 0;
+			dataLen = sizeof(data);
+			if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+				data[dataLen] = '\0';
+				if (!strnicmp(data,"zttap",5)) {
+					std::string instanceId;
+					type = 0;
+					dataLen = sizeof(data);
+					if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+						instanceId.assign(data,dataLen);
+						existingDeviceInstances.insert(instanceId);
+					}
+
+					std::string instanceIdPath;
+					type = 0;
+					dataLen = sizeof(data);
+					if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+						instanceIdPath.assign(data,dataLen);
+
+					if ((_myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)&&(instanceIdPath.length() != 0)) {
 						type = 0;
 						dataLen = sizeof(data);
-						if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-							instanceId.assign(data,dataLen);
-							existingDeviceInstances.insert(instanceId);
-						}
-
-						std::string instanceIdPath;
-						type = 0;
-						dataLen = sizeof(data);
-						if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
-							instanceIdPath.assign(data,dataLen);
-
-						if ((_myDeviceInstanceId.length() == 0)&&(instanceId.length() != 0)&&(instanceIdPath.length() != 0)) {
-							type = 0;
-							dataLen = sizeof(data);
-							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-								data[dataLen] = '\0';
-								if (!strcmp(data,tag)) {
-									_myDeviceInstanceId = instanceId;
-									_myDeviceInstanceIdPath = instanceIdPath;
-									mySubkeyName = subkeyName;
-									subkeyIndex = -1; // break outer loop
-								}
+						if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+							data[dataLen] = '\0';
+							if (!strcmp(data,tag)) {
+								_myDeviceInstanceId = instanceId;
+								_myDeviceInstanceIdPath = instanceIdPath;
+								mySubkeyName = subkeyName;
+								break; // found it!
 							}
 						}
 					}
 				}
-				break;
-		}
+			}
+		} else break; // no more subkeys or error occurred enumerating them
 	}
 
 	// If there is no device, try to create one
 	if (_myDeviceInstanceId.length() == 0) {
+		// Log devcon output to a file
+		HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+		if (devconLog == INVALID_HANDLE_VALUE) {
+			LOG("WARNING: unable to open devcon.log");
+		} else {
+			SetFilePointer(devconLog,0,0,FILE_END);
+		}
+
 		// Execute devcon to install an instance of the Microsoft Loopback Adapter
 		STARTUPINFOA startupInfo;
 		startupInfo.cb = sizeof(startupInfo);
+		if (devconLog != INVALID_HANDLE_VALUE) {
+			SetFilePointer(devconLog,0,0,FILE_END);
+			startupInfo.hStdOutput = devconLog;
+			startupInfo.hStdError = devconLog;
+		}
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
 		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" install \"" + _r->homePath + tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
+			if (devconLog != INVALID_HANDLE_VALUE)
+				CloseHandle(devconLog);
 			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
 		}
 		WaitForSingleObject(processInfo.hProcess,INFINITE);
 		CloseHandle(processInfo.hProcess);
 		CloseHandle(processInfo.hThread);
- 
+
+		if (devconLog != INVALID_HANDLE_VALUE)
+			CloseHandle(devconLog);
+
 		// Scan for the new instance by simply looking for taps that weren't
-		// there originally.
-		for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
+		// there originally. The static mutex we lock ensures this can't step
+		// on its own toes.
+		for(DWORD subkeyIndex=0;;++subkeyIndex) {
 			DWORD type;
 			DWORD dataLen;
 			DWORD subkeyNameLen = sizeof(subkeyName);
 			DWORD subkeyClassLen = sizeof(subkeyClass);
 			FILETIME lastWriteTime;
-			switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
-				case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
-				case ERROR_SUCCESS:
-					type = 0;
-					dataLen = sizeof(data);
-					if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-						data[dataLen] = '\0';
-						if (!strnicmp(data,"zttap",5)) {
-							type = 0;
-							dataLen = sizeof(data);
-							if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-								if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
-									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,(DWORD)(strlen(tag)+1));
-									_myDeviceInstanceId.assign(data,dataLen);
-									type = 0;
-									dataLen = sizeof(data);
-									if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
-										_myDeviceInstanceIdPath.assign(data,dataLen);
-									mySubkeyName = subkeyName;
+			if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
+				type = 0;
+				dataLen = sizeof(data);
+				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+					data[dataLen] = '\0';
+					if (!strnicmp(data,"zttap",5)) {
+						type = 0;
+						dataLen = sizeof(data);
+						if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+							if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
+								RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,(DWORD)(strlen(tag)+1));
+								_myDeviceInstanceId.assign(data,dataLen);
+								type = 0;
+								dataLen = sizeof(data);
+								if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+									_myDeviceInstanceIdPath.assign(data,dataLen);
+								mySubkeyName = subkeyName;
 
-									// Disable DHCP by default on newly created devices
-									HKEY tcpIpInterfaces;
-									if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
-										DWORD enable = 0;
-										RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
-										RegCloseKey(tcpIpInterfaces);
-									}
-
-									subkeyIndex = -1; // break outer loop
+								// Disable DHCP by default on newly created devices
+								HKEY tcpIpInterfaces;
+								if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+									DWORD enable = 0;
+									RegSetKeyValueA(tcpIpInterfaces,_myDeviceInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
+									RegCloseKey(tcpIpInterfaces);
 								}
+
+								break; // found it!
 							}
 						}
 					}
-					break;
-			}
+				}
+			} else break; // no more keys or error occurred
 		}
 	}
 
-	// If we have a device, configure it
 	if (_myDeviceInstanceId.length() > 0) {
 		char tmps[4096];
 		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]) + 1;
@@ -1228,16 +1240,14 @@ EthernetTap::EthernetTap(
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = 0;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+	} else {
+		RegCloseKey(nwAdapters);	
+		throw std::runtime_error("unable to find or create tap adapter");
 	}
 
-	// Done with registry
 	RegCloseKey(nwAdapters);	
 
-	// If we didn't get a device, we can't start
-	if (_myDeviceInstanceId.length() == 0)
-		throw std::runtime_error("unable to create new tap adapter");
-
-	// Convert device GUID junk... blech
+	// Convert device GUID junk... blech... is there an easier way to do this?
 	{
 		char nobraces[128];
 		const char *nbtmp1 = _myDeviceInstanceId.c_str();
@@ -1254,32 +1264,51 @@ EthernetTap::EthernetTap(
 
 	// Disable and enable interface to ensure registry settings take effect
 	{
-		STARTUPINFOA startupInfo;
-		startupInfo.cb = sizeof(startupInfo);
-		PROCESS_INFORMATION processInfo;
-		memset(&startupInfo,0,sizeof(STARTUPINFOA));
-		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" disable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-			RegCloseKey(nwAdapters);
-			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+		HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+		if (devconLog != INVALID_HANDLE_VALUE)
+			SetFilePointer(devconLog,0,0,FILE_END);
+		{
+			STARTUPINFOA startupInfo;
+			startupInfo.cb = sizeof(startupInfo);
+			if (devconLog != INVALID_HANDLE_VALUE) {
+				startupInfo.hStdOutput = devconLog;
+				startupInfo.hStdError = devconLog;
+			}
+			PROCESS_INFORMATION processInfo;
+			memset(&startupInfo,0,sizeof(STARTUPINFOA));
+			memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+			if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" disable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+				RegCloseKey(nwAdapters);
+				if (devconLog != INVALID_HANDLE_VALUE)
+					CloseHandle(devconLog);
+				throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+			}
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
 		}
-		WaitForSingleObject(processInfo.hProcess,INFINITE);
-		CloseHandle(processInfo.hProcess);
-		CloseHandle(processInfo.hThread);
-	}
-	{
-		STARTUPINFOA startupInfo;
-		startupInfo.cb = sizeof(startupInfo);
-		PROCESS_INFORMATION processInfo;
-		memset(&startupInfo,0,sizeof(STARTUPINFOA));
-		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" enable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-			RegCloseKey(nwAdapters);
-			throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+		{
+			STARTUPINFOA startupInfo;
+			startupInfo.cb = sizeof(startupInfo);
+			if (devconLog != INVALID_HANDLE_VALUE) {
+				startupInfo.hStdOutput = devconLog;
+				startupInfo.hStdError = devconLog;
+			}
+			PROCESS_INFORMATION processInfo;
+			memset(&startupInfo,0,sizeof(STARTUPINFOA));
+			memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+			if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + devcon + "\" enable @" + _myDeviceInstanceIdPath).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+				RegCloseKey(nwAdapters);
+				if (devconLog != INVALID_HANDLE_VALUE)
+					CloseHandle(devconLog);
+				throw std::runtime_error(std::string("unable to find or execute devcon at ")+devcon);
+			}
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
 		}
-		WaitForSingleObject(processInfo.hProcess,INFINITE);
-		CloseHandle(processInfo.hProcess);
-		CloseHandle(processInfo.hThread);
+		if (devconLog != INVALID_HANDLE_VALUE)
+			CloseHandle(devconLog);
 	}
 
 	// Open the tap, which is in this weird Windows analog of /dev
@@ -1314,6 +1343,7 @@ EthernetTap::~EthernetTap()
 
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
+
 	CloseHandle(_tap);
 	CloseHandle(_tapOvlRead.hEvent);
 	CloseHandle(_tapOvlWrite.hEvent);
@@ -1329,8 +1359,14 @@ EthernetTap::~EthernetTap()
 #endif
 
 	// Disable network device on shutdown
+	HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 	STARTUPINFOA startupInfo;
 	startupInfo.cb = sizeof(startupInfo);
+	if (devconLog != INVALID_HANDLE_VALUE) {
+		SetFilePointer(devconLog,0,0,FILE_END);
+		startupInfo.hStdOutput = devconLog;
+		startupInfo.hStdError = devconLog;
+	}
 	PROCESS_INFORMATION processInfo;
 	memset(&startupInfo,0,sizeof(STARTUPINFOA));
 	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
@@ -1339,6 +1375,8 @@ EthernetTap::~EthernetTap()
 		CloseHandle(processInfo.hProcess);
 		CloseHandle(processInfo.hThread);
 	}
+	if (devconLog != INVALID_HANDLE_VALUE)
+		CloseHandle(devconLog);
 }
 
 void EthernetTap::setDisplayName(const char *dn)
@@ -1481,7 +1519,7 @@ void EthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const
 	if (!_initialized)
 		return;
 	if (len > (ZT_IF_MTU))
-		return;
+		return; // sanity check
 
 	{
 		Mutex::Lock _l(_injectPending_m);
@@ -1626,8 +1664,14 @@ bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const c
 
 	Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
 
+	HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 	STARTUPINFOA startupInfo;
 	startupInfo.cb = sizeof(startupInfo);
+	if (devconLog != INVALID_HANDLE_VALUE) {
+		SetFilePointer(devconLog,0,0,FILE_END);
+		startupInfo.hStdOutput = devconLog;
+		startupInfo.hStdError = devconLog;
+	}
 	PROCESS_INFORMATION processInfo;
 	memset(&startupInfo,0,sizeof(STARTUPINFOA));
 	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
@@ -1635,8 +1679,12 @@ bool EthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const c
 		WaitForSingleObject(processInfo.hProcess,INFINITE);
 		CloseHandle(processInfo.hProcess);
 		CloseHandle(processInfo.hThread);
+		if (devconLog != INVALID_HANDLE_VALUE)
+			CloseHandle(devconLog);
 		return true;
 	}
+	if (devconLog != INVALID_HANDLE_VALUE)
+		CloseHandle(devconLog);
 
 	return false;
 }
@@ -1655,55 +1703,50 @@ int EthernetTap::cleanPersistentTapDevices(const RuntimeEnvironment *_r,const st
 		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
 			return -1;
 
-		for(DWORD subkeyIndex=0;subkeyIndex!=-1;) {
+		for(DWORD subkeyIndex=0;;++subkeyIndex) {
 			DWORD type;
 			DWORD dataLen;
 			DWORD subkeyNameLen = sizeof(subkeyName);
 			DWORD subkeyClassLen = sizeof(subkeyClass);
 			FILETIME lastWriteTime;
-			switch (RegEnumKeyExA(nwAdapters,subkeyIndex++,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime)) {
-				case ERROR_NO_MORE_ITEMS: subkeyIndex = -1; break;
-				case ERROR_SUCCESS:
-					type = 0;
-					dataLen = sizeof(data);
-					if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-						data[dataLen] = '\0';
-						if (!strnicmp(data,"zttap",5)) {
-							std::string instanceIdPath;
+			if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
+				type = 0;
+				dataLen = sizeof(data);
+				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+					data[dataLen] = '\0';
+					if (!strnicmp(data,"zttap",5)) {
+						std::string instanceIdPath;
+						type = 0;
+						dataLen = sizeof(data);
+						if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+							instanceIdPath.assign(data,dataLen);
+						if (instanceIdPath.length() != 0) {
 							type = 0;
 							dataLen = sizeof(data);
-							if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
-								instanceIdPath.assign(data,dataLen);
-							if (instanceIdPath.length() != 0) {
-								type = 0;
-								dataLen = sizeof(data);
-								if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-									if (dataLen <= 0) {
-										if (alsoRemoveUnassociatedDevices)
-											instanceIdPathsToRemove.insert(instanceIdPath);
-									} else {
-										if (!exceptThese.count(std::string(data,dataLen)))
-											instanceIdPathsToRemove.insert(instanceIdPath);
-									}
-								} else if (alsoRemoveUnassociatedDevices)
-									instanceIdPathsToRemove.insert(instanceIdPath);
-							}
+							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+								if (dataLen <= 0) {
+									if (alsoRemoveUnassociatedDevices)
+										instanceIdPathsToRemove.insert(instanceIdPath);
+								} else {
+									if (!exceptThese.count(std::string(data,dataLen)))
+										instanceIdPathsToRemove.insert(instanceIdPath);
+								}
+							} else if (alsoRemoveUnassociatedDevices)
+								instanceIdPathsToRemove.insert(instanceIdPath);
 						}
 					}
-					break;
-			}
+				}
+			} else break; // end of list or failure
 		}
 
 		RegCloseKey(nwAdapters);
 	}
 
 	int removed = 0;
-
 	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp) {
 		if (deletePersistentTapDevice(_r,iidp->c_str()))
 			++removed;
 	}
-
 	return removed;
 }
 

@@ -109,9 +109,11 @@ MainWindow::MainWindow(QWidget *parent) :
 #endif
 
 #ifdef __WINDOWS__
+	// Windows operates at a different DPI, so we have to rescale the default Qt
+	// font sizes so everything isn't huge. Yeah.
 	QWidgetList widgets = this->findChildren<QWidget*>();
 	foreach(QWidget *widget, widgets) {
-		if ((typeid(*widget) != typeid(ui->menuBar))&&(typeid(*widget) != typeid(ui->menuFile))) {
+		if (typeid(*widget) != typeid(*ui->menuFile)) { // menus don't need the DPI shift apparently
 			QFont font(widget->font());
 			font.setPointSizeF(font.pointSizeF() * 0.75);
 			widget->setFont(font);
