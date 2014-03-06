@@ -60,8 +60,11 @@ Network::~Network()
 {
 	Thread::join(_setupThread);
 
-	std::string devPersistentId(_tap->persistentId());
-	delete _tap;
+	std::string devPersistentId;
+	if (_tap) {
+		devPersistentId = _tap->persistentId();
+		delete _tap;
+	}
 
 	if (_destroyOnDelete) {
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
@@ -296,9 +299,13 @@ void Network::threadMain()
 			_nc->putLocalConfig(lcentry,dn);
 #endif
 	} catch (std::exception &exc) {
+		delete _tap;
+		_tap = (EthernetTap *)0;
 		LOG("network %.16llx failed to initialize: %s",_id,exc.what());
 		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
 	} catch ( ... ) {
+		delete _tap;
+		_tap = (EthernetTap *)0;
 		LOG("network %.16llx failed to initialize: unknown error",_id);
 		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
 	}
