@@ -139,7 +139,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 	}
 
 	if (code != 200) {
-		LOG("software update check failed: server responded %d (%s)",code,body.c_str());
+		LOG("software update check failed: server responded with code %d",code);
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
@@ -152,19 +152,20 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 		const char *err = parseNfo(body.c_str(),vMajor,vMinor,vRevision,signedBy,signature,url);
 
 		if (err) {
-			LOG("software update aborted: .nfo file error: %s",err);
+			LOG("software update check aborted: .nfo file parse error: %s",err);
 			upd->_status = UPDATE_STATUS_IDLE;
 			return;
 		}
+
 		if (!ZT_DEFAULTS.updateAuthorities.count(signedBy)) {
-			LOG("software update aborted: .nfo file specifies unknown signing authority");
+			LOG("software update check aborted: .nfo file specifies unknown signing authority");
 			upd->_status = UPDATE_STATUS_IDLE;
 			return;
 		}
 
 #ifndef ZT_ALWAYS_UPDATE /* for testing */
 		if (packVersion(vMajor,vMinor,vRevision) <= upd->_myVersion) {
-			LOG("software update aborted: .nfo file invalid: version on web site <= my version");
+			LOG("software update check complete: version on update site is not newer than my version, no update necessary");
 			upd->_status = UPDATE_STATUS_IDLE;
 			return;
 		}
@@ -188,14 +189,14 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 	Mutex::Lock _l(upd->_lock);
 
 	if (!validateUpdate(body.data(),(unsigned int)body.length(),upd->_signedBy,upd->_signature)) {
-		LOG("software update aborted: update fetched from '%s' failed signature check (got %u bytes)",url.c_str(),(unsigned int)body.length());
+		LOG("software update failed: update fetched from '%s' failed signature check (image size: %u)",url.c_str(),(unsigned int)body.length());
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
 
 	size_t lastSlash = url.rfind('/');
 	if (lastSlash == std::string::npos) { // sanity check, shouldn't happen
-		LOG("software update aborted: invalid URL");
+		LOG("software update failed: invalid URL");
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
@@ -209,12 +210,12 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 
 	FILE *upf = fopen(updatePath.c_str(),"wb");
 	if (!upf) {
-		LOG("software update aborted: unable to open %s for writing",updatePath.c_str());
+		LOG("software update failed: unable to open %s for writing",updatePath.c_str());
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
 	if (fwrite(body.data(),body.length(),1,upf) != 1) {
-		LOG("software update aborted: unable to write to %s",updatePath.c_str());
+		LOG("software update failed: unable to write to %s",updatePath.c_str());
 		upd->_status = UPDATE_STATUS_IDLE;
 		fclose(upf);
 		Utils::rm(updatePath);
