@@ -20,6 +20,7 @@ LicenseDialog::LicenseDialog(QWidget *parent) :
 		font.setPointSizeF(font.pointSizeF() * 0.75);
 		widget->setFont(font);
 	}
+	this->raise();
 #endif
 }
 

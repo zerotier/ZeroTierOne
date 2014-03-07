@@ -119,6 +119,7 @@ MainWindow::MainWindow(QWidget *parent) :
 			widget->setFont(font);
 		}
 	}
+	this->raise();
 #endif
 
 	ui->noNetworksLabel->setVisible(true);
