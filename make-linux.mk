@@ -18,15 +18,18 @@ endif
 #DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 
 # Uncomment for a release optimized build
-CFLAGS=-Wall -O3 -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+CFLAGS=-Wall -O3 -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+LDFLAGS=-pie -Wl,-z,relro,-z,now
 STRIP=strip --strip-all
 
 # Uncomment for a debug build
 #CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE $(DEFS)
+#LDFLAGS=
 #STRIP=echo
 
 # Uncomment for gprof profile build
 #CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
+#LDFLAGS=
 #STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
@@ -35,19 +38,15 @@ include objects.mk
 
 all:	one
 
-one:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
+one:	$(OBJS) main.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one main.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
 
-selftest:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)
+selftest:	$(OBJS) selftest.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
-
-idtool:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-idtool idtool.cpp $(OBJS) $(LIBS)
-	$(STRIP) zerotier-idtool
 
 installer: one FORCE
 	./buildinstaller.sh
