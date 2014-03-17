@@ -28,7 +28,7 @@
 #ifndef ZT_UDPSOCKET_HPP
 #define ZT_UDPSOCKET_HPP
 
-//#include "Socket.hpp"
+#include "Socket.hpp"
 
 namespace ZeroTier {
 
@@ -44,7 +44,6 @@ class UdpSocket : public Socket
 
 public:
 	virtual ~UdpSocket();
-
 	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen);
 
 	/**

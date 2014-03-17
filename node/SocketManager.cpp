@@ -434,10 +434,20 @@ void SocketManager::poll(unsigned long timeout)
 		}
 	}
 	for(std::vector< SharedPtr<Socket> >::iterator s(ts.begin());s!=ts.end();++s) {
-		if (FD_ISSET((*s)->_sock,&rfds))
-			(*s)->notifyAvailableForRead(*s,this);
-		if (FD_ISSET((*s)->_sock,&wfds))
-			(*s)->notifyAvailableForWrite(*s,this);
+		if (FD_ISSET((*s)->_sock,&wfds)) {
+			if (!(*s)->notifyAvailableForWrite(*s,this)) {
+				Mutex::Lock _l2(_tcpSockets_m);
+				_tcpSockets.erase(((TcpSocket *)s->ptr())->_remote);
+				continue;
+			}
+		}
+		if (FD_ISSET((*s)->_sock,&rfds)) {
+			if (!(*s)->notifyAvailableForRead(*s,this)) {
+				Mutex::Lock _l2(_tcpSockets_m);
+				_tcpSockets.erase(((TcpSocket *)s->ptr())->_remote);
+				continue;
+			}
+		}
 	}
 }
 

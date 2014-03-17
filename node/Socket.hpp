@@ -102,7 +102,6 @@ protected:
 	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm) = 0;
 	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm) = 0;
 
-private:
 #ifdef __WINDOWS__
 	SOCKET _sock;
 #else
