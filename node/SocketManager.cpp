@@ -421,7 +421,7 @@ void SocketManager::poll(unsigned long timeout)
 		_udpV6Socket->notifyAvailableForRead(_udpV6Socket,this);
 
 	std::vector< SharedPtr<Socket> > ts;
-	{
+	{ // grab copy of TCP sockets list because _tcpSockets[] might be changed in a handler
 		Mutex::Lock _l2(_tcpSockets_m);
 		if (_tcpSockets.size()) {
 			ts.reserve(_tcpSockets.size());
@@ -429,22 +429,40 @@ void SocketManager::poll(unsigned long timeout)
 				if (true) { // TODO: TCP expiration check
 					ts.push_back(s->second);
 					++s;
-				} else _tcpSockets.erase(s++);
+				} else {
+					_fdSetLock.lock();
+					FD_CLR(s->second->_sock,&_readfds);
+					FD_CLR(s->second->_sock,&_writefds);
+					_fdSetLock.unlock();
+					_tcpSockets.erase(s++);
+				}
 			}
 		}
 	}
 	for(std::vector< SharedPtr<Socket> >::iterator s(ts.begin());s!=ts.end();++s) {
 		if (FD_ISSET((*s)->_sock,&wfds)) {
 			if (!(*s)->notifyAvailableForWrite(*s,this)) {
-				Mutex::Lock _l2(_tcpSockets_m);
-				_tcpSockets.erase(((TcpSocket *)s->ptr())->_remote);
+				{
+					Mutex::Lock _l2(_tcpSockets_m);
+					_tcpSockets.erase(((TcpSocket *)s->ptr())->_remote);
+				}
+				_fdSetLock.lock();
+				FD_CLR((*s)->_sock,&_readfds);
+				FD_CLR((*s)->_sock,&_writefds);
+				_fdSetLock.unlock();
 				continue;
 			}
 		}
 		if (FD_ISSET((*s)->_sock,&rfds)) {
 			if (!(*s)->notifyAvailableForRead(*s,this)) {
-				Mutex::Lock _l2(_tcpSockets_m);
-				_tcpSockets.erase(((TcpSocket *)s->ptr())->_remote);
+				{
+					Mutex::Lock _l2(_tcpSockets_m);
+					_tcpSockets.erase(((TcpSocket *)s->ptr())->_remote);
+				}
+				_fdSetLock.lock();
+				FD_CLR((*s)->_sock,&_readfds);
+				FD_CLR((*s)->_sock,&_writefds);
+				_fdSetLock.unlock();
 				continue;
 			}
 		}
