@@ -28,91 +28,52 @@
 #ifndef ZT_UDPSOCKET_HPP
 #define ZT_UDPSOCKET_HPP
 
-#include <stdexcept>
-
-#include "Constants.hpp"
-#include "Thread.hpp"
-#include "InetAddress.hpp"
-#include "Mutex.hpp"
-
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#endif
+#include "Socket.hpp"
 
 namespace ZeroTier {
 
+class SocketManager;
+
 /**
- * A local UDP socket
- *
- * The socket listens in a background thread and sends packets to Switch.
+ * Locally bound UDP socket
  */
-class UdpSocket
+class TcpSocket : public Socket
 {
+	friend class SharedPtr<Socket>;
+	friend class SocketManager;
+
 public:
+	virtual ~UdpSocket();
+
+	virtual bool isOpen() const;
+	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen);
+
 	/**
-	 * Create and bind a local UDP socket
+	 * Send UDP packet with IP max hops set (<= 0 for default/infinite)
 	 *
-	 * @param localOnly If true, bind to loopback address only
-	 * @param localPort Local port to listen to
-	 * @param ipv6 If true, bind this as an IPv6 socket, otherwise IPv4
-	 * @param packetHandler Function to call when packets are read
-	 * @param arg First argument (after self) to function
-	 * @throws std::runtime_error Unable to bind
+	 * @param to Destination address
+	 * @param msg Message data
+	 * @param msglen Message length
+	 * @param hopLimit IP TTL / max hops
+	 * @return True if packet appears sent
 	 */
-	UdpSocket(
-		bool localOnly,
-		int localPort,
-		bool ipv6,
-		void (*packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int),
-		void *arg)
-		throw(std::runtime_error);
+	bool sendWithHopLimit(const InetAddress &to,const void *msg,unsigned int msglen,int hopLimit);
 
-	~UdpSocket();
-
-	/**
-	 * @return Locally bound port
-	 */
-	inline int localPort() const throw() { return _localPort; }
-
-	/**
-	 * @return True if this is an IPv6 socket
-	 */
-	inline bool v6() const throw() { return _v6; }
-
-	/**
-	 * Send a packet
-	 *
-	 * Attempt to send V6 on a V4 or V4 on a V6 socket will return false.
-	 *
-	 * @param to Destination IP/port
-	 * @param data Data to send
-	 * @param len Length of data in bytes
-	 * @param hopLimit IP hop limit for UDP packet or -1 for max (max: 255)
-	 * @return True if packet successfully sent to link layer
-	 */
-	bool send(const InetAddress &to,const void *data,unsigned int len,int hopLimit)
-		throw();
-
-	/**
-	 * Thread main method; do not call elsewhere
-	 */
-	void threadMain()
-		throw();
+protected:
+	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm);
+	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm);
 
 private:
-	Thread _thread;
-	void (*_packetHandler)(UdpSocket *,void *,const InetAddress &,const void *,unsigned int);
-	void *_arg;
-	int _localPort;
 #ifdef __WINDOWS__
-	volatile SOCKET _sock;
+	UdpSocket(Type t,SOCKET sock) :
 #else
-	volatile int _sock;
+	UdpSocket(Type t,int sock) :
 #endif
-	bool _v6;
-	Mutex _sendLock;
+		Socket(t,sock)
+	{
+	}
 };
 
-} // namespace ZeroTier
+}; // namespace ZeroTier
 
 #endif
