@@ -28,8 +28,6 @@
 #ifndef ZT_SOCKET_HPP
 #define ZT_SOCKET_HPP
 
-#include <list>
-
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "AtomicCounter.hpp"
@@ -49,6 +47,7 @@
 
 namespace ZeroTier {
 
+class Socket;
 class SocketManager;
 
 /**
@@ -58,8 +57,8 @@ class SocketManager;
  */
 class Socket : NonCopyable
 {
-	friend class SharedPtr<Socket>;
 	friend class SocketManager;
+	friend class SharedPtr<Socket>;
 
 public:
 	enum Type
@@ -81,20 +80,6 @@ public:
 	}
 
 	/**
-	 * @return True if this is a TCP socket
-	 */
-	inline bool isTCP() const
-		throw()
-	{
-		return (_type == ZT_SOCKET_TYPE_TCP);
-	}
-
-	/**
-	 * @return True if socket is available for sending/receiving of data
-	 */
-	virtual bool isOpen() const = 0;
-
-	/**
 	 * Send a ZeroTier message packet
 	 *
 	 * @param to Destination address (ignored in connected TCP sockets)
@@ -105,25 +90,19 @@ public:
 	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen) = 0;
 
 protected:
+#ifdef __WINDOWS__
+	Socket(Type t,SOCKET s) :
+#else
+	Socket(Type t,int s) :
+#endif
+		_sock(s),
+		_type(t) {}
+
 	// Called only by SocketManager, should return false if socket is no longer open/valid (e.g. connection drop or other fatal error)
 	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm) = 0;
 	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm) = 0;
 
 private:
-#ifdef __WINDOWS__
-	Socket(Type t,SOCKET sock) :
-		_sock(sock),
-		_type(t)
-	{
-	}
-#else
-	Socket(Type t,int sock) :
-		_sock(sock),
-		_type(t)
-	{
-	}
-#endif
-
 #ifdef __WINDOWS__
 	SOCKET _sock;
 #else
@@ -134,6 +113,6 @@ private:
 	AtomicCounter __refCount;
 };
 
-}; // namespace ZeroTier
+} // namespace ZeroTier
 
 #endif

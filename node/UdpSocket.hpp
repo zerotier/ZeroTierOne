@@ -28,7 +28,7 @@
 #ifndef ZT_UDPSOCKET_HPP
 #define ZT_UDPSOCKET_HPP
 
-#include "Socket.hpp"
+//#include "Socket.hpp"
 
 namespace ZeroTier {
 
@@ -37,7 +37,7 @@ class SocketManager;
 /**
  * Locally bound UDP socket
  */
-class TcpSocket : public Socket
+class UdpSocket : public Socket
 {
 	friend class SharedPtr<Socket>;
 	friend class SocketManager;
@@ -45,7 +45,6 @@ class TcpSocket : public Socket
 public:
 	virtual ~UdpSocket();
 
-	virtual bool isOpen() const;
 	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen);
 
 	/**
@@ -60,20 +59,17 @@ public:
 	bool sendWithHopLimit(const InetAddress &to,const void *msg,unsigned int msglen,int hopLimit);
 
 protected:
+#ifdef __WINDOWS__
+	UdpSocket(Type t,SOCKET s) :
+#else
+	UdpSocket(Type t,int s) :
+#endif
+		Socket(t,s) {}
+
 	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm);
 	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm);
-
-private:
-#ifdef __WINDOWS__
-	UdpSocket(Type t,SOCKET sock) :
-#else
-	UdpSocket(Type t,int sock) :
-#endif
-		Socket(t,sock)
-	{
-	}
 };
 
-}; // namespace ZeroTier
+} // namespace ZeroTier
 
 #endif

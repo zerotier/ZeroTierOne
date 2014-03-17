@@ -33,6 +33,8 @@
 #include <sys/types.h>
 
 #include "SocketManager.hpp"
+#include "UdpSocket.hpp"
+#include "TcpSocket.hpp"
 
 #ifndef __WINDOWS__
 #include <unistd.h>
@@ -73,7 +75,11 @@ static inline void __winpipe(SOCKET fds[2])
 }
 #endif
 
-SocketManager::SocketManager(int localUdpPort,int localTcpPort,void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,const void *,unsigned int),void *arg) :
+SocketManager::SocketManager(
+	int localUdpPort,
+	int localTcpPort,
+	void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
+	void *arg) :
 	_whackSendPipe(INVALID_SOCKET),
 	_whackReceivePipe(INVALID_SOCKET),
 	_tcpV4ListenSocket(INVALID_SOCKET),
@@ -95,7 +101,7 @@ SocketManager::SocketManager(int localUdpPort,int localTcpPort,void (*packetHand
 #else
 	{
 		int tmpfds[2];
-		if (::pipe(tmpfds,0))
+		if (::pipe(tmpfds))
 			throw std::runtime_error("pipe() failed");
 		_whackSendPipe = tmpfds[1];
 		_whackReceivePipe = tmpfds[0];
@@ -278,16 +284,16 @@ SocketManager::SocketManager(int localUdpPort,int localTcpPort,void (*packetHand
 			{
 #ifdef __WINDOWS__
 				BOOL f;
-				f = FALSE; setsockopt(_sock,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
-				f = FALSE; setsockopt(_sock,IPPROTO_IP,IP_DONTFRAGMENT,(const char *)&f,sizeof(f));
+				f = FALSE; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
+				f = FALSE; setsockopt(s,IPPROTO_IP,IP_DONTFRAGMENT,(const char *)&f,sizeof(f));
 #else
 				int f;
-				f = 0; setsockopt(_sock,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+				f = 0; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
 #ifdef IP_DONTFRAG
-				f = 0; setsockopt(_sock,IPPROTO_IP,IP_DONTFRAG,&f,sizeof(f));
+				f = 0; setsockopt(s,IPPROTO_IP,IP_DONTFRAG,&f,sizeof(f));
 #endif
 #ifdef IP_MTU_DISCOVER
-				f = 0; setsockopt(_sock,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
+				f = 0; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
 #endif
 #endif
 			}
@@ -335,10 +341,10 @@ bool SocketManager::sendFirewallOpener(const InetAddress &to,int hopLimit)
 {
 	if (to.isV4()) {
 		if (_udpV4Socket)
-			return _udpV4Socket->sendWithHopLimit(to,msg,msglen,hopLimit);
+			return ((UdpSocket *)_udpV4Socket.ptr())->sendWithHopLimit(to,"",1,hopLimit);
 	} else if (to.isV6()) {
 		if (_udpV6Socket)
-			return _udpV6Socket->sendWithHopLimit(to,msg,msglen,hopLimit);
+			return ((UdpSocket *)_udpV6Socket.ptr())->sendWithHopLimit(to,"",1,hopLimit);
 	}
 	return false;
 }
@@ -347,6 +353,11 @@ void SocketManager::poll(unsigned long timeout)
 {
 	fd_set rfds,wfds,nfds;
 	struct timeval tv;
+#ifdef __WINDOWS__
+	SOCKET sockfd;
+#else
+	int sockfd;
+#endif
 
 	Mutex::Lock _l(_pollLock);
 
@@ -370,8 +381,38 @@ void SocketManager::poll(unsigned long timeout)
 	}
 
 	if ((_tcpV4ListenSocket != INVALID_SOCKET)&&(FD_ISSET(_tcpV4ListenSocket,&rfds))) {
+		struct sockaddr_in from;
+		socklen_t fromlen = sizeof(from);
+		sockfd = accept(_tcpV4ListenSocket,(struct sockaddr *)&from,&fromlen);
+#ifdef __WINDOWS__
+		if (sockfd != INVALID_SOCKET) {
+#else
+		if (sockfd > 0) {
+#endif
+			InetAddress fromia((const struct sockaddr *)&from);
+			Mutex::Lock _l2(_tcpSockets_m);
+			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(sockfd,false,fromia));
+			_fdSetLock.lock();
+			FD_SET(sockfd,&_readfds);
+			_fdSetLock.unlock();
+		}
 	}
 	if ((_tcpV6ListenSocket != INVALID_SOCKET)&&(FD_ISSET(_tcpV6ListenSocket,&rfds))) {
+		struct sockaddr_in6 from;
+		socklen_t fromlen = sizeof(from);
+		sockfd = accept(_tcpV6ListenSocket,(struct sockaddr *)&from,&fromlen);
+#ifdef __WINDOWS__
+		if (sockfd != INVALID_SOCKET) {
+#else
+		if (sockfd > 0) {
+#endif
+			InetAddress fromia((const struct sockaddr *)&from);
+			Mutex::Lock _l2(_tcpSockets_m);
+			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(sockfd,false,fromia));
+			_fdSetLock.lock();
+			FD_SET(sockfd,&_readfds);
+			_fdSetLock.unlock();
+		}
 	}
 
 	if ((_udpV4Socket)&&(FD_ISSET(_udpV4Socket->_sock,&rfds)))
@@ -384,15 +425,19 @@ void SocketManager::poll(unsigned long timeout)
 		Mutex::Lock _l2(_tcpSockets_m);
 		if (_tcpSockets.size()) {
 			ts.reserve(_tcpSockets.size());
-			for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s)
-				ts.push_back(s->second);
+			for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();) {
+				if (true) { // TODO: TCP expiration check
+					ts.push_back(s->second);
+					++s;
+				} else _tcpSockets.erase(s++);
+			}
 		}
 	}
 	for(std::vector< SharedPtr<Socket> >::iterator s(ts.begin());s!=ts.end();++s) {
 		if (FD_ISSET((*s)->_sock,&rfds))
-			s->notifyAvailableForRead(*s,this);
+			(*s)->notifyAvailableForRead(*s,this);
 		if (FD_ISSET((*s)->_sock,&wfds))
-			s->notifyAvailableForWrite(*s,this);
+			(*s)->notifyAvailableForWrite(*s,this);
 	}
 }
 

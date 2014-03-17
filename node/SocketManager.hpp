@@ -48,8 +48,6 @@
 #include "SharedPtr.hpp"
 #include "InetAddress.hpp"
 #include "Socket.hpp"
-#include "TcpSocket.hpp"
-#include "UdpSocket.hpp"
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
 #include "Buffer.hpp"
@@ -75,7 +73,11 @@ public:
 	 * @param arg Second argument to packetHandler()
 	 * @throws std::runtime_error Could not bind local port(s) or open socket(s)
 	 */
-	SocketManager(int localUdpPort,int localTcpPort,void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg);
+	SocketManager(
+		int localUdpPort,
+		int localTcpPort,
+		void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
+		void *arg);
 
 	~SocketManager();
 
@@ -169,19 +171,15 @@ private:
 #ifdef __WINDOWS__
 	SOCKET _whackSendPipe;
 	SOCKET _whackReceivePipe;
-#else
-	int _whackSendPipe;
-	int _whackReceivePipe;
-#endif
-	Mutex::Lock _whackSendPipe_m;
-
-#ifdef __WINDOWS__
 	SOCKET _tcpV4ListenSocket;
 	SOCKET _tcpV6ListenSocket;
 #else
+	int _whackSendPipe;
+	int _whackReceivePipe;
 	int _tcpV4ListenSocket;
 	int _tcpV6ListenSocket;
 #endif
+	Mutex _whackSendPipe_m;
 
 	SharedPtr<Socket> _udpV4Socket;
 	SharedPtr<Socket> _udpV6Socket;

@@ -30,16 +30,17 @@
 
 #include <stdint.h>
 
-#include "Socket.hpp"
+#include "InetAddress.hpp"
 #include "Mutex.hpp"
 #include "Utils.hpp"
+#include "Socket.hpp"
+
+#define ZT_TCP_SENDQ_LENGTH 4096
+#define ZT_TCP_MAX_MESSAGE_LENGTH 2048
 
 namespace ZeroTier {
 
 class SocketManager;
-
-#define ZT_TCP_SENDQ_LENGTH 16384
-#define ZT_TCP_MAX_MESSAGE_LENGTH 2048
 
 /**
  * A TCP socket encapsulating ZeroTier packets over a TCP stream connection
@@ -69,35 +70,26 @@ class TcpSocket : public Socket
 
 public:
 	virtual ~TcpSocket();
-
-	virtual bool isOpen() const;
 	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen);
 
-	/**
-	 * @return Remote TCP endpoint address
-	 */
-	inline const InetAddress &remote() const { return _remote; }
-
 protected:
+#ifdef __WINDOWS__
+	TcpSocket(SOCKET s,bool c,const InetAddress &r) :
+#else
+	TcpSocket(int s,bool c,const InetAddress &r) :
+#endif
+		Socket(Socket::ZT_SOCKET_TYPE_TCP,s),
+		_lastReceivedData(Utils::now()),
+		_inptr(0),
+		_outptr(0),
+		_connecting(c),
+		_remote(r),
+		_lock() {}
+
 	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm);
 	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm);
 
 private:
-#ifdef __WINDOWS__
-	TcpSocket(SOCKET sock,bool connecting,const InetAddress &remote) :
-#endif
-	TcpSocket(int sock,bool connecting,const InetAddress &remote) :
-#else
-		Socket(ZT_SOCKET_TYPE_TCP,sock),
-		_lastReceivedData(Utils::now()),
-		_inptr(0),
-		_outptr(0),
-		_connecting(connecting),
-		_remote(remote),
-		_lock()
-	{
-	}
-
 	unsigned char _outbuf[ZT_TCP_SENDQ_LENGTH];
 	unsigned char _inbuf[ZT_TCP_MAX_MESSAGE_LENGTH];
 	uint64_t _lastReceivedData; // updated whenever data is received, checked directly by SocketManager for stale TCP cleanup
@@ -108,6 +100,6 @@ private:
 	Mutex _lock;
 };
 
-}; // namespace ZeroTier
+} // namespace ZeroTier
 
 #endif

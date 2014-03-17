@@ -4,7 +4,6 @@ OBJS=\
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Defaults.o \
-	node/Demarc.o \
 	node/EthernetTap.o \
 	node/HttpClient.o \
 	node/Identity.o \
@@ -21,10 +20,12 @@ OBJS=\
 	node/Poly1305.o \
 	node/Salsa20.o \
 	node/Service.o \
+	node/SocketManager.o \
 	node/SoftwareUpdater.o \
 	node/SHA512.o \
 	node/Switch.o \
 	node/SysEnv.o \
+	node/TcpSocket.o \
 	node/Topology.o \
 	node/UdpSocket.o \
 	node/Utils.o

@@ -39,7 +39,6 @@
 #include "Utils.hpp"
 #include "Identity.hpp"
 #include "Logger.hpp"
-#include "Demarc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "InetAddress.hpp"
 #include "Packet.hpp"
@@ -49,7 +48,7 @@
 #include "Mutex.hpp"
 
 // Increment if serialization has changed
-#define ZT_PEER_SERIALIZATION_VERSION 6
+#define ZT_PEER_SERIALIZATION_VERSION 7
 
 namespace ZeroTier {
 
@@ -428,7 +427,6 @@ private:
 			lastSend(0),
 			lastReceive(0),
 			lastFirewallOpener(0),
-			localPort(Demarc::ANY_PORT),
 			addr(),
 			fixed(false)
 		{
@@ -447,7 +445,6 @@ private:
 			b.append(lastSend);
 			b.append(lastReceive);
 			b.append(lastFirewallOpener);
-			b.append(Demarc::portToInt(localPort));
 
 			b.append((unsigned char)addr.type());
 			switch(addr.type()) {
@@ -475,7 +472,6 @@ private:
 			lastSend = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 			lastFirewallOpener = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-			localPort = Demarc::intToPort(b.template at<uint64_t>(p)); p += sizeof(uint64_t);
 
 			switch ((InetAddress::AddressType)b[p++]) {
 				case InetAddress::TYPE_NULL:
@@ -499,7 +495,6 @@ private:
 		uint64_t lastSend;
 		uint64_t lastReceive;
 		uint64_t lastFirewallOpener;
-		Demarc::Port localPort; // ANY_PORT if not defined (size: uint64_t)
 		InetAddress addr; // null InetAddress if path is undefined
 		bool fixed; // do not learn address from received packets
 	};
