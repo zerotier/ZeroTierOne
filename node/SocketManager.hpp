@@ -144,6 +144,7 @@ private:
 		_fdSetLock.unlock();
 	}
 
+	// Called in SocketManager destructor or in constructor cleanup before exception throwing
 	inline void _closeSockets()
 		throw()
 	{

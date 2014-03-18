@@ -351,8 +351,9 @@ bool SocketManager::sendFirewallOpener(const InetAddress &to,int hopLimit)
 
 void SocketManager::poll(unsigned long timeout)
 {
-	fd_set rfds,wfds,nfds;
+	fd_set rfds,wfds,efds;
 	struct timeval tv;
+	std::vector< SharedPtr<Socket> > ts;
 #ifdef __WINDOWS__
 	SOCKET sockfd;
 #else
@@ -365,11 +366,11 @@ void SocketManager::poll(unsigned long timeout)
 	memcpy(&rfds,&_readfds,sizeof(rfds));
 	memcpy(&wfds,&_writefds,sizeof(wfds));
 	_fdSetLock.unlock();
-	FD_ZERO(&nfds);
+	FD_ZERO(&efds);
 
 	tv.tv_sec = (long)(timeout / 1000);
 	tv.tv_usec = (long)((timeout % 1000) * 1000);
-	select(_nfds,&rfds,&wfds,&nfds,(timeout > 0) ? &tv : (struct timeval *)0);
+	select(_nfds,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
 
 	if (FD_ISSET(_whackReceivePipe,&rfds)) {
 		char tmp[32];
@@ -391,7 +392,7 @@ void SocketManager::poll(unsigned long timeout)
 #endif
 			InetAddress fromia((const struct sockaddr *)&from);
 			Mutex::Lock _l2(_tcpSockets_m);
-			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(sockfd,false,fromia));
+			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
 			_fdSetLock.lock();
 			FD_SET(sockfd,&_readfds);
 			_fdSetLock.unlock();
@@ -408,7 +409,7 @@ void SocketManager::poll(unsigned long timeout)
 #endif
 			InetAddress fromia((const struct sockaddr *)&from);
 			Mutex::Lock _l2(_tcpSockets_m);
-			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(sockfd,false,fromia));
+			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
 			_fdSetLock.lock();
 			FD_SET(sockfd,&_readfds);
 			_fdSetLock.unlock();
@@ -420,13 +421,13 @@ void SocketManager::poll(unsigned long timeout)
 	if ((_udpV6Socket)&&(FD_ISSET(_udpV6Socket->_sock,&rfds)))
 		_udpV6Socket->notifyAvailableForRead(_udpV6Socket,this);
 
-	std::vector< SharedPtr<Socket> > ts;
 	{ // grab copy of TCP sockets list because _tcpSockets[] might be changed in a handler
 		Mutex::Lock _l2(_tcpSockets_m);
 		if (_tcpSockets.size()) {
 			ts.reserve(_tcpSockets.size());
+			uint64_t now = Utils::now();
 			for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();) {
-				if (true) { // TODO: TCP expiration check
+				if ((now - ((TcpSocket *)s->second.get())->_lastActivity) < ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT) {
 					ts.push_back(s->second);
 					++s;
 				} else {

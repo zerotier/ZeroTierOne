@@ -35,9 +35,6 @@
 #include "Utils.hpp"
 #include "Socket.hpp"
 
-#define ZT_TCP_SENDQ_LENGTH 4096
-#define ZT_TCP_MAX_MESSAGE_LENGTH 2048
-
 namespace ZeroTier {
 
 class SocketManager;
@@ -74,30 +71,34 @@ public:
 
 protected:
 #ifdef __WINDOWS__
-	TcpSocket(SOCKET s,bool c,const InetAddress &r) :
+	TcpSocket(SocketManager *sm,SOCKET s,bool c,const InetAddress &r) :
 #else
-	TcpSocket(int s,bool c,const InetAddress &r) :
+	TcpSocket(SocketManager *sm,int s,bool c,const InetAddress &r) :
 #endif
 		Socket(Socket::ZT_SOCKET_TYPE_TCP,s),
-		_lastReceivedData(Utils::now()),
-		_inptr(0),
+		_lastActivity(Utils::now()),
+		_sm(sm),
+		_outbuf((unsigned char *)0),
 		_outptr(0),
+		_outbufsize(0),
+		_inptr(0),
 		_connecting(c),
-		_remote(r),
-		_lock() {}
+		_remote(r) {}
 
 	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm);
 	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm);
 
 private:
-	unsigned char _outbuf[ZT_TCP_SENDQ_LENGTH];
-	unsigned char _inbuf[ZT_TCP_MAX_MESSAGE_LENGTH];
-	uint64_t _lastReceivedData; // updated whenever data is received, checked directly by SocketManager for stale TCP cleanup
-	unsigned int _inptr;
+	unsigned char _inbuf[ZT_SOCKET_MAX_MESSAGE_LEN];
+	uint64_t _lastActivity; // updated whenever data is received, checked directly by SocketManager for stale TCP cleanup
+	SocketManager *_sm;
+	unsigned char *_outbuf;
 	unsigned int _outptr;
+	unsigned int _outbufsize;
+	unsigned int _inptr;
 	bool _connecting; // manipulated directly by SocketManager, true if connect() is in progress
 	InetAddress _remote;
-	Mutex _lock;
+	Mutex _writeLock;
 };
 
 } // namespace ZeroTier

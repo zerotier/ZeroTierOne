@@ -43,7 +43,7 @@
 /**
  * Maximum discrete message length supported by all socket types
  */
-#define ZT_SOCKET_MAX_MESSAGE_LEN 4096
+#define ZT_SOCKET_MAX_MESSAGE_LEN 2048
 
 namespace ZeroTier {
 
