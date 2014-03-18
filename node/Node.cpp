@@ -76,6 +76,7 @@
 #include "SHA512.hpp"
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
+#include "Buffer.hpp"
 
 #include "../version.h"
 
@@ -84,15 +85,20 @@ namespace ZeroTier {
 struct _LocalClientImpl
 {
 	unsigned char key[32];
-	UdpSocket *sock;
+	int sock;
 	void (*resultHandler)(void *,unsigned long,const char *);
 	void *arg;
 	unsigned int controlPort;
 	InetAddress localDestAddr;
 	Mutex inUseLock;
+
+	void threadMain()
+		throw()
+	{
+	}
 };
 
-static void _CBlocalClientHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len)
+static void _CBlocalClientHandler(const SharedPtr<Socket> &sock,void *arg,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
 {
 	_LocalClientImpl *impl = (_LocalClientImpl *)arg;
 	if (!impl)
@@ -100,11 +106,10 @@ static void _CBlocalClientHandler(UdpSocket *sock,void *arg,const InetAddress &r
 	if (!impl->resultHandler)
 		return; // sanity check
 	Mutex::Lock _l(impl->inUseLock);
-
 	try {
 		unsigned long convId = 0;
 		std::vector<std::string> results;
-		if (!NodeConfig::decodeControlMessagePacket(impl->key,data,len,convId,results))
+		if (!NodeConfig::decodeControlMessagePacket(impl->key,data.data(),data.size(),convId,results))
 			return;
 		for(std::vector<std::string>::iterator r(results.begin());r!=results.end();++r)
 			impl->resultHandler(impl->arg,convId,r->c_str());
@@ -117,18 +122,19 @@ Node::LocalClient::LocalClient(const char *authToken,unsigned int controlPort,vo
 {
 	_LocalClientImpl *impl = new _LocalClientImpl;
 
-	UdpSocket *sock = (UdpSocket *)0;
+	impl->sock = 
+
+	SocketManager *sm = (SocketManager *)0;
 	for(unsigned int i=0;i<5000;++i) {
 		try {
-			sock = new UdpSocket(true,32768 + (rand() % 20000),false,&_CBlocalClientHandler,impl);
+			sm = new SocketManager(0,32768 + (rand() % 20000),&_CBlocalClientHandler,impl);
 			break;
 		} catch ( ... ) {
-			sock = (UdpSocket *)0;
+			sm = (SocketManager *)0;
 		}
 	}
 
-	// If socket fails to bind, there's a big problem like missing IPv4 stack
-	if (sock) {
+	if (sm) {
 		{
 			unsigned int csk[64];
 			SHA512::hash(csk,authToken,(unsigned int)strlen(authToken));
@@ -142,7 +148,7 @@ Node::LocalClient::LocalClient(const char *authToken,unsigned int controlPort,vo
 		impl->localDestAddr = InetAddress::LO4;
 		impl->localDestAddr.setPort(impl->controlPort);
 		_impl = impl;
-	} else delete impl;
+	} else delete impl; // big problem, no ports?
 }
 
 Node::LocalClient::~LocalClient()

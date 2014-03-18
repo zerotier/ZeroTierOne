@@ -118,7 +118,6 @@ public:
 	 */
 	void onReceive(
 		const RuntimeEnvironment *_r,
-		Demarc::Port localPort,
 		const InetAddress &remoteAddr,
 		unsigned int hops,
 		uint64_t packetId,
@@ -134,9 +133,9 @@ public:
 	 * @param data Data to send
 	 * @param len Length of packet
 	 * @param now Current time
-	 * @return NULL_PORT or port packet was sent from
+	 * @return True if packet appears to have been sent
 	 */
-	Demarc::Port send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
+	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
 	/**
 	 * Send firewall opener to active link

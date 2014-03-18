@@ -98,23 +98,23 @@ void Peer::onReceive(
 	}
 }
 
-Demarc::Port Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
+bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	if ((_ipv6p.isActive(now))||((!(_ipv4p.addr))&&(_ipv6p.addr))) {
-		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,data,len,-1)) {
+		if (_r->demarc->send(_ipv6p.addr,data,len,-1)) {
 			_ipv6p.lastSend = now;
-			return _ipv6p.localPort;
+			return true;
 		}
 	}
 
 	if (_ipv4p.addr) {
-		if (_r->demarc->send(_ipv4p.localPort,_ipv4p.addr,data,len,-1)) {
+		if (_r->sm->send(_ipv4p.addr,data,len,-1)) {
 			_ipv4p.lastSend = now;
-			return _ipv4p.localPort;
+			return true;
 		}
 	}
 
-	return Demarc::NULL_PORT;
+	return false;
 }
 
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
