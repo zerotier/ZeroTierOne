@@ -56,7 +56,7 @@
 
 #include "Node.hpp"
 #include "Topology.hpp"
-#include "Demarc.hpp"
+#include "SocketManager.hpp"
 #include "Packet.hpp"
 #include "Switch.hpp"
 #include "Utils.hpp"
@@ -242,7 +242,7 @@ struct _NodeImpl
 		delete renv.nc;
 		delete renv.sysEnv;
 		delete renv.topology;
-		delete renv.demarc;
+		delete renv.sm;
 		delete renv.sw;
 		delete renv.mc;
 		delete renv.prng;
@@ -634,7 +634,7 @@ Node::ReasonForTermination Node::run()
 			try {
 				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
-				_r->mainLoopWaitCondition.wait(delay);
+				_r->sm->poll(delay);
 				lastDelayDelta = (long)(Utils::now() - start) - (long)delay; // used to detect sleep/wake
 			} catch (std::exception &exc) {
 				LOG("unexpected exception running Switch doTimerTasks: %s",exc.what());
@@ -663,14 +663,14 @@ void Node::terminate(ReasonForTermination reason,const char *reasonText)
 {
 	((_NodeImpl *)_impl)->reasonForTermination = reason;
 	((_NodeImpl *)_impl)->reasonForTerminationStr = ((reasonText) ? reasonText : "");
-	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
+	((_NodeImpl *)_impl)->renv.sw->whack();
 }
 
 void Node::resync()
 	throw()
 {
 	((_NodeImpl *)_impl)->resynchronize = true;
-	((_NodeImpl *)_impl)->renv.mainLoopWaitCondition.signal();
+	((_NodeImpl *)_impl)->renv.sw->whack();
 }
 
 class _VersionStringMaker

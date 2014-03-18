@@ -321,7 +321,7 @@ void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 
 	// Kick main loop out of wait so that it can pick up this
 	// change to our scheduled timer tasks.
-	_r->mainLoopWaitCondition.signal();
+	_r->sm->whack();
 }
 
 unsigned long Switch::doTimerTasks()
