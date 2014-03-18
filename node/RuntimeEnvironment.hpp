@@ -32,13 +32,11 @@
 
 #include "Constants.hpp"
 #include "Identity.hpp"
-#include "Condition.hpp"
 
 namespace ZeroTier {
 
 class NodeConfig;
 class Logger;
-class Demarc;
 class Switch;
 class Topology;
 class SysEnv;
@@ -47,6 +45,7 @@ class Service;
 class Node;
 class Multicaster;
 class SoftwareUpdater;
+class SocketManager;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -70,7 +69,7 @@ public:
 		prng((CMWC4096 *)0),
 		mc((Multicaster *)0),
 		sw((Switch *)0),
-		demarc((Demarc *)0),
+		sm((SocketManager *)0),
 		topology((Topology *)0),
 		sysEnv((SysEnv *)0),
 		nc((NodeConfig *)0),
@@ -83,10 +82,6 @@ public:
 
 	// Full path to home folder
 	std::string homePath;
-
-	// Main loop waits on this condition when it delays between runs, so
-	// signaling this will prematurely wake it.
-	Condition mainLoopWaitCondition;
 
 	// This node's identity
 	Identity identity;
@@ -109,7 +104,7 @@ public:
 	CMWC4096 *prng;
 	Multicaster *mc;
 	Switch *sw;
-	Demarc *demarc;
+	SocketManager *sm;
 	Topology *topology;
 	SysEnv *sysEnv;
 	NodeConfig *nc;

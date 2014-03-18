@@ -54,7 +54,6 @@
 #include <sys/file.h>
 #endif
 
-#include "Condition.hpp"
 #include "Node.hpp"
 #include "Topology.hpp"
 #include "Demarc.hpp"

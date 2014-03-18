@@ -43,7 +43,6 @@
 #include "InetAddress.hpp"
 #include "MAC.hpp"
 #include "Mutex.hpp"
-#include "Condition.hpp"
 #include "MulticastGroup.hpp"
 #include "Thread.hpp"
 #include "Buffer.hpp"
