@@ -48,19 +48,34 @@ class IpcConnection : NonCopyable
 	friend class SharedPtr<IpcConnection>;
 
 public:
-	IpcConnection(const char *endpoint);
+	/**
+	 * Connect to an IPC endpoint
+	 *
+	 * @param endpoint Endpoint path
+	 * @param commandHandler Command handler function
+	 * @param arg First argument to command handler
+	 * @throws std::runtime_error Unable to connect
+	 */
+	IpcConnection(const char *endpoint,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
 	~IpcConnection();
 
-	void writeln(const char *format,...);
+	/**
+	 * @param format Printf format string
+	 * @param ... Printf arguments
+	 */
+	void printf(const char *format,...);
 
+	/**
+	 * Close this connection
+	 */
 	void close();
 
 	void threadMain()
 		throw();
 
 private:
-	// Used by IpcListener to construct connections from incoming attempts
-	IpcConnection(int s);
+	// Used by IpcListener to construct incoming connections
+	IpcConnection(int s,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
 
 	void (*_handler)(void *,const SharedPtr<IpcConnection> &,const char *);
 	void *_arg;

@@ -8,6 +8,8 @@ OBJS=\
 	node/HttpClient.o \
 	node/Identity.o \
 	node/InetAddress.o \
+	node/IpcConnection.o \
+	node/IpcListener.o \
 	node/Logger.o \
 	node/Multicaster.o \
 	node/Network.o \

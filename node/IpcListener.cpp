@@ -33,30 +33,31 @@
 #include <set>
 
 #include "IpcListener.hpp"
+#include "IpcConnection.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
 #else
 #include <sys/socket.h>
-#include <sys/ud.h>
+#include <sys/un.h>
 #include <unistd.h>
 #endif
 
 namespace ZeroTier {
 
-IpcListener::IpcListener(cosnt char *ep,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg) :
+IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg) :
 	_endpoint(ep),
 	_handler(commandHandler),
 	_arg(arg),
 	_sock(0)
 {
+#ifdef __WINDOWS__
+#else
 	struct sockaddr_un unaddr;
-
 	unaddr.sun_family = AF_UNIX;
-	if ((long)_endpoint.length() > (long)(sizeof(unaddr.sun_path) - 1))
-		throw std::runtime_error("IPC endpoint path too long");
 	strncpy(unaddr.sun_path,_endpoint.c_str(),sizeof(unaddr.sun_path));
+	unaddr.sun_path[sizeof(unaddr.sun_path) - 1] = (char)0;
 
 	for(int tries=0;tries<3;++tries) {
 		_sock = socket(AF_UNIX,SOCK_STREAM,0);
@@ -85,12 +86,15 @@ IpcListener::IpcListener(cosnt char *ep,void (*commandHandler)(void *,const Shar
 		::close(_sock);
 		throw std::runtime_error("listen() failed for bound AF_UNIX socket");
 	}
+#endif
 
 	_thread = Thread::start(this);
 }
 
 IpcListener::~IpcListener()
 {
+#ifdef __WINDOWS__
+#else
 	int s = _sock;
 	_sock = 0;
 	if (s > 0) {
@@ -99,19 +103,23 @@ IpcListener::~IpcListener()
 	}
 	Thread::join(_thread);
 	unlink(_endpoint.c_str());
+#endif
 }
 
 void IpcListener::threadMain()
 	throw()
 {
+#ifdef __WINDOWS__
+#else
 	struct sockaddr_un unaddr;
 	socklen_t socklen;
 	int s;
-	unaddr.sun_family = AF_UNIX;
-	strncpy(unaddr.sun_path,_endpoint.c_str(),sizeof(unaddr.sun_path));
 	while (_sock > 0) {
+		unaddr.sun_family = AF_UNIX;
+		strncpy(unaddr.sun_path,_endpoint.c_str(),sizeof(unaddr.sun_path));
+		unaddr.sun_path[sizeof(unaddr.sun_path) - 1] = (char)0;
 		socklen = sizeof(unaddr);
-		s = accept(_sock,(struct sockaddr *)unaddr,&socklen);
+		s = accept(_sock,(struct sockaddr *)&unaddr,&socklen);
 		if (s <= 0)
 			break;
 		if (!_sock) {
@@ -119,9 +127,10 @@ void IpcListener::threadMain()
 			break;
 		}
 		try {
-			_handler(_arg,SharedPtr<IpcConnection>(new IpcConnection(s)),(const char *)0);
+			_handler(_arg,SharedPtr<IpcConnection>(new IpcConnection(s,_handler,_arg)),(const char *)0);
 		} catch ( ... ) {} // handlers should not throw
 	}
+#endif
 }
 
 } // namespace ZeroTier

@@ -57,7 +57,7 @@ public:
 	 * @param arg First argument to pass to handler
 	 * @throws std::runtime_error Unable to bind to endpoint
 	 */
-	IpcListener(cosnt char *ep,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
+	IpcListener(const char *ep,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
 
 	~IpcListener();
 
