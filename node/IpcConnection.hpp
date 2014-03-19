@@ -32,8 +32,6 @@
 #include "Thread.hpp"
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
-#include "SharedPtr.hpp"
-#include "AtomicCounter.hpp"
 
 namespace ZeroTier {
 
@@ -45,9 +43,15 @@ class IpcListener;
 class IpcConnection : NonCopyable
 {
 	friend class IpcListener;
-	friend class SharedPtr<IpcConnection>;
 
 public:
+	enum EventType
+	{
+		IPC_EVENT_COMMAND,
+		IPC_EVENT_NEW_CONNECTION,
+		IPC_EVENT_CONNECTION_CLOSED
+	};
+
 	/**
 	 * Connect to an IPC endpoint
 	 *
@@ -56,7 +60,7 @@ public:
 	 * @param arg First argument to command handler
 	 * @throws std::runtime_error Unable to connect
 	 */
-	IpcConnection(const char *endpoint,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
+	IpcConnection(const char *endpoint,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 	~IpcConnection();
 
 	/**
@@ -65,25 +69,17 @@ public:
 	 */
 	void printf(const char *format,...);
 
-	/**
-	 * Close this connection
-	 */
-	void close();
-
 	void threadMain()
 		throw();
 
 private:
 	// Used by IpcListener to construct incoming connections
-	IpcConnection(int s,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
+	IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 
-	void (*_handler)(void *,const SharedPtr<IpcConnection> &,const char *);
+	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
 	volatile int _sock;
-	Thread _thread;
 	Mutex _writeLock;
-
-	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier

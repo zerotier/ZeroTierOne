@@ -31,7 +31,7 @@
 #include "Constants.hpp"
 #include "Thread.hpp"
 #include "NonCopyable.hpp"
-#include "SharedPtr.hpp"
+#include "IpcConnection.hpp"
 
 #include <string>
 #include <stdexcept>
@@ -44,8 +44,6 @@
 
 namespace ZeroTier {
 
-class IpcConnection;
-
 /**
  * IPC incoming connection listener (Unix domain sockets or named pipes on Windows)
  */
@@ -53,11 +51,25 @@ class IpcListener : NonCopyable
 {
 public:
 	/**
+	 * Listen for IPC connections
+	 *
+	 * The supplied handler is passed on to incoming instances of IpcConnection. When
+	 * a connection is first opened, it is called with IPC_EVENT_NEW_CONNECTION. The
+	 * receiver must take ownership of the connection object. When a connection is
+	 * closed, IPC_EVENT_CONNECTION_CLOSING is generated. At this point (or after) the
+	 * receiver must delete the object. IPC_EVENT_COMMAND is generated when lines of
+	 * text are read, and in this cases the last argument is not NULL. No closed event
+	 * is generated in the event of manual delete if the connection is still open.
+	 *
+	 * Yeah, this whole callback model sort of sucks. Might rethink and replace with
+	 * some kind of actor model or something if it gets too unweildy. But for now the
+	 * use cases are simple enough that it's not too bad.
+	 *
 	 * @param commandHandler Function to call for each command
 	 * @param arg First argument to pass to handler
 	 * @throws std::runtime_error Unable to bind to endpoint
 	 */
-	IpcListener(const char *ep,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg);
+	IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 
 	~IpcListener();
 
@@ -66,7 +78,7 @@ public:
 
 private:
 	std::string _endpoint;
-	void (*_handler)(void *,const SharedPtr<IpcConnection> &,const char *);
+	void (*_handler)(void *,IpcConnection *,const char *);
 	void *_arg;
 	volatile int _sock;
 	Thread _thread;

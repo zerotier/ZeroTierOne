@@ -36,21 +36,17 @@
 #include <vector>
 #include <stdexcept>
 
+#include "IpcListener.hpp"
+#include "IpcConnection.hpp"
 #include "SharedPtr.hpp"
 #include "Network.hpp"
 #include "Utils.hpp"
-#include "UdpSocket.hpp"
 #include "Buffer.hpp"
 #include "Dictionary.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-
-/**
- * Maximum size of a packet for node configuration
- */
-#define ZT_NODECONFIG_MAX_PACKET_SIZE 4096
 
 /**
  * Node configuration endpoint
@@ -61,10 +57,9 @@ public:
 	/**
 	 * @param renv Runtime environment
 	 * @param authToken Configuration authentication token
-	 * @param controlPort Control port for local control packet I/O
-	 * @throws std::runtime_error Unable to bind to local control port
+	 * @throws std::runtime_error Unable to initialize or listen for IPC connections
 	 */
-	NodeConfig(const RuntimeEnvironment *renv,const char *authToken,unsigned int controlPort);
+	NodeConfig(const RuntimeEnvironment *renv,const char *authToken);
 
 	~NodeConfig();
 
@@ -110,7 +105,7 @@ public:
 	}
 
 	/**
-	 * Perform cleanup and possibly update saved state
+	 * Perform cleanup and possibly persist saved state
 	 */
 	void clean();
 
@@ -125,7 +120,7 @@ public:
 	}
 
 	/**
-	 * @return Set of network tap device names
+	 * @return Set of network tap device names from our virtual networks (not other taps on system)
 	 */
 	inline std::set<std::string> networkTapDeviceNames() const
 	{
@@ -139,52 +134,19 @@ public:
 		return tapDevs;
 	}
 
-	/**
-	 * Execute a control command (called when stuff comes in via control bus)
-	 *
-	 * @param command Command and arguments separated by whitespace (must already be trimmed of CR+LF, etc.)
-	 * @return One or more command results (lines of output)
-	 */
-	std::vector<std::string> execute(const char *command);
-
-	/**
-	 * Armor payload for control bus
-	 *
-	 * Note that no single element of payload can be longer than the max packet
-	 * size. If this occurs out_of_range is thrown.
-	 *
-	 * @param key 32 byte key
-	 * @param conversationId 32-bit conversation ID (bits beyond 32 are ignored)
-	 * @param payload One or more strings to encode in packet
-	 * @return One or more transport armored packets (if payload too big)
-	 * @throws std::out_of_range An element of payload is too big
-	 */
-	static std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > encodeControlMessage(const void *key,unsigned long conversationId,const std::vector<std::string> &payload);
-
-	/**
-	 * Decode a packet from the control bus
-	 *
-	 * Note that 'payload' is appended to. Existing data is not cleared.
-	 *
-	 * @param key 32 byte key
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param conversationId Result parameter filled with conversation ID on success
-	 * @param payload Result parameter to which results are appended
-	 * @return True on success, false on invalid packet or packet that failed authentication
-	 */
-	static bool decodeControlMessagePacket(const void *key,const void *data,unsigned int len,unsigned long &conversationId,std::vector<std::string> &payload);
-
 private:
-	static void _CBcontrolPacketHandler(UdpSocket *sock,void *arg,const InetAddress &remoteAddr,const void *data,unsigned int len);
+	static void _CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine);
+	void _doCommand(IpcConnection *ipcc,const char *commandLine);
 
 	void _readLocalConfig();
 	void _writeLocalConfig();
 
 	const RuntimeEnvironment *_r;
 
-	unsigned char _controlSocketKey[32];
-	UdpSocket _controlSocket;
+	IpcListener _ipcListener;
+	std::string _authToken;
+	std::map< IpcConnection *,bool > _connections;
+	Mutex _connections_m;
 
 	Dictionary _localConfig; // persisted as local.conf
 	Mutex _localConfig_m;

@@ -30,10 +30,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include <set>
-
 #include "IpcListener.hpp"
-#include "IpcConnection.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
@@ -46,7 +43,7 @@
 
 namespace ZeroTier {
 
-IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg) :
+IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 	_endpoint(ep),
 	_handler(commandHandler),
 	_arg(arg),
@@ -127,7 +124,7 @@ void IpcListener::threadMain()
 			break;
 		}
 		try {
-			_handler(_arg,SharedPtr<IpcConnection>(new IpcConnection(s,_handler,_arg)),(const char *)0);
+			_handler(_arg,new IpcConnection(s,_handler,_arg),Ipcconnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
 		} catch ( ... ) {} // handlers should not throw
 	}
 #endif

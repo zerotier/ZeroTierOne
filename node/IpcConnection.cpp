@@ -46,11 +46,13 @@
 
 namespace ZeroTier {
 
-IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg) :
+IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 	_handler(commandHandler),
 	_arg(arg),
 	_sock(0)
 {
+#ifdef __WINDOWS__
+#else
 	struct sockaddr_un unaddr;
 	unaddr.sun_family = AF_UNIX;
 	strncpy(unaddr.sun_path,endpoint,sizeof(unaddr.sun_path));
@@ -64,11 +66,12 @@ IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,
 		::close(_sock);
 		throw std::runtime_error("IPC endpoint unreachable");
 	}
+#endif
 
 	Thread::start(this);
 }
 
-IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,const SharedPtr<IpcConnection> &,const char *),void *arg) :
+IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 	_handler(commandHandler),
 	_arg(arg),
 	_sock(s)
@@ -78,7 +81,17 @@ IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,const SharedPtr
 
 IpcConnection::~IpcConnection()
 {
-	this->close();
+#ifdef __WINDOWS__
+#else
+	_writeLock.lock();
+	int s = _sock;
+	_sock = 0;
+	if (s > 0) {
+		::shutdown(s,SHUT_RDWR);
+		::close(s);
+	}
+	_writeLock.unlock();
+#endif
 }
 
 void IpcConnection::printf(const char *format,...)
@@ -95,44 +108,56 @@ void IpcConnection::printf(const char *format,...)
 	va_start(ap,format);
 	n = (int)::vsnprintf(tmp,sizeof(tmp),format,ap);
 	va_end(ap);
+	if (n <= 0)
+		return;
 
+#ifdef __WINDOWS__
+#else
 	::write(_sock,tmp,n);
-}
-
-void IpcConnection::close()
-{
-	Mutex::Lock _l(_writeLock);
-	int s = _sock;
-	_sock = 0;
-	if (s > 0) {
-		::shutdown(s,SHUT_RDWR);
-		::close(s);
-	}
-	Thread::join(_thread);
+#endif
 }
 
 void IpcConnection::threadMain()
 	throw()
 {
+#ifdef __WINDOWS__
+#else
 	char tmp[65536];
 	char linebuf[65536];
 	unsigned int lineptr = 0;
+	int s,n,i;
+	char c;
 
-	while (_sock) {
-		int n = (int)::read(_sock,tmp,sizeof(tmp));
+	for(;;) {
+		s = _sock;
+		if (s <= 0)
+			break;
+		n = (int)::read(s,tmp,sizeof(tmp));
 		if (n <= 0)
 			break;
-		for(int i=0;i<n;++i) {
-			char c = (linebuf[lineptr] = tmp[i]);
+		for(i=0;i<n;++i) {
+			c = (linebuf[lineptr] = tmp[i]);
 			if ((c == '\r')||(c == '\n')||(lineptr == (sizeof(linebuf) - 1))) {
 				if (lineptr) {
 					linebuf[lineptr] = (char)0;
-					_handler(_arg,SharedPtr<IpcConnection>(this),linebuf);
+					_handler(_arg,this,IPC_EVENT_COMMAND,linebuf);
 					lineptr = 0;
 				}
 			} else ++lineptr;
 		}
 	}
+
+	{
+		_writeLock.lock();
+		int s = _sock;
+		_sock = 0;
+		if (s > 0)
+			::close(s);
+		_writeLock.unlock();
+	}
+
+	_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSING,(const char *)0);
+#endif
 }
 
 } // namespace ZeroTier
