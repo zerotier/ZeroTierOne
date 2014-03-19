@@ -23,12 +23,12 @@ endif
 #DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 
 # Uncomment for a release optimized universal binary build
-CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
-STRIP=strip
+#CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+#STRIP=strip
 
 # Uncomment for a debug build
-#CFLAGS=-Wall -g -pthread -DZT_TRACE -DZT_LOG_STDOUT $(INCLUDES) $(DEFS)
-#STRIP=echo
+CFLAGS=-Wall -g -pthread -DZT_TRACE -DZT_LOG_STDOUT $(INCLUDES) $(DEFS)
+STRIP=echo
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 

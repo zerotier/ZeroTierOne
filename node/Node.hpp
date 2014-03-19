@@ -71,7 +71,8 @@ public:
 		/**
 		 * @return Initialization error or NULL if none
 		 */
-		const char *error() const;
+		const char *error() const
+			throw();
 
 		/**
 		 * Send a command to the local node

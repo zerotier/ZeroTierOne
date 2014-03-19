@@ -154,6 +154,10 @@ static int main(int argc,char **argv)
 	try {
 		volatile bool done = false;
 		Node::NodeControlClient client(hp,&_CBresultHandler,(void *)&done);
+		if (client.error()) {
+			fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?)"ZT_EOL_S,argv[0]);
+			return 1;
+		}
 		client.send(query.c_str());
 		while (!done)
 			Thread::sleep(250); // ghetto

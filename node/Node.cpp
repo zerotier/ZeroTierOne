@@ -99,6 +99,7 @@ Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(
 	_impl((void *)new _NodeControlClientImpl)
 {
 	_NodeControlClientImpl *impl = (_NodeControlClientImpl *)_impl;
+	impl->ipcc = (IpcConnection *)0;
 
 	if (!hp)
 		hp = ZT_DEFAULTS.defaultHomePath.c_str();
@@ -121,6 +122,7 @@ Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(
 					impl->ipcc = new IpcConnection((std::string(ZT_IPC_ENDPOINT_BASE) + myaddr).c_str(),&_CBipcResultHandler,_impl);
 					impl->ipcc->printf("auth %s"ZT_EOL_S,at.c_str());
 				} catch ( ... ) {
+					impl->ipcc = (IpcConnection *)0;
 					impl->err = "failure connecting to running ZeroTier One service";
 				}
 			}
@@ -136,11 +138,20 @@ Node::NodeControlClient::~NodeControlClient()
 	}
 }
 
+const char *Node::NodeControlClient::error() const
+	throw()
+{
+	if (((_NodeControlClientImpl *)_impl)->err.length())
+		return ((_NodeControlClientImpl *)_impl)->err.c_str();
+	return (const char *)0;
+}
+
 void Node::NodeControlClient::send(const char *command)
 	throw()
 {
 	try {
-		((_NodeControlClientImpl *)_impl)->ipcc->printf("%s"ZT_EOL_S,command);
+		if (((_NodeControlClientImpl *)_impl)->ipcc)
+			((_NodeControlClientImpl *)_impl)->ipcc->printf("%s"ZT_EOL_S,command);
 	} catch ( ... ) {}
 }
 
