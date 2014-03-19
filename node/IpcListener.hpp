@@ -37,9 +37,9 @@
 #include <stdexcept>
 
 #ifdef __WINDOWS__
-#define ZT_IPC_ENDPOINT "\\\\.\\pipe\\ZeroTierOne-control"
+#define ZT_IPC_ENDPOINT_BASE "\\\\.\\pipe\\ZeroTierOne-"
 #else
-#define ZT_IPC_ENDPOINT "/tmp/.ZeroTierOne-control"
+#define ZT_IPC_ENDPOINT_BASE "/tmp/.ZeroTierOne-"
 #endif
 
 namespace ZeroTier {
@@ -78,7 +78,7 @@ public:
 
 private:
 	std::string _endpoint;
-	void (*_handler)(void *,IpcConnection *,const char *);
+	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
 	volatile int _sock;
 	Thread _thread;

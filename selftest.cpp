@@ -44,7 +44,6 @@
 #include "node/Salsa20.hpp"
 #include "node/MAC.hpp"
 #include "node/Peer.hpp"
-#include "node/Condition.hpp"
 #include "node/NodeConfig.hpp"
 #include "node/Dictionary.hpp"
 #include "node/EthernetTap.hpp"
@@ -66,7 +65,7 @@ using namespace ZeroTier;
 
 static unsigned char fuzzbuf[1048576];
 
-static Condition webDoneCondition;
+static volatile bool webDone = false;
 static std::string webSha512ShouldBe;
 static void testHttpHandler(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
 {
@@ -77,45 +76,52 @@ static void testHttpHandler(void *arg,int code,const std::string &url,bool onDis
 			std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 OK" << std::endl;
 		else std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 FAILED!" << std::endl;
 	} else std::cout << "ERROR " << code << ": " << body << std::endl;
-	webDoneCondition.signal();
+	webDone = true;
 }
 
 static int testHttp()
 {
 	webSha512ShouldBe = "221b348c8278ad2063c158fb15927c35dc6bb42880daf130d0574025f88ec350811c34fae38a014b576d3ef5c98af32bb540e68204810db87a51fa9b239ea567";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/1k ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://download.zerotier.com/dev/1k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	webSha512ShouldBe = "342e1a058332aad2d7a5412c1d9cd4ad02b4038178ca0c3ed9d34e3cf0905c118b684e5d2a935a158195d453d7d69e9c6e201e252620fb53f29611794a5d4b0c";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/2k ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://download.zerotier.com/dev/2k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	webSha512ShouldBe = "439562e1471dd6bdb558cb680f38dd7742e521497e280cb1456a31f74b9216b7d98145b3896c2f68008e6ac0c1662a4cb70562caeac294c5d01f378b22a21292";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/4k ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://download.zerotier.com/dev/4k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	webSha512ShouldBe = "fbd3901a9956158b9d290efa1af4fff459d8c03187c98b0e630d10a19fab61940e668652257763973f6cde34f2aa81574f9a50b1979b675b45ddd18d69a4ceb8";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/8k ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://download.zerotier.com/dev/8k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	webSha512ShouldBe = "098ae593f8c3a962f385f9f008ec2116ad22eea8bc569fc88a06a0193480fdfb27470345c427116d19179fb2a74df21d95fe5f1df575a9f2d10d99595708b765";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/4m ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://download.zerotier.com/dev/4m",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	webSha512ShouldBe = "";
 	std::cout << "[http] fetching http://download.zerotier.com/dev/NOEXIST ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://download.zerotier.com/dev/NOEXIST",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	webSha512ShouldBe = "";
 	std::cout << "[http] fetching http://1.1.1.1/SHOULD_TIME_OUT ... "; std::cout.flush();
+	webDone = false;
 	HttpClient::GET("http://1.1.1.1/SHOULD_TIME_OUT",HttpClient::NO_HEADERS,4,&testHttpHandler,(void *)0);
-	webDoneCondition.wait();
+	while (!webDone) Thread::sleep(500);
 
 	return 0;
 }
@@ -512,38 +518,6 @@ static int testOther()
 	}
 	std::cout << "PASS" << std::endl;
 
-	std::cout << "[other] Testing command bus encode/decode... "; std::cout.flush();
-	try {
-		static char key[32] = { 0 };
-		for(unsigned int k=0;k<100;++k) {
-			std::vector<std::string> original;
-			for(unsigned int i=0,j=rand() % 256,l=(rand() % 1024)+1;i<j;++i)
-				original.push_back(std::string(l,'x'));
-			std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets(NodeConfig::encodeControlMessage(key,1,original));
-			//std::cout << packets.size() << ' '; std::cout.flush();
-			std::vector<std::string> after;
-			for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator i(packets.begin());i!=packets.end();++i) {
-				unsigned long convId = 9999;
-				if (!NodeConfig::decodeControlMessagePacket(key,i->data(),i->size(),convId,after)) {
-					std::cout << "FAIL (decode)" << std::endl;
-					return -1;
-				}
-				if (convId != 1) {
-					std::cout << "FAIL (conversation ID)" << std::endl;
-					return -1;
-				}
-			}
-			if (after != original) {
-				std::cout << "FAIL (compare)" << std::endl;
-				return -1;
-			}
-		}
-	} catch (std::exception &exc) {
-		std::cout << "FAIL (" << exc.what() << ")" << std::endl;
-		return -1;
-	}
-	std::cout << "PASS" << std::endl;
-
 	std::cout << "[other] Testing Dictionary... "; std::cout.flush();
 	for(int k=0;k<1000;++k) {
 		Dictionary a,b;
@@ -617,8 +591,8 @@ int main(int argc,char **argv)
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
 	std::cout << "[info] default home: " << ZT_DEFAULTS.defaultHomePath << std::endl;
-	std::cout << "[info] system authtoken.secret: " << Node::LocalClient::authTokenDefaultSystemPath() << std::endl;
-	std::cout << "[info] user authtoken.secret: " << Node::LocalClient::authTokenDefaultUserPath() << std::endl;
+	std::cout << "[info] system authtoken.secret: " << Node::NodeControlClient::authTokenDefaultSystemPath() << std::endl;
+	std::cout << "[info] user authtoken.secret: " << Node::NodeControlClient::authTokenDefaultUserPath() << std::endl;
 
 	srand((unsigned int)time(0));
 

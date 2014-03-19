@@ -67,7 +67,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 
 void Peer::onReceive(
 	const RuntimeEnvironment *_r,
-	Demarc::Port localPort,
 	const InetAddress &remoteAddr,
 	unsigned int hops,
 	uint64_t packetId,
@@ -80,7 +79,6 @@ void Peer::onReceive(
 		// Update last receive info for our direct path
 		WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
 		wp->lastReceive = now;
-		wp->localPort = ((localPort) ? localPort : Demarc::ANY_PORT);
 		if (!wp->fixed)
 			wp->addr = remoteAddr;
 
@@ -101,14 +99,14 @@ void Peer::onReceive(
 bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	if ((_ipv6p.isActive(now))||((!(_ipv4p.addr))&&(_ipv6p.addr))) {
-		if (_r->demarc->send(_ipv6p.addr,data,len,-1)) {
+		if (_r->sm->send(_ipv6p.addr,false,data,len)) {
 			_ipv6p.lastSend = now;
 			return true;
 		}
 	}
 
 	if (_ipv4p.addr) {
-		if (_r->sm->send(_ipv4p.addr,data,len,-1)) {
+		if (_r->sm->send(_ipv4p.addr,false,data,len)) {
 			_ipv4p.lastSend = now;
 			return true;
 		}
@@ -121,14 +119,14 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;
 	if (_ipv4p.addr) {
-		if (_r->demarc->send(_ipv4p.localPort,_ipv4p.addr,"\0",1,ZT_FIREWALL_OPENER_HOPS)) {
+		if (_r->sm->sendFirewallOpener(_ipv4p.addr,ZT_FIREWALL_OPENER_HOPS)) {
 			_ipv4p.lastFirewallOpener = now;
 			sent = true;
 		}
 	}
 
 	if (_ipv6p.addr) {
-		if (_r->demarc->send(_ipv6p.localPort,_ipv6p.addr,"\0",1,ZT_FIREWALL_OPENER_HOPS)) {
+		if (_r->sm->sendFirewallOpener(_ipv6p.addr,ZT_FIREWALL_OPENER_HOPS)) {
 			_ipv6p.lastFirewallOpener = now;
 			sent = true;
 		}
@@ -142,7 +140,7 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 	bool sent = false;
 	if (_ipv4p.addr) {
 		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv4p.addr.toString().c_str());
-		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv4p.localPort,_ipv4p.addr)) {
+		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv4p.addr,false)) {
 			_ipv4p.lastSend = now;
 			sent = true;
 		}
@@ -150,7 +148,7 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 
 	if (_ipv6p.addr) {
 		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv6p.addr.toString().c_str());
-		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.localPort,_ipv6p.addr)) {
+		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.addr,false)) {
 			_ipv6p.lastSend = now;
 			sent = true;
 		}

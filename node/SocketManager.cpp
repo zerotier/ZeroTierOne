@@ -427,7 +427,7 @@ void SocketManager::poll(unsigned long timeout)
 			ts.reserve(_tcpSockets.size());
 			uint64_t now = Utils::now();
 			for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();) {
-				if ((now - ((TcpSocket *)s->second.get())->_lastActivity) < ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT) {
+				if ((now - ((TcpSocket *)s->second.ptr())->_lastActivity) < ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT) {
 					ts.push_back(s->second);
 					++s;
 				} else {

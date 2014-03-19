@@ -50,20 +50,28 @@ public:
 	 * otherwise it will be unable to open a local UDP socket to
 	 * communicate with the service.
 	 */
-	class LocalClient
+	class NodeControlClient
 	{
 	public:
 		/**
 		 * Create a new node config client
 		 *
-		 * @param authToken Authentication token
-		 * @param controlPort Control port or 0 for 39393 (default)
+		 * Initialization may fail. Call error() to check.
+		 *
+		 * @param hp Home path of ZeroTier One instance
 		 * @param resultHandler Function to call when commands provide results
+		 * @param arg First argument to result handler
+		 * @param authToken Authentication token or NULL (default) to read from authtoken.secret in home path
 		 */
-		LocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
+		NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken = (const char *)0)
 			throw();
 
-		~LocalClient();
+		~NodeControlClient();
+
+		/**
+		 * @return Initialization error or NULL if none
+		 */
+		const char *error() const;
 
 		/**
 		 * Send a command to the local node
@@ -75,12 +83,13 @@ public:
 		 * @param command
 		 * @return Conversation ID that will be provided to result handler when/if results are sent back
 		 */
-		unsigned long send(const char *command)
+		void send(const char *command)
 			throw();
-		inline unsigned long send(const std::string &command) throw() { return send(command.c_str()); }
+		inline void send(const std::string &command)
+			throw() { return send(command.c_str()); }
 
 		/**
-		 * Split a line of results by space
+		 * Split a line of results
 		 *
 		 * @param line Line to split
 		 * @return Vector of fields
@@ -89,19 +98,19 @@ public:
 		static inline std::vector<std::string> splitLine(const std::string &line) { return splitLine(line.c_str()); }
 
 		/**
-		 * @return Default path for user-local authorization token for the current user or empty string if cannot be determined
+		 * @return Default path for current user's authtoken.secret
 		 */
-		static std::string authTokenDefaultUserPath();
+		static const char *authTokenDefaultUserPath();
 
 		/**
-		 * @return Default system path for auth token on this platform
+		 * @return Default path to system authtoken.secret
 		 */
-		static std::string authTokenDefaultSystemPath();
+		static const char *authTokenDefaultSystemPath();
 
 	private:
-		// LocalClient is not copyable
-		LocalClient(const LocalClient&);
-		const LocalClient& operator=(const LocalClient&);
+		// NodeControlClient is not copyable
+		NodeControlClient(const NodeControlClient&);
+		const NodeControlClient& operator=(const NodeControlClient&);
 
 		void *_impl;
 	};
@@ -129,7 +138,12 @@ public:
 		/**
 		 * A serious unrecoverable error has occurred.
 		 */
-		NODE_UNRECOVERABLE_ERROR = 3
+		NODE_UNRECOVERABLE_ERROR = 3,
+
+		/**
+		 * An address collision occurred (typically this should cause re-invocation with resetIdentity set to true)
+		 */
+		NODE_ADDRESS_COLLISION = 4
 	};
 
 	/**
@@ -137,11 +151,12 @@ public:
 	 *
 	 * The node is not executed until run() is called.
 	 *
-	 * @param hp Home directory path
-	 * @param port Port to bind for talking to the ZT1 network or 0 for 9993 (default)
-	 * @param controlPort Port to bind locally for control packets or 0 for 39393 (default)
+	 * @param hp Home directory path or NULL for system-wide default for this platform (default: NULL)
+	 * @param udpPort UDP port or 0 for default (9993) (default: 0)
+	 * @param tcpPort TCP port or 0 for default (9993) (default: 0)
+	 * @param resetIdentity If true, delete identity before starting and regenerate (default: false)
 	 */
-	Node(const char *hp,unsigned int port,unsigned int controlPort)
+	Node(const char *hp = (const char *)0,unsigned int udpPort = 0,unsigned int tcpPort = 0,bool resetIdentity = false)
 		throw();
 
 	~Node();
@@ -181,19 +196,12 @@ public:
 		throw();
 
 	/**
-	 * Forget p2p links and resynchronize with peers
+	 * Forget p2p links now and resynchronize with peers
 	 */
 	void resync()
 		throw();
 
-	/**
-	 * Get the ZeroTier version in major.minor.revision string format
-	 *
-	 * @return Version in string form
-	 */
-	static const char *versionString()
-		throw();
-
+	static const char *versionString() throw();
 	static unsigned int versionMajor() throw();
 	static unsigned int versionMinor() throw();
 	static unsigned int versionRevision() throw();
@@ -207,18 +215,5 @@ private:
 };
 
 } // namespace ZeroTier
-
-extern "C" {
-
-// Functions with C-style linkage for easy DLL symbol table
-// lookup. These just create instances of Node and LocalClient.
-
-ZeroTier::Node *zeroTierCreateNode(const char *hp,unsigned int port,unsigned int controlPort);
-void zeroTierDeleteNode(ZeroTier::Node *n);
-
-ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg);
-void zeroTierDeleteLocalClient(ZeroTier::Node::LocalClient *lc);
-
-} // extern "C"
 
 #endif

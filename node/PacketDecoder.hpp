@@ -37,6 +37,7 @@
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
 #include "Peer.hpp"
+#include "Socket.hpp"
 
 /*
  * The big picture:
@@ -70,16 +71,16 @@ public:
 	 * Create a new packet-in-decode
 	 *
 	 * @param b Source buffer with raw packet data
-	 * @param localPort Local port on which packet was received
+	 * @param fromSock Socket on which packet was received
 	 * @param remoteAddress Address from which packet came
 	 * @throws std::out_of_range Range error processing packet
 	 */
 	template<unsigned int C2>
-	PacketDecoder(const Buffer<C2> &b,Demarc::Port localPort,const InetAddress &remoteAddress)
+	PacketDecoder(const Buffer<C2> &b,const SharedPtr<Socket> &fromSock,const InetAddress &remoteAddress)
  		throw(std::out_of_range) :
  		Packet(b),
  		_receiveTime(Utils::now()),
- 		_localPort(localPort),
+ 		_fromSock(fromSock),
  		_remoteAddress(remoteAddress),
  		_step(DECODE_WAITING_FOR_SENDER_LOOKUP),
  		__refCount()
@@ -124,7 +125,7 @@ private:
 	bool _doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 
 	uint64_t _receiveTime;
-	Demarc::Port _localPort;
+	SharedPtr<Socket> _fromSock;
 	InetAddress _remoteAddress;
 
 	enum {

@@ -156,7 +156,7 @@ void IpcConnection::threadMain()
 		_writeLock.unlock();
 	}
 
-	_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSING,(const char *)0);
+	_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSED,(const char *)0);
 #endif
 }
 

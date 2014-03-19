@@ -45,9 +45,7 @@
 #include <WinSock2.h>
 #include <Windows.h>
 #include <ShlObj.h>
-#endif
-
-#ifdef __UNIX_LIKE__
+#else
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
@@ -55,176 +53,151 @@
 #endif
 
 #include "Node.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Logger.hpp"
+#include "Utils.hpp"
+#include "Defaults.hpp"
+#include "Identity.hpp"
 #include "Topology.hpp"
 #include "SocketManager.hpp"
-#include "Packet.hpp"
 #include "Switch.hpp"
-#include "Utils.hpp"
 #include "EthernetTap.hpp"
-#include "Logger.hpp"
-#include "InetAddress.hpp"
-#include "Salsa20.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "CMWC4096.hpp"
 #include "NodeConfig.hpp"
-#include "Defaults.hpp"
 #include "SysEnv.hpp"
 #include "Network.hpp"
 #include "MulticastGroup.hpp"
 #include "Mutex.hpp"
 #include "Multicaster.hpp"
-#include "CMWC4096.hpp"
-#include "SHA512.hpp"
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
 #include "Buffer.hpp"
+#include "IpcConnection.hpp"
 
 #include "../version.h"
 
 namespace ZeroTier {
 
-struct _LocalClientImpl
-{
-	unsigned char key[32];
-	int sock;
-	void (*resultHandler)(void *,unsigned long,const char *);
-	void *arg;
-	unsigned int controlPort;
-	InetAddress localDestAddr;
-	Mutex inUseLock;
+// ---------------------------------------------------------------------------
 
-	void threadMain()
-		throw()
-	{
-	}
+struct _NodeControlClientImpl
+{
+	void (*resultHandler)(void *,const char *);
+	void *arg;
+	IpcConnection *ipcc;
+	std::string err;
 };
 
-static void _CBlocalClientHandler(const SharedPtr<Socket> &sock,void *arg,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
+static void _CBipcResultHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *result)
 {
-	_LocalClientImpl *impl = (_LocalClientImpl *)arg;
-	if (!impl)
-		return;
-	if (!impl->resultHandler)
-		return; // sanity check
-	Mutex::Lock _l(impl->inUseLock);
+	if ((event == IpcConnection::IPC_EVENT_COMMAND)&&(result))
+		((_NodeControlClientImpl *)arg)->resultHandler(((_NodeControlClientImpl *)arg)->arg,result);
+}
+
+Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken)
+	throw() :
+	_impl((void *)new _NodeControlClientImpl)
+{
+	_NodeControlClientImpl *impl = (_NodeControlClientImpl *)_impl;
+
+	std::string at;
+	if (authToken)
+		at = authToken;
+	else if (!Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),at))
+		impl->err = "no authentication token specified and authtoken.secret not readable";
+	else {
+		std::string myid;
+		if (Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),myid)) {
+			std::string myaddr(myid.substr(0,myid.find(':')));
+			if (myaddr.length() != 10)
+				impl->err = "invalid address extracted from identity.public";
+			else {
+				try {
+					impl->resultHandler = resultHandler;
+					impl->arg = arg;
+					impl->ipcc = new IpcConnection((std::string(ZT_IPC_ENDPOINT_BASE) + myaddr).c_str(),&_CBipcResultHandler,_impl);
+					impl->ipcc->printf("auth %s"ZT_EOL_S,at.c_str());
+				} catch ( ... ) {
+					impl->err = "failure connecting to running ZeroTier One service";
+				}
+			}
+		} else impl->err = "unable to read identity.public";
+	}
+}
+
+Node::NodeControlClient::~NodeControlClient()
+{
+	if (_impl) {
+		delete ((_NodeControlClientImpl *)_impl)->ipcc;
+		delete (_NodeControlClientImpl *)_impl;
+	}
+}
+
+void Node::NodeControlClient::send(const char *command)
+	throw()
+{
 	try {
-		unsigned long convId = 0;
-		std::vector<std::string> results;
-		if (!NodeConfig::decodeControlMessagePacket(impl->key,data.data(),data.size(),convId,results))
-			return;
-		for(std::vector<std::string>::iterator r(results.begin());r!=results.end();++r)
-			impl->resultHandler(impl->arg,convId,r->c_str());
+		((_NodeControlClientImpl *)_impl)->ipcc->printf("%s"ZT_EOL_S,command);
 	} catch ( ... ) {}
 }
 
-Node::LocalClient::LocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
-	throw() :
-	_impl((void *)0)
-{
-	_LocalClientImpl *impl = new _LocalClientImpl;
-
-	impl->sock = 
-
-	SocketManager *sm = (SocketManager *)0;
-	for(unsigned int i=0;i<5000;++i) {
-		try {
-			sm = new SocketManager(0,32768 + (rand() % 20000),&_CBlocalClientHandler,impl);
-			break;
-		} catch ( ... ) {
-			sm = (SocketManager *)0;
-		}
-	}
-
-	if (sm) {
-		{
-			unsigned int csk[64];
-			SHA512::hash(csk,authToken,(unsigned int)strlen(authToken));
-			memcpy(impl->key,csk,32);
-		}
-
-		impl->sock = sock;
-		impl->resultHandler = resultHandler;
-		impl->arg = arg;
-		impl->controlPort = (controlPort) ? controlPort : (unsigned int)ZT_DEFAULT_CONTROL_UDP_PORT;
-		impl->localDestAddr = InetAddress::LO4;
-		impl->localDestAddr.setPort(impl->controlPort);
-		_impl = impl;
-	} else delete impl; // big problem, no ports?
-}
-
-Node::LocalClient::~LocalClient()
-{
-	if (_impl) {
-		((_LocalClientImpl *)_impl)->inUseLock.lock();
-		delete ((_LocalClientImpl *)_impl)->sock;
-		((_LocalClientImpl *)_impl)->inUseLock.unlock();
-		delete ((_LocalClientImpl *)_impl);
-	}
-}
-
-unsigned long Node::LocalClient::send(const char *command)
-	throw()
-{
-	if (!_impl)
-		return 0;
-	_LocalClientImpl *impl = (_LocalClientImpl *)_impl;
-	Mutex::Lock _l(impl->inUseLock);
-
-	try {
-		uint32_t convId = (uint32_t)rand();
-		if (!convId)
-			convId = 1;
-
-		std::vector<std::string> tmp;
-		tmp.push_back(std::string(command));
-		std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> > packets(NodeConfig::encodeControlMessage(impl->key,convId,tmp));
-
-		for(std::vector< Buffer<ZT_NODECONFIG_MAX_PACKET_SIZE> >::iterator p(packets.begin());p!=packets.end();++p)
-			impl->sock->send(impl->localDestAddr,p->data(),p->size(),-1);
-
-		return convId;
-	} catch ( ... ) {
-		return 0;
-	}
-}
-
-std::vector<std::string> Node::LocalClient::splitLine(const char *line)
+std::vector<std::string> Node::NodeControlClient::splitLine(const char *line)
 {
 	return Utils::split(line," ","\\","\"");
 }
 
-std::string Node::LocalClient::authTokenDefaultUserPath()
+const char *Node::NodeControlClient::authTokenDefaultUserPath()
 {
+	static std::string dlp;
+	static Mutex dlp_m;
+
+	Mutex::Lock _l(dlp_m);
+
 #ifdef __WINDOWS__
 
-	char buf[16384];
-	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_APPDATA,NULL,0,buf)))
-		return (std::string(buf) + "\\ZeroTier\\One\\authtoken.secret");
-	else return std::string();
+	if (!dlp.length()) {
+		char buf[16384];
+		if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_APPDATA,NULL,0,buf)))
+			dlp = (std::string(buf) + "\\ZeroTier\\One\\authtoken.secret");
+	}
 
 #else // not __WINDOWS__
 
-	const char *home = getenv("HOME");
-	if (home) {
+	if (!dlp.length()) {
+		const char *home = getenv("HOME");
+		if (home) {
 #ifdef __APPLE__
-		return (std::string(home) + "/Library/Application Support/ZeroTier/One/authtoken.secret");
+			dlp = (std::string(home) + "/Library/Application Support/ZeroTier/One/authtoken.secret");
 #else
-		return (std::string(home) + "/.zeroTierOneAuthToken");
+			dlp = (std::string(home) + "/.zeroTierOneAuthToken");
 #endif
-	} else return std::string();
+		}
+	}
 
 #endif // __WINDOWS__ or not __WINDOWS__
+
+	return dlp.c_str();
 }
 
-std::string Node::LocalClient::authTokenDefaultSystemPath()
+const char *Node::NodeControlClient::authTokenDefaultSystemPath()
 {
-	return (ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S"authtoken.secret");
+	static std::string dsp;
+	static Mutex dsp_m;
+
+	Mutex::Lock _l(dsp_m);
+
+	if (!dsp.length())
+		dsp = (ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S"authtoken.secret");
+
+	return dsp.c_str();
 }
+
+// ---------------------------------------------------------------------------
 
 struct _NodeImpl
 {
 	RuntimeEnvironment renv;
-	unsigned int port;
-	unsigned int controlPort;
+	unsigned int udpPort,tcpPort;
 	std::string reasonForTerminationStr;
 	volatile Node::ReasonForTermination reasonForTermination;
 	volatile bool started;
@@ -352,16 +325,35 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 }
 #endif // !__WINDOWS__
 
-Node::Node(const char *hp,unsigned int port,unsigned int controlPort)
+Node::Node(const char *hp,unsigned int udpPort,unsigned int tcpPort,bool resetIdentity)
 	throw() :
 	_impl(new _NodeImpl)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	if ((hp)&&(strlen(hp) > 0))
+
+	if ((hp)&&(hp[0]))
 		impl->renv.homePath = hp;
 	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
-	impl->port = (port) ? port : (unsigned int)ZT_DEFAULT_UDP_PORT;
-	impl->controlPort = (controlPort) ? controlPort : (unsigned int)ZT_DEFAULT_CONTROL_UDP_PORT;
+
+	if (resetIdentity) {
+		// Forget identity and peer database, peer keys, etc.
+		Utils::rm((impl->renv.homePath + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
+		Utils::rm((impl->renv.homePath + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
+		Utils::rm((impl->renv.homePath + ZT_PATH_SEPARATOR_S + "peers.persist").c_str());
+
+		// Truncate network config information in networks.d but leave the files since we
+		// still want to remember any networks we have joined. This will force re-config.
+		std::string networksDotD(impl->renv.homePath + ZT_PATH_SEPARATOR_S + "networks.d");
+		std::map< std::string,bool > nwfiles(Utils::listDirectory(networksDotD.c_str()));
+		for(std::map<std::string,bool>::iterator nwf(nwfiles.begin());nwf!=nwfiles.end();++nwf) {
+			FILE *foo = fopen((networksDotD + ZT_PATH_SEPARATOR_S + nwf->first).c_str(),"w");
+			if (foo)
+				fclose(foo);
+		}
+	}
+
+	impl->udpPort = ((udpPort > 0)&&(udpPort <= 0xffff)) ? udpPort : (unsigned int)ZT_DEFAULT_PORT;
+	impl->tcpPort = ((tcpPort > 0)&&(tcpPort <= 0xffff)) ? tcpPort : (unsigned int)ZT_DEFAULT_PORT;
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
@@ -371,6 +363,13 @@ Node::Node(const char *hp,unsigned int port,unsigned int controlPort)
 Node::~Node()
 {
 	delete (_NodeImpl *)_impl;
+}
+
+static void _CBztTraffic(const SharedPtr<Socket> &fromSock,void *arg,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
+{
+	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)arg;
+	if ((_r->sw)&&(!_r->shutdownInProgress))
+		_r->sw->onRemotePacket(fromSock,from,data);
 }
 
 Node::ReasonForTermination Node::run()
@@ -452,15 +451,13 @@ Node::ReasonForTermination Node::run()
 		// Create the objects that make up runtime state.
 		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
-		_r->demarc = new Demarc(_r);
+		_r->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
 		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
 		_r->sysEnv = new SysEnv();
 		try {
-			_r->nc = new NodeConfig(_r,configAuthToken.c_str(),impl->controlPort);
+			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
 		} catch (std::exception &exc) {
-			char foo[1024];
-			Utils::snprintf(foo,sizeof(foo),"unable to bind to local control port %u: is another instance of ZeroTier One already running?",impl->controlPort);
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,foo);
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unable to initialize IPC socket: is ZeroTier One already running?");
 		}
 		_r->node = this;
 #ifdef ZT_AUTO_UPDATE
@@ -471,13 +468,6 @@ Node::ReasonForTermination Node::run()
 			LOG("WARNING: unable to enable software updates: latest .nfo URL from ZT_DEFAULTS is empty (does this platform actually support software updates?)");
 		}
 #endif
-
-		// Bind local port for core I/O
-		if (!_r->demarc->bindLocalUdp(impl->port)) {
-			char foo[1024];
-			Utils::snprintf(foo,sizeof(foo),"unable to bind to global I/O port %u: is another instance of ZeroTier One already running?",impl->controlPort);
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,foo);
-		}
 
 		// Set initial supernode list
 		_r->topology->setSupernodes(ZT_DEFAULTS.supernodes);
@@ -669,14 +659,14 @@ void Node::terminate(ReasonForTermination reason,const char *reasonText)
 {
 	((_NodeImpl *)_impl)->reasonForTermination = reason;
 	((_NodeImpl *)_impl)->reasonForTerminationStr = ((reasonText) ? reasonText : "");
-	((_NodeImpl *)_impl)->renv.sw->whack();
+	((_NodeImpl *)_impl)->renv.sm->whack();
 }
 
 void Node::resync()
 	throw()
 {
 	((_NodeImpl *)_impl)->resynchronize = true;
-	((_NodeImpl *)_impl)->renv.sw->whack();
+	((_NodeImpl *)_impl)->renv.sm->whack();
 }
 
 class _VersionStringMaker
@@ -698,27 +688,3 @@ unsigned int Node::versionMinor() throw() { return ZEROTIER_ONE_VERSION_MINOR; }
 unsigned int Node::versionRevision() throw() { return ZEROTIER_ONE_VERSION_REVISION; }
 
 } // namespace ZeroTier
-
-extern "C" {
-
-ZeroTier::Node *zeroTierCreateNode(const char *hp,unsigned int port,unsigned int controlPort)
-{
-	return new ZeroTier::Node(hp,port,controlPort);
-}
-
-void zeroTierDeleteNode(ZeroTier::Node *n)
-{
-	delete n;
-}
-
-ZeroTier::Node::LocalClient *zeroTierCreateLocalClient(const char *authToken,unsigned int controlPort,void (*resultHandler)(void *,unsigned long,const char *),void *arg)
-{
-	return new ZeroTier::Node::LocalClient(authToken,controlPort,resultHandler,arg);
-}
-
-void zeroTierDeleteLocalClient(ZeroTier::Node::LocalClient *lc)
-{
-	delete lc;
-}
-
-} // extern "C"

@@ -124,7 +124,7 @@ void IpcListener::threadMain()
 			break;
 		}
 		try {
-			_handler(_arg,new IpcConnection(s,_handler,_arg),Ipcconnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
+			_handler(_arg,new IpcConnection(s,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
 		} catch ( ... ) {} // handlers should not throw
 	}
 #endif

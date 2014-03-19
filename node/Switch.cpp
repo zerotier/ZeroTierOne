@@ -47,7 +47,6 @@
 #include "RuntimeEnvironment.hpp"
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
-#include "Demarc.hpp"
 #include "CMWC4096.hpp"
 
 #include "../version.h"
@@ -64,14 +63,14 @@ Switch::~Switch()
 {
 }
 
-void Switch::onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
+void Switch::onRemotePacket(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
 {
 	try {
 		if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR)
-				_handleRemotePacketFragment(localPort,fromAddr,data);
+				_handleRemotePacketFragment(fromSock,fromAddr,data);
 			else if (data.size() >= ZT_PROTO_MIN_PACKET_LENGTH)
-				_handleRemotePacketHead(localPort,fromAddr,data);
+				_handleRemotePacketHead(fromSock,fromAddr,data);
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped packet from %s: unexpected exception: %s",fromAddr.toString().c_str(),ex.what());
@@ -207,7 +206,7 @@ void Switch::sendHELLO(const Address &dest)
 	send(outp,false);
 }
 
-bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr)
+bool Switch::sendHELLO(const SharedPtr<Socket> &fromSock,const SharedPtr<Peer> &dest,const InetAddress &remoteAddr)
 {
 	uint64_t now = Utils::now();
 	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
@@ -218,7 +217,21 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const 
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return (_r->demarc->send(localPort,remoteAddr,outp.data(),outp.size(),-1) != Demarc::NULL_PORT);
+	return fromSock->send(remoteAddr,outp.data(),outp.size());
+}
+
+bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &remoteAddr,bool tcp)
+{
+	uint64_t now = Utils::now();
+	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
+	outp.append((unsigned char)ZT_PROTO_VERSION);
+	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
+	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
+	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+	outp.append(now);
+	_r->identity.serialize(outp,false);
+	outp.armor(dest->key(),false);
+	return _r->sm->send(remoteAddr,tcp,outp.data(),outp.size());
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
@@ -311,12 +324,11 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
-	Demarc::Port fromPort = _r->demarc->pick(atAddr);
-	_r->demarc->send(fromPort,atAddr,"\0",1,ZT_FIREWALL_OPENER_HOPS);
+	_r->sm->sendFirewallOpener(atAddr,ZT_FIREWALL_OPENER_HOPS);
 
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_RENDEZVOUS_NAT_T_DELAY,fromPort,atAddr));
+		_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_RENDEZVOUS_NAT_T_DELAY,atAddr));
 	}
 
 	// Kick main loop out of wait so that it can pick up this
@@ -334,7 +346,7 @@ unsigned long Switch::doTimerTasks()
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
 				TRACE("sending NAT-T HELLO to %s(%s)",qi->peer->address().toString().c_str(),qi->inaddr.toString().c_str());
-				sendHELLO(qi->peer,qi->localPort,qi->inaddr);
+				sendHELLO(qi->peer,qi->inaddr,false);
 				_contactQueue.erase(qi++);
 			} else {
 				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));
@@ -529,7 +541,7 @@ const char *Switch::etherTypeName(const unsigned int etherType)
 	return "UNKNOWN";
 }
 
-void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
+void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
 	Packet::Fragment fragment(data);
 	Address destination(fragment.destination());
@@ -598,9 +610,9 @@ void Switch::_handleRemotePacketFragment(Demarc::Port localPort,const InetAddres
 	}
 }
 
-void Switch::_handleRemotePacketHead(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data)
+void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
-	SharedPtr<PacketDecoder> packet(new PacketDecoder(data,localPort,fromAddr));
+	SharedPtr<PacketDecoder> packet(new PacketDecoder(data,fromSock,fromAddr));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -711,8 +723,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		tmp.armor(peer->key(),encrypt);
 
-		Demarc::Port localPort;
-		if ((localPort = via->send(_r,tmp.data(),chunkSize,now))) {
+		if (via->send(_r,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {
 				// Too big for one bite, fragment the rest
 				unsigned int fragStart = chunkSize;

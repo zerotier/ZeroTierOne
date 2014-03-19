@@ -53,7 +53,7 @@ namespace ZeroTier {
 
 NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken) :
 	_r(renv),
-	_ipcListener(ZT_IPC_ENDPOINT,&_CBcommandHandler,this),
+	_ipcListener((std::string(ZT_IPC_ENDPOINT_BASE) + renv->identity.address().toString()).c_str(),&_CBcommandHandler,this),
 	_authToken(authToken)
 {
 	{
@@ -177,8 +177,8 @@ public:
 
 void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 {
-	if (!commandLine)
-		return; // sanity check
+	if ((!commandLine)||(!commandLine[0]))
+		return;
 	std::vector<std::string> r;
 	std::vector<std::string> cmd(Utils::split(commandLine,"\r\n \t","\\","'"));
 

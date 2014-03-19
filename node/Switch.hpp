@@ -44,9 +44,9 @@
 #include "Array.hpp"
 #include "Network.hpp"
 #include "SharedPtr.hpp"
-#include "SocketManager.hpp"
 #include "Multicaster.hpp"
 #include "PacketDecoder.hpp"
+#include "Socket.hpp"
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
@@ -78,11 +78,11 @@ public:
 	/**
 	 * Called when a packet is received from the real network
 	 *
-	 * @param localPort Local port on which packet was received
+	 * @param fromSock Originating socket
 	 * @param fromAddr Internet IP address of origin
 	 * @param data Packet data
 	 */
-	void onRemotePacket(Demarc::Port localPort,const InetAddress &fromAddr,const Buffer<4096> &data);
+	void onRemotePacket(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
@@ -122,12 +122,22 @@ public:
 	/**
 	 * Send a HELLO announcement immediately to the indicated address
 	 *
-	 * @param localPort Originating local port or ANY_PORT to pick
-	 * @param remoteAddr IP address to send to
+	 * @param fromSock Send from this local socket
 	 * @param dest Destination peer
+	 * @param remoteAddr Remote address
 	 * @return True if send appears successful
 	 */
-	bool sendHELLO(const SharedPtr<Peer> &dest,Demarc::Port localPort,const InetAddress &remoteAddr);
+	bool sendHELLO(const SharedPtr<Socket> &fromSock,const SharedPtr<Peer> &dest,const InetAddress &remoteAddr);
+
+	/**
+	 * Send a HELLO announcement immediately to the indicated address
+	 *
+	 * @param dest Destination peer
+	 * @param remoteAddr Remote address
+	 * @param tcp Attempt to use TCP?
+	 * @return True if send appears successful
+	 */
+	bool sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &remoteAddr,bool tcp);
 
 	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect
@@ -214,12 +224,12 @@ public:
 
 private:
 	void _handleRemotePacketFragment(
-		Demarc::Port localPort,
+		const SharedPtr<Socket> &fromSock,
 		const InetAddress &fromAddr,
 		const Buffer<4096> &data);
 
 	void _handleRemotePacketHead(
-		Demarc::Port localPort,
+		const SharedPtr<Socket> &fromSock,
 		const InetAddress &fromAddr,
 		const Buffer<4096> &data);
 
@@ -279,15 +289,13 @@ private:
 	struct ContactQueueEntry
 	{
 		ContactQueueEntry() {}
-		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,Demarc::Port lp,const InetAddress &a) :
+		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &a) :
 			peer(p),
 			fireAtTime(ft),
-			localPort(lp),
 			inaddr(a) {}
 
 		SharedPtr<Peer> peer;
 		uint64_t fireAtTime;
-		Demarc::Port localPort;
 		InetAddress inaddr;
 	};
 	std::list<ContactQueueEntry> _contactQueue;
