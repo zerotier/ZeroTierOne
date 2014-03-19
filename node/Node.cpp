@@ -100,6 +100,9 @@ Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(
 {
 	_NodeControlClientImpl *impl = (_NodeControlClientImpl *)_impl;
 
+	if (!hp)
+		hp = ZT_DEFAULTS.defaultHomePath.c_str();
+
 	std::string at;
 	if (authToken)
 		at = authToken;

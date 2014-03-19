@@ -59,9 +59,9 @@
 #include "node/Defaults.hpp"
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
-#include "node/Condition.hpp"
 #include "node/C25519.hpp"
 #include "node/Identity.hpp"
+#include "node/Thread.hpp"
 
 using namespace ZeroTier;
 
@@ -94,7 +94,6 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
-	fprintf(out,"  -c<port>          - Bind to this port for local control packets"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif
@@ -110,111 +109,57 @@ static void printHelp(const char *cn,FILE *out)
 
 namespace ZeroTierCLI { // ---------------------------------------------------
 
-static void printHelp(FILE *out,const char *exename)
+static void printHelp(FILE *out,const char *cn)
 {
-	fprintf(out,"Usage: %s [-switches] <command>"ZT_EOL_S,exename);
-	fprintf(out,ZT_EOL_S);
-	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out,"  -c<port>         - Communicate with daemon over this local port"ZT_EOL_S);
-	fprintf(out,"  -t<token>        - Specify token on command line"ZT_EOL_S);
-	fprintf(out,"  -T<file>         - Read token from file"ZT_EOL_S);
-	fprintf(out,ZT_EOL_S);
-	fprintf(out,"Use the 'help' command to get help from ZeroTier One itself."ZT_EOL_S);
+	fprintf(out,"Usage: %s <command>   (use 'help' for help)"ZT_EOL_S,cn);
 }
 
-static volatile unsigned int numResults = 0;
-static Condition doneCondition;
-
-static void resultHandler(void *arg,unsigned long id,const char *line)
+static void _CBresultHandler(void *arg,const char *line)
 {
-	++numResults;
-	if (strlen(line))
+	if ((line)&&(line[0]))
 		fprintf(stdout,"%s"ZT_EOL_S,line);
-	else doneCondition.signal();
+	else *((bool *)arg) = true;
 }
 
-// Runs instead of rest of main() if process is called zerotier-cli or if
-// -q is specified as an option.
 #ifdef __WINDOWS__
 static int main(int argc,_TCHAR* argv[])
 #else
 static int main(int argc,char **argv)
 #endif
 {
-	if (argc <= 1) {
+	if (argc < 2) {
 		printHelp(stdout,argv[0]);
-		return -1;
+		return 1;
 	}
 
-	std::string authToken;
-	std::string command;
-	bool pastSwitches = false;
-	unsigned int controlPort = 0;
+	const char *hp = (const char *)0;
+	std::string query;
 	for(int i=1;i<argc;++i) {
-		if ((argv[i][0] == '-')&&(!pastSwitches)) {
-			if (strlen(argv[i]) <= 1) {
-				printHelp(stdout,argv[0]);
-				return -1;
-			}
+		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
-				case 'q': // does nothing, for invocation without binary path name aliasing
-					if (argv[i][2]) {
-						printHelp(argv[0],stderr);
-						return 0;
-					}
-					break;
-				case 'c':
-					controlPort = Utils::strToUInt(argv[i] + 2);
-					break;
-				case 't':
-					authToken.assign(argv[i] + 2);
-					break;
-				case 'T':
-					if (!Utils::readFile(argv[i] + 2,authToken)) {
-						fprintf(stdout,"FATAL ERROR: unable to read token from '%s'"ZT_EOL_S,argv[i] + 2);
-						return -2;
-					}
+				case 'i': // ignore -i since it's used to invoke this
 					break;
 				case 'h':
-					printHelp(stdout,argv[0]);
-					return 0;
 				default:
-					return -1;
+					printHelp(stdout,argv[0]);
+					return 1;
 			}
 		} else {
-			pastSwitches = true;
-			if (command.length())
-				command.push_back(' ');
-			command.append(argv[i]);
+			if (query.length())
+				query.push_back(' ');
+			query.append(argv[i]);
 		}
 	}
 
-	if (!command.length()) {
-		printHelp(stdout,argv[0]);
-		return -1;
-	}
-
-	if (!authToken.length()) {
-		if (!Utils::readFile(Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
-			if (!Utils::readFile(Node::LocalClient::authTokenDefaultSystemPath().c_str(),authToken)) {
-				fprintf(stdout,"FATAL ERROR: no token specified on command line and could not read '%s' or '%s'"ZT_EOL_S,Node::LocalClient::authTokenDefaultSystemPath().c_str(),Node::LocalClient::authTokenDefaultUserPath().c_str());
-				return -2;
-			}
-		}
-	}
-	if (!authToken.length()) {
-		fprintf(stdout,"FATAL ERROR: could not find auth token"ZT_EOL_S);
-		return -2;
-	}
-
-	Node::LocalClient client(authToken.c_str(),controlPort,&resultHandler,(void *)0);
-	client.send(command.c_str());
-
-	doneCondition.wait(1000);
-
-	if (!numResults) {
-		fprintf(stdout,"ERROR: no results received. Is ZeroTier One running?"ZT_EOL_S);
-		return -1;
+	try {
+		volatile bool done = false;
+		Node::NodeControlClient client(hp,&_CBresultHandler,(void *)&done);
+		client.send(query.c_str());
+		while (!done)
+			Thread::sleep(250); // ghetto
+	} catch ( ... ) {
+		fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?)"ZT_EOL_S,argv[0]);
+		return 1;
 	}
 
 	return 0;
@@ -250,8 +195,6 @@ static Identity getIdFromArg(char *arg)
 	return Identity();
 }
 
-// Runs instead of rest of main() if process is called zerotier-idtool or if
-// -i is specified as an option.
 #ifdef __WINDOWS__
 static int main(int argc,_TCHAR* argv[])
 #else
@@ -259,8 +202,8 @@ static int main(int argc,char **argv)
 #endif
 {
 	if (argc < 2) {
-		printHelp(stderr,argv[0]);
-		return -1;
+		printHelp(stdout,argv[0]);
+		return 1;
 	}
 
 	if (!strcmp(argv[1],"generate")) {
@@ -270,85 +213,85 @@ static int main(int argc,char **argv)
 		if (argc >= 3) {
 			if (!Utils::writeFile(argv[2],idser)) {
 				fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[2]);
-				return -1;
+				return 1;
 			} else printf("%s written"ZT_EOL_S,argv[2]);
 			if (argc >= 4) {
 				idser = id.toString(false);
 				if (!Utils::writeFile(argv[3],idser)) {
 					fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[3]);
-					return -1;
+					return 1;
 				} else printf("%s written"ZT_EOL_S,argv[3]);
 			}
 		} else printf("%s",idser.c_str());
 	} else if (!strcmp(argv[1],"validate")) {
 		if (argc < 3) {
-			printHelp(stderr,argv[0]);
-			return -1;
+			printHelp(stdout,argv[0]);
+			return 1;
 		}
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
 			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
-			return -1;
+			return 1;
 		}
 
 		if (!id.locallyValidate()) {
 			fprintf(stderr,"%s FAILED validation."ZT_EOL_S,argv[2]);
-			return -1;
+			return 1;
 		} else printf("%s is a valid identity"ZT_EOL_S,argv[2]);
 	} else if (!strcmp(argv[1],"getpublic")) {
 		if (argc < 3) {
-			printHelp(stderr,argv[0]);
-			return -1;
+			printHelp(stdout,argv[0]);
+			return 1;
 		}
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
 			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
-			return -1;
+			return 1;
 		}
 
 		printf("%s",id.toString(false).c_str());
 	} else if (!strcmp(argv[1],"sign")) {
 		if (argc < 4) {
-			printHelp(stderr,argv[0]);
-			return -1;
+			printHelp(stdout,argv[0]);
+			return 1;
 		}
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
 			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
-			return -1;
+			return 1;
 		}
 
 		if (!id.hasPrivate()) {
 			fprintf(stderr,"%s does not contain a private key (must use private to sign)"ZT_EOL_S,argv[2]);
-			return -1;
+			return 1;
 		}
 
 		std::string inf;
 		if (!Utils::readFile(argv[3],inf)) {
 			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
-			return -1;
+			return 1;
 		}
 		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
 		printf("%s",Utils::hex(signature.data,(unsigned int)signature.size()).c_str());
 	} else if (!strcmp(argv[1],"verify")) {
 		if (argc < 4) {
-			printHelp(stderr,argv[0]);
-			return -1;
+			printHelp(stdout,argv[0]);
+			return 1;
 		}
 
 		Identity id = getIdFromArg(argv[2]);
 		if (!id) {
 			fprintf(stderr,"Identity argument invalid or file unreadable: %s"ZT_EOL_S,argv[2]);
-			return -1;
+			return 1;
 		}
 
 		std::string inf;
 		if (!Utils::readFile(argv[3],inf)) {
 			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
-			return -1;
+			return 1;
 		}
 
 		std::string signature(Utils::unhex(argv[4]));
@@ -356,16 +299,15 @@ static int main(int argc,char **argv)
 			printf("%s signature valid"ZT_EOL_S,argv[3]);
 		} else {
 			fprintf(stderr,"%s signature check FAILED"ZT_EOL_S,argv[3]);
-			return -1;
+			return 1;
 		}
 	} else {
-		printHelp(stderr,argv[0]);
-		return -1;
+		printHelp(stdout,argv[0]);
+		return 1;
 	}
 
 	return 0;
 }
-
 
 } // namespace ZeroTierIdTool ------------------------------------------------
 
@@ -522,7 +464,6 @@ int main(int argc,char **argv)
 
 	const char *homeDir = (const char *)0;
 	unsigned int port = 0;
-	unsigned int controlPort = 0;
 #ifdef __UNIX_LIKE__
 	bool runAsDaemon = false;
 #endif
@@ -535,7 +476,7 @@ int main(int argc,char **argv)
 				case 'p':
 					port = Utils::strToUInt(argv[i] + 2);
 					if (port > 65535) {
-						printHelp(argv[0],stderr);
+						printHelp(argv[0],stdout);
 						return 1;
 					}
 					break;
@@ -547,21 +488,14 @@ int main(int argc,char **argv)
 				case 'v':
 					printf("%s"ZT_EOL_S,Node::versionString());
 					return 0;
-				case 'c':
-					controlPort = Utils::strToUInt(argv[i] + 2);
-					if (controlPort > 65535) {
-						printHelp(argv[0],stderr);
-						return 1;
-					}
-					break;
 				case 'q':
 					if (argv[i][2]) {
-						printHelp(argv[0],stderr);
+						printHelp(argv[0],stdout);
 						return 0;
 					} else return ZeroTierCLI::main(argc,argv);
 				case 'i':
 					if (argv[i][2]) {
-						printHelp(argv[0],stderr);
+						printHelp(argv[0],stdout);
 						return 0;
 					} else return ZeroTierIdTool::main(argc,argv);
 #ifdef __WINDOWS__
@@ -613,12 +547,12 @@ int main(int argc,char **argv)
 				case 'h':
 				case '?':
 				default:
-					printHelp(argv[0],stderr);
+					printHelp(argv[0],stdout);
 					return 0;
 			}
 		} else {
 			if (homeDir) {
-				printHelp(argv[0],stderr);
+				printHelp(argv[0],stdout);
 				return 0;
 			}
 			homeDir = argv[i];
@@ -680,8 +614,9 @@ int main(int argc,char **argv)
 #endif
 
 	int exitCode = 0;
+	bool needsReset = false;
 	try {
-		node = new Node(homeDir,port,controlPort);
+		node = new Node(homeDir,port,port,needsReset);
 		switch(node->run()) {
 #ifdef __WINDOWS__
 			case Node::NODE_RESTART_FOR_UPGRADE: {
