@@ -184,7 +184,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 
 	if ((cmd.empty())||(cmd[0] == "help")) {
 		ipcc->printf("200 help help"ZT_EOL_S);
-		ipcc->printf("200 auth token"ZT_EOL_S);
+		ipcc->printf("200 help auth <token>"ZT_EOL_S);
 		ipcc->printf("200 help info"ZT_EOL_S);
 		ipcc->printf("200 help listpeers"ZT_EOL_S);
 		ipcc->printf("200 help listnetworks"ZT_EOL_S);
@@ -196,8 +196,8 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 		if ((cmd.size() > 1)&&(_authToken == cmd[1])) {
 			Mutex::Lock _l(_connections_m);
 			_connections[ipcc] = true;
-			ipcc->printf("200 OK"ZT_EOL_S);
-		} else ipcc->printf("403 auth failed"ZT_EOL_S);
+			ipcc->printf("200 auth OK"ZT_EOL_S);
+		} else ipcc->printf("403 auth FAILED"ZT_EOL_S);
 	} else {
 		{
 			Mutex::Lock _l(_connections_m);

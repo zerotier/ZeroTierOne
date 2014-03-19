@@ -116,9 +116,9 @@ static void printHelp(FILE *out,const char *cn)
 
 static void _CBresultHandler(void *arg,const char *line)
 {
-	if ((line)&&(line[0]))
+	if ((line)&&(line[0])) {
 		fprintf(stdout,"%s"ZT_EOL_S,line);
-	else *((bool *)arg) = true;
+	} else *((bool *)arg) = true;
 }
 
 #ifdef __WINDOWS__
