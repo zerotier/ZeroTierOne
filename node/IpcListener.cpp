@@ -38,6 +38,8 @@
 #else
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
 
@@ -56,29 +58,29 @@ IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnect
 	strncpy(unaddr.sun_path,_endpoint.c_str(),sizeof(unaddr.sun_path));
 	unaddr.sun_path[sizeof(unaddr.sun_path) - 1] = (char)0;
 
-	for(int tries=0;tries<3;++tries) {
-		_sock = socket(AF_UNIX,SOCK_STREAM,0);
-		if (_sock <= 0)
+	struct stat stattmp;
+	if (stat(_endpoint.c_str(),&stattmp)) {
+		int testSock = socket(AF_UNIX,SOCK_STREAM,0);
+		if (testSock <= 0)
 			throw std::runtime_error("unable to create socket of type AF_UNIX");
-		if (bind(_sock,(struct sockaddr *)&unaddr,sizeof(unaddr))) {
-			::close(_sock);
-			if (errno == EADDRINUSE) {
-				int testSock = socket(AF_UNIX,SOCK_STREAM,0);
-				if (testSock <= 0)
-					throw std::runtime_error("unable to create socket of type AF_UNIX");
-				if (connect(testSock,(struct sockaddr *)&unaddr,sizeof(unaddr))) {
-					// error indicates nothing is listening on other end, so unlink and try again
-					::close(testSock);
-					unlink(_endpoint.c_str());
-				} else {
-					// success means endpoint is being actively listened to by a process
-					::close(testSock);
-					throw std::runtime_error("IPC endpoint address in use");
-				}
-			} else throw std::runtime_error("IPC endpoint could not be bound");
+		if (connect(testSock,(struct sockaddr *)&unaddr,sizeof(unaddr))) {
+			// error means nothing is listening, orphaned name
+			::close(testSock);
+		} else {
+			// success means endpoint is being actively listened to by a process
+			::close(testSock);
+			throw std::runtime_error("IPC endpoint address in use");
 		}
 	}
+	::unlink(_endpoint.c_str());
 
+	_sock = socket(AF_UNIX,SOCK_STREAM,0);
+	if (_sock <= 0)
+		throw std::runtime_error("unable to create socket of type AF_UNIX");
+	if (bind(_sock,(struct sockaddr *)&unaddr,sizeof(unaddr))) {
+		::close(_sock);
+		throw std::runtime_error("IPC endpoint could not be bound");
+	}
 	if (listen(_sock,8)) {
 		::close(_sock);
 		throw std::runtime_error("listen() failed for bound AF_UNIX socket");

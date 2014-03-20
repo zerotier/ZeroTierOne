@@ -316,6 +316,8 @@ SocketManager::SocketManager(
 			_udpV4Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V4,s));
 		}
 	}
+
+	_updateNfds();
 }
 
 SocketManager::~SocketManager()
@@ -370,7 +372,7 @@ void SocketManager::poll(unsigned long timeout)
 
 	tv.tv_sec = (long)(timeout / 1000);
 	tv.tv_usec = (long)((timeout % 1000) * 1000);
-	select(_nfds,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
+	select(_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
 
 	if (FD_ISSET(_whackReceivePipe,&rfds)) {
 		char tmp[32];
@@ -396,6 +398,8 @@ void SocketManager::poll(unsigned long timeout)
 			_fdSetLock.lock();
 			FD_SET(sockfd,&_readfds);
 			_fdSetLock.unlock();
+			if (sockfd > _nfds)
+				_nfds = sockfd;
 		}
 	}
 	if ((_tcpV6ListenSocket != INVALID_SOCKET)&&(FD_ISSET(_tcpV6ListenSocket,&rfds))) {
@@ -413,6 +417,8 @@ void SocketManager::poll(unsigned long timeout)
 			_fdSetLock.lock();
 			FD_SET(sockfd,&_readfds);
 			_fdSetLock.unlock();
+			if (sockfd > _nfds)
+				_nfds = sockfd;
 		}
 	}
 
@@ -421,6 +427,7 @@ void SocketManager::poll(unsigned long timeout)
 	if ((_udpV6Socket)&&(FD_ISSET(_udpV6Socket->_sock,&rfds)))
 		_udpV6Socket->notifyAvailableForRead(_udpV6Socket,this);
 
+	bool closedSockets = false;
 	{ // grab copy of TCP sockets list because _tcpSockets[] might be changed in a handler
 		Mutex::Lock _l2(_tcpSockets_m);
 		if (_tcpSockets.size()) {
@@ -436,6 +443,7 @@ void SocketManager::poll(unsigned long timeout)
 					FD_CLR(s->second->_sock,&_writefds);
 					_fdSetLock.unlock();
 					_tcpSockets.erase(s++);
+					closedSockets = true;
 				}
 			}
 		}
@@ -451,6 +459,7 @@ void SocketManager::poll(unsigned long timeout)
 				FD_CLR((*s)->_sock,&_readfds);
 				FD_CLR((*s)->_sock,&_writefds);
 				_fdSetLock.unlock();
+				closedSockets = true;
 				continue;
 			}
 		}
@@ -464,10 +473,13 @@ void SocketManager::poll(unsigned long timeout)
 				FD_CLR((*s)->_sock,&_readfds);
 				FD_CLR((*s)->_sock,&_writefds);
 				_fdSetLock.unlock();
+				closedSockets = true;
 				continue;
 			}
 		}
 	}
+	if (closedSockets)
+		_updateNfds();
 }
 
 void SocketManager::whack()

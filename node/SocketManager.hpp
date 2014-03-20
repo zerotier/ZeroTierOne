@@ -169,6 +169,27 @@ private:
 #endif
 	}
 
+	inline void _updateNfds()
+	{
+		int nfds = _whackSendPipe;
+		if (_whackReceivePipe > nfds)
+			nfds = _whackReceivePipe;
+		if (_tcpV4ListenSocket > nfds)
+			nfds = _tcpV4ListenSocket;
+		if (_tcpV6ListenSocket > nfds)
+			nfds = _tcpV6ListenSocket;
+		if ((_udpV4Socket)&&(_udpV4Socket->_sock > nfds))
+			nfds = _udpV4Socket->_sock;
+		if ((_udpV6Socket)&&(_udpV6Socket->_sock > nfds))
+			nfds = _udpV6Socket->_sock;
+		Mutex::Lock _l(_tcpSockets_m);
+		for(std::map< InetAddress,SharedPtr<Socket> >::const_iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s) {
+			if (s->second->_sock > nfds)
+				nfds = s->second->_sock;
+		}
+		_nfds = nfds;
+	}
+
 #ifdef __WINDOWS__
 	SOCKET _whackSendPipe;
 	SOCKET _whackReceivePipe;
@@ -187,7 +208,7 @@ private:
 
 	fd_set _readfds;
 	fd_set _writefds;
-	int _nfds;
+	volatile int _nfds;
 	Mutex _fdSetLock;
 
 	std::map< InetAddress,SharedPtr<Socket> > _tcpSockets;
