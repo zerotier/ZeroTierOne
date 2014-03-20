@@ -41,6 +41,7 @@
 #include "NodeConfig.hpp"
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
+#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -50,7 +51,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 		// Unencrypted HELLOs are handled here since they are used to
 		// populate our identity cache in the first place. _doHELLO() is special
 		// in that it contains its own authentication logic.
-		TRACE("<< HELLO from %s(%s) (normal unencrypted HELLO)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		//TRACE("<< HELLO from %s(%s) (normal unencrypted HELLO)",source().toString().c_str(),_remoteAddress.toString().c_str());
 		return _doHELLO(_r);
 	}
 
@@ -77,7 +78,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			return true;
 		}
 
-		TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
+		//TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
 
 		switch(verb()) {
 			case Packet::VERB_NOP:
@@ -488,6 +489,19 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned char *const frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
 		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
 		const unsigned char *const signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
+
+		/*
+		TRACE("MULTICAST_FRAME %d bytes guid#%.16llx from %s(%s) to %s on network %.16llx",(int)frameLen,(unsigned long long)guid,sourceMac.toString().c_str(),origin.toString().c_str(),dest.toString().c_str(),(unsigned long long)nwid);
+		TRACE("  received from upstream peer: %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("  restrict prefix: %.8lx / %d",(unsigned long)prefix,(int)prefixBits);
+		TRACE("  ethernet type: %.4x(%s)",etherType,Switch::etherTypeName(etherType));
+		TRACE("  signature length: %d",(int)signatureLen);
+		{
+			unsigned char h[64];
+			SHA512::hash(h,frame,frameLen);
+			TRACE("  frame data SHA-512: %s",Utils::hex(h,64).c_str());
+		}
+		*/
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
 

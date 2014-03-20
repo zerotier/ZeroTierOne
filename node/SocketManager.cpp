@@ -266,6 +266,7 @@ SocketManager::SocketManager(
 			}
 
 			_udpV6Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V6,s));
+			fcntl(s,F_SETFL,O_NONBLOCK);
 			FD_SET(s,&_readfds);
 		}
 
@@ -316,6 +317,7 @@ SocketManager::SocketManager(
 			}
 
 			_udpV4Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V4,s));
+			fcntl(s,F_SETFL,O_NONBLOCK);
 			FD_SET(s,&_readfds);
 		}
 	}
