@@ -490,18 +490,15 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
 		const unsigned char *const signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
 
-		/*
-		TRACE("MULTICAST_FRAME %d bytes guid#%.16llx from %s(%s) to %s on network %.16llx",(int)frameLen,(unsigned long long)guid,sourceMac.toString().c_str(),origin.toString().c_str(),dest.toString().c_str(),(unsigned long long)nwid);
-		TRACE("  received from upstream peer: %s(%s)",source().toString().c_str(),_remoteAddress.toString().c_str());
-		TRACE("  restrict prefix: %.8lx / %d",(unsigned long)prefix,(int)prefixBits);
-		TRACE("  ethernet type: %.4x(%s)",etherType,Switch::etherTypeName(etherType));
-		TRACE("  signature length: %d",(int)signatureLen);
-		{
-			unsigned char h[64];
-			SHA512::hash(h,frame,frameLen);
-			TRACE("  frame data SHA-512: %s",Utils::hex(h,64).c_str());
-		}
-		*/
+		TRACE("MULTICAST_FRAME @%.16llx #%.16llx from %s<%s> via %s(%s) to %s [ %s, %d bytes, depth %d ]",
+			(unsigned long long)nwid,
+			(unsigned long long)guid,
+			sourceMac.toString().c_str(),origin.toString().c_str(),
+			source().toString().c_str(),_remoteAddress.toString().c_str(),
+			dest.toString().c_str(),
+			Switch::etherTypeName(etherType),
+			(int)frameLen,
+			(int)depth);
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
 
