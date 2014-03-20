@@ -179,7 +179,7 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert)
 
 	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
 	if (cert.timestamp() >= old.timestamp()) {
-		TRACE("got new certificate for %s on network %.16llx",cert.issuedTo().toString().c_str(),cert.networkId());
+		//TRACE("got new certificate for %s on network %.16llx",cert.issuedTo().toString().c_str(),cert.networkId());
 		old = cert;
 	}
 }

@@ -155,6 +155,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)sig.size());
 			outp.append(sig.data,(unsigned int)sig.size());
 
+			// FIXME: now we send the netconf cert with every single multicast,
+			// which pretty much ensures everyone has it ahead of time but adds
+			// some redundant payload. Maybe think abouut this in the future.
 			if (nconf->com())
 				nconf->com().serialize(outp);
 

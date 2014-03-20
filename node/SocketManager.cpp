@@ -45,7 +45,7 @@
 
 // Allow us to use the same value on Windows and *nix
 #ifndef INVALID_SOCKET
-#define INVALID_SOCKET 0
+#define INVALID_SOCKET (-1)
 #endif
 
 namespace ZeroTier {
@@ -107,6 +107,7 @@ SocketManager::SocketManager(
 		_whackReceivePipe = tmpfds[0];
 	}
 #endif
+	fcntl(_whackReceivePipe,F_SETFL,O_NONBLOCK);
 	FD_SET(_whackReceivePipe,&_readfds);
 
 	if (localTcpPort > 0) {
@@ -142,6 +143,7 @@ SocketManager::SocketManager(
 				f = 1; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
 			}
 #endif
+			fcntl(_tcpV6ListenSocket,F_SETFL,O_NONBLOCK);
 
 			struct sockaddr_in6 sin6;
 			memset(&sin6,0,sizeof(sin6));
@@ -184,6 +186,7 @@ SocketManager::SocketManager(
 				int f = 1; ::setsockopt(_tcpV4ListenSocket,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
 			}
 #endif
+			fcntl(_tcpV4ListenSocket,F_SETFL,O_NONBLOCK);
 
 			struct sockaddr_in sin4;
 			memset(&sin4,0,sizeof(sin4));
@@ -262,8 +265,8 @@ SocketManager::SocketManager(
 				throw std::runtime_error("unable to bind to port");
 			}
 
-			FD_SET(s,&_readfds);
 			_udpV6Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V6,s));
+			FD_SET(s,&_readfds);
 		}
 
 		{ // bind UDP IPv4
@@ -312,8 +315,8 @@ SocketManager::SocketManager(
 				throw std::runtime_error("unable to bind to port");
 			}
 
-			FD_SET(s,&_readfds);
 			_udpV4Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V4,s));
+			FD_SET(s,&_readfds);
 		}
 	}
 
@@ -375,11 +378,11 @@ void SocketManager::poll(unsigned long timeout)
 	select(_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
 
 	if (FD_ISSET(_whackReceivePipe,&rfds)) {
-		char tmp[32];
+		char tmp;
 #ifdef __WINDOWS__
-		::recv(_whackReceivePipe,tmp,sizeof(tmp),0);
+		::recv(_whackReceivePipe,&tmp,1,0);
 #else
-		::read(_whackReceivePipe,tmp,sizeof(tmp));
+		::read(_whackReceivePipe,&tmp,1);
 #endif
 	}
 
@@ -394,12 +397,20 @@ void SocketManager::poll(unsigned long timeout)
 #endif
 			InetAddress fromia((const struct sockaddr *)&from);
 			Mutex::Lock _l2(_tcpSockets_m);
-			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
-			_fdSetLock.lock();
-			FD_SET(sockfd,&_readfds);
-			_fdSetLock.unlock();
-			if (sockfd > _nfds)
-				_nfds = sockfd;
+			try {
+				_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
+
+				fcntl(sockfd,F_SETFL,O_NONBLOCK);
+
+				_fdSetLock.lock();
+				FD_SET(sockfd,&_readfds);
+				_fdSetLock.unlock();
+
+				if (sockfd > _nfds)
+					_nfds = sockfd;
+			} catch ( ... ) {
+				::close(sockfd);
+			}
 		}
 	}
 	if ((_tcpV6ListenSocket != INVALID_SOCKET)&&(FD_ISSET(_tcpV6ListenSocket,&rfds))) {
@@ -413,12 +424,20 @@ void SocketManager::poll(unsigned long timeout)
 #endif
 			InetAddress fromia((const struct sockaddr *)&from);
 			Mutex::Lock _l2(_tcpSockets_m);
-			_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
-			_fdSetLock.lock();
-			FD_SET(sockfd,&_readfds);
-			_fdSetLock.unlock();
-			if (sockfd > _nfds)
-				_nfds = sockfd;
+			try {
+				_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
+
+				fcntl(sockfd,F_SETFL,O_NONBLOCK);
+
+				_fdSetLock.lock();
+				FD_SET(sockfd,&_readfds);
+				_fdSetLock.unlock();
+
+				if (sockfd > _nfds)
+					_nfds = sockfd;
+			} catch ( ... ) {
+				::close(sockfd);
+			}
 		}
 	}
 

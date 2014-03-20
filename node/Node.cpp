@@ -230,15 +230,24 @@ struct _NodeImpl
 
 #ifndef __WINDOWS__
 		delete renv.netconfService;
+		TRACE("shutdown: delete netconfService");
 #endif
 		delete renv.updater;
+		TRACE("shutdown: delete updater");
 		delete renv.nc;
+		TRACE("shutdown: delete nc");
 		delete renv.sysEnv;
+		TRACE("shutdown: delete sysEnv");
 		delete renv.topology;
+		TRACE("shutdown: delete topology");
 		delete renv.sm;
+		TRACE("shutdown: delete sm");
 		delete renv.sw;
+		TRACE("shutdown: delete sw");
 		delete renv.mc;
+		TRACE("shutdown: delete mc");
 		delete renv.prng;
+		TRACE("shutdown: delete prng");
 		delete renv.log;
 
 		return reasonForTermination;
