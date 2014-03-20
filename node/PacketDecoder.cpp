@@ -609,7 +609,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 						maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
 
 					if (!network->isAllowed(origin)) {
-						TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),origin.toString().c_str());
+						TRACE("didn't inject MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,origin.toString().c_str());
 
 						// Tell them we need a certificate
 						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);

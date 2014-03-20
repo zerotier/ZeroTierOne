@@ -422,10 +422,12 @@ void SocketManager::poll(unsigned long timeout)
 		}
 	}
 
-	if ((_udpV4Socket)&&(FD_ISSET(_udpV4Socket->_sock,&rfds)))
+	if ((_udpV4Socket)&&(FD_ISSET(_udpV4Socket->_sock,&rfds))) {
 		_udpV4Socket->notifyAvailableForRead(_udpV4Socket,this);
-	if ((_udpV6Socket)&&(FD_ISSET(_udpV6Socket->_sock,&rfds)))
+	}
+	if ((_udpV6Socket)&&(FD_ISSET(_udpV6Socket->_sock,&rfds))) {
 		_udpV6Socket->notifyAvailableForRead(_udpV6Socket,this);
+	}
 
 	bool closedSockets = false;
 	{ // grab copy of TCP sockets list because _tcpSockets[] might be changed in a handler
