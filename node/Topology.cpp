@@ -67,7 +67,7 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j) {
 				p->addPath(Path(*j,false,true));
 			}
-			p->setLastUsed(now);
+			p->use(now);
 			_supernodePeers.push_back(p);
 		}
 		_supernodeAddresses.insert(i->first.address());
@@ -85,7 +85,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 	uint64_t now = Utils::now();
 	Mutex::Lock _l(_activePeers_m);
 	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
-	p->setLastUsed(now);
+	p->use(now);
 	saveIdentity(p->identity());
 	return p;
 }
@@ -100,7 +100,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	Mutex::Lock _l(_activePeers_m);
 	std::map< Address,SharedPtr<Peer> >::const_iterator ap(_activePeers.find(zta));
 	if ((ap != _activePeers.end())&&(ap->second)) {
-		ap->second->setLastUsed(now);
+		ap->second->use(now);
 		return ap->second;
 	}
 	return SharedPtr<Peer>();
@@ -176,7 +176,7 @@ keep_searching_for_supernodes:
 	}
 
 	if (bestSupernode) {
-		bestSupernode->setLastUsed(now);
+		bestSupernode->use(now);
 		return bestSupernode;
 	} else if (strictAvoid)
 		return SharedPtr<Peer>();
@@ -199,7 +199,7 @@ keep_searching_for_supernodes:
 	}
 
 	if (bestSupernode)
-		bestSupernode->setLastUsed(now);
+		bestSupernode->use(now);
 	return bestSupernode;
 }
 

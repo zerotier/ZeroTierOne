@@ -58,7 +58,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
-void Peer::onReceive(
+void Peer::receive(
 	const RuntimeEnvironment *_r,
 	const SharedPtr<Socket> &fromSock,
 	const InetAddress &remoteAddr,

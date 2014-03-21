@@ -89,7 +89,7 @@ public:
 	/**
 	 * @param now New time of last use
 	 */
-	inline void setLastUsed(uint64_t now)
+	inline void use(uint64_t now)
 		throw()
 	{
 		_lastUsed = now;
@@ -118,7 +118,7 @@ public:
 	 * @param inReVerb Verb in reply to (for OK/ERROR, VERB_NOP otherwise)
 	 * @param now Current time
 	 */
-	void onReceive(
+	void receive(
 		const RuntimeEnvironment *_r,
 		const SharedPtr<Socket> &fromSock,
 		const InetAddress &remoteAddr,
