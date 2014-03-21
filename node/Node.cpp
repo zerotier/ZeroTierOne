@@ -90,8 +90,10 @@ struct _NodeControlClientImpl
 
 static void _CBipcResultHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *result)
 {
-	if ((event == IpcConnection::IPC_EVENT_COMMAND)&&(result))
-		((_NodeControlClientImpl *)arg)->resultHandler(((_NodeControlClientImpl *)arg)->arg,result);
+	if ((event == IpcConnection::IPC_EVENT_COMMAND)&&(result)) {
+		if (strcmp(result,"200 auth OK"))
+			((_NodeControlClientImpl *)arg)->resultHandler(((_NodeControlClientImpl *)arg)->arg,result);
+	}
 }
 
 Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken)

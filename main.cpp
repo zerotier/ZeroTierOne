@@ -116,9 +116,11 @@ static void printHelp(FILE *out,const char *cn)
 
 static void _CBresultHandler(void *arg,const char *line)
 {
-	if ((line)&&(line[0])) {
-		fprintf(stdout,"%s"ZT_EOL_S,line);
-	} else *((bool *)arg) = true;
+	if (line) {
+		if ((line[0] == '.')&&(line[1] == (char)0))
+			*((bool *)arg) = true;
+		else fprintf(stdout,"%s"ZT_EOL_S,line);
+	}
 }
 
 #ifdef __WINDOWS__
@@ -160,7 +162,7 @@ static int main(int argc,char **argv)
 		}
 		client.send(query.c_str());
 		while (!done)
-			Thread::sleep(250); // ghetto
+			Thread::sleep(100); // ghetto
 	} catch ( ... ) {
 		fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?)"ZT_EOL_S,argv[0]);
 		return 1;

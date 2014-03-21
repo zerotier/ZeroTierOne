@@ -195,12 +195,12 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 			Mutex::Lock _l(_connections_m);
 			_connections[ipcc] = true;
 			ipcc->printf("200 auth OK"ZT_EOL_S);
-		} else ipcc->printf("403 auth FAILED"ZT_EOL_S);
+		} else ipcc->printf("403 auth failed"ZT_EOL_S);
 	} else {
 		{
 			Mutex::Lock _l(_connections_m);
 			if (!_connections[ipcc]) {
-				ipcc->printf("403 not authorized"ZT_EOL_S""ZT_EOL_S);
+				ipcc->printf("403 %s unauthorized"ZT_EOL_S"."ZT_EOL_S,cmd[0].c_str());
 				return;
 			}
 		}
@@ -307,7 +307,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 		}
 	}
 
-	ipcc->printf(ZT_EOL_S); // blank line ends response
+	ipcc->printf("."ZT_EOL_S); // blank line ends response
 }
 
 void NodeConfig::_readLocalConfig()
