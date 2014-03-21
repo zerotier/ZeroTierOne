@@ -581,7 +581,7 @@ Node::ReasonForTermination Node::run()
 				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 				TRACE("pinging %d supernodes",(int)sns.size());
 				for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p)
-					(*p)->sendPing(_r,now);
+					(*p)->sendPing(_r,now,resynchronize);
 			}
 
 			if (resynchronize) {
@@ -618,7 +618,7 @@ Node::ReasonForTermination Node::run()
 					if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
 						lastPingCheck = now;
 						try {
-							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
+							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now,resynchronize));
 							_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
 						} catch (std::exception &exc) {
 							LOG("unexpected exception running ping check cycle: %s",exc.what());

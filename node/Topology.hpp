@@ -216,31 +216,35 @@ public:
 	class PingPeersThatNeedPing
 	{
 	public:
-		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
+		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,bool firstSinceReset) throw() :
 			_now(now),
 			_supernodeAddresses(renv->topology->supernodeAddresses()),
-			_r(renv) {}
+			_r(renv),
+			_firstSinceReset(firstSinceReset) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
 			if ( 
-				   ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) &&
-				   (
-				     (
-				       (p->hasDirectPath())&&
-				       ((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)
-				     ) &&
-			       (!_supernodeAddresses.count(p->address()))
-				   )
-				 ) {
-				p->sendPing(_r,_now);
-			}
+			     /* 1: we have not heard anything directly in ZT_PEER_DIRECT_PING_DELAY ms */
+			     ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) &&
+			     /* 2: */
+			     (
+			       /* 2a: peer has direct path, and has sent us something recently */
+			       (
+			         (p->hasDirectPath())&&
+			         ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)
+			       ) &&
+			       /* 2b: peer is not a supernode */
+					   (!_supernodeAddresses.count(p->address()))
+			     )
+			   ) { p->sendPing(_r,_now,_firstSinceReset); }
 		}
 
 	private:
 		uint64_t _now;
 		std::set<Address> _supernodeAddresses;
 		const RuntimeEnvironment *_r;
+		bool _firstSinceReset;
 	};
 
 	/**
@@ -261,7 +265,7 @@ public:
 		{
 			if (!_supernodeAddresses.count(p->address())) {
 				p->clearPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
-				if (((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)&&(_supernode)) {
+				if (((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)&&(_supernode)) {
 					TRACE("sending reset NOP to %s",p->address().toString().c_str());
 					Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
 					outp.armor(p->key(),false); // no need to encrypt a NOP

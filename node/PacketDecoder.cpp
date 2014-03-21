@@ -82,7 +82,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 
 		switch(verb()) {
 			case Packet::VERB_NOP:
-				peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_NOP,0,Packet::VERB_NOP,Utils::now());
+				peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NOP,0,Packet::VERB_NOP,Utils::now());
 				return true;
 			case Packet::VERB_HELLO:
 				return _doHELLO(_r); // legal, but why? :)
@@ -156,7 +156,7 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				break;
 		}
 
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb,Utils::now());
 	} catch (std::exception &ex) {
 		TRACE("dropped ERROR from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -246,7 +246,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 			peer = _r->topology->addPeer(newPeer);
 		}
 
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP,Utils::now());
 		peer->setRemoteVersion(vMajor,vMinor,vRevision);
 
 		// If a supernode has a version higher than ours, this causes a software
@@ -324,7 +324,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 				break;
 		}
 
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb,Utils::now());
 	} catch (std::exception &ex) {
 		TRACE("dropped OK from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -358,7 +358,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	} else {
 		TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
-	peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,Utils::now());
+	peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,Utils::now());
 	return true;
 }
 
@@ -387,7 +387,7 @@ bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<P
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",source().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP,Utils::now());
+					peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP,Utils::now());
 					_r->sw->contact(withPeer,atAddr);
 				} else {
 					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -426,7 +426,7 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				// we receive unicast frames from it. This is called "implicit social
 				// ordering" in other docs.
 				_r->mc->bringCloser(network->id(),source());
-				peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());
+				peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());
 			} else {
 				TRACE("dropped FRAME from %s(%s): sender not a member of closed network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
 
@@ -583,7 +583,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 #endif
 
 		// At this point the frame is basically valid, so we can call it a receive
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
 
 		// This gets updated later in most cases but start with the global limit.
 		unsigned int maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
@@ -834,7 +834,7 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 			}
 		}
 
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,now);
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,now);
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -870,7 +870,7 @@ bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *
 			}
 		}
 
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &ex) {
 		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -913,7 +913,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 #ifndef __WINDOWS__
 		}
 #endif // !__WINDOWS__
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -934,7 +934,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 				nw->requestConfiguration();
 			}
 		}
-		peer->onReceive(_r,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,Utils::now());
+		peer->onReceive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {

@@ -64,8 +64,9 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 			SharedPtr<Peer> p(getPeer(i->first.address()));
 			if (!p)
 				p = addPeer(SharedPtr<Peer>(new Peer(_r->identity,i->first)));
-			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->setPathAddress(*j,true);
+			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j) {
+				p->addPath(Path(*j,false,true));
+			}
 			p->setLastUsed(now);
 			_supernodePeers.push_back(p);
 		}

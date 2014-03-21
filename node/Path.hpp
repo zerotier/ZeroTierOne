@@ -111,12 +111,12 @@ public:
 		Utils::snprintf(lrago,sizeof(lrago),"%lld",(long long)((_lastReceived != 0) ? (now - _lastReceived) : -1));
 		Utils::snprintf(lfoago,sizeof(lfoago),"%lld",(long long)((_lastFirewallOpener != 0) ? (now - _lastFirewallOpener) : -1));
 		Utils::snprintf(lpago,sizeof(lfoago),"%lld",(long long)((_lastPing != 0) ? (now - _lastPing) : -1));
-		return (std::string(_tcp ? "tcp:" : "udp:") + _addr.toString() + "[" + lsago + "," lrago + "," + lpago + "," + lfoago + "," + (active(now) ? "active" : "inactive") + "," + (_fixed ? "fixed" : "learned") + "]");
+		return (_addr.toString() + "[" + (_tcp ? "tcp" : "udp") + ";" + lsago + ";" + lrago + ";" + lpago + ";" + lfoago + ";" + (active(now) ? "active" : "inactive") + ";" + (_fixed ? "fixed" : "learned") + "]");
 	}
 
-	inline operator==(const Path &p) const throw() { return ((_addr == p._addr)&&(_tcp == p._tcp)); }
-	inline operator!=(const Path &p) const throw() { return ((_addr != p._addr)||(_tcp != p._tcp)); }
-	inline operator<(const Path &p) const
+	inline bool operator==(const Path &p) const throw() { return ((_addr == p._addr)&&(_tcp == p._tcp)); }
+	inline bool operator!=(const Path &p) const throw() { return ((_addr != p._addr)||(_tcp != p._tcp)); }
+	inline bool operator<(const Path &p) const
 		throw()
 	{
 		if (_addr == p._addr) {

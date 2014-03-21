@@ -199,7 +199,7 @@ public:
 		uint64_t x = 0;
 		Mutex::Lock _l(_lock);
 		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			uint64_t l = p->lastReceive();
+			uint64_t l = p->lastReceived();
 			if (l > x)
 				x = l;
 		}
@@ -316,7 +316,7 @@ public:
 	inline void addPath(const Path &newp)
 	{
 		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 			if (*p == newp) {
 				p->setFixed(newp.fixed());
 				return;
@@ -381,24 +381,47 @@ public:
 	inline operator bool() const throw() { return (_id); }
 
 	/**
+	 * @param now Current time
+	 * @param v4 Result parameter to receive active IPv4 address, if any
+	 * @param v6 Result parameter to receive active IPv6 address, if any
+	 */
+	inline void getActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+	{
+		bool gotV4 = false,gotV6 = false;
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			if (!gotV4) {
+				if ((!p->tcp())&&(p->address().isV4())&&(p->active(now))) {
+					gotV4 = true;
+					v4 = p->address();
+				}
+			} else if (!gotV6) {
+				if ((!p->tcp())&&(p->address().isV6())&&(p->active(now))) {
+					gotV6 = true;
+					v6 = p->address();
+				}
+			} else break;
+		}
+	}
+
+	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A
 	 * @param b Peer B
 	 * @param now Current time
-	 * @return Pair: B's address to send to A, A's address to send to B
+	 * @return Pair: B's address (to send to A), A's address (to send to B)
 	 */
 	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now)
 		throw()
 	{
-		if ((a._ipv6p.isActive(now))&&(b._ipv6p.isActive(now)))
-			return std::pair<InetAddress,InetAddress>(b._ipv6p.addr,a._ipv6p.addr);
-		else if ((a._ipv4p.isActive(now))&&(b._ipv4p.isActive(now)))
-			return std::pair<InetAddress,InetAddress>(b._ipv4p.addr,a._ipv4p.addr);
-		else if ((a._ipv6p.addr)&&(b._ipv6p.addr))
-			return std::pair<InetAddress,InetAddress>(b._ipv6p.addr,a._ipv6p.addr);
-		else if ((a._ipv4p.addr)&&(b._ipv4p.addr))
-			return std::pair<InetAddress,InetAddress>(b._ipv4p.addr,a._ipv4p.addr);
+		std::pair<InetAddress,InetAddress> v4,v6;
+		b.getActiveUdpPathAddresses(now,v4.first,v6.first);
+		a.getActiveUdpPathAddresses(now,v4.second,v6.second);
+		if ((v6.first)&&(v6.second))
+			return v6;
+		if ((v4.first)&&(v4.second))
+			return v4;
 		return std::pair<InetAddress,InetAddress>();
 	}
 

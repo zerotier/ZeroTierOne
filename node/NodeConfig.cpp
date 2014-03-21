@@ -156,20 +156,18 @@ public:
 	}
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		InetAddress v4(p->ipv4ActivePath(now));
-		InetAddress v6(p->ipv6ActivePath(now));
-		if ((v4)||(v6)) {
-			ipcc->printf("200 listpeers %s %s %s %u %s"ZT_EOL_S,
-				p->address().toString().c_str(),
-				((v4) ? v4.toString().c_str() : "-"),
-				((v6) ? v6.toString().c_str() : "-"),
-				p->latency(),
-				p->remoteVersion().c_str());
-		} else {
-			ipcc->printf("200 listpeers %s - - - %s"ZT_EOL_S,
-				p->address().toString().c_str(),
-				p->remoteVersion().c_str());
+		std::vector<Path> pp(p->paths());
+		std::string pathsStr;
+		for(std::vector<Path>::const_iterator ppp(pp.begin());ppp!=pp.end();++ppp) {
+			if (pathsStr.length())
+				pathsStr.push_back(',');
+			pathsStr.append(ppp->toString());
 		}
+		ipcc->printf("200 listpeers %s %s %u %s"ZT_EOL_S,
+			p->address().toString().c_str(),
+			((pathsStr.length() > 0) ? pathsStr.c_str() : "-"),
+			p->latency(),
+			p->remoteVersion().c_str());
 	}
 	IpcConnection *ipcc;
 	uint64_t now;
@@ -216,7 +214,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 			std::vector< SharedPtr<Peer> > snp(_r->topology->supernodePeers());
 			for(std::vector< SharedPtr<Peer> >::const_iterator sn(snp.begin());sn!=snp.end();++sn) {
 				uint64_t lastRec = (*sn)->lastDirectReceive();
-				if ((lastRec)&&(lastRec > since)&&((now - lastRec) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)) {
+				if ((lastRec)&&(lastRec > since)&&((now - lastRec) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)) {
 					isOnline = true;
 					break;
 				}
@@ -224,7 +222,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 
 			ipcc->printf("200 info %s %s %s"ZT_EOL_S,_r->identity.address().toString().c_str(),(isOnline ? "ONLINE" : "OFFLINE"),Node::versionString());
 		} else if (cmd[0] == "listpeers") {
-			ipcc->printf("200 listpeers <ztaddr> <ipv4> <ipv6> <latency> <version>"ZT_EOL_S);
+			ipcc->printf("200 listpeers <ztaddr> <paths> <latency> <version>"ZT_EOL_S);
 			_r->topology->eachPeer(_DumpPeerStatistics(ipcc));
 		} else if (cmd[0] == "listnetworks") {
 			Mutex::Lock _l(_networks_m);
