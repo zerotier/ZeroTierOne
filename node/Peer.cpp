@@ -69,23 +69,25 @@ void Peer::receive(
 	Packet::Verb inReVerb,
 	uint64_t now)
 {
-	Mutex::Lock _l(_lock);
-
 	if (!hops) { // direct packet
-		// Update receive time on known paths
-		bool havePath = false;
-		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-			if ((p->address() == remoteAddr)&&(p->tcp() == (fromSock->type() == Socket::ZT_SOCKET_TYPE_TCP))) {
-				p->received(now);
-				havePath = true;
-				break;
-			}
-		}
+		{
+			Mutex::Lock _l(_lock);
 
-		// Learn new UDP paths (learning TCP would require an explicit mechanism)
-		if ((!havePath)&&(fromSock->type() != Socket::ZT_SOCKET_TYPE_TCP)) {
-			_paths.push_back(Path(remoteAddr,false,false));
-			_paths.back().received(now);
+			// Update receive time on known paths
+			bool havePath = false;
+			for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+				if ((p->address() == remoteAddr)&&(p->tcp() == (fromSock->type() == Socket::ZT_SOCKET_TYPE_TCP))) {
+					p->received(now);
+					havePath = true;
+					break;
+				}
+			}
+
+			// Learn new UDP paths (learning TCP would require an explicit mechanism)
+			if ((!havePath)&&(fromSock->type() != Socket::ZT_SOCKET_TYPE_TCP)) {
+				_paths.push_back(Path(remoteAddr,false,false));
+				_paths.back().received(now);
+			}
 		}
 
 		// Announce multicast LIKEs to peers to whom we have a direct link
@@ -95,11 +97,10 @@ void Peer::receive(
 		}
 	}
 
-	if (verb == Packet::VERB_FRAME) {
+	if (verb == Packet::VERB_FRAME)
 		_lastUnicastFrame = now;
-	} else if (verb == Packet::VERB_MULTICAST_FRAME) {
+	else if (verb == Packet::VERB_MULTICAST_FRAME)
 		_lastMulticastFrame = now;
-	}
 }
 
 bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
