@@ -33,18 +33,14 @@
 namespace ZeroTier {
 
 Peer::Peer() :
-	_id(),
 	_lastUsed(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
-	_lastPinged(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
-	_latency(0)
-{
-}
+	_latency(0) {}
 
 Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
@@ -53,7 +49,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
-	_lastPinged(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -65,6 +60,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 
 void Peer::onReceive(
 	const RuntimeEnvironment *_r,
+	const SharedPtr<Socket> &fromSock,
 	const InetAddress &remoteAddr,
 	unsigned int hops,
 	uint64_t packetId,
@@ -73,12 +69,24 @@ void Peer::onReceive(
 	Packet::Verb inReVerb,
 	uint64_t now)
 {
+	Mutex::Lock _l(_lock);
+
 	if (!hops) { // direct packet
-		// Update last receive info for our direct path
-		WanPath *const wp = (remoteAddr.isV4() ? &_ipv4p : &_ipv6p);
-		wp->lastReceive = now;
-		if (!wp->fixed)
-			wp->addr = remoteAddr;
+		// Update receive time on known paths
+		bool havePath = false;
+		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+			if ((p->address() == remoteAddr)&&(p->tcp() == (fromSock->type() == Socket::ZT_SOCKET_TYPE_TCP))) {
+				p->received(now);
+				havePath = true;
+				break;
+			}
+		}
+
+		// Learn new UDP paths (learning TCP would require an explicit mechanism)
+		if ((!havePath)&&(fromSock->type() != Socket::ZT_SOCKET_TYPE_TCP)) {
+			_paths.push_back(Path(remoteAddr,false,false));
+			_paths.back().received(now);
+		}
 
 		// Announce multicast LIKEs to peers to whom we have a direct link
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
@@ -96,18 +104,24 @@ void Peer::onReceive(
 
 bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
-	if ((_ipv6p.isActive(now))||((!(_ipv4p.addr))&&(_ipv6p.addr))) {
-		if (_r->sm->send(_ipv6p.addr,false,data,len)) {
-			_ipv6p.lastSend = now;
-			return true;
+	Mutex::Lock _l(_lock);
+
+	if (_paths.empty())
+		return false;
+
+	uint64_t bestPathLastReceived = 0;
+	std::vector<Path>::iterator bestPath;
+	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+		uint64_t lr = p->lastRecevied();
+		if (lr >= bestPathLastReceived) {
+			bestPathLastReceived = lr;
+			bestPath = p;
 		}
 	}
 
-	if (_ipv4p.addr) {
-		if (_r->sm->send(_ipv4p.addr,false,data,len)) {
-			_ipv4p.lastSend = now;
-			return true;
-		}
+	if (_r->sm->send(bestPath->address(),bestPath->tcp(),data,len)) {
+		bestPath->sent(now);
+		return true;
 	}
 
 	return false;
@@ -116,70 +130,44 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;
-	if (_ipv4p.addr) {
-		if (_r->sm->sendFirewallOpener(_ipv4p.addr,ZT_FIREWALL_OPENER_HOPS)) {
-			_ipv4p.lastFirewallOpener = now;
-			sent = true;
-		}
-	}
+	Mutex::Lock _l(_lock);
 
-	if (_ipv6p.addr) {
-		if (_r->sm->sendFirewallOpener(_ipv6p.addr,ZT_FIREWALL_OPENER_HOPS)) {
-			_ipv6p.lastFirewallOpener = now;
-			sent = true;
-		}
+	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+		if (!p->tcp())
+			sent |= _r->sm->sendFirewallOpener(p->address(),ZT_FIREWALL_OPENER_HOPS);
 	}
 
 	return sent;
 }
 
-bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
+bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceReset)
 {
 	bool sent = false;
-	if (_ipv4p.addr) {
-		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv4p.addr.toString().c_str());
-		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv4p.addr,false)) {
-			_ipv4p.lastSend = now;
-			sent = true;
-		}
-	}
+	SharedPtr<Peer> self(this);
+	Mutex::Lock _l(_lock);
 
-	if (_ipv6p.addr) {
-		TRACE("PING %s(%s)",_id.address().toString().c_str(),_ipv6p.addr.toString().c_str());
-		if (_r->sw->sendHELLO(SharedPtr<Peer>(this),_ipv6p.addr,false)) {
-			_ipv6p.lastSend = now;
-			sent = true;
+	bool allPingsUnanswered;
+	if (!firstSinceReset) {
+		allPingsUnanswered = true;
+		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+			if (!p->pingUnanswered(now)) {
+				allPingsUnanswered = false;
+				break;
+			}
+		}
+	} else allPingsUnanswered = false;
+
+	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+		if ((allPingsUnanswered)||(!p->tcp())) {
+			if (_r->sw->sendHELLO(self,p->address(),p->tcp())) {
+				p->sent(now);
+				p->pinged(now);
+				sent = true;
+			}
 		}
 	}
 
 	return sent;
-}
-
-void Peer::setPathAddress(const InetAddress &addr,bool fixed)
-{
-	if (addr.isV4()) {
-		_ipv4p.addr = addr;
-		_ipv4p.fixed = fixed;
-	} else if (addr.isV6()) {
-		_ipv6p.addr = addr;
-		_ipv6p.fixed = fixed;
-	}
-}
-
-void Peer::clearFixedFlag(InetAddress::AddressType t)
-{
-	switch(t) {
-		case InetAddress::TYPE_NULL:
-			_ipv4p.fixed = false;
-			_ipv6p.fixed = false;
-			break;
-		case InetAddress::TYPE_IPV4:
-			_ipv4p.fixed = false;
-			break;
-		case InetAddress::TYPE_IPV6:
-			_ipv6p.fixed = false;
-			break;
-	}
 }
 
 } // namespace ZeroTier

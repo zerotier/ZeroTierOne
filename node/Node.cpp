@@ -590,6 +590,7 @@ Node::ReasonForTermination Node::run()
 				 * which will trigger a new RENDEZVOUS and a new hole punch. This
 				 * functor excludes supernodes, which are pinged separately above. */
 				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
+				_r->sm->closeTcpSockets();
 			} else {
 				// Periodically check for changes in our local multicast subscriptions
 				// and broadcast those changes to directly connected peers.

@@ -577,4 +577,19 @@ void SocketManager::whack()
 	_whackSendPipe_m.unlock();
 }
 
+void closeTcpSockets()
+{
+	{
+		Mutex::Lock _l2(_tcpSockets_m);
+		_fdSetLock.lock();
+		for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s`) {
+			FD_CLR((*s)->_sock,&_readfds);
+			FD_CLR((*s)->_sock,&_writefds);
+		}
+		_fdSetLock.unlock();
+		_tcpSockets.clear();
+	}
+	_updateNfds();
+}
+
 } // namespace ZeroTier

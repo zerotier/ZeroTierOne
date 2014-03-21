@@ -30,11 +30,15 @@
 
 #include <stdint.h>
 
+#include <stdexcept>
+#include <string>
+
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
+#include "Buffer.hpp"
 
-#include <string>
+#define ZT_PATH_SERIALIZATION_VERSION 1
 
 namespace ZeroTier {
 
@@ -45,7 +49,7 @@ class Path
 {
 public:
 	Path() :
-		_lastSent(0),
+		_lastSend(0),
 		_lastReceived(0),
 		_lastFirewallOpener(0),
 		_lastPing(0),
@@ -53,8 +57,8 @@ public:
 		_tcp(false),
 		_fixed(false) {}
 
-	Path(const InetAddress &addr,bool tcp,bool fixed) :
-		_lastSent(0),
+	Path(const InetAddress &addr,bool tcp,bool fixed = false) :
+		_lastSend(0),
 		_lastReceived(0),
 		_lastFirewallOpener(0),
 		_lastPing(0),
@@ -64,13 +68,15 @@ public:
 
 	inline const InetAddress &address() const throw() { return _addr; }
 	inline bool tcp() const throw() { return _tcp; }
-	inline uint64_t lastSent() const throw() { return _lastSent; }
+	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
 	inline uint64_t lastFirewallOpener() const throw() { return _lastFirewallOpener; }
 	inline uint64_t lastPing() const throw() { return _lastPing; }
 	inline bool fixed() const throw() { return _fixed; }
 
-	inline void sent(uint64_t t) throw() { _lastSent = t; }
+	inline void setFixed(bool f) throw() { _fixed = f; }
+
+	inline void sent(uint64_t t) throw() { _lastSend = t; }
 	inline void received(uint64_t t) throw() { _lastReceived = t; }
 	inline void firewallOpenerSent(uint64_t t) throw() { _lastFirewallOpener = t; }
 	inline void pinged(uint64_t t) throw() { _lastPing = t; }
@@ -82,13 +88,26 @@ public:
 	}
 
 	/**
+	 * @return True if it appears that a ping has gone unanswered
+	 */
+	inline bool pingUnanswered(uint64_t now) const
+		throw()
+	{
+		uint64_t lp = _lastPing;
+		uint64_t lr = _lastReceived;
+		if (lp)
+			return ((lr < lp)&&((lp - lr) > ZT_PING_UNANSWERED_AFTER));
+		return false;
+	}
+
+	/**
 	 * @return Human-readable address and other information about this path, some computed as of current time
 	 */
 	inline std::string toString() const
 	{
 		uint64_t now = Utils::now();
 		char lsago[32],lrago[32],lfoago[32],lpago[32];
-		Utils::snprintf(lsago,sizeof(lsago),"%lld",(long long)((_lastSent != 0) ? (now - _lastSent) : -1));
+		Utils::snprintf(lsago,sizeof(lsago),"%lld",(long long)((_lastSend != 0) ? (now - _lastSend) : -1));
 		Utils::snprintf(lrago,sizeof(lrago),"%lld",(long long)((_lastReceived != 0) ? (now - _lastReceived) : -1));
 		Utils::snprintf(lfoago,sizeof(lfoago),"%lld",(long long)((_lastFirewallOpener != 0) ? (now - _lastFirewallOpener) : -1));
 		Utils::snprintf(lpago,sizeof(lfoago),"%lld",(long long)((_lastPing != 0) ? (now - _lastPing) : -1));
@@ -110,8 +129,63 @@ public:
 	inline bool operator<=(const Path &p) const throw() { return !(p < *this); }
 	inline bool operator>=(const Path &p) const throw() { return !(*this < p); }
 
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		b.append((unsigned char)ZT_PATH_SERIALIZATION_VERSION);
+		b.append(_lastSend);
+		b.append(_lastReceived);
+		b.append(_lastFirewallOpener);
+		b.append(_lastPing);
+		b.append((unsigned char)_addr.type());
+		switch(_addr.type()) {
+			case InetAddress::TYPE_NULL:
+				break;
+			case InetAddress::TYPE_IPV4:
+				b.append(_addr.rawIpData(),4);
+				b.append((uint16_t)_addr.port());
+				break;
+			case InetAddress::TYPE_IPV6:
+				b.append(_addr.rawIpData(),16);
+				b.append((uint16_t)_addr.port());
+				break;
+		}
+		b.append(_tcp ? (unsigned char)1 : (unsigned char)0);
+		b.append(_fixed ? (unsigned char)1 : (unsigned char)0);
+	}
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+
+		if (b[p++] != ZT_PATH_SERIALIZATION_VERSION)
+			throw std::invalid_argument("Path: deserialize(): version mismatch");
+
+		_lastSend = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastReceived = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastFirewallOpener = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastPing = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		switch((InetAddress::AddressType)b[p++]) {
+			case InetAddress::TYPE_IPV4:
+				_addr.set(b.field(p,4),4,b.template at<uint16_t>(p + 4));
+				p += 4 + sizeof(uint16_t);
+				break;
+			case InetAddress::TYPE_IPV6:
+				_addr.set(b.field(p,16),16,b.template at<uint16_t>(p + 16));
+				p += 16 + sizeof(uint16_t);
+				break;
+			default:
+				_addr.zero();
+				break;
+		}
+		_tcp = (b[p++] != 0);
+		_fixed = (b[p++] != 0);
+
+		return (p - startAt);
+	}
+
 private:
-	volatile uint64_t _lastSent;
+	volatile uint64_t _lastSend;
 	volatile uint64_t _lastReceived;
 	volatile uint64_t _lastFirewallOpener;
 	volatile uint64_t _lastPing;

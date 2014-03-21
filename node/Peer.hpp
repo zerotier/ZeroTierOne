@@ -45,12 +45,12 @@
 #include "InetAddress.hpp"
 #include "Packet.hpp"
 #include "SharedPtr.hpp"
+#include "Socket.hpp"
 #include "AtomicCounter.hpp"
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-// Increment if serialization has changed
-#define ZT_PEER_SERIALIZATION_VERSION 7
+#define ZT_PEER_SERIALIZATION_VERSION 8
 
 namespace ZeroTier {
 
@@ -61,10 +61,10 @@ class Peer : NonCopyable
 {
 	friend class SharedPtr<Peer>;
 
-private:
-	~Peer() {}
-
 public:
+	/**
+	 * Construct an uninitialized peer (used with deserialize())
+	 */
 	Peer();
 
 	/**
@@ -80,12 +80,20 @@ public:
 	/**
 	 * @return Time peer record was last used in any way
 	 */
-	inline uint64_t lastUsed() const throw() { return _lastUsed; }
+	inline uint64_t lastUsed() const
+		throw()
+	{
+		return _lastUsed;
+	}
 
 	/**
 	 * @param now New time of last use
 	 */
-	inline void setLastUsed(uint64_t now) throw() { _lastUsed = now; }
+	inline void setLastUsed(uint64_t now)
+		throw()
+	{
+		_lastUsed = now;
+	}
 
 	/**
 	 * @return This peer's ZT address (short for identity().address())
@@ -101,7 +109,7 @@ public:
 	 * Must be called on authenticated packet receive from this peer
 	 * 
 	 * @param _r Runtime environment
-	 * @param localPort Local port on which packet was received
+	 * @param fromSock Socket from which packet was received
 	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
@@ -112,6 +120,7 @@ public:
 	 */
 	void onReceive(
 		const RuntimeEnvironment *_r,
+		const SharedPtr<Socket> &fromSock,
 		const InetAddress &remoteAddr,
 		unsigned int hops,
 		uint64_t packetId,
@@ -135,7 +144,7 @@ public:
 	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
 	/**
-	 * Send firewall opener to active link
+	 * Send firewall opener to all UDP paths
 	 * 
 	 * @param _r Runtime environment
 	 * @param now Current time
@@ -144,39 +153,73 @@ public:
 	bool sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now);
 
 	/**
-	 * Send HELLO to a peer via all active direct paths available
+	 * Send HELLO to a peer via all direct paths available
 	 *
 	 * This begins attempting to use TCP paths if no ping response has been
 	 * received from any UDP path in more than ZT_TCP_FALLBACK_AFTER.
 	 * 
 	 * @param _r Runtime environment
 	 * @param now Current time
+	 * @param firstSinceReset If true, this is the first ping sent since a network reset
 	 * @return True if send appears successful for at least one address type
 	 */
-	bool sendPing(const RuntimeEnvironment *_r,uint64_t now);
+	bool sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceReset);
 
 	/**
-	 * @return Last successfully sent firewall opener
+	 * @return All known direct paths to this peer
+	 */
+	std::vector<Path> paths() const
+	{
+		Mutex::Lock _l(_lock);
+		return _paths;
+	}
+
+	/**
+	 * @return Last successfully sent firewall opener for any path
 	 */
 	inline uint64_t lastFirewallOpener() const
 		throw()
 	{
+		uint64_t x = 0;
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			uint64_t l = p->lastFirewallOpener();
+			if (l > x)
+				x = l;
+		}
+		return x;
 	}
 
 	/**
-	 * @return Time of last direct packet receive
+	 * @return Time of last direct packet receive for any path
 	 */
 	inline uint64_t lastDirectReceive() const
 		throw()
 	{
+		uint64_t x = 0;
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			uint64_t l = p->lastReceive();
+			if (l > x)
+				x = l;
+		}
+		return x;
 	}
 
 	/**
-	 * @return Time of last direct packet send
+	 * @return Time of last direct packet send for any path
 	 */
 	inline uint64_t lastDirectSend() const
 		throw()
 	{
+		uint64_t x = 0;
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			uint64_t l = p->lastSend();
+			if (l > x)
+				x = l;
+		}
+		return x;
 	}
 
 	/**
@@ -246,6 +289,8 @@ public:
 	inline bool hasDirectPath() const
 		throw()
 	{
+		Mutex::Lock _l(_lock);
+		return (!_paths.empty());
 	}
 
 	/**
@@ -255,6 +300,12 @@ public:
 	inline bool hasActiveDirectPath(uint64_t now) const
 		throw()
 	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			if (p->active(now))
+				return true;
+		}
+		return false;
 	}
 
 	/**
@@ -262,8 +313,16 @@ public:
 	 *
 	 * @param p New path to add
 	 */
-	inline void addPath(const Path &p)
+	inline void addPath(const Path &newp)
 	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			if (*p == newp) {
+				p->setFixed(newp.fixed());
+				return;
+			}
+		}
+		_paths.push_back(newp);
 	}
 
 	/**
@@ -273,6 +332,15 @@ public:
 	 */
 	inline void clearPaths(bool fixedToo)
 	{
+		std::vector<Path> npv;
+		Mutex::Lock _l(_lock);
+		if (!fixedToo) {
+			for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+				if (p->fixed())
+					npv.push_back(*p);
+			}
+		}
+		_paths = npv;
 	}
 
 	/**
@@ -335,13 +403,13 @@ public:
 	}
 
 	template<unsigned int C>
-	inline void serialize(Buffer<C> &b)
+	inline void serialize(Buffer<C> &b) const
 	{
+		Mutex::Lock _l(_lock);
+
 		b.append((unsigned char)ZT_PEER_SERIALIZATION_VERSION);
-		b.append(_key,sizeof(_key));
 		_id.serialize(b,false);
-		_ipv4p.serialize(b);
-		_ipv6p.serialize(b);
+		b.append(_key,sizeof(_key));
 		b.append(_lastUsed);
 		b.append(_lastUnicastFrame);
 		b.append(_lastMulticastFrame);
@@ -350,6 +418,9 @@ public:
 		b.append((uint16_t)_vMinor);
 		b.append((uint16_t)_vRevision);
 		b.append((uint16_t)_latency);
+		b.append((uint16_t)_paths.size());
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
+			p->serialize(b);
 	}
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
@@ -359,10 +430,10 @@ public:
 		if (b[p++] != ZT_PEER_SERIALIZATION_VERSION)
 			throw std::invalid_argument("Peer: deserialize(): version mismatch");
 
-		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
+		Mutex::Lock _l(_lock);
+
 		p += _id.deserialize(b,p);
-		p += _ipv4p.deserialize(b,p);
-		p += _ipv6p.deserialize(b,p);
+		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
 		_lastUsed = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
@@ -371,6 +442,12 @@ public:
 		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_latency = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		unsigned int npaths = (unsigned int)b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		_paths.clear();
+		for(unsigned int i=0;i<npaths;++i) {
+			_paths.push_back(Path());
+			p += _paths.back().deserialize(b,p);
+		}
 
 		return (p - startAt);
 	}
@@ -385,8 +462,12 @@ private:
 	volatile uint64_t _lastUnicastFrame;
 	volatile uint64_t _lastMulticastFrame;
 	volatile uint64_t _lastAnnouncedTo;
-	volatile unsigned int _vMajor,_vMinor,_vRevision;
+	volatile unsigned int _vMajor;
+	volatile unsigned int _vMinor;
+	volatile unsigned int _vRevision;
 	volatile unsigned int _latency;
+
+	Mutex _lock;
 
 	AtomicCounter __refCount;
 };

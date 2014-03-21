@@ -260,7 +260,7 @@ public:
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
 			if (!_supernodeAddresses.count(p->address())) {
-				p->forgetDirectPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
+				p->clearPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
 				if (((_now - p->lastFrame()) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)&&(_supernode)) {
 					TRACE("sending reset NOP to %s",p->address().toString().c_str());
 					Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);

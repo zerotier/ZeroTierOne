@@ -307,7 +307,7 @@ error_no_byte_order_defined;
 /**
  * Try TCP tunnels if no response to UDP PINGs in this many milliseconds
  */
-#define ZT_TCP_FALLBACK_AFTER 5000
+#define ZT_PING_UNANSWERED_AFTER 5000
 
 /**
  * Stop relaying via peers that have not responded to direct sends in this long

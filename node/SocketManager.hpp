@@ -118,6 +118,11 @@ public:
 	 */
 	void whack();
 
+	/**
+	 * Close TCP sockets
+	 */
+	void closeTcpSockets();
+
 private:
 	// Called by socket implementations when a packet is received
 	inline void handleReceivedPacket(const SharedPtr<Socket> &sock,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
