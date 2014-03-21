@@ -159,6 +159,9 @@ bool TcpSocket::notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketMana
 {
 	Mutex::Lock _l(_writeLock);
 
+	if (_connecting)
+		_connecting = false;
+
 	if (_outptr) {
 		int n = (int)::send(_sock,_outbuf,_outptr,0);
 		if (n < 0) {

@@ -34,12 +34,11 @@ namespace ZeroTier {
 
 Peer::Peer() :
 	_id(),
-	_ipv4p(),
-	_ipv6p(),
 	_lastUsed(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
+	_lastPinged(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -50,12 +49,11 @@ Peer::Peer() :
 Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
 	_id(peerIdentity),
-	_ipv4p(),
-	_ipv6p(),
 	_lastUsed(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
+	_lastPinged(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),

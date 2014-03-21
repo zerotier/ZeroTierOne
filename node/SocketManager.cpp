@@ -37,6 +37,7 @@
 #include "TcpSocket.hpp"
 
 #ifndef __WINDOWS__
+#include <errno.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -46,6 +47,12 @@
 // Allow us to use the same value on Windows and *nix
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET (-1)
+#endif
+
+#ifdef __WINDOWS__
+#define CLOSE_SOCKET(s) ::closesocket(s)
+#else
+#define CLOSE_SOCKET(s) ::close(s)
 #endif
 
 namespace ZeroTier {
@@ -256,11 +263,7 @@ SocketManager::SocketManager(
 			sin6.sin6_port = htons(localUdpPort);
 			memcpy(&(sin6.sin6_addr),&in6addr_any,sizeof(struct in6_addr));
 			if (::bind(s,(const struct sockaddr *)&sin6,sizeof(sin6))) {
-#ifdef __WINDOWS__
-				::closesocket(s);
-#else
-				::close(s);
-#endif
+				CLOSE_SOCKET(s);
 				_closeSockets();
 				throw std::runtime_error("unable to bind to port");
 			}
@@ -308,11 +311,8 @@ SocketManager::SocketManager(
 			sin4.sin_port = htons(localUdpPort);
 			sin4.sin_addr.s_addr = INADDR_ANY;
 			if (::bind(s,(const struct sockaddr *)&sin4,sizeof(sin4))) {
-#ifdef __WINDOWS__
-				::closesocket(s);
-#else
-				::close(s);
-#endif
+				CLOSE_SOCKET(s);
+				_closeSockets();
 				throw std::runtime_error("unable to bind to port");
 			}
 
@@ -334,6 +334,59 @@ SocketManager::~SocketManager()
 bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned int msglen)
 {
 	if (tcp) {
+		SharedPtr<Socket> ts;
+		{
+			Mutex::Lock _l(_tcpSockets_m);
+			std::map< InetAddress,SharedPtr<Socket> >::iterator opents(_tcpSockets.find(to));
+			if (opents != _tcpSockets.end())
+				ts = opents->second;
+		}
+		if (ts)
+			return ts->send(to,msg,msglen);
+
+#ifdef __WINDOWS__
+		SOCKET s = ::socket(to.isV4() ? AF_INET : AF_INET6,SOCK_STREAM,0);
+		if (s == INVALID_SOCKET)
+			return false;
+		if (s >= FD_SETSIZE) {
+			::closesocket(s);
+			return false;
+		}
+#else
+		int s = ::socket(to.isV4() ? AF_INET : AF_INET6,SOCK_STREAM,0);
+		if (s <= 0)
+			return false;
+		if (s >= FD_SETSIZE) {
+			::close(s);
+			return false;
+		}
+#endif
+		fcntl(s,F_SETFL,O_NONBLOCK);
+
+		bool connecting = false;
+		if (connect(s,to.saddr(),to.saddrLen())) {
+			if (errno != EINPROGRESS) {
+				CLOSE_SOCKET(s);
+				return false;
+			} else connecting = true;
+		}
+
+		ts = SharedPtr<Socket>(new TcpSocket(this,s,connecting,to));
+		if (!ts->send(to,msg,msglen))
+			return false;
+
+		_fdSetLock.lock();
+		FD_SET(s,&_readfds);
+		if (connecting)
+			FD_SET(s,&_writefds);
+		_fdSetLock.unlock();
+
+		{
+			Mutex::Lock _l(_tcpSockets_m);
+			_tcpSockets[to] = ts;
+		}
+
+		return true;
 	} else if (to.isV4()) {
 		if (_udpV4Socket)
 			return _udpV4Socket->send(to,msg,msglen);
@@ -397,21 +450,25 @@ void SocketManager::poll(unsigned long timeout)
 #else
 		if (sockfd > 0) {
 #endif
-			InetAddress fromia((const struct sockaddr *)&from);
-			Mutex::Lock _l2(_tcpSockets_m);
-			try {
-				_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
+			if (sockfd < FD_SETSIZE) {
+				InetAddress fromia((const struct sockaddr *)&from);
+				Mutex::Lock _l2(_tcpSockets_m);
+				try {
+					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
 
-				fcntl(sockfd,F_SETFL,O_NONBLOCK);
+					fcntl(sockfd,F_SETFL,O_NONBLOCK);
 
-				_fdSetLock.lock();
-				FD_SET(sockfd,&_readfds);
-				_fdSetLock.unlock();
+					_fdSetLock.lock();
+					FD_SET(sockfd,&_readfds);
+					_fdSetLock.unlock();
 
-				if (sockfd > _nfds)
-					_nfds = sockfd;
-			} catch ( ... ) {
-				::close(sockfd);
+					if (sockfd > _nfds)
+						_nfds = sockfd;
+				} catch ( ... ) {
+					CLOSE_SOCKET(sockfd);
+				}
+			} else {
+				CLOSE_SOCKET(sockfd);
 			}
 		}
 	}
@@ -424,21 +481,25 @@ void SocketManager::poll(unsigned long timeout)
 #else
 		if (sockfd > 0) {
 #endif
-			InetAddress fromia((const struct sockaddr *)&from);
-			Mutex::Lock _l2(_tcpSockets_m);
-			try {
-				_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
+			if (sockfd < FD_SETSIZE) {
+				InetAddress fromia((const struct sockaddr *)&from);
+				Mutex::Lock _l2(_tcpSockets_m);
+				try {
+					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
 
-				fcntl(sockfd,F_SETFL,O_NONBLOCK);
+					fcntl(sockfd,F_SETFL,O_NONBLOCK);
 
-				_fdSetLock.lock();
-				FD_SET(sockfd,&_readfds);
-				_fdSetLock.unlock();
+					_fdSetLock.lock();
+					FD_SET(sockfd,&_readfds);
+					_fdSetLock.unlock();
 
-				if (sockfd > _nfds)
-					_nfds = sockfd;
-			} catch ( ... ) {
-				::close(sockfd);
+					if (sockfd > _nfds)
+						_nfds = sockfd;
+				} catch ( ... ) {
+					CLOSE_SOCKET(sockfd);
+				}
+			} else {
+				CLOSE_SOCKET(sockfd);
 			}
 		}
 	}

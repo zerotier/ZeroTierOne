@@ -128,7 +128,7 @@ private:
 		} catch ( ... ) {} // handlers shouldn't throw
 	}
 
-	// Called by socket implementations to register or unregister for available-for-write notification on underlying _sock
+	// Used by TcpSocket to register/unregister for write availability notification
 	inline void startNotifyWrite(const Socket *sock)
 		throw()
 	{

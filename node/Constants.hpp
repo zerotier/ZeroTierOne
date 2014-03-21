@@ -297,12 +297,17 @@ error_no_byte_order_defined;
  * 
  * A link that hasn't spoken in this long is simply considered inactive.
  */
-#define ZT_PEER_LINK_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 1000)
+#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 1000)
 
 /**
  * Close TCP tunnels if unused for this long
  */
-#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_LINK_ACTIVITY_TIMEOUT
+#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
+
+/**
+ * Try TCP tunnels if no response to UDP PINGs in this many milliseconds
+ */
+#define ZT_TCP_FALLBACK_AFTER 5000
 
 /**
  * Stop relaying via peers that have not responded to direct sends in this long

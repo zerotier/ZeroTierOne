@@ -30,11 +30,13 @@
 
 #include <stdint.h>
 
+#include <vector>
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
 
 #include "Constants.hpp"
+#include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
@@ -53,15 +55,7 @@
 namespace ZeroTier {
 
 /**
- * A peer on the network
- * 
- * Threading note:
- *
- * This structure contains no locks at the moment, but also performs no
- * memory allocation or pointer manipulation. As a result is is technically
- * "safe" for threads, as in won't crash. Right now it's only changed from
- * the core I/O thread so this isn't an issue. If multiple I/O threads are
- * introduced it ought to have a lock of some kind.
+ * Peer on P2P Network
  */
 class Peer : NonCopyable
 {
@@ -127,13 +121,16 @@ public:
 		uint64_t now);
 
 	/**
-	 * Send a UDP packet to this peer directly (not via relaying)
-	 * 
+	 * Send a packet to this peer using the most recently active direct path
+	 *
+	 * This does not relay. It returns false if there are no available active
+	 * paths.
+	 *
 	 * @param _r Runtime environment
 	 * @param data Data to send
 	 * @param len Length of packet
 	 * @param now Current time
-	 * @return True if packet appears to have been sent
+	 * @return True if packet appears to have been sent, false if no path or other error
 	 */
 	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
@@ -148,6 +145,9 @@ public:
 
 	/**
 	 * Send HELLO to a peer via all active direct paths available
+	 *
+	 * This begins attempting to use TCP paths if no ping response has been
+	 * received from any UDP path in more than ZT_TCP_FALLBACK_AFTER.
 	 * 
 	 * @param _r Runtime environment
 	 * @param now Current time
@@ -156,27 +156,11 @@ public:
 	bool sendPing(const RuntimeEnvironment *_r,uint64_t now);
 
 	/**
-	 * Set an address to reach this peer
-	 *
-	 * @param addr Address to set
-	 * @param fixed If true, address is fixed (won't be changed on packet receipt)
-	 */
-	void setPathAddress(const InetAddress &addr,bool fixed);
-
-	/**
-	 * Clear the fixed flag for an address type
-	 *
-	 * @param t Type to clear, or TYPE_NULL to clear flag on all types
-	 */
-	void clearFixedFlag(InetAddress::AddressType t);
-
-	/**
 	 * @return Last successfully sent firewall opener
 	 */
 	inline uint64_t lastFirewallOpener() const
 		throw()
 	{
-		return std::max(_ipv4p.lastFirewallOpener,_ipv6p.lastFirewallOpener);
 	}
 
 	/**
@@ -185,7 +169,6 @@ public:
 	inline uint64_t lastDirectReceive() const
 		throw()
 	{
-		return std::max(_ipv4p.lastReceive,_ipv6p.lastReceive);
 	}
 
 	/**
@@ -194,7 +177,6 @@ public:
 	inline uint64_t lastDirectSend() const
 		throw()
 	{
-		return std::max(_ipv4p.lastSend,_ipv6p.lastSend);
 	}
 
 	/**
@@ -261,58 +243,36 @@ public:
 	/**
 	 * @return True if this peer has at least one direct IP address path
 	 */
-	inline bool hasDirectPath() const throw() { return ((_ipv4p.addr)||(_ipv6p.addr)); }
+	inline bool hasDirectPath() const
+		throw()
+	{
+	}
 
 	/**
 	 * @param now Current time
 	 * @return True if this peer has at least one active or fixed direct path
 	 */
-	inline bool hasActiveDirectPath(uint64_t now) const throw() { return ((_ipv4p.isActive(now))||(_ipv6p.isActive(now))); }
-
-	/**
-	 * @return IPv4 direct address or null InetAddress if none
-	 */
-	inline InetAddress ipv4Path() const throw() { return _ipv4p.addr; }
-
-	/**
-	 * @return IPv6 direct address or null InetAddress if none
-	 */
-	inline InetAddress ipv6Path() const throw() { return _ipv4p.addr; }
-
-	/**
-	 * @return IPv4 direct address or null InetAddress if none
-	 */
-	inline InetAddress ipv4ActivePath(uint64_t now) const
+	inline bool hasActiveDirectPath(uint64_t now) const
 		throw()
 	{
-		if (_ipv4p.isActive(now))
-			return _ipv4p.addr;
-		return InetAddress();
 	}
 
 	/**
-	 * @return IPv6 direct address or null InetAddress if none
-	 */
-	inline InetAddress ipv6ActivePath(uint64_t now) const
-		throw()
-	{
-		if (_ipv6p.isActive(now))
-			return _ipv6p.addr;
-		return InetAddress();
-	}
-
-	/**
-	 * Forget direct paths
+	 * Add a path (if we don't already have it)
 	 *
-	 * @param fixedToo If true, also forget 'fixed' paths.
+	 * @param p New path to add
 	 */
-	inline void forgetDirectPaths(bool fixedToo)
-		throw()
+	inline void addPath(const Path &p)
 	{
-		if ((fixedToo)||(!_ipv4p.fixed))
-			_ipv4p.addr.zero();
-		if ((fixedToo)||(!_ipv6p.fixed))
-			_ipv6p.addr.zero();
+	}
+
+	/**
+	 * Clear paths
+	 *
+	 * @param fixedToo If true, clear fixed paths as well as learned ones
+	 */
+	inline void clearPaths(bool fixedToo)
+	{
 	}
 
 	/**
@@ -416,93 +376,10 @@ public:
 	}
 
 private:
-	/**
-	 * A direct IP path to a peer
-	 */
-	class WanPath
-	{
-	public:
-		WanPath() :
-			lastSend(0),
-			lastReceive(0),
-			lastFirewallOpener(0),
-			addr(),
-			fixed(false)
-		{
-		}
-
-		inline bool isActive(const uint64_t now) const
-			throw()
-		{
-			return ((addr)&&((fixed)||((now - lastReceive) < ZT_PEER_LINK_ACTIVITY_TIMEOUT)));
-		}
-
-		template<unsigned int C>
-		inline void serialize(Buffer<C> &b)
-			throw(std::out_of_range)
-		{
-			b.append(lastSend);
-			b.append(lastReceive);
-			b.append(lastFirewallOpener);
-
-			b.append((unsigned char)addr.type());
-			switch(addr.type()) {
-				case InetAddress::TYPE_NULL:
-					break;
-				case InetAddress::TYPE_IPV4:
-					b.append(addr.rawIpData(),4);
-					b.append((uint16_t)addr.port());
-					break;
-				case InetAddress::TYPE_IPV6:
-					b.append(addr.rawIpData(),16);
-					b.append((uint16_t)addr.port());
-					break;
-			}
-
-			b.append(fixed ? (unsigned char)1 : (unsigned char)0);
-		}
-
-		template<unsigned int C>
-		inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-			throw(std::out_of_range,std::invalid_argument)
-		{
-			unsigned int p = startAt;
-
-			lastSend = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-			lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-			lastFirewallOpener = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-
-			switch ((InetAddress::AddressType)b[p++]) {
-				case InetAddress::TYPE_NULL:
-					addr.zero();
-					break;
-				case InetAddress::TYPE_IPV4:
-					addr.set(b.field(p,4),4,b.template at<uint16_t>(p + 4));
-					p += 4 + sizeof(uint16_t);
-					break;
-				case InetAddress::TYPE_IPV6:
-					addr.set(b.field(p,16),16,b.template at<uint16_t>(p + 16));
-					p += 16 + sizeof(uint16_t);
-					break;
-			}
-
-			fixed = (b[p++] != 0);
-
-			return (p - startAt);
-		}
-
-		uint64_t lastSend;
-		uint64_t lastReceive;
-		uint64_t lastFirewallOpener;
-		InetAddress addr; // null InetAddress if path is undefined
-		bool fixed; // do not learn address from received packets
-	};
-
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 
-	WanPath _ipv4p;
-	WanPath _ipv6p;
+	std::vector<Path> _paths;
 
 	volatile uint64_t _lastUsed;
 	volatile uint64_t _lastUnicastFrame;
