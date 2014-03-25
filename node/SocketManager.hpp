@@ -30,16 +30,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <Windows.h>
-#else
-#include <unistd.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/select.h>
-#endif
 
 #include <map>
 #include <stdexcept>
@@ -51,6 +41,17 @@
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
 #include "Buffer.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <Windows.h>
+#else
+#include <unistd.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/select.h>
+#endif
 
 namespace ZeroTier {
 
@@ -150,50 +151,11 @@ private:
 	}
 
 	// Called in SocketManager destructor or in constructor cleanup before exception throwing
-	inline void _closeSockets()
-		throw()
-	{
-#ifdef __WINDOWS__
-		if (_whackSendPipe != INVALID_SOCKET)
-			::closesocket(_whackSendPipe);
-		if (_whackReceivePipe != INVALID_SOCKET)
-			::closesocket(_whackReceivePipe);
-		if (_tcpV4ListenSocket != INVALID_SOCKET)
-			::closesocket(s);
-		if (_tcpV6ListenSocket != INVALID_SOCKET)
-			::closesocket(s);
-#else
-		if (_whackSendPipe > 0)
-			::close(_whackSendPipe);
-		if (_whackReceivePipe > 0)
-			::close(_whackReceivePipe);
-		if (_tcpV4ListenSocket > 0)
-			::close(_tcpV4ListenSocket);
-		if (_tcpV4ListenSocket > 0)
-			::close(_tcpV6ListenSocket);
-#endif
-	}
+	void _closeSockets()
+		throw();
 
-	inline void _updateNfds()
-	{
-		int nfds = _whackSendPipe;
-		if (_whackReceivePipe > nfds)
-			nfds = _whackReceivePipe;
-		if (_tcpV4ListenSocket > nfds)
-			nfds = _tcpV4ListenSocket;
-		if (_tcpV6ListenSocket > nfds)
-			nfds = _tcpV6ListenSocket;
-		if ((_udpV4Socket)&&(_udpV4Socket->_sock > nfds))
-			nfds = _udpV4Socket->_sock;
-		if ((_udpV6Socket)&&(_udpV6Socket->_sock > nfds))
-			nfds = _udpV6Socket->_sock;
-		Mutex::Lock _l(_tcpSockets_m);
-		for(std::map< InetAddress,SharedPtr<Socket> >::const_iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s) {
-			if (s->second->_sock > nfds)
-				nfds = s->second->_sock;
-		}
-		_nfds = nfds;
-	}
+	// Called in SocketManager to recompute _nfds for select() based implementation
+	void _updateNfds();
 
 #ifdef __WINDOWS__
 	SOCKET _whackSendPipe;

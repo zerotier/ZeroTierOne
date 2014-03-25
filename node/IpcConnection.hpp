@@ -33,6 +33,11 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
+
 namespace ZeroTier {
 
 class IpcListener;
@@ -74,11 +79,19 @@ public:
 
 private:
 	// Used by IpcListener to construct incoming connections
+#ifdef __WINDOWS__
+	IpcConnection(HANDLE s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
+#else
 	IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
+#endif
 
 	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
+#ifdef __WINDOWS__
+	volatile HANDLE _sock;
+#else
 	volatile int _sock;
+#endif
 	Mutex _writeLock;
 };
 

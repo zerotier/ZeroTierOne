@@ -104,6 +104,8 @@ SocketManager::SocketManager(
 		__winpipe(tmps);
 		_whackSendPipe = tmps[0];
 		_whackReceivePipe = tmps[1];
+		u_long iMode=1;
+		ioctlsocket(tmps[1],FIONBIO,&iMode);
 	}
 #else
 	{
@@ -112,9 +114,9 @@ SocketManager::SocketManager(
 			throw std::runtime_error("pipe() failed");
 		_whackSendPipe = tmpfds[1];
 		_whackReceivePipe = tmpfds[0];
+		fcntl(_whackReceivePipe,F_SETFL,O_NONBLOCK);
 	}
 #endif
-	fcntl(_whackReceivePipe,F_SETFL,O_NONBLOCK);
 	FD_SET(_whackReceivePipe,&_readfds);
 
 	if (localTcpPort > 0) {
@@ -142,15 +144,17 @@ SocketManager::SocketManager(
 				BOOL f;
 				f = TRUE; ::setsockopt(_tcpV6ListenSocket,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
 				f = TRUE; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
+				u_long iMode=1;
+				ioctlsocket(_tcpV6ListenSocket,FIONBIO,&iMode);
 			}
 #else
 			{
 				int f;
 				f = 1; ::setsockopt(_tcpV6ListenSocket,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
 				f = 1; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+				fcntl(_tcpV6ListenSocket,F_SETFL,O_NONBLOCK);
 			}
 #endif
-			fcntl(_tcpV6ListenSocket,F_SETFL,O_NONBLOCK);
 
 			struct sockaddr_in6 sin6;
 			memset(&sin6,0,sizeof(sin6));
@@ -187,13 +191,15 @@ SocketManager::SocketManager(
 #ifdef __WINDOWS__
 			{
 				BOOL f = TRUE; ::setsockopt(_tcpV4ListenSocket,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
+				u_long iMode=1;
+				ioctlsocket(_tcpV4ListenSocket,FIONBIO,&iMode);
 			}
 #else
 			{
 				int f = 1; ::setsockopt(_tcpV4ListenSocket,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+				fcntl(_tcpV4ListenSocket,F_SETFL,O_NONBLOCK);
 			}
 #endif
-			fcntl(_tcpV4ListenSocket,F_SETFL,O_NONBLOCK);
 
 			struct sockaddr_in sin4;
 			memset(&sin4,0,sizeof(sin4));
@@ -269,7 +275,12 @@ SocketManager::SocketManager(
 			}
 
 			_udpV6Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V6,s));
+#ifdef __WINDOWS__
+			u_long iMode=1;
+			ioctlsocket(s,FIONBIO,&iMode);
+#else
 			fcntl(s,F_SETFL,O_NONBLOCK);
+#endif
 			FD_SET(s,&_readfds);
 		}
 
@@ -317,7 +328,12 @@ SocketManager::SocketManager(
 			}
 
 			_udpV4Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V4,s));
+#ifdef __WINDOWS__
+			u_long iMode=1;
+			ioctlsocket(s,FIONBIO,&iMode);
+#else
 			fcntl(s,F_SETFL,O_NONBLOCK);
+#endif
 			FD_SET(s,&_readfds);
 		}
 	}
@@ -352,6 +368,10 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 			::closesocket(s);
 			return false;
 		}
+		{
+			u_long iMode=1;
+			ioctlsocket(s,FIONBIO,&iMode);
+		}
 #else
 		int s = ::socket(to.isV4() ? AF_INET : AF_INET6,SOCK_STREAM,0);
 		if (s <= 0)
@@ -360,8 +380,8 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 			::close(s);
 			return false;
 		}
-#endif
 		fcntl(s,F_SETFL,O_NONBLOCK);
+#endif
 
 		bool connecting = false;
 		if (connect(s,to.saddr(),to.saddrLen())) {
@@ -455,14 +475,16 @@ void SocketManager::poll(unsigned long timeout)
 				Mutex::Lock _l2(_tcpSockets_m);
 				try {
 					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
-
+#ifdef __WINDOWS__
+					u_long iMode=1;
+					ioctlsocket(sockfd,FIONBIO,&iMode);
+#else
 					fcntl(sockfd,F_SETFL,O_NONBLOCK);
-
+#endif
 					_fdSetLock.lock();
 					FD_SET(sockfd,&_readfds);
 					_fdSetLock.unlock();
-
-					if (sockfd > _nfds)
+					if ((int)sockfd > (int)_nfds)
 						_nfds = sockfd;
 				} catch ( ... ) {
 					CLOSE_SOCKET(sockfd);
@@ -486,14 +508,16 @@ void SocketManager::poll(unsigned long timeout)
 				Mutex::Lock _l2(_tcpSockets_m);
 				try {
 					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
-
+#ifdef __WINDOWS__
+					u_long iMode=1;
+					ioctlsocket(sockfd,FIONBIO,&iMode);
+#else
 					fcntl(sockfd,F_SETFL,O_NONBLOCK);
-
+#endif
 					_fdSetLock.lock();
 					FD_SET(sockfd,&_readfds);
 					_fdSetLock.unlock();
-
-					if (sockfd > _nfds)
+					if ((int)sockfd > (int)_nfds)
 						_nfds = sockfd;
 				} catch ( ... ) {
 					CLOSE_SOCKET(sockfd);
@@ -570,7 +594,7 @@ void SocketManager::whack()
 {
 	_whackSendPipe_m.lock();
 #ifdef __WINDOWS__
-	::send(_whackSendPipe,(const void *)this,1,0);
+	::send(_whackSendPipe,(const char *)this,1,0);
 #else
 	::write(_whackSendPipe,(const void *)this,1); // data is arbitrary, just send a byte
 #endif
@@ -590,6 +614,55 @@ void SocketManager::closeTcpSockets()
 		_tcpSockets.clear();
 	}
 	_updateNfds();
+}
+
+void SocketManager::_closeSockets()
+	throw()
+{
+#ifdef __WINDOWS__
+	if (_whackSendPipe != INVALID_SOCKET)
+		::closesocket(_whackSendPipe);
+	if (_whackReceivePipe != INVALID_SOCKET)
+		::closesocket(_whackReceivePipe);
+	if (_tcpV4ListenSocket != INVALID_SOCKET)
+		::closesocket(_tcpV4ListenSocket);
+	if (_tcpV6ListenSocket != INVALID_SOCKET)
+		::closesocket(_tcpV6ListenSocket);
+#else
+	if (_whackSendPipe > 0)
+		::close(_whackSendPipe);
+	if (_whackReceivePipe > 0)
+		::close(_whackReceivePipe);
+	if (_tcpV4ListenSocket > 0)
+		::close(_tcpV4ListenSocket);
+	if (_tcpV4ListenSocket > 0)
+		::close(_tcpV6ListenSocket);
+#endif
+}
+
+void SocketManager::_updateNfds()
+{
+#ifdef __WINDOWS__
+	SOCKET nfds = _whackSendPipe;
+#else
+	int nfds = _whackSendPipe;
+#endif
+	if (_whackReceivePipe > nfds)
+		nfds = _whackReceivePipe;
+	if (_tcpV4ListenSocket > nfds)
+		nfds = _tcpV4ListenSocket;
+	if (_tcpV6ListenSocket > nfds)
+		nfds = _tcpV6ListenSocket;
+	if ((_udpV4Socket)&&(_udpV4Socket->_sock > nfds))
+		nfds = _udpV4Socket->_sock;
+	if ((_udpV6Socket)&&(_udpV6Socket->_sock > nfds))
+		nfds = _udpV6Socket->_sock;
+	Mutex::Lock _l(_tcpSockets_m);
+	for(std::map< InetAddress,SharedPtr<Socket> >::const_iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s) {
+		if (s->second->_sock > nfds)
+			nfds = s->second->_sock;
+	}
+	_nfds = nfds;
 }
 
 } // namespace ZeroTier

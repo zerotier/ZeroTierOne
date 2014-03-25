@@ -94,7 +94,7 @@ bool UdpSocket::notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManag
 	Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> buf;
 	InetAddress from;
 	socklen_t salen = from.saddrSpaceLen();
-	int n = (int)recvfrom(_sock,buf.data(),ZT_SOCKET_MAX_MESSAGE_LEN,0,from.saddr(),&salen);
+	int n = (int)recvfrom(_sock,(char *)(buf.data()),ZT_SOCKET_MAX_MESSAGE_LEN,0,from.saddr(),&salen);
 	if (n > 0) {
 		buf.setSize((unsigned int)n);
 		sm->handleReceivedPacket(self,from,buf);

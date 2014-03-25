@@ -37,6 +37,8 @@
 #include <stdexcept>
 
 #ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
 #define ZT_IPC_ENDPOINT_BASE "\\\\.\\pipe\\ZeroTierOne-"
 #else
 #define ZT_IPC_ENDPOINT_BASE "/tmp/.ZeroTierOne-"
@@ -80,7 +82,13 @@ private:
 	std::string _endpoint;
 	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
+#ifdef __WINDOWS__
+	volatile HANDLE _sock;
+	volatile bool _die;
+	Mutex _sock_m;
+#else
 	volatile int _sock;
+#endif
 	Thread _thread;
 };
 

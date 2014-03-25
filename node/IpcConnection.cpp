@@ -35,10 +35,7 @@
 
 #include "IpcConnection.hpp"
 
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#else
+#ifndef __WINDOWS__
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -49,9 +46,18 @@ namespace ZeroTier {
 IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 	_handler(commandHandler),
 	_arg(arg),
+#ifdef __WINDOWS__
+	_sock(INVALID_HANDLE_VALUE)
+#else
 	_sock(0)
+#endif
 {
 #ifdef __WINDOWS__
+	_sock = CreateFileA(endpoint,GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,0,NULL);
+	if (_sock == INVALID_HANDLE_VALUE)
+		throw std::runtime_error("IPC endpoint unreachable");
+	DWORD pipeMode = PIPE_READMODE_BYTE;
+	SetNamedPipeHandleState(_sock,&pipeMode,NULL,NULL);
 #else
 	struct sockaddr_un unaddr;
 	unaddr.sun_family = AF_UNIX;
@@ -71,7 +77,11 @@ IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,
 	Thread::start(this);
 }
 
+#ifdef __WINDOWS__
+IpcConnection::IpcConnection(HANDLE s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
+#else
 IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
+#endif
 	_handler(commandHandler),
 	_arg(arg),
 	_sock(s)
@@ -81,17 +91,22 @@ IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *
 
 IpcConnection::~IpcConnection()
 {
-#ifdef __WINDOWS__
-#else
 	_writeLock.lock();
+#ifdef __WINDOWS__
+	HANDLE s = _sock;
+	_sock = INVALID_HANDLE_VALUE;
+	if (s != INVALID_HANDLE_VALUE) {
+		CloseHandle(s);
+	}
+#else
 	int s = _sock;
 	_sock = 0;
 	if (s > 0) {
 		::shutdown(s,SHUT_RDWR);
 		::close(s);
 	}
-	_writeLock.unlock();
 #endif
+	_writeLock.unlock();
 }
 
 void IpcConnection::printf(const char *format,...)
@@ -112,6 +127,8 @@ void IpcConnection::printf(const char *format,...)
 		return;
 
 #ifdef __WINDOWS__
+	DWORD bsent = 0;
+	WriteFile(_sock,tmp,n,&bsent,NULL);
 #else
 	::write(_sock,tmp,n);
 #endif
@@ -120,21 +137,34 @@ void IpcConnection::printf(const char *format,...)
 void IpcConnection::threadMain()
 	throw()
 {
-#ifdef __WINDOWS__
-#else
 	char tmp[65536];
 	char linebuf[65536];
 	unsigned int lineptr = 0;
+#ifdef __WINDOWS__
+	HANDLE s;
+	DWORD n,i;
+#else
 	int s,n,i;
+#endif
 	char c;
 
 	for(;;) {
+#ifdef __WINDOWS__
+		s = _sock;
+		if (s == INVALID_HANDLE_VALUE)
+			break;
+		if (!ReadFile(s,tmp,sizeof(tmp),&n,NULL))
+			break;
+		if (n < 0)
+			break;
+#else
 		s = _sock;
 		if (s <= 0)
 			break;
 		n = (int)::read(s,tmp,sizeof(tmp));
 		if (n <= 0)
 			break;
+#endif
 		for(i=0;i<n;++i) {
 			c = (linebuf[lineptr] = tmp[i]);
 			if ((c == '\r')||(c == '\n')||(lineptr == (sizeof(linebuf) - 1))) {
@@ -149,15 +179,20 @@ void IpcConnection::threadMain()
 
 	{
 		_writeLock.lock();
-		int s = _sock;
+		s = _sock;
+#ifdef __WINDOWS__
+		_sock = INVALID_HANDLE_VALUE;
+		if (s != INVALID_HANDLE_VALUE)
+			CloseHandle(s);
+#else
 		_sock = 0;
 		if (s > 0)
 			::close(s);
+#endif
 		_writeLock.unlock();
 	}
 
 	_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSED,(const char *)0);
-#endif
 }
 
 } // namespace ZeroTier

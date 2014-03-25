@@ -32,10 +32,7 @@
 
 #include "IpcListener.hpp"
 
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#else
+#ifndef __WINDOWS__
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/stat.h>
@@ -49,10 +46,14 @@ IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnect
 	_endpoint(ep),
 	_handler(commandHandler),
 	_arg(arg),
-	_sock(0)
-{
 #ifdef __WINDOWS__
+	_sock(INVALID_HANDLE_VALUE),
+	_die(false)
 #else
+	_sock(0)
+#endif
+{
+#ifndef __WINDOWS__
 	struct sockaddr_un unaddr;
 	unaddr.sun_family = AF_UNIX;
 	strncpy(unaddr.sun_path,_endpoint.c_str(),sizeof(unaddr.sun_path));
@@ -93,6 +94,14 @@ IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnect
 IpcListener::~IpcListener()
 {
 #ifdef __WINDOWS__
+	_sock_m.lock();
+	_die = true;
+	HANDLE s = _sock;
+	_sock = INVALID_HANDLE_VALUE;
+	if (s != INVALID_HANDLE_VALUE)
+		CloseHandle(s);
+	_sock_m.unlock();
+	Thread::join(_thread);
 #else
 	int s = _sock;
 	_sock = 0;
@@ -109,6 +118,26 @@ void IpcListener::threadMain()
 	throw()
 {
 #ifdef __WINDOWS__
+	HANDLE s;
+	while (!_die) {
+		{
+			Mutex::Lock _l(_sock_m);
+			s = _sock = CreateNamedPipeA(_endpoint.c_str(),PIPE_ACCESS_DUPLEX,PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,PIPE_UNLIMITED_INSTANCES,4096,4096,0,NULL);
+		}
+		if (s != INVALID_HANDLE_VALUE) {
+			if ((ConnectNamedPipe(s,NULL))||(GetLastError() == ERROR_PIPE_CONNECTED)) {
+				Mutex::Lock _l(_sock_m);
+				try {
+					if (s != INVALID_HANDLE_VALUE)
+						_handler(_arg,new IpcConnection(s,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
+				} catch ( ... ) {} // handlers should not throw
+			} else {
+				Mutex::Lock _l(_sock_m);
+				CloseHandle(s);
+				_sock = INVALID_HANDLE_VALUE;
+			}
+		}
+	}
 #else
 	struct sockaddr_un unaddr;
 	socklen_t socklen;

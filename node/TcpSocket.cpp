@@ -106,7 +106,7 @@ bool TcpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 		// If no output was enqueued before this, try to send() it and then
 		// start a queued write if any remains after that.
 
-		int n = (int)::send(_sock,_outbuf,_outptr,0);
+		int n = (int)::send(_sock,(const char *)_outbuf,_outptr,0);
 		if (n > 0)
 			memmove(_outbuf,_outbuf + (unsigned int)n,_outptr -= (unsigned int)n);
 
@@ -125,7 +125,7 @@ bool TcpSocket::notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManag
 
 	// will not be called concurrently since only SocketManager::poll() calls this
 
-	int n = (int)::recv(_sock,buf,sizeof(buf),0);
+	int n = (int)::recv(_sock,(char *)buf,sizeof(buf),0);
 	if (n <= 0)
 		return false; // read error, stream probably closed
 
@@ -163,7 +163,7 @@ bool TcpSocket::notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketMana
 		_connecting = false;
 
 	if (_outptr) {
-		int n = (int)::send(_sock,_outbuf,_outptr,0);
+		int n = (int)::send(_sock,(const char *)_outbuf,_outptr,0);
 		if (n < 0) {
 			switch(errno) {
 #ifdef EBADF
