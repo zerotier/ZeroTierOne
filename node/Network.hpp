@@ -280,7 +280,7 @@ public:
 	/**
 	 * Update multicast balance for an address and multicast group, return whether packet is allowed
 	 *
-	 * @param a Address that wants to send/relay packet
+	 * @param a Originating address of multicast packet
 	 * @param mg Multicast group
 	 * @param bytes Size of packet
 	 * @return True if packet is within budget

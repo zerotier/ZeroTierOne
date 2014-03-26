@@ -108,6 +108,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 		}
 
+		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
+			TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
+			return;
+		}
+
 		const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
 		const uint16_t bloomNonce = (uint16_t)(_r->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
 		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
