@@ -485,7 +485,7 @@ void SocketManager::poll(unsigned long timeout)
 					FD_SET(sockfd,&_readfds);
 					_fdSetLock.unlock();
 					if ((int)sockfd > (int)_nfds)
-						_nfds = sockfd;
+						_nfds = (int)sockfd;
 				} catch ( ... ) {
 					CLOSE_SOCKET(sockfd);
 				}
@@ -518,7 +518,7 @@ void SocketManager::poll(unsigned long timeout)
 					FD_SET(sockfd,&_readfds);
 					_fdSetLock.unlock();
 					if ((int)sockfd > (int)_nfds)
-						_nfds = sockfd;
+						_nfds = (int)sockfd;
 				} catch ( ... ) {
 					CLOSE_SOCKET(sockfd);
 				}
@@ -662,7 +662,7 @@ void SocketManager::_updateNfds()
 		if (s->second->_sock > nfds)
 			nfds = s->second->_sock;
 	}
-	_nfds = nfds;
+	_nfds = (int)nfds;
 }
 
 } // namespace ZeroTier

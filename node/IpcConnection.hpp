@@ -88,11 +88,16 @@ private:
 	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
 #ifdef __WINDOWS__
-	volatile HANDLE _sock;
+	HANDLE _sock;
+	std::string _writeBuf;
+	bool _incoming;
 #else
 	volatile int _sock;
 #endif
 	Mutex _writeLock;
+	Thread _thread;
+	volatile bool _run;
+	volatile bool _running;
 };
 
 } // namespace ZeroTier

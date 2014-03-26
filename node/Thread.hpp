@@ -80,6 +80,13 @@ public:
 		Sleep((DWORD)ms);
 	}
 
+	// Not available on *nix platforms
+	static inline void cancelIO(const Thread &t)
+	{
+		if (t._th != NULL)
+			CancelSynchronousIo(t._th);
+	}
+
 private:
 	HANDLE _th;
 	DWORD _tid;

@@ -83,9 +83,8 @@ private:
 	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
 #ifdef __WINDOWS__
-	volatile HANDLE _sock;
-	volatile bool _die;
-	Mutex _sock_m;
+	volatile bool _run;
+	volatile bool _running;
 #else
 	volatile int _sock;
 #endif

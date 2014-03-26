@@ -47,10 +47,13 @@ IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,
 	_handler(commandHandler),
 	_arg(arg),
 #ifdef __WINDOWS__
-	_sock(INVALID_HANDLE_VALUE)
+	_sock(INVALID_HANDLE_VALUE),
+	_incoming(false),
 #else
-	_sock(0)
+	_sock(-1),
 #endif
+	_run(true),
+	_running(true)
 {
 #ifdef __WINDOWS__
 	_sock = CreateFileA(endpoint,GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,0,NULL);
@@ -74,7 +77,7 @@ IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,
 	}
 #endif
 
-	Thread::start(this);
+	_thread = Thread::start(this);
 }
 
 #ifdef __WINDOWS__
@@ -84,19 +87,26 @@ IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *
 #endif
 	_handler(commandHandler),
 	_arg(arg),
-	_sock(s)
+	_sock(s),
+#ifdef __WINDOWS__
+	_incoming(true),
+#endif
+	_run(true),
+	_running(true)
 {
-	Thread::start(this);
+	_thread = Thread::start(this);
 }
 
 IpcConnection::~IpcConnection()
 {
 	_writeLock.lock();
+	_run = false;
+	_writeLock.unlock();
+
 #ifdef __WINDOWS__
-	HANDLE s = _sock;
-	_sock = INVALID_HANDLE_VALUE;
-	if (s != INVALID_HANDLE_VALUE) {
-		CloseHandle(s);
+	while (_running) {
+		Thread::cancelIO(_thread);
+		Sleep(100);
 	}
 #else
 	int s = _sock;
@@ -106,7 +116,6 @@ IpcConnection::~IpcConnection()
 		::close(s);
 	}
 #endif
-	_writeLock.unlock();
 }
 
 void IpcConnection::printf(const char *format,...)
@@ -115,22 +124,20 @@ void IpcConnection::printf(const char *format,...)
 	int n;
 	char tmp[65536];
 
-	Mutex::Lock _l(_writeLock);
-
-	if (_sock <= 0)
-		return;
-
 	va_start(ap,format);
 	n = (int)::vsnprintf(tmp,sizeof(tmp),format,ap);
 	va_end(ap);
 	if (n <= 0)
 		return;
 
+	Mutex::Lock _l(_writeLock);
+
 #ifdef __WINDOWS__
-	DWORD bsent = 0;
-	WriteFile(_sock,tmp,n,&bsent,NULL);
+	_writeBuf.append(tmp,n);
+	Thread::cancelIO(_thread);
 #else
-	::write(_sock,tmp,n);
+	if (_sock > 0)
+		::write(_sock,tmp,n);
 #endif
 }
 
@@ -140,29 +147,51 @@ void IpcConnection::threadMain()
 	char tmp[65536];
 	char linebuf[65536];
 	unsigned int lineptr = 0;
+	char c;
+
 #ifdef __WINDOWS__
-	HANDLE s;
 	DWORD n,i;
+	std::string wbuf;
 #else
 	int s,n,i;
 #endif
-	char c;
 
-	for(;;) {
+	while (_run) {
 #ifdef __WINDOWS__
-		s = _sock;
-		if (s == INVALID_HANDLE_VALUE)
+		{
+			Mutex::Lock _l(_writeLock);
+			if (!_run)
+				break;
+			if (_writeBuf.length() > 0) {
+				wbuf.append(_writeBuf);
+				_writeBuf.clear();
+			}
+		}
+		if (wbuf.length() > 0) {
+			n = 0;
+			if ((WriteFile(_sock,wbuf.data(),(DWORD)(wbuf.length()),&n,NULL))&&(n > 0)) {
+				if (n < (DWORD)wbuf.length())
+					wbuf.erase(0,n);
+				else wbuf.clear();
+			} else if (GetLastError() != ERROR_OPERATION_ABORTED)
+				break;
+			FlushFileBuffers(_sock);
+		}
+		if (!_run)
 			break;
-		if (!ReadFile(s,tmp,sizeof(tmp),&n,NULL))
-			break;
-		if (n < 0)
+		n = 0;
+		if ((!ReadFile(_sock,tmp,sizeof(tmp),&n,NULL))||(n <= 0)) {
+			if (GetLastError() == ERROR_OPERATION_ABORTED)
+				n = 0;
+			else break;
+		}
+		if (!_run)
 			break;
 #else
-		s = _sock;
-		if (s <= 0)
+		if ((s = _sock) <= 0)
 			break;
 		n = (int)::read(s,tmp,sizeof(tmp));
-		if (n <= 0)
+		if ((n <= 0)||(_sock <= 0))
 			break;
 #endif
 		for(i=0;i<n;++i) {
@@ -177,22 +206,19 @@ void IpcConnection::threadMain()
 		}
 	}
 
-	{
-		_writeLock.lock();
-		s = _sock;
-#ifdef __WINDOWS__
-		_sock = INVALID_HANDLE_VALUE;
-		if (s != INVALID_HANDLE_VALUE)
-			CloseHandle(s);
-#else
-		_sock = 0;
-		if (s > 0)
-			::close(s);
-#endif
-		_writeLock.unlock();
-	}
+	_writeLock.lock();
+	bool r = _run;
+	_writeLock.unlock();
 
-	_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSED,(const char *)0);
+#ifdef __WINDOWS__
+	if (_incoming)
+		DisconnectNamedPipe(_sock);
+	CloseHandle(_sock);
+	_running = false;
+#endif
+
+	if (r)
+		_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSED,(const char *)0);
 }
 
 } // namespace ZeroTier

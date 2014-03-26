@@ -47,8 +47,8 @@ IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnect
 	_handler(commandHandler),
 	_arg(arg),
 #ifdef __WINDOWS__
-	_sock(INVALID_HANDLE_VALUE),
-	_die(false)
+	_run(true),
+	_running(true)
 #else
 	_sock(0)
 #endif
@@ -94,14 +94,14 @@ IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnect
 IpcListener::~IpcListener()
 {
 #ifdef __WINDOWS__
-	_sock_m.lock();
-	_die = true;
-	HANDLE s = _sock;
-	_sock = INVALID_HANDLE_VALUE;
-	if (s != INVALID_HANDLE_VALUE)
-		CloseHandle(s);
-	_sock_m.unlock();
-	Thread::join(_thread);
+	_run = false;
+	while (_running) {
+		Thread::cancelIO(_thread);
+		HANDLE tmp = CreateFileA(_endpoint.c_str(),GENERIC_READ|GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,0,NULL);
+		if (tmp != INVALID_HANDLE_VALUE)
+			CloseHandle(tmp);
+		Sleep(250);
+	}
 #else
 	int s = _sock;
 	_sock = 0;
@@ -110,7 +110,7 @@ IpcListener::~IpcListener()
 		::close(s);
 	}
 	Thread::join(_thread);
-	unlink(_endpoint.c_str());
+	::unlink(_endpoint.c_str());
 #endif
 }
 
@@ -119,25 +119,24 @@ void IpcListener::threadMain()
 {
 #ifdef __WINDOWS__
 	HANDLE s;
-	while (!_die) {
-		{
-			Mutex::Lock _l(_sock_m);
-			s = _sock = CreateNamedPipeA(_endpoint.c_str(),PIPE_ACCESS_DUPLEX,PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,PIPE_UNLIMITED_INSTANCES,4096,4096,0,NULL);
-		}
+	while (_run) {
+		s = CreateNamedPipeA(_endpoint.c_str(),PIPE_ACCESS_DUPLEX,PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,PIPE_UNLIMITED_INSTANCES,1024,1024,0,NULL);
 		if (s != INVALID_HANDLE_VALUE) {
 			if ((ConnectNamedPipe(s,NULL))||(GetLastError() == ERROR_PIPE_CONNECTED)) {
-				Mutex::Lock _l(_sock_m);
+				if (!_run) {
+					DisconnectNamedPipe(s);
+					CloseHandle(s);
+					break;
+				}
 				try {
-					if (s != INVALID_HANDLE_VALUE)
-						_handler(_arg,new IpcConnection(s,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
+					_handler(_arg,new IpcConnection(s,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
 				} catch ( ... ) {} // handlers should not throw
 			} else {
-				Mutex::Lock _l(_sock_m);
 				CloseHandle(s);
-				_sock = INVALID_HANDLE_VALUE;
 			}
 		}
 	}
+	_running = false;
 #else
 	struct sockaddr_un unaddr;
 	socklen_t socklen;

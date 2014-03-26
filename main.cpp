@@ -98,7 +98,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif
 	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
-	fprintf(out,"  -i                - Run idtool command (zerotier-idtool)"ZT_EOL_S);
+	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
 #ifdef __WINDOWS__
 	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
@@ -139,7 +139,7 @@ static int main(int argc,char **argv)
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
-				case 'i': // ignore -i since it's used to invoke this
+				case 'q': // ignore -q since it's used to invoke this
 					break;
 				case 'h':
 				default:
@@ -151,6 +151,10 @@ static int main(int argc,char **argv)
 				query.push_back(' ');
 			query.append(argv[i]);
 		}
+	}
+	if (!query.length()) {
+		printHelp(stdout,argv[0]);
+		return 1;
 	}
 
 	try {
