@@ -117,7 +117,7 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 	std::vector<Path>::iterator bestPath = p;
 	while (++p != _paths.end()) {
 		uint64_t lr = p->lastReceived();
-		if (lr >= bestPathLastReceived) {
+		if (lr > bestPathLastReceived) {
 			bestPathLastReceived = lr;
 			bestPath = p;
 		}
