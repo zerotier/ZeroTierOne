@@ -150,18 +150,24 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceRes
 {
 	bool sent = false;
 	SharedPtr<Peer> self(this);
+
 	Mutex::Lock _l(_lock);
+
+	// NOTE: this will never ping a peer that has *only* TCP paths. Right
+	// now there's never such a thing as TCP is only for failover.
 
 	bool pingTcp;
 	if (!firstSinceReset) {
 		// Do not use TCP if one of our UDP endpoints has answered recently.
-		pingTcp = true;
+		uint64_t lastPing = 0;
+		uint64_t lastDirectReceive = 0;
+
 		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (!p->pingUnanswered(now)) {
-				pingTcp = false;
-				break;
-			}
+			lastPing = std::max(lastPing,p->lastPing());
+			lastDirectReceive = std::max(lastDirectReceive,p->lastReceived());
 		}
+
+		pingTcp = ( (lastDirectReceive < lastPing) && ((lastPing - lastDirectReceive) >= ZT_PING_UNANSWERED_AFTER) );
 	} else pingTcp = false;
 
 	TRACE("PING %s (pingTcp==%d)",_id.address().toString().c_str(),(int)pingTcp);
