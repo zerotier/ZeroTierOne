@@ -63,7 +63,7 @@ public:
 	 * 
 	 * @param sn Supernodes for this network
 	 */
-	void setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn);
+	void setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn);
 
 	/**
 	 * Add a peer to database
@@ -102,15 +102,6 @@ public:
 	 * @param id Identity to save
 	 */
 	void saveIdentity(const Identity &id);
-
-	/**
-	 * @return Current network supernodes
-	 */
-	inline std::map< Identity,std::vector<InetAddress> > supernodes() const
-	{
-		Mutex::Lock _l(_supernodes_m);
-		return _supernodes;
-	}
 
 	/**
 	 * @return Vector of peers that are supernodes
@@ -313,7 +304,7 @@ private:
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;
 
-	std::map< Identity,std::vector<InetAddress> > _supernodes;
+	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _supernodes;
 	std::set< Address > _supernodeAddresses;
 	std::vector< SharedPtr<Peer> > _supernodePeers;
 	Mutex _supernodes_m;

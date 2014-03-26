@@ -91,6 +91,7 @@ void Peer::receive(
 		}
 
 		// Announce multicast LIKEs to peers to whom we have a direct link
+		// Lock can't be locked here or it'll recurse and deadlock.
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
 			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
@@ -107,18 +108,22 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 {
 	Mutex::Lock _l(_lock);
 
-	if (_paths.empty())
+	std::vector<Path>::iterator p(_paths.begin());
+	if (p == _paths.end()) {
+		TRACE("send to %s failed: no paths available",_id.address().toString().c_str());
 		return false;
-
-	uint64_t bestPathLastReceived = 0;
-	std::vector<Path>::iterator bestPath;
-	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+	}
+	uint64_t bestPathLastReceived = p->lastReceived();
+	std::vector<Path>::iterator bestPath = p;
+	while (++p != _paths.end()) {
 		uint64_t lr = p->lastReceived();
 		if (lr >= bestPathLastReceived) {
 			bestPathLastReceived = lr;
 			bestPath = p;
 		}
 	}
+
+	TRACE("send to %s: using path: %s",_id.address().toString().c_str(),bestPath->toString().c_str());
 
 	if (_r->sm->send(bestPath->address(),bestPath->tcp(),data,len)) {
 		bestPath->sent(now);
@@ -147,19 +152,22 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceRes
 	SharedPtr<Peer> self(this);
 	Mutex::Lock _l(_lock);
 
-	bool allPingsUnanswered;
+	bool pingTcp;
 	if (!firstSinceReset) {
-		allPingsUnanswered = true;
+		// Do not use TCP if one of our UDP endpoints has answered recently.
+		pingTcp = true;
 		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 			if (!p->pingUnanswered(now)) {
-				allPingsUnanswered = false;
+				pingTcp = false;
 				break;
 			}
 		}
-	} else allPingsUnanswered = false;
+	} else pingTcp = false;
+
+	TRACE("PING %s (pingTcp==%d)",_id.address().toString().c_str(),(int)pingTcp);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if ((allPingsUnanswered)||(!p->tcp())) {
+		if ((pingTcp)||(!p->tcp())) {
 			if (_r->sw->sendHELLO(self,p->address(),p->tcp())) {
 				p->sent(now);
 				p->pinged(now);
