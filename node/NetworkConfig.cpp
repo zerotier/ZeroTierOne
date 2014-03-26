@@ -33,7 +33,7 @@ namespace ZeroTier {
 // This is fast enough for things like Apple's mDNS spam, so it should serve
 // as a good default for your average network. It's 64 bytes per second, with
 // a starting and max balance of 64k.
-const NetworkConfig::MulticastRate NetworkConfig::DEFAULT_MULTICAST_RATE(65535,65535,64);
+const NetworkConfig::MulticastRate NetworkConfig::DEFAULT_MULTICAST_RATE(32768,32768,64);
 
 std::set<unsigned int> NetworkConfig::allowedEtherTypes() const
 {
