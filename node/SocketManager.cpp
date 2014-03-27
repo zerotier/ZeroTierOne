@@ -395,16 +395,16 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 		if (!ts->send(to,msg,msglen))
 			return false;
 
+		{
+			Mutex::Lock _l(_tcpSockets_m);
+			_tcpSockets[to] = ts;
+		}
+
 		_fdSetLock.lock();
 		FD_SET(s,&_readfds);
 		if (connecting)
 			FD_SET(s,&_writefds);
 		_fdSetLock.unlock();
-
-		{
-			Mutex::Lock _l(_tcpSockets_m);
-			_tcpSockets[to] = ts;
-		}
 
 		return true;
 	} else if (to.isV4()) {

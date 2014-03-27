@@ -69,6 +69,8 @@ void Peer::receive(
 	Packet::Verb inReVerb,
 	uint64_t now)
 {
+	*((const_cast<uint64_t *>(&(_r->timeOfLastPacketReceived)))) = now;
+
 	if (!hops) { // direct packet
 		{
 			Mutex::Lock _l(_lock);

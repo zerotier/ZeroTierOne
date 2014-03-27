@@ -577,8 +577,9 @@ Node::ReasonForTermination Node::run()
 			}
 
 			// Ping supernodes separately for two reasons: (1) supernodes only ping each
-			// other, and (2) we still want to ping them first on resynchronize.
-			if ((resynchronize)||((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY)) {
+			// other, and (2) we still want to ping them first on resynchronize. Also ping
+			// more aggressively if nothing seems to be happening at all.
+			if ((resynchronize)||((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY)||((now - _r->timeOfLastPacketReceived) >= ZT_PING_UNANSWERED_AFTER)) {
 				lastSupernodePing = now;
 				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 				TRACE("pinging %d supernodes",(int)sns.size());

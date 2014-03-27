@@ -65,6 +65,7 @@ public:
 	RuntimeEnvironment() :
 		shutdownInProgress(false),
 		timeOfLastNetworkEnvironmentChange(0),
+		timeOfLastPacketReceived(0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		mc((Multicaster *)0),
@@ -91,6 +92,10 @@ public:
 
 	// Time network environment (e.g. fingerprint) last changed -- used to determine online-ness
 	volatile uint64_t timeOfLastNetworkEnvironmentChange;
+
+	// Time last packet was received -- from anywhere. This is updated in Peer::receive()
+	// via an ugly const_cast<>.
+	volatile uint64_t timeOfLastPacketReceived;
 
 	/*
 	 * Order matters a bit here. These are constructed in this order

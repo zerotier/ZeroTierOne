@@ -164,32 +164,22 @@ bool TcpSocket::notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketMana
 
 	if (_outptr) {
 		int n = (int)::send(_sock,(const char *)_outbuf,_outptr,0);
-		if (n < 0) {
+		if (n <= 0) {
 			switch(errno) {
-#ifdef EBADF
-				case EBADF:
+#ifdef EAGAIN
+				case EAGAIN:
 #endif
-#ifdef EINVAL
-				case EINVAL:
+#if defined(EWOULDBLOCK) && ( !defined(EAGAIN) || (EWOULDBLOCK != EAGAIN) )
+				case EWOULDBLOCK:
 #endif
-#ifdef ENOTSOCK
-				case ENOTSOCK:
+#ifdef EINTR
+				case EINTR:
 #endif
-#ifdef ECONNRESET
-				case ECONNRESET:
-#endif
-#ifdef EPIPE
-				case EPIPE:
-#endif
-#ifdef ENETDOWN
-				case ENETDOWN:
-#endif
-					return false;
-				default:
 					break;
+				default:
+					return false;
 			}
-		} else if (n > 0)
-			memmove(_outbuf,_outbuf + (unsigned int)n,_outptr -= (unsigned int)n);
+		} else memmove(_outbuf,_outbuf + (unsigned int)n,_outptr -= (unsigned int)n);
 	}
 
 	if (!_outptr)
