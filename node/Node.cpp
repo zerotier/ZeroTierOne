@@ -537,10 +537,10 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t lastMulticastCheck = 0;
+		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
-		_r->timeOfLastNetworkEnvironmentChange = Utils::now();
-		long lastDelayDelta = 0;
+		_r->timeOfLastResynchronize = Utils::now();
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
 			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
@@ -551,11 +551,13 @@ Node::ReasonForTermination Node::run()
 			}
 
 			uint64_t now = Utils::now();
+
+			// Did the user send SIGHUP or otherwise order network resync? (mostly for debugging)
 			bool resynchronize = impl->resynchronize;
+			impl->resynchronize = false;
 			if (resynchronize) {
 				LOG("manual resynchronize ordered, resyncing with network");
 			}
-			impl->resynchronize = false;
 
 			// If it looks like the computer slept and woke, resynchronize.
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {
@@ -571,15 +573,17 @@ Node::ReasonForTermination Node::run()
 				if (fp != networkConfigurationFingerprint) {
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
-					_r->timeOfLastNetworkEnvironmentChange = now;
 					resynchronize = true;
 				}
 			}
 
-			// Ping supernodes separately for two reasons: (1) supernodes only ping each
-			// other, and (2) we still want to ping them first on resynchronize. Also ping
-			// more aggressively if nothing seems to be happening at all.
-			if ((resynchronize)||((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY)||((now - _r->timeOfLastPacketReceived) >= ZT_PING_UNANSWERED_AFTER)) {
+			if (resynchronize)
+				_r->timeOfLastResynchronize = now;
+
+			/* Ping supernodes separately, and do so more aggressively if we haven't
+			 * heard anything from anyone since our last resynchronize / startup. */
+			if ( ((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY) ||
+			     ((_r->timeOfLastResynchronize > _r->timeOfLastPacketReceived) && ((now - lastSupernodePing) >= ZT_PING_UNANSWERED_AFTER)) ) {
 				lastSupernodePing = now;
 				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 				TRACE("pinging %d supernodes",(int)sns.size());
@@ -595,8 +599,8 @@ Node::ReasonForTermination Node::run()
 				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
 				_r->sm->closeTcpSockets();
 			} else {
-				// Periodically check for changes in our local multicast subscriptions
-				// and broadcast those changes to directly connected peers.
+				/* Periodically check for changes in our local multicast subscriptions
+				 * and broadcast those changes to directly connected peers. */
 				if ((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD) {
 					lastMulticastCheck = now;
 					try {
@@ -615,8 +619,8 @@ Node::ReasonForTermination Node::run()
 					}
 				}
 
-				// Periodically ping all our non-stale direct peers unless we're a supernode.
-				// Supernodes only ping each other (which is done above).
+				/* Periodically ping all our non-stale direct peers unless we're a supernode.
+				 * Supernodes only ping each other (which is done above). */
 				if (!_r->topology->amSupernode()) {
 					if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
 						lastPingCheck = now;
@@ -632,7 +636,7 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			// Periodically or on resynchronize update network configurations.
+			// Update network configurations when needed.
 			if ((resynchronize)||((now - lastNetworkAutoconfCheck) >= ZT_NETWORK_AUTOCONF_CHECK_DELAY)) {
 				lastNetworkAutoconfCheck = now;
 				std::vector< SharedPtr<Network> > nets(_r->nc->networks());
@@ -642,8 +646,7 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
-			// Do periodic cleanup, flushes of stuff to disk, software update
-			// checks, etc.
+			// Do periodic tasks in submodules.
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
 				_r->mc->clean();

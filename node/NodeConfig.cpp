@@ -210,7 +210,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 			// network environment changed and also less than ZT_PEER_LINK_ACTIVITY_TIMEOUT ago.
 			bool isOnline = false;
 			uint64_t now = Utils::now();
-			uint64_t since = _r->timeOfLastNetworkEnvironmentChange;
+			uint64_t since = _r->timeOfLastResynchronize;
 			std::vector< SharedPtr<Peer> > snp(_r->topology->supernodePeers());
 			for(std::vector< SharedPtr<Peer> >::const_iterator sn(snp.begin());sn!=snp.end();++sn) {
 				uint64_t lastRec = (*sn)->lastDirectReceive();
