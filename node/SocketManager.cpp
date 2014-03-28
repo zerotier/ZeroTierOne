@@ -466,9 +466,9 @@ void SocketManager::poll(unsigned long timeout)
 	if (FD_ISSET(_whackReceivePipe,&rfds)) {
 		char tmp[16];
 #ifdef __WINDOWS__
-		::recv(_whackReceivePipe,&tmp,16,0);
+		::recv(_whackReceivePipe,tmp,16,0);
 #else
-		::read(_whackReceivePipe,&tmp,16);
+		::read(_whackReceivePipe,tmp,16);
 #endif
 	}
 
