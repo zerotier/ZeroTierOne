@@ -153,11 +153,11 @@ public:
 	 * The node is not executed until run() is called.
 	 *
 	 * @param hp Home directory path or NULL for system-wide default for this platform (default: NULL)
-	 * @param udpPort UDP port or 0 for default (9993) (default: 0)
-	 * @param tcpPort TCP port or 0 for default (9993) (default: 0)
+	 * @param udpPort UDP port or 0 to disable (default: 9993)
+	 * @param tcpPort TCP port or 0 to disable (default: 0)
 	 * @param resetIdentity If true, delete identity before starting and regenerate (default: false)
 	 */
-	Node(const char *hp = (const char *)0,unsigned int udpPort = 0,unsigned int tcpPort = 0,bool resetIdentity = false)
+	Node(const char *hp = (const char *)0,unsigned int udpPort = 9993,unsigned int tcpPort = 0,bool resetIdentity = false)
 		throw();
 
 	~Node();

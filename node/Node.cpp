@@ -377,8 +377,8 @@ Node::Node(const char *hp,unsigned int udpPort,unsigned int tcpPort,bool resetId
 		}
 	}
 
-	impl->udpPort = ((udpPort > 0)&&(udpPort <= 0xffff)) ? udpPort : (unsigned int)ZT_DEFAULT_PORT;
-	impl->tcpPort = ((tcpPort > 0)&&(tcpPort <= 0xffff)) ? tcpPort : (unsigned int)ZT_DEFAULT_PORT;
+	impl->udpPort = udpPort & 0xffff;
+	impl->tcpPort = tcpPort & 0xffff;
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;

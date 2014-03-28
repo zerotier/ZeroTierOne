@@ -114,9 +114,9 @@ error_no_byte_order_defined;
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
- * Default local port for ZeroTier traffic
+ * Default local port for ZeroTier UDP traffic
  */
-#define ZT_DEFAULT_PORT 9993
+#define ZT_DEFAULT_UDP_PORT 9993
 
 /**
  * Default payload MTU for UDP packets

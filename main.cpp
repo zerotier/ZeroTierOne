@@ -93,7 +93,8 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Bind to this port for network I/O"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
+	fprintf(out,"  -t<port>          - Port for TCP (default: disabled)"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif
@@ -473,7 +474,8 @@ int main(int argc,char **argv)
 		return ZeroTierIdTool::main(argc,argv);
 
 	const char *homeDir = (const char *)0;
-	unsigned int port = 0;
+	unsigned int udpPort = ZT_DEFAULT_UDP_PORT;
+	unsigned int tcpPort = 0;
 #ifdef __UNIX_LIKE__
 	bool runAsDaemon = false;
 #endif
@@ -484,8 +486,15 @@ int main(int argc,char **argv)
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {
 				case 'p':
-					port = Utils::strToUInt(argv[i] + 2);
-					if (port > 65535) {
+					udpPort = Utils::strToUInt(argv[i] + 2);
+					if (udpPort > 65535) {
+						printHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+				case 't':
+					tcpPort = Utils::strToUInt(argv[i] + 2);
+					if (tcpPort > 65535) {
 						printHelp(argv[0],stdout);
 						return 1;
 					}
@@ -626,7 +635,7 @@ int main(int argc,char **argv)
 	int exitCode = 0;
 	bool needsReset = false;
 	try {
-		node = new Node(homeDir,port,port,needsReset);
+		node = new Node(homeDir,udpPort,tcpPort,needsReset);
 		switch(node->run()) {
 #ifdef __WINDOWS__
 			case Node::NODE_RESTART_FOR_UPGRADE: {
