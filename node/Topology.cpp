@@ -50,7 +50,7 @@ Topology::~Topology()
 	_dumpPeers();
 }
 
-void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
+void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn)
 {
 	Mutex::Lock _l(_supernodes_m);
 
@@ -59,14 +59,13 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 	_supernodePeers.clear();
 	uint64_t now = Utils::now();
 
-	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
+	for(std::map< Identity,std::vector< std::pair<InetAddress,bool> > >::const_iterator i(sn.begin());i!=sn.end();++i) {
 		if (i->first != _r->identity) {
 			SharedPtr<Peer> p(getPeer(i->first.address()));
 			if (!p)
 				p = addPeer(SharedPtr<Peer>(new Peer(_r->identity,i->first)));
-			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j) {
-				p->addPath(Path(*j,false,true));
-			}
+			for(std::vector< std::pair<InetAddress,bool> >::const_iterator j(i->second.begin());j!=i->second.end();++j)
+				p->addPath(Path(j->first,j->second,true));
 			p->use(now);
 			_supernodePeers.push_back(p);
 		}

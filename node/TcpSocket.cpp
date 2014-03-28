@@ -73,7 +73,7 @@ bool TcpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 
 	Mutex::Lock _l(_writeLock);
 
-	bool outputWasEnqueued = (_outptr != 0);
+	bool writeInProgress = ((_outptr != 0)||(_connecting));
 
 	// Ensure that _outbuf is large enough
 	unsigned int newptr = _outptr + 5 + msglen;
@@ -102,7 +102,7 @@ bool TcpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 	for(unsigned int i=0;i<msglen;++i)
 		_outbuf[_outptr++] = ((const unsigned char *)msg)[i];
 
-	if (!outputWasEnqueued) {
+	if (!writeInProgress) {
 		// If no output was enqueued before this, try to send() it and then
 		// start a queued write if any remains after that.
 
@@ -164,32 +164,22 @@ bool TcpSocket::notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketMana
 
 	if (_outptr) {
 		int n = (int)::send(_sock,(const char *)_outbuf,_outptr,0);
-		if (n < 0) {
+		if (n <= 0) {
 			switch(errno) {
-#ifdef EBADF
-				case EBADF:
+#ifdef EAGAIN
+				case EAGAIN:
 #endif
-#ifdef EINVAL
-				case EINVAL:
+#if defined(EWOULDBLOCK) && ( !defined(EAGAIN) || (EWOULDBLOCK != EAGAIN) )
+				case EWOULDBLOCK:
 #endif
-#ifdef ENOTSOCK
-				case ENOTSOCK:
+#ifdef EINTR
+				case EINTR:
 #endif
-#ifdef ECONNRESET
-				case ECONNRESET:
-#endif
-#ifdef EPIPE
-				case EPIPE:
-#endif
-#ifdef ENETDOWN
-				case ENETDOWN:
-#endif
-					return false;
-				default:
 					break;
+				default:
+					return false;
 			}
-		} else if (n > 0)
-			memmove(_outbuf,_outbuf + (unsigned int)n,_outptr -= (unsigned int)n);
+		} else memmove(_outbuf,_outbuf + (unsigned int)n,_outptr -= (unsigned int)n);
 	}
 
 	if (!_outptr)

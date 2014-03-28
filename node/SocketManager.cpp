@@ -42,7 +42,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #endif
+
+// Uncomment to turn off TCP Nagle
+//#define ZT_TCP_NODELAY
 
 // Allow us to use the same value on Windows and *nix
 #ifndef INVALID_SOCKET
@@ -58,8 +63,8 @@
 namespace ZeroTier {
 
 #ifdef __WINDOWS__
-// hack from StackOverflow, behaves a bit like pipe() on *nix systems
-static inline void __winpipe(SOCKET fds[2])
+// hack copied from StackOverflow, behaves a bit like pipe() on *nix systems
+static inline void winPipeHack(SOCKET fds[2])
 {
 	struct sockaddr_in inaddr;
 	struct sockaddr addr;
@@ -98,10 +103,11 @@ SocketManager::SocketManager(
 	FD_ZERO(&_readfds);
 	FD_ZERO(&_writefds);
 
+	// Create a pipe or socket pair that can be used to interrupt select()
 #ifdef __WINDOWS__
 	{
 		SOCKET tmps[2] = { INVALID_SOCKET,INVALID_SOCKET };
-		__winpipe(tmps);
+		winPipeHack(tmps);
 		_whackSendPipe = tmps[0];
 		_whackReceivePipe = tmps[1];
 		u_long iMode=1;
@@ -129,15 +135,12 @@ SocketManager::SocketManager(
 			_tcpV6ListenSocket = ::socket(AF_INET6,SOCK_STREAM,0);
 #ifdef __WINDOWS__
 			if (_tcpV6ListenSocket == INVALID_SOCKET) {
-				_closeSockets();
-				throw std::runtime_error("unable to create IPv6 SOCK_STREAM socket");
-			}
 #else
 			if (_tcpV6ListenSocket <= 0) {
+#endif
 				_closeSockets();
 				throw std::runtime_error("unable to create IPv6 SOCK_STREAM socket");
 			}
-#endif
 
 #ifdef __WINDOWS__
 			{
@@ -178,15 +181,12 @@ SocketManager::SocketManager(
 			_tcpV4ListenSocket = ::socket(AF_INET,SOCK_STREAM,0);
 #ifdef __WINDOWS__
 			if (_tcpV4ListenSocket == INVALID_SOCKET) {
-				_closeSockets();
-				throw std::runtime_error("unable to create IPv4 SOCK_STREAM socket");
-			}
 #else
 			if (_tcpV4ListenSocket <= 0) {
+#endif
 				_closeSockets();
 				throw std::runtime_error("unable to create IPv4 SOCK_STREAM socket");
 			}
-#endif
 
 #ifdef __WINDOWS__
 			{
@@ -368,10 +368,10 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 			::closesocket(s);
 			return false;
 		}
-		{
-			u_long iMode=1;
-			ioctlsocket(s,FIONBIO,&iMode);
-		}
+		{ u_long iMode=1; ioctlsocket(s,FIONBIO,&iMode); }
+#ifdef ZT_TCP_NODELAY
+		{ BOOL f = TRUE; setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
+#endif
 #else
 		int s = ::socket(to.isV4() ? AF_INET : AF_INET6,SOCK_STREAM,0);
 		if (s <= 0)
@@ -381,6 +381,9 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 			return false;
 		}
 		fcntl(s,F_SETFL,O_NONBLOCK);
+#ifdef ZT_TCP_NODELAY
+		{ int f = 1; setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
+#endif
 #endif
 
 		bool connecting = false;
@@ -392,8 +395,18 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 		}
 
 		ts = SharedPtr<Socket>(new TcpSocket(this,s,connecting,to));
-		if (!ts->send(to,msg,msglen))
+		if (!ts->send(to,msg,msglen)) {
+			_fdSetLock.lock();
+			FD_CLR(s,&_readfds);
+			FD_CLR(s,&_writefds);
+			_fdSetLock.unlock();
 			return false;
+		}
+
+		{
+			Mutex::Lock _l(_tcpSockets_m);
+			_tcpSockets[to] = ts;
+		}
 
 		_fdSetLock.lock();
 		FD_SET(s,&_readfds);
@@ -401,10 +414,8 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 			FD_SET(s,&_writefds);
 		_fdSetLock.unlock();
 
-		{
-			Mutex::Lock _l(_tcpSockets_m);
-			_tcpSockets[to] = ts;
-		}
+		_updateNfds();
+		whack();
 
 		return true;
 	} else if (to.isV4()) {
@@ -453,11 +464,11 @@ void SocketManager::poll(unsigned long timeout)
 	select(_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
 
 	if (FD_ISSET(_whackReceivePipe,&rfds)) {
-		char tmp;
+		char tmp[16];
 #ifdef __WINDOWS__
-		::recv(_whackReceivePipe,&tmp,1,0);
+		::recv(_whackReceivePipe,&tmp,16,0);
 #else
-		::read(_whackReceivePipe,&tmp,1);
+		::read(_whackReceivePipe,&tmp,16);
 #endif
 	}
 
@@ -476,10 +487,15 @@ void SocketManager::poll(unsigned long timeout)
 				try {
 					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
 #ifdef __WINDOWS__
-					u_long iMode=1;
-					ioctlsocket(sockfd,FIONBIO,&iMode);
+					{ u_long iMode=1; ioctlsocket(sockfd,FIONBIO,&iMode); }
+#ifdef ZT_TCP_NODELAY
+					{ BOOL f = TRUE; setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
+#endif
 #else
 					fcntl(sockfd,F_SETFL,O_NONBLOCK);
+#ifdef ZT_TCP_NODELAY
+					{ int f = 1; setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
+#endif
 #endif
 					_fdSetLock.lock();
 					FD_SET(sockfd,&_readfds);
@@ -509,10 +525,15 @@ void SocketManager::poll(unsigned long timeout)
 				try {
 					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
 #ifdef __WINDOWS__
-					u_long iMode=1;
-					ioctlsocket(sockfd,FIONBIO,&iMode);
+					{ u_long iMode=1; ioctlsocket(sockfd,FIONBIO,&iMode); }
+#ifdef ZT_TCP_NODELAY
+					{ BOOL f = TRUE; setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
+#endif
 #else
 					fcntl(sockfd,F_SETFL,O_NONBLOCK);
+#ifdef ZT_TCP_NODELAY
+					{ int f = 1; setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
+#endif
 #endif
 					_fdSetLock.lock();
 					FD_SET(sockfd,&_readfds);
@@ -538,7 +559,7 @@ void SocketManager::poll(unsigned long timeout)
 	bool closedSockets = false;
 	{ // grab copy of TCP sockets list because _tcpSockets[] might be changed in a handler
 		Mutex::Lock _l2(_tcpSockets_m);
-		if (_tcpSockets.size()) {
+		if (!_tcpSockets.empty()) {
 			ts.reserve(_tcpSockets.size());
 			uint64_t now = Utils::now();
 			for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();) {

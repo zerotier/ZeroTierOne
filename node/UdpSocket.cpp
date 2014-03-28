@@ -48,6 +48,9 @@
 #include <signal.h>
 #endif
 
+// Uncomment to intentionally break UDP in order to test TCP fallback
+#define ZT_BREAK_UDP
+
 namespace ZeroTier {
 
 UdpSocket::~UdpSocket()
@@ -66,6 +69,9 @@ bool UdpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 
 bool UdpSocket::sendWithHopLimit(const InetAddress &to,const void *msg,unsigned int msglen,int hopLimit)
 {
+#ifdef ZT_BREAK_UDP
+	return true;
+#else
 	if (hopLimit <= 0)
 		hopLimit = 255;
 	if (to.isV6()) {
@@ -87,6 +93,7 @@ bool UdpSocket::sendWithHopLimit(const InetAddress &to,const void *msg,unsigned 
 		return ((int)sendto(_sock,msg,msglen,0,to.saddr(),to.saddrLen()) == (int)msglen);
 #endif
 	}
+#endif
 }
 
 bool UdpSocket::notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm)
@@ -97,7 +104,9 @@ bool UdpSocket::notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManag
 	int n = (int)recvfrom(_sock,(char *)(buf.data()),ZT_SOCKET_MAX_MESSAGE_LEN,0,from.saddr(),&salen);
 	if (n > 0) {
 		buf.setSize((unsigned int)n);
+#ifndef ZT_BREAK_UDP
 		sm->handleReceivedPacket(self,from,buf);
+#endif
 	}
 	return true;
 }

@@ -64,9 +64,9 @@ public:
 	const std::string defaultHomePath;
 
 	/**
-	 * Supernodes on the ZeroTier network
+	 * Supernodes on the ZeroTier network (identity, address/tcp?)
 	 */
-	const std::map< Identity,std::vector<InetAddress> > supernodes;
+	const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > supernodes;
 
 	/**
 	 * Identities permitted to sign software updates

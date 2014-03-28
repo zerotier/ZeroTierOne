@@ -69,6 +69,8 @@ void Peer::receive(
 	Packet::Verb inReVerb,
 	uint64_t now)
 {
+	*((const_cast<uint64_t *>(&(_r->timeOfLastPacketReceived)))) = now;
+
 	if (!hops) { // direct packet
 		{
 			Mutex::Lock _l(_lock);
@@ -91,6 +93,7 @@ void Peer::receive(
 		}
 
 		// Announce multicast LIKEs to peers to whom we have a direct link
+		// Lock can't be locked here or it'll recurse and deadlock.
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
 			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
@@ -107,18 +110,22 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 {
 	Mutex::Lock _l(_lock);
 
-	if (_paths.empty())
+	std::vector<Path>::iterator p(_paths.begin());
+	if (p == _paths.end()) {
+		TRACE("send to %s failed: no paths available",_id.address().toString().c_str());
 		return false;
-
-	uint64_t bestPathLastReceived = 0;
-	std::vector<Path>::iterator bestPath;
-	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
+	}
+	uint64_t bestPathLastReceived = p->lastReceived();
+	std::vector<Path>::iterator bestPath = p;
+	while (++p != _paths.end()) {
 		uint64_t lr = p->lastReceived();
-		if (lr >= bestPathLastReceived) {
+		if (lr > bestPathLastReceived) {
 			bestPathLastReceived = lr;
 			bestPath = p;
 		}
 	}
+
+	TRACE("send to %s: using path: %s",_id.address().toString().c_str(),bestPath->toString().c_str());
 
 	if (_r->sm->send(bestPath->address(),bestPath->tcp(),data,len)) {
 		bestPath->sent(now);
@@ -145,21 +152,30 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceRes
 {
 	bool sent = false;
 	SharedPtr<Peer> self(this);
+
 	Mutex::Lock _l(_lock);
 
-	bool allPingsUnanswered;
+	// NOTE: this will never ping a peer that has *only* TCP paths. Right
+	// now there's never such a thing as TCP is only for failover.
+
+	bool pingTcp;
 	if (!firstSinceReset) {
-		allPingsUnanswered = true;
+		// Do not use TCP if one of our UDP endpoints has answered recently.
+		uint64_t lastPing = 0;
+		uint64_t lastDirectReceive = 0;
+
 		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (!p->pingUnanswered(now)) {
-				allPingsUnanswered = false;
-				break;
-			}
+			lastPing = std::max(lastPing,p->lastPing());
+			lastDirectReceive = std::max(lastDirectReceive,p->lastReceived());
 		}
-	} else allPingsUnanswered = false;
+
+		pingTcp = ( (lastDirectReceive < lastPing) && ((lastPing - lastDirectReceive) >= ZT_PING_UNANSWERED_AFTER) );
+	} else pingTcp = false;
+
+	TRACE("PING %s (pingTcp==%d)",_id.address().toString().c_str(),(int)pingTcp);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if ((allPingsUnanswered)||(!p->tcp())) {
+		if ((pingTcp)||(!p->tcp())) {
 			if (_r->sw->sendHELLO(self,p->address(),p->tcp())) {
 				p->sent(now);
 				p->pinged(now);

@@ -88,19 +88,6 @@ public:
 	}
 
 	/**
-	 * @return True if it appears that a ping has gone unanswered
-	 */
-	inline bool pingUnanswered(uint64_t now) const
-		throw()
-	{
-		uint64_t lp = _lastPing;
-		uint64_t lr = _lastReceived;
-		if (lp)
-			return ((lr < lp)&&((lp - lr) > ZT_PING_UNANSWERED_AFTER));
-		return false;
-	}
-
-	/**
 	 * @return Human-readable address and other information about this path, some computed as of current time
 	 */
 	inline std::string toString() const

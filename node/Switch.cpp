@@ -752,13 +752,13 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				}
 			}
 
-#ifdef ZT_TRACE
+/* #ifdef ZT_TRACE
 			if (via != peer) {
 				TRACE(">> %s to %s via %s (%d)",Packet::verbString(packet.verb()),peer->address().toString().c_str(),via->address().toString().c_str(),(int)packet.size());
 			} else {
 				TRACE(">> %s to %s (%d)",Packet::verbString(packet.verb()),peer->address().toString().c_str(),(int)packet.size());
 			}
-#endif
+#endif */
 
 			return true;
 		}

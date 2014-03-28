@@ -141,27 +141,29 @@ bool InetAddress::operator==(const InetAddress &a) const
 				return (!memcmp(_sa.sin6.sin6_addr.s6_addr,a._sa.sin6.sin6_addr.s6_addr,sizeof(_sa.sin6.sin6_addr.s6_addr)));
 		}
 		return false;
-	} else if (!_sa.saddr.sa_family)
-		return (!a._sa.saddr.sa_family);
-	return (!memcmp(&_sa,&a._sa,sizeof(_sa)));
+	} else return (memcmp(&_sa,&a._sa,sizeof(_sa)) == 0);
 }
 
 bool InetAddress::operator<(const InetAddress &a) const
 	throw()
 {
-	if (_sa.saddr.sa_family == AF_INET) {
-		if (a._sa.saddr.sa_family == AF_INET)
-			return ((ntohl(_sa.sin.sin_addr.s_addr < ntohl(a._sa.sin.sin_addr.s_addr)))||((_sa.sin.sin_addr.s_addr == a._sa.sin.sin_addr.s_addr)&&(ntohs(_sa.sin.sin_port) < ntohs(a._sa.sin.sin_port))));
-		else if (a._sa.saddr.sa_family == AF_INET6)
-			return true;
-	} else if (_sa.saddr.sa_family == AF_INET6) {
-		if (a._sa.saddr.sa_family == AF_INET6) {
-			int cmp = memcmp(_sa.sin6.sin6_addr.s6_addr,a._sa.sin6.sin6_addr.s6_addr,16);
-			return ((cmp < 0)||((!cmp)&&(ntohs(_sa.sin6.sin6_port) < ntohs(a._sa.sin6.sin6_port))));
-		} else if (a._sa.saddr.sa_family == AF_INET)
-			return false;
+	if (_sa.saddr.sa_family < a._sa.saddr.sa_family)
+		return true;
+	else if (_sa.saddr.sa_family == a._sa.saddr.sa_family) {
+		if (_sa.saddr.sa_family == AF_INET) {
+			unsigned long x = ntohl(_sa.sin.sin_addr.s_addr);
+			unsigned long y = ntohl(a._sa.sin.sin_addr.s_addr);
+			if (x == y)
+				return (ntohs(_sa.sin.sin_port) < ntohs(a._sa.sin.sin_port));
+			else return (x < y);
+		} else if (_sa.saddr.sa_family == AF_INET6) {
+			int cmp = (int)memcmp(_sa.sin6.sin6_addr.s6_addr,a._sa.sin6.sin6_addr.s6_addr,16);
+			if (cmp == 0)
+				return (ntohs(_sa.sin6.sin6_port) < ntohs(a._sa.sin6.sin6_port));
+			else return (cmp < 0);
+		} else return (memcmp(&_sa,&a._sa,sizeof(_sa)) < 0);
 	}
-	return (_sa.saddr.sa_family < a._sa.saddr.sa_family);
+	return false;
 }
 
 } // namespace ZeroTier
