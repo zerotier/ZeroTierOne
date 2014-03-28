@@ -164,6 +164,16 @@ bool TcpSocket::notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketMana
 
 	if (_outptr) {
 		int n = (int)::send(_sock,(const char *)_outbuf,_outptr,0);
+#ifdef __WINDOWS__
+		if (n == SOCKET_ERROR) {
+			switch(WSAGetLastError()) {
+				case WSAEINTR:
+				case WSAEWOULDBLOCK:
+					break;
+				default:
+					return false;
+			}
+#else
 		if (n <= 0) {
 			switch(errno) {
 #ifdef EAGAIN
@@ -179,6 +189,7 @@ bool TcpSocket::notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketMana
 				default:
 					return false;
 			}
+#endif
 		} else memmove(_outbuf,_outbuf + (unsigned int)n,_outptr -= (unsigned int)n);
 	}
 

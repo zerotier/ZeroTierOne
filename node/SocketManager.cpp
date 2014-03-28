@@ -364,10 +364,6 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 		SOCKET s = ::socket(to.isV4() ? AF_INET : AF_INET6,SOCK_STREAM,0);
 		if (s == INVALID_SOCKET)
 			return false;
-		if (s >= FD_SETSIZE) {
-			::closesocket(s);
-			return false;
-		}
 		{ u_long iMode=1; ioctlsocket(s,FIONBIO,&iMode); }
 #ifdef ZT_TCP_NODELAY
 		{ BOOL f = TRUE; setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
@@ -387,8 +383,12 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 #endif
 
 		bool connecting = false;
-		if (connect(s,to.saddr(),to.saddrLen())) {
+		if (::connect(s,to.saddr(),to.saddrLen())) {
+#ifdef __WINDOWS__
+			if (WSAGetLastError() != WSAEWOULDBLOCK) {
+#else
 			if (errno != EINPROGRESS) {
+#endif
 				CLOSE_SOCKET(s);
 				return false;
 			} else connecting = true;
@@ -480,8 +480,8 @@ void SocketManager::poll(unsigned long timeout)
 		if (sockfd != INVALID_SOCKET) {
 #else
 		if (sockfd > 0) {
-#endif
 			if (sockfd < FD_SETSIZE) {
+#endif
 				InetAddress fromia((const struct sockaddr *)&from);
 				Mutex::Lock _l2(_tcpSockets_m);
 				try {
@@ -505,9 +505,11 @@ void SocketManager::poll(unsigned long timeout)
 				} catch ( ... ) {
 					CLOSE_SOCKET(sockfd);
 				}
+#ifndef __WINDOWS__
 			} else {
 				CLOSE_SOCKET(sockfd);
 			}
+#endif
 		}
 	}
 	if ((_tcpV6ListenSocket != INVALID_SOCKET)&&(FD_ISSET(_tcpV6ListenSocket,&rfds))) {
@@ -518,8 +520,8 @@ void SocketManager::poll(unsigned long timeout)
 		if (sockfd != INVALID_SOCKET) {
 #else
 		if (sockfd > 0) {
-#endif
 			if (sockfd < FD_SETSIZE) {
+#endif
 				InetAddress fromia((const struct sockaddr *)&from);
 				Mutex::Lock _l2(_tcpSockets_m);
 				try {
@@ -543,9 +545,11 @@ void SocketManager::poll(unsigned long timeout)
 				} catch ( ... ) {
 					CLOSE_SOCKET(sockfd);
 				}
+#ifndef __WINDOWS__
 			} else {
 				CLOSE_SOCKET(sockfd);
 			}
+#endif
 		}
 	}
 
