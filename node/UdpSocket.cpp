@@ -49,7 +49,7 @@
 #endif
 
 // Uncomment to intentionally break UDP in order to test TCP fallback
-#define ZT_BREAK_UDP
+//#define ZT_BREAK_UDP
 
 namespace ZeroTier {
 
