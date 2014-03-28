@@ -459,6 +459,17 @@ void SocketManager::poll(unsigned long timeout)
 	_fdSetLock.unlock();
 	FD_ZERO(&efds);
 
+#ifdef __WINDOWS__
+	// Windows signals failed connects in exceptfds
+	{
+		Mutex::Lock _l2(_tcpSockets_m);
+		for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s) {
+			if (((TcpSocket *)s->second.ptr())->_connecting)
+				FD_SET(s->second->_sock,&efds);
+		}
+	}
+#endif
+
 	tv.tv_sec = (long)(timeout / 1000);
 	tv.tv_usec = (long)((timeout % 1000) * 1000);
 	select(_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
@@ -567,7 +578,11 @@ void SocketManager::poll(unsigned long timeout)
 			ts.reserve(_tcpSockets.size());
 			uint64_t now = Utils::now();
 			for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();) {
+#ifdef __WINDOWS__
+				if ( ((now - ((TcpSocket *)s->second.ptr())->_lastActivity) < ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT) && (! ((((TcpSocket *)s->second.ptr())->_connecting)&&(FD_ISSET(s->second->_sock,&efds))) ) ) {
+#else
 				if ((now - ((TcpSocket *)s->second.ptr())->_lastActivity) < ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT) {
+#endif
 					ts.push_back(s->second);
 					++s;
 				} else {

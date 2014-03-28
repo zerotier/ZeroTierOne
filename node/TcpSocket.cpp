@@ -59,9 +59,9 @@ TcpSocket::~TcpSocket()
 #else
 	::close(_sock);
 #endif
-
 	if (_outbuf)
 		::free(_outbuf);
+	//printf("!!! TCP SOCKET DESTROYED @%.16llx to %s\r\n",(unsigned long long)this,_remote.toString().c_str());
 }
 
 bool TcpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)

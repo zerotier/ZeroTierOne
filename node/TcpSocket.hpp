@@ -83,7 +83,10 @@ protected:
 		_outbufsize(0),
 		_inptr(0),
 		_connecting(c),
-		_remote(r) {}
+		_remote(r)
+	{
+		//printf("!!! TCP SOCKET CREATED @%.16llx to %s\r\n",(unsigned long long)this,_remote.toString().c_str());
+	}
 
 	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm);
 	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm);
