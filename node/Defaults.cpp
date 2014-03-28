@@ -65,6 +65,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	if (!id.fromString("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",ZT_DEFAULT_UDP_PORT),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",443),true));
 	sn[id] = addrs;
 
 	// shub-niggurath.zerotier.com - Amsterdam, Netherlands
@@ -72,6 +73,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	if (!id.fromString("36f63d6574:0:67a776487a1a99b32f413329f2b67c43fbf6152e42c6b66e89043e69d93e48314c7d709b58a83016bd2612dd89400b856e18c553da94892f7d3ca16bf2c92c24"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",ZT_DEFAULT_UDP_PORT),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",443),true));
 	sn[id] = addrs;
 
 	// mi-go.zerotier.com - Singapore
@@ -79,6 +81,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	if (!id.fromString("abbb7f4622:0:89d2c6b2062b10f4ce314dfcb914c082566247090a6f74c8ba1c15c63b205f540758f0abae85287397152c9d8cf463cfe51e7a480946cd6a31495b24ca13253c"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("128.199.254.204",ZT_DEFAULT_UDP_PORT),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("128.199.254.204",443),true));
 	sn[id] = addrs;
 
 	// shoggoth.zerotier.com - Tokyo, Japan
@@ -86,6 +89,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	if (!id.fromString("48e8f875cb:0:5ca54f55e1094f65589f3e6d74158b6964d418ddac3570757128f1c6a2498322d92fcdcd47de459f4d1f9b38df2afd0c7b3fc247ba3d773c38ba35288f24988e"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",ZT_DEFAULT_UDP_PORT),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",443),true));
 	sn[id] = addrs;
 
 	return sn;
