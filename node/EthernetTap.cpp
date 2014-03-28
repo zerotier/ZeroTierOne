@@ -1287,6 +1287,7 @@ EthernetTap::EthernetTap(
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
 		}
+		Sleep(250);
 		{
 			STARTUPINFOA startupInfo;
 			startupInfo.cb = sizeof(startupInfo);
@@ -1309,14 +1310,22 @@ EthernetTap::EthernetTap(
 		}
 		if (devconLog != INVALID_HANDLE_VALUE)
 			CloseHandle(devconLog);
+		Sleep(250);
 	}
 
 	// Open the tap, which is in this weird Windows analog of /dev
 	char tapPath[4096];
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_myDeviceInstanceId.c_str());
-	_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
-	if (_tap == INVALID_HANDLE_VALUE)
-		throw std::runtime_error(std::string("unable to open tap device ")+tapPath);
+	for(int openTrials=0;;) {
+		// Try multiple times, since there seem to be reports from the field
+		// of driver init timing issues. Blech.
+		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
+		if (_tap == INVALID_HANDLE_VALUE) {
+			if (++openTrials >= 3)
+				throw std::runtime_error(std::string("unable to open tap device ")+tapPath);
+			else Sleep(500);
+		} else break;
+	}
 
 	// Set media status to enabled
 	uint32_t tmpi = 1;
