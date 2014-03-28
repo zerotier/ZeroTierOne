@@ -112,7 +112,7 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 
 	std::vector<Path>::iterator p(_paths.begin());
 	if (p == _paths.end()) {
-		TRACE("send to %s failed: no paths available",_id.address().toString().c_str());
+		//TRACE("send to %s failed: no paths available",_id.address().toString().c_str());
 		return false;
 	}
 	uint64_t bestPathLastReceived = p->lastReceived();
@@ -125,7 +125,7 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 		}
 	}
 
-	TRACE("send to %s: using path: %s",_id.address().toString().c_str(),bestPath->toString().c_str());
+	//TRACE("send to %s: using path: %s",_id.address().toString().c_str(),bestPath->toString().c_str());
 
 	if (_r->sm->send(bestPath->address(),bestPath->tcp(),data,len)) {
 		bestPath->sent(now);
