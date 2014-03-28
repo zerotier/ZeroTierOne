@@ -395,8 +395,13 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 		}
 
 		ts = SharedPtr<Socket>(new TcpSocket(this,s,connecting,to));
-		if (!ts->send(to,msg,msglen))
+		if (!ts->send(to,msg,msglen)) {
+			_fdSetLock.lock();
+			FD_CLR(s,&_readfds);
+			FD_CLR(s,&_writefds);
+			_fdSetLock.unlock();
 			return false;
+		}
 
 		{
 			Mutex::Lock _l(_tcpSockets_m);
@@ -408,6 +413,8 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 		if (connecting)
 			FD_SET(s,&_writefds);
 		_fdSetLock.unlock();
+
+		_updateNfds();
 		whack();
 
 		return true;
