@@ -166,6 +166,11 @@ public:
 	bool sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceReset);
 
 	/**
+	 * Called periodically by Topology::clean() to remove stale paths and do other cleanup
+	 */
+	void clean(uint64_t now);
+
+	/**
 	 * @return All known direct paths to this peer
 	 */
 	std::vector<Path> paths() const

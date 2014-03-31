@@ -29,6 +29,7 @@
 #define ZT_PATH_HPP
 
 #include <stdint.h>
+#include <string.h>
 
 #include <stdexcept>
 #include <string>
@@ -57,6 +58,12 @@ public:
 		_tcp(false),
 		_fixed(false) {}
 
+	Path(const Path &p)
+	{
+		// InetAddress is memcpy'able
+		memcpy(this,&p,sizeof(Path));
+	}
+
 	Path(const InetAddress &addr,bool tcp,bool fixed = false) :
 		_lastSend(0),
 		_lastReceived(0),
@@ -65,6 +72,13 @@ public:
 		_addr(addr),
 		_tcp(tcp),
 		_fixed(fixed) {}
+
+	inline Path &operator=(const Path &p)
+	{
+		if (this != &p)
+			memcpy(this,&p,sizeof(Path));
+		return *this;
+	}
 
 	inline const InetAddress &address() const throw() { return _addr; }
 	inline bool tcp() const throw() { return _tcp; }
@@ -81,6 +95,10 @@ public:
 	inline void firewallOpenerSent(uint64_t t) throw() { _lastFirewallOpener = t; }
 	inline void pinged(uint64_t t) throw() { _lastPing = t; }
 
+	/**
+	 * @param now Current time
+	 * @return True if this path is fixed or has received data in last ACTIVITY_TIMEOUT ms
+	 */
 	inline bool active(uint64_t now) const
 		throw()
 	{

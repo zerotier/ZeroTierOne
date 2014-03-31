@@ -51,6 +51,8 @@ namespace ZeroTier {
 
 /**
  * Wrapper for sockaddr structures for IPV4 and IPV6
+ *
+ * Note: this class is raw memcpy'able, which is used in a couple places.
  */
 class InetAddress
 {
