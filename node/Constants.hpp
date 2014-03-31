@@ -158,7 +158,7 @@ error_no_byte_order_defined;
  * The actual spec allows 16, but this is the most we'll support right
  * now. Packets with more than this many fragments are dropped.
  */
-#define ZT_MAX_PACKET_FRAGMENTS 3
+#define ZT_MAX_PACKET_FRAGMENTS 4
 
 /**
  * Timeout for receipt of fragmented packets in ms
