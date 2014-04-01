@@ -23,7 +23,7 @@ LDFLAGS=-pie -Wl,-z,relro,-z,now
 STRIP=strip --strip-all
 
 # Uncomment for a debug build
-#CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE $(DEFS)
+#CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE -DZT_LOG_STDOUT $(DEFS)
 #LDFLAGS=
 #STRIP=echo
 
@@ -52,7 +52,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) *.o node/*.o zerotier-* build-* ZeroTierOneInstaller-*
 
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
