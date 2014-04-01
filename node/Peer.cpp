@@ -121,30 +121,23 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 {
 	Mutex::Lock _l(_lock);
 
-	for(;;) {
-		std::vector<Path>::iterator p(_paths.begin());
-		if (p == _paths.end())
-			return false;
+	std::vector<Path>::iterator p(_paths.begin());
+	if (p == _paths.end())
+		return false;
 
-		uint64_t bestPathLastReceived = p->lastReceived();
-		std::vector<Path>::iterator bestPath = p;
-		while (++p != _paths.end()) {
-			uint64_t lr = p->lastReceived();
-			if (lr > bestPathLastReceived) {
-				bestPathLastReceived = lr;
-				bestPath = p;
-			}
+	uint64_t bestPathLastReceived = p->lastReceived();
+	std::vector<Path>::iterator bestPath = p;
+	while (++p != _paths.end()) {
+		uint64_t lr = p->lastReceived();
+		if (lr > bestPathLastReceived) {
+			bestPathLastReceived = lr;
+			bestPath = p;
 		}
+	}
 
-		if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
-			bestPath->sent(now);
-			return true;
-		} else {
-			if (bestPath->fixed())
-				return false;
-			_paths.erase(bestPath);
-			// ... try again and pick a different path
-		}
+	if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
+		bestPath->sent(now);
+		return true;
 	}
 
 	return false;

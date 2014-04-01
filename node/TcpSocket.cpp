@@ -48,8 +48,6 @@
 #include <signal.h>
 #endif
 
-#define ZT_TCP_MAX_SENDQ_LENGTH (ZT_SOCKET_MAX_MESSAGE_LEN * 8)
-
 namespace ZeroTier {
 
 TcpSocket::~TcpSocket()
@@ -59,8 +57,6 @@ TcpSocket::~TcpSocket()
 #else
 	::close(_sock);
 #endif
-	if (_outbuf)
-		::free(_outbuf);
 	//printf("!!! TCP SOCKET DESTROYED @%.16llx to %s\r\n",(unsigned long long)this,_remote.toString().c_str());
 }
 
@@ -72,26 +68,11 @@ bool TcpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 		return true; // sanity check
 
 	Mutex::Lock _l(_writeLock);
+
 	bool writeInProgress = ((_outptr != 0)||(_connecting));
 
-	// Ensure that _outbuf is large enough
-	unsigned int newptr = _outptr + 5 + msglen;
-	if (newptr > _outbufsize) {
-		unsigned int newbufsize = _outbufsize;
-		while (newbufsize < newptr)
-			newbufsize += ZT_SOCKET_MAX_MESSAGE_LEN;
-		if (newbufsize > ZT_TCP_MAX_SENDQ_LENGTH)
-			return false; // cannot send, outbuf full
-		unsigned char *newbuf = (unsigned char *)::malloc(newbufsize);
-		if (!newbuf)
-			return false; // cannot send, no memory
-		_outbufsize = newbufsize;
-		if (_outbuf) {
-			memcpy(newbuf,_outbuf,_outptr);
-			::free(_outbuf);
-		}
-		_outbuf = newbuf;
-	}
+	if ((_outptr + 5 + msglen) > (unsigned int)sizeof(_outbuf))
+		return false;
 
 	_outbuf[_outptr++] = 0x17; // look like TLS data
 	_outbuf[_outptr++] = 0x03;

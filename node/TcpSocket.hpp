@@ -78,10 +78,8 @@ protected:
 		Socket(t,s),
 		_lastActivity(Utils::now()),
 		_sm(sm),
-		_outbuf((unsigned char *)0),
-		_outptr(0),
-		_outbufsize(0),
 		_inptr(0),
+		_outptr(0),
 		_connecting(c),
 		_remote(r)
 	{
@@ -93,12 +91,11 @@ protected:
 
 private:
 	unsigned char _inbuf[ZT_SOCKET_MAX_MESSAGE_LEN];
+	unsigned char _outbuf[ZT_SOCKET_MAX_MESSAGE_LEN * 4];
 	uint64_t _lastActivity; // updated whenever data is received, checked directly by SocketManager for stale TCP cleanup
 	SocketManager *_sm;
-	unsigned char *_outbuf;
-	unsigned int _outptr;
-	unsigned int _outbufsize;
 	unsigned int _inptr;
+	unsigned int _outptr;
 	bool _connecting; // manipulated directly by SocketManager, true if connect() is in progress
 	InetAddress _remote;
 	Mutex _writeLock;
