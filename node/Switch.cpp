@@ -239,7 +239,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return _r->sm->send(deskUdp,false,false,outp.data(),outp.size());
+	return _r->sm->send(destUdp,false,false,outp.data(),outp.size());
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
