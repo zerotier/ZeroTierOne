@@ -130,7 +130,7 @@ public:
 			case PATH_TYPE_TCP_OUT: t = "tcp_out"; break;
 			case PATH_TYPE_TCP_IN: t = "tcp_in"; break;
 		}
-		Utils::snprintf(tmp,sizeof(tmp),"%s:%s:%lld;%lld;%lld;%lld;%s",
+		Utils::snprintf(tmp,sizeof(tmp),"%s;%s;%lld;%lld;%lld;%lld;%s",
 			t,
 			_addr.toString().c_str(),
 			(long long)((_lastSend != 0) ? (now - _lastSend) : -1),
