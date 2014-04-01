@@ -539,8 +539,8 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastMulticastCheck = 0;
 		long lastDelayDelta = 0;
 
-		uint64_t networkConfigurationFingerprint = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
-		_r->timeOfLastResynchronize = Utils::now();
+		uint64_t networkConfigurationFingerprint = 0;
+		_r->timeOfLastResynchronize = 0;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
 			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
