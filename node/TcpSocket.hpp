@@ -71,11 +71,11 @@ public:
 
 protected:
 #ifdef __WINDOWS__
-	TcpSocket(SocketManager *sm,SOCKET s,bool c,const InetAddress &r) :
+	TcpSocket(SocketManager *sm,SOCKET s,Socket::Type t,bool c,const InetAddress &r) :
 #else
-	TcpSocket(SocketManager *sm,int s,bool c,const InetAddress &r) :
+	TcpSocket(SocketManager *sm,int s,Socket::Type t,bool c,const InetAddress &r) :
 #endif
-		Socket(Socket::ZT_SOCKET_TYPE_TCP,s),
+		Socket(t,s),
 		_lastActivity(Utils::now()),
 		_sm(sm),
 		_outbuf((unsigned char *)0),

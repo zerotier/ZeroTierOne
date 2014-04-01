@@ -72,7 +72,6 @@ bool TcpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 		return true; // sanity check
 
 	Mutex::Lock _l(_writeLock);
-
 	bool writeInProgress = ((_outptr != 0)||(_connecting));
 
 	// Ensure that _outbuf is large enough
@@ -144,9 +143,10 @@ bool TcpSocket::notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManag
 
 		if ((pl)&&(p >= pl)) {
 			Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> data(_inbuf + 5,pl - 5);
-			sm->handleReceivedPacket(self,_remote,data);
-			memmove(_inbuf,_inbuf + pl,p - pl);
-			p -= pl;
+			memmove(_inbuf,_inbuf + pl,p -= pl);
+			try {
+				sm->handleReceivedPacket(self,_remote,data);
+			} catch ( ... ) {} // handlers should not throw
 			pl = 0;
 		}
 	}

@@ -65,7 +65,8 @@ public:
 	{
 		ZT_SOCKET_TYPE_UDP_V4,
 		ZT_SOCKET_TYPE_UDP_V6,
-		ZT_SOCKET_TYPE_TCP
+		ZT_SOCKET_TYPE_TCP_IN, // incoming connection, not listen
+		ZT_SOCKET_TYPE_TCP_OUT
 	};
 
 	virtual ~Socket() {}
@@ -77,6 +78,15 @@ public:
 		throw()
 	{
 		return _type;
+	}
+
+	/**
+	 * @return True if this is a TCP socket
+	 */
+	inline bool tcp() const
+		throw()
+	{
+		return ((_type == ZT_SOCKET_TYPE_TCP_IN)||(_type == ZT_SOCKET_TYPE_TCP_OUT));
 	}
 
 	/**

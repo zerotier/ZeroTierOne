@@ -579,7 +579,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			source().toString().c_str(),
 			frameLen,
 			startingFifoItems);
-		_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+		_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 
 		// At this point the frame is basically valid, so we can call it a receive
@@ -602,7 +602,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					mctdepth,
 					(_r->topology->amSupernode() ? 'S' : '-'),
 					_r->identity.address().toString().c_str());
-				_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+				_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 				TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
@@ -648,7 +648,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 							mctdepth,
 							(_r->topology->amSupernode() ? 'S' : '-'),
 							_r->identity.address().toString().c_str());
-						_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,sourceMac.toString().c_str(),origin.toString().c_str());
 						return true;
@@ -664,7 +664,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 							mctdepth,
 							(_r->topology->amSupernode() ? 'S' : '-'),
 							_r->identity.address().toString().c_str());
-						_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
 						return true;
@@ -681,7 +681,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 							mctdepth,
 							(_r->topology->amSupernode() ? 'S' : '-'),
 							_r->identity.address().toString().c_str());
-						_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 						TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 						return true;
@@ -702,7 +702,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				mctdepth,
 				(_r->topology->amSupernode() ? 'S' : '-'),
 				_r->identity.address().toString().c_str());
-			_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+			_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
@@ -717,7 +717,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				mctdepth,
 				(_r->topology->amSupernode() ? 'S' : '-'),
 				_r->identity.address().toString().c_str());
-			_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+			_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
@@ -776,7 +776,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				mctdepth,
 				(_r->topology->amSupernode() ? 'S' : '-'),
 				_r->identity.address().toString().c_str());
-			_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+			_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 			//TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
@@ -797,7 +797,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			origin.toString().c_str(),
 			nextHop.toString().c_str(),
 			numAdded);
-		_r->sm->send(ZT_DEFAULTS.multicastTraceWatcher,false,mct,strlen(mct));
+		_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
 #endif
 
 		// Send to next hop, reusing this packet as scratch space

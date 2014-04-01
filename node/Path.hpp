@@ -39,7 +39,7 @@
 #include "Utils.hpp"
 #include "Buffer.hpp"
 
-#define ZT_PATH_SERIALIZATION_VERSION 1
+#define ZT_PATH_SERIALIZATION_VERSION 2
 
 namespace ZeroTier {
 
@@ -49,13 +49,21 @@ namespace ZeroTier {
 class Path
 {
 public:
+	enum Type
+	{
+		PATH_TYPE_NULL = 0,
+		PATH_TYPE_UDP = 1,
+		PATH_TYPE_TCP_OUT = 2,
+		PATH_TYPE_TCP_IN = 3
+	};
+
 	Path() :
 		_lastSend(0),
 		_lastReceived(0),
 		_lastFirewallOpener(0),
 		_lastPing(0),
 		_addr(),
-		_tcp(false),
+		_type(PATH_TYPE_NULL),
 		_fixed(false) {}
 
 	Path(const Path &p)
@@ -64,13 +72,13 @@ public:
 		memcpy(this,&p,sizeof(Path));
 	}
 
-	Path(const InetAddress &addr,bool tcp,bool fixed = false) :
+	Path(const InetAddress &addr,Type t,bool fixed = false) :
 		_lastSend(0),
 		_lastReceived(0),
 		_lastFirewallOpener(0),
 		_lastPing(0),
 		_addr(addr),
-		_tcp(tcp),
+		_type(t),
 		_fixed(fixed) {}
 
 	inline Path &operator=(const Path &p)
@@ -81,13 +89,16 @@ public:
 	}
 
 	inline const InetAddress &address() const throw() { return _addr; }
-	inline bool tcp() const throw() { return _tcp; }
+
+	inline Type type() const throw() { return _type; }
+	inline bool tcp() const throw() { return ((_type == PATH_TYPE_TCP_IN)||(_type == PATH_TYPE_TCP_OUT)); }
+
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
 	inline uint64_t lastFirewallOpener() const throw() { return _lastFirewallOpener; }
 	inline uint64_t lastPing() const throw() { return _lastPing; }
-	inline bool fixed() const throw() { return _fixed; }
 
+	inline bool fixed() const throw() { return _fixed; }
 	inline void setFixed(bool f) throw() { _fixed = f; }
 
 	inline void sent(uint64_t t) throw() { _lastSend = t; }
@@ -111,40 +122,34 @@ public:
 	inline std::string toString() const
 	{
 		uint64_t now = Utils::now();
-		char lsago[32],lrago[32],lfoago[32],lpago[32];
-		Utils::snprintf(lsago,sizeof(lsago),"%lld",(long long)((_lastSend != 0) ? (now - _lastSend) : -1));
-		Utils::snprintf(lrago,sizeof(lrago),"%lld",(long long)((_lastReceived != 0) ? (now - _lastReceived) : -1));
-		Utils::snprintf(lfoago,sizeof(lfoago),"%lld",(long long)((_lastFirewallOpener != 0) ? (now - _lastFirewallOpener) : -1));
-		Utils::snprintf(lpago,sizeof(lfoago),"%lld",(long long)((_lastPing != 0) ? (now - _lastPing) : -1));
-		return ( _addr.toString() + 
-		         "[" + 
-		         	     (_tcp ? "tcp" : "udp") +
-		         	     ";" +
-		         	     lsago +
-		         	     ";" +
-		         	     lrago +
-		         	     ";" +
-		         	     lpago +
-		         	     ";" +
-		         	     lfoago +
-		         	     ";" +
-		         	     (active(now) ? "active" : "inactive") +
-		         	     ";" +
-		         	     (_fixed ? "fixed" : "learned") +
-		         "]"
-		       );
+		char tmp[1024];
+		const char *t = "";
+		switch(_type) {
+			case PATH_TYPE_NULL: t = "null"; break;
+			case PATH_TYPE_UDP: t = "udp"; break;
+			case PATH_TYPE_TCP_OUT: t = "tcp_out"; break;
+			case PATH_TYPE_TCP_IN: t = "tcp_in"; break;
+		}
+		Utils::snprintf(tmp,sizeof(tmp),"%s:%s:%lld;%lld;%lld;%lld;%s",
+			t,
+			_addr.toString().c_str(),
+			(long long)((_lastSend != 0) ? (now - _lastSend) : -1),
+			(long long)((_lastReceived != 0) ? (now - _lastReceived) : -1),
+			(long long)((_lastFirewallOpener != 0) ? (now - _lastFirewallOpener) : -1),
+			(long long)((_lastPing != 0) ? (now - _lastPing) : -1),
+			((_fixed) ? "fixed" : (active(now) ? "active" : "inactive"))
+		);
+		return std::string(tmp);
 	}
 
-	inline bool operator==(const Path &p) const throw() { return ((_addr == p._addr)&&(_tcp == p._tcp)); }
-	inline bool operator!=(const Path &p) const throw() { return ((_addr != p._addr)||(_tcp != p._tcp)); }
+	inline bool operator==(const Path &p) const throw() { return ((_addr == p._addr)&&(_type == p._type)); }
+	inline bool operator!=(const Path &p) const throw() { return ((_addr != p._addr)||(_type != p._type)); }
 	inline bool operator<(const Path &p) const
 		throw()
 	{
-		if (_addr == p._addr) {
-			if (!_tcp) // UDP < TCP
-				return p._tcp;
-			return false;
-		} else return (_addr < p._addr);
+		if (_addr == p._addr)
+			return ((int)_type < (int)p._type);
+		else return (_addr < p._addr);
 	}
 	inline bool operator>(const Path &p) const throw() { return (p < *this); }
 	inline bool operator<=(const Path &p) const throw() { return !(p < *this); }
@@ -171,7 +176,7 @@ public:
 				b.append((uint16_t)_addr.port());
 				break;
 		}
-		b.append(_tcp ? (unsigned char)1 : (unsigned char)0);
+		b.append((unsigned char)_type);
 		b.append(_fixed ? (unsigned char)1 : (unsigned char)0);
 	}
 	template<unsigned int C>
@@ -199,7 +204,7 @@ public:
 				_addr.zero();
 				break;
 		}
-		_tcp = (b[p++] != 0);
+		_type = (Type)b[p++];
 		_fixed = (b[p++] != 0);
 
 		return (p - startAt);
@@ -211,7 +216,7 @@ private:
 	volatile uint64_t _lastFirewallOpener;
 	volatile uint64_t _lastPing;
 	InetAddress _addr;
-	bool _tcp;
+	Type _type;
 	bool _fixed;
 };
 

@@ -65,7 +65,7 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 			if (!p)
 				p = addPeer(SharedPtr<Peer>(new Peer(_r->identity,i->first)));
 			for(std::vector< std::pair<InetAddress,bool> >::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(Path(j->first,j->second,true));
+				p->addPath(Path(j->first,(j->second) ? Path::PATH_TYPE_TCP_OUT : Path::PATH_TYPE_UDP,true));
 			p->use(now);
 			_supernodePeers.push_back(p);
 		}

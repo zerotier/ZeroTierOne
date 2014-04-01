@@ -214,7 +214,7 @@ void Switch::sendHELLO(const Address &dest)
 	send(outp,false);
 }
 
-bool Switch::sendHELLO(const SharedPtr<Socket> &fromSock,const SharedPtr<Peer> &dest,const InetAddress &remoteAddr)
+bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const Path &path)
 {
 	uint64_t now = Utils::now();
 	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
@@ -225,10 +225,10 @@ bool Switch::sendHELLO(const SharedPtr<Socket> &fromSock,const SharedPtr<Peer> &
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return fromSock->send(remoteAddr,outp.data(),outp.size());
+	return _r->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size());
 }
 
-bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &remoteAddr,bool tcp)
+bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
 {
 	uint64_t now = Utils::now();
 	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
@@ -239,7 +239,7 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &remoteAddr
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return _r->sm->send(remoteAddr,tcp,outp.data(),outp.size());
+	return _r->sm->send(deskUdp,false,false,outp.data(),outp.size());
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
@@ -354,7 +354,7 @@ unsigned long Switch::doTimerTasks()
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
 				TRACE("sending NAT-T HELLO to %s(%s)",qi->peer->address().toString().c_str(),qi->inaddr.toString().c_str());
-				sendHELLO(qi->peer,qi->inaddr,false);
+				sendHELLO(qi->peer,qi->inaddr);
 				_contactQueue.erase(qi++);
 			} else {
 				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));

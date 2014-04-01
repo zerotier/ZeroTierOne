@@ -69,25 +69,36 @@ void Peer::receive(
 	Packet::Verb inReVerb,
 	uint64_t now)
 {
+	// Update system-wide last packet receive time
 	*((const_cast<uint64_t *>(&(_r->timeOfLastPacketReceived)))) = now;
 
-	if (!hops) { // direct packet
+	// Learn paths from direct packets (hops == 0)
+	if (!hops) {
 		{
 			Mutex::Lock _l(_lock);
 
-			// Update receive time on known paths
 			bool havePath = false;
 			for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-				if ((p->address() == remoteAddr)&&(p->tcp() == (fromSock->type() == Socket::ZT_SOCKET_TYPE_TCP))) {
+				if ((p->address() == remoteAddr)&&(p->tcp() == fromSock->tcp())) {
 					p->received(now);
 					havePath = true;
 					break;
 				}
 			}
 
-			// Learn new UDP paths (learning TCP would require an explicit mechanism)
-			if ((!havePath)&&(fromSock->type() != Socket::ZT_SOCKET_TYPE_TCP)) {
-				_paths.push_back(Path(remoteAddr,false,false));
+			if (!havePath) {
+				Path::Type pt = Path::PATH_TYPE_UDP;
+				switch(fromSock->type()) {
+					case Socket::ZT_SOCKET_TYPE_TCP_IN:
+						pt = Path::PATH_TYPE_TCP_IN;
+						break;
+					case Socket::ZT_SOCKET_TYPE_TCP_OUT:
+						pt = Path::PATH_TYPE_TCP_OUT;
+						break;
+					default:
+						break;
+				}
+				_paths.push_back(Path(remoteAddr,pt,false));
 				_paths.back().received(now);
 			}
 		}
@@ -110,26 +121,30 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 {
 	Mutex::Lock _l(_lock);
 
-	std::vector<Path>::iterator p(_paths.begin());
-	if (p == _paths.end()) {
-		//TRACE("send to %s failed: no paths available",_id.address().toString().c_str());
-		return false;
-	}
-	uint64_t bestPathLastReceived = p->lastReceived();
-	std::vector<Path>::iterator bestPath = p;
-	while (++p != _paths.end()) {
-		uint64_t lr = p->lastReceived();
-		if (lr > bestPathLastReceived) {
-			bestPathLastReceived = lr;
-			bestPath = p;
+	for(;;) {
+		std::vector<Path>::iterator p(_paths.begin());
+		if (p == _paths.end())
+			return false;
+
+		uint64_t bestPathLastReceived = p->lastReceived();
+		std::vector<Path>::iterator bestPath = p;
+		while (++p != _paths.end()) {
+			uint64_t lr = p->lastReceived();
+			if (lr > bestPathLastReceived) {
+				bestPathLastReceived = lr;
+				bestPath = p;
+			}
 		}
-	}
 
-	//TRACE("send to %s: using path: %s",_id.address().toString().c_str(),bestPath->toString().c_str());
-
-	if (_r->sm->send(bestPath->address(),bestPath->tcp(),data,len)) {
-		bestPath->sent(now);
-		return true;
+		if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
+			bestPath->sent(now);
+			return true;
+		} else {
+			if (bestPath->fixed())
+				return false;
+			_paths.erase(bestPath);
+			// ... try again and pick a different path
+		}
 	}
 
 	return false;
@@ -160,23 +175,24 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceRes
 
 	bool pingTcp;
 	if (!firstSinceReset) {
-		// Do not use TCP if one of our UDP endpoints has answered recently.
+		uint64_t lastUdp = 0;
+		uint64_t lastTcp = 0;
 		uint64_t lastPing = 0;
-		uint64_t lastDirectReceive = 0;
-
 		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-			lastPing = std::max(lastPing,p->lastPing());
-			lastDirectReceive = std::max(lastDirectReceive,p->lastReceived());
+			if (p->tcp())
+				lastTcp = std::max(p->lastReceived(),lastTcp);
+			else lastUdp = std::max(p->lastReceived(),lastUdp);
+			lastPing = std::max(p->lastPing(),lastPing);
 		}
-
-		pingTcp = ( (lastDirectReceive < lastPing) && ((lastPing - lastDirectReceive) >= ZT_PING_UNANSWERED_AFTER) );
+		uint64_t lastAny = std::max(lastUdp,lastTcp);
+		pingTcp = ( ( (lastAny < lastPing) && ((lastPing - lastAny) >= ZT_PING_UNANSWERED_AFTER) ) || (lastTcp > lastUdp) );
 	} else pingTcp = false;
 
 	TRACE("PING %s (pingTcp==%d)",_id.address().toString().c_str(),(int)pingTcp);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 		if ((pingTcp)||(!p->tcp())) {
-			if (_r->sw->sendHELLO(self,p->address(),p->tcp())) {
+			if (_r->sw->sendHELLO(self,*p)) {
 				p->sent(now);
 				p->pinged(now);
 				sent = true;

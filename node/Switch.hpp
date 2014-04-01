@@ -122,22 +122,20 @@ public:
 	/**
 	 * Send a HELLO announcement immediately to the indicated address
 	 *
-	 * @param fromSock Send from this local socket
 	 * @param dest Destination peer
-	 * @param remoteAddr Remote address
+	 * @param path Network path to peer
 	 * @return True if send appears successful
 	 */
-	bool sendHELLO(const SharedPtr<Socket> &fromSock,const SharedPtr<Peer> &dest,const InetAddress &remoteAddr);
+	bool sendHELLO(const SharedPtr<Peer> &dest,const Path &path);
 
 	/**
-	 * Send a HELLO announcement immediately to the indicated address
+	 * Send a HELLO announcement immediately to the indicated address via UDP
 	 *
 	 * @param dest Destination peer
-	 * @param remoteAddr Remote address
-	 * @param tcp Attempt to use TCP?
+	 * @param destUdp UDP inet address
 	 * @return True if send appears successful
 	 */
-	bool sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &remoteAddr,bool tcp);
+	bool sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp);
 
 	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect

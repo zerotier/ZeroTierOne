@@ -85,17 +85,22 @@ public:
 	/**
 	 * Send a message to a remote peer
 	 *
-	 * If 'tcp' is true an existing TCP socket will be used or an attempt will
-	 * be made to connect if one is not available. The message will be placed
-	 * in the connecting TCP socket's outgoing queue, so if the connection
-	 * succeeds the message will be sent. Otherwise it will be dropped.
-	 *
 	 * @param to Destination address
 	 * @param tcp Use TCP?
+	 * @param autoConnectTcp If true, automatically initiate TCP connection if there is none
 	 * @param msg Message to send
 	 * @param msglen Length of message
 	 */
-	bool send(const InetAddress &to,bool tcp,const void *msg,unsigned int msglen);
+	bool send(const InetAddress &to,bool tcp,bool autoConnectTcp,const void *msg,unsigned int msglen);
+
+	/**
+	 * Send a message to a remote peer via UDP (shortcut for setting both TCP params to false in send)
+	 *
+	 * @param to Destination address
+	 * @param msg Message to send
+	 * @param msglen Length of message
+	 */
+	inline bool sendUdp(const InetAddress &to,const void *msg,unsigned int msglen) { return send(to,false,false,msg,msglen); }
 
 	/**
 	 * Send a UDP packet with a limited IP TTL

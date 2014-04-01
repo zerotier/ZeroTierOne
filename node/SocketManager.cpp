@@ -347,7 +347,7 @@ SocketManager::~SocketManager()
 	_closeSockets();
 }
 
-bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned int msglen)
+bool SocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTcp,const void *msg,unsigned int msglen)
 {
 	if (tcp) {
 		SharedPtr<Socket> ts;
@@ -359,6 +359,9 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 		}
 		if (ts)
 			return ts->send(to,msg,msglen);
+
+		if (!autoConnectTcp)
+			return false;
 
 #ifdef __WINDOWS__
 		SOCKET s = ::socket(to.isV4() ? AF_INET : AF_INET6,SOCK_STREAM,0);
@@ -394,7 +397,7 @@ bool SocketManager::send(const InetAddress &to,bool tcp,const void *msg,unsigned
 			} else connecting = true;
 		}
 
-		ts = SharedPtr<Socket>(new TcpSocket(this,s,connecting,to));
+		ts = SharedPtr<Socket>(new TcpSocket(this,s,Socket::ZT_SOCKET_TYPE_TCP_OUT,connecting,to));
 		if (!ts->send(to,msg,msglen)) {
 			_fdSetLock.lock();
 			FD_CLR(s,&_readfds);
@@ -496,7 +499,7 @@ void SocketManager::poll(unsigned long timeout)
 				InetAddress fromia((const struct sockaddr *)&from);
 				Mutex::Lock _l2(_tcpSockets_m);
 				try {
-					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
+					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,Socket::ZT_SOCKET_TYPE_TCP_IN,false,fromia));
 #ifdef __WINDOWS__
 					{ u_long iMode=1; ioctlsocket(sockfd,FIONBIO,&iMode); }
 #ifdef ZT_TCP_NODELAY
@@ -536,7 +539,7 @@ void SocketManager::poll(unsigned long timeout)
 				InetAddress fromia((const struct sockaddr *)&from);
 				Mutex::Lock _l2(_tcpSockets_m);
 				try {
-					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,false,fromia));
+					_tcpSockets[fromia] = SharedPtr<Socket>(new TcpSocket(this,sockfd,Socket::ZT_SOCKET_TYPE_TCP_IN,false,fromia));
 #ifdef __WINDOWS__
 					{ u_long iMode=1; ioctlsocket(sockfd,FIONBIO,&iMode); }
 #ifdef ZT_TCP_NODELAY
