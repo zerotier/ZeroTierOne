@@ -543,6 +543,8 @@ Node::ReasonForTermination Node::run()
 		_r->timeOfLastResynchronize = Utils::now();
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
+			//TRACE("--- BEGIN main I/O loop");
+
 			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
 				FILE *tmpf = fopen(shutdownIfUnreadablePath.c_str(),"r");
 				if (!tmpf)

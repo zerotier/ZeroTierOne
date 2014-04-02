@@ -267,27 +267,8 @@ public:
 	 * @param now Current time
 	 * @return True if it's time to attempt TCP failover (if we have TCP_OUT paths)
 	 */
-	inline bool isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
-		throw()
-	{
-		if ((now - _r->timeOfLastResynchronize) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) {
-			uint64_t lastUdpPingSent = 0;
-			uint64_t lastUdpReceive = 0;
-
-			{
-				Mutex::Lock _l(_lock);
-				for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-					if (p->type() == Path::PATH_TYPE_UDP) {
-						lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
-						lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
-					}
-				}
-			}
-
-			return ( (lastUdpPingSent > lastUdpReceive) && ((now - lastUdpPingSent) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) );
-		}
-		return false;
-	}
+	bool isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
+		throw();
 
 	/**
 	 * @return Current latency or 0 if unknown (max: 65535)

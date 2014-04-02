@@ -176,15 +176,41 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 	Mutex::Lock _l(_lock);
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 		if ((useTcp)||(!p->tcp())) {
+			p->pinged(now); // we log pings sent even if the send "fails", since what we want to track is when we last tried to ping
 			if (_r->sw->sendHELLO(self,*p)) {
 				p->sent(now);
-				p->pinged(now);
 				sent = true;
 			}
 		}
 	}
 
 	return sent;
+}
+
+bool Peer::isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
+	throw()
+{
+	uint64_t lastResync = _r->timeOfLastResynchronize;
+	if ((now - lastResync) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) {
+		if ((now - _r->timeOfLastPacketReceived) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT)
+			return true;
+
+		uint64_t lastUdpPingSent = 0;
+		uint64_t lastUdpReceive = 0;
+
+		{
+			Mutex::Lock _l(_lock);
+			for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+				if (p->type() == Path::PATH_TYPE_UDP) {
+					lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
+					lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
+				}
+			}
+		}
+
+		return ( (lastUdpPingSent > lastResync) && (lastUdpPingSent > lastUdpReceive) && ((now - lastUdpPingSent) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) );
+	}
+	return false;
 }
 
 void Peer::clean(uint64_t now)
