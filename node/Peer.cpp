@@ -117,8 +117,13 @@ void Peer::receive(
 		_lastMulticastFrame = now;
 }
 
+
 bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
+	// Note: we'll still use TCP here if that's all we have, but if this
+	// is false we will prefer UDP.
+	bool useTcp = isTcpFailoverTime(_r,now);
+
 	Mutex::Lock _l(_lock);
 
 	std::vector<Path>::iterator p(_paths.begin());
@@ -127,11 +132,13 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 
 	uint64_t bestPathLastReceived = p->lastReceived();
 	std::vector<Path>::iterator bestPath = p;
+	bool bestPathIsTcp = p->tcp();
 	while (++p != _paths.end()) {
 		uint64_t lr = p->lastReceived();
-		if (lr > bestPathLastReceived) {
+		if ( (lr > bestPathLastReceived) || ((bestPathIsTcp)&&(!useTcp)) ) {
 			bestPathLastReceived = lr;
 			bestPath = p;
+			bestPathIsTcp = p->tcp();
 		}
 	}
 
@@ -156,35 +163,19 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 	return sent;
 }
 
-bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceReset)
+bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;
 	SharedPtr<Peer> self(this);
 
+	// In the ping case we will never send TCP unless this returns true.
+	bool useTcp = isTcpFailoverTime(_r,now);
+
+	TRACE("PING %s (useTcp==%d)",_id.address().toString().c_str(),(int)useTcp);
+
 	Mutex::Lock _l(_lock);
-
-	// NOTE: this will never ping a peer that has *only* TCP paths. Right
-	// now there's never such a thing as TCP is only for failover.
-
-	bool pingTcp;
-	if (!firstSinceReset) {
-		uint64_t lastUdp = 0;
-		uint64_t lastTcp = 0;
-		uint64_t lastPing = 0;
-		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (p->tcp())
-				lastTcp = std::max(p->lastReceived(),lastTcp);
-			else lastUdp = std::max(p->lastReceived(),lastUdp);
-			lastPing = std::max(p->lastPing(),lastPing);
-		}
-		uint64_t lastAny = std::max(lastUdp,lastTcp);
-		pingTcp = ( ( (lastAny < lastPing) && ((lastPing - lastAny) >= ZT_PING_UNANSWERED_AFTER) ) || (lastTcp > lastUdp) );
-	} else pingTcp = false;
-
-	TRACE("PING %s (pingTcp==%d)",_id.address().toString().c_str(),(int)pingTcp);
-
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if ((pingTcp)||(!p->tcp())) {
+		if ((useTcp)||(!p->tcp())) {
 			if (_r->sw->sendHELLO(self,*p)) {
 				p->sent(now);
 				p->pinged(now);

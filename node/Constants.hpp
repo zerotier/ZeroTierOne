@@ -305,9 +305,14 @@ error_no_byte_order_defined;
 #define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
 
 /**
- * Try TCP tunnels if no response to UDP PINGs in this many milliseconds
+ * Try TCP tunnels if nothing received for this long
  */
-#define ZT_PING_UNANSWERED_AFTER 5000
+#define ZT_TCP_TUNNEL_FAILOVER_TIMEOUT 5000
+
+/**
+ * Try to ping supernodes this often until we get something from somewhere
+ */
+#define ZT_STARTUP_AGGRO 5000
 
 /**
  * Stop relaying via peers that have not responded to direct sends in this long

@@ -207,11 +207,10 @@ public:
 	class PingPeersThatNeedPing
 	{
 	public:
-		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,bool firstSinceReset) throw() :
+		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
 			_supernodeAddresses(renv->topology->supernodeAddresses()),
-			_r(renv),
-			_firstSinceReset(firstSinceReset) {}
+			_r(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
@@ -228,14 +227,13 @@ public:
 			       /* 2b: peer is not a supernode */
 					   (!_supernodeAddresses.count(p->address()))
 			     )
-			   ) { p->sendPing(_r,_now,_firstSinceReset); }
+			   ) { p->sendPing(_r,_now); }
 		}
 
 	private:
 		uint64_t _now;
 		std::set<Address> _supernodeAddresses;
 		const RuntimeEnvironment *_r;
-		bool _firstSinceReset;
 	};
 
 	/**

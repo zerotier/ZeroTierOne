@@ -540,7 +540,7 @@ Node::ReasonForTermination Node::run()
 		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = 0;
-		_r->timeOfLastResynchronize = 0;
+		_r->timeOfLastResynchronize = Utils::now();
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
 			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
@@ -551,13 +551,7 @@ Node::ReasonForTermination Node::run()
 			}
 
 			uint64_t now = Utils::now();
-
-			// Did the user send SIGHUP or otherwise order network resync? (mostly for debugging)
-			bool resynchronize = impl->resynchronize;
-			impl->resynchronize = false;
-			if (resynchronize) {
-				LOG("manual resynchronize ordered, resyncing with network");
-			}
+			bool resynchronize = false;
 
 			// If it looks like the computer slept and woke, resynchronize.
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {
@@ -577,18 +571,29 @@ Node::ReasonForTermination Node::run()
 				}
 			}
 
+			// Supernodes do not resynchronize unless explicitly ordered via SIGHUP.
+			if ((resynchronize)&&(_r->topology->amSupernode()))
+				resynchronize = false;
+
+			// Check for SIGHUP / force resync.
+			if (impl->resynchronize) {
+				impl->resynchronize = false;
+				resynchronize = true;
+				LOG("resynchronize forced by user, syncing with network");
+			}
+
 			if (resynchronize)
 				_r->timeOfLastResynchronize = now;
 
 			/* Ping supernodes separately, and do so more aggressively if we haven't
 			 * heard anything from anyone since our last resynchronize / startup. */
 			if ( ((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY) ||
-			     ((_r->timeOfLastResynchronize > _r->timeOfLastPacketReceived) && ((now - lastSupernodePing) >= ZT_PING_UNANSWERED_AFTER)) ) {
+			     ((_r->timeOfLastResynchronize > _r->timeOfLastPacketReceived) && ((now - lastSupernodePing) >= ZT_STARTUP_AGGRO)) ) {
 				lastSupernodePing = now;
 				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
 				TRACE("pinging %d supernodes",(int)sns.size());
 				for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p)
-					(*p)->sendPing(_r,now,resynchronize);
+					(*p)->sendPing(_r,now);
 			}
 
 			if (resynchronize) {
@@ -625,7 +630,7 @@ Node::ReasonForTermination Node::run()
 					if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
 						lastPingCheck = now;
 						try {
-							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now,resynchronize));
+							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
 							_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
 						} catch (std::exception &exc) {
 							LOG("unexpected exception running ping check cycle: %s",exc.what());

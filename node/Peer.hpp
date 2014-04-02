@@ -160,10 +160,9 @@ public:
 	 * 
 	 * @param _r Runtime environment
 	 * @param now Current time
-	 * @param firstSinceReset If true, this is the first ping sent since a network reset
 	 * @return True if send appears successful for at least one address type
 	 */
-	bool sendPing(const RuntimeEnvironment *_r,uint64_t now,bool firstSinceReset);
+	bool sendPing(const RuntimeEnvironment *_r,uint64_t now);
 
 	/**
 	 * Called periodically by Topology::clean() to remove stale paths and do other cleanup
@@ -261,6 +260,33 @@ public:
 		throw()
 	{
 		return _lastAnnouncedTo;
+	}
+
+	/**
+	 * @param _r Runtime environment
+	 * @param now Current time
+	 * @return True if it's time to attempt TCP failover (if we have TCP_OUT paths)
+	 */
+	inline bool isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
+		throw()
+	{
+		if ((now - _r->timeOfLastResynchronize) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) {
+			uint64_t lastUdpPingSent = 0;
+			uint64_t lastUdpReceive = 0;
+
+			{
+				Mutex::Lock _l(_lock);
+				for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+					if (p->type() == Path::PATH_TYPE_UDP) {
+						lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
+						lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
+					}
+				}
+			}
+
+			return ( (lastUdpPingSent > lastUdpReceive) && ((now - lastUdpPingSent) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) );
+		}
+		return false;
 	}
 
 	/**

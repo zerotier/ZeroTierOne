@@ -490,6 +490,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
 		const unsigned char *const signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
 
+		/*
 		TRACE("MULTICAST_FRAME @%.16llx #%.16llx from %s<%s> via %s(%s) to %s [ %s, %d bytes, depth %d ]",
 			(unsigned long long)nwid,
 			(unsigned long long)guid,
@@ -499,6 +500,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			Switch::etherTypeName(etherType),
 			(int)frameLen,
 			(int)depth);
+		*/
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
 
