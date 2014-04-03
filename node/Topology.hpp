@@ -272,8 +272,6 @@ public:
 
 	/**
 	 * Function object to forget direct links to active peers and then ping them indirectly
-	 *
-	 * Note that this excludes supernodes.
 	 */
 	class ResetActivePeers
 	{
@@ -286,12 +284,18 @@ public:
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if (!_supernodeAddresses.count(p->address())) {
-				p->clearPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
+			p->clearPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
+
+			Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
+			outp.armor(p->key(),false); // no need to encrypt a NOP
+
+			if (_supernodeAddresses.count(p->address())) {
+				// Send NOP directly to supernodes
+				p->send(_r,outp.data(),outp.size(),_now);
+			} else {
+				// Send NOP indirectly to regular peers if still active, triggering a new RENDEZVOUS
 				if (((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)&&(_supernode)) {
 					TRACE("sending reset NOP to %s",p->address().toString().c_str());
-					Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
-					outp.armor(p->key(),false); // no need to encrypt a NOP
 					_supernode->send(_r,outp.data(),outp.size(),_now);
 				}
 			}

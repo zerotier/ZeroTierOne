@@ -133,10 +133,10 @@ public:
 		Utils::snprintf(tmp,sizeof(tmp),"%s;%s;%lld;%lld;%lld;%lld;%s",
 			t,
 			_addr.toString().c_str(),
-			(long long)((_lastSend != 0) ? (now - _lastSend) : -1),
-			(long long)((_lastReceived != 0) ? (now - _lastReceived) : -1),
-			(long long)((_lastFirewallOpener != 0) ? (now - _lastFirewallOpener) : -1),
-			(long long)((_lastPing != 0) ? (now - _lastPing) : -1),
+			(long long)((_lastSend != 0) ? ((now - _lastSend) / 1000LL) : -1),
+			(long long)((_lastReceived != 0) ? ((now - _lastReceived) / 1000LL) : -1),
+			(long long)((_lastFirewallOpener != 0) ? ((now - _lastFirewallOpener) / 1000LL) : -1),
+			(long long)((_lastPing != 0) ? ((now - _lastPing) / 1000LL) : -1),
 			((_fixed) ? "fixed" : (active(now) ? "active" : "inactive"))
 		);
 		return std::string(tmp);

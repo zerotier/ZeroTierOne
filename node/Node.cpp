@@ -598,12 +598,12 @@ Node::ReasonForTermination Node::run()
 			}
 
 			if (resynchronize) {
-				/* If resynchronizing, forget P2P links to all peers and then send
-				 * something to formerly active ones. This will relay via a supernode
-				 * which will trigger a new RENDEZVOUS and a new hole punch. This
-				 * functor excludes supernodes, which are pinged separately above. */
-				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
+				/* Send NOP to all peers on resynchronize, directly to supernodes and
+				 * indirectly to regular nodes (to trigger RENDEZVOUS). Also clear
+				 * learned paths since they're likely no longer valid, and close
+				 * TCP sockets since they're also likely invalid. */
 				_r->sm->closeTcpSockets();
+				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
 			} else {
 				/* Periodically check for changes in our local multicast subscriptions
 				 * and broadcast those changes to directly connected peers. */

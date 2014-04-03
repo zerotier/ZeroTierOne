@@ -267,13 +267,13 @@ error_no_byte_order_defined;
  */
 #define ZT_PEER_DIRECT_PING_DELAY 120000
 
- /**
+/**
  * Delay in ms between firewall opener packets to direct links
  *
  * This should be lower than the UDP conversation entry timeout in most
  * stateful firewalls.
  */
-#define ZT_FIREWALL_OPENER_DELAY 50000
+#define ZT_FIREWALL_OPENER_DELAY 30000
 
 /**
  * Delay between requests for updated network autoconf information
@@ -290,7 +290,7 @@ error_no_byte_order_defined;
  * 
  * This is the shortest of the check delays/periods.
  */
-#define ZT_MIN_SERVICE_LOOP_INTERVAL ZT_NETWORK_FINGERPRINT_CHECK_DELAY
+#define ZT_MIN_SERVICE_LOOP_INTERVAL 5000
 
 /**
  * Activity timeout for links
