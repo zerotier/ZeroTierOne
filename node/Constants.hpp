@@ -263,11 +263,11 @@ error_no_byte_order_defined;
 #define ZT_NETWORK_FINGERPRINT_CHECK_DELAY 5000
 
 /**
- * Delay between pings (actually HELLOs) to direct links
+ * Delay between ordinary case pings of direct links
  */
 #define ZT_PEER_DIRECT_PING_DELAY 120000
 
-/**
+ /**
  * Delay in ms between firewall opener packets to direct links
  *
  * This should be lower than the UDP conversation entry timeout in most
@@ -297,12 +297,12 @@ error_no_byte_order_defined;
  * 
  * A link that hasn't spoken in this long is simply considered inactive.
  */
-#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 1000)
+#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 10000)
 
 /**
  * Close TCP tunnels if unused for this long
  */
-#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
+#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT (ZT_PEER_PATH_ACTIVITY_TIMEOUT + 10000)
 
 /**
  * Try TCP tunnels if nothing received for this long
@@ -313,6 +313,11 @@ error_no_byte_order_defined;
  * Try to ping supernodes this often until we get something from somewhere
  */
 #define ZT_STARTUP_AGGRO 5000
+
+/**
+ * Time since a ping was sent to be considered unanswered
+ */
+#define ZT_PING_UNANSWERED_AFTER 2500
 
 /**
  * Stop relaying via peers that have not responded to direct sends in this long

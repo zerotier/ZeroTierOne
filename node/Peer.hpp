@@ -227,6 +227,26 @@ public:
 	}
 
 	/**
+	 * @param _r Runtime environment
+	 * @param now Current time
+	 * @return True if the last ping is unanswered
+	 */
+	inline bool pingUnanswered(const RuntimeEnvironment *_r,uint64_t now)
+		throw()
+	{
+		uint64_t lp = 0;
+		uint64_t lr = 0;
+		{
+			Mutex::Lock _l(_lock);
+			for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+				lp = std::max(p->lastPing(),lp);
+				lr = std::max(p->lastReceived(),lr);
+			}
+		}
+		return ( (lp > _r->timeOfLastResynchronize) && ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) );
+	}
+
+	/**
 	 * @return Time of most recent unicast frame received
 	 */
 	inline uint64_t lastUnicastFrame() const

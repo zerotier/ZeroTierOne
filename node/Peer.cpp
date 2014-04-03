@@ -216,7 +216,7 @@ bool Peer::isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
 void Peer::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	unsigned long i = 0,o = 0,l = _paths.size();
+	unsigned long i = 0,o = 0,l = (unsigned long)_paths.size();
 	while (i != l) {
 		if (_paths[i].active(now))
 			_paths[o++] = _paths[i];

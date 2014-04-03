@@ -536,10 +536,10 @@ Node::ReasonForTermination Node::run()
 
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000ULL; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
-		uint64_t lastSupernodePing = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
 		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t lastMulticastCheck = 0;
+		uint64_t lastSupernodePingCheck = 0;
 		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = 0;
@@ -592,13 +592,9 @@ Node::ReasonForTermination Node::run()
 
 			/* Ping supernodes separately, and do so more aggressively if we haven't
 			 * heard anything from anyone since our last resynchronize / startup. */
-			if ( ((now - lastSupernodePing) >= ZT_PEER_DIRECT_PING_DELAY) ||
-			     ((_r->timeOfLastResynchronize > _r->timeOfLastPacketReceived) && ((now - lastSupernodePing) >= ZT_STARTUP_AGGRO)) ) {
-				lastSupernodePing = now;
-				std::vector< SharedPtr<Peer> > sns(_r->topology->supernodePeers());
-				TRACE("pinging %d supernodes",(int)sns.size());
-				for(std::vector< SharedPtr<Peer> >::const_iterator p(sns.begin());p!=sns.end();++p)
-					(*p)->sendPing(_r,now);
+			if ((now - lastSupernodePingCheck) >= ZT_STARTUP_AGGRO) {
+				lastSupernodePingCheck = now;
+				_r->topology->eachSupernodePeer(Topology::PingSupernodesThatNeedPing(_r,now));
 			}
 
 			if (resynchronize) {

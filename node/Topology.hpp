@@ -181,6 +181,20 @@ public:
 	}
 
 	/**
+	 * Apply a function or function object to all supernode peers
+	 *
+	 * @param f Function to apply
+	 * @tparam F Function or function object type
+	 */
+	template<typename F>
+	inline void eachSupernodePeer(F f)
+	{
+		Mutex::Lock _l(_supernodes_m);
+		for(std::vector< SharedPtr<Peer> >::const_iterator p(_supernodePeers.begin());p!=_supernodePeers.end();++p)
+			f(*this,*p);
+	}
+
+	/**
 	 * Function object to collect peers that need a firewall opener sent
 	 */
 	class OpenPeersThatNeedFirewallOpener
@@ -214,25 +228,45 @@ public:
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
-			if ( 
-			     /* 1: we have not heard anything directly in ZT_PEER_DIRECT_PING_DELAY ms */
-			     ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) &&
-			     /* 2: */
-			     (
-			       /* 2a: peer has direct path, and has sent us something recently */
-			       (
-			         (p->hasDirectPath())&&
-			         ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)
-			       ) &&
-			       /* 2b: peer is not a supernode */
-					   (!_supernodeAddresses.count(p->address()))
-			     )
-			   ) { p->sendPing(_r,_now); }
+			/* For ordinary nodes we ping if they've sent us a frame recently,
+			 * otherwise they are stale and we let the link die.
+			 *
+			 * Note that we measure ping time from time of last receive rather
+			 * than time of last send in order to only count full round trips. */
+			if ( (!_supernodeAddresses.count(p->address())) &&
+			     ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) &&
+				 ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) ) {
+				p->sendPing(_r,_now);
+			}
 		}
 
 	private:
 		uint64_t _now;
 		std::set<Address> _supernodeAddresses;
+		const RuntimeEnvironment *_r;
+	};
+
+	/**
+	 * Ping peers that need ping according to supernode rules (slightly more aggressive)
+	 */
+	class PingSupernodesThatNeedPing
+	{
+	public:
+		PingSupernodesThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
+			_now(now),
+			_r(renv) {}
+
+		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+		{
+			/* For supernodes we always ping even if no frames have been seen, and
+			 * we ping aggressively if pings are unanswered. The limit to this
+			 * frequency is set in the main loop to no more than ZT_STARTUP_AGGRO. */
+			if ( (p->pingUnanswered(_r,_now)) || ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) )
+				p->sendPing(_r,_now);
+		}
+
+	private:
+		uint64_t _now;
 		const RuntimeEnvironment *_r;
 	};
 
