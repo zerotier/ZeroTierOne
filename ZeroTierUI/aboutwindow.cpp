@@ -39,7 +39,17 @@ AboutWindow::AboutWindow(QWidget *parent) :
 	ui(new Ui::AboutWindow)
 {
 	ui->setupUi(this);
-	ui->aboutTextLabel->setText(QString("ZeroTier One\nVersion ")+ZeroTier::Node::versionString()+"\nQt Graphical User Interface\n\n(c)2011-2014 ZeroTier Networks LLC\n\nReleased under the terms of the GNU\nGeneral Public License v3.0, see: http://gplv3.fsf.org for terms.\n\nAuthor(s): Adam Ierymenko");
+	ui->aboutTextLabel->setText(QString("ZeroTier One\nVersion ")+ZeroTier::Node::versionString()+"\nDesktop Graphical User Interface\n\n(c)2011-2014 ZeroTier Networks LLC\n\nReleased under the terms of the GNU\nGeneral Public License v3.0, see: http://gplv3.fsf.org for terms.\n\nAuthor(s): Adam Ierymenko");
+
+#ifdef __WINDOWS__
+	QWidgetList widgets = this->findChildren<QWidget*>();
+	foreach(QWidget *widget, widgets) {
+		QFont font(widget->font());
+		font.setPointSizeF(font.pointSizeF() * 0.75);
+		widget->setFont(font);
+	}
+	this->raise();
+#endif
 }
 
 AboutWindow::~AboutWindow()

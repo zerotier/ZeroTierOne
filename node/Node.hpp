@@ -58,7 +58,7 @@ public:
 		 *
 		 * Initialization may fail. Call error() to check.
 		 *
-		 * @param hp Home path of ZeroTier One instance
+		 * @param hp Home path of ZeroTier One instance or NULL for default system home path
 		 * @param resultHandler Function to call when commands provide results
 		 * @param arg First argument to result handler
 		 * @param authToken Authentication token or NULL (default) to read from authtoken.secret in home path

@@ -109,27 +109,30 @@ Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(
 	std::string at;
 	if (authToken)
 		at = authToken;
-	else if (!Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),at))
-		impl->err = "no authentication token specified and authtoken.secret not readable";
-	else {
-		std::string myid;
-		if (Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),myid)) {
-			std::string myaddr(myid.substr(0,myid.find(':')));
-			if (myaddr.length() != 10)
-				impl->err = "invalid address extracted from identity.public";
-			else {
-				try {
-					impl->resultHandler = resultHandler;
-					impl->arg = arg;
-					impl->ipcc = new IpcConnection((std::string(ZT_IPC_ENDPOINT_BASE) + myaddr).c_str(),&_CBipcResultHandler,_impl);
-					impl->ipcc->printf("auth %s"ZT_EOL_S,at.c_str());
-				} catch ( ... ) {
-					impl->ipcc = (IpcConnection *)0;
-					impl->err = "failure connecting to running ZeroTier One service";
-				}
-			}
-		} else impl->err = "unable to read identity.public";
+	else if (!Utils::readFile(authTokenDefaultSystemPath(),at)) {
+		if (!Utils::readFile(authTokenDefaultUserPath(),at)) {
+			impl->err = "no authentication token specified and authtoken.secret not readable";
+			return;
+		}
 	}
+
+	std::string myid;
+	if (Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),myid)) {
+		std::string myaddr(myid.substr(0,myid.find(':')));
+		if (myaddr.length() != 10)
+			impl->err = "invalid address extracted from identity.public";
+		else {
+			try {
+				impl->resultHandler = resultHandler;
+				impl->arg = arg;
+				impl->ipcc = new IpcConnection((std::string(ZT_IPC_ENDPOINT_BASE) + myaddr).c_str(),&_CBipcResultHandler,_impl);
+				impl->ipcc->printf("auth %s"ZT_EOL_S,at.c_str());
+			} catch ( ... ) {
+				impl->ipcc = (IpcConnection *)0;
+				impl->err = "failure connecting to running ZeroTier One service";
+			}
+		}
+	} else impl->err = "unable to read identity.public";
 }
 
 Node::NodeControlClient::~NodeControlClient()

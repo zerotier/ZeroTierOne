@@ -80,9 +80,6 @@ NetworkWidget::~NetworkWidget()
 void NetworkWidget::setStatus(const std::string &status,const std::string &age)
 {
 	ui->statusLabel->setText(QString(status.c_str()));
-	if (status == "OK")
-		ui->ageLabel->setText(QString("[") + age.c_str() + "s ago]");
-	else ui->ageLabel->setText(QString());
 }
 
 void NetworkWidget::setNetworkName(const std::string &name)

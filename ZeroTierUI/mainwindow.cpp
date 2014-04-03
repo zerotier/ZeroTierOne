@@ -63,32 +63,32 @@
 #endif
 
 // Globally visible
-ZeroTier::Node::LocalClient *zeroTierClient = (ZeroTier::Node::LocalClient *)0;
+ZeroTier::Node::NodeControlClient *zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
 
 // Main window instance for app
 QMainWindow *mainWindow = (MainWindow *)0;
 
 // Handles message from ZeroTier One service
-static void handleZTMessage(void *arg,unsigned long id,const char *line)
+static void handleZTMessage(void *arg,const char *line)
 {
-	static std::map< unsigned long,std::vector<std::string> > ztReplies;
+	static std::vector<std::string> ztReplies;
 	static QMutex ztReplies_m;
 
 	ztReplies_m.lock();
-	if (*line) {
-		ztReplies[id].push_back(std::string(line));
-		ztReplies_m.unlock();
-	} else { // empty lines conclude transmissions
-		std::map< unsigned long,std::vector<std::string> >::iterator r(ztReplies.find(id));
-		if (r != ztReplies.end()) {
+
+	if (line) {
+		if ((line[0] == '.')&&(line[1] == (char)0)) {
 			// The message is packed into an event and sent to the main window where
 			// the actual parsing code lives.
-			MainWindow::ZTMessageEvent *event = new MainWindow::ZTMessageEvent(r->second);
-			ztReplies.erase(r);
-			ztReplies_m.unlock();
+			MainWindow::ZTMessageEvent *event = new MainWindow::ZTMessageEvent(ztReplies);
+			ztReplies.clear();
 			QCoreApplication::postEvent(mainWindow,event); // must post since this may be another thread
-		} else ztReplies_m.unlock();
+		} else if (line[0]) {
+			ztReplies.push_back(std::string(line));
+		}
 	}
+
+	ztReplies_m.unlock();
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -136,7 +136,7 @@ MainWindow::~MainWindow()
 {
 	delete ui;
 	delete zeroTierClient;
-	zeroTierClient = (ZeroTier::Node::LocalClient *)0;
+	zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
 	mainWindow = (MainWindow *)0;
 }
 
@@ -147,75 +147,72 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 	if (this->pollServiceTimerId < 0)
 		return;
 
+	// Show quick start dialog on first launch, then reset timer to normal rate
 	if (this->firstTimerTick) {
 		this->firstTimerTick = false;
 		this->killTimer(this->pollServiceTimerId);
-
 		if (!settings->value("shown_quickStart",false).toBool()) {
 			on_actionQuick_Start_triggered();
 			settings->setValue("shown_quickStart",true);
 			settings->sync();
 		}
-
-		this->pollServiceTimerId = this->startTimer(1500);
+		this->pollServiceTimerId = this->startTimer(2000);
 	}
 
 	if (!zeroTierClient) {
-		std::string authToken;
-		if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
 #ifdef __APPLE__
-			if (QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one")) {
-				// Authorize user by copying auth token into local home directory
-				QMessageBox::information(this,"Authorization Needed","Administrator privileges are required to allow the current user to control ZeroTier One on this computer. (You only have to do this once.)",QMessageBox::Ok,QMessageBox::NoButton);
+		if ((!QFile::exists(ZeroTier::Node::NodeControlClient::authTokenDefaultUserPath()))&&(QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one"))) {
+			// Authorize user by copying auth token into local home directory
+			QMessageBox::information(this,"Authorization Needed","Administrator privileges are required to allow the current user to control ZeroTier One on this computer. (You only have to do this once.)",QMessageBox::Ok,QMessageBox::NoButton);
 
-				std::string homePath(QDir::homePath().toStdString());
-				QString zt1Caches(QDir::homePath() + "/Library/Caches/ZeroTier/One");
-				QDir::root().mkpath(zt1Caches);
-				std::string tmpPath((zt1Caches + "/auth.sh").toStdString());
+			std::string homePath(QDir::homePath().toStdString());
+			QString zt1Caches(QDir::homePath() + "/Library/Caches/ZeroTier/One");
+			QDir::root().mkpath(zt1Caches);
+			std::string tmpPath((zt1Caches + "/auth.sh").toStdString());
 
-				FILE *scr = fopen(tmpPath.c_str(),"w");
-				if (!scr) {
-					QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Cannot write to temporary Library/Caches/ZeroTier/One folder.)",QMessageBox::Ok,QMessageBox::NoButton);
-					QApplication::exit(1);
-					return;
-				}
-
-				fprintf(scr,"#!/bin/bash\n");
-				fprintf(scr,"export PATH=\"/bin:/usr/bin:/sbin:/usr/sbin\"\n");
-				fprintf(scr,"if [ -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then\n");
-				fprintf(scr,"  mkdir -p '%s/Library/Application Support/ZeroTier/One'\n",homePath.c_str());
-				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier'\n",(int)getuid(),homePath.c_str());
-				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier'\n",(int)getgid(),homePath.c_str());
-				fprintf(scr,"  chmod 0700 '%s/Library/Application Support/ZeroTier'\n",homePath.c_str());
-				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One'\n",(int)getuid(),homePath.c_str());
-				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One'\n",(int)getgid(),homePath.c_str());
-				fprintf(scr,"  chmod 0700 '%s/Library/Application Support/ZeroTier/One'\n",homePath.c_str());
-				fprintf(scr,"  cp -f '/Library/Application Support/ZeroTier/One/authtoken.secret' '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
-				fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getuid(),homePath.c_str());
-				fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getgid(),homePath.c_str());
-				fprintf(scr,"  chmod 0600 '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
-				fprintf(scr,"fi\n");
-				fprintf(scr,"exit 0\n");
-
-				fclose(scr);
-				chmod(tmpPath.c_str(),0755);
-
-				macExecutePrivilegedShellCommand((std::string("'")+tmpPath+"' >>/dev/null 2>&1").c_str());
-
-				unlink(tmpPath.c_str());
+			FILE *scr = fopen(tmpPath.c_str(),"w");
+			if (!scr) {
+				QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Cannot write to temporary Library/Caches/ZeroTier/One folder.)",QMessageBox::Ok,QMessageBox::NoButton);
+				QApplication::exit(1);
+				return;
 			}
-#endif
 
-			if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultUserPath().c_str(),authToken)) {
-				if (!ZeroTier::Utils::readFile(ZeroTier::Node::LocalClient::authTokenDefaultSystemPath().c_str(),authToken)) {
-					QMessageBox::critical(this,"Cannot Authorize","Unable to authorize this user to administrate ZeroTier One. (Did you enter your password correctly?)",QMessageBox::Ok,QMessageBox::NoButton);
-					QApplication::exit(1);
-					return;
-				}
-			}
+			fprintf(scr,"#!/bin/bash\n");
+			fprintf(scr,"export PATH=\"/bin:/usr/bin:/sbin:/usr/sbin\"\n");
+			fprintf(scr,"if [ -f '/Library/Application Support/ZeroTier/One/authtoken.secret' ]; then\n");
+			fprintf(scr,"  mkdir -p '%s/Library/Application Support/ZeroTier/One'\n",homePath.c_str());
+			fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier'\n",(int)getuid(),homePath.c_str());
+			fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier'\n",(int)getgid(),homePath.c_str());
+			fprintf(scr,"  chmod 0700 '%s/Library/Application Support/ZeroTier'\n",homePath.c_str());
+			fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One'\n",(int)getuid(),homePath.c_str());
+			fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One'\n",(int)getgid(),homePath.c_str());
+			fprintf(scr,"  chmod 0700 '%s/Library/Application Support/ZeroTier/One'\n",homePath.c_str());
+			fprintf(scr,"  cp -f '/Library/Application Support/ZeroTier/One/authtoken.secret' '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
+			fprintf(scr,"  chown %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getuid(),homePath.c_str());
+			fprintf(scr,"  chgrp %d '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",(int)getgid(),homePath.c_str());
+			fprintf(scr,"  chmod 0600 '%s/Library/Application Support/ZeroTier/One/authtoken.secret'\n",homePath.c_str());
+			fprintf(scr,"fi\n");
+			fprintf(scr,"exit 0\n");
+
+			fclose(scr);
+			chmod(tmpPath.c_str(),0755);
+
+			macExecutePrivilegedShellCommand((std::string("'")+tmpPath+"' >>/dev/null 2>&1").c_str());
+
+			unlink(tmpPath.c_str());
 		}
+#endif // __APPLE__
 
-		zeroTierClient = new ZeroTier::Node::LocalClient(authToken.c_str(),0,&handleZTMessage,this);
+		try {
+			zeroTierClient = new ZeroTier::Node::NodeControlClient((const char *)0,&handleZTMessage,this);
+			const char *err = zeroTierClient->error();
+			if (err) {
+				delete zeroTierClient;
+				zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
+			}
+		} catch ( ... ) {
+			zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
+		}
 	}
 
 	if (++this->cyclesSinceResponseFromService >= 3) {
@@ -227,9 +224,11 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 		ui->networkListWidget->setVisible(false);
 	}
 
-	zeroTierClient->send("info");
-	zeroTierClient->send("listnetworks");
-	zeroTierClient->send("listpeers");
+	if (zeroTierClient) {
+		zeroTierClient->send("info");
+		zeroTierClient->send("listnetworks");
+		zeroTierClient->send("listpeers");
+	}
 }
 
 void MainWindow::customEvent(QEvent *event)
@@ -237,14 +236,13 @@ void MainWindow::customEvent(QEvent *event)
 	ZTMessageEvent *m = (ZTMessageEvent *)event; // only one custom event type so far
 	if (m->ztMessage.size() == 0)
 		return;
-
-	this->cyclesSinceResponseFromService = 0;
-
-	std::vector<std::string> hdr(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[0]));
+	std::vector<std::string> hdr(ZeroTier::Node::NodeControlClient::splitLine(m->ztMessage[0]));
 	if (hdr.size() < 2)
 		return;
 	if (hdr[0] != "200")
 		return;
+
+	this->cyclesSinceResponseFromService = 0;
 
 	if (hdr[1] == "info") {
 		if (hdr.size() >= 3)
@@ -256,7 +254,7 @@ void MainWindow::customEvent(QEvent *event)
 	} else if (hdr[1] == "listnetworks") {
 		std::map< std::string,std::vector<std::string> > newNetworks;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
-			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
+			std::vector<std::string> l(ZeroTier::Node::NodeControlClient::splitLine(m->ztMessage[i]));
 			// 200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>
 			if ((l.size() == 9)&&(l[2].length() == 16))
 				newNetworks[l[2]] = l;
@@ -309,12 +307,10 @@ void MainWindow::customEvent(QEvent *event)
 		}
 	} else if (hdr[1] == "listpeers") {
 		this->numPeers = 0;
-		for(unsigned long i=1;i<m->ztMessage.size();++i) {
-			std::vector<std::string> l(ZeroTier::Node::LocalClient::splitLine(m->ztMessage[i]));
-			if ((l.size() >= 5)&&((l[3] != "-")||(l[4] != "-")))
-				++this->numPeers; // number of direct peers online -- check for active IPv4 and/or IPv6 address
-		}
-	}
+		for(unsigned long i=1;i<m->ztMessage.size();++i)
+			++this->numPeers;
+	} else
+		return;
 
 	if (!ui->networkListWidget->count()) {
 		ui->noNetworksLabel->setText("You Have Not Joined Any Networks");
@@ -335,7 +331,7 @@ void MainWindow::customEvent(QEvent *event)
 	st += this->myVersion;
 	st += ", ";
 	st += QString::number(this->numPeers);
-	st += " direct links to peers";
+	st += " peers";
 	ui->statusLabel->setText(st);
 }
 

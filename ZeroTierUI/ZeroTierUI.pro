@@ -12,16 +12,21 @@ mac:QMAKE_INFO_PLIST = Info.plist
 mac:LIBS += -framework Cocoa
 
 SOURCES += main.cpp \
-    mainwindow.cpp \
-    aboutwindow.cpp \
+		mainwindow.cpp \
+		aboutwindow.cpp \
+		networkwidget.cpp \
+		installdialog.cpp \
+		licensedialog.cpp \
+		onetimedialog.cpp \
     ../node/C25519.cpp \
     ../node/CertificateOfMembership.cpp \
     ../node/Defaults.cpp \
-    ../node/Demarc.cpp \
     ../node/EthernetTap.cpp \
     ../node/HttpClient.cpp \
     ../node/Identity.cpp \
     ../node/InetAddress.cpp \
+    ../node/IpcConnection.cpp \
+    ../node/IpcListener.cpp \
     ../node/Logger.cpp \
     ../node/Multicaster.cpp \
     ../node/Network.cpp \
@@ -35,24 +40,25 @@ SOURCES += main.cpp \
     ../node/Salsa20.cpp \
     ../node/Service.cpp \
     ../node/SHA512.cpp \
+    ../node/SocketManager.cpp \
     ../node/SoftwareUpdater.cpp \
     ../node/Switch.cpp \
     ../node/SysEnv.cpp \
+    ../node/TcpSocket.cpp \
     ../node/Topology.cpp \
     ../node/UdpSocket.cpp \
     ../node/Utils.cpp \
     ../ext/lz4/lz4.c \
-    ../ext/lz4/lz4hc.c \
-    networkwidget.cpp \
-    installdialog.cpp \
-    licensedialog.cpp \
-    onetimedialog.cpp
+    ../ext/lz4/lz4hc.c
 
 HEADERS  += mainwindow.h \
-    aboutwindow.h \
-    ../node/Node.hpp \
-    ../node/Utils.hpp \
-    ../node/Defaults.hpp \
+		aboutwindow.h \
+		networkwidget.h \
+		installdialog.h \
+		mac_doprivileged.h \
+		licensedialog.h \
+		main.h \
+		onetimedialog.h \
     ../node/Address.hpp \
     ../node/Array.hpp \
     ../node/AtomicCounter.hpp \
@@ -61,14 +67,15 @@ HEADERS  += mainwindow.h \
     ../node/C25519.hpp \
     ../node/CertificateOfMembership.hpp \
     ../node/CMWC4096.hpp \
-    ../node/Condition.hpp \
     ../node/Constants.hpp \
-    ../node/Demarc.hpp \
+    ../node/Defaults.hpp \
     ../node/Dictionary.hpp \
     ../node/EthernetTap.hpp \
     ../node/HttpClient.hpp \
     ../node/Identity.hpp \
     ../node/InetAddress.hpp \
+    ../node/IpcConnection.hpp \
+    ../node/IpcListener.hpp \
     ../node/Logger.hpp \
     ../node/MAC.hpp \
     ../node/Multicaster.hpp \
@@ -76,10 +83,12 @@ HEADERS  += mainwindow.h \
     ../node/Mutex.hpp \
     ../node/Network.hpp \
     ../node/NetworkConfig.hpp \
+    ../node/Node.hpp \
     ../node/NodeConfig.hpp \
     ../node/NonCopyable.hpp \
     ../node/Packet.hpp \
     ../node/PacketDecoder.hpp \
+    ../node/Path.hpp \
     ../node/Peer.hpp \
     ../node/Poly1305.hpp \
     ../node/RuntimeEnvironment.hpp \
@@ -87,28 +96,26 @@ HEADERS  += mainwindow.h \
     ../node/Service.hpp \
     ../node/SHA512.hpp \
     ../node/SharedPtr.hpp \
+    ../node/Socket.hpp \
+    ../node/SocketManager.hpp \
     ../node/SoftwareUpdater.hpp \
     ../node/Switch.hpp \
     ../node/SysEnv.hpp \
+    ../node/TcpSocket.hpp \
     ../node/Thread.hpp \
     ../node/Topology.hpp \
     ../node/UdpSocket.hpp \
+    ../node/Utils.hpp \
     ../ext/lz4/lz4.h \
-    ../ext/lz4/lz4hc.h \
-    networkwidget.h \
-    installdialog.h \
-    mac_doprivileged.h \
-    licensedialog.h \
-    main.h \
-    onetimedialog.h
+    ../ext/lz4/lz4hc.h
 
 FORMS    += mainwindow.ui \
-    aboutwindow.ui \
-    networkwidget.ui \
-    installdialog.ui \
-    licensedialog.ui \
-    quickstartdialog.ui \
-    onetimedialog.ui
+		aboutwindow.ui \
+		networkwidget.ui \
+		installdialog.ui \
+		licensedialog.ui \
+		quickstartdialog.ui \
+		onetimedialog.ui
 
 RESOURCES += \
 		resources.qrc
@@ -117,4 +124,4 @@ mac:OBJECTIVE_SOURCES += \
 		mac_doprivileged.mm
 
 OTHER_FILES += \
-    stylesheet.css
+		stylesheet.css
