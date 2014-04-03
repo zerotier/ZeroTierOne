@@ -86,6 +86,7 @@ IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnect
 		::close(_sock);
 		throw std::runtime_error("listen() failed for bound AF_UNIX socket");
 	}
+	::chmod(_endpoint.c_str(),0777);
 #endif
 
 	_thread = Thread::start(this);
