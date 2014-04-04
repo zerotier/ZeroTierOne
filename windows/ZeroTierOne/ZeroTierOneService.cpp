@@ -80,7 +80,7 @@ restart_node:
 			// start or restart
 			ZeroTier::Mutex::Lock _l(_lock);
 			delete _node;
-			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),0,0);
+			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),ZT_DEFAULT_UDP_PORT,0,false);
 		}
 		switch(_node->run()) {
 			case ZeroTier::Node::NODE_RESTART_FOR_UPGRADE: {
