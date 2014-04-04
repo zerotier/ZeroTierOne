@@ -283,14 +283,6 @@ public:
 	}
 
 	/**
-	 * @param _r Runtime environment
-	 * @param now Current time
-	 * @return True if it's time to attempt TCP failover (if we have TCP_OUT paths)
-	 */
-	bool isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
-		throw();
-
-	/**
 	 * @return Current latency or 0 if unknown (max: 65535)
 	 */
 	inline unsigned int latency() const
@@ -508,6 +500,9 @@ public:
 	}
 
 private:
+	bool _isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
+		throw();
+
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 

@@ -235,7 +235,7 @@ public:
 			 * than time of last send in order to only count full round trips. */
 			if ( (!_supernodeAddresses.count(p->address())) &&
 			     ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) &&
-				 ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) ) {
+			     ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) ) {
 				p->sendPing(_r,_now);
 			}
 		}
@@ -261,7 +261,7 @@ public:
 			/* For supernodes we always ping even if no frames have been seen, and
 			 * we ping aggressively if pings are unanswered. The limit to this
 			 * frequency is set in the main loop to no more than ZT_STARTUP_AGGRO. */
-			if ( (p->pingUnanswered(_r,_now)) || ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) )
+			if ( (p->pingUnanswered(_r,_now)) || ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) || (p->lastDirectReceive() < _r->timeOfLastResynchronize) )
 				p->sendPing(_r,_now);
 		}
 
