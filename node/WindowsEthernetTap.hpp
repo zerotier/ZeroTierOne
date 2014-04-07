@@ -31,44 +31,67 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <string>
+#include <map>
+#include <list>
+#include <vector>
 #include <set>
+#include <string>
+#include <queue>
+#include <stdexcept>
 
 #include "Constants.hpp"
-#include "MAC.hpp"
 #include "InetAddress.hpp"
-#include "Buffer.hpp"
+#include "MAC.hpp"
+#include "Mutex.hpp"
 #include "MulticastGroup.hpp"
-#include "NonCopyable.hpp"
+#include "Thread.hpp"
+#include "Buffer.hpp"
+#include "Array.hpp"
+
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
 
 namespace ZeroTier {
 
+class RuntimeEnvironment;
+
 /**
- * Base class for Ethernet tap device implementations
+ * System ethernet tap device
  */
-class EthernetTap : NonCopyable
+class EthernetTap
 {
 public:
-	virtual ~EthernetTap() {}
-
 	/**
-	 * @return Implementation class name (e.g. UnixEthernetTap)
-	 */
-	inline const char *implementationName() const { return _implName; }
-
-	/**
-	 * Sets whether device is 'up'
+	 * Construct a new TAP device
 	 *
-	 * This may do nothing on some platforms.
-	 *
-	 * @param en Is device enabled?
+	 * Handler arguments: arg,from,to,etherType,data
+	 * 
+	 * @param renv Runtime environment
+	 * @param tag A tag used to persist tap identity at the OS layer (e.g. nwid in hex for Windows or device name for *nix)
+	 * @param mac MAC address of device
+	 * @param mtu MTU of device
+	 * @param desc If non-NULL, a description (not used on all OSes)
+	 * @param handler Handler function to be called when data is received from the tap
+	 * @param arg First argument to handler function
+	 * @throws std::runtime_error Unable to allocate device
 	 */
-	virtual void setEnabled(bool en) = 0;
+	EthernetTap(
+		const RuntimeEnvironment *renv,
+		const char *tag,
+		const MAC &mac,
+		unsigned int mtu,
+		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void *arg)
+		throw(std::runtime_error);
 
 	/**
-	 * @return Is device 'up'?
+	 * Close tap and shut down thread
+	 *
+	 * This may block for a few seconds while thread exits.
 	 */
-	virtual bool enabled() const = 0;
+	~EthernetTap();
 
 	/**
 	 * Set the user display name for this connection
@@ -77,7 +100,7 @@ public:
 	 *
 	 * @param dn User display name
 	 */
-	virtual void setDisplayName(const char *dn) = 0;
+	void setDisplayName(const char *dn);
 
 	/**
 	 * @return MAC address of this interface
@@ -95,7 +118,7 @@ public:
 	 * @param ip IP and netmask (netmask stored in port field)
 	 * @return True if IP added successfully
 	 */
-	virtual bool addIP(const InetAddress &ip) = 0;
+	bool addIP(const InetAddress &ip);
 
 	/**
 	 * Remove an IP from this interface
@@ -105,12 +128,12 @@ public:
 	 * @param ip IP and netmask (netmask stored in port field)
 	 * @return True if IP removed successfully
 	 */
-	virtual bool removeIP(const InetAddress &ip) = 0;
+	bool removeIP(const InetAddress &ip);
 
 	/**
 	 * @return All IP addresses (V4 and V6) assigned to this interface (including link-local)
 	 */
-	virtual std::set<InetAddress> ips() const = 0;
+	std::set<InetAddress> ips() const;
 
 	/**
 	 * Set this tap's IP addresses to exactly this set of IPs
@@ -152,17 +175,17 @@ public:
 	 * @param data Frame payload
 	 * @param len Length of frame
 	 */
-	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len) = 0;
+	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 
 	/**
 	 * @return OS-specific device or connection name
 	 */
-	virtual std::string deviceName() const = 0;
+	std::string deviceName() const;
 
 	/**
 	 * @return OS-internal persistent device ID or empty string if not applicable to this platform or not persistent
 	 */
-	virtual std::string persistentId() const = 0;
+	std::string persistentId() const;
 
 	/**
 	 * Fill or modify a set to contain multicast groups for this device
@@ -176,17 +199,73 @@ public:
 	 * @param groups Set to modify in place
 	 * @return True if set was changed since last call
 	 */
-	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups) = 0;
+	bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
-protected:
-	EthernetTap(const char *cn,const MAC &m,unsigned int mt) :
-		_implName(cn),
-		_mac(m),
-		_mtu(mt) {}
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
+		throw();
 
-	const char *_implName;
-	MAC _mac;
-	unsigned int _mtu;
+	/**
+	 * Remove persistent tap device by device name
+	 *
+	 * This has no effect on platforms that do not have persistent taps.
+	 * On platforms like Windows with persistent devices the device is
+	 * uninstalled.
+	 *
+	 * @param _r Runtime environment
+	 * @param pdev Device name as returned by persistentId() while tap is running
+	 * @return True if a device was deleted
+	 */
+	static bool deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid);
+
+	/**
+	 * Clean persistent tap devices that are not in the supplied set
+	 *
+	 * This has no effect on platforms that do not have persistent taps.
+	 * On platforms like Windows with persistent devices the device is
+	 * uninstalled.
+	 *
+	 * @param _r Runtime environment
+	 * @param exceptThese Devices to leave in place
+	 * @param alsoRemoveUnassociatedDevices If true, remove devices not associated with any network as well
+	 * @return Number of devices deleted or -1 if an error prevented the operation from being performed
+	 */
+	static int cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese,bool alsoRemoveUnassociatedDevices);
+
+private:
+	const MAC _mac;
+	const unsigned int _mtu;
+
+	const RuntimeEnvironment *_r;
+
+	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
+	void *_arg;
+
+	Thread _thread;
+
+#ifdef __UNIX_LIKE__
+	char _dev[16];
+	int _fd;
+	int _shutdownSignalPipe[2];
+#endif
+
+#ifdef __WINDOWS__
+	void _syncIpsWithRegistry(const std::set<InetAddress> &haveIps);
+
+	HANDLE _tap;
+	OVERLAPPED _tapOvlRead,_tapOvlWrite;
+	char _tapReadBuf[ZT_IF_MTU + 32];
+	HANDLE _injectSemaphore;
+	GUID _deviceGuid;
+	std::string _myDeviceInstanceId; // NetCfgInstanceId, a GUID
+	std::string _myDeviceInstanceIdPath; // DeviceInstanceID, another kind of "instance ID"
+	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
+	Mutex _injectPending_m;
+	volatile bool _run;
+	volatile bool _initialized;
+#endif
 };
 
 } // namespace ZeroTier

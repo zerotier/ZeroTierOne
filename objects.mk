@@ -4,7 +4,6 @@ OBJS=\
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Defaults.o \
-	node/EthernetTap.o \
 	node/HttpClient.o \
 	node/Identity.o \
 	node/InetAddress.o \
@@ -30,4 +29,5 @@ OBJS=\
 	node/TcpSocket.o \
 	node/Topology.o \
 	node/UdpSocket.o \
+	node/UnixEthernetTap.o \
 	node/Utils.o
