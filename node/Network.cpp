@@ -30,13 +30,19 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "Constants.hpp"
 #include "Network.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NodeConfig.hpp"
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Buffer.hpp"
-#include "EthernetTap.hpp"
+
+#ifdef __WINDOWS__
+#include "WindowsEthernetTap.hpp"
+#else
+#include "UnixEthernetTap.hpp"
+#endif
 
 #define ZT_NETWORK_CERT_WRITE_BUF_SIZE 131072
 
@@ -60,17 +66,21 @@ Network::~Network()
 {
 	Thread::join(_setupThread);
 
+#ifdef __WINDOWS__
 	std::string devPersistentId;
 	if (_tap) {
 		devPersistentId = _tap->persistentId();
 		delete _tap;
 	}
+#endif
 
 	if (_destroyOnDelete) {
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
+#ifdef __WINDOWS__
 		if (devPersistentId.length())
-			EthernetTap::deletePersistentTapDevice(_r,devPersistentId.c_str());
+			WindowsEthernetTap::deletePersistentTapDevice(_r,devPersistentId.c_str());
+#endif
 	} else {
 		// Causes flush of membership certs to disk
 		clean();
@@ -282,18 +292,17 @@ void Network::threadMain()
 		// registry to mark persistent instance of the tap device.
 		char tag[24];
 		Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)_id);
+		_tap = new WindowsEthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
 #else
 		// Unix tries to get the same device name next time, if possible.
 		std::string tagstr;
 		char lcentry[128];
 		Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
 		tagstr = _nc->getLocalConfig(lcentry);
+
 		const char *tag = (tagstr.length() > 0) ? tagstr.c_str() : (const char *)0;
-#endif
+		_tap = new UnixEthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
 
-		_tap = new EthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
-
-#ifndef __WINDOWS__
 		std::string dn(_tap->deviceName());
 		if ((!tag)||(dn != tag))
 			_nc->putLocalConfig(lcentry,dn);
