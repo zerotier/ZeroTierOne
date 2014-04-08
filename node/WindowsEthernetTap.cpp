@@ -80,7 +80,7 @@ static inline std::pair<NET_LUID,NET_IFINDEX> _findAdapterByGuid(const GUID &gui
 	throw std::runtime_error("interface not found");
 }
 
-// Only create or manipulate devices one at a time to avoid weird driver layer demons
+// Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
 
 // Compute some basic environment stuff on startup
@@ -217,7 +217,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	if (mtu > ZT_IF_MTU)
 		throw std::runtime_error("MTU too large for Windows tap");
 
-	Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
+	Mutex::Lock _l(_systemTapInitLock);
 
 	HKEY nwAdapters;
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
@@ -358,12 +358,11 @@ WindowsEthernetTap::WindowsEthernetTap(
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = 0;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+		RegCloseKey(nwAdapters);	
 	} else {
 		RegCloseKey(nwAdapters);	
 		throw std::runtime_error("unable to find or create tap adapter");
 	}
-
-	RegCloseKey(nwAdapters);	
 
 	// Convert device GUID junk... blech... is there an easier way to do this?
 	{
@@ -438,10 +437,14 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 				ipr.Address.Ipv4.sin_family = AF_INET;
 				ipr.Address.Ipv4.sin_addr.S_un.S_addr = *((const uint32_t *)ip.rawIpData());
 				ipr.OnLinkPrefixLength = ip.port();
+				if (ipr.OnLinkPrefixLength >= 32)
+					return false;
 			} else if (ip.isV6()) {
 				ipr.Address.Ipv6.sin6_family = AF_INET6;
 				memcpy(ipr.Address.Ipv6.sin6_addr.u.Byte,ip.rawIpData(),16);
 				ipr.OnLinkPrefixLength = ip.port();
+				if (ipr.OnLinkPrefixLength >= 128)
+					return false;
 			} else return false;
 
 			ipr.PrefixOrigin = IpPrefixOriginManual;
@@ -463,10 +466,12 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 		_syncIpsWithRegistry(haveIps,_netCfgInstanceId);
 	} catch (std::exception &exc) {
 		LOG("unexpected exception adding IP address %s to %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
+		return false;
 	} catch ( ... ) {
 		LOG("unexpected exception adding IP address %s to %s: unknown exception",ip.toString().c_str(),deviceName().c_str());
+		return false;
 	}
-	return false;
+	return true;
 }
 
 bool WindowsEthernetTap::removeIP(const InetAddress &ip)
@@ -546,11 +551,8 @@ std::set<InetAddress> WindowsEthernetTap::ips() const
 
 void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	if ((!_initialized)||(!_enabled))
+	if ((!_initialized)||(!_enabled)||(_tap == INVALID_HANDLE_VALUE)||(len > (ZT_IF_MTU)))
 		return;
-	if (len > (ZT_IF_MTU))
-		return; // sanity check
-
 	{
 		Mutex::Lock _l(_injectPending_m);
 		_injectPending.push( std::pair<Array<char,ZT_IF_MTU + 32>,unsigned int>(Array<char,ZT_IF_MTU + 32>(),len + 14) );
@@ -561,7 +563,6 @@ void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherTyp
 		d[13] = (char)(etherType & 0xff);
 		memcpy(d + 14,data,len);
 	}
-
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 }
 
