@@ -118,9 +118,7 @@ private:
 	void *_arg;
 	Thread _thread;
 
-	HANDLE _tap;
-	OVERLAPPED _tapOvlRead,_tapOvlWrite;
-	char _tapReadBuf[ZT_IF_MTU + 32];
+	volatile HANDLE _tap;
 	HANDLE _injectSemaphore;
 	GUID _deviceGuid;
 	std::string _netCfgInstanceId; // NetCfgInstanceId, a GUID

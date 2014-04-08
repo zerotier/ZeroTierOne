@@ -208,7 +208,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	_injectSemaphore(INVALID_HANDLE_VALUE),
 	_run(true),
 	_initialized(false),
-	_enabled(false)
+	_enabled(true)
 {
 	char subkeyName[4096];
 	char subkeyClass[4096];
@@ -380,37 +380,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
 	}
 
-	// Disable and enable interface to ensure registry settings take effect
-	_disableTapDevice(_r,_deviceInstanceId);
-	if (!_enableTapDevice(_r,_deviceInstanceId))
-		throw std::runtime_error("cannot enable tap device driver");
-
-	// Open the tap, which is in this weird Windows analog of /dev
-	char tapPath[4096];
-	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
-	for(int openTrials=0;;) {
-		// Try multiple times, since there seem to be reports from the field
-		// of driver init timing issues. Blech.
-		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
-		if (_tap == INVALID_HANDLE_VALUE) {
-			if (++openTrials >= 3)
-				throw std::runtime_error(std::string("unable to open tap device ")+tapPath);
-			else Sleep(500);
-		} else break;
-	}
-
-	setEnabled(true);
-	if (!_enabled) {
-		CloseHandle(_tap);
-		throw std::runtime_error("cannot enable tap device using IOCTL");
-	}
-
-	// Initialized overlapped I/O structures and related events
-	memset(&_tapOvlRead,0,sizeof(_tapOvlRead));
-	_tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-	memset(&_tapOvlWrite,0,sizeof(_tapOvlWrite));
-	_tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-
 	// Start background thread that actually performs I/O
 	_injectSemaphore = CreateSemaphore(NULL,0,1,NULL);
 	_thread = Thread::start(this);
@@ -422,29 +391,15 @@ WindowsEthernetTap::WindowsEthernetTap(
 WindowsEthernetTap::~WindowsEthernetTap()
 {
 	_run = false;
-
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
-
-	CloseHandle(_tap);
-	CloseHandle(_tapOvlRead.hEvent);
-	CloseHandle(_tapOvlWrite.hEvent);
 	CloseHandle(_injectSemaphore);
-
 	_disableTapDevice(_r,_deviceInstanceId);
 }
 
 void WindowsEthernetTap::setEnabled(bool en)
 {
-	if (_tap == INVALID_HANDLE_VALUE) {
-		_enabled = false;
-	} else {
-		uint32_t tmpi = (en ? 1 : 0);
-		DWORD bytesReturned = 0;
-		if (DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL))
-			_enabled = en;
-		else _enabled = false;
-	}
+	_enabled = en;
 }
 
 bool WindowsEthernetTap::enabled() const
@@ -624,6 +579,9 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	if (!_initialized)
 		return false;
+	HANDLE t = _tap;
+	if (t == INVALID_HANDLE_VALUE)
+		return false;
 
 	std::set<MulticastGroup> newGroups;
 
@@ -640,7 +598,7 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	// pretty much anything work... IPv4, IPv6, IPX, oldskool Netbios, who knows...
 	unsigned char mcastbuf[TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE];
 	DWORD bytesReturned = 0;
-	if (DeviceIoControl(_tap,TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS,(LPVOID)0,0,(LPVOID)mcastbuf,sizeof(mcastbuf),&bytesReturned,NULL)) {
+	if (DeviceIoControl(t,TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS,(LPVOID)0,0,(LPVOID)mcastbuf,sizeof(mcastbuf),&bytesReturned,NULL)) {
 		MAC mac;
 		DWORD i = 0;
 		while ((i + 6) <= bytesReturned) {
@@ -680,41 +638,95 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 void WindowsEthernetTap::threadMain()
 	throw()
 {
+	char tapPath[256];
+	OVERLAPPED tapOvlRead,tapOvlWrite;
 	HANDLE wait4[3];
-	wait4[0] = _injectSemaphore;
-	wait4[1] = _tapOvlRead.hEvent;
-	wait4[2] = _tapOvlWrite.hEvent; // only included if writeInProgress is true
+	char *tapReadBuf = (char *)0;
 
-	ReadFile(_tap,_tapReadBuf,sizeof(_tapReadBuf),NULL,&_tapOvlRead);
+	// Shouldn't be needed, but Windows does not overcommit. This Windows
+	// tap code is defensive to schizoid paranoia degrees.
+	while (!tapReadBuf) {
+		tapReadBuf = (char *)::malloc(ZT_IF_MTU + 32);
+		if (!tapReadBuf)
+			Sleep(1000);
+	}
+
+	// Tap is in this weird Windows global pseudo file space
+	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
+
+	// More insanity: repetatively try to enable/disable tap device. The first
+	// time we succeed, close it and do it again. This is to fix a driver init
+	// bug that seems to be extremely non-deterministic and to only occur after
+	// headless MSI upgrade. It cannot be reproduced in any other circumstance.
+	bool throwOneAway = true;
+	while (_run) {
+		_disableTapDevice(_r,_deviceInstanceId);
+		Sleep(250);
+		if (!_enableTapDevice(_r,_deviceInstanceId)) {
+			::free(tapReadBuf);
+			_enabled = false;
+			return; // only happens if devcon is missing or totally fails
+		}
+		Sleep(250);
+
+		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
+		if (_tap == INVALID_HANDLE_VALUE) {
+			Sleep(500);
+			continue;
+		}
+
+		uint32_t tmpi = 1;
+		DWORD bytesReturned = 0;
+		DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
+
+		if (throwOneAway) {
+			throwOneAway = false;
+			CloseHandle(_tap);
+			_tap = INVALID_HANDLE_VALUE;
+			Sleep(250);
+			continue;
+		} else break;
+	}
+
+	memset(&tapOvlRead,0,sizeof(tapOvlRead));
+	tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+	memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
+	tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+
+	wait4[0] = _injectSemaphore;
+	wait4[1] = tapOvlRead.hEvent;
+	wait4[2] = tapOvlWrite.hEvent; // only included if writeInProgress is true
+
+	// Start overlapped read, which is always active
+	ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
 	bool writeInProgress = false;
 
 	for(;;) {
-		// Windows can DIAF
-		if (_enabled)
-			setEnabled(true);
-
 		if (!_run) break;
-		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,INFINITE,TRUE);
+		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,5000,TRUE);
 		if (!_run) break;
 
-		if (HasOverlappedIoCompleted(&_tapOvlRead)) {
+		if ((r == WAIT_TIMEOUT)||(r == WAIT_FAILED))
+			continue;
+
+		if (HasOverlappedIoCompleted(&tapOvlRead)) {
 			DWORD bytesRead = 0;
-			if (GetOverlappedResult(_tap,&_tapOvlRead,&bytesRead,FALSE)) {
+			if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
 				if ((bytesRead > 14)&&(_enabled)) {
-					MAC to(_tapReadBuf);
-					MAC from(_tapReadBuf + 6);
-					unsigned int etherType = ((((unsigned int)_tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)_tapReadBuf[13]) & 0xff);
+					MAC to(tapReadBuf);
+					MAC from(tapReadBuf + 6);
+					unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
 					try {
-						Buffer<4096> tmp(_tapReadBuf + 14,bytesRead - 14);
+						Buffer<4096> tmp(tapReadBuf + 14,bytesRead - 14);
 						_handler(_arg,from,to,etherType,tmp);
 					} catch ( ... ) {} // handlers should not throw
 				}
 			}
-			ReadFile(_tap,_tapReadBuf,sizeof(_tapReadBuf),NULL,&_tapOvlRead);
+			ReadFile(_tap,tapReadBuf,ZT_IF_MTU + 32,NULL,&tapOvlRead);
 		}
 
 		if (writeInProgress) {
-			if (HasOverlappedIoCompleted(&_tapOvlWrite)) {
+			if (HasOverlappedIoCompleted(&tapOvlWrite)) {
 				writeInProgress = false;
 				_injectPending_m.lock();
 				_injectPending.pop();
@@ -722,7 +734,7 @@ void WindowsEthernetTap::threadMain()
 		} else _injectPending_m.lock();
 
 		if (!_injectPending.empty()) {
-			WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&_tapOvlWrite);
+			WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&tapOvlWrite);
 			writeInProgress = true;
 		}
 
@@ -730,6 +742,13 @@ void WindowsEthernetTap::threadMain()
 	}
 
 	CancelIo(_tap);
+
+	CloseHandle(tapOvlRead.hEvent);
+	CloseHandle(tapOvlWrite.hEvent);
+	CloseHandle(_tap);
+	_tap = INVALID_HANDLE_VALUE;
+
+	::free(tapReadBuf);
 }
 
 bool WindowsEthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid)
