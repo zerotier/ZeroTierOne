@@ -21,7 +21,6 @@ SOURCES += main.cpp \
     ../node/C25519.cpp \
     ../node/CertificateOfMembership.cpp \
     ../node/Defaults.cpp \
-    ../node/EthernetTap.cpp \
     ../node/HttpClient.cpp \
     ../node/Identity.cpp \
     ../node/InetAddress.cpp \
@@ -70,7 +69,6 @@ HEADERS  += mainwindow.h \
     ../node/Constants.hpp \
     ../node/Defaults.hpp \
     ../node/Dictionary.hpp \
-    ../node/EthernetTap.hpp \
     ../node/HttpClient.hpp \
     ../node/Identity.hpp \
     ../node/InetAddress.hpp \
