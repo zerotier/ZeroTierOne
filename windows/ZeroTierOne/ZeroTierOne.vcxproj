@@ -25,7 +25,6 @@
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\Defaults.cpp" />
-    <ClCompile Include="..\..\node\EthernetTap.cpp" />
     <ClCompile Include="..\..\node\HttpClient.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
@@ -52,6 +51,7 @@
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\UdpSocket.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
+    <ClCompile Include="..\..\node\WindowsEthernetTap.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
     <ClCompile Include="ZeroTierOneService.cpp" />
@@ -107,6 +107,7 @@
     <ClInclude Include="..\..\node\Topology.hpp" />
     <ClInclude Include="..\..\node\UdpSocket.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
+    <ClInclude Include="..\..\node\WindowsEthernetTap.hpp" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ServiceBase.h" />
     <ClInclude Include="ServiceInstaller.h" />
