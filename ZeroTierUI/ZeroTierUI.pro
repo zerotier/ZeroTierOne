@@ -107,6 +107,9 @@ HEADERS  += mainwindow.h \
     ../ext/lz4/lz4.h \
     ../ext/lz4/lz4hc.h
 
+win32:SOURCES += ../node/WindowsEthernetTap.cpp
+mac:SOURCE += ../node/UnixEthernetTap.cpp
+
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \
 		networkwidget.ui \
