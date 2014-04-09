@@ -72,6 +72,9 @@ Network::~Network()
 		devPersistentId = _tap->persistentId();
 		delete _tap;
 	}
+#else
+	if (_tap)
+		delete _tap;
 #endif
 
 	if (_destroyOnDelete) {
