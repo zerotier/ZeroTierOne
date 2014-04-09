@@ -308,6 +308,9 @@ UnixEthernetTap::UnixEthernetTap(
 
 	::close(sock);
 
+	// Set close-on-exec so that devices cannot persist if we fork/exec for update
+	fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
+
 	::pipe(_shutdownSignalPipe);
 
 	TRACE("tap %s created",_dev.c_str());
@@ -417,6 +420,9 @@ UnixEthernetTap::UnixEthernetTap(
 	}
 
 	_setIpv6Stuff(_dev.c_str(),true,false);
+
+	// Set close-on-exec so that devices cannot persist if we fork/exec for update
+	fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
 
 	::pipe(_shutdownSignalPipe);
 
