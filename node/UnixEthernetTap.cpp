@@ -439,6 +439,8 @@ UnixEthernetTap::~UnixEthernetTap()
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
 	::close(_fd);
+	::close(_shutdownSignalPipe[0]);
+	::close(_shutdownSignalPipe[1]);
 
 #ifdef __APPLE__
 	EthernetTap_instances_m.lock();
