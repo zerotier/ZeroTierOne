@@ -546,14 +546,18 @@ Node::ReasonForTermination Node::run()
 		_r->timeOfLastResynchronize = Utils::now();
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
-			//TRACE("--- BEGIN main I/O loop");
-
+			/* This is how the service automatically shuts down when the OSX .app is
+			 * thrown in the trash. It's not used on any other platform for now but
+			 * could do similar things. It's disabled on Windows since it doesn't really
+			 * work there. */
+#ifdef __UNIX_LIKE__
 			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
 				FILE *tmpf = fopen(shutdownIfUnreadablePath.c_str(),"r");
 				if (!tmpf)
 					return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable exists but is not readable");
 				fclose(tmpf);
 			}
+#endif
 
 			uint64_t now = Utils::now();
 			bool resynchronize = false;
@@ -664,7 +668,7 @@ Node::ReasonForTermination Node::run()
 
 			// Sleep for loop interval or until something interesting happens.
 			try {
-				unsigned long delay = std::min((unsigned long)ZT_MIN_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
+				unsigned long delay = std::min((unsigned long)ZT_MAX_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
 				uint64_t start = Utils::now();
 				_r->sm->poll(delay);
 				lastDelayDelta = (long)(Utils::now() - start) - (long)delay; // used to detect sleep/wake

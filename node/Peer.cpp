@@ -117,25 +117,28 @@ void Peer::receive(
 		_lastMulticastFrame = now;
 }
 
-
 bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	bool useTcp = _isTcpFailoverTime(_r,now);
+	bool useTcpOut = _isTcpFailoverTime(_r,now);
 
 	std::vector<Path>::iterator p(_paths.begin());
-	if (useTcp) {
-		while ((p->tcp())&&(p != _paths.end()))
+	if (!useTcpOut) {
+		// If we don't want to initiate TCP, seek past TCP paths if they are at the front
+		// to find the first UDP path as our default.
+		while ((p != _paths.end())&&(p->type() == Path::PATH_TYPE_TCP_OUT))
 			++p;
 	}
 	if (p == _paths.end())
 		return false;
 
-	uint64_t bestPathLastReceived = p->lastReceived();
+	// Treat first path as default and look for a better one based on time of
+	// last packet received.
 	std::vector<Path>::iterator bestPath = p;
+	uint64_t bestPathLastReceived = p->lastReceived();
 	while (++p != _paths.end()) {
 		uint64_t lr = p->lastReceived();
-		if ( (lr > bestPathLastReceived) && ((useTcp)||(!p->tcp())) ) {
+		if ( (lr > bestPathLastReceived) && ((useTcpOut)||(p->type() != Path::PATH_TYPE_TCP_OUT)) ) {
 			bestPathLastReceived = lr;
 			bestPath = p;
 		}
@@ -215,7 +218,7 @@ bool Peer::_isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
 			}
 		}
 
-		return ( (lastUdpPingSent > lastResync) && (lastUdpPingSent > lastUdpReceive) && ((now - lastUdpPingSent) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) );
+		return ( (lastUdpPingSent > lastResync) && ((now - lastUdpReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) );
 	}
 	return false;
 }

@@ -255,7 +255,7 @@ error_no_byte_order_defined;
 /**
  * Delay between scans of the topology active peer DB for peers that need ping
  */
-#define ZT_PING_CHECK_DELAY 7000
+#define ZT_PING_CHECK_DELAY 10000
 
 /**
  * Delay between checks of network configuration fingerprint
@@ -283,51 +283,44 @@ error_no_byte_order_defined;
 /**
  * Delay in core loop between checks of network autoconf newness
  */
-#define ZT_NETWORK_AUTOCONF_CHECK_DELAY 7000
-
-/**
- * Minimum delay in Node service loop
- * 
- * This is the shortest of the check delays/periods.
- */
-#define ZT_MIN_SERVICE_LOOP_INTERVAL 5000
-
-/**
- * Activity timeout for links
- * 
- * A link that hasn't spoken in this long is simply considered inactive.
- */
-#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + 10000)
-
-/**
- * Close TCP tunnels if unused for this long
- */
-#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT (ZT_PEER_PATH_ACTIVITY_TIMEOUT + 10000)
-
-/**
- * Try TCP tunnels if nothing received for this long
- */
-#define ZT_TCP_TUNNEL_FAILOVER_TIMEOUT 5000
-
-/**
- * Try to ping supernodes this often until we get something from somewhere
- */
-#define ZT_STARTUP_AGGRO 5000
+#define ZT_NETWORK_AUTOCONF_CHECK_DELAY 10000
 
 /**
  * Time since a ping was sent to be considered unanswered
  */
-#define ZT_PING_UNANSWERED_AFTER 2500
+#define ZT_PING_UNANSWERED_AFTER 1500
+
+/**
+ * Try to ping supernodes this often until we get something from somewhere
+ */
+#define ZT_STARTUP_AGGRO (ZT_PING_UNANSWERED_AFTER * 2)
+
+/**
+ * Maximum delay between runs of the main service loop
+ * 
+ * This is the shortest of the check delays/periods.
+ */
+#define ZT_MAX_SERVICE_LOOP_INTERVAL ZT_STARTUP_AGGRO
+
+/**
+ * Try TCP tunnels if nothing received for this long
+ */
+#define ZT_TCP_TUNNEL_FAILOVER_TIMEOUT (ZT_STARTUP_AGGRO * 5)
+
+/**
+ * Path activity timeout
+ */
+#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
+
+/**
+ * Close TCP tunnels if unused for this long
+ */
+#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
 
 /**
  * Stop relaying via peers that have not responded to direct sends in this long
  */
 #define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
-
-/**
- * Number of outgoing verb/packetId pairs to keep for sends expecting responses
- */
-#define ZT_PEER_REQUEST_HISTORY_LENGTH 8
 
 /**
  * IP hops (a.k.a. TTL) to set for firewall opener packets
