@@ -170,12 +170,12 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 	bool sent = false;
 	SharedPtr<Peer> self(this);
 	Mutex::Lock _l(_lock);
-	bool useTcp = _isTcpFailoverTime(_r,now);
+	bool useTcpOut = _isTcpFailoverTime(_r,now);
 
-	TRACE("PING %s (useTcp==%d)",_id.address().toString().c_str(),(int)useTcp);
+	TRACE("PING %s (useTcpOut==%d)",_id.address().toString().c_str(),(int)useTcpOut);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if ((useTcp)||(!p->tcp())) {
+		if ((useTcpOut)||(p->type() != Path::PATH_TYPE_TCP_OUT)) {
 			p->pinged(now); // we log pings sent even if the send "fails", since what we want to track is when we last tried to ping
 			if (_r->sw->sendHELLO(self,*p)) {
 				p->sent(now);
@@ -210,15 +210,17 @@ bool Peer::_isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
 
 		uint64_t lastUdpPingSent = 0;
 		uint64_t lastUdpReceive = 0;
+		bool haveUdp = false;
 
 		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
 			if (p->type() == Path::PATH_TYPE_UDP) {
 				lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
 				lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
+				haveUdp = true;
 			}
 		}
 
-		return ( (lastUdpPingSent > lastResync) && ((now - lastUdpReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) );
+		return ( (!haveUdp) || ( (lastUdpPingSent > lastResync) && ((now - lastUdpReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
 	}
 	return false;
 }
