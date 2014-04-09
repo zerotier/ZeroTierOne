@@ -186,11 +186,8 @@ public:
 	{
 		uint64_t x = 0;
 		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			uint64_t l = p->lastFirewallOpener();
-			if (l > x)
-				x = l;
-		}
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
+			x = std::max(x,p->lastFirewallOpener());
 		return x;
 	}
 
@@ -202,11 +199,8 @@ public:
 	{
 		uint64_t x = 0;
 		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			uint64_t l = p->lastReceived();
-			if (l > x)
-				x = l;
-		}
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
+			x = std::max(x,p->lastReceived());
 		return x;
 	}
 
@@ -218,11 +212,8 @@ public:
 	{
 		uint64_t x = 0;
 		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			uint64_t l = p->lastSend();
-			if (l > x)
-				x = l;
-		}
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
+			x = std::max(x,p->lastSend());
 		return x;
 	}
 
@@ -231,56 +222,27 @@ public:
 	 * @param now Current time
 	 * @return True if the last ping is unanswered
 	 */
-	inline bool pingUnanswered(const RuntimeEnvironment *_r,uint64_t now)
-		throw()
-	{
-		uint64_t lp = 0;
-		uint64_t lr = 0;
-		{
-			Mutex::Lock _l(_lock);
-			for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-				lp = std::max(p->lastPing(),lp);
-				lr = std::max(p->lastReceived(),lr);
-			}
-		}
-		return ( (lp > _r->timeOfLastResynchronize) && ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) );
-	}
+	bool pingUnanswered(const RuntimeEnvironment *_r,uint64_t now);
 
 	/**
 	 * @return Time of most recent unicast frame received
 	 */
-	inline uint64_t lastUnicastFrame() const
-		throw()
-	{
-		return _lastUnicastFrame;
-	}
+	inline uint64_t lastUnicastFrame() const throw() { return _lastUnicastFrame; }
 
 	/**
 	 * @return Time of most recent multicast frame received
 	 */
-	inline uint64_t lastMulticastFrame() const
-		throw()
-	{
-		return _lastMulticastFrame;
-	}
+	inline uint64_t lastMulticastFrame() const throw() { return _lastMulticastFrame; }
 
 	/**
 	 * @return Time of most recent frame of any kind (unicast or multicast)
 	 */
-	inline uint64_t lastFrame() const
-		throw()
-	{
-		return std::max(_lastUnicastFrame,_lastMulticastFrame);
-	}
+	inline uint64_t lastFrame() const throw() { return std::max(_lastUnicastFrame,_lastMulticastFrame); }
 
 	/**
 	 * @return Time we last announced state TO this peer, such as multicast LIKEs
 	 */
-	inline uint64_t lastAnnouncedTo() const
-		throw()
-	{
-		return _lastAnnouncedTo;
-	}
+	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
 	 * @return Current latency or 0 if unknown (max: 65535)
@@ -300,11 +262,10 @@ public:
 	inline void addDirectLatencyMeasurment(unsigned int l)
 		throw()
 	{
-		if (l > 65535) l = 65535;
 		unsigned int ol = _latency;
 		if ((ol > 0)&&(ol < 10000))
-			_latency = (ol + l) / 2;
-		else _latency = l;
+			_latency = (ol + std::min(l,(unsigned int)65535)) / 2;
+		else _latency = std::min(l,(unsigned int)65535);
 	}
 
 	/**
@@ -380,6 +341,7 @@ public:
 	 * @param vrev Revision
 	 */
 	inline void setRemoteVersion(unsigned int vmaj,unsigned int vmin,unsigned int vrev)
+		throw()
 	{
 		_vMajor = vmaj;
 		_vMinor = vmin;
@@ -391,12 +353,12 @@ public:
 	 */
 	inline std::string remoteVersion() const
 	{
-		if ((_vMajor)||(_vMinor)||(_vRevision)) {
+		if ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)) {
 			char tmp[32];
 			Utils::snprintf(tmp,sizeof(tmp),"%u.%u.%u",_vMajor,_vMinor,_vRevision);
 			return std::string(tmp);
 		}
-		return std::string("?");
+		return std::string("?.?.?");
 	}
 
 	/**
@@ -405,28 +367,16 @@ public:
 	inline operator bool() const throw() { return (_id); }
 
 	/**
+	 * Get most recently active UDP path addresses for IPv4 and/or IPv6
+	 *
+	 * Note that v4 and v6 are not modified if they are not found, so
+	 * initialize these to a NULL address to be able to check.
+	 *
 	 * @param now Current time
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
 	 */
-	inline void getActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
-	{
-		bool gotV4 = false,gotV6 = false;
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (!gotV4) {
-				if ((!p->tcp())&&(p->address().isV4())&&(p->active(now))) {
-					gotV4 = true;
-					v4 = p->address();
-				}
-			} else if (!gotV6) {
-				if ((!p->tcp())&&(p->address().isV6())&&(p->active(now))) {
-					gotV6 = true;
-					v6 = p->address();
-				}
-			} else break;
-		}
-	}
+	void getBestActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
 	 * Find a common set of addresses by which two peers can link, if any
@@ -437,16 +387,15 @@ public:
 	 * @return Pair: B's address (to send to A), A's address (to send to B)
 	 */
 	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now)
-		throw()
 	{
 		std::pair<InetAddress,InetAddress> v4,v6;
-		b.getActiveUdpPathAddresses(now,v4.first,v6.first);
-		a.getActiveUdpPathAddresses(now,v4.second,v6.second);
-		if ((v6.first)&&(v6.second))
+		b.getBestActiveUdpPathAddresses(now,v4.first,v6.first);
+		a.getBestActiveUdpPathAddresses(now,v4.second,v6.second);
+		if ((v6.first)&&(v6.second)) // prefer IPv6 if both have it since NAT-t is (almost) unnecessary
 			return v6;
-		if ((v4.first)&&(v4.second))
+		else if ((v4.first)&&(v4.second))
 			return v4;
-		return std::pair<InetAddress,InetAddress>();
+		else return std::pair<InetAddress,InetAddress>();
 	}
 
 	template<unsigned int C>

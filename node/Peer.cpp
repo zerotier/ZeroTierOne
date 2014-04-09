@@ -225,4 +225,42 @@ bool Peer::_isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
 	return false;
 }
 
+bool Peer::pingUnanswered(const RuntimeEnvironment *_r,uint64_t now)
+{
+	uint64_t lp = 0;
+	uint64_t lr = 0;
+	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			lp = std::max(p->lastPing(),lp);
+			lr = std::max(p->lastReceived(),lr);
+		}
+	}
+	return ( (lp > _r->timeOfLastResynchronize) && ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) );
+}
+
+void Peer::getBestActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+{
+	uint64_t bestV4 = 0,bestV6 = 0;
+	Mutex::Lock _l(_lock);
+	for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+		if ((p->type() == Path::PATH_TYPE_UDP)&&(p->active(now))) {
+			uint64_t lr = p->lastReceived();
+			if (lr) {
+				if (p->address().isV4()) {
+					if (lr >= bestV4) {
+						bestV4 = lr;
+						v4 = p->address();
+					}
+				} else if (p->address().isV6()) {
+					if (lr >= bestV6) {
+						bestV6 = lr;
+						v6 = p->address();
+					}
+				}
+			}
+		}
+	}
+}
+
 } // namespace ZeroTier
