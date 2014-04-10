@@ -64,6 +64,7 @@ class RuntimeEnvironment
 public:
 	RuntimeEnvironment() :
 		shutdownInProgress(false),
+		tcpTunnelingEnabled(false),
 		timeOfLastResynchronize(0),
 		timeOfLastPacketReceived(0),
 		log((Logger *)0),
@@ -89,6 +90,9 @@ public:
 
 	// Indicates that we are shutting down -- this is hacky, want to factor out
 	volatile bool shutdownInProgress;
+
+	// Are we in outgoing TCP failover mode?
+	volatile bool tcpTunnelingEnabled;
 
 	// Time network environment (e.g. fingerprint) last changed -- used to determine online-ness
 	volatile uint64_t timeOfLastResynchronize;

@@ -216,7 +216,13 @@ public:
 	};
 
 	/**
-	 * Pings all peers that need a ping sent, excluding supernodes (which are pinged separately)
+	 * Pings all peers that need a ping sent, excluding supernodes
+	 *
+	 * Ordinary peers are pinged if we haven't heard from them recently. Receive
+	 * time rather than send time as OK is returned on success and we want to
+	 * keep trying if a packet is lost. Ordinary peers are subject to a frame
+	 * inactivity timeout. We give up if we haven't actually transferred any
+	 * data to them recently, and eventually Topology purges them from memory.
 	 */
 	class PingPeersThatNeedPing
 	{
@@ -235,7 +241,7 @@ public:
 			 * than time of last send in order to only count full round trips. */
 			if ( (!_supernodeAddresses.count(p->address())) &&
 			     ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) &&
-			     ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) ) {
+			     ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) ) {
 				p->sendPing(_r,_now);
 			}
 		}
@@ -247,7 +253,13 @@ public:
 	};
 
 	/**
-	 * Ping peers that need ping according to supernode rules (slightly more aggressive)
+	 * Ping peers that need ping according to supernode rules
+	 *
+	 * Supernodes ping aggressively if a ping is unanswered and they are not
+	 * subject to the activity timeout. In other words: we assume they are
+	 * always there and always try to reach them.
+	 *
+	 * The ultimate rate limit for this is controlled up in the Node main loop.
 	 */
 	class PingSupernodesThatNeedPing
 	{
@@ -261,13 +273,29 @@ public:
 			/* For supernodes we always ping even if no frames have been seen, and
 			 * we ping aggressively if pings are unanswered. The limit to this
 			 * frequency is set in the main loop to no more than ZT_STARTUP_AGGRO. */
-			if ( (p->pingUnanswered(_r,_now)) || ((_now - p->lastDirectReceive()) > ZT_PEER_DIRECT_PING_DELAY) || (p->lastDirectReceive() < _r->timeOfLastResynchronize) )
+
+			uint64_t lp = 0;
+			uint64_t lr = 0;
+			p->lastPingAndDirectReceive(lp,lr);
+			if ( (lr < _r->timeOfLastResynchronize) || ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) || ((_now - lr) >= ZT_PEER_DIRECT_PING_DELAY) )
 				p->sendPing(_r,_now);
 		}
 
 	private:
 		uint64_t _now;
 		const RuntimeEnvironment *_r;
+	};
+
+	/**
+	 * Computes most recent timestamp of direct packet receive over a list of peers
+	 */
+	class FindMostRecentDirectReceiveTimestamp
+	{
+	public:
+		FindMostRecentDirectReceiveTimestamp(uint64_t &ts) throw() : _ts(ts) {}
+		inline void operator()(Topology &t,const SharedPtr<Peer> &p) throw() { _ts = std::max(p->lastDirectReceive(),_ts); }
+	private:
+		uint64_t &_ts;
 	};
 
 	/**

@@ -120,35 +120,44 @@ void Peer::receive(
 bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	bool useTcpOut = _isTcpFailoverTime(_r,now);
 
-	std::vector<Path>::iterator p(_paths.begin());
-	if (!useTcpOut) {
-		// If we don't want to initiate TCP, seek past TCP paths if they are at the front
-		// to find the first UDP path as our default.
-		while ((p != _paths.end())&&(p->type() == Path::PATH_TYPE_TCP_OUT))
-			++p;
-	}
-	if (p == _paths.end())
-		return false;
-
-	// Treat first path as default and look for a better one based on time of
-	// last packet received.
-	std::vector<Path>::iterator bestPath = p;
-	uint64_t bestPathLastReceived = p->lastReceived();
-	while (++p != _paths.end()) {
+	Path *bestNormalPath = (Path *)0;
+	Path *bestTcpOutPath = (Path *)0;
+	uint64_t bestNormalPathLastReceived = 0;
+	uint64_t bestTcpOutPathLastReceived = 0;
+	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 		uint64_t lr = p->lastReceived();
-		if ( (lr > bestPathLastReceived) && ((useTcpOut)||(p->type() != Path::PATH_TYPE_TCP_OUT)) ) {
-			bestPathLastReceived = lr;
-			bestPath = p;
+		if (p->type() == Path::PATH_TYPE_TCP_OUT) { // TCP_OUT paths initiate TCP connections
+			if (lr >= bestTcpOutPathLastReceived) {
+				bestTcpOutPathLastReceived = lr;
+				bestTcpOutPath = &(*p);
+			}
+		} else { // paths other than TCP_OUT are considered "normal"
+			if (lr >= bestNormalPathLastReceived) {
+				bestNormalPathLastReceived = lr;
+				bestNormalPath = &(*p);
+			}
 		}
 	}
+
+	Path *bestPath = (Path *)0;
+	if (!_r->tcpTunnelingEnabled) { // TCP tunneling master switch is off, use normal path
+		bestPath = bestNormalPath;
+	} else if (bestNormalPath) { // we have a normal path, so use if it looks active
+		if ((bestNormalPathLastReceived > _r->timeOfLastResynchronize)&&((now - bestNormalPathLastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
+			bestPath = bestNormalPath;
+		else bestPath = bestTcpOutPath;
+	} else { // no normal path available
+		bestPath = bestTcpOutPath;
+	}
+
+	if (!bestPath)
+		return false;
 
 	if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
 		bestPath->sent(now);
 		return true;
 	}
-
 	return false;
 }
 
@@ -170,7 +179,18 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 	bool sent = false;
 	SharedPtr<Peer> self(this);
 	Mutex::Lock _l(_lock);
-	bool useTcpOut = _isTcpFailoverTime(_r,now);
+
+	uint64_t lastUdpPingSent = 0;
+	uint64_t lastUdpReceive = 0;
+	bool haveUdp = false;
+	for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+		if (p->type() == Path::PATH_TYPE_UDP) {
+			lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
+			lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
+			haveUdp = true;
+		}
+	}
+	bool useTcpOut = ( (!haveUdp) || ( (_r->tcpTunnelingEnabled) && (lastUdpPingSent > lastUdpReceive) && ((now - lastUdpReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
 
 	TRACE("PING %s (useTcpOut==%d)",_id.address().toString().c_str(),(int)useTcpOut);
 
@@ -197,46 +217,6 @@ void Peer::clean(uint64_t now)
 		++i;
 	}
 	_paths.resize(o);
-}
-
-bool Peer::_isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
-	throw()
-{
-	// assumes _lock is locked
-	uint64_t lastResync = _r->timeOfLastResynchronize;
-	if ((now - lastResync) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) {
-		if ((now - _r->timeOfLastPacketReceived) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT)
-			return true;
-
-		uint64_t lastUdpPingSent = 0;
-		uint64_t lastUdpReceive = 0;
-		bool haveUdp = false;
-
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (p->type() == Path::PATH_TYPE_UDP) {
-				lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
-				lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
-				haveUdp = true;
-			}
-		}
-
-		return ( (!haveUdp) || ( (lastUdpPingSent > lastResync) && ((now - lastUdpReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
-	}
-	return false;
-}
-
-bool Peer::pingUnanswered(const RuntimeEnvironment *_r,uint64_t now)
-{
-	uint64_t lp = 0;
-	uint64_t lr = 0;
-	{
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			lp = std::max(p->lastPing(),lp);
-			lr = std::max(p->lastReceived(),lr);
-		}
-	}
-	return ( (lp > _r->timeOfLastResynchronize) && ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) );
 }
 
 void Peer::getBestActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const

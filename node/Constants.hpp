@@ -313,7 +313,7 @@ error_no_byte_order_defined;
 #define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
 
 /**
- * Close TCP tunnels if unused for this long
+ * Close TCP tunnels if unused for this long (used in SocketManager)
  */
 #define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
 

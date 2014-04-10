@@ -591,13 +591,29 @@ Node::ReasonForTermination Node::run()
 				LOG("resynchronize forced by user, syncing with network");
 			}
 
-			if (resynchronize)
+			if (resynchronize) {
+				_r->tcpTunnelingEnabled = false; // turn off TCP tunneling master switch at first
 				_r->timeOfLastResynchronize = now;
+			}
 
-			/* Ping supernodes separately, and do so more aggressively if we haven't
-			 * heard anything from anyone since our last resynchronize / startup. */
+			/* Supernodes are pinged separately and more aggressively. The
+			 * ZT_STARTUP_AGGRO parameter sets a limit on how rapidly they are
+			 * tried, while PingSupernodesThatNeedPing contains the logic for
+			 * determining if they need PING. */
 			if ((now - lastSupernodePingCheck) >= ZT_STARTUP_AGGRO) {
 				lastSupernodePingCheck = now;
+
+				uint64_t lastReceiveFromAnySupernode = 0; // function object result paramter
+				_r->topology->eachSupernodePeer(Topology::FindMostRecentDirectReceiveTimestamp(lastReceiveFromAnySupernode));
+
+				// Turn on TCP tunneling master switch if we haven't heard anything since before
+				// the last resynchronize and we've been trying long enough.
+				uint64_t tlr = _r->timeOfLastResynchronize;
+				if ((lastReceiveFromAnySupernode < tlr)&&((now - tlr) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT)) {
+					TRACE("network still unreachable after %u ms, TCP TUNNELING ENABLED",(unsigned int)ZT_TCP_TUNNEL_FAILOVER_TIMEOUT);
+					_r->tcpTunnelingEnabled = true;
+				}
+
 				_r->topology->eachSupernodePeer(Topology::PingSupernodesThatNeedPing(_r,now));
 			}
 

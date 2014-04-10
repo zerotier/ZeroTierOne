@@ -218,11 +218,20 @@ public:
 	}
 
 	/**
-	 * @param _r Runtime environment
-	 * @param now Current time
-	 * @return True if the last ping is unanswered
+	 * Get max timestamp of last ping and max timestamp of last receive in a single pass
+	 *
+	 * @param lp Last ping result parameter (init to 0 before calling)
+	 * @param lr Last receive result parameter (init to 0 before calling)
 	 */
-	bool pingUnanswered(const RuntimeEnvironment *_r,uint64_t now);
+	inline void lastPingAndDirectReceive(uint64_t &lp,uint64_t &lr)
+		throw()
+	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			lp = std::max(lp,p->lastPing());
+			lr = std::max(lr,p->lastReceived());
+		}
+	}
 
 	/**
 	 * @return Time of most recent unicast frame received
@@ -449,9 +458,6 @@ public:
 	}
 
 private:
-	bool _isTcpFailoverTime(const RuntimeEnvironment *_r,uint64_t now) const
-		throw();
-
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 
