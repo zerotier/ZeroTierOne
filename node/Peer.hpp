@@ -136,9 +136,9 @@ public:
 	 * @param data Data to send
 	 * @param len Length of packet
 	 * @param now Current time
-	 * @return True if packet appears to have been sent, false if no path or other error
+	 * @return Type of path used or Path::PATH_TYPE_NULL on failure
 	 */
-	bool send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
+	Path::Type send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
 	/**
 	 * Send firewall opener to all UDP paths

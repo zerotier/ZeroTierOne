@@ -462,6 +462,17 @@ int main(int argc,char **argv)
 	signal(SIGINT,&sighandlerQuit);
 	signal(SIGTERM,&sighandlerQuit);
 	signal(SIGQUIT,&sighandlerQuit);
+
+	/* Ensure that there are no inherited file descriptors open from a previous
+	 * incarnation. This is a hack to ensure that GitHub issue #61 or variants
+	 * of it do not return, and should not do anything otherwise bad. */
+	{
+		int mfd = STDIN_FILENO;
+		if (STDOUT_FILENO > mfd) mfd = STDOUT_FILENO;
+		if (STDERR_FILENO > mfd) mfd = STDERR_FILENO;
+		for(int f=mfd+1;f<1024;++f)
+			::close(f);
+	}
 #endif
 
 #ifdef __WINDOWS__

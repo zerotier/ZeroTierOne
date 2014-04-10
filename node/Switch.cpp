@@ -560,7 +560,7 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 			fragment.incrementHops();
 
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-			if ((!relayTo)||(!relayTo->send(_r,fragment.data(),fragment.size(),Utils::now()))) {
+			if ((!relayTo)||(relayTo->send(_r,fragment.data(),fragment.size(),Utils::now()) == Path::PATH_TYPE_NULL)) {
 				relayTo = _r->topology->getBestSupernode();
 				if (relayTo)
 					relayTo->send(_r,fragment.data(),fragment.size(),Utils::now());
@@ -633,10 +633,13 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 			packet->incrementHops();
 
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-			if ((relayTo)&&(relayTo->send(_r,packet->data(),packet->size(),Utils::now()))) {
-				// If we've relayed, this periodically tries to get them to
-				// talk directly to save our bandwidth.
-				unite(source,destination,false);
+			Path::Type relayedVia;
+			if ((relayTo)&&((relayedVia = relayTo->send(_r,packet->data(),packet->size(),Utils::now())) != Path::PATH_TYPE_NULL)) {
+				/* If both paths are UDP, attempt to invoke UDP NAT-t between peers
+				 * by sending VERB_RENDEZVOUS. Do not do this for TCP due to GitHub
+				 * issue #63. */
+				if ((fromSock->udp())&&(relayedVia == Path::PATH_TYPE_UDP))
+					unite(source,destination,false);
 			} else {
 				// If we've received a packet not for us and we don't have
 				// a direct path to its recipient, pass it to (another)
@@ -702,7 +705,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		addr.appendTo(outp);
 		outp.armor(supernode->key(),true);
 		uint64_t now = Utils::now();
-		if (supernode->send(_r,outp.data(),outp.size(),now))
+		if (supernode->send(_r,outp.data(),outp.size(),now) != Path::PATH_TYPE_NULL)
 			return supernode->address();
 	}
 	return Address();
@@ -731,7 +734,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		tmp.armor(peer->key(),encrypt);
 
-		if (via->send(_r,tmp.data(),chunkSize,now)) {
+		if (via->send(_r,tmp.data(),chunkSize,now) != Path::PATH_TYPE_NULL) {
 			if (chunkSize < tmp.size()) {
 				// Too big for one bite, fragment the rest
 				unsigned int fragStart = chunkSize;
@@ -744,9 +747,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				for(unsigned int f=0;f<fragsRemaining;++f) {
 					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 					Packet::Fragment frag(tmp,fragStart,chunkSize,f + 1,totalFragments);
-					if (!via->send(_r,frag.data(),frag.size(),now)) {
-						TRACE("WARNING: packet send to %s failed on later fragment #%u (check IP layer buffer sizes?)",via->address().toString().c_str(),f + 1);
-					}
+					via->send(_r,frag.data(),frag.size(),now);
 					fragStart += chunkSize;
 					remaining -= chunkSize;
 				}

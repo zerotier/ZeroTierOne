@@ -117,7 +117,7 @@ void Peer::receive(
 		_lastMulticastFrame = now;
 }
 
-bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
+Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 
@@ -164,9 +164,9 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 
 	if ((bestPath)&&(_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len))) {
 		bestPath->sent(now);
-		return true;
+		return bestPath->type();
 	}
-	return false;
+	return Path::PATH_TYPE_NULL;
 }
 
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)

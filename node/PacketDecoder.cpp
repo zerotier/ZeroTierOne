@@ -81,8 +81,9 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 		//TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
 
 		switch(verb()) {
-			case Packet::VERB_NOP:
-				peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NOP,0,Packet::VERB_NOP,Utils::now());
+			//case Packet::VERB_NOP:
+			default: // ignore unknown verbs, but if they pass auth check they are still valid
+				peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
 				return true;
 			case Packet::VERB_HELLO:
 				return _doHELLO(_r); // legal, but why? :)
@@ -108,8 +109,6 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doNETWORK_CONFIG_REQUEST(_r,peer);
 			case Packet::VERB_NETWORK_CONFIG_REFRESH:
 				return _doNETWORK_CONFIG_REFRESH(_r,peer);
-			default: // ignore unknown verbs
-				return true;
 		}
 	} else {
 		_step = DECODE_WAITING_FOR_SENDER_LOOKUP; // should already be this...

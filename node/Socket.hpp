@@ -81,6 +81,15 @@ public:
 	}
 
 	/**
+	 * @return True if this is a UDP socket
+	 */
+	inline bool udp() const
+		throw()
+	{
+		return ((_type == ZT_SOCKET_TYPE_UDP_V4)||(_type == ZT_SOCKET_TYPE_UDP_V6));
+	}
+
+	/**
 	 * @return True if this is a TCP socket
 	 */
 	inline bool tcp() const
