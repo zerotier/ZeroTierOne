@@ -121,18 +121,23 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 {
 	Mutex::Lock _l(_lock);
 
+	/* For sending ordinary packets, paths are divided into two categories:
+	 * "normal" and "TCP out." Normal includes UDP and incoming TCP. We want
+	 * to treat outbound TCP differently since if we use it it may end up
+	 * overriding UDP and UDP performs much better. We only want to initiate
+	 * TCP if it looks like UDP isn't available. */
 	Path *bestNormalPath = (Path *)0;
 	Path *bestTcpOutPath = (Path *)0;
 	uint64_t bestNormalPathLastReceived = 0;
 	uint64_t bestTcpOutPathLastReceived = 0;
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 		uint64_t lr = p->lastReceived();
-		if (p->type() == Path::PATH_TYPE_TCP_OUT) { // TCP_OUT paths initiate TCP connections
+		if (p->type() == Path::PATH_TYPE_TCP_OUT) {
 			if (lr >= bestTcpOutPathLastReceived) {
 				bestTcpOutPathLastReceived = lr;
 				bestTcpOutPath = &(*p);
 			}
-		} else { // paths other than TCP_OUT are considered "normal"
+		} else {
 			if (lr >= bestNormalPathLastReceived) {
 				bestNormalPathLastReceived = lr;
 				bestNormalPath = &(*p);
@@ -141,20 +146,23 @@ bool Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,u
 	}
 
 	Path *bestPath = (Path *)0;
-	if (!_r->tcpTunnelingEnabled) { // TCP tunneling master switch is off, use normal path
+	if (bestTcpOutPath) { // we have a TCP out path
+		if (bestNormalPath) { // we have both paths, decide which to use
+			if (_r->tcpTunnelingEnabled) { // TCP tunneling is enabled, so use normal path only if it looks alive
+				if ((bestNormalPathLastReceived > _r->timeOfLastResynchronize)&&((now - bestNormalPathLastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
+					bestPath = bestNormalPath;
+				else bestPath = bestTcpOutPath;
+			} else { // TCP tunneling is disabled, use normal path
+				bestPath = bestNormalPath;
+			}
+		} else { // we only have a TCP_OUT path, so use it regardless
+			bestPath = bestTcpOutPath;
+		}
+	} else { // we only have a normal path (or none at all, that case is caught below)
 		bestPath = bestNormalPath;
-	} else if (bestNormalPath) { // we have a normal path, so use if it looks active
-		if ((bestNormalPathLastReceived > _r->timeOfLastResynchronize)&&((now - bestNormalPathLastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
-			bestPath = bestNormalPath;
-		else bestPath = bestTcpOutPath;
-	} else { // no normal path available
-		bestPath = bestTcpOutPath;
 	}
 
-	if (!bestPath)
-		return false;
-
-	if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
+	if ((bestPath)&&(_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len))) {
 		bestPath->sent(now);
 		return true;
 	}
@@ -167,8 +175,10 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 	Mutex::Lock _l(_lock);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if (!p->tcp())
-			sent |= _r->sm->sendFirewallOpener(p->address(),ZT_FIREWALL_OPENER_HOPS);
+		if (p->type() == Path::PATH_TYPE_UDP) {
+			for(unsigned int h=1;h<=ZT_FIREWALL_OPENER_HOPS;++h)
+				sent |= _r->sm->sendFirewallOpener(p->address(),h);
+		}
 	}
 
 	return sent;
@@ -180,23 +190,26 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 	SharedPtr<Peer> self(this);
 	Mutex::Lock _l(_lock);
 
-	uint64_t lastUdpPingSent = 0;
-	uint64_t lastUdpReceive = 0;
-	bool haveUdp = false;
+	/* Ping (and thus open) outbound TCP connections if we have no other options
+	 * or if the TCP tunneling master switch is enabled and pings have been
+	 * unanswered for ZT_TCP_TUNNEL_FAILOVER_TIMEOUT ms over normal channels. */
+	uint64_t lastNormalPingSent = 0;
+	uint64_t lastNormalReceive = 0;
+	bool haveNormal = false;
 	for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-		if (p->type() == Path::PATH_TYPE_UDP) {
-			lastUdpPingSent = std::max(lastUdpPingSent,p->lastPing());
-			lastUdpReceive = std::max(lastUdpReceive,p->lastReceived());
-			haveUdp = true;
+		if (p->type() != Path::PATH_TYPE_TCP_OUT) {
+			lastNormalPingSent = std::max(lastNormalPingSent,p->lastPing());
+			lastNormalReceive = std::max(lastNormalReceive,p->lastReceived());
+			haveNormal = true;
 		}
 	}
-	bool useTcpOut = ( (!haveUdp) || ( (_r->tcpTunnelingEnabled) && (lastUdpPingSent > lastUdpReceive) && ((now - lastUdpReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
+	const bool useTcpOut = ( (!haveNormal) || ( (_r->tcpTunnelingEnabled) && (lastNormalPingSent > _r->timeOfLastResynchronize) && (lastNormalPingSent > lastNormalReceive) && ((lastNormalPingSent - lastNormalReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
 
 	TRACE("PING %s (useTcpOut==%d)",_id.address().toString().c_str(),(int)useTcpOut);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 		if ((useTcpOut)||(p->type() != Path::PATH_TYPE_TCP_OUT)) {
-			p->pinged(now); // we log pings sent even if the send "fails", since what we want to track is when we last tried to ping
+			p->pinged(now); // attempts to ping are logged whether they look successful or not
 			if (_r->sw->sendHELLO(self,*p)) {
 				p->sent(now);
 				sent = true;
@@ -212,7 +225,7 @@ void Peer::clean(uint64_t now)
 	Mutex::Lock _l(_lock);
 	unsigned long i = 0,o = 0,l = (unsigned long)_paths.size();
 	while (i != l) {
-		if (_paths[i].active(now))
+		if (_paths[i].active(now)) // active includes fixed
 			_paths[o++] = _paths[i];
 		++i;
 	}

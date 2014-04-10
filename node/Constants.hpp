@@ -179,7 +179,7 @@ error_no_byte_order_defined;
 #define ZT_MAC_FIRST_OCTET 0x32
 
 /**
- * Length of secret key in bytes
+ * Length of secret key in bytes -- 256-bit for Salsa20
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
@@ -189,17 +189,17 @@ error_no_byte_order_defined;
 #define ZT_DB_CLEAN_PERIOD 300000
 
 /**
- * How long to remember peers in RAM if they haven't been used
+ * How long to remember peer records in RAM if they haven't been used
  */
 #define ZT_PEER_IN_MEMORY_EXPIRATION 600000
 
 /**
  * Delay between WHOIS retries in ms
  */
-#define ZT_WHOIS_RETRY_DELAY 350
+#define ZT_WHOIS_RETRY_DELAY 500
 
 /**
- * Maximum identity WHOIS retries
+ * Maximum identity WHOIS retries (each attempt tries consulting a different peer)
  */
 #define ZT_MAX_WHOIS_RETRIES 3
 
@@ -214,7 +214,7 @@ error_no_byte_order_defined;
 #define ZT_RECEIVE_QUEUE_TIMEOUT (ZT_WHOIS_RETRY_DELAY * (ZT_MAX_WHOIS_RETRIES + 1))
 
 /**
- * Maximum number of ZT hops allowed
+ * Maximum number of ZT hops allowed (this is not IP hops/TTL)
  * 
  * The protocol allows up to 7, but we limit it to something smaller.
  */
@@ -248,7 +248,7 @@ error_no_byte_order_defined;
 #define ZT_MULTICAST_LIKE_EXPIRE 120000
 
 /**
- * Time between polls of local taps for multicast membership changes
+ * Time between polls of local tap devices for multicast membership changes
  */
 #define ZT_MULTICAST_LOCAL_POLL_PERIOD 10000
 
@@ -276,6 +276,17 @@ error_no_byte_order_defined;
 #define ZT_FIREWALL_OPENER_DELAY 30000
 
 /**
+ * Number of hops to open via firewall opener packets
+ *
+ * The firewall opener code iterates from 1 to this value (inclusive), sending
+ * a tiny packet with each TTL value.
+ *
+ * 2 should permit traversal of double-NAT configurations, such as from inside
+ * a VM running behind local NAT on a host that is itself behind NAT.
+ */
+#define ZT_FIREWALL_OPENER_HOPS 2
+
+/**
  * Delay between requests for updated network autoconf information
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
@@ -291,14 +302,12 @@ error_no_byte_order_defined;
 #define ZT_PING_UNANSWERED_AFTER 1500
 
 /**
- * Try to ping supernodes this often until we get something from somewhere
+ * Try to ping supernodes this often until we get something from them
  */
 #define ZT_STARTUP_AGGRO (ZT_PING_UNANSWERED_AFTER * 2)
 
 /**
- * Maximum delay between runs of the main service loop
- * 
- * This is the shortest of the check delays/periods.
+ * Maximum delay between runs of the main loop in Node.cpp
  */
 #define ZT_MAX_SERVICE_LOOP_INTERVAL ZT_STARTUP_AGGRO
 
@@ -308,27 +317,25 @@ error_no_byte_order_defined;
 #define ZT_TCP_TUNNEL_FAILOVER_TIMEOUT (ZT_STARTUP_AGGRO * 5)
 
 /**
- * Path activity timeout
+ * Path activity timeout (for non-fixed paths)
  */
 #define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
 
 /**
- * Close TCP tunnels if unused for this long (used in SocketManager)
+ * Close TCP sockets if unused for this long (SocketManager)
  */
 #define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
 
 /**
- * Stop relaying via peers that have not responded to direct sends in this long
+ * Stop relaying via peers that have not responded to direct sends
+ *
+ * When we send something (including frames), we generally expect a response.
+ * Switching relays if no response in a short period of time causes more
+ * rapid failover if a supernode goes down or becomes unreachable. In the
+ * mistaken case, little harm is done as it'll pick the next-fastest
+ * supernode and will switch back eventually.
  */
 #define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
-
-/**
- * IP hops (a.k.a. TTL) to set for firewall opener packets
- *
- * 2 should permit traversal of double-NAT configurations, such as from inside
- * a VM running behind local NAT on a host that is itself behind NAT.
- */
-#define ZT_FIREWALL_OPENER_HOPS 2
 
 /**
  * Delay sleep overshoot for detection of a probable sleep/wake event
@@ -342,6 +349,10 @@ error_no_byte_order_defined;
 
 /**
  * Minimum interval between attempts by relays to unite peers
+ *
+ * When a relay gets a packet destined for another peer, it sends both peers
+ * a RENDEZVOUS message no more than this often. This instructs the peers
+ * to attempt NAT-t and gives each the other's corresponding IP:port pair.
  */
 #define ZT_MIN_UNITE_INTERVAL 30000
 
@@ -361,7 +372,7 @@ error_no_byte_order_defined;
 #define ZT_UPDATE_MAX_INTERVAL 7200000
 
 /**
- * Update HTTP timeout in seconds
+ * Software update HTTP timeout in seconds
  */
 #define ZT_UPDATE_HTTP_TIMEOUT 30
 

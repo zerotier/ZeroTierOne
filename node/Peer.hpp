@@ -80,20 +80,14 @@ public:
 	/**
 	 * @return Time peer record was last used in any way
 	 */
-	inline uint64_t lastUsed() const
-		throw()
-	{
-		return _lastUsed;
-	}
+	inline uint64_t lastUsed() const throw() { return _lastUsed; }
 
 	/**
+	 * Log a use of this peer record (done by Topology when peers are looked up)
+	 *
 	 * @param now New time of last use
 	 */
-	inline void use(uint64_t now)
-		throw()
-	{
-		_lastUsed = now;
-	}
+	inline void use(uint64_t now) throw() { _lastUsed = now; }
 
 	/**
 	 * @return This peer's ZT address (short for identity().address())
@@ -106,7 +100,10 @@ public:
 	inline const Identity &identity() const throw() { return _id; }
 
 	/**
-	 * Must be called on authenticated packet receive from this peer
+	 * Log receipt of an authenticated packet
+	 *
+	 * This is called by the decode pipe when a packet is proven to be authentic
+	 * and appears to be valid.
 	 * 
 	 * @param _r Runtime environment
 	 * @param fromSock Socket from which packet was received
@@ -130,10 +127,10 @@ public:
 		uint64_t now);
 
 	/**
-	 * Send a packet to this peer using the most recently active direct path
+	 * Send a packet directly to this peer
 	 *
-	 * This does not relay. It returns false if there are no available active
-	 * paths.
+	 * This sends only via direct paths if available and does not handle
+	 * finding of relays. That is done in the send logic in Switch.
 	 *
 	 * @param _r Runtime environment
 	 * @param data Data to send
@@ -369,11 +366,6 @@ public:
 		}
 		return std::string("?.?.?");
 	}
-
-	/**
-	 * @return True if this Peer is initialized with something
-	 */
-	inline operator bool() const throw() { return (_id); }
 
 	/**
 	 * Get most recently active UDP path addresses for IPv4 and/or IPv6
