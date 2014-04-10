@@ -101,6 +101,12 @@ public:
 		this->set(ipBytes,ipLen,port);
 	}
 
+	InetAddress(const uint32_t ipv4,unsigned int port)
+		throw()
+	{
+		this->set(&ipv4,4,port);
+	}
+
 	InetAddress(const std::string &ip,unsigned int port)
 		throw()
 	{

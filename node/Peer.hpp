@@ -176,6 +176,20 @@ public:
 	}
 
 	/**
+	 * @param addr IP:port
+	 * @return True if we have a UDP path to this address
+	 */
+	inline bool haveUdpPath(const InetAddress &addr) const
+	{
+		Mutex::Lock _l(_lock);
+		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
+			if ((p->type() == Path::PATH_TYPE_UDP)&&(p->address() == addr))
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * @return Last successfully sent firewall opener for any path
 	 */
 	inline uint64_t lastFirewallOpener() const

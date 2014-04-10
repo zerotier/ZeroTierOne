@@ -83,6 +83,11 @@ public:
 	 * URL to latest .nfo for software updates
 	 */
 	const std::string updateLatestNfoURL;
+
+	/**
+	 * Address for IPv4 LAN auto-location broadcasts: 255.255.255.255:9993
+	 */
+	const InetAddress v4Broadcast;
 };
 
 extern const Defaults ZT_DEFAULTS;

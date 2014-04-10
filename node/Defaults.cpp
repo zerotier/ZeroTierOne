@@ -174,7 +174,8 @@ Defaults::Defaults() :
 	defaultHomePath(_mkDefaultHomePath()),
 	supernodes(_mkSupernodeMap()),
 	updateAuthorities(_mkUpdateAuth()),
-	updateLatestNfoURL(_mkUpdateUrl())
+	updateLatestNfoURL(_mkUpdateUrl()),
+	v4Broadcast(((uint32_t)0xffffffff),ZT_DEFAULT_UDP_PORT)
 {
 }
 

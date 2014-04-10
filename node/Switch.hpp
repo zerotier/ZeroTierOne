@@ -221,15 +221,9 @@ public:
 		throw();
 
 private:
-	void _handleRemotePacketFragment(
-		const SharedPtr<Socket> &fromSock,
-		const InetAddress &fromAddr,
-		const Buffer<4096> &data);
-
-	void _handleRemotePacketHead(
-		const SharedPtr<Socket> &fromSock,
-		const InetAddress &fromAddr,
-		const Buffer<4096> &data);
+	void _handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data);
+	void _handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data);
+	void _handleBeacon(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data);
 
 	Address _sendWhoisRequest(
 		const Address &addr,
@@ -241,6 +235,7 @@ private:
 		bool encrypt);
 
 	const RuntimeEnvironment *const _r;
+	volatile uint64_t _lastBeacon;
 	volatile unsigned int _multicastIdCounter;
 
 	struct WhoisRequest

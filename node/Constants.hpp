@@ -367,6 +367,16 @@ error_no_byte_order_defined;
 #define ZT_ANTIRECURSION_HISTORY_SIZE 16
 
 /**
+ * How often to broadcast beacons over physical local LANs
+ */
+#define ZT_BEACON_INTERVAL ZT_PEER_DIRECT_PING_DELAY
+
+/**
+ * Do not respond to any beacon more often than this
+ */
+#define ZT_MIN_BEACON_RESPONSE_INTERVAL (ZT_BEACON_INTERVAL / 64)
+
+/**
  * Minimum interval between attempts to do a software update
  */
 #define ZT_UPDATE_MIN_INTERVAL 120000

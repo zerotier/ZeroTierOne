@@ -56,6 +56,7 @@ namespace ZeroTier {
 
 Switch::Switch(const RuntimeEnvironment *renv) :
 	_r(renv),
+	_lastBeacon(0),
 	_multicastIdCounter((unsigned int)renv->prng->next32()) // start a random spot to minimize possible collisions on startup
 {
 }
@@ -67,7 +68,9 @@ Switch::~Switch()
 void Switch::onRemotePacket(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
 {
 	try {
-		if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+		if (data.size() == ZT_PROTO_BEACON_LENGTH) {
+			_handleBeacon(fromSock,fromAddr,data);
+		} else if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR)
 				_handleRemotePacketFragment(fromSock,fromAddr,data);
 			else if (data.size() >= ZT_PROTO_MIN_PACKET_LENGTH)
@@ -87,7 +90,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 
 	if (!_r->antiRec->checkEthernetFrame(data.data(),data.size())) {
-		TRACE("%s: rejected recursively addressed ZeroTier packet by tail match",network->tapDeviceName().c_str());
+		TRACE("%s: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->tapDeviceName().c_str(),etherTypeName(etherType),data.size());
 		return;
 	}
 
@@ -96,12 +99,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 	}
 	if (from != network->mac()) {
-		LOG("ignored tap: %s -> %s %s (bridging not supported)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+		LOG("%s: ignored tap: %s -> %s %s (bridging not supported)",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 		return;
 	}
 
 	if (!nconf->permitsEtherType(etherType)) {
-		LOG("ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
+		LOG("%s: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 
@@ -231,11 +234,8 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const Path &path)
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	if (_r->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size())) {
-		_r->antiRec->logOutgoingZT(outp.data(),outp.size());
-		return true;
-	}
-	return false;
+	_r->antiRec->logOutgoingZT(outp.data(),outp.size());
+	return _r->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size());
 }
 
 bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
@@ -249,11 +249,8 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	if (_r->sm->send(destUdp,false,false,outp.data(),outp.size())) {
-		_r->antiRec->logOutgoingZT(outp.data(),outp.size());
-		return true;
-	}
-	return false;
+	_r->antiRec->logOutgoingZT(outp.data(),outp.size());
+	return _r->sm->send(destUdp,false,false,outp.data(),outp.size());
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
@@ -707,6 +704,26 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 		if (!packet->tryDecode(_r)) {
 			Mutex::Lock _l(_rxQueue_m);
 			_rxQueue.push_back(packet);
+		}
+	}
+}
+
+void Switch::_handleBeacon(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
+{
+	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+	if (beaconAddr == _r->identity.address())
+		return;
+	SharedPtr<Peer> peer(_r->topology->getPeer(beaconAddr));
+	if (peer) {
+		uint64_t now = Utils::now();
+		if (peer->haveUdpPath(fromAddr)) {
+			if ((now - peer->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY)
+				peer->sendPing(_r,now);
+		} else {
+			if ((now - _lastBeacon) < ZT_MIN_BEACON_RESPONSE_INTERVAL)
+				return;
+			_lastBeacon = now;
+			sendHELLO(peer,fromAddr);
 		}
 	}
 }

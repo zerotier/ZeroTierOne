@@ -62,6 +62,7 @@
 #include "Identity.hpp"
 #include "Topology.hpp"
 #include "SocketManager.hpp"
+#include "Packet.hpp"
 #include "Switch.hpp"
 #include "EthernetTap.hpp"
 #include "CMWC4096.hpp"
@@ -534,6 +535,7 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastSupernodePingCheck = 0;
+		uint64_t lastBeacon = 0;
 		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = 0;
@@ -674,6 +676,18 @@ Node::ReasonForTermination Node::run()
 				_r->nc->clean();
 				if (_r->updater)
 					_r->updater->checkIfMaxIntervalExceeded(now);
+			}
+
+			// Send beacons to physical local LANs
+			if ((resynchronize)||((now - lastBeacon) >= ZT_BEACON_INTERVAL)) {
+				lastBeacon = now;
+				char bcn[ZT_PROTO_BEACON_LENGTH];
+				*((uint32_t *)(bcn)) = _r->prng->next32();
+				*((uint32_t *)(bcn + 4)) = _r->prng->next32();
+				_r->identity.address().copyTo(bcn + ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH);
+				TRACE("sending LAN beacon to %s",ZT_DEFAULTS.v4Broadcast.toString().c_str());
+				_r->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
+				_r->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
 			}
 
 			// Sleep for loop interval or until something interesting happens.

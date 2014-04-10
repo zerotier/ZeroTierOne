@@ -89,7 +89,7 @@ public:
 	{
 		for(unsigned int h=0;h<ZT_ANTIRECURSION_HISTORY_SIZE;++h) {
 			ArItem *i = &(_history[h]);
-			if ((len >= i->len)&&(!memcmp(((const unsigned char *)data) + (len - i->len),i->tail,i->len)))
+			if ((i->len > 0)&&(len >= i->len)&&(!memcmp(((const unsigned char *)data) + (len - i->len),i->tail,i->len)))
 				return false;
 		}
 		return true;

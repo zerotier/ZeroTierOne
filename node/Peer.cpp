@@ -162,12 +162,16 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 	} else { // we only have a normal path (or none at all, that case is caught below)
 		bestPath = bestNormalPath;
 	}
+	if (!bestPath)
+		return Path::PATH_TYPE_NULL;
 
-	if ((bestPath)&&(_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len))) {
+	_r->antiRec->logOutgoingZT(data,len);
+
+	if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
 		bestPath->sent(now);
-		_r->antiRec->logOutgoingZT(data,len);
 		return bestPath->type();
 	}
+
 	return Path::PATH_TYPE_NULL;
 }
 

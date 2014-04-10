@@ -136,6 +136,12 @@
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
+/**
+ * Length of LAN beacon packets
+ */
+#define ZT_PROTO_BEACON_LENGTH 13
+#define ZT_PROTO_BEACON_IDX_ADDRESS 8
+
 // Size of bloom filter used in multicast propagation graph exploration
 #define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS 512
 #define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES 64
@@ -250,6 +256,16 @@ namespace ZeroTier {
  *
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
  * sent in the clear, as it's the "here is my public key" message.
+ *
+ * Beacon format and beacon packets:
+ *   <[8] 8 random bytes>
+ *   <[5] sender ZT address>
+ *
+ * A beacon is a 13-byte packet containing only the address of the sender.
+ * Receiving peers may or may not respond to beacons with a HELLO or other
+ * message to initiate direct communication.
+ *
+ * Beacons may be used for direct LAN announcement or NAT traversal.
  */
 class Packet : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 {
