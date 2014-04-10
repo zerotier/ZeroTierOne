@@ -52,6 +52,8 @@
 #include <sys/file.h>
 #endif
 
+#include "../version.h"
+
 #include "Node.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Logger.hpp"
@@ -73,8 +75,7 @@
 #include "SoftwareUpdater.hpp"
 #include "Buffer.hpp"
 #include "IpcConnection.hpp"
-
-#include "../version.h"
+#include "AntiRecursion.hpp"
 
 namespace ZeroTier {
 
@@ -235,24 +236,16 @@ struct _NodeImpl
 
 #ifndef __WINDOWS__
 		delete renv.netconfService;
-		TRACE("shutdown: delete netconfService");
 #endif
 		delete renv.updater;
-		TRACE("shutdown: delete updater");
 		delete renv.nc;
-		TRACE("shutdown: delete nc");
 		delete renv.sysEnv;
-		TRACE("shutdown: delete sysEnv");
 		delete renv.topology;
-		TRACE("shutdown: delete topology");
 		delete renv.sm;
-		TRACE("shutdown: delete sm");
 		delete renv.sw;
-		TRACE("shutdown: delete sw");
 		delete renv.mc;
-		TRACE("shutdown: delete mc");
+		delete renv.antiRec;
 		delete renv.prng;
-		TRACE("shutdown: delete prng");
 		delete renv.log;
 
 		return reasonForTermination;
@@ -477,6 +470,7 @@ Node::ReasonForTermination Node::run()
 		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
 		// Create the objects that make up runtime state.
+		_r->antiRec = new AntiRecursion();
 		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);

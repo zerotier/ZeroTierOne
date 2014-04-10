@@ -48,6 +48,7 @@
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
+#include "AntiRecursion.hpp"
 
 #include "../version.h"
 
@@ -84,6 +85,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	SharedPtr<NetworkConfig> nconf(network->config2());
 	if (!nconf)
 		return;
+
+	if (!_r->antiRec->checkEthernetFrame(data.data(),data.size())) {
+		TRACE("%s: rejected recursively addressed ZeroTier packet by tail match",network->tapDeviceName().c_str());
+		return;
+	}
 
 	if (to == network->mac()) {
 		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tapDeviceName().c_str());
@@ -225,7 +231,11 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const Path &path)
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return _r->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size());
+	if (_r->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size())) {
+		_r->antiRec->logOutgoingZT(outp.data(),outp.size());
+		return true;
+	}
+	return false;
 }
 
 bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
@@ -239,7 +249,11 @@ bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
 	outp.append(now);
 	_r->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	return _r->sm->send(destUdp,false,false,outp.data(),outp.size());
+	if (_r->sm->send(destUdp,false,false,outp.data(),outp.size())) {
+		_r->antiRec->logOutgoingZT(outp.data(),outp.size());
+		return true;
+	}
+	return false;
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)

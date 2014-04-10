@@ -362,6 +362,11 @@ error_no_byte_order_defined;
 #define ZT_RENDEZVOUS_NAT_T_DELAY 500
 
 /**
+ * Size of anti-recursion history (see AntiRecursion.hpp)
+ */
+#define ZT_ANTIRECURSION_HISTORY_SIZE 16
+
+/**
  * Minimum interval between attempts to do a software update
  */
 #define ZT_UPDATE_MIN_INTERVAL 120000

@@ -46,6 +46,7 @@ class Node;
 class Multicaster;
 class SoftwareUpdater;
 class SocketManager;
+class AntiRecursion;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -69,6 +70,7 @@ public:
 		timeOfLastPacketReceived(0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
+		antiRec((AntiRecursion *)0),
 		mc((Multicaster *)0),
 		sw((Switch *)0),
 		sm((SocketManager *)0),
@@ -111,6 +113,7 @@ public:
 
 	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
+	AntiRecursion *antiRec;
 	Multicaster *mc;
 	Switch *sw;
 	SocketManager *sm;

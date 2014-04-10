@@ -27,6 +27,7 @@
 
 #include "Peer.hpp"
 #include "Switch.hpp"
+#include "AntiRecursion.hpp"
 
 #include <algorithm>
 
@@ -164,6 +165,7 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 
 	if ((bestPath)&&(_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len))) {
 		bestPath->sent(now);
+		_r->antiRec->logOutgoingZT(data,len);
 		return bestPath->type();
 	}
 	return Path::PATH_TYPE_NULL;
