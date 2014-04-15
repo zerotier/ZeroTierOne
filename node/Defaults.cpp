@@ -76,12 +76,12 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",443),true));
 	sn[id] = addrs;
 
-	// mi-go.zerotier.com - Singapore
+	// yig.zerotier.com - Sydney, Australia
 	addrs.clear();
-	if (!id.fromString("abbb7f4622:0:89d2c6b2062b10f4ce314dfcb914c082566247090a6f74c8ba1c15c63b205f540758f0abae85287397152c9d8cf463cfe51e7a480946cd6a31495b24ca13253c"))
+	if (!id.fromString("275f0151f6:0:58716258283f7e14a2f999875d9cc681c1f0ca8403dce38ec354ceaf284a555f36402e79a32d03b8c0963245b7f1af61a1ad3519d90e05bc3ce591034f6a1c9c"))
 		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("128.199.254.204",ZT_DEFAULT_UDP_PORT),false));
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("128.199.254.204",443),true));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",ZT_DEFAULT_UDP_PORT),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",443),true));
 	sn[id] = addrs;
 
 	// shoggoth.zerotier.com - Tokyo, Japan
