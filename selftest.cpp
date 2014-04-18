@@ -461,8 +461,8 @@ static int testPacket()
 	unsigned char salsaKey[32],hmacKey[32];
 	Packet a,b;
 
-	a.zeroAll();
-	b.zeroAll();
+	a.burn();
+	b.burn();
 
 	for(unsigned int i=0;i<32;++i) {
 		salsaKey[i] = (unsigned char)rand();

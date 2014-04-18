@@ -239,13 +239,16 @@ void Topology::_dumpPeers()
 				if (fwrite(buf.data(),buf.size(),1,pd) != 1) {
 					fclose(pd);
 					Utils::rm(pdpath);
+					buf.burn();
 					return;
 				}
 				buf.clear();
+				buf.burn();
 			}
 		} catch ( ... ) {
 			fclose(pd);
 			Utils::rm(pdpath);
+			buf.burn();
 			return;
 		}
 	}
@@ -254,12 +257,15 @@ void Topology::_dumpPeers()
 		if (fwrite(buf.data(),buf.size(),1,pd) != 1) {
 			fclose(pd);
 			Utils::rm(pdpath);
+			buf.burn();
 			return;
 		}
+		buf.burn();
 	}
 
 	fclose(pd);
 	Utils::lockDownFile(pdpath.c_str(),false);
+	buf.burn();
 }
 
 void Topology::_loadPeers()
@@ -301,6 +307,7 @@ void Topology::_loadPeers()
 
 	fclose(pd);
 	Utils::rm(pdpath);
+	buf.burn();
 }
 
 } // namespace ZeroTier

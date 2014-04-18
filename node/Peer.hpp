@@ -67,6 +67,8 @@ public:
 	 */
 	Peer();
 
+	~Peer() { Utils::burn(_key,sizeof(_key)); }
+
 	/**
 	 * Construct a new peer
 	 *

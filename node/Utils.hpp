@@ -86,6 +86,20 @@ public:
 	}
 
 	/**
+	 * Securely zero memory
+	 *
+	 * This just uses volatile to ensure that it's never optimized out.
+	 */
+	static inline void burn(void *ptr,unsigned int len)
+		throw()
+	{
+		volatile unsigned char *p = (unsigned char *)ptr;
+		volatile unsigned char *e = p + len;
+		while (p != e)
+			*(p++) = (unsigned char)0;
+	}
+
+	/**
 	 * Delete a file
 	 *
 	 * @param path Path to delete
@@ -433,19 +447,10 @@ public:
 	static std::string trim(const std::string &s);
 
 	/**
-	 * Like sprintf, but appends to std::string
-	 *
-	 * @param s String to append to
-	 * @param fmt Printf format string
-	 * @param ... Format arguments
-	 * @throws std::bad_alloc Memory allocation failure
-	 * @throws std::length_error Format + args exceeds internal buffer maximum
-	 */
-	static void stdsprintf(std::string &s,const char *fmt,...)
-		throw(std::bad_alloc,std::length_error);
-
-	/**
 	 * Variant of snprintf that is portable and throws an exception
+	 *
+	 * This just wraps the local implementation whatever it's called, while
+	 * performing a few other checks and adding exceptions for overflow.
 	 *
 	 * @param buf Buffer to write to
 	 * @param len Length of buffer in bytes

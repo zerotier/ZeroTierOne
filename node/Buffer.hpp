@@ -380,12 +380,12 @@ public:
 	}
 
 	/**
-	 * Unconditionally zero buffer's underlying memory
+	 * Unconditionally and securely zero buffer's underlying memory
 	 */
-	inline void zeroAll()
+	inline void burn()
 		throw()
 	{
-		memset(_b,0,sizeof(_b));
+		Utils::burn(_b,sizeof(_b));
 	}
 
 	/**
