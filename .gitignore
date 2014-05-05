@@ -6,8 +6,7 @@
 .DS_Store
 .Apple*
 *.dSYM
-/netconf-service/netconf-test
-/netconf-service/netconf.service
+/netconf-service/node_modules
 /ipch
 /windows/ZeroTierOne.sdf
 /windows/ZeroTierOne.v11.suo
