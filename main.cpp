@@ -189,6 +189,7 @@ static void printHelp(FILE *out,const char *pn)
 	fprintf(out,"  getpublic <identity.secret>"ZT_EOL_S);
 	fprintf(out,"  sign <identity.secret> <file>"ZT_EOL_S);
 	fprintf(out,"  verify <identity.secret/public> <file> <signature>"ZT_EOL_S);
+	fprintf(out,"  mkcom <identity.secret> [<id,value,maxDelta> ...] (hexadecimal integers)"ZT_EOL_S);
 }
 
 static Identity getIdFromArg(char *arg)

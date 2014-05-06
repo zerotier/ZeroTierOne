@@ -184,19 +184,27 @@ function Identity(idstr)
 	this.fromString = function(str) {
 		thiz.str = '';
 		thiz.fields = [];
-		if (!str)
+		if (typeof str !== 'string')
 			return;
+		for(var i=0;i<str.length;++i) {
+			if ("0123456789abcdef:ABCDEF".indexOf(str.charAt(i)) < 0)
+				return; // invalid character in identity
+		}
 		var fields = str.split(':');
 		if ((fields.length < 3)||(fields[0].length !== 10)||(fields[1] !== '0'))
 			return;
 		thiz.fields = fields;
-	}
+	};
 
 	this.isValid = function() {
 		if ((thiz.fields.length < 3)||(thiz.fields[0].length !== 10)||(thiz.fields[1] !== '0'))
 			return true;
 		return false;
-	}
+	};
+
+	this.hasSecretKey = function() {
+		return ((thiz.isValid())&&(thiz.fields.length >= 4));
+	};
 
 	if (typeof idstr === 'string')
 		thiz.fromString(idstr);
