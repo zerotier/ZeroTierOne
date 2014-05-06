@@ -52,7 +52,7 @@ var ZEROTIER_IDTOOL = '/usr/local/bin/zerotier-idtool';
 var redis = require('redis');
 var DB = redis.createClient();
 DB.on("error",function(err) {
-	console.error('Redis query error: '+err);
+	console.error('redis query error: '+err);
 });
 
 // Encoding-compatible with Dictionary.hpp in ZeroTier One C++ code base
