@@ -84,11 +84,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO));
 	_multicastPrefixBits = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS,_zero).c_str());
 	_multicastDepth = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH,_zero).c_str());
-	_arpCacheTtl = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ARP_CACHE_TTL,_zero).c_str());
-	_ndpCacheTtl = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_NDP_CACHE_TTL,_zero).c_str());
-	_emulateArp = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_EMULATE_ARP,_zero).c_str()) != 0);
-	_emulateNdp = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_EMULATE_NDP,_zero).c_str()) != 0);
-	_isOpen = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_IS_OPEN,_zero).c_str()) != 0);
+	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,_zero).c_str()) != 0);
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
 	_description = d.get(ZT_NETWORKCONFIG_DICT_KEY_DESC,std::string());
 

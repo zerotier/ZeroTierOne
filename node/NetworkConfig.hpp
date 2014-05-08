@@ -48,23 +48,18 @@ namespace ZeroTier {
 
 // These dictionary keys are short so they don't take up much room in
 // netconf response packets.
-#define ZT_NETWORKCONFIG_DICT_KEY_NETCONF_SERVICE_VERSION "ncver"
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS "mpb"
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH "md"
-#define ZT_NETWORKCONFIG_DICT_KEY_ARP_CACHE_TTL "cARP"
-#define ZT_NETWORKCONFIG_DICT_KEY_NDP_CACHE_TTL "cNDP"
-#define ZT_NETWORKCONFIG_DICT_KEY_EMULATE_ARP "eARP"
-#define ZT_NETWORKCONFIG_DICT_KEY_EMULATE_NDP "eNDP"
-#define ZT_NETWORKCONFIG_DICT_KEY_IS_OPEN "o"
-#define ZT_NETWORKCONFIG_DICT_KEY_NAME "name"
-#define ZT_NETWORKCONFIG_DICT_KEY_DESC "desc"
+#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
+#define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE "p"
+#define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
+#define ZT_NETWORKCONFIG_DICT_KEY_DESC "d"
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
-#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
 
 /**
@@ -122,11 +117,8 @@ public:
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
 	inline unsigned int multicastPrefixBits() const throw() { return _multicastPrefixBits; }
 	inline unsigned int multicastDepth() const throw() { return _multicastDepth; }
-	inline unsigned int arpCacheTtl() const throw() { return _arpCacheTtl; }
-	inline unsigned int ndpCacheTtl() const throw() { return _ndpCacheTtl; }
-	inline bool emulateArp() const throw() { return _emulateArp; }
-	inline bool emulateNdp() const throw() { return _emulateNdp; }
-	inline bool isOpen() const throw() { return _isOpen; }
+	inline bool isOpen() const throw() { return (!_private); }
+	inline bool isPrivate() const throw() { return _private; }
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::set<InetAddress> &staticIps() const throw() { return _staticIps; }
@@ -162,11 +154,7 @@ private:
 	Address _issuedTo;
 	unsigned int _multicastPrefixBits;
 	unsigned int _multicastDepth;
-	unsigned int _arpCacheTtl;
-	unsigned int _ndpCacheTtl;
-	bool _emulateArp;
-	bool _emulateNdp;
-	bool _isOpen;
+	bool _private;
 	std::string _name;
 	std::string _description;
 	std::set<InetAddress> _staticIps;

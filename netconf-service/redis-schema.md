@@ -58,7 +58,7 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - R infrastructure :: if true, network can't be deleted through API or web UI
 - M private :: if true, network requires authentication
 - R creationTime :: timestamp of network creation
-- M etherTypes :: comma-delimited list of integers indicating Ethernet types permitted on network
+- M etherTypes :: comma-delimited list of *hexadecimal* integers indicating Ethernet types permitted on network
 - M enableBroadcast :: if true, ff:ff:ff:ff:ff:ff is enabled network-wide
 - M v4AssignMode :: 'none' (or null/empty/etc.), 'zt', 'dhcp'
 - M v4AssignPool :: network/bits from which to assign IPs
