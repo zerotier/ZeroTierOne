@@ -253,13 +253,17 @@ function doNetconfRequest(message)
 		return;
 	}
 
-	// Get required fields
 	var peerId = new Identity(message.data['peerId']);
 	var fromIpAndPort = message.data['from'];
 	var nwid = message.data['nwid'];
 	var requestId = message.data['requestId'];
-	if ((!peerId)||(!peerId.isValid())||(!fromIpAndPort)||(!nwid)||(nwid.length !== 16)||(!requestId))
+	if ((!peerId)||(!peerId.isValid())||(!fromIpAndPort)||(!nwid)||(nwid.length !== 16)||(!requestId)) {
+		console.error('missing one or more required fields in netconf-request');
 		return;
+	}
+
+	var memberKey = 'zt1:network:'+nwid+':member:'+peerId.address()+':~';
+	var ipAssignmentsKey = 'zt1:network:'+nwid+':ipAssignments';
 
 	var network = null;
 	var member = null;
@@ -286,7 +290,6 @@ function doNetconfRequest(message)
 		if ((!network)||(!('nwid' in network))||(network['nwid'] !== nwid))
 			return next(null);
 
-		var memberKey = 'zt1:network:'+nwid+':member:'+peerId.address()+':~';
 		DB.hgetall(memberKey,function(err,obj) {
 			if (err)
 				return next(err);
@@ -298,8 +301,8 @@ function doNetconfRequest(message)
 				DB.hmset(memberKey,{
 					'lastSeen': Date.now(),
 					'lastAt': fromIpAndPort,
-					'clientVersion': (clientVersion) ? clientVersion : '?.?.?',
-					'clientOs': (clientOs) ? clientOs : '?'
+					'clientVersion': (message.data['clientVersion']) ? message.data['clientVersion'] : '?.?.?',
+					'clientOs': (message.data['clientOs']) ? message.data['clientOs'] : '?'
 				},next);
 			} else {
 				// Add member record to network for newly seen peer
@@ -333,11 +336,10 @@ function doNetconfRequest(message)
 		for(var i=0;i<ipa.length;++i) {
 			if (ipa[i])
 				ipAssignments.push(ipa[i]);
-			if ((ipa[i].indexOf('.') > 0)&&(v4NeedAssign)) {
+			if ((ipa[i].indexOf('.') > 0)&&(v4NeedAssign))
 				v4Assignments.push(ipa[i]);
-			} else if ((ipa[i].indexOf(':') > 0)&&(v6NeedAssign)) {
+			else if ((ipa[i].indexOf(':') > 0)&&(v6NeedAssign))
 				v6Assignments.push(ipa[i]);
-			}
 		}
 
 		return next(null);
@@ -348,13 +350,12 @@ function doNetconfRequest(message)
 		if ((!authorized)||(!v4NeedAssign)||(v4Assignments.length > 0))
 			return next(null);
 
-		var ipAssignmentAttempts = 0;
-		var v4pool = network['v4AssignPool']; // technically csv but only one netblock currently supported
 		var peerAddress = peerId.address();
 
 		var network = 0;
 		var netmask = 0;
 		var netmaskBits = 0;
+		var v4pool = network['v4AssignPool']; // technically csv but only one netblock currently supported
 		if (v4pool) {
 			var v4poolSplit = v4Pool.split('/');
 			if (v4poolSplit.length === 2) {
@@ -376,12 +377,9 @@ function doNetconfRequest(message)
 		if ((network === 0)||(netmask === 0xffffffff))
 			return next(null);
 		var invmask = netmask ^ 0xffffffff;
+
 		var abcd = 0;
-
-		var assignment = null;
-
-		var ipAssignmentsKey = 'zt1:network:'+nwid+':ipAssignments';
-		var memberKey = 'zt1:network:'+nwid+':member:'+peerAddress+':~';
+		var ipAssignmentAttempts = 0;
 
 		async.whilst(
 			function() { return ((v4Assignments.length === 0)&&(ipAssignmentAttempts < 1000)); },
@@ -402,7 +400,7 @@ function doNetconfRequest(message)
 
 				// Derive an IP to test and generate assignment ip/bits string
 				var ip = (abcd & invmask) | (network & netmask);
-				assignment = ((ip >> 24) & 0xff).toString(10) + '.' + ((ip >> 16) & 0xff).toString(10) + '.' + ((ip >> 8) & 0xff).toString(10) + '.' + (ip & 0xff).toString(10) + '/' + netmaskBits.toString(10);
+				var assignment = ((ip >> 24) & 0xff).toString(10) + '.' + ((ip >> 16) & 0xff).toString(10) + '.' + ((ip >> 8) & 0xff).toString(10) + '.' + (ip & 0xff).toString(10) + '/' + netmaskBits.toString(10);
 
 				// Check :ipAssignments to see if this IP is already taken
 				DB.hget(ipAssignmentsKey,assignment,function(err,value) {
