@@ -208,21 +208,30 @@ function Identity(idstr)
 		thiz.fromString(idstr);
 };
 
+//
+// Invokes zerotier-idtool to generate certificates for private networks
+//
+
 function generateCertificateOfMembership(nwid,peerAddress,callback)
 {
 	var comTimestamp = '0,' + Date.now().toString(16) + ',' + (ZT_NETWORK_AUTOCONF_DELAY * 4).toString(16);
 	var comNwid = '1,' + nwid + ',0';
 	var comIssuedTo = '2,' + peerAddress + ',ffffffffffffffff';
 	var cert = '';
+	var certErr = '';
 	var idtool = spawn(ZEROTIER_IDTOOL,[ 'mkcom',netconfSigningIdentity,comTimestamp,comNwid,comIssuedTo ]);
 	idtool.stdout.on('data',function(data) {
-		if (typeof data === 'string')
-			cert += data;
+		cert += data;
+	});
+	idtool.stderr.on('data',function(data) {
+		certErr += data;
 	});
 	idtool.on('close',function(exitCode) {
+		if (certErr.length > 0)
+			console.error('zerotier-idtool stderr returned: '+certErr);
 		return callback((cert.length > 0) ? cert : null,exitCode);
 	});
-};
+}
 
 //
 // Message handler for messages over ZeroTier One service bus
@@ -274,7 +283,7 @@ function doNetconfRequest(message)
 	},function(next) {
 
 		// member record lookup, unless public network
-		if ((!network)||(!('nwid' in network)||(network['nwid'] !== nwid))
+		if ((!network)||(!('nwid' in network))||(network['nwid'] !== nwid))
 			return next(null);
 
 		var memberKey = 'zt1:network:'+nwid+':member:'+peerId.address()+':~';
