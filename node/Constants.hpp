@@ -367,6 +367,14 @@ error_no_byte_order_defined;
 #define ZT_ANTIRECURSION_HISTORY_SIZE 16
 
 /**
+ * TTL for certificates of membership on private networks
+ *
+ * This is the max delta for the timestamp field of a COM, so it's a window
+ * plus or minus the certificate's timestamp. In milliseconds.
+ */
+#define ZT_NETWORK_CERTIFICATE_TTL_WINDOW (ZT_NETWORK_AUTOCONF_DELAY * 4)
+
+/**
  * How often to broadcast beacons over physical local LANs
  */
 #define ZT_BEACON_INTERVAL ZT_PEER_DIRECT_PING_DELAY

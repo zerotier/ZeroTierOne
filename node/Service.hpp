@@ -34,12 +34,6 @@
 #include "Constants.hpp"
 #include "Dictionary.hpp"
 #include "Thread.hpp"
-#include "Mutex.hpp"
-
-/**
- * Maximum size of a service message in bytes (sanity limit)
- */
-#define ZT_SERVICE_MAX_MESSAGE_SIZE 131072
 
 namespace ZeroTier {
 
@@ -91,20 +85,12 @@ public:
 	/**
 	 * @return Name of service
 	 */
-	inline const char *name() const
-		throw()
-	{
-		return _name.c_str();
-	}
+	inline const char *name() const throw() { return _name.c_str(); }
 
 	/**
 	 * @return True if subprocess is running
 	 */
-	inline bool running() const
-		throw()
-	{
-		return (_pid > 0);
-	}
+	inline bool running() const throw() { return (_pid > 0); }
 
 	/**
 	 * Thread main method; do not call elsewhere
@@ -114,15 +100,19 @@ public:
 
 private:
 	const RuntimeEnvironment *_r;
+
 	Thread _thread;
+
 	std::string _path;
 	std::string _name;
 	void *_arg;
 	void (*_handler)(void *,Service &,const Dictionary &);
-	long _pid;
-	int _childStdin;
-	int _childStdout;
-	int _childStderr;
+	volatile long _pid;
+
+	volatile int _childStdin;
+	volatile int _childStdout;
+	volatile int _childStderr;
+
 	volatile bool _run;
 };
 #endif // __WINDOWS__

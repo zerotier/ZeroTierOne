@@ -45,22 +45,21 @@ var ZEROTIER_IDTOOL = '/usr/local/bin/zerotier-idtool';
 
 // From Constants.hpp in node/
 var ZT_NETWORK_AUTOCONF_DELAY = 60000;
+var ZT_NETWORK_CERTIFICATE_TTL_WINDOW = (ZT_NETWORK_AUTOCONF_DELAY * 4);
 
 // Connect to redis, assuming database 0 and no auth (for now)
 var redis = require('redis');
 var DB = redis.createClient();
-DB.on("error",function(err) {
-	console.error('redis query error: '+err);
-});
+DB.on("error",function(err) { console.error('redis query error: '+err); });
 
 // Global variables -- these are initialized on startup or netconf-init message
 var netconfSigningIdentity = null; // identity of netconf master, with private key portion
 
+// spawn() function to launch sub-processes
 var spawn = require('child_process').spawn;
 
+// Returns true for fields that are "true" according to ZT redis schema
 function ztDbTrue(v) { return ((v === '1')||(v === 'true')||(v > 0)); }
-function csvToArray(csv) { return (((typeof csv === 'string')&&(csv.length > 0)) ? csv.split(',') : []); }
-function arrayToCsv(a) { return ((Array.isArray(a)) ? ((a.length > 0) ? a.join(',') : '') : (((a !== null)&&(typeof a !== 'undefined')) ? a.toString() : '')); }
 
 //
 // ZeroTier One Dictionary -- encoding-compatible with Dictionary in C++ code base
@@ -214,11 +213,16 @@ function Identity(idstr)
 
 function generateCertificateOfMembership(nwid,peerAddress,callback)
 {
-	var comTimestamp = '0,' + Date.now().toString(16) + ',' + (ZT_NETWORK_AUTOCONF_DELAY * 4).toString(16);
+	// The first fields of these COM tuples come from
+	// CertificateOfMembership.hpp's enum of required
+	// certificate default fields.
+	var comTimestamp = '0,' + Date.now().toString(16) + ',' + ZT_NETWORK_CERTIFICATE_TTL_WINDOW.toString(16);
 	var comNwid = '1,' + nwid + ',0';
 	var comIssuedTo = '2,' + peerAddress + ',ffffffffffffffff';
+
 	var cert = '';
 	var certErr = '';
+
 	var idtool = spawn(ZEROTIER_IDTOOL,[ 'mkcom',netconfSigningIdentity,comTimestamp,comNwid,comIssuedTo ]);
 	idtool.stdout.on('data',function(data) {
 		cert += data;
@@ -332,14 +336,18 @@ function doNetconfRequest(message)
 		v4NeedAssign = (network['v4AssignMode'] === 'zt');
 		v6NeedAssign = (network['v6AssignMode'] === 'zt');
 
-		var ipa = csvToArray(member['ipAssignments']);
-		for(var i=0;i<ipa.length;++i) {
-			if (ipa[i])
-				ipAssignments.push(ipa[i]);
-			if ((ipa[i].indexOf('.') > 0)&&(v4NeedAssign))
-				v4Assignments.push(ipa[i]);
-			else if ((ipa[i].indexOf(':') > 0)&&(v6NeedAssign))
-				v6Assignments.push(ipa[i]);
+		var ipacsv = member['ipAssignments'];
+		if (ipacsv) {
+			var ipa = ipacsv.split(',');
+			for(var i=0;i<ipa.length;++i) {
+				if (ipa[i]) {
+ 					ipAssignments.push(ipa[i]);
+					if ((ipa[i].indexOf('.') > 0)&&(v4NeedAssign))
+						v4Assignments.push(ipa[i]);
+					else if ((ipa[i].indexOf(':') > 0)&&(v6NeedAssign))
+						v6Assignments.push(ipa[i]);
+				}
+			}
 		}
 
 		return next(null);
