@@ -139,6 +139,8 @@ void Service::threadMain()
 				dup2(in[0],STDIN_FILENO);
 				dup2(out[1],STDOUT_FILENO);
 				dup2(err[1],STDERR_FILENO);
+				setenv("ZT_HOME",_r->homePath.c_str(),1);
+				chdir(_r->homePath.c_str());
 				execl(_path.c_str(),_path.c_str(),_r->homePath.c_str(),(const char *)0);
 				exit(-1);
 			}

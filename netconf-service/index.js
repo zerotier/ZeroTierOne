@@ -476,6 +476,7 @@ function doNetconfRequest(message)
 
 			}],function(err) {
 
+				// Send response to parent process
 				if (err) {
 					console.error('unable to generate certificate for peer '+peerId.address()+' on network '+nwid+': '+err);
 					response.data['error'] = 'ACCESS_DENIED'; // unable to generate certificate
@@ -489,7 +490,8 @@ function doNetconfRequest(message)
 					//netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH] = 0;
 					//netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = '';
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = privateNetwork ? '1' : '0';
-					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_NAME] = network['name'];
+					if (network['name'])
+						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_NAME] = network['name'];
 					if (network['desc'])
 						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_DESC] = network['desc'];
 					if ((v4NeedAssign)&&(v4Assignments.length > 0))
