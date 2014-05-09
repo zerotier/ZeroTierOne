@@ -52,6 +52,57 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	// Nothing special about a supernode... except that they are
 	// designated as such and trusted to provide WHOIS lookup.
 
+#ifdef ZT_USE_TESTNET
+
+	// If ZT_USE_TESTNET is defined we talk to test rather than live supernode
+	// instances. The testnet may not always be running, so this is probably not
+	// of any interest to users. Testnet servers run on port 7773 (UDP) and
+	// 773 (TCP).
+
+	// cthulhu.zerotier.com - New York, New York, USA
+	addrs.clear();
+	if (!id.fromString("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5"))
+		throw std::runtime_error("invalid identity in Defaults");
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("162.243.77.111",7773),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("162.243.77.111",773),true));
+	sn[id] = addrs;
+
+	// nyarlathotep.zerotier.com - San Francisco, California, USA
+	addrs.clear();
+	if (!id.fromString("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa"))
+		throw std::runtime_error("invalid identity in Defaults");
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",7773),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",773),true));
+	sn[id] = addrs;
+
+	// shub-niggurath.zerotier.com - Amsterdam, Netherlands
+	addrs.clear();
+	if (!id.fromString("36f63d6574:0:67a776487a1a99b32f413329f2b67c43fbf6152e42c6b66e89043e69d93e48314c7d709b58a83016bd2612dd89400b856e18c553da94892f7d3ca16bf2c92c24"))
+		throw std::runtime_error("invalid identity in Defaults");
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",7773),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",773),true));
+	sn[id] = addrs;
+
+	// yig.zerotier.com - Sydney, Australia
+	addrs.clear();
+	if (!id.fromString("275f0151f6:0:58716258283f7e14a2f999875d9cc681c1f0ca8403dce38ec354ceaf284a555f36402e79a32d03b8c0963245b7f1af61a1ad3519d90e05bc3ce591034f6a1c9c"))
+		throw std::runtime_error("invalid identity in Defaults");
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",7773),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",773),true));
+	sn[id] = addrs;
+
+	// shoggoth.zerotier.com - Tokyo, Japan
+	addrs.clear();
+	if (!id.fromString("48e8f875cb:0:5ca54f55e1094f65589f3e6d74158b6964d418ddac3570757128f1c6a2498322d92fcdcd47de459f4d1f9b38df2afd0c7b3fc247ba3d773c38ba35288f24988e"))
+		throw std::runtime_error("invalid identity in Defaults");
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",7773),false));
+	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",773),true));
+	sn[id] = addrs;
+
+#else
+
+	// Normally we use the live supernodes.
+
 	// cthulhu.zerotier.com - New York, New York, USA
 	addrs.clear();
 	if (!id.fromString("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5"))
@@ -91,6 +142,8 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",ZT_DEFAULT_UDP_PORT),false));
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",443),true));
 	sn[id] = addrs;
+
+#endif
 
 	return sn;
 }
