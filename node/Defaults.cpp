@@ -61,7 +61,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 
 	// cthulhu.zerotier.com - New York, New York, USA
 	addrs.clear();
-	if (!id.fromString("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5"))
+	if (!id.fromString("0bfa76f104:0:aff4d4604f2a2538d414a1d69fc722a28bea049d52192aded117c28b0f6c1052db9d36c488c5fe5e2071f2def8f86b6db64db09e819f90fdaedbfcb9f3bcdef9"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("162.243.77.111",7773),false));
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("162.243.77.111",773),true));
@@ -69,7 +69,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 
 	// nyarlathotep.zerotier.com - San Francisco, California, USA
 	addrs.clear();
-	if (!id.fromString("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa"))
+	if (!id.fromString("9f2b042cdb:0:8993f9348bb9642afa9a60995a35ef19817894fd0b6859201c0e56e399288867c8f0d01ae2858f9dc6f95eee6d42e2f6d08c44551404906b25679aa6db1faee7"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",7773),false));
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",773),true));
@@ -77,7 +77,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 
 	// shub-niggurath.zerotier.com - Amsterdam, Netherlands
 	addrs.clear();
-	if (!id.fromString("36f63d6574:0:67a776487a1a99b32f413329f2b67c43fbf6152e42c6b66e89043e69d93e48314c7d709b58a83016bd2612dd89400b856e18c553da94892f7d3ca16bf2c92c24"))
+	if (!id.fromString("916a4ca17d:0:b679a8d6761096ba4958fea0036dc4dbb76cb8cbf1ce9bc352cc594c3c24987bb3b30b5448d1f494f5e90a6cdaac9d28317cb4088780278ef20bc7c366cb214a"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",7773),false));
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",773),true));
@@ -85,7 +85,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 
 	// yig.zerotier.com - Sydney, Australia
 	addrs.clear();
-	if (!id.fromString("275f0151f6:0:58716258283f7e14a2f999875d9cc681c1f0ca8403dce38ec354ceaf284a555f36402e79a32d03b8c0963245b7f1af61a1ad3519d90e05bc3ce591034f6a1c9c"))
+	if (!id.fromString("3b62c7a69a:0:d967595a3b96d780151764e6ffb47af2fa8865f8e344fba4a684c10dd2e70014e26312f5b8a1590c13bfeb909a1fd35b96a84a8a43e0704cd8d01d9c2b791359"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",7773),false));
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",773),true));
@@ -93,7 +93,7 @@ static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _m
 
 	// shoggoth.zerotier.com - Tokyo, Japan
 	addrs.clear();
-	if (!id.fromString("48e8f875cb:0:5ca54f55e1094f65589f3e6d74158b6964d418ddac3570757128f1c6a2498322d92fcdcd47de459f4d1f9b38df2afd0c7b3fc247ba3d773c38ba35288f24988e"))
+	if (!id.fromString("345ad16512:0:9e796aec6e083726f45fbfdc10bcf18c0dc7a7914c9ce29f5eb5abcf41bfcb6b3698b68131d347235ae488804317df9c6102e2753841b973037d1e4685dce9fc"))
 		throw std::runtime_error("invalid identity in Defaults");
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",7773),false));
 	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",773),true));
