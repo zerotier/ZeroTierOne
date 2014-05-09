@@ -10,8 +10,13 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_AUTO_UPDATE=1
 	DEFS+=-DZT_OFFICIAL_RELEASE 
 endif
+
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
+endif
+
+ifeq ($(ZT_USE_TESTNET),1)
+	DEFS+=-DZT_USE_TESTNET
 endif
 
 # Uncomment to dump trace and log to stdout

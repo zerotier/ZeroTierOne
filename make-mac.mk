@@ -15,8 +15,13 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	CODESIGN=codesign
 	CODESIGN_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
+
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
+endif
+
+ifeq ($(ZT_USE_TESTNET),1)
+	DEFS+=-DZT_USE_TESTNET
 endif
 
 # Uncomment to dump trace and log info to stdout (useful for debug/test)
