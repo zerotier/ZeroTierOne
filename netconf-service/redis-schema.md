@@ -39,7 +39,6 @@ Note: users are referred to elsewhere in the database by their compound key \<au
 - R creationTime: :: timestamp of account creation
 - M displayName :: usually First Last, defaults to e-mail address for 'local' auth and whatever the OpenID API says for third party auth such as Google.
 - R stripeCustomerId :: customer ID for Stripe credit card service if the user has cards on file (we don't store cards, we let Stripe do that)
-- R referrals :: stringified JSON field containing referrals, coupons, etc.
 
 ## Networks
 
