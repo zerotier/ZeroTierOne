@@ -38,6 +38,7 @@ Note: users are referred to elsewhere in the database by their compound key \<au
 - R lastLogin :: timestamp of last login
 - R creationTime: :: timestamp of account creation
 - M displayName :: usually First Last, defaults to e-mail address for 'local' auth and whatever the OpenID API says for third party auth such as Google.
+- M defaultCard :: ID of default credit card (actual card objects are stored by Stripe, not in this database)
 - R stripeCustomerId :: customer ID for Stripe credit card service if the user has cards on file (we don't store cards, we let Stripe do that)
 
 ## Networks
@@ -63,6 +64,7 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - M v4AssignPool :: network/bits from which to assign IPs
 - M v6AssignMode :: 'none' (or null/empty/etc.), 'zt', 'v6native', 'dhcp6'
 - M v6AssignPool :: network/bits from which to assign IPs
+- M subscriptions :: comma-delimited list of subscriptions for this network
 - M ui :: string-serialized JSON blob for use by the user interface, ignored by netconf-master
 
 ### zt1:network:\<nwid\>:member:\<address\>:~

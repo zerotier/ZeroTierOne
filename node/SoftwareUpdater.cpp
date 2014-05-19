@@ -201,7 +201,17 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 		return;
 	}
 	std::string updatesDir(_r->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
-	std::string updatePath(updatesDir + ZT_PATH_SEPARATOR_S + url.substr(lastSlash + 1));
+	std::string updateFilename(url.substr(lastSlash + 1));
+	for(std::string::iterator c(updateFilename.begin());c!=updateFilename.end();++c) {
+		// Only allow a list of whitelisted characters to make up the filename to prevent any
+		// path shenanigans, esp on Windows where / is not the path separator.
+		if (!strchr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_.0123456789",*c)) {
+			LOG("software update failed: invalid URL: filename contains invalid characters");
+			upd->_status = UPDATE_STATUS_IDLE;
+			return;
+		}
+	}
+	std::string updatePath(updatesDir + ZT_PATH_SEPARATOR_S + updateFilename);
 #ifdef __WINDOWS__
 	CreateDirectoryA(updatesDir.c_str(),NULL);
 #else
