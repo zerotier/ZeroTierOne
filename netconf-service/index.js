@@ -32,13 +32,14 @@ var ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP = "ts";
 var ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO = "id";
 var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS = "mpb";
 var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH = "md";
+var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES = "mr";
 var ZT_NETWORKCONFIG_DICT_KEY_PRIVATE = "p";
 var ZT_NETWORKCONFIG_DICT_KEY_NAME = "n";
 var ZT_NETWORKCONFIG_DICT_KEY_DESC = "d";
 var ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC = "v4s";
 var ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC = "v6s";
-var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES = "mr";
 var ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP = "com";
+var ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST = "eb";
 
 // Path to zerotier-idtool binary, invoked to enerate certificates of membership
 var ZEROTIER_IDTOOL = '/usr/local/bin/zerotier-idtool';
@@ -48,6 +49,7 @@ var ZT_NETWORK_AUTOCONF_DELAY = 60000;
 var ZT_NETWORK_CERTIFICATE_TTL_WINDOW = (ZT_NETWORK_AUTOCONF_DELAY * 4);
 
 // Connect to redis, assuming database 0 and no auth (for now)
+var async = require('async');
 var redis = require('redis');
 var DB = redis.createClient();
 DB.on("error",function(err) { console.error('redis query error: '+err); });
@@ -67,7 +69,7 @@ function ztDbTrue(v) { return ((v === '1')||(v === 'true')||(v > 0)); }
 
 function Dictionary(fromStr)
 {
-	var thiz = this;
+	var self = this;
 
 	this.data = {};
 
@@ -115,12 +117,12 @@ function Dictionary(fromStr)
 	this.toString = function() {
 		var str = '';
 
-		for(var key in thiz.data) {
-			str += thiz._esc(key);
+		for(var key in self.data) {
+			str += self._esc(key);
 			str += '=';
-			var value = thiz.data[key];
+			var value = self.data[key];
 			if (value)
-				str += thiz._esc(value.toString());
+				str += self._esc(value.toString());
 			str += '\n';
 		}
 
@@ -128,9 +130,9 @@ function Dictionary(fromStr)
 	};
 
 	this.fromString = function(str) {
-		thiz.data = {};
+		self.data = {};
 		if (typeof str !== 'string')
-			return thiz;
+			return self;
 
 		var lines = str.split('\n');
 		for(var l=0;l<lines.length;++l) {
@@ -146,17 +148,17 @@ function Dictionary(fromStr)
 					break;
 			}
 
-			var k = thiz._unesc(lines[l].substr(0,eqAt));
+			var k = self._unesc(lines[l].substr(0,eqAt));
 			++eqAt;
 			if ((k)&&(k.length > 0))
-				thiz.data[k] = thiz._unesc((eqAt < lines[l].length) ? lines[l].substr(eqAt) : '');
+				self.data[k] = self._unesc((eqAt < lines[l].length) ? lines[l].substr(eqAt) : '');
 		}
 
-		return thiz;
+		return self;
 	};
 
 	if ((typeof fromStr === 'string')&&(fromStr.length > 0))
-		thiz.fromString(fromStr);
+		self.fromString(fromStr);
 };
 
 //
@@ -165,46 +167,45 @@ function Dictionary(fromStr)
 
 function Identity(idstr)
 {
-	var thiz = this;
+	var self = this;
 
 	this.str = '';
 	this.fields = [];
 
 	this.toString = function() {
-		return thiz.str;
+		return self.str;
 	};
 
 	this.address = function() {
-		return ((thiz.fields.length > 0) ? thiz.fields[0] : '0000000000');
+		return ((self.fields.length > 0) ? self.fields[0] : '0000000000');
 	};
 
 	this.fromString = function(str) {
-		thiz.str = '';
-		thiz.fields = [];
+		self.str = '';
+		self.fields = [];
 		if (typeof str !== 'string')
 			return;
 		for(var i=0;i<str.length;++i) {
-			if ("0123456789abcdef:ABCDEF".indexOf(str.charAt(i)) < 0)
+			if ("0123456789abcdef:".indexOf(str.charAt(i)) < 0)
 				return; // invalid character in identity
 		}
 		var fields = str.split(':');
 		if ((fields.length < 3)||(fields[0].length !== 10)||(fields[1] !== '0'))
 			return;
-		thiz.fields = fields;
+		self.str = str;
+		self.fields = fields;
 	};
 
 	this.isValid = function() {
-		if ((thiz.fields.length < 3)||(thiz.fields[0].length !== 10)||(thiz.fields[1] !== '0'))
-			return true;
-		return false;
+		return (! ((self.fields.length < 3)||(self.fields[0].length !== 10)||(self.fields[1] !== '0')) );
 	};
 
 	this.hasPrivate = function() {
-		return ((thiz.isValid())&&(thiz.fields.length >= 4));
+		return ((self.isValid())&&(self.fields.length >= 4));
 	};
 
 	if (typeof idstr === 'string')
-		thiz.fromString(idstr);
+		self.fromString(idstr);
 };
 
 //
@@ -247,12 +248,12 @@ function doNetconfInit(message)
 	if (!netconfSigningIdentity.hasPrivate()) {
 		netconfSigningIdentity = null;
 		console.error('got invalid netconf signing identity in netconf-init');
-	}
+	} // else console.error('got netconf-init, running! id: '+netconfSigningIdentity.address());
 }
 
 function doNetconfRequest(message)
 {
-	if ((!netconfSigningIdentity)||(!netconfSigningIdentity.hasPrivate())) {
+	if ((netconfSigningIdentity === null)||(!netconfSigningIdentity.hasPrivate())) {
 		console.error('got netconf-request before netconf-init, ignored');
 		return;
 	}
@@ -266,6 +267,7 @@ function doNetconfRequest(message)
 		return;
 	}
 
+	var networkKey = 'zt1:network:'+nwid+':~';
 	var memberKey = 'zt1:network:'+nwid+':member:'+peerId.address()+':~';
 	var ipAssignmentsKey = 'zt1:network:'+nwid+':ipAssignments';
 
@@ -283,15 +285,15 @@ function doNetconfRequest(message)
 	async.series([function(next) {
 
 		// network lookup
-		DB.hgetall('zt1:network:'+nwid+':~',function(err,obj) {
+		DB.hgetall(networkKey,function(err,obj) {
 			network = obj;
-			return next(err);
+			return next(null);
 		});
 
 	},function(next) {
 
-		// member record lookup, unless public network
-		if ((!network)||(!('nwid' in network))||(network['nwid'] !== nwid))
+		// member lookup
+		if ((!network)||(!('id' in network))||(network['id'] !== nwid))
 			return next(null);
 
 		DB.hgetall(memberKey,function(err,obj) {
@@ -301,7 +303,7 @@ function doNetconfRequest(message)
 			if (obj) {
 				// Update existing member record with new last seen time, etc.
 				member = obj;
-				authorized = (ztDbTrue(network['private']) || ztDbTrue(member['authorized']));
+				authorized = ((!ztDbTrue(network['private'])) || ztDbTrue(member['authorized']));
 				DB.hmset(memberKey,{
 					'lastSeen': Date.now(),
 					'lastAt': fromIpAndPort,
@@ -448,7 +450,7 @@ function doNetconfRequest(message)
 	}],function(err) {
 
 		if (err) {
-			console.log('error composing response for '+peerId.address()+': '+err);
+			console.error('error answering netconf-request for '+peerId.address()+': '+err);
 			return;
 		}
 
@@ -500,6 +502,7 @@ function doNetconfRequest(message)
 						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = v6Assignments.join(',');
 					if (certificateOfMembership !== null)
 						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = certificateOfMembership;
+					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = ztDbTrue(network['enableBroadcast']) ? '1' : '0';
 					response.data['netconf'] = netconf.toString();
 				}
 
@@ -538,24 +541,29 @@ function handleMessage(dictStr)
 //
 
 var stdinReadBuffer = '';
+
 process.stdin.on('readable',function() {
 	var chunk = process.stdin.read();
 	if (chunk)
 		stdinReadBuffer += chunk;
-	if ((stdinReadBuffer.length >= 2)&&(stdinReadBuffer.substr(stdinReadBuffer.length - 2) === '\n\n')) {
-		handleMessage(stdinReadBuffer);
-		stdinReadBuffer = '';
+	for(;;) {
+		var boundary = stdinReadBuffer.indexOf('\n\n');
+		if (boundary >= 0) {
+			handleMessage(stdinReadBuffer.substr(0,boundary + 1));
+			stdinReadBuffer = stdinReadBuffer.substr(boundary + 2);
+		} else break;
 	}
 });
 process.stdin.on('end',function() {
-	process.exit(0);
+	//process.exit(0);
 });
 process.stdin.on('close',function() {
-	process.exit(0);
+	//process.exit(0);
 });
 process.stdin.on('error',function() {
-	process.exit(0);
+	//process.exit(0);
 });
 
 // Tell ZeroTier One that the service is running, solicit netconf-init
 process.stdout.write('type=ready\n\n');
+

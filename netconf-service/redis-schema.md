@@ -2,19 +2,23 @@
 
 ## Notes
 
-- Top-level key format is zt1:top-level-record-type:... using :'s as a separator as per de-facto Redis standard.
-- Each top-level record type has a :~ child containing a hash. This is its root "document" and stores anything not requiring a special Redis data structure.
-- Right now there are no SET/ZSET fields to optimize searches for sub-keys such as :\<nwid\>:member:*. The code uses the Redis KEYS command for this, which is not efficient for (very) large databases. This will need to be refactored to use sets if ZT1 is wildly successful since key-globbing will slow things down with hundreds of thousands of keys. At current scales it's trivial so make it work first then make it fast.
-- ! before hash field names denotes required fields for a record to be valid.
-- M before hash field names denotes fields that are user-editable via the web API. (M for malleable/mutable.)
-- R before hash field names denotes read-only fields that are computed or can only be changed by special operations.
-- H before hash field names indicates fields that are not returned by web API queries. These are also read-only and are for internal use only.
-- @ before hash field names denotes fields that are presented by the web API as if they're part of the regular hash but are actually stored in sub-keys as SETs or other Redis data types.
-- Booleans: any value other than "1" or "true" is false, including a missing field.
+- : is used as the key namespace separator as per de-facto Redis standard.
+- A top-level record may have a :~ child containing a hash. This is the root hash and contains any simple key=value properties of the record.
+- Booleans: any value other than "1" or "true" is false.
 - Timestamps are in milliseconds since the epoch and are stored as base-10 integers.
-- IPv6 addresses must be stored *without* shortening, e.g. \:0000\: must be used instead of \:\:. It must be possible to strip colons and convert directly from hex to a 128-bit address.
-- All hexadecimal values must use lower-case letters a-f.
-- 16-digit hex network IDs and 10-digit hex addresses are zero-padded to 16 and 10 digits respectively (as they are everywhere else in the ZT1 universe).
+- IPv4 addresees: stored in standard dot notation e.g. 1.2.3.4
+- IPv6 addresses: :'s are optional and addresses must be stored *without* shortening, e.g. with :0000: instead of ::. It must be possible to strip :'s from the address and get 128 bits of straight hex.
+- Hexadecimal: all hex values must be lower case
+- 16-digit network IDs and 10-digit addresses are left zero-padded to 16 and 10 digits respectively, as they are everywhere else in the ZT1 universe.
+
+Note: right now KEYS globbing is used in a few places in the code to search for stuff. In the future we'll want to add SET/ZSET index fields for these to optimize, but that won't become an issue until there are at least millions of records. (Millions of users will give us lots of "good problems to have." :)
+
+## Field attribute flags used in this documentation (not in database)
+
+- ! required
+- M mutable (user-editable via API)
+- R read-only (at least from API/user perspective)
+- H hidden (not returned by API queries)
 
 ## Base Configuration
 
@@ -39,6 +43,7 @@ Note: users are referred to elsewhere in the database by their compound key \<au
 - R creationTime: :: timestamp of account creation
 - M displayName :: usually First Last, defaults to e-mail address for 'local' auth and whatever the OpenID API says for third party auth such as Google.
 - M defaultCard :: ID of default credit card (actual card objects are stored by Stripe, not in this database)
+- M ui :: arbitrary field that can be used by the UI to store stuff
 - R stripeCustomerId :: customer ID for Stripe credit card service if the user has cards on file (we don't store cards, we let Stripe do that)
 
 ## Networks
@@ -65,7 +70,7 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - M v6AssignMode :: 'none' (or null/empty/etc.), 'zt', 'v6native', 'dhcp6'
 - M v6AssignPool :: network/bits from which to assign IPs
 - M subscriptions :: comma-delimited list of subscriptions for this network
-- M ui :: string-serialized JSON blob for use by the user interface, ignored by netconf-master
+- M ui :: arbitrary field that can be used by the UI to store stuff
 
 ### zt1:network:\<nwid\>:member:\<address\>:~
 
