@@ -5,7 +5,7 @@ export PATH=/bin:/usr/bin:/usr/local/bin
 # We will start in ZT_HOME
 
 if [ ! -d ./services.d/netconf-service ]; then
-	echo 'cannot find netconf-service subfolder to launch subprocess' >>&2
+	echo 'cannot find netconf-service subfolder to launch subprocess' >&2
 	exit 1
 fi
 

@@ -307,6 +307,7 @@ function doNetconfRequest(message)
 				DB.hmset(memberKey,{
 					'lastSeen': Date.now(),
 					'lastAt': fromIpAndPort,
+					'authorized': authorized ? '1' : '0', // reset authorized to unhide in UI, since UI uses -1 to hide
 					'clientVersion': (message.data['clientVersion']) ? message.data['clientVersion'] : '?.?.?',
 					'clientOs': (message.data['clientOs']) ? message.data['clientOs'] : '?'
 				},next);
@@ -362,19 +363,19 @@ function doNetconfRequest(message)
 
 		var peerAddress = peerId.address();
 
-		var network = 0;
+		var ipnetwork = 0;
 		var netmask = 0;
 		var netmaskBits = 0;
 		var v4pool = network['v4AssignPool']; // technically csv but only one netblock currently supported
 		if (v4pool) {
-			var v4poolSplit = v4Pool.split('/');
+			var v4poolSplit = v4pool.split('/');
 			if (v4poolSplit.length === 2) {
 				var networkSplit = v4poolSplit[0].split('.');
 				if (networkSplit.length === 4) {
-					network |= (parseInt(networkSplit[0],10) << 24) & 0xff000000;
-					network |= (parseInt(networkSplit[1],10) << 16) & 0x00ff0000;
-					network |= (parseInt(networkSplit[2],10) << 8) & 0x0000ff00;
-					network |= parseInt(networkSplit[3],10) & 0x000000ff;
+					ipnetwork |= (parseInt(networkSplit[0],10) << 24) & 0xff000000;
+					ipnetwork |= (parseInt(networkSplit[1],10) << 16) & 0x00ff0000;
+					ipnetwork |= (parseInt(networkSplit[2],10) << 8) & 0x0000ff00;
+					ipnetwork |= parseInt(networkSplit[3],10) & 0x000000ff;
 					netmaskBits = parseInt(v4poolSplit[1],10);
 					if (netmaskBits > 32)
 						netmaskBits = 32; // sanity check
@@ -384,7 +385,7 @@ function doNetconfRequest(message)
 				}
 			}
 		}
-		if ((network === 0)||(netmask === 0xffffffff))
+		if ((ipnetwork === 0)||(netmask === 0xffffffff))
 			return next(null);
 		var invmask = netmask ^ 0xffffffff;
 
@@ -409,7 +410,7 @@ function doNetconfRequest(message)
 				abcd &= 0xffffffff;
 
 				// Derive an IP to test and generate assignment ip/bits string
-				var ip = (abcd & invmask) | (network & netmask);
+				var ip = (abcd & invmask) | (ipnetwork & netmask);
 				var assignment = ((ip >> 24) & 0xff).toString(10) + '.' + ((ip >> 16) & 0xff).toString(10) + '.' + ((ip >> 8) & 0xff).toString(10) + '.' + (ip & 0xff).toString(10) + '/' + netmaskBits.toString(10);
 
 				// Check :ipAssignments to see if this IP is already taken
