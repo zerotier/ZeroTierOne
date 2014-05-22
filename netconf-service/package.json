@@ -9,7 +9,7 @@
   "author": "ZeroTier Networks LLC",
   "license": "GPL",
   "dependencies": {
-    "redis": "~0.10.2",
+    "redis": "~0.10.3",
     "async": "~0.9.0"
   }
 }
