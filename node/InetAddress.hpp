@@ -413,14 +413,14 @@ public:
 		ip._sa.sin6.sin6_addr.s6_addr[5] = 0x00;
 		ip._sa.sin6.sin6_addr.s6_addr[6] = 0x00;
 		ip._sa.sin6.sin6_addr.s6_addr[7] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[8] = mac.data[0] & 0xfd;
-		ip._sa.sin6.sin6_addr.s6_addr[9] = mac.data[1];
-		ip._sa.sin6.sin6_addr.s6_addr[10] = mac.data[2];
+		ip._sa.sin6.sin6_addr.s6_addr[8] = mac[0] & 0xfd;
+		ip._sa.sin6.sin6_addr.s6_addr[9] = mac[1];
+		ip._sa.sin6.sin6_addr.s6_addr[10] = mac[2];
 		ip._sa.sin6.sin6_addr.s6_addr[11] = 0xff;
 		ip._sa.sin6.sin6_addr.s6_addr[12] = 0xfe;
-		ip._sa.sin6.sin6_addr.s6_addr[13] = mac.data[3];
-		ip._sa.sin6.sin6_addr.s6_addr[14] = mac.data[4];
-		ip._sa.sin6.sin6_addr.s6_addr[15] = mac.data[5];
+		ip._sa.sin6.sin6_addr.s6_addr[13] = mac[3];
+		ip._sa.sin6.sin6_addr.s6_addr[14] = mac[4];
+		ip._sa.sin6.sin6_addr.s6_addr[15] = mac[5];
 		ip._sa.sin6.sin6_port = Utils::hton((uint16_t)64);
 		return ip;
 	}

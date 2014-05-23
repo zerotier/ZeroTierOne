@@ -644,10 +644,8 @@ void UnixEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,c
 {
 	char putBuf[4096 + 14];
 	if ((_fd > 0)&&(len <= _mtu)) {
-		for(int i=0;i<6;++i)
-			putBuf[i] = to.data[i];
-		for(int i=0;i<6;++i)
-			putBuf[i+6] = from.data[i];
+		to.copyTo(putBuf,6);
+		from.copyTo(putBuf + 6,6);
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
@@ -921,7 +919,7 @@ bool UnixEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
 				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
 				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.insert(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen),0));
+					newGroups.insert(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
 			}
 			p = p->ifma_next;
 		}
@@ -996,10 +994,8 @@ void UnixEthernetTap::threadMain()
 				if (r > 14) {
 					if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
 						r = _mtu + 14;
-					for(int i=0;i<6;++i)
-						to.data[i] = (unsigned char)getBuf[i];
-					for(int i=0;i<6;++i)
-						from.data[i] = (unsigned char)getBuf[i + 6];
+					to.setTo(getBuf,6);
+					from.setTo(getBuf + 6,6);
 					unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 					if (etherType != 0x8100) { // VLAN tagged frames are not supported!
 						data.copyFrom(getBuf + 14,(unsigned int)r - 14);

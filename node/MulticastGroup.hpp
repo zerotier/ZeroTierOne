@@ -100,14 +100,7 @@ public:
 			// 24 bits of uniqueness. Collisions aren't likely to be common enough
 			// to care about.
 			const unsigned char *a = (const unsigned char *)ip.rawIpData();
-			MAC m;
-			m.data[0] = 0x33;
-			m.data[1] = 0x33;
-			m.data[2] = 0xff;
-			m.data[3] = a[13];
-			m.data[4] = a[14];
-			m.data[5] = a[15];
-			return MulticastGroup(m,0);
+			return MulticastGroup(MAC(0x33,0x33,0xff,a[13],a[14],a[15]),0);
 		}
 		return MulticastGroup();
 	}
@@ -118,7 +111,7 @@ public:
 	inline std::string toString() const
 	{
 		char buf[64];
-		Utils::snprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%lx",(unsigned int)_mac.data[0],(unsigned int)_mac.data[1],(unsigned int)_mac.data[2],(unsigned int)_mac.data[3],(unsigned int)_mac.data[4],(unsigned int)_mac.data[5],(unsigned long)_adi);
+		Utils::snprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%lx",(unsigned int)_mac[0],(unsigned int)_mac[1],(unsigned int)_mac[2],(unsigned int)_mac[3],(unsigned int)_mac[4],(unsigned int)_mac[5],(unsigned long)_adi);
 		return std::string(buf);
 	}
 

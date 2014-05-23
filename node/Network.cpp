@@ -102,7 +102,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	SharedPtr<Network> nw(new Network());
 	nw->_id = id;
 	nw->_nc = nc;
-	nw->_mac = renv->identity.address().toMAC();
+	nw->_mac.fromAddress(renv->identity.address(),id);
 	nw->_r = renv;
 	nw->_tap = (EthernetTap *)0;
 	nw->_lastConfigUpdate = 0;

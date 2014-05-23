@@ -414,7 +414,11 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
 				if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 					if (network->config()->permitsEtherType(etherType)) {
-						network->tapPut(source().toMAC(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+						network->tapPut(
+							MAC(source(),network->id()),
+							etherType,
+							data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,
+							size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
 					} else {
 						TRACE("dropped FRAME from %s: ethernet type %u not allowed on network %.16llx",source().toString().c_str(),etherType,(unsigned long long)network->id());
 						return true;
@@ -481,8 +485,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned int prefixBits = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX_BITS];
 		const unsigned int prefix = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_PREFIX];
 		const uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GUID);
-		const MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC));
-		const MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC)),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
+		const MAC sourceMac(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC),ZT_PROTO_VERB_MULTICAST_FRAME_LEN_SOURCE_MAC);
+		const MulticastGroup dest(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC),ZT_PROTO_VERB_MULTICAST_FRAME_LEN_DEST_MAC),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
 		const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
 		const unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN);
 		const unsigned char *const frame = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
@@ -635,7 +639,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 						// We do not terminate here, since if the member just has an out of
 						// date cert or hasn't sent us a cert yet we still want to propagate
 						// the message so multicast keeps working downstream.
-					} else if ((!nconf->permitsBridging(origin))&&(!origin.wouldHaveMac(sourceMac))) {
+					} else if ((!nconf->permitsBridging(origin))&&(MAC(origin,network->id()) != sourceMac)) {
 						// This *does* terminate propagation, since it's technically a
 						// security violation of the network's bridging policy. But if we
 						// were to keep propagating it wouldn't hurt anything, just waste
@@ -829,7 +833,7 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 			uint64_t nwid = at<uint64_t>(ptr);
 			SharedPtr<Network> network(_r->nc->network(nwid));
 			if ((_r->topology->amSupernode())||((network)&&(network->isAllowed(peer->address())))) {
-				_r->mc->likesGroup(nwid,src,MulticastGroup(MAC(field(ptr + 8,6)),at<uint32_t>(ptr + 14)),now);
+				_r->mc->likesGroup(nwid,src,MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),now);
 				if (network)
 					network->pushMembershipCertificate(peer->address(),false,now);
 			}

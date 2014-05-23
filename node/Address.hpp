@@ -37,7 +37,6 @@
 
 #include "Constants.hpp"
 #include "Utils.hpp"
-#include "MAC.hpp"
 #include "Buffer.hpp"
 
 namespace ZeroTier {
@@ -165,35 +164,6 @@ public:
 		throw()
 	{
 		return _a;
-	}
-
-	/**
-	 * Derive a MAC whose first octet is the ZeroTier LAN standard
-	 * 
-	 * @return Ethernet MAC derived from address
-	 */
-	inline MAC toMAC() const
-		throw()
-	{
-		MAC m;
-		m.data[0] = ZT_MAC_FIRST_OCTET;
-		copyTo(m.data + 1,ZT_ADDRESS_LENGTH);
-		return m;
-	}
-
-	/**
-	 * @param mac MAC address to check
-	 * @return True if this address would have this MAC
-	 */
-	inline bool wouldHaveMac(const MAC &mac) const
-		throw()
-	{
-		return ((mac.data[0] == ZT_MAC_FIRST_OCTET)&&
-		        (mac.data[1] == (unsigned char)((_a >> 32) & 0xff))&&
-		        (mac.data[2] == (unsigned char)((_a >> 24) & 0xff))&&
-		        (mac.data[3] == (unsigned char)((_a >> 16) & 0xff))&&
-		        (mac.data[4] == (unsigned char)((_a >> 8) & 0xff))&&
-		        (mac.data[5] == (unsigned char)(_a & 0xff)));
 	}
 
 	/**

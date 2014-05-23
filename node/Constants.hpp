@@ -171,14 +171,6 @@ error_no_byte_order_defined;
 #define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 1000
 
 /**
- * First byte of MAC addresses derived from ZeroTier addresses
- * 
- * This has the 0x02 bit set, which indicates a locally administrered
- * MAC address rather than one with a known HW ID.
- */
-#define ZT_MAC_FIRST_OCTET 0x32
-
-/**
  * Length of secret key in bytes -- 256-bit for Salsa20
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32

@@ -30,114 +30,136 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "Constants.hpp"
-#include "Array.hpp"
 #include "Utils.hpp"
+#include "Address.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
 /**
- * An Ethernet MAC address
+ * 48-byte Ethernet MAC address
  */
-class MAC : public Array<unsigned char,6>
+class MAC
 {
 public:
-	/**
-	 * Create a zero/null MAC
-	 */
-	MAC()
-		throw()
-	{
-		for(unsigned int i=0;i<6;++i)
-			data[i] = 0;
-	}
+	MAC() throw() : _m(0ULL) {}
+	MAC(const MAC &m) throw() : _m(m._m) {}
 
 	/**
-	 * Create a MAC consisting of only this octet
-	 *
-	 * @param octet Octet to fill MAC with (e.g. 0xff for broadcast-all)
+	 * @param octet Single octet to fill entire MAC with (e.g. 0xff for broadcast)
 	 */
-	MAC(const unsigned char octet)
-		throw()
-	{
-		for(unsigned int i=0;i<6;++i)
-			data[i] = octet;
-	}
+	MAC(const unsigned char octet) throw() :
+		_m( ((((uint64_t)octet) & 0xffULL) << 40) |
+		    ((((uint64_t)octet) & 0xffULL) << 32) |
+		    ((((uint64_t)octet) & 0xffULL) << 24) |
+		    ((((uint64_t)octet) & 0xffULL) << 16) |
+		    ((((uint64_t)octet) & 0xffULL) << 8) |
+		    (((uint64_t)octet) & 0xffULL) ) {}
+
+	MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) throw() :
+		_m( ((((uint64_t)a) & 0xffULL) << 40) |
+		    ((((uint64_t)b) & 0xffULL) << 32) |
+		    ((((uint64_t)c) & 0xffULL) << 24) |
+		    ((((uint64_t)d) & 0xffULL) << 16) |
+		    ((((uint64_t)e) & 0xffULL) << 8) |
+		    (((uint64_t)f) & 0xffULL) ) {}
+
+	MAC(const void *bits,unsigned int len) throw() { setTo(bits,len); }
+
+	MAC(const Address &ztaddr,uint64_t nwid) throw() { fromAddress(ztaddr,nwid); }
 
 	/**
-	 * Create a MAC from raw bits
-	 *
-	 * @param bits 6 bytes of MAC address data
+	 * Set MAC to zero
 	 */
-	MAC(const void *bits)
-		throw()
-	{
-		for(unsigned int i=0;i<6;++i)
-			data[i] = ((const unsigned char *)bits)[i];
-	}
+	inline void zero() { _m = 0ULL; }
 
 	/**
-	 * @return True if non-NULL (not all zero)
+	 * @return True if MAC is non-zero
 	 */
-	inline operator bool() const
+	inline operator bool() const throw() { return (_m != 0ULL); }
+
+	/**
+	 * @param bits Raw MAC in big-endian byte order
+	 * @param len Length, must be >= 6 or result is zero
+	 */
+	inline void setTo(const void *bits,unsigned int len)
 		throw()
 	{
-		for(unsigned int i=0;i<6;++i) {
-			if (data[i])
-				return true;
+		if (len < 6) {
+			_m = 0ULL;
+			return;
 		}
-		return false;
+		const unsigned char *b = (const unsigned char *)bits;
+		_m =  ((((uint64_t)*b) & 0xff) << 40); ++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 32); ++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 24); ++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 16); ++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 8); ++b;
+		_m |= (((uint64_t)*b) & 0xff);
 	}
 
 	/**
-	 * @return True if this is the broadcast-all MAC (0xff:0xff:...)
+	 * @param buf Destination buffer for MAC in big-endian byte order
+	 * @param len Length of buffer, must be >= 6 or nothing is copied
 	 */
-	inline bool isBroadcast() const
+	inline void copyTo(void *buf,unsigned int len) const
 		throw()
 	{
-		for(unsigned int i=0;i<6;++i) {
-			if (data[i] != 0xff)
-				return false;
-		}
-		return true;
+		if (len < 6)
+			return;
+		unsigned char *b = (unsigned char *)buf;
+		*(b++) = (unsigned char)((_m >> 40) & 0xff);
+		*(b++) = (unsigned char)((_m >> 32) & 0xff);
+		*(b++) = (unsigned char)((_m >> 24) & 0xff);
+		*(b++) = (unsigned char)((_m >> 16) & 0xff);
+		*(b++) = (unsigned char)((_m >> 8) & 0xff);
+		*b = (unsigned char)(_m & 0xff);
 	}
 
 	/**
-	 * @return True if this is a multicast/broadcast address
+	 * Append to a buffer in big-endian byte order
+	 *
+	 * @param b Buffer to append to
 	 */
-	inline bool isMulticast() const
-		throw()
+	template<unsigned int C>
+	inline void appendTo(Buffer<C> &b) const
+		throw(std::out_of_range)
 	{
-		return ((data[0] & 1));
+		unsigned char *p = (unsigned char *)b.appendField(6);
+		*(p++) = (unsigned char)((_m >> 40) & 0xff);
+		*(p++) = (unsigned char)((_m >> 32) & 0xff);
+		*(p++) = (unsigned char)((_m >> 24) & 0xff);
+		*(p++) = (unsigned char)((_m >> 16) & 0xff);
+		*(p++) = (unsigned char)((_m >> 8) & 0xff);
+		*p = (unsigned char)(_m & 0xff);
 	}
 
 	/**
-	 * @return True if this is a ZeroTier unicast MAC
+	 * @return True if this is broadcast (all 0xff)
 	 */
-	inline bool isZeroTier() const
-		throw()
-	{
-		return (data[0] == ZT_MAC_FIRST_OCTET);
-	}
+	inline bool isBroadcast() const throw() { return (_m == 0xffffffffffffULL); }
 
 	/**
-	 * Zero this MAC
+	 * @return True if this is a multicast MAC
 	 */
-	inline void zero()
-		throw()
-	{
-		for(unsigned int i=0;i<6;++i)
-			data[i] = 0;
-	}
+	inline bool isMulticast() const throw() { return ((_m & 0x010000000000ULL) != 0ULL); }
 
 	/**
-	 * @param s String hex representation (with or without :'s)
-	 * @return True if string decoded into a full-length MAC
+	 * @param True if this is a locally-administered MAC
+	 */
+	inline bool isLocallyAdministered() const throw() { return ((_m & 0x020000000000ULL) != 0ULL); }
+
+	/**
+	 * @param s Hex MAC, with or without : delimiters
 	 */
 	inline void fromString(const char *s)
 	{
-		Utils::unhex(s,data,6);
+		char tmp[8];
+		Utils::unhex(s,tmp,6);
+		setTo(tmp,6);
 	}
 
 	/**
@@ -145,10 +167,94 @@ public:
 	 */
 	inline std::string toString() const
 	{
-		char tmp[32];
-		Utils::snprintf(tmp,sizeof(tmp),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)data[0],(int)data[1],(int)data[2],(int)data[3],(int)data[4],(int)data[5]);
-		return std::string(tmp);
+		char tmp[24];
+		std::string s;
+		Utils::snprintf(tmp,sizeof(tmp),"%.12llx",_m);
+		for(int i=0;i<12;++i) {
+			if ((i > 0)&&((i % 2) == 0))
+				s.push_back(':');
+			s.push_back(tmp[i]);
+		}
+		return s;
 	}
+
+	/**
+	 * Set this MAC to a MAC derived from an address and a network ID
+	 *
+	 * @param ztaddr ZeroTier address
+	 * @param nwid 64-bit network ID
+	 */
+	inline void fromAddress(const Address &ztaddr,uint64_t nwid)
+		throw()
+	{
+		uint64_t m = ((uint64_t)firstOctetForNetwork(nwid)) << 40;
+		uint64_t a = ztaddr.toInt();
+		m |= a; // a is 40 bits
+		m ^= ((nwid >> 8) & 0xff) << 32;
+		m ^= ((nwid >> 16) & 0xff) << 24;
+		m ^= ((nwid >> 24) & 0xff) << 16;
+		m ^= ((nwid >> 32) & 0xff) << 8;
+		m ^= (nwid >> 40) & 0xff;
+		_m = m;
+	}
+
+	/**
+	 * Get the ZeroTier address for this MAC on this network (assuming no bridging of course, basic unicast)
+	 *
+	 * This just XORs the next-lest-significant 5 bytes of the network ID again to unmask.
+	 *
+	 * @param nwid Network ID
+	 */
+	inline Address toAddress(uint64_t nwid) const
+		throw()
+	{
+		uint64_t a = _m & 0xffffffffffULL;
+		a ^= ((nwid >> 8) & 0xff) << 32;
+		a ^= ((nwid >> 16) & 0xff) << 24;
+		a ^= ((nwid >> 24) & 0xff) << 16;
+		a ^= ((nwid >> 32) & 0xff) << 8;
+		a ^= (nwid >> 40) & 0xff;
+		return Address(a);
+	}
+
+	/**
+	 * @param nwid Network ID
+	 * @return First octet of MAC for this network
+	 */
+	static inline unsigned char firstOctetForNetwork(uint64_t nwid)
+		throw()
+	{
+		unsigned char a = ((unsigned char)(nwid & 0xfe) | 0x02); // locally administered, not multicast, from LSB of network ID
+		return ((a == 0x52) ? 0x32 : a); // blacklist 0x52 since it's used by KVM
+	}
+
+	/**
+	 * @param i Value from 0 to 5 (inclusive)
+	 * @return Byte at said position (address interpreted in big-endian order)
+	 */
+	inline unsigned char operator[](unsigned int i) const throw() { return (unsigned char)((_m >> (40 - (i * 8))) & 0xff); }
+
+	/**
+	 * @return 6, which is the number of bytes in a MAC, for container compliance
+	 */
+	inline unsigned int size() const throw() { return 6; }
+
+	inline MAC &operator=(const MAC &m)
+		throw()
+	{
+		_m = m._m;
+		return *this;
+	}
+
+	inline bool operator==(const MAC &m) const throw() { return (_m == m._m); }
+	inline bool operator!=(const MAC &m) const throw() { return (_m != m._m); }
+	inline bool operator<(const MAC &m) const throw() { return (_m < m._m); }
+	inline bool operator<=(const MAC &m) const throw() { return (_m <= m._m); }
+	inline bool operator>(const MAC &m) const throw() { return (_m > m._m); }
+	inline bool operator>=(const MAC &m) const throw() { return (_m >= m._m); }
+
+private:
+	uint64_t _m;
 };
 
 } // namespace ZeroTier

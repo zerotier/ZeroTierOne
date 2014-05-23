@@ -98,103 +98,103 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tapDeviceName().c_str());
 		return;
 	}
-	if (from != network->mac()) {
-		LOG("%s: ignored tap: %s -> %s %s (bridging not supported)",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
-		return;
-	}
 
 	if (!nconf->permitsEtherType(etherType)) {
 		LOG("%s: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 
-	if (to.isMulticast()) {
-		MulticastGroup mg(to,0);
+	if (from == network->mac()) {
+		if (to.isMulticast()) {
+			MulticastGroup mg(to,0);
 
-		if (to.isBroadcast()) {
-			// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
-			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
-				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
-		}
-
-		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
-			TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
-			return;
-		}
-
-		const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
-		const uint16_t bloomNonce = (uint16_t)(_r->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
-		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
-		unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
-		unsigned char *const fifoEnd = fifo + sizeof(fifo);
-		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
-		const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
-
-		for(unsigned int prefix=0,np=((unsigned int)2 << (nconf->multicastPrefixBits() - 1));prefix<np;++prefix) {
-			memset(bloom,0,sizeof(bloom));
-
-			unsigned char *fifoPtr = fifo;
-			_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),nconf->multicastPrefixBits(),prefix));
-			while (fifoPtr != fifoEnd)
-				*(fifoPtr++) = (unsigned char)0;
-
-			Address firstHop(fifo,ZT_ADDRESS_LENGTH); // fifo is +1 in size, with first element being used here
-			if (!firstHop) {
-				if (supernode)
-					firstHop = supernode->address();
-				else continue;
+			if (to.isBroadcast()) {
+				// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
+				if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
+					mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 			}
 
-			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
-			outp.append((uint16_t)0);
-			outp.append(fifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO); // remainder of fifo is loaded into packet
-			outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
-			outp.append((nconf->com()) ? (unsigned char)ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE : (unsigned char)0);
-			outp.append(network->id());
-			outp.append(bloomNonce);
-			outp.append((unsigned char)nconf->multicastPrefixBits());
-			outp.append((unsigned char)prefix);
-			_r->identity.address().appendTo(outp);
-			outp.append((unsigned char)((mcid >> 16) & 0xff));
-			outp.append((unsigned char)((mcid >> 8) & 0xff));
-			outp.append((unsigned char)(mcid & 0xff));
-			outp.append(from.data,6);
-			outp.append(mg.mac().data,6);
-			outp.append(mg.adi());
-			outp.append((uint16_t)etherType);
-			outp.append((uint16_t)data.size());
-			outp.append(data);
+			if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
+				TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
+				return;
+			}
 
-			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
-			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,(unsigned int)sig.size());
+			const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
+			const uint16_t bloomNonce = (uint16_t)(_r->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
+			unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
+			unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH];
+			unsigned char *const fifoEnd = fifo + sizeof(fifo);
+			const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
+			const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
 
-			// FIXME: now we send the netconf cert with every single multicast,
-			// which pretty much ensures everyone has it ahead of time but adds
-			// some redundant payload. Maybe think abouut this in the future.
-			if (nconf->com())
-				nconf->com().serialize(outp);
+			for(unsigned int prefix=0,np=((unsigned int)2 << (nconf->multicastPrefixBits() - 1));prefix<np;++prefix) {
+				memset(bloom,0,sizeof(bloom));
 
-			outp.compress();
-			send(outp,true);
-		}
-	} else if (to.isZeroTier()) {
-		// Simple unicast frame from us to another node
-		Address toZT(to.data + 1,ZT_ADDRESS_LENGTH);
-		if (network->isAllowed(toZT)) {
-			network->pushMembershipCertificate(toZT,false,Utils::now());
+				unsigned char *fifoPtr = fifo;
+				_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),nconf->multicastPrefixBits(),prefix));
+				while (fifoPtr != fifoEnd)
+					*(fifoPtr++) = (unsigned char)0;
 
-			Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
-			outp.append(network->id());
-			outp.append((uint16_t)etherType);
-			outp.append(data);
-			outp.compress();
-			send(outp,true);
+				Address firstHop(fifo,ZT_ADDRESS_LENGTH); // fifo is +1 in size, with first element being used here
+				if (!firstHop) {
+					if (supernode)
+						firstHop = supernode->address();
+					else continue;
+				}
+
+				Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
+				outp.append((uint16_t)0);
+				outp.append(fifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO); // remainder of fifo is loaded into packet
+				outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
+				outp.append((nconf->com()) ? (unsigned char)ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE : (unsigned char)0);
+				outp.append(network->id());
+				outp.append(bloomNonce);
+				outp.append((unsigned char)nconf->multicastPrefixBits());
+				outp.append((unsigned char)prefix);
+				_r->identity.address().appendTo(outp);
+				outp.append((unsigned char)((mcid >> 16) & 0xff));
+				outp.append((unsigned char)((mcid >> 8) & 0xff));
+				outp.append((unsigned char)(mcid & 0xff));
+				from.appendTo(outp);
+				mg.mac().appendTo(outp);
+				outp.append(mg.adi());
+				outp.append((uint16_t)etherType);
+				outp.append((uint16_t)data.size());
+				outp.append(data);
+
+				C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
+				outp.append((uint16_t)sig.size());
+				outp.append(sig.data,(unsigned int)sig.size());
+
+				// FIXME: now we send the netconf cert with every single multicast,
+				// which pretty much ensures everyone has it ahead of time but adds
+				// some redundant payload. Maybe think abouut this in the future.
+				if (nconf->com())
+					nconf->com().serialize(outp);
+
+				outp.compress();
+				send(outp,true);
+			}
+		} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
+			// Simple unicast frame from us to another node on the same virtual network
+			Address toZT(to.toAddress(network->id()));
+			if (network->isAllowed(toZT)) {
+				network->pushMembershipCertificate(toZT,false,Utils::now());
+
+				Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
+				outp.append(network->id());
+				outp.append((uint16_t)etherType);
+				outp.append(data);
+				outp.compress();
+				send(outp,true);
+			} else {
+				TRACE("%s: UNICAST: %s -> %s %s dropped, destination not a member of closed network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
+			}
 		} else {
-			TRACE("UNICAST: %s -> %s %s (dropped, destination not a member of closed network %llu)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
+			LOG("%s: UNICAST %s -> %s %s dropped, bridging disabled, unicast destination not on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 		}
 	} else {
-		TRACE("UNICAST: %s -> %s %s (dropped, destination MAC not ZeroTier)",from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+		LOG("%s: UNICAST %s -> %s %s dropped, bridging disabled, unicast source not on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 	}
 }
 
@@ -458,7 +458,7 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 
 					// network ID, MAC, ADI
 					outp.append((uint64_t)nwmgs->first->id());
-					outp.append(mg->mac().data,6);
+					mg->mac().appendTo(outp);
 					outp.append((uint32_t)mg->adi());
 				}
 			}
@@ -487,7 +487,7 @@ void Switch::announceMulticastGroups(const SharedPtr<Peer> &peer)
 
 				// network ID, MAC, ADI
 				outp.append((uint64_t)(*n)->id());
-				outp.append(mg->mac().data,6);
+				mg->mac().appendTo(outp);
 				outp.append((uint32_t)mg->adi());
 			}
 		}
