@@ -25,6 +25,8 @@
 // LLC. Start here: http://www.zerotier.com/
 //
 
+var config = require('./config.js');
+
 // Fields in netconf response dictionary
 var ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES = "et";
 var ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID = "nwid";
@@ -53,6 +55,7 @@ var async = require('async');
 var redis = require('redis');
 var DB = redis.createClient();
 DB.on("error",function(err) { console.error('redis query error: '+err); });
+DB.select(config.redisDb,function() {});
 
 // Global variables -- these are initialized on startup or netconf-init message
 var netconfSigningIdentity = null; // identity of netconf master, with private key portion
