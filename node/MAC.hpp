@@ -188,8 +188,7 @@ public:
 		throw()
 	{
 		uint64_t m = ((uint64_t)firstOctetForNetwork(nwid)) << 40;
-		uint64_t a = ztaddr.toInt();
-		m |= a; // a is 40 bits
+		m |= ztaddr.toInt(); // a is 40 bits
 		m ^= ((nwid >> 8) & 0xff) << 32;
 		m ^= ((nwid >> 16) & 0xff) << 24;
 		m ^= ((nwid >> 24) & 0xff) << 16;
@@ -208,8 +207,8 @@ public:
 	inline Address toAddress(uint64_t nwid) const
 		throw()
 	{
-		uint64_t a = _m & 0xffffffffffULL;
-		a ^= ((nwid >> 8) & 0xff) << 32;
+		uint64_t a = _m & 0xffffffffffULL; // least significant 40 bits of MAC are formed from address
+		a ^= ((nwid >> 8) & 0xff) << 32; // ... XORed with bits 8-48 of the nwid in little-endian byte order, so unmask it
 		a ^= ((nwid >> 16) & 0xff) << 24;
 		a ^= ((nwid >> 24) & 0xff) << 16;
 		a ^= ((nwid >> 32) & 0xff) << 8;

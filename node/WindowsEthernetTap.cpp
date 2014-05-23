@@ -351,7 +351,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 
 	if (_netCfgInstanceId.length() > 0) {
 		char tmps[4096];
-		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac.data[0],(unsigned int)mac.data[1],(unsigned int)mac.data[2],(unsigned int)mac.data[3],(unsigned int)mac.data[4],(unsigned int)mac.data[5]) + 1;
+		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
 		DWORD tmp = mtu;
@@ -557,8 +557,8 @@ void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherTyp
 		Mutex::Lock _l(_injectPending_m);
 		_injectPending.push( std::pair<Array<char,ZT_IF_MTU + 32>,unsigned int>(Array<char,ZT_IF_MTU + 32>(),len + 14) );
 		char *d = _injectPending.back().first.data;
-		memcpy(d,to.data,6);
-		memcpy(d + 6,from.data,6);
+		to.copyTo(d,6);
+		from.copyTo(d + 6,6);
 		d[12] = (char)((etherType >> 8) & 0xff);
 		d[13] = (char)(etherType & 0xff);
 		memcpy(d + 14,data,len);
@@ -603,13 +603,9 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 		MAC mac;
 		DWORD i = 0;
 		while ((i + 6) <= bytesReturned) {
-			mac.data[0] = mcastbuf[i++];
-			mac.data[1] = mcastbuf[i++];
-			mac.data[2] = mcastbuf[i++];
-			mac.data[3] = mcastbuf[i++];
-			mac.data[4] = mcastbuf[i++];
-			mac.data[5] = mcastbuf[i++];
-			if (mac.isMulticast()) {
+			mac.setTo(mcastbuf + i,6);
+			i += 6;
+			if ((mac.isMulticast())&&(!mac.isBroadcast())) {
 				// exclude the nulls that may be returned or any other junk Windows puts in there
 				newGroups.insert(MulticastGroup(mac,0));
 			}
@@ -712,8 +708,8 @@ void WindowsEthernetTap::threadMain()
 			DWORD bytesRead = 0;
 			if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
 				if ((bytesRead > 14)&&(_enabled)) {
-					MAC to(tapReadBuf);
-					MAC from(tapReadBuf + 6);
+					MAC to(tapReadBuf,6);
+					MAC from(tapReadBuf + 6,6);
 					unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
 					try {
 						Buffer<4096> tmp(tapReadBuf + 14,bytesRead - 14);

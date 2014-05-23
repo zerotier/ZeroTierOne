@@ -39,6 +39,7 @@
 #include "EthernetTap.hpp"
 #include "Mutex.hpp"
 #include "Thread.hpp"
+#include "Array.hpp"
 
 #include <WinSock2.h>
 #include <Windows.h>
