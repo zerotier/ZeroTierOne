@@ -61,6 +61,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
+#define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
 
 /**
  * Network configuration received from netconf master nodes
@@ -117,13 +118,14 @@ public:
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
 	inline unsigned int multicastPrefixBits() const throw() { return _multicastPrefixBits; }
 	inline unsigned int multicastDepth() const throw() { return _multicastDepth; }
+	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
 	inline bool isOpen() const throw() { return (!_private); }
 	inline bool isPrivate() const throw() { return _private; }
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::set<InetAddress> &staticIps() const throw() { return _staticIps; }
-	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
 	inline const CertificateOfMembership &com() const throw() { return _com; }
+	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
 
 	/**
 	 * @param fromPeer Peer attempting to bridge other Ethernet peers onto network
@@ -155,6 +157,7 @@ private:
 	unsigned int _multicastPrefixBits;
 	unsigned int _multicastDepth;
 	bool _private;
+	bool _enableBroadcast;
 	std::string _name;
 	std::string _description;
 	std::set<InetAddress> _staticIps;

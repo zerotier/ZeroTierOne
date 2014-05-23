@@ -65,9 +65,11 @@ const NetworkConfig::MulticastRate &NetworkConfig::multicastRate(const Multicast
 	return r->second;
 }
 
-static const std::string _zero("0");
 void NetworkConfig::_fromDictionary(const Dictionary &d)
 {
+	static const std::string zero("0");
+	static const std::string one("1");
+
 	// NOTE: d.get(name) throws if not found, d.get(name,default) returns default
 
 	memset(_etWhitelist,0,sizeof(_etWhitelist));
@@ -82,9 +84,10 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		throw std::invalid_argument("configuration contains zero network ID");
 	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP).c_str());
 	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO));
-	_multicastPrefixBits = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS,_zero).c_str());
-	_multicastDepth = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH,_zero).c_str());
-	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,_zero).c_str()) != 0);
+	_multicastPrefixBits = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS,zero).c_str());
+	_multicastDepth = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH,zero).c_str());
+	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,zero).c_str()) != 0);
+	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
 	_description = d.get(ZT_NETWORKCONFIG_DICT_KEY_DESC,std::string());
 

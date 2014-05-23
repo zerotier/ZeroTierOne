@@ -710,8 +710,6 @@ bool UnixEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 	bool changed = false;
 
-	newGroups.insert(_blindWildcardMulticastGroup); // always join this
-
 	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
 		if (!groups.count(*mg)) {
 			groups.insert(*mg);
@@ -719,7 +717,7 @@ bool UnixEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 		}
 	}
 	for(std::set<MulticastGroup>::iterator mg(groups.begin());mg!=groups.end();) {
-		if (!newGroups.count(*mg)) {
+		if ((!newGroups.count(*mg))&&(*mg != _blindWildcardMulticastGroup)) {
 			groups.erase(mg++);
 			changed = true;
 		} else ++mg;
@@ -934,8 +932,6 @@ bool UnixEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 	bool changed = false;
 
-	newGroups.insert(_blindWildcardMulticastGroup); // always join this
-
 	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
 		if (!groups.count(*mg)) {
 			groups.insert(*mg);
@@ -943,7 +939,7 @@ bool UnixEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 		}
 	}
 	for(std::set<MulticastGroup>::iterator mg(groups.begin());mg!=groups.end();) {
-		if (!newGroups.count(*mg)) {
+		if ((!newGroups.count(*mg))&&(*mg != _blindWildcardMulticastGroup)) {
 			groups.erase(mg++);
 			changed = true;
 		} else ++mg;

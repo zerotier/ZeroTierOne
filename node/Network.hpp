@@ -109,6 +109,11 @@ private:
 
 public:
 	/**
+	 * Broadcast multicast group: ff:ff:ff:ff:ff:ff / 0
+	 */
+	static const MulticastGroup BROADCAST;
+
+	/**
 	 * Possible network states
 	 */
 	enum Status
@@ -157,9 +162,22 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		EthernetTap *t = _tap;
-		if (t)
-			return _tap->updateMulticastGroups(_multicastGroups);
-		return false;
+		if (t) {
+			bool updated = _tap->updateMulticastGroups(_multicastGroups);
+			if ((_config)&&(_config->enableBroadcast())) {
+				if (_multicastGroups.count(BROADCAST))
+					return updated;
+				else {
+					_multicastGroups.insert(BROADCAST);
+					return true;
+				}
+			} else {
+				if (_multicastGroups.count(BROADCAST)) {
+					_multicastGroups.erase(BROADCAST);
+					return true;
+				} else return updated;
+			}
+		} else return false;
 	}
 
 	/**

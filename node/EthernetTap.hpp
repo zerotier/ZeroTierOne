@@ -170,8 +170,8 @@ public:
 	 * This populates a set or, if already populated, modifies it to contain
 	 * only multicast groups in which this device is interested.
 	 *
-	 * This should always include the blind wildcard MulticastGroup (MAC of
-	 * ff:ff:ff:ff:ff:ff and 0 ADI field).
+	 * This neither includes nor removes the broadcast (ff:ff:ff:ff:ff:ff / 0)
+	 * group.
 	 *
 	 * @param groups Set to modify in place
 	 * @return True if set was changed since last call

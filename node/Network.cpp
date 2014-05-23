@@ -48,6 +48,8 @@
 
 namespace ZeroTier {
 
+const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xff),0);
+
 const char *Network::statusString(const Status s)
 	throw()
 {
