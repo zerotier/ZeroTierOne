@@ -615,9 +615,7 @@ int main(int argc,char **argv)
 			if (homeDir) {
 				printHelp(argv[0],stdout);
 				return 0;
-			}
-			homeDir = argv[i];
-			break;
+			} else homeDir = argv[i];
 		}
 	}
 	if ((!homeDir)||(strlen(homeDir) == 0))
