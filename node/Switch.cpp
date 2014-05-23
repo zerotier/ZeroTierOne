@@ -109,9 +109,14 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			MulticastGroup mg(to,0);
 
 			if (to.isBroadcast()) {
-				// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
-				if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01))
+				if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01)) {
+					// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
 					mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
+				} else if (!nconf->enableBroadcast()) {
+					// Don't transmit broadcasts if this network doesn't want them
+					TRACE("%s: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled on network %.16llx",network->tapDeviceName().c_str(),network->id());
+					return;
+				}
 			}
 
 			if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
