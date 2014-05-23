@@ -272,7 +272,7 @@ UnixEthernetTap::UnixEthernetTap(
 
 	// Set MAC address
 	ifr.ifr_ifru.ifru_hwaddr.sa_family = ARPHRD_ETHER;
-	memcpy(ifr.ifr_ifru.ifru_hwaddr.sa_data,mac.data,6);
+	mac.copyTo(ifr.ifr_ifru.ifru_hwaddr.sa_data,6);
 	if (ioctl(sock,SIOCSIFHWADDR,(void *)&ifr) < 0) {
 		::close(_fd);
 		::close(sock);
@@ -696,7 +696,7 @@ bool UnixEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 					++fno;
 				}
 				if ((devname)&&(!strcmp(devname,_dev.c_str()))&&(mcastmac)&&(Utils::unhex(mcastmac,mac,6) == 6))
-					newGroups.insert(MulticastGroup(MAC(mac),0));
+					newGroups.insert(MulticastGroup(MAC(mac,6),0));
 			}
 		}
 		::close(fd);
