@@ -898,9 +898,9 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 				request["meta"] = std::string((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
 			request["type"] = "netconf-request";
 			request["peerId"] = peer->identity().toString(false);
-			Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)nwid);
+			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)nwid);
 			request["nwid"] = tmp;
-			Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)packetId());
+			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)packetId());
 			request["requestId"] = tmp;
 			if (!hops())
 				request["from"] = _remoteAddress.toString();

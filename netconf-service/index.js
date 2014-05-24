@@ -262,10 +262,9 @@ function doNetconfRequest(message)
 	}
 
 	var peerId = new Identity(message.data['peerId']);
-	var fromIpAndPort = message.data['from'];
 	var nwid = message.data['nwid'];
 	var requestId = message.data['requestId'];
-	if ((!peerId)||(!peerId.isValid())||(!fromIpAndPort)||(!nwid)||(nwid.length !== 16)||(!requestId)) {
+	if ((!peerId)||(!peerId.isValid())||(!nwid)||(nwid.length !== 16)||(!requestId)) {
 		console.error('missing one or more required fields in netconf-request');
 		return;
 	}
@@ -307,13 +306,17 @@ function doNetconfRequest(message)
 				// Update existing member record with new last seen time, etc.
 				member = obj;
 				authorized = ((!ztDbTrue(network['private'])) || ztDbTrue(member['authorized']));
-				DB.hmset(memberKey,{
+				var updatedFields = {
 					'lastSeen': Date.now(),
-					'lastAt': fromIpAndPort,
-					'authorized': authorized ? '1' : '0', // reset authorized to unhide in UI, since UI uses -1 to hide
-					'clientVersion': (message.data['clientVersion']) ? message.data['clientVersion'] : '?.?.?',
-					'clientOs': (message.data['clientOs']) ? message.data['clientOs'] : '?'
-				},next);
+					'authorized': authorized ? '1' : '0' // reset authorized to unhide in UI, since UI uses -1 to hide
+				};
+				if (message.data['from'])
+					updatedFields['lastAt'] = message.data['from'];
+				if (message.data['clientVersion'])
+					updatedFields['clientVersion'] = message.data['clientVersion'];
+				if (message.data['clientOs'])
+					updatedFields['clientOs'] = message.data['clientOs'];
+				DB.hmset(memberKey,updatedFields,next);
 			} else {
 				// Add member record to network for newly seen peer
 				authorized = ztDbTrue(network['private']) ? false : true; // public networks authorize everyone by default
@@ -324,11 +327,14 @@ function doNetconfRequest(message)
 					'authorized': authorized ? '1' : '0',
 					'identity': peerId.toString(),
 					'firstSeen': now,
-					'lastSeen': now,
-					'lastAt': fromIpAndPort,
-					'clientVersion': (message.data['clientVersion']) ? message.data['clientVersion'] : '?.?.?',
-					'clientOs': (message.data['clientOs']) ? message.data['clientOs'] : '?'
+					'lastSeen': now
 				};
+				if (message.data['from'])
+					member['lastAt'] = message.data['from'];
+				if (message.data['clientVersion'])
+					member['clientVersion'] = message.data['clientVersion'];
+				if (message.data['clientOs'])
+					member['clientOs'] = message.data['clientOs'];
 				DB.hmset(memberKey,member,next);
 			}
 		});
