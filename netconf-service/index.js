@@ -565,13 +565,13 @@ process.stdin.on('readable',function() {
 	}
 });
 process.stdin.on('end',function() {
-	//process.exit(0);
+	process.exit(0);
 });
 process.stdin.on('close',function() {
-	//process.exit(0);
+	process.exit(0);
 });
 process.stdin.on('error',function() {
-	//process.exit(0);
+	process.exit(0);
 });
 
 // Tell ZeroTier One that the service is running, solicit netconf-init
