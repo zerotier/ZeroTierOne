@@ -310,6 +310,10 @@ function doNetconfRequest(message)
 					'lastSeen': Date.now(),
 					'authorized': authorized ? '1' : '0' // reset authorized to unhide in UI, since UI uses -1 to hide
 				};
+				if (!('identity' in member))
+					updatedFields['identity'] = peerId.toString();
+				if (!('firstSeen' in member))
+					updatedFields['firstSeen'] = Date.now();
 				if (message.data['from'])
 					updatedFields['lastAt'] = message.data['from'];
 				if (message.data['clientVersion'])
