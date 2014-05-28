@@ -242,6 +242,20 @@ SocketManager::SocketManager(
 #endif
 
 			{
+				int bs = 1048576;
+				while (bs >= 65536) {
+					int tmpbs = bs;
+					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,&tmpbs,sizeof(tmpbs)) == 0)
+						break;
+					bs -= 16384;
+				}
+				bs = 1048576;
+				while (bs >= 65536) {
+					int tmpbs = bs;
+					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,&tmpbs,sizeof(tmpbs)) == 0)
+						break;
+					bs -= 16384;
+				}
 #ifdef __WINDOWS__
 				BOOL f;
 				f = TRUE; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
@@ -302,6 +316,20 @@ SocketManager::SocketManager(
 #endif
 
 			{
+				int bs = 1048576;
+				while (bs >= 65536) {
+					int tmpbs = bs;
+					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,&tmpbs,sizeof(tmpbs)) == 0)
+						break;
+					bs -= 16384;
+				}
+				bs = 1048576;
+				while (bs >= 65536) {
+					int tmpbs = bs;
+					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,&tmpbs,sizeof(tmpbs)) == 0)
+						break;
+					bs -= 16384;
+				}
 #ifdef __WINDOWS__
 				BOOL f;
 				f = FALSE; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
