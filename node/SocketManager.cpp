@@ -245,14 +245,14 @@ SocketManager::SocketManager(
 				int bs = 1048576;
 				while (bs >= 65536) {
 					int tmpbs = bs;
-					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,&tmpbs,sizeof(tmpbs)) == 0)
+					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 						break;
 					bs -= 16384;
 				}
 				bs = 1048576;
 				while (bs >= 65536) {
 					int tmpbs = bs;
-					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,&tmpbs,sizeof(tmpbs)) == 0)
+					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 						break;
 					bs -= 16384;
 				}
@@ -319,14 +319,14 @@ SocketManager::SocketManager(
 				int bs = 1048576;
 				while (bs >= 65536) {
 					int tmpbs = bs;
-					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,&tmpbs,sizeof(tmpbs)) == 0)
+					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 						break;
 					bs -= 16384;
 				}
 				bs = 1048576;
 				while (bs >= 65536) {
 					int tmpbs = bs;
-					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,&tmpbs,sizeof(tmpbs)) == 0)
+					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
 						break;
 					bs -= 16384;
 				}
