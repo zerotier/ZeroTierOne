@@ -36,11 +36,11 @@
 /**
  * Minor version
  */
-#define ZEROTIER_ONE_VERSION_MINOR 8
+#define ZEROTIER_ONE_VERSION_MINOR 9
 
 /**
  * Revision
  */
-#define ZEROTIER_ONE_VERSION_REVISION 2
+#define ZEROTIER_ONE_VERSION_REVISION 0
 
 #endif
