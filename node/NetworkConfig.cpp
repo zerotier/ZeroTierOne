@@ -86,6 +86,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO));
 	_multicastPrefixBits = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS,zero).c_str());
 	_multicastDepth = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH,zero).c_str());
+	_bridgingMode = (BridgingMode)Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_BRIDGING_MODE,zero).c_str());
 	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0);
 	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
@@ -119,6 +120,15 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 				throw std::invalid_argument("static IP address fields contain one or more invalid IP/netmask entries");
 		}
 		_staticIps.insert(addr);
+	}
+
+	std::vector<std::string> ab(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES,"").c_str(),",","",""));
+	for(std::vector<std::string>::const_iterator a(ab.begin());a!=ab.end();++a) {
+		if (a->length() == ZT_ADDRESS_LENGTH_HEX) {
+			Address tmp(*a);
+			if (!tmp.isReserved())
+				_activeBridges.insert(tmp);
+		}
 	}
 
 	Dictionary mr(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES,std::string()));

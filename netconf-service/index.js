@@ -42,6 +42,8 @@ var ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC = "v4s";
 var ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC = "v6s";
 var ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP = "com";
 var ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST = "eb";
+var ZT_NETWORKCONFIG_DICT_KEY_BRIDGING_MODE = "br";
+var ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES = "ab";
 
 // Path to zerotier-idtool binary, invoked to enerate certificates of membership
 var ZEROTIER_IDTOOL = '/usr/local/bin/zerotier-idtool';

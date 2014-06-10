@@ -62,18 +62,28 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
+#define ZT_NETWORKCONFIG_DICT_KEY_BRIDGING_MODE "br"
+#define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES "ab"
 
 /**
  * Network configuration received from netconf master nodes
  *
- * This is designed to work as an immutable value object held in a shared
- * pointer so that it can be both updated and used without too much mutex
- * boogie.
+ * This is an immutable value object created from a dictionary received from netconf master.
  */
 class NetworkConfig
 {
 public:
 	friend class SharedPtr<NetworkConfig>;
+
+	/**
+	 * Network bridging mode
+	 */
+	enum BridgingMode
+	{
+		BRIDGING_DISABLED = 0,    // no bridging
+		BRIDGING_ACTIVE_ONLY = 1, // only active bridges may bridge
+		BRIDGING_PERMISSIVE = 2   // allow passive bridging by any peer
+	};
 
 	/**
 	 * Tuple of multicast rate parameters
@@ -102,7 +112,7 @@ public:
 	 * @param etherType Ethernet frame type to check
 	 * @return True if allowed on this network
 	 */
-	inline bool permitsEtherType(unsigned int etherType)
+	inline bool permitsEtherType(unsigned int etherType) const
 		throw()
 	{
 		if ((!etherType)||(etherType > 0xffff)) // sanity checks
@@ -124,6 +134,7 @@ public:
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::set<InetAddress> &staticIps() const throw() { return _staticIps; }
+	inline const std::set<Address> &activeBridges() const throw() { return _activeBridges; }
 	inline const CertificateOfMembership &com() const throw() { return _com; }
 	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
 
@@ -134,7 +145,15 @@ public:
 	inline bool permitsBridging(const Address &fromPeer) const
 		throw()
 	{
-		return false; // TODO: bridging not implemented yet
+		switch(_bridgingMode) {
+			case BRIDGING_ACTIVE_ONLY:
+				return (_activeBridges.count(fromPeer) > 0);
+			case BRIDGING_PERMISSIVE:
+				return true;
+			//case BRIDGING_DISABLED:
+			default:
+				return false;
+		}
 	}
 
 	/**
@@ -156,11 +175,13 @@ private:
 	Address _issuedTo;
 	unsigned int _multicastPrefixBits;
 	unsigned int _multicastDepth;
+	BridgingMode _bridgingMode;
 	bool _private;
 	bool _enableBroadcast;
 	std::string _name;
 	std::string _description;
 	std::set<InetAddress> _staticIps;
+	std::set<Address> _activeBridges;
 	std::map<MulticastGroup,MulticastRate> _multicastRates;
 	CertificateOfMembership _com;
 

@@ -109,6 +109,11 @@ error_no_byte_order_defined;
 #define ZT_ADDRESS_LENGTH 5
 
 /**
+ * Length of a hexadecimal ZeroTier address
+ */
+#define ZT_ADDRESS_LENGTH_HEX 10
+
+/**
  * Addresses beginning with this byte are reserved for the joy of in-band signaling
  */
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
