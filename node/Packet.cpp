@@ -42,7 +42,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_WHOIS: return "WHOIS";
 		case VERB_RENDEZVOUS: return "RENDEZVOUS";
 		case VERB_FRAME: return "FRAME";
-		case VERB_BRIDGED_FRAME: return "BRIDGED_FRAME";
+		case VERB_EXT_FRAME: return "EXT_FRAME";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
 		case VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return "NETWORK_MEMBERSHIP_CERTIFICATE";

@@ -497,8 +497,22 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/* TODO: not implemented yet */
-		VERB_BRIDGED_FRAME = 7,
+		/*
+		 * An ethernet frame to or from specified MAC addresses:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] destination MAC or all zero for destination node>
+		 *   <[6] source MAC or all zero for node of origin>
+		 *   <[2] 16-bit ethertype>
+		 *   <[...] ethernet payload>
+		 *
+		 * Extended frames include full MAC addressing and are used for bridged
+		 * configurations. Theoretically they could carry multicast as well but
+		 * currently they're not used for that.
+		 *
+		 * ERROR may be generated if a membership certificate is needed for a
+		 * closed network. Payload will be network ID.
+		 */
+		VERB_EXT_FRAME = 7,
 
 		/* A multicast frame:
 		 *   <[2] 16-bit propagation depth or 0xffff for "do not forward">
@@ -542,6 +556,9 @@ public:
 		 * When choosing next hops, exclude addresses corresponding to bits already
 		 * set in the bloom filter and addresses outside the propagation restrict
 		 * prefix.
+		 *
+		 * Active bridges on a network are always added as next hops for all
+		 * multicast and broadcast traffic, as if they "like" all groups.
 		 *
 		 * Algorithm for setting bits in bloom filter:
 		 *

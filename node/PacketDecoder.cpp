@@ -97,8 +97,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doRENDEZVOUS(_r,peer);
 			case Packet::VERB_FRAME:
 				return _doFRAME(_r,peer);
-			case Packet::VERB_BRIDGED_FRAME:
-				return _doBRIDGED_FRAME(_r,peer);
+			case Packet::VERB_EXT_FRAME:
+				return _doEXT_FRAME(_r,peer);
 			case Packet::VERB_MULTICAST_FRAME:
 				return _doMULTICAST_FRAME(_r,peer);
 			case Packet::VERB_MULTICAST_LIKE:
@@ -455,9 +455,8 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	return true;
 }
 
-bool PacketDecoder::_doBRIDGED_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
-	// TODO: bridging is not implemented yet
 	return true;
 }
 
