@@ -69,6 +69,7 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - M v4AssignPool :: network/bits from which to assign IPs
 - M v6AssignMode :: 'none' (or null/empty/etc.), 'zt', 'v6native', 'dhcp6'
 - M v6AssignPool :: network/bits from which to assign IPs
+- M bridgingMode :: 0 == none, 1 == active only, 2 == permissive/all
 - M subscriptions :: comma-delimited list of subscriptions for this network
 - M ui :: arbitrary field that can be used by the UI to store stuff
 
@@ -81,7 +82,7 @@ The netconf-master will automatically add any peer that even attempts to request
 - !R id :: must be \<address\>
 - !R nwid :: must be \<nwid\>
 - M authorized :: true if node is authorized and will be issued valid certificates and network configurations
-- M bridge :: true if node is an active bridge that should receive all multicast traffic for this net (e.g. a physical-virtual bridge extending a physical network)
+- M bridge :: true if node is an active bridge
 - M name :: name of system
 - M notes :: annotation field
 - R authorizedBy :: user ID of user who authorized membership
