@@ -416,6 +416,27 @@ public:
 		return std::set<InetAddress>();
 	}
 
+	/**
+	 * @param mac MAC address
+	 * @return ZeroTier address of bridge to this MAC or null address if not found
+	 */
+	inline Address findBridgeTo(const MAC &mac) const
+	{
+		Mutex::Lock _l(_lock);
+		std::map<MAC,Address>::const_iterator br(_bridgeRoutes.find(mac));
+		if (br == _bridgeRoutes.end())
+			return Address();
+		return br->second;
+	}
+
+	/**
+	 * Set a bridge route
+	 *
+	 * @param mac MAC address of destination
+	 * @param addr Bridge this MAC is reachable behind
+	 */
+	void learnBridgeRoute(const MAC &mac,const Address &addr);
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -424,24 +445,33 @@ private:
 	void _dumpMulticastCerts();
 
 	uint64_t _id;
-	NodeConfig *_nc;
-	MAC _mac;
+	NodeConfig *_nc; // parent NodeConfig object
+	MAC _mac; // local MAC address
 	const RuntimeEnvironment *_r;
-	EthernetTap *volatile _tap;
+	EthernetTap *volatile _tap; // tap device or NULL if not initialized yet
+
 	std::set<MulticastGroup> _multicastGroups;
 	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;
+
 	std::map<Address,CertificateOfMembership> _membershipCertificates;
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate;
+
+	std::map<MAC,Address> _bridgeRoutes;
+
 	SharedPtr<NetworkConfig> _config;
 	volatile uint64_t _lastConfigUpdate;
+
 	volatile bool _destroyOnDelete;
+
 	volatile enum {
 		NETCONF_FAILURE_NONE,
 		NETCONF_FAILURE_ACCESS_DENIED,
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
+
 	Thread _setupThread;
+
 	Mutex _lock;
 
 	AtomicCounter __refCount;

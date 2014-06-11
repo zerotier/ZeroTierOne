@@ -396,4 +396,15 @@ error_no_byte_order_defined;
  */
 #define ZT_UPDATE_HTTP_TIMEOUT 30
 
+/**
+ * Sanity limit on maximum bridge routes
+ *
+ * If the number of bridge routes exceeds this, we cull routes from the
+ * bridges with the most MACs behind them until it doesn't. This is a
+ * sanity limit to prevent memory-filling DOS attacks, nothing more. No
+ * physical LAN has anywhere even close to this many nodes. Note that this
+ * does not limit the size of ZT virtual LANs, only bridge routing.
+ */
+#define ZT_MAX_BRIDGE_ROUTES 67108864
+
 #endif

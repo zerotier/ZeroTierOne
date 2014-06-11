@@ -333,6 +333,31 @@ void Network::threadMain()
 	}
 }
 
+void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
+{
+	Mutex::Lock _l(_lock);
+	_bridgeRoutes[mac] = addr;
+
+	// If _bridgeRoutes exceeds sanity limit, trim worst offenders until below -- denial of service circuit breaker
+	while (_bridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
+		std::map<Address,unsigned long> counts;
+		Address maxAddr;
+		unsigned long maxCount = 0;
+		for(std::map<MAC,Address>::iterator br(_bridgeRoutes.begin());br!=_bridgeRoutes.end();++br) {
+			unsigned long c = ++counts[br->second];
+			if (c > maxCount) {
+				maxCount = c;
+				maxAddr = br->second;
+			}
+		}
+		for(std::map<MAC,Address>::iterator br(_bridgeRoutes.begin());br!=_bridgeRoutes.end();) {
+			if (br->second == maxAddr)
+				_bridgeRoutes.erase(br++);
+			else ++br;
+		}
+	}
+}
+
 void Network::_restoreState()
 {
 	if (!_id)
