@@ -372,21 +372,6 @@ public:
 	}
 
 	/**
-	 * Inject a frame into tap with local MAC as destination MAC (if it's created)
-	 *
-	 * @param from Origin MAC
-	 * @param etherType Ethernet frame type
-	 * @param data Frame data
-	 * @param len Frame length
-	 */
-	inline void tapPut(const MAC &from,unsigned int etherType,const void *data,unsigned int len)
-	{
-		EthernetTap *t = _tap;
-		if (t)
-			t->put(from,t->mac(),etherType,data,len);
-	}
-
-	/**
 	 * @return Tap device name or empty string if still initializing
 	 */
 	inline std::string tapDeviceName() const
@@ -401,6 +386,7 @@ public:
 	 * @return Ethernet MAC address for this network's local interface
 	 */
 	inline const MAC &mac() const
+		throw()
 	{
 		return _mac;
 	}
@@ -414,6 +400,20 @@ public:
 		if (t)
 			return t->ips();
 		return std::set<InetAddress>();
+	}
+
+	/**
+	 * Shortcut for config()->permitsBridging(), returns false if no config
+	 *
+	 * @param peer Peer address to check
+	 * @return True if peer can bridge other Ethernet nodes into this network or network is in permissive bridging mode
+	 */
+	inline bool permitsBridging(const Address &peer) const
+	{
+		Mutex::Lock _l(_lock);
+		if (_config)
+			return _config->permitsBridging(peer);
+		return false;
 	}
 
 	/**

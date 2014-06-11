@@ -405,47 +405,44 @@ bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<P
 	return true;
 }
 
+bool PacketDecoder::_incomingFrame(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+{
+	if (network->isAllowed(peer->address())) {
+		if (network->config()->permitsEtherType(etherType)) {
+			network->tapPut(from,to,etherType,data,len);
+
+			/* Source moves "closer" to us in multicast propagation priority when
+			 * we receive unicast frames from it. This is called "implicit social
+			 * ordering" in other docs. */
+			_r->mc->bringCloser(network->id(),peer->address());
+			peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
+		} else {
+			TRACE("dropped %s from %s@%s: ethernet type %u not allowed on network %.16llx",Packet::verbString(verb()),from.toString().c_str(),peer->address().toString().c_str(),etherType,(unsigned long long)network->id());
+		}
+	} else {
+		TRACE("dropped %s from %s(%s): peer not a member of closed network %.16llx",Packet::verbString(verb()),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
+
+		Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+		outp.append((unsigned char)verb());
+		outp.append(packetId());
+		outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+		outp.append(network->id());
+		outp.armor(peer->key(),true);
+		_fromSock->send(_remoteAddress,outp.data(),outp.size());
+	}
+	return true;
+}
+
 bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID)));
 		if (network) {
-			if (network->isAllowed(source())) {
-				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-				if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
-					if (network->config()->permitsEtherType(etherType)) {
-						network->tapPut(
-							MAC(source(),network->id()),
-							etherType,
-							data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,
-							size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
-					} else {
-						TRACE("dropped FRAME from %s: ethernet type %u not allowed on network %.16llx",source().toString().c_str(),etherType,(unsigned long long)network->id());
-						return true;
-					}
-				} else return true; // ignore empty frames
-
-				// Source moves "closer" to us in multicast propagation priority when
-				// we receive unicast frames from it. This is called "implicit social
-				// ordering" in other docs.
-				_r->mc->bringCloser(network->id(),source());
-				peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());
-			} else {
-				TRACE("dropped FRAME from %s(%s): sender not a member of closed network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
-
-				Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-				outp.append((unsigned char)Packet::VERB_FRAME);
-				outp.append(packetId());
-				outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-				outp.append(network->id());
-				outp.armor(peer->key(),true);
-				_fromSock->send(_remoteAddress,outp.data(),outp.size());
-
-				return true;
-			}
+			unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
+			if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD)
+				_incomingFrame(_r,peer,network,MAC(peer->address(),network->id()),network->mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
-			return true;
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
@@ -457,6 +454,47 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 
 bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
+	try {
+		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID)));
+		if (network) {
+			const MAC to(field(ZT_PROTO_VERB_EXT_FRAME_IDX_TO,ZT_PROTO_VERB_EXT_FRAME_LEN_TO),ZT_PROTO_VERB_EXT_FRAME_LEN_TO);
+			const MAC from(field(ZT_PROTO_VERB_EXT_FRAME_IDX_FROM,ZT_PROTO_VERB_EXT_FRAME_LEN_FROM),ZT_PROTO_VERB_EXT_FRAME_LEN_FROM);
+			unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
+			if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
+				if ((!from)||(from.isMulticast())||(!to)) {
+					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source or destination MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+					return true;
+				}
+
+				if (from != MAC(peer->address(),network->id())) {
+					if (network->permitsBridging(peer->address())) {
+						network->learnBridgeRoute(from,peer->address());
+					} else {
+						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+						return true;
+					}
+				}
+
+				if (to != network->mac()) {
+					/* For security reasons we should block incoming bridge packets if
+					 * we are not a bridge. Bridging is a two way street, and unwanted
+					 * bridging might open doors to strange things on untrusted nets. */
+					if (!network->permitsBridging(_r->identity.address())) {
+						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+						return true;
+					}
+				}
+
+				_incomingFrame(_r,peer,network,from,to,etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+			} else return true; // ignore empty frames
+		} else {
+			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
+		}
+	} catch (std::exception &ex) {
+		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+	} catch ( ... ) {
+		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
 	return true;
 }
 

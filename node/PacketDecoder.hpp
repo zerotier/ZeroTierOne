@@ -58,6 +58,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class Network;
 
 /**
  * Subclass of packet that handles the decoding of it
@@ -116,6 +117,7 @@ private:
 	bool _doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _incomingFrame(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 	bool _doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
