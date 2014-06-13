@@ -119,6 +119,35 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	return nw;
 }
 
+bool Network::updateMulticastGroups()
+{
+	Mutex::Lock _l(_lock);
+	EthernetTap *t = _tap;
+	if (t) {
+		// Grab current groups from the local tap
+		bool updated = _tap->updateMulticastGroups(_multicastGroups);
+
+		// Merge in learned groups from any hosts bridged in behind us
+		for(std::map<MulticastGroup,uint64_t>::const_iterator mg(_bridgedMulticastGroups.begin());mg!=_bridgedMulticastGroups.end();++mg)
+			_multicastGroups.insert(mg->first);
+
+		// Add or remove BROADCAST group based on broadcast enabled netconf flag
+		if ((_config)&&(_config->enableBroadcast())) {
+			if (_multicastGroups.count(BROADCAST))
+				return updated;
+			else {
+				_multicastGroups.insert(BROADCAST);
+				return true;
+			}
+		} else {
+			if (_multicastGroups.count(BROADCAST)) {
+				_multicastGroups.erase(BROADCAST);
+				return true;
+			} else return updated;
+		}
+	} else return false;
+}
+
 bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
 	Mutex::Lock _l(_lock);
@@ -224,6 +253,7 @@ bool Network::isAllowed(const Address &peer) const
 void Network::clean()
 {
 	Mutex::Lock _l(_lock);
+	uint64_t now = Utils::now();
 
 	if ((_config)&&(_config->isOpen())) {
 		// Open (public) networks do not track certs or cert pushes at all.
@@ -239,13 +269,42 @@ void Network::clean()
 
 		// Clean entries from the last pushed tracking map if they're so old as
 		// to be no longer relevant.
-		uint64_t forgetIfBefore = Utils::now() - (_config->com().timestampMaxDelta() * 3ULL);
+		uint64_t forgetIfBefore = now - (_config->com().timestampMaxDelta() * 3ULL);
 		for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
 			if (lp->second < forgetIfBefore)
 				_lastPushedMembershipCertificate.erase(lp++);
 			else ++lp;
 		}
 	}
+
+	// Clean learned multicast groups if we haven't heard from them in a while
+	for(std::map<MulticastGroup,uint64_t>::iterator mg(_bridgedMulticastGroups.begin());mg!=_bridgedMulticastGroups.end();) {
+		if ((now - mg->second) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
+			_bridgedMulticastGroups.erase(mg++);
+		else ++mg;
+	}
+}
+
+Network::Status Network::status() const
+{
+	Mutex::Lock _l(_lock);
+	if (_tap) {
+		switch(_netconfFailure) {
+			case NETCONF_FAILURE_ACCESS_DENIED:
+				return NETWORK_ACCESS_DENIED;
+			case NETCONF_FAILURE_NOT_FOUND:
+				return NETWORK_NOT_FOUND;
+			case NETCONF_FAILURE_NONE:
+				if (_lastConfigUpdate > 0)
+					return NETWORK_OK;
+				else return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
+			case NETCONF_FAILURE_INIT_FAILED:
+			default:
+				return NETWORK_INITIALIZATION_FAILED;
+		}
+	} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED) {
+		return NETWORK_INITIALIZATION_FAILED;
+	} else return NETWORK_INITIALIZING;
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)

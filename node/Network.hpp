@@ -158,27 +158,7 @@ public:
 	 *
 	 * @return True if internal multicast group set has changed
 	 */
-	inline bool updateMulticastGroups()
-	{
-		Mutex::Lock _l(_lock);
-		EthernetTap *t = _tap;
-		if (t) {
-			bool updated = _tap->updateMulticastGroups(_multicastGroups);
-			if ((_config)&&(_config->enableBroadcast())) {
-				if (_multicastGroups.count(BROADCAST))
-					return updated;
-				else {
-					_multicastGroups.insert(BROADCAST);
-					return true;
-				}
-			} else {
-				if (_multicastGroups.count(BROADCAST)) {
-					_multicastGroups.erase(BROADCAST);
-					return true;
-				} else return updated;
-			}
-		} else return false;
-	}
+	bool updateMulticastGroups();
 
 	/**
 	 * @return Latest set of multicast groups for this network's tap
@@ -272,28 +252,7 @@ public:
 	/**
 	 * @return Status of this network
 	 */
-	inline Status status() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		if (_tap) {
-			switch(_netconfFailure) {
-				case NETCONF_FAILURE_ACCESS_DENIED:
-					return NETWORK_ACCESS_DENIED;
-				case NETCONF_FAILURE_NOT_FOUND:
-					return NETWORK_NOT_FOUND;
-				case NETCONF_FAILURE_NONE:
-					if (_lastConfigUpdate > 0)
-						return NETWORK_OK;
-					else return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
-				case NETCONF_FAILURE_INIT_FAILED:
-				default:
-					return NETWORK_INITIALIZATION_FAILED;
-			}
-		} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED) {
-			return NETWORK_INITIALIZATION_FAILED;
-		} else return NETWORK_INITIALIZING;
-	}
+	Status status() const;
 
 	/**
 	 * Update multicast balance for an address and multicast group, return whether packet is allowed
@@ -418,7 +377,7 @@ public:
 
 	/**
 	 * @param mac MAC address
-	 * @return ZeroTier address of bridge to this MAC or null address if not found
+	 * @return ZeroTier address of bridge to this MAC or null address if not found (also check result for self, since this can happen)
 	 */
 	inline Address findBridgeTo(const MAC &mac) const
 	{
@@ -436,6 +395,17 @@ public:
 	 * @param addr Bridge this MAC is reachable behind
 	 */
 	void learnBridgeRoute(const MAC &mac,const Address &addr);
+
+	/**
+	 * Learn a multicast group that is bridged to our tap device
+	 *
+	 * @param mg Multicast group
+	 */
+	inline void learnBridgedMulticastGroup(const MulticastGroup &mg)
+	{
+		Mutex::Lock _l(_lock);
+		_bridgedMulticastGroups[mg] = Utils::now();
+	}
 
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
@@ -457,6 +427,7 @@ private:
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate;
 
 	std::map<MAC,Address> _bridgeRoutes;
+	std::map<MulticastGroup,uint64_t> _bridgedMulticastGroups;
 
 	SharedPtr<NetworkConfig> _config;
 	volatile uint64_t _lastConfigUpdate;
