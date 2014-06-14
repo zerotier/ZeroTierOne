@@ -89,11 +89,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (!nconf)
 		return;
 
-	// This should not happen
-	if (to == network->mac()) {
-		LOG("%s: frame received from self, ignoring (bridge loop? OS bug?)",network->tapDeviceName().c_str());
+	// Sanity check -- bridge loop? OS problem?
+	if (to == network->mac())
 		return;
-	}
 
 	// Check anti-recursion module to ensure that this is not ZeroTier talking over its own links
 	if (!_r->antiRec->checkEthernetFrame(data.data(),data.size())) {
@@ -111,12 +109,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	bool fromBridged = false;
 	if (from != network->mac()) {
 		if (!network->permitsBridging(_r->identity.address())) {
-			LOG("%s: UNICAST %s -> %s %s dropped, bridging disabled on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
+			LOG("%s: %s -> %s %s not forwarded, bridging disabled on %.16llx or this peer not a bridge",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 			return;
 		}
 		fromBridged = true;
 	}
 
+	// Multicast, either bridged or local source
 	if (to.isMulticast()) {
 		MulticastGroup mg(to,0);
 
@@ -167,6 +166,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			// Then visit next hops according to multicaster (if there's room... almost certainly will be)
 			if (fifoPtr != fifoEnd) {
 				_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),nconf->multicastPrefixBits(),prefix));
+
+				// Pad remainder of FIFO with zeroes
 				while (fifoPtr != fifoEnd)
 					*(fifoPtr++) = (unsigned char)0;
 			}
@@ -176,7 +177,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			if (!firstHop) {
 				if (supernode)
 					firstHop = supernode->address();
-				else continue; // no first hop = nowhere to go, try next bit prefix
+				else continue; // nowhere to go
 			}
 
 			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
@@ -193,7 +194,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((unsigned char)((mcid >> 8) & 0xff));
 			outp.append((unsigned char)(mcid & 0xff));
 			from.appendTo(outp);
-			to.appendTo(outp);
+			mg.mac().appendTo(outp);
 			outp.append(mg.adi());
 			outp.append((uint16_t)etherType);
 			outp.append((uint16_t)data.size());
@@ -212,8 +213,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.compress();
 			send(outp,true);
 		}
-	} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
-		// Simple unicast frame from us to another node on the same virtual network
+
+		return;
+	}
+
+	// Unicast from local peer to another non-bridged ZeroTier node
+	if ((!fromBridged)&&(to[0] == MAC::firstOctetForNetwork(network->id()))) {
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
 			network->pushMembershipCertificate(toZT,false,Utils::now());
@@ -227,44 +232,45 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		} else {
 			TRACE("%s: UNICAST: %s -> %s %s dropped, destination not a member of closed network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 		}
-	} else {
-		// Simple unicast from us to another node behind another bridge
-		Address bridges[ZT_MAX_BRIDGE_SPAM];
-		unsigned int numBridges = 0;
+	}
 
-		bridges[0] = network->findBridgeTo(to));
-		if ((bridges[0])&&(bridges[0] != _r->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
-			++numBridges;
-		} else if (!nconf->activeBridges().empty()) {
-			// If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active bridges
-			std::set<Address>::const_iterator ab(nconf->activeBridges().begin());
-			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
-				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, just take them all
-				while (numBridges < nconf->activeBridges().size())
+	// Unicast to another node behind another bridge, whether from us or not
+
+	Address bridges[ZT_MAX_BRIDGE_SPAM];
+	unsigned int numBridges = 0;
+
+	bridges[0] = network->findBridgeTo(to);
+	if ((bridges[0])&&(bridges[0] != _r->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
+		++numBridges;
+	} else if (!nconf->activeBridges().empty()) {
+		// If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active bridges
+		std::set<Address>::const_iterator ab(nconf->activeBridges().begin());
+		if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
+			// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, just take them all
+			while (numBridges < nconf->activeBridges().size())
+				bridges[numBridges++] = *(ab++);
+		} else {
+			// Otherwise do this less efficient multipass thing to pick randomly from an ordered set until we have enough
+			while (numBridges < ZT_MAX_BRIDGE_SPAM) {
+				if (ab == nconf->activeBridges().end())
+					ab = nconf->activeBridges().begin();
+				if (((unsigned long)_r->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0)
 					bridges[numBridges++] = *(ab++);
-			} else {
-				// Otherwise do this less efficient multipass thing to pick randomly from an ordered set until we have enough
-				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
-					if (ab == nconf->activeBridges().end())
-						ab = nconf->activeBridges().begin();
-					if (((unsigned long)_r->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0)
-						bridges[numBridges++] = *(ab++);
-					else ++ab;
-				}
+				else ++ab;
 			}
 		}
+	}
 
-		for(unsigned int b=0;b<numBridges;++b) {
-			Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
-			outp.append(network->id());
-			outp.append((unsigned char)0);
-			to.appendTo(outp);
-			from.appendTo(outp);
-			outp.append((uint16_t)etherType);
-			outp.append(data);
-			outp.compress();
-			send(outp,true);
-		}
+	for(unsigned int b=0;b<numBridges;++b) {
+		Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
+		outp.append(network->id());
+		outp.append((unsigned char)0);
+		to.appendTo(outp);
+		from.appendTo(outp);
+		outp.append((uint16_t)etherType);
+		outp.append(data);
+		outp.compress();
+		send(outp,true);
 	}
 }
 

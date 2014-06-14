@@ -177,7 +177,8 @@ public:
 	 * @param prefixBits Number of bits in prefix bit pattern
 	 * @return True if address is within prefix
 	 */
-	inline bool withinMulticastPropagationPrefix(uint64_t prefix,unsigned int prefixBits)
+	inline bool withinMulticastPropagationPrefix(uint64_t prefix,unsigned int prefixBits) const
+		throw()
 	{
 		return ((_a & (0xffffffffffffffffULL >> (64 - prefixBits))) == prefix);
 	}
