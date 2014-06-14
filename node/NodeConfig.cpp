@@ -249,7 +249,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 					((nconf) ? nconf->name().c_str() : "?"),
 					Network::statusString(nw->second->status()),
 					age,
-					((nconf) ? (nconf->isOpen() ? "public" : "private") : "?"),
+					((nconf) ? (nconf->isPublic() ? "public" : "private") : "?"),
 					(dn.length() > 0) ? dn.c_str() : "?",
 					((tmp.length() > 0) ? tmp.c_str() : "-"));
 			}

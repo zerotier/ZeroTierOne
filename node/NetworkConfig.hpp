@@ -62,7 +62,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
-#define ZT_NETWORKCONFIG_DICT_KEY_BRIDGING_MODE "br"
+#define ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING "pb"
 #define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES "ab"
 
 /**
@@ -74,16 +74,6 @@ class NetworkConfig
 {
 public:
 	friend class SharedPtr<NetworkConfig>;
-
-	/**
-	 * Network bridging mode
-	 */
-	enum BridgingMode
-	{
-		BRIDGING_DISABLED = 0,    // no bridging
-		BRIDGING_ACTIVE_ONLY = 1, // only active bridges may bridge
-		BRIDGING_PERMISSIVE = 2   // allow passive bridging by any peer
-	};
 
 	/**
 	 * Tuple of multicast rate parameters
@@ -129,7 +119,8 @@ public:
 	inline unsigned int multicastPrefixBits() const throw() { return _multicastPrefixBits; }
 	inline unsigned int multicastDepth() const throw() { return _multicastDepth; }
 	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
-	inline bool isOpen() const throw() { return (!_private); }
+	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
+	inline bool isPublic() const throw() { return (!_private); }
 	inline bool isPrivate() const throw() { return _private; }
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
@@ -143,17 +134,8 @@ public:
 	 * @return True if this network allows bridging
 	 */
 	inline bool permitsBridging(const Address &fromPeer) const
-		throw()
 	{
-		switch(_bridgingMode) {
-			case BRIDGING_ACTIVE_ONLY:
-				return (_activeBridges.count(fromPeer) > 0);
-			case BRIDGING_PERMISSIVE:
-				return true;
-			//case BRIDGING_DISABLED:
-			default:
-				return false;
-		}
+		return ((_allowPassiveBridging) ? true : (_activeBridges.count(fromPeer) > 0));
 	}
 
 	/**
@@ -175,7 +157,7 @@ private:
 	Address _issuedTo;
 	unsigned int _multicastPrefixBits;
 	unsigned int _multicastDepth;
-	BridgingMode _bridgingMode;
+	bool _allowPassiveBridging;
 	bool _private;
 	bool _enableBroadcast;
 	std::string _name;

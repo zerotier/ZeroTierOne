@@ -229,7 +229,7 @@ public:
 	inline void pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		if ((_config)&&(!_config->isOpen())&&(_config->com()))
+		if ((_config)&&(!_config->isPublic())&&(_config->com()))
 			_pushMembershipCertificate(peer,force,now);
 	}
 

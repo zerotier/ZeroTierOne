@@ -235,7 +235,7 @@ bool Network::isAllowed(const Address &peer) const
 
 		if (!_config)
 			return false;
-		if (_config->isOpen())
+		if (_config->isPublic())
 			return true;
 
 		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
@@ -255,7 +255,7 @@ void Network::clean()
 	Mutex::Lock _l(_lock);
 	uint64_t now = Utils::now();
 
-	if ((_config)&&(_config->isOpen())) {
+	if ((_config)&&(_config->isPublic())) {
 		// Open (public) networks do not track certs or cert pushes at all.
 		_membershipCertificates.clear();
 		_lastPushedMembershipCertificate.clear();
@@ -446,7 +446,7 @@ void Network::_restoreState()
 	}
 
 	// Read most recent multicast cert dump
-	if ((_config)&&(!_config->isOpen())&&(Utils::fileExists(mcdbPath.c_str()))) {
+	if ((_config)&&(!_config->isPublic())&&(Utils::fileExists(mcdbPath.c_str()))) {
 		CertificateOfMembership com;
 		Mutex::Lock _l(_lock);
 
@@ -497,7 +497,7 @@ void Network::_dumpMulticastCerts()
 	if (!_config)
 		return;
 
-	if ((!_id)||(_config->isOpen())) {
+	if ((!_id)||(_config->isPublic())) {
 		Utils::rm(mcdbPath);
 		return;
 	}
