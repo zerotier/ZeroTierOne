@@ -167,6 +167,22 @@ public:
 	}
 
 	/**
+	 * Test whether this address is within a multicast propagation prefix
+	 *
+	 * Multicast propagation prefixes are (right-to-left a.k.a. LSB to MSB)
+	 * bit pattern prefixes of prefixBits bits that restrict which peers are
+	 * visited along a given multicast graph traversal path.
+	 *
+	 * @param prefix Prefix bit pattern (LSB to MSB)
+	 * @param prefixBits Number of bits in prefix bit pattern
+	 * @return True if address is within prefix
+	 */
+	inline bool withinMulticastPropagationPrefix(uint64_t prefix,unsigned int prefixBits)
+	{
+		return ((_a & (0xffffffffffffffffULL >> (64 - prefixBits))) == prefix);
+	}
+
+	/**
 	 * @return Hexadecimal string
 	 */
 	inline std::string toString() const

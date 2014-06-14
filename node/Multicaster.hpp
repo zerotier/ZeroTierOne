@@ -152,15 +152,15 @@ public:
 		 * @param prefixBits Number of bits in propagation restriction prefix
 		 * @param prefix Propagation restrition prefix
 		 */
-		AddToPropagationQueue(unsigned char **ptr,unsigned char *end,unsigned char *bloom,uint16_t bloomNonce,const Address &origin,unsigned int prefixBits,unsigned int prefix)
+		AddToPropagationQueue(unsigned char **ptr,unsigned char *end,unsigned char *bloom,uint16_t bloomNonce,const Address &origin,unsigned int prefixBits,uint64_t prefix)
 			throw() :
 			_origin(origin),
 			_bloomNonce((uint64_t)bloomNonce),
-			_prefixMask(0xffffffffffffffffULL >> (64 - prefixBits)),
-			_prefix((uint64_t)prefix & _prefixMask),
+			_prefix(prefix),
 			_ptr(ptr),
 			_end(end),
-			_bloom(bloom) {}
+			_bloom(bloom),
+			_prefixBits(prefixBits) {}
 
 		inline bool operator()(const Address &a)
 			throw()
@@ -170,7 +170,7 @@ public:
 				return true;
 
 			// Exclude addresses not in this prefix domain
-			if ((a.toInt() & _prefixMask) != _prefix)
+			if (!a.withinMulticastPropagationPrefix(_prefix,_prefixBits))
 				return true;
 
 			// Exclude addresses remembered in bloom filter -- or else remember them
@@ -189,11 +189,11 @@ public:
 	private:
 		const Address _origin;
 		const uint64_t _bloomNonce;
-		const uint64_t _prefixMask;
 		const uint64_t _prefix;
 		unsigned char **const _ptr;
 		unsigned char *const _end;
 		unsigned char *const _bloom;
+		unsigned int _prefixBits;
 	};
 
 private:

@@ -407,4 +407,9 @@ error_no_byte_order_defined;
  */
 #define ZT_MAX_BRIDGE_ROUTES 67108864
 
+/**
+ * If there is no known route, spam to up to this many active bridges
+ */
+#define ZT_MAX_BRIDGE_SPAM 4
+
 #endif
