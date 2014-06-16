@@ -285,11 +285,14 @@ function doNetconfRequest(message)
 	var v4Assignments = [];
 	var v6Assignments = [];
 	var ipAssignments = []; // both v4 and v6
+	var activeBridges = '';
 
 	async.series([function(next) {
 
 		// network lookup
 		DB.hgetall(networkKey,function(err,obj) {
+			if (!obj.id)
+				return next(new Error('invalid network record'));
 			network = obj;
 			return next(null);
 		});
@@ -463,6 +466,24 @@ function doNetconfRequest(message)
 
 		return next(null);
 
+	},function(next) {
+
+		// Get active bridges
+		DB.keys('zt1:network:'+nwid+':member:*:~',function(err,keys) {
+			if (keys) {
+				async.eachSeries(keys,function(key,nextKey) {
+					DB.hgetall(key,funciton(err,abr) {
+						if ((abr)&&(abr.id)&&(abr.id.length === 10)&&(ztDbTrue(abr['activeBridge']))) {
+							if (activeBridges.length)
+								activeBridges += ',';
+							activeBridges += abr.id;
+						}
+						return nextKey(null);
+					});
+				},next);
+			} else return next(null);
+		});
+
 	}],function(err) {
 
 		if (err) {
@@ -519,6 +540,9 @@ function doNetconfRequest(message)
 					if (certificateOfMembership !== null)
 						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = certificateOfMembership;
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = ztDbTrue(network['enableBroadcast']) ? '1' : '0';
+					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = ztDbTrue(network['allowPassiveBridging']) ? '1' : '0';
+					if ((activeBridges)&&(activeBridges.length > 0))
+						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges; // comma-delimited list
 					response.data['netconf'] = netconf.toString();
 				}
 
