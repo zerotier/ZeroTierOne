@@ -472,7 +472,7 @@ function doNetconfRequest(message)
 		DB.keys('zt1:network:'+nwid+':member:*:~',function(err,keys) {
 			if (keys) {
 				async.eachSeries(keys,function(key,nextKey) {
-					DB.hgetall(key,funciton(err,abr) {
+					DB.hgetall(key,function(err,abr) {
 						if ((abr)&&(abr.id)&&(abr.id.length === 10)&&(ztDbTrue(abr['activeBridge']))) {
 							if (activeBridges.length)
 								activeBridges += ',';
