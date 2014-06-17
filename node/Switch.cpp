@@ -101,7 +101,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 	// Check to make sure this protocol is allowed on this network
 	if (!nconf->permitsEtherType(etherType)) {
-		LOG("%s: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
+		TRACE("%s: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 
