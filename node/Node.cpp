@@ -682,8 +682,10 @@ Node::ReasonForTermination Node::run()
 			if ((resynchronize)||((now - lastBeacon) >= ZT_BEACON_INTERVAL)) {
 				lastBeacon = now;
 				char bcn[ZT_PROTO_BEACON_LENGTH];
-				*((uint32_t *)(bcn)) = _r->prng->next32();
-				*((uint32_t *)(bcn + 4)) = _r->prng->next32();
+				void *bcnptr = bcn;
+				*((uint32_t *)(bcnptr)) = _r->prng->next32();
+				bcnptr = bcn + 4;
+				*((uint32_t *)(bcnptr)) = _r->prng->next32();
 				_r->identity.address().copyTo(bcn + ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH);
 				TRACE("sending LAN beacon to %s",ZT_DEFAULTS.v4Broadcast.toString().c_str());
 				_r->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
