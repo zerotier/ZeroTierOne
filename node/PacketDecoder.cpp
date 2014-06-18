@@ -405,42 +405,34 @@ bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<P
 	return true;
 }
 
-bool PacketDecoder::_incomingFrame(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer,const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
-{
-	if (network->isAllowed(peer->address())) {
-		if (network->config()->permitsEtherType(etherType)) {
-			network->tapPut(from,to,etherType,data,len);
-
-			/* Source moves "closer" to us in multicast propagation priority when
-			 * we receive unicast frames from it. This is called "implicit social
-			 * ordering" in other docs. */
-			_r->mc->bringCloser(network->id(),peer->address());
-			peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
-		} else {
-			TRACE("dropped %s from %s@%s: ethernet type %u not allowed on network %.16llx",Packet::verbString(verb()),from.toString().c_str(),peer->address().toString().c_str(),etherType,(unsigned long long)network->id());
-		}
-	} else {
-		TRACE("dropped %s from %s(%s): peer not a member of closed network %.16llx",Packet::verbString(verb()),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
-
-		Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-		outp.append((unsigned char)verb());
-		outp.append(packetId());
-		outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-		outp.append(network->id());
-		outp.armor(peer->key(),true);
-		_fromSock->send(_remoteAddress,outp.data(),outp.size());
-	}
-	return true;
-}
-
 bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID)));
 		if (network) {
-			unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-			if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD)
-				_incomingFrame(_r,peer,network,MAC(peer->address(),network->id()),network->mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+			if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
+				if (!network->isAllowed(peer->address())) {
+					TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
+					_sendErrorNeedCertificate(_r,peer,network->id());
+					return true;
+				}
+
+				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
+				if (!network->config()->permitsEtherType(etherType)) {
+					TRACE("dropped FRAME from %s(%s): ethertype %.4x not allowed on %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
+					return true;
+				}
+
+				network->tapPut(MAC(peer->address(),network->id()),network->mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+
+				/* Source moves "closer" to us in multicast propagation priority when
+				 * we receive unicast frames from it. This is called "implicit social
+				 * ordering" in other docs. */
+				_r->mc->bringCloser(network->id(),peer->address());
+
+				peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());
+				return true;
+			}
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -457,21 +449,33 @@ bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Pe
 	try {
 		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID)));
 		if (network) {
-			if ((*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS] != 0) {
-				TRACE("dropped EXT_FRAME due to unknown flags");
-				return true;
-			}
-
-			const MAC to(field(ZT_PROTO_VERB_EXT_FRAME_IDX_TO,ZT_PROTO_VERB_EXT_FRAME_LEN_TO),ZT_PROTO_VERB_EXT_FRAME_LEN_TO);
-			const MAC from(field(ZT_PROTO_VERB_EXT_FRAME_IDX_FROM,ZT_PROTO_VERB_EXT_FRAME_LEN_FROM),ZT_PROTO_VERB_EXT_FRAME_LEN_FROM);
-			unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
-
 			if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
-				if ((!from)||(from.isMulticast())||(!to)) {
+				if ((*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS] != 0) {
+					TRACE("dropped EXT_FRAME due to unknown flags");
+					return true;
+				}
+
+				if (!network->isAllowed(peer->address())) {
+					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
+					_sendErrorNeedCertificate(_r,peer,network->id());
+					return true;
+				}
+
+				unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
+				if (!network->config()->permitsEtherType(etherType)) {
+					TRACE("dropped EXT_FRAME from %s(%s): ethertype %.4x not allowed on network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned int)etherType,(unsigned long long)network->id());
+					return true;
+				}
+
+				const MAC to(field(ZT_PROTO_VERB_EXT_FRAME_IDX_TO,ZT_PROTO_VERB_EXT_FRAME_LEN_TO),ZT_PROTO_VERB_EXT_FRAME_LEN_TO);
+				const MAC from(field(ZT_PROTO_VERB_EXT_FRAME_IDX_FROM,ZT_PROTO_VERB_EXT_FRAME_LEN_FROM),ZT_PROTO_VERB_EXT_FRAME_LEN_FROM);
+
+				if ((!from)||(from.isMulticast())||(from == network->mac())||(!to)) {
 					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source or destination MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 					return true;
 				}
 
+				// If it's not from the sending peer, they must be allowed to bridge into this network
 				if (from != MAC(peer->address(),network->id())) {
 					if (network->permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
@@ -479,19 +483,24 @@ bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Pe
 						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
 						return true;
 					}
-				}
+				} // else: it is valid to send a non-bridged packet this way instead of as FRAME, but this isn't done by current code
 
+				// If it's not to us, we must be allowed to bridge into this network
 				if (to != network->mac()) {
-					/* For security reasons we should block incoming bridge packets if
-					 * we are not a bridge. Bridging is a two way street, and unwanted
-					 * bridging might open doors to strange things on untrusted nets. */
 					if (!network->permitsBridging(_r->identity.address())) {
 						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
 						return true;
 					}
 				}
 
-				_incomingFrame(_r,peer,network,from,to,etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+				network->tapPut(from,to,etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+
+				/* Source moves "closer" to us in multicast propagation priority when
+				 * we receive unicast frames from it. This is called "implicit social
+				 * ordering" in other docs. */
+				_r->mc->bringCloser(network->id(),peer->address());
+
+				peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,Utils::now());
 			}
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
@@ -987,6 +996,17 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
+}
+
+void PacketDecoder::_sendErrorNeedCertificate(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer,uint64_t nwid)
+{
+	Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+	outp.append((unsigned char)verb());
+	outp.append(packetId());
+	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+	outp.append(nwid);
+	outp.armor(peer->key(),true);
+	_fromSock->send(_remoteAddress,outp.data(),outp.size());
 }
 
 } // namespace ZeroTier
