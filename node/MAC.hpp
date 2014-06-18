@@ -224,7 +224,7 @@ public:
 		throw()
 	{
 		unsigned char a = ((unsigned char)(nwid & 0xfe) | 0x02); // locally administered, not multicast, from LSB of network ID
-		return ((a == 0x52) ? 0x32 : a); // blacklist 0x52 since it's used by KVM
+		return ((a == 0x52) ? 0x32 : a); // blacklist 0x52 since it's used by KVM, libvirt, and other popular virtualization engines... seems de-facto standard on Linux
 	}
 
 	/**

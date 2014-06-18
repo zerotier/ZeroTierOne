@@ -133,7 +133,7 @@ error_no_byte_order_defined;
 #define ZT_UDP_DEFAULT_PAYLOAD_MTU 1444
 
 /**
- * MTU used for Ethernet tap device
+ * Default MTU used for Ethernet tap device
  *
  * This is pretty much an unchangeable global constant. To make it change
  * across nodes would require logic to send ICMP packet too big messages,
