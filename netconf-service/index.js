@@ -473,7 +473,11 @@ function doNetconfRequest(message)
 			if (keys) {
 				async.eachSeries(keys,function(key,nextKey) {
 					DB.hgetall(key,function(err,abr) {
-						if ((abr)&&(abr.id)&&(abr.id.length === 10)&&(ztDbTrue(abr['activeBridge']))) {
+						if ( (abr) &&
+							   (abr.id) &&
+							   (abr.id.length === 10) &&
+							   ( (!ztDbTrue(network['private'])) || ztDbTrue(abr['authorized']) ) &&
+							   (ztDbTrue(abr['activeBridge'])) ) {
 							if (activeBridges.length)
 								activeBridges += ',';
 							activeBridges += abr.id;
