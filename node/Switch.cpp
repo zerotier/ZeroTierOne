@@ -120,7 +120,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
-			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() == 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01)) {
+			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() >= 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01)) {
 				// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
 				// Also: enableBroadcast() does not apply to ARP since it's required for IPv4
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
@@ -264,6 +264,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	for(unsigned int b=0;b<numBridges;++b) {
+		printf("EXT_FRAME %s@%s > %s@%s\n",from.toString().c_str(),_r->identity.address().toString().c_str(),to.toString().c_str(),bridges[b].toString().c_str());
 		Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
 		outp.append(network->id());
 		outp.append((unsigned char)0);
