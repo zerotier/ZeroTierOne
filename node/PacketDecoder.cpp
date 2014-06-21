@@ -493,7 +493,7 @@ bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Pe
 					}
 				}
 
-				network->tapPut(from,to,etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+				network->tapPut(from,to,etherType,data() + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD);
 
 				/* Source moves "closer" to us in multicast propagation priority when
 				 * we receive unicast frames from it. This is called "implicit social
