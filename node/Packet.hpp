@@ -496,7 +496,7 @@ public:
 		 */
 		VERB_RENDEZVOUS = 5,
 
-		/* A ZT-to-ZT unicast ethernet frame:
+		/* A ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>

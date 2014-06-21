@@ -259,10 +259,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 	bridges[0] = network->findBridgeTo(to);
 	if ((bridges[0])&&(bridges[0] != _r->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
-		printf("got known bridge for %s at %s\n",to.toString().c_str(),bridges[0].toString().c_str());
 		++numBridges;
 	} else if (!nconf->activeBridges().empty()) {
-		printf("bridge spamming for %s\n",to.toString().c_str());
 		// If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active bridges
 		std::set<Address>::const_iterator ab(nconf->activeBridges().begin());
 		if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
