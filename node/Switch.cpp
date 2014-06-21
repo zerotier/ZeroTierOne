@@ -93,7 +93,10 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to == network->mac())
 		return;
 
-	// Check anti-recursion module to ensure that this is not ZeroTier talking over its own links
+	/* Check anti-recursion module to ensure that this is not ZeroTier talking over its own links.
+	 * Note: even when we introduce a more purposeful binding of the main UDP port, this can
+	 * still happen because Windows likes to send broadcasts over interfaces that have little
+	 * to do with their intended target audience. :P */
 	if (!_r->antiRec->checkEthernetFrame(data.data(),data.size())) {
 		TRACE("%s: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->tapDeviceName().c_str(),etherTypeName(etherType),data.size());
 		return;
@@ -115,8 +118,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		fromBridged = true;
 	}
 
-	// Multicast, either bridged or local source
 	if (to.isMulticast()) {
+		// Destination is a multicast address (including broadcast)
+
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
@@ -131,11 +135,14 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			}
 		}
 
-		// Learn multicast groups for bridged-in hosts
+		/* Learn multicast groups for bridged-in hosts.
+		 * Note that some OSes, most notably Linux, do this for you by learning
+		 * multicast addresses on bridge interfaces and subscribing each slave.
+		 * But in that case this does no harm, as the sets are just merged. */
 		if (fromBridged)
 			network->learnBridgedMulticastGroup(mg);
 
-		// Check multicast/broadcast bandwidth quotas
+		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
 		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
 			TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
 			return;
@@ -191,10 +198,10 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append(bloomNonce);
 			outp.append((unsigned char)nconf->multicastPrefixBits());
 			outp.append((unsigned char)prefix);
-			_r->identity.address().appendTo(outp);
+			_r->identity.address().appendTo(outp); // lower 40 bits of MCID are my address
 			outp.append((unsigned char)((mcid >> 16) & 0xff));
 			outp.append((unsigned char)((mcid >> 8) & 0xff));
-			outp.append((unsigned char)(mcid & 0xff));
+			outp.append((unsigned char)(mcid & 0xff)); // upper 24 bits of MCID are from our counter
 			from.appendTo(outp);
 			mg.mac().appendTo(outp);
 			outp.append(mg.adi());
@@ -219,8 +226,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 	}
 
-	// Destination is another ZeroTier node
 	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
+		// Destination is another ZeroTier node
+
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
 			network->pushMembershipCertificate(toZT,false,Utils::now());
@@ -252,35 +260,45 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 	}
 
-	// Destination is behind another bridge
+	{
+		// Destination is behind another bridge
 
-	Address bridges[ZT_MAX_BRIDGE_SPAM];
-	unsigned int numBridges = 0;
+		Address bridges[ZT_MAX_BRIDGE_SPAM];
+		unsigned int numBridges = 0;
 
-	bridges[0] = network->findBridgeTo(to);
-	if ((bridges[0])&&(bridges[0] != _r->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
-		++numBridges;
-	} else if (!nconf->activeBridges().empty()) {
-		// If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active bridges
-		std::set<Address>::const_iterator ab(nconf->activeBridges().begin());
-		if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
-			// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, just take them all
-			while (numBridges < nconf->activeBridges().size())
-				bridges[numBridges++] = *(ab++);
-		} else {
-			// Otherwise do this less efficient multipass thing to pick randomly from an ordered set until we have enough
-			while (numBridges < ZT_MAX_BRIDGE_SPAM) {
-				if (ab == nconf->activeBridges().end())
-					ab = nconf->activeBridges().begin();
-				if (((unsigned long)_r->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0)
-					bridges[numBridges++] = *(ab++);
-				else ++ab;
+		bridges[0] = network->findBridgeTo(to);
+		if ((bridges[0])&&(bridges[0] != _r->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
+			// We have a known bridge route for this MAC.
+			++numBridges;
+		} else if (!nconf->activeBridges().empty()) {
+			/* If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active
+			 * bridges. This is similar to what many switches do -- if they do not
+			 * know which port corresponds to a MAC, they send it to all ports. If
+			 * there aren't any active bridges, numBridges will stay 0 and packet
+			 * is dropped. */
+			std::set<Address>::const_iterator ab(nconf->activeBridges().begin());
+			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
+				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, spam them all
+				while (ab != nconf->activeBridges().end()) {
+					if (network->isAllowed(*ab)) // config sanity check
+						bridges[numBridges++] = *ab;
+					++ab;
+				}
+			} else {
+				// Otherwise pick a random set of them
+				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
+					if (ab == nconf->activeBridges().end())
+						ab = nconf->activeBridges().begin();
+					if (((unsigned long)_r->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0) {
+						if (network->isAllowed(*ab)) // config sanity check
+							bridges[numBridges++] = *ab;
+						++ab;
+					} else ++ab;
+				}
 			}
 		}
-	}
 
-	for(unsigned int b=0;b<numBridges;++b) {
-		if (network->isAllowed(bridges[b])) {
+		for(unsigned int b=0;b<numBridges;++b) {
 			Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
 			outp.append((unsigned char)0);
