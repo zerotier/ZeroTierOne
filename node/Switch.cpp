@@ -219,24 +219,37 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		return;
 	}
 
-	// Unicast from local peer to another non-bridged ZeroTier node
-	if ((!fromBridged)&&(to[0] == MAC::firstOctetForNetwork(network->id()))) {
+	// Destination is another ZeroTier node
+	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
 			network->pushMembershipCertificate(toZT,false,Utils::now());
-
-			Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
-			outp.append(network->id());
-			outp.append((uint16_t)etherType);
-			outp.append(data);
-			outp.compress();
-			send(outp,true);
+			if (fromBridged) {
+				// Must use EXT_FRAME if source is not myself
+				Packet outp(toZT,_r->identity.address(),Packet::VERB_EXT_FRAME);
+				outp.append(network->id());
+				outp.append((unsigned char)0);
+				to.appendTo(outp);
+				from.appendTo(outp);
+				outp.append((uint16_t)etherType);
+				outp.append(data);
+				outp.compress();
+				send(outp,true);
+			} else {
+				// VERB_FRAME is really just lighter weight EXT_FRAME, can use for direct-to-direct (before bridging this was the only unicast method)
+				Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
+				outp.append(network->id());
+				outp.append((uint16_t)etherType);
+				outp.append(data);
+				outp.compress();
+				send(outp,true);
+			}
 		} else {
 			TRACE("%s: UNICAST: %s -> %s %s dropped, destination not a member of closed network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 		}
 	}
 
-	// Unicast to another node behind another bridge, whether from us or not
+	// Destination is behind another bridge
 
 	Address bridges[ZT_MAX_BRIDGE_SPAM];
 	unsigned int numBridges = 0;
@@ -266,15 +279,17 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	for(unsigned int b=0;b<numBridges;++b) {
-		Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
-		outp.append(network->id());
-		outp.append((unsigned char)0);
-		to.appendTo(outp);
-		from.appendTo(outp);
-		outp.append((uint16_t)etherType);
-		outp.append(data);
-		outp.compress();
-		send(outp,true);
+		if (network->isAllowed(bridges[b])) {
+			Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(network->id());
+			outp.append((unsigned char)0);
+			to.appendTo(outp);
+			from.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(data);
+			outp.compress();
+			send(outp,true);
+		}
 	}
 }
 
