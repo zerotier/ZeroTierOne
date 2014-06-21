@@ -224,6 +224,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
 			network->pushMembershipCertificate(toZT,false,Utils::now());
+
 			if (fromBridged) {
 				// Must use EXT_FRAME if source is not myself
 				Packet outp(toZT,_r->identity.address(),Packet::VERB_EXT_FRAME);
@@ -247,6 +248,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		} else {
 			TRACE("%s: UNICAST: %s -> %s %s dropped, destination not a member of closed network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 		}
+
+		return;
 	}
 
 	// Destination is behind another bridge
