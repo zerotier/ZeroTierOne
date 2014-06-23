@@ -67,7 +67,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 			// In this state we have already authenticated and decoded the
 			// packet and we're waiting for the identity of the cert's signer.
 			return _doNETWORK_MEMBERSHIP_CERTIFICATE(_r,peer);
-		}
+		} // else this is the initial decode pass, so validate packet et. al.
 
 		if (!dearmor(peer->key())) {
 			TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
@@ -86,7 +86,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
 				return true;
 			case Packet::VERB_HELLO:
-				return _doHELLO(_r); // legal, but why? :)
+				return _doHELLO(_r);
 			case Packet::VERB_ERROR:
 				return _doERROR(_r,peer);
 			case Packet::VERB_OK:
@@ -193,7 +193,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-						TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
+						LOG("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
 						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 						outp.append((unsigned char)Packet::VERB_HELLO);
 						outp.append(packetId());
@@ -204,11 +204,11 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 						LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
 					}
 				} else {
-					TRACE("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
+					LOG("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
 				}
 				return true;
 			} else if (!dearmor(peer->key())) {
-				TRACE("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
+				LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			} // else continue and respond
 		} else {
@@ -220,7 +220,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (_r->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-						TRACE("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
+						LOG("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
 						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 						outp.append((unsigned char)Packet::VERB_HELLO);
 						outp.append(packetId());
@@ -231,7 +231,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 						LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
 					}
 				} else {
-					TRACE("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
+					LOG("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
 				}
 				return true;
 			} // else continue since identity is already known and matches
@@ -334,30 +334,35 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 
 bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
-	if (payloadLength() == ZT_ADDRESS_LENGTH) {
-		Identity id(_r->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
-		if (id) {
-			Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
-			outp.append((unsigned char)Packet::VERB_WHOIS);
-			outp.append(packetId());
-			id.serialize(outp,false);
-			outp.armor(peer->key(),true);
-			_fromSock->send(_remoteAddress,outp.data(),outp.size());
-			//TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
+	try {
+		if (payloadLength() == ZT_ADDRESS_LENGTH) {
+			Identity id(_r->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
+			if (id) {
+				Packet outp(source(),_r->identity.address(),Packet::VERB_OK);
+				outp.append((unsigned char)Packet::VERB_WHOIS);
+				outp.append(packetId());
+				id.serialize(outp,false);
+				outp.armor(peer->key(),true);
+				_fromSock->send(_remoteAddress,outp.data(),outp.size());
+				//TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
+			} else {
+				Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+				outp.append((unsigned char)Packet::VERB_WHOIS);
+				outp.append(packetId());
+				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
+				outp.append(payload(),ZT_ADDRESS_LENGTH);
+				outp.armor(peer->key(),true);
+				_fromSock->send(_remoteAddress,outp.data(),outp.size());
+				//TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
+			}
 		} else {
-			Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-			outp.append((unsigned char)Packet::VERB_WHOIS);
-			outp.append(packetId());
-			outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
-			outp.append(payload(),ZT_ADDRESS_LENGTH);
-			outp.armor(peer->key(),true);
-			_fromSock->send(_remoteAddress,outp.data(),outp.size());
-			//TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
+			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
-	} else {
-		TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
+
+		peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,Utils::now());
+	} catch ( ... ) {
+		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
-	peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,Utils::now());
 	return true;
 }
 
@@ -545,6 +550,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen);
 		const unsigned char *const signature = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2,signatureLen);
 
+		if ((!sourceMac)||(sourceMac.isMulticast())) {
+			TRACE("dropped MULTICAST_FRAME from %s(%s): invalid source MAC %s",source().toString().c_str(),_remoteAddress.toString().c_str(),sourceMac.toString().c_str());
+			return true;
+		}
+
+		/*
 		TRACE("MULTICAST_FRAME @%.16llx #%.16llx from %s<%s> via %s(%s) to %s [ %s, %d bytes, depth %d ]",
 			(unsigned long long)nwid,
 			(unsigned long long)guid,
@@ -554,6 +565,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			Switch::etherTypeName(etherType),
 			(int)frameLen,
 			(int)depth);
+		*/
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
 
@@ -747,6 +759,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			}
 		}
 
+		// Depth of 0xffff means "do not forward." Check first since
+		// incrementing this would integer overflow a 16-bit int.
 		if (depth == 0xffff) {
 #ifdef ZT_TRACE_MULTICAST
 			Utils::snprintf(mct,sizeof(mct),
@@ -762,6 +776,8 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
+
+		// Check if graph traversal depth has exceeded configured maximum.
 		if (++depth > maxDepth) {
 #ifdef ZT_TRACE_MULTICAST
 			Utils::snprintf(mct,sizeof(mct),
