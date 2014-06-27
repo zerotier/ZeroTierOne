@@ -91,9 +91,6 @@ private:
 	 * If there is no saved state, a dummy .conf is created on disk to remember
 	 * this network across restarts.
 	 *
-	 * This can be a time consuming operation on some platforms (cough Windows
-	 * cough).
-	 *
 	 * @param renv Runtime environment
 	 * @param nc Parent NodeConfig
 	 * @param id Network ID
@@ -103,7 +100,7 @@ private:
 	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,NodeConfig *nc,uint64_t id);
 
 	/**
-	 * Causes all persistent disk presence to be erased on delete
+	 * Causes all persistent disk presence to be erased on delete, and this network won't be reloaded on next startup
 	 */
 	inline void destroyOnDelete() throw() { _destroyOnDelete = true; }
 
@@ -118,12 +115,13 @@ public:
 	 */
 	enum Status
 	{
-		NETWORK_INITIALIZING,
-		NETWORK_WAITING_FOR_FIRST_AUTOCONF,
-		NETWORK_OK,
-		NETWORK_ACCESS_DENIED,
-		NETWORK_NOT_FOUND,
-		NETWORK_INITIALIZATION_FAILED
+		NETWORK_INITIALIZING,               // Creating tap device and setting up state
+		NETWORK_WAITING_FOR_FIRST_AUTOCONF, // Waiting for initial setup with netconf master
+		NETWORK_OK,                         // Network is up, seems to be working
+		NETWORK_ACCESS_DENIED,              // Netconf node reported permission denied
+		NETWORK_NOT_FOUND,                  // Netconf node reported network not found
+		NETWORK_INITIALIZATION_FAILED,      // Cannot initialize device (OS/installation problem?)
+		NETWORK_NO_MORE_DEVICES             // OS cannot create any more tap devices (some OSes have a limit)
 	};
 
 	/**
@@ -139,7 +137,7 @@ public:
 	inline uint64_t id() const throw() { return _id; }
 
 	/**
-	 * @return Address of network's controlling node
+	 * @return Address of network's netconf master (most significant 40 bits of ID)
 	 */
 	inline Address controller() throw() { return Address(_id >> 24); }
 
@@ -156,7 +154,7 @@ public:
 	/**
 	 * Update multicast groups for this network's tap
 	 *
-	 * @return True if internal multicast group set has changed
+	 * @return True if internal multicast group set has changed since last update
 	 */
 	bool updateMulticastGroups();
 
@@ -182,12 +180,12 @@ public:
 	 *
 	 * @param conf Configuration in key/value dictionary form
 	 * @param saveToDisk IF true (default), write config to disk
-	 * @return True if configuration was accepted
+	 * @return True if configuration was accepted, false if still initializing or config was not valid
 	 */
 	bool setConfiguration(const Dictionary &conf,bool saveToDisk = true);
 
 	/**
-	 * Set netconf failure to 'access denied'.
+	 * Set netconf failure to 'access denied' -- called by PacketDecoder when netconf master reports this
 	 */
 	inline void setAccessDenied()
 	{
@@ -196,7 +194,7 @@ public:
 	}
 
 	/**
-	 * Set netconf failure to 'not found'.
+	 * Set netconf failure to 'not found' -- called by PacketDecider when netconf master reports this
 	 */
 	inline void setNotFound()
 	{
@@ -283,7 +281,8 @@ public:
 	 * there is no current configuration. Callers should check isUp() first or
 	 * use config2() to get with the potential for null.
 	 *
-	 * Since it never returns null, it's safe to config()->whatever().
+	 * Since it never returns null, it's safe to config()->whatever() inside
+	 * a try/catch block.
 	 *
 	 * @return Network configuration (never null)
 	 * @throws std::runtime_error Network configuration unavailable
@@ -315,7 +314,7 @@ public:
 		throw();
 
 	/**
-	 * Inject a frame into tap (if it's created)
+	 * Inject a frame into tap (if it's created and network is enabled)
 	 *
 	 * @param from Origin MAC
 	 * @param to Destination MC
@@ -325,6 +324,8 @@ public:
 	 */
 	inline void tapPut(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 	{
+		if (!_enabled)
+			return;
 		EthernetTap *t = _tap;
 		if (t)
 			t->put(from,to,etherType,data,len);
@@ -407,6 +408,16 @@ public:
 		_bridgedMulticastGroups[mg] = Utils::now();
 	}
 
+	/**
+	 * @return True if traffic on this network's tap is enabled
+	 */
+	inline bool enabled() const throw() { return _enabled; }
+
+	/**
+	 * @param enabled Should traffic be allowed on this network?
+	 */
+	void setEnabled(bool enabled);
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -419,6 +430,7 @@ private:
 	MAC _mac; // local MAC address
 	const RuntimeEnvironment *_r;
 	EthernetTap *volatile _tap; // tap device or NULL if not initialized yet
+	volatile bool _enabled;
 
 	std::set<MulticastGroup> _multicastGroups;
 	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;

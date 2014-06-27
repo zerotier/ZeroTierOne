@@ -60,6 +60,7 @@ const char *Network::statusString(const Status s)
 		case NETWORK_ACCESS_DENIED: return "ACCESS_DENIED";
 		case NETWORK_NOT_FOUND: return "NOT_FOUND";
 		case NETWORK_INITIALIZATION_FAILED: return "INITIALIZATION_FAILED";
+		case NETWORK_NO_MORE_DEVICES: return "NO_MORE_DEVICES";
 	}
 	return "(invalid)";
 }
@@ -107,6 +108,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	nw->_mac.fromAddress(renv->identity.address(),id);
 	nw->_r = renv;
 	nw->_tap = (EthernetTap *)0;
+	nw->_enabled = true;
 	nw->_lastConfigUpdate = 0;
 	nw->_destroyOnDelete = false;
 	nw->_netconfFailure = NETCONF_FAILURE_NONE;
@@ -309,7 +311,7 @@ Network::Status Network::status() const
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
-	if (((Network *)arg)->status() != NETWORK_OK)
+	if ((!((Network *)arg)->_enabled)||(((Network *)arg)->status() != NETWORK_OK))
 		return;
 
 	const RuntimeEnvironment *_r = ((Network *)arg)->_r;
@@ -415,6 +417,13 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 			else ++br;
 		}
 	}
+}
+
+void Network::setEnabled(bool enabled)
+{
+	Mutex::Lock _l(_lock);
+	_enabled = enabled;
+	// TODO: bring OS network device to "down" state if enabled == false
 }
 
 void Network::_restoreState()
