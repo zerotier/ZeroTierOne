@@ -38,8 +38,11 @@ namespace ZeroTier {
  *
  * This takes a one-time-use 32-byte key and generates a 16-byte message
  * authentication code. The key must never be re-used for a different
- * message. Normally this is done by taking a base key and mangling it
- * using a nonce and possibly other data, as in Packet.
+ * message.
+ *
+ * In Packet this is done by using the first 32 bytes of the stream cipher
+ * keystream as a one-time-use key. These 32 bytes are then discarded and
+ * the packet is encrypted with the next N bytes.
  */
 class Poly1305
 {
