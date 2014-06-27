@@ -291,16 +291,15 @@ function doNetconfRequest(message)
 
 		// network lookup
 		DB.hgetall(networkKey,function(err,obj) {
-			if (!obj.id)
-				return next(new Error('invalid network record'));
-			network = obj;
+			if (obj.id === nwid)
+				network = obj;
 			return next(null);
 		});
 
 	},function(next) {
 
 		// member lookup
-		if ((!network)||(!('id' in network))||(network['id'] !== nwid))
+		if (!network)
 			return next(null);
 
 		DB.hgetall(memberKey,function(err,obj) {
@@ -351,7 +350,7 @@ function doNetconfRequest(message)
 	},function(next) {
 
 		// Figure out which IP address auto-assignments we need to look up or make
-		if (!authorized)
+		if ((!network)||(!authorized))
 			return next(null);
 
 		v4NeedAssign = (network['v4AssignMode'] === 'zt');
@@ -376,7 +375,7 @@ function doNetconfRequest(message)
 	},function(next) {
 
 		// assign IPv4 if needed
-		if ((!authorized)||(!v4NeedAssign)||(v4Assignments.length > 0))
+		if ((!network)||(!authorized)||(!v4NeedAssign)||(v4Assignments.length > 0))
 			return next(null);
 
 		var peerAddress = peerId.address();
@@ -461,7 +460,7 @@ function doNetconfRequest(message)
 	},function(next) {
 
 		// assign IPv6 if needed -- TODO
-		if ((!authorized)||(!v6NeedAssign)||(v6Assignments.length > 0))
+		if ((!network)||(!authorized)||(!v6NeedAssign)||(v6Assignments.length > 0))
 			return next(null);
 
 		return next(null);
@@ -469,6 +468,9 @@ function doNetconfRequest(message)
 	},function(next) {
 
 		// Get active bridges
+		if ((!network)||(!authorized))
+			return next(null);
+
 		DB.keys('zt1:network:'+nwid+':member:*:~',function(err,keys) {
 			if (keys) {
 				async.eachSeries(keys,function(key,nextKey) {
@@ -501,7 +503,7 @@ function doNetconfRequest(message)
 		response.data['type'] = 'netconf-response';
 		response.data['requestId'] = requestId;
 
-		if (authorized) {
+		if ((network)&&(authorized)) {
 			var certificateOfMembership = null;
 			var privateNetwork = ztDbTrue(network['private']);
 
@@ -556,7 +558,7 @@ function doNetconfRequest(message)
 
 		} else {
 
-			// Peer not authorized to join network
+			// Peer not authorized to join network or network not found (right now we always send ACCESS_DENIED)
 			response.data['error'] = 'ACCESS_DENIED';
 			process.stdout.write(response.toString()+'\n');
 
