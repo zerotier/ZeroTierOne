@@ -33,7 +33,7 @@ namespace ZeroTier {
 #define crypto_uint64 uint64_t
 #define crypto_hash_sha512_BYTES 64
 
-static void add(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
+static inline void add(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
 {
   unsigned int j;
   unsigned int u;
@@ -42,7 +42,7 @@ static void add(unsigned int out[32],const unsigned int a[32],const unsigned int
   u += a[31] + b[31]; out[31] = u;
 }
 
-static void sub(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
+static inline void sub(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
 {
   unsigned int j;
   unsigned int u;
@@ -56,7 +56,7 @@ static void sub(unsigned int out[32],const unsigned int a[32],const unsigned int
   out[31] = u;
 }
 
-static void squeeze(unsigned int a[32])
+static inline void squeeze(unsigned int a[32])
 {
   unsigned int j;
   unsigned int u;
@@ -72,7 +72,7 @@ static const unsigned int minusp[32] = {
  19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128
 } ;
 
-static void freeze(unsigned int a[32])
+static inline void freeze(unsigned int a[32])
 {
   unsigned int aorig[32];
   unsigned int j;
@@ -84,7 +84,7 @@ static void freeze(unsigned int a[32])
   for (j = 0;j < 32;++j) a[j] ^= negative & (aorig[j] ^ a[j]);
 }
 
-static void mult(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
+static inline void mult(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
 {
   unsigned int i;
   unsigned int j;
@@ -99,7 +99,7 @@ static void mult(unsigned int out[32],const unsigned int a[32],const unsigned in
   squeeze(out);
 }
 
-static void mult121665(unsigned int out[32],const unsigned int a[32])
+static inline void mult121665(unsigned int out[32],const unsigned int a[32])
 {
   unsigned int j;
   unsigned int u;
@@ -112,7 +112,7 @@ static void mult121665(unsigned int out[32],const unsigned int a[32])
   u += out[j]; out[j] = u;
 }
 
-static void square(unsigned int out[32],const unsigned int a[32])
+static inline void square(unsigned int out[32],const unsigned int a[32])
 {
   unsigned int i;
   unsigned int j;
@@ -132,7 +132,7 @@ static void square(unsigned int out[32],const unsigned int a[32])
   squeeze(out);
 }
 
-static void select(unsigned int p[64],unsigned int q[64],const unsigned int r[64],const unsigned int s[64],unsigned int b)
+static inline void select(unsigned int p[64],unsigned int q[64],const unsigned int r[64],const unsigned int s[64],unsigned int b)
 {
   unsigned int j;
   unsigned int t;
@@ -270,7 +270,7 @@ static void recip(unsigned int out[32],const unsigned int z[32])
   /* 2^255 - 21 */ mult(out,t1,z11);
 }
 
-static int crypto_scalarmult(unsigned char *q,
+static inline int crypto_scalarmult(unsigned char *q,
   const unsigned char *n,
   const unsigned char *p)
 {
@@ -314,7 +314,7 @@ fe25519;
 
 static void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y);
 
-static crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
+static inline crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {
   crypto_uint32 x = a ^ b; /* 0: yes; 1..65535: no */
   x -= 1; /* 4294967295: yes; 0..65534: no */
@@ -322,7 +322,7 @@ static crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
   return x;
 }
 
-static crypto_uint32 ge(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
+static inline crypto_uint32 ge(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {
   unsigned int x = a;
   x -= (unsigned int) b; /* 0..65535: yes; 4294901761..4294967295: no */
@@ -331,17 +331,17 @@ static crypto_uint32 ge(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
   return x;
 }
 
-static crypto_uint32 times19(crypto_uint32 a)
+static inline crypto_uint32 times19(crypto_uint32 a)
 {
   return (a << 4) + (a << 1) + a;
 }
 
-static crypto_uint32 times38(crypto_uint32 a)
+static inline crypto_uint32 times38(crypto_uint32 a)
 {
   return (a << 5) + (a << 2) + (a << 1);
 }
 
-static void reduce_add_sub(fe25519 *r)
+static inline void reduce_add_sub(fe25519 *r)
 {
   crypto_uint32 t;
   int i,rep;
@@ -361,7 +361,7 @@ static void reduce_add_sub(fe25519 *r)
   }
 }
 
-static void reduce_mul(fe25519 *r)
+static inline void reduce_mul(fe25519 *r)
 {
   crypto_uint32 t;
   int i,rep;
@@ -382,7 +382,7 @@ static void reduce_mul(fe25519 *r)
 }
 
 /* reduction modulo 2^255-19 */
-static void fe25519_freeze(fe25519 *r) 
+static inline void fe25519_freeze(fe25519 *r) 
 {
   int i;
   crypto_uint32 m = equal(r->v[31],127);
@@ -398,7 +398,7 @@ static void fe25519_freeze(fe25519 *r)
   r->v[0] -= m&237;
 }
 
-static void fe25519_unpack(fe25519 *r, const unsigned char x[32])
+static inline void fe25519_unpack(fe25519 *r, const unsigned char x[32])
 {
   int i;
   for(i=0;i<32;i++) r->v[i] = x[i];
@@ -406,7 +406,7 @@ static void fe25519_unpack(fe25519 *r, const unsigned char x[32])
 }
 
 /* Assumes input x being reduced below 2^255 */
-static void fe25519_pack(unsigned char r[32], const fe25519 *x)
+static inline void fe25519_pack(unsigned char r[32], const fe25519 *x)
 {
   int i;
   fe25519 y = *x;
@@ -429,7 +429,7 @@ static int fe25519_iszero(const fe25519 *x)
 }
 #endif
 
-static int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
+static inline int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
 {
   int i;
   fe25519 t1 = *x;
@@ -441,7 +441,7 @@ static int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
   return 1;
 }
 
-static void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
+static inline void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
 {
   int i;
   crypto_uint32 mask = b;
@@ -449,27 +449,27 @@ static void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
   for(i=0;i<32;i++) r->v[i] ^= mask & (x->v[i] ^ r->v[i]);
 }
 
-static unsigned char fe25519_getparity(const fe25519 *x)
+static inline unsigned char fe25519_getparity(const fe25519 *x)
 {
   fe25519 t = *x;
   fe25519_freeze(&t);
   return t.v[0] & 1;
 }
 
-static void fe25519_setone(fe25519 *r)
+static inline void fe25519_setone(fe25519 *r)
 {
   int i;
   r->v[0] = 1;
   for(i=1;i<32;i++) r->v[i]=0;
 }
 
-static void fe25519_setzero(fe25519 *r)
+static inline void fe25519_setzero(fe25519 *r)
 {
   int i;
   for(i=0;i<32;i++) r->v[i]=0;
 }
 
-static void fe25519_neg(fe25519 *r, const fe25519 *x)
+static inline void fe25519_neg(fe25519 *r, const fe25519 *x)
 {
   fe25519 t;
   int i;
@@ -478,14 +478,14 @@ static void fe25519_neg(fe25519 *r, const fe25519 *x)
   fe25519_sub(r, r, &t);
 }
 
-static void fe25519_add(fe25519 *r, const fe25519 *x, const fe25519 *y)
+static inline void fe25519_add(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
   int i;
   for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
   reduce_add_sub(r);
 }
 
-static void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
+static inline void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
   int i;
   crypto_uint32 t[32];
@@ -496,7 +496,7 @@ static void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
   reduce_add_sub(r);
 }
 
-static void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
+static inline void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
   int i,j;
   crypto_uint32 t[63];
@@ -513,7 +513,7 @@ static void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
   reduce_mul(r);
 }
 
-static void fe25519_square(fe25519 *r, const fe25519 *x)
+static inline void fe25519_square(fe25519 *r, const fe25519 *x)
 {
   fe25519_mul(r, x, x);
 }
@@ -657,7 +657,7 @@ static const crypto_uint32 m[32] = {0xED, 0xD3, 0xF5, 0x5C, 0x1A, 0x63, 0x12, 0x
 static const crypto_uint32 mu[33] = {0x1B, 0x13, 0x2C, 0x0A, 0xA3, 0xE5, 0x9C, 0xED, 0xA7, 0x29, 0x63, 0x08, 0x5D, 0x21, 0x06, 0x21, 
                                      0xEB, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F};
 
-static crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
+static inline crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {
   unsigned int x = a;
   x -= (unsigned int) b; /* 0..65535: no; 4294901761..4294967295: yes */
@@ -666,7 +666,7 @@ static crypto_uint32 lt(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 }
 
 /* Reduce coefficients of r before calling reduce_add_sub */
-static void reduce_add_sub(sc25519 *r)
+static inline void reduce_add_sub(sc25519 *r)
 {
   crypto_uint32 pb = 0;
   crypto_uint32 b;
@@ -687,7 +687,7 @@ static void reduce_add_sub(sc25519 *r)
 }
 
 /* Reduce coefficients of x before calling barrett_reduce */
-static void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
+static inline void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 {
   /* See HAC, Alg. 14.42 */
   int i,j;
@@ -738,7 +738,7 @@ static void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
   reduce_add_sub(r);
 }
 
-static void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
+static inline void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
 {
   int i;
   crypto_uint32 t[64];
@@ -755,7 +755,7 @@ static void shortsc25519_from16bytes(shortsc25519 *r, const unsigned char x[16])
 }
 #endif
 
-static void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
+static inline void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 {
   int i;
   crypto_uint32 t[64];
@@ -774,7 +774,7 @@ static void sc25519_from_shortsc(sc25519 *r, const shortsc25519 *x)
 }
 #endif
 
-static void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
+static inline void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 {
   int i;
   for(i=0;i<32;i++) r[i] = x->v[i];
@@ -813,7 +813,7 @@ static int sc25519_lt_vartime(const sc25519 *x, const sc25519 *y)
 }
 #endif
 
-static void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
+static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
   int i, carry;
   for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
@@ -841,7 +841,7 @@ static void sc25519_sub_nored(sc25519 *r, const sc25519 *x, const sc25519 *y)
 }
 #endif
 
-static void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
+static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
   int i,j,carry;
   crypto_uint32 t[64];
@@ -871,7 +871,7 @@ static void sc25519_mul_shortsc(sc25519 *r, const sc25519 *x, const shortsc25519
 }
 #endif
 
-static void sc25519_window3(signed char r[85], const sc25519 *s)
+static inline void sc25519_window3(signed char r[85], const sc25519 *s)
 {
   char carry;
   int i;
@@ -947,7 +947,7 @@ static void sc25519_window5(signed char r[51], const sc25519 *s)
 }
 #endif
 
-static void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
+static inline void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
 {
   int i;
   for(i=0;i<31;i++)
@@ -1975,7 +1975,7 @@ static inline unsigned char negative(signed char b)
   return (unsigned char)x;
 }
 
-static void choose_t(ge25519_aff *t, unsigned long long pos, signed char b)
+static inline void choose_t(ge25519_aff *t, unsigned long long pos, signed char b)
 {
   /* constant time */
   fe25519 v;
@@ -2110,7 +2110,7 @@ static void ge25519_double_scalarmult_vartime(ge25519_p3 *r, const ge25519_p3 *p
   }
 }
 
-static void ge25519_scalarmult_base(ge25519_p3 *r, const sc25519 *s)
+static inline void ge25519_scalarmult_base(ge25519_p3 *r, const sc25519 *s)
 {
   signed char b[85];
   int i;
