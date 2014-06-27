@@ -401,11 +401,12 @@ public:
 	 * Learn a multicast group that is bridged to our tap device
 	 *
 	 * @param mg Multicast group
+	 * @param now Current time
 	 */
-	inline void learnBridgedMulticastGroup(const MulticastGroup &mg)
+	inline void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		_bridgedMulticastGroups[mg] = Utils::now();
+		_bridgedMulticastGroups[mg] = now;
 	}
 
 	/**

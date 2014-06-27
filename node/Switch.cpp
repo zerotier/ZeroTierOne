@@ -121,6 +121,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to.isMulticast()) {
 		// Destination is a multicast address (including broadcast)
 
+		uint64_t now = Utils::now();
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
@@ -140,7 +141,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		 * multicast addresses on bridge interfaces and subscribing each slave.
 		 * But in that case this does no harm, as the sets are just merged. */
 		if (fromBridged)
-			network->learnBridgedMulticastGroup(mg);
+			network->learnBridgedMulticastGroup(mg,now);
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
 		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
@@ -166,9 +167,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			// All multicasts visit all active bridges first -- this is one of the two active/passive bridge differences
 			for(std::set<Address>::const_iterator ab(nconf->activeBridges().begin());ab!=nconf->activeBridges().end();++ab) {
 				if ((*ab != _r->identity.address())&&(ab->withinMulticastPropagationPrefix(prefix,nconf->multicastPrefixBits()))) {
-					ab->copyTo(fifoPtr,ZT_ADDRESS_LENGTH);
-					if ((fifoPtr += ZT_ADDRESS_LENGTH) == fifoEnd)
-						break;
+					SharedPtr<Peer> abPeer(_r->topology->getPeer(*ab));
+					if ((abPeer)&&(abPeer->hasActiveDirectPath(now))) {
+						ab->copyTo(fifoPtr,ZT_ADDRESS_LENGTH);
+						if ((fifoPtr += ZT_ADDRESS_LENGTH) == fifoEnd)
+							break;
+					}
 				}
 			}
 
