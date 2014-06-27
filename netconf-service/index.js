@@ -291,7 +291,7 @@ function doNetconfRequest(message)
 
 		// network lookup
 		DB.hgetall(networkKey,function(err,obj) {
-			if (obj.id === nwid)
+			if ((!err)&&(obj)&&(obj.id === nwid))
 				network = obj;
 			return next(null);
 		});
