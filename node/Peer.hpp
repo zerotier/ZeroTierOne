@@ -50,7 +50,7 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_SERIALIZATION_VERSION 8
+#define ZT_PEER_SERIALIZATION_VERSION 9
 
 namespace ZeroTier {
 
@@ -247,6 +247,11 @@ public:
 	}
 
 	/**
+	 * @return Time of last receive of anything, whether direct or relayed
+	 */
+	inline uint64_t lastReceive() const throw() { return _lastReceive; }
+
+	/**
 	 * @return Time of most recent unicast frame received
 	 */
 	inline uint64_t lastUnicastFrame() const throw() { return _lastUnicastFrame; }
@@ -265,6 +270,16 @@ public:
 	 * @return Time we last announced state TO this peer, such as multicast LIKEs
 	 */
 	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
+
+	/**
+	 * @param now Current time
+	 * @return True if peer has received something within ZT_PEER_ACTIVITY_TIMEOUT ms
+	 */
+	inline bool alive(uint64_t now) const
+		throw()
+	{
+		return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT);
+	}
 
 	/**
 	 * @return Current latency or 0 if unknown (max: 65535)
@@ -424,6 +439,7 @@ public:
 		_id.serialize(b,false);
 		b.append(_key,sizeof(_key));
 		b.append(_lastUsed);
+		b.append(_lastReceive);
 		b.append(_lastUnicastFrame);
 		b.append(_lastMulticastFrame);
 		b.append(_lastAnnouncedTo);
@@ -448,6 +464,7 @@ public:
 		p += _id.deserialize(b,p);
 		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
 		_lastUsed = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
@@ -472,6 +489,7 @@ private:
 	std::vector<Path> _paths;
 
 	volatile uint64_t _lastUsed;
+	volatile uint64_t _lastReceive; // direct or indirect
 	volatile uint64_t _lastUnicastFrame;
 	volatile uint64_t _lastMulticastFrame;
 	volatile uint64_t _lastAnnouncedTo;

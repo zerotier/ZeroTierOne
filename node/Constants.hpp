@@ -314,14 +314,19 @@ error_no_byte_order_defined;
 #define ZT_TCP_TUNNEL_FAILOVER_TIMEOUT (ZT_STARTUP_AGGRO * 5)
 
 /**
+ * Timeout for overall peer activity (measured from last receive)
+ */
+#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
+
+/**
  * Path activity timeout (for non-fixed paths)
  */
-#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
+#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
 
 /**
  * Close TCP sockets if unused for this long (SocketManager)
  */
-#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_PATH_ACTIVITY_TIMEOUT
+#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
 
 /**
  * Stop relaying via peers that have not responded to direct sends
@@ -387,14 +392,14 @@ error_no_byte_order_defined;
 #define ZT_UPDATE_MIN_INTERVAL 120000
 
 /**
- * Maximum interval between checks for new versions (2 hours)
+ * Maximum interval between checks for new versions
  */
 #define ZT_UPDATE_MAX_INTERVAL 7200000
 
 /**
  * Software update HTTP timeout in seconds
  */
-#define ZT_UPDATE_HTTP_TIMEOUT 30
+#define ZT_UPDATE_HTTP_TIMEOUT 120
 
 /**
  * Sanity limit on maximum bridge routes

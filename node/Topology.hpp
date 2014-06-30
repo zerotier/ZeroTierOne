@@ -82,7 +82,7 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	SharedPtr<Peer> getPeer(const Address &zta);
+	SharedPtr<Peer> getPeer(const Address &zta) const;
 
 	/**
 	 * Get an identity if cached or available in a peer record

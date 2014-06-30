@@ -40,6 +40,7 @@
 #include "Constants.hpp"
 #include "Mutex.hpp"
 #include "MulticastGroup.hpp"
+#include "Topology.hpp"
 #include "Address.hpp"
 #include "Buffer.hpp"
 
@@ -112,6 +113,7 @@ public:
 	 * @param nwid Network ID
 	 * @param mg Multicast group
 	 * @param nextHopFunc Function to call for each address, search stops if it returns false
+	 * @tparam F Function to receive each next hop address
 	 */
 	template<typename F>
 	inline void getNextHops(uint64_t nwid,const MulticastGroup &mg,F nextHopFunc)
@@ -151,20 +153,40 @@ public:
 		 * @param origin Originating address
 		 * @param prefixBits Number of bits in propagation restriction prefix
 		 * @param prefix Propagation restrition prefix
+		 * @param topology Topology database
+		 * @param now Current time
 		 */
-		AddToPropagationQueue(unsigned char **ptr,unsigned char *end,unsigned char *bloom,uint16_t bloomNonce,const Address &origin,unsigned int prefixBits,uint64_t prefix)
-			throw() :
+		AddToPropagationQueue(
+			unsigned char **ptr,
+			unsigned char *end,
+			unsigned char *bloom,
+			uint16_t bloomNonce,
+			const Address &origin,
+			unsigned int prefixBits,
+			uint64_t prefix,
+			const Topology *topology,
+			uint64_t now)
+		throw() :
 			_origin(origin),
 			_bloomNonce((uint64_t)bloomNonce),
 			_prefix(prefix),
+			_now(now),
 			_ptr(ptr),
 			_end(end),
 			_bloom(bloom),
+			_topology(topology),
 			_prefixBits(prefixBits) {}
 
+		/**
+		 * @param a Address to (possibly) add
+		 * @return True if FIFO still contains room for more possible addresses
+		 */
 		inline bool operator()(const Address &a)
 			throw()
 		{
+			if (*_ptr >= _end)
+				return false;
+
 			// Exclude original sender -- obviously they've already seen it
 			if (a == _origin)
 				return true;
@@ -173,27 +195,36 @@ public:
 			if (!a.withinMulticastPropagationPrefix(_prefix,_prefixBits))
 				return true;
 
-			// Exclude addresses remembered in bloom filter -- or else remember them
+			// Exclude addresses remembered in bloom filter
 			uint64_t aint = a.toInt() + _bloomNonce;
 			const unsigned int bit = (unsigned int)(aint ^ (aint >> 13) ^ (aint >> 26) ^ (aint >> 39)) & 0x1fff;
 			unsigned char *const bbyte = _bloom + (bit >> 3); // note: bloom filter size == 1024 is hard-coded here
 			const unsigned char bmask = 1 << (bit & 7);
 			if ((*bbyte & bmask))
+				return true; // address already visited
+
+			// Exclude peers that don't appear to be online
+			SharedPtr<Peer> p(_topology->getPeer(a));
+			if ((!p)||(!p->alive(_now)))
 				return true;
-			else *bbyte |= bmask;
+
+			// Remember address in bloom filter
+			*bbyte |= bmask;
 
 			a.copyTo(*_ptr,ZT_ADDRESS_LENGTH);
-			return ((*_ptr += ZT_ADDRESS_LENGTH) != _end);
+			return ((*_ptr += ZT_ADDRESS_LENGTH) < _end);
 		}
 
 	private:
 		const Address _origin;
 		const uint64_t _bloomNonce;
 		const uint64_t _prefix;
+		const uint64_t _now;
 		unsigned char **const _ptr;
 		unsigned char *const _end;
 		unsigned char *const _bloom;
-		unsigned int _prefixBits;
+		const Topology *const _topology;
+		const unsigned int _prefixBits;
 	};
 
 private:

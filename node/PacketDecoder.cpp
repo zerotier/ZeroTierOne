@@ -530,7 +530,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			return false;
 		}
 
-		// These fields change
+		// These fields in the packet are changed by each forwarder
 		unsigned int depth = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
 		unsigned char *const fifo = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_FIFO,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
 		unsigned char *const bloom = field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_PROPAGATION_BLOOM,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
@@ -568,6 +568,9 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		*/
 
 		SharedPtr<Network> network(_r->nc->network(nwid));
+		SharedPtr<NetworkConfig> nconf;
+		if (network)
+			nconf = network->config2();
 
 		/* Grab, verify, and learn certificate of network membership if any -- provided we are
 		 * a member of this network. Note: we can do this before verification of the actual
@@ -679,83 +682,80 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// be the case unless we're a supernode), check to see if we should
 			// inject the packet. This also gives us an opportunity to check things
 			// like multicast bandwidth constraints.
-			if (network) {
-				SharedPtr<NetworkConfig> nconf(network->config2());
-				if (nconf) {
-					// Learn real maxDepth from netconf
-					maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,nconf->multicastDepth());
-					if (!maxDepth)
-						maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
+			if ((network)&&(nconf)) {
+				// Learn real maxDepth from netconf
+				maxDepth = std::min((unsigned int)ZT_MULTICAST_GLOBAL_MAX_DEPTH,nconf->multicastDepth());
+				if (!maxDepth)
+					maxDepth = ZT_MULTICAST_GLOBAL_MAX_DEPTH;
 
-					if (!network->isAllowed(origin)) {
-						// Papers, please...
-						Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
-						outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
-						outp.append(packetId());
-						outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
-						outp.append(nwid);
-						outp.armor(peer->key(),true);
-						_fromSock->send(_remoteAddress,outp.data(),outp.size());
-						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,origin.toString().c_str());
-						return true;
-					}
-
-					if (MAC(origin,network->id()) != sourceMac) {
-						if (!nconf->permitsBridging(origin)) {
-#ifdef ZT_TRACE_MULTICAST
-							Utils::snprintf(mct,sizeof(mct),
-								"%.16llx %.2u %.3u%s %c %s dropped: bridging not allowed",
-								guid,
-								prefix,
-								depth,
-								mctdepth,
-								(_r->topology->amSupernode() ? 'S' : '-'),
-								_r->identity.address().toString().c_str());
-							_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
-							TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,sourceMac.toString().c_str(),origin.toString().c_str());
-							return true;
-						}
-						network->learnBridgeRoute(sourceMac,origin);
-					}
-
-					if (!nconf->permitsEtherType(etherType)) {
-#ifdef ZT_TRACE_MULTICAST
-						Utils::snprintf(mct,sizeof(mct),
-							"%.16llx %.2u %.3u%s %c %s dropped: ethertype not allowed",
-							guid,
-							prefix,
-							depth,
-							mctdepth,
-							(_r->topology->amSupernode() ? 'S' : '-'),
-							_r->identity.address().toString().c_str());
-						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
-						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
-						return true;
-					}
-
-					if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
-						// Rate limits can only be checked by members of this network, but
-						// there should be enough of them that over-limit multicasts get
-						// their propagation aborted.
-#ifdef ZT_TRACE_MULTICAST
-						Utils::snprintf(mct,sizeof(mct),
-							"%.16llx %.2u %.3u%s %c %s dropped: rate limits exceeded",
-							guid,
-							prefix,
-							depth,
-							mctdepth,
-							(_r->topology->amSupernode() ? 'S' : '-'),
-							_r->identity.address().toString().c_str());
-						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
-						TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
-						return true;
-					}
-
-					network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
+				if (!network->isAllowed(origin)) {
+					// Papers, please...
+					Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
+					outp.append(packetId());
+					outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
+					outp.append(nwid);
+					outp.armor(peer->key(),true);
+					_fromSock->send(_remoteAddress,outp.data(),outp.size());
+					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: sender %s not allowed or we don't have a certificate",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,origin.toString().c_str());
+					return true;
 				}
+
+				if (MAC(origin,network->id()) != sourceMac) {
+					if (!nconf->permitsBridging(origin)) {
+#ifdef ZT_TRACE_MULTICAST
+						Utils::snprintf(mct,sizeof(mct),
+							"%.16llx %.2u %.3u%s %c %s dropped: bridging not allowed",
+							guid,
+							prefix,
+							depth,
+							mctdepth,
+							(_r->topology->amSupernode() ? 'S' : '-'),
+							_r->identity.address().toString().c_str());
+						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
+#endif
+						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,sourceMac.toString().c_str(),origin.toString().c_str());
+						return true;
+					}
+					network->learnBridgeRoute(sourceMac,origin);
+				}
+
+				if (!nconf->permitsEtherType(etherType)) {
+#ifdef ZT_TRACE_MULTICAST
+					Utils::snprintf(mct,sizeof(mct),
+						"%.16llx %.2u %.3u%s %c %s dropped: ethertype not allowed",
+						guid,
+						prefix,
+						depth,
+						mctdepth,
+						(_r->topology->amSupernode() ? 'S' : '-'),
+						_r->identity.address().toString().c_str());
+					_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
+#endif
+					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
+					return true;
+				}
+
+				if (!network->updateAndCheckMulticastBalance(origin,dest,frameLen)) {
+					// Rate limits can only be checked by members of this network, but
+					// there should be enough of them that over-limit multicasts get
+					// their propagation aborted.
+#ifdef ZT_TRACE_MULTICAST
+					Utils::snprintf(mct,sizeof(mct),
+						"%.16llx %.2u %.3u%s %c %s dropped: rate limits exceeded",
+						guid,
+						prefix,
+						depth,
+						mctdepth,
+						(_r->topology->amSupernode() ? 'S' : '-'),
+						_r->identity.address().toString().c_str());
+					_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
+#endif
+					TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
+					return true;
+				}
+
+				network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
 			}
 		}
 
@@ -816,11 +816,27 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			} else break;
 		}
 
-		// Add any next hops we know about to FIFO
+		// Add any other next hops we know about to FIFO
 #ifdef ZT_TRACE_MULTICAST
 		unsigned char *beforeAdd = newFifoPtr;
 #endif
-		_r->mc->getNextHops(nwid,dest,Multicaster::AddToPropagationQueue(&newFifoPtr,newFifoEnd,bloom,bloomNonce,origin,prefixBits,prefix));
+		Multicaster::AddToPropagationQueue appender(
+			&newFifoPtr,
+			newFifoEnd,
+			bloom,
+			bloomNonce,
+			origin,
+			prefixBits,
+			prefix,
+			_r->topology,
+			Utils::now());
+		if (nconf) {
+			for(std::set<Address>::const_iterator ab(nconf->activeBridges().begin());ab!=nconf->activeBridges().end();++ab) {
+				if (!appender(*ab))
+					break;
+			}
+		}
+		_r->mc->getNextHops(nwid,dest,appender);
 #ifdef ZT_TRACE_MULTICAST
 		unsigned int numAdded = (unsigned int)(newFifoPtr - beforeAdd) / ZT_ADDRESS_LENGTH;
 #endif

@@ -35,6 +35,7 @@ namespace ZeroTier {
 
 Peer::Peer() :
 	_lastUsed(0),
+	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
@@ -47,6 +48,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
 	_id(peerIdentity),
 	_lastUsed(0),
+	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
@@ -72,6 +74,9 @@ void Peer::receive(
 {
 	// Update system-wide last packet receive time
 	*((const_cast<uint64_t *>(&(_r->timeOfLastPacketReceived)))) = now;
+
+	// Global last receive time regardless of path
+	_lastReceive = now;
 
 	// Learn paths from direct packets (hops == 0)
 	if (!hops) {

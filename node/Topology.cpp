@@ -89,7 +89,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 	return p;
 }
 
-SharedPtr<Peer> Topology::getPeer(const Address &zta)
+SharedPtr<Peer> Topology::getPeer(const Address &zta) const
 {
 	if (zta == _r->identity.address()) {
 		TRACE("BUG: ignored attempt to getPeer() for self, returned NULL");

@@ -164,26 +164,26 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			memset(bloom,0,sizeof(bloom));
 			unsigned char *fifoPtr = fifo;
 
-			// All multicasts visit all active bridges first -- this is one of the two active/passive bridge differences
+			// Add all active bridges and then next hops we know about to propagation queue
+			Multicaster::AddToPropagationQueue appender(
+				&fifoPtr,
+				fifoEnd,
+				bloom,
+				bloomNonce,
+				_r->identity.address(),
+				nconf->multicastPrefixBits(),
+				prefix,
+				_r->topology,
+				now);
 			for(std::set<Address>::const_iterator ab(nconf->activeBridges().begin());ab!=nconf->activeBridges().end();++ab) {
-				if ((*ab != _r->identity.address())&&(ab->withinMulticastPropagationPrefix(prefix,nconf->multicastPrefixBits()))) {
-					SharedPtr<Peer> abPeer(_r->topology->getPeer(*ab));
-					if ((abPeer)&&(abPeer->hasActiveDirectPath(now))) {
-						ab->copyTo(fifoPtr,ZT_ADDRESS_LENGTH);
-						if ((fifoPtr += ZT_ADDRESS_LENGTH) == fifoEnd)
-							break;
-					}
-				}
+				if (!appender(*ab))
+					break;
 			}
+			_r->mc->getNextHops(network->id(),mg,appender);
 
-			// Then visit next hops according to multicaster (if there's room... almost certainly will be)
-			if (fifoPtr != fifoEnd) {
-				_r->mc->getNextHops(network->id(),mg,Multicaster::AddToPropagationQueue(&fifoPtr,fifoEnd,bloom,bloomNonce,_r->identity.address(),nconf->multicastPrefixBits(),prefix));
-
-				// Pad remainder of FIFO with zeroes
-				while (fifoPtr != fifoEnd)
-					*(fifoPtr++) = (unsigned char)0;
-			}
+			// Pad remainder of FIFO with zeroes
+			while (fifoPtr != fifoEnd)
+				*(fifoPtr++) = (unsigned char)0;
 
 			// First element in FIFO is first hop, rest of FIFO is sent in packet *to* first hop
 			Address firstHop(fifo,ZT_ADDRESS_LENGTH);
