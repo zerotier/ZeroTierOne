@@ -105,11 +105,11 @@ public:
 	inline bool permitsEtherType(unsigned int etherType) const
 		throw()
 	{
-		if ((!etherType)||(etherType > 0xffff)) // sanity checks
+		if ((etherType <= 0)||(etherType > 0xffff)) // sanity checks
 			return false;
-		else if ((_etWhitelist[0] & 1)) // prsence of 0 in set inverts sense: whitelist becomes blacklist
-			return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) == 0);
-		else return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) != 0);
+		if ((_etWhitelist[0] & 1)) // presence of 0 means allow all
+			return true;
+		return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) != 0);
 	}
 
 	std::set<unsigned int> allowedEtherTypes() const;
