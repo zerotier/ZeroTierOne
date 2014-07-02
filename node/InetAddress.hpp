@@ -77,53 +77,14 @@ public:
 	 */
 	static const InetAddress LO6;
 
-	InetAddress()
-		throw()
-	{
-		memset(&_sa,0,sizeof(_sa));
-	}
-
-	InetAddress(const InetAddress &a)
-		throw()
-	{
-		memcpy(&_sa,&a._sa,sizeof(_sa));
-	}
-
-	InetAddress(const struct sockaddr *sa)
-		throw()
-	{
-		this->set(sa);
-	}
-
-	InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port)
-		throw()
-	{
-		this->set(ipBytes,ipLen,port);
-	}
-
-	InetAddress(const uint32_t ipv4,unsigned int port)
-		throw()
-	{
-		this->set(&ipv4,4,port);
-	}
-
-	InetAddress(const std::string &ip,unsigned int port)
-		throw()
-	{
-		this->set(ip,port);
-	}
-
-	InetAddress(const std::string &ipSlashPort)
-		throw()
-	{
-		this->fromString(ipSlashPort);
-	}
-
-	InetAddress(const char *ipSlashPort)
-		throw()
-	{
-		this->fromString(std::string(ipSlashPort));
-	}
+	InetAddress() throw() { memset(&_sa,0,sizeof(_sa)); }
+	InetAddress(const InetAddress &a) throw() { memcpy(&_sa,&a._sa,sizeof(_sa)); }
+	InetAddress(const struct sockaddr *sa) throw() { this->set(sa); }
+	InetAddress(const void *ipBytes,unsigned int ipLen,unsigned int port) throw() { this->set(ipBytes,ipLen,port); }
+	InetAddress(const uint32_t ipv4,unsigned int port) throw() { this->set(&ipv4,4,port); }
+	InetAddress(const std::string &ip,unsigned int port) throw() { this->set(ip,port); }
+	InetAddress(const std::string &ipSlashPort) throw() { this->fromString(ipSlashPort); }
+	InetAddress(const char *ipSlashPort) throw() { this->fromString(std::string(ipSlashPort)); }
 
 	inline InetAddress &operator=(const InetAddress &a)
 		throw()
@@ -141,15 +102,9 @@ public:
 		throw()
 	{
 		switch(sa->sa_family) {
-			case AF_INET:
-				memcpy(&_sa.sin,sa,sizeof(struct sockaddr_in));
-				break;
-			case AF_INET6:
-				memcpy(&_sa.sin6,sa,sizeof(struct sockaddr_in6));
-				break;
-			default:
-				_sa.saddr.sa_family = 0;
-				break;
+			case AF_INET: memcpy(&_sa.sin,sa,sizeof(struct sockaddr_in)); break;
+			case AF_INET6: memcpy(&_sa.sin6,sa,sizeof(struct sockaddr_in6)); break;
+			default: memset(&_sa,0,sizeof(_sa)); break;
 		}
 	}
 
@@ -169,20 +124,8 @@ public:
 	 * @param ipLen Length of IP address: 4 or 16
 	 * @param port Port number or 0 for none
 	 */
-	inline void set(const void *ipBytes,unsigned int ipLen,unsigned int port)
-		throw()
-	{
-		_sa.saddr.sa_family = 0;
-		if (ipLen == 4) {
-			setV4();
-			memcpy(rawIpData(),ipBytes,4);
-			setPort(port);
-		} else if (ipLen == 16) {
-			setV6();
-			memcpy(rawIpData(),ipBytes,16);
-			setPort(port);
-		}
-	}
+	void set(const void *ipBytes,unsigned int ipLen,unsigned int port)
+		throw();
 
 	/**
 	 * Set the port component
@@ -193,32 +136,16 @@ public:
 		throw()
 	{
 		if (_sa.saddr.sa_family == AF_INET)
-			_sa.sin.sin_port = htons((uint16_t)port);
+			_sa.sin.sin_port = Utils::hton((uint16_t)port);
 		else if (_sa.saddr.sa_family == AF_INET6)
-			_sa.sin6.sin6_port = htons((uint16_t)port);
+			_sa.sin6.sin6_port = Utils::hton((uint16_t)port);
 	}
 
 	/**
 	 * @return True if this is a link-local IP address
 	 */
-	inline bool isLinkLocal() const
-		throw()
-	{
-		if (_sa.saddr.sa_family == AF_INET)
-			return ((Utils::ntoh((uint32_t)_sa.sin.sin_addr.s_addr) & 0xffff0000) == 0xa9fe0000);
-		else if (_sa.saddr.sa_family == AF_INET6) {
-			if (_sa.sin6.sin6_addr.s6_addr[0] != 0xfe) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[1] != 0x80) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[2] != 0x00) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[3] != 0x00) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[4] != 0x00) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[5] != 0x00) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[6] != 0x00) return false;
-			if (_sa.sin6.sin6_addr.s6_addr[7] != 0x00) return false;
-			return true;
-		}
-		return false;
-	}
+	bool isLinkLocal() const
+		throw();
 
 	/**
 	 * @return ASCII IP/port format representation
@@ -242,12 +169,10 @@ public:
 		throw()
 	{
 		switch(_sa.saddr.sa_family) {
-			case AF_INET:
-				return ntohs(_sa.sin.sin_port);
-			case AF_INET6:
-				return ntohs(_sa.sin6.sin6_port);
+			case AF_INET: return Utils::ntoh((uint16_t)_sa.sin.sin_port);
+			case AF_INET6: return Utils::ntoh((uint16_t)_sa.sin6.sin6_port);
+			default: return 0;
 		}
-		return 0;
 	}
 
 	/**
@@ -259,36 +184,13 @@ public:
 	 *
 	 * @return Netmask bits
 	 */
-	inline unsigned int netmaskBits() const
-		throw()
-	{
-		return port();
-	}
+	inline unsigned int netmaskBits() const throw() { return port(); }
 
 	/**
 	 * Construct a full netmask as an InetAddress
 	 */
-	inline InetAddress netmask() const
-		throw()
-	{
-		InetAddress r(*this);
-		switch(_sa.saddr.sa_family) {
-			case AF_INET:
-				r._sa.sin.sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffff << (32 - netmaskBits())));
-				break;
-			case AF_INET6: {
-				unsigned char *bf = (unsigned char *)r._sa.sin6.sin6_addr.s6_addr;
-				signed int bitsLeft = (signed int)netmaskBits();
-				for(unsigned int i=0;i<16;++i) {
-					if (bitsLeft > 0) {
-						bf[i] = (unsigned char)((bitsLeft >= 8) ? 0xff : (0xff << (8 - bitsLeft)));
-						bitsLeft -= 8;
-					} else bf[i] = (unsigned char)0;
-				}
-			}	break;
-		}
-		return r;
-	}
+	InetAddress netmask() const
+		throw();
 
 	/**
 	 * @return True if this is an IPv4 address
@@ -327,17 +229,17 @@ public:
 	inline unsigned int saddrLen() const
 		throw()
 	{
-		return (isV4() ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6));
+		switch(_sa.saddr.sa_family) {
+			case AF_INET: return sizeof(struct sockaddr_in);
+			case AF_INET6: return sizeof(struct sockaddr_in6);
+			default: return 0;
+		}
 	}
 
 	/**
 	 * @return Combined length of internal structure, room for either V4 or V6
 	 */
-	inline unsigned int saddrSpaceLen() const
-		throw()
-	{
-		return sizeof(_sa);
-	}
+	inline unsigned int saddrSpaceLen() const throw() { return sizeof(_sa); }
 
 	/**
 	 * @return Raw sockaddr_in structure (valid if IPv4)
@@ -356,7 +258,7 @@ public:
 	inline const void *rawIpData() const throw() { return ((_sa.saddr.sa_family == AF_INET) ? (void *)(&(_sa.sin.sin_addr.s_addr)) : (void *)_sa.sin6.sin6_addr.s6_addr); }
 
 	/**
-	 * Compare only the IP portions of addresses, ignoring port
+	 * Compare only the IP portions of addresses, ignoring port/netmask
 	 *
 	 * @param a Address to compare
 	 * @return True if both addresses are of the same (valid) type and their IPs match
@@ -375,6 +277,25 @@ public:
 		return false;
 	}
 
+	/**
+	 * Compare IP/netmask with another IP/netmask
+	 *
+	 * @param ipnet IP/netmask to compare with
+	 * @return True if [netmask] bits match
+	 */
+	bool sameNetworkAs(const InetAddress &ipnet) const
+		throw();
+
+	/**
+	 * Set to null/zero
+	 */
+	inline void zero() throw() { memset(&_sa,0,sizeof(_sa)); }
+
+	/**
+	 * @return True if address family is non-zero
+	 */
+	inline operator bool() const throw() { return ((_sa.saddr.sa_family == AF_INET)||(_sa.saddr.sa_family == AF_INET6)); }
+
 	bool operator==(const InetAddress &a) const throw();
 	inline bool operator!=(const InetAddress &a) const throw() { return !(*this == a); }
 	bool operator<(const InetAddress &a) const throw();
@@ -383,47 +304,11 @@ public:
 	inline bool operator>=(const InetAddress &a) const throw() { return !(*this < a); }
 
 	/**
-	 * @return True if address family is non-zero
-	 */
-	inline operator bool() const throw() { return ((_sa.saddr.sa_family == AF_INET)||(_sa.saddr.sa_family == AF_INET6)); }
-
-	/**
-	 * Set to null/zero
-	 */
-	inline void zero()
-		throw()
-	{
-		_sa.saddr.sa_family = 0;
-	}
-
-	/**
 	 * @param mac MAC address seed
 	 * @return IPv6 link-local address
 	 */
-	static inline InetAddress makeIpv6LinkLocal(const MAC &mac)
-		throw()
-	{
-		InetAddress ip;
-		ip._sa.saddr.sa_family = AF_INET6;
-		ip._sa.sin6.sin6_addr.s6_addr[0] = 0xfe;
-		ip._sa.sin6.sin6_addr.s6_addr[1] = 0x80;
-		ip._sa.sin6.sin6_addr.s6_addr[2] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[3] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[4] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[5] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[6] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[7] = 0x00;
-		ip._sa.sin6.sin6_addr.s6_addr[8] = mac[0] & 0xfd;
-		ip._sa.sin6.sin6_addr.s6_addr[9] = mac[1];
-		ip._sa.sin6.sin6_addr.s6_addr[10] = mac[2];
-		ip._sa.sin6.sin6_addr.s6_addr[11] = 0xff;
-		ip._sa.sin6.sin6_addr.s6_addr[12] = 0xfe;
-		ip._sa.sin6.sin6_addr.s6_addr[13] = mac[3];
-		ip._sa.sin6.sin6_addr.s6_addr[14] = mac[4];
-		ip._sa.sin6.sin6_addr.s6_addr[15] = mac[5];
-		ip._sa.sin6.sin6_port = Utils::hton((uint16_t)64);
-		return ip;
-	}
+	static InetAddress makeIpv6LinkLocal(const MAC &mac)
+		throw();
 
 private:
 	union {

@@ -46,15 +46,49 @@ void InetAddress::set(const std::string &ip,unsigned int port)
 	memset(&_sa,0,sizeof(_sa));
 	if (ip.find(':') != std::string::npos) {
 		_sa.sin6.sin6_family = AF_INET6;
-		_sa.sin6.sin6_port = htons((uint16_t)port);
+		_sa.sin6.sin6_port = Utils::hton((uint16_t)port);
 		if (inet_pton(AF_INET6,ip.c_str(),(void *)&(_sa.sin6.sin6_addr.s6_addr)) <= 0)
 			_sa.saddr.sa_family = 0;
 	} else {
 		_sa.sin.sin_family = AF_INET;
-		_sa.sin.sin_port = htons((uint16_t)port);
+		_sa.sin.sin_port = Utils::hton((uint16_t)port);
 		if (inet_pton(AF_INET,ip.c_str(),(void *)&(_sa.sin.sin_addr.s_addr)) <= 0)
 			_sa.saddr.sa_family = 0;
 	}
+}
+
+void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
+	throw()
+{
+	memset(&_sa,0,sizeof(_sa));
+	if (ipLen == 4) {
+		setV4();
+		memcpy(rawIpData(),ipBytes,4);
+		setPort(port);
+	} else if (ipLen == 16) {
+		setV6();
+		memcpy(rawIpData(),ipBytes,16);
+		setPort(port);
+	}
+}
+
+bool InetAddress::isLinkLocal() const
+	throw()
+{
+	if (_sa.saddr.sa_family == AF_INET)
+		return ((Utils::ntoh((uint32_t)_sa.sin.sin_addr.s_addr) & 0xffff0000) == 0xa9fe0000);
+	else if (_sa.saddr.sa_family == AF_INET6) {
+		if (_sa.sin6.sin6_addr.s6_addr[0] != 0xfe) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[1] != 0x80) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[2] != 0x00) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[3] != 0x00) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[4] != 0x00) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[5] != 0x00) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[6] != 0x00) return false;
+		if (_sa.sin6.sin6_addr.s6_addr[7] != 0x00) return false;
+		return true;
+	}
+	return false;
 }
 
 std::string InetAddress::toString() const
@@ -103,7 +137,6 @@ void InetAddress::fromString(const std::string &ipSlashPort)
 std::string InetAddress::toIpString() const
 {
 	char buf[128];
-
 	switch(_sa.saddr.sa_family) {
 		case AF_INET:
 #ifdef __WINDOWS__
@@ -124,8 +157,62 @@ std::string InetAddress::toIpString() const
 #endif
 			break;
 	}
-
 	return std::string();
+}
+
+InetAddress InetAddress::netmask() const
+	throw()
+{
+	InetAddress r(*this);
+	switch(_sa.saddr.sa_family) {
+		case AF_INET:
+			r._sa.sin.sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffff << (32 - netmaskBits())));
+			break;
+		case AF_INET6: {
+			unsigned char *bf = (unsigned char *)r._sa.sin6.sin6_addr.s6_addr;
+			signed int bitsLeft = (signed int)netmaskBits();
+			for(unsigned int i=0;i<16;++i) {
+				if (bitsLeft > 0) {
+					bf[i] = (unsigned char)((bitsLeft >= 8) ? 0xff : (0xff << (8 - bitsLeft)));
+					bitsLeft -= 8;
+				} else bf[i] = (unsigned char)0;
+			}
+		}	break;
+	}
+	return r;
+}
+
+bool InetAddress::sameNetworkAs(const InetAddress &ipnet) const
+	throw()
+{
+	if (_sa.saddr.sa_family != ipnet._sa.saddr.sa_family)
+		return false;
+
+	unsigned int bits = netmaskBits();
+	if (bits != ipnet.netmaskBits())
+		return false;
+	if (!bits)
+		return true;
+	switch(_sa.saddr.sa_family) {
+		case AF_INET:
+			if (bits >= 32) bits = 32;
+			break;
+		case AF_INET6:
+			if (bits >= 128) bits = 128;
+			break;
+		default:
+			return false;
+	}
+
+	const uint8_t *a = (const uint8_t *)rawIpData();
+	const uint8_t *b = (const uint8_t *)ipnet.rawIpData();
+	while (bits >= 8) {
+		if (*(a++) != *(b++))
+			return false;
+		bits -= 8;
+	}
+	bits = 8 - bits;
+	return ((*a >> bits) == (*b >> bits));
 }
 
 bool InetAddress::operator==(const InetAddress &a) const
@@ -151,19 +238,44 @@ bool InetAddress::operator<(const InetAddress &a) const
 		return true;
 	else if (_sa.saddr.sa_family == a._sa.saddr.sa_family) {
 		if (_sa.saddr.sa_family == AF_INET) {
-			unsigned long x = ntohl(_sa.sin.sin_addr.s_addr);
-			unsigned long y = ntohl(a._sa.sin.sin_addr.s_addr);
+			unsigned long x = Utils::ntoh((uint32_t)_sa.sin.sin_addr.s_addr);
+			unsigned long y = Utils::ntoh((uint32_t)a._sa.sin.sin_addr.s_addr);
 			if (x == y)
-				return (ntohs(_sa.sin.sin_port) < ntohs(a._sa.sin.sin_port));
+				return (Utils::ntoh((uint16_t)_sa.sin.sin_port) < Utils::ntoh((uint16_t)a._sa.sin.sin_port));
 			else return (x < y);
 		} else if (_sa.saddr.sa_family == AF_INET6) {
 			int cmp = (int)memcmp(_sa.sin6.sin6_addr.s6_addr,a._sa.sin6.sin6_addr.s6_addr,16);
 			if (cmp == 0)
-				return (ntohs(_sa.sin6.sin6_port) < ntohs(a._sa.sin6.sin6_port));
+				return (Utils::ntoh((uint16_t)_sa.sin6.sin6_port) < Utils::ntoh((uint16_t)a._sa.sin6.sin6_port));
 			else return (cmp < 0);
 		} else return (memcmp(&_sa,&a._sa,sizeof(_sa)) < 0);
 	}
 	return false;
+}
+
+InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
+	throw()
+{
+	InetAddress ip;
+	ip._sa.saddr.sa_family = AF_INET6;
+	ip._sa.sin6.sin6_addr.s6_addr[0] = 0xfe;
+	ip._sa.sin6.sin6_addr.s6_addr[1] = 0x80;
+	ip._sa.sin6.sin6_addr.s6_addr[2] = 0x00;
+	ip._sa.sin6.sin6_addr.s6_addr[3] = 0x00;
+	ip._sa.sin6.sin6_addr.s6_addr[4] = 0x00;
+	ip._sa.sin6.sin6_addr.s6_addr[5] = 0x00;
+	ip._sa.sin6.sin6_addr.s6_addr[6] = 0x00;
+	ip._sa.sin6.sin6_addr.s6_addr[7] = 0x00;
+	ip._sa.sin6.sin6_addr.s6_addr[8] = mac[0] & 0xfd;
+	ip._sa.sin6.sin6_addr.s6_addr[9] = mac[1];
+	ip._sa.sin6.sin6_addr.s6_addr[10] = mac[2];
+	ip._sa.sin6.sin6_addr.s6_addr[11] = 0xff;
+	ip._sa.sin6.sin6_addr.s6_addr[12] = 0xfe;
+	ip._sa.sin6.sin6_addr.s6_addr[13] = mac[3];
+	ip._sa.sin6.sin6_addr.s6_addr[14] = mac[4];
+	ip._sa.sin6.sin6_addr.s6_addr[15] = mac[5];
+	ip._sa.sin6.sin6_port = Utils::hton((uint16_t)64);
+	return ip;
 }
 
 } // namespace ZeroTier

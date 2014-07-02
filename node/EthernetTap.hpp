@@ -115,7 +115,8 @@ public:
 	/**
 	 * Set this tap's IP addresses to exactly this set of IPs
 	 *
-	 * New IPs are created, ones not in this list are removed.
+	 * New IPs are created. Any IP that overlaps with the network of an IP in
+	 * this list is removed, but other IPs are left intact.
 	 *
 	 * @param ips IP addresses with netmask in port field
 	 */
@@ -130,15 +131,27 @@ public:
 			if (i->isLinkLocal()) {
 				if (i->isV6())
 					haveV6LinkLocal = true;
-			} else if (!allIps.count(*i))
-				removeIP(*i);
+			} else if (!allIps.count(*i)) {
+				for(std::set<InetAddress>::const_iterator i2(allIps.begin());i2!=allIps.end();++i2) {
+					if (i->sameNetworkAs(*i2)) {
+						removeIP(*i);
+						break;
+					}
+				}
+			}
 		}
 		if (!haveV6LinkLocal)
 			addIP(InetAddress::makeIpv6LinkLocal(_mac));
 #else
 		for(std::set<InetAddress>::iterator i(myIps.begin());i!=myIps.end();++i) {
-			if ((!i->isLinkLocal())&&(!allIps.count(*i)))
-				removeIP(*i);
+			if ((!i->isLinkLocal())&&(!allIps.count(*i))) {
+				for(std::set<InetAddress>::const_iterator i2(allIps.begin());i2!=allIps.end();++i2) {
+					if (i->sameNetworkAs(*i2)) {
+						removeIP(*i);
+						break;
+					}
+				}
+			}
 		}
 #endif
 	}
