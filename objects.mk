@@ -19,6 +19,7 @@ OBJS=\
 	node/PacketDecoder.o \
 	node/Peer.o \
 	node/Poly1305.o \
+	node/RoutingTable.o \
 	node/Salsa20.o \
 	node/Service.o \
 	node/SocketManager.o \
