@@ -25,79 +25,118 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_SYSTEMNETWORKSTACK_HPP
-#define ZT_SYSTEMNETWORKSTACK_HPP
+#ifndef ZT_ROUTINGTABLE_HPP
+#define ZT_ROUTINGTABLE_HPP
 
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include <vector>
 #include <string>
-#include <set>
 
 #include "InetAddress.hpp"
 #include "NonCopyable.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
 /**
- * Base class for OS-dependent interfaces to the system network configuration
+ * Base class for OS routing table interfaces
  */
-class SystemNetworkStack : NonCopyable
+class RoutingTable : NonCopyable
 {
 public:
-  struct RoutingTableEntry
-  {
-    char device[128];
-    InetAddress destination;
-    InetAddress gateway;
-    unsigned int deviceMetric;
-  };
+	class Entry
+	{
+	public:
+		Entry() { device[0] = (char)0; }
 
-  SystemNetworkStack() {}
-  virtual ~SystemNetworkStack() {}
+		InetAddress destination;
+		InetAddress gateway;
+		char device[128];
+		int metric;
 
-  /**
-   * @return All routing table entries sorted in order of destination
-   */
-  virtual std::vector<RoutingTableEntry> routingTable() const = 0;
+		inline bool operator==(const Entry &re) const { return ((destination == re.destination)&&(gateway == re.gateway)&&(strcmp(device == re.device) == 0)&&(metric == re.metric)); }
+		inline bool operator!=(const Entry &re) const { return (!(*this == re)); }
+		inline bool operator<(const Entry &re) const
+		{
+			if (destination < re.destination)
+				return true;
+			if (destination == re.destination) {
+				if (gateway < re.gateway)
+					return true;
+				if (gateway == re.gateway) {
+					int tmp = (int)::strcmp(device,re.device);
+					if (tmp < 0)
+						return true;
+					if (tmp == 0)
+						return (metric < re.metric);
+				}
+			}
+			return false;
+		}
+		inline bool operator>(const Entry &re) const { return (re < *this); }
+		inline bool operator<=(const Entry &re) const { return (!(re < *this)); }
+		inline bool operator>=(const Entry &re) const { return (!(*this < re)); }
+	};
 
-  /**
-   * Add or update a routing table entry
-   *
-   * Note that metrics may only be changed at the device level,
-   * so changes to deviceMetric are ignored.
-   *
-   * @param re Entry to add/update
-   * @return True if successful
-   */
-  virtual bool addUpdateRoute(const RoutingTableEntry &re) = 0;
+	SystemNetworkStack() {}
+	virtual ~SystemNetworkStack() {}
 
-  /**
-   * @param ifname Name of interface (Unix-style device or Windows device name)
-   * @return Interface metric (higher = lower priority)
-   */
-  virtual unsigned int interfaceMetric(const char *ifname) const = 0;
+	/**
+	 * @return All routing table entries sorted in order of destination address / netmask
+	 */
+	virtual std::vector<Entry> routingTable() const = 0;
 
-  /**
-   * @param ifname Name of interface (Unix-style device or Windows device name)
-   * @param metric New metric (higher = lower priority)
-   * @return True if successful
-   */
-  virtual bool setInterfaceMetric(const char *ifname,unsigned int metric) = 0;
+	/**
+	 * Add or update a routing table entry
+	 *
+	 * @param re Entry to add/update
+	 * @return True if successful
+	 */
+	virtual bool addUpdateRoute(const Entry &re) = 0;
 
-  /**
-   * @return Interface names sorted in ascending order
-   */
-  virtual std::vector<std::string> interfaces() const = 0;
-
-  /**
-   * @param ignoreInterfaces List of interfaces to exclude from fingerprint
-   * @return Integer CRC-type fingerprint of current network environment
-   */
-  inline uint64_t networkEnvironmentFingerprint(const std::set<std::string> &ignoreInterfaces) const
-  {
-    std::vector<RoutingTableEntry> rtab(routingTable());
-  };
+	/**
+	 * Compute a 64-bit value that hashes the current state of the network environment
+	 *
+	 * @param ignoreInterfaces Names of interfaces to exclude from fingerprint (e.g. my own)
+	 * @return Integer CRC-type fingerprint of current network environment
+	 */
+	inline uint64_t networkEnvironmentFingerprint(const std::vector<std::string> &ignoreInterfaces) const
+	{
+		uint64_t fp = 0;
+		std::vector<Entry> rtab(routingTable());
+		for(std::vector<Entry>::const_iterator re(rtab.begin());re!=rtab.end();++re) {
+			bool skip = false;
+			for(std::vector<std::string>::const_iterator ii(ignoreInterfaces.begin());ii!=ignoreInterfaces.end();++ii) {
+				if (*ii == re->interface.device) {
+					skip = true;
+					break;
+				}
+			}
+			if (skip)
+				continue;
+			++fp;
+			if (re->destination.isV4()) {
+				fp = Utils::sdbmHash(re->destination.rawIpData(),4,fp);
+				fp = Utils::sdbmHash((uint16_t)re->destination.netmaskBits(),fp);
+			} else if (re->destination.isV6()) {
+				fp = Utils::sdbmHash(re->destination.rawIpData(),16,fp);
+				fp = Utils::sdbmHash((uint16_t)re->destination.netmaskBits(),fp);
+			}
+			if (re->gateway.isV4()) {
+				fp = Utils::sdbmHash(re->gateway.rawIpData(),4,fp);
+				fp = Utils::sdbmHash((uint16_t)re->gateway.netmaskBits(),fp);
+			} else if (re->gateway.isV6()) {
+				fp = Utils::sdbmHash(re->gateway.rawIpData(),16,fp);
+				fp = Utils::sdbmHash((uint16_t)re->gateway.netmaskBits(),fp);
+			}
+			fp = Utils::sdbmHash(re->device,fp);
+			fp = Utils::sdbmHash((uint32_t)re->metric,fp);
+		}
+		return fp;
+	}
 };
 
 } // namespace ZeroTier

@@ -518,6 +518,68 @@ public:
 		return ((*aptr & mask) == (*aptr & mask));
 	}
 
+	/**
+	 * Compute SDBM hash of a binary string
+	 *
+	 * See: http://www.cse.yorku.ca/~oz/hash.html
+	 *
+	 * @param s Data to hash
+	 * @param l Length in bytes
+	 * @param h Previous hash value (use 0 initially)
+	 * @tparam H Hash integer type -- should be unsigned
+	 * @return New hash value
+	 */
+	template<typename H>
+	static inline H sdbmHash(const void *s,unsigned int l,H h)
+		throw()
+	{
+		for(unsigned int i=0;i<l;++i)
+			h = ((H)(((const unsigned char *)s)[i])) + (h << 6) + (h << 16) - h;
+		return h;
+	}
+
+	/**
+	 * Compute SDBM hash of a 0-terminated C string
+	 *
+	 * See: http://www.cse.yorku.ca/~oz/hash.html
+	 *
+	 * @param s C-string to hash
+	 * @param h Previous hash value (use 0 initially)
+	 * @tparam H Hash integer type -- should be unsigned
+	 * @return New hash value
+	 */
+	template<typename H>
+	static inline H sdbmHash(const char *s,H h)
+		throw()
+	{
+		char c;
+		while ((c = *(s++)))
+			h = ((H)c) + (h << 6) + (h << 16) - h;
+		return h;
+	}
+
+	/**
+	 * Compute SDBM hash of an integer's bytes in little-endian byte order
+	 *
+	 * See: http://www.cse.yorku.ca/~oz/hash.html
+	 *
+	 * @param n Integer to hash in LE byte order
+	 * @param h Previous hash value (use 0 initially)
+	 * @tparam I Integer type -- should be unsigned
+	 * @tparam H Hash integer type -- should be unsigned
+	 * @return New hash value
+	 */
+	template<typename I,typename H>
+	static inline H sdbmHash(I n,H h)
+		throw()
+	{
+		for(unsigned int i=0;i<(unsigned int)sizeof(n);++i) {
+			h = ((H)(n & 0xff)) + (h << 6) + (h << 16) - h;
+			n >>= 8;
+		}
+		return h;
+	}
+
 	// Byte swappers for big/little endian conversion
 	static inline uint8_t hton(uint8_t n) throw() { return n; }
 	static inline int8_t hton(int8_t n) throw() { return n; }
