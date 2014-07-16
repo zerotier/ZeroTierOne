@@ -34,35 +34,33 @@
 //
 // __LINUX__
 // __APPLE__
-// __UNIX_LIKE__ - any "unix like" OS (BSD, posix, etc.)
+// __BSD__ (OSX also defines this)
+// __UNIX_LIKE__ (Linux, BSD, etc.)
 // __WINDOWS__
 //
 // Also makes sure __BYTE_ORDER is defined reasonably.
 //
 
-// Canonicalize Linux... is this necessary? Do it anyway to be defensive.
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #ifndef __LINUX__
 #define __LINUX__
+#endif
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif
-#endif
+#include <endian.h>
 #endif
 
 // TODO: Android is what? Linux technically, but does it define it?
 
-// OSX and iOS are unix-like OSes far as we're concerned
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif
+#ifndef __BSD__
+#define __BSD__
 #endif
-
-// Linux has endian.h
-#ifdef __LINUX__
-#include <endian.h>
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -74,6 +72,7 @@
 #pragma warning(disable : 4996)
 #pragma warning(disable : 4101)
 #undef __UNIX_LIKE__
+#undef __BSD__
 #define ZT_PATH_SEPARATOR '\\'
 #define ZT_PATH_SEPARATOR_S "\\"
 #define ZT_EOL_S "\r\n"
@@ -98,9 +97,8 @@
 #define ZT_EOL_S "\n"
 #endif
 
-// Error out if required symbols are missing
 #ifndef __BYTE_ORDER
-error_no_byte_order_defined;
+#include <endian.h>
 #endif
 
 /**
