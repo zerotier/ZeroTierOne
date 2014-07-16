@@ -10,7 +10,6 @@
 #define ROTATE(v,c) (((v) << (c)) | ((v) >> (32 - (c))))
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) ((uint32_t)((v) + (w)))
-#define PLUSONE(v) ((uint32_t)((v) + 1))
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define U8TO32_LITTLE(p) (*((const uint32_t *)((const void *)(p))))
@@ -24,41 +23,77 @@ error need be;
 #endif
 #endif
 
-namespace ZeroTier {
+#ifdef ZT_SALSA20_SSE
+class _s20sseconsts
+{
+public:
+	_s20sseconsts()
+	{
+		maskLo32 = _mm_shuffle_epi32(_mm_cvtsi32_si128(-1), _MM_SHUFFLE(1, 0, 1, 0));
+		maskHi32 = _mm_slli_epi64(maskLo32, 32);
+	}
+	__m128i maskLo32,maskHi32;
+};
+static const _s20sseconsts _S20SSECONSTANTS;
+#endif
 
-static const char *sigma = "expand 32-byte k";
-static const char *tau = "expand 16-byte k";
+namespace ZeroTier {
 
 void Salsa20::init(const void *key,unsigned int kbits,const void *iv,unsigned int rounds)
 	throw()
 {
+#ifdef ZT_SALSA20_SSE
+	const uint32_t *k = (const uint32_t *)key;
+
+	_state.i[0] = 0x61707865;
+	_state.i[3] = 0x6b206574;
+	_state.i[13] = k[0];
+	_state.i[10] = k[1];
+	_state.i[7] = k[2];
+	_state.i[4] = k[3];
+	if (kbits == 256) {
+		k += 4;
+		_state.i[1] = 0x3320646e;
+		_state.i[2] = 0x79622d32;
+	} else {
+		_state.i[1] = 0x3120646e;
+		_state.i[2] = 0x79622d36;
+	}
+	_state.i[15] = k[0];
+	_state.i[12] = k[1];
+	_state.i[9] = k[2];
+	_state.i[6] = k[3];
+	_state.i[14] = ((const uint32_t *)iv)[0];
+	_state.i[11] = ((const uint32_t *)iv)[1];
+	_state.i[5] = 0;
+	_state.i[8] = 0;
+#else
 	const char *constants;
 	const uint8_t *k = (const uint8_t *)key;
 
-	_state[1] = U8TO32_LITTLE(k + 0);
-	_state[2] = U8TO32_LITTLE(k + 4);
-	_state[3] = U8TO32_LITTLE(k + 8);
-	_state[4] = U8TO32_LITTLE(k + 12);
+	_state.i[1] = U8TO32_LITTLE(k + 0);
+	_state.i[2] = U8TO32_LITTLE(k + 4);
+	_state.i[3] = U8TO32_LITTLE(k + 8);
+	_state.i[4] = U8TO32_LITTLE(k + 12);
 	if (kbits == 256) { /* recommended */
 		k += 16;
-		constants = sigma;
+		constants = "expand 32-byte k";
 	} else { /* kbits == 128 */
-		constants = tau;
+		constants = "expand 16-byte k";
 	}
-	_state[11] = U8TO32_LITTLE(k + 0);
-	_state[12] = U8TO32_LITTLE(k + 4);
-	_state[13] = U8TO32_LITTLE(k + 8);
-	_state[14] = U8TO32_LITTLE(k + 12);
-
-	_state[6] = U8TO32_LITTLE(((const uint8_t *)iv) + 0);
-	_state[7] = U8TO32_LITTLE(((const uint8_t *)iv) + 4);
-	_state[8] = 0;
-	_state[9] = 0;
-
-	_state[0] = U8TO32_LITTLE(constants + 0);
-	_state[5] = U8TO32_LITTLE(constants + 4);
-	_state[10] = U8TO32_LITTLE(constants + 8);
-	_state[15] = U8TO32_LITTLE(constants + 12);
+	_state.i[5] = U8TO32_LITTLE(constants + 4);
+	_state.i[6] = U8TO32_LITTLE(((const uint8_t *)iv) + 0);
+	_state.i[7] = U8TO32_LITTLE(((const uint8_t *)iv) + 4);
+	_state.i[8] = 0;
+	_state.i[9] = 0;
+	_state.i[10] = U8TO32_LITTLE(constants + 8);
+	_state.i[11] = U8TO32_LITTLE(k + 0);
+	_state.i[12] = U8TO32_LITTLE(k + 4);
+	_state.i[13] = U8TO32_LITTLE(k + 8);
+	_state.i[14] = U8TO32_LITTLE(k + 12);
+	_state.i[15] = U8TO32_LITTLE(constants + 12);
+	_state.i[0] = U8TO32_LITTLE(constants + 0);
+#endif
 
 	_roundsDiv2 = rounds / 2;
 }
@@ -66,40 +101,117 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv,unsigned in
 void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 	throw()
 {
-	uint32_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15;
-	uint32_t j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15;
 	uint8_t tmp[64];
 	const uint8_t *m = (const uint8_t *)in;
 	uint8_t *c = (uint8_t *)out;
 	uint8_t *ctarget = c;
 	unsigned int i;
 
-	if (!bytes) return;
+#ifndef ZT_SALSA20_SSE
+	uint32_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15;
+	uint32_t j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15;
+#endif
 
-	j0 = _state[0];
-	j1 = _state[1];
-	j2 = _state[2];
-	j3 = _state[3];
-	j4 = _state[4];
-	j5 = _state[5];
-	j6 = _state[6];
-	j7 = _state[7];
-	j8 = _state[8];
-	j9 = _state[9];
-	j10 = _state[10];
-	j11 = _state[11];
-	j12 = _state[12];
-	j13 = _state[13];
-	j14 = _state[14];
-	j15 = _state[15];
+	if (!bytes)
+		return;
+
+#ifndef ZT_SALSA20_SSE
+	j0 = _state.i[0];
+	j1 = _state.i[1];
+	j2 = _state.i[2];
+	j3 = _state.i[3];
+	j4 = _state.i[4];
+	j5 = _state.i[5];
+	j6 = _state.i[6];
+	j7 = _state.i[7];
+	j8 = _state.i[8];
+	j9 = _state.i[9];
+	j10 = _state.i[10];
+	j11 = _state.i[11];
+	j12 = _state.i[12];
+	j13 = _state.i[13];
+	j14 = _state.i[14];
+	j15 = _state.i[15];
+#endif
 
 	for (;;) {
 		if (bytes < 64) {
-			for (i = 0;i < bytes;++i) tmp[i] = m[i];
+			for (i = 0;i < bytes;++i)
+				tmp[i] = m[i];
 			m = tmp;
 			ctarget = c;
 			c = tmp;
 		}
+
+#ifdef ZT_SALSA20_SSE
+		__m128i X0 = _state.v[0];
+		__m128i X1 = _state.v[1];
+		__m128i X2 = _state.v[2];
+		__m128i X3 = _state.v[3];
+
+		for (i=0;i<_roundsDiv2;++i) {
+			__m128i T = _mm_add_epi32(X0, X3);
+			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 7));
+			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 25));
+			T = _mm_add_epi32(X1, X0);
+			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
+			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			T = _mm_add_epi32(X2, X1);
+			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 13));
+			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 19));
+			T = _mm_add_epi32(X3, X2);
+			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
+			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+
+			X1 = _mm_shuffle_epi32(X1, 0x93);
+			X2 = _mm_shuffle_epi32(X2, 0x4E);
+			X3 = _mm_shuffle_epi32(X3, 0x39);
+
+			T = _mm_add_epi32(X0, X1);
+			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 7));
+			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 25));
+			T = _mm_add_epi32(X3, X0);
+			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
+			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			T = _mm_add_epi32(X2, X3);
+			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 13));
+			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 19));
+			T = _mm_add_epi32(X1, X2);
+			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
+			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+
+			X1 = _mm_shuffle_epi32(X1, 0x39);
+			X2 = _mm_shuffle_epi32(X2, 0x4E);
+			X3 = _mm_shuffle_epi32(X3, 0x93);
+		}
+
+		X0 = _mm_add_epi32(_state.v[0],X0);
+		X1 = _mm_add_epi32(_state.v[1],X1);
+		X2 = _mm_add_epi32(_state.v[2],X2);
+		X3 = _mm_add_epi32(_state.v[3],X3);
+
+		{
+			__m128i k02 = _mm_or_si128(_mm_slli_epi64(X0, 32), _mm_srli_epi64(X3, 32));
+			k02 = _mm_shuffle_epi32(k02, _MM_SHUFFLE(0, 1, 2, 3));
+			__m128i k13 = _mm_or_si128(_mm_slli_epi64(X1, 32), _mm_srli_epi64(X0, 32));
+			k13 = _mm_shuffle_epi32(k13, _MM_SHUFFLE(0, 1, 2, 3));
+			__m128i k20 = _mm_or_si128(_mm_and_si128(X2, _S20SSECONSTANTS.maskLo32), _mm_and_si128(X1, _S20SSECONSTANTS.maskHi32));
+			__m128i k31 = _mm_or_si128(_mm_and_si128(X3, _S20SSECONSTANTS.maskLo32), _mm_and_si128(X2, _S20SSECONSTANTS.maskHi32));
+
+			const float *const mv = (const float *)m;
+			float *const cv = (float *)c;
+
+			_mm_storeu_ps(cv,_mm_xor_si128(_mm_unpackhi_epi64(k02,k20),_mm_loadu_ps(mv)));
+			_mm_storeu_ps(cv + 4,_mm_xor_si128(_mm_unpackhi_epi64(k13,k31),_mm_loadu_ps(mv + 4)));
+			_mm_storeu_ps(cv + 8,_mm_xor_si128(_mm_unpacklo_epi64(k20,k02),_mm_loadu_ps(mv + 8)));
+			_mm_storeu_ps(cv + 12,_mm_xor_si128(_mm_unpacklo_epi64(k31,k13),_mm_loadu_ps(mv + 12)));
+		}
+
+		if (!(++_state.i[8])) {
+			++_state.i[5]; // state reordered for SSE
+			/* stopping at 2^70 bytes per nonce is user's responsibility */
+		}
+#else
 		x0 = j0;
 		x1 = j1;
 		x2 = j2;
@@ -116,7 +228,7 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		x13 = j13;
 		x14 = j14;
 		x15 = j15;
-		//for (i = 20;i > 0;i -= 2) {
+
 		for(i=0;i<_roundsDiv2;++i) {
 			 x4 = XOR( x4,ROTATE(PLUS( x0,x12), 7));
 			 x8 = XOR( x8,ROTATE(PLUS( x4, x0), 9));
@@ -151,6 +263,7 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 			x14 = XOR(x14,ROTATE(PLUS(x13,x12),13));
 			x15 = XOR(x15,ROTATE(PLUS(x14,x13),18));
 		}
+
 		x0 = PLUS(x0,j0);
 		x1 = PLUS(x1,j1);
 		x2 = PLUS(x2,j2);
@@ -168,54 +281,43 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		x14 = PLUS(x14,j14);
 		x15 = PLUS(x15,j15);
 
-		x0 = XOR(x0,U8TO32_LITTLE(m + 0));
-		x1 = XOR(x1,U8TO32_LITTLE(m + 4));
-		x2 = XOR(x2,U8TO32_LITTLE(m + 8));
-		x3 = XOR(x3,U8TO32_LITTLE(m + 12));
-		x4 = XOR(x4,U8TO32_LITTLE(m + 16));
-		x5 = XOR(x5,U8TO32_LITTLE(m + 20));
-		x6 = XOR(x6,U8TO32_LITTLE(m + 24));
-		x7 = XOR(x7,U8TO32_LITTLE(m + 28));
-		x8 = XOR(x8,U8TO32_LITTLE(m + 32));
-		x9 = XOR(x9,U8TO32_LITTLE(m + 36));
-		x10 = XOR(x10,U8TO32_LITTLE(m + 40));
-		x11 = XOR(x11,U8TO32_LITTLE(m + 44));
-		x12 = XOR(x12,U8TO32_LITTLE(m + 48));
-		x13 = XOR(x13,U8TO32_LITTLE(m + 52));
-		x14 = XOR(x14,U8TO32_LITTLE(m + 56));
-		x15 = XOR(x15,U8TO32_LITTLE(m + 60));
+		U32TO8_LITTLE(c + 0,XOR(x0,U8TO32_LITTLE(m + 0)));
+		U32TO8_LITTLE(c + 4,XOR(x1,U8TO32_LITTLE(m + 4)));
+		U32TO8_LITTLE(c + 8,XOR(x2,U8TO32_LITTLE(m + 8)));
+		U32TO8_LITTLE(c + 12,XOR(x3,U8TO32_LITTLE(m + 12)));
+		U32TO8_LITTLE(c + 16,XOR(x4,U8TO32_LITTLE(m + 16)));
+		U32TO8_LITTLE(c + 20,XOR(x5,U8TO32_LITTLE(m + 20)));
+		U32TO8_LITTLE(c + 24,XOR(x6,U8TO32_LITTLE(m + 24)));
+		U32TO8_LITTLE(c + 28,XOR(x7,U8TO32_LITTLE(m + 28)));
+		U32TO8_LITTLE(c + 32,XOR(x8,U8TO32_LITTLE(m + 32)));
+		U32TO8_LITTLE(c + 36,XOR(x9,U8TO32_LITTLE(m + 36)));
+		U32TO8_LITTLE(c + 40,XOR(x10,U8TO32_LITTLE(m + 40)));
+		U32TO8_LITTLE(c + 44,XOR(x11,U8TO32_LITTLE(m + 44)));
+		U32TO8_LITTLE(c + 48,XOR(x12,U8TO32_LITTLE(m + 48)));
+		U32TO8_LITTLE(c + 52,XOR(x13,U8TO32_LITTLE(m + 52)));
+		U32TO8_LITTLE(c + 56,XOR(x14,U8TO32_LITTLE(m + 56)));
+		U32TO8_LITTLE(c + 60,XOR(x15,U8TO32_LITTLE(m + 60)));
 
-		j8 = PLUSONE(j8);
-		if (!j8) {
-			j9 = PLUSONE(j9);
+		if (!(++j8)) {
+			++j9;
 			/* stopping at 2^70 bytes per nonce is user's responsibility */
 		}
-
-		U32TO8_LITTLE(c + 0,x0);
-		U32TO8_LITTLE(c + 4,x1);
-		U32TO8_LITTLE(c + 8,x2);
-		U32TO8_LITTLE(c + 12,x3);
-		U32TO8_LITTLE(c + 16,x4);
-		U32TO8_LITTLE(c + 20,x5);
-		U32TO8_LITTLE(c + 24,x6);
-		U32TO8_LITTLE(c + 28,x7);
-		U32TO8_LITTLE(c + 32,x8);
-		U32TO8_LITTLE(c + 36,x9);
-		U32TO8_LITTLE(c + 40,x10);
-		U32TO8_LITTLE(c + 44,x11);
-		U32TO8_LITTLE(c + 48,x12);
-		U32TO8_LITTLE(c + 52,x13);
-		U32TO8_LITTLE(c + 56,x14);
-		U32TO8_LITTLE(c + 60,x15);
+#endif
 
 		if (bytes <= 64) {
 			if (bytes < 64) {
-				for (i = 0;i < bytes;++i) ctarget[i] = c[i];
+				for (i = 0;i < bytes;++i)
+					ctarget[i] = c[i];
 			}
-			_state[8] = j8;
-			_state[9] = j9;
+
+#ifndef ZT_SALSA20_SSE
+			_state.i[8] = j8;
+			_state.i[9] = j9;
+#endif
+
 			return;
 		}
+
 		bytes -= 64;
 		c += 64;
 		m += 64;

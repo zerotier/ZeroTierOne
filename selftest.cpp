@@ -136,6 +136,58 @@ static int testCrypto()
 		std::cout << "[crypto] getSecureRandom: " << Utils::hex(buf1,64) << std::endl;
 	}
 
+	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
+	for(unsigned int i=0;i<4;++i) {
+		for(unsigned int k=0;k<sizeof(buf1);++k)
+			buf1[k] = (unsigned char)rand();
+		memset(buf2,0,sizeof(buf2));
+		memset(buf3,0,sizeof(buf3));
+		Salsa20 s20;
+		s20.init("12345678123456781234567812345678",256,"12345678",20);
+		s20.encrypt(buf1,buf2,sizeof(buf1));
+		s20.init("12345678123456781234567812345678",256,"12345678",20);
+		s20.decrypt(buf2,buf3,sizeof(buf2));
+		if (memcmp(buf1,buf3,sizeof(buf1))) {
+			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
+			return -1;
+		}
+	}
+	Salsa20 s20(s20TV0Key,256,s20TV0Iv,20);
+	memset(buf1,0,sizeof(buf1));
+	memset(buf2,0,sizeof(buf2));
+	s20.encrypt(buf1,buf2,64);
+	if (memcmp(buf2,s20TV0Ks,64)) {
+		std::cout << "FAIL (test vector 0)" << std::endl;
+		return -1;
+	}
+	s20.init(s2012TV0Key,256,s2012TV0Iv,12);
+	memset(buf1,0,sizeof(buf1));
+	memset(buf2,0,sizeof(buf2));
+	s20.encrypt(buf1,buf2,64);
+	if (memcmp(buf2,s2012TV0Ks,64)) {
+		std::cout << "FAIL (test vector 1)" << std::endl;
+		return -1;
+	}
+	std::cout << "PASS" << std::endl;
+
+	std::cout << "[crypto] Benchmarking Salsa20/12... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		Salsa20 s20(s20TV0Key,256,s20TV0Iv,12);
+		double bytes = 0.0;
+		uint64_t start = Utils::now();
+		for(unsigned int i=0;i<1000;++i) {
+			s20.encrypt(bb,bb,1234567);
+			bytes += 1234567.0;
+		}
+		uint64_t end = Utils::now();
+		SHA512::hash(buf1,bb,1234567);
+		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		::free((void *)bb);
+	}
+
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
 	SHA512::hash(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {
@@ -244,40 +296,6 @@ static int testCrypto()
 				return -1;
 			}
 		}
-	}
-	std::cout << "PASS" << std::endl;
-
-	std::cout << "[crypto] Testing Salsa20... "; std::cout.flush();
-	for(unsigned int i=0;i<4;++i) {
-		for(unsigned int k=0;k<sizeof(buf1);++k)
-			buf1[k] = (unsigned char)rand();
-		memset(buf2,0,sizeof(buf2));
-		memset(buf3,0,sizeof(buf3));
-		Salsa20 s20;
-		s20.init("12345678123456781234567812345678",256,"12345678",20);
-		s20.encrypt(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678",256,"12345678",20);
-		s20.decrypt(buf2,buf3,sizeof(buf2));
-		if (memcmp(buf1,buf3,sizeof(buf1))) {
-			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
-			return -1;
-		}
-	}
-	Salsa20 s20(s20TV0Key,256,s20TV0Iv,20);
-	memset(buf1,0,sizeof(buf1));
-	memset(buf2,0,sizeof(buf2));
-	s20.encrypt(buf1,buf2,64);
-	if (memcmp(buf2,s20TV0Ks,64)) {
-		std::cout << "FAIL (test vector 0)" << std::endl;
-		return -1;
-	}
-	s20.init(s2012TV0Key,256,s2012TV0Iv,12);
-	memset(buf1,0,sizeof(buf1));
-	memset(buf2,0,sizeof(buf2));
-	s20.encrypt(buf1,buf2,64);
-	if (memcmp(buf2,s2012TV0Ks,64)) {
-		std::cout << "FAIL (test vector 1)" << std::endl;
-		return -1;
 	}
 	std::cout << "PASS" << std::endl;
 
@@ -596,8 +614,8 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
-	r |= testHttp();
 	r |= testCrypto();
+	r |= testHttp();
 	r |= testPacket();
 	r |= testOther();
 	r |= testIdentity();

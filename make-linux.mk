@@ -19,6 +19,9 @@ ifeq ($(ZT_USE_TESTNET),1)
 	DEFS+=-DZT_USE_TESTNET
 endif
 
+# Enable SSE-optimized Salsa20
+DEFS+=-DZT_SALSA20_SSE
+
 # Uncomment to dump trace and log to stdout
 #DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 
