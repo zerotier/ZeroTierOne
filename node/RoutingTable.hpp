@@ -48,7 +48,7 @@ public:
 		Entry() { device[0] = (char)0; }
 
 		InetAddress destination;
-		InetAddress gateway; // port/netmaskBits field not used, should be 0
+		InetAddress gateway; // port/netmaskBits field not used, should be 0 -- null if direct-to-device route
 		char device[128];
 		int metric;
 
