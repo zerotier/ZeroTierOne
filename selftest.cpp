@@ -178,7 +178,7 @@ static int testCrypto()
 		Salsa20 s20(s20TV0Key,256,s20TV0Iv,12);
 		double bytes = 0.0;
 		uint64_t start = Utils::now();
-		for(unsigned int i=0;i<1000;++i) {
+		for(unsigned int i=0;i<200;++i) {
 			s20.encrypt(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
