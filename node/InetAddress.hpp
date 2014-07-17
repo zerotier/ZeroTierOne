@@ -148,6 +148,15 @@ public:
 		throw();
 
 	/**
+	 * @return True if this is a loopback address
+	 */
+	inline bool isLoopback() const
+		throw()
+	{
+		return ((*this == LO4)||(*this == LO6));
+	}
+
+	/**
 	 * @return ASCII IP/port format representation
 	 */
 	std::string toString() const;
@@ -284,6 +293,15 @@ public:
 	 * @return True if [netmask] bits match
 	 */
 	bool sameNetworkAs(const InetAddress &ipnet) const
+		throw();
+
+	/**
+	 * Determine whether this address is within an ip/netmask
+	 *
+	 * @param ipnet IP/netmask
+	 * @return True if this address is within this network
+	 */
+	bool within(const InetAddress &ipnet) const
 		throw();
 
 	/**

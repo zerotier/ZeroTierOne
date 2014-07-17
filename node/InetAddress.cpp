@@ -215,6 +215,36 @@ bool InetAddress::sameNetworkAs(const InetAddress &ipnet) const
 	return ((*a >> bits) == (*b >> bits));
 }
 
+bool InetAddress::within(const InetAddress &ipnet) const
+	throw()
+{
+	if (_sa.saddr.sa_family != ipnet._sa.saddr.sa_family)
+		return false;
+
+	unsigned int bits = ipnet.netmaskBits();
+	switch(_sa.saddr.sa_family) {
+		case AF_INET:
+			if (bits > 32) return false;
+			break;
+		case AF_INET6:
+			if (bits > 128) return false;
+			break;
+		default: return false;
+	}
+
+	const uint8_t *a = (const uint8_t *)rawIpData();
+	const uint8_t *b = (const uint8_t *)ipnet.rawIpData();
+	while (bits >= 8) {
+		if (*(a++) != *(b++))
+			return false;
+		bits -= 8;
+	}
+	if (bits) {
+		uint8_t mask = ((0xff << (8 - bits)) & 0xff);
+		return ((*a & mask) == (*b & mask));
+	} else return true;
+}
+
 bool InetAddress::operator==(const InetAddress &a) const
 	throw()
 {

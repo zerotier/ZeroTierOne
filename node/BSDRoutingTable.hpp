@@ -42,7 +42,7 @@ class BSDRoutingTable : public RoutingTable
 public:
 	BSDRoutingTable();
 	virtual ~BSDRoutingTable();
-	virtual std::vector<RoutingTable::Entry> get() const;
+	virtual std::vector<RoutingTable::Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const;
 	virtual bool set(const RoutingTable::Entry &re);
 };
 

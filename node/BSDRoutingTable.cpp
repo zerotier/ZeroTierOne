@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/param.h>
 #include <sys/sysctl.h>
@@ -35,7 +36,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <net/route.h>
+#include <net/if.h>
 #include <net/if_dl.h>
+#include <ifaddrs.h>
 
 #include <algorithm>
 #include <utility>
@@ -55,7 +58,7 @@ BSDRoutingTable::~BSDRoutingTable()
 {
 }
 
-std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
+std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool includeLoopback) const
 {
 	std::vector<RoutingTable::Entry> entries;
 	int mib[6];
@@ -82,6 +85,7 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
 
 					if (((rtm->rtm_flags & RTF_LLINFO) == 0)&&((rtm->rtm_flags & RTF_HOST) == 0)&&((rtm->rtm_flags & RTF_UP) != 0)&&((rtm->rtm_flags & RTF_MULTICAST) == 0)) {
 						RoutingTable::Entry e;
+						e.deviceIndex = -9999; // unset
 
 						int which = 0;
 						while (saptr < saend) {
@@ -120,7 +124,15 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
 									break;
 								case 1:
 									//printf("RTA_GATEWAY\n");
-									e.gateway.set(sa);
+									switch(sa->sa_family) {
+										case AF_LINK:
+											e.deviceIndex = (int)((const struct sockaddr_dl *)sa)->sdl_index;
+											break;
+										case AF_INET:
+										case AF_INET6:
+											e.gateway.set(sa);
+											break;
+									}
 									break;
 								case 2: {
 									if (e.destination.isV6()) {
@@ -148,6 +160,7 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
 									}
 									//printf("RTA_NETMASK\n");
 								}	break;
+								/*
 								case 3:
 									//printf("RTA_GENMASK\n");
 									break;
@@ -160,6 +173,7 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
 								case 6:
 									//printf("RTA_AUTHOR\n");
 									break;
+								*/
 							}
 
 							saptr += salen;
@@ -167,8 +181,8 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
 
 						e.metric = (int)rtm->rtm_rmx.rmx_hopcount;
 
-						entries.push_back(e);
-						printf("%s\n",e.toString().c_str());
+						if (((includeLinkLocal)||(!e.destination.isLinkLocal()))&&((includeLoopback)||((!e.destination.isLoopback())&&(!e.gateway.isLoopback()))))
+							entries.push_back(e);
 					}
 
 					next = saend;
@@ -179,7 +193,24 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get() const
 		}
 	}
 
+	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
+		if ((!e1->device[0])&&(e1->deviceIndex >= 0))
+			if_indextoname(e1->deviceIndex,e1->device);
+	}
+	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e1(entries.begin());e1!=entries.end();++e1) {
+		if ((!e1->device[0])&&(e1->gateway)) {
+			int bestMetric = 9999999;
+			for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e2(entries.begin());e2!=entries.end();++e2) {
+				if ((e1->gateway.within(e2->destination))&&(e2->metric <= bestMetric)) {
+					bestMetric = e2->metric;
+					Utils::scopy(e1->device,sizeof(e1->device),e2->device);
+				}
+			}
+		}
+	}
+
 	std::sort(entries.begin(),entries.end());
+
 	return entries;
 }
 
@@ -196,6 +227,8 @@ int main(int argc,char **argv)
 {
 	ZeroTier::BSDRoutingTable rt;
 	std::vector<ZeroTier::RoutingTable::Entry> ents(rt.get());
+	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+		printf("%s\n",e->toString().c_str());
 	return 0;
 }
 //*/

@@ -493,32 +493,6 @@ public:
 	}
 
 	/**
-	 * Match two strings with bits masked netmask-style
-	 *
-	 * @param a First string
-	 * @param abits Number of bits in first string
-	 * @param b Second string
-	 * @param bbits Number of bits in second string
-	 * @return True if min(abits,bbits) match between a and b
-	 */
-	static inline bool matchNetmask(const void *a,unsigned int abits,const void *b,unsigned int bbits)
-		throw()
-	{
-		const unsigned char *aptr = (const unsigned char *)a;
-		const unsigned char *bptr = (const unsigned char *)b;
-
-		while ((abits >= 8)&&(bbits >= 8)) {
-			if (*aptr++ != *bptr++)
-				return false;
-			abits -= 8;
-			bbits -= 8;
-		}
-
-		unsigned char mask = 0xff << (8 - ((abits > bbits) ? bbits : abits));
-		return ((*aptr & mask) == (*aptr & mask));
-	}
-
-	/**
 	 * Compute SDBM hash of a binary string
 	 *
 	 * See: http://www.cse.yorku.ca/~oz/hash.html

@@ -39,7 +39,7 @@ namespace ZeroTier {
 std::string RoutingTable::Entry::toString() const
 {
 	char tmp[1024];
-	Utils::snprintf(tmp,sizeof(tmp),"%s %s %s %d",destination.toString().c_str(),((gateway) ? gateway.toIpString().c_str() : "(link)"),device,metric);
+	Utils::snprintf(tmp,sizeof(tmp),"%s %s %s %d",destination.toString().c_str(),((gateway) ? gateway.toIpString().c_str() : "<link>"),device,metric);
 	return std::string(tmp);
 }
 

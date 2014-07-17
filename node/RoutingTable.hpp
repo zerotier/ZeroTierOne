@@ -50,7 +50,8 @@ public:
 		InetAddress destination;
 		InetAddress gateway; // port/netmaskBits field not used, should be 0 -- null if direct-to-device route
 		char device[128];
-		int metric;
+		int deviceIndex; // may not always be set, depending on OS -- for internal use only
+		int metric; // higher = lower priority -- on some OSes this is "hop count," etc.
 
 		std::string toString() const;
 
@@ -66,9 +67,13 @@ public:
 	virtual ~RoutingTable();
 
 	/**
+	 * Get routing table
+	 *
+	 * @param includeLinkLocal If true, include link-local address routes (default: false)
+	 * @param includeLoopback Include loopback (default: false)
 	 * @return Sorted routing table entries
 	 */
-	virtual std::vector<Entry> get() const = 0;
+	virtual std::vector<Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const = 0;
 
 	/**
 	 * Add or update a routing table entry
