@@ -45,15 +45,42 @@ public:
 	class Entry
 	{
 	public:
-		Entry() { device[0] = (char)0; }
+		Entry() throw() { device[0] = (char)0; }
 
+		/**
+		 * Destination IP and netmask bits (CIDR format)
+		 */
 		InetAddress destination;
-		InetAddress gateway; // port/netmaskBits field not used, should be 0 -- null if direct-to-device route
-		char device[128];
-		int deviceIndex; // may not always be set, depending on OS -- for internal use only
-		int metric; // higher = lower priority -- on some OSes this is "hop count," etc.
 
+		/**
+		 * Gateway or null address if direct link-level route, netmask/port part of InetAddress not used
+		 */
+		InetAddress gateway;
+
+		/**
+		 * System device index or ID (not included in comparison operators, may not be set on all platforms)
+		 */
+		int deviceIndex;
+
+		/**
+		 * Metric or hop count -- higher = lower routing priority
+		 */
+		int metric;
+
+		/**
+		 * System device name
+		 */
+		char device[128];
+
+		/**
+		 * @return Human-readable representation of this route
+		 */
 		std::string toString() const;
+
+		/**
+		 * @return True if at least one required field is present (object is not null)
+		 */
+		inline operator bool() const { return ((destination)||(gateway)||(device[0])); }
 
 		bool operator==(const Entry &re) const;
 		inline bool operator!=(const Entry &re) const { return (!(*this == re)); }
@@ -73,15 +100,21 @@ public:
 	 * @param includeLoopback Include loopback (default: false)
 	 * @return Sorted routing table entries
 	 */
-	virtual std::vector<Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const = 0;
+	virtual std::vector<RoutingTable::Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const = 0;
 
 	/**
 	 * Add or update a routing table entry
 	 *
-	 * @param re Entry to add/update
-	 * @return True if change successful (or unchanged)
+	 * If there is no change, the existing entry is returned. Use a value of -1
+	 * for metric to delete a route.
+	 *
+	 * @param destination Destination IP/netmask
+	 * @param gateway Gateway IP (netmask/port part unused) or NULL/zero for device-level route
+	 * @param device Device name (can be null for gateway routes)
+	 * @param metric Route metric or hop count (higher = lower priority) or negative to delete
+	 * @return Entry or null entry on failure (or delete)
 	 */
-	virtual bool set(const Entry &re) = 0;
+	virtual RoutingTable::Entry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric) = 0;
 
 	/**
 	 * Compute a 64-bit value that hashes the current state of the network environment

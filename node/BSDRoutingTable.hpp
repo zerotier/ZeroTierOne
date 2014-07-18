@@ -43,7 +43,7 @@ public:
 	BSDRoutingTable();
 	virtual ~BSDRoutingTable();
 	virtual std::vector<RoutingTable::Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const;
-	virtual bool set(const RoutingTable::Entry &re);
+	virtual RoutingTable::Entry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric);
 };
 
 } // namespace ZeroTier

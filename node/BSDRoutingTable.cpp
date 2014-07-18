@@ -48,6 +48,8 @@
 
 // All I wanted was the bloody rounting table. I didn't expect the Spanish inquisition.
 
+#define ZT_BSD_ROUTE_CMD "/sbin/route"
+
 namespace ZeroTier {
 
 BSDRoutingTable::BSDRoutingTable()
@@ -180,6 +182,8 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool
 						}
 
 						e.metric = (int)rtm->rtm_rmx.rmx_hopcount;
+						if (e.metric < 0)
+							e.metric = 0;
 
 						if (((includeLinkLocal)||(!e.destination.isLinkLocal()))&&((includeLoopback)||((!e.destination.isLoopback())&&(!e.gateway.isLoopback()))))
 							entries.push_back(e);
@@ -214,21 +218,109 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool
 	return entries;
 }
 
-bool BSDRoutingTable::set(const RoutingTable::Entry &re)
+RoutingTable::Entry BSDRoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric)
 {
-	return true;
+	if ((!gateway)&&((!device)||(!device[0])))
+		return RoutingTable::Entry();
+
+	std::vector<RoutingTable::Entry> rtab(get(true,true));
+
+	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
+		if (e->destination == destination) {
+			if (((!device)||(!device[0]))||(!strcmp(device,e->device))) {
+				long p = (long)fork();
+				if (p > 0) {
+					int exitcode = -1;
+					::waitpid(p,&exitcode,0);
+				} else if (p == 0) {
+					::close(STDOUT_FILENO);
+					::close(STDERR_FILENO);
+					::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"delete",(destination.isV6() ? "-inet6" : "-inet"),destination.toString().c_str(),(const char *)0);
+					::_exit(-1);
+				}
+			}
+		}
+	}
+
+	if (metric < 0)
+		return RoutingTable::Entry();
+
+	{
+		char hcstr[64];
+		Utils::snprintf(hcstr,sizeof(hcstr),"%d",metric);
+		long p = (long)fork();
+		if (p > 0) {
+			int exitcode = -1;
+			::waitpid(p,&exitcode,0);
+		} else if (p == 0) {
+			::close(STDOUT_FILENO);
+			::close(STDERR_FILENO);
+			if (gateway) {
+				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"add",(destination.isV6() ? "-inet6" : "-inet"),destination.toString().c_str(),gateway.toIpString().c_str(),"-hopcount",hcstr,(const char *)0);
+			} else if ((device)&&(device[0])) {
+				::execl(ZT_BSD_ROUTE_CMD,ZT_BSD_ROUTE_CMD,"add",(destination.isV6() ? "-inet6" : "-inet"),destination.toString().c_str(),"-interface",device,"-hopcount",hcstr,(const char *)0);
+			}
+			::_exit(-1);
+		}
+	}
+
+	rtab = get(true,true);
+	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
+	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
+		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
+			if ((device)&&(device[0])) {
+				if (!strcmp(device,e->device)) {
+					if (metric == e->metric)
+						bestEntry = e;
+				}
+			}
+			if (bestEntry == rtab.end())
+				bestEntry = e;
+		}
+	}
+	if (bestEntry != rtab.end())
+		return *bestEntry;
+
+	return RoutingTable::Entry();
 }
 
 } // namespace ZeroTier
 
 // Enable and build to test routing table interface
-///*
+#if 0
+using namespace ZeroTier;
 int main(int argc,char **argv)
 {
-	ZeroTier::BSDRoutingTable rt;
-	std::vector<ZeroTier::RoutingTable::Entry> ents(rt.get());
-	for(std::vector<ZeroTier::RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+	BSDRoutingTable rt;
+
+	printf("<destination> <gateway> <interface> <metric>\n");
+	std::vector<RoutingTable::Entry> ents(rt.get());
+	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
 		printf("%s\n",e->toString().c_str());
+	printf("\n");
+
+	printf("adding 1.1.1.0 and 2.2.2.0...\n");
+	rt.set(InetAddress("1.1.1.0",24),InetAddress("1.2.3.4",0),(const char *)0,1);
+	rt.set(InetAddress("2.2.2.0",24),InetAddress(),"en0",1);
+	printf("\n");
+
+	printf("<destination> <gateway> <interface> <metric>\n");
+	ents = rt.get();
+	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+		printf("%s\n",e->toString().c_str());
+	printf("\n");
+
+	printf("deleting 1.1.1.0 and 2.2.2.0...\n");
+	rt.set(InetAddress("1.1.1.0",24),InetAddress("1.2.3.4",0),(const char *)0,-1);
+	rt.set(InetAddress("2.2.2.0",24),InetAddress(),"en0",-1);
+	printf("\n");
+
+	printf("<destination> <gateway> <interface> <metric>\n");
+	ents = rt.get();
+	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
+		printf("%s\n",e->toString().c_str());
+	printf("\n");
+
 	return 0;
 }
-//*/
+#endif
