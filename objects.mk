@@ -30,5 +30,4 @@ OBJS=\
 	node/TcpSocket.o \
 	node/Topology.o \
 	node/UdpSocket.o \
-	node/UnixEthernetTap.o \
 	node/Utils.o
