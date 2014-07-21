@@ -25,56 +25,44 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_UNIXETHERNETTAP_HPP
-#define ZT_UNIXETHERNETTAP_HPP
+#ifndef ZT_OSXETHERNETTAP_HPP
+#define ZT_OSXETHERNETTAP_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <stdexcept>
 
-#include "EthernetTap.hpp"
-#include "Mutex.hpp"
-#include "Thread.hpp"
+#include "../EthernetTap.hpp"
+#include "../Mutex.hpp"
+#include "../Thread.hpp"
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
-
 /**
- * Tap device using Unix taps (contains special case code for Linux, OSX, etc. but they're all similar)
+ * OSX Ethernet tap using ZeroTier kernel extension zt# devices
+ *
+ * This also installs a friendly-named network device in the system network
+ * configuration, permitting network devices to be seen and configured in
+ * the OSX system preferences app.
  */
-class UnixEthernetTap : public EthernetTap
+class OSXEthernetTap : public EthernetTap
 {
 public:
-	/**
-	 * Construct a new TAP device
-	 *
-	 * Handler arguments: arg,from,to,etherType,data
-	 * 
-	 * @param renv Runtime environment
-	 * @param tryToGetDevice Unix device name (e.g. zt0)
-	 * @param mac MAC address of device
-	 * @param mtu MTU of device
-	 * @param desc If non-NULL, a description (not used on all OSes)
-	 * @param handler Handler function to be called when data is received from the tap
-	 * @param arg First argument to handler function
-	 * @throws std::runtime_error Unable to allocate tap device
-	 */
-	UnixEthernetTap(
-		const RuntimeEnvironment *renv,
-		const char *tryToGetDevice,
+	OSXEthernetTap(
 		const MAC &mac,
 		unsigned int mtu,
+		unsigned int metric,
+		uint64_t nwid,
+		const char *desiredDevice,
+		const char *friendlyName,
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
-		void *arg)
-		throw(std::runtime_error);
+		void *arg);
 
-	virtual ~UnixEthernetTap();
+	virtual ~OSXEthernetTap();
 
 	virtual void setEnabled(bool en);
 	virtual bool enabled() const;
-	virtual void setDisplayName(const char *dn);
 	virtual bool addIP(const InetAddress &ip);
 	virtual bool removeIP(const InetAddress &ip);
 	virtual std::set<InetAddress> ips() const;
@@ -83,14 +71,10 @@ public:
 	virtual std::string persistentId() const;
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
-	/**
-	 * Thread main method; do not call elsewhere
-	 */
 	void threadMain()
 		throw();
 
 private:
-	const RuntimeEnvironment *_r;
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
 	Thread _thread;

@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include <stdexcept>
+
 #include "MAC.hpp"
 
 namespace ZeroTier {
@@ -58,15 +60,36 @@ public:
 	 *
 	 * On some platforms (Windows) this can be a time-consuming operation.
 	 *
+	 * Note that close() must be used. Do not just delete the tap instance,
+	 * since this may leave orphaned resources or cause other problems.
+	 *
 	 * @param mac MAC address
 	 * @param mtu Device MTU
 	 * @param metric Interface metric (higher = lower priority, may not be supported on all OSes)
 	 * @param nwid ZeroTier network ID
 	 * @param desiredDevice Desired system device name or NULL for no preference
 	 * @param friendlyName Friendly name of this interface or NULL for none (not used on all platforms)
-	 * @return EthernetTap instance or NULL on failure
+	 * @param handler Function to call when packets are received
+	 * @param arg First argument to provide to handler
+	 * @return EthernetTap instance
+	 * @throws std::runtime_error Unable to initialize tap device
 	 */
-	virtual EthernetTap *get(const MAC &mac,unsigned int mtu,unsigned int metric,uint64_t nwid,const char *desiredDevice,const char *friendlyName) = 0;
+	virtual EthernetTap *open(
+		const MAC &mac,
+		unsigned int mtu,
+		unsigned int metric,
+		uint64_t nwid,
+		const char *desiredDevice,
+		const char *friendlyName,
+		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void *arg) = 0;
+
+	/**
+	 * Close an ethernet tap device
+	 *
+	 * @param tap Tap instance
+	 */
+	virtual void close(EthernetTap *tap) = 0;
 };
 
 } // namespace ZeroTier

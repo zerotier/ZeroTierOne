@@ -71,15 +71,6 @@ public:
 	virtual bool enabled() const = 0;
 
 	/**
-	 * Set the user display name for this connection
-	 *
-	 * This does nothing on platforms that don't have this concept.
-	 *
-	 * @param dn User display name
-	 */
-	virtual void setDisplayName(const char *dn) = 0;
-
-	/**
 	 * @return MAC address of this interface
 	 */
 	inline const MAC &mac() const throw() { return _mac; }
@@ -88,6 +79,11 @@ public:
 	 * @return MTU of this interface
 	 */
 	inline unsigned int mtu() const throw() { return _mtu; }
+
+	/**
+	 * @return Interface metric
+	 */
+	inline unsigned int metric() const throw() { return _metric; }
 
 	/**
 	 * Add an IP to this interface
@@ -192,14 +188,16 @@ public:
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups) = 0;
 
 protected:
-	EthernetTap(const char *cn,const MAC &m,unsigned int mt) :
+	EthernetTap(const char *cn,const MAC &m,unsigned int mt,unsigned int met) :
 		_implName(cn),
 		_mac(m),
-		_mtu(mt) {}
+		_mtu(mt),
+		_metric(met) {}
 
 	const char *_implName;
 	MAC _mac;
 	unsigned int _mtu;
+	unsigned int _metric;
 };
 
 } // namespace ZeroTier
