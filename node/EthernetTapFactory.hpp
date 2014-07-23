@@ -31,8 +31,12 @@
 #include <stdint.h>
 
 #include <stdexcept>
+#include <vector>
+#include <string>
 
 #include "MAC.hpp"
+#include "NonCopyable.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -49,7 +53,7 @@ class EthernetTap;
  * as well as moving toward a design that makes unit testing the entire app
  * quite a bit easier.
  */
-class EthernetTapFactory
+class EthernetTapFactory : NonCopyable
 {
 public:
 	EthernetTapFactory() {}
@@ -90,6 +94,11 @@ public:
 	 * @param tap Tap instance
 	 */
 	virtual void close(EthernetTap *tap) = 0;
+
+	/**
+	 * @return All currently open tap device names
+	 */
+	virtual std::vector<std::string> allTapDeviceNames() const = 0;
 };
 
 } // namespace ZeroTier

@@ -25,25 +25,38 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_BSDROUTINGTABLE_HPP
-#define ZT_BSDROUTINGTABLE_HPP
+#ifndef ZT_LINUXETHERNETTAPFACTORY_HPP
+#define ZT_LINUXETHERNETTAPFACTORY_HPP
 
-#include "../RoutingTable.hpp"
+#include <vector>
+#include <string>
+
+#include "../EthernetTapFactory.hpp"
+#include "../Mutex.hpp"
 
 namespace ZeroTier {
 
-/**
- * Routing table interface for BSD with sysctl() and BSD /sbin/route
- *
- * Has currently only been tested on OSX/Darwin.
- */
-class BSDRoutingTable : public RoutingTable
+class LinuxEthernetTapFactory : public EthernetTapFactory
 {
 public:
-	BSDRoutingTable();
-	virtual ~BSDRoutingTable();
-	virtual std::vector<RoutingTable::Entry> get(bool includeLinkLocal = false,bool includeLoopback = false) const;
-	virtual RoutingTable::Entry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric);
+	LinuxEthernetTapFactory();
+	virtual ~LinuxEthernetTapFactory();
+
+	virtual EthernetTap *open(
+		const MAC &mac,
+		unsigned int mtu,
+		unsigned int metric,
+		uint64_t nwid,
+		const char *desiredDevice,
+		const char *friendlyName,
+		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void *arg);
+	virtual void close(EthernetTap *tap);
+	virtual std::vector<std::string> allTapDeviceNames() const;
+
+private:
+	std::vector<EthernetTap *> _devices;
+	Mutex _devices_m;
 };
 
 } // namespace ZeroTier

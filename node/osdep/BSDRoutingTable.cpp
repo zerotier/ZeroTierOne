@@ -43,7 +43,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "Constants.hpp"
+#include "../Constants.hpp"
 #include "BSDRoutingTable.hpp"
 
 // All I wanted was the bloody rounting table. I didn't expect the Spanish inquisition.
@@ -115,6 +115,9 @@ std::vector<RoutingTable::Entry> BSDRoutingTable::get(bool includeLinkLocal,bool
 										// Nobody expects the Spanish inquisition!
 										if ((sin6->sin6_addr.s6_addr[0] == 0xfe)&&((sin6->sin6_addr.s6_addr[1] & 0xc0) == 0x80)) {
 											// Our chief weapon is... in-band signaling!
+											// Seriously who in the living fuck thought this was a good idea and
+											// then had the sadistic idea to not document it anywhere? Of course it's
+											// not like there is any documentation on BSD sysctls anyway.
 											unsigned int interfaceIndex = ((((unsigned int)sin6->sin6_addr.s6_addr[2]) << 8) & 0xff) | (((unsigned int)sin6->sin6_addr.s6_addr[3]) & 0xff);
 											sin6->sin6_addr.s6_addr[2] = 0;
 											sin6->sin6_addr.s6_addr[3] = 0;

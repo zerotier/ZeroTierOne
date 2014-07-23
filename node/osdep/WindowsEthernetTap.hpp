@@ -35,18 +35,13 @@
 #include <queue>
 #include <stdexcept>
 
-#include "Constants.hpp"
-#include "EthernetTap.hpp"
-#include "Mutex.hpp"
-#include "Thread.hpp"
-#include "Array.hpp"
-
-#include <WinSock2.h>
-#include <Windows.h>
+#include "../Constants.hpp"
+#include "../EthernetTap.hpp"
+#include "../Mutex.hpp"
+#include "../Thread.hpp"
+#include "../Array.hpp"
 
 namespace ZeroTier {
-
-class RuntimeEnvironment;
 
 /**
  * Windows Ethernet tap device using bundled ztTap driver
@@ -114,7 +109,6 @@ public:
 	static int cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese,bool alsoRemoveUnassociatedDevices);
 
 private:
-	const RuntimeEnvironment *_r;
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
 	Thread _thread;

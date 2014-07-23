@@ -215,8 +215,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	::pipe(_shutdownSignalPipe);
 
-	TRACE("tap %s created",_dev.c_str());
-
 	_thread = Thread::start(this);
 }
 
@@ -341,22 +339,14 @@ std::set<InetAddress> LinuxEthernetTap::ips() const
 
 void LinuxEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[4096 + 14];
-	if ((_fd > 0)&&(len <= _mtu)) {
+	char putBuf[8194];
+	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
 		to.copyTo(putBuf,6);
 		from.copyTo(putBuf + 6,6);
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
-
-		int n = ::write(_fd,putBuf,len);
-		if (n <= 0) {
-			LOG("error writing packet to Ethernet tap device: %s",strerror(errno));
-		} else if (n != (int)len) {
-			// Saw this gremlin once, so log it if we see it again... OSX tap
-			// or something seems to have goofy issues with certain MTUs.
-			LOG("ERROR: write underrun: %s tap write() wrote %d of %u bytes of frame",_dev.c_str(),n,len);
-		}
+		::write(_fd,putBuf,len);
 	}
 }
 
@@ -465,13 +455,15 @@ void LinuxEthernetTap::threadMain()
 				if (r > 14) {
 					if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
 						r = _mtu + 14;
-					to.setTo(getBuf,6);
-					from.setTo(getBuf + 6,6);
-					unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-					if (etherType != 0x8100) { // VLAN tagged frames are not supported!
+
+					if (_enabled) {
+						to.setTo(getBuf,6);
+						from.setTo(getBuf + 6,6);
+						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						data.copyFrom(getBuf + 14,(unsigned int)r - 14);
 						_handler(_arg,from,to,etherType,data);
 					}
+
 					r = 0;
 				}
 			}

@@ -48,6 +48,13 @@ namespace ZeroTier {
  */
 class EthernetTap : NonCopyable
 {
+protected:
+	EthernetTap(const char *cn,const MAC &m,unsigned int mt,unsigned int met) :
+		_implName(cn),
+		_mac(m),
+		_mtu(mt),
+		_metric(met) {}
+
 public:
 	virtual ~EthernetTap() {}
 
@@ -188,12 +195,6 @@ public:
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups) = 0;
 
 protected:
-	EthernetTap(const char *cn,const MAC &m,unsigned int mt,unsigned int met) :
-		_implName(cn),
-		_mac(m),
-		_mtu(mt),
-		_metric(met) {}
-
 	const char *_implName;
 	MAC _mac;
 	unsigned int _mtu;

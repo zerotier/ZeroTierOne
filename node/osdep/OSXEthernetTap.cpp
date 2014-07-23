@@ -328,28 +328,12 @@ OSXEthernetTap::OSXEthernetTap(
 	_fd(0),
 	_enabled(true)
 {
-	char devpath[64],ethaddr[64],mtustr[16],tmp[4096];
+	char devpath[64],ethaddr[64],mtustr[32],metstr[32];
 	struct stat stattmp;
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
 	if (mtu > 2800)
 		throw std::runtime_error("max tap MTU is 2800");
-
-	// Check for existence of ZT tap devices, try to load module if not there
-	const char *kextload = UNIX_COMMANDS[ZT_MAC_KEXTLOAD_COMMAND];
-	if ((stat("/dev/zt0",&stattmp))&&(kextload)) {
-		strcpy(tmp,_r->homePath.c_str());
-		long kextpid = (long)vfork();
-		if (kextpid == 0) {
-			chdir(tmp);
-			execl(kextload,kextload,"-q","-repository",tmp,"tap.kext",(const char *)0);
-			_exit(-1);
-		} else if (kextpid > 0) {
-			int exitcode = -1;
-			waitpid(kextpid,&exitcode,0);
-			usleep(500);
-		} else throw std::runtime_error("unable to create subprocess with fork()");
-	}
 	if (stat("/dev/zt0",&stattmp))
 		throw std::runtime_error("/dev/zt# tap devices do not exist and unable to load kernel extension");
 
@@ -390,22 +374,17 @@ OSXEthernetTap::OSXEthernetTap(
 		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
 	}
 
-	const char *ifconfig = UNIX_COMMANDS[ZT_UNIX_IFCONFIG_COMMAND];
-	if (!ifconfig) {
-		::close(_fd);
-		throw std::runtime_error("unable to find 'ifconfig' command on system");
-	}
-
 	// Configure MAC address and MTU, bring interface up
 	Utils::snprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	Utils::snprintf(mtustr,sizeof(mtustr),"%u",mtu);
-	long cpid;
-	if ((cpid = (long)vfork()) == 0) {
-		execl(ifconfig,ifconfig,_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"up",(const char *)0);
-		_exit(-1);
-	} else {
+	Utils::snprintf(mtustr,sizeof(mtustr),"%u",_mtu);
+	Utils::snprintf(metstr,sizeof(metstr),"%u",_metric)
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
+		::_exit(-1);
+	} else if (cpid > 0) {
 		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
+		::waitpid(cpid,&exitcode,0);
 		if (exitcode) {
 			::close(_fd);
 			throw std::runtime_error("ifconfig failure setting link-layer address and activating tap interface");
@@ -420,10 +399,6 @@ OSXEthernetTap::OSXEthernetTap(
 	::pipe(_shutdownSignalPipe);
 
 	_thread = Thread::start(this);
-
-	EthernetTap_instances_m.lock();
-	++EthernetTap_instances;
-	EthernetTap_instances_m.unlock();
 }
 
 OSXEthernetTap::~OSXEthernetTap()
@@ -433,27 +408,6 @@ OSXEthernetTap::~OSXEthernetTap()
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
-
-	EthernetTap_instances_m.lock();
-	int instances = --EthernetTap_instances;
-	EthernetTap_instances_m.unlock();
-	if (instances <= 0) {
-		// Unload OSX kernel extension on the deletion of the last EthernetTap
-		// instance.
-		const char *kextunload = UNIX_COMMANDS[ZT_MAC_KEXTUNLOAD_COMMAND];
-		if (kextunload) {
-			char tmp[4096];
-			sprintf(tmp,"%s/tap.kext",_r->homePath.c_str());
-			long kextpid = (long)vfork();
-			if (kextpid == 0) {
-				execl(kextunload,kextunload,tmp,(const char *)0);
-				_exit(-1);
-			} else if (kextpid > 0) {
-				int exitcode = -1;
-				waitpid(kextpid,&exitcode,0);
-			}
-		}
-	}
 }
 
 void OSXEthernetTap::setEnabled(bool en)
@@ -469,14 +423,11 @@ bool OSXEthernetTap::enabled() const
 
 static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 {
-	const char *ifconfig = UNIX_COMMANDS[ZT_UNIX_IFCONFIG_COMMAND];
-	if (!ifconfig)
-		return false;
-	long cpid;
-	if ((cpid = (long)vfork()) == 0) {
-		execl(ifconfig,ifconfig,_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
 		_exit(-1);
-	} else {
+	} else (cpid > 0) {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
@@ -486,12 +437,6 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 
 bool OSXEthernetTap::addIP(const InetAddress &ip)
 {
-	const char *ifconfig = UNIX_COMMANDS[ZT_UNIX_IFCONFIG_COMMAND];
-	if (!ifconfig) {
-		LOG("ERROR: could not configure IP address for %s: unable to find 'ifconfig' command on system (checked /sbin, /bin, /usr/sbin, /usr/bin)",_dev.c_str());
-		return false;
-	}
-
 	if (!ip)
 		return false;
 
@@ -510,16 +455,15 @@ bool OSXEthernetTap::addIP(const InetAddress &ip)
 		}
 	}
 
-	long cpid;
-	if ((cpid = (long)vfork()) == 0) {
-		execl(ifconfig,ifconfig,_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
-		_exit(-1);
-	} else {
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString().c_str(),"alias",(const char *)0);
+		::_exit(-1);
+	} else if (cpid > 0) {
 		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
+		::waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
 	}
-
 	return false;
 }
 
@@ -569,22 +513,14 @@ std::set<InetAddress> OSXEthernetTap::ips() const
 
 void OSXEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	char putBuf[4096 + 14];
-	if ((_fd > 0)&&(len <= _mtu)) {
+	char putBuf[4096];
+	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
 		to.copyTo(putBuf,6);
 		from.copyTo(putBuf + 6,6);
 		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
 		memcpy(putBuf + 14,data,len);
 		len += 14;
-
-		int n = ::write(_fd,putBuf,len);
-		if (n <= 0) {
-			LOG("error writing packet to Ethernet tap device: %s",strerror(errno));
-		} else if (n != (int)len) {
-			// Saw this gremlin once, so log it if we see it again... OSX tap
-			// or something seems to have goofy issues with certain MTUs.
-			LOG("ERROR: write underrun: %s tap write() wrote %d of %u bytes of frame",_dev.c_str(),n,len);
-		}
+		::write(_fd,putBuf,len);
 	}
 }
 
@@ -669,10 +605,8 @@ void OSXEthernetTap::threadMain()
 		if (FD_ISSET(_fd,&readfds)) {
 			n = (int)::read(_fd,getBuf + r,sizeof(getBuf) - r);
 			if (n < 0) {
-				if ((errno != EINTR)&&(errno != ETIMEDOUT)) {
-					TRACE("unexpected error reading from tap: %s",strerror(errno));
+				if ((errno != EINTR)&&(errno != ETIMEDOUT))
 					break;
-				}
 			} else {
 				// Some tap drivers like to send the ethernet frame and the
 				// payload in two chunks, so handle that by accumulating
@@ -681,13 +615,15 @@ void OSXEthernetTap::threadMain()
 				if (r > 14) {
 					if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
 						r = _mtu + 14;
-					to.setTo(getBuf,6);
-					from.setTo(getBuf + 6,6);
-					unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-					if (etherType != 0x8100) { // VLAN tagged frames are not supported!
+
+					if (_enabled) {
+						to.setTo(getBuf,6);
+						from.setTo(getBuf + 6,6);
+						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						data.copyFrom(getBuf + 14,(unsigned int)r - 14);
 						_handler(_arg,from,to,etherType,data);
 					}
+
 					r = 0;
 				}
 			}
