@@ -144,10 +144,14 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		}
 
 #ifdef ZT_SALSA20_SSE
-		__m128i X0 = _state.v[0];
-		__m128i X1 = _state.v[1];
-		__m128i X2 = _state.v[2];
-		__m128i X3 = _state.v[3];
+		__m128i X0 = _mm_load_si128((const __m128i *)&(_state.v[0]));
+		__m128i X1 = _mm_load_si128((const __m128i *)&(_state.v[1]));
+		__m128i X2 = _mm_load_si128((const __m128i *)&(_state.v[2]));
+		__m128i X3 = _mm_load_si128((const __m128i *)&(_state.v[3]));
+		__m128i X0s = X0;
+		__m128i X1s = X1;
+		__m128i X2s = X2;
+		__m128i X3s = X3;
 
 		for (i=0;i<_roundsDiv2;++i) {
 			__m128i T = _mm_add_epi32(X0, X3);
@@ -185,10 +189,10 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 			X3 = _mm_shuffle_epi32(X3, 0x93);
 		}
 
-		X0 = _mm_add_epi32(_state.v[0],X0);
-		X1 = _mm_add_epi32(_state.v[1],X1);
-		X2 = _mm_add_epi32(_state.v[2],X2);
-		X3 = _mm_add_epi32(_state.v[3],X3);
+		X0 = _mm_add_epi32(X0s,X0);
+		X1 = _mm_add_epi32(X1s,X1);
+		X2 = _mm_add_epi32(X2s,X2);
+		X3 = _mm_add_epi32(X3s,X3);
 
 		{
 			__m128i k02 = _mm_or_si128(_mm_slli_epi64(X0, 32), _mm_srli_epi64(X3, 32));
@@ -201,10 +205,10 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 			const float *const mv = (const float *)m;
 			float *const cv = (float *)c;
 
-			_mm_storeu_ps(cv,_mm_xor_si128(_mm_unpackhi_epi64(k02,k20),_mm_loadu_ps(mv)));
-			_mm_storeu_ps(cv + 4,_mm_xor_si128(_mm_unpackhi_epi64(k13,k31),_mm_loadu_ps(mv + 4)));
-			_mm_storeu_ps(cv + 8,_mm_xor_si128(_mm_unpacklo_epi64(k20,k02),_mm_loadu_ps(mv + 8)));
-			_mm_storeu_ps(cv + 12,_mm_xor_si128(_mm_unpacklo_epi64(k31,k13),_mm_loadu_ps(mv + 12)));
+			_mm_storeu_ps(cv,_mm_castsi128_ps(_mm_xor_si128(_mm_unpackhi_epi64(k02,k20),_mm_castps_si128(_mm_loadu_ps(mv)))));
+			_mm_storeu_ps(cv + 4,_mm_castsi128_ps(_mm_xor_si128(_mm_unpackhi_epi64(k13,k31),_mm_castps_si128(_mm_loadu_ps(mv + 4)))));
+			_mm_storeu_ps(cv + 8,_mm_castsi128_ps(_mm_xor_si128(_mm_unpacklo_epi64(k20,k02),_mm_castps_si128(_mm_loadu_ps(mv + 8)))));
+			_mm_storeu_ps(cv + 12,_mm_castsi128_ps(_mm_xor_si128(_mm_unpacklo_epi64(k31,k13),_mm_castps_si128(_mm_loadu_ps(mv + 12)))));
 		}
 
 		if (!(++_state.i[8])) {

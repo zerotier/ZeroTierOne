@@ -120,7 +120,7 @@
     <ClCompile Include="..\..\node\TcpSocket.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\WindowsEthernetTap.cpp">
+    <ClCompile Include="..\..\node\RoutingTable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -287,13 +287,13 @@
     <ClInclude Include="..\..\node\TcpSocket.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\WindowsEthernetTap.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\AntiRecursion.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\version.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\RoutingTable.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

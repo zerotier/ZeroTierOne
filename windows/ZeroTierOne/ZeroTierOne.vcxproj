@@ -40,6 +40,7 @@
     <ClCompile Include="..\..\node\PacketDecoder.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp" />
+    <ClCompile Include="..\..\node\RoutingTable.cpp" />
     <ClCompile Include="..\..\node\Salsa20.cpp" />
     <ClCompile Include="..\..\node\Service.cpp" />
     <ClCompile Include="..\..\node\SHA512.cpp" />
@@ -51,7 +52,6 @@
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\UdpSocket.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
-    <ClCompile Include="..\..\node\WindowsEthernetTap.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
     <ClCompile Include="ZeroTierOneService.cpp" />
@@ -93,6 +93,7 @@
     <ClInclude Include="..\..\node\Path.hpp" />
     <ClInclude Include="..\..\node\Peer.hpp" />
     <ClInclude Include="..\..\node\Poly1305.hpp" />
+    <ClInclude Include="..\..\node\RoutingTable.hpp" />
     <ClInclude Include="..\..\node\RuntimeEnvironment.hpp" />
     <ClInclude Include="..\..\node\Salsa20.hpp" />
     <ClInclude Include="..\..\node\Service.hpp" />
@@ -108,7 +109,6 @@
     <ClInclude Include="..\..\node\Topology.hpp" />
     <ClInclude Include="..\..\node\UdpSocket.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
-    <ClInclude Include="..\..\node\WindowsEthernetTap.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ServiceBase.h" />
@@ -221,7 +221,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -245,7 +245,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
