@@ -123,6 +123,15 @@
     <ClCompile Include="..\..\node\RoutingTable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\osnet\WindowsEthernetTap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osnet\WindowsEthernetTapFactory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osnet\WindowsRoutingTable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ext\lz4\lz4.h">
@@ -294,6 +303,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\RoutingTable.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osnet\WindowsEthernetTap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osnet\WindowsEthernetTapFactory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osnet\WindowsRoutingTable.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

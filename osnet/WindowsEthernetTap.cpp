@@ -25,8 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "../Constants.hpp"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -42,9 +40,10 @@
 #include <nldef.h>
 #include <netioapi.h>
 
-#include "../EthernetTap.hpp"
-#include "../Utils.hpp"
-#include "../Mutex.hpp"
+#include "../node/Constants.hpp"
+#include "../node/EthernetTap.hpp"
+#include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
 #include "WindowsEthernetTap.hpp"
 
 #include "..\windows\TapDriver\tap-windows.h"

@@ -52,6 +52,9 @@
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\UdpSocket.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
+    <ClCompile Include="..\..\osnet\WindowsEthernetTap.cpp" />
+    <ClCompile Include="..\..\osnet\WindowsEthernetTapFactory.cpp" />
+    <ClCompile Include="..\..\osnet\WindowsRoutingTable.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
     <ClCompile Include="ZeroTierOneService.cpp" />
@@ -109,6 +112,9 @@
     <ClInclude Include="..\..\node\Topology.hpp" />
     <ClInclude Include="..\..\node\UdpSocket.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
+    <ClInclude Include="..\..\osnet\WindowsEthernetTap.hpp" />
+    <ClInclude Include="..\..\osnet\WindowsEthernetTapFactory.hpp" />
+    <ClInclude Include="..\..\osnet\WindowsRoutingTable.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ServiceBase.h" />
