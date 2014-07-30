@@ -993,7 +993,7 @@ public:
 		if ((compressed())&&(size() >= ZT_PROTO_MIN_PACKET_LENGTH)) {
 			if (size() > ZT_PACKET_IDX_PAYLOAD) {
 				unsigned int compLen = size() - ZT_PACKET_IDX_PAYLOAD;
-				int ucl = LZ4_uncompress_unknownOutputSize((const char *)field(ZT_PACKET_IDX_PAYLOAD,compLen),(char *)buf,compLen,sizeof(buf));
+				int ucl = LZ4_decompress_safe((const char *)field(ZT_PACKET_IDX_PAYLOAD,compLen),(char *)buf,compLen,sizeof(buf));
 				if ((ucl > 0)&&(ucl <= (int)(capacity() - ZT_PACKET_IDX_PAYLOAD))) {
 					setSize((unsigned int)ucl + ZT_PACKET_IDX_PAYLOAD);
 					memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)ucl),buf,ucl);
