@@ -355,9 +355,8 @@ std::string LinuxEthernetTap::deviceName() const
 	return _dev;
 }
 
-std::string LinuxEthernetTap::persistentId() const
+void LinuxEthernetTap::setFriendlyName(const char *friendlyName)
 {
-	return std::string();
 }
 
 bool LinuxEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)

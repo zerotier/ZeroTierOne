@@ -171,14 +171,16 @@ public:
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len) = 0;
 
 	/**
-	 * @return OS-specific device or connection name
+	 * @return OS-specific device or connection name (e.g. zt0, tap0, etc.)
 	 */
 	virtual std::string deviceName() const = 0;
 
 	/**
-	 * @return OS-internal persistent device ID or empty string if not applicable to this platform or not persistent
+	 * Change this device's user-visible name (if supported)
+	 *
+	 * @param friendlyName New name
 	 */
-	virtual std::string persistentId() const = 0;
+	virtual void setFriendlyName(const char *friendlyName) = 0;
 
 	/**
 	 * Fill or modify a set to contain multicast groups for this device

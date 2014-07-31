@@ -67,7 +67,6 @@
 #include "EthernetTap.hpp"
 #include "CMWC4096.hpp"
 #include "NodeConfig.hpp"
-#include "SysEnv.hpp"
 #include "Network.hpp"
 #include "MulticastGroup.hpp"
 #include "Mutex.hpp"
@@ -77,6 +76,7 @@
 #include "Buffer.hpp"
 #include "IpcConnection.hpp"
 #include "AntiRecursion.hpp"
+#include "RoutingTable.hpp"
 
 namespace ZeroTier {
 
@@ -218,6 +218,7 @@ const char *Node::NodeControlClient::authTokenDefaultSystemPath()
 struct _NodeImpl
 {
 	RuntimeEnvironment renv;
+
 	unsigned int udpPort,tcpPort;
 	std::string reasonForTerminationStr;
 	volatile Node::ReasonForTermination reasonForTermination;
@@ -225,6 +226,7 @@ struct _NodeImpl
 	volatile bool running;
 	volatile bool resynchronize;
 
+	// This function performs final node tear-down
 	inline Node::ReasonForTermination terminate()
 	{
 		RuntimeEnvironment *_r = &renv;
@@ -238,16 +240,15 @@ struct _NodeImpl
 #ifndef __WINDOWS__
 		delete renv.netconfService;
 #endif
-		delete renv.updater;
-		delete renv.nc;
-		delete renv.sysEnv;
-		delete renv.topology;
-		delete renv.sm;
-		delete renv.sw;
-		delete renv.mc;
-		delete renv.antiRec;
-		delete renv.prng;
-		delete renv.log;
+		delete renv.updater;  renv.updater = (SoftwareUpdater *)0;
+		delete renv.nc;       renv.nc = (NodeConfig *)0;            // shut down all networks, close taps, etc.
+		delete renv.topology; renv.topology = (Topology *)0;        // now we no longer need routing info
+		delete renv.sm;       renv.sm = (SocketManager *)0;         // close all sockets
+		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
+		delete renv.mc;       renv.mc = (Multicaster *)0;
+		delete renv.antiRec;  renv.antiRec = (AntiRecursion *)0;
+		delete renv.prng;     renv.prng = (CMWC4096 *)0;
+		delete renv.log;      renv.log = (Logger *)0;               // but stop logging last of all
 
 		return reasonForTermination;
 	}
@@ -260,7 +261,7 @@ struct _NodeImpl
 	}
 };
 
-#ifndef __WINDOWS__
+#ifndef __WINDOWS__ // "services" are not supported on Windows
 static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictionary &msg)
 {
 	if (!renv)
@@ -347,7 +348,13 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 }
 #endif // !__WINDOWS__
 
-Node::Node(const char *hp,unsigned int udpPort,unsigned int tcpPort,bool resetIdentity)
+Node::Node(
+	const char *hp,
+	EthernetTapFactory *tf,
+	RoutingTable *rt,
+	unsigned int udpPort,
+	unsigned int tcpPort,
+	bool resetIdentity)
 	throw() :
 	_impl(new _NodeImpl)
 {
@@ -357,6 +364,9 @@ Node::Node(const char *hp,unsigned int udpPort,unsigned int tcpPort,bool resetId
 		impl->renv.homePath = hp;
 	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
 
+	impl->renv.tapFactory = tf;
+	impl->renv.routingTable = rt;
+
 	if (resetIdentity) {
 		// Forget identity and peer database, peer keys, etc.
 		Utils::rm((impl->renv.homePath + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
@@ -364,13 +374,14 @@ Node::Node(const char *hp,unsigned int udpPort,unsigned int tcpPort,bool resetId
 		Utils::rm((impl->renv.homePath + ZT_PATH_SEPARATOR_S + "peers.persist").c_str());
 
 		// Truncate network config information in networks.d but leave the files since we
-		// still want to remember any networks we have joined. This will force re-config.
+		// still want to remember any networks we have joined. This will force those networks
+		// to be reconfigured with our newly regenerated identity after startup.
 		std::string networksDotD(impl->renv.homePath + ZT_PATH_SEPARATOR_S + "networks.d");
 		std::map< std::string,bool > nwfiles(Utils::listDirectory(networksDotD.c_str()));
 		for(std::map<std::string,bool>::iterator nwf(nwfiles.begin());nwf!=nwfiles.end();++nwf) {
-			FILE *foo = fopen((networksDotD + ZT_PATH_SEPARATOR_S + nwf->first).c_str(),"w");
-			if (foo)
-				fclose(foo);
+			FILE *trun = fopen((networksDotD + ZT_PATH_SEPARATOR_S + nwf->first).c_str(),"w");
+			if (trun)
+				fclose(trun);
 		}
 	}
 
@@ -470,13 +481,11 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
-		// Create the objects that make up runtime state.
 		_r->antiRec = new AntiRecursion();
 		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
 		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
-		_r->sysEnv = new SysEnv();
 		try {
 			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
 		} catch (std::exception &exc) {
@@ -568,7 +577,7 @@ Node::ReasonForTermination Node::run()
 			// If our network environment looks like it changed, resynchronize.
 			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
 				lastNetworkFingerprintCheck = now;
-				uint64_t fp = _r->sysEnv->getNetworkConfigurationFingerprint(_r->nc->networkTapDeviceNames());
+				uint64_t fp = _r->routingTable->networkEnvironmentFingerprint(_r->nc->networkTapDeviceNames());
 				if (fp != networkConfigurationFingerprint) {
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
@@ -588,7 +597,7 @@ Node::ReasonForTermination Node::run()
 			}
 
 			if (resynchronize) {
-				_r->tcpTunnelingEnabled = false; // turn off TCP tunneling master switch at first
+				_r->tcpTunnelingEnabled = false; // turn off TCP tunneling master switch at first, will be reenabled on persistent UDP failure
 				_r->timeOfLastResynchronize = now;
 			}
 
@@ -643,17 +652,15 @@ Node::ReasonForTermination Node::run()
 
 				/* Periodically ping all our non-stale direct peers unless we're a supernode.
 				 * Supernodes only ping each other (which is done above). */
-				if (!_r->topology->amSupernode()) {
-					if ((now - lastPingCheck) >= ZT_PING_CHECK_DELAY) {
-						lastPingCheck = now;
-						try {
-							_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
-							_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
-						} catch (std::exception &exc) {
-							LOG("unexpected exception running ping check cycle: %s",exc.what());
-						} catch ( ... ) {
-							LOG("unexpected exception running ping check cycle: (unkonwn)");
-						}
+				if ((!_r->topology->amSupernode())&&((now - lastPingCheck) >= ZT_PING_CHECK_DELAY)) {
+					lastPingCheck = now;
+					try {
+						_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
+						_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
+					} catch (std::exception &exc) {
+						LOG("unexpected exception running ping check cycle: %s",exc.what());
+					} catch ( ... ) {
+						LOG("unexpected exception running ping check cycle: (unkonwn)");
 					}
 				}
 			}

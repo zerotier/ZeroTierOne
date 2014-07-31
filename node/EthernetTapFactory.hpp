@@ -89,11 +89,12 @@ public:
 		void *arg) = 0;
 
 	/**
-	 * Close an ethernet tap device
+	 * Close an ethernet tap device and delete/free the tap object
 	 *
 	 * @param tap Tap instance
+	 * @param destroyPersistentDevices If true, destroy persistent device (on platforms where applicable)
 	 */
-	virtual void close(EthernetTap *tap) = 0;
+	virtual void close(EthernetTap *tap,bool destroyPersistentDevices) = 0;
 
 	/**
 	 * @return All currently open tap device names

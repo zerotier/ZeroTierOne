@@ -39,7 +39,6 @@ class NodeConfig;
 class Logger;
 class Switch;
 class Topology;
-class SysEnv;
 class CMWC4096;
 class Service;
 class Node;
@@ -47,6 +46,8 @@ class Multicaster;
 class SoftwareUpdater;
 class SocketManager;
 class AntiRecursion;
+class EthernetTapFactory;
+class RoutingTable;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -68,6 +69,8 @@ public:
 		tcpTunnelingEnabled(false),
 		timeOfLastResynchronize(0),
 		timeOfLastPacketReceived(0),
+		tapFactory((EthernetTapFactory *)0),
+		routingTable((RoutingTable *)0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		antiRec((AntiRecursion *)0),
@@ -75,7 +78,6 @@ public:
 		sw((Switch *)0),
 		sm((SocketManager *)0),
 		topology((Topology *)0),
-		sysEnv((SysEnv *)0),
 		nc((NodeConfig *)0),
 		updater((SoftwareUpdater *)0)
 #ifndef __WINDOWS__
@@ -103,6 +105,10 @@ public:
 	// via an ugly const_cast<>.
 	volatile uint64_t timeOfLastPacketReceived;
 
+	// These are passed in from outside and are not created or deleted by the ZeroTier node core
+	EthernetTapFactory *tapFactory;
+	RoutingTable *routingTable;
+
 	/*
 	 * Order matters a bit here. These are constructed in this order
 	 * and then deleted in the opposite order on Node exit. The order ensures
@@ -118,7 +124,6 @@ public:
 	Switch *sw;
 	SocketManager *sm;
 	Topology *topology;
-	SysEnv *sysEnv;
 	NodeConfig *nc;
 	Node *node;
 	SoftwareUpdater *updater; // null if software updates are not enabled

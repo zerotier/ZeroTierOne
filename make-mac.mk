@@ -42,7 +42,7 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
 
-OBJS+=node/BSDRoutingTable.o
+OBJS+=osnet/BSDRoutingTable.o
 
 all: one
 

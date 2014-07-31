@@ -37,12 +37,8 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Buffer.hpp"
-
-#ifdef __WINDOWS__
-#include "WindowsEthernetTap.hpp"
-#else
-#include "UnixEthernetTap.hpp"
-#endif
+#include "EthernetTap.hpp"
+#include "EthernetTapFactory.hpp"
 
 #define ZT_NETWORK_CERT_WRITE_BUF_SIZE 131072
 
@@ -69,26 +65,13 @@ Network::~Network()
 {
 	Thread::join(_setupThread);
 
-#ifdef __WINDOWS__
-	std::string devPersistentId;
-	if (_tap) {
-		devPersistentId = _tap->persistentId();
-		delete _tap;
-	}
-#else
 	if (_tap)
-		delete _tap;
-#endif
+		_r->tapFactory->close(_tap,_destroyOnDelete);
 
 	if (_destroyOnDelete) {
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
-#ifdef __WINDOWS__
-		if (devPersistentId.length())
-			WindowsEthernetTap::deletePersistentTapDevice(_r,devPersistentId.c_str());
-#endif
 	} else {
-		// Causes flush of membership certs to disk
 		clean();
 		_dumpMulticastCerts();
 	}
@@ -113,10 +96,16 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	nw->_destroyOnDelete = false;
 	nw->_netconfFailure = NETCONF_FAILURE_NONE;
 
-	if (nw->controller() == renv->identity.address()) // netconf masters can't really join networks
+	if (nw->controller() == renv->identity.address()) // TODO: fix Switch to allow packets to self
 		throw std::runtime_error("cannot join a network for which I am the netconf master");
 
-	nw->_setupThread = Thread::start<Network>(nw.ptr());
+	try {
+		nw->_restoreState();
+		nw->requestConfiguration();
+	} catch ( ... ) {
+		TRACE("exception in network setup thread in _restoreState() or requestConfiguration()!");
+		nw->_lastConfigUpdate = 0; // call requestConfiguration() again
+	}
 
 	return nw;
 }
@@ -127,7 +116,7 @@ bool Network::updateMulticastGroups()
 	EthernetTap *t = _tap;
 	if (t) {
 		// Grab current groups from the local tap
-		bool updated = _tap->updateMulticastGroups(_multicastGroups);
+		bool updated = t->updateMulticastGroups(_multicastGroups);
 
 		// Merge in learned groups from any hosts bridged in behind us
 		for(std::map<MulticastGroup,uint64_t>::const_iterator mg(_bridgedMulticastGroups.begin());mg!=_bridgedMulticastGroups.end();++mg)
@@ -154,20 +143,10 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
 	Mutex::Lock _l(_lock);
 
-	EthernetTap *t = _tap;
-	if (!t) {
-		TRACE("BUG: setConfiguration() called while tap is null!");
-		return false; // can't accept config in initialization state
-	}
-
 	try {
-		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf));
+		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
 		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == _r->identity.address())) {
 			_config = newConfig;
-
-			if (newConfig->staticIps().size())
-				t->setIps(newConfig->staticIps());
-			t->setDisplayName((std::string("ZeroTier One [") + newConfig->name() + "]").c_str());
 
 			_lastConfigUpdate = Utils::now();
 			_netconfFailure = NETCONF_FAILURE_NONE;
@@ -179,6 +158,17 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 				} else {
 					Utils::lockDownFile(confPath.c_str(),false);
 				}
+			}
+
+			EthernetTap *t = _tap;
+			if (t) {
+				char fname[1024];
+				_mkNetworkFriendlyName(fname,sizeof(fname));
+				t->setIps(newConfig->staticIps());
+				t->setFriendlyName(fname);
+			} else {
+				if (!_setupThread)
+					_setupThread = Thread::start<Network>(this);
 			}
 
 			return true;
@@ -196,9 +186,6 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 
 void Network::requestConfiguration()
 {
-	if (!_tap)
-		return; // don't bother requesting until we are initialized
-
 	if (controller() == _r->identity.address()) {
 		// netconf master cannot be a member of its own nets
 		LOG("unable to request network configuration for network %.16llx: I am the network master, cannot query self",(unsigned long long)_id);
@@ -346,51 +333,46 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 	}
 }
 
+// Ethernet tap creation thread -- required on some platforms where tap
+// creation may be time consuming (e.g. Windows).
 void Network::threadMain()
 	throw()
 {
-	// Setup thread -- this exits when tap is constructed. It's here
-	// because opening the tap can take some time on some platforms.
+	char fname[1024],lcentry[128];
+	Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
 
+	EthernetTap *t;
 	try {
-#ifdef __WINDOWS__
-		// Windows tags interfaces by their network IDs, which are shoved into the
-		// registry to mark persistent instance of the tap device.
-		char tag[24];
-		Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)_id);
-		_tap = new WindowsEthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
-#else
-		// Unix tries to get the same device name next time, if possible.
-		std::string tagstr;
-		char lcentry[128];
-		Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
-		tagstr = _nc->getLocalConfig(lcentry);
+		std::string desiredDevice(_nc->getLocalConfig(lcentry));
+		_mkNetworkFriendlyName(fname,sizeof(fname));
 
-		const char *tag = (tagstr.length() > 0) ? tagstr.c_str() : (const char *)0;
-		_tap = new UnixEthernetTap(_r,tag,_mac,ZT_IF_MTU,&_CBhandleTapData,this);
+		t = _r->tapFactory->open(_mac,ZT_IF_MTU,ZT_DEFAULT_IF_METRIC,_id,(desiredDevice.length() > 0) ? desiredDevice.c_str() : (const char *)0,fname,_CBhandleTapData,this);
 
-		std::string dn(_tap->deviceName());
-		if ((!tag)||(dn != tag))
+		std::string dn(t->deviceName());
+		if ((dn.length())&&(dn != desiredDevice))
 			_nc->putLocalConfig(lcentry,dn);
-#endif
 	} catch (std::exception &exc) {
-		delete _tap;
-		_tap = (EthernetTap *)0;
+		delete t;
+		t = (EthernetTap *)0;
 		LOG("network %.16llx failed to initialize: %s",_id,exc.what());
 		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
 	} catch ( ... ) {
-		delete _tap;
-		_tap = (EthernetTap *)0;
+		delete t;
+		t = (EthernetTap *)0;
 		LOG("network %.16llx failed to initialize: unknown error",_id);
 		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
 	}
 
-	try {
-		_restoreState();
-		requestConfiguration();
-	} catch ( ... ) {
-		TRACE("BUG: exception in network setup thread in _restoreState() or requestConfiguration()!");
-		_lastConfigUpdate = 0; // call requestConfiguration() again
+	{
+		Mutex::Lock _l(_lock);
+		if (_tap) // the tap creation thread can technically be re-launched, though this isn't done right now
+			_r->tapFactory->close(_tap,_destroyOnDelete);
+		_tap = t;
+		if (t) {
+			if (_config)
+				t->setIps(_config->staticIps());
+			t->setEnabled(_enabled);
+		}
 	}
 }
 
@@ -423,14 +405,12 @@ void Network::setEnabled(bool enabled)
 {
 	Mutex::Lock _l(_lock);
 	_enabled = enabled;
-	// TODO: bring OS network device to "down" state if enabled == false
+	if (_tap)
+		_tap->setEnabled(enabled);
 }
 
 void Network::_restoreState()
 {
-	if (!_id)
-		return; // sanity check
-
 	Buffer<ZT_NETWORK_CERT_WRITE_BUF_SIZE> buf;
 
 	std::string idstr(idString());
@@ -448,7 +428,7 @@ void Network::_restoreState()
 		} else {
 			// If the conf file isn't present, "touch" it so we'll remember
 			// the existence of this network.
-			FILE *tmp = fopen(confPath.c_str(),"wb");
+			FILE *tmp = fopen(confPath.c_str(),"w");
 			if (tmp)
 				fclose(tmp);
 		}

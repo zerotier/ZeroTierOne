@@ -156,6 +156,11 @@
 #define ZT_IF_MTU 2800
 
 /**
+ * Default interface metric for ZeroTier taps -- should be higher than physical ports
+ */
+#define ZT_DEFAULT_IF_METRIC 32768
+
+/**
  * Maximum number of packet fragments we'll support
  * 
  * The actual spec allows 16, but this is the most we'll support right

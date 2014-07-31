@@ -426,6 +426,14 @@ private:
 	void _restoreState();
 	void _dumpMulticastCerts();
 
+	inline void _mkNetworkFriendlyName(char *buf,unsigned int len)
+	{
+		// assumes _lock is locked
+		if (_config)
+			Utils::snprintf(buf,len,"ZeroTier One [%s]",_config->name().c_str());
+		else Utils::snprintf(buf,len,"ZeroTier One [%.16llx]",(unsigned long long)_id);
+	}
+
 	uint64_t _id;
 	NodeConfig *_nc; // parent NodeConfig object
 	MAC _mac; // local MAC address
@@ -439,8 +447,8 @@ private:
 	std::map<Address,CertificateOfMembership> _membershipCertificates;
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate;
 
-	std::map<MAC,Address> _bridgeRoutes;
-	std::map<MulticastGroup,uint64_t> _bridgedMulticastGroups;
+	std::map<MAC,Address> _bridgeRoutes; // remote addresses where given MACs are reachable
+	std::map<MulticastGroup,uint64_t> _bridgedMulticastGroups; // multicast groups of interest on our side of the bridge
 
 	SharedPtr<NetworkConfig> _config;
 	volatile uint64_t _lastConfigUpdate;

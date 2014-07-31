@@ -28,7 +28,7 @@
 #ifndef ZT_BSDROUTINGTABLE_HPP
 #define ZT_BSDROUTINGTABLE_HPP
 
-#include "../RoutingTable.hpp"
+#include "../node/RoutingTable.hpp"
 
 namespace ZeroTier {
 

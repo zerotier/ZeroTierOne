@@ -1,5 +1,4 @@
 OBJS=\
-	ext/lz4/lz4hc.o \
 	ext/lz4/lz4.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
@@ -26,7 +25,6 @@ OBJS=\
 	node/SoftwareUpdater.o \
 	node/SHA512.o \
 	node/Switch.o \
-	node/SysEnv.o \
 	node/TcpSocket.o \
 	node/Topology.o \
 	node/UdpSocket.o \

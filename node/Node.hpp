@@ -33,6 +33,9 @@
 
 namespace ZeroTier {
 
+class EthernetTapFactory;
+class RoutingTable;
+
 /**
  * A ZeroTier One node
  *
@@ -150,14 +153,25 @@ public:
 	/**
 	 * Create a new node
 	 *
-	 * The node is not executed until run() is called.
+	 * The node is not executed until run() is called. The supplied tap factory
+	 * and routing table must not be freed until the node is no longer
+	 * executing. Node does not delete these objects, so the caller still owns
+	 * them.
 	 *
-	 * @param hp Home directory path or NULL for system-wide default for this platform (default: NULL)
-	 * @param udpPort UDP port or 0 to disable (default: 9993)
-	 * @param tcpPort TCP port or 0 to disable (default: 0)
-	 * @param resetIdentity If true, delete identity before starting and regenerate (default: false)
+	 * @param hp Home directory path or NULL for system-wide default for this platform
+	 * @param tf Ethernet tap factory for platform network stack
+	 * @param rt Routing table interface for platform network stack
+	 * @param udpPort UDP port or 0 to disable
+	 * @param tcpPort TCP port or 0 to disable
+	 * @param resetIdentity If true, delete identity before starting and regenerate
 	 */
-	Node(const char *hp = (const char *)0,unsigned int udpPort = 9993,unsigned int tcpPort = 0,bool resetIdentity = false)
+	Node(
+		const char *hp,
+		EthernetTapFactory *tf,
+		RoutingTable *rt,
+		unsigned int udpPort,
+		unsigned int tcpPort,
+		bool resetIdentity)
 		throw();
 
 	~Node();

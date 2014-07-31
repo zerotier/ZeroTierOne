@@ -57,7 +57,7 @@ EthernetTap *LinuxEthernetTapFactory::open(
 	return t;
 }
 
-void LinuxEthernetTapFactory::close(EthernetTap *tap)
+void LinuxEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevices)
 {
 	{
 		Mutex::Lock _l(_devices_m);

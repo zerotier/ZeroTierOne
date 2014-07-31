@@ -100,7 +100,7 @@ EthernetTap *OSXEthernetTapFactory::open(
 	return t;
 }
 
-void OSXEthernetTapFactory::close(EthernetTap *tap)
+void OSXEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevices)
 {
 	{
 		Mutex::Lock _l(_devices_m);

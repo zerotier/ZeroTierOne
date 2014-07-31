@@ -64,7 +64,7 @@ public:
 	virtual std::set<InetAddress> ips() const;
 	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 	virtual std::string deviceName() const;
-	virtual std::string persistentId() const;
+	virtual void setFriendlyName(const char *friendlyName);
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
 	void threadMain()

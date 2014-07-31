@@ -529,9 +529,8 @@ std::string OSXEthernetTap::deviceName() const
 	return _dev;
 }
 
-std::string OSXEthernetTap::persistentId() const
+void OSXEthernetTap::setFriendlyName(const char *friendlyName)
 {
-	return std::string();
 }
 
 bool OSXEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)

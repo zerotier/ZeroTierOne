@@ -51,7 +51,7 @@ public:
 		const char *friendlyName,
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 		void *arg);
-	virtual void close(EthernetTap *tap);
+	virtual void close(EthernetTap *tap,bool destroyPersistentDevices);
 	virtual std::vector<std::string> allTapDeviceNames() const;
 
 private:

@@ -87,6 +87,8 @@ public:
 			CancelSynchronousIo(t._th);
 	}
 
+	inline operator bool() const throw() { return (_th != NULL); }
+
 private:
 	HANDLE _th;
 	DWORD _tid;
@@ -123,18 +125,21 @@ public:
 		throw()
 	{
 		memset(&_tid,0,sizeof(_tid));
+		_started = false;
 	}
 
 	Thread(const Thread &t)
 		throw()
 	{
 		memcpy(&_tid,&(t._tid),sizeof(_tid));
+		_started = t._started;
 	}
 
 	inline Thread &operator=(const Thread &t)
 		throw()
 	{
 		memcpy(&_tid,&(t._tid),sizeof(_tid));
+		_started = t._started;
 		return *this;
 	}
 
@@ -151,19 +156,21 @@ public:
 		throw(std::runtime_error)
 	{
 		Thread t;
+		t._started = true;
 		if (pthread_create(&t._tid,(const pthread_attr_t *)0,&___zt_threadMain<C>,instance))
 			throw std::runtime_error("pthread_create() failed, unable to create thread");
 		return t;
 	}
 
 	/**
-	 * Join to a thread, waiting for it to terminate
+	 * Join to a thread, waiting for it to terminate (does nothing on null Thread values)
 	 *
 	 * @param t Thread to join
 	 */
 	static inline void join(const Thread &t)
 	{
-		pthread_join(t._tid,(void **)0);
+		if (t._started)
+			pthread_join(t._tid,(void **)0);
 	}
 
 	/**
@@ -171,13 +178,13 @@ public:
 	 *
 	 * @param ms Number of milliseconds to sleep
 	 */
-	static inline void sleep(unsigned long ms)
-	{
-		usleep(ms * 1000);
-	}
+	static inline void sleep(unsigned long ms) { usleep(ms * 1000); }
+
+	inline operator bool() const throw() { return (_started); }
 
 private:
 	pthread_t _tid;
+	volatile bool _started;
 };
 
 } // namespace ZeroTier

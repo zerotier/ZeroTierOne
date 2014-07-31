@@ -120,16 +120,16 @@ public:
 	}
 
 	/**
-	 * @return Set of network tap device names from our virtual networks (not other taps on system)
+	 * @return Sorted vector of network tap device names from our virtual networks (not other taps on system)
 	 */
-	inline std::set<std::string> networkTapDeviceNames() const
+	inline std::vector<std::string> networkTapDeviceNames() const
 	{
-		std::set<std::string> tapDevs;
+		std::vector<std::string> tapDevs;
 		Mutex::Lock _l(_networks_m);
 		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
 			std::string dn(n->second->tapDeviceName());
 			if (dn.length())
-				tapDevs.insert(dn);
+				tapDevs.push_back(dn);
 		}
 		return tapDevs;
 	}
