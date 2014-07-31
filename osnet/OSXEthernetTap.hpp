@@ -33,9 +33,8 @@
 
 #include <stdexcept>
 
-#include "../EthernetTap.hpp"
-#include "../Mutex.hpp"
-#include "../Thread.hpp"
+#include "../node/EthernetTap.hpp"
+#include "../node/Thread.hpp"
 
 namespace ZeroTier {
 

@@ -259,9 +259,8 @@ static inline void _intl_freeifmaddrs(struct _intl_ifmaddrs *ifmp)
 #include <set>
 #include <algorithm>
 
-#include "../Constants.hpp"
-#include "../Utils.hpp"
-#include "../Mutex.hpp"
+#include "../node/Constants.hpp"
+#include "../node/Utils.hpp"
 #include "OSXEthernetTap.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
@@ -314,7 +313,6 @@ namespace ZeroTier {
 static Mutex __tapCreateLock;
 
 OSXEthernetTap::OSXEthernetTap(
-	const RuntimeEnvironment *renv,
 	const char *tryToGetDevice,
 	const MAC &mac,
 	unsigned int mtu,
@@ -447,11 +445,8 @@ bool OSXEthernetTap::addIP(const InetAddress &ip)
 	// Remove and reconfigure if address is the same but netmask is different
 	for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
 		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
-			if (___removeIp(_dev,*i)) {
+			if (___removeIp(_dev,*i))
 				break;
-			} else {
-				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
-			}
 		}
 	}
 

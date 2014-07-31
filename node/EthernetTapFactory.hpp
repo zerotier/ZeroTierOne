@@ -95,11 +95,6 @@ public:
 	 * @param destroyPersistentDevices If true, destroy persistent device (on platforms where applicable)
 	 */
 	virtual void close(EthernetTap *tap,bool destroyPersistentDevices) = 0;
-
-	/**
-	 * @return All currently open tap device names
-	 */
-	virtual std::vector<std::string> allTapDeviceNames() const = 0;
 };
 
 } // namespace ZeroTier

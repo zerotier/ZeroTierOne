@@ -31,8 +31,8 @@
 #include <vector>
 #include <string>
 
-#include "../EthernetTapFactory.hpp"
-#include "../Mutex.hpp"
+#include "../node/EthernetTapFactory.hpp"
+#include "../node/Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -63,7 +63,6 @@ public:
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 		void *arg);
 	virtual void close(EthernetTap *tap,bool destroyPersistentDevices);
-	virtual std::vector<std::string> allTapDeviceNames() const;
 
 private:
 	std::vector<EthernetTap *> _devices;

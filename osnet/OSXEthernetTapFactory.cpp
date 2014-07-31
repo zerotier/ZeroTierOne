@@ -114,13 +114,4 @@ void OSXEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevices
 	delete tap;
 }
 
-std::vector<std::string> allTapDeviceNames() const
-{
-	std::vector<std::string> dn;
-	Mutex::Lock _l(_devices_m);
-	for(std::vector<EthernetTap *>::const_iterator d(_devices.begin());d!=_devices.end();++d)
-		dn.push_back(d->deviceName());
-	return dn;
-}
-
 } // namespace ZeroTier
