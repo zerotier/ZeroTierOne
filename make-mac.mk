@@ -42,8 +42,7 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
 
-OBJS+=osnet/BSDRoutingTable.o
-#osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
+OBJS+=osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
 
 all: one
 

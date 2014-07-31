@@ -29,13 +29,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "OSXEthernetTapFactory.hpp"
 #include "OSXEthernetTap.hpp"
 
 namespace ZeroTier {
 
-OSXEthernetTapFactory::OSXEthernetTapFactory(const char *pathToTapKext,const char *tapKextName)
+OSXEthernetTapFactory::OSXEthernetTapFactory(const char *pathToTapKext,const char *tapKextName) :
 	_pathToTapKext((pathToTapKext) ? pathToTapKext : ""),
 	_tapKextName((tapKextName) ? tapKextName : "")
 {

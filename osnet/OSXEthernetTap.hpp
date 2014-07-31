@@ -78,6 +78,8 @@ private:
 	void *_arg;
 	Thread _thread;
 	std::string _dev;
+	unsigned int _mtu;
+	unsigned int _metric;
 	int _fd;
 	int _shutdownSignalPipe[2];
 	volatile bool _enabled;

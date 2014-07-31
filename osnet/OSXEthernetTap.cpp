@@ -56,15 +56,16 @@
 #include <netinet6/in6_var.h>
 #include <netinet/in_var.h>
 #include <netinet/icmp6.h>
-#include <netinet6/nd6.h>
-#include <ifaddrs.h>
 
-// OSX compile fix... in6_var defines this in a struct which namespaces it for C++
+// OSX compile fix... in6_var defines this in a struct which namespaces it for C++ ... why?!?
 struct prf_ra {
 	u_char onlink : 1;
 	u_char autonomous : 1;
 	u_char reserved : 6;
 } prf_ra;
+
+#include <netinet6/nd6.h>
+#include <ifaddrs.h>
 
 // These are KERNEL_PRIVATE... why?
 #ifndef SIOCAUTOCONF_START
@@ -309,40 +310,44 @@ static inline bool _setIpv6Stuff(const char *ifname,bool performNUD,bool acceptR
 
 namespace ZeroTier {
 
-// Only permit one tap to be opened concurrently across the entire process
-static Mutex __tapCreateLock;
-
 OSXEthernetTap::OSXEthernetTap(
-	const char *tryToGetDevice,
 	const MAC &mac,
 	unsigned int mtu,
+	unsigned int metric,
+	uint64_t nwid,
+	const char *desiredDevice,
+	const char *friendlyName,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
-	void *arg)
-	throw(std::runtime_error) :
+	void *arg) :
 	EthernetTap("OSXEthernetTap",mac,mtu,metric),
-	_r(renv),
 	_handler(handler),
 	_arg(arg),
+	_mtu(mtu),
+	_metric(metric),
 	_fd(0),
 	_enabled(true)
 {
+	static Mutex globalTapCreateLock;
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32];
 	struct stat stattmp;
-	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
+
+	Mutex::Lock _gl(globalTapCreateLock);
 
 	if (mtu > 2800)
 		throw std::runtime_error("max tap MTU is 2800");
 	if (stat("/dev/zt0",&stattmp))
-		throw std::runtime_error("/dev/zt# tap devices do not exist and unable to load kernel extension");
+		throw std::runtime_error("/dev/zt# tap devices do not exist");
 
 	// Try to reopen the last device we had, if we had one and it's still unused.
 	bool recalledDevice = false;
-	if ((tryToGetDevice)&&(tryToGetDevice[0])) {
-		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tryToGetDevice);
+	if ((desiredDevice)&&(desiredDevice[0] == 'z')&&(desiredDevice[1] == 't')) {
+		if ((strchr(desiredDevice,'/'))||(strchr(desiredDevice,'.'))) // security sanity check
+			throw std::runtime_error("invalid desiredDevice parameter");
+		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice);
 		if (stat(devpath,&stattmp) == 0) {
 			_fd = ::open(devpath,O_RDWR);
 			if (_fd > 0) {
-				_dev = tryToGetDevice;
+				_dev = desiredDevice;
 				recalledDevice = true;
 			}
 		}
@@ -350,7 +355,7 @@ OSXEthernetTap::OSXEthernetTap(
 
 	// Open the first unused tap device if we didn't recall a previous one.
 	if (!recalledDevice) {
-		for(int i=0;i<256;++i) {
+		for(int i=0;i<64;++i) {
 			Utils::snprintf(devpath,sizeof(devpath),"/dev/zt%d",i);
 			if (stat(devpath,&stattmp))
 				throw std::runtime_error("no more TAP devices available");
@@ -375,7 +380,7 @@ OSXEthernetTap::OSXEthernetTap(
 	// Configure MAC address and MTU, bring interface up
 	Utils::snprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
 	Utils::snprintf(mtustr,sizeof(mtustr),"%u",_mtu);
-	Utils::snprintf(metstr,sizeof(metstr),"%u",_metric)
+	Utils::snprintf(metstr,sizeof(metstr),"%u",_metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
@@ -425,7 +430,7 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	if (cpid == 0) {
 		execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
 		_exit(-1);
-	} else (cpid > 0) {
+	} else if (cpid > 0) {
 		int exitcode = -1;
 		waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
