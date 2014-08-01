@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -41,8 +42,8 @@
 #include <algorithm>
 #include <utility>
 
-#include "../Constants.hpp"
-#include "../Utils.hpp"
+#include "../node/Constants.hpp"
+#include "../node/Utils.hpp"
 #include "LinuxRoutingTable.hpp"
 
 #define ZT_LINUX_IP_COMMAND "/sbin/ip"
@@ -168,24 +169,50 @@ std::vector<RoutingTable::Entry> LinuxRoutingTable::get(bool includeLinkLocal,bo
 
 RoutingTable::Entry LinuxRoutingTable::set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric)
 {
+	char metstr[128];
+
 	if ((!gateway)&&((!device)||(!device[0])))
 		return RoutingTable::Entry();
 
-	std::vector<RoutingTable::Entry> rtab(get(true,true));
+	Utils::snprintf(metstr,sizeof(metstr),"%d",metric);
 
-	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
-		if (e->destination == destination) {
-			if (((!device)||(!device[0]))||(!strcmp(device,e->device))) {
+	if (metric < 0) {
+		long pid = (long)vfork();
+		if (pid == 0) {
+			if (gateway) {
+				if ((device)&&(device[0])) {
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",destination.toString().c_str(),"via",gateway.toIpString().c_str(),"dev",device,(const char *)0);
+				} else {
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",destination.toString().c_str(),"via",gateway.toIpString().c_str(),(const char *)0);
+				}
+			} else {
+				::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","del",destination.toString().c_str(),"dev",device,(const char *)0);
 			}
+			::_exit(-1);
+		} else if (pid > 0) {
+			int exitcode = -1;
+			::waitpid(pid,&exitcode,0);
+		}
+	} else {
+		long pid = (long)vfork();
+		if (pid == 0) {
+			if (gateway) {
+				if ((device)&&(device[0])) {
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",destination.toString().c_str(),"metric",metstr,"via",gateway.toIpString().c_str(),"dev",device,(const char *)0);
+				} else {
+					::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",destination.toString().c_str(),"metric",metstr,"via",gateway.toIpString().c_str(),(const char *)0);
+				}
+			} else {
+				::execl(ZT_LINUX_IP_COMMAND,ZT_LINUX_IP_COMMAND,"route","replace",destination.toString().c_str(),"metric",metstr,"dev",device,(const char *)0);
+			}
+			::_exit(-1);
+		} else if (pid > 0) {
+			int exitcode = -1;
+			::waitpid(pid,&exitcode,0);
 		}
 	}
 
-	if (metric < 0)
-		return RoutingTable::Entry();
-
-
-
-	rtab = get(true,true);
+	std::vector<RoutingTable::Entry> rtab(get(true,true));
 	std::vector<RoutingTable::Entry>::iterator bestEntry(rtab.end());
 	for(std::vector<RoutingTable::Entry>::iterator e(rtab.begin());e!=rtab.end();++e) {
 		if ((e->destination == destination)&&(e->gateway.ipsEqual(gateway))) {
@@ -206,42 +233,3 @@ RoutingTable::Entry LinuxRoutingTable::set(const InetAddress &destination,const 
 }
 
 } // namespace ZeroTier
-
-// Enable and build to test routing table interface
-//#if 0
-using namespace ZeroTier;
-int main(int argc,char **argv)
-{
-	LinuxRoutingTable rt;
-
-	printf("<destination> <gateway> <interface> <metric>\n");
-	std::vector<RoutingTable::Entry> ents(rt.get());
-	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
-		printf("%s\n",e->toString().c_str());
-	printf("\n");
-
-	printf("adding 1.1.1.0 and 2.2.2.0...\n");
-	rt.set(InetAddress("1.1.1.0",24),InetAddress("1.2.3.4",0),(const char *)0,1);
-	rt.set(InetAddress("2.2.2.0",24),InetAddress(),"en0",1);
-	printf("\n");
-
-	printf("<destination> <gateway> <interface> <metric>\n");
-	ents = rt.get();
-	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
-		printf("%s\n",e->toString().c_str());
-	printf("\n");
-
-	printf("deleting 1.1.1.0 and 2.2.2.0...\n");
-	rt.set(InetAddress("1.1.1.0",24),InetAddress("1.2.3.4",0),(const char *)0,-1);
-	rt.set(InetAddress("2.2.2.0",24),InetAddress(),"en0",-1);
-	printf("\n");
-
-	printf("<destination> <gateway> <interface> <metric>\n");
-	ents = rt.get();
-	for(std::vector<RoutingTable::Entry>::iterator e(ents.begin());e!=ents.end();++e)
-		printf("%s\n",e->toString().c_str());
-	printf("\n");
-
-	return 0;
-}
-//#endif

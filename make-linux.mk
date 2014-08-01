@@ -42,6 +42,8 @@ STRIP=strip --strip-all
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
+OBJS+=osnet/LinuxRoutingTable.o
+
 include objects.mk
 
 all:	one

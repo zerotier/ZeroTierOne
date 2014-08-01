@@ -28,7 +28,7 @@
 #ifndef ZT_LINUXROUTINGTABLE_HPP
 #define ZT_LINUXROUTINGTABLE_HPP
 
-#include "../RoutingTable.hpp"
+#include "../node/RoutingTable.hpp"
 
 namespace ZeroTier {
 
