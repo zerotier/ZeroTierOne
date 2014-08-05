@@ -145,11 +145,12 @@ public:
 	 * This ignores all non-hex characters, just stepping over them and
 	 * continuing. Upper and lower case are supported for letters a-f.
 	 *
-	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored)
+	 * @param hex Hexadecimal ASCII code (non-hex chars are ignored, stops at zero or maxlen)
+	 * @param maxlen Maximum length of hex string buffer
 	 * @return Binary data
 	 */
-	static std::string unhex(const char *hex);
-	static inline std::string unhex(const std::string &hex) { return unhex(hex.c_str()); }
+	static std::string unhex(const char *hex,unsigned int maxlen);
+	static inline std::string unhex(const std::string &hex) { return unhex(hex.c_str(),(unsigned int)hex.length()); }
 
 	/**
 	 * Convert hexadecimal to binary data
@@ -158,26 +159,13 @@ public:
 	 * continuing. Upper and lower case are supported for letters a-f.
 	 *
 	 * @param hex Hexadecimal ASCII
+	 * @param maxlen Maximum length of hex string buffer
 	 * @param buf Buffer to fill
 	 * @param len Length of buffer
 	 * @return Number of characters actually written
 	 */
-	static unsigned int unhex(const char *hex,void *buf,unsigned int len);
-	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),buf,len); }
-
-	/**
-	 * Convert hexadecimal to binary data
-	 *
-	 * This ignores all non-hex characters, just stepping over them and
-	 * continuing. Upper and lower case are supported for letters a-f.
-	 *
-	 * @param hex Hexadecimal ASCII
-	 * @param hexlen Length of hex ASCII
-	 * @param buf Buffer to fill
-	 * @param len Length of buffer
-	 * @return Number of bytes actually written to buffer
-	 */
-	static unsigned int unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len);
+	static unsigned int unhex(const char *hex,unsigned int maxlen,void *buf,unsigned int len);
+	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),hex.length(),buf,len); }
 
 	/**
 	 * Generate secure random bytes

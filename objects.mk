@@ -3,6 +3,7 @@ OBJS=\
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Defaults.o \
+	node/Dictionary.o \
 	node/HttpClient.o \
 	node/Identity.o \
 	node/InetAddress.o \

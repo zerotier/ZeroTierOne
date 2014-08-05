@@ -97,11 +97,15 @@ std::string Utils::hex(const void *data,unsigned int len)
 	return r;
 }
 
-std::string Utils::unhex(const char *hex)
+std::string Utils::unhex(const char *hex,unsigned int maxlen)
 {
 	int n = 1;
 	unsigned char c,b = 0;
+	const char *eof = hex + maxlen;
 	std::string r;
+
+	if (!maxlen)
+		return r;
 
 	while ((c = (unsigned char)*(hex++))) {
 		if ((c >= 48)&&(c <= 57)) { // 0..9
@@ -117,16 +121,22 @@ std::string Utils::unhex(const char *hex)
 				r.push_back((char)(b | (c - (97 - 10))));
 			else b = (c - (97 - 10)) << 4;
 		}
+		if (hex == eof)
+			break;
 	}
 
 	return r;
 }
 
-unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
+unsigned int Utils::unhex(const char *hex,unsigned int maxlen,void *buf,unsigned int len)
 {
 	int n = 1;
 	unsigned char c,b = 0;
 	unsigned int l = 0;
+	const char *eof = hex + maxlen;
+
+	if (!maxlen)
+		return 0;
 
 	while ((c = (unsigned char)*(hex++))) {
 		if ((c >= 48)&&(c <= 57)) { // 0..9
@@ -145,36 +155,8 @@ unsigned int Utils::unhex(const char *hex,void *buf,unsigned int len)
 				((unsigned char *)buf)[l++] = (b | (c - (97 - 10)));
 			} else b = (c - (97 - 10)) << 4;
 		}
-	}
-
-	return l;
-}
-
-unsigned int Utils::unhex(const char *hex,unsigned int hexlen,void *buf,unsigned int len)
-{
-	int n = 1;
-	unsigned char c,b = 0;
-	unsigned int l = 0;
-	const char *const end = hex + hexlen;
-
-	while (hex != end) {
-		c = (unsigned char)*(hex++);
-		if ((c >= 48)&&(c <= 57)) { // 0..9
-			if ((n ^= 1)) {
-				if (l >= len) break;
-				((unsigned char *)buf)[l++] = (b | (c - 48));
-			} else b = (c - 48) << 4;
-		} else if ((c >= 65)&&(c <= 70)) { // A..F
-			if ((n ^= 1)) {
-				if (l >= len) break;
-				((unsigned char *)buf)[l++] = (b | (c - (65 - 10)));
-			} else b = (c - (65 - 10)) << 4;
-		} else if ((c >= 97)&&(c <= 102)) { // a..f
-			if ((n ^= 1)) {
-				if (l >= len) break;
-				((unsigned char *)buf)[l++] = (b | (c - (97 - 10)));
-			} else b = (c - (97 - 10)) << 4;
-		}
+		if (hex == eof)
+			break;
 	}
 
 	return l;

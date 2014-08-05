@@ -34,7 +34,14 @@
  
 #include "Constants.hpp"
 
+// Three fields are added/updated by sign()
+#define ZT_DICTIONARY_SIGNATURE "~!ed25519"
+#define ZT_DICTIONARY_SIGNATURE_IDENTITY "~!sigid"
+#define ZT_DICTIONARY_SIGNATURE_TIMESTAMP "~!sigts"
+
 namespace ZeroTier {
+
+class Identity;
 
 /**
  * Simple key/value dictionary with string serialization
@@ -43,29 +50,29 @@ namespace ZeroTier {
  * It does not support comments or other syntactic complexities. It is
  * human-readable if the keys and values in the dictionary are also
  * human-readable. Otherwise it might contain unprintable characters.
+ *
+ * Keys beginning with "~!" are reserved for signatures and are ignored
+ * during the signature process.
+ *
+ * Note: the signature code depends on std::map<> being sorted, but no
+ * other code does. So if the underlying data structure is ever swapped
+ * out for an unsorted one, the signature code will have to be updated
+ * to sort before composing the string to sign.
  */
 class Dictionary : public std::map<std::string,std::string>
 {
 public:
-	Dictionary()
-	{
-	}
+	Dictionary() {}
 
 	/**
 	 * @param s String-serialized dictionary
 	 */
-	Dictionary(const char *s)
-	{
-		fromString(s);
-	}
+	Dictionary(const char *s) { fromString(s); }
 
 	/**
 	 * @param s String-serialized dictionary
 	 */
-	Dictionary(const std::string &s)
-	{
-		fromString(s.c_str());
-	}
+	Dictionary(const std::string &s) { fromString(s.c_str()); }
 
 	/**
 	 * Get a key, throwing an exception if it is not present
@@ -102,10 +109,7 @@ public:
 	 * @param key Key to check
 	 * @return True if dictionary contains key
 	 */
-	inline bool contains(const std::string &key) const
-	{
-		return (find(key) != end());
-	}
+	inline bool contains(const std::string &key) const { return (find(key) != end()); }
 
 	/**
 	 * @return String-serialized dictionary
@@ -113,14 +117,12 @@ public:
 	inline std::string toString() const
 	{
 		std::string s;
-
 		for(const_iterator kv(begin());kv!=end();++kv) {
 			_appendEsc(kv->first.data(),(unsigned int)kv->first.length(),s);
 			s.push_back('=');
 			_appendEsc(kv->second.data(),(unsigned int)kv->second.length(),s);
 			s.append(ZT_EOL_S);
 		}
-
 		return s;
 	}
 
@@ -129,78 +131,43 @@ public:
 	 *
 	 * @param s String-serialized dictionary
 	 */
-	inline void fromString(const char *s)
+	void fromString(const char *s);
+	inline void fromString(const std::string &s) { fromString(s.c_str()); }
+
+	/**
+	 * @return True if this dictionary is cryptographically signed
+	 */
+	inline bool hasSignature() const { return (find(ZT_DICTIONARY_SIGNATURE) != end()); }
+
+	/**
+	 * Remove any signature from this dictionary
+	 */
+	inline void removeSignature()
 	{
-		clear();
-		bool escapeState = false;
-		std::string keyBuf;
-		std::string *element = &keyBuf;
-		while (*s) {
-			if (escapeState) {
-				escapeState = false;
-				switch(*s) {
-					case '0':
-						element->push_back((char)0);
-						break;
-					case 'r':
-						element->push_back('\r');
-						break;
-					case 'n':
-						element->push_back('\n');
-						break;
-					default:
-						element->push_back(*s);
-						break;
-				}
-			} else {
-				if (*s == '\\') {
-					escapeState = true;
-				} else if (*s == '=') {
-					if (element == &keyBuf)
-						element = &((*this)[keyBuf]);
-				} else if ((*s == '\r')||(*s == '\n')) {
-					if ((element == &keyBuf)&&(keyBuf.length() > 0))
-						(*this)[keyBuf];
-					keyBuf = "";
-					element = &keyBuf;
-				} else element->push_back(*s);
-			}
-			++s;
-		}
-		if ((element == &keyBuf)&&(keyBuf.length() > 0))
-			(*this)[keyBuf];
-	}
-	inline void fromString(const std::string &s)
-	{
-		fromString(s.c_str());
+		erase(ZT_DICTIONARY_SIGNATURE);
+		erase(ZT_DICTIONARY_SIGNATURE_IDENTITY);
+		erase(ZT_DICTIONARY_SIGNATURE_TIMESTAMP);
 	}
 
+	/**
+	 * Add or update signature fields with a signature of all other keys and values
+	 *
+	 * @param with Identity to sign with (must have secret key)
+	 * @return True on success
+	 */
+	bool sign(const Identity &id);
+
+	/**
+	 * Verify signature against an identity
+	 *
+	 * @param id Identity to verify against
+	 * @return True if signature verification OK
+	 */
+	bool verify(const Identity &id) const;
+
 private:
-	static inline void _appendEsc(const char *data,unsigned int len,std::string &to)
-	{
-		for(unsigned int i=0;i<len;++i) {
-			switch(data[i]) {
-				case 0:
-					to.append("\\0");
-					break;
-				case '\r':
-					to.append("\\r");
-					break;
-				case '\n':
-					to.append("\\n");
-					break;
-				case '\\':
-					to.append("\\\\");
-					break;
-				case '=':
-					to.append("\\=");
-					break;
-				default:
-					to.push_back(data[i]);
-					break;
-			}
-		}
-	}
+	void _mkSigBuf(std::string &buf) const;
+	static void _appendEsc(const char *data,unsigned int len,std::string &to);
 };
 
 } // namespace ZeroTier
