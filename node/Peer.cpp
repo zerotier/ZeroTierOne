@@ -25,6 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "Constants.hpp"
 #include "Peer.hpp"
 #include "Switch.hpp"
 #include "AntiRecursion.hpp"
@@ -180,6 +181,7 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 	return Path::PATH_TYPE_NULL;
 }
 
+#ifdef ZT_FIREWALL_OPENER_DELAY
 bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;
@@ -194,6 +196,7 @@ bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
 
 	return sent;
 }
+#endif
 
 bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 {

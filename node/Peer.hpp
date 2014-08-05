@@ -142,6 +142,7 @@ public:
 	 */
 	Path::Type send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
+#ifdef ZT_FIREWALL_OPENER_DELAY
 	/**
 	 * Send firewall opener to all UDP paths
 	 * 
@@ -150,6 +151,7 @@ public:
 	 * @return True if send appears successful for at least one address type
 	 */
 	bool sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now);
+#endif
 
 	/**
 	 * Send HELLO to a peer via all direct paths available

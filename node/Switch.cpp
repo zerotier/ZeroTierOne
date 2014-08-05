@@ -461,7 +461,9 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
+#ifdef ZT_FIREWALL_OPENER_HOPS
 	_r->sm->sendFirewallOpener(atAddr,ZT_FIREWALL_OPENER_HOPS);
+#endif
 
 	{
 		Mutex::Lock _l(_contactQueue_m);

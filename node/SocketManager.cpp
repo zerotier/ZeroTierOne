@@ -463,6 +463,7 @@ bool SocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTcp,cons
 	return false;
 }
 
+#ifdef ZT_FIREWALL_OPENER_DELAY
 bool SocketManager::sendFirewallOpener(const InetAddress &to,int hopLimit)
 {
 	if (to.isV4()) {
@@ -474,6 +475,7 @@ bool SocketManager::sendFirewallOpener(const InetAddress &to,int hopLimit)
 	}
 	return false;
 }
+#endif
 
 void SocketManager::poll(unsigned long timeout)
 {

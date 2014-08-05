@@ -35,6 +35,7 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
+
 #include "SharedPtr.hpp"
 #include "InetAddress.hpp"
 #include "Socket.hpp"
@@ -108,7 +109,9 @@ public:
 	 * @param to Destination address
 	 * @param hopLimit IP TTL
 	 */
+#ifdef ZT_FIREWALL_OPENER_DELAY
 	bool sendFirewallOpener(const InetAddress &to,int hopLimit);
+#endif
 
 	/**
 	 * Perform I/O polling operation (e.g. select())

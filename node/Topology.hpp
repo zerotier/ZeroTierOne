@@ -194,6 +194,7 @@ public:
 			f(*this,*p);
 	}
 
+#ifdef ZT_FIREWALL_OPENER_DELAY
 	/**
 	 * Function object to collect peers that need a firewall opener sent
 	 */
@@ -214,6 +215,7 @@ public:
 		uint64_t _now;
 		const RuntimeEnvironment *_r;
 	};
+#endif
 
 	/**
 	 * Pings all peers that need a ping sent, excluding supernodes

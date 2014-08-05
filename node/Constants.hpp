@@ -228,7 +228,7 @@
 /**
  * Default number of bits in multicast propagation prefix
  */
-#define ZT_DEFAULT_MULTICAST_PREFIX_BITS 1
+#define ZT_DEFAULT_MULTICAST_PREFIX_BITS 2
 
 /**
  * Default max depth (TTL) for multicast propagation
@@ -272,8 +272,10 @@
  *
  * This should be lower than the UDP conversation entry timeout in most
  * stateful firewalls.
+ *
+ * Uncomment to disable firewall openers.
  */
-#define ZT_FIREWALL_OPENER_DELAY 30000
+//#define ZT_FIREWALL_OPENER_DELAY 30000
 
 /**
  * Number of hops to open via firewall opener packets
@@ -284,7 +286,7 @@
  * 2 should permit traversal of double-NAT configurations, such as from inside
  * a VM running behind local NAT on a host that is itself behind NAT.
  */
-#define ZT_FIREWALL_OPENER_HOPS 2
+//#define ZT_FIREWALL_OPENER_HOPS 2
 
 /**
  * Delay between requests for updated network autoconf information
@@ -363,6 +365,9 @@
 
 /**
  * Delay in milliseconds between firewall opener and real packet for NAT-t
+ *
+ * If firewall openers are disbled, it just waits this long before sending
+ * NAT-t packets.
  */
 #define ZT_RENDEZVOUS_NAT_T_DELAY 500
 

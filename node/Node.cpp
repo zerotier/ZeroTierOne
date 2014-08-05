@@ -656,7 +656,9 @@ Node::ReasonForTermination Node::run()
 					lastPingCheck = now;
 					try {
 						_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
+#ifdef ZT_FIREWALL_OPENER_DELAY
 						_r->topology->eachPeer(Topology::OpenPeersThatNeedFirewallOpener(_r,now));
+#endif
 					} catch (std::exception &exc) {
 						LOG("unexpected exception running ping check cycle: %s",exc.what());
 					} catch ( ... ) {
