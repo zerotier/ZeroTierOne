@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="11.3" Modules="professional" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="11.4" Modules="professional" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;PreReqComponent;MsiMergeModsComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;ActSyncAppComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;MsiEnvComponent;CPLAppletComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;MsiAppSearchComponent"/>
   </COMPONENT>

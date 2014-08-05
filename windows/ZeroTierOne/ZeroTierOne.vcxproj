@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ext\lz4\lz4.c" />
-    <ClCompile Include="..\..\ext\lz4\lz4hc.c" />
     <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
@@ -47,7 +46,6 @@
     <ClCompile Include="..\..\node\SocketManager.cpp" />
     <ClCompile Include="..\..\node\SoftwareUpdater.cpp" />
     <ClCompile Include="..\..\node\Switch.cpp" />
-    <ClCompile Include="..\..\node\SysEnv.cpp" />
     <ClCompile Include="..\..\node\TcpSocket.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\UdpSocket.cpp" />
@@ -106,7 +104,6 @@
     <ClInclude Include="..\..\node\SocketManager.hpp" />
     <ClInclude Include="..\..\node\SoftwareUpdater.hpp" />
     <ClInclude Include="..\..\node\Switch.hpp" />
-    <ClInclude Include="..\..\node\SysEnv.hpp" />
     <ClInclude Include="..\..\node\TcpSocket.hpp" />
     <ClInclude Include="..\..\node\Thread.hpp" />
     <ClInclude Include="..\..\node\Topology.hpp" />

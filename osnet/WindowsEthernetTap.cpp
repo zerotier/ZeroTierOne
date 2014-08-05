@@ -41,10 +41,11 @@
 #include <netioapi.h>
 
 #include "../node/Constants.hpp"
-#include "../node/EthernetTap.hpp"
+
+#include "WindowsEthernetTap.hpp"
+#include "WindowsEthernetTapFactory.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
-#include "WindowsEthernetTap.hpp"
 
 #include "..\windows\TapDriver\tap-windows.h"
 
@@ -53,114 +54,8 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 
 namespace ZeroTier {
 
-// Helper function to get an adapter's LUID and index from its GUID. The LUID is
-// constant but the index can change, so go ahead and just look them both up by
-// the GUID which is constant. (The GUID is the instance ID in the registry.)
-static inline std::pair<NET_LUID,NET_IFINDEX> _findAdapterByGuid(const GUID &guid)
-	throw(std::runtime_error)
-{
-	MIB_IF_TABLE2 *ift = (MIB_IF_TABLE2 *)0;
-
-	if (GetIfTable2Ex(MibIfTableRaw,&ift) != NO_ERROR)
-		throw std::runtime_error("GetIfTable2Ex() failed");
-
-	for(ULONG i=0;i<ift->NumEntries;++i) {
-		if (ift->Table[i].InterfaceGuid == guid) {
-			std::pair<NET_LUID,NET_IFINDEX> tmp(ift->Table[i].InterfaceLuid,ift->Table[i].InterfaceIndex);
-			FreeMibTable(ift);
-			return tmp;
-		}
-	}
-
-	FreeMibTable(&ift);
-
-	throw std::runtime_error("interface not found");
-}
-
 // Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
-
-// Compute some basic environment stuff on startup
-class _WinSysEnv
-{
-public:
-	_WinSysEnv()
-	{
-#ifdef _WIN64
-		is64Bit = TRUE;
-		devcon = "\\devcon_x64.exe";
-		tapDriver = "\\tap-windows\\x64\\zttap200.inf";
-#else
-		is64Bit = FALSE;
-		IsWow64Process(GetCurrentProcess(),&is64Bit);
-		devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
-		tapDriver = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap200.inf" : "\\tap-windows\\x86\\zttap200.inf");
-#endif
-	}
-	BOOL is64Bit;
-	const char *devcon;
-	const char *tapDriver;
-};
-static const _WinSysEnv _winEnv;
-
-static bool _disableTapDevice(const RuntimeEnvironment *_r,const std::string deviceInstanceId)
-{
-	HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-	if (devconLog != INVALID_HANDLE_VALUE)
-		SetFilePointer(devconLog,0,0,FILE_END);
-
-	STARTUPINFOA startupInfo;
-	startupInfo.cb = sizeof(startupInfo);
-	if (devconLog != INVALID_HANDLE_VALUE) {
-		startupInfo.hStdOutput = devconLog;
-		startupInfo.hStdError = devconLog;
-	}
-	PROCESS_INFORMATION processInfo;
-	memset(&startupInfo,0,sizeof(STARTUPINFOA));
-	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + _winEnv.devcon + "\" disable @" + deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-		if (devconLog != INVALID_HANDLE_VALUE)
-			CloseHandle(devconLog);
-		return false;
-	}
-	WaitForSingleObject(processInfo.hProcess,INFINITE);
-	CloseHandle(processInfo.hProcess);
-	CloseHandle(processInfo.hThread);
-
-	if (devconLog != INVALID_HANDLE_VALUE)
-		CloseHandle(devconLog);
-
-	return true;
-}
-static bool _enableTapDevice(const RuntimeEnvironment *_r,const std::string deviceInstanceId)
-{
-	HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-	if (devconLog != INVALID_HANDLE_VALUE)
-		SetFilePointer(devconLog,0,0,FILE_END);
-
-	STARTUPINFOA startupInfo;
-	startupInfo.cb = sizeof(startupInfo);
-	if (devconLog != INVALID_HANDLE_VALUE) {
-		startupInfo.hStdOutput = devconLog;
-		startupInfo.hStdError = devconLog;
-	}
-	PROCESS_INFORMATION processInfo;
-	memset(&startupInfo,0,sizeof(STARTUPINFOA));
-	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + _winEnv.devcon + "\" enable @" + deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-		if (devconLog != INVALID_HANDLE_VALUE)
-			CloseHandle(devconLog);
-		return false;
-	}
-	WaitForSingleObject(processInfo.hProcess,INFINITE);
-	CloseHandle(processInfo.hProcess);
-	CloseHandle(processInfo.hThread);
-
-	if (devconLog != INVALID_HANDLE_VALUE)
-		CloseHandle(devconLog);
-
-	return true;
-}
 
 static void _syncIpsWithRegistry(const std::set<InetAddress> &haveIps,const std::string netCfgInstanceId)
 {
@@ -190,19 +85,21 @@ static void _syncIpsWithRegistry(const std::set<InetAddress> &haveIps,const std:
 }
 
 WindowsEthernetTap::WindowsEthernetTap(
-	const RuntimeEnvironment *renv,
-	const char *tag,
+	const char *pathToHelpers,
 	const MAC &mac,
 	unsigned int mtu,
+	unsigned int metric,
+	uint64_t nwid,
+	const char *desiredDevice,
+	const char *friendlyName,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
-	void *arg)
-	throw(std::runtime_error) :
-	EthernetTap("WindowsEthernetTap",mac,mtu),
-	_r(renv),
+	void *arg) :
+	EthernetTap("WindowsEthernetTap",mac,mtu,metric),
 	_handler(handler),
 	_arg(arg),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
+	_pathToHelpers(pathToHelpers),
 	_run(true),
 	_initialized(false),
 	_enabled(true)
@@ -210,8 +107,9 @@ WindowsEthernetTap::WindowsEthernetTap(
 	char subkeyName[4096];
 	char subkeyClass[4096];
 	char data[4096];
+	char tag[24];
 
-	if (mtu > ZT_IF_MTU)
+	if (mtu > 2800)
 		throw std::runtime_error("MTU too large for Windows tap");
 
 	Mutex::Lock _l(_systemTapInitLock);
@@ -223,7 +121,10 @@ WindowsEthernetTap::WindowsEthernetTap(
 	std::set<std::string> existingDeviceInstances;
 	std::string mySubkeyName;
 
-	// Look for the tap instance that corresponds with our interface tag (network ID)
+	// We "tag" registry entries with the network ID to identify persistent devices
+	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
+
+	// Look for the tap instance that corresponds with this network
 	for(DWORD subkeyIndex=0;;++subkeyIndex) {
 		DWORD type;
 		DWORD dataLen;
@@ -258,6 +159,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 							if (!strcmp(data,tag)) {
 								_netCfgInstanceId = instanceId;
 								_deviceInstanceId = instanceIdPath;
+
 								mySubkeyName = subkeyName;
 								break; // found it!
 							}
@@ -271,12 +173,9 @@ WindowsEthernetTap::WindowsEthernetTap(
 	// If there is no device, try to create one
 	if (_netCfgInstanceId.length() == 0) {
 		// Log devcon output to a file
-		HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-		if (devconLog == INVALID_HANDLE_VALUE) {
-			LOG("WARNING: unable to open devcon.log");
-		} else {
+		HANDLE devconLog = CreateFileA((_pathToHelpers + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+		if (devconLog != INVALID_HANDLE_VALUE)
 			SetFilePointer(devconLog,0,0,FILE_END);
-		}
 
 		// Execute devcon to install an instance of the Microsoft Loopback Adapter
 		STARTUPINFOA startupInfo;
@@ -289,7 +188,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + _winEnv.devcon + "\" install \"" + _r->homePath + _winEnv.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" install \"" + _pathToHelpers + _winEnv.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			if (devconLog != INVALID_HANDLE_VALUE)
 				CloseHandle(devconLog);
@@ -302,9 +201,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 		if (devconLog != INVALID_HANDLE_VALUE)
 			CloseHandle(devconLog);
 
-		// Scan for the new instance by simply looking for taps that weren't
-		// there originally. The static mutex we lock ensures this can't step
-		// on its own toes.
+		// Scan for the new instance by simply looking for taps that weren't originally there...
 		for(DWORD subkeyIndex=0;;++subkeyIndex) {
 			DWORD type;
 			DWORD dataLen;
@@ -347,14 +244,14 @@ WindowsEthernetTap::WindowsEthernetTap(
 	}
 
 	if (_netCfgInstanceId.length() > 0) {
-		char tmps[4096];
+		char tmps[64];
 		unsigned int tmpsl = Utils::snprintf(tmps,sizeof(tmps),"%.2X-%.2X-%.2X-%.2X-%.2X-%.2X",(unsigned int)mac[0],(unsigned int)mac[1],(unsigned int)mac[2],(unsigned int)mac[3],(unsigned int)mac[4],(unsigned int)mac[5]) + 1;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"NetworkAddress",REG_SZ,tmps,tmpsl);
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
 		DWORD tmp = mtu;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = 0;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp)); // disable DHCP by default on new devices
 		RegCloseKey(nwAdapters);	
 	} else {
 		RegCloseKey(nwAdapters);	
@@ -376,6 +273,13 @@ WindowsEthernetTap::WindowsEthernetTap(
 			throw std::runtime_error("unable to convert instance ID GUID to native GUID (invalid NetCfgInstanceId in registry?)");
 	}
 
+	// Look up interface LUID... why are there (at least) four fucking ways to refer to a network device in Windows?
+	if (ConvertInterfaceGuidToLuid(&_deviceGuid,&_deviceLuid) != NO_ERROR)
+		throw std::runtime_error("unable to convert device interface GUID to LUID");
+
+	if (friendlyName)
+		setFriendlyName(friendlyName);
+
 	// Start background thread that actually performs I/O
 	_injectSemaphore = CreateSemaphore(NULL,0,1,NULL);
 	_thread = Thread::start(this);
@@ -390,7 +294,7 @@ WindowsEthernetTap::~WindowsEthernetTap()
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 	Thread::join(_thread);
 	CloseHandle(_injectSemaphore);
-	_disableTapDevice(_r,_deviceInstanceId);
+	_disableTapDevice();
 }
 
 void WindowsEthernetTap::setEnabled(bool en)
@@ -401,17 +305,6 @@ void WindowsEthernetTap::setEnabled(bool en)
 bool WindowsEthernetTap::enabled() const
 {
 	return _enabled;
-}
-
-void WindowsEthernetTap::setDisplayName(const char *dn)
-{
-	if (!_initialized)
-		return;
-	HKEY ifp;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,(std::string("SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\") + _netCfgInstanceId).c_str(),0,KEY_READ|KEY_WRITE,&ifp) == ERROR_SUCCESS) {
-		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,(DWORD)(strlen(dn)+1));
-		RegCloseKey(ifp);
-	}
 }
 
 bool WindowsEthernetTap::addIP(const InetAddress &ip)
@@ -426,7 +319,6 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 	try {
 		// Add IP to interface at the netlink level if not already assigned.
 		if (!haveIps.count(ip)) {
-			std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
 			MIB_UNICASTIPADDRESS_ROW ipr;
 
 			InitializeUnicastIpAddressEntry(&ipr);
@@ -449,23 +341,18 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 			ipr.ValidLifetime = 0xffffffff;
 			ipr.PreferredLifetime = 0xffffffff;
 
-			ipr.InterfaceLuid = ifidx.first;
-			ipr.InterfaceIndex = ifidx.second;
+			ipr.InterfaceLuid = _deviceLuid;
+			ipr.InterfaceIndex = _getDeviceIndex();
 
 			if (CreateUnicastIpAddressEntry(&ipr) == NO_ERROR) {
 				haveIps.insert(ip);
 			} else {
-				LOG("unable to add IP address %s to interface %s: %d",ip.toString().c_str(),deviceName().c_str(),(int)GetLastError());
 				return false;
 			}
 		}
 
 		_syncIpsWithRegistry(haveIps,_netCfgInstanceId);
-	} catch (std::exception &exc) {
-		LOG("unexpected exception adding IP address %s to %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
-		return false;
 	} catch ( ... ) {
-		LOG("unexpected exception adding IP address %s to %s: unknown exception",ip.toString().c_str(),deviceName().c_str());
 		return false;
 	}
 	return true;
@@ -477,10 +364,9 @@ bool WindowsEthernetTap::removeIP(const InetAddress &ip)
 		return false;
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
-		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
 			for(DWORD i=0;i<ipt->NumEntries;++i) {
-				if ((ipt->Table[i].InterfaceLuid.Value == ifidx.first.Value)&&(ipt->Table[i].InterfaceIndex == ifidx.second)) {
+				if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
 					InetAddress addr;
 					switch(ipt->Table[i].Address.si_family) {
 						case AF_INET:
@@ -502,11 +388,7 @@ bool WindowsEthernetTap::removeIP(const InetAddress &ip)
 			}
 			FreeMibTable((PVOID)ipt);
 		}
-	} catch (std::exception &exc) {
-		LOG("unexpected exception removing IP address %s from %s: %s",ip.toString().c_str(),deviceName().c_str(),exc.what());
-	} catch ( ... ) {
-		LOG("unexpected exception removing IP address %s from %s: unknown exception",ip.toString().c_str(),deviceName().c_str());
-	}
+	} catch ( ... ) {}
 	return false;
 }
 
@@ -520,11 +402,9 @@ std::set<InetAddress> WindowsEthernetTap::ips() const
 
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
-		std::pair<NET_LUID,NET_IFINDEX> ifidx = _findAdapterByGuid(_deviceGuid);
-
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
 			for(DWORD i=0;i<ipt->NumEntries;++i) {
-				if ((ipt->Table[i].InterfaceLuid.Value == ifidx.first.Value)&&(ipt->Table[i].InterfaceIndex == ifidx.second)) {
+				if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
 					switch(ipt->Table[i].Address.si_family) {
 						case AF_INET: {
 							InetAddress ip(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
@@ -550,27 +430,36 @@ void WindowsEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherTyp
 {
 	if ((!_initialized)||(!_enabled)||(_tap == INVALID_HANDLE_VALUE)||(len > (ZT_IF_MTU)))
 		return;
-	{
-		Mutex::Lock _l(_injectPending_m);
-		_injectPending.push( std::pair<Array<char,ZT_IF_MTU + 32>,unsigned int>(Array<char,ZT_IF_MTU + 32>(),len + 14) );
-		char *d = _injectPending.back().first.data;
-		to.copyTo(d,6);
-		from.copyTo(d + 6,6);
-		d[12] = (char)((etherType >> 8) & 0xff);
-		d[13] = (char)(etherType & 0xff);
-		memcpy(d + 14,data,len);
-	}
+
+	Mutex::Lock _l(_injectPending_m);
+	_injectPending.push( std::pair<Array<char,ZT_IF_MTU + 32>,unsigned int>(Array<char,ZT_IF_MTU + 32>(),len + 14) );
+	char *d = _injectPending.back().first.data;
+	to.copyTo(d,6);
+	from.copyTo(d + 6,6);
+	d[12] = (char)((etherType >> 8) & 0xff);
+	d[13] = (char)(etherType & 0xff);
+	memcpy(d + 14,data,len);
+
 	ReleaseSemaphore(_injectSemaphore,1,NULL);
 }
 
 std::string WindowsEthernetTap::deviceName() const
 {
-	return _netCfgInstanceId;
+	char tmp[1024];
+	if (ConvertInterfaceLuidToNameA(&_deviceLuid,tmp,sizeof(tmp)) != NO_ERROR)
+		return std::string("[ConvertInterfaceLuidToName() failed]");
+	return std::string(tmp);
 }
 
-std::string WindowsEthernetTap::persistentId() const
+void WindowsEthernetTap::setFriendlyName(const char *dn)
 {
-	return _deviceInstanceId;
+	if (!_initialized)
+		return;
+	HKEY ifp;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,(std::string("SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\") + _netCfgInstanceId).c_str(),0,KEY_READ|KEY_WRITE,&ifp) == ERROR_SUCCESS) {
+		RegSetKeyValueA(ifp,"Connection","Name",REG_SZ,(LPCVOID)dn,(DWORD)(strlen(dn)+1));
+		RegCloseKey(ifp);
+	}
 }
 
 bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
@@ -652,9 +541,9 @@ void WindowsEthernetTap::threadMain()
 	// headless MSI upgrade. It cannot be reproduced in any other circumstance.
 	bool throwOneAway = true;
 	while (_run) {
-		_disableTapDevice(_r,_deviceInstanceId);
+		_disableTapDevice();
 		Sleep(250);
-		if (!_enableTapDevice(_r,_deviceInstanceId)) {
+		if (!_enableTapDevice()) {
 			::free(tapReadBuf);
 			_enabled = false;
 			return; // only happens if devcon is missing or totally fails
@@ -743,94 +632,83 @@ void WindowsEthernetTap::threadMain()
 	::free(tapReadBuf);
 }
 
-bool WindowsEthernetTap::deletePersistentTapDevice(const RuntimeEnvironment *_r,const char *pid)
+bool WindowsEthernetTap::_disableTapDevice()
 {
-	Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
+	HANDLE devconLog = CreateFileA((_pathToHelpers + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+	if (devconLog != INVALID_HANDLE_VALUE)
+		SetFilePointer(devconLog,0,0,FILE_END);
 
-	HANDLE devconLog = CreateFileA((_r->homePath + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 	STARTUPINFOA startupInfo;
 	startupInfo.cb = sizeof(startupInfo);
 	if (devconLog != INVALID_HANDLE_VALUE) {
-		SetFilePointer(devconLog,0,0,FILE_END);
 		startupInfo.hStdOutput = devconLog;
 		startupInfo.hStdError = devconLog;
 	}
 	PROCESS_INFORMATION processInfo;
 	memset(&startupInfo,0,sizeof(STARTUPINFOA));
 	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-	if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + _r->homePath + _winEnv.devcon + "\" remove @" + pid).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-		WaitForSingleObject(processInfo.hProcess,INFINITE);
-		CloseHandle(processInfo.hProcess);
-		CloseHandle(processInfo.hThread);
+	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" disable @" + _deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 		if (devconLog != INVALID_HANDLE_VALUE)
 			CloseHandle(devconLog);
-		return true;
+		return false;
 	}
+	WaitForSingleObject(processInfo.hProcess,INFINITE);
+	CloseHandle(processInfo.hProcess);
+	CloseHandle(processInfo.hThread);
+
 	if (devconLog != INVALID_HANDLE_VALUE)
 		CloseHandle(devconLog);
 
-	return false;
+	return true;
 }
 
-int WindowsEthernetTap::cleanPersistentTapDevices(const RuntimeEnvironment *_r,const std::set<std::string> &exceptThese,bool alsoRemoveUnassociatedDevices)
+bool WindowsEthernetTap::_enableTapDevice()
 {
-	char subkeyName[4096];
-	char subkeyClass[4096];
-	char data[4096];
+	HANDLE devconLog = CreateFileA((_pathToHelpers + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+	if (devconLog != INVALID_HANDLE_VALUE)
+		SetFilePointer(devconLog,0,0,FILE_END);
 
-	std::set<std::string> instanceIdPathsToRemove;
-	{
-		Mutex::Lock _l(_systemTapInitLock); // only one thread may mess with taps at a time, process-wide
+	STARTUPINFOA startupInfo;
+	startupInfo.cb = sizeof(startupInfo);
+	if (devconLog != INVALID_HANDLE_VALUE) {
+		startupInfo.hStdOutput = devconLog;
+		startupInfo.hStdError = devconLog;
+	}
+	PROCESS_INFORMATION processInfo;
+	memset(&startupInfo,0,sizeof(STARTUPINFOA));
+	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" enable @" + _deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (devconLog != INVALID_HANDLE_VALUE)
+			CloseHandle(devconLog);
+		return false;
+	}
+	WaitForSingleObject(processInfo.hProcess,INFINITE);
+	CloseHandle(processInfo.hProcess);
+	CloseHandle(processInfo.hThread);
 
-		HKEY nwAdapters;
-		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
-			return -1;
+	if (devconLog != INVALID_HANDLE_VALUE)
+		CloseHandle(devconLog);
 
-		for(DWORD subkeyIndex=0;;++subkeyIndex) {
-			DWORD type;
-			DWORD dataLen;
-			DWORD subkeyNameLen = sizeof(subkeyName);
-			DWORD subkeyClassLen = sizeof(subkeyClass);
-			FILETIME lastWriteTime;
-			if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
-				type = 0;
-				dataLen = sizeof(data);
-				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-					data[dataLen] = '\0';
-					if (!strnicmp(data,"zttap",5)) {
-						std::string instanceIdPath;
-						type = 0;
-						dataLen = sizeof(data);
-						if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
-							instanceIdPath.assign(data,dataLen);
-						if (instanceIdPath.length() != 0) {
-							type = 0;
-							dataLen = sizeof(data);
-							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-								if (dataLen <= 0) {
-									if (alsoRemoveUnassociatedDevices)
-										instanceIdPathsToRemove.insert(instanceIdPath);
-								} else {
-									if (!exceptThese.count(std::string(data,dataLen)))
-										instanceIdPathsToRemove.insert(instanceIdPath);
-								}
-							} else if (alsoRemoveUnassociatedDevices)
-								instanceIdPathsToRemove.insert(instanceIdPath);
-						}
-					}
-				}
-			} else break; // end of list or failure
+	return true;
+}
+
+NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()
+{
+	MIB_IF_TABLE2 *ift = (MIB_IF_TABLE2 *)0;
+
+	if (GetIfTable2Ex(MibIfTableRaw,&ift) != NO_ERROR)
+		throw std::runtime_error("GetIfTable2Ex() failed");
+
+	for(ULONG i=0;i<ift->NumEntries;++i) {
+		if (ift->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+			FreeMibTable(ift);
+			return ift->Table[i].InterfaceIndex;
 		}
-
-		RegCloseKey(nwAdapters);
 	}
 
-	int removed = 0;
-	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp) {
-		if (deletePersistentTapDevice(_r,iidp->c_str()))
-			++removed;
-	}
-	return removed;
+	FreeMibTable(&ift);
+
+	throw std::runtime_error("interface not found");
 }
 
 } // namespace ZeroTier
