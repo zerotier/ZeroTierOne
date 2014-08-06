@@ -56,6 +56,7 @@
 #endif
 
 #include "node/Constants.hpp"
+
 #include "node/Defaults.hpp"
 #include "node/Utils.hpp"
 #include "node/Node.hpp"
@@ -63,6 +64,33 @@
 #include "node/Identity.hpp"
 #include "node/Thread.hpp"
 #include "node/CertificateOfMembership.hpp"
+#include "node/EthernetTapFactory.hpp"
+#include "node/RoutingTable.hpp"
+
+#ifdef __WINDOWS__
+#include "osnet/WindowsEthernetTapFactory.hpp"
+#include "osnet/WindowsRoutingTable.hpp"
+#define ZTCreatePlatformEthernetTapFactory (new WindowsEthernetTapFactory(homeDir))
+#define ZTCreatePlatformRoutingTable (new WindowsRoutingTable())
+#endif
+
+#ifdef __LINUX__
+#include "osnet/LinuxEthernetTapFactory.hpp"
+#include "osnet/LinuxRoutingTable.hpp"
+#define ZTCreatePlatformEthernetTapFactory (new LinuxEthernetTapFactory())
+#define ZTCreatePlatformRoutingTable (new LinuxRoutingTable())
+#endif
+
+#ifdef __APPLE__
+#include "osnet/OSXEthernetTapFactory.hpp"
+#include "osnet/BSDRoutingTable.hpp"
+#define ZTCreatePlatformEthernetTapFactory (new OSXEthernetTapFactory(homeDir,"tap.kext"))
+#define ZTCreatePlatformRoutingTable (new BSDRoutingTable())
+#endif
+
+#ifndef ZTCreatePlatformEthernetTapFactory
+#error Sorry, this platform has no osnet/ implementation yet. Fork me on GitHub and add one?
+#endif
 
 using namespace ZeroTier;
 
@@ -649,7 +677,7 @@ int main(int argc,char **argv)
 			fclose(pf);
 		}
 	}
-#endif
+#endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
 	if (winRunFromCommandLine) {
@@ -670,12 +698,15 @@ int main(int argc,char **argv)
 			return 1;
 		}
 	}
-#endif
+#endif // __WINDOWS__
 
 	int exitCode = 0;
 	bool needsReset = false;
 	try {
-		node = new Node(homeDir,udpPort,tcpPort,needsReset);
+		EthernetTapFactory *tapFactory = ZTCreatePlatformEthernetTapFactory;
+		RoutingTable *routingTable = ZTCreatePlatformRoutingTable;
+
+		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset);
 		switch(node->run()) {
 #ifdef __WINDOWS__
 			case Node::NODE_RESTART_FOR_UPGRADE: {

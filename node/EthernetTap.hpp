@@ -196,6 +196,21 @@ public:
 	 */
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups) = 0;
 
+	/**
+	 * Should this tap device get a pseudo-default-route?
+	 *
+	 * Some platforms (cough Windows) want all "real" network devices to have a
+	 * routing table entry for default, even if it's got a high metric and is
+	 * never used and goes nowhere. If this returns true, the underlying node
+	 * code will use RoutingTable to create one if no default route is
+	 * otherwise defined.
+	 *
+	 * Base class default returns false. Override to return true if needed.
+	 *
+	 * @return True if pseudo-default-route should always exist
+	 */
+	virtual bool createPseudoDefaultRoute() const { return false; }
+
 protected:
 	const char *_implName;
 	MAC _mac;

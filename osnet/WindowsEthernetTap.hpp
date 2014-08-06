@@ -71,6 +71,7 @@ public:
 	virtual std::string deviceName() const;
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
+	virtual bool createPseudoDefaultRoute() const;
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }

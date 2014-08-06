@@ -516,6 +516,11 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	return changed;
 }
 
+bool WindowsEthernetTap::createPseudoDefaultRoute() const
+{
+	return true;
+}
+
 void WindowsEthernetTap::threadMain()
 	throw()
 {
