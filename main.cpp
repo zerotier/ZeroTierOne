@@ -729,12 +729,16 @@ int main(int argc,char **argv)
 				// like OSX's launchd.
 				if (upgPath) {
 					Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
+					std::string updateLogPath(homeDir);
+					updateLogPath.append("/autoupdate.log");
+					Utils::rm(updateLogPath.c_str());
+					Utils::redirectUnixOutputs(updateLogPath.c_str(),(const char *)0);
 					::execl(upgPath,upgPath,(char *)0);
 				}
 				exitCode = 3;
 				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
 			}	break;
-#endif
+#endif // __WINDOWS__ / __UNIX_LIKE__
 			case Node::NODE_UNRECOVERABLE_ERROR: {
 				exitCode = 3;
 				const char *termReason = node->reasonForTermination();

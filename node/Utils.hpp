@@ -58,6 +58,21 @@ namespace ZeroTier {
 class Utils
 {
 public:
+#ifdef __UNIX_LIKE__
+	/**
+	 * Close STDOUT_FILENO and STDERR_FILENO and replace them with output to given path
+	 *
+	 * This can be called after fork() and prior to exec() to suppress output
+	 * from a subprocess, such as auto-update.
+	 *
+	 * @param stdoutPath Path to file to use for stdout
+	 * @param stderrPath Path to file to use for stderr, or NULL for same as stdout (default)
+	 * @return True on success
+	 */
+	static bool redirectUnixOutputs(const char *stdoutPath,const char *stderrPath = (const char *)0)
+		throw();
+#endif
+
 	/**
 	 * Perform a time-invariant binary comparison
 	 *

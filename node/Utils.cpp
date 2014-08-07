@@ -38,6 +38,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/uio.h>
 #include <dirent.h>
 #endif
@@ -49,6 +50,28 @@
 namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
+
+bool Utils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
+	throw()
+{
+	int fdout = ::open(stdoutPath,O_WRONLY|O_CREAT);
+	if (fdout > 0) {
+		int fderr;
+		if (stderrPath) {
+			fderr = ::open(stderrPath,O_WRONLY|O_CREAT);
+			if (fderr <= 0) {
+				::close(fdout);
+				return false;
+			}
+		} else fderr = fdout;
+		::close(STDOUT_FILENO);
+		::close(STDERR_FILENO);
+		::dup2(fdout,STDOUT_FILENO);
+		::dup2(fderr,STDERR_FILENO);
+		return true;
+	}
+	return false;
+}
 
 std::map<std::string,bool> Utils::listDirectory(const char *path)
 {
