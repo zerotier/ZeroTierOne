@@ -60,67 +60,20 @@
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
-// On startup, searches the path for required external utilities (which might vary by Linux distro)
-#define ZT_UNIX_IP_COMMAND 1
-class _CommandFinder
-{
-public:
-	_CommandFinder()
-	{
-		_findCmd(ZT_UNIX_IP_COMMAND,"ip");
-	}
-	inline const char *operator[](int id) const
-		throw()
-	{
-		std::map<int,std::string>::const_iterator c(_paths.find(id));
-		if (c == _paths.end())
-			return (const char *)0;
-		return c->second.c_str();
-	}
-private:
-	inline void _findCmd(int id,const char *name)
-	{
-		char tmp[4096];
-		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/sbin/%s",name);
-		if (ZeroTier::Utils::fileExists(tmp)) {
-			_paths[id] = tmp;
-			return;
-		}
-		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/usr/sbin/%s",name);
-		if (ZeroTier::Utils::fileExists(tmp)) {
-			_paths[id] = tmp;
-			return;
-		}
-		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/bin/%s",name);
-		if (ZeroTier::Utils::fileExists(tmp)) {
-			_paths[id] = tmp;
-			return;
-		}
-		ZeroTier::Utils::snprintf(tmp,sizeof(tmp),"/usr/bin/%s",name);
-		if (ZeroTier::Utils::fileExists(tmp)) {
-			_paths[id] = tmp;
-			return;
-		}
-	}
-	std::map<int,std::string> _paths;
-};
-static const _CommandFinder UNIX_COMMANDS;
-
 namespace ZeroTier {
 
-// Only permit one tap to be opened concurrently across the entire process
 static Mutex __tapCreateLock;
 
 LinuxEthernetTap::LinuxEthernetTap(
-	const RuntimeEnvironment *renv,
-	const char *tryToGetDevice,
 	const MAC &mac,
 	unsigned int mtu,
+	unsigned int metric,
+	uint64_t nwid,
+	const char *desiredDevice,
+	const char *friendlyName,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
-	void *arg)
-	throw(std::runtime_error) :
-	EthernetTap("LinuxEthernetTap",mac,mtu),
-	_r(renv),
+	void *arg) :
+	EthernetTap("LinuxEthernetTap",mac,mtu,metric),
 	_handler(handler),
 	_arg(arg),
 	_fd(0),
@@ -128,10 +81,11 @@ LinuxEthernetTap::LinuxEthernetTap(
 {
 	char procpath[128];
 	struct stat sbuf;
+
 	Mutex::Lock _l(__tapCreateLock); // create only one tap at a time, globally
 
-	if (mtu > 4096)
-		throw std::runtime_error("max tap MTU is 4096");
+	if (mtu > 2800)
+		throw std::runtime_error("max tap MTU is 2800");
 
 	_fd = ::open("/dev/net/tun",O_RDWR);
 	if (_fd <= 0)
@@ -142,8 +96,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	// Try to recall our last device name, or pick an unused one if that fails.
 	bool recalledDevice = false;
-	if ((tryToGetDevice)&&(tryToGetDevice[0])) {
-		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),tryToGetDevice);
+	if ((desiredDevice)&&(desiredDevice[0])) {
+		Utils::scopy(ifr.ifr_name,sizeof(ifr.ifr_name),desiredDevice);
 		Utils::snprintf(procpath,sizeof(procpath),"/proc/sys/net/ipv4/conf/%s",ifr.ifr_name);
 		recalledDevice = (stat(procpath,&sbuf) != 0);
 	}
@@ -163,7 +117,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	_dev = ifr.ifr_name;
 
-	ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
+	::ioctl(_fd,TUNSETPERSIST,0); // valgrind may generate a false alarm here
 
 	// Open an arbitrary socket to talk to netlink
 	int sock = socket(AF_INET,SOCK_DGRAM,0);
@@ -211,7 +165,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	::close(sock);
 
 	// Set close-on-exec so that devices cannot persist if we fork/exec for update
-	fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
+	::fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
 
 	::pipe(_shutdownSignalPipe);
 
@@ -240,53 +194,42 @@ bool LinuxEthernetTap::enabled() const
 
 static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 {
-	const char *ipcmd = UNIX_COMMANDS[ZT_UNIX_IP_COMMAND];
-	if (!ipcmd)
-		return false;
 	long cpid = (long)vfork();
 	if (cpid == 0) {
-		execl(ipcmd,ipcmd,"addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
-		_exit(-1);
+		Utils::redirectUnixOutputs("/dev/null",(const char *)0);
+		::execl("/sbin/ip","/sbin/ip","addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		::execl("/usr/sbin/ip","/usr/sbin/ip","addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		::_exit(-1);
 	} else {
 		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
+		::waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
 	}
 }
 
 bool LinuxEthernetTap::addIP(const InetAddress &ip)
 {
-	const char *ipcmd = UNIX_COMMANDS[ZT_UNIX_IP_COMMAND];
-	if (!ipcmd) {
-		LOG("ERROR: could not configure IP address for %s: unable to find 'ip' command on system (checked /sbin, /bin, /usr/sbin, /usr/bin)",_dev.c_str());
-		return false;
-	}
-
 	if (!ip)
 		return false;
-
 	std::set<InetAddress> allIps(ips());
 	if (allIps.count(ip) > 0)
 		return true;
 
 	// Remove and reconfigure if address is the same but netmask is different
 	for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
-		if (i->ipsEqual(ip)) {
-			if (___removeIp(_dev,*i)) {
-				break;
-			} else {
-				LOG("WARNING: failed to remove old IP/netmask %s to replace with %s",i->toString().c_str(),ip.toString().c_str());
-			}
-		}
+		if (i->ipsEqual(ip))
+			___removeIp(_dev,*i);
 	}
 
-	long cpid;
-	if ((cpid = (long)vfork()) == 0) {
-		execl(ipcmd,ipcmd,"addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
-		_exit(-1);
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		Utils::redirectUnixOutputs("/dev/null",(const char *)0);
+		::execl("/sbin/ip","/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		::execl("/usr/sbin/ip","/usr/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
+		::waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
 	}
 
@@ -442,10 +385,8 @@ void LinuxEthernetTap::threadMain()
 		if (FD_ISSET(_fd,&readfds)) {
 			n = (int)::read(_fd,getBuf + r,sizeof(getBuf) - r);
 			if (n < 0) {
-				if ((errno != EINTR)&&(errno != ETIMEDOUT)) {
-					TRACE("unexpected error reading from tap: %s",strerror(errno));
+				if ((errno != EINTR)&&(errno != ETIMEDOUT))
 					break;
-				}
 			} else {
 				// Some tap drivers like to send the ethernet frame and the
 				// payload in two chunks, so handle that by accumulating

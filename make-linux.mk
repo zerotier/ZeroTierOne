@@ -38,9 +38,8 @@ STRIP=strip --strip-all
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
-OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
-
 include objects.mk
+OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
 
 all:	one
 
@@ -58,7 +57,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) *.o node/*.o zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) zerotier-* build-* ZeroTierOneInstaller-*
 
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
