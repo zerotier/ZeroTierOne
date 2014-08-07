@@ -109,8 +109,9 @@ ln -sf "$ztapp/Contents/Info.plist" "$zthome/shutdownIfUnreadable"
 
 echo 'Installing zerotier-cli command line utility...'
 
-rm -f /usr/bin/zerotier-cli
+rm -f /usr/bin/zerotier-cli /usr/bin/zerotier-idtool
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" /usr/bin/zerotier-cli
+ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" /usr/bin/zerotier-idtool
 
 # This lets the install helper AppleScript thingy go ahead and authorize the
 # user after the installer is done, skiping that step for the user who did
