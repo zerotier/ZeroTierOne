@@ -15,10 +15,6 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
-ifeq ($(ZT_USE_TESTNET),1)
-	DEFS+=-DZT_USE_TESTNET
-endif
-
 # Enable SSE-optimized Salsa20
 DEFS+=-DZT_SALSA20_SSE
 

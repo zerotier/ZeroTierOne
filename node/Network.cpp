@@ -103,7 +103,6 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 		nw->_restoreState();
 		nw->requestConfiguration();
 	} catch ( ... ) {
-		TRACE("exception in network setup thread in _restoreState() or requestConfiguration()!");
 		nw->_lastConfigUpdate = 0; // call requestConfiguration() again
 	}
 
