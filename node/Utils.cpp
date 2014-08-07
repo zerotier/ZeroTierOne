@@ -51,6 +51,7 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
+#ifdef __UNIX_LIKE__
 bool Utils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 	throw()
 {
@@ -72,6 +73,7 @@ bool Utils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 	}
 	return false;
 }
+#endif // __UNIX_LIKE__
 
 std::map<std::string,bool> Utils::listDirectory(const char *path)
 {

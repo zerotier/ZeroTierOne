@@ -71,7 +71,7 @@ public:
 	 */
 	static bool redirectUnixOutputs(const char *stdoutPath,const char *stderrPath = (const char *)0)
 		throw();
-#endif
+#endif // __UNIX_LIKE__
 
 	/**
 	 * Perform a time-invariant binary comparison
