@@ -38,7 +38,7 @@ STRIP=strip --strip-all
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
-OBJS+=osnet/LinuxRoutingTable.o
+OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
 
 include objects.mk
 
