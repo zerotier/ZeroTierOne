@@ -57,7 +57,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) *.o zerotier-* build-* ZeroTierOneInstaller-*
 
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
