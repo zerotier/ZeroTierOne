@@ -34,6 +34,8 @@
 #include "OSXEthernetTapFactory.hpp"
 #include "OSXEthernetTap.hpp"
 
+#include "../node/Utils.hpp"
+
 namespace ZeroTier {
 
 OSXEthernetTapFactory::OSXEthernetTapFactory(const char *pathToTapKext,const char *tapKextName) :
@@ -47,6 +49,7 @@ OSXEthernetTapFactory::OSXEthernetTapFactory(const char *pathToTapKext,const cha
 			long kextpid = (long)vfork();
 			if (kextpid == 0) {
 				::chdir(_pathToTapKext.c_str());
+				Utils::redirectUnixOutputs("/dev/null",(const char *)0);
 				::execl("/sbin/kextload","/sbin/kextload","-q","-repository",_pathToTapKext.c_str(),_tapKextName.c_str(),(const char *)0);
 				::_exit(-1);
 			} else if (kextpid > 0) {
@@ -76,6 +79,7 @@ OSXEthernetTapFactory::~OSXEthernetTapFactory()
 		sprintf(tmp,"%s/%s",_pathToTapKext.c_str(),_tapKextName.c_str());
 		long kextpid = (long)vfork();
 		if (kextpid == 0) {
+			Utils::redirectUnixOutputs("/dev/null",(const char *)0);
 			::execl("/sbin/kextunload","/sbin/kextunload",tmp,(const char *)0);
 			::_exit(-1);
 		} else if (kextpid > 0) {

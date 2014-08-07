@@ -707,6 +707,7 @@ int main(int argc,char **argv)
 		RoutingTable *routingTable = ZTCreatePlatformRoutingTable;
 
 		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset);
+
 		switch(node->run()) {
 #ifdef __WINDOWS__
 			case Node::NODE_RESTART_FOR_UPGRADE: {
@@ -739,18 +740,24 @@ int main(int argc,char **argv)
 				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
 			}	break;
 #endif // __WINDOWS__ / __UNIX_LIKE__
+
 			case Node::NODE_UNRECOVERABLE_ERROR: {
 				exitCode = 3;
 				const char *termReason = node->reasonForTermination();
 				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
 			}	break;
+
 			default:
 				break;
 		}
+
 		delete node;
 		node = (Node *)0;
+	} catch ( std::exception &exc ) {
+		fprintf(stderr,"%s: unexpected exception: %s"ZT_EOL_S,argv[0],exc.what());
+		exitCode = 3;
 	} catch ( ... ) {
-		fprintf(stderr,"%s: unexpected exception!"ZT_EOL_S,argv[0]);
+		fprintf(stderr,"%s: unexpected exception: unknown exception"ZT_EOL_S,argv[0]);
 		exitCode = 3;
 	}
 
