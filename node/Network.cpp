@@ -340,7 +340,7 @@ void Network::threadMain()
 	char fname[1024],lcentry[128];
 	Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
 
-	EthernetTap *t;
+	EthernetTap *t = (EthernetTap *)0;
 	try {
 		std::string desiredDevice(_nc->getLocalConfig(lcentry));
 		_mkNetworkFriendlyName(fname,sizeof(fname));

@@ -180,7 +180,7 @@ public:
 	 * @return Number of characters actually written
 	 */
 	static unsigned int unhex(const char *hex,unsigned int maxlen,void *buf,unsigned int len);
-	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),hex.length(),buf,len); }
+	static inline unsigned int unhex(const std::string &hex,void *buf,unsigned int len) { return unhex(hex.c_str(),(unsigned int)hex.length(),buf,len); }
 
 	/**
 	 * Generate secure random bytes

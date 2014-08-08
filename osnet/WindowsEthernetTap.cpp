@@ -188,11 +188,11 @@ WindowsEthernetTap::WindowsEthernetTap(
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" install \"" + _pathToHelpers + _winEnv.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" install \"" + _pathToHelpers + WindowsEthernetTapFactory::WINENV.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			if (devconLog != INVALID_HANDLE_VALUE)
 				CloseHandle(devconLog);
-			throw std::runtime_error(std::string("unable to find or execute devcon at ") + _winEnv.devcon);
+			throw std::runtime_error(std::string("unable to find or execute devcon at ") + WindowsEthernetTapFactory::WINENV.devcon);
 		}
 		WaitForSingleObject(processInfo.hProcess,INFINITE);
 		CloseHandle(processInfo.hProcess);

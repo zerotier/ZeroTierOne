@@ -43,6 +43,7 @@ WindowsEthernetTapFactory::Env::Env()
 	tapDriver = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap200.inf" : "\\tap-windows\\x86\\zttap200.inf");
 #endif
 }
+const WindowsEthernetTapFactory::Env WindowsEthernetTapFactory::WINENV;
 
 WindowsEthernetTapFactory::WindowsEthernetTapFactory(const char *pathToHelpers) :
 	_pathToHelpers(pathToHelpers)

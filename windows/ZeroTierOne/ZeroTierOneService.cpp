@@ -26,15 +26,21 @@
  */
 
 #pragma region Includes
+
 #include <WinSock2.h>
 #include <Windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "ZeroTierOneService.h"
+
 #include "../../node/Defaults.hpp"
 #include "../../node/Utils.hpp"
-#pragma endregion
+
+#include "../../osnet/WindowsEthernetTapFactory.hpp"
+#include "../../osnet/WindowsRoutingTable.hpp"
+
+#pragma endregion // Includes
 
 #ifdef ZT_DEBUG_SERVICE
 FILE *SVCDBGfile = (FILE *)0;
@@ -76,27 +82,35 @@ void ZeroTierOneService::threadMain()
 
 restart_node:
 	try {
+		ZeroTier::WindowsEthernetTapFactory tapFactory(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str());
+		ZeroTier::WindowsRoutingTable routingTable;
+
 		{
 			// start or restart
 			ZeroTier::Mutex::Lock _l(_lock);
 			delete _node;
-			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),ZT_DEFAULT_UDP_PORT,0,false);
+			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),&tapFactory,&routingTable,ZT_DEFAULT_UDP_PORT,0,false);
 		}
+
 		switch(_node->run()) {
+
 			case ZeroTier::Node::NODE_RESTART_FOR_UPGRADE: {
 				// Shut down node
 				ZeroTier::Node *n;
 				{
-				   ZeroTier::Mutex::Lock _l(_lock);
-				   n = _node;
-				   _node = (ZeroTier::Node *)0;
+					ZeroTier::Mutex::Lock _l(_lock);
+					n = _node;
+					_node = (ZeroTier::Node *)0;
 				}
+
+				// Get upgrade path, which will be its reason for termination
 				std::string msiPath;
 				if (n) {
 					const char *msiPathTmp = n->reasonForTermination();
 					if (msiPathTmp)
 						msiPath = msiPathTmp;
 				}
+
 				delete n;
 
 				if ((!msiPath.length())||(!ZeroTier::Utils::fileExists(msiPath.c_str()))) {
@@ -114,6 +128,7 @@ restart_node:
 				// Terminate service to allow updater to update
 				Stop();
 			}	return;
+
 			case ZeroTier::Node::NODE_UNRECOVERABLE_ERROR: {
 				std::string err("ZeroTier node encountered an unrecoverable error: ");
 				const char *r = _node->reasonForTermination();
@@ -125,8 +140,10 @@ restart_node:
 				Sleep(5000);
 				goto restart_node;
 			}	break;
+
 			default: // includes normal termination, which will terminate thread
 				break;
+
 		}
 	} catch ( ... ) {
 		// sanity check, shouldn't happen since Node::run() should catch all its own errors
@@ -136,10 +153,11 @@ restart_node:
 		goto restart_node;
 	}
 
-	_lock.lock();
-	delete _node;
-	_node = (ZeroTier::Node *)0;
-	_lock.unlock();
+	{
+		ZeroTier::Mutex::Lock _l(_lock);
+		delete _node;
+		_node = (ZeroTier::Node *)0;
+	}
 }
 
 bool ZeroTierOneService::doStartUpgrade(const std::string &msiPath)

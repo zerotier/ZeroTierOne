@@ -702,9 +702,12 @@ int main(int argc,char **argv)
 
 	int exitCode = 0;
 	bool needsReset = false;
+	EthernetTapFactory *tapFactory = (EthernetTapFactory *)0;
+	RoutingTable *routingTable = (RoutingTable *)0;
+
 	try {
-		EthernetTapFactory *tapFactory = ZTCreatePlatformEthernetTapFactory;
-		RoutingTable *routingTable = ZTCreatePlatformRoutingTable;
+		tapFactory = ZTCreatePlatformEthernetTapFactory;
+		routingTable = ZTCreatePlatformRoutingTable;
 
 		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset);
 
@@ -760,6 +763,9 @@ int main(int argc,char **argv)
 		fprintf(stderr,"%s: unexpected exception: unknown exception"ZT_EOL_S,argv[0]);
 		exitCode = 3;
 	}
+
+	delete routingTable;
+	delete tapFactory;
 
 #ifdef __UNIX_LIKE__
 	Utils::rm((std::string(homeDir)+"/zerotier-one.pid").c_str());
