@@ -43,6 +43,12 @@ int main(int argc,char **argv)
 		return 1;
 	}
 
+	Dictionary test(topology.toString());
+	if (!test.verify(topologyAuthority)) {
+		std::cerr << "Test verification of signed dictionary failed!" << std::endl;
+		return 1;
+	}
+
 	std::cout << topology.toString();
 	return 0;
 }

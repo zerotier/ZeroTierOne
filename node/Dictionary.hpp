@@ -51,8 +51,7 @@ class Identity;
  * human-readable if the keys and values in the dictionary are also
  * human-readable. Otherwise it might contain unprintable characters.
  *
- * Keys beginning with "~!" are reserved for signatures and are ignored
- * during the signature process.
+ * Keys beginning with "~!" are reserved for signature data fields.
  *
  * Note: the signature code depends on std::map<> being sorted, but no
  * other code does. So if the underlying data structure is ever swapped
@@ -66,13 +65,14 @@ public:
 
 	/**
 	 * @param s String-serialized dictionary
+	 * @param maxlen Maximum length of buffer
 	 */
-	Dictionary(const char *s) { fromString(s); }
+	Dictionary(const char *s,unsigned int maxlen) { fromString(s,maxlen); }
 
 	/**
 	 * @param s String-serialized dictionary
 	 */
-	Dictionary(const std::string &s) { fromString(s.c_str()); }
+	Dictionary(const std::string &s) { fromString(s.c_str(),(unsigned int)s.length()); }
 
 	/**
 	 * Get a key, throwing an exception if it is not present
@@ -130,9 +130,10 @@ public:
 	 * Clear and initialize from a string
 	 *
 	 * @param s String-serialized dictionary
+	 * @param maxlen Maximum length of string buffer
 	 */
-	void fromString(const char *s);
-	inline void fromString(const std::string &s) { fromString(s.c_str()); }
+	void fromString(const char *s,unsigned int maxlen);
+	inline void fromString(const std::string &s) { fromString(s.c_str(),(unsigned int)s.length()); }
 
 	/**
 	 * @return True if this dictionary is cryptographically signed

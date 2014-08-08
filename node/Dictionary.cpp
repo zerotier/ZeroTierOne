@@ -32,13 +32,14 @@
 
 namespace ZeroTier {
 
-void Dictionary::fromString(const char *s)
+void Dictionary::fromString(const char *s,unsigned int maxlen)
 {
 	clear();
 	bool escapeState = false;
 	std::string keyBuf;
 	std::string *element = &keyBuf;
-	while (*s) {
+	const char *end = s + maxlen;
+	while ((*s)&&(s < end)) {
 		if (escapeState) {
 			escapeState = false;
 			switch(*s) {
@@ -77,16 +78,25 @@ void Dictionary::fromString(const char *s)
 bool Dictionary::sign(const Identity &id)
 {
 	try {
-		std::string buf;
-		_mkSigBuf(buf);
+		// Sign identity and timestamp fields too. If there's an existing
+		// signature, _mkSigBuf() ignores it.
 		char nows[32];
 		Utils::snprintf(nows,sizeof(nows),"%llx",(unsigned long long)Utils::now());
-		C25519::Signature sig(id.sign(buf.data(),buf.length()));
-		(*this)[ZT_DICTIONARY_SIGNATURE] = Utils::hex(sig.data,sig.size());
 		(*this)[ZT_DICTIONARY_SIGNATURE_IDENTITY] = id.toString(false);
 		(*this)[ZT_DICTIONARY_SIGNATURE_TIMESTAMP] = nows;
+
+		// Create a blob to hash and sign from fields in sorted order
+		std::string buf;
+		_mkSigBuf(buf);
+
+		// Add signature field
+		C25519::Signature sig(id.sign(buf.data(),(unsigned int)buf.length()));
+		(*this)[ZT_DICTIONARY_SIGNATURE] = Utils::hex(sig.data,(unsigned int)sig.size());
+
 		return true;
 	} catch ( ... ) {
+		// Probably means identity has no secret key field
+		removeSignature();
 		return false;
 	}
 }
@@ -110,7 +120,7 @@ void Dictionary::_mkSigBuf(std::string &buf) const
 {
 	unsigned long pairs = 0;
 	for(const_iterator i(begin());i!=end();++i) {
-		if ((i->first.length() < 2)||( (i->first[0] != '~')&&(i->first[1] != '!') )) {
+		if (i->first != ZT_DICTIONARY_SIGNATURE) {
 			buf.append(i->first);
 			buf.push_back('=');
 			buf.append(i->second);
