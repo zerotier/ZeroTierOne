@@ -706,8 +706,9 @@ NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()
 
 	for(ULONG i=0;i<ift->NumEntries;++i) {
 		if (ift->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+			NET_IFINDEX idx = ift->Table[i].InterfaceIndex;
 			FreeMibTable(ift);
-			return ift->Table[i].InterfaceIndex;
+			return idx;
 		}
 	}
 

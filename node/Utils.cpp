@@ -260,22 +260,20 @@ void Utils::lockDownFile(const char *path,bool isDir)
 #ifdef __WINDOWS__
 	{
 		STARTUPINFOA startupInfo;
-		startupInfo.cb = sizeof(startupInfo);
 		PROCESS_INFORMATION processInfo;
+
+		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		/*
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\cacls.exe \"") + path + "\" /E /R Users").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-			WaitForSingleObject(processInfo.hProcess,INFINITE);
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-		}
-		*/
 		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /inheritance:d /Q").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
 		}
+
+		startupInfo.cb = sizeof(startupInfo);
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
 		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove *S-1-5-32-545 /Q").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);

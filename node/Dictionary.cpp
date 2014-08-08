@@ -110,7 +110,7 @@ bool Dictionary::verify(const Identity &id) const
 		if (sig == end())
 			return false;
 		std::string sigbin(Utils::unhex(sig->second));
-		return id.verify(buf.data(),(unsigned int)buf.length(),sigbin.data(),sigbin.length());
+		return id.verify(buf.data(),(unsigned int)buf.length(),sigbin.data(),(unsigned int)sigbin.length());
 	} catch ( ... ) {
 		return false;
 	}
