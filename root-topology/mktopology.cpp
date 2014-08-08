@@ -1,9 +1,3 @@
-/* Makes topology dictionary out of source dictionary and signs with
- * 'topology.secret', which must be present (or symlinked) from where
- * this is run. */
-
-/* Just type 'make' and then run (Only tested on Linux) */
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -22,8 +16,8 @@ int main(int argc,char **argv)
 {
 	std::string buf;
 
-	if (!Utils::readFile("topology.secret",buf)) {
-		std::cerr << "Cannot read topology.secret" << std::endl;
+	if (!Utils::readFile("root-topology-authority.secret",buf)) {
+		std::cerr << "Cannot read root-topology-authority.secret" << std::endl;
 		return 1;
 	}
 	Identity topologyAuthority(buf);

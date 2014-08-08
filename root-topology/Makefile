@@ -11,4 +11,7 @@ official: all
 clean:
 	rm -f *.o mktopology bin2c root_topology.out
 
+realclean: clean
+	rm -f ZT_DEFAULT_ROOT_TOPOLOGY.c
+
 FORCE:

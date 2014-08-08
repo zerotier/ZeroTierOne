@@ -31,4 +31,4 @@
 .qmake.stash
 *.autosave
 /ZeroTier One.dmg
-/topology/topology.secret
+/root-topology/*.secret
