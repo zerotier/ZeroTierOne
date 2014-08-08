@@ -414,6 +414,45 @@ static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 	return FALSE;
 }
 
+// Pokes a hole in the Windows firewall (advfirewall) for the running program
+static void _winPokeAHole()
+{
+	char myPath[MAX_PATH];
+	DWORD ps = GetModuleFileNameA(NULL,myPath,sizeof(myPath));
+	if ((ps > 0)&&(ps < (DWORD)sizeof(myPath))) {
+		STARTUPINFOA startupInfo;
+		PROCESS_INFORMATION processInfo;
+		fprintf(stderr,"*** path: %s\n",myPath);
+
+		startupInfo.cb = sizeof(startupInfo);
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall delete rule name=\"ZeroTier One\" program=\"") + myPath + "\"").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+
+		startupInfo.cb = sizeof(startupInfo);
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=in action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+
+		startupInfo.cb = sizeof(startupInfo);
+		memset(&startupInfo,0,sizeof(STARTUPINFOA));
+		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=out action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+			WaitForSingleObject(processInfo.hProcess,INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+	}
+}
+
 // Returns true if this is running as the local administrator
 static BOOL IsCurrentUserLocalAdministrator(void)
 {
@@ -680,43 +719,7 @@ int main(int argc,char **argv)
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
-	{
-		char myPath[MAX_PATH];
-		DWORD ps = GetModuleFileNameA(NULL,myPath,sizeof(myPath));
-		if ((ps > 0)&&(ps < (DWORD)sizeof(myPath))) {
-			STARTUPINFOA startupInfo;
-			PROCESS_INFORMATION processInfo;
-			fprintf(stderr,"*** path: %s\n",myPath);
-
-			startupInfo.cb = sizeof(startupInfo);
-			memset(&startupInfo,0,sizeof(STARTUPINFOA));
-			memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-			if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall delete rule name=\"ZeroTier One\" program=\"") + myPath + "\"").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-				WaitForSingleObject(processInfo.hProcess,INFINITE);
-				CloseHandle(processInfo.hProcess);
-				CloseHandle(processInfo.hThread);
-			}
-
-			startupInfo.cb = sizeof(startupInfo);
-			memset(&startupInfo,0,sizeof(STARTUPINFOA));
-			memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-			if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=in action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-				WaitForSingleObject(processInfo.hProcess,INFINITE);
-				CloseHandle(processInfo.hProcess);
-				CloseHandle(processInfo.hThread);
-			}
-
-			startupInfo.cb = sizeof(startupInfo);
-			memset(&startupInfo,0,sizeof(STARTUPINFOA));
-			memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-			if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=out action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-				WaitForSingleObject(processInfo.hProcess,INFINITE);
-				CloseHandle(processInfo.hProcess);
-				CloseHandle(processInfo.hThread);
-			}
-		}
-	}
-
+	_winPokeAHole();
 	if (winRunFromCommandLine) {
 		// Running in "interactive" mode (mostly for debugging)
 		if (IsCurrentUserLocalAdministrator() != TRUE) {
