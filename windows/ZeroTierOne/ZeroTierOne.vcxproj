@@ -60,7 +60,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
-    <ClInclude Include="..\..\ext\lz4\lz4hc.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
     <ClInclude Include="..\..\node\AntiRecursion.hpp" />
     <ClInclude Include="..\..\node\Array.hpp" />

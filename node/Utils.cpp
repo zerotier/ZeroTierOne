@@ -43,9 +43,12 @@
 #include <dirent.h>
 #endif
 
+#ifdef __WINDOWS__
+#include <wincrypt.h>
+#endif
+
 #include "Utils.hpp"
 #include "Mutex.hpp"
-#include "Salsa20.hpp"
 
 namespace ZeroTier {
 
@@ -189,68 +192,64 @@ unsigned int Utils::unhex(const char *hex,unsigned int maxlen,void *buf,unsigned
 
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
-	static Mutex randomLock;
-	static char randbuf[16384];
-	static unsigned int randptr = sizeof(randbuf);
-	static Salsa20 s20;
-	static bool randInitialized = false;
+#ifdef __WINDOWS__
 
-	Mutex::Lock _l(randomLock);
+	static HCRYPTPROV cryptProvider = NULL;
+	static Mutex globalLock;
 
-	// A Salsa20/8 instance is used to further mangle whatever our base
-	// random source happens to be.
-	if (!randInitialized) {
-		randInitialized = true;
-		memset(randbuf,0,sizeof(randbuf));
-		char s20key[33];
-		uint64_t s20iv = now();
-		Utils::snprintf(s20key,sizeof(s20key),"%.16llx%.16llx",(unsigned long long)now(),(unsigned long long)((void *)&s20iv));
-		s20.init(s20key,256,&s20iv,8);
+	Mutex::Lock _l(globalLock);
+
+	if (cryptProvider == NULL) {
+		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to obtain WinCrypt context!\r\n");
+			exit(1);
+			return;
+		}
+	}
+
+	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
+		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+		exit(1);
+	}
+
+#else // not __WINDOWS__
+
+#ifdef __UNIX_LIKE__
+
+	static char randomBuf[65536];
+	static unsigned int randomPtr = sizeof(randomBuf);
+	static int devURandomFd = -1;
+	static Mutex globalLock;
+
+	Mutex::Lock _l(globalLock);
+
+	if (devURandomFd <= 0) {
+		devURandomFd = ::open("/dev/urandom",O_RDONLY);
+		if (devURandomFd <= 0) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\r\n");
+			exit(1);
+			return;
+		}
 	}
 
 	for(unsigned int i=0;i<bytes;++i) {
-		if (randptr >= sizeof(randbuf)) {
-#ifdef __UNIX_LIKE__
-			{
-				int fd = ::open("/dev/urandom",O_RDONLY);
-				if (fd < 0) {
-					fprintf(stderr,"FATAL ERROR: unable to open /dev/urandom (%d)"ZT_EOL_S,errno);
-					exit(-1);
-				}
-				if ((int)::read(fd,randbuf,sizeof(randbuf)) != (int)sizeof(randbuf)) {
-					fprintf(stderr,"FATAL ERROR: unable to read from /dev/urandom"ZT_EOL_S);
-					exit(-1);
-				}
-				::close(fd);
+		if (randomPtr >= sizeof(randomBuf)) {
+			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\r\n");
+				exit(1);
+				return;
 			}
-#else
-#ifdef __WINDOWS__
-			{
-				struct {
-					double nowf;
-					DWORD processId;
-					DWORD tickCount;
-					uint64_t nowi;
-					char padding[32];
-				} keyMaterial;
-				keyMaterial.nowf = Utils::nowf();
-				keyMaterial.processId = GetCurrentProcessId();
-				keyMaterial.tickCount = GetTickCount();
-				keyMaterial.nowi = Utils::now();
-				for(int i=0;i<sizeof(keyMaterial.padding);++i)
-					keyMaterial.padding[i] = (char)rand();
-				Salsa20 s20tmp(&keyMaterial,256,&(keyMaterial.nowi),8);
-				s20tmp.encrypt(randbuf,randbuf,sizeof(randbuf));
-			}
-#else
-no getSecureRandom() implementation;
-#endif
-#endif
-			s20.encrypt(randbuf,randbuf,sizeof(randbuf));
-			randptr = 0;
+			randomPtr = 0;
 		}
-		((char *)buf)[i] = randbuf[randptr++];
+		((char *)buf)[i] = randomBuf[randomPtr++];
 	}
+
+#else // not __UNIX_LIKE__
+
+#error No getSecureRandom() implementation available.
+
+#endif // __UNIX_LIKE__
+#endif // __WINDOWS__
 }
 
 void Utils::lockDownFile(const char *path,bool isDir)

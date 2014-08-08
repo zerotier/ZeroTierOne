@@ -90,9 +90,6 @@
     <ClCompile Include="..\..\node\Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ServiceBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -129,12 +126,12 @@
     <ClCompile Include="..\..\node\Dictionary.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ext\lz4\lz4.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\ext\lz4\lz4hc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Address.hpp">
