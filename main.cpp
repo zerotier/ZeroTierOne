@@ -43,6 +43,7 @@
 #include <wchar.h>
 #include <lmcons.h>
 #include <newdev.h>
+#include <atlbase.h>
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
 #include "windows/ZeroTierOne/ZeroTierOneService.h"
@@ -422,7 +423,6 @@ static void _winPokeAHole()
 	if ((ps > 0)&&(ps < (DWORD)sizeof(myPath))) {
 		STARTUPINFOA startupInfo;
 		PROCESS_INFORMATION processInfo;
-		fprintf(stderr,"*** path: %s\n",myPath);
 
 		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));

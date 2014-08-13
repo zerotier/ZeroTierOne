@@ -39,6 +39,8 @@ namespace ZeroTier {
 
 const InetAddress InetAddress::LO4("127.0.0.1",0);
 const InetAddress InetAddress::LO6("::1",0);
+const InetAddress InetAddress::DEFAULT4((uint32_t)0,0);
+const InetAddress InetAddress::DEFAULT6((const void *)0,16,0);
 
 void InetAddress::set(const std::string &ip,unsigned int port)
 	throw()
@@ -63,11 +65,13 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 	memset(&_sa,0,sizeof(_sa));
 	if (ipLen == 4) {
 		setV4();
-		memcpy(rawIpData(),ipBytes,4);
+		if (ipBytes)
+			memcpy(rawIpData(),ipBytes,4);
 		setPort(port);
 	} else if (ipLen == 16) {
 		setV6();
-		memcpy(rawIpData(),ipBytes,16);
+		if (ipBytes)
+			memcpy(rawIpData(),ipBytes,16);
 		setPort(port);
 	}
 }
@@ -88,6 +92,16 @@ bool InetAddress::isLinkLocal() const
 		if (_sa.sin6.sin6_addr.s6_addr[7] != 0x00) return false;
 		return true;
 	}
+	return false;
+}
+
+bool InetAddress::isDefaultRoute() const
+	throw()
+{
+	if (_sa.saddr.sa_family == AF_INET)
+		return ((_sa.sin.sin_addr.s_addr == 0)&&(_sa.sin.sin_port == 0));
+	else if (_sa.saddr.sa_family == AF_INET6)
+		return ((Utils::isZero(_sa.sin6.sin6_addr.s6_addr,16))&&(_sa.sin6.sin6_port == 0));
 	return false;
 }
 

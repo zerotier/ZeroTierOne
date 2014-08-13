@@ -387,12 +387,12 @@
 /**
  * How often to broadcast beacons over physical local LANs
  */
-#define ZT_BEACON_INTERVAL ZT_PEER_DIRECT_PING_DELAY
+#define ZT_BEACON_INTERVAL 30000
 
 /**
  * Do not respond to any beacon more often than this
  */
-#define ZT_MIN_BEACON_RESPONSE_INTERVAL (ZT_BEACON_INTERVAL / 64)
+#define ZT_MIN_BEACON_RESPONSE_INTERVAL (ZT_BEACON_INTERVAL / 32)
 
 /**
  * Minimum interval between attempts to do a software update

@@ -77,6 +77,16 @@ public:
 	 */
 	static const InetAddress LO6;
 
+	/**
+	 * 0.0.0.0/0
+	 */
+	static const InetAddress DEFAULT4;
+
+	/**
+	 * ::/0
+	 */
+	static const InetAddress DEFAULT6;
+
 	InetAddress() throw() { memset(&_sa,0,sizeof(_sa)); }
 	InetAddress(const InetAddress &a) throw() { memcpy(&_sa,&a._sa,sizeof(_sa)); }
 	InetAddress(const struct sockaddr *sa) throw() { this->set(sa); }
@@ -145,6 +155,12 @@ public:
 	 * @return True if this is a link-local IP address
 	 */
 	bool isLinkLocal() const
+		throw();
+
+	/**
+	 * @return True if this ip/netmask would represent a default route (e.g. 0.0.0.0/0)
+	 */
+	bool isDefaultRoute() const
 		throw();
 
 	/**

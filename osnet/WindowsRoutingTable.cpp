@@ -151,7 +151,9 @@ RoutingTable::Entry WindowsRoutingTable::set(const InetAddress &destination,cons
 		_copyInetAddressToSockaddrInet(gateway,nr.NextHop);
 		nr.Metric = metric;
 		nr.Protocol = MIB_IPPROTO_NETMGMT;
-		CreateIpForwardEntry2(&nr);
+		DWORD result = CreateIpForwardEntry2(&nr);
+		if (result != NO_ERROR)
+			return RoutingTable::Entry();
 	}
 
 	std::vector<RoutingTable::Entry> rtab(get(true,true));

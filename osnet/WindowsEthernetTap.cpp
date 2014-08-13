@@ -39,6 +39,11 @@
 #include <IPHlpApi.h>
 #include <nldef.h>
 #include <netioapi.h>
+#include <atlbase.h>
+#include <netlistmgr.h>
+#include <nldef.h>
+
+#include <iostream>
 
 #include "../node/Constants.hpp"
 
@@ -52,37 +57,12 @@
 // ff:ff:ff:ff:ff:ff with no ADI
 static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
+#define ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
+
 namespace ZeroTier {
 
 // Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
-
-static void _syncIpsWithRegistry(const std::set<InetAddress> &haveIps,const std::string netCfgInstanceId)
-{
-	// Update registry to contain all non-link-local IPs for this interface
-	std::string regMultiIps,regMultiNetmasks;
-	for(std::set<InetAddress>::const_iterator i(haveIps.begin());i!=haveIps.end();++i) {
-		if (!i->isLinkLocal()) {
-			regMultiIps.append(i->toIpString());
-			regMultiIps.push_back((char)0);
-			regMultiNetmasks.append(i->netmask().toIpString());
-			regMultiNetmasks.push_back((char)0);
-		}
-	}
-	HKEY tcpIpInterfaces;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
-		if (regMultiIps.length()) {
-			regMultiIps.push_back((char)0);
-			regMultiNetmasks.push_back((char)0);
-			RegSetKeyValueA(tcpIpInterfaces,netCfgInstanceId.c_str(),"IPAddress",REG_MULTI_SZ,regMultiIps.data(),(DWORD)regMultiIps.length());
-			RegSetKeyValueA(tcpIpInterfaces,netCfgInstanceId.c_str(),"SubnetMask",REG_MULTI_SZ,regMultiNetmasks.data(),(DWORD)regMultiNetmasks.length());
-		} else {
-			RegDeleteKeyValueA(tcpIpInterfaces,netCfgInstanceId.c_str(),"IPAddress");
-			RegDeleteKeyValueA(tcpIpInterfaces,netCfgInstanceId.c_str(),"SubnetMask");
-		}
-	}
-	RegCloseKey(tcpIpInterfaces);
-}
 
 WindowsEthernetTap::WindowsEthernetTap(
 	const char *pathToHelpers,
@@ -97,6 +77,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	EthernetTap("WindowsEthernetTap",mac,mtu,metric),
 	_handler(handler),
 	_arg(arg),
+	_nwid(nwid),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
 	_pathToHelpers(pathToHelpers),
@@ -171,7 +152,8 @@ WindowsEthernetTap::WindowsEthernetTap(
 	}
 
 	// If there is no device, try to create one
-	if (_netCfgInstanceId.length() == 0) {
+	bool creatingNewDevice = (_netCfgInstanceId.length() == 0);
+	if (creatingNewDevice) {
 		// Log devcon output to a file
 		HANDLE devconLog = CreateFileA((_pathToHelpers + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
 		if (devconLog != INVALID_HANDLE_VALUE)
@@ -250,8 +232,17 @@ WindowsEthernetTap::WindowsEthernetTap(
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MAC",REG_SZ,tmps,tmpsl);
 		DWORD tmp = mtu;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+
+		//tmp = NDIS_DEVICE_TYPE_ENDPOINT;
 		tmp = 0;
-		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp)); // disable DHCP by default on new devices
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*NdisDeviceType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+		tmp = IF_TYPE_ETHERNET_CSMACD;
+		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*IfType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+
+		if (creatingNewDevice) {
+			tmp = 0;
+			RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
+		}
 		RegCloseKey(nwAdapters);	
 	} else {
 		RegCloseKey(nwAdapters);	
@@ -351,7 +342,15 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 			}
 		}
 
-		_syncIpsWithRegistry(haveIps,_netCfgInstanceId);
+		std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+		if (std::find(regIps.begin(),regIps.end(),ip.toIpString()) == regIps.end()) {
+			std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+			regIps.push_back(ip.toIpString());
+			regSubnetMasks.push_back(ip.netmask().toIpString());
+			_setRegistryIPv4Value("IPAddress",regIps);
+			_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
+		}
+		//_syncIpsWithRegistry(haveIps,_netCfgInstanceId);
 	} catch ( ... ) {
 		return false;
 	}
@@ -381,7 +380,20 @@ bool WindowsEthernetTap::removeIP(const InetAddress &ip)
 					if (addr == ip) {
 						DeleteUnicastIpAddressEntry(&(ipt->Table[i]));
 						FreeMibTable(ipt);
-						_syncIpsWithRegistry(ips(),_netCfgInstanceId);
+
+						std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+						std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+						std::string ipstr(ip.toIpString());
+						for(std::vector<std::string>::iterator rip(regIps.begin()),rm(regSubnetMasks.begin());((rip!=regIps.end())&&(rm!=regSubnetMasks.end()));++rip,++rm) {
+							if (*rip == ipstr) {
+								regIps.erase(rip);
+								regSubnetMasks.erase(rm);
+								_setRegistryIPv4Value("IPAddress",regIps);
+								_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
+								break;
+							}
+						}
+
 						return true;
 					}
 				}
@@ -516,11 +528,6 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	return changed;
 }
 
-bool WindowsEthernetTap::createPseudoDefaultRoute() const
-{
-	return true;
-}
-
 void WindowsEthernetTap::threadMain()
 	throw()
 {
@@ -540,10 +547,13 @@ void WindowsEthernetTap::threadMain()
 	// Tap is in this weird Windows global pseudo file space
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
 
-	// More insanity: repetatively try to enable/disable tap device. The first
-	// time we succeed, close it and do it again. This is to fix a driver init
-	// bug that seems to be extremely non-deterministic and to only occur after
-	// headless MSI upgrade. It cannot be reproduced in any other circumstance.
+	/* More insanity: repetatively try to enable/disable tap device. The first
+	 * time we succeed, close it and do it again. This is to fix a driver init
+	 * bug that seems to be extremely non-deterministic and to only occur after
+	 * headless MSI upgrade. It cannot be reproduced in any other circumstance.
+	 *
+	 * Eventually when ZeroTier has actual money we will have someone create an
+	 * NDIS6 tap driver. Yes, we'll likely be cool and open source it. */
 	bool throwOneAway = true;
 	while (_run) {
 		_disableTapDevice();
@@ -574,6 +584,118 @@ void WindowsEthernetTap::threadMain()
 		} else break;
 	}
 
+	/* code not currently used, but keep it around cause it was hard to figure out...
+	CoInitializeEx(NULL,COINIT_MULTITHREADED);
+	CComPtr<INetworkListManager> nlm;
+	nlm.CoCreateInstance(CLSID_NetworkListManager);
+	if (nlm) {
+		for(int i=0;i<8;++i) { // wait up to 8s for the NLM (network awareness) to find and initialize its awareness of our new network
+			CComPtr<IEnumNetworks> nlmNets;
+			bool foundMyNet = false;
+			if (SUCCEEDED(nlm->GetNetworks(NLM_ENUM_NETWORK_ALL,&nlmNets))) {
+				DWORD dwReturn = 0;
+				while (!foundMyNet) {
+					CComPtr<INetwork> nlmNet;
+					HRESULT hr = nlmNets->Next(1,&nlmNet,&dwReturn);
+					if ((hr == S_OK)&&(dwReturn > 0)&&(nlmNet)) {
+						CComPtr<IEnumNetworkConnections> nlmNetConns;
+						if (SUCCEEDED(nlmNet->GetNetworkConnections(&nlmNetConns))) {
+							for(;;) {
+								CComPtr<INetworkConnection> nlmNetConn;
+								hr = nlmNetConns->Next(1,&nlmNetConn,&dwReturn);
+								if ((hr == S_OK)&&(dwReturn > 0)&&(nlmNetConn)) {
+									GUID netAdapterId;
+									nlmNetConn->GetAdapterId(&netAdapterId);
+									if (netAdapterId == _deviceGuid) {
+										foundMyNet = true;
+										printf("*** Found my net!\n");
+										nlmNet->SetName(L"ZeroTier One Network");
+										break;
+									}
+								} else break;
+							}
+						}
+					} else break;
+				}
+			}
+			if (foundMyNet)
+				break;
+			else Thread::sleep(1000);
+		}
+	}
+	*/
+
+#ifdef ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
+	/* This inserts a fake default route and a fake ARP entry, forcing
+	 * Windows to detect this as a "real" network and apply proper
+	 * firewall rules.
+	 *
+	 * This hack is completely stupid, but Windows made me do it
+	 * by being broken and insane.
+	 *
+	 * Background: Windows tries to detect its network location by
+	 * matching it to the ARP address of the default route. Networks
+	 * without default routes are "unidentified networks" and cannot
+	 * have their firewall classification changed by the user (easily).
+	 *
+	 * Yes, you read that right.
+	 *
+	 * The common workaround is to set *NdisDeviceType to 1, which
+	 * totally disables all Windows firewall functionality. This is
+	 * the answer you'll find on most forums for things like OpenVPN.
+	 *
+	 * Yes, you read that right.
+	 *
+	 * But these networks don't usually have default routes, so what
+	 * do we do? Answer: add a fake one that's never used and goes
+	 * nowhere. But it's got to resolve to an ARP address. So why
+	 * don't we just make up one of those too?!? Shove it in there
+	 * as a permanent statuc ARP entry and now Windows will think it
+	 * has a real live default route at our bogus IP.
+	 *
+	 * We'll have to see what DHCP does with this. In the future we
+	 * probably will not want to do this on DHCP-enabled networks, so
+	 * when we enable DHCP we will go in and yank this wacko hacko from
+	 * the routing table before doing so.
+	 *
+	 * But yes, this works, and it makes our networks look and behave
+	 * the way they should.
+	 *
+	 * Like Jesse Pinkman would say: "YEEEEAAH BITCH!" */
+	for(int i=0;i<8;++i) { // also wait up to 8s for this, though if we got the NLM part we're probably okay
+		MIB_IPFORWARD_ROW2 nr;
+		memset(&nr,0,sizeof(nr));
+		InitializeIpForwardEntry(&nr);
+		nr.InterfaceLuid.Value = _deviceLuid.Value;
+		nr.DestinationPrefix.Prefix.si_family = AF_INET; // rest is left as 0.0.0.0/0
+		nr.NextHop.si_family = AF_INET;
+		nr.NextHop.Ipv4.sin_addr.s_addr = 0x01010101; // 1.1.1.1
+		nr.Metric = 9999; // do not use as real default route
+		nr.Protocol = MIB_IPPROTO_NETMGMT;
+		DWORD result = CreateIpForwardEntry2(&nr);
+		if (result == NO_ERROR) {
+			MIB_IPNET_ROW2 ipnr;
+			memset(&ipnr,0,sizeof(ipnr));
+			ipnr.Address.si_family = AF_INET;
+			ipnr.Address.Ipv4.sin_addr.s_addr = 0x01010101;
+			ipnr.InterfaceLuid.Value = _deviceLuid.Value;
+			ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10; // just make something up that's consistent and not part of this net
+			ipnr.PhysicalAddress[1] = 0x00;
+			ipnr.PhysicalAddress[2] = (UCHAR)((_deviceGuid.Data1 >> 24) & 0xff);
+			ipnr.PhysicalAddress[3] = (UCHAR)((_deviceGuid.Data1 >> 16) & 0xff);
+			ipnr.PhysicalAddress[4] = (UCHAR)((_deviceGuid.Data1 >> 8) & 0xff);
+			ipnr.PhysicalAddress[5] = (UCHAR)(_deviceGuid.Data1 & 0xff);
+			ipnr.PhysicalAddressLength = 6;
+			ipnr.State = NlnsPermanent;
+			ipnr.IsRouter = 1;
+			ipnr.IsUnreachable = 0;
+			ipnr.ReachabilityTime.LastReachable = 0x0fffffff;
+			CreateIpNetEntry2(&ipnr);
+			break; // stop retrying, we're done
+		} else Thread::sleep(1000);
+	}
+#endif
+
 	memset(&tapOvlRead,0,sizeof(tapOvlRead));
 	tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 	memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
@@ -589,7 +711,7 @@ void WindowsEthernetTap::threadMain()
 
 	for(;;) {
 		if (!_run) break;
-		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,5000,TRUE);
+		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,10000,TRUE);
 		if (!_run) break;
 
 		if ((r == WAIT_TIMEOUT)||(r == WAIT_FAILED))
@@ -715,6 +837,56 @@ NET_IFINDEX WindowsEthernetTap::_getDeviceIndex()
 	FreeMibTable(&ift);
 
 	throw std::runtime_error("interface not found");
+}
+
+std::vector<std::string> WindowsEthernetTap::_getRegistryIPv4Value(const char *regKey)
+{
+	std::vector<std::string> value;
+	HKEY tcpIpInterfaces;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+		char buf[16384];
+		DWORD len = sizeof(buf);
+		DWORD kt = REG_MULTI_SZ;
+		if (RegGetValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),regKey,0,&kt,&buf,&len) == ERROR_SUCCESS) {
+			switch(kt) {
+				case REG_SZ:
+					if (len > 0)
+						value.push_back(std::string(buf));
+					break;
+				case REG_MULTI_SZ: {
+					for(DWORD k=0,s=0;k<len;++k) {
+						if (!buf[k]) {
+							if (s < k) {
+								value.push_back(std::string(buf + s));
+								s = k + 1;
+							} else break;
+						}
+					}
+				}	break;
+			}
+		}
+		RegCloseKey(tcpIpInterfaces);
+	}
+	return value;
+}
+
+void WindowsEthernetTap::_setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value)
+{
+	std::string regMulti;
+	for(std::vector<std::string>::const_iterator s(value.begin());s!=value.end();++s) {
+		regMulti.append(*s);
+		regMulti.push_back((char)0);
+	}
+	HKEY tcpIpInterfaces;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+		if (regMulti.length() > 0) {
+			regMulti.push_back((char)0);
+			RegSetKeyValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),regKey,REG_MULTI_SZ,regMulti.data(),(DWORD)regMulti.length());
+		} else {
+			RegDeleteKeyValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),regKey);
+		}
+		RegCloseKey(tcpIpInterfaces);
+	}
 }
 
 } // namespace ZeroTier

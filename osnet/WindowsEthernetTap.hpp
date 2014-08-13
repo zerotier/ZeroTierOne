@@ -71,7 +71,6 @@ public:
 	virtual std::string deviceName() const;
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
-	virtual bool createPseudoDefaultRoute() const;
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }
@@ -84,9 +83,12 @@ private:
 	bool _disableTapDevice();
 	bool _enableTapDevice();
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
+	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
+	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
 
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
+	uint64_t _nwid;
 	Thread _thread;
 
 	volatile HANDLE _tap;
