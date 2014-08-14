@@ -116,6 +116,14 @@ bool Dictionary::verify(const Identity &id) const
 	}
 }
 
+uint64_t Dictionary::signatureTimestamp() const
+{
+	const_iterator ts(find(ZT_DICTIONARY_SIGNATURE_TIMESTAMP));
+	if (ts == end())
+		return 0;
+	return Utils::hexStrToU64(ts->second.c_str());
+}
+
 void Dictionary::_mkSigBuf(std::string &buf) const
 {
 	unsigned long pairs = 0;

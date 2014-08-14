@@ -28,6 +28,8 @@
 #ifndef ZT_DICTIONARY_HPP
 #define ZT_DICTIONARY_HPP
 
+#include <stdint.h>
+
 #include <string>
 #include <map>
 #include <stdexcept>
@@ -139,6 +141,16 @@ public:
 	 * @return True if this dictionary is cryptographically signed
 	 */
 	inline bool hasSignature() const { return (find(ZT_DICTIONARY_SIGNATURE) != end()); }
+
+	/**
+	 * @return Signing identity in string-serialized format or empty string if none
+	 */
+	inline std::string signingIdentity() const { return get(ZT_DICTIONARY_SIGNATURE_IDENTITY,std::string()); }
+
+	/**
+	 * @return Signature timestamp in milliseconds since epoch or 0 if none
+	 */
+	uint64_t signatureTimestamp() const;
 
 	/**
 	 * Remove any signature from this dictionary

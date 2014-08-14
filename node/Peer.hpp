@@ -50,7 +50,7 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_SERIALIZATION_VERSION 9
+#define ZT_PEER_SERIALIZATION_VERSION 10
 
 namespace ZeroTier {
 

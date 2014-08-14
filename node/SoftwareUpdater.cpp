@@ -165,7 +165,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 
 #ifndef ZT_ALWAYS_UPDATE /* for testing */
 		if (packVersion(vMajor,vMinor,vRevision) <= upd->_myVersion) {
-			LOG("software update check complete: version on update site is not newer than my version, no update necessary");
+			TRACE("software update check complete: version on update site is not newer than my version, no update necessary");
 			upd->_status = UPDATE_STATUS_IDLE;
 			return;
 		}

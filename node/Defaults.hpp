@@ -64,9 +64,14 @@ public:
 	const std::string defaultHomePath;
 
 	/**
-	 * Supernodes on the ZeroTier network (identity, address/tcp?)
+	 * Default root topology dictionary
 	 */
-	const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > supernodes;
+	const std::string defaultRootTopology;
+
+	/**
+	 * Identities permitted to sign root topology dictionaries
+	 */
+	const std::map< Address,Identity > rootTopologyAuthorities;
 
 	/**
 	 * Identities permitted to sign software updates
@@ -83,6 +88,11 @@ public:
 	 * URL to latest .nfo for software updates
 	 */
 	const std::string updateLatestNfoURL;
+
+	/**
+	 * URL to check for updates to root topology
+	 */
+	const std::string rootTopologyUpdateURL;
 
 	/**
 	 * Address for IPv4 LAN auto-location broadcasts: 255.255.255.255:9993

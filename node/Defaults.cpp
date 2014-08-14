@@ -33,6 +33,9 @@
 #include "Defaults.hpp"
 #include "Utils.hpp"
 
+// bin2c'd signed default root topology dictionary
+#include "../root-topology/ZT_DEFAULT_ROOT_TOPOLOGY.c"
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
@@ -42,58 +45,6 @@
 namespace ZeroTier {
 
 const Defaults ZT_DEFAULTS;
-
-static inline std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _mkSupernodeMap()
-{
-	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > sn;
-	Identity id;
-	std::vector< std::pair<InetAddress,bool> > addrs;
-
-	// Nothing special about a supernode... except that they are
-	// designated as such and trusted to provide WHOIS lookup.
-
-	// cthulhu.zerotier.com - New York, New York, USA
-	addrs.clear();
-	if (!id.fromString("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5"))
-		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("162.243.77.111",ZT_DEFAULT_UDP_PORT),false));
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("162.243.77.111",443),true));
-	sn[id] = addrs;
-
-	// nyarlathotep.zerotier.com - San Francisco, California, USA
-	addrs.clear();
-	if (!id.fromString("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa"))
-		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",ZT_DEFAULT_UDP_PORT),false));
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.199.97.220",443),true));
-	sn[id] = addrs;
-
-	// shub-niggurath.zerotier.com - Amsterdam, Netherlands
-	addrs.clear();
-	if (!id.fromString("36f63d6574:0:67a776487a1a99b32f413329f2b67c43fbf6152e42c6b66e89043e69d93e48314c7d709b58a83016bd2612dd89400b856e18c553da94892f7d3ca16bf2c92c24"))
-		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",ZT_DEFAULT_UDP_PORT),false));
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("198.211.127.172",443),true));
-	sn[id] = addrs;
-
-	// yig.zerotier.com - Sydney, Australia
-	addrs.clear();
-	if (!id.fromString("275f0151f6:0:58716258283f7e14a2f999875d9cc681c1f0ca8403dce38ec354ceaf284a555f36402e79a32d03b8c0963245b7f1af61a1ad3519d90e05bc3ce591034f6a1c9c"))
-		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",ZT_DEFAULT_UDP_PORT),false));
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.212.61",443),true));
-	sn[id] = addrs;
-
-	// shoggoth.zerotier.com - Tokyo, Japan
-	addrs.clear();
-	if (!id.fromString("48e8f875cb:0:5ca54f55e1094f65589f3e6d74158b6964d418ddac3570757128f1c6a2498322d92fcdcd47de459f4d1f9b38df2afd0c7b3fc247ba3d773c38ba35288f24988e"))
-		throw std::runtime_error("invalid identity in Defaults");
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",ZT_DEFAULT_UDP_PORT),false));
-	addrs.push_back(std::pair<InetAddress,bool>(InetAddress("108.61.200.101",443),true));
-	sn[id] = addrs;
-
-	return sn;
-}
 
 static inline std::string _mkDefaultHomePath()
 {
@@ -113,10 +64,34 @@ static inline std::string _mkDefaultHomePath()
 		return (std::string(buf) + "\\ZeroTier\\One");
 	else return std::string("C:\\ZeroTier\\One");
 #else
-	// unknown platform
+#error Unknown platform, please define a default home path!
 #endif
 
 #endif // __UNIX_LIKE__ or not...
+}
+
+static inline std::map< Address,Identity > _mkRootTopologyAuth()
+{
+	std::map< Address,Identity > ua;
+
+	{ // 0001
+		Identity id("77792b1c02:0:b5c361e8e9c2154e82c3e902fdfc337468b092a7c4d8dc685c37eb10ee4f3c17cc0bb1d024167e8cb0824d12263428373582da3d0a9a14b36e4546c317e811e6");
+		ua[id.address()] = id;
+	}
+	{ // 0002
+		Identity id("86921e6de1:0:9ba04f9f12ed54ef567f548cb69d31e404537d7b0ee000c63f3d7c8d490a1a47a5a5b2af0cbe12d23f9194270593f298d936d7c872612ea509ef1c67ce2c7fc1");
+		ua[id.address()] = id;
+	}
+	{ // 0003
+		Identity id("90302b7025:0:358154a57af1b7afa07d0d91b69b92eaad2f11ade7f02343861f0c1b757d15626e8cb7f08fc52993d2202a39cbf5128c5647ee8c63d27d92db5a1d0fbe1eba19");
+		ua[id.address()] = id;
+	}
+	{ // 0004
+		Identity id("e5174078ee:0:c3f90daa834a74ee47105f5726ae2e29fc8ae0e939c9326788b52b16d847354de8de3b13a81896bbb509b91e1da21763073a30bbfb2b8e994550798d30a2d709");
+		ua[id.address()] = id;
+	}
+
+	return ua;
 }
 
 static inline std::map< Address,Identity > _mkUpdateAuth()
@@ -172,9 +147,11 @@ Defaults::Defaults() :
 	multicastTraceWatcher(ZT_TRACE_MULTICAST),
 #endif
 	defaultHomePath(_mkDefaultHomePath()),
-	supernodes(_mkSupernodeMap()),
+	defaultRootTopology((const char *)ZT_DEFAULT_ROOT_TOPOLOGY,ZT_DEFAULT_ROOT_TOPOLOGY_LEN),
+	rootTopologyAuthorities(_mkRootTopologyAuth()),
 	updateAuthorities(_mkUpdateAuth()),
 	updateLatestNfoURL(_mkUpdateUrl()),
+	rootTopologyUpdateURL("http://download.zerotier.com/net/topology/ROOT"),
 	v4Broadcast(((uint32_t)0xffffffff),ZT_DEFAULT_UDP_PORT)
 {
 }

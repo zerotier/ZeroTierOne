@@ -37,18 +37,20 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
+
 #include "Address.hpp"
+#include "Identity.hpp"
 #include "Peer.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
 #include "Packet.hpp"
 #include "Logger.hpp"
+#include "Dictionary.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class Dictionary;
 
 /**
  * Database of network topology
@@ -369,6 +371,14 @@ public:
 		uint64_t _now;
 		std::vector< SharedPtr<Peer> > &_v;
 	};
+
+	/**
+	 * Validate a root topology dictionary against the identities specified in Defaults
+	 *
+	 * @param rt Root topology dictionary
+	 * @return True if dictionary signature is valid
+	 */
+	static bool authenticateRootTopology(const Dictionary &rt);
 
 private:
 	const RuntimeEnvironment *const _r;

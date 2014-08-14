@@ -27,6 +27,8 @@
 
 #include <algorithm>
 
+#include "Constants.hpp"
+#include "Defaults.hpp"
 #include "Topology.hpp"
 #include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
@@ -236,6 +238,24 @@ void Topology::clean()
 			p->second->clean(now);
 			++p;
 		}
+	}
+}
+
+bool Topology::authenticateRootTopology(const Dictionary &rt)
+{
+	try {
+		std::string signer(rt.signingIdentity());
+		if (!signer.length())
+			return false;
+		Identity signerId(signer);
+		std::map< Address,Identity >::const_iterator authority(ZT_DEFAULTS.rootTopologyAuthorities.find(signerId.address()));
+		if (authority == ZT_DEFAULTS.rootTopologyAuthorities.end())
+			return false;
+		if (signerId != authority->second)
+			return false;
+		return rt.verify(authority->second);
+	} catch ( ... ) {
+		return false;
 	}
 }
 

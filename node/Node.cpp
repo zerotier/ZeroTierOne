@@ -466,7 +466,6 @@ Node::ReasonForTermination Node::run()
 #endif
 		}
 
-		// Load or generate config authentication secret
 		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
 		std::string configAuthToken;
 		if (!Utils::readFile(configAuthTokenPath.c_str(),configAuthToken)) {
@@ -501,8 +500,19 @@ Node::ReasonForTermination Node::run()
 		}
 #endif
 
-		// Set initial supernode list
-		_r->topology->setSupernodes(ZT_DEFAULTS.supernodes);
+		std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
+		std::string rootTopology;
+		if (!Utils::readFile(rootTopologyPath.c_str(),rootTopology))
+			rootTopology = ZT_DEFAULTS.defaultRootTopology;
+		try {
+			Dictionary rt(rootTopology);
+			if (!Topology::authenticateRootTopology(rt))
+				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"root-topology failed signature verification check");
+			Dictionary supernodes(rt.get("supernodes"));
+			_r->topology->setSupernodes(supernodes);
+		} catch ( ... ) {
+			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
+		}
 	} catch (std::bad_alloc &exc) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"memory allocation failure");
 	} catch (std::runtime_error &exc) {
