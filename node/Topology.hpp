@@ -48,6 +48,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class Dictionary;
 
 /**
  * Database of network topology
@@ -64,6 +65,16 @@ public:
 	 * @param sn Supernodes for this network
 	 */
 	void setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn);
+
+	/**
+	 * Set up supernodes for this network
+	 *
+	 * This performs no signature verification of any kind. The caller must
+	 * check the signature of the root topology dictionary first.
+	 *
+	 * @param sn Supernodes dictionary from root-topology
+	 */
+	void setSupernodes(const Dictionary &sn);
 
 	/**
 	 * Add a peer to database

@@ -30,6 +30,7 @@
 #include "Topology.hpp"
 #include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
+#include "Dictionary.hpp"
 
 #define ZT_PEER_WRITE_BUF_SIZE 131072
 
@@ -73,6 +74,27 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 	}
 
 	_amSupernode = (_supernodes.find(_r->identity) != _supernodes.end());
+}
+
+void Topology::setSupernodes(const Dictionary &sn)
+{
+	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > m;
+	for(Dictionary::const_iterator d(sn.begin());d!=sn.end();++d) {
+		if ((d->first.length() == ZT_ADDRESS_LENGTH_HEX)&&(d->second.length() > 0)) {
+			try {
+				Dictionary snspec(d->second);
+				std::vector< std::pair<InetAddress,bool> > &a = m[Identity(snspec.get("id"))];
+				std::string udp(snspec.get("udp",std::string()));
+				if (udp.length() > 0)
+					a.push_back(std::pair<InetAddress,bool>(InetAddress(udp),false));
+				std::string tcp(snspec.get("tcp",std::string()));
+					a.push_back(std::pair<InetAddress,bool>(InetAddress(tcp),true));
+			} catch ( ... ) {
+				LOG("supernode list contained invalid entry for: %s",d->first.c_str());
+			}
+		}
+	}
+	this->setSupernodes(m);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)

@@ -2,4 +2,4 @@ id=9d219039f3:0:01f0922a98e3b34ebcbff333269dc265d7a020aab69d72be4d4acc9c8c929478
 udp=128.199.197.217/9993
 tcp=128.199.197.217/443
 desc=Singapore
-hn=mi-go.zerotier.com
+dns=mi-go.zerotier.com
