@@ -1,0 +1,32 @@
+#!/bin/bash
+
+export PATH=/bin:/usr/bin
+
+if [ ! -e /usr/bin/openssl ]; then
+	echo $0: requires /usr/bin/openssl, please install openssl tools
+	exit 1
+fi
+
+if [ "$#" -lt 1 ]; then
+	echo $0: Usage: $0 '<input>' '[output]'
+	exit 1
+fi
+
+if [ ! -r "$1" ]; then
+	echo $0: $1 does not exist or is not readable.
+	exit 1
+fi
+
+outpath=`echo "$1" | sed 's/[.]aes$//'`
+if [ "$#" -ge 2 ]; then
+	outpath="$2"
+fi
+
+if [ -f "$outpath" ]; then
+	echo $0: $outpath already exists, delete or rename first.
+	exit 1
+fi
+
+openssl aes-256-cbc -d -salt -in "$1" -out "$outpath"
+
+echo $0: wrote "$outpath"
