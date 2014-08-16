@@ -48,6 +48,7 @@ class SocketManager;
 class AntiRecursion;
 class EthernetTapFactory;
 class RoutingTable;
+class HttpClient;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -73,6 +74,7 @@ public:
 		routingTable((RoutingTable *)0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
+		http((HttpClient *)0),
 		antiRec((AntiRecursion *)0),
 		mc((Multicaster *)0),
 		sw((Switch *)0),
@@ -119,6 +121,7 @@ public:
 
 	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
+	HttpClient *http;
 	AntiRecursion *antiRec;
 	Multicaster *mc;
 	Switch *sw;

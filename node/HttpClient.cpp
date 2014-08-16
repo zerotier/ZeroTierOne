@@ -27,17 +27,17 @@
 
 #include "Constants.hpp"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
 #include <winhttp.h>
 #include <locale>
 #include <codecvt>
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#endif // __WINDOWS__
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -48,7 +48,7 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
-#endif
+#endif // __UNIX_LIKE__
 
 #include <vector>
 #include <utility>
@@ -62,8 +62,6 @@
 
 namespace ZeroTier {
 
-const std::map<std::string,std::string> HttpClient::NO_HEADERS;
-
 #ifdef __UNIX_LIKE__
 
 // The *nix implementation calls 'curl' externally rather than linking to it.
@@ -76,25 +74,34 @@ const std::map<std::string,std::string> HttpClient::NO_HEADERS;
 #endif
 
 // Paths where "curl" may be found on the system
-#define NUM_CURL_PATHS 5
-static const char *CURL_PATHS[NUM_CURL_PATHS] = { "/usr/bin/curl","/bin/curl","/usr/local/bin/curl","/usr/sbin/curl","/sbin/curl" };
+#define NUM_CURL_PATHS 6
+static const char *CURL_PATHS[NUM_CURL_PATHS] = { "/usr/bin/curl","/bin/curl","/usr/local/bin/curl","/usr/sbin/curl","/sbin/curl","/usr/libexec/curl" };
 
 // Maximum message length
 #define CURL_MAX_MESSAGE_LENGTH (1024 * 1024 * 64)
 
 // Internal private thread class that performs request, notifies handler,
 // and then commits suicide by deleting itself.
-class P_Req : NonCopyable
+class HttpClient_Private_Request : NonCopyable
 {
 public:
-	P_Req(const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,bool,const std::string &),void *arg) :
+	HttpClient_Private_Request(HttpClient *parent,const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,const std::string &),void *arg) :
 		_url(url),
 		_headers(headers),
 		_timeout(timeout),
 		_handler(handler),
-		_arg(arg)
+		_arg(arg),
+		_parent(parent),
+		_pid(0),
+		_cancelled(false)
 	{
 		_myThread = Thread::start(this);
+	}
+
+	~HttpClient_Private_Request()
+	{
+		Mutex::Lock _l(_parent->_requests_m);
+		_parent->_requests.erase((HttpClient::Request)this);
 	}
 
 	void threadMain()
@@ -111,14 +118,14 @@ public:
 				break;
 			}
 		}
+
 		if (!curlPath.length()) {
-			_handler(_arg,-1,_url,false,"unable to locate 'curl' binary in /usr/bin, /bin, /usr/local/bin, /usr/sbin, or /sbin");
+			_doH(_arg,-1,_url,"unable to locate 'curl' binary in /usr/bin, /bin, /usr/local/bin, /usr/sbin, or /sbin");
 			delete this;
 			return;
 		}
-
 		if (!_url.length()) {
-			_handler(_arg,-1,_url,false,"cannot fetch empty URL");
+			_doH(_arg,-1,_url,"cannot fetch empty URL");
 			delete this;
 			return;
 		}
@@ -147,17 +154,17 @@ public:
 		::pipe(curlStdout);
 		::pipe(curlStderr);
 
-		long pid = (long)vfork();
-		if (pid < 0) {
+		_pid = (long)vfork();
+		if (_pid < 0) {
 			// fork() failed
 			::close(curlStdout[0]);
 			::close(curlStdout[1]);
 			::close(curlStderr[0]);
 			::close(curlStderr[1]);
-			_handler(_arg,-1,_url,false,"unable to fork()");
+			_doH(_arg,-1,_url,"unable to fork()");
 			delete this;
 			return;
-		} else if (pid > 0) {
+		} else if (_pid > 0) {
 			// fork() succeeded, in parent process
 			::close(curlStdout[1]);
 			::close(curlStderr[1]);
@@ -189,7 +196,7 @@ public:
 					} else if (n < 0)
 						break;
 					if (_body.length() > CURL_MAX_MESSAGE_LENGTH) {
-						::kill(pid,SIGKILL);
+						::kill(_pid,SIGKILL);
 						tooLong = true;
 						break;
 					}
@@ -200,12 +207,12 @@ public:
 					break;
 
 				if (Utils::now() >= timesOutAt) {
-					::kill(pid,SIGKILL);
+					::kill(_pid,SIGKILL);
 					timedOut = true;
 					break;
 				}
 
-				if (waitpid(pid,&exitCode,WNOHANG) > 0) {
+				if (waitpid(_pid,&exitCode,WNOHANG) > 0) {
 					for(;;) {
 						// Drain output...
 						int n = (int)::read(curlStdout[0],buf,sizeof(buf));
@@ -219,23 +226,24 @@ public:
 							}
 						}
 					}
-					pid = 0;
+					_pid = 0;
 					break;
 				}
 			}
 
-			if (pid > 0)
-				waitpid(pid,&exitCode,0);
+			if (_pid > 0)
+				waitpid(_pid,&exitCode,0);
+			_pid = 0;
 
 			::close(curlStdout[0]);
 			::close(curlStderr[0]);
 
 			if (timedOut)
-				_handler(_arg,-1,_url,false,"connection timed out");
+				_doH(_arg,-1,_url,"connection timed out");
 			else if (tooLong)
-				_handler(_arg,-1,_url,false,"response too long");
+				_doH(_arg,-1,_url,"response too long");
 			else if (exitCode)
-				_handler(_arg,-1,_url,false,"connection failed (curl returned non-zero exit code)");
+				_doH(_arg,-1,_url,"connection failed (curl returned non-zero exit code)");
 			else {
 				unsigned long idx = 0;
 
@@ -254,7 +262,7 @@ public:
 						headers.back().push_back(c);
 				}
 				if (headers.empty()||(!headers.front().length())) {
-					_handler(_arg,-1,_url,false,"HTTP response empty");
+					_doH(_arg,-1,_url,"HTTP response empty");
 					delete this;
 					return;
 				}
@@ -262,24 +270,24 @@ public:
 				// Parse first line -- HTTP status code and response
 				size_t scPos = headers.front().find(' ');
 				if (scPos == std::string::npos) {
-					_handler(_arg,-1,_url,false,"invalid HTTP response (no status line)");
+					_doH(_arg,-1,_url,"invalid HTTP response (no status line)");
 					delete this;
 					return;
 				}
 				++scPos;
 				unsigned int rcode = Utils::strToUInt(headers.front().substr(scPos,3).c_str());
 				if ((!rcode)||(rcode > 999)) {
-					_handler(_arg,-1,_url,false,"invalid HTTP response (invalid response code)");
+					_doH(_arg,-1,_url,"invalid HTTP response (invalid response code)");
 					delete this;
 					return;
 				}
 
 				// Serve up the resulting data to the handler
 				if (rcode == 200)
-					_handler(_arg,rcode,_url,false,_body.substr(idx));
+					_doH(_arg,rcode,_url,_body.substr(idx));
 				else if ((scPos + 4) < headers.front().length())
-					_handler(_arg,rcode,_url,false,headers.front().substr(scPos+4));
-				else _handler(_arg,rcode,_url,false,"(no status message from server)");
+					_doH(_arg,rcode,_url,headers.front().substr(scPos+4));
+				else _doH(_arg,rcode,_url,"(no status message from server)");
 			}
 
 			delete this;
@@ -295,27 +303,41 @@ public:
 		}
 	}
 
+	inline void cancel()
+	{ 
+		{
+			Mutex::Lock _l(_cancelled_m);
+			_cancelled = true;
+			if (_pid > 0)
+				::kill(_pid,SIGKILL);
+		}
+		Thread::join(_myThread);
+	}
+
+private:
+	inline void _doH(void *arg,int code,const std::string &url,const std::string &body)
+	{
+		Mutex::Lock _l(_cancelled_m);
+		try {
+			if ((!_cancelled)&&(_handler))
+				_handler(arg,code,url,body);
+		} catch ( ... ) {}
+	}
+
 	const std::string _url;
 	std::string _body;
 	std::map<std::string,std::string> _headers;
 	unsigned int _timeout;
-	void (*_handler)(void *,int,const std::string &,bool,const std::string &);
+	void (*_handler)(void *,int,const std::string &,const std::string &);
 	void *_arg;
+	HttpClient *_parent;
+	long _pid;
+	volatile bool _cancelled;
+	Mutex _cancelled_m;
 	Thread _myThread;
 };
 
-HttpClient::Request HttpClient::_do(
-	const char *method,
-	const std::string &url,
-	const std::map<std::string,std::string> &headers,
-	unsigned int timeout,
-	void (*handler)(void *,int,const std::string &,bool,const std::string &),
-	void *arg)
-{
-	return (HttpClient::Request)(new P_Req(method,url,headers,timeout,handler,arg));
-}
-
-#endif
+#endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
 
@@ -323,10 +345,10 @@ HttpClient::Request HttpClient::_do(
 
 // Internal private thread class that performs request, notifies handler,
 // and then commits suicide by deleting itself.
-class P_Req : NonCopyable
+class HttpClient_Private_Request : NonCopyable
 {
 public:
-	P_Req(const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,bool,const std::string &),void *arg) :
+	HttpClient_Private_Request(const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,const std::string &),void *arg) :
 		_url(url),
 		_headers(headers),
 		_timeout(timeout),
@@ -449,22 +471,52 @@ closeAndReturnFromHttp:
 	std::string _body;
 	std::map<std::string,std::string> _headers;
 	unsigned int _timeout;
-	void (*_handler)(void *,int,const std::string &,bool,const std::string &);
+	void (*_handler)(void *,int,const std::string &,const std::string &);
 	void *_arg;
 	Thread _myThread;
 };
+
+#endif // __WINDOWS__
+
+const std::map<std::string,std::string> HttpClient::NO_HEADERS;
+
+HttpClient::HttpClient()
+{
+}
+
+HttpClient::~HttpClient()
+{
+	std::set<Request> reqs;
+	{
+		Mutex::Lock _l(_requests_m);
+		reqs = _requests;
+	}
+	for(std::set<Request>::iterator r(reqs.begin());r!=reqs.end();++r)
+		this->cancel(*r);
+}
+
+void HttpClient::cancel(HttpClient::Request req)
+{
+	{
+		Mutex::Lock _l(_requests_m);
+		if (_requests.count(req) == 0)
+			return;
+	}
+	((HttpClient_Private_Request *)req)->cancel();
+}
 
 HttpClient::Request HttpClient::_do(
 	const char *method,
 	const std::string &url,
 	const std::map<std::string,std::string> &headers,
 	unsigned int timeout,
-	void (*handler)(void *,int,const std::string &,bool,const std::string &),
+	void (*handler)(void *,int,const std::string &,const std::string &),
 	void *arg)
 {
-	return (HttpClient::Request)(new P_Req(method,url,headers,timeout,handler,arg));
+	HttpClient::Request r = (HttpClient::Request)(new HttpClient_Private_Request(this,method,url,headers,timeout,handler,arg));
+	Mutex::Lock _l(_requests_m);
+	_requests.insert(r);
+	return r;
 }
-
-#endif
 
 } // namespace ZeroTier

@@ -250,6 +250,7 @@ struct _NodeImpl
 		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
 		delete renv.mc;       renv.mc = (Multicaster *)0;
 		delete renv.antiRec;  renv.antiRec = (AntiRecursion *)0;
+		delete renv.http;     renv.http = (HttpClient *)0;
 		delete renv.prng;     renv.prng = (CMWC4096 *)0;
 		delete renv.log;      renv.log = (Logger *)0;               // but stop logging last of all
 
@@ -408,7 +409,7 @@ static void _CBztTraffic(const SharedPtr<Socket> &fromSock,void *arg,const InetA
 		_r->sw->onRemotePacket(fromSock,from,data);
 }
 
-static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
+static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,const std::string &body)
 {
 	RuntimeEnvironment *_r = (RuntimeEnvironment *)arg;
 	if (_r->shutdownInProgress)
@@ -524,6 +525,7 @@ Node::ReasonForTermination Node::run()
 		}
 		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
 
+		_r->http = new HttpClient();
 		_r->antiRec = new AntiRecursion();
 		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
@@ -757,7 +759,7 @@ Node::ReasonForTermination Node::run()
 
 			if ((now - lastRootTopologyFetch) >= ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL) {
 				lastRootTopologyFetch = now;
-				HttpClient::GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
+				_r->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
 			}
 
 			// Sleep for loop interval or until something interesting happens.

@@ -35,7 +35,6 @@
 #include "Constants.hpp"
 #include "Mutex.hpp"
 #include "Utils.hpp"
-#include "HttpClient.hpp"
 #include "Defaults.hpp"
 #include "Address.hpp"
 
@@ -66,21 +65,7 @@ public:
 	 * @param vmin Peer's minor version
 	 * @param rev Peer's revision
 	 */
-	inline void sawRemoteVersion(unsigned int vmaj,unsigned int vmin,unsigned int rev)
-	{
-		const uint64_t tmp = packVersion(vmaj,vmin,rev);
-		if (tmp > _myVersion) {
-			Mutex::Lock _l(_lock);
-			if ((_status == UPDATE_STATUS_IDLE)&&(!_die)&&(ZT_DEFAULTS.updateLatestNfoURL.length())) {
-				const uint64_t now = Utils::now();
-				if ((now - _lastUpdateAttempt) >= ZT_UPDATE_MIN_INTERVAL) {
-					_lastUpdateAttempt = now;
-					_status = UPDATE_STATUS_GETTING_NFO;
-					HttpClient::GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
-				}
-			}
-		}
-	}
+	void sawRemoteVersion(unsigned int vmaj,unsigned int vmin,unsigned int rev);
 
 	/**
 	 * Check for updates now regardless of last check time or version
@@ -88,15 +73,7 @@ public:
 	 * This only starts a check if one is not in progress. Otherwise it does
 	 * nothing.
 	 */
-	inline void checkNow()
-	{
-		Mutex::Lock _l(_lock);
-		if (_status == UPDATE_STATUS_IDLE) {
-			_lastUpdateAttempt = Utils::now();
-			_status = UPDATE_STATUS_GETTING_NFO;
-			HttpClient::GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
-		}
-	}
+	void checkNow();
 
 	/**
 	 * Check for updates now if it's been longer than ZT_UPDATE_MAX_INTERVAL
@@ -167,8 +144,8 @@ public:
 		const std::string &signature);
 
 private:
-	static void _cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,bool onDisk,const std::string &body);
-	static void _cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,bool onDisk,const std::string &body);
+	static void _cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,const std::string &body);
+	static void _cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,const std::string &body);
 
 	const RuntimeEnvironment *_r;
 	const uint64_t _myVersion;

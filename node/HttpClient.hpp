@@ -30,10 +30,14 @@
 
 #include <string>
 #include <map>
+#include <set>
 
 #include "Constants.hpp"
+#include "Mutex.hpp"
 
 namespace ZeroTier {
+
+class HttpClient_Private_Request;
 
 /**
  * HTTP client that does queries in the background
@@ -55,7 +59,11 @@ namespace ZeroTier {
 class HttpClient
 {
 public:
+	friend class HttpClient_Private_Request;
 	typedef void * Request;
+
+	HttpClient();
+	~HttpClient();
 
 	/**
 	 * Empty map for convenience use
@@ -65,24 +73,37 @@ public:
 	/**
 	 * Request a URL using the GET method
 	 */
-	static inline Request GET(
+	inline Request GET(
 		const std::string &url,
 		const std::map<std::string,std::string> &headers,
 		unsigned int timeout,
-		void (*handler)(void *,int,const std::string &,bool,const std::string &),
+		void (*handler)(void *,int,const std::string &,const std::string &),
 		void *arg)
 	{
 		return _do("GET",url,headers,timeout,handler,arg);
 	}
 
+	/**
+	 * Cancel a request
+	 *
+	 * If the request is not active, this does nothing. This may take some time
+	 * depending on HTTP implementation. It may also not kill instantly, but
+	 * it will prevent the handler function from ever being called and cause the
+	 * request to die silently when complete.
+	 */
+	void cancel(Request req);
+
 private:
-	static Request _do(
+	Request _do(
 		const char *method,
 		const std::string &url,
 		const std::map<std::string,std::string> &headers,
 		unsigned int timeout,
-		void (*handler)(void *,int,const std::string &,bool,const std::string &),
+		void (*handler)(void *,int,const std::string &,const std::string &),
 		void *arg);
+
+	std::set<Request> _requests;
+	Mutex _requests_m;
 };
 
 } // namespace ZeroTier

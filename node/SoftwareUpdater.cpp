@@ -33,6 +33,7 @@
 
 #include "../version.h"
 
+#include "Constants.hpp"
 #include "SoftwareUpdater.hpp"
 #include "Dictionary.hpp"
 #include "C25519.hpp"
@@ -42,6 +43,7 @@
 #include "Thread.hpp"
 #include "Node.hpp"
 #include "Utils.hpp"
+#include "HttpClient.hpp"
 
 #ifdef __UNIX_LIKE__
 #include <unistd.h>
@@ -82,6 +84,32 @@ void SoftwareUpdater::cleanOldUpdates()
 	for(std::map<std::string,bool>::iterator i(dl.begin());i!=dl.end();++i) {
 		if (!i->second)
 			Utils::rm((updatesDir + ZT_PATH_SEPARATOR_S + i->first).c_str());
+	}
+}
+
+void SoftwareUpdater::sawRemoteVersion(unsigned int vmaj,unsigned int vmin,unsigned int rev)
+{
+	const uint64_t tmp = packVersion(vmaj,vmin,rev);
+	if (tmp > _myVersion) {
+		Mutex::Lock _l(_lock);
+		if ((_status == UPDATE_STATUS_IDLE)&&(!_die)&&(ZT_DEFAULTS.updateLatestNfoURL.length())) {
+			const uint64_t now = Utils::now();
+			if ((now - _lastUpdateAttempt) >= ZT_UPDATE_MIN_INTERVAL) {
+				_lastUpdateAttempt = now;
+				_status = UPDATE_STATUS_GETTING_NFO;
+				_r->http->GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
+			}
+		}
+	}
+}
+
+void SoftwareUpdater::checkNow()
+{
+	Mutex::Lock _l(_lock);
+	if (_status == UPDATE_STATUS_IDLE) {
+		_lastUpdateAttempt = Utils::now();
+		_status = UPDATE_STATUS_GETTING_NFO;
+		_r->http->GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
 	}
 }
 
@@ -127,7 +155,7 @@ bool SoftwareUpdater::validateUpdate(
 	return updateAuthority->second.verify(data,len,signature.data(),(unsigned int)signature.length());
 }
 
-void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
+void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
 	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)upd->_r;
@@ -175,14 +203,14 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 		upd->_signedBy = signedBy;
 		upd->_signature = signature;
 
-		HttpClient::GET(url,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionBinary,arg);
+		_r->http->GET(url,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionBinary,arg);
 	} catch ( ... ) {
 		LOG("software update check failed: .nfo file invalid or missing field(s)");
 		upd->_status = UPDATE_STATUS_IDLE;
 	}
 }
 
-void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
+void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
 	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)upd->_r;
