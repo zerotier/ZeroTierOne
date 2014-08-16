@@ -77,6 +77,7 @@
 #include "IpcConnection.hpp"
 #include "AntiRecursion.hpp"
 #include "RoutingTable.hpp"
+#include "HttpClient.hpp"
 
 namespace ZeroTier {
 
@@ -220,8 +221,10 @@ struct _NodeImpl
 	RuntimeEnvironment renv;
 
 	unsigned int udpPort,tcpPort;
+
 	std::string reasonForTerminationStr;
 	volatile Node::ReasonForTermination reasonForTermination;
+
 	volatile bool started;
 	volatile bool running;
 	volatile bool resynchronize;
@@ -405,6 +408,47 @@ static void _CBztTraffic(const SharedPtr<Socket> &fromSock,void *arg,const InetA
 		_r->sw->onRemotePacket(fromSock,from,data);
 }
 
+static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,bool onDisk,const std::string &body)
+{
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)arg;
+	if (_r->shutdownInProgress)
+		return;
+
+	if ((code != 200)||(body.length() == 0)) {
+		TRACE("failed to retrieve %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
+		return;
+	}
+
+	try {
+		Dictionary rt(body);
+		if (!Topology::authenticateRootTopology(rt)) {
+			LOG("discarded invalid root topology update from %s (signature check failed)",url.c_str());
+			return;
+		}
+
+		{
+			std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
+			std::string rootTopology;
+			if (Utils::readFile(rootTopologyPath.c_str(),rootTopology)) {
+				Dictionary alreadyHave(rootTopology);
+				if (alreadyHave == rt) {
+					TRACE("retrieved root topology from %s but no change (same)",url.c_str());
+					return;
+				} else if (alreadyHave.signatureTimestamp() > rt.signatureTimestamp()) {
+					TRACE("retrieved root topology from %s but no change (ours is newer)",url.c_str());
+					return;
+				}
+			}
+			Utils::writeFile(rootTopologyPath.c_str(),body);
+		}
+
+		_r->topology->setSupernodes(Dictionary(rt.get("supernodes")));
+	} catch ( ... ) {
+		LOG("discarded invalid root topology update from %s (format invalid)",url.c_str());
+		return;
+	}
+}
+
 Node::ReasonForTermination Node::run()
 	throw()
 {
@@ -508,8 +552,7 @@ Node::ReasonForTermination Node::run()
 			Dictionary rt(rootTopology);
 			if (!Topology::authenticateRootTopology(rt))
 				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"root-topology failed signature verification check");
-			Dictionary supernodes(rt.get("supernodes"));
-			_r->topology->setSupernodes(supernodes);
+			_r->topology->setSupernodes(Dictionary(rt.get("supernodes")));
 		} catch ( ... ) {
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
 		}
@@ -555,6 +598,7 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastSupernodePingCheck = 0;
 		uint64_t lastBeacon = 0;
+		uint64_t lastRootTopologyFetch = 0;
 		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = 0;
@@ -709,6 +753,11 @@ Node::ReasonForTermination Node::run()
 				TRACE("sending LAN beacon to %s",ZT_DEFAULTS.v4Broadcast.toString().c_str());
 				_r->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
 				_r->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
+			}
+
+			if ((now - lastRootTopologyFetch) >= ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL) {
+				lastRootTopologyFetch = now;
+				HttpClient::GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
 			}
 
 			// Sleep for loop interval or until something interesting happens.

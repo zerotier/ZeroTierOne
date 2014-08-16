@@ -57,6 +57,9 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 {
 	Mutex::Lock _l(_supernodes_m);
 
+	if (_supernodes == sn)
+		return; // no change
+
 	_supernodes = sn;
 	_supernodeAddresses.clear();
 	_supernodePeers.clear();

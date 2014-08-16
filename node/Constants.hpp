@@ -410,6 +410,13 @@
 #define ZT_UPDATE_HTTP_TIMEOUT 120
 
 /**
+ * Delay between fetches of the root topology update URL
+ *
+ * 86400000 = check once every 24 hours (this doesn't change often)
+ */
+#define ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL 86400000
+
+/**
  * Sanity limit on maximum bridge routes
  *
  * If the number of bridge routes exceeds this, we cull routes from the
