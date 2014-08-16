@@ -552,9 +552,13 @@ Node::ReasonForTermination Node::run()
 			rootTopology = ZT_DEFAULTS.defaultRootTopology;
 		try {
 			Dictionary rt(rootTopology);
-			if (!Topology::authenticateRootTopology(rt))
-				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"root-topology failed signature verification check");
-			_r->topology->setSupernodes(Dictionary(rt.get("supernodes")));
+			if (Topology::authenticateRootTopology(rt)) {
+				_r->topology->setSupernodes(Dictionary(rt.get("supernodes")));
+			} else {
+				LOG("%s failed signature check, using built-in defaults instead",rootTopologyPath.c_str());
+				Utils::rm(rootTopologyPath.c_str());
+				_r->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes")));
+			}
 		} catch ( ... ) {
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
 		}
