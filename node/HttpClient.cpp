@@ -149,6 +149,11 @@ public:
 		curlArgs[argPtr++] = const_cast <char *>(_url.c_str());
 		curlArgs[argPtr] = (char *)0;
 
+		if (_cancelled) {
+			delete this;
+			return;
+		}
+
 		int curlStdout[2];
 		int curlStderr[2];
 		::pipe(curlStdout);
@@ -175,7 +180,8 @@ public:
 			unsigned long long timesOutAt = Utils::now() + ((unsigned long long)_timeout * 1000ULL);
 			bool timedOut = false;
 			bool tooLong = false;
-			for(;;) {
+
+			while (!_cancelled) {
 				FD_ZERO(&readfds);
 				FD_ZERO(&writefds);
 				FD_ZERO(&errfds);
@@ -196,18 +202,18 @@ public:
 					} else if (n < 0)
 						break;
 					if (_body.length() > CURL_MAX_MESSAGE_LENGTH) {
-						::kill(_pid,SIGKILL);
 						tooLong = true;
 						break;
 					}
 				}
+
 				if (FD_ISSET(curlStderr[0],&readfds))
 					::read(curlStderr[0],buf,sizeof(buf));
+
 				if (FD_ISSET(curlStdout[0],&errfds)||FD_ISSET(curlStderr[0],&errfds))
 					break;
 
 				if (Utils::now() >= timesOutAt) {
-					::kill(_pid,SIGKILL);
 					timedOut = true;
 					break;
 				}
@@ -231,8 +237,10 @@ public:
 				}
 			}
 
-			if (_pid > 0)
+			if (_pid > 0) {
+				::kill(_pid,SIGKILL);
 				waitpid(_pid,&exitCode,0);
+			}
 			_pid = 0;
 
 			::close(curlStdout[0]);
@@ -491,17 +499,27 @@ HttpClient::~HttpClient()
 		Mutex::Lock _l(_requests_m);
 		reqs = _requests;
 	}
+
 	for(std::set<Request>::iterator r(reqs.begin());r!=reqs.end();++r)
 		this->cancel(*r);
+
+	for(;;) {
+		_requests_m.lock();
+		if (_requests.empty()) {
+			_requests_m.unlock();
+			break;
+		} else {
+			_requests_m.unlock();
+			Thread::sleep(250);
+		}
+	}
 }
 
 void HttpClient::cancel(HttpClient::Request req)
 {
-	{
-		Mutex::Lock _l(_requests_m);
-		if (_requests.count(req) == 0)
-			return;
-	}
+	Mutex::Lock _l(_requests_m);
+	if (_requests.count(req) == 0)
+		return;
 	((HttpClient_Private_Request *)req)->cancel();
 }
 
