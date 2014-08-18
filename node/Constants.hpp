@@ -347,7 +347,7 @@
 /**
  * Delay sleep overshoot for detection of a probable sleep/wake event
  */
-#define ZT_SLEEP_WAKE_DETECTION_THRESHOLD 2000
+#define ZT_SLEEP_WAKE_DETECTION_THRESHOLD 5000
 
 /**
  * Time to pause main service loop after sleep/wake detect
