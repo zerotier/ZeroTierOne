@@ -356,14 +356,22 @@ private:
 class HttpClient_Private_Request : NonCopyable
 {
 public:
-	HttpClient_Private_Request(const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,const std::string &),void *arg) :
+	HttpClient_Private_Request(HttpClient *parent,const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,const std::string &),void *arg) :
 		_url(url),
 		_headers(headers),
 		_timeout(timeout),
 		_handler(handler),
-		_arg(arg)
+		_arg(arg),
+		_parent(parent),
+		_hRequest((HINTERNET)0)
 	{
 		_myThread = Thread::start(this);
+	}
+
+	~HttpClient_Private_Request()
+	{
+		Mutex::Lock _l(_parent->_requests_m);
+		_parent->_requests.erase((HttpClient::Request)this);
 	}
 
 	void threadMain()
@@ -373,9 +381,9 @@ public:
 		HINTERNET hRequest = (HINTERNET)0;
 
 		try {
-			hSession = WinHttpOpen(L"ZeroTier One HttpClient/1.0",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS,0);
+			hSession = WinHttpOpen(L"ZeroTier One HttpClient/1.0 (WinHttp)",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,WINHTTP_NO_PROXY_NAME,WINHTTP_NO_PROXY_BYPASS,0);
 			if (!hSession) {
-				_handler(_arg,-1,_url,false,"WinHttpOpen() failed");
+				_handler(_arg,-1,_url,"WinHttpOpen() failed");
 				goto closeAndReturnFromHttp;
 			}
 			int timeoutMs = (int)_timeout * 1000;
@@ -392,11 +400,11 @@ public:
 			uc.dwUrlPathLength = -1;
 			uc.dwExtraInfoLength = -1;
 			if (!WinHttpCrackUrl(wurl.c_str(),(DWORD)wurl.length(),0,&uc)) {
-				_handler(_arg,-1,_url,false,"unable to parse URL: WinHttpCrackUrl() failed");
+				_handler(_arg,-1,_url,"unable to parse URL: WinHttpCrackUrl() failed");
 				goto closeAndReturnFromHttp;
 			}
 			if ((!uc.lpszHostName)||(!uc.lpszUrlPath)||(!uc.lpszScheme)||(uc.dwHostNameLength <= 0)||(uc.dwUrlPathLength <= 0)||(uc.dwSchemeLength <= 0)) {
-				_handler(_arg,-1,_url,false,"unable to parse URL: missing scheme, host name, or path");
+				_handler(_arg,-1,_url,"unable to parse URL: missing scheme, host name, or path");
 				goto closeAndReturnFromHttp;
 			}
 			std::wstring urlScheme(uc.lpszScheme,uc.dwSchemeLength);
@@ -406,24 +414,28 @@ public:
 				urlPath.append(uc.lpszExtraInfo,uc.dwExtraInfoLength);
 
 			if (urlScheme != L"http") {
-				_handler(_arg,-1,_url,false,"only 'http' scheme is supported");
+				_handler(_arg,-1,_url,"only 'http' scheme is supported");
 				goto closeAndReturnFromHttp;
 			}
 
 			hConnect = WinHttpConnect(hSession,urlHostName.c_str(),((uc.nPort > 0) ? uc.nPort : 80),0);
 			if (!hConnect) {
-				_handler(_arg,-1,_url,false,"connection failed");
+				_handler(_arg,-1,_url,"connection failed");
 				goto closeAndReturnFromHttp;
 			}
 
-			hRequest = WinHttpOpenRequest(hConnect,L"GET",urlPath.c_str(),NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
-			if (!hRequest) {
-				_handler(_arg,-1,_url,false,"error sending request (1)");
-				goto closeAndReturnFromHttp;
-			}
-			if (!WinHttpSendRequest(hRequest,WINHTTP_NO_ADDITIONAL_HEADERS,0,WINHTTP_NO_REQUEST_DATA,0,0,0)) {
-				_handler(_arg,-1,_url,false,"error sending request (2)");
-				goto closeAndReturnFromHttp;
+			{
+				Mutex::Lock _rl(_hRequest_m);
+				_hRequest = WinHttpOpenRequest(hConnect,L"GET",urlPath.c_str(),NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
+				if (!_hRequest) {
+					_handler(_arg,-1,_url,"error sending request (1)");
+					goto closeAndReturnFromHttp;
+				}
+				if (!WinHttpSendRequest(_hRequest,WINHTTP_NO_ADDITIONAL_HEADERS,0,WINHTTP_NO_REQUEST_DATA,0,0,0)) {
+					_handler(_arg,-1,_url,"error sending request (2)");
+					goto closeAndReturnFromHttp;
+				}
+				hRequest = _hRequest;
 			}
 
 			if (WinHttpReceiveResponse(hRequest,NULL)) {
@@ -435,38 +447,65 @@ public:
 				do {
 					dwSize = 0;
 					if (!WinHttpQueryDataAvailable(hRequest,&dwSize)) {
-						_handler(_arg,-1,_url,false,"receive error (1)");
+						_handler(_arg,-1,_url,"receive error (1)");
 						goto closeAndReturnFromHttp;
+					}
+
+					{
+						Mutex::Lock _rl(_hRequest_m);
+						if (!_hRequest) {
+							_handler(_arg,-1,_url,"request cancelled");
+							goto closeAndReturnFromHttp;
+						}
 					}
 
 					char *outBuffer = new char[dwSize];
 					DWORD dwRead = 0;
 					if (!WinHttpReadData(hRequest,(LPVOID)outBuffer,dwSize,&dwRead)) {
-						_handler(_arg,-1,_url,false,"receive error (2)");
+						_handler(_arg,-1,_url,"receive error (2)");
 						goto closeAndReturnFromHttp;
 					}
 
-					_body.append(outBuffer,dwRead);
-					delete [] outBuffer;
-					if (_body.length() > WIN_MAX_MESSAGE_LENGTH) {
-						_handler(_arg,-1,_url,false,"result too large");
+					{
+						Mutex::Lock _rl(_hRequest_m);
+						if (!_hRequest) {
+							_handler(_arg,-1,_url,"request cancelled");
+							goto closeAndReturnFromHttp;
+						}
+
+						_body.append(outBuffer,dwRead);
+						delete [] outBuffer;
+						if (_body.length() > WIN_MAX_MESSAGE_LENGTH) {
+							_handler(_arg,-1,_url,"result too large");
+							goto closeAndReturnFromHttp;
+						}
+					}
+				} while ((dwSize > 0)&&(_hRequest));
+
+				{
+					Mutex::Lock _rl(_hRequest_m);
+					if (!_hRequest) {
+						_handler(_arg,-1,_url,"request cancelled");
 						goto closeAndReturnFromHttp;
 					}
-				} while (dwSize > 0);
 
-				_handler(_arg,dwStatusCode,_url,false,_body);
+					_handler(_arg,dwStatusCode,_url,_body);
+				}
 			} else {
-				_handler(_arg,-1,_url,false,"receive response failed");
+				_handler(_arg,-1,_url,"receive response failed");
 			}
-		} catch (std::bad_alloc &exc) {
-			_handler(_arg,-1,_url,false,"insufficient memory");
 		} catch ( ... ) {
-			_handler(_arg,-1,_url,false,"unexpected exception");
+			_handler(_arg,-1,_url,"unexpected exception");
 		}
 
 closeAndReturnFromHttp:
-		if (hRequest)
-			WinHttpCloseHandle(hRequest);
+		{
+			Mutex::Lock _rl(_hRequest_m);
+			if (_hRequest) {
+				WinHttpCloseHandle(_hRequest);
+				_hRequest = (HINTERNET)0;
+			}
+		}
 		if (hConnect)
 			WinHttpCloseHandle(hConnect);
 		if (hSession)
@@ -475,12 +514,24 @@ closeAndReturnFromHttp:
 		return;
 	}
 
+	inline void cancel()
+	{
+		Mutex::Lock _rl(_hRequest_m);
+		if (_hRequest) {
+			WinHttpCloseHandle(_hRequest);
+			_hRequest = (HINTERNET)0;
+		}
+	}
+
 	const std::string _url;
 	std::string _body;
 	std::map<std::string,std::string> _headers;
 	unsigned int _timeout;
 	void (*_handler)(void *,int,const std::string &,const std::string &);
 	void *_arg;
+	HttpClient *_parent;
+	HINTERNET _hRequest;
+	Mutex _hRequest_m;
 	Thread _myThread;
 };
 
