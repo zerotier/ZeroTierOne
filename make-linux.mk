@@ -6,45 +6,45 @@ INCLUDES=
 DEFS=
 LIBS=
 
+# Enable SSE-optimized Salsa20 in all modes
+DEFS+=-DZT_SALSA20_SSE 
+
+# "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_AUTO_UPDATE=1
 	DEFS+=-DZT_OFFICIAL_RELEASE 
 endif
-
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
-# Enable SSE-optimized Salsa20
-DEFS+=-DZT_SALSA20_SSE
-
-# Uncomment to dump trace and log to stdout
-#DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
-
-# Uncomment for a release optimized build
-CFLAGS=-Wall -O3 -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-LDFLAGS=-pie -Wl,-z,relro,-z,now
-STRIP=strip --strip-all
-
-# Uncomment for a debug build
-#CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE -DZT_LOG_STDOUT $(DEFS)
-#LDFLAGS=
-#STRIP=echo
+# "make debug" is a shortcut for this
+ifeq ($(ZT_DEBUG),1)
+	CFLAGS=-Wall -g -pthread $(INCLUDES) -DZT_TRACE -DZT_LOG_STDOUT $(DEFS)
+	LDFLAGS=
+	STRIP=echo
+	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
+else
+	CFLAGS=-Wall -O3 -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	LDFLAGS=-pie -Wl,-z,relro,-z,now
+	STRIP=strip --strip-all
+endif
 
 # Uncomment for gprof profile build
 #CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
 #LDFLAGS=
 #STRIP=echo
 
+# Our code doesn't use rtti, so don't bloat the binary with it.
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
-OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
+OBJS+=main.o osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
 
 all:	one
 
-one:	$(OBJS) main.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one main.o $(OBJS) $(LIBS)
+one:	$(OBJS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
@@ -57,7 +57,10 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) *.o zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) node/*.o osnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
+
+debug:	FORCE
+	make -j 4 ZT_DEBUG=1
 
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
