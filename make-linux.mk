@@ -38,12 +38,12 @@ endif
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
-OBJS+=main.o osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
+OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
 
 all:	one
 
-one:	$(OBJS)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) $(LIBS)
+one:	$(OBJS) main.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one main.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool

@@ -48,7 +48,8 @@ SOURCES += main.cpp \
     ../node/UdpSocket.cpp \
     ../node/Utils.cpp \
     ../ext/lz4/lz4.c \
-    ../ext/lz4/lz4hc.c
+    ../ext/lz4/lz4hc.c \
+    ../node/Dictionary.cpp
 
 HEADERS  += mainwindow.h \
 		aboutwindow.h \
@@ -105,7 +106,9 @@ HEADERS  += mainwindow.h \
     ../node/UdpSocket.hpp \
     ../node/Utils.hpp \
     ../ext/lz4/lz4.h \
-    ../ext/lz4/lz4hc.h
+    ../ext/lz4/lz4hc.h \
+    ../node/EthernetTap.hpp \
+    ../node/EthernetTapFactory.hpp
 
 win32:SOURCES += ../node/WindowsEthernetTap.cpp
 mac:SOURCES += ../node/UnixEthernetTap.cpp

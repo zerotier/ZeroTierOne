@@ -226,7 +226,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 			_r->topology->eachPeer(_DumpPeerStatistics(ipcc));
 		} else if (cmd[0] == "listnetworks") {
 			Mutex::Lock _l(_networks_m);
-			ipcc->printf("200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>"ZT_EOL_S);
+			ipcc->printf("200 listnetworks <nwid> <name> <mac> <status> <config age> <type> <dev> <ips>"ZT_EOL_S);
 			for(std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.begin());nw!=_networks.end();++nw) {
 				std::string tmp;
 				std::set<InetAddress> ips(nw->second->ips());
@@ -244,9 +244,10 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 				age /= 1000;
 
 				std::string dn(nw->second->tapDeviceName());
-				ipcc->printf("200 listnetworks %.16llx %s %s %lld %s %s %s"ZT_EOL_S,
+				ipcc->printf("200 listnetworks %.16llx %s %s %s %lld %s %s %s"ZT_EOL_S,
 					(unsigned long long)nw->first,
 					((nconf) ? nconf->name().c_str() : "?"),
+					nw->second->mac().toString().c_str(),
 					Network::statusString(nw->second->status()),
 					age,
 					((nconf) ? (nconf->isPublic() ? "public" : "private") : "?"),

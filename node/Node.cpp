@@ -416,7 +416,7 @@ static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,c
 		return;
 
 	if ((code != 200)||(body.length() == 0)) {
-		TRACE("failed to retrieve %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
+		TRACE("failed to retrieve %s",url.c_str());
 		return;
 	}
 
@@ -433,7 +433,7 @@ static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,c
 			if (Utils::readFile(rootTopologyPath.c_str(),rootTopology)) {
 				Dictionary alreadyHave(rootTopology);
 				if (alreadyHave == rt) {
-					TRACE("retrieved root topology from %s but no change (same)",url.c_str());
+					TRACE("retrieved root topology from %s but no change (same as on disk)",url.c_str());
 					return;
 				} else if (alreadyHave.signatureTimestamp() > rt.signatureTimestamp()) {
 					TRACE("retrieved root topology from %s but no change (ours is newer)",url.c_str());
@@ -763,6 +763,7 @@ Node::ReasonForTermination Node::run()
 
 			if ((now - lastRootTopologyFetch) >= ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL) {
 				lastRootTopologyFetch = now;
+				TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
 				_r->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
 			}
 
