@@ -161,65 +161,92 @@ void Topology::saveIdentity(const Identity &id)
 SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const
 {
 	SharedPtr<Peer> bestSupernode;
-	unsigned int l,bestSupernodeLatency = 65536;
 	uint64_t now = Utils::now();
-	uint64_t lds,ldr;
-
 	Mutex::Lock _l(_supernodes_m);
 
-	// First look for a best supernode by comparing latencies, but exclude
-	// supernodes that have not responded to direct messages in order to
-	// try to exclude any that are dead or unreachable.
-	for(std::vector< SharedPtr<Peer> >::const_iterator sn(_supernodePeers.begin());sn!=_supernodePeers.end();) {
-		// Skip explicitly avoided relays
-		for(unsigned int i=0;i<avoidCount;++i) {
-			if (avoid[i] == (*sn)->address())
-				goto keep_searching_for_supernodes;
-		}
+	if (_amSupernode) {
+		/* If I am a supernode, the "best" supernode is the one whose address
+		 * is numerically greater than mine (with wrap at top of list). This
+		 * causes packets searching for a route to pretty much literally
+		 * circumnavigate the globe rather than bouncing between just two. */
 
-		// Skip possibly comatose or unreachable relays
-		lds = (*sn)->lastDirectSend();
-		ldr = (*sn)->lastDirectReceive();
-		if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
-			goto keep_searching_for_supernodes;
-
-		if ((*sn)->hasActiveDirectPath(now)) {
-			l = (*sn)->latency();
-			if (bestSupernode) {
-				if ((l)&&(l < bestSupernodeLatency)) {
-					bestSupernodeLatency = l;
-					bestSupernode = *sn;
+		if (_supernodeAddresses.size() > 1) { // gotta be one other than me for this to work
+			std::set<Address>::const_iterator sna(_supernodeAddresses.find(_r->identity.address()));
+			if (sna != _supernodeAddresses.end()) { // sanity check -- _amSupernode should've been false in this case
+				for(;;) {
+					if (++sna == _supernodeAddresses.end())
+						sna = _supernodeAddresses.begin(); // wrap around at end
+					if (*sna != _r->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
+						SharedPtr<Peer> p(getPeer(*sna));
+						if ((p)&&(p->hasActiveDirectPath(now))) {
+							bestSupernode = p;
+							break;
+						}
+					}
 				}
-			} else {
-				if (l)
-					bestSupernodeLatency = l;
-				bestSupernode = *sn;
 			}
 		}
+	} else {
+		/* If I am not a supernode, the best supernode is the active one with
+		 * the lowest latency. */
 
-keep_searching_for_supernodes:
-		++sn;
-	}
+		unsigned int l,bestSupernodeLatency = 65536;
+		uint64_t lds,ldr;
 
-	if (bestSupernode) {
-		bestSupernode->use(now);
-		return bestSupernode;
-	} else if (strictAvoid)
-		return SharedPtr<Peer>();
+		// First look for a best supernode by comparing latencies, but exclude
+		// supernodes that have not responded to direct messages in order to
+		// try to exclude any that are dead or unreachable.
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_supernodePeers.begin());sn!=_supernodePeers.end();) {
+			// Skip explicitly avoided relays
+			for(unsigned int i=0;i<avoidCount;++i) {
+				if (avoid[i] == (*sn)->address())
+					goto keep_searching_for_supernodes;
+			}
 
-	// If we have nothing from above, just pick one without avoidance criteria.
-	for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
-		if ((*sn)->hasActiveDirectPath(now)) {
-			unsigned int l = (*sn)->latency();
-			if (bestSupernode) {
-				if ((l)&&(l < bestSupernodeLatency)) {
-					bestSupernodeLatency = l;
+			// Skip possibly comatose or unreachable relays
+			lds = (*sn)->lastDirectSend();
+			ldr = (*sn)->lastDirectReceive();
+			if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
+				goto keep_searching_for_supernodes;
+
+			if ((*sn)->hasActiveDirectPath(now)) {
+				l = (*sn)->latency();
+				if (bestSupernode) {
+					if ((l)&&(l < bestSupernodeLatency)) {
+						bestSupernodeLatency = l;
+						bestSupernode = *sn;
+					}
+				} else {
+					if (l)
+						bestSupernodeLatency = l;
 					bestSupernode = *sn;
 				}
-			} else {
-				if (l)
-					bestSupernodeLatency = l;
-				bestSupernode = *sn;
+			}
+
+keep_searching_for_supernodes:
+			++sn;
+		}
+
+		if (bestSupernode) {
+			bestSupernode->use(now);
+			return bestSupernode;
+		} else if (strictAvoid)
+			return SharedPtr<Peer>();
+
+		// If we have nothing from above, just pick one without avoidance criteria.
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
+			if ((*sn)->hasActiveDirectPath(now)) {
+				unsigned int l = (*sn)->latency();
+				if (bestSupernode) {
+					if ((l)&&(l < bestSupernodeLatency)) {
+						bestSupernodeLatency = l;
+						bestSupernode = *sn;
+					}
+				} else {
+					if (l)
+						bestSupernodeLatency = l;
+					bestSupernode = *sn;
+				}
 			}
 		}
 	}

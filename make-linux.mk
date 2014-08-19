@@ -35,7 +35,6 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-# Our code doesn't use rtti, so don't bloat the binary with it.
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk

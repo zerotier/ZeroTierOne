@@ -15,7 +15,6 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	CODESIGN=codesign
 	CODESIGN_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
-
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
@@ -23,34 +22,34 @@ endif
 # Enable SSE-optimized Salsa20
 DEFS+=-DZT_SALSA20_SSE
 
-# Uncomment to dump trace and log info to stdout (useful for debug/test)
-#DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
-
-# Uncomment for a release optimized universal binary build
-CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
-STRIP=strip
-
-# Uncomment for a debug build
-#CFLAGS=-Wall -g -pthread -DZT_TRACE -DZT_LOG_STDOUT $(INCLUDES) $(DEFS)
-#STRIP=echo
+# "make debug" is a shortcut for this
+ifeq ($(ZT_DEBUG),1)
+	CFLAGS=-Wall -g -pthread -DZT_TRACE -DZT_LOG_STDOUT $(INCLUDES) $(DEFS)
+	STRIP=echo
+	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
+else
+	CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	STRIP=strip
+endif
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
-OBJS+=osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
+OBJS+=main.o osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
 
 all: one
 
 one:	$(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-one main.cpp $(OBJS) $(LIBS)
+	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
 
-selftest: $(OBJS)
-	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.cpp $(OBJS) $(LIBS)
+selftest: $(OBJS) selftest.o
+	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
+# Requires that ../Qt be symlinked to the Qt root to use for UI build
 mac-ui: FORCE
 	mkdir -p build-ZeroTierUI-release
 	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
@@ -59,15 +58,13 @@ mac-ui: FORCE
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "build-ZeroTierUI-release/ZeroTier One.app"
 	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
-install-mac-tap: FORCE
-	mkdir -p /Library/Application\ Support/ZeroTier/One
-	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
-	cp -R ext/bin/tap-mac/tap.kext /Library/Application\ Support/ZeroTier/One
-	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
-
 clean:
-	rm -rf *.dSYM build-* $(OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
+	rm -rf *.dSYM main.o selftest.o build-* $(OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
 
+debug:	FORCE
+	make -j 4 ZT_DEBUG=1
+
+# For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
 	make mac-ui ZT_OFFICIAL_RELEASE=1
@@ -79,5 +76,12 @@ official: FORCE
 	hdiutil create /tmp/tmp.dmg -ov -volname "ZeroTier One" -fs HFS+ -srcfolder ./build-ZeroTierOne-dmg
 	hdiutil convert /tmp/tmp.dmg -format UDZO -o "ZeroTier One.dmg"
 	rm -f /tmp/tmp.dmg
+
+# For those building from source -- installs signed binary tap driver in system ZT home
+install-mac-tap: FORCE
+	mkdir -p /Library/Application\ Support/ZeroTier/One
+	rm -rf /Library/Application\ Support/ZeroTier/One/tap.kext
+	cp -R ext/bin/tap-mac/tap.kext /Library/Application\ Support/ZeroTier/One
+	chown -R root:wheel /Library/Application\ Support/ZeroTier/One/tap.kext
 
 FORCE:

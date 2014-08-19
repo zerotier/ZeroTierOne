@@ -639,12 +639,12 @@ void Switch::cancelWhoisRequest(const Address &addr)
 
 void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 {
-	{
+	{	// cancel pending WHOIS since we now know this peer
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
 		_outstandingWhoisRequests.erase(peer->address());
 	}
 
-	{
+	{	// finish processing any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_rxQueue_m);
 		for(std::list< SharedPtr<PacketDecoder> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
 			if ((*rxi)->tryDecode(_r))
@@ -653,7 +653,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 		}
 	}
 
-	{
+	{	// finish sending any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_txQueue_m);
 		std::pair< std::multimap< Address,TXQueueEntry >::iterator,std::multimap< Address,TXQueueEntry >::iterator > waitingTxQueueItems(_txQueue.equal_range(peer->address()));
 		for(std::multimap< Address,TXQueueEntry >::iterator txi(waitingTxQueueItems.first);txi!=waitingTxQueueItems.second;) {
@@ -690,8 +690,11 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 			fragment.incrementHops();
 
+			// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
+			// It wouldn't hurt anything, just redundant and unnecessary.
 			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
 			if ((!relayTo)||(relayTo->send(_r,fragment.data(),fragment.size(),Utils::now()) == Path::PATH_TYPE_NULL)) {
+				// Don't know peer or no direct path -- so relay via supernode
 				relayTo = _r->topology->getBestSupernode();
 				if (relayTo)
 					relayTo->send(_r,fragment.data(),fragment.size(),Utils::now());
@@ -772,11 +775,7 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 				if ((fromSock->udp())&&(relayedVia == Path::PATH_TYPE_UDP))
 					unite(source,destination,false);
 			} else {
-				// If we've received a packet not for us and we don't have
-				// a direct path to its recipient, pass it to (another)
-				// supernode. This can happen due to Internet weather -- the
-				// most direct supernode may not be reachable, yet another
-				// further away may be.
+				// Don't know peer or no direct path -- so relay via supernode
 				relayTo = _r->topology->getBestSupernode(&source,1,true);
 				if (relayTo)
 					relayTo->send(_r,packet->data(),packet->size(),Utils::now());
@@ -903,21 +902,9 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 					remaining -= chunkSize;
 				}
 			}
-
-/* #ifdef ZT_TRACE
-			if (via != peer) {
-				TRACE(">> %s to %s via %s (%d)",Packet::verbString(packet.verb()),peer->address().toString().c_str(),via->address().toString().c_str(),(int)packet.size());
-			} else {
-				TRACE(">> %s to %s (%d)",Packet::verbString(packet.verb()),peer->address().toString().c_str(),(int)packet.size());
-			}
-#endif */
-
 			return true;
 		}
-		return false;
-	}
-
-	requestWhois(packet.destination());
+	} else requestWhois(packet.destination());
 	return false;
 }
 
