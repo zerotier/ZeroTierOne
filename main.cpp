@@ -97,47 +97,6 @@ using namespace ZeroTier;
 
 static Node *node = (Node *)0;
 
-static void printHelp(const char *cn,FILE *out)
-{
-	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2014 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
-	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
-#ifdef ZT_AUTO_UPDATE
-	fprintf(out,"Auto-update enabled build, will update from URL:"ZT_EOL_S);
-	fprintf(out,"  %s"ZT_EOL_S,ZT_DEFAULTS.updateLatestNfoURL.c_str());
-	fprintf(out,"Update authentication signing authorities: "ZT_EOL_S);
-	int no = 0;
-	for(std::map< Address,Identity >::const_iterator sa(ZT_DEFAULTS.updateAuthorities.begin());sa!=ZT_DEFAULTS.updateAuthorities.end();++sa) {
-		if (no == 0)
-			fprintf(out,"  %s",sa->first.toString().c_str());
-		else fprintf(out,", %s",sa->first.toString().c_str());
-		if (++no == 6) {
-			fprintf(out,ZT_EOL_S);
-			no = 0;
-		}
-	}
-	fprintf(out,ZT_EOL_S""ZT_EOL_S);
-#else
-	fprintf(out,"Auto-updates not enabled on this build. You must update manually."ZT_EOL_S""ZT_EOL_S);
-#endif
-	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
-	fprintf(out,"Available switches:"ZT_EOL_S);
-	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
-	fprintf(out,"  -v                - Show version"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
-	fprintf(out,"  -t<port>          - Port for TCP (default: disabled)"ZT_EOL_S);
-#ifdef __UNIX_LIKE__
-	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
-#endif
-	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
-	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
-#ifdef __WINDOWS__
-	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -D                - Load tap driver into system driver store (Windows)"ZT_EOL_S);
-#endif
-}
-
 namespace ZeroTierCLI { // ---------------------------------------------------
 
 static void printHelp(FILE *out,const char *cn)
@@ -155,9 +114,9 @@ static void _CBresultHandler(void *arg,const char *line)
 }
 
 #ifdef __WINDOWS__
-static int main(int argc,_TCHAR* argv[])
+static int main(const char *homeDir,int argc,_TCHAR* argv[])
 #else
-static int main(int argc,char **argv)
+static int main(const char *homeDir,int argc,char **argv)
 #endif
 {
 	if (argc < 2) {
@@ -165,7 +124,6 @@ static int main(int argc,char **argv)
 		return 1;
 	}
 
-	const char *hp = (const char *)0;
 	std::string query;
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
@@ -190,7 +148,7 @@ static int main(int argc,char **argv)
 
 	try {
 		volatile bool done = false;
-		Node::NodeControlClient client(hp,&_CBresultHandler,(void *)&done);
+		Node::NodeControlClient client(homeDir,&_CBresultHandler,(void *)&done);
 		const char *err = client.error();
 		if (err) {
 			fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (%s)"ZT_EOL_S,argv[0],err);
@@ -544,6 +502,49 @@ static BOOL IsCurrentUserLocalAdministrator(void)
 }
 #endif // __WINDOWS__
 
+// ---------------------------------------------------------------------------
+
+static void printHelp(const char *cn,FILE *out)
+{
+	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2014 ZeroTier Networks LLC"ZT_EOL_S,Node::versionMajor(),Node::versionMinor(),Node::versionRevision());
+	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+#ifdef ZT_AUTO_UPDATE
+	fprintf(out,"Auto-update enabled build, will update from URL:"ZT_EOL_S);
+	fprintf(out,"  %s"ZT_EOL_S,ZT_DEFAULTS.updateLatestNfoURL.c_str());
+	fprintf(out,"Update authentication signing authorities: "ZT_EOL_S);
+	int no = 0;
+	for(std::map< Address,Identity >::const_iterator sa(ZT_DEFAULTS.updateAuthorities.begin());sa!=ZT_DEFAULTS.updateAuthorities.end();++sa) {
+		if (no == 0)
+			fprintf(out,"  %s",sa->first.toString().c_str());
+		else fprintf(out,", %s",sa->first.toString().c_str());
+		if (++no == 6) {
+			fprintf(out,ZT_EOL_S);
+			no = 0;
+		}
+	}
+	fprintf(out,ZT_EOL_S""ZT_EOL_S);
+#else
+	fprintf(out,"Auto-updates not enabled on this build. You must update manually."ZT_EOL_S""ZT_EOL_S);
+#endif
+	fprintf(out,"Usage: %s [-switches] [home directory] [-q <query>]"ZT_EOL_S""ZT_EOL_S,cn);
+	fprintf(out,"Available switches:"ZT_EOL_S);
+	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
+	fprintf(out,"  -v                - Show version"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
+	fprintf(out,"  -t<port>          - Port for TCP (default: disabled)"ZT_EOL_S);
+#ifdef __UNIX_LIKE__
+	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
+#endif
+	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
+	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
+#ifdef __WINDOWS__
+	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
+	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
+	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
+	fprintf(out,"  -D                - Load tap driver into system driver store (Windows)"ZT_EOL_S);
+#endif
+}
+
 #ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])
 #else
@@ -578,7 +579,7 @@ int main(int argc,char **argv)
 #endif
 
 	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
-		return ZeroTierCLI::main(argc,argv);
+		return ZeroTierCLI::main((const char *)0,argc,argv);
 	if ((strstr(argv[0],"zerotier-idtool"))||(strstr(argv[0],"ZEROTIER-IDTOOL")))
 		return ZeroTierIdTool::main(argc,argv);
 
@@ -620,7 +621,7 @@ int main(int argc,char **argv)
 					if (argv[i][2]) {
 						printHelp(argv[0],stdout);
 						return 0;
-					} else return ZeroTierCLI::main(argc,argv);
+					} else return ZeroTierCLI::main(homeDir,argc,argv);
 				case 'i':
 					if (argv[i][2]) {
 						printHelp(argv[0],stdout);
