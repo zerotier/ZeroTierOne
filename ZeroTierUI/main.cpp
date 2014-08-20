@@ -43,7 +43,7 @@
 #include "../node/Defaults.hpp"
 
 // Uncomment for testing to disable making sure Windows service is running
-//#define DISABLE_WINDOWS_SERVICE_MANAGEMENT
+#define DISABLE_WINDOWS_SERVICE_MANAGEMENT
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>
