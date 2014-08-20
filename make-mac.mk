@@ -69,12 +69,16 @@ official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
 	make mac-ui ZT_OFFICIAL_RELEASE=1
 	./buildinstaller.sh
-	mkdir build-ZeroTierOne-dmg
+	make mac-dmg ZT_OFFICIAL_RELEASE=1
+
+mac-dmg:	FORCE
+	mkdir -p build-ZeroTierOne-dmg
 	cd build-ZeroTierOne-dmg ; ln -sf /Applications Applications
 	cp -a "build-ZeroTierUI-release/ZeroTier One.app" build-ZeroTierOne-dmg/
 	rm -f /tmp/tmp.dmg
 	hdiutil create /tmp/tmp.dmg -ov -volname "ZeroTier One" -fs HFS+ -srcfolder ./build-ZeroTierOne-dmg
 	hdiutil convert /tmp/tmp.dmg -format UDZO -o "ZeroTier One.dmg"
+	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.dmg"
 	rm -f /tmp/tmp.dmg
 
 # For those building from source -- installs signed binary tap driver in system ZT home

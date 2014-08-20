@@ -53,8 +53,8 @@ NetworkWidget::NetworkWidget(QWidget *parent,const std::string &nwid) :
 
 	QFontMetrics fm(ui->ipListWidget->font());
 	int lineHeight = ui->ipListWidget->spacing() + fm.height();
-	ui->ipListWidget->setMinimumHeight(lineHeight * 4);
-	ui->ipListWidget->setMaximumHeight(lineHeight * 4);
+	ui->ipListWidget->setMinimumHeight(lineHeight * 6);
+	ui->ipListWidget->setMaximumHeight(lineHeight * 6);
 
 #ifdef __APPLE__
 	QWidgetList widgets = this->findChildren<QWidget*>();
@@ -143,6 +143,11 @@ void NetworkWidget::setIps(const std::string &commaSeparatedList)
 		if (!ips.contains(item->text()))
 			ui->ipListWidget->removeItemWidget(item);
 	}
+}
+
+void NetworkWidget::setMAC(const std::string &mac)
+{
+	ui->macLabel->setText(QString(mac.c_str()));
 }
 
 const std::string &NetworkWidget::networkId()

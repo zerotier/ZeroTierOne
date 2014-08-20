@@ -216,8 +216,9 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 	}
 
 	if (++this->cyclesSinceResponseFromService >= 3) {
-		if (this->cyclesSinceResponseFromService == 3)
+		if (this->cyclesSinceResponseFromService == 3) {
 			QMessageBox::warning(this,"Service Not Running","Can't connect to the ZeroTier One service. Is it running?",QMessageBox::Ok);
+		}
 		ui->noNetworksLabel->setVisible(true);
 		ui->noNetworksLabel->setText("Connecting to Service...");
 		ui->bottomContainerWidget->setVisible(false);
@@ -255,8 +256,8 @@ void MainWindow::customEvent(QEvent *event)
 		std::map< std::string,std::vector<std::string> > newNetworks;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
 			std::vector<std::string> l(ZeroTier::Node::NodeControlClient::splitLine(m->ztMessage[i]));
-			// 200 listnetworks <nwid> <name> <status> <config age> <type> <dev> <ips>
-			if ((l.size() == 9)&&(l[2].length() == 16))
+			// 200 listnetworks <nwid> <name> <mac> <status> <config age> <type> <dev> <ips>
+			if ((l.size() == 10)&&(l[2].length() == 16))
 				newNetworks[l[2]] = l;
 		}
 
@@ -283,10 +284,11 @@ void MainWindow::customEvent(QEvent *event)
 					alreadyDisplayed.insert(nw->networkId());
 					std::vector<std::string> &l = networks[nw->networkId()];
 					nw->setNetworkName(l[3]);
-					nw->setStatus(l[4],l[5]);
-					nw->setNetworkType(l[6]);
-					nw->setNetworkDeviceName(l[7]);
-					nw->setIps(l[8]);
+					nw->setMAC(l[4]);
+					nw->setStatus(l[5],l[6]);
+					nw->setNetworkType(l[7]);
+					nw->setNetworkDeviceName(l[8]);
+					nw->setIps(l[9]);
 				}
 			}
 			for(std::map< std::string,std::vector<std::string> >::iterator nwdata(networks.begin());nwdata!=networks.end();++nwdata) {
@@ -294,10 +296,11 @@ void MainWindow::customEvent(QEvent *event)
 					std::vector<std::string> &l = nwdata->second;
 					NetworkWidget *nw = new NetworkWidget((QWidget *)0,nwdata->first);
 					nw->setNetworkName(l[3]);
-					nw->setStatus(l[4],l[5]);
-					nw->setNetworkType(l[6]);
-					nw->setNetworkDeviceName(l[7]);
-					nw->setIps(l[8]);
+					nw->setMAC(l[4]);
+					nw->setStatus(l[5],l[6]);
+					nw->setNetworkType(l[7]);
+					nw->setNetworkDeviceName(l[8]);
+					nw->setIps(l[9]);
 					QListWidgetItem *item = new QListWidgetItem();
 					item->setSizeHint(nw->sizeHint());
 					ui->networkListWidget->addItem(item);

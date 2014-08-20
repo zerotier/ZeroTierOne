@@ -50,6 +50,7 @@ public:
 	void setNetworkType(const std::string &type);
 	void setNetworkDeviceName(const std::string &dev);
 	void setIps(const std::string &commaSeparatedList);
+	void setMAC(const std::string &mac);
 
 	const std::string &networkId();
 

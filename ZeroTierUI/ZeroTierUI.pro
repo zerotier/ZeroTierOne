@@ -36,19 +36,18 @@ SOURCES += main.cpp \
     ../node/PacketDecoder.cpp \
     ../node/Peer.cpp \
     ../node/Poly1305.cpp \
+    ../node/RoutingTable.cpp \
     ../node/Salsa20.cpp \
     ../node/Service.cpp \
     ../node/SHA512.cpp \
     ../node/SocketManager.cpp \
     ../node/SoftwareUpdater.cpp \
     ../node/Switch.cpp \
-    ../node/SysEnv.cpp \
     ../node/TcpSocket.cpp \
     ../node/Topology.cpp \
     ../node/UdpSocket.cpp \
     ../node/Utils.cpp \
     ../ext/lz4/lz4.c \
-    ../ext/lz4/lz4hc.c \
     ../node/Dictionary.cpp
 
 HEADERS  += mainwindow.h \
@@ -99,19 +98,15 @@ HEADERS  += mainwindow.h \
     ../node/SocketManager.hpp \
     ../node/SoftwareUpdater.hpp \
     ../node/Switch.hpp \
-    ../node/SysEnv.hpp \
+    ../node/RoutingTable.hpp \
     ../node/TcpSocket.hpp \
     ../node/Thread.hpp \
     ../node/Topology.hpp \
     ../node/UdpSocket.hpp \
     ../node/Utils.hpp \
     ../ext/lz4/lz4.h \
-    ../ext/lz4/lz4hc.h \
     ../node/EthernetTap.hpp \
     ../node/EthernetTapFactory.hpp
-
-win32:SOURCES += ../node/WindowsEthernetTap.cpp
-mac:SOURCES += ../node/UnixEthernetTap.cpp
 
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \
