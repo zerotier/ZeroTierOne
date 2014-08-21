@@ -646,20 +646,19 @@ void WindowsEthernetTap::threadMain()
 	 *
 	 * Yes, you read that right.
 	 *
-	 * But these networks don't usually have default routes, so what
-	 * do we do? Answer: add a fake one that's never used and goes
-	 * nowhere. But it's got to resolve to an ARP address. So why
-	 * don't we just make up one of those too?!? Shove it in there
-	 * as a permanent statuc ARP entry and now Windows will think it
-	 * has a real live default route at our bogus IP.
+	 * The default route workaround is also known, but for this to
+	 * work there must be a known default IP that resolves to a known
+	 * ARP address. This works for an OpenVPN tunnel, but not here
+	 * because this isn't a tunnel. It's a mesh. There is no "other
+	 * end," or any other known always on IP.
+	 *
+	 * So let's make a fake one and shove it in there along with its
+	 * fake static ARP entry. Also makes it instant-on and static.
 	 *
 	 * We'll have to see what DHCP does with this. In the future we
 	 * probably will not want to do this on DHCP-enabled networks, so
 	 * when we enable DHCP we will go in and yank this wacko hacko from
 	 * the routing table before doing so.
-	 *
-	 * But yes, this works, and it makes our networks look and behave
-	 * the way they should.
 	 *
 	 * Like Jesse Pinkman would say: "YEEEEAAH BITCH!" */
 	for(int i=0;i<8;++i) { // also wait up to 8s for this, though if we got the NLM part we're probably okay
@@ -669,7 +668,7 @@ void WindowsEthernetTap::threadMain()
 		nr.InterfaceLuid.Value = _deviceLuid.Value;
 		nr.DestinationPrefix.Prefix.si_family = AF_INET; // rest is left as 0.0.0.0/0
 		nr.NextHop.si_family = AF_INET;
-		nr.NextHop.Ipv4.sin_addr.s_addr = 0x01010101; // 1.1.1.1
+		nr.NextHop.Ipv4.sin_addr.s_addr = htonl(0x19fffffe); // 25.255.255.254 -- unrouted IPv4 block
 		nr.Metric = 9999; // do not use as real default route
 		nr.Protocol = MIB_IPPROTO_NETMGMT;
 		DWORD result = CreateIpForwardEntry2(&nr);
@@ -677,7 +676,7 @@ void WindowsEthernetTap::threadMain()
 			MIB_IPNET_ROW2 ipnr;
 			memset(&ipnr,0,sizeof(ipnr));
 			ipnr.Address.si_family = AF_INET;
-			ipnr.Address.Ipv4.sin_addr.s_addr = 0x01010101;
+			ipnr.Address.Ipv4.sin_addr.s_addr = nr.NextHop.Ipv4.sin_addr.s_addr;
 			ipnr.InterfaceLuid.Value = _deviceLuid.Value;
 			ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10; // just make something up that's consistent and not part of this net
 			ipnr.PhysicalAddress[1] = 0x00;
