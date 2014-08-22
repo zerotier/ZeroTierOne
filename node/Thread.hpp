@@ -31,12 +31,13 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
-#include "AtomicCounter.hpp"
 
 #ifdef __WINDOWS__
 
+#include <WinSock2.h>
 #include <Windows.h>
 #include <string.h>
+#include "Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -56,6 +57,7 @@ public:
 		throw()
 	{
 		_th = NULL;
+		_tid = 0;
 	}
 
 	template<typename C>
@@ -71,8 +73,15 @@ public:
 
 	static inline void join(const Thread &t)
 	{
-		if (t._th != NULL)
-			WaitForSingleObject(t._th,INFINITE);
+		if (t._th != NULL) {
+			for(;;) {
+				DWORD ec = STILL_ACTIVE;
+				GetExitCodeThread(t._th,&ec);
+				if (ec == STILL_ACTIVE)
+					WaitForSingleObject(t._th,1000);
+				else break;
+			}
+		}
 	}
 
 	static inline void sleep(unsigned long ms)

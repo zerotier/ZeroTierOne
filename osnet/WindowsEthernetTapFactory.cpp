@@ -75,6 +75,9 @@ EthernetTap *WindowsEthernetTapFactory::open(
 
 void WindowsEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevices)
 {
+	if (!tap)
+		return;
+
 	std::string instanceId(((WindowsEthernetTap *)tap)->instanceId());
 	Mutex::Lock _l(_devices_m);
 
@@ -120,20 +123,8 @@ void WindowsEthernetTapFactory::destroyAllPersistentTapDevices(const char *pathT
 						dataLen = sizeof(data);
 						if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
 							instanceIdPath.assign(data,dataLen);
-						if (instanceIdPath.length() != 0) {
+						if (instanceIdPath.length() != 0)
 							instanceIdPathsToRemove.insert(instanceIdPath);
-							/*
-							type = 0;
-							dataLen = sizeof(data);
-							if (RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-								if (dataLen <= 0) {
-									instanceIdPathsToRemove.insert(instanceIdPath);
-								} else {
-									instanceIdPathsToRemove.insert(instanceIdPath);
-								}
-							}
-							*/
-						}
 					}
 				}
 			} else break; // end of list or failure

@@ -66,10 +66,13 @@ Network::~Network()
 {
 	Thread::join(_setupThread);
 
-	if (_tap)
-		_r->tapFactory->close(_tap,_destroyOnDelete);
+	{
+		Mutex::Lock _l(_lock);
+		if (_tap)
+			_r->tapFactory->close(_tap,_destroyed);
+	}
 
-	if (_destroyOnDelete) {
+	if (_destroyed) {
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
 		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
 	} else {
@@ -80,12 +83,6 @@ Network::~Network()
 
 SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfig *nc,uint64_t id)
 {
-	/* We construct Network via a static method to ensure that it is immediately
-	 * wrapped in a SharedPtr<>. Otherwise if there is traffic on the Ethernet
-	 * tap device, a SharedPtr<> wrap can occur in the Ethernet frame handler
-	 * that then causes the Network instance to be deleted before it is finished
-	 * being constructed. C++ edge cases, how I love thee. */
-
 	SharedPtr<Network> nw(new Network());
 	nw->_id = id;
 	nw->_nc = nc;
@@ -94,7 +91,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	nw->_tap = (EthernetTap *)0;
 	nw->_enabled = true;
 	nw->_lastConfigUpdate = 0;
-	nw->_destroyOnDelete = false;
+	nw->_destroyed = false;
 	nw->_netconfFailure = NETCONF_FAILURE_NONE;
 
 	if (nw->controller() == renv->identity.address()) // TODO: fix Switch to allow packets to self
@@ -142,6 +139,9 @@ bool Network::updateMulticastGroups()
 bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
 	Mutex::Lock _l(_lock);
+
+	if (_destroyed)
+		return false;
 
 	try {
 		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
@@ -242,6 +242,10 @@ bool Network::isAllowed(const Address &peer) const
 void Network::clean()
 {
 	Mutex::Lock _l(_lock);
+
+	if (_destroyed)
+		return;
+
 	uint64_t now = Utils::now();
 
 	if ((_config)&&(_config->isPublic())) {
@@ -277,23 +281,17 @@ void Network::clean()
 Network::Status Network::status() const
 {
 	Mutex::Lock _l(_lock);
-	if (_tap) {
-		switch(_netconfFailure) {
-			case NETCONF_FAILURE_ACCESS_DENIED:
-				return NETWORK_ACCESS_DENIED;
-			case NETCONF_FAILURE_NOT_FOUND:
-				return NETWORK_NOT_FOUND;
-			case NETCONF_FAILURE_NONE:
-				if (_lastConfigUpdate > 0)
-					return NETWORK_OK;
-				else return NETWORK_WAITING_FOR_FIRST_AUTOCONF;
-			case NETCONF_FAILURE_INIT_FAILED:
-			default:
-				return NETWORK_INITIALIZATION_FAILED;
-		}
-	} else if (_netconfFailure == NETCONF_FAILURE_INIT_FAILED) {
-		return NETWORK_INITIALIZATION_FAILED;
-	} else return NETWORK_INITIALIZING;
+	switch(_netconfFailure) {
+		case NETCONF_FAILURE_ACCESS_DENIED:
+			return NETWORK_ACCESS_DENIED;
+		case NETCONF_FAILURE_NOT_FOUND:
+			return NETWORK_NOT_FOUND;
+		case NETCONF_FAILURE_NONE:
+			return ((_lastConfigUpdate > 0) ? ((_tap) ? NETWORK_OK : NETWORK_INITIALIZING) : NETWORK_WAITING_FOR_FIRST_AUTOCONF);
+		//case NETCONF_FAILURE_INIT_FAILED:
+		default:
+			return NETWORK_INITIALIZATION_FAILED;
+	}
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
@@ -366,7 +364,7 @@ void Network::threadMain()
 	{
 		Mutex::Lock _l(_lock);
 		if (_tap) // the tap creation thread can technically be re-launched, though this isn't done right now
-			_r->tapFactory->close(_tap,_destroyOnDelete);
+			_r->tapFactory->close(_tap,false);
 		_tap = t;
 		if (t) {
 			if (_config)
@@ -407,6 +405,20 @@ void Network::setEnabled(bool enabled)
 	_enabled = enabled;
 	if (_tap)
 		_tap->setEnabled(enabled);
+}
+
+void Network::destroy()
+{
+	Mutex::Lock _l(_lock);
+
+	_enabled = false;
+	_destroyed = true;
+
+	Thread::join(_setupThread);
+
+	if (_tap)
+		_r->tapFactory->close(_tap,true);
+	_tap = (EthernetTap *)0;
 }
 
 void Network::_restoreState()

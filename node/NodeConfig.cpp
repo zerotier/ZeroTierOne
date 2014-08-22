@@ -286,7 +286,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 				if (nw == _networks.end()) {
 					ipcc->printf("404 leave %.16llx ERROR: not a member of that network"ZT_EOL_S,(unsigned long long)nwid);
 				} else {
-					nw->second->destroyOnDelete();
+					nw->second->destroy();
 					_networks.erase(nw);
 				}
 			} else {

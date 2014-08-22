@@ -233,7 +233,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 		DWORD tmp = mtu;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"MTU",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 
-		//tmp = NDIS_DEVICE_TYPE_ENDPOINT;
 		tmp = 0;
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*NdisDeviceType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 		tmp = IF_TYPE_ETHERNET_CSMACD;
@@ -571,129 +570,101 @@ void WindowsEthernetTap::threadMain()
 			continue;
 		}
 
-		uint32_t tmpi = 1;
-		DWORD bytesReturned = 0;
-		DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
+		{
+			uint32_t tmpi = 1;
+			DWORD bytesReturned = 0;
+			DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
+			bytesReturned = 0;
+			DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
+		}
+
+		{
+#ifdef ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
+			/* This inserts a fake default route and a fake ARP entry, forcing
+			 * Windows to detect this as a "real" network and apply proper
+			 * firewall rules.
+			 *
+			 * This hack is completely stupid, but Windows made me do it
+			 * by being broken and insane.
+			 *
+			 * Background: Windows tries to detect its network location by
+			 * matching it to the ARP address of the default route. Networks
+			 * without default routes are "unidentified networks" and cannot
+			 * have their firewall classification changed by the user (easily).
+			 *
+			 * Yes, you read that right.
+			 *
+			 * The common workaround is to set *NdisDeviceType to 1, which
+			 * totally disables all Windows firewall functionality. This is
+			 * the answer you'll find on most forums for things like OpenVPN.
+			 *
+			 * Yes, you read that right.
+			 *
+			 * The default route workaround is also known, but for this to
+			 * work there must be a known default IP that resolves to a known
+			 * ARP address. This works for an OpenVPN tunnel, but not here
+			 * because this isn't a tunnel. It's a mesh. There is no "other
+			 * end," or any other known always on IP.
+			 *
+			 * So let's make a fake one and shove it in there along with its
+			 * fake static ARP entry. Also makes it instant-on and static.
+			 *
+			 * We'll have to see what DHCP does with this. In the future we
+			 * probably will not want to do this on DHCP-enabled networks, so
+			 * when we enable DHCP we will go in and yank this wacko hacko from
+			 * the routing table before doing so.
+			 *
+			 * Like Jesse Pinkman would say: "YEEEEAAH BITCH!" */
+			const uint32_t fakeIp = htonl(0x19fffffe); // 25.255.255.254 -- unrouted IPv4 block
+			for(int i=0;i<8;++i) {
+				MIB_IPNET_ROW2 ipnr;
+				memset(&ipnr,0,sizeof(ipnr));
+				ipnr.Address.si_family = AF_INET;
+				ipnr.Address.Ipv4.sin_addr.s_addr = fakeIp;
+				ipnr.InterfaceLuid.Value = _deviceLuid.Value;
+				ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10; // just make something up that's consistent and not part of this net
+				ipnr.PhysicalAddress[1] = 0x00;
+				ipnr.PhysicalAddress[2] = (UCHAR)((_deviceGuid.Data1 >> 24) & 0xff);
+				ipnr.PhysicalAddress[3] = (UCHAR)((_deviceGuid.Data1 >> 16) & 0xff);
+				ipnr.PhysicalAddress[4] = (UCHAR)((_deviceGuid.Data1 >> 8) & 0xff);
+				ipnr.PhysicalAddress[5] = (UCHAR)(_deviceGuid.Data1 & 0xff);
+				ipnr.PhysicalAddressLength = 6;
+				ipnr.State = NlnsPermanent;
+				ipnr.IsRouter = 1;
+				ipnr.IsUnreachable = 0;
+				ipnr.ReachabilityTime.LastReachable = 0x0fffffff;
+				ipnr.ReachabilityTime.LastUnreachable = 1;
+				DWORD result = CreateIpNetEntry2(&ipnr);
+				if (result != NO_ERROR)
+					Sleep(500);
+				else break;
+			}
+			for(int i=0;i<8;++i) {
+				MIB_IPFORWARD_ROW2 nr;
+				memset(&nr,0,sizeof(nr));
+				InitializeIpForwardEntry(&nr);
+				nr.InterfaceLuid.Value = _deviceLuid.Value;
+				nr.DestinationPrefix.Prefix.si_family = AF_INET; // rest is left as 0.0.0.0/0
+				nr.NextHop.si_family = AF_INET;
+				nr.NextHop.Ipv4.sin_addr.s_addr = fakeIp;
+				nr.Metric = 9999; // do not use as real default route
+				nr.Protocol = MIB_IPPROTO_NETMGMT;
+				DWORD result = CreateIpForwardEntry2(&nr);
+				if (result != NO_ERROR)
+					Sleep(500);
+				else break;
+			}
+#endif
+		}
 
 		if (throwOneAway) {
 			throwOneAway = false;
 			CloseHandle(_tap);
 			_tap = INVALID_HANDLE_VALUE;
-			Sleep(250);
+			Sleep(1000);
 			continue;
 		} else break;
 	}
-
-	/* code not currently used, but keep it around cause it was hard to figure out...
-	CoInitializeEx(NULL,COINIT_MULTITHREADED);
-	CComPtr<INetworkListManager> nlm;
-	nlm.CoCreateInstance(CLSID_NetworkListManager);
-	if (nlm) {
-		for(int i=0;i<8;++i) { // wait up to 8s for the NLM (network awareness) to find and initialize its awareness of our new network
-			CComPtr<IEnumNetworks> nlmNets;
-			bool foundMyNet = false;
-			if (SUCCEEDED(nlm->GetNetworks(NLM_ENUM_NETWORK_ALL,&nlmNets))) {
-				DWORD dwReturn = 0;
-				while (!foundMyNet) {
-					CComPtr<INetwork> nlmNet;
-					HRESULT hr = nlmNets->Next(1,&nlmNet,&dwReturn);
-					if ((hr == S_OK)&&(dwReturn > 0)&&(nlmNet)) {
-						CComPtr<IEnumNetworkConnections> nlmNetConns;
-						if (SUCCEEDED(nlmNet->GetNetworkConnections(&nlmNetConns))) {
-							for(;;) {
-								CComPtr<INetworkConnection> nlmNetConn;
-								hr = nlmNetConns->Next(1,&nlmNetConn,&dwReturn);
-								if ((hr == S_OK)&&(dwReturn > 0)&&(nlmNetConn)) {
-									GUID netAdapterId;
-									nlmNetConn->GetAdapterId(&netAdapterId);
-									if (netAdapterId == _deviceGuid) {
-										foundMyNet = true;
-										printf("*** Found my net!\n");
-										nlmNet->SetName(L"ZeroTier One Network");
-										break;
-									}
-								} else break;
-							}
-						}
-					} else break;
-				}
-			}
-			if (foundMyNet)
-				break;
-			else Thread::sleep(1000);
-		}
-	}
-	*/
-
-#ifdef ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
-	/* This inserts a fake default route and a fake ARP entry, forcing
-	 * Windows to detect this as a "real" network and apply proper
-	 * firewall rules.
-	 *
-	 * This hack is completely stupid, but Windows made me do it
-	 * by being broken and insane.
-	 *
-	 * Background: Windows tries to detect its network location by
-	 * matching it to the ARP address of the default route. Networks
-	 * without default routes are "unidentified networks" and cannot
-	 * have their firewall classification changed by the user (easily).
-	 *
-	 * Yes, you read that right.
-	 *
-	 * The common workaround is to set *NdisDeviceType to 1, which
-	 * totally disables all Windows firewall functionality. This is
-	 * the answer you'll find on most forums for things like OpenVPN.
-	 *
-	 * Yes, you read that right.
-	 *
-	 * The default route workaround is also known, but for this to
-	 * work there must be a known default IP that resolves to a known
-	 * ARP address. This works for an OpenVPN tunnel, but not here
-	 * because this isn't a tunnel. It's a mesh. There is no "other
-	 * end," or any other known always on IP.
-	 *
-	 * So let's make a fake one and shove it in there along with its
-	 * fake static ARP entry. Also makes it instant-on and static.
-	 *
-	 * We'll have to see what DHCP does with this. In the future we
-	 * probably will not want to do this on DHCP-enabled networks, so
-	 * when we enable DHCP we will go in and yank this wacko hacko from
-	 * the routing table before doing so.
-	 *
-	 * Like Jesse Pinkman would say: "YEEEEAAH BITCH!" */
-	for(int i=0;i<8;++i) { // also wait up to 8s for this, though if we got the NLM part we're probably okay
-		MIB_IPFORWARD_ROW2 nr;
-		memset(&nr,0,sizeof(nr));
-		InitializeIpForwardEntry(&nr);
-		nr.InterfaceLuid.Value = _deviceLuid.Value;
-		nr.DestinationPrefix.Prefix.si_family = AF_INET; // rest is left as 0.0.0.0/0
-		nr.NextHop.si_family = AF_INET;
-		nr.NextHop.Ipv4.sin_addr.s_addr = htonl(0x19fffffe); // 25.255.255.254 -- unrouted IPv4 block
-		nr.Metric = 9999; // do not use as real default route
-		nr.Protocol = MIB_IPPROTO_NETMGMT;
-		DWORD result = CreateIpForwardEntry2(&nr);
-		if (result == NO_ERROR) {
-			MIB_IPNET_ROW2 ipnr;
-			memset(&ipnr,0,sizeof(ipnr));
-			ipnr.Address.si_family = AF_INET;
-			ipnr.Address.Ipv4.sin_addr.s_addr = nr.NextHop.Ipv4.sin_addr.s_addr;
-			ipnr.InterfaceLuid.Value = _deviceLuid.Value;
-			ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10; // just make something up that's consistent and not part of this net
-			ipnr.PhysicalAddress[1] = 0x00;
-			ipnr.PhysicalAddress[2] = (UCHAR)((_deviceGuid.Data1 >> 24) & 0xff);
-			ipnr.PhysicalAddress[3] = (UCHAR)((_deviceGuid.Data1 >> 16) & 0xff);
-			ipnr.PhysicalAddress[4] = (UCHAR)((_deviceGuid.Data1 >> 8) & 0xff);
-			ipnr.PhysicalAddress[5] = (UCHAR)(_deviceGuid.Data1 & 0xff);
-			ipnr.PhysicalAddressLength = 6;
-			ipnr.State = NlnsPermanent;
-			ipnr.IsRouter = 1;
-			ipnr.IsUnreachable = 0;
-			ipnr.ReachabilityTime.LastReachable = 0x0fffffff;
-			CreateIpNetEntry2(&ipnr);
-			break; // stop retrying, we're done
-		} else Thread::sleep(1000);
-	}
-#endif
 
 	memset(&tapOvlRead,0,sizeof(tapOvlRead));
 	tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
@@ -710,7 +681,7 @@ void WindowsEthernetTap::threadMain()
 
 	for(;;) {
 		if (!_run) break;
-		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,10000,TRUE);
+		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,5000,TRUE);
 		if (!_run) break;
 
 		if ((r == WAIT_TIMEOUT)||(r == WAIT_FAILED))

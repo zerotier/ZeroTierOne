@@ -25,6 +25,10 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+// Uncomment on Windows to assume -C and run in console instead of service
+// Useful for Visual Studio debugging (launch VS as Administrator to run)
+#define ZT_WIN_RUN_IN_CONSOLE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -586,12 +590,18 @@ int main(int argc,char **argv)
 	const char *homeDir = (const char *)0;
 	unsigned int udpPort = ZT_DEFAULT_UDP_PORT;
 	unsigned int tcpPort = 0;
+
 #ifdef __UNIX_LIKE__
 	bool runAsDaemon = false;
 #endif
 #ifdef __WINDOWS__
+#ifdef ZT_WIN_RUN_IN_CONSOLE
+	bool winRunFromCommandLine = true;
+#else
 	bool winRunFromCommandLine = false;
 #endif
+#endif // __WINDOWS__
+
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
 			switch(argv[i][1]) {

@@ -99,11 +99,6 @@ private:
 	 */
 	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,NodeConfig *nc,uint64_t id);
 
-	/**
-	 * Causes all persistent disk presence to be erased on delete, and this network won't be reloaded on next startup
-	 */
-	inline void destroyOnDelete() throw() { _destroyOnDelete = true; }
-
 public:
 	/**
 	 * Broadcast multicast group: ff:ff:ff:ff:ff:ff / 0
@@ -419,6 +414,15 @@ public:
 	 */
 	void setEnabled(bool enabled);
 
+	/**
+	 * Destroy this network
+	 *
+	 * This causes the network to disable itself, destroy its tap device, and on
+	 * delete to delete all trace of itself on disk and remove any persistent tap
+	 * device instances. Call this when a network is being removed from the system.
+	 */
+	void destroy();
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -453,7 +457,7 @@ private:
 	SharedPtr<NetworkConfig> _config;
 	volatile uint64_t _lastConfigUpdate;
 
-	volatile bool _destroyOnDelete;
+	volatile bool _destroyed;
 
 	volatile enum {
 		NETCONF_FAILURE_NONE,
