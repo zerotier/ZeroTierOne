@@ -64,7 +64,11 @@ const char *Network::statusString(const Status s)
 
 Network::~Network()
 {
-	Thread::join(_setupThread);
+	_lock.lock();
+	if ((_setupThread)&&(!_destroyed)) {
+		_lock.unlock();
+		Thread::join(_setupThread);
+	} else _lock.unlock();
 
 	{
 		Mutex::Lock _l(_lock);
@@ -414,7 +418,9 @@ void Network::destroy()
 	_enabled = false;
 	_destroyed = true;
 
-	Thread::join(_setupThread);
+	if (_setupThread)
+		Thread::join(_setupThread);
+	_setupThread = Thread();
 
 	if (_tap)
 		_r->tapFactory->close(_tap,true);

@@ -262,6 +262,7 @@ static inline void _intl_freeifmaddrs(struct _intl_ifmaddrs *ifmp)
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
 #include "OSXEthernetTap.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
