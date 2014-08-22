@@ -20,7 +20,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier Networks LLC"/>
-    <ROW Property="ProductCode" Value="1033:{39DFC63F-B6EA-40E7-880B-DC4A5E70F75A} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{E930C7BA-D13E-4150-B817-002B17AD4325} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="0.9.2" Type="32"/>
