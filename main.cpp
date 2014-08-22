@@ -27,7 +27,7 @@
 
 // Uncomment on Windows to assume -C and run in console instead of service
 // Useful for Visual Studio debugging (launch VS as Administrator to run)
-#define ZT_WIN_RUN_IN_CONSOLE
+//#define ZT_WIN_RUN_IN_CONSOLE
 
 #include <stdio.h>
 #include <stdlib.h>
