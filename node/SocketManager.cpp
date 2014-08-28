@@ -134,47 +134,41 @@ SocketManager::SocketManager(
 		{ // bind TCP IPv6
 			_tcpV6ListenSocket = ::socket(AF_INET6,SOCK_STREAM,0);
 #ifdef __WINDOWS__
-			if (_tcpV6ListenSocket == INVALID_SOCKET) {
+			if (_tcpV6ListenSocket != INVALID_SOCKET) {
+				{
+					BOOL f;
+					f = TRUE; ::setsockopt(_tcpV6ListenSocket,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
+					f = TRUE; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
+					u_long iMode=1;
+					ioctlsocket(_tcpV6ListenSocket,FIONBIO,&iMode);
+				}
 #else
-			if (_tcpV6ListenSocket <= 0) {
-#endif
-				_closeSockets();
-				throw std::runtime_error("unable to create IPv6 SOCK_STREAM socket");
-			}
+			if (_tcpV6ListenSocket > 0) {
+				{
+					int f;
+					f = 1; ::setsockopt(_tcpV6ListenSocket,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
+					f = 1; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+					fcntl(_tcpV6ListenSocket,F_SETFL,O_NONBLOCK);
+				}
+#endif // __WINDOWS__ / not __WINDOWS__
 
-#ifdef __WINDOWS__
-			{
-				BOOL f;
-				f = TRUE; ::setsockopt(_tcpV6ListenSocket,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
-				f = TRUE; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
-				u_long iMode=1;
-				ioctlsocket(_tcpV6ListenSocket,FIONBIO,&iMode);
-			}
-#else
-			{
-				int f;
-				f = 1; ::setsockopt(_tcpV6ListenSocket,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
-				f = 1; ::setsockopt(_tcpV6ListenSocket,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
-				fcntl(_tcpV6ListenSocket,F_SETFL,O_NONBLOCK);
-			}
-#endif
+				struct sockaddr_in6 sin6;
+				memset(&sin6,0,sizeof(sin6));
+				sin6.sin6_family = AF_INET6;
+				sin6.sin6_port = htons(localTcpPort);
+				memcpy(&(sin6.sin6_addr),&in6addr_any,sizeof(struct in6_addr));
+				if (::bind(_tcpV6ListenSocket,(const struct sockaddr *)&sin6,sizeof(sin6))) {
+					_closeSockets();
+					throw std::runtime_error("unable to bind to local TCP port");
+				}
 
-			struct sockaddr_in6 sin6;
-			memset(&sin6,0,sizeof(sin6));
-			sin6.sin6_family = AF_INET6;
-			sin6.sin6_port = htons(localTcpPort);
-			memcpy(&(sin6.sin6_addr),&in6addr_any,sizeof(struct in6_addr));
-			if (::bind(_tcpV6ListenSocket,(const struct sockaddr *)&sin6,sizeof(sin6))) {
-				_closeSockets();
-				throw std::runtime_error("unable to bind to local TCP port");
-			}
+				if (::listen(_tcpV6ListenSocket,16)) {
+					_closeSockets();
+					throw std::runtime_error("listen() failed");
+				}
 
-			if (::listen(_tcpV6ListenSocket,16)) {
-				_closeSockets();
-				throw std::runtime_error("listen() failed");
+				FD_SET(_tcpV6ListenSocket,&_readfds);
 			}
-
-			FD_SET(_tcpV6ListenSocket,&_readfds);
 		}
 
 		{ // bind TCP IPv4
@@ -229,75 +223,70 @@ SocketManager::SocketManager(
 		{ // bind UDP IPv6
 #ifdef __WINDOWS__
 			SOCKET s = ::socket(AF_INET6,SOCK_DGRAM,0);
-			if (s == INVALID_SOCKET) {
-				_closeSockets();
-				throw std::runtime_error("unable to create IPv6 SOCK_DGRAM socket");
-			}
+			if (s != INVALID_SOCKET) {
 #else
 			int s = ::socket(AF_INET6,SOCK_DGRAM,0);
-			if (s <= 0) {
-				_closeSockets();
-				throw std::runtime_error("unable to create IPv6 SOCK_DGRAM socket");
-			}
+			if (s > 0) {
 #endif
 
-			{
-				int bs = 1048576;
-				while (bs >= 65536) {
-					int tmpbs = bs;
-					if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
-						break;
-					bs -= 16384;
-				}
-				bs = 1048576;
-				while (bs >= 65536) {
-					int tmpbs = bs;
-					if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
-						break;
-					bs -= 16384;
-				}
+				{
+					int bs = 1048576;
+					while (bs >= 65536) {
+						int tmpbs = bs;
+						if (setsockopt(s,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
+							break;
+						bs -= 16384;
+					}
+					bs = 1048576;
+					while (bs >= 65536) {
+						int tmpbs = bs;
+						if (setsockopt(s,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
+							break;
+						bs -= 16384;
+					}
 #ifdef __WINDOWS__
-				BOOL f;
-				f = TRUE; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
-				f = FALSE; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
-				f = FALSE; setsockopt(s,IPPROTO_IPV6,IPV6_DONTFRAG,(const char *)&f,sizeof(f));
-				f = TRUE; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(const char *)&f,sizeof(f));
+					BOOL f;
+					f = TRUE; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
+					f = FALSE; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
+					f = FALSE; setsockopt(s,IPPROTO_IPV6,IPV6_DONTFRAG,(const char *)&f,sizeof(f));
+					f = TRUE; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(const char *)&f,sizeof(f));
 #else
-				int f;
-				f = 1; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
-				f = 0; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
-				f = 1; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(void *)&f,sizeof(f));
+					int f;
+					f = 1; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
+					f = 0; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
+					f = 1; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(void *)&f,sizeof(f));
 #ifdef IP_DONTFRAG
-				f = 0; setsockopt(s,IPPROTO_IP,IP_DONTFRAG,&f,sizeof(f));
+					f = 0; setsockopt(s,IPPROTO_IP,IP_DONTFRAG,&f,sizeof(f));
 #endif
 #ifdef IP_MTU_DISCOVER
-				f = 0; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
+					f = 0; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
 #endif
 #ifdef IPV6_MTU_DISCOVER
-				f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_MTU_DISCOVER,&f,sizeof(f));
+					f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_MTU_DISCOVER,&f,sizeof(f));
 #endif
 #endif
-			}
+				}
 
-			struct sockaddr_in6 sin6;
-			memset(&sin6,0,sizeof(sin6));
-			sin6.sin6_family = AF_INET6;
-			sin6.sin6_port = htons(localUdpPort);
-			memcpy(&(sin6.sin6_addr),&in6addr_any,sizeof(struct in6_addr));
-			if (::bind(s,(const struct sockaddr *)&sin6,sizeof(sin6))) {
-				CLOSE_SOCKET(s);
-				_closeSockets();
-				throw std::runtime_error("unable to bind to port");
-			}
+				struct sockaddr_in6 sin6;
+				memset(&sin6,0,sizeof(sin6));
+				sin6.sin6_family = AF_INET6;
+				sin6.sin6_port = htons(localUdpPort);
+				memcpy(&(sin6.sin6_addr),&in6addr_any,sizeof(struct in6_addr));
+				if (::bind(s,(const struct sockaddr *)&sin6,sizeof(sin6))) {
+					CLOSE_SOCKET(s);
+					_closeSockets();
+					throw std::runtime_error("unable to bind to port");
+				}
 
-			_udpV6Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V6,s));
+				_udpV6Socket = SharedPtr<Socket>(new UdpSocket(Socket::ZT_SOCKET_TYPE_UDP_V6,s));
 #ifdef __WINDOWS__
-			u_long iMode=1;
-			ioctlsocket(s,FIONBIO,&iMode);
+				u_long iMode=1;
+				ioctlsocket(s,FIONBIO,&iMode);
 #else
-			fcntl(s,F_SETFL,O_NONBLOCK);
+				fcntl(s,F_SETFL,O_NONBLOCK);
 #endif
-			FD_SET(s,&_readfds);
+				FD_SET(s,&_readfds);
+			}
 		}
 
 		{ // bind UDP IPv4
