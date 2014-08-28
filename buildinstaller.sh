@@ -38,9 +38,6 @@ case "$system" in
 			x86_64|amd64|x64)
 				machine="x64"
 				;;
-			*)
-				echo "Unsupported machine type: $machine"
-				exit 2
 		esac
 
 		echo "Assembling Linux installer for $machine and version $vmajor.$vminor.$revision"
