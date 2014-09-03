@@ -11,25 +11,23 @@ var INIT_DATA = {
 	 * 24-bit network ID. This will create the full 16-digit network ID of the
 	 * network you will join. This must be in the object name and in the "id"
 	 * field within the object itself. */
-	"zt1:network:ffffffffff111111:~": {
-		"id": "ffffffffff111111",     // netconf master ZT address + 24-bit ID
-		"name": "zerotier-testnet",   // short name, no spaces or special chars
-		"desc": "Test Network",       // description
-		"infrastructure": 0,          // unused by netconf-master
-		"private": 0,                 // set to '1' to require member approval
-		"creationTime": 0,            // unuxed by netconf-master
-		"owner": "",                  // unused by netconf-master
-		"etherTypes": "0800,0806",    // hex ethernet frame types allowed
-		"enableBroadcast": 1,         // set to '1' to enable ff:ff:ff:ff:ff:ff
-		"v4AssignMode": "zt",         // 'zt' to assign, 'none' to let OS do it
-		"v4AssignPool": "28.0.0.0/7", // IPv4 net block / netmask bits
-		"v6AssignMode": "none"        // 'zt' to assign, 'none' to let OS do it
+	"zt1:network:d40e9d860d111111:~": {
+		"id": "d40e9d860d111111",           // netconf master ZT address + 24-bit ID
+		"name": "zerotier-testnet",         // short name, no spaces or special chars
+		"desc": "Test Network",             // description
+		"infrastructure": 0,                // unused by netconf-master
+		"private": 0,                       // set to '1' to require member approval
+		"creationTime": 0,                  // unuxed by netconf-master
+		"owner": "",                        // unused by netconf-master
+		"etherTypes": "0800,0806",          // hex ethernet frame types allowed
+		"enableBroadcast": 1,               // set to '1' to enable ff:ff:ff:ff:ff:ff
+		"v4AssignMode": "zt",               // 'zt' to assign, 'none' to let OS do it
+		"v4AssignPool": "192.168.123.0/24", // IPv4 net block / netmask bits
+		"v6AssignMode": "none"              // 'zt' to assign, 'none' to let OS do it
 	}
 };
 
 var config = require('./config.js');
-
-config.redisDb = 2;
 
 var async = require('async');
 var redis = require('redis');
