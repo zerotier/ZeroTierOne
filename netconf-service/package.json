@@ -2,7 +2,7 @@
   "name": "zt1-netconf-service",
   "version": "0.0.0",
   "description": "Worker in charge of issuing network configuration from ZeroTier One netconf masters",
-  "main": "index.js",
+  "main": "netconf-master.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

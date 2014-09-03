@@ -10,4 +10,4 @@ if [ ! -d ./services.d/netconf-service ]; then
 fi
 
 cd services.d/netconf-service
-exec node index.js
+exec node netconf-master.js
