@@ -2,6 +2,8 @@
 
 ## What is it?
 
+It's the thing that controls virtual networks. It's a completely separate subsystem from supernodes; see the [Technical FAQ](https://github.com/zerotier/ZeroTierOne/wiki/Technical-FAQ) for more information on that.
+
 ZeroTier's 16-digit / 64-bit network IDs are actually two numbers packed together into one. The most significant 40 bits / first 10 digits of a network ID are the ZeroTier address of the *network configuration master* responsible for issuing network configurations and certificates to members of the network. The least significant 24 bits / last 6 digits are an arbitrary 24-bit number used to identify this network on its given master.
 
 When a ZeroTier node joins a network or updates its network configuration, it queries the network configuration master and receives a response containing either an error or a dictionary with that node's membership information and (if it's a private network) membership certificate.
