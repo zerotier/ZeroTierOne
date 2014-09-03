@@ -228,6 +228,7 @@ struct _NodeImpl
 	volatile bool started;
 	volatile bool running;
 	volatile bool resynchronize;
+	volatile bool disableRootTopologyUpdates;
 
 	// This function performs final node tear-down
 	inline Node::ReasonForTermination terminate()
@@ -395,6 +396,7 @@ Node::Node(
 	impl->started = false;
 	impl->running = false;
 	impl->resynchronize = false;
+	impl->disableRootTopologyUpdates = false;
 }
 
 Node::~Node()
@@ -471,6 +473,7 @@ Node::ReasonForTermination Node::run()
 		// Create non-crypto PRNG right away in case other code in init wants to use it
 		_r->prng = new CMWC4096();
 
+		// Read identity public and secret, generating if not present
 		bool gotId = false;
 		std::string identitySecretPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
 		std::string identityPublicPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.public");
@@ -511,6 +514,7 @@ Node::ReasonForTermination Node::run()
 #endif
 		}
 
+		// Read configuration authentication token, generating if not present
 		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
 		std::string configAuthToken;
 		if (!Utils::readFile(configAuthTokenPath.c_str(),configAuthToken)) {
@@ -546,18 +550,26 @@ Node::ReasonForTermination Node::run()
 		}
 #endif
 
+		// Initialize root topology from defaults or root-toplogy file in home path on disk
 		std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
 		std::string rootTopology;
 		if (!Utils::readFile(rootTopologyPath.c_str(),rootTopology))
 			rootTopology = ZT_DEFAULTS.defaultRootTopology;
 		try {
 			Dictionary rt(rootTopology);
+
 			if (Topology::authenticateRootTopology(rt)) {
-				_r->topology->setSupernodes(Dictionary(rt.get("supernodes")));
+				// Set supernodes if root topology signature is valid
+				_r->topology->setSupernodes(Dictionary(rt.get("supernodes",""))); // set supernodes from root-topology
+
+				// If root-topology contains noupdate=1, disable further updates and only use what was on disk
+				impl->disableRootTopologyUpdates = (Utils::strToInt(rt.get("noupdate","0").c_str()) > 0);
 			} else {
+				// Revert to built-in defaults if root topology fails signature check
 				LOG("%s failed signature check, using built-in defaults instead",rootTopologyPath.c_str());
 				Utils::rm(rootTopologyPath.c_str());
-				_r->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes")));
+				_r->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes","")));
+				impl->disableRootTopologyUpdates = false;
 			}
 		} catch ( ... ) {
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
@@ -761,10 +773,13 @@ Node::ReasonForTermination Node::run()
 				_r->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
 			}
 
+			// Check for updates to root topology (supernodes) periodically
 			if ((now - lastRootTopologyFetch) >= ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL) {
 				lastRootTopologyFetch = now;
-				TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
-				_r->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
+				if (!impl->disableRootTopologyUpdates) {
+					TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
+					_r->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
+				}
 			}
 
 			// Sleep for loop interval or until something interesting happens.
