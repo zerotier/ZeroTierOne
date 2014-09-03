@@ -49,7 +49,7 @@ int main( int argc, char const ** argv )
 	    else putchar(' ');
 	}
     }
-    printf("\n};\n", varname );
+    printf("\n};\n");
     printf("#define %s_LEN %llu\n",varname,(unsigned long long)size);
     //printf( "enum { %s_length = %"PRIu32"%s }; ", varname, size,"UL");
     //printf("enum { %s_length = sizeof(%s) };\n", varname, varname );
