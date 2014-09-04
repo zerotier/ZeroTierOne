@@ -224,8 +224,13 @@ bool LinuxEthernetTap::addIP(const InetAddress &ip)
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		Utils::redirectUnixOutputs("/dev/null",(const char *)0);
-		::execl("/sbin/ip","/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
-		::execl("/usr/sbin/ip","/usr/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		if (ip.isV4()) {
+			::execl("/sbin/ip","/sbin/ip","addr","add",ip.toString().c_str(),"broadcast",ip.broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
+			::execl("/usr/sbin/ip","/usr/sbin/ip","addr","add",ip.toString().c_str(),"broadcast",ip.broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		} else {
+			::execl("/sbin/ip","/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+			::execl("/usr/sbin/ip","/usr/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		}
 		::_exit(-1);
 	} else if (cpid > 0) {
 		int exitcode = -1;

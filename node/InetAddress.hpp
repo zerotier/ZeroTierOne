@@ -218,6 +218,14 @@ public:
 		throw();
 
 	/**
+	 * Constructs a broadcast address from a network/netmask address
+	 *
+	 * @return Broadcast address (only IP portion is meaningful)
+	 */
+	InetAddress broadcast() const
+		throw();
+
+	/**
 	 * @return True if this is an IPv4 address
 	 */
 	inline bool isV4() const throw() { return (_sa.saddr.sa_family == AF_INET); }

@@ -196,6 +196,28 @@ InetAddress InetAddress::netmask() const
 	return r;
 }
 
+InetAddress InetAddress::broadcast() const
+	throw()
+{
+	InetAddress r(*this);
+	switch(_sa.saddr.sa_family) {
+		case AF_INET:
+			r._sa.sin.sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffff >> netmaskBits()));
+			break;
+		case AF_INET6: {
+			unsigned char *bf = (unsigned char *)r._sa.sin6.sin6_addr.s6_addr;
+			signed int bitsLeft = (signed int)netmaskBits();
+			for(unsigned int i=0;i<16;++i) {
+				if (bitsLeft > 0) {
+					bf[i] |= (unsigned char)((bitsLeft >= 8) ? 0x00 : (0xff >> bitsLeft));
+					bitsLeft -= 8;
+				}
+			}
+		}	break;
+	}
+	return r;
+}
+
 bool InetAddress::sameNetworkAs(const InetAddress &ipnet) const
 	throw()
 {
