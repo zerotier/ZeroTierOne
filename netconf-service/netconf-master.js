@@ -527,13 +527,24 @@ function doNetconfRequest(message)
 					response.data['error'] = 'ACCESS_DENIED'; // unable to generate certificate
 				} else {
 					var netconf = new Dictionary();
+
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = network['etherTypes'];
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = nwid;
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = Date.now().toString(16);
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = peerId.address();
-					//netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS] = 0;
-					//netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH] = 0;
-					//netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = '';
+					if (network['p5MulticastPrefixBits'])
+						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS] = network['p5MulticastPrefixBits'];
+					if (network['p5MulticastDepth'])
+						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH] = network['p5MulticastDepth'];
+					if (network['multicastRates']) {
+						var ratesD = new Dictionary();
+						var ratesJ = JSON.parse(network['multicastRates']);
+						for(var k in ratesJ) {
+							if ((k)&&(ratesJ[k]))
+								ratesD.data[k] = ratesJ[k];
+						}
+						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = ratesD.toString();
+					}
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = privateNetwork ? '1' : '0';
 					if (network['name'])
 						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_NAME] = network['name'];
@@ -549,6 +560,7 @@ function doNetconfRequest(message)
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = ztDbTrue(network['allowPassiveBridging']) ? '1' : '0';
 					if ((activeBridges)&&(activeBridges.length > 0))
 						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges; // comma-delimited list
+
 					response.data['netconf'] = netconf.toString();
 				}
 

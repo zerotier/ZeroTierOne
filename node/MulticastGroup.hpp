@@ -124,13 +124,11 @@ public:
 	{
 		char hex[17];
 		unsigned int hexlen = 0;
-		while ((*s)&&(*s != '/')&&(hexlen < sizeof(hex) - 1))
+		while ((*s)&&(*s != '/')&&(hexlen < (sizeof(hex) - 1)))
 			hex[hexlen++] = *s;
 		hex[hexlen] = (char)0;
 		_mac.fromString(hex);
-		if (*s == '/')
-			_adi = (uint32_t)Utils::hexStrToULong(++s);
-		else _adi = 0;
+		_adi = (*s == '/') ? (uint32_t)Utils::hexStrToULong(s + 1) : (uint32_t)0;
 	}
 
 	/**

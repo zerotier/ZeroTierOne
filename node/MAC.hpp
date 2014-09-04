@@ -158,6 +158,8 @@ public:
 	inline void fromString(const char *s)
 	{
 		char tmp[8];
+		for(int i=0;i<6;++i)
+			tmp[i] = (char)0;
 		Utils::unhex(s,tmp,6);
 		setTo(tmp,6);
 	}
