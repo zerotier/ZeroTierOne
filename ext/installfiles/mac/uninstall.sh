@@ -30,6 +30,7 @@ fi
 
 echo "Erasing service and support files..."
 rm -f /usr/bin/zerotier-cli
+rm -f /usr/bin/zerotier-idtool
 cd "$zthome"
 rm -f zerotier-one *.persist identity.public *.log *.pid *.sh shutdownIfUnreadable
 rm -rf pre10.8 tap.kext updates.d networks.d
