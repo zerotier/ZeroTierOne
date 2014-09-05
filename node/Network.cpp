@@ -150,6 +150,10 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 	try {
 		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
 		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == _r->identity.address())) {
+			std::set<InetAddress> oldStaticIps;
+			if (_config)
+				oldStaticIps = _config->staticIps();
+
 			_config = newConfig;
 
 			_lastConfigUpdate = Utils::now();
@@ -168,8 +172,40 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 			if (t) {
 				char fname[1024];
 				_mkNetworkFriendlyName(fname,sizeof(fname));
-				t->setIps(newConfig->staticIps());
 				t->setFriendlyName(fname);
+
+				// Remove previously configured static IPs that are gone
+				for(std::set<InetAddress>::const_iterator oldip(oldStaticIps.begin());oldip!=oldStaticIps.end();++oldip) {
+					if (!_config->staticIps().count(*oldip))
+						t->removeIP(*oldip);
+				}
+
+				// Add new static IPs that were not in previous config
+				for(std::set<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip) {
+					if (!oldStaticIps.count(*newip))
+						t->addIP(*newip);
+				}
+
+#ifdef __APPLE__
+				// Make sure there's an IPv6 link-local address on Macs if IPv6 is enabled
+				// Other OSes don't need this -- Mac seems not to want to auto-assign
+				// This might go away once we integrate properly w/Mac network setup stuff.
+				if (_config->permitsEtherType(ZT_ETHERTYPE_IPV6)) {
+					bool haveV6LinkLocal = false;
+					std::set<InetAddress> ips(t->ips());
+					for(std::set<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+						if ((i->isV6())&&(i->isLinkLocal())) {
+							haveV6LinkLocal = true;
+							break;
+						}
+					}
+					if (!haveV6LinkLocal)
+						t->addIP(InetAddress::makeIpv6LinkLocal(_mac));
+				}
+#endif // __APPLE__
+
+				// ... IPs that were never controlled by static assignment are left
+				// alone, as these may be DHCP or user-configured.
 			} else {
 				if (!_setupThread)
 					_setupThread = Thread::start<Network>(this);
@@ -371,8 +407,10 @@ void Network::threadMain()
 			_r->tapFactory->close(_tap,false);
 		_tap = t;
 		if (t) {
-			if (_config)
-				t->setIps(_config->staticIps());
+			if (_config) {
+				for(std::set<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip)
+					t->addIP(*newip);
+			}
 			t->setEnabled(_enabled);
 		}
 	}
