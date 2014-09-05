@@ -207,29 +207,6 @@ public:
 			f(*this,*p);
 	}
 
-#ifdef ZT_FIREWALL_OPENER_DELAY
-	/**
-	 * Function object to collect peers that need a firewall opener sent
-	 */
-	class OpenPeersThatNeedFirewallOpener
-	{
-	public:
-		OpenPeersThatNeedFirewallOpener(const RuntimeEnvironment *renv,uint64_t now) throw() :
-			_now(now),
-			_r(renv) {}
-
-		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-		{
-			if ((p->hasDirectPath())&&((_now - std::max(p->lastFirewallOpener(),p->lastDirectSend())) >= ZT_FIREWALL_OPENER_DELAY))
-				p->sendFirewallOpener(_r,_now);
-		}
-
-	private:
-		uint64_t _now;
-		const RuntimeEnvironment *_r;
-	};
-#endif
-
 	/**
 	 * Pings all peers that need a ping sent, excluding supernodes
 	 *

@@ -104,16 +104,6 @@ public:
 	inline bool sendUdp(const InetAddress &to,const void *msg,unsigned int msglen) { return send(to,false,false,msg,msglen); }
 
 	/**
-	 * Send a UDP packet with a limited IP TTL
-	 *
-	 * @param to Destination address
-	 * @param hopLimit IP TTL
-	 */
-#ifdef ZT_FIREWALL_OPENER_DELAY
-	bool sendFirewallOpener(const InetAddress &to,int hopLimit);
-#endif
-
-	/**
 	 * Perform I/O polling operation (e.g. select())
 	 *
 	 * If called concurrently, one will block until the other completes.

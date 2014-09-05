@@ -50,7 +50,7 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_SERIALIZATION_VERSION 10
+#define ZT_PEER_SERIALIZATION_VERSION 11
 
 namespace ZeroTier {
 
@@ -142,17 +142,6 @@ public:
 	 */
 	Path::Type send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
 
-#ifdef ZT_FIREWALL_OPENER_DELAY
-	/**
-	 * Send firewall opener to all UDP paths
-	 * 
-	 * @param _r Runtime environment
-	 * @param now Current time
-	 * @return True if send appears successful for at least one address type
-	 */
-	bool sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now);
-#endif
-
 	/**
 	 * Send HELLO to a peer via all direct paths available
 	 *
@@ -191,19 +180,6 @@ public:
 				return true;
 		}
 		return false;
-	}
-
-	/**
-	 * @return Last successfully sent firewall opener for any path
-	 */
-	inline uint64_t lastFirewallOpener() const
-		throw()
-	{
-		uint64_t x = 0;
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
-			x = std::max(x,p->lastFirewallOpener());
-		return x;
 	}
 
 	/**

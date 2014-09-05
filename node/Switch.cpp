@@ -461,13 +461,14 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
-#ifdef ZT_FIREWALL_OPENER_HOPS
-	_r->sm->sendFirewallOpener(atAddr,ZT_FIREWALL_OPENER_HOPS);
-#endif
+	// Send simple packet directly to indicated address -- works for most NATs
+	sendHELLO(peer,atAddr);
+	TRACE("sending NAT-t HELLO to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 
+	// If we have not punched through after this timeout, open refreshing can of whupass
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_RENDEZVOUS_NAT_T_DELAY,atAddr));
+		_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
 	}
 
 	// Kick main loop out of wait so that it can pick up this
@@ -484,8 +485,23 @@ unsigned long Switch::doTimerTasks()
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				TRACE("sending NAT-T HELLO to %s(%s)",qi->peer->address().toString().c_str(),qi->inaddr.toString().c_str());
-				sendHELLO(qi->peer,qi->inaddr);
+				if (!qi->peer->hasActiveDirectPath(now)) {
+					TRACE("deploying aggressive NAT-t against %s(%s)",qi->peer->address().toString().c_str(),qi->inaddr.toString().c_str());
+
+					/* Shotgun approach -- literally -- against symmetric NATs. Most of these
+					 * either increment or decrement ports so this gets a good number. Also try
+					 * the original port one more time for good measure, since sometimes it
+					 * fails first time around. */
+					int p = (int)qi->inaddr.port() - 2;
+					for(int k=0;k<5;++k) {
+						if ((p > 0)&&(p <= 0xffff)) {
+							qi->inaddr.setPort((unsigned int)p);
+							sendHELLO(qi->peer,qi->inaddr);
+						}
+						++p;
+					}
+				}
+
 				_contactQueue.erase(qi++);
 			} else {
 				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));

@@ -39,7 +39,7 @@
 #include "Utils.hpp"
 #include "Buffer.hpp"
 
-#define ZT_PATH_SERIALIZATION_VERSION 2
+#define ZT_PATH_SERIALIZATION_VERSION 3
 
 namespace ZeroTier {
 
@@ -60,7 +60,6 @@ public:
 	Path() :
 		_lastSend(0),
 		_lastReceived(0),
-		_lastFirewallOpener(0),
 		_lastPing(0),
 		_addr(),
 		_type(PATH_TYPE_NULL),
@@ -75,7 +74,6 @@ public:
 	Path(const InetAddress &addr,Type t,bool fixed = false) :
 		_lastSend(0),
 		_lastReceived(0),
-		_lastFirewallOpener(0),
 		_lastPing(0),
 		_addr(addr),
 		_type(t),
@@ -95,7 +93,6 @@ public:
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
-	inline uint64_t lastFirewallOpener() const throw() { return _lastFirewallOpener; }
 	inline uint64_t lastPing() const throw() { return _lastPing; }
 
 	inline bool fixed() const throw() { return _fixed; }
@@ -103,7 +100,6 @@ public:
 
 	inline void sent(uint64_t t) throw() { _lastSend = t; }
 	inline void received(uint64_t t) throw() { _lastReceived = t; }
-	inline void firewallOpenerSent(uint64_t t) throw() { _lastFirewallOpener = t; }
 	inline void pinged(uint64_t t) throw() { _lastPing = t; }
 
 	/**
@@ -130,12 +126,11 @@ public:
 			case PATH_TYPE_TCP_OUT: t = "tcp_out"; break;
 			case PATH_TYPE_TCP_IN: t = "tcp_in"; break;
 		}
-		Utils::snprintf(tmp,sizeof(tmp),"%s;%s;%lld;%lld;%lld;%lld;%s",
+		Utils::snprintf(tmp,sizeof(tmp),"%s;%s;%lld;%lld;%lld;%s",
 			t,
 			_addr.toString().c_str(),
 			(long long)((_lastSend != 0) ? ((now - _lastSend) / 1000LL) : -1),
 			(long long)((_lastReceived != 0) ? ((now - _lastReceived) / 1000LL) : -1),
-			(long long)((_lastFirewallOpener != 0) ? ((now - _lastFirewallOpener) / 1000LL) : -1),
 			(long long)((_lastPing != 0) ? ((now - _lastPing) / 1000LL) : -1),
 			((_fixed) ? "fixed" : (active(now) ? "active" : "inactive"))
 		);
@@ -161,7 +156,6 @@ public:
 		b.append((unsigned char)ZT_PATH_SERIALIZATION_VERSION);
 		b.append(_lastSend);
 		b.append(_lastReceived);
-		b.append(_lastFirewallOpener);
 		b.append(_lastPing);
 		b.append((unsigned char)_addr.type());
 		switch(_addr.type()) {
@@ -189,7 +183,6 @@ public:
 
 		_lastSend = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastReceived = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastFirewallOpener = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastPing = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		switch((InetAddress::AddressType)b[p++]) {
 			case InetAddress::TYPE_IPV4:
@@ -213,7 +206,6 @@ public:
 private:
 	volatile uint64_t _lastSend;
 	volatile uint64_t _lastReceived;
-	volatile uint64_t _lastFirewallOpener;
 	volatile uint64_t _lastPing;
 	InetAddress _addr;
 	Type _type;

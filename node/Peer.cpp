@@ -181,23 +181,6 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 	return Path::PATH_TYPE_NULL;
 }
 
-#ifdef ZT_FIREWALL_OPENER_DELAY
-bool Peer::sendFirewallOpener(const RuntimeEnvironment *_r,uint64_t now)
-{
-	bool sent = false;
-	Mutex::Lock _l(_lock);
-
-	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if (p->type() == Path::PATH_TYPE_UDP) {
-			for(unsigned int h=1;h<=ZT_FIREWALL_OPENER_HOPS;++h)
-				sent |= _r->sm->sendFirewallOpener(p->address(),h);
-		}
-	}
-
-	return sent;
-}
-#endif
-
 bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 {
 	bool sent = false;

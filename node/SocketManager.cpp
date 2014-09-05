@@ -452,20 +452,6 @@ bool SocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTcp,cons
 	return false;
 }
 
-#ifdef ZT_FIREWALL_OPENER_DELAY
-bool SocketManager::sendFirewallOpener(const InetAddress &to,int hopLimit)
-{
-	if (to.isV4()) {
-		if (_udpV4Socket)
-			return ((UdpSocket *)_udpV4Socket.ptr())->sendWithHopLimit(to,"",1,hopLimit);
-	} else if (to.isV6()) {
-		if (_udpV6Socket)
-			return ((UdpSocket *)_udpV6Socket.ptr())->sendWithHopLimit(to,"",1,hopLimit);
-	}
-	return false;
-}
-#endif
-
 void SocketManager::poll(unsigned long timeout)
 {
 	fd_set rfds,wfds,efds;

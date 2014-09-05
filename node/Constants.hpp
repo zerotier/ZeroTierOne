@@ -275,27 +275,6 @@
 #define ZT_PEER_DIRECT_PING_DELAY 120000
 
 /**
- * Delay in ms between firewall opener packets to direct links
- *
- * This should be lower than the UDP conversation entry timeout in most
- * stateful firewalls.
- *
- * Uncomment to disable firewall openers.
- */
-//#define ZT_FIREWALL_OPENER_DELAY 30000
-
-/**
- * Number of hops to open via firewall opener packets
- *
- * The firewall opener code iterates from 1 to this value (inclusive), sending
- * a tiny packet with each TTL value.
- *
- * 2 should permit traversal of double-NAT configurations, such as from inside
- * a VM running behind local NAT on a host that is itself behind NAT.
- */
-//#define ZT_FIREWALL_OPENER_HOPS 2
-
-/**
  * Delay between requests for updated network autoconf information
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
@@ -371,12 +350,9 @@
 #define ZT_MIN_UNITE_INTERVAL 30000
 
 /**
- * Delay in milliseconds between firewall opener and real packet for NAT-t
- *
- * If firewall openers are disbled, it just waits this long before sending
- * NAT-t packets.
+ * Delay between initial direct NAT-t packet and more aggressive techniques
  */
-#define ZT_RENDEZVOUS_NAT_T_DELAY 500
+#define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 2000
 
 /**
  * Size of anti-recursion history (see AntiRecursion.hpp)
