@@ -41,6 +41,13 @@
 // Also makes sure __BYTE_ORDER is defined reasonably.
 //
 
+// Hack: make sure __GCC__ is defined on old GCC compilers
+#ifndef __GCC__
+#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2) || defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
+#define __GCC__
+#endif
+#endif
+
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #ifndef __LINUX__
 #define __LINUX__
