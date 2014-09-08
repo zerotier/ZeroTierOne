@@ -213,9 +213,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)data.size());
 			outp.append(data);
 
-			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
-			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,(unsigned int)sig.size());
+			if (network->authenticateMulticasts()) {
+				C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
+				outp.append((uint16_t)sig.size());
+				outp.append(sig.data,(unsigned int)sig.size());
+			} else {
+				outp.append((uint16_t)0);
+			}
 
 			// FIXME: now we send the netconf cert with every single multicast,
 			// which pretty much ensures everyone has it ahead of time but adds

@@ -358,6 +358,14 @@ public:
 	}
 
 	/**
+	 * @return True if multicasts must be authenticated on this network
+	 */
+	inline bool authenticateMulticasts() const
+	{
+		return false;
+	}
+
+	/**
 	 * Shortcut for config()->permitsBridging(), returns false if no config
 	 *
 	 * @param peer Peer address to check
