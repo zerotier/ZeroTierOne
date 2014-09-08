@@ -610,13 +610,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			}
 		}
 
-		// Check the multicast frame's signature to verify that its original sender is
-		// who it claims to be.
-		if ((!network)||(network->authenticateMulticasts())) {
-			// Note that right now we authenticate multicasts if we aren't a member of a
-			// network... have to think about whether this is mandatory. It mostly only
-			// matters for supernodes though, since ordinary peers are unlikely ever to
-			// see multicasts for networks they don't belong to.
+		// Authenticate multicasts for networks that require this -- note that the only
+		// nodes that will ever see multicasts for networks they don't belong to are
+		// supernodes, and in this case not authenticating is not a big deal. When nodes
+		// that are members see packets with failed authentication they will drop them
+		// and they will no longer propagate.
+		if ((network)&&(network->authenticateMulticasts())) {
 			const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + frameLen;
 			if (!originPeer->identity().verify(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen,signature,signatureLen)) {
 				LOG("dropped MULTICAST_FRAME from %s(%s): failed signature verification, claims to be from %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
