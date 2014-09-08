@@ -38,6 +38,9 @@ case "$system" in
 			x86_64|amd64|x64)
 				machine="x64"
 				;;
+			armv6l)
+				machine="arm"
+				;;
 			*)
 				echo "Unsupported machine type: $machine"
 				exit 2
