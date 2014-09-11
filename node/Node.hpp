@@ -198,11 +198,7 @@ public:
 		throw();
 
 	/**
-	 * Cause run() to return
-	 *
-	 * This can be called from a signal handler or another thread to signal a
-	 * running node to shut down. Shutdown may take a few seconds, so run()
-	 * may not return instantly. Multiple calls are ignored.
+	 * Terminate this node, causing run() to return
 	 *
 	 * @param reason Reason for termination
 	 * @param reasonText Text to be returned by reasonForTermination()
@@ -214,6 +210,40 @@ public:
 	 * Forget p2p links now and resynchronize with peers
 	 */
 	void resync()
+		throw();
+
+	/**
+	 * Join a network
+	 *
+	 * @param nwid 16-digit hex network ID
+	 */
+	bool join(const char *nwid)
+		throw();
+
+	/**
+	 * Leave a network
+	 *
+	 * @param nwid 16-digit hex network ID
+	 */
+	bool leave(const char *nwid)
+		throw();
+
+	void listPeers()
+		throw();
+
+	void listNetworks()
+		throw();
+
+	/**
+	 * Check for software updates (if enabled)
+	 */
+	bool updateCheck()
+		throw();
+
+	/**
+	 * @return Description of last non-fatal error or empty string if none
+	 */
+	const char *getLastError()
 		throw();
 
 	static const char *versionString() throw();
