@@ -1,5 +1,8 @@
 OBJS=\
 	ext/lz4/lz4.o \
+	ipc/IpcConnection.o \
+	ipc/IpcListener.o \
+	ipc/NodeControlClient.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Defaults.o \
@@ -7,8 +10,6 @@ OBJS=\
 	node/HttpClient.o \
 	node/Identity.o \
 	node/InetAddress.o \
-	node/IpcConnection.o \
-	node/IpcListener.o \
 	node/Logger.o \
 	node/Multicaster.o \
 	node/Network.o \

@@ -194,6 +194,15 @@ public:
 	};
 
 	/**
+	 * @param buf Buffer to fill
+	 * @param len Length of buffer
+	 */
+	inline void toString(char *buf,unsigned int len) const
+	{
+		Utils::snprintf(buf,len,"%.10llx",(unsigned long long)_a);
+	}
+
+	/**
 	 * @return True if this address is not zero
 	 */
 	inline operator bool() const throw() { return (_a != 0); }

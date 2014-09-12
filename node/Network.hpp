@@ -110,13 +110,13 @@ public:
 	 */
 	enum Status
 	{
-		NETWORK_INITIALIZING,               // Creating tap device and setting up state
-		NETWORK_WAITING_FOR_FIRST_AUTOCONF, // Waiting for initial setup with netconf master
-		NETWORK_OK,                         // Network is up, seems to be working
-		NETWORK_ACCESS_DENIED,              // Netconf node reported permission denied
-		NETWORK_NOT_FOUND,                  // Netconf node reported network not found
-		NETWORK_INITIALIZATION_FAILED,      // Cannot initialize device (OS/installation problem?)
-		NETWORK_NO_MORE_DEVICES             // OS cannot create any more tap devices (some OSes have a limit)
+		NETWORK_INITIALIZING = 0,               // Creating tap device and setting up state
+		NETWORK_WAITING_FOR_FIRST_AUTOCONF = 1, // Waiting for initial setup with netconf master
+		NETWORK_OK = 2,                         // Network is up, seems to be working
+		NETWORK_ACCESS_DENIED = 3,              // Netconf node reported permission denied
+		NETWORK_NOT_FOUND = 4,                  // Netconf node reported network not found
+		NETWORK_INITIALIZATION_FAILED = 5,      // Cannot initialize device (OS/installation problem?)
+		NETWORK_NO_MORE_DEVICES = 6             // OS cannot create any more tap devices (some OSes have a limit)
 	};
 
 	/**

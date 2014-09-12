@@ -74,147 +74,11 @@
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
 #include "Buffer.hpp"
-#include "IpcConnection.hpp"
 #include "AntiRecursion.hpp"
 #include "RoutingTable.hpp"
 #include "HttpClient.hpp"
 
 namespace ZeroTier {
-
-// ---------------------------------------------------------------------------
-
-struct _NodeControlClientImpl
-{
-	void (*resultHandler)(void *,const char *);
-	void *arg;
-	IpcConnection *ipcc;
-	std::string err;
-};
-
-static void _CBipcResultHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *result)
-{
-	if ((event == IpcConnection::IPC_EVENT_COMMAND)&&(result)) {
-		if (strcmp(result,"200 auth OK"))
-			((_NodeControlClientImpl *)arg)->resultHandler(((_NodeControlClientImpl *)arg)->arg,result);
-	}
-}
-
-Node::NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken)
-	throw() :
-	_impl((void *)new _NodeControlClientImpl)
-{
-	_NodeControlClientImpl *impl = (_NodeControlClientImpl *)_impl;
-	impl->ipcc = (IpcConnection *)0;
-
-	if (!hp)
-		hp = ZT_DEFAULTS.defaultHomePath.c_str();
-
-	std::string at;
-	if (authToken)
-		at = authToken;
-	else if (!Utils::readFile(authTokenDefaultSystemPath(),at)) {
-		if (!Utils::readFile(authTokenDefaultUserPath(),at)) {
-			impl->err = "no authentication token specified and authtoken.secret not readable";
-			return;
-		}
-	}
-
-	std::string myid;
-	if (Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),myid)) {
-		std::string myaddr(myid.substr(0,myid.find(':')));
-		if (myaddr.length() != 10)
-			impl->err = "invalid address extracted from identity.public";
-		else {
-			try {
-				impl->resultHandler = resultHandler;
-				impl->arg = arg;
-				impl->ipcc = new IpcConnection((std::string(ZT_IPC_ENDPOINT_BASE) + myaddr).c_str(),&_CBipcResultHandler,_impl);
-				impl->ipcc->printf("auth %s"ZT_EOL_S,at.c_str());
-			} catch ( ... ) {
-				impl->ipcc = (IpcConnection *)0;
-				impl->err = "failure connecting to running ZeroTier One service";
-			}
-		}
-	} else impl->err = "unable to read identity.public";
-}
-
-Node::NodeControlClient::~NodeControlClient()
-{
-	if (_impl) {
-		delete ((_NodeControlClientImpl *)_impl)->ipcc;
-		delete (_NodeControlClientImpl *)_impl;
-	}
-}
-
-const char *Node::NodeControlClient::error() const
-	throw()
-{
-	if (((_NodeControlClientImpl *)_impl)->err.length())
-		return ((_NodeControlClientImpl *)_impl)->err.c_str();
-	return (const char *)0;
-}
-
-void Node::NodeControlClient::send(const char *command)
-	throw()
-{
-	try {
-		if (((_NodeControlClientImpl *)_impl)->ipcc)
-			((_NodeControlClientImpl *)_impl)->ipcc->printf("%s"ZT_EOL_S,command);
-	} catch ( ... ) {}
-}
-
-std::vector<std::string> Node::NodeControlClient::splitLine(const char *line)
-{
-	return Utils::split(line," ","\\","\"");
-}
-
-const char *Node::NodeControlClient::authTokenDefaultUserPath()
-{
-	static std::string dlp;
-	static Mutex dlp_m;
-
-	Mutex::Lock _l(dlp_m);
-
-#ifdef __WINDOWS__
-
-	if (!dlp.length()) {
-		char buf[16384];
-		if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_APPDATA,NULL,0,buf)))
-			dlp = (std::string(buf) + "\\ZeroTier\\One\\authtoken.secret");
-	}
-
-#else // not __WINDOWS__
-
-	if (!dlp.length()) {
-		const char *home = getenv("HOME");
-		if (home) {
-#ifdef __APPLE__
-			dlp = (std::string(home) + "/Library/Application Support/ZeroTier/One/authtoken.secret");
-#else
-			dlp = (std::string(home) + "/.zeroTierOneAuthToken");
-#endif
-		}
-	}
-
-#endif // __WINDOWS__ or not __WINDOWS__
-
-	return dlp.c_str();
-}
-
-const char *Node::NodeControlClient::authTokenDefaultSystemPath()
-{
-	static std::string dsp;
-	static Mutex dsp_m;
-
-	Mutex::Lock _l(dsp_m);
-
-	if (!dsp.length())
-		dsp = (ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S"authtoken.secret");
-
-	return dsp.c_str();
-}
-
-// ---------------------------------------------------------------------------
 
 struct _NodeImpl
 {
@@ -541,6 +405,7 @@ Node::ReasonForTermination Node::run()
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unable to initialize IPC socket: is ZeroTier One already running?");
 		}
 		_r->node = this;
+
 #ifdef ZT_AUTO_UPDATE
 		if (ZT_DEFAULTS.updateLatestNfoURL.length()) {
 			_r->updater = new SoftwareUpdater(_r);
@@ -799,7 +664,7 @@ Node::ReasonForTermination Node::run()
 	return impl->terminate();
 }
 
-const char *Node::reasonForTermination() const
+const char *Node::terminationMessage() const
 	throw()
 {
 	if ((!((_NodeImpl *)_impl)->started)||(((_NodeImpl *)_impl)->running))
@@ -820,6 +685,291 @@ void Node::resync()
 {
 	((_NodeImpl *)_impl)->resynchronize = true;
 	((_NodeImpl *)_impl)->renv.sm->whack();
+}
+
+bool Node::online()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	if (!impl->running)
+		return false;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	uint64_t now = Utils::now();
+	uint64_t since = _r->timeOfLastResynchronize;
+	std::vector< SharedPtr<Peer> > snp(_r->topology->supernodePeers());
+	for(std::vector< SharedPtr<Peer> >::const_iterator sn(snp.begin());sn!=snp.end();++sn) {
+		uint64_t lastRec = (*sn)->lastDirectReceive();
+		if ((lastRec)&&(lastRec > since)&&((now - lastRec) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
+			return true;
+	}
+	return false;
+}
+
+void Node::join(uint64_t nwid)
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	_r->nc->join(nwid);
+}
+
+void Node::leave(uint64_t nwid)
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	_r->nc->leave(nwid);
+}
+
+struct GatherPeerStatistics
+{
+	uint64_t now;
+	ZT1_Node_Status *status;
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	{
+		++status->knownPeers;
+		if (p->hasActiveDirectPath(now))
+			++status->directlyConnectedPeers;
+		if (p->alive(now))
+			++status->alivePeers;
+	}
+};
+void Node::status(ZT1_Node_Status *status)
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+
+	memset(status,0,sizeof(ZT1_Node_Status));
+
+	Utils::scopy(status->publicIdentity,sizeof(status->publicIdentity),_r->identity.toString(false).c_str());
+	_r->identity.address().toString(status->address,sizeof(status->address));
+	status->rawAddress = _r->identity.address().toInt();
+
+	status->knownPeers = 0;
+	status->supernodes = _r->topology->numSupernodes();
+	status->directlyConnectedPeers = 0;
+	status->alivePeers = 0;
+	GatherPeerStatistics gps;
+	gps.now = Utils::now();
+	gps.status = status;
+	_r->topology->eachPeer(gps);
+
+	if (status->alivePeers > 0) {
+		double dlsr = (double)status->directlyConnectedPeers / (double)status->alivePeers;
+		if (dlsr > 1.0) dlsr = 1.0;
+		if (dlsr < 0.0) dlsr = 0.0;
+		status->directLinkSuccessRate = (float)dlsr;
+	} else status->directLinkSuccessRate = 1.0f; // no connections to no active peers == 100% success at nothing
+
+	status->online = online();
+	status->running = impl->running;
+}
+
+struct CollectPeersAndPaths
+{
+	std::vector< std::pair< SharedPtr<Peer>,std::vector<Path> > > data;
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { data.push_back(std::pair< SharedPtr<Peer>,std::vector<Path> >(p,p->paths())); }
+};
+struct SortPeersAndPathsInAscendingAddressOrder
+{
+	inline bool operator()(const std::pair< SharedPtr<Peer>,std::vector<Path> > &a,const std::pair< SharedPtr<Peer>,std::vector<Path> > &b) const { return (a.first->address() < b.first->address()); }
+};
+ZT1_Node_PeerList *Node::listPeers()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+
+	CollectPeersAndPaths pp;
+	_r->topology->eachPeer(pp);
+	std::sort(pp.data.begin(),pp.data.end(),SortPeersAndPathsInAscendingAddressOrder());
+
+	unsigned int returnBufSize = sizeof(ZT1_Node_PeerList);
+	for(std::vector< std::pair< SharedPtr<Peer>,std::vector<Path> > >::iterator p(pp.data.begin());p!=pp.data.end();++p)
+		returnBufSize += sizeof(ZT1_Node_Peer) + (sizeof(ZT1_Node_PhysicalPath) * p->second.size());
+
+	char *buf = (char *)::malloc(returnBufSize);
+	if (!buf)
+		return (ZT1_Node_PeerList *)0;
+	memset(buf,0,returnBufSize);
+
+	ZT1_Node_PeerList *pl = (ZT1_Node_PeerList *)buf;
+	buf += sizeof(ZT1_Node_PeerList);
+
+	pl->peers = (ZT1_Node_Peer *)buf;
+	buf += (sizeof(ZT1_Node_Peer) * pp.data.size());
+	pl->numPeers = 0;
+
+	uint64_t now = Utils::now();
+	for(std::vector< std::pair< SharedPtr<Peer>,std::vector<Path> > >::iterator p(pp.data.begin());p!=pp.data.end();++p) {
+		ZT1_Node_Peer *prec = &(pl->peers[pl->numPeers++]);
+		if (p->first->remoteVersionKnown())
+			Utils::snprintf(prec->remoteVersion,sizeof(prec->remoteVersion),"%u.%u.%u",p->first->remoteVersionMajor(),p->first->remoteVersionMinor(),p->first->remoteVersionRevision());
+		p->first->address().toString(prec->address,sizeof(prec->address));
+		prec->rawAddress = p->first->address().toInt();
+		prec->latency = p->first->latency();
+
+		prec->paths = (ZT1_Node_PhysicalPath *)buf;
+		buf += sizeof(ZT1_Node_PhysicalPath) * p->second.size();
+
+		prec->numPaths = 0;
+		for(std::vector<Path>::iterator pi(p->second.begin());pi!=p->second.end();++pi) {
+			ZT1_Node_PhysicalPath *path = &(prec->paths[prec->numPaths++]);
+			path->type = static_cast<typeof(path->type)>(pi->type());
+			if (pi->address().isV6()) {
+				path->address.type = ZT1_Node_PhysicalAddress::ZT1_Node_PhysicalAddress_TYPE_IPV6;
+				memcpy(path->address.bits,pi->address().rawIpData(),16);
+				// TODO: zoneIndex not supported yet, but should be once echo-location works w/V6
+			} else {
+				path->address.type = ZT1_Node_PhysicalAddress::ZT1_Node_PhysicalAddress_TYPE_IPV4;
+				memcpy(path->address.bits,pi->address().rawIpData(),4);
+			}
+			path->address.port = pi->address().port();
+			Utils::scopy(path->address.ascii,sizeof(path->address.ascii),pi->address().toIpString().c_str());
+			path->lastSend = (pi->lastSend() > 0) ? ((long)(now - pi->lastSend())) : (long)-1;
+			path->lastReceive = (pi->lastReceived() > 0) ? ((long)(now - pi->lastReceived())) : (long)-1;
+			path->lastPing = (pi->lastPing() > 0) ? ((long)(now - pi->lastPing())) : (long)-1;
+			path->active = pi->active(now);
+			path->fixed = pi->fixed();
+		}
+	}
+
+	return pl;
+}
+
+// Fills out everything but ips[] and numIps, which must be done more manually
+static void _fillNetworkQueryResultBuffer(const SharedPtr<Network> &network,const SharedPtr<NetworkConfig> &nconf,ZT1_Node_Network *nbuf)
+{
+	nbuf->nwid = network->id();
+	Utils::snprintf(nbuf->nwidHex,sizeof(nbuf->nwidHex),"%.16llx",(unsigned long long)network->id());
+	if (nconf) {
+		Utils::scopy(nbuf->name,sizeof(nbuf->name),nconf->name().c_str());
+		Utils::scopy(nbuf->description,sizeof(nbuf->description),nconf->description().c_str());
+	}
+	Utils::scopy(nbuf->device,sizeof(nbuf->device),network->tapDeviceName().c_str());
+	Utils::scopy(nbuf->statusStr,sizeof(nbuf->statusStr),Network::statusString(network->status()));
+	network->mac().toString(nbuf->macStr,sizeof(nbuf->macStr));
+	network->mac().copyTo(nbuf->mac,sizeof(nbuf->mac));
+	uint64_t lcu = network->lastConfigUpdate();
+	if (lcu > 0)
+		nbuf->configAge = (long)(Utils::now() - lcu);
+	else nbuf->configAge = -1;
+	nbuf->status = static_cast<typeof(nbuf->status)>(network->status());
+	nbuf->enabled = network->enabled();
+	nbuf->isPrivate = (nconf) ? nconf->isPrivate() : true;
+}
+
+ZT1_Node_Network *Node::getNetworkStatus(uint64_t nwid)
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+
+	SharedPtr<Network> network(_r->nc->network(nwid));
+	if (!network)
+		return (ZT1_Node_Network *)0;
+	SharedPtr<NetworkConfig> nconf(network->config2());
+	std::set<InetAddress> ips(network->ips());
+
+	char *buf = (char *)::malloc(sizeof(ZT1_Node_Network) + (sizeof(ZT1_Node_PhysicalAddress) * ips.size()));
+	if (!buf)
+		return (ZT1_Node_Network *)0;
+	memset(buf,0,sizeof(ZT1_Node_Network) + (sizeof(ZT1_Node_PhysicalAddress) * ips.size()));
+
+	ZT1_Node_Network *nbuf = (ZT1_Node_Network *)buf;
+	buf += sizeof(ZT1_Node_Network);
+
+	_fillNetworkQueryResultBuffer(network,nconf,nbuf);
+
+	nbuf->ips = (ZT1_Node_PhysicalAddress *)buf;
+	nbuf->numIps = 0;
+	for(std::set<InetAddress>::iterator ip(ips.begin());ip!=ips.end();++ip) {
+		ZT1_Node_PhysicalAddress *ipb = &(nbuf->ips[nbuf->numIps++]);
+		if (ip->isV6()) {
+			ipb->type = ZT1_Node_PhysicalAddress::ZT1_Node_PhysicalAddress_TYPE_IPV6;
+			memcpy(ipb->bits,ip->rawIpData(),16);
+		} else {
+			ipb->type = ZT1_Node_PhysicalAddress::ZT1_Node_PhysicalAddress_TYPE_IPV4;
+			memcpy(ipb->bits,ip->rawIpData(),4);
+		}
+		ipb->port = ip->port();
+		Utils::scopy(ipb->ascii,sizeof(ipb->ascii),ip->toIpString().c_str());
+	}
+
+	return nbuf;
+}
+
+ZT1_Node_NetworkList *Node::listNetworks()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+
+	std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+	std::vector< SharedPtr<NetworkConfig> > nconfs(networks.size());
+	std::vector< std::set<InetAddress> > ipsv(networks.size());
+
+	unsigned long returnBufSize = sizeof(ZT1_Node_NetworkList);
+	for(unsigned long i=0;i<networks.size();++i) {
+		nconfs[i] = networks[i]->config2();
+		ipsv[i] = networks[i]->ips();
+		returnBufSize += sizeof(ZT1_Node_Network) + (sizeof(ZT1_Node_PhysicalAddress) * ipsv[i].size());
+	}
+
+	char *buf = (char *)::malloc(returnBufSize);
+	if (!buf)
+		return (ZT1_Node_NetworkList *)0;
+	memset(buf,0,returnBufSize);
+
+	ZT1_Node_NetworkList *nl = (ZT1_Node_NetworkList *)buf;
+	buf += sizeof(ZT1_Node_NetworkList);
+
+	nl->networks = (ZT1_Node_Network *)buf;
+	buf += sizeof(ZT1_Node_Network) * networks.size();
+
+	for(unsigned long i=0;i<networks.size();++i) {
+		ZT1_Node_Network *nbuf = &(nl->networks[nl->numNetworks++]);
+
+		_fillNetworkQueryResultBuffer(networks[i],nconfs[i],nbuf);
+
+		nbuf->ips = (ZT1_Node_PhysicalAddress *)buf;
+		buf += sizeof(ZT1_Node_PhysicalAddress);
+
+		nbuf->numIps = 0;
+		for(std::set<InetAddress>::iterator ip(ipsv[i].begin());ip!=ipsv[i].end();++ip) {
+			ZT1_Node_PhysicalAddress *ipb = &(nbuf->ips[nbuf->numIps++]);
+			if (ip->isV6()) {
+				ipb->type = ZT1_Node_PhysicalAddress::ZT1_Node_PhysicalAddress_TYPE_IPV6;
+				memcpy(ipb->bits,ip->rawIpData(),16);
+			} else {
+				ipb->type = ZT1_Node_PhysicalAddress::ZT1_Node_PhysicalAddress_TYPE_IPV4;
+				memcpy(ipb->bits,ip->rawIpData(),4);
+			}
+			ipb->port = ip->port();
+			Utils::scopy(ipb->ascii,sizeof(ipb->ascii),ip->toIpString().c_str());
+		}
+	}
+
+	return nl;
+}
+
+void Node::freeQueryResult(void *qr)
+	throw()
+{
+	::free(qr);
+}
+
+bool Node::updateCheck()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	if (_r->updater) {
+		_r->updater->checkNow();
+		return true;
+	}
+	return false;
 }
 
 class _VersionStringMaker

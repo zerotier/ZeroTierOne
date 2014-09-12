@@ -126,6 +126,15 @@ public:
 	}
 
 	/**
+	 * @return Number of supernodes
+	 */
+	inline unsigned int numSupernodes() const
+	{
+		Mutex::Lock _l(_supernodes_m);
+		return _supernodePeers.size();
+	}
+
+	/**
 	 * Get the current favorite supernode
 	 * 
 	 * @return Supernode with lowest latency or NULL if none

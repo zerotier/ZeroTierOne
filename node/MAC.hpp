@@ -170,14 +170,17 @@ public:
 	inline std::string toString() const
 	{
 		char tmp[24];
-		std::string s;
-		Utils::snprintf(tmp,sizeof(tmp),"%.12llx",_m);
-		for(int i=0;i<12;++i) {
-			if ((i > 0)&&((i % 2) == 0))
-				s.push_back(':');
-			s.push_back(tmp[i]);
-		}
-		return s;
+		toString(tmp,sizeof(tmp));
+		return std::string(tmp);
+	}
+
+	/**
+	 * @param buf Buffer to contain human-readable MAC
+	 * @param len Length of buffer
+	 */
+	inline void toString(char *buf,unsigned int len) const
+	{
+		Utils::snprintf(buf,len,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)(*this)[0],(int)(*this)[1],(int)(*this)[2],(int)(*this)[3],(int)(*this)[4],(int)(*this)[5]);
 	}
 
 	/**

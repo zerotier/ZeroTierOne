@@ -36,8 +36,6 @@
 #include <vector>
 #include <stdexcept>
 
-#include "IpcListener.hpp"
-#include "IpcConnection.hpp"
 #include "SharedPtr.hpp"
 #include "Network.hpp"
 #include "Utils.hpp"
@@ -105,6 +103,38 @@ public:
 	}
 
 	/**
+	 * Join a network or return existing network if already joined
+	 *
+	 * @param nwid Network ID to join
+	 * @return New network instance
+	 */
+	inline SharedPtr<Network> join(uint64_t nwid)
+	{
+		Mutex::Lock _l(_networks_m);
+		SharedPtr<Network> &nw = _networks[nwid];
+		if (nw)
+			return nw;
+		else return (nw = Network::newInstance(_r,this,nwid));
+	}
+
+	/**
+	 * Leave a network
+	 *
+	 * @param nwid Network ID
+	 * @return True if network was left, false if we were not a member of this network
+	 */
+	inline bool leave(uint64_t nwid)
+	{
+		Mutex::Lock _l(_networks_m);
+		std::map< uint64_t,SharedPtr<Network> >::iterator n(_networks.find(nwid));
+		if (n != _networks.end()) {
+			n->second->destroy();
+			_networks.erase(n);
+			return true;
+		} else return false;
+	}
+
+	/**
 	 * Perform cleanup and possibly persist saved state
 	 */
 	void clean();
@@ -135,18 +165,22 @@ public:
 	}
 
 private:
+	/*
 	static void _CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine);
 	void _doCommand(IpcConnection *ipcc,const char *commandLine);
+	*/
 
 	void _readLocalConfig();
 	void _writeLocalConfig();
 
 	const RuntimeEnvironment *_r;
 
+	/*
 	IpcListener _ipcListener;
 	std::string _authToken;
 	std::map< IpcConnection *,bool > _connections;
 	Mutex _connections_m;
+	*/
 
 	Dictionary _localConfig; // persisted as local.conf
 	Mutex _localConfig_m;

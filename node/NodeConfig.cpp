@@ -52,9 +52,9 @@
 namespace ZeroTier {
 
 NodeConfig::NodeConfig(const RuntimeEnvironment *renv,const char *authToken) :
-	_r(renv),
-	_ipcListener((std::string(ZT_IPC_ENDPOINT_BASE) + renv->identity.address().toString()).c_str(),&_CBcommandHandler,this),
-	_authToken(authToken)
+	_r(renv)
+//	_ipcListener((std::string(ZT_IPC_ENDPOINT_BASE) + renv->identity.address().toString()).c_str(),&_CBcommandHandler,this),
+//	_authToken(authToken)
 {
 	{
 		Mutex::Lock _l(_localConfig_m);
@@ -91,10 +91,12 @@ NodeConfig::~NodeConfig()
 	_writeLocalConfig();
 
 	// Close any open IPC connections
+	/*
 	Mutex::Lock _l(_connections_m);
 	for(std::map< IpcConnection *,bool >::iterator c(_connections.begin());c!=_connections.end();++c)
 		delete c->first;
 	_connections.clear();
+	*/
 }
 
 void NodeConfig::putLocalConfig(const std::string &key,const char *value)
@@ -127,6 +129,7 @@ void NodeConfig::clean()
 		n->second->clean();
 }
 
+/*
 void NodeConfig::_CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine)
 {
 	switch(event) {
@@ -310,6 +313,7 @@ void NodeConfig::_doCommand(IpcConnection *ipcc,const char *commandLine)
 
 	ipcc->printf("."ZT_EOL_S); // blank line ends response
 }
+*/
 
 void NodeConfig::_readLocalConfig()
 {

@@ -28,8 +28,9 @@
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
 
-#include <string>
-#include <vector>
+#include <stdint.h>
+
+#include "../include/ZeroTierOne.h"
 
 namespace ZeroTier {
 
@@ -38,87 +39,10 @@ class RoutingTable;
 
 /**
  * A ZeroTier One node
- *
- * This class hides all its implementation details and all other classes in
- * preparation for ZeroTier One being made available in library form for
- * embedding in mobile apps.
  */
 class Node
 {
 public:
-	/**
-	 * Client for controlling a local ZeroTier One node
-	 *
-	 * Windows note: be sure you call WSAStartup() before using this,
-	 * otherwise it will be unable to open a local UDP socket to
-	 * communicate with the service.
-	 */
-	class NodeControlClient
-	{
-	public:
-		/**
-		 * Create a new node config client
-		 *
-		 * Initialization may fail. Call error() to check.
-		 *
-		 * @param hp Home path of ZeroTier One instance or NULL for default system home path
-		 * @param resultHandler Function to call when commands provide results
-		 * @param arg First argument to result handler
-		 * @param authToken Authentication token or NULL (default) to read from authtoken.secret in home path
-		 */
-		NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken = (const char *)0)
-			throw();
-
-		~NodeControlClient();
-
-		/**
-		 * @return Initialization error or NULL if none
-		 */
-		const char *error() const
-			throw();
-
-		/**
-		 * Send a command to the local node
-		 *
-		 * Note that the returned conversation ID will never be 0. A return value
-		 * of 0 indicates a fatal error such as failure to bind to any local UDP
-		 * port.
-		 *
-		 * @param command
-		 * @return Conversation ID that will be provided to result handler when/if results are sent back
-		 */
-		void send(const char *command)
-			throw();
-		inline void send(const std::string &command)
-			throw() { return send(command.c_str()); }
-
-		/**
-		 * Split a line of results
-		 *
-		 * @param line Line to split
-		 * @return Vector of fields
-		 */
-		static std::vector<std::string> splitLine(const char *line);
-		static inline std::vector<std::string> splitLine(const std::string &line) { return splitLine(line.c_str()); }
-
-		/**
-		 * @return Default path for current user's authtoken.secret
-		 */
-		static const char *authTokenDefaultUserPath();
-
-		/**
-		 * @return Default path to system authtoken.secret
-		 */
-		static const char *authTokenDefaultSystemPath();
-
-	private:
-		// NodeControlClient is not copyable
-		NodeControlClient(const NodeControlClient&);
-		const NodeControlClient& operator=(const NodeControlClient&);
-
-		void *_impl;
-	};
-
 	/**
 	 * Returned by node main if/when it terminates
 	 */
@@ -155,7 +79,7 @@ public:
 	 *
 	 * The node is not executed until run() is called. The supplied tap factory
 	 * and routing table must not be freed until the node is no longer
-	 * executing. Node does not delete these objects, so the caller still owns
+	 * executing. Node does not delete these objects; the caller still owns
 	 * them.
 	 *
 	 * @param hp Home directory path or NULL for system-wide default for this platform
@@ -171,18 +95,12 @@ public:
 		RoutingTable *rt,
 		unsigned int udpPort,
 		unsigned int tcpPort,
-		bool resetIdentity)
-		throw();
+		bool resetIdentity) throw();
 
 	~Node();
 
 	/**
-	 * Execute node in current thread
-	 *
-	 * This does not return until the node shuts down. Shutdown may be caused
-	 * by an internally detected condition such as a new upgrade being
-	 * available or a fatal error, or it may be signaled externally using
-	 * the terminate() method.
+	 * Execute node in current thread, return on shutdown
 	 *
 	 * @return Reason for termination
 	 */
@@ -194,56 +112,93 @@ public:
 	 *
 	 * @return Reason for node termination or NULL if run() has not returned
 	 */
-	const char *reasonForTermination() const
+	const char *terminationMessage() const
 		throw();
 
 	/**
 	 * Terminate this node, causing run() to return
 	 *
 	 * @param reason Reason for termination
-	 * @param reasonText Text to be returned by reasonForTermination()
+	 * @param reasonText Text to be returned by terminationMessage()
 	 */
 	void terminate(ReasonForTermination reason,const char *reasonText)
 		throw();
 
 	/**
 	 * Forget p2p links now and resynchronize with peers
+	 *
+	 * This can be used if the containing application knows its network environment has
+	 * changed. ZeroTier itself tries to detect such changes, but is not always successful.
 	 */
 	void resync()
 		throw();
 
 	/**
+	 * @return True if we appear to be online in some viable capacity
+	 */
+	bool online()
+		throw();
+
+	/**
 	 * Join a network
 	 *
-	 * @param nwid 16-digit hex network ID
+	 * Use getNetworkStatus() to check the network's status after joining. If you
+	 * are already a member of the network, this does nothing.
+	 *
+	 * @param nwid 64-bit network ID
 	 */
-	bool join(const char *nwid)
+	void join(uint64_t nwid)
 		throw();
 
 	/**
 	 * Leave a network
 	 *
-	 * @param nwid 16-digit hex network ID
+	 * @param nwid 64-bit network ID
 	 */
-	bool leave(const char *nwid)
-		throw();
-
-	void listPeers()
-		throw();
-
-	void listNetworks()
+	void leave(uint64_t nwid)
 		throw();
 
 	/**
-	 * Check for software updates (if enabled)
+	 * Get the status of this node
+	 *
+	 * @param status Buffer to fill with status information
+	 */
+	void status(ZT1_Node_Status *status)
+		throw();
+
+	/**
+	 * @return List of known peers or NULL on failure
+	 */
+	ZT1_Node_PeerList *listPeers()
+		throw();
+
+	/**
+	 * @param nwid 64-bit network ID
+	 * @return Network status or NULL if we are not a member of this network
+	 */
+	ZT1_Node_Network *getNetworkStatus(uint64_t nwid)
+		throw();
+
+	/**
+	 * @return List of networks we've joined or NULL on failure
+	 */
+	ZT1_Node_NetworkList *listNetworks()
+		throw();
+
+	/**
+	 * Free a query result buffer
+	 *
+	 * Use this to free the return values of listNetworks(), listPeers(), etc.
+	 *
+	 * @param qr Query result buffer
+	 */
+	void freeQueryResult(void *qr)
+		throw();
+
+	/**
+	 * Check for software updates (if enabled) (updates will eventually get factored out of node/)
 	 */
 	bool updateCheck()
-		throw();
-
-	/**
-	 * @return Description of last non-fatal error or empty string if none
-	 */
-	const char *getLastError()
 		throw();
 
 	static const char *versionString() throw();

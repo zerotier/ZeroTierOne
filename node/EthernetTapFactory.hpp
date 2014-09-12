@@ -30,10 +30,6 @@
 
 #include <stdint.h>
 
-#include <stdexcept>
-#include <vector>
-#include <string>
-
 #include "MAC.hpp"
 #include "NonCopyable.hpp"
 #include "Buffer.hpp"

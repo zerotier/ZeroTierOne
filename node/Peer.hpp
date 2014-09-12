@@ -363,18 +363,10 @@ public:
 		_vRevision = vrev;
 	}
 
-	/**
-	 * @return Remote version in string form or '?' if unknown
-	 */
-	inline std::string remoteVersion() const
-	{
-		if ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)) {
-			char tmp[32];
-			Utils::snprintf(tmp,sizeof(tmp),"%u.%u.%u",_vMajor,_vMinor,_vRevision);
-			return std::string(tmp);
-		}
-		return std::string("?.?.?");
-	}
+	inline unsigned int remoteVersionMajor() const throw() { return _vMajor; }
+	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
+	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
+	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
 	 * Get most recently active UDP path addresses for IPv4 and/or IPv6
