@@ -28,10 +28,10 @@
 #ifndef ZT_IPCCONNECTION_HPP
 #define ZT_IPCCONNECTION_HPP
 
-#include "Constants.hpp"
-#include "Thread.hpp"
-#include "NonCopyable.hpp"
-#include "Mutex.hpp"
+#include "../node/Constants.hpp"
+#include "../node/Thread.hpp"
+#include "../node/NonCopyable.hpp"
+#include "../node/Mutex.hpp"
 
 #ifdef __WINDOWS__
 #include <WinSock2.h>

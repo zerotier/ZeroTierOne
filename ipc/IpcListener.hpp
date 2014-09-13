@@ -28,9 +28,9 @@
 #ifndef ZT_IPCLISTENER_HPP
 #define ZT_IPCLISTENER_HPP
 
-#include "Constants.hpp"
-#include "Thread.hpp"
-#include "NonCopyable.hpp"
+#include "../node/Constants.hpp"
+#include "../node/Thread.hpp"
+#include "../node/NonCopyable.hpp"
 #include "IpcConnection.hpp"
 
 #include <string>

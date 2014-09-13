@@ -29,6 +29,10 @@
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
+#include "../node/Defaults.hpp"
+
+#include "IpcConnection.hpp"
+#include "IpcListener.hpp"
 
 namespace ZeroTier {
 
