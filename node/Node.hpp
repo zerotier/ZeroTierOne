@@ -28,8 +28,6 @@
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
 
-#include <stdint.h>
-
 #include "../include/ZeroTierOne.h"
 
 namespace ZeroTier {
