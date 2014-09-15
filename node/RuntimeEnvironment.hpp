@@ -66,6 +66,9 @@ class RuntimeEnvironment
 {
 public:
 	RuntimeEnvironment() :
+		homePath(),
+		identity(),
+		initialized(false),
 		shutdownInProgress(false),
 		tcpTunnelingEnabled(false),
 		timeOfLastResynchronize(0),
@@ -93,6 +96,9 @@ public:
 
 	// This node's identity
 	Identity identity;
+
+	// Are we initialized?
+	volatile bool initialized;
 
 	// Indicates that we are shutting down -- this is hacky, want to factor out
 	volatile bool shutdownInProgress;

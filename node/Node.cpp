@@ -338,35 +338,37 @@ Node::ReasonForTermination Node::run()
 		_r->prng = new CMWC4096();
 
 		// Read identity public and secret, generating if not present
-		bool gotId = false;
-		std::string identitySecretPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
-		std::string identityPublicPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.public");
-		std::string idser;
-		if (Utils::readFile(identitySecretPath.c_str(),idser))
-			gotId = _r->identity.fromString(idser);
-		if ((gotId)&&(!_r->identity.locallyValidate()))
-			gotId = false;
-		if (gotId) {
-			// Make sure identity.public matches identity.secret
-			idser = std::string();
-			Utils::readFile(identityPublicPath.c_str(),idser);
-			std::string pubid(_r->identity.toString(false));
-			if (idser != pubid) {
-				if (!Utils::writeFile(identityPublicPath.c_str(),pubid))
+		{
+			bool gotId = false;
+			std::string identitySecretPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
+			std::string identityPublicPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.public");
+			std::string idser;
+			if (Utils::readFile(identitySecretPath.c_str(),idser))
+				gotId = _r->identity.fromString(idser);
+			if ((gotId)&&(!_r->identity.locallyValidate()))
+				gotId = false;
+			if (gotId) {
+				// Make sure identity.public matches identity.secret
+				idser = std::string();
+				Utils::readFile(identityPublicPath.c_str(),idser);
+				std::string pubid(_r->identity.toString(false));
+				if (idser != pubid) {
+					if (!Utils::writeFile(identityPublicPath.c_str(),pubid))
+						return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.public (home path not writable?)");
+				}
+			} else {
+				LOG("no identity found or identity invalid, generating one... this might take a few seconds...");
+				_r->identity.generate();
+				LOG("generated new identity: %s",_r->identity.address().toString().c_str());
+				idser = _r->identity.toString(true);
+				if (!Utils::writeFile(identitySecretPath.c_str(),idser))
+					return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.secret (home path not writable?)");
+				idser = _r->identity.toString(false);
+				if (!Utils::writeFile(identityPublicPath.c_str(),idser))
 					return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.public (home path not writable?)");
 			}
-		} else {
-			LOG("no identity found or identity invalid, generating one... this might take a few seconds...");
-			_r->identity.generate();
-			LOG("generated new identity: %s",_r->identity.address().toString().c_str());
-			idser = _r->identity.toString(true);
-			if (!Utils::writeFile(identitySecretPath.c_str(),idser))
-				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.secret (home path not writable?)");
-			idser = _r->identity.toString(false);
-			if (!Utils::writeFile(identityPublicPath.c_str(),idser))
-				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.public (home path not writable?)");
+			Utils::lockDownFile(identitySecretPath.c_str(),false);
 		}
-		Utils::lockDownFile(identitySecretPath.c_str(),false);
 
 		// Make sure networks.d exists
 		{
@@ -378,21 +380,6 @@ Node::ReasonForTermination Node::run()
 #endif
 		}
 
-		// Read configuration authentication token, generating if not present
-		std::string configAuthTokenPath(_r->homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
-		std::string configAuthToken;
-		if (!Utils::readFile(configAuthTokenPath.c_str(),configAuthToken)) {
-			configAuthToken = "";
-			unsigned int sr = 0;
-			for(unsigned int i=0;i<24;++i) {
-				Utils::getSecureRandom(&sr,sizeof(sr));
-				configAuthToken.push_back("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[sr % 62]);
-			}
-			if (!Utils::writeFile(configAuthTokenPath.c_str(),configAuthToken))
-				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write authtoken.secret (home path not writable?)");
-		}
-		Utils::lockDownFile(configAuthTokenPath.c_str(),false);
-
 		_r->http = new HttpClient();
 		_r->antiRec = new AntiRecursion();
 		_r->mc = new Multicaster();
@@ -400,7 +387,7 @@ Node::ReasonForTermination Node::run()
 		_r->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
 		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
 		try {
-			_r->nc = new NodeConfig(_r,configAuthToken.c_str());
+			_r->nc = new NodeConfig(_r);
 		} catch (std::exception &exc) {
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unable to initialize IPC socket: is ZeroTier One already running?");
 		}
@@ -416,28 +403,30 @@ Node::ReasonForTermination Node::run()
 #endif
 
 		// Initialize root topology from defaults or root-toplogy file in home path on disk
-		std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
-		std::string rootTopology;
-		if (!Utils::readFile(rootTopologyPath.c_str(),rootTopology))
-			rootTopology = ZT_DEFAULTS.defaultRootTopology;
-		try {
-			Dictionary rt(rootTopology);
+		{
+			std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
+			std::string rootTopology;
+			if (!Utils::readFile(rootTopologyPath.c_str(),rootTopology))
+				rootTopology = ZT_DEFAULTS.defaultRootTopology;
+			try {
+				Dictionary rt(rootTopology);
 
-			if (Topology::authenticateRootTopology(rt)) {
-				// Set supernodes if root topology signature is valid
-				_r->topology->setSupernodes(Dictionary(rt.get("supernodes",""))); // set supernodes from root-topology
+				if (Topology::authenticateRootTopology(rt)) {
+					// Set supernodes if root topology signature is valid
+					_r->topology->setSupernodes(Dictionary(rt.get("supernodes",""))); // set supernodes from root-topology
 
-				// If root-topology contains noupdate=1, disable further updates and only use what was on disk
-				impl->disableRootTopologyUpdates = (Utils::strToInt(rt.get("noupdate","0").c_str()) > 0);
-			} else {
-				// Revert to built-in defaults if root topology fails signature check
-				LOG("%s failed signature check, using built-in defaults instead",rootTopologyPath.c_str());
-				Utils::rm(rootTopologyPath.c_str());
-				_r->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes","")));
-				impl->disableRootTopologyUpdates = false;
+					// If root-topology contains noupdate=1, disable further updates and only use what was on disk
+					impl->disableRootTopologyUpdates = (Utils::strToInt(rt.get("noupdate","0").c_str()) > 0);
+				} else {
+					// Revert to built-in defaults if root topology fails signature check
+					LOG("%s failed signature check, using built-in defaults instead",rootTopologyPath.c_str());
+					Utils::rm(rootTopologyPath.c_str());
+					_r->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes","")));
+					impl->disableRootTopologyUpdates = false;
+				}
+			} catch ( ... ) {
+				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
 			}
-		} catch ( ... ) {
-			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
 		}
 	} catch (std::bad_alloc &exc) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"memory allocation failure");
@@ -486,6 +475,9 @@ Node::ReasonForTermination Node::run()
 
 		uint64_t networkConfigurationFingerprint = 0;
 		_r->timeOfLastResynchronize = Utils::now();
+
+		// We are up and running
+		_r->initialized = true;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
 			/* This is how the service automatically shuts down when the OSX .app is
@@ -703,6 +695,38 @@ bool Node::online()
 			return true;
 	}
 	return false;
+}
+
+bool Node::started()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	return impl->started;
+}
+
+bool Node::running()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	return impl->running;
+}
+
+bool Node::initialized()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	return ((_r)&&(_r->initialized));
+}
+
+uint64_t Node::address()
+	throw()
+{
+	_NodeImpl *impl = (_NodeImpl *)_impl;
+	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	if ((!_r)||(!_r->initialized))
+		return 0;
+	return _r->identity.address().toInt();
 }
 
 void Node::join(uint64_t nwid)
@@ -957,7 +981,8 @@ ZT1_Node_NetworkList *Node::listNetworks()
 void Node::freeQueryResult(void *qr)
 	throw()
 {
-	::free(qr);
+	if (qr)
+		::free(qr);
 }
 
 bool Node::updateCheck()

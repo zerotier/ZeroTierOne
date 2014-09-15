@@ -25,11 +25,11 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include <string>
-#include <vector>
-
 #ifndef ZT_NODECONTROLCLIENT_HPP
 #define ZT_NODECONTROLCLIENT_HPP
+
+#include <string>
+#include <vector>
 
 namespace ZeroTier {
 

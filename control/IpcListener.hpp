@@ -36,14 +36,6 @@
 #include <string>
 #include <stdexcept>
 
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#define ZT_IPC_ENDPOINT_BASE "\\\\.\\pipe\\ZeroTierOne-"
-#else
-#define ZT_IPC_ENDPOINT_BASE "/tmp/.ZeroTierOne-"
-#endif
-
 namespace ZeroTier {
 
 /**
@@ -67,6 +59,7 @@ public:
 	 * some kind of actor model or something if it gets too unweildy. But for now the
 	 * use cases are simple enough that it's not too bad.
 	 *
+	 * @param IPC endpoint name (OS-specific)
 	 * @param commandHandler Function to call for each command
 	 * @param arg First argument to pass to handler
 	 * @throws std::runtime_error Unable to bind to endpoint

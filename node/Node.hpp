@@ -28,6 +28,8 @@
 #ifndef ZT_NODE_HPP
 #define ZT_NODE_HPP
 
+#include <stdint.h>
+
 #include "../include/ZeroTierOne.h"
 
 namespace ZeroTier {
@@ -135,6 +137,30 @@ public:
 	 * @return True if we appear to be online in some viable capacity
 	 */
 	bool online()
+		throw();
+
+	/**
+	 * @return True if run() has been called
+	 */
+	bool started()
+		throw();
+
+	/**
+	 * @return True if run() has not yet returned
+	 */
+	bool running()
+		throw();
+
+	/**
+	 * @return True if initialization phase of startup is complete
+	 */
+	bool initialized()
+		throw();
+
+	/**
+	 * @return This node's address (in least significant 40 bits of 64-bit int) or 0 if not yet initialized
+	 */
+	uint64_t address()
 		throw();
 
 	/**

@@ -54,10 +54,9 @@ class NodeConfig
 public:
 	/**
 	 * @param renv Runtime environment
-	 * @param authToken Configuration authentication token
 	 * @throws std::runtime_error Unable to initialize or listen for IPC connections
 	 */
-	NodeConfig(const RuntimeEnvironment *renv,const char *authToken);
+	NodeConfig(const RuntimeEnvironment *renv);
 
 	~NodeConfig();
 
@@ -164,27 +163,12 @@ public:
 		return tapDevs;
 	}
 
-private:
-	/*
-	static void _CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine);
-	void _doCommand(IpcConnection *ipcc,const char *commandLine);
-	*/
-
 	void _readLocalConfig();
 	void _writeLocalConfig();
 
 	const RuntimeEnvironment *_r;
-
-	/*
-	IpcListener _ipcListener;
-	std::string _authToken;
-	std::map< IpcConnection *,bool > _connections;
-	Mutex _connections_m;
-	*/
-
 	Dictionary _localConfig; // persisted as local.conf
 	Mutex _localConfig_m;
-
 	std::map< uint64_t,SharedPtr<Network> > _networks; // persisted in networks.d/
 	Mutex _networks_m;
 };

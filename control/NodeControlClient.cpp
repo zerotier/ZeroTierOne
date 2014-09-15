@@ -26,13 +26,12 @@
  */
 
 #include "NodeControlClient.hpp"
-
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Defaults.hpp"
-
 #include "IpcConnection.hpp"
 #include "IpcListener.hpp"
+#include "NodeControlService.hpp"
 
 namespace ZeroTier {
 
