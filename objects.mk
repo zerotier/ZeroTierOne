@@ -1,8 +1,9 @@
 OBJS=\
+	control/IpcConnection.o \
+	control/IpcListener.o \
+	control/NodeControlClient.o \
+	control/NodeControlService.o \
 	ext/lz4/lz4.o \
-	ipc/IpcConnection.o \
-	ipc/IpcListener.o \
-	ipc/NodeControlClient.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Defaults.o \
