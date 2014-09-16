@@ -58,11 +58,11 @@ const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','
 bool Utils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 	throw()
 {
-	int fdout = ::open(stdoutPath,O_WRONLY|O_CREAT);
+	int fdout = ::open(stdoutPath,O_WRONLY|O_CREAT,0600);
 	if (fdout > 0) {
 		int fderr;
 		if (stderrPath) {
-			fderr = ::open(stderrPath,O_WRONLY|O_CREAT);
+			fderr = ::open(stderrPath,O_WRONLY|O_CREAT,0600);
 			if (fderr <= 0) {
 				::close(fdout);
 				return false;
