@@ -226,4 +226,25 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 	ipcc->printf("."ZT_EOL_S); // blank line ends response
 }
 
+std::string NodeControlService::readOrCreateAuthtoken(const char *path,bool generateIfNotFound)
+{
+	unsigned char randbuf[24];
+	std::string token;
+
+	if (Utils::readFile(path,token))
+		return token;
+	else token = "";
+
+	if (generateIfNotFound) {
+		Utils::getSecureRandom(randbuf,sizeof(randbuf));
+		for(unsigned int i=0;i<sizeof(randbuf);++i)
+			token.push_back(("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")[(unsigned int)randbuf[i] % 62]);
+		if (!Utils::writeFile(path,token))
+			return std::string();
+		Utils::lockDownFile(path,false);
+	}
+
+	return token;
+}
+
 } // namespace ZeroTier

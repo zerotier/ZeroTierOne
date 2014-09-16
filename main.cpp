@@ -72,6 +72,9 @@
 #include "node/EthernetTapFactory.hpp"
 #include "node/RoutingTable.hpp"
 
+#include "control/NodeControlClient.hpp"
+#include "control/NodeControlService.hpp"
+
 #ifdef __WINDOWS__
 #include "osnet/WindowsEthernetTapFactory.hpp"
 #include "osnet/WindowsRoutingTable.hpp"
@@ -152,7 +155,7 @@ static int main(const char *homeDir,int argc,char **argv)
 
 	try {
 		volatile bool done = false;
-		Node::NodeControlClient client(homeDir,&_CBresultHandler,(void *)&done);
+		NodeControlClient client(homeDir,&_CBresultHandler,(void *)&done);
 		const char *err = client.error();
 		if (err) {
 			fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (%s)"ZT_EOL_S,argv[0],err);
@@ -778,7 +781,7 @@ int main(int argc,char **argv)
 			}	break;
 #else // __UNIX_LIKE__
 			case Node::NODE_RESTART_FOR_UPGRADE: {
-				const char *upgPath = node->reasonForTermination();
+				const char *upgPath = node->terminationMessage();
 				// On Unix-type OSes we exec() right into the upgrade. This in turn will
 				// end with us being re-launched either via the upgrade itself or something
 				// like OSX's launchd.
@@ -797,7 +800,7 @@ int main(int argc,char **argv)
 
 			case Node::NODE_UNRECOVERABLE_ERROR: {
 				exitCode = 3;
-				const char *termReason = node->reasonForTermination();
+				const char *termReason = node->terminationMessage();
 				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
 			}	break;
 

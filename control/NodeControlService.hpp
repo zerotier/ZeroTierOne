@@ -69,6 +69,15 @@ public:
 	void threadMain()
 		throw();
 
+	/**
+	 * Load (or generate) the authentication token
+	 *
+	 * @param path Full path to authtoken.secret
+	 * @param generateIfNotFound If true, generate and save if not found or readable
+	 * @return Authentication token or empty string on failure
+	 */
+	static std::string readOrCreateAuthtoken(const char *path,bool generateIfNotFound);
+
 private:
 	static void _CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine);
 	void _doCommand(IpcConnection *ipcc,const char *commandLine);
