@@ -51,13 +51,6 @@ class Defaults
 public:
 	Defaults();
 
-#ifdef ZT_TRACE_MULTICAST
-	/**
-	 * Host to send UDP multicast trace messages to (human readable)
-	 */
-	const InetAddress multicastTraceWatcher;
-#endif
-
 	/**
 	 * Default home path for this platform
 	 */

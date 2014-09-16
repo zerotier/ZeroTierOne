@@ -143,9 +143,6 @@ static inline const char *_mkUpdateUrl()
 }
 
 Defaults::Defaults() :
-#ifdef ZT_TRACE_MULTICAST
-	multicastTraceWatcher(ZT_TRACE_MULTICAST),
-#endif
 	defaultHomePath(_mkDefaultHomePath()),
 	defaultRootTopology((const char *)ZT_DEFAULT_ROOT_TOPOLOGY,ZT_DEFAULT_ROOT_TOPOLOGY_LEN),
 	rootTopologyAuthorities(_mkRootTopologyAuth()),

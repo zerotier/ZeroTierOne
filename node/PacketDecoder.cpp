@@ -555,18 +555,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			return true;
 		}
 
-		/*
-		TRACE("MULTICAST_FRAME @%.16llx #%.16llx from %s<%s> via %s(%s) to %s [ %s, %d bytes, depth %d ]",
-			(unsigned long long)nwid,
-			(unsigned long long)guid,
-			sourceMac.toString().c_str(),origin.toString().c_str(),
-			source().toString().c_str(),_remoteAddress.toString().c_str(),
-			dest.toString().c_str(),
-			Switch::etherTypeName(etherType),
-			(int)frameLen,
-			(int)depth);
-		*/
-
 		SharedPtr<Network> network(_r->nc->network(nwid));
 		SharedPtr<NetworkConfig> nconf;
 		if (network)
@@ -625,33 +613,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			return true;
 		}
 
-#ifdef ZT_TRACE_MULTICAST
-		// This code, if enabled, sends a UDP pingback to a logger for each multicast.
-		char mct[1024],mctdepth[1024];
-		unsigned int startingFifoItems = 0;
-		for(unsigned int i=0;i<ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO;i+=ZT_ADDRESS_LENGTH) {
-			if (Utils::isZero(fifo + i,ZT_ADDRESS_LENGTH))
-				break;
-			else ++startingFifoItems;
-		}
-		for(unsigned int i=0;i<depth;++i)
-			mctdepth[i] = ' ';
-		mctdepth[depth] = 0;
-		Utils::snprintf(mct,sizeof(mct),
-			"%.16llx %.2u %.3u%s %c %s <- %s via %s len:%u fifosize:%u",
-			guid,
-			prefix,
-			depth,
-			mctdepth,
-			(_r->topology->amSupernode() ? 'S' : '-'),
-			_r->identity.address().toString().c_str(),
-			origin.toString().c_str(),
-			source().toString().c_str(),
-			frameLen,
-			startingFifoItems);
-		_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
-
 		// At this point the frame is basically valid, so we can call it a receive
 		peer->receive(_r,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
 
@@ -663,17 +624,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			// nodes drop these, while supernodes will keep propagating them since they can
 			// act as bridges between sparse multicast networks more than once.
 			if (!_r->topology->amSupernode()) {
-#ifdef ZT_TRACE_MULTICAST
-				Utils::snprintf(mct,sizeof(mct),
-					"%.16llx %.2u %.3u%s %c %s dropped: duplicate",
-					guid,
-					prefix,
-					depth,
-					mctdepth,
-					(_r->topology->amSupernode() ? 'S' : '-'),
-					_r->identity.address().toString().c_str());
-				_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 				TRACE("dropped MULTICAST_FRAME from %s(%s): duplicate",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
@@ -703,17 +653,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 
 				if (MAC(origin,network->id()) != sourceMac) {
 					if (!nconf->permitsBridging(origin)) {
-#ifdef ZT_TRACE_MULTICAST
-						Utils::snprintf(mct,sizeof(mct),
-							"%.16llx %.2u %.3u%s %c %s dropped: bridging not allowed",
-							guid,
-							prefix,
-							depth,
-							mctdepth,
-							(_r->topology->amSupernode() ? 'S' : '-'),
-							_r->identity.address().toString().c_str());
-						_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 						TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: source mac %s doesn't belong to %s, and bridging is not supported on network",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,sourceMac.toString().c_str(),origin.toString().c_str());
 						return true;
 					}
@@ -721,17 +660,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				}
 
 				if (!nconf->permitsEtherType(etherType)) {
-#ifdef ZT_TRACE_MULTICAST
-					Utils::snprintf(mct,sizeof(mct),
-						"%.16llx %.2u %.3u%s %c %s dropped: ethertype not allowed",
-						guid,
-						prefix,
-						depth,
-						mctdepth,
-						(_r->topology->amSupernode() ? 'S' : '-'),
-						_r->identity.address().toString().c_str());
-					_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 					TRACE("dropped MULTICAST_FRAME from %s(%s) into %.16llx: ethertype %u is not allowed",source().toString().c_str(),nwid,_remoteAddress.toString().c_str(),etherType);
 					return true;
 				}
@@ -740,17 +668,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 					// Rate limits can only be checked by members of this network, but
 					// there should be enough of them that over-limit multicasts get
 					// their propagation aborted.
-#ifdef ZT_TRACE_MULTICAST
-					Utils::snprintf(mct,sizeof(mct),
-						"%.16llx %.2u %.3u%s %c %s dropped: rate limits exceeded",
-						guid,
-						prefix,
-						depth,
-						mctdepth,
-						(_r->topology->amSupernode() ? 'S' : '-'),
-						_r->identity.address().toString().c_str());
-					_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 					TRACE("dropped MULTICAST_FRAME from %s(%s): rate limits exceeded for sender %s",source().toString().c_str(),_remoteAddress.toString().c_str(),origin.toString().c_str());
 					return true;
 				}
@@ -762,34 +679,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		// Depth of 0xffff means "do not forward." Check first since
 		// incrementing this would integer overflow a 16-bit int.
 		if (depth == 0xffff) {
-#ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),
-				"%.16llx %.2u %.3u%s %c %s not forwarding: depth == 0xffff (do not forward)",
-				guid,
-				prefix,
-				depth,
-				mctdepth,
-				(_r->topology->amSupernode() ? 'S' : '-'),
-				_r->identity.address().toString().c_str());
-			_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): depth == 0xffff (do not forward)",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
 
 		// Check if graph traversal depth has exceeded configured maximum.
 		if (++depth > maxDepth) {
-#ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),
-				"%.16llx %.2u %.3u%s %c %s not forwarding: max propagation depth reached",
-				guid,
-				prefix,
-				depth,
-				mctdepth,
-				(_r->topology->amSupernode() ? 'S' : '-'),
-				_r->identity.address().toString().c_str());
-			_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 			TRACE("not forwarding MULTICAST_FRAME from %s(%s): max propagation depth reached",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
@@ -817,9 +712,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 		}
 
 		// Add any other next hops we know about to FIFO
-#ifdef ZT_TRACE_MULTICAST
-		unsigned char *beforeAdd = newFifoPtr;
-#endif
 		Multicaster::AddToPropagationQueue appender(
 			&newFifoPtr,
 			newFifoEnd,
@@ -837,9 +729,6 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 			}
 		}
 		_r->mc->getNextHops(nwid,dest,appender);
-#ifdef ZT_TRACE_MULTICAST
-		unsigned int numAdded = (unsigned int)(newFifoPtr - beforeAdd) / ZT_ADDRESS_LENGTH;
-#endif
 
 		// Zero-terminate new FIFO if not completely full. We pad the remainder with
 		// zeroes because this improves data compression ratios.
@@ -854,38 +743,12 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 				nextHop = supernode->address();
 		}
 		if ((!nextHop)||(nextHop == _r->identity.address())) { // check against our addr is a sanity check
-#ifdef ZT_TRACE_MULTICAST
-			Utils::snprintf(mct,sizeof(mct),
-				"%.16llx %.2u %.3u%s %c %s not forwarding: no next hop",
-				guid,
-				prefix,
-				depth,
-				mctdepth,
-				(_r->topology->amSupernode() ? 'S' : '-'),
-				_r->identity.address().toString().c_str());
-			_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 			//TRACE("not forwarding MULTICAST_FRAME from %s(%s): no next hop",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
 
 		// The rest of newFifo[] goes back into the packet
 		memcpy(fifo,newFifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO);
-
-#ifdef ZT_TRACE_MULTICAST
-		Utils::snprintf(mct,sizeof(mct),
-			"%.16llx %.2u %.3u%s %c %s -> origin %s, sending to next hop %s, +fifosize:%u",
-			guid,
-			prefix,
-			depth,
-			mctdepth,
-			(_r->topology->amSupernode() ? 'S' : '-'),
-			_r->identity.address().toString().c_str(),
-			origin.toString().c_str(),
-			nextHop.toString().c_str(),
-			numAdded);
-		_r->sm->sendUdp(ZT_DEFAULTS.multicastTraceWatcher,mct,strlen(mct));
-#endif
 
 		// Send to next hop, reusing this packet as scratch space
 		newInitializationVector();
