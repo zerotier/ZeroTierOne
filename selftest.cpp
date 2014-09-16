@@ -611,8 +611,6 @@ int main(int argc,char **argv)
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
 	std::cout << "[info] default home: " << ZT_DEFAULTS.defaultHomePath << std::endl;
-	std::cout << "[info] system authtoken.secret: " << Node::NodeControlClient::authTokenDefaultSystemPath() << std::endl;
-	std::cout << "[info] user authtoken.secret: " << Node::NodeControlClient::authTokenDefaultUserPath() << std::endl;
 
 	srand((unsigned int)time(0));
 

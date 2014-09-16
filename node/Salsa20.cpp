@@ -144,10 +144,10 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		}
 
 #ifdef ZT_SALSA20_SSE
-		__m128i X0 = _mm_load_si128((const __m128i *)&(_state.v[0]));
-		__m128i X1 = _mm_load_si128((const __m128i *)&(_state.v[1]));
-		__m128i X2 = _mm_load_si128((const __m128i *)&(_state.v[2]));
-		__m128i X3 = _mm_load_si128((const __m128i *)&(_state.v[3]));
+		__m128i X0 = _mm_loadu_si128((const __m128i *)&(_state.v[0]));
+		__m128i X1 = _mm_loadu_si128((const __m128i *)&(_state.v[1]));
+		__m128i X2 = _mm_loadu_si128((const __m128i *)&(_state.v[2]));
+		__m128i X3 = _mm_loadu_si128((const __m128i *)&(_state.v[3]));
 		__m128i X0s = X0;
 		__m128i X1s = X1;
 		__m128i X2s = X2;

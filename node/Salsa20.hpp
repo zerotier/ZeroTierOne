@@ -13,14 +13,7 @@
 
 #ifdef ZT_SALSA20_SSE
 #include <emmintrin.h>
-#ifdef __GCC__
-#define ZT_SALSA20_SSE_ALIGN __attribute__((aligned (16)))
-#else
-#define ZT_SALSA20_SSE_ALIGN __declspec(align(16))
-#endif
-#else
-#define ZT_SALSA20_SSE_ALIGN
-#endif
+#endif // ZT_SALSA20_SSE
 
 namespace ZeroTier {
 
@@ -79,10 +72,10 @@ public:
 	}
 
 private:
-	volatile ZT_SALSA20_SSE_ALIGN union {
+	volatile union {
 #ifdef ZT_SALSA20_SSE
 		__m128i v[4];
-#endif
+#endif // ZT_SALSA20_SSE
 		uint32_t i[16];
 	} _state;
 	unsigned int _roundsDiv2;
