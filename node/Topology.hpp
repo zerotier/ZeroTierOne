@@ -191,6 +191,9 @@ public:
 	/**
 	 * Apply a function or function object to all peers
 	 *
+	 * Note: explicitly template this by reference if you want the object
+	 * passed by reference instead of copied.
+	 *
 	 * @param f Function to apply
 	 * @tparam F Function or function object type
 	 */
@@ -204,6 +207,9 @@ public:
 
 	/**
 	 * Apply a function or function object to all supernode peers
+	 *
+	 * Note: explicitly template this by reference if you want the object
+	 * passed by reference instead of copied.
 	 *
 	 * @param f Function to apply
 	 * @tparam F Function or function object type

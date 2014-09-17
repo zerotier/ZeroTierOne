@@ -66,11 +66,13 @@ void NodeControlService::threadMain()
 	try {
 		while (_running) {
 			if (!_node->running()) {
-				break;
+				if (_node->started())
+					break;
 			} else if ((_node->initialized())&&(_node->address())) {
 				Utils::snprintf(tmp,sizeof(tmp),"%s%.10llx",ZT_IPC_ENDPOINT_BASE,(unsigned long long)_node->address());
 				_listener = new IpcListener(tmp,&_CBcommandHandler,this);
 			}
+			Thread::sleep(100); // wait for Node to start
 		}
 	} catch ( ... ) {
 		delete _listener;
@@ -138,35 +140,39 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 			if (pl) {
 				for(unsigned int i=0;i<pl->numPeers;++i) {
 					ipcc->printf("200 listpeers %.10llx ",(unsigned long long)pl->peers[i].rawAddress);
-					for(unsigned int j=0;j<pl->peers[i].numPaths;++j) {
-						if (j > 0)
-							ipcc->printf(",");
-						switch(pl->peers[i].paths[j].type) {
-							default:
-								ipcc->printf("unknown;");
-								break;
-							case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_UDP:
-								ipcc->printf("udp;");
-								break;
-							case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
-								ipcc->printf("tcp_out;");
-								break;
-							case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_TCP_IN:
-								ipcc->printf("tcp_in;");
-								break;
-							case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_ETHERNET:
-								ipcc->printf("eth;");
-								break;
+					if (pl->peers[i].numPaths == 0)
+						ipcc->printf("-");
+					else {
+						for(unsigned int j=0;j<pl->peers[i].numPaths;++j) {
+							if (j > 0)
+								ipcc->printf(",");
+							switch(pl->peers[i].paths[j].type) {
+								default:
+									ipcc->printf("unknown;");
+									break;
+								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_UDP:
+									ipcc->printf("udp;");
+									break;
+								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
+									ipcc->printf("tcp_out;");
+									break;
+								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_TCP_IN:
+									ipcc->printf("tcp_in;");
+									break;
+								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_ETHERNET:
+									ipcc->printf("eth;");
+									break;
+							}
+							ipcc->printf("%s/%d;%ld;%ld;%ld;%s",
+								pl->peers[i].paths[j].address.ascii,
+								(int)pl->peers[i].paths[j].address.port,
+								pl->peers[i].paths[j].lastSend,
+								pl->peers[i].paths[j].lastReceive,
+								pl->peers[i].paths[j].lastPing,
+								(pl->peers[i].paths[j].fixed ? "fixed" : (pl->peers[i].paths[j].active ? "active" : "inactive")));
 						}
-						ipcc->printf("%s/%d;%ld;%ld;%ld;%s",
-							pl->peers[i].paths[j].address.ascii,
-							(int)pl->peers[i].paths[j].address.port,
-							pl->peers[i].paths[j].lastSend,
-							pl->peers[i].paths[j].lastReceive,
-							pl->peers[i].paths[j].lastPing,
-							(pl->peers[i].paths[j].fixed ? "fixed" : (pl->peers[i].paths[j].active ? "active" : "inactive")));
 					}
-					ipcc->printf(ZT_EOL_S);
+					ipcc->printf(" %u %s"ZT_EOL_S,pl->peers[i].latency,(pl->peers[i].remoteVersion[0]) ? pl->peers[i].remoteVersion : "-");
 				}
 				_node->freeQueryResult(pl);
 			}

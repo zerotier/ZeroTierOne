@@ -777,7 +777,7 @@ void Node::status(ZT1_Node_Status *status)
 	GatherPeerStatistics gps;
 	gps.now = Utils::now();
 	gps.status = status;
-	_r->topology->eachPeer(gps);
+	_r->topology->eachPeer<GatherPeerStatistics &>(gps);
 
 	if (status->alivePeers > 0) {
 		double dlsr = (double)status->directlyConnectedPeers / (double)status->alivePeers;
@@ -793,7 +793,7 @@ void Node::status(ZT1_Node_Status *status)
 struct CollectPeersAndPaths
 {
 	std::vector< std::pair< SharedPtr<Peer>,std::vector<Path> > > data;
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { data.push_back(std::pair< SharedPtr<Peer>,std::vector<Path> >(p,p->paths())); }
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { this->data.push_back(std::pair< SharedPtr<Peer>,std::vector<Path> >(p,p->paths())); }
 };
 struct SortPeersAndPathsInAscendingAddressOrder
 {
@@ -806,7 +806,7 @@ ZT1_Node_PeerList *Node::listPeers()
 	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
 
 	CollectPeersAndPaths pp;
-	_r->topology->eachPeer(pp);
+	_r->topology->eachPeer<CollectPeersAndPaths &>(pp);
 	std::sort(pp.data.begin(),pp.data.end(),SortPeersAndPathsInAscendingAddressOrder());
 
 	unsigned int returnBufSize = sizeof(ZT1_Node_PeerList);
