@@ -38,12 +38,6 @@
 #include "../node/NonCopyable.hpp"
 #include "../node/Thread.hpp"
 
-#ifdef __WINDOWS__
-#define ZT_IPC_ENDPOINT_BASE "\\\\.\\pipe\\ZeroTierOne-"
-#else
-#define ZT_IPC_ENDPOINT_BASE "/tmp/.ZeroTierOne-"
-#endif
-
 namespace ZeroTier {
 
 class Node;
@@ -65,18 +59,10 @@ public:
 
 	~NodeControlService();
 
-	// Background thread waits for node to initialize, then creates IpcListener
+	// Background thread waits for node to initialize, then creates IpcListener and
+	// terminates. It also terminates on delete if it hasn't bootstrapped yet.
 	void threadMain()
 		throw();
-
-	/**
-	 * Load (or generate) the authentication token
-	 *
-	 * @param path Full path to authtoken.secret
-	 * @param generateIfNotFound If true, generate and save if not found or readable
-	 * @return Authentication token or empty string on failure
-	 */
-	static std::string readOrCreateAuthtoken(const char *path,bool generateIfNotFound);
 
 private:
 	static void _CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine);

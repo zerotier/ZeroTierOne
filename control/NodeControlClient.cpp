@@ -51,43 +51,20 @@ static void _CBipcResultHandler(void *arg,IpcConnection *ipcc,IpcConnection::Eve
 	}
 }
 
-NodeControlClient::NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken)
+NodeControlClient::NodeControlClient(const char *ep,const char *authToken,void (*resultHandler)(void *,const char *),void *arg)
 	throw() :
 	_impl((void *)new _NodeControlClientImpl)
 {
 	_NodeControlClientImpl *impl = (_NodeControlClientImpl *)_impl;
-	impl->ipcc = (IpcConnection *)0;
-
-	if (!hp)
-		hp = ZT_DEFAULTS.defaultHomePath.c_str();
-
-	std::string at;
-	if (authToken)
-		at = authToken;
-	else if (!Utils::readFile(authTokenDefaultSystemPath(),at)) {
-		if (!Utils::readFile(authTokenDefaultUserPath(),at)) {
-			impl->err = "no authentication token specified and authtoken.secret not readable";
-			return;
-		}
+	impl->resultHandler = resultHandler;
+	impl->arg = arg;
+	try {
+		impl->ipcc = new IpcConnection(ep,&_CBipcResultHandler,_impl);
+		impl->ipcc->printf("auth %s"ZT_EOL_S,authToken);
+	} catch ( ... ) {
+		impl->ipcc = (IpcConnection *)0;
+		impl->err = "failure connecting to running ZeroTier One service";
 	}
-
-	std::string myid;
-	if (Utils::readFile((std::string(hp) + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),myid)) {
-		std::string myaddr(myid.substr(0,myid.find(':')));
-		if (myaddr.length() != 10)
-			impl->err = "invalid address extracted from identity.public";
-		else {
-			try {
-				impl->resultHandler = resultHandler;
-				impl->arg = arg;
-				impl->ipcc = new IpcConnection((std::string(ZT_IPC_ENDPOINT_BASE) + myaddr).c_str(),&_CBipcResultHandler,_impl);
-				impl->ipcc->printf("auth %s"ZT_EOL_S,at.c_str());
-			} catch ( ... ) {
-				impl->ipcc = (IpcConnection *)0;
-				impl->err = "failure connecting to running ZeroTier One service";
-			}
-		}
-	} else impl->err = "unable to read identity.public";
 }
 
 NodeControlClient::~NodeControlClient()
@@ -153,17 +130,25 @@ const char *NodeControlClient::authTokenDefaultUserPath()
 	return dlp.c_str();
 }
 
-const char *NodeControlClient::authTokenDefaultSystemPath()
+std::string NodeControlClient::getAuthToken(const char *path,bool generateIfNotFound)
 {
-	static std::string dsp;
-	static Mutex dsp_m;
+	unsigned char randbuf[24];
+	std::string token;
 
-	Mutex::Lock _l(dsp_m);
+	if (Utils::readFile(path,token))
+		return Utils::trim(token);
+	else token = "";
 
-	if (!dsp.length())
-		dsp = (ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S"authtoken.secret");
+	if (generateIfNotFound) {
+		Utils::getSecureRandom(randbuf,sizeof(randbuf));
+		for(unsigned int i=0;i<sizeof(randbuf);++i)
+			token.push_back(("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")[(unsigned int)randbuf[i] % 62]);
+		if (!Utils::writeFile(path,token))
+			return std::string();
+		Utils::lockDownFile(path,false);
+	}
 
-	return dsp.c_str();
+	return token;
 }
 
 } // namespace ZeroTier

@@ -31,14 +31,16 @@
 #include <string>
 #include <vector>
 
+#ifdef __WINDOWS__
+#define ZT_IPC_ENDPOINT_BASE "\\\\.\\pipe\\ZeroTierOne-"
+#else
+#define ZT_IPC_ENDPOINT_BASE "/tmp/.ZeroTierOne-"
+#endif
+
 namespace ZeroTier {
 
 /**
  * Client for controlling a local ZeroTier One node
- *
- * Windows note: be sure you call WSAStartup() before using this,
- * otherwise it will be unable to open a local UDP socket to
- * communicate with the service.
  */
 class NodeControlClient
 {
@@ -48,12 +50,11 @@ public:
 	 *
 	 * Initialization may fail. Call error() to check.
 	 *
-	 * @param hp Home path of ZeroTier One instance or NULL for default system home path
+	 * @param ep Endpoint to connect to (OS-dependent)
 	 * @param resultHandler Function to call when commands provide results
 	 * @param arg First argument to result handler
-	 * @param authToken Authentication token or NULL (default) to read from authtoken.secret in home path
 	 */
-	NodeControlClient(const char *hp,void (*resultHandler)(void *,const char *),void *arg,const char *authToken = (const char *)0)
+	NodeControlClient(const char *ep,const char *authToken,void (*resultHandler)(void *,const char *),void *arg)
 		throw();
 
 	~NodeControlClient();
@@ -89,14 +90,18 @@ public:
 	static inline std::vector<std::string> splitLine(const std::string &line) { return splitLine(line.c_str()); }
 
 	/**
-	 * @return Default path for current user's authtoken.secret
+	 * @return Default path for current user's authtoken.secret or ~/.zeroTierOneAuthToken (location is platform-dependent)
 	 */
 	static const char *authTokenDefaultUserPath();
 
 	/**
-	 * @return Default path to system authtoken.secret
+	 * Load (or generate) the authentication token
+	 *
+	 * @param path Full path to authtoken.secret
+	 * @param generateIfNotFound If true, generate and save if not found or readable (requires appropriate privileges, returns empty on failure)
+	 * @return Authentication token or empty string on failure
 	 */
-	static const char *authTokenDefaultSystemPath();
+	static std::string getAuthToken(const char *path,bool generateIfNotFound);
 
 private:
 	// NodeControlClient is not copyable

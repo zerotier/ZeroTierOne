@@ -29,7 +29,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "../node/Constants.hpp"
 #include "NodeControlService.hpp"
+#include "NodeControlClient.hpp"
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 
@@ -114,7 +116,7 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 		ipcc->printf("200 help terminate [<reason>]"ZT_EOL_S);
 		ipcc->printf("200 help updatecheck"ZT_EOL_S);
 	} else if (cmd[0] == "auth") {
-		if ((cmd.size() > 1)&&(_authToken == cmd[1])) {
+		if ((cmd.size() > 1)&&(_authToken.length() > 0)&&(_authToken == cmd[1])) {
 			Mutex::Lock _l(_connections_m);
 			_connections[ipcc] = true;
 			ipcc->printf("200 auth OK"ZT_EOL_S);
@@ -224,27 +226,6 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 	}
 
 	ipcc->printf("."ZT_EOL_S); // blank line ends response
-}
-
-std::string NodeControlService::readOrCreateAuthtoken(const char *path,bool generateIfNotFound)
-{
-	unsigned char randbuf[24];
-	std::string token;
-
-	if (Utils::readFile(path,token))
-		return token;
-	else token = "";
-
-	if (generateIfNotFound) {
-		Utils::getSecureRandom(randbuf,sizeof(randbuf));
-		for(unsigned int i=0;i<sizeof(randbuf);++i)
-			token.push_back(("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")[(unsigned int)randbuf[i] % 62]);
-		if (!Utils::writeFile(path,token))
-			return std::string();
-		Utils::lockDownFile(path,false);
-	}
-
-	return token;
 }
 
 } // namespace ZeroTier

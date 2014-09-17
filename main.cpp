@@ -114,9 +114,10 @@ static void printHelp(FILE *out,const char *cn)
 static void _CBresultHandler(void *arg,const char *line)
 {
 	if (line) {
-		if ((line[0] == '.')&&(line[1] == (char)0))
+		if ((line[0] == '.')&&(line[1] == (char)0)) {
+			fflush(stdout);
 			*((bool *)arg) = true;
-		else fprintf(stdout,"%s"ZT_EOL_S,line);
+		} else fprintf(stdout,"%s"ZT_EOL_S,line);
 	}
 }
 
@@ -153,19 +154,43 @@ static int main(const char *homeDir,int argc,char **argv)
 		return 1;
 	}
 
+	if (!homeDir)
+		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
+
 	try {
+		std::string buf;
+		if (!Utils::readFile((std::string(homeDir) + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),buf)) {
+			fprintf(stderr,"%s: fatal error: unable to read node address from identity.public in home path"ZT_EOL_S,argv[0]);
+			return 1;
+		}
+		Identity id;
+		if (!id.fromString(buf)) {
+			fprintf(stderr,"%s: fatal error: unable to read node address from identity.public in home path"ZT_EOL_S,argv[0]);
+			return 1;
+		}
+
+		std::string authToken(NodeControlClient::getAuthToken((std::string(homeDir) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),false));
+		if (!authToken.length())
+			authToken = NodeControlClient::getAuthToken(NodeControlClient::authTokenDefaultUserPath(),false);
+		if (!authToken.length()) {
+			fprintf(stderr,"%s: fatal error: unable to read authentication token from home path or user home"ZT_EOL_S,argv[0]);
+			return 1;
+		}
+
 		volatile bool done = false;
-		NodeControlClient client(homeDir,&_CBresultHandler,(void *)&done);
+		NodeControlClient client((std::string(ZT_IPC_ENDPOINT_BASE) + id.address().toString()).c_str(),authToken.c_str(),&_CBresultHandler,(void *)&done);
 		const char *err = client.error();
 		if (err) {
 			fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (%s)"ZT_EOL_S,argv[0],err);
 			return 1;
 		}
 		client.send(query.c_str());
-		while (!done)
-			Thread::sleep(100); // ghetto
+		while (!done) Thread::sleep(100); // dis be ghetto
+	} catch (std::exception &exc) {
+		fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (%s)"ZT_EOL_S,argv[0],exc.what());
+		return 1;
 	} catch ( ... ) {
-		fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?)"ZT_EOL_S,argv[0]);
+		fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (unknown exception)"ZT_EOL_S,argv[0]);
 		return 1;
 	}
 
@@ -758,12 +783,19 @@ int main(int argc,char **argv)
 	bool needsReset = false;
 	EthernetTapFactory *tapFactory = (EthernetTapFactory *)0;
 	RoutingTable *routingTable = (RoutingTable *)0;
+	NodeControlService *controlService = (NodeControlService *)0;
 
 	try {
+		// Get or create authtoken.secret -- note that if this fails, authentication
+		// will always fail since an empty auth token won't work. This should always
+		// succeed unless something is wrong with the filesystem.
+		std::string authToken(NodeControlClient::getAuthToken((std::string(homeDir) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
+
 		tapFactory = ZTCreatePlatformEthernetTapFactory;
 		routingTable = ZTCreatePlatformRoutingTable;
 
 		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset);
+		controlService = new NodeControlService(node,authToken.c_str());
 
 		switch(node->run()) {
 #ifdef __WINDOWS__
@@ -807,9 +839,6 @@ int main(int argc,char **argv)
 			default:
 				break;
 		}
-
-		delete node;
-		node = (Node *)0;
 	} catch ( std::exception &exc ) {
 		fprintf(stderr,"%s: unexpected exception: %s"ZT_EOL_S,argv[0],exc.what());
 		exitCode = 3;
@@ -818,6 +847,8 @@ int main(int argc,char **argv)
 		exitCode = 3;
 	}
 
+	delete controlService;
+	delete node; node = (Node *)0;
 	delete routingTable;
 	delete tapFactory;
 
