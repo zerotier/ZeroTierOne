@@ -471,6 +471,7 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastSupernodePingCheck = 0;
 		uint64_t lastBeacon = 0;
 		uint64_t lastRootTopologyFetch = 0;
+		uint64_t lastShutdownIfUnreadableCheck = 0;
 		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = 0;
@@ -480,21 +481,24 @@ Node::ReasonForTermination Node::run()
 		_r->initialized = true;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
+			uint64_t now = Utils::now();
+			bool resynchronize = false;
+
 			/* This is how the service automatically shuts down when the OSX .app is
 			 * thrown in the trash. It's not used on any other platform for now but
 			 * could do similar things. It's disabled on Windows since it doesn't really
 			 * work there. */
 #ifdef __UNIX_LIKE__
-			if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
-				FILE *tmpf = fopen(shutdownIfUnreadablePath.c_str(),"r");
-				if (!tmpf)
-					return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable exists but is not readable");
-				fclose(tmpf);
+			if ((now - lastShutdownIfUnreadableCheck) > 10000) {
+				lastShutdownIfUnreadableCheck = now;
+				if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
+					int tmpfd = ::open(shutdownIfUnreadablePath.c_str(),O_RDONLY,0);
+					if (tmpfd < 0)
+						return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable exists but is not readable");
+					else ::close(tmpfd);
+				}
 			}
 #endif
-
-			uint64_t now = Utils::now();
-			bool resynchronize = false;
 
 			// If it looks like the computer slept and woke, resynchronize.
 			if (lastDelayDelta >= ZT_SLEEP_WAKE_DETECTION_THRESHOLD) {

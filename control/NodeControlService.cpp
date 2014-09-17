@@ -71,6 +71,7 @@ void NodeControlService::threadMain()
 			} else if ((_node->initialized())&&(_node->address())) {
 				Utils::snprintf(tmp,sizeof(tmp),"%s%.10llx",ZT_IPC_ENDPOINT_BASE,(unsigned long long)_node->address());
 				_listener = new IpcListener(tmp,&_CBcommandHandler,this);
+				break;
 			}
 			Thread::sleep(100); // wait for Node to start
 		}
