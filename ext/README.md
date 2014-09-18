@@ -1,0 +1,1 @@
+The ext/ folder contains third party code, drivers, installation support files, etc.
