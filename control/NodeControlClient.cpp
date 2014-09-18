@@ -59,7 +59,7 @@ NodeControlClient::NodeControlClient(const char *ep,const char *authToken,void (
 	impl->resultHandler = resultHandler;
 	impl->arg = arg;
 	try {
-		impl->ipcc = new IpcConnection(ep,&_CBipcResultHandler,_impl);
+		impl->ipcc = new IpcConnection(ep,ZT_IPC_TIMEOUT,&_CBipcResultHandler,_impl);
 		impl->ipcc->printf("auth %s"ZT_EOL_S,authToken);
 	} catch ( ... ) {
 		impl->ipcc = (IpcConnection *)0;

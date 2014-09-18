@@ -50,7 +50,7 @@ public:
 	 * The supplied handler is passed on to incoming instances of IpcConnection. When
 	 * a connection is first opened, it is called with IPC_EVENT_NEW_CONNECTION. The
 	 * receiver must take ownership of the connection object. When a connection is
-	 * closed, IPC_EVENT_CONNECTION_CLOSING is generated. At this point (or after) the
+	 * closed, IPC_EVENT_CONNECTION_CLOSED is generated. At this point (or after) the
 	 * receiver must delete the object. IPC_EVENT_COMMAND is generated when lines of
 	 * text are read, and in this cases the last argument is not NULL. No closed event
 	 * is generated in the event of manual delete if the connection is still open.
@@ -60,11 +60,12 @@ public:
 	 * use cases are simple enough that it's not too bad.
 	 *
 	 * @param IPC endpoint name (OS-specific)
+	 * @param timeout Endpoint inactivity timeout in seconds
 	 * @param commandHandler Function to call for each command
 	 * @param arg First argument to pass to handler
 	 * @throws std::runtime_error Unable to bind to endpoint
 	 */
-	IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
+	IpcListener(const char *ep,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 
 	~IpcListener();
 
@@ -75,6 +76,7 @@ private:
 	std::string _endpoint;
 	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
+	unsigned int _timeout;
 #ifdef __WINDOWS__
 	volatile bool _run;
 	volatile bool _running;

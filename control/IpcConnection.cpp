@@ -36,16 +36,20 @@
 #include "IpcConnection.hpp"
 
 #ifndef __WINDOWS__
+#include <unistd.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/select.h>
 #endif
 
 namespace ZeroTier {
 
-IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
+IpcConnection::IpcConnection(const char *endpoint,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 	_handler(commandHandler),
 	_arg(arg),
+	_timeout(timeout),
 #ifdef __WINDOWS__
 	_sock(INVALID_HANDLE_VALUE),
 	_incoming(false),
@@ -81,12 +85,13 @@ IpcConnection::IpcConnection(const char *endpoint,void (*commandHandler)(void *,
 }
 
 #ifdef __WINDOWS__
-IpcConnection::IpcConnection(HANDLE s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
+IpcConnection::IpcConnection(HANDLE s,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 #else
-IpcConnection::IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
+IpcConnection::IpcConnection(int s,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 #endif
 	_handler(commandHandler),
 	_arg(arg),
+	_timeout(timeout),
 	_sock(s),
 #ifdef __WINDOWS__
 	_incoming(true),
@@ -104,18 +109,23 @@ IpcConnection::~IpcConnection()
 	_writeLock.unlock();
 
 #ifdef __WINDOWS__
+
 	while (_running) {
-		Thread::cancelIO(_thread);
+		Thread::cancelIO(_thread); // cause Windows to break from blocking read and detect shutdown
 		Sleep(100);
 	}
-#else
+
+#else // !__WINDOWS__
+
 	int s = _sock;
 	_sock = 0;
 	if (s > 0) {
 		::shutdown(s,SHUT_RDWR);
 		::close(s);
 	}
-#endif
+	Thread::join(_thread);
+
+#endif // __WINDOWS__ / !__WINDOWS__
 }
 
 void IpcConnection::printf(const char *format,...)
@@ -134,7 +144,7 @@ void IpcConnection::printf(const char *format,...)
 
 #ifdef __WINDOWS__
 	_writeBuf.append(tmp,n);
-	Thread::cancelIO(_thread);
+	Thread::cancelIO(_thread); // cause Windows to break from blocking read and service write buffer
 #else
 	if (_sock > 0)
 		::write(_sock,tmp,n);
@@ -144,20 +154,39 @@ void IpcConnection::printf(const char *format,...)
 void IpcConnection::threadMain()
 	throw()
 {
-	char tmp[65536];
-	char linebuf[65536];
+	char tmp[16384];
+	char linebuf[16384];
 	unsigned int lineptr = 0;
 	char c;
 
 #ifdef __WINDOWS__
+
 	DWORD n,i;
 	std::string wbuf;
-#else
+
+#else // !__WINDOWS__
+
 	int s,n,i;
-#endif
+	fd_set readfds,writefds,errorfds;
+	struct timeval tout;
+
+#ifdef SO_NOSIGPIPE
+	if (_sock > 0) {
+		i = 1;
+		::setsockopt(_sock,SOL_SOCKET,SO_NOSIGPIPE,(char *)&i,sizeof(i));
+	}
+#endif // SO_NOSIGPIPE
+
+#endif // __WINDOWS__ / !__WINDOWS__
 
 	while (_run) {
+
 #ifdef __WINDOWS__
+
+		/* Note that we do not use fucking timeouts in Windows, since it does seem
+		 * to properly detect named pipe endpoint close. But we do use a write buffer
+		 * because Windows won't let you divorce reading and writing threads without
+		 * all that OVERLAPPED cruft. */
 		{
 			Mutex::Lock _l(_writeLock);
 			if (!_run)
@@ -187,16 +216,42 @@ void IpcConnection::threadMain()
 		}
 		if (!_run)
 			break;
-#else
+
+#else // !__WINDOWS__
+
+		/* So today I learned that there is no reliable way to detect a half-closed
+		 * Unix domain socket. So to make sure we don't leave orphaned sockets around
+		 * we just use fucking timeouts. If a socket fucking times out, we break from
+		 * the I/O loop and terminate the thread. But this IpcConnection code is ugly
+		 * so maybe the OS is simply offended by it and refuses to reveal its mysteries
+		 * to me. Oh well... this IPC code will probably get canned when we go to
+		 * local HTTP RESTful interfaces or soemthing like that. */
 		if ((s = _sock) <= 0)
 			break;
-		n = (int)::read(s,tmp,sizeof(tmp));
-		if ((n <= 0)||(_sock <= 0))
-			break;
-#endif
+		FD_ZERO(&readfds);
+		FD_ZERO(&writefds);
+		FD_ZERO(&errorfds);
+		FD_SET(s,&readfds);
+		FD_SET(s,&errorfds);
+		tout.tv_sec = _timeout; // use a fucking timeout
+		tout.tv_usec = 0;
+		if (select(s+1,&readfds,&writefds,&errorfds,&tout) <= 0) {
+			break; // socket has fucking timed out
+		} else {
+			if (FD_ISSET(s,&errorfds))
+				break; // socket has an exception... sometimes works
+			else {
+				n = (int)::read(s,tmp,sizeof(tmp));
+				if ((n <= 0)||(_sock <= 0))
+					break; // read returned error... sometimes works
+			}
+		}
+
+#endif // __WINDOWS__ / !__WINDOWS__
+
 		for(i=0;i<n;++i) {
 			c = (linebuf[lineptr] = tmp[i]);
-			if ((c == '\r')||(c == '\n')||(lineptr == (sizeof(linebuf) - 1))) {
+			if ((c == '\r')||(c == '\n')||(c == (char)0)||(lineptr == (sizeof(linebuf) - 1))) {
 				if (lineptr) {
 					linebuf[lineptr] = (char)0;
 					_handler(_arg,this,IPC_EVENT_COMMAND,linebuf);
@@ -211,11 +266,13 @@ void IpcConnection::threadMain()
 	_writeLock.unlock();
 
 #ifdef __WINDOWS__
+
 	if (_incoming)
 		DisconnectNamedPipe(_sock);
 	CloseHandle(_sock);
 	_running = false;
-#endif
+
+#endif // __WINDOWS__
 
 	if (r)
 		_handler(_arg,this,IPC_EVENT_CONNECTION_CLOSED,(const char *)0);

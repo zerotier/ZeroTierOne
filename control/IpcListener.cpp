@@ -42,10 +42,11 @@
 
 namespace ZeroTier {
 
-IpcListener::IpcListener(const char *ep,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
+IpcListener::IpcListener(const char *ep,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg) :
 	_endpoint(ep),
 	_handler(commandHandler),
 	_arg(arg),
+	_timeout(timeout),
 #ifdef __WINDOWS__
 	_run(true),
 	_running(true)
@@ -130,7 +131,7 @@ void IpcListener::threadMain()
 					break;
 				}
 				try {
-					_handler(_arg,new IpcConnection(s,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
+					_handler(_arg,new IpcConnection(s,_timeout,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
 				} catch ( ... ) {} // handlers should not throw
 			} else {
 				CloseHandle(s);
@@ -155,7 +156,7 @@ void IpcListener::threadMain()
 			break;
 		}
 		try {
-			_handler(_arg,new IpcConnection(s,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
+			_handler(_arg,new IpcConnection(s,_timeout,_handler,_arg),IpcConnection::IPC_EVENT_NEW_CONNECTION,(const char *)0);
 		} catch ( ... ) {} // handlers should not throw
 	}
 #endif

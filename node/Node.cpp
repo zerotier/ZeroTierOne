@@ -493,9 +493,9 @@ Node::ReasonForTermination Node::run()
 				lastShutdownIfUnreadableCheck = now;
 				if (Utils::fileExists(shutdownIfUnreadablePath.c_str(),false)) {
 					int tmpfd = ::open(shutdownIfUnreadablePath.c_str(),O_RDONLY,0);
-					if (tmpfd < 0)
+					if (tmpfd < 0) {
 						return impl->terminateBecause(Node::NODE_NORMAL_TERMINATION,"shutdownIfUnreadable exists but is not readable");
-					else ::close(tmpfd);
+					} else ::close(tmpfd);
 				}
 			}
 #endif

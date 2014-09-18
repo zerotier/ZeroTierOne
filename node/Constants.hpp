@@ -415,4 +415,9 @@
  */
 #define ZT_MAX_BRIDGE_SPAM 16
 
+/**
+ * Timeout for IPC connections (e.g. unix domain sockets) in seconds
+ */
+#define ZT_IPC_TIMEOUT 600
+
 #endif

@@ -70,7 +70,7 @@ void NodeControlService::threadMain()
 					break;
 			} else if ((_node->initialized())&&(_node->address())) {
 				Utils::snprintf(tmp,sizeof(tmp),"%s%.10llx",ZT_IPC_ENDPOINT_BASE,(unsigned long long)_node->address());
-				_listener = new IpcListener(tmp,&_CBcommandHandler,this);
+				_listener = new IpcListener(tmp,ZT_IPC_TIMEOUT,&_CBcommandHandler,this);
 				break;
 			}
 			Thread::sleep(100); // wait for Node to start
@@ -83,18 +83,18 @@ void NodeControlService::threadMain()
 
 void NodeControlService::_CBcommandHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *commandLine)
 {
-	if (!((NodeControlService *)arg)->_running)
-		return;
-	if ((!commandLine)||(!commandLine[0]))
-		return;
 	switch(event) {
 		case IpcConnection::IPC_EVENT_COMMAND: {
+			if ((!((NodeControlService *)arg)->_running)||(!commandLine)||(!commandLine[0]))
+				return;
 			((NodeControlService *)arg)->_doCommand(ipcc,commandLine);
 		}	break;
+
 		case IpcConnection::IPC_EVENT_NEW_CONNECTION: {
 			Mutex::Lock _l(((NodeControlService *)arg)->_connections_m);
 			((NodeControlService *)arg)->_connections[ipcc] = false; // not yet authenticated
 		}	break;
+
 		case IpcConnection::IPC_EVENT_CONNECTION_CLOSED: {
 			Mutex::Lock _l(((NodeControlService *)arg)->_connections_m);
 			((NodeControlService *)arg)->_connections.erase(ipcc);

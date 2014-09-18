@@ -61,11 +61,12 @@ public:
 	 * Connect to an IPC endpoint
 	 *
 	 * @param endpoint Endpoint path
+	 * @param timeout Inactivity timeout in seconds
 	 * @param commandHandler Command handler function
 	 * @param arg First argument to command handler
 	 * @throws std::runtime_error Unable to connect
 	 */
-	IpcConnection(const char *endpoint,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
+	IpcConnection(const char *endpoint,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 	~IpcConnection();
 
 	/**
@@ -80,13 +81,14 @@ public:
 private:
 	// Used by IpcListener to construct incoming connections
 #ifdef __WINDOWS__
-	IpcConnection(HANDLE s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
+	IpcConnection(HANDLE s,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 #else
-	IpcConnection(int s,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
+	IpcConnection(int s,unsigned int timeout,void (*commandHandler)(void *,IpcConnection *,IpcConnection::EventType,const char *),void *arg);
 #endif
 
 	void (*_handler)(void *,IpcConnection *,IpcConnection::EventType,const char *);
 	void *_arg;
+	unsigned int _timeout;
 #ifdef __WINDOWS__
 	HANDLE _sock;
 	std::string _writeBuf;
