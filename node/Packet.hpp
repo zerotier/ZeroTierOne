@@ -527,7 +527,7 @@ public:
 		 */
 		VERB_EXT_FRAME = 7,
 
-		/* A multicast frame:
+		/* A multicast frame [old multicast protocol, deprecated]:
 		 *   <[2] 16-bit propagation depth or 0xffff for "do not forward">
 		 *   <[320] propagation FIFO>
 		 *   <[1024] propagation bloom filter>
@@ -593,7 +593,7 @@ public:
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
 		 */
-		VERB_MULTICAST_FRAME = 8,
+		VERB_P5_MULTICAST_FRAME = 8,
 
 		/* Announce interest in multicast group(s):
 		 *   <[8] 64-bit network ID>
@@ -657,7 +657,60 @@ public:
 		 * It does not generate an OK or ERROR message, and is treated only as
 		 * a hint to refresh now.
 		 */
-		VERB_NETWORK_CONFIG_REFRESH = 12
+		VERB_NETWORK_CONFIG_REFRESH = 12,
+
+		/* Request endpoints for multicast distribution:
+		 *   <[1] flags>
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   <[2] 16-bit (suggested) max number of multicast peers desired>
+		 *  [<[...] network membership certificate (optional)>]
+		 *
+		 * Flags are:
+		 *   0x01 - network membership certificate is included
+		 *
+		 * This message asks a peer for additional known endpoints that have
+		 * LIKEd a given multicast group. It's sent when the sender wishes
+		 * to send multicast but does not have the desired number of recipient
+		 * peers. (Hence it is "lonely." :)
+		 *
+		 * OK response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   <[2] 16-bit total number of known members in this multicast group>
+		 *   <[2] 16-bit number of members enumerated in this packet>
+		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
+		 *
+		 * ERROR response payload:
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group being queried>
+		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *
+		 * ERRORs are optional and are only generated if permission is denied,
+		 * certificate of membership is out of date, etc.
+		 */
+		VERB_MULTICAST_LONELY = 13,
+
+		/* Multicast frame:
+		 *   <[1] flags (currently unused, must be 0)>
+		 *   <[4] 32-bit multicast ADI (note that this is out of order here -- it precedes MAC)>
+		 *   <[6] destination MAC or all zero for destination node>
+		 *   <[6] source MAC or all zero for node of origin>
+		 *   <[2] 16-bit ethertype>
+		 *   <[...] ethernet payload>
+		 *
+		 * This is similar to EXT_FRAME but carries a multicast, and is sent
+		 * out to recipients on a multicast list.
+		 *
+		 * OK is not generated.
+		 *
+		 * ERROR response payload:
+		 *   <[6] multicast group MAC>
+		 *   <[4] 32-bit multicast group ADI>
+		 */
+		VERB_MULTICAST_FRAME = 14
 	};
 
 	/**
@@ -687,7 +740,10 @@ public:
 		ERROR_NEED_MEMBERSHIP_CERTIFICATE = 6,
 
 		/* Tried to join network, but you're not a member */
-		ERROR_NETWORK_ACCESS_DENIED_ = 7 /* extra _ to avoid Windows name conflict */
+		ERROR_NETWORK_ACCESS_DENIED_ = 7, /* extra _ to avoid Windows name conflict */
+
+		/* Multicasts to this group are not wanted */
+		ERROR_UNWANTED_MULTICAST = 8
 	};
 
 	/**

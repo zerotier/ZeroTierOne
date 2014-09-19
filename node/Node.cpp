@@ -70,7 +70,6 @@
 #include "Network.hpp"
 #include "MulticastGroup.hpp"
 #include "Mutex.hpp"
-#include "Multicaster.hpp"
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
 #include "Buffer.hpp"
@@ -113,7 +112,6 @@ struct _NodeImpl
 		delete renv.topology; renv.topology = (Topology *)0;        // now we no longer need routing info
 		delete renv.sm;       renv.sm = (SocketManager *)0;         // close all sockets
 		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
-		delete renv.mc;       renv.mc = (Multicaster *)0;
 		delete renv.antiRec;  renv.antiRec = (AntiRecursion *)0;
 		delete renv.http;     renv.http = (HttpClient *)0;
 		delete renv.prng;     renv.prng = (CMWC4096 *)0;
@@ -382,7 +380,6 @@ Node::ReasonForTermination Node::run()
 
 		_r->http = new HttpClient();
 		_r->antiRec = new AntiRecursion();
-		_r->mc = new Multicaster();
 		_r->sw = new Switch(_r);
 		_r->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
 		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));

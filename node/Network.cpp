@@ -117,23 +117,23 @@ bool Network::updateMulticastGroups()
 	EthernetTap *t = _tap;
 	if (t) {
 		// Grab current groups from the local tap
-		bool updated = t->updateMulticastGroups(_multicastGroups);
+		bool updated = t->updateMulticastGroups(_myMulticastGroups);
 
 		// Merge in learned groups from any hosts bridged in behind us
-		for(std::map<MulticastGroup,uint64_t>::const_iterator mg(_bridgedMulticastGroups.begin());mg!=_bridgedMulticastGroups.end();++mg)
-			_multicastGroups.insert(mg->first);
+		for(std::map<MulticastGroup,uint64_t>::const_iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();++mg)
+			_myMulticastGroups.insert(mg->first);
 
 		// Add or remove BROADCAST group based on broadcast enabled netconf flag
 		if ((_config)&&(_config->enableBroadcast())) {
-			if (_multicastGroups.count(BROADCAST))
+			if (_myMulticastGroups.count(BROADCAST))
 				return updated;
 			else {
-				_multicastGroups.insert(BROADCAST);
+				_myMulticastGroups.insert(BROADCAST);
 				return true;
 			}
 		} else {
-			if (_multicastGroups.count(BROADCAST)) {
-				_multicastGroups.erase(BROADCAST);
+			if (_myMulticastGroups.count(BROADCAST)) {
+				_myMulticastGroups.erase(BROADCAST);
 				return true;
 			} else return updated;
 		}
@@ -311,9 +311,9 @@ void Network::clean()
 	}
 
 	// Clean learned multicast groups if we haven't heard from them in a while
-	for(std::map<MulticastGroup,uint64_t>::iterator mg(_bridgedMulticastGroups.begin());mg!=_bridgedMulticastGroups.end();) {
+	for(std::map<MulticastGroup,uint64_t>::iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();) {
 		if ((now - mg->second) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
-			_bridgedMulticastGroups.erase(mg++);
+			_multicastGroupsBehindMe.erase(mg++);
 		else ++mg;
 	}
 }
@@ -419,23 +419,23 @@ void Network::threadMain()
 void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 {
 	Mutex::Lock _l(_lock);
-	_bridgeRoutes[mac] = addr;
+	_remoteBridgeRoutes[mac] = addr;
 
-	// If _bridgeRoutes exceeds sanity limit, trim worst offenders until below -- denial of service circuit breaker
-	while (_bridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
+	// If _remoteBridgeRoutes exceeds sanity limit, trim worst offenders until below -- denial of service circuit breaker
+	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
 		std::map<Address,unsigned long> counts;
 		Address maxAddr;
 		unsigned long maxCount = 0;
-		for(std::map<MAC,Address>::iterator br(_bridgeRoutes.begin());br!=_bridgeRoutes.end();++br) {
+		for(std::map<MAC,Address>::iterator br(_remoteBridgeRoutes.begin());br!=_remoteBridgeRoutes.end();++br) {
 			unsigned long c = ++counts[br->second];
 			if (c > maxCount) {
 				maxCount = c;
 				maxAddr = br->second;
 			}
 		}
-		for(std::map<MAC,Address>::iterator br(_bridgeRoutes.begin());br!=_bridgeRoutes.end();) {
+		for(std::map<MAC,Address>::iterator br(_remoteBridgeRoutes.begin());br!=_remoteBridgeRoutes.end();) {
 			if (br->second == maxAddr)
-				_bridgeRoutes.erase(br++);
+				_remoteBridgeRoutes.erase(br++);
 			else ++br;
 		}
 	}

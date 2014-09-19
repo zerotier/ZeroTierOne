@@ -151,6 +151,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		TRACE("%s: MULTICAST %s -> %s %s %d",network->tapDeviceName().c_str(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
 
+		/* old P5 multicast algorithm
 		const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
 		const uint16_t bloomNonce = (uint16_t)(_r->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
 		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
@@ -226,6 +227,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.compress();
 			send(outp,true);
 		}
+		*/
 
 		return;
 	}

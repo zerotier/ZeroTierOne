@@ -228,36 +228,19 @@
 #define ZT_RELAY_MAX_HOPS 3
 
 /**
- * Size of multicast deduplication ring buffer in 64-bit ints
+ * Expire time for multicast 'likes' and indirect multicast memberships in ms
  */
-#define ZT_MULTICAST_DEDUP_HISTORY_LENGTH 512
-
-/**
- * Default number of bits in multicast propagation prefix
- */
-#define ZT_DEFAULT_MULTICAST_PREFIX_BITS 2
-
-/**
- * Default max depth (TTL) for multicast propagation
- */
-#define ZT_DEFAULT_MULTICAST_DEPTH 32
-
-/**
- * Global maximum for multicast propagation depth
- *
- * This is kind of an insane value, meant as a sanity check.
- */
-#define ZT_MULTICAST_GLOBAL_MAX_DEPTH 500
-
-/**
- * Expire time for multicast 'likes' in ms
- */
-#define ZT_MULTICAST_LIKE_EXPIRE 120000
+#define ZT_MULTICAST_LIKE_EXPIRE 600000
 
 /**
  * Time between polls of local tap devices for multicast membership changes
  */
 #define ZT_MULTICAST_LOCAL_POLL_PERIOD 10000
+
+/**
+ * Minimum delay between attempts to gather multicast topology info if members > 0
+ */
+#define ZT_MULTICAST_TOPOLOGY_RESEARCH_RATE_THROTTLE 120000
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping

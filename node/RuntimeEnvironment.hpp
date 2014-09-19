@@ -42,7 +42,6 @@ class Topology;
 class CMWC4096;
 class Service;
 class Node;
-class Multicaster;
 class SoftwareUpdater;
 class SocketManager;
 class AntiRecursion;
@@ -79,7 +78,6 @@ public:
 		prng((CMWC4096 *)0),
 		http((HttpClient *)0),
 		antiRec((AntiRecursion *)0),
-		mc((Multicaster *)0),
 		sw((Switch *)0),
 		sm((SocketManager *)0),
 		topology((Topology *)0),
@@ -129,7 +127,6 @@ public:
 	CMWC4096 *prng;
 	HttpClient *http;
 	AntiRecursion *antiRec;
-	Multicaster *mc;
 	Switch *sw;
 	SocketManager *sm;
 	Topology *topology;

@@ -44,7 +44,6 @@
 #include "Array.hpp"
 #include "Network.hpp"
 #include "SharedPtr.hpp"
-#include "Multicaster.hpp"
 #include "PacketDecoder.hpp"
 #include "Socket.hpp"
 
