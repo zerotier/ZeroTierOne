@@ -87,6 +87,12 @@ public:
 	inline uint64_t timestamp() const throw() { return _timestamp; }
 
 	/**
+	 * @param now Current time
+	 * @return True if this multicast is expired (has exceeded transmit timeout)
+	 */
+	inline bool expired(uint64_t now) const throw() { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
+
+	/**
 	 * @return Number of unique recipients to which this packet has already been sent
 	 */
 	inline unsigned int sendCount() const throw() { return (unsigned int)_alreadySentTo.size(); }
