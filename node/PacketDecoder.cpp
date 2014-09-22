@@ -99,8 +99,8 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 				return _doFRAME(_r,peer);
 			case Packet::VERB_EXT_FRAME:
 				return _doEXT_FRAME(_r,peer);
-			case Packet::VERB_MULTICAST_FRAME:
-				return _doMULTICAST_FRAME(_r,peer);
+			case Packet::VERB_P5_MULTICAST_FRAME:
+				return _doP5_MULTICAST_FRAME(_r,peer);
 			case Packet::VERB_MULTICAST_LIKE:
 				return _doMULTICAST_LIKE(_r,peer);
 			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE:

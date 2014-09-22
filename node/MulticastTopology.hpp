@@ -37,7 +37,6 @@
 #include "Constants.hpp"
 #include "Address.hpp"
 #include "MulticastGroup.hpp"
-#include "Mutex.hpp"
 #include "Utils.hpp"
 
 namespace ZeroTier {
@@ -46,6 +45,8 @@ class Topology;
 
 /**
  * Database of known multicast peers within a network
+ *
+ * This structure is not guarded by a mutex; the caller must synchronize access.
  */
 class MulticastTopology
 {
@@ -64,6 +65,14 @@ private:
 		inline bool operator<(const MulticastGroupMember &m) const throw() { return (rank < m.rank); }
 	};
 
+	struct MulticastGroupStatus
+	{
+		MulticastGroupStatus() : lastGatheredMembers(0) {}
+
+		uint64_t lastGatheredMembers; // time we last gathered members
+		std::vector<MulticastGroupMember> members; // members of this group
+	};
+
 public:
 	MulticastTopology();
 	~MulticastTopology();
@@ -75,20 +84,7 @@ public:
 	 * @param member Member to add/update
 	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
 	 */
-	inline void add(const MulticastGroup &mg,const Address &member,const Address &learnedFrom)
-	{
-		Mutex::Lock _l(_members_m);
-		std::vector<MulticastGroupMember> &mv = _members[mg];
-		for(std::vector<MulticastGroupMember>::iterator m(mv.begin());m!=mv.end();++m) {
-			if (m->address == member) {
-				if (m->learnedFrom) // once a member has been seen directly, we keep its status as direct
-					m->learnedFrom = learnedFrom;
-				m->timestamp = Utils::now();
-				return;
-			}
-		}
-		mv.push_back(MulticastGroupMember(member,learnedFrom,Utils::now()));
-	}
+	void add(const MulticastGroup &mg,const Address &member,const Address &learnedFrom);
 
 	/**
 	 * Erase a member from a multicast group (if present)
@@ -96,65 +92,50 @@ public:
 	 * @param mg Multicast group
 	 * @param member Member to erase
 	 */
-	inline void erase(const MulticastGroup &mg,const Address &member)
-	{
-		Mutex::Lock _l(_members_m);
-		std::map< MulticastGroup,std::vector<MulticastGroupMember> >::iterator r(_members.find(mg));
-		if (r != _members.end()) {
-			for(std::vector<MulticastGroupMember>::iterator m(r->second.begin());m!=r->second.end();++m) {
-				if (m->address == member) {
-					r->second.erase(m);
-					return;
-				}
-			}
-		}
-	}
+	void erase(const MulticastGroup &mg,const Address &member);
 
 	/**
 	 * @param mg Multicast group
-	 * @return Number of known peers in group
+	 * @return Tuple of: time we last gathered members (or 0 for never) and number of known members
 	 */
-	inline unsigned int memberCount(const MulticastGroup &mg) const
+	inline std::pair<uint64_t,unsigned int> groupStatus(const MulticastGroup &mg) const
 	{
-		Mutex::Lock _l(_members_m);
-		std::map< MulticastGroup,std::vector<MulticastGroupMember> >::const_iterator r(_members.find(mg));
-		return ((r != _members.end()) ? (unsigned int)r->second.size() : (unsigned int)0);
+		std::map< MulticastGroup,MulticastGroupStatus >::const_iterator r(_groups.find(mg));
+		return ((r != _groups.end()) ? std::pair<uint64_t,unsigned int>(r->second.lastGatheredMembers,r->second.members.size()) : std::pair<uint64_t,unsigned int>(0,0));
 	}
 
 	/**
-	 * Iterate over the known members of a multicast group
+	 * Return the number of new members we should want to gather or 0 for none
 	 *
 	 * @param mg Multicast group
-	 * @param func Function to be called with multicast group and address of member
-	 * @tparam F Function type (explicitly template on "FuncObj &" if reference instead of copy should be passed)
-	 * @return Number of members in multicast group for which function was called
+	 * @param now Current time
+	 * @param limit The maximum number we want per multicast group on this network
+	 * @param updateLastGatheredTimeOnNonzeroReturn If true, reset group's last gathered time to 'now' on non-zero return
 	 */
-	template<typename F>
-	inline unsigned int eachMember(const MulticastGroup &mg,F func) const
+	unsigned int want(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn);
+
+	/**
+	 * Update last gathered members time for a group
+	 *
+	 * @param mg Multicast group
+	 * @param now Current time
+	 */
+	inline void gatheringMembersNow(const MulticastGroup &mg,uint64_t now)
 	{
-		Mutex::Lock _l(_members_m);
-		std::map< MulticastGroup,std::vector<MulticastGroupMember> >::const_iterator r(_members.find(mg));
-		if (r != _members.end()) {
-			// We go in reverse order because most recently learned members are pushed to the end
-			// of the vector. The priority resort algorithm in clean() sorts in ascending order
-			// of propagation priority too.
-			for(std::vector<MulticastGroupMember>::const_reverse_iterator m(r->second.rbegin());m!=r->second.rend();++m) {
-				func(mg,m->address);
-			}
-			return (unsigned int)r->second.size();
-		} else return 0;
+		_groups[mg].lastGatheredMembers = now;
 	}
 
 	/**
 	 * Clean up and resort database
 	 *
+	 * @param now Current time
 	 * @param topology Global peer topology
+	 * @param trim Trim lists to a maximum of this many members per multicast group
 	 */
-	void clean(const Topology &topology);
+	void clean(uint64_t now,const Topology &topology);
 
 private:
-	std::map< MulticastGroup,std::vector<MulticastGroupMember> > _members;
-	Mutex _members_m;
+	std::map< MulticastGroup,MulticastGroupStatus > _groups;
 };
 
 } // namespace ZeroTier

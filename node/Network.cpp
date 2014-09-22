@@ -316,6 +316,8 @@ void Network::clean()
 			_multicastGroupsBehindMe.erase(mg++);
 		else ++mg;
 	}
+
+	_multicastTopology.clean(now,*(_r->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_DEFAULT_MULTICAST_LIMIT);
 }
 
 Network::Status Network::status() const

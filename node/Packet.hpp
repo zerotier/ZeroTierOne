@@ -664,7 +664,7 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
-		 *   <[2] 16-bit (suggested) max number of multicast peers desired>
+		 *   <[4] 32-bit (suggested) max number of multicast peers desired or 0 for no limit>
 		 *  [<[...] network membership certificate (optional)>]
 		 *
 		 * Flags are:
@@ -673,13 +673,13 @@ public:
 		 * This message asks a peer for additional known endpoints that have
 		 * LIKEd a given multicast group. It's sent when the sender wishes
 		 * to send multicast but does not have the desired number of recipient
-		 * peers. (Hence it is "lonely." :)
+		 * peers.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
-		 *   <[2] 16-bit total number of known members in this multicast group>
+		 *   <[4] 32-bit total number of known members in this multicast group>
 		 *   <[2] 16-bit number of members enumerated in this packet>
 		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
 		 *
@@ -691,7 +691,7 @@ public:
 		 * ERRORs are optional and are only generated if permission is denied,
 		 * certificate of membership is out of date, etc.
 		 */
-		VERB_MULTICAST_LONELY = 13,
+		VERB_MULTICAST_GATHER = 13,
 
 		/* Multicast frame:
 		 *   <[1] flags (currently unused, must be 0)>
@@ -709,6 +709,9 @@ public:
 		 * ERROR response payload:
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
+		 *
+		 * ERRORs are optional and can be generated if a certificate is needed or if
+		 * multicasts for this multicast group are no longer wanted.
 		 */
 		VERB_MULTICAST_FRAME = 14
 	};
@@ -779,6 +782,22 @@ public:
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
 		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+	}
+
+	/**
+	 * Make a copy of a packet with a new initialization vector and destination address
+	 *
+	 * This can be used to take one draft prototype packet and quickly make copies to
+	 * encrypt for different destinations.
+	 *
+	 * @param prototype Prototype packet
+	 * @param dest Destination ZeroTier address for new packet
+	 */
+	Packet(const Packet &prototype,const Address &dest) :
+		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
+	{
+		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
+		setDestination(dest);
 	}
 
 	/**

@@ -119,7 +119,7 @@ private:
 	bool _doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
+	bool _doP5_MULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer);

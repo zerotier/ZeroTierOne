@@ -191,7 +191,7 @@
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
 /**
- * How often Topology::clean() and Network::clean() are called in ms
+ * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
 #define ZT_DB_CLEAN_PERIOD 300000
 
@@ -238,9 +238,32 @@
 #define ZT_MULTICAST_LOCAL_POLL_PERIOD 10000
 
 /**
- * Minimum delay between attempts to gather multicast topology info if members > 0
+ * Minimum delay between multicast endpoint gathering attempts
+ *
+ * Actual delay will vary between MIN and MAX research rate depending on
+ * how many endpoints we have -- MIN for 0, MAX for one less than limit.
+ * If we have the limit of known multicast endpoints, no further attempts
+ * to gather them are made.
  */
-#define ZT_MULTICAST_TOPOLOGY_RESEARCH_RATE_THROTTLE 120000
+#define ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN (ZT_MULTICAST_LIKE_EXPIRE / 50)
+
+/**
+ * Maximum delay between multicast endpoint gathering attempts
+ */
+#define ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MAX (ZT_MULTICAST_LIKE_EXPIRE / 2)
+
+/**
+ * Timeout for outgoing multicasts
+ *
+ * Attempts will be made to gather recipients and send until we reach
+ * the limit or sending times out.
+ */
+#define ZT_MULTICAST_TRANSMIT_TIMEOUT (ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN * 3)
+
+/**
+ * Default maximum number of peers to address with a single multicast (if unspecified in network)
+ */
+#define ZT_DEFAULT_MULTICAST_LIMIT 64
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping

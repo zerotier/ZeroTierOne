@@ -12,7 +12,7 @@ OBJS=\
 	node/Identity.o \
 	node/InetAddress.o \
 	node/Logger.o \
-	node/Multicaster.o \
+	node/MulticastTopology.o \
 	node/Network.o \
 	node/NetworkConfig.o \
 	node/Node.o \

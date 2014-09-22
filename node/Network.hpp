@@ -51,6 +51,7 @@
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
+#include "MulticastTopology.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Thread.hpp"
@@ -445,15 +446,12 @@ private:
 	EthernetTap *volatile _tap; // tap device or NULL if not initialized yet
 	volatile bool _enabled;
 
-	std::set<MulticastGroup> _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
-	std::map<MulticastGroup,uint64_t> _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
+	std::set< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
+	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
+	std::map< MulticastGroup,BandwidthAccount > _multicastRateAccounts;
+	MulticastTopology _multicastTopology;
 
 	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
-
-	// Deprecated, but will be kept around until P5_MULTICAST_FRAME is gone -- but the
-	// entry for us is still used by both. Eventually there will only be one BandwidthAccount,
-	// namely ours.
-	std::map< std::pair<Address,MulticastGroup>,BandwidthAccount > _multicastRateAccounts;
 
 	std::map<Address,CertificateOfMembership> _membershipCertificates; // Other members' certificates of membership
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate; // When did we last push our certificate to each remote member?
