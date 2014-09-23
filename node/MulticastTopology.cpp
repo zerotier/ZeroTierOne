@@ -43,6 +43,7 @@ MulticastTopology::~MulticastTopology()
 
 void MulticastTopology::add(const MulticastGroup &mg,const Address &member,const Address &learnedFrom)
 {
+	Mutex::Lock _l(_groups_m);
 	std::vector<MulticastGroupMember> &mv = _groups[mg].members;
 	for(std::vector<MulticastGroupMember>::iterator m(mv.begin());m!=mv.end();++m) {
 		if (m->address == member) {
@@ -57,6 +58,7 @@ void MulticastTopology::add(const MulticastGroup &mg,const Address &member,const
 
 void MulticastTopology::erase(const MulticastGroup &mg,const Address &member)
 {
+	Mutex::Lock _l(_groups_m);
 	std::map< MulticastGroup,MulticastGroupStatus >::iterator r(_groups.find(mg));
 	if (r != _groups.end()) {
 		for(std::vector<MulticastGroupMember>::iterator m(r->second.members.begin());m!=r->second.members.end();++m) {
@@ -72,6 +74,7 @@ void MulticastTopology::erase(const MulticastGroup &mg,const Address &member)
 
 unsigned int MulticastTopology::want(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)
 {
+	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[mg];
 	if ((unsigned int)gs.members.size() >= limit) {
 		// We already caught our limit, don't need to go fishing any more.
@@ -90,6 +93,7 @@ unsigned int MulticastTopology::want(const MulticastGroup &mg,uint64_t now,unsig
 
 void MulticastTopology::clean(uint64_t now,const Topology &topology)
 {
+	Mutex::Lock _l(_groups_m);
 	for(std::map< MulticastGroup,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {
 		std::vector<MulticastGroupMember>::iterator reader(mm->second.members.begin());
 		std::vector<MulticastGroupMember>::iterator writer(mm->second.members.begin());
@@ -108,7 +112,7 @@ void MulticastTopology::clean(uint64_t now,const Topology &topology)
 					SharedPtr<Peer> p(topology.getPeer(writer->learnedFrom));
 					if (p)
 						writer->rank = p->lastUnicastFrame() - ZT_MULTICAST_LIKE_EXPIRE;
-					else writer->rank = writer->timestamp - 86400000;
+					else writer->rank = writer->timestamp - (86400000 + ZT_MULTICAST_LIKE_EXPIRE);
 				} else {
 					SharedPtr<Peer> p(topology.getPeer(writer->address));
 					if (p)

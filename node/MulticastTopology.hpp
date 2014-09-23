@@ -38,6 +38,7 @@
 #include "Address.hpp"
 #include "MulticastGroup.hpp"
 #include "Utils.hpp"
+#include "Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -45,8 +46,6 @@ class Topology;
 
 /**
  * Database of known multicast peers within a network
- *
- * This structure is not guarded by a mutex; the caller must synchronize access.
  */
 class MulticastTopology
 {
@@ -100,6 +99,7 @@ public:
 	 */
 	inline std::pair<uint64_t,unsigned int> groupStatus(const MulticastGroup &mg) const
 	{
+		Mutex::Lock _l(_groups_m);
 		std::map< MulticastGroup,MulticastGroupStatus >::const_iterator r(_groups.find(mg));
 		return ((r != _groups.end()) ? std::pair<uint64_t,unsigned int>(r->second.lastGatheredMembers,r->second.members.size()) : std::pair<uint64_t,unsigned int>(0,0));
 	}
@@ -122,6 +122,7 @@ public:
 	 */
 	inline void gatheringMembersNow(const MulticastGroup &mg,uint64_t now)
 	{
+		Mutex::Lock _l(_groups_m);
 		_groups[mg].lastGatheredMembers = now;
 	}
 
@@ -136,6 +137,7 @@ public:
 
 private:
 	std::map< MulticastGroup,MulticastGroupStatus > _groups;
+	Mutex _groups_m;
 };
 
 } // namespace ZeroTier

@@ -249,23 +249,21 @@ public:
 	Status status() const;
 
 	/**
-	 * Update multicast balance for an address and multicast group, return whether packet is allowed
+	 * Update and check multicast rate balance for a group
 	 *
-	 * @param a Originating address of multicast packet
 	 * @param mg Multicast group
 	 * @param bytes Size of packet
 	 * @return True if packet is within budget
 	 */
-	inline bool updateAndCheckMulticastBalance(const Address &a,const MulticastGroup &mg,unsigned int bytes)
+	inline bool updateAndCheckMulticastBalance(const MulticastGroup &mg,unsigned int bytes)
 	{
 		Mutex::Lock _l(_lock);
 		if (!_config)
 			return false;
-		std::pair<Address,MulticastGroup> k(a,mg);
-		std::map< std::pair<Address,MulticastGroup>,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(k));
+		std::map< MulticastGroup,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(mg));
 		if (bal == _multicastRateAccounts.end()) {
 			NetworkConfig::MulticastRate r(_config->multicastRate(mg));
-			bal = _multicastRateAccounts.insert(std::pair< std::pair<Address,MulticastGroup>,BandwidthAccount >(k,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
+			bal = _multicastRateAccounts.insert(std::pair< MulticastGroup,BandwidthAccount >(mg,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
 		}
 		return bal->second.deduct(bytes);
 	}
@@ -348,7 +346,7 @@ public:
 	}
 
 	/**
-	 * @return Set of currently assigned IP addresses
+	 * @return Set of IPs currently assigned to interface
 	 */
 	inline std::set<InetAddress> ips() const
 	{
