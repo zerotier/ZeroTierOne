@@ -414,6 +414,12 @@ public:
 	void setEnabled(bool enabled);
 
 	/**
+	 * @return Multicast topology for this network
+	 */
+	inline MulticastTopology &mcTopology() { return _multicastTopology; }
+	inline const MulticastTopology &mcTopology() const { return _multicastTopology; }
+
+	/**
 	 * Destroy this network
 	 *
 	 * This causes the network to disable itself, destroy its tap device, and on

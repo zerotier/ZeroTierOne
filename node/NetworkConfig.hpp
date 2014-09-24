@@ -52,8 +52,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
-#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS "mpb"
-#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH "md"
+#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
 #define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE "p"
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
@@ -116,8 +115,7 @@ public:
 	inline uint64_t networkId() const throw() { return _nwid; }
 	inline uint64_t timestamp() const throw() { return _timestamp; }
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
-	inline unsigned int multicastPrefixBits() const throw() { return _multicastPrefixBits; }
-	inline unsigned int multicastDepth() const throw() { return _multicastDepth; }
+	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
 	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
 	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
 	inline bool isPublic() const throw() { return (!_private); }
@@ -155,8 +153,7 @@ private:
 	uint64_t _nwid;
 	uint64_t _timestamp;
 	Address _issuedTo;
-	unsigned int _multicastPrefixBits;
-	unsigned int _multicastDepth;
+	unsigned int _multicastLimit;
 	bool _allowPassiveBridging;
 	bool _private;
 	bool _enableBroadcast;

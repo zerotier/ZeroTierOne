@@ -281,13 +281,12 @@ bool Network::isAllowed(const Address &peer) const
 
 void Network::clean()
 {
+	uint64_t now = Utils::now();
 	{
 		Mutex::Lock _l(_lock);
 
 		if (_destroyed)
 			return;
-
-		uint64_t now = Utils::now();
 
 		if ((_config)&&(_config->isPublic())) {
 			// Open (public) networks do not track certs or cert pushes at all.
@@ -318,7 +317,6 @@ void Network::clean()
 			else ++mg;
 		}
 	}
-
 	{
 		_multicastTopology.clean(now,*(_r->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_DEFAULT_MULTICAST_LIMIT);
 	}

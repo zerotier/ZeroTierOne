@@ -112,7 +112,7 @@ public:
 	 * @param limit The maximum number we want per multicast group on this network
 	 * @param updateLastGatheredTimeOnNonzeroReturn If true, reset group's last gathered time to 'now' on non-zero return
 	 */
-	unsigned int want(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn);
+	unsigned int shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn);
 
 	/**
 	 * Update last gathered members time for a group

@@ -85,18 +85,16 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 
 	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP).c_str());
 	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO));
-	_multicastPrefixBits = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS,zero).c_str());
-	if (!_multicastPrefixBits)
-		_multicastPrefixBits = ZT_DEFAULT_MULTICAST_PREFIX_BITS;
-	_multicastDepth = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH,zero).c_str());
-	if (!_multicastDepth)
-		_multicastDepth = ZT_DEFAULT_MULTICAST_DEPTH;
+	_multicastLimit = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,zero).c_str());
+	if (_multicastLimit == 0) _multicastLimit = ZT_DEFAULT_MULTICAST_LIMIT;
 	_allowPassiveBridging = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING,zero).c_str()) != 0);
 	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0);
 	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
 	_description = d.get(ZT_NETWORKCONFIG_DICT_KEY_DESC,std::string());
 
+	// In dictionary IPs are split into V4 and V6 addresses, but we don't really
+	// need that so merge them here.
 	std::string ipAddrs(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC,std::string()));
 	{
 		std::string v6s(d.get(ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC,std::string()));

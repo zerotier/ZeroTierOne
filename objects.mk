@@ -10,6 +10,7 @@ OBJS=\
 	node/Dictionary.o \
 	node/HttpClient.o \
 	node/Identity.o \
+	node/IncomingPacket.o \
 	node/InetAddress.o \
 	node/Logger.o \
 	node/MulticastTopology.o \
@@ -18,7 +19,6 @@ OBJS=\
 	node/Node.o \
 	node/NodeConfig.o \
 	node/Packet.o \
-	node/PacketDecoder.o \
 	node/Peer.o \
 	node/Poly1305.o \
 	node/RoutingTable.o \

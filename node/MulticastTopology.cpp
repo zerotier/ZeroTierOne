@@ -72,7 +72,7 @@ void MulticastTopology::erase(const MulticastGroup &mg,const Address &member)
 	}
 }
 
-unsigned int MulticastTopology::want(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)
+unsigned int MulticastTopology::shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)
 {
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[mg];
