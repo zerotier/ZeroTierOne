@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_PACKETDECODER_HPP
-#define ZT_PACKETDECODER_HPP
+#ifndef ZT_INCOMINGPACKET_HPP
+#define ZT_INCOMINGPACKET_HPP
 
 #include <stdexcept>
 
@@ -63,9 +63,9 @@ class Network;
 /**
  * Subclass of packet that handles the decoding of it
  */
-class PacketDecoder : public Packet
+class IncomingPacket : public Packet
 {
-	friend class SharedPtr<PacketDecoder>;
+	friend class SharedPtr<IncomingPacket>;
 
 public:
 	/**
@@ -77,7 +77,7 @@ public:
 	 * @throws std::out_of_range Range error processing packet
 	 */
 	template<unsigned int C2>
-	PacketDecoder(const Buffer<C2> &b,const SharedPtr<Socket> &fromSock,const InetAddress &remoteAddress)
+	IncomingPacket(const Buffer<C2> &b,const SharedPtr<Socket> &fromSock,const InetAddress &remoteAddress)
  		throw(std::out_of_range) :
  		Packet(b),
  		_receiveTime(Utils::now()),

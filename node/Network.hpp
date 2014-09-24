@@ -166,7 +166,7 @@ public:
 	/**
 	 * Set or update this network's configuration
 	 *
-	 * This is called by PacketDecoder when an update comes over the wire, or
+	 * This is called in IncomingPacket when an update comes over the wire, or
 	 * internally when an old config is reloaded from disk.
 	 *
 	 * This also cancels any netconf failure flags.
@@ -181,7 +181,7 @@ public:
 	bool setConfiguration(const Dictionary &conf,bool saveToDisk = true);
 
 	/**
-	 * Set netconf failure to 'access denied' -- called by PacketDecoder when netconf master reports this
+	 * Set netconf failure to 'access denied' -- called in IncomingPacket when netconf master reports this
 	 */
 	inline void setAccessDenied()
 	{

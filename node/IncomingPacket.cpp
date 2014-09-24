@@ -35,7 +35,7 @@
 #include "Defaults.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
-#include "PacketDecoder.hpp"
+#include "IncomingPacket.hpp"
 #include "Switch.hpp"
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
@@ -45,7 +45,7 @@
 
 namespace ZeroTier {
 
-bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
+bool IncomingPacket::tryDecode(const RuntimeEnvironment *_r)
 {
 	if ((!encrypted())&&(verb() == Packet::VERB_HELLO)) {
 		// Unencrypted HELLOs are handled here since they are used to
@@ -117,7 +117,7 @@ bool PacketDecoder::tryDecode(const RuntimeEnvironment *_r)
 	}
 }
 
-bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB];
@@ -164,7 +164,7 @@ bool PacketDecoder::_doERROR(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	return true;
 }
 
-bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
+bool IncomingPacket::_doHELLO(const RuntimeEnvironment *_r)
 {
 	try {
 		unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
@@ -271,7 +271,7 @@ bool PacketDecoder::_doHELLO(const RuntimeEnvironment *_r)
 	return true;
 }
 
-bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
@@ -332,7 +332,7 @@ bool PacketDecoder::_doOK(const RuntimeEnvironment *_r,const SharedPtr<Peer> &pe
 	return true;
 }
 
-bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		if (payloadLength() == ZT_ADDRESS_LENGTH) {
@@ -366,7 +366,7 @@ bool PacketDecoder::_doWHOIS(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	return true;
 }
 
-bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		/*
@@ -410,7 +410,7 @@ bool PacketDecoder::_doRENDEZVOUS(const RuntimeEnvironment *_r,const SharedPtr<P
 	return true;
 }
 
-bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID)));
@@ -449,7 +449,7 @@ bool PacketDecoder::_doFRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> 
 	return true;
 }
 
-bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		SharedPtr<Network> network(_r->nc->network(at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID)));
@@ -518,7 +518,7 @@ bool PacketDecoder::_doEXT_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Pe
 	return true;
 }
 
-bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		Address origin(Address(field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
@@ -767,7 +767,7 @@ bool PacketDecoder::_doMULTICAST_FRAME(const RuntimeEnvironment *_r,const Shared
 	return true;
 }
 
-bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		Address src(source());
@@ -793,7 +793,7 @@ bool PacketDecoder::_doMULTICAST_LIKE(const RuntimeEnvironment *_r,const SharedP
 	return true;
 }
 
-bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		CertificateOfMembership com;
@@ -829,7 +829,7 @@ bool PacketDecoder::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *
 	return true;
 }
 
-bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
@@ -872,7 +872,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *_r,const
 	return true;
 }
 
-bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
+bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer)
 {
 	try {
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
@@ -893,7 +893,7 @@ bool PacketDecoder::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *_r,const
 	return true;
 }
 
-void PacketDecoder::_sendErrorNeedCertificate(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer,uint64_t nwid)
+void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *_r,const SharedPtr<Peer> &peer,uint64_t nwid)
 {
 	Packet outp(source(),_r->identity.address(),Packet::VERB_ERROR);
 	outp.append((unsigned char)verb());

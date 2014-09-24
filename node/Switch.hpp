@@ -44,7 +44,7 @@
 #include "Array.hpp"
 #include "Network.hpp"
 #include "SharedPtr.hpp"
-#include "PacketDecoder.hpp"
+#include "IncomingPacket.hpp"
 #include "Socket.hpp"
 
 /* Ethernet frame types that might be relevant to us */
@@ -246,7 +246,7 @@ private:
 	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
-	std::list< SharedPtr<PacketDecoder> > _rxQueue;
+	std::list< SharedPtr<IncomingPacket> > _rxQueue;
 	Mutex _rxQueue_m;
 
 	struct TXQueueEntry
@@ -267,7 +267,7 @@ private:
 	struct DefragQueueEntry
 	{
 		uint64_t creationTime;
-		SharedPtr<PacketDecoder> frag0;
+		SharedPtr<IncomingPacket> frag0;
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB

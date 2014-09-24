@@ -547,7 +547,7 @@ unsigned long Switch::doTimerTasks()
 
 	{
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<PacketDecoder> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
+		for(std::list< SharedPtr<IncomingPacket> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
 			if ((now - (*i)->receiveTime()) > ZT_RECEIVE_QUEUE_TIMEOUT) {
 				TRACE("RX %s -> %s timed out",(*i)->source().toString().c_str(),(*i)->destination().toString().c_str());
 				_rxQueue.erase(i++);
@@ -664,7 +664,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 
 	{	// finish processing any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<PacketDecoder> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
+		for(std::list< SharedPtr<IncomingPacket> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
 			if ((*rxi)->tryDecode(_r))
 				_rxQueue.erase(rxi++);
 			else ++rxi;
@@ -755,7 +755,7 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 					// We have all fragments -- assemble and process full Packet
 					//TRACE("packet %.16llx is complete, assembling and processing...",pid);
 
-					SharedPtr<PacketDecoder> packet(dqe->second.frag0);
+					SharedPtr<IncomingPacket> packet(dqe->second.frag0);
 					for(unsigned int f=1;f<tf;++f)
 						packet->append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
 					_defragQueue.erase(dqe);
@@ -772,7 +772,7 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 
 void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
-	SharedPtr<PacketDecoder> packet(new PacketDecoder(data,fromSock,fromAddr));
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,fromSock,fromAddr));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
