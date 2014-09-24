@@ -67,6 +67,11 @@ class Peer;
 
 /**
  * Core of the distributed Ethernet switch and protocol implementation
+ *
+ * This class is perhaps a bit misnamed, but it's basically where everything
+ * meets. Transport-layer ZT packets come in here, as do virtual network
+ * packets from tap devices, and this sends them where they need to go and
+ * wraps/unwraps accordingly. It also handles queues and timeouts and such.
  */
 class Switch : NonCopyable
 {
@@ -161,13 +166,6 @@ public:
 	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr);
 
 	/**
-	 * Perform retries and other periodic timer tasks
-	 * 
-	 * @return Number of milliseconds until doTimerTasks() should be run again
-	 */
-	unsigned long doTimerTasks();
-
-	/**
 	 * Announce multicast group memberships
 	 *
 	 * This announces all the groups for all the networks in the supplied map to
@@ -204,13 +202,20 @@ public:
 	void cancelWhoisRequest(const Address &addr);
 
 	/**
-	 * Run any processes that are waiting for this peer
+	 * Run any processes that are waiting for this peer's identity
 	 *
 	 * Called when we learn of a peer's identity from HELLO, OK(WHOIS), etc.
 	 *
 	 * @param peer New peer
 	 */
 	void doAnythingWaitingForPeer(const SharedPtr<Peer> &peer);
+
+	/**
+	 * Perform retries and other periodic timer tasks
+	 * 
+	 * @return Number of milliseconds until doTimerTasks() should be run again
+	 */
+	unsigned long doTimerTasks();
 
 	/**
 	 * @param etherType Ethernet type ID
@@ -235,8 +240,8 @@ private:
 
 	const RuntimeEnvironment *const _r;
 	volatile uint64_t _lastBeacon;
-	volatile unsigned int _multicastIdCounter;
 
+	// Outsanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest
 	{
 		uint64_t lastSent;
@@ -246,9 +251,23 @@ private:
 	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
-	std::list< SharedPtr<IncomingPacket> > _rxQueue;
+	// Packet defragmentation queue -- comes before RX queue in path
+	struct DefragQueueEntry
+	{
+		uint64_t creationTime;
+		SharedPtr<IncomingPacket> frag0;
+		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
+		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
+		uint32_t haveFragments; // bit mask, LSB to MSB
+	};
+	std::map< uint64_t,DefragQueueEntry > _defragQueue;
+	Mutex _defragQueue_m;
+
+	// ZeroTier-layer RX queue of incoming packets in the process of being decoded
+	std::vector< SharedPtr<IncomingPacket> > _rxQueue;
 	Mutex _rxQueue_m;
 
+	// ZeroTier-layer TX queue by destination ZeroTier address
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
@@ -264,20 +283,11 @@ private:
 	std::multimap< Address,TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
 
-	struct DefragQueueEntry
-	{
-		uint64_t creationTime;
-		SharedPtr<IncomingPacket> frag0;
-		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
-		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
-		uint32_t haveFragments; // bit mask, LSB to MSB
-	};
-	std::map< uint64_t,DefragQueueEntry > _defragQueue;
-	Mutex _defragQueue_m;
-
+	// Tracks sending of VERB_RENDEZVOUS to relaying peers
 	std::map< Array< Address,2 >,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
 
+	// Active attempts to contact remote peers, including state of multi-phase NAT traversal
 	struct ContactQueueEntry
 	{
 		ContactQueueEntry() {}

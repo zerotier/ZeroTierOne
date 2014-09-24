@@ -33,10 +33,14 @@
 
 #include <map>
 #include <vector>
+#include <list>
 
 #include "Constants.hpp"
 #include "Address.hpp"
+#include "MAC.hpp"
 #include "MulticastGroup.hpp"
+#include "OutboundMulticast.hpp"
+#include "Switch.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
 
@@ -70,6 +74,7 @@ private:
 
 		uint64_t lastGatheredMembers; // time we last gathered members
 		std::vector<MulticastGroupMember> members; // members of this group
+		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 	};
 
 public:
@@ -80,10 +85,10 @@ public:
 	 * Add or update a member in a multicast group
 	 *
 	 * @param mg Multicast group
-	 * @param member Member to add/update
 	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
+	 * @param member New member address
 	 */
-	void add(const MulticastGroup &mg,const Address &member,const Address &learnedFrom);
+	void add(const MulticastGroup &mg,const Address &learnedFrom,const Address &member);
 
 	/**
 	 * Erase a member from a multicast group (if present)
@@ -92,6 +97,21 @@ public:
 	 * @param member Member to erase
 	 */
 	void erase(const MulticastGroup &mg,const Address &member);
+
+	/**
+	 * Send a multicast
+	 *
+	 * @param nwid Network ID
+	 * @param now Current time
+	 * @param sw Switch to use for sending packets
+	 * @param self This node's address
+	 * @param mg Multicast group
+	 * @param from Source Ethernet MAC address
+	 * @param etherType Ethernet frame type
+	 * @param data Packet data
+	 * @param len Length of packet data
+	 */
+	void send(uint64_t nwid,uint64_t now,const Switch &sw,const Address &self,const MulticastGroup &mg,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
 
 	/**
 	 * @param mg Multicast group

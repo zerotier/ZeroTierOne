@@ -41,19 +41,8 @@ MulticastTopology::~MulticastTopology()
 {
 }
 
-void MulticastTopology::add(const MulticastGroup &mg,const Address &member,const Address &learnedFrom)
+void MulticastTopology::add(const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 {
-	Mutex::Lock _l(_groups_m);
-	std::vector<MulticastGroupMember> &mv = _groups[mg].members;
-	for(std::vector<MulticastGroupMember>::iterator m(mv.begin());m!=mv.end();++m) {
-		if (m->address == member) {
-			if (m->learnedFrom) // once a member has been seen directly, we keep its status as direct
-				m->learnedFrom = learnedFrom;
-			m->timestamp = Utils::now();
-			return;
-		}
-	}
-	mv.push_back(MulticastGroupMember(member,learnedFrom,Utils::now()));
 }
 
 void MulticastTopology::erase(const MulticastGroup &mg,const Address &member)
@@ -70,6 +59,12 @@ void MulticastTopology::erase(const MulticastGroup &mg,const Address &member)
 			}
 		}
 	}
+}
+
+void send(uint64_t nwid,uint64_t now,const Address &self,const MulticastGroup &mg,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
+{
+	Mutex::Lock _l(_groups_m);
+	std::map< MulticastGroup,MulticastGroupStatus >::iterator r(_groups.find(mg));
 }
 
 unsigned int MulticastTopology::shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)

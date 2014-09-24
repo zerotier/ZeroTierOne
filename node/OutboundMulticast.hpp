@@ -51,6 +51,13 @@ class OutboundMulticast
 {
 public:
 	/**
+	 * Create an uninitialized outbound multicast
+	 *
+	 * It must be initialized with init().
+	 */
+	OutboundMulticast() {}
+
+	/**
 	 * Initialize outbound multicast
 	 *
 	 * @param timestamp Creation time
@@ -63,13 +70,13 @@ public:
 	 * @param len Length of data
 	 * @throws std::out_of_range Data too large to fit in a MULTICAST_FRAME
 	 */
-	OutboundMulticast(uint64_t timestamp,const Address &self,uint64_t nwid,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len) :
-		_timestamp(timestamp),
-		_nwid(nwid),
-		_source(src),
-		_destination(dest),
-		_etherType(etherType)
+	inline void init(uint64_t timestamp,const Address &self,uint64_t nwid,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len)
 	{
+		_timestamp = timestamp;
+		_nwid = nwid;
+		_source = src;
+		_destination = dest;
+		_etherType = etherType;
 		_packet.setSource(self);
 		_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
 		_packet.append((char)0);

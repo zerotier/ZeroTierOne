@@ -694,6 +694,7 @@ public:
 		VERB_MULTICAST_GATHER = 13,
 
 		/* Multicast frame:
+		 *   <[8] 64-bit network ID>
 		 *   <[1] flags (currently unused, must be 0)>
 		 *   <[4] 32-bit multicast ADI (note that this is out of order here -- it precedes MAC)>
 		 *   <[6] destination MAC or all zero for destination node>
