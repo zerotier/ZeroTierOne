@@ -73,12 +73,12 @@ Network::~Network()
 	{
 		Mutex::Lock _l(_lock);
 		if (_tap)
-			_r->tapFactory->close(_tap,_destroyed);
+			RR->tapFactory->close(_tap,_destroyed);
 	}
 
 	if (_destroyed) {
-		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
-		Utils::rm(std::string(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
+		Utils::rm(std::string(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf"));
+		Utils::rm(std::string(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
 	} else {
 		clean();
 		_dumpMulticastCerts();
@@ -149,7 +149,7 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 
 	try {
 		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
-		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == _r->identity.address())) {
+		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == RR->identity.address())) {
 			std::set<InetAddress> oldStaticIps;
 			if (_config)
 				oldStaticIps = _config->staticIps();
@@ -160,7 +160,7 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 			_netconfFailure = NETCONF_FAILURE_NONE;
 
 			if (saveToDisk) {
-				std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
+				std::string confPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
 				if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
 					LOG("error: unable to write network configuration file at: %s",confPath.c_str());
 				} else {
@@ -226,17 +226,17 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 
 void Network::requestConfiguration()
 {
-	if (controller() == _r->identity.address()) {
+	if (controller() == RR->identity.address()) {
 		// netconf master cannot be a member of its own nets
 		LOG("unable to request network configuration for network %.16llx: I am the network master, cannot query self",(unsigned long long)_id);
 		return;
 	}
 
 	TRACE("requesting netconf for network %.16llx from netconf master %s",(unsigned long long)_id,controller().toString().c_str());
-	Packet outp(controller(),_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
+	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	outp.append((uint16_t)0); // no meta-data
-	_r->sw->send(outp,true);
+	RR->sw->send(outp,true);
 }
 
 void Network::addMembershipCertificate(const CertificateOfMembership &cert)
@@ -318,7 +318,7 @@ void Network::clean()
 		}
 	}
 	{
-		_multicastTopology.clean(now,*(_r->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_DEFAULT_MULTICAST_LIMIT);
+		_multicastTopology.clean(now,*(RR->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_DEFAULT_MULTICAST_LIMIT);
 	}
 }
 
@@ -343,12 +343,12 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 	if ((!((Network *)arg)->_enabled)||(((Network *)arg)->status() != NETWORK_OK))
 		return;
 
-	const RuntimeEnvironment *_r = ((Network *)arg)->_r;
-	if (_r->shutdownInProgress)
+	const RuntimeEnvironment *RR = ((Network *)arg)->_r;
+	if (RR->shutdownInProgress)
 		return;
 
 	try {
-		_r->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
+		RR->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
 	} catch (std::exception &exc) {
 		TRACE("unexpected exception handling local packet: %s",exc.what());
 	} catch ( ... ) {
@@ -369,9 +369,9 @@ void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t
 		lastPushed = now;
 		TRACE("pushing membership cert for %.16llx to %s",(unsigned long long)_id,peer.toString().c_str());
 
-		Packet outp(peer,_r->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+		Packet outp(peer,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 		_config->com().serialize(outp);
-		_r->sw->send(outp,true);
+		RR->sw->send(outp,true);
 	}
 }
 
@@ -388,7 +388,7 @@ void Network::threadMain()
 		std::string desiredDevice(_nc->getLocalConfig(lcentry));
 		_mkNetworkFriendlyName(fname,sizeof(fname));
 
-		t = _r->tapFactory->open(_mac,ZT_IF_MTU,ZT_DEFAULT_IF_METRIC,_id,(desiredDevice.length() > 0) ? desiredDevice.c_str() : (const char *)0,fname,_CBhandleTapData,this);
+		t = RR->tapFactory->open(_mac,ZT_IF_MTU,ZT_DEFAULT_IF_METRIC,_id,(desiredDevice.length() > 0) ? desiredDevice.c_str() : (const char *)0,fname,_CBhandleTapData,this);
 
 		std::string dn(t->deviceName());
 		if ((dn.length())&&(dn != desiredDevice))
@@ -408,7 +408,7 @@ void Network::threadMain()
 	{
 		Mutex::Lock _l(_lock);
 		if (_tap) // the tap creation thread can technically be re-launched, though this isn't done right now
-			_r->tapFactory->close(_tap,false);
+			RR->tapFactory->close(_tap,false);
 		_tap = t;
 		if (t) {
 			if (_config) {
@@ -465,7 +465,7 @@ void Network::destroy()
 	_setupThread = Thread();
 
 	if (_tap)
-		_r->tapFactory->close(_tap,true);
+		RR->tapFactory->close(_tap,true);
 	_tap = (EthernetTap *)0;
 }
 
@@ -474,8 +474,8 @@ void Network::_restoreState()
 	Buffer<ZT_NETWORK_CERT_WRITE_BUF_SIZE> buf;
 
 	std::string idstr(idString());
-	std::string confPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idstr + ".conf");
-	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idstr + ".mcerts");
+	std::string confPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idstr + ".conf");
+	std::string mcdbPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idstr + ".mcerts");
 
 	// Read configuration file containing last config from netconf master
 	{
@@ -540,7 +540,7 @@ void Network::_restoreState()
 void Network::_dumpMulticastCerts()
 {
 	Buffer<ZT_NETWORK_CERT_WRITE_BUF_SIZE> buf;
-	std::string mcdbPath(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
+	std::string mcdbPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");
 	Mutex::Lock _l(_lock);
 
 	if (!_config)

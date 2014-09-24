@@ -39,11 +39,11 @@
 namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv,bool enablePermanentIdCaching) :
-	_r(renv),
+	RR(renv),
 	_amSupernode(false)
 {
 	if (enablePermanentIdCaching)
-		_idCacheBase = (_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d");
+		_idCacheBase = (RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d");
 	_loadPeers();
 }
 
@@ -66,10 +66,10 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 	uint64_t now = Utils::now();
 
 	for(std::map< Identity,std::vector< std::pair<InetAddress,bool> > >::const_iterator i(sn.begin());i!=sn.end();++i) {
-		if (i->first != _r->identity) {
+		if (i->first != RR->identity) {
 			SharedPtr<Peer> p(getPeer(i->first.address()));
 			if (!p)
-				p = addPeer(SharedPtr<Peer>(new Peer(_r->identity,i->first)));
+				p = addPeer(SharedPtr<Peer>(new Peer(RR->identity,i->first)));
 			for(std::vector< std::pair<InetAddress,bool> >::const_iterator j(i->second.begin());j!=i->second.end();++j)
 				p->addPath(Path(j->first,(j->second) ? Path::PATH_TYPE_TCP_OUT : Path::PATH_TYPE_UDP,true));
 			p->use(now);
@@ -78,7 +78,7 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 		_supernodeAddresses.insert(i->first.address());
 	}
 
-	_amSupernode = (_supernodes.find(_r->identity) != _supernodes.end());
+	_amSupernode = (_supernodes.find(RR->identity) != _supernodes.end());
 }
 
 void Topology::setSupernodes(const Dictionary &sn)
@@ -104,7 +104,7 @@ void Topology::setSupernodes(const Dictionary &sn)
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 {
-	if (peer->address() == _r->identity.address()) {
+	if (peer->address() == RR->identity.address()) {
 		TRACE("BUG: addNewPeer() caught and ignored attempt to add peer for self");
 		throw std::logic_error("cannot add peer for self");
 	}
@@ -118,7 +118,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 
 SharedPtr<Peer> Topology::getPeer(const Address &zta) const
 {
-	if (zta == _r->identity.address()) {
+	if (zta == RR->identity.address()) {
 		TRACE("BUG: ignored attempt to getPeer() for self, returned NULL");
 		return SharedPtr<Peer>();
 	}
@@ -171,12 +171,12 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 		 * circumnavigate the globe rather than bouncing between just two. */
 
 		if (_supernodeAddresses.size() > 1) { // gotta be one other than me for this to work
-			std::set<Address>::const_iterator sna(_supernodeAddresses.find(_r->identity.address()));
+			std::set<Address>::const_iterator sna(_supernodeAddresses.find(RR->identity.address()));
 			if (sna != _supernodeAddresses.end()) { // sanity check -- _amSupernode should've been false in this case
 				for(;;) {
 					if (++sna == _supernodeAddresses.end())
 						sna = _supernodeAddresses.begin(); // wrap around at end
-					if (*sna != _r->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
+					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
 						SharedPtr<Peer> p(getPeer(*sna));
 						if ((p)&&(p->hasActiveDirectPath(now))) {
 							bestSupernode = p;
@@ -292,7 +292,7 @@ bool Topology::authenticateRootTopology(const Dictionary &rt)
 void Topology::_dumpPeers()
 {
 	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
-	std::string pdpath(_r->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
+	std::string pdpath(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
 	Mutex::Lock _l(_activePeers_m);
 
 	FILE *pd = fopen(pdpath.c_str(),"wb");
@@ -343,7 +343,7 @@ void Topology::_dumpPeers()
 void Topology::_loadPeers()
 {
 	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
-	std::string pdpath(_r->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
+	std::string pdpath(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
 	Mutex::Lock _l(_activePeers_m);
 
 	_activePeers.clear();

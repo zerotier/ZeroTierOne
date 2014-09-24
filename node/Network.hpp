@@ -446,7 +446,7 @@ private:
 	uint64_t _id;
 	NodeConfig *_nc; // parent NodeConfig object
 	MAC _mac; // local MAC address
-	const RuntimeEnvironment *_r;
+	const RuntimeEnvironment *RR;
 	EthernetTap *volatile _tap; // tap device or NULL if not initialized yet
 	volatile bool _enabled;
 

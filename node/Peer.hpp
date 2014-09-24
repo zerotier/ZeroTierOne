@@ -118,7 +118,7 @@ public:
 	 * @param now Current time
 	 */
 	void receive(
-		const RuntimeEnvironment *_r,
+		const RuntimeEnvironment *RR,
 		const SharedPtr<Socket> &fromSock,
 		const InetAddress &remoteAddr,
 		unsigned int hops,
@@ -140,7 +140,7 @@ public:
 	 * @param now Current time
 	 * @return Type of path used or Path::PATH_TYPE_NULL on failure
 	 */
-	Path::Type send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now);
+	Path::Type send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
 
 	/**
 	 * Send HELLO to a peer via all direct paths available
@@ -152,7 +152,7 @@ public:
 	 * @param now Current time
 	 * @return True if send appears successful for at least one address type
 	 */
-	bool sendPing(const RuntimeEnvironment *_r,uint64_t now);
+	bool sendPing(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
 	 * Called periodically by Topology::clean() to remove stale paths and do other cleanup

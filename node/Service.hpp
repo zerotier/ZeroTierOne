@@ -99,7 +99,7 @@ public:
 		throw();
 
 private:
-	const RuntimeEnvironment *_r;
+	const RuntimeEnvironment *RR;
 
 	Thread _thread;
 

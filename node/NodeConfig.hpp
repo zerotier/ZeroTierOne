@@ -113,7 +113,7 @@ public:
 		SharedPtr<Network> &nw = _networks[nwid];
 		if (nw)
 			return nw;
-		else return (nw = Network::newInstance(_r,this,nwid));
+		else return (nw = Network::newInstance(RR,this,nwid));
 	}
 
 	/**
@@ -166,7 +166,7 @@ public:
 	void _readLocalConfig();
 	void _writeLocalConfig();
 
-	const RuntimeEnvironment *_r;
+	const RuntimeEnvironment *RR;
 	Dictionary _localConfig; // persisted as local.conf
 	Mutex _localConfig_m;
 	std::map< uint64_t,SharedPtr<Network> > _networks; // persisted in networks.d/

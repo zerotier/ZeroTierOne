@@ -237,7 +237,7 @@ public:
 		PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
 			_supernodeAddresses(renv->topology->supernodeAddresses()),
-			_r(renv) {}
+			RR(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
@@ -249,14 +249,14 @@ public:
 			if ( (!_supernodeAddresses.count(p->address())) &&
 			     ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) &&
 			     ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) ) {
-				p->sendPing(_r,_now);
+				p->sendPing(RR,_now);
 			}
 		}
 
 	private:
 		uint64_t _now;
 		std::set<Address> _supernodeAddresses;
-		const RuntimeEnvironment *_r;
+		const RuntimeEnvironment *RR;
 	};
 
 	/**
@@ -273,7 +273,7 @@ public:
 	public:
 		PingSupernodesThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) throw() :
 			_now(now),
-			_r(renv) {}
+			RR(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
@@ -284,13 +284,13 @@ public:
 			uint64_t lp = 0;
 			uint64_t lr = 0;
 			p->lastPingAndDirectReceive(lp,lr);
-			if ( (lr < _r->timeOfLastResynchronize) || ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) || ((_now - lr) >= ZT_PEER_DIRECT_PING_DELAY) )
-				p->sendPing(_r,_now);
+			if ( (lr < RR->timeOfLastResynchronize) || ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) || ((_now - lr) >= ZT_PEER_DIRECT_PING_DELAY) )
+				p->sendPing(RR,_now);
 		}
 
 	private:
 		uint64_t _now;
-		const RuntimeEnvironment *_r;
+		const RuntimeEnvironment *RR;
 	};
 
 	/**
@@ -315,23 +315,23 @@ public:
 			_now(now),
 			_supernode(renv->topology->getBestSupernode()),
 			_supernodeAddresses(renv->topology->supernodeAddresses()),
-			_r(renv) {}
+			RR(renv) {}
 
 		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 		{
 			p->clearPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
 
-			Packet outp(p->address(),_r->identity.address(),Packet::VERB_NOP);
+			Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
 			outp.armor(p->key(),false); // no need to encrypt a NOP
 
 			if (_supernodeAddresses.count(p->address())) {
 				// Send NOP directly to supernodes
-				p->send(_r,outp.data(),outp.size(),_now);
+				p->send(RR,outp.data(),outp.size(),_now);
 			} else {
 				// Send NOP indirectly to regular peers if still active, triggering a new RENDEZVOUS
 				if (((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)&&(_supernode)) {
 					TRACE("sending reset NOP to %s",p->address().toString().c_str());
-					_supernode->send(_r,outp.data(),outp.size(),_now);
+					_supernode->send(RR,outp.data(),outp.size(),_now);
 				}
 			}
 		}
@@ -340,7 +340,7 @@ public:
 		uint64_t _now;
 		SharedPtr<Peer> _supernode;
 		std::set<Address> _supernodeAddresses;
-		const RuntimeEnvironment *_r;
+		const RuntimeEnvironment *RR;
 	};
 
 	/**
@@ -373,7 +373,7 @@ public:
 	static bool authenticateRootTopology(const Dictionary &rt);
 
 private:
-	const RuntimeEnvironment *const _r;
+	const RuntimeEnvironment *RR;
 
 	void _dumpPeers();
 	void _loadPeers();

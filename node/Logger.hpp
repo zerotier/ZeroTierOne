@@ -37,11 +37,11 @@
 #include "Mutex.hpp"
 
 #undef LOG
-#define LOG(f,...) if (_r->log) _r->log->log(f,##__VA_ARGS__)
+#define LOG(f,...) if (RR->log) RR->log->log(f,##__VA_ARGS__)
 
 #undef TRACE
 #ifdef ZT_TRACE
-#define TRACE(f,...) if (_r->log) _r->log->trace(__FILE__,__LINE__,f,##__VA_ARGS__)
+#define TRACE(f,...) if (RR->log) RR->log->trace(__FILE__,__LINE__,f,##__VA_ARGS__)
 #else
 #define TRACE(f,...) {}
 #endif

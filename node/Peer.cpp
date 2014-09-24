@@ -63,7 +63,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 }
 
 void Peer::receive(
-	const RuntimeEnvironment *_r,
+	const RuntimeEnvironment *RR,
 	const SharedPtr<Socket> &fromSock,
 	const InetAddress &remoteAddr,
 	unsigned int hops,
@@ -74,7 +74,7 @@ void Peer::receive(
 	uint64_t now)
 {
 	// Update system-wide last packet receive time
-	*((const_cast<uint64_t *>(&(_r->timeOfLastPacketReceived)))) = now;
+	*((const_cast<uint64_t *>(&(RR->timeOfLastPacketReceived)))) = now;
 
 	// Global last receive time regardless of path
 	_lastReceive = now;
@@ -114,7 +114,7 @@ void Peer::receive(
 		// Lock can't be locked here or it'll recurse and deadlock.
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
-			_r->sw->announceMulticastGroups(SharedPtr<Peer>(this));
+			RR->sw->announceMulticastGroups(SharedPtr<Peer>(this));
 		}
 	}
 
@@ -124,7 +124,7 @@ void Peer::receive(
 		_lastMulticastFrame = now;
 }
 
-Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int len,uint64_t now)
+Path::Type Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 
@@ -155,8 +155,8 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 	Path *bestPath = (Path *)0;
 	if (bestTcpOutPath) { // we have a TCP out path
 		if (bestNormalPath) { // we have both paths, decide which to use
-			if (_r->tcpTunnelingEnabled) { // TCP tunneling is enabled, so use normal path only if it looks alive
-				if ((bestNormalPathLastReceived > _r->timeOfLastResynchronize)&&((now - bestNormalPathLastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
+			if (RR->tcpTunnelingEnabled) { // TCP tunneling is enabled, so use normal path only if it looks alive
+				if ((bestNormalPathLastReceived > RR->timeOfLastResynchronize)&&((now - bestNormalPathLastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
 					bestPath = bestNormalPath;
 				else bestPath = bestTcpOutPath;
 			} else { // TCP tunneling is disabled, use normal path
@@ -171,9 +171,9 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 	if (!bestPath)
 		return Path::PATH_TYPE_NULL;
 
-	_r->antiRec->logOutgoingZT(data,len);
+	RR->antiRec->logOutgoingZT(data,len);
 
-	if (_r->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
+	if (RR->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
 		bestPath->sent(now);
 		return bestPath->type();
 	}
@@ -181,7 +181,7 @@ Path::Type Peer::send(const RuntimeEnvironment *_r,const void *data,unsigned int
 	return Path::PATH_TYPE_NULL;
 }
 
-bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
+bool Peer::sendPing(const RuntimeEnvironment *RR,uint64_t now)
 {
 	bool sent = false;
 	SharedPtr<Peer> self(this);
@@ -200,14 +200,14 @@ bool Peer::sendPing(const RuntimeEnvironment *_r,uint64_t now)
 			haveNormal = true;
 		}
 	}
-	const bool useTcpOut = ( (!haveNormal) || ( (_r->tcpTunnelingEnabled) && (lastNormalPingSent > _r->timeOfLastResynchronize) && (lastNormalPingSent > lastNormalReceive) && ((lastNormalPingSent - lastNormalReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
+	const bool useTcpOut = ( (!haveNormal) || ( (RR->tcpTunnelingEnabled) && (lastNormalPingSent > RR->timeOfLastResynchronize) && (lastNormalPingSent > lastNormalReceive) && ((lastNormalPingSent - lastNormalReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
 
 	TRACE("PING %s (useTcpOut==%d)",_id.address().toString().c_str(),(int)useTcpOut);
 
 	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 		if ((useTcpOut)||(p->type() != Path::PATH_TYPE_TCP_OUT)) {
 			p->pinged(now); // attempts to ping are logged whether they look successful or not
-			if (_r->sw->sendHELLO(self,*p)) {
+			if (RR->sw->sendHELLO(self,*p)) {
 				p->sent(now);
 				sent = true;
 			}

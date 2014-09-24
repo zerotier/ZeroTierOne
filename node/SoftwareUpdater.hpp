@@ -147,7 +147,7 @@ private:
 	static void _cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,const std::string &body);
 	static void _cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,const std::string &body);
 
-	const RuntimeEnvironment *_r;
+	const RuntimeEnvironment *RR;
 	const uint64_t _myVersion;
 	volatile uint64_t _lastUpdateAttempt;
 	volatile enum {

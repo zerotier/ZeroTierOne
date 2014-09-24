@@ -59,7 +59,7 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv) :
 		_readLocalConfig();
 	}
 
-	std::string networksFolder(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
+	std::string networksFolder(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
 	std::map<std::string,bool> networksDotD(Utils::listDirectory(networksFolder.c_str()));
 	std::vector<uint64_t> configuredNets;
 	for(std::map<std::string,bool>::iterator d(networksDotD.begin());d!=networksDotD.end();++d) {
@@ -75,7 +75,7 @@ NodeConfig::NodeConfig(const RuntimeEnvironment *renv) :
 
 	for(std::vector<uint64_t>::iterator n(configuredNets.begin());n!=configuredNets.end();++n) {
 		try {
-			_networks[*n] = Network::newInstance(_r,this,*n);
+			_networks[*n] = Network::newInstance(RR,this,*n);
 		} catch (std::exception &exc) {
 			LOG("unable to create network %.16llx: %s",(unsigned long long)*n,exc.what());
 		} catch ( ... ) {
@@ -122,7 +122,7 @@ void NodeConfig::clean()
 void NodeConfig::_readLocalConfig()
 {
 	// assumes _localConfig_m is locked
-	std::string localDotConf(_r->homePath + ZT_PATH_SEPARATOR_S + "local.conf");
+	std::string localDotConf(RR->homePath + ZT_PATH_SEPARATOR_S + "local.conf");
 	std::string buf;
 	if (Utils::readFile(localDotConf.c_str(),buf))
 		_localConfig.fromString(buf.c_str());
@@ -131,7 +131,7 @@ void NodeConfig::_readLocalConfig()
 void NodeConfig::_writeLocalConfig()
 {
 	// assumes _localConfig_m is locked
-	Utils::writeFile(((_r->homePath + ZT_PATH_SEPARATOR_S + "local.conf")).c_str(),_localConfig.toString());
+	Utils::writeFile(((RR->homePath + ZT_PATH_SEPARATOR_S + "local.conf")).c_str(),_localConfig.toString());
 }
 
 } // namespace ZeroTier

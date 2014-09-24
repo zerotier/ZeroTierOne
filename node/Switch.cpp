@@ -96,7 +96,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	 * Note: even when we introduce a more purposeful binding of the main UDP port, this can
 	 * still happen because Windows likes to send broadcasts over interfaces that have little
 	 * to do with their intended target audience. :P */
-	if (!_r->antiRec->checkEthernetFrame(data.data(),data.size())) {
+	if (!RR->antiRec->checkEthernetFrame(data.data(),data.size())) {
 		TRACE("%s: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->tapDeviceName().c_str(),etherTypeName(etherType),data.size());
 		return;
 	}
@@ -110,7 +110,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	// Check if this packet is from someone other than the tap -- i.e. bridged in
 	bool fromBridged = false;
 	if (from != network->mac()) {
-		if (!network->permitsBridging(_r->identity.address())) {
+		if (!network->permitsBridging(RR->identity.address())) {
 			LOG("%s: %s -> %s %s not forwarded, bridging disabled on %.16llx or this peer not a bridge",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
 			return;
 		}
@@ -143,7 +143,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			network->learnBridgedMulticastGroup(mg,now);
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
-		if (!network->updateAndCheckMulticastBalance(_r->identity.address(),mg,data.size())) {
+		if (!network->updateAndCheckMulticastBalance(RR->identity.address(),mg,data.size())) {
 			TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
 			return;
 		}
@@ -152,12 +152,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		/* old P5 multicast algorithm
 		const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
-		const uint16_t bloomNonce = (uint16_t)(_r->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
+		const uint16_t bloomNonce = (uint16_t)(RR->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
 		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
 		unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH]; // extra ZT_ADDRESS_LENGTH is for first hop, not put in packet but serves as destination for packet
 		unsigned char *const fifoEnd = fifo + sizeof(fifo);
 		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
-		const SharedPtr<Peer> supernode(_r->topology->getBestSupernode());
+		const SharedPtr<Peer> supernode(RR->topology->getBestSupernode());
 
 		// For each bit prefix send a packet to a list of destinations within it
 		for(unsigned int prefix=0,np=((unsigned int)2 << (nconf->multicastPrefixBits() - 1));prefix<np;++prefix) {
@@ -170,16 +170,16 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				fifoEnd,
 				bloom,
 				bloomNonce,
-				_r->identity.address(),
+				RR->identity.address(),
 				nconf->multicastPrefixBits(),
 				prefix,
-				_r->topology,
+				RR->topology,
 				now);
 			for(std::set<Address>::const_iterator ab(nconf->activeBridges().begin());ab!=nconf->activeBridges().end();++ab) {
 				if (!appender(*ab))
 					break;
 			}
-			_r->mc->getNextHops(network->id(),mg,appender);
+			RR->mc->getNextHops(network->id(),mg,appender);
 
 			// Pad remainder of FIFO with zeroes
 			while (fifoPtr != fifoEnd)
@@ -193,7 +193,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				else continue; // nowhere to go
 			}
 
-			Packet outp(firstHop,_r->identity.address(),Packet::VERB_MULTICAST_FRAME);
+			Packet outp(firstHop,RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
 			outp.append((uint16_t)0);
 			outp.append(fifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO); // remainder of fifo is loaded into packet
 			outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
@@ -202,7 +202,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append(bloomNonce);
 			outp.append((unsigned char)nconf->multicastPrefixBits());
 			outp.append((unsigned char)prefix);
-			_r->identity.address().appendTo(outp); // lower 40 bits of MCID are my address
+			RR->identity.address().appendTo(outp); // lower 40 bits of MCID are my address
 			outp.append((unsigned char)((mcid >> 16) & 0xff));
 			outp.append((unsigned char)((mcid >> 8) & 0xff));
 			outp.append((unsigned char)(mcid & 0xff)); // upper 24 bits of MCID are from our counter
@@ -213,7 +213,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)data.size());
 			outp.append(data);
 
-			C25519::Signature sig(_r->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
+			C25519::Signature sig(RR->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
 			outp.append((uint16_t)sig.size());
 			outp.append(sig.data,(unsigned int)sig.size());
 
@@ -240,7 +240,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 			if (fromBridged) {
 				// Must use EXT_FRAME if source is not myself
-				Packet outp(toZT,_r->identity.address(),Packet::VERB_EXT_FRAME);
+				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 				outp.append(network->id());
 				outp.append((unsigned char)0);
 				to.appendTo(outp);
@@ -251,7 +251,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				send(outp,true);
 			} else {
 				// VERB_FRAME is really just lighter weight EXT_FRAME, can use for direct-to-direct (before bridging this was the only unicast method)
-				Packet outp(toZT,_r->identity.address(),Packet::VERB_FRAME);
+				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 				outp.append(network->id());
 				outp.append((uint16_t)etherType);
 				outp.append(data);
@@ -272,7 +272,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		unsigned int numBridges = 0;
 
 		bridges[0] = network->findBridgeTo(to);
-		if ((bridges[0])&&(bridges[0] != _r->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
+		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
 			// We have a known bridge route for this MAC.
 			++numBridges;
 		} else if (!nconf->activeBridges().empty()) {
@@ -294,7 +294,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
 					if (ab == nconf->activeBridges().end())
 						ab = nconf->activeBridges().begin();
-					if (((unsigned long)_r->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0) {
+					if (((unsigned long)RR->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0) {
 						if (network->isAllowed(*ab)) // config sanity check
 							bridges[numBridges++] = *ab;
 						++ab;
@@ -304,7 +304,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		for(unsigned int b=0;b<numBridges;++b) {
-			Packet outp(bridges[b],_r->identity.address(),Packet::VERB_EXT_FRAME);
+			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
 			outp.append((unsigned char)0);
 			to.appendTo(outp);
@@ -319,7 +319,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 void Switch::send(const Packet &packet,bool encrypt)
 {
-	if (packet.destination() == _r->identity.address()) {
+	if (packet.destination() == RR->identity.address()) {
 		TRACE("BUG: caught attempt to send() to self, ignored");
 		return;
 	}
@@ -332,55 +332,55 @@ void Switch::send(const Packet &packet,bool encrypt)
 
 void Switch::sendHELLO(const Address &dest)
 {
-	Packet outp(dest,_r->identity.address(),Packet::VERB_HELLO);
+	Packet outp(dest,RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 	outp.append(Utils::now());
-	_r->identity.serialize(outp,false);
+	RR->identity.serialize(outp,false);
 	send(outp,false);
 }
 
 bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const Path &path)
 {
 	uint64_t now = Utils::now();
-	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
+	Packet outp(dest->address(),RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 	outp.append(now);
-	_r->identity.serialize(outp,false);
+	RR->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	_r->antiRec->logOutgoingZT(outp.data(),outp.size());
-	return _r->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size());
+	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+	return RR->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size());
 }
 
 bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
 {
 	uint64_t now = Utils::now();
-	Packet outp(dest->address(),_r->identity.address(),Packet::VERB_HELLO);
+	Packet outp(dest->address(),RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 	outp.append(now);
-	_r->identity.serialize(outp,false);
+	RR->identity.serialize(outp,false);
 	outp.armor(dest->key(),false);
-	_r->antiRec->logOutgoingZT(outp.data(),outp.size());
-	return _r->sm->send(destUdp,false,false,outp.data(),outp.size());
+	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+	return RR->sm->send(destUdp,false,false,outp.data(),outp.size());
 }
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
 {
-	if ((p1 == _r->identity.address())||(p2 == _r->identity.address()))
+	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
 		return false;
 
-	SharedPtr<Peer> p1p = _r->topology->getPeer(p1);
+	SharedPtr<Peer> p1p = RR->topology->getPeer(p1);
 	if (!p1p)
 		return false;
-	SharedPtr<Peer> p2p = _r->topology->getPeer(p2);
+	SharedPtr<Peer> p2p = RR->topology->getPeer(p2);
 	if (!p2p)
 		return false;
 
@@ -420,12 +420,12 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	 * the order we make each attempted NAT-t favor one or the other going
 	 * first, meaning if it doesn't succeed the first time it might the second
 	 * and so forth. */
-	unsigned int alt = _r->prng->next32() & 1;
+	unsigned int alt = RR->prng->next32() & 1;
 	unsigned int completed = alt + 2;
 	while (alt != completed) {
 		if ((alt & 1) == 0) {
 			// Tell p1 where to find p2.
-			Packet outp(p1,_r->identity.address(),Packet::VERB_RENDEZVOUS);
+			Packet outp(p1,RR->identity.address(),Packet::VERB_RENDEZVOUS);
 			outp.append((unsigned char)0);
 			p2.appendTo(outp);
 			outp.append((uint16_t)cg.first.port());
@@ -437,10 +437,10 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 				outp.append(cg.first.rawIpData(),4);
 			}
 			outp.armor(p1p->key(),true);
-			p1p->send(_r,outp.data(),outp.size(),now);
+			p1p->send(RR,outp.data(),outp.size(),now);
 		} else {
 			// Tell p2 where to find p1.
-			Packet outp(p2,_r->identity.address(),Packet::VERB_RENDEZVOUS);
+			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
 			outp.append((unsigned char)0);
 			p1.appendTo(outp);
 			outp.append((uint16_t)cg.second.port());
@@ -452,7 +452,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 				outp.append(cg.second.rawIpData(),4);
 			}
 			outp.armor(p2p->key(),true);
-			p2p->send(_r,outp.data(),outp.size(),now);
+			p2p->send(RR,outp.data(),outp.size(),now);
 		}
 		++alt; // counts up and also flips LSB
 	}
@@ -474,13 +474,13 @@ void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 
 	// Kick main loop out of wait so that it can pick up this
 	// change to our scheduled timer tasks.
-	_r->sm->whack();
+	RR->sm->whack();
 }
 
 void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set<MulticastGroup> > &allMemberships)
 {
 	std::vector< SharedPtr<Peer> > directPeers;
-	_r->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(directPeers,Utils::now()));
+	RR->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(directPeers,Utils::now()));
 
 #ifdef ZT_TRACE
 	unsigned int totalMulticastGroups = 0;
@@ -491,16 +491,16 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 
 	uint64_t now = Utils::now();
 	for(std::vector< SharedPtr<Peer> >::iterator p(directPeers.begin());p!=directPeers.end();++p) {
-		Packet outp((*p)->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
+		Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 		for(std::map< SharedPtr<Network>,std::set<MulticastGroup> >::const_iterator nwmgs(allMemberships.begin());nwmgs!=allMemberships.end();++nwmgs) {
 			nwmgs->first->pushMembershipCertificate((*p)->address(),false,now);
 
-			if ((_r->topology->isSupernode((*p)->address()))||(nwmgs->first->isAllowed((*p)->address()))) {
+			if ((RR->topology->isSupernode((*p)->address()))||(nwmgs->first->isAllowed((*p)->address()))) {
 				for(std::set<MulticastGroup>::iterator mg(nwmgs->second.begin());mg!=nwmgs->second.end();++mg) {
 					if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 						send(outp,true);
-						outp.reset((*p)->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
+						outp.reset((*p)->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 					}
 
 					// network ID, MAC, ADI
@@ -518,18 +518,18 @@ void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set
 
 void Switch::announceMulticastGroups(const SharedPtr<Peer> &peer)
 {
-	Packet outp(peer->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
-	std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+	std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 	uint64_t now = Utils::now();
 	for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
-		if (((*n)->isAllowed(peer->address()))||(_r->topology->isSupernode(peer->address()))) {
+		if (((*n)->isAllowed(peer->address()))||(RR->topology->isSupernode(peer->address()))) {
 			(*n)->pushMembershipCertificate(peer->address(),false,now);
 
 			std::set<MulticastGroup> mgs((*n)->multicastGroups());
 			for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 					send(outp,true);
-					outp.reset(peer->address(),_r->identity.address(),Packet::VERB_MULTICAST_LIKE);
+					outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 				}
 
 				// network ID, MAC, ADI
@@ -702,19 +702,19 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 	Packet::Fragment fragment(data);
 	Address destination(fragment.destination());
 
-	if (destination != _r->identity.address()) {
+	if (destination != RR->identity.address()) {
 		// Fragment is not for us, so try to relay it
 		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 			fragment.incrementHops();
 
 			// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 			// It wouldn't hurt anything, just redundant and unnecessary.
-			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
-			if ((!relayTo)||(relayTo->send(_r,fragment.data(),fragment.size(),Utils::now()) == Path::PATH_TYPE_NULL)) {
+			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
+			if ((!relayTo)||(relayTo->send(RR,fragment.data(),fragment.size(),Utils::now()) == Path::PATH_TYPE_NULL)) {
 				// Don't know peer or no direct path -- so relay via supernode
-				relayTo = _r->topology->getBestSupernode();
+				relayTo = RR->topology->getBestSupernode();
 				if (relayTo)
-					relayTo->send(_r,fragment.data(),fragment.size(),Utils::now());
+					relayTo->send(RR,fragment.data(),fragment.size(),Utils::now());
 			}
 		} else {
 			TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
@@ -778,14 +778,14 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 
 	//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
-	if (destination != _r->identity.address()) {
+	if (destination != RR->identity.address()) {
 		// Packet is not for us, so try to relay it
 		if (packet->hops() < ZT_RELAY_MAX_HOPS) {
 			packet->incrementHops();
 
-			SharedPtr<Peer> relayTo = _r->topology->getPeer(destination);
+			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			Path::Type relayedVia;
-			if ((relayTo)&&((relayedVia = relayTo->send(_r,packet->data(),packet->size(),Utils::now())) != Path::PATH_TYPE_NULL)) {
+			if ((relayTo)&&((relayedVia = relayTo->send(RR,packet->data(),packet->size(),Utils::now())) != Path::PATH_TYPE_NULL)) {
 				/* If both paths are UDP, attempt to invoke UDP NAT-t between peers
 				 * by sending VERB_RENDEZVOUS. Do not do this for TCP due to GitHub
 				 * issue #63. */
@@ -793,9 +793,9 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 					unite(source,destination,false);
 			} else {
 				// Don't know peer or no direct path -- so relay via supernode
-				relayTo = _r->topology->getBestSupernode(&source,1,true);
+				relayTo = RR->topology->getBestSupernode(&source,1,true);
 				if (relayTo)
-					relayTo->send(_r,packet->data(),packet->size(),Utils::now());
+					relayTo->send(RR,packet->data(),packet->size(),Utils::now());
 			}
 		} else {
 			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet->source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -847,14 +847,14 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 void Switch::_handleBeacon(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
 {
 	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-	if (beaconAddr == _r->identity.address())
+	if (beaconAddr == RR->identity.address())
 		return;
-	SharedPtr<Peer> peer(_r->topology->getPeer(beaconAddr));
+	SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
 	if (peer) {
 		uint64_t now = Utils::now();
 		if (peer->haveUdpPath(fromAddr)) {
 			if ((now - peer->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY)
-				peer->sendPing(_r,now);
+				peer->sendPing(RR,now);
 		} else {
 			if ((now - _lastBeacon) < ZT_MIN_BEACON_RESPONSE_INTERVAL)
 				return;
@@ -866,13 +866,13 @@ void Switch::_handleBeacon(const SharedPtr<Socket> &fromSock,const InetAddress &
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> supernode(_r->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
+	SharedPtr<Peer> supernode(RR->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
 	if (supernode) {
-		Packet outp(supernode->address(),_r->identity.address(),Packet::VERB_WHOIS);
+		Packet outp(supernode->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		outp.armor(supernode->key(),true);
 		uint64_t now = Utils::now();
-		if (supernode->send(_r,outp.data(),outp.size(),now) != Path::PATH_TYPE_NULL)
+		if (supernode->send(RR,outp.data(),outp.size(),now) != Path::PATH_TYPE_NULL)
 			return supernode->address();
 	}
 	return Address();
@@ -880,7 +880,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 
 bool Switch::_trySend(const Packet &packet,bool encrypt)
 {
-	SharedPtr<Peer> peer(_r->topology->getPeer(packet.destination()));
+	SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
 
 	if (peer) {
 		uint64_t now = Utils::now();
@@ -889,7 +889,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 		if (peer->hasActiveDirectPath(now)) {
 			via = peer;
 		} else {
-			via = _r->topology->getBestSupernode();
+			via = RR->topology->getBestSupernode();
 			if (!via)
 				return false;
 		}
@@ -901,7 +901,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		tmp.armor(peer->key(),encrypt);
 
-		if (via->send(_r,tmp.data(),chunkSize,now) != Path::PATH_TYPE_NULL) {
+		if (via->send(RR,tmp.data(),chunkSize,now) != Path::PATH_TYPE_NULL) {
 			if (chunkSize < tmp.size()) {
 				// Too big for one bite, fragment the rest
 				unsigned int fragStart = chunkSize;
@@ -914,7 +914,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				for(unsigned int f=0;f<fragsRemaining;++f) {
 					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 					Packet::Fragment frag(tmp,fragStart,chunkSize,f + 1,totalFragments);
-					via->send(_r,frag.data(),frag.size(),now);
+					via->send(RR,frag.data(),frag.size(),now);
 					fragStart += chunkSize;
 					remaining -= chunkSize;
 				}

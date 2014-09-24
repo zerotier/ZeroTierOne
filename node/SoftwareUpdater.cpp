@@ -79,7 +79,7 @@ SoftwareUpdater::~SoftwareUpdater()
 
 void SoftwareUpdater::cleanOldUpdates()
 {
-	std::string updatesDir(_r->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
+	std::string updatesDir(RR->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
 	std::map<std::string,bool> dl(Utils::listDirectory(updatesDir.c_str()));
 	for(std::map<std::string,bool>::iterator i(dl.begin());i!=dl.end();++i) {
 		if (!i->second)
@@ -97,7 +97,7 @@ void SoftwareUpdater::sawRemoteVersion(unsigned int vmaj,unsigned int vmin,unsig
 			if ((now - _lastUpdateAttempt) >= ZT_UPDATE_MIN_INTERVAL) {
 				_lastUpdateAttempt = now;
 				_status = UPDATE_STATUS_GETTING_NFO;
-				_r->http->GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
+				RR->http->GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
 			}
 		}
 	}
@@ -109,7 +109,7 @@ void SoftwareUpdater::checkNow()
 	if (_status == UPDATE_STATUS_IDLE) {
 		_lastUpdateAttempt = Utils::now();
 		_status = UPDATE_STATUS_GETTING_NFO;
-		_r->http->GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
+		RR->http->GET(ZT_DEFAULTS.updateLatestNfoURL,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionInfo,this);
 	}
 }
 
@@ -158,7 +158,7 @@ bool SoftwareUpdater::validateUpdate(
 void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
-	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)upd->_r;
+	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)upd->_r;
 	Mutex::Lock _l(upd->_lock);
 
 	if ((upd->_die)||(upd->_status != UPDATE_STATUS_GETTING_NFO)) {
@@ -203,7 +203,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 		upd->_signedBy = signedBy;
 		upd->_signature = signature;
 
-		_r->http->GET(url,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionBinary,arg);
+		RR->http->GET(url,HttpClient::NO_HEADERS,ZT_UPDATE_HTTP_TIMEOUT,&_cbHandleGetLatestVersionBinary,arg);
 	} catch ( ... ) {
 		LOG("software update check failed: .nfo file invalid or missing field(s)");
 		upd->_status = UPDATE_STATUS_IDLE;
@@ -213,7 +213,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
-	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)upd->_r;
+	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)upd->_r;
 	Mutex::Lock _l(upd->_lock);
 
 	if (!validateUpdate(body.data(),(unsigned int)body.length(),upd->_signedBy,upd->_signature)) {
@@ -228,7 +228,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 		upd->_status = UPDATE_STATUS_IDLE;
 		return;
 	}
-	std::string updatesDir(_r->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
+	std::string updatesDir(RR->homePath + ZT_PATH_SEPARATOR_S + "updates.d");
 	std::string updateFilename(url.substr(lastSlash + 1));
 	if ((updateFilename.length() < 3)||(updateFilename.find("..") != std::string::npos)) {
 		LOG("software update failed: invalid URL: filename contains invalid characters");
@@ -274,7 +274,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const s
 	// caller's responsibility (main.c) to pick this up and do the right
 	// thing.
 	upd->_status = UPDATE_STATUS_IDLE;
-	_r->node->terminate(Node::NODE_RESTART_FOR_UPGRADE,updatePath.c_str());
+	RR->node->terminate(Node::NODE_RESTART_FOR_UPGRADE,updatePath.c_str());
 }
 
 } // namespace ZeroTier

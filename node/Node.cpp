@@ -96,7 +96,7 @@ struct _NodeImpl
 	// This function performs final node tear-down
 	inline Node::ReasonForTermination terminate()
 	{
-		RuntimeEnvironment *_r = &renv;
+		RuntimeEnvironment *RR = &renv;
 		LOG("terminating: %s",reasonForTerminationStr.c_str());
 
 		renv.shutdownInProgress = true;
@@ -133,7 +133,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 {
 	if (!renv)
 		return; // sanity check
-	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)renv;
+	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)renv;
 
 	try {
 		//TRACE("from netconf:\n%s",msg.toString().c_str());
@@ -142,8 +142,8 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 			LOG("received 'ready' from netconf.service, sending netconf-init with identity information...");
 			Dictionary initMessage;
 			initMessage["type"] = "netconf-init";
-			initMessage["netconfId"] = _r->identity.toString(true);
-			_r->netconfService->send(initMessage);
+			initMessage["netconfId"] = RR->identity.toString(true);
+			RR->netconfService->send(initMessage);
 		} else if (type == "netconf-response") {
 			uint64_t inRePacketId = strtoull(msg.get("requestId").c_str(),(char **)0,16);
 			uint64_t nwid = strtoull(msg.get("nwid").c_str(),(char **)0,16);
@@ -158,23 +158,23 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 					else if (err == "ACCESS_DENIED")
 						errCode = Packet::ERROR_NETWORK_ACCESS_DENIED_;
 
-					Packet outp(peerAddress,_r->identity.address(),Packet::VERB_ERROR);
+					Packet outp(peerAddress,RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 					outp.append(inRePacketId);
 					outp.append((unsigned char)errCode);
 					outp.append(nwid);
-					_r->sw->send(outp,true);
+					RR->sw->send(outp,true);
 				} else if (msg.contains("netconf")) {
 					const std::string &netconf = msg.get("netconf");
 					if (netconf.length() < 2048) { // sanity check
-						Packet outp(peerAddress,_r->identity.address(),Packet::VERB_OK);
+						Packet outp(peerAddress,RR->identity.address(),Packet::VERB_OK);
 						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 						outp.append(inRePacketId);
 						outp.append(nwid);
 						outp.append((uint16_t)netconf.length());
 						outp.append(netconf.data(),netconf.length());
 						outp.compress();
-						_r->sw->send(outp,true);
+						RR->sw->send(outp,true);
 					}
 				}
 			}
@@ -184,7 +184,7 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 				for(Dictionary::iterator t(to.begin());t!=to.end();++t) {
 					Address ztaddr(t->first);
 					if (ztaddr) {
-						Packet outp(ztaddr,_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
+						Packet outp(ztaddr,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
 
 						char *saveptr = (char *)0;
 						// Note: this loop trashes t->second, which is quasi-legal C++ but
@@ -194,15 +194,15 @@ static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictiona
 							uint64_t nwid = Utils::hexStrToU64(p);
 							if (nwid) {
 								if ((outp.size() + sizeof(uint64_t)) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-									_r->sw->send(outp,true);
-									outp.reset(ztaddr,_r->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
+									RR->sw->send(outp,true);
+									outp.reset(ztaddr,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
 								}
 								outp.append(nwid);
 							}
 						}
 
 						if (outp.payloadLength())
-							_r->sw->send(outp,true);
+							RR->sw->send(outp,true);
 					}
 				}
 			}
@@ -268,15 +268,15 @@ Node::~Node()
 
 static void _CBztTraffic(const SharedPtr<Socket> &fromSock,void *arg,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
 {
-	const RuntimeEnvironment *_r = (const RuntimeEnvironment *)arg;
-	if ((_r->sw)&&(!_r->shutdownInProgress))
-		_r->sw->onRemotePacket(fromSock,from,data);
+	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)arg;
+	if ((RR->sw)&&(!RR->shutdownInProgress))
+		RR->sw->onRemotePacket(fromSock,from,data);
 }
 
 static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,const std::string &body)
 {
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)arg;
-	if (_r->shutdownInProgress)
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)arg;
+	if (RR->shutdownInProgress)
 		return;
 
 	if ((code != 200)||(body.length() == 0)) {
@@ -292,7 +292,7 @@ static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,c
 		}
 
 		{
-			std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
+			std::string rootTopologyPath(RR->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
 			std::string rootTopology;
 			if (Utils::readFile(rootTopologyPath.c_str(),rootTopology)) {
 				Dictionary alreadyHave(rootTopology);
@@ -307,7 +307,7 @@ static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,c
 			Utils::writeFile(rootTopologyPath.c_str(),body);
 		}
 
-		_r->topology->setSupernodes(Dictionary(rt.get("supernodes")));
+		RR->topology->setSupernodes(Dictionary(rt.get("supernodes")));
 	} catch ( ... ) {
 		LOG("discarded invalid root topology update from %s (format invalid)",url.c_str());
 		return;
@@ -318,50 +318,50 @@ Node::ReasonForTermination Node::run()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 
 	impl->started = true;
 	impl->running = true;
 
 	try {
 #ifdef ZT_LOG_STDOUT
-		_r->log = new Logger((const char *)0,(const char *)0,0);
+		RR->log = new Logger((const char *)0,(const char *)0,0);
 #else
-		_r->log = new Logger((_r->homePath + ZT_PATH_SEPARATOR_S + "node.log").c_str(),(const char *)0,131072);
+		RR->log = new Logger((RR->homePath + ZT_PATH_SEPARATOR_S + "node.log").c_str(),(const char *)0,131072);
 #endif
 
 		LOG("starting version %s",versionString());
 
 		// Create non-crypto PRNG right away in case other code in init wants to use it
-		_r->prng = new CMWC4096();
+		RR->prng = new CMWC4096();
 
 		// Read identity public and secret, generating if not present
 		{
 			bool gotId = false;
-			std::string identitySecretPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
-			std::string identityPublicPath(_r->homePath + ZT_PATH_SEPARATOR_S + "identity.public");
+			std::string identitySecretPath(RR->homePath + ZT_PATH_SEPARATOR_S + "identity.secret");
+			std::string identityPublicPath(RR->homePath + ZT_PATH_SEPARATOR_S + "identity.public");
 			std::string idser;
 			if (Utils::readFile(identitySecretPath.c_str(),idser))
-				gotId = _r->identity.fromString(idser);
-			if ((gotId)&&(!_r->identity.locallyValidate()))
+				gotId = RR->identity.fromString(idser);
+			if ((gotId)&&(!RR->identity.locallyValidate()))
 				gotId = false;
 			if (gotId) {
 				// Make sure identity.public matches identity.secret
 				idser = std::string();
 				Utils::readFile(identityPublicPath.c_str(),idser);
-				std::string pubid(_r->identity.toString(false));
+				std::string pubid(RR->identity.toString(false));
 				if (idser != pubid) {
 					if (!Utils::writeFile(identityPublicPath.c_str(),pubid))
 						return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.public (home path not writable?)");
 				}
 			} else {
 				LOG("no identity found or identity invalid, generating one... this might take a few seconds...");
-				_r->identity.generate();
-				LOG("generated new identity: %s",_r->identity.address().toString().c_str());
-				idser = _r->identity.toString(true);
+				RR->identity.generate();
+				LOG("generated new identity: %s",RR->identity.address().toString().c_str());
+				idser = RR->identity.toString(true);
 				if (!Utils::writeFile(identitySecretPath.c_str(),idser))
 					return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.secret (home path not writable?)");
-				idser = _r->identity.toString(false);
+				idser = RR->identity.toString(false);
 				if (!Utils::writeFile(identityPublicPath.c_str(),idser))
 					return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"could not write identity.public (home path not writable?)");
 			}
@@ -370,7 +370,7 @@ Node::ReasonForTermination Node::run()
 
 		// Make sure networks.d exists
 		{
-			std::string networksDotD(_r->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
+			std::string networksDotD(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
 #ifdef __WINDOWS__
 			CreateDirectoryA(networksDotD.c_str(),NULL);
 #else
@@ -378,22 +378,22 @@ Node::ReasonForTermination Node::run()
 #endif
 		}
 
-		_r->http = new HttpClient();
-		_r->antiRec = new AntiRecursion();
-		_r->sw = new Switch(_r);
-		_r->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
-		_r->topology = new Topology(_r,Utils::fileExists((_r->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
+		RR->http = new HttpClient();
+		RR->antiRec = new AntiRecursion();
+		RR->sw = new Switch(_r);
+		RR->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
+		RR->topology = new Topology(RR,Utils::fileExists((RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
 		try {
-			_r->nc = new NodeConfig(_r);
+			RR->nc = new NodeConfig(_r);
 		} catch (std::exception &exc) {
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unable to initialize IPC socket: is ZeroTier One already running?");
 		}
-		_r->node = this;
+		RR->node = this;
 
 #ifdef ZT_AUTO_UPDATE
 		if (ZT_DEFAULTS.updateLatestNfoURL.length()) {
-			_r->updater = new SoftwareUpdater(_r);
-			_r->updater->cleanOldUpdates(); // clean out updates.d on startup
+			RR->updater = new SoftwareUpdater(_r);
+			RR->updater->cleanOldUpdates(); // clean out updates.d on startup
 		} else {
 			LOG("WARNING: unable to enable software updates: latest .nfo URL from ZT_DEFAULTS is empty (does this platform actually support software updates?)");
 		}
@@ -401,7 +401,7 @@ Node::ReasonForTermination Node::run()
 
 		// Initialize root topology from defaults or root-toplogy file in home path on disk
 		{
-			std::string rootTopologyPath(_r->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
+			std::string rootTopologyPath(RR->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
 			std::string rootTopology;
 			if (!Utils::readFile(rootTopologyPath.c_str(),rootTopology))
 				rootTopology = ZT_DEFAULTS.defaultRootTopology;
@@ -410,7 +410,7 @@ Node::ReasonForTermination Node::run()
 
 				if (Topology::authenticateRootTopology(rt)) {
 					// Set supernodes if root topology signature is valid
-					_r->topology->setSupernodes(Dictionary(rt.get("supernodes",""))); // set supernodes from root-topology
+					RR->topology->setSupernodes(Dictionary(rt.get("supernodes",""))); // set supernodes from root-topology
 
 					// If root-topology contains noupdate=1, disable further updates and only use what was on disk
 					impl->disableRootTopologyUpdates = (Utils::strToInt(rt.get("noupdate","0").c_str()) > 0);
@@ -418,7 +418,7 @@ Node::ReasonForTermination Node::run()
 					// Revert to built-in defaults if root topology fails signature check
 					LOG("%s failed signature check, using built-in defaults instead",rootTopologyPath.c_str());
 					Utils::rm(rootTopologyPath.c_str());
-					_r->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes","")));
+					RR->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes","")));
 					impl->disableRootTopologyUpdates = false;
 				}
 			} catch ( ... ) {
@@ -437,14 +437,14 @@ Node::ReasonForTermination Node::run()
 	// right now and isn't available on Windows.
 #ifndef __WINDOWS__
 	try {
-		std::string netconfServicePath(_r->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
+		std::string netconfServicePath(RR->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
 		if (Utils::fileExists(netconfServicePath.c_str())) {
 			LOG("netconf.d/netconf.service appears to exist, starting...");
-			_r->netconfService = new Service(_r,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
+			RR->netconfService = new Service(RR,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
 			Dictionary initMessage;
 			initMessage["type"] = "netconf-init";
-			initMessage["netconfId"] = _r->identity.toString(true);
-			_r->netconfService->send(initMessage);
+			initMessage["netconfId"] = RR->identity.toString(true);
+			RR->netconfService->send(initMessage);
 		}
 	} catch ( ... ) {
 		LOG("unexpected exception attempting to start services");
@@ -458,7 +458,7 @@ Node::ReasonForTermination Node::run()
 		 * Info.plist file inside the ZeroTier One application. This causes the
 		 * service to die when the user throws away the app, allowing uninstallation
 		 * in the natural Mac way. */
-		std::string shutdownIfUnreadablePath(_r->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
+		std::string shutdownIfUnreadablePath(RR->homePath + ZT_PATH_SEPARATOR_S + "shutdownIfUnreadable");
 
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000ULL; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
@@ -472,10 +472,10 @@ Node::ReasonForTermination Node::run()
 		long lastDelayDelta = 0;
 
 		uint64_t networkConfigurationFingerprint = 0;
-		_r->timeOfLastResynchronize = Utils::now();
+		RR->timeOfLastResynchronize = Utils::now();
 
 		// We are up and running
-		_r->initialized = true;
+		RR->initialized = true;
 
 		while (impl->reasonForTermination == NODE_RUNNING) {
 			uint64_t now = Utils::now();
@@ -507,7 +507,7 @@ Node::ReasonForTermination Node::run()
 			// If our network environment looks like it changed, resynchronize.
 			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
 				lastNetworkFingerprintCheck = now;
-				uint64_t fp = _r->routingTable->networkEnvironmentFingerprint(_r->nc->networkTapDeviceNames());
+				uint64_t fp = RR->routingTable->networkEnvironmentFingerprint(RR->nc->networkTapDeviceNames());
 				if (fp != networkConfigurationFingerprint) {
 					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
 					networkConfigurationFingerprint = fp;
@@ -516,7 +516,7 @@ Node::ReasonForTermination Node::run()
 			}
 
 			// Supernodes do not resynchronize unless explicitly ordered via SIGHUP.
-			if ((resynchronize)&&(_r->topology->amSupernode()))
+			if ((resynchronize)&&(RR->topology->amSupernode()))
 				resynchronize = false;
 
 			// Check for SIGHUP / force resync.
@@ -527,8 +527,8 @@ Node::ReasonForTermination Node::run()
 			}
 
 			if (resynchronize) {
-				_r->tcpTunnelingEnabled = false; // turn off TCP tunneling master switch at first, will be reenabled on persistent UDP failure
-				_r->timeOfLastResynchronize = now;
+				RR->tcpTunnelingEnabled = false; // turn off TCP tunneling master switch at first, will be reenabled on persistent UDP failure
+				RR->timeOfLastResynchronize = now;
 			}
 
 			/* Supernodes are pinged separately and more aggressively. The
@@ -539,17 +539,17 @@ Node::ReasonForTermination Node::run()
 				lastSupernodePingCheck = now;
 
 				uint64_t lastReceiveFromAnySupernode = 0; // function object result paramter
-				_r->topology->eachSupernodePeer(Topology::FindMostRecentDirectReceiveTimestamp(lastReceiveFromAnySupernode));
+				RR->topology->eachSupernodePeer(Topology::FindMostRecentDirectReceiveTimestamp(lastReceiveFromAnySupernode));
 
 				// Turn on TCP tunneling master switch if we haven't heard anything since before
 				// the last resynchronize and we've been trying long enough.
-				uint64_t tlr = _r->timeOfLastResynchronize;
+				uint64_t tlr = RR->timeOfLastResynchronize;
 				if ((lastReceiveFromAnySupernode < tlr)&&((now - tlr) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT)) {
 					TRACE("network still unreachable after %u ms, TCP TUNNELING ENABLED",(unsigned int)ZT_TCP_TUNNEL_FAILOVER_TIMEOUT);
-					_r->tcpTunnelingEnabled = true;
+					RR->tcpTunnelingEnabled = true;
 				}
 
-				_r->topology->eachSupernodePeer(Topology::PingSupernodesThatNeedPing(_r,now));
+				RR->topology->eachSupernodePeer(Topology::PingSupernodesThatNeedPing(RR,now));
 			}
 
 			if (resynchronize) {
@@ -557,8 +557,8 @@ Node::ReasonForTermination Node::run()
 				 * indirectly to regular nodes (to trigger RENDEZVOUS). Also clear
 				 * learned paths since they're likely no longer valid, and close
 				 * TCP sockets since they're also likely invalid. */
-				_r->sm->closeTcpSockets();
-				_r->topology->eachPeer(Topology::ResetActivePeers(_r,now));
+				RR->sm->closeTcpSockets();
+				RR->topology->eachPeer(Topology::ResetActivePeers(RR,now));
 			} else {
 				/* Periodically check for changes in our local multicast subscriptions
 				 * and broadcast those changes to directly connected peers. */
@@ -566,13 +566,13 @@ Node::ReasonForTermination Node::run()
 					lastMulticastCheck = now;
 					try {
 						std::map< SharedPtr<Network>,std::set<MulticastGroup> > toAnnounce;
-						std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+						std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw) {
 							if ((*nw)->updateMulticastGroups())
 								toAnnounce.insert(std::pair< SharedPtr<Network>,std::set<MulticastGroup> >(*nw,(*nw)->multicastGroups()));
 						}
 						if (toAnnounce.size())
-							_r->sw->announceMulticastGroups(toAnnounce);
+							RR->sw->announceMulticastGroups(toAnnounce);
 					} catch (std::exception &exc) {
 						LOG("unexpected exception announcing multicast groups: %s",exc.what());
 					} catch ( ... ) {
@@ -582,10 +582,10 @@ Node::ReasonForTermination Node::run()
 
 				/* Periodically ping all our non-stale direct peers unless we're a supernode.
 				 * Supernodes only ping each other (which is done above). */
-				if ((!_r->topology->amSupernode())&&((now - lastPingCheck) >= ZT_PING_CHECK_DELAY)) {
+				if ((!RR->topology->amSupernode())&&((now - lastPingCheck) >= ZT_PING_CHECK_DELAY)) {
 					lastPingCheck = now;
 					try {
-						_r->topology->eachPeer(Topology::PingPeersThatNeedPing(_r,now));
+						RR->topology->eachPeer(Topology::PingPeersThatNeedPing(RR,now));
 					} catch (std::exception &exc) {
 						LOG("unexpected exception running ping check cycle: %s",exc.what());
 					} catch ( ... ) {
@@ -597,7 +597,7 @@ Node::ReasonForTermination Node::run()
 			// Update network configurations when needed.
 			if ((resynchronize)||((now - lastNetworkAutoconfCheck) >= ZT_NETWORK_AUTOCONF_CHECK_DELAY)) {
 				lastNetworkAutoconfCheck = now;
-				std::vector< SharedPtr<Network> > nets(_r->nc->networks());
+				std::vector< SharedPtr<Network> > nets(RR->nc->networks());
 				for(std::vector< SharedPtr<Network> >::iterator n(nets.begin());n!=nets.end();++n) {
 					if ((now - (*n)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)
 						(*n)->requestConfiguration();
@@ -607,11 +607,11 @@ Node::ReasonForTermination Node::run()
 			// Do periodic tasks in submodules.
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
-				_r->mc->clean();
-				_r->topology->clean();
-				_r->nc->clean();
-				if (_r->updater)
-					_r->updater->checkIfMaxIntervalExceeded(now);
+				RR->mc->clean();
+				RR->topology->clean();
+				RR->nc->clean();
+				if (RR->updater)
+					RR->updater->checkIfMaxIntervalExceeded(now);
 			}
 
 			// Send beacons to physical local LANs
@@ -619,13 +619,13 @@ Node::ReasonForTermination Node::run()
 				lastBeacon = now;
 				char bcn[ZT_PROTO_BEACON_LENGTH];
 				void *bcnptr = bcn;
-				*((uint32_t *)(bcnptr)) = _r->prng->next32();
+				*((uint32_t *)(bcnptr)) = RR->prng->next32();
 				bcnptr = bcn + 4;
-				*((uint32_t *)(bcnptr)) = _r->prng->next32();
-				_r->identity.address().copyTo(bcn + ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH);
+				*((uint32_t *)(bcnptr)) = RR->prng->next32();
+				RR->identity.address().copyTo(bcn + ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH);
 				TRACE("sending LAN beacon to %s",ZT_DEFAULTS.v4Broadcast.toString().c_str());
-				_r->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
-				_r->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
+				RR->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
+				RR->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
 			}
 
 			// Check for updates to root topology (supernodes) periodically
@@ -633,15 +633,15 @@ Node::ReasonForTermination Node::run()
 				lastRootTopologyFetch = now;
 				if (!impl->disableRootTopologyUpdates) {
 					TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
-					_r->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
+					RR->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
 				}
 			}
 
 			// Sleep for loop interval or until something interesting happens.
 			try {
-				unsigned long delay = std::min((unsigned long)ZT_MAX_SERVICE_LOOP_INTERVAL,_r->sw->doTimerTasks());
+				unsigned long delay = std::min((unsigned long)ZT_MAX_SERVICE_LOOP_INTERVAL,RR->sw->doTimerTasks());
 				uint64_t start = Utils::now();
-				_r->sm->poll(delay);
+				RR->sm->poll(delay);
 				lastDelayDelta = (long)(Utils::now() - start) - (long)delay; // used to detect sleep/wake
 			} catch (std::exception &exc) {
 				LOG("unexpected exception running Switch doTimerTasks: %s",exc.what());
@@ -686,10 +686,10 @@ bool Node::online()
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	if (!impl->running)
 		return false;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 	uint64_t now = Utils::now();
-	uint64_t since = _r->timeOfLastResynchronize;
-	std::vector< SharedPtr<Peer> > snp(_r->topology->supernodePeers());
+	uint64_t since = RR->timeOfLastResynchronize;
+	std::vector< SharedPtr<Peer> > snp(RR->topology->supernodePeers());
 	for(std::vector< SharedPtr<Peer> >::const_iterator sn(snp.begin());sn!=snp.end();++sn) {
 		uint64_t lastRec = (*sn)->lastDirectReceive();
 		if ((lastRec)&&(lastRec > since)&&((now - lastRec) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
@@ -716,34 +716,34 @@ bool Node::initialized()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
-	return ((_r)&&(_r->initialized));
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+	return ((_r)&&(RR->initialized));
 }
 
 uint64_t Node::address()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
-	if ((!_r)||(!_r->initialized))
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+	if ((!_r)||(!RR->initialized))
 		return 0;
-	return _r->identity.address().toInt();
+	return RR->identity.address().toInt();
 }
 
 void Node::join(uint64_t nwid)
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
-	_r->nc->join(nwid);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+	RR->nc->join(nwid);
 }
 
 void Node::leave(uint64_t nwid)
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
-	_r->nc->leave(nwid);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+	RR->nc->leave(nwid);
 }
 
 struct GatherPeerStatistics
@@ -763,22 +763,22 @@ void Node::status(ZT1_Node_Status *status)
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 
 	memset(status,0,sizeof(ZT1_Node_Status));
 
-	Utils::scopy(status->publicIdentity,sizeof(status->publicIdentity),_r->identity.toString(false).c_str());
-	_r->identity.address().toString(status->address,sizeof(status->address));
-	status->rawAddress = _r->identity.address().toInt();
+	Utils::scopy(status->publicIdentity,sizeof(status->publicIdentity),RR->identity.toString(false).c_str());
+	RR->identity.address().toString(status->address,sizeof(status->address));
+	status->rawAddress = RR->identity.address().toInt();
 
 	status->knownPeers = 0;
-	status->supernodes = _r->topology->numSupernodes();
+	status->supernodes = RR->topology->numSupernodes();
 	status->directlyConnectedPeers = 0;
 	status->alivePeers = 0;
 	GatherPeerStatistics gps;
 	gps.now = Utils::now();
 	gps.status = status;
-	_r->topology->eachPeer<GatherPeerStatistics &>(gps);
+	RR->topology->eachPeer<GatherPeerStatistics &>(gps);
 
 	if (status->alivePeers > 0) {
 		double dlsr = (double)status->directlyConnectedPeers / (double)status->alivePeers;
@@ -804,10 +804,10 @@ ZT1_Node_PeerList *Node::listPeers()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 
 	CollectPeersAndPaths pp;
-	_r->topology->eachPeer<CollectPeersAndPaths &>(pp);
+	RR->topology->eachPeer<CollectPeersAndPaths &>(pp);
 	std::sort(pp.data.begin(),pp.data.end(),SortPeersAndPathsInAscendingAddressOrder());
 
 	unsigned int returnBufSize = sizeof(ZT1_Node_PeerList);
@@ -889,9 +889,9 @@ ZT1_Node_Network *Node::getNetworkStatus(uint64_t nwid)
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 
-	SharedPtr<Network> network(_r->nc->network(nwid));
+	SharedPtr<Network> network(RR->nc->network(nwid));
 	if (!network)
 		return (ZT1_Node_Network *)0;
 	SharedPtr<NetworkConfig> nconf(network->config2());
@@ -929,9 +929,9 @@ ZT1_Node_NetworkList *Node::listNetworks()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 
-	std::vector< SharedPtr<Network> > networks(_r->nc->networks());
+	std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 	std::vector< SharedPtr<NetworkConfig> > nconfs(networks.size());
 	std::vector< std::set<InetAddress> > ipsv(networks.size());
 
@@ -990,9 +990,9 @@ bool Node::updateCheck()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *_r = (RuntimeEnvironment *)&(impl->renv);
-	if (_r->updater) {
-		_r->updater->checkNow();
+	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+	if (RR->updater) {
+		RR->updater->checkNow();
 		return true;
 	}
 	return false;
