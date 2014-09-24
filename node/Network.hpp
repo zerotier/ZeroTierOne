@@ -51,7 +51,7 @@
 #include "Identity.hpp"
 #include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
-#include "MulticastTopology.hpp"
+#include "Multicaster.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Thread.hpp"
@@ -416,8 +416,8 @@ public:
 	/**
 	 * @return Multicast topology for this network
 	 */
-	inline MulticastTopology &mcTopology() { return _multicastTopology; }
-	inline const MulticastTopology &mcTopology() const { return _multicastTopology; }
+	inline Multicaster &mc() { return _multicaster; }
+	inline const Multicaster &mc() const { return _multicaster; }
 
 	/**
 	 * Destroy this network
@@ -453,7 +453,7 @@ private:
 	std::set< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
 	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
 	std::map< MulticastGroup,BandwidthAccount > _multicastRateAccounts;
-	MulticastTopology _multicastTopology;
+	Multicaster _multicaster;
 
 	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
 

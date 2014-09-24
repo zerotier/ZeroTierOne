@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_MULTICASTTOPOLOGY_HPP
-#define ZT_MULTICASTTOPOLOGY_HPP
+#ifndef ZT_MULTICASTER_HPP
+#define ZT_MULTICASTER_HPP
 
 #include <stdint.h>
 #include <string.h>
@@ -51,7 +51,7 @@ class Topology;
 /**
  * Database of known multicast peers within a network
  */
-class MulticastTopology
+class Multicaster
 {
 private:
 	struct MulticastGroupMember
@@ -78,8 +78,8 @@ private:
 	};
 
 public:
-	MulticastTopology();
-	~MulticastTopology();
+	Multicaster();
+	~Multicaster();
 
 	/**
 	 * Add or update a member in a multicast group

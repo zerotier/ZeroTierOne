@@ -28,24 +28,24 @@
 #include <algorithm>
 
 #include "Constants.hpp"
-#include "MulticastTopology.hpp"
+#include "Multicaster.hpp"
 #include "Topology.hpp"
 
 namespace ZeroTier {
 
-MulticastTopology::MulticastTopology()
+Multicaster::Multicaster()
 {
 }
 
-MulticastTopology::~MulticastTopology()
+Multicaster::~Multicaster()
 {
 }
 
-void MulticastTopology::add(const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+void Multicaster::add(const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 {
 }
 
-void MulticastTopology::erase(const MulticastGroup &mg,const Address &member)
+void Multicaster::erase(const MulticastGroup &mg,const Address &member)
 {
 	Mutex::Lock _l(_groups_m);
 	std::map< MulticastGroup,MulticastGroupStatus >::iterator r(_groups.find(mg));
@@ -67,7 +67,7 @@ void send(uint64_t nwid,uint64_t now,const Address &self,const MulticastGroup &m
 	std::map< MulticastGroup,MulticastGroupStatus >::iterator r(_groups.find(mg));
 }
 
-unsigned int MulticastTopology::shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)
+unsigned int Multicaster::shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)
 {
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[mg];
@@ -86,7 +86,7 @@ unsigned int MulticastTopology::shouldGather(const MulticastGroup &mg,uint64_t n
 	}
 }
 
-void MulticastTopology::clean(uint64_t now,const Topology &topology)
+void Multicaster::clean(uint64_t now,const Topology &topology)
 {
 	Mutex::Lock _l(_groups_m);
 	for(std::map< MulticastGroup,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {

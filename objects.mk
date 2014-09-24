@@ -13,7 +13,7 @@ OBJS=\
 	node/IncomingPacket.o \
 	node/InetAddress.o \
 	node/Logger.o \
-	node/MulticastTopology.o \
+	node/Multicaster.o \
 	node/Network.o \
 	node/NetworkConfig.o \
 	node/Node.o \
