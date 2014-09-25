@@ -107,7 +107,7 @@ public:
 	 * This is called by the decode pipe when a packet is proven to be authentic
 	 * and appears to be valid.
 	 * 
-	 * @param _r Runtime environment
+	 * @param RR Runtime environment
 	 * @param fromSock Socket from which packet was received
 	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
@@ -134,7 +134,7 @@ public:
 	 * This sends only via direct paths if available and does not handle
 	 * finding of relays. That is done in the send logic in Switch.
 	 *
-	 * @param _r Runtime environment
+	 * @param RR Runtime environment
 	 * @param data Data to send
 	 * @param len Length of packet
 	 * @param now Current time
@@ -148,7 +148,7 @@ public:
 	 * This begins attempting to use TCP paths if no ping response has been
 	 * received from any UDP path in more than ZT_TCP_FALLBACK_AFTER.
 	 * 
-	 * @param _r Runtime environment
+	 * @param RR Runtime environment
 	 * @param now Current time
 	 * @return True if send appears successful for at least one address type
 	 */

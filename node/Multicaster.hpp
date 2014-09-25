@@ -40,13 +40,12 @@
 #include "MAC.hpp"
 #include "MulticastGroup.hpp"
 #include "OutboundMulticast.hpp"
-#include "Switch.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
 
 namespace ZeroTier {
 
-class Topology;
+class RuntimeEnvironment;
 
 /**
  * Database of known multicast peers within a network
@@ -73,8 +72,8 @@ private:
 		MulticastGroupStatus() : lastGatheredMembers(0) {}
 
 		uint64_t lastGatheredMembers; // time we last gathered members
-		std::vector<MulticastGroupMember> members; // members of this group
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
+		std::vector<MulticastGroupMember> members; // members of this group
 	};
 
 public:
@@ -82,80 +81,46 @@ public:
 	~Multicaster();
 
 	/**
-	 * Add or update a member in a multicast group
+	 * Add or update a member in a multicast group and send any pending multicasts
 	 *
+	 * @param RR Runtime environment
 	 * @param mg Multicast group
 	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
 	 * @param member New member address
 	 */
-	void add(const MulticastGroup &mg,const Address &learnedFrom,const Address &member);
-
-	/**
-	 * Erase a member from a multicast group (if present)
-	 *
-	 * @param mg Multicast group
-	 * @param member Member to erase
-	 */
-	void erase(const MulticastGroup &mg,const Address &member);
+	inline void add(const RuntimeEnvironment *RR,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+	{
+		Mutex::Lock _l(_groups_m);
+		_add(RR,mg,learnedFrom,member);
+	}
 
 	/**
 	 * Send a multicast
 	 *
+	 * @param RR Runtime environment
 	 * @param nwid Network ID
+	 * @param limit Multicast limit
 	 * @param now Current time
-	 * @param sw Switch to use for sending packets
-	 * @param self This node's address
 	 * @param mg Multicast group
 	 * @param from Source Ethernet MAC address
 	 * @param etherType Ethernet frame type
 	 * @param data Packet data
 	 * @param len Length of packet data
 	 */
-	void send(uint64_t nwid,uint64_t now,const Switch &sw,const Address &self,const MulticastGroup &mg,const MAC &from,unsigned int etherType,const void *data,unsigned int len);
-
-	/**
-	 * @param mg Multicast group
-	 * @return Tuple of: time we last gathered members (or 0 for never) and number of known members
-	 */
-	inline std::pair<uint64_t,unsigned int> groupStatus(const MulticastGroup &mg) const
-	{
-		Mutex::Lock _l(_groups_m);
-		std::map< MulticastGroup,MulticastGroupStatus >::const_iterator r(_groups.find(mg));
-		return ((r != _groups.end()) ? std::pair<uint64_t,unsigned int>(r->second.lastGatheredMembers,r->second.members.size()) : std::pair<uint64_t,unsigned int>(0,0));
-	}
-
-	/**
-	 * Return the number of new members we should want to gather or 0 for none
-	 *
-	 * @param mg Multicast group
-	 * @param now Current time
-	 * @param limit The maximum number we want per multicast group on this network
-	 * @param updateLastGatheredTimeOnNonzeroReturn If true, reset group's last gathered time to 'now' on non-zero return
-	 */
-	unsigned int shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn);
-
-	/**
-	 * Update last gathered members time for a group
-	 *
-	 * @param mg Multicast group
-	 * @param now Current time
-	 */
-	inline void gatheringMembersNow(const MulticastGroup &mg,uint64_t now)
-	{
-		Mutex::Lock _l(_groups_m);
-		_groups[mg].lastGatheredMembers = now;
-	}
+	void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len);
 
 	/**
 	 * Clean up and resort database
 	 *
+	 * @param RR Runtime environment
 	 * @param now Current time
-	 * @param topology Global peer topology
-	 * @param trim Trim lists to a maximum of this many members per multicast group
 	 */
-	void clean(uint64_t now,const Topology &topology);
+	void clean(const RuntimeEnvironment *RR,uint64_t now);
 
 private:
+	void _add(const RuntimeEnvironment *RR,const MulticastGroup &mg,const Address &learnedFrom,const Address &member);
+	unsigned int _want(const MulticastGroup &mg,MulticastGroupStatus &gs,uint64_t now,unsigned int limit);
+
 	std::map< MulticastGroup,MulticastGroupStatus > _groups;
 	Mutex _groups_m;
 };

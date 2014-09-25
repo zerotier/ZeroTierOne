@@ -245,7 +245,7 @@
  * If we have the limit of known multicast endpoints, no further attempts
  * to gather them are made.
  */
-#define ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN (ZT_MULTICAST_LIKE_EXPIRE / 50)
+#define ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN (ZT_MULTICAST_LIKE_EXPIRE / 60)
 
 /**
  * Maximum delay between multicast endpoint gathering attempts

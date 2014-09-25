@@ -102,7 +102,30 @@ public:
 	/**
 	 * @return Number of unique recipients to which this packet has already been sent
 	 */
-	inline unsigned int sendCount() const throw() { return (unsigned int)_alreadySentTo.size(); }
+	inline unsigned int sentToCount() const throw() { return (unsigned int)_alreadySentTo.size(); }
+
+	/**
+	 * Just send without checking log
+	 *
+	 * @param sw Switch instance to send packets
+	 * @param toAddr Destination address
+	 */
+	inline void sendOnly(Switch &sw,const Address &toAddr)
+	{
+		sw.send(Packet(_packet,toAddr),true);
+	}
+
+	/**
+	 * Just send and log but do not check sent log
+	 *
+	 * @param sw Switch instance to send packets
+	 * @param toAddr Destination address
+	 */
+	inline void sendAndLog(Switch &sw,const Address &toAddr)
+	{
+		_alreadySentTo.push_back(toAddr);
+		sendOnly(sw,toAddr);
+	}
 
 	/**
 	 * Try to send this to a given peer if it hasn't been sent to them already
@@ -111,15 +134,13 @@ public:
 	 * @param toAddr Destination address
 	 * @return True if address is new and packet was sent to switch, false if duplicate
 	 */
-	inline bool send(Switch &sw,const Address &toAddr)
+	inline bool sendIfNew(Switch &sw,const Address &toAddr)
 	{
-		// If things get really big, we can go to a sorted vector or a flat_set implementation
 		for(std::vector<Address>::iterator a(_alreadySentTo.begin());a!=_alreadySentTo.end();++a) {
 			if (*a == toAddr)
 				return false;
 		}
-		_alreadySentTo.push_back(toAddr);
-		sw.send(Packet(_packet,toAddr),true);
+		sendAndLog(sw,toAddr);
 		return true;
 	}
 

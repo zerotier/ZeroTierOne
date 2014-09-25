@@ -97,7 +97,7 @@ public:
 	 * Once true is returned, this must not be called again. The packet's state
 	 * may no longer be valid.
 	 *
-	 * @param _r Runtime environment
+	 * @param RR Runtime environment
 	 * @return True if decoding and processing is complete, false if caller should try again
 	 * @throws std::out_of_range Range error processing packet (should be discarded)
 	 * @throws std::runtime_error Other error processing packet (should be discarded)

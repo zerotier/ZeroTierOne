@@ -30,10 +30,14 @@
 #include "Constants.hpp"
 #include "Multicaster.hpp"
 #include "Topology.hpp"
+#include "Switch.hpp"
+#include "Packet.hpp"
+#include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
 
-Multicaster::Multicaster()
+Multicaster::Multicaster() :
+	_limit(ZT_DEFAULT_MULTICAST_LIMIT)
 {
 }
 
@@ -41,48 +45,28 @@ Multicaster::~Multicaster()
 {
 }
 
-void Multicaster::add(const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
-{
-}
-
-void Multicaster::erase(const MulticastGroup &mg,const Address &member)
-{
-	Mutex::Lock _l(_groups_m);
-	std::map< MulticastGroup,MulticastGroupStatus >::iterator r(_groups.find(mg));
-	if (r != _groups.end()) {
-		for(std::vector<MulticastGroupMember>::iterator m(r->second.members.begin());m!=r->second.members.end();++m) {
-			if (m->address == member) {
-				r->second.members.erase(m);
-				if (r->second.members.empty())
-					_groups.erase(r);
-				return;
-			}
-		}
-	}
-}
-
-void send(uint64_t nwid,uint64_t now,const Address &self,const MulticastGroup &mg,const MAC &from,unsigned int etherType,const void *data,unsigned int len)
-{
-	Mutex::Lock _l(_groups_m);
-	std::map< MulticastGroup,MulticastGroupStatus >::iterator r(_groups.find(mg));
-}
-
-unsigned int Multicaster::shouldGather(const MulticastGroup &mg,uint64_t now,unsigned int limit,bool updateLastGatheredTimeOnNonzeroReturn)
+void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
 {
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[mg];
-	if ((unsigned int)gs.members.size() >= limit) {
-		// We already caught our limit, don't need to go fishing any more.
-		return 0;
-	} else {
-		// Compute the delay between fishing expeditions from the fraction of the limit that we already have.
-		const uint64_t rateDelay = (uint64_t)ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN + (uint64_t)(((double)gs.members.size() / (double)limit) * (double)(ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MAX - ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN));
 
-		if ((now - gs.lastGatheredMembers) >= rateDelay) {
-			if (updateLastGatheredTimeOnNonzeroReturn)
-				gs.lastGatheredMembers = now;
-			return (limit - (unsigned int)gs.members.size());
-		} else return 0;
+	if (gs.members.size() >= limit) {
+		// If we already have enough members, just send and we're done -- no need for TX queue
+		OutboundMulticast out;
+
+		out.init(now,RR->identity.address(),nwid,src,mg,etherType,data,len);
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs)
+			out.sendOnly(*(RR->sw),m->address);
+	} else {
+		// If we don't already have enough members, send to the ones we have and then gather (if allowed within gather rate limit delay)
+		gs.txQueue.push_back(OutboundMulticast());
+		OutboundMulticast &out = gs.txQueue.back();
+
+		out.init(now,RR->identity.address(),nwid,src,mg,etherType,data,len);
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs)
+			out.sendAndLog(*(RR->sw),m->address);
+
+
 	}
 }
 
@@ -90,6 +74,16 @@ void Multicaster::clean(uint64_t now,const Topology &topology)
 {
 	Mutex::Lock _l(_groups_m);
 	for(std::map< MulticastGroup,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {
+		// Remove expired outgoing multicasts from multicast TX queue
+		for(std::list<OutboundMulticast>::iterator tx(mm->second.txQueue.begin());tx!=mm->second.txQueue.end();) {
+			if (tx->expired(now))
+				mm->second.txQueue.erase(tx++);
+			else ++tx;
+		}
+
+		// Remove expired members from membership list, and update rank
+		// so that remaining members can be sorted in ascending order of
+		// transmit priority.
 		std::vector<MulticastGroupMember>::iterator reader(mm->second.members.begin());
 		std::vector<MulticastGroupMember>::iterator writer(mm->second.members.begin());
 		unsigned int count = 0;
@@ -122,10 +116,34 @@ void Multicaster::clean(uint64_t now,const Topology &topology)
 		}
 
 		if (count) {
+			// There are remaining members, so re-sort them by rank and resize the vector
 			std::sort(mm->second.members.begin(),writer); // sorts in ascending order of rank
 			mm->second.members.resize(count); // trim off the ones we cut, after writer
 			++mm;
-		} else _groups.erase(mm++);
+		} else if (mm->second.txQueue.empty()) {
+			// There are no remaining members and no pending multicasts, so erase the entry
+			_groups.erase(mm++);
+		} else ++mm;
+	}
+}
+
+void Multicaster::_add(const RuntimeEnvironment *RR,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+{
+	// assumes _groups_m is locked
+}
+
+unsigned int Multicaster::_want(const MulticastGroup &mg,MulticastGroupStatus &gs,uint64_t now,unsigned int limit)
+{
+	if (gs.members.size() >= limit) {
+		// We already caught our limit, don't need to go fishing any more.
+		return 0;
+	} else {
+		// Compute the delay between fishing expeditions from the fraction of the limit that we already have.
+		const uint64_t rateDelay = (uint64_t)ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN + (uint64_t)(((double)gs.members.size() / (double)limit) * (double)(ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MAX - ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN));
+		if ((now - gs.lastGatheredMembers) >= rateDelay) {
+			gs.lastGatheredMembers = now;
+			return (limit - (unsigned int)gs.members.size());
+		} else return 0;
 	}
 }
 
