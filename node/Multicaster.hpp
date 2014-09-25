@@ -56,11 +56,11 @@ private:
 	struct MulticastGroupMember
 	{
 		MulticastGroupMember() {}
-		MulticastGroupMember(const Address &a,const Address &lf,uint64_t ts) : address(a),learnedFrom(lf),timestamp(ts) {}
+		MulticastGroupMember(const Address &a,const Address &lf,uint64_t ts) : address(a),learnedFrom(lf),timestamp(ts),rank(0) {}
 
 		Address address;
 		Address learnedFrom; // NULL/0 for addresses directly learned from LIKE
-		uint64_t timestamp; // time of last LIKE or OK response to MULTICAST_LONELY
+		uint64_t timestamp; // time of last LIKE/OK(GATHER)
 		uint64_t rank; // used by sorting algorithm in clean()
 
 		// for sorting in ascending order of rank
@@ -69,9 +69,9 @@ private:
 
 	struct MulticastGroupStatus
 	{
-		MulticastGroupStatus() : lastGatheredMembers(0) {}
+		MulticastGroupStatus() : lastExplicitGather(0) {}
 
-		uint64_t lastGatheredMembers; // time we last gathered members
+		uint64_t lastExplicitGather; // time we last gathered members explicitly
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};
@@ -84,14 +84,15 @@ public:
 	 * Add or update a member in a multicast group and send any pending multicasts
 	 *
 	 * @param RR Runtime environment
+	 * @param now Current time
 	 * @param mg Multicast group
 	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
 	 * @param member New member address
 	 */
-	inline void add(const RuntimeEnvironment *RR,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+	inline void add(const RuntimeEnvironment *RR,uint64_t now,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(RR,mg,learnedFrom,member);
+		_add(RR,uint64_t now,_groups[mg],learnedFrom,member);
 	}
 
 	/**
@@ -114,12 +115,12 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
+	 * @param limit Multicast limit
 	 */
-	void clean(const RuntimeEnvironment *RR,uint64_t now);
+	void clean(const RuntimeEnvironment *RR,uint64_t now,unsigned int limit);
 
 private:
-	void _add(const RuntimeEnvironment *RR,const MulticastGroup &mg,const Address &learnedFrom,const Address &member);
-	unsigned int _want(const MulticastGroup &mg,MulticastGroupStatus &gs,uint64_t now,unsigned int limit);
+	void _add(const RuntimeEnvironment *RR,uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
 
 	std::map< MulticastGroup,MulticastGroupStatus > _groups;
 	Mutex _groups_m;

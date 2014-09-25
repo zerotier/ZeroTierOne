@@ -63,6 +63,7 @@ public:
 	 * @param timestamp Creation time
 	 * @param self My ZeroTier address
 	 * @param nwid Network ID
+	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
 	 * @param src Source MAC address of frame
 	 * @param dest Destination multicast group (MAC + ADI)
 	 * @param etherType 16-bit Ethernet type ID
@@ -70,7 +71,7 @@ public:
 	 * @param len Length of data
 	 * @throws std::out_of_range Data too large to fit in a MULTICAST_FRAME
 	 */
-	inline void init(uint64_t timestamp,const Address &self,uint64_t nwid,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len)
+	inline void init(uint64_t timestamp,const Address &self,uint64_t nwid,unsigned int gatherLimit,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len)
 	{
 		_timestamp = timestamp;
 		_nwid = nwid;
@@ -79,7 +80,9 @@ public:
 		_etherType = etherType;
 		_packet.setSource(self);
 		_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
-		_packet.append((char)0);
+		_packet.append((uint64_t)nwid);
+		_packet.append((char)0); // 0 flags
+		_packet.append((uint32_t)gatherLimit); // gather limit -- set before send, start with 0
 		_packet.append((uint32_t)dest.adi());
 		dest.mac().appendTo(_packet);
 		src.appendTo(_packet);
@@ -124,7 +127,7 @@ public:
 	inline void sendAndLog(Switch &sw,const Address &toAddr)
 	{
 		_alreadySentTo.push_back(toAddr);
-		sendOnly(sw,toAddr);
+		sendOnly(sw,toAddr,gatherLimit);
 	}
 
 	/**
@@ -140,7 +143,7 @@ public:
 			if (*a == toAddr)
 				return false;
 		}
-		sendAndLog(sw,toAddr);
+		sendAndLog(sw,toAddr,gatherLimit);
 		return true;
 	}
 

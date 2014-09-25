@@ -660,8 +660,8 @@ public:
 		VERB_NETWORK_CONFIG_REFRESH = 12,
 
 		/* Request endpoints for multicast distribution:
-		 *   <[1] flags>
 		 *   <[8] 64-bit network ID>
+		 *   <[1] flags>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
 		 *   <[4] 32-bit (suggested) max number of multicast peers desired or 0 for no limit>
@@ -683,6 +683,9 @@ public:
 		 *   <[2] 16-bit number of members enumerated in this packet>
 		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
 		 *
+		 * If no endpoints are known, OK and ERROR are both optional. It's okay
+		 * to return nothing in that case since gathering is "lazy."
+		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] MAC address of multicast group being queried>
@@ -696,6 +699,7 @@ public:
 		/* Multicast frame:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags (currently unused, must be 0)>
+		 *   <[4] 32-bit (suggested) gather limit or 0 for no gathering>
 		 *   <[4] 32-bit multicast ADI (note that this is out of order here -- it precedes MAC)>
 		 *   <[6] destination MAC or all zero for destination node>
 		 *   <[6] source MAC or all zero for node of origin>
@@ -705,7 +709,16 @@ public:
 		 * This is similar to EXT_FRAME but carries a multicast, and is sent
 		 * out to recipients on a multicast list.
 		 *
-		 * OK is not generated.
+		 * (ADI precedes MAC here so that everything from destination MAC forward
+		 * could be treated as a raw Ethernet frame.)
+		 *
+		 * OK response payload:
+		 *   <[1] flags>
+		 *   [... same as OK(GATHER) if flag 0x01 is set ...]
+		 *
+		 * Flags in OK are 0x01 for "gathering results returned," which can be
+		 * sent if a gather limit is specified in the original FRAME and there
+		 * are known endpoints to gather. This way frames can also gather.
 		 *
 		 * ERROR response payload:
 		 *   <[6] multicast group MAC>

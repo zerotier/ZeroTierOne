@@ -193,7 +193,7 @@
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
-#define ZT_DB_CLEAN_PERIOD 300000
+#define ZT_DB_CLEAN_PERIOD 120000
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -238,19 +238,9 @@
 #define ZT_MULTICAST_LOCAL_POLL_PERIOD 10000
 
 /**
- * Minimum delay between multicast endpoint gathering attempts
- *
- * Actual delay will vary between MIN and MAX research rate depending on
- * how many endpoints we have -- MIN for 0, MAX for one less than limit.
- * If we have the limit of known multicast endpoints, no further attempts
- * to gather them are made.
+ * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
  */
-#define ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN (ZT_MULTICAST_LIKE_EXPIRE / 60)
-
-/**
- * Maximum delay between multicast endpoint gathering attempts
- */
-#define ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MAX (ZT_MULTICAST_LIKE_EXPIRE / 2)
+#define ZT_MULTICAST_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
 
 /**
  * Timeout for outgoing multicasts
@@ -258,12 +248,17 @@
  * Attempts will be made to gather recipients and send until we reach
  * the limit or sending times out.
  */
-#define ZT_MULTICAST_TRANSMIT_TIMEOUT (ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN * 3)
+#define ZT_MULTICAST_TRANSMIT_TIMEOUT (ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN * 2)
+
+/**
+ * Default number of endpoints to implicitly gather from peers with each multicast frame
+ */
+#define ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER 8
 
 /**
  * Default maximum number of peers to address with a single multicast (if unspecified in network)
  */
-#define ZT_DEFAULT_MULTICAST_LIMIT 64
+#define ZT_MULTICAST_DEFAULT_LIMIT 128
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping

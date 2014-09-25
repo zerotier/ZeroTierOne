@@ -318,7 +318,7 @@ void Network::clean()
 		}
 	}
 	{
-		_multicastTopology.clean(now,*(RR->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_DEFAULT_MULTICAST_LIMIT);
+		_multicastTopology.clean(now,*(RR->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_MULTICAST_DEFAULT_LIMIT);
 	}
 }
 

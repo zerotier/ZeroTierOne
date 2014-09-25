@@ -28,16 +28,18 @@
 #include <algorithm>
 
 #include "Constants.hpp"
+#include "SharedPtr.hpp"
 #include "Multicaster.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"
 #include "Packet.hpp"
+#include "Peer.hpp"
 #include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
 
 Multicaster::Multicaster() :
-	_limit(ZT_DEFAULT_MULTICAST_LIMIT)
+	_limit(ZT_MULTICAST_DEFAULT_LIMIT)
 {
 }
 
@@ -54,29 +56,50 @@ void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t
 		// If we already have enough members, just send and we're done -- no need for TX queue
 		OutboundMulticast out;
 
-		out.init(now,RR->identity.address(),nwid,src,mg,etherType,data,len);
-		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs)
+		out.init(now,RR->identity.address(),nwid,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
+		unsigned int count = 0;
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs) {
 			out.sendOnly(*(RR->sw),m->address);
+			if (++count >= limit)
+				break;
+		}
 	} else {
 		// If we don't already have enough members, send to the ones we have and then gather (if allowed within gather rate limit delay)
 		gs.txQueue.push_back(OutboundMulticast());
 		OutboundMulticast &out = gs.txQueue.back();
 
-		out.init(now,RR->identity.address(),nwid,src,mg,etherType,data,len);
+		out.init(now,RR->identity.address(),nwid,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs)
 			out.sendAndLog(*(RR->sw),m->address);
 
+		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_GATHER_DELAY) {
+			gs.lastExplicitGather = now;
 
+			// Explicitly gather -- right now we only do this from supernodes since they
+			// know all multicast group memberships. In the future this might be more
+			// distributed somehow.
+			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			if (sn) {
+				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
+				outp.append(nwid);
+				outp.append((char)0); // TODO: include network membership cert
+				mg.mac().appendTo(outp);
+				outp.append((uint32_t)mg.adi());
+				outp.append((uint32_t)((limit - (unsigned int)gs.members.size()) + 1)); // +1 just means we'll have an extra in the queue if available
+				outp.armor(sn->key(),true);
+				sn->send(RR,outp.data(),outp.size(),now);
+			}
+		}
 	}
 }
 
-void Multicaster::clean(uint64_t now,const Topology &topology)
+void Multicaster::clean(const RuntimeEnvironment *RR,uint64_t now,unsigned int limit)
 {
 	Mutex::Lock _l(_groups_m);
 	for(std::map< MulticastGroup,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {
 		// Remove expired outgoing multicasts from multicast TX queue
 		for(std::list<OutboundMulticast>::iterator tx(mm->second.txQueue.begin());tx!=mm->second.txQueue.end();) {
-			if (tx->expired(now))
+			if ((tx->expired(now))||(tx->sentToCount() >= limit))
 				mm->second.txQueue.erase(tx++);
 			else ++tx;
 		}
@@ -98,12 +121,12 @@ void Multicaster::clean(uint64_t now,const Topology &topology)
 				 * about them minus one day (a large constant) to put these at the bottom of the list.
 				 * List is sorted in ascending order of rank and multicasts are sent last-to-first. */
 				if (writer->learnedFrom) {
-					SharedPtr<Peer> p(topology.getPeer(writer->learnedFrom));
+					SharedPtr<Peer> p(RR->topology.getPeer(writer->learnedFrom));
 					if (p)
 						writer->rank = p->lastUnicastFrame() - ZT_MULTICAST_LIKE_EXPIRE;
 					else writer->rank = writer->timestamp - (86400000 + ZT_MULTICAST_LIKE_EXPIRE);
 				} else {
-					SharedPtr<Peer> p(topology.getPeer(writer->address));
+					SharedPtr<Peer> p(RR->topology.getPeer(writer->address));
 					if (p)
 						writer->rank = p->lastUnicastFrame();
 					else writer->rank = writer->timestamp - 86400000;
@@ -127,24 +150,18 @@ void Multicaster::clean(uint64_t now,const Topology &topology)
 	}
 }
 
-void Multicaster::_add(const RuntimeEnvironment *RR,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+void Multicaster::_add(const RuntimeEnvironment *RR,uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
 {
 	// assumes _groups_m is locked
-}
-
-unsigned int Multicaster::_want(const MulticastGroup &mg,MulticastGroupStatus &gs,uint64_t now,unsigned int limit)
-{
-	if (gs.members.size() >= limit) {
-		// We already caught our limit, don't need to go fishing any more.
-		return 0;
-	} else {
-		// Compute the delay between fishing expeditions from the fraction of the limit that we already have.
-		const uint64_t rateDelay = (uint64_t)ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN + (uint64_t)(((double)gs.members.size() / (double)limit) * (double)(ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MAX - ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN));
-		if ((now - gs.lastGatheredMembers) >= rateDelay) {
-			gs.lastGatheredMembers = now;
-			return (limit - (unsigned int)gs.members.size());
-		} else return 0;
+	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {
+		if (m->address == member) {
+			if (m->learnedFrom)
+				m->learnedFrom = learnedFrom; // only update with indirect learnedFrom if we've never directly learned from this peer
+			m->timestamp = now;
+			return;
+		}
 	}
+	gs.members.push_back(MulticastGroupMember(member,learnedFrom,now));
 }
 
 } // namespace ZeroTier
