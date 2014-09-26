@@ -38,9 +38,10 @@
 #include "MulticastGroup.hpp"
 #include "Address.hpp"
 #include "Packet.hpp"
-#include "Switch.hpp"
 
 namespace ZeroTier {
+
+class Switch;
 
 /**
  * An outbound multicast packet
@@ -71,25 +72,7 @@ public:
 	 * @param len Length of data
 	 * @throws std::out_of_range Data too large to fit in a MULTICAST_FRAME
 	 */
-	inline void init(uint64_t timestamp,const Address &self,uint64_t nwid,unsigned int gatherLimit,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len)
-	{
-		_timestamp = timestamp;
-		_nwid = nwid;
-		_source = src;
-		_destination = dest;
-		_etherType = etherType;
-		_packet.setSource(self);
-		_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
-		_packet.append((uint64_t)nwid);
-		_packet.append((char)0); // 0 flags
-		_packet.append((uint32_t)gatherLimit); // gather limit -- set before send, start with 0
-		_packet.append((uint32_t)dest.adi());
-		dest.mac().appendTo(_packet);
-		src.appendTo(_packet);
-		_packet.append((uint16_t)etherType);
-		_packet.append(payload,len);
-		_packet.compress();
-	}
+	void init(uint64_t timestamp,const Address &self,uint64_t nwid,unsigned int gatherLimit,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len);
 
 	/**
 	 * @return Multicast creation time
@@ -113,10 +96,7 @@ public:
 	 * @param sw Switch instance to send packets
 	 * @param toAddr Destination address
 	 */
-	inline void sendOnly(Switch &sw,const Address &toAddr)
-	{
-		sw.send(Packet(_packet,toAddr),true);
-	}
+	void sendOnly(Switch &sw,const Address &toAddr);
 
 	/**
 	 * Just send and log but do not check sent log
@@ -127,7 +107,7 @@ public:
 	inline void sendAndLog(Switch &sw,const Address &toAddr)
 	{
 		_alreadySentTo.push_back(toAddr);
-		sendOnly(sw,toAddr,gatherLimit);
+		sendOnly(sw,toAddr);
 	}
 
 	/**
@@ -143,7 +123,7 @@ public:
 			if (*a == toAddr)
 				return false;
 		}
-		sendAndLog(sw,toAddr,gatherLimit);
+		sendAndLog(sw,toAddr);
 		return true;
 	}
 

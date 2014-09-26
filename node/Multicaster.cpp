@@ -38,8 +38,7 @@
 
 namespace ZeroTier {
 
-Multicaster::Multicaster() :
-	_limit(ZT_MULTICAST_DEFAULT_LIMIT)
+Multicaster::Multicaster()
 {
 }
 
@@ -47,7 +46,7 @@ Multicaster::~Multicaster()
 {
 }
 
-void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
+void Multicaster::send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
 {
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[mg];
@@ -58,7 +57,7 @@ void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t
 
 		out.init(now,RR->identity.address(),nwid,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
 		unsigned int count = 0;
-		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs) {
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
 			out.sendOnly(*(RR->sw),m->address);
 			if (++count >= limit)
 				break;
@@ -69,7 +68,7 @@ void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t
 		OutboundMulticast &out = gs.txQueue.back();
 
 		out.init(now,RR->identity.address(),nwid,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
-		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++gs)
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m)
 			out.sendAndLog(*(RR->sw),m->address);
 
 		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_GATHER_DELAY) {
@@ -121,12 +120,12 @@ void Multicaster::clean(const RuntimeEnvironment *RR,uint64_t now,unsigned int l
 				 * about them minus one day (a large constant) to put these at the bottom of the list.
 				 * List is sorted in ascending order of rank and multicasts are sent last-to-first. */
 				if (writer->learnedFrom) {
-					SharedPtr<Peer> p(RR->topology.getPeer(writer->learnedFrom));
+					SharedPtr<Peer> p(RR->topology->getPeer(writer->learnedFrom));
 					if (p)
 						writer->rank = p->lastUnicastFrame() - ZT_MULTICAST_LIKE_EXPIRE;
 					else writer->rank = writer->timestamp - (86400000 + ZT_MULTICAST_LIKE_EXPIRE);
 				} else {
-					SharedPtr<Peer> p(RR->topology.getPeer(writer->address));
+					SharedPtr<Peer> p(RR->topology->getPeer(writer->address));
 					if (p)
 						writer->rank = p->lastUnicastFrame();
 					else writer->rank = writer->timestamp - 86400000;
@@ -153,6 +152,8 @@ void Multicaster::clean(const RuntimeEnvironment *RR,uint64_t now,unsigned int l
 void Multicaster::_add(const RuntimeEnvironment *RR,uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
 {
 	// assumes _groups_m is locked
+
+	// Update timestamp and learnedFrom if existing
 	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {
 		if (m->address == member) {
 			if (m->learnedFrom)
@@ -161,6 +162,10 @@ void Multicaster::_add(const RuntimeEnvironment *RR,uint64_t now,MulticastGroupS
 			return;
 		}
 	}
+
+	// If not existing, add to end of list (highest priority) -- these will
+	// be resorted on next clean(). In the future we might want to insert
+	// this somewhere else but we'll try this for now.
 	gs.members.push_back(MulticastGroupMember(member,learnedFrom,now));
 }
 

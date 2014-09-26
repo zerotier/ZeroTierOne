@@ -248,7 +248,7 @@
  * Attempts will be made to gather recipients and send until we reach
  * the limit or sending times out.
  */
-#define ZT_MULTICAST_TRANSMIT_TIMEOUT (ZT_MULTICAST_TOPOLOGY_GATHER_DELAY_MIN * 2)
+#define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
 /**
  * Default number of endpoints to implicitly gather from peers with each multicast frame

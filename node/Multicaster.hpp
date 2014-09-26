@@ -92,7 +92,7 @@ public:
 	inline void add(const RuntimeEnvironment *RR,uint64_t now,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(RR,uint64_t now,_groups[mg],learnedFrom,member);
+		_add(RR,now,_groups[mg],learnedFrom,member);
 	}
 
 	/**
