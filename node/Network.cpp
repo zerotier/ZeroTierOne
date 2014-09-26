@@ -91,7 +91,7 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	nw->_id = id;
 	nw->_nc = nc;
 	nw->_mac.fromAddress(renv->identity.address(),id);
-	nw->_r = renv;
+	nw->RR = renv;
 	nw->_tap = (EthernetTap *)0;
 	nw->_enabled = true;
 	nw->_lastConfigUpdate = 0;
@@ -318,7 +318,7 @@ void Network::clean()
 		}
 	}
 	{
-		_multicastTopology.clean(now,*(RR->topology),(_config) ? _config->multicastLimit() : (unsigned int)ZT_MULTICAST_DEFAULT_LIMIT);
+		_multicaster.clean(RR,now,(_config) ? _config->multicastLimit() : (unsigned int)ZT_MULTICAST_DEFAULT_LIMIT);
 	}
 }
 
@@ -343,7 +343,7 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 	if ((!((Network *)arg)->_enabled)||(((Network *)arg)->status() != NETWORK_OK))
 		return;
 
-	const RuntimeEnvironment *RR = ((Network *)arg)->_r;
+	const RuntimeEnvironment *RR = ((Network *)arg)->RR;
 	if (RR->shutdownInProgress)
 		return;
 
