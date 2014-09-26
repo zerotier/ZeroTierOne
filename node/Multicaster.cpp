@@ -34,6 +34,7 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Peer.hpp"
+#include "CertificateOfMembership.hpp"
 #include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
@@ -46,7 +47,7 @@ Multicaster::~Multicaster()
 {
 }
 
-void Multicaster::send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
+void Multicaster::send(const RuntimeEnvironment *RR,uint64_t nwid,const CertificateOfMembership *com,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
 {
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[mg];
@@ -81,10 +82,11 @@ void Multicaster::send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int l
 			if (sn) {
 				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 				outp.append(nwid);
-				outp.append((char)0); // TODO: include network membership cert
+				outp.append((uint8_t)((com) ? 0x01: 0x00));
 				mg.mac().appendTo(outp);
 				outp.append((uint32_t)mg.adi());
 				outp.append((uint32_t)((limit - (unsigned int)gs.members.size()) + 1)); // +1 just means we'll have an extra in the queue if available
+				if (com) com->serialize(outp);
 				outp.armor(sn->key(),true);
 				sn->send(RR,outp.data(),outp.size(),now);
 			}

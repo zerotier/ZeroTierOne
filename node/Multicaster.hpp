@@ -46,6 +46,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class CertificateOfMembership;
 
 /**
  * Database of known multicast peers within a network
@@ -100,6 +101,7 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param nwid Network ID
+	 * @param com Certificate of membership to include or NULL for none
 	 * @param limit Multicast limit
 	 * @param now Current time
 	 * @param mg Multicast group
@@ -108,7 +110,17 @@ public:
 	 * @param data Packet data
 	 * @param len Length of packet data
 	 */
-	void send(const RuntimeEnvironment *RR,uint64_t nwid,unsigned int limit,uint64_t now,const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len);
+	void send(
+		const RuntimeEnvironment *RR,
+		uint64_t nwid,
+		const CertificateOfMembership *com,
+		unsigned int limit,
+		uint64_t now,
+		const MulticastGroup &mg,
+		const MAC &src,
+		unsigned int etherType,
+		const void *data,
+		unsigned int len);
 
 	/**
 	 * Clean up and resort database

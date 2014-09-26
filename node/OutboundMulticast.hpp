@@ -42,6 +42,7 @@
 namespace ZeroTier {
 
 class Switch;
+class CertificateOfMembership;
 
 /**
  * An outbound multicast packet
@@ -64,6 +65,7 @@ public:
 	 * @param timestamp Creation time
 	 * @param self My ZeroTier address
 	 * @param nwid Network ID
+	 * @param com Certificate of membership to attach or NULL to omit
 	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
 	 * @param src Source MAC address of frame
 	 * @param dest Destination multicast group (MAC + ADI)
@@ -72,7 +74,17 @@ public:
 	 * @param len Length of data
 	 * @throws std::out_of_range Data too large to fit in a MULTICAST_FRAME
 	 */
-	void init(uint64_t timestamp,const Address &self,uint64_t nwid,unsigned int gatherLimit,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len);
+	void init(
+		uint64_t timestamp,
+		const Address &self,
+		uint64_t nwid,
+		const CertificateOfMembership *com,
+		unsigned int gatherLimit,
+		const MAC &src,
+		const MulticastGroup &dest,
+		unsigned int etherType,
+		const void *payload,
+		unsigned int len);
 
 	/**
 	 * @return Multicast creation time

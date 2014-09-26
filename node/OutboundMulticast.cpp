@@ -28,10 +28,11 @@
 #include "Constants.hpp"
 #include "OutboundMulticast.hpp"
 #include "Switch.hpp"
+#include "CertificateOfMembership.hpp"
 
 namespace ZeroTier {
 
-void OutboundMulticast::init(uint64_t timestamp,const Address &self,uint64_t nwid,unsigned int gatherLimit,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len)
+void OutboundMulticast::init(uint64_t timestamp,const Address &self,uint64_t nwid,const CertificateOfMembership *com,unsigned int gatherLimit,const MAC &src,const MulticastGroup &dest,unsigned int etherType,const void *payload,unsigned int len)
 {
 	_timestamp = timestamp;
 	_nwid = nwid;
@@ -41,8 +42,9 @@ void OutboundMulticast::init(uint64_t timestamp,const Address &self,uint64_t nwi
 	_packet.setSource(self);
 	_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
 	_packet.append((uint64_t)nwid);
-	_packet.append((char)0); // 0 flags
+	_packet.append((uint8_t)((com) ? 0x01 : 0x00));
 	_packet.append((uint32_t)gatherLimit); // gather limit -- set before send, start with 0
+	if (com) com->serialize(_packet);
 	_packet.append((uint32_t)dest.adi());
 	dest.mac().appendTo(_packet);
 	src.appendTo(_packet);

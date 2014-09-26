@@ -893,6 +893,18 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 	return true;
 }
 
+bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+}
+
+bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+}
+
+void IncomingPacket::_handleMulticastGatherResponse(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,unsigned int startIdx)
+{
+}
+
 void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid)
 {
 	Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
