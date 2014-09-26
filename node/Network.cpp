@@ -81,7 +81,7 @@ Network::~Network()
 		Utils::rm(std::string(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts"));
 	} else {
 		clean();
-		_dumpMulticastCerts();
+		_dumpMembershipCerts();
 	}
 }
 
@@ -338,88 +338,6 @@ Network::Status Network::status() const
 	}
 }
 
-void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
-{
-	if ((!((Network *)arg)->_enabled)||(((Network *)arg)->status() != NETWORK_OK))
-		return;
-
-	const RuntimeEnvironment *RR = ((Network *)arg)->RR;
-	if (RR->shutdownInProgress)
-		return;
-
-	try {
-		RR->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
-	} catch (std::exception &exc) {
-		TRACE("unexpected exception handling local packet: %s",exc.what());
-	} catch ( ... ) {
-		TRACE("unexpected exception handling local packet");
-	}
-}
-
-void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
-{
-	uint64_t pushTimeout = _config->com().timestampMaxDelta() / 2;
-	if (!pushTimeout)
-		return; // still waiting on my own cert
-	if (pushTimeout > 1000)
-		pushTimeout -= 1000;
-
-	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
-	if ((force)||((now - lastPushed) > pushTimeout)) {
-		lastPushed = now;
-		TRACE("pushing membership cert for %.16llx to %s",(unsigned long long)_id,peer.toString().c_str());
-
-		Packet outp(peer,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_config->com().serialize(outp);
-		RR->sw->send(outp,true);
-	}
-}
-
-// Ethernet tap creation thread -- required on some platforms where tap
-// creation may be time consuming (e.g. Windows).
-void Network::threadMain()
-	throw()
-{
-	char fname[1024],lcentry[128];
-	Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
-
-	EthernetTap *t = (EthernetTap *)0;
-	try {
-		std::string desiredDevice(_nc->getLocalConfig(lcentry));
-		_mkNetworkFriendlyName(fname,sizeof(fname));
-
-		t = RR->tapFactory->open(_mac,ZT_IF_MTU,ZT_DEFAULT_IF_METRIC,_id,(desiredDevice.length() > 0) ? desiredDevice.c_str() : (const char *)0,fname,_CBhandleTapData,this);
-
-		std::string dn(t->deviceName());
-		if ((dn.length())&&(dn != desiredDevice))
-			_nc->putLocalConfig(lcentry,dn);
-	} catch (std::exception &exc) {
-		delete t;
-		t = (EthernetTap *)0;
-		LOG("network %.16llx failed to initialize: %s",_id,exc.what());
-		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
-	} catch ( ... ) {
-		delete t;
-		t = (EthernetTap *)0;
-		LOG("network %.16llx failed to initialize: unknown error",_id);
-		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
-	}
-
-	{
-		Mutex::Lock _l(_lock);
-		if (_tap) // the tap creation thread can technically be re-launched, though this isn't done right now
-			RR->tapFactory->close(_tap,false);
-		_tap = t;
-		if (t) {
-			if (_config) {
-				for(std::set<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip)
-					t->addIP(*newip);
-			}
-			t->setEnabled(_enabled);
-		}
-	}
-}
-
 void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 {
 	Mutex::Lock _l(_lock);
@@ -467,6 +385,94 @@ void Network::destroy()
 	if (_tap)
 		RR->tapFactory->close(_tap,true);
 	_tap = (EthernetTap *)0;
+}
+
+// Ethernet tap creation thread -- required on some platforms where tap
+// creation may be time consuming (e.g. Windows). Thread exits after tap
+// device setup.
+void Network::threadMain()
+	throw()
+{
+	char fname[1024],lcentry[128];
+	Utils::snprintf(lcentry,sizeof(lcentry),"_dev_for_%.16llx",(unsigned long long)_id);
+
+	EthernetTap *t = (EthernetTap *)0;
+	try {
+		std::string desiredDevice(_nc->getLocalConfig(lcentry));
+		_mkNetworkFriendlyName(fname,sizeof(fname));
+
+		t = RR->tapFactory->open(_mac,ZT_IF_MTU,ZT_DEFAULT_IF_METRIC,_id,(desiredDevice.length() > 0) ? desiredDevice.c_str() : (const char *)0,fname,_CBhandleTapData,this);
+
+		std::string dn(t->deviceName());
+		if ((dn.length())&&(dn != desiredDevice))
+			_nc->putLocalConfig(lcentry,dn);
+	} catch (std::exception &exc) {
+		delete t;
+		t = (EthernetTap *)0;
+		LOG("network %.16llx failed to initialize: %s",_id,exc.what());
+		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
+	} catch ( ... ) {
+		delete t;
+		t = (EthernetTap *)0;
+		LOG("network %.16llx failed to initialize: unknown error",_id);
+		_netconfFailure = NETCONF_FAILURE_INIT_FAILED;
+	}
+
+	{
+		Mutex::Lock _l(_lock);
+		if (_tap) // the tap creation thread can technically be re-launched, though this isn't done right now
+			RR->tapFactory->close(_tap,false);
+		_tap = t;
+		if (t) {
+			if (_config) {
+				for(std::set<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip)
+					t->addIP(*newip);
+			}
+			t->setEnabled(_enabled);
+		}
+	}
+}
+
+void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
+{
+	if ((!((Network *)arg)->_enabled)||(((Network *)arg)->status() != NETWORK_OK))
+		return;
+
+	const RuntimeEnvironment *RR = ((Network *)arg)->RR;
+	if (RR->shutdownInProgress)
+		return;
+
+	try {
+		RR->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
+	} catch (std::exception &exc) {
+		TRACE("unexpected exception handling local packet: %s",exc.what());
+	} catch ( ... ) {
+		TRACE("unexpected exception handling local packet");
+	}
+}
+
+void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
+{
+	// assumes _lock is locked
+	uint64_t pushTimeout = _config->com().timestampMaxDelta() / 2;
+
+	// Zero means we're still waiting on our own cert
+	if (!pushTimeout)
+		return;
+
+	// Give a 1s margin around +/- 1/2 max delta to account for latency
+	if (pushTimeout > 1000)
+		pushTimeout -= 1000;
+
+	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
+	if ((force)||((now - lastPushed) > pushTimeout)) {
+		lastPushed = now;
+		TRACE("pushing membership cert for %.16llx to %s",(unsigned long long)_id,peer.toString().c_str());
+
+		Packet outp(peer,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+		_config->com().serialize(outp);
+		RR->sw->send(outp,true);
+	}
 }
 
 void Network::_restoreState()
@@ -537,7 +543,7 @@ void Network::_restoreState()
 	}
 }
 
-void Network::_dumpMulticastCerts()
+void Network::_dumpMembershipCerts()
 {
 	Buffer<ZT_NETWORK_CERT_WRITE_BUF_SIZE> buf;
 	std::string mcdbPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".mcerts");

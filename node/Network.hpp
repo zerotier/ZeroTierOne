@@ -249,7 +249,7 @@ public:
 	Status status() const;
 
 	/**
-	 * Update and check multicast rate balance for a group
+	 * Update and check multicast rate balance for a multicast group
 	 *
 	 * @param mg Multicast group
 	 * @param bytes Size of packet
@@ -302,12 +302,6 @@ public:
 	}
 
 	/**
-	 * Thread main method; do not call elsewhere
-	 */
-	void threadMain()
-		throw();
-
-	/**
 	 * Inject a frame into tap (if it's created and network is enabled)
 	 *
 	 * @param from Origin MAC
@@ -318,6 +312,7 @@ public:
 	 */
 	inline void tapPut(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 	{
+		Mutex::Lock _l(_lock);
 		if (!_enabled)
 			return;
 		EthernetTap *t = _tap;
@@ -330,6 +325,7 @@ public:
 	 */
 	inline std::string tapDeviceName() const
 	{
+		Mutex::Lock _l(_lock);
 		EthernetTap *t = _tap;
 		if (t)
 			return t->deviceName();
@@ -339,17 +335,14 @@ public:
 	/**
 	 * @return Ethernet MAC address for this network's local interface
 	 */
-	inline const MAC &mac() const
-		throw()
-	{
-		return _mac;
-	}
+	inline const MAC &mac() const throw() { return _mac; }
 
 	/**
 	 * @return Set of IPs currently assigned to interface
 	 */
 	inline std::set<InetAddress> ips() const
 	{
+		Mutex::Lock _l(_lock);
 		EthernetTap *t = _tap;
 		if (t)
 			return t->ips();
@@ -371,8 +364,10 @@ public:
 	}
 
 	/**
+	 * Find the node on this network that has this MAC behind it (if any)
+	 *
 	 * @param mac MAC address
-	 * @return ZeroTier address of bridge to this MAC or null address if not found (also check result for self, since this can happen)
+	 * @return ZeroTier address of bridge to this MAC
 	 */
 	inline Address findBridgeTo(const MAC &mac) const
 	{
@@ -422,12 +417,18 @@ public:
 	 */
 	void destroy();
 
+	/**
+	 * Thread main method; do not call elsewhere
+	 */
+	void threadMain()
+		throw();
+
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
 	void _pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
 	void _restoreState();
-	void _dumpMulticastCerts();
+	void _dumpMembershipCerts();
 
 	inline void _mkNetworkFriendlyName(char *buf,unsigned int len)
 	{
