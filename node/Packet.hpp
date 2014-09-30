@@ -54,13 +54,18 @@
  * 3 - 0.5.0 ... 0.6.0
  *   * Yet another multicast redesign
  *   * New crypto completely changes key agreement cipher
- * 4 - 0.6.0 ...
+ * 4 - 0.6.0 ... 0.9.2
  *   * New identity format based on hashcash design
  *
  * This isn't going to change again for a long time unless your
  * author wakes up again at 4am with another great idea. :P
  */
 #define ZT_PROTO_VERSION 4
+
+/**
+ * Minimum supported protocol version
+ */
+#define ZT_PROTO_VERSION_MIN 4
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
@@ -184,6 +189,7 @@
 #define ZT_PROTO_VERB_EXT_FRAME_LEN_NETWORK_ID 8
 #define ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS (ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID + ZT_PROTO_VERB_EXT_FRAME_LEN_NETWORK_ID)
 #define ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS 1
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_COM (ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS + ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS)
 #define ZT_PROTO_VERB_EXT_FRAME_IDX_TO (ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS + ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS)
 #define ZT_PROTO_VERB_EXT_FRAME_LEN_TO 6
 #define ZT_PROTO_VERB_EXT_FRAME_IDX_FROM (ZT_PROTO_VERB_EXT_FRAME_IDX_TO + ZT_PROTO_VERB_EXT_FRAME_LEN_TO)
@@ -227,8 +233,7 @@
 #define ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME_LEN (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_ETHERTYPE)
 #define ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_FRAME_LEN 2
 #define ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME_LEN + ZT_PROTO_VERB_MULTICAST_FRAME_LEN_FRAME_LEN)
-
-#define ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE 0x01
+#define ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE 0x01
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
@@ -239,12 +244,15 @@
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS + 1)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC + 6)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT + 4)
 
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-// remainder are relative to offset after COM -- might do this with macros at some point
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT + 4)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + 4)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
 
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP + 8)
@@ -528,8 +536,7 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/*
-		 * Full Ethernet frame with MAC addressing and optional fields:
+		/* Full Ethernet frame with MAC addressing and optional fields:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *  [<[...] certificate of network membership>]
@@ -544,6 +551,8 @@ public:
 		 * An extended frame carries full MAC addressing, making them a
 		 * superset of VERB_FRAME. They're used for bridging or when we
 		 * want to attach a certificate since FRAME does not support that.
+		 *
+		 * Multicast frames may not be sent as EXT_FRAME.
 		 *
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
@@ -698,6 +707,7 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
+		 *   [begin gather results -- these same fields can be in OK(MULTICAST_FRAME)]
 		 *   <[4] 32-bit total number of known members in this multicast group>
 		 *   <[2] 16-bit number of members enumerated in this packet>
 		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
@@ -731,18 +741,27 @@ public:
 		 *
 		 * This is similar to EXT_FRAME but carries a multicast, and is sent
 		 * out to recipients on a multicast list. It may also specify a desired
-		 * number of multicast peers to gather, which is called "implicit
-		 * gathering." It is only allowed if certificate authentication permits
-		 * these peers to communicate on this network.
+		 * number of multicast peers to gather if additional multicast peers
+		 * for this group are desired.
 		 *
 		 * (ADI precedes MAC here so that everything from destination MAC forward
 		 * could be treated as a raw Ethernet frame.)
 		 *
+		 * OK responses are optional and are currently only returned if gathering
+		 * of additional multicast peers is requested.
+		 *
 		 * OK response payload:
-		 *   <[1] flags, 0x01 if implicit gathering results are included>
-		 *   [... same as OK(MULTICAST_GATHER) payload if flag 0x01 is set ...]
+		 *   <[8] 64-bit network ID>
+		 *   <[6] MAC address of multicast group>
+		 *   <[4] 32-bit ADI for multicast group>
+		 *   <[1] flags>
+		 *  [<[...] implicit gather results if flag 0x01 is set>]
+		 *
+		 * Flags:
+		 *   0x01 - OK include implicit gather results
 		 *
 		 * ERROR response payload:
+		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
 		 *

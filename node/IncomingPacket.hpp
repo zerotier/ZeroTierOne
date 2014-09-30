@@ -127,9 +127,6 @@ private:
 	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 
-	// Both OK(MULTICAST_GATHER) and OK(MULTICAST_FRAME) can carry this payload
-	void _handleMulticastGatherResponse(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,unsigned int startIdx);
-
 	// Send an ERROR_NEED_MEMBERSHIP_CERTIFICATE to a peer indicating that an updated cert is needed to join
 	void _sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid);
 

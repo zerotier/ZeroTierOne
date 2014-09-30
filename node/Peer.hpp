@@ -50,7 +50,7 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_SERIALIZATION_VERSION 11
+#define ZT_PEER_SERIALIZATION_VERSION 12
 
 namespace ZeroTier {
 
@@ -351,21 +351,25 @@ public:
 	/**
 	 * Set the currently known remote version of this peer's client
 	 *
+	 * @param vproto Protocol version
 	 * @param vmaj Major version
 	 * @param vmin Minor version
 	 * @param vrev Revision
 	 */
-	inline void setRemoteVersion(unsigned int vmaj,unsigned int vmin,unsigned int vrev)
-		throw()
+	inline void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
 	{
-		_vMajor = vmaj;
-		_vMinor = vmin;
-		_vRevision = vrev;
+		_vProto = (uint16_t)vproto;
+		_vMajor = (uint16_t)vmaj;
+		_vMinor = (uint16_t)vmin;
+		_vRevision = (uint16_t)vrev;
 	}
+
+	inline unsigned int remoteVersionProtocol() const throw() { return _vProto; }
 
 	inline unsigned int remoteVersionMajor() const throw() { return _vMajor; }
 	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
+
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
@@ -413,6 +417,7 @@ public:
 		b.append(_lastUnicastFrame);
 		b.append(_lastMulticastFrame);
 		b.append(_lastAnnouncedTo);
+		b.append((uint16_t)_vProto);
 		b.append((uint16_t)_vMajor);
 		b.append((uint16_t)_vMinor);
 		b.append((uint16_t)_vRevision);
@@ -438,6 +443,7 @@ public:
 		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		_vProto = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
@@ -463,9 +469,10 @@ private:
 	volatile uint64_t _lastUnicastFrame;
 	volatile uint64_t _lastMulticastFrame;
 	volatile uint64_t _lastAnnouncedTo;
-	volatile unsigned int _vMajor;
-	volatile unsigned int _vMinor;
-	volatile unsigned int _vRevision;
+	volatile uint16_t _vProto;
+	volatile uint16_t _vMajor;
+	volatile uint16_t _vMinor;
+	volatile uint16_t _vRevision;
 	volatile unsigned int _latency;
 
 	Mutex _lock;

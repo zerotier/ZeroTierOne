@@ -282,43 +282,38 @@ bool Network::isAllowed(const Address &peer) const
 void Network::clean()
 {
 	uint64_t now = Utils::now();
-	{
-		Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_lock);
 
-		if (_destroyed)
-			return;
+	if (_destroyed)
+		return;
 
-		if ((_config)&&(_config->isPublic())) {
-			// Open (public) networks do not track certs or cert pushes at all.
-			_membershipCertificates.clear();
-			_lastPushedMembershipCertificate.clear();
-		} else if (_config) {
-			// Clean certificates that are no longer valid from the cache.
-			for(std::map<Address,CertificateOfMembership>::iterator c=(_membershipCertificates.begin());c!=_membershipCertificates.end();) {
-				if (_config->com().agreesWith(c->second))
-					++c;
-				else _membershipCertificates.erase(c++);
-			}
-
-			// Clean entries from the last pushed tracking map if they're so old as
-			// to be no longer relevant.
-			uint64_t forgetIfBefore = now - (_config->com().timestampMaxDelta() * 3ULL);
-			for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
-				if (lp->second < forgetIfBefore)
-					_lastPushedMembershipCertificate.erase(lp++);
-				else ++lp;
-			}
+	if ((_config)&&(_config->isPublic())) {
+		// Open (public) networks do not track certs or cert pushes at all.
+		_membershipCertificates.clear();
+		_lastPushedMembershipCertificate.clear();
+	} else if (_config) {
+		// Clean certificates that are no longer valid from the cache.
+		for(std::map<Address,CertificateOfMembership>::iterator c=(_membershipCertificates.begin());c!=_membershipCertificates.end();) {
+			if (_config->com().agreesWith(c->second))
+				++c;
+			else _membershipCertificates.erase(c++);
 		}
 
-		// Clean learned multicast groups if we haven't heard from them in a while
-		for(std::map<MulticastGroup,uint64_t>::iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();) {
-			if ((now - mg->second) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
-				_multicastGroupsBehindMe.erase(mg++);
-			else ++mg;
+		// Clean entries from the last pushed tracking map if they're so old as
+		// to be no longer relevant.
+		uint64_t forgetIfBefore = now - (_config->com().timestampMaxDelta() * 3ULL);
+		for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
+			if (lp->second < forgetIfBefore)
+				_lastPushedMembershipCertificate.erase(lp++);
+			else ++lp;
 		}
 	}
-	{
-		_multicaster.clean(RR,now,(_config) ? _config->multicastLimit() : (unsigned int)ZT_MULTICAST_DEFAULT_LIMIT);
+
+	// Clean learned multicast groups if we haven't heard from them in a while
+	for(std::map<MulticastGroup,uint64_t>::iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();) {
+		if ((now - mg->second) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
+			_multicastGroupsBehindMe.erase(mg++);
+		else ++mg;
 	}
 }
 

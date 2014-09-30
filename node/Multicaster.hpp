@@ -47,6 +47,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 class CertificateOfMembership;
+class Packet;
 
 /**
  * Database of known multicast peers within a network
@@ -82,19 +83,39 @@ public:
 	~Multicaster();
 
 	/**
-	 * Add or update a member in a multicast group and send any pending multicasts
+	 * Add or update a member in a multicast group
 	 *
-	 * @param RR Runtime environment
 	 * @param now Current time
+	 * @param nwid Network ID
 	 * @param mg Multicast group
 	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
 	 * @param member New member address
 	 */
-	inline void add(const RuntimeEnvironment *RR,uint64_t now,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+	inline void subscribe(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(RR,now,_groups[mg],learnedFrom,member);
+		_add(now,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
 	}
+
+	/**
+	 * Append gather results to a packet by choosing registered multicast recipients at random
+	 *
+	 * This appends the following fields to the packet:
+	 *   <[4] 32-bit total number of known members in this multicast group>
+	 *   <[2] 16-bit number of members enumerated in this packet>
+	 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
+	 *
+	 * If zero is returned, the first two fields will still have been appended.
+	 *
+	 * @param RR Runtime environment
+	 * @param nwid Network ID
+	 * @param mg Multicast group
+	 * @param appendTo Packet to append to
+	 * @param limit Maximum number of 5-byte addresses to append
+	 * @return Number of addresses appended
+	 * @throws std::out_of_range Buffer overflow writing to packet
+	 */
+	unsigned int gather(const RuntimeEnvironment *RR,uint64_t nwid,MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
 
 	/**
 	 * Send a multicast
@@ -112,10 +133,10 @@ public:
 	 */
 	void send(
 		const RuntimeEnvironment *RR,
-		uint64_t nwid,
 		const CertificateOfMembership *com,
 		unsigned int limit,
 		uint64_t now,
+		uint64_t nwid,
 		const MulticastGroup &mg,
 		const MAC &src,
 		unsigned int etherType,
@@ -127,14 +148,13 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
-	 * @param limit Multicast limit
 	 */
-	void clean(const RuntimeEnvironment *RR,uint64_t now,unsigned int limit);
+	void clean(const RuntimeEnvironment *RR,uint64_t now);
 
 private:
-	void _add(const RuntimeEnvironment *RR,uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
+	void _add(uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
 
-	std::map< MulticastGroup,MulticastGroupStatus > _groups;
+	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus > _groups;
 	Mutex _groups_m;
 };
 

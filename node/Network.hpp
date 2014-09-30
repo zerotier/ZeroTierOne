@@ -228,35 +228,6 @@ public:
 	}
 
 	/**
-	 * Send a multicast packet to the members of a group
-	 *
-	 * This performs no rate checking or other permission checking.
-	 *
-	 * @param mg Multicast group destination
-	 * @param src Source Ethernet MAC address
-	 * @param etherType Ethernet frame type
-	 * @param data Payload data
-	 * @param len Length of payload
-	 */
-	inline void sendMulticast(const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
-	{
-		Mutex::Lock _l(_lock);
-		if (!_config)
-			return;
-		_multicaster.send(
-			RR,
-			_id,
-			(((!_config->isPublic())&&(_config->com())) ? &(_config->com()) : (const CertificateOfMembership *)0),
-			_config->multicastLimit(),
-			Utils::now(),
-			mg,
-			src,
-			etherType,
-			data,
-			len);
-	}
-
-	/**
 	 * @param peer Peer address to check
 	 * @return True if peer is allowed to communicate on this network
 	 */
@@ -477,7 +448,6 @@ private:
 	std::set< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
 	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
 	std::map< MulticastGroup,BandwidthAccount > _multicastRateAccounts;
-	Multicaster _multicaster;
 
 	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
 

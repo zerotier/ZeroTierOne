@@ -44,6 +44,7 @@ class Service;
 class Node;
 class SoftwareUpdater;
 class SocketManager;
+class Multicaster;
 class AntiRecursion;
 class EthernetTapFactory;
 class RoutingTable;
@@ -78,10 +79,12 @@ public:
 		prng((CMWC4096 *)0),
 		http((HttpClient *)0),
 		antiRec((AntiRecursion *)0),
+		mc((Multicaster *)0),
 		sw((Switch *)0),
 		sm((SocketManager *)0),
 		topology((Topology *)0),
 		nc((NodeConfig *)0),
+		node((Node *)0),
 		updater((SoftwareUpdater *)0)
 #ifndef __WINDOWS__
 		,netconfService((Service *)0)
@@ -127,6 +130,7 @@ public:
 	CMWC4096 *prng;
 	HttpClient *http;
 	AntiRecursion *antiRec;
+	Multicaster *mc;
 	Switch *sw;
 	SocketManager *sm;
 	Topology *topology;
