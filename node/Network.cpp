@@ -453,7 +453,8 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 
 void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
 {
-	// assumes _lock is locked
+	// assumes _lock is locked and _config is not null
+
 	uint64_t pushTimeout = _config->com().timestampMaxDelta() / 2;
 
 	// Zero means we're still waiting on our own cert

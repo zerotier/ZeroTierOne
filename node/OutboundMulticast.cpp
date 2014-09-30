@@ -39,8 +39,10 @@ void OutboundMulticast::init(uint64_t timestamp,const Address &self,uint64_t nwi
 	_source = src;
 	_destination = dest;
 	_etherType = etherType;
+
 	_packet.setSource(self);
 	_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
+
 	_packet.append((uint64_t)nwid);
 	_packet.append((uint8_t)((com) ? 0x01 : 0x00));
 	_packet.append((uint32_t)gatherLimit); // gather limit -- set before send, start with 0
@@ -50,6 +52,7 @@ void OutboundMulticast::init(uint64_t timestamp,const Address &self,uint64_t nwi
 	src.appendTo(_packet);
 	_packet.append((uint16_t)etherType);
 	_packet.append(payload,len);
+
 	_packet.compress();
 }
 

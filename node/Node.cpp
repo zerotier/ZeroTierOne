@@ -565,14 +565,9 @@ Node::ReasonForTermination Node::run()
 				if ((now - lastMulticastCheck) >= ZT_MULTICAST_LOCAL_POLL_PERIOD) {
 					lastMulticastCheck = now;
 					try {
-						std::map< SharedPtr<Network>,std::set<MulticastGroup> > toAnnounce;
 						std::vector< SharedPtr<Network> > networks(RR->nc->networks());
-						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw) {
-							if ((*nw)->updateMulticastGroups())
-								toAnnounce.insert(std::pair< SharedPtr<Network>,std::set<MulticastGroup> >(*nw,(*nw)->multicastGroups()));
-						}
-						if (toAnnounce.size())
-							RR->sw->announceMulticastGroups(toAnnounce);
+						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw)
+							(*nw)->updateMulticastGroups());
 					} catch (std::exception &exc) {
 						LOG("unexpected exception announcing multicast groups: %s",exc.what());
 					} catch ( ... ) {

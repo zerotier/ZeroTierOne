@@ -148,7 +148,7 @@ public:
 	}
 
 	/**
-	 * Update multicast groups for this network's tap
+	 * Update multicast groups for this network's tap and announce changes
 	 *
 	 * @return True if internal multicast group set has changed since last update
 	 */
@@ -225,6 +225,35 @@ public:
 		Mutex::Lock _l(_lock);
 		if ((_config)&&(!_config->isPublic())&&(_config->com()))
 			_pushMembershipCertificate(peer,force,now);
+	}
+
+	/**
+	 * Send a multicast packet to the members of a group
+	 *
+	 * This performs no rate checking or other permission checking.
+	 *
+	 * @param mg Multicast group destination
+	 * @param src Source Ethernet MAC address
+	 * @param etherType Ethernet frame type
+	 * @param data Payload data
+	 * @param len Length of payload
+	 */
+	inline void sendMulticast(const MulticastGroup &mg,const MAC &src,unsigned int etherType,const void *data,unsigned int len)
+	{
+		Mutex::Lock _l(_lock);
+		if (!_config)
+			return;
+		_multicaster.send(
+			RR,
+			_id,
+			(((!_config->isPublic())&&(_config->com())) ? &(_config->com()) : (const CertificateOfMembership *)0),
+			_config->multicastLimit(),
+			Utils::now(),
+			mg,
+			src,
+			etherType,
+			data,
+			len);
 	}
 
 	/**

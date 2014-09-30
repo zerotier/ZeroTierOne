@@ -143,96 +143,20 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			network->learnBridgedMulticastGroup(mg,now);
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
-		if (!network->updateAndCheckMulticastBalance(RR->identity.address(),mg,data.size())) {
+		if (!network->updateAndCheckMulticastBalance(mg,data.size())) {
 			TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
 			return;
 		}
 
 		TRACE("%s: MULTICAST %s -> %s %s %d",network->tapDeviceName().c_str(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
 
-		/* old P5 multicast algorithm
-		const unsigned int mcid = ++_multicastIdCounter & 0xffffff;
-		const uint16_t bloomNonce = (uint16_t)(RR->prng->next32() & 0xffff); // doesn't need to be cryptographically strong
-		unsigned char bloom[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM];
-		unsigned char fifo[ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO + ZT_ADDRESS_LENGTH]; // extra ZT_ADDRESS_LENGTH is for first hop, not put in packet but serves as destination for packet
-		unsigned char *const fifoEnd = fifo + sizeof(fifo);
-		const unsigned int signedPartLen = (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME - ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION) + data.size();
-		const SharedPtr<Peer> supernode(RR->topology->getBestSupernode());
-
-		// For each bit prefix send a packet to a list of destinations within it
-		for(unsigned int prefix=0,np=((unsigned int)2 << (nconf->multicastPrefixBits() - 1));prefix<np;++prefix) {
-			memset(bloom,0,sizeof(bloom));
-			unsigned char *fifoPtr = fifo;
-
-			// Add all active bridges and then next hops we know about to propagation queue
-			Multicaster::AddToPropagationQueue appender(
-				&fifoPtr,
-				fifoEnd,
-				bloom,
-				bloomNonce,
-				RR->identity.address(),
-				nconf->multicastPrefixBits(),
-				prefix,
-				RR->topology,
-				now);
-			for(std::set<Address>::const_iterator ab(nconf->activeBridges().begin());ab!=nconf->activeBridges().end();++ab) {
-				if (!appender(*ab))
-					break;
-			}
-			RR->mc->getNextHops(network->id(),mg,appender);
-
-			// Pad remainder of FIFO with zeroes
-			while (fifoPtr != fifoEnd)
-				*(fifoPtr++) = (unsigned char)0;
-
-			// First element in FIFO is first hop, rest of FIFO is sent in packet *to* first hop
-			Address firstHop(fifo,ZT_ADDRESS_LENGTH);
-			if (!firstHop) {
-				if (supernode)
-					firstHop = supernode->address();
-				else continue; // nowhere to go
-			}
-
-			Packet outp(firstHop,RR->identity.address(),Packet::VERB_MULTICAST_FRAME);
-			outp.append((uint16_t)0);
-			outp.append(fifo + ZT_ADDRESS_LENGTH,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_FIFO); // remainder of fifo is loaded into packet
-			outp.append(bloom,ZT_PROTO_VERB_MULTICAST_FRAME_LEN_PROPAGATION_BLOOM);
-			outp.append((nconf->com()) ? (unsigned char)ZT_PROTO_VERB_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE : (unsigned char)0);
-			outp.append(network->id());
-			outp.append(bloomNonce);
-			outp.append((unsigned char)nconf->multicastPrefixBits());
-			outp.append((unsigned char)prefix);
-			RR->identity.address().appendTo(outp); // lower 40 bits of MCID are my address
-			outp.append((unsigned char)((mcid >> 16) & 0xff));
-			outp.append((unsigned char)((mcid >> 8) & 0xff));
-			outp.append((unsigned char)(mcid & 0xff)); // upper 24 bits of MCID are from our counter
-			from.appendTo(outp);
-			mg.mac().appendTo(outp);
-			outp.append(mg.adi());
-			outp.append((uint16_t)etherType);
-			outp.append((uint16_t)data.size());
-			outp.append(data);
-
-			C25519::Signature sig(RR->identity.sign(outp.field(ZT_PROTO_VERB_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPartLen),signedPartLen));
-			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,(unsigned int)sig.size());
-
-			// FIXME: now we send the netconf cert with every single multicast,
-			// which pretty much ensures everyone has it ahead of time but adds
-			// some redundant payload. Maybe think abouut this in the future.
-			if (nconf->com())
-				nconf->com().serialize(outp);
-
-			outp.compress();
-			send(outp,true);
-		}
-		*/
+		network->sendMulticast(mg,from,etherType,data.data(),data.size());
 
 		return;
 	}
 
 	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
-		// Destination is another ZeroTier node
+		// Destination is another ZeroTier peer
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
@@ -266,7 +190,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	}
 
 	{
-		// Destination is behind another bridge
+		// Destination is bridged behind a remote peer
 
 		Address bridges[ZT_MAX_BRIDGE_SPAM];
 		unsigned int numBridges = 0;
@@ -475,72 +399,6 @@ void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 	// Kick main loop out of wait so that it can pick up this
 	// change to our scheduled timer tasks.
 	RR->sm->whack();
-}
-
-void Switch::announceMulticastGroups(const std::map< SharedPtr<Network>,std::set<MulticastGroup> > &allMemberships)
-{
-	std::vector< SharedPtr<Peer> > directPeers;
-	RR->topology->eachPeer(Topology::CollectPeersWithActiveDirectPath(directPeers,Utils::now()));
-
-#ifdef ZT_TRACE
-	unsigned int totalMulticastGroups = 0;
-	for(std::map< SharedPtr<Network>,std::set<MulticastGroup> >::const_iterator i(allMemberships.begin());i!=allMemberships.end();++i)
-		totalMulticastGroups += (unsigned int)i->second.size();
-	TRACE("announcing %u multicast groups for %u networks to %u peers",totalMulticastGroups,(unsigned int)allMemberships.size(),(unsigned int)directPeers.size());
-#endif
-
-	uint64_t now = Utils::now();
-	for(std::vector< SharedPtr<Peer> >::iterator p(directPeers.begin());p!=directPeers.end();++p) {
-		Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-
-		for(std::map< SharedPtr<Network>,std::set<MulticastGroup> >::const_iterator nwmgs(allMemberships.begin());nwmgs!=allMemberships.end();++nwmgs) {
-			nwmgs->first->pushMembershipCertificate((*p)->address(),false,now);
-
-			if ((RR->topology->isSupernode((*p)->address()))||(nwmgs->first->isAllowed((*p)->address()))) {
-				for(std::set<MulticastGroup>::iterator mg(nwmgs->second.begin());mg!=nwmgs->second.end();++mg) {
-					if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-						send(outp,true);
-						outp.reset((*p)->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-					}
-
-					// network ID, MAC, ADI
-					outp.append((uint64_t)nwmgs->first->id());
-					mg->mac().appendTo(outp);
-					outp.append((uint32_t)mg->adi());
-				}
-			}
-		}
-
-		if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
-			send(outp,true);
-	}
-}
-
-void Switch::announceMulticastGroups(const SharedPtr<Peer> &peer)
-{
-	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-	std::vector< SharedPtr<Network> > networks(RR->nc->networks());
-	uint64_t now = Utils::now();
-	for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
-		if (((*n)->isAllowed(peer->address()))||(RR->topology->isSupernode(peer->address()))) {
-			(*n)->pushMembershipCertificate(peer->address(),false,now);
-
-			std::set<MulticastGroup> mgs((*n)->multicastGroups());
-			for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
-				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-					send(outp,true);
-					outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-				}
-
-				// network ID, MAC, ADI
-				outp.append((uint64_t)(*n)->id());
-				mg->mac().appendTo(outp);
-				outp.append((uint32_t)mg->adi());
-			}
-		}
-	}
-	if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
-		send(outp,true);
 }
 
 void Switch::requestWhois(const Address &addr)

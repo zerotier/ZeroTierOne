@@ -28,6 +28,9 @@
 #include "Constants.hpp"
 #include "Peer.hpp"
 #include "Switch.hpp"
+#include "Packet.hpp"
+#include "Network.hpp"
+#include "NodeConfig.hpp"
 #include "AntiRecursion.hpp"
 
 #include <algorithm>
@@ -76,14 +79,14 @@ void Peer::receive(
 	// Update system-wide last packet receive time
 	*((const_cast<uint64_t *>(&(RR->timeOfLastPacketReceived)))) = now;
 
+	Mutex::Lock _l(_lock);
+
 	// Global last receive time regardless of path
 	_lastReceive = now;
 
-	// Learn paths from direct packets (hops == 0)
 	if (!hops) {
+		// Learn paths from direct packets (hops == 0)
 		{
-			Mutex::Lock _l(_lock);
-
 			bool havePath = false;
 			for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
 				if ((p->address() == remoteAddr)&&(p->tcp() == fromSock->tcp())) {
@@ -110,11 +113,36 @@ void Peer::receive(
 			}
 		}
 
-		// Announce multicast LIKEs to peers to whom we have a direct link
-		// Lock can't be locked here or it'll recurse and deadlock.
+		// Announce multicast groups of interest to direct peers if they are
+		// considered authorized members of a given network. Also announce to
+		// supernodes and network controllers. TODO: the former may go
+		// obsolete with time as network controllers take over this role.
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
-			RR->sw->announceMulticastGroups(SharedPtr<Peer>(this));
+
+			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+			std::vector< SharedPtr<Network> > networks(RR->nc->networks());
+			for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
+				if ( ((*n)->isAllowed(_id.address())) || ((*n)->controller() == _id.address()) || (RR->topology->isSupernode(_id.address())) ) {
+					std::set<MulticastGroup> mgs((*n)->multicastGroups());
+					for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
+						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+							outp.armor(_key,true);
+							fromSock->send(remoteAddr,outp.data(),outp.size());
+							outp.reset(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+						}
+
+						// network ID, MAC, ADI
+						outp.append((uint64_t)(*n)->id());
+						mg->mac().appendTo(outp);
+						outp.append((uint32_t)mg->adi());
+					}
+				}
+			}
+			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+				outp.armor(_key,true);
+				fromSock->send(remoteAddr,outp.data(),outp.size());
+			}
 		}
 	}
 

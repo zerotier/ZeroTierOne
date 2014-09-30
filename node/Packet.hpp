@@ -513,13 +513,15 @@ public:
 		 */
 		VERB_RENDEZVOUS = 5,
 
-		/* A ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
+		/* ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
 		 *
 		 * MAC addresses are derived from the packet's source and destination
-		 * ZeroTier addresses.
+		 * ZeroTier addresses. This is a shortened EXT_FRAME that elides full
+		 * Ethernet framing and other optional flags and features when they
+		 * are not necessary.
 		 *
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
@@ -527,17 +529,21 @@ public:
 		VERB_FRAME = 6,
 
 		/*
-		 * An ethernet frame to or from specified MAC addresses:
+		 * Full Ethernet frame with MAC addressing and optional fields:
 		 *   <[8] 64-bit network ID>
-		 *   <[1] flags (currently unused, must be 0)>
+		 *   <[1] flags>
+		 *  [<[...] certificate of network membership>]
 		 *   <[6] destination MAC or all zero for destination node>
 		 *   <[6] source MAC or all zero for node of origin>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
 		 *
-		 * Extended frames include full MAC addressing and are used for bridged
-		 * configurations. Theoretically they could carry multicast as well but
-		 * currently they're not used for that.
+		 * Flags:
+		 *   0x01 - Certificate of network membership is attached
+		 *
+		 * An extended frame carries full MAC addressing, making them a
+		 * superset of VERB_FRAME. They're used for bridging or when we
+		 * want to attach a certificate since FRAME does not support that.
 		 *
 		 * ERROR may be generated if a membership certificate is needed for a
 		 * closed network. Payload will be network ID.
@@ -678,23 +684,15 @@ public:
 
 		/* Request endpoints for multicast distribution:
 		 *   <[8] 64-bit network ID>
-		 *   <[1] flags>
+		 *   <[1] flags (unused, must be 0)>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
 		 *   <[4] 32-bit (suggested) max number of multicast peers desired or 0 for no limit>
-		 *  [<[...] network certificate of membership if included>]
-		 *
-		 * Flags:
-		 *   0x01 - Network certificate of membership is attached
 		 *
 		 * This message asks a peer for additional known endpoints that have
 		 * LIKEd a given multicast group. It's sent when the sender wishes
 		 * to send multicast but does not have the desired number of recipient
 		 * peers.
-		 *
-		 * A certificate of network membership can be included so that peers
-		 * can check network membership before responding. Without certificate
-		 * check any peer could probe multicast memberships on any network.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>

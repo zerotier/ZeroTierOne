@@ -56,10 +56,10 @@ void Multicaster::send(const RuntimeEnvironment *RR,uint64_t nwid,const Certific
 		// If we already have enough members, just send and we're done -- no need for TX queue
 		OutboundMulticast out;
 
-		out.init(now,RR->identity.address(),nwid,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
+		out.init(now,RR->identity.address(),nwid,com,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
 		unsigned int count = 0;
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
-			out.sendOnly(*(RR->sw),m->address);
+			out.sendOnly(*(RR->sw),m->address); // sendOnly() avoids overhead of creating sent log since we're going to discard this immediately
 			if (++count >= limit)
 				break;
 		}
@@ -68,25 +68,26 @@ void Multicaster::send(const RuntimeEnvironment *RR,uint64_t nwid,const Certific
 		gs.txQueue.push_back(OutboundMulticast());
 		OutboundMulticast &out = gs.txQueue.back();
 
-		out.init(now,RR->identity.address(),nwid,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
+		out.init(now,RR->identity.address(),nwid,com,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m)
 			out.sendAndLog(*(RR->sw),m->address);
 
 		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_GATHER_DELAY) {
 			gs.lastExplicitGather = now;
 
-			// Explicitly gather -- right now we only do this from supernodes since they
-			// know all multicast group memberships. In the future this might be more
-			// distributed somehow.
+			// TODO / INPROGRESS: right now supernodes track multicast LIKEs, a relic
+			// from the old algorithm. The next step will be to devolve this duty
+			// somewhere else, such as node(s) nominated by netconf masters. But
+			// we'll keep announcing LIKEs to supernodes for the near future to
+			// gradually migrate from old multicast to new without losing old nodes.
 			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 			if (sn) {
 				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 				outp.append(nwid);
-				outp.append((uint8_t)((com) ? 0x01: 0x00));
+				outp.append((uint8_t)0);
 				mg.mac().appendTo(outp);
 				outp.append((uint32_t)mg.adi());
 				outp.append((uint32_t)((limit - (unsigned int)gs.members.size()) + 1)); // +1 just means we'll have an extra in the queue if available
-				if (com) com->serialize(outp);
 				outp.armor(sn->key(),true);
 				sn->send(RR,outp.data(),outp.size(),now);
 			}
