@@ -239,16 +239,25 @@ void Network::requestConfiguration()
 	RR->sw->send(outp,true);
 }
 
-void Network::addMembershipCertificate(const CertificateOfMembership &cert)
+void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept)
 {
 	if (!cert) // sanity check
 		return;
+
+	if (!forceAccept) {
+		if (cert.signedBy() != controller())
+			return;
+		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
+		if (!signer)
+			return; // we should already have done a WHOIS on this peer, since this is our netconf master
+		if (!cert.verify(signer->identity()))
+			return;
+	}
 
 	Mutex::Lock _l(_lock);
 
 	// We go ahead and accept certs provisionally even if _isOpen is true, since
 	// that might be changed in short order if the user is fiddling in the UI.
-	// These will be purged on clean() for open networks eventually.
 
 	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
 	if (cert.timestamp() >= old.timestamp()) {

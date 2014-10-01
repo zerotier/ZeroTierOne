@@ -206,12 +206,10 @@ public:
 	/**
 	 * Add or update a membership certificate
 	 *
-	 * This cert must have been signature checked first. Certs older than the
-	 * cert on file are ignored and the newer cert remains in the database.
-	 *
 	 * @param cert Certificate of membership
+	 * @param forceAccept If true, accept without validating signature
 	 */
-	void addMembershipCertificate(const CertificateOfMembership &cert);
+	void addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept);
 
 	/**
 	 * Push our membership certificate to a peer

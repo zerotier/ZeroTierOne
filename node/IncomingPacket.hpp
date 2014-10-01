@@ -83,7 +83,6 @@ public:
  		_receiveTime(Utils::now()),
  		_fromSock(fromSock),
  		_remoteAddress(remoteAddress),
- 		_step(DECODE_WAITING_FOR_SENDER_LOOKUP),
  		__refCount()
 	{
 	}
@@ -133,13 +132,6 @@ private:
 	uint64_t _receiveTime;
 	SharedPtr<Socket> _fromSock;
 	InetAddress _remoteAddress;
-
-	enum {
-		DECODE_WAITING_FOR_SENDER_LOOKUP, // on initial receipt, we need peer's identity
-		DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP,
-		DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP
-	} _step;
-
 	AtomicCounter __refCount;
 };
 

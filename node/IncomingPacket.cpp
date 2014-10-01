@@ -57,18 +57,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 
 	SharedPtr<Peer> peer = RR->topology->getPeer(source());
 	if (peer) {
-		// Resume saved intermediate decode state?
-		if (_step == DECODE_WAITING_FOR_MULTICAST_FRAME_ORIGINAL_SENDER_LOOKUP) {
-			// In this state we have already authenticated and decrypted the
-			// packet and are waiting for the lookup of the original sender
-			// for a multicast frame. So check to see if we've got it.
-			return _doP5_MULTICAST_FRAME(RR,peer);
-		} else if (_step == DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP) {
-			// In this state we have already authenticated and decoded the
-			// packet and we're waiting for the identity of the cert's signer.
-			return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
-		} // else this is the initial decode pass, so validate packet et. al.
-
 		if (!dearmor(peer->key())) {
 			TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
 			return true;
@@ -115,7 +103,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				return _doMULTICAST_FRAME(RR,peer);
 		}
 	} else {
-		_step = DECODE_WAITING_FOR_SENDER_LOOKUP; // should already be this...
 		RR->sw->requestWhois(source());
 		return false;
 	}
@@ -459,10 +446,9 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				}
 
 				network->tapPut(MAC(peer->address(),network->id()),network->mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
-
-				peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());
-				return true;
 			}
+
+			peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -482,18 +468,18 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 			if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
 				unsigned int flags = (*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS];
 
-				if (!network->isAllowed(peer->address())) {
-					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
-					_sendErrorNeedCertificate(RR,peer,network->id());
-					return true;
-				}
-
 				unsigned int comLen = 0;
 				if ((flags & 0x01) != 0) {
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 					if (com.hasRequiredFields())
-						network->addMembershipCertificate(com);
+						network->addMembershipCertificate(com,false);
+				}
+
+				if (!network->isAllowed(peer->address())) {
+					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
+					_sendErrorNeedCertificate(RR,peer,network->id());
+					return true;
 				}
 
 				// Everything after flags must be adjusted based on the length
@@ -513,12 +499,11 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					return true;
 				}
 
-				if ((!from)||(from.isMulticast())||(from == network->mac())||(!to)) {
-					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source or destination MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+				if ((!from)||(from.isMulticast())||(from == network->mac())) {
+					TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 					return true;
 				}
 
-				// If it's not from the sending peer, they must be allowed to bridge into this network
 				if (from != MAC(peer->address(),network->id())) {
 					if (network->permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
@@ -528,7 +513,6 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					}
 				}
 
-				// If it's not to us, we must be allowed to bridge into this network
 				if (to != network->mac()) {
 					if (!network->permitsBridging(RR->identity.address())) {
 						TRACE("dropped EXT_FRAME from %s@%s(%s) to %s: I cannot bridge to %.16llx or bridging disabled on network",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
@@ -539,9 +523,9 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD);
 				if (payloadLen)
 					network->tapPut(from,to,etherType,field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
-
-				peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,Utils::now());
 			}
+
+			peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,Utils::now());
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -839,22 +823,10 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
 		while (ptr < size()) {
 			ptr += com.deserialize(*this,ptr);
-			if ((com.hasRequiredFields())&&(com.signedBy())) {
-				SharedPtr<Peer> signer(RR->topology->getPeer(com.signedBy()));
-				if (signer) {
-					if (com.verify(signer->identity())) {
-						uint64_t nwid = com.networkId();
-						SharedPtr<Network> network(RR->nc->network(nwid));
-						if (network) {
-							if (network->controller() == signer)
-								network->addMembershipCertificate(com);
-						}
-					}
-				} else {
-					RR->sw->requestWhois(com.signedBy());
-					_step = DECODE_WAITING_FOR_NETWORK_MEMBERSHIP_CERTIFICATE_SIGNER_LOOKUP;
-					return false;
-				}
+			if (com.hasRequiredFields()) {
+				SharedPtr<Network> network(RR->nc->network(com.networkId()));
+				if (network)
+					network->addMembershipCertificate(com,false);
 			}
 		}
 
@@ -970,71 +942,73 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
-		unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
-		unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT);
+		if (size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME) {
+			uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
+			unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
+			unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT);
 
-		SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
-		if (network) {
-			if (!network->isAllowed(peer->address())) {
-				TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
-				_sendErrorNeedCertificate(RR,peer,network->id());
-				return true;
-			}
+			SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
+			if (network) {
+				unsigned int comLen = 0;
+				if ((flags & 0x01) != 0) {
+					CertificateOfMembership com;
+					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
+					if (com.hasRequiredFields())
+						network->addMembershipCertificate(com,false);
+				}
 
-			unsigned int comLen = 0;
-			if ((flags & 0x01) != 0) {
-				CertificateOfMembership com;
-				comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-				if (com.hasRequiredFields())
-					network->addMembershipCertificate(com);
-			}
-
-			// Everything after gatherLimit is relative to the size of the
-			// attached certificate, if any.
-
-			MulticastGroup to(MAC(field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
-			MAC from(field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6),6);
-			unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-			unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
-
-			if (!payloadLen)
-				return true;
-
-			if (!to.mac().isMulticast()) {
-				TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-				return true;
-			}
-
-			if ((!from)||(from.isMulticast())||(from == network->mac())) {
-				TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-				return true;
-			}
-
-			// If it's not from the sending peer, they must be allowed to bridge into this network
-			if (from != MAC(peer->address(),network->id())) {
-				if (network->permitsBridging(peer->address())) {
-					network->learnBridgeRoute(from,peer->address());
-				} else {
-					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+				if (!network->isAllowed(peer->address())) {
+					TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
+					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
 				}
+
+				// Everything after gatherLimit is relative to the size of the
+				// attached certificate, if any.
+
+				MulticastGroup to(MAC(field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
+				MAC from(field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6),6);
+				unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+				unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
+
+				if (!payloadLen)
+					return true;
+
+				if (!to.mac().isMulticast()) {
+					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+					return true;
+				}
+
+				if ((!from)||(from.isMulticast())||(from == network->mac())) {
+					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+					return true;
+				}
+
+				// If it's not from the sending peer, they must be allowed to bridge into this network
+				if (from != MAC(peer->address(),network->id())) {
+					if (network->permitsBridging(peer->address())) {
+						network->learnBridgeRoute(from,peer->address());
+					} else {
+						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+						return true;
+					}
+				}
+
+				network->tapPut(from,to,etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
 			}
 
-			network->tapPut(from,to,etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
-		}
-
-		if (gatherLimit) {
-			Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
-			outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
-			outp.append(packetId());
-			outp.append(nwid);
-			to.mac().appendTo(outp);
-			outp.append((uint32_t)to.adi());
-			outp.append((unsigned char)0x01); // flag 0x01 = contains gather results
-			if (RR->mc->gather(RR,nwid,to,outp,gatherLimit)) {
-				outp.armor(peer->key(),true);
-				_fromSock->send(_remoteAddress,outp.data(),outp.size());
+			if (gatherLimit) {
+				Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
+				outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
+				outp.append(packetId());
+				outp.append(nwid);
+				to.mac().appendTo(outp);
+				outp.append((uint32_t)to.adi());
+				outp.append((unsigned char)0x01); // flag 0x01 = contains gather results
+				if (RR->mc->gather(RR,nwid,to,outp,gatherLimit)) {
+					outp.armor(peer->key(),true);
+					_fromSock->send(_remoteAddress,outp.data(),outp.size());
+				}
 			}
 		}
 
