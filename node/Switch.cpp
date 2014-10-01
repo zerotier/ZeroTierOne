@@ -151,9 +151,9 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		TRACE("%s: MULTICAST %s -> %s %s %d",network->tapDeviceName().c_str(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
 
 		RR->mc->send(
-			RR,
 			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
-			network->wantMulticastGroup(mg) ? nconf->multicastLimit() : 0,
+			nconf->multicastLimit(),
+			network->wantMulticastGroup(mg) ? ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER : 0,
 			now,
 			network->id(),
 			mg,

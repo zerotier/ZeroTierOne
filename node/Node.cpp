@@ -382,7 +382,7 @@ Node::ReasonForTermination Node::run()
 
 		RR->http = new HttpClient();
 		RR->antiRec = new AntiRecursion();
-		RR->mc = new Multicaster();
+		RR->mc = new Multicaster(RR);
 		RR->sw = new Switch(RR);
 		RR->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,RR);
 		RR->topology = new Topology(RR,Utils::fileExists((RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
@@ -605,8 +605,8 @@ Node::ReasonForTermination Node::run()
 			// Do periodic tasks in submodules.
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
-				RR->topology->clean();
-				RR->mc->clean(RR,now);
+				RR->topology->clean(now);
+				RR->mc->clean(now);
 				RR->nc->clean();
 				if (RR->updater)
 					RR->updater->checkIfMaxIntervalExceeded(now);

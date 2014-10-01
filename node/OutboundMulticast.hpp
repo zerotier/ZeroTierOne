@@ -66,6 +66,7 @@ public:
 	 * @param self My ZeroTier address
 	 * @param nwid Network ID
 	 * @param com Certificate of membership to attach or NULL to omit
+	 * @param limit Multicast limit for desired number of packets to send
 	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
 	 * @param src Source MAC address of frame
 	 * @param dest Destination multicast group (MAC + ADI)
@@ -79,6 +80,7 @@ public:
 		const Address &self,
 		uint64_t nwid,
 		const CertificateOfMembership *com,
+		unsigned int limit,
 		unsigned int gatherLimit,
 		const MAC &src,
 		const MulticastGroup &dest,
@@ -98,9 +100,9 @@ public:
 	inline bool expired(uint64_t now) const throw() { return ((now - _timestamp) >= ZT_MULTICAST_TRANSMIT_TIMEOUT); }
 
 	/**
-	 * @return Number of unique recipients to which this packet has already been sent
+	 * @return True if this outbound multicast has been sent to enough peers
 	 */
-	inline unsigned int sentToCount() const throw() { return (unsigned int)_alreadySentTo.size(); }
+	inline bool atLimit() const throw() { return (_alreadySentTo.size() > _limit); }
 
 	/**
 	 * Just send without checking log
@@ -144,6 +146,7 @@ private:
 	uint64_t _nwid;
 	MAC _source;
 	MulticastGroup _destination;
+	unsigned int _limit;
 	unsigned int _etherType;
 	Packet _packet; // packet contains basic structure of MULTICAST_FRAME and payload, is re-used with new IV and addressing each time
 	std::vector<Address> _alreadySentTo;

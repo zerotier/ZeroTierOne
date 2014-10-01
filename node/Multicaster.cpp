@@ -40,7 +40,8 @@
 
 namespace ZeroTier {
 
-Multicaster::Multicaster()
+Multicaster::Multicaster(const RuntimeEnvironment *renv) :
+	RR(renv)
 {
 }
 
@@ -104,9 +105,9 @@ restart_member_scan:
 }
 
 void Multicaster::send(
-	const RuntimeEnvironment *RR,
 	const CertificateOfMembership *com,
 	unsigned int limit,
+	unsigned int gatherLimit,
 	uint64_t now,
 	uint64_t nwid,
 	const MulticastGroup &mg,
@@ -122,7 +123,19 @@ void Multicaster::send(
 		// If we already have enough members, just send and we're done -- no need for TX queue
 		OutboundMulticast out;
 
-		out.init(now,RR->identity.address(),nwid,com,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
+		out.init(
+			now,
+			RR->identity.address(),
+			nwid,
+			com,
+			limit,
+			gatherLimit,
+			src,
+			mg,
+			etherType,
+			data,
+			len);
+
 		unsigned int count = 0;
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
 			out.sendOnly(*(RR->sw),m->address); // sendOnly() avoids overhead of creating sent log since we're going to discard this immediately
@@ -134,7 +147,19 @@ void Multicaster::send(
 		gs.txQueue.push_back(OutboundMulticast());
 		OutboundMulticast &out = gs.txQueue.back();
 
-		out.init(now,RR->identity.address(),nwid,com,ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER,src,mg,etherType,data,len);
+		out.init(
+			now,
+			RR->identity.address(),
+			nwid,
+			com,
+			limit,
+			gatherLimit,
+			src,
+			mg,
+			etherType,
+			data,
+			len);
+
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m)
 			out.sendAndLog(*(RR->sw),m->address);
 
@@ -161,13 +186,13 @@ void Multicaster::send(
 	}
 }
 
-void Multicaster::clean(const RuntimeEnvironment *RR,uint64_t now)
+void Multicaster::clean(uint64_t now)
 {
 	Mutex::Lock _l(_groups_m);
 	for(std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {
 		// Remove expired outgoing multicasts from multicast TX queue
 		for(std::list<OutboundMulticast>::iterator tx(mm->second.txQueue.begin());tx!=mm->second.txQueue.end();) {
-			if (tx->expired(now))
+			if ((tx->expired(now))||(tx->atLimit()))
 				mm->second.txQueue.erase(tx++);
 			else ++tx;
 		}
@@ -218,7 +243,7 @@ void Multicaster::clean(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-void Multicaster::_add(uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
+void Multicaster::_add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
 {
 	// assumes _groups_m is locked
 
@@ -236,6 +261,14 @@ void Multicaster::_add(uint64_t now,MulticastGroupStatus &gs,const Address &lear
 	// be resorted on next clean(). In the future we might want to insert
 	// this somewhere else but we'll try this for now.
 	gs.members.push_back(MulticastGroupMember(member,learnedFrom,now));
+
+	// Try to send to any outgoing multicasts that are waiting for more recipients
+	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
+		tx->sendIfNew(*(RR->sw),member);
+		if (tx->atLimit())
+			gs.txQueue.erase(tx++);
+		else ++tx;
+	}
 }
 
 } // namespace ZeroTier

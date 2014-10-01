@@ -49,7 +49,7 @@ Topology::Topology(const RuntimeEnvironment *renv,bool enablePermanentIdCaching)
 
 Topology::~Topology()
 {
-	clean();
+	clean(Utils::now());
 	_dumpPeers();
 }
 
@@ -256,9 +256,8 @@ keep_searching_for_supernodes:
 	return bestSupernode;
 }
 
-void Topology::clean()
+void Topology::clean(uint64_t now)
 {
-	uint64_t now = Utils::now();
 	Mutex::Lock _l(_activePeers_m);
 	Mutex::Lock _l2(_supernodes_m);
 	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {

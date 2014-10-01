@@ -42,6 +42,7 @@
 #include "OutboundMulticast.hpp"
 #include "Utils.hpp"
 #include "Mutex.hpp"
+#include "NonCopyable.hpp"
 
 namespace ZeroTier {
 
@@ -52,7 +53,7 @@ class Packet;
 /**
  * Database of known multicast peers within a network
  */
-class Multicaster
+class Multicaster : NonCopyable
 {
 private:
 	struct MulticastGroupMember
@@ -79,7 +80,7 @@ private:
 	};
 
 public:
-	Multicaster();
+	Multicaster(const RuntimeEnvironment *renv);
 	~Multicaster();
 
 	/**
@@ -94,7 +95,7 @@ public:
 	inline void subscribe(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(now,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
+		_add(now,nwid,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
 	}
 
 	/**
@@ -120,10 +121,10 @@ public:
 	/**
 	 * Send a multicast
 	 *
-	 * @param RR Runtime environment
 	 * @param nwid Network ID
 	 * @param com Certificate of membership to include or NULL for none
 	 * @param limit Multicast limit
+	 * @param gatherLimit Limit to pass for implicit gather with MULTICAST_FRAME
 	 * @param now Current time
 	 * @param mg Multicast group
 	 * @param from Source Ethernet MAC address
@@ -132,9 +133,9 @@ public:
 	 * @param len Length of packet data
 	 */
 	void send(
-		const RuntimeEnvironment *RR,
 		const CertificateOfMembership *com,
 		unsigned int limit,
+		unsigned int gatherLimit,
 		uint64_t now,
 		uint64_t nwid,
 		const MulticastGroup &mg,
@@ -149,11 +150,12 @@ public:
 	 * @param RR Runtime environment
 	 * @param now Current time
 	 */
-	void clean(const RuntimeEnvironment *RR,uint64_t now);
+	void clean(uint64_t now);
 
 private:
-	void _add(uint64_t now,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
+	void _add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
 
+	const RuntimeEnvironment *RR;
 	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus > _groups;
 	Mutex _groups_m;
 };

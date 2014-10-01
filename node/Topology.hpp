@@ -186,7 +186,7 @@ public:
 	/**
 	 * Clean and flush database
 	 */
-	void clean();
+	void clean(uint64_t now);
 
 	/**
 	 * Apply a function or function object to all peers
