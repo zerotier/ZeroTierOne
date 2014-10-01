@@ -971,9 +971,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
 				unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
 
-				if (!payloadLen)
-					return true;
-
 				if (!to.mac().isMulticast()) {
 					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 					return true;
@@ -984,7 +981,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 					return true;
 				}
 
-				// If it's not from the sending peer, they must be allowed to bridge into this network
 				if (from != MAC(peer->address(),network->id())) {
 					if (network->permitsBridging(peer->address())) {
 						network->learnBridgeRoute(from,peer->address());
@@ -994,20 +990,20 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 					}
 				}
 
-				network->tapPut(from,to,etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
-			}
+				network->tapPut(from,to.mac(),etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
 
-			if (gatherLimit) {
-				Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
-				outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
-				outp.append(packetId());
-				outp.append(nwid);
-				to.mac().appendTo(outp);
-				outp.append((uint32_t)to.adi());
-				outp.append((unsigned char)0x01); // flag 0x01 = contains gather results
-				if (RR->mc->gather(RR,nwid,to,outp,gatherLimit)) {
-					outp.armor(peer->key(),true);
-					_fromSock->send(_remoteAddress,outp.data(),outp.size());
+				if (gatherLimit) {
+					Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
+					outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
+					outp.append(packetId());
+					outp.append(nwid);
+					to.mac().appendTo(outp);
+					outp.append((uint32_t)to.adi());
+					outp.append((unsigned char)0x01); // flag 0x01 = contains gather results
+					if (RR->mc->gather(RR,nwid,to,outp,gatherLimit)) {
+						outp.armor(peer->key(),true);
+						_fromSock->send(_remoteAddress,outp.data(),outp.size());
+					}
 				}
 			}
 		}
