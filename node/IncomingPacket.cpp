@@ -34,14 +34,13 @@
 #include "Constants.hpp"
 #include "Defaults.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Topology.hpp"
 #include "IncomingPacket.hpp"
+#include "Topology.hpp"
 #include "Switch.hpp"
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "Service.hpp"
 #include "SoftwareUpdater.hpp"
-#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -73,34 +72,20 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			default: // ignore unknown verbs, but if they pass auth check they are still valid
 				peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
 				return true;
-			case Packet::VERB_HELLO:
-				return _doHELLO(RR);
-			case Packet::VERB_ERROR:
-				return _doERROR(RR,peer);
-			case Packet::VERB_OK:
-				return _doOK(RR,peer);
-			case Packet::VERB_WHOIS:
-				return _doWHOIS(RR,peer);
-			case Packet::VERB_RENDEZVOUS:
-				return _doRENDEZVOUS(RR,peer);
-			case Packet::VERB_FRAME:
-				return _doFRAME(RR,peer);
-			case Packet::VERB_EXT_FRAME:
-				return _doEXT_FRAME(RR,peer);
-			case Packet::VERB_P5_MULTICAST_FRAME:
-				return _doP5_MULTICAST_FRAME(RR,peer);
-			case Packet::VERB_MULTICAST_LIKE:
-				return _doMULTICAST_LIKE(RR,peer);
-			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE:
-				return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
-			case Packet::VERB_NETWORK_CONFIG_REQUEST:
-				return _doNETWORK_CONFIG_REQUEST(RR,peer);
-			case Packet::VERB_NETWORK_CONFIG_REFRESH:
-				return _doNETWORK_CONFIG_REFRESH(RR,peer);
-			case Packet::VERB_MULTICAST_GATHER:
-				return _doMULTICAST_GATHER(RR,peer);
-			case Packet::VERB_MULTICAST_FRAME:
-				return _doMULTICAST_FRAME(RR,peer);
+			case Packet::VERB_HELLO:                          return _doHELLO(RR);
+			case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
+			case Packet::VERB_OK:                             return _doOK(RR,peer);
+			case Packet::VERB_WHOIS:                          return _doWHOIS(RR,peer);
+			case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
+			case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
+			case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
+			case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
+			case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
+			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
+			case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
+			case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
+			case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
+			case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
 		}
 	} else {
 		RR->sw->requestWhois(source());
@@ -147,7 +132,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 					network->setAccessDenied();
 			}	break;
 
-			// TODO
+			// TODO -- send and accept these to cancel multicast "LIKE"s
 			//case Packet::ERROR_UNWANTED_MULTICAST: {
 			//}	break;
 
@@ -971,26 +956,28 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
 				unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
 
-				if (!to.mac().isMulticast()) {
-					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-					return true;
-				}
-
-				if ((!from)||(from.isMulticast())||(from == network->mac())) {
-					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-					return true;
-				}
-
-				if (from != MAC(peer->address(),network->id())) {
-					if (network->permitsBridging(peer->address())) {
-						network->learnBridgeRoute(from,peer->address());
-					} else {
-						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+				if (payloadLen) {
+					if (!to.mac().isMulticast()) {
+						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 						return true;
 					}
-				}
 
-				network->tapPut(from,to.mac(),etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
+					if ((!from)||(from.isMulticast())||(from == network->mac())) {
+						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+						return true;
+					}
+
+					if (from != MAC(peer->address(),network->id())) {
+						if (network->permitsBridging(peer->address())) {
+							network->learnBridgeRoute(from,peer->address());
+						} else {
+							TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
+							return true;
+						}
+					}
+
+					network->tapPut(from,to.mac(),etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
+				}
 
 				if (gatherLimit) {
 					Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
