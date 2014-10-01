@@ -52,7 +52,7 @@
 namespace ZeroTier {
 
 NodeConfig::NodeConfig(const RuntimeEnvironment *renv) :
-	_r(renv)
+	RR(renv)
 {
 	{
 		Mutex::Lock _l(_localConfig_m);

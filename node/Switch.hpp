@@ -216,7 +216,7 @@ private:
 		const Packet &packet,
 		bool encrypt);
 
-	const RuntimeEnvironment *const _r;
+	const RuntimeEnvironment *const RR;
 	volatile uint64_t _lastBeacon;
 
 	// Outsanding WHOIS requests and how many retries they've undergone

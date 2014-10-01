@@ -52,7 +52,7 @@
 namespace ZeroTier {
 
 Service::Service(const RuntimeEnvironment *renv,const char *name,const char *path,void (*handler)(void *,Service &,const Dictionary &),void *arg) :
-	_r(renv),
+	RR(renv),
 	_path(path),
 	_name(name),
 	_arg(arg),

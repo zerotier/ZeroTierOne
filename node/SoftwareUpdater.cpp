@@ -55,7 +55,7 @@
 namespace ZeroTier {
 
 SoftwareUpdater::SoftwareUpdater(const RuntimeEnvironment *renv) :
-	_r(renv),
+	RR(renv),
 	_myVersion(packVersion(ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION)),
 	_lastUpdateAttempt(0),
 	_status(UPDATE_STATUS_IDLE),
@@ -158,7 +158,7 @@ bool SoftwareUpdater::validateUpdate(
 void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
-	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)upd->_r;
+	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)upd->RR;
 	Mutex::Lock _l(upd->_lock);
 
 	if ((upd->_die)||(upd->_status != UPDATE_STATUS_GETTING_NFO)) {
@@ -213,7 +213,7 @@ void SoftwareUpdater::_cbHandleGetLatestVersionInfo(void *arg,int code,const std
 void SoftwareUpdater::_cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,const std::string &body)
 {
 	SoftwareUpdater *upd = (SoftwareUpdater *)arg;
-	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)upd->_r;
+	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)upd->RR;
 	Mutex::Lock _l(upd->_lock);
 
 	if (!validateUpdate(body.data(),(unsigned int)body.length(),upd->_signedBy,upd->_signature)) {

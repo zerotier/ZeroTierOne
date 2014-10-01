@@ -55,7 +55,7 @@
 namespace ZeroTier {
 
 Switch::Switch(const RuntimeEnvironment *renv) :
-	_r(renv),
+	RR(renv),
 	_lastBeacon(0)
 {
 }
@@ -150,7 +150,17 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		TRACE("%s: MULTICAST %s -> %s %s %d",network->tapDeviceName().c_str(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
 
-		network->sendMulticast(mg,from,etherType,data.data(),data.size());
+		RR->mc->send(
+			RR,
+			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
+			network->wantMulticastGroup(mg) ? nconf->multicastLimit() : 0,
+			now,
+			network->id(),
+			mg,
+			from,
+			etherType,
+			data.data(),
+			data.size());
 
 		return;
 	}
@@ -431,8 +441,8 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 
 	{	// finish processing any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<IncomingPacket> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
-			if ((*rxi)->tryDecode(_r))
+		for(std::vector< SharedPtr<IncomingPacket> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
+			if ((*rxi)->tryDecode(RR))
 				_rxQueue.erase(rxi++);
 			else ++rxi;
 		}
@@ -518,7 +528,7 @@ unsigned long Switch::doTimerTasks()
 
 	{
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<IncomingPacket> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
+		for(std::vector< SharedPtr<IncomingPacket> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
 			if ((now - (*i)->receiveTime()) > ZT_RECEIVE_QUEUE_TIMEOUT) {
 				TRACE("RX %s -> %s timed out",(*i)->source().toString().c_str(),(*i)->destination().toString().c_str());
 				_rxQueue.erase(i++);
@@ -617,7 +627,7 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 						packet->append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
 					_defragQueue.erase(dqe);
 
-					if (!packet->tryDecode(_r)) {
+					if (!packet->tryDecode(RR)) {
 						Mutex::Lock _l(_rxQueue_m);
 						_rxQueue.push_back(packet);
 					}
@@ -684,7 +694,7 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 					packet->append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
 				_defragQueue.erase(dqe);
 
-				if (!packet->tryDecode(_r)) {
+				if (!packet->tryDecode(RR)) {
 					Mutex::Lock _l(_rxQueue_m);
 					_rxQueue.push_back(packet);
 				}
@@ -695,7 +705,7 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 		} // else this is a duplicate head, ignore
 	} else {
 		// Packet is unfragmented, so just process it
-		if (!packet->tryDecode(_r)) {
+		if (!packet->tryDecode(RR)) {
 			Mutex::Lock _l(_rxQueue_m);
 			_rxQueue.push_back(packet);
 		}

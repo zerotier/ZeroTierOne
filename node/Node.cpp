@@ -383,11 +383,11 @@ Node::ReasonForTermination Node::run()
 		RR->http = new HttpClient();
 		RR->antiRec = new AntiRecursion();
 		RR->mc = new Multicaster();
-		RR->sw = new Switch(_r);
-		RR->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,_r);
+		RR->sw = new Switch(RR);
+		RR->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,RR);
 		RR->topology = new Topology(RR,Utils::fileExists((RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
 		try {
-			RR->nc = new NodeConfig(_r);
+			RR->nc = new NodeConfig(RR);
 		} catch (std::exception &exc) {
 			return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unable to initialize IPC socket: is ZeroTier One already running?");
 		}
@@ -395,7 +395,7 @@ Node::ReasonForTermination Node::run()
 
 #ifdef ZT_AUTO_UPDATE
 		if (ZT_DEFAULTS.updateLatestNfoURL.length()) {
-			RR->updater = new SoftwareUpdater(_r);
+			RR->updater = new SoftwareUpdater(RR);
 			RR->updater->cleanOldUpdates(); // clean out updates.d on startup
 		} else {
 			LOG("WARNING: unable to enable software updates: latest .nfo URL from ZT_DEFAULTS is empty (does this platform actually support software updates?)");
@@ -443,7 +443,7 @@ Node::ReasonForTermination Node::run()
 		std::string netconfServicePath(RR->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
 		if (Utils::fileExists(netconfServicePath.c_str())) {
 			LOG("netconf.d/netconf.service appears to exist, starting...");
-			RR->netconfService = new Service(RR,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,_r);
+			RR->netconfService = new Service(RR,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,RR);
 			Dictionary initMessage;
 			initMessage["type"] = "netconf-init";
 			initMessage["netconfId"] = RR->identity.toString(true);
@@ -570,7 +570,7 @@ Node::ReasonForTermination Node::run()
 					try {
 						std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw)
-							(*nw)->updateMulticastGroups());
+							(*nw)->updateMulticastGroups();
 					} catch (std::exception &exc) {
 						LOG("unexpected exception announcing multicast groups: %s",exc.what());
 					} catch ( ... ) {
@@ -631,7 +631,7 @@ Node::ReasonForTermination Node::run()
 				lastRootTopologyFetch = now;
 				if (!impl->disableRootTopologyUpdates) {
 					TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
-					RR->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,_r);
+					RR->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,RR);
 				}
 			}
 
@@ -715,7 +715,7 @@ bool Node::initialized()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
-	return ((_r)&&(RR->initialized));
+	return ((RR)&&(RR->initialized));
 }
 
 uint64_t Node::address()
@@ -723,7 +723,7 @@ uint64_t Node::address()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
-	if ((!_r)||(!RR->initialized))
+	if ((!RR)||(!RR->initialized))
 		return 0;
 	return RR->identity.address().toInt();
 }

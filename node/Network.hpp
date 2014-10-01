@@ -164,6 +164,16 @@ public:
 	}
 
 	/**
+	 * @param mg Multicast group
+	 * @return True if this group is among those to which I am subscribed
+	 */
+	inline bool wantMulticastGroup(const MulticastGroup &mg) const
+	{
+		Mutex::Lock _l(_lock);
+		return (_myMulticastGroups.count(mg) > 0);
+	}
+
+	/**
 	 * Set or update this network's configuration
 	 *
 	 * This is called in IncomingPacket when an update comes over the wire, or
