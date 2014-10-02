@@ -108,15 +108,6 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM 0x1
 
 /**
- * Header flag indicating that a packet is encrypted with Salsa20
- *
- * If this is not set, then the packet's payload is in the clear and the
- * MAC is over this (since there is no ciphertext). Otherwise the MAC is
- * of the ciphertext after encryption.
- */
-#define ZT_PROTO_FLAG_ENCRYPTED 0x80
-
-/**
  * Header flag indicating that a packet is fragmented
  *
  * If this flag is set, the receiver knows to expect more than one fragment.
@@ -320,7 +311,7 @@ namespace ZeroTier {
  * 
  * Packets smaller than 28 bytes are invalid and silently discarded.
  *
- * The flags/cipher/hops bit field is: CCCFFHHH where C is a 3-bit cipher
+ * The flags/cipher/hops bit field is: FFCCCHHH where C is a 3-bit cipher
  * selection allowing up to 8 cipher suites, F is flags (reserved, currently
  * all zero), and H is hop count.
  *
@@ -1024,7 +1015,13 @@ public:
 	/**
 	 * @return Cipher suite selector: 0 - 7 (see #defines)
 	 */
-	inline unsigned int cipher() const { return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0xe0) >> 5); }
+	inline unsigned int cipher() const
+	{
+		unsigned char b = (*this)[ZT_PACKET_IDX_FLAGS];
+		//return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
+		// Use DEPRECATED 0x80 "encrypted" flag -- this will go away once there are no more <1.0.0 peers on the net
+		return ((b & 0x80) == 0) ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012;
+	}
 
 	/**
 	 * Set this packet's cipher suite
@@ -1035,17 +1032,12 @@ public:
 	inline void setCipher(unsigned int c)
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
-		b &= 0x1f;
-		b |= (unsigned char)(c << 5);
+		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38);
+		// Set both the new cipher suite spec field and the old DEPRECATED "encrypted" flag as long as there's <1.0.0 peers online
+		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+			b |= 0x80;
+		else b &= 0x7f;
 	}
-
-	/**
-	 * Set the cipher suite field to zero indicating unencrypted
-	 *
-	 * This normally should not be called directly. It's here for use by
-	 * armoring and dearmoring functions.
-	 */
-	inline void clearCipher() { (*this)[ZT_PACKET_IDX_FLAGS] &= 0x1f; }
 
 	/**
 	 * Get this packet's unique ID (the IV field interpreted as uint64_t)
@@ -1137,10 +1129,8 @@ public:
 			if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
 				return false;
 
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
+			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
 				s20.decrypt(payload,payload,payloadLen);
-				clearCipher();
-			}
 
 			return true;
 		} else if (cs == ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM) {
