@@ -416,4 +416,17 @@
  */
 #define ZT_IPC_TIMEOUT 600
 
+/**
+ * A test pseudo-network-ID that can be joined
+ *
+ * Joining this network ID will result in a network with no IP addressing
+ * and default parameters. No network configuration master will be consulted
+ * and instead a static config will be used. This is used in built-in testnet
+ * scenarios and can also be used for external testing.
+ *
+ * This is an impossible real network ID since 0xff is a reserved address
+ * prefix.
+ */
+#define ZT_TEST_NETWORK_ID 0xffffffffffffffffULL
+
 #endif
