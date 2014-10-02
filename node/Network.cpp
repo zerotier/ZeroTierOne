@@ -505,7 +505,7 @@ void Network::_restoreState()
 		}
 	}
 
-	// Read most recent multicast cert dump
+	// Read most recent membership cert dump
 	if ((_config)&&(!_config->isPublic())&&(Utils::fileExists(mcdbPath.c_str()))) {
 		CertificateOfMembership com;
 		Mutex::Lock _l(_lock);
@@ -519,7 +519,7 @@ void Network::_restoreState()
 				if ((fread(magic,6,1,mcdb) == 1)&&(!memcmp("ZTMCD0",magic,6))) {
 					long rlen = 0;
 					do {
-						long rlen = (long)fread(buf.data() + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
+						long rlen = (long)fread(const_cast<char *>(static_cast<const char *>(buf.data())) + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
 						if (rlen < 0) rlen = 0;
 						buf.setSize(buf.size() + (unsigned int)rlen);
 						unsigned int ptr = 0;
@@ -528,10 +528,7 @@ void Network::_restoreState()
 							if (com.issuedTo())
 								_membershipCertificates[com.issuedTo()] = com;
 						}
-						if (ptr) {
-							memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);
-							buf.setSize(buf.size() - ptr);
-						}
+						buf.behead(ptr);
 					} while (rlen > 0);
 					fclose(mcdb);
 				} else {

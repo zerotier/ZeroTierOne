@@ -46,50 +46,56 @@ namespace ZeroTier {
 
 bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 {
-	if ((!encrypted())&&(verb() == Packet::VERB_HELLO)) {
-		// Unencrypted HELLOs are handled here since they are used to
-		// populate our identity cache in the first place. _doHELLO() is special
-		// in that it contains its own authentication logic.
-		//TRACE("<< HELLO from %s(%s) (normal unencrypted HELLO)",source().toString().c_str(),_remoteAddress.toString().c_str());
-		return _doHELLO(RR);
-	}
-
-	SharedPtr<Peer> peer = RR->topology->getPeer(source());
-	if (peer) {
-		if (!dearmor(peer->key())) {
-			TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
-			return true;
-		}
-		if (!uncompress()) {
-			TRACE("dropped packet from %s(%s), compressed data invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
+	try {
+		if ((!encrypted())&&(verb() == Packet::VERB_HELLO)) {
+			// Unencrypted HELLOs are handled here since they are used to
+			// populate our identity cache in the first place. _doHELLO() is special
+			// in that it contains its own authentication logic.
+			return _doHELLO(RR);
 		}
 
-		//TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
-
-		switch(verb()) {
-			//case Packet::VERB_NOP:
-			default: // ignore unknown verbs, but if they pass auth check they are still valid
-				peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
+		SharedPtr<Peer> peer = RR->topology->getPeer(source());
+		if (peer) {
+			if (!dearmor(peer->key())) {
+				TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
 				return true;
-			case Packet::VERB_HELLO:                          return _doHELLO(RR);
-			case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
-			case Packet::VERB_OK:                             return _doOK(RR,peer);
-			case Packet::VERB_WHOIS:                          return _doWHOIS(RR,peer);
-			case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
-			case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
-			case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
-			case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
-			case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
-			case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
-			case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
-			case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
-			case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
-			case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
+			}
+			if (!uncompress()) {
+				TRACE("dropped packet from %s(%s), compressed data invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
+			}
+
+			//TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
+
+			switch(verb()) {
+				//case Packet::VERB_NOP:
+				default: // ignore unknown verbs, but if they pass auth check they are "received"
+					peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP,Utils::now());
+					return true;
+				case Packet::VERB_HELLO:                          return _doHELLO(RR);
+				case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
+				case Packet::VERB_OK:                             return _doOK(RR,peer);
+				case Packet::VERB_WHOIS:                          return _doWHOIS(RR,peer);
+				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
+				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
+				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
+				case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
+				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
+				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
+				case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
+				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
+				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
+			}
+		} else {
+			RR->sw->requestWhois(source());
+			return false;
 		}
-	} else {
-		RR->sw->requestWhois(source());
-		return false;
+	} catch ( ... ) {
+		// Exceptions are more informatively caught in _do...() handlers but
+		// this outer try/catch will catch anything else odd.
+		TRACE("dropped ??? from %s(%s): unexpected exception in tryDecode()",source().toString().c_str(),_remoteAddress.toString().c_str());
+		return true;
 	}
 }
 
@@ -430,7 +436,8 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 					return true;
 				}
 
-				network->tapPut(MAC(peer->address(),network->id()),network->mac(),etherType,data() + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD);
+				unsigned int payloadLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
+				network->tapPut(MAC(peer->address(),network->id()),network->mac(),etherType,field(ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
 			}
 
 			peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP,Utils::now());

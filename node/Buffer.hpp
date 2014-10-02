@@ -163,11 +163,13 @@ public:
 		return ((unsigned char *)_b)[i];
 	}
 
-	unsigned char *data() throw() { return (unsigned char *)_b; }
-	const unsigned char *data() const throw() { return (const unsigned char *)_b; }
-
 	/**
-	 * Safe way to get a pointer to a field from data() with bounds checking
+	 * Get a raw pointer to a field with bounds checking
+	 *
+	 * This isn't perfectly safe in that the caller could still overflow
+	 * the pointer, but its use provides both a sanity check and
+	 * documentation / reminder to the calling code to treat the returned
+	 * pointer as being of size [l].
 	 * 
 	 * @param i Index of field in buffer
 	 * @param l Length of field in bytes
@@ -304,8 +306,9 @@ public:
 	/**
 	 * Increment size and return pointer to field of specified size
 	 *
-	 * The memory isn't actually written, so this is a shortcut for a multi-step
-	 * process involving getting the current pointer and adding size.
+	 * Nothing is actually written to the memory. This is a shortcut
+	 * for addSize() followed by field() to reference the previous
+	 * position and the new size.
 	 *
 	 * @param l Length of field to append
 	 * @return Pointer to beginning of appended field of length 'l'
@@ -353,6 +356,22 @@ public:
 	}
 
 	/**
+	 * Move everything after 'at' to the buffer's front and truncate
+	 *
+	 * @param at Truncate before this position
+	 * @throw std::out_of_range Position is beyond size of buffer
+	 */
+	inline void behead(const unsigned int at)
+		throw(std::out_of_range)
+	{
+		if (!at)
+			return;
+		if (at > _l)
+			throw std::out_of_range("Buffer: behead() beyond capacity");
+		::memmove(_b,_b + at,_l -= at);
+	}
+
+	/**
 	 * Set buffer data length to zero
 	 */
 	inline void clear()
@@ -387,6 +406,11 @@ public:
 	{
 		Utils::burn(_b,sizeof(_b));
 	}
+
+	/**
+	 * @return Constant pointer to data in buffer
+	 */
+	inline const void *data() const throw() { return _b; }
 
 	/**
 	 * @return Size of data in buffer

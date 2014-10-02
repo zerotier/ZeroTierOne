@@ -383,13 +383,13 @@ public:
 			setSize(fragLen + ZT_PROTO_MIN_FRAGMENT_LENGTH);
 
 			// NOTE: this copies both the IV/packet ID and the destination address.
-			memcpy(field(ZT_PACKET_FRAGMENT_IDX_PACKET_ID,13),p.data() + ZT_PACKET_IDX_IV,13);
+			memcpy(field(ZT_PACKET_FRAGMENT_IDX_PACKET_ID,13),field(ZT_PACKET_IDX_IV,13),13);
 
 			(*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] = ZT_PACKET_FRAGMENT_INDICATOR;
 			(*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO] = (char)(((fragTotal & 0xf) << 4) | (fragNo & 0xf));
 			(*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = 0;
 
-			memcpy(field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,fragLen),p.data() + fragStart,fragLen);
+			memcpy(field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,fragLen),field(fragStart,fragLen),fragLen);
 		}
 
 		/**

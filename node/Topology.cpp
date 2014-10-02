@@ -356,7 +356,7 @@ void Topology::_loadPeers()
 		if ((fread(magic,5,1,pd) == 1)&&(!memcmp("ZTPD0",magic,5))) {
 			long rlen = 0;
 			do {
-				long rlen = (long)fread(buf.data() + buf.size(),1,ZT_PEER_WRITE_BUF_SIZE - buf.size(),pd);
+				long rlen = (long)fread(const_cast<char *>(static_cast<const char *>(buf.data())) + buf.size(),1,ZT_PEER_WRITE_BUF_SIZE - buf.size(),pd);
 				if (rlen < 0) rlen = 0;
 				buf.setSize(buf.size() + (unsigned int)rlen);
 				unsigned int ptr = 0;
@@ -366,10 +366,7 @@ void Topology::_loadPeers()
 					_activePeers[p->address()] = p;
 					saveIdentity(p->identity());
 				}
-				if (ptr) {
-					memmove(buf.data(),buf.data() + ptr,buf.size() - ptr);
-					buf.setSize(buf.size() - ptr);
-				}
+				buf.behead(ptr);
 			} while (rlen > 0);
 		}
 	} catch ( ... ) {
