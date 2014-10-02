@@ -85,7 +85,7 @@
  * sent in the clear. Key agreement is performed using Curve25519 elliptic
  * curve Diffie-Hellman.
  */
-#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE 0x0
+#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE 0
 
 /**
  * Cipher suite: Curve25519/Poly1305/Salsa20/12
@@ -95,7 +95,7 @@
  * the remaining Salsa20/12 key stream. Key agreement is performed using
  * Curve25519 elliptic curve Diffie-Hellman.
  */
-#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 0x4
+#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
  * Cipher suite: Curve25519/AES256-GCM
@@ -105,7 +105,7 @@
  *
  * (Not implemented yet in client but reserved for future use.)
  */
-#define ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM 0x1
+#define ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM 2
 
 /**
  * Header flag indicating that a packet is fragmented
@@ -1017,10 +1017,9 @@ public:
 	 */
 	inline unsigned int cipher() const
 	{
-		unsigned char b = (*this)[ZT_PACKET_IDX_FLAGS];
 		//return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
 		// Use DEPRECATED 0x80 "encrypted" flag -- this will go away once there are no more <1.0.0 peers on the net
-		return ((b & 0x80) == 0) ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012;
+		return (((*this)[ZT_PACKET_IDX_FLAGS] & 0x80) == 0) ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012;
 	}
 
 	/**
