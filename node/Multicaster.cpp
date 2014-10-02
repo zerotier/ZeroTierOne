@@ -107,7 +107,6 @@ restart_member_scan:
 void Multicaster::send(
 	const CertificateOfMembership *com,
 	unsigned int limit,
-	unsigned int gatherLimit,
 	uint64_t now,
 	uint64_t nwid,
 	const MulticastGroup &mg,
@@ -129,7 +128,7 @@ void Multicaster::send(
 			nwid,
 			com,
 			limit,
-			gatherLimit,
+			0,
 			src,
 			mg,
 			etherType,
@@ -143,7 +142,31 @@ void Multicaster::send(
 				break;
 		}
 	} else {
-		// If we don't already have enough members, send to the ones we have and then gather (if allowed within gather rate limit delay)
+		unsigned int gatherLimit = (limit - (unsigned int)gs.members.size()) + 1;
+
+		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_GATHER_DELAY) {
+			gs.lastExplicitGather = now;
+
+			// TODO / INPROGRESS: right now supernodes track multicast LIKEs, a relic
+			// from the old algorithm. The next step will be to devolve this duty
+			// somewhere else, such as node(s) nominated by netconf masters. But
+			// we'll keep announcing LIKEs to supernodes for the near future to
+			// gradually migrate from old multicast to new without losing old nodes.
+			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			if (sn) {
+				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
+				outp.append(nwid);
+				outp.append((uint8_t)0);
+				mg.mac().appendTo(outp);
+				outp.append((uint32_t)mg.adi());
+				outp.append((uint32_t)gatherLimit); // +1 just means we'll have an extra in the queue if available
+				outp.armor(sn->key(),true);
+				sn->send(RR,outp.data(),outp.size(),now);
+			}
+
+			gatherLimit = 0; // once we've done this we don't need to do it implicitly
+		}
+
 		gs.txQueue.push_back(OutboundMulticast());
 		OutboundMulticast &out = gs.txQueue.back();
 
@@ -162,27 +185,6 @@ void Multicaster::send(
 
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m)
 			out.sendAndLog(*(RR->sw),m->address);
-
-		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_GATHER_DELAY) {
-			gs.lastExplicitGather = now;
-
-			// TODO / INPROGRESS: right now supernodes track multicast LIKEs, a relic
-			// from the old algorithm. The next step will be to devolve this duty
-			// somewhere else, such as node(s) nominated by netconf masters. But
-			// we'll keep announcing LIKEs to supernodes for the near future to
-			// gradually migrate from old multicast to new without losing old nodes.
-			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
-			if (sn) {
-				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
-				outp.append(nwid);
-				outp.append((uint8_t)0);
-				mg.mac().appendTo(outp);
-				outp.append((uint32_t)mg.adi());
-				outp.append((uint32_t)((limit - (unsigned int)gs.members.size()) + 1)); // +1 just means we'll have an extra in the queue if available
-				outp.armor(sn->key(),true);
-				sn->send(RR,outp.data(),outp.size(),now);
-			}
-		}
 	}
 }
 

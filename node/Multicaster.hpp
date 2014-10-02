@@ -92,7 +92,7 @@ public:
 	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
 	 * @param member New member address
 	 */
-	inline void subscribe(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
 		_add(now,nwid,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
@@ -124,7 +124,6 @@ public:
 	 * @param nwid Network ID
 	 * @param com Certificate of membership to include or NULL for none
 	 * @param limit Multicast limit
-	 * @param gatherLimit Limit to pass for implicit gather with MULTICAST_FRAME
 	 * @param now Current time
 	 * @param mg Multicast group
 	 * @param from Source Ethernet MAC address
@@ -135,7 +134,6 @@ public:
 	void send(
 		const CertificateOfMembership *com,
 		unsigned int limit,
-		unsigned int gatherLimit,
 		uint64_t now,
 		uint64_t nwid,
 		const MulticastGroup &mg,

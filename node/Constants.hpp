@@ -251,11 +251,6 @@
 #define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
 /**
- * Default number of endpoints to implicitly gather from peers with each multicast frame
- */
-#define ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER 8
-
-/**
  * Default maximum number of peers to address with a single multicast (if unspecified in network)
  */
 #define ZT_MULTICAST_DEFAULT_LIMIT 128

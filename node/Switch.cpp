@@ -153,7 +153,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		RR->mc->send(
 			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
 			nconf->multicastLimit(),
-			network->wantMulticastGroup(mg) ? ZT_MULTICAST_DEFAULT_IMPLICIT_GATHER : 0,
 			now,
 			network->id(),
 			mg,
