@@ -78,6 +78,22 @@ bool Utils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 }
 #endif // __UNIX_LIKE__
 
+static void _Utils_doBurn(char *ptr,unsigned int len)
+{
+	for(unsigned int i=0;i<len;++i)
+		ptr[i] = (char)0;
+}
+void (*volatile _Utils_doBurn_ptr)(char *,unsigned int) = _Utils_doBurn;
+void Utils::burn(void *ptr,unsigned int len)
+	throw()
+{
+	// Ridiculous hack: call _doBurn() via a volatile function pointer to
+	// hold down compiler optimizers and beat them mercilessly until they
+	// cry and mumble something about never eliding secure memory zeroing
+	// again.
+	(_Utils_doBurn_ptr)((char *)ptr,len);
+}
+
 std::map<std::string,bool> Utils::listDirectory(const char *path)
 {
 	std::map<std::string,bool> r;

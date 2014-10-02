@@ -101,18 +101,10 @@ public:
 	}
 
 	/**
-	 * Securely zero memory
-	 *
-	 * This just uses volatile to ensure that it's never optimized out.
+	 * Securely zero memory, avoiding compiler optimizations and such
 	 */
-	static inline void burn(void *ptr,unsigned int len)
-		throw()
-	{
-		volatile unsigned char *p = (unsigned char *)ptr;
-		volatile unsigned char *e = p + len;
-		while (p != e)
-			*(p++) = (unsigned char)0;
-	}
+	static void burn(void *ptr,unsigned int len)
+		throw();
 
 	/**
 	 * Delete a file
