@@ -47,7 +47,7 @@ namespace ZeroTier {
 bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 {
 	try {
-		if ((!encrypted())&&(verb() == Packet::VERB_HELLO)) {
+		if ((cipher() == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
 			// Unencrypted HELLOs are handled here since they are used to
 			// populate our identity cache in the first place. _doHELLO() is special
 			// in that it contains its own authentication logic.

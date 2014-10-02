@@ -76,6 +76,38 @@
 #define ZT_PROTO_MAX_HOPS 7
 
 /**
+ * Cipher suite: Curve25519/Poly1305/Salsa20/12 without payload encryption
+ *
+ * This specifies Poly1305 MAC using a 32-bit key derived from the first
+ * 32 bytes of a Salsa20/12 keystream as in the Salsa20/12 cipher suite,
+ * but the payload is not encrypted. This is currently only used to send
+ * HELLO since that's the public key specification packet and must be
+ * sent in the clear. Key agreement is performed using Curve25519 elliptic
+ * curve Diffie-Hellman.
+ */
+#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE 0x0
+
+/**
+ * Cipher suite: Curve25519/Poly1305/Salsa20/12
+ *
+ * This specifies Poly1305 using the first 32 bytes of a Salsa20/12 key
+ * stream as its one-time-use key followed by payload encryption with
+ * the remaining Salsa20/12 key stream. Key agreement is performed using
+ * Curve25519 elliptic curve Diffie-Hellman.
+ */
+#define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 0x4
+
+/**
+ * Cipher suite: Curve25519/AES256-GCM
+ *
+ * This specifies AES256 in GCM mode using GCM's built-in authentication
+ * with Curve25519 elliptic curve Diffie-Hellman.
+ *
+ * (Not implemented yet in client but reserved for future use.)
+ */
+#define ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM 0x1
+
+/**
  * Header flag indicating that a packet is encrypted with Salsa20
  *
  * If this is not set, then the packet's payload is in the clear and the
@@ -145,11 +177,11 @@
  * Length of LAN beacon packets
  */
 #define ZT_PROTO_BEACON_LENGTH 13
-#define ZT_PROTO_BEACON_IDX_ADDRESS 8
 
-// Size of bloom filter used in multicast propagation graph exploration
-#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BITS 512
-#define ZT_PROTO_VERB_MULTICAST_FRAME_BLOOM_FILTER_SIZE_BYTES 64
+/**
+ * Index of address in a LAN beacon
+ */
+#define ZT_PROTO_BEACON_IDX_ADDRESS 8
 
 // Field incides for parsing verbs -------------------------------------------
 
@@ -280,15 +312,22 @@ namespace ZeroTier {
  *   <[8] random initialization vector (doubles as 64-bit packet ID)>
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
- *   <[1] flags (LS 5 bits) and ZT hop count (MS 3 bits)>
+ *   <[1] flags/cipher (top 5 bits) and ZT hop count (last 3 bits)>
  *   <[8] 8-bit MAC (currently first 8 bytes of poly1305 tag)>
  *   [... -- begin encryption envelope -- ...]
- *   <[1] encrypted flags (MS 3 bits) and verb (LS 5 bits)>
+ *   <[1] encrypted flags (top 3 bits) and verb (last 5 bits)>
  *   [... verb-specific payload ...]
  * 
  * Packets smaller than 28 bytes are invalid and silently discarded.
  *
- * MAC is computed on ciphertext *after* encryption. See also:
+ * The flags/cipher/hops bit field is: CCCFFHHH where C is a 3-bit cipher
+ * selection allowing up to 8 cipher suites, F is flags (reserved, currently
+ * all zero), and H is hop count.
+ *
+ * The three-bit hop count is the only part of a packet that is mutable in
+ * transit without invalidating the MAC. All other bits in the packet are
+ * immutable. This is because intermediate nodes can increment the hop
+ * count up to 7 (protocol max).
  *
  * http://tonyarcieri.com/all-the-crypto-code-youve-ever-written-is-probably-broken
  *
@@ -324,7 +363,7 @@ public:
 	 *   <[5] destination ZT address>
 	 *   <[1] 0xff, a reserved address, signals that this isn't a normal packet>
 	 *   <[1] total fragments (most significant 4 bits), fragment no (LS 4 bits)>
-	 *   <[1] ZT hop count>
+	 *   <[1] ZT hop count (top 5 bits unused and must be zero)>
 	 *   <[...] fragment data>
 	 *
 	 * The protocol supports a maximum of 16 fragments. If a fragment is received
@@ -947,11 +986,6 @@ public:
 	inline bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
 
 	/**
-	 * @return True if packet is encrypted
-	 */
-	inline bool encrypted() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_ENCRYPTED) != 0); }
-
-	/**
 	 * @return True if packet is fragmented (expect fragments)
 	 */
 	inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
@@ -983,8 +1017,35 @@ public:
 	 */
 	inline void incrementHops()
 	{
-		(*this)[ZT_PACKET_IDX_FLAGS] = (char)((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & 0xf8) | (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] + 1) & 0x07);
+		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
+		b = (b & 0xf8) | ((b + 1) & 0x07);
 	}
+
+	/**
+	 * @return Cipher suite selector: 0 - 7 (see #defines)
+	 */
+	inline unsigned int cipher() const { return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0xe0) >> 5); }
+
+	/**
+	 * Set this packet's cipher suite
+	 *
+	 * This normally shouldn't be called directly as armor() will set it after
+	 * encrypting and MACing the packet.
+	 */
+	inline void setCipher(unsigned int c)
+	{
+		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
+		b &= 0x1f;
+		b |= (unsigned char)(c << 5);
+	}
+
+	/**
+	 * Set the cipher suite field to zero indicating unencrypted
+	 *
+	 * This normally should not be called directly. It's here for use by
+	 * armoring and dearmoring functions.
+	 */
+	inline void clearCipher() { (*this)[ZT_PACKET_IDX_FLAGS] &= 0x1f; }
 
 	/**
 	 * Get this packet's unique ID (the IV field interpreted as uint64_t)
@@ -1036,11 +1097,9 @@ public:
 		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
 
 		// Set flag now, since it affects key mangle function
-		if (encryptPayload)
-			(*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_ENCRYPTED;
-		else (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
+		setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
-		_mangleKey((const unsigned char *)key,mangledKey);
+		_salsa20MangleKey((const unsigned char *)key,mangledKey);
 		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
 
 		// MAC key is always the first 32 bytes of the Salsa20 key stream
@@ -1067,21 +1126,26 @@ public:
 		unsigned char mac[16];
 		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
 		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
+		unsigned int cs = cipher();
 
-		_mangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
+		if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
+			_salsa20MangleKey((const unsigned char *)key,mangledKey);
+			Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
 
-		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
-		Poly1305::compute(mac,payload,payloadLen,macKey);
-		if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
-			return false;
+			s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
+			Poly1305::compute(mac,payload,payloadLen,macKey);
+			if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
+				return false;
 
-		if (((*this)[ZT_PACKET_IDX_FLAGS] & (char)ZT_PROTO_FLAG_ENCRYPTED)) {
-			s20.decrypt(payload,payload,payloadLen);
-			(*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_ENCRYPTED);
-		}
+			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
+				s20.decrypt(payload,payload,payloadLen);
+				clearCipher();
+			}
 
-		return true;
+			return true;
+		} else if (cs == ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM) {
+			return false; // not implemented yet
+		} else return false; // unrecognized cipher suite
 	}
 
 	/**
@@ -1142,20 +1206,27 @@ private:
 	/**
 	 * Deterministically mangle a 256-bit crypto key based on packet
 	 *
+	 * This uses extra data from the packet to mangle the secret, giving us an
+	 * effective IV that is somewhat more than 64 bits. This is "free" for
+	 * Salsa20 since it has negligible key setup time so using a different
+	 * key each time is fine.
+	 *
 	 * @param in Input key (32 bytes)
 	 * @param out Output buffer (32 bytes)
 	 */
-	inline void _mangleKey(const unsigned char *in,unsigned char *out) const
+	inline void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
 	{
+		const unsigned char *d = (const unsigned char *)data();
+
 		// IV and source/destination addresses. Using the addresses divides the
 		// key space into two halves-- A->B and B->A (since order will change).
 		for(unsigned int i=0;i<18;++i) // 8 + (ZT_ADDRESS_LENGTH * 2) == 18
-			out[i] = in[i] ^ (unsigned char)(*this)[i];
+			out[i] = in[i] ^ d[i];
 
 		// Flags, but with hop count masked off. Hop count is altered by forwarding
 		// nodes. It's one of the only parts of a packet modifiable by people
 		// without the key.
-		out[18] = in[18] ^ ((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & 0xf8);
+		out[18] = in[18] ^ (d[ZT_PACKET_IDX_FLAGS] & 0xf8);
 
 		// Raw packet size in bytes -- thus each packet size defines a new
 		// key space.
