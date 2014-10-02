@@ -252,8 +252,10 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const
 	// Update timestamp and learnedFrom if existing
 	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {
 		if (m->address == member) {
+			// learnedFrom is NULL (zero) if we've learned this directly via MULTICAST_LIKE, at which
+			// point this becomes a first-order connection.
 			if (m->learnedFrom)
-				m->learnedFrom = learnedFrom; // only update with indirect learnedFrom if we've never directly learned from this peer
+				m->learnedFrom = learnedFrom;
 			m->timestamp = now;
 			return;
 		}

@@ -323,9 +323,18 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			}	break;
 
 			case Packet::VERB_MULTICAST_GATHER: {
+				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
+				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
+				_parseGatherResults(RR,peer,nwid,mg,ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS);
 			}	break;
 
 			case Packet::VERB_MULTICAST_FRAME: {
+				unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS];
+				if ((flags & 0x01) != 0) {
+					uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
+					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
+					_parseGatherResults(RR,peer,nwid,mg,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_GATHER_RESULTS);
+				}
 			}	break;
 
 			default: break;
@@ -1020,6 +1029,24 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 	outp.append(nwid);
 	outp.armor(peer->key(),true);
 	_fromSock->send(_remoteAddress,outp.data(),outp.size());
+}
+
+void IncomingPacket::_parseGatherResults(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid,const MulticastGroup &mg,unsigned int offset)
+{
+	//unsigned int totalKnown = at<uint32_t>(offset);
+	unsigned int count = at<uint16_t>(offset + 4);
+	const unsigned char *p = (const unsigned char *)data() + offset + 6;
+	const unsigned char *e = (const unsigned char *)data() + size();
+	Address atmp;
+	uint64_t now = Utils::now();
+	for(unsigned int i=0;i<count;++i) {
+		const unsigned char *n = p + ZT_ADDRESS_LENGTH;
+		if (n > e)
+			break;
+		atmp.setTo(p,ZT_ADDRESS_LENGTH);
+		RR->mc->add(now,nwid,mg,peer->address(),atmp);
+		p = n;
+	}
 }
 
 } // namespace ZeroTier
