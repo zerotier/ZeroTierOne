@@ -821,7 +821,7 @@ int main(int argc,char **argv)
 			routingTable = ZTCreatePlatformRoutingTable;
 		}
 
-		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset);
+		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
 		controlService = new NodeControlService(node,authToken.c_str());
 
 		switch(node->run()) {
