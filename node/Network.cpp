@@ -140,7 +140,7 @@ bool Network::updateMulticastGroups()
 	} else return false;
 }
 
-bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
+bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 {
 	Mutex::Lock _l(_lock);
 
@@ -148,25 +148,15 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 		return false;
 
 	try {
-		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
-		if ((newConfig->networkId() == _id)&&(newConfig->issuedTo() == RR->identity.address())) {
+		if ((conf->networkId() == _id)&&(conf->issuedTo() == RR->identity.address())) {
 			std::set<InetAddress> oldStaticIps;
 			if (_config)
 				oldStaticIps = _config->staticIps();
 
-			_config = newConfig;
+			_config = conf;
 
 			_lastConfigUpdate = Utils::now();
 			_netconfFailure = NETCONF_FAILURE_NONE;
-
-			if (saveToDisk) {
-				std::string confPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
-				if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
-					LOG("error: unable to write network configuration file at: %s",confPath.c_str());
-				} else {
-					Utils::lockDownFile(confPath.c_str(),false);
-				}
-			}
 
 			EthernetTap *t = _tap;
 			if (t) {
@@ -224,8 +214,32 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 	return false;
 }
 
+bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
+{
+	try {
+		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
+		if (applyConfiguration(newConfig)) {
+			if (saveToDisk) {
+				std::string confPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
+				if (!Utils::writeFile(confPath.c_str(),conf.toString())) {
+					LOG("error: unable to write network configuration file at: %s",confPath.c_str());
+				} else {
+					Utils::lockDownFile(confPath.c_str(),false);
+				}
+			}
+			return true;
+		}
+	} catch ( ... ) {
+		LOG("ignored invalid configuration for network %.16llx (dictionary decode failed)",(unsigned long long)_id);
+	}
+	return false;
+}
+
 void Network::requestConfiguration()
 {
+	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, no netconf master
+		return;
+
 	if (controller() == RR->identity.address()) {
 		// netconf master cannot be a member of its own nets
 		LOG("unable to request network configuration for network %.16llx: I am the network master, cannot query self",(unsigned long long)_id);
@@ -488,58 +502,65 @@ void Network::_restoreState()
 	std::string confPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idstr + ".conf");
 	std::string mcdbPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idstr + ".mcerts");
 
-	// Read configuration file containing last config from netconf master
-	{
-		std::string confs;
-		if (Utils::readFile(confPath.c_str(),confs)) {
-			try {
-				if (confs.length())
-					setConfiguration(Dictionary(confs),false);
-			} catch ( ... ) {} // ignore invalid config on disk, we will re-request from netconf master
-		} else {
-			// If the conf file isn't present, "touch" it so we'll remember
-			// the existence of this network.
-			FILE *tmp = fopen(confPath.c_str(),"w");
-			if (tmp)
-				fclose(tmp);
+	if (_id == ZT_TEST_NETWORK_ID) {
+		applyConfiguration(NetworkConfig::createTestNetworkConfig(RR->identity.address()));
+
+		// "Touch" path to this ID to remember test network membership
+		FILE *tmp = fopen(confPath.c_str(),"w");
+		if (tmp) fclose(tmp);
+	} else {
+		// Read configuration file containing last config from netconf master
+		{
+			std::string confs;
+			if (Utils::readFile(confPath.c_str(),confs)) {
+				try {
+					if (confs.length())
+						setConfiguration(Dictionary(confs),false);
+				} catch ( ... ) {} // ignore invalid config on disk, we will re-request from netconf master
+			} else {
+				// "Touch" path to remember membership in lieu of real config from netconf master
+				FILE *tmp = fopen(confPath.c_str(),"w");
+				if (tmp) fclose(tmp);
+			}
 		}
 	}
 
-	// Read most recent membership cert dump
-	if ((_config)&&(!_config->isPublic())&&(Utils::fileExists(mcdbPath.c_str()))) {
-		CertificateOfMembership com;
+	{ // Read most recent membership cert dump if there is one
 		Mutex::Lock _l(_lock);
+		if ((_config)&&(!_config->isPublic())&&(Utils::fileExists(mcdbPath.c_str()))) {
+			CertificateOfMembership com;
 
-		_membershipCertificates.clear();
+			_membershipCertificates.clear();
 
-		FILE *mcdb = fopen(mcdbPath.c_str(),"rb");
-		if (mcdb) {
-			try {
-				char magic[6];
-				if ((fread(magic,6,1,mcdb) == 1)&&(!memcmp("ZTMCD0",magic,6))) {
-					long rlen = 0;
-					do {
-						long rlen = (long)fread(const_cast<char *>(static_cast<const char *>(buf.data())) + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
-						if (rlen < 0) rlen = 0;
-						buf.setSize(buf.size() + (unsigned int)rlen);
-						unsigned int ptr = 0;
-						while ((ptr < (ZT_NETWORK_CERT_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
-							ptr += com.deserialize(buf,ptr);
-							if (com.issuedTo())
-								_membershipCertificates[com.issuedTo()] = com;
-						}
-						buf.behead(ptr);
-					} while (rlen > 0);
-					fclose(mcdb);
-				} else {
+			FILE *mcdb = fopen(mcdbPath.c_str(),"rb");
+			if (mcdb) {
+				try {
+					char magic[6];
+					if ((fread(magic,6,1,mcdb) == 1)&&(!memcmp("ZTMCD0",magic,6))) {
+						long rlen = 0;
+						do {
+							long rlen = (long)fread(const_cast<char *>(static_cast<const char *>(buf.data())) + buf.size(),1,ZT_NETWORK_CERT_WRITE_BUF_SIZE - buf.size(),mcdb);
+							if (rlen < 0) rlen = 0;
+							buf.setSize(buf.size() + (unsigned int)rlen);
+							unsigned int ptr = 0;
+							while ((ptr < (ZT_NETWORK_CERT_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
+								ptr += com.deserialize(buf,ptr);
+								if (com.issuedTo())
+									_membershipCertificates[com.issuedTo()] = com;
+							}
+							buf.behead(ptr);
+						} while (rlen > 0);
+						fclose(mcdb);
+					} else {
+						fclose(mcdb);
+						Utils::rm(mcdbPath);
+					}
+				} catch ( ... ) {
+					// Membership cert dump file invalid. We'll re-learn them off the net.
+					_membershipCertificates.clear();
 					fclose(mcdb);
 					Utils::rm(mcdbPath);
 				}
-			} catch ( ... ) {
-				// Membership cert dump file invalid. We'll re-learn them off the net.
-				_membershipCertificates.clear();
-				fclose(mcdb);
-				Utils::rm(mcdbPath);
 			}
 		}
 	}

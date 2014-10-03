@@ -174,19 +174,22 @@ public:
 	}
 
 	/**
+	 * Apply a NetworkConfig to this network
+	 *
+	 * @param conf Configuration in NetworkConfig form
+	 * @return True if configuration was accepted
+	 */
+	bool applyConfiguration(const SharedPtr<NetworkConfig> &conf);
+
+	/**
 	 * Set or update this network's configuration
 	 *
-	 * This is called in IncomingPacket when an update comes over the wire, or
-	 * internally when an old config is reloaded from disk.
-	 *
-	 * This also cancels any netconf failure flags.
-	 *
-	 * The network can't accept configuration when in INITIALIZATION state,
-	 * and so in that state this will just return false.
+	 * This decodes a network configuration in key=value dictionary form,
+	 * applies it if valid, and persists it to disk if saveToDisk is true.
 	 *
 	 * @param conf Configuration in key/value dictionary form
 	 * @param saveToDisk IF true (default), write config to disk
-	 * @return True if configuration was accepted, false if still initializing or config was not valid
+	 * @return True if configuration was accepted
 	 */
 	bool setConfiguration(const Dictionary &conf,bool saveToDisk = true);
 
