@@ -146,7 +146,7 @@ static int main(const char *homeDir,int argc,char **argv)
 					printHelp(stdout,argv[0]);
 					return 1;
 			}
-		} else {
+		} else if ((!homeDir)||(strcmp(homeDir,argv[i]))) {
 			if (query.length())
 				query.push_back(' ');
 			query.append(argv[i]);
