@@ -65,6 +65,7 @@ public:
 	virtual std::string deviceName() const;
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
+	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 
 	void threadMain()
 		throw();

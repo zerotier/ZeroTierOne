@@ -27,9 +27,22 @@
 
 #include "TestEthernetTap.hpp"
 #include "TestEthernetTapFactory.hpp"
+
+#include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#ifdef __WINDOWS__
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 namespace ZeroTier {
+
+static Mutex printLock;
 
 TestEthernetTap::TestEthernetTap(
 	TestEthernetTapFactory *parent,
@@ -47,9 +60,19 @@ TestEthernetTap::TestEthernetTap(
 	_arg(arg),
 	_enabled(true)
 {
+	static volatile unsigned int testTapCounter = 0;
+
 	char tmp[64];
-	Utils::snprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)nwid);
+	int pid = 0;
+#ifdef __UNIX_LIKE__
+	pid = (int)getpid();
+#endif
+#ifdef __WINDOWS__
+	pid = (int)_getpid();
+#endif
+	Utils::snprintf(tmp,sizeof(tmp),"test%dtap%d",pid,testTapCounter++);
 	_dev = tmp;
+
 	_thread = Thread::start(this);
 }
 
@@ -57,7 +80,7 @@ TestEthernetTap::~TestEthernetTap()
 {
 	{
 		Mutex::Lock _l(_pq_m);
-		_pq.push(TestFrame()); // 0-length frame = exit
+		_pq.push(TestFrame()); // 0 length frame = exit
 	}
 	_pq_c.signal();
 	Thread::join(_thread);
@@ -90,9 +113,9 @@ std::set<InetAddress> TestEthernetTap::ips() const
 
 void TestEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	static Mutex printLock;
 	Mutex::Lock _l(printLock);
-	fprintf(stderr,"%s << %s %.4x %s"ZT_EOL_S,to.toString().c_str(),from.toString().c_str(),etherType,std::string((const char *)data,len).c_str());
+	fprintf(stdout,"[%s] %s << %s %.4x %s"ZT_EOL_S,_dev.c_str(),to.toString().c_str(),from.toString().c_str(),etherType,std::string((const char *)data,len).c_str());
+	fflush(stdout);
 }
 
 std::string TestEthernetTap::deviceName() const
@@ -107,6 +130,26 @@ void TestEthernetTap::setFriendlyName(const char *friendlyName)
 bool TestEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	return false;
+}
+
+bool TestEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+{
+	if ((len == 0)||(len > 2800))
+		return false;
+
+	{
+		Mutex::Lock _l(_pq_m);
+		_pq.push(TestFrame(from,to,data,etherType & 0xffff,len));
+	}
+	_pq_c.signal();
+
+	{
+		Mutex::Lock _l(printLock);
+		fprintf(stdout,"[%s] %s >> %s %.4x %s"ZT_EOL_S,_dev.c_str(),from.toString().c_str(),to.toString().c_str(),etherType,std::string((const char *)data,len).c_str());
+		fflush(stdout);
+	}
+
+	return true;
 }
 
 void TestEthernetTap::threadMain()
@@ -126,7 +169,7 @@ void TestEthernetTap::threadMain()
 		}
 
 		if ((tf.len > 0)&&(_enabled))
-			_handler(_arg,tf.from,tf.to,ZT_TEST_ETHERNET_ETHERTYPE,Buffer<4096>(tf.data,tf.len));
+			_handler(_arg,tf.from,tf.to,tf.etherType,Buffer<4096>(tf.data,tf.len));
 
 		_pq_c.wait();
 	}

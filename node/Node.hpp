@@ -88,6 +88,7 @@ public:
 	 * @param udpPort UDP port or 0 to disable
 	 * @param tcpPort TCP port or 0 to disable
 	 * @param resetIdentity If true, delete identity before starting and regenerate
+	 * @param overrideRootTopology Override root topology with this dictionary (in string serialized format) and do not update (default: NULL for none)
 	 */
 	Node(
 		const char *hp,
@@ -95,7 +96,8 @@ public:
 		RoutingTable *rt,
 		unsigned int udpPort,
 		unsigned int tcpPort,
-		bool resetIdentity) throw();
+		bool resetIdentity,
+		const char *overrideRootTopology = (const char *)0) throw();
 
 	~Node();
 

@@ -4,6 +4,9 @@ OBJS=\
 	control/NodeControlClient.o \
 	control/NodeControlService.o \
 	ext/lz4/lz4.o \
+	testnet/TestEthernetTap.o \
+	testnet/TestEthernetTapFactory.o \
+	testnet/TestRoutingTable.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
 	node/Defaults.o \

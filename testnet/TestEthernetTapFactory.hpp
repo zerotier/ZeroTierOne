@@ -37,10 +37,9 @@
 #include "../node/Mutex.hpp"
 #include "../node/MAC.hpp"
 #include "../node/CMWC4096.hpp"
+#include "TestEthernetTap.hpp"
 
 namespace ZeroTier {
-
-class TestEthernetTap;
 
 class TestEthernetTapFactory : public EthernetTapFactory
 {

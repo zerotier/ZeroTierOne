@@ -527,6 +527,11 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	return changed;
 }
 
+bool WindowsEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+{
+	return false;
+}
+
 void WindowsEthernetTap::threadMain()
 	throw()
 {

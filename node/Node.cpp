@@ -93,6 +93,7 @@ struct _NodeImpl
 	volatile bool running;
 	volatile bool resynchronize;
 	volatile bool disableRootTopologyUpdates;
+	std::string overrideRootTopology;
 
 	// This function performs final node tear-down
 	inline Node::ReasonForTermination terminate()
@@ -223,8 +224,8 @@ Node::Node(
 	RoutingTable *rt,
 	unsigned int udpPort,
 	unsigned int tcpPort,
-	bool resetIdentity)
-	throw() :
+	bool resetIdentity,
+	const char *overrideRootTopology) throw() :
 	_impl(new _NodeImpl)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
@@ -260,7 +261,13 @@ Node::Node(
 	impl->started = false;
 	impl->running = false;
 	impl->resynchronize = false;
-	impl->disableRootTopologyUpdates = false;
+
+	if (overrideRootTopology) {
+		impl->disableRootTopologyUpdates = true;
+		impl->overrideRootTopology = overrideRootTopology;
+	} else {
+		impl->disableRootTopologyUpdates = false;
+	}
 }
 
 Node::~Node()
@@ -403,7 +410,7 @@ Node::ReasonForTermination Node::run()
 #endif
 
 		// Initialize root topology from defaults or root-toplogy file in home path on disk
-		{
+		if (impl->overrideRootTopology.length() == 0) {
 			std::string rootTopologyPath(RR->homePath + ZT_PATH_SEPARATOR_S + "root-topology");
 			std::string rootTopology;
 			if (!Utils::readFile(rootTopologyPath.c_str(),rootTopology))
@@ -424,6 +431,14 @@ Node::ReasonForTermination Node::run()
 					RR->topology->setSupernodes(Dictionary(Dictionary(ZT_DEFAULTS.defaultRootTopology).get("supernodes","")));
 					impl->disableRootTopologyUpdates = false;
 				}
+			} catch ( ... ) {
+				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
+			}
+		} else {
+			try {
+				Dictionary rt(impl->overrideRootTopology);
+				RR->topology->setSupernodes(Dictionary(rt.get("supernodes","")));
+				impl->disableRootTopologyUpdates = true;
 			} catch ( ... ) {
 				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
 			}

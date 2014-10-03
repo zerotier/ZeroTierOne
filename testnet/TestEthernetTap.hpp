@@ -36,15 +36,13 @@
 #include <queue>
 #include <string>
 
+#include "../node/Constants.hpp"
+#include "../node/EthernetTap.hpp"
 #include "../node/AtomicCounter.hpp"
 #include "../node/SharedPtr.hpp"
-#include "../node/EthernetTap.hpp"
 #include "../node/Thread.hpp"
 #include "../node/Mutex.hpp"
-#include "Condition.hpp"
-
-// Ethernet frame type to use on fake testnet
-#define ZT_TEST_ETHERNET_ETHERTYPE 0xdead
+#include "../node/Condition.hpp"
 
 namespace ZeroTier {
 
@@ -57,16 +55,18 @@ class TestEthernetTap : public EthernetTap
 private:
 	struct TestFrame
 	{
-		TestFrame() : len(0) {}
-		TestFrame(const MAC &f,const MAC &t,const void *d,unsigned int l) :
+		TestFrame() : etherType(0),len(0) {}
+		TestFrame(const MAC &f,const MAC &t,const void *d,unsigned int et,unsigned int l) :
 			from(f),
 			to(t),
+			etherType(et),
 			len(l)
 		{
 			memcpy(data,d,l);
 		}
 		MAC from;
 		MAC to;
+		unsigned int etherType;
 		unsigned int len;
 		char data[4096];
 	};
@@ -94,20 +94,10 @@ public:
 	virtual std::string deviceName() const;
 	virtual void setFriendlyName(const char *friendlyName);
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
+	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 
 	void threadMain()
 		throw();
-
-	inline void sendFromHost(const MAC &from,const MAC &to,const void *data,unsigned int len)
-	{
-		if (!len)
-			return;
-		{
-			Mutex::Lock _l(_pq_m);
-			_pq.push(TestFrame(from,to,data,len));
-		}
-		_pq_c.signal();
-	}
 
 private:
 	TestEthernetTapFactory *_parent;

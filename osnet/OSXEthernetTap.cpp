@@ -576,6 +576,11 @@ bool OSXEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 	return changed;
 }
 
+bool OSXEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+{
+	return false;
+}
+
 void OSXEthernetTap::threadMain()
 	throw()
 {

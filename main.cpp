@@ -75,6 +75,9 @@
 #include "control/NodeControlClient.hpp"
 #include "control/NodeControlService.hpp"
 
+#include "testnet/TestEthernetTapFactory.hpp"
+#include "testnet/TestRoutingTable.hpp"
+
 #ifdef __WINDOWS__
 #include "osnet/WindowsEthernetTapFactory.hpp"
 #include "osnet/WindowsRoutingTable.hpp"
@@ -564,6 +567,8 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
 	fprintf(out,"  -t<port>          - Port for TCP (default: disabled)"ZT_EOL_S);
+	fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
+	fprintf(out,"  -u                - Do not require root, use dummy tap device"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif
@@ -619,6 +624,8 @@ int main(int argc,char **argv)
 	unsigned int udpPort = ZT_DEFAULT_UDP_PORT;
 	unsigned int tcpPort = 0;
 
+	std::string overrideRootTopology;
+	bool userMode = false;
 #ifdef __UNIX_LIKE__
 	bool runAsDaemon = false;
 #endif
@@ -652,6 +659,20 @@ int main(int argc,char **argv)
 					runAsDaemon = true;
 					break;
 #endif
+				case 'T':
+					if (argv[i][2]) {
+						if (!Utils::readFile(argv[i] + 2,overrideRootTopology)) {
+							fprintf(stderr,"%s: cannot read root topology from %s"ZT_EOL_S,argv[0],argv[i] + 2);
+							return 1;
+						}
+					} else {
+						printHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+				case 'u':
+					userMode = true;
+					break;
 				case 'v':
 					printf("%s"ZT_EOL_S,Node::versionString());
 					return 0;
@@ -728,7 +749,7 @@ int main(int argc,char **argv)
 		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
 
 #ifdef __UNIX_LIKE__
-	if (getuid() != 0) {
+	if ((!userMode)&&(getuid() != 0)) {
 		fprintf(stderr,"%s: must be run as root (uid 0)\n",argv[0]);
 		return 1;
 	}
@@ -758,17 +779,18 @@ int main(int argc,char **argv)
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
-	_winPokeAHole();
 	if (winRunFromCommandLine) {
 		// Running in "interactive" mode (mostly for debugging)
-		if (IsCurrentUserLocalAdministrator() != TRUE) {
+		if ((!userMode)&&(IsCurrentUserLocalAdministrator() != TRUE)) {
 			fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
 			return 1;
 		}
+		_winPokeAHole();
 		SetConsoleCtrlHandler(&_winConsoleCtrlHandler,TRUE);
 		// continues on to ordinary command line execution code below...
 	} else {
 		// Running from service manager
+		_winPokeAHole();
 		ZeroTierOneService zt1Service;
 		if (CServiceBase::Run(zt1Service) == TRUE) {
 			return 0;
@@ -791,8 +813,13 @@ int main(int argc,char **argv)
 		// succeed unless something is wrong with the filesystem.
 		std::string authToken(NodeControlClient::getAuthToken((std::string(homeDir) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
 
-		tapFactory = ZTCreatePlatformEthernetTapFactory;
-		routingTable = ZTCreatePlatformRoutingTable;
+		if (userMode) {
+			tapFactory = new TestEthernetTapFactory();
+			routingTable = new TestRoutingTable();
+		} else {
+			tapFactory = ZTCreatePlatformEthernetTapFactory;
+			routingTable = ZTCreatePlatformRoutingTable;
+		}
 
 		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset);
 		controlService = new NodeControlService(node,authToken.c_str());

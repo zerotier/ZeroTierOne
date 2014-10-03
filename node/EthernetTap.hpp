@@ -152,6 +152,21 @@ public:
 	 */
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups) = 0;
 
+	/**
+	 * Inject a packet as if it was sent by the host, if supported
+	 *
+	 * This is for testing and is typically not supported by real TAP devices.
+	 * It's implemented by TestEthernetTap in testnet.
+	 *
+	 * @param from Source MAC
+	 * @param to Destination MAC
+	 * @param etherType Ethernet frame type
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @return False if not supported or packet too large
+	 */
+	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len) = 0;
+
 protected:
 	const char *_implName;
 	MAC _mac;
