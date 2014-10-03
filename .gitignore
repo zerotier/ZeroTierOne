@@ -26,9 +26,17 @@
 *.cache
 *.obj
 *.tlog
+*.pid
 /build-*
 /ZeroTierOneInstaller-*
 .qmake.stash
 *.autosave
 /ZeroTier One.dmg
 /root-topology/*.secret
+/testnet/local-testnet/*/peers.persist
+/testnet/local-testnet/*/authtoken.secret
+/testnet/local-testnet/*/*.log
+/testnet/local-testnet/*/*.old
+/testnet/local-testnet/*/root-topology
+/testnet/local-testnet/*/local.conf
+/testnet/local-testnet/*/networks.d

@@ -32,7 +32,7 @@ for sn in $supernodes; do
 	node_port=2`echo $sn | cut -d n -f 2`
 
 	echo zerotier-one -T../root-topology/local-testnet/root-topology -p$node_port -u $node_path
-	../zerotier-one -T../root-topology/local-testnet/root-topology -p$node_port -u $node_path
+	../zerotier-one -T../root-topology/local-testnet/root-topology -p$node_port -u "$node_path" &
 done
 
 echo
@@ -46,7 +46,7 @@ while [ $node_num -lt $create_nodes ]; do
 	mkdir -p $node_path
 
 	echo zerotier-one -T../root-topology/local-testnet/root-topology -p$node_port -u $node_path
-	../zerotier-one -T../root-topology/local-testnet/root-topology -p$node_port -u $node_path
+	../zerotier-one -T../root-topology/local-testnet/root-topology -p$node_port -u "$node_path" &
 
 	node_num=`expr $node_num + 1`
 done
