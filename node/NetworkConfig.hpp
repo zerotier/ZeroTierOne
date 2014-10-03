@@ -71,9 +71,9 @@ namespace ZeroTier {
  */
 class NetworkConfig
 {
-public:
 	friend class SharedPtr<NetworkConfig>;
 
+public:
 	/**
 	 * Tuple of multicast rate parameters
 	 */
@@ -90,6 +90,17 @@ public:
 	 * A hard-coded default multicast rate for networks that don't specify
 	 */
 	static const MulticastRate DEFAULT_MULTICAST_RATE;
+
+	/**
+	 * Create an instance of a NetworkConfig for the test network ID
+	 *
+	 * The test network ID is defined as ZT_TEST_NETWORK_ID. This is a
+	 * "fake" network with no real netconf master and default options.
+	 *
+	 * @param self This node's ZT address
+	 * @return Configured instance of netconf for test network ID
+	 */
+	static SharedPtr<NetworkConfig> createTestNetworkConfig(const Address &self);
 
 	/**
 	 * @param d Dictionary containing configuration

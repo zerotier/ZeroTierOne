@@ -329,6 +329,24 @@ public:
 	}
 
 	/**
+	 * Call injectPacketFromHost() on tap if it exists
+	 *
+	 * @param from Source MAC
+	 * @param to Destination MAC
+	 * @param etherType Ethernet frame type
+	 * @param data Packet data
+	 * @param len Packet length
+	 */
+	inline bool tapInjectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+	{
+		Mutex::Lock _l(_lock);
+		EthernetTap *t = _tap;
+		if (t)
+			return t->injectPacketFromHost(from,to,etherType,data,len);
+		return false;
+	}
+
+	/**
 	 * @return Tap device name or empty string if still initializing
 	 */
 	inline std::string tapDeviceName() const

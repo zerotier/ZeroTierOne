@@ -35,6 +35,25 @@ namespace ZeroTier {
 // a starting and max balance of 64k.
 const NetworkConfig::MulticastRate NetworkConfig::DEFAULT_MULTICAST_RATE(32768,32768,64);
 
+SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &self)
+{
+	SharedPtr<NetworkConfig> nc(new NetworkConfig());
+
+	memset(nc->_etWhitelist,0,sizeof(nc->_etWhitelist));
+	nc->_etWhitelist[0] |= 1; // allow all
+	nc->_nwid = ZT_TEST_NETWORK_ID;
+	nc->_timestamp = Utils::now();
+	nc->_issuedTo = self;
+	nc->_multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
+	nc->_allowPassiveBridging = false;
+	nc->_private = false;
+	nc->_enableBroadcast = true;
+	nc->_name = "ZT_TEST_NETWORK";
+	nc->_description = "Built-in dummy test network";
+
+	return nc;
+}
+
 std::set<unsigned int> NetworkConfig::allowedEtherTypes() const
 {
 	std::set<unsigned int> ets;
