@@ -48,6 +48,14 @@ namespace ZeroTier {
 
 class TestEthernetTapFactory;
 
+/**
+ * Dummy Ethernet tap
+ *
+ * This tap device prints the contents of packets it receives on stdout
+ * and also prints outgoing packets when they are injected. It does not
+ * connect to any real tap or other interface. It's useful for running
+ * test networks.
+ */
 class TestEthernetTap : public EthernetTap
 {
 	friend class SharedPtr<TestEthernetTap>;
