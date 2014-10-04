@@ -124,6 +124,14 @@ void Multicaster::send(
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)];
 
+	// TODO / DEPRECATED:
+	// Right now we also send all multicasts to at least one supernode.
+	// This supernode then relays them via the old multicast message
+	// type to pre 1.0.0 peers. We'll keep doing this until there aren't
+	// any of these on the network. Costs a bit of bandwidth, but maintains
+	// backward compability while people upgrade. Then this code can die.
+	bool gotASupernode = false;
+
 	if (gs.members.size() >= limit) {
 		// If we already have enough members, just send and we're done -- no need for TX queue
 		OutboundMulticast out;
@@ -144,13 +152,21 @@ void Multicaster::send(
 		unsigned int count = 0;
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
 			out.sendOnly(*(RR->sw),m->address); // sendOnly() avoids overhead of creating sent log since we're going to discard this immediately
+			if (RR->topology->isSupernode(m->address))
+				gotASupernode = true;
 			if (++count >= limit)
 				break;
+		}
+
+		if (!gotASupernode) {
+			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			if (sn)
+				out.sendOnly(*(RR->sw),sn->address());
 		}
 	} else {
 		unsigned int gatherLimit = (limit - (unsigned int)gs.members.size()) + 1;
 
-		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_GATHER_DELAY) {
+		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY) {
 			gs.lastExplicitGather = now;
 
 			// TODO / INPROGRESS: right now supernodes track multicast LIKEs, a relic
@@ -173,6 +189,10 @@ void Multicaster::send(
 			gatherLimit = 0; // once we've done this we don't need to do it implicitly
 		}
 
+		if ((gatherLimit > 0)&&((now - gs.lastImplicitGather) > ZT_MULTICAST_IMPLICIT_GATHER_DELAY))
+			gs.lastImplicitGather = now;
+		else gatherLimit = 0;
+
 		gs.txQueue.push_back(OutboundMulticast());
 		OutboundMulticast &out = gs.txQueue.back();
 
@@ -189,8 +209,17 @@ void Multicaster::send(
 			data,
 			len);
 
-		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m)
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
 			out.sendAndLog(*(RR->sw),m->address);
+			if (RR->topology->isSupernode(m->address))
+				gotASupernode = true;
+		}
+
+		if (!gotASupernode) {
+			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			if (sn)
+				out.sendAndLog(*(RR->sw),sn->address());
+		}
 	}
 }
 

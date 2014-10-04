@@ -240,7 +240,12 @@
 /**
  * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
  */
-#define ZT_MULTICAST_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
+#define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
+
+/**
+ * Minimum delay between implicit gathers via MULTICAST_FRAME
+ */
+#define ZT_MULTICAST_IMPLICIT_GATHER_DELAY 30000
 
 /**
  * Timeout for outgoing multicasts
