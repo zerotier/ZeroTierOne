@@ -35,6 +35,7 @@
 #include "Packet.hpp"
 #include "Peer.hpp"
 #include "CMWC4096.hpp"
+#include "C25519.hpp"
 #include "CertificateOfMembership.hpp"
 #include "RuntimeEnvironment.hpp"
 
@@ -205,6 +206,49 @@ void Multicaster::send(
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
 			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m->address) == alwaysSendTo.end())
 				out.sendAndLog(*(RR->sw),m->address);
+		}
+	}
+
+	// DEPRECATED / LEGACY / TODO:
+	// Currently we also always send a legacy P5_MULTICAST_FRAME packet to our
+	// supernode. Our supernode then takes care of relaying it down to all <1.0.0
+	// nodes. This code can go away (along with support for P5_MULTICAST_FRAME)
+	// once there are no more such nodes on the network.
+	{
+		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+		if (sn) {
+			uint32_t rn = RR->prng->next32();
+			Packet outp(sn->address(),RR->identity.address(),Packet::VERB_P5_MULTICAST_FRAME);
+
+			outp.append((uint16_t)0xffff); // do not forward
+			outp.append((unsigned char)0,320 + 1024); // empty queue and bloom filter
+
+			unsigned int signedPortionStart = outp.size();
+			outp.append((unsigned char)0);
+			outp.append((uint64_t)nwid);
+			outp.append((uint16_t)0);
+			outp.append((unsigned char)0);
+			outp.append((unsigned char)0);
+			RR->identity.address().appendTo(outp);
+			outp.append((const void *)&rn,3); // random multicast ID
+			src.appendTo(outp);
+			mg.mac().appendTo(outp);
+			outp.append((uint32_t)mg.adi());
+			outp.append((uint16_t)etherType);
+			outp.append((uint16_t)len);
+			outp.append(data,len);
+			unsigned int signedPortionLen = outp.size() - signedPortionStart;
+
+			C25519::Signature sig(RR->identity.sign(outp.field(signedPortionStart,signedPortionLen),signedPortionLen));
+
+			outp.append((uint16_t)sig.size());
+			outp.append(sig.data,sig.size());
+
+			if (com) com->serialize(outp);
+
+			outp.compress();
+			outp.armor(sn->key(),true);
+			sn->send(RR,outp.data(),outp.size(),now);
 		}
 	}
 }
