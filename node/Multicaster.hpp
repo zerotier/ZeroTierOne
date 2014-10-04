@@ -123,12 +123,13 @@ public:
 	/**
 	 * Send a multicast
 	 *
-	 * @param nwid Network ID
 	 * @param com Certificate of membership to include or NULL for none
 	 * @param limit Multicast limit
 	 * @param now Current time
+	 * @param nwid Network ID
+	 * @param alwaysSendTo Send to these peers first and even if not included in subscriber list
 	 * @param mg Multicast group
-	 * @param from Source Ethernet MAC address
+	 * @param src Source Ethernet MAC address
 	 * @param etherType Ethernet frame type
 	 * @param data Packet data
 	 * @param len Length of packet data
@@ -138,6 +139,7 @@ public:
 		unsigned int limit,
 		uint64_t now,
 		uint64_t nwid,
+		const std::vector<Address> &alwaysSendTo,
 		const MulticastGroup &mg,
 		const MAC &src,
 		unsigned int etherType,

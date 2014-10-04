@@ -54,18 +54,22 @@ SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &s
 	return nc;
 }
 
-std::set<unsigned int> NetworkConfig::allowedEtherTypes() const
+std::vector<unsigned int> NetworkConfig::allowedEtherTypes() const
 {
-	std::set<unsigned int> ets;
-	for(unsigned int i=0;i<sizeof(_etWhitelist);++i) {
-		if (_etWhitelist[i]) {
-			unsigned char b = _etWhitelist[i];
-			unsigned int et = i * 8;
-			while (b) {
-				if ((b & 1))
-					ets.insert(et);
-				b >>= 1;
-				++et;
+	std::vector<unsigned int> ets;
+	if ((_etWhitelist[0] & 1) != 0) {
+		ets.push_back(0);
+	} else {
+		for(unsigned int i=0;i<sizeof(_etWhitelist);++i) {
+			if (_etWhitelist[i]) {
+				unsigned char b = _etWhitelist[i];
+				unsigned int et = i * 8;
+				while (b) {
+					if ((b & 1))
+						ets.push_back(et);
+					b >>= 1;
+					++et;
+				}
 			}
 		}
 	}
@@ -139,17 +143,21 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 			default: // ignore unrecognized address types or junk/empty fields
 				continue;
 		}
-		_staticIps.insert(addr);
+		_staticIps.push_back(addr);
 	}
+	std::sort(_staticIps.begin(),_staticIps.end());
+	std::unique(_staticIps.begin(),_staticIps.end());
 
 	std::vector<std::string> activeBridgesSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator a(activeBridgesSplit.begin());a!=activeBridgesSplit.end();++a) {
 		if (a->length() == ZT_ADDRESS_LENGTH_HEX) { // ignore empty or garbage fields
 			Address tmp(*a);
 			if (!tmp.isReserved())
-				_activeBridges.insert(tmp);
+				_activeBridges.push_back(tmp);
 		}
 	}
+	std::sort(_activeBridges.begin(),_activeBridges.end());
+	std::unique(_activeBridges.begin(),_activeBridges.end());
 
 	Dictionary multicastRateEntries(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES,std::string()));
 	for(Dictionary::const_iterator i(multicastRateEntries.begin());i!=multicastRateEntries.end();++i) {

@@ -155,6 +155,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			nconf->multicastLimit(),
 			now,
 			network->id(),
+			nconf->activeBridges(),
 			mg,
 			from,
 			etherType,
@@ -169,6 +170,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
+			// TODO: we can refactor this to push certificates with EXT_FRAME
 			network->pushMembershipCertificate(toZT,false,Utils::now());
 
 			if (fromBridged) {
@@ -214,7 +216,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			 * know which port corresponds to a MAC, they send it to all ports. If
 			 * there aren't any active bridges, numBridges will stay 0 and packet
 			 * is dropped. */
-			std::set<Address>::const_iterator ab(nconf->activeBridges().begin());
+			std::vector<Address>::const_iterator ab(nconf->activeBridges().begin());
 			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
 				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, spam them all
 				while (ab != nconf->activeBridges().end()) {

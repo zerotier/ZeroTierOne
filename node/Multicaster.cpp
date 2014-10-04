@@ -115,6 +115,7 @@ void Multicaster::send(
 	unsigned int limit,
 	uint64_t now,
 	uint64_t nwid,
+	const std::vector<Address> &alwaysSendTo,
 	const MulticastGroup &mg,
 	const MAC &src,
 	unsigned int etherType,
@@ -124,16 +125,10 @@ void Multicaster::send(
 	Mutex::Lock _l(_groups_m);
 	MulticastGroupStatus &gs = _groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)];
 
-	// TODO / DEPRECATED:
-	// Right now we also send all multicasts to at least one supernode.
-	// This supernode then relays them via the old multicast message
-	// type to pre 1.0.0 peers. We'll keep doing this until there aren't
-	// any of these on the network. Costs a bit of bandwidth, but maintains
-	// backward compability while people upgrade. Then this code can die.
-	bool gotASupernode = false;
-
 	if (gs.members.size() >= limit) {
-		// If we already have enough members, just send and we're done -- no need for TX queue
+		// If we already have enough members, just send and we're done. We can
+		// skip the TX queue and skip the overhead of maintaining a send log by
+		// using sendOnly().
 		OutboundMulticast out;
 
 		out.init(
@@ -150,18 +145,18 @@ void Multicaster::send(
 			len);
 
 		unsigned int count = 0;
-		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
-			out.sendOnly(*(RR->sw),m->address); // sendOnly() avoids overhead of creating sent log since we're going to discard this immediately
-			if (RR->topology->isSupernode(m->address))
-				gotASupernode = true;
-			if (++count >= limit)
+
+		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
+			if (count++ >= limit)
 				break;
+			out.sendOnly(*(RR->sw),*ast);
 		}
 
-		if (!gotASupernode) {
-			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
-			if (sn)
-				out.sendOnly(*(RR->sw),sn->address());
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
+			if (count++ >= limit)
+				break;
+			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m->address) == alwaysSendTo.end())
+				out.sendOnly(*(RR->sw),m->address);
 		}
 	} else {
 		unsigned int gatherLimit = (limit - (unsigned int)gs.members.size()) + 1;
@@ -169,11 +164,6 @@ void Multicaster::send(
 		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY) {
 			gs.lastExplicitGather = now;
 
-			// TODO / INPROGRESS: right now supernodes track multicast LIKEs, a relic
-			// from the old algorithm. The next step will be to devolve this duty
-			// somewhere else, such as node(s) nominated by netconf masters. But
-			// we'll keep announcing LIKEs to supernodes for the near future to
-			// gradually migrate from old multicast to new without losing old nodes.
 			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 			if (sn) {
 				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
@@ -209,16 +199,12 @@ void Multicaster::send(
 			data,
 			len);
 
-		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
-			out.sendAndLog(*(RR->sw),m->address);
-			if (RR->topology->isSupernode(m->address))
-				gotASupernode = true;
-		}
+		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast)
+			out.sendAndLog(*(RR->sw),*ast);
 
-		if (!gotASupernode) {
-			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
-			if (sn)
-				out.sendAndLog(*(RR->sw),sn->address());
+		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
+			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m->address) == alwaysSendTo.end())
+				out.sendAndLog(*(RR->sw),m->address);
 		}
 	}
 }

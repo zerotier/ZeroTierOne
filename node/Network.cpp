@@ -200,7 +200,7 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 
 	try {
 		if ((conf->networkId() == _id)&&(conf->issuedTo() == RR->identity.address())) {
-			std::set<InetAddress> oldStaticIps;
+			std::vector<InetAddress> oldStaticIps;
 			if (_config)
 				oldStaticIps = _config->staticIps();
 
@@ -216,14 +216,14 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 				t->setFriendlyName(fname);
 
 				// Remove previously configured static IPs that are gone
-				for(std::set<InetAddress>::const_iterator oldip(oldStaticIps.begin());oldip!=oldStaticIps.end();++oldip) {
-					if (!_config->staticIps().count(*oldip))
+				for(std::vector<InetAddress>::const_iterator oldip(oldStaticIps.begin());oldip!=oldStaticIps.end();++oldip) {
+					if (std::find(_config->staticIps().begin(),_config->staticIps().end(),*oldip) == _config->staticIps().end())
 						t->removeIP(*oldip);
 				}
 
 				// Add new static IPs that were not in previous config
-				for(std::set<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip) {
-					if (!oldStaticIps.count(*newip))
+				for(std::vector<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip) {
+					if (std::find(oldStaticIps.begin(),oldStaticIps.end(),*newip) == oldStaticIps.end())
 						t->addIP(*newip);
 				}
 
@@ -494,7 +494,7 @@ void Network::threadMain()
 		_tap = t;
 		if (t) {
 			if (_config) {
-				for(std::set<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip)
+				for(std::vector<InetAddress>::const_iterator newip(_config->staticIps().begin());newip!=_config->staticIps().end();++newip)
 					t->addIP(*newip);
 			}
 			t->setEnabled(_enabled);

@@ -31,9 +31,10 @@
 #include <stdint.h>
 
 #include <map>
-#include <set>
+#include <vector>
 #include <string>
 #include <stdexcept>
+#include <algorithm>
 
 #include "Constants.hpp"
 #include "Dictionary.hpp"
@@ -122,7 +123,11 @@ public:
 		return ((_etWhitelist[etherType >> 3] & (1 << (etherType & 7))) != 0);
 	}
 
-	std::set<unsigned int> allowedEtherTypes() const;
+	/**
+	 * @return Allowed ethernet types or a vector containing only 0 if "all"
+	 */
+	std::vector<unsigned int> allowedEtherTypes() const;
+
 	inline uint64_t networkId() const throw() { return _nwid; }
 	inline uint64_t timestamp() const throw() { return _timestamp; }
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
@@ -133,8 +138,8 @@ public:
 	inline bool isPrivate() const throw() { return _private; }
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
-	inline const std::set<InetAddress> &staticIps() const throw() { return _staticIps; }
-	inline const std::set<Address> &activeBridges() const throw() { return _activeBridges; }
+	inline const std::vector<InetAddress> &staticIps() const throw() { return _staticIps; }
+	inline const std::vector<Address> &activeBridges() const throw() { return _activeBridges; }
 	inline const CertificateOfMembership &com() const throw() { return _com; }
 	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
 
@@ -144,7 +149,7 @@ public:
 	 */
 	inline bool permitsBridging(const Address &fromPeer) const
 	{
-		return ((_allowPassiveBridging) ? true : (_activeBridges.count(fromPeer) > 0));
+		return ( (_allowPassiveBridging) || (std::find(_activeBridges.begin(),_activeBridges.end(),fromPeer) != _activeBridges.end()) );
 	}
 
 	/**
@@ -170,8 +175,8 @@ private:
 	bool _enableBroadcast;
 	std::string _name;
 	std::string _description;
-	std::set<InetAddress> _staticIps;
-	std::set<Address> _activeBridges;
+	std::vector<InetAddress> _staticIps;
+	std::vector<Address> _activeBridges;
 	std::map<MulticastGroup,MulticastRate> _multicastRates;
 	CertificateOfMembership _com;
 
