@@ -66,12 +66,13 @@ unsigned int Multicaster::gather(const RuntimeEnvironment *RR,const Address &que
 
 	if (limit > gs->second.members.size())
 		limit = (unsigned int)gs->second.members.size();
-	if (limit > 0xffff) // sanity check -- this won't fit in a packet anyway
-		limit = 0xffff;
+	if (limit > ((ZT_PROTO_MAX_PACKET_LENGTH / 5) + 1))
+		limit = (ZT_PROTO_MAX_PACKET_LENGTH / 5) + 1;
 
-	appendTo.append((uint32_t)gs->second.members.size());
+	unsigned int totalAt = appendTo.size();
+	appendTo.addSize(4); // sizeof(uint32_t)
 	unsigned int nAt = appendTo.size();
-	appendTo.append((uint16_t)0); // set to n later
+	appendTo.addSize(2); // sizeof(uint16_t)
 
 	while ((n < limit)&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_PROTO_MAX_PACKET_LENGTH)) {
 		// Pick a member at random -- if we've already picked it,
@@ -103,6 +104,7 @@ restart_member_scan:
 		}
 	}
 
+	appendTo.setAt(totalAt,(uint32_t)(gs->second.members.size() - skipped));
 	appendTo.setAt(nAt,(uint16_t)(n - skipped));
 
 	return n;

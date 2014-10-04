@@ -242,7 +242,7 @@ private:
 	Mutex _defragQueue_m;
 
 	// ZeroTier-layer RX queue of incoming packets in the process of being decoded
-	std::vector< SharedPtr<IncomingPacket> > _rxQueue;
+	std::list< SharedPtr<IncomingPacket> > _rxQueue;
 	Mutex _rxQueue_m;
 
 	// ZeroTier-layer TX queue by destination ZeroTier address
