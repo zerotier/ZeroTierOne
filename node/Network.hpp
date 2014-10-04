@@ -148,11 +148,11 @@ public:
 	}
 
 	/**
-	 * Update multicast groups for this network's tap and announce changes
+	 * Rescan multicast groups for this network's tap and update peers on change
 	 *
 	 * @return True if internal multicast group set has changed since last update
 	 */
-	bool updateMulticastGroups();
+	bool rescanMulticastGroups();
 
 	/**
 	 * @return Latest set of multicast groups for this network's tap
@@ -161,16 +161,6 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		return _myMulticastGroups;
-	}
-
-	/**
-	 * @param mg Multicast group
-	 * @return True if this group is among those to which I am subscribed
-	 */
-	inline bool wantMulticastGroup(const MulticastGroup &mg) const
-	{
-		Mutex::Lock _l(_lock);
-		return (_myMulticastGroups.count(mg) > 0);
 	}
 
 	/**

@@ -113,10 +113,11 @@ void Peer::receive(
 			}
 		}
 
-		// Announce multicast groups of interest to direct peers if they are
-		// considered authorized members of a given network. Also announce to
-		// supernodes and network controllers. TODO: the former may go
-		// obsolete with time as network controllers take over this role.
+		/* Announce multicast groups of interest to direct peers if they are
+		 * considered authorized members of a given network. Also announce to
+		 * supernodes and network controllers. The other place this is done
+		 * is in rescanMulticastGroups() in Network, but that only sends something
+		 * if a network's multicast groups change. */
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
 

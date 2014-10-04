@@ -459,6 +459,8 @@ public:
 	}
 
 private:
+	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
+
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 

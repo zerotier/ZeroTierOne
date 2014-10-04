@@ -585,7 +585,7 @@ Node::ReasonForTermination Node::run()
 					try {
 						std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 						for(std::vector< SharedPtr<Network> >::const_iterator nw(networks.begin());nw!=networks.end();++nw)
-							(*nw)->updateMulticastGroups();
+							(*nw)->rescanMulticastGroups();
 					} catch (std::exception &exc) {
 						LOG("unexpected exception announcing multicast groups: %s",exc.what());
 					} catch ( ... ) {

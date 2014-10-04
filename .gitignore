@@ -33,6 +33,7 @@
 *.autosave
 /ZeroTier One.dmg
 /root-topology/*.secret
+/testnet/local-testnet/n????
 /testnet/local-testnet/*/peers.persist
 /testnet/local-testnet/*/authtoken.secret
 /testnet/local-testnet/*/*.log

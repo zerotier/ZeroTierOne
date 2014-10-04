@@ -111,33 +111,84 @@ SharedPtr<Network> Network::newInstance(const RuntimeEnvironment *renv,NodeConfi
 	return nw;
 }
 
-bool Network::updateMulticastGroups()
+// Function object used by rescanMulticastGroups()
+class AnnounceMulticastGroupsToPeersWithActiveDirectPaths
 {
-	Mutex::Lock _l(_lock);
-	EthernetTap *t = _tap;
-	if (t) {
-		// Grab current groups from the local tap
-		bool updated = t->updateMulticastGroups(_myMulticastGroups);
+public:
+	AnnounceMulticastGroupsToPeersWithActiveDirectPaths(const RuntimeEnvironment *renv,Network *nw) :
+		RR(renv),
+		_now(Utils::now()),
+		_network(nw)
+	{}
 
-		// Merge in learned groups from any hosts bridged in behind us
-		for(std::map<MulticastGroup,uint64_t>::const_iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();++mg)
-			_myMulticastGroups.insert(mg->first);
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	{
+		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (_network->controller() == p->address()) || (t.isSupernode(p->address())) ) {
+			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
-		// Add or remove BROADCAST group based on broadcast enabled netconf flag
-		if ((_config)&&(_config->enableBroadcast())) {
-			if (_myMulticastGroups.count(BROADCAST))
-				return updated;
-			else {
-				_myMulticastGroups.insert(BROADCAST);
-				return true;
+			std::set<MulticastGroup> mgs(_network->multicastGroups());
+			for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
+				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+					outp.armor(p->key(),true);
+					p->send(RR,outp.data(),outp.size(),_now);
+					outp.reset(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+				}
+
+				// network ID, MAC, ADI
+				outp.append((uint64_t)_network->id());
+				mg->mac().appendTo(outp);
+				outp.append((uint32_t)mg->adi());
 			}
-		} else {
-			if (_myMulticastGroups.count(BROADCAST)) {
-				_myMulticastGroups.erase(BROADCAST);
-				return true;
-			} else return updated;
+
+			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+				outp.armor(p->key(),true);
+				p->send(RR,outp.data(),outp.size(),_now);
+			}
 		}
-	} else return false;
+	}
+
+private:
+	const RuntimeEnvironment *RR;
+	uint64_t _now;
+	Network *_network;
+};
+
+bool Network::rescanMulticastGroups()
+{
+	bool updated = false;
+
+	{
+		Mutex::Lock _l(_lock);
+		EthernetTap *t = _tap;
+		if (t) {
+			// Grab current groups from the local tap
+			updated = t->updateMulticastGroups(_myMulticastGroups);
+
+			// Merge in learned groups from any hosts bridged in behind us
+			for(std::map<MulticastGroup,uint64_t>::const_iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();++mg)
+				_myMulticastGroups.insert(mg->first);
+
+			// Add or remove BROADCAST group based on broadcast enabled netconf flag
+			if ((_config)&&(_config->enableBroadcast())) {
+				if (!_myMulticastGroups.count(BROADCAST)) {
+					_myMulticastGroups.insert(BROADCAST);
+					updated = true;
+				}
+			} else {
+				if (_myMulticastGroups.count(BROADCAST)) {
+					_myMulticastGroups.erase(BROADCAST);
+					updated = true;
+				}
+			}
+		}
+	}
+
+	if (updated) {
+		AnnounceMulticastGroupsToPeersWithActiveDirectPaths afunc(RR,this);
+		RR->topology->eachPeer<AnnounceMulticastGroupsToPeersWithActiveDirectPaths &>(afunc);
+	}
+
+	return updated;
 }
 
 bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
@@ -449,6 +500,8 @@ void Network::threadMain()
 			t->setEnabled(_enabled);
 		}
 	}
+
+	rescanMulticastGroups();
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
