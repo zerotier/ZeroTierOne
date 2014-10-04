@@ -49,10 +49,10 @@ Multicaster::~Multicaster()
 {
 }
 
-unsigned int Multicaster::gather(const RuntimeEnvironment *RR,uint64_t nwid,MulticastGroup &mg,Packet &appendTo,unsigned int limit) const
+unsigned int Multicaster::gather(const RuntimeEnvironment *RR,const Address &queryingPeer,uint64_t nwid,MulticastGroup &mg,Packet &appendTo,unsigned int limit) const
 {
 	unsigned char *p;
-	unsigned int n = 0,i,rptr;
+	unsigned int n = 0,i,rptr,skipped = 0;
 	uint64_t a,done[(ZT_PROTO_MAX_PACKET_LENGTH / 5) + 1];
 
 	Mutex::Lock _l(_groups_m);
@@ -90,16 +90,20 @@ restart_member_scan:
 		// Log that we've picked this one
 		done[n++] = a;
 
-		// Append to packet
-		p = (unsigned char *)appendTo.appendField(ZT_ADDRESS_LENGTH);
-		*(p++) = (unsigned char)((a >> 32) & 0xff);
-		*(p++) = (unsigned char)((a >> 24) & 0xff);
-		*(p++) = (unsigned char)((a >> 16) & 0xff);
-		*(p++) = (unsigned char)((a >> 8) & 0xff);
-		*p = (unsigned char)(a & 0xff);
+		if (queryingPeer.toInt() == a) {
+			++skipped;
+		} else {
+			// Append to packet
+			p = (unsigned char *)appendTo.appendField(ZT_ADDRESS_LENGTH);
+			*(p++) = (unsigned char)((a >> 32) & 0xff);
+			*(p++) = (unsigned char)((a >> 24) & 0xff);
+			*(p++) = (unsigned char)((a >> 16) & 0xff);
+			*(p++) = (unsigned char)((a >> 8) & 0xff);
+			*p = (unsigned char)(a & 0xff);
+		}
 	}
 
-	appendTo.setAt(nAt,(uint16_t)n);
+	appendTo.setAt(nAt,(uint16_t)(n - skipped));
 
 	return n;
 }
@@ -248,6 +252,10 @@ void Multicaster::clean(uint64_t now)
 void Multicaster::_add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
 {
 	// assumes _groups_m is locked
+
+	// Do not add self -- even if someone else returns it
+	if (member == RR->identity.address())
+		return;
 
 	// Update timestamp and learnedFrom if existing
 	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {

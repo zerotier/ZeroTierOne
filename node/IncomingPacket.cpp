@@ -925,7 +925,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			outp.append(nwid);
 			mg.mac().appendTo(outp);
 			outp.append((uint32_t)mg.adi());
-			if (RR->mc->gather(RR,nwid,mg,outp,gatherLimit)) {
+			if (RR->mc->gather(RR,peer->address(),nwid,mg,outp,gatherLimit)) {
 				outp.armor(peer->key(),true);
 				_fromSock->send(_remoteAddress,outp.data(),outp.size());
 			}
@@ -1003,7 +1003,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 					to.mac().appendTo(outp);
 					outp.append((uint32_t)to.adi());
 					outp.append((unsigned char)0x01); // flag 0x01 = contains gather results
-					if (RR->mc->gather(RR,nwid,to,outp,gatherLimit)) {
+					if (RR->mc->gather(RR,peer->address(),nwid,to,outp,gatherLimit)) {
 						outp.armor(peer->key(),true);
 						_fromSock->send(_remoteAddress,outp.data(),outp.size());
 					}

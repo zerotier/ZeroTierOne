@@ -109,6 +109,7 @@ public:
 	 * If zero is returned, the first two fields will still have been appended.
 	 *
 	 * @param RR Runtime environment
+	 * @param queryingPeer Peer asking for gather (to skip in results)
 	 * @param nwid Network ID
 	 * @param mg Multicast group
 	 * @param appendTo Packet to append to
@@ -116,7 +117,7 @@ public:
 	 * @return Number of addresses appended
 	 * @throws std::out_of_range Buffer overflow writing to packet
 	 */
-	unsigned int gather(const RuntimeEnvironment *RR,uint64_t nwid,MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
+	unsigned int gather(const RuntimeEnvironment *RR,const Address &queryingPeer,uint64_t nwid,MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
 
 	/**
 	 * Send a multicast
