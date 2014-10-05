@@ -109,7 +109,6 @@ public:
 	 *
 	 * If zero is returned, the first two fields will still have been appended.
 	 *
-	 * @param RR Runtime environment
 	 * @param queryingPeer Peer asking for gather (to skip in results)
 	 * @param nwid Network ID
 	 * @param mg Multicast group
@@ -118,7 +117,17 @@ public:
 	 * @return Number of addresses appended
 	 * @throws std::out_of_range Buffer overflow writing to packet
 	 */
-	unsigned int gather(const RuntimeEnvironment *RR,const Address &queryingPeer,uint64_t nwid,MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
+	unsigned int gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
+
+	/**
+	 * Get known peers with versions <1.0.0 and that are not supernodes
+	 *
+	 * This is legacy peer compatibility code and will be removed later.
+	 *
+	 * @param nwid Network ID
+	 * @param mg Multicast group
+	 */
+	std::vector<Address> getLegacySubscribers(uint64_t nwid,const MulticastGroup &mg) const;
 
 	/**
 	 * Send a multicast
