@@ -149,7 +149,7 @@ void Peer::receive(
 
 	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
 		_lastUnicastFrame = now;
-	else if (verb == Packet::VERB_MULTICAST_FRAME)
+	else if ((verb == Packet::VERB_P5_MULTICAST_FRAME)||(verb == Packet::VERB_MULTICAST_FRAME))
 		_lastMulticastFrame = now;
 }
 

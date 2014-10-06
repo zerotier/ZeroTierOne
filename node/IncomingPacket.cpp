@@ -330,7 +330,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 			case Packet::VERB_MULTICAST_FRAME: {
 				unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS];
-				if ((flags & 0x01) != 0) {
+				if ((flags & 0x01) != 0) { // frame includes implicit gather results
 					uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
 					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
 					_parseGatherResults(RR,peer,nwid,mg,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_GATHER_RESULTS);
@@ -547,6 +547,88 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 	// to all older nodes that expect them. This won't be too expensive
 	// though since there aren't likely to be many older nodes left after
 	// we do a software update.
+
+	// Quick and dirty -- this is all condemned code in any case
+	static uint64_t p5MulticastDedupBuffer[1024];
+	static unsigned long p5MulticastDedupBufferPtr = 0;
+	static Mutex p5MulticastDedupBuffer_m;
+
+	try {
+		Address origin(Address(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
+		const unsigned int flags = (*this)[ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FLAGS];
+		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_NETWORK_ID);
+		const uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_GUID);
+		const MAC sourceMac(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_SOURCE_MAC),ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_SOURCE_MAC);
+		const MulticastGroup dest(MAC(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_DEST_MAC),ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_DEST_MAC),at<uint32_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_DEST_ADI));
+		const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_ETHERTYPE);
+		const unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME_LEN);
+		const unsigned char *const frame = field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME,frameLen);
+		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME + frameLen);
+
+		{
+			Mutex::Lock _l(p5MulticastDedupBuffer_m);
+			if (!p5MulticastDedupBufferPtr) {
+				memset(p5MulticastDedupBuffer,0,sizeof(p5MulticastDedupBuffer));
+			} else {
+				for(unsigned int i=0;i<1024;++i) {
+					if (p5MulticastDedupBuffer[i] == guid)
+						return true;
+				}
+			}
+			p5MulticastDedupBuffer[p5MulticastDedupBufferPtr++ % 1024] = guid;
+		}
+
+		peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_P5_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
+
+		if (RR->topology->amSupernode()) {
+			std::vector<Address> legacyPeers(RR->mc->getLegacySubscribers(nwid,dest));
+
+			setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xffff);
+
+			for(std::vector<Address>::iterator lp(legacyPeers.begin());lp!=legacyPeers.end();++lp) {
+				if ((*lp != origin)&&(*lp != source())) {
+					newInitializationVector();
+					setDestination(*lp);
+					setSource(RR->identity.address());
+					compress();
+					RR->sw->send(*this,true);
+				}
+			}
+		} else {
+			SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
+			if (network) {
+				if ((flags & ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE)) {
+					CertificateOfMembership com;
+					com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2 + signatureLen);
+					if (com.hasRequiredFields())
+						network->addMembershipCertificate(com,false);
+				}
+
+				if (!network->isAllowed(origin)) {
+					_sendErrorNeedCertificate(RR,peer,network->id());
+					return true;
+				}
+
+				if (frameLen) {
+					if (!dest.mac().isMulticast())
+						return true;
+					if ((!sourceMac)||(sourceMac.isMulticast())||(sourceMac == network->mac()))
+						return true;
+					if (sourceMac != MAC(origin,network->id())) {
+						if (network->permitsBridging(origin)) {
+							network->learnBridgeRoute(sourceMac,origin);
+						} else return true;
+					}
+
+					network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
+				}
+			}
+		}
+	} catch (std::exception &ex) {
+		TRACE("dropped P5_MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+	} catch ( ... ) {
+		TRACE("dropped P5_MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
 
 #if 0 // old code preserved below
 	try {
@@ -953,7 +1035,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				unsigned int comLen = 0;
 				if ((flags & 0x01) != 0) {
 					CertificateOfMembership com;
-					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
+					comLen = com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 					if (com.hasRequiredFields())
 						network->addMembershipCertificate(com,false);
 				}
