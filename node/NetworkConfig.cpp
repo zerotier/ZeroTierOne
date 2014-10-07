@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include <stdint.h>
+
 #include "NetworkConfig.hpp"
 #include "Utils.hpp"
 
@@ -50,6 +52,13 @@ SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &s
 	nc->_enableBroadcast = true;
 	nc->_name = "ZT_TEST_NETWORK";
 	nc->_description = "Built-in dummy test network";
+
+	// Make up a V4 IP from 'self' in the 10.0.0.0/8 range -- no
+	// guarantee of uniqueness but collisions are unlikely.
+	uint32_t ip = (uint32_t)((self.toInt() & 0x00ffffff) | 0x0a000000); // 10.x.x.x
+	if ((ip & 0x000000ff) == 0x000000ff) ip ^= 0x00000001; // but not ending in .255
+	if ((ip & 0x000000ff) == 0x00000000) ip ^= 0x00000001; // or .0
+	nc->_staticIps.push_back(InetAddress(Utils::hton(ip),8));
 
 	return nc;
 }
