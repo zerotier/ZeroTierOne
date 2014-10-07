@@ -119,8 +119,10 @@ static void _CBresultHandler(void *arg,const char *line)
 	if (line) {
 		if ((line[0] == '.')&&(line[1] == (char)0)) {
 			fflush(stdout);
-			*((bool *)arg) = true;
-		} else fprintf(stdout,"%s"ZT_EOL_S,line);
+			::exit(0); // terminate CLI on end of message
+		} else {
+			fprintf(stdout,"%s"ZT_EOL_S,line);
+		}
 	}
 }
 
@@ -180,15 +182,14 @@ static int main(const char *homeDir,int argc,char **argv)
 			return 1;
 		}
 
-		volatile bool done = false;
-		NodeControlClient client((std::string(ZT_IPC_ENDPOINT_BASE) + id.address().toString()).c_str(),authToken.c_str(),&_CBresultHandler,(void *)&done);
+		NodeControlClient client((std::string(ZT_IPC_ENDPOINT_BASE) + id.address().toString()).c_str(),authToken.c_str(),&_CBresultHandler,(void *)0);
 		const char *err = client.error();
 		if (err) {
 			fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (%s)"ZT_EOL_S,argv[0],err);
 			return 1;
 		}
 		client.send(query.c_str());
-		while (!done) Thread::sleep(100); // dis be ghetto
+		for(;;) { Thread::sleep(60000); } // exit() is called at end of message from handler
 	} catch (std::exception &exc) {
 		fprintf(stderr,"%s: fatal error: unable to connect (is ZeroTier One running?) (%s)"ZT_EOL_S,argv[0],exc.what());
 		return 1;

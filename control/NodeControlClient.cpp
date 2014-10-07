@@ -39,6 +39,7 @@ struct _NodeControlClientImpl
 {
 	void (*resultHandler)(void *,const char *);
 	void *arg;
+	bool ignoreNextBreak;
 	IpcConnection *ipcc;
 	std::string err;
 };
@@ -46,8 +47,11 @@ struct _NodeControlClientImpl
 static void _CBipcResultHandler(void *arg,IpcConnection *ipcc,IpcConnection::EventType event,const char *result)
 {
 	if ((event == IpcConnection::IPC_EVENT_COMMAND)&&(result)) {
-		if (strcmp(result,"200 auth OK"))
-			((_NodeControlClientImpl *)arg)->resultHandler(((_NodeControlClientImpl *)arg)->arg,result);
+		if (!strcmp(result,"200 auth OK")) {
+			((_NodeControlClientImpl *)arg)->ignoreNextBreak = true;
+		} else if ((((_NodeControlClientImpl *)arg)->ignoreNextBreak)&&(!strcmp(result,"."))) {
+			((_NodeControlClientImpl *)arg)->ignoreNextBreak = false;
+		} else ((_NodeControlClientImpl *)arg)->resultHandler(((_NodeControlClientImpl *)arg)->arg,result);
 	}
 }
 
@@ -58,6 +62,7 @@ NodeControlClient::NodeControlClient(const char *ep,const char *authToken,void (
 	_NodeControlClientImpl *impl = (_NodeControlClientImpl *)_impl;
 	impl->resultHandler = resultHandler;
 	impl->arg = arg;
+	impl->ignoreNextBreak = false;
 	try {
 		impl->ipcc = new IpcConnection(ep,ZT_IPC_TIMEOUT,&_CBipcResultHandler,_impl);
 		impl->ipcc->printf("auth %s"ZT_EOL_S,authToken);
