@@ -78,9 +78,10 @@ TestEthernetTap::TestEthernetTap(
 
 TestEthernetTap::~TestEthernetTap()
 {
+	static const TestFrame zf;
 	{
 		Mutex::Lock _l(_pq_m);
-		_pq.push(TestFrame()); // 0 length frame = exit
+		_pq.push(zf); // 0 length frame = exit
 	}
 	_pq_c.signal();
 	Thread::join(_thread);

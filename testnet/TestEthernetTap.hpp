@@ -63,7 +63,7 @@ class TestEthernetTap : public EthernetTap
 private:
 	struct TestFrame
 	{
-		TestFrame() : etherType(0),len(0) {}
+		TestFrame() : from(),to(),etherType(0),len(0) {}
 		TestFrame(const MAC &f,const MAC &t,const void *d,unsigned int et,unsigned int l) :
 			from(f),
 			to(t),
