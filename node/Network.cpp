@@ -331,6 +331,26 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 	}
 }
 
+bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
+{
+	Mutex::Lock _l(_lock);
+	if ((_config)&&(!_config->isPublic())&&(_config->com())) {
+		uint64_t pushInterval = _config->com().timestampMaxDelta() / 2;
+		if (pushInterval) {
+			// Give a 1s margin around +/- 1/2 max delta to account for network latency
+			if (pushInterval > 1000)
+				pushInterval -= 1000;
+
+			uint64_t &lastPushed = _lastPushedMembershipCertificate[to];
+			if ((now - lastPushed) > pushInterval) {
+				lastPushed = now;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool Network::isAllowed(const Address &peer) const
 {
 	try {
@@ -344,6 +364,7 @@ bool Network::isAllowed(const Address &peer) const
 		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
 		if (pc == _membershipCertificates.end())
 			return false; // no certificate on file
+
 		return _config->com().agreesWith(pc->second); // is other cert valid against ours?
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
@@ -519,31 +540,6 @@ void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned 
 		TRACE("unexpected exception handling local packet: %s",exc.what());
 	} catch ( ... ) {
 		TRACE("unexpected exception handling local packet");
-	}
-}
-
-void Network::_pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
-{
-	// assumes _lock is locked and _config is not null
-
-	uint64_t pushTimeout = _config->com().timestampMaxDelta() / 2;
-
-	// Zero means we're still waiting on our own cert
-	if (!pushTimeout)
-		return;
-
-	// Give a 1s margin around +/- 1/2 max delta to account for latency
-	if (pushTimeout > 1000)
-		pushTimeout -= 1000;
-
-	uint64_t &lastPushed = _lastPushedMembershipCertificate[peer];
-	if ((force)||((now - lastPushed) > pushTimeout)) {
-		lastPushed = now;
-		TRACE("pushing membership cert for %.16llx to %s",(unsigned long long)_id,peer.toString().c_str());
-
-		Packet outp(peer,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-		_config->com().serialize(outp);
-		RR->sw->send(outp,true);
 	}
 }
 

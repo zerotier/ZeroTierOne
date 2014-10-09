@@ -128,8 +128,15 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
 				SharedPtr<Network> network(RR->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if (network)
-					network->pushMembershipCertificate(source(),true,Utils::now());
+				if (network) {
+					SharedPtr<NetworkConfig> nconf(network->config2());
+					if (nconf) {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+						nconf->com().serialize(outp);
+						outp.armor(peer->key(),true);
+						_fromSock->send(_remoteAddress,outp.data(),outp.size());
+					}
+				}
 			}	break;
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
@@ -138,9 +145,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 					network->setAccessDenied();
 			}	break;
 
-			// TODO -- send and accept these to cancel multicast "LIKE"s
-			//case Packet::ERROR_UNWANTED_MULTICAST: {
-			//}	break;
+			case Packet::ERROR_UNWANTED_MULTICAST: {
+				// TODO: unsubscribe
+			}	break;
 
 			default: break;
 		}
@@ -330,10 +337,23 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 			case Packet::VERB_MULTICAST_FRAME: {
 				unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS];
-				if ((flags & 0x01) != 0) { // frame includes implicit gather results
-					uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
-					MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
-					_parseGatherResults(RR,peer,nwid,mg,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_GATHER_RESULTS);
+				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
+				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
+
+				unsigned int offset = 0;
+
+				if ((flags & 0x01) != 0) {
+					// OK(MULTICAST_FRAME) includes certificate of membership update
+					CertificateOfMembership com;
+					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_PAYLOAD);
+					SharedPtr<Network> network(RR->nc->network(nwid));
+					if ((network)&&(com.hasRequiredFields()))
+						network->addMembershipCertificate(com,false);
+				}
+
+				if ((flags & 0x02) != 0) {
+					// OK(MULTICAST_FRAME) includes implicit gather results
+					_parseGatherResults(RR,peer,nwid,mg,offset + ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_PAYLOAD);
 				}
 			}	break;
 
@@ -540,13 +560,13 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 
 bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
-	// This handles the old deprecated "P5" multicast frame, and will
-	// go away once there are no longer nodes using this on the network.
-	// We handle these old nodes by accepting these as simple multicasts
-	// and if we are a supernode performing individual relaying of them
-	// to all older nodes that expect them. This won't be too expensive
-	// though since there aren't likely to be many older nodes left after
-	// we do a software update.
+	/* This handles the old deprecated "P5" multicast frame, and will
+	 * go away once there are no longer nodes using this on the network.
+	 * We handle these old nodes by accepting these as simple multicasts
+	 * and if we are a supernode performing individual relaying of them
+	 * to all older nodes that expect them. This won't be too expensive
+	 * though since there aren't likely to be many older nodes left after
+	 * we do a software update. */
 
 	// Quick and dirty -- this is all condemned code in any case
 	static uint64_t p5MulticastDedupBuffer[1024];
@@ -1027,73 +1047,83 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		if (size() > ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME) {
-			uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
-			unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
-			unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT);
+		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
+		unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
 
-			SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
-			if (network) {
-				unsigned int comLen = 0;
-				if ((flags & 0x01) != 0) {
-					CertificateOfMembership com;
-					comLen = com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-					if (com.hasRequiredFields())
-						network->addMembershipCertificate(com,false);
+		SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
+		if (network) {
+			// Offset -- size of optional fields added to position of later fields
+			unsigned int offset = 0;
+
+			if ((flags & 0x01) != 0) {
+				CertificateOfMembership com;
+				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
+				if (com.hasRequiredFields())
+					network->addMembershipCertificate(com,false);
+			}
+
+			// Check membership after we've read any included COM, since
+			// that cert might be what we needed.
+			if (!network->isAllowed(peer->address())) {
+				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
+				_sendErrorNeedCertificate(RR,peer,network->id());
+				return true;
+			}
+
+			unsigned int gatherLimit = 0;
+			if ((flags & 0x02) != 0) {
+				gatherLimit = at<uint32_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT);
+				offset += 4;
+			}
+
+			MAC from;
+			if ((flags & 0x04) != 0) {
+				from.setTo(field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6),6);
+				offset += 6;
+			} else {
+				from.fromAddress(source(),nwid);
+			}
+
+			MulticastGroup to(MAC(field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
+			unsigned int etherType = at<uint16_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
+			unsigned int payloadLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
+
+			if ((payloadLen > 0)&&(payloadLen < ZT_IF_MTU)) {
+				if (!to.mac().isMulticast()) {
+					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+					return true;
 				}
-
-				if (!network->isAllowed(peer->address())) {
-					TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
-					_sendErrorNeedCertificate(RR,peer,network->id());
+				if ((!from)||(from.isMulticast())||(from == network->mac())) {
+					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 					return true;
 				}
 
-				// Everything after gatherLimit is relative to the size of the
-				// attached certificate, if any.
-
-				MulticastGroup to(MAC(field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
-				MAC from(field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6),6);
-				unsigned int etherType = at<uint16_t>(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
-				unsigned int payloadLen = size() - (comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
-
-				if (payloadLen) {
-					if (!to.mac().isMulticast()) {
-						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
+				if (from != MAC(peer->address(),network->id())) {
+					if (network->permitsBridging(peer->address())) {
+						network->learnBridgeRoute(from,peer->address());
+					} else {
+						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
 						return true;
 					}
-
-					if ((!from)||(from.isMulticast())||(from == network->mac())) {
-						TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: invalid source MAC",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
-						return true;
-					}
-
-					if (from != MAC(peer->address(),network->id())) {
-						if (network->permitsBridging(peer->address())) {
-							network->learnBridgeRoute(from,peer->address());
-						} else {
-							TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: sender not allowed to bridge into %.16llx",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str(),network->id());
-							return true;
-						}
-					}
-
-					network->tapPut(from,to.mac(),etherType,field(comLen + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
 				}
 
-				if (gatherLimit) {
-					Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
-					outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
-					outp.append(packetId());
-					outp.append(nwid);
-					to.mac().appendTo(outp);
-					outp.append((uint32_t)to.adi());
-					outp.append((unsigned char)0x01); // flag 0x01 = contains gather results
-					if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
-						outp.armor(peer->key(),true);
-						_fromSock->send(_remoteAddress,outp.data(),outp.size());
-					}
+				network->tapPut(from,to.mac(),etherType,field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),offset);
+			}
+
+			if (gatherLimit) {
+				Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
+				outp.append((unsigned char)Packet::VERB_MULTICAST_FRAME);
+				outp.append(packetId());
+				outp.append(nwid);
+				to.mac().appendTo(outp);
+				outp.append((uint32_t)to.adi());
+				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
+				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
+					outp.armor(peer->key(),true);
+					_fromSock->send(_remoteAddress,outp.data(),outp.size());
 				}
 			}
-		}
+		} // else ignore -- not a member of this network
 
 		peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {

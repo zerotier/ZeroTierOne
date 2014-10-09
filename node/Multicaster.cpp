@@ -174,7 +174,7 @@ void Multicaster::send(
 
 			if (count++ >= limit)
 				break;
-			out.sendOnly(*(RR->sw),*ast);
+			out.sendOnly(RR,*ast);
 		}
 
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
@@ -187,7 +187,7 @@ void Multicaster::send(
 			if (count++ >= limit)
 				break;
 			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m->address) == alwaysSendTo.end())
-				out.sendOnly(*(RR->sw),m->address);
+				out.sendOnly(RR,m->address);
 		}
 	} else {
 		unsigned int gatherLimit = (limit - (unsigned int)gs.members.size()) + 1;
@@ -235,7 +235,7 @@ void Multicaster::send(
 					continue;
 			}
 
-			out.sendAndLog(*(RR->sw),*ast);
+			out.sendAndLog(RR,*ast);
 		}
 
 		for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs.members.rbegin());m!=gs.members.rend();++m) {
@@ -246,7 +246,7 @@ void Multicaster::send(
 			}
 
 			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m->address) == alwaysSendTo.end())
-				out.sendAndLog(*(RR->sw),m->address);
+				out.sendAndLog(RR,m->address);
 		}
 	}
 
@@ -384,7 +384,7 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const
 				continue;
 		}
 
-		tx->sendIfNew(*(RR->sw),member);
+		tx->sendIfNew(RR,member);
 		if (tx->atLimit())
 			gs.txQueue.erase(tx++);
 		else ++tx;

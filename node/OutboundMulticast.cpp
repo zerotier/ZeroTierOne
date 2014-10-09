@@ -26,9 +26,13 @@
  */
 
 #include "Constants.hpp"
+#include "RuntimeEnvironment.hpp"
 #include "OutboundMulticast.hpp"
 #include "Switch.hpp"
+#include "NodeConfig.hpp"
+#include "Network.hpp"
 #include "CertificateOfMembership.hpp"
+#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -47,31 +51,57 @@ void OutboundMulticast::init(
 {
 	_timestamp = timestamp;
 	_nwid = nwid;
-	_source = src;
-	_destination = dest;
 	_limit = limit;
-	_etherType = etherType;
 
-	_packet.setSource(self);
-	_packet.setVerb(Packet::VERB_MULTICAST_FRAME);
+	uint8_t flags = 0;
+	if (gatherLimit) flags |= 0x02;
+	if (src) flags |= 0x04;
 
-	self.appendTo(_packet);
-	_packet.append((uint64_t)nwid);
-	_packet.append((uint8_t)((com) ? 0x01 : 0x00));
-	_packet.append((uint32_t)gatherLimit);
-	if (com) com->serialize(_packet);
-	_packet.append((uint32_t)dest.adi());
-	dest.mac().appendTo(_packet);
-	src.appendTo(_packet);
-	_packet.append((uint16_t)etherType);
-	_packet.append(payload,len);
+	_packetNoCom.setSource(self);
+	_packetNoCom.setVerb(Packet::VERB_MULTICAST_FRAME);
+	_packetNoCom.append((uint64_t)nwid);
+	_packetNoCom.append(flags);
+	if (gatherLimit) _packetNoCom.append((uint32_t)gatherLimit);
+	if (src) src.appendTo(_packetNoCom);
+	dest.mac().appendTo(_packetNoCom);
+	_packetNoCom.append((uint32_t)dest.adi());
+	_packetNoCom.append((uint16_t)etherType);
+	_packetNoCom.append(payload,len);
+	_packetNoCom.compress();
 
-	_packet.compress();
+	if (com) {
+		_haveCom = true;
+		flags |= 0x01;
+
+		_packetWithCom.setSource(self);
+		_packetWithCom.setVerb(Packet::VERB_MULTICAST_FRAME);
+		_packetWithCom.append((uint64_t)nwid);
+		_packetWithCom.append(flags);
+		com->serialize(_packetWithCom);
+		if (gatherLimit) _packetWithCom.append((uint32_t)gatherLimit);
+		if (src) src.appendTo(_packetWithCom);
+		dest.mac().appendTo(_packetWithCom);
+		_packetWithCom.append((uint32_t)dest.adi());
+		_packetWithCom.append((uint16_t)etherType);
+		_packetWithCom.append(payload,len);
+		_packetWithCom.compress();
+	} else _haveCom = false;
 }
 
-void OutboundMulticast::sendOnly(Switch &sw,const Address &toAddr)
+void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
 {
-	sw.send(Packet(_packet,toAddr),true);
+	if (_haveCom) {
+		SharedPtr<Network> network(RR->nc->network(_nwid));
+		if (network->peerNeedsOurMembershipCertificate(toAddr,Utils::now())) {
+			_packetWithCom.newInitializationVector();
+			_packetWithCom.setDestination(toAddr);
+			RR->sw->send(_packetWithCom,true);
+			return;
+		}
+	}
+	_packetNoCom.newInitializationVector();
+	_packetNoCom.setDestination(toAddr);
+	RR->sw->send(_packetNoCom,true);
 }
 
 } // namespace ZeroTier

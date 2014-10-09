@@ -268,15 +268,15 @@
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC + 6)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI + 4)
 
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ORIGIN + 5)
+// Note: COM, GATHER_LIMIT, and SOURCE_MAC are optional, and so are specified without size
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + 4)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
 
 #define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
@@ -302,7 +302,7 @@
 #define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC + 6)
 #define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_GATHER_RESULTS (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_PAYLOAD (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS + 1)
 
 // ---------------------------------------------------------------------------
 
@@ -769,48 +769,43 @@ public:
 		VERB_MULTICAST_GATHER = 13,
 
 		/* Multicast frame:
-		 *   <[5] ZT address of original source of multicast frame>
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
-		 *   <[4] 32-bit (suggested) gather limit or 0 for no implicit gathering>
-		 *  [<[...] network certificate of membership if included>]
-		 *   <[4] 32-bit multicast ADI (note that this is out of order here -- it precedes MAC)>
-		 *   <[6] destination MAC or all zero for destination node>
-		 *   <[6] source MAC or all zero for node of origin>
+		 *  [<[...] network certificate of membership>]
+		 *  [<[4] 32-bit implicit gather limit>]
+		 *  [<[6] source MAC>]
+		 *   <[6] destination MAC (multicast address)>
+		 *   <[4] 32-bit multicast ADI (multicast address extension)>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
 		 *
 		 * Flags:
 		 *   0x01 - Network certificate of membership is attached
+		 *   0x02 - Implicit gather limit field is present
+		 *   0x04 - Source MAC is specified -- otherwise it's computed from sender
 		 *
-		 * This is similar to EXT_FRAME but carries a multicast, and is sent
-		 * out to recipients on a multicast list. It may also specify a desired
-		 * number of multicast peers to gather if additional multicast peers
-		 * for this group are desired.
-		 *
-		 * (ADI precedes MAC here so that everything from destination MAC forward
-		 * could be treated as a raw Ethernet frame.)
-		 *
-		 * OK responses are optional and are currently only returned if gathering
-		 * of additional multicast peers is requested.
+		 * OK and ERROR responses are optional. OK may be generated if there are
+		 * implicit gather results or if the recipient wants to send its own
+		 * updated certificate of network membership to the sender. ERROR may be
+		 * generated if a certificate is needed or if multicasts to this group
+		 * are no longer wanted (multicast unsubscribe).
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] MAC address of multicast group>
 		 *   <[4] 32-bit ADI for multicast group>
 		 *   <[1] flags>
+		 *  [<[...] network certficate of membership>]
 		 *  [<[...] implicit gather results if flag 0x01 is set>]
 		 *
-		 * Flags:
-		 *   0x01 - OK include implicit gather results
+		 * OK flags (same bits as request flags):
+		 *   0x01 - OK includes certificate of network membership
+		 *   0x02 - OK includes implicit gather results
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
-		 *
-		 * ERRORs are optional and can be generated if a certificate is needed or if
-		 * multicasts for this multicast group are no longer wanted.
 		 */
 		VERB_MULTICAST_FRAME = 14
 	};

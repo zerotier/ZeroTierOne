@@ -41,8 +41,8 @@
 
 namespace ZeroTier {
 
-class Switch;
 class CertificateOfMembership;
+class RuntimeEnvironment;
 
 /**
  * An outbound multicast packet
@@ -65,10 +65,10 @@ public:
 	 * @param timestamp Creation time
 	 * @param self My ZeroTier address
 	 * @param nwid Network ID
-	 * @param com Certificate of membership to attach or NULL to omit
+	 * @param com Certificate of membership or NULL if none available
 	 * @param limit Multicast limit for desired number of packets to send
 	 * @param gatherLimit Number to lazily/implicitly gather with this frame or 0 for none
-	 * @param src Source MAC address of frame
+	 * @param src Source MAC address of frame or NULL to imply compute from sender ZT address
 	 * @param dest Destination multicast group (MAC + ADI)
 	 * @param etherType 16-bit Ethernet type ID
 	 * @param payload Data
@@ -107,49 +107,48 @@ public:
 	/**
 	 * Just send without checking log
 	 *
-	 * @param sw Switch instance to send packets
+	 * @param RR Runtime environment
 	 * @param toAddr Destination address
 	 */
-	void sendOnly(Switch &sw,const Address &toAddr);
+	void sendOnly(const RuntimeEnvironment *RR,const Address &toAddr);
 
 	/**
 	 * Just send and log but do not check sent log
 	 *
-	 * @param sw Switch instance to send packets
+	 * @param RR Runtime environment
 	 * @param toAddr Destination address
 	 */
-	inline void sendAndLog(Switch &sw,const Address &toAddr)
+	inline void sendAndLog(const RuntimeEnvironment *RR,const Address &toAddr)
 	{
 		_alreadySentTo.push_back(toAddr);
-		sendOnly(sw,toAddr);
+		sendOnly(RR,toAddr);
 	}
 
 	/**
 	 * Try to send this to a given peer if it hasn't been sent to them already
 	 *
-	 * @param sw Switch instance to send packets
+	 * @param RR Runtime environment
 	 * @param toAddr Destination address
 	 * @return True if address is new and packet was sent to switch, false if duplicate
 	 */
-	inline bool sendIfNew(Switch &sw,const Address &toAddr)
+	inline bool sendIfNew(const RuntimeEnvironment *RR,const Address &toAddr)
 	{
 		for(std::vector<Address>::iterator a(_alreadySentTo.begin());a!=_alreadySentTo.end();++a) {
 			if (*a == toAddr)
 				return false;
 		}
-		sendAndLog(sw,toAddr);
+		sendAndLog(RR,toAddr);
 		return true;
 	}
 
 private:
 	uint64_t _timestamp;
 	uint64_t _nwid;
-	MAC _source;
-	MulticastGroup _destination;
 	unsigned int _limit;
-	unsigned int _etherType;
-	Packet _packet; // packet contains basic structure of MULTICAST_FRAME and payload, is re-used with new IV and addressing each time
+	Packet _packetNoCom;
+	Packet _packetWithCom;
 	std::vector<Address> _alreadySentTo;
+	bool _haveCom;
 };
 
 } // namespace ZeroTier

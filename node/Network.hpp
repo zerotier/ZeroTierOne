@@ -215,18 +215,19 @@ public:
 	void addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept);
 
 	/**
-	 * Push our membership certificate to a peer
+	 * Check if we should push membership certificate to a peer, and update last pushed
 	 *
-	 * @param peer Destination peer address
-	 * @param force If true, push even if we've already done so within required time frame
+	 * If we haven't pushed a cert to this peer in a long enough time, this returns
+	 * true and updates the last pushed time. Otherwise it returns false.
+	 *
+	 * This doesn't actually send anything, since COMs can hitch a ride with several
+	 * different kinds of packets.
+	 *
+	 * @param to Destination peer
 	 * @param now Current time
+	 * @return True if we should include a COM with whatever we're currently sending
 	 */
-	inline void pushMembershipCertificate(const Address &peer,bool force,uint64_t now)
-	{
-		Mutex::Lock _l(_lock);
-		if ((_config)&&(!_config->isPublic())&&(_config->com()))
-			_pushMembershipCertificate(peer,force,now);
-	}
+	bool peerNeedsOurMembershipCertificate(const Address &to,uint64_t now);
 
 	/**
 	 * @param peer Peer address to check
@@ -445,7 +446,6 @@ public:
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
-	void _pushMembershipCertificate(const Address &peer,bool force,uint64_t now);
 	void _restoreState();
 	void _dumpMembershipCerts();
 

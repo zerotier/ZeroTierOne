@@ -170,11 +170,16 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
-			// TODO: we can refactor this to push certificates with EXT_FRAME
-			network->pushMembershipCertificate(toZT,false,Utils::now());
+			if (network->peerNeedsOurMembershipCertificate(toZT,Utils::now())) {
+				// TODO: once there are no more <1.0.0 nodes around, we can
+				// bundle this with EXT_FRAME instead of sending two packets.
+				Packet outp(toZT,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+				nconf->com().serialize(outp);
+				send(outp,true);
+			}
 
 			if (fromBridged) {
-				// Must use EXT_FRAME if source is not myself
+				// EXT_FRAME is used for bridging or if we want to include a COM
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 				outp.append(network->id());
 				outp.append((unsigned char)0);
@@ -185,7 +190,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				outp.compress();
 				send(outp,true);
 			} else {
-				// VERB_FRAME is really just lighter weight EXT_FRAME, can use for direct-to-direct (before bridging this was the only unicast method)
+				// FRAME is a shorter version that can be used when there's no bridging and no COM
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 				outp.append(network->id());
 				outp.append((uint16_t)etherType);
