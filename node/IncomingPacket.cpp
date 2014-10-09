@@ -584,16 +584,18 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 			std::vector<Address> legacyPeers(RR->mc->getLegacySubscribers(nwid,dest));
 
 			setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xffff);
+			setSource(RR->identity.address());
+			compress();
 
 			for(std::vector<Address>::iterator lp(legacyPeers.begin());lp!=legacyPeers.end();++lp) {
 				if ((*lp != origin)&&(*lp != source())) {
 					newInitializationVector();
 					setDestination(*lp);
-					setSource(RR->identity.address());
-					compress();
 					RR->sw->send(*this,true);
 				}
 			}
+
+			return true;
 		} else {
 			SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
 			if (network) {
