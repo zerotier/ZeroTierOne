@@ -58,6 +58,7 @@ void OutboundMulticast::init(
 	if (gatherLimit) flags |= 0x02;
 	if (src) flags |= 0x04;
 
+	/*
 	TRACE(">>MC %.16llx INIT %.16llx/%s limit %u gatherLimit %u from %s to %s length %u com==%d",
 		(unsigned long long)this,
 		nwid,
@@ -68,6 +69,7 @@ void OutboundMulticast::init(
 		dest.toString().c_str(),
 		len,
 		(com) ? 1 : 0);
+	*/
 
 	_packetNoCom.setSource(RR->identity.address());
 	_packetNoCom.setVerb(Packet::VERB_MULTICAST_FRAME);
@@ -107,12 +109,12 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toA
 		if (network->peerNeedsOurMembershipCertificate(toAddr,Utils::now())) {
 			_packetWithCom.newInitializationVector();
 			_packetWithCom.setDestination(toAddr);
-			TRACE(">>MC %.16llx -> %s (with COM)",(unsigned long long)this,toAddr.toString().c_str());
+			//TRACE(">>MC %.16llx -> %s (with COM)",(unsigned long long)this,toAddr.toString().c_str());
 			RR->sw->send(_packetWithCom,true);
 			return;
 		}
 	}
-	TRACE(">>MC %.16llx -> %s (without COM)",(unsigned long long)this,toAddr.toString().c_str());
+	//TRACE(">>MC %.16llx -> %s (without COM)",(unsigned long long)this,toAddr.toString().c_str());
 	_packetNoCom.newInitializationVector();
 	_packetNoCom.setDestination(toAddr);
 	RR->sw->send(_packetNoCom,true);

@@ -79,7 +79,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
 				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
 				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
-				//case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
+				case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);

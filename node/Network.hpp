@@ -164,6 +164,16 @@ public:
 	}
 
 	/**
+	 * @param mg Multicast group
+	 * @return True if this network endpoint / peer is a member
+	 */
+	bool subscribedToMulticastGroup(const MulticastGroup &mg) const
+	{
+		Mutex::Lock _l(_lock);
+		return (_myMulticastGroups.find(mg) != _myMulticastGroups.end());
+	}
+
+	/**
 	 * Apply a NetworkConfig to this network
 	 *
 	 * @param conf Configuration in NetworkConfig form
