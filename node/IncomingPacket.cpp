@@ -1094,7 +1094,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 
 			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,payloadLen);
 
-			if ((payloadLen > 0)&&(payloadLen < ZT_IF_MTU)) {
+			if ((payloadLen > 0)&&(payloadLen <= ZT_IF_MTU)) {
 				if (!to.mac().isMulticast()) {
 					TRACE("dropped MULTICAST_FRAME from %s@%s(%s) to %s: destination is unicast, must use FRAME or EXT_FRAME",from.toString().c_str(),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),to.toString().c_str());
 					return true;
