@@ -33,9 +33,8 @@
 namespace ZeroTier {
 
 // This is fast enough for things like Apple's mDNS spam, so it should serve
-// as a good default for your average network. It's 64 bytes per second, with
-// a starting and max balance of 64k.
-const NetworkConfig::MulticastRate NetworkConfig::DEFAULT_MULTICAST_RATE(32768,32768,64);
+// as a good default for your average network.
+const NetworkConfig::MulticastRate NetworkConfig::DEFAULT_MULTICAST_RATE(40000,60000,80);
 
 SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &self)
 {

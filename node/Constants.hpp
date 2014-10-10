@@ -258,7 +258,7 @@
 /**
  * Default maximum number of peers to address with a single multicast (if unspecified in network)
  */
-#define ZT_MULTICAST_DEFAULT_LIMIT 128
+#define ZT_MULTICAST_DEFAULT_LIMIT 64
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping

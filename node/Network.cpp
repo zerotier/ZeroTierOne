@@ -123,7 +123,7 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (_network->controller() == p->address()) || (t.isSupernode(p->address())) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (t.isSupernode(p->address())) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			std::set<MulticastGroup> mgs(_network->multicastGroups());
