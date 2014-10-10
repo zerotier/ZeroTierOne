@@ -70,9 +70,7 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - M v6AssignMode :: 'none' (or null/empty/etc.), 'zt', 'v6native', 'dhcp6'
 - M v6AssignPool :: network/bits from which to assign IPs
 - M allowPassiveBridging :: if true, allow passive bridging
-- M multicastAlgorithm :: currently only 'p5' is valid, or empty/missing for default
-- M p5MulticastPrefixBits :: P5 multicast algorithm: prefix bits, 1-8 or 0 for default
-- M p5MulticastDepth :: P5 multicast algorithm: depth (TTL) in or 0 for default
+- M multicastLimit :: maximum number of recipients to receive a multicast on this network
 - M multicastRates :: packed JSON containing multicast rates (see below)
 - M subscriptions :: comma-delimited list of subscriptions for this network
 - M ui :: arbitrary field that can be used by the UI to store stuff

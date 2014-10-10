@@ -610,11 +610,14 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 			setSource(RR->identity.address());
 			compress();
 
+			unsigned int count = 0;
 			for(std::vector<Address>::iterator lp(legacyPeers.begin());lp!=legacyPeers.end();++lp) {
 				if ((*lp != origin)&&(*lp != source())) {
 					newInitializationVector();
 					setDestination(*lp);
 					RR->sw->send(*this,true);
+					if (++count >= 128) // harded-coded sanity limit for these legacy nodes
+						break;
 				}
 			}
 

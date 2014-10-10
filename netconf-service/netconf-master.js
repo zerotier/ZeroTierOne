@@ -32,8 +32,7 @@ var ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES = "et";
 var ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID = "nwid";
 var ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP = "ts";
 var ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO = "id";
-var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS = "mpb";
-var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH = "md";
+var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT = "ml";
 var ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES = "mr";
 var ZT_NETWORKCONFIG_DICT_KEY_PRIVATE = "p";
 var ZT_NETWORKCONFIG_DICT_KEY_NAME = "n";
@@ -532,10 +531,8 @@ function doNetconfRequest(message)
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = nwid;
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = Date.now().toString(16);
 					netconf.data[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = peerId.address();
-					if (network['p5MulticastPrefixBits'])
-						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_PREFIX_BITS] = network['p5MulticastPrefixBits'];
-					if (network['p5MulticastDepth'])
-						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_DEPTH] = network['p5MulticastDepth'];
+					if (network['multicastLimit'])
+						netconf.data[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = network['multicastLimit'];
 					if (network['multicastRates']) {
 						var ratesD = new Dictionary();
 						var ratesJ = JSON.parse(network['multicastRates']);
