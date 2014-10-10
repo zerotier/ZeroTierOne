@@ -33,12 +33,13 @@
 #include "Network.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Utils.hpp"
+#include "Logger.hpp"
 
 namespace ZeroTier {
 
 void OutboundMulticast::init(
+	const RuntimeEnvironment *RR,
 	uint64_t timestamp,
-	const Address &self,
 	uint64_t nwid,
 	const CertificateOfMembership *com,
 	unsigned int limit,
@@ -57,7 +58,18 @@ void OutboundMulticast::init(
 	if (gatherLimit) flags |= 0x02;
 	if (src) flags |= 0x04;
 
-	_packetNoCom.setSource(self);
+	TRACE(">>MC %.16llx INIT %.16llx/%s limit %u gatherLimit %u from %s to %s length %u com==%d",
+		(unsigned long long)this,
+		nwid,
+		dest.toString().c_str(),
+		limit,
+		gatherLimit,
+		(src) ? src.toString().c_str() : MAC(RR->identity.address(),nwid).toString().c_str(),
+		dest.toString().c_str(),
+		len,
+		(com) ? 1 : 0);
+
+	_packetNoCom.setSource(RR->identity.address());
 	_packetNoCom.setVerb(Packet::VERB_MULTICAST_FRAME);
 	_packetNoCom.append((uint64_t)nwid);
 	_packetNoCom.append(flags);
@@ -73,7 +85,7 @@ void OutboundMulticast::init(
 		_haveCom = true;
 		flags |= 0x01;
 
-		_packetWithCom.setSource(self);
+		_packetWithCom.setSource(RR->identity.address());
 		_packetWithCom.setVerb(Packet::VERB_MULTICAST_FRAME);
 		_packetWithCom.append((uint64_t)nwid);
 		_packetWithCom.append(flags);
@@ -95,10 +107,12 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toA
 		if (network->peerNeedsOurMembershipCertificate(toAddr,Utils::now())) {
 			_packetWithCom.newInitializationVector();
 			_packetWithCom.setDestination(toAddr);
+			TRACE(">>MC %.16llx -> %s (with COM)",(unsigned long long)this,toAddr.toString().c_str());
 			RR->sw->send(_packetWithCom,true);
 			return;
 		}
 	}
+	TRACE(">>MC %.16llx -> %s (without COM)",(unsigned long long)this,toAddr.toString().c_str());
 	_packetNoCom.newInitializationVector();
 	_packetNoCom.setDestination(toAddr);
 	RR->sw->send(_packetNoCom,true);

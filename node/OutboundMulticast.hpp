@@ -62,8 +62,8 @@ public:
 	/**
 	 * Initialize outbound multicast
 	 *
+	 * @param RR Runtime environment
 	 * @param timestamp Creation time
-	 * @param self My ZeroTier address
 	 * @param nwid Network ID
 	 * @param com Certificate of membership or NULL if none available
 	 * @param limit Multicast limit for desired number of packets to send
@@ -76,8 +76,8 @@ public:
 	 * @throws std::out_of_range Data too large to fit in a MULTICAST_FRAME
 	 */
 	void init(
+		const RuntimeEnvironment *RR,
 		uint64_t timestamp,
-		const Address &self,
 		uint64_t nwid,
 		const CertificateOfMembership *com,
 		unsigned int limit,

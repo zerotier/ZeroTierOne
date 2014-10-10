@@ -28,6 +28,7 @@
 #include <algorithm>
 
 #include "Constants.hpp"
+#include "RuntimeEnvironment.hpp"
 #include "SharedPtr.hpp"
 #include "Multicaster.hpp"
 #include "Topology.hpp"
@@ -37,7 +38,7 @@
 #include "CMWC4096.hpp"
 #include "C25519.hpp"
 #include "CertificateOfMembership.hpp"
-#include "RuntimeEnvironment.hpp"
+#include "Logger.hpp"
 
 namespace ZeroTier {
 
@@ -62,23 +63,23 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 	if ((gs == _groups.end())||(gs->second.members.empty())) {
 		appendTo.append((uint32_t)0);
 		appendTo.append((uint16_t)0);
+		//TRACE("..MC Multicaster::gather() attached 0 of 0 peers for %.16llx/%s (1)",nwid,mg.toString().c_str());
 		return 0;
 	}
 
 	if (limit > gs->second.members.size())
 		limit = (unsigned int)gs->second.members.size();
-	if (limit > ((ZT_PROTO_MAX_PACKET_LENGTH / 5) + 1))
-		limit = (ZT_PROTO_MAX_PACKET_LENGTH / 5) + 1;
+	if (limit > ((ZT_PROTO_MAX_PACKET_LENGTH / ZT_ADDRESS_LENGTH) + 1))
+		limit = (ZT_PROTO_MAX_PACKET_LENGTH / ZT_ADDRESS_LENGTH) + 1;
 
 	unsigned int totalAt = appendTo.size();
 	appendTo.addSize(4); // sizeof(uint32_t)
 	unsigned int nAt = appendTo.size();
 	appendTo.addSize(2); // sizeof(uint16_t)
 
+	// Members are returned in random order so that repeated gather queries
+	// will return different subsets of a large multicast group.
 	while ((n < limit)&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_PROTO_MAX_PACKET_LENGTH)) {
-		// Pick a member at random -- if we've already picked it,
-		// keep circling the buffer until we find one we haven't.
-		// This won't loop forever since limit <= members.size().
 		rptr = (unsigned int)RR->prng->next32();
 restart_member_scan:
 		a = gs->second.members[rptr % (unsigned int)gs->second.members.size()].address.toInt();
@@ -105,8 +106,12 @@ restart_member_scan:
 		}
 	}
 
+	n -= skipped;
+
 	appendTo.setAt(totalAt,(uint32_t)(gs->second.members.size() - skipped));
-	appendTo.setAt(nAt,(uint16_t)(n - skipped));
+	appendTo.setAt(nAt,(uint16_t)n);
+
+	//TRACE("..MC Multicaster::gather() attached %u of %u peers for %.16llx/%s (2)",n,(unsigned int)(gs->second.members.size() - skipped),nwid,mg.toString().c_str());
 
 	return n;
 }
@@ -151,8 +156,8 @@ void Multicaster::send(
 		OutboundMulticast out;
 
 		out.init(
+			RR,
 			now,
-			RR->identity.address(),
 			nwid,
 			com,
 			limit,
@@ -196,6 +201,8 @@ void Multicaster::send(
 			gs.lastExplicitGather = now;
 			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 			if (sn) {
+				TRACE(">>MC GATHER up to %u in %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
+
 				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 				outp.append(nwid);
 				outp.append((uint8_t)0);
@@ -216,8 +223,8 @@ void Multicaster::send(
 		OutboundMulticast &out = gs.txQueue.back();
 
 		out.init(
+			RR,
 			now,
-			RR->identity.address(),
 			nwid,
 			com,
 			limit,
@@ -351,7 +358,7 @@ void Multicaster::clean(uint64_t now)
 	}
 }
 
-void Multicaster::_add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
+void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member)
 {
 	// assumes _groups_m is locked
 
@@ -375,6 +382,8 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const
 	// be resorted on next clean(). In the future we might want to insert
 	// this somewhere else but we'll try this for now.
 	gs.members.push_back(MulticastGroupMember(member,learnedFrom,now));
+
+	TRACE("..MC %s joined multicast group %.16llx/%s via %s",member.toString().c_str(),nwid,mg.toString().c_str(),((learnedFrom) ? learnedFrom.toString().c_str() : "(direct)"));
 
 	// Try to send to any outgoing multicasts that are waiting for more recipients
 	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {

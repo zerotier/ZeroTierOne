@@ -736,10 +736,14 @@ public:
 
 		/* Request endpoints for multicast distribution:
 		 *   <[8] 64-bit network ID>
-		 *   <[1] flags (unused, must be 0)>
+		 *   <[1] flags>
 		 *   <[6] MAC address of multicast group being queried>
 		 *   <[4] 32-bit ADI for multicast group being queried>
-		 *   <[4] 32-bit (suggested) max number of multicast peers desired or 0 for no limit>
+		 *   <[4] 32-bit requested max number of multicast peers>
+		 *  [<[...] network certificate of membership>]
+		 *
+		 * Flags:
+		 *   0x01 - Network certificate of membership is attached
 		 *
 		 * This message asks a peer for additional known endpoints that have
 		 * LIKEd a given multicast group. It's sent when the sender wishes

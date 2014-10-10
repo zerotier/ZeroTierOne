@@ -79,7 +79,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
 				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
 				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
-				case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
+				//case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
@@ -332,6 +332,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			case Packet::VERB_MULTICAST_GATHER: {
 				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
 				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
+				TRACE("%s(%s): OK(MULTICAST_GATHER) %.16llx/%s length %u",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),size());
 				_parseGatherResults(RR,peer,nwid,mg,ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS);
 			}	break;
 
@@ -339,6 +340,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS];
 				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
 				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
+
+				TRACE("%s(%s): OK(MULTICAST_FRAME) %.16llx/%s flags %.2x",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),flags);
 
 				unsigned int offset = 0;
 
@@ -568,7 +571,7 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 	 * though since there aren't likely to be many older nodes left after
 	 * we do a software update. */
 
-	// Quick and dirty -- this is all condemned code in any case
+	// Quick and dirty dedup -- this is all condemned code in any case
 	static uint64_t p5MulticastDedupBuffer[1024];
 	static unsigned long p5MulticastDedupBufferPtr = 0;
 	static Mutex p5MulticastDedupBuffer_m;
@@ -904,12 +907,11 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		Address src(source());
 		uint64_t now = Utils::now();
 
 		// Iterate through 18-byte network,MAC,ADI tuples
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18)
-			RR->mc->add(now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),Address(),src);
+			RR->mc->add(now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),Address(),peer->address());
 
 		peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,now);
 	} catch (std::exception &ex) {
@@ -1022,8 +1024,10 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 		MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
 		unsigned int gatherLimit = at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
 
+		//TRACE("<<MC %s(%s) GATHER up to %u in %.16llx/%s",source().toString().c_str(),_remoteAddress.toString().c_str(),gatherLimit,nwid,mg.toString().c_str());
+
 		if (gatherLimit) {
-			Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 			outp.append((unsigned char)Packet::VERB_MULTICAST_GATHER);
 			outp.append(packetId());
 			outp.append(nwid);
@@ -1081,12 +1085,14 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				from.setTo(field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC,6),6);
 				offset += 6;
 			} else {
-				from.fromAddress(source(),nwid);
+				from.fromAddress(peer->address(),nwid);
 			}
 
 			MulticastGroup to(MAC(field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC,6),6),at<uint32_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI));
 			unsigned int etherType = at<uint16_t>(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE);
 			unsigned int payloadLen = size() - (offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME);
+
+			//TRACE("<<MC FRAME %.16llx/%s from %s@%s flags %.2x length %u",nwid,to.toString().c_str(),from.toString().c_str(),peer->address().toString().c_str(),flags,payloadLen);
 
 			if ((payloadLen > 0)&&(payloadLen < ZT_IF_MTU)) {
 				if (!to.mac().isMulticast()) {
@@ -1107,7 +1113,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 					}
 				}
 
-				network->tapPut(from,to.mac(),etherType,field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),offset);
+				network->tapPut(from,to.mac(),etherType,field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,payloadLen),payloadLen);
 			}
 
 			if (gatherLimit) {

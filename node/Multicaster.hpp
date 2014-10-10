@@ -96,7 +96,7 @@ public:
 	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(now,nwid,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
+		_add(now,nwid,mg,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
 	}
 
 	/**
@@ -164,7 +164,7 @@ public:
 	void clean(uint64_t now);
 
 private:
-	void _add(uint64_t now,uint64_t nwid,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
+	void _add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
 
 	const RuntimeEnvironment *RR;
 	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus > _groups;

@@ -157,7 +157,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			network->id(),
 			nconf->activeBridges(),
 			mg,
-			from,
+			(fromBridged) ? from : MAC(),
 			etherType,
 			data.data(),
 			data.size());
