@@ -11,13 +11,13 @@ var INIT_DATA = {
 	 * 24-bit network ID. This will create the full 16-digit network ID of the
 	 * network you will join. This must be in the object name and in the "id"
 	 * field within the object itself. */
-	"zt1:network:d40e9d860d111111:~": {
-		"id": "d40e9d860d111111",           // netconf master ZT address + 24-bit ID
+	"zt1:network:31443a1a0a111111:~": {
+		"id": "31443a1a0a111111",           // netconf master ZT address + 24-bit ID
 		"name": "zerotier-testnet",         // short name, no spaces or special chars
 		"desc": "Test Network",             // description
 		"infrastructure": 0,                // unused by netconf-master
 		"private": 0,                       // set to '1' to require member approval
-		"creationTime": 0,                  // unuxed by netconf-master
+		"creationTime": 0,                  // unused by netconf-master
 		"owner": "",                        // unused by netconf-master
 		"etherTypes": "0800,0806",          // hex ethernet frame types allowed
 		"enableBroadcast": 1,               // set to '1' to enable ff:ff:ff:ff:ff:ff
