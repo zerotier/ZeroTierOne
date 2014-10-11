@@ -118,21 +118,18 @@ restart_member_scan:
 	return added;
 }
 
-std::vector<Address> Multicaster::getLegacySubscribers(uint64_t nwid,const MulticastGroup &mg) const
+std::vector<Address> Multicaster::getMembers(uint64_t nwid,const MulticastGroup &mg,unsigned int limit) const
 {
 	std::vector<Address> ls;
 	Mutex::Lock _l(_groups_m);
-
 	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::const_iterator gs(_groups.find(std::pair<uint64_t,MulticastGroup>(nwid,mg)));
 	if (gs == _groups.end())
 		return ls;
-
-	for(std::vector<MulticastGroupMember>::const_iterator m(gs->second.members.begin());m!=gs->second.members.end();++m) {
-		SharedPtr<Peer> p(RR->topology->getPeer(m->address));
-		if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
-			ls.push_back(m->address);
+	for(std::vector<MulticastGroupMember>::const_reverse_iterator m(gs->second.members.rbegin());m!=gs->second.members.rend();++m) {
+		ls.push_back(m->address);
+		if (ls.size() >= limit)
+			break;
 	}
-
 	return ls;
 }
 
@@ -281,7 +278,9 @@ void Multicaster::send(
 			outp.append((unsigned char)0);
 			RR->identity.address().appendTo(outp);
 			outp.append((const void *)&rn,3); // random multicast ID
-			src.appendTo(outp);
+			if (src)
+				src.appendTo(outp);
+			else MAC(RR->identity.address(),nwid).appendTo(outp);
 			mg.mac().appendTo(outp);
 			outp.append((uint32_t)mg.adi());
 			outp.append((uint16_t)etherType);

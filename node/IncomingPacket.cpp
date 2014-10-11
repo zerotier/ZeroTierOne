@@ -604,52 +604,54 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 		peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_P5_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
 
 		if (RR->topology->amSupernode()) {
-			std::vector<Address> legacyPeers(RR->mc->getLegacySubscribers(nwid,dest));
+			// To support legacy peers, old fashioned "P5" multicasts are propagated manually by supernodes.
+			// If the sending peer is >=1.0.0, they only go to legacy peers. Otherwise they go to all
+			// peers.
+
+			const unsigned int limit = 128; // use a fairly generous limit since we want legacy peers to always work until they go away
+			const bool senderIsLegacy = (peer->remoteVersionMajor() < 1);
+
+			std::vector<Address> members(RR->mc->getMembers(nwid,dest,limit));
 
 			setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xffff);
 			setSource(RR->identity.address());
 			compress();
-
-			unsigned int count = 0;
-			for(std::vector<Address>::iterator lp(legacyPeers.begin());lp!=legacyPeers.end();++lp) {
-				if ((*lp != origin)&&(*lp != source())) {
+			for(std::vector<Address>::iterator lp(members.begin());lp!=members.end();++lp) {
+				SharedPtr<Peer> lpp(RR->topology->getPeer(*lp));
+				if ( (*lp != origin) && (*lp != peer->address()) && ((senderIsLegacy) || (!lpp) || (lpp->remoteVersionMajor() < 1)) ) {
 					newInitializationVector();
 					setDestination(*lp);
 					RR->sw->send(*this,true);
-					if (++count >= 128) // harded-coded sanity limit for these legacy nodes
-						break;
 				}
 			}
+		}
 
-			return true;
-		} else {
-			SharedPtr<Network> network(RR->nc->network(nwid)); // will be NULL if not a member
-			if (network) {
-				if ((flags & ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE)) {
-					CertificateOfMembership com;
-					com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2 + signatureLen);
-					if (com.hasRequiredFields())
-						network->addMembershipCertificate(com,false);
-				}
+		SharedPtr<Network> network(RR->nc->network(nwid));
+		if (network) {
+			if ((flags & ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE)) {
+				CertificateOfMembership com;
+				com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME + frameLen + 2 + signatureLen);
+				if (com.hasRequiredFields())
+					network->addMembershipCertificate(com,false);
+			}
 
-				if (!network->isAllowed(origin)) {
-					_sendErrorNeedCertificate(RR,peer,network->id());
+			if (!network->isAllowed(origin)) {
+				_sendErrorNeedCertificate(RR,peer,network->id());
+				return true;
+			}
+
+			if ((frameLen > 0)&&(frameLen <= 2800)) {
+				if (!dest.mac().isMulticast())
 					return true;
+				if ((!sourceMac)||(sourceMac.isMulticast())||(sourceMac == network->mac()))
+					return true;
+				if (sourceMac != MAC(origin,network->id())) {
+					if (network->permitsBridging(origin)) {
+						network->learnBridgeRoute(sourceMac,origin);
+					} else return true;
 				}
 
-				if (frameLen) {
-					if (!dest.mac().isMulticast())
-						return true;
-					if ((!sourceMac)||(sourceMac.isMulticast())||(sourceMac == network->mac()))
-						return true;
-					if (sourceMac != MAC(origin,network->id())) {
-						if (network->permitsBridging(origin)) {
-							network->learnBridgeRoute(sourceMac,origin);
-						} else return true;
-					}
-
-					network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
-				}
+				network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
 			}
 		}
 	} catch (std::exception &ex) {

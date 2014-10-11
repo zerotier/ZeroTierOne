@@ -120,14 +120,12 @@ public:
 	unsigned int gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
 
 	/**
-	 * Get known peers with versions <1.0.0 and that are not supernodes
-	 *
-	 * This is legacy peer compatibility code and will be removed later.
+	 * Get subscribers to a multicast group
 	 *
 	 * @param nwid Network ID
 	 * @param mg Multicast group
 	 */
-	std::vector<Address> getLegacySubscribers(uint64_t nwid,const MulticastGroup &mg) const;
+	std::vector<Address> getMembers(uint64_t nwid,const MulticastGroup &mg,unsigned int limit) const;
 
 	/**
 	 * Send a multicast
@@ -138,7 +136,7 @@ public:
 	 * @param nwid Network ID
 	 * @param alwaysSendTo Send to these peers first and even if not included in subscriber list
 	 * @param mg Multicast group
-	 * @param src Source Ethernet MAC address
+	 * @param src Source Ethernet MAC address or NULL to skip in packet and compute from ZT address (non-bridged mode)
 	 * @param etherType Ethernet frame type
 	 * @param data Packet data
 	 * @param len Length of packet data
