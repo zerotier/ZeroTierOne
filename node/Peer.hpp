@@ -50,7 +50,7 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_SERIALIZATION_VERSION 12
+#define ZT_PEER_SERIALIZATION_VERSION 13
 
 namespace ZeroTier {
 
@@ -247,7 +247,7 @@ public:
 	/**
 	 * @return Time we last announced state TO this peer, such as multicast LIKEs
 	 */
-	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
+	inline uint64_t lastAnnouncedTo() const throw() { return __lastAnnouncedTo; }
 
 	/**
 	 * @param now Current time
@@ -416,7 +416,6 @@ public:
 		b.append(_lastReceive);
 		b.append(_lastUnicastFrame);
 		b.append(_lastMulticastFrame);
-		b.append(_lastAnnouncedTo);
 		b.append((uint16_t)_vProto);
 		b.append((uint16_t)_vMajor);
 		b.append((uint16_t)_vMinor);
@@ -442,7 +441,7 @@ public:
 		_lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
 		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastAnnouncedTo = b.template at<uint64_t>(p); p += sizeof(uint64_t);
+		__lastAnnouncedTo = 0;
 		_vProto = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
 		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
@@ -470,7 +469,7 @@ private:
 	volatile uint64_t _lastReceive; // direct or indirect
 	volatile uint64_t _lastUnicastFrame;
 	volatile uint64_t _lastMulticastFrame;
-	volatile uint64_t _lastAnnouncedTo;
+	volatile uint64_t __lastAnnouncedTo; // not persisted -- shouldn't be unless Multicaster state is also persisted
 	volatile uint16_t _vProto;
 	volatile uint16_t _vMajor;
 	volatile uint16_t _vMinor;

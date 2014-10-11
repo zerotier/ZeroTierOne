@@ -563,13 +563,9 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 
 bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
-	/* This handles the old deprecated "P5" multicast frame, and will
-	 * go away once there are no longer nodes using this on the network.
-	 * We handle these old nodes by accepting these as simple multicasts
-	 * and if we are a supernode performing individual relaying of them
-	 * to all older nodes that expect them. This won't be too expensive
-	 * though since there aren't likely to be many older nodes left after
-	 * we do a software update. */
+	/* This code is a bit of a hack to handle compatibility with <1.0.0 peers
+	 * and will go away once there's no longer any left (to speak of) on the
+	 * network. */
 
 	// Quick and dirty dedup -- this is all condemned code in any case
 	static uint64_t p5MulticastDedupBuffer[1024];
@@ -577,6 +573,7 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 	static Mutex p5MulticastDedupBuffer_m;
 
 	try {
+		unsigned int depth = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
 		Address origin(Address(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
 		const unsigned int flags = (*this)[ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FLAGS];
 		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_NETWORK_ID);
@@ -608,8 +605,8 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 			// If the sending peer is >=1.0.0, they only go to legacy peers. Otherwise they go to all
 			// peers.
 
+			const bool senderIsLegacy = ((peer->remoteVersionMajor() < 1)||(depth == 0xbeef));
 			const unsigned int limit = 128; // use a fairly generous limit since we want legacy peers to always work until they go away
-			const bool senderIsLegacy = (peer->remoteVersionMajor() < 1);
 
 			std::vector<Address> members(RR->mc->getMembers(nwid,dest,limit));
 
@@ -623,6 +620,21 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 					setDestination(*lp);
 					RR->sw->send(*this,true);
 				}
+			}
+		} else if (!RR->topology->isSupernode(peer->address())) {
+			// If we received this from a non-supernode, this must be a legacy peer. In that
+			// case relay it up to our supernode so it can get broadcast since there are now
+			// going to be too few legacy peers to form a mesh for the old style of propagation.
+
+			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			if (sn) {
+				setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xbeef); // magic number means "relayed on behalf of legacy peer"
+				newInitializationVector();
+				setDestination(sn->address());
+				setSource(RR->identity.address());
+				compress();
+				armor(sn->key(),true);
+				sn->send(RR,data(),size(),Utils::now());
 			}
 		}
 
