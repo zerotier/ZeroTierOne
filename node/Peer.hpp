@@ -50,7 +50,8 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-#define ZT_PEER_SERIALIZATION_VERSION 13
+// Comment out to disable peers.persist
+//#define ZT_PEER_SERIALIZATION_VERSION 13
 
 namespace ZeroTier {
 
@@ -404,6 +405,7 @@ public:
 		else return std::pair<InetAddress,InetAddress>();
 	}
 
+#ifdef ZT_PEER_SERIALIZATION_VERSION
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
@@ -456,6 +458,7 @@ public:
 
 		return (p - startAt);
 	}
+#endif // ZT_PEER_SERIALIZATION_VERSION
 
 private:
 	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);

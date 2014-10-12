@@ -24,9 +24,12 @@ DEFS+=-DZT_SALSA20_SSE
 
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
-	CFLAGS=-Wall -g -pthread -DZT_TRACE -DZT_LOG_STDOUT $(INCLUDES) $(DEFS)
+#	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
+	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	STRIP=echo
-	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
+	# The following line enables optimization for the crypto code, since
+	# C25519 in particular is almost UNUSABLE in heavy testing without it.
+ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -ftree-vectorize -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip

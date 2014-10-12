@@ -290,6 +290,7 @@ bool Topology::authenticateRootTopology(const Dictionary &rt)
 
 void Topology::_dumpPeers()
 {
+#ifdef ZT_PEER_SERIALIZATION_VERSION
 	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
 	std::string pdpath(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
 	Mutex::Lock _l(_activePeers_m);
@@ -335,14 +336,18 @@ void Topology::_dumpPeers()
 	}
 
 	fclose(pd);
-	Utils::lockDownFile(pdpath.c_str(),false);
 	buf.burn();
+
+	Utils::lockDownFile(pdpath.c_str(),false);
+#endif // ZT_PEER_SERIALIZATION_VERSION
 }
 
 void Topology::_loadPeers()
 {
-	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
 	std::string pdpath(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
+
+#ifdef ZT_PEER_SERIALIZATION_VERSION
+	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
 	Mutex::Lock _l(_activePeers_m);
 
 	_activePeers.clear();
@@ -374,8 +379,10 @@ void Topology::_loadPeers()
 	}
 
 	fclose(pd);
-	Utils::rm(pdpath);
 	buf.burn();
+#endif // ZT_PEER_SERIALIZATION_VERSION
+
+	Utils::rm(pdpath);
 }
 
 } // namespace ZeroTier
