@@ -138,7 +138,7 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 		if (cmd[0] == "info") {
 			ipcc->printf("200 info %.10llx %s %s"ZT_EOL_S,_node->address(),(_node->online() ? "ONLINE" : "OFFLINE"),Node::versionString());
 		} else if (cmd[0] == "listpeers") {
-			ipcc->printf("200 listpeers <ztaddr> <paths> <latency> <version>"ZT_EOL_S);
+			ipcc->printf("200 listpeers <ztaddr> <paths> <latency> <version> <role>"ZT_EOL_S);
 			ZT1_Node_PeerList *pl = _node->listPeers();
 			if (pl) {
 				for(unsigned int i=0;i<pl->numPeers;++i) {
@@ -175,7 +175,17 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 								(pl->peers[i].paths[j].fixed ? "fixed" : (pl->peers[i].paths[j].active ? "active" : "inactive")));
 						}
 					}
-					ipcc->printf(" %u %s"ZT_EOL_S,pl->peers[i].latency,(pl->peers[i].remoteVersion[0]) ? pl->peers[i].remoteVersion : "-");
+					const char *rolestr;
+					switch(pl->peers[i].role) {
+						case ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
+						case ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
+						case ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
+						default: rolestr = "?"; break;
+					}
+					ipcc->printf(" %u %s %s"ZT_EOL_S,
+						pl->peers[i].latency,
+						((pl->peers[i].remoteVersion[0]) ? pl->peers[i].remoteVersion : "-"),
+						rolestr);
 				}
 				_node->freeQueryResult(pl);
 			}

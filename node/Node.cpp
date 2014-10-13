@@ -847,6 +847,7 @@ ZT1_Node_PeerList *Node::listPeers()
 		p->first->address().toString(prec->address,sizeof(prec->address));
 		prec->rawAddress = p->first->address().toInt();
 		prec->latency = p->first->latency();
+		prec->role = RR->topology->isSupernode(p->first->address()) ? ZT1_Node_Peer_SUPERNODE : ZT1_Node_Peer_NODE;
 
 		prec->paths = (ZT1_Node_PhysicalPath *)buf;
 		buf += sizeof(ZT1_Node_PhysicalPath) * p->second.size();

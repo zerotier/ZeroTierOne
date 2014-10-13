@@ -204,6 +204,15 @@ struct ZT1_Node_Peer
 	unsigned int latency;
 
 	/**
+	 * What trust hierarchy role does this device have?
+	 */
+	enum {
+		ZT1_Node_Peer_SUPERNODE = 0, // planetary supernode
+		ZT1_Node_Peer_HUB = 1,       // locally federated hub (coming soon)
+		ZT1_Node_Peer_NODE = 2       // ordinary node
+	} role;
+
+	/**
 	 * Array of network paths to peer
 	 */
 	struct ZT1_Node_PhysicalPath *paths;
