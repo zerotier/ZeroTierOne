@@ -29,10 +29,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../node/Constants.hpp"
-#include "../node/MAC.hpp"
 #include "NodeControlService.hpp"
 #include "NodeControlClient.hpp"
+
+#include "../node/Constants.hpp"
+#include "../node/MAC.hpp"
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 
@@ -177,9 +178,9 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 					}
 					const char *rolestr;
 					switch(pl->peers[i].role) {
-						case ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
-						case ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
-						case ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
+						case ZT1_Node_Peer::ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
+						case ZT1_Node_Peer::ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
+						case ZT1_Node_Peer::ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
 						default: rolestr = "?"; break;
 					}
 					ipcc->printf(" %u %s %s"ZT_EOL_S,
