@@ -46,17 +46,6 @@ public:
 	virtual ~UdpSocket();
 	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen);
 
-	/**
-	 * Send UDP packet with IP max hops set (<= 0 for default/infinite)
-	 *
-	 * @param to Destination address
-	 * @param msg Message data
-	 * @param msglen Message length
-	 * @param hopLimit IP TTL / max hops
-	 * @return True if packet appears sent
-	 */
-	bool sendWithHopLimit(const InetAddress &to,const void *msg,unsigned int msglen,int hopLimit);
-
 protected:
 #ifdef __WINDOWS__
 	UdpSocket(Type t,SOCKET s) :

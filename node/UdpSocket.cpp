@@ -65,32 +65,19 @@ UdpSocket::~UdpSocket()
 
 bool UdpSocket::send(const InetAddress &to,const void *msg,unsigned int msglen)
 {
-	return sendWithHopLimit(to,msg,msglen,0);
-}
-
-bool UdpSocket::sendWithHopLimit(const InetAddress &to,const void *msg,unsigned int msglen,int hopLimit)
-{
 #ifdef ZT_BREAK_UDP
 	return true;
 #else
-	if (hopLimit <= 0)
-		hopLimit = 255;
 	if (to.isV6()) {
 #ifdef __WINDOWS__
-		DWORD hltmp = (DWORD)hopLimit;
-		setsockopt(_sock,IPPROTO_IPV6,IPV6_UNICAST_HOPS,(const char *)&hltmp,sizeof(hltmp));
 		return ((int)sendto(_sock,(const char *)msg,msglen,0,to.saddr(),to.saddrLen()) == (int)msglen);
 #else
-		setsockopt(_sock,IPPROTO_IPV6,IPV6_UNICAST_HOPS,&hopLimit,sizeof(hopLimit));
 		return ((int)sendto(_sock,msg,msglen,0,to.saddr(),to.saddrLen()) == (int)msglen);
 #endif
 	} else {
 #ifdef __WINDOWS__
-		DWORD hltmp = (DWORD)hopLimit;
-		setsockopt(_sock,IPPROTO_IP,IP_TTL,(const char *)&hltmp,sizeof(hltmp));
 		return ((int)sendto(_sock,(const char *)msg,msglen,0,to.saddr(),to.saddrLen()) == (int)msglen);
 #else
-		setsockopt(_sock,IPPROTO_IP,IP_TTL,&hopLimit,sizeof(hopLimit));
 		return ((int)sendto(_sock,msg,msglen,0,to.saddr(),to.saddrLen()) == (int)msglen);
 #endif
 	}
