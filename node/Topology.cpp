@@ -38,19 +38,15 @@
 
 namespace ZeroTier {
 
-Topology::Topology(const RuntimeEnvironment *renv,bool enablePermanentIdCaching) :
+Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
+	_idCacheBase(renv->homePath + ZT_PATH_SEPARATOR_S + "iddb.d"),
 	_amSupernode(false)
 {
-	if (enablePermanentIdCaching)
-		_idCacheBase = (RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d");
-	_loadPeers();
 }
 
 Topology::~Topology()
 {
-	clean(Utils::now());
-	_dumpPeers();
 }
 
 void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn)
@@ -108,57 +104,49 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 		TRACE("BUG: addNewPeer() caught and ignored attempt to add peer for self");
 		throw std::logic_error("cannot add peer for self");
 	}
+
 	uint64_t now = Utils::now();
 	Mutex::Lock _l(_activePeers_m);
+
 	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
 	p->use(now);
-	saveIdentity(p->identity());
+	_saveIdentity(p->identity());
+
 	return p;
 }
 
-SharedPtr<Peer> Topology::getPeer(const Address &zta) const
+SharedPtr<Peer> Topology::getPeer(const Address &zta)
 {
 	if (zta == RR->identity.address()) {
 		TRACE("BUG: ignored attempt to getPeer() for self, returned NULL");
 		return SharedPtr<Peer>();
 	}
+
 	uint64_t now = Utils::now();
 	Mutex::Lock _l(_activePeers_m);
-	std::map< Address,SharedPtr<Peer> >::const_iterator ap(_activePeers.find(zta));
-	if ((ap != _activePeers.end())&&(ap->second)) {
-		ap->second->use(now);
-		return ap->second;
+
+	SharedPtr<Peer> &ap = _activePeers[zta];
+
+	if (ap) {
+		ap->use(now);
+		return ap;
 	}
+
+	Identity id(_getIdentity(zta));
+	if (id) {
+		try {
+			ap = SharedPtr<Peer>(new Peer(RR->identity,id));
+			ap->use(now);
+			return ap;
+		} catch ( ... ) {} // invalid identity?
+	}
+
+	_activePeers.erase(zta);
+
 	return SharedPtr<Peer>();
 }
 
-Identity Topology::getIdentity(const Address &zta)
-{
-	SharedPtr<Peer> p(getPeer(zta));
-	if (p)
-		return p->identity();
-	if (_idCacheBase.length()) {
-		std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + zta.toString());
-		std::string ids;
-		if (Utils::readFile(idcPath.c_str(),ids)) {
-			try {
-				return Identity(ids);
-			} catch ( ... ) {} // ignore invalid IDs
-		}
-	}
-	return Identity();
-}
-
-void Topology::saveIdentity(const Identity &id)
-{
-	if ((id)&&(_idCacheBase.length())) {
-		std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + id.address().toString());
-		if (!Utils::fileExists(idcPath.c_str()))
-			Utils::writeFile(idcPath.c_str(),id.toString(false));
-	}
-}
-
-SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const
+SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
 	SharedPtr<Peer> bestSupernode;
 	uint64_t now = Utils::now();
@@ -261,9 +249,9 @@ void Topology::clean(uint64_t now)
 	Mutex::Lock _l(_activePeers_m);
 	Mutex::Lock _l2(_supernodes_m);
 	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
-		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(!_supernodeAddresses.count(p->second->address())))
+		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(!_supernodeAddresses.count(p->second->address()))) {
 			_activePeers.erase(p++);
-		else {
+		} else {
 			p->second->clean(now);
 			++p;
 		}
@@ -288,101 +276,24 @@ bool Topology::authenticateRootTopology(const Dictionary &rt)
 	}
 }
 
-void Topology::_dumpPeers()
+Identity Topology::_getIdentity(const Address &zta)
 {
-#ifdef ZT_PEER_SERIALIZATION_VERSION
-	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
-	std::string pdpath(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
-	Mutex::Lock _l(_activePeers_m);
-
-	FILE *pd = fopen(pdpath.c_str(),"wb");
-	if (!pd)
-		return;
-	if (fwrite("ZTPD0",5,1,pd) != 1) {
-		fclose(pd);
-		Utils::rm(pdpath);
-		return;
-	}
-
-	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();++p) {
+	std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + zta.toString());
+	std::string ids;
+	if (Utils::readFile(idcPath.c_str(),ids)) {
 		try {
-			p->second->serialize(buf);
-			if (buf.size() >= (ZT_PEER_WRITE_BUF_SIZE / 2)) {
-				if (fwrite(buf.data(),buf.size(),1,pd) != 1) {
-					fclose(pd);
-					Utils::rm(pdpath);
-					buf.burn();
-					return;
-				}
-				buf.clear();
-				buf.burn();
-			}
-		} catch ( ... ) {
-			fclose(pd);
-			Utils::rm(pdpath);
-			buf.burn();
-			return;
-		}
+			return Identity(ids);
+		} catch ( ... ) {} // ignore invalid IDs
 	}
-
-	if (buf.size()) {
-		if (fwrite(buf.data(),buf.size(),1,pd) != 1) {
-			fclose(pd);
-			Utils::rm(pdpath);
-			buf.burn();
-			return;
-		}
-		buf.burn();
-	}
-
-	fclose(pd);
-	buf.burn();
-
-	Utils::lockDownFile(pdpath.c_str(),false);
-#endif // ZT_PEER_SERIALIZATION_VERSION
+	return Identity();
 }
 
-void Topology::_loadPeers()
+void Topology::_saveIdentity(const Identity &id)
 {
-	std::string pdpath(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist");
-
-#ifdef ZT_PEER_SERIALIZATION_VERSION
-	Buffer<ZT_PEER_WRITE_BUF_SIZE> buf;
-	Mutex::Lock _l(_activePeers_m);
-
-	_activePeers.clear();
-
-	FILE *pd = fopen(pdpath.c_str(),"rb");
-	if (!pd)
-		return;
-
-	try {
-		char magic[5];
-		if ((fread(magic,5,1,pd) == 1)&&(!memcmp("ZTPD0",magic,5))) {
-			long rlen = 0;
-			do {
-				long rlen = (long)fread(const_cast<char *>(static_cast<const char *>(buf.data())) + buf.size(),1,ZT_PEER_WRITE_BUF_SIZE - buf.size(),pd);
-				if (rlen < 0) rlen = 0;
-				buf.setSize(buf.size() + (unsigned int)rlen);
-				unsigned int ptr = 0;
-				while ((ptr < (ZT_PEER_WRITE_BUF_SIZE / 2))&&(ptr < buf.size())) {
-					SharedPtr<Peer> p(new Peer());
-					ptr += p->deserialize(buf,ptr);
-					_activePeers[p->address()] = p;
-					saveIdentity(p->identity());
-				}
-				buf.behead(ptr);
-			} while (rlen > 0);
-		}
-	} catch ( ... ) {
-		_activePeers.clear();
+	if (id) {
+		std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + id.address().toString());
+		Utils::writeFile(idcPath.c_str(),id.toString(false));
 	}
-
-	fclose(pd);
-	buf.burn();
-#endif // ZT_PEER_SERIALIZATION_VERSION
-
-	Utils::rm(pdpath);
 }
 
 } // namespace ZeroTier

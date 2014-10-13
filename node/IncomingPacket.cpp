@@ -181,12 +181,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			return true;
 		}
 
-		// Do we already have this peer?
 		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
 		if (peer) {
-			// Check to make sure this isn't a colliding identity (different key,
-			// but same address). The odds are spectacularly low but it could happen.
-			// Could also be a sign of someone doing something nasty.
 			if (peer->identity() != id) {
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
@@ -208,33 +204,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			} else if (!dearmor(peer->key())) {
 				LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
-			} // else continue and respond
+			}
 		} else {
-			// If we don't have a peer record on file, check the identity cache (if
-			// we have one) to see if we have a cached identity. Then check that for
-			// collision before adding a new peer.
-			Identity alreadyHaveCachedId(RR->topology->getIdentity(id.address()));
-			if ((alreadyHaveCachedId)&&(id != alreadyHaveCachedId)) {
-				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
-				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
-					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-						LOG("rejected HELLO from %s(%s): address already claimed",source().toString().c_str(),_remoteAddress.toString().c_str());
-						Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
-						outp.append((unsigned char)Packet::VERB_HELLO);
-						outp.append(packetId());
-						outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-						outp.armor(key,true);
-						_fromSock->send(_remoteAddress,outp.data(),outp.size());
-					} else {
-						LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
-					}
-				} else {
-					LOG("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
-				}
-				return true;
-			} // else continue since identity is already known and matches
-
-			// If this is a new peer, learn it
 			SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
 			if (!dearmor(newPeer->key())) {
 				LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -376,29 +347,26 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 {
 	try {
 		if (payloadLength() == ZT_ADDRESS_LENGTH) {
-			Identity id(RR->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
-			if (id) {
-				Packet outp(source(),RR->identity.address(),Packet::VERB_OK);
+			SharedPtr<Peer> queried(RR->topology->getPeer(Address(payload(),ZT_ADDRESS_LENGTH)));
+			if (queried) {
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((unsigned char)Packet::VERB_WHOIS);
 				outp.append(packetId());
-				id.serialize(outp,false);
+				queried->identity().serialize(outp,false);
 				outp.armor(peer->key(),true);
 				_fromSock->send(_remoteAddress,outp.data(),outp.size());
-				//TRACE("sent WHOIS response to %s for %s",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 			} else {
-				Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
+				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 				outp.append((unsigned char)Packet::VERB_WHOIS);
 				outp.append(packetId());
 				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 				outp.append(payload(),ZT_ADDRESS_LENGTH);
 				outp.armor(peer->key(),true);
 				_fromSock->send(_remoteAddress,outp.data(),outp.size());
-				//TRACE("sent WHOIS ERROR to %s for %s (not found)",source().toString().c_str(),Address(payload(),ZT_ADDRESS_LENGTH).toString().c_str());
 			}
 		} else {
 			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
-
 		peer->receive(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP,Utils::now());
 	} catch ( ... ) {
 		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());

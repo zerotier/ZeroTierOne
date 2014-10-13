@@ -42,7 +42,7 @@ Peer::Peer() :
 	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
-	__lastAnnouncedTo(0),
+	_lastAnnouncedTo(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -55,7 +55,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastReceive(0),
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
-	__lastAnnouncedTo(0),
+	_lastAnnouncedTo(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -118,8 +118,8 @@ void Peer::receive(
 		 * supernodes and network controllers. The other place this is done
 		 * is in rescanMulticastGroups() in Network, but that only sends something
 		 * if a network's multicast groups change. */
-		if ((now - __lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-			__lastAnnouncedTo = now;
+		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+			_lastAnnouncedTo = now;
 
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 			std::vector< SharedPtr<Network> > networks(RR->nc->networks());

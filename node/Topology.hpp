@@ -58,7 +58,7 @@ class RuntimeEnvironment;
 class Topology
 {
 public:
-	Topology(const RuntimeEnvironment *renv,bool enablePermanentIdCaching);
+	Topology(const RuntimeEnvironment *renv);
 	~Topology();
 
 	/**
@@ -95,26 +95,7 @@ public:
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
-	SharedPtr<Peer> getPeer(const Address &zta) const;
-
-	/**
-	 * Get an identity if cached or available in a peer record
-	 *
-	 * @param zta ZeroTier address
-	 * @return Identity or NULL-identity if not found
-	 */
-	Identity getIdentity(const Address &zta);
-
-	/**
-	 * Save identity in permanent store, or do nothing if disabled
-	 *
-	 * This is called automatically by addPeer(), so it should not need to be
-	 * called manually anywhere else. The private part of the identity, if
-	 * present, is NOT cached by this.
-	 *
-	 * @param id Identity to save
-	 */
-	void saveIdentity(const Identity &id);
+	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
 	 * @return Vector of peers that are supernodes
@@ -139,7 +120,7 @@ public:
 	 * 
 	 * @return Supernode with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestSupernode() const
+	inline SharedPtr<Peer> getBestSupernode()
 	{
 		return getBestSupernode((const Address *)0,0,false);
 	}
@@ -156,7 +137,7 @@ public:
 	 * @param strictAvoid If false, consider avoided supernodes anyway if no non-avoid supernodes are available
 	 * @return Supernode or NULL if none
 	 */
-	SharedPtr<Peer> getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid) const;
+	SharedPtr<Peer> getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
 
 	/**
 	 * @param zta ZeroTier address
@@ -373,12 +354,12 @@ public:
 	static bool authenticateRootTopology(const Dictionary &rt);
 
 private:
+	Identity _getIdentity(const Address &zta);
+	void _saveIdentity(const Identity &id);
+
 	const RuntimeEnvironment *RR;
 
-	void _dumpPeers();
-	void _loadPeers();
-
-	std::string _idCacheBase; // empty if identity caching disabled
+	std::string _idCacheBase;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
 	Mutex _activePeers_m;

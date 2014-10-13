@@ -377,7 +377,7 @@ Node::ReasonForTermination Node::run()
 			Utils::lockDownFile(identitySecretPath.c_str(),false);
 		}
 
-		// Make sure networks.d exists
+		// Make sure networks.d exists (used by NodeConfig to remember networks)
 		{
 			std::string networksDotD(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d");
 #ifdef __WINDOWS__
@@ -386,13 +386,22 @@ Node::ReasonForTermination Node::run()
 			mkdir(networksDotD.c_str(),0700);
 #endif
 		}
+		// Make sure iddb.d exists (used by Topology to remember identities)
+		{
+			std::string iddbDotD(RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d");
+#ifdef __WINDOWS__
+			CreateDirectoryA(iddbDotD.c_str(),NULL);
+#else
+			mkdir(iddbDotD.c_str(),0700);
+#endif
+		}
 
 		RR->http = new HttpClient();
 		RR->antiRec = new AntiRecursion();
 		RR->mc = new Multicaster(RR);
 		RR->sw = new Switch(RR);
 		RR->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,RR);
-		RR->topology = new Topology(RR,Utils::fileExists((RR->homePath + ZT_PATH_SEPARATOR_S + "iddb.d").c_str()));
+		RR->topology = new Topology(RR);
 		try {
 			RR->nc = new NodeConfig(RR);
 		} catch (std::exception &exc) {
@@ -443,6 +452,9 @@ Node::ReasonForTermination Node::run()
 				return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"invalid root-topology format");
 			}
 		}
+
+		// Delete peers.persist if it exists -- legacy file, just takes up space
+		Utils::rm(std::string(RR->homePath + ZT_PATH_SEPARATOR_S + "peers.persist").c_str());
 	} catch (std::bad_alloc &exc) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"memory allocation failure");
 	} catch (std::runtime_error &exc) {

@@ -50,9 +50,6 @@
 #include "NonCopyable.hpp"
 #include "Mutex.hpp"
 
-// Comment out to disable peers.persist
-//#define ZT_PEER_SERIALIZATION_VERSION 13
-
 namespace ZeroTier {
 
 /**
@@ -248,7 +245,7 @@ public:
 	/**
 	 * @return Time we last announced state TO this peer, such as multicast LIKEs
 	 */
-	inline uint64_t lastAnnouncedTo() const throw() { return __lastAnnouncedTo; }
+	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
 	 * @param now Current time
@@ -405,61 +402,6 @@ public:
 		else return std::pair<InetAddress,InetAddress>();
 	}
 
-#ifdef ZT_PEER_SERIALIZATION_VERSION
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		Mutex::Lock _l(_lock);
-
-		b.append((unsigned char)ZT_PEER_SERIALIZATION_VERSION);
-		_id.serialize(b,false);
-		b.append(_key,sizeof(_key));
-		b.append(_lastUsed);
-		b.append(_lastReceive);
-		b.append(_lastUnicastFrame);
-		b.append(_lastMulticastFrame);
-		b.append((uint16_t)_vProto);
-		b.append((uint16_t)_vMajor);
-		b.append((uint16_t)_vMinor);
-		b.append((uint16_t)_vRevision);
-		b.append((uint16_t)_latency);
-		b.append((uint16_t)_paths.size());
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
-			p->serialize(b);
-	}
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-
-		if (b[p++] != ZT_PEER_SERIALIZATION_VERSION)
-			throw std::invalid_argument("Peer: deserialize(): version mismatch");
-
-		Mutex::Lock _l(_lock);
-
-		p += _id.deserialize(b,p);
-		memcpy(_key,b.field(p,sizeof(_key)),sizeof(_key)); p += sizeof(_key);
-		_lastUsed = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastReceive = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastUnicastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastMulticastFrame = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		__lastAnnouncedTo = 0;
-		_vProto = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_vMajor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_vMinor = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_vRevision = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_latency = b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		unsigned int npaths = (unsigned int)b.template at<uint16_t>(p); p += sizeof(uint16_t);
-		_paths.clear();
-		for(unsigned int i=0;i<npaths;++i) {
-			_paths.push_back(Path());
-			p += _paths.back().deserialize(b,p);
-		}
-
-		return (p - startAt);
-	}
-#endif // ZT_PEER_SERIALIZATION_VERSION
-
 private:
 	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
 
@@ -472,7 +414,7 @@ private:
 	volatile uint64_t _lastReceive; // direct or indirect
 	volatile uint64_t _lastUnicastFrame;
 	volatile uint64_t _lastMulticastFrame;
-	volatile uint64_t __lastAnnouncedTo; // not persisted -- shouldn't be unless Multicaster state is also persisted
+	volatile uint64_t _lastAnnouncedTo;
 	volatile uint16_t _vProto;
 	volatile uint16_t _vMajor;
 	volatile uint16_t _vMinor;
