@@ -47,7 +47,8 @@ fi
 
 running=0
 if [ "$pid" -gt 0 ]; then
-	if diff "/proc/$pid/exe" "$zthome/zerotier-one" >>/dev/null 2>&1; then
+	exepath=`readlink /proc/$pid/exe 2>/dev/null | grep zerotier-one`
+	if [ -n "$exepath" ]; then
 		running=1
 	fi
 fi
