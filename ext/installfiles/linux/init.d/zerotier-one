@@ -65,6 +65,17 @@ case "$1" in
 		if [ $running -gt 0 ]; then
 			echo "Stopping ZeroTier One..."
 			kill -TERM $pid
+			sleep 0.25
+			if [ -f "$zthome/zerotier-one.pid" ]; then
+				sleep 0.5
+			fi
+			if [ -f "$zthome/zerotier-one.pid" ]; then
+				sleep 1
+			fi
+			if [ -f "$zthome/zerotier-one.pid" ]; then
+				kill -KILL $pid >>/dev/null 2>&1
+				rm -f "$zthome/zerotier-one.pid"
+			fi
 		else
 			echo "ZeroTier One is not running."
 		fi
@@ -72,9 +83,19 @@ case "$1" in
 	restart|reload|force-reload|condrestart|try-restart)
 		echo "Restarting ZeroTier One..."
 		if [ $running -gt 0 ]; then
-			kill -TERM $pid
+			kill -TERM $pid >>/dev/null 2>&1
 		fi
-		while [ -f "$zthome/zerotier-one.pid" ]; do sleep 1; done
+		sleep 0.25
+		if [ -f "$zthome/zerotier-one.pid" ]; then
+			sleep 0.5
+		fi
+		if [ -f "$zthome/zerotier-one.pid" ]; then
+			sleep 1
+		fi
+		if [ -f "$zthome/zerotier-one.pid" ]; then
+			kill -KILL $pid >>/dev/null 2>&1
+			rm -f "$zthome/zerotier-one.pid"
+		fi
 		zerotier-one -d
 		;;
 	status)
