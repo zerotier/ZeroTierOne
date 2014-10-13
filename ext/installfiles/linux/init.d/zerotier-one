@@ -47,7 +47,7 @@ fi
 
 running=0
 if [ "$pid" -gt 0 ]; then
-	if [ -n "`ls -l /proc/$pid/exe | grep -F zerotier-one`" ]; then
+	if diff "/proc/$pid/exe" "$zthome/zerotier-one" >>/dev/null 2>&1; then
 		running=1
 	fi
 fi
