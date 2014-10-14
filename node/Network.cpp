@@ -310,25 +310,31 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 		return;
 
 	if (!forceAccept) {
-		if (cert.signedBy() != controller())
+		if (cert.signedBy() != controller()) {
+			LOG("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
 			return;
+		}
+
 		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
-		if (!signer)
-			return; // we should already have done a WHOIS on this peer, since this is our netconf master
-		if (!cert.verify(signer->identity()))
+
+		if (!signer) {
+			// This would be rather odd, since this is our netconf master... could happen
+			// if we get packets before we've gotten config.
+			RR->sw->requestWhois(cert.signedBy());
 			return;
+		}
+
+		if (!cert.verify(signer->identity())) {
+			LOG("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			return;
+		}
 	}
 
 	Mutex::Lock _l(_lock);
 
-	// We go ahead and accept certs provisionally even if _isOpen is true, since
-	// that might be changed in short order if the user is fiddling in the UI.
-
 	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
-	if (cert.timestamp() >= old.timestamp()) {
-		//TRACE("got new certificate for %s on network %.16llx",cert.issuedTo().toString().c_str(),cert.networkId());
+	if (cert.timestamp() >= old.timestamp())
 		old = cert;
-	}
 }
 
 bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
@@ -632,6 +638,7 @@ void Network::_dumpMembershipCerts()
 	FILE *mcdb = fopen(mcdbPath.c_str(),"wb");
 	if (!mcdb)
 		return;
+
 	if (fwrite("ZTMCD0",6,1,mcdb) != 1) {
 		fclose(mcdb);
 		Utils::rm(mcdbPath);
@@ -639,29 +646,14 @@ void Network::_dumpMembershipCerts()
 	}
 
 	for(std::map<Address,CertificateOfMembership>::iterator c=(_membershipCertificates.begin());c!=_membershipCertificates.end();++c) {
-		try {
-			c->second.serialize(buf);
-			if (buf.size() >= (ZT_NETWORK_CERT_WRITE_BUF_SIZE / 2)) {
-				if (fwrite(buf.data(),buf.size(),1,mcdb) != 1) {
-					fclose(mcdb);
-					Utils::rm(mcdbPath);
-					return;
-				}
-				buf.clear();
+		buf.clear();
+		c->second.serialize(buf);
+		if (buf.size() > 0) {
+			if (fwrite(buf.data(),buf.size(),1,mcdb) != 1) {
+				fclose(mcdb);
+				Utils::rm(mcdbPath);
+				return;
 			}
-		} catch ( ... ) {
-			// Sanity check... no cert will ever be big enough to overflow buf
-			fclose(mcdb);
-			Utils::rm(mcdbPath);
-			return;
-		}
-	}
-
-	if (buf.size()) {
-		if (fwrite(buf.data(),buf.size(),1,mcdb) != 1) {
-			fclose(mcdb);
-			Utils::rm(mcdbPath);
-			return;
 		}
 	}
 

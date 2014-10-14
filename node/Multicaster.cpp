@@ -270,8 +270,7 @@ void Multicaster::send(
 			outp.append((uint16_t)0xffff); // do not forward
 			outp.append((unsigned char)0,320 + 1024); // empty queue and bloom filter
 
-			unsigned int signedPortionStart = outp.size();
-			outp.append((unsigned char)0);
+			outp.append((unsigned char)((com) ? ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE : 0));
 			outp.append((uint64_t)nwid);
 			outp.append((uint16_t)0);
 			outp.append((unsigned char)0);
@@ -286,9 +285,9 @@ void Multicaster::send(
 			outp.append((uint16_t)etherType);
 			outp.append((uint16_t)len);
 			outp.append(data,len);
-			unsigned int signedPortionLen = outp.size() - signedPortionStart;
+			unsigned int signedPortionLen = outp.size() - ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION;
 
-			C25519::Signature sig(RR->identity.sign(outp.field(signedPortionStart,signedPortionLen),signedPortionLen));
+			C25519::Signature sig(RR->identity.sign(outp.field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPortionLen),signedPortionLen));
 
 			outp.append((uint16_t)sig.size());
 			outp.append(sig.data,sig.size());
