@@ -527,8 +527,6 @@ void Network::threadMain()
 			t->setEnabled(_enabled);
 		}
 	}
-
-	rescanMulticastGroups();
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
