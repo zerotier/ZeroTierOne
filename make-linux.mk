@@ -44,7 +44,7 @@ ifeq ($(ZT_DEBUG),1)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
-ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -ftree-vectorize -pthread $(INCLUDES) $(DEFS)
+ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
 	CFLAGS=-Wall -O3 -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
