@@ -32,9 +32,9 @@
 #include <string.h>
 
 #include <map>
-#include <set>
 #include <vector>
 #include <stdexcept>
+#include <algorithm>
 
 #include "Constants.hpp"
 
@@ -102,7 +102,7 @@ public:
 	 */
 	inline std::vector< SharedPtr<Peer> > supernodePeers() const
 	{
-		Mutex::Lock _l(_supernodes_m);
+		Mutex::Lock _l(_lock);
 		return _supernodePeers;
 	}
 
@@ -111,7 +111,7 @@ public:
 	 */
 	inline unsigned int numSupernodes() const
 	{
-		Mutex::Lock _l(_supernodes_m);
+		Mutex::Lock _l(_lock);
 		return _supernodePeers.size();
 	}
 
@@ -146,16 +146,16 @@ public:
 	inline bool isSupernode(const Address &zta) const
 		throw()
 	{
-		Mutex::Lock _l(_supernodes_m);
-		return (_supernodeAddresses.count(zta) > 0);
+		Mutex::Lock _l(_lock);
+		return (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),zta) != _supernodeAddresses.end());
 	}
 
 	/**
-	 * @return Set of supernode addresses
+	 * @return Vector of supernode addresses
 	 */
-	inline std::set<Address> supernodeAddresses() const
+	inline std::vector<Address> supernodeAddresses() const
 	{
-		Mutex::Lock _l(_supernodes_m);
+		Mutex::Lock _l(_lock);
 		return _supernodeAddresses;
 	}
 
@@ -175,13 +175,17 @@ public:
 	 * Note: explicitly template this by reference if you want the object
 	 * passed by reference instead of copied.
 	 *
+	 * Warning: be careful not to use features in these that call any other
+	 * methods of Topology that may lock _lock, otherwise a recursive lock
+	 * and deadlock or lock corruption may occur.
+	 *
 	 * @param f Function to apply
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
 	inline void eachPeer(F f)
 	{
-		Mutex::Lock _l(_activePeers_m);
+		Mutex::Lock _l(_lock);
 		for(std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.begin());p!=_activePeers.end();++p)
 			f(*this,p->second);
 	}
@@ -192,13 +196,17 @@ public:
 	 * Note: explicitly template this by reference if you want the object
 	 * passed by reference instead of copied.
 	 *
+	 * Warning: be careful not to use features in these that call any other
+	 * methods of Topology that may lock _lock, otherwise a recursive lock
+	 * and deadlock or lock corruption may occur.
+	 *
 	 * @param f Function to apply
 	 * @tparam F Function or function object type
 	 */
 	template<typename F>
 	inline void eachSupernodePeer(F f)
 	{
-		Mutex::Lock _l(_supernodes_m);
+		Mutex::Lock _l(_lock);
 		for(std::vector< SharedPtr<Peer> >::const_iterator p(_supernodePeers.begin());p!=_supernodePeers.end();++p)
 			f(*this,*p);
 	}
@@ -227,7 +235,7 @@ public:
 			 *
 			 * Note that we measure ping time from time of last receive rather
 			 * than time of last send in order to only count full round trips. */
-			if ( (!_supernodeAddresses.count(p->address())) &&
+			if ( (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) == _supernodeAddresses.end()) &&
 			     ((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) &&
 			     ((_now - p->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY) ) {
 				p->sendPing(RR,_now);
@@ -236,7 +244,7 @@ public:
 
 	private:
 		uint64_t _now;
-		std::set<Address> _supernodeAddresses;
+		std::vector<Address> _supernodeAddresses;
 		const RuntimeEnvironment *RR;
 	};
 
@@ -305,7 +313,7 @@ public:
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
 			outp.armor(p->key(),false); // no need to encrypt a NOP
 
-			if (_supernodeAddresses.count(p->address())) {
+			if (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) {
 				// Send NOP directly to supernodes
 				p->send(RR,outp.data(),outp.size(),_now);
 			} else {
@@ -320,7 +328,7 @@ public:
 	private:
 		uint64_t _now;
 		SharedPtr<Peer> _supernode;
-		std::set<Address> _supernodeAddresses;
+		std::vector<Address> _supernodeAddresses;
 		const RuntimeEnvironment *RR;
 	};
 
@@ -362,12 +370,11 @@ private:
 	std::string _idCacheBase;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
-	Mutex _activePeers_m;
-
 	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _supernodes;
-	std::set< Address > _supernodeAddresses;
+	std::vector< Address > _supernodeAddresses;
 	std::vector< SharedPtr<Peer> > _supernodePeers;
-	Mutex _supernodes_m;
+
+	Mutex _lock;
 
 	// Set to true if my identity is in _supernodes
 	volatile bool _amSupernode;

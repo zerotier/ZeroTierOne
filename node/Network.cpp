@@ -118,12 +118,13 @@ public:
 	AnnounceMulticastGroupsToPeersWithActiveDirectPaths(const RuntimeEnvironment *renv,Network *nw) :
 		RR(renv),
 		_now(Utils::now()),
-		_network(nw)
+		_network(nw),
+		_supernodeAddresses(renv->topology->supernodeAddresses())
 	{}
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (t.isSupernode(p->address())) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			std::set<MulticastGroup> mgs(_network->multicastGroups());
@@ -151,6 +152,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	Network *_network;
+	std::vector<Address> _supernodeAddresses;
 };
 
 bool Network::rescanMulticastGroups()
@@ -527,6 +529,8 @@ void Network::threadMain()
 			t->setEnabled(_enabled);
 		}
 	}
+
+	rescanMulticastGroups();
 }
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)

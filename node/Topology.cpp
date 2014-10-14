@@ -25,8 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include <algorithm>
-
 #include "Constants.hpp"
 #include "Defaults.hpp"
 #include "Topology.hpp"
@@ -51,7 +49,7 @@ Topology::~Topology()
 
 void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn)
 {
-	Mutex::Lock _l(_supernodes_m);
+	Mutex::Lock _l(_lock);
 
 	if (_supernodes == sn)
 		return; // no change
@@ -62,17 +60,19 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 	uint64_t now = Utils::now();
 
 	for(std::map< Identity,std::vector< std::pair<InetAddress,bool> > >::const_iterator i(sn.begin());i!=sn.end();++i) {
-		if (i->first != RR->identity) {
-			SharedPtr<Peer> p(getPeer(i->first.address()));
+		if (i->first != RR->identity) { // do not add self as a peer
+			SharedPtr<Peer> &p = _activePeers[i->first.address()];
 			if (!p)
-				p = addPeer(SharedPtr<Peer>(new Peer(RR->identity,i->first)));
+				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
 			for(std::vector< std::pair<InetAddress,bool> >::const_iterator j(i->second.begin());j!=i->second.end();++j)
 				p->addPath(Path(j->first,(j->second) ? Path::PATH_TYPE_TCP_OUT : Path::PATH_TYPE_UDP,true));
 			p->use(now);
 			_supernodePeers.push_back(p);
 		}
-		_supernodeAddresses.insert(i->first.address());
+		_supernodeAddresses.push_back(i->first.address());
 	}
+
+	std::sort(_supernodeAddresses.begin(),_supernodeAddresses.end());
 
 	_amSupernode = (_supernodes.find(RR->identity) != _supernodes.end());
 }
@@ -107,7 +107,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 	}
 
 	uint64_t now = Utils::now();
-	Mutex::Lock _l(_activePeers_m);
+	Mutex::Lock _l(_lock);
 
 	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
 	p->use(now);
@@ -124,7 +124,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	}
 
 	uint64_t now = Utils::now();
-	Mutex::Lock _l(_activePeers_m);
+	Mutex::Lock _l(_lock);
 
 	SharedPtr<Peer> &ap = _activePeers[zta];
 
@@ -151,7 +151,7 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 {
 	SharedPtr<Peer> bestSupernode;
 	uint64_t now = Utils::now();
-	Mutex::Lock _l(_supernodes_m);
+	Mutex::Lock _l(_lock);
 
 	if (_amSupernode) {
 		/* If I am a supernode, the "best" supernode is the one whose address
@@ -160,15 +160,15 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 		 * circumnavigate the globe rather than bouncing between just two. */
 
 		if (_supernodeAddresses.size() > 1) { // gotta be one other than me for this to work
-			std::set<Address>::const_iterator sna(_supernodeAddresses.find(RR->identity.address()));
+			std::vector<Address>::const_iterator sna(std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),RR->identity.address()));
 			if (sna != _supernodeAddresses.end()) { // sanity check -- _amSupernode should've been false in this case
 				for(;;) {
 					if (++sna == _supernodeAddresses.end())
 						sna = _supernodeAddresses.begin(); // wrap around at end
 					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
-						SharedPtr<Peer> p(getPeer(*sna));
-						if ((p)&&(p->hasActiveDirectPath(now))) {
-							bestSupernode = p;
+						std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.find(*sna));
+						if ((p != _activePeers.end())&&(p->second->hasActiveDirectPath(now))) {
+							bestSupernode = p->second;
 							break;
 						}
 					}
@@ -247,10 +247,9 @@ keep_searching_for_supernodes:
 
 void Topology::clean(uint64_t now)
 {
-	Mutex::Lock _l(_activePeers_m);
-	Mutex::Lock _l2(_supernodes_m);
+	Mutex::Lock _l(_lock);
 	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
-		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(!_supernodeAddresses.count(p->second->address()))) {
+		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->first) == _supernodeAddresses.end())) {
 			_activePeers.erase(p++);
 		} else {
 			p->second->clean(now);
