@@ -89,6 +89,7 @@ void Topology::setSupernodes(const Dictionary &sn)
 				if (udp.length() > 0)
 					a.push_back(std::pair<InetAddress,bool>(InetAddress(udp),false));
 				std::string tcp(snspec.get("tcp",std::string()));
+				if (tcp.length() > 0)
 					a.push_back(std::pair<InetAddress,bool>(InetAddress(tcp),true));
 			} catch ( ... ) {
 				LOG("supernode list contained invalid entry for: %s",d->first.c_str());
