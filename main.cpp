@@ -828,7 +828,7 @@ int main(int argc,char **argv)
 		switch(node->run()) {
 #ifdef __WINDOWS__
 			case Node::NODE_RESTART_FOR_UPGRADE: {
-				const char *upgPath = node->reasonForTermination();
+				const char *upgPath = node->terminationMessage();
 				if (upgPath) {
 					if (!ZeroTierOneService::doStartUpgrade(std::string(upgPath))) {
 						exitCode = 3;
