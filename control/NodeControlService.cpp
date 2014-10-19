@@ -154,16 +154,16 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 								default:
 									ipcc->printf("unknown;");
 									break;
-								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_UDP:
+								case ZT1_Node_PhysicalPath_TYPE_UDP:
 									ipcc->printf("udp;");
 									break;
-								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
+								case ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
 									ipcc->printf("tcp_out;");
 									break;
-								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_TCP_IN:
+								case ZT1_Node_PhysicalPath_TYPE_TCP_IN:
 									ipcc->printf("tcp_in;");
 									break;
-								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_ETHERNET:
+								case ZT1_Node_PhysicalPath_TYPE_ETHERNET:
 									ipcc->printf("eth;");
 									break;
 							}
@@ -178,9 +178,9 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 					}
 					const char *rolestr;
 					switch(pl->peers[i].role) {
-						case ZT1_Node_PeerRole::ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
-						case ZT1_Node_PeerRole::ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
-						case ZT1_Node_PeerRole::ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
+						case ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
+						case ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
+						case ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
 						default: rolestr = "?"; break;
 					}
 					ipcc->printf(" %u %s %s"ZT_EOL_S,

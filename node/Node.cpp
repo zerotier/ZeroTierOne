@@ -859,7 +859,7 @@ ZT1_Node_PeerList *Node::listPeers()
 		p->first->address().toString(prec->address,sizeof(prec->address));
 		prec->rawAddress = p->first->address().toInt();
 		prec->latency = p->first->latency();
-		prec->role = RR->topology->isSupernode(p->first->address()) ? ZT1_Node_PeerRole::ZT1_Node_Peer_SUPERNODE : ZT1_Node_PeerRole::ZT1_Node_Peer_NODE;
+		prec->role = RR->topology->isSupernode(p->first->address()) ? ZT1_Node_Peer_SUPERNODE : ZT1_Node_Peer_NODE;
 
 		prec->paths = (ZT1_Node_PhysicalPath *)buf;
 		buf += sizeof(ZT1_Node_PhysicalPath) * p->second.size();
@@ -869,11 +869,11 @@ ZT1_Node_PeerList *Node::listPeers()
 			ZT1_Node_PhysicalPath *path = &(prec->paths[prec->numPaths++]);
 			path->type = (ZT1_Node_PhysicalPathType)pi->type();
 			if (pi->address().isV6()) {
-				path->address.type = ZT1_Node_PhysicalAddressType::ZT1_Node_PhysicalAddress_TYPE_IPV6;
+				path->address.type = ZT1_Node_PhysicalAddress_TYPE_IPV6;
 				memcpy(path->address.bits,pi->address().rawIpData(),16);
 				// TODO: zoneIndex not supported yet, but should be once echo-location works w/V6
 			} else {
-				path->address.type = ZT1_Node_PhysicalAddressType::ZT1_Node_PhysicalAddress_TYPE_IPV4;
+				path->address.type = ZT1_Node_PhysicalAddress_TYPE_IPV4;
 				memcpy(path->address.bits,pi->address().rawIpData(),4);
 			}
 			path->address.port = pi->address().port();
@@ -938,10 +938,10 @@ ZT1_Node_Network *Node::getNetworkStatus(uint64_t nwid)
 	for(std::set<InetAddress>::iterator ip(ips.begin());ip!=ips.end();++ip) {
 		ZT1_Node_PhysicalAddress *ipb = &(nbuf->ips[nbuf->numIps++]);
 		if (ip->isV6()) {
-			ipb->type = ZT1_Node_PhysicalAddressType::ZT1_Node_PhysicalAddress_TYPE_IPV6;
+			ipb->type = ZT1_Node_PhysicalAddress_TYPE_IPV6;
 			memcpy(ipb->bits,ip->rawIpData(),16);
 		} else {
-			ipb->type = ZT1_Node_PhysicalAddressType::ZT1_Node_PhysicalAddress_TYPE_IPV4;
+			ipb->type = ZT1_Node_PhysicalAddress_TYPE_IPV4;
 			memcpy(ipb->bits,ip->rawIpData(),4);
 		}
 		ipb->port = ip->port();
@@ -991,10 +991,10 @@ ZT1_Node_NetworkList *Node::listNetworks()
 		for(std::set<InetAddress>::iterator ip(ipsv[i].begin());ip!=ipsv[i].end();++ip) {
 			ZT1_Node_PhysicalAddress *ipb = &(nbuf->ips[nbuf->numIps++]);
 			if (ip->isV6()) {
-				ipb->type = ZT1_Node_PhysicalAddressType::ZT1_Node_PhysicalAddress_TYPE_IPV6;
+				ipb->type = ZT1_Node_PhysicalAddress_TYPE_IPV6;
 				memcpy(ipb->bits,ip->rawIpData(),16);
 			} else {
-				ipb->type = ZT1_Node_PhysicalAddressType::ZT1_Node_PhysicalAddress_TYPE_IPV4;
+				ipb->type = ZT1_Node_PhysicalAddress_TYPE_IPV4;
 				memcpy(ipb->bits,ip->rawIpData(),4);
 			}
 			ipb->port = ip->port();
