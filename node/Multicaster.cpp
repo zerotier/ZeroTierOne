@@ -81,7 +81,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 
 	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::const_iterator gs(_groups.find(std::pair<uint64_t,MulticastGroup>(nwid,mg)));
 	if ((gs != _groups.end())&&(!gs->second.members.empty())) {
-		totalKnown += gs->second.members.size();
+		totalKnown += (unsigned int)gs->second.members.size();
 
 		// Members are returned in random order so that repeated gather queries
 		// will return different subsets of a large multicast group.
@@ -290,7 +290,7 @@ void Multicaster::send(
 			C25519::Signature sig(RR->identity.sign(outp.field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPortionLen),signedPortionLen));
 
 			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,sig.size());
+			outp.append(sig.data,(unsigned int)sig.size());
 
 			if (com) com->serialize(outp);
 

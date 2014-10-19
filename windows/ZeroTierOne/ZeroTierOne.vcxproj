@@ -19,12 +19,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\control\IpcConnection.cpp" />
+    <ClCompile Include="..\..\control\IpcListener.cpp" />
+    <ClCompile Include="..\..\control\NodeControlClient.cpp" />
+    <ClCompile Include="..\..\control\NodeControlService.cpp" />
     <ClCompile Include="..\..\ext\lz4\lz4.c" />
     <ClCompile Include="..\..\main.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
@@ -32,17 +36,16 @@
     <ClCompile Include="..\..\node\Dictionary.cpp" />
     <ClCompile Include="..\..\node\HttpClient.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
+    <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
-    <ClCompile Include="..\..\node\IpcConnection.cpp" />
-    <ClCompile Include="..\..\node\IpcListener.cpp" />
     <ClCompile Include="..\..\node\Logger.cpp" />
     <ClCompile Include="..\..\node\Multicaster.cpp" />
     <ClCompile Include="..\..\node\Network.cpp" />
     <ClCompile Include="..\..\node\NetworkConfig.cpp" />
     <ClCompile Include="..\..\node\Node.cpp" />
     <ClCompile Include="..\..\node\NodeConfig.cpp" />
+    <ClCompile Include="..\..\node\OutboundMulticast.cpp" />
     <ClCompile Include="..\..\node\Packet.cpp" />
-    <ClCompile Include="..\..\node\PacketDecoder.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp" />
     <ClCompile Include="..\..\node\RoutingTable.cpp" />
@@ -60,17 +63,25 @@
     <ClCompile Include="..\..\osnet\WindowsEthernetTapFactory.cpp" />
     <ClCompile Include="..\..\osnet\WindowsRoutingTable.cpp" />
     <ClCompile Include="..\..\selftest.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\testnet\TestEthernetTap.cpp" />
+    <ClCompile Include="..\..\testnet\TestEthernetTapFactory.cpp" />
+    <ClCompile Include="..\..\testnet\TestRoutingTable.cpp" />
     <ClCompile Include="ServiceBase.cpp" />
     <ClCompile Include="ServiceInstaller.cpp" />
     <ClCompile Include="ZeroTierOneService.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\control\IpcConnection.hpp" />
+    <ClInclude Include="..\..\control\IpcListener.hpp" />
+    <ClInclude Include="..\..\control\NodeControlClient.hpp" />
+    <ClInclude Include="..\..\control\NodeControlService.hpp" />
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
+    <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
     <ClInclude Include="..\..\node\AntiRecursion.hpp" />
     <ClInclude Include="..\..\node\Array.hpp" />
@@ -87,9 +98,8 @@
     <ClInclude Include="..\..\node\EthernetTap.hpp" />
     <ClInclude Include="..\..\node\HttpClient.hpp" />
     <ClInclude Include="..\..\node\Identity.hpp" />
+    <ClInclude Include="..\..\node\IncomingPacket.hpp" />
     <ClInclude Include="..\..\node\InetAddress.hpp" />
-    <ClInclude Include="..\..\node\IpcConnection.hpp" />
-    <ClInclude Include="..\..\node\IpcListener.hpp" />
     <ClInclude Include="..\..\node\Logger.hpp" />
     <ClInclude Include="..\..\node\MAC.hpp" />
     <ClInclude Include="..\..\node\Multicaster.hpp" />
@@ -100,8 +110,8 @@
     <ClInclude Include="..\..\node\Node.hpp" />
     <ClInclude Include="..\..\node\NodeConfig.hpp" />
     <ClInclude Include="..\..\node\NonCopyable.hpp" />
+    <ClInclude Include="..\..\node\OutboundMulticast.hpp" />
     <ClInclude Include="..\..\node\Packet.hpp" />
-    <ClInclude Include="..\..\node\PacketDecoder.hpp" />
     <ClInclude Include="..\..\node\Path.hpp" />
     <ClInclude Include="..\..\node\Peer.hpp" />
     <ClInclude Include="..\..\node\Poly1305.hpp" />
@@ -123,6 +133,9 @@
     <ClInclude Include="..\..\osnet\WindowsEthernetTap.hpp" />
     <ClInclude Include="..\..\osnet\WindowsEthernetTapFactory.hpp" />
     <ClInclude Include="..\..\osnet\WindowsRoutingTable.hpp" />
+    <ClInclude Include="..\..\testnet\TestEthernetTap.hpp" />
+    <ClInclude Include="..\..\testnet\TestEthernetTapFactory.hpp" />
+    <ClInclude Include="..\..\testnet\TestRoutingTable.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="ServiceBase.h" />

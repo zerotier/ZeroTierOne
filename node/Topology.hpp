@@ -112,7 +112,7 @@ public:
 	inline unsigned int numSupernodes() const
 	{
 		Mutex::Lock _l(_lock);
-		return _supernodePeers.size();
+		return (unsigned int)_supernodePeers.size();
 	}
 
 	/**

@@ -154,16 +154,16 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 								default:
 									ipcc->printf("unknown;");
 									break;
-								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_UDP:
+								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_UDP:
 									ipcc->printf("udp;");
 									break;
-								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
+								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
 									ipcc->printf("tcp_out;");
 									break;
-								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_TCP_IN:
+								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_TCP_IN:
 									ipcc->printf("tcp_in;");
 									break;
-								case ZT1_Node_PhysicalPath::ZT1_Node_PhysicalPath_TYPE_ETHERNET:
+								case ZT1_Node_PhysicalPathType::ZT1_Node_PhysicalPath_TYPE_ETHERNET:
 									ipcc->printf("eth;");
 									break;
 							}
@@ -178,9 +178,9 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 					}
 					const char *rolestr;
 					switch(pl->peers[i].role) {
-						case ZT1_Node_Peer::ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
-						case ZT1_Node_Peer::ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
-						case ZT1_Node_Peer::ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
+						case ZT1_Node_PeerRole::ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
+						case ZT1_Node_PeerRole::ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
+						case ZT1_Node_PeerRole::ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
 						default: rolestr = "?"; break;
 					}
 					ipcc->printf(" %u %s %s"ZT_EOL_S,
@@ -249,7 +249,7 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 				to.fromString(cmd[3].c_str());
 				from.copyTo(from2,6);
 				to.copyTo(to2,6);
-				if (_node->injectPacketFromHost(Utils::hexStrToU64(cmd[1].c_str()),from2,to2,Utils::hexStrToUInt(cmd[4].c_str()),cmd[5].c_str(),cmd[5].length()+1)) {
+				if (_node->injectPacketFromHost(Utils::hexStrToU64(cmd[1].c_str()),from2,to2,Utils::hexStrToUInt(cmd[4].c_str()),cmd[5].c_str(),(unsigned int)cmd[5].length()+1)) {
 					ipcc->printf("200 OK"ZT_EOL_S);
 				} else {
 					ipcc->printf("500 inject failed or not supported by this tap device"ZT_EOL_S);

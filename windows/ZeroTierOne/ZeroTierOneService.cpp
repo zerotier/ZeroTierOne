@@ -106,7 +106,7 @@ restart_node:
 				// Get upgrade path, which will be its reason for termination
 				std::string msiPath;
 				if (n) {
-					const char *msiPathTmp = n->reasonForTermination();
+					const char *msiPathTmp = n->terminationMessage();
 					if (msiPathTmp)
 						msiPath = msiPathTmp;
 				}
@@ -131,7 +131,7 @@ restart_node:
 
 			case ZeroTier::Node::NODE_UNRECOVERABLE_ERROR: {
 				std::string err("ZeroTier node encountered an unrecoverable error: ");
-				const char *r = _node->reasonForTermination();
+				const char *r = _node->terminationMessage();
 				if (r)
 					err.append(r);
 				else err.append("(unknown error)");

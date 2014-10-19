@@ -96,6 +96,16 @@ struct ZT1_Node_Status
 };
 
 /**
+ * Physical address type
+ */
+enum ZT1_Node_PhysicalAddressType {
+	ZT1_Node_PhysicalAddress_TYPE_NULL = 0,     /* none/invalid */
+	ZT1_Node_PhysicalAddress_TYPE_IPV4 = 1,     /* 32-bit IPv4 address (and port) */
+	ZT1_Node_PhysicalAddress_TYPE_IPV6 = 2,     /* 128-bit IPv6 address (and port) */
+	ZT1_Node_PhysicalAddress_TYPE_ETHERNET = 3  /* 48-bit Ethernet MAC address */
+};
+
+/**
  * Physical address result buffer
  */
 struct ZT1_Node_PhysicalAddress
@@ -103,12 +113,7 @@ struct ZT1_Node_PhysicalAddress
 	/**
 	 * Physical address type
 	 */
-	enum {
-		ZT1_Node_PhysicalAddress_TYPE_NULL = 0,     /* none/invalid */
-		ZT1_Node_PhysicalAddress_TYPE_IPV4 = 1,     /* 32-bit IPv4 address (and port) */
-		ZT1_Node_PhysicalAddress_TYPE_IPV6 = 2,     /* 128-bit IPv6 address (and port) */
-		ZT1_Node_PhysicalAddress_TYPE_ETHERNET = 3  /* 48-bit Ethernet MAC address */
-	} type;
+	enum ZT1_Node_PhysicalAddressType type;
 
 	/**
 	 * Address in raw binary form -- length depends on type
@@ -132,6 +137,17 @@ struct ZT1_Node_PhysicalAddress
 };
 
 /**
+ * Physical path type
+ */
+enum ZT1_Node_PhysicalPathType { /* These must be numerically the same as type in Path.hpp */
+	ZT1_Node_PhysicalPath_TYPE_NULL = 0,     /* none/invalid */
+	ZT1_Node_PhysicalPath_TYPE_UDP = 1,      /* UDP association */
+	ZT1_Node_PhysicalPath_TYPE_TCP_OUT = 2,  /* outgoing TCP tunnel using pseudo-SSL */
+	ZT1_Node_PhysicalPath_TYPE_TCP_IN = 3,   /* incoming TCP tunnel using pseudo-SSL */
+	ZT1_Node_PhysicalPath_TYPE_ETHERNET = 4  /* raw ethernet frames over trusted backplane */
+};
+
+/**
  * Network path result buffer
  */
 struct ZT1_Node_PhysicalPath
@@ -139,13 +155,7 @@ struct ZT1_Node_PhysicalPath
 	/**
 	 * Physical path type
 	 */
-	enum { /* These must be numerically the same as type in Path.hpp */
-		ZT1_Node_PhysicalPath_TYPE_NULL = 0,     /* none/invalid */
-		ZT1_Node_PhysicalPath_TYPE_UDP = 1,      /* UDP association */
-		ZT1_Node_PhysicalPath_TYPE_TCP_OUT = 2,  /* outgoing TCP tunnel using pseudo-SSL */
-		ZT1_Node_PhysicalPath_TYPE_TCP_IN = 3,   /* incoming TCP tunnel using pseudo-SSL */
-		ZT1_Node_PhysicalPath_TYPE_ETHERNET = 4  /* raw ethernet frames over trusted backplane */
-	} type;
+	enum ZT1_Node_PhysicalPathType type;
 
 	/**
 	 * Physical address of endpoint
@@ -179,6 +189,15 @@ struct ZT1_Node_PhysicalPath
 };
 
 /**
+ * What trust hierarchy role does this device have?
+ */
+enum ZT1_Node_PeerRole {
+	ZT1_Node_Peer_SUPERNODE = 0, // planetary supernode
+	ZT1_Node_Peer_HUB = 1,       // locally federated hub (coming soon)
+	ZT1_Node_Peer_NODE = 2       // ordinary node
+};
+
+/**
  * Peer status result buffer
  */
 struct ZT1_Node_Peer
@@ -206,11 +225,7 @@ struct ZT1_Node_Peer
 	/**
 	 * What trust hierarchy role does this device have?
 	 */
-	enum {
-		ZT1_Node_Peer_SUPERNODE = 0, // planetary supernode
-		ZT1_Node_Peer_HUB = 1,       // locally federated hub (coming soon)
-		ZT1_Node_Peer_NODE = 2       // ordinary node
-	} role;
+	enum ZT1_Node_PeerRole role;
 
 	/**
 	 * Array of network paths to peer
@@ -230,6 +245,19 @@ struct ZT1_Node_PeerList
 {
 	struct ZT1_Node_Peer *peers;
 	unsigned int numPeers;
+};
+
+/**
+ * Network status code
+ */
+enum ZT1_Node_NetworkStatus {
+	ZT1_Node_Network_INITIALIZING = 0,
+	ZT1_Node_Network_WAITING_FOR_FIRST_AUTOCONF = 1,
+	ZT1_Node_Network_OK = 2,
+	ZT1_Node_Network_ACCESS_DENIED = 3,
+	ZT1_Node_Network_NOT_FOUND = 4,
+	ZT1_Node_Network_INITIALIZATION_FAILED = 5,
+	ZT1_Node_Network_NO_MORE_DEVICES = 6
 };
 
 /**
@@ -299,15 +327,7 @@ struct ZT1_Node_Network
 	/**
 	 * Network status code
 	 */
-	enum { /* Must be same as Status in Network.hpp */
-		ZT1_Node_Network_INITIALIZING = 0,
-		ZT1_Node_Network_WAITING_FOR_FIRST_AUTOCONF = 1,
-		ZT1_Node_Network_OK = 2,
-		ZT1_Node_Network_ACCESS_DENIED = 3,
-		ZT1_Node_Network_NOT_FOUND = 4,
-		ZT1_Node_Network_INITIALIZATION_FAILED = 5,
-		ZT1_Node_Network_NO_MORE_DEVICES = 6
-	} status;
+	enum ZT1_Node_NetworkStatus status;
 
 	/**
 	 * True if traffic on network is enabled

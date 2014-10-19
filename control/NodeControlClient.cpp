@@ -33,6 +33,14 @@
 #include "IpcListener.hpp"
 #include "NodeControlService.hpp"
 
+#ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
+#include <tchar.h>
+#include <wchar.h>
+#include <ShlObj.h>
+#endif // __WINDOWS__
+
 namespace ZeroTier {
 
 struct _NodeControlClientImpl
