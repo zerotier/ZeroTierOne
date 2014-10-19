@@ -386,17 +386,15 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,Multi
 	//TRACE("..MC %s joined multicast group %.16llx/%s via %s",member.toString().c_str(),nwid,mg.toString().c_str(),((learnedFrom) ? learnedFrom.toString().c_str() : "(direct)"));
 
 	// Try to send to any outgoing multicasts that are waiting for more recipients
-	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
-		{ // TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
-			SharedPtr<Peer> p(RR->topology->getPeer(member));
-			if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
-				continue;
+	// TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
+	SharedPtr<Peer> p(RR->topology->getPeer(member));
+	if ((!p)||(!p->remoteVersionKnown())||(p->remoteVersionMajor() >= 1)) {
+		for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
+			tx->sendIfNew(RR,member);
+			if (tx->atLimit())
+				gs.txQueue.erase(tx++);
+			else ++tx;
 		}
-
-		tx->sendIfNew(RR,member);
-		if (tx->atLimit())
-			gs.txQueue.erase(tx++);
-		else ++tx;
 	}
 }
 
