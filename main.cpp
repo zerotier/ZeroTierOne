@@ -71,12 +71,12 @@
 #include "node/CertificateOfMembership.hpp"
 #include "node/EthernetTapFactory.hpp"
 #include "node/RoutingTable.hpp"
+#include "node/SocketManager.hpp"
 
 #include "control/NodeControlClient.hpp"
 #include "control/NodeControlService.hpp"
 
-#include "testnet/TestEthernetTapFactory.hpp"
-#include "testnet/TestRoutingTable.hpp"
+#include "osnet/NativeSocketManager.hpp"
 
 #ifdef __WINDOWS__
 #include "osnet/WindowsEthernetTapFactory.hpp"
@@ -568,8 +568,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
 	fprintf(out,"  -t<port>          - Port for TCP (default: disabled)"ZT_EOL_S);
-	fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
-	fprintf(out,"  -u                - Do not require root, use dummy tap device"ZT_EOL_S);
+	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif
@@ -626,7 +625,6 @@ int main(int argc,char **argv)
 	unsigned int tcpPort = 0;
 
 	std::string overrideRootTopology;
-	bool userMode = false;
 #ifdef __UNIX_LIKE__
 	bool runAsDaemon = false;
 #endif
@@ -670,9 +668,6 @@ int main(int argc,char **argv)
 						printHelp(argv[0],stdout);
 						return 1;
 					}
-					break;
-				case 'u':
-					userMode = true;
 					break;
 				case 'v':
 					printf("%s"ZT_EOL_S,Node::versionString());
@@ -750,7 +745,7 @@ int main(int argc,char **argv)
 		homeDir = ZT_DEFAULTS.defaultHomePath.c_str();
 
 #ifdef __UNIX_LIKE__
-	if ((!userMode)&&(getuid() != 0)) {
+	if (getuid() != 0) {
 		fprintf(stderr,"%s: must be run as root (uid 0)\n",argv[0]);
 		return 1;
 	}
@@ -782,7 +777,7 @@ int main(int argc,char **argv)
 #ifdef __WINDOWS__
 	if (winRunFromCommandLine) {
 		// Running in "interactive" mode (mostly for debugging)
-		if ((!userMode)&&(IsCurrentUserLocalAdministrator() != TRUE)) {
+		if (IsCurrentUserLocalAdministrator() != TRUE) {
 			fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
 			return 1;
 		}
@@ -806,6 +801,7 @@ int main(int argc,char **argv)
 	bool needsReset = false;
 	EthernetTapFactory *tapFactory = (EthernetTapFactory *)0;
 	RoutingTable *routingTable = (RoutingTable *)0;
+	SocketManager *socketManager = (SocketManager *)0;
 	NodeControlService *controlService = (NodeControlService *)0;
 
 	try {
@@ -814,15 +810,17 @@ int main(int argc,char **argv)
 		// succeed unless something is wrong with the filesystem.
 		std::string authToken(NodeControlClient::getAuthToken((std::string(homeDir) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
 
-		if (userMode) {
-			tapFactory = new TestEthernetTapFactory();
-			routingTable = new TestRoutingTable();
-		} else {
-			tapFactory = ZTCreatePlatformEthernetTapFactory;
-			routingTable = ZTCreatePlatformRoutingTable;
+		tapFactory = ZTCreatePlatformEthernetTapFactory;
+		routingTable = ZTCreatePlatformRoutingTable;
+
+		try {
+			socketManager = new NativeSocketManager(udpPort,tcpPort);
+		} catch ( ... ) {
+			fprintf(stderr,"%s: unable to bind to port: %u/UDP, %u/TCP (0 == disabled)"ZT_EOL_S,argv[0],udpPort,tcpPort);
+			throw;
 		}
 
-		node = new Node(homeDir,tapFactory,routingTable,udpPort,tcpPort,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+		node = new Node(homeDir,tapFactory,routingTable,socketManager,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
 		controlService = new NodeControlService(node,authToken.c_str());
 
 		switch(node->run()) {
@@ -832,11 +830,11 @@ int main(int argc,char **argv)
 				if (upgPath) {
 					if (!ZeroTierOneService::doStartUpgrade(std::string(upgPath))) {
 						exitCode = 3;
-						fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (doStartUpgrade failed)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+						fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (doStartUpgrade failed)"ZT_EOL_S,argv[0],(upgPath) ? upgPath : "(unknown path)");
 					}
 				} else {
 					exitCode = 3;
-					fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (no upgrade path provided)\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+					fprintf(stderr,"%s: abnormal termination: unable to execute update at %s (no upgrade path provided)"ZT_EOL_S,argv[0],(upgPath) ? upgPath : "(unknown path)");
 				}
 			}	break;
 #else // __UNIX_LIKE__
@@ -854,14 +852,14 @@ int main(int argc,char **argv)
 					::execl(upgPath,upgPath,(char *)0);
 				}
 				exitCode = 3;
-				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s\n",argv[0],(upgPath) ? upgPath : "(unknown path)");
+				fprintf(stderr,"%s: abnormal termination: unable to execute update at %s"ZT_EOL_S,argv[0],(upgPath) ? upgPath : "(unknown path)");
 			}	break;
 #endif // __WINDOWS__ / __UNIX_LIKE__
 
 			case Node::NODE_UNRECOVERABLE_ERROR: {
 				exitCode = 3;
 				const char *termReason = node->terminationMessage();
-				fprintf(stderr,"%s: abnormal termination: %s\n",argv[0],(termReason) ? termReason : "(unknown reason)");
+				fprintf(stderr,"%s: abnormal termination: %s"ZT_EOL_S,argv[0],(termReason) ? termReason : "(unknown reason)");
 			}	break;
 
 			default:
@@ -877,6 +875,7 @@ int main(int argc,char **argv)
 
 	delete controlService;
 	delete node; node = (Node *)0;
+	delete socketManager;
 	delete routingTable;
 	delete tapFactory;
 
