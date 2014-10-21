@@ -34,12 +34,6 @@
 #include "SharedPtr.hpp"
 #include "NonCopyable.hpp"
 
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <WS2tcpip.h>
-#include <Windows.h>
-#endif
-
 /**
  * Maximum discrete message length supported by all socket types
  */
@@ -48,25 +42,22 @@
 namespace ZeroTier {
 
 class Socket;
-class SocketManager;
 
 /**
- * Base class of all socket types
- *
- * Socket implementations are tightly bound to SocketManager.
+ * Base class for transport-layer socket implementations
  */
 class Socket : NonCopyable
 {
-	friend class SocketManager;
 	friend class SharedPtr<Socket>;
 
 public:
 	enum Type
 	{
-		ZT_SOCKET_TYPE_UDP_V4,
-		ZT_SOCKET_TYPE_UDP_V6,
-		ZT_SOCKET_TYPE_TCP_IN, // incoming connection, not listen
-		ZT_SOCKET_TYPE_TCP_OUT
+		ZT_SOCKET_TYPE_UDP_V4 = 1,
+		ZT_SOCKET_TYPE_UDP_V6 = 2,
+		ZT_SOCKET_TYPE_TCP_IN = 3,  // incoming connection accepted from listen socket
+		ZT_SOCKET_TYPE_TCP_OUT = 4, // outgoing connection to remote endpoint
+		ZT_SOCKET_TYPE_ETHERNET = 5 // unused, for future SDN backplane support
 	};
 
 	virtual ~Socket() {}
@@ -74,29 +65,17 @@ public:
 	/**
 	 * @return Socket type
 	 */
-	inline Type type() const
-		throw()
-	{
-		return _type;
-	}
+	inline Type type() const throw() { return _type; }
 
 	/**
 	 * @return True if this is a UDP socket
 	 */
-	inline bool udp() const
-		throw()
-	{
-		return ((_type == ZT_SOCKET_TYPE_UDP_V4)||(_type == ZT_SOCKET_TYPE_UDP_V6));
-	}
+	inline bool udp() const throw() { return ((_type == ZT_SOCKET_TYPE_UDP_V4)||(_type == ZT_SOCKET_TYPE_UDP_V6)); }
 
 	/**
 	 * @return True if this is a TCP socket
 	 */
-	inline bool tcp() const
-		throw()
-	{
-		return ((_type == ZT_SOCKET_TYPE_TCP_IN)||(_type == ZT_SOCKET_TYPE_TCP_OUT));
-	}
+	inline bool tcp() const throw() { return ((_type == ZT_SOCKET_TYPE_TCP_IN)||(_type == ZT_SOCKET_TYPE_TCP_OUT)); }
 
 	/**
 	 * Send a ZeroTier message packet
@@ -109,25 +88,9 @@ public:
 	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen) = 0;
 
 protected:
-#ifdef __WINDOWS__
-	Socket(Type t,SOCKET s) :
-#else
-	Socket(Type t,int s) :
-#endif
-		_sock(s),
-		_type(t) {}
+	Socket(const Type &t) : _type(t) {}
 
-	// Called only by SocketManager, should return false if socket is no longer open/valid (e.g. connection drop or other fatal error)
-	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,SocketManager *sm) = 0;
-	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,SocketManager *sm) = 0;
-
-#ifdef __WINDOWS__
-	SOCKET _sock;
-#else
-	int _sock;
-#endif
 	Type _type;
-
 	AtomicCounter __refCount;
 };
 

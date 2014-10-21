@@ -4,6 +4,7 @@ OBJS=\
 	control/NodeControlClient.o \
 	control/NodeControlService.o \
 	ext/lz4/lz4.o \
+	osnet/NativeSocketManager.o \
 	testnet/TestEthernetTap.o \
 	testnet/TestEthernetTapFactory.o \
 	testnet/TestRoutingTable.o \
@@ -28,11 +29,8 @@ OBJS=\
 	node/RoutingTable.o \
 	node/Salsa20.o \
 	node/Service.o \
-	node/SocketManager.o \
 	node/SoftwareUpdater.o \
 	node/SHA512.o \
 	node/Switch.o \
-	node/TcpSocket.o \
 	node/Topology.o \
-	node/UdpSocket.o \
 	node/Utils.o
