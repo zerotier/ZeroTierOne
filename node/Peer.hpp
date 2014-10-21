@@ -30,9 +30,9 @@
 
 #include <stdint.h>
 
-#include <vector>
 #include <algorithm>
 #include <utility>
+#include <vector>
 #include <stdexcept>
 
 #include "Constants.hpp"
@@ -48,23 +48,29 @@
 #include "Socket.hpp"
 #include "AtomicCounter.hpp"
 #include "NonCopyable.hpp"
-#include "Mutex.hpp"
+
+/**
+ * Maximum number of paths a peer can have
+ */
+#define ZT_PEER_MAX_PATHS 8
 
 namespace ZeroTier {
 
 /**
  * Peer on P2P Network
+ *
+ * This struture is not locked, volatile, and memcpy-able. NonCopyable
+ * semantics are just there to prevent bugs, not because it isn't safe
+ * to copy.
  */
 class Peer : NonCopyable
 {
 	friend class SharedPtr<Peer>;
 
-public:
-	/**
-	 * Construct an uninitialized peer (used with deserialize())
-	 */
-	Peer();
+private:
+	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
 
+public:
 	~Peer() { Utils::burn(_key,sizeof(_key)); }
 
 	/**
@@ -115,7 +121,7 @@ public:
 	 * @param inReVerb Verb in reply to (for OK/ERROR, VERB_NOP otherwise)
 	 * @param now Current time
 	 */
-	void receive(
+	void received(
 		const RuntimeEnvironment *RR,
 		const SharedPtr<Socket> &fromSock,
 		const InetAddress &remoteAddr,
@@ -162,8 +168,10 @@ public:
 	 */
 	std::vector<Path> paths() const
 	{
-		Mutex::Lock _l(_lock);
-		return _paths;
+		std::vector<Path> pp;
+		for(unsigned int p=0,np=_numPaths;p<np;++p)
+			pp.push_back(_paths[p]);
+		return pp;
 	}
 
 	/**
@@ -172,9 +180,8 @@ public:
 	 */
 	inline bool haveUdpPath(const InetAddress &addr) const
 	{
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			if ((p->type() == Path::PATH_TYPE_UDP)&&(p->address() == addr))
+		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+			if ((_paths[p].type() == Path::PATH_TYPE_UDP)&&(_paths[p].address() == addr))
 				return true;
 		}
 		return false;
@@ -187,9 +194,8 @@ public:
 		throw()
 	{
 		uint64_t x = 0;
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
-			x = std::max(x,p->lastReceived());
+		for(unsigned int p=0,np=_numPaths;p<np;++p)
+			x = std::max(x,_paths[p].lastReceived());
 		return x;
 	}
 
@@ -200,9 +206,8 @@ public:
 		throw()
 	{
 		uint64_t x = 0;
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p)
-			x = std::max(x,p->lastSend());
+		for(unsigned int p=0,np=_numPaths;p<np;++p)
+			x = std::max(x,_paths[p].lastSend());
 		return x;
 	}
 
@@ -215,10 +220,9 @@ public:
 	inline void lastPingAndDirectReceive(uint64_t &lp,uint64_t &lr)
 		throw()
 	{
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			lp = std::max(lp,p->lastPing());
-			lr = std::max(lr,p->lastReceived());
+		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+			lp = std::max(lp,_paths[p].lastPing());
+			lr = std::max(lr,_paths[p].lastReceived());
 		}
 	}
 
@@ -251,11 +255,7 @@ public:
 	 * @param now Current time
 	 * @return True if peer has received something within ZT_PEER_ACTIVITY_TIMEOUT ms
 	 */
-	inline bool alive(uint64_t now) const
-		throw()
-	{
-		return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT);
-	}
+	inline bool alive(uint64_t now) const throw() { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Current latency or 0 if unknown (max: 65535)
@@ -284,12 +284,7 @@ public:
 	/**
 	 * @return True if this peer has at least one direct IP address path
 	 */
-	inline bool hasDirectPath() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return (!_paths.empty());
-	}
+	inline bool hasDirectPath() const throw() { return (_numPaths != 0); }
 
 	/**
 	 * @param now Current time
@@ -298,9 +293,8 @@ public:
 	inline bool hasActiveDirectPath(uint64_t now) const
 		throw()
 	{
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (p->active(now))
+		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+			if (_paths[p].active(now))
 				return true;
 		}
 		return false;
@@ -311,35 +305,14 @@ public:
 	 *
 	 * @param p New path to add
 	 */
-	inline void addPath(const Path &newp)
-	{
-		Mutex::Lock _l(_lock);
-		for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-			if (*p == newp) {
-				p->setFixed(newp.fixed());
-				return;
-			}
-		}
-		_paths.push_back(newp);
-	}
+	void addPath(const Path &newp);
 
 	/**
 	 * Clear paths
 	 *
 	 * @param fixedToo If true, clear fixed paths as well as learned ones
 	 */
-	inline void clearPaths(bool fixedToo)
-	{
-		std::vector<Path> npv;
-		Mutex::Lock _l(_lock);
-		if (!fixedToo) {
-			for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-				if (p->fixed())
-					npv.push_back(*p);
-			}
-		}
-		_paths = npv;
-	}
+	void clearPaths(bool fixedToo);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
@@ -405,11 +378,6 @@ public:
 private:
 	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
 
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
-	Identity _id;
-
-	std::vector<Path> _paths;
-
 	volatile uint64_t _lastUsed;
 	volatile uint64_t _lastReceive; // direct or indirect
 	volatile uint64_t _lastUnicastFrame;
@@ -419,9 +387,13 @@ private:
 	volatile uint16_t _vMajor;
 	volatile uint16_t _vMinor;
 	volatile uint16_t _vRevision;
-	volatile unsigned int _latency;
 
-	Mutex _lock;
+	Path _paths[ZT_PEER_MAX_PATHS];
+	volatile unsigned int _numPaths;
+
+	volatile unsigned int _latency;
+	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
+	Identity _id;
 
 	AtomicCounter __refCount;
 };

@@ -37,14 +37,14 @@
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
-#include "Buffer.hpp"
-
-#define ZT_PATH_SERIALIZATION_VERSION 3
 
 namespace ZeroTier {
 
 /**
  * WAN address and protocol for reaching a peer
+ *
+ * This structure is volatile and memcpy-able, and depends on
+ * InetAddress being similarly safe.
  */
 class Path
 {
@@ -67,7 +67,6 @@ public:
 
 	Path(const Path &p)
 	{
-		// InetAddress is memcpy'able
 		memcpy(this,&p,sizeof(Path));
 	}
 
@@ -78,6 +77,16 @@ public:
 		_addr(addr),
 		_type(t),
 		_fixed(fixed) {}
+
+	inline void init(const InetAddress &addr,Type t,bool fixed = false)
+	{
+		_lastSend = 0;
+		_lastReceived = 0;
+		_lastPing = 0;
+		_addr = addr;
+		_type = t;
+		_fixed = fixed;
+	}
 
 	inline Path &operator=(const Path &p)
 	{
@@ -149,59 +158,6 @@ public:
 	inline bool operator>(const Path &p) const throw() { return (p < *this); }
 	inline bool operator<=(const Path &p) const throw() { return !(p < *this); }
 	inline bool operator>=(const Path &p) const throw() { return !(*this < p); }
-
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
-	{
-		b.append((unsigned char)ZT_PATH_SERIALIZATION_VERSION);
-		b.append(_lastSend);
-		b.append(_lastReceived);
-		b.append(_lastPing);
-		b.append((unsigned char)_addr.type());
-		switch(_addr.type()) {
-			case InetAddress::TYPE_NULL:
-				break;
-			case InetAddress::TYPE_IPV4:
-				b.append(_addr.rawIpData(),4);
-				b.append((uint16_t)_addr.port());
-				break;
-			case InetAddress::TYPE_IPV6:
-				b.append(_addr.rawIpData(),16);
-				b.append((uint16_t)_addr.port());
-				break;
-		}
-		b.append((unsigned char)_type);
-		b.append(_fixed ? (unsigned char)1 : (unsigned char)0);
-	}
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
-
-		if (b[p++] != ZT_PATH_SERIALIZATION_VERSION)
-			throw std::invalid_argument("Path: deserialize(): version mismatch");
-
-		_lastSend = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastReceived = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		_lastPing = b.template at<uint64_t>(p); p += sizeof(uint64_t);
-		switch((InetAddress::AddressType)b[p++]) {
-			case InetAddress::TYPE_IPV4:
-				_addr.set(b.field(p,4),4,b.template at<uint16_t>(p + 4));
-				p += 4 + sizeof(uint16_t);
-				break;
-			case InetAddress::TYPE_IPV6:
-				_addr.set(b.field(p,16),16,b.template at<uint16_t>(p + 16));
-				p += 16 + sizeof(uint16_t);
-				break;
-			default:
-				_addr.zero();
-				break;
-		}
-		_type = (Type)b[p++];
-		_fixed = (b[p++] != 0);
-
-		return (p - startAt);
-	}
 
 private:
 	volatile uint64_t _lastSend;

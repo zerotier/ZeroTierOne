@@ -37,20 +37,8 @@
 
 namespace ZeroTier {
 
-Peer::Peer() :
-	_lastUsed(0),
-	_lastReceive(0),
-	_lastUnicastFrame(0),
-	_lastMulticastFrame(0),
-	_lastAnnouncedTo(0),
-	_vMajor(0),
-	_vMinor(0),
-	_vRevision(0),
-	_latency(0) {}
-
 Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
-	_id(peerIdentity),
 	_lastUsed(0),
 	_lastReceive(0),
 	_lastUnicastFrame(0),
@@ -59,13 +47,15 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
-	_latency(0)
+	_numPaths(0),
+	_latency(0),
+	_id(peerIdentity)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
-void Peer::receive(
+void Peer::received(
 	const RuntimeEnvironment *RR,
 	const SharedPtr<Socket> &fromSock,
 	const InetAddress &remoteAddr,
@@ -79,8 +69,6 @@ void Peer::receive(
 	// Update system-wide last packet receive time
 	*((const_cast<uint64_t *>(&(RR->timeOfLastPacketReceived)))) = now;
 
-	Mutex::Lock _l(_lock);
-
 	// Global last receive time regardless of path
 	_lastReceive = now;
 
@@ -88,28 +76,35 @@ void Peer::receive(
 		// Learn paths from direct packets (hops == 0)
 		{
 			bool havePath = false;
-			for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-				if ((p->address() == remoteAddr)&&(p->tcp() == fromSock->tcp())) {
-					p->received(now);
+			for(unsigned int p=0,np=_numPaths;p<np;++p) {
+				if ((_paths[p].address() == remoteAddr)&&(_paths[p].tcp() == fromSock->tcp())) {
+					_paths[p].received(now);
 					havePath = true;
 					break;
 				}
 			}
 
 			if (!havePath) {
-				Path::Type pt = Path::PATH_TYPE_UDP;
-				switch(fromSock->type()) {
-					case Socket::ZT_SOCKET_TYPE_TCP_IN:
-						pt = Path::PATH_TYPE_TCP_IN;
-						break;
-					case Socket::ZT_SOCKET_TYPE_TCP_OUT:
-						pt = Path::PATH_TYPE_TCP_OUT;
-						break;
-					default:
-						break;
+				unsigned int np = _numPaths;
+				if (np >= ZT_PEER_MAX_PATHS)
+					clean(now);
+				np = _numPaths;
+				if (np < ZT_PEER_MAX_PATHS) {
+					Path::Type pt = Path::PATH_TYPE_UDP;
+					switch(fromSock->type()) {
+						case Socket::ZT_SOCKET_TYPE_TCP_IN:
+							pt = Path::PATH_TYPE_TCP_IN;
+							break;
+						case Socket::ZT_SOCKET_TYPE_TCP_OUT:
+							pt = Path::PATH_TYPE_TCP_OUT;
+							break;
+						default:
+							break;
+					}
+					_paths[np].init(remoteAddr,pt,false);
+					_paths[np].received(now);
+					_numPaths = ++np;
 				}
-				_paths.push_back(Path(remoteAddr,pt,false));
-				_paths.back().received(now);
 			}
 		}
 
@@ -121,10 +116,12 @@ void Peer::receive(
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
 
+			bool isSupernode = RR->topology->isSupernode(_id.address());
+
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 			std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 			for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
-				if ( ((*n)->isAllowed(_id.address())) || ((*n)->controller() == _id.address()) || (RR->topology->isSupernode(_id.address())) ) {
+				if ( ((*n)->isAllowed(_id.address())) || (isSupernode) ) {
 					std::set<MulticastGroup> mgs((*n)->multicastGroups());
 					for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
@@ -155,8 +152,6 @@ void Peer::receive(
 
 Path::Type Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 {
-	Mutex::Lock _l(_lock);
-
 	/* For sending ordinary packets, paths are divided into two categories:
 	 * "normal" and "TCP out." Normal includes UDP and incoming TCP. We want
 	 * to treat outbound TCP differently since if we use it it may end up
@@ -166,17 +161,17 @@ Path::Type Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int
 	Path *bestTcpOutPath = (Path *)0;
 	uint64_t bestNormalPathLastReceived = 0;
 	uint64_t bestTcpOutPathLastReceived = 0;
-	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		uint64_t lr = p->lastReceived();
-		if (p->type() == Path::PATH_TYPE_TCP_OUT) {
+	for(unsigned int p=0,np=_numPaths;p<np;++p) {
+		uint64_t lr = _paths[p].lastReceived();
+		if (_paths[p].type() == Path::PATH_TYPE_TCP_OUT) {
 			if (lr >= bestTcpOutPathLastReceived) {
 				bestTcpOutPathLastReceived = lr;
-				bestTcpOutPath = &(*p);
+				bestTcpOutPath = &(_paths[p]);
 			}
 		} else {
 			if (lr >= bestNormalPathLastReceived) {
 				bestNormalPathLastReceived = lr;
-				bestNormalPath = &(*p);
+				bestNormalPath = &(_paths[p]);
 			}
 		}
 	}
@@ -214,7 +209,6 @@ bool Peer::sendPing(const RuntimeEnvironment *RR,uint64_t now)
 {
 	bool sent = false;
 	SharedPtr<Peer> self(this);
-	Mutex::Lock _l(_lock);
 
 	/* Ping (and thus open) outbound TCP connections if we have no other options
 	 * or if the TCP tunneling master switch is enabled and pings have been
@@ -222,22 +216,22 @@ bool Peer::sendPing(const RuntimeEnvironment *RR,uint64_t now)
 	uint64_t lastNormalPingSent = 0;
 	uint64_t lastNormalReceive = 0;
 	bool haveNormal = false;
-	for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-		if (p->type() != Path::PATH_TYPE_TCP_OUT) {
-			lastNormalPingSent = std::max(lastNormalPingSent,p->lastPing());
-			lastNormalReceive = std::max(lastNormalReceive,p->lastReceived());
+	for(unsigned int p=0,np=_numPaths;p<np;++p) {
+		if (_paths[p].type() != Path::PATH_TYPE_TCP_OUT) {
+			lastNormalPingSent = std::max(lastNormalPingSent,_paths[p].lastPing());
+			lastNormalReceive = std::max(lastNormalReceive,_paths[p].lastReceived());
 			haveNormal = true;
 		}
 	}
-	const bool useTcpOut = ( (!haveNormal) || ( (RR->tcpTunnelingEnabled) && (lastNormalPingSent > RR->timeOfLastResynchronize) && (lastNormalPingSent > lastNormalReceive) && ((lastNormalPingSent - lastNormalReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
 
+	const bool useTcpOut = ( (!haveNormal) || ( (RR->tcpTunnelingEnabled) && (lastNormalPingSent > RR->timeOfLastResynchronize) && (lastNormalPingSent > lastNormalReceive) && ((lastNormalPingSent - lastNormalReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
 	TRACE("PING %s (useTcpOut==%d)",_id.address().toString().c_str(),(int)useTcpOut);
 
-	for(std::vector<Path>::iterator p(_paths.begin());p!=_paths.end();++p) {
-		if ((useTcpOut)||(p->type() != Path::PATH_TYPE_TCP_OUT)) {
-			p->pinged(now); // attempts to ping are logged whether they look successful or not
-			if (RR->sw->sendHELLO(self,*p)) {
-				p->sent(now);
+	for(unsigned int p=0,np=_numPaths;p<np;++p) {
+		if ((useTcpOut)||(_paths[p].type() != Path::PATH_TYPE_TCP_OUT)) {
+			_paths[p].pinged(now); // attempts to ping are logged whether they look successful or not
+			if (RR->sw->sendHELLO(self,_paths[p])) {
+				_paths[p].sent(now);
 				sent = true;
 			}
 		}
@@ -248,33 +242,68 @@ bool Peer::sendPing(const RuntimeEnvironment *RR,uint64_t now)
 
 void Peer::clean(uint64_t now)
 {
-	Mutex::Lock _l(_lock);
-	unsigned long i = 0,o = 0,l = (unsigned long)_paths.size();
-	while (i != l) {
-		if (_paths[i].active(now)) // active includes fixed
-			_paths[o++] = _paths[i];
-		++i;
+	unsigned int np = _numPaths;
+	unsigned int x = 0;
+	unsigned int y = 0;
+	while (x < np) {
+		if (_paths[x].active(now))
+			_paths[y++] = _paths[x];
+		++x;
 	}
-	_paths.resize(o);
+	_numPaths = y;
+}
+
+void Peer::addPath(const Path &newp)
+{
+	unsigned int np = _numPaths;
+	for(unsigned int p=0;p<np;++p) {
+		if (_paths[p] == newp) {
+			_paths[p].setFixed(newp.fixed());
+			return;
+		}
+	}
+	if (np >= ZT_PEER_MAX_PATHS)
+		clean(Utils::now());
+	np = _numPaths;
+	if (np < ZT_PEER_MAX_PATHS) {
+		_paths[np] = newp;
+		_numPaths = ++np;
+	}
+}
+
+void Peer::clearPaths(bool fixedToo)
+{
+	if (fixedToo) {
+		_numPaths = 0;
+	} else {
+		unsigned int np = _numPaths;
+		unsigned int x = 0;
+		unsigned int y = 0;
+		while (x < np) {
+			if (_paths[x].fixed())
+				_paths[y++] = _paths[x];
+			++x;
+		}
+		_numPaths = y;
+	}
 }
 
 void Peer::getBestActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
 {
 	uint64_t bestV4 = 0,bestV6 = 0;
-	Mutex::Lock _l(_lock);
-	for(std::vector<Path>::const_iterator p(_paths.begin());p!=_paths.end();++p) {
-		if ((p->type() == Path::PATH_TYPE_UDP)&&(p->active(now))) {
-			uint64_t lr = p->lastReceived();
+	for(unsigned int p=0,np=_numPaths;p<np;++p) {
+		if ((_paths[p].type() == Path::PATH_TYPE_UDP)&&(_paths[p].active(now))) {
+			uint64_t lr = _paths[p].lastReceived();
 			if (lr) {
-				if (p->address().isV4()) {
+				if (_paths[p].address().isV4()) {
 					if (lr >= bestV4) {
 						bestV4 = lr;
-						v4 = p->address();
+						v4 = _paths[p].address();
 					}
-				} else if (p->address().isV6()) {
+				} else if (_paths[p].address().isV6()) {
 					if (lr >= bestV6) {
 						bestV6 = lr;
-						v6 = p->address();
+						v6 = _paths[p].address();
 					}
 				}
 			}
