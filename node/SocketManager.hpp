@@ -48,9 +48,7 @@ namespace ZeroTier {
 class SocketManager : NonCopyable
 {
 public:
-	SocketManager(void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg) :
-		_packetHandler(packetHandler),
-		_arg(arg) {}
+	SocketManager() {}
 	virtual ~SocketManager() {}
 
 	/**
@@ -87,8 +85,13 @@ public:
 	 * If called concurrently, one will block until the other completes.
 	 *
 	 * @param timeout Timeout in milliseconds, may return sooner if whack() is called
+	 * @param handler Packet data handler
+	 * @param arg Void argument to packet data handler
 	 */
-	virtual void poll(unsigned long timeout) = 0;
+	virtual void poll(
+		unsigned long timeout,
+		void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
+		void *arg);
 
 	/**
 	 * Cause current or next blocking poll() operation to timeout immediately
@@ -99,10 +102,6 @@ public:
 	 * Close TCP sockets
 	 */
 	virtual void closeTcpSockets() = 0;
-
-protected:
-	void (*_packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &);
-	void *_arg;
 };
 
 } // namespace ZeroTier

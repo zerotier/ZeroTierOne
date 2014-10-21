@@ -75,13 +75,13 @@ public:
 		timeOfLastPacketReceived(0),
 		tapFactory((EthernetTapFactory *)0),
 		routingTable((RoutingTable *)0),
+		sm((SocketManager *)0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		http((HttpClient *)0),
 		antiRec((AntiRecursion *)0),
 		mc((Multicaster *)0),
 		sw((Switch *)0),
-		sm((SocketManager *)0),
 		topology((Topology *)0),
 		nc((NodeConfig *)0),
 		node((Node *)0),
@@ -117,6 +117,7 @@ public:
 	// These are passed in from outside and are not created or deleted by the ZeroTier node core
 	EthernetTapFactory *tapFactory;
 	RoutingTable *routingTable;
+	SocketManager *sm;
 
 	/*
 	 * Order matters a bit here. These are constructed in this order
@@ -132,7 +133,6 @@ public:
 	AntiRecursion *antiRec;
 	Multicaster *mc;
 	Switch *sw;
-	SocketManager *sm;
 	Topology *topology;
 	NodeConfig *nc;
 	Node *node;

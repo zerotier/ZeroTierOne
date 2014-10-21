@@ -84,8 +84,6 @@ struct _NodeImpl
 {
 	RuntimeEnvironment renv;
 
-	unsigned int udpPort,tcpPort;
-
 	std::string reasonForTerminationStr;
 	volatile Node::ReasonForTermination reasonForTermination;
 
@@ -112,7 +110,6 @@ struct _NodeImpl
 		delete renv.updater;  renv.updater = (SoftwareUpdater *)0;
 		delete renv.nc;       renv.nc = (NodeConfig *)0;            // shut down all networks, close taps, etc.
 		delete renv.topology; renv.topology = (Topology *)0;        // now we no longer need routing info
-		delete renv.sm;       renv.sm = (SocketManager *)0;         // close all sockets
 		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
 		delete renv.mc;       renv.mc = (Multicaster *)0;
 		delete renv.antiRec;  renv.antiRec = (AntiRecursion *)0;
@@ -222,8 +219,7 @@ Node::Node(
 	const char *hp,
 	EthernetTapFactory *tf,
 	RoutingTable *rt,
-	unsigned int udpPort,
-	unsigned int tcpPort,
+	SocketManager *sm,
 	bool resetIdentity,
 	const char *overrideRootTopology) throw() :
 	_impl(new _NodeImpl)
@@ -236,6 +232,7 @@ Node::Node(
 
 	impl->renv.tapFactory = tf;
 	impl->renv.routingTable = rt;
+	impl->renv.sm = sm;
 
 	if (resetIdentity) {
 		// Forget identity and peer database, peer keys, etc.
@@ -255,8 +252,6 @@ Node::Node(
 		}
 	}
 
-	impl->udpPort = udpPort & 0xffff;
-	impl->tcpPort = tcpPort & 0xffff;
 	impl->reasonForTermination = Node::NODE_RUNNING;
 	impl->started = false;
 	impl->running = false;
@@ -400,7 +395,6 @@ Node::ReasonForTermination Node::run()
 		RR->antiRec = new AntiRecursion();
 		RR->mc = new Multicaster(RR);
 		RR->sw = new Switch(RR);
-		RR->sm = new SocketManager(impl->udpPort,impl->tcpPort,&_CBztTraffic,RR);
 		RR->topology = new Topology(RR);
 		try {
 			RR->nc = new NodeConfig(RR);
@@ -666,7 +660,7 @@ Node::ReasonForTermination Node::run()
 			try {
 				unsigned long delay = std::min((unsigned long)ZT_MAX_SERVICE_LOOP_INTERVAL,RR->sw->doTimerTasks());
 				uint64_t start = Utils::now();
-				RR->sm->poll(delay);
+				RR->sm->poll(delay,&_CBztTraffic,RR);
 				lastDelayDelta = (long)(Utils::now() - start) - (long)delay; // used to detect sleep/wake
 			} catch (std::exception &exc) {
 				LOG("unexpected exception running Switch doTimerTasks: %s",exc.what());

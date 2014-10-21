@@ -79,9 +79,6 @@ public:
 	NativeSocket(const Type &t,int s) : Socket(t),_sock(s) {}
 	int _sock;
 #endif
-
-	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,NativeSocketManager *sm) = 0;
-	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,NativeSocketManager *sm) = 0;
 };
 
 /**
@@ -122,7 +119,7 @@ public:
 		}
 	}
 
-	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,NativeSocketManager *sm)
+	inline bool notifyAvailableForRead(const SharedPtr<Socket> &self,NativeSocketManager *sm,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg)
 	{
 		Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> buf;
 		InetAddress from;
@@ -130,12 +127,14 @@ public:
 		int n = (int)recvfrom(_sock,(char *)(buf.data()),ZT_SOCKET_MAX_MESSAGE_LEN,0,from.saddr(),&salen);
 		if (n > 0) {
 			buf.setSize((unsigned int)n);
-			sm->handleReceivedPacket(self,from,buf);
+			try {
+				handler(self,arg,from,buf);
+			} catch ( ... ) {} // handlers should not throw
 		}
 		return true;
 	}
 
-	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,NativeSocketManager *sm)
+	inline bool notifyAvailableForWrite(const SharedPtr<Socket> &self,NativeSocketManager *sm)
 	{
 		return true;
 	}
@@ -226,7 +225,7 @@ public:
 		return true;
 	}
 
-	virtual bool notifyAvailableForRead(const SharedPtr<Socket> &self,NativeSocketManager *sm)
+	inline bool notifyAvailableForRead(const SharedPtr<Socket> &self,NativeSocketManager *sm,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg)
 	{
 		unsigned char buf[65536];
 
@@ -251,7 +250,7 @@ public:
 				Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> data(_inbuf + 5,pl - 5);
 				memmove(_inbuf,_inbuf + pl,p -= pl);
 				try {
-					sm->handleReceivedPacket(self,_remote,data);
+					handler(self,arg,_remote,data);
 				} catch ( ... ) {} // handlers should not throw
 				pl = 0;
 			}
@@ -261,7 +260,7 @@ public:
 		return true;
 	}
 
-	virtual bool notifyAvailableForWrite(const SharedPtr<Socket> &self,NativeSocketManager *sm)
+	inline bool notifyAvailableForWrite(const SharedPtr<Socket> &self,NativeSocketManager *sm)
 	{
 		Mutex::Lock _l(_writeLock);
 
@@ -343,12 +342,8 @@ static inline void winPipeHack(SOCKET fds[2])
 }
 #endif
 
-NativeSocketManager::NativeSocketManager(
-	int localUdpPort,
-	int localTcpPort,
-	void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
-	void *arg) :
-	SocketManager(packetHandler,arg),
+NativeSocketManager::NativeSocketManager(int localUdpPort,int localTcpPort) :
+	SocketManager(),
 	_whackSendPipe(INVALID_SOCKET),
 	_whackReceivePipe(INVALID_SOCKET),
 	_tcpV4ListenSocket(INVALID_SOCKET),
@@ -707,7 +702,7 @@ bool NativeSocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTc
 	return false;
 }
 
-void NativeSocketManager::poll(unsigned long timeout)
+void NativeSocketManager::poll(unsigned long timeout,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg)
 {
 	fd_set rfds,wfds,efds;
 	struct timeval tv;
@@ -834,11 +829,11 @@ void NativeSocketManager::poll(unsigned long timeout)
 	{
 		NativeUdpSocket *usock = (NativeUdpSocket *)_udpV4Socket.ptr();
 		if ((usock)&&(FD_ISSET(usock->_sock,&rfds))) {
-			usock->notifyAvailableForRead(_udpV4Socket,this);
+			usock->notifyAvailableForRead(_udpV4Socket,this,handler,arg);
 		}
 		usock = (NativeUdpSocket *)_udpV6Socket.ptr();
 		if ((usock)&&(FD_ISSET(usock->_sock,&rfds))) {
-			usock->notifyAvailableForRead(_udpV6Socket,this);
+			usock->notifyAvailableForRead(_udpV6Socket,this,handler,arg);
 		}
 	}
 
@@ -885,7 +880,7 @@ void NativeSocketManager::poll(unsigned long timeout)
 			}
 		}
 		if (FD_ISSET(tsock->_sock,&rfds)) {
-			if (!tsock->notifyAvailableForRead(*s,this)) {
+			if (!tsock->notifyAvailableForRead(*s,this,handler,arg)) {
 				{
 					Mutex::Lock _l2(_tcpSockets_m);
 					_tcpSockets.erase(tsock->_remote);

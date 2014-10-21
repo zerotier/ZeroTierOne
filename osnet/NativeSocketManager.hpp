@@ -58,9 +58,7 @@ class NativeUdpSocket;
 class NativeTcpSocket;
 
 /**
- * Socket I/O multiplexer
- *
- * This wraps select(), epoll(), etc. and handles creation of Sockets.
+ * Native socket manager for Unix and Windows
  */
 class NativeSocketManager : public SocketManager
 {
@@ -68,36 +66,15 @@ class NativeSocketManager : public SocketManager
 	friend class NativeTcpSocket;
 
 public:
-	/**
-	 * @param localUdpPort Local UDP port to bind or 0 for no UDP support
-	 * @param localTcpPort Local TCP port to listen to or 0 for no incoming TCP connect support
-	 * @param packetHandler Function to call when packets are received by a socket
-	 * @param arg Second argument to packetHandler()
-	 * @throws std::runtime_error Could not bind local port(s) or open socket(s)
-	 */
-	NativeSocketManager(
-		int localUdpPort,
-		int localTcpPort,
-		void (*packetHandler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
-		void *arg);
-
+	NativeSocketManager(int localUdpPort,int localTcpPort);
 	virtual ~NativeSocketManager();
 
 	virtual bool send(const InetAddress &to,bool tcp,bool autoConnectTcp,const void *msg,unsigned int msglen);
-	virtual void poll(unsigned long timeout);
+	virtual void poll(unsigned long timeout,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg);
 	virtual void whack();
 	virtual void closeTcpSockets();
 
 private:
-	// Called by socket implementations when a packet is received
-	inline void handleReceivedPacket(const SharedPtr<Socket> &sock,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
-		throw()
-	{
-		try {
-			_packetHandler(sock,_arg,from,data);
-		} catch ( ... ) {} // handlers shouldn't throw
-	}
-
 	// Used by TcpSocket to register/unregister for write availability notification
 	void _startNotifyWrite(const NativeSocket *sock);
 	void _stopNotifyWrite(const NativeSocket *sock);

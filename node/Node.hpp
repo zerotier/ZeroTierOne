@@ -36,6 +36,7 @@ namespace ZeroTier {
 
 class EthernetTapFactory;
 class RoutingTable;
+class SocketManager;
 
 /**
  * A ZeroTier One node
@@ -85,8 +86,7 @@ public:
 	 * @param hp Home directory path or NULL for system-wide default for this platform
 	 * @param tf Ethernet tap factory for platform network stack
 	 * @param rt Routing table interface for platform network stack
-	 * @param udpPort UDP port or 0 to disable
-	 * @param tcpPort TCP port or 0 to disable
+	 * @param sm Socket manager for physical network I/O
 	 * @param resetIdentity If true, delete identity before starting and regenerate
 	 * @param overrideRootTopology Override root topology with this dictionary (in string serialized format) and do not update (default: NULL for none)
 	 */
@@ -94,8 +94,7 @@ public:
 		const char *hp,
 		EthernetTapFactory *tf,
 		RoutingTable *rt,
-		unsigned int udpPort,
-		unsigned int tcpPort,
+		SocketManager *sm,
 		bool resetIdentity,
 		const char *overrideRootTopology = (const char *)0) throw();
 
