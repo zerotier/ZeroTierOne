@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_SOCKETMANAGER_HPP
-#define ZT_SOCKETMANAGER_HPP
+#ifndef ZT_SIMNETSOCKETMANAGER_HPP
+#define ZT_SIMNETSOCKETMANAGER_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,73 +35,36 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
-#include "InetAddress.hpp"
-#include "Buffer.hpp"
-#include "NonCopyable.hpp"
-#include "Socket.hpp"
+#include "../node/SocketManager.hpp"
 
 namespace ZeroTier {
 
 /**
  * Socket I/O implementation
  */
-class SocketManager : NonCopyable
+class SimNetSocketManager : public SocketManager
 {
 public:
-	SocketManager() {}
-	virtual ~SocketManager() {}
+	SimNetSocketManager();
+	virtual ~SimNetSocketManager();
 
-	/**
-	 * Send a message to a remote peer
-	 *
-	 * @param to Destination address
-	 * @param tcp Use TCP?
-	 * @param autoConnectTcp If true, automatically initiate TCP connection if there is none
-	 * @param msg Message to send
-	 * @param msglen Length of message
-	 */
 	virtual bool send(
 		const InetAddress &to,
 		bool tcp,
 		bool autoConnectTcp,
 		const void *msg,
-		unsigned int msglen) = 0;
+		unsigned int msglen);
 
-	/**
-	 * Send a message to a remote peer via UDP (shortcut for setting both TCP params to false in send)
-	 *
-	 * @param to Destination address
-	 * @param msg Message to send
-	 * @param msglen Length of message
-	 */
-	inline bool sendUdp(
-		const InetAddress &to,
-		const void *msg,
-		unsigned int msglen) { return send(to,false,false,msg,msglen); }
-
-	/**
-	 * Perform I/O polling operation (e.g. select())
-	 *
-	 * If called concurrently, one will block until the other completes.
-	 *
-	 * @param timeout Timeout in milliseconds, may return sooner if whack() is called
-	 * @param handler Packet data handler
-	 * @param arg Void argument to packet data handler
-	 */
 	virtual void poll(
 		unsigned long timeout,
 		void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
-		void *arg) = 0;
+		void *arg);
 
-	/**
-	 * Cause current or next blocking poll() operation to timeout immediately
-	 */
-	virtual void whack() = 0;
+	virtual void whack();
 
-	/**
-	 * Close TCP sockets
-	 */
-	virtual void closeTcpSockets() = 0;
+	virtual void closeTcpSockets();
+
+private:
 };
 
 } // namespace ZeroTier
