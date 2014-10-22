@@ -63,7 +63,9 @@ public:
 	inline void wait(unsigned long ms) const
 		throw()
 	{
-		WaitForSingleObject(_sem,(DWORD)ms);
+		if (ms)
+			WaitForSingleObject(_sem,(DWORD)ms);
+		else WaitForSingleObject(_sem,INFINITE);
 	}
 
 	inline void signal() const

@@ -27,9 +27,32 @@
 
 #include "SimNetSocketManager.hpp"
 
+#include "../node/Constants.hpp"
+#include "../node/Socket.hpp"
+
 namespace ZeroTier {
 
-SimNetSocketManager::SimNetSocketManager()
+class SimNetSocket : public Socket
+{
+public:
+	SimNetSocket(SimNetSocketManager *sm) :
+		Socket(ZT_SOCKET_TYPE_UDP_V4),
+		_parent(sm) {}
+
+	virtual bool send(const InetAddress &to,const void *msg,unsigned int msglen)
+	{
+		SimNetSocketManager *dest = _parent->net()->get(to);
+		if (dest)
+			dest->enqueue(_parent->address(),msg,msglen);
+		return true; // we emulate UDP, which has no delivery guarantee semantics
+	}
+
+	SimNetSocketManager *_parent;
+};
+
+SimNetSocketManager::SimNetSocketManager() :
+	_sn((SimNet *)0), // initialized by SimNet
+	_mySocket(new SimNetSocket(this))
 {
 }
 
@@ -37,24 +60,40 @@ SimNetSocketManager::~SimNetSocketManager()
 {
 }
 
-bool SimNetSocketManager::send(
-	const InetAddress &to,
-	bool tcp,
-	bool autoConnectTcp,
-	const void *msg,
-	unsigned int msglen)
+bool SimNetSocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTcp,const void *msg,unsigned int msglen)
 {
+	if (tcp)
+		return false; // we emulate UDP
+	SimNetSocketManager *dest = _sn->get(to);
+	if (dest)
+		dest->enqueue(_address,msg,msglen);
+	return true; // we emulate UDP, which has no delivery guarantee semantics
 }
 
-void SimNetSocketManager::poll(
-	unsigned long timeout,
-	void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),
-	void *arg)
+void SimNetSocketManager::poll(unsigned long timeout,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg)
 {
+	{
+		Mutex::Lock _l(_lock);
+		while (!_queue.empty()) {
+			handler(_mySocket,arg,_queue.front().first,_queue.front().second);
+			_queue.pop();
+		}
+	}
+	if (timeout)
+		_waitCond.wait(timeout);
+	else _waitCond.wait();
+	{
+		Mutex::Lock _l(_lock);
+		while (!_queue.empty()) {
+			handler(_mySocket,arg,_queue.front().first,_queue.front().second);
+			_queue.pop();
+		}
+	}
 }
 
 void SimNetSocketManager::whack()
 {
+	_waitCond.signal();
 }
 
 void SimNetSocketManager::closeTcpSockets()
