@@ -1018,22 +1018,6 @@ bool Node::updateCheck()
 	return false;
 }
 
-bool Node::injectPacketFromHost(uint64_t nwid,const unsigned char *from,const unsigned char *to,unsigned int etherType,const void *data,unsigned int len)
-{
-	if (!running())
-		return false;
-	if ((!from)||(!to))
-		return false;
-
-	_NodeImpl *impl = (_NodeImpl *)_impl;
-	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
-
-	SharedPtr<Network> network(RR->nc->network(nwid));
-	if (network)
-		return network->tapInjectPacketFromHost(MAC(from,6),MAC(to,6),etherType,data,len);
-	return false;
-}
-
 class _VersionStringMaker
 {
 public:

@@ -39,6 +39,7 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 include objects.mk
 OBJS+=osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
+TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
 
 all: one
 
@@ -48,9 +49,13 @@ one:	$(OBJS) main.o
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
 
-selftest: $(OBJS) selftest.o
+selftest: $(OBJS) sefltest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
+
+testnet: $(OBJS) $(TESTNET_OBJS) testnet.o
+	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
+	$(STRIP) zerotier-testnet
 
 # Requires that ../Qt be symlinked to the Qt root to use for UI build
 mac-ui: FORCE
@@ -62,7 +67,7 @@ mac-ui: FORCE
 	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
-	rm -rf *.dSYM main.o selftest.o build-* $(OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
+	rm -rf *.dSYM testnet.o selftest.o build-* $(OBJS) $(TEST_OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

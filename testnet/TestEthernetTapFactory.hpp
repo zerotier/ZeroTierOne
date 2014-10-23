@@ -68,44 +68,9 @@ public:
 		return t->second;
 	}
 
-	inline SharedPtr<TestEthernetTap> getByDevice(const std::string &dev) const
-	{
-		Mutex::Lock _l(_tapsByDevice_m);
-		std::map< std::string,SharedPtr<TestEthernetTap> >::const_iterator t(_tapsByDevice.find(dev));
-		if (t == _tapsByDevice.end())
-			return SharedPtr<TestEthernetTap>();
-		return t->second;
-	}
-
-	inline SharedPtr<TestEthernetTap> getFirst() const
-	{
-		Mutex::Lock _l(_taps_m);
-		if (_taps.empty())
-			return SharedPtr<TestEthernetTap>();
-		return *(_taps.begin());
-	}
-
-	inline SharedPtr<TestEthernetTap> getRandom() const
-	{
-		Mutex::Lock _l(_taps_m);
-		Mutex::Lock _l2(_prng_m);
-		if (_taps.empty())
-			return SharedPtr<TestEthernetTap>();
-		unsigned int x = (const_cast<CMWC4096 *>(&_prng))->next32() % (unsigned int)_taps.size();
-		unsigned int i = 0;
-		for(std::set< SharedPtr<TestEthernetTap> >::const_iterator t(_taps.begin());t!=_taps.end();++t) {
-			if (i++ == x)
-				return *t;
-		}
-		return SharedPtr<TestEthernetTap>(); // never reached
-	}
-
 private:
 	std::set< SharedPtr<TestEthernetTap> > _taps;
 	Mutex _taps_m;
-
-	std::map<std::string,SharedPtr<TestEthernetTap> > _tapsByDevice;
-	Mutex _tapsByDevice_m;
 
 	std::map<MAC,SharedPtr<TestEthernetTap> > _tapsByMac;
 	Mutex _tapsByMac_m;

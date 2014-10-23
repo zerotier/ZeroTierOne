@@ -32,7 +32,7 @@
 #include <utility>
 #include <queue>
 
-#include "Constants.hpp"
+#include "../node/Constants.hpp"
 #include "../node/SocketManager.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Condition.hpp"
@@ -76,7 +76,10 @@ public:
 	inline TransferStats stats(const InetAddress &peer) const
 	{
 		Mutex::Lock _l(_stats_m);
-		return _stats[peer];
+		std::map< InetAddress,TransferStats >::const_iterator s(_stats.find(peer));
+		if (s == _stats.end())
+			return TransferStats();
+		return s->second;
 	}
 
 	/**

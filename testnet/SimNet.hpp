@@ -34,13 +34,12 @@
 #include "../node/Constants.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/CMWC4096.hpp"
 
 #include "SimNetSocketManager.hpp"
 
 #define ZT_SIMNET_MAX_TESTNET_SIZE 1048576
 
-namespcae ZeroTier {
+namespace ZeroTier {
 
 /**
  * A simulated headless IP network for testing
@@ -52,9 +51,9 @@ public:
 	~SimNet();
 
 	/**
-	 * @return New endpoint with random IP address
+	 * @return New endpoint or NULL on failure
 	 */
-	SimNetSocketManager *newEndpoint();
+	SimNetSocketManager *newEndpoint(const InetAddress &addr);
 
 	/**
 	 * @param addr Address to look up
@@ -62,14 +61,8 @@ public:
 	 */
 	SimNetSocketManager *get(const InetAddress &addr);
 
-	/**
-	 * @return All socket managers (pointers remain safe while SimNet is running-- these aren't cleaned)
-	 */
-	std::vector<SimNetSocketManager *> all();
-
 private:
-	std::map< InetAddress,SimNetSocketManager > _endpoints;
-	CMWC4096 _prng;
+	std::map< InetAddress,SimNetSocketManager * > _endpoints;
 	Mutex _lock;
 };
 

@@ -26,6 +26,7 @@
  */
 
 #include "SimNetSocketManager.hpp"
+#include "SimNet.hpp"
 
 #include "../node/Constants.hpp"
 #include "../node/Socket.hpp"
@@ -73,20 +74,20 @@ bool SimNetSocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTc
 void SimNetSocketManager::poll(unsigned long timeout,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg)
 {
 	{
-		Mutex::Lock _l(_lock);
-		while (!_queue.empty()) {
-			handler(_mySocket,arg,_queue.front().first,_queue.front().second);
-			_queue.pop();
+		Mutex::Lock _l(_inbox_m);
+		while (!_inbox.empty()) {
+			handler(_mySocket,arg,_inbox.front().first,_inbox.front().second);
+			_inbox.pop();
 		}
 	}
 	if (timeout)
 		_waitCond.wait(timeout);
 	else _waitCond.wait();
 	{
-		Mutex::Lock _l(_lock);
-		while (!_queue.empty()) {
-			handler(_mySocket,arg,_queue.front().first,_queue.front().second);
-			_queue.pop();
+		Mutex::Lock _l(_inbox_m);
+		while (!_inbox.empty()) {
+			handler(_mySocket,arg,_inbox.front().first,_inbox.front().second);
+			_inbox.pop();
 		}
 	}
 }

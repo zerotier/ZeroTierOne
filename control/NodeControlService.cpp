@@ -120,7 +120,6 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 		ipcc->printf("200 help leave <network ID>"ZT_EOL_S);
 		ipcc->printf("200 help terminate [<reason>]"ZT_EOL_S);
 		ipcc->printf("200 help updatecheck"ZT_EOL_S);
-		//ipcc->printf("200 help inject <network ID> <from MAC> <to MAC> <ethertype(hex)> <string>");
 	} else if (cmd[0] == "auth") {
 		if ((cmd.size() > 1)&&(_authToken.length() > 0)&&(_authToken == cmd[1])) {
 			Mutex::Lock _l(_connections_m);
@@ -239,23 +238,6 @@ void NodeControlService::_doCommand(IpcConnection *ipcc,const char *commandLine)
 				ipcc->printf("500 software updates are not enabled"ZT_EOL_S);
 			} else {
 				ipcc->printf("200 OK"ZT_EOL_S);
-			}
-		} else if (cmd[0] == "inject") {
-			if (cmd.size() >= 6) {
-				MAC from,to;
-				unsigned char from2[6];
-				unsigned char to2[6];
-				from.fromString(cmd[2].c_str());
-				to.fromString(cmd[3].c_str());
-				from.copyTo(from2,6);
-				to.copyTo(to2,6);
-				if (_node->injectPacketFromHost(Utils::hexStrToU64(cmd[1].c_str()),from2,to2,Utils::hexStrToUInt(cmd[4].c_str()),cmd[5].c_str(),(unsigned int)cmd[5].length()+1)) {
-					ipcc->printf("200 OK"ZT_EOL_S);
-				} else {
-					ipcc->printf("500 inject failed or not supported by this tap device"ZT_EOL_S);
-				}
-			} else {
-				ipcc->printf("400 missing required arguments"ZT_EOL_S);
 			}
 		} else {
 			ipcc->printf("404 %s No such command. Use 'help' for help."ZT_EOL_S,cmd[0].c_str());
