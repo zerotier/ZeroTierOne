@@ -5,24 +5,29 @@ INCLUDES=
 DEFS=
 LIBS=
 
+include objects.mk
+OBJS+=osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
+TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
+
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
 CODESIGN_CERT=
 
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
+	# For use by ZeroTier Networks -- sign with developer cert
 	ZT_AUTO_UPDATE=1
 	DEFS+=-DZT_OFFICIAL_RELEASE 
 	CODESIGN=codesign
 	CODESIGN_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
+
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
-# Enable SSE-optimized Salsa20
+# Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
 DEFS+=-DZT_SALSA20_SSE
 
-# "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 #	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
@@ -37,10 +42,6 @@ endif
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
-include objects.mk
-OBJS+=osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
-TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
-
 all: one
 
 one:	$(OBJS) main.o
@@ -53,7 +54,7 @@ selftest: $(OBJS) sefltest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
-testnet: $(OBJS) $(TESTNET_OBJS) testnet.o
+testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
 	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
 	$(STRIP) zerotier-testnet
 
@@ -67,10 +68,7 @@ mac-ui: FORCE
 	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
-	rm -rf *.dSYM testnet.o selftest.o build-* $(OBJS) $(TEST_OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
-
-debug:	FORCE
-	make -j 4 ZT_DEBUG=1
+	rm -rf *.dSYM testnet.o selftest.o build-* $(OBJS) $(TESTNET_OBJS) zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
 
 # For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE

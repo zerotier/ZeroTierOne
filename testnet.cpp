@@ -40,6 +40,7 @@
 #include "node/Identity.hpp"
 #include "node/Thread.hpp"
 #include "node/CMWC4096.hpp"
+#include "node/Dictionary.hpp"
 
 #include "testnet/SimNet.hpp"
 #include "testnet/SimNetSocketManager.hpp"
@@ -136,9 +137,9 @@ static Identity makeNodeHome(bool super)
 	mkdir(path.c_str(),0700);
 #endif
 
-	if (!Utils::writeFile((path + ZT_PATH_SEPARATOR_S + "identity.secret"),id.toString(true)))
+	if (!Utils::writeFile((path + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),id.toString(true)))
 		return Identity();
-	if (!Utils::writeFile((path + ZT_PATH_SEPARATOR_S + "identity.public"),id.toString(false)))
+	if (!Utils::writeFile((path + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),id.toString(false)))
 		return Identity();
 
 	return id;
@@ -180,8 +181,8 @@ static std::vector<Address> initSupernodes()
 
 	for(std::vector< std::pair<Identity,InetAddress> >::iterator i(snids.begin());i!=snids.end();++i) {
 		SimNode *n = new SimNode(net,(basePath + ZT_PATH_SEPARATOR_S + "S" + i->first.address().toString()),rootTopology.c_str(),true,i->second);
-		nodes[id.address()] = n;
-		newNodes.push_back(id.address());
+		nodes[i->first.address()] = n;
+		newNodes.push_back(i->first.address());
 	}
 
 	return newNodes;
@@ -221,7 +222,7 @@ static void doHelp(const std::vector<std::string> &cmd)
 	printf("---------- listnetworks <address/*>"ZT_EOL_S);
 	printf("---------- listpeers <address/*>"ZT_EOL_S);
 	printf("---------- alltoall"ZT_EOL_S);
-	printf("---------- quit"ZT_EOL_S)
+	printf("---------- quit"ZT_EOL_S);
 }
 
 static void doMKSN(const std::vector<std::string> &cmd)
@@ -231,7 +232,7 @@ static void doMKSN(const std::vector<std::string> &cmd)
 		return;
 	}
 	if (nodes.size() > 0) {
-		printf("---------- mksn error: mksn can only be called once (network already exists)"ZT_EOL_S,(unsigned int)nodes.size());
+		printf("---------- mksn error: mksn can only be called once (network already exists)"ZT_EOL_S);
 		return;
 	}
 
@@ -304,7 +305,7 @@ int main(int argc,char **argv)
 	printf(ZT_EOL_S);
 
 	{
-		printf("---------- scanning '%s' for existing network..."ZT_EOL_S);
+		printf("---------- scanning '%s' for existing network..."ZT_EOL_S,basePath.c_str());
 		std::vector<Address> snodes(initSupernodes());
 		if (snodes.empty()) {
 			printf("---------- no existing network found; use 'mksn' to create one."ZT_EOL_S);
