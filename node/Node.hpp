@@ -176,7 +176,7 @@ public:
 		throw();
 
 	/**
-	 * Leave a network
+	 * Leave a network (if a member)
 	 *
 	 * @param nwid 64-bit network ID
 	 */

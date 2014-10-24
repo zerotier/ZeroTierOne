@@ -217,11 +217,11 @@ static void doHelp(const std::vector<std::string> &cmd)
 	printf("---------- mksn <number of supernodes>"ZT_EOL_S);
 	printf("---------- mkn <number of normal nodes>"ZT_EOL_S);
 	printf("---------- list"ZT_EOL_S);
-	printf("---------- join <address/*> <network ID>"ZT_EOL_S);
-	printf("---------- leave <address/*> <network ID>"ZT_EOL_S);
-	printf("---------- listnetworks <address/*>"ZT_EOL_S);
-	printf("---------- listpeers <address/*>"ZT_EOL_S);
-	printf("---------- alltoall"ZT_EOL_S);
+	printf("---------- join <address/*/**> <network ID> (* normal peers, ** all)"ZT_EOL_S);
+	printf("---------- leave <address/*/**> <network ID> (* normal peers, ** all)"ZT_EOL_S);
+	printf("---------- listnetworks <address/*/**> (* normal peers, ** all)"ZT_EOL_S);
+	printf("---------- listpeers <address/*/**> (* normal peers, ** all)"ZT_EOL_S);
+	printf("---------- alltoall <*/**> <network ID> (* normal peers, ** all)"ZT_EOL_S);
 	printf("---------- quit"ZT_EOL_S);
 }
 
@@ -259,26 +259,213 @@ static void doMKN(const std::vector<std::string> &cmd)
 		printf("---------- mkn error: use mksn to create supernodes first."ZT_EOL_S);
 		return;
 	}
+
+	int count = Utils::strToInt(cmd[1].c_str());
+	for(int i=0;i<count;++i) {
+		Identity id(makeNodeHome(false));
+		printf("%s identity created"ZT_EOL_S,id.address().toString().c_str());
+	}
+
+	std::vector<Address> nodes(scanForNewNodes());
+	for(std::vector<Address>::iterator a(nodes.begin());a!=nodes.end();++a)
+		printf("%s started (regular node)"ZT_EOL_S,a->toString().c_str());
 }
 
 static void doList(const std::vector<std::string> &cmd)
 {
+	ZT1_Node_Status status;
+	for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+		n->second->node.status(&status);
+		printf("%s %c %s (%u peers, %u direct links)"ZT_EOL_S,
+			n->first.toString().c_str(),
+			n->second->supernode ? 'S' : 'N',
+			(status.online ? "ONLINE" : "OFFLINE"),
+			status.knownPeers,
+			status.directlyConnectedPeers);
+	}
 }
 
 static void doJoin(const std::vector<std::string> &cmd)
 {
+	if (cmd.size() < 3) {
+		doHelp(cmd);
+		return;
+	}
+
+	std::vector<Address> addrs;
+
+	if ((cmd[1] == "*")||(cmd[1] == "**")) {
+		bool includeSuper = (cmd[1] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				addrs.push_back(n->first);
+		}
+	} else addrs.push_back(Address(cmd[1]));
+
+	uint64_t nwid = Utils::hexStrToU64(cmd[2].c_str());
+
+	for(std::vector<Address>::iterator a(addrs.begin());a!=addrs.end();++a) {
+		std::map< Address,SimNode * >::iterator n(nodes.find(*a));
+		if (n != nodes.end()) {
+			n->second->node.join(nwid);
+			printf("%s join %.16llx"ZT_EOL_S,n->first.toString().c_str(),nwid);
+		}
+	}
 }
 
 static void doLeave(const std::vector<std::string> &cmd)
 {
+	if (cmd.size() < 3) {
+		doHelp(cmd);
+		return;
+	}
+
+	std::vector<Address> addrs;
+
+	if ((cmd[1] == "*")||(cmd[1] == "**")) {
+		bool includeSuper = (cmd[1] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				addrs.push_back(n->first);
+		}
+	} else addrs.push_back(Address(cmd[1]));
+
+	uint64_t nwid = Utils::hexStrToU64(cmd[2].c_str());
+
+	for(std::vector<Address>::iterator a(addrs.begin());a!=addrs.end();++a) {
+		std::map< Address,SimNode * >::iterator n(nodes.find(*a));
+		if (n != nodes.end()) {
+			n->second->node.leave(nwid);
+			printf("%s leave %.16llx"ZT_EOL_S,n->first.toString().c_str(),nwid);
+		}
+	}
 }
 
 static void doListNetworks(const std::vector<std::string> &cmd)
 {
+	if (cmd.size() < 2) {
+		doHelp(cmd);
+		return;
+	}
+
+	std::vector<Address> addrs;
+
+	if ((cmd[1] == "*")||(cmd[1] == "**")) {
+		bool includeSuper = (cmd[1] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				addrs.push_back(n->first);
+		}
+	} else addrs.push_back(Address(cmd[1]));
+
+	printf("---------- <nwid> <name> <mac> <status> <config age> <type> <dev> <ips>"ZT_EOL_S);
+
+	for(std::vector<Address>::iterator a(addrs.begin());a!=addrs.end();++a) {
+		std::string astr(a->toString());
+		std::map< Address,SimNode * >::iterator n(nodes.find(*a));
+		if (n != nodes.end()) {
+			ZT1_Node_NetworkList *nl = n->second->node.listNetworks();
+			if (nl) {
+				for(unsigned int i=0;i<nl->numNetworks;++i) {
+					printf("%s %s %s %s %s %ld %s %s ",
+						astr.c_str(),
+						nl->networks[i].nwidHex,
+						nl->networks[i].name,
+						nl->networks[i].macStr,
+						nl->networks[i].statusStr,
+						nl->networks[i].configAge,
+						(nl->networks[i].isPrivate ? "private" : "public"),
+						nl->networks[i].device);
+					if (nl->networks[i].numIps > 0) {
+						for(unsigned int j=0;j<nl->networks[i].numIps;++j) {
+							if (j > 0)
+								printf(",");
+							printf("%s/%d",nl->networks[i].ips[j].ascii,(int)nl->networks[i].ips[j].port);
+						}
+					} else printf("-");
+					printf(ZT_EOL_S);
+				}
+				n->second->node.freeQueryResult(nl);
+			}
+		}
+	}
 }
 
 static void doListPeers(const std::vector<std::string> &cmd)
 {
+	if (cmd.size() < 2) {
+		doHelp(cmd);
+		return;
+	}
+
+	std::vector<Address> addrs;
+
+	if ((cmd[1] == "*")||(cmd[1] == "**")) {
+		bool includeSuper = (cmd[1] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				addrs.push_back(n->first);
+		}
+	} else addrs.push_back(Address(cmd[1]));
+
+	printf("---------- <ztaddr> <paths> <latency> <version> <role>"ZT_EOL_S);
+
+	for(std::vector<Address>::iterator a(addrs.begin());a!=addrs.end();++a) {
+		std::string astr(a->toString());
+		std::map< Address,SimNode * >::iterator n(nodes.find(*a));
+		if (n != nodes.end()) {
+			ZT1_Node_PeerList *pl = n->second->node.listPeers();
+			if (pl) {
+				for(unsigned int i=0;i<pl->numPeers;++i) {
+					printf("%s %.10llx ",astr.c_str(),(unsigned long long)pl->peers[i].rawAddress);
+					if (pl->peers[i].numPaths == 0)
+						printf("-");
+					else {
+						for(unsigned int j=0;j<pl->peers[i].numPaths;++j) {
+							if (j > 0)
+								printf(",");
+							switch(pl->peers[i].paths[j].type) {
+								default:
+									printf("unknown;");
+									break;
+								case ZT1_Node_PhysicalPath_TYPE_UDP:
+									printf("udp;");
+									break;
+								case ZT1_Node_PhysicalPath_TYPE_TCP_OUT:
+									printf("tcp_out;");
+									break;
+								case ZT1_Node_PhysicalPath_TYPE_TCP_IN:
+									printf("tcp_in;");
+									break;
+								case ZT1_Node_PhysicalPath_TYPE_ETHERNET:
+									printf("eth;");
+									break;
+							}
+							printf("%s/%d;%ld;%ld;%ld;%s",
+								pl->peers[i].paths[j].address.ascii,
+								(int)pl->peers[i].paths[j].address.port,
+								pl->peers[i].paths[j].lastSend,
+								pl->peers[i].paths[j].lastReceive,
+								pl->peers[i].paths[j].lastPing,
+								(pl->peers[i].paths[j].fixed ? "fixed" : (pl->peers[i].paths[j].active ? "active" : "inactive")));
+						}
+					}
+					const char *rolestr;
+					switch(pl->peers[i].role) {
+						case ZT1_Node_Peer_SUPERNODE: rolestr = "SUPERNODE"; break;
+						case ZT1_Node_Peer_HUB: rolestr = "HUB"; break;
+						case ZT1_Node_Peer_NODE: rolestr = "NODE"; break;
+						default: rolestr = "?"; break;
+					}
+					printf(" %u %s %s"ZT_EOL_S,
+						pl->peers[i].latency,
+						((pl->peers[i].remoteVersion[0]) ? pl->peers[i].remoteVersion : "-"),
+						rolestr);
+				}
+				n->second->node.freeQueryResult(pl);
+			}
+		}
+	}
 }
 
 static void doAllToAll(const std::vector<std::string> &cmd)
