@@ -30,7 +30,7 @@
 
 #include <map>
 #include <utility>
-#include <queue>
+#include <vector>
 
 #include "../node/Constants.hpp"
 #include "../node/SocketManager.hpp"
@@ -98,7 +98,7 @@ public:
 	{
 		{
 			Mutex::Lock _l(_inbox_m);
-			_inbox.push(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >(from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN>(data,len)));
+			_inbox.push_back(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >(from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN>(data,len)));
 		}
 		_waitCond.signal();
 	}
@@ -116,7 +116,7 @@ private:
 	SharedPtr<Socket> _mySocket;
 	TransferStats _totals;
 
-	std::queue< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > > _inbox;
+	std::vector< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > > _inbox;
 	Mutex _inbox_m;
 
 	std::map< InetAddress,TransferStats > _stats;
