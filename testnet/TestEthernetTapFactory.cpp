@@ -57,6 +57,10 @@ EthernetTap *TestEthernetTapFactory::open(
 		Mutex::Lock _l(_tapsByMac_m);
 		_tapsByMac[mac] = tap;
 	}
+	{
+		Mutex::Lock _l(_tapsByNwid_m);
+		_tapsByNwid[nwid] = tap;
+	}
 	return tap.ptr();
 }
 
@@ -72,6 +76,10 @@ void TestEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevice
 	{
 		Mutex::Lock _l(_tapsByMac_m);
 		_tapsByMac.erase(tapp->mac());
+	}
+	{
+		Mutex::Lock _l(_tapsByNwid_m);
+		_tapsByNwid.erase(tapp->nwid());
 	}
 }
 

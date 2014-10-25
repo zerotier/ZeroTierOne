@@ -68,12 +68,24 @@ public:
 		return t->second;
 	}
 
+	inline SharedPtr<TestEthernetTap> getByNwid(uint64_t nwid) const
+	{
+		Mutex::Lock _l(_tapsByNwid_m);
+		std::map< uint64_t,SharedPtr<TestEthernetTap> >::const_iterator t(_tapsByNwid.find(nwid));
+		if (t == _tapsByNwid.end())
+			return SharedPtr<TestEthernetTap>();
+		return t->second;
+	}
+
 private:
 	std::set< SharedPtr<TestEthernetTap> > _taps;
 	Mutex _taps_m;
 
-	std::map<MAC,SharedPtr<TestEthernetTap> > _tapsByMac;
+	std::map< MAC,SharedPtr<TestEthernetTap> > _tapsByMac;
 	Mutex _tapsByMac_m;
+
+	std::map< uint64_t,SharedPtr<TestEthernetTap> > _tapsByNwid;
+	Mutex _tapsByNwid_m;
 
 	CMWC4096 _prng;
 	Mutex _prng_m;

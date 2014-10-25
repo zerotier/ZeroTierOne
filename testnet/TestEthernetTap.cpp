@@ -42,8 +42,6 @@
 
 namespace ZeroTier {
 
-static Mutex printLock;
-
 TestEthernetTap::TestEthernetTap(
 	TestEthernetTapFactory *parent,
 	const MAC &mac,
@@ -55,6 +53,7 @@ TestEthernetTap::TestEthernetTap(
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg) :
 	EthernetTap("TestEthernetTap",mac,mtu,metric),
+	_nwid(nwid),
 	_parent(parent),
 	_handler(handler),
 	_arg(arg),
@@ -114,9 +113,8 @@ std::set<InetAddress> TestEthernetTap::ips() const
 
 void TestEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	Mutex::Lock _l(printLock);
-	fprintf(stdout,"[%s] %s << %s %.4x %s"ZT_EOL_S,_dev.c_str(),to.toString().c_str(),from.toString().c_str(),etherType,std::string((const char *)data,len).c_str());
-	fflush(stdout);
+	Mutex::Lock _l(_gq_m);
+	_gq.push_back(TestFrame(from,to,data,etherType,len));
 }
 
 std::string TestEthernetTap::deviceName() const
@@ -143,12 +141,6 @@ bool TestEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigne
 		_pq.push(TestFrame(from,to,data,etherType & 0xffff,len));
 	}
 	_pq_c.signal();
-
-	{
-		Mutex::Lock _l(printLock);
-		fprintf(stdout,"[%s] %s >> %s %.4x %s"ZT_EOL_S,_dev.c_str(),from.toString().c_str(),to.toString().c_str(),etherType,std::string((const char *)data,len).c_str());
-		fflush(stdout);
-	}
 
 	return true;
 }

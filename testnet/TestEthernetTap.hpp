@@ -60,7 +60,7 @@ class TestEthernetTap : public EthernetTap
 {
 	friend class SharedPtr<TestEthernetTap>;
 
-private:
+public:
 	struct TestFrame
 	{
 		TestFrame() : from(),to(),etherType(0),len(0) {}
@@ -79,7 +79,6 @@ private:
 		char data[4096];
 	};
 
-public:
 	TestEthernetTap(
 		TestEthernetTapFactory *parent,
 		const MAC &mac,
@@ -104,10 +103,22 @@ public:
 	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 
+	inline uint64_t nwid() const { return _nwid; }
+
+	// Get things that have been put() and empty queue
+	inline void get(std::vector<TestFrame> &v,bool clearQueue = true)
+	{
+		Mutex::Lock _l(_gq_m);
+		v = _gq;
+		if (clearQueue)
+			_gq.clear();
+	}
+
 	void threadMain()
 		throw();
 
 private:
+	uint64_t _nwid;
 	TestEthernetTapFactory *_parent;
 
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
@@ -119,6 +130,9 @@ private:
 	std::queue< TestFrame > _pq;
 	Mutex _pq_m;
 	Condition _pq_c;
+
+	std::vector< TestFrame > _gq;
+	Mutex _gq_m;
 
 	AtomicCounter __refCount;
 };
