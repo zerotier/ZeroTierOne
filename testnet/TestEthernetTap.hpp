@@ -63,17 +63,20 @@ class TestEthernetTap : public EthernetTap
 public:
 	struct TestFrame
 	{
-		TestFrame() : from(),to(),etherType(0),len(0) {}
+		TestFrame() : from(),to(),timestamp(0),etherType(0),len(0) {}
 		TestFrame(const MAC &f,const MAC &t,const void *d,unsigned int et,unsigned int l) :
 			from(f),
 			to(t),
+			timestamp(Utils::now()),
 			etherType(et),
 			len(l)
 		{
 			memcpy(data,d,l);
 		}
+
 		MAC from;
 		MAC to;
+		uint64_t timestamp;
 		unsigned int etherType;
 		unsigned int len;
 		char data[4096];

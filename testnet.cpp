@@ -32,6 +32,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 
 #include "node/Constants.hpp"
 #include "node/Node.hpp"
@@ -217,11 +218,11 @@ static void doHelp(const std::vector<std::string> &cmd)
 	printf("---------- mksn <number of supernodes>"ZT_EOL_S);
 	printf("---------- mkn <number of normal nodes>"ZT_EOL_S);
 	printf("---------- list"ZT_EOL_S);
-	printf("---------- join <address/*/**> <network ID> (* normal peers, ** all)"ZT_EOL_S);
-	printf("---------- leave <address/*/**> <network ID> (* normal peers, ** all)"ZT_EOL_S);
-	printf("---------- listnetworks <address/*/**> (* normal peers, ** all)"ZT_EOL_S);
-	printf("---------- listpeers <address/*/**> (* normal peers, ** all)"ZT_EOL_S);
-	printf("---------- alltoall <*/**> <network ID> (* normal peers, ** all)"ZT_EOL_S);
+	printf("---------- join <address/*/**> <network ID>"ZT_EOL_S);
+	printf("---------- leave <address/*/**> <network ID>"ZT_EOL_S);
+	printf("---------- listnetworks <address/*/**>"ZT_EOL_S);
+	printf("---------- listpeers <address/*/**>"ZT_EOL_S);
+	printf("---------- unicast <address/*/**> <address/*/**> <network ID> <frame length, min: 8> [<timeout, default: 2>]"ZT_EOL_S);
 	printf("---------- quit"ZT_EOL_S);
 }
 
@@ -293,7 +294,6 @@ static void doJoin(const std::vector<std::string> &cmd)
 	}
 
 	std::vector<Address> addrs;
-
 	if ((cmd[1] == "*")||(cmd[1] == "**")) {
 		bool includeSuper = (cmd[1] == "**");
 		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
@@ -321,7 +321,6 @@ static void doLeave(const std::vector<std::string> &cmd)
 	}
 
 	std::vector<Address> addrs;
-
 	if ((cmd[1] == "*")||(cmd[1] == "**")) {
 		bool includeSuper = (cmd[1] == "**");
 		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
@@ -349,7 +348,6 @@ static void doListNetworks(const std::vector<std::string> &cmd)
 	}
 
 	std::vector<Address> addrs;
-
 	if ((cmd[1] == "*")||(cmd[1] == "**")) {
 		bool includeSuper = (cmd[1] == "**");
 		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
@@ -399,7 +397,6 @@ static void doListPeers(const std::vector<std::string> &cmd)
 	}
 
 	std::vector<Address> addrs;
-
 	if ((cmd[1] == "*")||(cmd[1] == "**")) {
 		bool includeSuper = (cmd[1] == "**");
 		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
@@ -468,8 +465,93 @@ static void doListPeers(const std::vector<std::string> &cmd)
 	}
 }
 
-static void doAllToAll(const std::vector<std::string> &cmd)
+static void doUnicast(const std::vector<std::string> &cmd)
 {
+	volatile union {
+		uint64_t ts;
+		unsigned char data[2800];
+	} pkt,inpkt;
+
+	if (cmd.size() < 5) {
+		doHelp(cmd);
+		return;
+	}
+
+	uint64_t nwid = Utils::hexStrToU64(cmd[3].c_str());
+	unsigned int frameLen = Utils::strToUInt(cmd[4].c_str());
+	uint64_t tout = 2000;
+	if (cmd.size() >= 6)
+		tout = Utils::strToU64(cmd[5].c_str()) * 1000ULL;
+
+	if (frameLen < 8) {
+		doHelp(cmd);
+		return;
+	}
+	if (frameLen > 2800)
+		frameLen = 2800;
+
+	std::vector<Address> senders;
+	if ((cmd[1] == "*")||(cmd[1] == "**")) {
+		bool includeSuper = (cmd[1] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				senders.push_back(n->first);
+		}
+	} else senders.push_back(Address(cmd[1]));
+
+	std::vector<Address> receivers;
+	if ((cmd[2] == "*")||(cmd[2] == "**")) {
+		bool includeSuper = (cmd[2] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				receivers.push_back(n->first);
+		}
+	} else receivers.push_back(Address(cmd[2]));
+
+	for(unsigned int i=0;i<frameLen;++i)
+		pkt.data[i] = (unsigned char)prng.next32();
+
+	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {
+		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
+			if (*s == *r)
+				continue;
+			SimNode *sender = nodes[*s];
+			SimNode *receiver = nodes[*r];
+
+			SharedPtr<TestEthernetTap> stap(sender->tapFactory.getByNwid(nwid));
+			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
+
+			if ((stap)&&(rtap)) {
+				pkt.ts = Utils::now();
+				tap->injectPacketFromHost(stap->mac(),rtap->mac(),0xdead,pkt.data,frameLen);
+				printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid,frameLen);
+			} else if (stap)
+				printf("%s -> !%s (receiver not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+			else if (rtap) 
+				printf("%s -> !%s (sender not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+			else printf("%s -> !%s (neither party is a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+		}
+	}
+
+	printf("---------- waiting up to %llu seconds...",tout / 1000ULL);
+
+	std::set<Address> receivedFrom;
+	uint64_t toutend = Utils::now() + tout;
+	do {
+		std::vector<TestEthernetTap::TestFrame> frames;
+		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
+			SimNode *receiver = nodes[*r];
+			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
+			if (rtap) {
+				rtap->get(frames,true);
+				for(std::vector<TestEthernetTap::TestFrame>::iterator f(frames.begin());f!=frames.end();++f) {
+					if ((f->len == frameLen)&&(!memcmp(f->data + 8,pkt.data + 8,frameLen - 8))) {
+						receivedFrom.insert(*r);
+					}
+				}
+			}
+		}
+	} while ((receivedFrom.size() < receivers.size())&&(Utils::now() < toutend));
 }
 
 int main(int argc,char **argv)
@@ -528,6 +610,8 @@ int main(int argc,char **argv)
 			doMKSN(cmd);
 		else if (cmd[0] == "mkn")
 			doMKN(cmd);
+		else if (cmd[0] == "list")
+			doList(cmd);
 		else if (cmd[0] == "join")
 			doJoin(cmd);
 		else if (cmd[0] == "leave")
@@ -536,8 +620,8 @@ int main(int argc,char **argv)
 			doListNetworks(cmd);
 		else if (cmd[0] == "listpeers")
 			doListPeers(cmd);
-		else if (cmd[0] == "alltoall")
-			doAllToAll(cmd);
+		else if (cmd[0] == "unicast")
+			doUnicast(cmd);
 		else doHelp(cmd);
 	}
 
