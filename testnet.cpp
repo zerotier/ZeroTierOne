@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <string>
 #include <map>
@@ -467,10 +468,10 @@ static void doListPeers(const std::vector<std::string> &cmd)
 
 static void doUnicast(const std::vector<std::string> &cmd)
 {
-	volatile union {
+	union {
 		uint64_t ts;
 		unsigned char data[2800];
-	} pkt,inpkt;
+	} pkt;
 
 	if (cmd.size() < 5) {
 		doHelp(cmd);
@@ -523,7 +524,7 @@ static void doUnicast(const std::vector<std::string> &cmd)
 
 			if ((stap)&&(rtap)) {
 				pkt.ts = Utils::now();
-				tap->injectPacketFromHost(stap->mac(),rtap->mac(),0xdead,pkt.data,frameLen);
+				stap->injectPacketFromHost(stap->mac(),rtap->mac(),0xdead,pkt.data,frameLen);
 				printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid,frameLen);
 			} else if (stap)
 				printf("%s -> !%s (receiver not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
@@ -533,7 +534,7 @@ static void doUnicast(const std::vector<std::string> &cmd)
 		}
 	}
 
-	printf("---------- waiting up to %llu seconds...",tout / 1000ULL);
+	printf("---------- waiting up to %llu seconds..."ZT_EOL_S,tout / 1000ULL);
 
 	std::set<Address> receivedFrom;
 	uint64_t toutend = Utils::now() + tout;
@@ -547,11 +548,22 @@ static void doUnicast(const std::vector<std::string> &cmd)
 				for(std::vector<TestEthernetTap::TestFrame>::iterator f(frames.begin());f!=frames.end();++f) {
 					if ((f->len == frameLen)&&(!memcmp(f->data + 8,pkt.data + 8,frameLen - 8))) {
 						receivedFrom.insert(*r);
+						uint64_t ints = 0;
+						memcpy(&ints,f->data,8);
+						printf("%s received test packet, latency == %llums"ZT_EOL_S,r->toString().c_str(),f->timestamp - ints);
+					} else {
+						printf("%s received spurious packet, length == %u, etherType == %.4x"ZT_EOL_S,r->toString().c_str(),f->len,f->etherType);
 					}
 				}
 			}
 		}
 	} while ((receivedFrom.size() < receivers.size())&&(Utils::now() < toutend));
+
+	for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
+		if (!receivedFrom.count(*r)) {
+			printf("%s did not receive test packet: timed out"ZT_EOL_S,r->toString().c_str());
+		}
+	}
 }
 
 int main(int argc,char **argv)
