@@ -80,9 +80,9 @@ TestEthernetTap::~TestEthernetTap()
 	static const TestFrame zf;
 	{
 		Mutex::Lock _l(_pq_m);
-		_pq.push(zf); // 0 length frame = exit
+		_pq.push_back(zf); // 0 length frame = exit
+		_pq_c.signal();
 	}
-	_pq_c.signal();
 	Thread::join(_thread);
 }
 
@@ -138,9 +138,9 @@ bool TestEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigne
 
 	{
 		Mutex::Lock _l(_pq_m);
-		_pq.push(TestFrame(from,to,data,etherType & 0xffff,len));
+		_pq.push_back(TestFrame(from,to,data,etherType & 0xffff,len));
+		_pq_c.signal();
 	}
-	_pq_c.signal();
 
 	return true;
 }
@@ -148,23 +148,25 @@ bool TestEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigne
 void TestEthernetTap::threadMain()
 	throw()
 {
-	TestFrame tf;
+	std::vector<TestFrame> q;
 	for(;;) {
-		tf.len = 0;
 		{
 			Mutex::Lock _l(_pq_m);
-			if (!_pq.empty()) {
-				if (_pq.front().len == 0)
-					break;
-				memcpy(&tf,&(_pq.front()),sizeof(tf));
-				_pq.pop();
+			q = _pq;
+			_pq.clear();
+		}
+
+		for(std::vector<TestFrame>::iterator f(q.begin());f!=q.end();++f) {
+			if (!f->len)
+				return; // empty frame signals thread to die
+			else if (_enabled) {
+				try {
+					_handler(_arg,f->from,f->to,f->etherType,Buffer<4096>(f->data,f->len));
+				} catch ( ... ) {} // handlers should not throw
 			}
 		}
 
-		if ((tf.len > 0)&&(_enabled))
-			_handler(_arg,tf.from,tf.to,tf.etherType,Buffer<4096>(tf.data,tf.len));
-
-		_pq_c.wait();
+		_pq_c.wait(1000);
 	}
 }
 

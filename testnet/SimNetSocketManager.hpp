@@ -35,7 +35,7 @@
 #include "../node/Constants.hpp"
 #include "../node/SocketManager.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/Condition.hpp"
+#include "Condition.hpp"
 
 namespace ZeroTier {
 
@@ -96,10 +96,8 @@ public:
 	 */
 	inline void enqueue(const InetAddress &from,const void *data,unsigned int len)
 	{
-		{
-			Mutex::Lock _l(_inbox_m);
-			_inbox.push_back(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >(from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN>(data,len)));
-		}
+		Mutex::Lock _l(_inbox_m);
+		_inbox.push_back(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >(from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN>(data,len)));
 		_waitCond.signal();
 	}
 

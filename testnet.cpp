@@ -223,7 +223,7 @@ static void doHelp(const std::vector<std::string> &cmd)
 	printf("---------- leave <address/*/**> <network ID>"ZT_EOL_S);
 	printf("---------- listnetworks <address/*/**>"ZT_EOL_S);
 	printf("---------- listpeers <address/*/**>"ZT_EOL_S);
-	printf("---------- unicast <address/*/**> <address/*/**> <network ID> <frame length, min: 8> [<timeout, default: 2>]"ZT_EOL_S);
+	printf("---------- unicast <address/*/**> <address/*/**> <network ID> <frame length, min: 16> [<timeout, default: 2>]"ZT_EOL_S);
 	printf("---------- quit"ZT_EOL_S);
 }
 
@@ -248,7 +248,7 @@ static void doMKSN(const std::vector<std::string> &cmd)
 	for(std::vector<Address>::iterator a(nodes.begin());a!=nodes.end();++a)
 		printf("%s started (supernode)"ZT_EOL_S,a->toString().c_str());
 
-	printf("---------- root topology is: %s"ZT_EOL_S,rootTopology.c_str());
+	//printf("---------- root topology is: %s"ZT_EOL_S,rootTopology.c_str());
 }
 
 static void doMKN(const std::vector<std::string> &cmd)
@@ -469,7 +469,7 @@ static void doListPeers(const std::vector<std::string> &cmd)
 static void doUnicast(const std::vector<std::string> &cmd)
 {
 	union {
-		uint64_t ts;
+		uint64_t i[2];
 		unsigned char data[2800];
 	} pkt;
 
@@ -484,10 +484,8 @@ static void doUnicast(const std::vector<std::string> &cmd)
 	if (cmd.size() >= 6)
 		tout = Utils::strToU64(cmd[5].c_str()) * 1000ULL;
 
-	if (frameLen < 8) {
-		doHelp(cmd);
-		return;
-	}
+	if (frameLen < 16)
+		frameLen = 16;
 	if (frameLen > 2800)
 		frameLen = 2800;
 
@@ -512,6 +510,7 @@ static void doUnicast(const std::vector<std::string> &cmd)
 	for(unsigned int i=0;i<frameLen;++i)
 		pkt.data[i] = (unsigned char)prng.next32();
 
+	unsigned long sentCount = 0;
 	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {
 		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
 			if (*s == *r)
@@ -523,45 +522,54 @@ static void doUnicast(const std::vector<std::string> &cmd)
 			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
 
 			if ((stap)&&(rtap)) {
-				pkt.ts = Utils::now();
+				pkt.i[0] = s->toInt();
+				pkt.i[1] = Utils::now();
 				stap->injectPacketFromHost(stap->mac(),rtap->mac(),0xdead,pkt.data,frameLen);
 				printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid,frameLen);
-			} else if (stap)
+				++sentCount;
+			} else if (stap) {
 				printf("%s -> !%s (receiver not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
-			else if (rtap) 
+			} else if (rtap) {
 				printf("%s -> !%s (sender not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
-			else printf("%s -> !%s (neither party is a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+			} else {
+				printf("%s -> !%s (neither party is a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+			}
 		}
 	}
 
 	printf("---------- waiting up to %llu seconds..."ZT_EOL_S,tout / 1000ULL);
 
-	std::set<Address> receivedFrom;
+	std::set< std::pair<Address,Address> > receivedPairs;
+	std::vector<TestEthernetTap::TestFrame> frames;
 	uint64_t toutend = Utils::now() + tout;
 	do {
-		std::vector<TestEthernetTap::TestFrame> frames;
 		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
 			SimNode *receiver = nodes[*r];
 			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
 			if (rtap) {
-				rtap->get(frames,true);
+				rtap->get(frames);
 				for(std::vector<TestEthernetTap::TestFrame>::iterator f(frames.begin());f!=frames.end();++f) {
-					if ((f->len == frameLen)&&(!memcmp(f->data + 8,pkt.data + 8,frameLen - 8))) {
-						receivedFrom.insert(*r);
-						uint64_t ints = 0;
-						memcpy(&ints,f->data,8);
-						printf("%s received test packet, latency == %llums"ZT_EOL_S,r->toString().c_str(),f->timestamp - ints);
+					if ((f->len == frameLen)&&(!memcmp(f->data + 16,pkt.data + 16,frameLen - 16))) {
+						uint64_t ints[2];
+						memcpy(ints,f->data,16);
+						printf("%s <- %.10llx received test packet, latency == %llums"ZT_EOL_S,r->toString().c_str(),ints[0],f->timestamp - ints[1]);
+						receivedPairs.insert(std::pair<Address,Address>(Address(ints[0]),*r));
 					} else {
-						printf("%s received spurious packet, length == %u, etherType == %.4x"ZT_EOL_S,r->toString().c_str(),f->len,f->etherType);
+						printf("%s !! got spurious packet, length == %u, etherType == %.4x"ZT_EOL_S,r->toString().c_str(),f->len,f->etherType);
 					}
 				}
 			}
 		}
-	} while ((receivedFrom.size() < receivers.size())&&(Utils::now() < toutend));
+		Thread::sleep(250);
+	} while ((receivedPairs.size() < sentCount)&&(Utils::now() < toutend));
 
-	for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
-		if (!receivedFrom.count(*r)) {
-			printf("%s did not receive test packet: timed out"ZT_EOL_S,r->toString().c_str());
+	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {
+		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
+			if (*s == *r)
+				continue;
+			if (!receivedPairs.count(std::pair<Address,Address>(*s,*r))) {
+				printf("%s <- %s was never received (timed out)"ZT_EOL_S,r->toString().c_str(),s->toString().c_str());
+			}
 		}
 	}
 }
@@ -593,7 +601,7 @@ int main(int argc,char **argv)
 		} else {
 			for(std::vector<Address>::iterator a(snodes.begin());a!=snodes.end();++a)
 				printf("%s started (supernode)"ZT_EOL_S,a->toString().c_str());
-			printf("---------- root topology is: %s"ZT_EOL_S,rootTopology.c_str());
+			//printf("---------- root topology is: %s"ZT_EOL_S,rootTopology.c_str());
 			std::vector<Address> nodes(scanForNewNodes());
 			for(std::vector<Address>::iterator a(nodes.begin());a!=nodes.end();++a)
 				printf("%s started (normal peer)"ZT_EOL_S,a->toString().c_str());

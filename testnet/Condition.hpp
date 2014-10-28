@@ -28,15 +28,13 @@
 #ifndef ZT_CONDITION_HPP
 #define ZT_CONDITION_HPP
 
-#include "Constants.hpp"
-#include "NonCopyable.hpp"
+#include "../node/Constants.hpp"
+#include "../node/NonCopyable.hpp"
 
 #ifdef __WINDOWS__
 
 #include <Windows.h>
 #include <stdlib.h>
-
-#include "Utils.hpp"
 
 namespace ZeroTier {
 
@@ -85,7 +83,8 @@ private:
 #include <time.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "Utils.hpp"
+
+#include "../node/Utils.hpp"
 
 namespace ZeroTier {
 

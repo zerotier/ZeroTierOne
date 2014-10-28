@@ -32,8 +32,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <stdexcept>
-#include <queue>
 #include <string>
 
 #include "../node/Constants.hpp"
@@ -42,7 +40,7 @@
 #include "../node/SharedPtr.hpp"
 #include "../node/Thread.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/Condition.hpp"
+#include "Condition.hpp"
 
 namespace ZeroTier {
 
@@ -109,12 +107,11 @@ public:
 	inline uint64_t nwid() const { return _nwid; }
 
 	// Get things that have been put() and empty queue
-	inline void get(std::vector<TestFrame> &v,bool clearQueue = true)
+	inline void get(std::vector<TestFrame> &v)
 	{
 		Mutex::Lock _l(_gq_m);
 		v = _gq;
-		if (clearQueue)
-			_gq.clear();
+		_gq.clear();
 	}
 
 	void threadMain()
@@ -130,7 +127,7 @@ private:
 	std::string _dev;
 	volatile bool _enabled;
 
-	std::queue< TestFrame > _pq;
+	std::vector< TestFrame > _pq;
 	Mutex _pq_m;
 	Condition _pq_c;
 
