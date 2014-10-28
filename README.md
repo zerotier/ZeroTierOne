@@ -50,3 +50,5 @@ Some Windows users have reported a [problem with the TAP device driver](https://
 More help can be found in the [GitHub wiki](https://github.com/zerotier/ZeroTierOne/wiki) and the [customer support portal / knowledge base](https://www.zerotier.com/support/).
 
 The ZeroTier source code is open source and is licensed under the GNU GPL v3 (not LGPL). If you'd like to embed it in a closed-source commercial product or appliance, please e-mail [contact@zerotier.com](mailto:contact@zerotier.com) to discuss licensing.
+
+*ZeroTier is keyboard crafted with coffee and sleep deprivation in Southern California.*
