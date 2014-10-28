@@ -72,10 +72,9 @@ private:
 
 	struct MulticastGroupStatus
 	{
-		MulticastGroupStatus() : lastExplicitGather(0),lastImplicitGather(0) {}
+		MulticastGroupStatus() : lastExplicitGather(0) {}
 
 		uint64_t lastExplicitGather;
-		uint64_t lastImplicitGather;
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};

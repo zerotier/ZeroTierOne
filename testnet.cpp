@@ -277,6 +277,7 @@ static void doMKN(const std::vector<std::string> &cmd)
 
 static void doList(const std::vector<std::string> &cmd)
 {
+	unsigned int peers = 0,supernodes = 0;
 	ZT1_Node_Status status;
 	for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
 		n->second->node.status(&status);
@@ -287,8 +288,12 @@ static void doList(const std::vector<std::string> &cmd)
 				(status.online ? "ONLINE" : "OFFLINE"),
 				status.knownPeers,
 				status.directlyConnectedPeers);
+			if (n->second->supernode)
+				++supernodes;
+			else ++peers;
 		} else printf("%s ? INITIALIZING (0 peers, 0 direct links)"ZT_EOL_S,n->first.toString().c_str());
 	}
+	printf("---------- %u regular peers, %u supernodes"ZT_EOL_S,peers,supernodes);
 }
 
 static void doJoin(const std::vector<std::string> &cmd)

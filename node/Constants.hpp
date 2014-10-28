@@ -243,15 +243,9 @@
 #define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
 
 /**
- * Minimum delay between implicit gathers via MULTICAST_FRAME
- */
-#define ZT_MULTICAST_IMPLICIT_GATHER_DELAY 30000
-
-/**
  * Timeout for outgoing multicasts
  *
- * Attempts will be made to gather recipients and send until we reach
- * the limit or sending times out.
+ * This is how long we wait for explicit or implicit gather results.
  */
 #define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
