@@ -40,7 +40,8 @@
 #include "../node/SharedPtr.hpp"
 #include "../node/Thread.hpp"
 #include "../node/Mutex.hpp"
-#include "Semaphore.hpp"
+
+#include "MTQ.hpp"
 
 namespace ZeroTier {
 
@@ -105,14 +106,7 @@ public:
 	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 
 	inline uint64_t nwid() const { return _nwid; }
-
-	// Get things that have been put() and empty queue
-	inline void get(std::vector<TestFrame> &v)
-	{
-		Mutex::Lock _l(_gq_m);
-		v = _gq;
-		_gq.clear();
-	}
+	inline bool getNextReceivedFrame(TestFrame &v,unsigned long timeout) { return _gq.pop(v,timeout); }
 
 	void threadMain()
 		throw();
@@ -127,12 +121,8 @@ private:
 	std::string _dev;
 	volatile bool _enabled;
 
-	std::vector< TestFrame > _pq;
-	Mutex _pq_m;
-	Semaphore _pq_c;
-
-	std::vector< TestFrame > _gq;
-	Mutex _gq_m;
+	MTQ<TestFrame> _pq;
+	MTQ<TestFrame> _gq;
 
 	AtomicCounter __refCount;
 };

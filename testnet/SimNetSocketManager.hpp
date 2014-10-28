@@ -35,7 +35,8 @@
 #include "../node/Constants.hpp"
 #include "../node/SocketManager.hpp"
 #include "../node/Mutex.hpp"
-#include "Semaphore.hpp"
+
+#include "MTQ.hpp"
 
 namespace ZeroTier {
 
@@ -96,9 +97,7 @@ public:
 	 */
 	inline void enqueue(const InetAddress &from,const void *data,unsigned int len)
 	{
-		Mutex::Lock _l(_inbox_m);
-		_inbox.push_back(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >(from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN>(data,len)));
-		_waitCond.signal();
+		_inbox.push(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >(from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN>(data,len)));
 	}
 
 	virtual bool send(const InetAddress &to,bool tcp,bool autoConnectTcp,const void *msg,unsigned int msglen);
@@ -114,13 +113,10 @@ private:
 	SharedPtr<Socket> _mySocket;
 	TransferStats _totals;
 
-	std::vector< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > > _inbox;
-	Mutex _inbox_m;
+	MTQ< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > > _inbox;
 
 	std::map< InetAddress,TransferStats > _stats;
 	Mutex _stats_m;
-
-	Semaphore _waitCond;
 };
 
 } // namespace ZeroTier

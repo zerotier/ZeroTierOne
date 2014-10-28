@@ -73,32 +73,14 @@ bool SimNetSocketManager::send(const InetAddress &to,bool tcp,bool autoConnectTc
 
 void SimNetSocketManager::poll(unsigned long timeout,void (*handler)(const SharedPtr<Socket> &,void *,const InetAddress &,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &),void *arg)
 {
-	std::vector< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > > inb;
-
-	{
-		Mutex::Lock _l(_inbox_m);
-		inb = _inbox;
-		_inbox.clear();
-	}
-	for(std::vector< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > >::iterator i(inb.begin());i!=inb.end();++i)
-		handler(_mySocket,arg,i->first,i->second);
-
-	if (timeout)
-		_waitCond.wait(timeout);
-	else _waitCond.wait();
-
-	{
-		Mutex::Lock _l(_inbox_m);
-		inb = _inbox;
-		_inbox.clear();
-	}
-	for(std::vector< std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > >::iterator i(inb.begin());i!=inb.end();++i)
-		handler(_mySocket,arg,i->first,i->second);
+	std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> > msg;
+	if ((_inbox.pop(msg,timeout))&&(msg.second.size()))
+		handler(_mySocket,arg,msg.first,msg.second);
 }
 
 void SimNetSocketManager::whack()
 {
-	_waitCond.signal();
+	_inbox.push(std::pair< InetAddress,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> >());
 }
 
 void SimNetSocketManager::closeTcpSockets()

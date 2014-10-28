@@ -540,27 +540,26 @@ static void doUnicast(const std::vector<std::string> &cmd)
 	printf("---------- waiting up to %llu seconds..."ZT_EOL_S,tout / 1000ULL);
 
 	std::set< std::pair<Address,Address> > receivedPairs;
-	std::vector<TestEthernetTap::TestFrame> frames;
+	TestEthernetTap::TestFrame frame;
 	uint64_t toutend = Utils::now() + tout;
 	do {
 		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
 			SimNode *receiver = nodes[*r];
 			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
 			if (rtap) {
-				rtap->get(frames);
-				for(std::vector<TestEthernetTap::TestFrame>::iterator f(frames.begin());f!=frames.end();++f) {
-					if ((f->len == frameLen)&&(!memcmp(f->data + 16,pkt.data + 16,frameLen - 16))) {
+				while (rtap->getNextReceivedFrame(frame,1)) {
+					if ((frame.len == frameLen)&&(!memcmp(frame.data + 16,pkt.data + 16,frameLen - 16))) {
 						uint64_t ints[2];
-						memcpy(ints,f->data,16);
-						printf("%s <- %.10llx received test packet, latency == %llums"ZT_EOL_S,r->toString().c_str(),ints[0],f->timestamp - ints[1]);
+						memcpy(ints,frame.data,16);
+						printf("%s <- %.10llx received test packet, latency == %llums"ZT_EOL_S,r->toString().c_str(),ints[0],frame.timestamp - ints[1]);
 						receivedPairs.insert(std::pair<Address,Address>(Address(ints[0]),*r));
 					} else {
-						printf("%s !! got spurious packet, length == %u, etherType == %.4x"ZT_EOL_S,r->toString().c_str(),f->len,f->etherType);
+						printf("%s !! got spurious packet, length == %u, etherType == 0x%.4x"ZT_EOL_S,r->toString().c_str(),frame.len,frame.etherType);
 					}
 				}
 			}
 		}
-		Thread::sleep(250);
+		Thread::sleep(50);
 	} while ((receivedPairs.size() < sentPairs.size())&&(Utils::now() < toutend));
 
 	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {

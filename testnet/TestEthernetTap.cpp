@@ -77,12 +77,8 @@ TestEthernetTap::TestEthernetTap(
 
 TestEthernetTap::~TestEthernetTap()
 {
-	static const TestFrame zf;
-	{
-		Mutex::Lock _l(_pq_m);
-		_pq.push_back(zf); // 0 length frame = exit
-		_pq_c.signal();
-	}
+	static const TestFrame zf; // use a static empty frame because of weirdo G++ warning bug...
+	_pq.push(zf); // empty frame terminates thread
 	Thread::join(_thread);
 }
 
@@ -113,8 +109,7 @@ std::set<InetAddress> TestEthernetTap::ips() const
 
 void TestEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	Mutex::Lock _l(_gq_m);
-	_gq.push_back(TestFrame(from,to,data,etherType,len));
+	_gq.push(TestFrame(from,to,data,etherType,len));
 }
 
 std::string TestEthernetTap::deviceName() const
@@ -135,38 +130,22 @@ bool TestEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigne
 {
 	if ((len == 0)||(len > 2800))
 		return false;
-
-	{
-		Mutex::Lock _l(_pq_m);
-		_pq.push_back(TestFrame(from,to,data,etherType & 0xffff,len));
-		_pq_c.signal();
-	}
-
+	_pq.push(TestFrame(from,to,data,etherType & 0xffff,len));
 	return true;
 }
 
 void TestEthernetTap::threadMain()
 	throw()
 {
-	std::vector<TestFrame> q;
+	TestFrame f;
 	for(;;) {
-		{
-			Mutex::Lock _l(_pq_m);
-			q = _pq;
-			_pq.clear();
-		}
-
-		for(std::vector<TestFrame>::iterator f(q.begin());f!=q.end();++f) {
-			if (!f->len)
-				return; // empty frame signals thread to die
-			else if (_enabled) {
+		if (_pq.pop(f,0)) {
+			if (f.len) {
 				try {
-					_handler(_arg,f->from,f->to,f->etherType,Buffer<4096>(f->data,f->len));
-				} catch ( ... ) {} // handlers should not throw
-			}
+					_handler(_arg,f.from,f.to,f.etherType,Buffer<4096>(f.data,f.len));
+				} catch ( ... ) {}
+			} else break;
 		}
-
-		_pq_c.wait(1000);
 	}
 }
 
