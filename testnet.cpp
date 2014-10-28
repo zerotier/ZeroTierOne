@@ -223,8 +223,10 @@ static void doHelp(const std::vector<std::string> &cmd)
 	printf("---------- leave <address/*/**> <network ID>"ZT_EOL_S);
 	printf("---------- listnetworks <address/*/**>"ZT_EOL_S);
 	printf("---------- listpeers <address/*/**>"ZT_EOL_S);
-	printf("---------- unicast <address/*/**> <address/*/**> <network ID> <frame length, min: 16> [<timeout, default: 2>]"ZT_EOL_S);
+	printf("---------- unicast <address/*/**> <address/*/**> <network ID> <frame length, min: 16> [<timeout (sec)>]"ZT_EOL_S);
+	printf("---------- multicast <address/*/**> <MAC/*> <network ID> <frame length, min: 16> [<timeout (sec)>]"ZT_EOL_S);
 	printf("---------- quit"ZT_EOL_S);
+	printf("---------- . runs previous command again"ZT_EOL_S);
 }
 
 static void doMKSN(const std::vector<std::string> &cmd)
@@ -577,6 +579,91 @@ static void doUnicast(const std::vector<std::string> &cmd)
 	printf("---------- sent %u, received %u"ZT_EOL_S,(unsigned int)sentPairs.size(),(unsigned int)receivedPairs.size());
 }
 
+static void doMulticast(const std::vector<std::string> &cmd)
+{
+	union {
+		uint64_t i[2];
+		unsigned char data[2800];
+	} pkt;
+
+	if (cmd.size() < 5) {
+		doHelp(cmd);
+		return;
+	}
+
+	uint64_t nwid = Utils::hexStrToU64(cmd[3].c_str());
+	unsigned int frameLen = Utils::strToUInt(cmd[4].c_str());
+	uint64_t tout = 2000;
+	if (cmd.size() >= 6)
+		tout = Utils::strToU64(cmd[5].c_str()) * 1000ULL;
+
+	if (frameLen < 16)
+		frameLen = 16;
+	if (frameLen > 2800)
+		frameLen = 2800;
+
+	std::vector<Address> senders;
+	if ((cmd[1] == "*")||(cmd[1] == "**")) {
+		bool includeSuper = (cmd[1] == "**");
+		for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
+			if ((includeSuper)||(!n->second->supernode))
+				senders.push_back(n->first);
+		}
+	} else senders.push_back(Address(cmd[1]));
+
+	MAC mcaddr;
+	if (cmd[2] == "*")
+		mcaddr = MAC(0xff,0xff,0xff,0xff,0xff,0xff);
+	else mcaddr.fromString(cmd[2].c_str());
+
+	if (!mcaddr.isMulticast()) {
+		printf("---------- %s is not a multicast MAC address"ZT_EOL_S,mcaddr.toString().c_str());
+		return;
+	}
+
+	for(unsigned int i=0;i<frameLen;++i)
+		pkt.data[i] = (unsigned char)prng.next32();
+
+	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {
+		SimNode *sender = nodes[*s];
+		SharedPtr<TestEthernetTap> stap(sender->tapFactory.getByNwid(nwid));
+		if (stap) {
+			pkt.i[0] = s->toInt();
+			pkt.i[1] = Utils::now();
+			stap->injectPacketFromHost(stap->mac(),mcaddr,0xdead,pkt.data,frameLen);
+			printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),mcaddr.toString().c_str(),nwid,frameLen);
+		} else {
+			printf("%s -> !%s (sender is not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),mcaddr.toString().c_str(),nwid);
+		}
+	}
+
+	printf("---------- waiting %llu seconds..."ZT_EOL_S,tout / 1000ULL);
+
+	uint64_t toutend = Utils::now() + tout;
+	unsigned int receiveCount = 0;
+	TestEthernetTap::TestFrame frame;
+	do {
+		for(std::map< Address,SimNode * >::iterator nn(nodes.begin());nn!=nodes.end();++nn) {
+			SimNode *receiver = nn->second;
+			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
+			if (rtap) {
+				while (rtap->getNextReceivedFrame(frame,1)) {
+					if ((frame.len == frameLen)&&(!memcmp(frame.data + 16,pkt.data + 16,frameLen - 16))) {
+						uint64_t ints[2];
+						memcpy(ints,frame.data,16);
+						printf("%s <- %.10llx received test packet, latency == %llums"ZT_EOL_S,nn->first.toString().c_str(),ints[0],frame.timestamp - ints[1]);
+						++receiveCount;
+					} else {
+						printf("%s !! got spurious packet, length == %u, etherType == 0x%.4x"ZT_EOL_S,nn->first.toString().c_str(),frame.len,frame.etherType);
+					}
+				}
+			}
+		}
+	} while (Utils::now() < toutend);
+
+	printf("---------- test multicast received by %u peers"ZT_EOL_S,receiveCount);
+}
+
 int main(int argc,char **argv)
 {
 	char linebuf[1024];
@@ -616,36 +703,50 @@ int main(int argc,char **argv)
 	printf("Type 'help' for help."ZT_EOL_S);
 	printf(ZT_EOL_S);
 
-	for(;;) {
+	std::vector<std::string> cmd,prevCmd;
+	bool run = true;
+	while (run) {
 		printf(">> ");
 		fflush(stdout);
 		if (!fgets(linebuf,sizeof(linebuf),stdin))
 			break;
-		std::vector<std::string> cmd(Utils::split(linebuf," \r\n\t","\\","\""));
-		if (cmd.size() == 0)
-			continue;
 
-		if (cmd[0] == "quit")
+		cmd = Utils::split(linebuf," \r\n\t","\\","\"");
+
+		for(;;) {
+			if (cmd.size() == 0)
+				break;
+			else if (cmd[0] == "quit")
+				run = false;
+			else if (cmd[0] == "help")
+				doHelp(cmd);
+			else if (cmd[0] == "mksn")
+				doMKSN(cmd);
+			else if (cmd[0] == "mkn")
+				doMKN(cmd);
+			else if (cmd[0] == "list")
+				doList(cmd);
+			else if (cmd[0] == "join")
+				doJoin(cmd);
+			else if (cmd[0] == "leave")
+				doLeave(cmd);
+			else if (cmd[0] == "listnetworks")
+				doListNetworks(cmd);
+			else if (cmd[0] == "listpeers")
+				doListPeers(cmd);
+			else if (cmd[0] == "unicast")
+				doUnicast(cmd);
+			else if (cmd[0] == "multicast")
+				doMulticast(cmd);
+			else if ((cmd[0] == ".")&&(prevCmd.size() > 0)) {
+				cmd = prevCmd;
+				continue;
+			} else doHelp(cmd);
 			break;
-		else if (cmd[0] == "help")
-			doHelp(cmd);
-		else if (cmd[0] == "mksn")
-			doMKSN(cmd);
-		else if (cmd[0] == "mkn")
-			doMKN(cmd);
-		else if (cmd[0] == "list")
-			doList(cmd);
-		else if (cmd[0] == "join")
-			doJoin(cmd);
-		else if (cmd[0] == "leave")
-			doLeave(cmd);
-		else if (cmd[0] == "listnetworks")
-			doListNetworks(cmd);
-		else if (cmd[0] == "listpeers")
-			doListPeers(cmd);
-		else if (cmd[0] == "unicast")
-			doUnicast(cmd);
-		else doHelp(cmd);
+		}
+
+		if ((cmd.size() > 0)&&(cmd[0] != "."))
+			prevCmd = cmd;
 	}
 
 	for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
