@@ -3,7 +3,7 @@ ZeroTier One - Planetary Scale Software Defined Networking
 
 ZeroTier One is an ethernet virtualization engine. It creates virtual switched LANs of almost unlimited size that span physical network boundaries. To the operating system these behave just like ordinary Ethernet ports. Everything just works, even as your computer moves around or your physical Internet link changes.
 
-It's intended to replace conventional hub-and-spoke VPNs, provide provider-neutral secure private backplane networks to multi-data-center and hybrid cloud deployments, and much more.
+It's intended to replace conventional hub-and-spoke VPNs, provide provider-neutral secure private backplane networks to multi-data-center and hybrid cloud deployments, allow remote access to embedded devices, and much more.
 
 ZeroTier uses a peer to peer network with managed anchor points ("supernodes"). These are operated by ZeroTier Networks, and are free to use. They provides instant "zero configuration" startup, NAT traversal assistance, relaying in cases where NAT traversal doesn't work, and a trusted root authority for looking up peer public keys (identities). The supernodes run the same open-source software as regular nodes, are geographically distributed across three continents, and have remained stable for over a year. [This blog post](http://adamierymenko.com/decentralization-i-want-to-believe/) discusses the design rationale in some detail.
 
