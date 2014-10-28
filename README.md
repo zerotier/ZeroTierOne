@@ -45,7 +45,7 @@ If you're interested, there's a [technical deep dive about NAT traversal on our 
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to supernodes over port 443 (https impersonation). This will work almost anywhere but is *slow*. If performance seems just terrible, this is the first thing to check.
 
-Some Windows users have reported a [problem with the TAP device driver])https://github.com/zerotier/ZeroTierOne/issues/107). From user reports this seems to occur on Windows systems that have not been updated through Windows Update. While we have a fix planned, we **really** recommend keeping your system up to date for security reasons. Frankly we're a bit torn on this one. If this is truly the cause, perhaps ZeroTier failing to work on unpatched Windows systems is a feature not a bug.
+Some Windows users have reported a [problem with the TAP device driver](https://github.com/zerotier/ZeroTierOne/issues/107). From user reports this seems to occur on Windows systems that have not been updated through Windows Update. While we have a fix planned, we **really** recommend keeping your system up to date for security reasons. Frankly we're a bit torn on this one. If this is truly the cause, perhaps ZeroTier failing to work on unpatched Windows systems is a feature not a bug.
 
 More help can be found in the [GitHub wiki](https://github.com/zerotier/ZeroTierOne/wiki) and the [customer support portal / knowledge base](https://www.zerotier.com/support/).
 
