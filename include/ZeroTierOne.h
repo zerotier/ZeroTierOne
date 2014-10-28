@@ -93,6 +93,11 @@ struct ZT1_Node_Status
 	 * True if running; all other fields are technically undefined if this is false
 	 */
 	bool running;
+
+	/**
+	 * True if initialization is complete
+	 */
+	bool initialized;
 };
 
 /**

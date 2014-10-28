@@ -278,12 +278,14 @@ static void doList(const std::vector<std::string> &cmd)
 	ZT1_Node_Status status;
 	for(std::map< Address,SimNode * >::iterator n(nodes.begin());n!=nodes.end();++n) {
 		n->second->node.status(&status);
-		printf("%s %c %s (%u peers, %u direct links)"ZT_EOL_S,
-			n->first.toString().c_str(),
-			n->second->supernode ? 'S' : 'N',
-			(status.online ? "ONLINE" : "OFFLINE"),
-			status.knownPeers,
-			status.directlyConnectedPeers);
+		if (status.initialized) {
+			printf("%s %c %s (%u peers, %u direct links)"ZT_EOL_S,
+				n->first.toString().c_str(),
+				n->second->supernode ? 'S' : 'N',
+				(status.online ? "ONLINE" : "OFFLINE"),
+				status.knownPeers,
+				status.directlyConnectedPeers);
+		} else printf("%s ? INITIALIZING (0 peers, 0 direct links)"ZT_EOL_S,n->first.toString().c_str());
 	}
 }
 
@@ -571,6 +573,8 @@ static void doUnicast(const std::vector<std::string> &cmd)
 			}
 		}
 	}
+
+	printf("---------- sent %u, received %u"ZT_EOL_S,(unsigned int)sentPairs.size(),(unsigned int)receivedPairs.size());
 }
 
 int main(int argc,char **argv)

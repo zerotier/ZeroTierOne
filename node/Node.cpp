@@ -702,9 +702,9 @@ bool Node::online()
 	throw()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
-	if (!impl->running)
-		return false;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+	if ((!RR)||(!RR->initialized))
+		return false;
 	uint64_t now = Utils::now();
 	uint64_t since = RR->timeOfLastResynchronize;
 	std::vector< SharedPtr<Peer> > snp(RR->topology->supernodePeers());
@@ -753,7 +753,8 @@ void Node::join(uint64_t nwid)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
-	RR->nc->join(nwid);
+	if ((RR)&&(RR->initialized))
+		RR->nc->join(nwid);
 }
 
 void Node::leave(uint64_t nwid)
@@ -761,7 +762,8 @@ void Node::leave(uint64_t nwid)
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
-	RR->nc->leave(nwid);
+	if ((RR)&&(RR->initialized))
+		RR->nc->leave(nwid);
 }
 
 struct GatherPeerStatistics
@@ -785,6 +787,9 @@ void Node::status(ZT1_Node_Status *status)
 
 	memset(status,0,sizeof(ZT1_Node_Status));
 
+	if ((!RR)||(!RR->initialized))
+		return;
+
 	Utils::scopy(status->publicIdentity,sizeof(status->publicIdentity),RR->identity.toString(false).c_str());
 	RR->identity.address().toString(status->address,sizeof(status->address));
 	status->rawAddress = RR->identity.address().toInt();
@@ -807,6 +812,7 @@ void Node::status(ZT1_Node_Status *status)
 
 	status->online = online();
 	status->running = impl->running;
+	status->initialized = true;
 }
 
 struct CollectPeersAndPaths
@@ -823,6 +829,9 @@ ZT1_Node_PeerList *Node::listPeers()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+
+	if ((!RR)||(!RR->initialized))
+		return (ZT1_Node_PeerList *)0;
 
 	CollectPeersAndPaths pp;
 	RR->topology->eachPeer<CollectPeersAndPaths &>(pp);
@@ -910,6 +919,9 @@ ZT1_Node_Network *Node::getNetworkStatus(uint64_t nwid)
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
 
+	if ((!RR)||(!RR->initialized))
+		return (ZT1_Node_Network *)0;
+
 	SharedPtr<Network> network(RR->nc->network(nwid));
 	if (!network)
 		return (ZT1_Node_Network *)0;
@@ -949,6 +961,9 @@ ZT1_Node_NetworkList *Node::listNetworks()
 {
 	_NodeImpl *impl = (_NodeImpl *)_impl;
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)&(impl->renv);
+
+	if ((!RR)||(!RR->initialized))
+		return (ZT1_Node_NetworkList *)0;
 
 	std::vector< SharedPtr<Network> > networks(RR->nc->networks());
 	std::vector< SharedPtr<NetworkConfig> > nconfs(networks.size());
