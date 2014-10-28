@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+/* SEE: testnet/README.md */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -224,9 +226,10 @@ static void doHelp(const std::vector<std::string> &cmd)
 	printf("---------- listnetworks <address/*/**>"ZT_EOL_S);
 	printf("---------- listpeers <address/*/**>"ZT_EOL_S);
 	printf("---------- unicast <address/*/**> <address/*/**> <network ID> <frame length, min: 16> [<timeout (sec)>]"ZT_EOL_S);
-	printf("---------- multicast <address/*/**> <MAC/*> <network ID> <frame length, min: 16> [<timeout (sec)>]"ZT_EOL_S);
+	printf("---------- multicast <address/*/**> <MAC/* for bcast> <network ID> <frame length, min: 16> [<timeout (sec)>]"ZT_EOL_S);
 	printf("---------- quit"ZT_EOL_S);
-	printf("---------- . runs previous command again"ZT_EOL_S);
+	printf("---------- ( * means all regular nodes, ** means including supernodes )"ZT_EOL_S);
+	printf("---------- ( . runs previous command again )"ZT_EOL_S);
 }
 
 static void doMKSN(const std::vector<std::string> &cmd)
