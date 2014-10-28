@@ -40,7 +40,7 @@
 #include "../node/SharedPtr.hpp"
 #include "../node/Thread.hpp"
 #include "../node/Mutex.hpp"
-#include "Condition.hpp"
+#include "Semaphore.hpp"
 
 namespace ZeroTier {
 
@@ -129,7 +129,7 @@ private:
 
 	std::vector< TestFrame > _pq;
 	Mutex _pq_m;
-	Condition _pq_c;
+	Semaphore _pq_c;
 
 	std::vector< TestFrame > _gq;
 	Mutex _gq_m;

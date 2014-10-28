@@ -510,7 +510,7 @@ static void doUnicast(const std::vector<std::string> &cmd)
 	for(unsigned int i=0;i<frameLen;++i)
 		pkt.data[i] = (unsigned char)prng.next32();
 
-	unsigned long sentCount = 0;
+	std::set< std::pair<Address,Address> > sentPairs;
 	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {
 		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
 			if (*s == *r)
@@ -526,7 +526,7 @@ static void doUnicast(const std::vector<std::string> &cmd)
 				pkt.i[1] = Utils::now();
 				stap->injectPacketFromHost(stap->mac(),rtap->mac(),0xdead,pkt.data,frameLen);
 				printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid,frameLen);
-				++sentCount;
+				sentPairs.insert(std::pair<Address,Address>(*s,*r));
 			} else if (stap) {
 				printf("%s -> !%s (receiver not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
 			} else if (rtap) {
@@ -561,13 +561,13 @@ static void doUnicast(const std::vector<std::string> &cmd)
 			}
 		}
 		Thread::sleep(250);
-	} while ((receivedPairs.size() < sentCount)&&(Utils::now() < toutend));
+	} while ((receivedPairs.size() < sentPairs.size())&&(Utils::now() < toutend));
 
 	for(std::vector<Address>::iterator s(senders.begin());s!=senders.end();++s) {
 		for(std::vector<Address>::iterator r(receivers.begin());r!=receivers.end();++r) {
 			if (*s == *r)
 				continue;
-			if (!receivedPairs.count(std::pair<Address,Address>(*s,*r))) {
+			if ((sentPairs.count(std::pair<Address,Address>(*s,*r)))&&(!receivedPairs.count(std::pair<Address,Address>(*s,*r)))) {
 				printf("%s <- %s was never received (timed out)"ZT_EOL_S,r->toString().c_str(),s->toString().c_str());
 			}
 		}

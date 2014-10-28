@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_CONDITION_HPP
-#define ZT_CONDITION_HPP
+#ifndef ZT_SEMAPHORE_HPP
+#define ZT_SEMAPHORE_HPP
 
 #include "../node/Constants.hpp"
 #include "../node/NonCopyable.hpp"
@@ -38,30 +38,16 @@
 
 namespace ZeroTier {
 
-class Condition : NonCopyable
+class Semaphore : NonCopyable
 {
 public:
-	Condition()
+	Semaphore() throw() { _sem = CreateSemaphore(NULL,0,0x7fffffff,NULL); }
+	~Semaphore() { CloseHandle(_sem); }
+
+	inline void wait(unsigned long ms = 0) const
 		throw()
 	{
-		_sem = CreateSemaphore(NULL,0,1,NULL);
-	}
-
-	~Condition()
-	{
-		CloseHandle(_sem);
-	}
-
-	inline void wait() const
-		throw()
-	{
-		WaitForSingleObject(_sem,INFINITE);
-	}
-
-	inline void wait(unsigned long ms) const
-		throw()
-	{
-		if (ms)
+		if (ms > 0)
 			WaitForSingleObject(_sem,(DWORD)ms);
 		else WaitForSingleObject(_sem,INFINITE);
 	}
@@ -88,51 +74,65 @@ private:
 
 namespace ZeroTier {
 
-class Condition : NonCopyable
+// This isn't quite a perfect semaphore, but the way we use it it's fine... we
+// just want this to signal when queues are ready.
+class Semaphore : NonCopyable
 {
 public:
-	Condition()
+	Semaphore()
 		throw()
 	{
 		pthread_mutex_init(&_mh,(const pthread_mutexattr_t *)0);
 		pthread_cond_init(&_cond,(const pthread_condattr_t *)0);
+		_cnt = 0;
 	}
 
-	~Condition()
+	~Semaphore()
 	{
 		pthread_cond_destroy(&_cond);
 		pthread_mutex_destroy(&_mh);
 	}
 
-	inline void wait() const
+	inline void wait()
 		throw()
 	{
 		pthread_mutex_lock(const_cast <pthread_mutex_t *>(&_mh));
-		pthread_cond_wait(const_cast <pthread_cond_t *>(&_cond),const_cast <pthread_mutex_t *>(&_mh));
+		if (_cnt <= 0)
+			pthread_cond_wait(const_cast <pthread_cond_t *>(&_cond),const_cast <pthread_mutex_t *>(&_mh));
+		if (_cnt > 0)
+			--_cnt;
 		pthread_mutex_unlock(const_cast <pthread_mutex_t *>(&_mh));
 	}
 
-	inline void wait(unsigned long ms) const
+	inline void wait(unsigned long ms)
 		throw()
 	{
 		uint64_t when = Utils::now() + (uint64_t)ms;
 		struct timespec ts;
 		ts.tv_sec = (unsigned long)(when / 1000);
 		ts.tv_nsec = (unsigned long)(when % 1000) * 1000000;
+
 		pthread_mutex_lock(const_cast <pthread_mutex_t *>(&_mh));
-		pthread_cond_timedwait(const_cast <pthread_cond_t *>(&_cond),const_cast <pthread_mutex_t *>(&_mh),&ts);
+		if (_cnt <= 0)
+			pthread_cond_timedwait(const_cast <pthread_cond_t *>(&_cond),const_cast <pthread_mutex_t *>(&_mh),&ts);
+		if (_cnt > 0)
+			--_cnt;
 		pthread_mutex_unlock(const_cast <pthread_mutex_t *>(&_mh));
 	}
 
-	inline void signal() const
+	inline void signal()
 		throw()
 	{
+		pthread_mutex_lock(const_cast <pthread_mutex_t *>(&_mh));
+		++_cnt;
+		pthread_mutex_unlock(const_cast <pthread_mutex_t *>(&_mh));
 		pthread_cond_signal(const_cast <pthread_cond_t *>(&_cond));
 	}
 
 private:
 	pthread_cond_t _cond;
 	pthread_mutex_t _mh;
+	volatile int _cnt;
 };
 
 } // namespace ZeroTier

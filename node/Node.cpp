@@ -100,7 +100,6 @@ struct _NodeImpl
 		LOG("terminating: %s",reasonForTerminationStr.c_str());
 
 		renv.shutdownInProgress = true;
-		Thread::sleep(500);
 
 		running = false;
 

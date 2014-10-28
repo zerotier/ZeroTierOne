@@ -35,7 +35,7 @@
 #include "../node/Constants.hpp"
 #include "../node/SocketManager.hpp"
 #include "../node/Mutex.hpp"
-#include "Condition.hpp"
+#include "Semaphore.hpp"
 
 namespace ZeroTier {
 
@@ -120,7 +120,7 @@ private:
 	std::map< InetAddress,TransferStats > _stats;
 	Mutex _stats_m;
 
-	Condition _waitCond;
+	Semaphore _waitCond;
 };
 
 } // namespace ZeroTier
