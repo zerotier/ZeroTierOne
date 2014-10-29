@@ -6,6 +6,10 @@ INCLUDES=
 DEFS=
 LIBS=
 
+include objects.mk
+OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
+TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
+
 # Enable SSE-optimized Salsa20 on x86 and x86_64 machines
 MACHINE=$(shell uname -m)
 ifeq ($(MACHINE),x86_64)
@@ -58,9 +62,6 @@ endif
 
 CXXFLAGS=$(CFLAGS) -fno-rtti
 
-include objects.mk
-OBJS+=osnet/LinuxRoutingTable.o osnet/LinuxEthernetTap.o osnet/LinuxEthernetTapFactory.o
-
 all:	one
 
 one:	$(OBJS) main.o
@@ -73,11 +74,15 @@ selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
+testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
+	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
+	$(STRIP) zerotier-testnet
+
 installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) node/*.o osnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osnet/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

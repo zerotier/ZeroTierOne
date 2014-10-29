@@ -321,7 +321,7 @@ static void doJoin(const std::vector<std::string> &cmd)
 		std::map< Address,SimNode * >::iterator n(nodes.find(*a));
 		if (n != nodes.end()) {
 			n->second->node.join(nwid);
-			printf("%s join %.16llx"ZT_EOL_S,n->first.toString().c_str(),nwid);
+			printf("%s join %.16llx"ZT_EOL_S,n->first.toString().c_str(),(unsigned long long)nwid);
 		}
 	}
 }
@@ -348,7 +348,7 @@ static void doLeave(const std::vector<std::string> &cmd)
 		std::map< Address,SimNode * >::iterator n(nodes.find(*a));
 		if (n != nodes.end()) {
 			n->second->node.leave(nwid);
-			printf("%s leave %.16llx"ZT_EOL_S,n->first.toString().c_str(),nwid);
+			printf("%s leave %.16llx"ZT_EOL_S,n->first.toString().c_str(),(unsigned long long)nwid);
 		}
 	}
 }
@@ -537,14 +537,14 @@ static void doUnicast(const std::vector<std::string> &cmd)
 				pkt.i[0] = s->toInt();
 				pkt.i[1] = Utils::now();
 				stap->injectPacketFromHost(stap->mac(),rtap->mac(),0xdead,pkt.data,frameLen);
-				printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid,frameLen);
+				printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),(unsigned long long)nwid,frameLen);
 				sentPairs.insert(std::pair<Address,Address>(*s,*r));
 			} else if (stap) {
-				printf("%s -> !%s (receiver not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+				printf("%s -> !%s (receiver not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),(unsigned long long)nwid);
 			} else if (rtap) {
-				printf("%s -> !%s (sender not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+				printf("%s -> !%s (sender not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),(unsigned long long)nwid);
 			} else {
-				printf("%s -> !%s (neither party is a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),nwid);
+				printf("%s -> !%s (neither party is a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),r->toString().c_str(),(unsigned long long)nwid);
 			}
 		}
 	}
@@ -563,7 +563,7 @@ static void doUnicast(const std::vector<std::string> &cmd)
 				if ((frame.len == frameLen)&&(!memcmp(frame.data + 16,pkt.data + 16,frameLen - 16))) {
 					uint64_t ints[2];
 					memcpy(ints,frame.data,16);
-					printf("%s <- %.10llx received test packet, length == %u, latency == %llums"ZT_EOL_S,r->toString().c_str(),ints[0],frame.len,frame.timestamp - ints[1]);
+					printf("%s <- %.10llx received test packet, length == %u, latency == %llums"ZT_EOL_S,r->toString().c_str(),(unsigned long long)ints[0],frame.len,(unsigned long long)(frame.timestamp - ints[1]));
 					receivedPairs.insert(std::pair<Address,Address>(Address(ints[0]),*r));
 				} else {
 					printf("%s !! got spurious packet, length == %u, etherType == 0x%.4x"ZT_EOL_S,r->toString().c_str(),frame.len,frame.etherType);
@@ -640,9 +640,9 @@ static void doMulticast(const std::vector<std::string> &cmd)
 			pkt.i[0] = s->toInt();
 			pkt.i[1] = Utils::now();
 			stap->injectPacketFromHost(stap->mac(),mcaddr,0xdead,pkt.data,frameLen);
-			printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),mcaddr.toString().c_str(),nwid,frameLen);
+			printf("%s -> %s etherType 0xdead network %.16llx length %u"ZT_EOL_S,s->toString().c_str(),mcaddr.toString().c_str(),(unsigned long long)nwid,frameLen);
 		} else {
-			printf("%s -> !%s (sender is not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),mcaddr.toString().c_str(),nwid);
+			printf("%s -> !%s (sender is not a member of %.16llx)"ZT_EOL_S,s->toString().c_str(),mcaddr.toString().c_str(),(unsigned long long)nwid);
 		}
 	}
 
@@ -660,7 +660,7 @@ static void doMulticast(const std::vector<std::string> &cmd)
 				if ((frame.len == frameLen)&&(!memcmp(frame.data + 16,pkt.data + 16,frameLen - 16))) {
 					uint64_t ints[2];
 					memcpy(ints,frame.data,16);
-					printf("%s <- %.10llx received test packet, length == %u, latency == %llums"ZT_EOL_S,nn->first.toString().c_str(),ints[0],frame.len,frame.timestamp - ints[1]);
+					printf("%s <- %.10llx received test packet, length == %u, latency == %llums"ZT_EOL_S,nn->first.toString().c_str(),(unsigned long long)ints[0],frame.len,(unsigned long long)(frame.timestamp - ints[1]));
 					++receiveCount;
 				} else {
 					printf("%s !! got spurious packet, length == %u, etherType == 0x%.4x"ZT_EOL_S,nn->first.toString().c_str(),frame.len,frame.etherType);
