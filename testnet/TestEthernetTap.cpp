@@ -128,7 +128,7 @@ bool TestEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 bool TestEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	if ((len == 0)||(len > 2800))
+	if ((len == 0)||(len > _mtu))
 		return false;
 	_pq.push(TestFrame(from,to,data,etherType & 0xffff,len));
 	return true;

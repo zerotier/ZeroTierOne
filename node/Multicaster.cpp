@@ -325,7 +325,7 @@ void Multicaster::clean(uint64_t now)
 		// so that remaining members can be sorted in ascending order of
 		// transmit priority.
 		std::vector<MulticastGroupMember>::iterator reader(mm->second.members.begin());
-		std::vector<MulticastGroupMember>::iterator writer(mm->second.members.begin());
+		std::vector<MulticastGroupMember>::iterator writer(reader);
 		unsigned int count = 0;
 		while (reader != mm->second.members.end()) {
 			if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
@@ -363,7 +363,10 @@ void Multicaster::clean(uint64_t now)
 		} else if (mm->second.txQueue.empty()) {
 			// There are no remaining members and no pending multicasts, so erase the entry
 			_groups.erase(mm++);
-		} else ++mm;
+		} else {
+			mm->second.members.clear();
+			++mm;
+		}
 	}
 }
 
@@ -399,10 +402,14 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,Multi
 	SharedPtr<Peer> p(RR->topology->getPeer(member));
 	if ((!p)||(!p->remoteVersionKnown())||(p->remoteVersionMajor() >= 1)) {
 		for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
-			tx->sendIfNew(RR,member);
 			if (tx->atLimit())
 				gs.txQueue.erase(tx++);
-			else ++tx;
+			else {
+				tx->sendIfNew(RR,member);
+				if (tx->atLimit())
+					gs.txQueue.erase(tx++);
+				else ++tx;
+			}
 		}
 	}
 }

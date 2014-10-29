@@ -102,7 +102,7 @@ public:
 	/**
 	 * @return True if this outbound multicast has been sent to enough peers
 	 */
-	inline bool atLimit() const throw() { return (_alreadySentTo.size() > _limit); }
+	inline bool atLimit() const throw() { return (_alreadySentTo.size() >= _limit); }
 
 	/**
 	 * Just send without checking log

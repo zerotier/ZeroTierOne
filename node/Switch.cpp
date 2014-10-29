@@ -785,9 +785,9 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 					++fragsRemaining;
 				unsigned int totalFragments = fragsRemaining + 1;
 
-				for(unsigned int f=0;f<fragsRemaining;++f) {
+				for(unsigned int fno=1;fno<totalFragments;++fno) {
 					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
-					Packet::Fragment frag(tmp,fragStart,chunkSize,f + 1,totalFragments);
+					Packet::Fragment frag(tmp,fragStart,chunkSize,fno,totalFragments);
 					via->send(RR,frag.data(),frag.size(),now);
 					fragStart += chunkSize;
 					remaining -= chunkSize;
@@ -795,7 +795,9 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 			}
 			return true;
 		}
-	} else requestWhois(packet.destination());
+	} else {
+		requestWhois(packet.destination());
+	}
 	return false;
 }
 

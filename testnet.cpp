@@ -559,11 +559,11 @@ static void doUnicast(const std::vector<std::string> &cmd)
 			SimNode *receiver = nodes[*r];
 			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
 			if (rtap) {
-				while (rtap->getNextReceivedFrame(frame,1)) {
+				if (rtap->getNextReceivedFrame(frame,5)) {
 					if ((frame.len == frameLen)&&(!memcmp(frame.data + 16,pkt.data + 16,frameLen - 16))) {
 						uint64_t ints[2];
 						memcpy(ints,frame.data,16);
-						printf("%s <- %.10llx received test packet, latency == %llums"ZT_EOL_S,r->toString().c_str(),ints[0],frame.timestamp - ints[1]);
+						printf("%s <- %.10llx received test packet, length == %u, latency == %llums"ZT_EOL_S,r->toString().c_str(),ints[0],frame.len,frame.timestamp - ints[1]);
 						receivedPairs.insert(std::pair<Address,Address>(Address(ints[0]),*r));
 					} else {
 						printf("%s !! got spurious packet, length == %u, etherType == 0x%.4x"ZT_EOL_S,r->toString().c_str(),frame.len,frame.etherType);
@@ -647,19 +647,19 @@ static void doMulticast(const std::vector<std::string> &cmd)
 
 	printf("---------- waiting %llu seconds..."ZT_EOL_S,tout / 1000ULL);
 
-	uint64_t toutend = Utils::now() + tout;
 	unsigned int receiveCount = 0;
 	TestEthernetTap::TestFrame frame;
+	uint64_t toutend = Utils::now() + tout;
 	do {
 		for(std::map< Address,SimNode * >::iterator nn(nodes.begin());nn!=nodes.end();++nn) {
 			SimNode *receiver = nn->second;
 			SharedPtr<TestEthernetTap> rtap(receiver->tapFactory.getByNwid(nwid));
 			if (rtap) {
-				while (rtap->getNextReceivedFrame(frame,1)) {
+				if (rtap->getNextReceivedFrame(frame,5)) {
 					if ((frame.len == frameLen)&&(!memcmp(frame.data + 16,pkt.data + 16,frameLen - 16))) {
 						uint64_t ints[2];
 						memcpy(ints,frame.data,16);
-						printf("%s <- %.10llx received test packet, latency == %llums"ZT_EOL_S,nn->first.toString().c_str(),ints[0],frame.timestamp - ints[1]);
+						printf("%s <- %.10llx received test packet, length == %u, latency == %llums"ZT_EOL_S,nn->first.toString().c_str(),ints[0],frame.len,frame.timestamp - ints[1]);
 						++receiveCount;
 					} else {
 						printf("%s !! got spurious packet, length == %u, etherType == 0x%.4x"ZT_EOL_S,nn->first.toString().c_str(),frame.len,frame.etherType);
