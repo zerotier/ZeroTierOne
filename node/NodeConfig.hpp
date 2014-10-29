@@ -145,7 +145,7 @@ public:
 	inline bool hasNetwork(uint64_t nwid)
 	{
 		Mutex::Lock _l(_networks_m);
-		return (_networks.count(nwid) > 0);
+		return (_networks.find(nwid) != _networks.end());
 	}
 
 	/**
@@ -163,12 +163,15 @@ public:
 		return tapDevs;
 	}
 
+private:
 	void _readLocalConfig();
 	void _writeLocalConfig();
 
 	const RuntimeEnvironment *RR;
+
 	Dictionary _localConfig; // persisted as local.conf
 	Mutex _localConfig_m;
+
 	std::map< uint64_t,SharedPtr<Network> > _networks; // persisted in networks.d/
 	Mutex _networks_m;
 };

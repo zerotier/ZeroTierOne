@@ -36,6 +36,11 @@ TestEthernetTapFactory::TestEthernetTapFactory()
 
 TestEthernetTapFactory::~TestEthernetTapFactory()
 {
+	Mutex::Lock _l1(_taps_m);
+	Mutex::Lock _l2(_tapsByMac_m);
+	Mutex::Lock _l3(_tapsByNwid_m);
+	for(std::set<EthernetTap *>::iterator t(_taps.begin());t!=_taps.end();++t)
+		delete *t;
 }
 
 EthernetTap *TestEthernetTapFactory::open(
@@ -48,33 +53,27 @@ EthernetTap *TestEthernetTapFactory::open(
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg)
 {
-	SharedPtr<TestEthernetTap> tap(new TestEthernetTap(this,mac,mtu,metric,nwid,desiredDevice,friendlyName,handler,arg));
-	{
-		Mutex::Lock _l(_taps_m);
-		_taps.insert(tap);
-	}
-	{
-		Mutex::Lock _l(_tapsByMac_m);
-		_tapsByMac[mac] = tap;
-	}
-	{
-		Mutex::Lock _l(_tapsByNwid_m);
-		_tapsByNwid[nwid] = tap;
-	}
-	return tap.ptr();
+	TestEthernetTap *tap = new TestEthernetTap(mac,mtu,metric,nwid,desiredDevice,friendlyName,handler,arg);
+	Mutex::Lock _l1(_taps_m);
+	Mutex::Lock _l2(_tapsByMac_m);
+	Mutex::Lock _l3(_tapsByNwid_m);
+	_taps.insert(tap);
+	_tapsByMac[mac] = tap;
+	_tapsByNwid[nwid] = tap;
+	return tap;
 }
 
 void TestEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevices)
 {
-	if (!tap)
-		return;
-	SharedPtr<TestEthernetTap> tapp((TestEthernetTap *)tap);
 	Mutex::Lock _l1(_taps_m);
 	Mutex::Lock _l2(_tapsByMac_m);
 	Mutex::Lock _l3(_tapsByNwid_m);
-	_taps.erase(tapp);
-	_tapsByMac.erase(tapp->mac());
-	_tapsByNwid.erase(tapp->nwid());
+	if (!tap)
+		return;
+	_taps.erase(tap);
+	_tapsByMac.erase(tap->mac());
+	_tapsByNwid.erase(((TestEthernetTap *)tap)->nwid());
+	delete tap;
 }
 
 } // namespace ZeroTier

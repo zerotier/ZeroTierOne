@@ -69,7 +69,6 @@ public:
 		homePath(),
 		identity(),
 		initialized(false),
-		shutdownInProgress(false),
 		tcpTunnelingEnabled(false),
 		timeOfLastResynchronize(0),
 		timeOfLastPacketReceived(0),
@@ -79,9 +78,9 @@ public:
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		http((HttpClient *)0),
-		antiRec((AntiRecursion *)0),
-		mc((Multicaster *)0),
 		sw((Switch *)0),
+		mc((Multicaster *)0),
+		antiRec((AntiRecursion *)0),
 		topology((Topology *)0),
 		nc((NodeConfig *)0),
 		node((Node *)0),
@@ -100,9 +99,6 @@ public:
 
 	// Are we initialized?
 	volatile bool initialized;
-
-	// Indicates that we are shutting down -- this is hacky, want to factor out
-	volatile bool shutdownInProgress;
 
 	// Are we in outgoing TCP failover mode?
 	volatile bool tcpTunnelingEnabled;
@@ -130,9 +126,9 @@ public:
 	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
 	HttpClient *http;
-	AntiRecursion *antiRec;
-	Multicaster *mc;
 	Switch *sw;
+	Multicaster *mc;
+	AntiRecursion *antiRec;
 	Topology *topology;
 	NodeConfig *nc;
 	Node *node;

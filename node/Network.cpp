@@ -535,15 +535,11 @@ void Network::threadMain()
 
 void Network::_CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
 {
-	if ((!((Network *)arg)->_enabled)||(((Network *)arg)->status() != NETWORK_OK))
+	SharedPtr<Network> network((Network *)arg,true);
+	if ((!network)||(!network->_enabled)||(network->status() != NETWORK_OK))
 		return;
-
-	const RuntimeEnvironment *RR = ((Network *)arg)->RR;
-	if (RR->shutdownInProgress)
-		return;
-
 	try {
-		RR->sw->onLocalEthernet(SharedPtr<Network>((Network *)arg),from,to,etherType,data);
+		network->RR->sw->onLocalEthernet(network,from,to,etherType,data);
 	} catch (std::exception &exc) {
 		TRACE("unexpected exception handling local packet: %s",exc.what());
 	} catch ( ... ) {

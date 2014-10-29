@@ -36,8 +36,6 @@
 
 #include "../node/Constants.hpp"
 #include "../node/EthernetTap.hpp"
-#include "../node/AtomicCounter.hpp"
-#include "../node/SharedPtr.hpp"
 #include "../node/Thread.hpp"
 #include "../node/Mutex.hpp"
 
@@ -57,8 +55,6 @@ class TestEthernetTapFactory;
  */
 class TestEthernetTap : public EthernetTap
 {
-	friend class SharedPtr<TestEthernetTap>;
-
 public:
 	struct TestFrame
 	{
@@ -82,7 +78,6 @@ public:
 	};
 
 	TestEthernetTap(
-		TestEthernetTapFactory *parent,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -113,7 +108,6 @@ public:
 
 private:
 	uint64_t _nwid;
-	TestEthernetTapFactory *_parent;
 
 	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
 	void *_arg;
@@ -123,8 +117,6 @@ private:
 
 	MTQ<TestFrame> _pq;
 	MTQ<TestFrame> _gq;
-
-	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier

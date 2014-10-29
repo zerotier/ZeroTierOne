@@ -32,11 +32,9 @@
 #include <string>
 #include <set>
 
-#include "../node/SharedPtr.hpp"
 #include "../node/EthernetTapFactory.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/MAC.hpp"
-#include "../node/CMWC4096.hpp"
 #include "TestEthernetTap.hpp"
 
 namespace ZeroTier {
@@ -59,36 +57,33 @@ public:
 
 	virtual void close(EthernetTap *tap,bool destroyPersistentDevices);
 
-	inline SharedPtr<TestEthernetTap> getByMac(const MAC &mac) const
+	inline TestEthernetTap *getByMac(const MAC &mac) const
 	{
 		Mutex::Lock _l(_tapsByMac_m);
-		std::map< MAC,SharedPtr<TestEthernetTap> >::const_iterator t(_tapsByMac.find(mac));
+		std::map< MAC,TestEthernetTap * >::const_iterator t(_tapsByMac.find(mac));
 		if (t == _tapsByMac.end())
-			return SharedPtr<TestEthernetTap>();
+			return (TestEthernetTap *)0;
 		return t->second;
 	}
 
-	inline SharedPtr<TestEthernetTap> getByNwid(uint64_t nwid) const
+	inline TestEthernetTap *getByNwid(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_tapsByNwid_m);
-		std::map< uint64_t,SharedPtr<TestEthernetTap> >::const_iterator t(_tapsByNwid.find(nwid));
+		std::map< uint64_t,TestEthernetTap * >::const_iterator t(_tapsByNwid.find(nwid));
 		if (t == _tapsByNwid.end())
-			return SharedPtr<TestEthernetTap>();
+			return (TestEthernetTap *)0;
 		return t->second;
 	}
 
 private:
-	std::set< SharedPtr<TestEthernetTap> > _taps;
+	std::set< EthernetTap * > _taps;
 	Mutex _taps_m;
 
-	std::map< MAC,SharedPtr<TestEthernetTap> > _tapsByMac;
+	std::map< MAC,TestEthernetTap * > _tapsByMac;
 	Mutex _tapsByMac_m;
 
-	std::map< uint64_t,SharedPtr<TestEthernetTap> > _tapsByNwid;
+	std::map< uint64_t,TestEthernetTap * > _tapsByNwid;
 	Mutex _tapsByNwid_m;
-
-	CMWC4096 _prng;
-	Mutex _prng_m;
 };
 
 } // namespace ZeroTier

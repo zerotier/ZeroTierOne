@@ -43,7 +43,6 @@
 namespace ZeroTier {
 
 TestEthernetTap::TestEthernetTap(
-	TestEthernetTapFactory *parent,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
@@ -54,7 +53,6 @@ TestEthernetTap::TestEthernetTap(
 	void *arg) :
 	EthernetTap("TestEthernetTap",mac,mtu,metric),
 	_nwid(nwid),
-	_parent(parent),
 	_handler(handler),
 	_arg(arg),
 	_enabled(true)

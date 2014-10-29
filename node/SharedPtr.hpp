@@ -64,6 +64,20 @@ public:
 		++obj->__refCount;
 	}
 
+	SharedPtr(T *obj,bool runAwayFromZombies)
+		throw() :
+		_ptr(obj)
+	{
+		// HACK: this is used in "handlers" to take ownership of naked pointers,
+		// an ugly pattern that really ought to be factored out.
+		if (runAwayFromZombies) {
+			if ((int)(++obj->__refCount) < 2) {
+				--obj->__refCount;
+				_ptr = (T *)0;
+			}
+		} else ++obj->__refCount;
+	}
+
 	SharedPtr(const SharedPtr &sp)
 		throw() :
 		_ptr(sp._getAndInc())

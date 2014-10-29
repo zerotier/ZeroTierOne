@@ -99,8 +99,6 @@ struct _NodeImpl
 		RuntimeEnvironment *RR = &renv;
 		LOG("terminating: %s",reasonForTerminationStr.c_str());
 
-		renv.shutdownInProgress = true;
-
 		running = false;
 
 #ifndef __WINDOWS__
@@ -109,9 +107,9 @@ struct _NodeImpl
 		delete renv.updater;  renv.updater = (SoftwareUpdater *)0;
 		delete renv.nc;       renv.nc = (NodeConfig *)0;            // shut down all networks, close taps, etc.
 		delete renv.topology; renv.topology = (Topology *)0;        // now we no longer need routing info
-		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
 		delete renv.mc;       renv.mc = (Multicaster *)0;
 		delete renv.antiRec;  renv.antiRec = (AntiRecursion *)0;
+		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
 		delete renv.http;     renv.http = (HttpClient *)0;
 		delete renv.prng;     renv.prng = (CMWC4096 *)0;
 		delete renv.log;      renv.log = (Logger *)0;               // but stop logging last of all
@@ -271,16 +269,12 @@ Node::~Node()
 
 static void _CBztTraffic(const SharedPtr<Socket> &fromSock,void *arg,const InetAddress &from,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
 {
-	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)arg;
-	if ((RR->sw)&&(!RR->shutdownInProgress))
-		RR->sw->onRemotePacket(fromSock,from,data);
+	((const RuntimeEnvironment *)arg)->sw->onRemotePacket(fromSock,from,data);
 }
 
 static void _cbHandleGetRootTopology(void *arg,int code,const std::string &url,const std::string &body)
 {
 	RuntimeEnvironment *RR = (RuntimeEnvironment *)arg;
-	if (RR->shutdownInProgress)
-		return;
 
 	if ((code != 200)||(body.length() == 0)) {
 		TRACE("failed to retrieve %s",url.c_str());
@@ -391,9 +385,9 @@ Node::ReasonForTermination Node::run()
 		}
 
 		RR->http = new HttpClient();
-		RR->antiRec = new AntiRecursion();
-		RR->mc = new Multicaster(RR);
 		RR->sw = new Switch(RR);
+		RR->mc = new Multicaster(RR);
+		RR->antiRec = new AntiRecursion();
 		RR->topology = new Topology(RR);
 		try {
 			RR->nc = new NodeConfig(RR);
