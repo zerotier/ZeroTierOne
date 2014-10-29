@@ -69,18 +69,12 @@ void TestEthernetTapFactory::close(EthernetTap *tap,bool destroyPersistentDevice
 	if (!tap)
 		return;
 	SharedPtr<TestEthernetTap> tapp((TestEthernetTap *)tap);
-	{
-		Mutex::Lock _l(_taps_m);
-		_taps.erase(tapp);
-	}
-	{
-		Mutex::Lock _l(_tapsByMac_m);
-		_tapsByMac.erase(tapp->mac());
-	}
-	{
-		Mutex::Lock _l(_tapsByNwid_m);
-		_tapsByNwid.erase(tapp->nwid());
-	}
+	Mutex::Lock _l1(_taps_m);
+	Mutex::Lock _l2(_tapsByMac_m);
+	Mutex::Lock _l3(_tapsByNwid_m);
+	_taps.erase(tapp);
+	_tapsByMac.erase(tapp->mac());
+	_tapsByNwid.erase(tapp->nwid());
 }
 
 } // namespace ZeroTier
