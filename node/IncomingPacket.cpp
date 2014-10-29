@@ -892,20 +892,9 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 
 void IncomingPacket::_parseGatherResults(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid,const MulticastGroup &mg,unsigned int offset)
 {
-	//unsigned int totalKnown = at<uint32_t>(offset);
+	unsigned int totalKnown = at<uint32_t>(offset);
 	unsigned int count = at<uint16_t>(offset + 4);
-	const unsigned char *p = (const unsigned char *)data() + offset + 6;
-	const unsigned char *e = (const unsigned char *)data() + size();
-	Address atmp;
-	uint64_t now = Utils::now();
-	for(unsigned int i=0;i<count;++i) {
-		const unsigned char *n = p + ZT_ADDRESS_LENGTH;
-		if (n > e)
-			break;
-		atmp.setTo(p,ZT_ADDRESS_LENGTH);
-		RR->mc->add(now,nwid,mg,peer->address(),atmp);
-		p = n;
-	}
+	RR->mc->addMultiple(Utils::now(),nwid,mg,peer->address(),field(offset + 6,count * 5),count,totalKnown);
 }
 
 } // namespace ZeroTier

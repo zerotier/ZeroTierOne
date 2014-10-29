@@ -52,6 +52,20 @@ Multicaster::~Multicaster()
 {
 }
 
+void Multicaster::addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const void *addresses,unsigned int count,unsigned int totalKnown)
+{
+	const unsigned char *p = (const unsigned char *)addresses;
+	const unsigned char *e = p + (5 * count);
+	Mutex::Lock _l(_groups_m);
+	MulticastGroupStatus &gs = _groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)];
+	while (p != e) {
+		_add(now,nwid,mg,gs,learnedFrom,Address(p,5));
+		p += 5;
+	}
+	if (RR->topology->isSupernode(learnedFrom))
+		gs.totalKnownMembers = totalKnown;
+}
+
 unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Packet &appendTo,unsigned int limit) const
 {
 	unsigned char *p;
@@ -337,7 +351,7 @@ void Multicaster::clean(uint64_t now)
 				 * learned peers. For peers with no active Peer record, we use the time we last learned
 				 * about them minus one day (a large constant) to put these at the bottom of the list.
 				 * List is sorted in ascending order of rank and multicasts are sent last-to-first. */
-				if (writer->learnedFrom) {
+				if (writer->learnedFrom != writer->address) {
 					SharedPtr<Peer> p(RR->topology->getPeer(writer->learnedFrom));
 					if (p)
 						writer->rank = (RR->topology->amSupernode() ? p->lastDirectReceive() : p->lastUnicastFrame()) - ZT_MULTICAST_LIKE_EXPIRE;
@@ -381,9 +395,7 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,Multi
 	// Update timestamp and learnedFrom if existing
 	for(std::vector<MulticastGroupMember>::iterator m(gs.members.begin());m!=gs.members.end();++m) {
 		if (m->address == member) {
-			// learnedFrom is NULL (zero) if we've learned this directly via MULTICAST_LIKE, at which
-			// point this becomes a first-order connection.
-			if (m->learnedFrom)
+			if (m->learnedFrom != member) // once we learn it directly, remember this forever
 				m->learnedFrom = learnedFrom;
 			m->timestamp = now;
 			return;

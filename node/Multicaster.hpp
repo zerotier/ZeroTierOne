@@ -62,7 +62,7 @@ private:
 		MulticastGroupMember(const Address &a,const Address &lf,uint64_t ts) : address(a),learnedFrom(lf),timestamp(ts),rank(0) {}
 
 		Address address;
-		Address learnedFrom; // NULL/0 for addresses directly learned from LIKE
+		Address learnedFrom;
 		uint64_t timestamp; // time of last LIKE/OK(GATHER)
 		uint64_t rank; // used by sorting algorithm in clean()
 
@@ -72,9 +72,10 @@ private:
 
 	struct MulticastGroupStatus
 	{
-		MulticastGroupStatus() : lastExplicitGather(0) {}
+		MulticastGroupStatus() : lastExplicitGather(0),totalKnownMembers(0) {}
 
 		uint64_t lastExplicitGather;
+		unsigned int totalKnownMembers; // 0 if unknown
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};
@@ -89,7 +90,7 @@ public:
 	 * @param now Current time
 	 * @param nwid Network ID
 	 * @param mg Multicast group
-	 * @param learnedFrom Address from which we learned this member or NULL/0 Address if direct
+	 * @param learnedFrom Address from which we learned this member
 	 * @param member New member address
 	 */
 	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
@@ -97,6 +98,21 @@ public:
 		Mutex::Lock _l(_groups_m);
 		_add(now,nwid,mg,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
 	}
+
+	/**
+	 * Add multiple addresses from a binary array of 5-byte address fields
+	 *
+	 * It's up to the caller to check bounds on the array before calling this.
+	 *
+	 * @param now Current time
+	 * @param nwid Network ID
+	 * @param mg Multicast group
+	 * @param learnedFrom Peer from which we received this list
+	 * @param addresses Raw binary addresses in big-endian format, as a series of 5-byte fields
+	 * @param count Number of addresses
+	 * @param totalKnown Total number of known addresses as reported by peer
+	 */
+	void addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const void *addresses,unsigned int count,unsigned int totalKnown);
 
 	/**
 	 * Append gather results to a packet by choosing registered multicast recipients at random
