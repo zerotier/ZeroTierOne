@@ -74,8 +74,13 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 
 	if (!limit)
 		return 0;
-	if (limit > 0xffff) // TODO: multiple return packets not yet supported
+	else if (limit > 0xffff)
 		limit = 0xffff;
+
+	const unsigned int totalAt = appendTo.size();
+	appendTo.addSize(4); // sizeof(uint32_t)
+	const unsigned int addedAt = appendTo.size();
+	appendTo.addSize(2); // sizeof(uint16_t)
 
 	{ // Return myself if I am a member of this group
 		SharedPtr<Network> network(RR->nc->network(nwid));
@@ -88,11 +93,6 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 
 	Mutex::Lock _l(_groups_m);
 
-	const unsigned int totalAt = appendTo.size();
-	appendTo.addSize(4); // sizeof(uint32_t)
-	const unsigned int addedAt = appendTo.size();
-	appendTo.addSize(2); // sizeof(uint16_t)
-
 	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::const_iterator gs(_groups.find(std::pair<uint64_t,MulticastGroup>(nwid,mg)));
 	if ((gs != _groups.end())&&(!gs->second.members.empty())) {
 		totalKnown += (unsigned int)gs->second.members.size();
@@ -100,7 +100,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 		// Members are returned in random order so that repeated gather queries
 		// will return different subsets of a large multicast group.
 		k = 0;
-		while ((added < limit)&&(k < gs->second.members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_PROTO_MAX_PACKET_LENGTH)) {
+		while ((added < limit)&&(k < gs->second.members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_UDP_DEFAULT_PAYLOAD_MTU)) {
 			rptr = (unsigned int)RR->prng->next32();
 
 restart_member_scan:

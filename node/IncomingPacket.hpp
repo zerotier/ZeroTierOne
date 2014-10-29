@@ -130,9 +130,6 @@ private:
 	// Send an ERROR_NEED_MEMBERSHIP_CERTIFICATE to a peer indicating that an updated cert is needed to join
 	void _sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid);
 
-	// Parse gather results for OK(MULTICAST_GATHER) and OK(MULTICAST_FRAME)
-	void _parseGatherResults(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid,const MulticastGroup &mg,unsigned int offset);
-
 	uint64_t _receiveTime;
 	SharedPtr<Socket> _fromSock;
 	InetAddress _remoteAddress;

@@ -203,7 +203,7 @@ public:
 		throw(std::out_of_range)
 	{
 		if ((i + sizeof(T)) > _l)
-			throw std::out_of_range("Buffer: set() beyond end of data");
+			throw std::out_of_range("Buffer: setAt() beyond end of data");
 		T *const ZT_VAR_MAY_ALIAS p = reinterpret_cast<T *>(_b + i);
 		*p = Utils::hton(v);
 	}

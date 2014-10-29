@@ -304,7 +304,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID);
 				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI));
 				TRACE("%s(%s): OK(MULTICAST_GATHER) %.16llx/%s length %u",source().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),size());
-				_parseGatherResults(RR,peer,nwid,mg,ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS);
+
+				unsigned int count = at<uint16_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 4);
+				RR->mc->addMultiple(Utils::now(),nwid,mg,peer->address(),field(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS + 6,count * 5),count,at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS));
 			}	break;
 
 			case Packet::VERB_MULTICAST_FRAME: {
@@ -319,7 +321,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				if ((flags & 0x01) != 0) {
 					// OK(MULTICAST_FRAME) includes certificate of membership update
 					CertificateOfMembership com;
-					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_PAYLOAD);
+					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
 					SharedPtr<Network> network(RR->nc->network(nwid));
 					if ((network)&&(com.hasRequiredFields()))
 						network->addMembershipCertificate(com,false);
@@ -327,7 +329,10 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 
 				if ((flags & 0x02) != 0) {
 					// OK(MULTICAST_FRAME) includes implicit gather results
-					_parseGatherResults(RR,peer,nwid,mg,offset + ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_PAYLOAD);
+					offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
+					unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
+					unsigned int count = at<uint16_t>(offset); offset += 2;
+					RR->mc->addMultiple(Utils::now(),nwid,mg,peer->address(),field(offset,count * 5),count,totalKnown);
 				}
 			}	break;
 
@@ -888,13 +893,6 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 	outp.append(nwid);
 	outp.armor(peer->key(),true);
 	_fromSock->send(_remoteAddress,outp.data(),outp.size());
-}
-
-void IncomingPacket::_parseGatherResults(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid,const MulticastGroup &mg,unsigned int offset)
-{
-	unsigned int totalKnown = at<uint32_t>(offset);
-	unsigned int count = at<uint16_t>(offset + 4);
-	RR->mc->addMultiple(Utils::now(),nwid,mg,peer->address(),field(offset + 6,count * 5),count,totalKnown);
 }
 
 } // namespace ZeroTier
