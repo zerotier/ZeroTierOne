@@ -27,7 +27,7 @@ That will do a unicast all-to-all test and report results. At first latencies mi
 
     multicast <some node's 10-digit ZT address> * ffffffffffffffff 24 60
 
-This will send a multicast packet to ff:ff:ff:ff:ff:ff (broadcast) and report back who receives it. You should see multicast propagation limited to 64 nodes, since this is the setting for multicast limit on the fake test network (and the default if not overridden in netconf). Multicast will show the same "warm up" behavior as unicast.
+This will send a multicast packet to ff:ff:ff:ff:ff:ff (broadcast) and report back who receives it. You should see multicast propagation limited to 32 nodes, since this is the setting for multicast limit on the fake test network (and the default if not overridden in netconf). Multicast will show the same "warm up" behavior as unicast.
 
 Typing just "." will execute the same testnet command again.
 

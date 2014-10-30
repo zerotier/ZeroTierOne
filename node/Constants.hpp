@@ -250,9 +250,9 @@
 #define ZT_MULTICAST_TRANSMIT_TIMEOUT 5000
 
 /**
- * Default maximum number of peers to address with a single multicast (if unspecified in network)
+ * Default maximum number of peers to address with a single multicast (if unspecified in network config)
  */
-#define ZT_MULTICAST_DEFAULT_LIMIT 64
+#define ZT_MULTICAST_DEFAULT_LIMIT 32
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping
