@@ -37,6 +37,9 @@
 #include "../../node/Defaults.hpp"
 #include "../../node/Utils.hpp"
 
+#include "../../control/NodeControlClient.hpp"
+#include "../../control/NodeControlService.hpp"
+
 #include "../../osnet/WindowsEthernetTapFactory.hpp"
 #include "../../osnet/WindowsRoutingTable.hpp"
 #include "../../osnet/NativeSocketManager.hpp"
@@ -83,6 +86,8 @@ void ZeroTierOneService::threadMain()
 
 restart_node:
 	try {
+		std::string authToken(ZeroTier::NodeControlClient::getAuthToken((ZeroTier::ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
+
 		ZeroTier::WindowsEthernetTapFactory tapFactory(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str());
 		ZeroTier::WindowsRoutingTable routingTable;
 		ZeroTier::NativeSocketManager socketManager(ZT_DEFAULT_UDP_PORT,0);
@@ -93,6 +98,8 @@ restart_node:
 			delete _node;
 			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),&tapFactory,&routingTable,&socketManager,false,(const char *)0);
 		}
+
+		ZeroTier::NodeControlService controlService(_node,authToken.c_str());
 
 		switch(_node->run()) {
 

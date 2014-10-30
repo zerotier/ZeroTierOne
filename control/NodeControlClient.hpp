@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 
+#include "../node/Constants.hpp"
+
 #ifdef __WINDOWS__
 #define ZT_IPC_ENDPOINT_BASE "\\\\.\\pipe\\ZeroTierOne-"
 #else
