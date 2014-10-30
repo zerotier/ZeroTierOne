@@ -12,53 +12,58 @@ mac:QMAKE_INFO_PLIST = Info.plist
 mac:LIBS += -framework Cocoa
 
 SOURCES += main.cpp \
-		mainwindow.cpp \
-		aboutwindow.cpp \
-		networkwidget.cpp \
-		installdialog.cpp \
-		licensedialog.cpp \
-		onetimedialog.cpp \
+    mainwindow.cpp \
+    aboutwindow.cpp \
+    networkwidget.cpp \
+    installdialog.cpp \
+    licensedialog.cpp \
+    onetimedialog.cpp \
+    ../control/IpcConnection.cpp \
+    ../control/IpcListener.cpp \
+    ../control/NodeControlClient.cpp \
+    ../control/NodeControlService.cpp \
     ../node/C25519.cpp \
     ../node/CertificateOfMembership.cpp \
     ../node/Defaults.cpp \
+    ../node/Dictionary.cpp \
     ../node/HttpClient.cpp \
     ../node/Identity.cpp \
+    ../node/IncomingPacket.cpp \
     ../node/InetAddress.cpp \
-    ../node/IpcConnection.cpp \
-    ../node/IpcListener.cpp \
     ../node/Logger.cpp \
     ../node/Multicaster.cpp \
     ../node/Network.cpp \
     ../node/NetworkConfig.cpp \
     ../node/Node.cpp \
     ../node/NodeConfig.cpp \
+    ../node/OutboundMulticast.cpp \
     ../node/Packet.cpp \
-    ../node/PacketDecoder.cpp \
     ../node/Peer.cpp \
     ../node/Poly1305.cpp \
     ../node/RoutingTable.cpp \
     ../node/Salsa20.cpp \
     ../node/Service.cpp \
     ../node/SHA512.cpp \
-    ../node/SocketManager.cpp \
     ../node/SoftwareUpdater.cpp \
     ../node/Switch.cpp \
-    ../node/TcpSocket.cpp \
     ../node/Topology.cpp \
-    ../node/UdpSocket.cpp \
     ../node/Utils.cpp \
-    ../ext/lz4/lz4.c \
-    ../node/Dictionary.cpp
+    ../ext/lz4/lz4.c
 
 HEADERS  += mainwindow.h \
-		aboutwindow.h \
-		networkwidget.h \
-		installdialog.h \
-		mac_doprivileged.h \
-		licensedialog.h \
-		main.h \
-		onetimedialog.h \
+    aboutwindow.h \
+    networkwidget.h \
+    installdialog.h \
+    mac_doprivileged.h \
+    licensedialog.h \
+    main.h \
+    onetimedialog.h \
+    ../control/IpcConnection.hpp \
+    ../control/IpcListener.hpp \
+    ../control/NodeControlClient.hpp \
+    ../control/NodeControlService.hpp \
     ../node/Address.hpp \
+    ../node/AntiRecursion.hpp \
     ../node/Array.hpp \
     ../node/AtomicCounter.hpp \
     ../node/BandwidthAccount.hpp \
@@ -69,11 +74,12 @@ HEADERS  += mainwindow.h \
     ../node/Constants.hpp \
     ../node/Defaults.hpp \
     ../node/Dictionary.hpp \
+    ../node/EthernetTap.hpp \
+    ../node/EthernetTapFactory.hpp \
     ../node/HttpClient.hpp \
     ../node/Identity.hpp \
+    ../node/IncomingPacket.hpp \
     ../node/InetAddress.hpp \
-    ../node/IpcConnection.hpp \
-    ../node/IpcListener.hpp \
     ../node/Logger.hpp \
     ../node/MAC.hpp \
     ../node/Multicaster.hpp \
@@ -84,11 +90,12 @@ HEADERS  += mainwindow.h \
     ../node/Node.hpp \
     ../node/NodeConfig.hpp \
     ../node/NonCopyable.hpp \
+    ../node/OutboundMulticast.hpp \
     ../node/Packet.hpp \
-    ../node/PacketDecoder.hpp \
     ../node/Path.hpp \
     ../node/Peer.hpp \
     ../node/Poly1305.hpp \
+    ../node/RoutingTable.hpp \
     ../node/RuntimeEnvironment.hpp \
     ../node/Salsa20.hpp \
     ../node/Service.hpp \
@@ -98,15 +105,10 @@ HEADERS  += mainwindow.h \
     ../node/SocketManager.hpp \
     ../node/SoftwareUpdater.hpp \
     ../node/Switch.hpp \
-    ../node/RoutingTable.hpp \
-    ../node/TcpSocket.hpp \
     ../node/Thread.hpp \
     ../node/Topology.hpp \
-    ../node/UdpSocket.hpp \
     ../node/Utils.hpp \
-    ../ext/lz4/lz4.h \
-    ../node/EthernetTap.hpp \
-    ../node/EthernetTapFactory.hpp
+    ../ext/lz4/lz4.h
 
 FORMS    += mainwindow.ui \
 		aboutwindow.ui \

@@ -62,8 +62,11 @@
 #include "mac_doprivileged.h"
 #endif
 
+#include "../node/Utils.hpp"
+#include "../node/Identity.hpp"
+
 // Globally visible
-ZeroTier::Node::NodeControlClient *zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
+ZeroTier::NodeControlClient *zeroTierClient = (ZeroTier::NodeControlClient *)0;
 
 // Main window instance for app
 QMainWindow *mainWindow = (MainWindow *)0;
@@ -77,6 +80,7 @@ static void handleZTMessage(void *arg,const char *line)
 	ztReplies_m.lock();
 
 	if (line) {
+		//printf("%s\n",line);
 		if ((line[0] == '.')&&(line[1] == (char)0)) {
 			// The message is packed into an event and sent to the main window where
 			// the actual parsing code lives.
@@ -136,7 +140,7 @@ MainWindow::~MainWindow()
 {
 	delete ui;
 	delete zeroTierClient;
-	zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
+	zeroTierClient = (ZeroTier::NodeControlClient *)0;
 	mainWindow = (MainWindow *)0;
 }
 
@@ -161,7 +165,7 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 
 	if (!zeroTierClient) {
 #ifdef __APPLE__
-		if ((!QFile::exists(ZeroTier::Node::NodeControlClient::authTokenDefaultUserPath()))&&(QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one"))) {
+		if ((!QFile::exists(ZeroTier::NodeControlClient::authTokenDefaultUserPath()))&&(QFile::exists("/Library/Application Support/ZeroTier/One/zerotier-one"))) {
 			// Authorize user by copying auth token into local home directory
 			QMessageBox::information(this,"Authorization Needed","Administrator privileges are required to allow the current user to control ZeroTier One on this computer. (You only have to do this once.)",QMessageBox::Ok,QMessageBox::NoButton);
 
@@ -204,14 +208,21 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 #endif // __APPLE__
 
 		try {
-			zeroTierClient = new ZeroTier::Node::NodeControlClient((const char *)0,&handleZTMessage,this);
-			const char *err = zeroTierClient->error();
-			if (err) {
-				delete zeroTierClient;
-				zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
+			std::string buf;
+			if (ZeroTier::Utils::readFile("/Library/Application Support/ZeroTier/One/identity.public",buf)) {
+				ZeroTier::Identity id;
+				if (id.fromString(buf)) {
+					std::string authToken(ZeroTier::NodeControlClient::getAuthToken(ZeroTier::NodeControlClient::authTokenDefaultUserPath(),false));
+					zeroTierClient = new ZeroTier::NodeControlClient((std::string(ZT_IPC_ENDPOINT_BASE) + id.address().toString()).c_str(),authToken.c_str(),&handleZTMessage,this);
+					const char *err = zeroTierClient->error();
+					if (err) {
+						delete zeroTierClient;
+						zeroTierClient = (ZeroTier::NodeControlClient *)0;
+					}
+				}
 			}
 		} catch ( ... ) {
-			zeroTierClient = (ZeroTier::Node::NodeControlClient *)0;
+			zeroTierClient = (ZeroTier::NodeControlClient *)0;
 		}
 	}
 
@@ -237,7 +248,7 @@ void MainWindow::customEvent(QEvent *event)
 	ZTMessageEvent *m = (ZTMessageEvent *)event; // only one custom event type so far
 	if (m->ztMessage.size() == 0)
 		return;
-	std::vector<std::string> hdr(ZeroTier::Node::NodeControlClient::splitLine(m->ztMessage[0]));
+	std::vector<std::string> hdr(ZeroTier::NodeControlClient::splitLine(m->ztMessage[0]));
 	if (hdr.size() < 2)
 		return;
 	if (hdr[0] != "200")
@@ -255,7 +266,7 @@ void MainWindow::customEvent(QEvent *event)
 	} else if (hdr[1] == "listnetworks") {
 		std::map< std::string,std::vector<std::string> > newNetworks;
 		for(unsigned long i=1;i<m->ztMessage.size();++i) {
-			std::vector<std::string> l(ZeroTier::Node::NodeControlClient::splitLine(m->ztMessage[i]));
+			std::vector<std::string> l(ZeroTier::NodeControlClient::splitLine(m->ztMessage[i]));
 			// 200 listnetworks <nwid> <name> <mac> <status> <config age> <type> <dev> <ips>
 			if ((l.size() == 10)&&(l[2].length() == 16))
 				newNetworks[l[2]] = l;
