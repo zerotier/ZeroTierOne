@@ -64,6 +64,7 @@
 
 #include "../node/Utils.hpp"
 #include "../node/Identity.hpp"
+#include "../node/Defaults.hpp"
 
 // Globally visible
 ZeroTier::NodeControlClient *zeroTierClient = (ZeroTier::NodeControlClient *)0;
@@ -209,10 +210,12 @@ void MainWindow::timerEvent(QTimerEvent *event) // event can be null since code 
 
 		try {
 			std::string buf;
-			if (ZeroTier::Utils::readFile("/Library/Application Support/ZeroTier/One/identity.public",buf)) {
+			if (ZeroTier::Utils::readFile((ZeroTier::ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S + "identity.public").c_str(),buf)) {
 				ZeroTier::Identity id;
 				if (id.fromString(buf)) {
 					std::string authToken(ZeroTier::NodeControlClient::getAuthToken(ZeroTier::NodeControlClient::authTokenDefaultUserPath(),false));
+					if (!authToken.length())
+						authToken = ZeroTier::NodeControlClient::getAuthToken((ZeroTier::ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),false);
 					zeroTierClient = new ZeroTier::NodeControlClient((std::string(ZT_IPC_ENDPOINT_BASE) + id.address().toString()).c_str(),authToken.c_str(),&handleZTMessage,this);
 					const char *err = zeroTierClient->error();
 					if (err) {
