@@ -726,8 +726,8 @@ void NativeSocketManager::poll(unsigned long timeout,void (*handler)(const Share
 	{
 		Mutex::Lock _l2(_tcpSockets_m);
 		for(std::map< InetAddress,SharedPtr<Socket> >::iterator s(_tcpSockets.begin());s!=_tcpSockets.end();++s) {
-			if (((TcpSocket *)s->second.ptr())->_connecting)
-				FD_SET(s->second->_sock,&efds);
+			if (((NativeTcpSocket *)s->second.ptr())->_connecting)
+				FD_SET(((NativeTcpSocket *)s->second.ptr())->_sock,&efds);
 		}
 	}
 #endif

@@ -39,6 +39,7 @@
 
 #include "../../osnet/WindowsEthernetTapFactory.hpp"
 #include "../../osnet/WindowsRoutingTable.hpp"
+#include "../../osnet/NativeSocketManager.hpp"
 
 #pragma endregion // Includes
 
@@ -84,12 +85,13 @@ restart_node:
 	try {
 		ZeroTier::WindowsEthernetTapFactory tapFactory(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str());
 		ZeroTier::WindowsRoutingTable routingTable;
+		ZeroTier::NativeSocketManager socketManager(ZT_DEFAULT_UDP_PORT,0);
 
 		{
 			// start or restart
 			ZeroTier::Mutex::Lock _l(_lock);
 			delete _node;
-			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),&tapFactory,&routingTable,ZT_DEFAULT_UDP_PORT,0,false);
+			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),&tapFactory,&routingTable,&socketManager,false,(const char *)0);
 		}
 
 		switch(_node->run()) {
