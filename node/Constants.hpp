@@ -58,6 +58,21 @@
 #include <endian.h>
 #endif
 
+#ifdef __FreeBSD__
+#ifndef __UNIX_LIKE__
+#define __UNIX_LIKE__
+#endif
+#ifndef __BSD__
+#define __BSD__
+#endif
+#include <machine/endian.h>
+#ifndef __BYTE_ORDER
+#define __BYTE_ORDER _BYTE_ORDER
+#define __LITTLE_ENDIAN _LITTLE_ENDIAN
+#define __BIG_ENDIAN _BIG_ENDIAN
+#endif
+#endif
+
 // TODO: Android is what? Linux technically, but does it define it?
 
 #ifdef __APPLE__

@@ -9,3 +9,8 @@ endif
 ifeq ($(OSTYPE),Linux)
 	include make-linux.mk
 endif
+
+ifeq ($(OSTYPE),FreeBSD)
+	include make-freebsd.mk
+endif
+
