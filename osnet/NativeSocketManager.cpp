@@ -412,7 +412,7 @@ NativeSocketManager::NativeSocketManager(int localUdpPort,int localTcpPort) :
 					throw std::runtime_error("unable to bind to local TCP port");
 				}
 
-				if (::listen(_tcpV6ListenSocket,16)) {
+				if (::listen(_tcpV6ListenSocket,1024)) {
 					_closeSockets();
 					throw std::runtime_error("listen() failed");
 				}
@@ -455,7 +455,7 @@ NativeSocketManager::NativeSocketManager(int localUdpPort,int localTcpPort) :
 				throw std::runtime_error("unable to bind to local TCP port");
 			}
 
-			if (::listen(_tcpV4ListenSocket,16)) {
+			if (::listen(_tcpV4ListenSocket,1024)) {
 				_closeSockets();
 				throw std::runtime_error("listen() failed");
 			}
