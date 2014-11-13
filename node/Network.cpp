@@ -311,6 +311,14 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 	if (!cert) // sanity check
 		return;
 
+	Mutex::Lock _l(_lock);
+	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
+
+	// Nothing to do if the cert hasn't changed -- we get duplicates due to zealous cert pushing
+	if (old == cert)
+		return;
+
+	// Check signature, log and return if cert is invalid
 	if (!forceAccept) {
 		if (cert.signedBy() != controller()) {
 			LOG("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
@@ -332,9 +340,7 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 		}
 	}
 
-	Mutex::Lock _l(_lock);
-
-	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
+	// If we made it past authentication, update cert
 	if (cert.timestamp() >= old.timestamp())
 		old = cert;
 }
