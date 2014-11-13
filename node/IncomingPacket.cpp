@@ -611,14 +611,14 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 
 			std::vector<Address> members(RR->mc->getMembers(nwid,dest,limit));
 			SharedPtr<Peer> lpp;
+			uint64_t now = Utils::now();
 
 			setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xffff);
 			setSource(RR->identity.address());
 			compress();
 			for(std::vector<Address>::iterator lp(members.begin());lp!=members.end();++lp) {
-				if (!senderIsLegacy)
-					lpp = RR->topology->getPeer(*lp);
-				if ( (*lp != origin) && (*lp != peer->address()) && ((senderIsLegacy) || (!lpp) || (lpp->remoteVersionMajor() < 1)) ) {
+				lpp = RR->topology->getPeer(*lp);
+				if ( (lpp) && (lpp->hasActiveDirectPath(now)) && (*lp != origin) && (*lp != peer->address()) && ((senderIsLegacy) || (lpp->remoteVersionMajor() < 1)) ) {
 					newInitializationVector();
 					setDestination(*lp);
 					RR->sw->send(*this,true);
