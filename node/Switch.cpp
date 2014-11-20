@@ -482,7 +482,7 @@ unsigned long Switch::doTimerTasks()
 					 * the original port one more time for good measure, since sometimes it
 					 * fails first time around. */
 					int p = (int)qi->inaddr.port() - 2;
-					for(int k=0;k<5;++k) {
+					for(int k=0;k<6;++k) {
 						if ((p > 0)&&(p <= 0xffff)) {
 							qi->inaddr.setPort((unsigned int)p);
 							sendHELLO(qi->peer,qi->inaddr);
