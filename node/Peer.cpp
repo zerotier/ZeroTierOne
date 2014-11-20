@@ -177,6 +177,25 @@ Path::Type Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int
 	}
 
 	Path *bestPath = (Path *)0;
+	uint64_t normalPathAge = now - bestNormalPathLastReceived;
+	uint64_t tcpOutPathAge = now - bestTcpOutPathLastReceived;
+	if (normalPathAge < ZT_PEER_PATH_ACTIVITY_TIMEOUT) {
+		/* If we have a normal path that looks alive, only use TCP if it looks
+		 * even more alive, if the UDP path is not a very recent acquisition,
+		 * and if TCP tunneling is globally enabled. */
+		bestPath = ( (tcpOutPathAge < normalPathAge) && (normalPathAge > (ZT_PEER_DIRECT_PING_DELAY / 4)) && (RR->tcpTunnelingEnabled) ) ? bestTcpOutPath : bestNormalPath;
+	} else if ( (tcpOutPathAge < ZT_PEER_PATH_ACTIVITY_TIMEOUT) || ((RR->tcpTunnelingEnabled)&&(bestTcpOutPath)) ) {
+		/* Otherwise use a TCP path if we have an active one or if TCP
+		 * fallback has been globally triggered and we know of one at all. */
+		bestPath = bestTcpOutPath;
+	} else if ( (bestNormalPath) && (bestNormalPath->fixed()) ) {
+		/* Finally, use a normal path if we have a "fixed" one as these are
+		 * always considered basically alive. */
+		bestPath = bestNormalPath;
+	}
+
+	/* Old path choice logic -- would attempt to use inactive paths... deprecating and will probably kill.
+	Path *bestPath = (Path *)0;
 	if (bestTcpOutPath) { // we have a TCP out path
 		if (bestNormalPath) { // we have both paths, decide which to use
 			if (RR->tcpTunnelingEnabled) { // TCP tunneling is enabled, so use normal path only if it looks alive
@@ -192,6 +211,8 @@ Path::Type Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int
 	} else { // we only have a normal path (or none at all, that case is caught below)
 		bestPath = bestNormalPath;
 	}
+	*/
+
 	if (!bestPath)
 		return Path::PATH_TYPE_NULL;
 

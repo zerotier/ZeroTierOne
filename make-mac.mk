@@ -50,7 +50,7 @@ one:	$(OBJS) main.o
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
 
-selftest: $(OBJS) sefltest.o
+selftest: $(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
