@@ -607,46 +607,74 @@ Node::ReasonForTermination Node::run()
 			}
 
 			// Update network configurations when needed.
-			if ((resynchronize)||((now - lastNetworkAutoconfCheck) >= ZT_NETWORK_AUTOCONF_CHECK_DELAY)) {
-				lastNetworkAutoconfCheck = now;
-				std::vector< SharedPtr<Network> > nets(RR->nc->networks());
-				for(std::vector< SharedPtr<Network> >::iterator n(nets.begin());n!=nets.end();++n) {
-					if ((now - (*n)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)
-						(*n)->requestConfiguration();
+			try {
+				if ((resynchronize)||((now - lastNetworkAutoconfCheck) >= ZT_NETWORK_AUTOCONF_CHECK_DELAY)) {
+					lastNetworkAutoconfCheck = now;
+					std::vector< SharedPtr<Network> > nets(RR->nc->networks());
+					for(std::vector< SharedPtr<Network> >::iterator n(nets.begin());n!=nets.end();++n) {
+						if ((now - (*n)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)
+							(*n)->requestConfiguration();
+					}
 				}
+			} catch ( ... ) {
+				LOG("unexpected exception updating network configurations (non-fatal, will retry)");
 			}
 
 			// Do periodic tasks in submodules.
 			if ((now - lastClean) >= ZT_DB_CLEAN_PERIOD) {
 				lastClean = now;
-				RR->topology->clean(now);
-				RR->mc->clean(now);
-				RR->nc->clean();
-				if (RR->updater)
-					RR->updater->checkIfMaxIntervalExceeded(now);
+				try {
+					RR->topology->clean(now);
+				} catch ( ... ) {
+					LOG("unexpected exception in Topology::clean() (non-fatal)");
+				}
+				try {
+					RR->mc->clean(now);
+				} catch ( ... ) {
+					LOG("unexpected exception in Multicaster::clean() (non-fatal)");
+				}
+				try {
+					RR->nc->clean();
+				} catch ( ... ) {
+					LOG("unexpected exception in NodeConfig::clean() (non-fatal)");
+				}
+				try {
+					if (RR->updater)
+						RR->updater->checkIfMaxIntervalExceeded(now);
+				} catch ( ... ) {
+					LOG("unexpected exception in SoftwareUpdater::checkIfMaxIntervalExceeded() (non-fatal)");
+				}
 			}
 
 			// Send beacons to physical local LANs
-			if ((resynchronize)||((now - lastBeacon) >= ZT_BEACON_INTERVAL)) {
-				lastBeacon = now;
-				char bcn[ZT_PROTO_BEACON_LENGTH];
-				void *bcnptr = bcn;
-				*((uint32_t *)(bcnptr)) = RR->prng->next32();
-				bcnptr = bcn + 4;
-				*((uint32_t *)(bcnptr)) = RR->prng->next32();
-				RR->identity.address().copyTo(bcn + ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH);
-				TRACE("sending LAN beacon to %s",ZT_DEFAULTS.v4Broadcast.toString().c_str());
-				RR->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
-				RR->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
+			try {
+				if ((resynchronize)||((now - lastBeacon) >= ZT_BEACON_INTERVAL)) {
+					lastBeacon = now;
+					char bcn[ZT_PROTO_BEACON_LENGTH];
+					void *bcnptr = bcn;
+					*((uint32_t *)(bcnptr)) = RR->prng->next32();
+					bcnptr = bcn + 4;
+					*((uint32_t *)(bcnptr)) = RR->prng->next32();
+					RR->identity.address().copyTo(bcn + ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH);
+					TRACE("sending LAN beacon to %s",ZT_DEFAULTS.v4Broadcast.toString().c_str());
+					RR->antiRec->logOutgoingZT(bcn,ZT_PROTO_BEACON_LENGTH);
+					RR->sm->send(ZT_DEFAULTS.v4Broadcast,false,false,bcn,ZT_PROTO_BEACON_LENGTH);
+				}
+			} catch ( ... ) {
+				LOG("unexpected exception sending LAN beacon (non-fatal)");
 			}
 
 			// Check for updates to root topology (supernodes) periodically
-			if ((now - lastRootTopologyFetch) >= ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL) {
-				lastRootTopologyFetch = now;
-				if (!impl->disableRootTopologyUpdates) {
-					TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
-					RR->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,RR);
+			try {
+				if ((now - lastRootTopologyFetch) >= ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL) {
+					lastRootTopologyFetch = now;
+					if (!impl->disableRootTopologyUpdates) {
+						TRACE("fetching root topology from %s",ZT_DEFAULTS.rootTopologyUpdateURL.c_str());
+						RR->http->GET(ZT_DEFAULTS.rootTopologyUpdateURL,HttpClient::NO_HEADERS,60,&_cbHandleGetRootTopology,RR);
+					}
 				}
+			} catch ( ... ) {
+				LOG("unexpected exception attempting to check for root topology updates (non-fatal)");
 			}
 
 			// Sleep for loop interval or until something interesting happens.
