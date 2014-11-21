@@ -59,23 +59,17 @@ private:
 	struct MulticastGroupMember
 	{
 		MulticastGroupMember() {}
-		MulticastGroupMember(const Address &a,const Address &lf,uint64_t ts) : address(a),learnedFrom(lf),timestamp(ts),rank(0) {}
+		MulticastGroupMember(const Address &a,uint64_t ts) : address(a),timestamp(ts) {}
 
 		Address address;
-		Address learnedFrom;
-		uint64_t timestamp; // time of last LIKE/OK(GATHER)
-		uint64_t rank; // used by sorting algorithm in clean()
-
-		// for sorting in ascending order of rank
-		inline bool operator<(const MulticastGroupMember &m) const throw() { return (rank < m.rank); }
+		uint64_t timestamp; // time of last notification
 	};
 
 	struct MulticastGroupStatus
 	{
-		MulticastGroupStatus() : lastExplicitGather(0),totalKnownMembers(0) {}
+		MulticastGroupStatus() : lastExplicitGather(0) {}
 
 		uint64_t lastExplicitGather;
-		unsigned int totalKnownMembers; // 0 if unknown
 		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};
@@ -90,13 +84,12 @@ public:
 	 * @param now Current time
 	 * @param nwid Network ID
 	 * @param mg Multicast group
-	 * @param learnedFrom Address from which we learned this member
 	 * @param member New member address
 	 */
-	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const Address &member)
+	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(now,nwid,mg,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],learnedFrom,member);
+		_add(now,nwid,mg,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],member);
 	}
 
 	/**
@@ -107,12 +100,11 @@ public:
 	 * @param now Current time
 	 * @param nwid Network ID
 	 * @param mg Multicast group
-	 * @param learnedFrom Peer from which we received this list
 	 * @param addresses Raw binary addresses in big-endian format, as a series of 5-byte fields
 	 * @param count Number of addresses
 	 * @param totalKnown Total number of known addresses as reported by peer
 	 */
-	void addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &learnedFrom,const void *addresses,unsigned int count,unsigned int totalKnown);
+	void addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
 
 	/**
 	 * Append gather results to a packet by choosing registered multicast recipients at random
@@ -177,7 +169,7 @@ public:
 	void clean(uint64_t now);
 
 private:
-	void _add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &learnedFrom,const Address &member);
+	void _add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
 
 	const RuntimeEnvironment *RR;
 	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus > _groups;
