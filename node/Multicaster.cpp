@@ -192,7 +192,7 @@ void Multicaster::send(
 			nwid,
 			com,
 			limit,
-			2, // we'll still gather a little from peers to keep multicast list fresh
+			1, // we'll still gather a little from peers to keep multicast list fresh
 			src,
 			mg,
 			etherType,
@@ -214,7 +214,7 @@ void Multicaster::send(
 		}
 
 		unsigned long idx = 0;
-		while (count < limit) {
+		while (count < limit) { // limit <= gs.members.size() so idx will never overflow here
 			const MulticastGroupMember &m = gs.members[indexes[idx++]];
 
 			{ // TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
@@ -246,7 +246,7 @@ void Multicaster::send(
 				outp.armor(sn->key(),true);
 				sn->send(RR,outp.data(),outp.size(),now);
 			}
-			gatherLimit = 0; // don't need to gather from peers this time since we consulted the core
+			gatherLimit = 1; // we still gather a bit from peers as well
 		}
 
 		gs.txQueue.push_back(OutboundMulticast());
