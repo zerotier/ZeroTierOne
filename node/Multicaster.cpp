@@ -304,6 +304,7 @@ void Multicaster::send(
 	// supernode. Our supernode then takes care of relaying it down to <1.0.0
 	// nodes. This code can go away (along with support for P5_MULTICAST_FRAME)
 	// once there are no more such nodes on the network.
+#if 0
 	{
 		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 		if (sn) {
@@ -342,32 +343,31 @@ void Multicaster::send(
 			sn->send(RR,outp.data(),outp.size(),now);
 		}
 	}
+#endif
 }
 
 void Multicaster::clean(uint64_t now)
 {
 	Mutex::Lock _l(_groups_m);
 	for(std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {
-		// Remove expired outgoing multicasts from multicast TX queue
 		for(std::list<OutboundMulticast>::iterator tx(mm->second.txQueue.begin());tx!=mm->second.txQueue.end();) {
 			if ((tx->expired(now))||(tx->atLimit()))
 				mm->second.txQueue.erase(tx++);
 			else ++tx;
 		}
 
-		// Remove expired members from membership list, and update rank
-		// so that remaining members can be sorted in ascending order of
-		// transmit priority.
-		std::vector<MulticastGroupMember>::iterator reader(mm->second.members.begin());
-		std::vector<MulticastGroupMember>::iterator writer(reader);
-		unsigned int count = 0;
-		while (reader != mm->second.members.end()) {
-			if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
-				*writer = *reader;
-				++writer;
-				++count;
+		unsigned long count = 0;
+		{
+			std::vector<MulticastGroupMember>::iterator reader(mm->second.members.begin());
+			std::vector<MulticastGroupMember>::iterator writer(reader);
+			while (reader != mm->second.members.end()) {
+				if ((now - reader->timestamp) < ZT_MULTICAST_LIKE_EXPIRE) {
+					*writer = *reader;
+					++writer;
+					++count;
+				}
+				++reader;
 			}
-			++reader;
 		}
 
 		if (count) {
