@@ -304,7 +304,6 @@ void Multicaster::send(
 	// supernode. Our supernode then takes care of relaying it down to <1.0.0
 	// nodes. This code can go away (along with support for P5_MULTICAST_FRAME)
 	// once there are no more such nodes on the network.
-#if 0
 	{
 		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 		if (sn) {
@@ -343,7 +342,6 @@ void Multicaster::send(
 			sn->send(RR,outp.data(),outp.size(),now);
 		}
 	}
-#endif
 }
 
 void Multicaster::clean(uint64_t now)
