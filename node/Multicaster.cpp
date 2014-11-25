@@ -202,11 +202,13 @@ void Multicaster::send(
 		unsigned int count = 0;
 
 		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
-			{ // TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
+			{
 				SharedPtr<Peer> p(RR->topology->getPeer(*ast));
 				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
 					continue;
 			}
+#endif
 
 			out.sendOnly(RR,*ast);
 			if (++count >= limit)
@@ -217,11 +219,13 @@ void Multicaster::send(
 		while (count < limit) { // limit <= gs.members.size() so idx will never overflow here
 			const MulticastGroupMember &m = gs.members[indexes[idx++]];
 
-			{ // TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
+			{
 				SharedPtr<Peer> p(RR->topology->getPeer(m.address));
 				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
 					continue;
 			}
+#endif
 
 			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m.address) == alwaysSendTo.end()) {
 				out.sendOnly(RR,m.address);
@@ -268,11 +272,13 @@ void Multicaster::send(
 		unsigned int count = 0;
 
 		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
-			{ // TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
+			{
 				SharedPtr<Peer> p(RR->topology->getPeer(*ast));
 				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
 					continue;
 			}
+#endif
 
 			out.sendAndLog(RR,*ast);
 			if (++count >= limit)
@@ -283,11 +289,13 @@ void Multicaster::send(
 		while ((count < limit)&&(idx < gs.members.size())) {
 			const MulticastGroupMember &m = gs.members[indexes[idx++]];
 
-			{ // TODO / LEGACY: don't send new multicast frame to old peers (if we know their version)
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
+			{
 				SharedPtr<Peer> p(RR->topology->getPeer(m.address));
 				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
 					continue;
 			}
+#endif
 
 			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m.address) == alwaysSendTo.end()) {
 				out.sendAndLog(RR,m.address);
@@ -299,11 +307,7 @@ void Multicaster::send(
 	if (indexes != idxbuf)
 		delete [] indexes;
 
-	// DEPRECATED / LEGACY / TODO:
-	// Currently we also always send a legacy P5_MULTICAST_FRAME packet to our
-	// supernode. Our supernode then takes care of relaying it down to <1.0.0
-	// nodes. This code can go away (along with support for P5_MULTICAST_FRAME)
-	// once there are no more such nodes on the network.
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
 	{
 		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 		if (sn) {
@@ -342,6 +346,7 @@ void Multicaster::send(
 			sn->send(RR,outp.data(),outp.size(),now);
 		}
 	}
+#endif
 }
 
 void Multicaster::clean(uint64_t now)

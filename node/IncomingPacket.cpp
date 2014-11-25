@@ -79,7 +79,9 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
 				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
 				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
 				case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
+#endif
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
@@ -534,6 +536,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 	return true;
 }
 
+#ifdef ZT_SUPPORT_LEGACY_MULTICAST
 bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	/* This code is a bit of a hack to handle compatibility with <1.0.0 peers
@@ -647,6 +650,7 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 	}
 	return true;
 }
+#endif
 
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
