@@ -273,6 +273,10 @@ void Multicaster::send(
 		delete [] indexes;
 
 #ifdef ZT_SUPPORT_LEGACY_MULTICAST
+	// This sends a P5 multicast up to our supernode, who then
+	// redistributes it manually down to all <1.0.0 peers for
+	// legacy support. These peers don't support the new multicast
+	// frame type, so even if they receive it they will ignore it.
 	{
 		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 		if (sn) {
