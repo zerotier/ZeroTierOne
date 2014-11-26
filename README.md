@@ -1,4 +1,4 @@
-ZeroTier One - Planetary Scale Software Defined Networking
+ZeroTier One - Network Virtualization Everywhere
 ======
 
 ZeroTier One is an ethernet virtualization engine. It creates virtual switched LANs of almost unlimited size that span physical network boundaries. To the operating system these behave just like ordinary Ethernet ports. Everything just works, even as your computer moves around or your physical Internet link changes.

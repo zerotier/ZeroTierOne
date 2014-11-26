@@ -111,6 +111,7 @@ private:
 #else
 	int _v;
 #ifndef __GNUC__
+#warning Neither __WINDOWS__ nor __GNUC__ so AtomicCounter using Mutex
 	Mutex _l;
 #endif
 #endif

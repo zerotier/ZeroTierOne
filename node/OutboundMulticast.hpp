@@ -133,12 +133,10 @@ public:
 	 */
 	inline bool sendIfNew(const RuntimeEnvironment *RR,const Address &toAddr)
 	{
-		for(std::vector<Address>::const_iterator a(_alreadySentTo.begin());a!=_alreadySentTo.end();++a) {
-			if (*a == toAddr)
-				return false;
-		}
-		sendAndLog(RR,toAddr);
-		return true;
+		if (std::find(_alreadySentTo.begin(),_alreadySentTo.end(),toAddr) == _alreadySentTo.end()) {
+			sendAndLog(RR,toAddr);
+			return true;
+		} else return false;
 	}
 
 private:

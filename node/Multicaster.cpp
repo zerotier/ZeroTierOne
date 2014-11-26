@@ -165,8 +165,8 @@ void Multicaster::send(
 	MulticastGroupStatus &gs = _groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)];
 
 	if (!gs.members.empty()) {
-		// Use a stack-allocated buffer unless this multicast group is ridiculously huge
-		if (gs.members.size() > 8194)
+		// Allocate a memory buffer if group is monstrous
+		if (gs.members.size() > (sizeof(idxbuf) / sizeof(unsigned long)))
 			indexes = new unsigned long[gs.members.size()];
 
 		// Generate a random permutation of member indexes
@@ -181,9 +181,7 @@ void Multicaster::send(
 	}
 
 	if (gs.members.size() >= limit) {
-		// If we already have enough members, just send and we're done. We can
-		// skip the TX queue and skip the overhead of maintaining a send log by
-		// using sendOnly().
+		// Skip queue if we already have enough members to complete the send operation
 		OutboundMulticast out;
 
 		out.init(
@@ -202,33 +200,16 @@ void Multicaster::send(
 		unsigned int count = 0;
 
 		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-			{
-				SharedPtr<Peer> p(RR->topology->getPeer(*ast));
-				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
-					continue;
-			}
-#endif
-
 			out.sendOnly(RR,*ast);
 			if (++count >= limit)
 				break;
 		}
 
 		unsigned long idx = 0;
-		while (count < limit) { // limit <= gs.members.size() so idx will never overflow here
-			const MulticastGroupMember &m = gs.members[indexes[idx++]];
-
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-			{
-				SharedPtr<Peer> p(RR->topology->getPeer(m.address));
-				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
-					continue;
-			}
-#endif
-
-			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m.address) == alwaysSendTo.end()) {
-				out.sendOnly(RR,m.address);
+		while ((count < limit)&&(idx < gs.members.size())) {
+			Address ma(gs.members[indexes[idx++]].address);
+			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),ma) == alwaysSendTo.end()) {
+				out.sendOnly(RR,ma);
 				++count;
 			}
 		}
@@ -239,18 +220,18 @@ void Multicaster::send(
 			gs.lastExplicitGather = now;
 			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
 			if (sn) {
-				TRACE(">>MC GATHER up to %u in %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
+				TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
 
 				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 				outp.append(nwid);
 				outp.append((uint8_t)0);
 				mg.mac().appendTo(outp);
 				outp.append((uint32_t)mg.adi());
-				outp.append((uint32_t)gatherLimit); // +1 just means we'll have an extra in the queue if available
+				outp.append((uint32_t)gatherLimit);
 				outp.armor(sn->key(),true);
 				sn->send(RR,outp.data(),outp.size(),now);
 			}
-			gatherLimit = 1; // we still gather a bit from peers as well
+			gatherLimit = 0;
 		}
 
 		gs.txQueue.push_back(OutboundMulticast());
@@ -272,14 +253,6 @@ void Multicaster::send(
 		unsigned int count = 0;
 
 		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-			{
-				SharedPtr<Peer> p(RR->topology->getPeer(*ast));
-				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
-					continue;
-			}
-#endif
-
 			out.sendAndLog(RR,*ast);
 			if (++count >= limit)
 				break;
@@ -287,23 +260,15 @@ void Multicaster::send(
 
 		unsigned long idx = 0;
 		while ((count < limit)&&(idx < gs.members.size())) {
-			const MulticastGroupMember &m = gs.members[indexes[idx++]];
-
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-			{
-				SharedPtr<Peer> p(RR->topology->getPeer(m.address));
-				if ((p)&&(p->remoteVersionKnown())&&(p->remoteVersionMajor() < 1))
-					continue;
-			}
-#endif
-
-			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),m.address) == alwaysSendTo.end()) {
-				out.sendAndLog(RR,m.address);
+			Address ma(gs.members[indexes[idx++]].address);
+			if (std::find(alwaysSendTo.begin(),alwaysSendTo.end(),ma) == alwaysSendTo.end()) {
+				out.sendAndLog(RR,ma);
 				++count;
 			}
 		}
 	}
 
+	// Free allocated memory buffer if any
 	if (indexes != idxbuf)
 		delete [] indexes;
 
@@ -346,7 +311,7 @@ void Multicaster::send(
 			sn->send(RR,outp.data(),outp.size(),now);
 		}
 	}
-#endif
+#endif // ZT_SUPPORT_LEGACY_MULTICAST
 }
 
 void Multicaster::clean(uint64_t now)
