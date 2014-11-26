@@ -650,7 +650,7 @@ bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const Sh
 	}
 	return true;
 }
-#endif
+#endif // ZT_SUPPORT_LEGACY_MULTICAST
 
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
