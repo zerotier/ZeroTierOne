@@ -993,7 +993,7 @@ ZT1_Node_NetworkList *Node::listNetworks()
 
 	unsigned long returnBufSize = sizeof(ZT1_Node_NetworkList);
 	for(unsigned long i=0;i<networks.size();++i) {
-		nconfs[i] = networks[i]->config2();
+		nconfs[i] = networks[i]->config2(); // note: can return NULL
 		ipsv[i] = networks[i]->ips();
 		returnBufSize += sizeof(ZT1_Node_Network) + (sizeof(ZT1_Node_PhysicalAddress) * (unsigned int)ipsv[i].size());
 	}
@@ -1015,7 +1015,7 @@ ZT1_Node_NetworkList *Node::listNetworks()
 		_fillNetworkQueryResultBuffer(networks[i],nconfs[i],nbuf);
 
 		nbuf->ips = (ZT1_Node_PhysicalAddress *)buf;
-		buf += sizeof(ZT1_Node_PhysicalAddress);
+		buf += sizeof(ZT1_Node_PhysicalAddress) * ipsv[i].size();
 
 		nbuf->numIps = 0;
 		for(std::set<InetAddress>::iterator ip(ipsv[i].begin());ip!=ipsv[i].end();++ip) {
