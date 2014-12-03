@@ -82,7 +82,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osnet/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osnet/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-* *.deb *.rpm
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

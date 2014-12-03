@@ -27,6 +27,8 @@
 *.obj
 *.tlog
 *.pid
+/*.deb
+/*.rpm
 /build-*
 /ZeroTierOneInstaller-*
 .qmake.stash

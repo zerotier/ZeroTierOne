@@ -31,12 +31,15 @@ case "$system" in
 		# Canonicalize $machine for some architectures... we use x86
 		# and x64 for Intel stuff. ARM and others should be fine if
 		# we ever ship officially for those.
+		debian_arch=$machine
 		case "$machine" in
 			i386|i486|i586|i686)
 				machine="x86"
+				debian_arch="i386"
 				;;
 			x86_64|amd64|x64)
 				machine="x64"
+				debian_arch="amd64"
 				;;
 		esac
 
@@ -60,6 +63,22 @@ case "$system" in
 		chmod 0755 $targ
 		rm -f build-installer-tmp.tar.gz
 		ls -l $targ
+
+		if [ -f /usr/bin/dpkg-deb -a "$UID" -eq 0 ]; then
+			echo
+			echo Found dpkg-deb and you are root, trying to build Debian package.
+			rm -rf build-installer-deb
+			debbase="build-installer-deb/zerotier-one_${vmajor}.${vminor}.${revision}_$debian_arch"
+			debfolder="${debbase}/DEBIAN"
+			mkdir -p $debfolder
+			cat 'ext/installfiles/linux/DEBIAN/control.in' | sed "s/__VERSION__/${vmajor}.${vminor}.${revision}/" >$debfolder/control
+			cp -f 'ext/installfiles/linux/DEBIAN/conffiles' "${debfolder}/conffiles"
+			mkdir -p "${debbase}/var/lib/zerotier-one"
+			cp -f $targ "${debbase}/var/lib/zerotier-one"
+			dpkg-deb --build $debbase
+			mv -f build-installer-deb/*.deb .
+			rm -rf build-installer-deb
+		fi
 
 		;;
 
@@ -95,5 +114,7 @@ case "$system" in
 		exit 2
 
 esac
+
+rm -rf build-installer
 
 exit 0

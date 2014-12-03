@@ -1,0 +1,11 @@
+Package: zerotier-one
+Architecture: any
+Maintainer: ZeroTier Networks
+Depends: curl
+Priority: optional
+Version: __VERSION__
+Homepage: https://github.com/zerotier/ZeroTierOne
+Description: ZeroTier One network virtualization service
+ ZeroTier One is a fast, secure, and easy to use peer to peer network
+ virtualization engine. Visit https://www.zerotier.com/ for more
+ information.
