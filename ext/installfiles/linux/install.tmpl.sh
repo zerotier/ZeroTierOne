@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 shopt -s expand_aliases
 
 dryRun=0
@@ -139,7 +139,11 @@ else
 		fi
 	fi
 
-	service zerotier-one restart &
+	if [ -f /sbin/service -o -f /usr/sbin/service ]; then
+		service zerotier-one restart &
+	else
+		/etc/init.d/zerotier-one restart &
+	fi
 fi
 
 sleep 1
