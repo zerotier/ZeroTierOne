@@ -172,7 +172,7 @@ void Multicaster::send(
 		// Generate a random permutation of member indexes
 		for(unsigned long i=0;i<gs.members.size();++i)
 			indexes[i] = i;
-		for(unsigned long i=gs.members.size()-1;i>0;--i) {
+		for(unsigned long i=(unsigned long)gs.members.size()-1;i>0;--i) {
 			unsigned long j = RR->prng->next32() % (i + 1);
 			unsigned long tmp = indexes[j];
 			indexes[j] = indexes[i];
