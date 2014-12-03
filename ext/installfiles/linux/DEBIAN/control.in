@@ -1,5 +1,5 @@
 Package: zerotier-one
-Architecture: any
+Architecture: __ARCH__
 Maintainer: ZeroTier Networks
 Depends: curl
 Priority: optional

@@ -67,15 +67,33 @@ case "$system" in
 		if [ -f /usr/bin/dpkg-deb -a "$UID" -eq 0 ]; then
 			echo
 			echo Found dpkg-deb and you are root, trying to build Debian package.
+
 			rm -rf build-installer-deb
+
 			debbase="build-installer-deb/zerotier-one_${vmajor}.${vminor}.${revision}_$debian_arch"
 			debfolder="${debbase}/DEBIAN"
 			mkdir -p $debfolder
-			cat 'ext/installfiles/linux/DEBIAN/control.in' | sed "s/__VERSION__/${vmajor}.${vminor}.${revision}/" >$debfolder/control
+
+			cat 'ext/installfiles/linux/DEBIAN/control.in' | sed "s/__VERSION__/${vmajor}.${vminor}.${revision}/" | sed "s/__ARCH__/${debian_arch}/" >$debfolder/control
+			cat $debfolder/control
 			cp -f 'ext/installfiles/linux/DEBIAN/conffiles' "${debfolder}/conffiles"
-			mkdir -p "${debbase}/var/lib/zerotier-one"
-			cp -f $targ "${debbase}/var/lib/zerotier-one"
+
+			mkdir -p "${debbase}/var/lib/zerotier-one/updates.d"
+			cp -f $targ "${debbase}/var/lib/zerotier-one/updates.d"
+
+			rm -f "${debfolder}/postinst" "${debfolder}/prerm"
+
+			echo '#!/bin/bash' >${debfolder}/postinst
+			echo "/var/lib/zerotier-one/updates.d/${targ}" >>${debfolder}/postinst
+			echo "/bin/rm -f /var/lib/zerotier-one/updates.d/*" >>${debfolder}/postinst
+			chmod a+x ${debfolder}/postinst
+
+			echo '#!/bin/bash' >${debfolder}/prerm
+			echo "/var/lib/zerotier-one/uninstall.sh" >>${debfolder}/prerm
+			chmod a+x ${debfolder}/prerm
+
 			dpkg-deb --build $debbase
+
 			mv -f build-installer-deb/*.deb .
 			rm -rf build-installer-deb
 		fi
