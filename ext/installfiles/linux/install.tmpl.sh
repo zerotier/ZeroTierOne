@@ -62,6 +62,13 @@ if [ "$blobStart" -le "$endMarkerIndex" ]; then
 	exit 2
 fi
 
+echo -n 'Getting version of existing install... '
+origVersion=NONE
+if [ -x /var/lib/zerotier-one/zerotier-one ]; then
+	origVersion=`/var/lib/zerotier-one/zerotier-one -v`
+fi
+echo $origVersion
+
 echo 'Extracting files...'
 if [ $dryRun -gt 0 ]; then
 	echo ">> tail -c +$blobStart \"$scriptPath\" | gunzip -c | tar -xvop -C / -f -"
@@ -70,10 +77,14 @@ else
 	tail -c +$blobStart "$scriptPath" | gunzip -c | tar -xvop --no-overwrite-dir -C / -f -
 fi
 
-if [ $dryRun -eq 0 -a ! -d "/var/lib/zerotier-one" ]; then
+if [ $dryRun -eq 0 -a ! -x "/var/lib/zerotier-one/zerotier-one" ]; then
 	echo 'Archive extraction failed, cannot find zerotier-one binary in "/var/lib/zerotier-one".'
 	exit 2
 fi
+
+echo -n 'Getting version of new install... '
+newVersion=`/var/lib/zerotier-one/zerotier-one -v`
+echo $newVersion
 
 echo 'Installing zerotier-cli command line utility...'
 
@@ -81,7 +92,7 @@ rm -f /usr/bin/zerotier-cli /usr/bin/zerotier-idtool
 ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-cli
 ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-idtool
 
-echo 'Installing and (re-)starting zerotier-one daemon...'
+echo 'Installing zerotier-one service...'
 
 # Note: ensure that service restarts are the last thing this script actually
 # does, since these may kill the script itself. Also note the & to allow
@@ -100,7 +111,10 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
 	systemctl enable zerotier-one
-	systemctl restart zerotier-one &
+	if [ "$origVersion" != "$newVersion" ]; then
+		echo 'Version has changed, starting...'
+		systemctl restart zerotier-one &
+	fi
 else
 	cp -f /tmp/init.d_zerotier-one /etc/init.d/zerotier-one
 	chmod 0755 /etc/init.d/zerotier-one
@@ -139,10 +153,13 @@ else
 		fi
 	fi
 
-	if [ -f /sbin/service -o -f /usr/sbin/service ]; then
-		service zerotier-one restart &
-	else
-		/etc/init.d/zerotier-one restart &
+	if [ "$origVersion" != "$newVersion" ]; then
+		echo 'Version has changed, starting...'
+		if [ -f /sbin/service -o -f /usr/sbin/service ]; then
+			service zerotier-one restart &
+		else
+			/etc/init.d/zerotier-one restart &
+		fi
 	fi
 fi
 
