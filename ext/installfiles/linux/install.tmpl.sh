@@ -113,10 +113,10 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	chmod 0755 "$SYSTEMDUNITDIR/zerotier-one.service"
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
-	systemctl enable zerotier-one
+	systemctl enable zerotier-one.service
 	if [ "$origVersion" != "$newVersion" ]; then
 		echo 'Version has changed, starting...'
-		systemctl restart zerotier-one &
+		systemctl restart zerotier-one.service &
 	fi
 else
 	cp -f /tmp/init.d_zerotier-one /etc/init.d/zerotier-one
