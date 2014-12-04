@@ -41,6 +41,10 @@ case "$system" in
 				machine="x64"
 				debian_arch="amd64"
 				;;
+			armv6l|arm|armhf)
+				machine="armv6l"
+				debian_arch="armhf"
+				;;
 		esac
 
 		echo "Assembling Linux installer for $machine and version $vmajor.$vminor.$revision"
