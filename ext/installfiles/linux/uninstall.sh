@@ -25,8 +25,8 @@ fi
 
 echo "Killing any running zerotier-one service..."
 if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
-	systemctl stop zerotier-one
-	systemctl disable zerotier-one
+	systemctl stop zerotier-one.service
+	systemctl disable zerotier-one.service
 else
 	if [ -f /sbin/service -o -f /usr/sbin/service -o -f /bin/service -o -f /usr/bin/service ]; then
 		service zerotier-one stop
