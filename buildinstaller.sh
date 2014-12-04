@@ -89,7 +89,10 @@ case "$system" in
 			chmod a+x ${debfolder}/postinst
 
 			echo '#!/bin/bash' >${debfolder}/prerm
-			echo "/var/lib/zerotier-one/uninstall.sh" >>${debfolder}/prerm
+			echo 'export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin' >>${debfolder}/prerm
+			echo 'if [ "$1" != "upgrade" ]; then' >>${debfolder}/prerm
+			echo '	/var/lib/zerotier-one/uninstall.sh' >>${debfolder}/prerm
+			echo 'fi' >>${debfolder}/prerm
 			chmod a+x ${debfolder}/prerm
 
 			dpkg-deb --build $debbase
