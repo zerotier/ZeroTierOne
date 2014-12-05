@@ -105,6 +105,19 @@ case "$system" in
 			rm -rf build-installer-deb
 		fi
 
+		if [ -f /usr/bin/rpmbuild ]; then
+			echo
+			echo Found rpmbuild, trying to build RedHat/CentOS package.
+
+			rm -f /tmp/zerotier-one.spec
+			curr_dir=`pwd`
+			cat ext/installfiles/linux/RPM/zerotier-one.spec.in | sed "s/__VERSION__/${vmajor}.${vminor}.${revision}/g" | sed "s/__INSTALLER__/${targ}/g" >/tmp/zerotier-one.spec
+
+			rpmbuild -ba /tmp/zerotier-one.spec
+
+			rm -f /tmp/zerotier-one.spec
+		fi
+
 		;;
 
 	Darwin)
