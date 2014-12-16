@@ -178,14 +178,13 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			return true;
 		}
 
-		if (!id.locallyValidate()) {
-			TRACE("dropped HELLO from %s(%s): identity invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-
 		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
 		if (peer) {
+			// We already have an identity with this address -- check for collisions
+
 			if (peer->identity() != id) {
+				// Identity is different from the one we already have -- address collision
+
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
@@ -202,18 +201,35 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				} else {
 					LOG("rejected HELLO from %s(%s): key agreement failed",source().toString().c_str(),_remoteAddress.toString().c_str());
 				}
+
 				return true;
-			} else if (!dearmor(peer->key())) {
-				LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
+			} else {
+				// Identity is the same as the one we already have -- check packet integrity
+
+				if (!dearmor(peer->key())) {
+					LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
+					return true;
+				}
+
+				// If packet was valid, continue below...
 			}
 		} else {
+			// We don't already have an identity with this address -- validate and learn it
+
+			if (!id.locallyValidate()) {
+				TRACE("dropped HELLO from %s(%s): identity invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
+				return true;
+			}
+
 			SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
 			if (!dearmor(newPeer->key())) {
 				LOG("rejected HELLO from %s(%s): packet failed authentication",source().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
+
 			peer = RR->topology->addPeer(newPeer);
+
+			// New peer learned, continue below...
 		}
 
 		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP,Utils::now());
