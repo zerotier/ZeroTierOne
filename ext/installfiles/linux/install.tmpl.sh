@@ -116,7 +116,7 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	systemctl enable zerotier-one.service
 	if [ "$origVersion" != "$newVersion" ]; then
 		echo 'Version has changed, starting...'
-		systemctl restart zerotier-one.service &
+		systemctl restart zerotier-one.service
 	fi
 else
 	cp -f /tmp/init.d_zerotier-one /etc/init.d/zerotier-one
@@ -159,14 +159,12 @@ else
 	if [ "$origVersion" != "$newVersion" ]; then
 		echo 'Version has changed, starting...'
 		if [ -f /sbin/service -o -f /usr/sbin/service ]; then
-			service zerotier-one restart &
+			service zerotier-one restart
 		else
-			/etc/init.d/zerotier-one restart &
+			/etc/init.d/zerotier-one restart
 		fi
 	fi
 fi
-
-sleep 1
 
 exit 0
 
