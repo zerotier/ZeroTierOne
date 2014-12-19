@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_OSXETHERNETTAPFACTORY_HPP
-#define ZT_OSXETHERNETTAPFACTORY_HPP
+#ifndef ZT_BSDETHERNETTAPFACTORY_HPP
+#define ZT_BSDETHERNETTAPFACTORY_HPP
 
 #include <vector>
 #include <string>
@@ -36,22 +36,11 @@
 
 namespace ZeroTier {
 
-class OSXEthernetTapFactory : public EthernetTapFactory
+class BSDEthernetTapFactory : public EthernetTapFactory
 {
 public:
-	/**
-	 * Create OSX ethernet tap factory
-	 *
-	 * If kext paths are specified, an attempt will be made to load the kext
-	 * on launch if not present and unload it on shutdown.
-	 *
-	 * @param pathToTapKext Full path to the location of the tap kext
-	 * @param tapKextName Name of tap kext as found within tap kext path (usually "tap.kext")
-	 * @throws std::runtime_error Tap not available and unable to load kext
-	 */
-	OSXEthernetTapFactory(const char *pathToTapKext,const char *tapKextName);
-
-	virtual ~OSXEthernetTapFactory();
+	BSDEthernetTapFactory();
+	virtual ~BSDEthernetTapFactory();
 
 	virtual EthernetTap *open(
 		const MAC &mac,
@@ -67,8 +56,7 @@ public:
 private:
 	std::vector<EthernetTap *> _devices;
 	Mutex _devices_m;
-	std::string _pathToTapKext;
-	std::string _tapKextName;
+	const char *_pathToIfconfig;
 };
 
 } // namespace ZeroTier

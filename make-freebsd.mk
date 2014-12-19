@@ -6,7 +6,7 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=
+OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o osnet/BSDRoutingTable.o
 TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
 
 # Enable SSE-optimized Salsa20 on x86 and x86_64 machines
@@ -72,8 +72,9 @@ testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
 	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
 	$(STRIP) zerotier-testnet
 
-installer: one FORCE
-	./buildinstaller.sh
+# No installer on FreeBSD yet
+#installer: one FORCE
+#	./buildinstaller.sh
 
 clean:
 	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osnet/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
@@ -81,8 +82,8 @@ clean:
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1
 
-official: FORCE
-	make -j 4 ZT_OFFICIAL_RELEASE=1
-	./buildinstaller.sh
+#official: FORCE
+#	make -j 4 ZT_OFFICIAL_RELEASE=1
+#	./buildinstaller.sh
 
 FORCE:
