@@ -12,6 +12,8 @@ do this eventually.
 Just type 'make'. You'll need gcc and g++ installed, but ZeroTier One requires
 no other third party libraries beyond the standard libc, libstdc++, and libm.
 
+*Note:* On FreeBSD you must use 'gmake', not 'make'!
+
 ### MacOS
 
 make
