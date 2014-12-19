@@ -1,17 +1,18 @@
-Building ZeroTier One on different platforms:
+Building ZeroTier One From Source
+======
 
-(See RUNNING.txt for what to do next.)
+(See RUNNING.md for what to do next.)
 
 Developers note: there is currently no management of dependencies on *nix
 platforms, so you should make clean ; make if you change a header. Will
 do this eventually.
 
--- Linux
+### Linux and FreeBSD
 
 Just type 'make'. You'll need gcc and g++ installed, but ZeroTier One requires
 no other third party libraries beyond the standard libc, libstdc++, and libm.
 
--- MacOS
+### MacOS
 
 make
 
@@ -32,6 +33,7 @@ be symbolically linked into "Qt" in the parent directory of the ZeroTier
 One source tree. Then you can type "make mac-ui" and the UI should build.
 You can also load the UI in Qt Creator and build/test it that way.
 
--- Windows
+### Windows
 
-Here be dragons.
+There's a Visual Studio 2012 solution file in windows/ that can be used.
+I've never tried it with MinGW, but theoretically this should be possible.

@@ -51,14 +51,24 @@ static inline std::string _mkDefaultHomePath()
 #ifdef __UNIX_LIKE__
 
 #ifdef __APPLE__
+	// /Library/... on Apple
 	return std::string("/Library/Application Support/ZeroTier/One");
 #else
+
+#ifdef __FreeBSD__
+	// FreeBSD likes /var/db instead of /var/lib
+	return std::string("/var/db/zerotier-one");
+#else
+	// Use /var/lib for Linux and other *nix
 	return std::string("/var/lib/zerotier-one");
+#endif
+
 #endif
 
 #else // not __UNIX_LIKE__
 
 #ifdef __WINDOWS__
+	// Look up app data folder on Windows, e.g. C:\ProgramData\...
 	char buf[16384];
 	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
 		return (std::string(buf) + "\\ZeroTier\\One");

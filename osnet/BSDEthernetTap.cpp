@@ -117,10 +117,11 @@ BSDEthernetTap::BSDEthernetTap(
 
 	// On BSD we create taps and they can have high numbers, so use ones starting
 	// at 9993 to not conflict with other stuff. Then we rename it to zt<base32 of nwid>
-	for(int i=9993;i<500;++i) {
+	std::map<std::string,bool> devFiles(Utils::listDirectory("/dev"));
+	for(int i=9993;i<(9993+128);++i) {
 		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
 		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
-		if (stat(devpath,&stattmp)) {
+		if (devFiles.count(std::string(tmpdevname)) == 0) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
 				::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"create",(const char *)0);
@@ -146,6 +147,8 @@ BSDEthernetTap::BSDEthernetTap(
 				if (_fd > 0)
 					break;
 				else throw std::runtime_error("unable to open created tap device");
+			} else {
+				throw std::runtime_error("cannot find /dev node for newly created tap device");
 			}
 		}
 	}
@@ -190,6 +193,15 @@ BSDEthernetTap::~BSDEthernetTap()
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
+
+	long cpid = (long)vfork();
+	if (cpid == 0) {
+		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"destroy",(const char *)0);
+		::_exit(-1);
+	} else if (cpid > 0) {
+		int exitcode = -1;
+		::waitpid(cpid,&exitcode,0);
+	}
 }
 
 void BSDEthernetTap::setEnabled(bool en)

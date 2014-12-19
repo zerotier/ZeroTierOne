@@ -1,10 +1,13 @@
-This guide is for those building and running from source. See BUILDING.txt
+Running ZeroTier One
+======
+
+This guide is for those building and running from source. See BUILDING.md
 first.
 
 The wiki at GitHub contains several pages that are probably also of interest:
   https://github.com/zerotier/ZeroTierOne/wiki
 
---- MacOS
+### MacOS
 
 On Mac, the default ZeroTier home is:
 
@@ -24,7 +27,7 @@ If run with no options, it will use the default home directory above.
 
 sudo ./zerotier-one &
 
---- LINUX
+### LINUX
 
 On Linux, the default ZeroTier home is:
 
@@ -56,11 +59,18 @@ sudo ufw allow 9993/udp
 
 You should now be able to ping and browse earth.zerotier.net
 
---- WINDOWS
+### FreeBSD
 
-A windows port is in progress.
+FreeBSD is identical to Linux except that the default home is
+/var/db/zerotier-one instead of /var/lib.
 
---- ONCE IT'S RUNNING:
+### WINDOWS
+
+Run zerotier-one.exe -h for help. There's a command to install the current
+binary as a service to run it that way, and another option to run it from
+the Windows console.
+
+### Once you're up and running...
 
 To use the command line interface, see this guide:
   https://github.com/zerotier/ZeroTierOne/wiki/Command-Line-Interface
@@ -68,7 +78,7 @@ To use the command line interface, see this guide:
 If you want to test by joining the Earth network, try:
   sudo ./zerotier-cli join 8056c2e21c000001
 
-An interface called 'zt0' should appear and should get an IP address in
+An interface called 'zt####' should appear and should get an IP address in
 the 28.0.0.0/7 range (28.* or 29.*) within a few seconds or so. Then try
 pinging earth.zerotier.net or navigating to http://earth.zerotier.net/ in
 a web browser.
