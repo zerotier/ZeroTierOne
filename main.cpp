@@ -83,25 +83,32 @@
 #include "osnet/WindowsRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new WindowsEthernetTapFactory(homeDir))
 #define ZTCreatePlatformRoutingTable (new WindowsRoutingTable())
-#endif
+#endif // __WINDOWS__
 
 #ifdef __LINUX__
 #include "osnet/LinuxEthernetTapFactory.hpp"
 #include "osnet/LinuxRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new LinuxEthernetTapFactory())
 #define ZTCreatePlatformRoutingTable (new LinuxRoutingTable())
-#endif
+#endif // __LINUX__
 
 #ifdef __APPLE__
 #include "osnet/OSXEthernetTapFactory.hpp"
 #include "osnet/BSDRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new OSXEthernetTapFactory(homeDir,"tap.kext"))
 #define ZTCreatePlatformRoutingTable (new BSDRoutingTable())
-#endif
+#endif // __APPLE__
 
 #ifndef ZTCreatePlatformEthernetTapFactory
+#ifdef __BSD__
+#include "osnet/BSDEthernetTapFactory.hpp"
+#include "osnet/BSDRoutingTable.hpp"
+#define ZTCreatePlatformEthernetTapFactory (new BSDEthernetTapFactory())
+#define ZTCreatePlatformRoutingTable (new BSDRoutingTable())
+#else
 #error Sorry, this platform has no osnet/ implementation yet. Fork me on GitHub and add one?
-#endif
+#endif // __BSD__
+#endif // ZTCreatePlatformEthernetTapFactory
 
 using namespace ZeroTier;
 

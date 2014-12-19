@@ -28,24 +28,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 #include "BSDEthernetTapFactory.hpp"
 #include "BSDEthernetTap.hpp"
-
-#include "../node/Utils.hpp"
 
 namespace ZeroTier {
 
 BSDEthernetTapFactory::BSDEthernetTapFactory()
 {
-	struct stat stattmp;
-	if (!stat("/sbin/ifconfig",&stattmp))
-		_pathToIfconfig = "/sbin/ifconfig";
-	else if (!stat("/usr/sbin/ifconfig",&stattmp))
-		_pathToIfconfig = "/usr/sbin/ifconfig";
-	else throw std::runtime_error("can't find ifconfig");
 }
 
 BSDEthernetTapFactory::~BSDEthernetTapFactory()

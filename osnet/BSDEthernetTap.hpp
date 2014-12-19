@@ -25,24 +25,23 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_BSDETHERNETTAPFACTORY_HPP
-#define ZT_BSDETHERNETTAPFACTORY_HPP
+#ifndef ZT_BSDETHERNETTAP_HPP
+#define ZT_BSDETHERNETTAP_HPP
 
-#include <vector>
-#include <string>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "../node/EthernetTapFactory.hpp"
-#include "../node/Mutex.hpp"
+#include <stdexcept>
+
+#include "../node/EthernetTap.hpp"
+#include "../node/Thread.hpp"
 
 namespace ZeroTier {
 
-class BSDEthernetTapFactory : public EthernetTapFactory
+class BSDEthernetTap : public EthernetTap
 {
 public:
-	BSDEthernetTapFactory();
-	virtual ~BSDEthernetTapFactory();
-
-	virtual EthernetTap *open(
+	BSDEthernetTap(
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -51,11 +50,33 @@ public:
 		const char *friendlyName,
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 		void *arg);
-	virtual void close(EthernetTap *tap,bool destroyPersistentDevices);
+
+	virtual ~BSDEthernetTap();
+
+	virtual void setEnabled(bool en);
+	virtual bool enabled() const;
+	virtual bool addIP(const InetAddress &ip);
+	virtual bool removeIP(const InetAddress &ip);
+	virtual std::set<InetAddress> ips() const;
+	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	virtual std::string deviceName() const;
+	virtual void setFriendlyName(const char *friendlyName);
+	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
+	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+
+	void threadMain()
+		throw();
 
 private:
-	std::vector<EthernetTap *> _devices;
-	Mutex _devices_m;
+	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
+	void *_arg;
+	Thread _thread;
+	std::string _dev;
+	unsigned int _mtu;
+	unsigned int _metric;
+	int _fd;
+	int _shutdownSignalPipe[2];
+	volatile bool _enabled;
 };
 
 } // namespace ZeroTier
