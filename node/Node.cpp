@@ -71,7 +71,6 @@
 #include "MulticastGroup.hpp"
 #include "Multicaster.hpp"
 #include "Mutex.hpp"
-#include "Service.hpp"
 #include "SoftwareUpdater.hpp"
 #include "Buffer.hpp"
 #include "AntiRecursion.hpp"
@@ -101,9 +100,6 @@ struct _NodeImpl
 
 		running = false;
 
-#ifndef __WINDOWS__
-		delete renv.netconfService;
-#endif
 		delete renv.updater;  renv.updater = (SoftwareUpdater *)0;
 		delete renv.nc;       renv.nc = (NodeConfig *)0;            // shut down all networks, close taps, etc.
 		delete renv.topology; renv.topology = (Topology *)0;        // now we no longer need routing info
@@ -124,93 +120,6 @@ struct _NodeImpl
 		return terminate();
 	}
 };
-
-#ifndef __WINDOWS__ // "services" are not supported on Windows
-static void _netconfServiceMessageHandler(void *renv,Service &svc,const Dictionary &msg)
-{
-	if (!renv)
-		return; // sanity check
-	const RuntimeEnvironment *RR = (const RuntimeEnvironment *)renv;
-
-	try {
-		//TRACE("from netconf:\n%s",msg.toString().c_str());
-		const std::string &type = msg.get("type");
-		if (type == "ready") {
-			LOG("received 'ready' from netconf.service, sending netconf-init with identity information...");
-			Dictionary initMessage;
-			initMessage["type"] = "netconf-init";
-			initMessage["netconfId"] = RR->identity.toString(true);
-			RR->netconfService->send(initMessage);
-		} else if (type == "netconf-response") {
-			uint64_t inRePacketId = strtoull(msg.get("requestId").c_str(),(char **)0,16);
-			uint64_t nwid = strtoull(msg.get("nwid").c_str(),(char **)0,16);
-			Address peerAddress(msg.get("peer").c_str());
-
-			if (peerAddress) {
-				if (msg.contains("error")) {
-					Packet::ErrorCode errCode = Packet::ERROR_INVALID_REQUEST;
-					const std::string &err = msg.get("error");
-					if (err == "OBJ_NOT_FOUND")
-						errCode = Packet::ERROR_OBJ_NOT_FOUND;
-					else if (err == "ACCESS_DENIED")
-						errCode = Packet::ERROR_NETWORK_ACCESS_DENIED_;
-
-					Packet outp(peerAddress,RR->identity.address(),Packet::VERB_ERROR);
-					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(inRePacketId);
-					outp.append((unsigned char)errCode);
-					outp.append(nwid);
-					RR->sw->send(outp,true);
-				} else if (msg.contains("netconf")) {
-					const std::string &netconf = msg.get("netconf");
-					if (netconf.length() < 2048) { // sanity check
-						Packet outp(peerAddress,RR->identity.address(),Packet::VERB_OK);
-						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(inRePacketId);
-						outp.append(nwid);
-						outp.append((uint16_t)netconf.length());
-						outp.append(netconf.data(),netconf.length());
-						outp.compress();
-						RR->sw->send(outp,true);
-					}
-				}
-			}
-		} else if (type == "netconf-push") {
-			if (msg.contains("to")) {
-				Dictionary to(msg.get("to")); // key: peer address, value: comma-delimited network list
-				for(Dictionary::iterator t(to.begin());t!=to.end();++t) {
-					Address ztaddr(t->first);
-					if (ztaddr) {
-						Packet outp(ztaddr,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
-
-						char *saveptr = (char *)0;
-						// Note: this loop trashes t->second, which is quasi-legal C++ but
-						// shouldn't break anything as long as we don't try to use 'to'
-						// for anything interesting after doing this.
-						for(char *p=Utils::stok(const_cast<char *>(t->second.c_str()),",",&saveptr);(p);p=Utils::stok((char *)0,",",&saveptr)) {
-							uint64_t nwid = Utils::hexStrToU64(p);
-							if (nwid) {
-								if ((outp.size() + sizeof(uint64_t)) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-									RR->sw->send(outp,true);
-									outp.reset(ztaddr,RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REFRESH);
-								}
-								outp.append(nwid);
-							}
-						}
-
-						if (outp.payloadLength())
-							RR->sw->send(outp,true);
-					}
-				}
-			}
-		}
-	} catch (std::exception &exc) {
-		LOG("unexpected exception parsing response from netconf service: %s",exc.what());
-	} catch ( ... ) {
-		LOG("unexpected exception parsing response from netconf service: unknown exception");
-	}
-}
-#endif // !__WINDOWS__
 
 Node::Node(
 	const char *hp,
@@ -449,24 +358,6 @@ Node::ReasonForTermination Node::run()
 	} catch ( ... ) {
 		return impl->terminateBecause(Node::NODE_UNRECOVERABLE_ERROR,"unknown exception during initialization");
 	}
-
-	// Start external service subprocesses, which is only used by special nodes
-	// right now and isn't available on Windows.
-#ifndef __WINDOWS__
-	try {
-		std::string netconfServicePath(RR->homePath + ZT_PATH_SEPARATOR_S + "services.d" + ZT_PATH_SEPARATOR_S + "netconf.service");
-		if (Utils::fileExists(netconfServicePath.c_str())) {
-			LOG("netconf.d/netconf.service appears to exist, starting...");
-			RR->netconfService = new Service(RR,"netconf",netconfServicePath.c_str(),&_netconfServiceMessageHandler,RR);
-			Dictionary initMessage;
-			initMessage["type"] = "netconf-init";
-			initMessage["netconfId"] = RR->identity.toString(true);
-			RR->netconfService->send(initMessage);
-		}
-	} catch ( ... ) {
-		LOG("unexpected exception attempting to start services");
-	}
-#endif
 
 	// Core I/O loop
 	try {

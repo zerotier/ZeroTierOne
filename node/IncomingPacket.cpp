@@ -39,7 +39,6 @@
 #include "Switch.hpp"
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
-#include "Service.hpp"
 #include "SoftwareUpdater.hpp"
 
 namespace ZeroTier {
@@ -85,7 +84,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
-				case Packet::VERB_NETWORK_CONFIG_REFRESH:         return _doNETWORK_CONFIG_REFRESH(RR,peer);
 				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
 			}
@@ -714,69 +712,11 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 {
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
-
-#ifndef __WINDOWS__
-		if (RR->netconfService) {
-			char tmp[128];
-			unsigned int dictLen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-
-			Dictionary request;
-			if (dictLen)
-				request["meta"] = std::string((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,dictLen),dictLen);
-			request["type"] = "netconf-request";
-			request["peerId"] = peer->identity().toString(false);
-			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)nwid);
-			request["nwid"] = tmp;
-			Utils::snprintf(tmp,sizeof(tmp),"%.16llx",(unsigned long long)packetId());
-			request["requestId"] = tmp;
-			if (!hops())
-				request["from"] = _remoteAddress.toString();
-			//TRACE("to netconf:\n%s",request.toString().c_str());
-			RR->netconfService->send(request);
-		} else {
-#endif // !__WINDOWS__
-
-			// Send unsupported operation if there is no netconf service
-			// configured on this node (or if this is a Windows machine,
-			// which doesn't support that at all).
-			Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
-			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-			outp.append(packetId());
-			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
-			outp.append(nwid);
-			outp.armor(peer->key(),true);
-			_fromSock->send(_remoteAddress,outp.data(),outp.size());
-
-#ifndef __WINDOWS__
-		}
-#endif // !__WINDOWS__
-
 		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
-	}
-	return true;
-}
-
-bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
-{
-	try {
-		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
-		while ((ptr + sizeof(uint64_t)) <= size()) {
-			uint64_t nwid = at<uint64_t>(ptr); ptr += sizeof(uint64_t);
-			SharedPtr<Network> nw(RR->nc->network(nwid));
-			if ((nw)&&(source() == nw->controller())) { // only respond to requests from controller
-				TRACE("NETWORK_CONFIG_REFRESH from %s, refreshing network %.16llx",source().toString().c_str(),nwid);
-				nw->requestConfiguration();
-			}
-		}
-		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,Utils::now());
-	} catch (std::exception &exc) {
-		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
-	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }

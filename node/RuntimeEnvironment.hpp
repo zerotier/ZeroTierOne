@@ -40,7 +40,6 @@ class Logger;
 class Switch;
 class Topology;
 class CMWC4096;
-class Service;
 class Node;
 class SoftwareUpdater;
 class SocketManager;
@@ -85,9 +84,6 @@ public:
 		nc((NodeConfig *)0),
 		node((Node *)0),
 		updater((SoftwareUpdater *)0)
-#ifndef __WINDOWS__
-		,netconfService((Service *)0)
-#endif
 	{
 	}
 
@@ -133,9 +129,6 @@ public:
 	NodeConfig *nc;
 	Node *node;
 	SoftwareUpdater *updater; // null if software updates are not enabled
-#ifndef __WINDOWS__
-	Service *netconfService; // null if no netconf service running
-#endif
 };
 
 } // namespace ZeroTier
