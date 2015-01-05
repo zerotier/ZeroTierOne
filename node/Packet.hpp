@@ -802,40 +802,7 @@ public:
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
 		 */
-		VERB_MULTICAST_FRAME = 14,
-
-		/* Message or query to a service:
-		 *   <[8] 64-bit service identifier>
-		 *   <[1] flags>
-		 *  [<[...] payload to service>]
-		 *
-		 * Flags are currently unused and must be zero.
-		 *
-		 * Services allow out-of-band extensions to be added to the
-		 * ZeroTier peer-to-peer network without having to mix them
-		 * with the Ethernet virtualization layer. Right now this
-		 * includes the network configuration (netconf) service, and
-		 * in the future could include things like DHTs, caching,
-		 * mesh net functionality, extensions to cryptographic or
-		 * authentication services, remote administration, remote
-		 * debugging, etc.
-		 *
-		 * Service identifiers less than or equal to 0xffff (65535)
-		 * are reserved for use by ZeroTier Networks, with ID 0 being
-		 * the netconf service that provisions and configures virtual
-		 * networks. These IDs should not be used by third party
-		 * developers. IDs above 65535 can be used, and should be
-		 * assigned using something like a cryptographic random number
-		 * generator to minimize the potential for collisions.
-		 *
-		 * OK responses to this message contain the same fields as
-		 * above, and their meaning is service-dependent.
-		 *
-		 * ERROR_UNSUPPORTED_OPERATION may optionally be returned if
-		 * the queried service ID is not available on this node.
-		 * Payload consists of the 64-bit service ID queried.
-		 */
-		VERB_SERVICE_MESSAGE = 15
+		VERB_MULTICAST_FRAME = 14
 	};
 
 	/**
