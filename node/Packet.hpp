@@ -698,10 +698,11 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of request meta-data dictionary>
 		 *   <[...] string-serialized request meta-data>
+		 *  [<[8] 64-bit timestamp of netconf we currently have>]
 		 *
 		 * This message requests network configuration from a node capable of
-		 * providing it. Such nodes run the netconf service, which must be
-		 * installed into the ZeroTier home directory.
+		 * providing it. If the optional timestamp is included, a response is
+		 * only generated if there is a newer network configuration available.
 		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
@@ -714,15 +715,31 @@ public:
 		 * node can push to other peers to demonstrate its right to speak on
 		 * a given network.
 		 *
+		 * When a new network configuration is received, another config request
+		 * should be sent with the new netconf's timestamp. This confirms receipt
+		 * and also causes any subsequent changes to rapidly propagate as this
+		 * cycle will repeat until there are no changes. This is optional but
+		 * recommended behavior.
+		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
 		 *
-		 * Support is optional. Nodes should return UNSUPPORTED_OPERATION if
-		 * not supported or enabled.
+		 * UNSUPPORTED_OPERATION is returned if this service is not supported,
+		 * and OBJ_NOT_FOUND if the queried network ID was not found.
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 11,
 
-		/* DEPRECATED -- was never actually used */
+		/* Network configuration refresh request:
+		 *   <[...] array of 64-bit network IDs>
+		 *
+		 * This message can be sent by the network configuration master node
+		 * to request that nodes refresh their network configuration. It can
+		 * thus be used to "push" updates so that network config changes will
+		 * take effect quickly.
+		 *
+		 * It does not generate an OK or ERROR message, and is treated only as
+		 * a hint to refresh now.
+		 */
 		VERB_NETWORK_CONFIG_REFRESH = 12,
 
 		/* Request endpoints for multicast distribution:
