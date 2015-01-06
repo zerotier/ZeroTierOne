@@ -308,6 +308,12 @@ void Network::requestConfiguration()
 	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	outp.append((uint16_t)0); // no meta-data
+	{
+		Mutex::Lock _l(_lock);
+		if (_config)
+			outp.append((uint64_t)_config->timestamp());
+		else outp.append((uint64_t)0);
+	}
 	RR->sw->send(outp,true);
 }
 
