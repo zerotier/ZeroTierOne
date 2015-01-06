@@ -11,8 +11,6 @@
 - Hexadecimal: all hex values must be lower case
 - 16-digit network IDs and 10-digit addresses are left zero-padded to 16 and 10 digits respectively, as they are everywhere else in the ZT1 universe.
 
-Note: right now KEYS globbing is used in a few places in the code to search for stuff. In the future we'll want to add SET/ZSET index fields for these to optimize, but that won't become an issue until there are at least millions of records. (Millions of users will give us lots of "good problems to have." :)
-
 ### Field attribute flags used in this documentation (not in database)
 
 - ! required

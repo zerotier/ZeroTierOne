@@ -17,6 +17,7 @@ OBJS=\
 	node/Multicaster.o \
 	node/Network.o \
 	node/NetworkConfig.o \
+	node/NetworkConfigMaster.o \
 	node/Node.o \
 	node/NodeConfig.o \
 	node/OutboundMulticast.o \
