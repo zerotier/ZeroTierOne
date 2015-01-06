@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2011-2014  ZeroTier Networks LLC
+ * Copyright (C) 2011-2015  ZeroTier Networks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -189,9 +189,9 @@ public:
 	 *
 	 * @param conf Configuration in key/value dictionary form
 	 * @param saveToDisk IF true (default), write config to disk
-	 * @return True if configuration was accepted
+	 * @return 0 -- rejected, 1 -- accepted but not new, 2 -- accepted new config
 	 */
-	bool setConfiguration(const Dictionary &conf,bool saveToDisk = true);
+	int setConfiguration(const Dictionary &conf,bool saveToDisk = true);
 
 	/**
 	 * Set netconf failure to 'access denied' -- called in IncomingPacket when netconf master reports this

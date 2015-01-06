@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2011-2014  ZeroTier Networks LLC
+ * Copyright (C) 2011-2015  ZeroTier Networks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -125,6 +125,7 @@ private:
 	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
+	bool _doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 

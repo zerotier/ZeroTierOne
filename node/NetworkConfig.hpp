@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2011-2014  ZeroTier Networks LLC
+ * Copyright (C) 2011-2015  ZeroTier Networks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,9 +82,13 @@ public:
 	{
 		MulticastRate() throw() {}
 		MulticastRate(uint32_t pl,uint32_t maxb,uint32_t acc) throw() : preload(pl),maxBalance(maxb),accrual(acc) {}
+
 		uint32_t preload;
 		uint32_t maxBalance;
 		uint32_t accrual;
+
+		inline bool operator==(const MulticastRate &mr) const { return ((preload == mr.preload)&&(maxBalance == mr.maxBalance)&&(accrual == mr.accrual)); }
+		inline bool operator!=(const MulticastRate &mr) const { return (!(*this == mr)); }
 	};
 
 	/**
@@ -159,15 +163,18 @@ public:
 	const MulticastRate &multicastRate(const MulticastGroup &mg) const
 		throw();
 
+	bool operator==(const NetworkConfig &nc) const;
+	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
+
 private:
 	NetworkConfig() {}
 	~NetworkConfig() {}
 
 	void _fromDictionary(const Dictionary &d);
 
-	unsigned char _etWhitelist[65536 / 8];
 	uint64_t _nwid;
 	uint64_t _timestamp;
+	unsigned char _etWhitelist[65536 / 8];
 	Address _issuedTo;
 	unsigned int _multicastLimit;
 	bool _allowPassiveBridging;

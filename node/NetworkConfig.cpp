@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2011-2014  ZeroTier Networks LLC
+ * Copyright (C) 2011-2015  ZeroTier Networks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,6 +103,12 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 
 	// NOTE: d.get(name) throws if not found, d.get(name,default) returns default
 
+	_nwid = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID).c_str());
+	if (!_nwid)
+		throw std::invalid_argument("configuration contains zero network ID");
+
+	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP).c_str());
+
 	memset(_etWhitelist,0,sizeof(_etWhitelist));
 	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES).c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator et(ets.begin());et!=ets.end();++et) {
@@ -110,11 +116,6 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		_etWhitelist[tmp >> 3] |= (1 << (tmp & 7));
 	}
 
-	_nwid = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID).c_str());
-	if (!_nwid)
-		throw std::invalid_argument("configuration contains zero network ID");
-
-	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP).c_str());
 	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO));
 	_multicastLimit = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,zero).c_str());
 	if (_multicastLimit == 0) _multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
@@ -175,6 +176,25 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	}
 
 	_com.fromString(d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP,std::string()));
+}
+
+bool NetworkConfig::operator==(const NetworkConfig &nc) const
+{
+	if (_nwid != nc._nwid) return false;
+	if (_timestamp != nc._timestamp) return false;
+	if (memcmp(_etWhitelist,nc._etWhitelist,sizeof(_etWhitelist))) return false;
+	if (_issuedTo != nc._issuedTo) return false;
+	if (_multicastLimit != nc._multicastLimit) return false;
+	if (_allowPassiveBridging != nc._allowPassiveBridging) return false;
+	if (_private != nc._private) return false;
+	if (_enableBroadcast != nc._enableBroadcast) return false;
+	if (_name != nc._name) return false;
+	if (_description != nc._description) return false;
+	if (_staticIps != nc._staticIps) return false;
+	if (_activeBridges != nc._activeBridges) return false;
+	if (_multicastRates != nc._multicastRates) return false;
+	if (_com != nc._com) return false;
+	return true;
 }
 
 } // namespace ZeroTier

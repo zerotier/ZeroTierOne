@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2011-2014  ZeroTier Networks LLC
+ * Copyright (C) 2011-2015  ZeroTier Networks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -267,10 +267,15 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 	return false;
 }
 
-bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
+int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
 	try {
 		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
+		{
+			Mutex::Lock _l(_lock);
+			if ((_config)&&(*_config == *newConfig))
+				return 1; // OK but duplicate
+		}
 		if (applyConfiguration(newConfig)) {
 			if (saveToDisk) {
 				std::string confPath(RR->homePath + ZT_PATH_SEPARATOR_S + "networks.d" + ZT_PATH_SEPARATOR_S + idString() + ".conf");
@@ -280,12 +285,12 @@ bool Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 					Utils::lockDownFile(confPath.c_str(),false);
 				}
 			}
-			return true;
+			return 2; // OK and configuration has changed
 		}
 	} catch ( ... ) {
 		LOG("ignored invalid configuration for network %.16llx (dictionary decode failed)",(unsigned long long)_id);
 	}
-	return false;
+	return 0;
 }
 
 void Network::requestConfiguration()

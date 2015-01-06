@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Global Peer to Peer Ethernet
- * Copyright (C) 2011-2014  ZeroTier Networks LLC
+ * Copyright (C) 2011-2015  ZeroTier Networks
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ std::vector<RoutingTable::Entry> LinuxRoutingTable::get(bool includeLinkLocal,bo
 	std::vector<RoutingTable::Entry> entries;
 
 	{
-                int fd = ::open("/proc/net/route",O_RDONLY);
+		int fd = ::open("/proc/net/route",O_RDONLY);
 		if (fd <= 0)
 			buf[0] = (char)0;
 		else {
