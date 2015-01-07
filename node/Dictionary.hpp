@@ -35,6 +35,7 @@
 #include <stdexcept>
  
 #include "Constants.hpp"
+#include "Utils.hpp"
 
 // Three fields are added/updated by sign()
 #define ZT_DICTIONARY_SIGNATURE "~!ed25519"
@@ -105,6 +106,128 @@ public:
 		if (e == end())
 			return dfl;
 		return e->second;
+	}
+
+	/**
+	 * @param key Key to get
+	 * @param dfl Default boolean result if key not found or empty (default: false)
+	 * @return Boolean value of key
+	 */
+	inline bool getBoolean(const std::string &key,bool dfl = false) const
+	{
+		const_iterator e(find(key));
+		if (e == end())
+			return dfl;
+		if (e->second.length() < 1)
+			return dfl;
+		switch(e->second[0]) {
+			case '1':
+			case 't':
+			case 'T':
+			case 'y':
+			case 'Y':
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * @param key Key to get
+	 * @param dfl Default value if not present (default: 0)
+	 * @return Value converted to unsigned 64-bit int or 0 if not found
+	 */
+	inline uint64_t getUInt(const std::string &key,uint64_t dfl = 0) const
+	{
+		const_iterator e(find(key));
+		if (e == end())
+			return dfl;
+		return Utils::strToU64(e->second.c_str());
+	}
+
+	/**
+	 * @param key Key to get
+	 * @param dfl Default value if not present (default: 0)
+	 * @return Value converted to unsigned 64-bit int or 0 if not found
+	 */
+	inline uint64_t getHexUInt(const std::string &key,uint64_t dfl = 0) const
+	{
+		const_iterator e(find(key));
+		if (e == end())
+			return dfl;
+		return Utils::hexStrToU64(e->second.c_str());
+	}
+
+	/**
+	 * @param key Key to get
+	 * @param dfl Default value if not present (default: 0)
+	 * @return Value converted to signed 64-bit int or 0 if not found
+	 */
+	inline int64_t getInt(const std::string &key,int64_t dfl = 0) const
+	{
+		const_iterator e(find(key));
+		if (e == end())
+			return dfl;
+		return Utils::strTo64(e->second.c_str());
+	}
+
+	/**
+	 * @param key Key to set
+	 * @param value String value
+	 */
+	inline void set(const std::string &key,const char *value)
+	{
+		(*this)[key] = value;
+	}
+
+	/**
+	 * @param key Key to set
+	 * @param value String value
+	 */
+	inline void set(const std::string &key,const std::string &value)
+	{
+		(*this)[key] = value;
+	}
+
+	/**
+	 * @param key Key to set
+	 * @param value Boolean value
+	 */
+	inline void set(const std::string &key,bool value)
+	{
+		(*this)[key] = ((value) ? "1" : "0");
+	}
+
+	/**
+	 * @param key Key to set
+	 * @param value Integer value
+	 */
+	inline void set(const std::string &key,uint64_t value)
+	{
+		char tmp[24];
+		Utils::snprintf(tmp,sizeof(tmp),"%llu",(unsigned long long)value);
+		(*this)[key] = tmp;
+	}
+
+	/**
+	 * @param key Key to set
+	 * @param value Integer value
+	 */
+	inline void set(const std::string &key,int64_t value)
+	{
+		char tmp[24];
+		Utils::snprintf(tmp,sizeof(tmp),"%lld",(long long)value);
+		(*this)[key] = tmp;
+	}
+
+	/**
+	 * @param key Key to set
+	 * @param value Integer value
+	 */
+	inline void setHex(const std::string &key,uint64_t value)
+	{
+		char tmp[24];
+		Utils::snprintf(tmp,sizeof(tmp),"%llx",(unsigned long long)value);
+		(*this)[key] = tmp;
 	}
 
 	/**

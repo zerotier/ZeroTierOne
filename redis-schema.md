@@ -5,7 +5,8 @@
 - : is used as the key namespace separator as per de-facto Redis standard.
 - A top-level record may have a :~ child containing a hash. This is the root hash and contains any simple key=value properties of the record.
 - Booleans: any value other than "1" or "true" is false.
-- Timestamps are in milliseconds since the epoch and are stored as base-10 integers.
+- Unless otherwise indicated *all integer values are in hexadecimal!*
+- Timestamps are in milliseconds since the epoch
 - IPv4 addresees: stored in standard dot notation e.g. 1.2.3.4
 - IPv6 addresses: :'s are optional and addresses must be stored *without* shortening, e.g. with :0000: instead of ::. It must be possible to strip :'s from the address and get 128 bits of straight hex.
 - Hexadecimal: all hex values must be lower case
@@ -23,8 +24,6 @@ Network records are used by the network configuration master to issue configurat
 
 ### zt1:network:\<nwid\>:~
 
-Each network has a network record indexed by its 64-bit network ID in lower-case hexadecimal. Unless otherwise indicated all integer values are in hexadecimal.
-
 - !R id :: must be \<nwid\>
 - !M name :: network's globally unique short name, which can contain only characters valid in an e-mail address. It's the job of the code that populates this DB to ensure that this is globally unique.
 - R owner :: id of user who owns this network (not used by netconf master, only for web UI and web API)
@@ -34,7 +33,7 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - R infrastructure :: if true, network can't be deleted through API or web UI
 - M private :: if true, network requires authentication
 - R creationTime :: timestamp of network creation
-- M etherTypes :: comma-delimited list of integers indicating Ethernet types permitted on network
+- M etherTypes :: comma-delimited list of HEX integers indicating Ethernet types permitted on network
 - M enableBroadcast :: if true, ff:ff:ff:ff:ff:ff is enabled network-wide
 - M v4AssignMode :: 'none' (or null/empty/etc.), 'zt', 'dhcp'
 - M v4AssignPool :: network/bits from which to assign IPs
@@ -42,11 +41,14 @@ Each network has a network record indexed by its 64-bit network ID in lower-case
 - M v6AssignPool :: network/bits from which to assign IPs
 - M allowPassiveBridging :: if true, allow passive bridging
 - M multicastLimit :: maximum number of recipients to receive a multicast on this network
-- M multicastRates :: packed JSON containing multicast rates (see below)
+- M multicastRates :: string-encoded dictionary containing multicast groups and rates (see below)
 - M subscriptions :: comma-delimited list of subscriptions for this network
+- M revision :: network revision number
 - M ui :: arbitrary field that can be used by the UI to store stuff
 
-Multicast rates are encoded as a JSON document. Each key is a multicast group in "MAC/ADI" format (e.g. *ff:ff:ff:ff:ff:ff/0*), and each value is a comma-delimited tuple of hex integer values: preload, max balance, and rate of accrual in bytes per second. An entry for *0* (or *0/0* or *00:00:00:00:00:00/0*) indicates the default setting for all unspecified multicast groups. Setting a rate limit like *ffffffff,ffffffff,ffffffff* as default will effectively turn off rate limits.
+Multicast rates are encoded as a dictionary. Each key is a multicast group in "MAC/ADI" format (e.g. *ff:ff:ff:ff:ff:ff/0*), and each value is a comma-delimited tuple of hex integer values: preload, max balance, and rate of accrual in bytes per second. An entry for *0* (or *0/0* or *00:00:00:00:00:00/0*) indicates the default setting for all unspecified multicast groups. Setting a rate limit like *ffffffff,ffffffff,ffffffff* as default will effectively turn off rate limits.
+
+Incrementing the network's revision number causes network configurations to be regenerated automatically on next query by a peer. It's important to note that certificates of membership for private networks permit revision numbers to vary by up to **2**. Thus, revision should be incremented once for changes that do not have authorization implications and twice when de-authorizing a member from a network. For better continuity this double-increment can happen with a time delay between each increment to give still-authorized peers more time to get an updated certificate.
 
 ### zt1:network:\<nwid\>:member:\<address\>:~
 
@@ -65,7 +67,8 @@ Each member of a network has a hash containing its configuration and authorizati
 - R lastSeen :: time node was most recently seen
 - R lastAt :: real Internet IP/port where node was most recently seen
 - R ipAssignments :: comma-delimited list of IP address assignments (see below)
-- R netconf :: most recent network configuration dictionary (updated on changes)
+- R netconf :: most recent network configuration dictionary
+- R netconfRevision :: revision of network when most recent netconf was generated
 - R netconfTimestamp :: timestamp from netconf dictionary
 - R netconfClientTimestamp :: timestamp client most recently reported
 - M ui :: string-serialized JSON blob for use by the user interface (unused by netconf-master)

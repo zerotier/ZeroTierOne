@@ -41,6 +41,7 @@
 #include "Address.hpp"
 #include "Dictionary.hpp"
 #include "Mutex.hpp"
+#include "InetAddress.hpp"
 
 #include <hiredis/hiredis.h>
 
@@ -82,15 +83,17 @@ public:
 	 * This is a blocking call, so rate is limited by Redis. It will fail
 	 * and log its failure if the Redis server is not available or times out.
 	 *
+	 * @param fromAddr Originating IP address
 	 * @param packetId 64-bit packet ID
-	 * @param from Originating peer ZeroTier address
+	 * @param member Originating peer ZeroTier address
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
 	 * @param haveTimestamp Timestamp requesting peer has or 0 if none or not included
 	 */
 	void doNetworkConfigRequest(
+		const InetAddress &fromAddr,
 		uint64_t packetId,
-		const Address &from,
+		const Address &member,
 		uint64_t nwid,
 		const Dictionary &metaData,
 		uint64_t haveTimestamp);
@@ -98,10 +101,13 @@ public:
 private:
 	// These assume _lock is locked
 	bool _reconnect();
-	bool _hgetall(const char *key,std::map<std::string,std::string> &hdata);
-	bool _hmset(const char *key,const std::map<std::string,std::string> &hdata);
+	bool _hgetall(const char *key,Dictionary &hdata);
+	bool _hmset(const char *key,const Dictionary &hdata);
 	bool _hget(const char *key,const char *hashKey,std::string &value);
 	bool _hset(const char *key,const char *hashKey,const char *value);
+
+	bool _initNewMember(uint64_t nwid,const Address &member,const Dictionary &metaData,Dictionary &memberRecord);
+	bool _generateNetconf(uint64_t nwid,const Address &member,const Dictionary &metaData,std::string &netconf,uint64_t &ts);
 
 	Mutex _lock;
 

@@ -92,12 +92,12 @@ public:
 	enum ReservedId
 	{
 		/**
-		 * Timestamp of certificate issue in milliseconds since epoch
+		 * Revision number of certificate
 		 *
-		 * maxDelta here defines certificate lifetime, and certs are lazily
-		 * pushed to other peers on a net with a frequency of 1/2 this time.
+		 * Certificates may differ in revision number by a designated max
+		 * delta. Differences wider than this cause certificates not to agree.
 		 */
-		COM_RESERVED_ID_TIMESTAMP = 0,
+		COM_RESERVED_ID_REVISION = 0,
 
 		/**
 		 * Network ID for which certificate was issued
@@ -123,14 +123,14 @@ public:
 	/**
 	 * Create from required fields common to all networks
 	 *
-	 * @param timestamp Timestamp of cert
+	 * @param revision Revision number of certificate
 	 * @param timestampMaxDelta Maximum variation between timestamps on this net
 	 * @param nwid Network ID
 	 * @param issuedTo Certificate recipient
 	 */
-	CertificateOfMembership(uint64_t timestamp,uint64_t timestampMaxDelta,uint64_t nwid,const Address &issuedTo)
+	CertificateOfMembership(uint64_t revision,uint64_t revisionMaxDelta,uint64_t nwid,const Address &issuedTo)
 	{
-		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_TIMESTAMP,timestamp,timestampMaxDelta));
+		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_REVISION,revision,revisionMaxDelta));
 		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_NETWORK_ID,nwid,0));
 		_qualifiers.push_back(_Qualifier(COM_RESERVED_ID_ISSUED_TO,issuedTo.toInt(),0xffffffffffffffffULL));
 		memset(_signature.data,0,_signature.size());
@@ -182,7 +182,7 @@ public:
 	{
 		if (_qualifiers.size() < 3)
 			return false;
-		if (_qualifiers[0].id != COM_RESERVED_ID_TIMESTAMP)
+		if (_qualifiers[0].id != COM_RESERVED_ID_REVISION)
 			return false;
 		if (_qualifiers[1].id != COM_RESERVED_ID_NETWORK_ID)
 			return false;
@@ -192,26 +192,26 @@ public:
 	}
 
 	/**
-	 * @return Maximum delta for mandatory timestamp field or 0 if field missing
+	 * @return Maximum delta for mandatory revision field or 0 if field missing
 	 */
-	inline uint64_t timestampMaxDelta() const
+	inline uint64_t revisionMaxDelta() const
 		throw()
 	{
 		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			if (q->id == COM_RESERVED_ID_TIMESTAMP)
+			if (q->id == COM_RESERVED_ID_REVISION)
 				return q->maxDelta;
 		}
 		return 0ULL;
 	}
 
 	/**
-	 * @return Timestamp for this cert in ms since epoch (according to netconf's clock)
+	 * @return Revision number for this cert
 	 */
-	inline uint64_t timestamp() const
+	inline uint64_t revision() const
 		throw()
 	{
 		for(std::vector<_Qualifier>::const_iterator q(_qualifiers.begin());q!=_qualifiers.end();++q) {
-			if (q->id == COM_RESERVED_ID_TIMESTAMP)
+			if (q->id == COM_RESERVED_ID_REVISION)
 				return q->value;
 		}
 		return 0ULL;

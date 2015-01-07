@@ -1,7 +1,7 @@
 CC=clang
 CXX=clang++
 
-INCLUDES=
+INCLUDES=-I/usr/local/include
 DEFS=
 LIBS=
 

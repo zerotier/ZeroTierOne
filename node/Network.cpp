@@ -352,7 +352,7 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 	}
 
 	// If we made it past authentication, update cert
-	if (cert.timestamp() >= old.timestamp())
+	if (cert.revision() != old.revision())
 		old = cert;
 }
 
@@ -360,17 +360,10 @@ bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	if ((_config)&&(!_config->isPublic())&&(_config->com())) {
-		uint64_t pushInterval = _config->com().timestampMaxDelta() / 2;
-		if (pushInterval) {
-			// Give a 1s margin around +/- 1/2 max delta to account for network latency
-			if (pushInterval > 1000)
-				pushInterval -= 1000;
-
-			uint64_t &lastPushed = _lastPushedMembershipCertificate[to];
-			if ((now - lastPushed) > pushInterval) {
-				lastPushed = now;
-				return true;
-			}
+		uint64_t &lastPushed = _lastPushedMembershipCertificate[to];
+		if ((now - lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
+			lastPushed = now;
+			return true;
 		}
 	}
 	return false;
@@ -421,7 +414,7 @@ void Network::clean()
 
 		// Clean entries from the last pushed tracking map if they're so old as
 		// to be no longer relevant.
-		uint64_t forgetIfBefore = now - (_config->com().timestampMaxDelta() * 3ULL);
+		uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
 		for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
 			if (lp->second < forgetIfBefore)
 				_lastPushedMembershipCertificate.erase(lp++);
