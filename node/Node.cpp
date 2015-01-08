@@ -108,7 +108,9 @@ struct _NodeImpl
 		delete renv.mc;            renv.mc = (Multicaster *)0;
 		delete renv.antiRec;       renv.antiRec = (AntiRecursion *)0;
 		delete renv.sw;            renv.sw = (Switch *)0;                // order matters less from here down
+#ifdef ZT_ENABLE_NETCONF_MASTER
 		delete renv.netconfMaster; renv.netconfMaster = (NetworkConfigMaster *)0;
+#endif
 		delete renv.http;          renv.http = (HttpClient *)0;
 		delete renv.prng;          renv.prng = (CMWC4096 *)0;
 		delete renv.log;           renv.log = (Logger *)0;               // but stop logging last of all

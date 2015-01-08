@@ -30,8 +30,6 @@
 
 #include "Constants.hpp"
 
-#define ZT_ENABLE_NETCONF_MASTER
-
 #ifdef ZT_ENABLE_NETCONF_MASTER
 
 #include <stdint.h>

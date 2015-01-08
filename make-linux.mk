@@ -31,6 +31,12 @@ ifeq ($(MACHINE),x86)
 	DEFS+=-DZT_SALSA20_SSE 
 endif
 
+# Build with ZT_ENABLE_NETCONF_MASTER=1 to build with NetworkConfigMaster enabled
+ifeq ($(ZT_ENABLE_NETCONF_MASTER),1)
+	DEFS+=-DZT_ENABLE_NETCONF_MASTER
+	LIBS+=-lhiredis
+endif
+
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_AUTO_UPDATE=1

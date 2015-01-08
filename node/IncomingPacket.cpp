@@ -714,15 +714,17 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 {
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
-		unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-		Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
-		uint64_t haveTimestamp = 0;
-		if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size())
-			haveTimestamp = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
 
+#ifdef ZT_ENABLE_NETCONF_MASTER
 		if (RR->netconfMaster) {
+			unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
+			Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
+			uint64_t haveTimestamp = 0;
+			if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size())
+				haveTimestamp = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
 			RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),source(),nwid,metaData,haveTimestamp);
 		} else {
+#endif
 			Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 			outp.append(packetId());
@@ -730,7 +732,9 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append(nwid);
 			outp.armor(peer->key(),true);
 			_fromSock->send(_remoteAddress,outp.data(),outp.size());
+#ifdef ZT_ENABLE_NETCONF_MASTER
 		}
+#endif
 
 		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
