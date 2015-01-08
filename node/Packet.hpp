@@ -603,72 +603,7 @@ public:
 		 */
 		VERB_EXT_FRAME = 7,
 
-		/* A multicast frame [old multicast protocol, deprecated]:
-		 *   <[2] 16-bit propagation depth or 0xffff for "do not forward">
-		 *   <[320] propagation FIFO>
-		 *   <[1024] propagation bloom filter>
-		 *   [... begin signed portion ...]
-		 *   <[1] 8-bit flags, currently unused and must be 0>
-		 *   <[8] 64-bit network ID>
-		 *   <[2] 16-bit random propagation bloom filter nonce>
-		 *   <[1] number of significant bits in propagation restrict prefix>
-		 *   <[1] propagation restriction prefix (sig bits right to left)>
-		 *   <[5] ZeroTier address of node of origin>
-		 *   <[3] 24-bit multicast ID, together with origin forms GUID>
-		 *   <[6] source MAC address>
-		 *   <[6] destination multicast group MAC address>
-		 *   <[4] destination multicast group ADI field>
-		 *   <[2] 16-bit frame ethertype>
-		 *   <[2] 16-bit length of payload>
-		 *   <[...] ethernet frame payload>
-		 *   [... end of signed portion ...]
-		 *   <[2] 16-bit length of signature>
-		 *   <[...] signature (currently Ed25519/SHA-512, 96 bytes in length)>
-		 *  [<[...] network membership certificate (optional)>]
-		 *
-		 * Flags:
-		 *   0x01 - Multicast frame includes network membership certificate
-		 *          for original sender for this network.
-		 *
-		 * When a multicast frame is received:
-		 *
-		 * (1) Check the signature of the signed portion of packet, discard on fail
-		 * (2) Check for duplicate multicast, STOP if duplicate
-		 * (3) Check rate limits, STOP if over limit
-		 * (4) Inject into tap if member of network and packet passes other checks
-		 * (5) Increment propagation depth, STOP if over limit
-		 * (6) Pop topmost element off FIFO -- this is next hop
-		 * (7) Push suggested next hops onto FIFO until full -- set corresponding
-		 *     bits in bloom filter
-		 * (8) Send to next hop, or to a supernode if none
-		 *
-		 * When choosing next hops, exclude addresses corresponding to bits already
-		 * set in the bloom filter and addresses outside the propagation restrict
-		 * prefix.
-		 *
-		 * Active bridges on a network are always added as next hops for all
-		 * multicast and broadcast traffic, as if they "like" all groups.
-		 *
-		 * Algorithm for setting bits in bloom filter:
-		 *
-		 * (1) Place the address in the least significant 40 bits of a 64-bit int.
-		 * (2) Add the bloom filter nonce to this value.
-		 * (3) XOR the least significant 13 bits of this value with the next most
-		 *     significant 13 bits and so on, 4 times.
-		 * (4) This value ANDed with 0x1fff is the bit to set in the bloom filter.
-		 * (5) Set this bit via: byte[bit >> 3] |= (0x80 >> (bit & 7))
-		 *
-		 * To check bits in bloom filter perform the same computation but mask the
-		 * bit instead of ORing it.
-		 *
-		 * Propagation occurs within a restrict prefix. The restrict prefix is
-		 * applied to the least significant 16 bits of an address. The original
-		 * sender of the multicast sets the restrict prefix and sends 2^N copies
-		 * of the multicast frame, one for each address prefix.
-		 *
-		 * ERROR may be generated if a membership certificate is needed for a
-		 * closed network. Payload will be network ID.
-		 */
+		/* DEPRECATED -- legacy support only, will go away completely soon */
 		VERB_P5_MULTICAST_FRAME = 8,
 
 		/* Announce interest in multicast group(s):

@@ -76,6 +76,7 @@
 #include "AntiRecursion.hpp"
 #include "RoutingTable.hpp"
 #include "HttpClient.hpp"
+#include "NetworkConfigMaster.hpp"
 
 namespace ZeroTier {
 
@@ -89,6 +90,7 @@ struct _NodeImpl
 	volatile bool started;
 	volatile bool running;
 	volatile bool resynchronize;
+
 	volatile bool disableRootTopologyUpdates;
 	std::string overrideRootTopology;
 
@@ -100,15 +102,16 @@ struct _NodeImpl
 
 		running = false;
 
-		delete renv.updater;  renv.updater = (SoftwareUpdater *)0;
-		delete renv.nc;       renv.nc = (NodeConfig *)0;            // shut down all networks, close taps, etc.
-		delete renv.topology; renv.topology = (Topology *)0;        // now we no longer need routing info
-		delete renv.mc;       renv.mc = (Multicaster *)0;
-		delete renv.antiRec;  renv.antiRec = (AntiRecursion *)0;
-		delete renv.sw;       renv.sw = (Switch *)0;                // order matters less from here down
-		delete renv.http;     renv.http = (HttpClient *)0;
-		delete renv.prng;     renv.prng = (CMWC4096 *)0;
-		delete renv.log;      renv.log = (Logger *)0;               // but stop logging last of all
+		delete renv.updater;       renv.updater = (SoftwareUpdater *)0;
+		delete renv.nc;            renv.nc = (NodeConfig *)0;            // shut down all networks, close taps, etc.
+		delete renv.topology;      renv.topology = (Topology *)0;        // now we no longer need routing info
+		delete renv.mc;            renv.mc = (Multicaster *)0;
+		delete renv.antiRec;       renv.antiRec = (AntiRecursion *)0;
+		delete renv.sw;            renv.sw = (Switch *)0;                // order matters less from here down
+		delete renv.netconfMaster; renv.netconfMaster = (NetworkConfigMaster *)0;
+		delete renv.http;          renv.http = (HttpClient *)0;
+		delete renv.prng;          renv.prng = (CMWC4096 *)0;
+		delete renv.log;           renv.log = (Logger *)0;               // but stop logging last of all
 
 		return reasonForTermination;
 	}

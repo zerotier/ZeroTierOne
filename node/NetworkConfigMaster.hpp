@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include <string>
 #include <map>
+#include <vector>
 
 #include "Address.hpp"
 #include "Dictionary.hpp"
@@ -105,6 +106,8 @@ private:
 	bool _hmset(const char *key,const Dictionary &hdata);
 	bool _hget(const char *key,const char *hashKey,std::string &value);
 	bool _hset(const char *key,const char *hashKey,const char *value);
+	bool _get(const char *key,std::string &value);
+	bool _smembers(const char *key,std::vector<std::string> &sdata);
 
 	bool _initNewMember(uint64_t nwid,const Address &member,const Dictionary &metaData,Dictionary &memberRecord);
 	bool _generateNetconf(uint64_t nwid,const Address &member,const Dictionary &metaData,std::string &netconf,uint64_t &ts);

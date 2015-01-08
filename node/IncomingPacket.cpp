@@ -40,6 +40,7 @@
 #include "Peer.hpp"
 #include "NodeConfig.hpp"
 #include "SoftwareUpdater.hpp"
+#include "NetworkConfigMaster.hpp"
 
 namespace ZeroTier {
 
@@ -713,6 +714,24 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 {
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
+		unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
+		Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
+		uint64_t haveTimestamp = 0;
+		if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size())
+			haveTimestamp = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
+
+		if (RR->netconfMaster) {
+			RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),source(),nwid,metaData,haveTimestamp);
+		} else {
+			Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
+			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+			outp.append(packetId());
+			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
+			outp.append(nwid);
+			outp.armor(peer->key(),true);
+			_fromSock->send(_remoteAddress,outp.data(),outp.size());
+		}
+
 		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
@@ -725,6 +744,14 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
+		while ((ptr + 8) <= size()) {
+			uint64_t nwid = at<uint64_t>(ptr);
+			SharedPtr<Network> nw(RR->nc->network(nwid));
+			if ((nw)&&(source() == nw->controller()))
+				nw->requestConfiguration();
+			ptr += 8;
+		}
 		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());

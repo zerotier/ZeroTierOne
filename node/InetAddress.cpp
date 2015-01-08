@@ -54,7 +54,7 @@ void InetAddress::set(const std::string &ip,unsigned int port)
 	} else {
 		_sa.sin.sin_family = AF_INET;
 		_sa.sin.sin_port = Utils::hton((uint16_t)port);
-		if (inet_pton(AF_INET,ip.c_str(),(void *)&(_sa.sin.sin_addr.s_addr)) <= 0)
+			if (inet_pton(AF_INET,ip.c_str(),(void *)&(_sa.sin.sin_addr.s_addr)) <= 0)
 			_sa.saddr.sa_family = 0;
 	}
 }
