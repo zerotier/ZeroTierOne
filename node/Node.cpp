@@ -310,6 +310,21 @@ Node::ReasonForTermination Node::run()
 		}
 		RR->node = this;
 
+#ifdef ZT_ENABLE_NETCONF_MASTER
+		{
+			std::string redisHost(RR->nc->getLocalConfig(ZT_LOCAL_CONFIG_NETCONF_REDIS_HOST));
+			if (redisHost.length() > 0) {
+				unsigned int redisPort = Utils::strToUInt(RR->nc->getLocalConfig(ZT_LOCAL_CONFIG_NETCONF_REDIS_PORT).c_str());
+				if ((redisPort == 0)||(redisPort > 0xffff))
+					redisPort = ZT_LOCAL_CONFIG_NETCONF_REDIS_PORT_DEFAULT;
+				std::string redisAuth(RR->nc->getLocalConfig(ZT_LOCAL_CONFIG_NETCONF_REDIS_AUTH));
+				std::string redisDatabaseNumberStr(RR->nc->getLocalConfig(ZT_LOCAL_CONFIG_NETCONF_REDIS_DBNUM));
+				unsigned int redisDatabaseNumber = (redisDatabaseNumberStr.length() > 0) ? Utils::strToUInt(redisDatabaseNumberStr.c_str()) : (unsigned int)ZT_LOCAL_CONFIG_NETCONF_REDIS_DBNUM_DEFAULT;
+				RR->netconfMaster = new NetworkConfigMaster(RR,redisHost.c_str(),redisPort,redisAuth.c_str(),redisDatabaseNumber);
+			}
+		}
+#endif
+
 #ifdef ZT_AUTO_UPDATE
 		if (ZT_DEFAULTS.updateLatestNfoURL.length()) {
 			RR->updater = new SoftwareUpdater(RR);

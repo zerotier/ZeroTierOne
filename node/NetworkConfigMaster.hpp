@@ -30,6 +30,13 @@
 
 #include "Constants.hpp"
 
+#define ZT_LOCAL_CONFIG_NETCONF_REDIS_HOST "netconf.redisHost"
+#define ZT_LOCAL_CONFIG_NETCONF_REDIS_PORT "netconf.redisPort"
+#define ZT_LOCAL_CONFIG_NETCONF_REDIS_PORT_DEFAULT 6379
+#define ZT_LOCAL_CONFIG_NETCONF_REDIS_AUTH "netconf.redisAuth"
+#define ZT_LOCAL_CONFIG_NETCONF_REDIS_DBNUM "netconf.redisDatabaseNumber"
+#define ZT_LOCAL_CONFIG_NETCONF_REDIS_DBNUM_DEFAULT 0
+
 #ifdef ZT_ENABLE_NETCONF_MASTER
 
 #include <stdint.h>
