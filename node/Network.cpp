@@ -274,7 +274,7 @@ int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 		{
 			Mutex::Lock _l(_lock);
 			if ((_config)&&(*_config == *newConfig))
-				return 1; // OK but duplicate
+				return 1; // OK config, but duplicate of what we already have
 		}
 		if (applyConfiguration(newConfig)) {
 			if (saveToDisk) {
