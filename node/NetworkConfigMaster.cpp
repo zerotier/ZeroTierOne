@@ -94,8 +94,9 @@ void NetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uin
 	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
 	Utils::snprintf(revKey,sizeof(revKey),"zt1:network:%s:revision",nwids);
 
-	TRACE("netconf: request from %s for %s (if newer than %llu)",addrs,nwids,(unsigned long long)haveTimestamp);
+	TRACE("netconf: %s : %s if > %llu",nwids,addrs,(unsigned long long)haveTimestamp);
 
+	// Check to make sure network itself exists and is valid
 	if (!_hget(nwKey,"id",tmps2)) {
 		LOG("netconf: Redis error retrieving %s/id",nwKey);
 		return;
@@ -111,6 +112,7 @@ void NetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uin
 		return;
 	}
 
+	// Get network revision
 	if (!_get(revKey,revision)) {
 		LOG("netconf: Redis error retrieving %s",revKey);
 		return;
@@ -118,20 +120,26 @@ void NetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uin
 	if (!revision.length())
 		revision = "0";
 
+	// Get network member record for this peer
 	if (!_hgetall(memberKey,memberRecord)) {
 		LOG("netconf: Redis error retrieving %s",memberKey);
 		return;
 	}
 
+	// If there is no member record, init a new one -- for public networks this
+	// auto-authorizes, and for private nets it makes the peer show up in the UI
+	// so the admin can authorize or delete/hide it.
 	if ((memberRecord.size() == 0)||(memberRecord.get("id","") != addrs)||(memberRecord.get("nwid","") != nwids)) {
 		if (!_initNewMember(nwid,member,metaData,memberRecord))
 			return;
 	}
 
 	if (memberRecord.getBoolean("authorized")) {
+		// Get current netconf and netconf timestamp
 		uint64_t ts = memberRecord.getHexUInt("netconfTimestamp",0);
 		std::string netconf(memberRecord.get("netconf",""));
 
+		// Update statistics for this node
 		Dictionary upd;
 		upd.setHex("netconfClientTimestamp",haveTimestamp);
 		if (fromAddr)
@@ -139,11 +147,16 @@ void NetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uin
 		upd.setHex("lastSeen",Utils::now());
 		_hmset(memberKey,upd);
 
+		// Attempt to generate netconf for this node if there isn't
+		// one or it's not in step with the network's revision.
 		if (((ts == 0)||(netconf.length() == 0))||(memberRecord.get("netconfRevision","") != revision)) {
 			if (!_generateNetconf(nwid,member,metaData,netconf,ts))
 				return;
 		}
 
+		// If the netconf we have (or just generated) is newer than what
+		// the client reports that it has, send it. Otherwise we just
+		// ignore the message since the client is up to date.
 		if (ts > haveTimestamp) {
 			TRACE("netconf: sending %u bytes of netconf data to %s",netconf.length(),addrs);
 			Packet outp(member,RR->identity.address(),Packet::VERB_OK);

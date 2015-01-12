@@ -123,6 +123,14 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				}
 				break;
 
+			case Packet::ERROR_UNSUPPORTED_OPERATION:
+				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
+					SharedPtr<Network> network(RR->nc->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
+					if ((network)&&(network->controller() == source()))
+						network->setNotFound();
+				}
+				break;
+
 			case Packet::ERROR_IDENTITY_COLLISION:
 				// TODO: if it comes from a supernode, regenerate a new identity
 				// if (RR->topology->isSupernode(source())) {}
@@ -286,9 +294,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 				// If a supernode has a version higher than ours, this causes a software
-				// update check to run now. This might bum-rush download.zerotier.com, but
-				// it's hosted on S3 so hopefully it can take it. This should cause updates
-				// to propagate out very quickly.
+				// update check to run now.
 				if ((RR->updater)&&(RR->topology->isSupernode(peer->address())))
 					RR->updater->sawRemoteVersion(vMajor,vMinor,vRevision);
 			}	break;
@@ -307,12 +313,33 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 				SharedPtr<Network> nw(RR->nc->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
 				if ((nw)&&(nw->controller() == source())) {
-					// OK(NETWORK_CONFIG_REQUEST) is only accepted from a network's
-					// controller.
 					unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
-						nw->setConfiguration(Dictionary(dict));
+						if (nw->setConfiguration(Dictionary(dict)) == 2) { // 2 == accepted and actually new
+							/* If this configuration was indeed new, we do another
+							 * netconf request with its timestamp. We do this in
+							 * order to (a) tell the netconf server we got it (it
+							 * won't send a duplicate if ts == current), and (b)
+							 * get another one if the netconf is changing rapidly
+							 * until we finally have the final version.
+							 *
+							 * Note that we don't do this for netconf masters with
+							 * versions <= 1.0.3, since those regenerate a new netconf
+							 * with a new timestamp every time. In that case this double
+							 * confirmation would create a race condition. */
+							if (peer->atLeastVersion(1,0,3)) {
+								SharedPtr<NetworkConfig> nc(nw->config2());
+								if ((nc)&&(nc->timestamp() > 0)) { // sanity check
+									Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
+								        outp.append((uint64_t)nw->id());
+							                outp.append((uint16_t)0); // no meta-data
+							                outp.append((uint64_t)nc->timestamp());
+							                outp.armor(peer->key(),true);
+						        	        _fromSock->send(_remoteAddress,outp.data(),outp.size());
+								}
+							}
+						}
 						TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
 					}
 				}

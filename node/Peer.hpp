@@ -341,6 +341,32 @@ public:
 	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
 
+	/**
+	 * Check whether this peer's version is both known and is at least what is specified
+	 *
+	 * @param major Major version to check against
+	 * @param minor Minor version
+	 * @param rev Revision
+	 * @return True if peer's version is at least supplied tuple
+	 */
+	inline bool atLeastVersion(unsigned int major,unsigned int minor,unsigned int rev)
+		throw()
+	{
+		if ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)) {
+			if (_vMajor > major)
+				return true;
+			else if (_vMajor == major) {
+				if (_vMinor > minor)
+					return true;
+				else if (_vMinor == minor) {
+					if (_vRevision >= rev)
+						return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
