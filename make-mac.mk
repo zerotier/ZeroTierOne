@@ -4,6 +4,7 @@ CXX=clang++
 INCLUDES=-I/usr/local/include
 DEFS=
 LIBS=
+ARCH_FLAGS=-arch i386 -arch x86_64
 
 include objects.mk
 OBJS+=osnet/BSDRoutingTable.o osnet/OSXEthernetTap.o osnet/OSXEthernetTapFactory.o
@@ -25,6 +26,13 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
+# Build with ZT_ENABLE_NETCONF_MASTER=1 to build with NetworkConfigMaster enabled
+ifeq ($(ZT_ENABLE_NETCONF_MASTER),1)
+	DEFS+=-DZT_ENABLE_NETCONF_MASTER
+	LIBS+=-L/usr/local/lib -lhiredis
+	ARCH_FLAGS=-arch x86_64
+endif
+
 # Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
 DEFS+=-DZT_SALSA20_SSE
 
@@ -36,7 +44,7 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS=-arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS=$(ARCH_FLAGS) -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
