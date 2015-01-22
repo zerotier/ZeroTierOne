@@ -11,6 +11,11 @@
 
 #include "Constants.hpp"
 
+/* Enable SSE-optimized Salsa20 on SSE2 machines */
+#ifdef __SSE2__
+#define ZT_SALSA20_SSE
+#endif
+
 #ifdef ZT_SALSA20_SSE
 #include <emmintrin.h>
 #endif // ZT_SALSA20_SSE

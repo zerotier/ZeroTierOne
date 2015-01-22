@@ -25,9 +25,6 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
-# Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
-DEFS+=-DZT_SALSA20_SSE
-
 ifeq ($(ZT_DEBUG),1)
 #	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
 	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)

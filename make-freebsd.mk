@@ -9,27 +9,6 @@ include objects.mk
 OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o osnet/BSDRoutingTable.o
 TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
 
-# Enable SSE-optimized Salsa20 on x86 and x86_64 machines
-MACHINE=$(shell uname -m)
-ifeq ($(MACHINE),x86_64)
-	DEFS+=-DZT_SALSA20_SSE 
-endif
-ifeq ($(MACHINE),amd64)
-	DEFS+=-DZT_SALSA20_SSE 
-endif
-ifeq ($(MACHINE),i686)
-	DEFS+=-DZT_SALSA20_SSE 
-endif
-ifeq ($(MACHINE),i586)
-	DEFS+=-DZT_SALSA20_SSE 
-endif
-ifeq ($(MACHINE),i386)
-	DEFS+=-DZT_SALSA20_SSE 
-endif
-ifeq ($(MACHINE),x86)
-	DEFS+=-DZT_SALSA20_SSE 
-endif
-
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	ZT_AUTO_UPDATE=1
