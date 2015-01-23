@@ -33,8 +33,8 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS?=-O2 CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS?=-O3
-	CFLAGS+=-arch i386 -arch x86_64 -Wall -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS?=-O3 -fstack-protector
+	CFLAGS+=-arch i386 -arch x86_64 -Wall -flto -fPIE -fvectorize -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
