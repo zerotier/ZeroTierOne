@@ -271,6 +271,20 @@ public:
 	}
 
 	/**
+	 * @return Checksum of this address (not portable, so don't use for long-term storage purposes)
+	 */
+	inline uint64_t hashCode() const
+	{
+		switch(_sa.saddr.sa_family) {
+			case AF_INET:
+				return ((uint64_t)_sa.sin.sin_port + (uint64_t)(_sa.sin.sin_addr.s_addr));
+			case AF_INET6:
+				return ((uint64_t)_sa.sin6.sin6_port + ( ((const uint64_t *)_sa.sin6.sin6_addr.s6_addr)[0] ^ ((const uint64_t *)_sa.sin6.sin6_addr.s6_addr)[1] ));
+		}
+		return 0;
+	}
+
+	/**
 	 * @return Combined length of internal structure, room for either V4 or V6
 	 */
 	inline unsigned int saddrSpaceLen() const throw() { return sizeof(_sa); }
