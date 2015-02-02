@@ -47,6 +47,7 @@
 #include "Packet.hpp"
 #include "Logger.hpp"
 #include "Dictionary.hpp"
+#include "ExternalSurface.hpp"
 
 namespace ZeroTier {
 
@@ -373,6 +374,8 @@ private:
 	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _supernodes;
 	std::vector< Address > _supernodeAddresses;
 	std::vector< SharedPtr<Peer> > _supernodePeers;
+
+	ExternalSurface _surface;
 
 	Mutex _lock;
 
