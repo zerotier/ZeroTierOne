@@ -74,39 +74,4 @@ RoutingTable::~RoutingTable()
 {
 }
 
-uint64_t RoutingTable::networkEnvironmentFingerprint(const std::vector<std::string> &ignoreInterfaces) const
-{
-	uint64_t fp = 0;
-	std::vector<Entry> rtab(get());
-	for(std::vector<Entry>::const_iterator re(rtab.begin());re!=rtab.end();++re) {
-		bool skip = false;
-		for(std::vector<std::string>::const_iterator ii(ignoreInterfaces.begin());ii!=ignoreInterfaces.end();++ii) {
-			if (*ii == re->device) {
-				skip = true;
-				break;
-			}
-		}
-		if (skip)
-			continue;
-		++fp;
-		if (re->destination.isV4()) {
-			fp = Utils::sdbmHash(re->destination.rawIpData(),4,fp);
-			fp = Utils::sdbmHash((uint16_t)re->destination.netmaskBits(),fp);
-		} else if (re->destination.isV6()) {
-			fp = Utils::sdbmHash(re->destination.rawIpData(),16,fp);
-			fp = Utils::sdbmHash((uint16_t)re->destination.netmaskBits(),fp);
-		}
-		if (re->gateway.isV4()) {
-			fp = Utils::sdbmHash(re->gateway.rawIpData(),4,fp);
-			fp = Utils::sdbmHash((uint16_t)re->gateway.netmaskBits(),fp);
-		} else if (re->gateway.isV6()) {
-			fp = Utils::sdbmHash(re->gateway.rawIpData(),16,fp);
-			fp = Utils::sdbmHash((uint16_t)re->gateway.netmaskBits(),fp);
-		}
-		fp = Utils::sdbmHash(re->device,fp);
-		fp = Utils::sdbmHash((uint32_t)re->metric,fp);
-	}
-	return fp;
-}
-
 } // namespace ZeroTier

@@ -115,16 +115,6 @@ public:
 	 * @return Entry or null entry on failure (or delete)
 	 */
 	virtual RoutingTable::Entry set(const InetAddress &destination,const InetAddress &gateway,const char *device,int metric) = 0;
-
-	/**
-	 * Compute a 64-bit value that hashes the current state of the network environment
-	 *
-	 * This shouldn't be overridden -- uses get() to get underlying routing table.
-	 *
-	 * @param ignoreInterfaces Names of interfaces to exclude from fingerprint (e.g. my own)
-	 * @return Integer CRC-type fingerprint of current network environment
-	 */
-	uint64_t networkEnvironmentFingerprint(const std::vector<std::string> &ignoreInterfaces) const;
 };
 
 } // namespace ZeroTier

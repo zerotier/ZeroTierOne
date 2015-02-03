@@ -275,11 +275,6 @@
 #define ZT_PING_CHECK_DELAY 10000
 
 /**
- * Delay between checks of network configuration fingerprint
- */
-#define ZT_NETWORK_FINGERPRINT_CHECK_DELAY 5000
-
-/**
  * Delay between ordinary case pings of direct links
  */
 #define ZT_PEER_DIRECT_PING_DELAY 120000

@@ -391,7 +391,6 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastNetworkAutoconfCheck = Utils::now() - 5000ULL; // check autoconf again after 5s for startup
 		uint64_t lastPingCheck = 0;
 		uint64_t lastClean = Utils::now(); // don't need to do this immediately
-		uint64_t lastNetworkFingerprintCheck = 0;
 		uint64_t lastMulticastCheck = 0;
 		uint64_t lastSupernodePingCheck = 0;
 		uint64_t lastBeacon = 0;
@@ -399,7 +398,6 @@ Node::ReasonForTermination Node::run()
 		uint64_t lastShutdownIfUnreadableCheck = 0;
 		long lastDelayDelta = 0;
 
-		uint64_t networkConfigurationFingerprint = 0;
 		RR->timeOfLastResynchronize = Utils::now();
 
 		// We are up and running
@@ -430,17 +428,6 @@ Node::ReasonForTermination Node::run()
 				resynchronize = true;
 				LOG("probable suspend/resume detected, pausing a moment for things to settle...");
 				Thread::sleep(ZT_SLEEP_WAKE_SETTLE_TIME);
-			}
-
-			// If our network environment looks like it changed, resynchronize.
-			if ((resynchronize)||((now - lastNetworkFingerprintCheck) >= ZT_NETWORK_FINGERPRINT_CHECK_DELAY)) {
-				lastNetworkFingerprintCheck = now;
-				uint64_t fp = RR->routingTable->networkEnvironmentFingerprint(RR->nc->networkTapDeviceNames());
-				if (fp != networkConfigurationFingerprint) {
-					LOG("netconf fingerprint change: %.16llx != %.16llx, resyncing with network",networkConfigurationFingerprint,fp);
-					networkConfigurationFingerprint = fp;
-					resynchronize = true;
-				}
 			}
 
 			// Supernodes do not resynchronize unless explicitly ordered via SIGHUP.
