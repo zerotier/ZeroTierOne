@@ -258,6 +258,24 @@ void Topology::clean(uint64_t now)
 	}
 }
 
+bool Topology::updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress)
+{
+	Mutex::Lock _l(_lock);
+
+	if (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),remotePeer->address()) == _supernodeAddresses.end())
+		return false;
+
+	if (_surface.update(mirroredAddress)) {
+		// Clear non-fixed paths for all peers
+		for(std::map< Address,SharedPtr<Peer> >::const_iterator ap(_activePeers.begin());ap!=_activePeers.end();++ap)
+			ap->second->clearPaths(false);
+
+		return true;
+	}
+
+	return false;
+}
+
 bool Topology::authenticateRootTopology(const Dictionary &rt)
 {
 	try {

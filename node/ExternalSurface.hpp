@@ -46,7 +46,7 @@ public:
 	 * @param remote Remote address as reflected by any trusted peer
 	 * @return True if our external surface has changed
 	 */
-	inline bool revise(const InetAddress &remote)
+	inline bool update(const InetAddress &remote)
 		throw()
 	{
 		const unsigned long idx = (remote.isV4() ? 0 : 2) | (remote.isLinkLocal() ? 1 : 0);

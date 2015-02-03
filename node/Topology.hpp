@@ -355,6 +355,19 @@ public:
 	};
 
 	/**
+	 * Update our knowledge of exterior network addresses
+	 *
+	 * If the remote peer in question is trusted, this will update our internal
+	 * instance of ExternalSurface. If our surface has changed, this triggers a
+	 * partial or total reset of ephemeral peer addresses and a renegotiation of
+	 * new ones using supernodes / relays.
+	 *
+	 * @param remotePeer Remote peer address
+	 * @param mirroredAddress Real-world network address the remote peer told us we have
+	 */
+	bool updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress);
+
+	/**
 	 * Validate a root topology dictionary against the identities specified in Defaults
 	 *
 	 * @param rt Root topology dictionary
