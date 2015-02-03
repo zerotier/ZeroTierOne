@@ -119,9 +119,6 @@ private:
 	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-	bool _doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-#endif
 	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);

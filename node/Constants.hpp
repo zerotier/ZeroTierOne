@@ -435,9 +435,4 @@
  */
 #define ZT_TEST_NETWORK_ID 0xffffffffffffffffULL
 
-/**
- * Enable support for legacy <1.0.0 multicast peers (P5)
- */
-#define ZT_SUPPORT_LEGACY_MULTICAST 1
-
 #endif

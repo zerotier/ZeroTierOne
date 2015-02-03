@@ -79,9 +79,6 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
 				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
 				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-				case Packet::VERB_P5_MULTICAST_FRAME:             return _doP5_MULTICAST_FRAME(RR,peer);
-#endif
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
@@ -578,122 +575,6 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 	}
 	return true;
 }
-
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-bool IncomingPacket::_doP5_MULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
-{
-	/* This code is a bit of a hack to handle compatibility with <1.0.0 peers
-	 * and will go away once there's no longer any left (to speak of) on the
-	 * network. */
-
-	// Quick and dirty dedup -- this is all condemned code in any case
-	static uint64_t p5MulticastDedupBuffer[1024];
-	static unsigned long p5MulticastDedupBufferPtr = 0;
-	static Mutex p5MulticastDedupBuffer_m;
-
-	try {
-		unsigned int depth = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH);
-		Address origin(Address(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_ORIGIN,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_ORIGIN),ZT_ADDRESS_LENGTH));
-		const unsigned int flags = (*this)[ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FLAGS];
-		const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_NETWORK_ID);
-		const uint64_t guid = at<uint64_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_GUID);
-		const MAC sourceMac(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_SOURCE_MAC,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_SOURCE_MAC),ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_SOURCE_MAC);
-		const MulticastGroup dest(MAC(field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_DEST_MAC,ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_DEST_MAC),ZT_PROTO_VERB_P5_MULTICAST_FRAME_LEN_DEST_MAC),at<uint32_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_DEST_ADI));
-		const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_ETHERTYPE);
-		const unsigned int frameLen = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME_LEN);
-		const unsigned char *const frame = field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME,frameLen);
-		const unsigned int signatureLen = at<uint16_t>(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME + frameLen);
-
-		{
-			if (origin == RR->identity.address())
-				return true;
-			Mutex::Lock _l(p5MulticastDedupBuffer_m);
-			if (!p5MulticastDedupBufferPtr) {
-				memset(p5MulticastDedupBuffer,0,sizeof(p5MulticastDedupBuffer));
-			} else {
-				for(unsigned int i=0;i<1024;++i) {
-					if (p5MulticastDedupBuffer[i] == guid)
-						return true;
-				}
-			}
-			p5MulticastDedupBuffer[p5MulticastDedupBufferPtr++ % 1024] = guid;
-		}
-
-		SharedPtr<Network> network(RR->nc->network(nwid));
-		if (network) {
-			if ((flags & ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE) != 0) {
-				CertificateOfMembership com;
-				com.deserialize(*this,ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_FRAME + frameLen + 2 + signatureLen);
-				if (com.hasRequiredFields())
-					network->addMembershipCertificate(com,false);
-			}
-			if (!network->isAllowed(origin)) {
-				SharedPtr<Peer> originPeer(RR->topology->getPeer(origin));
-				if (originPeer)
-					_sendErrorNeedCertificate(RR,originPeer,nwid);
-			} else if ((frameLen > 0)&&(frameLen <= 2800)) {
-				if (!dest.mac().isMulticast())
-					return true;
-				if ((!sourceMac)||(sourceMac.isMulticast())||(sourceMac == network->mac()))
-					return true;
-				if (sourceMac != MAC(origin,nwid)) {
-					if (network->permitsBridging(origin)) {
-						network->learnBridgeRoute(sourceMac,origin);
-					} else return true;
-				}
-				network->tapPut(sourceMac,dest.mac(),etherType,frame,frameLen);
-			}
-		}
-
-		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_P5_MULTICAST_FRAME,0,Packet::VERB_NOP,Utils::now());
-
-		if (RR->topology->amSupernode()) {
-			// To support legacy peers, old fashioned "P5" multicasts are propagated manually by supernodes.
-			// If the sending peer is >=1.0.0, they only go to legacy peers. Otherwise they go to all
-			// peers.
-
-			const bool senderIsLegacy = ((peer->remoteVersionMajor() < 1)||(depth == 0xbeef)); // magic number means "relayed on behalf of legacy peer"
-			const unsigned int limit = 128; // use a fairly generous limit since we want legacy peers to always work until they go away
-
-			std::vector<Address> members(RR->mc->getMembers(nwid,dest,limit));
-			SharedPtr<Peer> lpp;
-			uint64_t now = Utils::now();
-
-			setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xffff);
-			setSource(RR->identity.address());
-			compress();
-			for(std::vector<Address>::iterator lp(members.begin());lp!=members.end();++lp) {
-				lpp = RR->topology->getPeer(*lp);
-				if ( (lpp) && (lpp->hasActiveDirectPath(now)) && (*lp != origin) && (*lp != peer->address()) && ((senderIsLegacy) || (lpp->remoteVersionMajor() < 1)) ) {
-					newInitializationVector();
-					setDestination(*lp);
-					RR->sw->send(*this,true);
-				}
-			}
-		} else if (!RR->topology->isSupernode(peer->address())) {
-			// If we received this from a non-supernode, this must be a legacy peer. In that
-			// case relay it up to our supernode so it can get broadcast since there are now
-			// going to be too few legacy peers to form a mesh for the old style of propagation.
-
-			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
-			if (sn) {
-				setAt(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX_PROPAGATION_DEPTH,(uint16_t)0xbeef); // magic number means "relayed on behalf of legacy peer"
-				newInitializationVector();
-				setDestination(sn->address());
-				setSource(RR->identity.address());
-				compress();
-				armor(sn->key(),true);
-				sn->send(RR,data(),size(),Utils::now());
-			}
-		}
-	} catch (std::exception &ex) {
-		TRACE("dropped P5_MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
-	} catch ( ... ) {
-		TRACE("dropped P5_MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
-	}
-	return true;
-}
-#endif // ZT_SUPPORT_LEGACY_MULTICAST
 
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
