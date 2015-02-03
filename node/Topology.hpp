@@ -298,6 +298,7 @@ public:
 	/**
 	 * Function object to forget direct links to active peers and then ping them indirectly
 	 */
+	/*
 	class ResetActivePeers
 	{
 	public:
@@ -332,6 +333,7 @@ public:
 		std::vector<Address> _supernodeAddresses;
 		const RuntimeEnvironment *RR;
 	};
+	*/
 
 	/**
 	 * Function object to collect peers with any known direct path
@@ -364,8 +366,9 @@ public:
 	 *
 	 * @param remotePeer Remote peer address
 	 * @param mirroredAddress Real-world network address the remote peer told us we have
+	 * @param now Current time
 	 */
-	bool updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress);
+	bool updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress,uint64_t now);
 
 	/**
 	 * Validate a root topology dictionary against the identities specified in Defaults

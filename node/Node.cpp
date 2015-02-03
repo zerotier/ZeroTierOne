@@ -468,12 +468,7 @@ Node::ReasonForTermination Node::run()
 			}
 
 			if (resynchronize) {
-				/* Send NOP to all peers on resynchronize, directly to supernodes and
-				 * indirectly to regular nodes (to trigger RENDEZVOUS). Also clear
-				 * learned paths since they're likely no longer valid, and close
-				 * TCP sockets since they're also likely invalid. */
 				RR->sm->closeTcpSockets();
-				RR->topology->eachPeer(Topology::ResetActivePeers(RR,now));
 			} else {
 				/* Periodically check for changes in our local multicast subscriptions
 				 * and broadcast those changes to directly connected peers. */
