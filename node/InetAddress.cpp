@@ -137,7 +137,7 @@ std::string InetAddress::toString() const
 
 void InetAddress::fromString(const std::string &ipSlashPort)
 {
-	std::size_t slashAt = ipSlashPort.find('/');
+	size_t slashAt = ipSlashPort.find('/');
 	if ((slashAt == std::string::npos)||(slashAt >= ipSlashPort.length()))
 		set(ipSlashPort,0);
 	else {

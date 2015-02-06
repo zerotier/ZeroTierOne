@@ -270,7 +270,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -294,7 +294,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>

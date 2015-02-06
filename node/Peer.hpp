@@ -400,13 +400,4 @@ private:
 
 } // namespace ZeroTier
 
-// Add a swap() for shared ptr's to peers to speed up peer sorts
-namespace std {
-	template<>
-	inline void swap(ZeroTier::SharedPtr<ZeroTier::Peer> &a,ZeroTier::SharedPtr<ZeroTier::Peer> &b)
-	{
-		a.swap(b);
-	}
-}
-
 #endif

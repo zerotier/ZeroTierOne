@@ -573,8 +573,8 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
-	fprintf(out,"  -t<port>          - Port for TCP (default: disabled)"ZT_EOL_S);
+	fprintf(out,"  -p <port>         - Port for UDP (default: 9993)"ZT_EOL_S);
+	fprintf(out,"  -t <port>         - Port for TCP (default: disabled)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
