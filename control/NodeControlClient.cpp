@@ -33,6 +33,8 @@
 #include "IpcListener.hpp"
 #include "NodeControlService.hpp"
 
+#include "stddef.h"
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>

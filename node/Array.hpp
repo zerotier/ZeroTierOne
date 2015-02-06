@@ -31,12 +31,14 @@
 #include <string>
 #include <algorithm>
 
+#include "stddef.h"
+
 namespace ZeroTier {
 
 /**
  * Static array -- a simple thing that's belonged in STL since the time of the dinosaurs
  */
-template<typename T,std::size_t S>
+template<typename T,size_t S>
 class Array
 {
 public:
@@ -44,19 +46,19 @@ public:
 
 	Array(const Array &a)
 	{
-		for(std::size_t i=0;i<S;++i)
+		for(size_t i=0;i<S;++i)
 			data[i] = a.data[i];
 	}
 
 	Array(const T *ptr)
 	{
-		for(std::size_t i=0;i<S;++i)
+		for(size_t i=0;i<S;++i)
 			data[i] = ptr[i];
 	}
 
 	inline Array &operator=(const Array &a)
 	{
-		for(std::size_t i=0;i<S;++i)
+		for(size_t i=0;i<S;++i)
 			data[i] = a.data[i];
 		return *this;
 	}
@@ -68,8 +70,8 @@ public:
 	typedef const T& const_reference;
 	typedef T* iterator;
 	typedef const T* const_iterator;
-	typedef std::size_t size_type;
-	typedef std::ptrdiff_t difference_type;
+	typedef size_t size_type;
+	typedef ptrdiff_t difference_type;
 	typedef std::reverse_iterator<iterator> reverse_iterator;
 	typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
@@ -83,11 +85,11 @@ public:
 	inline const_reverse_iterator rbegin() const throw() { return const_reverse_iterator(begin()); }
 	inline const_reverse_iterator rend() const throw() { return const_reverse_iterator(end()); }
 
-	inline std::size_t size() const throw() { return S; }
-	inline std::size_t max_size() const throw() { return S; }
+	inline size_t size() const throw() { return S; }
+	inline size_t max_size() const throw() { return S; }
 
-	inline reference operator[](const std::size_t n) throw() { return data[n]; }
-	inline const_reference operator[](const std::size_t n) const throw() { return data[n]; }
+	inline reference operator[](const size_t n) throw() { return data[n]; }
+	inline const_reference operator[](const size_t n) const throw() { return data[n]; }
 
 	inline reference front() throw() { return data[0]; }
 	inline const_reference front() const throw() { return data[0]; }
