@@ -40,7 +40,8 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-CXXFLAGS=$(CFLAGS) -fno-rtti
+CXXFLAGS?=-fno-rtti
+CXXFLAGS+=$(CFLAGS)
 
 all:	one
 

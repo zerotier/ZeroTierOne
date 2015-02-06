@@ -38,7 +38,8 @@ else
 	STRIP=strip
 endif
 
-CXXFLAGS=$(CFLAGS) -fno-rtti
+CXXFLAGS?=-fno-rtti
+CXXFLAGS=$(CFLAGS)
 
 all: one
 

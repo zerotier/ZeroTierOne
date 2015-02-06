@@ -34,7 +34,8 @@ else
 	STRIP=strip --strip-all
 endif
 
-CXXFLAGS=$(CFLAGS) -fno-rtti
+CXXFLAGS?=-fno-rtti
+CXXFLAGS=$(CFLAGS)
 
 all:	one
 
