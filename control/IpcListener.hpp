@@ -1,5 +1,5 @@
 /*
- * ZeroTier One - Global Peer to Peer Ethernet
+ * ZeroTier One - Network Virtualization Everywhere
  * Copyright (C) 2011-2014	ZeroTier Networks LLC
  *
  * This program is free software: you can redistribute it and/or modify
