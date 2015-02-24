@@ -622,29 +622,70 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 {
 	try {
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
+		unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
+		Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
+		uint64_t haveTimestamp = 0;
+		if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size())
+			haveTimestamp = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
 
-#ifdef ZT_ENABLE_NETCONF_MASTER
+		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
+
 		if (RR->netconfMaster) {
-			unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
-			Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
-			uint64_t haveTimestamp = 0;
-			if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size())
-				haveTimestamp = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
-			RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),source(),nwid,metaData,haveTimestamp);
+			Dictionary netconf;
+			switch(RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),source(),nwid,metaData,haveTimestamp,netconf)) {
+				case NetworkConfigMaster::NETCONF_QUERY_OK: {
+					std::string netconfStr(netconf.toString());
+					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
+						LOG("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
+					} else {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+						outp.append(packetId());
+						outp.append(nwid);
+						outp.append((uint16_t)netconfStr.length());
+						outp.append(netconfStr.data(),netconfStr.length());
+						outp.compress();
+						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) {
+							LOG("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
+						} else {
+							_fromSock->send(_remoteAddress,outp.data(),outp.size());
+						}
+					}
+				}	break;
+				case NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND: {
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(packetId());
+					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
+					outp.append(nwid);
+					outp.armor(peer->key(),true);
+					_fromSock->send(_remoteAddress,outp.data(),outp.size());
+				}	break;
+				case NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED: {
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
+					outp.append(packetId());
+					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
+					outp.append(nwid);
+					outp.armor(peer->key(),true);
+					_fromSock->send(_remoteAddress,outp.data(),outp.size());
+				} break;
+				case NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
+					LOG("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
+					break;
+				default:
+					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkConfigMaster::doNetworkConfigRequest()");
+					break;
+			}
 		} else {
-#endif
-			Packet outp(source(),RR->identity.address(),Packet::VERB_ERROR);
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 			outp.append(packetId());
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);
 			_fromSock->send(_remoteAddress,outp.data(),outp.size());
-#ifdef ZT_ENABLE_NETCONF_MASTER
 		}
-#endif
-
-		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {

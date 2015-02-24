@@ -28,108 +28,65 @@
 #ifndef ZT_NETWORKCONFIGMASTER_HPP
 #define ZT_NETWORKCONFIGMASTER_HPP
 
-#include "Constants.hpp"
-
-#define ZT_LOCAL_CONFIG_NETCONF_REDIS_HOST "netconf.redisHost"
-#define ZT_LOCAL_CONFIG_NETCONF_REDIS_PORT "netconf.redisPort"
-#define ZT_LOCAL_CONFIG_NETCONF_REDIS_PORT_DEFAULT 6379
-#define ZT_LOCAL_CONFIG_NETCONF_REDIS_AUTH "netconf.redisAuth"
-#define ZT_LOCAL_CONFIG_NETCONF_REDIS_DBNUM "netconf.redisDatabaseNumber"
-#define ZT_LOCAL_CONFIG_NETCONF_REDIS_DBNUM_DEFAULT 0
-
-#ifdef ZT_ENABLE_NETCONF_MASTER
-
 #include <stdint.h>
-#include <string>
-#include <map>
-#include <vector>
 
-#include "Address.hpp"
-#include "Dictionary.hpp"
-#include "Mutex.hpp"
+#include "Constants.hpp"
 #include "InetAddress.hpp"
-
-#include <hiredis/hiredis.h>
+#include "Dictionary.hpp"
+#include "Address.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 
 /**
- * Network configuration master -- responds to NETCONF requests
- *
- * This requires the 'hiredis' C library to build.
+ * Interface for network configuration (netconf) master implementations
  */
 class NetworkConfigMaster
 {
 public:
 	/**
-	 * Create netconf master
-	 *
-	 * This doesn't connect to Redis until the first request is received.
-	 *
-	 * @param renv Runtime environment
-	 * @param redisHost Hostname or IP of Redis server
-	 * @param redisPort Redis IP port number
-	 * @param redisPassword Redis AUTH password or NULL if none
-	 * @param redisDatabaseNumber Redis database number (usually 0)
+	 * Return value of doNetworkConfigRequest
 	 */
-	NetworkConfigMaster(
-		const RuntimeEnvironment *renv,
-		const char *redisHost,
-		unsigned int redisPort,
-		const char *redisPassword,
-		unsigned int redisDatabaseNumber);
+	enum ResultCode
+	{
+		NETCONF_QUERY_OK = 0,
+		NETCONF_QUERY_OBJECT_NOT_FOUND = 1,
+		NETCONF_QUERY_ACCESS_DENIED = 2,
+		NETCONF_QUERY_INTERNAL_SERVER_ERROR = 3
+	};
 
-	~NetworkConfigMaster();
+	NetworkConfigMaster() {}
+	virtual ~NetworkConfigMaster() {}
 
 	/**
 	 * Handle a network config request, sending replies if necessary
 	 *
-	 * This is a blocking call, so rate is limited by Redis. It will fail
-	 * and log its failure if the Redis server is not available or times out.
+	 * This call is permitted to block, and may be called concurrently from more
+	 * than one thread. Implementations must use locks if needed.
+	 *
+	 * On internal server errors, the 'error' field in result can be filled in
+	 * to indicate the error.
 	 *
 	 * @param fromAddr Originating IP address
 	 * @param packetId 64-bit packet ID
 	 * @param member Originating peer ZeroTier address
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
-	 * @param haveTimestamp Timestamp requesting peer has or 0 if none or not included
+	 * @param haveTimestamp Timestamp sent by requesting peer or 0 if none
+	 * @param result Dictionary to receive resulting signed netconf on success
+	 * @return Returns NETCONF_QUERY_OK if result dictionary is valid, or an error code on error
 	 */
-	void doNetworkConfigRequest(
+	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		uint64_t packetId,
 		const Address &member,
 		uint64_t nwid,
 		const Dictionary &metaData,
-		uint64_t haveTimestamp);
-
-private:
-	// These assume _lock is locked
-	bool _reconnect();
-	bool _hgetall(const char *key,Dictionary &hdata);
-	bool _hmset(const char *key,const Dictionary &hdata);
-	bool _hget(const char *key,const char *hashKey,std::string &value);
-	bool _hset(const char *key,const char *hashKey,const char *value);
-	bool _get(const char *key,std::string &value);
-	bool _smembers(const char *key,std::vector<std::string> &sdata);
-
-	bool _initNewMember(uint64_t nwid,const Address &member,const Dictionary &metaData,Dictionary &memberRecord);
-	bool _generateNetconf(uint64_t nwid,const Address &member,const Dictionary &metaData,std::string &netconf,uint64_t &ts);
-
-	Mutex _lock;
-
-	std::string _redisHost;
-	std::string _redisPassword;
-	unsigned int _redisPort;
-	unsigned int _redisDatabaseNumber;
-
-	const RuntimeEnvironment *RR;
-	redisContext *_rc;
+		uint64_t haveTimestamp,
+		Dictionary &result) = 0;
 };
 
 } // namespace ZeroTier
-
-#endif // ZT_ENABLE_NETCONF_MASTER
 
 #endif
