@@ -632,7 +632,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 
 		if (RR->netconfMaster) {
 			Dictionary netconf;
-			switch(RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),source(),nwid,metaData,haveTimestamp,netconf)) {
+			switch(RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),peer->identity(),nwid,metaData,haveTimestamp,netconf)) {
 				case NetworkConfigMaster::NETCONF_QUERY_OK: {
 					std::string netconfStr(netconf.toString());
 					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
@@ -652,6 +652,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						}
 					}
 				}	break;
+				case NetworkConfigMaster::NETCONF_QUERY_OK_BUT_NOT_NEWER: // nothing to do -- netconf has not changed
+					break;
 				case NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);

@@ -25,11 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "Constants.hpp"
-#include "NetworkConfigMaster.hpp"
-
-#ifdef ZT_ENABLE_NETCONF_MASTER
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,47 +35,41 @@
 
 #include <algorithm>
 #include <utility>
+#include <stdexcept>
 
-#include "RuntimeEnvironment.hpp"
-#include "Switch.hpp"
-#include "Packet.hpp"
-#include "NetworkConfig.hpp"
-#include "Utils.hpp"
-#include "Node.hpp"
-#include "Logger.hpp"
-#include "Topology.hpp"
-#include "Peer.hpp"
-#include "CertificateOfMembership.hpp"
-
-// Redis timeout in seconds
-#define ZT_NETCONF_REDIS_TIMEOUT 10
+#include "RedisNetworkConfigMaster.hpp"
+#include "../node/Utils.hpp"
+#include "../node/CertificateOfMembership.hpp"
+#include "../node/NetworkConfig.hpp"
 
 namespace ZeroTier {
 
-NetworkConfigMaster::NetworkConfigMaster(
-	const RuntimeEnvironment *renv,
+RedisNetworkConfigMaster::RedisNetworkConfigMaster(
+	const Identity &signingId,
 	const char *redisHost,
 	unsigned int redisPort,
 	const char *redisPassword,
 	unsigned int redisDatabaseNumber) :
 	_lock(),
+	_signingId(signingId),
 	_redisHost(redisHost),
 	_redisPassword((redisPassword) ? redisPassword : ""),
 	_redisPort(redisPort),
 	_redisDatabaseNumber(redisDatabaseNumber),
-	RR(renv),
 	_rc((redisContext *)0)
 {
+	if (!_signingId.hasPrivate())
+		throw std::runtime_error("RedisNetworkConfigMaster signing identity must have a private key");
 }
 
-NetworkConfigMaster::~NetworkConfigMaster()
+RedisNetworkConfigMaster::~RedisNetworkConfigMaster()
 {
 	Mutex::Lock _l(_lock);
 	if (_rc)
 		redisFree(_rc);
 }
 
-void NetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Address &member,uint64_t nwid,const Dictionary &metaData,uint64_t haveTimestamp)
+NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Identity &member,uint64_t nwid,const Dictionary &metaData,uint64_t haveTimestamp,Dictionary &netconf)
 {
 	char memberKey[128],nwids[24],addrs[16],nwKey[128],revKey[128];
 	Dictionary memberRecord;
@@ -89,101 +78,78 @@ void NetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uin
 	Mutex::Lock _l(_lock);
 
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.toInt());
+	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
 	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
 	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
 	Utils::snprintf(revKey,sizeof(revKey),"zt1:network:%s:revision",nwids);
 
-	TRACE("netconf: %s : %s if > %llu",nwids,addrs,(unsigned long long)haveTimestamp);
+	//TRACE("netconf: %s : %s if > %llu",nwids,addrs,(unsigned long long)haveTimestamp);
 
 	// Check to make sure network itself exists and is valid
 	if (!_hget(nwKey,"id",tmps2)) {
-		LOG("netconf: Redis error retrieving %s/id",nwKey);
-		return;
+		netconf["error"] = "Redis error retrieving network record";
+		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
-	if (tmps2 != nwids) {
-		TRACE("netconf: network %s not found",nwids);
-		Packet outp(member,RR->identity.address(),Packet::VERB_ERROR);
-		outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-		outp.append(packetId);
-		outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
-		outp.append(nwid);
-		RR->sw->send(outp,true);
-		return;
-	}
+	if (tmps2 != nwids)
+		return NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND;
 
 	// Get network revision
 	if (!_get(revKey,revision)) {
-		LOG("netconf: Redis error retrieving %s",revKey);
-		return;
+		netconf["error"] = "Redis error retrieving network revision";
+		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 	if (!revision.length())
 		revision = "0";
 
 	// Get network member record for this peer
 	if (!_hgetall(memberKey,memberRecord)) {
-		LOG("netconf: Redis error retrieving %s",memberKey);
-		return;
+		netconf["error"] = "Redis error retrieving member record";
+		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
 	// If there is no member record, init a new one -- for public networks this
 	// auto-authorizes, and for private nets it makes the peer show up in the UI
 	// so the admin can authorize or delete/hide it.
 	if ((memberRecord.size() == 0)||(memberRecord.get("id","") != addrs)||(memberRecord.get("nwid","") != nwids)) {
-		if (!_initNewMember(nwid,member,metaData,memberRecord))
-			return;
+		if (!_initNewMember(nwid,member,metaData,memberRecord)) {
+			netconf["error"] = "_initNewMember() failed";
+			return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+		}
 	}
 
 	if (memberRecord.getBoolean("authorized")) {
 		// Get current netconf and netconf timestamp
-		uint64_t ts = memberRecord.getHexUInt("netconfTimestamp",0);
-		std::string netconf(memberRecord.get("netconf",""));
+		uint64_t ts = memberRecord.getUInt("netconfTimestamp",0);
+		std::string netconfStr(memberRecord.get("netconf",""));
+		netconf.fromString(netconfStr);
 
 		// Update statistics for this node
 		Dictionary upd;
-		upd.setHex("netconfClientTimestamp",haveTimestamp);
+		upd.set("netconfClientTimestamp",haveTimestamp);
 		if (fromAddr)
 			upd.set("lastAt",fromAddr.toString());
-		upd.setHex("lastSeen",Utils::now());
+		upd.set("lastSeen",Utils::now());
 		_hmset(memberKey,upd);
 
 		// Attempt to generate netconf for this node if there isn't
 		// one or it's not in step with the network's revision.
-		if (((ts == 0)||(netconf.length() == 0))||(memberRecord.get("netconfRevision","") != revision)) {
-			if (!_generateNetconf(nwid,member,metaData,netconf,ts))
-				return;
+		if (((ts == 0)||(netconfStr.length() == 0))||(memberRecord.get("netconfRevision","") != revision)) {
+			std::string errorMessage;
+			if (!_generateNetconf(nwid,member,metaData,netconf,ts,errorMessage)) {
+				netconf["error"] = errorMessage;
+				return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+			}
 		}
 
-		// If the netconf we have (or just generated) is newer than what
-		// the client reports that it has, send it. Otherwise we just
-		// ignore the message since the client is up to date.
-		if (ts > haveTimestamp) {
-			TRACE("netconf: sending %u bytes of netconf data to %s",netconf.length(),addrs);
-			Packet outp(member,RR->identity.address(),Packet::VERB_OK);
-			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-			outp.append(packetId);
-			outp.append(nwid);
-			outp.append((uint16_t)netconf.length());
-			outp.append(netconf.data(),netconf.length());
-			outp.compress();
-			if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check -- this would be weird
-				TRACE("netconf: compressed packet exceeds ZT_PROTO_MAX_PACKET_LENGTH!");
-				return;
-			}
-			RR->sw->send(outp,true);
-		}
+		if (ts > haveTimestamp)
+			return NetworkConfigMaster::NETCONF_QUERY_OK;
+		else return NetworkConfigMaster::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 	} else {
-		TRACE("netconf: access denied for %s on %s",addrs,nwids);
-		Packet outp(member,RR->identity.address(),Packet::VERB_ERROR);
-		outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-		outp.append(packetId);
-		outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
-		outp.append(nwid);
-		RR->sw->send(outp,true);
+		return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
 	}
 }
 
-bool NetworkConfigMaster::_reconnect()
+bool RedisNetworkConfigMaster::_reconnect()
 {
 	struct timeval tv;
 
@@ -207,7 +173,7 @@ bool NetworkConfigMaster::_reconnect()
 	return true;
 }
 
-bool NetworkConfigMaster::_hgetall(const char *key,Dictionary &hdata)
+bool RedisNetworkConfigMaster::_hgetall(const char *key,Dictionary &hdata)
 {
 	if (!_rc) {
 		if (!_reconnect())
@@ -242,7 +208,7 @@ bool NetworkConfigMaster::_hgetall(const char *key,Dictionary &hdata)
 	return true;
 }
 
-bool NetworkConfigMaster::_hmset(const char *key,const Dictionary &hdata)
+bool RedisNetworkConfigMaster::_hmset(const char *key,const Dictionary &hdata)
 {
 	const char *hargv[1024];
 
@@ -281,7 +247,7 @@ bool NetworkConfigMaster::_hmset(const char *key,const Dictionary &hdata)
 	return true;
 }
 
-bool NetworkConfigMaster::_hget(const char *key,const char *hashKey,std::string &value)
+bool RedisNetworkConfigMaster::_hget(const char *key,const char *hashKey,std::string &value)
 {
 	if (!_rc) {
 		if (!_reconnect())
@@ -304,7 +270,7 @@ bool NetworkConfigMaster::_hget(const char *key,const char *hashKey,std::string 
 	return true;
 }
 
-bool NetworkConfigMaster::_hset(const char *key,const char *hashKey,const char *value)
+bool RedisNetworkConfigMaster::_hset(const char *key,const char *hashKey,const char *value)
 {
 	if (!_rc) {
 		if (!_reconnect())
@@ -328,7 +294,7 @@ bool NetworkConfigMaster::_hset(const char *key,const char *hashKey,const char *
 	return true;
 }
 
-bool NetworkConfigMaster::_get(const char *key,std::string &value)
+bool RedisNetworkConfigMaster::_get(const char *key,std::string &value)
 {
 	if (!_rc) {
 		if (!_reconnect())
@@ -351,7 +317,7 @@ bool NetworkConfigMaster::_get(const char *key,std::string &value)
 	return true;
 }
 
-bool NetworkConfigMaster::_smembers(const char *key,std::vector<std::string> &sdata)
+bool RedisNetworkConfigMaster::_smembers(const char *key,std::vector<std::string> &sdata)
 {
 	if (!_rc) {
 		if (!_reconnect())
@@ -376,22 +342,22 @@ bool NetworkConfigMaster::_smembers(const char *key,std::vector<std::string> &sd
 	return true;
 }
 
-bool NetworkConfigMaster::_initNewMember(uint64_t nwid,const Address &member,const Dictionary &metaData,Dictionary &memberRecord)
+bool RedisNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord)
 {
 	char memberKey[256],nwids[24],addrs[16],nwKey[256];
 	Dictionary networkRecord;
 
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.toInt());
+	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
 	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
 	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
 
 	if (!_hgetall(nwKey,networkRecord)) {
-		LOG("netconf: Redis error retrieving %s",nwKey);
+		//LOG("netconf: Redis error retrieving %s",nwKey);
 		return false;
 	}
 	if (networkRecord.get("id","") != nwids) {
-		TRACE("netconf: network %s not found (initNewMember)",nwids);
+		//TRACE("netconf: network %s not found (initNewMember)",nwids);
 		return false;
 	}
 
@@ -399,51 +365,47 @@ bool NetworkConfigMaster::_initNewMember(uint64_t nwid,const Address &member,con
 	memberRecord["id"] = addrs;
 	memberRecord["nwid"] = nwids;
 	memberRecord["authorized"] = (networkRecord.getBoolean("private",true) ? "0" : "1"); // auto-authorize on public networks
-	memberRecord.setHex("firstSeen",Utils::now());
-	{
-		SharedPtr<Peer> peer(RR->topology->getPeer(member));
-		if (peer)
-			memberRecord["identity"] = peer->identity().toString(false);
-	}
+	memberRecord.set("firstSeen",Utils::now());
+	memberRecord["identity"] = member.toString(false);
 
 	if (!_hmset(memberKey,memberRecord)) {
-		LOG("netconf: Redis error storing %s for new member %s",memberKey,addrs);
+		//LOG("netconf: Redis error storing %s for new member %s",memberKey,addrs);
 		return false;
 	}
 
 	return true;
 }
 
-bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,const Dictionary &metaData,std::string &netconf,uint64_t &ts)
+bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &netconf,uint64_t &ts,std::string &errorMessage)
 {
 	char memberKey[256],nwids[24],addrs[16],tss[24],nwKey[256],revKey[128],abKey[128],ipaKey[128];
-	Dictionary networkRecord,memberRecord,nc;
+	Dictionary networkRecord,memberRecord;
 	std::string revision;
 
 	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.toInt());
+	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
 	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
 	Utils::snprintf(revKey,sizeof(revKey),"zt1:network:%s:revision",nwids);
 	Utils::snprintf(abKey,sizeof(revKey),"zt1:network:%s:activeBridges",nwids);
 	Utils::snprintf(ipaKey,sizeof(revKey),"zt1:network:%s:ipAssignments",nwids);
 
 	if (!_hgetall(nwKey,networkRecord)) {
-		LOG("netconf: Redis error retrieving %s",nwKey);
+		errorMessage = "Redis error retrieving network record";
 		return false;
 	}
 	if (networkRecord.get("id","") != nwids) {
-		TRACE("netconf: network %s not found (generateNetconf)",nwids);
+		errorMessage = "network IDs do not match in database";
 		return false;
 	}
 
 	if (!_hgetall(memberKey,memberRecord)) {
-		LOG("netconf: Redis error retrieving %s",memberKey);
+		errorMessage = "Redis error retrieving member record";
 		return false;
 	}
 
 	if (!_get(revKey,revision)) {
-		LOG("netconf: Redis error retrieving %s",revKey);
+		errorMessage = "Redis error retrieving network revision";
 		return false;
 	}
 	if (!revision.length())
@@ -454,28 +416,28 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 	Utils::snprintf(tss,sizeof(tss),"%llx",ts);
 
 	// Core configuration
-	nc[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
-	nc[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = nwids;
-	nc[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = addrs;
-	nc[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = isPrivate ? "1" : "0";
-	nc[ZT_NETWORKCONFIG_DICT_KEY_NAME] = networkRecord.get("name",nwids);
-	nc[ZT_NETWORKCONFIG_DICT_KEY_DESC] = networkRecord.get("desc","");
-	nc[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = networkRecord.getBoolean("enableBroadcast",true) ? "1" : "0";
-	nc[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = networkRecord.getBoolean("allowPassiveBridging",false) ? "1" : "0";
-	nc[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = networkRecord.get("etherTypes","");
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = nwids;
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = addrs;
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = isPrivate ? "1" : "0";
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_NAME] = networkRecord.get("name",nwids);
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_DESC] = networkRecord.get("desc","");
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = networkRecord.getBoolean("enableBroadcast",true) ? "1" : "0";
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = networkRecord.getBoolean("allowPassiveBridging",false) ? "1" : "0";
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = networkRecord.get("etherTypes",""); // these are stored as hex comma-delimited list
 
 	// Multicast options
-	nc[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = networkRecord.get("multicastRates","");
+	netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = networkRecord.get("multicastRates","");
 	uint64_t ml = networkRecord.getHexUInt("multicastLimit",0);
 	if (ml > 0)
-		nc.setHex(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,ml);
+		netconf.setHex(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,ml);
 
 	// Active bridge configuration
 	{
 		std::string activeBridgeList;
 		std::vector<std::string> activeBridgeSet;
 		if (!_smembers(abKey,activeBridgeSet)) {
-			LOG("netconf: Redis error retrieving set %s",abKey);
+			errorMessage = "Redis error retrieving active bridge set";
 			return false;
 		}
 		std::sort(activeBridgeSet.begin(),activeBridgeSet.end());
@@ -487,7 +449,7 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 			}
 		}
 		if (activeBridgeList.length() > 0)
-			nc[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridgeList;
+			netconf[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridgeList;
 	}
 
 	// IP address assignment and auto-assign using the ZeroTier-internal mechanism (not DHCP, etc.)
@@ -524,7 +486,7 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 					uint32_t invmask = ~pmask; // netmask over "random" part
 
 					// Begin exploring the IP space by generating an IP from the ZeroTier address
-					uint32_t first = (((uint32_t)(member.toInt() & 0xffffffffULL)) & invmask) | (pnet & pmask);
+					uint32_t first = (((uint32_t)(member.address().toInt() & 0xffffffffULL)) & invmask) | (pnet & pmask);
 					if ((first & 0xff) == 0)
 						first |= 1;
 					else if ((first & 0xff) == 0xff)
@@ -544,10 +506,10 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 						// Is 'ip' already assigned to another node?
 						std::string assignment;
 						if (!_hget(ipaKey,ip.toString().c_str(),assignment)) {
-							LOG("netconf: Redis error checking IP allocation in %s",ipaKey);
+							errorMessage = "Redis error while checking IP allocation";
 							return false;
 						}
-						if ((assignment.length() != 10)||(assignment == member.toString())) {
+						if ((assignment.length() != 10)||(assignment == member.address().toString())) {
 							gotone = true;
 							break; // not taken!
 						}
@@ -570,13 +532,16 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 					// If we got one, add to IP list and claim in database
 					if (gotone) {
 						ip4s.push_back(ip);
-						_hset(ipaKey,ip.toString().c_str(),member.toString().c_str());
+						_hset(ipaKey,ip.toString().c_str(),member.address().toString().c_str());
 						if (ipAssignments.length() > 0)
 							ipAssignments.push_back(',');
 						ipAssignments.append(ip.toString());
 						_hset(memberKey,"ipAssignments",ipAssignments.c_str());
 					} else {
-						LOG("netconf: failed to allocate IP in %s for %s in network %s, need a larger pool!",v4AssignPool.toString().c_str(),addrs,nwids);
+						char tmp[1024];
+						Utils::snprintf(tmp,sizeof(tmp),"failed to allocate IP in %s for %s in network %s, need a larger pool!",v4AssignPool.toString().c_str(),addrs,nwids);
+						errorMessage = tmp;
+						return false;
 					}
 				}
 			}
@@ -589,7 +554,7 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 				v4s.append(i->toString());
 			}
 			if (v4s.length())
-				nc[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = v4s;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = v4s;
 		}
 
 		if (networkRecord.get("v6AssignMode","") == "zt") {
@@ -602,38 +567,35 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 				v6s.append(i->toString());
 			}
 			if (v6s.length())
-				nc[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = v6s;
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = v6s;
 		}
 	}
 
 	// If this is a private network, generate a signed certificate of membership
 	if (isPrivate) {
-		CertificateOfMembership com(Utils::strToU64(revision.c_str()),1,nwid,member);
-		if (com.sign(RR->identity)) // basically can't fail unless our identity is invalid
-			nc[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
+		CertificateOfMembership com(Utils::strToU64(revision.c_str()),1,nwid,member.address());
+		if (com.sign(_signingId)) // basically can't fail unless our identity is invalid
+			netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 		else {
-			LOG("netconf: failure signing certificate (identity problem?)");
+			errorMessage = "unable to sign COM";
 			return false;
 		}
 	}
 
 	// Sign netconf dictionary itself
-	if (!nc.sign(RR->identity)) {
-		LOG("netconf: failure signing dictionary (identity problem?)");
+	if (!netconf.sign(_signingId)) {
+		errorMessage = "unable to sign netconf dictionary";
 		return false;
 	}
-
-	// Convert to string-serialized form into result paramter
-	netconf = nc.toString();
 
 	// Record new netconf in database for re-use on subsequent repeat queries
 	{
 		Dictionary upd;
-		upd["netconf"] = netconf;
-		upd["netconfTimestamp"] = tss;
+		upd["netconf"] = netconf.toString();
+		upd.set("netconfTimestamp",ts);
 		upd["netconfRevision"] = revision;
 		if (!_hmset(memberKey,upd)) {
-			LOG("netconf: Redis error writing to key %s",memberKey);
+			errorMessage = "Redis error updating network record with new netconf dictionary";
 			return false;
 		}
 	}
@@ -642,5 +604,3 @@ bool NetworkConfigMaster::_generateNetconf(uint64_t nwid,const Address &member,c
 }
 
 } // namespace ZeroTier
-
-#endif // ZT_ENABLE_NETCONF_MASTER

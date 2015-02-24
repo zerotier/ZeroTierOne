@@ -34,6 +34,7 @@
 #include "InetAddress.hpp"
 #include "Dictionary.hpp"
 #include "Address.hpp"
+#include "Identity.hpp"
 
 namespace ZeroTier {
 
@@ -51,9 +52,10 @@ public:
 	enum ResultCode
 	{
 		NETCONF_QUERY_OK = 0,
-		NETCONF_QUERY_OBJECT_NOT_FOUND = 1,
-		NETCONF_QUERY_ACCESS_DENIED = 2,
-		NETCONF_QUERY_INTERNAL_SERVER_ERROR = 3
+		NETCONF_QUERY_OK_BUT_NOT_NEWER = 1,
+		NETCONF_QUERY_OBJECT_NOT_FOUND = 2,
+		NETCONF_QUERY_ACCESS_DENIED = 3,
+		NETCONF_QUERY_INTERNAL_SERVER_ERROR = 4
 	};
 
 	NetworkConfigMaster() {}
@@ -70,7 +72,7 @@ public:
 	 *
 	 * @param fromAddr Originating IP address
 	 * @param packetId 64-bit packet ID
-	 * @param member Originating peer ZeroTier address
+	 * @param member Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
 	 * @param haveTimestamp Timestamp sent by requesting peer or 0 if none
@@ -80,7 +82,7 @@ public:
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		uint64_t packetId,
-		const Address &member,
+		const Identity &member,
 		uint64_t nwid,
 		const Dictionary &metaData,
 		uint64_t haveTimestamp,
