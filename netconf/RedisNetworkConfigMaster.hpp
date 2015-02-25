@@ -73,6 +73,7 @@ private:
 	bool _hget(const char *key,const char *hashKey,std::string &value);
 	bool _hset(const char *key,const char *hashKey,const char *value);
 	bool _get(const char *key,std::string &value);
+	bool _sadd(const char *key,const char *value);
 	bool _smembers(const char *key,std::vector<std::string> &sdata);
 
 	bool _initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord);

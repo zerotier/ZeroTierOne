@@ -87,7 +87,7 @@ NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest
 
 	// Check to make sure network itself exists and is valid
 	if (!_hget(nwKey,"id",tmps2)) {
-		netconf["error"] = "Redis error retrieving network record";
+		netconf["error"] = "Redis error retrieving network record ID field";
 		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 	if (tmps2 != nwids)
@@ -317,6 +317,30 @@ bool RedisNetworkConfigMaster::_get(const char *key,std::string &value)
 	return true;
 }
 
+bool RedisNetworkConfigMaster::_sadd(const char *key,const char *value)
+{
+	if (!_rc) {
+		if (!_reconnect())
+			return false;
+	}
+
+	redisReply *reply = (redisReply *)redisCommand(_rc,"SADD %s %s",key,value);
+	if (!reply) {
+		if (_reconnect())
+			return _sadd(key,value);
+		return false;
+	}
+
+	if (reply->type == REDIS_REPLY_ERROR) {
+		freeReplyObject(reply);
+		return false;
+	}
+
+	freeReplyObject(reply);
+
+	return true;
+}
+
 bool RedisNetworkConfigMaster::_smembers(const char *key,std::vector<std::string> &sdata)
 {
 	if (!_rc) {
@@ -344,13 +368,14 @@ bool RedisNetworkConfigMaster::_smembers(const char *key,std::vector<std::string
 
 bool RedisNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord)
 {
-	char memberKey[256],nwids[24],addrs[16],nwKey[256];
+	char memberKey[128],nwids[24],addrs[16],nwKey[128],membersKey[128];
 	Dictionary networkRecord;
 
 	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
 	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
 	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
+	Utils::snprintf(membersKey,sizeof(membersKey),"zt1:network:%s:members",nwids);
 
 	if (!_hgetall(nwKey,networkRecord)) {
 		//LOG("netconf: Redis error retrieving %s",nwKey);
@@ -364,14 +389,14 @@ bool RedisNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &memb
 	memberRecord.clear();
 	memberRecord["id"] = addrs;
 	memberRecord["nwid"] = nwids;
-	memberRecord["authorized"] = (networkRecord.getBoolean("private",true) ? "0" : "1"); // auto-authorize on public networks
+	memberRecord["authorized"] = ((networkRecord.get("private","1") == "0") ? "1" : "0"); // auto-authorize on public networks
 	memberRecord.set("firstSeen",Utils::now());
 	memberRecord["identity"] = member.toString(false);
 
-	if (!_hmset(memberKey,memberRecord)) {
-		//LOG("netconf: Redis error storing %s for new member %s",memberKey,addrs);
+	if (!_hmset(memberKey,memberRecord))
 		return false;
-	}
+	if (!_sadd(membersKey,addrs))
+		return false;
 
 	return true;
 }
