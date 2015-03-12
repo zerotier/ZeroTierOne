@@ -10,11 +10,11 @@ CREATE TABLE IpAssignment (
   ipNetmaskBits integer(4) NOT NULL DEFAULT(0)
 );
 
-CREATE INDEX IpAssignment_networkId ON IpAssignment (networkId);
+CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
 
 CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
 
-CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
+CREATE INDEX IpAssignment_networkId ON IpAssignment (networkId);
 
 CREATE TABLE IpAssignmentPool (
   networkId char(16) NOT NULL,
@@ -36,9 +36,20 @@ CREATE TABLE Member (
   activeBridge integer(1) NOT NULL DEFAULT(0)
 );
 
+CREATE INDEX Member_networkId ON Member (networkId);
+
 CREATE UNIQUE INDEX Member_networkId_nodeId ON Member (networkId, nodeId);
 
-CREATE INDEX Member_networkId ON Member (networkId ASC);
+CREATE TABLE MulticastRate (
+  networkId char(16) NOT NULL,
+  mgMac char(12) NOT NULL,
+  mgAdi integer(8) NOT NULL DEFAULT(0),
+  preload integer(16) NOT NULL,
+  maxBalance integer(16) NOT NULL,
+  accrual integer(16) NOT NULL
+);
+
+CREATE INDEX MulticastRate_networkId ON MulticastRate (networkId);
 
 CREATE TABLE Network (
   id char(16) PRIMARY KEY NOT NULL,

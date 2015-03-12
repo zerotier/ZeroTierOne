@@ -42,6 +42,11 @@
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
 
+// Stored in database as schemaVersion key in Config.
+// If not present, database is assumed to be empty and at the current schema version
+// and this key/value is added automatically.
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 1
+
 namespace ZeroTier {
 
 SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath) :

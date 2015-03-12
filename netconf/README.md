@@ -19,6 +19,12 @@ To initialize a database run:
 
 Then type '.quit' to exit the SQLite3 command shell.
 
+Since SQLite3 supports multiple concurrent processes attached to the same database, it's easy to have another process administrate network details while the ZeroTier One service serves them. The schema is simple. Folks with some sysadmin expertise should be able to figure out how to populate a database and get something running. We'll probably publish some code for this at some point in the future, but for now it's all tied up with our zerotier.com web backend.
+
+One important detail you'll need to know:
+
+Whenever a network (including associated tables) is changed in any way, its revision number must be incremented. For private networks this is part of the certificate. Certificates are permitted to differ by up to 16 revisions. Therefore, to explicitly and rapidly de-authorize someone you should do a *two-step increment*. This is done with a time delay. First de-authorize the user and increment the revision by one. Then wait 30-60 seconds and increment it by 15. This gives all running clients a chance to get updated certificates before the now-excluded node falls off the revision number horizon. All other changes need only increment once, since a few nodes briefly having a slightly out of date config won't cause any harm.
+
 ### Reliability
 
 Network configuration masters can go offline without affecting already-configured members of running networks. You just won't be able to add new members, de-authorize members, or otherwise change any network configuration while the master is offline.
