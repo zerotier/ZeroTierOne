@@ -29,8 +29,9 @@ endif
 # Build with ZT_ENABLE_NETCONF_MASTER=1 to build with NetworkConfigMaster enabled
 ifeq ($(ZT_ENABLE_NETCONF_MASTER),1)
 	DEFS+=-DZT_ENABLE_NETCONF_MASTER
-	LIBS+=-L/usr/local/lib -lhiredis
+	LIBS+=-L/usr/local/lib -lsqlite3
 	ARCH_FLAGS=-arch x86_64
+	OBJS+=netconf/SqliteNetworkConfigMaster.o 
 endif
 
 # Enable SSE-optimized Salsa20 -- all Intel macs support SSE2

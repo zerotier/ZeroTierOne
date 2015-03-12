@@ -43,3 +43,4 @@
 /testnet/local-testnet/*/root-topology
 /testnet/local-testnet/*/local.conf
 /testnet/local-testnet/*/networks.d
+/netconf/netconf.db

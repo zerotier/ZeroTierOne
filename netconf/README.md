@@ -11,9 +11,13 @@ By default this code is not built or included in the client. To build on Linux, 
 
 ### Running
 
-When you run a node with netconf support, a SQLite3 database will be created in the ZeroTier One working directory. On Linux this is /var/lib/zerotier-one by default unless you run the service with a command line to specify something else.
+To enable netconf functionality, place a properly initialized SQLite3 database called **netconf.db** into the ZeroTier working directory of the node you wish to serve network configurations and restart it. If that file is present it will be opened and the network configuration master function will be enabled. You will see this in the log file.
 
-This database can be attached to and modified while the service is running as per SQLite3's rather awesome sharing capabilities. For now you're on your own in that department too, but in the future we might ship some code for this.
+To initialize a database run:
+
+    sqlite3 -init netconf-schema.sql netconf.db
+
+Then type '.quit' to exit the SQLite3 command shell.
 
 ### Reliability
 

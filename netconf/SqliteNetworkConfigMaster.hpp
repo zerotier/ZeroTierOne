@@ -25,10 +25,13 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_REDISNETWORKCONFIGMASTER_HPP
-#define ZT_REDISNETWORKCONFIGMASTER_HPP
+#ifndef ZT_SQLITENETWORKCONFIGMASTER_HPP
+#define ZT_SQLITENETWORKCONFIGMASTER_HPP
 
 #include <stdint.h>
+
+#include <sqlite3.h>
+
 #include <string>
 #include <map>
 #include <vector>
@@ -37,25 +40,13 @@
 #include "../node/NetworkConfigMaster.hpp"
 #include "../node/Mutex.hpp"
 
-#include <hiredis/hiredis.h>
-
-// Redis timeout in seconds
-#define ZT_NETCONF_REDIS_TIMEOUT 10
-
 namespace ZeroTier {
 
-class RedisNetworkConfigMaster : public NetworkConfigMaster
+class SqliteNetworkConfigMaster : public NetworkConfigMaster
 {
 public:
-	RedisNetworkConfigMaster(
-		const Identity &signingId,
-		const char *redisHost,
-		unsigned int redisPort,
-		const char *redisPassword,
-		unsigned int redisDatabaseNumber);
-
-	virtual ~RedisNetworkConfigMaster();
-
+	SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath);
+	virtual ~SqliteNetworkConfigMaster();
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		uint64_t packetId,
@@ -66,29 +57,14 @@ public:
 		Dictionary &netconf);
 
 private:
-	// These assume _lock is locked
-	bool _reconnect();
-	bool _hgetall(const char *key,Dictionary &hdata);
-	bool _hmset(const char *key,const Dictionary &hdata);
-	bool _hget(const char *key,const char *hashKey,std::string &value);
-	bool _hset(const char *key,const char *hashKey,const char *value);
-	bool _get(const char *key,std::string &value);
-	bool _sadd(const char *key,const char *value);
-	bool _smembers(const char *key,std::vector<std::string> &sdata);
-
 	bool _initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord);
 	bool _generateNetconf(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &netconf,uint64_t &ts,std::string &errorMessage);
 
-	Mutex _lock;
-
 	Identity _signingId;
+	std::string _dbPath;
+	sqlite3 *_db;
 
-	std::string _redisHost;
-	std::string _redisPassword;
-	unsigned int _redisPort;
-	unsigned int _redisDatabaseNumber;
-
-	redisContext *_rc;
+	Mutex _lock;
 };
 
 } // namespace ZeroTier

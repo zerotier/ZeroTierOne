@@ -6,8 +6,8 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o osnet/BSDRoutingTable.o
-TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o
+OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o osnet/BSDRoutingTable.o 
+TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o 
 
 # Enable SSE-optimized Salsa20 on x86 and x86_64 machines
 MACHINE=$(shell uname -m)
@@ -28,6 +28,13 @@ ifeq ($(MACHINE),i386)
 endif
 ifeq ($(MACHINE),x86)
 	DEFS+=-DZT_SALSA20_SSE 
+endif
+
+# Build with ZT_ENABLE_NETCONF_MASTER=1 to build with NetworkConfigMaster enabled
+ifeq ($(ZT_ENABLE_NETCONF_MASTER),1)
+	DEFS+=-DZT_ENABLE_NETCONF_MASTER
+	LIBS+=-lsqlite3
+	OBJS+=netconf/SqliteNetworkConfigMaster.o 
 endif
 
 # "make official" is a shortcut for this

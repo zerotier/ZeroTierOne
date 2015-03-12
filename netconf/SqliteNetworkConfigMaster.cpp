@@ -37,40 +37,37 @@
 #include <utility>
 #include <stdexcept>
 
-#include "RedisNetworkConfigMaster.hpp"
+#include "SqliteNetworkConfigMaster.hpp"
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
 
 namespace ZeroTier {
 
-RedisNetworkConfigMaster::RedisNetworkConfigMaster(
-	const Identity &signingId,
-	const char *redisHost,
-	unsigned int redisPort,
-	const char *redisPassword,
-	unsigned int redisDatabaseNumber) :
-	_lock(),
+SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath) :
 	_signingId(signingId),
-	_redisHost(redisHost),
-	_redisPassword((redisPassword) ? redisPassword : ""),
-	_redisPort(redisPort),
-	_redisDatabaseNumber(redisDatabaseNumber),
-	_rc((redisContext *)0)
+	_dbPath(dbPath),
+	_db((sqlite3 *)0)
+	_lock()
 {
 	if (!_signingId.hasPrivate())
-		throw std::runtime_error("RedisNetworkConfigMaster signing identity must have a private key");
+		throw std::runtime_error("SqliteNetworkConfigMaster signing identity must have a private key");
+
+	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE,(const char *)0) != SQLITE_OK)
+		throw std::runtime_error("SqliteNetworkConfigMaster cannot open database file");
+	sqlite3_busy_timeout(_db,10000);
 }
 
-RedisNetworkConfigMaster::~RedisNetworkConfigMaster()
+SqliteNetworkConfigMaster::~SqliteNetworkConfigMaster()
 {
 	Mutex::Lock _l(_lock);
-	if (_rc)
-		redisFree(_rc);
+	if (_db)
+		sqlite3_close(_db);
 }
 
-NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Identity &member,uint64_t nwid,const Dictionary &metaData,uint64_t haveTimestamp,Dictionary &netconf)
+NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Identity &member,uint64_t nwid,const Dictionary &metaData,uint64_t haveTimestamp,Dictionary &netconf)
 {
+#if 0
 	char memberKey[128],nwids[24],addrs[16],nwKey[128],revKey[128];
 	Dictionary memberRecord;
 	std::string revision,tmps2;
@@ -87,7 +84,7 @@ NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest
 
 	// Check to make sure network itself exists and is valid
 	if (!_hget(nwKey,"id",tmps2)) {
-		netconf["error"] = "Redis error retrieving network record ID field";
+		netconf["error"] = "Sqlite error retrieving network record ID field";
 		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 	if (tmps2 != nwids)
@@ -95,7 +92,7 @@ NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest
 
 	// Get network revision
 	if (!_get(revKey,revision)) {
-		netconf["error"] = "Redis error retrieving network revision";
+		netconf["error"] = "Sqlite error retrieving network revision";
 		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 	if (!revision.length())
@@ -103,7 +100,7 @@ NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest
 
 	// Get network member record for this peer
 	if (!_hgetall(memberKey,memberRecord)) {
-		netconf["error"] = "Redis error retrieving member record";
+		netconf["error"] = "Sqlite error retrieving member record";
 		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
@@ -147,227 +144,12 @@ NetworkConfigMaster::ResultCode RedisNetworkConfigMaster::doNetworkConfigRequest
 	} else {
 		return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
 	}
+#endif
 }
 
-bool RedisNetworkConfigMaster::_reconnect()
+bool SqliteNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord)
 {
-	struct timeval tv;
-
-	if (_rc)
-		redisFree(_rc);
-
-	tv.tv_sec = ZT_NETCONF_REDIS_TIMEOUT;
-	tv.tv_usec = 0;
-	_rc = redisConnectWithTimeout(_redisHost.c_str(),_redisPort,tv);
-	if (!_rc)
-		return false;
-	if (_rc->err) {
-		redisFree(_rc);
-		_rc = (redisContext *)0;
-		return false;
-	}
-	redisSetTimeout(_rc,tv); // necessary???
-
-	// TODO: support AUTH and SELECT !!!
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_hgetall(const char *key,Dictionary &hdata)
-{
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	redisReply *reply = (redisReply *)redisCommand(_rc,"HGETALL %s",key);
-	if (!reply) {
-		if (_reconnect())
-			return _hgetall(key,hdata);
-		return false;
-	}
-
-	hdata.clear();
-	if (reply->type == REDIS_REPLY_ARRAY) {
-		for(long i=0;i<reply->elements;) {
-			try {
-				const char *k = reply->element[i]->str;
-				if (++i >= reply->elements)
-					break;
-				if ((k)&&(reply->element[i]->str))
-					hdata[k] = reply->element[i]->str;
-				++i;
-			} catch ( ... ) {
-				break; // memory safety
-			}
-		}
-	}
-
-	freeReplyObject(reply);
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_hmset(const char *key,const Dictionary &hdata)
-{
-	const char *hargv[1024];
-
-	if (!hdata.size())
-		return true;
-
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	hargv[0] = "HMSET";
-	hargv[1] = key;
-	int hargc = 2;
-	for(Dictionary::const_iterator i(hdata.begin());i!=hdata.end();++i) {
-		if (hargc >= 1024)
-			break;
-		hargv[hargc++] = i->first.c_str();
-		hargv[hargc++] = i->second.c_str();
-	}
-
-	redisReply *reply = (redisReply *)redisCommandArgv(_rc,hargc,hargv,(const size_t *)0);
-	if (!reply) {
-		if (_reconnect())
-			return _hmset(key,hdata);
-		return false;
-	}
-
-	if (reply->type == REDIS_REPLY_ERROR) {
-		freeReplyObject(reply);
-		return false;
-	}
-
-	freeReplyObject(reply);
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_hget(const char *key,const char *hashKey,std::string &value)
-{
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	redisReply *reply = (redisReply *)redisCommand(_rc,"HGET %s %s",key,hashKey);
-	if (!reply) {
-		if (_reconnect())
-			return _hget(key,hashKey,value);
-		return false;
-	}
-
-	if (reply->type == REDIS_REPLY_STRING)
-		value = reply->str;
-	else value = "";
-
-	freeReplyObject(reply);
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_hset(const char *key,const char *hashKey,const char *value)
-{
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	redisReply *reply = (redisReply *)redisCommand(_rc,"HSET %s %s %s",key,hashKey,value);
-	if (!reply) {
-		if (_reconnect())
-			return _hset(key,hashKey,value);
-		return false;
-	}
-
-	if (reply->type == REDIS_REPLY_ERROR) {
-		freeReplyObject(reply);
-		return false;
-	}
-
-	freeReplyObject(reply);
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_get(const char *key,std::string &value)
-{
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	redisReply *reply = (redisReply *)redisCommand(_rc,"GET %s",key);
-	if (!reply) {
-		if (_reconnect())
-			return _get(key,value);
-		return false;
-	}
-
-	if ((reply->type == REDIS_REPLY_STRING)&&(reply->str))
-		value = reply->str;
-	else value = "";
-
-	freeReplyObject(reply);
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_sadd(const char *key,const char *value)
-{
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	redisReply *reply = (redisReply *)redisCommand(_rc,"SADD %s %s",key,value);
-	if (!reply) {
-		if (_reconnect())
-			return _sadd(key,value);
-		return false;
-	}
-
-	if (reply->type == REDIS_REPLY_ERROR) {
-		freeReplyObject(reply);
-		return false;
-	}
-
-	freeReplyObject(reply);
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_smembers(const char *key,std::vector<std::string> &sdata)
-{
-	if (!_rc) {
-		if (!_reconnect())
-			return false;
-	}
-
-	redisReply *reply = (redisReply *)redisCommand(_rc,"SMEMBERS %s",key);
-	if (!reply) {
-		if (_reconnect())
-			return _smembers(key,sdata);
-		return false;
-	}
-
-	sdata.clear();
-	if (reply->type == REDIS_REPLY_ARRAY) {
-		for(long i=0;i<reply->elements;++i) {
-			if (reply->element[i]->str)
-				sdata.push_back(reply->element[i]->str);
-		}
-	}
-
-	return true;
-}
-
-bool RedisNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord)
-{
+#if 0
 	char memberKey[128],nwids[24],addrs[16],nwKey[128],membersKey[128];
 	Dictionary networkRecord;
 
@@ -378,7 +160,7 @@ bool RedisNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &memb
 	Utils::snprintf(membersKey,sizeof(membersKey),"zt1:network:%s:members",nwids);
 
 	if (!_hgetall(nwKey,networkRecord)) {
-		//LOG("netconf: Redis error retrieving %s",nwKey);
+		//LOG("netconf: Sqlite error retrieving %s",nwKey);
 		return false;
 	}
 	if (networkRecord.get("id","") != nwids) {
@@ -399,10 +181,12 @@ bool RedisNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &memb
 		return false;
 
 	return true;
+#endif
 }
 
-bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &netconf,uint64_t &ts,std::string &errorMessage)
+bool SqliteNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &netconf,uint64_t &ts,std::string &errorMessage)
 {
+#if 0
 	char memberKey[256],nwids[24],addrs[16],tss[24],nwKey[256],revKey[128],abKey[128],ipaKey[128];
 	Dictionary networkRecord,memberRecord;
 	std::string revision;
@@ -416,7 +200,7 @@ bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &me
 	Utils::snprintf(ipaKey,sizeof(revKey),"zt1:network:%s:ipAssignments",nwids);
 
 	if (!_hgetall(nwKey,networkRecord)) {
-		errorMessage = "Redis error retrieving network record";
+		errorMessage = "Sqlite error retrieving network record";
 		return false;
 	}
 	if (networkRecord.get("id","") != nwids) {
@@ -425,12 +209,12 @@ bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &me
 	}
 
 	if (!_hgetall(memberKey,memberRecord)) {
-		errorMessage = "Redis error retrieving member record";
+		errorMessage = "Sqlite error retrieving member record";
 		return false;
 	}
 
 	if (!_get(revKey,revision)) {
-		errorMessage = "Redis error retrieving network revision";
+		errorMessage = "Sqlite error retrieving network revision";
 		return false;
 	}
 	if (!revision.length())
@@ -462,7 +246,7 @@ bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &me
 		std::string activeBridgeList;
 		std::vector<std::string> activeBridgeSet;
 		if (!_smembers(abKey,activeBridgeSet)) {
-			errorMessage = "Redis error retrieving active bridge set";
+			errorMessage = "Sqlite error retrieving active bridge set";
 			return false;
 		}
 		std::sort(activeBridgeSet.begin(),activeBridgeSet.end());
@@ -531,7 +315,7 @@ bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &me
 						// Is 'ip' already assigned to another node?
 						std::string assignment;
 						if (!_hget(ipaKey,ip.toString().c_str(),assignment)) {
-							errorMessage = "Redis error while checking IP allocation";
+							errorMessage = "Sqlite error while checking IP allocation";
 							return false;
 						}
 						if ((assignment.length() != 10)||(assignment == member.address().toString())) {
@@ -620,12 +404,13 @@ bool RedisNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &me
 		upd.set("netconfTimestamp",ts);
 		upd["netconfRevision"] = revision;
 		if (!_hmset(memberKey,upd)) {
-			errorMessage = "Redis error updating network record with new netconf dictionary";
+			errorMessage = "Sqlite error updating network record with new netconf dictionary";
 			return false;
 		}
 	}
 
 	return true;
+#endif
 }
 
 } // namespace ZeroTier
