@@ -47,6 +47,7 @@ class SqliteNetworkConfigMaster : public NetworkConfigMaster
 public:
 	SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath);
 	virtual ~SqliteNetworkConfigMaster();
+
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		uint64_t packetId,

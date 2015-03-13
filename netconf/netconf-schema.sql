@@ -1,7 +1,7 @@
 CREATE TABLE Config (
   k varchar(16) PRIMARY KEY NOT NULL,
   v varchar(1024) NOT NULL
-) WITHOUT ROWID;
+);
 
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL,
@@ -30,8 +30,7 @@ CREATE TABLE Member (
   nodeId char(10) NOT NULL,
   cachedNetconf blob(4096),
   cachedNetconfRevision integer(32),
-  cachedNetconfTimestamp integer(32),
-  clientReportedTimestamp integer(32),
+  clientReportedRevision integer(32),
   authorized integer(1) NOT NULL DEFAULT(0),
   activeBridge integer(1) NOT NULL DEFAULT(0)
 );
@@ -62,7 +61,7 @@ CREATE TABLE Network (
   multicastLimit integer(8) NOT NULL DEFAULT(32),
   creationTime integer(32) NOT NULL DEFAULT(0),
   revision integer(32) NOT NULL DEFAULT(0)
-) WITHOUT ROWID;
+);
 
 CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
@@ -70,7 +69,7 @@ CREATE TABLE Node (
   lastAt varchar(64),
   lastSeen integer(32) NOT NULL DEFAULT(0),
   firstSeen integer(32) NOT NULL DEFAULT(0)
-) WITHOUT ROWID;
+);
 
 CREATE TABLE Rule (
   networkId char(16) NOT NULL,

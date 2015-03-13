@@ -78,6 +78,10 @@
 
 #include "osnet/NativeSocketManager.hpp"
 
+#ifdef ZT_ENABLE_NETCONF_MASTER
+#include "netconf/SqliteNetworkConfigMaster.hpp"
+#endif // ZT_ENABLE_NETCONF_MASTER
+
 #ifdef __WINDOWS__
 #include "osnet/WindowsEthernetTapFactory.hpp"
 #include "osnet/WindowsRoutingTable.hpp"
@@ -810,6 +814,7 @@ int main(int argc,char **argv)
 	RoutingTable *routingTable = (RoutingTable *)0;
 	SocketManager *socketManager = (SocketManager *)0;
 	NodeControlService *controlService = (NodeControlService *)0;
+	NetworkConfigMaster *netconfMaster = (NetworkConfigMaster *)0;
 
 	try {
 		// Get or create authtoken.secret -- note that if this fails, authentication
@@ -827,7 +832,7 @@ int main(int argc,char **argv)
 			throw;
 		}
 
-		node = new Node(homeDir,tapFactory,routingTable,socketManager,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+		node = new Node(homeDir,tapFactory,routingTable,socketManager,netconfMaster,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
 		controlService = new NodeControlService(node,authToken.c_str());
 
 		switch(node->run()) {

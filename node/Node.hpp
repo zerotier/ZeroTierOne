@@ -37,6 +37,7 @@ namespace ZeroTier {
 class EthernetTapFactory;
 class RoutingTable;
 class SocketManager;
+class NetworkConfigMaster;
 
 /**
  * A ZeroTier One node
@@ -87,6 +88,7 @@ public:
 	 * @param tf Ethernet tap factory for platform network stack
 	 * @param rt Routing table interface for platform network stack
 	 * @param sm Socket manager for physical network I/O
+	 * @param nm Network configuration master or NULL for none
 	 * @param resetIdentity If true, delete identity before starting and regenerate
 	 * @param overrideRootTopology Override root topology with this dictionary (in string serialized format) and do not update (default: NULL for none)
 	 */
@@ -95,6 +97,7 @@ public:
 		EthernetTapFactory *tf,
 		RoutingTable *rt,
 		SocketManager *sm,
+		NetworkConfigMaster *nm,
 		bool resetIdentity,
 		const char *overrideRootTopology = (const char *)0) throw();
 

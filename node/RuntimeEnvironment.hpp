@@ -75,10 +75,10 @@ public:
 		tapFactory((EthernetTapFactory *)0),
 		routingTable((RoutingTable *)0),
 		sm((SocketManager *)0),
+		netconfMaster((NetworkConfigMaster *)0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		http((HttpClient *)0),
-		netconfMaster((NetworkConfigMaster *)0),
 		sw((Switch *)0),
 		mc((Multicaster *)0),
 		antiRec((AntiRecursion *)0),
@@ -112,6 +112,7 @@ public:
 	EthernetTapFactory *tapFactory;
 	RoutingTable *routingTable;
 	SocketManager *sm;
+	NetworkConfigMaster *netconfMaster;
 
 	/*
 	 * Order matters a bit here. These are constructed in this order
@@ -124,7 +125,6 @@ public:
 	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
 	HttpClient *http;
-	NetworkConfigMaster *netconfMaster;
 	Switch *sw;
 	Multicaster *mc;
 	AntiRecursion *antiRec;

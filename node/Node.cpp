@@ -108,7 +108,6 @@ struct _NodeImpl
 		delete renv.mc;            renv.mc = (Multicaster *)0;
 		delete renv.antiRec;       renv.antiRec = (AntiRecursion *)0;
 		delete renv.sw;            renv.sw = (Switch *)0;                // order matters less from here down
-		delete renv.netconfMaster; renv.netconfMaster = (NetworkConfigMaster *)0;
 		delete renv.http;          renv.http = (HttpClient *)0;
 		delete renv.prng;          renv.prng = (CMWC4096 *)0;
 		delete renv.log;           renv.log = (Logger *)0;               // but stop logging last of all
@@ -129,6 +128,7 @@ Node::Node(
 	EthernetTapFactory *tf,
 	RoutingTable *rt,
 	SocketManager *sm,
+	NetworkConfigMaster *nm,
 	bool resetIdentity,
 	const char *overrideRootTopology) throw() :
 	_impl(new _NodeImpl)
@@ -142,6 +142,7 @@ Node::Node(
 	impl->renv.tapFactory = tf;
 	impl->renv.routingTable = rt;
 	impl->renv.sm = sm;
+	impl->renv.netconfMaster = nm;
 
 	if (resetIdentity) {
 		// Forget identity and peer database, peer keys, etc.
