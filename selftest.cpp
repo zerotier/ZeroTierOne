@@ -55,6 +55,10 @@
 #include "node/Defaults.hpp"
 #include "node/Node.hpp"
 
+#ifdef ZT_ENABLE_NETCONF_MASTER
+#include "netconf/SqliteNetworkConfigMaster.hpp"
+#endif // ZT_ENABLE_NETCONF_MASTER
+
 #ifdef __WINDOWS__
 #include <tchar.h>
 #endif
@@ -636,6 +640,27 @@ static int testOther()
 	return 0;
 }
 
+static int testSqliteNetconfMaster()
+{
+#ifdef ZT_ENABLE_NETCONF_MASTER
+	try {
+		std::cout << "[netconf] Generating signing identity..." << std::endl;
+		Identity signingId;
+		signingId.generate();
+
+		std::cout << "[netconf] Creating database..." << std::endl;
+		SqliteNetworkConfigMaster netconf(signingId,"netconf-test.db");
+	} catch (std::runtime_error &exc) {
+		std::cout << "FAIL! (unexpected exception: " << exc.what() << ")" << std::endl;
+		return -1;
+	} catch ( ... ) {
+		std::cout << "FAIL! (unexpected exception: ...)" << std::endl;
+		return -1;
+	}
+#endif // ZT_ENABLE_NETCONF_MASTER
+	return 0;
+}
+
 #ifdef __WINDOWS__
 int _tmain(int argc, _TCHAR* argv[])
 #else
@@ -686,6 +711,7 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
+	r |= testSqliteNetconfMaster();
 	r |= testCrypto();
 	r |= testHttp();
 	r |= testPacket();
