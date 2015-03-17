@@ -42,6 +42,9 @@
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
 
+// Include ZT_NETCONF_SCHEMA_SQL constant to init database
+#include "netconf-schema.sql.c"
+
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
@@ -52,13 +55,13 @@ namespace ZeroTier {
 SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath) :
 	_signingId(signingId),
 	_dbPath(dbPath),
-	_db((sqlite3 *)0)
+	_db((sqlite3 *)0),
 	_lock()
 {
 	if (!_signingId.hasPrivate())
 		throw std::runtime_error("SqliteNetworkConfigMaster signing identity must have a private key");
 
-	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE,(const char *)0) != SQLITE_OK)
+	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
 		throw std::runtime_error("SqliteNetworkConfigMaster cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
 }
