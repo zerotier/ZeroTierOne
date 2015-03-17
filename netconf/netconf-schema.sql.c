@@ -86,7 +86,7 @@
 "  ipProtocol integer(4),\n"\
 "  ipSourcePort integer(8),\n"\
 "  ipDestPort integer(8),\n"\
-"  "action" varchar(4096) NOT NULL DEFAULT('accept')\n"\
+"  \"action\" varchar(4096) NOT NULL DEFAULT('accept')\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX Rule_networkId ON Rule (networkId);\n"\

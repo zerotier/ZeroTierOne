@@ -49,6 +49,7 @@
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
 #define ZT_NETCONF_SQLITE_SCHEMA_VERSION 1
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "1"
 
 namespace ZeroTier {
 
@@ -64,6 +65,33 @@ SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,c
 	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
 		throw std::runtime_error("SqliteNetworkConfigMaster cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
+
+	sqlite3_stmt *s = (sqlite3_stmt *)0;
+	if (sqlite3_prepare_v2(_db,"SELECT v FROM Config WHERE k = 'schemaVersion';",-1,&s,(const char **)0) != SQLITE_OK) {
+		sqlite3_close(_db);
+		throw std::runtime_error("SqliteNetworkConfigMaster cannot create prepared statement (library problem?)");
+	}
+	if (!s) {
+		sqlite3_close(_db);
+		throw std::runtime_error("SqliteNetworkConfigMaster cannot create prepared statement (library problem?)");
+	}
+
+	int schemaVersion = -1;
+	if (sqlite3_step(s) == SQLITE_ROW)
+		schemaVersion = sqlite3_column_int(s,0);
+
+	sqlite3_finalize(s);
+
+	if (schemaVersion == -1) {
+		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
+			sqlite3_close(_db);
+			throw std::runtime_error("SqliteNetworkConfigMaster cannot initialize database and/or insert schemaVersion into Config table");
+		}
+	} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
+		// Note -- this will eventually run auto-upgrades so this isn't how it'll work going forward
+		sqlite3_close(_db);
+		throw std::runtime_error("SqliteNetworkConfigMaster database schema version mismatch");
+	}
 }
 
 SqliteNetworkConfigMaster::~SqliteNetworkConfigMaster()
