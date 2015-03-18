@@ -56,8 +56,7 @@ namespace ZeroTier {
 SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath) :
 	_signingId(signingId),
 	_dbPath(dbPath),
-	_db((sqlite3 *)0),
-	_lock()
+	_db((sqlite3 *)0)
 {
 	if (!_signingId.hasPrivate())
 		throw std::runtime_error("SqliteNetworkConfigMaster signing identity must have a private key");
@@ -66,396 +65,415 @@ SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,c
 		throw std::runtime_error("SqliteNetworkConfigMaster cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
 
-	sqlite3_stmt *s;
-	for(int k=0;k<2;++k) {
-		s = (sqlite3_stmt *)0;
-		if ((sqlite3_prepare_v2(_db,"SELECT 'v' FROM Config WHERE 'k' = 'schemaVersion';",-1,&s,(const char **)0) != SQLITE_OK)||(!s)) {
-			if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
-				sqlite3_close(_db);
-				throw std::runtime_error("SqliteNetworkConfigMaster cannot initialize database and/or insert schemaVersion into Config table");
-			} else {
-				// Initialized database and set schema version, so we are done.
-				return;
-			}
-		} else break;
+	sqlite3_stmt *s = (sqlite3_stmt *)0;
+	if ((sqlite3_prepare_v2(_db,"SELECT 'v' FROM Config WHERE 'k' = 'schemaVersion';",-1,&s,(const char **)0) == SQLITE_OK)&&(s)) {
+		int schemaVersion = -1234;
+		if (sqlite3_step(s) == SQLITE_ROW)
+			schemaVersion = sqlite3_column_int(s,0);
+
+		sqlite3_finalize(s);
+
+		if (schemaVersion == -1234) {
+			sqlite3_close(_db);
+			throw std::runtime_error("SqliteNetworkConfigMaster schemaVersion not found in Config table (init failure?)");
+		} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
+			// Note -- this will eventually run auto-upgrades so this isn't how it'll work going forward
+			sqlite3_close(_db);
+			throw std::runtime_error("SqliteNetworkConfigMaster database schema version mismatch");
+		}
+	} else {
+		// Prepare statement will fail if Config table doesn't exist, which means our DB
+		// needs to be initialized.
+		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
+			sqlite3_close(_db);
+			throw std::runtime_error("SqliteNetworkConfigMaster cannot initialize database and/or insert schemaVersion into Config table");
+		}
 	}
-	if (!s) {
+
+	if (
+			  (sqlite3_prepare_v2(_db,"SELECT 'name','private','enableBroadcast','allowPassiveBridging','v4AssignMode','v6AssignMode','multicastLimit','revision' FROM Network WHERE 'id' = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT rowid,'cachedNetconf','cachedNetconfRevision','clientReportedRevision','authorized','activeBridge' FROM Member WHERE 'networkId' = ? AND 'nodeId' = ?",-1,&_sGetMemberByNetworkAndNodeId,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Member ('networkId','nodeId','cachedNetconfRevision','clientReportedRevision','authorized','activeBridge') VALUES (?,?,0,0,?,0)",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT 'identity' FROM Node WHERE 'id' = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Node ('id','identity','lastAt','lastSeen','firstSeen') VALUES (?,?,?,?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Node SET 'lastAt' = ?,'lastSeen' = ? WHERE 'id' = ?",-1,&_sUpdateNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Node SET 'lastSeen' = ? WHERE 'id' = ?",-1,&_sUpdateNode2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Member SET 'clientReportedRevision' = ? WHERE rowid = ?",-1,&_sUpdateMemberClientReportedRevision,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT 'etherType' FROM Rule WHERE 'networkId' = ? AND 'action' = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT 'mgMac','mgAdi','preload','maxBalance','accrual' FROM MulticastRate WHERE 'networkId' = ?",-1,&_sGetMulticastRates,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT 'nodeId' FROM Member WHERE 'networkId' = ? AND 'authorized' > 0 AND 'activeBridge' > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT 'ip','ipNetmaskBits' FROM IpAssignment WHERE 'networkId' = ? AND 'nodeId' = ? AND 'ipVersion' = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT 'ipNetwork','ipNetmaskBits' FROM IpAssignmentPool WHERE 'networkId' = ? AND 'ipVersion' = ? AND 'active' > 0",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE 'networkId' = ? AND 'ip' = ? AND 'ipVersion' = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignment ('networkId','nodeId','ip','ipNetmaskBits','ipVersion') VALUES (?,?,?,?,?)",-1,&_sAllocateIp,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Member SET 'cachedNetconf' = ?,'cachedNetconfRevision' = ? WHERE rowid = ?",-1,&_sCacheNetconf,(const char **)0) != SQLITE_OK)
+		 ) {
 		sqlite3_close(_db);
-		throw std::runtime_error("SqliteNetworkConfigMaster unable to create prepared statement or initialize database");
-	}
-
-	// If we made it here, database was opened and prepared statement was created
-	// to check schema version. Check and upgrade if needed.
-
-	int schemaVersion = -1234;
-	if (sqlite3_step(s) == SQLITE_ROW)
-		schemaVersion = sqlite3_column_int(s,0);
-
-	sqlite3_finalize(s);
-
-	if (schemaVersion == -1234) {
-		sqlite3_close(_db);
-		throw std::runtime_error("SqliteNetworkConfigMaster schemaVersion not found in Config table (init failure?)");
-	} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
-		// Note -- this will eventually run auto-upgrades so this isn't how it'll work going forward
-		sqlite3_close(_db);
-		throw std::runtime_error("SqliteNetworkConfigMaster database schema version mismatch");
+		throw std::runtime_error("SqliteNetworkConfigMaster unable to initialize one or more prepared statements");
 	}
 }
 
 SqliteNetworkConfigMaster::~SqliteNetworkConfigMaster()
 {
 	Mutex::Lock _l(_lock);
-	if (_db)
+	if (_db) {
+		sqlite3_finalize(_sGetNetworkById);
+		sqlite3_finalize(_sGetMemberByNetworkAndNodeId);
+		sqlite3_finalize(_sCreateMember);
+		sqlite3_finalize(_sGetNodeIdentity);
+		sqlite3_finalize(_sCreateNode);
+		sqlite3_finalize(_sUpdateNode);
+		sqlite3_finalize(_sUpdateNode2);
+		sqlite3_finalize(_sUpdateMemberClientReportedRevision);
+		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
+		sqlite3_finalize(_sGetMulticastRates);
+		sqlite3_finalize(_sGetActiveBridges);
+		sqlite3_finalize(_sGetIpAssignmentsForNode);
+		sqlite3_finalize(_sGetIpAssignmentPools);
+		sqlite3_finalize(_sCheckIfIpIsAllocated);
+		sqlite3_finalize(_sAllocateIp);
+		sqlite3_finalize(_sCacheNetconf);
 		sqlite3_close(_db);
+	}
 }
 
-NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Identity &member,uint64_t nwid,const Dictionary &metaData,uint64_t haveTimestamp,Dictionary &netconf)
+NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
 {
-#if 0
-	char memberKey[128],nwids[24],addrs[16],nwKey[128],revKey[128];
-	Dictionary memberRecord;
-	std::string revision,tmps2;
-
 	Mutex::Lock _l(_lock);
 
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
-	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
-	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
-	Utils::snprintf(revKey,sizeof(revKey),"zt1:network:%s:revision",nwids);
+	// Note: we can't reuse prepared statements that return const char * pointers without
+	// making our own copy in e.g. a std::string first.
 
-	//TRACE("netconf: %s : %s if > %llu",nwids,addrs,(unsigned long long)haveTimestamp);
+	struct {
+		char id[24];
+		const char *name;
+		const char *v4AssignMode;
+		const char *v6AssignMode;
+		bool isPrivate;
+		bool enableBroadcast;
+		bool allowPassiveBridging;
+		int multicastLimit;
+		uint64_t revision;
+	} network;
+	memset(&network,0,sizeof(network));
+	Utils::snprintf(network.id,sizeof(network.id),"%.16llx",(unsigned long long)nwid);
 
-	// Check to make sure network itself exists and is valid
-	if (!_hget(nwKey,"id",tmps2)) {
-		netconf["error"] = "Sqlite error retrieving network record ID field";
-		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-	}
-	if (tmps2 != nwids)
-		return NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND;
+	struct {
+		int64_t rowid;
+		char nodeId[16];
+		int cachedNetconfBytes;
+		const void *cachedNetconf;
+		uint64_t cachedNetconfRevision;
+		uint64_t clientReportedRevision;
+		bool authorized;
+		bool activeBridge;
+	} member;
+	memset(&member,0,sizeof(member));
+	Utils::snprintf(member.nodeId,sizeof(member.nodeId),"%.10llx",(unsigned long long)identity.address().toInt());
 
-	// Get network revision
-	if (!_get(revKey,revision)) {
-		netconf["error"] = "Sqlite error retrieving network revision";
-		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-	}
-	if (!revision.length())
-		revision = "0";
+	// Create/update Node record and check identity fully -- identities are first-come-first-claim
 
-	// Get network member record for this peer
-	if (!_hgetall(memberKey,memberRecord)) {
-		netconf["error"] = "Sqlite error retrieving member record";
-		return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-	}
-
-	// If there is no member record, init a new one -- for public networks this
-	// auto-authorizes, and for private nets it makes the peer show up in the UI
-	// so the admin can authorize or delete/hide it.
-	if ((memberRecord.size() == 0)||(memberRecord.get("id","") != addrs)||(memberRecord.get("nwid","") != nwids)) {
-		if (!_initNewMember(nwid,member,metaData,memberRecord)) {
-			netconf["error"] = "_initNewMember() failed";
+	sqlite3_reset(_sGetNodeIdentity);
+	sqlite3_bind_text(_sGetNodeIdentity,1,member.nodeId,10,SQLITE_STATIC);
+	if (sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW) {
+		try {
+			Identity alreadyKnownIdentity((const char *)sqlite3_column_text(_sGetNodeIdentity,0));
+			if (alreadyKnownIdentity == identity) {
+				char lastSeen[64];
+				Utils::snprintf(lastSeen,sizeof(lastSeen),"%llu",(unsigned long long)Utils::now());
+				if (fromAddr) {
+					std::string lastAt(fromAddr.toString());
+					sqlite3_reset(_sUpdateNode);
+					sqlite3_bind_text(_sUpdateNode,1,lastAt.c_str(),-1,SQLITE_STATIC);
+					sqlite3_bind_text(_sUpdateNode,2,lastSeen,-1,SQLITE_STATIC);
+					sqlite3_bind_text(_sUpdateNode,3,member.nodeId,10,SQLITE_STATIC);
+					sqlite3_step(_sUpdateNode);
+				} else { // fromAddr is empty, which means this was a relayed packet -- so don't update lastAt
+					sqlite3_reset(_sUpdateNode2);
+					sqlite3_bind_text(_sUpdateNode2,1,lastSeen,-1,SQLITE_STATIC);
+					sqlite3_bind_text(_sUpdateNode2,2,member.nodeId,10,SQLITE_STATIC);
+					sqlite3_step(_sUpdateNode2);
+				}
+			} else {
+				return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
+			}
+		} catch ( ... ) { // identity stored in database is not valid or is NULL
+			return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
+		}
+	} else {
+		std::string idstr(identity.toString(false));
+		std::string lastAt;
+		if (fromAddr)
+			lastAt = fromAddr.toString();
+		char lastSeen[64];
+		Utils::snprintf(lastSeen,sizeof(lastSeen),"%llu",(unsigned long long)Utils::now());
+		sqlite3_reset(_sCreateNode);
+		sqlite3_bind_text(_sCreateNode,1,member.nodeId,10,SQLITE_STATIC);
+		sqlite3_bind_text(_sCreateNode,2,idstr.c_str(),-1,SQLITE_STATIC);
+		sqlite3_bind_text(_sCreateNode,3,lastAt.c_str(),-1,SQLITE_STATIC);
+		sqlite3_bind_text(_sCreateNode,4,lastSeen,-1,SQLITE_STATIC);
+		sqlite3_bind_text(_sCreateNode,5,lastSeen,-1,SQLITE_STATIC);
+		if (sqlite3_step(_sCreateNode) != SQLITE_DONE) {
+			netconf["error"] = "unable to create new node record";
 			return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
 	}
 
-	if (memberRecord.getBoolean("authorized")) {
-		// Get current netconf and netconf timestamp
-		uint64_t ts = memberRecord.getUInt("netconfTimestamp",0);
-		std::string netconfStr(memberRecord.get("netconf",""));
-		netconf.fromString(netconfStr);
+	// Fetch Network record
 
-		// Update statistics for this node
-		Dictionary upd;
-		upd.set("netconfClientTimestamp",haveTimestamp);
-		if (fromAddr)
-			upd.set("lastAt",fromAddr.toString());
-		upd.set("lastSeen",Utils::now());
-		_hmset(memberKey,upd);
+	bool foundNetwork = false;
+	sqlite3_reset(_sGetNetworkById);
+	sqlite3_bind_text(_sGetNetworkById,1,network.id,16,SQLITE_STATIC);
+	if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
+		foundNetwork = true;
+		network.name = (const char *)sqlite3_column_text(_sGetNetworkById,0);
+		network.isPrivate = (sqlite3_column_int(_sGetNetworkById,1) > 0);
+		network.enableBroadcast = (sqlite3_column_int(_sGetNetworkById,2) > 0);
+		network.allowPassiveBridging = (sqlite3_column_int(_sGetNetworkById,3) > 0);
+		network.v4AssignMode = (const char *)sqlite3_column_text(_sGetNetworkById,4);
+		network.v6AssignMode = (const char *)sqlite3_column_text(_sGetNetworkById,5);
+		network.multicastLimit = sqlite3_column_int(_sGetNetworkById,6);
+		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
+	}
+	if (!foundNetwork)
+		return NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND;
 
-		// Attempt to generate netconf for this node if there isn't
-		// one or it's not in step with the network's revision.
-		if (((ts == 0)||(netconfStr.length() == 0))||(memberRecord.get("netconfRevision","") != revision)) {
-			std::string errorMessage;
-			if (!_generateNetconf(nwid,member,metaData,netconf,ts,errorMessage)) {
-				netconf["error"] = errorMessage;
-				return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
-			}
+	// Fetch Member record
+
+	bool foundMember = false;
+	sqlite3_reset(_sGetMemberByNetworkAndNodeId);
+	sqlite3_bind_text(_sGetMemberByNetworkAndNodeId,1,network.id,16,SQLITE_STATIC);
+	sqlite3_bind_text(_sGetMemberByNetworkAndNodeId,2,member.nodeId,10,SQLITE_STATIC);
+	if (sqlite3_step(_sGetMemberByNetworkAndNodeId) == SQLITE_ROW) {
+		foundMember = true;
+		member.rowid = (int64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,0);
+		member.cachedNetconfBytes = sqlite3_column_bytes(_sGetMemberByNetworkAndNodeId,1);
+		member.cachedNetconf = sqlite3_column_blob(_sGetMemberByNetworkAndNodeId,1);
+		member.cachedNetconfRevision = (uint64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,2);
+		member.clientReportedRevision = (uint64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,3);
+		member.authorized = (sqlite3_column_int(_sGetMemberByNetworkAndNodeId,4) > 0);
+		member.activeBridge = (sqlite3_column_int(_sGetMemberByNetworkAndNodeId,5) > 0);
+	}
+
+	// Create Member record for unknown nodes, auto-authorizing if network is public
+
+	if (!foundMember) {
+		member.cachedNetconfBytes = 0;
+		member.cachedNetconfRevision = 0;
+		member.clientReportedRevision = 0;
+		member.authorized = (network.isPrivate ? false : true);
+		member.activeBridge = false;
+		sqlite3_reset(_sCreateMember);
+		sqlite3_bind_text(_sCreateMember,1,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_text(_sCreateMember,2,member.nodeId,10,SQLITE_STATIC);
+		sqlite3_bind_int(_sCreateMember,3,(member.authorized ? 0 : 1));
+		if ( (sqlite3_step(_sCreateMember) != SQLITE_DONE) && ((member.rowid = (int64_t)sqlite3_last_insert_rowid(_db)) > 0) ) {
+			netconf["error"] = "unable to create new member record";
+			return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
+	}
 
-		if (ts > haveTimestamp)
-			return NetworkConfigMaster::NETCONF_QUERY_OK;
-		else return NetworkConfigMaster::NETCONF_QUERY_OK_BUT_NOT_NEWER;
-	} else {
+	// Check member authorization
+
+	if (!member.authorized)
 		return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
-	}
-#endif
-}
 
-bool SqliteNetworkConfigMaster::_initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord)
-{
-#if 0
-	char memberKey[128],nwids[24],addrs[16],nwKey[128],membersKey[128];
-	Dictionary networkRecord;
+	// Update client's currently reported haveRevision in Member record
 
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
-	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
-	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
-	Utils::snprintf(membersKey,sizeof(membersKey),"zt1:network:%s:members",nwids);
-
-	if (!_hgetall(nwKey,networkRecord)) {
-		//LOG("netconf: Sqlite error retrieving %s",nwKey);
-		return false;
-	}
-	if (networkRecord.get("id","") != nwids) {
-		//TRACE("netconf: network %s not found (initNewMember)",nwids);
-		return false;
+	if (member.rowid > 0) {
+		sqlite3_reset(_sUpdateMemberClientReportedRevision);
+		sqlite3_bind_int64(_sUpdateMemberClientReportedRevision,1,(sqlite3_int64)haveRevision);
+		sqlite3_bind_int64(_sUpdateMemberClientReportedRevision,2,member.rowid);
+		sqlite3_step(_sUpdateMemberClientReportedRevision);
 	}
 
-	memberRecord.clear();
-	memberRecord["id"] = addrs;
-	memberRecord["nwid"] = nwids;
-	memberRecord["authorized"] = ((networkRecord.get("private","1") == "0") ? "1" : "0"); // auto-authorize on public networks
-	memberRecord.set("firstSeen",Utils::now());
-	memberRecord["identity"] = member.toString(false);
+	// If netconf is unchanged from client reported revision, just tell client they're up to date
 
-	if (!_hmset(memberKey,memberRecord))
-		return false;
-	if (!_sadd(membersKey,addrs))
-		return false;
+	if ((haveRevision > 0)&&(haveRevision == network.revision))
+		return NetworkConfigMaster::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
-	return true;
-#endif
-}
+	// Generate or retrieve cached netconf
 
-bool SqliteNetworkConfigMaster::_generateNetconf(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &netconf,uint64_t &ts,std::string &errorMessage)
-{
-#if 0
-	char memberKey[256],nwids[24],addrs[16],tss[24],nwKey[256],revKey[128],abKey[128],ipaKey[128];
-	Dictionary networkRecord,memberRecord;
-	std::string revision;
+	netconf.clear();
+	if ((member.cachedNetconfRevision == network.revision)&&(member.cachedNetconfBytes > 0)) {
+		// Use cached copy
+		std::string tmp((const char *)member.cachedNetconf,member.cachedNetconfBytes);
+		netconf.fromString(tmp);
+	} else {
+		// Create and sign a new netconf, and save in database to re-use in the future
 
-	Utils::snprintf(memberKey,sizeof(memberKey),"zt1:network:%s:member:%s:~",nwids,addrs);
-	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
-	Utils::snprintf(addrs,sizeof(addrs),"%.10llx",(unsigned long long)member.address().toInt());
-	Utils::snprintf(nwKey,sizeof(nwKey),"zt1:network:%s:~",nwids);
-	Utils::snprintf(revKey,sizeof(revKey),"zt1:network:%s:revision",nwids);
-	Utils::snprintf(abKey,sizeof(revKey),"zt1:network:%s:activeBridges",nwids);
-	Utils::snprintf(ipaKey,sizeof(revKey),"zt1:network:%s:ipAssignments",nwids);
+		char tss[24],rs[24];
+		Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)Utils::now());
+		Utils::snprintf(rs,sizeof(rs),"%.16llx",(unsigned long long)network.revision);
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_REVISION] = rs;
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = network.id;
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = member.nodeId;
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = network.isPrivate ? "1" : "0";
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_NAME] = (network.name) ? network.name : "";
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = network.enableBroadcast ? "1" : "0";
+		netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = network.allowPassiveBridging ? "1" : "0";
 
-	if (!_hgetall(nwKey,networkRecord)) {
-		errorMessage = "Sqlite error retrieving network record";
-		return false;
-	}
-	if (networkRecord.get("id","") != nwids) {
-		errorMessage = "network IDs do not match in database";
-		return false;
-	}
-
-	if (!_hgetall(memberKey,memberRecord)) {
-		errorMessage = "Sqlite error retrieving member record";
-		return false;
-	}
-
-	if (!_get(revKey,revision)) {
-		errorMessage = "Sqlite error retrieving network revision";
-		return false;
-	}
-	if (!revision.length())
-		revision = "0";
-
-	bool isPrivate = networkRecord.getBoolean("private",true);
-	ts = Utils::now();
-	Utils::snprintf(tss,sizeof(tss),"%llx",ts);
-
-	// Core configuration
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID] = nwids;
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO] = addrs;
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_PRIVATE] = isPrivate ? "1" : "0";
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_NAME] = networkRecord.get("name",nwids);
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_DESC] = networkRecord.get("desc","");
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST] = networkRecord.getBoolean("enableBroadcast",true) ? "1" : "0";
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING] = networkRecord.getBoolean("allowPassiveBridging",false) ? "1" : "0";
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = networkRecord.get("etherTypes",""); // these are stored as hex comma-delimited list
-
-	// Multicast options
-	netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = networkRecord.get("multicastRates","");
-	uint64_t ml = networkRecord.getHexUInt("multicastLimit",0);
-	if (ml > 0)
-		netconf.setHex(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,ml);
-
-	// Active bridge configuration
-	{
-		std::string activeBridgeList;
-		std::vector<std::string> activeBridgeSet;
-		if (!_smembers(abKey,activeBridgeSet)) {
-			errorMessage = "Sqlite error retrieving active bridge set";
-			return false;
-		}
-		std::sort(activeBridgeSet.begin(),activeBridgeSet.end());
-		for(std::vector<std::string>::const_iterator i(activeBridgeSet.begin());i!=activeBridgeSet.end();++i) {
-			if (i->length() == 10) {
-				if (activeBridgeList.length() > 0)
-					activeBridgeList.push_back(',');
-				activeBridgeList.append(*i);
-			}
-		}
-		if (activeBridgeList.length() > 0)
-			netconf[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridgeList;
-	}
-
-	// IP address assignment and auto-assign using the ZeroTier-internal mechanism (not DHCP, etc.)
-	{
-		std::string ipAssignments(memberRecord.get("ipAssignments",""));
-
-		// Get sorted, separated lists of IPv4 and IPv6 IP address assignments already present
-		std::vector<InetAddress> ip4s,ip6s;
 		{
-			std::vector<std::string> ips(Utils::split(ipAssignments.c_str(),",","",""));
-			for(std::vector<std::string>::iterator i(ips.begin());i!=ips.end();++i) {
-				InetAddress a(*i);
-				if (a.isV4())
-					ip4s.push_back(a);
-				else if (a.isV6())
-					ip6s.push_back(a);
+			std::vector<int> allowedEtherTypes;
+			sqlite3_reset(_sGetEtherTypesFromRuleTable);
+			sqlite3_bind_text(_sGetEtherTypesFromRuleTable,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetEtherTypesFromRuleTable) == SQLITE_ROW) {
+				int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
+				if ((et >= 0)&&(et <= 0xffff))
+					allowedEtherTypes.push_back(et);
+			}
+			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
+			std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end());
+			std::string allowedEtherTypesCsv;
+			for(std::vector<int>::const_iterator i(allowedEtherTypes.begin());i!=allowedEtherTypes.end();++i) {
+				if (allowedEtherTypesCsv.length())
+					allowedEtherTypesCsv.push_back(',');
+				char tmp[16];
+				Utils::snprintf(tmp,sizeof(tmp),"%.4x",(unsigned int)*i);
+				allowedEtherTypesCsv.append(tmp);
+			}
+			netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = allowedEtherTypesCsv;
+		}
+
+		{
+			std::string multicastRates;
+			sqlite3_reset(_sGetMulticastRates);
+			sqlite3_bind_text(_sGetMulticastRates,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetMulticastRates) == SQLITE_ROW) {
+				const char *mac = (const char *)sqlite3_column_text(_sGetMulticastRates,0);
+				if ((mac)&&(strlen(mac) == 12)) {
+					unsigned long adi = ((unsigned long)sqlite3_column_int64(_sGetMulticastRates,1)) & 0xffffffff;
+					char tmp[256];
+					Utils::snprintf(tmp,sizeof(tmp),"%s/%.4lx=%x,%x,%x\n",mac,adi,sqlite3_column_int(_sGetMulticastRates,2),sqlite3_column_int(_sGetMulticastRates,3),sqlite3_column_int(_sGetMulticastRates,4));
+					multicastRates.append(tmp);
+				}
+			}
+			if (multicastRates.length() > 0)
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = multicastRates;
+			if (network.multicastLimit > 0) {
+				char ml[16];
+				Utils::snprintf(ml,sizeof(ml),"%lx",(unsigned long)network.multicastLimit);
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = ml;
 			}
 		}
-		std::sort(ip4s.begin(),ip4s.end());
-		std::unique(ip4s.begin(),ip4s.end());
-		std::sort(ip6s.begin(),ip6s.end());
-		std::unique(ip6s.begin(),ip6s.end());
 
-		// If IPv4 assignment mode is 'zt', send them to the client
-		if (networkRecord.get("v4AssignMode","") == "zt") {
-			// If we have no IPv4 addresses and we have an assignment pool, auto-assign
-			if (ip4s.empty()) {
-				InetAddress v4AssignPool(networkRecord.get("v4AssignPool",""));
-				uint32_t pnet = Utils::ntoh(*((const uint32_t *)v4AssignPool.rawIpData()));
-				unsigned int pbits = v4AssignPool.netmaskBits();
+		{
+			std::string activeBridges;
+			sqlite3_reset(_sGetActiveBridges);
+			sqlite3_bind_text(_sGetActiveBridges,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetActiveBridges) == SQLITE_ROW) {
+				const char *ab = (const char *)sqlite3_column_text(_sGetActiveBridges,0);
+				if ((ab)&&(strlen(ab) == 10)) {
+					if (activeBridges.length())
+						activeBridges.push_back(',');
+					activeBridges.append(ab);
+				}
+				if (activeBridges.length() > 1024) // sanity check -- you can't have too many active bridges at the moment
+					break;
+			}
+			if (activeBridges.length())
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges;
+		}
 
-				if ((v4AssignPool.isV4())&&(pbits > 0)&&(pbits < 32)&&(pnet != 0)) {
-					uint32_t pmask = 0xffffffff << (32 - pbits); // netmask over network part
-					uint32_t invmask = ~pmask; // netmask over "random" part
+		if ((network.v4AssignMode)&&(!strcmp(network.v4AssignMode,"zt"))) {
+			std::string v4s;
 
-					// Begin exploring the IP space by generating an IP from the ZeroTier address
-					uint32_t first = (((uint32_t)(member.address().toInt() & 0xffffffffULL)) & invmask) | (pnet & pmask);
-					if ((first & 0xff) == 0)
-						first |= 1;
-					else if ((first & 0xff) == 0xff)
-						first &= 0xfe;
+			sqlite3_reset(_sGetIpAssignmentsForNode);
+			sqlite3_bind_text(_sGetIpAssignmentsForNode,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_text(_sGetIpAssignmentsForNode,2,member.nodeId,10,SQLITE_STATIC);
+			sqlite3_bind_int(_sGetIpAssignmentsForNode,3,4); // 4 == IPv4
+			while (sqlite3_step(_sGetIpAssignmentsForNode) == SQLITE_ROW) {
+				const unsigned char *ip = (const unsigned char *)sqlite3_column_blob(_sGetIpAssignmentsForNode,0);
+				int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,1);
+				if ((ip)&&(sqlite3_column_bytes(_sGetIpAssignmentsForNode,0) >= 4)&&(ipNetmaskBits > 0)&&(ipNetmaskBits <= 32)) {
+					char tmp[32];
+					Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[0],(int)ip[1],(int)ip[2],(int)ip[3],ipNetmaskBits);
+					if (v4s.length())
+						v4s.push_back(',');
+					v4s.append(tmp);
+				}
+			}
 
-					// Start by trying this first IP
-					uint32_t abcd = first;
+			if (!v4s.length()) {
+				// Attempt to auto-assign an IPv4 address from an available pool if one isn't assigned already
+				sqlite3_reset(_sGetIpAssignmentPools);
+				sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
+				sqlite3_bind_int(_sGetIpAssignmentPools,2,4); // 4 == IPv4
+				while ((!v4s.length())&&(sqlite3_step(_sGetIpAssignmentPools) == SQLITE_ROW)) {
+					const void *ipNetwork = sqlite3_column_blob(_sGetIpAssignmentPools,0);
+					int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentPools,1);
+					if ((ipNetwork)&&(sqlite3_column_bytes(_sGetIpAssignmentPools,0) >= 4)&&(ipNetmaskBits > 0)&&(ipNetmaskBits < 32)) {
+						uint32_t n = Utils::ntoh(*((const uint32_t *)ipNetwork)); // network in host byte order e.g. 192.168.0.0
+						uint32_t m = 0xffffffff << (32 - ipNetmaskBits); // netmask e.g. 0xffffff00 for '24' since 32 - 24 == 8
+						uint32_t im = ~m; // inverse mask, e.g. 0x000000ff for a netmask of 0xffffff00
+						uint32_t abits = (uint32_t)(identity.address().toInt() & 0xffffffff); // least significant bits of member ZT address
 
-					InetAddress ip;
-					bool gotone = false;
-					unsigned long sanityCounter = 0;
-					do {
-						// Convert to IPv4 InetAddress
-						uint32_t abcdNetworkByteOrder = Utils::hton(abcd);
-						ip.set(&abcdNetworkByteOrder,4,pbits);
+						for(uint32_t k=0;k<=im;++k) { // try up to the number of IPs possible in this network
+							uint32_t ip = ( ((abits + k) & im) | (n & m) ); // build IP using bits from ZT address of member + k
+							if ((ip & 0x000000ff) == 0x00) continue; // no IPs ending in .0 allowed
+							if ((ip & 0x000000ff) == 0xff) continue; // no IPs ending in .255 allowed
 
-						// Is 'ip' already assigned to another node?
-						std::string assignment;
-						if (!_hget(ipaKey,ip.toString().c_str(),assignment)) {
-							errorMessage = "Sqlite error while checking IP allocation";
-							return false;
+							uint32_t nip = Utils::hton(ip); // IP in big-endian "network" byte order
+							sqlite3_reset(_sCheckIfIpIsAllocated);
+							sqlite3_bind_text(_sCheckIfIpIsAllocated,1,network.id,16,SQLITE_STATIC);
+							sqlite3_bind_blob(_sCheckIfIpIsAllocated,2,(const void *)&nip,4,SQLITE_STATIC);
+							sqlite3_bind_int(_sCheckIfIpIsAllocated,3,4); // 4 == IPv4
+							if (sqlite3_step(_sCheckIfIpIsAllocated) != SQLITE_ROW) {
+								// No rows returned, so the IP is available
+								sqlite3_reset(_sAllocateIp);
+								sqlite3_bind_text(_sAllocateIp,1,network.id,16,SQLITE_STATIC);
+								sqlite3_bind_text(_sAllocateIp,2,member.nodeId,10,SQLITE_STATIC);
+								sqlite3_bind_blob(_sAllocateIp,3,(const void *)&nip,4,SQLITE_STATIC);
+								sqlite3_bind_int(_sAllocateIp,4,ipNetmaskBits);
+								sqlite3_bind_int(_sAllocateIp,5,4); // 4 == IPv4
+								if (sqlite3_step(_sAllocateIp) == SQLITE_DONE) {
+									char tmp[32];
+									Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)((ip >> 24) & 0xff),(int)((ip >> 16) & 0xff),(int)((ip >> 8) & 0xff),(int)(ip & 0xff),ipNetmaskBits);
+									if (v4s.length())
+										v4s.push_back(',');
+									v4s.append(tmp);
+									break; // IP found and reserved! v4s containing something will cause outer while() to break.
+								}
+							}
 						}
-						if ((assignment.length() != 10)||(assignment == member.address().toString())) {
-							gotone = true;
-							break; // not taken!
-						}
-
-						// If we made it here, the IP was taken so increment and mask and try again
-						++abcd;
-						abcd &= invmask;
-						abcd |= (pnet & pmask);
-						if ((abcd & 0xff) == 0)
-							abcd |= 1;
-						else if ((abcd & 0xff) == 0xff)
-							abcd &= 0xfe;
-
-						// Don't spend insane amounts of time here -- if we have to try this hard, the user
-						// needs to allocate a larger IP block.
-						if (++sanityCounter >= 65535)
-							break;
-					} while (abcd != first); // keep going until we loop back around to 'first'
-
-					// If we got one, add to IP list and claim in database
-					if (gotone) {
-						ip4s.push_back(ip);
-						_hset(ipaKey,ip.toString().c_str(),member.address().toString().c_str());
-						if (ipAssignments.length() > 0)
-							ipAssignments.push_back(',');
-						ipAssignments.append(ip.toString());
-						_hset(memberKey,"ipAssignments",ipAssignments.c_str());
-					} else {
-						char tmp[1024];
-						Utils::snprintf(tmp,sizeof(tmp),"failed to allocate IP in %s for %s in network %s, need a larger pool!",v4AssignPool.toString().c_str(),addrs,nwids);
-						errorMessage = tmp;
-						return false;
 					}
 				}
 			}
 
-			// Create comma-delimited list to send to client
-			std::string v4s;
-			for(std::vector<InetAddress>::iterator i(ip4s.begin());i!=ip4s.end();++i) {
-				if (v4s.length() > 0)
-					v4s.push_back(',');
-				v4s.append(i->toString());
-			}
 			if (v4s.length())
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = v4s;
 		}
 
-		if (networkRecord.get("v6AssignMode","") == "zt") {
-			// TODO: IPv6 auto-assign ... not quite baked yet. :)
+		// TODO: IPv6 auto-assign once it's supported in UI
 
-			std::string v6s;
-			for(std::vector<InetAddress>::iterator i(ip6s.begin());i!=ip6s.end();++i) {
-				if (v6s.length() > 0)
-					v6s.push_back(',');
-				v6s.append(i->toString());
+		if (network.isPrivate) {
+			CertificateOfMembership com(network.revision,16,nwid,identity.address());
+			if (com.sign(_signingId)) // basically can't fail unless our identity is invalid
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
+			else {
+				netconf["error"] = "unable to sign COM";
+				return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 			}
-			if (v6s.length())
-				netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = v6s;
+		}
+
+		if (!netconf.sign(_signingId)) {
+			netconf["error"] = "unable to sign netconf dictionary";
+			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+		}
+
+		// Save serialized netconf for future re-use
+		std::string netconfSerialized(netconf.toString());
+		if (netconfSerialized.length() < 4096) { // sanity check
+			sqlite3_reset(_sCacheNetconf);
+			sqlite3_bind_blob(_sCacheNetconf,1,(const void *)netconfSerialized.data(),netconfSerialized.length(),SQLITE_STATIC);
+			sqlite3_bind_int64(_sCacheNetconf,2,(sqlite3_int64)network.revision);
+			sqlite3_bind_int64(_sCacheNetconf,3,member.rowid);
+			sqlite3_step(_sCacheNetconf);
 		}
 	}
 
-	// If this is a private network, generate a signed certificate of membership
-	if (isPrivate) {
-		CertificateOfMembership com(Utils::strToU64(revision.c_str()),1,nwid,member.address());
-		if (com.sign(_signingId)) // basically can't fail unless our identity is invalid
-			netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
-		else {
-			errorMessage = "unable to sign COM";
-			return false;
-		}
-	}
-
-	// Sign netconf dictionary itself
-	if (!netconf.sign(_signingId)) {
-		errorMessage = "unable to sign netconf dictionary";
-		return false;
-	}
-
-	// Record new netconf in database for re-use on subsequent repeat queries
-	{
-		Dictionary upd;
-		upd["netconf"] = netconf.toString();
-		upd.set("netconfTimestamp",ts);
-		upd["netconfRevision"] = revision;
-		if (!_hmset(memberKey,upd)) {
-			errorMessage = "Sqlite error updating network record with new netconf dictionary";
-			return false;
-		}
-	}
-
-	return true;
-#endif
+	return NetworkConfigMaster::NETCONF_QUERY_OK;
 }
 
 } // namespace ZeroTier

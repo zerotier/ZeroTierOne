@@ -51,19 +51,33 @@ public:
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		uint64_t packetId,
-		const Identity &member,
+		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,
-		uint64_t haveTimestamp,
+		uint64_t haveRevision,
 		Dictionary &netconf);
 
 private:
-	bool _initNewMember(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &memberRecord);
-	bool _generateNetconf(uint64_t nwid,const Identity &member,const Dictionary &metaData,Dictionary &netconf,uint64_t &ts,std::string &errorMessage);
-
 	Identity _signingId;
 	std::string _dbPath;
 	sqlite3 *_db;
+
+	sqlite3_stmt *_sGetNetworkById;
+	sqlite3_stmt *_sGetMemberByNetworkAndNodeId;
+	sqlite3_stmt *_sCreateMember;
+	sqlite3_stmt *_sGetNodeIdentity;
+	sqlite3_stmt *_sCreateNode;
+	sqlite3_stmt *_sUpdateNode;
+	sqlite3_stmt *_sUpdateNode2;
+	sqlite3_stmt *_sUpdateMemberClientReportedRevision;
+	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
+	sqlite3_stmt *_sGetMulticastRates;
+	sqlite3_stmt *_sGetActiveBridges;
+	sqlite3_stmt *_sGetIpAssignmentsForNode;
+	sqlite3_stmt *_sGetIpAssignmentPools;
+	sqlite3_stmt *_sCheckIfIpIsAllocated;
+	sqlite3_stmt *_sAllocateIp;
+	sqlite3_stmt *_sCacheNetconf;
 
 	Mutex _lock;
 };

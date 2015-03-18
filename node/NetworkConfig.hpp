@@ -52,6 +52,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
+#define ZT_NETWORKCONFIG_DICT_KEY_REVISION "r"
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
@@ -134,6 +135,7 @@ public:
 
 	inline uint64_t networkId() const throw() { return _nwid; }
 	inline uint64_t timestamp() const throw() { return _timestamp; }
+	inline uint64_t revision() const throw() { return _revision; }
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
 	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
 	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
@@ -174,6 +176,7 @@ private:
 
 	uint64_t _nwid;
 	uint64_t _timestamp;
+	uint64_t _revision;
 	unsigned char _etWhitelist[65536 / 8];
 	Address _issuedTo;
 	unsigned int _multicastLimit;

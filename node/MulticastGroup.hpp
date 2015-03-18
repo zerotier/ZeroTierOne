@@ -111,7 +111,7 @@ public:
 	inline std::string toString() const
 	{
 		char buf[64];
-		Utils::snprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%lx",(unsigned int)_mac[0],(unsigned int)_mac[1],(unsigned int)_mac[2],(unsigned int)_mac[3],(unsigned int)_mac[4],(unsigned int)_mac[5],(unsigned long)_adi);
+		Utils::snprintf(buf,sizeof(buf),"%.2x%.2x%.2x%.2x%.2x%.2x/%.4x",(unsigned int)_mac[0],(unsigned int)_mac[1],(unsigned int)_mac[2],(unsigned int)_mac[3],(unsigned int)_mac[4],(unsigned int)_mac[5],(unsigned int)_adi);
 		return std::string(buf);
 	}
 

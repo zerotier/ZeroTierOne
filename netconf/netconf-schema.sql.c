@@ -7,11 +7,12 @@
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL,\n"\
 "  nodeId char(10) NOT NULL,\n"\
-"  ip varchar(64) NOT NULL,\n"\
-"  ipNetmaskBits integer(4) NOT NULL DEFAULT(0)\n"\
+"  ip blob(16) NOT NULL,\n"\
+"  ipNetmaskBits integer NOT NULL DEFAULT(0),\n"\
+"  ipVersion integer NOT NULL DEFAULT(4)\n"\
 ");\n"\
 "\n"\
-"CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);\n"\
+"CREATE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);\n"\
 "\n"\
 "CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);\n"\
 "\n"\
@@ -19,9 +20,10 @@
 "\n"\
 "CREATE TABLE IpAssignmentPool (\n"\
 "  networkId char(16) NOT NULL,\n"\
-"  ipNetwork varchar(64) NOT NULL,\n"\
-"  ipNetmaskBits integer(4) NOT NULL,\n"\
-"  active integer(1) NOT NULL DEFAULT(1)\n"\
+"  ipNetwork blob(16) NOT NULL,\n"\
+"  ipNetmaskBits integer NOT NULL,\n"\
+"  ipVersion integer NOT NULL DEFAULT(4),\n"\
+"  active integer NOT NULL DEFAULT(1)\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);\n"\
@@ -30,10 +32,10 @@
 "  networkId char(16) NOT NULL,\n"\
 "  nodeId char(10) NOT NULL,\n"\
 "  cachedNetconf blob(4096),\n"\
-"  cachedNetconfRevision integer(32),\n"\
-"  clientReportedRevision integer(32),\n"\
-"  authorized integer(1) NOT NULL DEFAULT(0),\n"\
-"  activeBridge integer(1) NOT NULL DEFAULT(0)\n"\
+"  cachedNetconfRevision integer NOT NULL DEFAULT(0),\n"\
+"  clientReportedRevision integer NOT NULL DEFAULT(0),\n"\
+"  authorized integer NOT NULL DEFAULT(0),\n"\
+"  activeBridge integer NOT NULL DEFAULT(0)\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX Member_networkId ON Member (networkId);\n"\
@@ -43,10 +45,10 @@
 "CREATE TABLE MulticastRate (\n"\
 "  networkId char(16) NOT NULL,\n"\
 "  mgMac char(12) NOT NULL,\n"\
-"  mgAdi integer(8) NOT NULL DEFAULT(0),\n"\
-"  preload integer(16) NOT NULL,\n"\
-"  maxBalance integer(16) NOT NULL,\n"\
-"  accrual integer(16) NOT NULL\n"\
+"  mgAdi integer NOT NULL DEFAULT(0),\n"\
+"  preload integer NOT NULL,\n"\
+"  maxBalance integer NOT NULL,\n"\
+"  accrual integer NOT NULL\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX MulticastRate_networkId ON MulticastRate (networkId);\n"\
@@ -54,38 +56,38 @@
 "CREATE TABLE Network (\n"\
 "  id char(16) PRIMARY KEY NOT NULL,\n"\
 "  name varchar(128) NOT NULL,\n"\
-"  private integer(1) NOT NULL DEFAULT(1),\n"\
-"  enableBroadcast integer(1) NOT NULL DEFAULT(1),\n"\
-"  allowPassiveBridging integer(1) NOT NULL DEFAULT(0),\n"\
+"  private integer NOT NULL DEFAULT(1),\n"\
+"  enableBroadcast integer NOT NULL DEFAULT(1),\n"\
+"  allowPassiveBridging integer NOT NULL DEFAULT(0),\n"\
 "  v4AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
 "  v6AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
-"  multicastLimit integer(8) NOT NULL DEFAULT(32),\n"\
-"  creationTime integer(32) NOT NULL DEFAULT(0),\n"\
-"  revision integer(32) NOT NULL DEFAULT(0)\n"\
+"  multicastLimit integer NOT NULL DEFAULT(32),\n"\
+"  creationTime integer NOT NULL DEFAULT(0),\n"\
+"  revision integer NOT NULL DEFAULT(1)\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE Node (\n"\
 "  id char(10) PRIMARY KEY NOT NULL,\n"\
 "  identity varchar(4096) NOT NULL,\n"\
 "  lastAt varchar(64),\n"\
-"  lastSeen integer(32) NOT NULL DEFAULT(0),\n"\
-"  firstSeen integer(32) NOT NULL DEFAULT(0)\n"\
+"  lastSeen integer NOT NULL DEFAULT(0),\n"\
+"  firstSeen integer NOT NULL DEFAULT(0)\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL,\n"\
 "  nodeId char(10),\n"\
-"  vlanId integer(4),\n"\
-"  vlanPcp integer(4),\n"\
-"  etherType integer(8),\n"\
+"  vlanId integer,\n"\
+"  vlanPcp integer,\n"\
+"  etherType integer,\n"\
 "  macSource char(12),\n"\
 "  macDest char(12),\n"\
 "  ipSource varchar(64),\n"\
 "  ipDest varchar(64),\n"\
-"  ipTos integer(4),\n"\
-"  ipProtocol integer(4),\n"\
-"  ipSourcePort integer(8),\n"\
-"  ipDestPort integer(8),\n"\
+"  ipTos integer,\n"\
+"  ipProtocol integer,\n"\
+"  ipSourcePort integer,\n"\
+"  ipDestPort integer,\n"\
 "  \"action\" varchar(4096) NOT NULL DEFAULT('accept')\n"\
 ");\n"\
 "\n"\

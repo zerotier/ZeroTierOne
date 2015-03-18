@@ -75,17 +75,17 @@ public:
 	 * @param member Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
-	 * @param haveTimestamp Timestamp sent by requesting peer or 0 if none
+	 * @param haveRevision Network revision ID sent by requesting peer or 0 if none
 	 * @param result Dictionary to receive resulting signed netconf on success
 	 * @return Returns NETCONF_QUERY_OK if result dictionary is valid, or an error code on error
 	 */
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		uint64_t packetId,
-		const Identity &member,
+		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,
-		uint64_t haveTimestamp,
+		uint64_t haveRevision,
 		Dictionary &result) = 0;
 };
 

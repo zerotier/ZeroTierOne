@@ -44,6 +44,7 @@ SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &s
 	nc->_etWhitelist[0] |= 1; // allow all
 	nc->_nwid = ZT_TEST_NETWORK_ID;
 	nc->_timestamp = Utils::now();
+	nc->_revision = 1;
 	nc->_issuedTo = self;
 	nc->_multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
 	nc->_allowPassiveBridging = false;
@@ -108,6 +109,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		throw std::invalid_argument("configuration contains zero network ID");
 
 	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP).c_str());
+	_revision = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_REVISION,"1").c_str()); // older netconf masters don't send this, so default to 1
 
 	memset(_etWhitelist,0,sizeof(_etWhitelist));
 	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES).c_str(),",","",""));
