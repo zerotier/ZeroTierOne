@@ -4,6 +4,7 @@ OBJS=\
 	control/NodeControlClient.o \
 	control/NodeControlService.o \
 	ext/lz4/lz4.o \
+	ext/http-parser/http_parser.o \
 	osnet/NativeSocketManager.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \

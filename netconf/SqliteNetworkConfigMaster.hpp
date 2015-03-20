@@ -98,7 +98,7 @@ public:
 	public:
 		DBC(SqliteNetworkConfigMaster &nc) : _p(&nc) { nc._lock.lock(); }
 		~DBC() { _p->_lock.unlock(); }
-		inline sqlite3 *operator*() { return _p->_db; }
+		inline sqlite3 *operator*() const throw() { return _p->_db; }
 	private:
 		SqliteNetworkConfigMaster *const _p;
 	};
