@@ -39,12 +39,16 @@
 #include "../node/Constants.hpp"
 #include "../node/NetworkConfigMaster.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/NonCopyable.hpp"
 
 namespace ZeroTier {
 
 class SqliteNetworkConfigMaster : public NetworkConfigMaster
 {
 public:
+	class DBC;
+	friend class SqliteNetworkConfigMaster::DBC;
+
 	SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath);
 	virtual ~SqliteNetworkConfigMaster();
 
@@ -80,6 +84,24 @@ private:
 	sqlite3_stmt *_sCacheNetconf;
 
 	Mutex _lock;
+
+public:
+	/**
+	 * Provides a safe interface for direct access to this master's database
+	 *
+	 * This acts as both a contextual lock of the master's Mutex and a pointer
+	 * to the Sqlite3 database instance. Dereferencing this with * yields the
+	 * sqlite3* pointer. Create on parent with DBC(SqliteNetworkConfigMaster &).
+	 */
+	class DBC : NonCopyable
+	{
+	public:
+		DBC(SqliteNetworkConfigMaster &nc) : _p(&nc) { nc._lock.lock(); }
+		~DBC() { _p->_lock.unlock(); }
+		inline sqlite3 *operator*() { return _p->_db; }
+	private:
+		SqliteNetworkConfigMaster *const _p;
+	};
 };
 
 } // namespace ZeroTier
