@@ -94,13 +94,22 @@ template
 class Wire
 {
 public:
+	/**
+	 * @param dgHandler Function or function object to handle UDP or RAW datagrams
+	 * @param tcpConnectHandler Handler for outgoing TCP connection attempts (success or failure)
+	 * @param tcpAcceptHandler Handler for incoming TCP connections
+	 * @param tcpDataHandler Handler for incoming TCP data
+	 * @param tcpWritableHandler Handler to be called when TCP sockets are writable (if notification is on)
+	 * @param noDelay If true, disable Nagle algorithm on new TCP sockets
+	 */
 	Wire(
 		ON_DATAGRAM_FUNCTION dgHandler,
 		ON_TCP_CONNECT_FUNCTION tcpConnectHandler,
 		ON_TCP_ACCEPT_FUNCTION tcpAcceptHandler,
 		ON_TCP_CLOSE_FUNCTION tcpCloseHandler,
 		ON_TCP_DATA_FUNCTION tcpDataHandler,
-		ON_TCP_WRITABLE_FUNCTION tcpWritableHandler) :
+		ON_TCP_WRITABLE_FUNCTION tcpWritableHandler,
+		bool noDelay) :
 		_dgHandler(dgHandler),
 		_tcpConnectHandler(tcpConnectHandler),
 		_tcpAcceptHandler(tcpAcceptHandler),
@@ -126,6 +135,8 @@ public:
 		_nfds = (pipes[0] > pipes[1]) ? (long)pipes[0] : (long)pipes[1];
 		_whackReceiveSocket = pipes[0];
 		_whackSendSocket = pipes[1];
+
+		_noDelay = noDelay;
 	}
 
 	~Wire()
@@ -138,15 +149,25 @@ public:
 		ZT_SELECTWIRE_CLOSE_SOCKET(_whackSendSocket);
 	}
 
+	/**
+	 * Cause poll() to stop waiting immediately
+	 */
 	inline void whack()
 	{
-#ifdef __WINDOWS__
+#if defined(_WIN32) || defined(_WIN64)
 		::send(_whackSendSocket,(const char *)this,1,0);
 #else
 		::write(_whackSendSocket,(const void *)this,1);
 #endif
 	}
 
+	/**
+	 * Bind a UDP socket
+	 *
+	 * @param localAddress Local endpoint address and port
+	 * @param uptr Initial value of user pointer associated with this socket
+	 * @return Socket (as opaque pointer) or NULL on failure
+	 */
 	inline const void *udpBind(const struct sockaddr *localAddress,void *uptr)
 	{
 		ZT_SELECTWIRE_SOCKFD_TYPE s = ::socket(AF_INET6,SOCK_DGRAM,0);
@@ -167,7 +188,7 @@ public:
 				break;
 			bs -= 16384;
 		}
-#ifdef __WINDOWS__
+#if defined(_WIN32) || defined(_WIN64)
 		BOOL f;
 		if (localAddress->ss_family == AF_INET6) {
 			f = TRUE; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
@@ -175,7 +196,7 @@ public:
 		}
 		f = FALSE; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
 		f = TRUE; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(const char *)&f,sizeof(f));
-#else
+#else // not Windows
 		int f;
 		if (localAddress->ss_family == AF_INET6) {
 			f = 1; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
@@ -191,14 +212,14 @@ public:
 #ifdef IP_MTU_DISCOVER
 		f = 0; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
 #endif
-#endif
+#endif // Windows or not
 
 		if (::bind(s,localAddress,(localAddress->ss_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) {
 			ZT_SELECTWIRE_CLOSE_SOCKET(s);
 			return (const void *)0;
 		}
 
-#ifdef __WINDOWS__
+#if defined(_WIN32) || defined(_WIN64)
 		u_long iMode=1;
 		ioctlsocket(s,FIONBIO,&iMode);
 #else
@@ -222,6 +243,16 @@ public:
 		return (const void *)0;
 	}
 
+	/**
+	 * Send a UDP packet
+	 *
+	 * @param sock UDP socket
+	 * @param addr Destination address (must be correct type for socket)
+	 * @param addrlen Length of sockaddr_X structure
+	 * @param data Data to send
+	 * @param len Length of packet
+	 * @return True if packet appears to have been sent successfully
+	 */
 	inline bool udpSend(const void *sock,const struct sockaddr *addr,unsigned int addrlen,const void *data,unsigned long len)
 	{
 		WireSocket &sws = *(const_cast <WireSocket *>(reinterpret_cast<const WireSocket *>(sock)));
@@ -243,6 +274,12 @@ public:
 		return ((n > 0) ? (unsigned long)n : 0);
 	}
 
+	/**
+	 * Set whether we want to be notified via the TCP writability handler when a socket is writable
+	 *
+	 * @param sock TCP connection socket (other types are not valid)
+	 * @param notifyWritable Want writable notifications?
+	 */
 	inline const void tcpSetNotifyWritable(const void *sock,bool notifyWritable)
 	{
 		WireSocket &sws = *(const_cast <WireSocket *>(reinterpret_cast<const WireSocket *>(sock)));
@@ -251,7 +288,6 @@ public:
 		} else {
 			FD_CLR(sws.sock,&_writefds);
 		}
-		this->whack();
 	}
 
 	inline void poll(unsigned long timeout)
@@ -271,7 +307,7 @@ public:
 
 		if (FD_ISSET(_whackReceiveSocket,&rfds)) {
 			char tmp[16];
-#ifdef __WINDOWS__
+#if defined(_WIN32) || defined(_WIN64)
 			::recv(_whackReceiveSocket,tmp,16,0);
 #else
 			::read(_whackReceiveSocket,tmp,16);
@@ -322,10 +358,12 @@ public:
 						socklen_t slen = sizeof(ss);
 						ZT_SELECTWIRE_SOCKFD_TYPE s = ::accept(_socks[i].sock,(struct sockaddr *)&ss,&slen);
 						if (ZT_SELECTWIRE_SOCKFD_VALID(s)) {
-#ifdef __WINDOWS__
+#if defined(_WIN32) || defined(_WIN64)
+							if (_noDelay) { BOOL f = TRUE; setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
 							u_long iMode=1;
 							ioctlsocket(s,FIONBIO,&iMode);
 #else
+							if (_noDelay) { int f = 1; setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
 							fcntl(s,F_SETFL,O_NONBLOCK);
 #endif
 							bool haveSlot = false;
@@ -469,11 +507,16 @@ private:
 	ON_TCP_CLOSE_FUNCTION _tcpCloseHandler;
 	ON_TCP_DATA_FUNCTION _tcpDataHandler;
 	ON_TCP_WRITABLE_FUNCTION _tcpWritableHandler;
+
 	WireSocket _socks[ZT_SELECTWIRE_MAX_SOCKETS];
+
 	fd_set _readfds,_writefds,_exceptfds;
 	long _nfds;
+
 	ZT_SELECTWIRE_SOCKFD_TYPE _whackReceiveSocket;
 	ZT_SELECTWIRE_SOCKFD_TYPE _whackSendSocket;
+
+	bool _noDelay;
 };
 
 } // namespace ZeroTier
