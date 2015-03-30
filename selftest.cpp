@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#define ZT_TEST_WIRE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,6 +56,10 @@
 #include "node/HttpClient.hpp"
 #include "node/Defaults.hpp"
 #include "node/Node.hpp"
+
+#ifdef ZT_TEST_WIRE
+#include "osnet/Wire.hpp"
+#endif
 
 #ifdef ZT_ENABLE_NETCONF_MASTER
 #include "netconf/SqliteNetworkConfigMaster.hpp"

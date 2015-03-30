@@ -32,14 +32,27 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <list>
+
 #if defined(_WIN32) || defined(_WIN64)
+
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
-#else
+
+#define ZT_WIRE_SOCKFD_TYPE SOCKET
+#define ZT_WIRE_SOCKFD_NULL (INVALID_SOCKET)
+#define ZT_WIRE_SOCKFD_VALID(s) ((s) != INVALID_SOCKET)
+#define ZT_WIRE_CLOSE_SOCKET(s) ::closesocket(s)
+#define ZT_WIRE_MAX_SOCKETS (FD_SETSIZE)
+#define ZT_WIRE_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
+
+#else // not Windows
+
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/select.h>
@@ -47,25 +60,15 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#endif
 
-#include <list>
-
-#if defined(_WIN32) || defined(_WIN64)
-#define ZT_WIRE_SOCKFD_TYPE SOCKET
-#define ZT_WIRE_SOCKFD_NULL (INVALID_SOCKET)
-#define ZT_WIRE_SOCKFD_VALID(s) ((s) != INVALID_SOCKET)
-#define ZT_WIRE_CLOSE_SOCKET(s) ::closesocket(s)
-#define ZT_WIRE_MAX_SOCKETS (FD_SETSIZE)
-#define ZT_WIRE_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
-#else
 #define ZT_WIRE_SOCKFD_TYPE int
 #define ZT_WIRE_SOCKFD_NULL (-1)
 #define ZT_WIRE_SOCKFD_VALID(s) ((s) > -1)
 #define ZT_WIRE_CLOSE_SOCKET(s) ::close(s)
 #define ZT_WIRE_MAX_SOCKETS (FD_SETSIZE)
 #define ZT_WIRE_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
-#endif
+
+#endif // Windows or not
 
 namespace ZeroTier {
 
@@ -111,20 +114,57 @@ typedef const void * WireSocket;
  * This isn't thread-safe with the exception of whack(), which is safe to
  * call from another thread to abort poll().
  */
-template
-<
+template <
 	typename ON_DATAGRAM_FUNCTION,
 	typename ON_TCP_CONNECT_FUNCTION,
 	typename ON_TCP_ACCEPT_FUNCTION,
 	typename ON_TCP_CLOSE_FUNCTION,
 	typename ON_TCP_DATA_FUNCTION,
-	typename ON_TCP_WRITABLE_FUNCTION
->
+	typename ON_TCP_WRITABLE_FUNCTION>
 class Wire
 {
+private:
+	ON_DATAGRAM_FUNCTION _datagramHandler;
+	ON_TCP_CONNECT_FUNCTION _tcpConnectHandler;
+	ON_TCP_ACCEPT_FUNCTION _tcpAcceptHandler;
+	ON_TCP_CLOSE_FUNCTION _tcpCloseHandler;
+	ON_TCP_DATA_FUNCTION _tcpDataHandler;
+	ON_TCP_WRITABLE_FUNCTION _tcpWritableHandler;
+
+	enum WireSocketType
+	{
+		ZT_WIRE_SOCKET_TCP_OUT_PENDING = 0x00,
+		ZT_WIRE_SOCKET_TCP_OUT_CONNECTED = 0x01,
+		ZT_WIRE_SOCKET_TCP_IN = 0x02,
+		ZT_WIRE_SOCKET_TCP_LISTEN = 0x03,
+		ZT_WIRE_SOCKET_RAW = 0x04,
+		ZT_WIRE_SOCKET_UDP = 0x05
+	};
+
+	struct WireSocketImpl
+	{
+		WireSocketType type;
+		ZT_WIRE_SOCKFD_TYPE sock;
+		void *uptr; // user-settable pointer
+		ZT_WIRE_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
+	};
+
+	std::list<WireSocketImpl> _socks;
+	fd_set _readfds;
+	fd_set _writefds;
+#if defined(_WIN32) || defined(_WIN64)
+	fd_set _exceptfds;	
+#endif
+	long _nfds;
+
+	ZT_WIRE_SOCKFD_TYPE _whackReceiveSocket;
+	ZT_WIRE_SOCKFD_TYPE _whackSendSocket;
+
+	bool _noDelay;
+
 public:
 	/**
-	 * @param dgHandler Function or function object to handle UDP or RAW datagrams
+	 * @param datagramHandler Function or function object to handle UDP or RAW datagrams
 	 * @param tcpConnectHandler Handler for outgoing TCP connection attempts (success or failure)
 	 * @param tcpAcceptHandler Handler for incoming TCP connections
 	 * @param tcpDataHandler Handler for incoming TCP data
@@ -132,14 +172,14 @@ public:
 	 * @param noDelay If true, disable Nagle algorithm on new TCP sockets
 	 */
 	Wire(
-		ON_DATAGRAM_FUNCTION dgHandler,
+		ON_DATAGRAM_FUNCTION datagramHandler,
 		ON_TCP_CONNECT_FUNCTION tcpConnectHandler,
 		ON_TCP_ACCEPT_FUNCTION tcpAcceptHandler,
 		ON_TCP_CLOSE_FUNCTION tcpCloseHandler,
 		ON_TCP_DATA_FUNCTION tcpDataHandler,
 		ON_TCP_WRITABLE_FUNCTION tcpWritableHandler,
 		bool noDelay) :
-		_dgHandler(dgHandler),
+		_datagramHandler(datagramHandler),
 		_tcpConnectHandler(tcpConnectHandler),
 		_tcpAcceptHandler(tcpAcceptHandler),
 		_tcpCloseHandler(tcpCloseHandler),
@@ -148,16 +188,40 @@ public:
 	{
 		FD_ZERO(&_readfds);
 		FD_ZERO(&_writefds);
-		FD_ZERO(&_exceptfds);
 
 #if defined(_WIN32) || defined(_WIN64)
+		FD_ZERO(&_exceptfds);
+
 		SOCKET pipes[2];
-		this->_winPipeHack(pipes);
-#else
+		{	// hack copied from StackOverflow, behaves a bit like pipe() on *nix systems
+			struct sockaddr_in inaddr;
+			struct sockaddr addr;
+			SOCKET lst=::socket(AF_INET, SOCK_STREAM,IPPROTO_TCP);
+			if (lst == INVALID_SOCKET)
+				throw std::runtime_error("unable to create pipes for select() abort");
+			memset(&inaddr, 0, sizeof(inaddr));
+			memset(&addr, 0, sizeof(addr));
+			inaddr.sin_family = AF_INET;
+			inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+			inaddr.sin_port = 0;
+			int yes=1;
+			setsockopt(lst,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
+			bind(lst,(struct sockaddr *)&inaddr,sizeof(inaddr));
+			listen(lst,1);
+			int len=sizeof(inaddr);
+			getsockname(lst, &addr,&len);
+			pipes[0]=::socket(AF_INET, SOCK_STREAM,0);
+			if (pipes[0] == INVALID_SOCKET)
+				throw std::runtime_error("unable to create pipes for select() abort");
+			connect(pipes[0],&addr,len);
+			pipes[1]=accept(lst,0,0);
+			closesocket(lst);
+		}
+#else // not Windows
 		int pipes[2];
 		if (::pipe(pipes))
 			throw std::runtime_error("unable to create pipes for select() abort");
-#endif
+#endif // Windows or not
 
 		_nfds = (pipes[0] > pipes[1]) ? (long)pipes[0] : (long)pipes[1];
 		_whackReceiveSocket = pipes[0];
@@ -336,7 +400,7 @@ public:
 			int f;
 			f = 1; ::setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
 			f = 1; ::setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
-			f = (_noDelay ? 1 : 0); setsockopt(newSock,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f));
+			f = (_noDelay ? 1 : 0); setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f));
 			fcntl(s,F_SETFL,O_NONBLOCK);
 		}
 #endif
@@ -395,7 +459,7 @@ public:
 		if (_socks.size() >= ZT_WIRE_MAX_SOCKETS)
 			return (WireSocket *)0;
 
-		ZT_WIRE_SOCKFD_TYPE s = ::socket(localAddress->sa_family,SOCK_STREAM,0);
+		ZT_WIRE_SOCKFD_TYPE s = ::socket(remoteAddress->sa_family,SOCK_STREAM,0);
 		if (!ZT_WIRE_SOCKFD_VALID(s))
 			return (WireSocket *)0;
 
@@ -413,13 +477,13 @@ public:
 			int f;
 			f = 1; ::setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
 			f = 1; ::setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
-			f = (_noDelay ? 1 : 0); setsockopt(newSock,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f));
+			f = (_noDelay ? 1 : 0); setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f));
 			fcntl(s,F_SETFL,O_NONBLOCK);
 		}
 #endif
 
 		connected = true;
-		if (::connect(s,localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) {
+		if (::connect(s,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) {
 #if defined(_WIN32) || defined(_WIN64)
 			if (WSAGetLastError() != WSAEWOULDBLOCK) {
 #else
@@ -453,7 +517,7 @@ public:
 		sws.sock = s;
 		sws.uptr = uptr;
 		memset(&(sws.saddr),0,sizeof(struct sockaddr_storage));
-		memcpy(&(sws.saddr),localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
+		memcpy(&(sws.saddr),remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 
 		if ((callConnectHandlerOnInstantConnect)&&(connected)) {
 			try {
@@ -560,7 +624,8 @@ public:
 
 		tv.tv_sec = (long)(timeout / 1000);
 		tv.tv_usec = (long)((timeout % 1000) * 1000);
-		::select((int)_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0);
+		if (::select((int)_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0) <= 0)
+			return;
 
 		if (FD_ISSET(_whackReceiveSocket,&rfds)) {
 			char tmp[16];
@@ -571,7 +636,7 @@ public:
 #endif
 		}
 
-		for(std::list<WireSocketImpl>::iterator s(_socks.begin()),nexts;s!=_socks.end();s=nexts) {
+		for(typename std::list<WireSocketImpl>::iterator s(_socks.begin()),nexts;s!=_socks.end();s=nexts) {
 			nexts = s; ++nexts; // we can delete the linked list item, so traverse now
 
 			switch (s->type) {
@@ -579,13 +644,13 @@ public:
 				case ZT_WIRE_SOCKET_TCP_OUT_PENDING:
 #if defined(_WIN32) || defined(_WIN64)
 					if (FD_ISSET(s->sock,&efds))
-						this->close((WireSocket *)&(_socks[i]),true);
-					else // if ... below
+						this->close((WireSocket *)&(*s),true);
+					else // ... if
 #endif
 					if (FD_ISSET(s->sock,&wfds)) {
 						socklen_t slen = sizeof(ss);
 						if (::getpeername(s->sock,(struct sockaddr *)&ss,&slen) != 0) {
-							this->close((WireSocket *)&(_socks[i]),true);
+							this->close((WireSocket *)&(*s),true);
 						} else {
 							s->type = ZT_WIRE_SOCKET_TCP_OUT_CONNECTED;
 							FD_SET(s->sock,&_readfds);
@@ -594,7 +659,7 @@ public:
 							FD_CLR(s->sock,&_exceptfds);
 #endif
 							try {
-								_tcpConnectHandler((WireSocket *)&(_socks[i]),&(s->uptr),true);
+								_tcpConnectHandler((WireSocket *)&(*s),&(s->uptr),true);
 							} catch ( ... ) {}
 						}
 					}
@@ -605,16 +670,16 @@ public:
 					if (FD_ISSET(s->sock,&rfds)) {
 						long n = (long)::recv(s->sock,buf,sizeof(buf),0);
 						if (n <= 0) {
-							this->close((WireSocket *)&(_socks[i]),true);
+							this->close((WireSocket *)&(*s),true);
 						} else {
 							try {
-								_tcpDataHandler((WireSocket *)&(_socks[i]),&(s->uptr),(void *)buf,(unsigned long)n);
+								_tcpDataHandler((WireSocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
 							} catch ( ... ) {}
 						}
 					}
 					if ((FD_ISSET(s->sock,&wfds))&&(FD_ISSET(s->sock,&_writefds))) {
 						try {
-							_tcpWritableHandler((WireSocket *)&(_socks[i]),&(s->uptr));
+							_tcpWritableHandler((WireSocket *)&(*s),&(s->uptr));
 						} catch ( ... ) {}
 					}
 					break;
@@ -647,6 +712,7 @@ public:
 								try {
 									_tcpAcceptHandler((WireSocket *)&(*s),(WireSocket *)&(_socks.back()),&(s->uptr),&(sws.uptr),(const struct sockaddr *)&(sws.saddr));
 								} catch ( ... ) {}
+							}
 						}
 					}
 					break;
@@ -658,7 +724,7 @@ public:
 						long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
 						if (n > 0) {
 							try {
-								_dgHandler((WireSocket *)&(_socks[i]),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
+								_datagramHandler((WireSocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
 							} catch ( ... ) {}
 						}
 					}
@@ -705,92 +771,26 @@ public:
 				break;
 		}
 
-		if ((long)sws.sock >= _nfds) {
-			long nfds = (long)_whackSendSocket;
-			if ((long)_whackReceiveSocket > nfds)
-				nfds = (long)_whackReceiveSocket;
-			for(std::list<WireSocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
-				if ((long)s->sock > nfds)
-					nfds = (long)s->sock;
-			}
-			_nfds = nfds;
-		}
+		long oldSock = (long)sws.sock;
 
-		for(std::list<WireSocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
+		for(typename std::list<WireSocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
 			if (&(*s) == sock) {
 				_socks.erase(s);
 				break;
 			}
 		}
+
+		if (oldSock >= _nfds) {
+			long nfds = (long)_whackSendSocket;
+			if ((long)_whackReceiveSocket > nfds)
+				nfds = (long)_whackReceiveSocket;
+			for(typename std::list<WireSocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
+				if ((long)s->sock > nfds)
+					nfds = (long)s->sock;
+			}
+			_nfds = nfds;
+		}
 	}
-
-private:
-#if defined(_WIN32) || defined(_WIN64)
-	// hack copied from StackOverflow, behaves a bit like pipe() on *nix systems
-	inline void _winPipeHack(SOCKET fds[2]) const
-	{
-		struct sockaddr_in inaddr;
-		struct sockaddr addr;
-		SOCKET lst=::socket(AF_INET, SOCK_STREAM,IPPROTO_TCP);
-		if (lst == INVALID_SOCKET)
-			throw std::runtime_error("unable to create pipes for select() abort");
-		memset(&inaddr, 0, sizeof(inaddr));
-		memset(&addr, 0, sizeof(addr));
-		inaddr.sin_family = AF_INET;
-		inaddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-		inaddr.sin_port = 0;
-		int yes=1;
-		setsockopt(lst,SOL_SOCKET,SO_REUSEADDR,(char*)&yes,sizeof(yes));
-		bind(lst,(struct sockaddr *)&inaddr,sizeof(inaddr));
-		listen(lst,1);
-		int len=sizeof(inaddr);
-		getsockname(lst, &addr,&len);
-		fds[0]=::socket(AF_INET, SOCK_STREAM,0);
-		if (fds[0] == INVALID_SOCKET)
-			throw std::runtime_error("unable to create pipes for select() abort");
-		connect(fds[0],&addr,len);
-		fds[1]=accept(lst,0,0);
-		closesocket(lst);
-	}
-#endif
-
-	enum WireSocketType
-	{
-		ZT_WIRE_SOCKET_TCP_OUT_PENDING = 0x00,
-		ZT_WIRE_SOCKET_TCP_OUT_CONNECTED = 0x01,
-		ZT_WIRE_SOCKET_TCP_IN = 0x02,
-		ZT_WIRE_SOCKET_TCP_LISTEN = 0x03,
-		ZT_WIRE_SOCKET_RAW = 0x04,
-		ZT_WIRE_SOCKET_UDP = 0x05
-	};
-
-	struct WireSocketImpl
-	{
-		WireSocketType type;
-		ZT_WIRE_SOCKFD_TYPE sock;
-		void *uptr; // user-settable pointer
-		ZT_WIRE_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
-	};
-
-	ON_DATAGRAM_FUNCTION _dgHandler;
-	ON_TCP_CONNECT_FUNCTION _tcpConnectHandler;
-	ON_TCP_ACCEPT_FUNCTION _tcpAcceptHandler;
-	ON_TCP_CLOSE_FUNCTION _tcpCloseHandler;
-	ON_TCP_DATA_FUNCTION _tcpDataHandler;
-	ON_TCP_WRITABLE_FUNCTION _tcpWritableHandler;
-
-	std::list<WireSocketImpl> _socks;
-	fd_set _readfds;
-	fd_set _writefds;
-#if defined(_WIN32) || defined(_WIN64)
-	fd_set _exceptfds;	
-#endif
-	long _nfds;
-
-	ZT_WIRE_SOCKFD_TYPE _whackReceiveSocket;
-	ZT_WIRE_SOCKFD_TYPE _whackSendSocket;
-
-	bool _noDelay;
 };
 
 } // namespace ZeroTier
