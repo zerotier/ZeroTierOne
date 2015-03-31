@@ -36,33 +36,33 @@
 #include <stdint.h>
 
 #ifndef ZT_SOCKADDR_STORAGE
-
 #if defined(_WIN32) || defined(_WIN64)
-
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
-
-#else // not Windows
-
+#else /* not Windows */
 #include <netinet/in.h>
-
-#endif // Windows or not
-
+#endif /* Windows or not */
 #define ZT_SOCKADDR_STORAGE struct sockaddr_storage
-
-#endif // !ZT_SOCKADDR_STORAGE
+#endif /* !ZT_SOCKADDR_STORAGE */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/****************************************************************************/
+/* Structures and other types                                               */
+/****************************************************************************/
+
 /**
  * Function return values: OK or various error conditions
  */
-enum ZT1_ReturnValue
+enum ZT1_ResultCode
 {
-	ZT1_OK = 0,
+	/**
+	 * Operation completed normally
+	 */
+	ZT1_RESULT_OK = 0,
 
 	/**
 	 * Our identity collides with another on the network
@@ -72,46 +72,81 @@ enum ZT1_ReturnValue
 	 * data store / home path and restart. You might also avoid shark infested
 	 * waters, hide during thunderstorms, and consider playing the lottery.
 	 */
-	ZT1_FATAL_ERROR_IDENTITY_COLLISION = 1,
+	ZT1_RESULT_ERROR_IDENTITY_COLLISION = 1,
 
 	/**
 	 * Ran out of memory
 	 */
-	ZT1_FATAL_ERROR_OUT_OF_MEMORY = 2,
+	ZT1_RESULT_ERROR_OUT_OF_MEMORY = 2,
 
 	/**
-	 * Home path is not writable
+	 * Data store is not writable or has failed
 	 */
-	ZT1_FATAL_ERROR_DATA_STORE_NOT_WRITABLE = 3
+	ZT1_RESULT_ERROR_DATA_STORE_FAILED = 3
 };
 
 /**
- * Status codes
+ * Status codes sent to status update callback when things happen
  */
-enum ZT1_StatusCode
+enum ZT1_NodeStatusChangeCode
 {
 	/**
 	 * Node is online
 	 */
-	ZT1_STATUS_ONLINE = 1,
+	ZT1_NODE_STATUS_ONLINE = 1,
 
 	/**
 	 * Node is offline -- nothing is reachable
 	 */
-	ZT1_STATUS_OFFLINE = 2,
+	ZT1_NODE_STATUS_OFFLINE = 2,
 
 	/**
 	 * The desperation level has changed
 	 *
 	 * 'extra' will point to an int containing the new level.
 	 */
-	ZT1_STATUS_DESPERATION_CHANGE = 3
+	ZT1_NODE_STATUS_DESPERATION_CHANGE = 3
 };
+
+/**
+ * Current node status
+ */
+typedef struct
+{
+	/**
+	 * 40-bit ZeroTier address of this node
+	 */
+	uint64_t address;
+
+	/**
+	 * Public identity in string-serialized form (safe to send to others)
+	 *
+	 * This pointer will remain valid as long as the node exists.
+	 */
+	const char *publicIdentity;
+
+	/**
+	 * Full identity including secret key in string-serialized form
+	 *
+	 * This pointer will remain valid as long as the node exists.
+	 */
+	const char *secretIdentity;
+
+	/**
+	 * True if some kind of connectivity appears available
+	 */
+	int online;
+
+	/**
+	 * Current maximum link desperation metric
+	 */
+	int desperation;
+} ZT1_NodeStatus;
 
 /**
  * A message to or from a physical address (e.g. IP or physical Ethernet)
  */
-struct ZT1_WireMessage
+typedef struct
 {
 	/**
 	 * Remote socket address
@@ -162,12 +197,12 @@ struct ZT1_WireMessage
 	 * Length of packet
 	 */
 	unsigned int packetLength;
-};
+} ZT1_WireMessage;
 
 /**
  * A message to or from a virtual LAN port
  */
-struct ZT1_VirtualLanFrame
+typedef struct
 {
 	/**
 	 * ZeroTier network ID of virtual LAN port
@@ -203,12 +238,54 @@ struct ZT1_VirtualLanFrame
 	 * Ethernet frame length
 	 */
 	unsigned int frameLength;
+} ZT1_VirtualNetworkFrame;
+
+/**
+ * Virtual network status codes
+ */
+enum ZT1_VirtualNetworkStatus
+{
+	/**
+	 * Waiting for network configuration (also means revision == 0)
+	 */
+	ZT1_NETWORK_STATUS_WAITING = 0,
+
+	/**
+	 * Configuration received and we are authorized
+	 */
+	ZT1_NETWORK_STATUS_AUTHORIZED = 1,
+
+	/**
+	 * Netconf master told us 'nope'
+	 */
+	ZT1_NETWORK_STATUS_ACCESS_DENIED = 2,
+
+	/**
+	 * Netconf master exists, but this virtual network does not
+	 */
+	ZT1_NETWORK_STATUS_NOT_FOUND = 3
+};
+
+/**
+ * Virtual network type codes
+ */
+enum ZT1_VirtualNetworkType
+{
+	/**
+	 * Private networks are authorized via certificates of membership
+	 */
+	ZT1_NETWORK_TYPE_PRIVATE = 0,
+
+	/**
+	 * Public networks have no access control -- they'll always be AUTHORIZED
+	 */
+	ZT1_NETWORK_TYPE_PUBLIC = 1
 };
 
 /**
  * Virtual LAN configuration
  */
-struct ZT1_VirtualPortConfig
+typedef struct
 {
 	/**
 	 * 64-bit ZeroTier network ID
@@ -223,55 +300,32 @@ struct ZT1_VirtualPortConfig
 	/**
 	 * Network configuration request status
 	 */
-	enum {
-		/**
-		 * Waiting for network configuration
-		 */
-		ZT1_VirtualPortConfig_STATUS_WAITING = 0,
-
-		/**
-		 * Configuration received and we are authorized
-		 */
-		ZT1_VirtualPortConfig_STATUS_AUTHORIZED = 1,
-
-		/**
-		 * Netconf master told us 'nope'
-		 */
-		ZT1_VirtualPortConfig_STATUS_ACCESS_DENIED = 2,
-
-		/**
-		 * Netconf master exists, but this virtual network does not
-		 */
-		ZT1_VirtualPortConfig_STATUS_NOT_FOUND = 3
-	} status;
+	enum ZT1_VirtualNetworkStatus status;
 
 	/**
 	 * Network type
 	 */
-	enum {
-		/**
-		 * Private networks are authorized via certificates of membership
-		 */
-		ZT1_VirtualPortConfig_NETWORK_TYPE_PRIVATE = 0,
-
-		/**
-		 * Public networks have no access control -- they'll always be AUTHORIZED
-		 */
-		ZT1_VirtualPortConfig_NETWORK_TYPE_PUBLIC = 1
-	} type;
+	enum ZT1_VirtualNetworkType type;
 
 	/**
-	 * Desired interface MTU
+	 * Maximum interface MTU
 	 */
 	unsigned int mtu;
 
 	/**
-	 * If nonzero, DHCP should be used if allowed by security constraints
+	 * If nonzero, the network this port belongs to indicates DHCP availability
+	 *
+	 * This is a suggestion. The underlying implementation is free to ignore it
+	 * for security or other reasons. This is simply a netconf parameter that
+	 * means 'DHCP is available on this network.'
 	 */
 	int dhcp;
 
 	/**
 	 * If nonzero, this port is allowed to bridge to other networks
+	 *
+	 * This is informational. If this is false (0), bridged packets will simply
+	 * be dropped and bridging won't work.
 	 */
 	int bridge;
 
@@ -303,12 +357,140 @@ struct ZT1_VirtualPortConfig
 	 * Network name (from network configuration master)
 	 */
 	const char *networkName;
+} ZT1_VirtualNetworkConfig;
+
+/**
+ * A list of networks
+ */
+typedef struct
+{
+	ZT1_VirtualNetworkConfig *networks;
+	unsigned long networkCount;
+} ZT1_VirtualNetworkList;
+
+/**
+ * Physical network path to a peer
+ */
+typedef struct
+{
+	/**
+	 * Address of endpoint
+	 */
+	ZT_SOCKADDR_STORAGE address;
+
+	/**
+	 * Time since last send in milliseconds or -1 for never
+	 */
+	long lastSend;
+
+	/**
+	 * Time since last receive in milliseconds or -1 for never
+	 */
+	long lastReceive;
+
+	/**
+	 * Time since last ping sent in milliseconds or -1 for never
+	 */
+	long lastPing;
+
+	/**
+	 * Time since last firewall opener sent in milliseconds or -1 for never
+	 */
+	long lastFirewallOpener;
+
+	/**
+	 * Total bytes sent
+	 */
+	uint64_t bytesSent;
+
+	/**
+	 * Total bytes received
+	 */
+	uint64_t bytesReceived;
+
+	/**
+	 * This path's desperation metric (higher == worse)
+	 */
+	int desperation;
+
+	/**
+	 * Is path fixed? (i.e. not learned, static)
+	 */
+	int fixed;
+} ZT1_PeerPhysicalPath;
+
+/**
+ * What trust hierarchy role does this device have?
+ */
+enum ZT1_PeerRole {
+	ZT1_PEER_ROLE_SUPERNODE = 0, // planetary supernode
+	ZT1_PEER_ROLE_HUB = 1,       // locally federated hub
+	ZT1_PEER_ROLE_NODE = 2       // ordinary node
 };
 
 /**
- * Opaque instance of ZeroTier One node
+ * Peer status result buffer
+ */
+typedef struct
+{
+	/**
+	 * ZeroTier binary address (40 bits)
+	 */
+	uint64_t address;
+
+	/**
+	 * Remote major version or -1 if not known
+	 */
+	int versionMajor;
+
+	/**
+	 * Remote minor version or -1 if not known
+	 */
+	int versionMinor;
+
+	/**
+	 * Remote revision or -1 if not known
+	 */
+	int versionRev;
+
+	/**
+	 * Last measured latency in milliseconds or zero if unknown
+	 */
+	unsigned int latency;
+
+	/**
+	 * What trust hierarchy role does this device have?
+	 */
+	enum ZT1_PeerRole role;
+
+	/**
+	 * Array of network paths to peer
+	 */
+	struct ZT1_PeerPhysicalPath *paths;
+
+	/**
+	 * Number of paths (size of paths[])
+	 */
+	unsigned long pathCount;
+} ZT1_Peer;
+
+/**
+ * List of peers
+ */
+typedef struct
+{
+	ZT1_Peer *peers;
+	unsigned long peerCount;
+} ZT1_PeerList;
+
+/**
+ * An instance of a ZeroTier One node (opaque)
  */
 typedef void ZT1_Node;
+
+/****************************************************************************/
+/* Callbacks used by Node API                                               */
+/****************************************************************************/
 
 /**
  * Callback called to update virtual port configuration
@@ -316,19 +498,59 @@ typedef void ZT1_Node;
  * This can be called at any time to update the configuration of a virtual
  * network port. If a port is deleted (via leave() or otherwise) this is
  * called with a NULL config parameter.
+ *
+ * This in turn should be used by the underlying implementation to create
+ * and configure tap devices to handle frames, etc.
+ *
+ * The supplied config pointer is not guaranteed to remain valid, so make
+ * a copy if you want one.
  */
-typedef void (*ZT1_VirtualPortConfigCallback)(uint64_t,const struct ZT1_VirtualPortConfig *);
+typedef void (*ZT1_VirtualNetworkConfigCallback)(ZT1_Node *,uint64_t,const ZT1_VirtualNetworkConfig *);
 
 /**
  * Callback for status messages
  *
- * Status messages indicate changes in network status, minor problems or
- * errors, and other events. The second parameter is a human-readable
- * detail message, and can be NULL. The third parameter is reserved for any
- * special structures that might be attached to certain message types, and
- * is usually NULL.
+ * This is called whenever the node's status changes in some significant way.
  */
-typedef void (*ZT1_StatusCallback)(enum ZT1_StatusCode,const char *,const void *);
+typedef void (*ZT1_StatusCallback)(ZT1_Node *,enum ZT1_NodeStatusChangeCode);
+
+/**
+ * Function to get an object from the data store
+ *
+ * Parameters: (1) object name, (2) buffer to fill, (3) size of buffer, (4)
+ * index in object to start reading, (5) result parameter that must be set
+ * to the actual size of the object if it exists.
+ *
+ * Object names can contain forward slash (/) path separators. They will
+ * never contain .. or backslash (\), so this is safe to map as a Unix-style
+ * path if the underlying storage permits. For security reasons we recommend
+ * returning errors if .. or \ are used.
+ *
+ * The function must return the actual number of bytes read. If the object
+ * doesn't exist, it should return -1. -2 should be returned on other errors
+ * such as errors accessing underlying storage.
+ *
+ * If the read doesn't fit in the buffer, the max number of bytes should be
+ * read. The caller may call the function multiple times to read the whole
+ * object.
+ */
+typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,const char *,void *,unsigned long,unsigned long,unsigned long *);
+
+/**
+ * Function to store an object in the data store
+ *
+ * Parameters: (1) object name, (2) object data, (3) object size. Naming
+ * semantics are the same as the get function. This must return zero on
+ * success. You can return any OS-specific error code on failure, as these
+ * may be visible in logs or error messages and might aid in debugging.
+ *
+ * A call to write 0 bytes can safely be interpreted as a delete operation.
+ */
+typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,unsigned long);
+
+/****************************************************************************/
+/* C Node API                                                               */
+/****************************************************************************/
 
 /**
  * Create a new ZeroTier One node
@@ -336,34 +558,19 @@ typedef void (*ZT1_StatusCallback)(enum ZT1_StatusCode,const char *,const void *
  * Note that this can take a few seconds the first time it's called, as it
  * will generate an identity.
  *
- * @param node Result parameter: pointer to set to new node instance
- * @param homePath ZeroTier home path for storing state information
+ * @param node Result: pointer is set to new node instance on success
+ * @param dataStoreGetFunction Function called to get objects from persistent storage
+ * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param portConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param statusCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ReturnValue ZT1_Node_new(
+enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
-	const char *homePath,
+	ZT1_DataStoreGetFunction *dataStoreGetFunction,
+	ZT1_DataStorePutFunction *dataStorePutFunction,
 	ZT1_VirtualPortConfigCallback *portConfigCallback,
 	ZT1_StatusCallback *statusCallback);
-
-/**
- * Enable network configuration master services for this node
- *
- * The supplied instance must be a C++ object that inherits from the
- * NetworkConfigMaster base class in node/. No type checking is performed,
- * so a pointer to anything else will result in a crash.
- *
- * Normal nodes should not need to use this.
- *
- * @param node ZertTier One node
- * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
- * @return OK (0) or error code if a fatal error condition has occurred
- */
-enum ZT1_ReturnValue ZT1_Node_enableNetconfMaster(
-	ZT1_Node *node,
-	void *networkConfigMasterInstance);
 
 /**
  * Process wire messages and/or LAN frames
@@ -379,6 +586,13 @@ enum ZT1_ReturnValue ZT1_Node_enableNetconfMaster(
  * with the ZeroTier One core may also be called such as virtual network
  * endpoint configuration update or diagnostic message handlers.
  *
+ * The supplied time must be at millisecond resolution and must increment
+ * monotonically from the time the Node is created. Other than that, there
+ * are no other restrictions. On normal systems this is usually the system
+ * clock measured in milliseconds since the epoch.
+ *
+ * @param node Node instance
+ * @param now Current time at millisecond resolution (typically since epoch)
  * @param inputWireMessages ZeroTier transport packets from the wire
  * @param inputWireMessageCount Number of packets received
  * @param inputLanFrames Frames read from virtual LAN tap device
@@ -390,335 +604,111 @@ enum ZT1_ReturnValue ZT1_Node_enableNetconfMaster(
  * @param maxNextInterval Result: maximum number of milliseconds before next call to run() is needed
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ReturnValue ZT1_Node_run(
-	const struct ZT1_WireMessage *inputWireMessages,
+enum ZT1_ResultCode ZT1_Node_run(
+	ZT1_Node *node,
+	uint64_t now,
+	const ZT1_WireMessage *inputWireMessages,
 	unsigned int inputWireMessageCount,
-	const struct ZT1_VirtualLanFrame *inputLanFrames,
+	const ZT1_VirtualLanFrame *inputLanFrames,
 	unsigned int inputLanFrameCount,
-	const struct ZT1_WireMessage **outputWireMessages,
+	const ZT1_WireMessage **outputWireMessages,
 	unsigned int *outputWireMessageCount,
-	const struct ZT1_VirtualLanFrame **outputLanFrames,
+	const ZT1_VirtualLanFrame **outputLanFrames,
 	unsigned int *outputLanFrameCount,
 	unsigned long *maxNextInterval);
 
-/* ------------------------------------------------------------------------ */
-/* Query result buffers                                                     */
-/* ------------------------------------------------------------------------ */
+/**
+ * Join a network
+ *
+ * This may generate calls to the port config callback before it returns,
+ * or these may be deffered if a netconf is not available yet.
+ *
+ * @param node Node instance
+ * @param networkId 64-bit ZeroTIer network ID
+ * @return OK (0) or error code if a fatal error condition has occurred
+ */
+enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t networkId);
 
 /**
- * Node status result buffer
+ * Leave a network
+ *
+ * If a port has been configured for this network this will generate a call
+ * to the port config callback with a NULL second parameter to indicate that
+ * the port is now deleted.
+ *
+ * @param node Node instance
+ * @param networkId 64-bit network ID
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-struct ZT1_Node_Status
-{
-	/**
-	 * Public identity in string form
-	 */
-	char publicIdentity[256];
-
-	/**
-	 * ZeroTier address in 10-digit hex form
-	 */
-	char address[16];
-
-	/**
-	 * ZeroTier address (in least significant 40 bits of 64-bit integer)
-	 */
-	uint64_t rawAddress;
-
-	/**
-	 * Number of known peers (including supernodes)
-	 */
-	unsigned int knownPeers;
-
-	/**
-	 * Number of upstream supernodes
-	 */
-	unsigned int supernodes;
-
-	/**
-	 * Number of peers with active direct links
-	 */
-	unsigned int directlyConnectedPeers;
-
-	/**
-	 * Number of peers that have recently communicated with us
-	 */
-	unsigned int alivePeers;
-
-	/**
-	 * Success rate at establishing direct links (0.0 to 1.0, approximate)
-	 */
-	float directLinkSuccessRate;
-
-	/**
-	 * True if connectivity appears good
-	 */
-	bool online;
-
-	/**
-	 * True if running; all other fields are technically undefined if this is false
-	 */
-	bool running;
-
-	/**
-	 * True if initialization is complete
-	 */
-	bool initialized;
-};
+enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t networkId);
 
 /**
- * Physical address type
+ * Get the status of this node
+ *
+ * @param node Node instance
+ * @param status Buffer to fill with current node status
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_Node_PhysicalAddressType {
-	ZT1_Node_PhysicalAddress_TYPE_NULL = 0,     /* none/invalid */
-	ZT1_Node_PhysicalAddress_TYPE_IPV4 = 1,     /* 32-bit IPv4 address (and port) */
-	ZT1_Node_PhysicalAddress_TYPE_IPV6 = 2,     /* 128-bit IPv6 address (and port) */
-	ZT1_Node_PhysicalAddress_TYPE_ETHERNET = 3  /* 48-bit Ethernet MAC address */
-};
+enum ZT1_ResultCode ZT1_Node_status(ZT1_Node *node,ZT1_NodeStatus *status);
 
 /**
- * Physical address result buffer
+ * Get a list of known peer nodes
+ *
+ * The pointer returned here must be freed with freeQueryResult()
+ * when you are done with it.
+ *
+ * @param node Node instance
+ * @return List of known peers or NULL on failure
  */
-struct ZT1_Node_PhysicalAddress
-{
-	/**
-	 * Physical address type
-	 */
-	enum ZT1_Node_PhysicalAddressType type;
-
-	/**
-	 * Address in raw binary form -- length depends on type
-	 */
-	unsigned char bits[16];
-
-	/**
-	 * Port or netmask bits (for IPV4 and IPV6)
-	 */
-	unsigned int port;
-
-	/**
-	 * Address in canonical human-readable form
-	 */
-	char ascii[64];
-
-	/**
-	 * Zone index identifier (thing after % on IPv6 link-local addresses only)
-	 */
-	char zoneIndex[16];
-};
+ZT1_PeerList *ZT1_Node_peers(ZT1_Node *node);
 
 /**
- * Physical path type
+ * Get the status of a virtual network
+ *
+ * The pointer returned here must be freed with freeQueryResult()
+ * when you are done with it.
+ *
+ * @param node Node instance
+ * @param nwid 64-bit network ID
+ * @return Network configuration or NULL if we are not a member of this network
  */
-enum ZT1_Node_PhysicalPathType { /* These must be numerically the same as type in Path.hpp */
-	ZT1_Node_PhysicalPath_TYPE_NULL = 0,     /* none/invalid */
-	ZT1_Node_PhysicalPath_TYPE_UDP = 1,      /* UDP association */
-	ZT1_Node_PhysicalPath_TYPE_TCP_OUT = 2,  /* outgoing TCP tunnel using pseudo-SSL */
-	ZT1_Node_PhysicalPath_TYPE_TCP_IN = 3,   /* incoming TCP tunnel using pseudo-SSL */
-	ZT1_Node_PhysicalPath_TYPE_ETHERNET = 4  /* raw ethernet frames over trusted backplane */
-};
+ZT1_VirtualNetworkConfig *ZT1_Node_networkConfig(ZT1_Node *node,uint64_t nwid);
 
 /**
- * Network path result buffer
+ * Enumerate and get status of all networks
+ *
+ * @param node Node instance
+ * @return List of networks or NULL on failure
  */
-struct ZT1_Node_PhysicalPath
-{
-	/**
-	 * Physical path type
-	 */
-	enum ZT1_Node_PhysicalPathType type;
-
-	/**
-	 * Physical address of endpoint
-	 */
-	struct ZT1_Node_PhysicalAddress address;
-
-	/**
-	 * Time since last send in milliseconds or -1 for never
-	 */
-	long lastSend;
-
-	/**
-	 * Time since last receive in milliseconds or -1 for never
-	 */
-	long lastReceive;
-
-	/**
-	 * Time since last ping in milliseconds or -1 for never
-	 */
-	long lastPing;
-
-	/**
-	 * Is path active/connected? Non-fixed active paths may be garbage collected over time.
-	 */
-	bool active;
-
-	/**
-	 * Is path fixed? (i.e. not learned, static)
-	 */
-	bool fixed;
-};
+ZT1_VirtualNetworkList *ZT1_Node_listNetworks(ZT1_Node *node);
 
 /**
- * What trust hierarchy role does this device have?
+ * Free a query result buffer
+ *
+ * Use this to free the return values of listNetworks(), listPeers(), etc.
+ *
+ * @param qr Query result buffer
  */
-enum ZT1_Node_PeerRole {
-	ZT1_Node_Peer_SUPERNODE = 0, // planetary supernode
-	ZT1_Node_Peer_HUB = 1,       // locally federated hub (coming soon)
-	ZT1_Node_Peer_NODE = 2       // ordinary node
-};
+void ZT1_Node_freeQueryResult(void *qr);
 
 /**
- * Peer status result buffer
+ * Set a network configuration master instance for this node
+ *
+ * Normal nodes should not need to use this. This is for nodes with
+ * special compiled-in support for acting as network configuration
+ * masters / controllers.
+ *
+ * The supplied instance must be a C++ object that inherits from the
+ * NetworkConfigMaster base class in node/. No type checking is performed,
+ * so a pointer to anything else will result in a crash.
+ *
+ * @param node ZertTier One node
+ * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
+ * @return OK (0) or error code if a fatal error condition has occurred
  */
-struct ZT1_Node_Peer
-{
-	/**
-	 * Remote peer version: major.minor.revision (or empty if unknown)
-	 */
-	char remoteVersion[16];
-
-	/**
-	 * ZeroTier address of peer as 10-digit hex string
-	 */
-	char address[16];
-
-	/**
-	 * ZeroTier address in least significant 40 bits of 64-bit integer
-	 */
-	uint64_t rawAddress;
-
-	/**
-	 * Last measured latency in milliseconds or zero if unknown
-	 */
-	unsigned int latency;
-
-	/**
-	 * What trust hierarchy role does this device have?
-	 */
-	enum ZT1_Node_PeerRole role;
-
-	/**
-	 * Array of network paths to peer
-	 */
-	struct ZT1_Node_PhysicalPath *paths;
-
-	/**
-	 * Number of paths (size of paths[])
-	 */
-	unsigned int numPaths;
-};
-
-/**
- * List of peers
- */
-struct ZT1_Node_PeerList
-{
-	struct ZT1_Node_Peer *peers;
-	unsigned int numPeers;
-};
-
-/**
- * Network status code
- */
-enum ZT1_Node_NetworkStatus {
-	ZT1_Node_Network_INITIALIZING = 0,
-	ZT1_Node_Network_WAITING_FOR_FIRST_AUTOCONF = 1,
-	ZT1_Node_Network_OK = 2,
-	ZT1_Node_Network_ACCESS_DENIED = 3,
-	ZT1_Node_Network_NOT_FOUND = 4,
-	ZT1_Node_Network_INITIALIZATION_FAILED = 5,
-	ZT1_Node_Network_NO_MORE_DEVICES = 6
-};
-
-/**
- * Network status result buffer
- */
-struct ZT1_Node_Network
-{
-	/**
-	 * 64-bit network ID
-	 */
-	uint64_t nwid;
-
-	/**
-	 * 64-bit network ID in hex form
-	 */
-	char nwidHex[32];
-
-	/**
-	 * Short network name
-	 */
-	char name[256];
-
-	/**
-	 * Longer network description
-	 */
-	char description[4096];
-
-	/**
-	 * Device name (system-dependent)
-	 */
-	char device[256];
-
-	/**
-	 * Status code in string format
-	 */
-	char statusStr[64];
-
-	/**
-	 * Ethernet MAC address of this endpoint in string form
-	 */
-	char macStr[32];
-
-	/**
-	 * Ethernet MAC address of this endpoint on the network in raw binary form
-	 */
-	unsigned char mac[6];
-
-	/**
-	 * Age of configuration in milliseconds or -1 if never refreshed
-	 */
-	long configAge;
-
-	/**
-	 * Assigned layer-3 IPv4 and IPv6 addresses
-	 *
-	 * Note that PhysicalAddress also supports other address types, but this
-	 * list will only list IP address assignments. The port field will contain
-	 * the number of bits in the netmask -- e.g. 192.168.1.1/24.
-	 */
-	struct ZT1_Node_PhysicalAddress *ips;
-
-	/**
-	 * Number of layer-3 IPs (size of ips[])
-	 */
-	unsigned int numIps;
-
-	/**
-	 * Network status code
-	 */
-	enum ZT1_Node_NetworkStatus status;
-
-	/**
-	 * True if traffic on network is enabled
-	 */
-	bool enabled;
-
-	/**
-	 * Is this a private network? If false, network lacks access control.
-	 */
-	bool isPrivate;
-};
-
-/**
- * Return buffer for list of networks
- */
-struct ZT1_Node_NetworkList
-{
-	struct ZT1_Node_Network *networks;
-	unsigned int numNetworks;
-};
+enum ZT1_ResultCode ZT1_Node_setNetconfMaster(
+	ZT1_Node *node,
+	void *networkConfigMasterInstance);
 
 #ifdef __cplusplus
 }
