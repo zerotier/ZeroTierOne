@@ -70,7 +70,6 @@
 #include "node/Thread.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/EthernetTapFactory.hpp"
-#include "node/RoutingTable.hpp"
 #include "node/SocketManager.hpp"
 
 #include "control/NodeControlClient.hpp"
@@ -84,31 +83,23 @@
 
 #ifdef __WINDOWS__
 #include "osnet/WindowsEthernetTapFactory.hpp"
-#include "osnet/WindowsRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new WindowsEthernetTapFactory(homeDir))
-#define ZTCreatePlatformRoutingTable (new WindowsRoutingTable())
 #endif // __WINDOWS__
 
 #ifdef __LINUX__
 #include "osnet/LinuxEthernetTapFactory.hpp"
-#include "osnet/LinuxRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new LinuxEthernetTapFactory())
-#define ZTCreatePlatformRoutingTable (new LinuxRoutingTable())
 #endif // __LINUX__
 
 #ifdef __APPLE__
 #include "osnet/OSXEthernetTapFactory.hpp"
-#include "osnet/BSDRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new OSXEthernetTapFactory(homeDir,"tap.kext"))
-#define ZTCreatePlatformRoutingTable (new BSDRoutingTable())
 #endif // __APPLE__
 
 #ifndef ZTCreatePlatformEthernetTapFactory
 #ifdef __BSD__
 #include "osnet/BSDEthernetTapFactory.hpp"
-#include "osnet/BSDRoutingTable.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new BSDEthernetTapFactory())
-#define ZTCreatePlatformRoutingTable (new BSDRoutingTable())
 #else
 #error Sorry, this platform has no osnet/ implementation yet. Fork me on GitHub and add one?
 #endif // __BSD__
@@ -811,7 +802,6 @@ int main(int argc,char **argv)
 	int exitCode = 0;
 	bool needsReset = false;
 	EthernetTapFactory *tapFactory = (EthernetTapFactory *)0;
-	RoutingTable *routingTable = (RoutingTable *)0;
 	SocketManager *socketManager = (SocketManager *)0;
 	NodeControlService *controlService = (NodeControlService *)0;
 	NetworkConfigMaster *netconfMaster = (NetworkConfigMaster *)0;
@@ -823,7 +813,6 @@ int main(int argc,char **argv)
 		std::string authToken(NodeControlClient::getAuthToken((std::string(homeDir) + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
 
 		tapFactory = ZTCreatePlatformEthernetTapFactory;
-		routingTable = ZTCreatePlatformRoutingTable;
 
 		try {
 			socketManager = new NativeSocketManager(udpPort,tcpPort);
@@ -832,7 +821,7 @@ int main(int argc,char **argv)
 			throw;
 		}
 
-		node = new Node(homeDir,tapFactory,routingTable,socketManager,netconfMaster,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+		node = new Node(homeDir,tapFactory,socketManager,netconfMaster,needsReset,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
 		controlService = new NodeControlService(node,authToken.c_str());
 
 		switch(node->run()) {
@@ -888,7 +877,6 @@ int main(int argc,char **argv)
 	delete controlService;
 	delete node; node = (Node *)0;
 	delete socketManager;
-	delete routingTable;
 	delete tapFactory;
 
 #ifdef __UNIX_LIKE__

@@ -24,7 +24,6 @@ OBJS=\
 	node/Packet.o \
 	node/Peer.o \
 	node/Poly1305.o \
-	node/RoutingTable.o \
 	node/Salsa20.o \
 	node/SoftwareUpdater.o \
 	node/SHA512.o \

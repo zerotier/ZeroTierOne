@@ -55,7 +55,7 @@ struct ZT1_Node_Status
 	char address[16];
 
 	/**
-	 * ZeroTier address in least significant 40 bits of 64-bit integer
+	 * ZeroTier address (in least significant 40 bits of 64-bit integer)
 	 */
 	uint64_t rawAddress;
 

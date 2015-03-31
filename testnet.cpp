@@ -50,7 +50,6 @@
 #include "testnet/SimNetSocketManager.hpp"
 #include "testnet/TestEthernetTap.hpp"
 #include "testnet/TestEthernetTapFactory.hpp"
-#include "testnet/TestRoutingTable.hpp"
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -67,9 +66,8 @@ public:
 	SimNode(SimNet &net,const std::string &hp,const char *rootTopology,bool issn,const InetAddress &addr) :
 		home(hp),
 		tapFactory(),
-		routingTable(),
 		socketManager(net.newEndpoint(addr)),
-		node(home.c_str(),&tapFactory,&routingTable,socketManager,false,rootTopology),
+		node(home.c_str(),&tapFactory,socketManager,false,rootTopology),
 		reasonForTermination(Node::NODE_RUNNING),
 		supernode(issn)
 	{
@@ -90,7 +88,6 @@ public:
 
 	std::string home;
 	TestEthernetTapFactory tapFactory;
-	TestRoutingTable routingTable;
 	SimNetSocketManager *socketManager;
 	Node node;
 	Node::ReasonForTermination reasonForTermination;

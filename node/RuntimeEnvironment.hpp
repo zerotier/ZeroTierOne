@@ -46,7 +46,6 @@ class SocketManager;
 class Multicaster;
 class AntiRecursion;
 class EthernetTapFactory;
-class RoutingTable;
 class HttpClient;
 class NetworkConfigMaster;
 
@@ -73,7 +72,6 @@ public:
 		timeOfLastResynchronize(0),
 		timeOfLastPacketReceived(0),
 		tapFactory((EthernetTapFactory *)0),
-		routingTable((RoutingTable *)0),
 		sm((SocketManager *)0),
 		netconfMaster((NetworkConfigMaster *)0),
 		log((Logger *)0),
@@ -110,7 +108,6 @@ public:
 
 	// These are passed in from outside and are not created or deleted by the ZeroTier node core
 	EthernetTapFactory *tapFactory;
-	RoutingTable *routingTable;
 	SocketManager *sm;
 	NetworkConfigMaster *netconfMaster;
 

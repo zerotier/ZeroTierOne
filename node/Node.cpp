@@ -74,7 +74,6 @@
 #include "SoftwareUpdater.hpp"
 #include "Buffer.hpp"
 #include "AntiRecursion.hpp"
-#include "RoutingTable.hpp"
 #include "HttpClient.hpp"
 #include "NetworkConfigMaster.hpp"
 
@@ -126,7 +125,6 @@ struct _NodeImpl
 Node::Node(
 	const char *hp,
 	EthernetTapFactory *tf,
-	RoutingTable *rt,
 	SocketManager *sm,
 	NetworkConfigMaster *nm,
 	bool resetIdentity,
@@ -140,7 +138,6 @@ Node::Node(
 	else impl->renv.homePath = ZT_DEFAULTS.defaultHomePath;
 
 	impl->renv.tapFactory = tf;
-	impl->renv.routingTable = rt;
 	impl->renv.sm = sm;
 	impl->renv.netconfMaster = nm;
 

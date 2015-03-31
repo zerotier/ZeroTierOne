@@ -6,8 +6,8 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o osnet/BSDRoutingTable.o 
-TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o testnet/TestRoutingTable.o 
+OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o
+TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o
 
 # Enable SSE-optimized Salsa20 on x86 and x86_64 machines
 MACHINE=$(shell uname -m)
