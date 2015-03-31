@@ -86,7 +86,6 @@ public:
 	 *
 	 * @param hp Home directory path or NULL for system-wide default for this platform
 	 * @param tf Ethernet tap factory for platform network stack
-	 * @param rt Routing table interface for platform network stack
 	 * @param sm Socket manager for physical network I/O
 	 * @param nm Network configuration master or NULL for none
 	 * @param resetIdentity If true, delete identity before starting and regenerate
@@ -95,7 +94,6 @@ public:
 	Node(
 		const char *hp,
 		EthernetTapFactory *tf,
-		RoutingTable *rt,
 		SocketManager *sm,
 		NetworkConfigMaster *nm,
 		bool resetIdentity,
