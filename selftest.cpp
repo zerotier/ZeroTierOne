@@ -58,7 +58,7 @@
 #include "node/Node.hpp"
 
 #ifdef ZT_TEST_PHY
-#include "osnet/Phy.hpp"
+#include "osdep/Phy.hpp"
 #endif
 
 #ifdef ZT_ENABLE_NETCONF_MASTER

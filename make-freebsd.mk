@@ -6,7 +6,7 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osnet/BSDEthernetTapFactory.o osnet/BSDEthernetTap.o
+OBJS+=osdep/BSDEthernetTapFactory.o osdep/BSDEthernetTap.o
 TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o
 
 # Enable SSE-optimized Salsa20 on x86 and x86_64 machines
@@ -84,7 +84,7 @@ testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
 #	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osnet/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osdep/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

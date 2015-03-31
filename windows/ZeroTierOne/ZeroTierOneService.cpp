@@ -40,9 +40,9 @@
 #include "../../control/NodeControlClient.hpp"
 #include "../../control/NodeControlService.hpp"
 
-#include "../../osnet/WindowsEthernetTapFactory.hpp"
-#include "../../osnet/WindowsRoutingTable.hpp"
-#include "../../osnet/NativeSocketManager.hpp"
+#include "../../osdep/WindowsEthernetTapFactory.hpp"
+#include "../../osdep/WindowsRoutingTable.hpp"
+#include "../../osdep/NativeSocketManager.hpp"
 
 #pragma endregion // Includes
 

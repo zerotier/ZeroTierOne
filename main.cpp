@@ -75,33 +75,33 @@
 #include "control/NodeControlClient.hpp"
 #include "control/NodeControlService.hpp"
 
-#include "osnet/NativeSocketManager.hpp"
+#include "osdep/NativeSocketManager.hpp"
 
 #ifdef ZT_ENABLE_NETCONF_MASTER
 #include "netconf/SqliteNetworkConfigMaster.hpp"
 #endif // ZT_ENABLE_NETCONF_MASTER
 
 #ifdef __WINDOWS__
-#include "osnet/WindowsEthernetTapFactory.hpp"
+#include "osdep/WindowsEthernetTapFactory.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new WindowsEthernetTapFactory(homeDir))
 #endif // __WINDOWS__
 
 #ifdef __LINUX__
-#include "osnet/LinuxEthernetTapFactory.hpp"
+#include "osdep/LinuxEthernetTapFactory.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new LinuxEthernetTapFactory())
 #endif // __LINUX__
 
 #ifdef __APPLE__
-#include "osnet/OSXEthernetTapFactory.hpp"
+#include "osdep/OSXEthernetTapFactory.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new OSXEthernetTapFactory(homeDir,"tap.kext"))
 #endif // __APPLE__
 
 #ifndef ZTCreatePlatformEthernetTapFactory
 #ifdef __BSD__
-#include "osnet/BSDEthernetTapFactory.hpp"
+#include "osdep/BSDEthernetTapFactory.hpp"
 #define ZTCreatePlatformEthernetTapFactory (new BSDEthernetTapFactory())
 #else
-#error Sorry, this platform has no osnet/ implementation yet. Fork me on GitHub and add one?
+#error Sorry, this platform has no osdep/ implementation yet. Fork me on GitHub and add one?
 #endif // __BSD__
 #endif // ZTCreatePlatformEthernetTapFactory
 
