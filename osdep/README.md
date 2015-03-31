@@ -1,6 +1,6 @@
-Network and Virtual Network Port Interfaces for Real OSes
+OS-Dependent and OS-Interface Things
 ======
 
-This folder contains implementations of EthernetTap, EthernetTapFactory, and RoutingTable that bind to operating system level interfaces and drivers on Linux, Mac, Windows, and other platforms.
-
-It also contains NativeSocketManager which implements SocketManager using standard sockets (or WinSock2) and select() for multiplexing.
+This folder contains stuff that interfaces with the base operating system
+like Phy for network access and the various OS-specific Ethernet tap
+drivers.
