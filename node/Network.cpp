@@ -39,7 +39,6 @@
 #include "Buffer.hpp"
 #include "EthernetTap.hpp"
 #include "EthernetTapFactory.hpp"
-#include "RoutingTable.hpp"
 
 #define ZT_NETWORK_CERT_WRITE_BUF_SIZE 131072
 

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_WIRE_HPP
-#define ZT_WIRE_HPP
+#ifndef ZT_PHY_HPP
+#define ZT_PHY_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,12 +40,12 @@
 #include <WS2tcpip.h>
 #include <Windows.h>
 
-#define ZT_WIRE_SOCKFD_TYPE SOCKET
-#define ZT_WIRE_SOCKFD_NULL (INVALID_SOCKET)
-#define ZT_WIRE_SOCKFD_VALID(s) ((s) != INVALID_SOCKET)
-#define ZT_WIRE_CLOSE_SOCKET(s) ::closesocket(s)
-#define ZT_WIRE_MAX_SOCKETS (FD_SETSIZE)
-#define ZT_WIRE_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
+#define ZT_PHY_SOCKFD_TYPE SOCKET
+#define ZT_PHY_SOCKFD_NULL (INVALID_SOCKET)
+#define ZT_PHY_SOCKFD_VALID(s) ((s) != INVALID_SOCKET)
+#define ZT_PHY_CLOSE_SOCKET(s) ::closesocket(s)
+#define ZT_PHY_MAX_SOCKETS (FD_SETSIZE)
+#define ZT_PHY_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
 
 #else // not Windows
 
@@ -61,12 +61,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-#define ZT_WIRE_SOCKFD_TYPE int
-#define ZT_WIRE_SOCKFD_NULL (-1)
-#define ZT_WIRE_SOCKFD_VALID(s) ((s) > -1)
-#define ZT_WIRE_CLOSE_SOCKET(s) ::close(s)
-#define ZT_WIRE_MAX_SOCKETS (FD_SETSIZE)
-#define ZT_WIRE_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
+#define ZT_PHY_SOCKFD_TYPE int
+#define ZT_PHY_SOCKFD_NULL (-1)
+#define ZT_PHY_SOCKFD_VALID(s) ((s) > -1)
+#define ZT_PHY_CLOSE_SOCKET(s) ::close(s)
+#define ZT_PHY_MAX_SOCKETS (FD_SETSIZE)
+#define ZT_PHY_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
 
 #endif // Windows or not
 
@@ -75,23 +75,23 @@ namespace ZeroTier {
 /**
  * Opaque socket type
  */
-typedef const void * WireSocket;
+typedef void PhySocket;
 
 /**
  * Simple templated non-blocking sockets implementation
  *
  * Yes there is boost::asio and libuv, but I like small binaries and I hate
- * build dependencies.
+ * build dependencies. Both drag in a whole bunch of pasta with them.
  *
  * This implementation takes four functions or function objects as template
  * paramters:
  *
- * ON_DATAGRAM_FUNCTION(WireSocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
- * ON_TCP_CONNECT_FUNCTION(WireSocket *sock,void **uptr,bool success)
- * ON_TCP_ACCEPT_FUNCTION(WireSocket *sockL,WireSocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
- * ON_TCP_CLOSE_FUNCTION(WireSocket *sock,void **uptr)
- * ON_TCP_DATA_FUNCTION(WireSocket *sock,void **uptr,void *data,unsigned long len)
- * ON_TCP_WRITABLE_FUNCTION(WireSocket *sock,void **uptr)
+ * ON_DATAGRAM_FUNCTION(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+ * ON_TCP_CONNECT_FUNCTION(PhySocket *sock,void **uptr,bool success)
+ * ON_TCP_ACCEPT_FUNCTION(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
+ * ON_TCP_CLOSE_FUNCTION(PhySocket *sock,void **uptr)
+ * ON_TCP_DATA_FUNCTION(PhySocket *sock,void **uptr,void *data,unsigned long len)
+ * ON_TCP_WRITABLE_FUNCTION(PhySocket *sock,void **uptr)
  *
  * These templates typically refer to function objects. Templates are used to
  * avoid the call overhead of indirection, which is surprisingly high for high
@@ -120,8 +120,8 @@ template <
 	typename ON_TCP_ACCEPT_FUNCTION,
 	typename ON_TCP_CLOSE_FUNCTION,
 	typename ON_TCP_DATA_FUNCTION,
-	typename ON_TCP_WRITABLE_FUNCTION>
-class Wire
+	typename ON_TCP_WRITABLE_FUNCTION >
+class Phy
 {
 private:
 	ON_DATAGRAM_FUNCTION _datagramHandler;
@@ -131,25 +131,25 @@ private:
 	ON_TCP_DATA_FUNCTION _tcpDataHandler;
 	ON_TCP_WRITABLE_FUNCTION _tcpWritableHandler;
 
-	enum WireSocketType
+	enum PhySocketType
 	{
-		ZT_WIRE_SOCKET_TCP_OUT_PENDING = 0x00,
-		ZT_WIRE_SOCKET_TCP_OUT_CONNECTED = 0x01,
-		ZT_WIRE_SOCKET_TCP_IN = 0x02,
-		ZT_WIRE_SOCKET_TCP_LISTEN = 0x03,
-		ZT_WIRE_SOCKET_RAW = 0x04,
-		ZT_WIRE_SOCKET_UDP = 0x05
+		ZT_PHY_SOCKET_TCP_OUT_PENDING = 0x00,
+		ZT_PHY_SOCKET_TCP_OUT_CONNECTED = 0x01,
+		ZT_PHY_SOCKET_TCP_IN = 0x02,
+		ZT_PHY_SOCKET_TCP_LISTEN = 0x03,
+		ZT_PHY_SOCKET_RAW = 0x04,
+		ZT_PHY_SOCKET_UDP = 0x05
 	};
 
-	struct WireSocketImpl
+	struct PhySocketImpl
 	{
-		WireSocketType type;
-		ZT_WIRE_SOCKFD_TYPE sock;
+		PhySocketType type;
+		ZT_PHY_SOCKFD_TYPE sock;
 		void *uptr; // user-settable pointer
-		ZT_WIRE_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
+		ZT_PHY_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
 	};
 
-	std::list<WireSocketImpl> _socks;
+	std::list<PhySocketImpl> _socks;
 	fd_set _readfds;
 	fd_set _writefds;
 #if defined(_WIN32) || defined(_WIN64)
@@ -157,8 +157,8 @@ private:
 #endif
 	long _nfds;
 
-	ZT_WIRE_SOCKFD_TYPE _whackReceiveSocket;
-	ZT_WIRE_SOCKFD_TYPE _whackSendSocket;
+	ZT_PHY_SOCKFD_TYPE _whackReceiveSocket;
+	ZT_PHY_SOCKFD_TYPE _whackSendSocket;
 
 	bool _noDelay;
 
@@ -171,7 +171,7 @@ public:
 	 * @param tcpWritableHandler Handler to be called when TCP sockets are writable (if notification is on)
 	 * @param noDelay If true, disable Nagle algorithm on new TCP sockets
 	 */
-	Wire(
+	Phy(
 		ON_DATAGRAM_FUNCTION datagramHandler,
 		ON_TCP_CONNECT_FUNCTION tcpConnectHandler,
 		ON_TCP_ACCEPT_FUNCTION tcpAcceptHandler,
@@ -230,12 +230,12 @@ public:
 		_noDelay = noDelay;
 	}
 
-	~Wire()
+	~Phy()
 	{
 		while (!_socks.empty())
-			this->close((WireSocket *)&(_socks.front()),true);
-		ZT_WIRE_CLOSE_SOCKET(_whackReceiveSocket);
-		ZT_WIRE_CLOSE_SOCKET(_whackSendSocket);
+			this->close((PhySocket *)&(_socks.front()),true);
+		ZT_PHY_CLOSE_SOCKET(_whackReceiveSocket);
+		ZT_PHY_CLOSE_SOCKET(_whackSendSocket);
 	}
 
 	/**
@@ -246,7 +246,7 @@ public:
 #if defined(_WIN32) || defined(_WIN64)
 		::send(_whackSendSocket,(const char *)this,1,0);
 #else
-		::write(_whackSendSocket,(WireSocket *)this,1);
+		::write(_whackSendSocket,(PhySocket *)this,1);
 #endif
 	}
 
@@ -258,7 +258,7 @@ public:
 	/**
 	 * @return Maximum number of sockets allowed
 	 */
-	inline unsigned long maxCount() const throw() { return ZT_WIRE_MAX_SOCKETS; }
+	inline unsigned long maxCount() const throw() { return ZT_PHY_MAX_SOCKETS; }
 
 	/**
 	 * Bind a UDP socket
@@ -268,14 +268,14 @@ public:
 	 * @param bufferSize Desired socket receive/send buffer size -- will set as close to this as possible (default: 0, leave alone)
 	 * @return Socket or NULL on failure to bind
 	 */
-	inline WireSocket *udpBind(const struct sockaddr *localAddress,void *uptr = (void *)0,int bufferSize = 0)
+	inline PhySocket *udpBind(const struct sockaddr *localAddress,void *uptr = (void *)0,int bufferSize = 0)
 	{
-		if (_socks.size() >= ZT_WIRE_MAX_SOCKETS)
-			return (WireSocket *)0;
+		if (_socks.size() >= ZT_PHY_MAX_SOCKETS)
+			return (PhySocket *)0;
 
-		ZT_WIRE_SOCKFD_TYPE s = ::socket(localAddress->sa_family,SOCK_DGRAM,0);
-		if (!ZT_WIRE_SOCKFD_VALID(s))
-			return (WireSocket *)0;
+		ZT_PHY_SOCKFD_TYPE s = ::socket(localAddress->sa_family,SOCK_DGRAM,0);
+		if (!ZT_PHY_SOCKFD_VALID(s))
+			return (PhySocket *)0;
 
 		if (bufferSize > 0) {
 			int bs = bufferSize;
@@ -325,8 +325,8 @@ public:
 #endif // Windows or not
 
 		if (::bind(s,localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) {
-			ZT_WIRE_CLOSE_SOCKET(s);
-			return (WireSocket *)0;
+			ZT_PHY_CLOSE_SOCKET(s);
+			return (PhySocket *)0;
 		}
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -336,23 +336,23 @@ public:
 #endif
 
 		try {
-			_socks.push_back(WireSocketImpl());
+			_socks.push_back(PhySocketImpl());
 		} catch ( ... ) {
-			ZT_WIRE_CLOSE_SOCKET(s);
-			return (WireSocket *)0;
+			ZT_PHY_CLOSE_SOCKET(s);
+			return (PhySocket *)0;
 		}
-		WireSocketImpl &sws = _socks.back();
+		PhySocketImpl &sws = _socks.back();
 
 		if ((long)s > _nfds)
 			_nfds = (long)s;
 		FD_SET(s,&_readfds);
-		sws.type = ZT_WIRE_SOCKET_UDP;
+		sws.type = ZT_PHY_SOCKET_UDP;
 		sws.sock = s;
 		sws.uptr = uptr;
 		memset(&(sws.saddr),0,sizeof(struct sockaddr_storage));
 		memcpy(&(sws.saddr),localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 
-		return (WireSocket *)&sws;
+		return (PhySocket *)&sws;
 	}
 
 	/**
@@ -364,9 +364,9 @@ public:
 	 * @param len Length of packet
 	 * @return True if packet appears to have been sent successfully
 	 */
-	inline bool udpSend(WireSocket *sock,const struct sockaddr *remoteAddress,const void *data,unsigned long len)
+	inline bool udpSend(PhySocket *sock,const struct sockaddr *remoteAddress,const void *data,unsigned long len)
 	{
-		WireSocketImpl &sws = *(const_cast <WireSocketImpl *>(reinterpret_cast<const WireSocketImpl *>(sock)));
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		return ((long)::sendto(sws.sock,data,len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
 	}
 
@@ -377,14 +377,14 @@ public:
 	 * @param uptr Initial value of uptr for new socket (default: NULL)
 	 * @return Socket or NULL on failure to bind
 	 */
-	inline WireSocket *tcpListen(const struct sockaddr *localAddress,void *uptr = (void *)0)
+	inline PhySocket *tcpListen(const struct sockaddr *localAddress,void *uptr = (void *)0)
 	{
-		if (_socks.size() >= ZT_WIRE_MAX_SOCKETS)
-			return (WireSocket *)0;
+		if (_socks.size() >= ZT_PHY_MAX_SOCKETS)
+			return (PhySocket *)0;
 
-		ZT_WIRE_SOCKFD_TYPE s = ::socket(localAddress->sa_family,SOCK_STREAM,0);
-		if (!ZT_WIRE_SOCKFD_VALID(s))
-			return (WireSocket *)0;
+		ZT_PHY_SOCKFD_TYPE s = ::socket(localAddress->sa_family,SOCK_STREAM,0);
+		if (!ZT_PHY_SOCKFD_VALID(s))
+			return (PhySocket *)0;
 
 #if defined(_WIN32) || defined(_WIN64)
 		{
@@ -406,33 +406,33 @@ public:
 #endif
 
 		if (::bind(s,localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in))) {
-			ZT_WIRE_CLOSE_SOCKET(s);
-			return (WireSocket *)0;
+			ZT_PHY_CLOSE_SOCKET(s);
+			return (PhySocket *)0;
 		}
 
 		if (::listen(s,1024)) {
-			ZT_WIRE_CLOSE_SOCKET(s);
-			return (WireSocket *)0;
+			ZT_PHY_CLOSE_SOCKET(s);
+			return (PhySocket *)0;
 		}
 
 		try {
-			_socks.push_back(WireSocketImpl());
+			_socks.push_back(PhySocketImpl());
 		} catch ( ... ) {
-			ZT_WIRE_CLOSE_SOCKET(s);
-			return (WireSocket *)0;
+			ZT_PHY_CLOSE_SOCKET(s);
+			return (PhySocket *)0;
 		}
-		WireSocketImpl &sws = _socks.back();
+		PhySocketImpl &sws = _socks.back();
 
 		if ((long)s > _nfds)
 			_nfds = (long)s;
 		FD_SET(s,&_readfds);
-		sws.type = ZT_WIRE_SOCKET_TCP_LISTEN;
+		sws.type = ZT_PHY_SOCKET_TCP_LISTEN;
 		sws.sock = s;
 		sws.uptr = uptr;
 		memset(&(sws.saddr),0,sizeof(struct sockaddr_storage));
 		memcpy(&(sws.saddr),localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 
-		return (WireSocket *)&sws;
+		return (PhySocket *)&sws;
 	}
 
 	/**
@@ -457,15 +457,15 @@ public:
 	 * @param callConnectHandler If true, call TCP connect handler even if result is known before function exit (default: true)
 	 * @return New socket or NULL on failure
 	 */
-	inline WireSocket *tcpConnect(const struct sockaddr *remoteAddress,bool &connected,void *uptr = (void *)0,bool callConnectHandler = true)
+	inline PhySocket *tcpConnect(const struct sockaddr *remoteAddress,bool &connected,void *uptr = (void *)0,bool callConnectHandler = true)
 	{
-		if (_socks.size() >= ZT_WIRE_MAX_SOCKETS)
-			return (WireSocket *)0;
+		if (_socks.size() >= ZT_PHY_MAX_SOCKETS)
+			return (PhySocket *)0;
 
-		ZT_WIRE_SOCKFD_TYPE s = ::socket(remoteAddress->sa_family,SOCK_STREAM,0);
-		if (!ZT_WIRE_SOCKFD_VALID(s)) {
+		ZT_PHY_SOCKFD_TYPE s = ::socket(remoteAddress->sa_family,SOCK_STREAM,0);
+		if (!ZT_PHY_SOCKFD_VALID(s)) {
 			connected = false;
-			return (WireSocket *)0;
+			return (PhySocket *)0;
 		}
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -495,30 +495,30 @@ public:
 #else
 			if (errno != EINPROGRESS) {
 #endif
-				ZT_WIRE_CLOSE_SOCKET(s);
-				return (WireSocket *)0;
+				ZT_PHY_CLOSE_SOCKET(s);
+				return (PhySocket *)0;
 			} // else connection is proceeding asynchronously...
 		}
 
 		try {
-			_socks.push_back(WireSocketImpl());
+			_socks.push_back(PhySocketImpl());
 		} catch ( ... ) {
-			ZT_WIRE_CLOSE_SOCKET(s);
-			return (WireSocket *)0;
+			ZT_PHY_CLOSE_SOCKET(s);
+			return (PhySocket *)0;
 		}
-		WireSocketImpl &sws = _socks.back();
+		PhySocketImpl &sws = _socks.back();
 
 		if ((long)s > _nfds)
 			_nfds = (long)s;
 		if (connected) {
 			FD_SET(s,&_readfds);
-			sws.type = ZT_WIRE_SOCKET_TCP_OUT_CONNECTED;
+			sws.type = ZT_PHY_SOCKET_TCP_OUT_CONNECTED;
 		} else {
 			FD_SET(s,&_writefds);
 #if defined(_WIN32) || defined(_WIN64)
 			FD_SET(s,&_exceptfds);
 #endif
-			sws.type = ZT_WIRE_SOCKET_TCP_OUT_PENDING;
+			sws.type = ZT_PHY_SOCKET_TCP_OUT_PENDING;
 		}
 		sws.sock = s;
 		sws.uptr = uptr;
@@ -527,11 +527,11 @@ public:
 
 		if ((callConnectHandler)&&(connected)) {
 			try {
-				_tcpConnectHandler((WireSocket *)&sws,&(sws.uptr),true);
+				_tcpConnectHandler((PhySocket *)&sws,&(sws.uptr),true);
 			} catch ( ... ) {}
 		}
 
-		return (WireSocket *)&sws;
+		return (PhySocket *)&sws;
 	}
 
 	/**
@@ -547,9 +547,9 @@ public:
 	 * @param callCloseHandler If true, call close handler on socket closing failure condition
 	 * @return Number of bytes actually sent or -1 on fatal error (socket closure)
 	 */
-	inline long tcpSend(WireSocket *sock,const void *data,unsigned long len,bool callCloseHandler)
+	inline long tcpSend(PhySocket *sock,const void *data,unsigned long len,bool callCloseHandler)
 	{
-		WireSocketImpl &sws = *(const_cast <WireSocketImpl *>(reinterpret_cast<const WireSocketImpl *>(sock)));
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		long n = (long)::send(sws.sock,data,len,0);
 #if defined(_WIN32) || defined(_WIN64)
 		if (n == SOCKET_ERROR) {
@@ -594,9 +594,9 @@ public:
 	 * @param sock TCP connection socket (other types are not valid)
 	 * @param notifyWritable Want writable notifications?
 	 */
-	inline const void tcpSetNotifyWritable(WireSocket *sock,bool notifyWritable)
+	inline const void tcpSetNotifyWritable(PhySocket *sock,bool notifyWritable)
 	{
-		WireSocketImpl &sws = *(const_cast <WireSocketImpl *>(reinterpret_cast<const WireSocketImpl *>(sock)));
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		if (notifyWritable) {
 			FD_SET(sws.sock,&_writefds);
 		} else {
@@ -642,62 +642,62 @@ public:
 #endif
 		}
 
-		for(typename std::list<WireSocketImpl>::iterator s(_socks.begin()),nexts;s!=_socks.end();s=nexts) {
+		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin()),nexts;s!=_socks.end();s=nexts) {
 			nexts = s; ++nexts; // we can delete the linked list item, so traverse now
 
 			switch (s->type) {
 
-				case ZT_WIRE_SOCKET_TCP_OUT_PENDING:
+				case ZT_PHY_SOCKET_TCP_OUT_PENDING:
 #if defined(_WIN32) || defined(_WIN64)
 					if (FD_ISSET(s->sock,&efds))
-						this->close((WireSocket *)&(*s),true);
+						this->close((PhySocket *)&(*s),true);
 					else // ... if
 #endif
 					if (FD_ISSET(s->sock,&wfds)) {
 						socklen_t slen = sizeof(ss);
 						if (::getpeername(s->sock,(struct sockaddr *)&ss,&slen) != 0) {
-							this->close((WireSocket *)&(*s),true);
+							this->close((PhySocket *)&(*s),true);
 						} else {
-							s->type = ZT_WIRE_SOCKET_TCP_OUT_CONNECTED;
+							s->type = ZT_PHY_SOCKET_TCP_OUT_CONNECTED;
 							FD_SET(s->sock,&_readfds);
 							FD_CLR(s->sock,&_writefds);
 #if defined(_WIN32) || defined(_WIN64)
 							FD_CLR(s->sock,&_exceptfds);
 #endif
 							try {
-								_tcpConnectHandler((WireSocket *)&(*s),&(s->uptr),true);
+								_tcpConnectHandler((PhySocket *)&(*s),&(s->uptr),true);
 							} catch ( ... ) {}
 						}
 					}
 					break;
 
-				case ZT_WIRE_SOCKET_TCP_OUT_CONNECTED:
-				case ZT_WIRE_SOCKET_TCP_IN:
+				case ZT_PHY_SOCKET_TCP_OUT_CONNECTED:
+				case ZT_PHY_SOCKET_TCP_IN:
 					if (FD_ISSET(s->sock,&rfds)) {
 						long n = (long)::recv(s->sock,buf,sizeof(buf),0);
 						if (n <= 0) {
-							this->close((WireSocket *)&(*s),true);
+							this->close((PhySocket *)&(*s),true);
 						} else {
 							try {
-								_tcpDataHandler((WireSocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
+								_tcpDataHandler((PhySocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
 							} catch ( ... ) {}
 						}
 					}
 					if ((FD_ISSET(s->sock,&wfds))&&(FD_ISSET(s->sock,&_writefds))) {
 						try {
-							_tcpWritableHandler((WireSocket *)&(*s),&(s->uptr));
+							_tcpWritableHandler((PhySocket *)&(*s),&(s->uptr));
 						} catch ( ... ) {}
 					}
 					break;
 
-				case ZT_WIRE_SOCKET_TCP_LISTEN:
+				case ZT_PHY_SOCKET_TCP_LISTEN:
 					if (FD_ISSET(s->sock,&rfds)) {
 						memset(&ss,0,sizeof(ss));
 						socklen_t slen = sizeof(ss);
-						ZT_WIRE_SOCKFD_TYPE newSock = ::accept(s->sock,(struct sockaddr *)&ss,&slen);
-						if (ZT_WIRE_SOCKFD_VALID(newSock)) {
-							if (_socks.size() >= ZT_WIRE_MAX_SOCKETS) {
-								ZT_WIRE_CLOSE_SOCKET(newSock);
+						ZT_PHY_SOCKFD_TYPE newSock = ::accept(s->sock,(struct sockaddr *)&ss,&slen);
+						if (ZT_PHY_SOCKFD_VALID(newSock)) {
+							if (_socks.size() >= ZT_PHY_MAX_SOCKETS) {
+								ZT_PHY_CLOSE_SOCKET(newSock);
 							} else {
 #if defined(_WIN32) || defined(_WIN64)
 								{ BOOL f = (_noDelay ? TRUE : FALSE); setsockopt(newSock,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
@@ -706,31 +706,31 @@ public:
 								{ int f = (_noDelay ? 1 : 0); setsockopt(newSock,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f)); }
 								fcntl(newSock,F_SETFL,O_NONBLOCK);
 #endif
-								_socks.push_back(WireSocketImpl());
-								WireSocketImpl &sws = _socks.back();
+								_socks.push_back(PhySocketImpl());
+								PhySocketImpl &sws = _socks.back();
 								FD_SET(newSock,&_readfds);
 								if ((long)newSock > _nfds)
 									_nfds = (long)newSock;
-								sws.type = ZT_WIRE_SOCKET_TCP_IN;
+								sws.type = ZT_PHY_SOCKET_TCP_IN;
 								sws.sock = newSock;
 								sws.uptr = (void *)0;
 								memcpy(&(sws.saddr),&ss,sizeof(struct sockaddr_storage));
 								try {
-									_tcpAcceptHandler((WireSocket *)&(*s),(WireSocket *)&(_socks.back()),&(s->uptr),&(sws.uptr),(const struct sockaddr *)&(sws.saddr));
+									_tcpAcceptHandler((PhySocket *)&(*s),(PhySocket *)&(_socks.back()),&(s->uptr),&(sws.uptr),(const struct sockaddr *)&(sws.saddr));
 								} catch ( ... ) {}
 							}
 						}
 					}
 					break;
 
-				case ZT_WIRE_SOCKET_UDP:
+				case ZT_PHY_SOCKET_UDP:
 					if (FD_ISSET(s->sock,&rfds)) {
 						memset(&ss,0,sizeof(ss));
 						socklen_t slen = sizeof(ss);
 						long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
 						if (n > 0) {
 							try {
-								_datagramHandler((WireSocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
+								_datagramHandler((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
 							} catch ( ... ) {}
 						}
 					}
@@ -743,11 +743,11 @@ public:
 		}
 	}
 
-	inline void close(WireSocket *sock,bool callHandlers)
+	inline void close(PhySocket *sock,bool callHandlers)
 	{
 		if (!sock)
 			return;
-		WireSocketImpl &sws = *(const_cast <WireSocketImpl *>(reinterpret_cast<const WireSocketImpl *>(sock)));
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 
 		FD_CLR(sws.sock,&_readfds);
 		FD_CLR(sws.sock,&_writefds);
@@ -755,18 +755,18 @@ public:
 		FD_CLR(sws.sock,&_exceptfds);
 #endif
 
-		ZT_WIRE_CLOSE_SOCKET(sws.sock);
+		ZT_PHY_CLOSE_SOCKET(sws.sock);
 
 		switch(sws.type) {
-			case ZT_WIRE_SOCKET_TCP_OUT_PENDING:
+			case ZT_PHY_SOCKET_TCP_OUT_PENDING:
 				if (callHandlers) {
 					try {
 						_tcpConnectHandler(sock,&(sws.uptr),false);
 					} catch ( ... ) {}
 				}
 				break;
-			case ZT_WIRE_SOCKET_TCP_OUT_CONNECTED:
-			case ZT_WIRE_SOCKET_TCP_IN:
+			case ZT_PHY_SOCKET_TCP_OUT_CONNECTED:
+			case ZT_PHY_SOCKET_TCP_IN:
 				if (callHandlers) {
 					try {
 						_tcpCloseHandler(sock,&(sws.uptr));
@@ -779,8 +779,8 @@ public:
 
 		long oldSock = (long)sws.sock;
 
-		for(typename std::list<WireSocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
-			if (reinterpret_cast<WireSocket *>(&(*s)) == sock) {
+		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
+			if (reinterpret_cast<PhySocket *>(&(*s)) == sock) {
 				_socks.erase(s);
 				break;
 			}
@@ -790,7 +790,7 @@ public:
 			long nfds = (long)_whackSendSocket;
 			if ((long)_whackReceiveSocket > nfds)
 				nfds = (long)_whackReceiveSocket;
-			for(typename std::list<WireSocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
+			for(typename std::list<PhySocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
 				if ((long)s->sock > nfds)
 					nfds = (long)s->sock;
 			}
@@ -799,18 +799,18 @@ public:
 	}
 };
 
-// Typedefs for using regular naked functions as template parameters to Wire<>
-typedef void (*Wire_OnDatagramFunctionPtr)(WireSocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
-typedef void (*Wire_OnTcpConnectFunction)(WireSocket *sock,void **uptr,bool success);
-typedef void (*Wire_OnTcpAcceptFunction)(WireSocket *sockL,WireSocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
-typedef void (*Wire_OnTcpCloseFunction)(WireSocket *sock,void **uptr);
-typedef void (*Wire_OnTcpDataFunction)(WireSocket *sock,void **uptr,void *data,unsigned long len);
-typedef void (*Wire_OnTcpWritableFunction)(WireSocket *sock,void **uptr);
+// Typedefs for using regular naked functions as template parameters to Phy<>
+typedef void (*Phy_OnDatagramFunctionPtr)(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
+typedef void (*Phy_OnTcpConnectFunction)(PhySocket *sock,void **uptr,bool success);
+typedef void (*Phy_OnTcpAcceptFunction)(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
+typedef void (*Phy_OnTcpCloseFunction)(PhySocket *sock,void **uptr);
+typedef void (*Phy_OnTcpDataFunction)(PhySocket *sock,void **uptr,void *data,unsigned long len);
+typedef void (*Phy_OnTcpWritableFunction)(PhySocket *sock,void **uptr);
 
 /**
- * Wire<> typedef'd to use simple naked function pointers
+ * Phy<> typedef'd to use simple naked function pointers
  */
-typedef Wire<Wire_OnDatagramFunctionPtr,Wire_OnTcpConnectFunction,Wire_OnTcpAcceptFunction,Wire_OnTcpCloseFunction,Wire_OnTcpDataFunction,Wire_OnTcpWritableFunction> SimpleFunctionWire;
+typedef Phy<Phy_OnDatagramFunctionPtr,Phy_OnTcpConnectFunction,Phy_OnTcpAcceptFunction,Phy_OnTcpCloseFunction,Phy_OnTcpDataFunction,Phy_OnTcpWritableFunction> SimpleFunctionPhy;
 
 } // namespace ZeroTier
 

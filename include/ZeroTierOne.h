@@ -338,14 +338,14 @@ typedef void (*ZT1_StatusCallback)(enum ZT1_StatusCode,const char *,const void *
  *
  * @param node Result parameter: pointer to set to new node instance
  * @param homePath ZeroTier home path for storing state information
- * @param lanConfigUpdateCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
+ * @param portConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param statusCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ReturnValue ZT1_Node_new(
 	ZT1_Node **node,
 	const char *homePath,
-	ZT1_VirtualLanConfigCallback *lanConfigUpdateCallback,
+	ZT1_VirtualPortConfigCallback *portConfigCallback,
 	ZT1_StatusCallback *statusCallback);
 
 /**

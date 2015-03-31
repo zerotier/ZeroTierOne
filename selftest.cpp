@@ -25,7 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#define ZT_TEST_WIRE
+#define ZT_TEST_PHY
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,8 +57,8 @@
 #include "node/Defaults.hpp"
 #include "node/Node.hpp"
 
-#ifdef ZT_TEST_WIRE
-#include "osnet/Wire.hpp"
+#ifdef ZT_TEST_PHY
+#include "osnet/Phy.hpp"
 #endif
 
 #ifdef ZT_ENABLE_NETCONF_MASTER
@@ -646,63 +646,63 @@ static int testOther()
 	return 0;
 }
 
-#ifdef ZT_TEST_WIRE
-#define ZT_TEST_WIRE_NUM_UDP_PACKETS 10000
-#define ZT_TEST_WIRE_UDP_PACKET_SIZE 1000
-#define ZT_TEST_WIRE_NUM_VALID_TCP_CONNECTS 10
-#define ZT_TEST_WIRE_NUM_INVALID_TCP_CONNECTS 2
-#define ZT_TEST_WIRE_TCP_MESSAGE_SIZE 1000000
-#define ZT_TEST_WIRE_TIMEOUT_MS 20000
-static unsigned long wireTestUdpPacketCount = 0;
-static unsigned long wireTestTcpByteCount = 0;
-static unsigned long wireTestTcpConnectSuccessCount = 0;
-static unsigned long wireTestTcpConnectFailCount = 0;
-static unsigned long wireTestTcpAcceptCount = 0;
-static SimpleFunctionWire *testWireInstance = (SimpleFunctionWire *)0;
-static void testWireOnDatagramFunction(WireSocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+#ifdef ZT_TEST_PHY
+#define ZT_TEST_PHY_NUM_UDP_PACKETS 10000
+#define ZT_TEST_PHY_UDP_PACKET_SIZE 1000
+#define ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS 10
+#define ZT_TEST_PHY_NUM_INVALID_TCP_CONNECTS 2
+#define ZT_TEST_PHY_TCP_MESSAGE_SIZE 1000000
+#define ZT_TEST_PHY_TIMEOUT_MS 20000
+static unsigned long phyTestUdpPacketCount = 0;
+static unsigned long phyTestTcpByteCount = 0;
+static unsigned long phyTestTcpConnectSuccessCount = 0;
+static unsigned long phyTestTcpConnectFailCount = 0;
+static unsigned long phyTestTcpAcceptCount = 0;
+static SimpleFunctionPhy *testPhyInstance = (SimpleFunctionPhy *)0;
+static void testPhyOnDatagramFunction(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
 {
-	++wireTestUdpPacketCount;
+	++phyTestUdpPacketCount;
 }
-static void testWireOnTcpConnectFunction(WireSocket *sock,void **uptr,bool success)
+static void testPhyOnTcpConnectFunction(PhySocket *sock,void **uptr,bool success)
 {
 	if (success) {
-		++wireTestTcpConnectSuccessCount;
+		++phyTestTcpConnectSuccessCount;
 	} else {
-		++wireTestTcpConnectFailCount;
+		++phyTestTcpConnectFailCount;
 	}
 }
-static void testWireOnTcpAcceptFunction(WireSocket *sockL,WireSocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
+static void testPhyOnTcpAcceptFunction(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 {
-	++wireTestTcpAcceptCount;
-	*uptrN = new std::string(ZT_TEST_WIRE_TCP_MESSAGE_SIZE,(char)0xff);
-	testWireInstance->tcpSetNotifyWritable(sockN,true);
+	++phyTestTcpAcceptCount;
+	*uptrN = new std::string(ZT_TEST_PHY_TCP_MESSAGE_SIZE,(char)0xff);
+	testPhyInstance->tcpSetNotifyWritable(sockN,true);
 }
-static void testWireOnTcpCloseFunction(WireSocket *sock,void **uptr)
+static void testPhyOnTcpCloseFunction(PhySocket *sock,void **uptr)
 {
 	delete (std::string *)*uptr; // delete testMessage if any
 }
-static void testWireOnTcpDataFunction(WireSocket *sock,void **uptr,void *data,unsigned long len)
+static void testPhyOnTcpDataFunction(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {
-	wireTestTcpByteCount += len;
+	phyTestTcpByteCount += len;
 }
-static void testWireOnTcpWritableFunction(WireSocket *sock,void **uptr)
+static void testPhyOnTcpWritableFunction(PhySocket *sock,void **uptr)
 {
 	std::string *testMessage = (std::string *)*uptr;
 	if ((testMessage)&&(testMessage->length() > 0)) {
-		long sent = testWireInstance->tcpSend(sock,(const void *)testMessage->data(),testMessage->length(),true);
+		long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),testMessage->length(),true);
 		if (sent > 0)
 			testMessage->erase(0,sent);
 	}
 	if ((!testMessage)||(!testMessage->length())) {
-		testWireInstance->close(sock,true);
+		testPhyInstance->close(sock,true);
 	}
 }
-#endif // ZT_TEST_WIRE
+#endif // ZT_TEST_PHY
 
-static int testWire()
+static int testPhy()
 {
-#ifdef ZT_TEST_WIRE
-	char udpTestPayload[ZT_TEST_WIRE_UDP_PACKET_SIZE];
+#ifdef ZT_TEST_PHY
+	char udpTestPayload[ZT_TEST_PHY_UDP_PACKET_SIZE];
 	memset(udpTestPayload,0xff,sizeof(udpTestPayload));
 
 	struct sockaddr_in bindaddr;
@@ -716,66 +716,66 @@ static int testWire()
 	bindaddr.sin_port = Utils::hton((uint16_t)60004);
 	bindaddr.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
 
-	std::cout << "[wire] Creating wire endpoint..." << std::endl;
-	testWireInstance = new SimpleFunctionWire(testWireOnDatagramFunction,testWireOnTcpConnectFunction,testWireOnTcpAcceptFunction,testWireOnTcpCloseFunction,testWireOnTcpDataFunction,testWireOnTcpWritableFunction,false);
+	std::cout << "[phy] Creating phy endpoint..." << std::endl;
+	testPhyInstance = new SimpleFunctionPhy(testPhyOnDatagramFunction,testPhyOnTcpConnectFunction,testPhyOnTcpAcceptFunction,testPhyOnTcpCloseFunction,testPhyOnTcpDataFunction,testPhyOnTcpWritableFunction,false);
 
-	std::cout << "[wire] Binding UDP listen socket to 127.0.0.1/60002... ";
-	WireSocket *udpListenSock = testWireInstance->udpBind((const struct sockaddr *)&bindaddr);
+	std::cout << "[phy] Binding UDP listen socket to 127.0.0.1/60002... ";
+	PhySocket *udpListenSock = testPhyInstance->udpBind((const struct sockaddr *)&bindaddr);
 	if (!udpListenSock) {
 		std::cout << "FAILED." << std::endl;
 		return -1;
 	}
 	std::cout << "OK" << std::endl;
 
-	std::cout << "[wire] Binding TCP listen socket to 127.0.0.1/60002... ";
-	WireSocket *tcpListenSock = testWireInstance->tcpListen((const struct sockaddr *)&bindaddr);
+	std::cout << "[phy] Binding TCP listen socket to 127.0.0.1/60002... ";
+	PhySocket *tcpListenSock = testPhyInstance->tcpListen((const struct sockaddr *)&bindaddr);
 	if (!tcpListenSock) {
 		std::cout << "FAILED." << std::endl;
 		return -1;
 	}
 	std::cout << "OK" << std::endl;
 
-	unsigned long wireTestUdpPacketsSent = 0;
-	unsigned long wireTestTcpValidConnectionsAttempted = 0;
-	unsigned long wireTestTcpInvalidConnectionsAttempted = 0;
+	unsigned long phyTestUdpPacketsSent = 0;
+	unsigned long phyTestTcpValidConnectionsAttempted = 0;
+	unsigned long phyTestTcpInvalidConnectionsAttempted = 0;
 
-	std::cout << "[wire] Testing UDP send/receive... "; std::cout.flush();
-	uint64_t timeoutAt = Utils::now() + ZT_TEST_WIRE_TIMEOUT_MS;
-	while ((Utils::now() < timeoutAt)&&(wireTestUdpPacketCount < ZT_TEST_WIRE_NUM_UDP_PACKETS)) {
-		if (wireTestUdpPacketsSent < ZT_TEST_WIRE_NUM_UDP_PACKETS) {
-			if (!testWireInstance->udpSend(udpListenSock,(const struct sockaddr *)&bindaddr,udpTestPayload,sizeof(udpTestPayload))) {
+	std::cout << "[phy] Testing UDP send/receive... "; std::cout.flush();
+	uint64_t timeoutAt = Utils::now() + ZT_TEST_PHY_TIMEOUT_MS;
+	while ((Utils::now() < timeoutAt)&&(phyTestUdpPacketCount < ZT_TEST_PHY_NUM_UDP_PACKETS)) {
+		if (phyTestUdpPacketsSent < ZT_TEST_PHY_NUM_UDP_PACKETS) {
+			if (!testPhyInstance->udpSend(udpListenSock,(const struct sockaddr *)&bindaddr,udpTestPayload,sizeof(udpTestPayload))) {
 				std::cout << "FAILED." << std::endl;
 				return -1;
-			} else ++wireTestUdpPacketsSent;
+			} else ++phyTestUdpPacketsSent;
 		}
-		testWireInstance->poll(100);
+		testPhyInstance->poll(100);
 	}
-	std::cout << "got " << wireTestUdpPacketCount << " packets, OK" << std::endl;
+	std::cout << "got " << phyTestUdpPacketCount << " packets, OK" << std::endl;
 
-	std::cout << "[wire] Testing TCP... "; std::cout.flush();
-	timeoutAt = Utils::now() + ZT_TEST_WIRE_TIMEOUT_MS;
-	while ((Utils::now() < timeoutAt)&&(wireTestTcpByteCount < (ZT_TEST_WIRE_NUM_VALID_TCP_CONNECTS * ZT_TEST_WIRE_TCP_MESSAGE_SIZE))) {
-		if (wireTestTcpValidConnectionsAttempted < ZT_TEST_WIRE_NUM_VALID_TCP_CONNECTS) {
-			++wireTestTcpValidConnectionsAttempted;
+	std::cout << "[phy] Testing TCP... "; std::cout.flush();
+	timeoutAt = Utils::now() + ZT_TEST_PHY_TIMEOUT_MS;
+	while ((Utils::now() < timeoutAt)&&(phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE))) {
+		if (phyTestTcpValidConnectionsAttempted < ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS) {
+			++phyTestTcpValidConnectionsAttempted;
 			bool connected = false;
-			if (!testWireInstance->tcpConnect((const struct sockaddr *)&bindaddr,connected,(void *)0,true))
-				++wireTestTcpConnectFailCount;
+			if (!testPhyInstance->tcpConnect((const struct sockaddr *)&bindaddr,connected,(void *)0,true))
+				++phyTestTcpConnectFailCount;
 		}
-		if (wireTestTcpInvalidConnectionsAttempted < ZT_TEST_WIRE_NUM_INVALID_TCP_CONNECTS) {
-			++wireTestTcpInvalidConnectionsAttempted;
+		if (phyTestTcpInvalidConnectionsAttempted < ZT_TEST_PHY_NUM_INVALID_TCP_CONNECTS) {
+			++phyTestTcpInvalidConnectionsAttempted;
 			bool connected = false;
-			if (!testWireInstance->tcpConnect((const struct sockaddr *)&invalidAddr,connected,(void *)0,true))
-				++wireTestTcpConnectFailCount;
+			if (!testPhyInstance->tcpConnect((const struct sockaddr *)&invalidAddr,connected,(void *)0,true))
+				++phyTestTcpConnectFailCount;
 		}
-		testWireInstance->poll(100);
+		testPhyInstance->poll(100);
 	}
-	if (wireTestTcpByteCount < (ZT_TEST_WIRE_NUM_VALID_TCP_CONNECTS * ZT_TEST_WIRE_TCP_MESSAGE_SIZE)) {
-		std::cout << "got " << wireTestTcpConnectSuccessCount << " connect successes, " << wireTestTcpConnectFailCount << " failures, and " << wireTestTcpByteCount << " bytes, FAILED." << std::endl;
+	if (phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE)) {
+		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, FAILED." << std::endl;
 		return -1;
 	} else {
-		std::cout << "got " << wireTestTcpConnectSuccessCount << " connect successes, " << wireTestTcpConnectFailCount << " failures, and " << wireTestTcpByteCount << " bytes, OK" << std::endl;
+		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, OK" << std::endl;
 	}
-#endif // ZT_TEST_WIRE
+#endif // ZT_TEST_PHY
 	return 0;
 }
 
@@ -850,7 +850,7 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
-	r |= testWire();
+	r |= testPhy();
 	r |= testSqliteNetconfMaster();
 	r |= testCrypto();
 	r |= testHttp();
