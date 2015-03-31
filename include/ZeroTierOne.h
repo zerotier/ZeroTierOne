@@ -88,7 +88,7 @@ enum ZT1_ResultCode
 /**
  * Status codes sent to status update callback when things happen
  */
-enum ZT1_NodeStatusChangeCode
+enum ZT1_NodeStatusCode
 {
 	/**
 	 * Node is online
@@ -512,7 +512,7 @@ typedef void (*ZT1_VirtualNetworkConfigCallback)(ZT1_Node *,uint64_t,const ZT1_V
  *
  * This is called whenever the node's status changes in some significant way.
  */
-typedef void (*ZT1_StatusCallback)(ZT1_Node *,enum ZT1_NodeStatusChangeCode);
+typedef void (*ZT1_StatusCallback)(ZT1_Node *,enum ZT1_NodeStatusCode);
 
 /**
  * Function to get an object from the data store

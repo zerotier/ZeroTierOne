@@ -31,7 +31,7 @@
 #include <vector>
 #include <string>
 
-#include "../node/EthernetTapFactory.hpp"
+#include "EthernetTapFactory.hpp"
 #include "../node/Mutex.hpp"
 
 namespace ZeroTier {

@@ -54,7 +54,6 @@
 #include "Multicaster.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
-#include "Thread.hpp"
 
 namespace ZeroTier {
 
@@ -447,12 +446,6 @@ public:
 	 */
 	void destroy();
 
-	/**
-	 * Thread main method; do not call elsewhere
-	 */
-	void threadMain()
-		throw();
-
 private:
 	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
 
@@ -494,8 +487,6 @@ private:
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
-
-	Thread _setupThread;
 
 	Mutex _lock;
 
