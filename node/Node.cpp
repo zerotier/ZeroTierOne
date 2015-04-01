@@ -44,19 +44,15 @@ namespace ZeroTier {
 Node::Node(
 	ZT1_DataStoreGetFunction *dataStoreGetFunction,
 	ZT1_DataStorePutFunction *dataStorePutFunction,
+	ZT1_WirePacketSendFunction *wirePacketSendFunction,
+	ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigCallback *networkConfigCallback,
 	ZT1_StatusCallback *statusCallback) :
 	RR(new RuntimeEnvironment(this)),
-	_outputWireMessages((ZT1_WireMessage *)0),
-	_outputWireMessageCount(0),
-	_outputWireMessageCapacity(8),
-	_outputWireMessages_m(),
-	_outputFrames((ZT1_VirtualNetworkFrame *)0),
-	_outputFrameCount(0),
-	_outputFrameCapacity(8),
-	_outputFrames_m(),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
+	_wirePacketSendFunction(wirePacketSendFunction),
+	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
 	_networkConfigCallback(networkConfigCallback),
 	_statusCallback(statusCallback),
 	_networks(),
@@ -67,16 +63,12 @@ Node::Node(
 	_spamCounter(0)
 {
 	try {
-		_outputWireMessages = new ZT1_WireMessage[_outputWireMessageCapacity];
-		_outputFrames = new ZT1_VirtualNetworkFrame[_outputFrameCapacity];
 		RR->prng = new CMWC4096();
 		RR->sw = new Switch(RR);
 		RR->mc = new Multicaster(RR);
 		RR->antiRec = new AntiRecursion(RR);
 		RR->topology = new Topology(RR);
 	} catch ( ... ) {
-		delete [] _outputFrames;
-		delete [] _outputWireMessages;
 		delete RR->topology;
 		delete RR->antiRec;
 		delete RR->mc;
@@ -90,8 +82,6 @@ Node::Node(
 
 Node::~Node()
 {
-	delete [] _outputFrames;
-	delete [] _outputWireMessages;
 	delete RR->topology;
 	delete RR->antiRec;
 	delete RR->mc;
@@ -101,25 +91,19 @@ Node::~Node()
 	delete RR;
 }
 
-ZT1_ResultCode Node::run(
-	uint64_t now,
-	const ZT1_WireMessage *inputWireMessages,
-	unsigned int inputWireMessageCount,
-	const ZT1_VirtualNetworkFrame *inputFrames,
-	unsigned int inputFrameCount,
-	const ZT1_WireMessage **outputWireMessages,
-	unsigned int *outputWireMessageCount,
-	const ZT1_VirtualNetworkFrame **outputFrames,
-	unsigned int *outputLanFrameCount,
-	unsigned long *maxNextInterval)
-{
-}
-
 ZT1_ResultCode Node::join(uint64_t nwid)
 {
 }
 
 ZT1_ResultCode Node::leave(uint64_t nwid)
+{
+}
+
+ZT1_ResultCode Node::multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
+{
+}
+
+ZT1_ResultCode Node::multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
 }
 

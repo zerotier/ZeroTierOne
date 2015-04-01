@@ -35,6 +35,7 @@
 
 #include <stdint.h>
 
+// For the struct sockaddr_storage structure
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
 #include <WS2tcpip.h>
@@ -53,14 +54,44 @@ extern "C" {
 /****************************************************************************/
 
 /**
- * Maximum frame MTU
+ * Maximum MTU for ZeroTier virtual networks
+ *
+ * This is pretty much an unchangeable global constant. To make it change
+ * across nodes would require logic to send ICMP packet too big messages,
+ * which would complicate things. 1500 has been good enough on most LANs
+ * for ages, so a larger MTU should be fine for the forseeable future. This
+ * typically results in two UDP packets per single large frame. Experimental
+ * results seem to show that this is good. Larger MTUs resulting in more
+ * fragments seemed too brittle on slow/crummy links for no benefit.
+ *
+ * If this does change, also change it in tap.h in the tuntaposx code under
+ * mac-tap.
+ * 
+ * Overhead for a normal frame split into two packets:
+ *
+ * 1414 = 1444 (typical UDP MTU) - 28 (packet header) - 2 (ethertype)
+ * 1428 = 1444 (typical UDP MTU) - 16 (fragment header)
+ * SUM: 2842
+ *
+ * We use 2800, which leaves some room for other payload in other types of
+ * messages such as multicast propagation or future support for bridging.
  */
 #define ZT1_MAX_MTU 2800
 
 /**
- * Maximum length of a wire message packet in bytes
+ * Feature flag: this is an official ZeroTier, Inc. binary build (built with ZT_OFFICIAL_RELEASE)
  */
-#define ZT1_MAX_WIRE_MESSAGE_LENGTH 1500
+#define ZT1_FEATURE_FLAG_OFFICIAL 0x00000001
+
+/**
+ * Feature flag: ZeroTier One was built to be thread-safe -- concurrent processXXX() calls are okay
+ */
+#define ZT1_FEATURE_FLAG_THREAD_SAFE 0x00000002
+
+/**
+ * Feature flag: FIPS compliant build (not available yet, but reserved for future use if we ever do this)
+ */
+#define ZT1_FEATURE_FLAG_FIPS 0x00000004
 
 /****************************************************************************/
 /* Structures and other types                                               */
@@ -156,103 +187,6 @@ typedef struct
 } ZT1_NodeStatus;
 
 /**
- * A message to or from a physical address (e.g. IP or physical Ethernet)
- */
-typedef struct
-{
-	/**
-	 * Socket address
-	 */
-	struct sockaddr_storage address;
-
-	/**
-	 * Link desperation -- higher equals "worse" or "slower"
-	 *
-	 * This is very similar to an interface metric. Higher values indicate
-	 * worse links. For incoming wire messages, it should be sent to the
-	 * desperation metric for the originating socket. For outgoing wire
-	 * messages, ZeroTier will increment this from zero as it grows more
-	 * and more desperate to communicate.
-	 *
-	 * In other words, this value controls fallback to things like TCP
-	 * tunnels to relays. As desperation increases, ZeroTier becomes
-	 * more and more willing to use these links.
-	 *
-	 * Desperation values shouldn't be arbitrary. They should be tied to
-	 * specific transport types. For example: 0 might be UDP, 1 might be
-	 * TCP, and 2 might be HTTP relay via a ZeroTier relay server. There
-	 * should be no gaps. Negative values are permitted and may refer to
-	 * better-than-normal links such as direct raw Ethernet framing over
-	 * a trusted backplane.
-	 */
-	int desperation;
-
-	/**
-	 * If nonzero (true), spam this message across paths up to 'desperation'
-	 *
-	 * This works with 'desperation' to allow fall-forward to less desperate
-	 * paths. When this flag is set, this message should be sent across all
-	 * applicable transports up to and including the specified level of
-	 * desperation.
-	 *
-	 * For example, if spam==1 and desperation==2 the packet might be sent
-	 * via both UDP and HTTP tunneling.
-	 */
-	int spam;
-
-	/**
-	 * Packet data
-	 */
-	char packetData[ZT1_MAX_WIRE_MESSAGE_LENGTH];
-
-	/**
-	 * Length of packet
-	 */
-	unsigned int packetLength;
-} ZT1_WireMessage;
-
-/**
- * A message to or from a virtual LAN port
- */
-typedef struct
-{
-	/**
-	 * ZeroTier network ID of virtual LAN port
-	 */
-	uint64_t nwid;
-
-	/**
-	 * Source MAC address
-	 */
-	uint64_t sourceMac;
-
-	/**
-	 * Destination MAC address
-	 */
-	uint64_t destMac;
-
-	/**
-	 * 16-bit Ethernet frame type
-	 */
-	unsigned int etherType;
-
-	/**
-	 * 10-bit VLAN ID or 0 for none
-	 */
-	unsigned int vlanId;
-
-	/**
-	 * Ethernet frame data
-	 */
-	char frameData[ZT1_MAX_MTU];
-
-	/**
-	 * Ethernet frame length
-	 */
-	unsigned int frameLength;
-} ZT1_VirtualNetworkFrame;
-
-/**
  * Virtual network status codes
  */
 enum ZT1_VirtualNetworkStatus
@@ -293,6 +227,22 @@ enum ZT1_VirtualNetworkType
 	 */
 	ZT1_NETWORK_TYPE_PUBLIC = 1
 };
+
+/**
+ * An Ethernet multicast group
+ */
+typedef struct
+{
+	/**
+	 * MAC address (least significant 48 bits)
+	 */
+	uint64_t mac;
+
+	/**
+	 * Additional distinguishing information (usually zero)
+	 */
+	unsigned long adi;
+} ZT1_MulticastGroup;
 
 /**
  * Virtual LAN configuration
@@ -342,6 +292,11 @@ typedef struct
 	int bridge;
 
 	/**
+	 * If nonzero, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
+	 */
+	int broadcastEnabled;
+
+	/**
 	 * Network config revision as reported by netconf master
 	 *
 	 * If this is zero, it means we're still waiting for our netconf.
@@ -364,6 +319,16 @@ typedef struct
 	 * Number of assigned addresses
 	 */
 	unsigned int assignedAddressCount;
+
+	/**
+	 * Multicast group subscriptions
+	 */
+	ZT1_MulticastGroup *multicastSubscriptions;
+
+	/**
+	 * Number of multicast group subscriptions
+	 */
+	unsigned int multicastSubscriptionCount;
 
 	/**
 	 * Network name (from network configuration master)
@@ -551,14 +516,38 @@ typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,const char *,void *,unsigned
 /**
  * Function to store an object in the data store
  *
- * Parameters: (1) object name, (2) object data, (3) object size. Naming
- * semantics are the same as the get function. This must return zero on
+ * Parameters: (1) node, (2) object name, (3) object data, (4) object size.
+ * Name semantics are the same as the get function. This must return zero on
  * success. You can return any OS-specific error code on failure, as these
  * may be visible in logs or error messages and might aid in debugging.
  *
  * A call to write 0 bytes can safely be interpreted as a delete operation.
  */
 typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,unsigned long);
+
+/**
+ * Function to send a ZeroTier packet out over the wire
+ *
+ * Parameters: (1) node, (2) address, (3) desperation, (4) spam? (bool),
+ * (5) packet data, (6) packet data length.
+ *
+ * If spam is nonzero, the implementation should attempt to send the packet
+ * over all link types or protocols up to and including the stated level of
+ * desperation. Non-applicable link types can of course be skipped.
+ *
+ * The function must return zero on success and may return any error code
+ * on failure. Note that success does not (of course) guarantee packet
+ * delivery. It only means that the packet appears to have been sent.
+ */
+typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,const struct sockaddr_storage *,int,int,const void *,unsigned int);
+
+/**
+ * Function to send a frame out to a virtual network port
+ *
+ * Parameters: (1) node, (2) network ID, (3) source MAC, (4) destination MAC,
+ * (5) ethertype, (6) VLAN ID, (7) frame data, (8) frame length.
+ */
+typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int);
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -581,53 +570,74 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
 	ZT1_DataStoreGetFunction *dataStoreGetFunction,
 	ZT1_DataStorePutFunction *dataStorePutFunction,
+	ZT1_WirePacketSendFunction *wirePacketSendFunction,
+	ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigCallback *networkConfigCallback,
 	ZT1_StatusCallback *statusCallback);
 
 /**
- * Process wire messages and/or LAN frames
- *
- * This runs the ZeroTier core loop once with input packets and frames and
- * returns zero or more resulting packets or frames. It also sets a max
- * interval value. The calling code must call run() again after no more
- * than this many milliseconds of inactivity. If no packets have been
- * received, it's fine to call run() with no inputs after the inactivity
- * timeout.
- *
- * In addition to normal inputs and outputs, any callbacks registered
- * with the ZeroTier One core may also be called such as virtual network
- * endpoint configuration update or diagnostic message handlers.
- *
- * The supplied time must be at millisecond resolution and must increment
- * monotonically from the time the Node is created. Other than that, there
- * are no other restrictions. On normal systems this is usually the system
- * clock measured in milliseconds since the epoch.
+ * Process a packet received from the physical wire
  *
  * @param node Node instance
- * @param now Current time at millisecond resolution (typically since epoch)
- * @param inputWireMessages ZeroTier transport packets from the wire
- * @param inputWireMessageCount Number of packets received
- * @param inputLanFrames Frames read from virtual LAN tap device
- * @param inputLanFrameCount Number of frames read
- * @param outputWireMessages Result: set to array of wire messages to be sent
- * @param outputWireMessageCount Result: set to size of *outputWireMessages[]
- * @param outputLanFrames Result: set to array of LAN frames to post to tap device
- * @param outputLanFrameCount Result: set to size of outputLanFrames[]
- * @param maxNextInterval Result: maximum number of milliseconds before next call to run() is needed
+ * @param now Current clock in milliseconds
+ * @param remoteAddress Origin of packet
+ * @param linkDesperation Link desperation metric for link or protocol over which packet arrived
+ * @param packetData Packet data
+ * @param packetLength Packet length
+ * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_run(
+enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
-	const ZT1_WireMessage *inputWireMessages,
-	unsigned int inputWireMessageCount,
-	const ZT1_VirtualNetworkFrame *inputFrames,
-	unsigned int inputFrameCount,
-	const ZT1_WireMessage **outputWireMessages,
-	unsigned int *outputWireMessageCount,
-	const ZT1_VirtualNetworkFrame **outputFrames,
-	unsigned int *outputLanFrameCount,
-	unsigned long *maxNextInterval);
+	const struct sockaddr_storage *remoteAddress,
+	int linkDesperation,
+	const void *packetData,
+	unsigned int packetLength,
+	uint64_t *nextCallDeadline);
+
+/**
+ * Process a frame from a virtual network port (tap)
+ *
+ * @param node Node instance
+ * @param now Current clock in milliseconds
+ * @param nwid ZeroTier 64-bit virtual network ID
+ * @param sourceMac Source MAC address (least significant 48 bits)
+ * @param destMac Destination MAC address (least significant 48 bits)
+ * @param etherType 16-bit Ethernet frame type
+ * @param vlanId 10-bit VLAN ID or 0 if none
+ * @param frameData Frame payload data
+ * @param frameLength Frame payload length
+ * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
+ * @return OK (0) or error code if a fatal error condition has occurred
+ */
+enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
+	ZT1_Node *node,
+	uint64_t now,
+	uint64_t nwid,
+	uint64_t sourceMac,
+	uint64_t destMac,
+	unsigned int etherType,
+	unsigned int vlanId,
+	const void *frameData,
+	unsigned int frameLength,
+	uint64_t *nextCallDeadline);
+
+/**
+ * Perform required periodic operations even if no new frames or packets have arrived
+ *
+ * If the nextCallDeadline arrives and nothing has happened, call this method
+ * to do required background tasks like pinging and cleanup.
+ *
+ * @param node Node instance
+ * @param now Current clock in milliseconds
+ * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
+ * @return OK (0) or error code if a fatal error condition has occurred
+ */
+enum ZT1_Resultcode ZT1_Node_processNothing(
+	ZT1_Node *node,
+	uint64_t now,
+	uint64_t *nextCallDeadline);
 
 /**
  * Join a network
@@ -636,7 +646,7 @@ enum ZT1_ResultCode ZT1_Node_run(
  * or these may be deffered if a netconf is not available yet.
  *
  * @param node Node instance
- * @param nwid 64-bit ZeroTIer network ID
+ * @param nwid 64-bit ZeroTier network ID
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t nwid);
@@ -653,6 +663,49 @@ enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t nwid);
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t nwid);
+
+/**
+ * Subscribe to an Ethernet multicast group
+ *
+ * ADI stands for additional distinguishing information. This defaults to zero
+ * and is rarely used. Right now its only use is to enable IPv4 ARP to scale,
+ * and this must be done.
+ *
+ * For IPv4 ARP, the implementation must subscribe to 0xffffffffffff (the
+ * broadcast address) but with an ADI equal to each IPv4 address in host
+ * byte order. This converts ARP from a non-scalable broadcast protocol to
+ * a scalable multicast protocol with perfect address specificity.
+ *
+ * If this is not done, ARP will not work reliably.
+ *
+ * Multiple calls to subscribe to the same multicast address will have no
+ * effect.
+ *
+ * This does not generate an update call to networkConfigCallback().
+ *
+ * @param node Node instance
+ * @param nwid 64-bit network ID
+ * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
+ * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
+ * @return OK (0) or error code if a fatal error condition has occurred
+ */
+enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
+
+/**
+ * Unsubscribe from an Ethernet multicast group (or all groups)
+ *
+ * If multicastGroup is zero (0), this will unsubscribe from all groups. If
+ * you are not subscribed to a group this has no effect.
+ *
+ * This does not generate an update call to networkConfigCallback().
+ *
+ * @param node Node instance
+ * @param nwid 64-bit network ID
+ * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
+ * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
+ * @return OK (0) or error code if a fatal error condition has occurred
+ */
+enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
 
 /**
  * Get the status of this node
@@ -725,8 +778,9 @@ void ZT1_Node_setNetconfMaster(ZT1_Node *node,void *networkConfigMasterInstance)
  * @param major Result: major version
  * @param minor Result: minor version
  * @param revision Result: revision
+ * @param featureFlags: Result: feature flag bitmap
  */
-void ZT1_version(int *major,int *minor,int *revision);
+void ZT1_version(int *major,int *minor,int *revision,unsigned long *featureFlags);
 
 #ifdef __cplusplus
 }

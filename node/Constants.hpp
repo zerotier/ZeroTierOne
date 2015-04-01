@@ -28,6 +28,8 @@
 #ifndef ZT_CONSTANTS_HPP
 #define ZT_CONSTANTS_HPP
 
+#include "../include/ZeroTierOne.h"
+
 //
 // This include file also auto-detects and canonicalizes some environment
 // information defines:
@@ -154,28 +156,8 @@
 
 /**
  * Default MTU used for Ethernet tap device
- *
- * This is pretty much an unchangeable global constant. To make it change
- * across nodes would require logic to send ICMP packet too big messages,
- * which would complicate things. 1500 has been good enough on most LANs
- * for ages, so a larger MTU should be fine for the forseeable future. This
- * typically results in two UDP packets per single large frame. Experimental
- * results seem to show that this is good. Larger MTUs resulting in more
- * fragments seemed too brittle on slow/crummy links for no benefit.
- *
- * If this does change, also change it in tap.h in the tuntaposx code under
- * mac-tap.
- * 
- * Overhead for a normal frame split into two packets:
- *
- * 1414 = 1444 (typical UDP MTU) - 28 (packet header) - 2 (ethertype)
- * 1428 = 1444 (typical UDP MTU) - 16 (fragment header)
- * SUM: 2842
- *
- * We use 2800, which leaves some room for other payload in other types of
- * messages such as multicast propagation or future support for bridging.
  */
-#define ZT_IF_MTU 2800
+#define ZT_IF_MTU ZT1_MAX_MTU
 
 /**
  * Default interface metric for ZeroTier taps -- should be higher than physical ports

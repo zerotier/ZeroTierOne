@@ -58,6 +58,8 @@ public:
 	Node(
 		ZT1_DataStoreGetFunction *dataStoreGetFunction,
 		ZT1_DataStorePutFunction *dataStorePutFunction,
+		ZT1_WirePacketSendFunction *wirePacketSendFunction,
+		ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
 		ZT1_VirtualNetworkConfigCallback *networkConfigCallback,
 		ZT1_StatusCallback *statusCallback);
 
@@ -65,32 +67,38 @@ public:
 
 	// Public API Functions ----------------------------------------------------
 
-	ZT1_ResultCode run(
+	ZT1_ResultCode processWirePacket(
+		ZT1_Node *node,
 		uint64_t now,
-		const ZT1_WireMessage *inputWireMessages,
-		unsigned int inputWireMessageCount,
-		const ZT1_VirtualNetworkFrame *inputFrames,
-		unsigned int inputFrameCount,
-		const ZT1_WireMessage **outputWireMessages,
-		unsigned int *outputWireMessageCount,
-		const ZT1_VirtualNetworkFrame **outputFrames,
-		unsigned int *outputLanFrameCount,
-		unsigned long *maxNextInterval);
-
+		const struct sockaddr_storage *remoteAddress,
+		int linkDesperation,
+		const void *packetData,
+		unsigned int packetLength,
+		uint64_t *nextCallDeadline);
+	ZT1_ResultCode processVirtualNetworkFrame(
+		ZT1_Node *node,
+		uint64_t now,
+		uint64_t nwid,
+		uint64_t sourceMac,
+		uint64_t destMac,
+		unsigned int etherType,
+		unsigned int vlanId,
+		const void *frameData,
+		unsigned int frameLength,
+		uint64_t *nextCallDeadline);
+	ZT1_Resultcode processNothing(
+		ZT1_Node *node,
+		uint64_t now,
+		uint64_t *nextCallDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
-
 	ZT1_ResultCode leave(uint64_t nwid);
-
+	ZT1_ResultCode multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
+	ZT1_ResultCode multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
 	void status(ZT1_NodeStatus *status);
-
 	ZT1_PeerList *peers();
-
 	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid);
-
 	ZT1_VirtualNetworkList *listNetworks();
-
 	void freeQueryResult(void *qr);
-
 	void setNetconfMaster(void *networkConfigMasterInstance);
 
 	// Internal functions ------------------------------------------------------
@@ -114,19 +122,13 @@ public:
 	 */
 	inline void putPacket(const InetAddress &addr,const void *data,unsigned int len)
 	{
-		Mutex::Lock _l(_outputWireMessages_m);
-		if (_outputWireMessageCount >= _outputWireMessageCapacity) {
-			ZT1_WireMessage *old = _outputWireMessages;
-			_outputWireMessages = new ZT1_WireMessage[_outputWireMessageCapacity *= 2];
-			memcpy(_outputWireMessages,old,sizeof(ZT1_WireMessage) * _outputWireMessageCount);
-			delete [] old;
-		}
-		ZT1_WireMessage &wm = _outputWireMessages[_outputWireMessageCount++];
-		memcpy(&(wm.address),&addr,sizeof(struct sockaddr_storage));
-		wm.desperation = this->desperation();
-		wm.spam = (int)((++_spamCounter % ZT_DESPERATION_SPAM_EVERY) == 0);
-		memcpy(wm.packetData,data,len);
-		wm.packetLength = len;
+		_wirePacketSendFunction(
+			reinterpret_cast<ZT1_Node *>(this),
+			reinterpret_cast<const struct sockaddr_storage *>(&addr),
+			this->desperation(),
+			(int)((++_spamCounter % ZT_DESPERATION_SPAM_EVERY) == 0),
+			data,
+			len);
 	}
 
 	/**
@@ -142,21 +144,15 @@ public:
 	 */
 	inline void putFrame(uint64_t nwid,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		Mutex::Lock _l(_outputFrames_m);
-		if (_outputFrameCount >= _outputFrameCapacity) {
-			ZT1_VirtualNetworkFrame *old = _outputFrames;
-			_outputFrames = new ZT1_VirtualNetworkFrame[_outputFrameCapacity *= 2];
-			memcpy(_outputFrames,old,sizeof(ZT1_VirtualNetworkFrame) * _outputFrameCount);
-			delete [] old;
-		}
-		ZT1_VirtualNetworkFrame &f = _outputFrames[_outputFrameCount++];
-		f.nwid = nwid;
-		f.sourceMac = source.toInt();
-		f.destMac = dest.toInt();
-		f.etherType = etherType;
-		f.vlanId = vlanId;
-		memcpy(f.frameData,data,len);
-		f.frameLength = len;
+		_virtualNetworkFrameFunction(
+			reinterpret_cast<ZT1_Node *>(this),
+			nwid,
+			source.toInt(),
+			dest.toInt(),
+			etherType,
+			vlanId,
+			data,
+			len);
 	}
 
 	/**
@@ -173,18 +169,10 @@ public:
 private:
 	RuntimeEnvironment *RR;
 
-	ZT1_WireMessage *_outputWireMessages;
-	unsigned long _outputWireMessageCount;
-	unsigned long _outputWireMessageCapacity;
-	Mutex _outputWireMessages_m;
-
-	ZT1_VirtualNetworkFrame *_outputFrames;
-	unsigned long _outputFrameCount;
-	unsigned long _outputFrameCapacity;
-	Mutex _outputFrames_m;
-
 	ZT1_DataStoreGetFunction *_dataStoreGetFunction;
 	ZT1_DataStorePutFunction *_dataStorePutFunction;
+	ZT1_WirePacketSendFunction *_wirePacketSendFunction;
+	ZT1_VirtualNetworkFrameFunction *_virtualNetworkFrameFunction;
 	ZT1_VirtualNetworkConfigCallback *_networkConfigCallback;
 	ZT1_StatusCallback *_statusCallback;
 
@@ -194,10 +182,10 @@ private:
 	std::map< uint64_t,Network * > _networks;
 	Mutex _networks_m;
 
-	uint64_t _now; // time of last run()
-	uint64_t _timeOfLastPacketReceived;
-	uint64_t _timeOfLastPrivilgedPacket;
-	unsigned int _spamCounter; // used to "spam" every Nth packet
+	volatile uint64_t _now; // time of last run()
+	volatile uint64_t _timeOfLastPacketReceived;
+	volatile _timeOfLastPrivilgedPacket;
+	volatile unsigned int _spamCounter; // used to "spam" every Nth packet
 };
 
 } // namespace ZeroTier
