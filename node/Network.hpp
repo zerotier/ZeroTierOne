@@ -40,7 +40,6 @@
 #include "Constants.hpp"
 #include "NonCopyable.hpp"
 #include "Utils.hpp"
-#include "EthernetTap.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"

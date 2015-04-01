@@ -41,11 +41,11 @@
 #include "InetAddress.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
+#include "Network.hpp"
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class Network;
 
 /**
  * Implementation of Node object as defined in CAPI
@@ -60,7 +60,7 @@ public:
 		ZT1_DataStorePutFunction *dataStorePutFunction,
 		ZT1_WirePacketSendFunction *wirePacketSendFunction,
 		ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
-		ZT1_VirtualNetworkConfigCallback *networkConfigCallback,
+		ZT1_VirtualNetworkConfigCallback *virtualNetworkConfigCallback,
 		ZT1_StatusCallback *statusCallback);
 
 	~Node();
@@ -68,7 +68,6 @@ public:
 	// Public API Functions ----------------------------------------------------
 
 	ZT1_ResultCode processWirePacket(
-		ZT1_Node *node,
 		uint64_t now,
 		const struct sockaddr_storage *remoteAddress,
 		int linkDesperation,
@@ -76,7 +75,6 @@ public:
 		unsigned int packetLength,
 		uint64_t *nextCallDeadline);
 	ZT1_ResultCode processVirtualNetworkFrame(
-		ZT1_Node *node,
 		uint64_t now,
 		uint64_t nwid,
 		uint64_t sourceMac,
@@ -86,10 +84,7 @@ public:
 		const void *frameData,
 		unsigned int frameLength,
 		uint64_t *nextCallDeadline);
-	ZT1_Resultcode processNothing(
-		ZT1_Node *node,
-		uint64_t now,
-		uint64_t *nextCallDeadline);
+	ZT1_Resultcode processNothing(uint64_t now,uint64_t *nextCallDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
 	ZT1_ResultCode leave(uint64_t nwid);
 	ZT1_ResultCode multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
@@ -112,6 +107,30 @@ public:
 	 * @return Current level of desperation
 	 */
 	inline int desperation() const throw() { return (int)((_now - _timeOfLastPrivilgedPacket) / ZT_DESPERATION_INCREMENT); }
+
+	/**
+	 * Called to update last packet receive time whenever a packet is received
+	 *
+	 * @param fromPrivilegedPeer If true, peer is a supernode or federated hub (a.k.a. an upstream link)
+	 */
+	inline void packetReceived(bool fromPrivilegedPeer)
+		throw()
+	{
+		const uint64_t n = _now;
+		_timeOfLastPacketReceived = n;
+		if (fromPrivilegedPeer)
+			_timeOfLastPrivilgedPacket = n;
+	}
+
+	/**
+	 * @return Most recent time of any packet receipt
+	 */
+	inline uint64_t timeOfLastPacketReceived() const throw() { return _timeOfLastPacketReceived; }
+
+	/**
+	 * @return Timestamp of last packet received from a supernode or hub (upstream link)
+	 */
+	inline uint64_t timeOfLastPrivilgedPacket() const throw() { return _timeOfLastPrivilgedPacket; }
 
 	/**
 	 * Enqueue a ZeroTier message to be sent
@@ -159,11 +178,11 @@ public:
 	 * @param nwid Network ID
 	 * @return Network instance
 	 */
-	inline Network *network(uint64_t nwid)
+	inline SharedPtr<Network> network(uint64_t nwid)
 	{
 		Mutex::Lock _l(_networks_m);
-		std::map< uint64_t,Network * >::iterator nw(_networks.find(nwid));
-		return ((nw == _networks.end()) ? (Network *)0 : nw->second);
+		std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+		return ((nw == _networks.end()) ? SharedPtr<Network>() : nw->second);
 	}
 
 private:
@@ -173,13 +192,13 @@ private:
 	ZT1_DataStorePutFunction *_dataStorePutFunction;
 	ZT1_WirePacketSendFunction *_wirePacketSendFunction;
 	ZT1_VirtualNetworkFrameFunction *_virtualNetworkFrameFunction;
-	ZT1_VirtualNetworkConfigCallback *_networkConfigCallback;
+	ZT1_VirtualNetworkConfigCallback *_virtualNetworkConfigCallback;
 	ZT1_StatusCallback *_statusCallback;
 
 	//Dictionary _localConfig; // persisted as local.conf
 	//Mutex _localConfig_m;
 
-	std::map< uint64_t,Network * > _networks;
+	std::map< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 
 	volatile uint64_t _now; // time of last run()

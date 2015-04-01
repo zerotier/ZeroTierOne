@@ -125,7 +125,17 @@ enum ZT1_ResultCode
 	/**
 	 * Data store is not writable or has failed
 	 */
-	ZT1_RESULT_ERROR_DATA_STORE_FAILED = 3
+	ZT1_RESULT_ERROR_DATA_STORE_FAILED = 3,
+
+	/**
+	 * Internal error (e.g. unexpected exception, build problem, link problem, etc.)
+	 */
+	ZT1_RESULT_ERROR_INTERNAL = 4,
+
+	/**
+	 * Invalid packet or failed authentication
+	 */
+	ZT1_RESULT_PACKET_INVALID = 5
 };
 
 /**
@@ -562,7 +572,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  * @param node Result: pointer is set to new node instance on success
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
- * @param networkConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
+ * @param virtualNetworkConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param statusCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -572,7 +582,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_DataStorePutFunction *dataStorePutFunction,
 	ZT1_WirePacketSendFunction *wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback *networkConfigCallback,
+	ZT1_VirtualNetworkConfigCallback *virtualNetworkConfigCallback,
 	ZT1_StatusCallback *statusCallback);
 
 /**
@@ -634,10 +644,7 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
  * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_Resultcode ZT1_Node_processNothing(
-	ZT1_Node *node,
-	uint64_t now,
-	uint64_t *nextCallDeadline);
+enum ZT1_Resultcode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline);
 
 /**
  * Join a network
@@ -751,9 +758,10 @@ ZT1_VirtualNetworkList *ZT1_Node_listNetworks(ZT1_Node *node);
  *
  * Use this to free the return values of listNetworks(), listPeers(), etc.
  *
+ * @param node Node instance
  * @param qr Query result buffer
  */
-void ZT1_Node_freeQueryResult(void *qr);
+void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr);
 
 /**
  * Set a network configuration master instance for this node
