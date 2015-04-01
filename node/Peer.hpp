@@ -36,16 +36,15 @@
 #include <stdexcept>
 
 #include "Constants.hpp"
+#include "RuntimeEnvironment.hpp"
 #include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
 #include "Logger.hpp"
-#include "RuntimeEnvironment.hpp"
 #include "InetAddress.hpp"
 #include "Packet.hpp"
 #include "SharedPtr.hpp"
-#include "Socket.hpp"
 #include "AtomicCounter.hpp"
 #include "NonCopyable.hpp"
 
@@ -404,20 +403,20 @@ public:
 private:
 	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
 
-	volatile uint64_t _lastUsed;
-	volatile uint64_t _lastReceive; // direct or indirect
-	volatile uint64_t _lastUnicastFrame;
-	volatile uint64_t _lastMulticastFrame;
-	volatile uint64_t _lastAnnouncedTo;
-	volatile uint16_t _vProto;
-	volatile uint16_t _vMajor;
-	volatile uint16_t _vMinor;
-	volatile uint16_t _vRevision;
+	uint64_t _lastUsed;
+	uint64_t _lastReceive; // direct or indirect
+	uint64_t _lastUnicastFrame;
+	uint64_t _lastMulticastFrame;
+	uint64_t _lastAnnouncedTo;
+	uint16_t _vProto;
+	uint16_t _vMajor;
+	uint16_t _vMinor;
+	uint16_t _vRevision;
 
 	Path _paths[ZT_PEER_MAX_PATHS];
-	volatile unsigned int _numPaths;
+	unsigned int _numPaths;
 
-	volatile unsigned int _latency;
+	unsigned int _latency;
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	Identity _id;
 
