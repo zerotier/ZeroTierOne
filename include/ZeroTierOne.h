@@ -203,7 +203,7 @@ typedef struct
 	/**
 	 * Packet data
 	 */
-	const char packetData[ZT1_MAX_WIRE_MESSAGE_LENGTH];
+	char packetData[ZT1_MAX_WIRE_MESSAGE_LENGTH];
 
 	/**
 	 * Length of packet
@@ -244,7 +244,7 @@ typedef struct
 	/**
 	 * Ethernet frame data
 	 */
-	const char frameData[ZT1_MAX_MTU];
+	char frameData[ZT1_MAX_MTU];
 
 	/**
 	 * Ethernet frame length
@@ -717,9 +717,7 @@ void ZT1_Node_freeQueryResult(void *qr);
  * @param networkConfigMasterInstance Instance of NetworkConfigMaster C++ class or NULL to disable
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_setNetconfMaster(
-	ZT1_Node *node,
-	void *networkConfigMasterInstance);
+void ZT1_Node_setNetconfMaster(ZT1_Node *node,void *networkConfigMasterInstance);
 
 /**
  * Get ZeroTier One version

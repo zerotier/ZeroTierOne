@@ -45,6 +45,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class Network;
 
 /**
  * Implementation of Node object as defined in CAPI
@@ -68,8 +69,8 @@ public:
 		uint64_t now,
 		const ZT1_WireMessage *inputWireMessages,
 		unsigned int inputWireMessageCount,
-		const ZT1_VirtualLanFrame *inputLanFrames,
-		unsigned int inputLanFrameCount,
+		const ZT1_VirtualNetworkFrame *inputFrames,
+		unsigned int inputFrameCount,
 		const ZT1_WireMessage **outputWireMessages,
 		unsigned int *outputWireMessageCount,
 		const ZT1_VirtualNetworkFrame **outputFrames,
@@ -90,9 +91,7 @@ public:
 
 	void freeQueryResult(void *qr);
 
-	ZT1_ResultCode setNetconfMaster(
-		ZT1_Node *node,
-		void *networkConfigMasterInstance);
+	void setNetconfMaster(void *networkConfigMasterInstance);
 
 	// Internal functions ------------------------------------------------------
 
@@ -123,7 +122,7 @@ public:
 			delete [] old;
 		}
 		ZT1_WireMessage &wm = _outputWireMessages[_outputWireMessageCount++];
-		memcpy(&(wm.address),&addr,sizeof(ZT_SOCKADDR_STORAGE));
+		memcpy(&(wm.address),&addr,sizeof(struct sockaddr_storage));
 		wm.desperation = this->desperation();
 		wm.spam = (int)((++_spamCounter % ZT_DESPERATION_SPAM_EVERY) == 0);
 		memcpy(wm.packetData,data,len);
@@ -164,11 +163,11 @@ public:
 	 * @param nwid Network ID
 	 * @return Network instance
 	 */
-	inline SharedPtr<Network> network(uint64_t nwid)
+	inline Network *network(uint64_t nwid)
 	{
 		Mutex::Lock _l(_networks_m);
-		std::map< uint64_t,Network >::iterator nw(_networks.find(nwid));
-		return ((nw == _networks.end()) ? SharedPtr<Network>() : nw->second);
+		std::map< uint64_t,Network * >::iterator nw(_networks.find(nwid));
+		return ((nw == _networks.end()) ? (Network *)0 : nw->second);
 	}
 
 private:
@@ -184,15 +183,15 @@ private:
 	unsigned long _outputFrameCapacity;
 	Mutex _outputFrames_m;
 
-	ZT1_DataStoreGetFunction *_dataStoreGetFunction,
-	ZT1_DataStorePutFunction *_dataStorePutFunction,
-	ZT1_VirtualPortConfigCallback *_portConfigCallback,
-	ZT1_StatusCallback *_statusCallback);
+	ZT1_DataStoreGetFunction *_dataStoreGetFunction;
+	ZT1_DataStorePutFunction *_dataStorePutFunction;
+	ZT1_VirtualNetworkConfigCallback *_networkConfigCallback;
+	ZT1_StatusCallback *_statusCallback;
 
 	//Dictionary _localConfig; // persisted as local.conf
 	//Mutex _localConfig_m;
 
-	std::map< uint64_t,SharedPtr<Network> > _networks;
+	std::map< uint64_t,Network * > _networks;
 	Mutex _networks_m;
 
 	uint64_t _now; // time of last run()

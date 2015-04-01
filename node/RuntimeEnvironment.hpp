@@ -60,7 +60,8 @@ class NetworkConfigMaster;
 class RuntimeEnvironment
 {
 public:
-	RuntimeEnvironment() :
+	RuntimeEnvironment(Node *n) :
+		node(n),
 		identity(),
 		netconfMaster((NetworkConfigMaster *)0),
 		log((Logger *)0),
@@ -68,11 +69,12 @@ public:
 		sw((Switch *)0),
 		mc((Multicaster *)0),
 		antiRec((AntiRecursion *)0),
-		topology((Topology *)0),
-		nc((NodeConfig *)0),
-		node((Node *)0)
+		topology((Topology *)0)
 	{
 	}
+
+	// Node instance that owns this RuntimeEnvironment
+	Node *const node;
 
 	// This node's identity
 	Identity identity;
@@ -94,8 +96,6 @@ public:
 	Multicaster *mc;
 	AntiRecursion *antiRec;
 	Topology *topology;
-	NodeConfig *nc;
-	Node *node;
 };
 
 } // namespace ZeroTier
