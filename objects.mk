@@ -15,7 +15,6 @@ OBJS=\
 	node/Network.o \
 	node/NetworkConfig.o \
 	node/Node.o \
-	node/NodeConfig.o \
 	node/OutboundMulticast.o \
 	node/Packet.o \
 	node/Peer.o \

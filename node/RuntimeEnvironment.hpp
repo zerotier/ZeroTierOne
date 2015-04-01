@@ -41,12 +41,8 @@ class Switch;
 class Topology;
 class CMWC4096;
 class Node;
-class SoftwareUpdater;
-class SocketManager;
 class Multicaster;
 class AntiRecursion;
-class EthernetTapFactory;
-class HttpClient;
 class NetworkConfigMaster;
 
 /**
@@ -65,50 +61,23 @@ class RuntimeEnvironment
 {
 public:
 	RuntimeEnvironment() :
-		homePath(),
 		identity(),
-		initialized(false),
-		tcpTunnelingEnabled(false),
-		timeOfLastResynchronize(0),
-		timeOfLastPacketReceived(0),
-		tapFactory((EthernetTapFactory *)0),
-		sm((SocketManager *)0),
 		netconfMaster((NetworkConfigMaster *)0),
 		log((Logger *)0),
 		prng((CMWC4096 *)0),
-		http((HttpClient *)0),
 		sw((Switch *)0),
 		mc((Multicaster *)0),
 		antiRec((AntiRecursion *)0),
 		topology((Topology *)0),
 		nc((NodeConfig *)0),
-		node((Node *)0),
-		updater((SoftwareUpdater *)0)
+		node((Node *)0)
 	{
 	}
-
-	// Full path to home folder
-	std::string homePath;
 
 	// This node's identity
 	Identity identity;
 
-	// Are we initialized?
-	volatile bool initialized;
-
-	// Are we in outgoing TCP failover mode?
-	volatile bool tcpTunnelingEnabled;
-
-	// Time network environment (e.g. fingerprint) last changed -- used to determine online-ness
-	volatile uint64_t timeOfLastResynchronize;
-
-	// Time last packet was received -- from anywhere. This is updated in Peer::receive()
-	// via an ugly const_cast<>.
-	volatile uint64_t timeOfLastPacketReceived;
-
-	// These are passed in from outside and are not created or deleted by the ZeroTier node core
-	EthernetTapFactory *tapFactory;
-	SocketManager *sm;
+	// This is set externally to an instance of this base class if netconf functionality is enabled
 	NetworkConfigMaster *netconfMaster;
 
 	/*
@@ -121,14 +90,12 @@ public:
 
 	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
-	HttpClient *http;
 	Switch *sw;
 	Multicaster *mc;
 	AntiRecursion *antiRec;
 	Topology *topology;
 	NodeConfig *nc;
 	Node *node;
-	SoftwareUpdater *updater; // null if software updates are not enabled
 };
 
 } // namespace ZeroTier

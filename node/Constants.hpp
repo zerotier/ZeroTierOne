@@ -300,14 +300,19 @@
 #define ZT_STARTUP_AGGRO (ZT_PING_UNANSWERED_AFTER * 2)
 
 /**
+ * How long since last message from an authoritative upstream peer before we increment our desperation level?
+ */
+#define ZT_DESPERATION_INCREMENT (ZT_STARTUP_AGGRO * 2)
+
+/**
+ * "Spam" packets to lower desperation links every Nth packet
+ */
+#define ZT_DESPERATION_SPAM_EVERY 10
+
+/**
  * Maximum delay between runs of the main loop in Node.cpp
  */
 #define ZT_MAX_SERVICE_LOOP_INTERVAL ZT_STARTUP_AGGRO
-
-/**
- * Try TCP tunnels if nothing received for this long
- */
-#define ZT_TCP_TUNNEL_FAILOVER_TIMEOUT (ZT_STARTUP_AGGRO * 5)
 
 /**
  * Timeout for overall peer activity (measured from last receive)
@@ -318,11 +323,6 @@
  * Path activity timeout (for non-fixed paths)
  */
 #define ZT_PEER_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
-
-/**
- * Close TCP sockets if unused for this long (SocketManager)
- */
-#define ZT_TCP_TUNNEL_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
 
 /**
  * Stop relaying via peers that have not responded to direct sends
@@ -373,28 +373,6 @@
  * Do not respond to any beacon more often than this
  */
 #define ZT_MIN_BEACON_RESPONSE_INTERVAL (ZT_BEACON_INTERVAL / 32)
-
-/**
- * Minimum interval between attempts to do a software update
- */
-#define ZT_UPDATE_MIN_INTERVAL 120000
-
-/**
- * Maximum interval between checks for new versions
- */
-#define ZT_UPDATE_MAX_INTERVAL 7200000
-
-/**
- * Software update HTTP timeout in seconds
- */
-#define ZT_UPDATE_HTTP_TIMEOUT 120
-
-/**
- * Delay between fetches of the root topology update URL
- *
- * 86400000 = check once every 24 hours (this doesn't change often)
- */
-#define ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL 86400000
 
 /**
  * Sanity limit on maximum bridge routes

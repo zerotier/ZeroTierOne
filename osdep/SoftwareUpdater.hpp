@@ -38,6 +38,28 @@
 #include "Defaults.hpp"
 #include "Address.hpp"
 
+/**
+ * Delay between fetches of the root topology update URL
+ *
+ * 86400000 = check once every 24 hours (this doesn't change often)
+ */
+#define ZT_UPDATE_ROOT_TOPOLOGY_CHECK_INTERVAL 86400000
+
+/**
+ * Minimum interval between attempts to do a software update
+ */
+#define ZT_UPDATE_MIN_INTERVAL 120000
+
+/**
+ * Maximum interval between checks for new versions
+ */
+#define ZT_UPDATE_MAX_INTERVAL 7200000
+
+/**
+ * Software update HTTP timeout in seconds
+ */
+#define ZT_UPDATE_HTTP_TIMEOUT 120
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;

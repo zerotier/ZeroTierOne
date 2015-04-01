@@ -35,20 +35,32 @@
 
 #include <stdint.h>
 
-#ifndef ZT_SOCKADDR_STORAGE
 #if defined(_WIN32) || defined(_WIN64)
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <Windows.h>
 #else /* not Windows */
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #endif /* Windows or not */
-#define ZT_SOCKADDR_STORAGE struct sockaddr_storage
-#endif /* !ZT_SOCKADDR_STORAGE */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/****************************************************************************/
+/* Core constants                                                           */
+/****************************************************************************/
+
+/**
+ * Maximum frame MTU
+ */
+#define ZT1_MAX_MTU 2800
+
+/**
+ * Maximum length of a wire message packet in bytes
+ */
+#define ZT1_MAX_WIRE_MESSAGE_LENGTH 1500
 
 /****************************************************************************/
 /* Structures and other types                                               */
@@ -149,9 +161,9 @@ typedef struct
 typedef struct
 {
 	/**
-	 * Remote socket address
+	 * Socket address
 	 */
-	ZT_SOCKADDR_STORAGE remoteAddress;
+	struct sockaddr_storage address;
 
 	/**
 	 * Link desperation -- higher equals "worse" or "slower"
@@ -191,7 +203,7 @@ typedef struct
 	/**
 	 * Packet data
 	 */
-	const void *packetData;
+	const char packetData[ZT1_MAX_WIRE_MESSAGE_LENGTH];
 
 	/**
 	 * Length of packet
@@ -207,7 +219,7 @@ typedef struct
 	/**
 	 * ZeroTier network ID of virtual LAN port
 	 */
-	uint64_t networkId;
+	uint64_t nwid;
 
 	/**
 	 * Source MAC address
@@ -232,7 +244,7 @@ typedef struct
 	/**
 	 * Ethernet frame data
 	 */
-	const void *frameData;
+	const char frameData[ZT1_MAX_MTU];
 
 	/**
 	 * Ethernet frame length
@@ -290,7 +302,7 @@ typedef struct
 	/**
 	 * 64-bit ZeroTier network ID
 	 */
-	uint64_t networkId;
+	uint64_t nwid;
 
 	/**
 	 * Ethernet MAC (40 bits) that should be assigned to port
@@ -346,7 +358,7 @@ typedef struct
 	 * This is only used for ZeroTier-managed address assignments sent by the
 	 * virtual network's configuration master.
 	 */
-	const ZT_SOCKADDR_STORAGE *assignedAddresses;
+	const struct sockaddr_storage *assignedAddresses;
 
 	/**
 	 * Number of assigned addresses
@@ -376,7 +388,7 @@ typedef struct
 	/**
 	 * Address of endpoint
 	 */
-	ZT_SOCKADDR_STORAGE address;
+	struct sockaddr_storage address;
 
 	/**
 	 * Time since last send in milliseconds or -1 for never
@@ -466,7 +478,7 @@ typedef struct
 	/**
 	 * Array of network paths to peer
 	 */
-	struct ZT1_PeerPhysicalPath *paths;
+	ZT1_PeerPhysicalPath *paths;
 
 	/**
 	 * Number of paths (size of paths[])
@@ -561,7 +573,7 @@ typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,uns
  * @param node Result: pointer is set to new node instance on success
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
- * @param portConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
+ * @param networkConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param statusCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -569,7 +581,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
 	ZT1_DataStoreGetFunction *dataStoreGetFunction,
 	ZT1_DataStorePutFunction *dataStorePutFunction,
-	ZT1_VirtualPortConfigCallback *portConfigCallback,
+	ZT1_VirtualNetworkConfigCallback *networkConfigCallback,
 	ZT1_StatusCallback *statusCallback);
 
 /**
@@ -609,11 +621,11 @@ enum ZT1_ResultCode ZT1_Node_run(
 	uint64_t now,
 	const ZT1_WireMessage *inputWireMessages,
 	unsigned int inputWireMessageCount,
-	const ZT1_VirtualLanFrame *inputLanFrames,
-	unsigned int inputLanFrameCount,
+	const ZT1_VirtualNetworkFrame *inputFrames,
+	unsigned int inputFrameCount,
 	const ZT1_WireMessage **outputWireMessages,
 	unsigned int *outputWireMessageCount,
-	const ZT1_VirtualLanFrame **outputLanFrames,
+	const ZT1_VirtualNetworkFrame **outputFrames,
 	unsigned int *outputLanFrameCount,
 	unsigned long *maxNextInterval);
 
@@ -624,10 +636,10 @@ enum ZT1_ResultCode ZT1_Node_run(
  * or these may be deffered if a netconf is not available yet.
  *
  * @param node Node instance
- * @param networkId 64-bit ZeroTIer network ID
+ * @param nwid 64-bit ZeroTIer network ID
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t networkId);
+enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t nwid);
 
 /**
  * Leave a network
@@ -637,19 +649,18 @@ enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t networkId);
  * the port is now deleted.
  *
  * @param node Node instance
- * @param networkId 64-bit network ID
+ * @param nwid 64-bit network ID
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t networkId);
+enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t nwid);
 
 /**
  * Get the status of this node
  *
  * @param node Node instance
  * @param status Buffer to fill with current node status
- * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_status(ZT1_Node *node,ZT1_NodeStatus *status);
+void ZT1_Node_status(ZT1_Node *node,ZT1_NodeStatus *status);
 
 /**
  * Get a list of known peer nodes
@@ -709,6 +720,15 @@ void ZT1_Node_freeQueryResult(void *qr);
 enum ZT1_ResultCode ZT1_Node_setNetconfMaster(
 	ZT1_Node *node,
 	void *networkConfigMasterInstance);
+
+/**
+ * Get ZeroTier One version
+ *
+ * @param major Result: major version
+ * @param minor Result: minor version
+ * @param revision Result: revision
+ */
+void ZT1_version(int *major,int *minor,int *revision);
 
 #ifdef __cplusplus
 }

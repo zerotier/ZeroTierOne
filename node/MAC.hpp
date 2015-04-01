@@ -71,6 +71,13 @@ public:
 
 	MAC(const Address &ztaddr,uint64_t nwid) throw() { fromAddress(ztaddr,nwid); }
 
+	MAC(const uint64_t m) throw() : _m(m & 0xffffffffffffULL) {}
+
+	/**
+	 * @return MAC in 64-bit integer
+	 */
+	inline uint64_t toInt() const throw() { return _m; }
+
 	/**
 	 * Set MAC to zero
 	 */
