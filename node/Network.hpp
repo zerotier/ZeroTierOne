@@ -31,7 +31,6 @@
 #include <stdint.h>
 
 #include <string>
-#include <set>
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -57,48 +56,23 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class NodeConfig;
 
 /**
  * A virtual LAN
- *
- * Networks can be open or closed. Each network has an ID whose most
- * significant 40 bits are the ZeroTier address of the node that should
- * be contacted for network configuration. The least significant 24
- * bits are arbitrary, allowing up to 2^24 networks per managing
- * node.
- *
- * Open networks do not track membership. Anyone is allowed to communicate
- * over them. For closed networks, each peer must distribute a certificate
- * regularly that proves that they are allowed to communicate.
  */
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
-	friend class NodeConfig;
-
-private:
-	// Only NodeConfig can create, only SharedPtr can delete
-
-	// Actual construction happens in newInstance()
-	Network() throw() {}
-	~Network();
-
-	/**
-	 * Create a new Network instance and restore any saved state
-	 *
-	 * If there is no saved state, a dummy .conf is created on disk to remember
-	 * this network across restarts.
-	 *
-	 * @param renv Runtime environment
-	 * @param nc Parent NodeConfig
-	 * @param id Network ID
-	 * @return Reference counted pointer to new network
-	 * @throws std::runtime_error Unable to create tap device or other fatal error
-	 */
-	static SharedPtr<Network> newInstance(const RuntimeEnvironment *renv,NodeConfig *nc,uint64_t id);
 
 public:
+	/**
+	 * @param renv Runtime environment
+	 * @param nwid Network ID
+	 */
+	Network(const RuntimeEnvironment *renv,uint64_t nwid);
+
+	~Network();
+
 	/**
 	 * Broadcast multicast group: ff:ff:ff:ff:ff:ff / 0
 	 */
@@ -119,13 +93,6 @@ public:
 	};
 
 	/**
-	 * @param s Status
-	 * @return String description
-	 */
-	static const char *statusString(const Status s)
-		throw();
-
-	/**
 	 * @return Network ID
 	 */
 	inline uint64_t id() const throw() { return _id; }
@@ -136,26 +103,9 @@ public:
 	inline Address controller() throw() { return Address(_id >> 24); }
 
 	/**
-	 * @return Network ID in hexadecimal form
+	 * @return Latest list of multicast groups for this network's tap
 	 */
-	inline std::string idString()
-	{
-		char buf[64];
-		Utils::snprintf(buf,sizeof(buf),"%.16llx",(unsigned long long)_id);
-		return std::string(buf);
-	}
-
-	/**
-	 * Rescan multicast groups for this network's tap and update peers on change
-	 *
-	 * @return True if internal multicast group set has changed since last update
-	 */
-	bool rescanMulticastGroups();
-
-	/**
-	 * @return Latest set of multicast groups for this network's tap
-	 */
-	inline std::set<MulticastGroup> multicastGroups() const
+	inline std::vector<MulticastGroup> multicastGroups() const
 	{
 		Mutex::Lock _l(_lock);
 		return _myMulticastGroups;
@@ -168,7 +118,7 @@ public:
 	bool subscribedToMulticastGroup(const MulticastGroup &mg) const
 	{
 		Mutex::Lock _l(_lock);
-		return (_myMulticastGroups.find(mg) != _myMulticastGroups.end());
+		return (std::find(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg) != _myMulticastGroups.end());
 	}
 
 	/**
@@ -312,70 +262,9 @@ public:
 	}
 
 	/**
-	 * Inject a frame into tap (if it's created and network is enabled)
-	 *
-	 * @param from Origin MAC
-	 * @param to Destination MC
-	 * @param etherType Ethernet frame type
-	 * @param data Frame data
-	 * @param len Frame length
-	 */
-	inline void tapPut(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
-	{
-		Mutex::Lock _l(_lock);
-		if (!_enabled)
-			return;
-		EthernetTap *t = _tap;
-		if (t)
-			t->put(from,to,etherType,data,len);
-	}
-
-	/**
-	 * Call injectPacketFromHost() on tap if it exists
-	 *
-	 * @param from Source MAC
-	 * @param to Destination MAC
-	 * @param etherType Ethernet frame type
-	 * @param data Packet data
-	 * @param len Packet length
-	 */
-	inline bool tapInjectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
-	{
-		Mutex::Lock _l(_lock);
-		EthernetTap *t = _tap;
-		if (t)
-			return t->injectPacketFromHost(from,to,etherType,data,len);
-		return false;
-	}
-
-	/**
-	 * @return Tap device name or empty string if still initializing
-	 */
-	inline std::string tapDeviceName() const
-	{
-		Mutex::Lock _l(_lock);
-		EthernetTap *t = _tap;
-		if (t)
-			return t->deviceName();
-		else return std::string();
-	}
-
-	/**
 	 * @return Ethernet MAC address for this network's local interface
 	 */
 	inline const MAC &mac() const throw() { return _mac; }
-
-	/**
-	 * @return Set of IPs currently assigned to interface
-	 */
-	inline std::set<InetAddress> ips() const
-	{
-		Mutex::Lock _l(_lock);
-		EthernetTap *t = _tap;
-		if (t)
-			return t->ips();
-		return std::set<InetAddress>();
-	}
 
 	/**
 	 * Shortcut for config()->permitsBridging(), returns false if no config
@@ -446,9 +335,6 @@ public:
 	void destroy();
 
 private:
-	static void _CBhandleTapData(void *arg,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
-
-	void _restoreState();
 	void _dumpMembershipCerts();
 
 	inline void _mkNetworkFriendlyName(char *buf,unsigned int len)
@@ -459,14 +345,12 @@ private:
 		else Utils::snprintf(buf,len,"ZeroTier One [%.16llx]",(unsigned long long)_id);
 	}
 
-	uint64_t _id;
-	NodeConfig *_nc; // parent NodeConfig object
-	MAC _mac; // local MAC address
 	const RuntimeEnvironment *RR;
-	EthernetTap *volatile _tap; // tap device or NULL if not initialized yet
+	uint64_t _id;
+	MAC _mac; // local MAC address
 	volatile bool _enabled;
 
-	std::set< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
+	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
 	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
 	std::map< MulticastGroup,BandwidthAccount > _multicastRateAccounts;
 

@@ -70,9 +70,8 @@ public:
 	 * On internal server errors, the 'error' field in result can be filled in
 	 * to indicate the error.
 	 *
-	 * @param fromAddr Originating IP address
-	 * @param packetId 64-bit packet ID
-	 * @param member Originating peer ZeroTier identity
+	 * @param fromAddr Originating wire address or null address if packet is not direct (or from self)
+	 * @param identity Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
 	 * @param haveRevision Network revision ID sent by requesting peer or 0 if none
@@ -81,7 +80,6 @@ public:
 	 */
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
-		uint64_t packetId,
 		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,

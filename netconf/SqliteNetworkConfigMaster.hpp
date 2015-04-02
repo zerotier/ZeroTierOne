@@ -54,7 +54,6 @@ public:
 
 	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
-		uint64_t packetId,
 		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,

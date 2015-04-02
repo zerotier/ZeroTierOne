@@ -45,6 +45,7 @@
 namespace ZeroTier {
 
 Node::Node(
+	uint64_t now,
 	ZT1_DataStoreGetFunction *dataStoreGetFunction,
 	ZT1_DataStorePutFunction *dataStorePutFunction,
 	ZT1_WirePacketSendFunction *wirePacketSendFunction,
@@ -60,7 +61,7 @@ Node::Node(
 	_statusCallback(statusCallback),
 	_networks(),
 	_networks_m(),
-	_now(0),
+	_now(now),
 	_timeOfLastPacketReceived(0),
 	_timeOfLastPrivilegedPacket(0),
 	_spamCounter(0)
@@ -129,14 +130,18 @@ ZT1_ResultCode Node::join(uint64_t nwid)
 	Mutex::Lock _l(_networks_m);
 	SharedPtr<Network> &nw = _networks[nwid];
 	if (!nw)
-		nw = new Network();
+		nw = SharedPtr<Network>(new Network(RR,nwid));
 	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::leave(uint64_t nwid)
 {
 	Mutex::Lock _l(_networks_m);
-	_networks.erase(nwid);
+	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+	if (nw != _networks.end()) {
+		nw->second->destroy();
+		_networks.erase(nw);
+	}
 }
 
 ZT1_ResultCode Node::multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
@@ -180,6 +185,7 @@ extern "C" {
 
 enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
+	uint64_t now,
 	ZT1_DataStoreGetFunction *dataStoreGetFunction,
 	ZT1_DataStorePutFunction *dataStorePutFunction,
 	ZT1_WirePacketSendFunction *wirePacketSendFunction,
@@ -189,7 +195,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 {
 	*node = (ZT1_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigCallback,statusCallback));
+		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigCallback,statusCallback));
 		return ZT1_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;

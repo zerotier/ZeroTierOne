@@ -526,14 +526,19 @@ typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,const char *,void *,unsigned
 /**
  * Function to store an object in the data store
  *
- * Parameters: (1) node, (2) object name, (3) object data, (4) object size.
+ * Parameters: (1) node, (2) object name, (3) object data, (4) object size,
+ * and (5) secure? (bool). If secure is true, the file should be set readable
+ * and writable only to the user running ZeroTier One. What this means is
+ * platform-specific.
+ *
  * Name semantics are the same as the get function. This must return zero on
  * success. You can return any OS-specific error code on failure, as these
  * may be visible in logs or error messages and might aid in debugging.
  *
- * A call to write 0 bytes can safely be interpreted as a delete operation.
+ * A call to write 0 bytes with a null data pointer should be interpreted
+ * as a delete operation. The secure flag is not meaningful in this case.
  */
-typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,unsigned long);
+typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,unsigned long,int);
 
 /**
  * Function to send a ZeroTier packet out over the wire
@@ -570,6 +575,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  * will generate an identity.
  *
  * @param node Result: pointer is set to new node instance on success
+ * @param now Current clock in milliseconds
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
@@ -578,6 +584,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  */
 enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
+	uint64_t now,
 	ZT1_DataStoreGetFunction *dataStoreGetFunction,
 	ZT1_DataStorePutFunction *dataStorePutFunction,
 	ZT1_WirePacketSendFunction *wirePacketSendFunction,
@@ -644,7 +651,7 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
  * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_Resultcode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline);
+enum ZT1_ResultCode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline);
 
 /**
  * Join a network

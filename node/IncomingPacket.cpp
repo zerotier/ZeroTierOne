@@ -308,14 +308,14 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			} break;
 
 			case Packet::VERB_NETWORK_CONFIG_REQUEST: {
-				SharedPtr<Network> nw(RR->nc->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
+				SharedPtr<Network> nw(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID)));
 				if ((nw)&&(nw->controller() == source())) {
 					unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
 						if (nw->setConfiguration(Dictionary(dict)) == 2) { // 2 == accepted and actually new
 							/* If this configuration was indeed new, we do another
-							 * netconf request with its timestamp. We do this in
+							 * netconf request with its revision. We do this in
 							 * order to (a) tell the netconf server we got it (it
 							 * won't send a duplicate if ts == current), and (b)
 							 * get another one if the netconf is changing rapidly
@@ -323,17 +323,17 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 							 *
 							 * Note that we don't do this for netconf masters with
 							 * versions <= 1.0.3, since those regenerate a new netconf
-							 * with a new timestamp every time. In that case this double
+							 * with a new revision every time. In that case this double
 							 * confirmation would create a race condition. */
-							if (peer->atLeastVersion(1,0,3)) {
+							if ((peer->atLeastVersion(1,0,3))&&(nc->revision() > 0)) {
 								SharedPtr<NetworkConfig> nc(nw->config2());
 								if ((nc)&&(nc->timestamp() > 0)) { // sanity check
 									Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
-								        outp.append((uint64_t)nw->id());
-							                outp.append((uint16_t)0); // no meta-data
-							                outp.append((uint64_t)nc->timestamp());
-							                outp.armor(peer->key(),true);
-						        	        _fromSock->send(_remoteAddress,outp.data(),outp.size());
+									outp.append((uint64_t)nw->id());
+									outp.append((uint16_t)0); // no meta-data
+									outp.append((uint64_t)nc->revision());
+									outp.armor(peer->key(),true);
+									_fromSock->send(_remoteAddress,outp.data(),outp.size());
 								}
 							}
 						}
@@ -624,15 +624,17 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
 		unsigned int metaDataLength = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN);
 		Dictionary metaData((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT,metaDataLength),metaDataLength);
-		uint64_t haveTimestamp = 0;
+		uint64_t haveRevision = 0;
 		if ((ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength + 8) <= size())
-			haveTimestamp = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
+			haveRevision = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT + metaDataLength);
 
-		peer->received(RR,_fromSock,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,Utils::now());
+		const unsigned int h = hops();
+		uint64_t pid = packetId();
+		peer->received(RR,_fromSock,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP,RR->node->now());
 
 		if (RR->netconfMaster) {
 			Dictionary netconf;
-			switch(RR->netconfMaster->doNetworkConfigRequest(_remoteAddress,packetId(),peer->identity(),nwid,metaData,haveTimestamp,netconf)) {
+			switch(RR->netconfMaster->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,peer->identity(),nwid,metaData,haveRevision,netconf)) {
 				case NetworkConfigMaster::NETCONF_QUERY_OK: {
 					std::string netconfStr(netconf.toString());
 					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
@@ -640,7 +642,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					} else {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-						outp.append(packetId());
+						outp.append(pid);
 						outp.append(nwid);
 						outp.append((uint16_t)netconfStr.length());
 						outp.append(netconfStr.data(),netconfStr.length());
@@ -657,7 +659,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				case NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(packetId());
+					outp.append(pid);
 					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
@@ -666,7 +668,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				case NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-					outp.append(packetId());
+					outp.append(pid);
 					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
@@ -682,7 +684,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		} else {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 			outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
-			outp.append(packetId());
+			outp.append(pid);
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);

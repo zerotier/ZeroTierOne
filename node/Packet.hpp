@@ -596,10 +596,10 @@ public:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of request meta-data dictionary>
 		 *   <[...] string-serialized request meta-data>
-		 *  [<[8] 64-bit timestamp of netconf we currently have>]
+		 *  [<[8] 64-bit revision of netconf we currently have>]
 		 *
 		 * This message requests network configuration from a node capable of
-		 * providing it. If the optional timestamp is included, a response is
+		 * providing it. If the optional revision is included, a response is
 		 * only generated if there is a newer network configuration available.
 		 *
 		 * OK response payload:
@@ -614,7 +614,7 @@ public:
 		 * a given network.
 		 *
 		 * When a new network configuration is received, another config request
-		 * should be sent with the new netconf's timestamp. This confirms receipt
+		 * should be sent with the new netconf's revision. This confirms receipt
 		 * and also causes any subsequent changes to rapidly propagate as this
 		 * cycle will repeat until there are no changes. This is optional but
 		 * recommended behavior.

@@ -137,7 +137,7 @@ SqliteNetworkConfigMaster::~SqliteNetworkConfigMaster()
 	}
 }
 
-NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,uint64_t packetId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
+NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
 {
 	Mutex::Lock _l(_lock);
 

@@ -56,6 +56,7 @@ class Node
 {
 public:
 	Node(
+		uint64_t now,
 		ZT1_DataStoreGetFunction *dataStoreGetFunction,
 		ZT1_DataStorePutFunction *dataStorePutFunction,
 		ZT1_WirePacketSendFunction *wirePacketSendFunction,
@@ -183,6 +184,19 @@ public:
 		Mutex::Lock _l(_networks_m);
 		std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
 		return ((nw == _networks.end()) ? SharedPtr<Network>() : nw->second);
+	}
+
+	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure)
+	{
+	}
+	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
+
+	inline std::string dataStoreGet(const char *name)
+	{
+	}
+
+	inline void dataStoreDelete(const char *name)
+	{
 	}
 
 private:
