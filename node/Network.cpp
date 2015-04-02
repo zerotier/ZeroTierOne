@@ -420,17 +420,8 @@ void Network::setEnabled(bool enabled)
 void Network::destroy()
 {
 	Mutex::Lock _l(_lock);
-
 	_enabled = false;
 	_destroyed = true;
-
-	if (_setupThread)
-		Thread::join(_setupThread);
-	_setupThread = Thread();
-
-	if (_tap)
-		RR->tapFactory->close(_tap,true);
-	_tap = (EthernetTap *)0;
 }
 
 } // namespace ZeroTier
