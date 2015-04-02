@@ -335,16 +335,6 @@ public:
 	void destroy();
 
 private:
-	void _dumpMembershipCerts();
-
-	inline void _mkNetworkFriendlyName(char *buf,unsigned int len)
-	{
-		// assumes _lock is locked
-		if (_config)
-			Utils::snprintf(buf,len,"ZeroTier One [%s]",_config->name().c_str());
-		else Utils::snprintf(buf,len,"ZeroTier One [%.16llx]",(unsigned long long)_id);
-	}
-
 	const RuntimeEnvironment *RR;
 	uint64_t _id;
 	MAC _mac; // local MAC address

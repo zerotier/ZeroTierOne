@@ -100,15 +100,28 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 
 Network::~Network()
 {
+	char n[128];
 	if (_destroyed) {
-		char n[128];
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
 		RR->node->dataStoreDelete(n);
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
 		RR->node->dataStoreDelete(n);
 	} else {
 		clean();
-		_dumpMembershipCerts();
+
+		std::string buf("ZTMCD0");
+		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
+		Mutex::Lock _l(_lock);
+
+		if ((!_config)||(_config.isPublic())||(_membershipCertificates.size() == 0)) {
+			RR->node->dataStoreDelete(n);
+			return;
+		}
+
+		for(std::map<Address,CertificateOfMembership>::iterator c(_membershipCertificates.begin());c!=_membershipCertificates.end();++c)
+			c->second.serialize2(buf);
+
+		RR->node->dataStorePut(n,buf,true);
 	}
 }
 
@@ -418,26 +431,6 @@ void Network::destroy()
 	if (_tap)
 		RR->tapFactory->close(_tap,true);
 	_tap = (EthernetTap *)0;
-}
-
-void Network::_dumpMembershipCerts()
-{
-	char n[128];
-	std::string buf("ZTMCD0");
-
-	Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
-
-	Mutex::Lock _l(_lock);
-
-	if ((!_config)||(_config.isPublic())||(_membershipCertificates.size() == 0)) {
-		RR->node->dataStoreDelete(n);
-		return;
-	}
-
-	for(std::map<Address,CertificateOfMembership>::iterator c(_membershipCertificates.begin());c!=_membershipCertificates.end();++c)
-		c->second.serialize2(buf);
-
-	RR->node->dataStorePut(n,buf,true);
 }
 
 } // namespace ZeroTier
