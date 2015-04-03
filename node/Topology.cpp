@@ -32,8 +32,6 @@
 #include "CMWC4096.hpp"
 #include "Dictionary.hpp"
 
-#define ZT_PEER_WRITE_BUF_SIZE 131072
-
 namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv) :

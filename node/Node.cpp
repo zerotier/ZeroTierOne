@@ -46,12 +46,12 @@ namespace ZeroTier {
 
 Node::Node(
 	uint64_t now,
-	ZT1_DataStoreGetFunction *dataStoreGetFunction,
-	ZT1_DataStorePutFunction *dataStorePutFunction,
-	ZT1_WirePacketSendFunction *wirePacketSendFunction,
-	ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback *virtualNetworkConfigCallback,
-	ZT1_StatusCallback *statusCallback) :
+	ZT1_DataStoreGetFunction dataStoreGetFunction,
+	ZT1_DataStorePutFunction dataStorePutFunction,
+	ZT1_WirePacketSendFunction wirePacketSendFunction,
+	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
+	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+	ZT1_StatusCallback statusCallback) :
 	RR(new RuntimeEnvironment(this)),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
@@ -183,12 +183,12 @@ extern "C" {
 enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
 	uint64_t now,
-	ZT1_DataStoreGetFunction *dataStoreGetFunction,
-	ZT1_DataStorePutFunction *dataStorePutFunction,
-	ZT1_WirePacketSendFunction *wirePacketSendFunction,
-	ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback *virtualNetworkConfigCallback,
-	ZT1_StatusCallback *statusCallback)
+	ZT1_DataStoreGetFunction dataStoreGetFunction,
+	ZT1_DataStorePutFunction dataStorePutFunction,
+	ZT1_WirePacketSendFunction wirePacketSendFunction,
+	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
+	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+	ZT1_StatusCallback statusCallback)
 {
 	*node = (ZT1_Node *)0;
 	try {

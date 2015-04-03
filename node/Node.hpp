@@ -57,12 +57,12 @@ class Node
 public:
 	Node(
 		uint64_t now,
-		ZT1_DataStoreGetFunction *dataStoreGetFunction,
-		ZT1_DataStorePutFunction *dataStorePutFunction,
-		ZT1_WirePacketSendFunction *wirePacketSendFunction,
-		ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
-		ZT1_VirtualNetworkConfigCallback *virtualNetworkConfigCallback,
-		ZT1_StatusCallback *statusCallback);
+		ZT1_DataStoreGetFunction dataStoreGetFunction,
+		ZT1_DataStorePutFunction dataStorePutFunction,
+		ZT1_WirePacketSendFunction wirePacketSendFunction,
+		ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
+		ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+		ZT1_StatusCallback statusCallback);
 
 	~Node();
 
@@ -85,7 +85,7 @@ public:
 		const void *frameData,
 		unsigned int frameLength,
 		uint64_t *nextCallDeadline);
-	ZT1_Resultcode processNothing(uint64_t now,uint64_t *nextCallDeadline);
+	ZT1_ResultCode processNothing(uint64_t now,uint64_t *nextCallDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
 	ZT1_ResultCode leave(uint64_t nwid);
 	ZT1_ResultCode multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
@@ -111,16 +111,14 @@ public:
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param desperation Link desperation for reaching this address
-	 * @param spam If true, flag this packet to be spammed to lower-desperation links
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,int desperation,bool spam)
+	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,int desperation)
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT1_Node *>(this),
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			desperation,
-			(int)spam,
 			data,
 			len) == 0);
 	}
@@ -160,28 +158,24 @@ public:
 		return ((nw == _networks.end()) ? SharedPtr<Network>() : nw->second);
 	}
 
-	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure)
-	{
-	}
+	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
 
 	inline std::string dataStoreGet(const char *name)
 	{
 	}
 
-	inline void dataStoreDelete(const char *name)
-	{
-	}
+	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
 
 private:
 	RuntimeEnvironment *RR;
 
-	ZT1_DataStoreGetFunction *_dataStoreGetFunction;
-	ZT1_DataStorePutFunction *_dataStorePutFunction;
-	ZT1_WirePacketSendFunction *_wirePacketSendFunction;
-	ZT1_VirtualNetworkFrameFunction *_virtualNetworkFrameFunction;
-	ZT1_VirtualNetworkConfigCallback *_virtualNetworkConfigCallback;
-	ZT1_StatusCallback *_statusCallback;
+	ZT1_DataStoreGetFunction _dataStoreGetFunction;
+	ZT1_DataStorePutFunction _dataStorePutFunction;
+	ZT1_WirePacketSendFunction _wirePacketSendFunction;
+	ZT1_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
+	ZT1_VirtualNetworkConfigCallback _virtualNetworkConfigCallback;
+	ZT1_StatusCallback _statusCallback;
 
 	//Dictionary _localConfig; // persisted as local.conf
 	//Mutex _localConfig_m;

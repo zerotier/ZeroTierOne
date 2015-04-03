@@ -45,7 +45,6 @@
 #include "Network.hpp"
 #include "SharedPtr.hpp"
 #include "IncomingPacket.hpp"
-#include "Socket.hpp"
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
@@ -60,9 +59,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class EthernetTap;
 class Logger;
-class Node;
 class Peer;
 
 /**
@@ -82,11 +79,11 @@ public:
 	/**
 	 * Called when a packet is received from the real network
 	 *
-	 * @param fromSock Originating socket
 	 * @param fromAddr Internet IP address of origin
+	 * @param linkDesperation Link desperation of path over which packet was received
 	 * @param data Packet data
 	 */
-	void onRemotePacket(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data);
+	void onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
@@ -178,9 +175,9 @@ public:
 		throw();
 
 private:
-	void _handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data);
-	void _handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data);
-	void _handleBeacon(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data);
+	void _handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
+	void _handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
+	void _handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
 
 	Address _sendWhoisRequest(
 		const Address &addr,

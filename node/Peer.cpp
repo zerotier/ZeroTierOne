@@ -43,7 +43,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
-	_lastSpammed(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -145,31 +144,6 @@ void Peer::received(
 		_lastUnicastFrame = now;
 	else if (verb == Packet::VERB_MULTICAST_FRAME)
 		_lastMulticastFrame = now;
-}
-
-bool Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
-{
-	Path *bestPath = (Path *)0;
-	uint64_t lrMax = 0;
-	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if ((_paths[p].active(now)&&(_paths[p].lastReceived() >= lrMax)) {
-			lrMax = _paths[p].lastReceived();
-			bestPath = &(_paths[p]);
-		}
-	}
-
-	if (bestPath) {
-		bool spam = ((now - _lastSpammed) >= ZT_DESPERATION_SPAM_INTERVAL);
-		if (RR->node->putPacket(bestPath->address(),data,len,bestPath->desperation(),spam)) {
-			bestPath->sent(now);
-			RR->antiRec->logOutgoingZT(data,len);
-			if (spam)
-				_lastSpammed = now;
-			return true;
-		}
-	}
-
-	return false;
 }
 
 void Peer::addPath(const Path &newp)

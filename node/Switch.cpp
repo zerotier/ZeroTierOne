@@ -32,13 +32,10 @@
 #include <utility>
 #include <stdexcept>
 
+#include "../version.h"
+#include "../include/ZeroTierOne.h"
+
 #include "Constants.hpp"
-
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#endif
-
 #include "Switch.hpp"
 #include "Node.hpp"
 #include "EthernetTap.hpp"
@@ -49,8 +46,6 @@
 #include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
 #include "AntiRecursion.hpp"
-
-#include "../version.h"
 
 namespace ZeroTier {
 
@@ -64,16 +59,17 @@ Switch::~Switch()
 {
 }
 
-void Switch::onRemotePacket(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,Buffer<ZT_SOCKET_MAX_MESSAGE_LEN> &data)
+void Switch::onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
 {
 	try {
 		if (data.size() == ZT_PROTO_BEACON_LENGTH) {
-			_handleBeacon(fromSock,fromAddr,data);
+			_handleBeacon(fromAddr,linkDesperation,data);
 		} else if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
-			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR)
-				_handleRemotePacketFragment(fromSock,fromAddr,data);
-			else if (data.size() >= ZT_PROTO_MIN_PACKET_LENGTH)
-				_handleRemotePacketHead(fromSock,fromAddr,data);
+			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
+				_handleRemotePacketFragment(fromAddr,linkDesperation,data);
+			} else if (data.size() >= ZT_PROTO_MIN_PACKET_LENGTH) {
+				_handleRemotePacketHead(fromAddr,linkDesperation,data);
+			}
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped packet from %s: unexpected exception: %s",fromAddr.toString().c_str(),ex.what());
@@ -376,7 +372,7 @@ void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
 	// Send simple packet directly to indicated address -- works for most NATs
 	sendHELLO(peer,atAddr);
-	TRACE("sending NAT-t HELLO to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
+	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 
 	// If we have not punched through after this timeout, open refreshing can of whupass
 	{
@@ -543,7 +539,7 @@ const char *Switch::etherTypeName(const unsigned int etherType)
 	return "UNKNOWN";
 }
 
-void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
+void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
 {
 	Packet::Fragment fragment(data);
 	Address destination(fragment.destination());
@@ -615,7 +611,7 @@ void Switch::_handleRemotePacketFragment(const SharedPtr<Socket> &fromSock,const
 	}
 }
 
-void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
+void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
 {
 	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,fromSock,fromAddr));
 
@@ -690,7 +686,7 @@ void Switch::_handleRemotePacketHead(const SharedPtr<Socket> &fromSock,const Ine
 	}
 }
 
-void Switch::_handleBeacon(const SharedPtr<Socket> &fromSock,const InetAddress &fromAddr,const Buffer<4096> &data)
+void Switch::_handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
 {
 	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 	if (beaconAddr == RR->identity.address())

@@ -36,8 +36,11 @@
 #include <algorithm>
 
 #include "Constants.hpp"
+#include "Node.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
+#include "AntiRecursion.hpp"
+#include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
 
@@ -91,6 +94,8 @@ public:
 	/**
 	 * Called when a packet is sent to this path
 	 *
+	 * This is called automatically by Path::send().
+	 *
 	 * @param t Time of send
 	 */
 	inline void sent(uint64_t t) throw() { _lastSend = t; }
@@ -128,7 +133,7 @@ public:
 	 */
 	inline int desperation(uint64_t now) const
 	{
-		if ((_lastSend > _lastReceived)&&(_fixed))
+		if ((_fixed)&&(_lastSend > _lastReceived))
 			return std::max(_lastReceiveDesperation,(int)((_lastSend - _lastReceived) / ZT_DESPERATION_INCREMENT));
 		return _lastReceiveDesperation;
 	}
@@ -141,6 +146,25 @@ public:
 		throw()
 	{
 		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) );
+	}
+
+	/**
+	 * Send a packet via this path
+	 *
+	 * @param RR Runtime environment
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param now Current time
+	 * @return True if transport reported success
+	 */
+	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+	{
+		if (RR->node->putPacket(_addr,data,len,desperation(now))) {
+			sent(now);
+			RR->antiRec->logOutgoingZT(data,len);
+			return true;
+		}
+		return false;
 	}
 
 	/**

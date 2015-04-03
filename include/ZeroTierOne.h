@@ -408,9 +408,9 @@ typedef struct
  * What trust hierarchy role does this peer have?
  */
 enum ZT1_PeerRole {
-	ZT1_PEER_ROLE_NODE = 0       // ordinary node
-	ZT1_PEER_ROLE_HUB = 1,       // locally federated hub
-	ZT1_PEER_ROLE_SUPERNODE = 2, // planetary supernode
+	ZT1_PEER_ROLE_NODE = 0,     // ordinary node
+	ZT1_PEER_ROLE_HUB = 1,      // locally federated hub
+	ZT1_PEER_ROLE_SUPERNODE = 2 // planetary supernode
 };
 
 /**
@@ -541,18 +541,14 @@ typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,uns
 /**
  * Function to send a ZeroTier packet out over the wire
  *
- * Parameters: (1) node, (2) address, (3) desperation, (4) spam? (bool),
- * (5) packet data, (6) packet data length.
- *
- * If spam is nonzero, the implementation should attempt to send the packet
- * over all link types or protocols up to and including the stated level of
- * desperation. Non-applicable link types can of course be skipped.
+ * Parameters: (1) node, (2) address, (3) link desperation,
+ * (4) packet data, (5) packet data length.
  *
  * The function must return zero on success and may return any error code
  * on failure. Note that success does not (of course) guarantee packet
  * delivery. It only means that the packet appears to have been sent.
  */
-typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,const struct sockaddr_storage *,int,int,const void *,unsigned int);
+typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,const struct sockaddr_storage *,int,const void *,unsigned int);
 
 /**
  * Function to send a frame out to a virtual network port
@@ -583,12 +579,12 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
 enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
 	uint64_t now,
-	ZT1_DataStoreGetFunction *dataStoreGetFunction,
-	ZT1_DataStorePutFunction *dataStorePutFunction,
-	ZT1_WirePacketSendFunction *wirePacketSendFunction,
-	ZT1_VirtualNetworkFrameFunction *virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback *virtualNetworkConfigCallback,
-	ZT1_StatusCallback *statusCallback);
+	ZT1_DataStoreGetFunction dataStoreGetFunction,
+	ZT1_DataStorePutFunction dataStorePutFunction,
+	ZT1_WirePacketSendFunction wirePacketSendFunction,
+	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
+	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+	ZT1_StatusCallback statusCallback);
 
 /**
  * Process a packet received from the physical wire

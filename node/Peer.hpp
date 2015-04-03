@@ -132,18 +132,23 @@ public:
 		Packet::Verb inReVerb = Packet::VERB_NOP);
 
 	/**
-	 * Send a packet directly to this peer
+	 * Get the best direct path to this peer
 	 *
-	 * This sends only via direct paths if available and does not handle
-	 * finding of relays. That is done in the send logic in Switch.
-	 *
-	 * @param RR Runtime environment
-	 * @param data Data to send
-	 * @param len Length of packet
 	 * @param now Current time
-	 * @return True if packet appears to have been sent via some available path
+	 * @return Best path or NULL if there are no active (or fixed) direct paths
 	 */
-	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
+	Path *getBestPath(uint64_t now)
+	{
+		Path *bestPath = (Path *)0;
+		uint64_t lrMax = 0;
+		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+			if ((_paths[p].active(now))&&(_paths[p].lastReceived() >= lrMax)) {
+				lrMax = _paths[p].lastReceived();
+				bestPath = &(_paths[p]);
+			}
+		}
+		return bestPath;
+	}
 
 	/**
 	 * @return All known direct paths to this peer
@@ -359,25 +364,20 @@ private:
 	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
-
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
-	uint64_t _lastSpammed;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
-
 	Identity _id;
-
 	Path _paths[ZT_PEER_MAX_PATHS];
 	unsigned int _numPaths;
-
 	unsigned int _latency;
-	unsigned int _spamCounter;
+
 	AtomicCounter __refCount;
 };
 

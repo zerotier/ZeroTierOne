@@ -44,8 +44,6 @@
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
-#include "Packet.hpp"
-#include "Logger.hpp"
 #include "Dictionary.hpp"
 #include "ExternalSurface.hpp"
 
