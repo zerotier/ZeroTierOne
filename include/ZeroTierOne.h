@@ -144,19 +144,17 @@ enum ZT1_ResultCode
 enum ZT1_NodeStatusCode
 {
 	/**
-	 * Node is online
+	 * Node is offline -- nothing is reachable
+	 */
+	ZT1_NODE_STATUS_OFFLINE = 0,
+
+	/**
+	 * Node is online -- at least one upstream is reachable
 	 */
 	ZT1_NODE_STATUS_ONLINE = 1,
 
 	/**
-	 * Node is offline -- nothing is reachable
-	 */
-	ZT1_NODE_STATUS_OFFLINE = 2,
-
-	/**
-	 * The desperation level has changed
-	 *
-	 * 'extra' will point to an int containing the new level.
+	 * Link desperation level has changed
 	 */
 	ZT1_NODE_STATUS_DESPERATION_CHANGE = 3
 };
@@ -407,12 +405,12 @@ typedef struct
 } ZT1_PeerPhysicalPath;
 
 /**
- * What trust hierarchy role does this device have?
+ * What trust hierarchy role does this peer have?
  */
 enum ZT1_PeerRole {
-	ZT1_PEER_ROLE_SUPERNODE = 0, // planetary supernode
+	ZT1_PEER_ROLE_NODE = 0       // ordinary node
 	ZT1_PEER_ROLE_HUB = 1,       // locally federated hub
-	ZT1_PEER_ROLE_NODE = 2       // ordinary node
+	ZT1_PEER_ROLE_SUPERNODE = 2, // planetary supernode
 };
 
 /**

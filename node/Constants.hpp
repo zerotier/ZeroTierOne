@@ -287,9 +287,9 @@
 #define ZT_DESPERATION_INCREMENT (ZT_STARTUP_AGGRO * 2)
 
 /**
- * "Spam" packets to lower desperation links every Nth packet
+ * Interval between "spams" if desperation > 0
  */
-#define ZT_DESPERATION_SPAM_EVERY 10
+#define ZT_DESPERATION_SPAM_INTERVAL 60000
 
 /**
  * Maximum delay between runs of the main loop in Node.cpp

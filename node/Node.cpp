@@ -61,10 +61,7 @@ Node::Node(
 	_statusCallback(statusCallback),
 	_networks(),
 	_networks_m(),
-	_now(now),
-	_timeOfLastPacketReceived(0),
-	_timeOfLastPrivilegedPacket(0),
-	_spamCounter(0)
+	_now(now)
 {
 	try {
 		RR->prng = new CMWC4096();

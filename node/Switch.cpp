@@ -270,6 +270,7 @@ void Switch::send(const Packet &packet,bool encrypt)
 	}
 }
 
+#if 0
 void Switch::sendHELLO(const Address &dest)
 {
 	Packet outp(dest,RR->identity.address(),Packet::VERB_HELLO);
@@ -281,36 +282,7 @@ void Switch::sendHELLO(const Address &dest)
 	RR->identity.serialize(outp,false);
 	send(outp,false);
 }
-
-bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const Path &path)
-{
-	uint64_t now = Utils::now();
-	Packet outp(dest->address(),RR->identity.address(),Packet::VERB_HELLO);
-	outp.append((unsigned char)ZT_PROTO_VERSION);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
-	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-	outp.append(now);
-	RR->identity.serialize(outp,false);
-	outp.armor(dest->key(),false);
-	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-	return RR->sm->send(path.address(),path.tcp(),path.type() == Path::PATH_TYPE_TCP_OUT,outp.data(),outp.size());
-}
-
-bool Switch::sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp)
-{
-	uint64_t now = Utils::now();
-	Packet outp(dest->address(),RR->identity.address(),Packet::VERB_HELLO);
-	outp.append((unsigned char)ZT_PROTO_VERSION);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
-	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-	outp.append(now);
-	RR->identity.serialize(outp,false);
-	outp.armor(dest->key(),false);
-	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-	return RR->sm->send(destUdp,false,false,outp.data(),outp.size());
-}
+#endif
 
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
 {

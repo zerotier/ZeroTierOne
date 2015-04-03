@@ -33,6 +33,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <algorithm>
 
 #include "Constants.hpp"
 #include "InetAddress.hpp"
@@ -49,42 +50,28 @@ namespace ZeroTier {
 class Path
 {
 public:
-	enum Type
-	{
-		PATH_TYPE_NULL = 0,
-		PATH_TYPE_UDP = 1,
-		PATH_TYPE_TCP_OUT = 2,
-		PATH_TYPE_TCP_IN = 3
-	};
-
 	Path() :
 		_lastSend(0),
 		_lastReceived(0),
-		_lastPing(0),
 		_addr(),
-		_type(PATH_TYPE_NULL),
+		_lastReceiveDesperation(0),
 		_fixed(false) {}
 
-	Path(const Path &p)
-	{
-		memcpy(this,&p,sizeof(Path));
-	}
+	Path(const Path &p) throw() { memcpy(this,&p,sizeof(Path)); }
 
-	Path(const InetAddress &addr,Type t,bool fixed = false) :
+	Path(const InetAddress &addr,bool fixed) :
 		_lastSend(0),
 		_lastReceived(0),
-		_lastPing(0),
 		_addr(addr),
-		_type(t),
+		_lastReceiveDesperation(0),
 		_fixed(fixed) {}
 
-	inline void init(const InetAddress &addr,Type t,bool fixed = false)
+	inline void init(const InetAddress &addr,bool fixed)
 	{
 		_lastSend = 0;
 		_lastReceived = 0;
-		_lastPing = 0;
 		_addr = addr;
-		_type = t;
+		_lastReceiveDesperation = 0;
 		_fixed = fixed;
 	}
 
@@ -97,19 +84,54 @@ public:
 
 	inline const InetAddress &address() const throw() { return _addr; }
 
-	inline Type type() const throw() { return _type; }
-	inline bool tcp() const throw() { return ((_type == PATH_TYPE_TCP_IN)||(_type == PATH_TYPE_TCP_OUT)); }
-
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
-	inline uint64_t lastPing() const throw() { return _lastPing; }
+	inline int lastReceiveDesperation() const throw() { return _lastReceiveDesperation; }
 
+	/**
+	 * Called when a packet is sent to this path
+	 *
+	 * @param t Time of send
+	 */
+	inline void sent(uint64_t t) throw() { _lastSend = t; }
+
+	/**
+	 * Called when a packet is received from this path
+	 *
+	 * @param t Time of receive
+	 * @param d Link desperation of receive
+	 */
+	inline void received(uint64_t t,int d) throw() { _lastReceived = t; _lastReceiveDesperation = d; }
+
+	/**
+	 * @return Is this a fixed path?
+	 */
 	inline bool fixed() const throw() { return _fixed; }
+
+	/**
+	 * @param f New value of fixed path flag
+	 */
 	inline void setFixed(bool f) throw() { _fixed = f; }
 
-	inline void sent(uint64_t t) throw() { _lastSend = t; }
-	inline void received(uint64_t t) throw() { _lastReceived = t; }
-	inline void pinged(uint64_t t) throw() { _lastPing = t; }
+	/**
+	 * Compute path desperation
+	 *
+	 * Path desperation affects escalation to less efficient fallback
+	 * transports such as TCP or HTTP relaying.
+	 *
+	 * Right now we only escalate desperation for fixed paths, which
+	 * are paths to supernodes. This causes our fallback tunneling
+	 * mechanisms to kick in.
+	 *
+	 * @param now Current time
+	 * @return Path desperation, starting at 0
+	 */
+	inline int desperation(uint64_t now) const
+	{
+		if ((_lastSend > _lastReceived)&&(_fixed))
+			return std::max(_lastReceiveDesperation,(int)((_lastSend - _lastReceived) / ZT_DESPERATION_INCREMENT));
+		return _lastReceiveDesperation;
+	}
 
 	/**
 	 * @param now Current time
@@ -118,53 +140,37 @@ public:
 	inline bool active(uint64_t now) const
 		throw()
 	{
-		return ((_addr)&&((_fixed)||((now - _lastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)));
+		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) );
 	}
 
 	/**
-	 * @return Human-readable address and other information about this path, some computed as of current time
+	 * @param now Current time
+	 * @return Human-readable address and other information about this path
 	 */
-	inline std::string toString() const
+	inline std::string toString(uint64_t now) const
 	{
-		uint64_t now = Utils::now();
 		char tmp[1024];
-		const char *t = "";
-		switch(_type) {
-			case PATH_TYPE_NULL: t = "null"; break;
-			case PATH_TYPE_UDP: t = "udp"; break;
-			case PATH_TYPE_TCP_OUT: t = "tcp_out"; break;
-			case PATH_TYPE_TCP_IN: t = "tcp_in"; break;
-		}
-		Utils::snprintf(tmp,sizeof(tmp),"%s;%s;%lld;%lld;%lld;%s",
-			t,
+		Utils::snprintf(tmp,sizeof(tmp),"%s(%s)",
 			_addr.toString().c_str(),
-			(long long)((_lastSend != 0) ? ((now - _lastSend) / 1000LL) : -1),
-			(long long)((_lastReceived != 0) ? ((now - _lastReceived) / 1000LL) : -1),
-			(long long)((_lastPing != 0) ? ((now - _lastPing) / 1000LL) : -1),
 			((_fixed) ? "fixed" : (active(now) ? "active" : "inactive"))
 		);
 		return std::string(tmp);
 	}
 
-	inline bool operator==(const Path &p) const throw() { return ((_addr == p._addr)&&(_type == p._type)); }
-	inline bool operator!=(const Path &p) const throw() { return ((_addr != p._addr)||(_type != p._type)); }
-	inline bool operator<(const Path &p) const
-		throw()
-	{
-		if (_addr == p._addr)
-			return ((int)_type < (int)p._type);
-		else return (_addr < p._addr);
-	}
-	inline bool operator>(const Path &p) const throw() { return (p < *this); }
-	inline bool operator<=(const Path &p) const throw() { return !(p < *this); }
-	inline bool operator>=(const Path &p) const throw() { return !(*this < p); }
+	inline operator bool() const throw() { return (_addr); }
+
+	inline bool operator==(const Path &p) const throw() { return (_addr == p._addr); }
+	inline bool operator!=(const Path &p) const throw() { return (_addr != p._addr); }
+	inline bool operator<(const Path &p) const throw() { return (_addr < p._addr); }
+	inline bool operator>(const Path &p) const throw() { return (_addr > p._addr); }
+	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
+	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
 
 private:
-	volatile uint64_t _lastSend;
-	volatile uint64_t _lastReceived;
-	volatile uint64_t _lastPing;
+	uint64_t _lastSend;
+	uint64_t _lastReceived;
 	InetAddress _addr;
-	Type _type;
+	int _lastReceiveDesperation;
 	bool _fixed;
 };
 

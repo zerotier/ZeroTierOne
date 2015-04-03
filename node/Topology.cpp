@@ -251,10 +251,7 @@ void Topology::clean(uint64_t now)
 	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
 		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->first) == _supernodeAddresses.end())) {
 			_activePeers.erase(p++);
-		} else {
-			p->second->clean(now);
-			++p;
-		}
+		} else ++p;
 	}
 }
 

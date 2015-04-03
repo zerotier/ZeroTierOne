@@ -117,31 +117,6 @@ public:
 	void send(const Packet &packet,bool encrypt);
 
 	/**
-	 * Send a HELLO announcement
-	 *
-	 * @param dest Address of destination
-	 */
-	void sendHELLO(const Address &dest);
-
-	/**
-	 * Send a HELLO announcement immediately to the indicated address
-	 *
-	 * @param dest Destination peer
-	 * @param path Network path to peer
-	 * @return True if send appears successful
-	 */
-	bool sendHELLO(const SharedPtr<Peer> &dest,const Path &path);
-
-	/**
-	 * Send a HELLO announcement immediately to the indicated address via UDP
-	 *
-	 * @param dest Destination peer
-	 * @param destUdp UDP inet address
-	 * @return True if send appears successful
-	 */
-	bool sendHELLO(const SharedPtr<Peer> &dest,const InetAddress &destUdp);
-
-	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect
 	 *
 	 * This only works if both peers are known, with known working direct

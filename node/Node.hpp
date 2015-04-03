@@ -105,50 +105,24 @@ public:
 	inline uint64_t now() const throw() { return _now; }
 
 	/**
-	 * @return Current level of desperation
-	 */
-	inline int desperation() const throw() { return (int)((_now - _timeOfLastPrivilgedPacket) / ZT_DESPERATION_INCREMENT); }
-
-	/**
-	 * Called to update last packet receive time whenever a packet is received
-	 *
-	 * @param fromPrivilegedPeer If true, peer is a supernode or federated hub (a.k.a. an upstream link)
-	 */
-	inline void packetReceived(bool fromPrivilegedPeer)
-		throw()
-	{
-		const uint64_t n = _now;
-		_timeOfLastPacketReceived = n;
-		if (fromPrivilegedPeer)
-			_timeOfLastPrivilgedPacket = n;
-	}
-
-	/**
-	 * @return Most recent time of any packet receipt
-	 */
-	inline uint64_t timeOfLastPacketReceived() const throw() { return _timeOfLastPacketReceived; }
-
-	/**
-	 * @return Timestamp of last packet received from a supernode or hub (upstream link)
-	 */
-	inline uint64_t timeOfLastPrivilgedPacket() const throw() { return _timeOfLastPrivilgedPacket; }
-
-	/**
 	 * Enqueue a ZeroTier message to be sent
 	 *
 	 * @param addr Destination address
 	 * @param data Packet data
 	 * @param len Packet length
+	 * @param desperation Link desperation for reaching this address
+	 * @param spam If true, flag this packet to be spammed to lower-desperation links
+	 * @return True if packet appears to have been sent
 	 */
-	inline void putPacket(const InetAddress &addr,const void *data,unsigned int len)
+	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,int desperation,bool spam)
 	{
-		_wirePacketSendFunction(
+		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT1_Node *>(this),
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
-			this->desperation(),
-			(int)((++_spamCounter % ZT_DESPERATION_SPAM_EVERY) == 0),
+			desperation,
+			(int)spam,
 			data,
-			len);
+			len) == 0);
 	}
 
 	/**
@@ -216,9 +190,6 @@ private:
 	Mutex _networks_m;
 
 	volatile uint64_t _now; // time of last run()
-	volatile uint64_t _timeOfLastPacketReceived;
-	volatile _timeOfLastPrivilgedPacket;
-	volatile unsigned int _spamCounter; // used to "spam" every Nth packet
 };
 
 } // namespace ZeroTier

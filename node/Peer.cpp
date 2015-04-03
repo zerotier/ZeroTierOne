@@ -27,10 +27,9 @@
 
 #include "Constants.hpp"
 #include "Peer.hpp"
+#include "Node.hpp"
 #include "Switch.hpp"
-#include "Packet.hpp"
 #include "Network.hpp"
-#include "NodeConfig.hpp"
 #include "AntiRecursion.hpp"
 
 #include <algorithm>
@@ -44,12 +43,13 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
+	_lastSpammed(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
+	_id(peerIdentity),
 	_numPaths(0),
-	_latency(0),
-	_id(peerIdentity)
+	_latency(0)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
@@ -57,53 +57,50 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 
 void Peer::received(
 	const RuntimeEnvironment *RR,
-	const SharedPtr<Socket> &fromSock,
 	const InetAddress &remoteAddr,
+	int linkDesperation
 	unsigned int hops,
 	uint64_t packetId,
 	Packet::Verb verb,
 	uint64_t inRePacketId,
-	Packet::Verb inReVerb,
-	uint64_t now)
+	Packet::Verb inReVerb)
 {
-	// Update system-wide last packet receive time
-	*((const_cast<uint64_t *>(&(RR->timeOfLastPacketReceived)))) = now;
-
-	// Global last receive time regardless of path
+	const uint64_t now = RR->node->now();
 	_lastReceive = now;
 
 	if (!hops) {
-		// Learn paths from direct packets (hops == 0)
+		/* Learn new paths from direct (hops == 0) packets */
 		{
+			unsigned int np = _numPaths;
+
 			bool havePath = false;
-			for(unsigned int p=0,np=_numPaths;p<np;++p) {
-				if ((_paths[p].address() == remoteAddr)&&(_paths[p].tcp() == fromSock->tcp())) {
-					_paths[p].received(now);
+			for(unsigned int p=0;p<np;++p) {
+				if (_paths[p].address() == remoteAddr) {
+					_paths[p].received(now,linkDesperation);
 					havePath = true;
 					break;
 				}
 			}
 
 			if (!havePath) {
-				unsigned int np = _numPaths;
-				if (np >= ZT_PEER_MAX_PATHS)
-					clean(now);
-				np = _numPaths;
+				Path *slot = (Path *)0;
 				if (np < ZT_PEER_MAX_PATHS) {
-					Path::Type pt = Path::PATH_TYPE_UDP;
-					switch(fromSock->type()) {
-						case Socket::ZT_SOCKET_TYPE_TCP_IN:
-							pt = Path::PATH_TYPE_TCP_IN;
-							break;
-						case Socket::ZT_SOCKET_TYPE_TCP_OUT:
-							pt = Path::PATH_TYPE_TCP_OUT;
-							break;
-						default:
-							break;
+					// Add new path
+					slot = &(_paths[np++]);
+				} else {
+					// Replace oldest non-fixed path
+					uint64_t slotLRmin = 0xffffffffffffffffULL;
+					for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
+						if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
+							slotLRmin = _paths[p].lastReceived();
+							slot = &(_paths[p]);
+						}
 					}
-					_paths[np].init(remoteAddr,pt,false);
-					_paths[np].received(now);
-					_numPaths = ++np;
+				}
+				if (slot) {
+					slot->init(remoteAddr,false);
+					slot->received(now,linkDesperation);
+					_numPaths = np;
 				}
 			}
 		}
@@ -126,7 +123,7 @@ void Peer::received(
 					for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 							outp.armor(_key,true);
-							fromSock->send(remoteAddr,outp.data(),outp.size());
+							RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation,false);
 							outp.reset(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 						}
 
@@ -139,156 +136,70 @@ void Peer::received(
 			}
 			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
 				outp.armor(_key,true);
-				fromSock->send(remoteAddr,outp.data(),outp.size());
+				RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation,false);
 			}
 		}
 	}
 
 	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
 		_lastUnicastFrame = now;
-	else if ((verb == Packet::VERB_P5_MULTICAST_FRAME)||(verb == Packet::VERB_MULTICAST_FRAME))
+	else if (verb == Packet::VERB_MULTICAST_FRAME)
 		_lastMulticastFrame = now;
 }
 
-Path::Type Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+bool Peer::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 {
-	/* For sending ordinary packets, paths are divided into two categories:
-	 * "normal" and "TCP out." Normal includes UDP and incoming TCP. We want
-	 * to treat outbound TCP differently since if we use it it may end up
-	 * overriding UDP and UDP performs much better. We only want to initiate
-	 * TCP if it looks like UDP isn't available. */
-	Path *bestNormalPath = (Path *)0;
-	Path *bestTcpOutPath = (Path *)0;
-	uint64_t bestNormalPathLastReceived = 0;
-	uint64_t bestTcpOutPathLastReceived = 0;
-	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		uint64_t lr = _paths[p].lastReceived();
-		if (_paths[p].type() == Path::PATH_TYPE_TCP_OUT) {
-			if (lr >= bestTcpOutPathLastReceived) {
-				bestTcpOutPathLastReceived = lr;
-				bestTcpOutPath = &(_paths[p]);
-			}
-		} else {
-			if (lr >= bestNormalPathLastReceived) {
-				bestNormalPathLastReceived = lr;
-				bestNormalPath = &(_paths[p]);
-			}
-		}
-	}
-
 	Path *bestPath = (Path *)0;
-	uint64_t normalPathAge = now - bestNormalPathLastReceived;
-	uint64_t tcpOutPathAge = now - bestTcpOutPathLastReceived;
-	if (normalPathAge < ZT_PEER_PATH_ACTIVITY_TIMEOUT) {
-		/* If we have a normal path that looks alive, only use TCP if it looks
-		 * even more alive, if the UDP path is not a very recent acquisition,
-		 * and if TCP tunneling is globally enabled. */
-		bestPath = ( (tcpOutPathAge < normalPathAge) && (normalPathAge > (ZT_PEER_DIRECT_PING_DELAY / 4)) && (RR->tcpTunnelingEnabled) ) ? bestTcpOutPath : bestNormalPath;
-	} else if ( (tcpOutPathAge < ZT_PEER_PATH_ACTIVITY_TIMEOUT) || ((RR->tcpTunnelingEnabled)&&(bestTcpOutPath)) ) {
-		/* Otherwise use a TCP path if we have an active one or if TCP
-		 * fallback has been globally triggered and we know of one at all. */
-		bestPath = bestTcpOutPath;
-	} else if ( (bestNormalPath) && (bestNormalPath->fixed()) ) {
-		/* Finally, use a normal path if we have a "fixed" one as these are
-		 * always considered basically alive. */
-		bestPath = bestNormalPath;
-	}
-
-	/* Old path choice logic -- would attempt to use inactive paths... deprecating and will probably kill.
-	Path *bestPath = (Path *)0;
-	if (bestTcpOutPath) { // we have a TCP out path
-		if (bestNormalPath) { // we have both paths, decide which to use
-			if (RR->tcpTunnelingEnabled) { // TCP tunneling is enabled, so use normal path only if it looks alive
-				if ((bestNormalPathLastReceived > RR->timeOfLastResynchronize)&&((now - bestNormalPathLastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT))
-					bestPath = bestNormalPath;
-				else bestPath = bestTcpOutPath;
-			} else { // TCP tunneling is disabled, use normal path
-				bestPath = bestNormalPath;
-			}
-		} else { // we only have a TCP_OUT path, so use it regardless
-			bestPath = bestTcpOutPath;
-		}
-	} else { // we only have a normal path (or none at all, that case is caught below)
-		bestPath = bestNormalPath;
-	}
-	*/
-
-	if (!bestPath)
-		return Path::PATH_TYPE_NULL;
-
-	RR->antiRec->logOutgoingZT(data,len);
-
-	if (RR->sm->send(bestPath->address(),bestPath->tcp(),bestPath->type() == Path::PATH_TYPE_TCP_OUT,data,len)) {
-		bestPath->sent(now);
-		return bestPath->type();
-	}
-
-	return Path::PATH_TYPE_NULL;
-}
-
-bool Peer::sendPing(const RuntimeEnvironment *RR,uint64_t now)
-{
-	bool sent = false;
-	SharedPtr<Peer> self(this);
-
-	/* Ping (and thus open) outbound TCP connections if we have no other options
-	 * or if the TCP tunneling master switch is enabled and pings have been
-	 * unanswered for ZT_TCP_TUNNEL_FAILOVER_TIMEOUT ms over normal channels. */
-	uint64_t lastNormalPingSent = 0;
-	uint64_t lastNormalReceive = 0;
-	bool haveNormal = false;
+	uint64_t lrMax = 0;
 	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if (_paths[p].type() != Path::PATH_TYPE_TCP_OUT) {
-			lastNormalPingSent = std::max(lastNormalPingSent,_paths[p].lastPing());
-			lastNormalReceive = std::max(lastNormalReceive,_paths[p].lastReceived());
-			haveNormal = true;
+		if ((_paths[p].active(now)&&(_paths[p].lastReceived() >= lrMax)) {
+			lrMax = _paths[p].lastReceived();
+			bestPath = &(_paths[p]);
 		}
 	}
 
-	const bool useTcpOut = ( (!haveNormal) || ( (RR->tcpTunnelingEnabled) && (lastNormalPingSent > RR->timeOfLastResynchronize) && (lastNormalPingSent > lastNormalReceive) && ((lastNormalPingSent - lastNormalReceive) >= ZT_TCP_TUNNEL_FAILOVER_TIMEOUT) ) );
-	TRACE("PING %s (useTcpOut==%d)",_id.address().toString().c_str(),(int)useTcpOut);
-
-	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if ((useTcpOut)||(_paths[p].type() != Path::PATH_TYPE_TCP_OUT)) {
-			_paths[p].pinged(now); // attempts to ping are logged whether they look successful or not
-			if (RR->sw->sendHELLO(self,_paths[p])) {
-				_paths[p].sent(now);
-				sent = true;
-			}
+	if (bestPath) {
+		bool spam = ((now - _lastSpammed) >= ZT_DESPERATION_SPAM_INTERVAL);
+		if (RR->node->putPacket(bestPath->address(),data,len,bestPath->desperation(),spam)) {
+			bestPath->sent(now);
+			RR->antiRec->logOutgoingZT(data,len);
+			if (spam)
+				_lastSpammed = now;
+			return true;
 		}
 	}
 
-	return sent;
-}
-
-void Peer::clean(uint64_t now)
-{
-	unsigned int np = _numPaths;
-	unsigned int x = 0;
-	unsigned int y = 0;
-	while (x < np) {
-		if (_paths[x].active(now))
-			_paths[y++] = _paths[x];
-		++x;
-	}
-	_numPaths = y;
+	return false;
 }
 
 void Peer::addPath(const Path &newp)
 {
 	unsigned int np = _numPaths;
+
 	for(unsigned int p=0;p<np;++p) {
-		if (_paths[p] == newp) {
+		if (_paths[p].address() == newp.address()) {
 			_paths[p].setFixed(newp.fixed());
 			return;
 		}
 	}
-	if (np >= ZT_PEER_MAX_PATHS)
-		clean(Utils::now());
-	np = _numPaths;
+
+	Path *slot = (Path *)0;
 	if (np < ZT_PEER_MAX_PATHS) {
-		_paths[np] = newp;
-		_numPaths = ++np;
+		// Add new path
+		slot = &(_paths[np++]);
+	} else {
+		// Replace oldest non-fixed path
+		uint64_t slotLRmin = 0xffffffffffffffffULL;
+		for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
+			if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
+				slotLRmin = _paths[p].lastReceived();
+				slot = &(_paths[p]);
+			}
+		}
+	}
+	if (slot) {
+		*slot = newp;
+		_numPaths = np;
 	}
 }
 
@@ -309,11 +220,11 @@ void Peer::clearPaths(bool fixedToo)
 	}
 }
 
-void Peer::getBestActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
 {
 	uint64_t bestV4 = 0,bestV6 = 0;
 	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if ((_paths[p].type() == Path::PATH_TYPE_UDP)&&(_paths[p].active(now))) {
+		if (_paths[p].active(now)) {
 			uint64_t lr = _paths[p].lastReceived();
 			if (lr) {
 				if (_paths[p].address().isV4()) {

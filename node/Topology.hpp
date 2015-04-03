@@ -191,6 +191,7 @@ public:
 			f(*this,p->second);
 	}
 
+#if 0
 	/**
 	 * Apply a function or function object to all supernode peers
 	 *
@@ -274,7 +275,7 @@ public:
 			uint64_t lp = 0;
 			uint64_t lr = 0;
 			p->lastPingAndDirectReceive(lp,lr);
-			if ( (lr < RR->timeOfLastResynchronize) || ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) || ((_now - lr) >= ZT_PEER_DIRECT_PING_DELAY) )
+			if ( ((lr < lp)&&((lp - lr) >= ZT_PING_UNANSWERED_AFTER)) || ((_now - lr) >= ZT_PEER_DIRECT_PING_DELAY) )
 				p->sendPing(RR,_now);
 		}
 
@@ -284,21 +285,8 @@ public:
 	};
 
 	/**
-	 * Computes most recent timestamp of direct packet receive over a list of peers
-	 */
-	class FindMostRecentDirectReceiveTimestamp
-	{
-	public:
-		FindMostRecentDirectReceiveTimestamp(uint64_t &ts) throw() : _ts(ts) {}
-		inline void operator()(Topology &t,const SharedPtr<Peer> &p) throw() { _ts = std::max(p->lastDirectReceive(),_ts); }
-	private:
-		uint64_t &_ts;
-	};
-
-	/**
 	 * Function object to forget direct links to active peers and then ping them indirectly
 	 */
-	/*
 	class ResetActivePeers
 	{
 	public:
@@ -333,28 +321,7 @@ public:
 		std::vector<Address> _supernodeAddresses;
 		const RuntimeEnvironment *RR;
 	};
-	*/
-
-	/**
-	 * Function object to collect peers with any known direct path
-	 */
-	class CollectPeersWithActiveDirectPath
-	{
-	public:
-		CollectPeersWithActiveDirectPath(std::vector< SharedPtr<Peer> > &v,uint64_t now) throw() :
-			_now(now),
-			_v(v) {}
-
-		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-		{
-			if (p->hasActiveDirectPath(_now))
-				_v.push_back(p);
-		}
-
-	private:
-		uint64_t _now;
-		std::vector< SharedPtr<Peer> > &_v;
-	};
+#endif
 
 	/**
 	 * Update our knowledge of exterior network addresses
@@ -396,7 +363,7 @@ private:
 	Mutex _lock;
 
 	// Set to true if my identity is in _supernodes
-	volatile bool _amSupernode;
+	bool _amSupernode;
 };
 
 } // namespace ZeroTier

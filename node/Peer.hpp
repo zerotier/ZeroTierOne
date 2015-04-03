@@ -35,6 +35,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include "../include/ZeroTierOne.h"
+
 #include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Path.hpp"
@@ -51,7 +53,7 @@
 /**
  * Maximum number of paths a peer can have
  */
-#define ZT_PEER_MAX_PATHS 8
+#define ZT_PEER_MAX_PATHS 3
 
 namespace ZeroTier {
 
@@ -111,25 +113,23 @@ public:
 	 * and appears to be valid.
 	 * 
 	 * @param RR Runtime environment
-	 * @param fromSock Socket from which packet was received
 	 * @param remoteAddr Internet address of sender
+	 * @param linkDesperation Link desperation level
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
 	 * @param verb Packet verb
-	 * @param inRePacketId Packet ID in reply to (for OK/ERROR, 0 otherwise)
-	 * @param inReVerb Verb in reply to (for OK/ERROR, VERB_NOP otherwise)
-	 * @param now Current time
+	 * @param inRePacketId Packet ID in reply to (default: none)
+	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
 	 */
 	void received(
 		const RuntimeEnvironment *RR,
-		const SharedPtr<Socket> &fromSock,
 		const InetAddress &remoteAddr,
+		int linkDesperation,
 		unsigned int hops,
 		uint64_t packetId,
 		Packet::Verb verb,
-		uint64_t inRePacketId,
-		Packet::Verb inReVerb,
-		uint64_t now);
+		uint64_t inRePacketId = 0,
+		Packet::Verb inReVerb = Packet::VERB_NOP);
 
 	/**
 	 * Send a packet directly to this peer
@@ -141,26 +141,9 @@ public:
 	 * @param data Data to send
 	 * @param len Length of packet
 	 * @param now Current time
-	 * @return Type of path used or Path::PATH_TYPE_NULL on failure
+	 * @return True if packet appears to have been sent via some available path
 	 */
-	Path::Type send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
-
-	/**
-	 * Send HELLO to a peer via all direct paths available
-	 *
-	 * This begins attempting to use TCP paths if no ping response has been
-	 * received from any UDP path in more than ZT_TCP_FALLBACK_AFTER.
-	 * 
-	 * @param RR Runtime environment
-	 * @param now Current time
-	 * @return True if send appears successful for at least one address type
-	 */
-	bool sendPing(const RuntimeEnvironment *RR,uint64_t now);
-
-	/**
-	 * Called periodically by Topology::clean() to remove stale paths and do other cleanup
-	 */
-	void clean(uint64_t now);
+	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
 
 	/**
 	 * @return All known direct paths to this peer
@@ -171,19 +154,6 @@ public:
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			pp.push_back(_paths[p]);
 		return pp;
-	}
-
-	/**
-	 * @param addr IP:port
-	 * @return True if we have a UDP path to this address
-	 */
-	inline bool haveUdpPath(const InetAddress &addr) const
-	{
-		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			if ((_paths[p].type() == Path::PATH_TYPE_UDP)&&(_paths[p].address() == addr))
-				return true;
-		}
-		return false;
 	}
 
 	/**
@@ -208,21 +178,6 @@ public:
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			x = std::max(x,_paths[p].lastSend());
 		return x;
-	}
-
-	/**
-	 * Get max timestamp of last ping and max timestamp of last receive in a single pass
-	 *
-	 * @param lp Last ping result parameter (init to 0 before calling)
-	 * @param lr Last receive result parameter (init to 0 before calling)
-	 */
-	inline void lastPingAndDirectReceive(uint64_t &lp,uint64_t &lr)
-		throw()
-	{
-		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			lp = std::max(lp,_paths[p].lastPing());
-			lr = std::max(lr,_paths[p].lastReceived());
-		}
 	}
 
 	/**
@@ -378,7 +333,7 @@ public:
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
 	 */
-	void getBestActiveUdpPathAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
+	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
 	 * Find a common set of addresses by which two peers can link, if any
@@ -391,8 +346,8 @@ public:
 	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now)
 	{
 		std::pair<InetAddress,InetAddress> v4,v6;
-		b.getBestActiveUdpPathAddresses(now,v4.first,v6.first);
-		a.getBestActiveUdpPathAddresses(now,v4.second,v6.second);
+		b.getBestActiveAddresses(now,v4.first,v6.first);
+		a.getBestActiveAddresses(now,v4.second,v6.second);
 		if ((v6.first)&&(v6.second)) // prefer IPv6 if both have it since NAT-t is (almost) unnecessary
 			return v6;
 		else if ((v4.first)&&(v4.second))
@@ -403,23 +358,26 @@ public:
 private:
 	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
 
+	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
+
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
+	uint64_t _lastSpammed;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 
+	Identity _id;
+
 	Path _paths[ZT_PEER_MAX_PATHS];
 	unsigned int _numPaths;
 
 	unsigned int _latency;
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
-	Identity _id;
-
+	unsigned int _spamCounter;
 	AtomicCounter __refCount;
 };
 
