@@ -95,7 +95,7 @@ Node::~Node()
 ZT1_ResultCode Node::processWirePacket(
 	uint64_t now,
 	const struct sockaddr_storage *remoteAddress,
-	int linkDesperation,
+	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
 	uint64_t *nextCallDeadline)
@@ -207,7 +207,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
 	const struct sockaddr_storage *remoteAddress,
-	int linkDesperation,
+	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
 	uint64_t *nextCallDeadline)

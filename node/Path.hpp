@@ -106,7 +106,7 @@ public:
 	 * @param t Time of receive
 	 * @param d Link desperation of receive
 	 */
-	inline void received(uint64_t t,int d) throw() { _lastReceived = t; _lastReceiveDesperation = d; }
+	inline void received(uint64_t t,unsigned int d) throw() { _lastReceived = t; _lastReceiveDesperation = d; }
 
 	/**
 	 * @return Is this a fixed path?
@@ -131,10 +131,10 @@ public:
 	 * @param now Current time
 	 * @return Path desperation, starting at 0
 	 */
-	inline int desperation(uint64_t now) const
+	inline unsigned int desperation(uint64_t now) const
 	{
 		if ((_fixed)&&(_lastSend > _lastReceived))
-			return std::max(_lastReceiveDesperation,(int)((_lastSend - _lastReceived) / ZT_DESPERATION_INCREMENT));
+			return std::max(_lastReceiveDesperation,(unsigned int)((_lastSend - _lastReceived) / ZT_DESPERATION_INCREMENT));
 		return _lastReceiveDesperation;
 	}
 
@@ -194,7 +194,7 @@ private:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
 	InetAddress _addr;
-	int _lastReceiveDesperation;
+	unsigned int _lastReceiveDesperation;
 	bool _fixed;
 };
 

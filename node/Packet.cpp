@@ -50,7 +50,6 @@ const char *Packet::verbString(Verb v)
 		case VERB_NETWORK_CONFIG_REFRESH: return "NETWORK_CONFIG_REFRESH";
 		case VERB_MULTICAST_GATHER: return "MULTICAST_GATHER";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
-		case VERB_PHYSICAL_ADDRESS_CHANGED: return "PHYSICAL_ADDRESS_CHANGED";
 	}
 	return "(unknown)";
 }

@@ -137,7 +137,7 @@ public:
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active (or fixed) direct paths
 	 */
-	Path *getBestPath(uint64_t now)
+	inline Path *getBestPath(uint64_t now)
 	{
 		Path *bestPath = (Path *)0;
 		uint64_t lrMax = 0;
@@ -148,6 +148,25 @@ public:
 			}
 		}
 		return bestPath;
+	}
+
+	/**
+	 * Send via best path
+	 *
+	 * @param RR Runtime environment
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param now Current time
+	 * @return Path used on success or NULL on failure
+	 */
+	inline Path *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+	{
+		Path *bestPath = getBestPath(now);
+		if (bestPath) {
+			if (bestPath->send(RR,data,len,now))
+				return bestPath;
+		}
+		return (Path *)0;
 	}
 
 	/**

@@ -151,12 +151,7 @@ enum ZT1_NodeStatusCode
 	/**
 	 * Node is online -- at least one upstream is reachable
 	 */
-	ZT1_NODE_STATUS_ONLINE = 1,
-
-	/**
-	 * Link desperation level has changed
-	 */
-	ZT1_NODE_STATUS_DESPERATION_CHANGE = 3
+	ZT1_NODE_STATUS_ONLINE = 1
 };
 
 /**
@@ -191,7 +186,7 @@ typedef struct
 	/**
 	 * Current maximum link desperation metric
 	 */
-	int desperation;
+	unsigned int desperation;
 } ZT1_NodeStatus;
 
 /**
@@ -394,11 +389,6 @@ typedef struct
 	uint64_t bytesReceived;
 
 	/**
-	 * This path's desperation metric (higher == worse)
-	 */
-	int desperation;
-
-	/**
 	 * Is path fixed? (i.e. not learned, static)
 	 */
 	int fixed;
@@ -548,7 +538,7 @@ typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,uns
  * on failure. Note that success does not (of course) guarantee packet
  * delivery. It only means that the packet appears to have been sent.
  */
-typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,const struct sockaddr_storage *,int,const void *,unsigned int);
+typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,const struct sockaddr_storage *,unsigned int,const void *,unsigned int);
 
 /**
  * Function to send a frame out to a virtual network port
@@ -602,7 +592,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
 	const struct sockaddr_storage *remoteAddress,
-	int linkDesperation,
+	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
 	uint64_t *nextCallDeadline);

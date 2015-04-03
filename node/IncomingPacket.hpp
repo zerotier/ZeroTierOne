@@ -31,14 +31,12 @@
 #include <stdexcept>
 
 #include "Packet.hpp"
-#include "SocketManager.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
 #include "MulticastGroup.hpp"
 #include "Peer.hpp"
-#include "Socket.hpp"
 
 /*
  * The big picture:
@@ -73,17 +71,17 @@ public:
 	 * Create a new packet-in-decode
 	 *
 	 * @param b Source buffer with raw packet data
-	 * @param fromSock Socket on which packet was received
 	 * @param remoteAddress Address from which packet came
+	 * @param linkDesperation Link desperation for link over which packet was received
 	 * @throws std::out_of_range Range error processing packet
 	 */
 	template<unsigned int C2>
-	IncomingPacket(const Buffer<C2> &b,const SharedPtr<Socket> &fromSock,const InetAddress &remoteAddress)
+	IncomingPacket(const Buffer<C2> &b,const InetAddress &remoteAddress,unsigned int linkDesperation)
  		throw(std::out_of_range) :
  		Packet(b),
  		_receiveTime(Utils::now()),
- 		_fromSock(fromSock),
  		_remoteAddress(remoteAddress),
+ 		_linkDesperation(linkDesperation),
  		__refCount()
 	{
 	}
@@ -130,8 +128,8 @@ private:
 	void _sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid);
 
 	uint64_t _receiveTime;
-	SharedPtr<Socket> _fromSock;
 	InetAddress _remoteAddress;
+	unsigned int _linkDesperation;
 	AtomicCounter __refCount;
 };
 

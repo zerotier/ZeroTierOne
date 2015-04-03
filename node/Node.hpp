@@ -71,7 +71,7 @@ public:
 	ZT1_ResultCode processWirePacket(
 		uint64_t now,
 		const struct sockaddr_storage *remoteAddress,
-		int linkDesperation,
+		unsigned int linkDesperation,
 		const void *packetData,
 		unsigned int packetLength,
 		uint64_t *nextCallDeadline);
@@ -113,7 +113,7 @@ public:
 	 * @param desperation Link desperation for reaching this address
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,int desperation)
+	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,unsigned int desperation)
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT1_Node *>(this),

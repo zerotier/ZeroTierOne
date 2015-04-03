@@ -36,16 +36,15 @@
 #include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
+#include "RuntimeEnvironment.hpp"
 #include "Switch.hpp"
 #include "Node.hpp"
-#include "EthernetTap.hpp"
 #include "InetAddress.hpp"
 #include "Topology.hpp"
-#include "RuntimeEnvironment.hpp"
 #include "Peer.hpp"
-#include "NodeConfig.hpp"
 #include "CMWC4096.hpp"
 #include "AntiRecursion.hpp"
+#include "Packet.hpp"
 
 namespace ZeroTier {
 
@@ -93,13 +92,13 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	 * still happen because Windows likes to send broadcasts over interfaces that have little
 	 * to do with their intended target audience. :P */
 	if (!RR->antiRec->checkEthernetFrame(data.data(),data.size())) {
-		TRACE("%s: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->tapDeviceName().c_str(),etherTypeName(etherType),data.size());
+		TRACE("%.16llx: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->id(),etherTypeName(etherType),data.size());
 		return;
 	}
 
 	// Check to make sure this protocol is allowed on this network
 	if (!nconf->permitsEtherType(etherType)) {
-		TRACE("%s: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
+		TRACE("%.16llx: ignored tap: %s -> %s: ethertype %s not allowed on network %.16llx",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),(unsigned long long)network->id());
 		return;
 	}
 
@@ -107,7 +106,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	bool fromBridged = false;
 	if (from != network->mac()) {
 		if (!network->permitsBridging(RR->identity.address())) {
-			LOG("%s: %s -> %s %s not forwarded, bridging disabled on %.16llx or this peer not a bridge",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
+			LOG("%.16llx: %s -> %s %s not forwarded, bridging disabled or this peer not a bridge",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 			return;
 		}
 		fromBridged = true;
@@ -126,7 +125,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
 			} else if (!nconf->enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
-				TRACE("%s: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled on network %.16llx",network->tapDeviceName().c_str(),network->id());
+				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
 				return;
 			}
 		}
@@ -140,11 +139,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
 		if (!network->updateAndCheckMulticastBalance(mg,data.size())) {
-			TRACE("%s: didn't multicast %d bytes, quota exceeded for multicast group %s",network->tapDeviceName().c_str(),(int)data.size(),mg.toString().c_str());
+			TRACE("%.16llx: didn't multicast %d bytes, quota exceeded for multicast group %s",network->id(),(int)data.size(),mg.toString().c_str());
 			return;
 		}
 
-		TRACE("%s: MULTICAST %s -> %s %s %d",network->tapDeviceName().c_str(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
+		TRACE("%.16llx: MULTICAST %s -> %s %s %d",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
 
 		RR->mc->send(
 			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
@@ -195,7 +194,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				send(outp,true);
 			}
 		} else {
-			TRACE("%s: UNICAST: %s -> %s %s dropped, destination not a member of closed network %.16llx",network->tapDeviceName().c_str(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),network->id());
+			TRACE("%.16llx: UNICAST: %s -> %s %s dropped, destination not a member of private network",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 		}
 
 		return;
@@ -368,26 +367,32 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	return true;
 }
 
-void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
+void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr,unsigned int maxDesperation)
 {
-	// Send simple packet directly to indicated address -- works for most NATs
-	sendHELLO(peer,atAddr);
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
+
+	uint64_t now = RR->node->now();
+
+	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
+	outp.armor(peer->key(),false);
+
+	/* Note that we don't log this as a "sent" packet or send it via the peer's
+	 * normal send() path. That's because this is a trial packet to an
+	 * unconfirmed address.
+	 *
+	 * First attempt is always at desperation zero. Then we escalate to max
+	 * before escalating through other NAT-t strategies. */
+	RR->node->putPacket(atAddr,outp.data(),outp.size(),0);
 
 	// If we have not punched through after this timeout, open refreshing can of whupass
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,Utils::now() + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
+		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr,maxDesperation));
 	}
-
-	// Kick main loop out of wait so that it can pick up this
-	// change to our scheduled timer tasks.
-	RR->sm->whack();
 }
 
 void Switch::requestWhois(const Address &addr)
 {
-	//TRACE("requesting WHOIS for %s",addr.toString().c_str());
 	bool inserted = false;
 	{
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
@@ -436,38 +441,84 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 unsigned long Switch::doTimerTasks()
 {
 	unsigned long nextDelay = ~((unsigned long)0); // big number, caller will cap return value
-	uint64_t now = Utils::now();
+	const uint64_t now = RR->node->now();
 
-	{
+	{ // Aggressive NAT traversal time!
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if (!qi->peer->hasActiveDirectPath(now)) {
-					TRACE("deploying aggressive NAT-t against %s(%s)",qi->peer->address().toString().c_str(),qi->inaddr.toString().c_str());
+				if (qi->peer->hasActiveDirectPath(now)) {
+					// We've successfully NAT-t'd, so cancel attempt
+					_contactQueue.erase(qi++);
+					continue;
+				} else {
+					// Nope, nothing yet. Time to kill some kittens.
 
-					/* Shotgun approach -- literally -- against symmetric NATs. Most of these
-					 * either increment or decrement ports so this gets a good number. Also try
-					 * the original port one more time for good measure, since sometimes it
-					 * fails first time around. */
-					int p = (int)qi->inaddr.port() - 2;
-					for(int k=0;k<6;++k) {
-						if ((p > 0)&&(p <= 0xffff)) {
-							qi->inaddr.setPort((unsigned int)p);
-							sendHELLO(qi->peer,qi->inaddr);
-						}
-						++p;
+					Packet outp(qi->peer->address(),RR->identity.address(),Packet::VERB_NOP);
+					outp.armor(qi->peer->key(),false);
+
+					switch(qi->strategyIteration) {
+						case 0:
+							// First strategy: rifle method: direct packet to known port
+							++qi->strategyIteration;
+							RR->node->putPacket(qi->inaddr,outp.data(),outp.size(),qi->currentDesperation);
+							break;
+						case 1: {
+							// Second strategy: shotgun method up: try a few ports above
+							++qi->strategyIteration;
+							int p = (int)qi->inaddr.port();
+							for(int i=0;i<6;++i) {
+								if (++p > 0xffff)
+									break;
+								InetAddress tmpaddr(qi->inaddr);
+								tmpaddr.setPort((unsigned int)p);
+								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
+							}
+						}	break;
+						case 2: {
+							// Third strategy: shotgun method down: try a few ports below
+							++qi->strategyIteration;
+							int p = (int)qi->inaddr.port();
+							for(int i=0;i<3;++i) {
+								if (--p < 1024)
+									break;
+								InetAddress tmpaddr(qi->inaddr);
+								tmpaddr.setPort((unsigned int)p);
+								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
+							}
+						}	break;
+						case 3:
+							// Fourth strategy: sawed-off shotgun: try random non-privileged ports
+							for(int i=0;i<16;++i) {
+								InetAddress tmpaddr(qi->inaddr);
+								tmpaddr.setPort((unsigned int)(1024 + (RR->prng->next32() % (65536 - 1024))));
+								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
+							}
+
+							// Escalate link desperation after all strategies attempted
+							++qi->currentDesperation;
+							if (qi->currentDesperation > qi->maxDesperation) {
+								// We've tried all strategies at all levels of desperation, give up.
+								_contactQueue.erase(qi++);
+								continue;
+							} else {
+								// Otherwise restart at new link desperation level (e.g. try a tougher transport)
+								qi->strategyIteration = 0;
+							}
+							break;
 					}
-				}
 
-				_contactQueue.erase(qi++);
+					qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
+					nextDelay = std::min(nextDelay,(unsigned long)ZT_NAT_T_TACTICAL_ESCALATION_DELAY);
+				}
 			} else {
 				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));
-				++qi;
 			}
+			++qi; // if qi was erased, loop will have continued before here
 		}
 	}
 
-	{
+	{	// Retry outstanding WHOIS requests
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
 		for(std::map< Address,WhoisRequest >::iterator i(_outstandingWhoisRequests.begin());i!=_outstandingWhoisRequests.end();) {
 			unsigned long since = (unsigned long)(now - i->second.lastSent);
@@ -483,12 +534,14 @@ unsigned long Switch::doTimerTasks()
 					TRACE("WHOIS %s (retry %u)",i->first.toString().c_str(),i->second.retries);
 					nextDelay = std::min(nextDelay,(unsigned long)ZT_WHOIS_RETRY_DELAY);
 				}
-			} else nextDelay = std::min(nextDelay,ZT_WHOIS_RETRY_DELAY - since);
+			} else {
+				nextDelay = std::min(nextDelay,ZT_WHOIS_RETRY_DELAY - since);
+			}
 			++i;
 		}
 	}
 
-	{
+	{	// Time out TX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_txQueue_m);
 		for(std::multimap< Address,TXQueueEntry >::iterator i(_txQueue.begin());i!=_txQueue.end();) {
 			if (_trySend(i->second.packet,i->second.encrypt))
@@ -500,7 +553,7 @@ unsigned long Switch::doTimerTasks()
 		}
 	}
 
-	{
+	{	// Time out RX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_rxQueue_m);
 		for(std::list< SharedPtr<IncomingPacket> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
 			if ((now - (*i)->receiveTime()) > ZT_RECEIVE_QUEUE_TIMEOUT) {
@@ -510,7 +563,7 @@ unsigned long Switch::doTimerTasks()
 		}
 	}
 
-	{
+	{	// Time out packets that didn't get all their fragments.
 		Mutex::Lock _l(_defragQueue_m);
 		for(std::map< uint64_t,DefragQueueEntry >::iterator i(_defragQueue.begin());i!=_defragQueue.end();) {
 			if ((now - i->second.creationTime) > ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT) {
@@ -552,11 +605,11 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDes
 			// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 			// It wouldn't hurt anything, just redundant and unnecessary.
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-			if ((!relayTo)||(relayTo->send(RR,fragment.data(),fragment.size(),Utils::now()) == Path::PATH_TYPE_NULL)) {
+			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
 				// Don't know peer or no direct path -- so relay via supernode
 				relayTo = RR->topology->getBestSupernode();
 				if (relayTo)
-					relayTo->send(RR,fragment.data(),fragment.size(),Utils::now());
+					relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now());
 			}
 		} else {
 			TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
@@ -613,7 +666,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDes
 
 void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,fromSock,fromAddr));
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,fromAddr,linkDesperation));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -626,18 +679,13 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDespera
 			packet->incrementHops();
 
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-			Path::Type relayedVia;
-			if ((relayTo)&&((relayedVia = relayTo->send(RR,packet->data(),packet->size(),Utils::now())) != Path::PATH_TYPE_NULL)) {
-				/* If both paths are UDP, attempt to invoke UDP NAT-t between peers
-				 * by sending VERB_RENDEZVOUS. Do not do this for TCP due to GitHub
-				 * issue #63. */
-				if ((fromSock->udp())&&(relayedVia == Path::PATH_TYPE_UDP))
-					unite(source,destination,false);
+			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),RR->node->now())))) {
+				unite(source,destination,false);
 			} else {
 				// Don't know peer or no direct path -- so relay via supernode
 				relayTo = RR->topology->getBestSupernode(&source,1,true);
 				if (relayTo)
-					relayTo->send(RR,packet->data(),packet->size(),Utils::now());
+					relayTo->send(RR,packet->data(),packet->size(),RR->node->now());
 			}
 		} else {
 			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet->source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -693,15 +741,12 @@ void Switch::_handleBeacon(const InetAddress &fromAddr,int linkDesperation,const
 		return;
 	SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
 	if (peer) {
-		uint64_t now = Utils::now();
-		if (peer->haveUdpPath(fromAddr)) {
-			if ((now - peer->lastDirectReceive()) >= ZT_PEER_DIRECT_PING_DELAY)
-				peer->sendPing(RR,now);
-		} else {
-			if ((now - _lastBeacon) < ZT_MIN_BEACON_RESPONSE_INTERVAL)
-				return;
+		const uint64_t now = RR->node->now();
+		if ((now - _lastBeacon) >= ZT_MIN_BEACON_RESPONSE_INTERVAL) {
 			_lastBeacon = now;
-			sendHELLO(peer,fromAddr);
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
+			outp.armor(peer->key(),false);
+			RR->node->putPacket(fromAddr,outp.data(),outp.size(),linkDesperation);
 		}
 	}
 }
@@ -713,8 +758,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		Packet outp(supernode->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		outp.armor(supernode->key(),true);
-		uint64_t now = Utils::now();
-		if (supernode->send(RR,outp.data(),outp.size(),now) != Path::PATH_TYPE_NULL)
+		if (supernode->send(RR,outp.data(),outp.size(),RR->node->now()))
 			return supernode->address();
 	}
 	return Address();
@@ -725,14 +769,15 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 	SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
 
 	if (peer) {
-		uint64_t now = Utils::now();
+		const uint64_t now = RR->node->now();
 
 		SharedPtr<Peer> via;
-		if (peer->hasActiveDirectPath(now)) {
+		Path *viaPath;
+		if ((viaPath = peer->getBestPath(now))) {
 			via = peer;
 		} else {
 			via = RR->topology->getBestSupernode();
-			if (!via)
+			if (!(via)||(!(viaPath = via->getBestPath(now))))
 				return false;
 		}
 
@@ -743,7 +788,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		tmp.armor(peer->key(),encrypt);
 
-		if (via->send(RR,tmp.data(),chunkSize,now) != Path::PATH_TYPE_NULL) {
+		if (viaPath->send(RR,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {
 				// Too big for one bite, fragment the rest
 				unsigned int fragStart = chunkSize;
@@ -756,7 +801,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 				for(unsigned int fno=1;fno<totalFragments;++fno) {
 					chunkSize = std::min(remaining,(unsigned int)(ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
 					Packet::Fragment frag(tmp,fragStart,chunkSize,fno,totalFragments);
-					via->send(RR,frag.data(),frag.size(),now);
+					viaPath->send(RR,frag.data(),frag.size(),now);
 					fragStart += chunkSize;
 					remaining -= chunkSize;
 				}

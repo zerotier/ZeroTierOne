@@ -134,8 +134,9 @@ public:
 	 *
 	 * @param peer Peer to contact
 	 * @param atAddr Address of peer
+	 * @param linkDesperation Attempt up to given max desperation
 	 */
-	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr);
+	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr,unsigned int maxDesperation);
 
 	/**
 	 * Request WHOIS on a given address
@@ -241,14 +242,20 @@ private:
 	struct ContactQueueEntry
 	{
 		ContactQueueEntry() {}
-		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &a) :
+		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &a,unsigned int md) :
 			peer(p),
 			fireAtTime(ft),
-			inaddr(a) {}
+			inaddr(a),
+			maxDesperation(md),
+			currentDesperation(0),
+			strategyIteration(1) {} // start with 2nd strategy, zero desperation, since we've already tried 0/0
 
 		SharedPtr<Peer> peer;
 		uint64_t fireAtTime;
 		InetAddress inaddr;
+		unsigned int maxDesperation;
+		unsigned int currentDesperation;
+		unsigned int strategyIteration;
 	};
 	std::list<ContactQueueEntry> _contactQueue;
 	Mutex _contactQueue_m;

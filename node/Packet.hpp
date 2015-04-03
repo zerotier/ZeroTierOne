@@ -717,45 +717,7 @@ public:
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
 		 */
-		VERB_MULTICAST_FRAME = 14,
-
-		/* Message sent to notify of a change in underlying address:
-		 *   <[1] flags>
-		 *   <[1] address type>
-		 *   <[2] 16-bit length of address>
-		 *   <[...] new address>
-		 *
-		 * Flags:
-		 *   0x01 - Address was confirmed (if unset no confirmation was done)
-		 *
-		 * Address types:
-		 *   0x01 - IPv4/UDP
-		 *   0x02 - IPv6/UDP
-		 *   0x03 - IPv4/TCP
-		 *   0x04 - IPv6/TCP
-		 *   0x05 - Ethernet MAC (raw framing address)
-		 *   0x06 - Bluetooth MAC
-		 *   0x07 - HTTP URL
-		 *   (other values are reserved)
-		 *
-		 * Address formats:
-		 *   IPv4: 32-bit address, 16-bit port in network byte order
-		 *   IPv6: 128-bit address, 16-bit port in network byte order
-		 *   Ethernet: 48-bit / 6-byte MAC
-		 *   Bluetooth: 48-bit / 6-byte Bluetooth MAC
-		 *   HTTP URL: ASCII string containing endpoint URL
-		 *
-		 * This should be sent by peers when a new remote address is detected by
-		 * way of a new packet from a previously unknown underlying physical
-		 * address. It may also be sent with flag 0x01 set once a new address is
-		 * confirmed via a bi-directional transaction, indicating a higher
-		 * confidence level.
-		 *
-		 * Peers can use this message to trigger reconnection semantics when
-		 * mobility, DHCP reassignment, VM migration, or other factors lead to
-		 * a change in physical address.
-		 */
-		VERB_PHYSICAL_ADDRESS_CHANGED = 15
+		VERB_MULTICAST_FRAME = 14
 	};
 
 	/**

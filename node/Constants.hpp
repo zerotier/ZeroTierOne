@@ -334,7 +334,7 @@
  * a RENDEZVOUS message no more than this often. This instructs the peers
  * to attempt NAT-t and gives each the other's corresponding IP:port pair.
  */
-#define ZT_MIN_UNITE_INTERVAL 30000
+#define ZT_MIN_UNITE_INTERVAL 60000
 
 /**
  * Delay between initial direct NAT-t packet and more aggressive techniques
