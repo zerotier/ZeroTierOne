@@ -771,13 +771,10 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
-		SharedPtr<Peer> via;
-		Path *viaPath;
-		if ((viaPath = peer->getBestPath(now))) {
-			via = peer;
-		} else {
-			via = RR->topology->getBestSupernode();
-			if (!(via)||(!(viaPath = via->getBestPath(now))))
+		Path *viaPath = peer->getBestPath(now);
+		if (!viaPath) {
+			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			if (!(sn)||(!(viaPath = sn->getBestPath(now))))
 				return false;
 		}
 
