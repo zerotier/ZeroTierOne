@@ -88,8 +88,8 @@ public:
 	ZT1_ResultCode processNothing(uint64_t now,uint64_t *nextCallDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
 	ZT1_ResultCode leave(uint64_t nwid);
-	ZT1_ResultCode multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
-	ZT1_ResultCode multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
+	ZT1_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT1_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	void status(ZT1_NodeStatus *status);
 	ZT1_PeerList *peers();
 	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid);

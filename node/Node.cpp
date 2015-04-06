@@ -75,7 +75,7 @@ Node::Node(
 		RR->prng = new CMWC4096();
 		RR->sw = new Switch(RR);
 		RR->mc = new Multicaster(RR);
-		RR->antiRec = new AntiRecursion(RR);
+		RR->antiRec = new AntiRecursion();
 		RR->topology = new Topology(RR);
 	} catch ( ... ) {
 		delete RR->topology;
@@ -125,7 +125,7 @@ ZT1_ResultCode Node::processVirtualNetworkFrame(
 	_now = now;
 }
 
-ZT1_Resultcode Node::processNothing(uint64_t now,uint64_t *nextCallDeadline)
+ZT1_ResultCode Node::processNothing(uint64_t now,uint64_t *nextCallDeadline)
 {
 	_now = now;
 }
@@ -149,11 +149,11 @@ ZT1_ResultCode Node::leave(uint64_t nwid)
 	}
 }
 
-ZT1_ResultCode Node::multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
+ZT1_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
 }
 
-ZT1_ResultCode Node::multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
+ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
 }
 
@@ -273,20 +273,20 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextCallDeadline);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
-enum ZT1_Resultcode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline)
+enum ZT1_ResultCode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processNothing(now,nextCallDeadline);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
@@ -295,9 +295,9 @@ enum ZT1_ResultCode ZT1_Node_join(ZT1_Node *node,uint64_t nwid)
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
@@ -306,9 +306,9 @@ enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t nwid)
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
@@ -317,9 +317,9 @@ enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uin
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->multicastSubscribe(nwid,multicastGroup,multicastAdi);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
@@ -328,9 +328,9 @@ enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,u
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->multicastUnsubscribe(nwid,multicastGroup,multicastAdi);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
 }
 
@@ -388,12 +388,12 @@ void ZT1_version(int *major,int *minor,int *revision,unsigned long *featureFlags
 	if (minor) *minor = ZEROTIER_ONE_VERSION_MINOR;
 	if (revision) *revision = ZEROTIER_ONE_VERSION_REVISION;
 	if (featureFlags) {
-		*featureFlags =
-			ZT1_FEATURE_FLAG_THREAD_SAFE |
+		*featureFlags = (
+			ZT1_FEATURE_FLAG_THREAD_SAFE
 #ifdef ZT_OFFICIAL_BUILD
-			ZT1_FEATURE_FLAG_OFFICIAL
+			| ZT1_FEATURE_FLAG_OFFICIAL
 #endif
-		;
+		);
 	}
 }
 
