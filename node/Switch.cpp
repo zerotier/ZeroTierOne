@@ -457,30 +457,27 @@ unsigned long Switch::doTimerTasks()
 					Packet outp(qi->peer->address(),RR->identity.address(),Packet::VERB_NOP);
 					outp.armor(qi->peer->key(),false);
 
-					switch(qi->strategyIteration) {
-						case 0:
+					switch(qi->strategyIteration++) {
+						case 0: {
 							// First strategy: rifle method: direct packet to known port
-							++qi->strategyIteration;
 							RR->node->putPacket(qi->inaddr,outp.data(),outp.size(),qi->currentDesperation);
-							break;
+						}	break;
 						case 1: {
 							// Second strategy: shotgun method up: try a few ports above
-							++qi->strategyIteration;
+							InetAddress tmpaddr(qi->inaddr);
 							int p = (int)qi->inaddr.port();
 							for(int i=0;i<9;++i) {
 								if (++p > 0xffff) break;
-								InetAddress tmpaddr(qi->inaddr);
 								tmpaddr.setPort((unsigned int)p);
 								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
 							}
 						}	break;
 						case 2: {
 							// Third strategy: shotgun method down: try a few ports below
-							++qi->strategyIteration;
+							InetAddress tmpaddr(qi->inaddr);
 							int p = (int)qi->inaddr.port();
 							for(int i=0;i<3;++i) {
 								if (--p < 1024) break;
-								InetAddress tmpaddr(qi->inaddr);
 								tmpaddr.setPort((unsigned int)p);
 								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
 							}
