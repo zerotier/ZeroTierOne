@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include "../include/ZeroTierOne.h"
+
 #include <string>
 #include <map>
 #include <vector>
@@ -46,8 +48,6 @@
 #include "MulticastGroup.hpp"
 #include "MAC.hpp"
 #include "Dictionary.hpp"
-#include "Identity.hpp"
-#include "InetAddress.hpp"
 #include "BandwidthAccount.hpp"
 #include "Multicaster.hpp"
 #include "NetworkConfig.hpp"
@@ -77,20 +77,6 @@ public:
 	 * Broadcast multicast group: ff:ff:ff:ff:ff:ff / 0
 	 */
 	static const MulticastGroup BROADCAST;
-
-	/**
-	 * Possible network states
-	 */
-	enum Status
-	{
-		NETWORK_INITIALIZING = 0,               // Creating tap device and setting up state
-		NETWORK_WAITING_FOR_FIRST_AUTOCONF = 1, // Waiting for initial setup with netconf master
-		NETWORK_OK = 2,                         // Network is up, seems to be working
-		NETWORK_ACCESS_DENIED = 3,              // Netconf node reported permission denied
-		NETWORK_NOT_FOUND = 4,                  // Netconf node reported network not found
-		NETWORK_INITIALIZATION_FAILED = 5,      // Cannot initialize device (OS/installation problem?)
-		NETWORK_NO_MORE_DEVICES = 6             // OS cannot create any more tap devices (some OSes have a limit)
-	};
 
 	/**
 	 * @return Network ID
@@ -206,7 +192,7 @@ public:
 	/**
 	 * @return Status of this network
 	 */
-	Status status() const;
+	ZT1_VirtualNetworkStatus status() const;
 
 	/**
 	 * Update and check multicast rate balance for a multicast group

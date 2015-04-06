@@ -40,7 +40,7 @@
 
 namespace ZeroTier {
 
-const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xff),0);
+const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
 Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	RR(renv),
@@ -113,7 +113,7 @@ Network::~Network()
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
 		Mutex::Lock _l(_lock);
 
-		if ((!_config)||(_config.isPublic())||(_membershipCertificates.size() == 0)) {
+		if ((!_config)||(_config->isPublic())||(_membershipCertificates.size() == 0)) {
 			RR->node->dataStoreDelete(n);
 			return;
 		}
@@ -141,8 +141,8 @@ public:
 		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
-			std::set<MulticastGroup> mgs(_network->multicastGroups());
-			for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
+			std::vector<MulticastGroup> mgs(_network->multicastGroups());
+			for(std::vector<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 					outp.armor(p->key(),true);
 					p->send(RR,outp.data(),outp.size(),_now);
@@ -194,7 +194,7 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 {
 	try {
-		SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
+		const SharedPtr<NetworkConfig> newConfig(new NetworkConfig(conf)); // throws if invalid
 		{
 			Mutex::Lock _l(_lock);
 			if ((_config)&&(*_config == *newConfig))
@@ -368,19 +368,18 @@ void Network::clean()
 	}
 }
 
-Network::Status Network::status() const
+ZT1_VirtualNetworkStatus Network::status() const
 {
 	Mutex::Lock _l(_lock);
 	switch(_netconfFailure) {
 		case NETCONF_FAILURE_ACCESS_DENIED:
-			return NETWORK_ACCESS_DENIED;
+			return ZT1_NETWORK_STATUS_ACCESS_DENIED;
 		case NETCONF_FAILURE_NOT_FOUND:
-			return NETWORK_NOT_FOUND;
+			return ZT1_NETWORK_STATUS_NOT_FOUND;
 		case NETCONF_FAILURE_NONE:
-			return ((_lastConfigUpdate > 0) ? ((_tap) ? NETWORK_OK : NETWORK_INITIALIZING) : NETWORK_WAITING_FOR_FIRST_AUTOCONF);
-		//case NETCONF_FAILURE_INIT_FAILED:
+			return ((_lastConfigUpdate > 0) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
 		default:
-			return NETWORK_INITIALIZATION_FAILED;
+			return ZT1_NETWORK_STATUS_INITIALIZATION_FAILED;
 	}
 }
 
@@ -413,8 +412,6 @@ void Network::setEnabled(bool enabled)
 {
 	Mutex::Lock _l(_lock);
 	_enabled = enabled;
-	if (_tap)
-		_tap->setEnabled(enabled);
 }
 
 void Network::destroy()

@@ -252,12 +252,12 @@ enum ZT1_VirtualNetworkStatus
 	/**
 	 * Waiting for network configuration (also means revision == 0)
 	 */
-	ZT1_NETWORK_STATUS_WAITING = 0,
+	ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION = 0,
 
 	/**
 	 * Configuration received and we are authorized
 	 */
-	ZT1_NETWORK_STATUS_AUTHORIZED = 1,
+	ZT1_NETWORK_STATUS_OK = 1,
 
 	/**
 	 * Netconf master told us 'nope'
@@ -267,7 +267,12 @@ enum ZT1_VirtualNetworkStatus
 	/**
 	 * Netconf master exists, but this virtual network does not
 	 */
-	ZT1_NETWORK_STATUS_NOT_FOUND = 3
+	ZT1_NETWORK_STATUS_NOT_FOUND = 3,
+
+	/**
+	 * Initialization of network failed or other internal error
+	 */
+	ZT1_NETWORK_STATUS_INITIALIZATION_FAILED = 4
 };
 
 /**

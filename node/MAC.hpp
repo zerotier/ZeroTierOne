@@ -48,17 +48,6 @@ public:
 	MAC() throw() : _m(0ULL) {}
 	MAC(const MAC &m) throw() : _m(m._m) {}
 
-	/**
-	 * @param octet Single octet to fill entire MAC with (e.g. 0xff for broadcast)
-	 */
-	MAC(const unsigned char octet) throw() :
-		_m( ((((uint64_t)octet) & 0xffULL) << 40) |
-		    ((((uint64_t)octet) & 0xffULL) << 32) |
-		    ((((uint64_t)octet) & 0xffULL) << 24) |
-		    ((((uint64_t)octet) & 0xffULL) << 16) |
-		    ((((uint64_t)octet) & 0xffULL) << 8) |
-		    (((uint64_t)octet) & 0xffULL) ) {}
-
 	MAC(const unsigned char a,const unsigned char b,const unsigned char c,const unsigned char d,const unsigned char e,const unsigned char f) throw() :
 		_m( ((((uint64_t)a) & 0xffULL) << 40) |
 		    ((((uint64_t)b) & 0xffULL) << 32) |

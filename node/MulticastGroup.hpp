@@ -93,7 +93,7 @@ public:
 			// the Multicast Group ADI field. Making V4 ARP work is basically why
 			// ADI was added, as well as handling other things that want mindless
 			// Ethernet broadcast to all.
-			return MulticastGroup(MAC((unsigned char)0xff),Utils::ntoh(*((const uint32_t *)ip.rawIpData())));
+			return MulticastGroup(MAC(0xffffffffffffULL),Utils::ntoh(*((const uint32_t *)ip.rawIpData())));
 		} else if (ip.isV6()) {
 			// IPv6 is better designed in this respect. We can compute the IPv6
 			// multicast address directly from the IP address, and it gives us
