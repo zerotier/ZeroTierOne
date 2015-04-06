@@ -192,7 +192,20 @@ public:
 	/**
 	 * @return Status of this network
 	 */
-	ZT1_VirtualNetworkStatus status() const;
+	inline ZT1_VirtualNetworkStatus status() const
+	{
+		Mutex::Lock _l(_lock);
+		return _status();
+	}
+
+	/**
+	 * @param ec Buffer to fill with externally-visible network configuration
+	 */
+	inline void externalConfig(ZT1_VirtualNetworkConfig *ec) const
+	{
+		Mutex::Lock _l(_lock);
+		_externalConfig(ec);
+	}
 
 	/**
 	 * Update and check multicast rate balance for a multicast group
@@ -321,6 +334,9 @@ public:
 	void destroy();
 
 private:
+	ZT1_VirtualNetworkStatus _status() const;
+	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
+
 	const RuntimeEnvironment *RR;
 	uint64_t _id;
 	MAC _mac; // local MAC address
@@ -340,12 +356,13 @@ private:
 
 	volatile bool _destroyed;
 
-	volatile enum {
+	enum {
 		NETCONF_FAILURE_NONE,
 		NETCONF_FAILURE_ACCESS_DENIED,
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
+	int _portError; // return value from port config callback
 
 	Mutex _lock;
 

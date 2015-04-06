@@ -61,7 +61,7 @@ public:
 		ZT1_DataStorePutFunction dataStorePutFunction,
 		ZT1_WirePacketSendFunction wirePacketSendFunction,
 		ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-		ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+		ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 		ZT1_StatusCallback statusCallback);
 
 	~Node();
@@ -115,16 +115,12 @@ public:
 	 */
 	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,unsigned int desperation)
 	{
-		try {
-			return (_wirePacketSendFunction(
-				reinterpret_cast<ZT1_Node *>(this),
-				reinterpret_cast<const struct sockaddr_storage *>(&addr),
-				desperation,
-				data,
-				len) == 0);
-		} catch ( ... ) { // callbacks should not throw
-			return false;
-		}
+		return (_wirePacketSendFunction(
+			reinterpret_cast<ZT1_Node *>(this),
+			reinterpret_cast<const struct sockaddr_storage *>(&addr),
+			desperation,
+			data,
+			len) == 0);
 	}
 
 	/**
@@ -140,17 +136,15 @@ public:
 	 */
 	inline void putFrame(uint64_t nwid,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		try {
-			_virtualNetworkFrameFunction(
-				reinterpret_cast<ZT1_Node *>(this),
-				nwid,
-				source.toInt(),
-				dest.toInt(),
-				etherType,
-				vlanId,
-				data,
-				len);
-		} catch ( ... ) {} // callbacks should not throw
+		_virtualNetworkFrameFunction(
+			reinterpret_cast<ZT1_Node *>(this),
+			nwid,
+			source.toInt(),
+			dest.toInt(),
+			etherType,
+			vlanId,
+			data,
+			len);
 	}
 
 	inline SharedPtr<Network> network(uint64_t nwid)
@@ -167,6 +161,8 @@ public:
 
 	inline void postEvent(ZT1_Event ev) { _statusCallback(reinterpret_cast<ZT1_Node *>(this),ev); }
 
+	inline int configureVirtualNetworkPort(uint64_t nwid,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,nc); }
+
 	void postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev);
 
 private:
@@ -176,7 +172,7 @@ private:
 	ZT1_DataStorePutFunction _dataStorePutFunction;
 	ZT1_WirePacketSendFunction _wirePacketSendFunction;
 	ZT1_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
-	ZT1_VirtualNetworkConfigCallback _virtualNetworkConfigCallback;
+	ZT1_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
 	ZT1_StatusCallback _statusCallback;
 
 	//Dictionary _localConfig; // persisted as local.conf

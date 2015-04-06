@@ -125,6 +125,8 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0);
 	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
+	if (_name.length() > ZT1_MAX_NETWORK_SHORT_NAME_LENGTH)
+		throw std::invalid_argument("network short name too long (max: 255 characters)");
 	_description = d.get(ZT_NETWORKCONFIG_DICT_KEY_DESC,std::string());
 
 	// In dictionary IPs are split into V4 and V6 addresses, but we don't really
@@ -156,6 +158,8 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		}
 		_staticIps.push_back(addr);
 	}
+	if (_staticIps.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES)
+		throw std::invalid_argument("too many ZT-assigned IP addresses");
 	std::sort(_staticIps.begin(),_staticIps.end());
 	std::unique(_staticIps.begin(),_staticIps.end());
 

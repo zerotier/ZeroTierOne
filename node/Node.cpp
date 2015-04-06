@@ -54,14 +54,14 @@ Node::Node(
 	ZT1_DataStorePutFunction dataStorePutFunction,
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 	ZT1_StatusCallback statusCallback) :
 	RR(new RuntimeEnvironment(this)),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
 	_wirePacketSendFunction(wirePacketSendFunction),
 	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
-	_virtualNetworkConfigCallback(virtualNetworkConfigCallback),
+	_virtualNetworkConfigFunction(virtualNetworkConfigFunction),
 	_statusCallback(statusCallback),
 	_networks(),
 	_networks_m(),
@@ -217,12 +217,12 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_DataStorePutFunction dataStorePutFunction,
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 	ZT1_StatusCallback statusCallback)
 {
 	*node = (ZT1_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigCallback,statusCallback));
+		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,statusCallback));
 		return ZT1_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

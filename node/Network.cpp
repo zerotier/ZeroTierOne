@@ -49,7 +49,8 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	_enabled(true),
 	_lastConfigUpdate(0),
 	_destroyed(false),
-	_netconfFailure(NETCONF_FAILURE_NONE)
+	_netconfFailure(NETCONF_FAILURE_NONE),
+	_portError(0)
 {
 	char confn[128],mcdbn[128];
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
@@ -96,10 +97,16 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	}
 
 	requestConfiguration();
+
+	ZT1_VirtualNetworkConfig ctmp;
+	_externalConfig(&ctmp);
+	_portError = RR->node->configureVirtualNetworkPort(_id,&ctmp);
 }
 
 Network::~Network()
 {
+	RR->node->configureVirtualNetworkPort(_id,(const ZT1_VirtualNetworkConfig *)0);
+
 	char n[128];
 	if (_destroyed) {
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
@@ -179,6 +186,11 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 			_config = conf;
 			_lastConfigUpdate = RR->node->now();
 			_netconfFailure = NETCONF_FAILURE_NONE;
+
+			ZT1_VirtualNetworkConfig ctmp;
+			_externalConfig(&ctmp);
+			_portError = RR->node->configureVirtualNetworkPort(_id,&ctmp);
+
 			return true;
 		} else {
 			LOG("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
@@ -368,21 +380,6 @@ void Network::clean()
 	}
 }
 
-ZT1_VirtualNetworkStatus Network::status() const
-{
-	Mutex::Lock _l(_lock);
-	switch(_netconfFailure) {
-		case NETCONF_FAILURE_ACCESS_DENIED:
-			return ZT1_NETWORK_STATUS_ACCESS_DENIED;
-		case NETCONF_FAILURE_NOT_FOUND:
-			return ZT1_NETWORK_STATUS_NOT_FOUND;
-		case NETCONF_FAILURE_NONE:
-			return ((_lastConfigUpdate > 0) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
-		default:
-			return ZT1_NETWORK_STATUS_INITIALIZATION_FAILED;
-	}
-}
-
 void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 {
 	Mutex::Lock _l(_lock);
@@ -419,6 +416,55 @@ void Network::destroy()
 	Mutex::Lock _l(_lock);
 	_enabled = false;
 	_destroyed = true;
+}
+
+ZT1_VirtualNetworkStatus Network::_status() const
+{
+	// assumes _lock is locked
+	if (_portError)
+		return ZT1_NETWORK_STATUS_PORT_ERROR;
+	switch(_netconfFailure) {
+		case NETCONF_FAILURE_ACCESS_DENIED:
+			return ZT1_NETWORK_STATUS_ACCESS_DENIED;
+		case NETCONF_FAILURE_NOT_FOUND:
+			return ZT1_NETWORK_STATUS_NOT_FOUND;
+		case NETCONF_FAILURE_NONE:
+			return ((_lastConfigUpdate > 0) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
+		default:
+			return ZT1_NETWORK_STATUS_PORT_ERROR;
+	}
+}
+
+void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
+{
+	// assumes _lock is locked
+	ec->nwid = _id;
+	ec->mac = MAC(RR->identity.address(),_id);
+	if (_config)
+		Utils::scopy(ec->name,sizeof(ec->name),_config->name().c_str());
+	else ec->name[0] = (char)0;
+	ec->status = _status();
+	ec->type = (_config) ? (_config->isPrivate() ? ZT1_NETWORK_TYPE_PRIVATE : ZT1_NETWORK_TYPE_PUBLIC) : ZT1_NETWORK_TYPE_PRIVATE;
+	ec->mtu = ZT_IF_MTU;
+	ec->dhcp = 0;
+	ec->bridge = (_config) ? ((_config->allowPassiveBridging() || (std::find(_config->activeBridges().begin(),_config->activeBridges().end(),RR->identity.address()) != _config->activeBridges().end())) ? 1 : 0) : 0;
+	ec->broadcastEnabled = (_config) ? (_config->enableBroadcast() ? 1 : 0) : 0;
+	ec->portError = _portError;
+	ec->netconfRevision = (_config) ? (unsigned long)_config->revision() : 0;
+
+	ec->multicastSubscriptionCount = std::max((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
+	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
+		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
+		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
+	}
+
+	if (_config) {
+		ec->assignedAddressCount = (unsigned int)_config->staticIps().size();
+		for(unsigned long i=0;i<ZT1_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
+			if (i < _config->staticIps().size())
+				memcpy(&(ec->assignedAddresses[i]),&(_config->staticIps()[i]),sizeof(struct sockaddr_storage));
+		}
+	} else ec->assignedAddressCount = 0;
 }
 
 } // namespace ZeroTier

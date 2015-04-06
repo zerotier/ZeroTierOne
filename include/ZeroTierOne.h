@@ -79,6 +79,21 @@ extern "C" {
 #define ZT1_MAX_MTU 2800
 
 /**
+ * Maximum length of network short name
+ */
+#define ZT1_MAX_NETWORK_SHORT_NAME_LENGTH 255
+
+/**
+ * Maximum number of statically assigned IP addresses per network endpoint using ZT address management (not DHCP)
+ */
+#define ZT1_MAX_ZT_ASSIGNED_ADDRESSES 16
+
+/**
+ * Maximum number of multicast group subscriptions per network
+ */
+#define ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 8194
+
+/**
  * Feature flag: this is an official ZeroTier, Inc. binary build (built with ZT_OFFICIAL_RELEASE)
  */
 #define ZT1_FEATURE_FLAG_OFFICIAL 0x00000001
@@ -272,7 +287,7 @@ enum ZT1_VirtualNetworkStatus
 	/**
 	 * Initialization of network failed or other internal error
 	 */
-	ZT1_NETWORK_STATUS_INITIALIZATION_FAILED = 4
+	ZT1_NETWORK_STATUS_PORT_ERROR = 4
 };
 
 /**
@@ -323,6 +338,11 @@ typedef struct
 	uint64_t mac;
 
 	/**
+	 * Network name (from network configuration master)
+	 */
+	char name[ZT1_MAX_NETWORK_SHORT_NAME_LENGTH + 1];
+
+	/**
 	 * Network configuration request status
 	 */
 	enum ZT1_VirtualNetworkStatus status;
@@ -360,11 +380,31 @@ typedef struct
 	int broadcastEnabled;
 
 	/**
+	 * If the network is in PORT_ERROR state, this is the error most recently returned by the port config callback
+	 */
+	int portError;
+
+	/**
 	 * Network config revision as reported by netconf master
 	 *
 	 * If this is zero, it means we're still waiting for our netconf.
 	 */
 	unsigned long netconfRevision;
+
+	/**
+	 * Number of multicast group subscriptions
+	 */
+	unsigned int multicastSubscriptionCount;
+
+	/**
+	 * Multicast group subscriptions
+	 */
+	ZT1_MulticastGroup multicastSubscriptions[ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS];
+
+	/**
+	 * Number of assigned addresses
+	 */
+	unsigned int assignedAddressCount;
 
 	/**
 	 * ZeroTier-assigned addresses (in sockaddr_storage structures)
@@ -376,27 +416,7 @@ typedef struct
 	 * This is only used for ZeroTier-managed address assignments sent by the
 	 * virtual network's configuration master.
 	 */
-	const struct sockaddr_storage *assignedAddresses;
-
-	/**
-	 * Number of assigned addresses
-	 */
-	unsigned int assignedAddressCount;
-
-	/**
-	 * Multicast group subscriptions
-	 */
-	ZT1_MulticastGroup *multicastSubscriptions;
-
-	/**
-	 * Number of multicast group subscriptions
-	 */
-	unsigned int multicastSubscriptionCount;
-
-	/**
-	 * Network name (from network configuration master)
-	 */
-	const char *networkName;
+	struct sockaddr_storage assignedAddresses[ZT1_MAX_ZT_ASSIGNED_ADDRESSES];
 } ZT1_VirtualNetworkConfig;
 
 /**
@@ -539,8 +559,12 @@ typedef void ZT1_Node;
  *
  * The supplied config pointer is not guaranteed to remain valid, so make
  * a copy if you want one.
+ *
+ * This must return 0 on success. It can return any OS-dependent error code
+ * on failure, and this results in the network being placed into the
+ * PORT_ERROR state.
  */
-typedef void (*ZT1_VirtualNetworkConfigCallback)(ZT1_Node *,uint64_t,const ZT1_VirtualNetworkConfig *);
+typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,const ZT1_VirtualNetworkConfig *);
 
 /**
  * Callback for status messages
@@ -622,7 +646,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  * @param now Current clock in milliseconds
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
- * @param virtualNetworkConfigCallback Function to be called when virtual LANs are created, deleted, or their config parameters change
+ * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param statusCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -633,7 +657,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_DataStorePutFunction dataStorePutFunction,
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
+	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 	ZT1_StatusCallback statusCallback);
 
 /**
