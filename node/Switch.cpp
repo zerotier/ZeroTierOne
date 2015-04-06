@@ -467,9 +467,8 @@ unsigned long Switch::doTimerTasks()
 							// Second strategy: shotgun method up: try a few ports above
 							++qi->strategyIteration;
 							int p = (int)qi->inaddr.port();
-							for(int i=0;i<6;++i) {
-								if (++p > 0xffff)
-									break;
+							for(int i=0;i<9;++i) {
+								if (++p > 0xffff) break;
 								InetAddress tmpaddr(qi->inaddr);
 								tmpaddr.setPort((unsigned int)p);
 								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
@@ -480,18 +479,9 @@ unsigned long Switch::doTimerTasks()
 							++qi->strategyIteration;
 							int p = (int)qi->inaddr.port();
 							for(int i=0;i<3;++i) {
-								if (--p < 1024)
-									break;
+								if (--p < 1024) break;
 								InetAddress tmpaddr(qi->inaddr);
 								tmpaddr.setPort((unsigned int)p);
-								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
-							}
-						}	break;
-						case 3:
-							// Fourth strategy: sawed-off shotgun: try random non-privileged ports
-							for(int i=0;i<16;++i) {
-								InetAddress tmpaddr(qi->inaddr);
-								tmpaddr.setPort((unsigned int)(1024 + (RR->prng->next32() % (65536 - 1024))));
 								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
 							}
 
@@ -505,7 +495,7 @@ unsigned long Switch::doTimerTasks()
 								// Otherwise restart at new link desperation level (e.g. try a tougher transport)
 								qi->strategyIteration = 0;
 							}
-							break;
+						}	break;
 					}
 
 					qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
