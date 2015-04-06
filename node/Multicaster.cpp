@@ -37,7 +37,6 @@
 #include "Peer.hpp"
 #include "CMWC4096.hpp"
 #include "C25519.hpp"
-#include "NodeConfig.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Logger.hpp"
 
@@ -81,7 +80,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 	appendTo.addSize(2); // sizeof(uint16_t)
 
 	{ // Return myself if I am a member of this group
-		SharedPtr<Network> network(RR->nc->network(nwid));
+		SharedPtr<Network> network(RR->node->network(nwid));
 		if ((network)&&(network->subscribedToMulticastGroup(mg))) {
 			RR->identity.address().appendTo(appendTo);
 			++totalKnown;
