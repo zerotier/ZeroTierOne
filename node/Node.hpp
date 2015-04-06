@@ -115,12 +115,16 @@ public:
 	 */
 	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,unsigned int desperation)
 	{
-		return (_wirePacketSendFunction(
-			reinterpret_cast<ZT1_Node *>(this),
-			reinterpret_cast<const struct sockaddr_storage *>(&addr),
-			desperation,
-			data,
-			len) == 0);
+		try {
+			return (_wirePacketSendFunction(
+				reinterpret_cast<ZT1_Node *>(this),
+				reinterpret_cast<const struct sockaddr_storage *>(&addr),
+				desperation,
+				data,
+				len) == 0);
+		} catch ( ... ) { // callbacks should not throw
+			return false;
+		}
 	}
 
 	/**
@@ -136,21 +140,19 @@ public:
 	 */
 	inline void putFrame(uint64_t nwid,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		_virtualNetworkFrameFunction(
-			reinterpret_cast<ZT1_Node *>(this),
-			nwid,
-			source.toInt(),
-			dest.toInt(),
-			etherType,
-			vlanId,
-			data,
-			len);
+		try {
+			_virtualNetworkFrameFunction(
+				reinterpret_cast<ZT1_Node *>(this),
+				nwid,
+				source.toInt(),
+				dest.toInt(),
+				etherType,
+				vlanId,
+				data,
+				len);
+		} catch ( ... ) {} // callbacks should not throw
 	}
 
-	/**
-	 * @param nwid Network ID
-	 * @return Network instance
-	 */
 	inline SharedPtr<Network> network(uint64_t nwid)
 	{
 		Mutex::Lock _l(_networks_m);
@@ -160,12 +162,12 @@ public:
 
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
-
-	inline std::string dataStoreGet(const char *name)
-	{
-	}
-
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
+	std::string dataStoreGet(const char *name);
+
+	inline void postEvent(ZT1_Event ev) { _statusCallback(reinterpret_cast<ZT1_Node *>(this),ev); }
+
+	void postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev);
 
 private:
 	RuntimeEnvironment *RR;
@@ -184,6 +186,7 @@ private:
 	Mutex _networks_m;
 
 	volatile uint64_t _now; // time of last run()
+	unsigned int _newestVersionSeen[3]; // major, minor, revision
 };
 
 } // namespace ZeroTier

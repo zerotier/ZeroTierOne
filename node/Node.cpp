@@ -44,6 +44,10 @@
 
 namespace ZeroTier {
 
+/****************************************************************************/
+/* Public Node interface (C++, exposed via CAPI bindings)                   */
+/****************************************************************************/
+
 Node::Node(
 	uint64_t now,
 	ZT1_DataStoreGetFunction dataStoreGetFunction,
@@ -63,6 +67,10 @@ Node::Node(
 	_networks_m(),
 	_now(now)
 {
+	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
+	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
+	_newestVersionSeen[2] = ZEROTIER_ONE_VERSION_REVISION;
+
 	try {
 		RR->prng = new CMWC4096();
 		RR->sw = new Switch(RR);
@@ -176,7 +184,29 @@ void Node::setNetconfMaster(void *networkConfigMasterInstance)
 	RR->netconfMaster = reinterpret_cast<NetworkConfigMaster *>(networkConfigMasterInstance);
 }
 
+/****************************************************************************/
+/* Node methods used only within node/                                      */
+/****************************************************************************/
+
+std::string Node::dataStoreGet(const char *name)
+{
+}
+
+void Node::postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev)
+{
+	if (Peer::compareVersion(major,minor,rev,_newestVersionSeen[0],_newestVersionSeen[1],_newestVersionSeen[2]) > 0) {
+		_newestVersionSeen[0] = major;
+		_newestVersionSeen[1] = minor;
+		_newestVersionSeen[2] = rev;
+		this->postEvent(ZT1_EVENT_SAW_MORE_RECENT_VERSION);
+	}
+}
+
 } // namespace ZeroTier
+
+/****************************************************************************/
+/* CAPI bindings                                                            */
+/****************************************************************************/
 
 extern "C" {
 
@@ -195,12 +225,19 @@ enum ZT1_ResultCode ZT1_Node_new(
 		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigCallback,statusCallback));
 		return ZT1_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch (std::runtime_error &exc) {
-		return ZT1_RESULT_ERROR_DATA_STORE_FAILED;
+		return ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_INTERNAL;
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
+}
+
+void ZT1_Node_delete(ZT1_Node *node)
+{
+	try {
+		delete (reinterpret_cast<ZeroTier::Node *>(node));
+	} catch ( ... ) {}
 }
 
 enum ZT1_ResultCode ZT1_Node_processWirePacket(
@@ -215,9 +252,9 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,linkDesperation,packetData,packetLength,nextCallDeadline);
 	} catch (std::bad_alloc &exc) {
-		return ZT1_RESULT_ERROR_OUT_OF_MEMORY;
+		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_PACKET_INVALID;
+		return ZT1_RESULT_ERROR_PACKET_INVALID;
 	}
 }
 

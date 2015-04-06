@@ -98,7 +98,12 @@ extern "C" {
 /****************************************************************************/
 
 /**
- * Function return values: OK or various error conditions
+ * Function return code: OK (0) or error results
+ *
+ * Fatal errors should be interpreted to mean that the node is no longer
+ * working correctly. They indicate serious problems such as build problems,
+ * an inaccessible data store, system configuration issues, or out of
+ * memory.
  */
 enum ZT1_ResultCode
 {
@@ -107,51 +112,101 @@ enum ZT1_ResultCode
 	 */
 	ZT1_RESULT_OK = 0,
 
-	/**
-	 * Our identity collides with another on the network
-	 *
-	 * This is profoundly unlikely: once in about 2^39 identities. If this
-	 * happens to you, delete identity.public and identity.secret from your
-	 * data store / home path and restart. You might also avoid shark infested
-	 * waters, hide during thunderstorms, and consider playing the lottery.
-	 */
-	ZT1_RESULT_ERROR_IDENTITY_COLLISION = 1,
+	// Fatal errors (>0, <1000)
 
 	/**
 	 * Ran out of memory
 	 */
-	ZT1_RESULT_ERROR_OUT_OF_MEMORY = 2,
+	ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY = 1,
 
 	/**
 	 * Data store is not writable or has failed
 	 */
-	ZT1_RESULT_ERROR_DATA_STORE_FAILED = 3,
+	ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED = 2,
 
 	/**
 	 * Internal error (e.g. unexpected exception, build problem, link problem, etc.)
 	 */
-	ZT1_RESULT_ERROR_INTERNAL = 4,
+	ZT1_RESULT_FATAL_ERROR_INTERNAL = 3,
+
+	// Non-fatal errors (>1000)
 
 	/**
 	 * Invalid packet or failed authentication
 	 */
-	ZT1_RESULT_PACKET_INVALID = 5
+	ZT1_RESULT_ERROR_PACKET_INVALID = 1000
 };
 
 /**
  * Status codes sent to status update callback when things happen
  */
-enum ZT1_NodeStatusCode
+enum ZT1_Event
 {
 	/**
-	 * Node is offline -- nothing is reachable
+	 * Node has been initialized
+	 *
+	 * This is the first event generated, and is always sent. It may occur
+	 * before Node's constructor returns.
 	 */
-	ZT1_NODE_STATUS_OFFLINE = 0,
+	ZT1_EVENT_UP = 0,
 
 	/**
-	 * Node is online -- at least one upstream is reachable
+	 * Node is offline -- network does not seem to be reachable by any available strategy
 	 */
-	ZT1_NODE_STATUS_ONLINE = 1
+	ZT1_EVENT_OFFLINE = 1,
+
+	/**
+	 * Node is online -- at least one upstream node appears reachable
+	 */
+	ZT1_EVENT_ONLINE = 2,
+
+	/**
+	 * Node is shutting down
+	 *
+	 * This is generated within Node's destructor when it is being shut down.
+	 * It's done for convenience, since cleaning up other state in the event
+	 * handler may appear more idiomatic.
+	 */
+	ZT1_EVENT_DOWN = 3,
+
+	/**
+	 * Your identity has collided with another node's ZeroTier address
+	 *
+	 * This happens if two different public keys both hash (via the algorithm
+	 * in Identity::generate()) to the same 40-bit ZeroTier address.
+	 *
+	 * This is something you should "never" see, where "never" is defined as
+	 * once per 2^39 new node initializations / identity creations. If you do
+	 * see it, you're going to see it very soon after a node is first
+	 * initialized.
+	 *
+	 * This is reported as an event rather than a return code since it's
+	 * detected asynchronously via error messages from authoritative nodes.
+	 *
+	 * If this occurs, you must shut down and delete the node, delete the
+	 * identity.secret record/file from the data store, and restart to generate
+	 * a new identity. If you don't do this, you will not be able to communicate
+	 * with other nodes.
+	 *
+	 * We'd automate this process, but we don't think silently deleting
+	 * private keys or changing our address without telling the calling code
+	 * is good form. It violates the principle of least surprise.
+	 *
+	 * You can technically get away with not handling this, but we recommend
+	 * doing so in a mature reliable application. Besides, handling this
+	 * condition is a good way to make sure it never arises. It's like how
+	 * umbrellas prevent rain and smoke detectors prevent fires. They do, right?
+	 */
+	ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION = 4,
+
+	/**
+	 * A more recent version was observed on the network
+	 *
+	 * Right now this is only triggered if a hub or supernode reports a
+	 * more recent version, and only once. It can be used to trigger a
+	 * software update check.
+	 */
+	ZT1_EVENT_SAW_MORE_RECENT_VERSION = 5
 };
 
 /**
@@ -487,7 +542,7 @@ typedef void (*ZT1_VirtualNetworkConfigCallback)(ZT1_Node *,uint64_t,const ZT1_V
  *
  * This is called whenever the node's status changes in some significant way.
  */
-typedef void (*ZT1_StatusCallback)(ZT1_Node *,enum ZT1_NodeStatusCode);
+typedef void (*ZT1_StatusCallback)(ZT1_Node *,enum ZT1_Event);
 
 /**
  * Function to get an object from the data store
@@ -575,6 +630,16 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigCallback virtualNetworkConfigCallback,
 	ZT1_StatusCallback statusCallback);
+
+/**
+ * Delete a node and free all resources it consumes
+ *
+ * If you are using multiple threads, all other threads must be shut down
+ * first. This can crash if processXXX() methods are in progress.
+ *
+ * @param node Node to delete
+ */
+void ZT1_Node_delete(ZT1_Node *node);
 
 /**
  * Process a packet received from the physical wire
