@@ -72,6 +72,21 @@ Node::Node(
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
 	_newestVersionSeen[2] = ZEROTIER_ONE_VERSION_REVISION;
 
+	std::string idtmp(dataStoreGet("identity.secret"));
+	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
+		RR->identity.generate();
+		idtmp = RR->identity.toString(true);
+		if (!dataStorePut("identity.secret",idtmp,true)) {
+			delete RR;
+			throw std::runtime_error("unable to write identity.secret");
+		}
+		idtmp = RR->identity.toString(false);
+		if (!dataStorePut("identity.public",idtmp,false)) {
+			delete RR;
+			throw std::runtime_error("unable to write identity.public");
+		}
+	}
+
 	try {
 		RR->prng = new CMWC4096();
 		RR->sw = new Switch(RR);
@@ -90,6 +105,8 @@ Node::Node(
 		delete RR;
 		throw;
 	}
+
+	postEvent(ZT1_EVENT_UP);
 }
 
 Node::~Node()
@@ -112,7 +129,7 @@ ZT1_ResultCode Node::processWirePacket(
 	unsigned int packetLength,
 	uint64_t *nextCallDeadline)
 {
-	_now = now;
+	processBackgroundTasks(now,nextCallDeadline);
 }
 
 ZT1_ResultCode Node::processVirtualNetworkFrame(
@@ -126,10 +143,10 @@ ZT1_ResultCode Node::processVirtualNetworkFrame(
 	unsigned int frameLength,
 	uint64_t *nextCallDeadline)
 {
-	_now = now;
+	processBackgroundTasks(now,nextCallDeadline);
 }
 
-ZT1_ResultCode Node::processNothing(uint64_t now,uint64_t *nextCallDeadline)
+ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextCallDeadline)
 {
 	_now = now;
 }
@@ -309,10 +326,10 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	}
 }
 
-enum ZT1_ResultCode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline)
+enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processNothing(now,nextCallDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextCallDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

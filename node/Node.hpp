@@ -85,7 +85,7 @@ public:
 		const void *frameData,
 		unsigned int frameLength,
 		uint64_t *nextCallDeadline);
-	ZT1_ResultCode processNothing(uint64_t now,uint64_t *nextCallDeadline);
+	ZT1_ResultCode processBackgroundTasks(uint64_t now,uint64_t *nextCallDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
 	ZT1_ResultCode leave(uint64_t nwid);
 	ZT1_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);

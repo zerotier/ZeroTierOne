@@ -755,7 +755,7 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
  * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_processNothing(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline);
+enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline);
 
 /**
  * Join a network
