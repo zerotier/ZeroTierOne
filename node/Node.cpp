@@ -158,7 +158,7 @@ ZT1_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,un
 	Mutex::Lock _l(_networks_m);
 	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
 	if (nw != _networks.end())
-		nw->second->multicastSubscribe(MulticastGroup(MAC(multicastGroup,(uint32_t)(multicastAdi & 0xffffffff))));
+		nw->second->multicastSubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 }
 
 ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
@@ -166,7 +166,7 @@ ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,
 	Mutex::Lock _l(_networks_m);
 	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
 	if (nw != _networks.end())
-		nw->second->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup,(uint32_t)(multicastAdi & 0xffffffff))));
+		nw->second->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
 }
 
 void Node::status(ZT1_NodeStatus *status)
@@ -210,6 +210,16 @@ void Node::setNetconfMaster(void *networkConfigMasterInstance)
 
 std::string Node::dataStoreGet(const char *name)
 {
+	char buf[16384];
+	std::string r;
+	unsigned long olen = 0;
+	do {
+		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),name,buf,sizeof(buf),r.length(),&olen);
+		if (n <= 0)
+			return std::string();
+		r.append(buf,n);
+	} while (r.length() < olen);
+	return r;
 }
 
 void Node::postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev)
@@ -364,7 +374,7 @@ void ZT1_Node_status(ZT1_Node *node,ZT1_NodeStatus *status)
 ZT1_PeerList *ZT1_Node_peers(ZT1_Node *node)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->listPeers();
+		return reinterpret_cast<ZeroTier::Node *>(node)->peers();
 	} catch ( ... ) {
 		return (ZT1_PeerList *)0;
 	}
@@ -382,7 +392,7 @@ ZT1_VirtualNetworkConfig *ZT1_Node_networkConfig(ZT1_Node *node,uint64_t nwid)
 ZT1_VirtualNetworkList *ZT1_Node_networks(ZT1_Node *node)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->listNetworks();
+		return reinterpret_cast<ZeroTier::Node *>(node)->networks();
 	} catch ( ... ) {
 		return (ZT1_VirtualNetworkList *)0;
 	}

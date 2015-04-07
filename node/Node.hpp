@@ -92,7 +92,7 @@ public:
 	ZT1_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	void status(ZT1_NodeStatus *status);
 	ZT1_PeerList *peers();
-	bool networkConfig(uint64_t nwid,ZT1_VirtualNetworkConfig *ec);
+	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid);
 	ZT1_VirtualNetworkList *networks();
 	void freeQueryResult(void *qr);
 	void setNetconfMaster(void *networkConfigMasterInstance);
