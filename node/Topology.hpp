@@ -45,7 +45,6 @@
 #include "InetAddress.hpp"
 #include "Utils.hpp"
 #include "Dictionary.hpp"
-#include "ExternalSurface.hpp"
 
 namespace ZeroTier {
 
@@ -322,20 +321,6 @@ public:
 #endif
 
 	/**
-	 * Update our knowledge of exterior network addresses
-	 *
-	 * If the remote peer in question is trusted, this will update our internal
-	 * instance of ExternalSurface. If our surface has changed, this triggers a
-	 * partial or total reset of ephemeral peer addresses and a renegotiation of
-	 * new ones using supernodes / relays.
-	 *
-	 * @param remotePeer Remote peer address
-	 * @param mirroredAddress Real-world network address the remote peer told us we have
-	 * @param now Current time
-	 */
-	bool updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress,uint64_t now);
-
-	/**
 	 * Validate a root topology dictionary against the identities specified in Defaults
 	 *
 	 * @param rt Root topology dictionary
@@ -355,8 +340,6 @@ private:
 	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _supernodes;
 	std::vector< Address > _supernodeAddresses;
 	std::vector< SharedPtr<Peer> > _supernodePeers;
-
-	ExternalSurface _surface;
 
 	Mutex _lock;
 

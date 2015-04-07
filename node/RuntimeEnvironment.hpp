@@ -44,6 +44,7 @@ class Node;
 class Multicaster;
 class AntiRecursion;
 class NetworkConfigMaster;
+class SelfAwareness;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -69,7 +70,8 @@ public:
 		sw((Switch *)0),
 		mc((Multicaster *)0),
 		antiRec((AntiRecursion *)0),
-		topology((Topology *)0)
+		topology((Topology *)0),
+		sa((SelfAwareness *)0)
 	{
 	}
 
@@ -96,6 +98,7 @@ public:
 	Multicaster *mc;
 	AntiRecursion *antiRec;
 	Topology *topology;
+	SelfAwareness *sa;
 };
 
 } // namespace ZeroTier

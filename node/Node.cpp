@@ -41,6 +41,7 @@
 #include "Logger.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
+#include "SelfAwareness.hpp"
 
 namespace ZeroTier {
 
@@ -77,7 +78,9 @@ Node::Node(
 		RR->mc = new Multicaster(RR);
 		RR->antiRec = new AntiRecursion();
 		RR->topology = new Topology(RR);
+		RR->sa = new SelfAwareness(RR);
 	} catch ( ... ) {
+		delete RR->sa;
 		delete RR->topology;
 		delete RR->antiRec;
 		delete RR->mc;
@@ -91,6 +94,7 @@ Node::Node(
 
 Node::~Node()
 {
+	delete RR->sa;
 	delete RR->topology;
 	delete RR->antiRec;
 	delete RR->mc;

@@ -39,6 +39,7 @@
 #include "Switch.hpp"
 #include "Peer.hpp"
 #include "NetworkConfigMaster.hpp"
+#include "SelfAwareness.hpp"
 
 namespace ZeroTier {
 
@@ -174,7 +175,23 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
-		const Identity id(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
+
+		Identity id;
+		unsigned int destAddrPtr = id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY) + ZT_PROTO_VERB_HELLO_IDX_IDENTITY;
+
+		unsigned int destAddrType = ZT_PROTO_DEST_ADDRESS_TYPE_NONE;
+		if (destAddrPtr < size()) // ZeroTier One < 1.0.3 did not include this field
+			destAddrType = (*this)[destAddrPtr++];
+
+		InetAddress destAddr;
+		switch(destAddrType) {
+			case ZT_PROTO_DEST_ADDRESS_TYPE_IPV4:
+				destAddr.set(field(destAddrPtr,4),4,at<uint16_t>(destAddrPtr + 4));
+				break;
+			case ZT_PROTO_DEST_ADDRESS_TYPE_IPV6:
+				destAddr.set(field(destAddrPtr,16),16,at<uint16_t>(destAddrPtr + 16));
+				break;
+		}
 
 		if (source() != id.address()) {
 			TRACE("dropped HELLO from %s(%s): identity not for sending address",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -245,11 +262,13 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP);
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
 
-		// Won't get HELLO *from* supernodes, so skip this for now here. It's done in OK(HELLO).
-		//if (RR->topology->isSupernode(id.address()))
-		//	RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
+		if (RR->topology->isSupernode(id.address())) {
+			RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
+			RR->sa->iam(destAddr);
+		}
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
+
 		outp.append((unsigned char)Packet::VERB_HELLO);
 		outp.append(packetId());
 		outp.append(timestamp);
@@ -257,6 +276,23 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+
+		switch(_remoteAddress.ss_family) {
+			case AF_INET:
+				outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV4);
+				outp.append(_remoteAddress.rawIpData(),4);
+				outp.append((uint16_t)_remoteAddress.port());
+				break;
+			case AF_INET6:
+				outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV6);
+				outp.append(_remoteAddress.rawIpData(),16);
+				outp.append((uint16_t)_remoteAddress.port());
+				break;
+			default:
+				outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_NONE);
+				break;
+		}
+
 		outp.armor(peer->key(),true);
 		RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 	} catch (std::exception &ex) {

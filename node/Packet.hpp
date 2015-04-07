@@ -175,6 +175,12 @@
  */
 #define ZT_PROTO_BEACON_IDX_ADDRESS 8
 
+// Destination address types from HELLO and OK(HELLO)
+#define ZT_PROTO_DEST_ADDRESS_TYPE_NONE 0
+#define ZT_PROTO_DEST_ADDRESS_TYPE_ETHERNET 1
+#define ZT_PROTO_DEST_ADDRESS_TYPE_IPV4 4
+#define ZT_PROTO_DEST_ADDRESS_TYPE_IPV6 6
+
 // Field incides for parsing verbs -------------------------------------------
 
 // Some verbs have variable-length fields. Those aren't fully defined here
@@ -467,6 +473,23 @@ public:
 		 *   <[2] software revision>
 		 *   <[8] timestamp (ms since epoch)>
 		 *   <[...] binary serialized identity (see Identity)>
+		 *   <[1] destination address type>
+		 *   [<[...] destination address>]
+		 *
+		 * This is the only message that ever must be sent in the clear, since it
+		 * is used to push an identity to a new peer.
+		 *
+		 * The destination address is the wire address to which this packet is
+		 * being sent, and in OK is *also* the destination address of the OK
+		 * packet. This can be used by the receiver to detect NAT, learn its real
+		 * external address if behind NAT, and detect changes to its external
+		 * address that require re-establishing connectivity.
+		 *
+		 * Destination address types and formats (not all of these are used now):
+		 *   0 - None -- no destination address data present
+		 *   1 - Ethernet address -- format: <[6] Ethernet MAC>
+		 *   4 - 6-byte IPv4 address -- format: <[4] IP>, <[2] port>
+		 *   6 - 18-byte IPv6 address -- format: <[16] IP>, <[2] port>
 		 *
 		 * OK payload:
 		 *   <[8] timestamp (echoed from original HELLO)>
@@ -474,6 +497,8 @@ public:
 		 *   <[1] software major version (of responder)>
 		 *   <[1] software minor version (of responder)>
 		 *   <[2] software revision (of responder)>
+		 *   <[1] destination address type (for this OK, not copied from HELLO)>
+		 *   [<[...] destination address>]
 		 *
 		 * ERROR has no payload.
 		 */

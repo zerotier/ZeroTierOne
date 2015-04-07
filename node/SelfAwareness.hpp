@@ -25,40 +25,32 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_EXTERNALSURFACE_HPP
-#define ZT_EXTERNALSURFACE_HPP
+#ifndef ZT_SELFAWARENESS_HPP
+#define ZT_SELFAWARENESS_HPP
 
 #include "InetAddress.hpp"
 
 namespace ZeroTier {
 
+class RuntimeEnvironment;
+
 /**
  * Tracks changes to this peer's real world addresses
  */
-class ExternalSurface
+class SelfAwareness
 {
 public:
-	ExternalSurface() {}
+	SelfAwareness(const RuntimeEnvironment *renv);
+	~SelfAwareness();
 
 	/**
-	 * Revise our external surface image, return true if it changed
+	 * Called when a trusted remote peer informs us of our external network address
 	 *
-	 * @param remote Remote address as reflected by any trusted peer
-	 * @return True if our external surface has changed
+	 * @param physicalAddress Physical address as reflected by any trusted peer
 	 */
-	inline bool update(const InetAddress &remote)
-		throw()
-	{
-		const unsigned long idx = (remote.isV4() ? 0 : 2) | (remote.isLinkLocal() ? 1 : 0);
-		if (_s[idx] != remote) {
-			_s[idx] = remote;
-			return true;
-		}
-		return false;
-	}
+	void iam(const InetAddress &physicalAddress);
 
 private:
-	InetAddress _s[4]; // global v4, link-local v4, global v6, link-local v6
 };
 
 } // namespace ZeroTier
