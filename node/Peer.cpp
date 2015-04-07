@@ -57,7 +57,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 void Peer::received(
 	const RuntimeEnvironment *RR,
 	const InetAddress &remoteAddr,
-	int linkDesperation
+	int linkDesperation,
 	unsigned int hops,
 	uint64_t packetId,
 	Packet::Verb verb,
@@ -120,7 +120,7 @@ void Peer::received(
 					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 							outp.armor(_key,true);
-							RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation,false);
+							RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation);
 							outp.reset(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 						}
 
@@ -133,7 +133,7 @@ void Peer::received(
 			}
 			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
 				outp.armor(_key,true);
-				RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation,false);
+				RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation);
 			}
 		}
 	}
