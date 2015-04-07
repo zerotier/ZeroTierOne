@@ -78,7 +78,9 @@ void SelfAwareness::iam(const InetAddress &reporterPhysicalAddress,const InetAdd
 		else {
 			Mutex::Lock _l(_lock);
 			InetAddress &lastPhy = _lastPhysicalAddress[scope - 1];
-			if ((lastPhy)&&(lastPhy != myPhysicalAddress)) {
+			if (!lastPhy) {
+				lastPhy = myPhysicalAddress;
+			} else if (lastPhy != myPhysicalAddress) {
 				lastPhy = myPhysicalAddress;
 				_ResetWithinScope rset(RR,RR->node->now(),(InetAddress::IpScope)scope);
 				RR->topology->eachPeer<_ResetWithinScope &>(rset);
