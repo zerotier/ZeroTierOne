@@ -137,10 +137,33 @@ Network::~Network()
 	}
 }
 
+std::vector<MulticastGroup> Network::allMulticastGroups() const
+{
+	Mutex::Lock _l(_lock);
+	std::vector<MulticastGroup> mgs(_myMulticastGroups);
+	std::vector<MulticastGroup>::iterator oldend(mgs.end());
+	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i) {
+		if (!std::binary_search(mgs.begin(),oldend,i->first))
+			mgs.push_back(i->first);
+	}
+	std::sort(mgs.begin(),mgs.end());
+	return mgs;
+}
+
+bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
+{
+	Mutex::Lock _l(_lock);
+	if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
+		return true;
+	else if (includeBridgedGroups)
+		return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
+	else return false;
+}
+
 void Network::multicastSubscribe(const MulticastGroup &mg)
 {
 	Mutex::Lock _l(_lock);
-	if (std::find(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg) != _myMulticastGroups.end())
+	if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
 		return;
 	_myMulticastGroups.push_back(mg);
 	std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());

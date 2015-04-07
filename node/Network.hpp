@@ -100,31 +100,14 @@ public:
 	/**
 	 * @return All multicast groups including learned groups that are behind any bridges we're attached to
 	 */
-	inline std::vector<MulticastGroup> allMulticastGroups() const
-	{
-		Mutex::Lock _l(_lock);
-		std::vector<MulticastGroup> mgs(_myMulticastGroups);
-		for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i) {
-			if (std::find(mgs.begin(),mgs.end(),i->first) == mgs.end())
-				mgs.push_back(i->first);
-		}
-		std::sort(mgs.begin(),mgs.end());
-		return mgs;
-	}
+	std::vector<MulticastGroup> allMulticastGroups() const;
 
 	/**
 	 * @param mg Multicast group
+	 * @param includeBridgedGroups If true, also include any groups we've learned via bridging
 	 * @return True if this network endpoint / peer is a member
 	 */
-	bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
-	{
-		Mutex::Lock _l(_lock);
-		if (std::find(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg) != _myMulticastGroups.end())
-			return true;
-		else if (includeBridgedGroups)
-			return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
-		else return false;
-	}
+	bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const;
 
 	/**
 	 * Subscribe to a multicast group
