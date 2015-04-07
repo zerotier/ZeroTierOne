@@ -145,7 +145,7 @@ public:
 	inline bool active(uint64_t now) const
 		throw()
 	{
-		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_PATH_ACTIVITY_TIMEOUT) );
+		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
 	}
 
 	/**

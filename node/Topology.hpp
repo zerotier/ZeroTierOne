@@ -280,44 +280,6 @@ public:
 		uint64_t _now;
 		const RuntimeEnvironment *RR;
 	};
-
-	/**
-	 * Function object to forget direct links to active peers and then ping them indirectly
-	 */
-	class ResetActivePeers
-	{
-	public:
-		ResetActivePeers(const RuntimeEnvironment *renv,uint64_t now) throw() :
-			_now(now),
-			_supernode(renv->topology->getBestSupernode()),
-			_supernodeAddresses(renv->topology->supernodeAddresses()),
-			RR(renv) {}
-
-		inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-		{
-			p->clearPaths(false); // false means don't forget 'fixed' paths e.g. supernodes
-
-			Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
-			outp.armor(p->key(),false); // no need to encrypt a NOP
-
-			if (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) {
-				// Send NOP directly to supernodes
-				p->send(RR,outp.data(),outp.size(),_now);
-			} else {
-				// Send NOP indirectly to regular peers if still active, triggering a new RENDEZVOUS
-				if (((_now - p->lastFrame()) < ZT_PEER_PATH_ACTIVITY_TIMEOUT)&&(_supernode)) {
-					TRACE("sending reset NOP to %s",p->address().toString().c_str());
-					_supernode->send(RR,outp.data(),outp.size(),_now);
-				}
-			}
-		}
-
-	private:
-		uint64_t _now;
-		SharedPtr<Peer> _supernode;
-		std::vector<Address> _supernodeAddresses;
-		const RuntimeEnvironment *RR;
-	};
 #endif
 
 	/**

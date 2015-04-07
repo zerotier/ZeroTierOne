@@ -302,11 +302,6 @@
 #define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
 
 /**
- * Path activity timeout (for non-fixed paths)
- */
-#define ZT_PEER_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
-
-/**
  * Stop relaying via peers that have not responded to direct sends
  *
  * When we send something (including frames), we generally expect a response.

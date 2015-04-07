@@ -230,10 +230,9 @@ public:
 	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
-	 * @param now Current time
-	 * @return True if peer has received something within ZT_PEER_ACTIVITY_TIMEOUT ms
+	 * @return True if peer has received an actual data frame within ZT_PEER_ACTIVITY_TIMEOUT milliseconds
 	 */
-	inline bool alive(uint64_t now) const throw() { return ((now - _lastReceive) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline uint64_t alive(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Current latency or 0 if unknown (max: 65535)
@@ -291,6 +290,20 @@ public:
 	 * @param fixedToo If true, clear fixed paths as well as learned ones
 	 */
 	void clearPaths(bool fixedToo);
+
+	/**
+	 * Reset paths within a given scope
+	 *
+	 * For fixed paths in this scope, a packet is sent. Non-fixed paths in this
+	 * scope are forgotten. If there are no paths remaining, a message is sent
+	 * indirectly to reestablish connectivity if we're actively exchanging
+	 * data with this peer (alive).
+	 *
+	 * @param RR Runtime environment
+	 * @param scope IP scope of paths to reset
+	 * @param now Current time
+	 */
+	void resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key

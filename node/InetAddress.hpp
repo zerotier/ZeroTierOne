@@ -74,21 +74,19 @@ struct InetAddress : public sockaddr_storage
 	/**
 	 * IP address scope
 	 *
-	 * Be sure the integer values of these start at 0 and increment
-	 * monotonically without gaps, as they're used as an array index.
-	 * The NONE entry must be the last, since it's the count. It's
-	 * okay to change these since they are not exported via the API.
+	 * Do not change these numeric index values without taking a look
+	 * at SelfAwareness. Values 1-5 are mapped onto an array index.
 	 */
 	enum IpScope
 	{
-		IP_SCOPE_LOOPBACK = 0,      // 127.0.0.1
-		IP_SCOPE_MULTICAST = 1,     // 224.0.0.0 and other multicast IPs
-		IP_SCOPE_LINK_LOCAL = 2,    // 169.254.x.x, IPv6 LL
-		IP_SCOPE_PRIVATE = 3,       // 10.x.x.x, etc.
-		IP_SCOPE_PSEUDOPRIVATE = 4, // 28.x.x.x, etc. -- unofficially unrouted IP blocks often "bogarted"
-		IP_SCOPE_SHARED = 5,        // 100.64.0.0/10, shared space for e.g. carrier-grade NAT
-		IP_SCOPE_GLOBAL = 6,        // globally routable IP address (all others)
-		IP_SCOPE_NONE = 7           // not an IP address -- also the number of classes, must be last entry
+		IP_SCOPE_NONE = 0,          // not an IP address -- also the number of classes, must be last entry
+		IP_SCOPE_LINK_LOCAL = 1,    // 169.254.x.x, IPv6 LL
+		IP_SCOPE_PRIVATE = 2,       // 10.x.x.x, etc.
+		IP_SCOPE_PSEUDOPRIVATE = 3, // 28.x.x.x, etc. -- unofficially unrouted IP blocks often "bogarted"
+		IP_SCOPE_SHARED = 4,        // 100.64.0.0/10, shared space for e.g. carrier-grade NAT
+		IP_SCOPE_GLOBAL = 5,        // globally routable IP address (all others)
+		IP_SCOPE_LOOPBACK = 6,      // 127.0.0.1
+		IP_SCOPE_MULTICAST = 7      // 224.0.0.0 and other multicast IPs
 	};
 
 	InetAddress() throw() { memset(this,0,sizeof(InetAddress)); }

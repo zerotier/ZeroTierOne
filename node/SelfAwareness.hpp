@@ -47,14 +47,16 @@ public:
 	/**
 	 * Called when a trusted remote peer informs us of our external network address
 	 *
-	 * @param physicalAddress Physical address as reflected by any trusted peer
-	 * @param trusted True if this peer is trusted
+	 * @param reporterPhysicalAddress Physical address that reporting peer seems to have
+	 * @param myPhysicalAddress Physical address that peer says we have
+	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 */
-	void iam(const InetAddress &physicalAddress,bool trusted);
+	void iam(const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted);
 
 private:
 	const RuntimeEnvironment *RR;
 	Mutex _lock;
+	InetAddress _lastPhysicalAddress[5]; // 5 == the number of address classes we care about, see InetAddress.hpp and SelfAwareness.cpp
 };
 
 } // namespace ZeroTier

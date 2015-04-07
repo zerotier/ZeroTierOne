@@ -253,36 +253,6 @@ void Topology::clean(uint64_t now)
 	}
 }
 
-/*
-bool Topology::updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress,uint64_t now)
-{
-	Mutex::Lock _l(_lock);
-
-	if (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),remotePeer->address()) == _supernodeAddresses.end())
-		return false;
-
-	if (_surface.update(mirroredAddress)) {
-		// Clear non-fixed paths for all peers -- will force reconnect on next activity
-		for(std::map< Address,SharedPtr<Peer> >::const_iterator ap(_activePeers.begin());ap!=_activePeers.end();++ap)
-			ap->second->clearPaths(false);
-
-		// Reset TCP tunneling if our global addressing has changed
-		if (!mirroredAddress.isLinkLocal())
-			(const_cast <RuntimeEnvironment *>(RR))->tcpTunnelingEnabled = false;
-
-		// Ping supernodes now (other than the one we might have just heard from)
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_supernodePeers.begin());sn!=_supernodePeers.end();++sn) {
-			if (remotePeer != *sn)
-				(*sn)->sendPing(RR,now);
-		}
-
-		return true;
-	}
-
-	return false;
-}
-*/
-
 bool Topology::authenticateRootTopology(const Dictionary &rt)
 {
 	try {
