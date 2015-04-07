@@ -148,23 +148,14 @@ void Network::multicastSubscribe(const MulticastGroup &mg)
 
 void Network::multicastUnsubscribe(const MulticastGroup &mg)
 {
-	bool needAnnounce = false;
-	{
-		Mutex::Lock _l(_lock);
-
-		std::vector<MulticastGroup> nmg;
-		for(std::vector<MulticastGroup>::const_iterator i(_myMulticastGroups.begin());i!=_myMulticastGroups.end();++i) {
-			if (*i != mg)
-				nmg.push_back(*i);
-		}
-
-		if (nmg.size() != _myMulticastGroups.size()) {
-			_myMulticastGroups.swap(nmg);
-			needAnnounce = true;
-		}
+	Mutex::Lock _l(_lock);
+	std::vector<MulticastGroup> nmg;
+	for(std::vector<MulticastGroup>::const_iterator i(_myMulticastGroups.begin());i!=_myMulticastGroups.end();++i) {
+		if (*i != mg)
+			nmg.push_back(*i);
 	}
-	if (needAnnounce)
-		_announceMulticastGroups();
+	if (nmg.size() != _myMulticastGroups.size())
+		_myMulticastGroups.swap(nmg);
 }
 
 bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
