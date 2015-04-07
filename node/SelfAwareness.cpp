@@ -65,9 +65,8 @@ SelfAwareness::~SelfAwareness()
 
 void SelfAwareness::iam(const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted)
 {
-	const unsigned int scope = (unsigned int)myPhysicalAddress.ipScope();
-
 	// This code depends on the numeric values assigned to scopes in InetAddress.hpp
+	const unsigned int scope = (unsigned int)myPhysicalAddress.ipScope();
 	if ((scope > 0)&&(scope < (unsigned int)InetAddress::IP_SCOPE_LOOPBACK)) {
 		/* For now only trusted peers are permitted to inform us of changes to
 		 * our global Internet IP or to changes of NATed IPs. We'll let peers on
@@ -76,16 +75,16 @@ void SelfAwareness::iam(const InetAddress &reporterPhysicalAddress,const InetAdd
 		 * attack in which an attacker could force us to reset our connections. */
 		if ( (!trusted) && ((scope == (unsigned int)InetAddress::IP_SCOPE_GLOBAL)||(scope != (unsigned int)reporterPhysicalAddress.ipScope())) )
 			return;
-
-		InetAddress &lastPhy = _lastPhysicalAddress[scope - 1];
-		if ((lastPhy)&&(lastPhy != myPhysicalAddress)) {
-			lastPhy = myPhysicalAddress;
-			_ResetWithinScope rset(RR,RR->node->now(),(InetAddress::IpScope)scope);
-			RR->topology->eachPeer<_ResetWithinScope &>(rset);
+		else {
+			Mutex::Lock _l(_lock);
+			InetAddress &lastPhy = _lastPhysicalAddress[scope - 1];
+			if ((lastPhy)&&(lastPhy != myPhysicalAddress)) {
+				lastPhy = myPhysicalAddress;
+				_ResetWithinScope rset(RR,RR->node->now(),(InetAddress::IpScope)scope);
+				RR->topology->eachPeer<_ResetWithinScope &>(rset);
+			}
 		}
 	}
-
-	Mutex::Lock _l(_lock);
 }
 
 } // namespace ZeroTier
