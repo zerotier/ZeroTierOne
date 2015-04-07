@@ -265,20 +265,6 @@ void Switch::send(const Packet &packet,bool encrypt)
 	}
 }
 
-#if 0
-void Switch::sendHELLO(const Address &dest)
-{
-	Packet outp(dest,RR->identity.address(),Packet::VERB_HELLO);
-	outp.append((unsigned char)ZT_PROTO_VERSION);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
-	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
-	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-	outp.append(Utils::now());
-	RR->identity.serialize(outp,false);
-	send(outp,false);
-}
-#endif
-
 bool Switch::unite(const Address &p1,const Address &p2,bool force)
 {
 	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
@@ -370,19 +356,10 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr,unsigned int maxDesperation)
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
+	const uint64_t now = RR->node->now();
 
-	uint64_t now = RR->node->now();
-
-	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-	outp.armor(peer->key(),false);
-
-	/* Note that we don't log this as a "sent" packet or send it via the peer's
-	 * normal send() path. That's because this is a trial packet to an
-	 * unconfirmed address.
-	 *
-	 * First attempt is always at desperation zero. Then we escalate to max
-	 * before escalating through other NAT-t strategies. */
-	RR->node->putPacket(atAddr,outp.data(),outp.size(),0);
+	// Attempt to contact at zero desperation first
+	peer->attemptToContactAt(RR,atAddr,0,now);
 
 	// If we have not punched through after this timeout, open refreshing can of whupass
 	{
@@ -454,14 +431,13 @@ unsigned long Switch::doTimerTasks()
 				} else {
 					// Nope, nothing yet. Time to kill some kittens.
 
-					Packet outp(qi->peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(qi->peer->key(),false);
-
 					switch(qi->strategyIteration++) {
+
 						case 0: {
 							// First strategy: rifle method: direct packet to known port
-							RR->node->putPacket(qi->inaddr,outp.data(),outp.size(),qi->currentDesperation);
+							qi->peer->attemptToContactAt(RR,qi->inaddr,qi->currentDesperation,now);
 						}	break;
+
 						case 1: {
 							// Second strategy: shotgun method up: try a few ports above
 							InetAddress tmpaddr(qi->inaddr);
@@ -469,9 +445,10 @@ unsigned long Switch::doTimerTasks()
 							for(int i=0;i<9;++i) {
 								if (++p > 0xffff) break;
 								tmpaddr.setPort((unsigned int)p);
-								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
+								qi->peer->attemptToContactAt(RR,tmpaddr,qi->currentDesperation,now);
 							}
 						}	break;
+
 						case 2: {
 							// Third strategy: shotgun method down: try a few ports below
 							InetAddress tmpaddr(qi->inaddr);
@@ -479,7 +456,7 @@ unsigned long Switch::doTimerTasks()
 							for(int i=0;i<3;++i) {
 								if (--p < 1024) break;
 								tmpaddr.setPort((unsigned int)p);
-								RR->node->putPacket(tmpaddr,outp.data(),outp.size(),qi->currentDesperation);
+								qi->peer->attemptToContactAt(RR,tmpaddr,qi->currentDesperation,now);
 							}
 
 							// Escalate link desperation after all strategies attempted
@@ -493,6 +470,7 @@ unsigned long Switch::doTimerTasks()
 								qi->strategyIteration = 0;
 							}
 						}	break;
+
 					}
 
 					qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;

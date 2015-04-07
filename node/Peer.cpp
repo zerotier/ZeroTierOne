@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#include "../version.h"
+
 #include "Constants.hpp"
 #include "Peer.hpp"
 #include "Node.hpp"
@@ -68,38 +70,48 @@ void Peer::received(
 	_lastReceive = now;
 
 	if (!hops) {
+		bool pathIsConfirmed = false;
+
 		/* Learn new paths from direct (hops == 0) packets */
 		{
 			unsigned int np = _numPaths;
-
-			bool havePath = false;
 			for(unsigned int p=0;p<np;++p) {
 				if (_paths[p].address() == remoteAddr) {
 					_paths[p].received(now,linkDesperation);
-					havePath = true;
+					pathIsConfirmed = true;
 					break;
 				}
 			}
 
-			if (!havePath) {
-				Path *slot = (Path *)0;
-				if (np < ZT_PEER_MAX_PATHS) {
-					// Add new path
-					slot = &(_paths[np++]);
-				} else {
-					// Replace oldest non-fixed path
-					uint64_t slotLRmin = 0xffffffffffffffffULL;
-					for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
-						if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
-							slotLRmin = _paths[p].lastReceived();
-							slot = &(_paths[p]);
+			if (!pathIsConfirmed) {
+				if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
+					// Learn paths if they've been confirmed via a HELLO
+					Path *slot = (Path *)0;
+					if (np < ZT_PEER_MAX_PATHS) {
+						// Add new path
+						slot = &(_paths[np++]);
+					} else {
+						// Replace oldest non-fixed path
+						uint64_t slotLRmin = 0xffffffffffffffffULL;
+						for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
+							if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
+								slotLRmin = _paths[p].lastReceived();
+								slot = &(_paths[p]);
+							}
 						}
 					}
-				}
-				if (slot) {
-					slot->init(remoteAddr,false);
-					slot->received(now,linkDesperation);
-					_numPaths = np;
+					if (slot) {
+						slot->init(remoteAddr,false);
+						slot->received(now,linkDesperation);
+						_numPaths = np;
+						pathIsConfirmed = true;
+					}
+				} else {
+					/* If this path is not known, send a HELLO. We don't learn
+					 * paths without confirming that a bidirectional link is in
+					 * fact present, but any packet that decodes and authenticates
+					 * correctly is considered valid. */
+					attemptToContactAt(RR,remoteAddr,linkDesperation,now);
 				}
 			}
 		}
@@ -107,7 +119,7 @@ void Peer::received(
 		/* Announce multicast groups of interest to direct peers if they are
 		 * considered authorized members of a given network. Also announce to
 		 * supernodes and network controllers. */
-		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+		if ((pathIsConfirmed)&&((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000))) {
 			_lastAnnouncedTo = now;
 
 			const bool isSupernode = RR->topology->isSupernode(_id.address());
@@ -142,6 +154,37 @@ void Peer::received(
 		_lastUnicastFrame = now;
 	else if (verb == Packet::VERB_MULTICAST_FRAME)
 		_lastMulticastFrame = now;
+}
+
+void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,unsigned int linkDesperation,uint64_t now)
+{
+	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
+	outp.append((unsigned char)ZT_PROTO_VERSION);
+	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
+	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
+	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+	outp.append(now);
+
+	RR->identity.serialize(outp,false);
+
+	switch(atAddress.ss_family) {
+		case AF_INET:
+			outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV4);
+			outp.append(atAddress.rawIpData(),4);
+			outp.append((uint16_t)atAddress.port());
+			break;
+		case AF_INET6:
+			outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV6);
+			outp.append(atAddress.rawIpData(),16);
+			outp.append((uint16_t)atAddress.port());
+			break;
+		default:
+			outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_NONE);
+			break;
+	}
+
+	outp.armor(_key,false); // HELLO is sent in the clear
+	RR->node->putPacket(atAddress,outp.data(),outp.size(),linkDesperation);
 }
 
 void Peer::addPath(const Path &newp)
@@ -200,9 +243,7 @@ void Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
 			if (_paths[x].fixed()) {
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_NOP);
-				outp.armor(_key,false);
-				RR->node->putPacket(_paths[x].address(),outp.data(),outp.size(),_paths[x].desperation(now));
+				attemptToContactAt(RR,_paths[x].address(),_paths[x].desperation(now),now);
 				_paths[y++] = _paths[x]; // keep fixed paths
 			}
 		} else {

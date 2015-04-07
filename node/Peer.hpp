@@ -170,6 +170,19 @@ public:
 	}
 
 	/**
+	 * Send a HELLO to this peer at a specified physical address
+	 *
+	 * This does not update any statistics. It's used to send initial HELLOs
+	 * for NAT traversal and path verification.
+	 *
+	 * @param RR Runtime environment
+	 * @param atAddress Destination address
+	 * @param linkDesperation Link desperation
+	 * @param now Current time
+	 */
+	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,unsigned int linkDesperation,uint64_t now);
+
+	/**
 	 * @return All known direct paths to this peer
 	 */
 	std::vector<Path> paths() const
