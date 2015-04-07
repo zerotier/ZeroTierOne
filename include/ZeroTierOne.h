@@ -323,6 +323,32 @@ typedef struct
 } ZT1_MulticastGroup;
 
 /**
+ * Virtual network configuration update type
+ */
+enum ZT1_VirtualNetworkConfigOperation
+{
+	/**
+	 * Network is coming up (either for the first time or after service restart)
+	 */
+	ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP = 1,
+
+	/**
+	 * Network configuration has been updated
+	 */
+	ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE = 2,
+
+	/**
+	 * Network is going down (not permanently)
+	 */
+	ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN = 3,
+
+	/**
+	 * Network is going down permanently (leave/delete)
+	 */
+	ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY = 4
+};
+
+/**
  * Virtual LAN configuration
  */
 typedef struct
@@ -548,14 +574,14 @@ typedef void ZT1_Node;
 /****************************************************************************/
 
 /**
- * Callback called to update virtual port configuration
+ * Callback called to update virtual network port configuration
  *
  * This can be called at any time to update the configuration of a virtual
- * network port. If a port is deleted (via leave() or otherwise) this is
- * called with a NULL config parameter.
+ * network port. The parameter after the network ID specifies whether this
+ * port is being brought up, updated, brought down, or permanently deleted.
  *
  * This in turn should be used by the underlying implementation to create
- * and configure tap devices to handle frames, etc.
+ * and configure tap devices at the OS (or virtual network stack) layer.
  *
  * The supplied config pointer is not guaranteed to remain valid, so make
  * a copy if you want one.
@@ -564,7 +590,7 @@ typedef void ZT1_Node;
  * on failure, and this results in the network being placed into the
  * PORT_ERROR state.
  */
-typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,const ZT1_VirtualNetworkConfig *);
+typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *);
 
 /**
  * Callback for status messages
@@ -771,7 +797,7 @@ enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t nwid);
  * If this is not done, ARP will not work reliably.
  *
  * Multiple calls to subscribe to the same multicast address will have no
- * effect.
+ * effect. It is perfectly safe to do this.
  *
  * This does not generate an update call to networkConfigCallback().
  *
@@ -836,7 +862,7 @@ ZT1_VirtualNetworkConfig *ZT1_Node_networkConfig(ZT1_Node *node,uint64_t nwid);
  * @param node Node instance
  * @return List of networks or NULL on failure
  */
-ZT1_VirtualNetworkList *ZT1_Node_listNetworks(ZT1_Node *node);
+ZT1_VirtualNetworkList *ZT1_Node_networks(ZT1_Node *node);
 
 /**
  * Free a query result buffer

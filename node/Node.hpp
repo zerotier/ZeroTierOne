@@ -92,8 +92,8 @@ public:
 	ZT1_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	void status(ZT1_NodeStatus *status);
 	ZT1_PeerList *peers();
-	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid);
-	ZT1_VirtualNetworkList *listNetworks();
+	bool networkConfig(uint64_t nwid,ZT1_VirtualNetworkConfig *ec);
+	ZT1_VirtualNetworkList *networks();
 	void freeQueryResult(void *qr);
 	void setNetconfMaster(void *networkConfigMasterInstance);
 
@@ -154,6 +154,15 @@ public:
 		return ((nw == _networks.end()) ? SharedPtr<Network>() : nw->second);
 	}
 
+	inline std::vector< SharedPtr<Network> > allNetworks() const
+	{
+		Mutex::Lock _l(_networks_m);
+		std::vector< SharedPtr<Network> > nw;
+		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+			nw.push_back(n->second);
+		return nw;
+	}
+
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
@@ -161,7 +170,7 @@ public:
 
 	inline void postEvent(ZT1_Event ev) { _statusCallback(reinterpret_cast<ZT1_Node *>(this),ev); }
 
-	inline int configureVirtualNetworkPort(uint64_t nwid,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,nc); }
+	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,op,nc); }
 
 	void postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev);
 

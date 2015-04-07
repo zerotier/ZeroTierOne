@@ -89,12 +89,27 @@ public:
 	inline Address controller() throw() { return Address(_id >> 24); }
 
 	/**
-	 * @return Latest list of multicast groups for this network's tap
+	 * @return Multicast group memberships for this network's port (local, not learned via bridging)
 	 */
 	inline std::vector<MulticastGroup> multicastGroups() const
 	{
 		Mutex::Lock _l(_lock);
 		return _myMulticastGroups;
+	}
+
+	/**
+	 * @return All multicast groups including learned groups that are behind any bridges we're attached to
+	 */
+	inline std::vector<MulticastGroup> allMulticastGroups() const
+	{
+		Mutex::Lock _l(_lock);
+		std::vector<MulticastGroup> mgs(_myMulticastGroups);
+		for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i) {
+			if (std::find(mgs.begin(),mgs.end(),i->first) == mgs.end())
+				mgs.push_back(i->first);
+		}
+		std::sort(mgs.begin(),mgs.end());
+		return mgs;
 	}
 
 	/**
@@ -106,6 +121,20 @@ public:
 		Mutex::Lock _l(_lock);
 		return (std::find(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg) != _myMulticastGroups.end());
 	}
+
+	/**
+	 * Subscribe to a multicast group
+	 *
+	 * @param mg New multicast group
+	 */
+	void multicastSubscribe(const MulticastGroup &mg);
+
+	/**
+	 * Unsubscribe from a multicast group
+	 *
+	 * @param mg Multicast group
+	 */
+	void multicastUnsubscribe(const MulticastGroup &mg);
 
 	/**
 	 * Apply a NetworkConfig to this network
@@ -308,11 +337,7 @@ public:
 	 * @param mg Multicast group
 	 * @param now Current time
 	 */
-	inline void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
-	{
-		Mutex::Lock _l(_lock);
-		_multicastGroupsBehindMe[mg] = now;
-	}
+	void learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now);
 
 	/**
 	 * @return True if traffic on this network's tap is enabled
@@ -336,6 +361,7 @@ public:
 private:
 	ZT1_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
+	void _announceMulticastGroups();
 
 	const RuntimeEnvironment *RR;
 	uint64_t _id;

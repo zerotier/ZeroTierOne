@@ -106,20 +106,18 @@ void Peer::received(
 
 		/* Announce multicast groups of interest to direct peers if they are
 		 * considered authorized members of a given network. Also announce to
-		 * supernodes and network controllers. The other place this is done
-		 * is in rescanMulticastGroups() in Network, but that only sends something
-		 * if a network's multicast groups change. */
+		 * supernodes and network controllers. */
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
 
-			bool isSupernode = RR->topology->isSupernode(_id.address());
+			const bool isSupernode = RR->topology->isSupernode(_id.address());
 
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-			std::vector< SharedPtr<Network> > networks(RR->nc->networks());
-			for(std::vector< SharedPtr<Network> >::iterator n(networks.begin());n!=networks.end();++n) {
-				if ( ((*n)->isAllowed(_id.address())) || (isSupernode) ) {
-					std::set<MulticastGroup> mgs((*n)->multicastGroups());
-					for(std::set<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
+			const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
+			for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n) {
+				if ( (isSupernode) || ((*n)->isAllowed(_id.address())) ) {
+					const std::vector<MulticastGroup> mgs((*n)->allMulticastGroups());
+					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 							outp.armor(_key,true);
 							RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation,false);

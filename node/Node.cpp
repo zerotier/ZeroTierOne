@@ -151,10 +151,18 @@ ZT1_ResultCode Node::leave(uint64_t nwid)
 
 ZT1_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
+	Mutex::Lock _l(_networks_m);
+	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+	if (nw != _networks.end())
+		nw->second->multicastSubscribe(MulticastGroup(MAC(multicastGroup,(uint32_t)(multicastAdi & 0xffffffff))));
 }
 
 ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
+	Mutex::Lock _l(_networks_m);
+	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+	if (nw != _networks.end())
+		nw->second->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup,(uint32_t)(multicastAdi & 0xffffffff))));
 }
 
 void Node::status(ZT1_NodeStatus *status)
@@ -167,9 +175,17 @@ ZT1_PeerList *Node::peers()
 
 ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid)
 {
+	Mutex::Lock _l(_networks_m);
+	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+	if (nw != _networks.end()) {
+		ZT1_VirtualNetworkConfig *nc = (ZT1_VirtualNetworkConfig *)::malloc(sizeof(ZT1_VirtualNetworkConfig));
+		nw->second->externalConfig(nc);
+		return nc;
+	}
+	return (ZT1_VirtualNetworkConfig *)0;
 }
 
-ZT1_VirtualNetworkList *Node::listNetworks()
+ZT1_VirtualNetworkList *Node::networks()
 {
 }
 
@@ -344,7 +360,7 @@ void ZT1_Node_status(ZT1_Node *node,ZT1_NodeStatus *status)
 ZT1_PeerList *ZT1_Node_peers(ZT1_Node *node)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->peers();
+		return reinterpret_cast<ZeroTier::Node *>(node)->listPeers();
 	} catch ( ... ) {
 		return (ZT1_PeerList *)0;
 	}
@@ -359,7 +375,7 @@ ZT1_VirtualNetworkConfig *ZT1_Node_networkConfig(ZT1_Node *node,uint64_t nwid)
 	}
 }
 
-ZT1_VirtualNetworkList *ZT1_Node_listNetworks(ZT1_Node *node)
+ZT1_VirtualNetworkList *ZT1_Node_networks(ZT1_Node *node)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->listNetworks();
