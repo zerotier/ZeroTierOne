@@ -25,38 +25,28 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_SELFAWARENESS_HPP
-#define ZT_SELFAWARENESS_HPP
-
-#include "InetAddress.hpp"
-#include "Mutex.hpp"
+#include "Constants.hpp"
+#include "SelfAwareness.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Node.hpp"
+#include "Topology.hpp"
+#include "Packet.hpp"
+#include "Peer.hpp"
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
-
-/**
- * Tracks changes to this peer's real world addresses
- */
-class SelfAwareness
+SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
+	RR(renv)
 {
-public:
-	SelfAwareness(const RuntimeEnvironment *renv);
-	~SelfAwareness();
+}
 
-	/**
-	 * Called when a trusted remote peer informs us of our external network address
-	 *
-	 * @param physicalAddress Physical address as reflected by any trusted peer
-	 * @param trusted True if this peer is trusted
-	 */
-	void iam(const InetAddress &physicalAddress,bool trusted);
+SelfAwareness::~SelfAwareness()
+{
+}
 
-private:
-	const RuntimeEnvironment *RR;
-	Mutex _lock;
-};
+void SelfAwareness::iam(const InetAddress &physicalAddress,bool trusted)
+{
+	Mutex::Lock _l(_lock);
+}
 
 } // namespace ZeroTier
-
-#endif

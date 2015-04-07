@@ -44,8 +44,10 @@ namespace ZeroTier {
 /**
  * Extends sockaddr_storage with friendly C++ methods
  *
- * This adds no new fields, so it can be memcpy'd and assigned to/from
- * raw sockaddr_storage structures. This is used in a few places.
+ * This is basically a "mixin" for sockaddr_storage. It adds methods and
+ * operators, but does not modify the structure. This can be cast to/from
+ * sockaddr_storage and used interchangeably. Don't change this as it's
+ * used in a few places.
  */
 struct InetAddress : public sockaddr_storage
 {
@@ -68,6 +70,26 @@ struct InetAddress : public sockaddr_storage
 	 * ::/0
 	 */
 	static const InetAddress DEFAULT6;
+
+	/**
+	 * IP address scope
+	 *
+	 * Be sure the integer values of these start at 0 and increment
+	 * monotonically without gaps, as they're used as an array index.
+	 * The NONE entry must be the last, since it's the count. It's
+	 * okay to change these since they are not exported via the API.
+	 */
+	enum IpScope
+	{
+		IP_SCOPE_LOOPBACK = 0,      // 127.0.0.1
+		IP_SCOPE_MULTICAST = 1,     // 224.0.0.0 and other multicast IPs
+		IP_SCOPE_LINK_LOCAL = 2,    // 169.254.x.x, IPv6 LL
+		IP_SCOPE_PRIVATE = 3,       // 10.x.x.x, etc.
+		IP_SCOPE_PSEUDOPRIVATE = 4, // 28.x.x.x, etc. -- unofficially unrouted IP blocks often "bogarted"
+		IP_SCOPE_SHARED = 5,        // 100.64.0.0/10, shared space for e.g. carrier-grade NAT
+		IP_SCOPE_GLOBAL = 6,        // globally routable IP address (all others)
+		IP_SCOPE_NONE = 7           // not an IP address -- also the number of classes, must be last entry
+	};
 
 	InetAddress() throw() { memset(this,0,sizeof(InetAddress)); }
 	InetAddress(const InetAddress &a) throw() { memcpy(this,&a,sizeof(InetAddress)); }
@@ -169,6 +191,12 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	/**
+	 * @return IP scope classification (e.g. loopback, link-local, private, global)
+	 */
+	IpScope ipScope() const
+		throw();
+
+	/**
 	 * Set from a string-format IP and a port
 	 *
 	 * @param ip IP address in V4 or V6 ASCII notation
@@ -204,17 +232,6 @@ struct InetAddress : public sockaddr_storage
 				break;
 		}
 	}
-
-	/**
-	 * @return True if this is a link-local IP address
-	 */
-	bool isLinkLocal() const
-		throw();
-
-	/**
-	 * @return True if this is a loopback address
-	 */
-	inline bool isLoopback() const throw() { return ((*this == LO4)||(*this == LO6)); }
 
 	/**
 	 * @return ASCII IP/port format representation

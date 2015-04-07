@@ -264,7 +264,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 		if (RR->topology->isSupernode(id.address())) {
 			RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
-			RR->sa->iam(destAddr);
+			RR->sa->iam(destAddr,true);
+		} else {
+			RR->sa->iam(destAddr,false);
 		}
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);

@@ -42,6 +42,74 @@ const InetAddress InetAddress::LO6("::1",0);
 const InetAddress InetAddress::DEFAULT4((uint32_t)0,0);
 const InetAddress InetAddress::DEFAULT6((const void *)0,16,0);
 
+InetAddress::IpScope InetAddress::ipScope() const
+	throw()
+{
+	switch(ss_family) {
+
+		case AF_INET: {
+			const uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+			switch(ip >> 24) {
+				case 0x00: return IP_SCOPE_NONE;                                      // 0.0.0.0/8 (reserved, never used)
+				case 0x06: return IP_SCOPE_PSEUDOPRIVATE;                             // 6.0.0.0/8 (US Army)
+				case 0x0a: return IP_SCOPE_PRIVATE;                                   // 10.0.0.0/8
+				case 0x0b: return IP_SCOPE_PSEUDOPRIVATE;                             // 11.0.0.0/8 (US DoD)
+				case 0x15: return IP_SCOPE_PSEUDOPRIVATE;                             // 21.0.0.0/8 (US DDN-RVN)
+				case 0x16: return IP_SCOPE_PSEUDOPRIVATE;                             // 22.0.0.0/8 (US DISA)
+				case 0x19: return IP_SCOPE_PSEUDOPRIVATE;                             // 25.0.0.0/8 (UK Ministry of Defense)
+				case 0x1a: return IP_SCOPE_PSEUDOPRIVATE;                             // 26.0.0.0/8 (US DISA)
+				case 0x1c: return IP_SCOPE_PSEUDOPRIVATE;                             // 28.0.0.0/8 (US DSI-North)
+				case 0x1d: return IP_SCOPE_PSEUDOPRIVATE;                             // 29.0.0.0/8 (US DISA)
+				case 0x1e: return IP_SCOPE_PSEUDOPRIVATE;                             // 30.0.0.0/8 (US DISA)
+				case 0x2c: return IP_SCOPE_PSEUDOPRIVATE;                             // 44.0.0.0/8 (Amateur Radio)
+				case 0x33: return IP_SCOPE_PSEUDOPRIVATE;                             // 51.0.0.0/8 (UK Department of Social Security)
+				case 0x37: return IP_SCOPE_PSEUDOPRIVATE;                             // 55.0.0.0/8 (US DoD)
+				case 0x38: return IP_SCOPE_PSEUDOPRIVATE;                             // 56.0.0.0/8 (US Postal Service)
+				case 0x64:
+					if ((ip & 0xffc00000) == 0x64400000) return IP_SCOPE_SHARED;        // 100.64.0.0/10
+					break;
+				case 0x7f: return IP_SCOPE_LOOPBACK;                                  // 127.0.0.0/8
+				case 0xa9:
+					if ((ip & 0xffff0000) == 0xa9fe0000) return IP_SCOPE_LINK_LOCAL;    // 169.254.0.0/16
+					break;
+				case 0xac:
+					if ((ip & 0xfff00000) == 0xac100000) return IP_SCOPE_PRIVATE;       // 172.16.0.0/12
+					break;
+				case 0xc0:
+					if ((ip & 0xffff0000) == 0xc9a80000) return IP_SCOPE_PRIVATE;				// 192.168.0.0/16
+					break;
+				case 0xff: return IP_SCOPE_NONE;                                      // 255.0.0.0/8 (broadcast, or unused/unusable)
+				default:
+					switch(ip >> 28) {
+						case 0xe: return IP_SCOPE_MULTICAST;                              // 224.0.0.0/4
+						case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                          // 240.0.0.0/4 ("reserved," usually unusable)
+						default: return IP_SCOPE_GLOBAL;                                  // everything else
+					}
+					break;
+			}
+		}	break;
+
+		case AF_INET6: {
+			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			if ((ip[0] & 0xf0) == 0xf0) {
+				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                              // ff00::/8
+				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0) == 0x80)) return IP_SCOPE_LINK_LOCAL; // fe80::/10
+				if ((ip[0] & 0xfe) == 0xfc) return IP_SCOPE_PRIVATE;                       // fc00::/7
+			}
+			unsigned int k = 0;
+			while ((!ip[k])&&(k < 15)) ++k;
+			if (k == 15) { // all 0's except last byte
+				if (ip[15] == 0x01) return IP_SCOPE_LOOPBACK;                              // ::1/128
+				if (ip[15] == 0x00) return IP_SCOPE_NONE;                                  // ::/128
+			}
+			return IP_SCOPE_GLOBAL;
+		}	break;
+
+	}
+
+	return IP_SCOPE_NONE;
+}
+
 void InetAddress::set(const std::string &ip,unsigned int port)
 	throw()
 {
@@ -79,19 +147,6 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 			memcpy(rawIpData(),ipBytes,16);
 		setPort(port);
 	}
-}
-
-bool InetAddress::isLinkLocal() const
-	throw()
-{
-	static const unsigned char v6llPrefix[8] = { 0xfe,0x80,0x00,0x00,0x00,0x00,0x00,0x00 };
-	switch(ss_family) {
-		case AF_INET:
-			return ((Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) & 0xffff0000) == 0xa9fe0000);
-		case AF_INET6:
-			return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,v6llPrefix,8) == 0);
-	}
-	return false;
 }
 
 std::string InetAddress::toString() const

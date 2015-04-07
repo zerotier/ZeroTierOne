@@ -253,6 +253,7 @@ void Topology::clean(uint64_t now)
 	}
 }
 
+/*
 bool Topology::updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress &mirroredAddress,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
@@ -280,6 +281,7 @@ bool Topology::updateSurface(const SharedPtr<Peer> &remotePeer,const InetAddress
 
 	return false;
 }
+*/
 
 bool Topology::authenticateRootTopology(const Dictionary &rt)
 {
