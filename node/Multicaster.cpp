@@ -81,7 +81,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 
 	{ // Return myself if I am a member of this group
 		SharedPtr<Network> network(RR->node->network(nwid));
-		if ((network)&&(network->subscribedToMulticastGroup(mg))) {
+		if ((network)&&(network->subscribedToMulticastGroup(mg,true))) {
 			RR->identity.address().appendTo(appendTo);
 			++totalKnown;
 			++added;

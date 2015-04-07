@@ -116,10 +116,14 @@ public:
 	 * @param mg Multicast group
 	 * @return True if this network endpoint / peer is a member
 	 */
-	bool subscribedToMulticastGroup(const MulticastGroup &mg) const
+	bool subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
 	{
 		Mutex::Lock _l(_lock);
-		return (std::find(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg) != _myMulticastGroups.end());
+		if (std::find(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg) != _myMulticastGroups.end())
+			return true;
+		else if (includeBridgedGroups)
+			return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
+		else return false;
 	}
 
 	/**
