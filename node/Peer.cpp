@@ -191,14 +191,15 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
 	Path *const bestPath = getBestPath(now);
 	if ((bestPath)&&(bestPath->active(now))) {
+		const unsigned int desp = std::max(RR->node->coreDesperation(),bestPath->lastReceiveDesperation());
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
-			attemptToContactAt(RR,bestPath->address(),bestPath->desperation(now),now);
+			attemptToContactAt(RR,bestPath->address(),desp,now);
 			bestPath->sent(now);
 		} else if ((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY) {
 			// We only do keepalive if desperation is zero right now, since higher
 			// desperation paths involve things like tunneling that do not need it.
-			if (bestPath->desperation() == 0) {
-				RR->node->putPacket(_paths[p].address(),"",0,0);
+			if (desp == 0) {
+				RR->node->putPacket(bestPath->address(),"",0,0);
 				bestPath->sent(now);
 			}
 		}
@@ -261,7 +262,7 @@ void Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
 			if (_paths[x].fixed()) {
-				attemptToContactAt(RR,_paths[x].address(),_paths[x].desperation(now),now);
+				attemptToContactAt(RR,_paths[x].address(),_paths[x].lastReceiveDesperation(),now);
 				_paths[y++] = _paths[x]; // keep fixed paths
 			}
 		} else {
