@@ -82,8 +82,9 @@ public:
 	 * @param fromAddr Internet IP address of origin
 	 * @param linkDesperation Link desperation of path over which packet was received
 	 * @param data Packet data
+	 * @param len Packet length
 	 */
-	void onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
+	void onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
@@ -92,9 +93,11 @@ public:
 	 * @param from Originating MAC address
 	 * @param to Destination MAC address
 	 * @param etherType Ethernet packet type
+	 * @param vlanId VLAN ID or 0 if none
 	 * @param data Ethernet payload
+	 * @param len Frame length
 	 */
-	void onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data);
+	void onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 	/**
 	 * Send a packet to a ZeroTier address (destination in packet)
@@ -164,9 +167,13 @@ public:
 	/**
 	 * Perform retries and other periodic timer tasks
 	 * 
+	 * This can return a very long delay if there are no pending timer
+	 * tasks. The caller should cap this comparatively vs. other values.
+	 *
+	 * @param now Current time
 	 * @return Number of milliseconds until doTimerTasks() should be run again
 	 */
-	unsigned long doTimerTasks();
+	unsigned long doTimerTasks(uint64_t now);
 
 	/**
 	 * @param etherType Ethernet type ID
@@ -176,9 +183,9 @@ public:
 		throw();
 
 private:
-	void _handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
-	void _handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
-	void _handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data);
+	void _handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len);
+	void _handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len);
+	void _handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<ZT_PROTO_BEACON_LENGTH> &data);
 
 	Address _sendWhoisRequest(
 		const Address &addr,

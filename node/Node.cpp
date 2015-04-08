@@ -42,6 +42,7 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
+#include "Defaults.hpp"
 
 namespace ZeroTier {
 
@@ -56,7 +57,8 @@ Node::Node(
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT1_StatusCallback statusCallback) :
+	ZT1_StatusCallback statusCallback,
+	const char *overrideRootTopology) :
 	RR(new RuntimeEnvironment(this)),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
@@ -66,7 +68,11 @@ Node::Node(
 	_statusCallback(statusCallback),
 	_networks(),
 	_networks_m(),
-	_now(now)
+	_now(now),
+	_startTimeAfterInactivity(0),
+	_lastPingCheck(0),
+	_lastHousekeepingRun(0),
+	_coreDesperation(0)
 {
 	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
@@ -106,6 +112,21 @@ Node::Node(
 		throw;
 	}
 
+	Dictionary rt;
+	if (overrideRootTopology) {
+		rt.fromString(std::string(overrideRootTopology));
+	} else {
+		std::string rttmp(dataStoreGet("root-topology"));
+		if (rttmp.length() > 0) {
+			rt.fromString(rttmp);
+			if (!Topology::authenticateRootTopology(rt))
+				rt.clear();
+		}
+		if (!rt.size())
+			rt.fromString(ZT_DEFAULTS.defaultRootTopology);
+	}
+	RR->topology->setSupernodes(Dictionary(rt.get("supernodes","")));
+
 	postEvent(ZT1_EVENT_UP);
 }
 
@@ -127,9 +148,17 @@ ZT1_ResultCode Node::processWirePacket(
 	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
-	uint64_t *nextCallDeadline)
+	uint64_t *nextBackgroundTaskDeadline)
 {
-	processBackgroundTasks(now,nextCallDeadline);
+	if (now >= *nextBackgroundTaskDeadline) {
+		ZT1_ResultCode rc = processBackgroundTasks(now,nextBackgroundTaskDeadline);
+		if (rc != ZT1_RESULT_OK)
+			return rc;
+	} else _now = now;
+
+	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(remoteAddress)),linkDesperation,packetData,packetLength);
+
+	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::processVirtualNetworkFrame(
@@ -141,14 +170,107 @@ ZT1_ResultCode Node::processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	uint64_t *nextCallDeadline)
+	uint64_t *nextBackgroundTaskDeadline)
 {
-	processBackgroundTasks(now,nextCallDeadline);
+	if (now >= *nextBackgroundTaskDeadline) {
+		ZT1_ResultCode rc = processBackgroundTasks(now,nextBackgroundTaskDeadline);
+		if (rc != ZT1_RESULT_OK)
+			return rc;
+	} else _now = now;
+
+	try {
+		SharedPtr<Network> nw(network(nwid));
+		if (nw)
+			RR->sw->onLocalEthernet(nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
+		else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
+	} catch ( ... ) {
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+	}
+
+	return ZT1_RESULT_OK;
 }
 
-ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextCallDeadline)
+class _PingPeersThatNeedPing
+{
+public:
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
+		lastReceiveFromSupernode(0),
+		RR(renv),
+		_now(now),
+		_supernodes(RR->topology->supernodeAddresses()) {}
+
+	uint64_t lastReceiveFromSupernode;
+
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	{
+		if (std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end()) {
+			p->doPingAndKeepalive(RR,_now);
+			if (p->lastReceive() > lastReceiveFromSupernode)
+				lastReceiveFromSupernode = p->lastReceive();
+		} else if (p->alive(_now)) {
+			p->doPingAndKeepalive(RR,_now);
+		}
+	}
+private:
+	const RuntimeEnvironment *RR;
+	uint64_t _now;
+	std::vector<Address> _supernodes;
+};
+
+ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
+	Mutex::Lock bl(_backgroundTasksLock);
+
+	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
+		_lastPingCheck = now;
+
+		if ((now - _startTimeAfterInactivity) > (ZT_PING_CHECK_INVERVAL * 3))
+			_startTimeAfterInactivity = now;
+
+		try {
+			_PingPeersThatNeedPing pfunc(RR,now);
+			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
+
+			_coreDesperation = (unsigned int)(std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromSupernode) / (ZT_PING_CHECK_INVERVAL * ZT_CORE_DESPERATION_INCREMENT));
+		} catch ( ... ) {
+			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+		}
+
+		try {
+			Mutex::Lock _l(_networks_m);
+			for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+				if ((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)
+					n->second->requestConfiguration();
+			}
+		} catch ( ... ) {
+			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+		}
+	}
+
+	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
+		_lastHousekeepingRun = now;
+
+		try {
+			RR->topology->clean(now);
+		} catch ( ... ) {
+			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+		}
+
+		try {
+			RR->mc->clean(now);
+		} catch ( ... ) {
+			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+		}
+	}
+
+	try {
+		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min((unsigned long)ZT_PING_CHECK_INVERVAL,RR->sw->doTimerTasks(now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
+	} catch ( ... ) {
+		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+	}
+
+	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::join(uint64_t nwid)
@@ -265,11 +387,12 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT1_StatusCallback statusCallback)
+	ZT1_StatusCallback statusCallback,
+	const char *overrideRootTopology)
 {
 	*node = (ZT1_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,statusCallback));
+		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,statusCallback,overrideRootTopology));
 		return ZT1_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
@@ -294,10 +417,10 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
-	uint64_t *nextCallDeadline)
+	uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,linkDesperation,packetData,packetLength,nextCallDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,linkDesperation,packetData,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -315,10 +438,10 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	uint64_t *nextCallDeadline)
+	uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextCallDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -326,10 +449,10 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	}
 }
 
-enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline)
+enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextCallDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

@@ -62,7 +62,8 @@ public:
 		ZT1_WirePacketSendFunction wirePacketSendFunction,
 		ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 		ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-		ZT1_StatusCallback statusCallback);
+		ZT1_StatusCallback statusCallback,
+		const char *overrideRootTopology);
 
 	~Node();
 
@@ -74,7 +75,7 @@ public:
 		unsigned int linkDesperation,
 		const void *packetData,
 		unsigned int packetLength,
-		uint64_t *nextCallDeadline);
+		uint64_t *nextBackgroundTaskDeadline);
 	ZT1_ResultCode processVirtualNetworkFrame(
 		uint64_t now,
 		uint64_t nwid,
@@ -84,8 +85,8 @@ public:
 		unsigned int vlanId,
 		const void *frameData,
 		unsigned int frameLength,
-		uint64_t *nextCallDeadline);
-	ZT1_ResultCode processBackgroundTasks(uint64_t now,uint64_t *nextCallDeadline);
+		uint64_t *nextBackgroundTaskDeadline);
+	ZT1_ResultCode processBackgroundTasks(uint64_t now,uint64_t *nextBackgroundTaskDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
 	ZT1_ResultCode leave(uint64_t nwid);
 	ZT1_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
@@ -163,6 +164,8 @@ public:
 		return nw;
 	}
 
+	inline unsigned int coreDesperation() const throw() { return _coreDesperation; }
+
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
@@ -190,7 +193,13 @@ private:
 	std::map< uint64_t,SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 
-	volatile uint64_t _now; // time of last run()
+	Mutex _backgroundTasksLock;
+
+	uint64_t _now;
+	uint64_t _startTimeAfterInactivity;
+	uint64_t _lastPingCheck;
+	uint64_t _lastHousekeepingRun;
+	unsigned int _coreDesperation;
 	unsigned int _newestVersionSeen[3]; // major, minor, revision
 };
 

@@ -158,7 +158,6 @@ Defaults::Defaults() :
 	rootTopologyAuthorities(_mkRootTopologyAuth()),
 	updateAuthorities(_mkUpdateAuth()),
 	updateLatestNfoURL(_mkUpdateUrl()),
-	rootTopologyUpdateURL("http://download.zerotier.com/net/topology/ROOT"),
 	v4Broadcast(((uint32_t)0xffffffff),ZT_DEFAULT_UDP_PORT)
 {
 }

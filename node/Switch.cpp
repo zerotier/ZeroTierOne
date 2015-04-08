@@ -58,16 +58,16 @@ Switch::~Switch()
 {
 }
 
-void Switch::onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
+void Switch::onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
 {
 	try {
-		if (data.size() == ZT_PROTO_BEACON_LENGTH) {
-			_handleBeacon(fromAddr,linkDesperation,data);
-		} else if (data.size() > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
-			if (data[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
-				_handleRemotePacketFragment(fromAddr,linkDesperation,data);
-			} else if (data.size() >= ZT_PROTO_MIN_PACKET_LENGTH) {
-				_handleRemotePacketHead(fromAddr,linkDesperation,data);
+		if (len == ZT_PROTO_BEACON_LENGTH) {
+			_handleBeacon(fromAddr,linkDesperation,Buffer<ZT_PROTO_BEACON_LENGTH>(data,len));
+		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+			if (((const unsigned char *)data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
+				_handleRemotePacketFragment(fromAddr,linkDesperation,data,len);
+			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) {
+				_handleRemotePacketHead(fromAddr,linkDesperation,data,len);
 			}
 		}
 	} catch (std::exception &ex) {
@@ -77,7 +77,7 @@ void Switch::onRemotePacket(const InetAddress &fromAddr,int linkDesperation,cons
 	}
 }
 
-void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,const Buffer<4096> &data)
+void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 {
 	SharedPtr<NetworkConfig> nconf(network->config2());
 	if (!nconf)
@@ -415,10 +415,9 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 	}
 }
 
-unsigned long Switch::doTimerTasks()
+unsigned long Switch::doTimerTasks(uint64_t now)
 {
-	unsigned long nextDelay = ~((unsigned long)0); // big number, caller will cap return value
-	const uint64_t now = RR->node->now();
+	unsigned long nextDelay = 0xffffffff; // ceiling delay, caller will cap to minimum
 
 	{ // Aggressive NAT traversal time!
 		Mutex::Lock _l(_contactQueue_m);
@@ -538,7 +537,7 @@ unsigned long Switch::doTimerTasks()
 		}
 	}
 
-	return std::max(nextDelay,(unsigned long)10); // minimum delay
+	return nextDelay;
 }
 
 const char *Switch::etherTypeName(const unsigned int etherType)
@@ -557,9 +556,9 @@ const char *Switch::etherTypeName(const unsigned int etherType)
 	return "UNKNOWN";
 }
 
-void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
+void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
 {
-	Packet::Fragment fragment(data);
+	Packet::Fragment fragment(data,len);
 	Address destination(fragment.destination());
 
 	if (destination != RR->identity.address()) {
@@ -629,9 +628,9 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDes
 	}
 }
 
-void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
+void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,fromAddr,linkDesperation));
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,fromAddr,linkDesperation));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -699,7 +698,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDespera
 	}
 }
 
-void Switch::_handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<4096> &data)
+void Switch::_handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<ZT_PROTO_BEACON_LENGTH> &data)
 {
 	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 	if (beaconAddr == RR->identity.address())

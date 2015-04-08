@@ -70,15 +70,14 @@ public:
 	/**
 	 * Create a new packet-in-decode
 	 *
-	 * @param b Source buffer with raw packet data
+	 * @param data Packet data
+	 * @param len Packet length
 	 * @param remoteAddress Address from which packet came
 	 * @param linkDesperation Link desperation for link over which packet was received
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	template<unsigned int C2>
-	IncomingPacket(const Buffer<C2> &b,const InetAddress &remoteAddress,unsigned int linkDesperation)
- 		throw(std::out_of_range) :
- 		Packet(b),
+	IncomingPacket(const void *data,unsigned int len,const InetAddress &remoteAddress,unsigned int linkDesperation) :
+ 		Packet(data,len),
  		_receiveTime(Utils::now()),
  		_remoteAddress(remoteAddress),
  		_linkDesperation(linkDesperation),

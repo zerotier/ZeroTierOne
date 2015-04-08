@@ -83,11 +83,6 @@ public:
 	const std::string updateLatestNfoURL;
 
 	/**
-	 * URL to check for updates to root topology
-	 */
-	const std::string rootTopologyUpdateURL;
-
-	/**
 	 * Address for IPv4 LAN auto-location broadcasts: 255.255.255.255:9993
 	 */
 	const InetAddress v4Broadcast;

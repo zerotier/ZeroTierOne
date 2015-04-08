@@ -361,6 +361,11 @@ public:
 		{
 		}
 
+		Fragment(const void *data,unsigned int len) :
+			Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
+		{
+		}
+
 		/**
 		 * Initialize from a packet
 		 * 
@@ -793,9 +798,13 @@ public:
 		throw();
 
 	template<unsigned int C2>
-	Packet(const Buffer<C2> &b)
- 		throw(std::out_of_range) :
+	Packet(const Buffer<C2> &b) :
  		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
+	{
+	}
+
+	Packet(const void *data,unsigned int len) :
+		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
 	{
 	}
 

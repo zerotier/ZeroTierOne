@@ -54,26 +54,26 @@ class Path
 {
 public:
 	Path() :
+		_addr(),
 		_lastSend(0),
 		_lastReceived(0),
-		_addr(),
 		_lastReceiveDesperation(0),
 		_fixed(false) {}
 
 	Path(const Path &p) throw() { memcpy(this,&p,sizeof(Path)); }
 
 	Path(const InetAddress &addr,bool fixed) :
+		_addr(addr),
 		_lastSend(0),
 		_lastReceived(0),
-		_addr(addr),
 		_lastReceiveDesperation(0),
 		_fixed(fixed) {}
 
 	inline void init(const InetAddress &addr,bool fixed)
 	{
+		_addr = addr;
 		_lastSend = 0;
 		_lastReceived = 0;
-		_addr = addr;
 		_lastReceiveDesperation = 0;
 		_fixed = fixed;
 	}
@@ -89,7 +89,6 @@ public:
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
-	inline int lastReceiveDesperation() const throw() { return _lastReceiveDesperation; }
 
 	/**
 	 * Called when a packet is sent to this path
@@ -98,7 +97,11 @@ public:
 	 *
 	 * @param t Time of send
 	 */
-	inline void sent(uint64_t t) throw() { _lastSend = t; }
+	inline void sent(uint64_t t)
+		throw()
+	{
+		_lastSend = t;
+	}
 
 	/**
 	 * Called when a packet is received from this path
@@ -106,7 +109,12 @@ public:
 	 * @param t Time of receive
 	 * @param d Link desperation of receive
 	 */
-	inline void received(uint64_t t,unsigned int d) throw() { _lastReceived = t; _lastReceiveDesperation = d; }
+	inline void received(uint64_t t,unsigned int d)
+		throw()
+	{
+		_lastReceived = t;
+		_lastReceiveDesperation = d;
+	}
 
 	/**
 	 * @return Is this a fixed path?
@@ -119,24 +127,9 @@ public:
 	inline void setFixed(bool f) throw() { _fixed = f; }
 
 	/**
-	 * Compute path desperation
-	 *
-	 * Path desperation affects escalation to less efficient fallback
-	 * transports such as TCP or HTTP relaying.
-	 *
-	 * Right now we only escalate desperation for fixed paths, which
-	 * are paths to supernodes. This causes our fallback tunneling
-	 * mechanisms to kick in.
-	 *
-	 * @param now Current time
-	 * @return Path desperation, starting at 0
+	 * @return Last desperation reported via incoming link
 	 */
-	inline unsigned int desperation(uint64_t now) const
-	{
-		if ((_fixed)&&(_lastSend > _lastReceived))
-			return std::max(_lastReceiveDesperation,(unsigned int)((_lastSend - _lastReceived) / ZT_DESPERATION_INCREMENT));
-		return _lastReceiveDesperation;
-	}
+	inline unsigned int lastReceiveDesperation() const throw() { return _lastReceiveDesperation; }
 
 	/**
 	 * @param now Current time
@@ -159,7 +152,7 @@ public:
 	 */
 	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		if (RR->node->putPacket(_addr,data,len,desperation(now))) {
+		if (RR->node->putPacket(_addr,data,len,std::max(RR->node->coreDesperation(),_lastReceiveDesperation))) {
 			sent(now);
 			RR->antiRec->logOutgoingZT(data,len);
 			return true;
@@ -191,9 +184,9 @@ public:
 	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
 
 private:
+	InetAddress _addr;
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
-	InetAddress _addr;
 	unsigned int _lastReceiveDesperation;
 	bool _fixed;
 };

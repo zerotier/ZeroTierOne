@@ -183,21 +183,12 @@ public:
 	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,unsigned int linkDesperation,uint64_t now);
 
 	/**
-	 * Send a HELLO to all active direct paths
+	 * Send pings or keepalives depending on configured timeouts
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
 	 */
-	inline void ping(const RuntimeEnvironment *RR,uint64_t now)
-	{
-		unsigned int np = _numPaths;
-		for(unsigned int p=0;p<np;++p) {
-			if (_paths[p].active(now)) {
-				attemptToContactAt(RR,_paths[p].address(),_paths[p].desperation(now),now);
-				_paths[p].sent(now);
-			}
-		}
-	}
+	void doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
 	 * @return All known direct paths to this peer

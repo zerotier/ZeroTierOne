@@ -187,6 +187,24 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 	RR->node->putPacket(atAddress,outp.data(),outp.size(),linkDesperation);
 }
 
+void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
+{
+	Path *const bestPath = getBestPath(now);
+	if ((bestPath)&&(bestPath->active(now))) {
+		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
+			attemptToContactAt(RR,bestPath->address(),bestPath->desperation(now),now);
+			bestPath->sent(now);
+		} else if ((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY) {
+			// We only do keepalive if desperation is zero right now, since higher
+			// desperation paths involve things like tunneling that do not need it.
+			if (bestPath->desperation() == 0) {
+				RR->node->putPacket(_paths[p].address(),"",0,0);
+				bestPath->sent(now);
+			}
+		}
+	}
+}
+
 void Peer::addPath(const Path &newp)
 {
 	unsigned int np = _numPaths;

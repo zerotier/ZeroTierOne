@@ -141,11 +141,6 @@
 #define ZT_ADDRESS_RESERVED_PREFIX 0xff
 
 /**
- * Default local port for ZeroTier UDP traffic
- */
-#define ZT_DEFAULT_UDP_PORT 9993
-
-/**
  * Default payload MTU for UDP packets
  *
  * In the future we might support UDP path MTU discovery, but for now we
@@ -190,7 +185,12 @@
 /**
  * How often Topology::clean() and Network::clean() and similar are called, in ms
  */
-#define ZT_DB_CLEAN_PERIOD 120000
+#define ZT_HOUSEKEEPING_PERIOD 120000
+
+/**
+ * Overriding granularity for timer tasks to prevent CPU-intensive thrashing on every packet
+ */
+#define ZT_CORE_TIMER_TASK_GRANULARITY 1000
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -230,11 +230,6 @@
 #define ZT_MULTICAST_LIKE_EXPIRE 600000
 
 /**
- * Time between polls of local tap devices for multicast membership changes
- */
-#define ZT_MULTICAST_LOCAL_POLL_PERIOD 10000
-
-/**
  * Delay between explicit MULTICAST_GATHER requests for a given multicast channel
  */
 #define ZT_MULTICAST_EXPLICIT_GATHER_DELAY (ZT_MULTICAST_LIKE_EXPIRE / 10)
@@ -252,9 +247,20 @@
 #define ZT_MULTICAST_DEFAULT_LIMIT 32
 
 /**
- * Delay between scans of the topology active peer DB for peers that need ping
+ * How frequently to send a zero-byte UDP keepalive packet
+ *
+ * There are NATs with timeouts as short as 30 seconds, so this turns out
+ * to be needed.
  */
-#define ZT_PING_CHECK_DELAY 10000
+#define ZT_NAT_KEEPALIVE_DELAY 25000
+
+/**
+ * Delay between scans of the topology active peer DB for peers that need ping
+ *
+ * This is also how often pings will be retried to upstream peers (supernodes)
+ * constantly until something is heard.
+ */
+#define ZT_PING_CHECK_INVERVAL 6250
 
 /**
  * Delay between ordinary case pings of direct links
@@ -267,39 +273,14 @@
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
 
 /**
- * Delay in core loop between checks of network autoconf newness
+ * Increment core desperation after this multiple of ping checks without responses from upstream peers
  */
-#define ZT_NETWORK_AUTOCONF_CHECK_DELAY 10000
-
-/**
- * Time since a ping was sent to be considered unanswered
- */
-#define ZT_PING_UNANSWERED_AFTER 1500
-
-/**
- * Try to ping supernodes this often until we get something from them
- */
-#define ZT_STARTUP_AGGRO (ZT_PING_UNANSWERED_AFTER * 2)
-
-/**
- * How long since last message from an authoritative upstream peer before we increment our desperation level?
- */
-#define ZT_DESPERATION_INCREMENT (ZT_STARTUP_AGGRO * 2)
-
-/**
- * Interval between "spams" if desperation > 0
- */
-#define ZT_DESPERATION_SPAM_INTERVAL 60000
-
-/**
- * Maximum delay between runs of the main loop in Node.cpp
- */
-#define ZT_MAX_SERVICE_LOOP_INTERVAL ZT_STARTUP_AGGRO
+#define ZT_CORE_DESPERATION_INCREMENT 2
 
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_DELAY)
+#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_INVERVAL)
 
 /**
  * Stop relaying via peers that have not responded to direct sends
@@ -311,16 +292,6 @@
  * supernode and will switch back eventually.
  */
 #define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
-
-/**
- * Delay sleep overshoot for detection of a probable sleep/wake event
- */
-#define ZT_SLEEP_WAKE_DETECTION_THRESHOLD 5000
-
-/**
- * Time to pause main service loop after sleep/wake detect
- */
-#define ZT_SLEEP_WAKE_SETTLE_TIME 5000
 
 /**
  * Minimum interval between attempts by relays to unite peers
@@ -366,11 +337,6 @@
  * If there is no known route, spam to up to this many active bridges
  */
 #define ZT_MAX_BRIDGE_SPAM 16
-
-/**
- * Timeout for IPC connections (e.g. unix domain sockets) in seconds
- */
-#define ZT_IPC_TIMEOUT 600
 
 /**
  * A test pseudo-network-ID that can be joined

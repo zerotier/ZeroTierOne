@@ -54,6 +54,11 @@ extern "C" {
 /****************************************************************************/
 
 /**
+ * Default port for the ZeroTier service
+ */
+#define ZT1_DEFAULT_PORT 9993
+
+/**
  * Maximum MTU for ZeroTier virtual networks
  *
  * This is pretty much an unchangeable global constant. To make it change
@@ -149,7 +154,12 @@ enum ZT1_ResultCode
 	/**
 	 * Invalid packet or failed authentication
 	 */
-	ZT1_RESULT_ERROR_PACKET_INVALID = 1000
+	ZT1_RESULT_ERROR_PACKET_INVALID = 1000,
+
+	/**
+	 * Network ID not valid
+	 */
+	ZT1_RESULT_ERROR_NETWORK_NOT_FOUND = 1001
 };
 
 /**
@@ -674,6 +684,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param statusCallback Function to receive status updates and non-fatal error notices
+ * @param overrideRootTopology If not NULL, must contain string-serialize root topology (for testing, default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_new(
@@ -684,7 +695,8 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT1_StatusCallback statusCallback);
+	ZT1_StatusCallback statusCallback,
+	const char *overrideRootTopology = (const char *)0);
 
 /**
  * Delete a node and free all resources it consumes
@@ -705,7 +717,7 @@ void ZT1_Node_delete(ZT1_Node *node);
  * @param linkDesperation Link desperation metric for link or protocol over which packet arrived
  * @param packetData Packet data
  * @param packetLength Packet length
- * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
+ * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_processWirePacket(
@@ -715,7 +727,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
-	uint64_t *nextCallDeadline);
+	uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Process a frame from a virtual network port (tap)
@@ -729,7 +741,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
  * @param vlanId 10-bit VLAN ID or 0 if none
  * @param frameData Frame payload data
  * @param frameLength Frame payload length
- * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
+ * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
@@ -742,20 +754,17 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	uint64_t *nextCallDeadline);
+	uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Perform required periodic operations even if no new frames or packets have arrived
  *
- * If the nextCallDeadline arrives and nothing has happened, call this method
- * to do required background tasks like pinging and cleanup.
- *
  * @param node Node instance
  * @param now Current clock in milliseconds
- * @param nextCallDeadline Result: set to deadline for next call to one of the three processXXX() methods
+ * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to one of the three processXXX() methods
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextCallDeadline);
+enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Join a network
