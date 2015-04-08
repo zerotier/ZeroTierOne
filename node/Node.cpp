@@ -232,7 +232,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroun
 			_PingPeersThatNeedPing pfunc(RR,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
-			_coreDesperation = (unsigned int)(std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromSupernode) / (ZT_PING_CHECK_INVERVAL * ZT_CORE_DESPERATION_INCREMENT));
+			_coreDesperation = (unsigned int)((now - std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromSupernode)) / (ZT_PING_CHECK_INVERVAL * ZT_CORE_DESPERATION_INCREMENT));
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}
