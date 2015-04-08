@@ -607,7 +607,7 @@ typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,enum ZT1_Vir
  *
  * This is called whenever the node's status changes in some significant way.
  */
-typedef void (*ZT1_StatusCallback)(ZT1_Node *,enum ZT1_Event);
+typedef void (*ZT1_EventCallback)(ZT1_Node *,enum ZT1_Event);
 
 /**
  * Function to get an object from the data store
@@ -683,7 +683,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
- * @param statusCallback Function to receive status updates and non-fatal error notices
+ * @param eventCallback Function to receive status updates and non-fatal error notices
  * @param overrideRootTopology If not NULL, must contain string-serialize root topology (for testing, default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -695,7 +695,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT1_StatusCallback statusCallback,
+	ZT1_EventCallback eventCallback,
 	const char *overrideRootTopology = (const char *)0);
 
 /**

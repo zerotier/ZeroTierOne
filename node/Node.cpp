@@ -56,7 +56,7 @@ Node::Node(
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT1_StatusCallback statusCallback,
+	ZT1_EventCallback eventCallback,
 	const char *overrideRootTopology) :
 	RR(new RuntimeEnvironment(this)),
 	_dataStoreGetFunction(dataStoreGetFunction),
@@ -64,7 +64,7 @@ Node::Node(
 	_wirePacketSendFunction(wirePacketSendFunction),
 	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
 	_virtualNetworkConfigFunction(virtualNetworkConfigFunction),
-	_statusCallback(statusCallback),
+	_eventCallback(eventCallback),
 	_networks(),
 	_networks_m(),
 	_now(now),
@@ -384,12 +384,12 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT1_StatusCallback statusCallback,
+	ZT1_EventCallback eventCallback,
 	const char *overrideRootTopology)
 {
 	*node = (ZT1_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,statusCallback,overrideRootTopology));
+		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,eventCallback,overrideRootTopology));
 		return ZT1_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

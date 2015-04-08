@@ -62,7 +62,7 @@ public:
 		ZT1_WirePacketSendFunction wirePacketSendFunction,
 		ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 		ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-		ZT1_StatusCallback statusCallback,
+		ZT1_EventCallback eventCallback,
 		const char *overrideRootTopology);
 
 	~Node();
@@ -171,7 +171,7 @@ public:
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
 	std::string dataStoreGet(const char *name);
 
-	inline void postEvent(ZT1_Event ev) { _statusCallback(reinterpret_cast<ZT1_Node *>(this),ev); }
+	inline void postEvent(ZT1_Event ev) { _eventCallback(reinterpret_cast<ZT1_Node *>(this),ev); }
 
 	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,op,nc); }
 
@@ -185,7 +185,7 @@ private:
 	ZT1_WirePacketSendFunction _wirePacketSendFunction;
 	ZT1_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
 	ZT1_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
-	ZT1_StatusCallback _statusCallback;
+	ZT1_EventCallback _eventCallback;
 
 	//Dictionary _localConfig; // persisted as local.conf
 	//Mutex _localConfig_m;
