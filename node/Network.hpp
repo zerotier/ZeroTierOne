@@ -333,6 +333,13 @@ public:
 	 */
 	void destroy();
 
+	inline bool operator==(const Network &n) const throw() { return (_id == n._id); }
+	inline bool operator!=(const Network &n) const throw() { return (_id != n._id); }
+	inline bool operator<(const Network &n) const throw() { return (_id < n._id); }
+	inline bool operator>(const Network &n) const throw() { return (_id > n._id); }
+	inline bool operator<=(const Network &n) const throw() { return (_id <= n._id); }
+	inline bool operator>=(const Network &n) const throw() { return (_id >= n._id); }
+
 private:
 	ZT1_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked

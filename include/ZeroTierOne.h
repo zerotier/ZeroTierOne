@@ -120,10 +120,10 @@ extern "C" {
 /**
  * Function return code: OK (0) or error results
  *
- * Fatal errors should be interpreted to mean that the node is no longer
- * working correctly. They indicate serious problems such as build problems,
- * an inaccessible data store, system configuration issues, or out of
- * memory.
+ * Use ZT1_ResultCode_isFatal() to check for a fatal error. If a fatal error
+ * occurs, the node should be considered to not be working correctly. These
+ * indicate serious problems like an inaccessible data store or a compile
+ * problem.
  */
 enum ZT1_ResultCode
 {
@@ -145,22 +145,23 @@ enum ZT1_ResultCode
 	ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED = 2,
 
 	/**
-	 * Internal error (e.g. unexpected exception, build problem, link problem, etc.)
+	 * Internal error (e.g. unexpected exception indicating bug or build problem)
 	 */
 	ZT1_RESULT_FATAL_ERROR_INTERNAL = 3,
 
 	// Non-fatal errors (>1000)
 
 	/**
-	 * Invalid packet or failed authentication
-	 */
-	ZT1_RESULT_ERROR_PACKET_INVALID = 1000,
-
-	/**
 	 * Network ID not valid
 	 */
-	ZT1_RESULT_ERROR_NETWORK_NOT_FOUND = 1001
+	ZT1_RESULT_ERROR_NETWORK_NOT_FOUND = 1000
 };
+
+/**
+ * @param x Result code
+ * @return True if result code indicates a fatal error
+ */
+#define ZT1_ResultCode_isFatal(x) ((((int)(x)) > 0)&&(((int)(x)) < 1000))
 
 /**
  * Status codes sent to status update callback when things happen
@@ -172,16 +173,22 @@ enum ZT1_Event
 	 *
 	 * This is the first event generated, and is always sent. It may occur
 	 * before Node's constructor returns.
+	 *
+	 * Meta-data: none
 	 */
 	ZT1_EVENT_UP = 0,
 
 	/**
 	 * Node is offline -- network does not seem to be reachable by any available strategy
+	 *
+	 * Meta-data: none
 	 */
 	ZT1_EVENT_OFFLINE = 1,
 
 	/**
 	 * Node is online -- at least one upstream node appears reachable
+	 *
+	 * Meta-data: none
 	 */
 	ZT1_EVENT_ONLINE = 2,
 
@@ -191,6 +198,8 @@ enum ZT1_Event
 	 * This is generated within Node's destructor when it is being shut down.
 	 * It's done for convenience, since cleaning up other state in the event
 	 * handler may appear more idiomatic.
+	 *
+	 * Meta-data: none
 	 */
 	ZT1_EVENT_DOWN = 3,
 
@@ -221,6 +230,8 @@ enum ZT1_Event
 	 * doing so in a mature reliable application. Besides, handling this
 	 * condition is a good way to make sure it never arises. It's like how
 	 * umbrellas prevent rain and smoke detectors prevent fires. They do, right?
+	 *
+	 * Meta-data: none
 	 */
 	ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION = 4,
 
@@ -230,8 +241,33 @@ enum ZT1_Event
 	 * Right now this is only triggered if a hub or supernode reports a
 	 * more recent version, and only once. It can be used to trigger a
 	 * software update check.
+	 *
+	 * Meta-data: unsigned int[3], more recent version number
 	 */
-	ZT1_EVENT_SAW_MORE_RECENT_VERSION = 5
+	ZT1_EVENT_SAW_MORE_RECENT_VERSION = 5,
+
+	/**
+	 * A packet failed authentication
+	 *
+	 * Meta-data: struct sockaddr_storage containing origin address of packet
+	 */
+	ZT1_EVENT_AUTHENTICATION_FAILURE = 6,
+
+	/**
+	 * A received packet was not valid
+	 *
+	 * Meta-data: struct sockaddr_storage containing origin address of packet
+	 */
+	ZT1_EVENT_INVALID_PACKET = 7,
+
+	/**
+	 * Trace (debugging) message
+	 *
+	 * These events are only generated if this is a TRACE-enabled build.
+	 *
+	 * Meta-data: C string, TRACE message
+	 */
+	ZT1_EVENT_TRACE = 8
 };
 
 /**
@@ -603,11 +639,15 @@ typedef void ZT1_Node;
 typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *);
 
 /**
- * Callback for status messages
+ * Callback for events
  *
- * This is called whenever the node's status changes in some significant way.
+ * Events are generated when the node's status changes in a significant way
+ * and on certain non-fatal errors and events of interest. The final void
+ * parameter points to event meta-data. The type of event meta-data (and
+ * whether it is present at all) is event type dependent. See the comments
+ * in the definition of ZT1_Event.
  */
-typedef void (*ZT1_EventCallback)(ZT1_Node *,enum ZT1_Event);
+typedef void (*ZT1_EventCallback)(ZT1_Node *,enum ZT1_Event,const void *);
 
 /**
  * Function to get an object from the data store

@@ -175,14 +175,10 @@ ZT1_ResultCode Node::processVirtualNetworkFrame(
 			return rc;
 	} else _now = now;
 
-	try {
-		SharedPtr<Network> nw(network(nwid));
-		if (nw)
-			RR->sw->onLocalEthernet(nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
-		else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
-	} catch ( ... ) {
-		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
-	}
+	SharedPtr<Network> nw(network(nwid));
+	if (nw)
+		RR->sw->onLocalEthernet(nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
+	else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
 
 	return ZT1_RESULT_OK;
 }
@@ -364,9 +360,36 @@ void Node::postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigne
 		_newestVersionSeen[0] = major;
 		_newestVersionSeen[1] = minor;
 		_newestVersionSeen[2] = rev;
-		this->postEvent(ZT1_EVENT_SAW_MORE_RECENT_VERSION);
+		this->postEvent(ZT1_EVENT_SAW_MORE_RECENT_VERSION,(const void *)_newestVersionSeen);
 	}
 }
+
+#ifdef ZT_TRACE
+void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
+{
+	static Mutex traceLock;
+
+	va_list ap;
+	char tmp1[1024],tmp2[1024],tmp3[256];
+
+	Mutex::Lock _l(traceLock);
+
+#ifdef __WINDOWS__
+	ctime_s(tmp3,sizeof(tmp3),&now);
+	const char *nowstr = tmp3;
+#else
+	const char *nowstr = ctime_r(&now,tmp3);
+#endif
+
+	va_start(ap,fmt);
+	vsnprintf(tmp2,sizeof(tmp2),fmt,ap);
+	va_end(ap);
+	tmp2[sizeof(tmp2)-1] = (char)0;
+
+	Utils::snprintf(tmp1,sizeof(tmp1),"[%s] %s:%u %s",nowstr,module,line,tmp2);
+	postEvent(ZT1_EVENT_TRACE,tmp1);
+}
+#endif // ZT_TRACE
 
 } // namespace ZeroTier
 
@@ -421,7 +444,8 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		return ZT1_RESULT_ERROR_PACKET_INVALID;
+		reinterpret_cast<ZeroTier::Node *>(node)->postEvent(ZT1_EVENT_INVALID_PACKET,(const void *)remoteAddress);
+		return ZT1_RESULT_OK;
 	}
 }
 

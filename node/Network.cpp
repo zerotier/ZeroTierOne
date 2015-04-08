@@ -199,12 +199,12 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 
 			return true;
 		} else {
-			LOG("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
+			TRACE("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
 		}
 	} catch (std::exception &exc) {
-		LOG("ignored invalid configuration for network %.16llx (%s)",(unsigned long long)_id,exc.what());
+		TRACE("ignored invalid configuration for network %.16llx (%s)",(unsigned long long)_id,exc.what());
 	} catch ( ... ) {
-		LOG("ignored invalid configuration for network %.16llx (unknown exception)",(unsigned long long)_id);
+		TRACE("ignored invalid configuration for network %.16llx (unknown exception)",(unsigned long long)_id);
 	}
 	return false;
 }
@@ -227,7 +227,7 @@ int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 			return 2; // OK and configuration has changed
 		}
 	} catch ( ... ) {
-		LOG("ignored invalid configuration for network %.16llx (dictionary decode failed)",(unsigned long long)_id);
+		TRACE("ignored invalid configuration for network %.16llx (dictionary decode failed)",(unsigned long long)_id);
 	}
 	return 0;
 }
@@ -288,7 +288,7 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 	// Check signature, log and return if cert is invalid
 	if (!forceAccept) {
 		if (cert.signedBy() != controller()) {
-			LOG("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
 			return;
 		}
 
@@ -302,7 +302,7 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 		}
 
 		if (!cert.verify(signer->identity())) {
-			LOG("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
 			return;
 		}
 	}

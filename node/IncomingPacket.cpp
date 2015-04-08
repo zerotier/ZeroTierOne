@@ -213,7 +213,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-						LOG("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
+						TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
 						outp.append((unsigned char)Packet::VERB_HELLO);
 						outp.append(packetId());
@@ -221,10 +222,12 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 						outp.armor(key,true);
 						RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 					} else {
-						LOG("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
+						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					}
 				} else {
-					LOG("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+					RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
+					TRACE("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				}
 
 				return true;
@@ -232,7 +235,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				// Identity is the same as the one we already have -- check packet integrity
 
 				if (!dearmor(peer->key())) {
-					LOG("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+					RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
+					TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					return true;
 				}
 
@@ -242,13 +246,15 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			// We don't already have an identity with this address -- validate and learn it
 
 			if (!id.locallyValidate()) {
+				RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
 
 			SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
 			if (!dearmor(newPeer->key())) {
-				LOG("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+				RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
+				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
 
@@ -672,7 +678,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 				case NetworkConfigMaster::NETCONF_QUERY_OK: {
 					const std::string netconfStr(netconf.toString());
 					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
-						LOG("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
+						TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 					} else {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 						outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
@@ -682,7 +688,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						outp.append(netconfStr.data(),netconfStr.length());
 						outp.compress();
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) {
-							LOG("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
+							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
 							RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 						}
@@ -709,7 +715,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 				} break;
 				case NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
-					LOG("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
+					TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
 					break;
 				default:
 					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkConfigMaster::doNetworkConfigRequest()");

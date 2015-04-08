@@ -86,7 +86,7 @@ void Topology::setSupernodes(const Dictionary &sn)
 				if (udp.length() > 0)
 					a.push_back(InetAddress(udp));
 			} catch ( ... ) {
-				LOG("supernode list contained invalid entry for: %s",d->first.c_str());
+				TRACE("supernode list contained invalid entry for: %s",d->first.c_str());
 			}
 		}
 	}

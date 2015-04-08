@@ -43,6 +43,13 @@
 #include "MAC.hpp"
 #include "Network.hpp"
 
+#undef TRACE
+#ifdef ZT_TRACE
+#define TRACE(f,...) RR->node->postTrace(__FILE__,__LINE__,f,##__VA_ARGS__)
+#else
+#define TRACE(f,...) {}
+#endif
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -164,6 +171,9 @@ public:
 		return nw;
 	}
 
+	/**
+	 * @return Overall system level of desperation based on how long it's been since an upstream node (supernode) has talked to us
+	 */
 	inline unsigned int coreDesperation() const throw() { return _coreDesperation; }
 
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,data,len,(int)secure) == 0); }
@@ -171,11 +181,31 @@ public:
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
 	std::string dataStoreGet(const char *name);
 
-	inline void postEvent(ZT1_Event ev) { _eventCallback(reinterpret_cast<ZT1_Node *>(this),ev); }
+	/**
+	 * Post an event to the external user
+	 *
+	 * @param ev Event type
+	 * @param md Meta-data (default: NULL/none)
+	 */
+	inline void postEvent(ZT1_Event ev,const void *md = (const void *)0) { _eventCallback(reinterpret_cast<ZT1_Node *>(this),ev,md); }
 
+	/**
+	 * Update virtual network port configuration
+	 *
+	 * @param nwid Network ID
+	 * @param op Configuration operation
+	 * @param nc Network configuration
+	 */
 	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,op,nc); }
 
+	/**
+	 * If this version is newer than the newest we've seen, post a new version seen event
+	 */
 	void postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev);
+
+#ifdef ZT_TRACE
+	void postTrace(const char *module,unsigned int line,const char *fmt,...);
+#endif
 
 private:
 	RuntimeEnvironment *RR;
