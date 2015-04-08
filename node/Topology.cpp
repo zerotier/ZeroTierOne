@@ -26,17 +26,16 @@
  */
 
 #include "Constants.hpp"
-#include "Defaults.hpp"
 #include "Topology.hpp"
-#include "NodeConfig.hpp"
-#include "CMWC4096.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Defaults.hpp"
 #include "Dictionary.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_idCacheBase(renv->homePath + ZT_PATH_SEPARATOR_S + "iddb.d"),
 	_amSupernode(false)
 {
 }
@@ -45,7 +44,7 @@ Topology::~Topology()
 {
 }
 
-void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn)
+void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
 {
 	Mutex::Lock _l(_lock);
 
@@ -55,15 +54,15 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 	_supernodes = sn;
 	_supernodeAddresses.clear();
 	_supernodePeers.clear();
-	uint64_t now = Utils::now();
+	const uint64_t now = RR->node->now();
 
-	for(std::map< Identity,std::vector< std::pair<InetAddress,bool> > >::const_iterator i(sn.begin());i!=sn.end();++i) {
+	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
 		if (i->first != RR->identity) { // do not add self as a peer
 			SharedPtr<Peer> &p = _activePeers[i->first.address()];
 			if (!p)
 				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
-			for(std::vector< std::pair<InetAddress,bool> >::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(Path(j->first,(j->second) ? Path::PATH_TYPE_TCP_OUT : Path::PATH_TYPE_UDP,true));
+			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
+				p->addPath(Path(*j,true));
 			p->use(now);
 			_supernodePeers.push_back(p);
 		}
@@ -77,18 +76,15 @@ void Topology::setSupernodes(const std::map< Identity,std::vector< std::pair<Ine
 
 void Topology::setSupernodes(const Dictionary &sn)
 {
-	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > m;
+	std::map< Identity,std::vector<InetAddress> > m;
 	for(Dictionary::const_iterator d(sn.begin());d!=sn.end();++d) {
 		if ((d->first.length() == ZT_ADDRESS_LENGTH_HEX)&&(d->second.length() > 0)) {
 			try {
 				Dictionary snspec(d->second);
-				std::vector< std::pair<InetAddress,bool> > &a = m[Identity(snspec.get("id"))];
+				std::vector<InetAddress> &a = m[Identity(snspec.get("id"))];
 				std::string udp(snspec.get("udp",std::string()));
 				if (udp.length() > 0)
-					a.push_back(std::pair<InetAddress,bool>(InetAddress(udp),false));
-				std::string tcp(snspec.get("tcp",std::string()));
-				if (tcp.length() > 0)
-					a.push_back(std::pair<InetAddress,bool>(InetAddress(tcp),true));
+					a.push_back(InetAddress(udp));
 			} catch ( ... ) {
 				LOG("supernode list contained invalid entry for: %s",d->first.c_str());
 			}
@@ -104,7 +100,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 		throw std::logic_error("cannot add peer for self");
 	}
 
-	uint64_t now = Utils::now();
+	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
 	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
@@ -121,7 +117,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		return SharedPtr<Peer>();
 	}
 
-	uint64_t now = Utils::now();
+	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
 	SharedPtr<Peer> &ap = _activePeers[zta];
@@ -148,7 +144,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
 	SharedPtr<Peer> bestSupernode;
-	uint64_t now = Utils::now();
+	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
 	if (_amSupernode) {
@@ -273,9 +269,10 @@ bool Topology::authenticateRootTopology(const Dictionary &rt)
 
 Identity Topology::_getIdentity(const Address &zta)
 {
-	std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + zta.toString());
-	std::string ids;
-	if (Utils::readFile(idcPath.c_str(),ids)) {
+	char p[128];
+	Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)zta.toInt());
+	std::string ids(RR->node->dataStoreGet(p));
+	if (ids.length() > 0) {
 		try {
 			return Identity(ids);
 		} catch ( ... ) {} // ignore invalid IDs
@@ -286,8 +283,9 @@ Identity Topology::_getIdentity(const Address &zta)
 void Topology::_saveIdentity(const Identity &id)
 {
 	if (id) {
-		std::string idcPath(_idCacheBase + ZT_PATH_SEPARATOR_S + id.address().toString());
-		Utils::writeFile(idcPath.c_str(),id.toString(false));
+		char p[128];
+		Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)id.address().toInt());
+		RR->node->dataStorePut(p,id.toString(false),false);
 	}
 }
 

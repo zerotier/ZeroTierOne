@@ -43,7 +43,6 @@
 #include "Peer.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
-#include "Utils.hpp"
 #include "Dictionary.hpp"
 
 namespace ZeroTier {
@@ -64,7 +63,7 @@ public:
 	 * 
 	 * @param sn Supernodes for this network
 	 */
-	void setSupernodes(const std::map< Identity,std::vector< std::pair<InetAddress,bool> > > &sn);
+	void setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn);
 
 	/**
 	 * Set up supernodes for this network
@@ -202,16 +201,13 @@ private:
 
 	const RuntimeEnvironment *RR;
 
-	std::string _idCacheBase;
-
 	std::map< Address,SharedPtr<Peer> > _activePeers;
-	std::map< Identity,std::vector< std::pair<InetAddress,bool> > > _supernodes;
+	std::map< Identity,std::vector<InetAddress> > _supernodes;
 	std::vector< Address > _supernodeAddresses;
 	std::vector< SharedPtr<Peer> > _supernodePeers;
 
 	Mutex _lock;
 
-	// Set to true if my identity is in _supernodes
 	bool _amSupernode;
 };
 
