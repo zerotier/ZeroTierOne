@@ -38,7 +38,6 @@
 #include "Topology.hpp"
 #include "Buffer.hpp"
 #include "Packet.hpp"
-#include "Logger.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
@@ -107,7 +106,6 @@ Node::Node(
 		delete RR->mc;
 		delete RR->sw;
 		delete RR->prng;
-		delete RR->log;
 		delete RR;
 		throw;
 	}
@@ -138,7 +136,6 @@ Node::~Node()
 	delete RR->mc;
 	delete RR->sw;
 	delete RR->prng;
-	delete RR->log;
 	delete RR;
 }
 

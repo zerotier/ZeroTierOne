@@ -38,7 +38,6 @@
 #include "CMWC4096.hpp"
 #include "C25519.hpp"
 #include "CertificateOfMembership.hpp"
-#include "Logger.hpp"
 
 namespace ZeroTier {
 

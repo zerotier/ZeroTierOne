@@ -32,7 +32,6 @@
 #include "Network.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Node.hpp"
-#include "Logger.hpp"
 
 namespace ZeroTier {
 

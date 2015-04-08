@@ -36,7 +36,6 @@
 namespace ZeroTier {
 
 class NodeConfig;
-class Logger;
 class Switch;
 class Topology;
 class CMWC4096;
@@ -48,15 +47,6 @@ class SelfAwareness;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
- * 
- * I do not believe in mutable static variables, period, or in global static
- * instances of objects that don't basically represent constants. It makes
- * unit testing, embedding, threading, and other things hard and is poor
- * practice.
- * 
- * So we put everything that we would want to be global, like Logger, here
- * and we give everybody this as _r. The Node creates and initializes this
- * on startup and deletes things on shutdown.
  */
 class RuntimeEnvironment
 {
@@ -65,7 +55,6 @@ public:
 		node(n),
 		identity(),
 		netconfMaster((NetworkConfigMaster *)0),
-		log((Logger *)0),
 		prng((CMWC4096 *)0),
 		sw((Switch *)0),
 		mc((Multicaster *)0),
@@ -92,7 +81,6 @@ public:
 	 * These are constant and never null after startup unless indicated.
 	 */
 
-	Logger *log; // null if logging is disabled
 	CMWC4096 *prng;
 	Switch *sw;
 	Multicaster *mc;

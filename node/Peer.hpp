@@ -43,7 +43,6 @@
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
-#include "Logger.hpp"
 #include "InetAddress.hpp"
 #include "Packet.hpp"
 #include "SharedPtr.hpp"

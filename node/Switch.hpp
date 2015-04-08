@@ -59,7 +59,6 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class Logger;
 class Peer;
 
 /**
