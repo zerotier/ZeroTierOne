@@ -167,6 +167,7 @@ void Network::multicastSubscribe(const MulticastGroup &mg)
 		return;
 	_myMulticastGroups.push_back(mg);
 	std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());
+	_announceMulticastGroups();
 }
 
 void Network::multicastUnsubscribe(const MulticastGroup &mg)
