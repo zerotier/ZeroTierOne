@@ -54,30 +54,6 @@ namespace ZeroTier {
 
 const char Utils::HEXCHARS[16] = { '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f' };
 
-#ifdef __UNIX_LIKE__
-bool Utils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
-	throw()
-{
-	int fdout = ::open(stdoutPath,O_WRONLY|O_CREAT,0600);
-	if (fdout > 0) {
-		int fderr;
-		if (stderrPath) {
-			fderr = ::open(stderrPath,O_WRONLY|O_CREAT,0600);
-			if (fderr <= 0) {
-				::close(fdout);
-				return false;
-			}
-		} else fderr = fdout;
-		::close(STDOUT_FILENO);
-		::close(STDERR_FILENO);
-		::dup2(fdout,STDOUT_FILENO);
-		::dup2(fderr,STDERR_FILENO);
-		return true;
-	}
-	return false;
-}
-#endif // __UNIX_LIKE__
-
 static void _Utils_doBurn(char *ptr,unsigned int len)
 {
 	for(unsigned int i=0;i<len;++i)
@@ -92,42 +68,6 @@ void Utils::burn(void *ptr,unsigned int len)
 	// cry and mumble something about never eliding secure memory zeroing
 	// again.
 	(_Utils_doBurn_ptr)((char *)ptr,len);
-}
-
-std::map<std::string,bool> Utils::listDirectory(const char *path)
-{
-	std::map<std::string,bool> r;
-
-#ifdef __WINDOWS__
-	HANDLE hFind;
-	WIN32_FIND_DATAA ffd;
-	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
-		do {
-			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,"..")))
-				r[std::string(ffd.cFileName)] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
-		} while (FindNextFileA(hFind,&ffd));
-		FindClose(hFind);
-	}
-#else
-	struct dirent de;
-	struct dirent *dptr;
-
-	DIR *d = opendir(path);
-	if (!d)
-		return r;
-
-	dptr = (struct dirent *)0;
-	for(;;) {
-		if (readdir_r(d,&de,&dptr))
-			break;
-		if (dptr) {
-			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,"..")))
-				r[std::string(dptr->d_name)] = (dptr->d_type == DT_DIR);
-		} else break;
-	}
-#endif
-
-	return r;
 }
 
 std::string Utils::hex(const void *data,unsigned int len)
@@ -266,102 +206,6 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 #endif // __UNIX_LIKE__
 #endif // __WINDOWS__
-}
-
-void Utils::lockDownFile(const char *path,bool isDir)
-{
-#ifdef __UNIX_LIKE__
-	chmod(path,isDir ? 0700 : 0600);
-#else
-#ifdef __WINDOWS__
-	{
-		STARTUPINFOA startupInfo;
-		PROCESS_INFORMATION processInfo;
-
-		startupInfo.cb = sizeof(startupInfo);
-		memset(&startupInfo,0,sizeof(STARTUPINFOA));
-		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /inheritance:d /Q").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-			WaitForSingleObject(processInfo.hProcess,INFINITE);
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-		}
-
-		startupInfo.cb = sizeof(startupInfo);
-		memset(&startupInfo,0,sizeof(STARTUPINFOA));
-		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove *S-1-5-32-545 /Q").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-			WaitForSingleObject(processInfo.hProcess,INFINITE);
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-		}
-	}
-#endif
-#endif
-}
-
-uint64_t Utils::getLastModified(const char *path)
-{
-	struct stat s;
-	if (stat(path,&s))
-		return 0;
-	return (((uint64_t)s.st_mtime) * 1000ULL);
-}
-
-bool Utils::fileExists(const char *path,bool followLinks)
-{
-	struct stat s;
-#ifdef __UNIX_LIKE__
-	if (!followLinks)
-		return (lstat(path,&s) == 0);
-#endif
-	return (stat(path,&s) == 0);
-}
-
-int64_t Utils::getFileSize(const char *path)
-{
-	struct stat s;
-	if (stat(path,&s))
-		return -1;
-#ifdef __WINDOWS__
-	return s.st_size;
-#else
-	if (S_ISREG(s.st_mode))
-		return s.st_size;
-#endif
-	return -1;
-}
-
-bool Utils::readFile(const char *path,std::string &buf)
-{
-	char tmp[4096];
-	FILE *f = fopen(path,"rb");
-	if (f) {
-		for(;;) {
-			long n = (long)fread(tmp,1,sizeof(tmp),f);
-			if (n > 0)
-				buf.append(tmp,n);
-			else break;
-		}
-		fclose(f);
-		return true;
-	}
-	return false;
-}
-
-bool Utils::writeFile(const char *path,const void *buf,unsigned int len)
-{
-	FILE *f = fopen(path,"wb");
-	if (f) {
-		if ((long)fwrite(buf,1,len,f) != (long)len) {
-			fclose(f);
-			return false;
-		} else {
-			fclose(f);
-			return true;
-		}
-	}
-	return false;
 }
 
 std::vector<std::string> Utils::split(const char *s,const char *const sep,const char *esc,const char *quot)

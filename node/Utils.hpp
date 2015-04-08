@@ -41,15 +41,6 @@
 
 #include "Constants.hpp"
 
-#ifdef __WINDOWS__
-#include <WinSock2.h>
-#include <Windows.h>
-#else
-#include <unistd.h>
-#include <sys/time.h>
-#include <arpa/inet.h>
-#endif
-
 namespace ZeroTier {
 
 /**
@@ -58,21 +49,6 @@ namespace ZeroTier {
 class Utils
 {
 public:
-#ifdef __UNIX_LIKE__
-	/**
-	 * Close STDOUT_FILENO and STDERR_FILENO and replace them with output to given path
-	 *
-	 * This can be called after fork() and prior to exec() to suppress output
-	 * from a subprocess, such as auto-update.
-	 *
-	 * @param stdoutPath Path to file to use for stdout
-	 * @param stderrPath Path to file to use for stderr, or NULL for same as stdout (default)
-	 * @return True on success
-	 */
-	static bool redirectUnixOutputs(const char *stdoutPath,const char *stderrPath = (const char *)0)
-		throw();
-#endif // __UNIX_LIKE__
-
 	/**
 	 * Perform a time-invariant binary comparison
 	 *
@@ -105,36 +81,6 @@ public:
 	 */
 	static void burn(void *ptr,unsigned int len)
 		throw();
-
-	/**
-	 * Delete a file
-	 *
-	 * @param path Path to delete
-	 * @return True if delete was successful
-	 */
-	static inline bool rm(const char *path)
-		throw()
-	{
-#ifdef __WINDOWS__
-		return (DeleteFileA(path) != FALSE);
-#else
-		return (unlink(path) == 0);
-#endif
-	}
-	static inline bool rm(const std::string &path) throw() { return rm(path.c_str()); }
-
-	/**
-	 * List a directory's contents
-	 * 
-	 * Keys in returned map are filenames only and don't include the leading
-	 * path. Pseudo-paths like . and .. are not returned. Values are true if
-	 * the item is a directory, false if it's a file. More detailed attributes
-	 * aren't supported since the code that uses this doesn't need them.
-	 *
-	 * @param path Path to list
-	 * @return Map of entries and whether or not they are also directories (empty on failure)
-	 */
-	static std::map<std::string,bool> listDirectory(const char *path);
 
 	/**
 	 * Convert binary data to hexadecimal
@@ -184,119 +130,6 @@ public:
 	 * @param bytes Number of random bytes to generate
 	 */
 	static void getSecureRandom(void *buf,unsigned int bytes);
-
-	/**
-	 * Set modes on a file to something secure
-	 * 
-	 * This locks a file so that only the owner can access it. What it actually
-	 * does varies by platform.
-	 * 
-	 * @param path Path to lock
-	 * @param isDir True if this is a directory
-	 */
-	static void lockDownFile(const char *path,bool isDir);
-
-	/**
-	 * Get file last modification time
-	 *
-	 * Resolution is often only second, not millisecond, but the return is
-	 * always in ms for comparison against now().
-	 *
-	 * @param path Path to file to get time
-	 * @return Last modification time in ms since epoch or 0 if not found
-	 */
-	static uint64_t getLastModified(const char *path);
-
-	/**
-	 * @param path Path to check
-	 * @param followLinks Follow links (on platforms with that concept)
-	 * @return True if file or directory exists at path location
-	 */
-	static bool fileExists(const char *path,bool followLinks = true);
-
-	/**
-	 * @param path Path to file
-	 * @return File size or -1 if nonexistent or other failure
-	 */
-	static int64_t getFileSize(const char *path);
-
-	/**
-	 * @return Current time in milliseconds since epoch
-	 */
-	static inline uint64_t now()
-		throw()
-	{
-#ifdef __WINDOWS__
-		FILETIME ft;
-		SYSTEMTIME st;
-		ULARGE_INTEGER tmp;
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st,&ft);
-		tmp.LowPart = ft.dwLowDateTime;
-		tmp.HighPart = ft.dwHighDateTime;
-		return ( ((tmp.QuadPart - 116444736000000000ULL) / 10000L) + st.wMilliseconds );
-#else
-		struct timeval tv;
-		gettimeofday(&tv,(struct timezone *)0);
-		return ( (1000ULL * (uint64_t)tv.tv_sec) + (uint64_t)(tv.tv_usec / 1000) );
-#endif
-	};
-
-	/**
-	 * @return Current time in seconds since epoch, to the highest available resolution
-	 */
-	static inline double nowf()
-		throw()
-	{
-#ifdef __WINDOWS__
-		FILETIME ft;
-		SYSTEMTIME st;
-		ULARGE_INTEGER tmp;
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st,&ft);
-		tmp.LowPart = ft.dwLowDateTime;
-		tmp.HighPart = ft.dwHighDateTime;
-		return (((double)(tmp.QuadPart - 116444736000000000ULL)) / 10000000.0);
-#else
-		struct timeval tv;
-		gettimeofday(&tv,(struct timezone *)0);
-		return ( ((double)tv.tv_sec) + (((double)tv.tv_usec) / 1000000.0) );
-#endif
-	}
-
-	/**
-	 * Read the full contents of a file into a string buffer
-	 *
-	 * The buffer isn't cleared, so if it already contains data the file's data will
-	 * be appended.
-	 *
-	 * @param path Path of file to read
-	 * @param buf Buffer to fill
-	 * @return True if open and read successful
-	 */
-	static bool readFile(const char *path,std::string &buf);
-
-	/**
-	 * Write a block of data to disk, replacing any current file contents
-	 *
-	 * @param path Path to write
-	 * @param buf Buffer containing data
-	 * @param len Length of buffer
-	 * @return True if entire file was successfully written
-	 */
-	static bool writeFile(const char *path,const void *buf,unsigned int len);
-
-	/**
-	 * Write a block of data to disk, replacing any current file contents
-	 *
-	 * @param path Path to write
-	 * @param s Data to write
-	 * @return True if entire file was successfully written
-	 */
-	static inline bool writeFile(const char *path,const std::string &s)
-	{
-		return writeFile(path,s.data(),(unsigned int)s.length());
-	}
 
 	/**
 	 * Split a string by delimiter, with optional escape and quote characters
@@ -485,68 +318,6 @@ public:
 				return false;
 		}
 		return true;
-	}
-
-	/**
-	 * Compute SDBM hash of a binary string
-	 *
-	 * See: http://www.cse.yorku.ca/~oz/hash.html
-	 *
-	 * @param s Data to hash
-	 * @param l Length in bytes
-	 * @param h Previous hash value (use 0 initially)
-	 * @tparam H Hash integer type -- should be unsigned
-	 * @return New hash value
-	 */
-	template<typename H>
-	static inline H sdbmHash(const void *s,unsigned int l,H h)
-		throw()
-	{
-		for(unsigned int i=0;i<l;++i)
-			h = ((H)(((const unsigned char *)s)[i])) + (h << 6) + (h << 16) - h;
-		return h;
-	}
-
-	/**
-	 * Compute SDBM hash of a 0-terminated C string
-	 *
-	 * See: http://www.cse.yorku.ca/~oz/hash.html
-	 *
-	 * @param s C-string to hash
-	 * @param h Previous hash value (use 0 initially)
-	 * @tparam H Hash integer type -- should be unsigned
-	 * @return New hash value
-	 */
-	template<typename H>
-	static inline H sdbmHash(const char *s,H h)
-		throw()
-	{
-		char c;
-		while ((c = *(s++)))
-			h = ((H)c) + (h << 6) + (h << 16) - h;
-		return h;
-	}
-
-	/**
-	 * Compute SDBM hash of an integer's bytes in little-endian byte order
-	 *
-	 * See: http://www.cse.yorku.ca/~oz/hash.html
-	 *
-	 * @param n Integer to hash in LE byte order
-	 * @param h Previous hash value (use 0 initially)
-	 * @tparam I Integer type -- should be unsigned
-	 * @tparam H Hash integer type -- should be unsigned
-	 * @return New hash value
-	 */
-	template<typename I,typename H>
-	static inline H sdbmHash(I n,H h)
-		throw()
-	{
-		for(unsigned int i=0;i<(unsigned int)sizeof(n);++i) {
-			h = ((H)(n & 0xff)) + (h << 6) + (h << 16) - h;
-			n >>= 8;
-		}
-		return h;
 	}
 
 	// Byte swappers for big/little endian conversion
