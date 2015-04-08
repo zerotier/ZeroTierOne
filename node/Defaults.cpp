@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../include/ZeroTierOne.h"
+
 #include "Constants.hpp"
 #include "Defaults.hpp"
 #include "Utils.hpp"
@@ -158,7 +160,7 @@ Defaults::Defaults() :
 	rootTopologyAuthorities(_mkRootTopologyAuth()),
 	updateAuthorities(_mkUpdateAuth()),
 	updateLatestNfoURL(_mkUpdateUrl()),
-	v4Broadcast(((uint32_t)0xffffffff),ZT_DEFAULT_UDP_PORT)
+	v4Broadcast(((uint32_t)0xffffffff),ZT1_DEFAULT_PORT)
 {
 }
 

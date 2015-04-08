@@ -144,12 +144,12 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	std::vector<std::string> ipAddrsSplit(Utils::split(ipAddrs.c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator ipstr(ipAddrsSplit.begin());ipstr!=ipAddrsSplit.end();++ipstr) {
 		InetAddress addr(*ipstr);
-		switch(addr.type()) {
-			case InetAddress::TYPE_IPV4:
+		switch(addr.ss_family) {
+			case AF_INET:
 				if ((!addr.netmaskBits())||(addr.netmaskBits() > 32))
 					continue;
 				break;
-			case InetAddress::TYPE_IPV6:
+			case AF_INET6:
 				if ((!addr.netmaskBits())||(addr.netmaskBits() > 128))
 					continue;
 				break;

@@ -29,10 +29,9 @@
 #include "RuntimeEnvironment.hpp"
 #include "OutboundMulticast.hpp"
 #include "Switch.hpp"
-#include "NodeConfig.hpp"
 #include "Network.hpp"
 #include "CertificateOfMembership.hpp"
-#include "Utils.hpp"
+#include "Node.hpp"
 #include "Logger.hpp"
 
 namespace ZeroTier {
@@ -105,7 +104,7 @@ void OutboundMulticast::init(
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
 {
 	if (_haveCom) {
-		SharedPtr<Network> network(RR->nc->network(_nwid));
+		SharedPtr<Network> network(RR->node->network(_nwid));
 		if (network->peerNeedsOurMembershipCertificate(toAddr,RR->node->now())) {
 			_packetWithCom.newInitializationVector();
 			_packetWithCom.setDestination(toAddr);
