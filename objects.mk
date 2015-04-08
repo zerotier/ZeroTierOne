@@ -8,7 +8,6 @@ OBJS=\
 	node/Identity.o \
 	node/IncomingPacket.o \
 	node/InetAddress.o \
-	node/Logger.o \
 	node/Multicaster.o \
 	node/Network.o \
 	node/NetworkConfig.o \
