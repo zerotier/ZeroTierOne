@@ -69,11 +69,12 @@ public:
 	 * @param preload Initial balance to place in account
 	 * @param maxb Maximum allowed balance (> 0)
 	 * @param acc Rate of accrual in bytes per second
+	 * @param now Current time
 	 */
-	BandwidthAccount(uint32_t preload,uint32_t maxb,uint32_t acc)
+	BandwidthAccount(uint32_t preload,uint32_t maxb,uint32_t acc,uint64_t now)
 		throw()
 	{
-		init(preload,maxb,acc);
+		init(preload,maxb,acc,now);
 	}
 
 	/**
@@ -82,11 +83,12 @@ public:
 	 * @param preload Initial balance to place in account
 	 * @param maxb Maximum allowed balance (> 0)
 	 * @param acc Rate of accrual in bytes per second
+	 * @param now Current time
 	 */
-	inline void init(uint32_t preload,uint32_t maxb,uint32_t acc)
+	inline void init(uint32_t preload,uint32_t maxb,uint32_t acc,uint64_t now)
 		throw()
 	{
-		_lastTime = Utils::nowf();
+		_lastTime = ((double)now / 1000.0);
 		_balance = preload;
 		_maxBalance = maxb;
 		_accrual = acc;
@@ -95,15 +97,16 @@ public:
 	/**
 	 * Update and retrieve balance of this account
 	 *
+	 * @param now Current time
 	 * @return New balance updated from current clock
 	 */
-	inline uint32_t update()
+	inline uint32_t update(uint64_t now)
 		throw()
 	{
 		double lt = _lastTime;
-		double now = Utils::nowf();
-		_lastTime = now;
-		return (_balance = std::min(_maxBalance,(uint32_t)round((double)_balance + ((double)_accrual * (now - lt)))));
+		double nowf = ((double)now / 1000.0);
+		_lastTime = nowf;
+		return (_balance = std::min(_maxBalance,(uint32_t)round((double)_balance + ((double)_accrual * (nowf - lt)))));
 	}
 
 	/**
@@ -113,12 +116,13 @@ public:
 	 * balance is updated and false is returned.
 	 *
 	 * @param amt Amount to deduct
+	 * @param now Current time
 	 * @return True if amount fit within balance and was deducted
 	 */
-	inline bool deduct(uint32_t amt)
+	inline bool deduct(uint32_t amt,uint64_t now)
 		throw()
 	{
-		if (update() >= amt) {
+		if (update(now) >= amt) {
 			_balance -= amt;
 			return true;
 		}

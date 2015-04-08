@@ -289,9 +289,10 @@ public:
 	 * Add or update signature fields with a signature of all other keys and values
 	 *
 	 * @param with Identity to sign with (must have secret key)
+	 * @param now Current time
 	 * @return True on success
 	 */
-	bool sign(const Identity &id);
+	bool sign(const Identity &id,uint64_t now);
 
 	/**
 	 * Verify signature against an identity

@@ -40,7 +40,6 @@
 
 #include "Constants.hpp"
 #include "NonCopyable.hpp"
-#include "Utils.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
@@ -230,18 +229,7 @@ public:
 	 * @param bytes Size of packet
 	 * @return True if packet is within budget
 	 */
-	inline bool updateAndCheckMulticastBalance(const MulticastGroup &mg,unsigned int bytes)
-	{
-		Mutex::Lock _l(_lock);
-		if (!_config)
-			return false;
-		std::map< MulticastGroup,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(mg));
-		if (bal == _multicastRateAccounts.end()) {
-			NetworkConfig::MulticastRate r(_config->multicastRate(mg));
-			bal = _multicastRateAccounts.insert(std::pair< MulticastGroup,BandwidthAccount >(mg,BandwidthAccount(r.preload,r.maxBalance,r.accrual))).first;
-		}
-		return bal->second.deduct(bytes);
-	}
+	bool updateAndCheckMulticastBalance(const MulticastGroup &mg,unsigned int bytes);
 
 	/**
 	 * Get current network config or throw exception

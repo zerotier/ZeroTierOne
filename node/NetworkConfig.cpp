@@ -43,7 +43,7 @@ SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &s
 	memset(nc->_etWhitelist,0,sizeof(nc->_etWhitelist));
 	nc->_etWhitelist[0] |= 1; // allow all
 	nc->_nwid = ZT_TEST_NETWORK_ID;
-	nc->_timestamp = Utils::now();
+	nc->_timestamp = 1;
 	nc->_revision = 1;
 	nc->_issuedTo = self;
 	nc->_multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;

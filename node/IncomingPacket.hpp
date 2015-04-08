@@ -74,11 +74,12 @@ public:
 	 * @param len Packet length
 	 * @param remoteAddress Address from which packet came
 	 * @param linkDesperation Link desperation for link over which packet was received
+	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,const InetAddress &remoteAddress,unsigned int linkDesperation) :
+	IncomingPacket(const void *data,unsigned int len,const InetAddress &remoteAddress,unsigned int linkDesperation,uint64_t now) :
  		Packet(data,len),
- 		_receiveTime(Utils::now()),
+ 		_receiveTime(now),
  		_remoteAddress(remoteAddress),
  		_linkDesperation(linkDesperation),
  		__refCount()

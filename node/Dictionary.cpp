@@ -75,13 +75,13 @@ void Dictionary::fromString(const char *s,unsigned int maxlen)
 		(*this)[keyBuf];
 }
 
-bool Dictionary::sign(const Identity &id)
+bool Dictionary::sign(const Identity &id,uint64_t now)
 {
 	try {
 		// Sign identity and timestamp fields too. If there's an existing
 		// signature, _mkSigBuf() ignores it.
 		char nows[32];
-		Utils::snprintf(nows,sizeof(nows),"%llx",(unsigned long long)Utils::now());
+		Utils::snprintf(nows,sizeof(nows),"%llx",(unsigned long long)now);
 		(*this)[ZT_DICTIONARY_SIGNATURE_IDENTITY] = id.toString(false);
 		(*this)[ZT_DICTIONARY_SIGNATURE_TIMESTAMP] = nows;
 

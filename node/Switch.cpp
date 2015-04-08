@@ -91,7 +91,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	 * Note: even when we introduce a more purposeful binding of the main UDP port, this can
 	 * still happen because Windows likes to send broadcasts over interfaces that have little
 	 * to do with their intended target audience. :P */
-	if (!RR->antiRec->checkEthernetFrame(data.data(),data.size())) {
+	if (!RR->antiRec->checkEthernetFrame(data,len)) {
 		TRACE("%.16llx: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->id(),etherTypeName(etherType),data.size());
 		return;
 	}
@@ -115,14 +115,24 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to.isMulticast()) {
 		// Destination is a multicast address (including broadcast)
 
-		uint64_t now = Utils::now();
+		const uint64_t now = RR->node->now();
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
-			if ((etherType == ZT_ETHERTYPE_ARP)&&(data.size() >= 28)&&(data[2] == 0x08)&&(data[3] == 0x00)&&(data[4] == 6)&&(data[5] == 4)&&(data[7] == 0x01)) {
+			if (
+			    (etherType == ZT_ETHERTYPE_ARP)&&
+			    (len >= 28)&&
+			    (
+			     (((const unsigned char *)data)[2] == 0x08)&&
+			     (((const unsigned char *)data)[3] == 0x00)&&
+			     (((const unsigned char *)data)[4] == 6)&&
+			     (((const unsigned char *)data)[5] == 4)&&
+			     (((const unsigned char *)data)[7] == 0x01)
+			    )
+				 ) {
 				// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
 				// Also: enableBroadcast() does not apply to ARP since it's required for IPv4
-				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(data.field(24,4),4,0));
+				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!nconf->enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
 				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
@@ -138,7 +148,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			network->learnBridgedMulticastGroup(mg,now);
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
-		if (!network->updateAndCheckMulticastBalance(mg,data.size())) {
+		if (!network->updateAndCheckMulticastBalance(mg,len)) {
 			TRACE("%.16llx: didn't multicast %d bytes, quota exceeded for multicast group %s",network->id(),(int)data.size(),mg.toString().c_str());
 			return;
 		}
@@ -154,8 +164,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			mg,
 			(fromBridged) ? from : MAC(),
 			etherType,
-			data.data(),
-			data.size());
+			data,
+			len);
 
 		return;
 	}
@@ -165,7 +175,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
-			if (network->peerNeedsOurMembershipCertificate(toZT,Utils::now())) {
+			if (network->peerNeedsOurMembershipCertificate(toZT,RR->node->now())) {
 				// TODO: once there are no more <1.0.0 nodes around, we can
 				// bundle this with EXT_FRAME instead of sending two packets.
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
@@ -181,7 +191,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				to.appendTo(outp);
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
-				outp.append(data);
+				outp.append(data,len);
 				outp.compress();
 				send(outp,true);
 			} else {
@@ -189,7 +199,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 				outp.append(network->id());
 				outp.append((uint16_t)etherType);
-				outp.append(data);
+				outp.append(data,len);
 				outp.compress();
 				send(outp,true);
 			}
@@ -245,7 +255,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			to.appendTo(outp);
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
-			outp.append(data);
+			outp.append(data,len);
 			outp.compress();
 			send(outp,true);
 		}
@@ -261,7 +271,7 @@ void Switch::send(const Packet &packet,bool encrypt)
 
 	if (!_trySend(packet,encrypt)) {
 		Mutex::Lock _l(_txQueue_m);
-		_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry(Utils::now(),packet,encrypt)));
+		_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry(RR->node->now(),packet,encrypt)));
 	}
 }
 
@@ -277,7 +287,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	if (!p2p)
 		return false;
 
-	uint64_t now = Utils::now();
+	const uint64_t now = RR->node->now();
 
 	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
 	if (!(cg.first))
@@ -375,7 +385,7 @@ void Switch::requestWhois(const Address &addr)
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
 		std::pair< std::map< Address,WhoisRequest >::iterator,bool > entry(_outstandingWhoisRequests.insert(std::pair<Address,WhoisRequest>(addr,WhoisRequest())));
 		if ((inserted = entry.second))
-			entry.first->second.lastSent = Utils::now();
+			entry.first->second.lastSent = RR->node->now();
 		entry.first->second.retries = 0; // reset retry count if entry already existed
 	}
 	if (inserted)
@@ -597,7 +607,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDes
 				// We received a Packet::Fragment without its head, so queue it and wait
 
 				DefragQueueEntry &dq = _defragQueue[pid];
-				dq.creationTime = Utils::now();
+				dq.creationTime = RR->node->now();
 				dq.frags[fno - 1] = fragment;
 				dq.totalFragments = tf; // total fragment count is known
 				dq.haveFragments = 1 << fno; // we have only this fragment
@@ -630,7 +640,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDes
 
 void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,fromAddr,linkDesperation));
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,fromAddr,linkDesperation,RR->node->now()));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -664,7 +674,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDespera
 		if (dqe == _defragQueue.end()) {
 			// If we have no other fragments yet, create an entry and save the head
 			DefragQueueEntry &dq = _defragQueue[pid];
-			dq.creationTime = Utils::now();
+			dq.creationTime = RR->node->now();
 			dq.frag0 = packet;
 			dq.totalFragments = 0; // 0 == unknown, waiting for Packet::Fragment
 			dq.haveFragments = 1; // head is first bit (left to right)
