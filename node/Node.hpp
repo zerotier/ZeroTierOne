@@ -172,7 +172,19 @@ public:
 	}
 
 	/**
-	 * @return Overall system level of desperation based on how long it's been since an upstream node (supernode) has talked to us
+	 * Get an overall current level of desperation
+	 *
+	 * The current level of desperation is based on how recently an upstream
+	 * (a.k.a. supernode) peer has spoken to us. As such, it will change and
+	 * return to 0 once something like tunneling (higher desperation link) is
+	 * active. As a result, actual link desperation for outgoing messages
+	 * should be the max of either this or the most recent link desperation
+	 * for an incoming message from a given address. See Path.hpp and Peer.hpp.
+	 *
+	 * In other words think of this as 'the desperation we should try to
+	 * escalate to right now.'
+	 *
+	 * @return Overall system level of desperation
 	 */
 	inline unsigned int coreDesperation() const throw() { return _coreDesperation; }
 
@@ -197,6 +209,11 @@ public:
 	 * @param nc Network configuration
 	 */
 	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,op,nc); }
+
+	/**
+	 * @return True if we appear to be online
+	 */
+	inline bool online() const throw() { return _online; }
 
 	/**
 	 * If this version is newer than the newest we've seen, post a new version seen event
@@ -231,6 +248,7 @@ private:
 	uint64_t _lastHousekeepingRun;
 	unsigned int _coreDesperation;
 	unsigned int _newestVersionSeen[3]; // major, minor, revision
+	bool _online;
 };
 
 } // namespace ZeroTier

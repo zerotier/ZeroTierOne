@@ -76,6 +76,7 @@ Node::Node(
 	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
 	_newestVersionSeen[2] = ZEROTIER_ONE_VERSION_REVISION;
+	_online = false;
 
 	std::string idtmp(dataStoreGet("identity.secret"));
 	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
@@ -187,19 +188,19 @@ class _PingPeersThatNeedPing
 {
 public:
 	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
-		lastReceiveFromSupernode(0),
+		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
 		_supernodes(RR->topology->supernodeAddresses()) {}
 
-	uint64_t lastReceiveFromSupernode;
+	uint64_t lastReceiveFromUpstream;
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
 		if (std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end()) {
 			p->doPingAndKeepalive(RR,_now);
-			if (p->lastReceive() > lastReceiveFromSupernode)
-				lastReceiveFromSupernode = p->lastReceive();
+			if (p->lastReceive() > lastReceiveFromUpstream)
+				lastReceiveFromUpstream = p->lastReceive();
 		} else if (p->alive(_now)) {
 			p->doPingAndKeepalive(RR,_now);
 		}
@@ -218,6 +219,8 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroun
 	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
 		_lastPingCheck = now;
 
+		// This is used as a floor for the desperation and online status
+		// calculations if we just started up or have been asleep.
 		if ((now - _startTimeAfterInactivity) > (ZT_PING_CHECK_INVERVAL * 3))
 			_startTimeAfterInactivity = now;
 
@@ -225,7 +228,12 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroun
 			_PingPeersThatNeedPing pfunc(RR,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
-			_coreDesperation = (unsigned int)((now - std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromSupernode)) / (ZT_PING_CHECK_INVERVAL * ZT_CORE_DESPERATION_INCREMENT));
+			const uint64_t lastActivityAgo = now - std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromUpstream);
+			_coreDesperation = (unsigned int)(lastActivityAgo / (ZT_PING_CHECK_INVERVAL * ZT_CORE_DESPERATION_INCREMENT));
+			bool oldOnline = _online;
+			_online = (lastActivityAgo < ZT_PEER_ACTIVITY_TIMEOUT);
+			if (oldOnline != _online)
+				postEvent(_online ? ZT1_EVENT_ONLINE : ZT1_EVENT_OFFLINE);
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}

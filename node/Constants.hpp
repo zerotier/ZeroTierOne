@@ -280,7 +280,7 @@
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 2) + ZT_PING_CHECK_INVERVAL)
+#define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_DIRECT_PING_DELAY + (ZT_PING_CHECK_INVERVAL * 3))
 
 /**
  * Stop relaying via peers that have not responded to direct sends
