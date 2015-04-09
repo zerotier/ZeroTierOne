@@ -32,8 +32,7 @@
 #include <map>
 #include <set>
 
-#include "Constants.hpp"
-#include "Mutex.hpp"
+#include "../node/Mutex.hpp"
 
 namespace ZeroTier {
 

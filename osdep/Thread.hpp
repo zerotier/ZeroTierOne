@@ -30,7 +30,7 @@
 
 #include <stdexcept>
 
-#include "Constants.hpp"
+#include "../node/Constants.hpp"
 
 #ifdef __WINDOWS__
 

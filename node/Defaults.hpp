@@ -52,11 +52,6 @@ public:
 	Defaults();
 
 	/**
-	 * Default home path for this platform
-	 */
-	const std::string defaultHomePath;
-
-	/**
 	 * Default root topology dictionary
 	 */
 	const std::string defaultRootTopology;
@@ -65,22 +60,6 @@ public:
 	 * Identities permitted to sign root topology dictionaries
 	 */
 	const std::map< Address,Identity > rootTopologyAuthorities;
-
-	/**
-	 * Identities permitted to sign software updates
-	 *
-	 * ZTN can keep multiple signing identities and rotate them, keeping some in
-	 * "cold storage" and obsoleting others gradually.
-	 *
-	 * If you don't build with ZT_OFFICIAL_BUILD, this isn't used since your
-	 * build will not auto-update.
-	 */
-	const std::map< Address,Identity > updateAuthorities;
-
-	/**
-	 * URL to latest .nfo for software updates
-	 */
-	const std::string updateLatestNfoURL;
 
 	/**
 	 * Address for IPv4 LAN auto-location broadcasts: 255.255.255.255:9993

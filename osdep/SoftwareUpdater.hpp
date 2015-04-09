@@ -32,11 +32,11 @@
 
 #include <string>
 
-#include "Constants.hpp"
-#include "Mutex.hpp"
-#include "Utils.hpp"
-#include "Defaults.hpp"
-#include "Address.hpp"
+#include "../node/Constants.hpp"
+#include "../node/Mutex.hpp"
+#include "../node/Address.hpp"
+
+#include "HttpClient.hpp"
 
 /**
  * Delay between fetches of the root topology update URL
@@ -62,15 +62,13 @@
 
 namespace ZeroTier {
 
-class RuntimeEnvironment;
-
 /**
  * Software updater
  */
 class SoftwareUpdater
 {
 public:
-	SoftwareUpdater(const RuntimeEnvironment *renv);
+	SoftwareUpdater();
 	~SoftwareUpdater();
 
 	/**
@@ -169,7 +167,7 @@ private:
 	static void _cbHandleGetLatestVersionInfo(void *arg,int code,const std::string &url,const std::string &body);
 	static void _cbHandleGetLatestVersionBinary(void *arg,int code,const std::string &url,const std::string &body);
 
-	const RuntimeEnvironment *RR;
+	HttpClient httpClient;
 	const uint64_t _myVersion;
 	volatile uint64_t _lastUpdateAttempt;
 	volatile enum {

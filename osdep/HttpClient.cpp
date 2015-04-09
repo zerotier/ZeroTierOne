@@ -25,7 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "Constants.hpp"
+#include "../node/Constants.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,9 +56,7 @@
 
 #include "HttpClient.hpp"
 #include "Thread.hpp"
-#include "Utils.hpp"
-#include "NonCopyable.hpp"
-#include "Defaults.hpp"
+#include "OSUtils.hpp"
 
 namespace ZeroTier {
 
@@ -82,7 +80,7 @@ static const char *CURL_PATHS[NUM_CURL_PATHS] = { "/usr/bin/curl","/bin/curl","/
 
 // Internal private thread class that performs request, notifies handler,
 // and then commits suicide by deleting itself.
-class HttpClient_Private_Request : NonCopyable
+class HttpClient_Private_Request
 {
 public:
 	HttpClient_Private_Request(HttpClient *parent,const char *method,const std::string &url,const std::map<std::string,std::string> &headers,unsigned int timeout,void (*handler)(void *,int,const std::string &,const std::string &),void *arg) :
@@ -113,7 +111,7 @@ public:
 
 		std::string curlPath;
 		for(int i=0;i<NUM_CURL_PATHS;++i) {
-			if (Utils::fileExists(CURL_PATHS[i])) {
+			if (OSUtils::fileExists(CURL_PATHS[i])) {
 				curlPath = CURL_PATHS[i];
 				break;
 			}
@@ -177,7 +175,7 @@ public:
 			fcntl(curlStderr[0],F_SETFL,O_NONBLOCK);
 
 			int exitCode = -1;
-			unsigned long long timesOutAt = Utils::now() + ((unsigned long long)_timeout * 1000ULL);
+			unsigned long long timesOutAt = OSUtils::now() + ((unsigned long long)_timeout * 1000ULL);
 			bool timedOut = false;
 			bool tooLong = false;
 
@@ -198,7 +196,7 @@ public:
 					if (n > 0) {
 						_body.append(buf,n);
 						// Reset timeout when data is read...
-						timesOutAt = Utils::now() + ((unsigned long long)_timeout * 1000ULL);
+						timesOutAt = OSUtils::now() + ((unsigned long long)_timeout * 1000ULL);
 					} else if (n < 0)
 						break;
 					if (_body.length() > CURL_MAX_MESSAGE_LENGTH) {
@@ -213,7 +211,7 @@ public:
 				if (FD_ISSET(curlStdout[0],&errfds)||FD_ISSET(curlStderr[0],&errfds))
 					break;
 
-				if (Utils::now() >= timesOutAt) {
+				if (OSUtils::now() >= timesOutAt) {
 					timedOut = true;
 					break;
 				}
@@ -283,7 +281,7 @@ public:
 					return;
 				}
 				++scPos;
-				unsigned int rcode = Utils::strToUInt(headers.front().substr(scPos,3).c_str());
+				unsigned int rcode = OSUtils::strToUInt(headers.front().substr(scPos,3).c_str());
 				if ((!rcode)||(rcode > 999)) {
 					_doH(_arg,-1,_url,"invalid HTTP response (invalid response code)");
 					delete this;

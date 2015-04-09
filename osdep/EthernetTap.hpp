@@ -37,9 +37,8 @@
 #include "../node/Constants.hpp"
 #include "../node/MAC.hpp"
 #include "../node/InetAddress.hpp"
-#include "../node/Buffer.hpp"
-#include "MulticastGroup.hpp"
-#include "NonCopyable.hpp"
+#include "../node/MulticastGroup.hpp"
+#include "../node/NonCopyable.hpp"
 
 namespace ZeroTier {
 

@@ -37,8 +37,9 @@
 #include <queue>
 #include <stdexcept>
 
+#include "EthernetTap.hpp"
+
 #include "../node/Constants.hpp"
-#include "../node/EthernetTap.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Thread.hpp"
 #include "../node/Array.hpp"

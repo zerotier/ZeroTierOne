@@ -34,7 +34,7 @@
 #include <stdexcept>
 
 #include "EthernetTap.hpp"
-#include "../node/Thread.hpp"
+#include "Thread.hpp"
 
 namespace ZeroTier {
 

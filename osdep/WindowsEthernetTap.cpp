@@ -46,11 +46,10 @@
 #include <iostream>
 
 #include "../node/Constants.hpp"
-
-#include "WindowsEthernetTap.hpp"
-#include "WindowsEthernetTapFactory.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
+
+#include "WindowsEthernetTap.hpp"
 
 #include "..\windows\TapDriver\tap-windows.h"
 
