@@ -69,6 +69,8 @@ public:
 
 	// This node's identity
 	Identity identity;
+	std::string publicIdentityStr;
+	std::string secretIdentityStr;
 
 	// This is set externally to an instance of this base class if netconf functionality is enabled
 	NetworkConfigMaster *netconfMaster;

@@ -92,6 +92,8 @@ Node::Node(
 			throw std::runtime_error("unable to write identity.public");
 		}
 	}
+	RR->publicIdentityStr = RR->identity.toString(false);
+	RR->secretIdentityStr = RR->identity.toString(true);
 
 	try {
 		RR->prng = new CMWC4096();
@@ -291,6 +293,7 @@ ZT1_ResultCode Node::leave(uint64_t nwid)
 		nw->second->destroy();
 		_networks.erase(nw);
 	}
+	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
@@ -299,6 +302,7 @@ ZT1_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,un
 	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
 	if (nw != _networks.end())
 		nw->second->multicastSubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
+	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
@@ -307,10 +311,15 @@ ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,
 	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
 	if (nw != _networks.end())
 		nw->second->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
+	return ZT1_RESULT_OK;
 }
 
 void Node::status(ZT1_NodeStatus *status)
 {
+	status->address = RR->identity.address().toInt();
+	status->publicIdentity = RR->publicIdentityStr.c_str();
+	status->secretIdentity = RR->secretIdentityStr.c_str();
+	status->online = _online ? 1 : 0;
 }
 
 ZT1_PeerList *Node::peers()
@@ -331,6 +340,19 @@ ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid)
 
 ZT1_VirtualNetworkList *Node::networks()
 {
+	Mutex::Lock _l(_networks_m);
+
+	char *buf = (char *)::malloc(sizeof(ZT1_VirtualNetworkList) + (sizeof(ZT1_VirtualNetworkConfig) * _networks.size()));
+	if (!buf)
+		return (ZT1_VirtualNetworkList *)0;
+	ZT1_VirtualNetworkList *nl = (ZT1_VirtualNetworkList *)buf;
+	nl->networks = (ZT1_VirtualNetworkConfig *)(buf + sizeof(ZT1_VirtualNetworkList));
+
+	nl->networkCount = 0;
+	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+		n->second->externalConfig(&(nl->networks[nl->networkCount++]));
+
+	return nl;
 }
 
 void Node::freeQueryResult(void *qr)
@@ -589,9 +611,6 @@ void ZT1_version(int *major,int *minor,int *revision,unsigned long *featureFlags
 	if (featureFlags) {
 		*featureFlags = (
 			ZT1_FEATURE_FLAG_THREAD_SAFE
-#ifdef ZT_OFFICIAL_BUILD
-			| ZT1_FEATURE_FLAG_OFFICIAL
-#endif
 		);
 	}
 }

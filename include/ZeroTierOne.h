@@ -96,22 +96,17 @@ extern "C" {
 /**
  * Maximum number of multicast group subscriptions per network
  */
-#define ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 8194
-
-/**
- * Feature flag: this is an official ZeroTier, Inc. binary build (built with ZT_OFFICIAL_RELEASE)
- */
-#define ZT1_FEATURE_FLAG_OFFICIAL 0x00000001
+#define ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 4096
 
 /**
  * Feature flag: ZeroTier One was built to be thread-safe -- concurrent processXXX() calls are okay
  */
-#define ZT1_FEATURE_FLAG_THREAD_SAFE 0x00000002
+#define ZT1_FEATURE_FLAG_THREAD_SAFE 0x00000001
 
 /**
  * Feature flag: FIPS compliant build (not available yet, but reserved for future use if we ever do this)
  */
-#define ZT1_FEATURE_FLAG_FIPS 0x00000004
+#define ZT1_FEATURE_FLAG_FIPS 0x00000002
 
 /****************************************************************************/
 /* Structures and other types                                               */
@@ -298,11 +293,6 @@ typedef struct
 	 * True if some kind of connectivity appears available
 	 */
 	int online;
-
-	/**
-	 * Current maximum link desperation metric
-	 */
-	unsigned int desperation;
 } ZT1_NodeStatus;
 
 /**
