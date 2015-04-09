@@ -49,11 +49,6 @@
 #include "AtomicCounter.hpp"
 #include "NonCopyable.hpp"
 
-/**
- * Maximum number of paths a peer can have
- */
-#define ZT_PEER_MAX_PATHS 3
-
 namespace ZeroTier {
 
 /**
@@ -192,7 +187,7 @@ public:
 	/**
 	 * @return All known direct paths to this peer
 	 */
-	std::vector<Path> paths() const
+	inline std::vector<Path> paths() const
 	{
 		std::vector<Path> pp;
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
@@ -347,10 +342,10 @@ public:
 	}
 
 	inline unsigned int remoteVersionProtocol() const throw() { return _vProto; }
-
 	inline unsigned int remoteVersionMajor() const throw() { return _vMajor; }
 	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
+	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
 	 * Check whether this peer's version is both known and is at least what is specified
@@ -377,8 +372,6 @@ public:
 		}
 		return false;
 	}
-
-	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
 	 * Get most recently active UDP path addresses for IPv4 and/or IPv6
@@ -451,7 +444,7 @@ private:
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 	Identity _id;
-	Path _paths[ZT_PEER_MAX_PATHS];
+	Path _paths[ZT1_MAX_PEER_NETWORK_PATHS];
 	unsigned int _numPaths;
 	unsigned int _latency;
 

@@ -324,6 +324,42 @@ void Node::status(ZT1_NodeStatus *status)
 
 ZT1_PeerList *Node::peers()
 {
+	std::map< Address,SharedPtr<Peer> > peers(RR->topology->allPeers());
+
+	char *buf = (char *)::malloc(sizeof(ZT1_PeerList) + (sizeof(ZT1_Peer) * peers.size()));
+	if (!buf)
+		return (ZT1_PeerList *)0;
+	ZT1_PeerList *pl = (ZT1_PeerList *)buf;
+	pl->peers = (ZT1_Peer *)(buf + sizeof(ZT1_PeerList));
+
+	pl->peerCount = 0;
+	for(std::map< Address,SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) {
+		ZT1_Peer *p = &(pl->peers[pl->peerCount++]);
+		p->address = pi->second->address().toInt();
+		if (pi->second->remoteVersionKnown()) {
+			p->versionMajor = pi->second->remoteVersionMajor();
+			p->versionMinor = pi->second->remoteVersionMinor();
+			p->versionRev = pi->second->remoteVersionRevision();
+		} else {
+			p->versionMajor = -1;
+			p->versionMinor = -1;
+			p->versionRev = -1;
+		}
+		p->latency = pi->second->latency();
+		p->role = RR->topology->isSupernode(pi->second->address()) ? ZT1_PEER_ROLE_SUPERNODE : ZT1_PEER_ROLE_LEAF;
+
+		std::vector<Path> paths(pi->second->paths());
+		p->pathCount = 0;
+		for(std::vector<Path>::iterator path(paths.begin());path!=paths.end();++path) {
+			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
+			p->paths[p->pathCount].lastSend = path->lastSend();
+			p->paths[p->pathCount].lastReceive = path->lastReceived();
+			p->paths[p->pathCount].fixed = path->fixed() ? 1 : 0;
+			++p->pathCount;
+		}
+	}
+
+	return pl;
 }
 
 ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid)

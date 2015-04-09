@@ -87,13 +87,13 @@ void Peer::received(
 				if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
 					// Learn paths if they've been confirmed via a HELLO
 					Path *slot = (Path *)0;
-					if (np < ZT_PEER_MAX_PATHS) {
+					if (np < ZT1_MAX_PEER_NETWORK_PATHS) {
 						// Add new path
 						slot = &(_paths[np++]);
 					} else {
 						// Replace oldest non-fixed path
 						uint64_t slotLRmin = 0xffffffffffffffffULL;
-						for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
+						for(unsigned int p=0;p<ZT1_MAX_PEER_NETWORK_PATHS;++p) {
 							if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
 								slotLRmin = _paths[p].lastReceived();
 								slot = &(_paths[p]);
@@ -218,13 +218,13 @@ void Peer::addPath(const Path &newp)
 	}
 
 	Path *slot = (Path *)0;
-	if (np < ZT_PEER_MAX_PATHS) {
+	if (np < ZT1_MAX_PEER_NETWORK_PATHS) {
 		// Add new path
 		slot = &(_paths[np++]);
 	} else {
 		// Replace oldest non-fixed path
 		uint64_t slotLRmin = 0xffffffffffffffffULL;
-		for(unsigned int p=0;p<ZT_PEER_MAX_PATHS;++p) {
+		for(unsigned int p=0;p<ZT1_MAX_PEER_NETWORK_PATHS;++p) {
 			if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
 				slotLRmin = _paths[p].lastReceived();
 				slot = &(_paths[p]);

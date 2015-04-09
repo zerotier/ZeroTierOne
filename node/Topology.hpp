@@ -188,6 +188,15 @@ public:
 	}
 
 	/**
+	 * @return All currently active peers by address
+	 */
+	inline std::map< Address,SharedPtr<Peer> > allPeers() const
+	{
+		Mutex::Lock _l(_lock);
+		return _activePeers;
+	}
+
+	/**
 	 * Validate a root topology dictionary against the identities specified in Defaults
 	 *
 	 * @param rt Root topology dictionary

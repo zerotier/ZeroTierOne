@@ -99,6 +99,11 @@ extern "C" {
 #define ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS 4096
 
 /**
+ * Maximum number of direct network paths to a given peer
+ */
+#define ZT1_MAX_PEER_NETWORK_PATHS 4
+
+/**
  * Feature flag: ZeroTier One was built to be thread-safe -- concurrent processXXX() calls are okay
  */
 #define ZT1_FEATURE_FLAG_THREAD_SAFE 0x00000001
@@ -501,34 +506,14 @@ typedef struct
 	struct sockaddr_storage address;
 
 	/**
-	 * Time since last send in milliseconds or -1 for never
+	 * Time of last send in milliseconds or 0 for never
 	 */
-	long lastSend;
+	uint64_t lastSend;
 
 	/**
-	 * Time since last receive in milliseconds or -1 for never
+	 * Time of last receive in milliseconds or 0 for never
 	 */
-	long lastReceive;
-
-	/**
-	 * Time since last ping sent in milliseconds or -1 for never
-	 */
-	long lastPing;
-
-	/**
-	 * Time since last firewall opener sent in milliseconds or -1 for never
-	 */
-	long lastFirewallOpener;
-
-	/**
-	 * Total bytes sent
-	 */
-	uint64_t bytesSent;
-
-	/**
-	 * Total bytes received
-	 */
-	uint64_t bytesReceived;
+	uint64_t lastReceive;
 
 	/**
 	 * Is path fixed? (i.e. not learned, static)
@@ -540,7 +525,7 @@ typedef struct
  * What trust hierarchy role does this peer have?
  */
 enum ZT1_PeerRole {
-	ZT1_PEER_ROLE_NODE = 0,     // ordinary node
+	ZT1_PEER_ROLE_LEAF = 0,     // ordinary node
 	ZT1_PEER_ROLE_HUB = 1,      // locally federated hub
 	ZT1_PEER_ROLE_SUPERNODE = 2 // planetary supernode
 };
@@ -551,7 +536,7 @@ enum ZT1_PeerRole {
 typedef struct
 {
 	/**
-	 * ZeroTier binary address (40 bits)
+	 * ZeroTier address (40 bits)
 	 */
 	uint64_t address;
 
@@ -581,14 +566,14 @@ typedef struct
 	enum ZT1_PeerRole role;
 
 	/**
-	 * Array of network paths to peer
-	 */
-	ZT1_PeerPhysicalPath *paths;
-
-	/**
 	 * Number of paths (size of paths[])
 	 */
-	unsigned long pathCount;
+	unsigned int pathCount;
+
+	/**
+	 * Known network paths to peer
+	 */
+	ZT1_PeerPhysicalPath paths[ZT1_MAX_PEER_NETWORK_PATHS];
 } ZT1_Peer;
 
 /**
