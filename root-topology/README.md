@@ -6,7 +6,7 @@ Keys in the root topology dictionary are:
    * **##########**: supernode address, contains supernode definition
      * **id**: supernode identity (public) in string-serialized format
      * **udp**: comma-delimited list of ip/port UDP addresses of node
-     * **tcp**: comma-delimited list of ip/port TCP addresses of node
+     * **tcp**: *DEPRECATED* comma-delimited list of ip/port TCP addresses of node
      * **desc**: human-readable description (optional)
      * **dns**: DNS name (optional, not currently used for anything)
  * **noupdate**: if the value of this is '1', do not auto-update from ZeroTier's servers
