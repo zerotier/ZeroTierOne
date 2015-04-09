@@ -7,8 +7,8 @@ LIBS=
 ARCH_FLAGS=-arch i386 -arch x86_64
 
 include objects.mk
-OBJS+=osdep/OSXEthernetTap.o osdep/OSXEthernetTapFactory.o
-TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o testnet/TestEthernetTapFactory.o
+OBJS+=osdep/OSXEthernetTap.o 
+TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o 
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
