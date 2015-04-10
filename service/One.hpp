@@ -78,7 +78,7 @@ public:
 	static One *newInstance(
 		const char *hp,
 		unsigned int port,
-		NetworkConfigMaster *master = (NetworkConfigMaster *)0),
+		NetworkConfigMaster *master = (NetworkConfigMaster *)0,
 		const char *overrideRootTopology = (const char *)0);
 
 	/**
@@ -89,12 +89,12 @@ public:
 	/**
 	 * @return Reason for terminating or ONE_STILL_RUNNING if running
 	 */
-	virtual ReasonForTermination reasonForTermination() = 0;
+	virtual ReasonForTermination reasonForTermination() const = 0;
 
 	/**
 	 * @return Fatal error message or empty string if none
 	 */
-	virtual std::string fatalErrorMessage() = 0;
+	virtual std::string fatalErrorMessage() const = 0;
 
 	/**
 	 * Block until service terminates
@@ -111,7 +111,7 @@ public:
 	/**
 	 * @return True if service is still running
 	 */
-	inline isRunning() const { return (this->reasonForTermination() == ONE_STILL_RUNNING); }
+	inline bool isRunning() const { return (this->reasonForTermination() == ONE_STILL_RUNNING); }
 
 protected:
 	One() {}

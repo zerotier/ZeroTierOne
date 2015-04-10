@@ -64,7 +64,7 @@ class OneImpl : public One
 {
 public:
 	OneImpl(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) :
-		_phy(SphyOnDatagramFunction,SphyOnTcpWritableFunction,SphyOnTcpAcceptFunction,SphyOnTcpCloseFunction,SphyOnTcpDataFunction,SphyOnTcpWritableFunction,true),
+		_phy(SphyOnDatagramFunction,SphyOnTcpConnectFunction,SphyOnTcpAcceptFunction,SphyOnTcpCloseFunction,SphyOnTcpDataFunction,SphyOnTcpWritableFunction,true),
 		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
@@ -75,7 +75,7 @@ public:
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
 
-		::memset(&in4,0,sizeof(in4));
+		::memset((void *)&in4,0,sizeof(in4));
 		in4.sin_family = AF_INET;
 		in4.sin_port = Utils::hton(port);
 		_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,this,131072);
@@ -87,9 +87,9 @@ public:
 			throw std::runtime_error("cannot bind to port (TCP/IPv4)");
 		}
 
-		::memset(in6,0,sizeof(in6));
-		in6.sin_family = AF_INET6;
-		in6.sin_port = in4.sin_port;
+		::memset((void *)&in6,0,sizeof(in6));
+		in6.sin6_family = AF_INET6;
+		in6.sin6_port = in4.sin_port;
 		_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,this,131072);
 		_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
@@ -108,22 +108,22 @@ public:
 		_phy.close(_v6TcpListenSocket);
 	}
 
-	virtual ReasonForTermination reasonForTermination()
+	virtual ReasonForTermination reasonForTermination() const
 	{
 		Mutex::Lock _l(_termReason_m);
 		return _termReason;
+	}
+
+	virtual std::string fatalErrorMessage() const
+	{
+		Mutex::Lock _l(_termReason_m);
+		return _fatalErrorMessage;
 	}
 
 	virtual void waitForTermination()
 	{
 		if (reasonForTermination() == ONE_STILL_RUNNING)
 			Thread::join(_thread);
-	}
-
-	virtual std::string fatalErrorMessage()
-	{
-		Mutex::Lock _l(_termReason_m);
-		return _fatalErrorMessage;
 	}
 
 	virtual void terminate()
@@ -139,11 +139,17 @@ public:
 	inline void phyOnDatagramFunction(PhySocket *sock,const struct sockaddr *from,void *data,unsigned long len)
 	{
 		InetAddress fromss(from);
-		ZT1_ResultCode rc = _node->processWirePacket(OSUtils::now(),(const struct sockaddr_storage *)&fromss,0,reinterpret_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+		ZT1_ResultCode rc = _node->processWirePacket(
+			OSUtils::now(),
+			(const struct sockaddr_storage *)&fromss,
+			0,
+			data,
+			len,
+			const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
 		if (ZT1_ResultCode_isFatal(rc)) {
 			char tmp[256];
 			Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
-			Mutex::Lock _termReason_m;
+			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
 			_fatalErrorMessage = tmp;
 			this->terminate();
@@ -178,7 +184,7 @@ public:
 	{
 		switch(event) {
 			case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION: {
-				Mutex::Lock _termReason_m;
+				Mutex::Lock _l(_termReason_m);
 				_termReason = ONE_IDENTITY_COLLISION;
 				_fatalErrorMessage = "identity/address collision";
 				this->terminate();
@@ -288,7 +294,7 @@ private:
 };
 
 static void SphyOnDatagramFunction(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
-{ reinterpret_cast<OneImpl *>(*uptr)->phyOnDatagramFunction(sock,data,len); }
+{ reinterpret_cast<OneImpl *>(*uptr)->phyOnDatagramFunction(sock,from,data,len); }
 static void SphyOnTcpConnectFunction(PhySocket *sock,void **uptr,bool success)
 { reinterpret_cast<OneImpl *>(*uptr)->phyOnTcpConnectFunction(sock,success); }
 static void SphyOnTcpAcceptFunction(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)

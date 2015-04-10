@@ -743,7 +743,11 @@ public:
 		}
 	}
 
-	inline void close(PhySocket *sock,bool callHandlers)
+	/**
+	 * @param sock Socket to close
+	 * @param callHandlers If true, call handlers for TCP connect (success: false) or close (default: true)
+	 */
+	inline void close(PhySocket *sock,bool callHandlers = true)
 	{
 		if (!sock)
 			return;

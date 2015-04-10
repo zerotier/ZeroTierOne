@@ -20,4 +20,7 @@ OBJS=\
 	node/SHA512.o \
 	node/Switch.o \
 	node/Topology.o \
-	node/Utils.o
+	node/Utils.o \
+	osdep/HttpClient.o \
+	osdep/OSUtils.o \
+	service/One.o
