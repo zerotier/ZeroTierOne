@@ -178,8 +178,7 @@ public:
 		ON_TCP_CLOSE_FUNCTION tcpCloseHandler,
 		ON_TCP_DATA_FUNCTION tcpDataHandler,
 		ON_TCP_WRITABLE_FUNCTION tcpWritableHandler,
-		bool noDelay
-			) :
+		bool noDelay) :
 		_datagramHandler(datagramHandler),
 		_tcpConnectHandler(tcpConnectHandler),
 		_tcpAcceptHandler(tcpAcceptHandler),

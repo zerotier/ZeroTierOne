@@ -68,6 +68,11 @@ public:
 	};
 
 	/**
+	 * @return Platform default home path
+	 */
+	static std::string platformDefaultHomePath();
+
+	/**
 	 * Create and start a new instance of the service
 	 *
 	 * @param hp Home path

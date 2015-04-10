@@ -64,6 +64,7 @@ class OneImpl : public One
 {
 public:
 	OneImpl(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) :
+		_homePath((hp) ? hp : "."),
 		_phy(SphyOnDatagramFunction,SphyOnTcpConnectFunction,SphyOnTcpAcceptFunction,SphyOnTcpCloseFunction,SphyOnTcpDataFunction,SphyOnTcpWritableFunction,true),
 		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
@@ -138,10 +139,9 @@ public:
 
 	inline void phyOnDatagramFunction(PhySocket *sock,const struct sockaddr *from,void *data,unsigned long len)
 	{
-		InetAddress fromss(from);
 		ZT1_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
-			(const struct sockaddr_storage *)&fromss,
+			(const struct sockaddr_storage *)&from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			0,
 			data,
 			len,
@@ -207,10 +207,66 @@ public:
 
 	inline long nodeDataStoreGetFunction(const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize)
 	{
+		std::string p(_homePath);
+		p.push_back(ZT_PATH_SEPARATOR);
+		char lastc = (char)0;
+		for(const char *n=name;(*n);++n) {
+			if ((*n == '.')&&(lastc == '.'))
+				return -2; // security sanity check-- don't allow ../ stuff even though there's really no way Node will ever do this
+			p.push_back((*n == '/') ? ZT_PATH_SEPARATOR : *n);
+			lastc = *n;
+		}
+
+		FILE *f = fopen(p.c_str(),"rb");
+		if (!f)
+			return -1;
+		if (fseek(f,0,SEEK_END) != 0) {
+			fclose(f);
+			return -2;
+		}
+		long ts = ftell(f);
+		if (ts < 0) {
+			fclose(f);
+			return -2;
+		}
+		*totalSize = (unsigned long)ts;
+		if (fseek(f,(long)readIndex,SEEK_SET) != 0) {
+			fclose(f);
+			return -2;
+		}
+		long n = (long)fread(buf,1,bufSize,f);
+		fclose(f);
+		return n;
 	}
 
 	inline int nodeDataStorePutFunction(const char *name,const void *data,unsigned long len,int secure)
 	{
+		std::string p(_homePath);
+		p.push_back(ZT_PATH_SEPARATOR);
+		char lastc = (char)0;
+		for(const char *n=name;(*n);++n) {
+			if ((*n == '.')&&(lastc == '.'))
+				return -2; // security sanity check-- don't allow ../ stuff even though there's really no way Node will ever do this
+			p.push_back((*n == '/') ? ZT_PATH_SEPARATOR : *n);
+			lastc = *n;
+		}
+
+		if (!data) {
+			OSUtils::rm(p.c_str());
+			return 0;
+		}
+
+		FILE *f = fopen(p.c_str(),"wb");
+		if (!f)
+			return -1;
+		if (fwrite(data,len,1,f) != 1) {
+			fclose(f);
+			return 0;
+		} else {
+			fclose(f);
+			OSUtils::rm(p.c_str());
+			return -1;
+		}
 	}
 
 	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *addr,unsigned int desperation,const void *data,unsigned int len)
@@ -229,6 +285,8 @@ public:
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
+		fprintf(stderr,"VIRTUAL NETWORK FRAME from %.16llx : %.12llx -> %.12llx %.4x %u bytes",nwid,sourceMac,destMac,etherType,len);
+		fflush(stderr);
 	}
 
 	void threadMain()
@@ -274,6 +332,7 @@ public:
 	}
 
 private:
+	const std::string _homePath;
 	SimpleFunctionPhy _phy;
 	NetworkConfigMaster *_master;
 	std::string _overrideRootTopology;
@@ -318,6 +377,40 @@ static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct so
 { reinterpret_cast<OneImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
+
+std::string One::platformDefaultHomePath()
+{
+#ifdef __UNIX_LIKE__
+
+#ifdef __APPLE__
+	// /Library/... on Apple
+	return std::string("/Library/Application Support/ZeroTier/One");
+#else
+
+#ifdef __FreeBSD__
+	// FreeBSD likes /var/db instead of /var/lib
+	return std::string("/var/db/zerotier-one");
+#else
+	// Use /var/lib for Linux and other *nix
+	return std::string("/var/lib/zerotier-one");
+#endif
+
+#endif
+
+#else // not __UNIX_LIKE__
+
+#ifdef __WINDOWS__
+	// Look up app data folder on Windows, e.g. C:\ProgramData\...
+	char buf[16384];
+	if (SUCCEEDED(SHGetFolderPathA(NULL,CSIDL_COMMON_APPDATA,NULL,0,buf)))
+		return (std::string(buf) + "\\ZeroTier\\One");
+	else return std::string("C:\\ZeroTier\\One");
+#else
+#error Unknown platform, please define a default home path!
+#endif
+
+#endif // __UNIX_LIKE__ or not...
+}
 
 One *One::newInstance(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) { return new OneImpl(hp,port,master,overrideRootTopology); }
 One::~One() {}

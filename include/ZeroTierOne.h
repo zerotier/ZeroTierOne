@@ -659,8 +659,8 @@ typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,void *,const char *,void *,u
  * success. You can return any OS-specific error code on failure, as these
  * may be visible in logs or error messages and might aid in debugging.
  *
- * A call to write 0 bytes with a null data pointer should be interpreted
- * as a delete operation. The secure flag is not meaningful in this case.
+ * If the data pointer is null, this must be interpreted as a delete
+ * operation.
  */
 typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,void *,const char *,const void *,unsigned long,int);
 
