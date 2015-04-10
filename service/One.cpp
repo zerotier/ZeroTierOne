@@ -76,6 +76,22 @@ public:
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
 
+		if (*hp) {
+			std::vector<std::string> hpsp(Utils::split(hp,ZT_PATH_SEPARATOR_S,"",""));
+			std::string ptmp;
+			if (*hp == '/')
+				ptmp.push_back('/');
+			for(std::vector<std::string>::iterator pi(hpsp.begin());pi!=hpsp.end();++pi) {
+				if (ptmp.length() > 0)
+					ptmp.push_back(ZT_PATH_SEPARATOR);
+				ptmp.append(*pi);
+				if ((*pi != ".")&&(*pi != "..")) {
+					if (!OSUtils::mkdir(ptmp))
+						throw std::runtime_error("home path does not exist, and could not create");
+				}
+			}
+		}
+
 		::memset((void *)&in4,0,sizeof(in4));
 		in4.sin_family = AF_INET;
 		in4.sin_port = Utils::hton(port);
@@ -141,7 +157,7 @@ public:
 	{
 		ZT1_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
-			(const struct sockaddr_storage *)&from, // Phy<> uses sockaddr_storage, so it'll always be that big
+			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			0,
 			data,
 			len,
@@ -178,6 +194,7 @@ public:
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf)
 	{
+		return 0;
 	}
 
 	inline void nodeEventCallback(enum ZT1_Event event,const void *metaData)
@@ -259,8 +276,10 @@ public:
 		FILE *f = fopen(p.c_str(),"wb");
 		if (!f)
 			return -1;
-		if (fwrite(data,len,1,f) != 1) {
+		if (fwrite(data,len,1,f) == 1) {
 			fclose(f);
+			if (secure)
+				OSUtils::lockDownFile(p.c_str(),false);
 			return 0;
 		} else {
 			fclose(f);
@@ -274,25 +293,26 @@ public:
 		switch(addr->ss_family) {
 			case AF_INET:
 				if (_v4UdpSocket)
-					_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len);
+					return (_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) ? 0 : -1);
 				break;
 			case AF_INET6:
 				if (_v6UdpSocket)
-					_phy.udpSend(_v6UdpSocket,(const struct sockaddr *)addr,data,len);
+					return (_phy.udpSend(_v6UdpSocket,(const struct sockaddr *)addr,data,len) ? 0 : -1);
 				break;
 		}
+		return -1;
 	}
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		fprintf(stderr,"VIRTUAL NETWORK FRAME from %.16llx : %.12llx -> %.12llx %.4x %u bytes",nwid,sourceMac,destMac,etherType,len);
+		fprintf(stderr,"VIRTUAL NETWORK FRAME from %.16llx : %.12llx -> %.12llx %.4x %u bytes\n",nwid,sourceMac,destMac,etherType,len);
 		fflush(stderr);
 	}
 
 	void threadMain()
 		throw()
 	{
-		_nextBackgroundTaskDeadline = OSUtils::now();
+		_nextBackgroundTaskDeadline = 0;
 		try {
 			_node = new Node(
 				OSUtils::now(),
@@ -315,9 +335,16 @@ public:
 					break;
 				} else _run_m.unlock();
 
-				const uint64_t dl = _nextBackgroundTaskDeadline;
-				const uint64_t now = OSUtils::now();
-				_phy.poll((dl > now) ? (unsigned long)(dl - now) : 500);
+				uint64_t dl = _nextBackgroundTaskDeadline;
+				uint64_t now = OSUtils::now();
+
+				if (dl <= now) {
+					_node->processBackgroundTasks(now,const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+					dl = _nextBackgroundTaskDeadline;
+					now = OSUtils::now();
+				}
+
+				_phy.poll((dl > now) ? (unsigned long)(dl - now) : 100);
 			}
 		} catch (std::exception &exc) {
 			Mutex::Lock _l(_termReason_m);
@@ -366,15 +393,15 @@ static void SphyOnTcpWritableFunction(PhySocket *sock,void **uptr)
 { reinterpret_cast<OneImpl *>(*uptr)->phyOnTcpWritableFunction(sock); }
 
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf)
-{ reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkConfigFunction(nwid,op,nwconf); }
+{ return reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkConfigFunction(nwid,op,nwconf); }
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData)
 { reinterpret_cast<OneImpl *>(uptr)->nodeEventCallback(event,metaData); }
 static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize)
-{ reinterpret_cast<OneImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
+{ return reinterpret_cast<OneImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure)
-{ reinterpret_cast<OneImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
+{ return reinterpret_cast<OneImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
 static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,unsigned int desperation,const void *data,unsigned int len)
-{ reinterpret_cast<OneImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
+{ return reinterpret_cast<OneImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
 
@@ -406,7 +433,9 @@ std::string One::platformDefaultHomePath()
 		return (std::string(buf) + "\\ZeroTier\\One");
 	else return std::string("C:\\ZeroTier\\One");
 #else
-#error Unknown platform, please define a default home path!
+
+	return std::string(); // UNKNOWN PLATFORM
+
 #endif
 
 #endif // __UNIX_LIKE__ or not...

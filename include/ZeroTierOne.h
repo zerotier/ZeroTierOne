@@ -614,6 +614,15 @@ typedef void ZT1_Node;
 typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,void *,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *);
 
 /**
+ * Function to send a frame out to a virtual network port
+ *
+ * Parameters: (1) node, (2) user ptr, (3) network ID, (4) source MAC,
+ * (5) destination MAC, (6) ethertype, (7) VLAN ID, (8) frame data,
+ * (9) frame length.
+ */
+typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,void *,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int);
+
+/**
  * Callback for events
  *
  * Events are generated when the node's status changes in a significant way
@@ -675,15 +684,6 @@ typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,void *,const char *,const voi
  * delivery. It only means that the packet appears to have been sent.
  */
 typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,void *,const struct sockaddr_storage *,unsigned int,const void *,unsigned int);
-
-/**
- * Function to send a frame out to a virtual network port
- *
- * Parameters: (1) node, (2) user ptr, (3) network ID, (4) source MAC,
- * (5) destination MAC, (6) ethertype, (7) VLAN ID, (8) frame data,
- * (9) frame length.
- */
-typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,void *,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int);
 
 /****************************************************************************/
 /* C Node API                                                               */

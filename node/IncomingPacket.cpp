@@ -304,9 +304,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		outp.armor(peer->key(),true);
 		RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 	} catch (std::exception &ex) {
-		TRACE("dropped HELLO from %s(%s): %s",id.address().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+		TRACE("dropped HELLO from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped HELLO from %s(%s): unexpected exception",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }

@@ -82,6 +82,7 @@ Node::Node(
 
 	std::string idtmp(dataStoreGet("identity.secret"));
 	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
+		TRACE("identity.secret not found, generating...");
 		RR->identity.generate();
 		idtmp = RR->identity.toString(true);
 		if (!dataStorePut("identity.secret",idtmp,true)) {
@@ -444,10 +445,16 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 
 #ifdef __WINDOWS__
 	ctime_s(tmp3,sizeof(tmp3),&now);
-	const char *nowstr = tmp3;
+	char *nowstr = tmp3;
 #else
-	const char *nowstr = ctime_r(&now,tmp3);
+	time_t now = (time_t)(_now / 1000ULL);
+	char *nowstr = ctime_r(&now,tmp3);
 #endif
+	unsigned long nowstrlen = strlen(nowstr);
+	if (nowstr[nowstrlen-1] == '\n')
+		nowstr[--nowstrlen] = (char)0;
+	if (nowstr[nowstrlen-1] == '\r')
+		nowstr[--nowstrlen] = (char)0;
 
 	va_start(ap,fmt);
 	vsnprintf(tmp2,sizeof(tmp2),fmt,ap);

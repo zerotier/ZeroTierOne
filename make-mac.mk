@@ -38,7 +38,7 @@ endif
 DEFS+=-DZT_SALSA20_SSE
 
 ifeq ($(ZT_DEBUG),1)
-#	DEFS+=-DZT_TRACE 
+	DEFS+=-DZT_TRACE 
 	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since

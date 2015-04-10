@@ -46,7 +46,9 @@
 #include <Windows.h>
 #else
 #include <unistd.h>
+#include <errno.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <arpa/inet.h>
 #endif
 
@@ -89,6 +91,15 @@ public:
 #endif
 	}
 	static inline bool rm(const std::string &path) throw() { return rm(path.c_str()); }
+
+	static inline bool mkdir(const char *path)
+		throw()
+	{
+		if (::mkdir(path,0755) != 0)
+			return (errno == EEXIST);
+		return true;
+	}
+	static inline bool mkdir(const std::string &path) throw() { return OSUtils::mkdir(path.c_str()); }
 
 	/**
 	 * List a directory's contents

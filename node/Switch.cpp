@@ -92,7 +92,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	 * still happen because Windows likes to send broadcasts over interfaces that have little
 	 * to do with their intended target audience. :P */
 	if (!RR->antiRec->checkEthernetFrame(data,len)) {
-		TRACE("%.16llx: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->id(),etherTypeName(etherType),data.size());
+		TRACE("%.16llx: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->id(),etherTypeName(etherType),len);
 		return;
 	}
 
@@ -149,11 +149,11 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
 		if (!network->updateAndCheckMulticastBalance(mg,len)) {
-			TRACE("%.16llx: didn't multicast %d bytes, quota exceeded for multicast group %s",network->id(),(int)data.size(),mg.toString().c_str());
+			TRACE("%.16llx: didn't multicast %u bytes, quota exceeded for multicast group %s",network->id(),len,mg.toString().c_str());
 			return;
 		}
 
-		TRACE("%.16llx: MULTICAST %s -> %s %s %d",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),(int)data.size());
+		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
 		RR->mc->send(
 			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,

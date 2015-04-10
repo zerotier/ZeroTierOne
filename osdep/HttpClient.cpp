@@ -57,6 +57,7 @@
 #include "HttpClient.hpp"
 #include "Thread.hpp"
 #include "OSUtils.hpp"
+#include "../node/Utils.hpp"
 
 namespace ZeroTier {
 
@@ -281,7 +282,7 @@ public:
 					return;
 				}
 				++scPos;
-				unsigned int rcode = OSUtils::strToUInt(headers.front().substr(scPos,3).c_str());
+				unsigned int rcode = Utils::strToUInt(headers.front().substr(scPos,3).c_str());
 				if ((!rcode)||(rcode > 999)) {
 					_doH(_arg,-1,_url,"invalid HTTP response (invalid response code)");
 					delete this;

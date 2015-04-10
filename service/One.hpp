@@ -28,6 +28,8 @@
 #ifndef ZT_ONE_HPP
 #define ZT_ONE_HPP
 
+#include <string>
+
 namespace ZeroTier {
 
 class NetworkConfigMaster;
@@ -68,7 +70,7 @@ public:
 	};
 
 	/**
-	 * @return Platform default home path
+	 * @return Platform default home path or empty string if this platform doesn't have one
 	 */
 	static std::string platformDefaultHomePath();
 

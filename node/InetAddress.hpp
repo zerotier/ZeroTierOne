@@ -354,6 +354,19 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	/**
+	 * @param a InetAddress to compare again
+	 * @return True if only IP portions are equal (false for non-IP or null addresses)
+	 */
+	inline bool ipsEqual(const InetAddress &a) const
+	{
+		switch(ss_family) {
+			case AF_INET: return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
+			case AF_INET6: return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
+		}
+		return false;
+	}
+
+	/**
 	 * Set to null/zero
 	 */
 	inline void zero() throw() { memset(this,0,sizeof(InetAddress)); }
