@@ -33,19 +33,14 @@
 
 #include <stdexcept>
 
-#include "EthernetTap.hpp"
 #include "Thread.hpp"
 
 namespace ZeroTier {
 
 /**
  * OSX Ethernet tap using ZeroTier kernel extension zt# devices
- *
- * This also installs a friendly-named network device in the system network
- * configuration, permitting network devices to be seen and configured in
- * the OSX system preferences app.
  */
-class OSXEthernetTap : public EthernetTap
+class OSXEthernetTap
 {
 public:
 	OSXEthernetTap(
@@ -58,18 +53,17 @@ public:
 		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 		void *arg);
 
-	virtual ~OSXEthernetTap();
+	~OSXEthernetTap();
 
-	virtual void setEnabled(bool en);
-	virtual bool enabled() const;
-	virtual bool addIP(const InetAddress &ip);
-	virtual bool removeIP(const InetAddress &ip);
-	virtual std::set<InetAddress> ips() const;
-	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
-	virtual std::string deviceName() const;
-	virtual void setFriendlyName(const char *friendlyName);
-	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
-	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	void setEnabled(bool en);
+	bool enabled() const;
+	bool addIP(const InetAddress &ip);
+	bool removeIP(const InetAddress &ip);
+	std::set<InetAddress> ips() const;
+	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	std::string deviceName() const;
+	void setFriendlyName(const char *friendlyName);
+	bool updateMulticastGroups(std::set<MulticastGroup> &groups);
 
 	void threadMain()
 		throw();
