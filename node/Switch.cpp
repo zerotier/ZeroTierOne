@@ -289,7 +289,8 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 	const uint64_t now = RR->node->now();
 
-	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
+	// Right now we only unite desperation == 0 links, which will be direct
+	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now,0));
 	if (!(cg.first))
 		return false;
 

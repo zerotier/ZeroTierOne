@@ -280,11 +280,11 @@ void Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	}
 }
 
-void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
+void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6,unsigned int maxDesperation) const
 {
 	uint64_t bestV4 = 0,bestV6 = 0;
 	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if (_paths[p].active(now)) {
+		if ((_paths[p].active(now))&&(_paths[p].lastReceiveDesperation() <= maxDesperation)) {
 			uint64_t lr = _paths[p].lastReceived();
 			if (lr) {
 				if (_paths[p].address().isV4()) {

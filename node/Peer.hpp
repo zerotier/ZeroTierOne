@@ -374,7 +374,7 @@ public:
 	}
 
 	/**
-	 * Get most recently active UDP path addresses for IPv4 and/or IPv6
+	 * Get most recently active path addresses for IPv4 and/or IPv6
 	 *
 	 * Note that v4 and v6 are not modified if they are not found, so
 	 * initialize these to a NULL address to be able to check.
@@ -382,8 +382,9 @@ public:
 	 * @param now Current time
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
+	 * @param maxDesperation Maximum link desperation to consider
 	 */
-	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
+	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6,unsigned int maxDesperation) const;
 
 	/**
 	 * Find a common set of addresses by which two peers can link, if any
@@ -391,13 +392,14 @@ public:
 	 * @param a Peer A
 	 * @param b Peer B
 	 * @param now Current time
+	 * @param maxDesperation Maximum link desperation to consider
 	 * @return Pair: B's address (to send to A), A's address (to send to B)
 	 */
-	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now)
+	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now,unsigned int maxDesperation)
 	{
 		std::pair<InetAddress,InetAddress> v4,v6;
-		b.getBestActiveAddresses(now,v4.first,v6.first);
-		a.getBestActiveAddresses(now,v4.second,v6.second);
+		b.getBestActiveAddresses(now,v4.first,v6.first,maxDesperation);
+		a.getBestActiveAddresses(now,v4.second,v6.second,maxDesperation);
 		if ((v6.first)&&(v6.second)) // prefer IPv6 if both have it since NAT-t is (almost) unnecessary
 			return v6;
 		else if ((v4.first)&&(v4.second))
