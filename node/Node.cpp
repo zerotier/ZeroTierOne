@@ -51,6 +51,7 @@ namespace ZeroTier {
 
 Node::Node(
 	uint64_t now,
+	void *uptr,
 	ZT1_DataStoreGetFunction dataStoreGetFunction,
 	ZT1_DataStorePutFunction dataStorePutFunction,
 	ZT1_WirePacketSendFunction wirePacketSendFunction,
@@ -59,6 +60,7 @@ Node::Node(
 	ZT1_EventCallback eventCallback,
 	const char *overrideRootTopology) :
 	RR(new RuntimeEnvironment(this)),
+	_uptr(uptr),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
 	_wirePacketSendFunction(wirePacketSendFunction),
@@ -412,7 +414,7 @@ std::string Node::dataStoreGet(const char *name)
 	std::string r;
 	unsigned long olen = 0;
 	do {
-		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),name,buf,sizeof(buf),r.length(),&olen);
+		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),_uptr,name,buf,sizeof(buf),r.length(),&olen);
 		if (n <= 0)
 			return std::string();
 		r.append(buf,n);
@@ -467,6 +469,7 @@ extern "C" {
 
 enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
+	void *uptr,
 	uint64_t now,
 	ZT1_DataStoreGetFunction dataStoreGetFunction,
 	ZT1_DataStorePutFunction dataStorePutFunction,
@@ -478,7 +481,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 {
 	*node = (ZT1_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,eventCallback,overrideRootTopology));
+		*node = reinterpret_cast<ZT1_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,eventCallback,overrideRootTopology));
 		return ZT1_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

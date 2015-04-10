@@ -64,6 +64,7 @@ class Node
 public:
 	Node(
 		uint64_t now,
+		void *uptr,
 		ZT1_DataStoreGetFunction dataStoreGetFunction,
 		ZT1_DataStorePutFunction dataStorePutFunction,
 		ZT1_WirePacketSendFunction wirePacketSendFunction,
@@ -125,6 +126,7 @@ public:
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT1_Node *>(this),
+			_uptr,
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			desperation,
 			data,
@@ -146,6 +148,7 @@ public:
 	{
 		_virtualNetworkFrameFunction(
 			reinterpret_cast<ZT1_Node *>(this),
+			_uptr,
 			nwid,
 			source.toInt(),
 			dest.toInt(),
@@ -188,9 +191,9 @@ public:
 	 */
 	inline unsigned int coreDesperation() const throw() { return _coreDesperation; }
 
-	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,data,len,(int)secure) == 0); }
+	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uptr,name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
-	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),name,(const void *)0,0,0); }
+	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uptr,name,(const void *)0,0,0); }
 	std::string dataStoreGet(const char *name);
 
 	/**
@@ -199,7 +202,7 @@ public:
 	 * @param ev Event type
 	 * @param md Meta-data (default: NULL/none)
 	 */
-	inline void postEvent(ZT1_Event ev,const void *md = (const void *)0) { _eventCallback(reinterpret_cast<ZT1_Node *>(this),ev,md); }
+	inline void postEvent(ZT1_Event ev,const void *md = (const void *)0) { _eventCallback(reinterpret_cast<ZT1_Node *>(this),_uptr,ev,md); }
 
 	/**
 	 * Update virtual network port configuration
@@ -208,7 +211,7 @@ public:
 	 * @param op Configuration operation
 	 * @param nc Network configuration
 	 */
-	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),nwid,op,nc); }
+	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),_uptr,nwid,op,nc); }
 
 	/**
 	 * @return True if we appear to be online
@@ -226,6 +229,8 @@ public:
 
 private:
 	RuntimeEnvironment *RR;
+
+	void *_uptr;
 
 	ZT1_DataStoreGetFunction _dataStoreGetFunction;
 	ZT1_DataStorePutFunction _dataStorePutFunction;

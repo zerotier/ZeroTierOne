@@ -611,7 +611,7 @@ typedef void ZT1_Node;
  * on failure, and this results in the network being placed into the
  * PORT_ERROR state.
  */
-typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *);
+typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,void *,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *);
 
 /**
  * Callback for events
@@ -622,7 +622,7 @@ typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,uint64_t,enum ZT1_Vir
  * whether it is present at all) is event type dependent. See the comments
  * in the definition of ZT1_Event.
  */
-typedef void (*ZT1_EventCallback)(ZT1_Node *,enum ZT1_Event,const void *);
+typedef void (*ZT1_EventCallback)(ZT1_Node *,void *,enum ZT1_Event,const void *);
 
 /**
  * Function to get an object from the data store
@@ -644,15 +644,16 @@ typedef void (*ZT1_EventCallback)(ZT1_Node *,enum ZT1_Event,const void *);
  * read. The caller may call the function multiple times to read the whole
  * object.
  */
-typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,const char *,void *,unsigned long,unsigned long,unsigned long *);
+typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,void *,const char *,void *,unsigned long,unsigned long,unsigned long *);
 
 /**
  * Function to store an object in the data store
  *
- * Parameters: (1) node, (2) object name, (3) object data, (4) object size,
- * and (5) secure? (bool). If secure is true, the file should be set readable
- * and writable only to the user running ZeroTier One. What this means is
- * platform-specific.
+ * Parameters: (1) node, (2) user ptr, (3) object name, (4) object data,
+ * (5) object size, (6) secure? (bool).
+ *
+ * If secure is true, the file should be set readable and writable only
+ * to the user running ZeroTier One. What this means is platform-specific.
  *
  * Name semantics are the same as the get function. This must return zero on
  * success. You can return any OS-specific error code on failure, as these
@@ -661,27 +662,28 @@ typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,const char *,void *,unsigned
  * A call to write 0 bytes with a null data pointer should be interpreted
  * as a delete operation. The secure flag is not meaningful in this case.
  */
-typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,const char *,const void *,unsigned long,int);
+typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,void *,const char *,const void *,unsigned long,int);
 
 /**
  * Function to send a ZeroTier packet out over the wire
  *
- * Parameters: (1) node, (2) address, (3) link desperation,
- * (4) packet data, (5) packet data length.
+ * Parameters: (1) node, (2) user ptr, (3) address, (4) link desperation,
+ * (5) packet data, (6) packet data length.
  *
  * The function must return zero on success and may return any error code
  * on failure. Note that success does not (of course) guarantee packet
  * delivery. It only means that the packet appears to have been sent.
  */
-typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,const struct sockaddr_storage *,unsigned int,const void *,unsigned int);
+typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,void *,const struct sockaddr_storage *,unsigned int,const void *,unsigned int);
 
 /**
  * Function to send a frame out to a virtual network port
  *
- * Parameters: (1) node, (2) network ID, (3) source MAC, (4) destination MAC,
- * (5) ethertype, (6) VLAN ID, (7) frame data, (8) frame length.
+ * Parameters: (1) node, (2) user ptr, (3) network ID, (4) source MAC,
+ * (5) destination MAC, (6) ethertype, (7) VLAN ID, (8) frame data,
+ * (9) frame length.
  */
-typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int);
+typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,void *,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int);
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -694,6 +696,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  * will generate an identity.
  *
  * @param node Result: pointer is set to new node instance on success
+ * @param uptr User pointer to pass to functions/callbacks
  * @param now Current clock in milliseconds
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
@@ -704,6 +707,7 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,uint64_t,uint64_t,uin
  */
 enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_Node **node,
+	void *uptr,
 	uint64_t now,
 	ZT1_DataStoreGetFunction dataStoreGetFunction,
 	ZT1_DataStorePutFunction dataStorePutFunction,
