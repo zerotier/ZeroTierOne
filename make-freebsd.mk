@@ -48,7 +48,7 @@ endif
 
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
-#	DEFS+=-DZT_TRACE -DZT_LOG_STDOUT 
+	DEFS+=-DZT_TRACE 
 	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
 	STRIP=echo
