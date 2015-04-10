@@ -111,6 +111,7 @@ void Peer::received(
 					 * paths without confirming that a bidirectional link is in
 					 * fact present, but any packet that decodes and authenticates
 					 * correctly is considered valid. */
+					TRACE("got non-confirmation packet from unknown path %s(%s), pinging...",_id.address().toString().c_str(),remoteAddr.toString().c_str());
 					attemptToContactAt(RR,remoteAddr,linkDesperation,now);
 				}
 			}
@@ -193,12 +194,14 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	if ((bestPath)&&(bestPath->active(now))) {
 		const unsigned int desp = std::max(RR->node->coreDesperation(),bestPath->lastReceiveDesperation());
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
+			TRACE("PING %s(%s) desperation == %u",_id.address().toString().c_str(),bestPath->address().toString().c_str(),desp);
 			attemptToContactAt(RR,bestPath->address(),desp,now);
 			bestPath->sent(now);
 		} else if ((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY) {
 			// We only do keepalive if desperation is zero right now, since higher
 			// desperation paths involve things like tunneling that do not need it.
 			if (desp == 0) {
+				TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
 				RR->node->putPacket(bestPath->address(),"",0,0);
 				bestPath->sent(now);
 			}

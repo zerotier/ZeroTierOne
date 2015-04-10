@@ -37,7 +37,7 @@ using namespace ZeroTier;
 int main(int argc,char **argv)
 {
 	One *one = One::newInstance("/tmp/foo",12345);
-	one->waitForTermination();
+	one->run();
 	printf("termination reason: %d, message: %s\n",(int)one->reasonForTermination(),one->fatalErrorMessage().c_str());
 	return 0;
 }

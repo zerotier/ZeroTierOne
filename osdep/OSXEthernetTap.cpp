@@ -320,7 +320,6 @@ OSXEthernetTap::OSXEthernetTap(
 	const char *friendlyName,
 	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
 	void *arg) :
-	EthernetTap("OSXEthernetTap",mac,mtu,metric),
 	_handler(handler),
 	_arg(arg),
 	_mtu(mtu),

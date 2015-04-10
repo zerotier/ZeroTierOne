@@ -724,13 +724,16 @@ public:
 
 				case ZT_PHY_SOCKET_UDP:
 					if (FD_ISSET(s->sock,&rfds)) {
-						memset(&ss,0,sizeof(ss));
-						socklen_t slen = sizeof(ss);
-						long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
-						if (n > 0) {
-							try {
-								_datagramHandler((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
-							} catch ( ... ) {}
+						for(;;) {
+							memset(&ss,0,sizeof(ss));
+							socklen_t slen = sizeof(ss);
+							long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
+							if (n > 0) {
+								try {
+									_datagramHandler((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
+								} catch ( ... ) {}
+							} else if (n < 0)
+								break;
 						}
 					}
 					break;

@@ -75,7 +75,10 @@ public:
 	static std::string platformDefaultHomePath();
 
 	/**
-	 * Create and start a new instance of the service
+	 * Create a new instance of the service
+	 *
+	 * Once created, you must call the run() method to actually start
+	 * processing.
 	 *
 	 * @param hp Home path
 	 * @param port TCP and UDP port for packets and HTTP control
@@ -88,10 +91,18 @@ public:
 		NetworkConfigMaster *master = (NetworkConfigMaster *)0,
 		const char *overrideRootTopology = (const char *)0);
 
-	/**
-	 * Deletion will block until service stops if it's still running
-	 */
 	virtual ~One();
+
+	/**
+	 * Execute the service main I/O loop until terminated
+	 *
+	 * The terminate() method may be called from a signal handler or another
+	 * thread to terminate execution. Otherwise this will not return unless
+	 * another condition terminates execution such as a fatal error.
+	 *
+	 * @param 
+	 */
+	virtual ReasonForTermination run() = 0;
 
 	/**
 	 * @return Reason for terminating or ONE_STILL_RUNNING if running
@@ -104,14 +115,7 @@ public:
 	virtual std::string fatalErrorMessage() const = 0;
 
 	/**
-	 * Block until service terminates
-	 */
-	virtual void waitForTermination() = 0;
-
-	/**
-	 * Terminate background service
-	 *
-	 * Actual shutdown might take a few seconds.
+	 * Terminate background service (can be called from other threads)
 	 */
 	virtual void terminate() = 0;
 

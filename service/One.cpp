@@ -39,7 +39,6 @@
 #include "../node/InetAddress.hpp"
 
 #include "../osdep/Phy.hpp"
-#include "../osdep/Thread.hpp"
 #include "../osdep/OSUtils.hpp"
 
 #include "One.hpp"
@@ -109,20 +108,71 @@ public:
 		in6.sin6_port = in4.sin_port;
 		_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,this,131072);
 		_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
-
-		_thread = Thread::start(this);
 	}
 
 	virtual ~OneImpl()
 	{
-		if (reasonForTermination() == ONE_STILL_RUNNING) {
-			terminate();
-			waitForTermination();
-		}
 		_phy.close(_v4UdpSocket);
 		_phy.close(_v6UdpSocket);
 		_phy.close(_v4TcpListenSocket);
 		_phy.close(_v6TcpListenSocket);
+	}
+
+	virtual ReasonForTermination run()
+	{
+		try {
+			_node = new Node(
+				OSUtils::now(),
+				this,
+				SnodeDataStoreGetFunction,
+				SnodeDataStorePutFunction,
+				SnodeWirePacketSendFunction,
+				SnodeVirtualNetworkFrameFunction,
+				SnodeVirtualNetworkConfigFunction,
+				SnodeEventCallback,
+				((_overrideRootTopology.length() > 0) ? _overrideRootTopology.c_str() : (const char *)0));
+
+			if (_master)
+				_node->setNetconfMaster((void *)_master);
+
+			_nextBackgroundTaskDeadline = 0;
+			for(;;) {
+				_run_m.lock();
+				if (!_run) {
+					_run_m.unlock();
+					_termReason_m.lock();
+					_termReason = ONE_NORMAL_TERMINATION;
+					_termReason_m.unlock();
+					break;
+				} else _run_m.unlock();
+
+				uint64_t dl = _nextBackgroundTaskDeadline;
+				uint64_t now = OSUtils::now();
+
+				if (dl <= now) {
+					_node->processBackgroundTasks(now,const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+					dl = _nextBackgroundTaskDeadline;
+					now = OSUtils::now();
+				}
+
+				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
+				printf("polling: %lums timeout\n",delay);
+				_phy.poll(delay);
+			}
+		} catch (std::exception &exc) {
+			Mutex::Lock _l(_termReason_m);
+			_termReason = ONE_UNRECOVERABLE_ERROR;
+			_fatalErrorMessage = exc.what();
+		} catch ( ... ) {
+			Mutex::Lock _l(_termReason_m);
+			_termReason = ONE_UNRECOVERABLE_ERROR;
+			_fatalErrorMessage = "unexpected exception in main thread";
+		}
+
+		delete _node;
+		_node = (Node *)0;
+
+		return _termReason;
 	}
 
 	virtual ReasonForTermination reasonForTermination() const
@@ -137,12 +187,6 @@ public:
 		return _fatalErrorMessage;
 	}
 
-	virtual void waitForTermination()
-	{
-		if (reasonForTermination() == ONE_STILL_RUNNING)
-			Thread::join(_thread);
-	}
-
 	virtual void terminate()
 	{
 		_run_m.lock();
@@ -155,21 +199,23 @@ public:
 
 	inline void phyOnDatagramFunction(PhySocket *sock,const struct sockaddr *from,void *data,unsigned long len)
 	{
-		ZT1_ResultCode rc = _node->processWirePacket(
-			OSUtils::now(),
-			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
-			0,
-			data,
-			len,
-			const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
-		if (ZT1_ResultCode_isFatal(rc)) {
-			char tmp[256];
-			Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
-			Mutex::Lock _l(_termReason_m);
-			_termReason = ONE_UNRECOVERABLE_ERROR;
-			_fatalErrorMessage = tmp;
-			this->terminate();
-		}
+		try {
+			ZT1_ResultCode rc = _node->processWirePacket(
+				OSUtils::now(),
+				(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
+				0,
+				data,
+				len,
+				const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+			if (ZT1_ResultCode_isFatal(rc)) {
+				char tmp[256];
+				Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
+				Mutex::Lock _l(_termReason_m);
+				_termReason = ONE_UNRECOVERABLE_ERROR;
+				_fatalErrorMessage = tmp;
+				this->terminate();
+			}
+		} catch ( ... ) {}
 	}
 
 	inline void phyOnTcpConnectFunction(PhySocket *sock,bool success)
@@ -309,55 +355,6 @@ public:
 		fflush(stderr);
 	}
 
-	void threadMain()
-		throw()
-	{
-		_nextBackgroundTaskDeadline = 0;
-		try {
-			_node = new Node(
-				OSUtils::now(),
-				this,
-				SnodeDataStoreGetFunction,
-				SnodeDataStorePutFunction,
-				SnodeWirePacketSendFunction,
-				SnodeVirtualNetworkFrameFunction,
-				SnodeVirtualNetworkConfigFunction,
-				SnodeEventCallback,
-				((_overrideRootTopology.length() > 0) ? _overrideRootTopology.c_str() : (const char *)0));
-
-			if (_master)
-				_node->setNetconfMaster((void *)_master);
-
-			for(;;) {
-				_run_m.lock();
-				if (!_run) {
-					_run_m.unlock();
-					break;
-				} else _run_m.unlock();
-
-				uint64_t dl = _nextBackgroundTaskDeadline;
-				uint64_t now = OSUtils::now();
-
-				if (dl <= now) {
-					_node->processBackgroundTasks(now,const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
-					dl = _nextBackgroundTaskDeadline;
-					now = OSUtils::now();
-				}
-
-				_phy.poll((dl > now) ? (unsigned long)(dl - now) : 100);
-			}
-		} catch (std::exception &exc) {
-			Mutex::Lock _l(_termReason_m);
-			_termReason = ONE_UNRECOVERABLE_ERROR;
-			_fatalErrorMessage = exc.what();
-		} catch ( ... ) {
-			Mutex::Lock _l(_termReason_m);
-			_termReason = ONE_UNRECOVERABLE_ERROR;
-			_fatalErrorMessage = "unexpected exception in main thread";
-		}
-		delete _node;
-	}
-
 private:
 	const std::string _homePath;
 	SimpleFunctionPhy _phy;
@@ -368,7 +365,6 @@ private:
 	PhySocket *_v6UdpSocket;
 	PhySocket *_v4TcpListenSocket;
 	PhySocket *_v6TcpListenSocket;
-	Thread _thread;
 	volatile uint64_t _nextBackgroundTaskDeadline;
 
 	ReasonForTermination _termReason;

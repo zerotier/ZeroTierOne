@@ -33,6 +33,12 @@
 
 #include <stdexcept>
 
+#include "../node/Constants.hpp"
+#include "../node/MAC.hpp"
+#include "../node/Buffer.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/MulticastGroup.hpp"
+
 #include "Thread.hpp"
 
 namespace ZeroTier {
