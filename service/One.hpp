@@ -36,9 +36,6 @@ class NetworkConfigMaster;
 
 /**
  * ZeroTier One -- local VPN/NVF service built around ZeroTier core
- *
- * Actual implementation is under the fold, hence the pure virtual
- * interface.
  */
 class One
 {

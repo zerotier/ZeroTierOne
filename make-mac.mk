@@ -77,7 +77,7 @@ mac-ui: FORCE
 	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
-	rm -rf *.dSYM build-* *.o netconf/*.o control/*.o node/*.o testnet/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
+	rm -rf *.dSYM build-* *.o netconf/*.o service/*.o node/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
 
 # For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE

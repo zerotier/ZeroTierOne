@@ -89,7 +89,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf *.o netconf/*.o node/*.o osdep/*.o control/*.o testnet/*.o ext/lz4/*.o zerotier-* build-* ZeroTierOneInstaller-* *.deb *.rpm
+	rm -rf *.o netconf/*.o node/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* build-* ZeroTierOneInstaller-* *.deb *.rpm
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

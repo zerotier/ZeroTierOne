@@ -29,8 +29,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <string>
+#include <map>
+#include <vector>
+#include <algorithm>
+
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
+
+#include "../ext/http-parser/http_parser.h"
 
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
@@ -45,13 +52,6 @@
 
 namespace ZeroTier {
 
-static void SphyOnDatagramFunction(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
-static void SphyOnTcpConnectFunction(PhySocket *sock,void **uptr,bool success);
-static void SphyOnTcpAcceptFunction(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
-static void SphyOnTcpCloseFunction(PhySocket *sock,void **uptr);
-static void SphyOnTcpDataFunction(PhySocket *sock,void **uptr,void *data,unsigned long len);
-static void SphyOnTcpWritableFunction(PhySocket *sock,void **uptr);
-
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf);
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData);
 static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize);
@@ -59,12 +59,32 @@ static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,
 static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,unsigned int desperation,const void *data,unsigned int len);
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
+static int ShttpServerOnMessageBegin(http_parser *parser);
+static int ShttpServerOnUrl(http_parser *parser,const char *ptr,size_t length);
+static int ShttpServerOnStatus(http_parser *parser,const char *ptr,size_t length);
+static int ShttpServerOnHeaderField(http_parser *parser,const char *ptr,size_t length);
+static int ShttpServerOnValue(http_parser *parser,const char *ptr,size_t length);
+static int ShttpServerOnHeadersComplete(http_parser *parser);
+static int ShttpServerOnBody(http_parser *parser,const char *ptr,size_t length);
+static int ShttpServerOnMessageComplete(http_parser *parser);
+
+static int ShttpClientOnMessageBegin(http_parser *parser);
+static int ShttpClientOnUrl(http_parser *parser,const char *ptr,size_t length);
+static int ShttpClientOnStatus(http_parser *parser,const char *ptr,size_t length);
+static int ShttpClientOnHeaderField(http_parser *parser,const char *ptr,size_t length);
+static int ShttpClientOnValue(http_parser *parser,const char *ptr,size_t length);
+static int ShttpClientOnHeadersComplete(http_parser *parser);
+static int ShttpClientOnBody(http_parser *parser,const char *ptr,size_t length);
+static int ShttpClientOnMessageComplete(http_parser *parser);
+
+class OneImpl;
+
 class OneImpl : public One
 {
 public:
 	OneImpl(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
-		_phy(SphyOnDatagramFunction,SphyOnTcpConnectFunction,SphyOnTcpAcceptFunction,SphyOnTcpCloseFunction,SphyOnTcpDataFunction,SphyOnTcpWritableFunction,true),
+		_phy(this,true),
 		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
@@ -197,44 +217,42 @@ public:
 
 	// Begin private implementation methods
 
-	inline void phyOnDatagramFunction(PhySocket *sock,const struct sockaddr *from,void *data,unsigned long len)
+	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
 	{
-		try {
-			ZT1_ResultCode rc = _node->processWirePacket(
-				OSUtils::now(),
-				(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
-				0,
-				data,
-				len,
-				const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
-			if (ZT1_ResultCode_isFatal(rc)) {
-				char tmp[256];
-				Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
-				Mutex::Lock _l(_termReason_m);
-				_termReason = ONE_UNRECOVERABLE_ERROR;
-				_fatalErrorMessage = tmp;
-				this->terminate();
-			}
-		} catch ( ... ) {}
+		ZT1_ResultCode rc = _node->processWirePacket(
+			OSUtils::now(),
+			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
+			0,
+			data,
+			len,
+			const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+		if (ZT1_ResultCode_isFatal(rc)) {
+			char tmp[256];
+			Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
+			Mutex::Lock _l(_termReason_m);
+			_termReason = ONE_UNRECOVERABLE_ERROR;
+			_fatalErrorMessage = tmp;
+			this->terminate();
+		}
 	}
 
-	inline void phyOnTcpConnectFunction(PhySocket *sock,bool success)
+	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
 	{
 	}
 
-	inline void phyOnTcpAcceptFunction(PhySocket *sockN,const struct sockaddr *from)
+	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
 	}
 
-	inline void phyOnTcpCloseFunction(PhySocket *sock)
+	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
 	{
 	}
 
-	inline void phyOnTcpDataFunction(PhySocket *sock,void *data,unsigned long len)
+	inline void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 	{
 	}
 
-	inline void phyOnTcpWritableFunction(PhySocket *sock)
+	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
 	{
 	}
 
@@ -270,15 +288,9 @@ public:
 
 	inline long nodeDataStoreGetFunction(const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize)
 	{
-		std::string p(_homePath);
-		p.push_back(ZT_PATH_SEPARATOR);
-		char lastc = (char)0;
-		for(const char *n=name;(*n);++n) {
-			if ((*n == '.')&&(lastc == '.'))
-				return -2; // security sanity check-- don't allow ../ stuff even though there's really no way Node will ever do this
-			p.push_back((*n == '/') ? ZT_PATH_SEPARATOR : *n);
-			lastc = *n;
-		}
+		std::string p(_dataStorePrepPath(name));
+		if (!p.length())
+			return -2;
 
 		FILE *f = fopen(p.c_str(),"rb");
 		if (!f)
@@ -304,15 +316,9 @@ public:
 
 	inline int nodeDataStorePutFunction(const char *name,const void *data,unsigned long len,int secure)
 	{
-		std::string p(_homePath);
-		p.push_back(ZT_PATH_SEPARATOR);
-		char lastc = (char)0;
-		for(const char *n=name;(*n);++n) {
-			if ((*n == '.')&&(lastc == '.'))
-				return -2; // security sanity check-- don't allow ../ stuff even though there's really no way Node will ever do this
-			p.push_back((*n == '/') ? ZT_PATH_SEPARATOR : *n);
-			lastc = *n;
-		}
+		std::string p(_dataStorePrepPath(name));
+		if (!p.length())
+			return -2;
 
 		if (!data) {
 			OSUtils::rm(p.c_str());
@@ -356,8 +362,25 @@ public:
 	}
 
 private:
+	std::string _dataStorePrepPath(const char *name) const
+	{
+		std::string p(_homePath);
+		p.push_back(ZT_PATH_SEPARATOR);
+		char lastc = (char)0;
+		for(const char *n=name;(*n);++n) {
+			if ((*n == '.')&&(lastc == '.'))
+				return std::string(); // don't allow ../../ stuff as a precaution
+			if (*n == '/') {
+				OSUtils::mkdir(p.c_str());
+				p.push_back(ZT_PATH_SEPARATOR);
+			} else p.push_back(*n);
+			lastc = *n;
+		}
+		return p;
+	}
+
 	const std::string _homePath;
-	SimpleFunctionPhy _phy;
+	Phy<OneImpl *> _phy;
 	NetworkConfigMaster *_master;
 	std::string _overrideRootTopology;
 	Node *_node;
@@ -374,19 +397,6 @@ private:
 	bool _run;
 	Mutex _run_m;
 };
-
-static void SphyOnDatagramFunction(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
-{ reinterpret_cast<OneImpl *>(*uptr)->phyOnDatagramFunction(sock,from,data,len); }
-static void SphyOnTcpConnectFunction(PhySocket *sock,void **uptr,bool success)
-{ reinterpret_cast<OneImpl *>(*uptr)->phyOnTcpConnectFunction(sock,success); }
-static void SphyOnTcpAcceptFunction(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
-{ *uptrN = *uptrL; reinterpret_cast<OneImpl *>(*uptrL)->phyOnTcpAcceptFunction(sockN,from); }
-static void SphyOnTcpCloseFunction(PhySocket *sock,void **uptr)
-{ reinterpret_cast<OneImpl *>(*uptr)->phyOnTcpCloseFunction(sock); }
-static void SphyOnTcpDataFunction(PhySocket *sock,void **uptr,void *data,unsigned long len)
-{ reinterpret_cast<OneImpl *>(*uptr)->phyOnTcpDataFunction(sock,data,len); }
-static void SphyOnTcpWritableFunction(PhySocket *sock,void **uptr)
-{ reinterpret_cast<OneImpl *>(*uptr)->phyOnTcpWritableFunction(sock); }
 
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf)
 { return reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkConfigFunction(nwid,op,nwconf); }

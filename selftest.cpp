@@ -46,17 +46,15 @@
 #include "node/Salsa20.hpp"
 #include "node/MAC.hpp"
 #include "node/Peer.hpp"
-#include "node/NodeConfig.hpp"
 #include "node/Dictionary.hpp"
-#include "node/EthernetTap.hpp"
 #include "node/SHA512.hpp"
 #include "node/C25519.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
-#include "node/HttpClient.hpp"
 #include "node/Defaults.hpp"
 #include "node/Node.hpp"
 
+#include "osdep/OSUtils.hpp"
 #ifdef ZT_TEST_PHY
 #include "osdep/Phy.hpp"
 #endif
@@ -147,69 +145,6 @@ static const C25519TestVector C25519_TEST_VECTORS[ZT_NUM_C25519_TEST_VECTORS] = 
 
 static unsigned char fuzzbuf[1048576];
 
-static volatile bool webDone = false;
-static std::string webSha512ShouldBe;
-static void testHttpHandler(void *arg,int code,const std::string &url,const std::string &body)
-{
-	unsigned char sha[64];
-	if (code == 200) {
-		SHA512::hash(sha,body.data(),(unsigned int)body.length());
-		if (webSha512ShouldBe == Utils::hex(sha,64))
-			std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 OK" << std::endl;
-		else std::cout << "got " << body.length() << " bytes, response code " << code << ", SHA-512 FAILED!" << std::endl;
-	} else std::cout << "ERROR " << code << ": " << body << std::endl;
-	webDone = true;
-}
-
-static int testHttp()
-{
-	HttpClient http;
-
-	webSha512ShouldBe = "221b348c8278ad2063c158fb15927c35dc6bb42880daf130d0574025f88ec350811c34fae38a014b576d3ef5c98af32bb540e68204810db87a51fa9b239ea567";
-	std::cout << "[http] fetching http://download.zerotier.com/dev/1k ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://download.zerotier.com/dev/1k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	webSha512ShouldBe = "342e1a058332aad2d7a5412c1d9cd4ad02b4038178ca0c3ed9d34e3cf0905c118b684e5d2a935a158195d453d7d69e9c6e201e252620fb53f29611794a5d4b0c";
-	std::cout << "[http] fetching http://download.zerotier.com/dev/2k ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://download.zerotier.com/dev/2k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	webSha512ShouldBe = "439562e1471dd6bdb558cb680f38dd7742e521497e280cb1456a31f74b9216b7d98145b3896c2f68008e6ac0c1662a4cb70562caeac294c5d01f378b22a21292";
-	std::cout << "[http] fetching http://download.zerotier.com/dev/4k ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://download.zerotier.com/dev/4k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	webSha512ShouldBe = "fbd3901a9956158b9d290efa1af4fff459d8c03187c98b0e630d10a19fab61940e668652257763973f6cde34f2aa81574f9a50b1979b675b45ddd18d69a4ceb8";
-	std::cout << "[http] fetching http://download.zerotier.com/dev/8k ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://download.zerotier.com/dev/8k",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	webSha512ShouldBe = "098ae593f8c3a962f385f9f008ec2116ad22eea8bc569fc88a06a0193480fdfb27470345c427116d19179fb2a74df21d95fe5f1df575a9f2d10d99595708b765";
-	std::cout << "[http] fetching http://download.zerotier.com/dev/4m ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://download.zerotier.com/dev/4m",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	webSha512ShouldBe = "";
-	std::cout << "[http] fetching http://download.zerotier.com/dev/NOEXIST ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://download.zerotier.com/dev/NOEXIST",HttpClient::NO_HEADERS,30,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	webSha512ShouldBe = "";
-	std::cout << "[http] fetching http://1.1.1.1/SHOULD_TIME_OUT ... "; std::cout.flush();
-	webDone = false;
-	http.GET("http://1.1.1.1/SHOULD_TIME_OUT",HttpClient::NO_HEADERS,4,&testHttpHandler,(void *)0);
-	while (!webDone) Thread::sleep(500);
-
-	return 0;
-}
-
 static int testCrypto()
 {
 	unsigned char buf1[16384];
@@ -261,12 +196,12 @@ static int testCrypto()
 			bb[i] = (unsigned char)i;
 		Salsa20 s20(s20TV0Key,256,s20TV0Iv,12);
 		double bytes = 0.0;
-		uint64_t start = Utils::now();
+		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
 			s20.encrypt(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
-		uint64_t end = Utils::now();
+		uint64_t end = OSUtils::now();
 		SHA512::hash(buf1,bb,1234567);
 		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
 		::free((void *)bb);
@@ -415,9 +350,9 @@ static int testIdentity()
 
 	for(unsigned int k=0;k<4;++k) {
 		std::cout << "[identity] Generate identity... "; std::cout.flush();
-		uint64_t genstart = Utils::now();
+		uint64_t genstart = OSUtils::now();
 		id.generate();
-		uint64_t genend = Utils::now();
+		uint64_t genend = OSUtils::now();
 		std::cout << "(took " << (genend - genstart) << "ms): " << id.toString(true) << std::endl;
 		std::cout << "[identity] Locally validate identity: ";
 		if (id.locallyValidate()) {
@@ -658,45 +593,54 @@ static unsigned long phyTestTcpByteCount = 0;
 static unsigned long phyTestTcpConnectSuccessCount = 0;
 static unsigned long phyTestTcpConnectFailCount = 0;
 static unsigned long phyTestTcpAcceptCount = 0;
-static SimpleFunctionPhy *testPhyInstance = (SimpleFunctionPhy *)0;
-static void testPhyOnDatagramFunction(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+struct TestPhyHandlers;
+static Phy<TestPhyHandlers *> *testPhyInstance = (Phy<TestPhyHandlers *> *)0;
+struct TestPhyHandlers
 {
-	++phyTestUdpPacketCount;
-}
-static void testPhyOnTcpConnectFunction(PhySocket *sock,void **uptr,bool success)
-{
-	if (success) {
-		++phyTestTcpConnectSuccessCount;
-	} else {
-		++phyTestTcpConnectFailCount;
+	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+	{
+		++phyTestUdpPacketCount;
 	}
-}
-static void testPhyOnTcpAcceptFunction(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
-{
-	++phyTestTcpAcceptCount;
-	*uptrN = new std::string(ZT_TEST_PHY_TCP_MESSAGE_SIZE,(char)0xff);
-	testPhyInstance->tcpSetNotifyWritable(sockN,true);
-}
-static void testPhyOnTcpCloseFunction(PhySocket *sock,void **uptr)
-{
-	delete (std::string *)*uptr; // delete testMessage if any
-}
-static void testPhyOnTcpDataFunction(PhySocket *sock,void **uptr,void *data,unsigned long len)
-{
-	phyTestTcpByteCount += len;
-}
-static void testPhyOnTcpWritableFunction(PhySocket *sock,void **uptr)
-{
-	std::string *testMessage = (std::string *)*uptr;
-	if ((testMessage)&&(testMessage->length() > 0)) {
-		long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),testMessage->length(),true);
-		if (sent > 0)
-			testMessage->erase(0,sent);
+
+	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
+	{
+		if (success) {
+			++phyTestTcpConnectSuccessCount;
+		} else {
+			++phyTestTcpConnectFailCount;
+		}
 	}
-	if ((!testMessage)||(!testMessage->length())) {
-		testPhyInstance->close(sock,true);
+
+	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
+	{
+		++phyTestTcpAcceptCount;
+		*uptrN = new std::string(ZT_TEST_PHY_TCP_MESSAGE_SIZE,(char)0xff);
+		testPhyInstance->tcpSetNotifyWritable(sockN,true);
 	}
-}
+
+	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
+	{
+		delete (std::string *)*uptr; // delete testMessage if any
+	}
+
+	inline void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
+	{
+		phyTestTcpByteCount += len;
+	}
+
+	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
+	{
+		std::string *testMessage = (std::string *)*uptr;
+		if ((testMessage)&&(testMessage->length() > 0)) {
+			long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),testMessage->length(),true);
+			if (sent > 0)
+				testMessage->erase(0,sent);
+		}
+		if ((!testMessage)||(!testMessage->length())) {
+			testPhyInstance->close(sock,true);
+		}
+	}
+};
 #endif // ZT_TEST_PHY
 
 static int testPhy()
@@ -717,7 +661,8 @@ static int testPhy()
 	bindaddr.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
 
 	std::cout << "[phy] Creating phy endpoint..." << std::endl;
-	testPhyInstance = new SimpleFunctionPhy(testPhyOnDatagramFunction,testPhyOnTcpConnectFunction,testPhyOnTcpAcceptFunction,testPhyOnTcpCloseFunction,testPhyOnTcpDataFunction,testPhyOnTcpWritableFunction,false);
+	TestPhyHandlers testPhyHandlers;
+	testPhyInstance = new Phy<TestPhyHandlers *>(&testPhyHandlers,false);
 
 	std::cout << "[phy] Binding UDP listen socket to 127.0.0.1/60002... ";
 	PhySocket *udpListenSock = testPhyInstance->udpBind((const struct sockaddr *)&bindaddr);
@@ -740,8 +685,8 @@ static int testPhy()
 	unsigned long phyTestTcpInvalidConnectionsAttempted = 0;
 
 	std::cout << "[phy] Testing UDP send/receive... "; std::cout.flush();
-	uint64_t timeoutAt = Utils::now() + ZT_TEST_PHY_TIMEOUT_MS;
-	while ((Utils::now() < timeoutAt)&&(phyTestUdpPacketCount < ZT_TEST_PHY_NUM_UDP_PACKETS)) {
+	uint64_t timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
+	while ((OSUtils::now() < timeoutAt)&&(phyTestUdpPacketCount < ZT_TEST_PHY_NUM_UDP_PACKETS)) {
 		if (phyTestUdpPacketsSent < ZT_TEST_PHY_NUM_UDP_PACKETS) {
 			if (!testPhyInstance->udpSend(udpListenSock,(const struct sockaddr *)&bindaddr,udpTestPayload,sizeof(udpTestPayload))) {
 				std::cout << "FAILED." << std::endl;
@@ -753,8 +698,8 @@ static int testPhy()
 	std::cout << "got " << phyTestUdpPacketCount << " packets, OK" << std::endl;
 
 	std::cout << "[phy] Testing TCP... "; std::cout.flush();
-	timeoutAt = Utils::now() + ZT_TEST_PHY_TIMEOUT_MS;
-	while ((Utils::now() < timeoutAt)&&(phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE))) {
+	timeoutAt = OSUtils::now() + ZT_TEST_PHY_TIMEOUT_MS;
+	while ((OSUtils::now() < timeoutAt)&&(phyTestTcpByteCount < (ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS * ZT_TEST_PHY_TCP_MESSAGE_SIZE))) {
 		if (phyTestTcpValidConnectionsAttempted < ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS) {
 			++phyTestTcpValidConnectionsAttempted;
 			bool connected = false;
@@ -846,14 +791,12 @@ int main(int argc,char **argv)
 	*/
 
 	std::cout << "[info] sizeof(void *) == " << sizeof(void *) << std::endl;
-	std::cout << "[info] default home: " << ZT_DEFAULTS.defaultHomePath << std::endl;
 
 	srand((unsigned int)time(0));
 
 	r |= testPhy();
 	r |= testSqliteNetconfMaster();
 	r |= testCrypto();
-	r |= testHttp();
 	r |= testPacket();
 	r |= testOther();
 	r |= testIdentity();

@@ -83,15 +83,15 @@ typedef void PhySocket;
  * Yes there is boost::asio and libuv, but I like small binaries and I hate
  * build dependencies. Both drag in a whole bunch of pasta with them.
  *
- * This implementation takes four functions or function objects as template
- * paramters:
+ * This class is templated on a pointer to a handler class which must
+ * implement the following functions:
  *
- * ON_DATAGRAM_FUNCTION(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
- * ON_TCP_CONNECT_FUNCTION(PhySocket *sock,void **uptr,bool success)
- * ON_TCP_ACCEPT_FUNCTION(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
- * ON_TCP_CLOSE_FUNCTION(PhySocket *sock,void **uptr)
- * ON_TCP_DATA_FUNCTION(PhySocket *sock,void **uptr,void *data,unsigned long len)
- * ON_TCP_WRITABLE_FUNCTION(PhySocket *sock,void **uptr)
+ * phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+ * phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
+ * phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
+ * phyOnTcpClose(PhySocket *sock,void **uptr)
+ * phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
+ * phyOnTcpWritable(PhySocket *sock,void **uptr)
  *
  * These templates typically refer to function objects. Templates are used to
  * avoid the call overhead of indirection, which is surprisingly high for high
@@ -114,22 +114,11 @@ typedef void PhySocket;
  * This isn't thread-safe with the exception of whack(), which is safe to
  * call from another thread to abort poll().
  */
-template <
-	typename ON_DATAGRAM_FUNCTION,
-	typename ON_TCP_CONNECT_FUNCTION,
-	typename ON_TCP_ACCEPT_FUNCTION,
-	typename ON_TCP_CLOSE_FUNCTION,
-	typename ON_TCP_DATA_FUNCTION,
-	typename ON_TCP_WRITABLE_FUNCTION >
+template <typename HANDLER_PTR_TYPE>
 class Phy
 {
 private:
-	ON_DATAGRAM_FUNCTION _datagramHandler;
-	ON_TCP_CONNECT_FUNCTION _tcpConnectHandler;
-	ON_TCP_ACCEPT_FUNCTION _tcpAcceptHandler;
-	ON_TCP_CLOSE_FUNCTION _tcpCloseHandler;
-	ON_TCP_DATA_FUNCTION _tcpDataHandler;
-	ON_TCP_WRITABLE_FUNCTION _tcpWritableHandler;
+	HANDLER_PTR_TYPE _handler;
 
 	enum PhySocketType
 	{
@@ -164,27 +153,11 @@ private:
 
 public:
 	/**
-	 * @param datagramHandler Function or function object to handle UDP or RAW datagrams
-	 * @param tcpConnectHandler Handler for outgoing TCP connection attempts (success or failure)
-	 * @param tcpAcceptHandler Handler for incoming TCP connections
-	 * @param tcpDataHandler Handler for incoming TCP data
-	 * @param tcpWritableHandler Handler to be called when TCP sockets are writable (if notification is on)
-	 * @param noDelay If true, disable Nagle algorithm on new TCP sockets
+	 * @param handler Pointer of type HANDLER_PTR_TYPE to handler
+	 * @param noDelay If true, disable TCP NAGLE algorithm on TCP sockets
 	 */
-	Phy(
-		ON_DATAGRAM_FUNCTION datagramHandler,
-		ON_TCP_CONNECT_FUNCTION tcpConnectHandler,
-		ON_TCP_ACCEPT_FUNCTION tcpAcceptHandler,
-		ON_TCP_CLOSE_FUNCTION tcpCloseHandler,
-		ON_TCP_DATA_FUNCTION tcpDataHandler,
-		ON_TCP_WRITABLE_FUNCTION tcpWritableHandler,
-		bool noDelay) :
-		_datagramHandler(datagramHandler),
-		_tcpConnectHandler(tcpConnectHandler),
-		_tcpAcceptHandler(tcpAcceptHandler),
-		_tcpCloseHandler(tcpCloseHandler),
-		_tcpDataHandler(tcpDataHandler),
-		_tcpWritableHandler(tcpWritableHandler)
+	Phy(HANDLER_PTR_TYPE handler,bool noDelay) :
+		_handler(handler)
 	{
 		FD_ZERO(&_readfds);
 		FD_ZERO(&_writefds);
@@ -526,7 +499,7 @@ public:
 
 		if ((callConnectHandler)&&(connected)) {
 			try {
-				_tcpConnectHandler((PhySocket *)&sws,&(sws.uptr),true);
+				_handler->phyOnTcpConnect((PhySocket *)&sws,&(sws.uptr),true);
 			} catch ( ... ) {}
 		}
 
@@ -664,7 +637,7 @@ public:
 							FD_CLR(s->sock,&_exceptfds);
 #endif
 							try {
-								_tcpConnectHandler((PhySocket *)&(*s),&(s->uptr),true);
+								_handler->phyOnTcpConnect((PhySocket *)&(*s),&(s->uptr),true);
 							} catch ( ... ) {}
 						}
 					}
@@ -678,13 +651,13 @@ public:
 							this->close((PhySocket *)&(*s),true);
 						} else {
 							try {
-								_tcpDataHandler((PhySocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
+								_handler->phyOnTcpData((PhySocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
 							} catch ( ... ) {}
 						}
 					}
 					if ((FD_ISSET(s->sock,&wfds))&&(FD_ISSET(s->sock,&_writefds))) {
 						try {
-							_tcpWritableHandler((PhySocket *)&(*s),&(s->uptr));
+							_handler->phyOnTcpWritable((PhySocket *)&(*s),&(s->uptr));
 						} catch ( ... ) {}
 					}
 					break;
@@ -715,7 +688,7 @@ public:
 								sws.uptr = (void *)0;
 								memcpy(&(sws.saddr),&ss,sizeof(struct sockaddr_storage));
 								try {
-									_tcpAcceptHandler((PhySocket *)&(*s),(PhySocket *)&(_socks.back()),&(s->uptr),&(sws.uptr),(const struct sockaddr *)&(sws.saddr));
+									_handler->phyOnTcpAccept((PhySocket *)&(*s),(PhySocket *)&(_socks.back()),&(s->uptr),&(sws.uptr),(const struct sockaddr *)&(sws.saddr));
 								} catch ( ... ) {}
 							}
 						}
@@ -730,7 +703,7 @@ public:
 							long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
 							if (n > 0) {
 								try {
-									_datagramHandler((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
+									_handler->phyOnDatagram((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
 								} catch ( ... ) {}
 							} else if (n < 0)
 								break;
@@ -767,7 +740,7 @@ public:
 			case ZT_PHY_SOCKET_TCP_OUT_PENDING:
 				if (callHandlers) {
 					try {
-						_tcpConnectHandler(sock,&(sws.uptr),false);
+						_handler->phyOnTcpConnect(sock,&(sws.uptr),false);
 					} catch ( ... ) {}
 				}
 				break;
@@ -775,7 +748,7 @@ public:
 			case ZT_PHY_SOCKET_TCP_IN:
 				if (callHandlers) {
 					try {
-						_tcpCloseHandler(sock,&(sws.uptr));
+						_handler->phyOnTcpClose(sock,&(sws.uptr));
 					} catch ( ... ) {}
 				}
 				break;
@@ -804,19 +777,6 @@ public:
 		}
 	}
 };
-
-// Typedefs for using regular naked functions as template parameters to Phy<>
-typedef void (*Phy_OnDatagramFunctionPtr)(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
-typedef void (*Phy_OnTcpConnectFunction)(PhySocket *sock,void **uptr,bool success);
-typedef void (*Phy_OnTcpAcceptFunction)(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
-typedef void (*Phy_OnTcpCloseFunction)(PhySocket *sock,void **uptr);
-typedef void (*Phy_OnTcpDataFunction)(PhySocket *sock,void **uptr,void *data,unsigned long len);
-typedef void (*Phy_OnTcpWritableFunction)(PhySocket *sock,void **uptr);
-
-/**
- * Phy<> typedef'd to use simple naked function pointers
- */
-typedef Phy<Phy_OnDatagramFunctionPtr,Phy_OnTcpConnectFunction,Phy_OnTcpAcceptFunction,Phy_OnTcpCloseFunction,Phy_OnTcpDataFunction,Phy_OnTcpWritableFunction> SimpleFunctionPhy;
 
 } // namespace ZeroTier
 

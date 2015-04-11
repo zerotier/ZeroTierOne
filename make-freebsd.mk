@@ -84,7 +84,7 @@ testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
 #	./buildinstaller.sh
 
 clean:
-	rm -rf $(OBJS) $(TESTNET_OBJS) node/*.o osdep/*.o control/*.o testnet/*.o *.o zerotier-* build-* ZeroTierOneInstaller-*
+	rm -rf *.o netconf/*.o node/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o build-* zerotier-* ZeroTierOneInstaller-*
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1
