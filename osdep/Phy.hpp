@@ -516,10 +516,10 @@ public:
 	 * @param sock An open TCP socket (other socket types will fail)
 	 * @param data Data to send
 	 * @param len Length of data
-	 * @param callCloseHandler If true, call close handler on socket closing failure condition
+	 * @param callCloseHandler If true, call close handler on socket closing failure condition (default: true)
 	 * @return Number of bytes actually sent or -1 on fatal error (socket closure)
 	 */
-	inline long tcpSend(PhySocket *sock,const void *data,unsigned long len,bool callCloseHandler)
+	inline long tcpSend(PhySocket *sock,const void *data,unsigned long len,bool callCloseHandler = true)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		long n = (long)::send(sws.sock,data,len,0);

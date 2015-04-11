@@ -50,7 +50,16 @@
 
 #include "One.hpp"
 
+// Sanity limits for HTTP
+#define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 8)
+#define ZT_MAX_HTTP_CONNECTIONS 64
+
 namespace ZeroTier {
+
+// Used to convert HTTP header names to ASCII lower case
+static const unsigned char ZT_TOLOWER_TABLE[256] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, ' ', '!', '"', '#', '$', '%', '&', 0x27, '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', 0x7f, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff };
+
+class OneImpl;
 
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf);
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData);
@@ -59,25 +68,46 @@ static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,
 static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,unsigned int desperation,const void *data,unsigned int len);
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
-static int ShttpServerOnMessageBegin(http_parser *parser);
-static int ShttpServerOnUrl(http_parser *parser,const char *ptr,size_t length);
-static int ShttpServerOnStatus(http_parser *parser,const char *ptr,size_t length);
-static int ShttpServerOnHeaderField(http_parser *parser,const char *ptr,size_t length);
-static int ShttpServerOnValue(http_parser *parser,const char *ptr,size_t length);
-static int ShttpServerOnHeadersComplete(http_parser *parser);
-static int ShttpServerOnBody(http_parser *parser,const char *ptr,size_t length);
-static int ShttpServerOnMessageComplete(http_parser *parser);
+static int ShttpOnMessageBegin(http_parser *parser);
+static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length);
+static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length);
+static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length);
+static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length);
+static int ShttpOnHeadersComplete(http_parser *parser);
+static int ShttpOnBody(http_parser *parser,const char *ptr,size_t length);
+static int ShttpOnMessageComplete(http_parser *parser);
 
-static int ShttpClientOnMessageBegin(http_parser *parser);
-static int ShttpClientOnUrl(http_parser *parser,const char *ptr,size_t length);
-static int ShttpClientOnStatus(http_parser *parser,const char *ptr,size_t length);
-static int ShttpClientOnHeaderField(http_parser *parser,const char *ptr,size_t length);
-static int ShttpClientOnValue(http_parser *parser,const char *ptr,size_t length);
-static int ShttpClientOnHeadersComplete(http_parser *parser);
-static int ShttpClientOnBody(http_parser *parser,const char *ptr,size_t length);
-static int ShttpClientOnMessageComplete(http_parser *parser);
+const struct http_parser_settings HTTP_PARSER_SETTINGS = {
+	ShttpOnMessageBegin,
+	ShttpOnUrl,
+	ShttpOnStatus,
+	ShttpOnHeaderField,
+	ShttpOnValue,
+	ShttpOnHeadersComplete,
+	ShttpOnBody,
+	ShttpOnMessageComplete
+};
 
-class OneImpl;
+struct HttpConnection
+{
+	bool server;
+	bool writing;
+	bool shouldKeepAlive;
+	OneImpl *parent;
+	PhySocket *sock;
+	http_parser parser;
+	unsigned long messageSize;
+	unsigned long writePtr;
+	uint64_t lastActivity;
+
+	std::string currentHeaderField;
+	std::string currentHeaderValue;
+
+	std::string url;
+	std::string status;
+	std::map< std::string,std::string > headers;
+	std::string body; // also doubles as send queue for writes out to the socket
+};
 
 class OneImpl : public One
 {
@@ -113,7 +143,7 @@ public:
 
 		::memset((void *)&in4,0,sizeof(in4));
 		in4.sin_family = AF_INET;
-		in4.sin_port = Utils::hton(port);
+		in4.sin_port = Utils::hton((uint16_t)port);
 		_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,this,131072);
 		if (!_v4UdpSocket)
 			throw std::runtime_error("cannot bind to port (UDP/IPv4)");
@@ -170,13 +200,13 @@ public:
 				uint64_t now = OSUtils::now();
 
 				if (dl <= now) {
-					_node->processBackgroundTasks(now,const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
 					now = OSUtils::now();
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
-				printf("polling: %lums timeout\n",delay);
+				//printf("polling: %lums timeout\n",delay);
 				_phy.poll(delay);
 			}
 		} catch (std::exception &exc) {
@@ -225,7 +255,7 @@ public:
 			0,
 			data,
 			len,
-			const_cast<uint64_t *>(&_nextBackgroundTaskDeadline));
+			&_nextBackgroundTaskDeadline);
 		if (ZT1_ResultCode_isFatal(rc)) {
 			char tmp[256];
 			Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
@@ -238,22 +268,64 @@ public:
 
 	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
 	{
+		// TODO: outgoing HTTP connection success/failure
 	}
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
+		HttpConnection *htc = &(_httpConnections[sockN]);
+		htc->server = true;
+		htc->writing = false;
+		htc->shouldKeepAlive = true;
+		htc->parent = this;
+		htc->sock = sockN;
+		http_parser_init(&(htc->parser),HTTP_REQUEST);
+		htc->parser.data = (void *)htc;
+		htc->messageSize = 0;
+		htc->writePtr = 0;
+		htc->lastActivity = OSUtils::now();
+		htc->currentHeaderField = "";
+		htc->currentHeaderValue = "";
+		htc->url = "";
+		htc->status = "";
+		htc->headers.clear();
+		htc->body = "";
+		*uptrN = (void *)htc;
 	}
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
 	{
+		_httpConnections.erase(sock);
 	}
 
 	inline void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 	{
+		HttpConnection *htc = reinterpret_cast<HttpConnection *>(*uptr);
+		http_parser_execute(&(htc->parser),&HTTP_PARSER_SETTINGS,(const char *)data,len);
+		if ((htc->parser.upgrade)||(htc->parser.http_errno != HPE_OK))
+			_phy.close(sock);
 	}
 
 	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
 	{
+		HttpConnection *htc = reinterpret_cast<HttpConnection *>(*uptr);
+		long sent = _phy.tcpSend(sock,htc->body.data() + htc->writePtr,htc->body.length() - htc->writePtr,true);
+		if (sent < 0) {
+			return; // close handler will have been called, so everything's dead
+		} else {
+			htc->lastActivity = OSUtils::now();
+			htc->writePtr += sent;
+			if (htc->writePtr >= htc->body.length()) {
+				_phy.tcpSetNotifyWritable(sock,false);
+				if (htc->shouldKeepAlive) {
+					htc->writing = false;
+					htc->writePtr = 0;
+					htc->body.assign("",0);
+				} else {
+					_phy.close(sock); // will call close handler to delete from _httpConnections
+				}
+			}
+		}
 	}
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf)
@@ -361,6 +433,48 @@ public:
 		fflush(stderr);
 	}
 
+	inline void onHttpRequestToServer(HttpConnection *htc)
+	{
+		char tmpn[256];
+
+		/*
+		printf("HTTP request:\n");
+		printf("  url: %s\n",htc->url.c_str());
+		printf("  status: %s\n",htc->status.c_str());
+		printf("  headers:\n");
+		for(std::map<std::string,std::string>::iterator h(htc->headers.begin());h!=htc->headers.end();++h)
+			printf("    %s: %s\n",h->first.c_str(),h->second.c_str());
+		printf("  body:\n----\n%s\n----\n",htc->body.c_str());
+		*/
+
+		std::string data = "123456";
+		std::string contentType = "text/plain";
+		//unsigned int scode = _nodeHttpControlPlane.handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
+		unsigned int scode = 200;
+
+		Utils::snprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nServer: ZeroTier One\r\nCache-Control: no-cache\r\nPragma: no-cache\r\n",scode,((scode == 200) ? "OK" : ((scode == 404) ? "Not Found" : "Error")));
+		htc->body.assign(tmpn);
+		htc->body.append("Content-Type: ");
+		htc->body.append(contentType);
+		Utils::snprintf(tmpn,sizeof(tmpn),"\r\nContent-Length: %lu\r\n",(unsigned long)data.length());
+		htc->body.append(tmpn);
+		if (!htc->shouldKeepAlive)
+			htc->body.append("Connection: close\r\n");
+		htc->body.append("\r\n");
+		if (htc->parser.method != HTTP_HEAD)
+			htc->body.append(data);
+
+		htc->writing = true;
+		htc->writePtr = 0;
+		_phy.tcpSetNotifyWritable(htc->sock,true);
+	}
+
+	inline void onHttpResponseFromClient(HttpConnection *htc)
+	{
+		if (!htc->shouldKeepAlive)
+			_phy.close(htc->sock); // will call close handler, which deletes from _httpConnections
+	}
+
 private:
 	std::string _dataStorePrepPath(const char *name) const
 	{
@@ -388,7 +502,9 @@ private:
 	PhySocket *_v6UdpSocket;
 	PhySocket *_v4TcpListenSocket;
 	PhySocket *_v6TcpListenSocket;
-	volatile uint64_t _nextBackgroundTaskDeadline;
+	uint64_t _nextBackgroundTaskDeadline;
+
+	std::map< PhySocket *,HttpConnection > _httpConnections; // no mutex for this since it's done in the main loop thread only
 
 	ReasonForTermination _termReason;
 	std::string _fatalErrorMessage;
@@ -410,6 +526,89 @@ static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct so
 { return reinterpret_cast<OneImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
+
+static int ShttpOnMessageBegin(http_parser *parser)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->currentHeaderField.assign("",0);
+	htc->currentHeaderValue.assign("",0);
+	htc->messageSize = 0;
+	htc->url.assign("",0);
+	htc->status.assign("",0);
+	htc->headers.clear();
+	htc->body.assign("",0);
+	return 0;
+}
+static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->messageSize += length;
+	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
+		return -1;
+	htc->url.append(ptr,length);
+	return 0;
+}
+static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->messageSize += length;
+	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
+		return -1;
+	htc->status.append(ptr,length);
+	return 0;
+}
+static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->messageSize += length;
+	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
+		return -1;
+	if ((htc->currentHeaderField.length())&&(htc->currentHeaderValue.length())) {
+		htc->headers[htc->currentHeaderField] = htc->currentHeaderValue;
+		htc->currentHeaderField.assign("",0);
+		htc->currentHeaderValue.assign("",0);
+	}
+	for(size_t i=0;i<length;++i)
+		htc->currentHeaderField.push_back((char)ZT_TOLOWER_TABLE[(unsigned int)ptr[i]]);
+	return 0;
+}
+static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->messageSize += length;
+	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
+		return -1;
+	htc->currentHeaderValue.append(ptr,length);
+	return 0;
+}
+static int ShttpOnHeadersComplete(http_parser *parser)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	if ((htc->currentHeaderField.length())&&(htc->currentHeaderValue.length()))
+		htc->headers[htc->currentHeaderField] = htc->currentHeaderValue;
+	return 0;
+}
+static int ShttpOnBody(http_parser *parser,const char *ptr,size_t length)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->messageSize += length;
+	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
+		return -1;
+	htc->body.append(ptr,length);
+	return 0;
+}
+static int ShttpOnMessageComplete(http_parser *parser)
+{
+	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
+	htc->shouldKeepAlive = (http_should_keep_alive(parser) != 0);
+	htc->lastActivity = OSUtils::now();
+	if (htc->server) {
+		htc->parent->onHttpRequestToServer(htc);
+	} else {
+		htc->parent->onHttpResponseFromClient(htc);
+	}
+	return 0;
+}
 
 std::string One::platformDefaultHomePath()
 {
