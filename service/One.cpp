@@ -458,55 +458,13 @@ public:
 		std::string contentType;
 		unsigned int scode = 404;
 
-		if ((htc->url.length() >= 3)&&(htc->url[0] == '/')&&(htc->url[1] == 'Z')&&(htc->url[2] == 'T')) {
-			/* Paths of /ZT<anything> indicate the tunneling of the ZeroTier
-			 * protocol over TCP/HTTP. GETs invoke old school long-polling to
-			 * wait for a packet, while POST or PUT submits a packet to be
-			 * parsed. This is our desperation >= 1 path. */
-			switch(htc->parser.method) {
-				case HTTP_GET: {
-				}	break;
-				case HTTP_POST:
-				case HTTP_PUT: {
-					ZT1_ResultCode rc = _node->processWirePacket(
-						OSUtils::now(),
-						(const struct sockaddr_storage *)&(htc->from),
-						1,
-						(const void *)htc->body.data(),
-						(unsigned int)htc->body.length(),
-						&_nextBackgroundTaskDeadline);
-					if (ZT1_ResultCode_isFatal(rc)) {
-						char tmp[256];
-						Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket(%d)",(int)rc);
-						Mutex::Lock _l(_termReason_m);
-						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = tmp;
-						this->terminate();
-						return;
-					} else {
-						data = "";
-						contentType = "text/plain";
-						scode = 200;
-					}
-				}	break;
-				default:
-					data = "Invalid method for ZeroTier protocol tunneling request.";
-					contentType = "text/plain";
-					scode = 405;
-					htc->shouldKeepAlive = false;
-					break;
-			}
+		if ((htc->from == InetAddress::LO4)||(htc->from == InetAddress::LO6)) {
+			//scode = _controlPlane.handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
 		} else {
-			/* Other paths are passed along to the control plane, which is currently
-			 * only allowed from loopback. */
-			if ((htc->from == InetAddress::LO4)||(htc->from == InetAddress::LO6)) {
-				//scode = _controlPlane.handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
-			} else {
-				data = "Forbidden.";
-				contentType = "text/plain";
-				scode = 403;
-				htc->shouldKeepAlive = false;
-			}
+			data = "Forbidden.";
+			contentType = "text/plain";
+			scode = 403;
+			htc->shouldKeepAlive = false;
 		}
 
 		Utils::snprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nServer: ZeroTier One\r\nCache-Control: no-cache\r\nPragma: no-cache\r\n",scode,((scode == 200) ? "OK" : ((scode == 404) ? "Not Found" : "Error")));
