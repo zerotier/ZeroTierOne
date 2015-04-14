@@ -189,7 +189,7 @@ public:
 			if (_master)
 				_node->setNetconfMaster((void *)_master);
 
-			_controlPlane = new ControlPlane(_node,std::set<std::string>());
+			_controlPlane = new ControlPlane(_node);
 
 			_nextBackgroundTaskDeadline = 0;
 			for(;;) {
@@ -454,16 +454,12 @@ public:
 		std::string contentType("text/plain"); // default if not changed in handleRequest()
 		unsigned int scode = 404;
 
-		if ((htc->from.ipsEqual(InetAddress::LO4))||(htc->from.ipsEqual(InetAddress::LO6))) {
-			try {
-				if (_controlPlane)
-					scode = _controlPlane->handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
-			} catch ( ... ) {
-				scode = 500;
-			}
-		} else {
-			scode = 403;
-			htc->shouldKeepAlive = false;
+		try {
+			if (_controlPlane)
+				scode = _controlPlane->handleRequest(htc->from,htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
+			else scode = 500;
+		} catch ( ... ) {
+			scode = 500;
 		}
 
 		const char *scodestr;

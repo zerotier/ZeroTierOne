@@ -37,6 +37,7 @@
 namespace ZeroTier {
 
 class Node;
+struct InetAddress;
 
 /**
  * HTTP control plane and static web server
@@ -44,12 +45,13 @@ class Node;
 class ControlPlane
 {
 public:
-	ControlPlane(Node *n,const std::set<std::string> atoks);
+	ControlPlane(Node *n);
 	~ControlPlane();
 
 	/**
 	 * Handle HTTP request
 	 *
+	 * @param fromAddress Originating IP address of request
 	 * @param httpMethod HTTP method (as defined in ext/http-parser/http_parser.h)
 	 * @param path Request path
 	 * @param headers Request headers
@@ -59,6 +61,7 @@ public:
 	 * @return HTTP response code
 	 */
 	unsigned int handleRequest(
+		const InetAddress &fromAddress,
 		unsigned int httpMethod,
 		const std::string &path,
 		const std::map<std::string,std::string> &headers,

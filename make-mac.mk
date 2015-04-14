@@ -63,18 +63,18 @@ selftest: $(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
-testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
-	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
-	$(STRIP) zerotier-testnet
+#testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
+#	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
+#	$(STRIP) zerotier-testnet
 
 # Requires that ../Qt be symlinked to the Qt root to use for UI build
-mac-ui: FORCE
-	mkdir -p build-ZeroTierUI-release
-	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
-	strip "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One"
-	find "build-ZeroTierUI-release/ZeroTier One.app" -type f -name '.DS_Store' -print0 | xargs -0 rm -f
-	$(CODESIGN) -f -s $(CODESIGN_CERT) "build-ZeroTierUI-release/ZeroTier One.app"
-	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
+#mac-ui: FORCE
+#	mkdir -p build-ZeroTierUI-release
+#	cd build-ZeroTierUI-release ; ../../Qt/bin/qmake ../ZeroTierUI/ZeroTierUI.pro ; make -j 4
+#	strip "build-ZeroTierUI-release/ZeroTier One.app/Contents/MacOS/ZeroTier One"
+#	find "build-ZeroTierUI-release/ZeroTier One.app" -type f -name '.DS_Store' -print0 | xargs -0 rm -f
+#	$(CODESIGN) -f -s $(CODESIGN_CERT) "build-ZeroTierUI-release/ZeroTier One.app"
+#	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
 	rm -rf *.dSYM build-* *.o netconf/*.o service/*.o node/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
@@ -82,7 +82,6 @@ clean:
 # For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
-	make mac-ui ZT_OFFICIAL_RELEASE=1
 	./buildinstaller.sh
 	make mac-dmg ZT_OFFICIAL_RELEASE=1
 

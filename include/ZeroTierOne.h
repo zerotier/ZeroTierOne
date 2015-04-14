@@ -524,6 +524,16 @@ typedef struct
 	 * Is path fixed? (i.e. not learned, static)
 	 */
 	int fixed;
+
+	/**
+	 * Is path active?
+	 */
+	int active;
+
+	/**
+	 * Is path preferred?
+	 */
+	int preferred;
 } ZT1_PeerPhysicalPath;
 
 /**
@@ -795,6 +805,9 @@ enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,
  *
  * This may generate calls to the port config callback before it returns,
  * or these may be deffered if a netconf is not available yet.
+ *
+ * If we are already a member of the network, nothing is done and OK is
+ * returned.
  *
  * @param node Node instance
  * @param nwid 64-bit ZeroTier network ID

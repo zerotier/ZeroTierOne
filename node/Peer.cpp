@@ -111,7 +111,7 @@ void Peer::received(
 					 * paths without confirming that a bidirectional link is in
 					 * fact present, but any packet that decodes and authenticates
 					 * correctly is considered valid. */
-					TRACE("got non-confirmation packet from unknown path %s(%s), pinging...",_id.address().toString().c_str(),remoteAddr.toString().c_str());
+					TRACE("got non-confirmation %s from unknown path %s(%s), pinging...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
 					attemptToContactAt(RR,remoteAddr,linkDesperation,now);
 				}
 			}
