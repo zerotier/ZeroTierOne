@@ -65,6 +65,7 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING "pb"
 #define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES "ab"
+#define ZT_NETWORKCONFIG_DICT_KEY_RELAYS "rl"
 
 /**
  * Network configuration received from netconf master nodes

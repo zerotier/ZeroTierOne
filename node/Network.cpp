@@ -96,8 +96,6 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 		} catch ( ... ) {} // ignore invalid MCDB, we'll re-learn from peers
 	}
 
-	requestConfiguration();
-
 	ZT1_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
 	_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
@@ -468,7 +466,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 {
 	// assumes _lock is locked
 	ec->nwid = _id;
-	ec->mac = MAC(RR->identity.address(),_id);
+	ec->mac = _mac.toInt();
 	if (_config)
 		Utils::scopy(ec->name,sizeof(ec->name),_config->name().c_str());
 	else ec->name[0] = (char)0;
@@ -481,7 +479,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 	ec->portError = _portError;
 	ec->netconfRevision = (_config) ? (unsigned long)_config->revision() : 0;
 
-	ec->multicastSubscriptionCount = std::max((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
+	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
 	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
 		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();

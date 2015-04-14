@@ -135,7 +135,7 @@ static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc)
 		"{"
 		"\"nwid\": \"%.16llx\","
 		"\"mac\": \"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\","
-		"\"name\": %s,"
+		"\"name\": \"%s\","
 		"\"status\": \"%s\","
 		"\"type\": \"%s\","
 		"\"mtu\": %u,"
