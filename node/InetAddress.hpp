@@ -62,16 +62,6 @@ struct InetAddress : public sockaddr_storage
 	static const InetAddress LO6;
 
 	/**
-	 * 0.0.0.0/0
-	 */
-	static const InetAddress DEFAULT4;
-
-	/**
-	 * ::/0
-	 */
-	static const InetAddress DEFAULT6;
-
-	/**
 	 * IP address scope
 	 *
 	 * Do not change these numeric index values without taking a look
@@ -91,6 +81,7 @@ struct InetAddress : public sockaddr_storage
 
 	InetAddress() throw() { memset(this,0,sizeof(InetAddress)); }
 	InetAddress(const InetAddress &a) throw() { memcpy(this,&a,sizeof(InetAddress)); }
+	InetAddress(const InetAddress *a) throw() { memcpy(this,a,sizeof(InetAddress)); }
 	InetAddress(const struct sockaddr_storage &ss) throw() { *this = ss; }
 	InetAddress(const struct sockaddr_storage *ss) throw() { *this = ss; }
 	InetAddress(const struct sockaddr &sa) throw() { *this = sa; }
@@ -109,6 +100,13 @@ struct InetAddress : public sockaddr_storage
 		throw()
 	{
 		memcpy(this,&a,sizeof(InetAddress));
+		return *this;
+	}
+
+	inline InetAddress &operator=(const InetAddress *a)
+		throw()
+	{
+		memcpy(this,a,sizeof(InetAddress));
 		return *this;
 	}
 
@@ -295,39 +293,6 @@ struct InetAddress : public sockaddr_storage
 	inline bool isV6() const throw() { return (ss_family == AF_INET6); }
 
 	/**
-	 * Force type to IPv4
-	 */
-	inline void setV4() throw() { ss_family = AF_INET; }
-
-	/**
-	 * Force type to IPv6
-	 */
-	inline void setV6() throw() { ss_family = AF_INET6; }
-
-	/**
-	 * @return Length of sockaddr_in if IPv4, sockaddr_in6 if IPv6
-	 */
-	inline unsigned int saddrLen() const
-		throw()
-	{
-		switch(ss_family) {
-			case AF_INET: return sizeof(struct sockaddr_in);
-			case AF_INET6: return sizeof(struct sockaddr_in6);
-			default: return 0;
-		}
-	}
-
-	/**
-	 * @return Raw sockaddr_in structure (valid if IPv4)
-	 */
-	inline const struct sockaddr_in *saddr4() const throw() { return reinterpret_cast<const struct sockaddr_in *>(this); }
-
-	/**
-	 * @return Raw sockaddr_in6 structure (valid if IPv6)
-	 */
-	inline const struct sockaddr_in6 *saddr6() const throw() { return reinterpret_cast<const struct sockaddr_in6 *>(this); }
-
-	/**
 	 * @return pointer to raw IP address bytes
 	 */
 	inline const void *rawIpData() const
@@ -376,9 +341,9 @@ struct InetAddress : public sockaddr_storage
 	 */
 	inline operator bool() const throw() { return (ss_family != 0); }
 
-	inline bool operator==(const InetAddress &a) const throw() { return (memcmp(this,&a,sizeof(InetAddress)) == 0); }
+	bool operator==(const InetAddress &a) const throw();
+	bool operator<(const InetAddress &a) const throw();
 	inline bool operator!=(const InetAddress &a) const throw() { return !(*this == a); }
-	inline bool operator<(const InetAddress &a) const throw() { return (memcmp(this,&a,sizeof(InetAddress)) < 0); }
 	inline bool operator>(const InetAddress &a) const throw() { return (a < *this); }
 	inline bool operator<=(const InetAddress &a) const throw() { return !(a < *this); }
 	inline bool operator>=(const InetAddress &a) const throw() { return !(*this < a); }

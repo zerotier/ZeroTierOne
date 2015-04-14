@@ -37,10 +37,8 @@
 
 namespace ZeroTier {
 
-const InetAddress InetAddress::LO4("127.0.0.1",0);
-const InetAddress InetAddress::LO6("::1",0);
-const InetAddress InetAddress::DEFAULT4((uint32_t)0,0);
-const InetAddress InetAddress::DEFAULT6((const void *)0,16,0);
+const InetAddress InetAddress::LO4((const void *)("\x7f\x00\x00\x01"),4,0);
+const InetAddress InetAddress::LO6((const void *)("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"),16,0);
 
 InetAddress::IpScope InetAddress::ipScope() const
 	throw()
@@ -113,22 +111,19 @@ InetAddress::IpScope InetAddress::ipScope() const
 void InetAddress::set(const std::string &ip,unsigned int port)
 	throw()
 {
+	memset(this,0,sizeof(InetAddress));
 	if (ip.find(':') != std::string::npos) {
-		struct sockaddr_in6 sin6;
-		memset(&sin6,0,sizeof(sin6));
-		sin6.sin6_family = AF_INET6;
-		sin6.sin6_port = Utils::hton((uint16_t)port);
-		if (inet_pton(AF_INET6,ip.c_str(),(void *)&(sin6.sin6_addr.s6_addr)) <= 0)
+		struct sockaddr_in6 *sin6 = reinterpret_cast<struct sockaddr_in6 *>(this);
+		ss_family = AF_INET6;
+		sin6->sin6_port = Utils::hton((uint16_t)port);
+		if (inet_pton(AF_INET6,ip.c_str(),(void *)&(sin6->sin6_addr.s6_addr)) <= 0)
 			memset(this,0,sizeof(InetAddress));
-		else *this = sin6;
 	} else {
-		struct sockaddr_in sin;
-		memset(&sin,0,sizeof(sin));
-		sin.sin_family = AF_INET;
-		sin.sin_port = Utils::hton((uint16_t)port);
-		if (inet_pton(AF_INET,ip.c_str(),(void *)&(sin.sin_addr.s_addr)) <= 0)
+		struct sockaddr_in *sin = reinterpret_cast<struct sockaddr_in *>(this);
+		ss_family = AF_INET;
+		sin->sin_port = Utils::hton((uint16_t)port);
+		if (inet_pton(AF_INET,ip.c_str(),(void *)&(sin->sin_addr.s_addr)) <= 0)
 			memset(this,0,sizeof(InetAddress));
-		else *this = sin;
 	}
 }
 
@@ -137,15 +132,14 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 {
 	memset(this,0,sizeof(InetAddress));
 	if (ipLen == 4) {
-		setV4();
-		if (ipBytes)
-			memcpy(rawIpData(),ipBytes,4);
-		setPort(port);
+		ss_family = AF_INET;
+		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = *(reinterpret_cast<const uint32_t *>(ipBytes));
+		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
-		setV6();
-		if (ipBytes)
-			memcpy(rawIpData(),ipBytes,16);
-		setPort(port);
+		ss_family = AF_INET6;
+		(reinterpret_cast<uint64_t *>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr))[0] = ((const uint64_t *)ipBytes)[0];
+		(reinterpret_cast<uint64_t *>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr))[1] = ((const uint64_t *)ipBytes)[1];
+		reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 	}
 }
 
@@ -225,10 +219,10 @@ std::string InetAddress::toIpString() const
 
 void InetAddress::fromString(const std::string &ipSlashPort)
 {
-	std::size_t slashAt = ipSlashPort.find('/');
-	if ((slashAt == std::string::npos)||(slashAt >= ipSlashPort.length()))
+	const std::size_t slashAt = ipSlashPort.find('/');
+	if (slashAt == std::string::npos) {
 		set(ipSlashPort,0);
-	else {
+	} else {
 		long p = strtol(ipSlashPort.substr(slashAt+1).c_str(),(char **)0,10);
 		if ((p > 0)&&(p <= 0xffff))
 			set(ipSlashPort.substr(0,slashAt),(unsigned int)p);
@@ -278,6 +272,58 @@ InetAddress InetAddress::broadcast() const
 		}	break;
 	}
 	return r;
+}
+
+bool InetAddress::operator==(const InetAddress &a) const
+	throw()
+{
+	if (ss_family == a.ss_family) {
+		switch(ss_family) {
+			case AF_INET:
+				return (
+					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)&&
+					(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr));
+				break;
+			case AF_INET6:
+				return (
+					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_port)&&
+					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_flowinfo == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_flowinfo)&&
+					(memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0)&&
+					(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_scope_id == reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_scope_id));
+				break;
+			default:
+				return (memcmp(this,&a,sizeof(InetAddress)) == 0);
+		}
+	}
+	return false;
+}
+
+bool InetAddress::operator<(const InetAddress &a) const
+	throw()
+{
+	if (ss_family < a.ss_family) {
+		switch(ss_family) {
+			case AF_INET:
+				if (reinterpret_cast<const struct sockaddr_in *>(this)->sin_port < reinterpret_cast<const struct sockaddr_in *>(&a)->sin_port)
+					return true;
+				if (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr < reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr)
+					return true;
+				break;
+			case AF_INET6:
+				if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port < reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_port)
+					return true;
+				if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_flowinfo < reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_flowinfo)
+					return true;
+				if (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) < 0)
+					return true;
+				if (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_scope_id < reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_scope_id)
+					return true;
+				break;
+			default:
+				return (memcmp(this,&a,sizeof(InetAddress)) < 0);
+		}
+	}
+	return false;
 }
 
 InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
