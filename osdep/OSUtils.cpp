@@ -106,6 +106,8 @@ std::map<std::string,bool> OSUtils::listDirectory(const char *path)
 				r[std::string(dptr->d_name)] = (dptr->d_type == DT_DIR);
 		} else break;
 	}
+
+	closedir(d);
 #endif
 
 	return r;
