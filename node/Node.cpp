@@ -317,7 +317,12 @@ ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,
 	return ZT1_RESULT_OK;
 }
 
-void Node::status(ZT1_NodeStatus *status)
+uint64_t Node::address() const
+{
+	return RR->identity.address().toInt();
+}
+
+void Node::status(ZT1_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
@@ -325,7 +330,7 @@ void Node::status(ZT1_NodeStatus *status)
 	status->online = _online ? 1 : 0;
 }
 
-ZT1_PeerList *Node::peers()
+ZT1_PeerList *Node::peers() const
 {
 	std::map< Address,SharedPtr<Peer> > peers(RR->topology->allPeers());
 
@@ -365,7 +370,7 @@ ZT1_PeerList *Node::peers()
 	return pl;
 }
 
-ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid)
+ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	Mutex::Lock _l(_networks_m);
 	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
@@ -377,7 +382,7 @@ ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid)
 	return (ZT1_VirtualNetworkConfig *)0;
 }
 
-ZT1_VirtualNetworkList *Node::networks()
+ZT1_VirtualNetworkList *Node::networks() const
 {
 	Mutex::Lock _l(_networks_m);
 
@@ -599,6 +604,11 @@ enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,u
 	} catch ( ... ) {
 		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
+}
+
+uint64_t ZT1_Node_address(ZT1_Node *node)
+{
+	return reinterpret_cast<ZeroTier::Node *>(node)->address();
 }
 
 void ZT1_Node_status(ZT1_Node *node,ZT1_NodeStatus *status)

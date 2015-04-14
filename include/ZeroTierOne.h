@@ -328,7 +328,12 @@ enum ZT1_VirtualNetworkStatus
 	/**
 	 * Initialization of network failed or other internal error
 	 */
-	ZT1_NETWORK_STATUS_PORT_ERROR = 4
+	ZT1_NETWORK_STATUS_PORT_ERROR = 4,
+
+	/**
+	 * ZeroTier One version too old
+	 */
+	ZT1_NETWORK_STATUS_CLIENT_TOO_OLD = 5
 };
 
 /**
@@ -852,6 +857,14 @@ enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uin
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
+
+/**
+ * Get this node's 40-bit ZeroTier address
+ *
+ * @param node Node instance
+ * @return ZeroTier address (least significant 40 bits of 64-bit int)
+ */
+uint64_t ZT1_Node_address(ZT1_Node *node);
 
 /**
  * Get the status of this node

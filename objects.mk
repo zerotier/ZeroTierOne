@@ -24,4 +24,5 @@ OBJS=\
 	node/Utils.o \
 	osdep/HttpClient.o \
 	osdep/OSUtils.o \
+	service/ControlPlane.o \
 	service/One.o

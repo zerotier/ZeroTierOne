@@ -49,6 +49,7 @@
 #include "../osdep/OSUtils.hpp"
 
 #include "One.hpp"
+#include "ControlPlane.hpp"
 
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 8)
@@ -119,6 +120,7 @@ public:
 		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
+		_controlPlane((ControlPlane *)0),
 		_nextBackgroundTaskDeadline(0),
 		_termReason(ONE_STILL_RUNNING),
 		_run(true)
@@ -186,6 +188,8 @@ public:
 			if (_master)
 				_node->setNetconfMaster((void *)_master);
 
+			_controlPlane = new ControlPlane(_node);
+
 			_nextBackgroundTaskDeadline = 0;
 			for(;;) {
 				_run_m.lock();
@@ -225,6 +229,8 @@ public:
 				_phy.close(_httpConnections.begin()->first);
 		} catch ( ... ) {}
 
+		delete _controlPlane;
+		_controlPlane = (ControlPlane *)0;
 		delete _node;
 		_node = (Node *)0;
 
@@ -443,31 +449,36 @@ public:
 	inline void onHttpRequestToServer(HttpConnection *htc)
 	{
 		char tmpn[256];
-
-		/*
-		printf("HTTP request:\n");
-		printf("  url: %s\n",htc->url.c_str());
-		printf("  status: %s\n",htc->status.c_str());
-		printf("  headers:\n");
-		for(std::map<std::string,std::string>::iterator h(htc->headers.begin());h!=htc->headers.end();++h)
-			printf("    %s: %s\n",h->first.c_str(),h->second.c_str());
-		printf("  body:\n----\n%s\n----\n",htc->body.c_str());
-		*/
-
 		std::string data;
-		std::string contentType;
+		std::string contentType("text/plain"); // default if not changed in handleRequest()
 		unsigned int scode = 404;
 
 		if ((htc->from == InetAddress::LO4)||(htc->from == InetAddress::LO6)) {
-			//scode = _controlPlane.handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
+			try {
+				if (_controlPlane)
+					scode = _controlPlane->handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
+			} catch ( ... ) {
+				scode = 500;
+			}
 		} else {
-			data = "Forbidden.";
-			contentType = "text/plain";
 			scode = 403;
 			htc->shouldKeepAlive = false;
 		}
 
-		Utils::snprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nServer: ZeroTier One\r\nCache-Control: no-cache\r\nPragma: no-cache\r\n",scode,((scode == 200) ? "OK" : ((scode == 404) ? "Not Found" : "Error")));
+		const char *scodestr;
+		switch(scode) {
+			case 200: scodestr = "OK";
+			case 400: scodestr = "Bad Request";
+			case 401: scodestr = "Unauthorized";
+			case 403: scodestr = "Forbidden";
+			case 404: scodestr = "Not Found";
+			case 500: scodestr = "Internal Server Error";
+			case 501: scodestr = "Not Implemented";
+			case 503: scodestr = "Service Unavailable";
+			default: scodestr = "Error";
+		}
+
+		Utils::snprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\n",scode,scodestr);
 		htc->body.assign(tmpn);
 		htc->body.append("Content-Type: ");
 		htc->body.append(contentType);
@@ -517,6 +528,7 @@ private:
 	PhySocket *_v6UdpSocket;
 	PhySocket *_v4TcpListenSocket;
 	PhySocket *_v6TcpListenSocket;
+	ControlPlane *_controlPlane;
 	uint64_t _nextBackgroundTaskDeadline;
 
 	std::map< PhySocket *,HttpConnection > _httpConnections; // no mutex for this since it's done in the main loop thread only
