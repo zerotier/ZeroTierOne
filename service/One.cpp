@@ -191,6 +191,15 @@ public:
 
 			_controlPlane = new ControlPlane(_node);
 
+			{
+				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
+				for(std::vector<std::string>::iterator f(networksDotD.begin());f!=networksDotD.end();++f) {
+					std::size_t dot = f->find_last_of('.');
+					if ((dot == 16)&&(f->substr(16) == ".conf"))
+						_node->join(Utils::hexStrToU64(f->substr(0,dot).c_str()));
+				}
+			}
+
 			_nextBackgroundTaskDeadline = 0;
 			for(;;) {
 				_run_m.lock();

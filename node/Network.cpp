@@ -67,6 +67,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 			std::string conf(RR->node->dataStoreGet(confn));
 			if (conf.length()) {
 				setConfiguration(Dictionary(conf),false);
+				_lastConfigUpdate = 0; // we still want to re-request a new config from the network
 				gotConf = true;
 			}
 		} catch ( ... ) {} // ignore invalids, we'll re-request

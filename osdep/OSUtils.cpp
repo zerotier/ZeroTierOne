@@ -75,38 +75,35 @@ bool OSUtils::redirectUnixOutputs(const char *stdoutPath,const char *stderrPath)
 }
 #endif // __UNIX_LIKE__
 
-std::map<std::string,bool> OSUtils::listDirectory(const char *path)
+std::vector<std::string> OSUtils::listDirectory(const char *path)
 {
-	std::map<std::string,bool> r;
+	std::vector<std::string> r;
 
 #ifdef __WINDOWS__
 	HANDLE hFind;
 	WIN32_FIND_DATAA ffd;
 	if ((hFind = FindFirstFileA((std::string(path) + "\\*").c_str(),&ffd)) != INVALID_HANDLE_VALUE) {
 		do {
-			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,"..")))
-				r[std::string(ffd.cFileName)] = ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+			if ((strcmp(ffd.cFileName,"."))&&(strcmp(ffd.cFileName,".."))&&((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0))
+				r.push_back(std::string(ffd.cFileName));
 		} while (FindNextFileA(hFind,&ffd));
 		FindClose(hFind);
 	}
 #else
 	struct dirent de;
 	struct dirent *dptr;
-
 	DIR *d = opendir(path);
 	if (!d)
 		return r;
-
 	dptr = (struct dirent *)0;
 	for(;;) {
 		if (readdir_r(d,&de,&dptr))
 			break;
 		if (dptr) {
-			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,"..")))
-				r[std::string(dptr->d_name)] = (dptr->d_type == DT_DIR);
+			if ((strcmp(dptr->d_name,"."))&&(strcmp(dptr->d_name,".."))&&(dptr->d_type != DT_DIR))
+				r.push_back(std::string(dptr->d_name));
 		} else break;
 	}
-
 	closedir(d);
 #endif
 

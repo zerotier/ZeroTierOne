@@ -103,16 +103,13 @@ public:
 
 	/**
 	 * List a directory's contents
-	 * 
-	 * Keys in returned map are filenames only and don't include the leading
-	 * path. Pseudo-paths like . and .. are not returned. Values are true if
-	 * the item is a directory, false if it's a file. More detailed attributes
-	 * aren't supported since the code that uses this doesn't need them.
+	 *
+	 * This returns only files, not sub-directories.
 	 *
 	 * @param path Path to list
-	 * @return Map of entries and whether or not they are also directories (empty on failure)
+	 * @return Names of files in directory
 	 */
-	static std::map<std::string,bool> listDirectory(const char *path);
+	static std::vector<std::string> listDirectory(const char *path);
 
 	/**
 	 * Set modes on a file to something secure
