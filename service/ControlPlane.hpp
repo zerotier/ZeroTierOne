@@ -36,6 +36,7 @@
 
 namespace ZeroTier {
 
+class One;
 class Node;
 struct InetAddress;
 
@@ -45,7 +46,7 @@ struct InetAddress;
 class ControlPlane
 {
 public:
-	ControlPlane(Node *n);
+	ControlPlane(One *svc,Node *n);
 	~ControlPlane();
 
 	/**
@@ -70,6 +71,7 @@ public:
 		std::string &responseContentType);
 
 private:
+	One *const _svc;
 	Node *const _node;
 	std::set<std::string> _authTokens;
 };

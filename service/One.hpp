@@ -112,6 +112,11 @@ public:
 	virtual std::string fatalErrorMessage() const = 0;
 
 	/**
+	 * @return System device name corresponding with a given ZeroTier network ID
+	 */
+	virtual std::string portDeviceName(uint64_t nwid) const = 0;
+
+	/**
 	 * Terminate background service (can be called from other threads)
 	 */
 	virtual void terminate() = 0;

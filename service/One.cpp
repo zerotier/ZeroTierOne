@@ -52,6 +52,11 @@
 #include "One.hpp"
 #include "ControlPlane.hpp"
 
+#ifdef __APPLE__
+#include "../osdep/OSXEthernetTap.hpp"
+namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
+#endif
+
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 8)
 #define ZT_MAX_HTTP_CONNECTIONS 64
@@ -189,9 +194,9 @@ public:
 			if (_master)
 				_node->setNetconfMaster((void *)_master);
 
-			_controlPlane = new ControlPlane(_node);
+			_controlPlane = new ControlPlane(this,_node);
 
-			{
+			{	// Remember networks from previous session
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
 				for(std::vector<std::string>::iterator f(networksDotD.begin());f!=networksDotD.end();++f) {
 					std::size_t dot = f->find_last_of('.');
@@ -257,6 +262,15 @@ public:
 	{
 		Mutex::Lock _l(_termReason_m);
 		return _fatalErrorMessage;
+	}
+
+	virtual std::string portDeviceName(uint64_t nwid) const
+	{
+		Mutex::Lock _l(_taps_m);
+		std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.find(nwid));
+		if (t != _taps.end())
+			return t->second->deviceName();
+		return std::string();
 	}
 
 	virtual void terminate()
@@ -536,6 +550,9 @@ private:
 	PhySocket *_v6TcpListenSocket;
 	ControlPlane *_controlPlane;
 	uint64_t _nextBackgroundTaskDeadline;
+
+	std::map< uint64_t,EthernetTap * > _taps;
+	Mutex _taps_m;
 
 	std::map< PhySocket *,HttpConnection > _httpConnections; // no mutex for this since it's done in the main loop thread only
 

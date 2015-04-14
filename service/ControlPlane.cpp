@@ -26,6 +26,7 @@
  */
 
 #include "ControlPlane.hpp"
+#include "One.hpp"
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
@@ -115,7 +116,7 @@ static std::string _jsonEnumerate(const ZT1_PeerPhysicalPath *pp,unsigned int co
 	buf.push_back(']');
 	return buf;
 }
-static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc)
+static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc,const std::string &portDeviceName)
 {
 	char json[65536];
 	const char *nstatus = "",*ntype = "";
@@ -145,7 +146,8 @@ static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc)
 		"\"portError\": %d,"
 		"\"netconfRevision\": %lu,"
 		"\"multicastSubscriptions\": %s,"
-		"\"assignedAddresses\": %s"
+		"\"assignedAddresses\": %s,"
+		"\"portDeviceName\": \"%s\""
 		"}",
 		nc->nwid,
 		(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff),
@@ -159,7 +161,8 @@ static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc)
 		nc->portError,
 		nc->netconfRevision,
 		_jsonEnumerate(nc->multicastSubscriptions,nc->multicastSubscriptionCount).c_str(),
-		_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str());
+		_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
+		_jsonEscape(portDeviceName).c_str());
 	buf.append(json);
 }
 static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
@@ -193,7 +196,8 @@ static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
 	buf.append(json);
 }
 
-ControlPlane::ControlPlane(Node *n) :
+ControlPlane::ControlPlane(One *svc,Node *n) :
+	_svc(svc),
 	_node(n)
 {
 }
@@ -317,7 +321,7 @@ unsigned int ControlPlane::handleRequest(
 							for(unsigned long i=0;i<nws->networkCount;++i) {
 								if (i > 0)
 									responseBody.push_back(',');
-								_jsonAppend(responseBody,&(nws->networks[i]));
+								_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
 							}
 							responseBody.push_back(']');
 							scode = 200;
@@ -327,7 +331,7 @@ unsigned int ControlPlane::handleRequest(
 							for(unsigned long i=0;i<nws->networkCount;++i) {
 								if (nws->networks[i].nwid == wantnw) {
 									responseContentType = "application/json";
-									_jsonAppend(responseBody,&(nws->networks[i]));
+									_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
 									scode = 200;
 									break;
 								}
@@ -384,7 +388,7 @@ unsigned int ControlPlane::handleRequest(
 							for(unsigned long i=0;i<nws->networkCount;++i) {
 								if (nws->networks[i].nwid == wantnw) {
 									responseContentType = "application/json";
-									_jsonAppend(responseBody,&(nws->networks[i]));
+									_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
 									scode = 200;
 									break;
 								}
