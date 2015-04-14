@@ -51,7 +51,7 @@ static std::string _jsonEscape(const char *s)
 			case '"':  buf.append("\\\""); break;
 			case '\\': buf.append("\\\\"); break;
 			case '/':  buf.append("\\/");  break;
-			default:   buf.push_back(*s);  break;
+			default:   buf.push_back(*p);  break;
 		}
 	}
 	return buf;
@@ -88,6 +88,22 @@ static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int
 		buf.push_back('"');
 		buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(ss)->toString()));
 		buf.push_back('"');
+	}
+	buf.push_back(']');
+	return buf;
+}
+static std::string _jsonEnumerate(const ZT1_PeerPhysicalPath *pp,unsigned int count)
+{
+	char tmp[1024];
+	std::string buf;
+	buf.push_back('[');
+	for(unsigned int i=0;i<count;++i) {
+		if (i > 0)
+			buf.push_back(',');
+		buf.append("{\"address\":\"");
+		buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(&(pp[i].address))->toString()));
+		Utils::snprintf(tmp,sizeof(tmp),"\",\"lastSend\":%llu,\"lastReceive\":%llu,\"fixed\":%s}",pp[i].lastSend,pp[i].lastReceive,(pp[i].fixed == 0) ? "falase" : "true");
+		buf.append(tmp);
 	}
 	buf.push_back(']');
 	return buf;
@@ -141,6 +157,33 @@ static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc)
 }
 static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
 {
+	char json[65536];
+	const char *prole = "";
+	switch(peer->role) {
+		case ZT1_PEER_ROLE_LEAF:      prole = "LEAF"; break;
+		case ZT1_PEER_ROLE_HUB:       prole = "HUB"; break;
+		case ZT1_PEER_ROLE_SUPERNODE: prole = "SUPERNODE"; break;
+	}
+	Utils::snprintf(json,sizeof(json),
+		"{"
+		"\"address\": \"%.10llx\","
+		"\"versionMajor\": %d,"
+		"\"versionMinor\": %d,"
+		"\"versionRev\": %d,"
+		"\"version\": \"%d.%d.%d\","
+		"\"latency\": %u,"
+		"\"role\": \"%s\","
+		"\"paths\": %s"
+		"}",
+		peer->address,
+		peer->versionMajor,
+		peer->versionMinor,
+		peer->versionRev,
+		peer->versionMajor,peer->versionMinor,peer->versionRev,
+		peer->latency,
+		prole,
+		_jsonEnumerate(peer->paths,peer->pathCount).c_str());
+	buf.append(json);
 }
 
 ControlPlane::ControlPlane(Node *n,const std::set<std::string> atoks) :
@@ -192,6 +235,7 @@ unsigned int ControlPlane::handleRequest(
 		if (ps[0] == "index") {
 			responseContentType = "text/html";
 			responseBody = "<html><body>Hello World!</body></html>";
+			scode = 200;
 		} else if (ps[0] == "status") {
 			responseContentType = "application/json";
 			ZT1_NodeStatus status;
@@ -203,7 +247,7 @@ unsigned int ControlPlane::handleRequest(
 				"\"online\":%s,"
 				"\"versionMajor\":%d,"
 				"\"versionMinor\":%d,"
-				"\"versionRevision\":%d,"
+				"\"versionRev\":%d,"
 				"\"version\":\"%d.%d.%d\""
 				"}",
 				status.address,
@@ -214,9 +258,11 @@ unsigned int ControlPlane::handleRequest(
 				ZEROTIER_ONE_VERSION_REVISION,
 				ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 			responseBody = json;
+			scode = 200;
 		} else if (ps[0] == "config") {
 			responseContentType = "application/json";
 			responseBody = "{}"; // TODO
+			scode = 200;
 		} else if (ps[0] == "network") {
 			ZT1_VirtualNetworkList *nws = _node->networks();
 			if (nws) {
@@ -230,27 +276,53 @@ unsigned int ControlPlane::handleRequest(
 						_jsonAppend(responseBody,&(nws->networks[i]));
 					}
 					responseBody.push_back(']');
+					scode = 200;
 				} else if (ps.size() == 2) {
 					// Return a single network by ID or 404 if not found
 					uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-					bool got = false;
 					for(unsigned long i=0;i<nws->networkCount;++i) {
 						if (nws->networks[i].nwid == wantnw) {
-							got = true;
 							responseContentType = "application/json";
 							_jsonAppend(responseBody,&(nws->networks[i]));
+							scode = 200;
 							break;
 						}
 					}
-					if (!got)
-						scode = 404;
-				} else {
-					// Not sure what they want here, 404
-					scode = 404;
-				}
+				} // else 404
 				_node->freeQueryResult((void *)nws);
-			} else scode = 500;
+			} else {
+				scode = 500;
+			}
 		} else if (ps[0] == "peer") {
+			ZT1_PeerList *pl = _node->peers();
+			if (pl) {
+				if (ps.size() == 1) {
+					// Return [array] of all peers
+					responseContentType = "application/json";
+					responseBody = "[";
+					for(unsigned long i=0;i<pl->peerCount;++i) {
+						if (i > 0)
+							responseBody.push_back(',');
+						_jsonAppend(responseBody,&(pl->peers[i]));
+					}
+					responseBody.push_back(']');
+					scode = 200;
+				} else if (ps.size() == 2) {
+					// Return a single peer by ID or 404 if not found
+					uint64_t wantp = Utils::hexStrToU64(ps[1].c_str());
+					for(unsigned long i=0;i<pl->peerCount;++i) {
+						if (pl->peers[i].address == wantp) {
+							responseContentType = "application/json";
+							_jsonAppend(responseBody,&(pl->peers[i]));
+							scode = 200;
+							break;
+						}
+					}
+				} // else 404
+				_node->freeQueryResult((void *)pl);
+			} else {
+				scode = 500;
+			}
 		}
 	} else if ((httpMethod == HTTP_POST)||(httpMethod == HTTP_PUT)) { // PUT is weird in REST but we'll take it anyway
 	} else if (httpMethod == HTTP_DELETE) {

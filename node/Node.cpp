@@ -373,7 +373,7 @@ ZT1_PeerList *Node::peers() const
 ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
+	std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.find(nwid));
 	if (nw != _networks.end()) {
 		ZT1_VirtualNetworkConfig *nc = (ZT1_VirtualNetworkConfig *)::malloc(sizeof(ZT1_VirtualNetworkConfig));
 		nw->second->externalConfig(nc);

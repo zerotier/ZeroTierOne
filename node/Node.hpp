@@ -99,7 +99,7 @@ public:
 	ZT1_ResultCode leave(uint64_t nwid);
 	ZT1_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT1_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	uint64_t address(ZT1_Node *node) const;
+	uint64_t address() const;
 	void status(ZT1_NodeStatus *status) const;
 	ZT1_PeerList *peers() const;
 	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;

@@ -31,6 +31,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include <algorithm>
 
@@ -188,7 +189,7 @@ public:
 			if (_master)
 				_node->setNetconfMaster((void *)_master);
 
-			_controlPlane = new ControlPlane(_node);
+			_controlPlane = new ControlPlane(_node,std::set<std::string>());
 
 			_nextBackgroundTaskDeadline = 0;
 			for(;;) {
@@ -453,7 +454,7 @@ public:
 		std::string contentType("text/plain"); // default if not changed in handleRequest()
 		unsigned int scode = 404;
 
-		if ((htc->from == InetAddress::LO4)||(htc->from == InetAddress::LO6)) {
+		if ((htc->from.ipsEqual(InetAddress::LO4))||(htc->from.ipsEqual(InetAddress::LO6))) {
 			try {
 				if (_controlPlane)
 					scode = _controlPlane->handleRequest(htc->parser.method,htc->url,htc->headers,htc->body,data,contentType);
@@ -467,15 +468,15 @@ public:
 
 		const char *scodestr;
 		switch(scode) {
-			case 200: scodestr = "OK";
-			case 400: scodestr = "Bad Request";
-			case 401: scodestr = "Unauthorized";
-			case 403: scodestr = "Forbidden";
-			case 404: scodestr = "Not Found";
-			case 500: scodestr = "Internal Server Error";
-			case 501: scodestr = "Not Implemented";
-			case 503: scodestr = "Service Unavailable";
-			default: scodestr = "Error";
+			case 200: scodestr = "OK"; break;
+			case 400: scodestr = "Bad Request"; break;
+			case 401: scodestr = "Unauthorized"; break;
+			case 403: scodestr = "Forbidden"; break;
+			case 404: scodestr = "Not Found"; break;
+			case 500: scodestr = "Internal Server Error"; break;
+			case 501: scodestr = "Not Implemented"; break;
+			case 503: scodestr = "Service Unavailable"; break;
+			default: scodestr = "Error"; break;
 		}
 
 		Utils::snprintf(tmpn,sizeof(tmpn),"HTTP/1.1 %.3u %s\r\nCache-Control: no-cache\r\nPragma: no-cache\r\n",scode,scodestr);
