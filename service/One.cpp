@@ -228,19 +228,22 @@ public:
 
 				uint64_t dl = _nextBackgroundTaskDeadline;
 				uint64_t now = OSUtils::now();
-
 				if (dl <= now) {
-					if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
-						lastTapMulticastGroupCheck = now;
-						Mutex::Lock _l(_taps_m);
-						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
-							_updateMulticastGroups(t->first,t->second);
-					}
-
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
-
 					dl = _nextBackgroundTaskDeadline;
-					now = OSUtils::now();
+				}
+
+				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
+					lastTapMulticastGroupCheck = now;
+					Mutex::Lock _l(_taps_m);
+					for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t) {
+						std::vector<MulticastGroup> added,removed;
+						t->second->scanMulticastGroups(added,removed);
+						for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
+							_node->multicastSubscribe(t->first,m->mac().toInt(),m->adi());
+						for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
+							_node->multicastUnsubscribe(t->first,m->mac().toInt(),m->adi());
+					}
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
@@ -409,7 +412,7 @@ public:
 							StapFrameHandler,
 							(void *)this))).first;
 					} catch ( ... ) {
-						return -999;
+						return -999; // tap init failed
 					}
 				}
 				// fall through...
@@ -432,11 +435,8 @@ public:
 							t->second->removeIp(*ip);
 					}
 					assignedIps.swap(newAssignedIps);
-
-					_updateMulticastGroups(t->first,t->second);
-					if (nwc->broadcastEnabled)
-						_node->multicastSubscribe(nwid,0xffffffffffffULL,0);
-					else _node->multicastUnsubscribe(nwid,0xffffffffffffULL,0);
+				} else {
+					return -999; // tap init failed
 				}
 				break;
 			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
@@ -627,17 +627,6 @@ private:
 		return p;
 	}
 
-	void _updateMulticastGroups(uint64_t nwid,EthernetTap *tap)
-	{
-		// assumes _taps_m is locked
-		std::vector<MulticastGroup> added,removed;
-		tap->scanMulticastGroups(added,removed);
-		for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
-			_node->multicastSubscribe(nwid,m->mac().toInt(),m->adi());
-		for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
-			_node->multicastUnsubscribe(nwid,m->mac().toInt(),m->adi());
-	}
-
 	const std::string _homePath;
 	Phy<OneImpl *> _phy;
 	NetworkConfigMaster *_master;
@@ -648,7 +637,7 @@ private:
 	PhySocket *_v4TcpListenSocket;
 	PhySocket *_v6TcpListenSocket;
 	ControlPlane *_controlPlane;
-	uint64_t _nextBackgroundTaskDeadline;
+	volatile uint64_t _nextBackgroundTaskDeadline;
 
 	std::map< uint64_t,EthernetTap * > _taps;
 	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned

@@ -47,6 +47,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	_id(nwid),
 	_mac(renv->identity.address(),nwid),
 	_enabled(true),
+	_portInitialized(false),
 	_lastConfigUpdate(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
@@ -84,7 +85,6 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 				const char *e = p + mcdb.length();
 				if (!memcmp("ZTMCD0",p,6)) {
 					p += 6;
-					Mutex::Lock _l(_lock);
 					while (p != e) {
 						CertificateOfMembership com;
 						com.deserialize2(p,e);
@@ -97,9 +97,12 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 		} catch ( ... ) {} // ignore invalid MCDB, we'll re-learn from peers
 	}
 
-	ZT1_VirtualNetworkConfig ctmp;
-	_externalConfig(&ctmp);
-	_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+	if (!_portInitialized) {
+		ZT1_VirtualNetworkConfig ctmp;
+		_externalConfig(&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		_portInitialized = true;
+	}
 }
 
 Network::~Network()
@@ -145,6 +148,8 @@ std::vector<MulticastGroup> Network::allMulticastGroups() const
 		if (!std::binary_search(mgs.begin(),oldend,i->first))
 			mgs.push_back(i->first);
 	}
+	if ((_config)&&(_config->enableBroadcast()))
+		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
 	return mgs;
 }
@@ -161,11 +166,13 @@ bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBr
 
 void Network::multicastSubscribe(const MulticastGroup &mg)
 {
-	Mutex::Lock _l(_lock);
-	if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
-		return;
-	_myMulticastGroups.push_back(mg);
-	std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());
+	{
+		Mutex::Lock _l(_lock);
+		if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
+			return;
+		_myMulticastGroups.push_back(mg);
+		std::sort(_myMulticastGroups.begin(),_myMulticastGroups.end());
+	}
 	_announceMulticastGroups();
 }
 
@@ -183,19 +190,22 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 
 bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 {
-	Mutex::Lock _l(_lock);
-	if (_destroyed)
+	if (_destroyed) // sanity check
 		return false;
 	try {
 		if ((conf->networkId() == _id)&&(conf->issuedTo() == RR->identity.address())) {
-			_config = conf;
-			_lastConfigUpdate = RR->node->now();
-			_netconfFailure = NETCONF_FAILURE_NONE;
-
 			ZT1_VirtualNetworkConfig ctmp;
-			_externalConfig(&ctmp);
-			_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
-
+			bool portInitialized;
+			{
+				Mutex::Lock _l(_lock);
+				_config = conf;
+				_lastConfigUpdate = RR->node->now();
+				_netconfFailure = NETCONF_FAILURE_NONE;
+				_externalConfig(&ctmp);
+				portInitialized = _portInitialized;
+				_portInitialized = true;
+			}
+			_portError = RR->node->configureVirtualNetworkPort(_id,(portInitialized) ? ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 			return true;
 		} else {
 			TRACE("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
@@ -462,7 +472,7 @@ ZT1_VirtualNetworkStatus Network::_status() const
 		case NETCONF_FAILURE_NOT_FOUND:
 			return ZT1_NETWORK_STATUS_NOT_FOUND;
 		case NETCONF_FAILURE_NONE:
-			return ((_lastConfigUpdate > 0) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
+			return ((_config) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
 		default:
 			return ZT1_NETWORK_STATUS_PORT_ERROR;
 	}

@@ -65,17 +65,22 @@ class Network : NonCopyable
 
 public:
 	/**
+	 * Broadcast multicast group: ff:ff:ff:ff:ff:ff / 0
+	 */
+	static const MulticastGroup BROADCAST;
+
+	/**
+	 * Construct a new network
+	 *
+	 * Note that init() should be called immediately after the network is
+	 * constructed to actually configure the port.
+	 *
 	 * @param renv Runtime environment
 	 * @param nwid Network ID
 	 */
 	Network(const RuntimeEnvironment *renv,uint64_t nwid);
 
 	~Network();
-
-	/**
-	 * Broadcast multicast group: ff:ff:ff:ff:ff:ff / 0
-	 */
-	static const MulticastGroup BROADCAST;
 
 	/**
 	 * @return Network ID
@@ -348,7 +353,8 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _id;
 	MAC _mac; // local MAC address
-	bool _enabled;
+	volatile bool _enabled;
+	volatile bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
 	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
@@ -370,7 +376,7 @@ private:
 		NETCONF_FAILURE_NOT_FOUND,
 		NETCONF_FAILURE_INIT_FAILED
 	} _netconfFailure;
-	int _portError; // return value from port config callback
+	volatile int _portError; // return value from port config callback
 
 	Mutex _lock;
 

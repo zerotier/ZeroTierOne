@@ -395,7 +395,7 @@ enum ZT1_VirtualNetworkConfigOperation
 };
 
 /**
- * Virtual LAN configuration
+ * Virtual network configuration
  */
 typedef struct
 {
@@ -448,9 +448,6 @@ typedef struct
 
 	/**
 	 * If nonzero, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
-	 *
-	 * This is really just a hint to user code. If this is true, the user can
-	 * subscribe to the broadcast group. If not, then the user shouldn't.
 	 */
 	int broadcastEnabled;
 
@@ -630,6 +627,10 @@ typedef void ZT1_Node;
  * The supplied config pointer is not guaranteed to remain valid, so make
  * a copy if you want one.
  *
+ * This should not call multicastSubscribe() or other network-modifying
+ * methods, as this could cause a deadlock in multithreaded or interrupt
+ * driven environments.
+ *
  * This must return 0 on success. It can return any OS-dependent error code
  * on failure, and this results in the network being placed into the
  * PORT_ERROR state.
@@ -759,7 +760,7 @@ void ZT1_Node_delete(ZT1_Node *node);
  * @param linkDesperation Link desperation metric for link or protocol over which packet arrived
  * @param packetData Packet data
  * @param packetLength Packet length
- * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to one of the three processXXX() methods
+ * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_processWirePacket(
@@ -769,7 +770,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
-	uint64_t *nextBackgroundTaskDeadline);
+	volatile uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Process a frame from a virtual network port (tap)
@@ -783,7 +784,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
  * @param vlanId 10-bit VLAN ID or 0 if none
  * @param frameData Frame payload data
  * @param frameLength Frame payload length
- * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to one of the three processXXX() methods
+ * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
@@ -796,17 +797,17 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	uint64_t *nextBackgroundTaskDeadline);
+	volatile uint64_t *nextBackgroundTaskDeadline);
 
 /**
- * Perform required periodic operations even if no new frames or packets have arrived
+ * Perform periodic background operations
  *
  * @param node Node instance
  * @param now Current clock in milliseconds
- * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to one of the three processXXX() methods
+ * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextBackgroundTaskDeadline);
+enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
 
 /**
  * Join a network

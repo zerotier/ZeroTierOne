@@ -152,16 +152,10 @@ ZT1_ResultCode Node::processWirePacket(
 	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
-	uint64_t *nextBackgroundTaskDeadline)
+	volatile uint64_t *nextBackgroundTaskDeadline)
 {
-	if (now >= *nextBackgroundTaskDeadline) {
-		ZT1_ResultCode rc = processBackgroundTasks(now,nextBackgroundTaskDeadline);
-		if (rc != ZT1_RESULT_OK)
-			return rc;
-	} else _now = now;
-
+	_now = now;
 	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(remoteAddress)),linkDesperation,packetData,packetLength);
-
 	return ZT1_RESULT_OK;
 }
 
@@ -174,20 +168,14 @@ ZT1_ResultCode Node::processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	uint64_t *nextBackgroundTaskDeadline)
+	volatile uint64_t *nextBackgroundTaskDeadline)
 {
-	if (now >= *nextBackgroundTaskDeadline) {
-		ZT1_ResultCode rc = processBackgroundTasks(now,nextBackgroundTaskDeadline);
-		if (rc != ZT1_RESULT_OK)
-			return rc;
-	} else _now = now;
-
-	SharedPtr<Network> nw(network(nwid));
-	if (nw)
+	_now = now;
+	SharedPtr<Network> nw(this->network(nwid));
+	if (nw) {
 		RR->sw->onLocalEthernet(nw,MAC(sourceMac),MAC(destMac),etherType,vlanId,frameData,frameLength);
-	else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
-
-	return ZT1_RESULT_OK;
+		return ZT1_RESULT_OK;
+	} else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
 class _PingPeersThatNeedPing
@@ -217,7 +205,7 @@ private:
 	std::vector<Address> _supernodes;
 };
 
-ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroundTaskDeadline)
+ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
@@ -260,6 +248,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroun
 			*(reinterpret_cast<uint32_t *>(beacon)) = RR->prng->next32();
 			*(reinterpret_cast<uint32_t *>(beacon + 4)) = RR->prng->next32();
 			RR->identity.address().copyTo(beacon + 8,5);
+			RR->antiRec->logOutgoingZT(beacon,13);
 			putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13,0);
 		}
 	}
@@ -292,9 +281,9 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroun
 ZT1_ResultCode Node::join(uint64_t nwid)
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> &nw = _networks[nwid];
-	if (!nw)
-		nw = SharedPtr<Network>(new Network(RR,nwid));
+	SharedPtr<Network> &nwe = _networks[nwid];
+	if (!nwe)
+		nwe = SharedPtr<Network>(new Network(RR,nwid));
 	return ZT1_RESULT_OK;
 }
 
@@ -311,20 +300,20 @@ ZT1_ResultCode Node::leave(uint64_t nwid)
 
 ZT1_ResultCode Node::multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
-	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
-	if (nw != _networks.end())
-		nw->second->multicastSubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
-	return ZT1_RESULT_OK;
+	SharedPtr<Network> nw(this->network(nwid));
+	if (nw) {
+		nw->multicastSubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
+		return ZT1_RESULT_OK;
+	} else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
 ZT1_ResultCode Node::multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi)
 {
-	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
-	if (nw != _networks.end())
-		nw->second->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
-	return ZT1_RESULT_OK;
+	SharedPtr<Network> nw(this->network(nwid));
+	if (nw) {
+		nw->multicastUnsubscribe(MulticastGroup(MAC(multicastGroup),(uint32_t)(multicastAdi & 0xffffffff)));
+		return ZT1_RESULT_OK;
+	} else return ZT1_RESULT_ERROR_NETWORK_NOT_FOUND;
 }
 
 uint64_t Node::address() const
@@ -531,7 +520,7 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
-	uint64_t *nextBackgroundTaskDeadline)
+	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,linkDesperation,packetData,packetLength,nextBackgroundTaskDeadline);
@@ -553,7 +542,7 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	unsigned int vlanId,
 	const void *frameData,
 	unsigned int frameLength,
-	uint64_t *nextBackgroundTaskDeadline)
+	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processVirtualNetworkFrame(now,nwid,sourceMac,destMac,etherType,vlanId,frameData,frameLength,nextBackgroundTaskDeadline);
@@ -564,7 +553,7 @@ enum ZT1_ResultCode ZT1_Node_processVirtualNetworkFrame(
 	}
 }
 
-enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,uint64_t *nextBackgroundTaskDeadline)
+enum ZT1_ResultCode ZT1_Node_processBackgroundTasks(ZT1_Node *node,uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->processBackgroundTasks(now,nextBackgroundTaskDeadline);

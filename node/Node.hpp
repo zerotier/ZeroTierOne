@@ -83,7 +83,7 @@ public:
 		unsigned int linkDesperation,
 		const void *packetData,
 		unsigned int packetLength,
-		uint64_t *nextBackgroundTaskDeadline);
+		volatile uint64_t *nextBackgroundTaskDeadline);
 	ZT1_ResultCode processVirtualNetworkFrame(
 		uint64_t now,
 		uint64_t nwid,
@@ -93,8 +93,8 @@ public:
 		unsigned int vlanId,
 		const void *frameData,
 		unsigned int frameLength,
-		uint64_t *nextBackgroundTaskDeadline);
-	ZT1_ResultCode processBackgroundTasks(uint64_t now,uint64_t *nextBackgroundTaskDeadline);
+		volatile uint64_t *nextBackgroundTaskDeadline);
+	ZT1_ResultCode processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
 	ZT1_ResultCode join(uint64_t nwid);
 	ZT1_ResultCode leave(uint64_t nwid);
 	ZT1_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
