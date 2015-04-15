@@ -344,23 +344,20 @@ OSXEthernetTap::OSXEthernetTap(
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
-	if (stat("/dev/zt0",&stattmp)) {
-		if (homePath) {
-			long kextpid = (long)vfork();
-			if (kextpid == 0) {
-				::chdir(homePath);
-				OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
-				::execl("/sbin/kextload","/sbin/kextload","-q","-repository",homePath,"tap.kext",(const char *)0);
-				::_exit(-1);
-			} else if (kextpid > 0) {
-				int exitcode = -1;
-				::waitpid(kextpid,&exitcode,0);
-			}
-			::usleep(500); // give tap device driver time to start up and try again
-			if (stat("/dev/zt0",&stattmp))
-				throw std::runtime_error("/dev/zt# tap devices do not exist and cannot load tap.kext");
+	if (::stat("/dev/zt0",&stattmp)) {
+		long kextpid = (long)vfork();
+		if (kextpid == 0) {
+			::chdir(homePath);
+			OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
+			::execl("/sbin/kextload","/sbin/kextload","-q","-repository",homePath,"tap.kext",(const char *)0);
+			::_exit(-1);
+		} else if (kextpid > 0) {
+			int exitcode = -1;
+			::waitpid(kextpid,&exitcode,0);
 		}
-		throw std::runtime_error("/dev/zt# tap devices do not exist and tap.kext not available");
+		::usleep(500); // give tap device driver time to start up and try again
+		if (::stat("/dev/zt0",&stattmp))
+			throw std::runtime_error("/dev/zt# tap devices do not exist and cannot load tap.kext");
 	}
 
 	// Try to reopen the last device we had, if we had one and it's still unused.
