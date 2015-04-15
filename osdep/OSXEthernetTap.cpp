@@ -263,6 +263,7 @@ static inline void _intl_freeifmaddrs(struct _intl_ifmaddrs *ifmp)
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/Dictionary.hpp"
 #include "OSUtils.hpp"
 #include "OSXEthernetTap.hpp"
 
@@ -333,13 +334,15 @@ OSXEthernetTap::OSXEthernetTap(
 	_fd(0),
 	_enabled(true)
 {
-	char devpath[64],ethaddr[64],mtustr[32],metstr[32];
+	char devpath[64],ethaddr[64],mtustr[32],metstr[32],nwids[32];
 	struct stat stattmp;
 
-	Mutex::Lock _gl(globalTapCreateLock);
+	Utils::snprintf(nwids,sizeof(nwids),"%.16llx",nwid);
 
 	if (mtu > 2800)
 		throw std::runtime_error("max tap MTU is 2800");
+
+	Mutex::Lock _gl(globalTapCreateLock);
 
 	if (stat("/dev/zt0",&stattmp)) {
 		if (homePath) {
@@ -362,20 +365,22 @@ OSXEthernetTap::OSXEthernetTap(
 
 	// Try to reopen the last device we had, if we had one and it's still unused.
 	bool recalledDevice = false;
-	/*
-	if ((desiredDevice)&&(desiredDevice[0] == 'z')&&(desiredDevice[1] == 't')) {
-		if ((strchr(desiredDevice,'/'))||(strchr(desiredDevice,'.'))) // security sanity check
-			throw std::runtime_error("invalid desiredDevice parameter");
-		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice);
-		if (stat(devpath,&stattmp) == 0) {
-			_fd = ::open(devpath,O_RDWR);
-			if (_fd > 0) {
-				_dev = desiredDevice;
-				recalledDevice = true;
+	std::string devmapbuf;
+	Dictionary devmap;
+	if (OSUtils::readFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmapbuf)) {
+		devmap.fromString(devmapbuf);
+		std::string desiredDevice(devmap.get(nwids,""));
+		if (desiredDevice.length() > 2) {
+			Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",desiredDevice.c_str());
+			if (stat(devpath,&stattmp) == 0) {
+				_fd = ::open(devpath,O_RDWR);
+				if (_fd > 0) {
+					_dev = desiredDevice;
+					recalledDevice = true;
+				}
 			}
 		}
 	}
-	*/
 
 	// Open the first unused tap device if we didn't recall a previous one.
 	if (!recalledDevice) {
@@ -425,9 +430,12 @@ OSXEthernetTap::OSXEthernetTap(
 
 	::pipe(_shutdownSignalPipe);
 
-	_thread = Thread::start(this);
-
 	++globalTapsRunning;
+
+	devmap[nwids] = _dev;
+	OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "devicemap").c_str(),devmap.toString());
+
+	_thread = Thread::start(this);
 }
 
 OSXEthernetTap::~OSXEthernetTap()

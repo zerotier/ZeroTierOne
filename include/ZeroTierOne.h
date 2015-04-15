@@ -448,6 +448,9 @@ typedef struct
 
 	/**
 	 * If nonzero, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
+	 *
+	 * This is really just a hint to user code. If this is true, the user can
+	 * subscribe to the broadcast group. If not, then the user shouldn't.
 	 */
 	int broadcastEnabled;
 

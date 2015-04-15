@@ -409,7 +409,7 @@ public:
 							StapFrameHandler,
 							(void *)this))).first;
 					} catch ( ... ) {
-						return -2;
+						return -999;
 					}
 				}
 				// fall through...
