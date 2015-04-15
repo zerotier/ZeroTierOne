@@ -88,7 +88,7 @@ public:
 	inline uint64_t id() const throw() { return _id; }
 
 	/**
-	 * @return Address of network's netconf master (most significant 40 bits of ID)
+	 * @return Address of network's controller (most significant 40 bits of ID)
 	 */
 	inline Address controller() throw() { return Address(_id >> 24); }
 
@@ -148,7 +148,7 @@ public:
 	int setConfiguration(const Dictionary &conf,bool saveToDisk = true);
 
 	/**
-	 * Set netconf failure to 'access denied' -- called in IncomingPacket when netconf master reports this
+	 * Set netconf failure to 'access denied' -- called in IncomingPacket when controller reports this
 	 */
 	inline void setAccessDenied()
 	{
@@ -157,7 +157,7 @@ public:
 	}
 
 	/**
-	 * Set netconf failure to 'not found' -- called by PacketDecider when netconf master reports this
+	 * Set netconf failure to 'not found' -- called by PacketDecider when controller reports this
 	 */
 	inline void setNotFound()
 	{

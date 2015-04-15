@@ -68,9 +68,9 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_RELAYS "rl"
 
 /**
- * Network configuration received from netconf master nodes
+ * Network configuration received from network controller nodes
  *
- * This is an immutable value object created from a dictionary received from netconf master.
+ * This is an immutable value object created from a dictionary received from controller.
  */
 class NetworkConfig
 {
@@ -102,10 +102,10 @@ public:
 	 * Create an instance of a NetworkConfig for the test network ID
 	 *
 	 * The test network ID is defined as ZT_TEST_NETWORK_ID. This is a
-	 * "fake" network with no real netconf master and default options.
+	 * "fake" network with no real controller and default options.
 	 *
 	 * @param self This node's ZT address
-	 * @return Configured instance of netconf for test network ID
+	 * @return Configuration for test network ID
 	 */
 	static SharedPtr<NetworkConfig> createTestNetworkConfig(const Address &self);
 

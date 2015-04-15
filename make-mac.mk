@@ -26,12 +26,11 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
-# Build with ZT_ENABLE_NETCONF_MASTER=1 to build with NetworkConfigMaster enabled
-ifeq ($(ZT_ENABLE_NETCONF_MASTER),1)
-	DEFS+=-DZT_ENABLE_NETCONF_MASTER
+# Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
+ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
+	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
 	LIBS+=-L/usr/local/lib -lsqlite3
-	ARCH_FLAGS=-arch x86_64
-	OBJS+=netconf/SqliteNetworkConfigMaster.o 
+	OBJS+=controller/SqliteNetworkController.o 
 endif
 
 # Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
@@ -77,7 +76,7 @@ selftest: $(OBJS) selftest.o
 #	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
-	rm -rf *.dSYM build-* *.pkg *.dmg *.o netconf/*.o service/*.o node/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-*
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-*
 
 # For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE

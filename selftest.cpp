@@ -59,9 +59,9 @@
 #include "osdep/Phy.hpp"
 #endif
 
-#ifdef ZT_ENABLE_NETCONF_MASTER
-#include "netconf/SqliteNetworkConfigMaster.hpp"
-#endif // ZT_ENABLE_NETCONF_MASTER
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+#include "controller/SqliteNetworkController.hpp"
+#endif // ZT_ENABLE_NETWORK_CONTROLLER
 
 #ifdef __WINDOWS__
 #include <tchar.h>
@@ -726,14 +726,14 @@ static int testPhy()
 
 static int testSqliteNetconfMaster()
 {
-#ifdef ZT_ENABLE_NETCONF_MASTER
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 	try {
-		std::cout << "[netconf] Generating signing identity..." << std::endl;
+		std::cout << "[network-controller] Generating signing identity..." << std::endl;
 		Identity signingId;
 		signingId.generate();
 
-		std::cout << "[netconf] Creating database..." << std::endl;
-		SqliteNetworkConfigMaster netconf(signingId,"netconf-test.db");
+		std::cout << "[network-controller] Creating database..." << std::endl;
+		SqliteNetworkController controller(signingId,"network-controller-test.db");
 	} catch (std::runtime_error &exc) {
 		std::cout << "FAIL! (unexpected exception: " << exc.what() << ")" << std::endl;
 		return -1;
@@ -741,7 +741,7 @@ static int testSqliteNetconfMaster()
 		std::cout << "FAIL! (unexpected exception: ...)" << std::endl;
 		return -1;
 	}
-#endif // ZT_ENABLE_NETCONF_MASTER
+#endif // ZT_ENABLE_NETWORK_CONTROLLER
 	return 0;
 }
 

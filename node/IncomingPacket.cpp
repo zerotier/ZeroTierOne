@@ -38,7 +38,7 @@
 #include "Topology.hpp"
 #include "Switch.hpp"
 #include "Peer.hpp"
-#include "NetworkConfigMaster.hpp"
+#include "NetworkController.hpp"
 #include "SelfAwareness.hpp"
 
 namespace ZeroTier {
@@ -361,14 +361,14 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					if (dict.length()) {
 						if (nw->setConfiguration(Dictionary(dict)) == 2) { // 2 == accepted and actually new
 							/* If this configuration was indeed new, we do another
-							 * netconf request with its revision. We do this in
-							 * order to (a) tell the netconf server we got it (it
+							 * controller request with its revision. We do this in
+							 * order to (a) tell the network controller we got it (it
 							 * won't send a duplicate if ts == current), and (b)
-							 * get another one if the netconf is changing rapidly
+							 * get another one if the controller is changing rapidly
 							 * until we finally have the final version.
 							 *
-							 * Note that we don't do this for netconf masters with
-							 * versions <= 1.0.3, since those regenerate a new netconf
+							 * Note that we don't do this for network controllers with
+							 * versions <= 1.0.3, since those regenerate a new controller
 							 * with a new revision every time. In that case this double
 							 * confirmation would create a race condition. */
 							const SharedPtr<NetworkConfig> nc(nw->config2());
@@ -672,10 +672,10 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		const uint64_t pid = packetId();
 		peer->received(RR,_remoteAddress,_linkDesperation,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
-		if (RR->netconfMaster) {
+		if (RR->localNetworkController) {
 			Dictionary netconf;
-			switch(RR->netconfMaster->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,peer->identity(),nwid,metaData,haveRevision,netconf)) {
-				case NetworkConfigMaster::NETCONF_QUERY_OK: {
+			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,peer->identity(),nwid,metaData,haveRevision,netconf)) {
+				case NetworkController::NETCONF_QUERY_OK: {
 					const std::string netconfStr(netconf.toString());
 					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
 						TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
@@ -694,9 +694,9 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						}
 					}
 				}	break;
-				case NetworkConfigMaster::NETCONF_QUERY_OK_BUT_NOT_NEWER: // nothing to do -- netconf has not changed
+				case NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER: // nothing to do -- netconf has not changed
 					break;
-				case NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND: {
+				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 					outp.append(pid);
@@ -705,7 +705,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.armor(peer->key(),true);
 					RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 				}	break;
-				case NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED: {
+				case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
 					outp.append(pid);
@@ -714,11 +714,11 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.armor(peer->key(),true);
 					RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
 				} break;
-				case NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
+				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
 					TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
 					break;
 				default:
-					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkConfigMaster::doNetworkConfigRequest()");
+					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkController::doNetworkConfigRequest()");
 					break;
 			}
 		} else {

@@ -43,7 +43,7 @@ class RuntimeEnvironment;
 /**
  * Interface for network configuration (netconf) master implementations
  */
-class NetworkConfigMaster
+class NetworkController
 {
 public:
 	/**
@@ -58,8 +58,8 @@ public:
 		NETCONF_QUERY_INTERNAL_SERVER_ERROR = 4
 	};
 
-	NetworkConfigMaster() {}
-	virtual ~NetworkConfigMaster() {}
+	NetworkController() {}
+	virtual ~NetworkController() {}
 
 	/**
 	 * Handle a network config request, sending replies if necessary
@@ -78,7 +78,7 @@ public:
 	 * @param result Dictionary to receive resulting signed netconf on success
 	 * @return Returns NETCONF_QUERY_OK if result dictionary is valid, or an error code on error
 	 */
-	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
+	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		const Identity &identity,
 		uint64_t nwid,

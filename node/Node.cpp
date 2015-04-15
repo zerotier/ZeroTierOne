@@ -30,7 +30,7 @@
 #include "Constants.hpp"
 #include "Node.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "NetworkConfigMaster.hpp"
+#include "NetworkController.hpp"
 #include "CMWC4096.hpp"
 #include "Switch.hpp"
 #include "Multicaster.hpp"
@@ -407,9 +407,9 @@ void Node::freeQueryResult(void *qr)
 		::free(qr);
 }
 
-void Node::setNetconfMaster(void *networkConfigMasterInstance)
+void Node::setNetconfMaster(void *networkControllerInstance)
 {
-	RR->netconfMaster = reinterpret_cast<NetworkConfigMaster *>(networkConfigMasterInstance);
+	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
 }
 
 /****************************************************************************/
@@ -654,10 +654,10 @@ void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr)
 	} catch ( ... ) {}
 }
 
-void ZT1_Node_setNetconfMaster(ZT1_Node *node,void *networkConfigMasterInstance)
+void ZT1_Node_setNetconfMaster(ZT1_Node *node,void *networkControllerInstance)
 {
 	try {
-		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkConfigMasterInstance);
+		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkControllerInstance);
 	} catch ( ... ) {}
 }
 

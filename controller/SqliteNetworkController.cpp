@@ -37,7 +37,7 @@
 #include <utility>
 #include <stdexcept>
 
-#include "SqliteNetworkConfigMaster.hpp"
+#include "SqliteNetworkController.hpp"
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
@@ -53,16 +53,16 @@
 
 namespace ZeroTier {
 
-SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath) :
+SqliteNetworkController::SqliteNetworkController(const Identity &signingId,const char *dbPath) :
 	_signingId(signingId),
 	_dbPath(dbPath),
 	_db((sqlite3 *)0)
 {
 	if (!_signingId.hasPrivate())
-		throw std::runtime_error("SqliteNetworkConfigMaster signing identity must have a private key");
+		throw std::runtime_error("SqliteNetworkController signing identity must have a private key");
 
 	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
-		throw std::runtime_error("SqliteNetworkConfigMaster cannot open database file");
+		throw std::runtime_error("SqliteNetworkController cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
 
 	sqlite3_stmt *s = (sqlite3_stmt *)0;
@@ -75,18 +75,18 @@ SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,c
 
 		if (schemaVersion == -1234) {
 			sqlite3_close(_db);
-			throw std::runtime_error("SqliteNetworkConfigMaster schemaVersion not found in Config table (init failure?)");
+			throw std::runtime_error("SqliteNetworkController schemaVersion not found in Config table (init failure?)");
 		} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
 			// Note -- this will eventually run auto-upgrades so this isn't how it'll work going forward
 			sqlite3_close(_db);
-			throw std::runtime_error("SqliteNetworkConfigMaster database schema version mismatch");
+			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
 		}
 	} else {
 		// Prepare statement will fail if Config table doesn't exist, which means our DB
 		// needs to be initialized.
 		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
 			sqlite3_close(_db);
-			throw std::runtime_error("SqliteNetworkConfigMaster cannot initialize database and/or insert schemaVersion into Config table");
+			throw std::runtime_error("SqliteNetworkController cannot initialize database and/or insert schemaVersion into Config table");
 		}
 	}
 
@@ -109,11 +109,11 @@ SqliteNetworkConfigMaster::SqliteNetworkConfigMaster(const Identity &signingId,c
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET 'cachedNetconf' = ?,'cachedNetconfRevision' = ? WHERE rowid = ?",-1,&_sCacheNetconf,(const char **)0) != SQLITE_OK)
 		 ) {
 		sqlite3_close(_db);
-		throw std::runtime_error("SqliteNetworkConfigMaster unable to initialize one or more prepared statements");
+		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
 	}
 }
 
-SqliteNetworkConfigMaster::~SqliteNetworkConfigMaster()
+SqliteNetworkController::~SqliteNetworkController()
 {
 	Mutex::Lock _l(_lock);
 	if (_db) {
@@ -137,7 +137,7 @@ SqliteNetworkConfigMaster::~SqliteNetworkConfigMaster()
 	}
 }
 
-NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
+NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
 {
 	Mutex::Lock _l(_lock);
 
@@ -195,10 +195,10 @@ NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigReques
 					sqlite3_step(_sUpdateNode2);
 				}
 			} else {
-				return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
+				return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 			}
 		} catch ( ... ) { // identity stored in database is not valid or is NULL
-			return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
+			return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 		}
 	} else {
 		std::string idstr(identity.toString(false));
@@ -215,7 +215,7 @@ NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigReques
 		sqlite3_bind_text(_sCreateNode,5,lastSeen,-1,SQLITE_STATIC);
 		if (sqlite3_step(_sCreateNode) != SQLITE_DONE) {
 			netconf["error"] = "unable to create new node record";
-			return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
 	}
 
@@ -236,7 +236,7 @@ NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigReques
 		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
 	}
 	if (!foundNetwork)
-		return NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND;
+		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
 
 	// Fetch Member record
 
@@ -269,14 +269,14 @@ NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigReques
 		sqlite3_bind_int(_sCreateMember,3,(member.authorized ? 0 : 1));
 		if ( (sqlite3_step(_sCreateMember) != SQLITE_DONE) && ((member.rowid = (int64_t)sqlite3_last_insert_rowid(_db)) > 0) ) {
 			netconf["error"] = "unable to create new member record";
-			return NetworkConfigMaster::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
 	}
 
 	// Check member authorization
 
 	if (!member.authorized)
-		return NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED;
+		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 
 	// Update client's currently reported haveRevision in Member record
 
@@ -290,7 +290,7 @@ NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigReques
 	// If netconf is unchanged from client reported revision, just tell client they're up to date
 
 	if ((haveRevision > 0)&&(haveRevision == network.revision))
-		return NetworkConfigMaster::NETCONF_QUERY_OK_BUT_NOT_NEWER;
+		return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
 	// Generate or retrieve cached netconf
 
@@ -473,7 +473,7 @@ NetworkConfigMaster::ResultCode SqliteNetworkConfigMaster::doNetworkConfigReques
 		}
 	}
 
-	return NetworkConfigMaster::NETCONF_QUERY_OK;
+	return NetworkController::NETCONF_QUERY_OK;
 }
 
 } // namespace ZeroTier

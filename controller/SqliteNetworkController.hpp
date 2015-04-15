@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_SQLITENETWORKCONFIGMASTER_HPP
-#define ZT_SQLITENETWORKCONFIGMASTER_HPP
+#ifndef ZT_SQLITENETWORKCONTROLLER_HPP
+#define ZT_SQLITENETWORKCONTROLLER_HPP
 
 #include <stdint.h>
 
@@ -37,22 +37,22 @@
 #include <vector>
 
 #include "../node/Constants.hpp"
-#include "../node/NetworkConfigMaster.hpp"
+#include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/NonCopyable.hpp"
 
 namespace ZeroTier {
 
-class SqliteNetworkConfigMaster : public NetworkConfigMaster
+class SqliteNetworkController : public NetworkController
 {
 public:
 	class DBC;
-	friend class SqliteNetworkConfigMaster::DBC;
+	friend class SqliteNetworkController::DBC;
 
-	SqliteNetworkConfigMaster(const Identity &signingId,const char *dbPath);
-	virtual ~SqliteNetworkConfigMaster();
+	SqliteNetworkController(const Identity &signingId,const char *dbPath);
+	virtual ~SqliteNetworkController();
 
-	virtual NetworkConfigMaster::ResultCode doNetworkConfigRequest(
+	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		const Identity &identity,
 		uint64_t nwid,
@@ -90,16 +90,16 @@ public:
 	 *
 	 * This acts as both a contextual lock of the master's Mutex and a pointer
 	 * to the Sqlite3 database instance. Dereferencing this with * yields the
-	 * sqlite3* pointer. Create on parent with DBC(SqliteNetworkConfigMaster &).
+	 * sqlite3* pointer. Create on parent with DBC(SqliteNetworkController &).
 	 */
 	class DBC : NonCopyable
 	{
 	public:
-		DBC(SqliteNetworkConfigMaster &nc) : _p(&nc) { nc._lock.lock(); }
+		DBC(SqliteNetworkController &nc) : _p(&nc) { nc._lock.lock(); }
 		~DBC() { _p->_lock.unlock(); }
 		inline sqlite3 *operator*() const throw() { return _p->_db; }
 	private:
-		SqliteNetworkConfigMaster *const _p;
+		SqliteNetworkController *const _p;
 	};
 };
 

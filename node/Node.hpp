@@ -105,7 +105,7 @@ public:
 	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT1_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
-	void setNetconfMaster(void *networkConfigMasterInstance);
+	void setNetconfMaster(void *networkControllerInstance);
 
 	// Internal functions ------------------------------------------------------
 

@@ -42,7 +42,7 @@ class CMWC4096;
 class Node;
 class Multicaster;
 class AntiRecursion;
-class NetworkConfigMaster;
+class NetworkController;
 class SelfAwareness;
 
 /**
@@ -54,7 +54,7 @@ public:
 	RuntimeEnvironment(Node *n) :
 		node(n),
 		identity(),
-		netconfMaster((NetworkConfigMaster *)0),
+		localNetworkController((NetworkController *)0),
 		prng((CMWC4096 *)0),
 		sw((Switch *)0),
 		mc((Multicaster *)0),
@@ -72,8 +72,8 @@ public:
 	std::string publicIdentityStr;
 	std::string secretIdentityStr;
 
-	// This is set externally to an instance of this base class if netconf functionality is enabled
-	NetworkConfigMaster *netconfMaster;
+	// This is set externally to an instance of this base class
+	NetworkController *localNetworkController;
 
 	/*
 	 * Order matters a bit here. These are constructed in this order

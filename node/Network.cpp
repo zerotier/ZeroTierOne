@@ -36,7 +36,7 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Buffer.hpp"
-#include "NetworkConfigMaster.hpp"
+#include "NetworkController.hpp"
 
 namespace ZeroTier {
 
@@ -243,21 +243,21 @@ int Network::setConfiguration(const Dictionary &conf,bool saveToDisk)
 
 void Network::requestConfiguration()
 {
-	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, no netconf master
+	if (_id == ZT_TEST_NETWORK_ID) // pseudo-network-ID, uses locally generated static config
 		return;
 
 	if (controller() == RR->identity.address()) {
-		if (RR->netconfMaster) {
+		if (RR->localNetworkController) {
 			SharedPtr<NetworkConfig> nconf(config2());
 			Dictionary newconf;
-			switch(RR->netconfMaster->doNetworkConfigRequest(InetAddress(),RR->identity,_id,Dictionary(),(nconf) ? nconf->revision() : (uint64_t)0,newconf)) {
-				case NetworkConfigMaster::NETCONF_QUERY_OK:
+			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,_id,Dictionary(),(nconf) ? nconf->revision() : (uint64_t)0,newconf)) {
+				case NetworkController::NETCONF_QUERY_OK:
 					this->setConfiguration(newconf,true);
 					return;
-				case NetworkConfigMaster::NETCONF_QUERY_OBJECT_NOT_FOUND:
+				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND:
 					this->setNotFound();
 					return;
-				case NetworkConfigMaster::NETCONF_QUERY_ACCESS_DENIED:
+				case NetworkController::NETCONF_QUERY_ACCESS_DENIED:
 					this->setAccessDenied();
 					return;
 				default:
@@ -269,7 +269,7 @@ void Network::requestConfiguration()
 		}
 	}
 
-	TRACE("requesting netconf for network %.16llx from netconf master %s",(unsigned long long)_id,controller().toString().c_str());
+	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,controller().toString().c_str());
 	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
 	outp.append((uint16_t)0); // no meta-data
@@ -304,7 +304,7 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
 
 		if (!signer) {
-			// This would be rather odd, since this is our netconf master... could happen
+			// This would be rather odd, since this is our controller... could happen
 			// if we get packets before we've gotten config.
 			RR->sw->requestWhois(cert.signedBy());
 			return;

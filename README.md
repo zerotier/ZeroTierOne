@@ -27,8 +27,6 @@ You *only* need an account on our site if you want to use the control panel foun
 
 Public networks, as the name implies, can be joined without getting authorization from anyone. All you need is their 16-digit network ID. A public network called [Earth](https://www.zerotier.com/earth.html) (8056c2e21c000001) exists for everyone, but be sure your device is adequately secured and up to date before joining.
 
-Alternatively, you can run your own network configuration controller. This lets you run any network for free. To do this, start with the netconf-service/ subfolder of this project. You'll need to do a bit of system administration work and manually populate a Redis database, but it's not terribly hard if you're into that kind of thing.
-
 More products and services will be forthcoming.
 
 ### Basic Troubleshooting

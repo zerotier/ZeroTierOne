@@ -8,7 +8,6 @@ LIBS=
 
 include objects.mk
 OBJS+=osdep/LinuxEthernetTap.o 
-TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o 
 
 # Enable SSE-optimized Salsa20 on x86 and x86_64 machines
 MACHINE=$(shell uname -m)
@@ -29,13 +28,6 @@ ifeq ($(MACHINE),i386)
 endif
 ifeq ($(MACHINE),x86)
 	DEFS+=-DZT_SALSA20_SSE 
-endif
-
-# Build with ZT_ENABLE_NETCONF_MASTER=1 to build with NetworkConfigMaster enabled
-ifeq ($(ZT_ENABLE_NETCONF_MASTER),1)
-	DEFS+=-DZT_ENABLE_NETCONF_MASTER
-	LIBS+=-lsqlite3
-	OBJS+=netconf/SqliteNetworkConfigMaster.o 
 endif
 
 # "make official" is a shortcut for this
@@ -71,8 +63,8 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 all:	one
 
-one:	$(OBJS) main.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one main.o $(OBJS) $(LIBS)
+one:	$(OBJS) one.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
@@ -81,15 +73,11 @@ selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
-testnet: $(TESTNET_OBJS) $(OBJS) testnet.o
-	$(CXX) $(CXXFLAGS) -o zerotier-testnet testnet.o $(OBJS) $(TESTNET_OBJS) $(LIBS)
-	$(STRIP) zerotier-testnet
-
 installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf *.o netconf/*.o node/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* build-* ZeroTierOneInstaller-* *.deb *.rpm
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* build-* ZeroTierOneInstaller-* *.deb *.rpm
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

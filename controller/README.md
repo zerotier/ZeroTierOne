@@ -1,7 +1,7 @@
-Network Configuration Master
+Network Controller Implementation
 ======
 
-This folder contains code implementing the node/NetworkConfigMaster.hpp interface to allow ZeroTier nodes to create and manage virtual networks.
+This folder contains code implementing the node/NetworkController.hpp interface to allow ZeroTier nodes to create and manage virtual networks.
 
 The standard implementation uses SQLite3 with the attached schema. A separate service (not included here yet) is used to administrate that database and configure networks.
 
