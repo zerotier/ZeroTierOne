@@ -30,7 +30,10 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "service/One.hpp"
+#include <string>
+#include <stdexcept>
+
+#include "service/OneService.hpp"
 
 using namespace ZeroTier;
 

@@ -130,8 +130,8 @@ protected:
 	OneService() {}
 
 private:
-	OneService(const One &one) {}
-	inline One &operator=(const One &one) { return *this; }
+	OneService(const OneService &one) {}
+	inline OneService &operator=(const OneService &one) { return *this; }
 };
 
 } // namespace ZeroTier

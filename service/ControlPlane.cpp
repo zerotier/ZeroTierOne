@@ -26,7 +26,7 @@
  */
 
 #include "ControlPlane.hpp"
-#include "One.hpp"
+#include "OneService.hpp"
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
@@ -196,7 +196,7 @@ static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
 	buf.append(json);
 }
 
-ControlPlane::ControlPlane(One *svc,Node *n) :
+ControlPlane::ControlPlane(OneService *svc,Node *n) :
 	_svc(svc),
 	_node(n)
 {
