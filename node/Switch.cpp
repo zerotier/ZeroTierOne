@@ -153,7 +153,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			return;
 		}
 
-		TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
+		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
 		RR->mc->send(
 			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
@@ -204,7 +204,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				send(outp,true);
 			}
 
-			TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged);
+			//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged);
 		} else {
 			TRACE("%.16llx: UNICAST: %s -> %s etherType==%s dropped, destination not a member of private network",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 		}

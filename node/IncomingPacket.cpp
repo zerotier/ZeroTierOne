@@ -399,7 +399,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID);
 				const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI));
 
-				TRACE("%s(%s): OK(MULTICAST_FRAME) %.16llx/%s flags %.2x",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),flags);
+				//TRACE("%s(%s): OK(MULTICAST_FRAME) %.16llx/%s flags %.2x",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),nwid,mg.toString().c_str(),flags);
 
 				unsigned int offset = 0;
 

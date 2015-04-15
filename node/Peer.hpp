@@ -441,6 +441,7 @@ private:
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
+	uint64_t _lastPathConfirmationSent;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;

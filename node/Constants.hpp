@@ -318,6 +318,11 @@
 #define ZT_MIN_BEACON_RESPONSE_INTERVAL 2500
 
 /**
+ * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
+ */
+#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 5000
+
+/**
  * Sanity limit on maximum bridge routes
  *
  * If the number of bridge routes exceeds this, we cull routes from the

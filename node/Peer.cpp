@@ -45,6 +45,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
+	_lastPathConfirmationSent(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -111,8 +112,11 @@ void Peer::received(
 					 * paths without confirming that a bidirectional link is in
 					 * fact present, but any packet that decodes and authenticates
 					 * correctly is considered valid. */
-					TRACE("got non-confirmation %s from unknown path %s(%s), pinging...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-					attemptToContactAt(RR,remoteAddr,linkDesperation,now);
+					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
+						_lastPathConfirmationSent = now;
+						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+						attemptToContactAt(RR,remoteAddr,linkDesperation,now);
+					}
 				}
 			}
 		}
