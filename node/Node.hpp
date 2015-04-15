@@ -252,6 +252,7 @@ private:
 	uint64_t _startTimeAfterInactivity;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
+	uint64_t _lastBeacon;
 	unsigned int _coreDesperation;
 	unsigned int _newestVersionSeen[3]; // major, minor, revision
 	bool _online;

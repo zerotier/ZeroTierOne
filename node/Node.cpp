@@ -73,6 +73,7 @@ Node::Node(
 	_startTimeAfterInactivity(0),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0),
+	_lastBeacon(0),
 	_coreDesperation(0)
 {
 	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
@@ -251,6 +252,15 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,uint64_t *nextBackgroun
 			}
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
+		}
+
+		if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
+			_lastBeacon = now;
+			char beacon[13];
+			*(reinterpret_cast<uint32_t *>(beacon)) = RR->prng->next32();
+			*(reinterpret_cast<uint32_t *>(beacon + 4)) = RR->prng->next32();
+			RR->identity.address().copyTo(beacon + 8,5);
+			putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13,0);
 		}
 	}
 
