@@ -4,11 +4,11 @@ CXX=clang++
 INCLUDES=-I/usr/local/include
 DEFS=
 LIBS=
-ARCH_FLAGS=-arch i386 -arch x86_64
+ARCH_FLAGS=-arch x86_64
 
 include objects.mk
 OBJS+=osdep/OSXEthernetTap.o 
-TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o 
+#TESTNET_OBJS=testnet/SimNet.o testnet/SimNetSocketManager.o testnet/TestEthernetTap.o 
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
@@ -45,7 +45,7 @@ ifeq ($(ZT_DEBUG),1)
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS=$(ARCH_FLAGS) -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.6 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS=$(ARCH_FLAGS) -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
@@ -53,8 +53,8 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 all: one
 
-one:	$(OBJS) main.o
-	$(CXX) $(CXXFLAGS) -o zerotier-one main.o $(OBJS) $(LIBS)
+one:	$(OBJS) one.o
+	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
@@ -77,23 +77,23 @@ selftest: $(OBJS) selftest.o
 #	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
-	rm -rf *.dSYM build-* *.o netconf/*.o service/*.o node/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-* "ZeroTier One.zip" "ZeroTier One.dmg"
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o netconf/*.o service/*.o node/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* ZeroTierOneInstaller-*
 
 # For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
 	./buildinstaller.sh
-	make mac-dmg ZT_OFFICIAL_RELEASE=1
+#	make mac-dmg ZT_OFFICIAL_RELEASE=1
 
-mac-dmg:	FORCE
-	mkdir -p build-ZeroTierOne-dmg
-	cd build-ZeroTierOne-dmg ; ln -sf /Applications Applications
-	cp -a "build-ZeroTierUI-release/ZeroTier One.app" build-ZeroTierOne-dmg/
-	rm -f /tmp/tmp.dmg
-	hdiutil create /tmp/tmp.dmg -ov -volname "ZeroTier One" -fs HFS+ -srcfolder ./build-ZeroTierOne-dmg
-	hdiutil convert /tmp/tmp.dmg -format UDZO -o "ZeroTier One.dmg"
-	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.dmg"
-	rm -f /tmp/tmp.dmg
+#mac-dmg:	FORCE
+#	mkdir -p build-ZeroTierOne-dmg
+#	cd build-ZeroTierOne-dmg ; ln -sf /Applications Applications
+#	cp -a "build-ZeroTierUI-release/ZeroTier One.app" build-ZeroTierOne-dmg/
+#	rm -f /tmp/tmp.dmg
+#	hdiutil create /tmp/tmp.dmg -ov -volname "ZeroTier One" -fs HFS+ -srcfolder ./build-ZeroTierOne-dmg
+#	hdiutil convert /tmp/tmp.dmg -format UDZO -o "ZeroTier One.dmg"
+#	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.dmg"
+#	rm -f /tmp/tmp.dmg
 
 # For those building from source -- installs signed binary tap driver in system ZT home
 install-mac-tap: FORCE
