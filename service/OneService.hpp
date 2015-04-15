@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_ONE_HPP
-#define ZT_ONE_HPP
+#ifndef ZT_ONESERVICE_HPP
+#define ZT_ONESERVICE_HPP
 
 #include <string>
 
@@ -35,9 +35,9 @@ namespace ZeroTier {
 class NetworkConfigMaster;
 
 /**
- * ZeroTier One -- local VPN/NVF service built around ZeroTier core
+ * Local service for ZeroTier One as system VPN/NFV provider
  */
-class One
+class OneService
 {
 public:
 	/**
@@ -82,13 +82,13 @@ public:
 	 * @param master Instance of network config master if this instance is to act as one (default: NULL)
 	 * @param overrideRootTopology String-serialized root topology (for testing, default: NULL)
 	 */
-	static One *newInstance(
+	static OneService *newInstance(
 		const char *hp,
 		unsigned int port,
 		NetworkConfigMaster *master = (NetworkConfigMaster *)0,
 		const char *overrideRootTopology = (const char *)0);
 
-	virtual ~One();
+	virtual ~OneService();
 
 	/**
 	 * Execute the service main I/O loop until terminated
@@ -127,10 +127,10 @@ public:
 	inline bool isRunning() const { return (this->reasonForTermination() == ONE_STILL_RUNNING); }
 
 protected:
-	One() {}
+	OneService() {}
 
 private:
-	One(const One &one) {}
+	OneService(const One &one) {}
 	inline One &operator=(const One &one) { return *this; }
 };
 

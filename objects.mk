@@ -25,4 +25,4 @@ OBJS=\
 	osdep/HttpClient.o \
 	osdep/OSUtils.o \
 	service/ControlPlane.o \
-	service/One.o
+	service/OneService.o

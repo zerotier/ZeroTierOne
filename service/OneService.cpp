@@ -50,7 +50,7 @@
 #include "../osdep/Phy.hpp"
 #include "../osdep/OSUtils.hpp"
 
-#include "One.hpp"
+#include "OneService.hpp"
 #include "ControlPlane.hpp"
 
 #ifdef __APPLE__
@@ -73,7 +73,7 @@ namespace ZeroTier {
 // Used to convert HTTP header names to ASCII lower case
 static const unsigned char ZT_TOLOWER_TABLE[256] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, ' ', '!', '"', '#', '$', '%', '&', 0x27, '(', ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?', '@', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', '_', '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~', 0x7f, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff };
 
-class OneImpl;
+class OneServiceImpl;
 
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf);
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData);
@@ -109,7 +109,7 @@ struct HttpConnection
 	bool server;
 	bool writing;
 	bool shouldKeepAlive;
-	OneImpl *parent;
+	OneServiceImpl *parent;
 	PhySocket *sock;
 	InetAddress from;
 	http_parser parser;
@@ -126,10 +126,10 @@ struct HttpConnection
 	std::string body; // also doubles as send queue for writes out to the socket
 };
 
-class OneImpl : public One
+class OneServiceImpl : public OneService
 {
 public:
-	OneImpl(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) :
+	OneServiceImpl(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
 		_phy(this,true),
 		_master(master),
@@ -178,7 +178,7 @@ public:
 		_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 	}
 
-	virtual ~OneImpl()
+	virtual ~OneServiceImpl()
 	{
 		_phy.close(_v4UdpSocket);
 		_phy.close(_v6UdpSocket);
@@ -628,7 +628,7 @@ private:
 	}
 
 	const std::string _homePath;
-	Phy<OneImpl *> _phy;
+	Phy<OneServiceImpl *> _phy;
 	NetworkConfigMaster *_master;
 	std::string _overrideRootTopology;
 	Node *_node;
@@ -654,20 +654,20 @@ private:
 };
 
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf)
-{ return reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkConfigFunction(nwid,op,nwconf); }
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkConfigFunction(nwid,op,nwconf); }
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData)
-{ reinterpret_cast<OneImpl *>(uptr)->nodeEventCallback(event,metaData); }
+{ reinterpret_cast<OneServiceImpl *>(uptr)->nodeEventCallback(event,metaData); }
 static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize)
-{ return reinterpret_cast<OneImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure)
-{ return reinterpret_cast<OneImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
 static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,unsigned int desperation,const void *data,unsigned int len)
-{ return reinterpret_cast<OneImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
-{ reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
+{ reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
 
 static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
-{ reinterpret_cast<OneImpl *>(uptr)->tapFrameHandler(nwid,from,to,etherType,vlanId,data,len); }
+{ reinterpret_cast<OneServiceImpl *>(uptr)->tapFrameHandler(nwid,from,to,etherType,vlanId,data,len); }
 
 static int ShttpOnMessageBegin(http_parser *parser)
 {
@@ -752,7 +752,7 @@ static int ShttpOnMessageComplete(http_parser *parser)
 	return 0;
 }
 
-std::string One::platformDefaultHomePath()
+std::string OneService::platformDefaultHomePath()
 {
 #ifdef __UNIX_LIKE__
 
@@ -788,7 +788,7 @@ std::string One::platformDefaultHomePath()
 #endif // __UNIX_LIKE__ or not...
 }
 
-One *One::newInstance(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) { return new OneImpl(hp,port,master,overrideRootTopology); }
-One::~One() {}
+OneService *OneService::newInstance(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,master,overrideRootTopology); }
+OneService::~OneService() {}
 
 } // namespace ZeroTier
