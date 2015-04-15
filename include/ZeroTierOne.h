@@ -457,6 +457,11 @@ typedef struct
 	int portError;
 
 	/**
+	 * Is this network enabled? If not, all frames to/from are dropped.
+	 */
+	int enabled;
+
+	/**
 	 * Network config revision as reported by netconf master
 	 *
 	 * If this is zero, it means we're still waiting for our netconf.

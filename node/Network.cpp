@@ -436,7 +436,12 @@ void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 void Network::setEnabled(bool enabled)
 {
 	Mutex::Lock _l(_lock);
-	_enabled = enabled;
+	if (_enabled != enabled) {
+		_enabled = enabled;
+		ZT1_VirtualNetworkConfig ctmp;
+		_externalConfig(&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
+	}
 }
 
 void Network::destroy()
@@ -478,6 +483,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 	ec->bridge = (_config) ? ((_config->allowPassiveBridging() || (std::find(_config->activeBridges().begin(),_config->activeBridges().end(),RR->identity.address()) != _config->activeBridges().end())) ? 1 : 0) : 0;
 	ec->broadcastEnabled = (_config) ? (_config->enableBroadcast() ? 1 : 0) : 0;
 	ec->portError = _portError;
+	ec->enabled = (_enabled) ? 1 : 0;
 	ec->netconfRevision = (_config) ? (unsigned long)_config->revision() : 0;
 
 	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);

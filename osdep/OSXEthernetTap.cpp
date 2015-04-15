@@ -263,6 +263,7 @@ static inline void _intl_freeifmaddrs(struct _intl_ifmaddrs *ifmp)
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
+#include "OSUtils.hpp"
 #include "OSXEthernetTap.hpp"
 
 // ff:ff:ff:ff:ff:ff with no ADI
@@ -311,23 +312,27 @@ static inline bool _setIpv6Stuff(const char *ifname,bool performNUD,bool acceptR
 
 namespace ZeroTier {
 
+static long globalTapsRunning = 0;
+static Mutex globalTapCreateLock;
+
 OSXEthernetTap::OSXEthernetTap(
+	const char *homePath,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
 	uint64_t nwid,
-	const char *desiredDevice,
 	const char *friendlyName,
-	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *data,unsigned int len),
 	void *arg) :
 	_handler(handler),
 	_arg(arg),
+	_nwid(nwid),
+	_homePath(homePath),
 	_mtu(mtu),
 	_metric(metric),
 	_fd(0),
 	_enabled(true)
 {
-	static Mutex globalTapCreateLock;
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32];
 	struct stat stattmp;
 
@@ -335,11 +340,29 @@ OSXEthernetTap::OSXEthernetTap(
 
 	if (mtu > 2800)
 		throw std::runtime_error("max tap MTU is 2800");
-	if (stat("/dev/zt0",&stattmp))
-		throw std::runtime_error("/dev/zt# tap devices do not exist");
+
+	if (stat("/dev/zt0",&stattmp)) {
+		if (homePath) {
+			long kextpid = (long)vfork();
+			if (kextpid == 0) {
+				::chdir(homePath);
+				OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
+				::execl("/sbin/kextload","/sbin/kextload","-q","-repository",homePath,"tap.kext",(const char *)0);
+				::_exit(-1);
+			} else if (kextpid > 0) {
+				int exitcode = -1;
+				::waitpid(kextpid,&exitcode,0);
+			}
+			::usleep(500); // give tap device driver time to start up and try again
+			if (stat("/dev/zt0",&stattmp))
+				throw std::runtime_error("/dev/zt# tap devices do not exist and cannot load tap.kext");
+		}
+		throw std::runtime_error("/dev/zt# tap devices do not exist and tap.kext not available");
+	}
 
 	// Try to reopen the last device we had, if we had one and it's still unused.
 	bool recalledDevice = false;
+	/*
 	if ((desiredDevice)&&(desiredDevice[0] == 'z')&&(desiredDevice[1] == 't')) {
 		if ((strchr(desiredDevice,'/'))||(strchr(desiredDevice,'.'))) // security sanity check
 			throw std::runtime_error("invalid desiredDevice parameter");
@@ -352,6 +375,7 @@ OSXEthernetTap::OSXEthernetTap(
 			}
 		}
 	}
+	*/
 
 	// Open the first unused tap device if we didn't recall a previous one.
 	if (!recalledDevice) {
@@ -402,15 +426,37 @@ OSXEthernetTap::OSXEthernetTap(
 	::pipe(_shutdownSignalPipe);
 
 	_thread = Thread::start(this);
+
+	++globalTapsRunning;
 }
 
 OSXEthernetTap::~OSXEthernetTap()
 {
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
+
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
+
+	{
+		Mutex::Lock _gl(globalTapCreateLock);
+		if (--globalTapsRunning <= 0) {
+			globalTapsRunning = 0; // sanity check -- should not be possible
+
+			char tmp[16384];
+			sprintf(tmp,"%s/%s",_homePath.c_str(),"tap.kext");
+			long kextpid = (long)vfork();
+			if (kextpid == 0) {
+				OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
+				::execl("/sbin/kextunload","/sbin/kextunload",tmp,(const char *)0);
+				::_exit(-1);
+			} else if (kextpid > 0) {
+				int exitcode = -1;
+				::waitpid(kextpid,&exitcode,0);
+			}
+		}
+	}
 }
 
 void OSXEthernetTap::setEnabled(bool en)
@@ -438,17 +484,17 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	return false; // never reached, make compiler shut up about return value
 }
 
-bool OSXEthernetTap::addIP(const InetAddress &ip)
+bool OSXEthernetTap::addIp(const InetAddress &ip)
 {
 	if (!ip)
 		return false;
 
-	std::set<InetAddress> allIps(ips());
-	if (allIps.count(ip) > 0)
-		return true; // IP/netmask already assigned
+	std::vector<InetAddress> allIps(ips());
+	if (std::binary_search(allIps.begin(),allIps.end(),ip))
+		return true;
 
 	// Remove and reconfigure if address is the same but netmask is different
-	for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
+	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
 		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
 			if (___removeIp(_dev,*i))
 				break;
@@ -463,26 +509,30 @@ bool OSXEthernetTap::addIP(const InetAddress &ip)
 		int exitcode = -1;
 		::waitpid(cpid,&exitcode,0);
 		return (exitcode == 0);
-	}
+	} // else return false...
+
 	return false;
 }
 
-bool OSXEthernetTap::removeIP(const InetAddress &ip)
+bool OSXEthernetTap::removeIp(const InetAddress &ip)
 {
-	if (ips().count(ip) > 0) {
+	if (!ip)
+		return true;
+	std::vector<InetAddress> allIps(ips());
+	if (!std::binary_search(allIps.begin(),allIps.end(),ip)) {
 		if (___removeIp(_dev,ip))
 			return true;
 	}
 	return false;
 }
 
-std::set<InetAddress> OSXEthernetTap::ips() const
+std::vector<InetAddress> OSXEthernetTap::ips() const
 {
 	struct ifaddrs *ifa = (struct ifaddrs *)0;
 	if (getifaddrs(&ifa))
-		return std::set<InetAddress>();
+		return std::vector<InetAddress>();
 
-	std::set<InetAddress> r;
+	std::vector<InetAddress> r;
 
 	struct ifaddrs *p = ifa;
 	while (p) {
@@ -491,14 +541,14 @@ std::set<InetAddress> OSXEthernetTap::ips() const
 				case AF_INET: {
 					struct sockaddr_in *sin = (struct sockaddr_in *)p->ifa_addr;
 					struct sockaddr_in *nm = (struct sockaddr_in *)p->ifa_netmask;
-					r.insert(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
+					r.push_back(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
 				}	break;
 				case AF_INET6: {
 					struct sockaddr_in6 *sin = (struct sockaddr_in6 *)p->ifa_addr;
 					struct sockaddr_in6 *nm = (struct sockaddr_in6 *)p->ifa_netmask;
 					uint32_t b[4];
 					memcpy(b,nm->sin6_addr.s6_addr,sizeof(b));
-					r.insert(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
+					r.push_back(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
 				}	break;
 			}
 		}
@@ -507,6 +557,9 @@ std::set<InetAddress> OSXEthernetTap::ips() const
 
 	if (ifa)
 		freeifaddrs(ifa);
+
+	std::sort(r.begin(),r.end());
+	std::unique(r.begin(),r.end());
 
 	return r;
 }
@@ -533,9 +586,10 @@ void OSXEthernetTap::setFriendlyName(const char *friendlyName)
 {
 }
 
-bool OSXEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
+void OSXEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
 {
-	std::set<MulticastGroup> newGroups;
+	std::vector<MulticastGroup> newGroups;
+
 	struct _intl_ifmaddrs *ifmap = (struct _intl_ifmaddrs *)0;
 	if (!_intl_getifmaddrs(&ifmap)) {
 		struct _intl_ifmaddrs *p = ifmap;
@@ -544,35 +598,30 @@ bool OSXEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
 				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
 				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.insert(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
+					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
 			}
 			p = p->ifma_next;
 		}
 		_intl_freeifmaddrs(ifmap);
 	}
 
-	{
-		std::set<InetAddress> allIps(ips());
-		for(std::set<InetAddress>::const_iterator i(allIps.begin());i!=allIps.end();++i)
-			newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
+	std::vector<InetAddress> allIps(ips());
+	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)
+		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
+
+	std::sort(newGroups.begin(),newGroups.end());
+	std::unique(newGroups.begin(),newGroups.end());
+
+	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
+		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
+			added.push_back(*m);
+	}
+	for(std::vector<MulticastGroup>::iterator m(_multicastGroups.begin());m!=_multicastGroups.end();++m) {
+		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
+			removed.push_back(*m);
 	}
 
-	bool changed = false;
-
-	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
-		if (!groups.count(*mg)) {
-			groups.insert(*mg);
-			changed = true;
-		}
-	}
-	for(std::set<MulticastGroup>::iterator mg(groups.begin());mg!=groups.end();) {
-		if ((!newGroups.count(*mg))&&(*mg != _blindWildcardMulticastGroup)) {
-			groups.erase(mg++);
-			changed = true;
-		} else ++mg;
-	}
-
-	return changed;
+	_multicastGroups.swap(newGroups);
 }
 
 void OSXEthernetTap::threadMain()
@@ -582,7 +631,6 @@ void OSXEthernetTap::threadMain()
 	MAC to,from;
 	int n,nfds,r;
 	char getBuf[8194];
-	Buffer<4096> data;
 
 	// Wait for a moment after startup -- wait for Network to finish
 	// constructing itself.
@@ -619,8 +667,8 @@ void OSXEthernetTap::threadMain()
 						to.setTo(getBuf,6);
 						from.setTo(getBuf + 6,6);
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-						data.copyFrom(getBuf + 14,(unsigned int)r - 14);
-						_handler(_arg,from,to,etherType,data);
+						// TODO: VLAN support
+						_handler(_arg,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 					}
 
 					r = 0;

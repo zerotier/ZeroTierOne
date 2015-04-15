@@ -32,10 +32,11 @@
 #include <stdlib.h>
 
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "../node/Constants.hpp"
 #include "../node/MAC.hpp"
-#include "../node/Buffer.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MulticastGroup.hpp"
 
@@ -50,35 +51,38 @@ class OSXEthernetTap
 {
 public:
 	OSXEthernetTap(
+		const char *homePath,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
 		uint64_t nwid,
-		const char *desiredDevice,
 		const char *friendlyName,
-		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
 	~OSXEthernetTap();
 
 	void setEnabled(bool en);
 	bool enabled() const;
-	bool addIP(const InetAddress &ip);
-	bool removeIP(const InetAddress &ip);
-	std::set<InetAddress> ips() const;
+	bool addIp(const InetAddress &ip);
+	bool removeIp(const InetAddress &ip);
+	std::vector<InetAddress> ips() const;
 	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
 	std::string deviceName() const;
 	void setFriendlyName(const char *friendlyName);
-	bool updateMulticastGroups(std::set<MulticastGroup> &groups);
+	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 
 	void threadMain()
 		throw();
 
 private:
-	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
+	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
+	uint64_t _nwid;
 	Thread _thread;
+	std::string _homePath;
 	std::string _dev;
+	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
 	unsigned int _metric;
 	int _fd;

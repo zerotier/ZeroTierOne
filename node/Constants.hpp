@@ -155,11 +155,6 @@
 #define ZT_IF_MTU ZT1_MAX_MTU
 
 /**
- * Default interface metric for ZeroTier taps -- should be higher than physical ports
- */
-#define ZT_DEFAULT_IF_METRIC 32768
-
-/**
  * Maximum number of packet fragments we'll support
  * 
  * The actual spec allows 16, but this is the most we'll support right
@@ -313,14 +308,14 @@
 #define ZT_ANTIRECURSION_HISTORY_SIZE 16
 
 /**
- * How often to broadcast beacons over physical local LANs
+ * How often to send LAN beacons
  */
 #define ZT_BEACON_INTERVAL 30000
 
 /**
  * Do not respond to any beacon more often than this
  */
-#define ZT_MIN_BEACON_RESPONSE_INTERVAL (ZT_BEACON_INTERVAL / 32)
+#define ZT_MIN_BEACON_RESPONSE_INTERVAL 2500
 
 /**
  * Sanity limit on maximum bridge routes

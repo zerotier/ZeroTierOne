@@ -45,6 +45,7 @@
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 #include "../node/InetAddress.hpp"
+#include "../node/MAC.hpp"
 
 #include "../osdep/Phy.hpp"
 #include "../osdep/OSUtils.hpp"
@@ -61,6 +62,12 @@ namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 8)
 #define ZT_MAX_HTTP_CONNECTIONS 64
 
+// Interface metric for ZeroTier taps
+#define ZT_IF_METRIC 32768
+
+// How often to check for new multicast subscriptions on a tap device
+#define ZT_TAP_CHECK_MULTICAST_INTERVAL 30000
+
 namespace ZeroTier {
 
 // Used to convert HTTP header names to ASCII lower case
@@ -74,6 +81,8 @@ static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure);
 static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,unsigned int desperation,const void *data,unsigned int len);
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
+
+static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 static int ShttpOnMessageBegin(http_parser *parser);
 static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length);
@@ -206,6 +215,7 @@ public:
 			}
 
 			_nextBackgroundTaskDeadline = 0;
+			uint64_t lastTapMulticastGroupCheck = 0;
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -220,13 +230,20 @@ public:
 				uint64_t now = OSUtils::now();
 
 				if (dl <= now) {
+					if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
+						lastTapMulticastGroupCheck = now;
+						Mutex::Lock _l(_taps_m);
+						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
+							_updateMulticastGroups(t->first,t->second);
+					}
+
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
+
 					dl = _nextBackgroundTaskDeadline;
 					now = OSUtils::now();
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
-				//printf("polling: %lums timeout\n",delay);
 				_phy.poll(delay);
 			}
 		} catch (std::exception &exc) {
@@ -243,6 +260,13 @@ public:
 			while (!_httpConnections.empty())
 				_phy.close(_httpConnections.begin()->first);
 		} catch ( ... ) {}
+
+		{
+			Mutex::Lock _l(_taps_m);
+			for(std::map< uint64_t,EthernetTap * >::iterator t(_taps.begin());t!=_taps.end();++t)
+				delete t->second;
+			_taps.clear();
+		}
 
 		delete _controlPlane;
 		_controlPlane = (ControlPlane *)0;
@@ -365,8 +389,65 @@ public:
 		}
 	}
 
-	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf)
+	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwc)
 	{
+		Mutex::Lock _l(_taps_m);
+		std::map< uint64_t,EthernetTap * >::iterator t(_taps.find(nwid));
+		switch(op) {
+			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
+				if (t == _taps.end()) {
+					try {
+						char friendlyName[1024];
+						Utils::snprintf(friendlyName,sizeof(friendlyName),"ZeroTier One [%.16llx]",nwid);
+						t = _taps.insert(std::pair< uint64_t,EthernetTap *>(nwid,new EthernetTap(
+							_homePath.c_str(),
+							MAC(nwc->mac),
+							nwc->mtu,
+							ZT_IF_METRIC,
+							nwid,
+							friendlyName,
+							StapFrameHandler,
+							(void *)this))).first;
+					} catch ( ... ) {
+						return -2;
+					}
+				}
+				// fall through...
+			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+				if (t != _taps.end()) {
+					t->second->setEnabled(nwc->enabled != 0);
+
+					std::vector<InetAddress> &assignedIps = _tapAssignedIps[nwid];
+					std::vector<InetAddress> newAssignedIps;
+					for(unsigned int i=0;i<nwc->assignedAddressCount;++i)
+						newAssignedIps.push_back(InetAddress(nwc->assignedAddresses[i]));
+					std::sort(newAssignedIps.begin(),newAssignedIps.end());
+					std::unique(newAssignedIps.begin(),newAssignedIps.end());
+					for(std::vector<InetAddress>::iterator ip(newAssignedIps.begin());ip!=newAssignedIps.end();++ip) {
+						if (!std::binary_search(assignedIps.begin(),assignedIps.end(),*ip))
+							t->second->addIp(*ip);
+					}
+					for(std::vector<InetAddress>::iterator ip(assignedIps.begin());ip!=assignedIps.end();++ip) {
+						if (!std::binary_search(newAssignedIps.begin(),newAssignedIps.end(),*ip))
+							t->second->removeIp(*ip);
+					}
+					assignedIps.swap(newAssignedIps);
+
+					_updateMulticastGroups(t->first,t->second);
+					if (nwc->broadcastEnabled)
+						_node->multicastSubscribe(nwid,0xffffffffffffULL,0);
+					else _node->multicastUnsubscribe(nwid,0xffffffffffffULL,0);
+				}
+				break;
+			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
+			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
+				if (t != _taps.end()) {
+					delete t->second;
+					_taps.erase(t);
+					_tapAssignedIps.erase(nwid);
+				}
+				break;
+		}
 		return 0;
 	}
 
@@ -466,8 +547,15 @@ public:
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
-		fprintf(stderr,"VIRTUAL NETWORK FRAME from %.16llx : %.12llx -> %.12llx %.4x %u bytes\n",nwid,sourceMac,destMac,etherType,len);
-		fflush(stderr);
+		Mutex::Lock _l(_taps_m);
+		std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.find(nwid));
+		if (t != _taps.end())
+			t->second->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
+	}
+
+	inline void tapFrameHandler(uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	{
+		_node->processVirtualNetworkFrame(OSUtils::now(),nwid,from.toInt(),to.toInt(),etherType,vlanId,data,len,&_nextBackgroundTaskDeadline);
 	}
 
 	inline void onHttpRequestToServer(HttpConnection *htc)
@@ -539,6 +627,17 @@ private:
 		return p;
 	}
 
+	void _updateMulticastGroups(uint64_t nwid,EthernetTap *tap)
+	{
+		// assumes _taps_m is locked
+		std::vector<MulticastGroup> added,removed;
+		tap->scanMulticastGroups(added,removed);
+		for(std::vector<MulticastGroup>::iterator m(added.begin());m!=added.end();++m)
+			_node->multicastSubscribe(nwid,m->mac().toInt(),m->adi());
+		for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
+			_node->multicastUnsubscribe(nwid,m->mac().toInt(),m->adi());
+	}
+
 	const std::string _homePath;
 	Phy<OneImpl *> _phy;
 	NetworkConfigMaster *_master;
@@ -552,6 +651,7 @@ private:
 	uint64_t _nextBackgroundTaskDeadline;
 
 	std::map< uint64_t,EthernetTap * > _taps;
+	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
 	Mutex _taps_m;
 
 	std::map< PhySocket *,HttpConnection > _httpConnections; // no mutex for this since it's done in the main loop thread only
@@ -576,6 +676,9 @@ static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct so
 { return reinterpret_cast<OneImpl *>(uptr)->nodeWirePacketSendFunction(addr,desperation,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
+
+static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+{ reinterpret_cast<OneImpl *>(uptr)->tapFrameHandler(nwid,from,to,etherType,vlanId,data,len); }
 
 static int ShttpOnMessageBegin(http_parser *parser)
 {

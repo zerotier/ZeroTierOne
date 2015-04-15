@@ -112,7 +112,7 @@ public:
 	virtual std::string fatalErrorMessage() const = 0;
 
 	/**
-	 * @return System device name corresponding with a given ZeroTier network ID
+	 * @return System device name corresponding with a given ZeroTier network ID or empty string if not opened yet or network ID not found
 	 */
 	virtual std::string portDeviceName(uint64_t nwid) const = 0;
 

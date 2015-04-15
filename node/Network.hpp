@@ -348,7 +348,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _id;
 	MAC _mac; // local MAC address
-	volatile bool _enabled;
+	bool _enabled;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
 	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
