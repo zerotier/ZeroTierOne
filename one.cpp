@@ -63,6 +63,7 @@
 #include "node/Utils.hpp"
 #include "node/NetworkController.hpp"
 #include "osdep/OSUtils.hpp"
+#include "osdep/Http.hpp"
 #include "service/OneService.hpp"
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 #include "controller/SqliteNetworkController.hpp"
@@ -79,12 +80,229 @@ static OneService *volatile zt1Service = (OneService *)0;
 /* zerotier-cli personality                                                 */
 /****************************************************************************/
 
+static void cliPrintHelp(const char *pn,FILE *out)
+{
+	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	fprintf(out,"Usage: %s [-switches] <command/path> [<args>]"ZT_EOL_S""ZT_EOL_S,pn);
+	fprintf(out,"Available switches:"ZT_EOL_S);
+	fprintf(out,"  -h                 - Display this help"ZT_EOL_S);
+	fprintf(out,"  -v                 - Show version"ZT_EOL_S);
+	fprintf(out,"  -j                 - Display full raw JSON output"ZT_EOL_S);
+	fprintf(out,"  -D<path>           - ZeroTier home path for parameter auto-detect"ZT_EOL_S);
+	fprintf(out,"  -p<port>           - HTTP port (default: auto)"ZT_EOL_S);
+	fprintf(out,"  -T<token>          - Authentication token (default: auto)"ZT_EOL_S);
+	fprintf(out,"  -H<ip>             - HTTP IP address (default: 127.0.0.1)"ZT_EOL_S""ZT_EOL_S);
+	fprintf(out,"Available commands:"ZT_EOL_S);
+	fprintf(out,"  info               - Display status info"ZT_EOL_S);
+	fprintf(out,"  listpeers          - List all peers"ZT_EOL_S);
+	fprintf(out,"  listnetworks       - List all networks"ZT_EOL_S);
+	fprintf(out,"  join <network>     - Join a network"ZT_EOL_S);
+	fprintf(out,"  leave <network>    - Leave a network"ZT_EOL_S);
+}
+
+static std::string cliFixJsonCRs(const std::string &s)
+{
+	std::string r;
+	for(std::string::const_iterator c(s.begin());c!=s.end();++c) {
+		if (*c == '\n')
+			r.append(ZT_EOL_S);
+		else r.push_back(*c);
+	}
+	return r;
+}
+
 #ifdef __WINDOWS__
 static int cli(int argc, _TCHAR* argv[])
 #else
 static int cli(int argc,char **argv)
 #endif
 {
+	unsigned int port = 0;
+	std::string homeDir;
+	std::string command;
+	std::string arg1;
+	std::string authToken;
+	std::string ip("127.0.0.1");
+	bool json = false;
+	for(int i=1;i<argc;++i) {
+		if (argv[i][0] == '-') {
+			switch(argv[i][1]) {
+
+				case 'q': // ignore -q used to invoke this personality
+					if (argv[i][2]) {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+
+				case 'j':
+					if (argv[i][2]) {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					json = true;
+					break;
+
+				case 'p': // port for HTTP
+					port = Utils::strToUInt(argv[i] + 2);
+					if ((port > 0xffff)||(port == 0)) {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+
+				case 'D': // Home path
+					if (argv[i][2]) {
+						homeDir = argv[i] + 2;
+					} else {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+
+				case 'H': // HTTP IP
+					if (argv[i][2]) {
+						ip = argv[i] + 2;
+					} else {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+
+				case 'T': // Override root topology
+					if (argv[i][2]) {
+						authToken = argv[i] + 2;
+					} else {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					break;
+
+				case 'v': // Display version
+					if (argv[i][2]) {
+						cliPrintHelp(argv[0],stdout);
+						return 1;
+					}
+					printf("%d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					return 0;
+
+				case 'h':
+				case '?':
+				default:
+					cliPrintHelp(argv[0],stdout);
+					return 0;
+			}
+		} else {
+			if (command.length())
+				arg1 = argv[i];
+			else command = argv[i];
+		}
+	}
+	if (!homeDir.length())
+		homeDir = OneService::platformDefaultHomePath();
+
+	if ((!port)||(!authToken.length())) {
+		if (!homeDir.length()) {
+			fprintf(stderr,"%s: missing port or authentication token and no home directory specified to auto-detect"ZT_EOL_S,argv[0]);
+			return 2;
+		}
+
+		if (!port) {
+			std::string portStr;
+			OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),portStr);
+			port = Utils::strToUInt(portStr.c_str());
+			if ((port == 0)||(port > 0xffff)) {
+				fprintf(stderr,"%s: missing port and zerotier-one.port not found in %s"ZT_EOL_S,argv[0],homeDir.c_str());
+				return 2;
+			}
+		}
+
+		if (!authToken.length()) {
+			OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),authToken);
+			if (!authToken.length()) {
+				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s"ZT_EOL_S,argv[0],homeDir.c_str());
+				return 2;
+			}
+		}
+	}
+
+	InetAddress addr;
+	{
+		char addrtmp[256];
+		Utils::snprintf(addrtmp,sizeof(addrtmp),"%s/%u",ip.c_str(),port);
+		addr = InetAddress(addrtmp);
+	}
+
+	std::map<std::string,std::string> requestHeaders;
+	std::map<std::string,std::string> responseHeaders;
+	std::string responseBody;
+
+	requestHeaders["X-ZT1-Auth"] = authToken;
+
+	if ((command == "info")||(command == "status")) {
+		unsigned int scode = Http::GET(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			"/status",
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+				return 0;
+			} else {
+			}
+		} else {
+			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "listpeers") {
+		unsigned int scode = Http::GET(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			"/peer",
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+				return 0;
+			} else {
+			}
+		} else {
+			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "listnetworks") {
+		unsigned int scode = Http::GET(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			"/network",
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+				return 0;
+			} else {
+			}
+		} else {
+			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if (command == "join") {
+	} else if (command == "leave") {
+	} else {
+		cliPrintHelp(argv[0],stderr);
+		return 0;
+	}
 }
 
 /****************************************************************************/
@@ -93,6 +311,8 @@ static int cli(int argc,char **argv)
 
 static void idtoolPrintHelp(FILE *out,const char *pn)
 {
+	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
 	fprintf(out,"Usage: %s <command> [<args>]"ZT_EOL_S""ZT_EOL_S"Commands:"ZT_EOL_S,pn);
 	fprintf(out,"  generate [<identity.secret>] [<identity.public>]"ZT_EOL_S);
 	fprintf(out,"  validate <identity.secret/public>"ZT_EOL_S);
@@ -445,6 +665,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif // __UNIX_LIKE__
 	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
+	fprintf(out,"  -q                - Query API (zerotier-cli)"ZT_EOL_S);
 #ifdef __WINDOWS__
 	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
@@ -496,6 +717,8 @@ int main(int argc,char **argv)
 
 	if ((strstr(argv[0],"zerotier-idtool"))||(strstr(argv[0],"ZEROTIER-IDTOOL")))
 		return idtool(argc,argv);
+	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
+		return cli(argc,argv);
 
 	std::string overrideRootTopology;
 	std::string homeDir;
@@ -540,6 +763,12 @@ int main(int argc,char **argv)
 						printHelp(argv[0],stdout);
 						return 0;
 					} else return idtool(argc,argv);
+
+				case 'q': // Invoke cli personality
+					if (argv[i][2]) {
+						printHelp(argv[0],stdout);
+						return 0;
+					} else return cli(argc,argv);
 
 #ifdef __WINDOWS__
 				case 'C': // Run from command line instead of as Windows service

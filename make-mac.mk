@@ -56,6 +56,7 @@ one:	$(OBJS) one.o
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
+	ln -sf zerotier-one zerotier-cli
 
 selftest: $(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
