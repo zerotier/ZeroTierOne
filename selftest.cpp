@@ -25,8 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#define ZT_TEST_PHY
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,9 +53,8 @@
 #include "node/Node.hpp"
 
 #include "osdep/OSUtils.hpp"
-#ifdef ZT_TEST_PHY
 #include "osdep/Phy.hpp"
-#endif
+#include "osdep/Http.hpp"
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 #include "controller/SqliteNetworkController.hpp"
@@ -581,7 +578,6 @@ static int testOther()
 	return 0;
 }
 
-#ifdef ZT_TEST_PHY
 #define ZT_TEST_PHY_NUM_UDP_PACKETS 10000
 #define ZT_TEST_PHY_UDP_PACKET_SIZE 1000
 #define ZT_TEST_PHY_NUM_VALID_TCP_CONNECTS 10
@@ -641,11 +637,8 @@ struct TestPhyHandlers
 		}
 	}
 };
-#endif // ZT_TEST_PHY
-
 static int testPhy()
 {
-#ifdef ZT_TEST_PHY
 	char udpTestPayload[ZT_TEST_PHY_UDP_PACKET_SIZE];
 	memset(udpTestPayload,0xff,sizeof(udpTestPayload));
 
@@ -720,11 +713,11 @@ static int testPhy()
 	} else {
 		std::cout << "got " << phyTestTcpConnectSuccessCount << " connect successes, " << phyTestTcpConnectFailCount << " failures, and " << phyTestTcpByteCount << " bytes, OK" << std::endl;
 	}
-#endif // ZT_TEST_PHY
+
 	return 0;
 }
 
-static int testSqliteNetconfMaster()
+static int testSqliteNetworkController()
 {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 	try {
@@ -742,6 +735,37 @@ static int testSqliteNetconfMaster()
 		return -1;
 	}
 #endif // ZT_ENABLE_NETWORK_CONTROLLER
+	return 0;
+}
+
+static int testHttp()
+{
+	std::map<std::string,std::string> requestHeaders,responseHeaders;
+	std::string responseBody;
+
+	InetAddress downloadZerotierDotCom("142.4.214.72/80");
+
+	std::cout << "[http] GET http://download.zerotier.com/dev/1k @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
+	requestHeaders["Host"] = "download.zerotier.com";
+	unsigned int sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/1k",requestHeaders,responseHeaders,responseBody);
+	std::cout << sc << " " << responseBody.length() << " bytes ";
+	if (sc == 0)
+		std::cout << "ERROR: " << responseBody << std::endl;
+	else std::cout << "DONE" << std::endl;
+
+	std::cout << "[http] GET http://download.zerotier.com/dev/4m @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
+	requestHeaders["Host"] = "download.zerotier.com";
+	sc = Http::GET(1024 * 1024 * 16,60000,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
+	std::cout << sc << " " << responseBody.length() << " bytes ";
+	if (sc == 0)
+		std::cout << "ERROR: " << responseBody << std::endl;
+	else std::cout << "DONE" << std::endl;
+
+	downloadZerotierDotCom = InetAddress("1.0.0.1/1234");
+	std::cout << "[http] GET @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
+	sc = Http::GET(1024 * 1024 * 16,2500,reinterpret_cast<const struct sockaddr *>(&downloadZerotierDotCom),"/dev/4m",requestHeaders,responseHeaders,responseBody);
+	std::cout << sc << " (should be 0, time out)" << std::endl;
+
 	return 0;
 }
 
@@ -795,7 +819,8 @@ int main(int argc,char **argv)
 	srand((unsigned int)time(0));
 
 	r |= testPhy();
-	r |= testSqliteNetconfMaster();
+	r |= testHttp();
+	r |= testSqliteNetworkController();
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();

@@ -76,6 +76,18 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 /****************************************************************************/
+/* zerotier-cli personality                                                 */
+/****************************************************************************/
+
+#ifdef __WINDOWS__
+static int cli(int argc, _TCHAR* argv[])
+#else
+static int cli(int argc,char **argv)
+#endif
+{
+}
+
+/****************************************************************************/
 /* zerotier-idtool personality                                              */
 /****************************************************************************/
 
@@ -107,9 +119,9 @@ static Identity getIdFromArg(char *arg)
 }
 
 #ifdef __WINDOWS__
-int idtool(int argc, _TCHAR* argv[])
+static int idtool(int argc, _TCHAR* argv[])
 #else
-int idtool(int argc,char **argv)
+static int idtool(int argc,char **argv)
 #endif
 {
 	if (argc < 2) {

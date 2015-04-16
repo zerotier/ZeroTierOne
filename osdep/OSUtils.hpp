@@ -220,6 +220,15 @@ public:
 	 * @return True if entire file was successfully written
 	 */
 	static inline bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
+
+	/**
+	 * @param c ASCII character to convert
+	 * @return Lower case ASCII character or unchanged if not a letter
+	 */
+	static inline char toLower(char c) throw() { return (char)OSUtils::TOLOWER_TABLE[(unsigned long)c]; }
+
+private:
+	static const unsigned char TOLOWER_TABLE[256];
 };
 
 } // namespace ZeroTier

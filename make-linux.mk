@@ -76,7 +76,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-one zerotier-idtool zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

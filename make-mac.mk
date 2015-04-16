@@ -75,7 +75,7 @@ selftest: $(OBJS) selftest.o
 #	$(CODESIGN) -vvv "build-ZeroTierUI-release/ZeroTier One.app"
 
 clean:
-	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-one zerotier-idtool zerotier-selftest ZeroTierOneInstaller-*
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-selftest ZeroTierOneInstaller-*
 
 # For our use -- builds official signed binary, packages in installer and download DMG
 official: FORCE

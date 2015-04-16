@@ -443,7 +443,7 @@ public:
 #if defined(_WIN32) || defined(_WIN64)
 		{
 			BOOL f;
-			f = TRUE; ::setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f));
+			if (remoteAddress->sa_family == AF_INET6) { f = TRUE; ::setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(const char *)&f,sizeof(f)); }
 			f = TRUE; ::setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(const char *)&f,sizeof(f));
 			f = (_noDelay ? TRUE : FALSE); setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f));
 			u_long iMode=1;
@@ -452,7 +452,7 @@ public:
 #else
 		{
 			int f;
-			f = 1; ::setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
+			if (remoteAddress->sa_family == AF_INET6) { f = 1; ::setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f)); }
 			f = 1; ::setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
 			f = (_noDelay ? 1 : 0); setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&f,sizeof(f));
 			fcntl(s,F_SETFL,O_NONBLOCK);
@@ -621,9 +621,9 @@ public:
 
 				case ZT_PHY_SOCKET_TCP_OUT_PENDING:
 #if defined(_WIN32) || defined(_WIN64)
-					if (FD_ISSET(s->sock,&efds))
+					if (FD_ISSET(s->sock,&efds)) {
 						this->close((PhySocket *)&(*s),true);
-					else // ... if
+					} else // ... if
 #endif
 					if (FD_ISSET(s->sock,&wfds)) {
 						socklen_t slen = sizeof(ss);
