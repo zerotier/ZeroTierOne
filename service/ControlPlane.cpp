@@ -313,37 +313,33 @@ unsigned int ControlPlane::handleRequest(
 				responseBody = "{}"; // TODO
 				scode = 200;
 			} else if (ps[0] == "network") {
-				if ((ps.size() > 1)&&(ps[1] == "controller")) {
-					// TODO
-				} else {
-					ZT1_VirtualNetworkList *nws = _node->networks();
-					if (nws) {
-						if (ps.size() == 1) {
-							// Return [array] of all networks
-							responseContentType = "application/json";
-							responseBody = "[";
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								if (i > 0)
-									responseBody.push_back(',');
+				ZT1_VirtualNetworkList *nws = _node->networks();
+				if (nws) {
+					if (ps.size() == 1) {
+						// Return [array] of all networks
+						responseContentType = "application/json";
+						responseBody = "[";
+						for(unsigned long i=0;i<nws->networkCount;++i) {
+							if (i > 0)
+								responseBody.push_back(',');
+							_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+						}
+						responseBody.push_back(']');
+						scode = 200;
+					} else if (ps.size() == 2) {
+						// Return a single network by ID or 404 if not found
+						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
+						for(unsigned long i=0;i<nws->networkCount;++i) {
+							if (nws->networks[i].nwid == wantnw) {
+								responseContentType = "application/json";
 								_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								scode = 200;
+								break;
 							}
-							responseBody.push_back(']');
-							scode = 200;
-						} else if (ps.size() == 2) {
-							// Return a single network by ID or 404 if not found
-							uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								if (nws->networks[i].nwid == wantnw) {
-									responseContentType = "application/json";
-									_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
-									scode = 200;
-									break;
-								}
-							}
-						} // else 404
-						_node->freeQueryResult((void *)nws);
-					} else scode = 500;
-				}
+						}
+					} // else 404
+					_node->freeQueryResult((void *)nws);
+				} else scode = 500;
 			} else if (ps[0] == "peer") {
 				ZT1_PeerList *pl = _node->peers();
 				if (pl) {
