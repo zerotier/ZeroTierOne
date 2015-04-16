@@ -298,7 +298,54 @@ static int cli(int argc,char **argv)
 			return 1;
 		}
 	} else if (command == "join") {
+		if (arg1.length() != 16) {
+			cliPrintHelp(argv[0],stderr);
+			return 2;
+		}
+		unsigned int scode = Http::POST(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			(std::string("/network/") + arg1).c_str(),
+			requestHeaders,
+			"",
+			0,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+			} else {
+			}
+			return 0;
+		} else {
+			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
 	} else if (command == "leave") {
+		if (arg1.length() != 16) {
+			cliPrintHelp(argv[0],stderr);
+			return 2;
+		}
+		unsigned int scode = Http::DELETE(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			(std::string("/network/") + arg1).c_str(),
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			if (json) {
+				printf("%s",cliFixJsonCRs(responseBody).c_str());
+			} else {
+				printf("200 leave OK"ZT_EOL_S);
+			}
+			return 0;
+		} else {
+			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
 	} else {
 		cliPrintHelp(argv[0],stderr);
 		return 0;

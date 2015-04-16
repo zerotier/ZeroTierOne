@@ -83,6 +83,35 @@ public:
 	}
 
 	/**
+	 * Make HTTP DELETE request
+	 *
+	 * The caller must set all headers, including Host.
+	 *
+	 * @return HTTP status code or 0 on error (responseBody will contain error message)
+	 */
+	static inline unsigned int DELETE(
+		unsigned long maxResponseSize,
+		unsigned long timeout,
+		const struct sockaddr *remoteAddress,
+		const char *path,
+		const std::map<std::string,std::string> &requestHeaders,
+		std::map<std::string,std::string> &responseHeaders,
+		std::string &responseBody)
+	{
+		return _do(
+			"DELETE",
+			maxResponseSize,
+			timeout,
+			remoteAddress,
+			path,
+			requestHeaders,
+			(const void *)0,
+			0,
+			responseHeaders,
+			responseBody);
+	}
+
+	/**
 	 * Make HTTP POST request
 	 *
 	 * It is the responsibility of the caller to set all headers. With POST, the
