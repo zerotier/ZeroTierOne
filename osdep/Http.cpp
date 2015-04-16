@@ -209,7 +209,7 @@ unsigned int Http::_do(
 		handler.lastActivity = OSUtils::now();
 
 		try {
-			handler.writeSize = Utils::snprintf(handler.writeBuf,sizeof(handler.writeBuf),"GET %s HTTP/1.1\r\n",path);
+			handler.writeSize = Utils::snprintf(handler.writeBuf,sizeof(handler.writeBuf),"%s %s HTTP/1.1\r\n",method,path);
 			for(std::map<std::string,std::string>::const_iterator h(requestHeaders.begin());h!=requestHeaders.end();++h)
 				handler.writeSize += Utils::snprintf(handler.writeBuf + handler.writeSize,sizeof(handler.writeBuf) - handler.writeSize,"%s: %s\r\n",h->first.c_str(),h->second.c_str());
 			handler.writeSize += Utils::snprintf(handler.writeBuf + handler.writeSize,sizeof(handler.writeBuf) - handler.writeSize,"\r\n");

@@ -408,6 +408,59 @@ static int cli(int argc,char **argv)
 				printf("%s",cliFixJsonCRs(responseBody).c_str());
 				return 0;
 			} else {
+				printf("200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>"ZT_EOL_S);
+				json_value *j = json_parse(responseBody.c_str(),responseBody.length());
+				if (j) {
+					if (j->type == json_array) {
+						for(unsigned int p=0;p<j->u.array.length;++p) {
+							json_value *jn = j->u.array.values[p];
+							if (jn->type == json_object) {
+								const char *nwid = (const char *)0;
+								const char *name = "";
+								const char *mac = (const char *)0;
+								const char *status = (const char *)0;
+								const char *type = (const char *)0;
+								const char *portDeviceName = "";
+								std::string ips;
+								for(unsigned int k=0;k<jn->u.object.length;++k) {
+									if ((!strcmp(jn->u.object.values[k].name,"nwid"))&&(jn->u.object.values[k].value->type == json_string))
+										nwid = jn->u.object.values[k].value->u.string.ptr;
+									else if ((!strcmp(jn->u.object.values[k].name,"name"))&&(jn->u.object.values[k].value->type == json_string))
+										name = jn->u.object.values[k].value->u.string.ptr;
+									else if ((!strcmp(jn->u.object.values[k].name,"mac"))&&(jn->u.object.values[k].value->type == json_string))
+										mac = jn->u.object.values[k].value->u.string.ptr;
+									else if ((!strcmp(jn->u.object.values[k].name,"status"))&&(jn->u.object.values[k].value->type == json_string))
+										status = jn->u.object.values[k].value->u.string.ptr;
+									else if ((!strcmp(jn->u.object.values[k].name,"type"))&&(jn->u.object.values[k].value->type == json_string))
+										type = jn->u.object.values[k].value->u.string.ptr;
+									else if ((!strcmp(jn->u.object.values[k].name,"portDeviceName"))&&(jn->u.object.values[k].value->type == json_string))
+										portDeviceName = jn->u.object.values[k].value->u.string.ptr;
+									else if ((!strcmp(jn->u.object.values[k].name,"assignedAddresses"))&&(jn->u.object.values[k].value->type == json_array)) {
+										for(unsigned int a=0;a<jn->u.object.values[k].value->u.array.length;++a) {
+											json_value *aa = jn->u.object.values[k].value->u.array.values[a];
+											if (aa->type == json_string) {
+												if (ips.length())
+													ips.push_back(',');
+												ips.append(aa->u.string.ptr);
+											}
+										}
+									}
+								}
+								if ((nwid)&&(mac)&&(status)&&(type)) {
+									printf("200 listnetworks %s %s %s %s %s %s %s"ZT_EOL_S,
+										nwid,
+										(((name)&&(name[0])) ? name : "-"),
+										mac,
+										status,
+										type,
+										(((portDeviceName)&&(portDeviceName[0])) ? portDeviceName : "-"),
+										((ips.length() > 0) ? ips.c_str() : "-"));
+								}
+							}
+						}
+					}
+					json_value_free(j);
+				}
 			}
 		} else {
 			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
@@ -418,20 +471,23 @@ static int cli(int argc,char **argv)
 			cliPrintHelp(argv[0],stderr);
 			return 2;
 		}
+		requestHeaders["Content-Type"] = "application/json";
+		requestHeaders["Content-Length"] = "2";
 		unsigned int scode = Http::POST(
 			1024 * 1024 * 16,
 			60000,
 			(const struct sockaddr *)&addr,
 			(std::string("/network/") + arg1).c_str(),
 			requestHeaders,
-			"",
-			0,
+			"{}",
+			2,
 			responseHeaders,
 			responseBody);
 		if (scode == 200) {
 			if (json) {
 				printf("%s",cliFixJsonCRs(responseBody).c_str());
 			} else {
+				printf("200 join OK"ZT_EOL_S);
 			}
 			return 0;
 		} else {

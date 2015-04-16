@@ -438,26 +438,22 @@ unsigned int ControlPlane::handleRequest(
 			if (ps[0] == "config") {
 				// TODO
 			} else if (ps[0] == "network") {
-				if ((ps.size() > 1)&&(ps[1] == "controller")) {
-					// TODO
-				} else {
-					if (ps.size() == 2) {
-						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-						_node->join(wantnw); // does nothing if we are a member
-						ZT1_VirtualNetworkList *nws = _node->networks();
-						if (nws) {
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								if (nws->networks[i].nwid == wantnw) {
-									responseContentType = "application/json";
-									_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
-									responseBody.push_back('\n');
-									scode = 200;
-									break;
-								}
+				if (ps.size() == 2) {
+					uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
+					_node->join(wantnw); // does nothing if we are a member
+					ZT1_VirtualNetworkList *nws = _node->networks();
+					if (nws) {
+						for(unsigned long i=0;i<nws->networkCount;++i) {
+							if (nws->networks[i].nwid == wantnw) {
+								responseContentType = "application/json";
+								_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								responseBody.push_back('\n');
+								scode = 200;
+								break;
 							}
-							_node->freeQueryResult((void *)nws);
-						} else scode = 500;
-					} // else 404
+						}
+						_node->freeQueryResult((void *)nws);
+					} else scode = 500;
 				}
 			} // else 404
 		} else scode = 401; // isAuth == false
@@ -468,26 +464,22 @@ unsigned int ControlPlane::handleRequest(
 			if (ps[0] == "config") {
 				// TODO
 			} else if (ps[0] == "network") {
-				if ((ps.size() > 1)&&(ps[1] == "controller")) {
-					// TODO
-				} else {
-					ZT1_VirtualNetworkList *nws = _node->networks();
-					if (nws) {
-						if (ps.size() == 2) {
-							uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-							for(unsigned long i=0;i<nws->networkCount;++i) {
-								if (nws->networks[i].nwid == wantnw) {
-									_node->leave(wantnw);
-									responseBody = "true";
-									responseContentType = "application/json";
-									scode = 200;
-									break;
-								}
+				ZT1_VirtualNetworkList *nws = _node->networks();
+				if (nws) {
+					if (ps.size() == 2) {
+						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
+						for(unsigned long i=0;i<nws->networkCount;++i) {
+							if (nws->networks[i].nwid == wantnw) {
+								_node->leave(wantnw);
+								responseBody = "true";
+								responseContentType = "application/json";
+								scode = 200;
+								break;
 							}
-						} // else 404
-						_node->freeQueryResult((void *)nws);
-					} else scode = 500;
-				}
+						}
+					} // else 404
+					_node->freeQueryResult((void *)nws);
+				} else scode = 500;
 			} // else 404
 
 		} else {
