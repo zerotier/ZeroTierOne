@@ -49,11 +49,12 @@ public:
 	class DBC;
 	friend class SqliteNetworkController::DBC;
 
-	SqliteNetworkController(const Identity &signingId,const char *dbPath);
+	SqliteNetworkController(const char *dbPath);
 	virtual ~SqliteNetworkController();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
+		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,
@@ -61,7 +62,6 @@ public:
 		Dictionary &netconf);
 
 private:
-	Identity _signingId;
 	std::string _dbPath;
 	sqlite3 *_db;
 

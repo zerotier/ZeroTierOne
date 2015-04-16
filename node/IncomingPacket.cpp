@@ -674,7 +674,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 
 		if (RR->localNetworkController) {
 			Dictionary netconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,peer->identity(),nwid,metaData,haveRevision,netconf)) {
+			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,haveRevision,netconf)) {
 				case NetworkController::NETCONF_QUERY_OK: {
 					const std::string netconfStr(netconf.toString());
 					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit

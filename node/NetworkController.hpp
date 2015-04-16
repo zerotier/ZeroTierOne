@@ -71,6 +71,7 @@ public:
 	 * to indicate the error.
 	 *
 	 * @param fromAddr Originating wire address or null address if packet is not direct (or from self)
+	 * @param signingId Identity that should be used to sign results -- must include private key
 	 * @param identity Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
@@ -80,6 +81,7 @@ public:
 	 */
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
+		const Identity &signingId,
 		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,

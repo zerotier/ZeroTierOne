@@ -143,22 +143,6 @@ public:
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
 
-		if (*hp) {
-			std::vector<std::string> hpsp(Utils::split(hp,ZT_PATH_SEPARATOR_S,"",""));
-			std::string ptmp;
-			if (*hp == '/')
-				ptmp.push_back('/');
-			for(std::vector<std::string>::iterator pi(hpsp.begin());pi!=hpsp.end();++pi) {
-				if (ptmp.length() > 0)
-					ptmp.push_back(ZT_PATH_SEPARATOR);
-				ptmp.append(*pi);
-				if ((*pi != ".")&&(*pi != "..")) {
-					if (!OSUtils::mkdir(ptmp))
-						throw std::runtime_error("home path does not exist, and could not create");
-				}
-			}
-		}
-
 		::memset((void *)&in4,0,sizeof(in4));
 		in4.sin_family = AF_INET;
 		in4.sin_port = Utils::hton((uint16_t)port);

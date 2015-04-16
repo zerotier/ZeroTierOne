@@ -69,10 +69,11 @@
 
 #define ZT1_AUTHTOKEN_SECRET_PATH "authtoken.secret"
 #define ZT1_PID_PATH "zerotier-one.pid"
+#define ZT1_CONTROLLER_DB_PATH "controller.db"
 
 using namespace ZeroTier;
 
-static OneService *zt1Service = (OneService *)0;
+static OneService *volatile zt1Service = (OneService *)0;
 
 /****************************************************************************/
 /* zerotier-cli personality                                                 */
@@ -437,29 +438,11 @@ static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
-
-#ifdef ZT_AUTO_UPDATE
-	fprintf(out,"Auto-update enabled build, will update from URL:"ZT_EOL_S);
-	fprintf(out,"  %s"ZT_EOL_S,ZT_DEFAULTS.updateLatestNfoURL.c_str());
-	fprintf(out,"Update authentication signing authorities: "ZT_EOL_S);
-	int no = 0;
-	for(std::map< Address,Identity >::const_iterator sa(ZT_DEFAULTS.updateAuthorities.begin());sa!=ZT_DEFAULTS.updateAuthorities.end();++sa) {
-		if (no == 0)
-			fprintf(out,"  %s",sa->first.toString().c_str());
-		else fprintf(out,", %s",sa->first.toString().c_str());
-		if (++no == 6) {
-			fprintf(out,ZT_EOL_S);
-			no = 0;
-		}
-	}
-	fprintf(out,ZT_EOL_S""ZT_EOL_S);
-#endif // ZT_AUTO_UPDATE
-
 	fprintf(out,"Usage: %s [-switches] [home directory] [-q <query>]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Port for UDP (default: 9993)"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
@@ -643,8 +626,24 @@ int main(int argc,char **argv)
 
 	if (!homeDir.length())
 		homeDir = OneService::platformDefaultHomePath();
-
-	OSUtils::mkdir(homeDir.c_str());
+	if (!homeDir.length()) {
+		fprintf(stderr,"%s: no home path specified and no platform default available"ZT_EOL_S,argv[0]);
+		return 1;
+	} else {
+		std::vector<std::string> hpsp(Utils::split(homeDir.c_str(),ZT_PATH_SEPARATOR_S,"",""));
+		std::string ptmp;
+		if (homeDir[0] == ZT_PATH_SEPARATOR)
+			ptmp.push_back(ZT_PATH_SEPARATOR);
+		for(std::vector<std::string>::iterator pi(hpsp.begin());pi!=hpsp.end();++pi) {
+			if (ptmp.length() > 0)
+				ptmp.push_back(ZT_PATH_SEPARATOR);
+			ptmp.append(*pi);
+			if ((*pi != ".")&&(*pi != "..")) {
+				if (!OSUtils::mkdir(ptmp))
+					throw std::runtime_error("home path does not exist, and could not create");
+			}
+		}
+	}
 
 	std::string authToken;
 	{
@@ -713,4 +712,57 @@ int main(int argc,char **argv)
 	}
 #endif // __WINDOWS__
 
+	NetworkController *controller = (NetworkController *)0;
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	try {
+		controller = new SqliteNetworkController((homeDir + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str());
+	} catch (std::exception &exc) {
+		fprintf(stderr,"%s: failure initializing SqliteNetworkController: %s"ZT_EOL_S,exc.what());
+		return 1;
+	} catch ( ... ) {
+		fprintf(stderr,"%s: failure initializing SqliteNetworkController: unknown exception"ZT_EOL_S);
+		return 1;
+	}
+#endif // ZT_ENABLE_NETWORK_CONTROLLER
+
+	unsigned int returnValue = 0;
+
+	try {
+		for(;;) {
+			zt1Service = OneService::newInstance(homeDir.c_str(),port,controller,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+			switch(zt1Service->run()) {
+				case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
+				case OneService::ONE_NORMAL_TERMINATION:
+					break;
+				case OneService::ONE_UNRECOVERABLE_ERROR:
+					fprintf(stderr,"%s: fatal error: %s"ZT_EOL_S,argv[0],zt1Service->fatalErrorMessage().c_str());
+					returnValue = 1;
+					break;
+				case OneService::ONE_IDENTITY_COLLISION: {
+					delete zt1Service;
+					zt1Service = (OneService *)0;
+					std::string oldid;
+					OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),oldid);
+					if (oldid.length()) {
+						OSUtils::writeFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret.saved_after_collision").c_str(),oldid);
+						OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
+						OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
+					}
+				}	continue; // restart!
+			}
+			break; // terminate loop -- normally we don't keep restarting
+		}
+	} catch (std::exception &exc) {
+		fprintf(stderr,"%s: fatal error: %s"ZT_EOL_S,argv[0],exc.what());
+		returnValue = 1;
+	} catch ( ... ) {
+		fprintf(stderr,"%s: fatal error: unknown exception"ZT_EOL_S,argv[0]);
+		returnValue = 1;
+	}
+
+	delete zt1Service;
+	zt1Service = (OneService *)0;
+	delete controller;
+
+	return returnValue;
 }

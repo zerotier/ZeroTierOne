@@ -53,14 +53,10 @@
 
 namespace ZeroTier {
 
-SqliteNetworkController::SqliteNetworkController(const Identity &signingId,const char *dbPath) :
-	_signingId(signingId),
+SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	_dbPath(dbPath),
 	_db((sqlite3 *)0)
 {
-	if (!_signingId.hasPrivate())
-		throw std::runtime_error("SqliteNetworkController signing identity must have a private key");
-
 	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
 		throw std::runtime_error("SqliteNetworkController cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
@@ -137,12 +133,17 @@ SqliteNetworkController::~SqliteNetworkController()
 	}
 }
 
-NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
+NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
 {
 	Mutex::Lock _l(_lock);
 
 	// Note: we can't reuse prepared statements that return const char * pointers without
 	// making our own copy in e.g. a std::string first.
+
+	if ((!signingId)||(!signingId.hasPrivate())) {
+		netconf["error"] = "signing identity invalid or lacks private key";
+		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+	}
 
 	struct {
 		char id[24];
@@ -449,7 +450,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 		if (network.isPrivate) {
 			CertificateOfMembership com(network.revision,16,nwid,identity.address());
-			if (com.sign(_signingId)) // basically can't fail unless our identity is invalid
+			if (com.sign(signingId)) // basically can't fail unless our identity is invalid
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			else {
 				netconf["error"] = "unable to sign COM";
@@ -457,7 +458,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			}
 		}
 
-		if (!netconf.sign(_signingId)) {
+		if (!netconf.sign(signingId)) {
 			netconf["error"] = "unable to sign netconf dictionary";
 			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}

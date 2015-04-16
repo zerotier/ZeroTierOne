@@ -32,7 +32,7 @@
 
 namespace ZeroTier {
 
-class NetworkConfigMaster;
+class NetworkController;
 
 /**
  * Local service for ZeroTier One as system VPN/NFV provider
@@ -85,7 +85,7 @@ public:
 	static OneService *newInstance(
 		const char *hp,
 		unsigned int port,
-		NetworkConfigMaster *master = (NetworkConfigMaster *)0,
+		NetworkController *master = (NetworkController *)0,
 		const char *overrideRootTopology = (const char *)0);
 
 	virtual ~OneService();

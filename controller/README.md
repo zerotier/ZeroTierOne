@@ -9,13 +9,11 @@ The standard implementation uses SQLite3 with the attached schema. A separate se
 
 By default this code is not built or included in the client. To build on Linux, BSD, or Mac add ZT_ENABLE_NETCONF_MASTER=1 to the make command line. It could be built on Windows as well, but you're on your own there. You'd have to build SQLite3 first, or get a pre-built copy somewhere.
 
-### Running
+### Createing databases
 
-To enable netconf functionality, place a properly initialized SQLite3 database called **netconf.db** into the ZeroTier working directory of the node you wish to serve network configurations and restart it. If that file is present it will be opened and the network configuration master function will be enabled. You will see this in the log file.
+If you execute a network controller enabled build of the ZeroTier One service, a *controller.db* will automatically be created and initialize. You can also create one manually with:
 
-To initialize a database run:
-
-    sqlite3 -init netconf-schema.sql netconf.db
+    sqlite3 -init schema.sql controller.db
 
 Then type '.quit' to exit the SQLite3 command shell.
 
