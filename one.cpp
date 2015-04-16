@@ -522,6 +522,8 @@ static int cli(int argc,char **argv)
 		cliPrintHelp(argv[0],stderr);
 		return 0;
 	}
+
+	return 0;
 }
 
 /****************************************************************************/
