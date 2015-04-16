@@ -68,7 +68,6 @@
 #include "controller/SqliteNetworkController.hpp"
 #endif
 
-#define ZT1_AUTHTOKEN_SECRET_PATH "authtoken.secret"
 #define ZT1_PID_PATH "zerotier-one.pid"
 #define ZT1_CONTROLLER_DB_PATH "controller.db"
 
@@ -642,23 +641,6 @@ int main(int argc,char **argv)
 			}
 		}
 	}
-
-	std::string authToken;
-	{
-		std::string authTokenPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_AUTHTOKEN_SECRET_PATH);
-		if (!OSUtils::readFile(authTokenPath.c_str(),authToken)) {
-			unsigned char foo[24];
-			Utils::getSecureRandom(foo,sizeof(foo));
-			authToken = "";
-			for(unsigned int i=0;i<sizeof(foo);++i)
-				authToken.push_back("abcdefghijklmnopqrstuvwxyz0123456789"[(unsigned long)foo[i] % 36]);
-			if (!OSUtils::writeFile(authTokenPath.c_str(),authToken)) {
-				fprintf(stderr,"%s: cannot create authtoken.secret"ZT_EOL_S,argv[0]);
-				return 1;
-			} else OSUtils::lockDownFile(authTokenPath.c_str(),false);
-		}
-	}
-	authToken = Utils::trim(authToken);
 
 #ifdef __UNIX_LIKE__
 	if (getuid() != 0) {

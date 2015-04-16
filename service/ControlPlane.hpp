@@ -28,11 +28,13 @@
 #ifndef ZT_ONE_CONTROLPLANE_HPP
 #define ZT_ONE_CONTROLPLANE_HPP
 
-#include "../include/ZeroTierOne.h"
-
 #include <string>
 #include <map>
 #include <set>
+
+#include "../include/ZeroTierOne.h"
+
+#include "../node/Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -48,6 +50,15 @@ class ControlPlane
 public:
 	ControlPlane(OneService *svc,Node *n);
 	~ControlPlane();
+
+	/**
+	 * Add an authentication token for API access
+	 */
+	inline void addAuthToken(const char *tok)
+	{
+		Mutex::Lock _l(_authTokens_m);
+		_authTokens.insert(std::string(tok));
+	}
 
 	/**
 	 * Handle HTTP request
@@ -74,6 +85,7 @@ private:
 	OneService *const _svc;
 	Node *const _node;
 	std::set<std::string> _authTokens;
+	Mutex _authTokens_m;
 };
 
 } // namespace ZeroTier

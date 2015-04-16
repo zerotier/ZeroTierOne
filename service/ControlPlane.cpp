@@ -248,7 +248,18 @@ unsigned int ControlPlane::handleRequest(
 		ps.push_back(std::string("index.html"));
 	}
 
-	bool isAuth = true; // TODO: auth tokens
+	bool isAuth = false;
+	{
+		Mutex::Lock _l(_authTokens_m);
+		std::map<std::string,std::string>::const_iterator ah(headers.find("x-zt1-auth"));
+		if ((ah != headers.end())&&(_authTokens.count(ah->second) > 0))
+			isAuth = true;
+		else {
+			ah = urlArgs.find("auth");
+			if ((ah != urlArgs.end())&&(_authTokens.count(ah->second) > 0))
+				isAuth = true;
+		}
+	}
 
 	if (httpMethod == HTTP_GET) {
 

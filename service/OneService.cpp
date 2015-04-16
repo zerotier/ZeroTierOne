@@ -173,6 +173,25 @@ public:
 	virtual ReasonForTermination run()
 	{
 		try {
+			std::string authToken;
+			{
+				std::string authTokenPath(_homePath + ZT_PATH_SEPARATOR_S + "authtoken.secret");
+				if (!OSUtils::readFile(authTokenPath.c_str(),authToken)) {
+					unsigned char foo[24];
+					Utils::getSecureRandom(foo,sizeof(foo));
+					authToken = "";
+					for(unsigned int i=0;i<sizeof(foo);++i)
+						authToken.push_back("abcdefghijklmnopqrstuvwxyz0123456789"[(unsigned long)foo[i] % 36]);
+					if (!OSUtils::writeFile(authTokenPath.c_str(),authToken)) {
+						Mutex::Lock _l(_termReason_m);
+						_termReason = ONE_UNRECOVERABLE_ERROR;
+						_fatalErrorMessage = "authtoken.secret could not be written";
+						return _termReason;
+					} else OSUtils::lockDownFile(authTokenPath.c_str(),false);
+				}
+			}
+			authToken = Utils::trim(authToken);
+
 			_node = new Node(
 				OSUtils::now(),
 				this,
@@ -188,6 +207,7 @@ public:
 				_node->setNetconfMaster((void *)_master);
 
 			_controlPlane = new ControlPlane(this,_node);
+			_controlPlane->addAuthToken(authToken.c_str());
 
 			{	// Remember networks from previous session
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
