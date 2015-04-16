@@ -41,7 +41,7 @@ namespace ZeroTier {
 class RuntimeEnvironment;
 
 /**
- * Interface for network configuration (netconf) master implementations
+ * Interface for network controller implementations
  */
 class NetworkController
 {

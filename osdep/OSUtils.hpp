@@ -219,10 +219,7 @@ public:
 	 * @param s Data to write
 	 * @return True if entire file was successfully written
 	 */
-	static inline bool writeFile(const char *path,const std::string &s)
-	{
-		return writeFile(path,s.data(),(unsigned int)s.length());
-	}
+	static inline bool writeFile(const char *path,const std::string &s) { return writeFile(path,s.data(),(unsigned int)s.length()); }
 };
 
 } // namespace ZeroTier
