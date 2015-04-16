@@ -715,10 +715,10 @@ int main(int argc,char **argv)
 	try {
 		controller = new SqliteNetworkController((homeDir + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str());
 	} catch (std::exception &exc) {
-		fprintf(stderr,"%s: failure initializing SqliteNetworkController: %s"ZT_EOL_S,exc.what());
+		fprintf(stderr,"%s: failure initializing SqliteNetworkController: %s"ZT_EOL_S,argv[0],exc.what());
 		return 1;
 	} catch ( ... ) {
-		fprintf(stderr,"%s: failure initializing SqliteNetworkController: unknown exception"ZT_EOL_S);
+		fprintf(stderr,"%s: failure initializing SqliteNetworkController: unknown exception"ZT_EOL_S,argv[0]);
 		return 1;
 	}
 #endif // ZT_ENABLE_NETWORK_CONTROLLER

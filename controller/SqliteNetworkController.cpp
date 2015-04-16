@@ -41,9 +41,10 @@
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
+#include "../osdep/OSUtils.hpp"
 
 // Include ZT_NETCONF_SCHEMA_SQL constant to init database
-#include "netconf-schema.sql.c"
+#include "schema.sql.c"
 
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
@@ -181,7 +182,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			Identity alreadyKnownIdentity((const char *)sqlite3_column_text(_sGetNodeIdentity,0));
 			if (alreadyKnownIdentity == identity) {
 				char lastSeen[64];
-				Utils::snprintf(lastSeen,sizeof(lastSeen),"%llu",(unsigned long long)Utils::now());
+				Utils::snprintf(lastSeen,sizeof(lastSeen),"%llu",(unsigned long long)OSUtils::now());
 				if (fromAddr) {
 					std::string lastAt(fromAddr.toString());
 					sqlite3_reset(_sUpdateNode);
@@ -207,7 +208,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		if (fromAddr)
 			lastAt = fromAddr.toString();
 		char lastSeen[64];
-		Utils::snprintf(lastSeen,sizeof(lastSeen),"%llu",(unsigned long long)Utils::now());
+		Utils::snprintf(lastSeen,sizeof(lastSeen),"%llu",(unsigned long long)OSUtils::now());
 		sqlite3_reset(_sCreateNode);
 		sqlite3_bind_text(_sCreateNode,1,member.nodeId,10,SQLITE_STATIC);
 		sqlite3_bind_text(_sCreateNode,2,idstr.c_str(),-1,SQLITE_STATIC);
@@ -304,7 +305,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		// Create and sign a new netconf, and save in database to re-use in the future
 
 		char tss[24],rs[24];
-		Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)Utils::now());
+		Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)OSUtils::now());
 		Utils::snprintf(rs,sizeof(rs),"%.16llx",(unsigned long long)network.revision);
 		netconf[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
 		netconf[ZT_NETWORKCONFIG_DICT_KEY_REVISION] = rs;
@@ -458,7 +459,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			}
 		}
 
-		if (!netconf.sign(signingId)) {
+		if (!netconf.sign(signingId,OSUtils::now())) {
 			netconf["error"] = "unable to sign netconf dictionary";
 			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
