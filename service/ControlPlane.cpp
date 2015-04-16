@@ -177,6 +177,8 @@ static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
 	Utils::snprintf(json,sizeof(json),
 		"{"
 		"\"address\": \"%.10llx\","
+		"\"lastUnicastFrame\": %llu,"
+		"\"lastMulticastFrame\": %llu,"
 		"\"versionMajor\": %d,"
 		"\"versionMinor\": %d,"
 		"\"versionRev\": %d,"
@@ -186,6 +188,8 @@ static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
 		"\"paths\": %s"
 		"}",
 		peer->address,
+		peer->lastUnicastFrame,
+		peer->lastMulticastFrame,
 		peer->versionMajor,
 		peer->versionMinor,
 		peer->versionRev,

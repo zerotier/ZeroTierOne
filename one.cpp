@@ -675,16 +675,6 @@ int main(int argc,char **argv)
 			return 0; // forked
 		// else p == 0, so we are daemonized
 	}
-
-	{
-		// Write .pid file to home folder
-		std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_PID_PATH);
-		FILE *pf = fopen(pidPath.c_str(),"w");
-		if (pf) {
-			fprintf(pf,"%ld",(long)getpid());
-			fclose(pf);
-		}
-	}
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
@@ -722,6 +712,18 @@ int main(int argc,char **argv)
 		return 1;
 	}
 #endif // ZT_ENABLE_NETWORK_CONTROLLER
+
+#ifdef __UNIX_LIKE__
+	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_PID_PATH);
+	{
+		// Write .pid file to home folder
+		FILE *pf = fopen(pidPath.c_str(),"w");
+		if (pf) {
+			fprintf(pf,"%ld",(long)getpid());
+			fclose(pf);
+		}
+	}
+#endif // __UNIX_LIKE__
 
 	unsigned int returnValue = 0;
 
@@ -761,6 +763,10 @@ int main(int argc,char **argv)
 	delete zt1Service;
 	zt1Service = (OneService *)0;
 	delete controller;
+
+#ifdef __UNIX_LIKE__
+	OSUtils::rm(pidPath.c_str());
+#endif
 
 	return returnValue;
 }
