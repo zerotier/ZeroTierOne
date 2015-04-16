@@ -61,6 +61,7 @@
 #include "node/Identity.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/Utils.hpp"
+#include "node/NetworkController.hpp"
 #include "osdep/OSUtils.hpp"
 #include "service/OneService.hpp"
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
@@ -110,7 +111,7 @@ static Identity getIdFromArg(char *arg)
 			return id;
 	} else { // identity is to be read from a file
 		std::string idser;
-		if (Utils::readFile(arg,idser)) {
+		if (OSUtils::readFile(arg,idser)) {
 			if (id.fromString(idser))
 				return id;
 		}
@@ -134,13 +135,13 @@ int idtool(int argc,char **argv)
 		id.generate();
 		std::string idser = id.toString(true);
 		if (argc >= 3) {
-			if (!Utils::writeFile(argv[2],idser)) {
+			if (!OSUtils::writeFile(argv[2],idser)) {
 				fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[2]);
 				return 1;
 			} else printf("%s written"ZT_EOL_S,argv[2]);
 			if (argc >= 4) {
 				idser = id.toString(false);
-				if (!Utils::writeFile(argv[3],idser)) {
+				if (!OSUtils::writeFile(argv[3],idser)) {
 					fprintf(stderr,"Error writing to %s"ZT_EOL_S,argv[3]);
 					return 1;
 				} else printf("%s written"ZT_EOL_S,argv[3]);
@@ -193,7 +194,7 @@ int idtool(int argc,char **argv)
 		}
 
 		std::string inf;
-		if (!Utils::readFile(argv[3],inf)) {
+		if (!OSUtils::readFile(argv[3],inf)) {
 			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
 			return 1;
 		}
@@ -212,7 +213,7 @@ int idtool(int argc,char **argv)
 		}
 
 		std::string inf;
-		if (!Utils::readFile(argv[3],inf)) {
+		if (!OSUtils::readFile(argv[3],inf)) {
 			fprintf(stderr,"%s is not readable"ZT_EOL_S,argv[3]);
 			return 1;
 		}
@@ -267,15 +268,12 @@ int idtool(int argc,char **argv)
 #ifdef __UNIX_LIKE__
 static void _sighandlerHup(int sig)
 {
-	Node *n = node;
-	if (n)
-		n->resync();
 }
 static void _sighandlerQuit(int sig)
 {
-	Node *n = node;
-	if (n)
-		n->terminate(Node::NODE_NORMAL_TERMINATION,"terminated by signal");
+	OneService *s = zt1Service;
+	if (s)
+		s->terminate();
 	else exit(0);
 }
 #endif

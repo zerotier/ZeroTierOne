@@ -22,7 +22,6 @@ OBJS=\
 	node/Switch.o \
 	node/Topology.o \
 	node/Utils.o \
-	osdep/HttpClient.o \
 	osdep/OSUtils.o \
 	service/ControlPlane.o \
 	service/OneService.o

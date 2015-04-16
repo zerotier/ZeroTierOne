@@ -129,7 +129,7 @@ struct HttpConnection
 class OneServiceImpl : public OneService
 {
 public:
-	OneServiceImpl(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) :
+	OneServiceImpl(const char *hp,unsigned int port,NetworkController *master,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
 		_phy(this,true),
 		_master(master),
@@ -613,7 +613,7 @@ private:
 
 	const std::string _homePath;
 	Phy<OneServiceImpl *> _phy;
-	NetworkConfigMaster *_master;
+	NetworkController *_master;
 	std::string _overrideRootTopology;
 	Node *_node;
 	PhySocket *_v4UdpSocket;
@@ -772,7 +772,7 @@ std::string OneService::platformDefaultHomePath()
 #endif // __UNIX_LIKE__ or not...
 }
 
-OneService *OneService::newInstance(const char *hp,unsigned int port,NetworkConfigMaster *master,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,master,overrideRootTopology); }
+OneService *OneService::newInstance(const char *hp,unsigned int port,NetworkController *master,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,master,overrideRootTopology); }
 OneService::~OneService() {}
 
 } // namespace ZeroTier
