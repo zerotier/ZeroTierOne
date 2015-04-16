@@ -76,18 +76,6 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 /****************************************************************************/
-/* zerotier-cli personality                                                 */
-/****************************************************************************/
-
-#ifdef __WINDOWS__
-int cli(int argc, _TCHAR* argv[])
-#else
-int cli(int argc,char **argv)
-#endif
-{
-}
-
-/****************************************************************************/
 /* zerotier-idtool personality                                              */
 /****************************************************************************/
 
@@ -435,7 +423,7 @@ static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
-	fprintf(out,"Usage: %s [-switches] [home directory] [-q <query>]"ZT_EOL_S""ZT_EOL_S,cn);
+	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
@@ -444,7 +432,6 @@ static void printHelp(const char *cn,FILE *out)
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif // __UNIX_LIKE__
-	fprintf(out,"  -q                - Send a query to a running service (zerotier-cli)"ZT_EOL_S);
 	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
 #ifdef __WINDOWS__
 	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
@@ -495,8 +482,6 @@ int main(int argc,char **argv)
 #endif
 #endif // __WINDOWS__
 
-	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
-		return cli(argc,argv);
 	if ((strstr(argv[0],"zerotier-idtool"))||(strstr(argv[0],"ZEROTIER-IDTOOL")))
 		return idtool(argc,argv);
 
@@ -514,9 +499,6 @@ int main(int argc,char **argv)
 						printHelp(argv[0],stdout);
 						return 1;
 					}
-					break;
-
-				case 't': // TCP port -- ignore, since we now bind to both UDP and TCP on the same port
 					break;
 
 #ifdef __UNIX_LIKE__
@@ -540,12 +522,6 @@ int main(int argc,char **argv)
 				case 'v': // Display version
 					printf("%d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 					return 0;
-
-				case 'q': // Invoke cli personality
-					if (argv[i][2]) {
-						printHelp(argv[0],stdout);
-						return 0;
-					} else return cli(argc,argv);
 
 				case 'i': // Invoke idtool personality
 					if (argv[i][2]) {

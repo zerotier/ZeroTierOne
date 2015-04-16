@@ -66,7 +66,6 @@ all:	one
 one:	$(OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
-	ln -sf zerotier-one zerotier-cli
 	ln -sf zerotier-one zerotier-idtool
 
 selftest:	$(OBJS) selftest.o
@@ -77,7 +76,7 @@ installer: one FORCE
 	./buildinstaller.sh
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-* build-* ZeroTierOneInstaller-* *.deb *.rpm
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o zerotier-one zerotier-idtool zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
 
 debug:	FORCE
 	make -j 4 ZT_DEBUG=1

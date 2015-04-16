@@ -131,6 +131,7 @@ class OneServiceImpl : public OneService
 public:
 	OneServiceImpl(const char *hp,unsigned int port,NetworkController *master,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
+		_port(port),
 		_phy(this,true),
 		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
@@ -160,6 +161,10 @@ public:
 		in6.sin6_port = in4.sin_port;
 		_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,this,131072);
 		_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
+
+		char portstr[64];
+		Utils::snprintf(portstr,sizeof(portstr),"%u",port);
+		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
 	}
 
 	virtual ~OneServiceImpl()
@@ -632,6 +637,7 @@ private:
 	}
 
 	const std::string _homePath;
+	unsigned int _port;
 	Phy<OneServiceImpl *> _phy;
 	NetworkController *_master;
 	std::string _overrideRootTopology;
