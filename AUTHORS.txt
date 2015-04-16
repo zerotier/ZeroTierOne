@@ -9,6 +9,12 @@ ZeroTier One includes the following third party code:
  * LZ4 compression algorithm by Yann Collet (BSD license)
    http://code.google.com/p/lz4/
 
+ * http-parser by many authors (MIT license)
+   https://github.com/joyent/http-parser
+
+ * json-parser by James McLaughlin (BSD license)
+   https://github.com/udp/json-parser
+
  * TunTapOSX by Mattias Nissler (forked for ZT1) (BSD license)
    http://tuntaposx.sourceforge.net
 
