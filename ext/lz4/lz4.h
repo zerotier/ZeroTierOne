@@ -1,7 +1,8 @@
 /*
    LZ4 - Fast LZ compression algorithm
    Header File
-   Copyright (C) 2011-2014, Yann Collet.
+   Copyright (C) 2011-2015, Yann Collet.
+
    BSD 2-Clause License (http://www.opensource.org/licenses/bsd-license.php)
 
    Redistribution and use in source and binary forms, with or without
@@ -28,7 +29,7 @@
    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
    You can contact the author at :
-   - LZ4 source repository : http://code.google.com/p/lz4/
+   - LZ4 source repository : https://github.com/Cyan4973/lz4
    - LZ4 public forum : https://groups.google.com/forum/#!forum/lz4c
 */
 #pragma once
@@ -38,22 +39,22 @@ extern "C" {
 #endif
 
 /*
- * lz4.h provides raw compression format functions, for optimal performance and integration into programs.
- * If you need to generate data using an inter-operable format (respecting the framing specification),
+ * lz4.h provides block compression functions, for optimal performance.
+ * If you need to generate inter-operable compressed data (respecting LZ4 frame specification),
  * please use lz4frame.h instead.
 */
 
 /**************************************
-   Version
+*  Version
 **************************************/
 #define LZ4_VERSION_MAJOR    1    /* for breaking interface changes  */
-#define LZ4_VERSION_MINOR    5    /* for new (non-breaking) interface capabilities */
+#define LZ4_VERSION_MINOR    6    /* for new (non-breaking) interface capabilities */
 #define LZ4_VERSION_RELEASE  0    /* for tweaks, bug-fixes, or development */
 #define LZ4_VERSION_NUMBER (LZ4_VERSION_MAJOR *100*100 + LZ4_VERSION_MINOR *100 + LZ4_VERSION_RELEASE)
 int LZ4_versionNumber (void);
 
 /**************************************
-   Tuning parameter
+*  Tuning parameter
 **************************************/
 /*
  * LZ4_MEMORY_USAGE :
@@ -66,7 +67,7 @@ int LZ4_versionNumber (void);
 
 
 /**************************************
-   Simple Functions
+*  Simple Functions
 **************************************/
 
 int LZ4_compress        (const char* source, char* dest, int sourceSize);
@@ -95,7 +96,7 @@ LZ4_decompress_safe() :
 
 
 /**************************************
-   Advanced Functions
+*  Advanced Functions
 **************************************/
 #define LZ4_MAX_INPUT_SIZE        0x7E000000   /* 2 113 929 216 bytes */
 #define LZ4_COMPRESSBOUND(isize)  ((unsigned int)(isize) > (unsigned int)LZ4_MAX_INPUT_SIZE ? 0 : (isize) + ((isize)/255) + 16)
@@ -169,7 +170,7 @@ int LZ4_decompress_safe_partial (const char* source, char* dest, int compressedS
 
 
 /***********************************************
-   Streaming Compression Functions
+*  Streaming Compression Functions
 ***********************************************/
 
 #define LZ4_STREAMSIZE_U64 ((1 << (LZ4_MEMORY_USAGE-3)) + 4)
@@ -211,6 +212,7 @@ int LZ4_loadDict (LZ4_stream_t* LZ4_streamPtr, const char* dictionary, int dictS
  * LZ4_compress_continue
  * Compress data block 'source', using blocks compressed before as dictionary to improve compression ratio
  * Previous data blocks are assumed to still be present at their previous location.
+ * dest buffer must be already allocated, and sized to at least LZ4_compressBound(inputSize)
  */
 int LZ4_compress_continue (LZ4_stream_t* LZ4_streamPtr, const char* source, char* dest, int inputSize);
 
@@ -227,14 +229,13 @@ int LZ4_compress_limitedOutput_continue (LZ4_stream_t* LZ4_streamPtr, const char
  * save it into a safer place (char* safeBuffer)
  * Note : you don't need to call LZ4_loadDict() afterwards,
  *        dictionary is immediately usable, you can therefore call again LZ4_compress_continue()
- * Return : dictionary size in bytes, or 0 if error
- * Note : any dictSize > 64 KB will be interpreted as 64KB.
+ * Return : saved dictionary size in bytes (necessarily <= dictSize), or 0 if error
  */
 int LZ4_saveDict (LZ4_stream_t* LZ4_streamPtr, char* safeBuffer, int dictSize);
 
 
 /************************************************
-   Streaming Decompression Functions
+*  Streaming Decompression Functions
 ************************************************/
 
 #define LZ4_STREAMDECODESIZE_U64  4
@@ -285,7 +286,7 @@ int LZ4_decompress_fast_usingDict (const char* source, char* dest, int originalS
 
 
 /**************************************
-   Obsolete Functions
+*  Obsolete Functions
 **************************************/
 /*
 Obsolete decompression functions
