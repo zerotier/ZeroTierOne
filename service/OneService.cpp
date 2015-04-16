@@ -131,7 +131,6 @@ class OneServiceImpl : public OneService
 public:
 	OneServiceImpl(const char *hp,unsigned int port,NetworkController *master,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
-		_port(port),
 		_phy(this,true),
 		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
@@ -637,7 +636,6 @@ private:
 	}
 
 	const std::string _homePath;
-	unsigned int _port;
 	Phy<OneServiceImpl *> _phy;
 	NetworkController *_master;
 	std::string _overrideRootTopology;

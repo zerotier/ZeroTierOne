@@ -60,6 +60,7 @@ static std::string _jsonEscape(const char *s)
 	return buf;
 }
 static std::string _jsonEscape(const std::string &s) { return _jsonEscape(s.c_str()); }
+
 static std::string _jsonEnumerate(const ZT1_MulticastGroup *mg,unsigned int count)
 {
 	std::string buf;
@@ -81,6 +82,7 @@ static std::string _jsonEnumerate(const ZT1_MulticastGroup *mg,unsigned int coun
 	buf.push_back(']');
 	return buf;
 }
+
 static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int count)
 {
 	std::string buf;
@@ -95,30 +97,18 @@ static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int
 	buf.push_back(']');
 	return buf;
 }
-static std::string _jsonEnumerate(const ZT1_PeerPhysicalPath *pp,unsigned int count)
+
+static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_VirtualNetworkConfig *nc,const std::string &portDeviceName)
 {
-	char tmp[1024];
-	std::string buf;
-	buf.push_back('[');
-	for(unsigned int i=0;i<count;++i) {
-		if (i > 0)
-			buf.push_back(',');
-		buf.append("{\"address\":\"");
-		buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(&(pp[i].address))->toString()));
-		Utils::snprintf(tmp,sizeof(tmp),"\",\"lastSend\":%llu,\"lastReceive\":%llu,\"fixed\":%s,\"active\":%s,\"preferred\":%s}",
-			pp[i].lastSend,
-			pp[i].lastReceive,
-			(pp[i].fixed == 0) ? "false" : "true",
-			(pp[i].active == 0) ? "false" : "true",
-			(pp[i].preferred == 0) ? "false" : "true");
-		buf.append(tmp);
-	}
-	buf.push_back(']');
-	return buf;
-}
-static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc,const std::string &portDeviceName)
-{
-	char json[65536];
+	char json[4096];
+	char prefix[32];
+
+	if (depth >= sizeof(prefix)) // sanity check -- shouldn't be possible
+		return;
+	for(unsigned int i=0;i<depth;++i)
+		prefix[i] = '\t';
+	prefix[depth] = '\0';
+
 	const char *nstatus = "",*ntype = "";
 	switch(nc->status) {
 		case ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION: nstatus = "REQUESTING_CONFIGURATION"; break;
@@ -132,71 +122,122 @@ static void _jsonAppend(std::string &buf,const ZT1_VirtualNetworkConfig *nc,cons
 		case ZT1_NETWORK_TYPE_PRIVATE:                    ntype = "PRIVATE"; break;
 		case ZT1_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
 	}
+
 	Utils::snprintf(json,sizeof(json),
-		"{"
-		"\"nwid\": \"%.16llx\","
-		"\"mac\": \"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\","
-		"\"name\": \"%s\","
-		"\"status\": \"%s\","
-		"\"type\": \"%s\","
-		"\"mtu\": %u,"
-		"\"dhcp\": %s,"
-		"\"bridge\": %s,"
-		"\"broadcastEnabled\": %s,"
-		"\"portError\": %d,"
-		"\"netconfRevision\": %lu,"
-		"\"multicastSubscriptions\": %s,"
-		"\"assignedAddresses\": %s,"
-		"\"portDeviceName\": \"%s\""
-		"}",
-		nc->nwid,
-		(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff),
-		_jsonEscape(nc->name).c_str(),
-		nstatus,
-		ntype,
-		nc->mtu,
-		(nc->dhcp == 0) ? "false" : "true",
-		(nc->bridge == 0) ? "false" : "true",
-		(nc->broadcastEnabled == 0) ? "false" : "true",
-		nc->portError,
-		nc->netconfRevision,
-		_jsonEnumerate(nc->multicastSubscriptions,nc->multicastSubscriptionCount).c_str(),
-		_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
-		_jsonEscape(portDeviceName).c_str());
+		"%s{\n"
+		"%s\t\"nwid\": \"%.16llx\",\n"
+		"%s\t\"mac\": \"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\",\n"
+		"%s\t\"name\": \"%s\",\n"
+		"%s\t\"status\": \"%s\",\n"
+		"%s\t\"type\": \"%s\",\n"
+		"%s\t\"mtu\": %u,\n"
+		"%s\t\"dhcp\": %s,\n"
+		"%s\t\"bridge\": %s,\n"
+		"%s\t\"broadcastEnabled\": %s,\n"
+		"%s\t\"portError\": %d,\n"
+		"%s\t\"netconfRevision\": %lu,\n"
+		"%s\t\"multicastSubscriptions\": %s,\n"
+		"%s\t\"assignedAddresses\": %s,\n"
+		"%s\t\"portDeviceName\": \"%s\"\n"
+		"%s}",
+		prefix,
+		prefix,nc->nwid,
+		prefix,(unsigned int)((nc->mac >> 40) & 0xff),(unsigned int)((nc->mac >> 32) & 0xff),(unsigned int)((nc->mac >> 24) & 0xff),(unsigned int)((nc->mac >> 16) & 0xff),(unsigned int)((nc->mac >> 8) & 0xff),(unsigned int)(nc->mac & 0xff),
+		prefix,_jsonEscape(nc->name).c_str(),
+		prefix,nstatus,
+		prefix,ntype,
+		prefix,nc->mtu,
+		prefix,(nc->dhcp == 0) ? "false" : "true",
+		prefix,(nc->bridge == 0) ? "false" : "true",
+		prefix,(nc->broadcastEnabled == 0) ? "false" : "true",
+		prefix,nc->portError,
+		prefix,nc->netconfRevision,
+		prefix,_jsonEnumerate(nc->multicastSubscriptions,nc->multicastSubscriptionCount).c_str(),
+		prefix,_jsonEnumerate(nc->assignedAddresses,nc->assignedAddressCount).c_str(),
+		prefix,_jsonEscape(portDeviceName).c_str(),
+		prefix);
 	buf.append(json);
 }
-static void _jsonAppend(std::string &buf,const ZT1_Peer *peer)
+
+static std::string _jsonEnumerate(unsigned int depth,const ZT1_PeerPhysicalPath *pp,unsigned int count)
 {
-	char json[65536];
+	char json[1024];
+	char prefix[32];
+
+	if (depth >= sizeof(prefix)) // sanity check -- shouldn't be possible
+		return std::string();
+	for(unsigned int i=0;i<depth;++i)
+		prefix[i] = '\t';
+	prefix[depth] = '\0';
+
+	std::string buf;
+	for(unsigned int i=0;i<count;++i) {
+		if (i > 0)
+			buf.push_back(',');
+		Utils::snprintf(json,sizeof(json),
+			"{\n"
+			"%s\t\"address\": \"%s\",\n"
+			"%s\t\"lastSend\": %llu,\n"
+			"%s\t\"lastReceive\": %llu,\n"
+			"%s\t\"fixed\": %s,\n"
+			"%s\t\"active\": %s,\n"
+			"%s\t\"preferred\": %s\n"
+			"%s}",
+			prefix,_jsonEscape(reinterpret_cast<const InetAddress *>(&(pp[i].address))->toString()).c_str(),
+			prefix,pp[i].lastSend,
+			prefix,pp[i].lastReceive,
+			prefix,(pp[i].fixed == 0) ? "false" : "true",
+			prefix,(pp[i].active == 0) ? "false" : "true",
+			prefix,(pp[i].preferred == 0) ? "false" : "true",
+			prefix);
+		buf.append(json);
+	}
+	return buf;
+}
+
+static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer)
+{
+	char json[1024];
+	char prefix[32];
+
+	if (depth >= sizeof(prefix)) // sanity check -- shouldn't be possible
+		return;
+	for(unsigned int i=0;i<depth;++i)
+		prefix[i] = '\t';
+	prefix[depth] = '\0';
+
 	const char *prole = "";
 	switch(peer->role) {
 		case ZT1_PEER_ROLE_LEAF:      prole = "LEAF"; break;
 		case ZT1_PEER_ROLE_HUB:       prole = "HUB"; break;
 		case ZT1_PEER_ROLE_SUPERNODE: prole = "SUPERNODE"; break;
 	}
+
 	Utils::snprintf(json,sizeof(json),
-		"{"
-		"\"address\": \"%.10llx\","
-		"\"lastUnicastFrame\": %llu,"
-		"\"lastMulticastFrame\": %llu,"
-		"\"versionMajor\": %d,"
-		"\"versionMinor\": %d,"
-		"\"versionRev\": %d,"
-		"\"version\": \"%d.%d.%d\","
-		"\"latency\": %u,"
-		"\"role\": \"%s\","
-		"\"paths\": %s"
-		"}",
-		peer->address,
-		peer->lastUnicastFrame,
-		peer->lastMulticastFrame,
-		peer->versionMajor,
-		peer->versionMinor,
-		peer->versionRev,
-		peer->versionMajor,peer->versionMinor,peer->versionRev,
-		peer->latency,
-		prole,
-		_jsonEnumerate(peer->paths,peer->pathCount).c_str());
+		"%s{\n"
+		"%s\t\"address\": \"%.10llx\",\n"
+		"%s\t\"lastUnicastFrame\": %llu,\n"
+		"%s\t\"lastMulticastFrame\": %llu,\n"
+		"%s\t\"versionMajor\": %d,\n"
+		"%s\t\"versionMinor\": %d,\n"
+		"%s\t\"versionRev\": %d,\n"
+		"%s\t\"version\": \"%d.%d.%d\",\n"
+		"%s\t\"latency\": %u,\n"
+		"%s\t\"role\": \"%s\",\n"
+		"%s\t\"paths\": [%s]\n"
+		"%s}",
+		prefix,
+		prefix,peer->address,
+		prefix,peer->lastUnicastFrame,
+		prefix,peer->lastMulticastFrame,
+		prefix,peer->versionMajor,
+		prefix,peer->versionMinor,
+		prefix,peer->versionRev,
+		prefix,peer->versionMajor,peer->versionMinor,peer->versionRev,
+		prefix,peer->latency,
+		prefix,prole,
+		prefix,_jsonEnumerate(depth+1,peer->paths,peer->pathCount).c_str(),
+		prefix);
 	buf.append(json);
 }
 
@@ -219,7 +260,7 @@ unsigned int ControlPlane::handleRequest(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	char json[65536];
+	char json[1024];
 	unsigned int scode = 404;
 	std::vector<std::string> ps(Utils::split(path.c_str(),"/","",""));
 	std::map<std::string,std::string> urlArgs;
@@ -252,9 +293,9 @@ unsigned int ControlPlane::handleRequest(
 	{
 		Mutex::Lock _l(_authTokens_m);
 		std::map<std::string,std::string>::const_iterator ah(headers.find("x-zt1-auth"));
-		if ((ah != headers.end())&&(_authTokens.count(ah->second) > 0))
+		if ((ah != headers.end())&&(_authTokens.count(ah->second) > 0)) {
 			isAuth = true;
-		else {
+		} else {
 			ah = urlArgs.find("auth");
 			if ((ah != urlArgs.end())&&(_authTokens.count(ah->second) > 0))
 				isAuth = true;
@@ -269,8 +310,12 @@ unsigned int ControlPlane::handleRequest(
 			ext = ps[0].substr(dotIdx);
 
 		if ((ps.size() == 1)&&(ext.length() >= 2)&&(ext[0] == '.')) {
+			/* Static web pages can be served without authentication to enable a simple web
+			 * UI. This is still only allowed from approved IP addresses. Anything with a
+			 * dot in the first path element (e.g. foo.html) is considered a static page,
+			 * as nothing in the API is so named. */
+
 #ifdef ZT_BUILD_IN_WEB_UI
-			// .anything == static page -- also the only thing you can get without isAuth == true
 			if (ext == ".html")
 				responseContentType = "text/html";
 			else if (ext == ".js")
@@ -295,21 +340,24 @@ unsigned int ControlPlane::handleRequest(
 			responseBody = "<html><body>Hello World!</body></html>";
 			scode = 200;
 #endif // ZT_BUILD_IN_WEB_UI
+
 		} else if (isAuth) {
+			/* Things that require authentication -- a.k.a. everything but static web app pages. */
+
 			if (ps[0] == "status") {
 				responseContentType = "application/json";
 				ZT1_NodeStatus status;
 				_node->status(&status);
 				Utils::snprintf(json,sizeof(json),
-					"{"
-					"\"address\":\"%.10llx\","
-					"\"publicIdentity\":\"%s\","
-					"\"online\":%s,"
-					"\"versionMajor\":%d,"
-					"\"versionMinor\":%d,"
-					"\"versionRev\":%d,"
-					"\"version\":\"%d.%d.%d\""
-					"}",
+					"{\n"
+					"\t\"address\":\"%.10llx\",\n"
+					"\t\"publicIdentity\":\"%s\",\n"
+					"\t\"online\":%s,\n"
+					"\t\"versionMajor\":%d,\n"
+					"\t\"versionMinor\":%d,\n"
+					"\t\"versionRev\":%d,\n"
+					"\t\"version\":\"%d.%d.%d\"\n"
+					"}\n",
 					status.address,
 					status.publicIdentity,
 					(status.online) ? "true" : "false",
@@ -329,13 +377,13 @@ unsigned int ControlPlane::handleRequest(
 					if (ps.size() == 1) {
 						// Return [array] of all networks
 						responseContentType = "application/json";
-						responseBody = "[";
+						responseBody = "[\n";
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (i > 0)
-								responseBody.push_back(',');
-							_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								responseBody.append(",");
+							_jsonAppend(1,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
 						}
-						responseBody.push_back(']');
+						responseBody.append("\n]\n");
 						scode = 200;
 					} else if (ps.size() == 2) {
 						// Return a single network by ID or 404 if not found
@@ -343,7 +391,8 @@ unsigned int ControlPlane::handleRequest(
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (nws->networks[i].nwid == wantnw) {
 								responseContentType = "application/json";
-								_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+								responseBody.push_back('\n');
 								scode = 200;
 								break;
 							}
@@ -357,13 +406,13 @@ unsigned int ControlPlane::handleRequest(
 					if (ps.size() == 1) {
 						// Return [array] of all peers
 						responseContentType = "application/json";
-						responseBody = "[";
+						responseBody = "[\n";
 						for(unsigned long i=0;i<pl->peerCount;++i) {
 							if (i > 0)
-								responseBody.push_back(',');
-							_jsonAppend(responseBody,&(pl->peers[i]));
+								responseBody.append(",\n");
+							_jsonAppend(1,responseBody,&(pl->peers[i]));
 						}
-						responseBody.push_back(']');
+						responseBody.append("\n]\n");
 						scode = 200;
 					} else if (ps.size() == 2) {
 						// Return a single peer by ID or 404 if not found
@@ -371,7 +420,8 @@ unsigned int ControlPlane::handleRequest(
 						for(unsigned long i=0;i<pl->peerCount;++i) {
 							if (pl->peers[i].address == wantp) {
 								responseContentType = "application/json";
-								_jsonAppend(responseBody,&(pl->peers[i]));
+								_jsonAppend(0,responseBody,&(pl->peers[i]));
+								responseBody.push_back('\n');
 								scode = 200;
 								break;
 							}
@@ -399,7 +449,8 @@ unsigned int ControlPlane::handleRequest(
 							for(unsigned long i=0;i<nws->networkCount;++i) {
 								if (nws->networks[i].nwid == wantnw) {
 									responseContentType = "application/json";
-									_jsonAppend(responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+									_jsonAppend(0,responseBody,&(nws->networks[i]),_svc->portDeviceName(nws->networks[i].nwid));
+									responseBody.push_back('\n');
 									scode = 200;
 									break;
 								}
@@ -438,16 +489,20 @@ unsigned int ControlPlane::handleRequest(
 					} else scode = 500;
 				}
 			} // else 404
-		} else scode = 401; // isAuth = false
+
+		} else {
+			scode = 401; // isAuth = false
+		}
 
 	} else {
 		scode = 400;
 		responseBody = "Method not supported.";
 	}
 
-	// Wrap result in jsonp function call if the user included a jsonp= url argument
+	// Wrap result in jsonp function call if the user included a jsonp= url argument.
+	// Also double-check isAuth since it feels like the right thing to do.
 	std::map<std::string,std::string>::const_iterator jsonp(urlArgs.find("jsonp"));
-	if ((jsonp != urlArgs.end())&&(responseContentType == "application/json")) {
+	if ((isAuth)&&(jsonp != urlArgs.end())&&(responseContentType == "application/json")) {
 		if (responseBody.length() > 0)
 			responseBody = jsonp->second + "(" + responseBody + ");";
 		else responseBody = jsonp->second + "(null);";
