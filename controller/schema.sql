@@ -32,6 +32,7 @@ CREATE TABLE Member (
   nodeId char(10) NOT NULL,
   cachedNetconf blob(4096),
   cachedNetconfRevision integer NOT NULL DEFAULT(0),
+  cachedNetconfTimestamp integer NOT NULL DEFAULT(0),
   clientReportedRevision integer NOT NULL DEFAULT(0),
   authorized integer NOT NULL DEFAULT(0),
   activeBridge integer NOT NULL DEFAULT(0)
