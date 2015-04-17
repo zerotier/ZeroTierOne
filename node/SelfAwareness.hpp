@@ -29,6 +29,7 @@
 #define ZT_SELFAWARENESS_HPP
 
 #include "InetAddress.hpp"
+#include "Address.hpp"
 #include "Mutex.hpp"
 
 namespace ZeroTier {
@@ -47,11 +48,12 @@ public:
 	/**
 	 * Called when a trusted remote peer informs us of our external network address
 	 *
+	 * @param reporter ZeroTier address of reporting peer
 	 * @param reporterPhysicalAddress Physical address that reporting peer seems to have
 	 * @param myPhysicalAddress Physical address that peer says we have
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 */
-	void iam(const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted);
+	void iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted);
 
 private:
 	const RuntimeEnvironment *RR;

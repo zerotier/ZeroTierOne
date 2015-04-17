@@ -63,24 +63,26 @@ SelfAwareness::~SelfAwareness()
 {
 }
 
-void SelfAwareness::iam(const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted)
+void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted)
 {
 	// This code depends on the numeric values assigned to scopes in InetAddress.hpp
 	const unsigned int scope = (unsigned int)myPhysicalAddress.ipScope();
 	if ((scope > 0)&&(scope < (unsigned int)InetAddress::IP_SCOPE_LOOPBACK)) {
-		/* For now only trusted peers are permitted to inform us of changes to
-		 * our global Internet IP or to changes of NATed IPs. We'll let peers on
-		 * private, shared, or link-local networks inform us of changes as long
-		 * as they too are at the same scope. This discrimination avoids a DoS
-		 * attack in which an attacker could force us to reset our connections. */
-		if ( (!trusted) && ((scope == (unsigned int)InetAddress::IP_SCOPE_GLOBAL)||(scope != (unsigned int)reporterPhysicalAddress.ipScope())) )
+		if ( (!trusted) && ((scope == (unsigned int)InetAddress::IP_SCOPE_GLOBAL)||(scope != (unsigned int)reporterPhysicalAddress.ipScope())) ) {
+			/* For now only trusted peers are permitted to inform us of changes to
+			 * our global Internet IP or to changes of NATed IPs. We'll let peers on
+			 * private, shared, or link-local networks inform us of changes as long
+			 * as they too are at the same scope. This discrimination avoids a DoS
+			 * attack in which an attacker could force us to reset our connections. */
 			return;
-		else {
+		} else {
 			Mutex::Lock _l(_lock);
 			InetAddress &lastPhy = _lastPhysicalAddress[scope - 1];
 			if (!lastPhy) {
+				TRACE("learned physical address %s for scope %u from reporter %s(%s) (replaced <null>)",myPhysicalAddress.toString().c_str(),scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str());
 				lastPhy = myPhysicalAddress;
 			} else if (lastPhy != myPhysicalAddress) {
+				TRACE("learned physical address %s for scope %u from reporter %s(%s) (replaced %s, resetting within scope)",myPhysicalAddress.toString().c_str(),scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),lastPhy.toString().c_str());
 				lastPhy = myPhysicalAddress;
 				_ResetWithinScope rset(RR,RR->node->now(),(InetAddress::IpScope)scope);
 				RR->topology->eachPeer<_ResetWithinScope &>(rset);
