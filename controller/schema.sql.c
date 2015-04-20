@@ -67,6 +67,13 @@
 "  revision integer NOT NULL DEFAULT(1)\n"\
 ");\n"\
 "\n"\
+"CREATE TABLE Relay (\n"\
+"  networkId char(16) NOT NULL,\n"\
+"  nodeId char(10) NOT NULL\n"\
+");\n"\
+"\n"\
+"CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);\n"\
+"\n"\
 "CREATE TABLE Node (\n"\
 "  id char(10) PRIMARY KEY NOT NULL,\n"\
 "  identity varchar(4096) NOT NULL,\n"\

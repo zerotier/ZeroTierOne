@@ -66,6 +66,13 @@ CREATE TABLE Network (
   revision integer NOT NULL DEFAULT(1)
 );
 
+CREATE TABLE Relay (
+  networkId char(16) NOT NULL,
+  nodeId char(10) NOT NULL
+);
+
+CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);
+
 CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
   identity varchar(4096) NOT NULL,
