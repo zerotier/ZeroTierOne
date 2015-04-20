@@ -833,14 +833,14 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
-	//r |= testPhy();
-	//r |= testHttp();
 	r |= testSqliteNetworkController();
 	r |= testCrypto();
 	r |= testPacket();
 	r |= testOther();
 	r |= testIdentity();
 	r |= testCertificate();
+	r |= testPhy();
+	r |= testHttp();
 
 	if (r)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;

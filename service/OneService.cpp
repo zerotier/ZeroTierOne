@@ -53,9 +53,14 @@
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
 
+// Include the right tap device driver for this platform -- add new platforms here
 #ifdef __APPLE__
 #include "../osdep/OSXEthernetTap.hpp"
 namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
+#endif
+#ifdef __LINUX__
+#include "../osdep/LinuxEthernetTap.hpp"
+namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
 #endif
 
 // Sanity limits for HTTP

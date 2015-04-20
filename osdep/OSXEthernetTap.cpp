@@ -637,8 +637,6 @@ void OSXEthernetTap::threadMain()
 	int n,nfds,r;
 	char getBuf[8194];
 
-	// Wait for a moment after startup -- wait for Network to finish
-	// constructing itself.
 	Thread::sleep(500);
 
 	FD_ZERO(&readfds);

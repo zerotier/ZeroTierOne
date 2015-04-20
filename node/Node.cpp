@@ -137,6 +137,8 @@ Node::Node(
 
 Node::~Node()
 {
+	Mutex::Lock _l(_networks_m);
+	_networks.clear(); // delete these before we delete RR
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->antiRec;

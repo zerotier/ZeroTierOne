@@ -381,7 +381,7 @@ static int cli(int argc,char **argv)
 										verstr[0] = '-';
 										verstr[1] = (char)0;
 									}
-									printf("200 listpeers %s %s %lld %s %s"ZT_EOL_S,address,(paths.length()) ? paths.c_str() : "-",latency,verstr,role);
+									printf("200 listpeers %s %s %lld %s %s"ZT_EOL_S,address,(paths.length()) ? paths.c_str() : "-",(long long)latency,verstr,role);
 								}
 							}
 						}

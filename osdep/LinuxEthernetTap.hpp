@@ -31,9 +31,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <string>
+#include <vector>
 #include <stdexcept>
 
-#include "EthernetTap.hpp"
+#include "../node/MulticastGroup.hpp"
 #include "Thread.hpp"
 
 namespace ZeroTier {
@@ -41,40 +43,43 @@ namespace ZeroTier {
 /**
  * Linux Ethernet tap using kernel tun/tap driver
  */
-class LinuxEthernetTap : public EthernetTap
+class LinuxEthernetTap
 {
 public:
 	LinuxEthernetTap(
+		const char *homePath,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
 		uint64_t nwid,
-		const char *desiredDevice,
 		const char *friendlyName,
-		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
-	virtual ~LinuxEthernetTap();
+	~LinuxEthernetTap();
 
-	virtual void setEnabled(bool en);
-	virtual bool enabled() const;
-	virtual bool addIP(const InetAddress &ip);
-	virtual bool removeIP(const InetAddress &ip);
-	virtual std::set<InetAddress> ips() const;
-	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
-	virtual std::string deviceName() const;
-	virtual void setFriendlyName(const char *friendlyName);
-	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
-	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	void setEnabled(bool en);
+	bool enabled() const;
+	bool addIp(const InetAddress &ip);
+	bool removeIp(const InetAddress &ip);
+	std::vector<InetAddress> ips() const;
+	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	std::string deviceName() const;
+	void setFriendlyName(const char *friendlyName);
+	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 
 	void threadMain()
 		throw();
 
 private:
-	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
+	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
+	uint64_t _nwid;
 	Thread _thread;
+	std::string _homePath;
 	std::string _dev;
+	std::vector<MulticastGroup> _multicastGroups;
+	unsigned int _mtu;
 	int _fd;
 	int _shutdownSignalPipe[2];
 	volatile bool _enabled;
