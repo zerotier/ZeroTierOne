@@ -758,7 +758,19 @@ static int testHttp()
 	std::map<std::string,std::string> requestHeaders,responseHeaders;
 	std::string responseBody;
 
-	InetAddress downloadZerotierDotCom("142.4.214.72/80");
+	InetAddress downloadZerotierDotCom;
+	std::vector<InetAddress> rr(OSUtils::resolve("download.zerotier.com"));
+	if (rr.empty()) {
+		std::cout << "[http] Resolve of download.zerotier.com failed, skipping." << std::endl;
+		return 0;
+	} else {
+		for(std::vector<InetAddress>::iterator r(rr.begin());r!=rr.end();++r) {
+			std::cout << "[http] download.zerotier.com: " << r->toString() << std::endl;
+			if (r->isV4())
+				downloadZerotierDotCom = *r;
+		}
+	}
+	downloadZerotierDotCom.setPort(80);
 
 	std::cout << "[http] GET http://download.zerotier.com/dev/1k @" << downloadZerotierDotCom.toString() << " ... "; std::cout.flush();
 	requestHeaders["Host"] = "download.zerotier.com";
