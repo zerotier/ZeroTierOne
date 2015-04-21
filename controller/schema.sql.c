@@ -72,8 +72,10 @@
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL,\n"\
 "  nodeId char(10) NOT NULL,\n"\
-"  address varchar(64) NOT NULL\n"\
+"  phyAddress varchar(64) NOT NULL\n"\
 ");\n"\
+"\n"\
+"CREATE INDEX Relay_networkId ON Relay (networkId);\n"\
 "\n"\
 "CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);\n"\
 "\n"\
@@ -87,6 +89,7 @@
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL,\n"\
+"  ordering integer NOT NULL DEFAULT(0),\n"\
 "  nodeId char(10),\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\

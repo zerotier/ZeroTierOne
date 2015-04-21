@@ -776,7 +776,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 			return 200;
 		} // else 404
 
-	}
+	} // else 404
 
 	return 404;
 }
@@ -792,6 +792,33 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 	if (path.empty())
 		return 404;
 	Mutex::Lock _l(_lock);
+
+	if (path[0] == "network") {
+
+		if ((path.size() >= 2)&&(path[1].length() == 16)) {
+			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+			char nwids[24];
+			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+
+			if (path.size() >= 3) {
+				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
+					uint64_t address = Utils::hexStrToU64(path[3].c_str());
+					char addrs[24];
+					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
+
+				} else if (path[2] == "rule") {
+
+
+				} else if (path[2] == "ipAssignmentPool") {
+
+				} // else 404
+			} else {
+
+			}
+
+		} // else 404
+
+	} // else 404
 
 	return 404;
 }
