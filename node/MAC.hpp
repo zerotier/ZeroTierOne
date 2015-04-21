@@ -56,6 +56,9 @@ public:
 		    ((((uint64_t)e) & 0xffULL) << 8) |
 		    (((uint64_t)f) & 0xffULL) ) {}
 
+	MAC(const char *s) throw() { fromString(s); }
+	MAC(const std::string &s) throw() { fromString(s.c_str()); }
+
 	MAC(const void *bits,unsigned int len) throw() { setTo(bits,len); }
 
 	MAC(const Address &ztaddr,uint64_t nwid) throw() { fromAddress(ztaddr,nwid); }

@@ -56,8 +56,25 @@ public:
 	 */
 	inline void addAuthToken(const char *tok)
 	{
-		Mutex::Lock _l(_authTokens_m);
+		Mutex::Lock _l(_lock);
 		_authTokens.insert(std::string(tok));
+	}
+
+	/**
+	 * Mount a subsystem under a prefix
+	 *
+	 * Note that the prefix must not contain a dot -- this is reserved for
+	 * static pages -- and must not be a reserved prefix such as /peer
+	 * or /network. Do not include path / characters in the prefix. Example
+	 * would be 'controller' for SqliteNetworkController.
+	 *
+	 * @param prefix First element in URI path
+	 * @param subsys Object to call for results of GET and POST/PUT operations
+	 */
+	inline void mount(const char *prefix,ControlPlaneSubsystem *subsys)
+	{
+		Mutex::Lock _l(_lock);
+		_subsystems[std::string(prefix)] = subsys;
 	}
 
 	/**
@@ -85,7 +102,8 @@ private:
 	OneService *const _svc;
 	Node *const _node;
 	std::set<std::string> _authTokens;
-	Mutex _authTokens_m;
+	std::map<std::string,ControlPlaneSubsystem *> _subsystems;
+	Mutex _lock;
 };
 
 } // namespace ZeroTier

@@ -40,10 +40,15 @@
 #include "../include/ZeroTierOne.h"
 #include "../node/Constants.hpp"
 
+#include "../ext/json-parser/json.h"
+
 #include "SqliteNetworkController.hpp"
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
+#include "../node/InetAddress.hpp"
+#include "../node/MAC.hpp"
+#include "../node/Address.hpp"
 #include "../osdep/OSUtils.hpp"
 
 // Include ZT_NETCONF_SCHEMA_SQL constant to init database
@@ -59,6 +64,57 @@
 #define ZT_CACHED_NETCONF_MAX_AGE (60 * 60 * 1000)
 
 namespace ZeroTier {
+
+namespace {
+
+static std::string _jsonEscape(const char *s)
+{
+	if (!s)
+		return std::string();
+	std::string buf;
+	for(const char *p=s;(*p);++p) {
+		switch(*p) {
+			case '\t': buf.append("\\t");  break;
+			case '\b': buf.append("\\b");  break;
+			case '\r': buf.append("\\r");  break;
+			case '\n': buf.append("\\n");  break;
+			case '\f': buf.append("\\f");  break;
+			case '"':  buf.append("\\\""); break;
+			case '\\': buf.append("\\\\"); break;
+			case '/':  buf.append("\\/");  break;
+			default:   buf.push_back(*p);  break;
+		}
+	}
+	return buf;
+}
+static std::string _jsonEscape(const std::string &s) { return _jsonEscape(s.c_str()); }
+
+struct MemberRecord {
+	int64_t rowid;
+	char nodeId[16];
+	int cachedNetconfBytes;
+	const void *cachedNetconf;
+	uint64_t cachedNetconfRevision;
+	uint64_t cachedNetconfTimestamp;
+	uint64_t clientReportedRevision;
+	bool authorized;
+	bool activeBridge;
+};
+
+struct NetworkRecord {
+	char id[24];
+	const char *name;
+	const char *v4AssignMode;
+	const char *v6AssignMode;
+	bool isPrivate;
+	bool enableBroadcast;
+	bool allowPassiveBridging;
+	int multicastLimit;
+	uint64_t creationTime;
+	uint64_t revision;
+};
+
+} // anonymous namespace
 
 SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	_dbPath(dbPath),
@@ -95,8 +151,8 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	}
 
 	if (
-			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,revision FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT rowid,cachedNetconf,cachedNetconfRevision,cachedNetconfTimestamp,clientReportedRevision,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMemberByNetworkAndNodeId,(const char **)0) != SQLITE_OK)
+			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT rowid,cachedNetconf,cachedNetconfRevision,cachedNetconfTimestamp,clientReportedRevision,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,cachedNetconfRevision,clientReportedRevision,authorized,activeBridge) VALUES (?,?,0,0,?,0)",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Node (id,identity,lastAt,lastSeen,firstSeen) VALUES (?,?,?,?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
@@ -106,12 +162,17 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT mgMac,mgAdi,preload,maxBalance,accrual FROM MulticastRate WHERE networkId = ?",-1,&_sGetMulticastRates,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT ipNetwork,ipNetmaskBits FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ? AND active > 0",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ? AND active > 0",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE networkId = ? AND ip = ? AND ipVersion = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignment (networkId,nodeId,ip,ipNetmaskBits,ipVersion) VALUES (?,?,?,?,?)",-1,&_sAllocateIp,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET cachedNetconf = ?,cachedNetconfRevision = ? WHERE rowid = ?",-1,&_sCacheNetconf,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT nodeId,address FROM Relay WHERE networkId = ?",-1,&_sGetRelays,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,phyAddress FROM Relay WHERE networkId = ?",-1,&_sGetRelays,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT id FROM Network ORDER BY id ASC",-1,&_sListNetworks,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.id,n.lastAt,n.lastSeen,n.firstSeen FROM Member AS m,Node AS n WHERE m.networkId = ? AND n.id = m.nodeId ORDER BY n.id ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.identity,n.lastAt,n.lastSeen,n.firstSeen FROM Member AS m,Node AS n WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits,ipVersion,active FROM IpAssignmentPool WHERE networkId = ? ORDER BY ipNetwork ASC",-1,&_sGetIpAssignmentPools2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\" FROM Rule WHERE networkId = ? ORDER BY ordering ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
 		 ) {
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
@@ -123,7 +184,7 @@ SqliteNetworkController::~SqliteNetworkController()
 	Mutex::Lock _l(_lock);
 	if (_db) {
 		sqlite3_finalize(_sGetNetworkById);
-		sqlite3_finalize(_sGetMemberByNetworkAndNodeId);
+		sqlite3_finalize(_sGetMember);
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateNode);
@@ -139,6 +200,11 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sAllocateIp);
 		sqlite3_finalize(_sCacheNetconf);
 		sqlite3_finalize(_sGetRelays);
+		sqlite3_finalize(_sListNetworks);
+		sqlite3_finalize(_sListNetworkMembers);
+		sqlite3_finalize(_sGetMember2);
+		sqlite3_finalize(_sGetIpAssignmentPools2);
+		sqlite3_finalize(_sListRules);
 		sqlite3_close(_db);
 	}
 }
@@ -155,31 +221,11 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
-	struct {
-		char id[24];
-		const char *name;
-		const char *v4AssignMode;
-		const char *v6AssignMode;
-		bool isPrivate;
-		bool enableBroadcast;
-		bool allowPassiveBridging;
-		int multicastLimit;
-		uint64_t revision;
-	} network;
+	NetworkRecord network;
 	memset(&network,0,sizeof(network));
 	Utils::snprintf(network.id,sizeof(network.id),"%.16llx",(unsigned long long)nwid);
 
-	struct {
-		int64_t rowid;
-		char nodeId[16];
-		int cachedNetconfBytes;
-		const void *cachedNetconf;
-		uint64_t cachedNetconfRevision;
-		uint64_t cachedNetconfTimestamp;
-		uint64_t clientReportedRevision;
-		bool authorized;
-		bool activeBridge;
-	} member;
+	MemberRecord member;
 	memset(&member,0,sizeof(member));
 	Utils::snprintf(member.nodeId,sizeof(member.nodeId),"%.10llx",(unsigned long long)identity.address().toInt());
 
@@ -233,11 +279,9 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 	// Fetch Network record
 
-	bool foundNetwork = false;
 	sqlite3_reset(_sGetNetworkById);
 	sqlite3_bind_text(_sGetNetworkById,1,network.id,16,SQLITE_STATIC);
 	if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
-		foundNetwork = true;
 		network.name = (const char *)sqlite3_column_text(_sGetNetworkById,0);
 		network.isPrivate = (sqlite3_column_int(_sGetNetworkById,1) > 0);
 		network.enableBroadcast = (sqlite3_column_int(_sGetNetworkById,2) > 0);
@@ -245,27 +289,26 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		network.v4AssignMode = (const char *)sqlite3_column_text(_sGetNetworkById,4);
 		network.v6AssignMode = (const char *)sqlite3_column_text(_sGetNetworkById,5);
 		network.multicastLimit = sqlite3_column_int(_sGetNetworkById,6);
-		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
-	}
-	if (!foundNetwork)
-		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
+		network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
+		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
+	} else return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
 
 	// Fetch Member record
 
 	bool foundMember = false;
-	sqlite3_reset(_sGetMemberByNetworkAndNodeId);
-	sqlite3_bind_text(_sGetMemberByNetworkAndNodeId,1,network.id,16,SQLITE_STATIC);
-	sqlite3_bind_text(_sGetMemberByNetworkAndNodeId,2,member.nodeId,10,SQLITE_STATIC);
-	if (sqlite3_step(_sGetMemberByNetworkAndNodeId) == SQLITE_ROW) {
+	sqlite3_reset(_sGetMember);
+	sqlite3_bind_text(_sGetMember,1,network.id,16,SQLITE_STATIC);
+	sqlite3_bind_text(_sGetMember,2,member.nodeId,10,SQLITE_STATIC);
+	if (sqlite3_step(_sGetMember) == SQLITE_ROW) {
 		foundMember = true;
-		member.rowid = (int64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,0);
-		member.cachedNetconfBytes = sqlite3_column_bytes(_sGetMemberByNetworkAndNodeId,1);
-		member.cachedNetconf = sqlite3_column_blob(_sGetMemberByNetworkAndNodeId,1);
-		member.cachedNetconfRevision = (uint64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,2);
-		member.cachedNetconfTimestamp = (uint64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,3);
-		member.clientReportedRevision = (uint64_t)sqlite3_column_int64(_sGetMemberByNetworkAndNodeId,4);
-		member.authorized = (sqlite3_column_int(_sGetMemberByNetworkAndNodeId,5) > 0);
-		member.activeBridge = (sqlite3_column_int(_sGetMemberByNetworkAndNodeId,6) > 0);
+		member.rowid = (int64_t)sqlite3_column_int64(_sGetMember,0);
+		member.cachedNetconfBytes = sqlite3_column_bytes(_sGetMember,1);
+		member.cachedNetconf = sqlite3_column_blob(_sGetMember,1);
+		member.cachedNetconfRevision = (uint64_t)sqlite3_column_int64(_sGetMember,2);
+		member.cachedNetconfTimestamp = (uint64_t)sqlite3_column_int64(_sGetMember,3);
+		member.clientReportedRevision = (uint64_t)sqlite3_column_int64(_sGetMember,4);
+		member.authorized = (sqlite3_column_int(_sGetMember,5) > 0);
+		member.activeBridge = (sqlite3_column_int(_sGetMember,6) > 0);
 	}
 
 	// Create Member record for unknown nodes, auto-authorizing if network is public
@@ -512,6 +555,260 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	}
 
 	return NetworkController::NETCONF_QUERY_OK;
+}
+
+unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
+	const std::vector<std::string> &path,
+	const std::map<std::string,std::string> &urlArgs,
+	const std::map<std::string,std::string> &headers,
+	const std::string &body,
+	std::string &responseBody,
+	std::string &responseContentType)
+{
+	char json[16384];
+
+	if (path.empty())
+		return 404;
+	Mutex::Lock _l(_lock);
+
+	if (path[0] == "network") {
+
+		if ((path.size() >= 2)&&(path[1].length() == 16)) {
+			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+			char nwids[24];
+			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+
+			if (path.size() >= 3) {
+				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
+					uint64_t address = Utils::hexStrToU64(path[3].c_str());
+					char addrs[24];
+					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
+
+					sqlite3_reset(_sGetMember2);
+					sqlite3_bind_text(_sGetMember2,1,nwids,16,SQLITE_STATIC);
+					sqlite3_bind_text(_sGetMember2,2,addrs,10,SQLITE_STATIC);
+					if (sqlite3_step(_sGetMember2) == SQLITE_ROW) {
+						Utils::snprintf(json,sizeof(json),
+							"{\n"
+							"\taddress: \"%s\""
+							"\tauthorized: %s,"
+							"\tactiveBridge: %s,\n"
+							"\tlastAt: \"%s\",\n"
+							"\tlastSeen: %llu,\n"
+							"\tfirstSeen: %llu,\n"
+							"\tidentity: \"%s\"\n"
+							"}\n",
+							addrs,
+							(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
+							(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
+							_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,3)).c_str(),
+							(unsigned long long)sqlite3_column_int64(_sGetMember2,4),
+							(unsigned long long)sqlite3_column_int64(_sGetMember2,5),
+							_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,2)).c_str());
+						responseBody = json;
+						responseContentType = "application/json";
+						return 200;
+					} // else 404
+				} // else 404
+			} else {
+				// get network info
+				sqlite3_reset(_sGetNetworkById);
+				sqlite3_bind_text(_sGetNetworkById,1,nwids,16,SQLITE_STATIC);
+				if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
+					Utils::snprintf(json,sizeof(json),
+						"{\n"
+						"\tnwid: \"%s\",\n"
+						"\tname: \"%s\",\n"
+						"\tprivate: %s,\n"
+						"\tenableBroadcast: %s,\n"
+						"\tallowPassiveBridging: %s,\n"
+						"\tv4AssignMode: \"%s\",\n"
+						"\tv6AssignMode: \"%s\",\n"
+						"\tmulticastLimit: %d,\n"
+						"\tcreationTime: %llu,\n",
+						"\trevision: %llu,\n"
+						"\tmembers: [",
+						nwids,
+						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
+						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
+						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
+						(sqlite3_column_int(_sGetNetworkById,3) > 0) ? "true" : "false",
+						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,4)).c_str(),
+						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,5)).c_str(),
+						sqlite3_column_int(_sGetNetworkById,6),
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,7),
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,8));
+					responseBody = json;
+
+					sqlite3_reset(_sListNetworkMembers);
+					sqlite3_bind_text(_sListNetworkMembers,1,nwids,16,SQLITE_STATIC);
+					bool firstMember = true;
+					while (sqlite3_step(_sListNetworkMembers) == SQLITE_ROW) {
+						Utils::snprintf(json,sizeof(json),
+							"%s{\n"
+							"\t\taddress: \"%s\",\n"
+							"\t\tauthorized: %s,\n"
+							"\t\tactiveBridge: %s,\n"
+							"\t\tlastAt: \"%s\",\n"
+							"\t\tlastSeen: %llu,\n"
+							"\t\tfirstSeen: %llu\n"
+							"\t}",
+							firstMember ? "\n\t" : ",",
+							(const char *)sqlite3_column_text(_sListNetworkMembers,2),
+							(sqlite3_column_int(_sListNetworkMembers,0) > 0) ? "true" : "false",
+							(sqlite3_column_int(_sListNetworkMembers,1) > 0) ? "true" : "false",
+							_jsonEscape((const char *)sqlite3_column_text(_sListNetworkMembers,3)).c_str(),
+							(unsigned long long)sqlite3_column_int64(_sListNetworkMembers,4),
+							(unsigned long long)sqlite3_column_int64(_sListNetworkMembers,5));
+						responseBody.append(json);
+						firstMember = false;
+					}
+					responseBody.append("],\n\trelays: [");
+
+					sqlite3_reset(_sGetRelays);
+					sqlite3_bind_text(_sGetRelays,1,nwids,16,SQLITE_STATIC);
+					bool firstRelay = true;
+					while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
+						responseBody.append(firstRelay ? "\n\t\t" : ",\n\t\t");
+						firstRelay = false;
+						responseBody.append("{address:\"");
+						responseBody.append((const char *)sqlite3_column_text(_sGetRelays,0));
+						responseBody.append("\",phyAddress:\"");
+						responseBody.append(_jsonEscape((const char *)sqlite3_column_text(_sGetRelays,1)));
+						responseBody.append("\"}");
+					}
+					responseBody.append("],\n\tipAssignmentPools: [");
+
+					sqlite3_reset(_sGetIpAssignmentPools2);
+					sqlite3_bind_text(_sGetIpAssignmentPools2,1,nwids,16,SQLITE_STATIC);
+					bool firstIpAssignmentPool = true;
+					while (sqlite3_step(_sGetIpAssignmentPools2) == SQLITE_ROW) {
+						responseBody.append(firstIpAssignmentPool ? "\n\t\t" : ",\n\t\t");
+						firstIpAssignmentPool = false;
+						InetAddress ipp((const void *)sqlite3_column_blob(_sGetIpAssignmentPools2,0),(sqlite3_column_int(_sGetIpAssignmentPools2,2) == 6) ? 16 : 4,(unsigned int)sqlite3_column_int(_sGetIpAssignmentPools2,1));
+						Utils::snprintf(json,sizeof(json),"{ipNetwork:\"%s\",ipNetmaskBits:%u,ipVersion:%d,active:%s}",
+							_jsonEscape(ipp.toIpString()).c_str(),
+							ipp.netmaskBits(),
+							sqlite3_column_int(_sGetIpAssignmentPools2,2),
+							(sqlite3_column_int(_sGetIpAssignmentPools2,3) > 0) ? "true" : "false");
+						responseBody.append(json);
+					}
+					responseBody.append("],\n\trules: [");
+
+					sqlite3_reset(_sListRules);
+					sqlite3_bind_text(_sListRules,1,nwids,16,SQLITE_STATIC);
+					bool firstRule = true;
+					while (sqlite3_step(_sListRules) == SQLITE_ROW) {
+						responseBody.append(firstRule ? "\n\t{\n" : ",{\n");
+						if (sqlite3_column_type(_sListRules,0) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tnodeId: \"%s\",\n",(const char *)sqlite3_column_text(_sListRules,0));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,1) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tvlanId: %d,\n",sqlite3_column_int(_sListRules,1));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,2) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tvlanPcp: %d,\n",sqlite3_column_int(_sListRules,2));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,3) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tetherType: %d,\n",sqlite3_column_int(_sListRules,3));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,4) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tmacSource: \"%s\",\n",MAC((const char *)sqlite3_column_text(_sListRules,4)).toString().c_str());
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,5) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tmacDest: \"%s\",\n",MAC((const char *)sqlite3_column_text(_sListRules,5)).toString().c_str());
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,6) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tipSource: \"%s\",\n",_jsonEscape((const char *)sqlite3_column_text(_sListRules,6)).c_str());
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,7) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tipDest: \"%s\",\n",_jsonEscape((const char *)sqlite3_column_text(_sListRules,7)).c_str());
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,8) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tipTos: %d,\n",sqlite3_column_int(_sListRules,8));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,9) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tipProtocol: %d,\n",sqlite3_column_int(_sListRules,9));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,10) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tipSourcePort: %d,\n",sqlite3_column_int(_sListRules,10));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,11) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\tipDestPort: %d,\n",sqlite3_column_int(_sListRules,11));
+							responseBody.append(json);
+						}
+						responseBody.append("\t\taction: \"");
+						responseBody.append(_jsonEscape((const char *)sqlite3_column_text(_sListRules,12)));
+						responseBody.append("\"\n\t}");
+					}
+
+					responseBody.append("]\n}\n");
+					responseContentType = "application/json";
+					return 200;
+				} // else 404
+			}
+		} else if (path.size() == 1) {
+			// list networks
+			sqlite3_reset(_sListNetworks);
+			responseContentType = "application/json";
+			responseBody = "[";
+			bool first = true;
+			while (sqlite3_step(_sListNetworks) == SQLITE_ROW) {
+				if (first) {
+					first = false;
+					responseBody.push_back('"');
+				} else responseBody.append(",\"");
+				responseBody.append((const char *)sqlite3_column_text(_sListNetworks,0));
+				responseBody.push_back('"');
+			}
+			responseBody.push_back(']');
+			return 200;
+		} // else 404
+
+	}
+
+	return 404;
+}
+
+unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
+	const std::vector<std::string> &path,
+	const std::map<std::string,std::string> &urlArgs,
+	const std::map<std::string,std::string> &headers,
+	const std::string &body,
+	std::string &responseBody,
+	std::string &responseContentType)
+{
+	if (path.empty())
+		return 404;
+	Mutex::Lock _l(_lock);
+
+	return 404;
+}
+
+unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
+	const std::vector<std::string> &path,
+	const std::map<std::string,std::string> &urlArgs,
+	const std::map<std::string,std::string> &headers,
+	const std::string &body,
+	std::string &responseBody,
+	std::string &responseContentType)
+{
+	if (path.empty())
+		return 404;
+	Mutex::Lock _l(_lock);
+
+	return 404;
 }
 
 } // namespace ZeroTier

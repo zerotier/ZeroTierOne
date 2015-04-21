@@ -25,92 +25,50 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_SQLITENETWORKCONTROLLER_HPP
-#define ZT_SQLITENETWORKCONTROLLER_HPP
+#ifndef ZT_CONTROLPLANESUBSYSTEM_HPP
+#define ZT_CONTROLPLANESUBSYSTEM_HPP
 
-#include <stdint.h>
-
-#include <sqlite3.h>
-
-#include <string>
 #include <map>
 #include <vector>
-
-#include "../node/Constants.hpp"
-#include "../node/NetworkController.hpp"
-#include "../node/Mutex.hpp"
-
-#include "../service/ControlPlaneSubsystem.hpp"
+#include <string>
 
 namespace ZeroTier {
 
-class SqliteNetworkController : public NetworkController,public ControlPlaneSubsystem
+/**
+ * Base class for subsystems that can be mounted under the HTTP control plane
+ *
+ * Handlers should fill in responseBody and responseContentType and return
+ * a HTTP status code or 0 on other errors.
+ */
+class ControlPlaneSubsystem
 {
 public:
-	SqliteNetworkController(const char *dbPath);
-	virtual ~SqliteNetworkController();
+	ControlPlaneSubsystem() {}
+	virtual ~ControlPlaneSubsystem() {}
 
-	// NetworkController
-	virtual NetworkController::ResultCode doNetworkConfigRequest(
-		const InetAddress &fromAddr,
-		const Identity &signingId,
-		const Identity &identity,
-		uint64_t nwid,
-		const Dictionary &metaData,
-		uint64_t haveRevision,
-		Dictionary &netconf);
-
-	// ControlPlaneSubsystem
 	virtual unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
 		const std::map<std::string,std::string> &headers,
 		const std::string &body,
 		std::string &responseBody,
-		std::string &responseContentType);
+		std::string &responseContentType) = 0;
+
 	virtual unsigned int handleControlPlaneHttpPOST(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
 		const std::map<std::string,std::string> &headers,
 		const std::string &body,
 		std::string &responseBody,
-		std::string &responseContentType);
+		std::string &responseContentType) = 0;
+
 	virtual unsigned int handleControlPlaneHttpDELETE(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
 		const std::map<std::string,std::string> &headers,
 		const std::string &body,
 		std::string &responseBody,
-		std::string &responseContentType);
-
-private:
-	std::string _dbPath;
-	sqlite3 *_db;
-
-	sqlite3_stmt *_sGetNetworkById;
-	sqlite3_stmt *_sGetMember;
-	sqlite3_stmt *_sCreateMember;
-	sqlite3_stmt *_sGetNodeIdentity;
-	sqlite3_stmt *_sCreateNode;
-	sqlite3_stmt *_sUpdateNode;
-	sqlite3_stmt *_sUpdateNode2;
-	sqlite3_stmt *_sUpdateMemberClientReportedRevision;
-	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
-	sqlite3_stmt *_sGetMulticastRates;
-	sqlite3_stmt *_sGetActiveBridges;
-	sqlite3_stmt *_sGetIpAssignmentsForNode;
-	sqlite3_stmt *_sGetIpAssignmentPools;
-	sqlite3_stmt *_sCheckIfIpIsAllocated;
-	sqlite3_stmt *_sAllocateIp;
-	sqlite3_stmt *_sCacheNetconf;
-	sqlite3_stmt *_sGetRelays;
-	sqlite3_stmt *_sListNetworks;
-	sqlite3_stmt *_sListNetworkMembers;
-	sqlite3_stmt *_sGetMember2;
-	sqlite3_stmt *_sGetIpAssignmentPools2;
-	sqlite3_stmt *_sListRules;
-
-	Mutex _lock;
+		std::string &responseContentType) = 0;
 };
 
 } // namespace ZeroTier

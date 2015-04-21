@@ -241,9 +241,10 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 	buf.append(json);
 }
 
-ControlPlane::ControlPlane(OneService *svc,Node *n) :
+ControlPlane::ControlPlane(OneService *svc,Node *n,SqliteNetworkController *nc) :
 	_svc(svc),
-	_node(n)
+	_node(n),
+	_controller(nc)
 {
 }
 
@@ -264,6 +265,7 @@ unsigned int ControlPlane::handleRequest(
 	unsigned int scode = 404;
 	std::vector<std::string> ps(Utils::split(path.c_str(),"/","",""));
 	std::map<std::string,std::string> urlArgs;
+	Mutex::Lock _l(_lock);
 
 	if (!((fromAddress.ipsEqual(InetAddress::LO4))||(fromAddress.ipsEqual(InetAddress::LO6))))
 		return 403; // Forbidden: we only allow access from localhost right now
@@ -291,7 +293,6 @@ unsigned int ControlPlane::handleRequest(
 
 	bool isAuth = false;
 	{
-		Mutex::Lock _l(_authTokens_m);
 		std::map<std::string,std::string>::const_iterator ah(headers.find("x-zt1-auth"));
 		if ((ah != headers.end())&&(_authTokens.count(ah->second) > 0)) {
 			isAuth = true;
@@ -429,12 +430,19 @@ unsigned int ControlPlane::handleRequest(
 					} // else 404
 					_node->freeQueryResult((void *)pl);
 				} else scode = 500;
-			} // else 404
+			} else {
+				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
+				if (ss != _subsystems.end())
+					scode = ss->second->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+				else scode = 404;
+			}
+
 		} else scode = 401; // isAuth == false
 
 	} else if ((httpMethod == HTTP_POST)||(httpMethod == HTTP_PUT)) {
 
 		if (isAuth) {
+
 			if (ps[0] == "config") {
 				// TODO
 			} else if (ps[0] == "network") {
@@ -455,12 +463,19 @@ unsigned int ControlPlane::handleRequest(
 						_node->freeQueryResult((void *)nws);
 					} else scode = 500;
 				}
-			} // else 404
+			} else {
+				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
+				if (ss != _subsystems.end())
+					scode = ss->second->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+				else scode = 404;
+			}
+
 		} else scode = 401; // isAuth == false
 
 	} else if (httpMethod == HTTP_DELETE) {
 
 		if (isAuth) {
+
 			if (ps[0] == "config") {
 				// TODO
 			} else if (ps[0] == "network") {
@@ -480,7 +495,12 @@ unsigned int ControlPlane::handleRequest(
 					} // else 404
 					_node->freeQueryResult((void *)nws);
 				} else scode = 500;
-			} // else 404
+			} else {
+				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
+				if (ss != _subsystems.end())
+					scode = ss->second->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+				else scode = 404;
+			}
 
 		} else {
 			scode = 401; // isAuth = false
@@ -492,7 +512,7 @@ unsigned int ControlPlane::handleRequest(
 	}
 
 	// Wrap result in jsonp function call if the user included a jsonp= url argument.
-	// Also double-check isAuth since it feels like the right thing to do.
+	// Also double-check isAuth since forbidding this without auth feels safer.
 	std::map<std::string,std::string>::const_iterator jsonp(urlArgs.find("jsonp"));
 	if ((isAuth)&&(jsonp != urlArgs.end())&&(responseContentType == "application/json")) {
 		if (responseBody.length() > 0)
