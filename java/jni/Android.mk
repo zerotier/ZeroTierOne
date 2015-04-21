@@ -3,6 +3,9 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := ZeroTierOneJNI
+LOCAL_C_INCLUDES := $(ZT1)/include
+
+# ZeroTierOne SDK source files
 LOCAL_SRC_FILES := \
 	$(ZT1)/ext/lz4/lz4.c \
 	$(ZT1)/ext/json-parser/json.c \
@@ -30,5 +33,9 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/Utils.cpp \
 	$(ZT1)/osdep/Http.cpp \
 	$(ZT1)/osdep/OSUtils.cpp
+
+# JNI Files
+LOCAL_SRC_FILES += \
+	com_zerotierone_sdk_Node.cpp
 
 include $(BUILD_SHARED_LIBRARY)

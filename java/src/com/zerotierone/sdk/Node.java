@@ -35,12 +35,26 @@ public class Node {
 		System.loadLibrary("ZeroTierOneJNI");
 	}
 
-        private final DataStoreGetListener getListener;
-        private final DataStorePutListener putListener;
-        private final PacketSender sender;
-        private final VirtualNetworkFrameListener frameListener;
-        private final VirtualNetworkConfigListener configListener;
-        
+    private static final String TAG = "NODE";
+
+    /**
+     * Node ID for JNI purposes.
+     * Currently set to the now value passed in at the constructor
+     * 
+     * -1 if the node has already been closed
+     */
+    private final long nodeId;
+
+    private final DataStoreGetListener getListener;
+    private final DataStorePutListener putListener;
+    private final PacketSender sender;
+    private final VirtualNetworkFrameListener frameListener;
+    private final VirtualNetworkConfigListener configListener;
+    
+
+    private native ResultCode node_init(long now);
+    private native void node_delete(long nodeId);
+
 	public Node(long now,
                 DataStoreGetListener getListener,
                 DataStorePutListener putListener,
@@ -48,33 +62,78 @@ public class Node {
                 VirtualNetworkFrameListener frameListener,
                 VirtualNetworkConfigListener configListener)
 	{
-            this.getListener = getListener;
-            this.putListener = putListener;
-            this.sender = sender;
-            this.frameListener = frameListener;
-            this.configListener = configListener;
+        this.nodeId = now;
+
+        this.getListener = getListener;
+        this.putListener = putListener;
+        this.sender = sender;
+        this.frameListener = frameListener;
+        this.configListener = configListener;
+
+        ResultCode rc = node_init(now);
+        if(rc.getValue() != ResultCode.RESULT_OK)
+        {
+            // TODO: Throw Exception
+        }
 	}
 
-	public native ResultCode processVirtualNetworkFrame(
+    public void close() {
+        if(nodeId != -1) {
+            node_delete(nodeId);
+            nodeId = -1;
+        }
+    }
+
+	private native ResultCode processVirtualNetworkFrame(
+        long nodeId,
 		long now,
 		long nwid,
 		long sourceMac,
 		long destMac,
-		int etherTYpe,
+		int etherType,
 		int vlanId,
 		ByteBuffer frameData,
 		int frameLength,
 		Long nextBackgroundTaskDeadline);
 
-	public native ResultCode processBackgroundTasks(
+    public ResultCode processVirtualNetworkFrame(
+        long now,
+        long nwid,
+        long sourceMac,
+        long destMac,
+        int etherType,
+        int vlanId,
+        ByteBuffer frameData,
+        int frameLength,
+        Long nextBackgroundTaskDeadline) {
+        return processVirtualNetworkFrame(
+            nodeId, now, nwid, sourceMac, destMac, etherType, vlanId, 
+            frameData, frameLength, nextBackgroundTaskDeadline);
+    }
+
+	private native ResultCode processBackgroundTasks(
+        long nodeId,
 		long now,
 		Long nextBackgroundTaskDeadline);
 
-	public native ResultCode join(long nwid);
+    public ResultCode processBackgroundTasks(long now, long nextBackgroundTaskDeadline) {
+        return processBackgroundTasks(nodeId, now, nextBackgroundTaskDeadline);
+    }
 
-	public native ResultCode leave(long nwid);
+	private native ResultCode join(long nodeId, long nwid);
 
-	public native ResultCode multicastSubscribe(
+    public ResultCode join(long nwid) {
+        return join(nodeId, nwid);
+    }
+
+	private native ResultCode leave(long nodeId, long nwid);
+
+    public ResultCode leave(long nwid) {
+        return leave(nodeId, nwid);
+    }
+
+	private native ResultCode multicastSubscribe(
+        long nodeId,
 		long nwid,
 		long multicastGroup,
 		long multicastAdi);
@@ -82,10 +141,18 @@ public class Node {
 	public ResultCode multicastSubscribe(
 		long nwid,
 		long multicastGroup) {
-		return multicastSubscribe(nwid, multicastGroup, 0);
+		return multicastSubscribe(nodeId, nwid, multicastGroup, 0);
 	}
 
-	public native ResultCode multicastUnsubscribe(
+    public ResultCode multicastSubscribe(
+        long nwid,
+        long multicastGroup,
+        long multicastAdi) {
+        return multicastSubscribe(nodeId, nwid, multicastGroup, multicastAdi);
+    }
+
+	private native ResultCode multicastUnsubscribe(
+        long nodeId,
 		long nwid,
 		long multicastGroup,
 		long multicastAdi);
@@ -93,11 +160,19 @@ public class Node {
 	public ResultCode multicastUnsubscribe(
 		long nwid,
 		long multicastGroup) {
-		return multicastUnsubscribe(nwid, multicastGroup, 0);
+		return multicastUnsubscribe(nodeId, nwid, multicastGroup, 0);
 	}
 
-	public native long address();
+    public ResultCode multicastUnsubscribe(
+        long nwid,
+        long multicastGroup,
+        long multicastAdi) {
+        return multicastUnsubscribe(nodeId, nwid, multicastGroup, multicastAdi);
+    }
 
+	private native long address(long nodeId);
 
-
+    public long address() {
+        return address(nodeId);
+    }
 }

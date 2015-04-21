@@ -9,59 +9,75 @@ extern "C" {
 #endif
 /*
  * Class:     com_zerotierone_sdk_Node
+ * Method:    node_init
+ * Signature: (J)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    node_delete
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
  * Method:    processVirtualNetworkFrame
- * Signature: (JJJJIILjava/nio/ByteBuffer;ILjava/lang/Long;)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJJIILjava/nio/ByteBuffer;ILjava/lang/Long;)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFrame
-  (JNIEnv *, jobject, jlong, jlong, jlong, jlong, jint, jint, jobject, jint, jobject);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jlong, jlong, jint, jint, jobject, jint, jobject);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    processBackgroundTasks
- * Signature: (JLjava/lang/Long;)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJLjava/lang/Long;)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks
-  (JNIEnv *, jobject, jlong, jobject);
+  (JNIEnv *, jobject, jlong, jlong, jobject);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    join
- * Signature: (J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jobject, jlong, jlong);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    leave
- * Signature: (J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jobject, jlong, jlong);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    multicastSubscribe
- * Signature: (JJJ)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe
-  (JNIEnv *, jobject, jlong, jlong, jlong);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jlong);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    multicastUnsubscribe
- * Signature: (JJJ)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
-  (JNIEnv *, jobject, jlong, jlong, jlong);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jlong);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    address
- * Signature: ()J
+ * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address
-  (JNIEnv *, jobject);
+  (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus
 }
