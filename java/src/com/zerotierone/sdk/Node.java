@@ -51,10 +51,6 @@ public class Node {
     private final VirtualNetworkFrameListener frameListener;
     private final VirtualNetworkConfigListener configListener;
     
-
-    private native ResultCode node_init(long now);
-    private native void node_delete(long nodeId);
-
 	public Node(long now,
                 DataStoreGetListener getListener,
                 DataStorePutListener putListener,
@@ -116,34 +112,19 @@ public class Node {
             frameData, frameLength, nextBackgroundTaskDeadline);
     }
 
-	private native ResultCode processBackgroundTasks(
-        long nodeId,
-		long now,
-		Long nextBackgroundTaskDeadline);
-
     public ResultCode processBackgroundTasks(long now, long nextBackgroundTaskDeadline) {
         return processBackgroundTasks(nodeId, now, nextBackgroundTaskDeadline);
     }
-
-	private native ResultCode join(long nodeId, long nwid);
 
     public ResultCode join(long nwid) {
         return join(nodeId, nwid);
     }
 
-	private native ResultCode leave(long nodeId, long nwid);
-
     public ResultCode leave(long nwid) {
         return leave(nodeId, nwid);
     }
 
-	private native ResultCode multicastSubscribe(
-        long nodeId,
-		long nwid,
-		long multicastGroup,
-		long multicastAdi);
-
-	public ResultCode multicastSubscribe(
+    public ResultCode multicastSubscribe(
 		long nwid,
 		long multicastGroup) {
 		return multicastSubscribe(nodeId, nwid, multicastGroup, 0);
@@ -155,12 +136,6 @@ public class Node {
         long multicastAdi) {
         return multicastSubscribe(nodeId, nwid, multicastGroup, multicastAdi);
     }
-
-	private native ResultCode multicastUnsubscribe(
-        long nodeId,
-		long nwid,
-		long multicastGroup,
-		long multicastAdi);
 
 	public ResultCode multicastUnsubscribe(
 		long nwid,
@@ -175,9 +150,37 @@ public class Node {
         return multicastUnsubscribe(nodeId, nwid, multicastGroup, multicastAdi);
     }
 
-	private native long address(long nodeId);
-
     public long address() {
         return address(nodeId);
     }
+
+    /**
+     * function declarations for JNI
+     */
+    private native ResultCode node_init(long now);
+
+    private native void node_delete(long nodeId);
+
+    private native ResultCode processBackgroundTasks(
+        long nodeId,
+        long now,
+        Long nextBackgroundTaskDeadline);
+
+    private native ResultCode join(long nodeId, long nwid);
+
+    private native ResultCode leave(long nodeId, long nwid);
+
+    private native ResultCode multicastSubscribe(
+        long nodeId,
+        long nwid,
+        long multicastGroup,
+        long multicastAdi);
+
+    private native ResultCode multicastUnsubscribe(
+        long nodeId,
+        long nwid,
+        long multicastGroup,
+        long multicastAdi);
+
+    private native long address(long nodeId);
 }
