@@ -147,6 +147,7 @@ public:
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::vector<InetAddress> &staticIps() const throw() { return _staticIps; }
 	inline const std::vector<Address> &activeBridges() const throw() { return _activeBridges; }
+	inline const std::vector< std::pair<Address,InetAddress> > &relays() const throw() { return _relays; }
 	inline const CertificateOfMembership &com() const throw() { return _com; }
 	inline bool enableBroadcast() const throw() { return _enableBroadcast; }
 
@@ -188,6 +189,7 @@ private:
 	std::string _description;
 	std::vector<InetAddress> _staticIps;
 	std::vector<Address> _activeBridges;
+	std::vector< std::pair<Address,InetAddress> > _relays;
 	std::map<MulticastGroup,MulticastRate> _multicastRates;
 	CertificateOfMembership _com;
 

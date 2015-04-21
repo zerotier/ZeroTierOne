@@ -181,6 +181,18 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 			_multicastRates[MulticastGroup(i->first)] = MulticastRate(Utils::hexStrToUInt(params[0].c_str()),Utils::hexStrToUInt(params[1].c_str()),Utils::hexStrToUInt(params[2].c_str()));
 	}
 
+	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
+	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
+		std::size_t semi(r->find(';')); // address;ip/port,...
+		if ((semi == ZT_ADDRESS_LENGTH)&&(r->length() > (ZT_ADDRESS_LENGTH + 1))) {
+			std::pair<Address,InetAddress> relay(Address(r->substr(0,semi)),InetAddress(r->substr(semi+1)));
+			if ((relay.first)&&(relay.second))
+				_relays.push_back(relay);
+		}
+	}
+	std::sort(_relays.begin(),_relays.end());
+	std::unique(_relays.begin(),_relays.end());
+
 	_com.fromString(d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP,std::string()));
 }
 
