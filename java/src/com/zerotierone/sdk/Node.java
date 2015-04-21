@@ -84,6 +84,11 @@ public class Node {
         }
     }
 
+    @Override
+    protected void finalize() {
+        close();
+    }
+
 	private native ResultCode processVirtualNetworkFrame(
         long nodeId,
 		long now,
