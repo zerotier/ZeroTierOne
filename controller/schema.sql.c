@@ -41,6 +41,8 @@
 "\n"\
 "CREATE INDEX Member_networkId ON Member (networkId);\n"\
 "\n"\
+"CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
+"\n"\
 "CREATE UNIQUE INDEX Member_networkId_nodeId ON Member (networkId, nodeId);\n"\
 "\n"\
 "CREATE TABLE MulticastRate (\n"\
@@ -69,7 +71,8 @@
 "\n"\
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL,\n"\
-"  nodeId char(10) NOT NULL\n"\
+"  nodeId char(10) NOT NULL,\n"\
+"  address varchar(64) NOT NULL\n"\
 ");\n"\
 "\n"\
 "CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);\n"\

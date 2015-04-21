@@ -40,6 +40,8 @@ CREATE TABLE Member (
 
 CREATE INDEX Member_networkId ON Member (networkId);
 
+CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
+
 CREATE UNIQUE INDEX Member_networkId_nodeId ON Member (networkId, nodeId);
 
 CREATE TABLE MulticastRate (
@@ -68,7 +70,8 @@ CREATE TABLE Network (
 
 CREATE TABLE Relay (
   networkId char(16) NOT NULL,
-  nodeId char(10) NOT NULL
+  nodeId char(10) NOT NULL,
+  address varchar(64) NOT NULL
 );
 
 CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);

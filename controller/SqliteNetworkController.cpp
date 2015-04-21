@@ -105,12 +105,13 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET clientReportedRevision = ? WHERE rowid = ?",-1,&_sUpdateMemberClientReportedRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT mgMac,mgAdi,preload,maxBalance,accrual FROM MulticastRate WHERE networkId = ?",-1,&_sGetMulticastRates,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND authorized > 0 AND activeBridge > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT ipNetwork,ipNetmaskBits FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ? AND active > 0",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE networkId = ? AND ip = ? AND ipVersion = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignment (networkId,nodeId,ip,ipNetmaskBits,ipVersion) VALUES (?,?,?,?,?)",-1,&_sAllocateIp,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET cachedNetconf = ?,cachedNetconfRevision = ? WHERE rowid = ?",-1,&_sCacheNetconf,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT nodeId,address FROM Relay WHERE networkId = ?",-1,&_sGetRelays,(const char **)0) != SQLITE_OK)
 		 ) {
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
@@ -137,6 +138,7 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCheckIfIpIsAllocated);
 		sqlite3_finalize(_sAllocateIp);
 		sqlite3_finalize(_sCacheNetconf);
+		sqlite3_finalize(_sGetRelays);
 		sqlite3_close(_db);
 	}
 }
@@ -387,6 +389,29 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			}
 			if (activeBridges.length())
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges;
+		}
+
+		{
+			std::string relays;
+			sqlite3_reset(_sGetRelays);
+			sqlite3_bind_text(_sGetRelays,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
+				const char *n = (const char *)sqlite3_column_text(_sGetRelays,0);
+				const char *a = (const char *)sqlite3_column_text(_sGetRelays,1);
+				if ((n)&&(a)) {
+					Address node(n);
+					InetAddress addr(a);
+					if ((node)&&(addr)) {
+						if (relays.length())
+							relays.push_back(',');
+						relays.append(node.toString());
+						relays.push_back(';');
+						relays.append(addr.toString());
+					}
+				}
+			}
+			if (relays.length())
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_RELAYS] = relays;
 		}
 
 		if ((network.v4AssignMode)&&(!strcmp(network.v4AssignMode,"zt"))) {

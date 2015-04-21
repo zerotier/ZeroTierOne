@@ -81,6 +81,7 @@ private:
 	sqlite3_stmt *_sCheckIfIpIsAllocated;
 	sqlite3_stmt *_sAllocateIp;
 	sqlite3_stmt *_sCacheNetconf;
+	sqlite3_stmt *_sGetRelays;
 
 	Mutex _lock;
 
