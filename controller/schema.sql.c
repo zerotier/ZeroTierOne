@@ -89,7 +89,7 @@
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL,\n"\
-"  ordering integer NOT NULL DEFAULT(0),\n"\
+"  ruleId integer NOT NULL,\n"\
 "  nodeId char(10),\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\

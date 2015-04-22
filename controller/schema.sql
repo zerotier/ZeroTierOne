@@ -88,7 +88,7 @@ CREATE TABLE Node (
 
 CREATE TABLE Rule (
   networkId char(16) NOT NULL,
-  ordering integer NOT NULL DEFAULT(0),
+  ruleId integer NOT NULL,
   nodeId char(10),
   vlanId integer,
   vlanPcp integer,
