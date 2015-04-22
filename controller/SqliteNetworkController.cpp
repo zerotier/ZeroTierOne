@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <utility>
 #include <stdexcept>
+#include <set>
 
 #include "../include/ZeroTierOne.h"
 #include "../node/Constants.hpp"
@@ -497,13 +498,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 					if ((ipNetwork)&&(sqlite3_column_bytes(_sGetIpAssignmentPools,0) >= 4)&&(ipNetmaskBits > 0)&&(ipNetmaskBits < 32)) {
 						uint32_t n = Utils::ntoh(*((const uint32_t *)ipNetwork)); // network in host byte order e.g. 192.168.0.0
 						uint32_t m = 0xffffffff << (32 - ipNetmaskBits); // netmask e.g. 0xffffff00 for '24' since 32 - 24 == 8
+						n &= m; // sanity check -- ipNetwork bits right of netmask bit count should be zero
 						uint32_t im = ~m; // inverse mask, e.g. 0x000000ff for a netmask of 0xffffff00
 						uint32_t abits = (uint32_t)(identity.address().toInt() & 0xffffffff); // least significant bits of member ZT address
 
 						for(uint32_t k=0;k<=im;++k) { // try up to the number of IPs possible in this network
-							uint32_t ip = ( ((abits + k) & im) | (n & m) ); // build IP using bits from ZT address of member + k
-							if ((ip & 0x000000ff) == 0x00) continue; // no IPs ending in .0 allowed
-							if ((ip & 0x000000ff) == 0xff) continue; // no IPs ending in .255 allowed
+							uint32_t ip = ( ((abits + k) & im) | n ); // build IP using bits from ZT address of member + k
+							if ((ip & 0xffffff00) == 0) continue; // no IPs ending in .0
+							if (ip == n) continue; // no IPs equal to the network e.g. 10.0.0.0 for 10.0.0.0/255.255.255.0
+							if (ip == (n | im)) continue; // broadcast address e.g. 10.0.0.255 for 10.0.0.0/255.255.255.0
 
 							uint32_t nip = Utils::hton(ip); // IP in big-endian "network" byte order
 							sqlite3_reset(_sCheckIfIpIsAllocated);
