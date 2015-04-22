@@ -22,8 +22,7 @@
 "  networkId char(16) NOT NULL,\n"\
 "  ipNetwork blob(16) NOT NULL,\n"\
 "  ipNetmaskBits integer NOT NULL,\n"\
-"  ipVersion integer NOT NULL DEFAULT(4),\n"\
-"  active integer NOT NULL DEFAULT(1)\n"\
+"  ipVersion integer NOT NULL DEFAULT(4)\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);\n"\

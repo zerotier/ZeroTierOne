@@ -21,8 +21,7 @@ CREATE TABLE IpAssignmentPool (
   networkId char(16) NOT NULL,
   ipNetwork blob(16) NOT NULL,
   ipNetmaskBits integer NOT NULL,
-  ipVersion integer NOT NULL DEFAULT(4),
-  active integer NOT NULL DEFAULT(1)
+  ipVersion integer NOT NULL DEFAULT(4)
 );
 
 CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);

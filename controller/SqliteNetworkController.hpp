@@ -114,6 +114,9 @@ private:
 	sqlite3_stmt *_sCreateNetwork;
 	sqlite3_stmt *_sUpdateNetworkField;
 	sqlite3_stmt *_sGetNetworkRevision;
+	sqlite3_stmt *_sGetIpAssignmentsForNode2;
+	sqlite3_stmt *_sDeleteRelaysForNetwork;
+	sqlite3_stmt *_sCreateRelay;
 
 	Mutex _lock;
 };
