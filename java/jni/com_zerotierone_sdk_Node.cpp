@@ -482,6 +482,42 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket
     return createResultObject(env, ZT1_RESULT_OK);
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    processBackgroundTasks
+ * Signature: (JJ[J)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks
+   (JNIEnv *env, jobject obj, 
+    jlong id,
+    jlong in_now,
+    jlongArray out_nextBackgroundTaskDeadline)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    unsigned int nbtd_len = env->GetArrayLength(out_nextBackgroundTaskDeadline);
+    if(nbtd_len < 1)
+    {
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t now = (uint64_t)in_now;
+    uint64_t nextBackgroundTaskDeadline = 0;
+
+    ZT1_ResultCode rc = ZT1_Node_processBackgroundTasks(node, now, &nextBackgroundTaskDeadline);
+
+    jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
+    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
+    env->ReleaseLongArrayElements(out_nextBackgroundTaskDeadline, outDeadline, 0);
+
+    return createResultObject(env, rc);
+}
 
 #ifdef __cplusplus
 } // extern "C"
