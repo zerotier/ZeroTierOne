@@ -30,6 +30,7 @@
 #include <ZeroTierOne.h>
 
 #include <map>
+#include <string>
 #include <assert.h>
 #include <string.h>
 
@@ -125,12 +126,11 @@ namespace {
 
     jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     {
-        // cache the class and constructor so we don't have to
-        // look them up every time we need to create a java
+        // cache the class so we don't have to
+        // look it up every time we need to create a java
         // ResultCode object
         static jclass resultClass = NULL;
-        static jmethodID constructorId = NULL;
-
+        
         jobject resultObject = NULL;
 
         if(resultClass == NULL)
@@ -142,16 +142,30 @@ namespace {
             }
         }
 
-        if(constructorId = NULL)
+        std::string fieldName;
+        switch(code)
         {
-            constructorId = env->GetMethodID(resultClass, "<init>", "(I)V");
-            if(constructorId == NULL)
-            {
-                return NULL; // exception thrown
-            }
+        case ZT1_RESULT_OK:
+            fieldName = "ZT1_RESULT_OK";
+            break;
+        case ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
+            fieldName = "ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY";
+            break;
+        case ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
+            fieldName = "ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED";
+            break;
+        case ZT1_RESULT_ERROR_NETWORK_NOT_FOUND:
+            fieldName = "ZT1_RESULT_ERROR_NETWORK_NOT_FOUND";
+            break;
+        case ZT1_RESULT_FATAL_ERROR_INTERNAL:
+        default:
+            fieldName = "ZT1_RESULT_FATAL_ERROR_INTERNAL";
+            break;
         }
 
-        resultObject = env->NewObject(resultClass, constructorId, (jlong)code);
+        jfieldID enumField = env->GetStaticFieldID(resultClass, fieldName.c_str(), "Lcom/zerotierone/sdk/ResultCode");
+
+        resultObject = env->GetStaticObjectField(resultClass, enumField);
 
         return resultObject;
     }
