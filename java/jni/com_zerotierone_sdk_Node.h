@@ -87,6 +87,30 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
 JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address
   (JNIEnv *, jobject, jlong);
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    status
+ * Signature: (J)Lcom/zerotierone/sdk/NodeStatus;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    networkConfig
+ * Signature: (J)Lcom/zerotierone/sdk/VirtualNetworkConfig;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    version
+ * Signature: (J)Lcom/zerotierone/sdk/Version;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
+  (JNIEnv *, jobject, jlong);
+
 #ifdef __cplusplus
 }
 #endif

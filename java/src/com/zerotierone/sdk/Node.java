@@ -153,6 +153,22 @@ public class Node {
         return address(nodeId);
     }
 
+    public NodeStatus status() {
+        return status(nodeId);
+    }
+
+    // TODO: ZT1_Node_peers
+
+    public VirtualNetworkConfig networkConfig() {
+        return networkConfig(nodeId);
+    }
+
+    // TODO: ZT1_Node_networks
+
+    public Version version() {
+        return version(nodeId);
+    }
+
     /**
      * function declarations for JNI
      */
@@ -201,4 +217,16 @@ public class Node {
         long multicastAdi);
 
     private native long address(long nodeId);
+
+    private native NodeStatus status(long nodeId);
+
+    // TODO: ZT1_Node_peers
+
+    private native VirtualNetworkConfig networkConfig(long nodeId);
+
+    // TODO: ZT1_Node_networks
+
+    private native Version version(long nodeId);
+
+
 }
