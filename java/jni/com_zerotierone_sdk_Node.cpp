@@ -565,6 +565,66 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave
     return createResultObject(env, rc);
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    multicastSubscribe
+ * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe
+   (JNIEnv *env, jobject obj, 
+    jlong id, 
+    jlong in_nwid,
+    jlong in_multicastGroup,
+    jlong in_multicastAdi)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t nwid = (uint64_t)in_nwid;
+    uint64_t multicastGroup = (uint64_t)in_multicastGroup;
+    uint64_t multicastAdi = (uint64_t)in_multicastAdi;
+
+    ZT1_ResultCode rc = ZT1_Node_multicastSubscribe(
+        node, nwid, multicastGroup, multicastAdi);
+
+    return createResultObject(env, rc);
+}
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    multicastUnsubscribe
+ * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
+   (JNIEnv *env, jobject obj, 
+    jlong id, 
+    jlong in_nwid,
+    jlong in_multicastGroup,
+    jlong in_multicastAdi)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t nwid = (uint64_t)in_nwid;
+    uint64_t multicastGroup = (uint64_t)in_multicastGroup;
+    uint64_t multicastAdi = (uint64_t)in_multicastAdi;
+
+    ZT1_ResultCode rc = ZT1_Node_multicastUnsubscribe(
+        node, nwid, multicastGroup, multicastAdi);
+
+    return createResultObject(env, rc);
+}
+
 
 #ifdef __cplusplus
 } // extern "C"
