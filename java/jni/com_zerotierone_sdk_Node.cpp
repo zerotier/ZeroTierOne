@@ -154,6 +154,17 @@ namespace {
 
         return resultObject;
     }
+
+    ZT1_Node* findNode(uint64_t nodeId)
+    {
+        NodeMap::iterator found = nodeMap.find(nodeId);
+        if(found != nodeMap.end())
+        {
+            JniRef *ref = found->second;
+            return ref->node;
+        }
+        return NULL;
+    }
 }
 
 /*
@@ -309,8 +320,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
     jlongArray out_nextBackgroundTaskDeadline)
 {
     uint64_t nodeId = (uint64_t) id;
-    NodeMap::iterator found = nodeMap.find(nodeId);
-    if(found == nodeMap.end())
+    
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
     {
         // cannot find valid node.  We should  never get here.
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
@@ -322,8 +334,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
         // array for next background task length has 0 elements!
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
-
-    ZT1_Node *node = found->second;
 
     uint64_t now = (uint64_t)in_now;
     uint64_t nwid = (uint64_t)in_nwid;
