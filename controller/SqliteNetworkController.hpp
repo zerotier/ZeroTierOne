@@ -109,7 +109,6 @@ private:
 	sqlite3_stmt *_sGetMember2;
 	sqlite3_stmt *_sGetIpAssignmentPools2;
 	sqlite3_stmt *_sListRules;
-	sqlite3_stmt *_sDeleteRule;
 	sqlite3_stmt *_sCreateRule;
 	sqlite3_stmt *_sCreateNetwork;
 	sqlite3_stmt *_sUpdateNetworkField;
@@ -117,6 +116,9 @@ private:
 	sqlite3_stmt *_sGetIpAssignmentsForNode2;
 	sqlite3_stmt *_sDeleteRelaysForNetwork;
 	sqlite3_stmt *_sCreateRelay;
+	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
+	sqlite3_stmt *_sDeleteRulesForNetwork;
+	sqlite3_stmt *_sCreateIpAssignmentPool;
 
 	Mutex _lock;
 };
