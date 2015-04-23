@@ -98,10 +98,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    networkConfig
- * Signature: (J)Lcom/zerotierone/sdk/VirtualNetworkConfig;
+ * Signature: (JJ)Lcom/zerotierone/sdk/VirtualNetworkConfig;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jobject, jlong, jlong);
 
 /*
  * Class:     com_zerotierone_sdk_Node
