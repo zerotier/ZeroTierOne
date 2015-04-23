@@ -297,6 +297,9 @@ JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete
     {
         JniRef *ref = found->second;
         nodeMap.erase(found);
+
+        ZT1_Node_delete(ref->node);
+
         delete ref;
         ref = NULL;
     }
