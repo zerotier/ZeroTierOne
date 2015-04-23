@@ -25,7 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include <jni.h>
+#include "com_zerotierone_sdk_Node.h"
 
 #include <ZeroTierOne.h>
 
@@ -38,122 +38,122 @@ extern "C" {
 
 namespace {
 
-	struct JniRef
-	{
-		JniRef()
-			: env(NULL)
-			, node(NULL)
-			, dataStoreGetListener(NULL)
-			, dataStorePutListener(NULL)
-			, packetSender(NULL)
-			, frameListener(NULL)
-			, configListener(NULL)
-		{}
-		uint64_t id;
+    struct JniRef
+    {
+        JniRef()
+            : env(NULL)
+            , node(NULL)
+            , dataStoreGetListener(NULL)
+            , dataStorePutListener(NULL)
+            , packetSender(NULL)
+            , frameListener(NULL)
+            , configListener(NULL)
+        {}
+        uint64_t id;
 
-		JNIEnv *env;
+        JNIEnv *env;
 
-		ZT1_Node *node;
+        ZT1_Node *node;
 
-		jobject dataStoreGetListener;
-		jobject dataStorePutListener;
-		jobject packetSender;
-		jobject frameListener;
-		jobject configListener;
-	};
+        jobject dataStoreGetListener;
+        jobject dataStorePutListener;
+        jobject packetSender;
+        jobject frameListener;
+        jobject configListener;
+    };
 
 
-	int VirtualNetworkConfigFunctionCallback(ZT1_Node *node,void *userData,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *)
-	{
-		JniRef *ref = (JniRef*)userData;
-		assert(ref->node == node);
+    int VirtualNetworkConfigFunctionCallback(ZT1_Node *node,void *userData,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *)
+    {
+        JniRef *ref = (JniRef*)userData;
+        assert(ref->node == node);
 
-		JNIEnv *env = ref->env;
+        JNIEnv *env = ref->env;
 
-		return 0;
-	}
+        return 0;
+    }
 
-	void VirtualNetworkFrameFunctionCallback(ZT1_Node *node,void *userData,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int)
-	{
-		JniRef *ref = (JniRef*)userData;
-		assert(ref->node == node);
+    void VirtualNetworkFrameFunctionCallback(ZT1_Node *node,void *userData,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int)
+    {
+        JniRef *ref = (JniRef*)userData;
+        assert(ref->node == node);
 
-		JNIEnv *env = ref->env;
-	}
+        JNIEnv *env = ref->env;
+    }
 
-	void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event,const void *)
-	{
-		JniRef *ref = (JniRef*)userData;
-		assert(ref->node == node);
+    void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event,const void *)
+    {
+        JniRef *ref = (JniRef*)userData;
+        assert(ref->node == node);
 
-		JNIEnv *env = ref->env;
-	}
+        JNIEnv *env = ref->env;
+    }
 
-	long DataStoreGetFunction(ZT1_Node *node,void *userData,const char *,void *,unsigned long,unsigned long,unsigned long *)
-	{
-		JniRef *ref = (JniRef*)userData;
-		assert(ref->node == node);
+    long DataStoreGetFunction(ZT1_Node *node,void *userData,const char *,void *,unsigned long,unsigned long,unsigned long *)
+    {
+        JniRef *ref = (JniRef*)userData;
+        assert(ref->node == node);
 
-		JNIEnv *env = ref->env;
+        JNIEnv *env = ref->env;
 
-		return 0;
-	}
+        return 0;
+    }
 
-	int DataStorePutFunction(ZT1_Node *node,void *userData,const char *,const void *,unsigned long,int)
-	{
-		JniRef *ref = (JniRef*)userData;
-		assert(ref->node == node);
+    int DataStorePutFunction(ZT1_Node *node,void *userData,const char *,const void *,unsigned long,int)
+    {
+        JniRef *ref = (JniRef*)userData;
+        assert(ref->node == node);
 
-		JNIEnv *env = ref->env;
+        JNIEnv *env = ref->env;
 
-		return 0;
-	}
+        return 0;
+    }
 
-	int WirePacketSendFunction(ZT1_Node *node,void *userData,const struct sockaddr_storage *,unsigned int,const void *,unsigned int)
-	{
-		JniRef *ref = (JniRef*)userData;
-		assert(ref->node == node);
+    int WirePacketSendFunction(ZT1_Node *node,void *userData,const struct sockaddr_storage *,unsigned int,const void *,unsigned int)
+    {
+        JniRef *ref = (JniRef*)userData;
+        assert(ref->node == node);
 
-		JNIEnv *env = ref->env;
+        JNIEnv *env = ref->env;
 
-		return 0;
-	}
+        return 0;
+    }
 
-	typedef std::map<uint64_t, JniRef*> NodeMap;
-	static NodeMap nodeMap;
+    typedef std::map<uint64_t, JniRef*> NodeMap;
+    static NodeMap nodeMap;
 
-	jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
-	{
-		// cache the class and constructor so we don't have to
-		// look them up every time we need to create a java
-		// ResultCode object
-		static jclass resultClass = NULL;
-		static jmethodID constructorId = NULL;
+    jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
+    {
+        // cache the class and constructor so we don't have to
+        // look them up every time we need to create a java
+        // ResultCode object
+        static jclass resultClass = NULL;
+        static jmethodID constructorId = NULL;
 
-		jobject resultObject = NULL;
+        jobject resultObject = NULL;
 
-		if(resultClass == NULL)
-		{
-			resultClass = env->FindClass("com/zerotierone/sdk/ResultCode");
-			if(resultClass == NULL)
-			{
-				return NULL; // exception thrown
-			}
-		}
+        if(resultClass == NULL)
+        {
+            resultClass = env->FindClass("com/zerotierone/sdk/ResultCode");
+            if(resultClass == NULL)
+            {
+                return NULL; // exception thrown
+            }
+        }
 
-		if(constructorId = NULL)
-		{
-			constructorId = env->GetMethodID(resultClass, "<init>", "(I)V");
-			if(constructorId == NULL)
-			{
-				return NULL; // exception thrown
-			}
-		}
+        if(constructorId = NULL)
+        {
+            constructorId = env->GetMethodID(resultClass, "<init>", "(I)V");
+            if(constructorId == NULL)
+            {
+                return NULL; // exception thrown
+            }
+        }
 
-		resultObject = env->NewObject(resultClass, constructorId, (jlong)code);
+        resultObject = env->NewObject(resultClass, constructorId, (jlong)code);
 
-		return resultObject;
-	}
+        return resultObject;
+    }
 }
 
 /*
@@ -164,111 +164,111 @@ namespace {
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
   (JNIEnv *env, jobject obj, jlong now)
 {
-	jobject resultObject = createResultObject(env, ZT1_RESULT_OK);
+    jobject resultObject = createResultObject(env, ZT1_RESULT_OK);
 
-	ZT1_Node *node;
-	JniRef *ref = new JniRef;
+    ZT1_Node *node;
+    JniRef *ref = new JniRef;
 
-	ZT1_ResultCode rc = ZT1_Node_new(
-		&node,
-		ref,
-		(uint64_t)now,
-		&DataStoreGetFunction,
-		&DataStorePutFunction,
-		&WirePacketSendFunction,
-		&VirtualNetworkFrameFunctionCallback,
-		&VirtualNetworkConfigFunctionCallback,
-		&EventCallback);
+    ZT1_ResultCode rc = ZT1_Node_new(
+        &node,
+        ref,
+        (uint64_t)now,
+        &DataStoreGetFunction,
+        &DataStorePutFunction,
+        &WirePacketSendFunction,
+        &VirtualNetworkFrameFunctionCallback,
+        &VirtualNetworkConfigFunctionCallback,
+        &EventCallback);
 
-	if(rc != ZT1_RESULT_OK)
-	{
-		resultObject = createResultObject(env, rc);
-		if(node)
-		{
-			ZT1_Node_delete(node);
-			node = NULL;
-		}
-		delete ref;
-		ref = NULL;
-		return resultObject;
-	}
+    if(rc != ZT1_RESULT_OK)
+    {
+        resultObject = createResultObject(env, rc);
+        if(node)
+        {
+            ZT1_Node_delete(node);
+            node = NULL;
+        }
+        delete ref;
+        ref = NULL;
+        return resultObject;
+    }
 
-	
-	ref->id = (uint64_t)now;
-	ref->env = env;
-	ref->node = node;
+    
+    ref->id = (uint64_t)now;
+    ref->env = env;
+    ref->node = node;
 
-	jclass cls = env->GetObjectClass(obj);
-	jfieldID fid = env->GetFieldID(
-		cls, "getListener", "Lcom.zerotierone.sdk.DataStoreGetListener;");
+    jclass cls = env->GetObjectClass(obj);
+    jfieldID fid = env->GetFieldID(
+        cls, "getListener", "Lcom.zerotierone.sdk.DataStoreGetListener;");
 
-	if(fid == NULL)
-	{
-		return NULL; // exception already thrown
-	}
+    if(fid == NULL)
+    {
+        return NULL; // exception already thrown
+    }
 
-	ref->dataStoreGetListener = env->GetObjectField(obj, fid);
-	if(ref->dataStoreGetListener == NULL)
-	{
-		return NULL;
-	}
+    ref->dataStoreGetListener = env->GetObjectField(obj, fid);
+    if(ref->dataStoreGetListener == NULL)
+    {
+        return NULL;
+    }
 
-	fid = env->GetFieldID(
-		cls, "putListener", "Lcom.zerotierone.sdk.DataStorePutLisetner;");
+    fid = env->GetFieldID(
+        cls, "putListener", "Lcom.zerotierone.sdk.DataStorePutLisetner;");
 
-	if(fid == NULL)
-	{
-		return NULL; // exception already thrown
-	}
+    if(fid == NULL)
+    {
+        return NULL; // exception already thrown
+    }
 
-	ref->dataStorePutListener = env->GetObjectField(obj, fid);
-	if(ref->dataStorePutListener == NULL)
-	{
-		return NULL;
-	}
+    ref->dataStorePutListener = env->GetObjectField(obj, fid);
+    if(ref->dataStorePutListener == NULL)
+    {
+        return NULL;
+    }
 
-	fid = env->GetFieldID(
-		cls, "sender", "Lcom.zerotierone.sdk.PacketSender;");
-	if(fid == NULL)
-	{
-		return NULL; // exception already thrown
-	}
+    fid = env->GetFieldID(
+        cls, "sender", "Lcom.zerotierone.sdk.PacketSender;");
+    if(fid == NULL)
+    {
+        return NULL; // exception already thrown
+    }
 
-	ref->packetSender = env->GetObjectField(obj, fid);
-	if(ref->packetSender == NULL)
-	{
-		return NULL;
-	}
+    ref->packetSender = env->GetObjectField(obj, fid);
+    if(ref->packetSender == NULL)
+    {
+        return NULL;
+    }
 
-	fid = env->GetFieldID(
-		cls, "frameListener", "Lcom.zerotierone.sdk.VirtualNetworkFrameListener;");
-	if(fid == NULL)
-	{
-		return NULL; // exception already thrown
-	}
+    fid = env->GetFieldID(
+        cls, "frameListener", "Lcom.zerotierone.sdk.VirtualNetworkFrameListener;");
+    if(fid == NULL)
+    {
+        return NULL; // exception already thrown
+    }
 
-	ref->frameListener = env->GetObjectField(obj, fid);
-	if(ref->frameListener = NULL)
-	{
-		return NULL;
-	}
+    ref->frameListener = env->GetObjectField(obj, fid);
+    if(ref->frameListener = NULL)
+    {
+        return NULL;
+    }
 
-	fid = env->GetFieldID(
-		cls, "configListener", "Lcom.zerotierone.sdk.VirtualNetworkConfigListener;");
-	if(fid == NULL)
-	{
-		return NULL; // exception already thrown
-	}
+    fid = env->GetFieldID(
+        cls, "configListener", "Lcom.zerotierone.sdk.VirtualNetworkConfigListener;");
+    if(fid == NULL)
+    {
+        return NULL; // exception already thrown
+    }
 
-	ref->configListener = env->GetObjectField(obj, fid);
-	if(ref->configListener == NULL)
-	{
-		return NULL;
-	}
+    ref->configListener = env->GetObjectField(obj, fid);
+    if(ref->configListener == NULL)
+    {
+        return NULL;
+    }
 
-	nodeMap.insert(std::make_pair(ref->id, ref));
+    nodeMap.insert(std::make_pair(ref->id, ref));
 
-	return resultObject;
+    return resultObject;
 }
 
 /*
@@ -279,18 +279,84 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
 JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete
   (JNIEnv *env, jobject obj, jlong id)
 {
-	uint64_t nodeId = (uint64_t)id;
+    uint64_t nodeId = (uint64_t)id;
 
-	NodeMap::iterator found = nodeMap.find(nodeId);
-	if(found != nodeMap.end())
-	{
-		JniRef *ref = found->second;
-		nodeMap.erase(found);
-		delete ref;
-		ref = NULL;
-	}
+    NodeMap::iterator found = nodeMap.find(nodeId);
+    if(found != nodeMap.end())
+    {
+        JniRef *ref = found->second;
+        nodeMap.erase(found);
+        delete ref;
+        ref = NULL;
+    }
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    processVirtualNetworkFrame
+ * Signature: (JJJJJII[B[J)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFrame
+   (JNIEnv *env, jobject obj, 
+    jlong id, 
+    jlong in_now, 
+    jlong in_nwid,
+    jlong in_sourceMac,
+    jlong in_destMac,
+    jint in_etherType,
+    jint in_vlanId,
+    jbyteArray in_frameData,
+    jlongArray out_nextBackgroundTaskDeadline)
+{
+    uint64_t nodeId = (uint64_t) id;
+    NodeMap::iterator found = nodeMap.find(nodeId);
+    if(found == nodeMap.end())
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    unsigned int nbtd_len = env->GetArrayLength(out_nextBackgroundTaskDeadline);
+    if(nbtd_len < 1)
+    {
+        // array for next background task length has 0 elements!
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    ZT1_Node *node = found->second;
+
+    uint64_t now = (uint64_t)in_now;
+    uint64_t nwid = (uint64_t)in_nwid;
+    uint64_t sourceMac = (uint64_t)in_sourceMac;
+    uint64_t destMac = (uint64_t)in_destMac;
+    unsigned int etherType = (unsigned int)in_etherType;
+    unsigned int vlanId = (unsigned int)in_vlanId;
+
+    unsigned int frameLength = env->GetArrayLength(in_frameData);
+    jbyte *frameData =env->GetByteArrayElements(in_frameData, NULL);
+
+    uint64_t nextBackgroundTaskDeadline = 0;
+
+    ZT1_ResultCode rc = ZT1_Node_processVirtualNetworkFrame(
+        node,
+        now,
+        nwid,
+        sourceMac,
+        destMac,
+        etherType,
+        vlanId,
+        (const void*)frameData,
+        frameLength,
+        &nextBackgroundTaskDeadline);
+
+    jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
+    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
+    env->ReleaseLongArrayElements(out_nextBackgroundTaskDeadline, outDeadline, 0);
+
+    env->ReleaseByteArrayElements(in_frameData, frameData, 0);
+
+    return createResultObject(env, rc);
+}
 
 
 #ifdef __cplusplus
