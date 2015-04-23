@@ -39,19 +39,18 @@
 #include "../node/Constants.hpp"
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/NonCopyable.hpp"
+
+#include "../service/ControlPlaneSubsystem.hpp"
 
 namespace ZeroTier {
 
-class SqliteNetworkController : public NetworkController
+class SqliteNetworkController : public NetworkController,public ControlPlaneSubsystem
 {
 public:
-	class DBC;
-	friend class SqliteNetworkController::DBC;
-
 	SqliteNetworkController(const char *dbPath);
 	virtual ~SqliteNetworkController();
 
+	// NetworkController
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		const Identity &signingId,
@@ -61,12 +60,35 @@ public:
 		uint64_t haveRevision,
 		Dictionary &netconf);
 
+	// ControlPlaneSubsystem
+	virtual unsigned int handleControlPlaneHttpGET(
+		const std::vector<std::string> &path,
+		const std::map<std::string,std::string> &urlArgs,
+		const std::map<std::string,std::string> &headers,
+		const std::string &body,
+		std::string &responseBody,
+		std::string &responseContentType);
+	virtual unsigned int handleControlPlaneHttpPOST(
+		const std::vector<std::string> &path,
+		const std::map<std::string,std::string> &urlArgs,
+		const std::map<std::string,std::string> &headers,
+		const std::string &body,
+		std::string &responseBody,
+		std::string &responseContentType);
+	virtual unsigned int handleControlPlaneHttpDELETE(
+		const std::vector<std::string> &path,
+		const std::map<std::string,std::string> &urlArgs,
+		const std::map<std::string,std::string> &headers,
+		const std::string &body,
+		std::string &responseBody,
+		std::string &responseContentType);
+
 private:
 	std::string _dbPath;
 	sqlite3 *_db;
 
 	sqlite3_stmt *_sGetNetworkById;
-	sqlite3_stmt *_sGetMemberByNetworkAndNodeId;
+	sqlite3_stmt *_sGetMember;
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
 	sqlite3_stmt *_sCreateNode;
@@ -82,26 +104,23 @@ private:
 	sqlite3_stmt *_sAllocateIp;
 	sqlite3_stmt *_sCacheNetconf;
 	sqlite3_stmt *_sGetRelays;
+	sqlite3_stmt *_sListNetworks;
+	sqlite3_stmt *_sListNetworkMembers;
+	sqlite3_stmt *_sGetMember2;
+	sqlite3_stmt *_sGetIpAssignmentPools2;
+	sqlite3_stmt *_sListRules;
+	sqlite3_stmt *_sCreateRule;
+	sqlite3_stmt *_sCreateNetwork;
+	sqlite3_stmt *_sUpdateNetworkField;
+	sqlite3_stmt *_sGetNetworkRevision;
+	sqlite3_stmt *_sGetIpAssignmentsForNode2;
+	sqlite3_stmt *_sDeleteRelaysForNetwork;
+	sqlite3_stmt *_sCreateRelay;
+	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
+	sqlite3_stmt *_sDeleteRulesForNetwork;
+	sqlite3_stmt *_sCreateIpAssignmentPool;
 
 	Mutex _lock;
-
-public:
-	/**
-	 * Provides a safe interface for direct access to this master's database
-	 *
-	 * This acts as both a contextual lock of the master's Mutex and a pointer
-	 * to the Sqlite3 database instance. Dereferencing this with * yields the
-	 * sqlite3* pointer. Create on parent with DBC(SqliteNetworkController &).
-	 */
-	class DBC : NonCopyable
-	{
-	public:
-		DBC(SqliteNetworkController &nc) : _p(&nc) { nc._lock.lock(); }
-		~DBC() { _p->_lock.unlock(); }
-		inline sqlite3 *operator*() const throw() { return _p->_db; }
-	private:
-		SqliteNetworkController *const _p;
-	};
 };
 
 } // namespace ZeroTier

@@ -213,6 +213,8 @@ public:
 
 			_controlPlane = new ControlPlane(this,_node);
 			_controlPlane->addAuthToken(authToken.c_str());
+			if (_master)
+				_controlPlane->mount("controller",_master);
 
 			{	// Remember networks from previous session
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));

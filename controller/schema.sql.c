@@ -22,8 +22,7 @@
 "  networkId char(16) NOT NULL,\n"\
 "  ipNetwork blob(16) NOT NULL,\n"\
 "  ipNetmaskBits integer NOT NULL,\n"\
-"  ipVersion integer NOT NULL DEFAULT(4),\n"\
-"  active integer NOT NULL DEFAULT(1)\n"\
+"  ipVersion integer NOT NULL DEFAULT(4)\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);\n"\
@@ -72,8 +71,10 @@
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL,\n"\
 "  nodeId char(10) NOT NULL,\n"\
-"  address varchar(64) NOT NULL\n"\
+"  phyAddress varchar(64) NOT NULL\n"\
 ");\n"\
+"\n"\
+"CREATE INDEX Relay_networkId ON Relay (networkId);\n"\
 "\n"\
 "CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);\n"\
 "\n"\
@@ -87,6 +88,7 @@
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL,\n"\
+"  ruleId integer NOT NULL,\n"\
 "  nodeId char(10),\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\
