@@ -659,6 +659,106 @@ JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address
     return (jlong)address;
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    status
+ * Signature: (J)Lcom/zerotierone/sdk/NodeStatus;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
+   (JNIEnv *env, jobject obj, jlong id)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return 0;
+    }
+
+    // static so we only have to look these up once
+    static jclass nodeStatusClass = NULL;
+    static jmethodID nodeStatusConstructor = NULL;
+
+    // create a com.zerotierone.sdk.NodeStatus object
+    if(nodeStatusClass == NULL)
+    {
+        nodeStatusClass = env->FindClass("com.zerotierone.sdk.NodeStatus");
+        if(nodeStatusClass == NULL)
+        {
+            return NULL;
+        }
+    }
+    
+    if(nodeStatusConstructor == NULL)
+    {
+        nodeStatusConstructor = env->GetMethodID(
+            nodeStatusClass, "<init>", "()V");
+        if(nodeStatusConstructor == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    jobject nodeStatusObj = env->NewObject(nodeStatusClass, nodeStatusConstructor);
+    if(nodeStatusObj == NULL)
+    {
+        return NULL;
+    }
+
+    ZT1_NodeStatus nodeStatus;
+    ZT1_Node_status(node, &nodeStatus);
+
+    // TODO: copy data from C to Java
+
+    return nodeStatusObj;
+}
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    networkConfig
+ * Signature: (J)Lcom/zerotierone/sdk/VirtualNetworkConfig;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
+   (JNIEnv *env, jobject obj, jlong id, jlong nwid)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return 0;
+    }
+
+    // create a com.zerotierone.sdk.VirtualNetworkConfig object
+    jclass vnetConfigClass = env->FindClass("com.zerotierone.sdk.VirtualNetworkConfig");
+    if(vnetConfigClass == NULL)
+    {
+        return NULL;
+    }
+
+    jmethodID vnetConfigConstructor = env->GetMethodID(
+        vnetConfigClass, "<init>", "()V");
+    if(vnetConfigConstructor == NULL)
+    {
+        return NULL;
+    }
+
+    jobject vnetConfigObj = env->NewObject(vnetConfigClass, vnetConfigConstructor);
+    if(vnetConfigObj == NULL)
+    {
+        return NULL;
+    }
+    
+    ZT1_VirtualNetworkConfig *vnetConfig = ZT1_Node_networkConfig(node, nwid);
+    
+    // TODO: copy data from C to Java
+
+
+    return NULL;
+}
+
+/*
+ * Class:     com_zerotierone_sdk_Node
  * Method:    version
  * Signature: (J)Lcom/zerotierone/sdk/Version;
  */
