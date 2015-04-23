@@ -519,6 +519,53 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks
     return createResultObject(env, rc);
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    join
+ * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join
+   (JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t nwid = (uint64_t)in_nwid;
+
+    ZT1_ResultCode rc = ZT1_Node_join(node, nwid);
+
+    return createResultObject(env, rc);
+}
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    leave
+ * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave
+   (JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t nwid = (uint64_t)in_nwid;
+
+    ZT1_ResultCode rc = ZT1_Node_leave(node, nwid);
+
+    return createResultObject(env, rc);
+}
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
