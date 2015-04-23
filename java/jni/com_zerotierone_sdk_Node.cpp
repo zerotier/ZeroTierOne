@@ -641,6 +641,24 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
 
 /*
  * Class:     com_zerotierone_sdk_Node
+ * Method:    address
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address
+  (JNIEnv *env , jobject obj, jlong id)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return 0;
+    }
+
+    uint64_t address = ZT1_Node_address(node);
+    return (jlong)address;
+}
+
  * Method:    version
  * Signature: (J)Lcom/zerotierone/sdk/Version;
  */
