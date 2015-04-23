@@ -109,7 +109,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
  * Signature: (J)Lcom/zerotierone/sdk/Version;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
-  (JNIEnv *, jobject, jlong);
+  (JNIEnv *, jobject);
 
 #ifdef __cplusplus
 }

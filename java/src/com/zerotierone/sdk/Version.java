@@ -28,8 +28,10 @@
 package com.zerotierone.sdk;
 
 public class Version {
-	public int major;
-	public int minor;
-	public int revision;
-	public long featureFlags;
+    public Version() {}
+    
+	public int major = 0;
+	public int minor = 0;
+	public int revision = 0;
+	public long featureFlags = 0;
 }

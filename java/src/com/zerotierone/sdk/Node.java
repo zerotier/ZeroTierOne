@@ -222,11 +222,11 @@ public class Node {
 
     // TODO: ZT1_Node_peers
 
-    private native VirtualNetworkConfig networkConfig(long nodeId);
+    private native VirtualNetworkConfig networkConfig(long nodeId, long nwid);
 
     // TODO: ZT1_Node_networks
 
-    private native Version version(long nodeId);
+    private native Version version();
 
 
 }

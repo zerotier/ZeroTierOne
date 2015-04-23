@@ -639,6 +639,91 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
     return createResultObject(env, rc);
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    version
+ * Signature: (J)Lcom/zerotierone/sdk/Version;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
+   (JNIEnv *env, jobject obj)
+{
+    // create a com.zerotierone.sdk.Version object
+    jclass versionClass = env->FindClass("com.zerotierone.sdk.Version");
+    if(versionClass == NULL)
+    {
+        return NULL;
+    }
+
+    jmethodID versionConstructor = env->GetMethodID(
+        versionClass, "<init>", "()V");
+    if(versionConstructor == NULL)
+    {
+        return NULL;
+    }
+
+    jobject versionObj = env->NewObject(versionClass, versionConstructor);
+    if(versionObj == NULL)
+    {
+        return NULL;
+    }
+
+    int major = 0;
+    int minor = 0;
+    int revision = 0;
+    unsigned long featureFlags = 0;
+
+    ZT1_version(&major, &minor, &revision, &featureFlags);
+
+    // copy data to Version object
+    static jfieldID majorField = NULL;
+    static jfieldID minorField = NULL;
+    static jfieldID revisionField = NULL;
+    static jfieldID featureFlagsField = NULL;
+
+    if(majorField == NULL)
+    {
+        majorField = env->GetFieldID(versionClass, "major", "Lcom.zerotierone.sdk.Version");
+        if(majorField = NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(minorField == NULL)
+    {
+        minorField = env->GetFieldID(versionClass, "minor", "Lcom.zerotierone.sdk.Version");
+        if(minorField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(revisionField == NULL)
+    {
+        revisionField = env->GetFieldID(versionClass, "revision", "Lcom.zerotierone.sdk.Version");
+        if(revisionField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(featureFlagsField == NULL)
+    {
+        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "Lcom.zerotierone.sdk.Version");
+        if(featureFlagsField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    env->SetIntField(versionObj, majorField, (jint)major);
+    env->SetIntField(versionObj, minorField, (jint)minor);
+    env->SetIntField(versionObj, revisionField, (jint)revision);
+    env->SetLongField(versionObj, featureFlagsField, (jlong)featureFlags);
+
+
+    return versionObj;
+}
 
 #ifdef __cplusplus
 } // extern "C"
