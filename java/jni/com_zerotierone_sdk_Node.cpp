@@ -31,6 +31,7 @@
 
 #include <map>
 #include <assert.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -369,6 +370,116 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
     env->ReleaseByteArrayElements(in_frameData, frameData, 0);
 
     return createResultObject(env, rc);
+}
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    processWirePacket
+ * Signature: (JJLjava/net/InetAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket
+   (JNIEnv *env, jobject obj, 
+    jlong id,
+    jlong in_now, 
+    jobject in_remoteAddress,
+    jint in_linkDesparation,
+    jbyteArray in_packetData,
+    jlongArray out_nextBackgroundTaskDeadline)
+{
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    unsigned int nbtd_len = env->GetArrayLength(out_nextBackgroundTaskDeadline);
+    if(nbtd_len < 1)
+    {
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    uint64_t now = (uint64_t)in_now;
+    unsigned int linkDesparation = (unsigned int)in_linkDesparation;
+
+    // get the java.net.InetAddress class and getAddress() method
+    jclass inetAddressClass = env->FindClass("java/net/InetAddress");
+    if(inetAddressClass == NULL)
+    {
+        // can't find java.net.InetAddress
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    jmethodID getAddressMethod = env->GetMethodID(
+        inetAddressClass, "getAddress", "()[B");
+    if(getAddressMethod == NULL)
+    {
+        // cant find InetAddress.getAddres()
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    // Call InetAddress.getAddress()
+    jbyteArray addressArray = (jbyteArray)env->CallObjectMethod(in_remoteAddress, getAddressMethod);
+    if(addressArray == NULL)
+    {
+        // unable to call getAddress()
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    unsigned int addrSize = env->GetArrayLength(addressArray);
+    // get the address bytes
+    jbyte *addr = env->GetByteArrayElements(addressArray, NULL);
+
+
+    sockaddr_storage remoteAddress = {};
+
+    if(addrSize == 16)
+    {
+        // IPV6 address
+        sockaddr_in6 ipv6 = {};
+        ipv6.sin6_family = AF_INET6;
+        memcpy(ipv6.sin6_addr.s6_addr, addr, 16);
+        memcpy(&remoteAddress, &ipv6, sizeof(sockaddr_in6));
+    }
+    else if(addrSize = 4)
+    {
+        // IPV4 address
+        sockaddr_in ipv4 = {};
+        ipv4.sin_family = AF_INET;
+        memcpy(&ipv4.sin_addr, addr, 4);
+        memcpy(&remoteAddress, &ipv4, sizeof(sockaddr_in));
+    }
+    else
+    {
+        // unknown address type
+        env->ReleaseByteArrayElements(addressArray, addr, 0);
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+
+    unsigned int packetLength = env->GetArrayLength(in_packetData);
+    jbyte *packetData = env->GetByteArrayElements(in_packetData, NULL);
+
+    uint64_t nextBackgroundTaskDeadline = 0;
+
+    ZT1_ResultCode rc = ZT1_Node_processWirePacket(
+        node,
+        now,
+        &remoteAddress,
+        linkDesparation,
+        packetData,
+        packetLength,
+        &nextBackgroundTaskDeadline);
+
+    jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
+    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
+    env->ReleaseLongArrayElements(out_nextBackgroundTaskDeadline, outDeadline, 0);
+
+    env->ReleaseByteArrayElements(addressArray, addr, 0);
+    env->ReleaseByteArrayElements(in_packetData, packetData, 0);
+
+    return createResultObject(env, ZT1_RESULT_OK);
 }
 
 
