@@ -26,18 +26,26 @@ JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    processVirtualNetworkFrame
- * Signature: (JJJJJIILjava/nio/ByteBuffer;ILjava/lang/Long;)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJJII[B[J)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFrame
-  (JNIEnv *, jobject, jlong, jlong, jlong, jlong, jlong, jint, jint, jobject, jint, jobject);
+  (JNIEnv *, jobject, jlong, jlong, jlong, jlong, jlong, jint, jint, jbyteArray, jlongArray);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    processWirePacket
+ * Signature: (JJLjava/net/InetAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket
+  (JNIEnv *, jobject, jlong, jlong, jobject, jint, jbyteArray, jlongArray);
 
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    processBackgroundTasks
- * Signature: (JJLjava/lang/Long;)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJ[J)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks
-  (JNIEnv *, jobject, jlong, jlong, jobject);
+  (JNIEnv *, jobject, jlong, jlong, jlongArray);
 
 /*
  * Class:     com_zerotierone_sdk_Node

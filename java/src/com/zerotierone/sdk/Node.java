@@ -29,6 +29,7 @@ package com.zerotierone.sdk;
 
 import java.nio.ByteBuffer;
 import java.lang.Long;
+import java.net.InetAddress;
 
 public class Node {
 	static {
@@ -85,18 +86,6 @@ public class Node {
         close();
     }
 
-	private native ResultCode processVirtualNetworkFrame(
-        long nodeId,
-		long now,
-		long nwid,
-		long sourceMac,
-		long destMac,
-		int etherType,
-		int vlanId,
-		ByteBuffer frameData,
-		int frameLength,
-		Long nextBackgroundTaskDeadline);
-
     public ResultCode processVirtualNetworkFrame(
         long now,
         long nwid,
@@ -104,12 +93,22 @@ public class Node {
         long destMac,
         int etherType,
         int vlanId,
-        ByteBuffer frameData,
-        int frameLength,
-        Long nextBackgroundTaskDeadline) {
+        byte[] frameData,
+        long[] nextBackgroundTaskDeadline) {
         return processVirtualNetworkFrame(
             nodeId, now, nwid, sourceMac, destMac, etherType, vlanId, 
             frameData, frameLength, nextBackgroundTaskDeadline);
+    }
+
+    public ResultCode processWirePacket(
+        long now,
+        InetAddress remoteAddress,
+        int linkDesperation,
+        byte[] packetData,
+        long[] nextBackgroundTaskDeadline) {
+        return processWirePacket(
+            nodeId, now, remoteAddress, linkDesperation, packetData, 
+            nextBackgroundTaskDeadline);
     }
 
     public ResultCode processBackgroundTasks(long now, long nextBackgroundTaskDeadline) {
@@ -161,10 +160,29 @@ public class Node {
 
     private native void node_delete(long nodeId);
 
+    private native ResultCode processVirtualNetworkFrame(
+        long nodeId,
+        long now,
+        long nwid,
+        long sourceMac,
+        long destMac,
+        int etherType,
+        int vlanId,
+        byte[] frameData,
+        long[] nextBackgroundTaskDeadline);
+
+    private native ResultCode processWirePacket(
+        long nodeId,
+        long now,
+        InetAddress remoteAddress,
+        int linkDesperation,
+        byte[] packetData,
+        long[] nextBackgroundTaskDeadline);
+
     private native ResultCode processBackgroundTasks(
         long nodeId,
         long now,
-        Long nextBackgroundTaskDeadline);
+        long[] nextBackgroundTaskDeadline);
 
     private native ResultCode join(long nodeId, long nwid);
 
