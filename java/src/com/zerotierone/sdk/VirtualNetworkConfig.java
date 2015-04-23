@@ -29,9 +29,12 @@ package com.zerotierone.sdk;
 
 import java.lang.String;
 import java.util.ArrayList;
+import java.net.InetAddresss;
 
 public class VirtualNetworkConfig {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
+    public static final int ZT1_MAX_ZT_ASSIGNED_ADDRESSES = 16;
+
     private long nwid;
     private long mac;
     private String name;
@@ -46,6 +49,5 @@ public class VirtualNetworkConfig {
     private long netconfRevision;
     private int multicastSubscriptionCount;
     private ArrayList<MulticastGroup> multicastSubscriptions;
-    
-    // TODO: sockaddr_storage
+    private ArrayList<InetAddress> assignedAddresses;
 }
