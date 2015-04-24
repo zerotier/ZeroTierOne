@@ -46,3 +46,4 @@
 /netconf/netconf.db
 java/obj/
 java/libs/
+java/bin/

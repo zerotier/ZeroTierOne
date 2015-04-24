@@ -1,0 +1,46 @@
+<project default="android" name="ZeroTierOneSDK">
+    <property environment="env"/>
+
+    <target name="clean">
+        <delete dir="bin"/>
+        <delete dir="libs"/>
+        <delete dir="obj"/>
+        <delete>
+            <fileset dir="jni" includes="*.so"/>
+        </delete>
+    </target>
+
+    <target name="build">
+        <echo message="os.name          = ${os.name}"/>
+        <echo message="os.arch          = ${os.arch}"/>
+        <echo message="ant.java.version = ${ant.java.version}"/>
+        <echo message="java.version     = ${java.version}"/>
+        <javac srcdir="src"
+               destdir="bin"
+               classpath="${env.ANDROID_PLATFORM}/android.jar"
+               includeantruntime="false"/>
+        <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
+            <arg value="ZT1=${user.dir}/../"/>
+        </exec>
+        <jar destfile="bin/ZeroTierOneSDK.jar" basedir="bin"/>
+    </target>
+
+<!--    <target name="android" depends="build">
+        <echo message="OS is Android, installing..."/>
+        <copy file="libs/armeabi/libZeroTierOneJNI.so" 
+              tofile="${aproj_loc}/libs/armeabi/libZeroTierOneJNI.so" 
+              overwrite="true"/>
+        <copy file="libs/arm64-v8a/libZeroTierOneJNI.so"
+              tofile="${aproj_loc}/libs/arm64-v8a/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/armeabi-v7a/libZeroTierOneJNI.so"
+              tofile="${aproj_loc}/libs/armeabi-v7a/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/x86/libZeroTierOneJNI.so"
+              tofile="${aproj_loc}/libs/x86/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy   file="bin/ZeroTierOneSDK.jar" 
+                tofile="${aproj_loc}/libs/ZeroTierOneSDK.jar" 
+                overwrite="true"/>
+    </target> -->
+</project>

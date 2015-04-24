@@ -44,7 +44,7 @@ public class Node {
      * 
      * -1 if the node has already been closed
      */
-    private final long nodeId;
+    private long nodeId;
 
     private final DataStoreGetListener getListener;
     private final DataStorePutListener putListener;
@@ -68,7 +68,7 @@ public class Node {
         this.configListener = configListener;
 
         ResultCode rc = node_init(now);
-        if(rc.getValue() != ResultCode.RESULT_OK)
+        if(rc != ResultCode.RESULT_OK)
         {
             // TODO: Throw Exception
         }
@@ -97,7 +97,7 @@ public class Node {
         long[] nextBackgroundTaskDeadline) {
         return processVirtualNetworkFrame(
             nodeId, now, nwid, sourceMac, destMac, etherType, vlanId, 
-            frameData, frameLength, nextBackgroundTaskDeadline);
+            frameData, nextBackgroundTaskDeadline);
     }
 
     public ResultCode processWirePacket(
@@ -111,7 +111,7 @@ public class Node {
             nextBackgroundTaskDeadline);
     }
 
-    public ResultCode processBackgroundTasks(long now, long nextBackgroundTaskDeadline) {
+    public ResultCode processBackgroundTasks(long now, long[] nextBackgroundTaskDeadline) {
         return processBackgroundTasks(nodeId, now, nextBackgroundTaskDeadline);
     }
 
@@ -159,14 +159,14 @@ public class Node {
 
     // TODO: ZT1_Node_peers
 
-    public VirtualNetworkConfig networkConfig() {
-        return networkConfig(nodeId);
+    public VirtualNetworkConfig networkConfig(long nwid) {
+        return networkConfig(nodeId, nwid);
     }
 
     // TODO: ZT1_Node_networks
 
-    public Version version() {
-        return version(nodeId);
+    public Version getVersion() {
+        return version();
     }
 
     /**

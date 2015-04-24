@@ -29,7 +29,7 @@ package com.zerotierone.sdk;
 
 import java.lang.String;
 import java.util.ArrayList;
-import java.net.InetAddresss;
+import java.net.InetAddress;
 
 public class VirtualNetworkConfig {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
@@ -41,13 +41,72 @@ public class VirtualNetworkConfig {
     private VirtualNetworkStatus status;
     private VirtualNetworkType type;
     private int mtu;
-    private int dhcp;
-    private int bridge;
-    private int broadcastEnabled;
-    private int portError;
+    private boolean dhcp;
+    private boolean bridge;
+    private boolean broadcastEnabled;
+    private boolean portError;
     private boolean enabled;
     private long netconfRevision;
     private int multicastSubscriptionCount;
     private ArrayList<MulticastGroup> multicastSubscriptions;
     private ArrayList<InetAddress> assignedAddresses;
+
+    private VirtualNetworkConfig() {
+
+    }
+
+    public final long networkId() {
+        return nwid;
+    }
+    public final long macAddress() {
+        return mac;
+    }
+
+    public final String name() {
+        return name;
+    }
+
+    public final VirtualNetworkStatus networkStatus() {
+        return status;
+    }
+
+    public final VirtualNetworkType networkType() {
+        return type;
+    }
+
+    public final int mtu() {
+        return mtu;
+    }
+
+    public final boolean isDhcpAvailable() {
+        return dhcp;
+    }
+
+    public final boolean isBridgeEnabled() {
+        return bridge;
+    }
+
+    public final boolean broadcastEnabled() {
+        return broadcastEnabled;
+    }
+
+    public final boolean portError() {
+        return portError;
+    }
+
+    public final boolean isEnabled() {
+        return enabled;
+    }
+
+    public final long netconfRevision() {
+        return netconfRevision;
+    }
+
+    public final ArrayList<MulticastGroup> multicastSubscriptions() {
+        return multicastSubscriptions;
+    }
+
+    public final ArrayList<InetAddress> assignedAddresses() {
+        return assignedAddresses;
+    }
 }
