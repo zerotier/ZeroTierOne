@@ -669,7 +669,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
 
     if(addressField == NULL)
     {
-        addressField = env->GetFieldID(nodeStatusClass, "address", "Lcom/zerotierone/sdk/NodeStatus;");
+        addressField = env->GetFieldID(nodeStatusClass, "address", "J");
         if(addressField == NULL)
         {
             return NULL;
@@ -678,7 +678,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
 
     if(publicIdentityField == NULL)
     {
-        publicIdentityField = env->GetFieldID(nodeStatusClass, "publicIdentity", "Lcom/zerotierone/sdk/NodeStatus;");
+        publicIdentityField = env->GetFieldID(nodeStatusClass, "publicIdentity", "Ljava/lang/String;");
         if(publicIdentityField == NULL)
         {
             return NULL;
@@ -687,7 +687,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
 
     if(secretIdentityField == NULL)
     {
-        secretIdentityField = env->GetFieldID(nodeStatusClass, "secretIdentity", "Lcom/zerotierone/sdk/NodeStatus;");
+        secretIdentityField = env->GetFieldID(nodeStatusClass, "secretIdentity", "Ljava/lang/String;");
         if(secretIdentityField == NULL)
         {
             return NULL;
@@ -696,7 +696,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
 
     if(onlineField == NULL)
     {
-        onlineField = env->GetFieldID(nodeStatusClass, "online", "Lcom/zerotierone/sdk/NodeStatus;");
+        onlineField = env->GetFieldID(nodeStatusClass, "online", "Z");
         if(onlineField == NULL)
         {
             return NULL;
@@ -779,7 +779,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(nwidField == NULL)
     {
-        nwidField = env->GetFieldID(vnetConfigClass, "nwid", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        nwidField = env->GetFieldID(vnetConfigClass, "nwid", "J");
         if(nwidField == NULL)
         {
             return NULL;
@@ -788,7 +788,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(macField == NULL)
     {
-        macField = env->GetFieldID(vnetConfigClass, "mac", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        macField = env->GetFieldID(vnetConfigClass, "mac", "J");
         if(macField == NULL)
         {
             return NULL;
@@ -797,7 +797,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(nameField == NULL)
     {
-        nameField = env->GetFieldID(vnetConfigClass, "name", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        nameField = env->GetFieldID(vnetConfigClass, "name", "Ljava/lang/String;");
         if(nameField == NULL)
         {
             return NULL;
@@ -806,7 +806,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(statusField == NULL)
     {
-        statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworStatus;");
         if(statusField == NULL)
         {
             return NULL;
@@ -815,7 +815,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(typeField == NULL)
     {
-        typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
         if(typeField == NULL)
         {
             return NULL;
@@ -824,7 +824,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(mtuField == NULL)
     {
-        mtuField = env->GetFieldID(vnetConfigClass, "mtu", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        mtuField = env->GetFieldID(vnetConfigClass, "mtu", "I");
         if(mtuField == NULL)
         {
             return NULL;
@@ -833,7 +833,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(dhcpField == NULL)
     {
-        dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Z");
         if(dhcpField == NULL)
         {
             return NULL;
@@ -842,7 +842,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(bridgeField == NULL)
     {
-        bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Z");
         if(bridgeField == NULL)
         {
             return NULL;
@@ -851,7 +851,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(broadcastEnabledField == NULL)
     {
-        broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Z");
         if(broadcastEnabledField == NULL)
         {
             return NULL;
@@ -860,7 +860,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(portErrorField == NULL)
     {
-        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "Z");
         if(portErrorField == NULL)
         {
             return NULL;
@@ -869,7 +869,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(enabledField == NULL)
     {
-        enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Z");
         if(enabledField == NULL)
         {
             return NULL;
@@ -878,7 +878,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(netconfRevisionField == NULL)
     {
-        netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "J");
         if(netconfRevisionField == NULL)
         {
             return NULL;
@@ -887,7 +887,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(multicastSubscriptionsField == NULL)
     {
-        multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
         if(multicastSubscriptionsField == NULL)
         {
             return NULL;
@@ -896,7 +896,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 
     if(assignedAddressesField == NULL)
     {
-        assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
         if(assignedAddressesField == NULL)
         {
             return NULL;
@@ -989,7 +989,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(majorField == NULL)
     {
-        majorField = env->GetFieldID(versionClass, "major", "Lcom/zerotierone/sdk/Version;");
+        majorField = env->GetFieldID(versionClass, "major", "I");
         if(majorField = NULL)
         {
             return NULL;
@@ -998,7 +998,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(minorField == NULL)
     {
-        minorField = env->GetFieldID(versionClass, "minor", "Lcom/zerotierone/sdk/Version;");
+        minorField = env->GetFieldID(versionClass, "minor", "I");
         if(minorField == NULL)
         {
             return NULL;
@@ -1007,7 +1007,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(revisionField == NULL)
     {
-        revisionField = env->GetFieldID(versionClass, "revision", "Lcom/zerotierone/sdk/Version;");
+        revisionField = env->GetFieldID(versionClass, "revision", "I");
         if(revisionField == NULL)
         {
             return NULL;
@@ -1016,7 +1016,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(featureFlagsField == NULL)
     {
-        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "Lcom/zerotierone/sdk/Version;");
+        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "J");
         if(featureFlagsField == NULL)
         {
             return NULL;
