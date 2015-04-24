@@ -461,9 +461,16 @@ public:
 			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
 			case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
 				if (t != _taps.end()) {
+#ifdef __WINDOWS__
+					std::string winInstanceId(t->second->instanceId());
+#endif
 					delete t->second;
 					_taps.erase(t);
 					_tapAssignedIps.erase(nwid);
+#ifdef __WINDOWS__
+					if ((op == ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
+						WindowsEthernetTap::deletePersistentTapDevice(_homePath.c_str(),winInstanceId.c_str());
+#endif
 				}
 				break;
 		}

@@ -789,7 +789,29 @@ void WindowsEthernetTap::destroyAllPersistentTapDevices(const char *pathToHelper
 	}
 
 	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp)
-		_deletePersistentTapDevice(pathToHelpers,iidp->c_str());
+		deletePersistentTapDevice(pathToHelpers,iidp->c_str());
+}
+
+void WindowsEthernetTap::deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId)
+{
+	HANDLE devconLog = CreateFileA((std::string(pathToHelpers) + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+	STARTUPINFOA startupInfo;
+	startupInfo.cb = sizeof(startupInfo);
+	if (devconLog != INVALID_HANDLE_VALUE) {
+		SetFilePointer(devconLog,0,0,FILE_END);
+		startupInfo.hStdOutput = devconLog;
+		startupInfo.hStdError = devconLog;
+	}
+	PROCESS_INFORMATION processInfo;
+	memset(&startupInfo,0,sizeof(STARTUPINFOA));
+	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+	if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + pathToHelpers + WINENV.devcon + "\" remove @" + instanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+	}
+	if (devconLog != INVALID_HANDLE_VALUE)
+		CloseHandle(devconLog);
 }
 
 bool WindowsEthernetTap::_disableTapDevice()
@@ -920,28 +942,6 @@ void WindowsEthernetTap::_setRegistryIPv4Value(const char *regKey,const std::vec
 		}
 		RegCloseKey(tcpIpInterfaces);
 	}
-}
-
-void WindowsEthernetTap::_deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId)
-{
-	HANDLE devconLog = CreateFileA((std::string(pathToHelpers) + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
-	STARTUPINFOA startupInfo;
-	startupInfo.cb = sizeof(startupInfo);
-	if (devconLog != INVALID_HANDLE_VALUE) {
-		SetFilePointer(devconLog,0,0,FILE_END);
-		startupInfo.hStdOutput = devconLog;
-		startupInfo.hStdError = devconLog;
-	}
-	PROCESS_INFORMATION processInfo;
-	memset(&startupInfo,0,sizeof(STARTUPINFOA));
-	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-	if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + pathToHelpers + WINENV.devcon + "\" remove @" + instanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
-		WaitForSingleObject(processInfo.hProcess,INFINITE);
-		CloseHandle(processInfo.hProcess);
-		CloseHandle(processInfo.hThread);
-	}
-	if (devconLog != INVALID_HANDLE_VALUE)
-		CloseHandle(devconLog);
 }
 
 } // namespace ZeroTier

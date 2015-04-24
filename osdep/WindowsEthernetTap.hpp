@@ -78,6 +78,7 @@ public:
 		throw();
 
 	static void destroyAllPersistentTapDevices(const char *pathToHelpers);
+	static void deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId);
 
 private:
 	bool _disableTapDevice();
@@ -85,7 +86,6 @@ private:
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
 	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
-	static void _deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId);
 
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
