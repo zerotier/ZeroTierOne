@@ -1,4 +1,4 @@
-<project default="android" name="ZeroTierOneSDK">
+<project default="build" name="ZeroTierOneSDK">
     <property environment="env"/>
 
     <target name="clean">
