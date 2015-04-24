@@ -1,8 +1,20 @@
 #include "ZT1_jniutils.h"
+#include <string>
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+namespace
+{
+    static jclass arrayListClass = NULL;
+    static jmethodID arrayList_constructor = NULL;
+    static jmethodID arrayList_add = NULL;
+
+    static jclass inetAddressClass = NULL;
+    static jmethodID  inetAddress_getByAddress = NULL;
+}
 
 jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
 {
@@ -172,30 +184,162 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
     vntypeObject = env->GetStaticObjectField(vntypeClass, enumField);
     return vntypeObject;
 }
-    
+
 jobject newArrayList(JNIEnv *env)
 {
-    return NULL;
+    if(arrayListClass == NULL)
+    {
+        arrayListClass = env->FindClass("java/util/ArrayList");
+        if(arrayListClass == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(arrayList_constructor == NULL)
+    {
+        arrayList_constructor = env->GetMethodID(
+            arrayListClass, "<init>", "()V");
+        if(arrayList_constructor == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    jobject arrayListObj = env->NewObject(arrayListClass, arrayList_constructor);
+
+    return arrayListObj;
 }
 
-jobject appendItemToArrayList(JNIEnv *env, jobject object)
+bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object)
 {
-    return NULL;
+    assert(array != NULL);
+    assert(object != NULL);
+
+    if(arrayList_add == NULL)
+    {
+        arrayList_add = env->GetMethodID(arrayListClass, "add", "(Ljava.lang.Object;)Z");
+        if(arrayList_add == NULL)
+        {
+            return false;
+        }
+    }
+
+    return env->CallBooleanMethod(array, arrayList_add, object);
 }
 
-jobject newIPV6Address(JNIEnv *env, char *addr)
+jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
-    return NULL;
-}
+    if(inetAddressClass == NULL)
+    {
+        inetAddressClass = env->FindClass("java/net/InetAddress");
+        if(inetAddressClass == NULL)
+        {
+            return NULL;
+        }
+    }
 
-jobject newIPV4Address(JNIEnv *env, char *addr)
-{
-    return NULL;
+    if(inetAddress_getByAddress == NULL)
+    {
+        inetAddress_getByAddress = env->GetStaticMethodID(
+            inetAddressClass, "getByAddress", "([B)Ljava/net/InetAddress;");
+        if(inetAddress_getByAddress == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    jobject inetAddressObj = NULL;
+    switch(addr.ss_family)
+    {
+        case AF_INET6:
+        {
+            sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
+            jbyteArray buff = env->NewByteArray(16);
+            if(buff == NULL)
+            {
+                return NULL;
+            }
+
+            env->SetByteArrayRegion(buff, 0, 16, (jbyte*)ipv6->sin6_addr.s6_addr);
+            inetAddressObj = env->CallStaticObjectMethod(
+                inetAddressClass, inetAddress_getByAddress, buff);
+        }
+        break;
+        case AF_INET:
+        {
+            sockaddr_in *ipv4 = (sockaddr_in*)&addr;
+            jbyteArray buff = env->NewByteArray(4);
+            if(buff == NULL)
+            {
+                return NULL;
+            }
+
+            env->SetByteArrayRegion(buff, 0, 4, (jbyte*)&ipv4->sin_addr);
+            inetAddressObj = env->CallStaticObjectMethod(
+                inetAddressClass, inetAddress_getByAddress, buff);
+        }
+        break;
+    }
+
+    return inetAddressObj;
 }
 
 jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
 {
-    return NULL;
+    static jclass multicastGroupClass = NULL;
+    static jmethodID multicastGroup_constructor = NULL;
+
+    static jfieldID macField = NULL;
+    static jfieldID adiField = NULL;
+
+    if(multicastGroupClass == NULL)
+    {
+        multicastGroupClass = env->FindClass("com/zerotierone/sdk/MulticastGroup");
+        if(multicastGroupClass == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(multicastGroup_constructor == NULL)
+    {
+        multicastGroup_constructor = env->GetMethodID(
+            multicastGroupClass, "<init>", "()V");
+        if(multicastGroup_constructor == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    jobject multicastGroupObj = env->NewObject(multicastGroupClass, multicastGroup_constructor);
+    if(multicastGroupObj == NULL)
+    {
+        return NULL;
+    }
+
+    if(macField == NULL)
+    {
+        macField = env->GetFieldID(multicastGroupClass, "mac", "J");
+        if(macField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(adiField == NULL)
+    {
+        adiField = env->GetFieldID(multicastGroupClass, "adi", "J");
+        if(adiField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    env->SetLongField(multicastGroupObj, macField, mc.mac);
+    env->SetLongField(multicastGroupObj, adiField, mc.adi);
+
+    return multicastGroupObj;
 }
 
 #ifdef __cplusplus

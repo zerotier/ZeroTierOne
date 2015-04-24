@@ -9,13 +9,13 @@ extern "C" {
 
 jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
+jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type);
 jobject createEvent(JNIEnv *env, ZT1_Event event);
 
 jobject newArrayList(JNIEnv *env);
-jobject appendItemToArrayList(JNIEnv *env, jobject object);
+bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object);
 
-jobject newIPV6Address(JNIEnv *env, char *addr);
-jobject newIPV4Address(JNIEnv *env, char *addr);
+jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
 
 jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc);
 #ifdef __cplusplus

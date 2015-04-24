@@ -933,16 +933,27 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
     env->SetBooleanField(vnetConfigObj, portErrorField, vnetConfig->portError);
 
 
-    jobject mcastSubsArrayObj = NULL;
-    jobject assignedAddrArrayObj = NULL;
-
-
+    jobject mcastSubsArrayObj = newArrayList(env);
+    for(unsigned int i = 0; i < vnetConfig->multicastSubscriptionCount; ++i)
+    {
+        jobject mcastObj = newMulticastGroup(env, vnetConfig->multicastSubscriptions[i]);
+        appendItemToArrayList(env, mcastSubsArrayObj, mcastObj);
+    }
     env->SetObjectField(vnetConfigObj, multicastSubscriptionsField, mcastSubsArrayObj);
+
+
+    jobject assignedAddrArrayObj = newArrayList(env);
+    for(unsigned int i = 0; i < vnetConfig->assignedAddressCount; ++i)
+    {
+        jobject inetAddrObj = newInetAddress(env, vnetConfig->assignedAddresses[i]);
+        appendItemToArrayList(env, assignedAddrArrayObj, inetAddrObj);
+    }
+
     env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
 
     ZT1_Node_freeQueryResult(node, vnetConfig);
     vnetConfig = NULL;
-    
+
     return vnetConfigObj;
 }
 

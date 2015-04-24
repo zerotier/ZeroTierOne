@@ -28,6 +28,8 @@ package com.zerotierone.sdk;
 
 
 public class MulticastGroup {
+    private MulticastGroup() {}
+
     private long mac;
     private long adi;
 }
