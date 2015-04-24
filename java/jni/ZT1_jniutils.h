@@ -7,6 +7,10 @@
 extern "C" {
 #endif
 
+jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
+jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
+jobject createEvent(JNIEnv *env, ZT1_Event event);
+
 jobject newArrayList(JNIEnv *env);
 jobject appendItemToArrayList(JNIEnv *env, jobject object);
 
