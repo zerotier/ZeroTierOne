@@ -178,6 +178,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (networkId,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET ? = ? WHERE networkId = ?",-1,&_sUpdateNetworkField,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ?",-1,&_sGetIpAssignmentsForNode2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Relay WHERE networkId = ?",-1,&_sDeleteRelaysForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Relay (networkId,nodeId,phyAddress) VALUES (?,?,?)",-1,&_sCreateRelay,(const char **)0) != SQLITE_OK)
@@ -220,6 +221,7 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateNetwork);
 		sqlite3_finalize(_sUpdateNetworkField);
 		sqlite3_finalize(_sGetNetworkRevision);
+		sqlite3_finalize(_sSetNetworkRevision);
 		sqlite3_finalize(_sGetIpAssignmentsForNode2);
 		sqlite3_finalize(_sDeleteRelaysForNetwork);
 		sqlite3_finalize(_sCreateRelay);
@@ -841,10 +843,16 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 			int64_t revision = 0;
 			sqlite3_reset(_sGetNetworkRevision);
 			sqlite3_bind_text(_sGetNetworkRevision,1,nwids,16,SQLITE_STATIC);
-			if (sqlite3_step(_sGetNetworkRevision) == SQLITE_ROW)
+			bool networkExists = false;
+			if (sqlite3_step(_sGetNetworkRevision) == SQLITE_ROW) {
+				networkExists = true;
 				revision = sqlite3_column_int64(_sGetNetworkRevision,0);
+			}
 
 			if (path.size() >= 3) {
+
+				if (!networkExists)
+					return 404;
 
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
 					uint64_t address = Utils::hexStrToU64(path[3].c_str());
@@ -856,7 +864,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 
 			} else {
 
-				if (revision <= 0) {
+				if (!networkExists) {
 					sqlite3_reset(_sCreateNetwork);
 					sqlite3_bind_text(_sCreateNetwork,1,nwids,16,SQLITE_STATIC);
 					sqlite3_bind_text(_sCreateNetwork,2,nwids,16,SQLITE_STATIC); // default name, will be changed below if a name is specified in JSON
@@ -1080,6 +1088,11 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					}
 					json_value_free(j);
 				}
+
+				sqlite3_reset(_sSetNetworkRevision);
+				sqlite3_bind_int64(_sSetNetworkRevision,1,revision += 1);
+				sqlite3_bind_text(_sSetNetworkRevision,2,nwids,16,SQLITE_STATIC);
+				sqlite3_step(_sSetNetworkRevision);
 
 				return handleControlPlaneHttpGET(path,urlArgs,headers,body,responseBody,responseContentType);
 			}

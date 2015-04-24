@@ -40,6 +40,7 @@ namespace ZeroTier {
 
 class OneService;
 class Node;
+class ControlPlaneSubsystem;
 struct InetAddress;
 
 /**
