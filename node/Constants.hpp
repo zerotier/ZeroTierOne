@@ -91,7 +91,9 @@
 #ifndef __WINDOWS__
 #define __WINDOWS__
 #endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #pragma warning(disable : 4290)
 #pragma warning(disable : 4996)
 #pragma warning(disable : 4101)

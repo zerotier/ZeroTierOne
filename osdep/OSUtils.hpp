@@ -45,6 +45,7 @@
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
+#include <Shlwapi.h>
 #else
 #include <unistd.h>
 #include <errno.h>
@@ -96,9 +97,15 @@ public:
 	static inline bool mkdir(const char *path)
 		throw()
 	{
+#ifdef __WINDOWS__
+		if (::PathIsDirectoryA(path))
+			return true;
+		return (::CreateDirectoryA(path,NULL) == TRUE);
+#else
 		if (::mkdir(path,0755) != 0)
 			return (errno == EEXIST);
 		return true;
+#endif
 	}
 	static inline bool mkdir(const std::string &path) throw() { return OSUtils::mkdir(path.c_str()); }
 

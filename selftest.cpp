@@ -628,7 +628,7 @@ struct TestPhyHandlers
 	{
 		std::string *testMessage = (std::string *)*uptr;
 		if ((testMessage)&&(testMessage->length() > 0)) {
-			long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),testMessage->length(),true);
+			long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),(unsigned long)testMessage->length(),true);
 			if (sent > 0)
 				testMessage->erase(0,sent);
 		}
@@ -803,6 +803,11 @@ int main(int argc,char **argv)
 #endif
 {
 	int r = 0;
+
+#ifdef __WINDOWS__
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2,2),&wsaData);
+#endif
 
 	// Code to generate the C25519 test vectors -- did this once and then
 	// put these up top so that we can ensure that every platform produces

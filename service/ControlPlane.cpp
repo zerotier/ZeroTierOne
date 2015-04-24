@@ -26,6 +26,7 @@
  */
 
 #include "ControlPlane.hpp"
+#include "ControlPlaneSubsystem.hpp"
 #include "OneService.hpp"
 
 #include "../version.h"
@@ -241,10 +242,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 	buf.append(json);
 }
 
-ControlPlane::ControlPlane(OneService *svc,Node *n,SqliteNetworkController *nc) :
+ControlPlane::ControlPlane(OneService *svc,Node *n) :
 	_svc(svc),
-	_node(n),
-	_controller(nc)
+	_node(n)
 {
 }
 

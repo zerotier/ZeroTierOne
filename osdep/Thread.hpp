@@ -37,7 +37,7 @@
 #include <WinSock2.h>
 #include <Windows.h>
 #include <string.h>
-#include "Mutex.hpp"
+#include "../node/Mutex.hpp"
 
 namespace ZeroTier {
 

@@ -28,10 +28,13 @@
 #ifndef ZT_BWACCOUNT_HPP
 #define ZT_BWACCOUNT_HPP
 
+#include "Constants.hpp"
+
+#include <algorithm>
+
 #include <stdint.h>
 #include <math.h>
 
-#include "Constants.hpp"
 #include "Utils.hpp"
 
 #ifdef __WINDOWS__

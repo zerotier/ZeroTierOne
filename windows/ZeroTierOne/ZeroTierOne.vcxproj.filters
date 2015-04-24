@@ -16,36 +16,78 @@
     <Filter Include="Source Files\node">
       <UniqueIdentifier>{67b1c0f8-b018-4169-9c14-7032ed12c786}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\control">
-      <UniqueIdentifier>{64683235-3edd-443c-828c-c8e657d3bfd7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\osnet">
-      <UniqueIdentifier>{c8a3c54f-bb49-4c3f-b406-5177bc14a447}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\testnet">
-      <UniqueIdentifier>{142d7af3-1770-44d7-bd87-d509bb25be1e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\include">
       <UniqueIdentifier>{40761a4c-e8db-4a91-9cab-7afef332f4a8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\control">
-      <UniqueIdentifier>{066d9967-d4f3-4b41-b9a8-b18ea763aca3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\node">
       <UniqueIdentifier>{da3b8126-840c-45db-8abe-9d7e7976f8be}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\osnet">
-      <UniqueIdentifier>{173e391d-1519-41b8-960b-9b8dad083827}</UniqueIdentifier>
+    <Filter Include="Source Files\osdep">
+      <UniqueIdentifier>{6054dfae-4ed2-4d69-8cf5-d6f27646f2d7}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\testnet">
-      <UniqueIdentifier>{6f36ddd5-a2e1-48e1-9543-1ab975f91780}</UniqueIdentifier>
+    <Filter Include="Source Files\service">
+      <UniqueIdentifier>{9944293a-4a1a-40e9-b92a-eff31fe87e2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\osdep">
+      <UniqueIdentifier>{ca21bd6b-ff4e-4f9e-bedd-c9f603d2d0d6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\service">
+      <UniqueIdentifier>{e1743b3c-1d18-47f1-ab5a-f5703c19f1df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext">
+      <UniqueIdentifier>{71865460-d693-4c73-84f6-dbff42f49df6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\http-parser">
+      <UniqueIdentifier>{17ae9a01-d39f-4c6d-a800-8f2cd0804c96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\json-parser">
+      <UniqueIdentifier>{736aad7f-8d95-4602-88df-3bb970869c6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\lz4">
+      <UniqueIdentifier>{3636527c-bc03-4852-bd3c-20ee25e56d82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ext">
+      <UniqueIdentifier>{7784af31-5b60-4300-b07e-44cf864c54db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ext\lz4">
+      <UniqueIdentifier>{29164186-10fc-45f5-b253-6d03f0ddd4db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ext\http-parser">
+      <UniqueIdentifier>{f8a1c208-15b8-4d85-a4cb-11d2b82f2d1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ext\json-parser">
+      <UniqueIdentifier>{da28e961-1761-41d8-9a59-65b00dfb1302}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\windows">
+      <UniqueIdentifier>{43f75f84-c70d-4d44-a0ef-28a7a399abd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\windows\ZeroTierOne">
+      <UniqueIdentifier>{0da07a2f-8922-4827-ac51-29ca3f30f881}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\windows">
+      <UniqueIdentifier>{b74916eb-bb6c-4449-a2a2-fa0b17f60121}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\windows\ZeroTierOne">
+      <UniqueIdentifier>{bf604491-14c4-4a74-81a6-6105d07c5c7c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\ext\lz4\lz4.c">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\service\ControlPlane.cpp">
+      <Filter>Source Files\service</Filter>
     </ClCompile>
-    <ClCompile Include="ZeroTierOneService.cpp">
+    <ClCompile Include="..\..\service\OneService.cpp">
+      <Filter>Source Files\service</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\Http.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\OSUtils.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\selftest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\C25519.cpp">
@@ -60,9 +102,6 @@
     <ClCompile Include="..\..\node\Dictionary.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\HttpClient.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Identity.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -70,9 +109,6 @@
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\InetAddress.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\node\Logger.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\Multicaster.cpp">
@@ -87,9 +123,6 @@
     <ClCompile Include="..\..\node\Node.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\NodeConfig.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\OutboundMulticast.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -102,19 +135,13 @@
     <ClCompile Include="..\..\node\Poly1305.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\RoutingTable.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Salsa20.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\Service.cpp">
+    <ClCompile Include="..\..\node\SelfAwareness.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\SHA512.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\node\SoftwareUpdater.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\Switch.cpp">
@@ -126,118 +153,61 @@
     <ClCompile Include="..\..\node\Utils.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\control\IpcConnection.cpp">
-      <Filter>Source Files\control</Filter>
+    <ClCompile Include="..\..\ext\lz4\lz4.c">
+      <Filter>Source Files\ext\lz4</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\control\IpcListener.cpp">
-      <Filter>Source Files\control</Filter>
+    <ClCompile Include="..\..\ext\http-parser\http_parser.c">
+      <Filter>Source Files\ext\http-parser</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\control\NodeControlClient.cpp">
-      <Filter>Source Files\control</Filter>
+    <ClCompile Include="..\..\ext\json-parser\json.c">
+      <Filter>Source Files\ext\json-parser</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\control\NodeControlService.cpp">
-      <Filter>Source Files\control</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\osnet\NativeSocketManager.cpp">
-      <Filter>Source Files\osnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\osnet\WindowsEthernetTap.cpp">
-      <Filter>Source Files\osnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\osnet\WindowsEthernetTapFactory.cpp">
-      <Filter>Source Files\osnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\osnet\WindowsRoutingTable.cpp">
-      <Filter>Source Files\osnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\SimNet.cpp">
-      <Filter>Source Files\testnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\SimNetSocketManager.cpp">
-      <Filter>Source Files\testnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\TestEthernetTap.cpp">
-      <Filter>Source Files\testnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\TestEthernetTapFactory.cpp">
-      <Filter>Source Files\testnet</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\TestRoutingTable.cpp">
-      <Filter>Source Files\testnet</Filter>
+    <ClCompile Include="..\..\one.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ServiceBase.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
     <ClCompile Include="ServiceInstaller.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\testnet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\main.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="ZeroTierOneService.cpp">
+      <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ServiceBase.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ServiceInstaller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ZeroTierOneService.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\version.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\testnet\MTQ.hpp">
-      <Filter>Header Files\testnet</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\testnet\SimNet.hpp">
-      <Filter>Header Files\testnet</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\testnet\SimNetSocketManager.hpp">
-      <Filter>Header Files\testnet</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\testnet\TestEthernetTap.hpp">
-      <Filter>Header Files\testnet</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\testnet\TestEthernetTapFactory.hpp">
-      <Filter>Header Files\testnet</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\testnet\TestRoutingTable.hpp">
-      <Filter>Header Files\testnet</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\ZeroTierOne.h">
       <Filter>Header Files\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\control\IpcConnection.hpp">
-      <Filter>Header Files\control</Filter>
+    <ClInclude Include="..\..\osdep\Http.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\control\IpcListener.hpp">
-      <Filter>Header Files\control</Filter>
+    <ClInclude Include="..\..\osdep\OSUtils.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\control\NodeControlClient.hpp">
-      <Filter>Header Files\control</Filter>
+    <ClInclude Include="..\..\osdep\Phy.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\control\NodeControlService.hpp">
-      <Filter>Header Files\control</Filter>
+    <ClInclude Include="..\..\osdep\Thread.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\osnet\NativeSocketManager.hpp">
-      <Filter>Header Files\osnet</Filter>
+    <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\osnet\WindowsEthernetTap.hpp">
-      <Filter>Header Files\osnet</Filter>
+    <ClInclude Include="..\..\service\ControlPlane.hpp">
+      <Filter>Header Files\service</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\osnet\WindowsEthernetTapFactory.hpp">
-      <Filter>Header Files\osnet</Filter>
+    <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp">
+      <Filter>Header Files\service</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\osnet\WindowsRoutingTable.hpp">
-      <Filter>Header Files\osnet</Filter>
+    <ClInclude Include="..\..\service\OneService.hpp">
+      <Filter>Header Files\service</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Address.hpp">
       <Filter>Header Files\node</Filter>
@@ -275,15 +245,6 @@
     <ClInclude Include="..\..\node\Dictionary.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\EthernetTap.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\EthernetTapFactory.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\HttpClient.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Identity.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
@@ -291,9 +252,6 @@
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\InetAddress.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\Logger.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\MAC.hpp">
@@ -314,10 +272,10 @@
     <ClInclude Include="..\..\node\NetworkConfig.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\Node.hpp">
+    <ClInclude Include="..\..\node\NetworkController.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\NodeConfig.hpp">
+    <ClInclude Include="..\..\node\Node.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\NonCopyable.hpp">
@@ -338,16 +296,13 @@
     <ClInclude Include="..\..\node\Poly1305.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\RoutingTable.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\RuntimeEnvironment.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Salsa20.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\Service.hpp">
+    <ClInclude Include="..\..\node\SelfAwareness.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\SHA512.hpp">
@@ -356,19 +311,7 @@
     <ClInclude Include="..\..\node\SharedPtr.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\Socket.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\SocketManager.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\SoftwareUpdater.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Switch.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\Thread.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Topology.hpp">
@@ -378,7 +321,22 @@
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\ext\lz4\lz4.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\ext\lz4</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\json-parser\json.h">
+      <Filter>Header Files\ext\json-parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\http-parser\http_parser.h">
+      <Filter>Header Files\ext\http-parser</Filter>
+    </ClInclude>
+    <ClInclude Include="ServiceBase.h">
+      <Filter>Header Files\windows\ZeroTierOne</Filter>
+    </ClInclude>
+    <ClInclude Include="ServiceInstaller.h">
+      <Filter>Header Files\windows\ZeroTierOne</Filter>
+    </ClInclude>
+    <ClInclude Include="ZeroTierOneService.h">
+      <Filter>Header Files\windows\ZeroTierOne</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

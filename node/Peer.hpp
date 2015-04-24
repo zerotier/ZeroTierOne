@@ -30,6 +30,8 @@
 
 #include <stdint.h>
 
+#include "Constants.hpp"
+
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -37,7 +39,6 @@
 
 #include "../include/ZeroTierOne.h"
 
-#include "Constants.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Path.hpp"
 #include "Address.hpp"

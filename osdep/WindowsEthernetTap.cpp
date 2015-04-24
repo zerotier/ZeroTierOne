@@ -44,42 +44,71 @@
 #include <nldef.h>
 
 #include <iostream>
+#include <set>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
 
 #include "WindowsEthernetTap.hpp"
+#include "OSUtils.hpp"
 
 #include "..\windows\TapDriver\tap-windows.h"
 
 // ff:ff:ff:ff:ff:ff with no ADI
-static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
+//static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
 
 #define ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
 
 namespace ZeroTier {
 
+namespace {
+
+class WindowsEthernetTapEnv
+{
+public:
+	WindowsEthernetTapEnv()
+	{
+#ifdef _WIN64
+		is64Bit = TRUE;
+		devcon = "\\devcon_x64.exe";
+		tapDriver = "\\tap-windows\\x64\\zttap200.inf";
+#else
+		is64Bit = FALSE;
+		IsWow64Process(GetCurrentProcess(),&is64Bit);
+		devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
+		tapDriver = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap200.inf" : "\\tap-windows\\x86\\zttap200.inf");
+#endif
+	}
+
+	BOOL is64Bit;
+	std::string devcon;
+	std::string tapDriver;
+};
+
+static const WindowsEthernetTapEnv WINENV;
+
+} // anonymous namespace
+
 // Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
 
 WindowsEthernetTap::WindowsEthernetTap(
-	const char *pathToHelpers,
+	const char *hp,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
 	uint64_t nwid,
-	const char *desiredDevice,
 	const char *friendlyName,
-	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
-	EthernetTap("WindowsEthernetTap",mac,mtu,metric),
 	_handler(handler),
 	_arg(arg),
+	_mac(mac),
 	_nwid(nwid),
 	_tap(INVALID_HANDLE_VALUE),
 	_injectSemaphore(INVALID_HANDLE_VALUE),
-	_pathToHelpers(pathToHelpers),
+	_pathToHelpers(hp),
 	_run(true),
 	_initialized(false),
 	_enabled(true)
@@ -169,11 +198,11 @@ WindowsEthernetTap::WindowsEthernetTap(
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" install \"" + _pathToHelpers + WindowsEthernetTapFactory::WINENV.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WINENV.devcon + "\" install \"" + _pathToHelpers + WINENV.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			if (devconLog != INVALID_HANDLE_VALUE)
 				CloseHandle(devconLog);
-			throw std::runtime_error(std::string("unable to find or execute devcon at ") + WindowsEthernetTapFactory::WINENV.devcon);
+			throw std::runtime_error(std::string("unable to find or execute devcon at ") + WINENV.devcon);
 		}
 		WaitForSingleObject(processInfo.hProcess,INFINITE);
 		CloseHandle(processInfo.hProcess);
@@ -296,18 +325,18 @@ bool WindowsEthernetTap::enabled() const
 	return _enabled;
 }
 
-bool WindowsEthernetTap::addIP(const InetAddress &ip)
+bool WindowsEthernetTap::addIp(const InetAddress &ip)
 {
 	if (!_initialized)
 		return false;
 	if (!ip.netmaskBits()) // sanity check... netmask of 0.0.0.0 is WUT?
 		return false;
 
-	std::set<InetAddress> haveIps(ips());
+	std::vector<InetAddress> haveIps(ips());
 
 	try {
 		// Add IP to interface at the netlink level if not already assigned.
-		if (!haveIps.count(ip)) {
+		if (!std::binary_search(haveIps.begin(),haveIps.end(),ip)) {
 			MIB_UNICASTIPADDRESS_ROW ipr;
 
 			InitializeUnicastIpAddressEntry(&ipr);
@@ -333,11 +362,8 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 			ipr.InterfaceLuid = _deviceLuid;
 			ipr.InterfaceIndex = _getDeviceIndex();
 
-			if (CreateUnicastIpAddressEntry(&ipr) == NO_ERROR) {
-				haveIps.insert(ip);
-			} else {
+			if (CreateUnicastIpAddressEntry(&ipr) != NO_ERROR)
 				return false;
-			}
 		}
 
 		std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
@@ -348,14 +374,13 @@ bool WindowsEthernetTap::addIP(const InetAddress &ip)
 			_setRegistryIPv4Value("IPAddress",regIps);
 			_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
 		}
-		//_syncIpsWithRegistry(haveIps,_netCfgInstanceId);
 	} catch ( ... ) {
 		return false;
 	}
 	return true;
 }
 
-bool WindowsEthernetTap::removeIP(const InetAddress &ip)
+bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 {
 	if (!_initialized)
 		return false;
@@ -371,7 +396,7 @@ bool WindowsEthernetTap::removeIP(const InetAddress &ip)
 							break;
 						case AF_INET6:
 							addr.set(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
-							if (addr.isLinkLocal())
+							if (addr.ipScope() == InetAddress::IP_SCOPE_LINK_LOCAL)
 								continue; // can't remove link-local IPv6 addresses
 							break;
 					}
@@ -402,10 +427,10 @@ bool WindowsEthernetTap::removeIP(const InetAddress &ip)
 	return false;
 }
 
-std::set<InetAddress> WindowsEthernetTap::ips() const
+std::vector<InetAddress> WindowsEthernetTap::ips() const
 {
 	static const InetAddress linkLocalLoopback("fe80::1",64); // what is this and why does Windows assign it?
-	std::set<InetAddress> addrs;
+	std::vector<InetAddress> addrs;
 
 	if (!_initialized)
 		return addrs;
@@ -419,12 +444,12 @@ std::set<InetAddress> WindowsEthernetTap::ips() const
 						case AF_INET: {
 							InetAddress ip(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr),4,ipt->Table[i].OnLinkPrefixLength);
 							if (ip != InetAddress::LO4)
-								addrs.insert(ip);
+								addrs.push_back(ip);
 						}	break;
 						case AF_INET6: {
 							InetAddress ip(ipt->Table[i].Address.Ipv6.sin6_addr.u.Byte,16,ipt->Table[i].OnLinkPrefixLength);
 							if ((ip != linkLocalLoopback)&&(ip != InetAddress::LO6))
-								addrs.insert(ip);
+								addrs.push_back(ip);
 						}	break;
 					}
 				}
@@ -432,6 +457,9 @@ std::set<InetAddress> WindowsEthernetTap::ips() const
 			FreeMibTable(ipt);
 		}
 	} catch ( ... ) {} // sanity check, shouldn't happen unless out of memory
+
+	std::sort(addrs.begin(),addrs.end());
+	std::unique(addrs.begin(),addrs.end());
 
 	return addrs;
 }
@@ -472,23 +500,15 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 	}
 }
 
-bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
+void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
 {
 	if (!_initialized)
-		return false;
+		return;
 	HANDLE t = _tap;
 	if (t == INVALID_HANDLE_VALUE)
-		return false;
+		return;
 
-	std::set<MulticastGroup> newGroups;
-
-	// Ensure that groups are added for each IP... this handles the MAC:ADI
-	// groups that are created from IPv4 addresses. Some of these may end
-	// up being duplicates of what the IOCTL returns but that's okay since
-	// the set<> will filter that.
-	std::set<InetAddress> ipaddrs(ips());
-	for(std::set<InetAddress>::const_iterator i(ipaddrs.begin());i!=ipaddrs.end();++i)
-		newGroups.insert(MulticastGroup::deriveMulticastGroupForAddressResolution(*i));
+	std::vector<MulticastGroup> newGroups;
 
 	// The ZT1 tap driver supports an IOCTL to get multicast memberships at the L2
 	// level... something Windows does not seem to expose ordinarily. This lets
@@ -503,32 +523,28 @@ bool WindowsEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 			i += 6;
 			if ((mac.isMulticast())&&(!mac.isBroadcast())) {
 				// exclude the nulls that may be returned or any other junk Windows puts in there
-				newGroups.insert(MulticastGroup(mac,0));
+				newGroups.push_back(MulticastGroup(mac,0));
 			}
 		}
 	}
 
-	bool changed = false;
+	std::vector<InetAddress> allIps(ips());
+	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)
+		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
-	for(std::set<MulticastGroup>::iterator mg(newGroups.begin());mg!=newGroups.end();++mg) {
-		if (!groups.count(*mg)) {
-			groups.insert(*mg);
-			changed = true;
-		}
+	std::sort(newGroups.begin(),newGroups.end());
+	std::unique(newGroups.begin(),newGroups.end());
+
+	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
+		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
+			added.push_back(*m);
 	}
-	for(std::set<MulticastGroup>::iterator mg(groups.begin());mg!=groups.end();) {
-		if ((!newGroups.count(*mg))&&(*mg != _blindWildcardMulticastGroup)) {
-			groups.erase(mg++);
-			changed = true;
-		} else ++mg;
+	for(std::vector<MulticastGroup>::iterator m(_multicastGroups.begin());m!=_multicastGroups.end();++m) {
+		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
+			removed.push_back(*m);
 	}
 
-	return changed;
-}
-
-bool WindowsEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
-{
-	return false;
+	_multicastGroups.swap(newGroups);
 }
 
 void WindowsEthernetTap::threadMain()
@@ -699,8 +715,8 @@ void WindowsEthernetTap::threadMain()
 					MAC from(tapReadBuf + 6,6);
 					unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
 					try {
-						Buffer<4096> tmp(tapReadBuf + 14,bytesRead - 14);
-						_handler(_arg,from,to,etherType,tmp);
+						// TODO: decode vlans
+						_handler(_arg,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
 					} catch ( ... ) {} // handlers should not throw
 				}
 			}
@@ -733,6 +749,71 @@ void WindowsEthernetTap::threadMain()
 	::free(tapReadBuf);
 }
 
+void WindowsEthernetTap::destroyAllPersistentTapDevices(const char *pathToHelpers)
+{
+	char subkeyName[4096];
+	char subkeyClass[4096];
+	char data[4096];
+
+	std::set<std::string> instanceIdPathsToRemove;
+	{
+		HKEY nwAdapters;
+		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
+			return;
+
+		for(DWORD subkeyIndex=0;;++subkeyIndex) {
+			DWORD type;
+			DWORD dataLen;
+			DWORD subkeyNameLen = sizeof(subkeyName);
+			DWORD subkeyClassLen = sizeof(subkeyClass);
+			FILETIME lastWriteTime;
+			if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
+				type = 0;
+				dataLen = sizeof(data);
+				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+					data[dataLen] = '\0';
+					if (!strnicmp(data,"zttap",5)) {
+						std::string instanceIdPath;
+						type = 0;
+						dataLen = sizeof(data);
+						if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+							instanceIdPath.assign(data,dataLen);
+						if (instanceIdPath.length() != 0)
+							instanceIdPathsToRemove.insert(instanceIdPath);
+					}
+				}
+			} else break; // end of list or failure
+		}
+
+		RegCloseKey(nwAdapters);
+	}
+
+	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp)
+		deletePersistentTapDevice(pathToHelpers,iidp->c_str());
+}
+
+void WindowsEthernetTap::deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId)
+{
+	HANDLE devconLog = CreateFileA((std::string(pathToHelpers) + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
+	STARTUPINFOA startupInfo;
+	startupInfo.cb = sizeof(startupInfo);
+	if (devconLog != INVALID_HANDLE_VALUE) {
+		SetFilePointer(devconLog,0,0,FILE_END);
+		startupInfo.hStdOutput = devconLog;
+		startupInfo.hStdError = devconLog;
+	}
+	PROCESS_INFORMATION processInfo;
+	memset(&startupInfo,0,sizeof(STARTUPINFOA));
+	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
+	if (CreateProcessA(NULL,(LPSTR)(std::string("\"") + pathToHelpers + WINENV.devcon + "\" remove @" + instanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		WaitForSingleObject(processInfo.hProcess,INFINITE);
+		CloseHandle(processInfo.hProcess);
+		CloseHandle(processInfo.hThread);
+	}
+	if (devconLog != INVALID_HANDLE_VALUE)
+		CloseHandle(devconLog);
+}
+
 bool WindowsEthernetTap::_disableTapDevice()
 {
 	HANDLE devconLog = CreateFileA((_pathToHelpers + "\\devcon.log").c_str(),GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_ALWAYS,FILE_ATTRIBUTE_NORMAL,NULL);
@@ -748,7 +829,7 @@ bool WindowsEthernetTap::_disableTapDevice()
 	PROCESS_INFORMATION processInfo;
 	memset(&startupInfo,0,sizeof(STARTUPINFOA));
 	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" disable @" + _deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WINENV.devcon + "\" disable @" + _deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 		if (devconLog != INVALID_HANDLE_VALUE)
 			CloseHandle(devconLog);
 		return false;
@@ -778,7 +859,7 @@ bool WindowsEthernetTap::_enableTapDevice()
 	PROCESS_INFORMATION processInfo;
 	memset(&startupInfo,0,sizeof(STARTUPINFOA));
 	memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WindowsEthernetTapFactory::WINENV.devcon + "\" enable @" + _deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+	if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WINENV.devcon + "\" enable @" + _deviceInstanceId).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 		if (devconLog != INVALID_HANDLE_VALUE)
 			CloseHandle(devconLog);
 		return false;

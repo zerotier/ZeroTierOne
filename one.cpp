@@ -32,6 +32,8 @@
 #include <time.h>
 #include <errno.h>
 
+#include "node/Constants.hpp"
+
 #ifdef __WINDOWS__
 #include <WinSock2.h>
 #include <Windows.h>
@@ -60,7 +62,6 @@
 
 #include "ext/json-parser/json.h"
 
-#include "node/Constants.hpp"
 #include "node/Identity.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/Utils.hpp"
@@ -499,7 +500,7 @@ static int cli(int argc,char **argv)
 			cliPrintHelp(argv[0],stderr);
 			return 2;
 		}
-		unsigned int scode = Http::DELETE(
+		unsigned int scode = Http::DEL(
 			1024 * 1024 * 16,
 			60000,
 			(const struct sockaddr *)&addr,
@@ -731,9 +732,9 @@ static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 		case CTRL_BREAK_EVENT:
 		case CTRL_CLOSE_EVENT:
 		case CTRL_SHUTDOWN_EVENT:
-			Node *n = node;
-			if (n)
-				n->terminate(Node::NODE_NORMAL_TERMINATION,"terminated by signal");
+			OneService *s = zt1Service;
+			if (s)
+				s->terminate();
 			return TRUE;
 	}
 	return FALSE;
