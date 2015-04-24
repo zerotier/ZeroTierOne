@@ -1043,6 +1043,28 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
     return versionObj;
 }
 
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    peers
+ * Signature: (J)Ljava/util/ArrayList;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
+    JNIEnv *env, jobject obj, jlong id)
+{
+    return NULL;
+}
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    networks
+ * Signature: (J)Ljava/util/ArrayList;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networks(
+    JNIEnv *env, jobject obj, jlong id)
+{
+    return NULL;
+}
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

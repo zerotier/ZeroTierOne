@@ -30,6 +30,7 @@ package com.zerotierone.sdk;
 import java.nio.ByteBuffer;
 import java.lang.Long;
 import java.net.InetAddress;
+import java.util.ArrayList;
 
 public class Node {
 	static {
@@ -157,13 +158,17 @@ public class Node {
         return status(nodeId);
     }
 
-    // TODO: ZT1_Node_peers
+    public ArrayList<Peer> peers() {
+        return peers(nodeId);
+    }
 
     public VirtualNetworkConfig networkConfig(long nwid) {
         return networkConfig(nodeId, nwid);
     }
 
-    // TODO: ZT1_Node_networks
+    public ArrayList<VirtualNetworkConfig> networks() {
+        return networks(nodeId);
+    }
 
     public Version getVersion() {
         return version();
@@ -220,13 +225,11 @@ public class Node {
 
     private native NodeStatus status(long nodeId);
 
-    // TODO: ZT1_Node_peers
-
     private native VirtualNetworkConfig networkConfig(long nodeId, long nwid);
-
-    // TODO: ZT1_Node_networks
 
     private native Version version();
 
+    private native ArrayList<Peer> peers(long nodeId);
 
+    private native ArrayList<VirtualNetworkConfig> networks(long nodeId);
 }

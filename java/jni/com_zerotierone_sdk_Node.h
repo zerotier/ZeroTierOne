@@ -106,10 +106,26 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    version
- * Signature: (J)Lcom/zerotierone/sdk/Version;
+ * Signature: ()Lcom/zerotierone/sdk/Version;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
   (JNIEnv *, jobject);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    peers
+ * Signature: (J)Ljava/util/ArrayList;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     com_zerotierone_sdk_Node
+ * Method:    networks
+ * Signature: (J)Ljava/util/ArrayList;
+ */
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networks
+  (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus
 }
