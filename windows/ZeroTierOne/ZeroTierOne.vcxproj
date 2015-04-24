@@ -19,87 +19,40 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\control\IpcConnection.cpp" />
-    <ClCompile Include="..\..\control\IpcListener.cpp" />
-    <ClCompile Include="..\..\control\NodeControlClient.cpp" />
-    <ClCompile Include="..\..\control\NodeControlService.cpp" />
+    <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
+    <ClCompile Include="..\..\ext\json-parser\json.c" />
     <ClCompile Include="..\..\ext\lz4\lz4.c" />
-    <ClCompile Include="..\..\main.cpp" />
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\Defaults.cpp" />
     <ClCompile Include="..\..\node\Dictionary.cpp" />
-    <ClCompile Include="..\..\node\HttpClient.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
-    <ClCompile Include="..\..\node\Logger.cpp" />
     <ClCompile Include="..\..\node\Multicaster.cpp" />
     <ClCompile Include="..\..\node\Network.cpp" />
     <ClCompile Include="..\..\node\NetworkConfig.cpp" />
     <ClCompile Include="..\..\node\Node.cpp" />
-    <ClCompile Include="..\..\node\NodeConfig.cpp" />
     <ClCompile Include="..\..\node\OutboundMulticast.cpp" />
     <ClCompile Include="..\..\node\Packet.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp" />
-    <ClCompile Include="..\..\node\RoutingTable.cpp" />
     <ClCompile Include="..\..\node\Salsa20.cpp" />
-    <ClCompile Include="..\..\node\Service.cpp" />
+    <ClCompile Include="..\..\node\SelfAwareness.cpp" />
     <ClCompile Include="..\..\node\SHA512.cpp" />
-    <ClCompile Include="..\..\node\SoftwareUpdater.cpp" />
     <ClCompile Include="..\..\node\Switch.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
-    <ClCompile Include="..\..\osnet\NativeSocketManager.cpp" />
-    <ClCompile Include="..\..\osnet\WindowsEthernetTap.cpp" />
-    <ClCompile Include="..\..\osnet\WindowsEthernetTapFactory.cpp" />
-    <ClCompile Include="..\..\osnet\WindowsRoutingTable.cpp" />
-    <ClCompile Include="..\..\testnet.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\SimNet.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\SimNetSocketManager.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\TestEthernetTap.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\TestEthernetTapFactory.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\..\testnet\TestRoutingTable.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="ServiceBase.cpp" />
-    <ClCompile Include="ServiceInstaller.cpp" />
-    <ClCompile Include="ZeroTierOneService.cpp" />
+    <ClCompile Include="..\..\osdep\Http.cpp" />
+    <ClCompile Include="..\..\osdep\OSUtils.cpp" />
+    <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
+    <ClCompile Include="..\..\selftest.cpp" />
+    <ClCompile Include="..\..\service\ControlPlane.cpp" />
+    <ClCompile Include="..\..\service\OneService.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\control\IpcConnection.hpp" />
-    <ClInclude Include="..\..\control\IpcListener.hpp" />
-    <ClInclude Include="..\..\control\NodeControlClient.hpp" />
-    <ClInclude Include="..\..\control\NodeControlService.hpp" />
+    <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
+    <ClInclude Include="..\..\ext\json-parser\json.h" />
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
     <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
@@ -114,55 +67,41 @@
     <ClInclude Include="..\..\node\Constants.hpp" />
     <ClInclude Include="..\..\node\Defaults.hpp" />
     <ClInclude Include="..\..\node\Dictionary.hpp" />
-    <ClInclude Include="..\..\node\EthernetTap.hpp" />
-    <ClInclude Include="..\..\node\EthernetTapFactory.hpp" />
-    <ClInclude Include="..\..\node\HttpClient.hpp" />
     <ClInclude Include="..\..\node\Identity.hpp" />
     <ClInclude Include="..\..\node\IncomingPacket.hpp" />
     <ClInclude Include="..\..\node\InetAddress.hpp" />
-    <ClInclude Include="..\..\node\Logger.hpp" />
     <ClInclude Include="..\..\node\MAC.hpp" />
     <ClInclude Include="..\..\node\Multicaster.hpp" />
     <ClInclude Include="..\..\node\MulticastGroup.hpp" />
     <ClInclude Include="..\..\node\Mutex.hpp" />
     <ClInclude Include="..\..\node\Network.hpp" />
     <ClInclude Include="..\..\node\NetworkConfig.hpp" />
+    <ClInclude Include="..\..\node\NetworkController.hpp" />
     <ClInclude Include="..\..\node\Node.hpp" />
-    <ClInclude Include="..\..\node\NodeConfig.hpp" />
     <ClInclude Include="..\..\node\NonCopyable.hpp" />
     <ClInclude Include="..\..\node\OutboundMulticast.hpp" />
     <ClInclude Include="..\..\node\Packet.hpp" />
     <ClInclude Include="..\..\node\Path.hpp" />
     <ClInclude Include="..\..\node\Peer.hpp" />
     <ClInclude Include="..\..\node\Poly1305.hpp" />
-    <ClInclude Include="..\..\node\RoutingTable.hpp" />
     <ClInclude Include="..\..\node\RuntimeEnvironment.hpp" />
     <ClInclude Include="..\..\node\Salsa20.hpp" />
-    <ClInclude Include="..\..\node\Service.hpp" />
+    <ClInclude Include="..\..\node\SelfAwareness.hpp" />
     <ClInclude Include="..\..\node\SHA512.hpp" />
     <ClInclude Include="..\..\node\SharedPtr.hpp" />
-    <ClInclude Include="..\..\node\Socket.hpp" />
-    <ClInclude Include="..\..\node\SocketManager.hpp" />
-    <ClInclude Include="..\..\node\SoftwareUpdater.hpp" />
     <ClInclude Include="..\..\node\Switch.hpp" />
-    <ClInclude Include="..\..\node\Thread.hpp" />
     <ClInclude Include="..\..\node\Topology.hpp" />
     <ClInclude Include="..\..\node\Utils.hpp" />
-    <ClInclude Include="..\..\osnet\NativeSocketManager.hpp" />
-    <ClInclude Include="..\..\osnet\WindowsEthernetTap.hpp" />
-    <ClInclude Include="..\..\osnet\WindowsEthernetTapFactory.hpp" />
-    <ClInclude Include="..\..\osnet\WindowsRoutingTable.hpp" />
-    <ClInclude Include="..\..\testnet\MTQ.hpp" />
-    <ClInclude Include="..\..\testnet\SimNet.hpp" />
-    <ClInclude Include="..\..\testnet\SimNetSocketManager.hpp" />
-    <ClInclude Include="..\..\testnet\TestEthernetTap.hpp" />
-    <ClInclude Include="..\..\testnet\TestEthernetTapFactory.hpp" />
-    <ClInclude Include="..\..\testnet\TestRoutingTable.hpp" />
+    <ClInclude Include="..\..\osdep\Http.hpp" />
+    <ClInclude Include="..\..\osdep\OSUtils.hpp" />
+    <ClInclude Include="..\..\osdep\Phy.hpp" />
+    <ClInclude Include="..\..\osdep\Thread.hpp" />
+    <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
+    <ClInclude Include="..\..\service\ControlPlane.hpp" />
+    <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp" />
+    <ClInclude Include="..\..\service\OneService.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="ServiceBase.h" />
-    <ClInclude Include="ServiceInstaller.h" />
-    <ClInclude Include="ZeroTierOneService.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ZeroTierOne.rc" />
@@ -240,7 +179,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_LOG_STDOUT;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -254,7 +193,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_LOG_STDOUT;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -270,7 +209,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -294,7 +233,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>

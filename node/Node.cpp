@@ -60,7 +60,7 @@ Node::Node(
 	ZT1_EventCallback eventCallback,
 	const char *overrideRootTopology) :
 	RR(new RuntimeEnvironment(this)),
-	_uptr(uptr),
+	_uPtr(uptr),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
 	_wirePacketSendFunction(wirePacketSendFunction),
@@ -426,7 +426,7 @@ std::string Node::dataStoreGet(const char *name)
 	std::string r;
 	unsigned long olen = 0;
 	do {
-		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),_uptr,name,buf,sizeof(buf),r.length(),&olen);
+		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,buf,sizeof(buf),r.length(),&olen);
 		if (n <= 0)
 			return std::string();
 		r.append(buf,n);
