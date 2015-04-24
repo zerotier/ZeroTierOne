@@ -47,7 +47,6 @@ public class VirtualNetworkConfig {
     private boolean portError;
     private boolean enabled;
     private long netconfRevision;
-    private int multicastSubscriptionCount;
     private ArrayList<MulticastGroup> multicastSubscriptions;
     private ArrayList<InetAddress> assignedAddresses;
 

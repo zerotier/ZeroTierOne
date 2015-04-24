@@ -692,7 +692,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
         }
     }
 
-    env->SetIntField(nodeStatusObj, addressField, nodeStatus.address);
+    env->SetLongField(nodeStatusObj, addressField, nodeStatus.address);
 
     jstring pubIdentStr = env->NewStringUTF(nodeStatus.publicIdentity);
     if(pubIdentStr == NULL)
@@ -751,10 +751,188 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
     
     ZT1_VirtualNetworkConfig *vnetConfig = ZT1_Node_networkConfig(node, nwid);
     
-    // TODO: copy data from C to Java
+    static jfieldID nwidField = NULL;
+    static jfieldID macField = NULL;
+    static jfieldID nameField = NULL;
+    static jfieldID statusField = NULL;
+    static jfieldID typeField = NULL;
+    static jfieldID mtuField = NULL;
+    static jfieldID dhcpField = NULL;
+    static jfieldID bridgeField = NULL;
+    static jfieldID broadcastEnabledField = NULL;
+    static jfieldID portErrorField = NULL;
+    static jfieldID enabledField = NULL;
+    static jfieldID netconfRevisionField = NULL;
+    static jfieldID multicastSubscriptionsField = NULL;
+    static jfieldID assignedAddressesField = NULL;
+
+    if(nwidField == NULL)
+    {
+        nwidField = env->GetFieldID(vnetConfigClass, "nwid", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(nwidField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(macField == NULL)
+    {
+        macField = env->GetFieldID(vnetConfigClass, "mac", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(macField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(nameField == NULL)
+    {
+        nameField = env->GetFieldID(vnetConfigClass, "name", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(nameField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(statusField == NULL)
+    {
+        statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(statusField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(typeField == NULL)
+    {
+        typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(typeField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(mtuField == NULL)
+    {
+        mtuField = env->GetFieldID(vnetConfigClass, "mtu", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(mtuField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(dhcpField == NULL)
+    {
+        dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(dhcpField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(bridgeField == NULL)
+    {
+        bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(bridgeField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(broadcastEnabledField == NULL)
+    {
+        broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(broadcastEnabledField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(portErrorField == NULL)
+    {
+        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(portErrorField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(enabledField == NULL)
+    {
+        enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(enabledField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(netconfRevisionField == NULL)
+    {
+        netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(netconfRevisionField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(multicastSubscriptionsField == NULL)
+    {
+        multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(multicastSubscriptionsField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(assignedAddressesField == NULL)
+    {
+        assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Lcom/zerotierone/sdk/VirtualNetworkConfig;");
+        if(assignedAddressesField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    env->SetLongField(vnetConfigObj, nwidField, vnetConfig->nwid);
+    env->SetLongField(vnetConfigObj, macField, vnetConfig->mac);
+    jstring nameStr = env->NewStringUTF(vnetConfig->name);
+    if(nameStr == NULL)
+    {
+        return NULL; // out of memory
+    }
+    env->SetObjectField(vnetConfigObj, nameField, nameStr);
+
+    jobject statusObject = createVirtualNetworkStatus(env, vnetConfig->status);
+    if(statusObject == NULL)
+    {
+        return NULL;
+    }
+    env->SetObjectField(vnetConfigObj, statusField, statusObject);
+
+    jobject typeObject = createVirtualNetworkType(env, vnetConfig->type);
+    if(typeObject == NULL)
+    {
+        return NULL;
+    }
+    env->SetObjectField(vnetConfigObj, typeField, typeObject);
+
+    env->SetIntField(vnetConfigObj, mtuField, vnetConfig->mtu);
+    env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig->dhcp);
+    env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig->bridge);
+    env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig->broadcastEnabled);
+    env->SetBooleanField(vnetConfigObj, portErrorField, vnetConfig->portError);
 
 
-    return NULL;
+    jobject mcastSubsArrayObj = NULL;
+    jobject assignedAddrArrayObj = NULL;
+
+
+    env->SetObjectField(vnetConfigObj, multicastSubscriptionsField, mcastSubsArrayObj);
+    env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
+
+    ZT1_Node_freeQueryResult(node, vnetConfig);
+    vnetConfig = NULL;
+    
+    return vnetConfigObj;
 }
 
 /*
