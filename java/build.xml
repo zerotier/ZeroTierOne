@@ -3,24 +3,26 @@
 
     <target name="clean">
         <delete dir="bin" failonerror="false"/>
+        <delete dir="classes" failonerror="false"/>
         <delete dir="libs" failonerror="false"/>
         <delete dir="obj" failonerror="false"/>
     </target>
 
-    <target name="build" depends="clean">
+    <target name="build">
         <echo message="os.name          = ${os.name}"/>
         <echo message="os.arch          = ${os.arch}"/>
         <echo message="ant.java.version = ${ant.java.version}"/>
         <echo message="java.version     = ${java.version}"/>
         <mkdir dir="bin"/>
+        <mkdir dir="classes"/>
         <javac srcdir="src"
-               destdir="bin"
+               destdir="classes"
                classpath="${env.ANDROID_PLATFORM}/android.jar"
                includeantruntime="false"/>
         <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
             <arg value="ZT1=${user.dir}/../"/>
         </exec>
-        <jar destfile="bin/ZeroTierOneSDK.jar" basedir="bin"/>
+        <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 
 <!--    <target name="android" depends="build">
