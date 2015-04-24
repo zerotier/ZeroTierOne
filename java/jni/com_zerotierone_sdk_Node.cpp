@@ -40,6 +40,10 @@ extern "C" {
 
 namespace {
 
+    jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
+    jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
+    jobject createEvent(JNIEnv *env, ZT1_Event event);
+    
     struct JniRef
     {
         JniRef()
@@ -163,7 +167,7 @@ namespace {
             break;
         }
 
-        jfieldID enumField = env->GetStaticFieldID(resultClass, fieldName.c_str(), "Lcom/zerotierone/sdk/ResultCode");
+        jfieldID enumField = env->GetStaticFieldID(resultClass, fieldName.c_str(), "Lcom/zerotierone/sdk/ResultCode;");
 
         resultObject = env->GetStaticObjectField(resultClass, enumField);
 
@@ -179,6 +183,98 @@ namespace {
             return ref->node;
         }
         return NULL;
+    }
+
+    jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
+    {
+        static jclass statusClass = NULL;
+        
+        jobject statusObject = NULL;
+
+        if(statusClass == NULL)
+        {
+            statusClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkStatus");
+            if(statusClass == NULL)
+            {
+                return NULL; // exception thrown
+            }
+        }
+
+        std::string fieldName;
+        switch(status)
+        {
+        case ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION:
+            fieldName = "NETWORK_STATUS_REQUESTING_CONFIGURATION";
+            break;
+        case ZT1_NETWORK_STATUS_OK:
+            fieldName = "NETWORK_STATUS_OK";
+            break;
+        case ZT1_NETWORK_STATUS_ACCESS_DENIED:
+            fieldName = "NETWORK_STATUS_ACCESS_DENIED";
+            break;
+        case ZT1_NETWORK_STATUS_NOT_FOUND:
+            fieldName = "NETWORK_STATUS_NOT_FOUND";
+            break;
+        case ZT1_NETWORK_STATUS_PORT_ERROR:
+            fieldName = "NETWORK_STATUS_PORT_ERROR";
+            break;
+        case ZT1_NETWORK_STATUS_CLIENT_TOO_OLD:
+            fieldName = "NETWORK_STATUS_CLIENT_TOO_OLD";
+            break;
+        }
+
+        jfieldID enumField = env->GetStaticFieldID(statusClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
+
+        statusObject = env->GetStaticObjectField(statusClass, enumField);
+
+        return statusObject;
+    }
+
+    jobject createEvent(JNIEnv *env, ZT1_Event event)
+    {
+        static jclass eventClass = NULL;
+        jobject eventObject = NULL;
+
+        if(eventClass == NULL)
+        {
+            eventClass = env->FindClass("com/zerotierone/sdk/Event");
+            if(eventClass == NULL)
+            {
+                return NULL;
+            }
+        }
+
+        std::string fieldName;
+        switch(event)
+        {
+        case ZT1_EVENT_UP:
+            fieldName = "EVENT_UP";
+            break;
+        case ZT1_EVENT_OFFLINE:
+            fieldName = "EVENT_OFFLINE";
+            break;
+        case ZT1_EVENT_DOWN:
+            fieldName = "EVENT_DOWN";
+            break;
+        case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
+            fieldName = "EVENT_FATAL_ERROR_IDENTITY_COLLISION";
+            break;
+        case ZT1_EVENT_AUTHENTICATION_FAILURE:
+            fieldName = "EVENT_AUTHENTICATION_FAILURE";
+            break;
+        case ZT1_EVENT_INVALID_PACKET:
+            fieldName = "EVENT_INVALID_PACKET";
+            break;
+        case ZT1_EVENT_TRACE:
+            fieldName = "EVENT_TRACE";
+            break;
+        }
+
+        jfieldID enumField = env->GetStaticFieldID(eventClass, fieldName.c_str(), "Lcom/zerotierone/sdk/Event;");
+
+        eventObject = env->GetStaticObjectField(eventClass, enumField);
+
+        return eventObject;
     }
 }
 
@@ -226,7 +322,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
 
     jclass cls = env->GetObjectClass(obj);
     jfieldID fid = env->GetFieldID(
-        cls, "getListener", "Lcom.zerotierone.sdk.DataStoreGetListener;");
+        cls, "getListener", "Lcom/zerotierone/sdk/DataStoreGetListener;");
 
     if(fid == NULL)
     {
@@ -240,7 +336,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
     }
 
     fid = env->GetFieldID(
-        cls, "putListener", "Lcom.zerotierone.sdk.DataStorePutLisetner;");
+        cls, "putListener", "Lcom/zerotierone/sdk/DataStorePutLisetner;");
 
     if(fid == NULL)
     {
@@ -254,7 +350,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
     }
 
     fid = env->GetFieldID(
-        cls, "sender", "Lcom.zerotierone.sdk.PacketSender;");
+        cls, "sender", "Lcom/zerotierone/sdk/PacketSender;");
     if(fid == NULL)
     {
         return NULL; // exception already thrown
@@ -267,7 +363,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
     }
 
     fid = env->GetFieldID(
-        cls, "frameListener", "Lcom.zerotierone.sdk.VirtualNetworkFrameListener;");
+        cls, "frameListener", "Lcom/zerotierone/sdk/VirtualNetworkFrameListener;");
     if(fid == NULL)
     {
         return NULL; // exception already thrown
@@ -280,7 +376,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
     }
 
     fid = env->GetFieldID(
-        cls, "configListener", "Lcom.zerotierone.sdk.VirtualNetworkConfigListener;");
+        cls, "configListener", "Lcom/zerotierone/sdk/VirtualNetworkConfigListener;");
     if(fid == NULL)
     {
         return NULL; // exception already thrown
@@ -682,7 +778,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
     // create a com.zerotierone.sdk.NodeStatus object
     if(nodeStatusClass == NULL)
     {
-        nodeStatusClass = env->FindClass("com.zerotierone.sdk.NodeStatus");
+        nodeStatusClass = env->FindClass("com/zerotierone/sdk/NodeStatus");
         if(nodeStatusClass == NULL)
         {
             return NULL;
@@ -730,7 +826,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
     }
 
     // create a com.zerotierone.sdk.VirtualNetworkConfig object
-    jclass vnetConfigClass = env->FindClass("com.zerotierone.sdk.VirtualNetworkConfig");
+    jclass vnetConfigClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
     {
         return NULL;
@@ -766,7 +862,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
    (JNIEnv *env, jobject obj)
 {
     // create a com.zerotierone.sdk.Version object
-    jclass versionClass = env->FindClass("com.zerotierone.sdk.Version");
+    jclass versionClass = env->FindClass("com/zerotierone/sdk/Version");
     if(versionClass == NULL)
     {
         return NULL;
@@ -800,7 +896,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(majorField == NULL)
     {
-        majorField = env->GetFieldID(versionClass, "major", "Lcom.zerotierone.sdk.Version");
+        majorField = env->GetFieldID(versionClass, "major", "Lcom/zerotierone/sdk/Version;");
         if(majorField = NULL)
         {
             return NULL;
@@ -809,7 +905,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(minorField == NULL)
     {
-        minorField = env->GetFieldID(versionClass, "minor", "Lcom.zerotierone.sdk.Version");
+        minorField = env->GetFieldID(versionClass, "minor", "Lcom/zerotierone/sdk/Version;");
         if(minorField == NULL)
         {
             return NULL;
@@ -818,7 +914,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(revisionField == NULL)
     {
-        revisionField = env->GetFieldID(versionClass, "revision", "Lcom.zerotierone.sdk.Version");
+        revisionField = env->GetFieldID(versionClass, "revision", "Lcom/zerotierone/sdk/Version;");
         if(revisionField == NULL)
         {
             return NULL;
@@ -827,7 +923,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
 
     if(featureFlagsField == NULL)
     {
-        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "Lcom.zerotierone.sdk.Version");
+        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "Lcom/zerotierone/sdk/Version;");
         if(featureFlagsField == NULL)
         {
             return NULL;
