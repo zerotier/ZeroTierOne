@@ -43,12 +43,21 @@
     <ClCompile Include="..\..\node\Switch.cpp" />
     <ClCompile Include="..\..\node\Topology.cpp" />
     <ClCompile Include="..\..\node\Utils.cpp" />
+    <ClCompile Include="..\..\one.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
-    <ClCompile Include="..\..\selftest.cpp" />
+    <ClCompile Include="..\..\selftest.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\service\ControlPlane.cpp" />
     <ClCompile Include="..\..\service\OneService.cpp" />
+    <ClCompile Include="ServiceBase.cpp" />
+    <ClCompile Include="ServiceInstaller.cpp" />
+    <ClCompile Include="ZeroTierOneService.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
@@ -102,6 +111,9 @@
     <ClInclude Include="..\..\service\OneService.hpp" />
     <ClInclude Include="..\..\version.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="ServiceBase.h" />
+    <ClInclude Include="ServiceInstaller.h" />
+    <ClInclude Include="ZeroTierOneService.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ZeroTierOne.rc" />

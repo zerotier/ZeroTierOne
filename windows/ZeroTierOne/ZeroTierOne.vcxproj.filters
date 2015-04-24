@@ -58,6 +58,18 @@
     <Filter Include="Source Files\ext\json-parser">
       <UniqueIdentifier>{da28e961-1761-41d8-9a59-65b00dfb1302}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\windows">
+      <UniqueIdentifier>{43f75f84-c70d-4d44-a0ef-28a7a399abd4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\windows\ZeroTierOne">
+      <UniqueIdentifier>{0da07a2f-8922-4827-ac51-29ca3f30f881}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\windows">
+      <UniqueIdentifier>{b74916eb-bb6c-4449-a2a2-fa0b17f60121}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\windows\ZeroTierOne">
+      <UniqueIdentifier>{bf604491-14c4-4a74-81a6-6105d07c5c7c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\service\ControlPlane.cpp">
@@ -149,6 +161,18 @@
     </ClCompile>
     <ClCompile Include="..\..\ext\json-parser\json.c">
       <Filter>Source Files\ext\json-parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\one.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ServiceBase.cpp">
+      <Filter>Source Files\windows\ZeroTierOne</Filter>
+    </ClCompile>
+    <ClCompile Include="ServiceInstaller.cpp">
+      <Filter>Source Files\windows\ZeroTierOne</Filter>
+    </ClCompile>
+    <ClCompile Include="ZeroTierOneService.cpp">
+      <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -304,6 +328,15 @@
     </ClInclude>
     <ClInclude Include="..\..\ext\http-parser\http_parser.h">
       <Filter>Header Files\ext\http-parser</Filter>
+    </ClInclude>
+    <ClInclude Include="ServiceBase.h">
+      <Filter>Header Files\windows\ZeroTierOne</Filter>
+    </ClInclude>
+    <ClInclude Include="ServiceInstaller.h">
+      <Filter>Header Files\windows\ZeroTierOne</Filter>
+    </ClInclude>
+    <ClInclude Include="ZeroTierOneService.h">
+      <Filter>Header Files\windows\ZeroTierOne</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

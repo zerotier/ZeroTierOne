@@ -33,11 +33,9 @@
 
 #include <string>
 
-#include "../../node/Node.hpp"
-#include "../../node/Defaults.hpp"
-#include "../../node/Thread.hpp"
 #include "../../node/Mutex.hpp"
-#include "../../node/Utils.hpp"
+#include "../../osdep/Thread.hpp"
+#include "../../service/OneService.hpp"
 
 // Uncomment to make debugging Windows services suck slightly less hard.
 //#define ZT_DEBUG_SERVICE "C:\\ZeroTierOneServiceDebugLog.txt"
@@ -79,7 +77,7 @@ protected:
 	virtual void OnShutdown();
 
 private:
-	ZeroTier::Node *volatile _node;
+	ZeroTier::OneService *volatile _service;
 	ZeroTier::Mutex _lock;
 	ZeroTier::Thread _thread;
 };

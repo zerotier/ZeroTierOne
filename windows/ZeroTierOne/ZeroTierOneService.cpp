@@ -34,15 +34,13 @@
 
 #include "ZeroTierOneService.h"
 
-#include "../../node/Defaults.hpp"
+#include "../../version.h"
+#include "../../include/ZeroTierOne.h"
+
+#include "../../node/Constants.hpp"
 #include "../../node/Utils.hpp"
-
-#include "../../control/NodeControlClient.hpp"
-#include "../../control/NodeControlService.hpp"
-
-#include "../../osdep/WindowsEthernetTapFactory.hpp"
-#include "../../osdep/WindowsRoutingTable.hpp"
-#include "../../osdep/NativeSocketManager.hpp"
+#include "../../osdep/OSUtils.hpp"
+#include "../../service/OneService.hpp"
 
 #pragma endregion // Includes
 
@@ -53,7 +51,7 @@ ZeroTier::Mutex SVCDBGfile_m;
 
 ZeroTierOneService::ZeroTierOneService() :
 	CServiceBase(ZT_SERVICE_NAME,TRUE,TRUE,FALSE),
-	_node((ZeroTier::Node *)0)
+	_service((ZeroTier::OneService *)0)
 {
 #ifdef ZT_DEBUG_SERVICE
 	SVCDBGfile_m.lock();
@@ -86,6 +84,41 @@ void ZeroTierOneService::threadMain()
 
 restart_node:
 	try {
+		{
+			ZeroTier::Mutex::Lock _l(_lock);
+			delete _service;
+			_service = (ZeroTier::OneService *)0; // in case newInstance() fails
+			_service = ZeroTier::OneService::newInstance(
+				ZeroTier::OneService::platformDefaultHomePath().c_str(),
+				ZT1_DEFAULT_PORT);
+		}
+		switch(_service->run()) {
+			case ZeroTier::OneService::ONE_UNRECOVERABLE_ERROR: {
+				std::string err("ZeroTier One encountered an unrecoverable error: ");
+				err.append(_service->fatalErrorMessage());
+				err.append(" (restarting in 5 seconds)");
+				WriteEventLogEntry(const_cast <PSTR>(err.c_str()),EVENTLOG_ERROR_TYPE);
+				Sleep(5000);
+			}	goto restart_node;
+
+			case ZeroTier::OneService::ONE_IDENTITY_COLLISION: {
+				std::string homeDir(ZeroTier::OneService::platformDefaultHomePath());
+				delete _service;
+				_service = (ZeroTier::OneService *)0;
+				std::string oldid;
+				ZeroTier::OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),oldid);
+				if (oldid.length()) {
+					ZeroTier::OSUtils::writeFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret.saved_after_collision").c_str(),oldid);
+					ZeroTier::OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
+					ZeroTier::OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
+				}
+			}	goto restart_node;
+
+			default: // normal termination
+				break;
+		}
+
+#if 0
 		std::string authToken(ZeroTier::NodeControlClient::getAuthToken((ZeroTier::ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
 
 		ZeroTier::WindowsEthernetTapFactory tapFactory(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str());
@@ -154,6 +187,7 @@ restart_node:
 				break;
 
 		}
+#endif
 	} catch ( ... ) {
 		// sanity check, shouldn't happen since Node::run() should catch all its own errors
 		// could also happen if we're out of memory though!
@@ -164,17 +198,19 @@ restart_node:
 
 	{
 		ZeroTier::Mutex::Lock _l(_lock);
-		delete _node;
-		_node = (ZeroTier::Node *)0;
+		delete _service;
+		_service = (ZeroTier::OneService *)0;
 	}
 }
 
 bool ZeroTierOneService::doStartUpgrade(const std::string &msiPath)
 {
-	std::string msiLog(ZeroTier::ZT_DEFAULTS.defaultHomePath + "\\LastUpdateLog.txt");
-	ZeroTier::Utils::rm(msiLog);
+	std::string homePath(ZeroTier::OneService::platformDefaultHomePath());
 
-	std::string bat(ZeroTier::ZT_DEFAULTS.defaultHomePath + "\\InstallAndRestartService.bat");
+	std::string msiLog(homePath + "\\LastUpdateLog.txt");
+	ZeroTier::OSUtils::rm(msiLog);
+
+	std::string bat(homePath + "\\InstallAndRestartService.bat");
 	FILE *batf = fopen(bat.c_str(),"wb");
 	if (!batf)
 		return false;
@@ -210,10 +246,11 @@ void ZeroTierOneService::OnStop()
 	ZT_SVCDBG("ZeroTierOneService::OnStop()\r\n");
 
 	_lock.lock();
-	ZeroTier::Node *n = _node;
+	ZeroTier::OneService *s = _service;
 	_lock.unlock();
-	if (n) {
-		n->terminate(ZeroTier::Node::NODE_NORMAL_TERMINATION,"Windows service stopped");
+
+	if (s) {
+		s->terminate();
 		ZeroTier::Thread::join(_thread);
 	}
 }
