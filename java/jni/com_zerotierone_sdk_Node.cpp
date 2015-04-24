@@ -141,8 +141,8 @@ namespace {
  * Method:    node_init
  * Signature: (J)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
-  (JNIEnv *env, jobject obj, jlong now)
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
+    JNIEnv *env, jobject obj, jlong now)
 {
     jobject resultObject = createResultObject(env, ZT1_RESULT_OK);
 
@@ -256,8 +256,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init
  * Method:    node_delete
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete
-  (JNIEnv *env, jobject obj, jlong id)
+JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete(
+    JNIEnv *env, jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t)id;
 
@@ -279,8 +279,8 @@ JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete
  * Method:    processVirtualNetworkFrame
  * Signature: (JJJJJII[B[J)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFrame
-   (JNIEnv *env, jobject obj, 
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFrame(
+    JNIEnv *env, jobject obj, 
     jlong id, 
     jlong in_now, 
     jlong in_nwid,
@@ -345,8 +345,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
  * Method:    processWirePacket
  * Signature: (JJLjava/net/InetAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket
-   (JNIEnv *env, jobject obj, 
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
+    JNIEnv *env, jobject obj, 
     jlong id,
     jlong in_now, 
     jobject in_remoteAddress,
@@ -455,8 +455,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket
  * Method:    processBackgroundTasks
  * Signature: (JJ[J)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks
-   (JNIEnv *env, jobject obj, 
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks(
+    JNIEnv *env, jobject obj, 
     jlong id,
     jlong in_now,
     jlongArray out_nextBackgroundTaskDeadline)
@@ -492,8 +492,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks
  * Method:    join
  * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join
-   (JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join(
+    JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
 {
     uint64_t nodeId = (uint64_t) id;
     ZT1_Node *node = findNode(nodeId);
@@ -515,8 +515,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join
  * Method:    leave
  * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave
-   (JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave(
+    JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
 {
     uint64_t nodeId = (uint64_t) id;
     ZT1_Node *node = findNode(nodeId);
@@ -538,8 +538,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave
  * Method:    multicastSubscribe
  * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe
-   (JNIEnv *env, jobject obj, 
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe(
+    JNIEnv *env, jobject obj, 
     jlong id, 
     jlong in_nwid,
     jlong in_multicastGroup,
@@ -568,8 +568,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe
  * Method:    multicastUnsubscribe
  * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
-   (JNIEnv *env, jobject obj, 
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe(
+    JNIEnv *env, jobject obj, 
     jlong id, 
     jlong in_nwid,
     jlong in_multicastGroup,
@@ -598,8 +598,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe
  * Method:    address
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address
-  (JNIEnv *env , jobject obj, jlong id)
+JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address(
+    JNIEnv *env , jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;
     ZT1_Node *node = findNode(nodeId);
@@ -729,8 +729,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
  * Method:    networkConfig
  * Signature: (J)Lcom/zerotierone/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
-   (JNIEnv *env, jobject obj, jlong id, jlong nwid)
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig(
+    JNIEnv *env, jobject obj, jlong id, jlong nwid)
 {
     uint64_t nodeId = (uint64_t) id;
     ZT1_Node *node = findNode(nodeId);
@@ -962,8 +962,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig
  * Method:    version
  * Signature: (J)Lcom/zerotierone/sdk/Version;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version
-   (JNIEnv *env, jobject obj)
+JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version(
+    JNIEnv *env, jobject obj)
 {
     // create a com.zerotierone.sdk.Version object
     jclass versionClass = env->FindClass("com/zerotierone/sdk/Version");
