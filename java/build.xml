@@ -2,19 +2,17 @@
     <property environment="env"/>
 
     <target name="clean">
-        <delete dir="bin"/>
-        <delete dir="libs"/>
-        <delete dir="obj"/>
-        <delete>
-            <fileset dir="jni" includes="*.so"/>
-        </delete>
+        <delete dir="bin" failonerror="false"/>
+        <delete dir="libs" failonerror="false"/>
+        <delete dir="obj" failonerror="false"/>
     </target>
 
-    <target name="build">
+    <target name="build" depends="clean">
         <echo message="os.name          = ${os.name}"/>
         <echo message="os.arch          = ${os.arch}"/>
         <echo message="ant.java.version = ${ant.java.version}"/>
         <echo message="java.version     = ${java.version}"/>
+        <mkdir dir="bin"/>
         <javac srcdir="src"
                destdir="bin"
                classpath="${env.ANDROID_PLATFORM}/android.jar"
