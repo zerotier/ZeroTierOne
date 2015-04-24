@@ -43,7 +43,7 @@ namespace {
     jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
     jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
     jobject createEvent(JNIEnv *env, ZT1_Event event);
-    
+
     struct JniRef
     {
         JniRef()
@@ -804,7 +804,64 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
     ZT1_NodeStatus nodeStatus;
     ZT1_Node_status(node, &nodeStatus);
 
-    // TODO: copy data from C to Java
+    static jfieldID addressField = NULL;
+    static jfieldID publicIdentityField = NULL;
+    static jfieldID secretIdentityField = NULL;
+    static jfieldID onlineField = NULL;
+
+    if(addressField == NULL)
+    {
+        addressField = env->GetFieldID(nodeStatusClass, "address", "Lcom/zerotierone/sdk/NodeStatus;");
+        if(addressField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(publicIdentityField == NULL)
+    {
+        publicIdentityField = env->GetFieldID(nodeStatusClass, "publicIdentity", "Lcom/zerotierone/sdk/NodeStatus;");
+        if(publicIdentityField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(secretIdentityField == NULL)
+    {
+        secretIdentityField = env->GetFieldID(nodeStatusClass, "secretIdentity", "Lcom/zerotierone/sdk/NodeStatus;");
+        if(secretIdentityField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(onlineField == NULL)
+    {
+        onlineField = env->GetFieldID(nodeStatusClass, "online", "Lcom/zerotierone/sdk/NodeStatus;");
+        if(onlineField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    env->SetIntField(nodeStatusObj, addressField, nodeStatus.address);
+
+    jstring pubIdentStr = env->NewStringUTF(nodeStatus.publicIdentity);
+    if(pubIdentStr == NULL)
+    {
+        return NULL; // out of memory
+    }
+    env->SetObjectField(nodeStatusObj, publicIdentityField, pubIdentStr);
+
+    jstring secIdentStr = env->NewStringUTF(nodeStatus.secretIdentity);
+    if(secIdentStr == NULL)
+    {
+        return NULL; // out of memory
+    }
+    env->SetObjectField(nodeStatusObj, secretIdentityField, secIdentStr);
+
+    env->SetBooleanField(nodeStatusObj, onlineField, nodeStatus.online);
 
     return nodeStatusObj;
 }

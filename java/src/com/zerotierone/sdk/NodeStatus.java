@@ -31,21 +31,23 @@ public class NodeStatus {
 	private long address;
 	private String publicIdentity;
 	private String secretIdentity;
-	private int online;
+	private boolean online;
 
-	public long getAddres() {
+	private NodeStatus() {}
+
+	public final long getAddres() {
 		return address;
 	}
 
-	public String getPublicIdentity() {
+	public final String getPublicIdentity() {
 		return publicIdentity;
 	}
 
-	public String getSecretIdentity() {
+	public final String getSecretIdentity() {
 		return secretIdentity;
 	}
 
-	public boolean isOnline() {
-		return online != 0;
+	public final boolean isOnline() {
+		return online;
 	}
 }
