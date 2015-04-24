@@ -426,7 +426,7 @@ std::string Node::dataStoreGet(const char *name)
 	std::string r;
 	unsigned long olen = 0;
 	do {
-		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,buf,sizeof(buf),r.length(),&olen);
+		long n = _dataStoreGetFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,buf,sizeof(buf),(unsigned long)r.length(),&olen);
 		if (n <= 0)
 			return std::string();
 		r.append(buf,n);
@@ -454,14 +454,14 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 
 	Mutex::Lock _l(traceLock);
 
+	time_t now = (time_t)(_now / 1000ULL);
 #ifdef __WINDOWS__
 	ctime_s(tmp3,sizeof(tmp3),&now);
 	char *nowstr = tmp3;
 #else
-	time_t now = (time_t)(_now / 1000ULL);
 	char *nowstr = ctime_r(&now,tmp3);
 #endif
-	unsigned long nowstrlen = strlen(nowstr);
+	unsigned long nowstrlen = (unsigned long)strlen(nowstr);
 	if (nowstr[nowstrlen-1] == '\n')
 		nowstr[--nowstrlen] = (char)0;
 	if (nowstr[nowstrlen-1] == '\r')

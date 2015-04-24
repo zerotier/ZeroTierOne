@@ -130,7 +130,7 @@ static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length)
 static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpPhyHandler *hh = reinterpret_cast<HttpPhyHandler *>(parser->data);
-	hh->messageSize += length;
+	hh->messageSize += (unsigned long)length;
 	if (hh->messageSize > hh->maxResponseSize)
 		return -1;
 	return 0;
@@ -138,13 +138,13 @@ static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
 static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpPhyHandler *hh = reinterpret_cast<HttpPhyHandler *>(parser->data);
-	hh->messageSize += length;
+	hh->messageSize += (unsigned long)length;
 	if (hh->messageSize > hh->maxResponseSize)
 		return -1;
 	if ((hh->currentHeaderField.length())&&(hh->currentHeaderValue.length())) {
 		(*hh->responseHeaders)[hh->currentHeaderField] = hh->currentHeaderValue;
-		hh->currentHeaderField.assign("",0);
-		hh->currentHeaderValue.assign("",0);
+		hh->currentHeaderField = "";
+		hh->currentHeaderValue = "";
 	}
 	for(size_t i=0;i<length;++i)
 		hh->currentHeaderField.push_back(OSUtils::toLower(ptr[i]));
@@ -153,7 +153,7 @@ static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)
 static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpPhyHandler *hh = reinterpret_cast<HttpPhyHandler *>(parser->data);
-	hh->messageSize += length;
+	hh->messageSize += (unsigned long)length;
 	if (hh->messageSize > hh->maxResponseSize)
 		return -1;
 	hh->currentHeaderValue.append(ptr,length);
@@ -169,7 +169,7 @@ static int ShttpOnHeadersComplete(http_parser *parser)
 static int ShttpOnBody(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpPhyHandler *hh = reinterpret_cast<HttpPhyHandler *>(parser->data);
-	hh->messageSize += length;
+	hh->messageSize += (unsigned long)length;
 	if (hh->messageSize > hh->maxResponseSize)
 		return -1;
 	hh->responseBody->append(ptr,length);
@@ -198,7 +198,7 @@ unsigned int Http::_do(
 {
 	try {
 		responseHeaders.clear();
-		responseBody.assign("",0);
+		responseBody = "";
 
 		HttpPhyHandler handler;
 

@@ -89,7 +89,7 @@ public:
 	 *
 	 * @return HTTP status code or 0 on error (responseBody will contain error message)
 	 */
-	static inline unsigned int DELETE(
+	static inline unsigned int DEL(
 		unsigned long maxResponseSize,
 		unsigned long timeout,
 		const struct sockaddr *remoteAddress,

@@ -339,7 +339,11 @@ public:
 	inline bool udpSend(PhySocket *sock,const struct sockaddr *remoteAddress,const void *data,unsigned long len)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+#if defined(_WIN32) || defined(_WIN64)
+		return ((long)::sendto(sws.sock,reinterpret_cast<const char *>(data),len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+#else
 		return ((long)::sendto(sws.sock,data,len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+#endif
 	}
 
 	/**
@@ -522,8 +526,8 @@ public:
 	inline long tcpSend(PhySocket *sock,const void *data,unsigned long len,bool callCloseHandler = true)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
-		long n = (long)::send(sws.sock,data,len,0);
 #if defined(_WIN32) || defined(_WIN64)
+		long n = (long)::send(sws.sock,reinterpret_cast<const char *>(data),len,0);
 		if (n == SOCKET_ERROR) {
 				switch(WSAGetLastError()) {
 					case WSAEINTR:
@@ -535,6 +539,7 @@ public:
 				}
 		}
 #else // not Windows
+		long n = (long)::send(sws.sock,data,len,0);
 		if (n < 0) {
 			switch(errno) {
 #ifdef EAGAIN
@@ -614,8 +619,10 @@ public:
 #endif
 		}
 
-		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin()),nexts;s!=_socks.end();s=nexts) {
+		bool atEnd = false;
+		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin()),nexts;(!atEnd);s=nexts) {
 			nexts = s; ++nexts; // we can delete the linked list item, so traverse now
+			atEnd = (nexts == _socks.end()); // if we delete the last element, s!=_socks.end() will no longer terminate our loop
 
 			switch (s->type) {
 
@@ -644,9 +651,10 @@ public:
 					break;
 
 				case ZT_PHY_SOCKET_TCP_OUT_CONNECTED:
-				case ZT_PHY_SOCKET_TCP_IN:
-					if (FD_ISSET(s->sock,&rfds)) {
-						long n = (long)::recv(s->sock,buf,sizeof(buf),0);
+				case ZT_PHY_SOCKET_TCP_IN: {
+					ZT_PHY_SOCKFD_TYPE sock = s->sock; // if closed, s->sock becomes invalid as s is no longer dereferencable
+					if (FD_ISSET(sock,&rfds)) {
+						long n = (long)::recv(sock,buf,sizeof(buf),0);
 						if (n <= 0) {
 							this->close((PhySocket *)&(*s),true);
 						} else {
@@ -655,12 +663,12 @@ public:
 							} catch ( ... ) {}
 						}
 					}
-					if ((FD_ISSET(s->sock,&wfds))&&(FD_ISSET(s->sock,&_writefds))) {
+					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
 						try {
 							_handler->phyOnTcpWritable((PhySocket *)&(*s),&(s->uptr));
 						} catch ( ... ) {}
 					}
-					break;
+				}	break;
 
 				case ZT_PHY_SOCKET_TCP_LISTEN:
 					if (FD_ISSET(s->sock,&rfds)) {

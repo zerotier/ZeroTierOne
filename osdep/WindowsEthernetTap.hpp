@@ -37,42 +37,38 @@
 #include <queue>
 #include <stdexcept>
 
-#include "EthernetTap.hpp"
-
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
-#include "../node/Thread.hpp"
 #include "../node/Array.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "../osdep/Thread.hpp"
 
 namespace ZeroTier {
 
-class WindowsEthernetTap : public EthernetTap
+class WindowsEthernetTap
 {
 public:
 	WindowsEthernetTap(
-		const char *pathToHelpers,
+		const char *hp,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
 		uint64_t nwid,
-		const char *desiredDevice,
 		const char *friendlyName,
-		void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+		void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 		void *arg);
 
-	virtual ~WindowsEthernetTap();
+	~WindowsEthernetTap();
 
-	virtual void setEnabled(bool en);
-	virtual bool enabled() const;
-	virtual bool addIP(const InetAddress &ip);
-	virtual bool removeIP(const InetAddress &ip);
-	virtual std::set<InetAddress> ips() const;
-	virtual void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
-	virtual std::string deviceName() const;
-	virtual void setFriendlyName(const char *friendlyName);
-	virtual bool updateMulticastGroups(std::set<MulticastGroup> &groups);
-	virtual bool injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	void setEnabled(bool en);
+	bool enabled() const;
+	bool addIp(const InetAddress &ip);
+	bool removeIp(const InetAddress &ip);
+	std::vector<InetAddress> ips() const;
+	void put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len);
+	std::string deviceName() const;
+	void setFriendlyName(const char *friendlyName);
+	void scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed);
 
 	inline const NET_LUID &luid() const { return _deviceLuid; }
 	inline const GUID &guid() const { return _deviceGuid; }
@@ -81,15 +77,19 @@ public:
 	void threadMain()
 		throw();
 
+	static void destroyAllPersistentTapDevices(const char *pathToHelpers);
+
 private:
 	bool _disableTapDevice();
 	bool _enableTapDevice();
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
 	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
+	static void _deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId);
 
-	void (*_handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &);
+	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
+	MAC _mac;
 	uint64_t _nwid;
 	Thread _thread;
 
@@ -100,6 +100,8 @@ private:
 	NET_LUID _deviceLuid;
 	std::string _netCfgInstanceId; // NetCfgInstanceId, a GUID
 	std::string _deviceInstanceId; // DeviceInstanceID, another kind of "instance ID"
+
+	std::vector<MulticastGroup> _multicastGroups;
 
 	std::queue< std::pair< Array<char,ZT_IF_MTU + 32>,unsigned int > > _injectPending;
 	Mutex _injectPending_m;

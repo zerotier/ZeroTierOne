@@ -53,6 +53,10 @@
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
 
+#ifdef __WINDOWS__
+#include <ShlObj.h>
+#endif
+
 // Include the right tap device driver for this platform -- add new platforms here
 #ifdef __APPLE__
 #include "../osdep/OSXEthernetTap.hpp"
@@ -61,6 +65,10 @@ namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
 #ifdef __LINUX__
 #include "../osdep/LinuxEthernetTap.hpp"
 namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
+#endif
+#ifdef __WINDOWS__
+#include "../osdep/WindowsEthernetTap.hpp"
+namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
 #endif
 
 // Sanity limits for HTTP
@@ -384,7 +392,7 @@ public:
 	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
 	{
 		HttpConnection *htc = reinterpret_cast<HttpConnection *>(*uptr);
-		long sent = _phy.tcpSend(sock,htc->body.data() + htc->writePtr,htc->body.length() - htc->writePtr,true);
+		long sent = _phy.tcpSend(sock,htc->body.data() + htc->writePtr,(unsigned long)htc->body.length() - htc->writePtr,true);
 		if (sent < 0) {
 			return; // close handler will have been called, so everything's dead
 		} else {
@@ -395,7 +403,7 @@ public:
 				if (htc->shouldKeepAlive) {
 					htc->writing = false;
 					htc->writePtr = 0;
-					htc->body.assign("",0);
+					htc->body = "";
 				} else {
 					_phy.close(sock); // will call close handler to delete from _httpConnections
 				}
@@ -417,7 +425,7 @@ public:
 							_homePath.c_str(),
 							MAC(nwc->mac),
 							nwc->mtu,
-							ZT_IF_METRIC,
+							(unsigned int)ZT_IF_METRIC,
 							nwid,
 							friendlyName,
 							StapFrameHandler,
@@ -683,19 +691,19 @@ static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC 
 static int ShttpOnMessageBegin(http_parser *parser)
 {
 	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
-	htc->currentHeaderField.assign("",0);
-	htc->currentHeaderValue.assign("",0);
+	htc->currentHeaderField = "";
+	htc->currentHeaderValue = "";
 	htc->messageSize = 0;
-	htc->url.assign("",0);
-	htc->status.assign("",0);
+	htc->url = "";
+	htc->status = "";
 	htc->headers.clear();
-	htc->body.assign("",0);
+	htc->body = "";
 	return 0;
 }
 static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
-	htc->messageSize += length;
+	htc->messageSize += (unsigned long)length;
 	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	htc->url.append(ptr,length);
@@ -704,7 +712,7 @@ static int ShttpOnUrl(http_parser *parser,const char *ptr,size_t length)
 static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
-	htc->messageSize += length;
+	htc->messageSize += (unsigned long)length;
 	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	htc->status.append(ptr,length);
@@ -713,13 +721,13 @@ static int ShttpOnStatus(http_parser *parser,const char *ptr,size_t length)
 static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
-	htc->messageSize += length;
+	htc->messageSize += (unsigned long)length;
 	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	if ((htc->currentHeaderField.length())&&(htc->currentHeaderValue.length())) {
 		htc->headers[htc->currentHeaderField] = htc->currentHeaderValue;
-		htc->currentHeaderField.assign("",0);
-		htc->currentHeaderValue.assign("",0);
+		htc->currentHeaderField = "";
+		htc->currentHeaderValue = "";
 	}
 	for(size_t i=0;i<length;++i)
 		htc->currentHeaderField.push_back(OSUtils::toLower(ptr[i]));
@@ -728,7 +736,7 @@ static int ShttpOnHeaderField(http_parser *parser,const char *ptr,size_t length)
 static int ShttpOnValue(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
-	htc->messageSize += length;
+	htc->messageSize += (unsigned long)length;
 	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	htc->currentHeaderValue.append(ptr,length);
@@ -744,7 +752,7 @@ static int ShttpOnHeadersComplete(http_parser *parser)
 static int ShttpOnBody(http_parser *parser,const char *ptr,size_t length)
 {
 	HttpConnection *htc = reinterpret_cast<HttpConnection *>(parser->data);
-	htc->messageSize += length;
+	htc->messageSize += (unsigned long)length;
 	if (htc->messageSize > ZT_MAX_HTTP_MESSAGE_SIZE)
 		return -1;
 	htc->body.append(ptr,length);

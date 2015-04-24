@@ -437,7 +437,7 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	unsigned long tmp = _multicastGroupsBehindMe.size();
+	unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
 	_multicastGroupsBehindMe[mg] = now;
 	if (tmp != _multicastGroupsBehindMe.size())
 		_announceMulticastGroups();
