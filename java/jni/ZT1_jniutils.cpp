@@ -50,16 +50,6 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     return resultObject;
 }
 
-ZT1_Node* findNode(uint64_t nodeId)
-{
-    NodeMap::iterator found = nodeMap.find(nodeId);
-    if(found != nodeMap.end())
-    {
-        JniRef *ref = found->second;
-        return ref->node;
-    }
-    return NULL;
-}
 
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
 {

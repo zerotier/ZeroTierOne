@@ -122,7 +122,18 @@ namespace {
     }
 
     typedef std::map<uint64_t, JniRef*> NodeMap;
-    static NodeMap nodeMap;    
+    static NodeMap nodeMap;
+
+    ZT1_Node* findNode(uint64_t nodeId)
+    {
+        NodeMap::iterator found = nodeMap.find(nodeId);
+        if(found != nodeMap.end())
+        {
+            JniRef *ref = found->second;
+            return ref->node;
+        }
+        return NULL;
+    }
 }
 
 /*
