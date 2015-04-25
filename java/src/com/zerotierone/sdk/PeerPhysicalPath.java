@@ -29,7 +29,7 @@ package com.zerotierone.sdk;
 
 import java.net.InetAddress;
 
-public class PhysicalPeerPath {
+public class PeerPhysicalPath {
     private InetAddress address;
     private long lastSend;
     private long lastReceive;
@@ -37,7 +37,7 @@ public class PhysicalPeerPath {
     private boolean active;
     private boolean preferred;
 
-    private PhysicalPeerPath() {}
+    private PeerPhysicalPath() {}
 
     public final InetAddress address() {
         return address;
