@@ -1051,7 +1051,34 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version(
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
     JNIEnv *env, jobject obj, jlong id)
 {
-    return NULL;
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return 0;
+    }
+
+    ZT1_PeerList *peerList = ZT1_Node_peers(node);
+
+    if(peerList == NULL)
+    {
+        return NULL;
+    }
+
+    jobject peerListObject = newArrayList(env);
+    if(peerListObject == NULL)
+    {
+        return NULL;
+    }
+
+    for(unsigned int i = 0; i < peerList->peerCount; ++i)
+    {
+        jobject peerObj = newPeer(env, peerList->peers[i]);
+        appendItemToArrayList(env, peerListObject, peerObj);
+    }
+
+    return peerListObject;
 }
 
 /*
