@@ -11,6 +11,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
 jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type);
 jobject createEvent(JNIEnv *env, ZT1_Event event);
+jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role);
 
 jobject newArrayList(JNIEnv *env);
 bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object);
@@ -18,6 +19,10 @@ bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object);
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
 
 jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc);
+
+jobject newPeer(JNIEnv *env, const ZT1_Peer &peer);
+jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp);
+
 #ifdef __cplusplus
 }
 #endif
