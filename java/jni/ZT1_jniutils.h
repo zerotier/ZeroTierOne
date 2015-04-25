@@ -26,6 +26,8 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp);
 
 jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &config);
 
+jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags);
+
 #ifdef __cplusplus
 }
 #endif

@@ -879,6 +879,84 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     return vnetConfigObj;
 }
 
+jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags)
+{
+   // create a com.zerotierone.sdk.Version object
+    static jclass versionClass = NULL;
+    static jmethodID versionConstructor = NULL;
+
+    if(versionClass == NULL)
+    {
+        versionClass = env->FindClass("com/zerotierone/sdk/Version");
+        if(versionClass == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(versionConstructor == NULL)
+    {
+        versionConstructor = env->GetMethodID(
+            versionClass, "<init>", "()V");
+        if(versionConstructor == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    jobject versionObj = env->NewObject(versionClass, versionConstructor);
+    if(versionObj == NULL)
+    {
+        return NULL;
+    }
+
+    // copy data to Version object
+    static jfieldID majorField = NULL;
+    static jfieldID minorField = NULL;
+    static jfieldID revisionField = NULL;
+    static jfieldID featureFlagsField = NULL;
+
+    if(majorField == NULL)
+    {
+        majorField = env->GetFieldID(versionClass, "major", "I");
+        if(majorField = NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(minorField == NULL)
+    {
+        minorField = env->GetFieldID(versionClass, "minor", "I");
+        if(minorField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(revisionField == NULL)
+    {
+        revisionField = env->GetFieldID(versionClass, "revision", "I");
+        if(revisionField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    if(featureFlagsField == NULL)
+    {
+        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "J");
+        if(featureFlagsField == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    env->SetIntField(versionObj, majorField, (jint)major);
+    env->SetIntField(versionObj, minorField, (jint)minor);
+    env->SetIntField(versionObj, revisionField, (jint)rev);
+    env->SetLongField(versionObj, featureFlagsField, (jlong)featureFlags); 
+}
 
 #ifdef __cplusplus
 }

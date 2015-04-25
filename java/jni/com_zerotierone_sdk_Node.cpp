@@ -48,6 +48,7 @@ namespace {
             , dataStoreGetListener(NULL)
             , dataStorePutListener(NULL)
             , packetSender(NULL)
+            , eventListener(NULL)
             , frameListener(NULL)
             , configListener(NULL)
         {}
@@ -60,6 +61,7 @@ namespace {
         jobject dataStoreGetListener;
         jobject dataStorePutListener;
         jobject packetSender;
+        jobject eventListener;
         jobject frameListener;
         jobject configListener;
     };
@@ -152,6 +154,99 @@ namespace {
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
+
+        jclass eventListenerClass = NULL;
+        jmethodID onEventMethod = NULL;
+        jmethodID onOutOfDateMethod = NULL;
+        jmethodID onNetworkErrorMethod = NULL;
+        jmethodID onTraceMethod = NULL;
+
+        eventListenerClass = env->GetObjectClass(ref->eventListener);
+        if(eventListenerClass == NULL)
+        {
+            return;
+        }
+
+        onEventMethod = env->GetMethodID(eventListenerClass,
+            "onEvent", "(Lcom/zerotierone/sdk/Event;)V");
+        if(onEventMethod == NULL)
+        {
+            return;
+        }
+
+        onOutOfDateMethod = env->GetMethodID(eventListenerClass,
+            "onOutOfDate", "(Lcom/zerotierone/sdk/Version;)V");
+        if(onOutOfDateMethod == NULL)
+        {
+            return;
+        }
+
+        onNetworkErrorMethod = env->GetMethodID(eventListenerClass,
+            "onNetworkError", "(Lcom/zerotierone/sdk/Version;Ljava/net/InetAddress;)V");
+        if(onNetworkErrorMethod == NULL)
+        {
+            return;
+        }
+
+        onTraceMethod = env->GetMethodID(eventListenerClass,
+            "onTrace", "(Ljava/lang/String;)V");
+        if(onTraceMethod == NULL)
+        {
+            return;
+        }
+
+        jobject eventObject = createEvent(env, event);
+        if(eventObject == NULL)
+        {
+            return;
+        }
+
+        switch(event)
+        {
+        case ZT1_EVENT_UP:
+        case ZT1_EVENT_OFFLINE:
+        case ZT1_EVENT_ONLINE:
+        case ZT1_EVENT_DOWN:
+        case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
+        {
+            // call onEvent()
+            env->CallVoidMethod(eventListenerClass, onEventMethod, eventObject);
+        }
+        break;
+        case ZT1_EVENT_SAW_MORE_RECENT_VERSION:
+        {
+            // call onOutOfDate()
+            if(data != NULL)
+            {
+                int *version = (int*)data;
+                jobject verisonObj = newVersion(env, version[0], version[1], version[2], 0);
+                env->CallVoidMethod(eventListenerClass, onEventMethod, verisonObj);
+            }
+        }
+        break;
+        case ZT1_EVENT_AUTHENTICATION_FAILURE:
+        case ZT1_EVENT_INVALID_PACKET:
+        {
+            // call onNetworkError()
+            if(data != NULL)
+            {
+                sockaddr_storage *addr = (sockaddr_storage*)data;
+                jobject addressObj = newInetAddress(env, *addr);
+                env->CallVoidMethod(eventListenerClass, onNetworkErrorMethod, addressObj);
+            }
+        }
+        case ZT1_EVENT_TRACE:
+        {
+            // call onTrace()
+            if(data != NULL)
+            {
+                const char* message = (const char*)data;
+                jstring messageStr = env->NewStringUTF(message);
+                env->CallVoidMethod(eventListenerClass, onTraceMethod);
+            }
+        }
+        break;
+        }
     }
 
     long DataStoreGetFunction(ZT1_Node *node,void *userData,
@@ -408,6 +503,19 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
 
     ref->configListener = env->GetObjectField(obj, fid);
     if(ref->configListener == NULL)
+    {
+        return NULL;
+    }
+
+    fid = env->GetFieldID(
+        cls, "eventListener", "Lcom/zerotierone/sdk/EventListener;");
+    if(fid == NULL)
+    {
+        return NULL;
+    }
+
+    ref->eventListener = env->GetObjectField(obj, fid);
+    if(ref->eventListener == NULL)
     {
         return NULL;
     }
@@ -923,26 +1031,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig(
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version(
     JNIEnv *env, jobject obj)
 {
-    // create a com.zerotierone.sdk.Version object
-    jclass versionClass = env->FindClass("com/zerotierone/sdk/Version");
-    if(versionClass == NULL)
-    {
-        return NULL;
-    }
-
-    jmethodID versionConstructor = env->GetMethodID(
-        versionClass, "<init>", "()V");
-    if(versionConstructor == NULL)
-    {
-        return NULL;
-    }
-
-    jobject versionObj = env->NewObject(versionClass, versionConstructor);
-    if(versionObj == NULL)
-    {
-        return NULL;
-    }
-
     int major = 0;
     int minor = 0;
     int revision = 0;
@@ -950,55 +1038,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version(
 
     ZT1_version(&major, &minor, &revision, &featureFlags);
 
-    // copy data to Version object
-    static jfieldID majorField = NULL;
-    static jfieldID minorField = NULL;
-    static jfieldID revisionField = NULL;
-    static jfieldID featureFlagsField = NULL;
-
-    if(majorField == NULL)
-    {
-        majorField = env->GetFieldID(versionClass, "major", "I");
-        if(majorField = NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(minorField == NULL)
-    {
-        minorField = env->GetFieldID(versionClass, "minor", "I");
-        if(minorField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(revisionField == NULL)
-    {
-        revisionField = env->GetFieldID(versionClass, "revision", "I");
-        if(revisionField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(featureFlagsField == NULL)
-    {
-        featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "J");
-        if(featureFlagsField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    env->SetIntField(versionObj, majorField, (jint)major);
-    env->SetIntField(versionObj, minorField, (jint)minor);
-    env->SetIntField(versionObj, revisionField, (jint)revision);
-    env->SetLongField(versionObj, featureFlagsField, (jlong)featureFlags);
-
-
-    return versionObj;
+    return newVersion(env, major, minor, revision, featureFlags);
 }
 
 /*

@@ -27,8 +27,15 @@
 
 package com.zerotierone.sdk;
 
-import java.nio.ByteBuffer;
+import java.net.InetAddress;
+import java.lang.String;
 
 public interface EventListener {
-    public void onEvent(Node node,Event event, ByteBuffer buffer);
+    public void onEvent(Event event);
+    
+    public void onNetworkError(Event event, InetAddress source);
+
+    public void onOutOfDate(Version newVersion);
+
+    public void onTrace(String message);
 }

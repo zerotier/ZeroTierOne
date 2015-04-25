@@ -50,6 +50,7 @@ public class Node {
     private final DataStoreGetListener getListener;
     private final DataStorePutListener putListener;
     private final PacketSender sender;
+    private final EventListener eventListener;
     private final VirtualNetworkFrameListener frameListener;
     private final VirtualNetworkConfigListener configListener;
     
@@ -57,6 +58,7 @@ public class Node {
                 DataStoreGetListener getListener,
                 DataStorePutListener putListener,
                 PacketSender sender,
+                EventListener eventListener,
                 VirtualNetworkFrameListener frameListener,
                 VirtualNetworkConfigListener configListener)
 	{
@@ -65,6 +67,7 @@ public class Node {
         this.getListener = getListener;
         this.putListener = putListener;
         this.sender = sender;
+        this.eventListener = eventListener;
         this.frameListener = frameListener;
         this.configListener = configListener;
 
