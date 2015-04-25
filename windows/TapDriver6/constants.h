@@ -69,7 +69,8 @@
 //===========================================================
 
 #define ETHERNET_HEADER_SIZE        (sizeof (ETH_HEADER))
-#define ETHERNET_MTU                1500
+//#define ETHERNET_MTU                1500
+#define ETHERNET_MTU                2800
 #define ETHERNET_PACKET_SIZE        (ETHERNET_MTU + ETHERNET_HEADER_SIZE)
 #define DEFAULT_PACKET_LOOKAHEAD    (ETHERNET_PACKET_SIZE)
 #define VLAN_TAG_SIZE               4
@@ -108,7 +109,7 @@
 #define TAP_RECV_SPEED                     (100ULL*MEGABITS_PER_SECOND)
 
 // Max number of multicast addresses supported in hardware
-#define TAP_MAX_MCAST_LIST                 32
+#define TAP_MAX_MCAST_LIST                 128
 
 #define TAP_MAX_LOOKAHEAD                  TAP_FRAME_MAX_DATA_SIZE
 #define TAP_BUFFER_SIZE                    TAP_MAX_FRAME_SIZE
@@ -137,7 +138,7 @@
                 NDIS_PACKET_TYPE_PROMISCUOUS | \
                 NDIS_PACKET_TYPE_ALL_MULTICAST)
 
-#define TAP_MAX_MCAST_LIST          32  // Max length of multicast address list
+//#define TAP_MAX_MCAST_LIST          128  // Max length of multicast address list
 
 //
 // Specify a bitmask that defines optional properties of the NIC.

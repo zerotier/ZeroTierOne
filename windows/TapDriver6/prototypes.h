@@ -64,6 +64,7 @@ IndicateReceivePacket(
     __in const unsigned int packetLength
     );
 
+/*
 BOOLEAN
 ProcessDHCP(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
@@ -73,7 +74,9 @@ ProcessDHCP(
     __in const DHCP *dhcp,
     __in int optlen
     );
+*/
 
+/*
 BOOLEAN
 ProcessARP(
     __in PTAP_ADAPTER_CONTEXT   Adapter,
@@ -83,5 +86,6 @@ ProcessARP(
     __in const IPADDR ip_netmask,
     __in const MACADDR mac
    );
+*/
 
 #endif

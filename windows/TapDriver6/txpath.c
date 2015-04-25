@@ -82,6 +82,8 @@ icmpv6_checksum(
     return ((USHORT) ~sum);
 }
 
+/*
+
 // check IPv6 packet for "is this an IPv6 Neighbor Solicitation that
 // the tap driver needs to answer?"
 // see RFC 4861 4.3 for the different cases
@@ -267,6 +269,7 @@ ProcessARP(
     else
         return FALSE;
 }
+*/
 
 //=============================================================
 // CompleteIRP is normally called with an adapter -> userspace
@@ -537,7 +540,8 @@ Return Value:
     // If so, catch both DHCP requests and ARP queries
     // to resolve the address of our virtual DHCP server.
     //=====================================================
-    if (Adapter->m_dhcp_enabled)
+#if 0
+	if (Adapter->m_dhcp_enabled)
     {
         const ETH_HEADER *eth = (ETH_HEADER *) tapPacket->m_Data;
         const IPHDR *ip = (IPHDR *) (tapPacket->m_Data + sizeof (ETH_HEADER));
@@ -594,15 +598,17 @@ Return Value:
             }
         }
     }
+#endif
 
-    //===============================================
+	//===============================================
     // In Point-To-Point mode, check to see whether
     // packet is ARP (handled) or IPv4 (sent to app).
     // IPv6 packets are inspected for neighbour discovery
     // (to be handled locally), and the rest is forwarded
     // all other protocols are dropped
     //===============================================
-    if (Adapter->m_tun)
+#if 0
+	if (Adapter->m_tun)
     {
         ETH_HEADER *e;
 
@@ -669,8 +675,9 @@ Return Value:
             tapPacket->m_SizeFlags |= TP_TUN;
         }
     }
+#endif
 
-    //===============================================
+	//===============================================
     // Push packet onto queue to wait for read from
     // userspace.
     //===============================================

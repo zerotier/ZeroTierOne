@@ -213,7 +213,6 @@
   <ItemGroup>
     <ClCompile Include="adapter.c" />
     <ClCompile Include="device.c" />
-    <ClCompile Include="dhcp.c" />
     <ClCompile Include="error.c" />
     <ClCompile Include="macinfo.c" />
     <ClCompile Include="mem.c" />
@@ -227,7 +226,6 @@
     <ClInclude Include="config.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="device.h" />
-    <ClInclude Include="dhcp.h" />
     <ClInclude Include="endian.h" />
     <ClInclude Include="error.h" />
     <ClInclude Include="hexdump.h" />

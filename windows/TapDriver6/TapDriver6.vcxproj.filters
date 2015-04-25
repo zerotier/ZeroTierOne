@@ -25,9 +25,6 @@
     <ClCompile Include="device.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dhcp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="error.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -61,9 +58,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="device.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dhcp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="endian.h">

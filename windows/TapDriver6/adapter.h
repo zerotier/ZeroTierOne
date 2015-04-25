@@ -170,6 +170,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
 #define TAP_WAIT_POLL_LOOP_TIMEOUT  3000    // 3 seconds
     NDIS_EVENT                  ReceiveNblInFlightCountZeroEvent;
 
+	/*
     // Info for point-to-point mode
     BOOLEAN                     m_tun;
     IPADDR                      m_localIP;
@@ -178,8 +179,10 @@ typedef struct _TAP_ADAPTER_CONTEXT
     ETH_HEADER                  m_TapToUser;
     ETH_HEADER                  m_UserToTap;
     ETH_HEADER                  m_UserToTap_IPv6; // same as UserToTap but proto=ipv6
+	*/
 
-    // Info for DHCP server masquerade
+	// Info for DHCP server masquerade
+	/*
     BOOLEAN                     m_dhcp_enabled;
     IPADDR                      m_dhcp_addr;
     ULONG                       m_dhcp_netmask;
@@ -191,6 +194,7 @@ typedef struct _TAP_ADAPTER_CONTEXT
     ULONG                       m_dhcp_user_supplied_options_buffer_len;
     BOOLEAN                     m_dhcp_received_discover;
     ULONG                       m_dhcp_bad_requests;
+	*/
 
     // Multicast list. Fixed size.
     ULONG                       ulMCListSize;

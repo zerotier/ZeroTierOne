@@ -432,7 +432,7 @@ TapDeviceWrite(
     //
     if(tapAdapterSendAndReceiveReady(adapter) == NDIS_STATUS_SUCCESS)
     {
-        if (!adapter->m_tun && ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
+        if (/*!adapter->m_tun &&*/ ((irpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
         {
             PNET_BUFFER_LIST    netBufferList;
 
@@ -514,6 +514,7 @@ TapDeviceWrite(
                 ntStatus = STATUS_INSUFFICIENT_RESOURCES;
             }
         }
+		/*
         else if (adapter->m_tun && ((irpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
         {
             PETH_HEADER         p_UserToTap = &adapter->m_UserToTap;
@@ -637,6 +638,7 @@ TapDeviceWrite(
                 ntStatus = STATUS_INSUFFICIENT_RESOURCES;
             }
         }
+		*/
         else
         {
             DEBUGP (("[%s] Bad buffer size in IRP_MJ_WRITE, len=%d\n",

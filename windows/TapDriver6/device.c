@@ -48,6 +48,7 @@ VOID tapResetAdapterState(
     __in PTAP_ADAPTER_CONTEXT Adapter
     )
 {
+  /*
   // Point-To-Point
   Adapter->m_tun = FALSE;
   Adapter->m_localIP = 0;
@@ -56,8 +57,10 @@ VOID tapResetAdapterState(
   NdisZeroMemory (&Adapter->m_TapToUser, sizeof (Adapter->m_TapToUser));
   NdisZeroMemory (&Adapter->m_UserToTap, sizeof (Adapter->m_UserToTap));
   NdisZeroMemory (&Adapter->m_UserToTap_IPv6, sizeof (Adapter->m_UserToTap_IPv6));
+  */
 
   // DHCP Masq
+  /*
   Adapter->m_dhcp_enabled = FALSE;
   Adapter->m_dhcp_server_arp = FALSE;
   Adapter->m_dhcp_user_supplied_options_buffer_len = 0;
@@ -68,6 +71,7 @@ VOID tapResetAdapterState(
   Adapter->m_dhcp_received_discover = FALSE;
   Adapter->m_dhcp_bad_requests = 0;
   NdisZeroMemory (Adapter->m_dhcp_server_mac, MACADDR_SIZE);
+  */
 }
 
 // IRP_MJ_CREATE
@@ -278,6 +282,7 @@ tapSetMediaConnectStatus(
     }
 }
 
+/*
 //======================================================
 // If DHCP mode is used together with tun
 // mode, consider the fact that the P2P remote subnet
@@ -297,6 +302,7 @@ CheckIfDhcpAndTunMode (
         }
     }
 }
+*/
 
 // IRP_MJ_DEVICE_CONTROL callback.
 NTSTATUS
@@ -428,6 +434,36 @@ Return Value:
         }
         break;
 
+			// Allow ZeroTier One to get multicast memberships at the L2 level in a
+			// protocol-neutral manner.
+			case TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS:
+				{
+					if (outBufLength < TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE) {
+						/* output buffer too small */
+						NOTE_ERROR ();
+		                Irp->IoStatus.Status = ntStatus = STATUS_BUFFER_TOO_SMALL;
+					} else {
+						char *out = (char *)Irp->AssociatedIrp.SystemBuffer;
+						char *end = out + TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE;
+						unsigned long i,j;
+						for(i=0;i<adapter->ulMCListSize;++i) {
+							if (i >= TAP_MAX_MCAST_LIST)
+								break;
+							for(j=0;j<6;++j)
+								*(out++) = adapter->MCList[i][j];
+							if (out >= end)
+								break;
+						}
+						while (out < end)
+							*(out++) = (char)0;
+		                Irp->IoStatus.Information = TAP_WIN_IOCTL_GET_MULTICAST_MEMBERSHIPS_OUTPUT_BUF_SIZE;
+						Irp->IoStatus.Status = ntStatus = STATUS_SUCCESS;
+					}
+					break;
+				}
+
+
+#if 0
     case TAP_WIN_IOCTL_CONFIG_TUN:
         {
             if(inBufLength >= sizeof(IPADDR)*3)
@@ -513,7 +549,9 @@ Return Value:
             }
         }
         break;
+#endif
 
+#if 0
     case TAP_WIN_IOCTL_CONFIG_DHCP_MASQ:
         {
             if(inBufLength >= sizeof(IPADDR)*4)
@@ -586,7 +624,9 @@ Return Value:
             }
         }
         break;
+#endif
 
+#if 0
     case TAP_WIN_IOCTL_GET_INFO:
         {
             char state[16];
@@ -657,7 +697,7 @@ Return Value:
             // BUGBUG!!! Fail because this is not completely implemented.
             ntStatus = STATUS_INVALID_DEVICE_REQUEST;
         }
-        break;
+#endif    
 
 #if DBG
     case TAP_WIN_IOCTL_GET_LOG_LINE:
