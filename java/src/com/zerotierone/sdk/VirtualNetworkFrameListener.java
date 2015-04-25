@@ -24,17 +24,17 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotierone.sdk;
 
 import java.nio.ByteBuffer;
 
 public interface VirtualNetworkFrameListener {
-    void onVirtualNetworkFrame(Node node,
+    void onVirtualNetworkFrame(
                 long nwid,
                 long srcMac,
                 long destMac,
                 long etherType,
                 long vlanId,
-                ByteBuffer frameData,
-                long len);
+                byte[] frameData);
 }

@@ -65,7 +65,12 @@ namespace {
     };
 
 
-    int VirtualNetworkConfigFunctionCallback(ZT1_Node *node,void *userData,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation operation, const ZT1_VirtualNetworkConfig *config)
+    int VirtualNetworkConfigFunctionCallback(
+        ZT1_Node *node,
+        void *userData,
+        uint64_t nwid,
+        enum ZT1_VirtualNetworkConfigOperation operation,
+        const ZT1_VirtualNetworkConfig *config)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
@@ -110,13 +115,48 @@ namespace {
         return env->CallIntMethod(ref->configListener, callbackMethod, (jlong)nwid, operationObject, networkConfigObject);
     }
 
-    void VirtualNetworkFrameFunctionCallback(ZT1_Node *node,void *userData,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int)
+    void VirtualNetworkFrameFunctionCallback(ZT1_Node *node,void *userData,
+        uint64_t nwid,
+        uint64_t sourceMac,
+        uint64_t destMac,
+        unsigned int etherType,
+        unsigned int vlanid,
+        const void *frameData,
+        unsigned int frameLength)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
+
+        static jclass frameListenerClass = NULL;
+        static jmethodID callbackMethod = NULL;
+
+        if(frameListenerClass == NULL)
+        {
+            frameListenerClass = env->GetObjectClass(ref->frameListener);
+            if(frameListenerClass == NULL)
+            {
+                return;
+            }
+        }
+
+        if(callbackMethod == NULL)
+        {
+            callbackMethod = env->GetMethodID(frameListenerClass,
+                "onVirtualNetworkFrame", "(JJJJJ[B)V");
+            if(callbackMethod == NULL)
+            {
+                return;
+            }
+        }
+
+        jbyteArray dataArray = env->NewByteArray(frameLength);
+        env->SetByteArrayRegion(dataArray, 0, frameLength, (jbyte*)frameData);
+
+        env->CallVoidMethod(ref->frameListener, callbackMethod, nwid, sourceMac, destMac, etherType, vlanid, dataArray);
     }
+
 
     void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event,const void *)
     {
