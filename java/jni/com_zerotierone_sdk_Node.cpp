@@ -65,14 +65,49 @@ namespace {
     };
 
 
-    int VirtualNetworkConfigFunctionCallback(ZT1_Node *node,void *userData,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *)
+    int VirtualNetworkConfigFunctionCallback(ZT1_Node *node,void *userData,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation operation, const ZT1_VirtualNetworkConfig *config)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
 
-        return 0;
+        static jclass configListenerClass = NULL;
+        static jmethodID callbackMethod = NULL;
+
+        if(configListenerClass == NULL)
+        {
+            configListenerClass = env->GetObjectClass(ref->configListener);
+            if(configListenerClass == NULL)
+            {
+                return -1;
+            }
+        }
+
+        if(callbackMethod == NULL)
+        {
+            callbackMethod = env->GetMethodID(configListenerClass,
+                "onNetworkConfigurationUpdated",
+                "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
+            if(callbackMethod == NULL)
+            {
+                return -2;
+            }
+        }
+
+        jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
+        if(operationObject == NULL)
+        {
+            return -3;
+        }
+
+        jobject networkConfigObject = newNetworkConfig(env, *config);
+        if(networkConfigObject == NULL)
+        {
+            return -4;
+        }
+
+        return env->CallIntMethod(ref->configListener, callbackMethod, (jlong)nwid, operationObject, networkConfigObject);
     }
 
     void VirtualNetworkFrameFunctionCallback(ZT1_Node *node,void *userData,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int)

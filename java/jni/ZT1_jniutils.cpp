@@ -215,9 +215,45 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(vntypeClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtyalNetworkType;");
+    jfieldID enumField = env->GetStaticFieldID(vntypeClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkType;");
     vntypeObject = env->GetStaticObjectField(vntypeClass, enumField);
     return vntypeObject;
+}
+
+jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfigOperation op)
+{
+    static jclass vnetConfigOpClass = NULL;
+    jobject vnetConfigOpObject = NULL;
+
+    if(vnetConfigOpClass == NULL)
+    {
+        vnetConfigOpClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfigOperation");
+        if(vnetConfigOpClass == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    std::string fieldName;
+    switch(op)
+    {
+    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
+        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_UP";
+        break;
+    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE";
+        break;
+    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
+        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN";
+        break;
+    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
+        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY";
+        break;
+    }
+
+    jfieldID enumField = env->GetStaticFieldID(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkConfigOperation;");
+    vnetConfigOpObject = env->GetStaticObjectField(vnetConfigOpClass, enumField);
+    return vnetConfigOpObject;
 }
 
 jobject newArrayList(JNIEnv *env)
@@ -842,6 +878,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
 
     return vnetConfigObj;
 }
+
 
 #ifdef __cplusplus
 }

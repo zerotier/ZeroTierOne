@@ -30,9 +30,8 @@ package com.zerotierone.sdk;
 
 
 public interface VirtualNetworkConfigListener {
-    public void onNetworkConfigurationUpdated(
-            Node node,
-            long someValue,
+    public int onNetworkConfigurationUpdated(
+            long nwid,
             VirtualNetworkConfigOperation op,
             VirtualNetworkConfig config);
 }

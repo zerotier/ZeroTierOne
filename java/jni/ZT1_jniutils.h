@@ -12,6 +12,7 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
 jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type);
 jobject createEvent(JNIEnv *env, ZT1_Event event);
 jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role);
+jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfigOperation op);
 
 jobject newArrayList(JNIEnv *env);
 bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object);
