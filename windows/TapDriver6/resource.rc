@@ -1,0 +1,62 @@
+#include <windows.h>
+#include <ntverp.h>
+
+#include "config.h"
+
+#undef VER_PRODUCTVERSION
+#undef VER_PRODUCTVERSION_STR
+#undef VER_COMPANYNAME_STR
+#undef VER_PRODUCTNAME_STR
+
+/* VER_FILETYPE, VER_FILESUBTYPE, VER_FILEDESCRIPTION_STR
+ * and VER_INTERNALNAME_STR must be defined before including COMMON.VER
+ * The strings don't need a '\0', since common.ver has them.
+ */
+
+#define	VER_FILETYPE	VFT_DRV
+/* possible values:		VFT_UNKNOWN
+				VFT_APP
+				VFT_DLL
+				VFT_DRV
+				VFT_FONT
+				VFT_VXD
+				VFT_STATIC_LIB
+*/
+#define	VER_FILESUBTYPE	VFT2_DRV_NETWORK
+/* possible values		VFT2_UNKNOWN
+				VFT2_DRV_PRINTER
+				VFT2_DRV_KEYBOARD
+				VFT2_DRV_LANGUAGE
+				VFT2_DRV_DISPLAY
+				VFT2_DRV_MOUSE
+				VFT2_DRV_NETWORK
+				VFT2_DRV_SYSTEM
+				VFT2_DRV_INSTALLABLE
+				VFT2_DRV_SOUND
+				VFT2_DRV_COMM
+*/
+
+#define VER_COMPANYNAME_STR         "The OpenVPN Project"
+#define VER_FILEDESCRIPTION_STR     "TAP-Windows Virtual Network Driver (NDIS 6.0)"
+#define VER_ORIGINALFILENAME_STR    PRODUCT_TAP_WIN_COMPONENT_ID ".sys"
+#define VER_LEGALCOPYRIGHT_YEARS    "2003-2014"
+#define VER_LEGALCOPYRIGHT_STR      "OpenVPN Technologies, Inc."
+
+
+#define VER_PRODUCTNAME_STR         VER_FILEDESCRIPTION_STR
+#define VER_PRODUCTVERSION	    PRODUCT_TAP_WIN_MAJOR,00,00,PRODUCT_TAP_WIN_MINOR
+
+#define XSTR(s) STR(s)
+#define STR(s) #s
+
+#define VSTRING PRODUCT_VERSION " " XSTR(PRODUCT_TAP_WIN_MAJOR) "/" XSTR(PRODUCT_TAP_WIN_MINOR)
+
+#ifdef DBG
+#define VER_PRODUCTVERSION_STR      VSTRING " (DEBUG)"
+#else
+#define VER_PRODUCTVERSION_STR      VSTRING
+#endif
+
+#define VER_INTERNALNAME_STR        VER_ORIGINALFILENAME_STR
+
+#include "common.ver"
