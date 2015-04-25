@@ -30,9 +30,8 @@ import java.nio.ByteBuffer;
 
 
 public interface PacketSender {
-    public int onSendPacketRequested(Node node,
+    public int onSendPacketRequested(
             String addr,
-            int linkDesc,
-            ByteBuffer packetData,
-            long dataLength);
+            int linkDesparation,
+            byte[] packetData);
 }

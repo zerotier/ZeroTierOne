@@ -255,15 +255,36 @@ namespace {
         }
     }
 
-    int WirePacketSendFunction(ZT1_Node *node,void *userData,const struct sockaddr_storage *,unsigned int,const void *,unsigned int)
+    int WirePacketSendFunction(ZT1_Node *node,void *userData,\
+        const struct sockaddr_storage *address,
+        unsigned int linkDesparation,
+        const void *buffer,
+        unsigned int bufferSize)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
 
+        jclass packetSenderClass = NULL;
+        jmethodID callbackMethod = NULL;
 
-        return 0;
+        packetSenderClass = env->GetObjectClass(ref->packetSender);
+        if(packetSenderClass == NULL)
+        {
+            return -1;
+        }
+
+        callbackMethod = env->GetMethodID(packetSenderClass,
+            "onSendPacketRequested", "(Ljava/lang/String;I[B)I");
+        if(callbackMethod == NULL)
+        {
+            return -2;
+        }
+        jobject addressObj = newInetAddress(env, *address);
+        jbyteArray bufferObj = env->NewByteArray(bufferSize);
+        env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
+        return env->CallIntMethod(packetSenderClass, callbackMethod, addressObj, linkDesparation, bufferObj);
     }
 
     typedef std::map<uint64_t, JniRef*> NodeMap;
