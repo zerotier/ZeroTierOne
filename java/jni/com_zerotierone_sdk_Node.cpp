@@ -740,221 +740,13 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig(
         return 0;
     }
 
-    // create a com.zerotierone.sdk.VirtualNetworkConfig object
-    jclass vnetConfigClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfig");
-    if(vnetConfigClass == NULL)
-    {
-        return NULL;
-    }
-
-    jmethodID vnetConfigConstructor = env->GetMethodID(
-        vnetConfigClass, "<init>", "()V");
-    if(vnetConfigConstructor == NULL)
-    {
-        return NULL;
-    }
-
-    jobject vnetConfigObj = env->NewObject(vnetConfigClass, vnetConfigConstructor);
-    if(vnetConfigObj == NULL)
-    {
-        return NULL;
-    }
-    
     ZT1_VirtualNetworkConfig *vnetConfig = ZT1_Node_networkConfig(node, nwid);
     
-    static jfieldID nwidField = NULL;
-    static jfieldID macField = NULL;
-    static jfieldID nameField = NULL;
-    static jfieldID statusField = NULL;
-    static jfieldID typeField = NULL;
-    static jfieldID mtuField = NULL;
-    static jfieldID dhcpField = NULL;
-    static jfieldID bridgeField = NULL;
-    static jfieldID broadcastEnabledField = NULL;
-    static jfieldID portErrorField = NULL;
-    static jfieldID enabledField = NULL;
-    static jfieldID netconfRevisionField = NULL;
-    static jfieldID multicastSubscriptionsField = NULL;
-    static jfieldID assignedAddressesField = NULL;
-
-    if(nwidField == NULL)
-    {
-        nwidField = env->GetFieldID(vnetConfigClass, "nwid", "J");
-        if(nwidField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(macField == NULL)
-    {
-        macField = env->GetFieldID(vnetConfigClass, "mac", "J");
-        if(macField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(nameField == NULL)
-    {
-        nameField = env->GetFieldID(vnetConfigClass, "name", "Ljava/lang/String;");
-        if(nameField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(statusField == NULL)
-    {
-        statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworStatus;");
-        if(statusField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(typeField == NULL)
-    {
-        typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
-        if(typeField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(mtuField == NULL)
-    {
-        mtuField = env->GetFieldID(vnetConfigClass, "mtu", "I");
-        if(mtuField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(dhcpField == NULL)
-    {
-        dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Z");
-        if(dhcpField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(bridgeField == NULL)
-    {
-        bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Z");
-        if(bridgeField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(broadcastEnabledField == NULL)
-    {
-        broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Z");
-        if(broadcastEnabledField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(portErrorField == NULL)
-    {
-        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "Z");
-        if(portErrorField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(enabledField == NULL)
-    {
-        enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Z");
-        if(enabledField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(netconfRevisionField == NULL)
-    {
-        netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "J");
-        if(netconfRevisionField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(multicastSubscriptionsField == NULL)
-    {
-        multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
-        if(multicastSubscriptionsField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    if(assignedAddressesField == NULL)
-    {
-        assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
-        if(assignedAddressesField == NULL)
-        {
-            return NULL;
-        }
-    }
-
-    env->SetLongField(vnetConfigObj, nwidField, vnetConfig->nwid);
-    env->SetLongField(vnetConfigObj, macField, vnetConfig->mac);
-    jstring nameStr = env->NewStringUTF(vnetConfig->name);
-    if(nameStr == NULL)
-    {
-        return NULL; // out of memory
-    }
-    env->SetObjectField(vnetConfigObj, nameField, nameStr);
-
-    jobject statusObject = createVirtualNetworkStatus(env, vnetConfig->status);
-    if(statusObject == NULL)
-    {
-        return NULL;
-    }
-    env->SetObjectField(vnetConfigObj, statusField, statusObject);
-
-    jobject typeObject = createVirtualNetworkType(env, vnetConfig->type);
-    if(typeObject == NULL)
-    {
-        return NULL;
-    }
-    env->SetObjectField(vnetConfigObj, typeField, typeObject);
-
-    env->SetIntField(vnetConfigObj, mtuField, vnetConfig->mtu);
-    env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig->dhcp);
-    env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig->bridge);
-    env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig->broadcastEnabled);
-    env->SetBooleanField(vnetConfigObj, portErrorField, vnetConfig->portError);
-
-
-    jobject mcastSubsArrayObj = newArrayList(env);
-    for(unsigned int i = 0; i < vnetConfig->multicastSubscriptionCount; ++i)
-    {
-        jobject mcastObj = newMulticastGroup(env, vnetConfig->multicastSubscriptions[i]);
-        appendItemToArrayList(env, mcastSubsArrayObj, mcastObj);
-    }
-    env->SetObjectField(vnetConfigObj, multicastSubscriptionsField, mcastSubsArrayObj);
-
-
-    jobject assignedAddrArrayObj = newArrayList(env);
-    for(unsigned int i = 0; i < vnetConfig->assignedAddressCount; ++i)
-    {
-        jobject inetAddrObj = newInetAddress(env, vnetConfig->assignedAddresses[i]);
-        appendItemToArrayList(env, assignedAddrArrayObj, inetAddrObj);
-    }
-
-    env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
+    jobject vnetConfigObject = newNetworkConfig(env, *vnetConfig);
 
     ZT1_Node_freeQueryResult(node, vnetConfig);
-    vnetConfig = NULL;
 
-    return vnetConfigObj;
+    return vnetConfigObject;
 }
 
 /*
@@ -1069,6 +861,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
     jobject peerListObject = newArrayList(env);
     if(peerListObject == NULL)
     {
+        ZT1_Node_freeQueryResult(node, peerList);
         return NULL;
     }
 
@@ -1077,6 +870,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
         jobject peerObj = newPeer(env, peerList->peers[i]);
         appendItemToArrayList(env, peerListObject, peerObj);
     }
+
+    ZT1_Node_freeQueryResult(node, peerList);
+    peerList = NULL;
 
     return peerListObject;
 }
@@ -1089,7 +885,36 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networks(
     JNIEnv *env, jobject obj, jlong id)
 {
-    return NULL;
+    uint64_t nodeId = (uint64_t) id;
+    ZT1_Node *node = findNode(nodeId);
+    if(node == NULL)
+    {
+        // cannot find valid node.  We should  never get here.
+        return 0;
+    }
+
+    ZT1_VirtualNetworkList *networkList = ZT1_Node_networks(node);
+    if(networkList == NULL)
+    {
+        return NULL;
+    }
+
+    jobject networkListObject = newArrayList(env);
+    if(networkListObject == NULL)
+    {
+        ZT1_Node_freeQueryResult(node, networkList);
+        return NULL;
+    }
+
+    for(unsigned int i = 0; i < networkList->networkCount; ++i)
+    {
+        jobject networkObject = newNetworkConfig(env, networkList->networks[i]);
+        appendItemToArrayList(env, networkListObject, networkObject);
+    }
+
+    ZT1_Node_freeQueryResult(node, networkList);
+
+    return networkListObject;
 }
 
 #ifdef __cplusplus

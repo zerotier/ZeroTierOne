@@ -23,6 +23,8 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc);
 jobject newPeer(JNIEnv *env, const ZT1_Peer &peer);
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp);
 
+jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &config);
+
 #ifdef __cplusplus
 }
 #endif
