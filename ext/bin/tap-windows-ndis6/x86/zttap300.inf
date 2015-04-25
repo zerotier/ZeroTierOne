@@ -44,10 +44,6 @@ Provider = "ZeroTier Networks LLC" ; We're ZeroTier, Inc. now but kernel mode ce
 %DeviceDescription% = zttap300.ndi, root\zttap300 ; Root enumerated
 %DeviceDescription% = zttap300.ndi, zttap300      ; Legacy
 
-[zttap300.NTamd64]
-%DeviceDescription% = zttap300.ndi, root\zttap300 ; Root enumerated
-%DeviceDescription% = zttap300.ndi, zttap300      ; Legacy
-
 ;----------------- Characteristics ------------
 ;    NCF_PHYSICAL = 0x04
 ;    NCF_VIRTUAL = 0x01
