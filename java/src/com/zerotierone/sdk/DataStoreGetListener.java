@@ -32,7 +32,6 @@ public interface DataStoreGetListener {
     public long onDataStoreGet(
             String name,
             byte[] out_buffer,
-            long bufferSize,
             long bufferIndex,
             long[] out_objectSize);
 }

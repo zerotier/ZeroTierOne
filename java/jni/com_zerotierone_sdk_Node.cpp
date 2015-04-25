@@ -194,7 +194,7 @@ namespace {
         {
             callbackMethod = env->GetMethodID(dataStoreGetClass,
                 "onDataStoreGet",
-                "(Ljava/lang/String;[BJJ[J)J");
+                "(Ljava/lang/String;[BJ[J)J");
             if(callbackMethod == NULL)
             {
                 return -2;
@@ -206,7 +206,7 @@ namespace {
         jlongArray objectSizeObj = env->NewLongArray(1);
 
         long retval = env->CallLongMethod(
-            dataStoreGetClass, callbackMethod, nameStr, bufferObj, bufferSize, bufferIndex, objectSizeObj);
+            dataStoreGetClass, callbackMethod, nameStr, bufferObj, bufferIndex, objectSizeObj);
 
         env->GetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
         env->GetLongArrayRegion(objectSizeObj, 0, 1, (jlong*)&out_objectSize);
