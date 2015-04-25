@@ -72,20 +72,21 @@ public:
 #ifdef _WIN64
 		is64Bit = TRUE;
 		devcon = "\\devcon_x64.exe";
-		tapDriver = "\\tap-windows\\x64\\zttap200.inf";
+		tapDriverNdis5 = "\\tap-windows\\x64\\zttap200.inf";
+		tapDriverNdis6 = "\\tap-windows\\x64\\zttap300.inf";
 #else
 		is64Bit = FALSE;
 		IsWow64Process(GetCurrentProcess(),&is64Bit);
 		devcon = ((is64Bit == TRUE) ? "\\devcon_x64.exe" : "\\devcon_x86.exe");
-		tapDriver = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap200.inf" : "\\tap-windows\\x86\\zttap200.inf");
+		tapDriverNdis5 = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap200.inf" : "\\tap-windows\\x86\\zttap200.inf");
+		tapDriverNdis6 = ((is64Bit == TRUE) ? "\\tap-windows\\x64\\zttap300.inf" : "\\tap-windows\\x86\\zttap300.inf");
 #endif
 	}
-
 	BOOL is64Bit;
-	std::string devcon;
-	std::string tapDriver;
+	const char *devcon;
+	const char *tapDriverNdis5;
+	const char *tapDriverNdis6;
 };
-
 static const WindowsEthernetTapEnv WINENV;
 
 } // anonymous namespace
@@ -122,6 +123,16 @@ WindowsEthernetTap::WindowsEthernetTap(
 		throw std::runtime_error("MTU too large for Windows tap");
 
 	Mutex::Lock _l(_systemTapInitLock);
+
+	std::string tapDriverPath(_pathToHelpers + WINENV.tapDriverNdis6);
+	const char *tapDriverName = "zttap300";
+	if (::PathFileExistsA(tapDriverPath.c_str()) == FALSE) {
+		tapDriverPath = _pathToHelpers + WINENV.tapDriverNdis5;
+		tapDriverName = "zttap200";
+		if (::PathFileExistsA(tapDriverPath.c_str()) == FALSE) {
+			throw std::runtime_error("no tap driver available: cannot find zttap300.inf (NDIS6) or zttap200.inf (NDIS5) under home path");
+		}
+	}
 
 	HKEY nwAdapters;
 	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}",0,KEY_READ|KEY_WRITE,&nwAdapters) != ERROR_SUCCESS)
@@ -198,7 +209,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 		PROCESS_INFORMATION processInfo;
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WINENV.devcon + "\" install \"" + _pathToHelpers + WINENV.tapDriver + "\" zttap200").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (!CreateProcessA(NULL,(LPSTR)(std::string("\"") + _pathToHelpers + WINENV.devcon + "\" install \"" + tapDriverPath + "\" " + tapDriverName).c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
 			RegCloseKey(nwAdapters);
 			if (devconLog != INVALID_HANDLE_VALUE)
 				CloseHandle(devconLog);
