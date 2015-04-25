@@ -217,14 +217,68 @@ namespace {
     }
 
     int DataStorePutFunction(ZT1_Node *node,void *userData,
-        const char *,const void *,unsigned long,int)
+        const char *objectName,
+        const void *buffer,
+        unsigned long bufferSize,
+        int secure)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
 
-        return 0;
+        static jclass dataStorePutClass = NULL;
+        static jmethodID callbackMethod = NULL;
+        static jmethodID deleteMethod = NULL;
+
+        if(dataStorePutClass == NULL)
+        {
+            dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
+            if(dataStorePutClass == NULL)
+            {
+                return -1;
+            }
+        }
+
+        if(callbackMethod == NULL)
+        {
+            callbackMethod = env->GetMethodID(dataStorePutClass,
+                "onDataStorePut",
+                "(Ljava/lang/String;[BZ)I");
+            if(callbackMethod == NULL)
+            {
+                return -2;
+            }
+        }
+
+        if(deleteMethod == NULL)
+        {
+            deleteMethod = env->GetMethodID(dataStorePutClass,
+                "onDelete", "(Ljava/lang/String;)I");
+            if(deleteMethod == NULL)
+            {
+                return -3;
+            }
+        }
+
+        jstring nameStr = env->NewStringUTF(objectName);
+
+        if(buffer == NULL)
+        {
+            // delete operation
+            return env->CallIntMethod(dataStorePutClass, deleteMethod, nameStr);
+        }
+        else
+        {
+            // set operation
+            jbyteArray bufferObj = env->NewByteArray(bufferSize);
+            env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
+            bool secure = secure != 0;
+
+
+            return env->CallIntMethod(dataStorePutClass, callbackMethod,
+                nameStr, bufferObj, secure);
+        }
     }
 
     int WirePacketSendFunction(ZT1_Node *node,void *userData,const struct sockaddr_storage *,unsigned int,const void *,unsigned int)
@@ -233,6 +287,7 @@ namespace {
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
+
 
         return 0;
     }

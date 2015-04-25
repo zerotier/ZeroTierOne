@@ -29,9 +29,11 @@ package com.zerotierone.sdk;
 import java.nio.ByteBuffer;
 
 public interface DataStorePutListener {
-    public int onDataStorePut(Node node,
-            String name,
-            ByteBuffer buffer,
-            long bufferSize,
-            boolean secure);
+    public int onDataStorePut(
+        String name,
+        byte[] buffer,
+        boolean secure);
+
+    public int onDelete(
+        String name);
 }
