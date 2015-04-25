@@ -77,27 +77,21 @@ namespace {
 
         JNIEnv *env = ref->env;
 
-        static jclass configListenerClass = NULL;
-        static jmethodID callbackMethod = NULL;
+        jclass configListenerClass = NULL;
+        jmethodID callbackMethod = NULL;
 
+        configListenerClass = env->GetObjectClass(ref->configListener);
         if(configListenerClass == NULL)
         {
-            configListenerClass = env->GetObjectClass(ref->configListener);
-            if(configListenerClass == NULL)
-            {
-                return -1;
-            }
+            return -1;
         }
 
+        callbackMethod = env->GetMethodID(configListenerClass,
+            "onNetworkConfigurationUpdated",
+            "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
         if(callbackMethod == NULL)
         {
-            callbackMethod = env->GetMethodID(configListenerClass,
-                "onNetworkConfigurationUpdated",
-                "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
-            if(callbackMethod == NULL)
-            {
-                return -2;
-            }
+            return -2;
         }
 
         jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
@@ -129,26 +123,20 @@ namespace {
 
         JNIEnv *env = ref->env;
 
-        static jclass frameListenerClass = NULL;
-        static jmethodID callbackMethod = NULL;
+        jclass frameListenerClass = NULL;
+        jmethodID callbackMethod = NULL;
 
+        frameListenerClass = env->GetObjectClass(ref->frameListener);
         if(frameListenerClass == NULL)
         {
-            frameListenerClass = env->GetObjectClass(ref->frameListener);
-            if(frameListenerClass == NULL)
-            {
-                return;
-            }
+            return;
         }
 
+        callbackMethod = env->GetMethodID(frameListenerClass,
+            "onVirtualNetworkFrame", "(JJJJJ[B)V");
         if(callbackMethod == NULL)
         {
-            callbackMethod = env->GetMethodID(frameListenerClass,
-                "onVirtualNetworkFrame", "(JJJJJ[B)V");
-            if(callbackMethod == NULL)
-            {
-                return;
-            }
+            return;
         }
 
         jbyteArray dataArray = env->NewByteArray(frameLength);
@@ -178,27 +166,21 @@ namespace {
 
         JNIEnv *env = ref->env;
 
-        static jclass dataStoreGetClass = NULL;
-        static jmethodID callbackMethod = NULL;
+        jclass dataStoreGetClass = NULL;
+        jmethodID callbackMethod = NULL;
 
+        dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
         if(dataStoreGetClass == NULL)
         {
-            dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
-            if(dataStoreGetClass == NULL)
-            {
-                return -2;
-            }
+            return -2;
         }
 
+        callbackMethod = env->GetMethodID(dataStoreGetClass,
+            "onDataStoreGet",
+            "(Ljava/lang/String;[BJ[J)J");
         if(callbackMethod == NULL)
         {
-            callbackMethod = env->GetMethodID(dataStoreGetClass,
-                "onDataStoreGet",
-                "(Ljava/lang/String;[BJ[J)J");
-            if(callbackMethod == NULL)
-            {
-                return -2;
-            }
+            return -2;
         }
 
         jstring nameStr = env->NewStringUTF(objectName);
@@ -227,38 +209,30 @@ namespace {
 
         JNIEnv *env = ref->env;
 
-        static jclass dataStorePutClass = NULL;
-        static jmethodID callbackMethod = NULL;
-        static jmethodID deleteMethod = NULL;
+        jclass dataStorePutClass = NULL;
+        jmethodID callbackMethod = NULL;
+        jmethodID deleteMethod = NULL;
 
+
+        dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
         if(dataStorePutClass == NULL)
         {
-            dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
-            if(dataStorePutClass == NULL)
-            {
-                return -1;
-            }
+            return -1;
         }
 
+        callbackMethod = env->GetMethodID(dataStorePutClass,
+            "onDataStorePut",
+            "(Ljava/lang/String;[BZ)I");
         if(callbackMethod == NULL)
         {
-            callbackMethod = env->GetMethodID(dataStorePutClass,
-                "onDataStorePut",
-                "(Ljava/lang/String;[BZ)I");
-            if(callbackMethod == NULL)
-            {
-                return -2;
-            }
+            return -2;
         }
 
+        deleteMethod = env->GetMethodID(dataStorePutClass,
+            "onDelete", "(Ljava/lang/String;)I");
         if(deleteMethod == NULL)
         {
-            deleteMethod = env->GetMethodID(dataStorePutClass,
-                "onDelete", "(Ljava/lang/String;)I");
-            if(deleteMethod == NULL)
-            {
-                return -3;
-            }
+            return -3;
         }
 
         jstring nameStr = env->NewStringUTF(objectName);
