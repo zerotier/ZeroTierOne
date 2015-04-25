@@ -29,10 +29,10 @@ package com.zerotierone.sdk;
 import java.nio.ByteBuffer;
 
 public interface DataStoreGetListener {
-    public int onDataStoreGet(Node node,
+    public long onDataStoreGet(
             String name,
-            ByteBuffer buffer,
+            byte[] out_buffer,
             long bufferSize,
-            long index,
-            Long out_objectSize);
+            long bufferIndex,
+            long[] out_objectSize);
 }

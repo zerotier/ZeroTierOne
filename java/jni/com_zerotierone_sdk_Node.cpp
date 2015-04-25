@@ -158,7 +158,7 @@ namespace {
     }
 
 
-    void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event,const void *)
+    void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event event, const void *data)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
@@ -166,17 +166,58 @@ namespace {
         JNIEnv *env = ref->env;
     }
 
-    long DataStoreGetFunction(ZT1_Node *node,void *userData,const char *,void *,unsigned long,unsigned long,unsigned long *)
+    long DataStoreGetFunction(ZT1_Node *node,void *userData,
+        const char *objectName,
+        void *buffer,
+        unsigned long bufferSize,
+        unsigned long bufferIndex,
+        unsigned long *out_objectSize)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
         JNIEnv *env = ref->env;
 
-        return 0;
+        static jclass dataStoreGetClass = NULL;
+        static jmethodID callbackMethod = NULL;
+
+        if(dataStoreGetClass == NULL)
+        {
+            dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
+            if(dataStoreGetClass == NULL)
+            {
+                return -2;
+            }
+        }
+
+        if(callbackMethod == NULL)
+        {
+            callbackMethod = env->GetMethodID(dataStoreGetClass,
+                "onDataStoreGet",
+                "(Ljava/lang/String;[BJJ[J)J");
+            if(callbackMethod == NULL)
+            {
+                return -2;
+            }
+        }
+
+        jstring nameStr = env->NewStringUTF(objectName);
+        jbyteArray bufferObj = env->NewByteArray(bufferSize);
+        jlongArray objectSizeObj = env->NewLongArray(1);
+
+        long retval = env->CallLongMethod(
+            dataStoreGetClass, callbackMethod, nameStr, bufferObj, bufferSize, bufferIndex, objectSizeObj);
+
+        env->GetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
+        env->GetLongArrayRegion(objectSizeObj, 0, 1, (jlong*)&out_objectSize);
+        env->ReleaseByteArrayElements(bufferObj, (jbyte*)buffer, 0);
+        env->ReleaseLongArrayElements(objectSizeObj, (jlong*)&out_objectSize, 0);
+
+        return retval;
     }
 
-    int DataStorePutFunction(ZT1_Node *node,void *userData,const char *,const void *,unsigned long,int)
+    int DataStorePutFunction(ZT1_Node *node,void *userData,
+        const char *,const void *,unsigned long,int)
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
