@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// Note: this is unfinished and not currently used. Stashed in case we resurrect this idea.
+
 var UDP_PORT_START = 9994;
 var UDP_PORT_COUNT = 16384;
 var HTTP_PORT = 8080;
