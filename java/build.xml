@@ -34,9 +34,6 @@
         <copy file="libs/x86/libZeroTierOneJNI.so"
               tofile="${user.dir}/classes/lib/x86/libZeroTierOneJNI.so"
               overwrite="true"/>
-        <copy   file="bin/ZeroTierOneSDK.jar" 
-                tofile="${user.dir}/classes/lib/ZeroTierOneSDK.jar" 
-                overwrite="true"/>
         <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 
