@@ -4,7 +4,7 @@
     <target name="clean">
         <delete dir="bin" failonerror="false"/>
         <delete dir="classes" failonerror="false"/>
-        <!--<delete dir="libs" failonerror="false"/>-->
+        <delete dir="libs" failonerror="false"/>
         <delete dir="obj" failonerror="false"/>
     </target>
 

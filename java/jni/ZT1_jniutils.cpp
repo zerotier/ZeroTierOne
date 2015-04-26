@@ -38,20 +38,20 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     switch(code)
     {
     case ZT1_RESULT_OK:
-        fieldName = "ZT1_RESULT_OK";
+        fieldName = "RESULT_OK";
         break;
     case ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
-        fieldName = "ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY";
+        fieldName = "RESULT_FATAL_ERROR_OUT_OF_MEMORY";
         break;
     case ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
-        fieldName = "ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED";
+        fieldName = "RESULT_FATAL_ERROR_DATA_STORE_FAILED";
         break;
     case ZT1_RESULT_ERROR_NETWORK_NOT_FOUND:
-        fieldName = "ZT1_RESULT_ERROR_NETWORK_NOT_FOUND";
+        fieldName = "RESULT_ERROR_NETWORK_NOT_FOUND";
         break;
     case ZT1_RESULT_FATAL_ERROR_INTERNAL:
     default:
-        fieldName = "ZT1_RESULT_FATAL_ERROR_INTERNAL";
+        fieldName = "RESULT_FATAL_ERROR_INTERNAL";
         break;
     }
 
