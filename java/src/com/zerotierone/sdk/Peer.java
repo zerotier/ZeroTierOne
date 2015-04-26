@@ -29,7 +29,10 @@ package com.zerotierone.sdk;
 
 import java.util.ArrayList;
 
-public class Peer {
+/**
+ * Peer status result
+ */
+public final class Peer {
     private long address;
     private long lastUnicastFrame;
     private long lastMulticastFrame;
@@ -42,38 +45,65 @@ public class Peer {
 
     private Peer() {}
 
+    /**
+     * ZeroTier address (40 bits)
+     */
     public final long address() {
         return address;
     }
 
+    /**
+     * Time we last received a unicast frame from this peer
+     */
     public final long lastUnicastFrame() {
         return lastUnicastFrame;
     }
 
+    /**
+     * Time we last received a multicast rame from this peer
+     */
     public final long lastMulticastFrame() {
         return lastMulticastFrame;
     }
 
+    /**
+     * Remote major version or -1 if not known
+     */
     public final int versionMajor() {
         return versionMajor;
     }
 
+    /**
+     * Remote minor version or -1 if not known
+     */
     public final int versionMinor() {
         return versionMinor;
     }
 
+    /**
+     * Remote revision or -1 if not known
+     */
     public final int versionRev() {
         return versionRev;
     }
 
+    /**
+     * Last measured latency in milliseconds or zero if unknown
+     */
     public final int latency() {
         return latency;
     }
 
+    /**
+     * What trust hierarchy role does this device have?
+     */
     public final PeerRole role() {
         return role;
     }
 
+    /**
+     * Known network paths to peer
+     */
     public final ArrayList<PhysicalPeerPath> paths() {
         return paths;
     }

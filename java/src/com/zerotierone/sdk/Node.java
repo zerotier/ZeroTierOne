@@ -32,6 +32,9 @@ import java.lang.Long;
 import java.net.InetAddress;
 import java.util.ArrayList;
 
+/**
+ * A ZeroTier One node
+ */
 public class Node {
 	static {
 		System.loadLibrary("ZeroTierOneJNI");
@@ -54,6 +57,20 @@ public class Node {
     private final VirtualNetworkFrameListener frameListener;
     private final VirtualNetworkConfigListener configListener;
     
+    /**
+     * Create a new ZeroTier One node
+     *
+     * <p>Note that this can take a few seconds the first time it's called, as it
+     * will generate an identity.</p>
+     *
+     * @param now Current clock in milliseconds
+     * @param getListener User written instance of the {@link DataStoreGetListener} interface called to get objects from persistent storage.  This instance must be unique per Node object.
+     * @param putListener User written intstance of the {@link DataStorePutListener} interface called to put objects in persistent storage.  This instance must be unique per Node object.
+     * @param sender
+     * @param eventListener User written instance of the {@link EventListener} interface to receive status updates and non-fatal error notices.  This instance must be unique per Node object.
+     * @param frameListener 
+     * @param configListener User written instance of the {@link VirtualNetworkConfigListener} interface to be called when virtual LANs are created, deleted, or their config parameters change.  This instance must be unique per Node object.
+     */
 	public Node(long now,
                 DataStoreGetListener getListener,
                 DataStorePutListener putListener,
@@ -78,6 +95,11 @@ public class Node {
         }
 	}
 
+    /**
+      * Close this Node.
+      * 
+      * <p>The Node object can no longer be used once this method is called.</p>
+      */
     public void close() {
         if(nodeId != -1) {
             node_delete(nodeId);
@@ -90,6 +112,19 @@ public class Node {
         close();
     }
 
+    /**
+     * Process a frame from a virtual network port
+     *
+     * @param now Current clock in milliseconds
+     * @param nwid ZeroTier 64-bit virtual network ID
+     * @param sourceMac Source MAC address (least significant 48 bits)
+     * @param destMac Destination MAC address (least significant 48 bits)
+     * @param etherType 16-bit Ethernet frame type
+     * @param vlanId 10-bit VLAN ID or 0 if none
+     * @param frameData Frame payload data
+     * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode processVirtualNetworkFrame(
         long now,
         long nwid,
@@ -104,6 +139,16 @@ public class Node {
             frameData, nextBackgroundTaskDeadline);
     }
 
+    /**
+     * Process a packet received from the physical wire
+     *
+     * @param now Current clock in milliseconds
+     * @param remoteAddress Origin of packet
+     * @param linkDesperation Link desperation metric for link or protocol over which packet arrived
+     * @param packetData Packet data
+     * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode processWirePacket(
         long now,
         InetAddress remoteAddress,
@@ -115,24 +160,96 @@ public class Node {
             nextBackgroundTaskDeadline);
     }
 
+    /**
+     * Perform periodic background operations
+     *
+     * @param now Current clock in milliseconds
+     * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode processBackgroundTasks(long now, long[] nextBackgroundTaskDeadline) {
         return processBackgroundTasks(nodeId, now, nextBackgroundTaskDeadline);
     }
 
+    /**
+     * Join a network
+     *
+     * <p>This may generate calls to the port config callback before it returns,
+     * or these may be deffered if a netconf is not available yet.</p>
+     *
+     * <p>If we are already a member of the network, nothing is done and OK is
+     * returned.</p>
+     *
+     * @param nwid 64-bit ZeroTier network ID
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode join(long nwid) {
         return join(nodeId, nwid);
     }
 
+    /**
+     * Leave a network
+     *
+     * <p>If a port has been configured for this network this will generate a call
+     * to the port config callback with a NULL second parameter to indicate that
+     * the port is now deleted.</p>
+     *
+     * @param nwid 64-bit network ID
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode leave(long nwid) {
         return leave(nodeId, nwid);
     }
 
+    /**
+     * Subscribe to an Ethernet multicast group
+     *
+     * <p>For IPv4 ARP, the implementation must subscribe to 0xffffffffffff (the
+     * broadcast address) but with an ADI equal to each IPv4 address in host
+     * byte order. This converts ARP from a non-scalable broadcast protocol to
+     * a scalable multicast protocol with perfect address specificity.</p>
+     *
+     * <p>If this is not done, ARP will not work reliably.</p>
+     *
+     * <p>Multiple calls to subscribe to the same multicast address will have no
+     * effect. It is perfectly safe to do this.</p>
+     *
+     * <p>This does not generate an update call to the {@link VirtualNetworkConfigListener#onNetworkConfigurationUpdated} method.</p>
+     *
+     * @param nwid 64-bit network ID
+     * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode multicastSubscribe(
 		long nwid,
 		long multicastGroup) {
 		return multicastSubscribe(nodeId, nwid, multicastGroup, 0);
 	}
 
+    /**
+     * Subscribe to an Ethernet multicast group
+     *
+     * <p>ADI stands for additional distinguishing information. This defaults to zero
+     * and is rarely used. Right now its only use is to enable IPv4 ARP to scale,
+     * and this must be done.</p>
+     *
+     * <p>For IPv4 ARP, the implementation must subscribe to 0xffffffffffff (the
+     * broadcast address) but with an ADI equal to each IPv4 address in host
+     * byte order. This converts ARP from a non-scalable broadcast protocol to
+     * a scalable multicast protocol with perfect address specificity.</p>
+     *
+     * <p>If this is not done, ARP will not work reliably.</p>
+     *
+     * <p>Multiple calls to subscribe to the same multicast address will have no
+     * effect. It is perfectly safe to do this.</p>
+     *
+     * <p>This does not generate an update call to the {@link VirtualNetworkConfigListener#onNetworkConfigurationUpdated} method.</p>
+     *
+     * @param nwid 64-bit network ID
+     * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
+     * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode multicastSubscribe(
         long nwid,
         long multicastGroup,
@@ -140,12 +257,42 @@ public class Node {
         return multicastSubscribe(nodeId, nwid, multicastGroup, multicastAdi);
     }
 
+
+    /**
+     * Unsubscribe from an Ethernet multicast group (or all groups)
+     *
+     * <p>If multicastGroup is zero (0), this will unsubscribe from all groups. If
+     * you are not subscribed to a group this has no effect.</p>
+     *
+     * <p>This does not generate an update call to the {@link VirtualNetworkConfigListener#onNetworkConfigurationUpdated} method.</p>
+     *
+     * @param nwid 64-bit network ID
+     * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
 	public ResultCode multicastUnsubscribe(
 		long nwid,
 		long multicastGroup) {
 		return multicastUnsubscribe(nodeId, nwid, multicastGroup, 0);
 	}
 
+    /**
+     * Unsubscribe from an Ethernet multicast group (or all groups)
+     *
+     * <p>If multicastGroup is zero (0), this will unsubscribe from all groups. If
+     * you are not subscribed to a group this has no effect.</p>
+     *
+     * <p>This does not generate an update call to the {@link VirtualNetworkConfigListener#onNetworkConfigurationUpdated} method.</p>
+     *
+     * <p>ADI stands for additional distinguishing information. This defaults to zero
+     * and is rarely used. Right now its only use is to enable IPv4 ARP to scale,
+     * and this must be done.</p>
+     *
+     * @param nwid 64-bit network ID
+     * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
+     * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
+     * @return OK (0) or error code if a fatal error condition has occurred
+     */
     public ResultCode multicastUnsubscribe(
         long nwid,
         long multicastGroup,
@@ -153,33 +300,64 @@ public class Node {
         return multicastUnsubscribe(nodeId, nwid, multicastGroup, multicastAdi);
     }
 
+    /**
+     * Get this node's 40-bit ZeroTier address
+     *
+     * @return ZeroTier address (least significant 40 bits of 64-bit int)
+     */
     public long address() {
         return address(nodeId);
     }
 
+    /**
+     * Get the status of this node
+     *
+     * @return @{link NodeStatus} struct with the current node status.
+     */
     public NodeStatus status() {
         return status(nodeId);
     }
 
+    /**
+     * Get a list of known peer nodes
+     *
+     * @return List of known peers or NULL on failure
+     */
     public ArrayList<Peer> peers() {
         return peers(nodeId);
     }
 
+    /**
+     * Get the status of a virtual network
+     *
+     * @param nwid 64-bit network ID
+     * @return {@link VirtualNetworkConfig} or NULL if we are not a member of this network
+     */
     public VirtualNetworkConfig networkConfig(long nwid) {
         return networkConfig(nodeId, nwid);
     }
 
+    /**
+     * Enumerate and get status of all networks
+     *
+     * @return List of networks or NULL on failure
+     */
     public ArrayList<VirtualNetworkConfig> networks() {
         return networks(nodeId);
     }
 
+    /**
+     * Get ZeroTier One version
+     *
+     * @return {@link Version} object with ZeroTierOne version information.
+     */
     public Version getVersion() {
         return version();
     }
 
-    /**
-     * function declarations for JNI
-     */
+    //
+    // function declarations for JNI
+    //
     private native ResultCode node_init(long now);
 
     private native void node_delete(long nodeId);

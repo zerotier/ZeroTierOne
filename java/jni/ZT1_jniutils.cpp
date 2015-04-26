@@ -785,7 +785,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
 
     if(portErrorField == NULL)
     {
-        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "Z");
+        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "I");
         if(portErrorField == NULL)
         {
             return NULL;
@@ -855,7 +855,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig.dhcp);
     env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig.bridge);
     env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig.broadcastEnabled);
-    env->SetBooleanField(vnetConfigObj, portErrorField, vnetConfig.portError);
+    env->SetIntField(vnetConfigObj, portErrorField, vnetConfig.portError);
 
 
     jobject mcastSubsArrayObj = newArrayList(env);

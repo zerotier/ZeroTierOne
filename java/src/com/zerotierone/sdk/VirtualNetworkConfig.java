@@ -31,7 +31,7 @@ import java.lang.String;
 import java.util.ArrayList;
 import java.net.InetAddress;
 
-public class VirtualNetworkConfig {
+public final class VirtualNetworkConfig {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT1_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
@@ -44,7 +44,7 @@ public class VirtualNetworkConfig {
     private boolean dhcp;
     private boolean bridge;
     private boolean broadcastEnabled;
-    private boolean portError;
+    private int portError;
     private boolean enabled;
     private long netconfRevision;
     private ArrayList<MulticastGroup> multicastSubscriptions;
@@ -54,57 +54,116 @@ public class VirtualNetworkConfig {
 
     }
 
+    /**
+     * 64-bit ZeroTier network ID
+     */
     public final long networkId() {
         return nwid;
     }
+
+    /**
+     * Ethernet MAC (40 bits) that should be assigned to port
+     */
     public final long macAddress() {
         return mac;
     }
 
+    /**
+     * Network name (from network configuration master)
+     */
     public final String name() {
         return name;
     }
 
+    /**
+     * Network configuration request status
+     */
     public final VirtualNetworkStatus networkStatus() {
         return status;
     }
 
+    /**
+     * Network type
+     */
     public final VirtualNetworkType networkType() {
         return type;
     }
 
+    /**
+     * Maximum interface MTU
+     */
     public final int mtu() {
         return mtu;
     }
 
+    /**
+     * If the network this port belongs to indicates DHCP availability
+     *
+     * <p>This is a suggestion. The underlying implementation is free to ignore it
+     * for security or other reasons. This is simply a netconf parameter that
+     * means 'DHCP is available on this network.'</p>
+     */
     public final boolean isDhcpAvailable() {
         return dhcp;
     }
 
+    /**
+     * If this port is allowed to bridge to other networks
+     *
+     * <p>This is informational. If this is false, bridged packets will simply
+     * be dropped and bridging won't work.</p>
+     */
     public final boolean isBridgeEnabled() {
         return bridge;
     }
 
+    /**
+     * If true, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
+     */
     public final boolean broadcastEnabled() {
         return broadcastEnabled;
     }
 
-    public final boolean portError() {
+    /**
+     * If the network is in PORT_ERROR state, this is the error most recently returned by the port config callback
+     */
+    public final int portError() {
         return portError;
     }
 
+    /**
+     * Is this network enabled? If not, all frames to/from are dropped.
+     */
     public final boolean isEnabled() {
         return enabled;
     }
 
+    /**
+     * Network config revision as reported by netconf master
+     *
+     * <p>If this is zero, it means we're still waiting for our netconf.</p>
+     */
     public final long netconfRevision() {
         return netconfRevision;
     }
 
+    /**
+     * Multicast group subscriptions
+     */
     public final ArrayList<MulticastGroup> multicastSubscriptions() {
         return multicastSubscriptions;
     }
 
+    /**
+     * ZeroTier-assigned addresses (in {@link java.net.InetAddress} objects)
+     *
+     * For IP, the port number of the sockaddr_XX structure contains the number
+     * of bits in the address netmask. Only the IP address and port are used.
+     * Other fields like interface number can be ignored.
+     *
+     * This is only used for ZeroTier-managed address assignments sent by the
+     * virtual network's configuration master.
+     */
     public final ArrayList<InetAddress> assignedAddresses() {
         return assignedAddresses;
     }

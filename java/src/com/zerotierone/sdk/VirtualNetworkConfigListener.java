@@ -30,6 +30,29 @@ package com.zerotierone.sdk;
 
 
 public interface VirtualNetworkConfigListener {
+    /**
+     * Callback called to update virtual network port configuration
+     *
+     * <p>This can be called at any time to update the configuration of a virtual
+     * network port. The parameter after the network ID specifies whether this
+     * port is being brought up, updated, brought down, or permanently deleted.
+     *
+     * This in turn should be used by the underlying implementation to create
+     * and configure tap devices at the OS (or virtual network stack) layer.</P>
+     *
+     * This should not call {@link Node#multicastSubscribe} or other network-modifying
+     * methods, as this could cause a deadlock in multithreaded or interrupt
+     * driven environments.
+     *
+     * This must return 0 on success. It can return any OS-dependent error code
+     * on failure, and this results in the network being placed into the
+     * PORT_ERROR state.
+     *
+     * @param nwid network id
+     * @param op {@link VirtualNetworkConfigOperation} enum describing the configuration operation
+     * @param config {@link VirtualNetworkConfig} object with the new configuration
+     * @return 0 on success
+     */
     public int onNetworkConfigurationUpdated(
             long nwid,
             VirtualNetworkConfigOperation op,

@@ -443,7 +443,7 @@ namespace {
         if(ref->packetSenderCallbackMethod == NULL)
         {
             ref->packetSenderCallbackMethod = env->GetMethodID(ref->packetSenderClass,
-                "onSendPacketRequested", "(Ljava/lang/String;I[B)I");
+                "onSendPacketRequested", "(Ljava/net/InetAddress;I[B)I");
             if(ref->packetSenderCallbackMethod == NULL)
             {
                 return -2;

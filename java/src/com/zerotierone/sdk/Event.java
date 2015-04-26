@@ -28,11 +28,89 @@
 package com.zerotierone.sdk;
 
 public enum Event {
+    /**
+     * Node has been initialized
+     *
+     * This is the first event generated, and is always sent. It may occur
+     * before Node's constructor returns.
+     */
 	EVENT_UP,
+
+    /**
+     * Node is offline -- network does not seem to be reachable by any available strategy
+     */
 	EVENT_OFFLINE,
+
+    /**
+     * Node is shutting down
+     * 
+     * <p>This is generated within Node's destructor when it is being shut down.
+     * It's done for convenience, since cleaning up other state in the event
+     * handler may appear more idiomatic.</p>
+     */
 	EVENT_DOWN,
+
+    /**
+     * Your identity has collided with another node's ZeroTier address
+     * 
+     * <p>This happens if two different public keys both hash (via the algorithm
+     * in Identity::generate()) to the same 40-bit ZeroTier address.</p>
+     * 
+     * <p>This is something you should "never" see, where "never" is defined as
+     * once per 2^39 new node initializations / identity creations. If you do
+     * see it, you're going to see it very soon after a node is first
+     * initialized.</p>
+     * 
+     * <p>This is reported as an event rather than a return code since it's
+     * detected asynchronously via error messages from authoritative nodes.</p>
+     * 
+     * <p>If this occurs, you must shut down and delete the node, delete the
+     * identity.secret record/file from the data store, and restart to generate
+     * a new identity. If you don't do this, you will not be able to communicate
+     * with other nodes.</p>
+     * 
+     * <p>We'd automate this process, but we don't think silently deleting
+     * private keys or changing our address without telling the calling code
+     * is good form. It violates the principle of least surprise.</p>
+     * 
+     * <p>You can technically get away with not handling this, but we recommend
+     * doing so in a mature reliable application. Besides, handling this
+     * condition is a good way to make sure it never arises. It's like how
+     * umbrellas prevent rain and smoke detectors prevent fires. They do, right?</p>
+     */
 	EVENT_FATAL_ERROR_IDENTITY_COLLISION,
+    
+    /**
+     * A more recent version was observed on the network
+     * 
+     * <p>Right now this is only triggered if a hub or supernode reports a
+     * more recent version, and only once. It can be used to trigger a
+     * software update check.</p>
+     * 
+     * <p>Meta-data: {@link Version}, more recent version number</p>
+     */
+    EVENT_SAW_MORE_RECENT_VERSION,
+
+    /**
+     * A packet failed authentication
+     *
+     * <p>Meta-data: {@link InetAddress} containing origin address of packet</p>
+     */
 	EVENT_AUTHENTICATION_FAILURE,
+
+    /**
+     * A received packet was not valid
+     *
+     * <p>Meta-data: {@link InetAddress} containing origin address of packet</p>
+     */
 	EVENT_INVALID_PACKET,
+
+    /**
+     * Trace (debugging) message
+     *
+     * <p>These events are only generated if this is a TRACE-enabled build.</p>
+     *
+     * <p>Meta-data: {@link String}, TRACE message</p>
+     */
 	EVENT_TRACE
 }

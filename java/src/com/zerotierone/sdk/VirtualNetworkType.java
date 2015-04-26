@@ -27,6 +27,13 @@
 package com.zerotierone.sdk;
 
 public enum VirtualNetworkType {
+    /**
+     * Private networks are authorized via certificates of membership
+     */
     NETWORK_TYPE_PRIVATE,
+
+    /**
+     * Public networks have no access control -- they'll always be AUTHORIZED
+     */
     NETWORK_TYPE_PUBLIC
 }

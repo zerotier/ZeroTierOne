@@ -27,9 +27,23 @@
 package com.zerotierone.sdk;
 
 
-public class MulticastGroup {
+public final class MulticastGroup {
     private MulticastGroup() {}
 
     private long mac;
     private long adi;
+
+    /**
+     * MAC address (least significant 48 bits)
+     */
+    public final long getMacAddress() {
+        return mac;
+    }
+
+    /**
+     * Additional distinguishing information (usually zero)
+     */
+    public final long getAdi() {
+        return adi;
+    }
 }

@@ -28,7 +28,18 @@
 package com.zerotierone.sdk;
 
 public enum PeerRole {
+    /**
+     * An ordinary node
+     */
     PEER_ROLE_LEAF,
+
+    /**
+     * Locally federated hub
+     */
     PEER_ROLE_HUB,
+
+    /**
+     * planetary supernode
+     */
     PEER_ROLE_SUPERNODE
 }

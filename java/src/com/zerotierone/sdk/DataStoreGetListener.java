@@ -29,6 +29,29 @@ package com.zerotierone.sdk;
 import java.nio.ByteBuffer;
 
 public interface DataStoreGetListener {
+
+    /**
+     * Function to get an object from the data store
+     *
+     * <p>Object names can contain forward slash (/) path separators. They will
+     * never contain .. or backslash (\), so this is safe to map as a Unix-style
+     * path if the underlying storage permits. For security reasons we recommend
+     * returning errors if .. or \ are used.</p>
+     *
+     * <p>The function must return the actual number of bytes read. If the object
+     * doesn't exist, it should return -1. -2 should be returned on other errors
+     * such as errors accessing underlying storage.</p>
+     *
+     * <p>If the read doesn't fit in the buffer, the max number of bytes should be
+     * read. The caller may call the function multiple times to read the whole
+     * object.</p>
+     *
+     * @param name Name of the object in the data store
+     * @param out_buffer buffer to put the object in
+     * @param bufferIndex index in the object to start reading
+     * @param out_objectSize long[1] to be set to the actual size of the object if it exists.
+     * @return the actual number of bytes read.
+     */
     public long onDataStoreGet(
             String name,
             byte[] out_buffer,

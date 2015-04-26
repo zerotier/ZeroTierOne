@@ -25,6 +25,13 @@
         <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 
+    <target name="docs">
+      <echo message="Generating Javadocs"/>
+      <mkdir dir="doc/"/>
+      <javadoc sourcepath="src/"
+               destdir="doc/"/>
+    </target>
+
 <!--    <target name="android" depends="build">
         <echo message="OS is Android, installing..."/>
         <copy file="libs/armeabi/libZeroTierOneJNI.so" 

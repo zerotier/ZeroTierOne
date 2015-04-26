@@ -26,12 +26,24 @@
  */
 package com.zerotierone.sdk;
 
-import java.nio.ByteBuffer;
+import java.net.InetAddress;
 
 
 public interface PacketSender {
+    /**
+     * Function to send a ZeroTier packet out over the wire
+     *
+     * <p>The function must return zero on success and may return any error code
+     * on failure. Note that success does not (of course) guarantee packet
+     * delivery. It only means that the packet appears to have been sent.</p>
+     *
+     * @param addr {@link InetAddress} to send to
+     * @param linkDesperation
+     * @param packetData data to send
+     * @return 0 on success, any error code on failure.
+     */
     public int onSendPacketRequested(
-            String addr,
-            int linkDesparation,
+            InetAddress addr,
+            int linkDesperation,
             byte[] packetData);
 }

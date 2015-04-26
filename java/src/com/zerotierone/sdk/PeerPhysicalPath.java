@@ -29,7 +29,10 @@ package com.zerotierone.sdk;
 
 import java.net.InetAddress;
 
-public class PeerPhysicalPath {
+/**
+ * Physical network path to a peer
+ */
+public final class PeerPhysicalPath {
     private InetAddress address;
     private long lastSend;
     private long lastReceive;
@@ -39,26 +42,44 @@ public class PeerPhysicalPath {
 
     private PeerPhysicalPath() {}
 
+    /**
+     * Address of endpoint
+     */
     public final InetAddress address() {
         return address;
     }
 
+    /**
+     * Time of last send in milliseconds or 0 for never
+     */
     public final long lastSend() {
         return lastSend;
     }
 
+    /**
+     * Time of last receive in milliseconds or 0 for never
+     */
     public final long lastReceive() {
         return lastReceive;
     }
 
+    /**
+     * Is path fixed? (i.e. not learned, static)
+     */
     public final boolean isFixed() {
         return fixed;
     }
 
+    /**
+     * Is path active?
+     */
     public final boolean isActive() {
         return active;
     }
 
+    /**
+     * Is path preferred?
+     */
     public final boolean isPreferred() {
         return preferred;
     }

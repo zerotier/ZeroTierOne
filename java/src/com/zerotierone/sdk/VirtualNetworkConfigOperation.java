@@ -27,8 +27,23 @@
 package com.zerotierone.sdk;
 
 public enum VirtualNetworkConfigOperation {
+    /**
+     * Network is coming up (either for the first time or after service restart)
+     */
     VIRTUAL_NETWORK_CONFIG_OPERATION_UP,
+
+    /**
+     * Network configuration has been updated
+     */
     VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,
+
+    /**
+     * Network is going down (not permanently)
+     */
     VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,
+
+    /**
+     * Network is going down permanently (leave/delete)
+     */
     VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY
 }
