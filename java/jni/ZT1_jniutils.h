@@ -7,6 +7,19 @@
 extern "C" {
 #endif
 
+#define LOG_TAG "ZeroTierOneJNI"
+
+#if __ANDROID__
+#include <android/log.h>
+#define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__))
+#define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
+#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
+#else
+#define LOGI(...)
+#define LOGD(...)
+#define LOGE(...)
+#endif
+
 jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
 jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type);
