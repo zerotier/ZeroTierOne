@@ -77,7 +77,7 @@ public class Node {
                 PacketSender sender,
                 EventListener eventListener,
                 VirtualNetworkFrameListener frameListener,
-                VirtualNetworkConfigListener configListener)
+                VirtualNetworkConfigListener configListener) throws NodeException
 	{
         this.nodeId = now;
 
@@ -92,6 +92,7 @@ public class Node {
         if(rc != ResultCode.RESULT_OK)
         {
             // TODO: Throw Exception
+            throw new NodeException(rc.toString());
         }
 	}
 
