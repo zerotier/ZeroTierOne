@@ -296,6 +296,9 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	if (!(cg.first))
 		return false;
 
+	if (cg.first.ipScope() != cg.second.ipScope())
+		return false;
+
 	// Addresses are sorted in key for last unite attempt map for order
 	// invariant lookup: (p1,p2) == (p2,p1)
 	Array<Address,2> uniteKey;
