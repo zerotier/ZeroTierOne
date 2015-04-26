@@ -4,7 +4,7 @@
     <target name="clean">
         <delete dir="bin" failonerror="false"/>
         <delete dir="classes" failonerror="false"/>
-        <delete dir="libs" failonerror="false"/>
+        <!--<delete dir="libs" failonerror="false"/>-->
         <delete dir="obj" failonerror="false"/>
     </target>
 
@@ -22,6 +22,21 @@
         <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
             <arg value="ZT1=${user.dir}/../"/>
         </exec>
+        <copy file="libs/armeabi/libZeroTierOneJNI.so" 
+              tofile="${user.dir}/classes/lib/armeabi/libZeroTierOneJNI.so" 
+              overwrite="true"/>
+        <copy file="libs/arm64-v8a/libZeroTierOneJNI.so"
+              tofile="${user.dir}/classes/lib/arm64-v8a/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/armeabi-v7a/libZeroTierOneJNI.so"
+              tofile="${user.dir}/classes/lib/armeabi-v7a/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/x86/libZeroTierOneJNI.so"
+              tofile="${user.dir}/classes/lib/x86/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy   file="bin/ZeroTierOneSDK.jar" 
+                tofile="${user.dir}/classes/lib/ZeroTierOneSDK.jar" 
+                overwrite="true"/>
         <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 
