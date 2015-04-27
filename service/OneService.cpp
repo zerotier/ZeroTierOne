@@ -158,6 +158,7 @@ public:
 		_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,this,131072);
 		if (!_v4UdpSocket)
 			throw std::runtime_error("cannot bind to port (UDP/IPv4)");
+		in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @localhost
 		_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 		if (!_v4TcpListenSocket) {
 			_phy.close(_v4UdpSocket);
@@ -168,6 +169,7 @@ public:
 		in6.sin6_family = AF_INET6;
 		in6.sin6_port = in4.sin_port;
 		_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,this,131072);
+		in6.sin6_addr.s6_addr[15] = 1; // listen for TCP only at localhost
 		_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
 		char portstr[64];
