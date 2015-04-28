@@ -43,64 +43,28 @@ namespace {
     struct JniRef
     {
         JniRef()
-            : env(NULL)
+            : jvm(NULL)
             , node(NULL)
             , dataStoreGetListener(NULL)
-            , dataStoreGetClass(NULL)
-            , dataStoreGetCallbackMethod(NULL)
             , dataStorePutListener(NULL)
-            , dataStorePutClass(NULL)
-            , dataStorePutCallbackMethod(NULL)
-            , deleteMethod(NULL)
             , packetSender(NULL)
-            , packetSenderClass(NULL)
-            , packetSenderCallbackMethod(NULL)
             , eventListener(NULL)
-            , eventListenerClass(NULL)
-            , onEventMethod(NULL)
-            , onOutOfDateMethod(NULL)
-            , onNetworkErrorMethod(NULL)
-            , onTraceMethod(NULL)
             , frameListener(NULL)
-            , frameListenerClass(NULL)
-            , frameListenerCallbackMethod(NULL)
             , configListener(NULL)
-            , configListenerClass(NULL)
-            , configListenerCallbackMethod(NULL)
         {}
+
         uint64_t id;
 
-        JNIEnv *env;
+        JavaVM *jvm;
 
         ZT1_Node *node;
 
         jobject dataStoreGetListener;
-        jclass dataStoreGetClass;
-        jmethodID dataStoreGetCallbackMethod;
-
         jobject dataStorePutListener;
-        jclass dataStorePutClass;
-        jmethodID dataStorePutCallbackMethod;
-        jmethodID deleteMethod;
-
         jobject packetSender;
-        jclass packetSenderClass;
-        jmethodID packetSenderCallbackMethod;
-        
         jobject eventListener;
-        jclass eventListenerClass;
-        jmethodID onEventMethod;
-        jmethodID onOutOfDateMethod;
-        jmethodID onNetworkErrorMethod;
-        jmethodID onTraceMethod;
-
         jobject frameListener;
-        jclass frameListenerClass;
-        jmethodID frameListenerCallbackMethod;
-
         jobject configListener;
-        jclass configListenerClass;
-        jmethodID configListenerCallbackMethod;
     };
 
 
@@ -112,30 +76,23 @@ namespace {
         const ZT1_VirtualNetworkConfig *config)
     {
         JniRef *ref = (JniRef*)userData;
-        assert(ref->node == node);
+        JNIEnv *env = NULL;
+        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
-        JNIEnv *env = ref->env;
-
-        if(ref->configListenerClass == NULL)
+        jclass configListenerClass = env->GetObjectClass(ref->configListener);
+        if(configListenerClass == NULL)
         {
-            ref->configListenerClass = env->GetObjectClass(ref->configListener);
-            if(ref->configListenerClass == NULL)
-            {
-                LOGE("Couldn't find class for VirtualNetworkConfigListener instance");
-                return -1;
-            }
+            LOGE("Couldn't find class for VirtualNetworkConfigListener instance");
+            return -1;
         }
 
-        if(ref->configListenerCallbackMethod == NULL)
+        jmethodID configListenerCallbackMethod = env->GetMethodID(configListenerClass,
+            "onNetworkConfigurationUpdated",
+            "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
+        if(configListenerCallbackMethod == NULL)
         {
-            ref->configListenerCallbackMethod = env->GetMethodID(ref->configListenerClass,
-                "onNetworkConfigurationUpdated",
-                "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
-            if(ref->configListenerCallbackMethod == NULL)
-            {
-                LOGE("Couldn't find onVirtualNetworkFrame() method");
-                return -2;
-            }
+            LOGE("Couldn't find onVirtualNetworkFrame() method");
+            return -2;
         }
 
         jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
@@ -154,7 +111,7 @@ namespace {
 
         return env->CallIntMethod(
             ref->configListener, 
-            ref->configListenerCallbackMethod, 
+            configListenerCallbackMethod, 
             (jlong)nwid, operationObject, networkConfigObject);
     }
 
@@ -169,35 +126,30 @@ namespace {
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
+        JNIEnv *env = NULL;
+        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
-        JNIEnv *env = ref->env;
 
-        if(ref->frameListenerClass == NULL)
+        jclass frameListenerClass = env->GetObjectClass(ref->frameListener);
+        if(frameListenerClass == NULL)
         {
-            ref->frameListenerClass = env->GetObjectClass(ref->frameListener);
-            if(ref->frameListenerClass == NULL)
-            {
-                LOGE("Couldn't find class for VirtualNetworkFrameListener instance");
-                return;
-            }
+            LOGE("Couldn't find class for VirtualNetworkFrameListener instance");
+            return;
         }
 
-        if(ref->frameListenerCallbackMethod == NULL)
+        jmethodID frameListenerCallbackMethod = env->GetMethodID(
+            frameListenerClass,
+            "onVirtualNetworkFrame", "(JJJJJ[B)V");
+        if(frameListenerCallbackMethod == NULL)
         {
-            ref->frameListenerCallbackMethod = env->GetMethodID(
-                ref->frameListenerClass,
-                "onVirtualNetworkFrame", "(JJJJJ[B)V");
-            if(ref->frameListenerCallbackMethod == NULL)
-            {
-                LOGE("Couldn't find onVirtualNetworkFrame() method");
-                return;
-            }
+            LOGE("Couldn't find onVirtualNetworkFrame() method");
+            return;
         }
 
         jbyteArray dataArray = env->NewByteArray(frameLength);
         env->SetByteArrayRegion(dataArray, 0, frameLength, (jbyte*)frameData);
 
-        env->CallVoidMethod(ref->frameListener, ref->frameListenerCallbackMethod, nwid, sourceMac, destMac, etherType, vlanid, dataArray);
+        env->CallVoidMethod(ref->frameListener, frameListenerCallbackMethod, nwid, sourceMac, destMac, etherType, vlanid, dataArray);
     }
 
 
@@ -205,64 +157,50 @@ namespace {
     {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
+        JNIEnv *env = NULL;
+        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
-        JNIEnv *env = ref->env;
 
-        if(ref->eventListenerClass == NULL)
+        jclass eventListenerClass = env->GetObjectClass(ref->eventListener);
+        if(eventListenerClass == NULL)
         {
-            ref->eventListenerClass = env->GetObjectClass(ref->eventListener);
-            if(ref->eventListenerClass == NULL)
-            {
-                LOGE("Couldn't class for EventListener instance");
-                return;
-            }
+            LOGE("Couldn't class for EventListener instance");
+            return;
         }
 
-        if(ref->onEventMethod == NULL)
+        jmethodID onEventMethod = env->GetMethodID(eventListenerClass,
+            "onEvent", "(Lcom/zerotierone/sdk/Event;)V");
+        if(onEventMethod == NULL)
         {
-            ref->onEventMethod = env->GetMethodID(ref->eventListenerClass,
-                "onEvent", "(Lcom/zerotierone/sdk/Event;)V");
-            if(ref->onEventMethod == NULL)
-            {
-                LOGE("Couldn't find onEvent method");
-                return;
-            }
+            LOGE("Couldn't find onEvent method");
+            return;
         }
 
 
-        if(ref->onOutOfDateMethod == NULL)
+        jmethodID onOutOfDateMethod = env->GetMethodID(eventListenerClass,
+            "onOutOfDate", "(Lcom/zerotierone/sdk/Version;)V");
+        if(onOutOfDateMethod == NULL)
         {
-            ref->onOutOfDateMethod = env->GetMethodID(ref->eventListenerClass,
-                "onOutOfDate", "(Lcom/zerotierone/sdk/Version;)V");
-            if(ref->onOutOfDateMethod == NULL)
-            {
-                LOGE("Couldn't find onOutOfDate method");
-                return;
-            }
+            LOGE("Couldn't find onOutOfDate method");
+            return;
         }
 
 
-        if(ref->onOutOfDateMethod == NULL)
+        jmethodID onNetworkErrorMethod = env->GetMethodID(eventListenerClass,
+            "onNetworkError", "(Lcom/zerotierone/sdk/Event;Ljava/net/InetSocketAddress;)V");
+        if(onNetworkErrorMethod == NULL)
         {
-            ref->onNetworkErrorMethod = env->GetMethodID(ref->eventListenerClass,
-                "onNetworkError", "(Lcom/zerotierone/sdk/Event;Ljava/net/InetSocketAddress;)V");
-            if(ref->onNetworkErrorMethod == NULL)
-            {
-                LOGE("Couldn't find onNetworkError method");
-                return;
-            }
+            LOGE("Couldn't find onNetworkError method");
+            return;
         }
 
 
-        if(ref->onTraceMethod == NULL)
+        jmethodID onTraceMethod = env->GetMethodID(eventListenerClass,
+            "onTrace", "(Ljava/lang/String;)V");
+        if(onTraceMethod == NULL)
         {
-            ref->onTraceMethod = env->GetMethodID(ref->eventListenerClass,
-                "onTrace", "(Ljava/lang/String;)V");
-            if(ref->onTraceMethod == NULL)
-            {
-                LOGE("Couldn't find onTrace method");
-                return;
-            }
+            LOGE("Couldn't find onTrace method");
+            return;
         }
 
         jobject eventObject = createEvent(env, event);
@@ -280,7 +218,7 @@ namespace {
         case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
         {
             // call onEvent()
-            env->CallVoidMethod(ref->eventListener, ref->onEventMethod, eventObject);
+            env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
         }
         break;
         case ZT1_EVENT_SAW_MORE_RECENT_VERSION:
@@ -290,7 +228,7 @@ namespace {
             {
                 int *version = (int*)data;
                 jobject verisonObj = newVersion(env, version[0], version[1], version[2], 0);
-                env->CallVoidMethod(ref->eventListener, ref->onOutOfDateMethod, verisonObj);
+                env->CallVoidMethod(ref->eventListener, onOutOfDateMethod, verisonObj);
             }
         }
         break;
@@ -302,7 +240,7 @@ namespace {
             {
                 sockaddr_storage *addr = (sockaddr_storage*)data;
                 jobject addressObj = newInetSocketAddress(env, *addr);
-                env->CallVoidMethod(ref->eventListener, ref->onNetworkErrorMethod, addressObj);
+                env->CallVoidMethod(ref->eventListener, onNetworkErrorMethod, addressObj);
             }
         }
         case ZT1_EVENT_TRACE:
@@ -312,7 +250,7 @@ namespace {
             {
                 const char* message = (const char*)data;
                 jstring messageStr = env->NewStringUTF(message);
-                env->CallVoidMethod(ref->eventListener, ref->onTraceMethod);
+                env->CallVoidMethod(ref->eventListener, onTraceMethod);
             }
         }
         break;
@@ -327,29 +265,24 @@ namespace {
         unsigned long *out_objectSize)
     {
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = ref->env;
+        JNIEnv *env = NULL;
+        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
-        if(ref->dataStoreGetClass == NULL)
+        jclass dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
+        if(dataStoreGetClass == NULL)
         {
-            ref->dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
-            if(ref->dataStoreGetClass == NULL)
-            {
-                LOGE("Couldn't find class for DataStoreGetListener instance");
-                return -1;
-            }
+            LOGE("Couldn't find class for DataStoreGetListener instance");
+            return -1;
         }
 
-        if(ref->dataStoreGetCallbackMethod == NULL)
+        jmethodID dataStoreGetCallbackMethod = env->GetMethodID(
+            dataStoreGetClass,
+            "onDataStoreGet",
+            "(Ljava/lang/String;[BJ[J)J");
+        if(dataStoreGetCallbackMethod == NULL)
         {
-            ref->dataStoreGetCallbackMethod = env->GetMethodID(
-                ref->dataStoreGetClass,
-                "onDataStoreGet",
-                "(Ljava/lang/String;[BJ[J)J");
-            if(ref->dataStoreGetCallbackMethod == NULL)
-            {
-                LOGE("Couldn't find onDataStoreGet method");
-                return -2;
-            }
+            LOGE("Couldn't find onDataStoreGet method");
+            return -2;
         }
 
         jstring nameStr = env->NewStringUTF(objectName);
@@ -363,7 +296,7 @@ namespace {
         jlongArray objectSizeObj = env->NewLongArray(1);
 
         long retval = env->CallLongMethod(
-            ref->dataStoreGetListener, ref->dataStoreGetCallbackMethod, 
+            ref->dataStoreGetListener, dataStoreGetCallbackMethod, 
             nameStr, bufferObj, bufferIndex, objectSizeObj);
 
         env->GetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
@@ -381,40 +314,33 @@ namespace {
         int secure)
     {
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = ref->env;
+        JNIEnv *env = NULL;
+        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
-        if(ref->dataStorePutClass == NULL)
+
+        jclass dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
+        if(dataStorePutClass == NULL)
         {
-            ref->dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
-            if(ref->dataStorePutClass == NULL)
-            {
-                LOGE("Couldn't find class for DataStorePutListener instance");
-                return -1;
-            }
+            LOGE("Couldn't find class for DataStorePutListener instance");
+            return -1;
         }
 
-        if(ref->dataStorePutCallbackMethod == NULL)
+        jmethodID dataStorePutCallbackMethod = env->GetMethodID(
+            dataStorePutClass,
+            "onDataStorePut",
+            "(Ljava/lang/String;[BZ)I");
+        if(dataStorePutCallbackMethod == NULL)
         {
-            ref->dataStorePutCallbackMethod = env->GetMethodID(
-                ref->dataStorePutClass,
-                "onDataStorePut",
-                "(Ljava/lang/String;[BZ)I");
-            if(ref->dataStorePutCallbackMethod == NULL)
-            {
-                LOGE("Couldn't find onDataStorePut method");
-                return -2;
-            }
+            LOGE("Couldn't find onDataStorePut method");
+            return -2;
         }
 
-        if(ref->deleteMethod == NULL)
+        jmethodID deleteMethod = env->GetMethodID(dataStorePutClass,
+            "onDelete", "(Ljava/lang/String;)I");
+        if(deleteMethod == NULL)
         {
-            ref->deleteMethod = env->GetMethodID(ref->dataStorePutClass,
-                "onDelete", "(Ljava/lang/String;)I");
-            if(ref->deleteMethod == NULL)
-            {
-                LOGE("Couldn't find onDelete method");
-                return -3;
-            }
+            LOGE("Couldn't find onDelete method");
+            return -3;
         }
 
         jstring nameStr = env->NewStringUTF(objectName);
@@ -423,7 +349,7 @@ namespace {
         {
             // delete operation
             return env->CallIntMethod(
-                ref->dataStorePutListener, ref->deleteMethod, nameStr);
+                ref->dataStorePutListener, deleteMethod, nameStr);
         }
         else
         {
@@ -434,7 +360,7 @@ namespace {
 
 
             return env->CallIntMethod(ref->dataStorePutListener,
-                ref->dataStorePutCallbackMethod,
+                dataStorePutCallbackMethod,
                 nameStr, bufferObj, secure);
         }
     }
@@ -448,33 +374,29 @@ namespace {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
-        JNIEnv *env = ref->env;
+        JNIEnv *env = NULL;
+        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
-        if(ref->packetSenderClass == NULL)
+
+        jclass packetSenderClass = env->GetObjectClass(ref->packetSender);
+        if(packetSenderClass == NULL)
         {
-            ref->packetSenderClass = env->GetObjectClass(ref->packetSender);
-            if(ref->packetSenderClass == NULL)
-            {
-                LOGE("Couldn't find class for PacketSender instance");
-                return -1;
-            }
+            LOGE("Couldn't find class for PacketSender instance");
+            return -1;
         }
 
-        if(ref->packetSenderCallbackMethod == NULL)
+        jmethodID packetSenderCallbackMethod = env->GetMethodID(packetSenderClass,
+            "onSendPacketRequested", "(Ljava/net/InetSocketAddress;I[B)I");
+        if(packetSenderCallbackMethod == NULL)
         {
-            ref->packetSenderCallbackMethod = env->GetMethodID(ref->packetSenderClass,
-                "onSendPacketRequested", "(Ljava/net/InetSocketAddress;I[B)I");
-            if(ref->packetSenderCallbackMethod == NULL)
-            {
-                LOGE("Couldn't find onSendPacketRequested method");
-                return -2;
-            }
+            LOGE("Couldn't find onSendPacketRequested method");
+            return -2;
         }
         
         jobject addressObj = newInetSocketAddress(env, *address);
         jbyteArray bufferObj = env->NewByteArray(bufferSize);
         env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
-        return env->CallIntMethod(ref->packetSender, ref->packetSenderCallbackMethod, addressObj, linkDesparation, bufferObj);
+        return env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, addressObj, linkDesparation, bufferObj);
     }
 
     typedef std::map<uint64_t, JniRef*> NodeMap;
@@ -506,7 +428,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     ZT1_Node *node;
     JniRef *ref = new JniRef;
     ref->id = (uint64_t)now;
-    ref->env = env;
+    env->GetJavaVM(&ref->jvm);
 
     jclass cls = env->GetObjectClass(obj);
     jfieldID fid = env->GetFieldID(
@@ -1019,28 +941,21 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
         return 0;
     }
 
-    // static so we only have to look these up once
-    static jclass nodeStatusClass = NULL;
-    static jmethodID nodeStatusConstructor = NULL;
+    jclass nodeStatusClass = NULL;
+    jmethodID nodeStatusConstructor = NULL;
 
     // create a com.zerotierone.sdk.NodeStatus object
+    nodeStatusClass = env->FindClass("com/zerotierone/sdk/NodeStatus");
     if(nodeStatusClass == NULL)
     {
-        nodeStatusClass = env->FindClass("com/zerotierone/sdk/NodeStatus");
-        if(nodeStatusClass == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
     
+    nodeStatusConstructor = env->GetMethodID(
+        nodeStatusClass, "<init>", "()V");
     if(nodeStatusConstructor == NULL)
     {
-        nodeStatusConstructor = env->GetMethodID(
-            nodeStatusClass, "<init>", "()V");
-        if(nodeStatusConstructor == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
     jobject nodeStatusObj = env->NewObject(nodeStatusClass, nodeStatusConstructor);
@@ -1052,45 +967,33 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
     ZT1_NodeStatus nodeStatus;
     ZT1_Node_status(node, &nodeStatus);
 
-    static jfieldID addressField = NULL;
-    static jfieldID publicIdentityField = NULL;
-    static jfieldID secretIdentityField = NULL;
-    static jfieldID onlineField = NULL;
+    jfieldID addressField = NULL;
+    jfieldID publicIdentityField = NULL;
+    jfieldID secretIdentityField = NULL;
+    jfieldID onlineField = NULL;
 
+    addressField = env->GetFieldID(nodeStatusClass, "address", "J");
     if(addressField == NULL)
     {
-        addressField = env->GetFieldID(nodeStatusClass, "address", "J");
-        if(addressField == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
+    publicIdentityField = env->GetFieldID(nodeStatusClass, "publicIdentity", "Ljava/lang/String;");
     if(publicIdentityField == NULL)
     {
-        publicIdentityField = env->GetFieldID(nodeStatusClass, "publicIdentity", "Ljava/lang/String;");
-        if(publicIdentityField == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
+    secretIdentityField = env->GetFieldID(nodeStatusClass, "secretIdentity", "Ljava/lang/String;");
     if(secretIdentityField == NULL)
     {
-        secretIdentityField = env->GetFieldID(nodeStatusClass, "secretIdentity", "Ljava/lang/String;");
-        if(secretIdentityField == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
+    onlineField = env->GetFieldID(nodeStatusClass, "online", "Z");
     if(onlineField == NULL)
     {
-        onlineField = env->GetFieldID(nodeStatusClass, "online", "Z");
-        if(onlineField == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
     env->SetLongField(nodeStatusObj, addressField, nodeStatus.address);
