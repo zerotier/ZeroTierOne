@@ -29,7 +29,7 @@ package com.zerotierone.sdk;
 
 import java.lang.String;
 import java.util.ArrayList;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 public final class VirtualNetworkConfig {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
@@ -48,7 +48,7 @@ public final class VirtualNetworkConfig {
     private boolean enabled;
     private long netconfRevision;
     private ArrayList<MulticastGroup> multicastSubscriptions;
-    private ArrayList<InetAddress> assignedAddresses;
+    private ArrayList<InetSocketAddress> assignedAddresses;
 
     private VirtualNetworkConfig() {
 
@@ -155,7 +155,7 @@ public final class VirtualNetworkConfig {
     }
 
     /**
-     * ZeroTier-assigned addresses (in {@link java.net.InetAddress} objects)
+     * ZeroTier-assigned addresses (in {@link java.net.InetSocketAddress} objects)
      *
      * For IP, the port number of the sockaddr_XX structure contains the number
      * of bits in the address netmask. Only the IP address and port are used.
@@ -164,7 +164,7 @@ public final class VirtualNetworkConfig {
      * This is only used for ZeroTier-managed address assignments sent by the
      * virtual network's configuration master.
      */
-    public final ArrayList<InetAddress> assignedAddresses() {
+    public final ArrayList<InetSocketAddress> assignedAddresses() {
         return assignedAddresses;
     }
 }

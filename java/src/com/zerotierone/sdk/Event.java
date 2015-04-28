@@ -94,14 +94,14 @@ public enum Event {
     /**
      * A packet failed authentication
      *
-     * <p>Meta-data: {@link InetAddress} containing origin address of packet</p>
+     * <p>Meta-data: {@link InetSocketAddress} containing origin address of packet</p>
      */
 	EVENT_AUTHENTICATION_FAILURE,
 
     /**
      * A received packet was not valid
      *
-     * <p>Meta-data: {@link InetAddress} containing origin address of packet</p>
+     * <p>Meta-data: {@link InetSocketAddress} containing origin address of packet</p>
      */
 	EVENT_INVALID_PACKET,
 

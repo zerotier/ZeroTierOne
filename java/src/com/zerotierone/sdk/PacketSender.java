@@ -26,7 +26,7 @@
  */
 package com.zerotierone.sdk;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 
 public interface PacketSender {
@@ -37,13 +37,13 @@ public interface PacketSender {
      * on failure. Note that success does not (of course) guarantee packet
      * delivery. It only means that the packet appears to have been sent.</p>
      *
-     * @param addr {@link InetAddress} to send to
+     * @param addr {@link InetSocketAddress} to send to
      * @param linkDesperation
      * @param packetData data to send
      * @return 0 on success, any error code on failure.
      */
     public int onSendPacketRequested(
-            InetAddress addr,
+            InetSocketAddress addr,
             int linkDesperation,
             byte[] packetData);
 }

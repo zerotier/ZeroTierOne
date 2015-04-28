@@ -245,7 +245,7 @@ namespace {
         if(ref->onOutOfDateMethod == NULL)
         {
             ref->onNetworkErrorMethod = env->GetMethodID(ref->eventListenerClass,
-                "onNetworkError", "(Lcom/zerotierone/sdk/Event;Ljava/net/InetAddress;)V");
+                "onNetworkError", "(Lcom/zerotierone/sdk/Event;Ljava/net/InetSocketAddress;)V");
             if(ref->onNetworkErrorMethod == NULL)
             {
                 LOGE("Couldn't find onNetworkError method");
@@ -301,7 +301,7 @@ namespace {
             if(data != NULL)
             {
                 sockaddr_storage *addr = (sockaddr_storage*)data;
-                jobject addressObj = newInetAddress(env, *addr);
+                jobject addressObj = newInetSocketAddress(env, *addr);
                 env->CallVoidMethod(ref->eventListener, ref->onNetworkErrorMethod, addressObj);
             }
         }
@@ -463,7 +463,7 @@ namespace {
         if(ref->packetSenderCallbackMethod == NULL)
         {
             ref->packetSenderCallbackMethod = env->GetMethodID(ref->packetSenderClass,
-                "onSendPacketRequested", "(Ljava/net/InetAddress;I[B)I");
+                "onSendPacketRequested", "(Ljava/net/InetSocketAddress;I[B)I");
             if(ref->packetSenderCallbackMethod == NULL)
             {
                 LOGE("Couldn't find onSendPacketRequested method");
@@ -471,7 +471,7 @@ namespace {
             }
         }
         
-        jobject addressObj = newInetAddress(env, *address);
+        jobject addressObj = newInetSocketAddress(env, *address);
         jbyteArray bufferObj = env->NewByteArray(bufferSize);
         env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
         return env->CallIntMethod(ref->packetSender, ref->packetSenderCallbackMethod, addressObj, linkDesparation, bufferObj);
@@ -717,7 +717,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJLjava/net/InetAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJLjava/net/InetSocketAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
     JNIEnv *env, jobject obj, 
@@ -745,7 +745,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
     uint64_t now = (uint64_t)in_now;
     unsigned int linkDesparation = (unsigned int)in_linkDesparation;
 
-    // get the java.net.InetAddress class and getAddress() method
+    // get the java.net.InetSocketAddress class and getAddress() method
     jclass inetAddressClass = env->FindClass("java/net/InetAddress");
     if(inetAddressClass == NULL)
     {
@@ -761,8 +761,24 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
+    jclass InetSocketAddressClass = env->FindClass("java/net/InetSocketAddress");
+    if(InetSocketAddressClass == NULL)
+    {
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    jmethodID inetSockGetAddressMethod = env->GetMethodID(
+        InetSocketAddressClass, "getAddress", "()Ljava/net/InetAddress;");
+
+    jobject addrObject = env->CallObjectMethod(in_remoteAddress, inetSockGetAddressMethod);
+
+    if(addrObject == NULL)
+    {
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
     // Call InetAddress.getAddress()
-    jbyteArray addressArray = (jbyteArray)env->CallObjectMethod(in_remoteAddress, getAddressMethod);
+    jbyteArray addressArray = (jbyteArray)env->CallObjectMethod(addrObject, getAddressMethod);
     if(addressArray == NULL)
     {
         // unable to call getAddress()

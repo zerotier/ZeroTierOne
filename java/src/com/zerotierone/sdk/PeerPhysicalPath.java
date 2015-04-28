@@ -27,13 +27,13 @@
 
 package com.zerotierone.sdk;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 /**
  * Physical network path to a peer
  */
 public final class PeerPhysicalPath {
-    private InetAddress address;
+    private InetSocketAddress address;
     private long lastSend;
     private long lastReceive;
     private boolean fixed;
@@ -45,7 +45,7 @@ public final class PeerPhysicalPath {
     /**
      * Address of endpoint
      */
-    public final InetAddress address() {
+    public final InetSocketAddress address() {
         return address;
     }
 

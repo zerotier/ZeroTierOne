@@ -27,7 +27,7 @@
 
 package com.zerotierone.sdk;
 
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.lang.String;
 
 /**
@@ -45,9 +45,9 @@ public interface EventListener {
      * Callback for network error events: {@link Event.EVENT_AUTHENTICATION_FAILUER}, {link Event.EVENT_INVALID_PACKET}
      *
      * @param event {@link Event} enum
-     * @param source {@link InetAddress} containing the origin address of the packet
+     * @param source {@link InetSocketAddress} containing the origin address of the packet
      */
-    public void onNetworkError(Event event, InetAddress source);
+    public void onNetworkError(Event event, InetSocketAddress source);
 
     /**
      * Callback when the node detects that it's out of date.

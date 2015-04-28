@@ -301,6 +301,9 @@ bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object)
 
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
+    static jclass inetAddressClass = NULL;
+    static jmethodID inetAddress_getByAddress = NULL;
+
     if(inetAddressClass == NULL)
     {
         inetAddressClass = env->FindClass("java/net/InetAddress");
@@ -354,6 +357,58 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
     }
 
     return inetAddressObj;
+}
+
+jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
+{
+    static jclass inetSocketAddressClass = NULL;
+    static jmethodID inetSocketAddress_constructor = NULL;
+
+    if(inetSocketAddressClass == NULL)
+    {
+        inetSocketAddressClass == env->FindClass("java/net/InetSocketAddress");
+        if(inetSocketAddressClass == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    jobject inetAddressObject = newInetAddress(env, addr);
+
+    if(inetAddressObject == NULL)
+    {
+        return NULL;
+    }
+
+    if(inetSocketAddress_constructor == NULL)
+    {
+        inetSocketAddress_constructor = env->GetMethodID(
+            inetSocketAddressClass, "<init>", "(Ljava/net/InetAddress;I)V");
+        if(inetSocketAddress_constructor == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    int port = 0;
+    switch(addr.ss_family)
+    {
+        case AF_INET6:
+        {
+            sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
+            port = ipv6->sin6_port;
+        }
+        break;
+        case AF_INET:
+        {
+            sockaddr_in *ipv4 = (sockaddr_in*)&addr;
+            port = ipv4->sin_port;
+        }
+        break;
+    };
+
+    jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
+    return inetSocketAddressObject;
 }
 
 jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)

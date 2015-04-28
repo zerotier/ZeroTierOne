@@ -30,6 +30,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
 jobject newArrayList(JNIEnv *env);
 bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object);
 
+jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr);
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
 
 jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc);

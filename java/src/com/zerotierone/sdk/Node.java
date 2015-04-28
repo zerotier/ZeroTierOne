@@ -29,7 +29,7 @@ package com.zerotierone.sdk;
 
 import java.nio.ByteBuffer;
 import java.lang.Long;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 /**
@@ -152,7 +152,7 @@ public class Node {
      */
     public ResultCode processWirePacket(
         long now,
-        InetAddress remoteAddress,
+        InetSocketAddress remoteAddress,
         int linkDesperation,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline) {
@@ -377,7 +377,7 @@ public class Node {
     private native ResultCode processWirePacket(
         long nodeId,
         long now,
-        InetAddress remoteAddress,
+        InetSocketAddress remoteAddress,
         int linkDesperation,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline);

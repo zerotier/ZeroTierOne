@@ -34,7 +34,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
 /*
  * Class:     com_zerotierone_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJLjava/net/InetAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJLjava/net/InetSockAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket
   (JNIEnv *, jobject, jlong, jlong, jobject, jint, jbyteArray, jlongArray);
