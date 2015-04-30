@@ -11,7 +11,7 @@ rm -rf supernodes
 mkdir supernodes
 
 for cid in `docker ps -f 'name=test-supernode-*' -q`; do
-	id=`docker exec $cid cat /var/lib/zerotier-one/identity.public`
+	id=`docker exec $cid cat /var/lib/zerotier-one/identity.secret | cut -d : -f 1-3`
 	ztaddr=`echo $id | cut -d : -f 1`
 	ip=`docker exec $cid ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p'`
 	echo $cid $ztaddr $id $ip
