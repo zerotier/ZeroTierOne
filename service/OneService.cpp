@@ -439,10 +439,10 @@ public:
 						InetAddress from;
 
 						unsigned long plen = mlen; // payload length, modified if there's an IP header
-						data += 5;
-						if (mlen == 4) {
+						data += 5; // skip forward past pseudo-TLS junk and mlen
+						if (plen == 4) {
 							// Hello message, which isn't sent by proxy and would be ignored by client
-						} else if (mlen) {
+						} else if (plen) {
 							// Messages should contain IPv4 or IPv6 source IP address data
 							switch(data[0]) {
 								case 4: // IPv4
@@ -450,6 +450,9 @@ public:
 										from.set((const void *)(data + 1),4,((((unsigned int)data[5]) & 0xff) << 8) | (((unsigned int)data[6]) & 0xff));
 										data += 7; // type + 4 byte IP + 2 byte port
 										plen -= 7;
+									} else {
+										_phy.close(sock);
+										return;
 									}
 									break;
 								case 6: // IPv6
@@ -457,38 +460,38 @@ public:
 										from.set((const void *)(data + 1),16,((((unsigned int)data[17]) & 0xff) << 8) | (((unsigned int)data[18]) & 0xff));
 										data += 19; // type + 16 byte IP + 2 byte port
 										plen -= 19;
+									} else {
+										_phy.close(sock);
+										return;
 									}
 									break;
 								case 0: // none/omitted
+									++data;
+									--plen;
 									break;
-								default: // invalid
+								default: // invalid address type
 									_phy.close(sock);
 									return;
 							}
-							if (!from) { // missing IP header
+
+							ZT1_ResultCode rc = _node->processWirePacket(
+								OSUtils::now(),
+								(const struct sockaddr_storage *)&from, // Phy<> uses sockaddr_storage, so it'll always be that big
+								1, // desperation == 1, TCP tunnel proxy
+								data,
+								plen,
+								&_nextBackgroundTaskDeadline);
+							if (ZT1_ResultCode_isFatal(rc)) {
+								char tmp[256];
+								Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+								Mutex::Lock _l(_termReason_m);
+								_termReason = ONE_UNRECOVERABLE_ERROR;
+								_fatalErrorMessage = tmp;
+								this->terminate();
 								_phy.close(sock);
 								return;
 							}
 						}
-
-						ZT1_ResultCode rc = _node->processWirePacket(
-							OSUtils::now(),
-							(const struct sockaddr_storage *)&from, // Phy<> uses sockaddr_storage, so it'll always be that big
-							1, // desperation == 1, TCP tunnel proxy
-							data,
-							plen,
-							&_nextBackgroundTaskDeadline);
-						if (ZT1_ResultCode_isFatal(rc)) {
-							char tmp[256];
-							Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
-							Mutex::Lock _l(_termReason_m);
-							_termReason = ONE_UNRECOVERABLE_ERROR;
-							_fatalErrorMessage = tmp;
-							this->terminate();
-							_phy.close(sock);
-							return;
-						}
-
 						if (tc->body.length() > (mlen + 5))
 							tc->body = tc->body.substr(mlen + 5);
 						else tc->body = "";
