@@ -285,7 +285,7 @@ namespace {
         if(dataStoreGetClass == NULL)
         {
             LOGE("Couldn't find class for DataStoreGetListener instance");
-            return -1;
+            return -2;
         }
 
         jmethodID dataStoreGetCallbackMethod = env->GetMethodID(
@@ -301,21 +301,40 @@ namespace {
         jstring nameStr = env->NewStringUTF(objectName);
         if(nameStr == NULL)
         {
-            return -3; // out of memory
+            LOGE("Error creating name string object");
+            return -2; // out of memory
         }
 
         jbyteArray bufferObj = env->NewByteArray(bufferSize);
+        if(bufferObj == NULL)
+        {
+            LOGE("Error creating byte[] buffer of size: %lu", bufferSize);
+            return -2;
+        }
 
         jlongArray objectSizeObj = env->NewLongArray(1);
+        if(objectSizeObj == NULL)
+        {
+            LOGE("Error creating long[1] array for actual object size");
+            return -2; // couldn't create long[1] array
+        }
+
+        LOGD("Calling onDataStoreGet(%s, %p, %lu, %p)",
+            objectName, buffer, bufferIndex, objectSizeObj);
 
         long retval = env->CallLongMethod(
             ref->dataStoreGetListener, dataStoreGetCallbackMethod, 
-            nameStr, bufferObj, bufferIndex, objectSizeObj);
+            nameStr, bufferObj, (jlong)bufferIndex, objectSizeObj);
 
-        env->GetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
-        env->GetLongArrayRegion(objectSizeObj, 0, 1, (jlong*)&out_objectSize);
-        env->ReleaseByteArrayElements(bufferObj, (jbyte*)buffer, 0);
-        env->ReleaseLongArrayElements(objectSizeObj, (jlong*)&out_objectSize, 0);
+        if(retval > 0)
+        {
+            env->GetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
+            env->GetLongArrayRegion(objectSizeObj, 0, 1, (jlong*)out_objectSize);
+            env->ReleaseByteArrayElements(bufferObj, (jbyte*)buffer, 0);
+            env->ReleaseLongArrayElements(objectSizeObj, (jlong*)out_objectSize, 0);
+        }
+
+        LOGI("Out Object Size: %lu", *out_objectSize);
 
         return retval;
     }
