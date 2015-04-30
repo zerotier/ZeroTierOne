@@ -71,13 +71,13 @@ static std::string _jsonEnumerate(const ZT1_MulticastGroup *mg,unsigned int coun
 		if (i > 0)
 			buf.push_back(',');
 		Utils::snprintf(tmp,sizeof(tmp),"\"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\\/%.8lx\"",
-			(unsigned int)((mg->mac >> 40) & 0xff),
-			(unsigned int)((mg->mac >> 32) & 0xff),
-			(unsigned int)((mg->mac >> 24) & 0xff),
-			(unsigned int)((mg->mac >> 16) & 0xff),
-			(unsigned int)((mg->mac >> 8) & 0xff),
-			(unsigned int)(mg->mac & 0xff),
-			mg->adi);
+			(unsigned int)((mg[i].mac >> 40) & 0xff),
+			(unsigned int)((mg[i].mac >> 32) & 0xff),
+			(unsigned int)((mg[i].mac >> 24) & 0xff),
+			(unsigned int)((mg[i].mac >> 16) & 0xff),
+			(unsigned int)((mg[i].mac >> 8) & 0xff),
+			(unsigned int)(mg[i].mac & 0xff),
+			(unsigned long)(mg[i].adi));
 		buf.append(tmp);
 	}
 	buf.push_back(']');
@@ -92,7 +92,7 @@ static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int
 		if (i > 0)
 			buf.push_back(',');
 		buf.push_back('"');
-		buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(ss)->toString()));
+		buf.append(_jsonEscape(reinterpret_cast<const InetAddress *>(&(ss[i]))->toString()));
 		buf.push_back('"');
 	}
 	buf.push_back(']');
