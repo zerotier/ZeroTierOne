@@ -42,6 +42,13 @@ public enum Event {
 	EVENT_OFFLINE,
 
     /**
+     * Node is online -- at least one upstream node appears reachable
+     *
+     * Meta-data: none
+     */
+    EVENT_ONLINE,
+
+    /**
      * Node is shutting down
      * 
      * <p>This is generated within Node's destructor when it is being shut down.

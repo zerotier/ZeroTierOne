@@ -53,6 +53,19 @@ namespace {
             , configListener(NULL)
         {}
 
+        ~JniRef()
+        {
+            JNIEnv *env = NULL;
+            jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+
+            env->DeleteGlobalRef(dataStoreGetListener);
+            env->DeleteGlobalRef(dataStorePutListener);
+            env->DeleteGlobalRef(packetSender);
+            env->DeleteGlobalRef(eventListener);
+            env->DeleteGlobalRef(frameListener);
+            env->DeleteGlobalRef(configListener);
+        }
+
         uint64_t id;
 
         JavaVM *jvm;
@@ -250,7 +263,7 @@ namespace {
             {
                 const char* message = (const char*)data;
                 jstring messageStr = env->NewStringUTF(message);
-                env->CallVoidMethod(ref->eventListener, onTraceMethod);
+                env->CallVoidMethod(ref->eventListener, onTraceMethod, messageStr);
             }
         }
         break;
@@ -356,12 +369,12 @@ namespace {
             // set operation
             jbyteArray bufferObj = env->NewByteArray(bufferSize);
             env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
-            bool secure = secure != 0;
+            bool bsecure = secure != 0;
 
 
             return env->CallIntMethod(ref->dataStorePutListener,
                 dataStorePutCallbackMethod,
-                nameStr, bufferObj, secure);
+                nameStr, bufferObj, bsecure);
         }
     }
 
@@ -439,11 +452,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
         return NULL; // exception already thrown
     }
 
-    ref->dataStoreGetListener = env->GetObjectField(obj, fid);
-    if(ref->dataStoreGetListener == NULL)
+    jobject tmp = env->GetObjectField(obj, fid);
+    if(tmp == NULL)
     {
         return NULL;
     }
+    ref->dataStoreGetListener = env->NewGlobalRef(tmp);
 
     fid = env->GetFieldID(
         cls, "putListener", "Lcom/zerotierone/sdk/DataStorePutListener;");
@@ -453,11 +467,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
         return NULL; // exception already thrown
     }
 
-    ref->dataStorePutListener = env->GetObjectField(obj, fid);
-    if(ref->dataStorePutListener == NULL)
+    tmp = env->GetObjectField(obj, fid);
+    if(tmp == NULL)
     {
         return NULL;
     }
+    ref->dataStorePutListener = env->NewGlobalRef(tmp);
 
     fid = env->GetFieldID(
         cls, "sender", "Lcom/zerotierone/sdk/PacketSender;");
@@ -466,11 +481,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
         return NULL; // exception already thrown
     }
 
-    ref->packetSender = env->GetObjectField(obj, fid);
-    if(ref->packetSender == NULL)
+    tmp = env->GetObjectField(obj, fid);
+    if(tmp == NULL)
     {
         return NULL;
     }
+    ref->packetSender = env->NewGlobalRef(tmp);
 
     fid = env->GetFieldID(
         cls, "frameListener", "Lcom/zerotierone/sdk/VirtualNetworkFrameListener;");
@@ -479,11 +495,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
         return NULL; // exception already thrown
     }
 
-    ref->frameListener = env->GetObjectField(obj, fid);
-    if(ref->frameListener = NULL)
+    tmp = env->GetObjectField(obj, fid);
+    if(tmp == NULL)
     {
         return NULL;
     }
+    ref->frameListener = env->NewGlobalRef(tmp);
 
     fid = env->GetFieldID(
         cls, "configListener", "Lcom/zerotierone/sdk/VirtualNetworkConfigListener;");
@@ -492,11 +509,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
         return NULL; // exception already thrown
     }
 
-    ref->configListener = env->GetObjectField(obj, fid);
-    if(ref->configListener == NULL)
+    tmp = env->GetObjectField(obj, fid);
+    if(tmp == NULL)
     {
         return NULL;
     }
+    ref->configListener = env->NewGlobalRef(tmp);
 
     fid = env->GetFieldID(
         cls, "eventListener", "Lcom/zerotierone/sdk/EventListener;");
@@ -505,11 +523,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
         return NULL;
     }
 
-    ref->eventListener = env->GetObjectField(obj, fid);
-    if(ref->eventListener == NULL)
+    tmp = env->GetObjectField(obj, fid);
+    if(tmp == NULL)
     {
         return NULL;
     }
+    ref->eventListener = env->NewGlobalRef(tmp);
 
     ZT1_ResultCode rc = ZT1_Node_new(
         &node,
@@ -722,7 +741,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
         memcpy(ipv6.sin6_addr.s6_addr, addr, 16);
         memcpy(&remoteAddress, &ipv6, sizeof(sockaddr_in6));
     }
-    else if(addrSize = 4)
+    else if(addrSize == 4)
     {
         // IPV4 address
         sockaddr_in ipv4 = {};
@@ -759,7 +778,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
     env->ReleaseByteArrayElements(addressArray, addr, 0);
     env->ReleaseByteArrayElements(in_packetData, packetData, 0);
 
-    return createResultObject(env, ZT1_RESULT_OK);
+    return createResultObject(env, rc);
 }
 
 /*

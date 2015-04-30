@@ -111,11 +111,17 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
     case ZT1_EVENT_OFFLINE:
         fieldName = "EVENT_OFFLINE";
         break;
+    case ZT1_EVENT_ONLINE:
+        fieldName = "EVENT_ONLINE";
+        break;
     case ZT1_EVENT_DOWN:
         fieldName = "EVENT_DOWN";
         break;
     case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
         fieldName = "EVENT_FATAL_ERROR_IDENTITY_COLLISION";
+        break;
+    case ZT1_EVENT_SAW_MORE_RECENT_VERSION:
+        fieldName = "EVENT_SAW_MORE_RECENT_VERSION";
         break;
     case ZT1_EVENT_AUTHENTICATION_FAILURE:
         fieldName = "EVENT_AUTHENTICATION_FAILURE";
@@ -332,7 +338,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     jclass inetSocketAddressClass = NULL;
     jmethodID inetSocketAddress_constructor = NULL;
 
-    inetSocketAddressClass == env->FindClass("java/net/InetSocketAddress");
+    inetSocketAddressClass = env->FindClass("java/net/InetSocketAddress");
     if(inetSocketAddressClass == NULL)
     {
         return NULL;
@@ -631,155 +637,124 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     jfieldID multicastSubscriptionsField = NULL;
     jfieldID assignedAddressesField = NULL;
 
+    vnetConfigClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
     {
-        vnetConfigClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfig");
-        if(vnetConfigClass == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Couldn't find com.zerotierone.sdk.VirtualNetworkConfig");
+        return NULL;
     }
 
+    vnetConfig_constructor = env->GetMethodID(
+        vnetConfigClass, "<init>", "()V");
     if(vnetConfig_constructor == NULL)
     {
-        jmethodID vnetConfig_constructor = env->GetMethodID(
-            vnetConfigClass, "<init>", "()V");
-        if(vnetConfig_constructor == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Couldn't find VirtualNetworkConfig Constructor");
+        return NULL;
     }
 
     jobject vnetConfigObj = env->NewObject(vnetConfigClass, vnetConfig_constructor);
     if(vnetConfigObj == NULL)
     {
+        LOGE("Error creating new VirtualNetworkConfig object");
         return NULL;
     }
 
+    nwidField = env->GetFieldID(vnetConfigClass, "nwid", "J");
     if(nwidField == NULL)
     {
-        nwidField = env->GetFieldID(vnetConfigClass, "nwid", "J");
-        if(nwidField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting nwid field");
+        return NULL;
     }
 
+    macField = env->GetFieldID(vnetConfigClass, "mac", "J");
     if(macField == NULL)
     {
-        macField = env->GetFieldID(vnetConfigClass, "mac", "J");
-        if(macField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting mac field");
+        return NULL;
     }
 
+    nameField = env->GetFieldID(vnetConfigClass, "name", "Ljava/lang/String;");
     if(nameField == NULL)
     {
-        nameField = env->GetFieldID(vnetConfigClass, "name", "Ljava/lang/String;");
-        if(nameField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting name field");
+        return NULL;
     }
 
+    statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
     if(statusField == NULL)
     {
-        statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworStatus;");
-        if(statusField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting status field");
+        return NULL;
     }
 
+    typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
     if(typeField == NULL)
     {
-        typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
-        if(typeField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting type field");
+        return NULL;
     }
 
+    mtuField = env->GetFieldID(vnetConfigClass, "mtu", "I");
     if(mtuField == NULL)
     {
-        mtuField = env->GetFieldID(vnetConfigClass, "mtu", "I");
-        if(mtuField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting mtu field");
+        return NULL;
     }
 
+    dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Z");
     if(dhcpField == NULL)
     {
-        dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Z");
-        if(dhcpField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting dhcp field");
+        return NULL;
     }
 
+    bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Z");
     if(bridgeField == NULL)
     {
-        bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Z");
-        if(bridgeField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting bridge field");
+        return NULL;
     }
 
+    broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Z");
     if(broadcastEnabledField == NULL)
     {
-        broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Z");
-        if(broadcastEnabledField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting broadcastEnabled field");
+        return NULL;
     }
 
+    portErrorField = env->GetFieldID(vnetConfigClass, "portError", "I");
     if(portErrorField == NULL)
     {
-        portErrorField == env->GetFieldID(vnetConfigClass, "portError", "I");
-        if(portErrorField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting portError field");
+        return NULL;
     }
 
+    enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Z");
     if(enabledField == NULL)
     {
-        enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Z");
-        if(enabledField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting enabled field");
+        return NULL;
     }
 
+    netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "J");
     if(netconfRevisionField == NULL)
     {
-        netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "J");
-        if(netconfRevisionField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting netconfRevision field");
+        return NULL;
     }
 
+    multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
     if(multicastSubscriptionsField == NULL)
     {
-        multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
-        if(multicastSubscriptionsField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting multicastSubscriptions field");
+        return NULL;
     }
 
+    assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
     if(assignedAddressesField == NULL)
     {
-        assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
-        if(assignedAddressesField == NULL)
-        {
-            return NULL;
-        }
+        LOGE("Error getting assignedAddresses field");
+        return NULL;
     }
 
     env->SetLongField(vnetConfigObj, nwidField, vnetConfig.nwid);
@@ -865,7 +840,7 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     jfieldID featureFlagsField = NULL;
 
     majorField = env->GetFieldID(versionClass, "major", "I");
-    if(majorField = NULL)
+    if(majorField == NULL)
     {
         return NULL;
     }
@@ -892,6 +867,8 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     env->SetIntField(versionObj, minorField, (jint)minor);
     env->SetIntField(versionObj, revisionField, (jint)rev);
     env->SetLongField(versionObj, featureFlagsField, (jlong)featureFlags); 
+
+    return versionObj;
 }
 
 #ifdef __cplusplus
