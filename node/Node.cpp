@@ -59,7 +59,8 @@ Node::Node(
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 	ZT1_EventCallback eventCallback,
 	const char *overrideRootTopology) :
-	RR(new RuntimeEnvironment(this)),
+	_RR(this),
+	RR(&_RR),
 	_uPtr(uptr),
 	_dataStoreGetFunction(dataStoreGetFunction),
 	_dataStorePutFunction(dataStorePutFunction),
@@ -86,18 +87,17 @@ Node::Node(
 		TRACE("identity.secret not found, generating...");
 		RR->identity.generate();
 		idtmp = RR->identity.toString(true);
-		if (!dataStorePut("identity.secret",idtmp,true)) {
-			delete RR;
+		if (!dataStorePut("identity.secret",idtmp,true))
 			throw std::runtime_error("unable to write identity.secret");
-		}
-		idtmp = RR->identity.toString(false);
-		if (!dataStorePut("identity.public",idtmp,false)) {
-			delete RR;
-			throw std::runtime_error("unable to write identity.public");
-		}
 	}
 	RR->publicIdentityStr = RR->identity.toString(false);
 	RR->secretIdentityStr = RR->identity.toString(true);
+
+	idtmp = dataStoreGet("identity.public");
+	if (idtmp != RR->publicIdentityStr) {
+		if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
+			throw std::runtime_error("unable to write identity.public");
+	}
 
 	try {
 		RR->prng = new CMWC4096();
@@ -113,7 +113,6 @@ Node::Node(
 		delete RR->mc;
 		delete RR->sw;
 		delete RR->prng;
-		delete RR;
 		throw;
 	}
 
@@ -138,14 +137,13 @@ Node::Node(
 Node::~Node()
 {
 	Mutex::Lock _l(_networks_m);
-	_networks.clear(); // delete these before we delete RR
+	_networks.clear();
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->antiRec;
 	delete RR->mc;
 	delete RR->sw;
 	delete RR->prng;
-	delete RR;
 }
 
 ZT1_ResultCode Node::processWirePacket(

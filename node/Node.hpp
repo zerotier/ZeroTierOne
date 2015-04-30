@@ -38,6 +38,7 @@
 
 #include "../include/ZeroTierOne.h"
 
+#include "RuntimeEnvironment.hpp"
 #include "InetAddress.hpp"
 #include "Mutex.hpp"
 #include "MAC.hpp"
@@ -51,8 +52,6 @@
 #endif
 
 namespace ZeroTier {
-
-class RuntimeEnvironment;
 
 /**
  * Implementation of Node object as defined in CAPI
@@ -229,6 +228,7 @@ public:
 #endif
 
 private:
+	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
 
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
