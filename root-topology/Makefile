@@ -1,5 +1,5 @@
 all:	FORCE
-	g++ -o mktopology mktopology.cpp ../node/Utils.cpp ../node/Identity.cpp ../node/C25519.cpp ../node/Salsa20.cpp ../node/Dictionary.cpp ../node/SHA512.cpp
+	g++ -o mktopology mktopology.cpp ../osdep/OSUtils.cpp ../node/Utils.cpp ../node/InetAddress.cpp ../node/Identity.cpp ../node/C25519.cpp ../node/Salsa20.cpp ../node/Dictionary.cpp ../node/SHA512.cpp
 	gcc -o bin2c bin2c.c
 
 official: FORCE

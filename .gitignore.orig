@@ -36,11 +36,24 @@
 /ZeroTier One.dmg
 /root-topology/bin2c
 /root-topology/mktopology
-/root-topology/test/supernodes
-/root-topology/test/test-root-topology
+/root-topology/*.secret
+<<<<<<< HEAD
+/testnet/local-testnet/n????
+/testnet/local-testnet/*/peers.persist
+/testnet/local-testnet/*/authtoken.secret
+/testnet/local-testnet/*/*.log
+/testnet/local-testnet/*/*.old
+/testnet/local-testnet/*/root-topology
+/testnet/local-testnet/*/local.conf
+/testnet/local-testnet/*/networks.d
+/netconf/netconf.db
 java/obj/
 java/libs/
 java/bin/
 java/classes/
 java/doc/
 windows/ZeroTierOne/Debug/
+=======
+/root-topology/test/supernodes
+/root-topology/test/test-root-topology
+>>>>>>> adamierymenko-dev

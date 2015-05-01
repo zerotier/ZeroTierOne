@@ -48,6 +48,8 @@
 using namespace ZeroTier;
 
 /*
+ * ZeroTier TCP Proxy Server
+ *
  * This implements a simple packet encapsulation that is designed to look like
  * a TLS connection. It's not a TLS connection, but it sends TLS format record
  * headers. It could be extended in the future to implement a fake TLS
@@ -60,21 +62,26 @@ using namespace ZeroTier;
  *   <[2] payload length> - 16-bit length of payload in bytes
  *   <[...] payload> - Message payload
  *
- * The primary purpose of TCP sockets is to work over ports like HTTPS(443),
- * allowing users behind particularly fascist firewalls to at least reach
- * ZeroTier's supernodes. UDP is the preferred method of communication as
- * encapsulating L2 and L3 protocols over TCP is inherently inefficient
- * due to double-ACKs. So TCP is only used as a fallback.
+ * TCP is inherently inefficient for encapsulating Ethernet, since TCP and TCP
+ * like protocols over TCP lead to double-ACKs. So this transport is only used
+ * to enable access when UDP or other datagram protocols are not available.
  *
- * New clients send a HELLO message consisting of a 4-byte message (too small
- * for a ZT packet) containing:
+ * Clients send a greeting, which is a four-byte message that contains:
  *   <[1] ZeroTier major version>
  *   <[1] minor version>
  *   <[2] revision>
  *
- * Clients that have send a HELLO and that have a new enough version prepend
- * each payload with the remote IP the message is destined for. This is in
- * the same format as the IP portion of ZeroTier HELLO packets.
+ * If a client has sent a greeting, it uses the new version of this protocol
+ * in which every encapsulated ZT packet is prepended by an IP address where
+ * it should be forwarded (or where it came from for replies). This causes
+ * this proxy to act as a remote UDP socket similar to a socks proxy, which
+ * will allow us to move this function off the supernodes and onto dedicated
+ * proxy nodes.
+ *
+ * Older ZT clients that do not send this message get their packets relayed
+ * to/from 127.0.0.1:9993, which will allow them to talk to and relay via
+ * the ZT node on the same machine as the proxy. We'll only support this for
+ * as long as such nodes appear to be in the wild.
  */
 
 struct TcpProxyService;
