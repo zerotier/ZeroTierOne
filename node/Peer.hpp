@@ -311,15 +311,14 @@ public:
 	 * Reset paths within a given scope
 	 *
 	 * For fixed paths in this scope, a packet is sent. Non-fixed paths in this
-	 * scope are forgotten. If there are no paths remaining, a message is sent
-	 * indirectly to reestablish connectivity if we're actively exchanging
-	 * data with this peer (alive).
+	 * scope are forgotten.
 	 *
 	 * @param RR Runtime environment
 	 * @param scope IP scope of paths to reset
 	 * @param now Current time
+	 * @return True if at least one path was forgotten
 	 */
-	void resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now);
+	bool resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key

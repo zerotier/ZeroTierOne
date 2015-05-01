@@ -261,7 +261,7 @@ void Peer::clearPaths(bool fixedToo)
 	}
 }
 
-void Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now)
+bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now)
 {
 	unsigned int np = _numPaths;
 	unsigned int x = 0;
@@ -278,13 +278,7 @@ void Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 		++x;
 	}
 	_numPaths = y;
-
-	if ((y < np)&&(alive(now))) {
-		// Try to re-establish direct connectivity to this peer if it's alive
-		// and we have forgotten paths to it.
-		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_NOP);
-		RR->sw->send(outp,true);
-	}
+	return (y < np);
 }
 
 void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6,unsigned int maxDesperation) const

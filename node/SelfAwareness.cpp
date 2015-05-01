@@ -46,7 +46,15 @@ public:
 		RR(renv),
 		_now(now),
 		_scope(scope) {}
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { p->resetWithinScope(RR,_scope,_now); }
+
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	{
+		if (p->resetWithinScope(RR,_scope,_now))
+			peersReset.push_back(p);
+	}
+
+	std::vector< SharedPtr<Peer> > peersReset;
+
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
@@ -84,8 +92,27 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 			} else if (lastPhy != myPhysicalAddress) {
 				TRACE("learned physical address %s for scope %u from reporter %s(%s) (replaced %s, resetting within scope)",myPhysicalAddress.toString().c_str(),scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),lastPhy.toString().c_str());
 				lastPhy = myPhysicalAddress;
-				_ResetWithinScope rset(RR,RR->node->now(),(InetAddress::IpScope)scope);
+				uint64_t now = RR->node->now();
+
+				_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
 				RR->topology->eachPeer<_ResetWithinScope &>(rset);
+
+				// For all peers for whom we forgot an address, send a packet indirectly if
+				// they are still considered alive so that we will re-establish direct links.
+				SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+				if (sn) {
+					Path *snp = sn->getBestPath(now);
+					if (snp) {
+						for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
+							if ((*p)->alive(now)) {
+								TRACE("sending indirect NOP to %s via %s(%s) to re-establish link",(*p)->address().toString().c_str(),sn->address().toString().c_str(),snp->address().toString().c_str());
+								Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
+								outp.armor((*p)->key(),true);
+								snp->send(RR,outp.data(),outp.size(),now);
+							}
+						}
+					}
+				}
 			}
 		}
 	}
