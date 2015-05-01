@@ -364,13 +364,13 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         case AF_INET6:
         {
             sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
-            port = ipv6->sin6_port;
+            port = ntohs(ipv6->sin6_port);
         }
         break;
         case AF_INET:
         {
             sockaddr_in *ipv4 = (sockaddr_in*)&addr;
-            port = ipv4->sin_port;
+            port = ntohs(ipv4->sin_port);
         }
         break;
     };
