@@ -44,3 +44,5 @@ java/bin/
 java/classes/
 java/doc/
 windows/ZeroTierOne/Debug/
+java/build_win64/
+java/build_win32/

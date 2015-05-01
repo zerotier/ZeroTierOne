@@ -1,5 +1,6 @@
 #ifndef ZT1_jniutils_h_
 #define ZT1_jniutils_h_
+#include <stdio.h>
 #include <jni.h>
 #include <ZeroTierOne.h>
 
@@ -15,9 +16,9 @@ extern "C" {
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__))
 #define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__))
 #else
-#define LOGI(...)
-#define LOGD(...)
-#define LOGE(...)
+#define LOGI(...) fprintf(stdout, __VA_ARGS__)
+#define LOGD(...) fprintf(stdout, __VA_ARGS__)
+#define LOGE(...) fprintf(stdout, __VA_ARGS__)
 #endif
 
 jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);

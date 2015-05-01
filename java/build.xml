@@ -1,15 +1,20 @@
 <project default="build" name="ZeroTierOneSDK">
     <property environment="env"/>
 
+    <condition property="isWindows">
+      <os family="windows"/>
+    </condition>
+
     <target name="clean">
         <delete dir="bin" failonerror="false"/>
         <delete dir="classes" failonerror="false"/>
+        <delete dir="cmakebuild" failonerror="false"/>
         <delete dir="libs" failonerror="false"/>
         <delete dir="obj" failonerror="false"/>
     </target>
 
-    <target name="build">
-        <echo message="os.name          = ${os.name}"/>
+    <target name="build_java">
+      <echo message="os.name          = ${os.name}"/>
         <echo message="os.arch          = ${os.arch}"/>
         <echo message="ant.java.version = ${ant.java.version}"/>
         <echo message="java.version     = ${java.version}"/>
@@ -19,6 +24,9 @@
                destdir="classes"
                classpath="${env.ANDROID_PLATFORM}/android.jar"
                includeantruntime="false"/>
+    </target>
+
+    <target name="build_android">
         <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
             <arg value="ZT1=${user.dir}/../"/>
         </exec>
@@ -34,6 +42,34 @@
         <copy file="libs/x86/libZeroTierOneJNI.so"
               tofile="${user.dir}/classes/lib/x86/libZeroTierOneJNI.so"
               overwrite="true"/>
+    </target>
+
+
+    <target name="windows" if="isWindows">
+      <mkdir dir="build_win32"/>
+      <exec dir="build_win32/" executable="cmake" failonerror="true">
+        <arg line=".. -G&quot;Visual Studio 11 2012&quot; -DCMAKE_BUILD_TYPE=Release"/>
+      </exec>
+      <exec dir="build_win32/" executable="cmake" failonerror="true">
+        <arg line="--build . --config Release"/>
+      </exec>
+      <copy file="build_win32/Release/ZeroTierOneJNI.dll"
+            tofile="classes/lib/ZeroTierOneJNI_win32.dll"
+            overwrite="true"/>
+
+      <mkdir dir="build_win64"/>
+      <exec dir="build_win64/" executable="cmake" failonerror="true">
+        <arg line=".. -G&quot;Visual Studio 11 2012 Win64&quot; -DCMAKE_BUILD_TYPE=Release"/>
+      </exec>
+      <exec dir="build_win64/" executable="cmake" failonerror="true">
+        <arg line="--build . --config Release"/>
+      </exec>
+      <copy file="build_win64/Release/ZeroTierOneJNI.dll"
+            tofile="classes/lib/ZeroTierOneJNI_win64.dll"
+            overwrite="true"/>
+    </target>
+
+    <target name="build" depends="build_java,build_android,windows">    
         <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 
