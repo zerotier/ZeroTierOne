@@ -24,36 +24,22 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-package com.zerotierone.sdk;
 
-public interface DataStorePutListener {
+package com.zerotier.sdk;
+
+public enum PeerRole {
+    /**
+     * An ordinary node
+     */
+    PEER_ROLE_LEAF,
 
     /**
-     * Function to store an object in the data store
-     *
-     * <p>If secure is true, the file should be set readable and writable only
-     * to the user running ZeroTier One. What this means is platform-specific.</p>
-     *
-     * <p>Name semantics are the same as {@link DataStoreGetListener}. This must return 
-     * zero on success. You can return any OS-specific error code on failure, as these
-     * may be visible in logs or error messages and might aid in debugging.</p>
-     *
-     * @param name Object name
-     * @param buffer data to store
-     * @param secure set to user read/write only.
-     * @return 0 on success.
+     * Locally federated hub
      */
-    public int onDataStorePut(
-        String name,
-        byte[] buffer,
-        boolean secure);
+    PEER_ROLE_HUB,
 
     /**
-     * Function to delete an object from the data store
-     * 
-     * @param name Object name
-     * @return 0 on success.
+     * planetary supernode
      */
-    public int onDelete(
-        String name);
+    PEER_ROLE_SUPERNODE
 }

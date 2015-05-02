@@ -25,50 +25,13 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
-/**
- * Function return code: OK (0) or error results
- *
- * <p>Use {@link ResultCode#isFatal) to check for a fatal error. If a fatal error
- * occurs, the node should be considered to not be working correctly. These
- * indicate serious problems like an inaccessible data store or a compile
- * problem.</p>
- */
-public enum ResultCode {
-    /**
-     * Operation completed normally
-     */
-	RESULT_OK(0),
-
-    // Fatal errors (> 0, < 1000)
-    /**
-     * Ran out of memory
-     */
-	RESULT_FATAL_ERROR_OUT_OF_MEMORY(1),
-
-    /**
-     * Data store is not writable or has failed
-     */
-	RESULT_FATAL_ERROR_DATA_STORE_FAILED(2),
-
-    /**
-     * Internal error (e.g. unexpected exception indicating bug or build problem)
-     */
-	RESULT_FATAL_ERROR_INTERNAL(3),
-
-    // non-fatal errors
-
-    /**
-     * Network ID not valid
-     */
-	RESULT_ERROR_NETWORK_NOT_FOUND(1000);
-	
-	private final int id;
-    ResultCode(int id) { this.id = id; }
-    public int getValue() { return id; }
-
-    public boolean isFatal(int id) {
-    	return (id > 0 && id < 1000);
-    }
+public final class Version {
+    private Version() {}
+    
+	public int major = 0;
+	public int minor = 0;
+	public int revision = 0;
+	public long featureFlags = 0;
 }

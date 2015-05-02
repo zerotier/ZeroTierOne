@@ -25,7 +25,7 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
 public enum Event {
     /**

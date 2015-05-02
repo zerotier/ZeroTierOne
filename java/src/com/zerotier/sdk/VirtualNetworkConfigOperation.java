@@ -24,26 +24,26 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
-import java.net.InetSocketAddress;
-
-
-public interface PacketSender {
+public enum VirtualNetworkConfigOperation {
     /**
-     * Function to send a ZeroTier packet out over the wire
-     *
-     * <p>The function must return zero on success and may return any error code
-     * on failure. Note that success does not (of course) guarantee packet
-     * delivery. It only means that the packet appears to have been sent.</p>
-     *
-     * @param addr {@link InetSocketAddress} to send to
-     * @param linkDesperation
-     * @param packetData data to send
-     * @return 0 on success, any error code on failure.
+     * Network is coming up (either for the first time or after service restart)
      */
-    public int onSendPacketRequested(
-            InetSocketAddress addr,
-            int linkDesperation,
-            byte[] packetData);
+    VIRTUAL_NETWORK_CONFIG_OPERATION_UP,
+
+    /**
+     * Network configuration has been updated
+     */
+    VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,
+
+    /**
+     * Network is going down (not permanently)
+     */
+    VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,
+
+    /**
+     * Network is going down permanently (leave/delete)
+     */
+    VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY
 }

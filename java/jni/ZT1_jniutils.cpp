@@ -15,7 +15,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     
     jobject resultObject = NULL;
 
-    resultClass = cache.findClass("com/zerotierone/sdk/ResultCode");
+    resultClass = cache.findClass("com/zerotier/sdk/ResultCode");
     if(resultClass == NULL)
     {
         return NULL; // exception thrown
@@ -42,7 +42,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
         break;
     }
 
-    jfieldID enumField = cache.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotierone/sdk/ResultCode;");
+    jfieldID enumField = cache.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotier/sdk/ResultCode;");
 
     resultObject = env->GetStaticObjectField(resultClass, enumField);
 
@@ -54,7 +54,7 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
 {
     jobject statusObject = NULL;
 
-    jclass statusClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkStatus");
+    jclass statusClass = cache.findClass("com/zerotier/sdk/VirtualNetworkStatus");
     if(statusClass == NULL)
     {
         return NULL; // exception thrown
@@ -83,7 +83,7 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
         break;
     }
 
-    jfieldID enumField = cache.findStaticField(statusClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
+    jfieldID enumField = cache.findStaticField(statusClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkStatus;");
 
     statusObject = env->GetStaticObjectField(statusClass, enumField);
 
@@ -95,7 +95,7 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
     jclass eventClass = NULL;
     jobject eventObject = NULL;
 
-    eventClass = cache.findClass("com/zerotierone/sdk/Event");
+    eventClass = cache.findClass("com/zerotier/sdk/Event");
     if(eventClass == NULL)
     {
         return NULL;
@@ -133,7 +133,7 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
         break;
     }
 
-    jfieldID enumField = cache.findStaticField(eventClass, fieldName.c_str(), "Lcom/zerotierone/sdk/Event;");
+    jfieldID enumField = cache.findStaticField(eventClass, fieldName.c_str(), "Lcom/zerotier/sdk/Event;");
 
     eventObject = env->GetStaticObjectField(eventClass, enumField);
 
@@ -145,7 +145,7 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
     jclass peerRoleClass = NULL;
     jobject peerRoleObject = NULL;
 
-    peerRoleClass = cache.findClass("com/zerotierone/sdk/PeerRole");
+    peerRoleClass = cache.findClass("com/zerotier/sdk/PeerRole");
     if(peerRoleClass == NULL)
     {
         return NULL;
@@ -165,7 +165,7 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
         break;
     }
 
-    jfieldID enumField = cache.findStaticField(peerRoleClass, fieldName.c_str(), "Lcom/zerotierone/sdk/PeerRole;");
+    jfieldID enumField = cache.findStaticField(peerRoleClass, fieldName.c_str(), "Lcom/zerotier/sdk/PeerRole;");
 
     peerRoleObject = env->GetStaticObjectField(peerRoleClass, enumField);
 
@@ -177,7 +177,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
     jclass vntypeClass = NULL;
     jobject vntypeObject = NULL;
 
-    vntypeClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkType");
+    vntypeClass = cache.findClass("com/zerotier/sdk/VirtualNetworkType");
     if(vntypeClass == NULL)
     {
         return NULL;
@@ -194,7 +194,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
         break;
     }
 
-    jfieldID enumField = cache.findStaticField(vntypeClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkType;");
+    jfieldID enumField = cache.findStaticField(vntypeClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkType;");
     vntypeObject = env->GetStaticObjectField(vntypeClass, enumField);
     return vntypeObject;
 }
@@ -204,7 +204,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
     jclass vnetConfigOpClass = NULL;
     jobject vnetConfigOpObject = NULL;
 
-    vnetConfigOpClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkConfigOperation");
+    vnetConfigOpClass = cache.findClass("com/zerotier/sdk/VirtualNetworkConfigOperation");
     if(vnetConfigOpClass == NULL)
     {
         return NULL;
@@ -227,7 +227,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
         break;
     }
 
-    jfieldID enumField = cache.findStaticField(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkConfigOperation;");
+    jfieldID enumField = cache.findStaticField(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkConfigOperation;");
     vnetConfigOpObject = env->GetStaticObjectField(vnetConfigOpClass, enumField);
     return vnetConfigOpObject;
 }
@@ -386,7 +386,7 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
     jfieldID macField = NULL;
     jfieldID adiField = NULL;
 
-    multicastGroupClass = cache.findClass("com/zerotierone/sdk/MulticastGroup");
+    multicastGroupClass = cache.findClass("com/zerotier/sdk/MulticastGroup");
     if(multicastGroupClass == NULL)
     {
         return NULL;
@@ -442,7 +442,7 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp)
 
     jmethodID ppp_constructor = NULL;
 
-    pppClass = cache.findClass("com/zerotierone/sdk/PeerPhysicalPath");
+    pppClass = cache.findClass("com/zerotier/sdk/PeerPhysicalPath");
     if(pppClass == NULL)
     {
         return NULL;
@@ -524,7 +524,7 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
 
     jmethodID peer_constructor = NULL;
 
-    peerClass = cache.findClass("com/zerotierone/sdk/Peer");
+    peerClass = cache.findClass("com/zerotier/sdk/Peer");
     if(peerClass == NULL)
     {
         return NULL;
@@ -572,7 +572,7 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
         return NULL;
     }
 
-    roleField = cache.findField(peerClass, "role", "Lcom/zerotierone/sdk/PeerRole;");
+    roleField = cache.findField(peerClass, "role", "Lcom/zerotier/sdk/PeerRole;");
     if(roleField == NULL)
     {
         return NULL;
@@ -636,10 +636,10 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     jfieldID multicastSubscriptionsField = NULL;
     jfieldID assignedAddressesField = NULL;
 
-    vnetConfigClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkConfig");
+    vnetConfigClass = cache.findClass("com/zerotier/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
     {
-        LOGE("Couldn't find com.zerotierone.sdk.VirtualNetworkConfig");
+        LOGE("Couldn't find com.zerotier.sdk.VirtualNetworkConfig");
         return NULL;
     }
 
@@ -679,14 +679,14 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
         return NULL;
     }
 
-    statusField = cache.findField(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
+    statusField = cache.findField(vnetConfigClass, "status", "Lcom/zerotier/sdk/VirtualNetworkStatus;");
     if(statusField == NULL)
     {
         LOGE("Error getting status field");
         return NULL;
     }
 
-    typeField = cache.findField(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
+    typeField = cache.findField(vnetConfigClass, "type", "Lcom/zerotier/sdk/VirtualNetworkType;");
     if(typeField == NULL)
     {
         LOGE("Error getting type field");
@@ -809,11 +809,11 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
 
 jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags)
 {
-   // create a com.zerotierone.sdk.Version object
+   // create a com.zerotier.sdk.Version object
     jclass versionClass = NULL;
     jmethodID versionConstructor = NULL;
 
-    versionClass = cache.findClass("com/zerotierone/sdk/Version");
+    versionClass = cache.findClass("com/zerotier/sdk/Version");
     if(versionClass == NULL)
     {
         return NULL;

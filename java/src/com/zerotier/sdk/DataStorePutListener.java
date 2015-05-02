@@ -24,13 +24,36 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+package com.zerotier.sdk;
 
-package com.zerotierone.sdk;
+public interface DataStorePutListener {
 
-import java.lang.RuntimeException;
+    /**
+     * Function to store an object in the data store
+     *
+     * <p>If secure is true, the file should be set readable and writable only
+     * to the user running ZeroTier One. What this means is platform-specific.</p>
+     *
+     * <p>Name semantics are the same as {@link DataStoreGetListener}. This must return 
+     * zero on success. You can return any OS-specific error code on failure, as these
+     * may be visible in logs or error messages and might aid in debugging.</p>
+     *
+     * @param name Object name
+     * @param buffer data to store
+     * @param secure set to user read/write only.
+     * @return 0 on success.
+     */
+    public int onDataStorePut(
+        String name,
+        byte[] buffer,
+        boolean secure);
 
-class NodeException extends RuntimeException {
-    NodeException(String message) {
-        super(message);
-    }
+    /**
+     * Function to delete an object from the data store
+     * 
+     * @param name Object name
+     * @return 0 on success.
+     */
+    public int onDelete(
+        String name);
 }

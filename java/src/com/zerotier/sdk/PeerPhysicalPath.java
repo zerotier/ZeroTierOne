@@ -24,16 +24,63 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-package com.zerotierone.sdk;
 
-public enum VirtualNetworkType {
-    /**
-     * Private networks are authorized via certificates of membership
-     */
-    NETWORK_TYPE_PRIVATE,
+package com.zerotier.sdk;
+
+import java.net.InetSocketAddress;
+
+/**
+ * Physical network path to a peer
+ */
+public final class PeerPhysicalPath {
+    private InetSocketAddress address;
+    private long lastSend;
+    private long lastReceive;
+    private boolean fixed;
+    private boolean active;
+    private boolean preferred;
+
+    private PeerPhysicalPath() {}
 
     /**
-     * Public networks have no access control -- they'll always be AUTHORIZED
+     * Address of endpoint
      */
-    NETWORK_TYPE_PUBLIC
+    public final InetSocketAddress address() {
+        return address;
+    }
+
+    /**
+     * Time of last send in milliseconds or 0 for never
+     */
+    public final long lastSend() {
+        return lastSend;
+    }
+
+    /**
+     * Time of last receive in milliseconds or 0 for never
+     */
+    public final long lastReceive() {
+        return lastReceive;
+    }
+
+    /**
+     * Is path fixed? (i.e. not learned, static)
+     */
+    public final boolean isFixed() {
+        return fixed;
+    }
+
+    /**
+     * Is path active?
+     */
+    public final boolean isActive() {
+        return active;
+    }
+
+    /**
+     * Is path preferred?
+     */
+    public final boolean isPreferred() {
+        return preferred;
+    }
 }

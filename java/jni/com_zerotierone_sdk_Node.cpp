@@ -105,7 +105,7 @@ namespace {
 
         jmethodID configListenerCallbackMethod = cache.findMethod(configListenerClass,
             "onNetworkConfigurationUpdated",
-            "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
+            "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I");
         if(configListenerCallbackMethod == NULL)
         {
             LOGE("Couldn't find onVirtualNetworkFrame() method");
@@ -186,7 +186,7 @@ namespace {
         }
 
         jmethodID onEventMethod = cache.findMethod(eventListenerClass,
-            "onEvent", "(Lcom/zerotierone/sdk/Event;)V");
+            "onEvent", "(Lcom/zerotier/sdk/Event;)V");
         if(onEventMethod == NULL)
         {
             LOGE("Couldn't find onEvent method");
@@ -195,7 +195,7 @@ namespace {
 
 
         jmethodID onOutOfDateMethod = cache.findMethod(eventListenerClass,
-            "onOutOfDate", "(Lcom/zerotierone/sdk/Version;)V");
+            "onOutOfDate", "(Lcom/zerotier/sdk/Version;)V");
         if(onOutOfDateMethod == NULL)
         {
             LOGE("Couldn't find onOutOfDate method");
@@ -204,7 +204,7 @@ namespace {
 
 
         jmethodID onNetworkErrorMethod = cache.findMethod(eventListenerClass,
-            "onNetworkError", "(Lcom/zerotierone/sdk/Event;Ljava/net/InetSocketAddress;)V");
+            "onNetworkError", "(Lcom/zerotier/sdk/Event;Ljava/net/InetSocketAddress;)V");
         if(onNetworkErrorMethod == NULL)
         {
             LOGE("Couldn't find onNetworkError method");
@@ -463,11 +463,11 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    node_init
- * Signature: (J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (J)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     JNIEnv *env, jobject obj, jlong now)
 {
     LOGD("Creating ZT1_Node struct");
@@ -480,7 +480,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
 
     jclass cls = env->GetObjectClass(obj);
     jfieldID fid = cache.findField(
-        cls, "getListener", "Lcom/zerotierone/sdk/DataStoreGetListener;");
+        cls, "getListener", "Lcom/zerotier/sdk/DataStoreGetListener;");
 
     if(fid == NULL)
     {
@@ -495,7 +495,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     ref->dataStoreGetListener = env->NewGlobalRef(tmp);
 
     fid = cache.findField(
-        cls, "putListener", "Lcom/zerotierone/sdk/DataStorePutListener;");
+        cls, "putListener", "Lcom/zerotier/sdk/DataStorePutListener;");
 
     if(fid == NULL)
     {
@@ -510,7 +510,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     ref->dataStorePutListener = env->NewGlobalRef(tmp);
 
     fid = cache.findField(
-        cls, "sender", "Lcom/zerotierone/sdk/PacketSender;");
+        cls, "sender", "Lcom/zerotier/sdk/PacketSender;");
     if(fid == NULL)
     {
         return NULL; // exception already thrown
@@ -524,7 +524,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     ref->packetSender = env->NewGlobalRef(tmp);
 
     fid = cache.findField(
-        cls, "frameListener", "Lcom/zerotierone/sdk/VirtualNetworkFrameListener;");
+        cls, "frameListener", "Lcom/zerotier/sdk/VirtualNetworkFrameListener;");
     if(fid == NULL)
     {
         return NULL; // exception already thrown
@@ -538,7 +538,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     ref->frameListener = env->NewGlobalRef(tmp);
 
     fid = cache.findField(
-        cls, "configListener", "Lcom/zerotierone/sdk/VirtualNetworkConfigListener;");
+        cls, "configListener", "Lcom/zerotier/sdk/VirtualNetworkConfigListener;");
     if(fid == NULL)
     {
         return NULL; // exception already thrown
@@ -552,7 +552,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     ref->configListener = env->NewGlobalRef(tmp);
 
     fid = cache.findField(
-        cls, "eventListener", "Lcom/zerotierone/sdk/EventListener;");
+        cls, "eventListener", "Lcom/zerotier/sdk/EventListener;");
     if(fid == NULL)
     {
         return NULL;
@@ -597,11 +597,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    node_delete
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete(
+JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
     JNIEnv *env, jobject obj, jlong id)
 {
     LOGD("Destroying ZT1_Node struct");
@@ -625,11 +625,11 @@ JNIEXPORT void JNICALL Java_com_zerotierone_sdk_Node_node_1delete(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    processVirtualNetworkFrame
- * Signature: (JJJJJII[B[J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJJII[B[J)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFrame(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
     JNIEnv *env, jobject obj, 
     jlong id, 
     jlong in_now, 
@@ -691,11 +691,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processVirtualNetworkFra
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJLjava/net/InetSocketAddress;I[B[J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJLjava/net/InetSocketAddress;I[B[J)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     JNIEnv *env, jobject obj, 
     jlong id,
     jlong in_now, 
@@ -817,11 +817,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    processBackgroundTasks
- * Signature: (JJ[J)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJ[J)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
     JNIEnv *env, jobject obj, 
     jlong id,
     jlong in_now,
@@ -854,11 +854,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processBackgroundTasks(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    join
- * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJ)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
     JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -877,11 +877,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_join(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    leave
- * Signature: (JJ)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJ)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
     JNIEnv *env, jobject obj, jlong id, jlong in_nwid)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -900,11 +900,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_leave(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    multicastSubscribe
- * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJ)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
     JNIEnv *env, jobject obj, 
     jlong id, 
     jlong in_nwid,
@@ -930,11 +930,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    multicastUnsubscribe
- * Signature: (JJJJ)Lcom/zerotierone/sdk/ResultCode;
+ * Signature: (JJJJ)Lcom/zerotier/sdk/ResultCode;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
     JNIEnv *env, jobject obj, 
     jlong id, 
     jlong in_nwid,
@@ -960,11 +960,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    address
  * Signature: (J)J
  */
-JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address(
+JNIEXPORT jlong JNICALL Java_com_zerotier_sdk_Node_address(
     JNIEnv *env , jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -980,11 +980,11 @@ JNIEXPORT jlong JNICALL Java_com_zerotierone_sdk_Node_address(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    status
- * Signature: (J)Lcom/zerotierone/sdk/NodeStatus;
+ * Signature: (J)Lcom/zerotier/sdk/NodeStatus;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
    (JNIEnv *env, jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -998,8 +998,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
     jclass nodeStatusClass = NULL;
     jmethodID nodeStatusConstructor = NULL;
 
-    // create a com.zerotierone.sdk.NodeStatus object
-    nodeStatusClass = cache.findClass("com/zerotierone/sdk/NodeStatus");
+    // create a com.zerotier.sdk.NodeStatus object
+    nodeStatusClass = cache.findClass("com/zerotier/sdk/NodeStatus");
     if(nodeStatusClass == NULL)
     {
         return NULL;
@@ -1072,11 +1072,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    networkConfig
- * Signature: (J)Lcom/zerotierone/sdk/VirtualNetworkConfig;
+ * Signature: (J)Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
     JNIEnv *env, jobject obj, jlong id, jlong nwid)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -1097,11 +1097,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networkConfig(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    version
- * Signature: (J)Lcom/zerotierone/sdk/Version;
+ * Signature: (J)Lcom/zerotier/sdk/Version;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
     JNIEnv *env, jobject obj)
 {
     int major = 0;
@@ -1115,11 +1115,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_version(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    peers
  * Signature: (J)Ljava/util/ArrayList;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_peers(
     JNIEnv *env, jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -1157,11 +1157,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_peers(
 }
 
 /*
- * Class:     com_zerotierone_sdk_Node
+ * Class:     com_zerotier_sdk_Node
  * Method:    networks
  * Signature: (J)Ljava/util/ArrayList;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_networks(
+JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networks(
     JNIEnv *env, jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;

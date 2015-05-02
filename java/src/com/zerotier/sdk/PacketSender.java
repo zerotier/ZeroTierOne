@@ -24,26 +24,26 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
+
+import java.net.InetSocketAddress;
 
 
-public final class MulticastGroup {
-    private MulticastGroup() {}
-
-    private long mac;
-    private long adi;
-
+public interface PacketSender {
     /**
-     * MAC address (least significant 48 bits)
+     * Function to send a ZeroTier packet out over the wire
+     *
+     * <p>The function must return zero on success and may return any error code
+     * on failure. Note that success does not (of course) guarantee packet
+     * delivery. It only means that the packet appears to have been sent.</p>
+     *
+     * @param addr {@link InetSocketAddress} to send to
+     * @param linkDesperation
+     * @param packetData data to send
+     * @return 0 on success, any error code on failure.
      */
-    public final long getMacAddress() {
-        return mac;
-    }
-
-    /**
-     * Additional distinguishing information (usually zero)
-     */
-    public final long getAdi() {
-        return adi;
-    }
+    public int onSendPacketRequested(
+            InetSocketAddress addr,
+            int linkDesperation,
+            byte[] packetData);
 }

@@ -24,36 +24,26 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
-public enum VirtualNetworkStatus {
-    /**
-     * Waiting for network configuration (also means revision == 0)
-     */
-    NETWORK_STATUS_REQUESTING_CONFIGURATION,
 
-    /**
-     * Configuration received and we are authorized
-     */
-    NETWORK_STATUS_OK,
+public final class MulticastGroup {
+    private MulticastGroup() {}
+
+    private long mac;
+    private long adi;
 
     /**
-     * Netconf master told us 'nope'
+     * MAC address (least significant 48 bits)
      */
-    NETWORK_STATUS_ACCESS_DENIED,
+    public final long getMacAddress() {
+        return mac;
+    }
 
     /**
-     * Netconf master exists, but this virtual network does not
+     * Additional distinguishing information (usually zero)
      */
-    NETWORK_STATUS_NOT_FOUND,
-
-    /**
-     * Initialization of network failed or other internal error
-     */
-    NETWORK_STATUS_PORT_ERROR,
-
-    /**
-     * ZeroTier One version too old
-     */
-    NETWORK_STATUS_CLIENT_TOO_OLD
+    public final long getAdi() {
+        return adi;
+    }
 }

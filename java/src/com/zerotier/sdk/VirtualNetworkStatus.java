@@ -24,14 +24,36 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+package com.zerotier.sdk;
 
-package com.zerotierone.sdk;
+public enum VirtualNetworkStatus {
+    /**
+     * Waiting for network configuration (also means revision == 0)
+     */
+    NETWORK_STATUS_REQUESTING_CONFIGURATION,
 
-public final class Version {
-    private Version() {}
-    
-	public int major = 0;
-	public int minor = 0;
-	public int revision = 0;
-	public long featureFlags = 0;
+    /**
+     * Configuration received and we are authorized
+     */
+    NETWORK_STATUS_OK,
+
+    /**
+     * Netconf master told us 'nope'
+     */
+    NETWORK_STATUS_ACCESS_DENIED,
+
+    /**
+     * Netconf master exists, but this virtual network does not
+     */
+    NETWORK_STATUS_NOT_FOUND,
+
+    /**
+     * Initialization of network failed or other internal error
+     */
+    NETWORK_STATUS_PORT_ERROR,
+
+    /**
+     * ZeroTier One version too old
+     */
+    NETWORK_STATUS_CLIENT_TOO_OLD
 }

@@ -25,62 +25,43 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
+import java.lang.String;
 
 /**
- * Physical network path to a peer
+ * Interface to handle callbacks for ZeroTier One events.
  */
-public final class PeerPhysicalPath {
-    private InetSocketAddress address;
-    private long lastSend;
-    private long lastReceive;
-    private boolean fixed;
-    private boolean active;
-    private boolean preferred;
-
-    private PeerPhysicalPath() {}
+public interface EventListener {
+    /**
+     * Callback for events with no other associated metadata
+     * 
+     * @param event {@link Event} enum
+     */
+    public void onEvent(Event event);
+    
+    /**
+     * Callback for network error events: {@link Event.EVENT_AUTHENTICATION_FAILUER}, {link Event.EVENT_INVALID_PACKET}
+     *
+     * @param event {@link Event} enum
+     * @param source {@link InetSocketAddress} containing the origin address of the packet
+     */
+    public void onNetworkError(Event event, InetSocketAddress source);
 
     /**
-     * Address of endpoint
+     * Callback when the node detects that it's out of date.
+     *
+     * @param newVersion {@link Version} object with the latest version of ZeroTier One
      */
-    public final InetSocketAddress address() {
-        return address;
-    }
+    public void onOutOfDate(Version newVersion);
 
     /**
-     * Time of last send in milliseconds or 0 for never
+     * Trace messages
+     * 
+     * <p>These events are only generated if the underlying ZeroTierOne SDK is a TRACE-enabled build.</p>
+     *
+     * @param message the trace message
      */
-    public final long lastSend() {
-        return lastSend;
-    }
-
-    /**
-     * Time of last receive in milliseconds or 0 for never
-     */
-    public final long lastReceive() {
-        return lastReceive;
-    }
-
-    /**
-     * Is path fixed? (i.e. not learned, static)
-     */
-    public final boolean isFixed() {
-        return fixed;
-    }
-
-    /**
-     * Is path active?
-     */
-    public final boolean isActive() {
-        return active;
-    }
-
-    /**
-     * Is path preferred?
-     */
-    public final boolean isPreferred() {
-        return preferred;
-    }
+    public void onTrace(String message);
 }

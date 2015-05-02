@@ -24,26 +24,46 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
-package com.zerotierone.sdk;
 
-public enum VirtualNetworkConfigOperation {
-    /**
-     * Network is coming up (either for the first time or after service restart)
-     */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_UP,
+package com.zerotier.sdk;
 
-    /**
-     * Network configuration has been updated
-     */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,
+public final class NodeStatus {
+	private long address;
+	private String publicIdentity;
+	private String secretIdentity;
+	private boolean online;
 
-    /**
-     * Network is going down (not permanently)
-     */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,
+	private NodeStatus() {}
 
-    /**
-     * Network is going down permanently (leave/delete)
-     */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY
+	/**
+	 * 40-bit ZeroTier address of this node
+	 */
+	public final long getAddres() {
+		return address;
+	}
+
+	/**
+	 * Public identity in string-serialized form (safe to send to others)
+	 *
+	 * <p>This identity will remain valid as long as the node exists.</p>
+	 */
+	public final String getPublicIdentity() {
+		return publicIdentity;
+	}
+
+	/**
+	 * Full identity including secret key in string-serialized form
+	 *
+	 * <p>This identity will remain valid as long as the node exists.</p>
+	 */
+	public final String getSecretIdentity() {
+		return secretIdentity;
+	}
+
+	/**
+	 * True if some kind of connectivity appears available
+	 */
+	public final boolean isOnline() {
+		return online;
+	}
 }

@@ -26,7 +26,7 @@
  */
 
 
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
 
 public interface VirtualNetworkConfigListener {

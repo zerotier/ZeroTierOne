@@ -1,4 +1,4 @@
-package com.zerotierone.sdk;
+package com.zerotier.sdk;
 
 import java.io.File;
 import java.io.FileNotFoundException;
