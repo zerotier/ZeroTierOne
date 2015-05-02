@@ -3,11 +3,11 @@
 #include <string>
 #include <assert.h>
 
+extern JniCache cache;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-extern JniCache cache;
 
 jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
 {
@@ -15,7 +15,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     
     jobject resultObject = NULL;
 
-    resultClass = env->FindClass("com/zerotierone/sdk/ResultCode");
+    resultClass = cache.findClass("com/zerotierone/sdk/ResultCode");
     if(resultClass == NULL)
     {
         return NULL; // exception thrown
@@ -42,7 +42,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(resultClass, fieldName.c_str(), "Lcom/zerotierone/sdk/ResultCode;");
+    jfieldID enumField = cache.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotierone/sdk/ResultCode;");
 
     resultObject = env->GetStaticObjectField(resultClass, enumField);
 
@@ -52,16 +52,12 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
 
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
 {
-    jclass statusClass = NULL;
     jobject statusObject = NULL;
 
+    jclass statusClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkStatus");
     if(statusClass == NULL)
     {
-        statusClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkStatus");
-        if(statusClass == NULL)
-        {
-            return NULL; // exception thrown
-        }
+        return NULL; // exception thrown
     }
 
     std::string fieldName;
@@ -87,7 +83,7 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(statusClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
+    jfieldID enumField = cache.findStaticField(statusClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
 
     statusObject = env->GetStaticObjectField(statusClass, enumField);
 
@@ -99,7 +95,7 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
     jclass eventClass = NULL;
     jobject eventObject = NULL;
 
-    eventClass = env->FindClass("com/zerotierone/sdk/Event");
+    eventClass = cache.findClass("com/zerotierone/sdk/Event");
     if(eventClass == NULL)
     {
         return NULL;
@@ -137,7 +133,7 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(eventClass, fieldName.c_str(), "Lcom/zerotierone/sdk/Event;");
+    jfieldID enumField = cache.findStaticField(eventClass, fieldName.c_str(), "Lcom/zerotierone/sdk/Event;");
 
     eventObject = env->GetStaticObjectField(eventClass, enumField);
 
@@ -149,7 +145,7 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
     jclass peerRoleClass = NULL;
     jobject peerRoleObject = NULL;
 
-    peerRoleClass = env->FindClass("com/zerotierone/sdk/PeerRole");
+    peerRoleClass = cache.findClass("com/zerotierone/sdk/PeerRole");
     if(peerRoleClass == NULL)
     {
         return NULL;
@@ -169,7 +165,7 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(peerRoleClass, fieldName.c_str(), "Lcom/zerotierone/sdk/PeerRole;");
+    jfieldID enumField = cache.findStaticField(peerRoleClass, fieldName.c_str(), "Lcom/zerotierone/sdk/PeerRole;");
 
     peerRoleObject = env->GetStaticObjectField(peerRoleClass, enumField);
 
@@ -181,7 +177,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
     jclass vntypeClass = NULL;
     jobject vntypeObject = NULL;
 
-    vntypeClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkType");
+    vntypeClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkType");
     if(vntypeClass == NULL)
     {
         return NULL;
@@ -198,7 +194,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(vntypeClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkType;");
+    jfieldID enumField = cache.findStaticField(vntypeClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkType;");
     vntypeObject = env->GetStaticObjectField(vntypeClass, enumField);
     return vntypeObject;
 }
@@ -208,7 +204,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
     jclass vnetConfigOpClass = NULL;
     jobject vnetConfigOpObject = NULL;
 
-    vnetConfigOpClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfigOperation");
+    vnetConfigOpClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkConfigOperation");
     if(vnetConfigOpClass == NULL)
     {
         return NULL;
@@ -231,7 +227,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
         break;
     }
 
-    jfieldID enumField = env->GetStaticFieldID(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkConfigOperation;");
+    jfieldID enumField = cache.findStaticField(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotierone/sdk/VirtualNetworkConfigOperation;");
     vnetConfigOpObject = env->GetStaticObjectField(vnetConfigOpClass, enumField);
     return vnetConfigOpObject;
 }
@@ -241,13 +237,13 @@ jobject newArrayList(JNIEnv *env)
     jclass arrayListClass = NULL;
     jmethodID arrayList_constructor = NULL;
 
-    arrayListClass = env->FindClass("java/util/ArrayList");
+    arrayListClass = cache.findClass("java/util/ArrayList");
     if(arrayListClass == NULL)
     {
         return NULL;
     }
 
-    arrayList_constructor = env->GetMethodID(
+    arrayList_constructor = cache.findMethod(
         arrayListClass, "<init>", "()V");
     if(arrayList_constructor == NULL)
     {
@@ -267,13 +263,13 @@ bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object)
     jclass arrayListClass = NULL;
     jmethodID arrayList_add = NULL;
 
-    arrayListClass = env->FindClass("java/util/ArrayList");
+    arrayListClass = cache.findClass("java/util/ArrayList");
     if(arrayListClass == NULL)
     {
         return NULL;
     }
 
-    arrayList_add = env->GetMethodID(arrayListClass, "add", "(Ljava.lang.Object;)Z");
+    arrayList_add = cache.findMethod(arrayListClass, "add", "(Ljava.lang.Object;)Z");
     if(arrayList_add == NULL)
     {
         return false;
@@ -287,13 +283,13 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
     jclass inetAddressClass = NULL;
     jmethodID inetAddress_getByAddress = NULL;
 
-    inetAddressClass = env->FindClass("java/net/InetAddress");
+    inetAddressClass = cache.findClass("java/net/InetAddress");
     if(inetAddressClass == NULL)
     {
         return NULL;
     }
 
-    inetAddress_getByAddress = env->GetStaticMethodID(
+    inetAddress_getByAddress = cache.findStaticMethod(
         inetAddressClass, "getByAddress", "([B)Ljava/net/InetAddress;");
     if(inetAddress_getByAddress == NULL)
     {
@@ -341,7 +337,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     jclass inetSocketAddressClass = NULL;
     jmethodID inetSocketAddress_constructor = NULL;
 
-    inetSocketAddressClass = env->FindClass("java/net/InetSocketAddress");
+    inetSocketAddressClass = cache.findClass("java/net/InetSocketAddress");
     if(inetSocketAddressClass == NULL)
     {
         return NULL;
@@ -354,7 +350,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
         return NULL;
     }
 
-    inetSocketAddress_constructor = env->GetMethodID(
+    inetSocketAddress_constructor = cache.findMethod(
         inetSocketAddressClass, "<init>", "(Ljava/net/InetAddress;I)V");
     if(inetSocketAddress_constructor == NULL)
     {
@@ -390,13 +386,13 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
     jfieldID macField = NULL;
     jfieldID adiField = NULL;
 
-    multicastGroupClass = env->FindClass("com/zerotierone/sdk/MulticastGroup");
+    multicastGroupClass = cache.findClass("com/zerotierone/sdk/MulticastGroup");
     if(multicastGroupClass == NULL)
     {
         return NULL;
     }
 
-    multicastGroup_constructor = env->GetMethodID(
+    multicastGroup_constructor = cache.findMethod(
         multicastGroupClass, "<init>", "()V");
     if(multicastGroup_constructor == NULL)
     {
@@ -411,7 +407,7 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
 
     if(macField == NULL)
     {
-        macField = env->GetFieldID(multicastGroupClass, "mac", "J");
+        macField = cache.findField(multicastGroupClass, "mac", "J");
         if(macField == NULL)
         {
             return NULL;
@@ -420,7 +416,7 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
 
     if(adiField == NULL)
     {
-        adiField = env->GetFieldID(multicastGroupClass, "adi", "J");
+        adiField = cache.findField(multicastGroupClass, "adi", "J");
         if(adiField == NULL)
         {
             return NULL;
@@ -446,49 +442,49 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp)
 
     jmethodID ppp_constructor = NULL;
 
-    pppClass = env->FindClass("com/zerotierone/sdk/PeerPhysicalPath");
+    pppClass = cache.findClass("com/zerotierone/sdk/PeerPhysicalPath");
     if(pppClass == NULL)
     {
         return NULL;
     }
 
-    addressField = env->GetFieldID(pppClass, "address", "Ljava/net/InetAddress;");
+    addressField = cache.findField(pppClass, "address", "Ljava/net/InetAddress;");
     if(addressField == NULL)
     {
         return NULL;
     }
 
-    lastSendField = env->GetFieldID(pppClass, "lastSend", "J");
+    lastSendField = cache.findField(pppClass, "lastSend", "J");
     if(lastSendField == NULL)
     {
         return NULL;
     }
 
-    lastReceiveField = env->GetFieldID(pppClass, "lastReceive", "J");
+    lastReceiveField = cache.findField(pppClass, "lastReceive", "J");
     if(lastReceiveField == NULL)
     {
         return NULL;
     }
 
-    fixedField = env->GetFieldID(pppClass, "fixed", "Z");
+    fixedField = cache.findField(pppClass, "fixed", "Z");
     if(fixedField == NULL)
     {
         return NULL;
     }
 
-    activeField = env->GetFieldID(pppClass, "active", "Z");
+    activeField = cache.findField(pppClass, "active", "Z");
     if(activeField == NULL)
     {
         return NULL;
     }
 
-    preferredField = env->GetFieldID(pppClass, "preferred", "Z");
+    preferredField = cache.findField(pppClass, "preferred", "Z");
     if(preferredField == NULL)
     {
         return NULL;
     }
 
-    ppp_constructor = env->GetMethodID(pppClass, "<init>", "()V");
+    ppp_constructor = cache.findMethod(pppClass, "<init>", "()V");
     if(ppp_constructor == NULL)
     {
         return NULL;
@@ -528,67 +524,67 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
 
     jmethodID peer_constructor = NULL;
 
-    peerClass = env->FindClass("com/zerotierone/sdk/Peer");
+    peerClass = cache.findClass("com/zerotierone/sdk/Peer");
     if(peerClass == NULL)
     {
         return NULL;
     }
 
-    addressField = env->GetFieldID(peerClass, "address", "J");
+    addressField = cache.findField(peerClass, "address", "J");
     if(addressField == NULL)
     {
         return NULL;
     }
 
-    lastUnicastFrameField = env->GetFieldID(peerClass, "lastUnicastFrame", "J");
+    lastUnicastFrameField = cache.findField(peerClass, "lastUnicastFrame", "J");
     if(lastUnicastFrameField == NULL)
     {
         return NULL;
     }
 
-    lastMulticastFrameField = env->GetFieldID(peerClass, "lastMulticastFrame", "J");
+    lastMulticastFrameField = cache.findField(peerClass, "lastMulticastFrame", "J");
     if(lastMulticastFrameField == NULL)
     {
         return NULL;
     }
 
-    versionMajorField = env->GetFieldID(peerClass, "versionMajor", "I");
+    versionMajorField = cache.findField(peerClass, "versionMajor", "I");
     if(versionMajorField == NULL)
     {
         return NULL;
     }
 
-    versionMinorField = env->GetFieldID(peerClass, "versionMinor", "I");
+    versionMinorField = cache.findField(peerClass, "versionMinor", "I");
     if(versionMinorField == NULL)
     {
         return NULL;
     }
 
-    versionRevField = env->GetFieldID(peerClass, "versionRev", "I");
+    versionRevField = cache.findField(peerClass, "versionRev", "I");
     if(versionRevField == NULL)
     {
         return NULL;
     }
 
-    latencyField = env->GetFieldID(peerClass, "latency", "I");
+    latencyField = cache.findField(peerClass, "latency", "I");
     if(latencyField == NULL)
     {
         return NULL;
     }
 
-    roleField = env->GetFieldID(peerClass, "role", "Lcom/zerotierone/sdk/PeerRole;");
+    roleField = cache.findField(peerClass, "role", "Lcom/zerotierone/sdk/PeerRole;");
     if(roleField == NULL)
     {
         return NULL;
     }
 
-    pathsField = env->GetFieldID(peerClass, "paths", "Ljava.util.ArrayList;");
+    pathsField = cache.findField(peerClass, "paths", "Ljava.util.ArrayList;");
     if(pathsField == NULL)
     {
         return NULL;
     }
 
-    peer_constructor = env->GetMethodID(peerClass, "<init>", "()V");
+    peer_constructor = cache.findMethod(peerClass, "<init>", "()V");
     if(peer_constructor == NULL)
     {
         return NULL;
@@ -640,14 +636,14 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     jfieldID multicastSubscriptionsField = NULL;
     jfieldID assignedAddressesField = NULL;
 
-    vnetConfigClass = env->FindClass("com/zerotierone/sdk/VirtualNetworkConfig");
+    vnetConfigClass = cache.findClass("com/zerotierone/sdk/VirtualNetworkConfig");
     if(vnetConfigClass == NULL)
     {
         LOGE("Couldn't find com.zerotierone.sdk.VirtualNetworkConfig");
         return NULL;
     }
 
-    vnetConfig_constructor = env->GetMethodID(
+    vnetConfig_constructor = cache.findMethod(
         vnetConfigClass, "<init>", "()V");
     if(vnetConfig_constructor == NULL)
     {
@@ -662,98 +658,98 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
         return NULL;
     }
 
-    nwidField = env->GetFieldID(vnetConfigClass, "nwid", "J");
+    nwidField = cache.findField(vnetConfigClass, "nwid", "J");
     if(nwidField == NULL)
     {
         LOGE("Error getting nwid field");
         return NULL;
     }
 
-    macField = env->GetFieldID(vnetConfigClass, "mac", "J");
+    macField = cache.findField(vnetConfigClass, "mac", "J");
     if(macField == NULL)
     {
         LOGE("Error getting mac field");
         return NULL;
     }
 
-    nameField = env->GetFieldID(vnetConfigClass, "name", "Ljava/lang/String;");
+    nameField = cache.findField(vnetConfigClass, "name", "Ljava/lang/String;");
     if(nameField == NULL)
     {
         LOGE("Error getting name field");
         return NULL;
     }
 
-    statusField = env->GetFieldID(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
+    statusField = cache.findField(vnetConfigClass, "status", "Lcom/zerotierone/sdk/VirtualNetworkStatus;");
     if(statusField == NULL)
     {
         LOGE("Error getting status field");
         return NULL;
     }
 
-    typeField = env->GetFieldID(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
+    typeField = cache.findField(vnetConfigClass, "type", "Lcom/zerotierone/sdk/VirtualNetworkType;");
     if(typeField == NULL)
     {
         LOGE("Error getting type field");
         return NULL;
     }
 
-    mtuField = env->GetFieldID(vnetConfigClass, "mtu", "I");
+    mtuField = cache.findField(vnetConfigClass, "mtu", "I");
     if(mtuField == NULL)
     {
         LOGE("Error getting mtu field");
         return NULL;
     }
 
-    dhcpField = env->GetFieldID(vnetConfigClass, "dhcp", "Z");
+    dhcpField = cache.findField(vnetConfigClass, "dhcp", "Z");
     if(dhcpField == NULL)
     {
         LOGE("Error getting dhcp field");
         return NULL;
     }
 
-    bridgeField = env->GetFieldID(vnetConfigClass, "bridge", "Z");
+    bridgeField = cache.findField(vnetConfigClass, "bridge", "Z");
     if(bridgeField == NULL)
     {
         LOGE("Error getting bridge field");
         return NULL;
     }
 
-    broadcastEnabledField = env->GetFieldID(vnetConfigClass, "broadcastEnabled", "Z");
+    broadcastEnabledField = cache.findField(vnetConfigClass, "broadcastEnabled", "Z");
     if(broadcastEnabledField == NULL)
     {
         LOGE("Error getting broadcastEnabled field");
         return NULL;
     }
 
-    portErrorField = env->GetFieldID(vnetConfigClass, "portError", "I");
+    portErrorField = cache.findField(vnetConfigClass, "portError", "I");
     if(portErrorField == NULL)
     {
         LOGE("Error getting portError field");
         return NULL;
     }
 
-    enabledField = env->GetFieldID(vnetConfigClass, "enabled", "Z");
+    enabledField = cache.findField(vnetConfigClass, "enabled", "Z");
     if(enabledField == NULL)
     {
         LOGE("Error getting enabled field");
         return NULL;
     }
 
-    netconfRevisionField = env->GetFieldID(vnetConfigClass, "netconfRevision", "J");
+    netconfRevisionField = cache.findField(vnetConfigClass, "netconfRevision", "J");
     if(netconfRevisionField == NULL)
     {
         LOGE("Error getting netconfRevision field");
         return NULL;
     }
 
-    multicastSubscriptionsField = env->GetFieldID(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
+    multicastSubscriptionsField = cache.findField(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
     if(multicastSubscriptionsField == NULL)
     {
         LOGE("Error getting multicastSubscriptions field");
         return NULL;
     }
 
-    assignedAddressesField = env->GetFieldID(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
+    assignedAddressesField = cache.findField(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
     if(assignedAddressesField == NULL)
     {
         LOGE("Error getting assignedAddresses field");
@@ -817,13 +813,13 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     jclass versionClass = NULL;
     jmethodID versionConstructor = NULL;
 
-    versionClass = env->FindClass("com/zerotierone/sdk/Version");
+    versionClass = cache.findClass("com/zerotierone/sdk/Version");
     if(versionClass == NULL)
     {
         return NULL;
     }
 
-    versionConstructor = env->GetMethodID(
+    versionConstructor = cache.findMethod(
         versionClass, "<init>", "()V");
     if(versionConstructor == NULL)
     {
@@ -842,25 +838,25 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     jfieldID revisionField = NULL;
     jfieldID featureFlagsField = NULL;
 
-    majorField = env->GetFieldID(versionClass, "major", "I");
+    majorField = cache.findField(versionClass, "major", "I");
     if(majorField == NULL)
     {
         return NULL;
     }
 
-    minorField = env->GetFieldID(versionClass, "minor", "I");
+    minorField = cache.findField(versionClass, "minor", "I");
     if(minorField == NULL)
     {
         return NULL;
     }
 
-    revisionField = env->GetFieldID(versionClass, "revision", "I");
+    revisionField = cache.findField(versionClass, "revision", "I");
     if(revisionField == NULL)
     {
         return NULL;
     }
 
-    featureFlagsField = env->GetFieldID(versionClass, "featureFlags", "J");
+    featureFlagsField = cache.findField(versionClass, "featureFlags", "J");
     if(featureFlagsField == NULL)
     {
         return NULL;

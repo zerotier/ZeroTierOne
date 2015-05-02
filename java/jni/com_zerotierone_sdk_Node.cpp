@@ -36,12 +36,12 @@
 #include <assert.h>
 #include <string.h>
 
+// global static JNI Cache Object
+JniCache cache;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// global static JNI Cache Object
-static JniCache cache;
 
 namespace {
     struct JniRef
@@ -103,7 +103,7 @@ namespace {
             return -1;
         }
 
-        jmethodID configListenerCallbackMethod = env->GetMethodID(configListenerClass,
+        jmethodID configListenerCallbackMethod = cache.findMethod(configListenerClass,
             "onNetworkConfigurationUpdated",
             "(JLcom/zerotierone/sdk/VirtualNetworkConfigOperation;Lcom/zerotierone/sdk/VirtualNetworkConfig;)I");
         if(configListenerCallbackMethod == NULL)
@@ -154,7 +154,7 @@ namespace {
             return;
         }
 
-        jmethodID frameListenerCallbackMethod = env->GetMethodID(
+        jmethodID frameListenerCallbackMethod = cache.findMethod(
             frameListenerClass,
             "onVirtualNetworkFrame", "(JJJJJ[B)V");
         if(frameListenerCallbackMethod == NULL)
@@ -185,7 +185,7 @@ namespace {
             return;
         }
 
-        jmethodID onEventMethod = env->GetMethodID(eventListenerClass,
+        jmethodID onEventMethod = cache.findMethod(eventListenerClass,
             "onEvent", "(Lcom/zerotierone/sdk/Event;)V");
         if(onEventMethod == NULL)
         {
@@ -194,7 +194,7 @@ namespace {
         }
 
 
-        jmethodID onOutOfDateMethod = env->GetMethodID(eventListenerClass,
+        jmethodID onOutOfDateMethod = cache.findMethod(eventListenerClass,
             "onOutOfDate", "(Lcom/zerotierone/sdk/Version;)V");
         if(onOutOfDateMethod == NULL)
         {
@@ -203,7 +203,7 @@ namespace {
         }
 
 
-        jmethodID onNetworkErrorMethod = env->GetMethodID(eventListenerClass,
+        jmethodID onNetworkErrorMethod = cache.findMethod(eventListenerClass,
             "onNetworkError", "(Lcom/zerotierone/sdk/Event;Ljava/net/InetSocketAddress;)V");
         if(onNetworkErrorMethod == NULL)
         {
@@ -212,7 +212,7 @@ namespace {
         }
 
 
-        jmethodID onTraceMethod = env->GetMethodID(eventListenerClass,
+        jmethodID onTraceMethod = cache.findMethod(eventListenerClass,
             "onTrace", "(Ljava/lang/String;)V");
         if(onTraceMethod == NULL)
         {
@@ -292,7 +292,7 @@ namespace {
             return -2;
         }
 
-        jmethodID dataStoreGetCallbackMethod = env->GetMethodID(
+        jmethodID dataStoreGetCallbackMethod = cache.findMethod(
             dataStoreGetClass,
             "onDataStoreGet",
             "(Ljava/lang/String;[BJ[J)J");
@@ -361,7 +361,7 @@ namespace {
             return -1;
         }
 
-        jmethodID dataStorePutCallbackMethod = env->GetMethodID(
+        jmethodID dataStorePutCallbackMethod = cache.findMethod(
             dataStorePutClass,
             "onDataStorePut",
             "(Ljava/lang/String;[BZ)I");
@@ -371,7 +371,7 @@ namespace {
             return -2;
         }
 
-        jmethodID deleteMethod = env->GetMethodID(dataStorePutClass,
+        jmethodID deleteMethod = cache.findMethod(dataStorePutClass,
             "onDelete", "(Ljava/lang/String;)I");
         if(deleteMethod == NULL)
         {
@@ -421,7 +421,7 @@ namespace {
             return -1;
         }
 
-        jmethodID packetSenderCallbackMethod = env->GetMethodID(packetSenderClass,
+        jmethodID packetSenderCallbackMethod = cache.findMethod(packetSenderClass,
             "onSendPacketRequested", "(Ljava/net/InetSocketAddress;I[B)I");
         if(packetSenderCallbackMethod == NULL)
         {
@@ -479,7 +479,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     env->GetJavaVM(&ref->jvm);
 
     jclass cls = env->GetObjectClass(obj);
-    jfieldID fid = env->GetFieldID(
+    jfieldID fid = cache.findField(
         cls, "getListener", "Lcom/zerotierone/sdk/DataStoreGetListener;");
 
     if(fid == NULL)
@@ -494,7 +494,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     }
     ref->dataStoreGetListener = env->NewGlobalRef(tmp);
 
-    fid = env->GetFieldID(
+    fid = cache.findField(
         cls, "putListener", "Lcom/zerotierone/sdk/DataStorePutListener;");
 
     if(fid == NULL)
@@ -509,7 +509,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     }
     ref->dataStorePutListener = env->NewGlobalRef(tmp);
 
-    fid = env->GetFieldID(
+    fid = cache.findField(
         cls, "sender", "Lcom/zerotierone/sdk/PacketSender;");
     if(fid == NULL)
     {
@@ -523,7 +523,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     }
     ref->packetSender = env->NewGlobalRef(tmp);
 
-    fid = env->GetFieldID(
+    fid = cache.findField(
         cls, "frameListener", "Lcom/zerotierone/sdk/VirtualNetworkFrameListener;");
     if(fid == NULL)
     {
@@ -537,7 +537,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     }
     ref->frameListener = env->NewGlobalRef(tmp);
 
-    fid = env->GetFieldID(
+    fid = cache.findField(
         cls, "configListener", "Lcom/zerotierone/sdk/VirtualNetworkConfigListener;");
     if(fid == NULL)
     {
@@ -551,7 +551,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_node_1init(
     }
     ref->configListener = env->NewGlobalRef(tmp);
 
-    fid = env->GetFieldID(
+    fid = cache.findField(
         cls, "eventListener", "Lcom/zerotierone/sdk/EventListener;");
     if(fid == NULL)
     {
@@ -722,14 +722,14 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
     unsigned int linkDesparation = (unsigned int)in_linkDesparation;
 
     // get the java.net.InetSocketAddress class and getAddress() method
-    jclass inetAddressClass = env->FindClass("java/net/InetAddress");
+    jclass inetAddressClass = cache.findClass("java/net/InetAddress");
     if(inetAddressClass == NULL)
     {
         // can't find java.net.InetAddress
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
-    jmethodID getAddressMethod = env->GetMethodID(
+    jmethodID getAddressMethod = cache.findMethod(
         inetAddressClass, "getAddress", "()[B");
     if(getAddressMethod == NULL)
     {
@@ -737,13 +737,13 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_processWirePacket(
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
-    jclass InetSocketAddressClass = env->FindClass("java/net/InetSocketAddress");
+    jclass InetSocketAddressClass = cache.findClass("java/net/InetSocketAddress");
     if(InetSocketAddressClass == NULL)
     {
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
-    jmethodID inetSockGetAddressMethod = env->GetMethodID(
+    jmethodID inetSockGetAddressMethod = cache.findMethod(
         InetSocketAddressClass, "getAddress", "()Ljava/net/InetAddress;");
 
     jobject addrObject = env->CallObjectMethod(in_remoteAddress, inetSockGetAddressMethod);
@@ -951,7 +951,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastUnsubscribe(
 
     uint64_t nwid = (uint64_t)in_nwid;
     uint64_t multicastGroup = (uint64_t)in_multicastGroup;
-    uint64_t multicastAdi = (uint64_t)in_multicastAdi;
+    unsigned long multicastAdi = (unsigned long)in_multicastAdi;
 
     ZT1_ResultCode rc = ZT1_Node_multicastUnsubscribe(
         node, nwid, multicastGroup, multicastAdi);
@@ -999,13 +999,13 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
     jmethodID nodeStatusConstructor = NULL;
 
     // create a com.zerotierone.sdk.NodeStatus object
-    nodeStatusClass = env->FindClass("com/zerotierone/sdk/NodeStatus");
+    nodeStatusClass = cache.findClass("com/zerotierone/sdk/NodeStatus");
     if(nodeStatusClass == NULL)
     {
         return NULL;
     }
     
-    nodeStatusConstructor = env->GetMethodID(
+    nodeStatusConstructor = cache.findMethod(
         nodeStatusClass, "<init>", "()V");
     if(nodeStatusConstructor == NULL)
     {
@@ -1026,25 +1026,25 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_status
     jfieldID secretIdentityField = NULL;
     jfieldID onlineField = NULL;
 
-    addressField = env->GetFieldID(nodeStatusClass, "address", "J");
+    addressField = cache.findField(nodeStatusClass, "address", "J");
     if(addressField == NULL)
     {
         return NULL;
     }
 
-    publicIdentityField = env->GetFieldID(nodeStatusClass, "publicIdentity", "Ljava/lang/String;");
+    publicIdentityField = cache.findField(nodeStatusClass, "publicIdentity", "Ljava/lang/String;");
     if(publicIdentityField == NULL)
     {
         return NULL;
     }
 
-    secretIdentityField = env->GetFieldID(nodeStatusClass, "secretIdentity", "Ljava/lang/String;");
+    secretIdentityField = cache.findField(nodeStatusClass, "secretIdentity", "Ljava/lang/String;");
     if(secretIdentityField == NULL)
     {
         return NULL;
     }
 
-    onlineField = env->GetFieldID(nodeStatusClass, "online", "Z");
+    onlineField = cache.findField(nodeStatusClass, "online", "Z");
     if(onlineField == NULL)
     {
         return NULL;
