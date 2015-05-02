@@ -1,10 +1,13 @@
 #include "ZT1_jniutils.h"
+#include "ZT1_jnicache.h"
 #include <string>
 #include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+extern JniCache cache;
 
 jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
 {

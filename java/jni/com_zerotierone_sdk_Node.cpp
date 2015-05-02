@@ -27,6 +27,7 @@
 
 #include "com_zerotierone_sdk_Node.h"
 #include "ZT1_jniutils.h"
+#include "ZT1_jnicache.h"
 
 #include <ZeroTierOne.h>
 
@@ -38,6 +39,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// global static JNI Cache Object
+static JniCache cache;
 
 namespace {
     struct JniRef
@@ -322,7 +326,7 @@ namespace {
         LOGD("Calling onDataStoreGet(%s, %p, %lu, %p)",
             objectName, buffer, bufferIndex, objectSizeObj);
 
-        long retval = env->CallLongMethod(
+        long retval = (long)env->CallLongMethod(
             ref->dataStoreGetListener, dataStoreGetCallbackMethod, 
             nameStr, bufferObj, (jlong)bufferIndex, objectSizeObj);
 
@@ -445,6 +449,18 @@ namespace {
         return NULL;
     }
 }
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) 
+{
+    cache.setJavaVM(vm);
+    return JNI_VERSION_1_6;
+}
+
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
+{
+    cache.clearCache();
+}
+
 
 /*
  * Class:     com_zerotierone_sdk_Node
@@ -905,7 +921,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotierone_sdk_Node_multicastSubscribe(
 
     uint64_t nwid = (uint64_t)in_nwid;
     uint64_t multicastGroup = (uint64_t)in_multicastGroup;
-    uint64_t multicastAdi = (uint64_t)in_multicastAdi;
+    unsigned long multicastAdi = (unsigned long)in_multicastAdi;
 
     ZT1_ResultCode rc = ZT1_Node_multicastSubscribe(
         node, nwid, multicastGroup, multicastAdi);
