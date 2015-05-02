@@ -1,4 +1,4 @@
-<project default="build" name="ZeroTierOneSDK">
+<project default="build" name="ZeroTierOneSDK" basedir=".">
     <property environment="env"/>
 
     <condition property="isWindows">
@@ -8,7 +8,8 @@
     <target name="clean">
         <delete dir="bin" failonerror="false"/>
         <delete dir="classes" failonerror="false"/>
-        <delete dir="cmakebuild" failonerror="false"/>
+        <delete dir="build_win32" failonerror="false"/>
+        <delete dir="build_win64" failonerror="false"/>
         <delete dir="libs" failonerror="false"/>
         <delete dir="obj" failonerror="false"/>
     </target>
