@@ -23,6 +23,8 @@
         <mkdir dir="classes"/>
         <javac srcdir="src"
                destdir="classes"
+               source="1.7"
+               target="1.7"
                classpath="${env.ANDROID_PLATFORM}/android.jar"
                includeantruntime="false"/>
     </target>
