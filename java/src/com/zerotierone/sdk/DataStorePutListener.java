@@ -26,8 +26,6 @@
  */
 package com.zerotierone.sdk;
 
-import java.nio.ByteBuffer;
-
 public interface DataStorePutListener {
 
     /**

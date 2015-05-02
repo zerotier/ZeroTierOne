@@ -27,8 +27,6 @@
 
 package com.zerotierone.sdk;
 
-import java.nio.ByteBuffer;
-import java.lang.Long;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.io.IOException;

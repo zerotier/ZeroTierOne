@@ -27,8 +27,6 @@
 
 package com.zerotierone.sdk;
 
-import java.nio.ByteBuffer;
-
 public interface VirtualNetworkFrameListener {
     /**
      * Function to send a frame out to a virtual network port
