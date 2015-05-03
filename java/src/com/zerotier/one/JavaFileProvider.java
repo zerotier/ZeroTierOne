@@ -16,20 +16,28 @@ public class JavaFileProvider implements DataStoreFileProvider {
 	@Override
 	public FileInputStream getInputFileStream(String name)
 			throws FileNotFoundException {
-		File f = new File(_path + File.pathSeparator + name);
+		File f = new File(_path + File.separator + name);
 		return new FileInputStream(f);
 	}
 
 	@Override
 	public FileOutputStream getOutputFileStream(String name)
 			throws FileNotFoundException {
-		File f = new File(_path + File.pathSeparator + name);
+		File f = new File(_path + File.separator + name);
+		if(!f.exists())
+		{
+			try {
+				f.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 		return new FileOutputStream(f);
 	}
 
 	@Override
 	public void deleteFile(String name) throws IOException {
-		File f = new File(_path + File.pathSeparator + name);
+		File f = new File(_path + File.separator + name);
 		boolean success = f.delete();
 		if(!success) {
 			throw new IOException("Unable to delete file: " + _path + File.pathSeparator + name);
