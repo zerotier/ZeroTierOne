@@ -34,6 +34,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 
 import com.zerotier.sdk.Event;
 import com.zerotier.sdk.EventListener;
@@ -68,14 +69,16 @@ public class OneService extends Thread implements Runnable, PacketSender,
 	    			bgtask[0] = 0;
 	    			DatagramPacket p = new DatagramPacket(buffer, buffer.length);
 	    			
-	    			_udpSocket.receive(p);
-	    			if(p.getLength() > 0)
-	    			{
-	    				System.out.println("Got Data From: " + p.getAddress().toString() +":" + p.getPort());
-	    				
-	    				_node.processWirePacket(System.currentTimeMillis(), new InetSocketAddress(p.getAddress(), p.getPort()), 0, p.getData(), bgtask);
-	    				_nextBackgroundTaskDeadline = bgtask[0];
-	    			}
+	    			try {
+	    				_udpSocket.receive(p);
+	    				if(p.getLength() > 0)
+		    			{
+		    				System.out.println("Got Data From: " + p.getAddress().toString() +":" + p.getPort());
+		    				
+		    				_node.processWirePacket(System.currentTimeMillis(), new InetSocketAddress(p.getAddress(), p.getPort()), 0, p.getData(), bgtask);
+		    				_nextBackgroundTaskDeadline = bgtask[0];
+		    			}
+	    			} catch (SocketTimeoutException e) {}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -90,6 +93,7 @@ public class OneService extends Thread implements Runnable, PacketSender,
 		
 		try {
 			_udpSocket = new DatagramSocket(_port);
+			_udpSocket.setSoTimeout(100);
 			_tcpSocket = new ServerSocket();
 			_tcpSocket.bind(new InetSocketAddress("127.0.0.1", _port));
 		} catch (SocketException e) {
@@ -114,6 +118,9 @@ public class OneService extends Thread implements Runnable, PacketSender,
 
 	@Override
 	public void run() {
+		if(_node == null)
+			return;
+		
 		while(true) {
 		    try {
 		
