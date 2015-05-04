@@ -210,7 +210,14 @@ bool NetworkConfig::operator==(const NetworkConfig &nc) const
 	if (_description != nc._description) return false;
 	if (_staticIps != nc._staticIps) return false;
 	if (_activeBridges != nc._activeBridges) return false;
-	if (_multicastRates != nc._multicastRates) return false;
+	if (_multicastRates.size() == nc._multicastRates.size()) {
+		// uclibc++ doesn't seem to implement map<> != map<> correctly, so do
+		// it ourselves. Note that this depends on the maps being sorted.
+		for(std::map<MulticastGroup,MulticastRate>::const_iterator a(_multicastRates.begin()),b(nc._multicastRates.begin());a!=_multicastRates.end();++a,++b) {
+			if ((a->first != b->first)||(a->second != b->second))
+				return false;
+		}
+	} else return false;
 	if (_com != nc._com) return false;
 	return true;
 }
