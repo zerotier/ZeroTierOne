@@ -1019,10 +1019,7 @@ public:
 	/**
 	 * @return Raw packet payload
 	 */
-	inline const unsigned char *payload() const
-	{
-		return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
-	}
+	inline const unsigned char *payload() const { return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD); }
 
 	/**
 	 * Armor packet for transport
@@ -1030,30 +1027,7 @@ public:
 	 * @param key 32-byte key
 	 * @param encryptPayload If true, encrypt packet payload, else just MAC
 	 */
-	inline void armor(const void *key,bool encryptPayload)
-	{
-		unsigned char mangledKey[32];
-		unsigned char macKey[32];
-		unsigned char mac[16];
-		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
-		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
-
-		// Set flag now, since it affects key mangle function
-		setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
-
-		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
-
-		// MAC key is always the first 32 bytes of the Salsa20 key stream
-		// This is the same construction DJB's NaCl library uses
-		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
-
-		if (encryptPayload)
-			s20.encrypt(payload,payload,payloadLen);
-
-		Poly1305::compute(mac,payload,payloadLen,macKey);
-		memcpy(field(ZT_PACKET_IDX_MAC,8),mac,8);
-	}
+	void armor(const void *key,bool encryptPayload);
 
 	/**
 	 * Verify and (if encrypted) decrypt packet
@@ -1061,32 +1035,7 @@ public:
 	 * @param key 32-byte key
 	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
-	inline bool dearmor(const void *key)
-	{
-		unsigned char mangledKey[32];
-		unsigned char macKey[32];
-		unsigned char mac[16];
-		const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
-		unsigned char *const payload = field(ZT_PACKET_IDX_VERB,payloadLen);
-		unsigned int cs = cipher();
-
-		if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
-			_salsa20MangleKey((const unsigned char *)key,mangledKey);
-			Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
-
-			s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
-			Poly1305::compute(mac,payload,payloadLen,macKey);
-			if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
-				return false;
-
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
-				s20.decrypt(payload,payload,payloadLen);
-
-			return true;
-		} else if (cs == ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM) {
-			return false; // not implemented yet
-		} else return false; // unrecognized cipher suite
-	}
+	bool dearmor(const void *key);
 
 	/**
 	 * Attempt to compress payload if not already (must be unencrypted)
@@ -1098,22 +1047,7 @@ public:
 	 * 
 	 * @return True if compression occurred
 	 */
-	inline bool compress()
-	{
-		unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH * 2];
-		if ((!compressed())&&(size() > (ZT_PACKET_IDX_PAYLOAD + 32))) {
-			int pl = (int)(size() - ZT_PACKET_IDX_PAYLOAD);
-			int cl = LZ4_compress((const char *)field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)pl),(char *)buf,pl);
-			if ((cl > 0)&&(cl < pl)) {
-				(*this)[ZT_PACKET_IDX_VERB] |= (char)ZT_PROTO_VERB_FLAG_COMPRESSED;
-				setSize((unsigned int)cl + ZT_PACKET_IDX_PAYLOAD);
-				memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)cl),buf,cl);
-				return true;
-			}
-		}
-		(*this)[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
-		return false;
-	}
+	bool compress();
 
 	/**
 	 * Attempt to decompress payload if it is compressed (must be unencrypted)
@@ -1123,22 +1057,7 @@ public:
 	 * 
 	 * @return True if data is now decompressed and valid, false on error
 	 */
-	inline bool uncompress()
-	{
-		unsigned char buf[ZT_PROTO_MAX_PACKET_LENGTH];
-		if ((compressed())&&(size() >= ZT_PROTO_MIN_PACKET_LENGTH)) {
-			if (size() > ZT_PACKET_IDX_PAYLOAD) {
-				unsigned int compLen = size() - ZT_PACKET_IDX_PAYLOAD;
-				int ucl = LZ4_decompress_safe((const char *)field(ZT_PACKET_IDX_PAYLOAD,compLen),(char *)buf,compLen,sizeof(buf));
-				if ((ucl > 0)&&(ucl <= (int)(capacity() - ZT_PACKET_IDX_PAYLOAD))) {
-					setSize((unsigned int)ucl + ZT_PACKET_IDX_PAYLOAD);
-					memcpy(field(ZT_PACKET_IDX_PAYLOAD,(unsigned int)ucl),buf,ucl);
-				} else return false;
-			}
-			(*this)[ZT_PACKET_IDX_VERB] &= (char)(~ZT_PROTO_VERB_FLAG_COMPRESSED);
-		}
-		return true;
-	}
+	bool uncompress();
 
 private:
 	static const unsigned char ZERO_KEY[32];
