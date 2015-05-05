@@ -5,11 +5,16 @@
       <os family="windows"/>
     </condition>
 
+    <condition property="isMac">
+      <os family="mac"/>
+    </condition>
+
     <target name="clean">
         <delete dir="bin" failonerror="false"/>
         <delete dir="classes" failonerror="false"/>
         <delete dir="build_win32" failonerror="false"/>
         <delete dir="build_win64" failonerror="false"/>
+        <delete dir="mac32_64" failonerror="false"/>
         <delete dir="libs" failonerror="false"/>
         <delete dir="obj" failonerror="false"/>
     </target>
@@ -72,7 +77,20 @@
             overwrite="true"/>
     </target>
 
-    <target name="build" depends="build_java,build_android,windows">    
+    <target name="mac" if="isMac">
+      <mkdir dir="mac32_64"/>
+      <exec dir="mac32_64/" executable="cmake" failonerror="true">
+        <arg line=".. -DCMAKE_BUILD_TYPE=Release"/>
+      </exec>
+      <exec dir="mac32_64/" executable="cmake" failonerror="true">
+        <arg line="--build . --config Release"/>
+      </exec>
+      <copy file="mac32_64/libZeroTierOneJNI.jnilib"
+            tofile="classes/lib/libZeroTierOneJNI.jnilib"
+            overwrite="true"/>
+    </target>
+
+    <target name="build" depends="build_java,build_android,windows,mac">    
         <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 

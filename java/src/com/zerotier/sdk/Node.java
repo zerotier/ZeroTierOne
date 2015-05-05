@@ -47,8 +47,10 @@ public class Node {
                     } else {
                         NativeUtils.loadLibraryFromJar("/lib/ZeroTierOneJNI_win32.dll");
                     }
+                } else if(System.getProperty("os.name").startsWith("Mac")) {
+                    NativeUtils.loadLibraryFromJar("/lib/libZeroTierOneJNI.jnilib");
                 } else {
-                    // TODO: Mac
+                    // TODO: Linux
                 }
             } catch (IOException ioe) {
                 ioe.printStackTrace();

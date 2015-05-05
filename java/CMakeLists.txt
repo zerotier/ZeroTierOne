@@ -5,13 +5,24 @@ project(ZeroTierOneJNI)
 find_package(Java COMPONENTS Development)
 message("JAVA_HOME: $ENV{JAVA_HOME}")
 
+if(WIN32)
 set(Java_INCLUDE_DIRS $ENV{JAVA_HOME}/include)
+endif()
+
+if(APPLE)
+set(Java_INCLUDE_DIRS "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk/System/Library/Frameworks/JavaVM.framework/Headers")
+endif()
 
 message("Java Include Dirs: ${Java_INCLUDE_DIRS}")
 
 if(WIN32)
     add_definitions(-DNOMINMAX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /W3 /MP")
+endif()
+
+if(APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -arch i386 -arch x86_64 -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -mmacosx-version-min=10.7 -Wno-unused-private-field")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -fno-rtti")
 endif()
 
 set(src_files
@@ -61,6 +72,8 @@ include_directories(
     )
 
 add_library(${PROJECT_NAME} SHARED ${src_files})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".jnilib")
 
 set(link_libs )
 
