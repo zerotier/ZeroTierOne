@@ -264,6 +264,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 
 		try {
 			RR->topology->clean(now);
+			RR->sa->clean(now);
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}

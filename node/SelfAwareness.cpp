@@ -37,6 +37,9 @@
 #include "Packet.hpp"
 #include "Peer.hpp"
 
+// Entry timeout -- make it fairly long since this is just to prevent stale buildup
+#define ZT_SELFAWARENESS_ENTRY_TIMEOUT 3600000
+
 namespace ZeroTier {
 
 class _ResetWithinScope
@@ -64,57 +67,73 @@ private:
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
 	RR(renv)
 {
-	memset(_lastPhysicalAddress,0,sizeof(_lastPhysicalAddress));
 }
 
 SelfAwareness::~SelfAwareness()
 {
 }
 
-void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted)
+void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
 {
-	// This code depends on the numeric values assigned to scopes in InetAddress.hpp
-	const unsigned int scope = (unsigned int)myPhysicalAddress.ipScope();
-	if ((scope > 0)&&(scope < (unsigned int)InetAddress::IP_SCOPE_LOOPBACK)) {
-		if ( (!trusted) && ((scope == (unsigned int)InetAddress::IP_SCOPE_GLOBAL)||(scope != (unsigned int)reporterPhysicalAddress.ipScope())) ) {
-			/* For now only trusted peers are permitted to inform us of changes to
-			 * our global Internet IP or to changes of NATed IPs. We'll let peers on
-			 * private, shared, or link-local networks inform us of changes as long
-			 * as they too are at the same scope. This discrimination avoids a DoS
-			 * attack in which an attacker could force us to reset our connections. */
+	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
+
+	switch(scope) {
+		case InetAddress::IP_SCOPE_NONE:
+		case InetAddress::IP_SCOPE_LOOPBACK:
+		case InetAddress::IP_SCOPE_MULTICAST:
 			return;
-		} else {
-			Mutex::Lock _l(_lock);
-			InetAddress &lastPhy = _lastPhysicalAddress[scope - 1];
-			if (!lastPhy) {
-				TRACE("learned physical address %s for scope %u from reporter %s(%s) (replaced <null>)",myPhysicalAddress.toString().c_str(),scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str());
-				lastPhy = myPhysicalAddress;
-			} else if (lastPhy != myPhysicalAddress) {
-				TRACE("learned physical address %s for scope %u from reporter %s(%s) (replaced %s, resetting within scope)",myPhysicalAddress.toString().c_str(),scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),lastPhy.toString().c_str());
-				lastPhy = myPhysicalAddress;
-				uint64_t now = RR->node->now();
+		case InetAddress::IP_SCOPE_GLOBAL:
+			if ((!trusted)||(scope != reporterPhysicalAddress.ipScope()))
+				return;
+			break;
+		default:
+			if (scope != reporterPhysicalAddress.ipScope())
+				return;
+			break;
+	}
 
-				_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
-				RR->topology->eachPeer<_ResetWithinScope &>(rset);
+	Mutex::Lock _l(_phy_m);
 
-				// For all peers for whom we forgot an address, send a packet indirectly if
-				// they are still considered alive so that we will re-establish direct links.
-				SharedPtr<Peer> sn(RR->topology->getBestSupernode());
-				if (sn) {
-					Path *snp = sn->getBestPath(now);
-					if (snp) {
-						for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
-							if ((*p)->alive(now)) {
-								TRACE("sending indirect NOP to %s via %s(%s) to re-establish link",(*p)->address().toString().c_str(),sn->address().toString().c_str(),snp->address().toString().c_str());
-								Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
-								outp.armor((*p)->key(),true);
-								snp->send(RR,outp.data(),outp.size(),now);
-							}
-						}
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,scope)];
+
+	if (!entry.ts) {
+		entry.mySurface = myPhysicalAddress;
+		entry.ts = now;
+		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced <null>)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str());
+	} else if (entry.mySurface != myPhysicalAddress) {
+		entry.mySurface = myPhysicalAddress;
+		entry.ts = now;
+		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced %s, resetting all in scope)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
+
+		_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
+		RR->topology->eachPeer<_ResetWithinScope &>(rset);
+
+		// For all peers for whom we forgot an address, send a packet indirectly if
+		// they are still considered alive so that we will re-establish direct links.
+		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+		if (sn) {
+			Path *snp = sn->getBestPath(now);
+			if (snp) {
+				for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
+					if ((*p)->alive(now)) {
+						TRACE("sending indirect NOP to %s via %s(%s) to re-establish link",(*p)->address().toString().c_str(),sn->address().toString().c_str(),snp->address().toString().c_str());
+						Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
+						outp.armor((*p)->key(),true);
+						snp->send(RR,outp.data(),outp.size(),now);
 					}
 				}
 			}
 		}
+	}
+}
+
+void SelfAwareness::clean(uint64_t now)
+{
+	Mutex::Lock _l(_phy_m);
+	for(std::map< PhySurfaceKey,PhySurfaceEntry >::iterator p(_phy.begin());p!=_phy.end();) {
+		if ((now - p->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+			_phy.erase(p++);
+		else ++p;
 	}
 }
 
