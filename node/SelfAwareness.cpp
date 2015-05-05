@@ -124,7 +124,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 				}
 			}
 		}
-	}
+	} else entry.ts = now;
 }
 
 void SelfAwareness::clean(uint64_t now)
