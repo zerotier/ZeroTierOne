@@ -416,7 +416,7 @@ typedef struct
 	uint64_t nwid;
 
 	/**
-	 * Ethernet MAC (40 bits) that should be assigned to port
+	 * Ethernet MAC (48 bits) that should be assigned to port
 	 */
 	uint64_t mac;
 
