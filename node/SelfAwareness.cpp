@@ -105,6 +105,14 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		entry.ts = now;
 		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced %s, resetting all in scope)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
 
+		// Erase all entries (other than this one) for this scope to prevent thrashing
+		// Note: we should probably not use 'entry' after this
+		for(std::map< PhySurfaceKey,PhySurfaceEntry >::iterator p(_phy.begin());p!=_phy.end();) {
+			if ((p->first.reporter != reporter)&&(p->first.scope == scope))
+				_phy.erase(p++);
+			else ++p;
+		}
+
 		_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
@@ -124,7 +132,9 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 				}
 			}
 		}
-	} else entry.ts = now;
+	} else {
+		entry.ts = now;
+	}
 }
 
 void SelfAwareness::clean(uint64_t now)
