@@ -96,7 +96,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 
 	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,scope)];
 
-	if (!entry.ts) {
+	if ((now - entry.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT) {
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced <null>)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str());
