@@ -273,7 +273,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			trusted = true;
 		}
 		if (destAddr)
-			RR->sa->iam(id.address(),_remoteAddress,destAddr,trusted);
+			RR->sa->iam(id.address(),_remoteAddress,destAddr,trusted,RR->node->now());
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
 
@@ -358,7 +358,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					trusted = true;
 				}
 				if (destAddr)
-					RR->sa->iam(peer->address(),_remoteAddress,destAddr,trusted);
+					RR->sa->iam(peer->address(),_remoteAddress,destAddr,trusted,RR->node->now());
 			}	break;
 
 			case Packet::VERB_WHOIS: {

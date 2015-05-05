@@ -63,9 +63,6 @@ struct InetAddress : public sockaddr_storage
 
 	/**
 	 * IP address scope
-	 *
-	 * Do not change these numeric index values without taking a look
-	 * at SelfAwareness. Values 1-5 are mapped onto an array index.
 	 */
 	enum IpScope
 	{

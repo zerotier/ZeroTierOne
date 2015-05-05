@@ -28,6 +28,8 @@
 #ifndef ZT_SELFAWARENESS_HPP
 #define ZT_SELFAWARENESS_HPP
 
+#include <map>
+
 #include "InetAddress.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
@@ -52,13 +54,41 @@ public:
 	 * @param reporterPhysicalAddress Physical address that reporting peer seems to have
 	 * @param myPhysicalAddress Physical address that peer says we have
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
+	 * @param now Current time
 	 */
-	void iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted);
+	void iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
+
+	/**
+	 * Clean up database periodically
+	 *
+	 * @param now Current time
+	 */
+	void clean(uint64_t now);
 
 private:
+	struct PhySurfaceKey
+	{
+		Address reporter;
+		InetAddress::IpScope scope;
+
+		PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
+		PhySurfaceKey(const Address &r,InetAddress::IpScope s) : reporter(r),scope(s) {}
+		inline bool operator<(const PhySurfaceKey &k) const throw() { return ((reporter < k.reporter) ? true : ((reporter == k.reporter) ? ((int)scope < (int)k.scope) : false)); }
+		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(scope == k.scope)); }
+	};
+	struct PhySurfaceEntry
+	{
+		InetAddress mySurface;
+		uint64_t ts;
+
+		PhySurfaceEntry() : mySurface(),ts(0) {}
+		PhySurfaceEntry(const InetAddress &a,const uint64_t t) : mySurface(a),ts(t) {}
+	};
+
 	const RuntimeEnvironment *RR;
-	Mutex _lock;
-	InetAddress _lastPhysicalAddress[5]; // 5 == the number of address classes we care about, see InetAddress.hpp and SelfAwareness.cpp
+
+	std::map< PhySurfaceKey,PhySurfaceEntry > _phy;
+	Mutex _phy_m;
 };
 
 } // namespace ZeroTier
