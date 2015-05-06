@@ -133,7 +133,9 @@ Node::Node(
 		if (!rt.size())
 			rt.fromString(ZT_DEFAULTS.defaultRootTopology);
 	}
-	RR->topology->setSupernodes(Dictionary(rt.get("supernodes","")));
+	Dictionary rootservers(rt.get("rootservers",""));
+	rootservers.update(rt.get("supernodes",""));
+	RR->topology->setRootservers(rootservers);
 
 	postEvent(ZT1_EVENT_UP);
 }
@@ -189,7 +191,7 @@ public:
 		RR(renv),
 		_now(now),
 		_relays(relays),
-		_supernodes(RR->topology->supernodeAddresses())
+		_rootservers(RR->topology->rootserverAddresses())
 	{
 	}
 
@@ -205,7 +207,7 @@ public:
 			}
 		}
 
-		if ((isRelay)||(std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end())) {
+		if ((isRelay)||(std::find(_rootservers.begin(),_rootservers.end(),p->address()) != _rootservers.end())) {
 			p->doPingAndKeepalive(RR,_now);
 			if (p->lastReceive() > lastReceiveFromUpstream)
 				lastReceiveFromUpstream = p->lastReceive();
@@ -219,7 +221,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	const std::vector< std::pair<Address,InetAddress> > &_relays;
-	std::vector<Address> _supernodes;
+	std::vector<Address> _rootservers;
 };
 
 ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
@@ -260,7 +262,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 				}
 			}
 
-			// Ping living or supernode/relay peers
+			// Ping living or rootserver/relay peers
 			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
@@ -384,7 +386,7 @@ ZT1_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = pi->second->latency();
-		p->role = RR->topology->isSupernode(pi->second->address()) ? ZT1_PEER_ROLE_SUPERNODE : ZT1_PEER_ROLE_LEAF;
+		p->role = RR->topology->isRootserver(pi->second->address()) ? ZT1_PEER_ROLE_ROOTSERVER : ZT1_PEER_ROLE_LEAF;
 
 		std::vector<Path> paths(pi->second->paths());
 		Path *bestPath = pi->second->getBestPath(_now);

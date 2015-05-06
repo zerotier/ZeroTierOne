@@ -259,6 +259,9 @@ public:
 	 */
 	void fromString(const char *s,unsigned int maxlen);
 	inline void fromString(const std::string &s) { fromString(s.c_str(),(unsigned int)s.length()); }
+	void updateFromString(const char *s,unsigned int maxlen);
+	inline void update(const char *s,unsigned int maxlen) { updateFromString(s, maxlen); }
+	inline void update(const std::string &s) { updateFromString(s.c_str(),(unsigned int)s.length()); }
 
 	/**
 	 * @return True if this dictionary is cryptographically signed

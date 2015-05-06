@@ -2,9 +2,9 @@ This folder contains the source files to compile the signed network root topolog
 
 Keys in the root topology dictionary are:
 
- * **supernodes**: contains another Dictionary mapping supernode address to supernode definition
-   * **##########**: supernode address, contains supernode definition
-     * **id**: supernode identity (public) in string-serialized format
+ * **rootservers**: contains another Dictionary mapping rootserver address to rootserver definition
+   * **##########**: rootserver address, contains rootserver definition
+     * **id**: rootserver identity (public) in string-serialized format
      * **udp**: comma-delimited list of ip/port UDP addresses of node
      * **tcp**: *DEPRECATED* comma-delimited list of ip/port TCP addresses of node
      * **desc**: human-readable description (optional)

@@ -32,9 +32,8 @@
 
 namespace ZeroTier {
 
-void Dictionary::fromString(const char *s,unsigned int maxlen)
+void Dictionary::updateFromString(const char *s,unsigned int maxlen)
 {
-	clear();
 	bool escapeState = false;
 	std::string keyBuf;
 	std::string *element = &keyBuf;
@@ -73,6 +72,12 @@ void Dictionary::fromString(const char *s,unsigned int maxlen)
 	}
 	if ((element == &keyBuf)&&(keyBuf.length() > 0))
 		(*this)[keyBuf];
+}
+
+void Dictionary::fromString(const char *s,unsigned int maxlen)
+{
+	clear();
+	updateFromString(s,maxlen);
 }
 
 bool Dictionary::sign(const Identity &id,uint64_t now)

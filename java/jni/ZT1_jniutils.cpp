@@ -174,8 +174,8 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
     case ZT1_PEER_ROLE_HUB:
         fieldName = "PEER_ROLE_HUB";
         break;
-    case ZT1_PEER_ROLE_SUPERNODE:
-        fieldName = "PEER_ROLE_SUPERNODE";
+    case ZT1_PEER_ROLE_ROOTSERVER:
+        fieldName = "PEER_ROLE_ROOTSERVER";
         break;
     }
 

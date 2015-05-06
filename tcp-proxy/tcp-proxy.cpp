@@ -85,7 +85,7 @@ using namespace ZeroTier;
  * in which every encapsulated ZT packet is prepended by an IP address where
  * it should be forwarded (or where it came from for replies). This causes
  * this proxy to act as a remote UDP socket similar to a socks proxy, which
- * will allow us to move this function off the supernodes and onto dedicated
+ * will allow us to move this function off the rootservers and onto dedicated
  * proxy nodes.
  *
  * Older ZT clients that do not send this message get their packets relayed

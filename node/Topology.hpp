@@ -59,21 +59,21 @@ public:
 	~Topology();
 
 	/**
-	 * Set up supernodes for this network
+	 * Set up rootservers for this network
 	 * 
-	 * @param sn Supernodes for this network
+	 * @param sn Rootservers for this network
 	 */
-	void setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn);
+	void setRootservers(const std::map< Identity,std::vector<InetAddress> > &sn);
 
 	/**
-	 * Set up supernodes for this network
+	 * Set up rootservers for this network
 	 *
 	 * This performs no signature verification of any kind. The caller must
 	 * check the signature of the root topology dictionary first.
 	 *
-	 * @param sn Supernodes dictionary from root-topology
+	 * @param sn Rootservers dictionary from root-topology
 	 */
-	void setSupernodes(const Dictionary &sn);
+	void setRootservers(const Dictionary &sn);
 
 	/**
 	 * Add a peer to database
@@ -95,65 +95,65 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
-	 * @return Vector of peers that are supernodes
+	 * @return Vector of peers that are rootservers
 	 */
-	inline std::vector< SharedPtr<Peer> > supernodePeers() const
+	inline std::vector< SharedPtr<Peer> > rootserverPeers() const
 	{
 		Mutex::Lock _l(_lock);
-		return _supernodePeers;
+		return _rootserverPeers;
 	}
 
 	/**
-	 * @return Number of supernodes
+	 * @return Number of rootservers
 	 */
-	inline unsigned int numSupernodes() const
+	inline unsigned int numRootservers() const
 	{
 		Mutex::Lock _l(_lock);
-		return (unsigned int)_supernodePeers.size();
+		return (unsigned int)_rootserverPeers.size();
 	}
 
 	/**
-	 * Get the current favorite supernode
+	 * Get the current favorite rootserver
 	 * 
-	 * @return Supernode with lowest latency or NULL if none
+	 * @return Rootserver with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestSupernode()
+	inline SharedPtr<Peer> getBestRootserver()
 	{
-		return getBestSupernode((const Address *)0,0,false);
+		return getBestRootserver((const Address *)0,0,false);
 	}
 
 	/**
-	 * Get the best supernode, avoiding supernodes listed in an array
+	 * Get the best rootserver, avoiding rootservers listed in an array
 	 * 
-	 * This will get the best supernode (lowest latency, etc.) but will
-	 * try to avoid the listed supernodes, only using them if no others
+	 * This will get the best rootserver (lowest latency, etc.) but will
+	 * try to avoid the listed rootservers, only using them if no others
 	 * are available.
 	 * 
 	 * @param avoid Nodes to avoid
 	 * @param avoidCount Number of nodes to avoid
-	 * @param strictAvoid If false, consider avoided supernodes anyway if no non-avoid supernodes are available
-	 * @return Supernode or NULL if none
+	 * @param strictAvoid If false, consider avoided rootservers anyway if no non-avoid rootservers are available
+	 * @return Rootserver or NULL if none
 	 */
-	SharedPtr<Peer> getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
+	SharedPtr<Peer> getBestRootserver(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
 
 	/**
 	 * @param zta ZeroTier address
-	 * @return True if this is a designated supernode
+	 * @return True if this is a designated rootserver
 	 */
-	inline bool isSupernode(const Address &zta) const
+	inline bool isRootserver(const Address &zta) const
 		throw()
 	{
 		Mutex::Lock _l(_lock);
-		return (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),zta) != _supernodeAddresses.end());
+		return (std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),zta) != _rootserverAddresses.end());
 	}
 
 	/**
-	 * @return Vector of supernode addresses
+	 * @return Vector of rootserver addresses
 	 */
-	inline std::vector<Address> supernodeAddresses() const
+	inline std::vector<Address> rootserverAddresses() const
 	{
 		Mutex::Lock _l(_lock);
-		return _supernodeAddresses;
+		return _rootserverAddresses;
 	}
 
 	/**
@@ -206,13 +206,13 @@ private:
 	const RuntimeEnvironment *RR;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
-	std::map< Identity,std::vector<InetAddress> > _supernodes;
-	std::vector< Address > _supernodeAddresses;
-	std::vector< SharedPtr<Peer> > _supernodePeers;
+	std::map< Identity,std::vector<InetAddress> > _rootservers;
+	std::vector< Address > _rootserverAddresses;
+	std::vector< SharedPtr<Peer> > _rootserverPeers;
 
 	Mutex _lock;
 
-	bool _amSupernode;
+	bool _amRootserver;
 };
 
 } // namespace ZeroTier
