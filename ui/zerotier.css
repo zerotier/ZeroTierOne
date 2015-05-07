@@ -116,6 +116,17 @@ html,body {
 	display: table-cell;
 	font-size: 10pt;
 }
+.zeroTierNode > .middle > .middleScroll > .peers > .peerHeader {
+	width: 100%;
+	display: table-row;
+	background: #ffffff;
+	border-bottom: 1px solid #000000;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peerHeader > .f {
+	display: table-cell;
+	font-size: 10pt;
+	font-weight: bold;
+}
 
 .zeroTierNode > .bottom {
 	width: 100%;

@@ -10,8 +10,10 @@ var ZeroTierNode = React.createClass({
 	},
 
 	ago: function(ms) {
-		var tmp = (Date.now() - ms);
-		return ((tmp > 0) ? tmp : 0);
+		if (ms > 0) {
+			var tmp = Math.round((Date.now() - ms) / 1000);
+			return ((tmp > 0) ? tmp : 0);
+		} else return 0;
 	},
 
 	updatePeers: function() {
@@ -88,7 +90,7 @@ var ZeroTierNode = React.createClass({
 	componentDidMount: function() {
 		this.tabIndex = 0;
 		this.updateAll();
-		this.updateIntervalId = setInterval(this.updateAll,5000);
+		this.updateIntervalId = setInterval(this.updateAll,2500);
 	},
 	componentWillUnmount: function() {
 		clearInterval(this.updateIntervalId);
@@ -105,12 +107,12 @@ var ZeroTierNode = React.createClass({
 						{
 							(this.tabIndex === 1) ? (
 								<div className="peers">
-									<div className="peer">
-										<div className="f"><b>Address</b></div>
-										<div className="f"><b>Version</b></div>
-										<div className="f"><b>Latency</b></div>
-										<div className="f"><b>Direct&nbsp;Paths</b></div>
-										<div className="f"><b>Role</b></div>
+									<div className="peerHeader">
+										<div className="f">Address</div>
+										<div className="f">Version</div>
+										<div className="f">Latency</div>
+										<div className="f">Direct&nbsp;Paths</div>
+										<div className="f">Role</div>
 									</div>
 									{
 										this.state._peers.map(function(peer) {
@@ -129,7 +131,7 @@ var ZeroTierNode = React.createClass({
 																	peer['paths'].map(function(path) {
 																		if ((path.active)||(path.fixed)) {
 																			return (
-																				<div className="peerPath">{path.address}&nbsp;{this.ago(path.lastSend)}&nbsp;{this.ago(path.lastReceive)}</div>
+																				<div className="peerPath">{path.address}&nbsp;{this.ago(path.lastSend)}&nbsp;{this.ago(path.lastReceive)}{path.preferred ? ' *' : ''}</div>
 																			);
 																		} else {
 																			return (
