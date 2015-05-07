@@ -226,7 +226,7 @@ public:
 			if (_master)
 				_node->setNetconfMaster((void *)_master);
 
-			_controlPlane = new ControlPlane(this,_node);
+			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
 			_controlPlane->addAuthToken(authToken.c_str());
 			if (_master)
 				_controlPlane->mount("controller",reinterpret_cast<ControlPlaneSubsystem *>(_master));

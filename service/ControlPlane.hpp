@@ -49,7 +49,7 @@ struct InetAddress;
 class ControlPlane
 {
 public:
-	ControlPlane(OneService *svc,Node *n);
+	ControlPlane(OneService *svc,Node *n,const char *uiStaticPath);
 	~ControlPlane();
 
 	/**
@@ -102,6 +102,7 @@ public:
 private:
 	OneService *const _svc;
 	Node *const _node;
+	std::string _uiStaticPath;
 	std::set<std::string> _authTokens;
 	std::map<std::string,ControlPlaneSubsystem *> _subsystems;
 	Mutex _lock;

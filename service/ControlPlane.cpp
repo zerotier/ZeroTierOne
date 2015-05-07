@@ -37,8 +37,7 @@
 #include "../node/InetAddress.hpp"
 #include "../node/Node.hpp"
 #include "../node/Utils.hpp"
-
-#define ZT_BUILD_IN_WEB_UI
+#include "../osdep/OSUtils.hpp"
 
 namespace ZeroTier {
 
@@ -242,9 +241,10 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 	buf.append(json);
 }
 
-ControlPlane::ControlPlane(OneService *svc,Node *n) :
+ControlPlane::ControlPlane(OneService *svc,Node *n,const char *uiStaticPath) :
 	_svc(svc),
-	_node(n)
+	_node(n),
+	_uiStaticPath((uiStaticPath) ? uiStaticPath : "")
 {
 }
 
@@ -316,31 +316,34 @@ unsigned int ControlPlane::handleRequest(
 			 * dot in the first path element (e.g. foo.html) is considered a static page,
 			 * as nothing in the API is so named. */
 
-#ifdef ZT_BUILD_IN_WEB_UI
-			if (ext == ".html")
-				responseContentType = "text/html";
-			else if (ext == ".js")
-				responseContentType = "application/javascript";
-			else if (ext == ".json")
-				responseContentType = "application/json";
-			else if (ext == ".css")
-				responseContentType = "text/css";
-			else if (ext == ".png")
-				responseContentType = "image/png";
-			else if (ext == ".jpg")
-				responseContentType = "image/jpeg";
-			else if (ext == ".gif")
-				responseContentType = "image/gif";
-			else if (ext == ".txt")
-				responseContentType = "text/plain";
-			else if (ext == ".xml")
-				responseContentType = "text/xml";
-			else if (ext == ".svg")
-				responseContentType = "image/svg+xml";
-			else responseContentType = "application/octet-stream";
-			responseBody = "<html><body>Hello World!</body></html>";
-			scode = 200;
-#endif // ZT_BUILD_IN_WEB_UI
+			if (_uiStaticPath.length() > 0) {
+				if (ext == ".html")
+					responseContentType = "text/html";
+				else if (ext == ".js")
+					responseContentType = "application/javascript";
+				else if (ext == ".jsx")
+					responseContentType = "text/jsx";
+				else if (ext == ".json")
+					responseContentType = "application/json";
+				else if (ext == ".css")
+					responseContentType = "text/css";
+				else if (ext == ".png")
+					responseContentType = "image/png";
+				else if (ext == ".jpg")
+					responseContentType = "image/jpeg";
+				else if (ext == ".gif")
+					responseContentType = "image/gif";
+				else if (ext == ".txt")
+					responseContentType = "text/plain";
+				else if (ext == ".xml")
+					responseContentType = "text/xml";
+				else if (ext == ".svg")
+					responseContentType = "image/svg+xml";
+				else responseContentType = "application/octet-stream";
+				scode = OSUtils::readFile((_uiStaticPath + ZT_PATH_SEPARATOR_S + ps[0]).c_str(),responseBody) ? 200 : 404;
+			} else {
+				scode = 404;
+			}
 
 		} else if (isAuth) {
 			/* Things that require authentication -- a.k.a. everything but static web app pages. */

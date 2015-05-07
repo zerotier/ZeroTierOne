@@ -1,0 +1,39 @@
+/* Dark blue-grey: #234447
+ * Light blue-grey: #91a2a3
+ * Light yellow: #ffffcc
+ * Orange: #ffb354 */
+
+/*
+@font-face {
+	font-family: 'Clear Sans Thin';
+	src: url('fonts/clearsans_thin/ClearSans-Thin-webfont.eot');
+	src: url('fonts/clearsans_thin/ClearSans-Thin-webfont.eot?#iefix') format('embedded-opentype'), url('fonts/clearsans_thin/ClearSans-Thin-webfont.woff') format('woff'), url('fonts/clearsans_thin/ClearSans-Thin-webfont.ttf') format('truetype'), url('fonts/clearsans_thin/ClearSans-Thin-webfont.svg#clear_sans_thinregular') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+*/
+/*
+@font-face {
+	font-family: 'Clear Sans Regular';
+	src: url('ClearSans-Regular-webfont.eot');
+	src: url('ClearSans-Regular-webfont.eot?#iefix') format('embedded-opentype'), url('ClearSans-Regular-webfont.woff') format('woff'), url('ClearSans-Regular-webfont.ttf') format('truetype'), url('ClearSans-Regular-webfont.svg#clear_sansregular') format('svg');
+	font-weight: normal;
+	font-style: normal;
+}
+*/
+
+html,body {
+	font-family: "Helvetica Neue","Lucida Sans Unicode",sans-serif;
+	font-size: 12pt;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+}
+
+.zerotier-address {
+	font-family: monospace;
+}
+.zerotier-node-statusline {
+	font-size: smaller;
+	padding: 0 0.75rem 0 0.75rem;
+}
