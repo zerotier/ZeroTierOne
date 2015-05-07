@@ -73,19 +73,19 @@ html,body {
 	background: #eeeeee;
 }
 .zeroTierNode > .middle > .middleScroll > .networks {
-	display: table;
-	width: 100%;
+	display: block;
+	width: auto;
 	padding: 0;
 	margin: 0;
 	border: 0;
 	border-collapse: collapse;
 }
 .zeroTierNode > .middle > .middleScroll > .networks > .network {
-	width: 100%;
-	padding: 0;
-	margin: 0;
-	display: table-row;
-	border-bottom: 1px solid #234447;
+	padding: 0.5rem;
+	margin: 0.25rem;
+	float: left;
+	display: inline-block;
+	border: 1px solid #234447;
 	background: #ffffff;
 }
 .zeroTierNode > .middle > .middleScroll > .peers {
@@ -180,25 +180,56 @@ html,body {
 }
 
 .zeroTierNetwork {
-	width: 100%;
-	padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	padding: 0;
 	margin: 0;
+	display: inline-block;
+	text-align: right;
+	width: 100%;
+	position: relative;
+}
+.zeroTierNetwork .deletedOverlay {
+	width: 100%;
+	height: 100%;
+	position: absolute;
+	background: rgba(255,255,255,0.8);
+	display: block;
+	top: 0;
+	left: 0;
+	z-index: 2;
 }
 .zeroTierNetwork .networkInfo {
 	padding: 0 0 0.5rem 0;
+	text-align: left;
+	font-size: 12pt;
+}
+.zeroTierNetwork .networkInfo .networkId {
+	font-size: 10pt;
+	font-family: monospace;
+	color: #91a2a3;
+}
+.zeroTierNetwork .networkInfo .networkName {
+	padding: 0 0 0 1rem;
+	float: right;
+	font-size: 12pt;
 }
 .zeroTierNetwork .networkProps {
-	padding: 0 0 0.5rem 0;
+	width: 100%;
 	display: table;
+	padding: 0;
+	margin: 0 auto 0 auto;
+	border-top: 1px solid #999999;
+	border-bottom: 1px solid #999999;
 }
 .zeroTierNetwork .networkProps > .row {
 	display: table-row;
 }
 .zeroTierNetwork .networkProps > .row > .name {
 	display: table-cell;
+	font-size: 10pt;
 	padding: 0.1rem 0.5rem 0.1rem 0.5rem;
 }
 .zeroTierNetwork .networkProps > .row > .value {
+	font-size: 10pt;
 	display: table-cell;
 	padding: 0.1rem 0.5rem 0.1rem 0.5rem;
 	background: #eeeeee;
@@ -207,7 +238,7 @@ html,body {
 }
 .zeroTierNetwork .ipAddress {
 	font-family: monospace;
-	font-size: 12pt;
+	font-size: 10pt;
 }
 .zeroTierNetwork .leaveNetworkButton {
 	padding: 0.25rem 0.5rem 0.25rem 0.5rem;

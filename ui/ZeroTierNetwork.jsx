@@ -1,12 +1,36 @@
 var ZeroTierNetwork = React.createClass({
+	getInitialState: function() {
+		return {
+			deleted: false
+		};
+	},
+
 	leaveNetwork: function(event) {
+		Ajax.call({
+			url: 'network/'+this.props.nwid+'?auth='+this.props.authToken,
+			cache: false,
+			type: 'DELETE',
+			success: function(data) {
+				this.setState({deleted: true});
+			}.bind(this),
+			error: function(error) {
+			}.bind(this)
+		});
 		event.preventDefault();
 	},
 
 	render: function() {
 		return (
 			<div className="zeroTierNetwork">
-				<div className="networkInfo"><span className="zeroTierAddress">{this.props.nwid}</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[</b>&nbsp;<span>{this.props.name}</span>&nbsp;<b>]</b></div>
+				{
+					(this.state.deleted) ? (
+						<div className="deletedOverlay">&nbsp;</div>
+					) : (null)
+				}
+				<div className="networkInfo">
+					<span className="networkId">{this.props.nwid}</span>
+					<span className="networkName">{this.props.name}</span>
+				</div>
 				<div className="networkProps">
 					<div className="row">
 						<div className="name">Status</div>

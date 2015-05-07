@@ -56,8 +56,11 @@ var ZeroTierNode = React.createClass({
 			cache: false,
 			type: 'GET',
 			success: function(data) {
-				if (data)
-					this.setState(JSON.parse(data));
+				if (data) {
+					var status = JSON.parse(data);
+					this.setState(status);
+					document.title = 'ZeroTier One [' + status.address + ']';
+				}
 				this.updateNetworks();
 				this.updatePeers();
 			}.bind(this),
@@ -68,7 +71,17 @@ var ZeroTierNode = React.createClass({
 	},
 	joinNetwork: function(event) {
 		event.preventDefault();
-		alert('foo');
+		if ((this.networkToJoin)&&(this.networkToJoin.length === 16)) {
+			Ajax.call({
+				url: 'network/'+this.networkToJoin+'?auth='+this.props.authToken,
+				cache: false,
+				type: 'POST',
+				success: function(data) {
+				}.bind(this),
+				error: function() {
+				}.bind(this)
+			});
+		}
 	},
 	handleNetworkIdEntry: function(event) {
 		var nid = event.target.value;
@@ -154,6 +167,7 @@ var ZeroTierNode = React.createClass({
 								<div className="networks">
 									{
 										this.state._networks.map(function(network) {
+											network['authToken'] = this.props.authToken;
 											return React.createElement('div',{className: 'network'},React.createElement(ZeroTierNetwork,network));
 										}.bind(this))
 									}
