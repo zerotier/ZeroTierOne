@@ -6,8 +6,6 @@
 	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>ZeroTier One</string>
-	<key>CFBundleIconFile</key>
-	<string>application.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.zerotier.$(PRODUCT_NAME:rfc1034identifier)</string>
 	<key>CFBundleInfoDictionaryVersion</key>

@@ -19,6 +19,7 @@
 		88C0646014BDE10A00E4BCE2 /* Window.m in Sources */ = {isa = PBXBuildFile; fileRef = 88C0645F14BDE10A00E4BCE2 /* Window.m */; };
 		88C0646614BDEC5800E4BCE2 /* Window.xib in Resources */ = {isa = PBXBuildFile; fileRef = 88C0646414BDEC5800E4BCE2 /* Window.xib */; };
 		88C0646D14BDF6A600E4BCE2 /* WindowController.m in Sources */ = {isa = PBXBuildFile; fileRef = 88C0646C14BDF6A600E4BCE2 /* WindowController.m */; };
+		C13A649D1AFB171100CB31FE /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C13A649C1AFB171100CB31FE /* Images.xcassets */; };
 		C1C2B9911AFB0CF10060D7C2 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C1C2B9901AFB0CF10060D7C2 /* Security.framework */; };
 		F2B80016179E0FC100B069A8 /* Clipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = F2B80015179E0FC100B069A8 /* Clipboard.m */; };
 		FA32509D14BA813600BF0781 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA32509C14BA813600BF0781 /* WebKit.framework */; };
@@ -74,6 +75,7 @@
 		88C0646514BDEC5800E4BCE2 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/Window.xib; sourceTree = "<group>"; };
 		88C0646B14BDF6A600E4BCE2 /* WindowController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WindowController.h; sourceTree = "<group>"; };
 		88C0646C14BDF6A600E4BCE2 /* WindowController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WindowController.m; sourceTree = "<group>"; };
+		C13A649C1AFB171100CB31FE /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		C1C2B9901AFB0CF10060D7C2 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		F2B80014179E0FC100B069A8 /* Clipboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Clipboard.h; sourceTree = "<group>"; };
 		F2B80015179E0FC100B069A8 /* Clipboard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Clipboard.m; sourceTree = "<group>"; };
@@ -227,6 +229,7 @@
 				FAE451D114BA79C600190544 /* AppDelegate.m */,
 				FAE451D314BA79C600190544 /* MainMenu.xib */,
 				88C0646414BDEC5800E4BCE2 /* Window.xib */,
+				C13A649C1AFB171100CB31FE /* Images.xcassets */,
 				FAE451C514BA79C600190544 /* Supporting Files */,
 			);
 			path = MacGap;
@@ -299,6 +302,7 @@
 			files = (
 				FA3250E514BA883A00BF0781 /* public in Resources */,
 				FAE451C914BA79C600190544 /* InfoPlist.strings in Resources */,
+				C13A649D1AFB171100CB31FE /* Images.xcassets in Resources */,
 				FAE451CF14BA79C600190544 /* Credits.rtf in Resources */,
 				FAE451D514BA79C600190544 /* MainMenu.xib in Resources */,
 				FA3250E714BA8BCE00BF0781 /* application.icns in Resources */,
@@ -426,6 +430,7 @@
 		FAE451D914BA79C600190544 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "compiler-default";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -447,6 +452,7 @@
 		FAE451DA14BA79C600190544 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "compiler-default";
 				COMBINE_HIDPI_IMAGES = YES;
