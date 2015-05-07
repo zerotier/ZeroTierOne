@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>4D486E78-E297-4CC3-AAAE-1A58EDAC87E6</string>
+	<key>IDESourceControlProjectName</key>
+	<string>MacGap</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>60776BB1B4F98ABFCF3BD8223221516D7FB415ED</key>
+		<string>https://github.com/MacGapProject/MacGap1.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>MacGap.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>60776BB1B4F98ABFCF3BD8223221516D7FB415ED</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/MacGapProject/MacGap1.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>60776BB1B4F98ABFCF3BD8223221516D7FB415ED</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>60776BB1B4F98ABFCF3BD8223221516D7FB415ED</string>
+			<key>IDESourceControlWCCName</key>
+			<string>MacGap1</string>
+		</dict>
+	</array>
+</dict>
+</plist>
