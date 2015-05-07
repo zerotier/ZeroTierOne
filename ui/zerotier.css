@@ -3,37 +3,211 @@
  * Light yellow: #ffffcc
  * Orange: #ffb354 */
 
-/*
-@font-face {
-	font-family: 'Clear Sans Thin';
-	src: url('fonts/clearsans_thin/ClearSans-Thin-webfont.eot');
-	src: url('fonts/clearsans_thin/ClearSans-Thin-webfont.eot?#iefix') format('embedded-opentype'), url('fonts/clearsans_thin/ClearSans-Thin-webfont.woff') format('woff'), url('fonts/clearsans_thin/ClearSans-Thin-webfont.ttf') format('truetype'), url('fonts/clearsans_thin/ClearSans-Thin-webfont.svg#clear_sans_thinregular') format('svg');
-	font-weight: normal;
-	font-style: normal;
-}
-*/
-/*
-@font-face {
-	font-family: 'Clear Sans Regular';
-	src: url('ClearSans-Regular-webfont.eot');
-	src: url('ClearSans-Regular-webfont.eot?#iefix') format('embedded-opentype'), url('ClearSans-Regular-webfont.woff') format('woff'), url('ClearSans-Regular-webfont.ttf') format('truetype'), url('ClearSans-Regular-webfont.svg#clear_sansregular') format('svg');
-	font-weight: normal;
-	font-style: normal;
-}
-*/
-
 html,body {
 	font-family: "Helvetica Neue","Lucida Sans Unicode",sans-serif;
 	font-size: 12pt;
 	margin: 0;
 	padding: 0;
 	width: 100%;
+	height: 100%;
+	overflow: hidden;
 }
 
-.zerotier-address {
+.zeroTierAddress {
 	font-family: monospace;
 }
-.zerotier-node-statusline {
-	font-size: smaller;
-	padding: 0 0.75rem 0 0.75rem;
+
+.zeroTierNode {
+	width: 100%;
+	height: 100%;
+	max-height: 100%;
+	padding: 0;
+	margin: 0;
+	display: table;
+}
+
+.zeroTierNode > .top {
+	width: 100%;
+	overflow: hidden;
+	display: table-row;
+	white-space: nowrap;
+	background: #234447;
+	color: #ffffff;
+	padding: 0;
+	margin: 0;
+}
+.zeroTierNode > .top button {
+	display: inline-block;
+	padding: 0.25rem 0.75rem 0.25rem 0.75rem;
+	color: #ffffff;
+	margin: 0;
+	border: 0;
+	outline: none;
+	background: #234447;
+	font-size: 12pt;
+	cursor: pointer;
+}
+.zeroTierNode > .top button:hover {
+	background: #91a2a3;
+}
+.zeroTierNode > .top button:disabled {
+	background: #91a2a3;
+}
+
+.zeroTierNode > .middle {
+	height: 100%;
+	width: 100%;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	display: table-row;
+}
+.zeroTierNode > .middle > .middleScroll {
+	display: block;
+	width: 100%;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	overflow-x: hidden;
+	overflow-y: scroll;
+	background: #eeeeee;
+}
+.zeroTierNode > .middle > .middleScroll > .networks {
+	display: table;
+	width: 100%;
+	padding: 0;
+	margin: 0;
+	border: 0;
+	border-collapse: collapse;
+}
+.zeroTierNode > .middle > .middleScroll > .networks > .network {
+	width: 100%;
+	padding: 0;
+	margin: 0;
+	display: table-row;
+	border-bottom: 1px solid #234447;
+	background: #ffffff;
+}
+.zeroTierNode > .middle > .middleScroll > .peers {
+	display: table;
+	width: 100%;
+	padding: 0;
+	margin: 0;
+	border-collapse: collapse;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer {
+	width: 100%;
+	display: table-row;
+	background: #ffffff;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPath {
+	font-size: 10pt;
+	font-family: monospace;
+	white-space: nowrap;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathInactive {
+	font-size: 10pt;
+	font-family: monospace;
+	color: #bbbbbb;
+	text-decoration: line-through;
+	white-space: nowrap;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer > .f {
+	display: table-cell;
+	font-size: 10pt;
+}
+
+.zeroTierNode > .bottom {
+	width: 100%;
+	overflow: hidden;
+	display: table-row;
+	background: #234447;
+	color: #ffffff;
+}
+.zeroTierNode > .bottom > .left {
+	text-align: left;
+	white-space: nowrap;
+	float: left;
+	padding: 0 0 0 0.5rem;
+}
+.zeroTierNode > .bottom > .left > .statusLine {
+	font-family: monospace;
+	white-space: nowrap;
+	font-size: 12pt;
+}
+.zeroTierNode > .bottom > .right {
+	background: #91a2a3;
+	text-align: right;
+	white-space: nowrap;
+	float: right;
+}
+.zeroTierNode > .bottom > .right input {
+	font-family: monospace;
+	font-size: 12pt;
+	background: #91a2a3;
+	color: #ffffff;
+	outline: none;
+	border: 0;
+	margin: 0;
+	padding: 0.05rem 0.25rem 0.05rem 0.25rem;
+	height: 100%;
+	display: inline-block;
+}
+.zeroTierNode > .bottom > .right button {
+	display: inline-block;
+	font-size: 12pt;
+	background: #ffb354;
+	border: 1px solid #ffb354;
+	color: #000000;
+	margin: 0;
+	padding: 0.05rem 0.75rem 0.05rem 0.75rem;
+	height: 100%;
+}
+.zeroTierNode > .bottom > .right button:hover {
+	cursor: pointer;
+	border: 1px solid #000000;
+}
+
+.zeroTierNetwork {
+	width: 100%;
+	padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+	margin: 0;
+}
+.zeroTierNetwork .networkInfo {
+	padding: 0 0 0.5rem 0;
+}
+.zeroTierNetwork .networkProps {
+	padding: 0 0 0.5rem 0;
+	display: table;
+}
+.zeroTierNetwork .networkProps > .row {
+	display: table-row;
+}
+.zeroTierNetwork .networkProps > .row > .name {
+	display: table-cell;
+	padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+}
+.zeroTierNetwork .networkProps > .row > .value {
+	display: table-cell;
+	padding: 0.1rem 0.5rem 0.1rem 0.5rem;
+	background: #eeeeee;
+}
+.zeroTierNetwork .ipList {
+}
+.zeroTierNetwork .ipAddress {
+	font-family: monospace;
+	font-size: 12pt;
+}
+.zeroTierNetwork .leaveNetworkButton {
+	padding: 0.25rem 0.5rem 0.25rem 0.5rem;
+	margin: 0.5rem 0 0 0;
+	font-size: 10pt;
+	background: #ffffff;
+	outline: none;
+	background: #ffb354;
+	border: 1px solid #ffb354;
+	cursor: pointer;
+}
+.zeroTierNetwork .leaveNetworkButton:hover {
+	border: 1px solid #000000;
 }
