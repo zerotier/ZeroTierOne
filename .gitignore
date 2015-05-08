@@ -36,6 +36,7 @@
 /ZeroTier One.dmg
 /root-topology/bin2c
 /root-topology/mktopology
+/root-topology/*.secret
 /root-topology/test/supernodes
 /root-topology/test/test-root-topology
 java/obj/
@@ -46,5 +47,5 @@ java/doc/
 windows/ZeroTierOne/Debug/
 java/build_win64/
 java/build_win32/
-
 /java/mac32_64/
+/ext/mac-ui-macgap1-wrapper/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
