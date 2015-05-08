@@ -82,18 +82,19 @@ html,body {
 }
 .zeroTierNode > .middle > .middleScroll > .networks {
 	display: block;
-	width: auto;
+	width: 100%;
 	padding: 0;
 	margin: 0;
 	border: 0;
+	text-align: left;
 	border-collapse: collapse;
 }
 .zeroTierNode > .middle > .middleScroll > .networks > .network {
-	padding: 0.25rem;
-	margin: 0.25rem 0 0 0.25rem;
-	float: left;
 	display: inline-block;
-	min-width: 30%;
+	padding: 0.25rem;
+	margin: 0.25rem 0 0 1%;
+	min-width: 31%;
+	max-width: 98%;
 	border: 1px solid #234447;
 	background: #ffffff;
 }
