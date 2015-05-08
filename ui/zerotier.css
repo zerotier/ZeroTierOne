@@ -112,20 +112,20 @@ html,body {
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer:nth-child(even) {
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathActive {
-	font-size: 10pt;
+	font-size: 8pt;
 	color: #555555;
 	font-style: italic;
 	font-family: monospace;
 	white-space: nowrap;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathPreferred {
-	font-size: 10pt;
+	font-size: 8pt;
 	color: #000000;
 	font-family: monospace;
 	white-space: nowrap;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathInactive {
-	font-size: 10pt;
+	font-size: 8pt;
 	font-family: monospace;
 	color: #aaaaaa;
 	font-style: italic;
@@ -135,17 +135,18 @@ html,body {
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer > .f {
 	display: table-cell;
 	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
-	font-size: 10pt;
+	font-size: 8pt;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peerHeader {
 	width: 100%;
+	font-size: 8pt;
 	display: table-row;
 	background: #ffffff;
 	border-bottom: 1px solid #000000;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peerHeader > .f {
 	display: table-cell;
-	font-size: 10pt;
+	font-size: 8pt;
 	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
 	font-weight: bold;
 }
