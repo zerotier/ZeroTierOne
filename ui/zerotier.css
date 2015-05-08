@@ -36,6 +36,14 @@ html,body {
 	padding: 0;
 	margin: 0;
 }
+.zeroTierNode > .top > .logo {
+	display: inline-block;
+	padding: 0.1em 0 0 0;
+	margin: 0;
+	font-size: 12pt;
+	font-weight: bold;
+	float: right;
+}
 .zeroTierNode > .top button {
 	display: inline-block;
 	padding: 0.25rem 0.75rem 0.25rem 0.75rem;
@@ -70,7 +78,7 @@ html,body {
 	margin: 0;
 	overflow-x: hidden;
 	overflow-y: scroll;
-	background: #eeeeee;
+	background: #dddddd;
 }
 .zeroTierNode > .middle > .middleScroll > .networks {
 	display: block;
@@ -81,17 +89,17 @@ html,body {
 	border-collapse: collapse;
 }
 .zeroTierNode > .middle > .middleScroll > .networks > .network {
-	padding: 0.5rem;
-	margin: 0.25rem;
+	padding: 0.25rem;
+	margin: 0.25rem 0 0 0.25rem;
 	float: left;
 	display: inline-block;
+	min-width: 30%;
 	border: 1px solid #234447;
 	background: #ffffff;
 }
 .zeroTierNode > .middle > .middleScroll > .peers {
 	display: table;
 	width: 100%;
-	padding: 0;
 	margin: 0;
 	border-collapse: collapse;
 }
@@ -100,20 +108,35 @@ html,body {
 	display: table-row;
 	background: #ffffff;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPath {
+.zeroTierNode > .middle > .middleScroll > .peers > .peer:nth-child(odd) {
+	background: #f3f3f3;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer:nth-child(even) {
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathActive {
 	font-size: 10pt;
+	color: #555555;
+	font-style: italic;
+	font-family: monospace;
+	white-space: nowrap;
+}
+.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathPreferred {
+	font-size: 10pt;
+	color: #000000;
 	font-family: monospace;
 	white-space: nowrap;
 }
 .zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathInactive {
 	font-size: 10pt;
 	font-family: monospace;
-	color: #bbbbbb;
+	color: #aaaaaa;
+	font-style: italic;
 	text-decoration: line-through;
 	white-space: nowrap;
 }
 .zeroTierNode > .middle > .middleScroll > .peers > .peer > .f {
 	display: table-cell;
+	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
 	font-size: 10pt;
 }
 .zeroTierNode > .middle > .middleScroll > .peers > .peerHeader {
@@ -125,6 +148,7 @@ html,body {
 .zeroTierNode > .middle > .middleScroll > .peers > .peerHeader > .f {
 	display: table-cell;
 	font-size: 10pt;
+	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
 	font-weight: bold;
 }
 
@@ -155,13 +179,12 @@ html,body {
 .zeroTierNode > .bottom > .right input {
 	font-family: monospace;
 	font-size: 12pt;
-	background: #91a2a3;
-	color: #ffffff;
+	background: #ffffff;
+	color: #000000;
 	outline: none;
-	border: 0;
+	border: 1px solid #234447;
 	margin: 0;
 	padding: 0.05rem 0.25rem 0.05rem 0.25rem;
-	height: 100%;
 	display: inline-block;
 }
 .zeroTierNode > .bottom > .right button {
@@ -187,18 +210,8 @@ html,body {
 	width: 100%;
 	position: relative;
 }
-.zeroTierNetwork .deletedOverlay {
-	width: 100%;
-	height: 100%;
-	position: absolute;
-	background: rgba(255,255,255,0.8);
-	display: block;
-	top: 0;
-	left: 0;
-	z-index: 2;
-}
 .zeroTierNetwork .networkInfo {
-	padding: 0 0 0.5rem 0;
+	padding: 0 0 0.25rem 0;
 	text-align: left;
 	font-size: 12pt;
 }
@@ -242,7 +255,7 @@ html,body {
 }
 .zeroTierNetwork .leaveNetworkButton {
 	padding: 0.25rem 0.5rem 0.25rem 0.5rem;
-	margin: 0.5rem 0 0 0;
+	margin: 0.25rem 0 0 0;
 	font-size: 10pt;
 	background: #ffffff;
 	outline: none;

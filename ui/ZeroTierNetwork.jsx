@@ -1,8 +1,6 @@
 var ZeroTierNetwork = React.createClass({
 	getInitialState: function() {
-		return {
-			deleted: false
-		};
+		return {};
 	},
 
 	leaveNetwork: function(event) {
@@ -11,7 +9,8 @@ var ZeroTierNetwork = React.createClass({
 			cache: false,
 			type: 'DELETE',
 			success: function(data) {
-				this.setState({deleted: true});
+				if (this.props.onNetworkDeleted)
+					this.props.onNetworkDeleted(this.props.nwid);
 			}.bind(this),
 			error: function(error) {
 			}.bind(this)
@@ -22,13 +21,8 @@ var ZeroTierNetwork = React.createClass({
 	render: function() {
 		return (
 			<div className="zeroTierNetwork">
-				{
-					(this.state.deleted) ? (
-						<div className="deletedOverlay">&nbsp;</div>
-					) : (null)
-				}
 				<div className="networkInfo">
-					<span className="networkId">{this.props.nwid}</span>
+					<span className="networkId">{this.props.nwid}</span>&nbsp;
 					<span className="networkName">{this.props.name}</span>
 				</div>
 				<div className="networkProps">
