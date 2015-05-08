@@ -149,7 +149,8 @@ var ZeroTierNode = React.createClass({
 										<div className="f">Version</div>
 										<div className="f">Latency</div>
 										<div className="f">Data&nbsp;Paths</div>
-										<div className="f">Last&nbsp;Frame</div>
+										<div className="f">Last&nbsp;Unicast</div>
+										<div className="f">Last&nbsp;Multicast</div>
 										<div className="f">Role</div>
 									</div>
 									{
@@ -178,6 +179,7 @@ var ZeroTierNode = React.createClass({
 														}
 													</div>
 													<div className="f">{this.ago(peer['lastUnicastFrame'])}</div>
+													<div className="f">{this.ago(peer['lastMulticastFrame'])}</div>
 													<div className="f">{peer['role']}</div>
 												</div>
 											);
