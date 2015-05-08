@@ -144,8 +144,8 @@ var ZeroTierNode = React.createClass({
 					<div className="middleScroll">
 						{
 							(this.tabIndex === 1) ? (
-								<div className="peers">
-									<div className="peerHeader">
+								<div className="peers" key="_peers">
+									<div className="peerHeader" key="_peersHeader">
 										<div className="f">Address</div>
 										<div className="f">Version</div>
 										<div className="f">Latency</div>
@@ -156,7 +156,7 @@ var ZeroTierNode = React.createClass({
 									{
 										this.state._peers.map(function(peer) {
 											return (
-												<div className="peer">
+												<div className="peer" key={peer['address']}>
 													<div className="f zeroTierAddress">{peer['address']}</div>
 													<div className="f">{(peer['version'] === '-1.-1.-1') ? '-' : peer['version']}</div>
 													<div className="f">{peer['latency']}</div>
@@ -186,12 +186,12 @@ var ZeroTierNode = React.createClass({
 									}
 								</div>
 							) : (
-								<div className="networks">
+								<div className="networks" key="_networks">
 									{
 										this.state._networks.map(function(network) {
 											network['authToken'] = this.props.authToken;
 											network['onNetworkDeleted'] = this.handleNetworkDelete;
-											return React.createElement('div',{className: 'network'},React.createElement(ZeroTierNetwork,network));
+											return React.createElement('div',{className: 'network',key: network.nwid},React.createElement(ZeroTierNetwork,network));
 										}.bind(this))
 									}
 								</div>

@@ -60,7 +60,7 @@ var ZeroTierNetwork = React.createClass({
 							{
 								this.props['assignedAddresses'].map(function(ipAssignment) {
 									return (
-										<div className="ipAddress">{ipAssignment}</div>
+										<div key={ipAssignment} className="ipAddress">{ipAssignment}</div>
 									);
 								})
 							}

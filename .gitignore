@@ -40,3 +40,4 @@
 /root-topology/test/supernodes
 /root-topology/test/test-root-topology
 /ext/mac-ui-macgap1-wrapper/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
+/ui/.module-cache
