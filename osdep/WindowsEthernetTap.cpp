@@ -124,11 +124,11 @@ WindowsEthernetTap::WindowsEthernetTap(
 
 	Mutex::Lock _l(_systemTapInitLock);
 
-	std::string tapDriverPath(_pathToHelpers + WINENV.tapDriverNdis6);
-	const char *tapDriverName = "zttap300";
+	std::string tapDriverPath(_pathToHelpers + WINENV.tapDriverNdis5);
+	const char *tapDriverName = "zttap200";
 	if (::PathFileExistsA(tapDriverPath.c_str()) == FALSE) {
-		tapDriverPath = _pathToHelpers + WINENV.tapDriverNdis5;
-		tapDriverName = "zttap200";
+		tapDriverPath = _pathToHelpers + WINENV.tapDriverNdis6;
+		tapDriverName = "zttap300";
 		if (::PathFileExistsA(tapDriverPath.c_str()) == FALSE) {
 			throw std::runtime_error("no tap driver available: cannot find zttap300.inf (NDIS6) or zttap200.inf (NDIS5) under home path");
 		}
