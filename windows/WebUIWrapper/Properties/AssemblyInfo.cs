@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("WebUIWrapper")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("ZeroTier One")]
+[assembly: AssemblyDescription("UI Wrapper")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("WebUIWrapper")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyCompany("ZeroTier, Inc.")]
+[assembly: AssemblyProduct("ZeroTier One")]
+[assembly: AssemblyCopyright("Copyright ©2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
