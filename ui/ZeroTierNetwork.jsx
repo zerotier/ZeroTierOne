@@ -67,7 +67,7 @@ var ZeroTierNetwork = React.createClass({
 						</div>
 					</div>
 				</div>
-				<button className="leaveNetworkButton" onClick={this.leaveNetwork}>Leave&nbsp;Network</button>
+				<button type="button" className="leaveNetworkButton" onClick={this.leaveNetwork}>Leave&nbsp;Network</button>
 			</div>
 		);
 	}

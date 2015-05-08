@@ -96,7 +96,7 @@ var ZeroTierNode = React.createClass({
 	},
 	handleNetworkIdEntry: function(event) {
 		this.networkInputElement = event.target;
-		var nid = event.target.value;
+		var nid = this.networkInputElement.value;
 		if (nid) {
 			nid = nid.toLowerCase();
 			var nnid = '';
@@ -105,10 +105,10 @@ var ZeroTierNode = React.createClass({
 					nnid += nid.charAt(i);
 			}
 			this.networkToJoin = nnid;
-			event.target.value = nnid;
+			this.networkInputElement.value = nnid;
 		} else {
 			this.networkToJoin = '';
-			event.target.value = '';
+			this.networkInputElement.value = '';
 		}
 	},
 
@@ -138,9 +138,8 @@ var ZeroTierNode = React.createClass({
 				<div className="top">&nbsp;&nbsp;
 					<button disabled={this.tabIndex === 0} onClick={function() {this.tabIndex = 0; this.forceUpdate();}.bind(this)}>Networks</button>
 					<button disabled={this.tabIndex === 1} onClick={function() {this.tabIndex = 1; this.forceUpdate();}.bind(this)}>Peers</button>
-					<div className="logo">&#x23c1;&nbsp;</div>
 				</div>
-				<div className="middle">
+				<div className="middle"><div className="middleCell">
 					<div className="middleScroll">
 						{
 							(this.tabIndex === 1) ? (
@@ -198,13 +197,13 @@ var ZeroTierNode = React.createClass({
 							)
 						}
 					</div>
-				</div>
+				</div></div>
 				<div className="bottom">
 					<div className="left">
 						<span className="statusLine"><span className="zeroTierAddress">{this.state.address}</span>&nbsp;&nbsp;{this.state.online ? 'ONLINE' : 'OFFLINE'}&nbsp;&nbsp;{this.state.version}</span>
 					</div>
 					<div className="right">
-						<form onSubmit={this.joinNetwork}><input type="text" placeholder="  [ Network ID ]" onChange={this.handleNetworkIdEntry} size="16"/><button type="submit">Join</button></form>
+						<form onSubmit={this.joinNetwork}><input type="text" maxlength="16" placeholder="[ Network ID ]" onChange={this.handleNetworkIdEntry} size="16"/><button type="button" onClick={this.joinNetwork}>Join</button></form>
 					</div>
 				</div>
 			</div>

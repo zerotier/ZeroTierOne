@@ -20,7 +20,6 @@ html,body {
 .zeroTierNode {
 	width: 100%;
 	height: 100%;
-	max-height: 100%;
 	padding: 0;
 	margin: 0;
 	display: table;
@@ -35,14 +34,6 @@ html,body {
 	color: #ffffff;
 	padding: 0;
 	margin: 0;
-}
-.zeroTierNode > .top > .logo {
-	display: inline-block;
-	padding: 0.1em 0 0 0;
-	margin: 0;
-	font-size: 12pt;
-	font-weight: bold;
-	float: right;
 }
 .zeroTierNode > .top button {
 	display: inline-block;
@@ -63,33 +54,39 @@ html,body {
 }
 
 .zeroTierNode > .middle {
-	height: 100%;
 	width: 100%;
+	height: 100%;
 	padding: 0;
 	margin: 0;
 	overflow: hidden;
 	display: table-row;
 }
-.zeroTierNode > .middle > .middleScroll {
+.zeroTierNode > .middle > .middleCell {
+	width: 100%;
+	height: 100%;
+	display: table-cell;
+}
+.zeroTierNode > .middle > .middleCell > .middleScroll {
 	display: block;
 	width: 100%;
 	height: 100%;
 	padding: 0;
 	margin: 0;
+	overflow: scroll;
 	overflow-x: hidden;
 	overflow-y: scroll;
 	background: #dddddd;
 }
-.zeroTierNode > .middle > .middleScroll > .networks {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .networks {
 	display: block;
 	width: 100%;
-	padding: 0;
+	padding: 0 0 0.25rem 0;
 	margin: 0;
 	border: 0;
 	text-align: left;
 	border-collapse: collapse;
 }
-.zeroTierNode > .middle > .middleScroll > .networks > .network {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .networks > .network {
 	display: inline-block;
 	padding: 0.25rem;
 	margin: 0.25rem 0 0 1%;
@@ -98,36 +95,36 @@ html,body {
 	border: 1px solid #234447;
 	background: #ffffff;
 }
-.zeroTierNode > .middle > .middleScroll > .peers {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers {
 	display: table;
 	width: 100%;
 	margin: 0;
 	border-collapse: collapse;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer {
 	width: 100%;
 	display: table-row;
 	background: #ffffff;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer:nth-child(odd) {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer:nth-child(odd) {
 	background: #f3f3f3;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer:nth-child(even) {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer:nth-child(even) {
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathActive {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathActive {
 	font-size: 10pt;
 	color: #555555;
 	font-style: italic;
 	font-family: monospace;
 	white-space: nowrap;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathPreferred {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathPreferred {
 	font-size: 10pt;
 	color: #000000;
 	font-family: monospace;
 	white-space: nowrap;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer .peerPathInactive {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathInactive {
 	font-size: 10pt;
 	font-family: monospace;
 	color: #aaaaaa;
@@ -135,18 +132,18 @@ html,body {
 	text-decoration: line-through;
 	white-space: nowrap;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peer > .f {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer > .f {
 	display: table-cell;
 	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
 	font-size: 10pt;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peerHeader {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peerHeader {
 	width: 100%;
 	display: table-row;
 	background: #ffffff;
 	border-bottom: 1px solid #000000;
 }
-.zeroTierNode > .middle > .middleScroll > .peers > .peerHeader > .f {
+.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peerHeader > .f {
 	display: table-cell;
 	font-size: 10pt;
 	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
@@ -154,6 +151,7 @@ html,body {
 }
 
 .zeroTierNode > .bottom {
+	font-size: 12pt;
 	width: 100%;
 	overflow: hidden;
 	display: table-row;
@@ -165,17 +163,24 @@ html,body {
 	white-space: nowrap;
 	float: left;
 	padding: 0 0 0 0.5rem;
+	font-size: 12pt;
+	height: 100%;
 }
 .zeroTierNode > .bottom > .left > .statusLine {
 	font-family: monospace;
 	white-space: nowrap;
 	font-size: 12pt;
+	height: 100%;
 }
 .zeroTierNode > .bottom > .right {
-	background: #91a2a3;
 	text-align: right;
+	height: 100%;
 	white-space: nowrap;
 	float: right;
+	font-size: 12pt;
+}
+.zeroTierNode > .bottom > .right form {
+	height: 100%;
 }
 .zeroTierNode > .bottom > .right input {
 	font-family: monospace;
@@ -183,10 +188,13 @@ html,body {
 	background: #ffffff;
 	color: #000000;
 	outline: none;
-	border: 1px solid #234447;
+	outline-style: none;
+	box-shadow: 0;
+	border: 0;
 	margin: 0;
-	padding: 0.05rem 0.25rem 0.05rem 0.25rem;
-	display: inline-block;
+	padding: 0 0.25rem 0 0.25rem;
+	display: inline;
+	height: 100%;
 }
 .zeroTierNode > .bottom > .right button {
 	display: inline-block;
@@ -196,10 +204,14 @@ html,body {
 	color: #000000;
 	margin: 0;
 	padding: 0.05rem 0.75rem 0.05rem 0.75rem;
+	outline: none;
+	outline-style: none;
 	height: 100%;
 }
 .zeroTierNode > .bottom > .right button:hover {
 	cursor: pointer;
+	outline: none;
+	outline-style: none;
 	border: 1px solid #000000;
 }
 
@@ -217,7 +229,7 @@ html,body {
 	font-size: 12pt;
 }
 .zeroTierNetwork .networkInfo .networkId {
-	font-size: 10pt;
+	font-size: 11pt;
 	font-family: monospace;
 	color: #91a2a3;
 }
