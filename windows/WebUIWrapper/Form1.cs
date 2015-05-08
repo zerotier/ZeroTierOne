@@ -62,7 +62,7 @@ namespace WebUIWrapper
                     this.Close();
                     return;
                 }
-                webContainer.Url = new System.Uri("http://127.0.0.1:" + port.ToString() + "/index.html?authToken=" + authToken);
+                webContainer.Navigate("http://127.0.0.1:" + port.ToString() + "/index.html?authToken=" + authToken);
             }
             catch
             {

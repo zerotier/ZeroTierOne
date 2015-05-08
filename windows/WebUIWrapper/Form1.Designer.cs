@@ -35,18 +35,13 @@
             // webContainer
             // 
             this.webContainer.AllowNavigation = false;
-            this.webContainer.AllowWebBrowserDrop = false;
             this.webContainer.Dock = System.Windows.Forms.DockStyle.Fill;
             this.webContainer.IsWebBrowserContextMenuEnabled = false;
             this.webContainer.Location = new System.Drawing.Point(0, 0);
             this.webContainer.MinimumSize = new System.Drawing.Size(20, 20);
             this.webContainer.Name = "webContainer";
-            this.webContainer.ScriptErrorsSuppressed = true;
-            this.webContainer.ScrollBarsEnabled = false;
             this.webContainer.Size = new System.Drawing.Size(1012, 556);
             this.webContainer.TabIndex = 0;
-            this.webContainer.Url = new System.Uri("", System.UriKind.Relative);
-            this.webContainer.WebBrowserShortcutsEnabled = false;
             // 
             // Form1
             // 
