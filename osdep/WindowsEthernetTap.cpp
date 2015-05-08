@@ -92,10 +92,8 @@ static const WindowsEthernetTapEnv WINENV;
 // Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
 
-// Set to true if existing taps should close and reopen due to new device creation
-// This is a hack to get around what seems to be a bug that causes existing
-// devices to go into a coma after new device creation.
-static volatile bool _needReset = false;
+// Incrementing this causes everyone currently open to close and reopen
+static volatile int _systemTapResetStatus = 0;
 
 } // anonymous namespace
 
@@ -271,8 +269,11 @@ WindowsEthernetTap::WindowsEthernetTap(
 			} else break; // no more keys or error occurred
 		}
 
-		// Cause all existing taps to reset
-		_needReset = true;
+		// When we create a new tap device from scratch, existing taps for
+		// some reason go into 'unplugged' state. This can be fixed by
+		// closing and re-opening them. Incrementing this causes all
+		// existing tap threads to do this.
+		++_systemTapResetStatus;
 	}
 
 	if (_netCfgInstanceId.length() > 0) {
@@ -592,6 +593,7 @@ void WindowsEthernetTap::threadMain()
 	}
 
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
+	int prevTapResetStatus = _systemTapResetStatus;
 	while (_run) {
 		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 		if (_tap == INVALID_HANDLE_VALUE) {
@@ -695,7 +697,11 @@ void WindowsEthernetTap::threadMain()
 
 		ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
 		bool writeInProgress = false;
-		while ((_run)&&(!_needReset)) {
+		while (_run) {
+			if (prevTapResetStatus != _systemTapResetStatus) {
+				prevTapResetStatus = _systemTapResetStatus;
+				break; // this will cause us to close and reopen the tap
+			}
 			DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
 			if (!_run) break; // will also break outer while(_run)
 
