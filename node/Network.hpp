@@ -55,6 +55,7 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
+class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
 
 /**
  * A virtual LAN
@@ -62,6 +63,7 @@ class RuntimeEnvironment;
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
+	friend class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
 
 public:
 	/**
@@ -197,7 +199,11 @@ public:
 	 * @param peer Peer address to check
 	 * @return True if peer is allowed to communicate on this network
 	 */
-	bool isAllowed(const Address &peer) const;
+	inline bool isAllowed(const Address &peer) const
+	{
+		Mutex::Lock _l(_lock);
+		return _isAllowed(peer);
+	}
 
 	/**
 	 * Perform cleanup and possibly save state
@@ -348,6 +354,7 @@ public:
 private:
 	ZT1_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
+	bool _isAllowed(const Address &peer) const;
 	void _announceMulticastGroups();
 
 	const RuntimeEnvironment *RR;
