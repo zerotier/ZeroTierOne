@@ -334,29 +334,6 @@ bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
 	return false;
 }
 
-bool Network::isAllowed(const Address &peer) const
-{
-	try {
-		Mutex::Lock _l(_lock);
-
-		if (!_config)
-			return false;
-		if (_config->isPublic())
-			return true;
-
-		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
-		if (pc == _membershipCertificates.end())
-			return false; // no certificate on file
-
-		return _config->com().agreesWith(pc->second); // is other cert valid against ours?
-	} catch (std::exception &exc) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
-	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer.toString().c_str());
-	}
-	return false; // default position on any failure
-}
-
 void Network::clean()
 {
 	const uint64_t now = RR->node->now();
@@ -511,6 +488,28 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 	} else ec->assignedAddressCount = 0;
 }
 
+bool Network::_isAllowed(const Address &peer) const
+{
+	// Assumes _lock is locked
+	try {
+		if (!_config)
+			return false;
+		if (_config->isPublic())
+			return true;
+
+		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
+		if (pc == _membershipCertificates.end())
+			return false; // no certificate on file
+
+		return _config->com().agreesWith(pc->second); // is other cert valid against ours?
+	} catch (std::exception &exc) {
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer.toString().c_str());
+	}
+	return false; // default position on any failure
+}
+
 // Used in Network::_announceMulticastGroups()
 class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths
 {
@@ -524,7 +523,7 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && (_network->isAllowed(p->address())) ) || (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			std::vector<MulticastGroup> mgs(_network->allMulticastGroups());
@@ -557,6 +556,7 @@ private:
 
 void Network::_announceMulticastGroups()
 {
+	// Assumes _lock is locked
 	_AnnounceMulticastGroupsToPeersWithActiveDirectPaths afunc(RR,this);
 	RR->topology->eachPeer<_AnnounceMulticastGroupsToPeersWithActiveDirectPaths &>(afunc);
 }

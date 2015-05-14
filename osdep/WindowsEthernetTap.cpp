@@ -53,7 +53,7 @@
 #include "WindowsEthernetTap.hpp"
 #include "OSUtils.hpp"
 
-#include "..\windows\TapDriver\tap-windows.h"
+#include "..\windows\TapDriver6\tap-windows.h"
 
 // ff:ff:ff:ff:ff:ff with no ADI
 //static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
@@ -89,10 +89,13 @@ public:
 };
 static const WindowsEthernetTapEnv WINENV;
 
-} // anonymous namespace
-
 // Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
+
+// Incrementing this causes everyone currently open to close and reopen
+static volatile int _systemTapResetStatus = 0;
+
+} // anonymous namespace
 
 WindowsEthernetTap::WindowsEthernetTap(
 	const char *hp,
@@ -124,11 +127,14 @@ WindowsEthernetTap::WindowsEthernetTap(
 
 	Mutex::Lock _l(_systemTapInitLock);
 
-	std::string tapDriverPath(_pathToHelpers + WINENV.tapDriverNdis6);
-	const char *tapDriverName = "zttap300";
+	// Use NDIS5 if it's installed, since we don't want to switch out the driver on
+	// pre-existing installs (yet). We won't ship NDIS5 anymore so new installs will
+	// use NDIS6.
+	std::string tapDriverPath(_pathToHelpers + WINENV.tapDriverNdis5);
+	const char *tapDriverName = "zttap200";
 	if (::PathFileExistsA(tapDriverPath.c_str()) == FALSE) {
-		tapDriverPath = _pathToHelpers + WINENV.tapDriverNdis5;
-		tapDriverName = "zttap200";
+		tapDriverPath = _pathToHelpers + WINENV.tapDriverNdis6;
+		tapDriverName = "zttap300";
 		if (::PathFileExistsA(tapDriverPath.c_str()) == FALSE) {
 			throw std::runtime_error("no tap driver available: cannot find zttap300.inf (NDIS6) or zttap200.inf (NDIS5) under home path");
 		}
@@ -198,7 +204,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 		if (devconLog != INVALID_HANDLE_VALUE)
 			SetFilePointer(devconLog,0,0,FILE_END);
 
-		// Execute devcon to install an instance of the Microsoft Loopback Adapter
+		// Execute devcon to create a new tap device
 		STARTUPINFOA startupInfo;
 		startupInfo.cb = sizeof(startupInfo);
 		if (devconLog != INVALID_HANDLE_VALUE) {
@@ -262,6 +268,12 @@ WindowsEthernetTap::WindowsEthernetTap(
 				}
 			} else break; // no more keys or error occurred
 		}
+
+		// When we create a new tap device from scratch, existing taps for
+		// some reason go into 'unplugged' state. This can be fixed by
+		// closing and re-opening them. Incrementing this causes all
+		// existing tap threads to do this.
+		++_systemTapResetStatus;
 	}
 
 	if (_netCfgInstanceId.length() > 0) {
@@ -306,15 +318,15 @@ WindowsEthernetTap::WindowsEthernetTap(
 	if (ConvertInterfaceGuidToLuid(&_deviceGuid,&_deviceLuid) != NO_ERROR)
 		throw std::runtime_error("unable to convert device interface GUID to LUID");
 
+	// Certain functions can now work (e.g. ips())
+	_initialized = true;
+
 	if (friendlyName)
 		setFriendlyName(friendlyName);
 
 	// Start background thread that actually performs I/O
 	_injectSemaphore = CreateSemaphore(NULL,0,1,NULL);
 	_thread = Thread::start(this);
-
-	// Certain functions can now work (e.g. ips())
-	_initialized = true;
 }
 
 WindowsEthernetTap::~WindowsEthernetTap()
@@ -566,46 +578,32 @@ void WindowsEthernetTap::threadMain()
 	HANDLE wait4[3];
 	char *tapReadBuf = (char *)0;
 
-	// Shouldn't be needed, but Windows does not overcommit. This Windows
-	// tap code is defensive to schizoid paranoia degrees.
+	if (!_enableTapDevice()) {
+		_enabled = false;
+		return; // only happens if devcon is missing or totally fails
+	}
+
+	/* No idea why I did this. I did it a long time ago and there was only a
+	 * a snarky comment. But I'd never do crap like this without a reason, so
+	 * I am leaving it alone with a more descriptive snarky comment. */
 	while (!tapReadBuf) {
 		tapReadBuf = (char *)::malloc(ZT_IF_MTU + 32);
 		if (!tapReadBuf)
 			Sleep(1000);
 	}
 
-	// Tap is in this weird Windows global pseudo file space
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
-
-	/* More insanity: repetatively try to enable/disable tap device. The first
-	 * time we succeed, close it and do it again. This is to fix a driver init
-	 * bug that seems to be extremely non-deterministic and to only occur after
-	 * headless MSI upgrade. It cannot be reproduced in any other circumstance.
-	 *
-	 * Eventually when ZeroTier has actual money we will have someone create an
-	 * NDIS6 tap driver. Yes, we'll likely be cool and open source it. */
-	bool throwOneAway = true;
+	int prevTapResetStatus = _systemTapResetStatus;
 	while (_run) {
-		_disableTapDevice();
-		Sleep(250);
-		if (!_enableTapDevice()) {
-			::free(tapReadBuf);
-			_enabled = false;
-			return; // only happens if devcon is missing or totally fails
-		}
-		Sleep(250);
-
 		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 		if (_tap == INVALID_HANDLE_VALUE) {
-			Sleep(500);
+			fprintf(stderr,"Error opening %s -- retrying.\r\n",tapPath);
 			continue;
 		}
 
 		{
 			uint32_t tmpi = 1;
 			DWORD bytesReturned = 0;
-			DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
-			bytesReturned = 0;
 			DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
 		}
 
@@ -688,74 +686,69 @@ void WindowsEthernetTap::threadMain()
 #endif
 		}
 
-		if (throwOneAway) {
-			throwOneAway = false;
-			CloseHandle(_tap);
-			_tap = INVALID_HANDLE_VALUE;
-			Sleep(1000);
-			continue;
-		} else break;
-	}
+		memset(&tapOvlRead,0,sizeof(tapOvlRead));
+		tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+		memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
+		tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 
-	memset(&tapOvlRead,0,sizeof(tapOvlRead));
-	tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-	memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
-	tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+		wait4[0] = _injectSemaphore;
+		wait4[1] = tapOvlRead.hEvent;
+		wait4[2] = tapOvlWrite.hEvent; // only included if writeInProgress is true
 
-	wait4[0] = _injectSemaphore;
-	wait4[1] = tapOvlRead.hEvent;
-	wait4[2] = tapOvlWrite.hEvent; // only included if writeInProgress is true
-
-	// Start overlapped read, which is always active
-	ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
-	bool writeInProgress = false;
-
-	for(;;) {
-		if (!_run) break;
-		DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,5000,TRUE);
-		if (!_run) break;
-
-		if ((r == WAIT_TIMEOUT)||(r == WAIT_FAILED))
-			continue;
-
-		if (HasOverlappedIoCompleted(&tapOvlRead)) {
-			DWORD bytesRead = 0;
-			if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
-				if ((bytesRead > 14)&&(_enabled)) {
-					MAC to(tapReadBuf,6);
-					MAC from(tapReadBuf + 6,6);
-					unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
-					try {
-						// TODO: decode vlans
-						_handler(_arg,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
-					} catch ( ... ) {} // handlers should not throw
-				}
+		ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
+		bool writeInProgress = false;
+		while (_run) {
+			if (prevTapResetStatus != _systemTapResetStatus) {
+				prevTapResetStatus = _systemTapResetStatus;
+				break; // this will cause us to close and reopen the tap
 			}
-			ReadFile(_tap,tapReadBuf,ZT_IF_MTU + 32,NULL,&tapOvlRead);
+			DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
+			if (!_run) break; // will also break outer while(_run)
+
+			if ((r == WAIT_TIMEOUT)||(r == WAIT_FAILED))
+				continue;
+
+			if (HasOverlappedIoCompleted(&tapOvlRead)) {
+				DWORD bytesRead = 0;
+				if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
+					if ((bytesRead > 14)&&(_enabled)) {
+						MAC to(tapReadBuf,6);
+						MAC from(tapReadBuf + 6,6);
+						unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
+						try {
+							// TODO: decode vlans
+							_handler(_arg,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
+						} catch ( ... ) {} // handlers should not throw
+					}
+				}
+				ReadFile(_tap,tapReadBuf,ZT_IF_MTU + 32,NULL,&tapOvlRead);
+			}
+
+			if (writeInProgress) {
+				if (HasOverlappedIoCompleted(&tapOvlWrite)) {
+					writeInProgress = false;
+					_injectPending_m.lock();
+					_injectPending.pop();
+				} else continue; // still writing, so skip code below and wait
+			} else _injectPending_m.lock();
+
+			if (!_injectPending.empty()) {
+				WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&tapOvlWrite);
+				writeInProgress = true;
+			}
+
+			_injectPending_m.unlock();
 		}
 
-		if (writeInProgress) {
-			if (HasOverlappedIoCompleted(&tapOvlWrite)) {
-				writeInProgress = false;
-				_injectPending_m.lock();
-				_injectPending.pop();
-			} else continue; // still writing, so skip code below and wait
-		} else _injectPending_m.lock();
+		CancelIo(_tap);
 
-		if (!_injectPending.empty()) {
-			WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&tapOvlWrite);
-			writeInProgress = true;
-		}
+		CloseHandle(tapOvlRead.hEvent);
+		CloseHandle(tapOvlWrite.hEvent);
+		CloseHandle(_tap);
+		_tap = INVALID_HANDLE_VALUE;
 
-		_injectPending_m.unlock();
+		// We will restart and re-open the tap unless _run == false
 	}
-
-	CancelIo(_tap);
-
-	CloseHandle(tapOvlRead.hEvent);
-	CloseHandle(tapOvlWrite.hEvent);
-	CloseHandle(_tap);
-	_tap = INVALID_HANDLE_VALUE;
 
 	::free(tapReadBuf);
 }

@@ -49,3 +49,6 @@ java/build_win64/
 java/build_win32/
 /java/mac32_64/
 /ext/mac-ui-macgap1-wrapper/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
+/ui/.module-cache
+/windows/WebUIWrapper/bin
+/windows/WebUIWrapper/obj

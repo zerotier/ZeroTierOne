@@ -99,14 +99,12 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
- * Cipher suite: Curve25519/AES256-GCM
+ * DEPRECATED payload encrypted flag, will be removed for re-use soon.
  *
- * This specifies AES256 in GCM mode using GCM's built-in authentication
- * with Curve25519 elliptic curve Diffie-Hellman.
- *
- * (Not implemented yet in client but reserved for future use.)
+ * This has been replaced by the two-bit cipher suite selection field where
+ * a value of 0 indicated unencrypted (but authenticated) messages.
  */
-#define ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM 2
+#define ZT_PROTO_FLAG_ENCRYPTED 0x80
 
 /**
  * Header flag indicating that a packet is fragmented
@@ -115,6 +113,13 @@
  * See Packet::Fragment for details.
  */
 #define ZT_PROTO_FLAG_FRAGMENTED 0x40
+
+/**
+ * Flag indicating encryption with a PFS session key
+ *
+ * Not used yet -- for future PFS session re-keying support.
+ */
+#define ZT_PROTO_FLAG_PFS_SESSION 0x20
 
 /**
  * Verb flag indicating payload is compressed with LZ4
@@ -293,9 +298,9 @@ namespace ZeroTier {
  * 
  * Packets smaller than 28 bytes are invalid and silently discarded.
  *
- * The flags/cipher/hops bit field is: FFCCCHHH where C is a 3-bit cipher
- * selection allowing up to 8 cipher suites, F is flags (reserved, currently
- * all zero), and H is hop count.
+ * The flags/cipher/hops bit field is: FFFCCHHH where C is a 2-bit cipher
+ * selection allowing up to 4 cipher suites, F is outside-envelope flags,
+ * and H is hop count.
  *
  * The three-bit hop count is the only part of a packet that is mutable in
  * transit without invalidating the MAC. All other bits in the packet are
@@ -968,25 +973,21 @@ public:
 	 */
 	inline unsigned int cipher() const
 	{
-		//return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
-		// Use DEPRECATED 0x80 "encrypted" flag -- this will go away once there are no more <1.0.0 peers on the net
-		return (((*this)[ZT_PACKET_IDX_FLAGS] & 0x80) == 0) ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012;
+		// Note: this uses the new cipher spec field, which is incompatible with <1.0.0 peers
+		return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x18) >> 3);
 	}
 
 	/**
 	 * Set this packet's cipher suite
-	 *
-	 * This normally shouldn't be called directly as armor() will set it after
-	 * encrypting and MACing the packet.
 	 */
 	inline void setCipher(unsigned int c)
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
-		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38);
-		// Set both the new cipher suite spec field and the old DEPRECATED "encrypted" flag as long as there's <1.0.0 peers online
+		b = (b & 0xe7) | (unsigned char)((c << 3) & 0x18); // bits: FFFCCHHH
+		// DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
 		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
-			b |= 0x80;
-		else b &= 0x7f;
+			b |= ZT_PROTO_FLAG_ENCRYPTED;
+		else b &= (~ZT_PROTO_FLAG_ENCRYPTED);
 	}
 
 	/**

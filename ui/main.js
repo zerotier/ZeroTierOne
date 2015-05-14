@@ -46,6 +46,6 @@ if ((!ztAuthToken)||(ztAuthToken.length <= 0)) {
 }
 
 React.render(
-	<ZeroTierNode authToken={ztAuthToken} />,
+	React.createElement(ZeroTierNode, {authToken: ztAuthToken}),
 	document.getElementById('main')
 );
