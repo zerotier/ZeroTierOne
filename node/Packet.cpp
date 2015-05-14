@@ -118,8 +118,6 @@ bool Packet::dearmor(const void *key)
 			s20.decrypt(payload,payload,payloadLen);
 
 		return true;
-	} else if (cs == ZT_PROTO_CIPHER_SUITE__C25519_AES256_GCM) {
-		return false; // not implemented yet
 	} else return false; // unrecognized cipher suite
 }
 
