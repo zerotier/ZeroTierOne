@@ -60,7 +60,7 @@
 #include <endian.h>
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
 #endif

@@ -70,6 +70,10 @@ namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
 #include "../osdep/WindowsEthernetTap.hpp"
 namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
 #endif
+#ifdef __BSD__
+#include "../osdep/BSDEthernetTap.hpp"
+namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
+#endif
 
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 8)
