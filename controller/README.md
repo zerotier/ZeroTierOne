@@ -9,7 +9,7 @@ The standard implementation uses SQLite3 with the attached schema. A separate se
 
 By default this code is not built or included in the client. To build on Linux, BSD, or Mac add ZT_ENABLE_NETCONF_MASTER=1 to the make command line. It could be built on Windows as well, but you're on your own there. You'd have to build SQLite3 first, or get a pre-built copy somewhere.
 
-### Createing databases
+### Creating databases
 
 If you execute a network controller enabled build of the ZeroTier One service, a *controller.db* will automatically be created and initialize. You can also create one manually with:
 
