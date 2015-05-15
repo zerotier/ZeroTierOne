@@ -243,6 +243,10 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		netconf["error"] = "signing identity invalid or lacks private key";
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
+	if (signingId.address().toInt() != (nwid >> 24)) {
+		netconf["error"] = "signing identity address does not match most significant 40 bits of network ID";
+		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+	}
 
 	NetworkRecord network;
 	memset(&network,0,sizeof(network));
