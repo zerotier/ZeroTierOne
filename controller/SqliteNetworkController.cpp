@@ -61,6 +61,9 @@
 #define ZT_NETCONF_SQLITE_SCHEMA_VERSION 1
 #define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "1"
 
+// API version reported via JSON control plane
+#define ZT_NETCONF_CONTROLLER_API_VERSION 1
+
 // Maximum age in ms for a cached netconf before we regenerate anyway (one hour)
 #define ZT_CACHED_NETCONF_MAX_AGE (60 * 60 * 1000)
 
@@ -619,8 +622,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 					if (sqlite3_step(_sGetMember2) == SQLITE_ROW) {
 						Utils::snprintf(json,sizeof(json),
 							"{\n"
-							"\taddress: \"%s\""
-							"\tauthorized: %s,"
+							"\taddress: \"%s\"\n"
+							"\tauthorized: %s,\n"
 							"\tactiveBridge: %s,\n"
 							"\tlastAt: \"%s\",\n"
 							"\tlastSeen: %llu,\n"
@@ -820,7 +823,13 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 			return 200;
 		} // else 404
 
-	} // else 404
+	} else {
+		// GET /controller returns status and API version if controller is supported
+		Utils::snprintf(json,sizeof(json),"{\n\tcontroller: true,\n\tapiVersion: %d\n\tclock: %llu\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
+		responseBody = json;
+		responseContentType = "applicaiton/json";
+		return 200;
+	}
 
 	return 404;
 }
