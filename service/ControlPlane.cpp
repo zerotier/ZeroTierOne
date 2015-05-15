@@ -360,7 +360,8 @@ unsigned int ControlPlane::handleRequest(
 					"\t\"versionMajor\":%d,\n"
 					"\t\"versionMinor\":%d,\n"
 					"\t\"versionRev\":%d,\n"
-					"\t\"version\":\"%d.%d.%d\"\n"
+					"\t\"version\":\"%d.%d.%d\",\n"
+					"\t\"clock\": %llu\n"
 					"}\n",
 					status.address,
 					status.publicIdentity,
@@ -368,7 +369,8 @@ unsigned int ControlPlane::handleRequest(
 					ZEROTIER_ONE_VERSION_MAJOR,
 					ZEROTIER_ONE_VERSION_MINOR,
 					ZEROTIER_ONE_VERSION_REVISION,
-					ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,
+					(unsigned long long)OSUtils::now());
 				responseBody = json;
 				scode = 200;
 			} else if (ps[0] == "config") {

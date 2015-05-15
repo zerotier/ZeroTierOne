@@ -64,9 +64,6 @@
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
 
-// Maximum age in ms for a cached netconf before we regenerate anyway (one hour)
-#define ZT_CACHED_NETCONF_MAX_AGE (60 * 60 * 1000)
-
 namespace ZeroTier {
 
 namespace {
@@ -96,11 +93,6 @@ static std::string _jsonEscape(const std::string &s) { return _jsonEscape(s.c_st
 struct MemberRecord {
 	int64_t rowid;
 	char nodeId[16];
-	int cachedNetconfBytes;
-	const void *cachedNetconf;
-	uint64_t cachedNetconfRevision;
-	uint64_t cachedNetconfTimestamp;
-	uint64_t clientReportedRevision;
 	bool authorized;
 	bool activeBridge;
 };
@@ -156,13 +148,12 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 	if (
 			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT rowid,cachedNetconf,cachedNetconfRevision,cachedNetconfTimestamp,clientReportedRevision,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,cachedNetconfRevision,clientReportedRevision,authorized,activeBridge) VALUES (?,?,0,0,?,0)",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge) VALUES (?,?,?,0)",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Node (id,identity,lastAt,lastSeen,firstSeen) VALUES (?,?,?,?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Node SET lastAt = ?,lastSeen = ? WHERE id = ?",-1,&_sUpdateNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Node SET lastSeen = ? WHERE id = ?",-1,&_sUpdateNode2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET clientReportedRevision = ? WHERE rowid = ?",-1,&_sUpdateMemberClientReportedRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT mgMac,mgAdi,preload,maxBalance,accrual FROM MulticastRate WHERE networkId = ?",-1,&_sGetMulticastRates,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
@@ -170,10 +161,9 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE networkId = ? AND ip = ? AND ipVersion = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignment (networkId,nodeId,ip,ipNetmaskBits,ipVersion) VALUES (?,?,?,?,?)",-1,&_sAllocateIp,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET cachedNetconf = ?,cachedNetconfRevision = ? WHERE rowid = ?",-1,&_sCacheNetconf,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId,phyAddress FROM Relay WHERE networkId = ? ORDER BY nodeId ASC",-1,&_sGetRelays,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT id FROM Network ORDER BY id ASC",-1,&_sListNetworks,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.id,n.lastAt,n.lastSeen,n.firstSeen FROM Member AS m,Node AS n WHERE m.networkId = ? AND n.id = m.nodeId ORDER BY n.id ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT n.id FROM Member AS m,Node AS n WHERE m.networkId = ? AND n.id = m.nodeId ORDER BY n.id ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.identity,n.lastAt,n.lastSeen,n.firstSeen FROM Member AS m,Node AS n WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits,ipVersion FROM IpAssignmentPool WHERE networkId = ? ORDER BY ipNetwork ASC",-1,&_sGetIpAssignmentPools2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ruleId,nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleId ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
@@ -205,7 +195,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateNode);
 		sqlite3_finalize(_sUpdateNode);
 		sqlite3_finalize(_sUpdateNode2);
-		sqlite3_finalize(_sUpdateMemberClientReportedRevision);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetMulticastRates);
 		sqlite3_finalize(_sGetActiveBridges);
@@ -213,7 +202,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sGetIpAssignmentPools);
 		sqlite3_finalize(_sCheckIfIpIsAllocated);
 		sqlite3_finalize(_sAllocateIp);
-		sqlite3_finalize(_sCacheNetconf);
 		sqlite3_finalize(_sGetRelays);
 		sqlite3_finalize(_sListNetworks);
 		sqlite3_finalize(_sListNetworkMembers);
@@ -332,21 +320,13 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	if (sqlite3_step(_sGetMember) == SQLITE_ROW) {
 		foundMember = true;
 		member.rowid = (int64_t)sqlite3_column_int64(_sGetMember,0);
-		member.cachedNetconfBytes = sqlite3_column_bytes(_sGetMember,1);
-		member.cachedNetconf = sqlite3_column_blob(_sGetMember,1);
-		member.cachedNetconfRevision = (uint64_t)sqlite3_column_int64(_sGetMember,2);
-		member.cachedNetconfTimestamp = (uint64_t)sqlite3_column_int64(_sGetMember,3);
-		member.clientReportedRevision = (uint64_t)sqlite3_column_int64(_sGetMember,4);
-		member.authorized = (sqlite3_column_int(_sGetMember,5) > 0);
-		member.activeBridge = (sqlite3_column_int(_sGetMember,6) > 0);
+		member.authorized = (sqlite3_column_int(_sGetMember,1) > 0);
+		member.activeBridge = (sqlite3_column_int(_sGetMember,2) > 0);
 	}
 
 	// Create Member record for unknown nodes, auto-authorizing if network is public
 
 	if (!foundMember) {
-		member.cachedNetconfBytes = 0;
-		member.cachedNetconfRevision = 0;
-		member.clientReportedRevision = 0;
 		member.authorized = (network.isPrivate ? false : true);
 		member.activeBridge = false;
 		sqlite3_reset(_sCreateMember);
@@ -364,32 +344,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	if (!member.authorized)
 		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
 
-	// Update client's currently reported haveRevision in Member record
-
-	if (member.rowid > 0) {
-		sqlite3_reset(_sUpdateMemberClientReportedRevision);
-		sqlite3_bind_int64(_sUpdateMemberClientReportedRevision,1,(sqlite3_int64)haveRevision);
-		sqlite3_bind_int64(_sUpdateMemberClientReportedRevision,2,member.rowid);
-		sqlite3_step(_sUpdateMemberClientReportedRevision);
-	}
-
 	// If netconf is unchanged from client reported revision, just tell client they're up to date
 
 	if ((haveRevision > 0)&&(haveRevision == network.revision))
 		return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
-	// Generate or retrieve cached netconf
+	// Create and sign netconf
 
 	netconf.clear();
-	if ( (member.cachedNetconfBytes > 0)&&
-		   (member.cachedNetconfRevision == network.revision)&&
-		   ((OSUtils::now() - member.cachedNetconfTimestamp) < ZT_CACHED_NETCONF_MAX_AGE) ) {
-		// Use cached copy
-		std::string tmp((const char *)member.cachedNetconf,member.cachedNetconfBytes);
-		netconf.fromString(tmp);
-	} else {
-		// Create and sign a new netconf, and save in database to re-use in the future
-
+	{
 		char tss[24],rs[24];
 		Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)OSUtils::now());
 		Utils::snprintf(rs,sizeof(rs),"%.16llx",(unsigned long long)network.revision);
@@ -574,16 +537,6 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			netconf["error"] = "unable to sign netconf dictionary";
 			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
-
-		// Save serialized netconf for future re-use
-		std::string netconfSerialized(netconf.toString());
-		if (netconfSerialized.length() < 4096) { // sanity check
-			sqlite3_reset(_sCacheNetconf);
-			sqlite3_bind_blob(_sCacheNetconf,1,(const void *)netconfSerialized.data(),netconfSerialized.length(),SQLITE_STATIC);
-			sqlite3_bind_int64(_sCacheNetconf,2,(sqlite3_int64)network.revision);
-			sqlite3_bind_int64(_sCacheNetconf,3,member.rowid);
-			sqlite3_step(_sCacheNetconf);
-		}
 	}
 
 	return NetworkController::NETCONF_QUERY_OK;
@@ -622,7 +575,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 					if (sqlite3_step(_sGetMember2) == SQLITE_ROW) {
 						Utils::snprintf(json,sizeof(json),
 							"{\n"
-							"\taddress: \"%s\"\n"
+							"\tnwid: \"%s\",\n"
+							"\taddress: \"%s\",\n"
 							"\tauthorized: %s,\n"
 							"\tactiveBridge: %s,\n"
 							"\tlastAt: \"%s\",\n"
@@ -630,6 +584,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 							"\tfirstSeen: %llu,\n"
 							"\tidentity: \"%s\",\n"
 							"\tipAssignments: [",
+							nwids,
 							addrs,
 							(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
 							(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
@@ -674,7 +629,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 						"\tmulticastLimit: %d,\n"
 						"\tcreationTime: %llu,\n",
 						"\trevision: %llu,\n"
-						"\tmembers: [",
+						"\amembers: [",
 						nwids,
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
@@ -691,23 +646,11 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 					sqlite3_bind_text(_sListNetworkMembers,1,nwids,16,SQLITE_STATIC);
 					bool firstMember = true;
 					while (sqlite3_step(_sListNetworkMembers) == SQLITE_ROW) {
-						Utils::snprintf(json,sizeof(json),
-							"%s{\n"
-							"\t\taddress: \"%s\",\n"
-							"\t\tauthorized: %s,\n"
-							"\t\tactiveBridge: %s,\n"
-							"\t\tlastAt: \"%s\",\n"
-							"\t\tlastSeen: %llu,\n"
-							"\t\tfirstSeen: %llu\n"
-							"\t}",
-							firstMember ? "\n\t" : ",",
-							(const char *)sqlite3_column_text(_sListNetworkMembers,2),
-							(sqlite3_column_int(_sListNetworkMembers,0) > 0) ? "true" : "false",
-							(sqlite3_column_int(_sListNetworkMembers,1) > 0) ? "true" : "false",
-							_jsonEscape((const char *)sqlite3_column_text(_sListNetworkMembers,3)).c_str(),
-							(unsigned long long)sqlite3_column_int64(_sListNetworkMembers,4),
-							(unsigned long long)sqlite3_column_int64(_sListNetworkMembers,5));
-						responseBody.append(json);
+						if (!firstMember)
+							responseBody.push_back(',');
+						responseBody.push_back('"');
+						responseBody.append((const char *)sqlite3_column_text(_sListNetworkMembers,0));
+						responseBody.push_back('"');
 						firstMember = false;
 					}
 					responseBody.append("],\n\trelays: [");
