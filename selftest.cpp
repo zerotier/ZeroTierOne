@@ -204,6 +204,24 @@ static int testCrypto()
 		::free((void *)bb);
 	}
 
+	std::cout << "[crypto] Benchmarking Salsa20/20... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		Salsa20 s20(s20TV0Key,256,s20TV0Iv,20);
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<200;++i) {
+			s20.encrypt(bb,bb,1234567);
+			bytes += 1234567.0;
+		}
+		uint64_t end = OSUtils::now();
+		SHA512::hash(buf1,bb,1234567);
+		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
+		::free((void *)bb);
+	}
+
 	std::cout << "[crypto] Testing SHA-512... "; std::cout.flush();
 	SHA512::hash(buf1,sha512TV0Input,(unsigned int)strlen(sha512TV0Input));
 	if (memcmp(buf1,sha512TV0Digest,64)) {

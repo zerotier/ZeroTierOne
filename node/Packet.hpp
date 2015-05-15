@@ -99,6 +99,17 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
+ * Cipher suite: PFS negotiated ephemeral cipher suite and authentication
+ *
+ * This message is encrypted with the latest negotiated ephemeral (PFS)
+ * key pair and cipher suite. If authentication fails, VERB_SET_EPHEMERAL_KEY
+ * may be sent to renegotiate ephemeral keys. To prevent attacks, this
+ * attempted renegotiation should be limited to some sane rate such as
+ * once per second.
+ */
+#define ZT_PROTO_CIPHER_SUITE__EPHEMERAL 7
+
+/**
  * DEPRECATED payload encrypted flag, will be removed for re-use soon.
  *
  * This has been replaced by the two-bit cipher suite selection field where
@@ -113,13 +124,6 @@
  * See Packet::Fragment for details.
  */
 #define ZT_PROTO_FLAG_FRAGMENTED 0x40
-
-/**
- * Flag indicating encryption with a PFS session key
- *
- * Not used yet -- for future PFS session re-keying support.
- */
-#define ZT_PROTO_FLAG_PFS_SESSION 0x20
 
 /**
  * Verb flag indicating payload is compressed with LZ4
@@ -185,6 +189,17 @@
 #define ZT_PROTO_DEST_ADDRESS_TYPE_ETHERNET 1
 #define ZT_PROTO_DEST_ADDRESS_TYPE_IPV4 4
 #define ZT_PROTO_DEST_ADDRESS_TYPE_IPV6 6
+
+// Ephemeral key record flags
+#define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01
+
+// Ephemeral key record symmetric cipher types
+#define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_SALSA2012_POLY1305 0x01
+#define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_AES256_GCM 0x02
+
+// Ephemeral key record public key types
+#define ZT_PROTO_EPHEMERAL_KEY_PK_C25519 0x01
+#define ZT_PROTO_EPHEMERAL_KEY_PK_NISTP256 0x02
 
 // Field incides for parsing verbs -------------------------------------------
 
@@ -298,8 +313,8 @@ namespace ZeroTier {
  * 
  * Packets smaller than 28 bytes are invalid and silently discarded.
  *
- * The flags/cipher/hops bit field is: FFFCCHHH where C is a 2-bit cipher
- * selection allowing up to 4 cipher suites, F is outside-envelope flags,
+ * The flags/cipher/hops bit field is: FFCCCHHH where C is a 3-bit cipher
+ * selection allowing up to 7 cipher suites, F is outside-envelope flags,
  * and H is hop count.
  *
  * The three-bit hop count is the only part of a packet that is mutable in
@@ -752,7 +767,59 @@ public:
 		 *   <[6] multicast group MAC>
 		 *   <[4] 32-bit multicast group ADI>
 		 */
-		VERB_MULTICAST_FRAME = 14
+		VERB_MULTICAST_FRAME = 14,
+
+		/* Ephemeral (PFS) key push:
+		 *   <[8] 64-bit PFS key set ID sender holds for recipient (0==none)>
+		 *   <[8] 64-bit PFS key set ID of this key set>
+		 *   [... begin PFS key record ...]
+		 *   <[1] flags>
+		 *   <[1] symmetric cipher ID>
+		 *   <[1] public key type ID>
+		 *   <[2] public key length in bytes>
+		 *   <[2] identity signature length in bytes (0 for none)>
+		 *   <[...] public key>
+		 *   <[...] signature of sender's ZT identity with public key>
+		 *   [... additional records may follow up to max packet length ...]
+		 *
+		 * This message is sent to negotiate an ephemeral key. If the recipient's
+		 * current key pair for the sender does not match the one the sender
+		 * claims to have on file, it must respond with its own SET_EPHEMERAL_KEY.
+		 *
+		 * PFS key IDs are random and must not be zero, since zero indicates that
+		 * the sender does not have an ephemeral key on file for the recipient.
+		 *
+		 * For each public key, the sender may sign its ZeroTier identity (public
+		 * portion only) using the associated digital signature algorithm. This
+		 * permits the extension of FIPS-compliant cryptographic algorithms to
+		 * cover verification of the identity for full FIPS compliant mode. For
+		 * non-FIPS mode, this is optional. If no signature is included the
+		 * signature length field must be zero.
+		 *
+		 * One or more records may be sent. If multiple records are present,
+		 * the first record with common symmetric cipher, public key type,
+		 * and relevant flags must be used.
+		 *
+		 * Flags (all unspecified flags must be zero):
+		 *   0x01 - FIPS mode, only use record if FIPS compliant crypto in use
+		 *
+		 * Symmetric cipher IDs:
+		 *   0x01 - Salsa20/12 with Poly1305 authentication (ZT default)
+		 *   0x02 - AES256-GCM combined crypto and authentication
+		 *
+		 * Public key types:
+		 *   0x01 - Curve25519 ECDH with SHA-512 KDF, Ed25519 signatures
+		 *   0x02 - NIST P-256 ECDH with SHA-512 KDF, ECDSA signatures
+		 *
+		 * Once both peers have a PFS key, they will attempt to send PFS key
+		 * encrypted messages with the PFS flag set using the negotiated
+		 * cipher/auth type.
+		 *
+		 * Note: most of these features such as FIPS and other cipher suites are
+		 * not implemented yet. They're just specified in the protocol for future
+		 * use to support e.g. FIPS requirements.
+		 */
+		VERB_SET_EPHEMERAL_KEY = 15
 	};
 
 	/**
@@ -824,7 +891,7 @@ public:
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
 	{
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
-		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags, cipher ID, and hops
 	}
 
 	/**
@@ -873,7 +940,7 @@ public:
 		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
 		setDestination(dest);
 		setSource(source);
-		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+		(*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags, cipher ID, and hops
 		setVerb(v);
 	}
 
@@ -884,34 +951,21 @@ public:
 	 * technically different but otherwise identical copies of the same
 	 * packet.
 	 */
-	inline void newInitializationVector()
-	{
-		Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
-	}
+	inline void newInitializationVector() { Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8); }
 
 	/**
 	 * Set this packet's destination
 	 * 
 	 * @param dest ZeroTier address of destination
 	 */
-	inline void setDestination(const Address &dest)
-	{
-		unsigned char *d = field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH);
-		for(unsigned int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			d[i] = dest[i];
-	}
+	inline void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Set this packet's source
 	 * 
 	 * @param source ZeroTier address of source
 	 */
-	inline void setSource(const Address &source)
-	{
-		unsigned char *s = field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH);
-		for(unsigned int i=0;i<ZT_ADDRESS_LENGTH;++i)
-			s[i] = source[i];
-	}
+	inline void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's destination
@@ -974,7 +1028,7 @@ public:
 	inline unsigned int cipher() const
 	{
 		// Note: this uses the new cipher spec field, which is incompatible with <1.0.0 peers
-		return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x18) >> 3);
+		return (((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x38) >> 3);
 	}
 
 	/**
@@ -983,7 +1037,7 @@ public:
 	inline void setCipher(unsigned int c)
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
-		b = (b & 0xe7) | (unsigned char)((c << 3) & 0x18); // bits: FFFCCHHH
+		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
 		// DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
 		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
 			b |= ZT_PROTO_FLAG_ENCRYPTED;
