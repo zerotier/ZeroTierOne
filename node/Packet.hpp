@@ -777,9 +777,7 @@ public:
 		 *   <[1] symmetric cipher ID>
 		 *   <[1] public key type ID>
 		 *   <[2] public key length in bytes>
-		 *   <[2] identity signature length in bytes (0 for none)>
 		 *   <[...] public key>
-		 *   <[...] signature of sender's ZT identity with public key>
 		 *   [... additional records may follow up to max packet length ...]
 		 *
 		 * This message is sent to negotiate an ephemeral key. If the recipient's
@@ -788,13 +786,6 @@ public:
 		 *
 		 * PFS key IDs are random and must not be zero, since zero indicates that
 		 * the sender does not have an ephemeral key on file for the recipient.
-		 *
-		 * For each public key, the sender may sign its ZeroTier identity (public
-		 * portion only) using the associated digital signature algorithm. This
-		 * permits the extension of FIPS-compliant cryptographic algorithms to
-		 * cover verification of the identity for full FIPS compliant mode. For
-		 * non-FIPS mode, this is optional. If no signature is included the
-		 * signature length field must be zero.
 		 *
 		 * One or more records may be sent. If multiple records are present,
 		 * the first record with common symmetric cipher, public key type,
@@ -808,8 +799,8 @@ public:
 		 *   0x02 - AES256-GCM combined crypto and authentication
 		 *
 		 * Public key types:
-		 *   0x01 - Curve25519 ECDH with SHA-512 KDF, Ed25519 signatures
-		 *   0x02 - NIST P-256 ECDH with SHA-512 KDF, ECDSA signatures
+		 *   0x01 - Curve25519 ECDH with SHA-512 KDF
+		 *   0x02 - NIST P-256 ECDH with SHA-512 KDF
 		 *
 		 * Once both peers have a PFS key, they will attempt to send PFS key
 		 * encrypted messages with the PFS flag set using the negotiated
@@ -818,6 +809,10 @@ public:
 		 * Note: most of these features such as FIPS and other cipher suites are
 		 * not implemented yet. They're just specified in the protocol for future
 		 * use to support e.g. FIPS requirements.
+		 *
+		 * OK response payload:
+		 *   <[8] PFS key set ID of received key set>
+		 *   <[1] index in record list of chosen key record>
 		 */
 		VERB_SET_EPHEMERAL_KEY = 15
 	};
