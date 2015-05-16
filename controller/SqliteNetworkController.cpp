@@ -169,20 +169,19 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits,ipVersion FROM IpAssignmentPool WHERE networkId = ? ORDER BY ipNetwork ASC",-1,&_sGetIpAssignmentPools2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ruleId,nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleId ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleId,nodeId,vlanId,vlanPcP,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (networkId,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Network SET ? = ? WHERE networkId = ?",-1,&_sUpdateNetworkField,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ?",-1,&_sGetIpAssignmentsForNode2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ? ORDER BY ip ASC",-1,&_sGetIpAssignmentsForNode2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Relay WHERE networkId = ?",-1,&_sDeleteRelaysForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Relay (networkId,nodeId,phyAddress) VALUES (?,?,?)",-1,&_sCreateRelay,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignmentPool WHERE networkId = ?",-1,&_sDeleteIpAssignmentPoolsForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Rule WHERE networkId = ?",-1,&_sDeleteRulesForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignmentPool (networkId,ipNetwork,ipNetmaskBits,ipVersion) VALUES (?,?,?,?)",-1,&_sCreateIpAssignmentPool,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET ? = ? WHERE rowid = ?",-1,&_sUpdateMemberField,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignment WHERE networkId = ?; DELETE FROM IpAssignmentPool WHERE networkId = ?; DELETE FROM Member WHERE networkId = ?; DELETE FROM MulticastRate WHERE networkId = ?; DELETE FROM Relay WHERE networkId = ?; DELETE FROM Rule WHERE networkId = ?; DELETE FROM Network WHERE id = ?;",-1,&_sDeleteNetworkAndRelated,(const char **)0) != SQLITE_OK)
 		 ) {
+		//printf("!!! %s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
 	}
@@ -215,7 +214,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sListRules);
 		sqlite3_finalize(_sCreateRule);
 		sqlite3_finalize(_sCreateNetwork);
-		sqlite3_finalize(_sUpdateNetworkField);
 		sqlite3_finalize(_sGetNetworkRevision);
 		sqlite3_finalize(_sSetNetworkRevision);
 		sqlite3_finalize(_sGetIpAssignmentsForNode2);
@@ -224,7 +222,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sDeleteIpAssignmentPoolsForNetwork);
 		sqlite3_finalize(_sDeleteRulesForNetwork);
 		sqlite3_finalize(_sCreateIpAssignmentPool);
-		sqlite3_finalize(_sUpdateMemberField);
 		sqlite3_finalize(_sDeleteNetworkAndRelated);
 		sqlite3_close(_db);
 	}
@@ -902,20 +899,25 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					if (j) {
 						if (j->type == json_object) {
 							for(unsigned int k=0;k<j->u.object.length;++k) {
-								sqlite3_reset(_sUpdateMemberField);
-								sqlite3_bind_int64(_sUpdateMemberField,3,memberRowId);
 
 								if (!strcmp(j->u.object.values[k].name,"authorized")) {
 									if (j->u.object.values[k].value->type == json_boolean) {
-										sqlite3_bind_text(_sUpdateMemberField,1,"authorized",-1,SQLITE_STATIC);
-										sqlite3_bind_int(_sUpdateMemberField,2,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-										sqlite3_step(_sUpdateMemberField);
+										sqlite3_stmt *stmt = (sqlite3_stmt *)0;
+									  if (sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ? WHERE rowid = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+											sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
+											sqlite3_bind_int64(stmt,2,memberRowId);
+											sqlite3_step(stmt);
+											sqlite3_finalize(stmt);
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"activeBridge")) {
 									if (j->u.object.values[k].value->type == json_boolean) {
-										sqlite3_bind_text(_sUpdateMemberField,1,"activeBridge",-1,SQLITE_STATIC);
-										sqlite3_bind_int(_sUpdateMemberField,2,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-										sqlite3_step(_sUpdateMemberField);
+										sqlite3_stmt *stmt = (sqlite3_stmt *)0;
+									  if (sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ? WHERE rowid = ?",-1,&stmt,(const char **)0) == SQLITE_OK) {
+											sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
+											sqlite3_bind_int64(stmt,2,memberRowId);
+											sqlite3_step(stmt);
+											sqlite3_finalize(stmt);
+									  }
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"ipAssignments")) {
 									if (j->u.object.values[k].value->type == json_array) {
@@ -957,6 +959,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										}
 									}
 								}
+
 							}
 						}
 						json_value_free(j);
@@ -980,50 +983,42 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				if (j) {
 					if (j->type == json_object) {
 						for(unsigned int k=0;k<j->u.object.length;++k) {
-							sqlite3_reset(_sUpdateNetworkField);
-							sqlite3_bind_text(_sUpdateNetworkField,3,nwids,16,SQLITE_STATIC);
+							sqlite3_stmt *stmt = (sqlite3_stmt *)0;
 
 							if (!strcmp(j->u.object.values[k].name,"name")) {
 								if ((j->u.object.values[k].value->type == json_string)&&(j->u.object.values[k].value->u.string.ptr[0])) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"name",-1,SQLITE_STATIC);
-									sqlite3_bind_text(_sUpdateNetworkField,2,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET name = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"private")) {
 								if (j->u.object.values[k].value->type == json_boolean) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"private",-1,SQLITE_STATIC);
-									sqlite3_bind_int(_sUpdateNetworkField,2,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET private = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"enableBroadcast")) {
 								if (j->u.object.values[k].value->type == json_boolean) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"enableBroadcast",-1,SQLITE_STATIC);
-									sqlite3_bind_int(_sUpdateNetworkField,2,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET enableBroadcast = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"allowPassiveBridging")) {
 								if (j->u.object.values[k].value->type == json_boolean) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"allowPassiveBridging",-1,SQLITE_STATIC);
-									sqlite3_bind_int(_sUpdateNetworkField,2,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET allowPassiveBridging = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"v4AssignMode")) {
 								if (j->u.object.values[k].value->type == json_string) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"v4AssignMode",-1,SQLITE_STATIC);
-									sqlite3_bind_text(_sUpdateNetworkField,2,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET v4AssignMode = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"v6AssignMode")) {
 								if (j->u.object.values[k].value->type == json_string) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"v6AssignMode",-1,SQLITE_STATIC);
-									sqlite3_bind_text(_sUpdateNetworkField,2,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET v6AssignMode = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"multicastLimit")) {
 								if (j->u.object.values[k].value->type == json_integer) {
-									sqlite3_bind_text(_sUpdateNetworkField,1,"multicastLimit",-1,SQLITE_STATIC);
-									sqlite3_bind_int(_sUpdateNetworkField,2,(int)j->u.object.values[k].value->u.integer);
-									sqlite3_step(_sUpdateNetworkField);
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET multicastLimit = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+										sqlite3_bind_int(stmt,1,(int)j->u.object.values[k].value->u.integer);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"relays")) {
 								if (j->u.object.values[k].value->type == json_array) {
@@ -1184,6 +1179,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										}
 									}
 								}
+							}
+
+							if (stmt) {
+								sqlite3_bind_text(stmt,2,nwids,16,SQLITE_STATIC);
+								sqlite3_step(stmt);
+								sqlite3_finalize(stmt);
 							}
 						}
 					}

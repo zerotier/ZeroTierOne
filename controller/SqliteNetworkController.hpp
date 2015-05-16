@@ -110,7 +110,6 @@ private:
 	sqlite3_stmt *_sListRules;
 	sqlite3_stmt *_sCreateRule;
 	sqlite3_stmt *_sCreateNetwork;
-	sqlite3_stmt *_sUpdateNetworkField;
 	sqlite3_stmt *_sGetNetworkRevision;
 	sqlite3_stmt *_sSetNetworkRevision;
 	sqlite3_stmt *_sGetIpAssignmentsForNode2;
@@ -119,7 +118,6 @@ private:
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;
-	sqlite3_stmt *_sUpdateMemberField;
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteNetworkAndRelated;
 
