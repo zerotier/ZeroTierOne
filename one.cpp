@@ -881,6 +881,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
+	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 #ifdef __UNIX_LIKE__
@@ -945,6 +946,7 @@ int main(int argc,char **argv)
 	std::string overrideRootTopology;
 	std::string homeDir;
 	unsigned int port = ZT1_DEFAULT_PORT;
+	bool skipRootCheck = false;
 
 	for(int i=1;i<argc;++i) {
 		if (argv[i][0] == '-') {
@@ -963,6 +965,10 @@ int main(int argc,char **argv)
 					runAsDaemon = true;
 					break;
 #endif // __UNIX_LIKE__
+
+				case 'U':
+					skipRootCheck = true;
+					break;
 
 				case 'T': // Override root topology
 					if (argv[i][2]) {
@@ -1082,11 +1088,10 @@ int main(int argc,char **argv)
 	}
 
 #ifdef __UNIX_LIKE__
-	if (getuid() != 0) {
+	if ((!skipRootCheck)&&(getuid() != 0)) {
 		fprintf(stderr,"%s: must be run as root (uid 0)"ZT_EOL_S,argv[0]);
 		return 1;
 	}
-
 	if (runAsDaemon) {
 		long p = (long)fork();
 		if (p < 0) {
@@ -1102,10 +1107,13 @@ int main(int argc,char **argv)
 	if (winRunFromCommandLine) {
 		// Running in "interactive" mode (mostly for debugging)
 		if (IsCurrentUserLocalAdministrator() != TRUE) {
-			fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
-			return 1;
+			if (!skipRootCheck) {
+				fprintf(stderr,"%s: must be run as a local administrator."ZT_EOL_S,argv[0]);
+				return 1;
+			}
+		} else {
+			_winPokeAHole();
 		}
-		_winPokeAHole();
 		SetConsoleCtrlHandler(&_winConsoleCtrlHandler,TRUE);
 		// continues on to ordinary command line execution code below...
 	} else {
