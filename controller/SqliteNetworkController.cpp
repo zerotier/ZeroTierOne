@@ -560,12 +560,9 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 	std::string &responseContentType)
 {
 	char json[16384];
-
-	if (path.empty())
-		return 404;
 	Mutex::Lock _l(_lock);
 
-	if (path[0] == "network") {
+	if ((path.size() > 0)&&(path[0] == "network")) {
 
 		if ((path.size() >= 2)&&(path[1].length() == 16)) {
 			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
@@ -584,15 +581,15 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 					if (sqlite3_step(_sGetMember2) == SQLITE_ROW) {
 						Utils::snprintf(json,sizeof(json),
 							"{\n"
-							"\tnwid: \"%s\",\n"
-							"\taddress: \"%s\",\n"
-							"\tauthorized: %s,\n"
-							"\tactiveBridge: %s,\n"
-							"\tlastAt: \"%s\",\n"
-							"\tlastSeen: %llu,\n"
-							"\tfirstSeen: %llu,\n"
-							"\tidentity: \"%s\",\n"
-							"\tipAssignments: [",
+							"\t\"nwid\": \"%s\",\n"
+							"\t\"address\": \"%s\",\n"
+							"\t\"authorized\": %s,\n"
+							"\t\"activeBridge\": %s,\n"
+							"\t\"lastAt\": \"%s\",\n"
+							"\t\"lastSeen\": %llu,\n"
+							"\t\"firstSeen\": %llu,\n"
+							"\t\"identity\": \"%s\",\n"
+							"\t\"ipAssignments\": [",
 							nwids,
 							addrs,
 							(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
@@ -651,18 +648,18 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 										case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR: result = "INTERNAL_SERVER_ERROR"; break;
 										default: result = "(unrecognized result code)"; break;
 									}
-									responseBody.append(",\n\tnetconf: \"");
+									responseBody.append(",\n\t\"netconf\": \"");
 									responseBody.append(_jsonEscape(netconf.toString().c_str()));
-									responseBody.append("\",\n\tnetconfResult: \"");
+									responseBody.append("\",\n\t\"netconfResult\": \"");
 									responseBody.append(result);
-									responseBody.append("\",\n\tnetconfResultMessage: \"");
+									responseBody.append("\",\n\t\"netconfResultMessage\": \"");
 									responseBody.append(_jsonEscape(netconf["error"].c_str()));
 									responseBody.append("\"");
 								} else {
-									responseBody.append(",\n\tnetconf: \"\",\n\tnetconfResult: \"INTERNAL_SERVER_ERROR\",\n\tnetconfResultMessage: \"invalid member or signing identity\"");
+									responseBody.append(",\n\t\"netconf\": \"\",\n\t\"netconfResult\": \"INTERNAL_SERVER_ERROR\",\n\t\"netconfResultMessage\": \"invalid member or signing identity\"");
 								}
 							} catch ( ... ) {
-								responseBody.append(",\n\tnetconf: \"\",\n\tnetconfResult: \"INTERNAL_SERVER_ERROR\",\n\tnetconfResultMessage: \"unexpected exception\"");
+								responseBody.append(",\n\t\"netconf\": \"\",\n\t\"netconfResult\": \"INTERNAL_SERVER_ERROR\",\n\t\"netconfResultMessage\": \"unexpected exception\"");
 							}
 						}
 
@@ -679,17 +676,17 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 				if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
 					Utils::snprintf(json,sizeof(json),
 						"{\n"
-						"\tnwid: \"%s\",\n"
-						"\tname: \"%s\",\n"
-						"\tprivate: %s,\n"
-						"\tenableBroadcast: %s,\n"
-						"\tallowPassiveBridging: %s,\n"
-						"\tv4AssignMode: \"%s\",\n"
-						"\tv6AssignMode: \"%s\",\n"
-						"\tmulticastLimit: %d,\n"
-						"\tcreationTime: %llu,\n",
-						"\trevision: %llu,\n"
-						"\amembers: [",
+						"\t\"nwid\": \"%s\",\n"
+						"\t\"name\": \"%s\",\n"
+						"\t\"private\": %s,\n"
+						"\t\"enableBroadcast\": %s,\n"
+						"\t\"allowPassiveBridging\": %s,\n"
+						"\t\"v4AssignMode\": \"%s\",\n"
+						"\t\"v6AssignMode\": \"%s\",\n"
+						"\t\"multicastLimit\": %d,\n"
+						"\t\"creationTime\": %llu,\n",
+						"\t\"revision\": %llu,\n"
+						"\a\"members\": [",
 						nwids,
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
@@ -713,7 +710,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 						responseBody.push_back('"');
 						firstMember = false;
 					}
-					responseBody.append("],\n\trelays: [");
+					responseBody.append("],\n\t\"relays\": [");
 
 					sqlite3_reset(_sGetRelays);
 					sqlite3_bind_text(_sGetRelays,1,nwids,16,SQLITE_STATIC);
@@ -721,13 +718,13 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 					while (sqlite3_step(_sGetRelays) == SQLITE_ROW) {
 						responseBody.append(firstRelay ? "\n\t\t" : ",\n\t\t");
 						firstRelay = false;
-						responseBody.append("{address:\"");
+						responseBody.append("{\"address\":\"");
 						responseBody.append((const char *)sqlite3_column_text(_sGetRelays,0));
-						responseBody.append("\",phyAddress:\"");
+						responseBody.append("\",\"phyAddress\":\"");
 						responseBody.append(_jsonEscape((const char *)sqlite3_column_text(_sGetRelays,1)));
 						responseBody.append("\"}");
 					}
-					responseBody.append("],\n\tipAssignmentPools: [");
+					responseBody.append("],\n\t\"ipAssignmentPools\": [");
 
 					sqlite3_reset(_sGetIpAssignmentPools2);
 					sqlite3_bind_text(_sGetIpAssignmentPools2,1,nwids,16,SQLITE_STATIC);
@@ -736,69 +733,69 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 						responseBody.append(firstIpAssignmentPool ? "\n\t\t" : ",\n\t\t");
 						firstIpAssignmentPool = false;
 						InetAddress ipp((const void *)sqlite3_column_blob(_sGetIpAssignmentPools2,0),(sqlite3_column_int(_sGetIpAssignmentPools2,2) == 6) ? 16 : 4,(unsigned int)sqlite3_column_int(_sGetIpAssignmentPools2,1));
-						Utils::snprintf(json,sizeof(json),"{network:\"%s\",netmaskBits:%u}",
+						Utils::snprintf(json,sizeof(json),"{\"network\":\"%s\",\"netmaskBits\":%u}",
 							_jsonEscape(ipp.toIpString()).c_str(),
 							ipp.netmaskBits());
 						responseBody.append(json);
 					}
-					responseBody.append("],\n\trules: [");
+					responseBody.append("],\n\t\"rules\": [");
 
 					sqlite3_reset(_sListRules);
 					sqlite3_bind_text(_sListRules,1,nwids,16,SQLITE_STATIC);
 					bool firstRule = true;
 					while (sqlite3_step(_sListRules) == SQLITE_ROW) {
 						responseBody.append(firstRule ? "\n\t{\n" : ",{\n");
-						Utils::snprintf(json,sizeof(json),"\t\truleId: %lld,\n",sqlite3_column_int64(_sListRules,0));
+						Utils::snprintf(json,sizeof(json),"\t\t\"ruleId\": %lld,\n",sqlite3_column_int64(_sListRules,0));
 						responseBody.append(json);
 						if (sqlite3_column_type(_sListRules,1) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tnodeId: \"%s\",\n",(const char *)sqlite3_column_text(_sListRules,1));
+							Utils::snprintf(json,sizeof(json),"\t\t\"nodeId\": \"%s\",\n",(const char *)sqlite3_column_text(_sListRules,1));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,2) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tvlanId: %d,\n",sqlite3_column_int(_sListRules,2));
+							Utils::snprintf(json,sizeof(json),"\t\t\"vlanId\": %d,\n",sqlite3_column_int(_sListRules,2));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,3) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tvlanPcp: %d,\n",sqlite3_column_int(_sListRules,3));
+							Utils::snprintf(json,sizeof(json),"\t\t\"vlanPcp\": %d,\n",sqlite3_column_int(_sListRules,3));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,4) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tetherType: %d,\n",sqlite3_column_int(_sListRules,4));
+							Utils::snprintf(json,sizeof(json),"\t\t\"etherType\": %d,\n",sqlite3_column_int(_sListRules,4));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,5) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tmacSource: \"%s\",\n",MAC((const char *)sqlite3_column_text(_sListRules,5)).toString().c_str());
+							Utils::snprintf(json,sizeof(json),"\t\t\"macSource\": \"%s\",\n",MAC((const char *)sqlite3_column_text(_sListRules,5)).toString().c_str());
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,6) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tmacDest: \"%s\",\n",MAC((const char *)sqlite3_column_text(_sListRules,6)).toString().c_str());
+							Utils::snprintf(json,sizeof(json),"\t\t\"macDest\": \"%s\",\n",MAC((const char *)sqlite3_column_text(_sListRules,6)).toString().c_str());
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,7) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tipSource: \"%s\",\n",_jsonEscape((const char *)sqlite3_column_text(_sListRules,7)).c_str());
+							Utils::snprintf(json,sizeof(json),"\t\t\"ipSource\": \"%s\",\n",_jsonEscape((const char *)sqlite3_column_text(_sListRules,7)).c_str());
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,8) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tipDest: \"%s\",\n",_jsonEscape((const char *)sqlite3_column_text(_sListRules,8)).c_str());
+							Utils::snprintf(json,sizeof(json),"\t\t\"ipDest\": \"%s\",\n",_jsonEscape((const char *)sqlite3_column_text(_sListRules,8)).c_str());
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,9) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tipTos: %d,\n",sqlite3_column_int(_sListRules,9));
+							Utils::snprintf(json,sizeof(json),"\t\t\"ipTos\": %d,\n",sqlite3_column_int(_sListRules,9));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,10) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tipProtocol: %d,\n",sqlite3_column_int(_sListRules,10));
+							Utils::snprintf(json,sizeof(json),"\t\t\"ipProtocol\": %d,\n",sqlite3_column_int(_sListRules,10));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,11) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tipSourcePort: %d,\n",sqlite3_column_int(_sListRules,11));
+							Utils::snprintf(json,sizeof(json),"\t\t\"ipSourcePort\": %d,\n",sqlite3_column_int(_sListRules,11));
 							responseBody.append(json);
 						}
 						if (sqlite3_column_type(_sListRules,12) != SQLITE_NULL) {
-							Utils::snprintf(json,sizeof(json),"\t\tipDestPort: %d,\n",sqlite3_column_int(_sListRules,12));
+							Utils::snprintf(json,sizeof(json),"\t\t\"ipDestPort\": %d,\n",sqlite3_column_int(_sListRules,12));
 							responseBody.append(json);
 						}
-						responseBody.append("\t\taction: \"");
+						responseBody.append("\t\t\"action\": \"");
 						responseBody.append(_jsonEscape((const char *)sqlite3_column_text(_sListRules,13)));
 						responseBody.append("\"\n\t}");
 					}
@@ -828,7 +825,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpGET(
 
 	} else {
 		// GET /controller returns status and API version if controller is supported
-		Utils::snprintf(json,sizeof(json),"{\n\tcontroller: true,\n\tapiVersion: %d\n\tclock: %llu\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
+		Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
 		responseBody = json;
 		responseContentType = "applicaiton/json";
 		return 200;

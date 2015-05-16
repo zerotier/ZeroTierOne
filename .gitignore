@@ -43,3 +43,4 @@
 /ui/.module-cache
 /windows/WebUIWrapper/bin
 /windows/WebUIWrapper/obj
+node_modules

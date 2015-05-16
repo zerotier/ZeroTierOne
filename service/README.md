@@ -11,7 +11,7 @@ The JSON API supports GET, POST/PUT, and DELETE. PUT is treated as a synonym for
 
 Values POSTed to the JSON API are *extremely* type sensitive. Things *must* be of the indicated type, otherwise they will be ignored or will generate an error. Anything quoted is a string so booleans and integers must lack quotes. Booleans must be *true* or *false* and nothing else. Integers cannot contain decimal points or they are floats (and vice versa). If something seems to be getting ignored or set to a strange value, or if you receive errors, check the type of all JSON fields you are submitting against the types listed below. Unrecognized fields in JSON objects are also ignored.
 
-API requests must be authenticated via an authentication token. ZeroTier One saves this token in the *authtoken.secret* file in its working directory. This token may be supplied via the *authToken* URL parameter (e.g. '?authToken=...') or via the *X-ZT1-Auth* HTTP request header. Static UI pages are the only thing the server will allow without authentication.
+API requests must be authenticated via an authentication token. ZeroTier One saves this token in the *authtoken.secret* file in its working directory. This token may be supplied via the *auth* URL parameter (e.g. '?auth=...') or via the *X-ZT1-Auth* HTTP request header. Static UI pages are the only thing the server will allow without authentication.
 
 A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP response is sent as a script with its JSON response payload wrapped in a call to the function name supplied as the argument to *jsonp*.
 

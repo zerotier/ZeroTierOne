@@ -1,0 +1,14 @@
+{
+  "name": "zt1-controller-client",
+  "version": "1.0.0",
+  "description": "ZeroTier One network controller client for NodeJS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ZeroTier, Inc.",
+  "license": "BSD",
+  "dependencies": {
+    "request": "^2.55.0"
+  }
+}

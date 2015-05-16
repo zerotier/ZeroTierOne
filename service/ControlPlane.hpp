@@ -40,7 +40,7 @@ namespace ZeroTier {
 
 class OneService;
 class Node;
-class ControlPlaneSubsystem;
+class SqliteNetworkController;
 struct InetAddress;
 
 /**
@@ -72,7 +72,7 @@ public:
 	 * @param prefix First element in URI path
 	 * @param subsys Object to call for results of GET and POST/PUT operations
 	 */
-	inline void mount(const char *prefix,ControlPlaneSubsystem *subsys)
+	inline void mount(const char *prefix,SqliteNetworkController *subsys)
 	{
 		Mutex::Lock _l(_lock);
 		_subsystems[std::string(prefix)] = subsys;
@@ -104,7 +104,7 @@ private:
 	Node *const _node;
 	std::string _uiStaticPath;
 	std::set<std::string> _authTokens;
-	std::map<std::string,ControlPlaneSubsystem *> _subsystems;
+	std::map<std::string,SqliteNetworkController *> _subsystems;
 	Mutex _lock;
 };
 
