@@ -49,6 +49,7 @@
 
 #include "Utils.hpp"
 #include "Mutex.hpp"
+#include "Salsa20.hpp"
 
 namespace ZeroTier {
 
@@ -152,6 +153,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	static HCRYPTPROV cryptProvider = NULL;
 	static Mutex globalLock;
+	static Salsa20 s20;
 
 	Mutex::Lock _l(globalLock);
 
@@ -161,12 +163,19 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			exit(1);
 			return;
 		}
+		char s20key[32];
+		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(s20key),(BYTE *)s20key)) {
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
+			exit(1);
+		}
+		s20.init(s20key,256,s20key,8);
 	}
 
 	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
 		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 		exit(1);
 	}
+	s20.encrypt(buf,buf,bytes);
 
 #else // not __WINDOWS__
 

@@ -94,7 +94,6 @@ private:
 	sqlite3_stmt *_sCreateNode;
 	sqlite3_stmt *_sUpdateNode;
 	sqlite3_stmt *_sUpdateNode2;
-	sqlite3_stmt *_sUpdateMemberClientReportedRevision;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
 	sqlite3_stmt *_sGetMulticastRates;
 	sqlite3_stmt *_sGetActiveBridges;
@@ -102,7 +101,7 @@ private:
 	sqlite3_stmt *_sGetIpAssignmentPools;
 	sqlite3_stmt *_sCheckIfIpIsAllocated;
 	sqlite3_stmt *_sAllocateIp;
-	sqlite3_stmt *_sCacheNetconf;
+	sqlite3_stmt *_sDeleteIpAllocations;
 	sqlite3_stmt *_sGetRelays;
 	sqlite3_stmt *_sListNetworks;
 	sqlite3_stmt *_sListNetworkMembers;
@@ -120,6 +119,9 @@ private:
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;
+	sqlite3_stmt *_sUpdateMemberField;
+	sqlite3_stmt *_sDeleteMember;
+	sqlite3_stmt *_sDeleteNetworkAndRelated;
 
 	Mutex _lock;
 };

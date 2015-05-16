@@ -43,6 +43,8 @@
 #else /* not Windows */
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 #endif /* Windows or not */
 
 #ifdef __cplusplus

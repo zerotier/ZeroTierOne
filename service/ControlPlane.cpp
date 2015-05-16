@@ -360,7 +360,8 @@ unsigned int ControlPlane::handleRequest(
 					"\t\"versionMajor\":%d,\n"
 					"\t\"versionMinor\":%d,\n"
 					"\t\"versionRev\":%d,\n"
-					"\t\"version\":\"%d.%d.%d\"\n"
+					"\t\"version\":\"%d.%d.%d\",\n"
+					"\t\"clock\": %llu\n"
 					"}\n",
 					status.address,
 					status.publicIdentity,
@@ -368,7 +369,8 @@ unsigned int ControlPlane::handleRequest(
 					ZEROTIER_ONE_VERSION_MAJOR,
 					ZEROTIER_ONE_VERSION_MINOR,
 					ZEROTIER_ONE_VERSION_REVISION,
-					ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+					ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,
+					(unsigned long long)OSUtils::now());
 				responseBody = json;
 				scode = 200;
 			} else if (ps[0] == "config") {
@@ -433,6 +435,14 @@ unsigned int ControlPlane::handleRequest(
 					} // else 404
 					_node->freeQueryResult((void *)pl);
 				} else scode = 500;
+			} else if (ps[0] == "newIdentity") {
+				// Return a newly generated ZeroTier identity -- this is primarily for debugging
+				// and testing to make it easy for automated test scripts to generate test IDs.
+				Identity newid;
+				newid.generate();
+				responseBody = newid.toString(true);
+				responseContentType = "text/plain";
+				scode = 200;
 			} else {
 				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
