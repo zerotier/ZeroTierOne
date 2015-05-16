@@ -101,6 +101,7 @@ private:
 	sqlite3_stmt *_sGetIpAssignmentPools;
 	sqlite3_stmt *_sCheckIfIpIsAllocated;
 	sqlite3_stmt *_sAllocateIp;
+	sqlite3_stmt *_sDeleteIpAllocations;
 	sqlite3_stmt *_sGetRelays;
 	sqlite3_stmt *_sListNetworks;
 	sqlite3_stmt *_sListNetworkMembers;
@@ -118,6 +119,7 @@ private:
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;
+	sqlite3_stmt *_sUpdateMemberField;
 
 	Mutex _lock;
 };

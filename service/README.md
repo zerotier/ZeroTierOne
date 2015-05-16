@@ -5,13 +5,15 @@ This is the common background service implementation for ZeroTier One, the VPN-l
 
 It provides a ready-made core I/O loop and a local HTTP-based JSON control bus for controlling the service. This control bus HTTP server can also serve the files in ui/ if this folder's contents are installed in the ZeroTier home folder. The ui/ implements a React-based HTML5 user interface which is then wrappered for various platforms via MacGap, Windows .NET WebControl, etc. It can also be used locally from scripts or via *curl*.
 
-### JSON API
+### Network Virtualization Service API
 
-The JSON API supports GET, POST/PUT, and DELETE. PUT is treated as a synonym for POST.
+The JSON API supports GET, POST/PUT, and DELETE. PUT is treated as a synonym for POST. Other methods including HEAD are not supported.
 
-Any JSON objects POSTed to the service are *extremely* type-sensitive due to the simple embedded C JSON parser that we use. If, for example, an integer field is quoted as a string, its contents may be ignored or an error 400 may be returned. Integer fields must be ASCII integers (no decimal point), and boolean fields must be *true* or *false*.
+Values POSTed to the JSON API are *extremely* type sensitive. Things *must* be of the indicated type, otherwise they will be ignored or will generate an error. Anything quoted is a string so booleans and integers must lack quotes. Booleans must be *true* or *false* and nothing else. Integers cannot contain decimal points or they are floats (and vice versa). If something seems to be getting ignored or set to a strange value, or if you receive errors, check the type of all JSON fields you are submitting against the types listed below. Unrecognized fields in JSON objects are also ignored.
 
-Each request to the API must be authenticated via an authentication token. ZeroTier One saves this token in the *authtoken.secret* file in its working directory. This token may be supplied via the *authToken* URL parameter (e.g. '?authToken=...') or via the *X-ZT1-Auth* HTTP request header. Static UI pages will be served without authentication but all other requests require it. In addition, a *jsonp* URL argument may be supplied to invoke JSONP response behavior. In this mode, JSON responses are passed into the function specified by the *jsonp* URL argument's value (e.g. '?jsonp=myJsonPHandler').
+API requests must be authenticated via an authentication token. ZeroTier One saves this token in the *authtoken.secret* file in its working directory. This token may be supplied via the *authToken* URL parameter (e.g. '?authToken=...') or via the *X-ZT1-Auth* HTTP request header. Static UI pages are the only thing the server will allow without authentication.
+
+A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP response is sent as a script with its JSON response payload wrapped in a call to the function name supplied as the argument to *jsonp*.
 
 #### /status
 
