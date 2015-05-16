@@ -120,6 +120,8 @@ private:
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;
 	sqlite3_stmt *_sUpdateMemberField;
+	sqlite3_stmt *_sDeleteMember;
+	sqlite3_stmt *_sDeleteNetworkAndRelated;
 
 	Mutex _lock;
 };

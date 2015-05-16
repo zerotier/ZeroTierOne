@@ -435,6 +435,14 @@ unsigned int ControlPlane::handleRequest(
 					} // else 404
 					_node->freeQueryResult((void *)pl);
 				} else scode = 500;
+			} else if (ps[0] == "newIdentity") {
+				// Return a newly generated ZeroTier identity -- this is primarily for debugging
+				// and testing to make it easy for automated test scripts to generate test IDs.
+				Identity newid;
+				newid.generate();
+				responseBody = newid.toString(true);
+				responseContentType = "text/plain";
+				scode = 200;
 			} else {
 				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())

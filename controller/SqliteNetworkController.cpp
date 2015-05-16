@@ -180,6 +180,8 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Rule WHERE networkId = ?",-1,&_sDeleteRulesForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignmentPool (networkId,ipNetwork,ipNetmaskBits,ipVersion) VALUES (?,?,?,?)",-1,&_sCreateIpAssignmentPool,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET ? = ? WHERE rowid = ?",-1,&_sUpdateMemberField,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignment WHERE networkId = ?; DELETE FROM IpAssignmentPool WHERE networkId = ?; DELETE FROM Member WHERE networkId = ?; DELETE FROM MulticastRate WHERE networkId = ?; DELETE FROM Relay WHERE networkId = ?; DELETE FROM Rule WHERE networkId = ?; DELETE FROM Network WHERE id = ?;",-1,&_sDeleteNetworkAndRelated,(const char **)0) != SQLITE_OK)
 		 ) {
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
@@ -223,6 +225,7 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sDeleteRulesForNetwork);
 		sqlite3_finalize(_sCreateIpAssignmentPool);
 		sqlite3_finalize(_sUpdateMemberField);
+		sqlite3_finalize(_sDeleteNetworkAndRelated);
 		sqlite3_close(_db);
 	}
 }
@@ -1213,6 +1216,46 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 	if (path.empty())
 		return 404;
 	Mutex::Lock _l(_lock);
+
+	if (path[0] == "network") {
+
+		if ((path.size() >= 2)&&(path[1].length() == 16)) {
+			uint64_t nwid = Utils::hexStrToU64(path[1].c_str());
+			char nwids[24];
+			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
+
+			if (path.size() >= 3) {
+
+				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
+					uint64_t address = Utils::hexStrToU64(path[3].c_str());
+					char addrs[24];
+					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
+
+					sqlite3_reset(_sDeleteIpAllocations);
+					sqlite3_bind_text(_sDeleteIpAllocations,1,nwids,16,SQLITE_STATIC);
+					sqlite3_bind_text(_sDeleteIpAllocations,2,addrs,10,SQLITE_STATIC);
+					if (sqlite3_step(_sDeleteIpAllocations) == SQLITE_DONE) {
+						sqlite3_reset(_sDeleteMember);
+						sqlite3_bind_text(_sDeleteMember,1,nwids,16,SQLITE_STATIC);
+						sqlite3_bind_text(_sDeleteMember,2,addrs,10,SQLITE_STATIC);
+						if (sqlite3_step(_sDeleteMember) != SQLITE_DONE)
+							return 500;
+					} else return 500;
+
+					return 200;
+				}
+
+			} else {
+
+				sqlite3_reset(_sDeleteNetworkAndRelated);
+				for(int i=1;i<=7;++i)
+					sqlite3_bind_text(_sDeleteNetworkAndRelated,i,nwids,16,SQLITE_STATIC);
+				return ((sqlite3_step(_sDeleteNetworkAndRelated) == SQLITE_DONE) ? 200 : 500);
+
+			}
+		} // else 404
+
+	} // else 404
 
 	return 404;
 }
