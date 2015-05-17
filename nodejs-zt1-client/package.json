@@ -9,6 +9,7 @@
   "author": "ZeroTier, Inc.",
   "license": "BSD",
   "dependencies": {
+    "async": "^0.9.0",
     "request": "^2.55.0"
   }
 }
