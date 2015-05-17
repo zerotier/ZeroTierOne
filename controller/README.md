@@ -3,34 +3,30 @@ Network Controller Implementation
 
 This folder contains code implementing the node/NetworkController.hpp interface to allow ZeroTier nodes to create and manage virtual networks.
 
-The standard implementation uses SQLite3 with the attached schema. A separate service (not included here yet) is used to administrate that database and configure networks.
-
 ### Building
 
-By default this code is not built or included in the client. To build on Linux, BSD, or Mac add ZT_ENABLE_NETCONF_MASTER=1 to the make command line. It could be built on Windows as well, but you're on your own there. You'd have to build SQLite3 first, or get a pre-built copy somewhere.
+By default this code is not built or included in the client. To build on Linux, BSD, or Mac add ZT\_ENABLE\_NETCONF\_MASTER=1 to the make command line. You'll need the development headers for Sqlite3 installed. They ship as part of OSX and Xcode. On Linux or BSD you'll probably need to install a package.
 
-### Creating databases
+### Running
 
-If you execute a network controller enabled build of the ZeroTier One service, a *controller.db* will automatically be created and initialize. You can also create one manually with:
+When started, a controller-enabled build of ZeroTier One will automatically create and initialize a *controller.db* in its home folder. This is where all the controller's data and persistent state lives.
 
-    sqlite3 -init schema.sql controller.db
+Since Sqlite3 supports multiple processes attached to the same database, it is safe to back up a running database with the command line *sqlite3* utility:
 
-Then type '.quit' to exit the SQLite3 command shell.
+    sqlite3 /path/to/controller.db .dump
 
-Since SQLite3 supports multiple concurrent processes attached to the same database, it's easy to have another process administrate network details while the ZeroTier One service serves them. The schema is simple. Folks with some sysadmin expertise should be able to figure out how to populate a database and get something running. We'll probably publish some code for this at some point in the future, but for now it's all tied up with our zerotier.com web backend.
+In production ZeroTier runs this frequently and keeps many timestamped copies going back about a week. These are also backed up (encrypted) to Amazon S3 along with the rest of our data.
 
-One important detail you'll need to know:
+### Administrating
 
-Whenever a network (including associated tables) is changed in any way, its revision number must be incremented. For private networks this is part of the certificate. Certificates are permitted to differ by up to 16 revisions. Therefore, to explicitly and rapidly de-authorize someone you should do a *two-step increment*. This is done with a time delay. First de-authorize the user and increment the revision by one. Then wait 30-60 seconds and increment it by 15. This gives all running clients a chance to get updated certificates before the now-excluded node falls off the revision number horizon. All other changes need only increment once, since a few nodes briefly having a slightly out of date config won't cause any harm.
+See service/README.md for documentation on the JSON API presented by this network controller implementation. Also see *nodejs-zt1-client* for a NodeJS JavaScript interface.
 
 ### Reliability
 
-Network configuration masters can go offline without affecting already-configured members of running networks. You just won't be able to add new members, de-authorize members, or otherwise change any network configuration while the master is offline.
+Network controllers can go offline without affecting already-configured members of running networks. You just won't be able to change anything and new members will not be able to join.
 
-High-availability can be implemented through fail-over. A simple method involves making a frequent backup of the SQLite database (use the SQLite command line client to do this safely) and the network configuration master's working directory. Then, if the master goes down, another instance of it can rapidly be provisioned elsewhere. Since ZeroTier addresses are mobile, the new instance will quickly take over for the old one and service requests.
+High-availability can be implemented through fail-over. A simple method involves making a frequent backup of the SQLite database (use the SQLite command line client to do this safely) and the network configuration master's working directory. Then, if the master goes down, another instance of it can rapidly be provisioned elsewhere. Since ZeroTier addresses are mobile, the new instance will quickly (usually no more than 30s) take over for the old one and service requests.
 
 ### Limits
 
-A single network configuration master can administrate up to 2^24 networks as per the ZeroTier protocol limit. The number of clients is theoretically unlimited, but in practice is limited by network bandwidth.
-
-You should keep an eye on CPU utilization and stop adding networks/users to a network configuration master if it gets too high. The bottleneck here is not the SQLite database but the CPU overhead of signing certificates of membership. You'll hit limits there long before hitting any limit associated with SQLite.
+A single network configuration master can administrate up to 2^24 (~16m) networks as per the ZeroTier protocol limit. There is no hard limit on the number of clients, though millions or more would impose significant CPU demands on a server. Optimizations could be implemented such as memoization/caching to reduce this.
