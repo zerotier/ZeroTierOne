@@ -40,17 +40,14 @@
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
 
-#include "../service/ControlPlaneSubsystem.hpp"
-
 namespace ZeroTier {
 
-class SqliteNetworkController : public NetworkController,public ControlPlaneSubsystem
+class SqliteNetworkController : public NetworkController
 {
 public:
 	SqliteNetworkController(const char *dbPath);
 	virtual ~SqliteNetworkController();
 
-	// NetworkController
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
 		const InetAddress &fromAddr,
 		const Identity &signingId,
@@ -60,22 +57,21 @@ public:
 		uint64_t haveRevision,
 		Dictionary &netconf);
 
-	// ControlPlaneSubsystem
-	virtual unsigned int handleControlPlaneHttpGET(
+	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
 		const std::map<std::string,std::string> &headers,
 		const std::string &body,
 		std::string &responseBody,
 		std::string &responseContentType);
-	virtual unsigned int handleControlPlaneHttpPOST(
+	unsigned int handleControlPlaneHttpPOST(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
 		const std::map<std::string,std::string> &headers,
 		const std::string &body,
 		std::string &responseBody,
 		std::string &responseContentType);
-	virtual unsigned int handleControlPlaneHttpDELETE(
+	unsigned int handleControlPlaneHttpDELETE(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
 		const std::map<std::string,std::string> &headers,
@@ -84,6 +80,14 @@ public:
 		std::string &responseContentType);
 
 private:
+	unsigned int _doCPGet(
+		const std::vector<std::string> &path,
+		const std::map<std::string,std::string> &urlArgs,
+		const std::map<std::string,std::string> &headers,
+		const std::string &body,
+		std::string &responseBody,
+		std::string &responseContentType);
+
 	std::string _dbPath;
 	sqlite3 *_db;
 
@@ -110,7 +114,6 @@ private:
 	sqlite3_stmt *_sListRules;
 	sqlite3_stmt *_sCreateRule;
 	sqlite3_stmt *_sCreateNetwork;
-	sqlite3_stmt *_sUpdateNetworkField;
 	sqlite3_stmt *_sGetNetworkRevision;
 	sqlite3_stmt *_sSetNetworkRevision;
 	sqlite3_stmt *_sGetIpAssignmentsForNode2;
@@ -119,7 +122,6 @@ private:
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;
-	sqlite3_stmt *_sUpdateMemberField;
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteNetworkAndRelated;
 

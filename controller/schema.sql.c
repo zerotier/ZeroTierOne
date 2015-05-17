@@ -30,10 +30,6 @@
 "CREATE TABLE Member (\n"\
 "  networkId char(16) NOT NULL,\n"\
 "  nodeId char(10) NOT NULL,\n"\
-"  cachedNetconf blob(4096),\n"\
-"  cachedNetconfRevision integer NOT NULL DEFAULT(0),\n"\
-"  cachedNetconfTimestamp integer NOT NULL DEFAULT(0),\n"\
-"  clientReportedRevision integer NOT NULL DEFAULT(0),\n"\
 "  authorized integer NOT NULL DEFAULT(0),\n"\
 "  activeBridge integer NOT NULL DEFAULT(0)\n"\
 ");\n"\

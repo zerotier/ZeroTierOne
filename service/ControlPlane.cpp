@@ -26,13 +26,14 @@
  */
 
 #include "ControlPlane.hpp"
-#include "ControlPlaneSubsystem.hpp"
 #include "OneService.hpp"
 
 #include "../version.h"
 #include "../include/ZeroTierOne.h"
 
 #include "../ext/http-parser/http_parser.h"
+
+#include "../controller/SqliteNetworkController.hpp"
 
 #include "../node/InetAddress.hpp"
 #include "../node/Node.hpp"
@@ -444,7 +445,7 @@ unsigned int ControlPlane::handleRequest(
 				responseContentType = "text/plain";
 				scode = 200;
 			} else {
-				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
+				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
 					scode = ss->second->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
@@ -477,7 +478,7 @@ unsigned int ControlPlane::handleRequest(
 					} else scode = 500;
 				}
 			} else {
-				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
+				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
 					scode = ss->second->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
@@ -509,7 +510,7 @@ unsigned int ControlPlane::handleRequest(
 					_node->freeQueryResult((void *)nws);
 				} else scode = 500;
 			} else {
-				std::map<std::string,ControlPlaneSubsystem *>::const_iterator ss(_subsystems.find(ps[0]));
+				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
 					scode = ss->second->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;

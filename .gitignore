@@ -52,3 +52,4 @@ java/build_win32/
 /ui/.module-cache
 /windows/WebUIWrapper/bin
 /windows/WebUIWrapper/obj
+node_modules
