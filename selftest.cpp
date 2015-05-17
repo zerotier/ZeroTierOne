@@ -510,16 +510,14 @@ static int testCertificate()
 
 static int testPacket()
 {
-	unsigned char salsaKey[32],hmacKey[32];
+	unsigned char salsaKey[32];
 	Packet a,b;
 
 	a.burn();
 	b.burn();
 
-	for(unsigned int i=0;i<32;++i) {
+	for(unsigned int i=0;i<32;++i)
 		salsaKey[i] = (unsigned char)rand();
-		hmacKey[i] = (unsigned char)rand();
-	}
 
 	std::cout << "[packet] Testing Packet encoder/decoder... ";
 

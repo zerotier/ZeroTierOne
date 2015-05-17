@@ -33,7 +33,9 @@
 
 #include "../ext/http-parser/http_parser.h"
 
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 #include "../controller/SqliteNetworkController.hpp"
+#endif
 
 #include "../node/InetAddress.hpp"
 #include "../node/Node.hpp"

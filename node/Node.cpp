@@ -251,8 +251,10 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 		if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
 			_lastBeacon = now;
 			char beacon[13];
-			*(reinterpret_cast<uint32_t *>(beacon)) = RR->prng->next32();
-			*(reinterpret_cast<uint32_t *>(beacon + 4)) = RR->prng->next32();
+			void *p = beacon;
+			*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
+			p = beacon + 4;
+			*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
 			RR->identity.address().copyTo(beacon + 8,5);
 			RR->antiRec->logOutgoingZT(beacon,13);
 			putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13,0);
