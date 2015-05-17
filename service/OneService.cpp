@@ -912,8 +912,8 @@ std::string OneService::platformDefaultHomePath()
 	return std::string("/Library/Application Support/ZeroTier/One");
 #else
 
-#ifdef __FreeBSD__
-	// FreeBSD likes /var/db instead of /var/lib
+#ifdef __BSD__
+	// BSD likes /var/db instead of /var/lib
 	return std::string("/var/db/zerotier-one");
 #else
 	// Use /var/lib for Linux and other *nix
