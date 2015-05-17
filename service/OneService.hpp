@@ -32,8 +32,6 @@
 
 namespace ZeroTier {
 
-class NetworkController;
-
 /**
  * Local service for ZeroTier One as system VPN/NFV provider
  */
@@ -79,13 +77,11 @@ public:
 	 *
 	 * @param hp Home path
 	 * @param port TCP and UDP port for packets and HTTP control
-	 * @param master Instance of network config master if this instance is to act as one (default: NULL)
 	 * @param overrideRootTopology String-serialized root topology (for testing, default: NULL)
 	 */
 	static OneService *newInstance(
 		const char *hp,
 		unsigned int port,
-		NetworkController *master = (NetworkController *)0,
 		const char *overrideRootTopology = (const char *)0);
 
 	virtual ~OneService();

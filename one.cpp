@@ -72,12 +72,7 @@
 
 #include "service/OneService.hpp"
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "controller/SqliteNetworkController.hpp"
-#endif
-
 #define ZT1_PID_PATH "zerotier-one.pid"
-#define ZT1_CONTROLLER_DB_PATH "controller.db"
 
 using namespace ZeroTier;
 
@@ -1129,19 +1124,6 @@ int main(int argc,char **argv)
 	}
 #endif // __WINDOWS__
 
-	NetworkController *controller = (NetworkController *)0;
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	try {
-		controller = new SqliteNetworkController((homeDir + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str());
-	} catch (std::exception &exc) {
-		fprintf(stderr,"%s: failure initializing SqliteNetworkController: %s"ZT_EOL_S,argv[0],exc.what());
-		return 1;
-	} catch ( ... ) {
-		fprintf(stderr,"%s: failure initializing SqliteNetworkController: unknown exception"ZT_EOL_S,argv[0]);
-		return 1;
-	}
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
-
 #ifdef __UNIX_LIKE__
 	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_PID_PATH);
 	{
@@ -1158,7 +1140,7 @@ int main(int argc,char **argv)
 
 	try {
 		for(;;) {
-			zt1Service = OneService::newInstance(homeDir.c_str(),port,controller,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+			zt1Service = OneService::newInstance(homeDir.c_str(),port,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
 			switch(zt1Service->run()) {
 				case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
 				case OneService::ONE_NORMAL_TERMINATION:
@@ -1191,7 +1173,6 @@ int main(int argc,char **argv)
 
 	delete zt1Service;
 	zt1Service = (OneService *)0;
-	delete controller;
 
 #ifdef __UNIX_LIKE__
 	OSUtils::rm(pidPath.c_str());

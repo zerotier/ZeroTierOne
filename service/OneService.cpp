@@ -53,6 +53,12 @@
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
 
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+#include "../controller/SqliteNetworkController.hpp"
+#else
+class SqliteNetworkController;
+#endif
+
 #ifdef __WINDOWS__
 #include <ShlObj.h>
 #endif
@@ -84,6 +90,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 // How often to check for new multicast subscriptions on a tap device
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 30000
+
+// Path under ZT1 home for controller database if controller is enabled
+#define ZT1_CONTROLLER_DB_PATH "controller.db"
 
 namespace ZeroTier {
 
@@ -147,10 +156,12 @@ struct TcpConnection
 class OneServiceImpl : public OneService
 {
 public:
-	OneServiceImpl(const char *hp,unsigned int port,NetworkController *master,const char *overrideRootTopology) :
+	OneServiceImpl(const char *hp,unsigned int port,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+		_controller((_homePath + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str()),
+#endif
 		_phy(this,true),
-		_master(master),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
 		_controlPlane((ControlPlane *)0),
@@ -227,13 +238,16 @@ public:
 				SnodeEventCallback,
 				((_overrideRootTopology.length() > 0) ? _overrideRootTopology.c_str() : (const char *)0));
 
-			if (_master)
-				_node->setNetconfMaster((void *)_master);
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+			_node->setNetconfMaster((void *)&_controller);
+#endif
 
 			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
 			_controlPlane->addAuthToken(authToken.c_str());
-			if (_master)
-				_controlPlane->mount("controller",reinterpret_cast<SqliteNetworkController *>(_master));
+
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+			_controlPlane->setController(&_controller);
+#endif
 
 			{	// Remember networks from previous session
 				std::vector<std::string> networksDotD(OSUtils::listDirectory((_homePath + ZT_PATH_SEPARATOR_S + "networks.d").c_str()));
@@ -763,8 +777,10 @@ private:
 	}
 
 	const std::string _homePath;
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	SqliteNetworkController _controller;
+#endif
 	Phy<OneServiceImpl *> _phy;
-	NetworkController *_master;
 	std::string _overrideRootTopology;
 	Node *_node;
 	PhySocket *_v4UdpSocket;
@@ -923,7 +939,7 @@ std::string OneService::platformDefaultHomePath()
 #endif // __UNIX_LIKE__ or not...
 }
 
-OneService *OneService::newInstance(const char *hp,unsigned int port,NetworkController *master,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,master,overrideRootTopology); }
+OneService *OneService::newInstance(const char *hp,unsigned int port,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,overrideRootTopology); }
 OneService::~OneService() {}
 
 } // namespace ZeroTier

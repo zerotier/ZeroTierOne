@@ -245,6 +245,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 ControlPlane::ControlPlane(OneService *svc,Node *n,const char *uiStaticPath) :
 	_svc(svc),
 	_node(n),
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	_controller((SqliteNetworkController *)0),
+#endif
 	_uiStaticPath((uiStaticPath) ? uiStaticPath : "")
 {
 }
@@ -446,9 +449,8 @@ unsigned int ControlPlane::handleRequest(
 				scode = 200;
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
-				if (ss != _subsystems.end())
-					scode = ss->second->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+				if (_controller)
+					_controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;
@@ -483,9 +485,8 @@ unsigned int ControlPlane::handleRequest(
 				}
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
-				if (ss != _subsystems.end())
-					scode = ss->second->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+				if (_controller)
+					_controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;
@@ -519,9 +520,8 @@ unsigned int ControlPlane::handleRequest(
 				} else scode = 500;
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
-				if (ss != _subsystems.end())
-					scode = ss->second->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+				if (_controller)
+					_controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;
