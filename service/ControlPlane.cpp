@@ -445,10 +445,14 @@ unsigned int ControlPlane::handleRequest(
 				responseContentType = "text/plain";
 				scode = 200;
 			} else {
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
 					scode = ss->second->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
+#else
+				scode = 404;
+#endif
 			}
 
 		} else scode = 401; // isAuth == false
@@ -478,10 +482,14 @@ unsigned int ControlPlane::handleRequest(
 					} else scode = 500;
 				}
 			} else {
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
 					scode = ss->second->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
+#else
+				scode = 404;
+#endif
 			}
 
 		} else scode = 401; // isAuth == false
@@ -510,10 +518,14 @@ unsigned int ControlPlane::handleRequest(
 					_node->freeQueryResult((void *)nws);
 				} else scode = 500;
 			} else {
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				std::map<std::string,SqliteNetworkController *>::const_iterator ss(_subsystems.find(ps[0]));
 				if (ss != _subsystems.end())
 					scode = ss->second->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
+#else
+				scode = 404;
+#endif
 			}
 
 		} else {
