@@ -59,7 +59,7 @@ Getting /network returns an array of all networks that this node has joined. See
  * Methods: GET, POST, DELETE
  * Returns: { object }
 
-To join a network, POST to it. POST data is optional and may be omitted. Example: POST to /network/8056c2e21c000001 to join the public "Earth" network. To leave a network, DELETE it e.g. DELETE /network/8056c2e21c000001.
+To join a network, POST to it. Since networks have no mandatory writable parameters, POST data is optional and may be omitted. Example: POST to /network/8056c2e21c000001 to join the public "Earth" network. To leave a network, DELETE it e.g. DELETE /network/8056c2e21c000001.
 
 Most network settings are not writable, as they are defined by the network controller.
 
