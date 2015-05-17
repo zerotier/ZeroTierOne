@@ -80,6 +80,14 @@ public:
 		std::string &responseContentType);
 
 private:
+	unsigned int _doCPGet(
+		const std::vector<std::string> &path,
+		const std::map<std::string,std::string> &urlArgs,
+		const std::map<std::string,std::string> &headers,
+		const std::string &body,
+		std::string &responseBody,
+		std::string &responseContentType);
+
 	std::string _dbPath;
 	sqlite3 *_db;
 
