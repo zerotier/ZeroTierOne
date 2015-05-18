@@ -146,7 +146,7 @@ static int cli(int argc,char **argv)
 					json = true;
 					break;
 
-				case 'p': // port for HTTP
+				case 'p':
 					port = Utils::strToUInt(argv[i] + 2);
 					if ((port > 0xffff)||(port == 0)) {
 						cliPrintHelp(argv[0],stdout);
@@ -154,7 +154,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'D': // Home path
+				case 'D':
 					if (argv[i][2]) {
 						homeDir = argv[i] + 2;
 					} else {
@@ -163,7 +163,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'H': // HTTP IP
+				case 'H':
 					if (argv[i][2]) {
 						ip = argv[i] + 2;
 					} else {
@@ -172,7 +172,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'T': // Override root topology
+				case 'T':
 					if (argv[i][2]) {
 						authToken = argv[i] + 2;
 					} else {
@@ -181,7 +181,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'v': // Display version
+				case 'v':
 					if (argv[i][2]) {
 						cliPrintHelp(argv[0],stdout);
 						return 1;
@@ -222,6 +222,20 @@ static int cli(int argc,char **argv)
 
 		if (!authToken.length()) {
 			OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),authToken);
+#ifdef __UNIX_LIKE__
+			if (!authToken.length()) {
+				const char *hd = getenv("HOME");
+				if (hd) {
+					char p[4096];
+#ifdef __APPLE__
+					Utils::snprintf(p,sizeof(p),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",hd);
+#else
+					Utils::snprintf(p,sizeof(p),"%s/.zeroTierOneAuthToken",hd);
+#endif
+					OSUtils::readFile(p,authToken);
+				}
+			}
+#endif
 			if (!authToken.length()) {
 				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s"ZT_EOL_S,argv[0],homeDir.c_str());
 				return 2;
