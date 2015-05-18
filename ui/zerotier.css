@@ -179,6 +179,7 @@ html,body {
 	white-space: nowrap;
 	float: right;
 	font-size: 12pt;
+	background: #ffffff;
 }
 .zeroTierNode > .bottom > .right form {
 	height: 100%;
