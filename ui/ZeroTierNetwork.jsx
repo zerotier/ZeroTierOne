@@ -4,17 +4,19 @@ var ZeroTierNetwork = React.createClass({
 	},
 
 	leaveNetwork: function(event) {
-		Ajax.call({
-			url: 'network/'+this.props.nwid+'?auth='+this.props.authToken,
-			cache: false,
-			type: 'DELETE',
-			success: function(data) {
-				if (this.props.onNetworkDeleted)
-					this.props.onNetworkDeleted(this.props.nwid);
-			}.bind(this),
-			error: function(error) {
-			}.bind(this)
-		});
+		if (confirm("Are you sure you want to leave this network?")) {
+			Ajax.call({
+				url: 'network/'+this.props.nwid+'?auth='+this.props.authToken,
+				cache: false,
+				type: 'DELETE',
+				success: function(data) {
+					if (this.props.onNetworkDeleted)
+						this.props.onNetworkDeleted(this.props.nwid);
+				}.bind(this),
+				error: function(error) {
+				}.bind(this)
+			});
+		}
 		event.preventDefault();
 	},
 
