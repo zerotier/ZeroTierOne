@@ -120,33 +120,6 @@ case "$system" in
 
 		;;
 
-	Darwin)
-		echo "Assembling mac installer for x86/x64 (combined) version $vmajor.$vminor.$revision"
-
-		mkdir -p 'build-installer/Applications'
-		cp -a 'build-ZeroTierUI-release/ZeroTier One.app' 'build-installer/Applications'
-		mkdir -p 'build-installer/Library/Application Support/ZeroTier/One'
-		cp -fp 'ext/installfiles/mac/uninstall.sh' 'build-installer/Library/Application Support/ZeroTier/One'
-		cp -fp 'ext/installfiles/mac/launch.sh' 'build-installer/Library/Application Support/ZeroTier/One'
-		cp -fp 'zerotier-one' 'build-installer/Library/Application Support/ZeroTier/One'
-		cp -fRp ext/bin/tap-mac/* 'build-installer/Library/Application Support/ZeroTier/One'
-		mkdir -p 'build-installer/Library/LaunchDaemons'
-		cp -fp 'ext/installfiles/mac/com.zerotier.one.plist' 'build-installer/Library/LaunchDaemons'
-
-		targ="ZeroTierOneInstaller-mac-combined-${vmajor}_${vminor}_${revision}"
-		rm -f build-installer-tmp.tar.bz2
-		cd build-installer
-		find . -type f -name .DS_Store -print0 | xargs -0 rm -f
-		tar -cf - * | bzip2 -9 >../build-installer-tmp.tar.bz2
-		cd ..
-		rm -f $targ
-		cat ext/installfiles/mac/install.tmpl.sh build-installer-tmp.tar.bz2 >$targ
-		chmod 0755 $targ
-		rm -f build-installer-tmp.tar.bz2
-		ls -l $targ
-
-		;;
-
 	*)
 		echo "Unsupported platform: $system"
 		exit 2
