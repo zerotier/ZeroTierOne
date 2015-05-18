@@ -230,7 +230,7 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	return false; // never reached, make compiler shut up about return value
 }
 
-bool BSDEthernetTap::addIP(const InetAddress &ip)
+bool BSDEthernetTap::addIp(const InetAddress &ip)
 {
 	if (!ip)
 		return false;
@@ -259,8 +259,10 @@ bool BSDEthernetTap::addIP(const InetAddress &ip)
 	return false;
 }
 
-bool BSDEthernetTap::removeIP(const InetAddress &ip)
+bool BSDEthernetTap::removeIp(const InetAddress &ip)
 {
+	if (!ip)
+		return false;
 	std::vector<InetAddress> allIps(ips());
 	if (std::find(allIps.begin(),allIps.end(),ip) != allIps.end()) {
 		if (___removeIp(_dev,ip))
@@ -269,11 +271,11 @@ bool BSDEthernetTap::removeIP(const InetAddress &ip)
 	return false;
 }
 
-std::set<InetAddress> BSDEthernetTap::ips() const
+std::vector<InetAddress> BSDEthernetTap::ips() const
 {
 	struct ifaddrs *ifa = (struct ifaddrs *)0;
 	if (getifaddrs(&ifa))
-		return std::set<InetAddress>();
+		return std::vector<InetAddress>();
 
 	std::vector<InetAddress> r;
 
@@ -454,7 +456,6 @@ void BSDEthernetTap::threadMain()
 						to.setTo(getBuf,6);
 						from.setTo(getBuf + 6,6);
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
-						data.copyFrom(getBuf + 14,(unsigned int)r - 14);
 						// TODO: VLAN support
 						_handler(_arg,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 					}
