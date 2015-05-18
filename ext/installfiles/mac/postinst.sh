@@ -16,6 +16,14 @@ if [ ! -f authtoken.secret ]; then
 	chgrp wheel authtoken.secret
 	chmod 0600 authtoken.secret
 fi
+rm -f zerotier-cli zerotier-idtool
+ln -sf zerotier-one zerotier-cli
+ln -sf zerotier-one zerotier-idtool
+
+cd /usr/bin
+rm -f zerotier-cli zerotier-idtool
+ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-cli
+ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-idtool
 
 launchctl load /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
 
