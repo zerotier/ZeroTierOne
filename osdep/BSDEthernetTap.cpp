@@ -59,10 +59,12 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <utility>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 #include "../node/Mutex.hpp"
+#include "OSUtils.hpp"
 #include "BSDEthernetTap.hpp"
 
 #define ZT_BASE32_CHARS "0123456789abcdefghijklmnopqrstuv"
@@ -73,17 +75,17 @@ static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC
 namespace ZeroTier {
 
 BSDEthernetTap::BSDEthernetTap(
+	const char *homePath,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
 	uint64_t nwid,
-	const char *desiredDevice,
 	const char *friendlyName,
-	void (*handler)(void *,const MAC &,const MAC &,unsigned int,const Buffer<4096> &),
+	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
-	EthernetTap("BSDEthernetTap",mac,mtu,metric),
 	_handler(handler),
 	_arg(arg),
+	_nwid(nwid),
 	_mtu(mtu),
 	_metric(metric),
 	_fd(0),
@@ -117,11 +119,11 @@ BSDEthernetTap::BSDEthernetTap(
 
 	// On BSD we create taps and they can have high numbers, so use ones starting
 	// at 9993 to not conflict with other stuff. Then we rename it to zt<base32 of nwid>
-	std::map<std::string,bool> devFiles(Utils::listDirectory("/dev"));
+	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
 	for(int i=9993;i<(9993+128);++i) {
 		Utils::snprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
 		Utils::snprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
-		if (devFiles.count(std::string(tmpdevname)) == 0) {
+		if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
 				::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"create",(const char *)0);
@@ -207,7 +209,6 @@ BSDEthernetTap::~BSDEthernetTap()
 void BSDEthernetTap::setEnabled(bool en)
 {
 	_enabled = en;
-	// TODO: interface status change
 }
 
 bool BSDEthernetTap::enabled() const
@@ -234,12 +235,12 @@ bool BSDEthernetTap::addIP(const InetAddress &ip)
 	if (!ip)
 		return false;
 
-	std::set<InetAddress> allIps(ips());
-	if (allIps.count(ip) > 0)
+	std::vector<InetAddress> allIps(ips());
+	if (std::find(allIps.begin(),allIps.end(),ip) != allIps.end())
 		return true; // IP/netmask already assigned
 
 	// Remove and reconfigure if address is the same but netmask is different
-	for(std::set<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
+	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
 		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
 			if (___removeIp(_dev,*i))
 				break;
@@ -260,7 +261,8 @@ bool BSDEthernetTap::addIP(const InetAddress &ip)
 
 bool BSDEthernetTap::removeIP(const InetAddress &ip)
 {
-	if (ips().count(ip) > 0) {
+	std::vector<InetAddress> allIps(ips());
+	if (std::find(allIps.begin(),allIps.end(),ip) != allIps.end()) {
 		if (___removeIp(_dev,ip))
 			return true;
 	}
@@ -273,7 +275,7 @@ std::set<InetAddress> BSDEthernetTap::ips() const
 	if (getifaddrs(&ifa))
 		return std::set<InetAddress>();
 
-	std::set<InetAddress> r;
+	std::vector<InetAddress> r;
 
 	struct ifaddrs *p = ifa;
 	while (p) {
@@ -282,14 +284,14 @@ std::set<InetAddress> BSDEthernetTap::ips() const
 				case AF_INET: {
 					struct sockaddr_in *sin = (struct sockaddr_in *)p->ifa_addr;
 					struct sockaddr_in *nm = (struct sockaddr_in *)p->ifa_netmask;
-					r.insert(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
+					r.push_back(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
 				}	break;
 				case AF_INET6: {
 					struct sockaddr_in6 *sin = (struct sockaddr_in6 *)p->ifa_addr;
 					struct sockaddr_in6 *nm = (struct sockaddr_in6 *)p->ifa_netmask;
 					uint32_t b[4];
 					memcpy(b,nm->sin6_addr.s6_addr,sizeof(b));
-					r.insert(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
+					r.push_back(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
 				}	break;
 			}
 		}
@@ -298,6 +300,9 @@ std::set<InetAddress> BSDEthernetTap::ips() const
 
 	if (ifa)
 		freeifaddrs(ifa);
+
+	std::sort(r.begin(),r.end());
+	std::unique(r.begin(),r.end());
 
 	return r;
 }
@@ -324,6 +329,45 @@ void BSDEthernetTap::setFriendlyName(const char *friendlyName)
 {
 }
 
+void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
+{
+	std::vector<MulticastGroup> newGroups;
+
+	struct ifmaddrs *ifmap = (struct ifmaddrs *)0;
+	if (!getifmaddrs(&ifmap)) {
+		struct ifmaddrs *p = ifmap;
+		while (p) {
+			if (p->ifma_addr->sa_family == AF_LINK) {
+				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
+				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
+				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
+					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
+			}
+			p = p->ifma_next;
+		}
+		freeifmaddrs(ifmap);
+	}
+
+	std::vector<InetAddress> allIps(ips());
+	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)
+		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
+
+	std::sort(newGroups.begin(),newGroups.end());
+	std::unique(newGroups.begin(),newGroups.end());
+
+	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
+		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
+			added.push_back(*m);
+	}
+	for(std::vector<MulticastGroup>::iterator m(_multicastGroups.begin());m!=_multicastGroups.end();++m) {
+		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
+			removed.push_back(*m);
+	}
+
+	_multicastGroups.swap(newGroups);
+}
+
+/*
 bool BSDEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 {
 	std::set<MulticastGroup> newGroups;
@@ -365,11 +409,7 @@ bool BSDEthernetTap::updateMulticastGroups(std::set<MulticastGroup> &groups)
 
 	return changed;
 }
-
-bool BSDEthernetTap::injectPacketFromHost(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
-{
-	return false;
-}
+*/
 
 void BSDEthernetTap::threadMain()
 	throw()
@@ -378,7 +418,6 @@ void BSDEthernetTap::threadMain()
 	MAC to,from;
 	int n,nfds,r;
 	char getBuf[8194];
-	Buffer<4096> data;
 
 	// Wait for a moment after startup -- wait for Network to finish
 	// constructing itself.
@@ -416,7 +455,8 @@ void BSDEthernetTap::threadMain()
 						from.setTo(getBuf + 6,6);
 						unsigned int etherType = ntohs(((const uint16_t *)getBuf)[6]);
 						data.copyFrom(getBuf + 14,(unsigned int)r - 14);
-						_handler(_arg,from,to,etherType,data);
+						// TODO: VLAN support
+						_handler(_arg,_nwid,from,to,etherType,0,(const void *)(getBuf + 14),r - 14);
 					}
 
 					r = 0;
