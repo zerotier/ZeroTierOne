@@ -14,11 +14,11 @@
 		<string>http://adam.ierymenko@git.int.zerotier.com/zerotier/zerotierone</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>ext/mac-ui-macgap1-wrapper/MacGap.xcodeproj</string>
+	<string>ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>ABA3617E9F0148F844A82502F0D808DE6591AA97</key>
-		<string>../../../..</string>
+		<string>../../../../..</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
 	<string>http://adam.ierymenko@git.int.zerotier.com/zerotier/zerotierone</string>
