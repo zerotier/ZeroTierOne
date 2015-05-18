@@ -14,6 +14,7 @@
 <body><div style="width: 100%; height: 100%;" id="main"></div></body>
 <script src="main.js"></script>
 <script>
+/* Windows hacks */
 function isIE() {
 	var myNav = navigator.userAgent.toLowerCase();
 	return (myNav.indexOf('msie') != -1) ? parseInt(myNav.split('msie')[1]) : false;
@@ -33,6 +34,24 @@ if (ieVersion !== false) {
 	} else {
 		resizeMiddleScrollClasses();
 		window.onresize = resizeMiddleScrollClasses;
+	}
+}
+
+/* MacGap hacks */
+if (macgap) {
+	if (macgap.menu) {
+		var tmp = macgap.menu.getItem("Help");
+		if (tmp)
+			tmp.remove();
+		tmp = macgap.menu.getItem("Format");
+		if (tmp)
+			tmp.remove();
+		tmp = macgap.menu.getItem("View");
+		if (tmp)
+			tmp.remove();
+		tmp = macgap.menu.getItem("File");
+		if (tmp)
+			tmp.remove();
 	}
 }
 </script>
