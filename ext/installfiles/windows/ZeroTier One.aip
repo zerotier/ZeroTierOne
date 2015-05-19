@@ -23,7 +23,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{04787C81-6E05-4B4C-A6BE-8E76F1E096E1} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{0791191F-D1A5-4C66-862C-E1C5C3355383} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.0.3" Type="32"/>
@@ -122,10 +122,10 @@
     <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="ZeroTier One" DescriptionUrl="https://www.zerotier.com/" SignOptions="7" SignTool="0" Thumbprint="2ad023dc7aa92bf4265b33852a2ed2406d2bee86 Subject: ZeroTier Networks LLC&#10;Issuer: DigiCert High Assurance Code Signing CA-1&#10;Valid from 04/24/2015 to 04/01/2016"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FirewallExceptionComponent">
-    <ROW FirewallException="ZeroTierOne" DisplayName="ZeroTier One (UDP_9993)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="0" Port="9993" Protocol="UDP"/>
-    <ROW FirewallException="ZeroTierOneService_x64" DisplayName="ZeroTier One (Service_x64)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="((?zerotierone_x64.exe=2) AND ($zerotierone_x64.exe=3))" Profiles="0" AppPath="[#zerotierone_x64.exe]"/>
-    <ROW FirewallException="ZeroTierOneService_x86" DisplayName="ZeroTier One (Service_x86)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="((?zerotierone_x86.exe=2) AND ($zerotierone_x86.exe=3))" Profiles="0" AppPath="[#zerotierone_x86.exe]"/>
-    <ROW FirewallException="ZeroTierOneTCP_9993" DisplayName="ZeroTier One (TCP_9993)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="0" Port="9993" Protocol="TCP"/>
+    <ROW FirewallException="ZeroTierOne" DisplayName="ZeroTier One (UDP_9993)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="UDP"/>
+    <ROW FirewallException="ZeroTierOneService_x64" DisplayName="ZeroTier One (Service_x64)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="((?zerotierone_x64.exe=2) AND ($zerotierone_x64.exe=3))" Profiles="7" AppPath="[#zerotierone_x64.exe]"/>
+    <ROW FirewallException="ZeroTierOneService_x86" DisplayName="ZeroTier One (Service_x86)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="((?zerotierone_x86.exe=2) AND ($zerotierone_x86.exe=3))" Profiles="7" AppPath="[#zerotierone_x86.exe]"/>
+    <ROW FirewallException="ZeroTierOneTCP_9993" DisplayName="ZeroTier One (TCP_9993)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="TCP"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -348,8 +348,8 @@
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Order="1" Flags="14" Text="0"/>
     <ROW XmlElement="swidname" ParentElement="swidproduct_version" Name="swid:name" Order="0" Flags="14" Text="[ProductVersion]"/>
     <ROW XmlElement="swidname_1" ParentElement="swidsoftware_creator" Name="swid:name" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidname_2" ParentElement="swidsoftware_licensor" Name="swid:name" Order="0" Flags="14" Text="ZeroTier Networks LLC"/>
-    <ROW XmlElement="swidname_3" ParentElement="swidtag_creator" Name="swid:name" Order="0" Flags="14" Text="ZeroTier Networks LLC"/>
+    <ROW XmlElement="swidname_2" ParentElement="swidsoftware_licensor" Name="swid:name" Order="0" Flags="14" Text="ZeroTier, Inc."/>
+    <ROW XmlElement="swidname_3" ParentElement="swidtag_creator" Name="swid:name" Order="0" Flags="14" Text="ZeroTier, Inc."/>
     <ROW XmlElement="swidnumeric" ParentElement="swidproduct_version" Name="swid:numeric" Order="1" Flags="14"/>
     <ROW XmlElement="swidproduct_title" ParentElement="swidsoftware_identification_tag" Name="swid:product_title" Order="1" Flags="14" Text="[ProductName]"/>
     <ROW XmlElement="swidproduct_version" ParentElement="swidsoftware_identification_tag" Name="swid:product_version" Order="2" Flags="14"/>
