@@ -43,3 +43,5 @@
 /windows/WebUIWrapper/bin
 /windows/WebUIWrapper/obj
 node_modules
+/ZeroTier One.msi
+/ext/installfiles/windows/*-cache

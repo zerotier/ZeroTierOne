@@ -38,7 +38,7 @@ if (ieVersion !== false) {
 }
 
 /* MacGap hacks */
-if (macgap) {
+if (typeof macgap !== 'undefined') {
 	if (macgap.menu) {
 		var tmp = macgap.menu.getItem("Help");
 		if (tmp)
