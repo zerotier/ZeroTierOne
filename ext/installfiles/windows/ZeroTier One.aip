@@ -23,7 +23,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{C16FC676-99A9-45D0-986B-BFD07E6137C4} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{3E09F491-A20B-4207-BE5E-40FBDC295F35} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.0.3" Type="32"/>
@@ -107,10 +107,12 @@
     <ATTRIBUTE name="Enable" value="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageComponent">
-    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="108" InstallCondition="((NOT Installed) AND (VersionNT64))" RemoveCondition="(REMOVE=&quot;ALL&quot; AND (NOT UPGRADINGPRODUCTCODE) AND (VersionNT64))"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Order="1" Options="108" InstallCondition="((NOT Installed) AND (VersionNT64))" RemoveCondition="((REMOVE=&quot;ALL&quot;) AND (NOT UPGRADINGPRODUCTCODE) AND (VersionNT64))"/>
+    <ROW ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Order="2" Options="108" InstallCondition="((NOT Installed) AND (NOT VersionNT64))" RemoveCondition="((REMOVE=&quot;ALL&quot;) AND (NOT UPGRADINGPRODUCTCODE) AND (NOT VersionNT64))"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ChainedPackageFileComponent">
     <ROW FileId="ZeroTierOne_NDIS6_x64.msi" ChainedPackage="ZeroTierOne_NDIS6_x64.msi" Options="1" TargetPath="ZeroTierOne_NDIS6_x64.msi" Content="..\..\bin\tap-windows-ndis6\x64\ZeroTierOne_NDIS6_x64.msi"/>
+    <ROW FileId="ZeroTierOne_NDIS6_x86.msi" ChainedPackage="ZeroTierOne_NDIS6_x86.msi" Options="1" TargetPath="ZeroTierOne_NDIS6_x86.msi" Content="..\..\bin\tap-windows-ndis6\x86\ZeroTierOne_NDIS6_x86.msi"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
