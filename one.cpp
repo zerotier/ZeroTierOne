@@ -750,6 +750,7 @@ static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 }
 
 // Pokes a hole in the Windows firewall (advfirewall) for the running program
+/* -- now done by Advanced Installer
 static void _winPokeAHole()
 {
 	char myPath[MAX_PATH];
@@ -786,6 +787,7 @@ static void _winPokeAHole()
 		}
 	}
 }
+*/
 
 // Returns true if this is running as the local administrator
 static BOOL IsCurrentUserLocalAdministrator(void)
@@ -1121,13 +1123,13 @@ int main(int argc,char **argv)
 				return 1;
 			}
 		} else {
-			_winPokeAHole();
+			//_winPokeAHole();
 		}
 		SetConsoleCtrlHandler(&_winConsoleCtrlHandler,TRUE);
 		// continues on to ordinary command line execution code below...
 	} else {
 		// Running from service manager
-		_winPokeAHole();
+		//_winPokeAHole();
 		ZeroTierOneService zt1Service;
 		if (CServiceBase::Run(zt1Service) == TRUE) {
 			return 0;
