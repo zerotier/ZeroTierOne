@@ -523,7 +523,7 @@ public:
 	{
 		TcpConnection *tc = reinterpret_cast<TcpConnection *>(*uptr);
 		if (tc->writeBuf.length()) {
-			long sent = _phy.tcpSend(sock,tc->writeBuf.data(),tc->writeBuf.length(),true);
+			long sent = (long)_phy.tcpSend(sock,tc->writeBuf.data(),(unsigned long)tc->writeBuf.length(),true);
 			if (sent > 0) {
 				tc->lastActivity = OSUtils::now();
 				if ((unsigned long)sent == (unsigned long)tc->writeBuf.length()) {
