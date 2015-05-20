@@ -888,6 +888,9 @@ static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	std::string updateUrl(OneService::autoUpdateUrl());
+	if (updateUrl.length())
+		fprintf(out,"Automatic update enabled:"ZT_EOL_S"  %s"ZT_EOL_S""ZT_EOL_S,updateUrl.c_str());
 	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);

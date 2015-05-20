@@ -13,16 +13,11 @@ OBJS+=osdep/OSXEthernetTap.o
 CODESIGN=echo
 CODESIGN_CERT=
 
+# For internal use only -- signs everything with ZeroTier's developer cert
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	# For use by ZeroTier Networks -- sign with developer cert
-	ZT_AUTO_UPDATE=1
-	DEFS+=-DZT_OFFICIAL_RELEASE 
+	DEFS+=-DZT_OFFICIAL_RELEASE -DZT_AUTO_UPDATE 
 	CODESIGN=codesign
 	CODESIGN_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
-endif
-
-ifeq ($(ZT_AUTO_UPDATE),1)
-	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
@@ -35,6 +30,7 @@ endif
 # Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
 DEFS+=-DZT_SALSA20_SSE
 
+# Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE 
 	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
@@ -63,9 +59,17 @@ selftest: $(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
-sign-pkg: FORCE
+# Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
+mac-dist-pkg: FORCE
+	cd ext/installfiles/mac ; packagesbuild "ZeroTier One.pkgproj"
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.pkg"
 	$(CODESIGN) -vvv "ZeroTier One.pkg"
+
+# For internal use only
+official: FORCE
+	make clean
+	make -j 4 ZT_OFFICIAL_RELEASE=1
+	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
 	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-*

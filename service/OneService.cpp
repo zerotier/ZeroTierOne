@@ -96,6 +96,8 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 namespace ZeroTier {
 
+namespace {
+
 class OneServiceImpl;
 
 static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwconf);
@@ -903,6 +905,8 @@ static int ShttpOnMessageComplete(http_parser *parser)
 	return 0;
 }
 
+} // anonymous namespace
+
 std::string OneService::platformDefaultHomePath()
 {
 #ifdef __UNIX_LIKE__
@@ -937,6 +941,30 @@ std::string OneService::platformDefaultHomePath()
 #endif
 
 #endif // __UNIX_LIKE__ or not...
+}
+
+std::string OneService::autoUpdateUrl()
+{
+#ifdef ZT_AUTO_UPDATE
+
+/*
+#if defined(__LINUX__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
+	if (sizeof(void *) == 8)
+		return "http://download.zerotier.com/ZeroTierOneInstaller-linux-x64-LATEST.nfo";
+	else return "http://download.zerotier.com/ZeroTierOneInstaller-linux-x86-LATEST.nfo";
+#endif
+*/
+
+#if defined(__APPLE__) && ( defined(__i386__) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__i386) )
+	return "http://download.zerotier.com/update/mac_intel/LATEST.nfo";
+#endif
+
+#ifdef __WINDOWS__
+	return "http://download.zerotier.com/update/win_intel/LATEST.nfo";
+#endif
+
+#endif // ZT_AUTO_UPDATE
+	return std::string();
 }
 
 OneService *OneService::newInstance(const char *hp,unsigned int port,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,overrideRootTopology); }

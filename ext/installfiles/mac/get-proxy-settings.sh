@@ -5,9 +5,9 @@
 
 export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin
 
-enabled=`system_profiler SPNetworkDataType|grep "HTTP Proxy Enabled"|awk {'sub(/^.*:[ \t]*/, "", $0); print $0;'}`
-port=`system_profiler SPNetworkDataType|grep "HTTP Proxy Port"|awk {'sub(/^.*:[ \t]*/, "", $0); print $0;'}`
-serv=`system_profiler SPNetworkDataType|grep "HTTP Proxy Server"|awk {'sub(/^.*:[ \t]*/, "", $0); print $0;'}`
+enabled=`system_profiler SPNetworkDataType|grep "HTTP Proxy Enabled"|awk {'sub(/^.*:[ \t]*/, "", $0); print $0;'} 2>/dev/null`
+port=`system_profiler SPNetworkDataType|grep "HTTP Proxy Port"|awk {'sub(/^.*:[ \t]*/, "", $0); print $0;'} 2>/dev/null`
+serv=`system_profiler SPNetworkDataType|grep "HTTP Proxy Server"|awk {'sub(/^.*:[ \t]*/, "", $0); print $0;'} 2>/dev/null`
 
 if [ "$enabled" = "Yes" ]; then
 	if [ "$serv" ]; then
