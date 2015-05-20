@@ -578,11 +578,6 @@ void WindowsEthernetTap::threadMain()
 	HANDLE wait4[3];
 	char *tapReadBuf = (char *)0;
 
-	if (!_enableTapDevice()) {
-		_enabled = false;
-		return; // only happens if devcon is missing or totally fails
-	}
-
 	/* No idea why I did this. I did it a long time ago and there was only a
 	 * a snarky comment. But I'd never do crap like this without a reason, so
 	 * I am leaving it alone with a more descriptive snarky comment. */
@@ -596,6 +591,9 @@ void WindowsEthernetTap::threadMain()
 	int prevTapResetStatus = _systemTapResetStatus;
 	bool throwOneAway = true; // "Power cycle" the network port once on startup, because Windows...
 	while (_run) {
+		_disableTapDevice();
+		Sleep(500);
+		_enableTapDevice();
 		Sleep(500);
 
 		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
