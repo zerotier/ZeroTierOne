@@ -443,7 +443,7 @@ std::string Node::dataStoreGet(const char *name)
 
 void Node::postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev)
 {
-	if (Peer::compareVersion(major,minor,rev,_newestVersionSeen[0],_newestVersionSeen[1],_newestVersionSeen[2]) > 0) {
+	if (Utils::compareVersion(major,minor,rev,_newestVersionSeen[0],_newestVersionSeen[1],_newestVersionSeen[2]) > 0) {
 		_newestVersionSeen[0] = major;
 		_newestVersionSeen[1] = minor;
 		_newestVersionSeen[2] = rev;

@@ -20,6 +20,10 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	CODESIGN_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
 
+ifeq ($(ZT_AUTO_UPDATE),1)
+	DEFS+=-DZT_AUTO_UPDATE 
+endif
+
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
 	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
