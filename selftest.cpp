@@ -55,6 +55,7 @@
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
 #include "osdep/Http.hpp"
+#include "osdep/BackgroundResolver.hpp"
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 #include "controller/SqliteNetworkController.hpp"
@@ -769,6 +770,23 @@ static int testSqliteNetworkController()
 	return 0;
 }
 
+static int testResolver()
+{
+	std::cout << "[resolver] Testing BackgroundResolver..."; std::cout.flush();
+
+	BackgroundResolver r("tcp-fallback.zerotier.com");
+	r.resolveNow();
+	r.wait();
+
+	std::vector<InetAddress> ips(r.get());
+	for(std::vector<InetAddress>::const_iterator ip(ips.begin());ip!=ips.end();++ip) {
+		std::cout << ' ' << ip->toString();
+	}
+	std::cout << std::endl;
+
+	return 0;
+}
+
 static int testHttp()
 {
 	std::map<std::string,std::string> requestHeaders,responseHeaders;
@@ -873,6 +891,7 @@ int main(int argc,char **argv)
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();
+	r |= testResolver();
 	r |= testHttp();
 
 	if (r)

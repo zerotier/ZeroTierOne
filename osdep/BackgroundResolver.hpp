@@ -79,7 +79,7 @@ public:
 	 * @param callback Callback function to receive notification or NULL if none
 	 * @praam arg Second argument to callback function
 	 */
-	void resolveNow(void (*callback)(BackgroundResolver *,void *),void *arg);
+	void resolveNow(void (*callback)(BackgroundResolver *,void *) = 0,void *arg = 0);
 
 	/**
 	 * Abort (abandon) any current resolve jobs
