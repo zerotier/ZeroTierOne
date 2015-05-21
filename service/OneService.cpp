@@ -53,6 +53,7 @@
 #include "../osdep/Thread.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
+#include "../osdep/BackgroundResolver.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -101,6 +102,12 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 // Path under ZT1 home for controller database if controller is enabled
 #define ZT1_CONTROLLER_DB_PATH "controller.db"
+
+// TCP fallback relay host
+#define ZT1_TCP_FALLBACK_RELAY "tcp-fallback.zerotier.com"
+
+// Frequency at which we re-resolve the TCP fallback relay
+#define ZT1_TCP_FALLBACK_RERESOLVE_DELAY 86400000
 
 namespace ZeroTier {
 
@@ -365,6 +372,7 @@ class OneServiceImpl : public OneService
 public:
 	OneServiceImpl(const char *hp,unsigned int port,const char *overrideRootTopology) :
 		_homePath((hp) ? hp : "."),
+		_tcpFallbackResolver(ZT1_TCP_FALLBACK_RELAY),
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		_controller((_homePath + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str()),
 #endif
@@ -467,6 +475,7 @@ public:
 
 			_nextBackgroundTaskDeadline = 0;
 			uint64_t lastTapMulticastGroupCheck = 0;
+			uint64_t lastTcpFallbackResolve = 0;
 #ifdef ZT_AUTO_UPDATE
 			uint64_t lastSoftwareUpdateCheck = 0;
 #endif // ZT_AUTO_UPDATE
@@ -493,6 +502,11 @@ public:
 					Thread::start(&backgroundSoftwareUpdateChecker);
 				}
 #endif // ZT_AUTO_UPDATE
+
+				if ((now - lastTcpFallbackResolve) >= ZT1_TCP_FALLBACK_RERESOLVE_DELAY) {
+					lastTcpFallbackResolve = now;
+					_tcpFallbackResolver.resolveNow();
+				}
 
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
 					lastTapMulticastGroupCheck = now;
@@ -595,7 +609,8 @@ public:
 		if (!success)
 			return;
 
-		// Outgoing connections are right now only tunnel connections
+		// Outgoing TCP connections are always TCP fallback tunnel connections.
+
 		TcpConnection *tc = &(_tcpConections[sock]);
 		tc->type = TcpConnection::TCP_TUNNEL_OUTGOING;
 		tc->shouldKeepAlive = true; // unused
@@ -623,7 +638,8 @@ public:
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
-		// Incoming connections are TCP HTTP requests
+		// Incoming TCP connections are HTTP JSON API requests.
+
 		TcpConnection *tc = &(_tcpConections[sockN]);
 		tc->type = TcpConnection::TCP_HTTP_INCOMING;
 		tc->shouldKeepAlive = true;
@@ -653,6 +669,7 @@ public:
 	{
 		TcpConnection *tc = reinterpret_cast<TcpConnection *>(*uptr);
 		switch(tc->type) {
+
 			case TcpConnection::TCP_HTTP_INCOMING:
 			case TcpConnection::TCP_HTTP_OUTGOING:
 				http_parser_execute(&(tc->parser),&HTTP_PARSER_SETTINGS,(const char *)data,len);
@@ -661,6 +678,7 @@ public:
 					return;
 				}
 				break;
+
 			case TcpConnection::TCP_TUNNEL_OUTGOING:
 				tc->body.append((const char *)data,len);
 				if (tc->body.length() > 65535) {
@@ -727,12 +745,14 @@ public:
 								return;
 							}
 						}
+
 						if (tc->body.length() > (mlen + 5))
 							tc->body = tc->body.substr(mlen + 5);
 						else tc->body = "";
 					}
 				}
 				break;
+
 		}
 	}
 
@@ -827,9 +847,6 @@ public:
 				_termReason = ONE_IDENTITY_COLLISION;
 				_fatalErrorMessage = "identity/address collision";
 				this->terminate();
-			}	break;
-
-			case ZT1_EVENT_SAW_MORE_RECENT_VERSION: {
 			}	break;
 
 			case ZT1_EVENT_TRACE: {
@@ -994,6 +1011,7 @@ private:
 	}
 
 	const std::string _homePath;
+	BackgroundResolver _tcpFallbackResolver;
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 	SqliteNetworkController _controller;
 #endif

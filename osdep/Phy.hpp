@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include <list>
+#include <stdexcept>
 
 #if defined(_WIN32) || defined(_WIN64)
 

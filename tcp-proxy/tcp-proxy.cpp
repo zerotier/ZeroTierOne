@@ -45,6 +45,9 @@
 #define ZT_TCP_PROXY_UDP_POOL_START_PORT 10000
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
 
+// Uncomment to print tracing output to stdout
+#define ZT_TCP_PROXY_TRACE
+
 using namespace ZeroTier;
 
 /*
@@ -135,6 +138,10 @@ struct TcpProxyService
 			if (rm != reverseMappings.end()) {
 				Client &c = *(rm->second);
 
+#ifdef ZT_TCP_PROXY_TRACE
+				printf("UDP [%u] %s >> %.16llx\n",len,reinterpret_cast<const InetAddress *>(from)->toString().c_str(),(unsigned long long)&c);
+#endif
+
 				unsigned long mlen = len;
 				if (c.newVersion)
 					mlen += 7; // new clients get IP info
@@ -161,6 +168,10 @@ struct TcpProxyService
 					for(unsigned long i=0;i<len;++i)
 						c.tcpWriteBuf[c.tcpWritePtr++] = ((const char *)data)[i];
 				}
+			} else {
+#ifdef ZT_TCP_PROXY_TRACE
+				printf("UDP [%u] %s >> (unknown, discarded)\n",len,reinterpret_cast<const InetAddress *>(from)->toString().c_str());
+#endif
 			}
 		}
 	}
@@ -180,6 +191,10 @@ struct TcpProxyService
 		c.lastActivity = time((time_t *)0);
 		c.newVersion = false;
 		*uptrN = (void *)&c;
+
+#ifdef ZT_TCP_PROXY_TRACE
+		printf("TCP connect from %s -> %.16llx\n",reinterpret_cast<const InetAddress *>(from)->toString().c_str(),(unsigned long long)&c);
+#endif
 	}
 
 	void phyOnTcpClose(PhySocket *sock,void **uptr)
