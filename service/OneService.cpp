@@ -108,6 +108,7 @@ namespace {
 
 #ifdef ZT_AUTO_UPDATE
 #define ZT_AUTO_UPDATE_MAX_HTTP_RESPONSE_SIZE (1024 * 1024 * 64)
+#define ZT_AUTO_UPDATE_CHECK_PERIOD 21600000
 class BackgroundSoftwareUpdateChecker
 {
 public:
@@ -247,6 +248,40 @@ public:
 				/* Windows version comes in the form of .MSI package that
 				 * takes care of everything. */
 				{
+					char tempp[512],batp[512],msip[512],cmdline[512];
+					if (GetTempPathA(sizeof(tempp),tempp) <= 0)
+						return;
+					CreateDirectoryA(tempp,(LPSECURITY_ATTRIBUTES)0);
+					Utils::snprintf(batp,sizeof(batp),"%s\\ZeroTierOne-update-%u.%u.%u.bat",tempp,vMajor,vMinor,vRevision);
+					Utils::snprintf(msip,sizeof(msip),"%s\\ZeroTierOne-update-%u.%u.%u.msi",tempp,vMajor,vMinor,vRevision);
+					FILE *msi = fopen(msip,"wb");
+					if ((!msi)||(fwrite(fileData.data(),(size_t)fileData.length(),1,msi) != 1)) {
+						fclose(msi);
+						return;
+					}
+					fclose(msi);
+					FILE *bat = fopen(batp,"wb");
+					if (!bat)
+						return;
+					fprintf(bat,
+						"TIMEOUT.EXE /T 1 /NOBREAK\r\n"
+						"NET.EXE STOP \"ZeroTierOneService\"\r\n"
+						"TIMEOUT.EXE /T 1 /NOBREAK\r\n"
+						"MSIEXEC.EXE /i \"%s\" /qn\r\n"
+						"TIMEOUT.EXE /T 1 /NOBREAK\r\n"
+						"NET.EXE START \"ZeroTierOneService\"\r\n"
+						"DEL \"%s\"\r\n"
+						"DEL \"%s\"\r\n",
+						msip,
+						msip,
+						batp);
+					fclose(bat);
+					STARTUPINFOA si;
+					PROCESS_INFORMATION pi;
+					memset(&si,0,sizeof(si));
+					memset(&pi,0,sizeof(pi));
+					Utils::snprintf(cmdline,sizeof(cmdline),"CMD.EXE /c \"%s\"",batp);
+					CreateProcessA(NULL,cmdline,NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi);
 				}
 #endif // __WINDOWS__
 
@@ -367,10 +402,6 @@ public:
 		char portstr[64];
 		Utils::snprintf(portstr,sizeof(portstr),"%u",port);
 		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
-
-#ifdef ZT_AUTO_UPDATE
-		Thread::start(&backgroundSoftwareUpdateChecker);
-#endif
 	}
 
 	virtual ~OneServiceImpl()
@@ -436,6 +467,9 @@ public:
 
 			_nextBackgroundTaskDeadline = 0;
 			uint64_t lastTapMulticastGroupCheck = 0;
+#ifdef ZT_AUTO_UPDATE
+			uint64_t lastSoftwareUpdateCheck = 0;
+#endif // ZT_AUTO_UPDATE
 			for(;;) {
 				_run_m.lock();
 				if (!_run) {
@@ -452,6 +486,13 @@ public:
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
 				}
+
+#ifdef ZT_AUTO_UPDATE
+				if ((now - lastSoftwareUpdateCheck) >= ZT_AUTO_UPDATE_CHECK_PERIOD) {
+					lastSoftwareUpdateCheck = OSUtils::now();
+					Thread::start(&backgroundSoftwareUpdateChecker);
+				}
+#endif // ZT_AUTO_UPDATE
 
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
 					lastTapMulticastGroupCheck = now;
