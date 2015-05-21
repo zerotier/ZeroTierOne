@@ -68,9 +68,6 @@ public:
 	void threadMain()
 		throw();
 
-	// Returns false on failure.
-	static bool doStartUpgrade(const std::string &msiPath);
-
 protected:
     virtual void OnStart(DWORD dwArgc, PSTR *pszArgv);
     virtual void OnStop();
