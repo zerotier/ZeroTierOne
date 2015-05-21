@@ -57,7 +57,6 @@ public:
 		_addr(),
 		_lastSend(0),
 		_lastReceived(0),
-		_lastReceiveDesperation(0),
 		_fixed(false) {}
 
 	Path(const Path &p) throw() { memcpy(this,&p,sizeof(Path)); }
@@ -66,7 +65,6 @@ public:
 		_addr(addr),
 		_lastSend(0),
 		_lastReceived(0),
-		_lastReceiveDesperation(0),
 		_fixed(fixed) {}
 
 	inline void init(const InetAddress &addr,bool fixed)
@@ -74,7 +72,6 @@ public:
 		_addr = addr;
 		_lastSend = 0;
 		_lastReceived = 0;
-		_lastReceiveDesperation = 0;
 		_fixed = fixed;
 	}
 
@@ -107,13 +104,11 @@ public:
 	 * Called when a packet is received from this path
 	 *
 	 * @param t Time of receive
-	 * @param d Link desperation of receive
 	 */
-	inline void received(uint64_t t,unsigned int d)
+	inline void received(uint64_t t)
 		throw()
 	{
 		_lastReceived = t;
-		_lastReceiveDesperation = d;
 	}
 
 	/**
@@ -125,11 +120,6 @@ public:
 	 * @param f New value of fixed path flag
 	 */
 	inline void setFixed(bool f) throw() { _fixed = f; }
-
-	/**
-	 * @return Last desperation reported via incoming link
-	 */
-	inline unsigned int lastReceiveDesperation() const throw() { return _lastReceiveDesperation; }
 
 	/**
 	 * @param now Current time
@@ -152,7 +142,7 @@ public:
 	 */
 	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		if (RR->node->putPacket(_addr,data,len,std::max(RR->node->coreDesperation(),_lastReceiveDesperation))) {
+		if (RR->node->putPacket(_addr,data,len)) {
 			sent(now);
 			RR->antiRec->logOutgoingZT(data,len);
 			return true;
@@ -187,7 +177,6 @@ private:
 	InetAddress _addr;
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
-	unsigned int _lastReceiveDesperation;
 	bool _fixed;
 };
 

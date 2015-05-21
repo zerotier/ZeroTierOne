@@ -69,7 +69,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			switch(verb()) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
-					peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),verb(),0,Packet::VERB_NOP);
+					peer->received(RR,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP);
 					return true;
 				case Packet::VERB_HELLO:                          return _doHELLO(RR);
 				case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
@@ -140,7 +140,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 						nconf->com().serialize(outp);
 						outp.armor(peer->key(),true);
-						RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+						RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 					}
 				}
 			}	break;
@@ -158,7 +158,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			default: break;
 		}
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
 	} catch (std::exception &ex) {
 		TRACE("dropped ERROR from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -219,7 +219,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 						outp.append(packetId());
 						outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
 						outp.armor(key,true);
-						RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+						RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 					} else {
 						RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
@@ -264,7 +264,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 		// VALID -- continues here
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP);
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
 
 		bool trusted = false;
@@ -302,7 +302,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		}
 
 		outp.armor(peer->key(),true);
-		RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+		RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 	} catch (std::exception &ex) {
 		TRACE("dropped HELLO from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -397,7 +397,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 								outp.append((uint16_t)0); // no meta-data
 								outp.append((uint64_t)nc->revision());
 								outp.armor(peer->key(),true);
-								RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+								RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 							}
 						}
 						TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
@@ -443,7 +443,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			default: break;
 		}
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb);
 	} catch (std::exception &ex) {
 		TRACE("dropped OK from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -463,7 +463,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				outp.append(packetId());
 				queried->identity().serialize(outp,false);
 				outp.armor(peer->key(),true);
-				RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+				RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 			} else {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 				outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -471,12 +471,12 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 				outp.append(payload(),ZT_ADDRESS_LENGTH);
 				outp.armor(peer->key(),true);
-				RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+				RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 			}
 		} else {
 			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -508,8 +508,8 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
-					RR->sw->contact(withPeer,atAddr,_linkDesperation);
+					peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
+					RR->sw->contact(withPeer,atAddr);
 				} else {
 					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 				}
@@ -549,7 +549,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				RR->node->putFrame(network->id(),MAC(peer->address(),network->id()),network->mac(),etherType,0,field(ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
 			}
 
-			peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP);
+			peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP);
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -625,7 +625,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				RR->node->putFrame(network->id(),from,to,etherType,0,field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
 			}
 
-			peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP);
+			peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP);
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -646,7 +646,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18)
 			RR->mc->add(now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
 	} catch (std::exception &ex) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -670,7 +670,7 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 			}
 		}
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
 	} catch (std::exception &ex) {
 		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
@@ -689,7 +689,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 
 		const unsigned int h = hops();
 		const uint64_t pid = packetId();
-		peer->received(RR,_remoteAddress,_linkDesperation,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
 		if (RR->localNetworkController) {
 			Dictionary netconf;
@@ -709,7 +709,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) {
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
-							RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+							RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 						}
 					}
 				}	break;
@@ -722,7 +722,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
-					RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+					RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 				}	break;
 				case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
@@ -731,7 +731,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
-					RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+					RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 				} break;
 				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
 					TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
@@ -747,7 +747,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);
-			RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+			RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 		}
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
@@ -768,7 +768,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 				nw->requestConfiguration();
 			ptr += 8;
 		}
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
 	} catch (std::exception &exc) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -795,11 +795,11 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			outp.append((uint32_t)mg.adi());
 			if (RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit)) {
 				outp.armor(peer->key(),true);
-				RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+				RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 			}
 		}
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
 	} catch (std::exception &exc) {
 		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -886,12 +886,12 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
 					outp.armor(peer->key(),true);
-					RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+					RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 				}
 			}
 		} // else ignore -- not a member of this network
 
-		peer->received(RR,_remoteAddress,_linkDesperation,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP);
+		peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP);
 	} catch (std::exception &exc) {
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -908,7 +908,7 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 	outp.append(nwid);
 	outp.armor(peer->key(),true);
-	RR->node->putPacket(_remoteAddress,outp.data(),outp.size(),_linkDesperation);
+	RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 }
 
 } // namespace ZeroTier

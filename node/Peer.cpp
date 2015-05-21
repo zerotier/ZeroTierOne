@@ -60,7 +60,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 void Peer::received(
 	const RuntimeEnvironment *RR,
 	const InetAddress &remoteAddr,
-	int linkDesperation,
 	unsigned int hops,
 	uint64_t packetId,
 	Packet::Verb verb,
@@ -78,7 +77,7 @@ void Peer::received(
 			unsigned int np = _numPaths;
 			for(unsigned int p=0;p<np;++p) {
 				if (_paths[p].address() == remoteAddr) {
-					_paths[p].received(now,linkDesperation);
+					_paths[p].received(now);
 					pathIsConfirmed = true;
 					break;
 				}
@@ -103,7 +102,7 @@ void Peer::received(
 					}
 					if (slot) {
 						slot->init(remoteAddr,false);
-						slot->received(now,linkDesperation);
+						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;
 					}
@@ -115,7 +114,7 @@ void Peer::received(
 					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
 						_lastPathConfirmationSent = now;
 						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-						attemptToContactAt(RR,remoteAddr,linkDesperation,now);
+						attemptToContactAt(RR,remoteAddr,now);
 					}
 				}
 			}
@@ -137,7 +136,7 @@ void Peer::received(
 					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 							outp.armor(_key,true);
-							RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation);
+							RR->node->putPacket(remoteAddr,outp.data(),outp.size());
 							outp.reset(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 						}
 
@@ -150,7 +149,7 @@ void Peer::received(
 			}
 			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
 				outp.armor(_key,true);
-				RR->node->putPacket(remoteAddr,outp.data(),outp.size(),linkDesperation);
+				RR->node->putPacket(remoteAddr,outp.data(),outp.size());
 			}
 		}
 	}
@@ -161,7 +160,7 @@ void Peer::received(
 		_lastMulticastFrame = now;
 }
 
-void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,unsigned int linkDesperation,uint64_t now)
+void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,uint64_t now)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
@@ -189,26 +188,21 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 	}
 
 	outp.armor(_key,false); // HELLO is sent in the clear
-	RR->node->putPacket(atAddress,outp.data(),outp.size(),linkDesperation);
+	RR->node->putPacket(atAddress,outp.data(),outp.size());
 }
 
 void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
 	Path *const bestPath = getBestPath(now);
 	if ((bestPath)&&(bestPath->active(now))) {
-		const unsigned int desp = std::max(RR->node->coreDesperation(),bestPath->lastReceiveDesperation());
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
-			TRACE("PING %s(%s) desperation == %u",_id.address().toString().c_str(),bestPath->address().toString().c_str(),desp);
-			attemptToContactAt(RR,bestPath->address(),desp,now);
+			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
+			attemptToContactAt(RR,bestPath->address(),now);
 			bestPath->sent(now);
 		} else if ((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY) {
-			// We only do keepalive if desperation is zero right now, since higher
-			// desperation paths involve things like tunneling that do not need it.
-			if (desp == 0) {
-				TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
-				RR->node->putPacket(bestPath->address(),"",0,0);
-				bestPath->sent(now);
-			}
+			TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
+			RR->node->putPacket(bestPath->address(),"",0);
+			bestPath->sent(now);
 		}
 	}
 }
@@ -269,7 +263,7 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
 			if (_paths[x].fixed()) {
-				attemptToContactAt(RR,_paths[x].address(),_paths[x].lastReceiveDesperation(),now);
+				attemptToContactAt(RR,_paths[x].address(),now);
 				_paths[y++] = _paths[x]; // keep fixed paths
 			}
 		} else {
@@ -281,11 +275,11 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	return (y < np);
 }
 
-void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6,unsigned int maxDesperation) const
+void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
 {
 	uint64_t bestV4 = 0,bestV6 = 0;
 	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if ((_paths[p].active(now))&&(_paths[p].lastReceiveDesperation() <= maxDesperation)) {
+		if (_paths[p].active(now)) {
 			uint64_t lr = _paths[p].lastReceived();
 			if (lr) {
 				if (_paths[p].address().isV4()) {

@@ -79,7 +79,6 @@ public:
 	ZT1_ResultCode processWirePacket(
 		uint64_t now,
 		const struct sockaddr_storage *remoteAddress,
-		unsigned int linkDesperation,
 		const void *packetData,
 		unsigned int packetLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
@@ -119,16 +118,14 @@ public:
 	 * @param addr Destination address
 	 * @param data Packet data
 	 * @param len Packet length
-	 * @param desperation Link desperation for reaching this address
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len,unsigned int desperation)
+	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len)
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT1_Node *>(this),
 			_uPtr,
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
-			desperation,
 			data,
 			len) == 0);
 	}
@@ -173,23 +170,6 @@ public:
 			nw.push_back(n->second);
 		return nw;
 	}
-
-	/**
-	 * Get an overall current level of desperation
-	 *
-	 * The current level of desperation is based on how recently an upstream
-	 * (a.k.a. supernode) peer has spoken to us. As such, it will change and
-	 * return to 0 once something like tunneling (higher desperation link) is
-	 * active. As a result, actual link desperation for outgoing messages
-	 * should be the max of either this or the most recent link desperation
-	 * for an incoming message from a given address. See Path.hpp and Peer.hpp.
-	 *
-	 * In other words think of this as 'the desperation we should try to
-	 * escalate to right now.'
-	 *
-	 * @return Overall system level of desperation
-	 */
-	inline unsigned int coreDesperation() const throw() { return _coreDesperation; }
 
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
@@ -253,7 +233,6 @@ private:
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
 	uint64_t _lastBeacon;
-	unsigned int _coreDesperation;
 	unsigned int _newestVersionSeen[3]; // major, minor, revision
 	bool _online;
 };

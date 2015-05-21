@@ -723,14 +723,14 @@ typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,void *,const char *,const voi
 /**
  * Function to send a ZeroTier packet out over the wire
  *
- * Parameters: (1) node, (2) user ptr, (3) address, (4) link desperation,
- * (5) packet data, (6) packet data length.
+ * Parameters: (1) node, (2) user ptr, (3) address, (4) packet data,
+ * (5) packet data length.
  *
  * The function must return zero on success and may return any error code
  * on failure. Note that success does not (of course) guarantee packet
  * delivery. It only means that the packet appears to have been sent.
  */
-typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,void *,const struct sockaddr_storage *,unsigned int,const void *,unsigned int);
+typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,void *,const struct sockaddr_storage *,const void *,unsigned int);
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -780,7 +780,6 @@ void ZT1_Node_delete(ZT1_Node *node);
  * @param node Node instance
  * @param now Current clock in milliseconds
  * @param remoteAddress Origin of packet
- * @param linkDesperation Link desperation metric for link or protocol over which packet arrived
  * @param packetData Packet data
  * @param packetLength Packet length
  * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
@@ -790,7 +789,6 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
 	const struct sockaddr_storage *remoteAddress,
-	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline);

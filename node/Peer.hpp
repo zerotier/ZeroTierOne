@@ -109,7 +109,6 @@ public:
 	 * 
 	 * @param RR Runtime environment
 	 * @param remoteAddr Internet address of sender
-	 * @param linkDesperation Link desperation level
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
 	 * @param verb Packet verb
@@ -119,7 +118,6 @@ public:
 	void received(
 		const RuntimeEnvironment *RR,
 		const InetAddress &remoteAddr,
-		int linkDesperation,
 		unsigned int hops,
 		uint64_t packetId,
 		Packet::Verb verb,
@@ -172,10 +170,9 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param atAddress Destination address
-	 * @param linkDesperation Link desperation
 	 * @param now Current time
 	 */
-	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,unsigned int linkDesperation,uint64_t now);
+	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,uint64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
@@ -382,9 +379,8 @@ public:
 	 * @param now Current time
 	 * @param v4 Result parameter to receive active IPv4 address, if any
 	 * @param v6 Result parameter to receive active IPv6 address, if any
-	 * @param maxDesperation Maximum link desperation to consider
 	 */
-	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6,unsigned int maxDesperation) const;
+	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
 	 * Find a common set of addresses by which two peers can link, if any
@@ -392,14 +388,13 @@ public:
 	 * @param a Peer A
 	 * @param b Peer B
 	 * @param now Current time
-	 * @param maxDesperation Maximum link desperation to consider
 	 * @return Pair: B's address (to send to A), A's address (to send to B)
 	 */
-	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now,unsigned int maxDesperation)
+	static inline std::pair<InetAddress,InetAddress> findCommonGround(const Peer &a,const Peer &b,uint64_t now)
 	{
 		std::pair<InetAddress,InetAddress> v4,v6;
-		b.getBestActiveAddresses(now,v4.first,v6.first,maxDesperation);
-		a.getBestActiveAddresses(now,v4.second,v6.second,maxDesperation);
+		b.getBestActiveAddresses(now,v4.first,v6.first);
+		a.getBestActiveAddresses(now,v4.second,v6.second);
 		if ((v6.first)&&(v6.second)) // prefer IPv6 if both have it since NAT-t is (almost) unnecessary
 			return v6;
 		else if ((v4.first)&&(v4.second))
