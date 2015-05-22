@@ -454,7 +454,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 						if (p < 0xffff) {
 							tmpaddr.setPort((unsigned int)p);
 							qi->peer->attemptToContactAt(RR,tmpaddr,now);
-						}
+						} else qi->strategyIteration = 9;
 					} else if (qi->strategyIteration <= 18) {
 						// Strategies 10-18: try ports below
 						InetAddress tmpaddr(qi->inaddr);
@@ -462,7 +462,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 						if (p >= 1024) {
 							tmpaddr.setPort((unsigned int)p);
 							qi->peer->attemptToContactAt(RR,tmpaddr,now);
-						}
+						} else qi->strategyIteration = 18;
 					} else {
 						// All strategies tried, expire entry
 						_contactQueue.erase(qi++);

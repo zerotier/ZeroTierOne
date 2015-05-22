@@ -566,7 +566,7 @@ public:
 
 		try {
 			while (!_tcpConnections.empty())
-				_phy.close(_tcpConnections.begin()->first);
+				_phy.close((*_tcpConnections.begin())->sock);
 		} catch ( ... ) {}
 
 		{
@@ -651,7 +651,9 @@ public:
 
 		// Outgoing TCP connections are always TCP fallback tunnel connections.
 
-		TcpConnection *tc = &(_tcpConnections[sock]);
+		TcpConnection *tc = new TcpConnection();
+		_tcpConnections.insert(tc);
+
 		tc->type = TcpConnection::TCP_TUNNEL_OUTGOING;
 		tc->shouldKeepAlive = true;
 		tc->parent = this;
@@ -682,7 +684,9 @@ public:
 	{
 		// Incoming TCP connections are HTTP JSON API requests.
 
-		TcpConnection *tc = &(_tcpConnections[sockN]);
+		TcpConnection *tc = new TcpConnection();
+		_tcpConnections.insert(tc);
+
 		tc->type = TcpConnection::TCP_HTTP_INCOMING;
 		tc->shouldKeepAlive = true;
 		tc->parent = this;
@@ -704,11 +708,12 @@ public:
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
 	{
-		std::map< PhySocket *,TcpConnection >::iterator tc(_tcpConnections.find(sock));
-		if (tc != _tcpConnections.end()) {
-			if (&(tc->second) == _tcpFallbackTunnel)
+		TcpConnection *tc = (TcpConnection *)*uptr;
+		if (tc) {
+			if (tc == _tcpFallbackTunnel)
 				_tcpFallbackTunnel = (TcpConnection *)0;
 			_tcpConnections.erase(tc);
+			delete tc;
 		}
 	}
 
@@ -1142,7 +1147,7 @@ private:
 	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
 	Mutex _taps_m;
 
-	std::map< PhySocket *,TcpConnection > _tcpConnections; // no mutex for this since it's done in the main loop thread only
+	std::set< TcpConnection * > _tcpConnections; // no mutex for this since it's done in the main loop thread only
 	TcpConnection *_tcpFallbackTunnel;
 
 	ReasonForTermination _termReason;
