@@ -444,42 +444,31 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 					continue;
 				} else {
 					// Nope, nothing yet. Time to kill some kittens.
-
-					switch(qi->strategyIteration++) {
-
-						case 0: {
-							// First strategy: rifle method: direct packet to known port
-							qi->peer->attemptToContactAt(RR,qi->inaddr,now);
-						}	break;
-
-						case 1: {
-							// Second strategy: shotgun method up: try a few ports above
-							InetAddress tmpaddr(qi->inaddr);
-							int p = (int)qi->inaddr.port();
-							for(int i=0;i<9;++i) {
-								if (++p > 0xffff) break;
-								tmpaddr.setPort((unsigned int)p);
-								qi->peer->attemptToContactAt(RR,tmpaddr,now);
-							}
-						}	break;
-
-						case 2: {
-							// Third strategy: shotgun method down: try a few ports below
-							InetAddress tmpaddr(qi->inaddr);
-							int p = (int)qi->inaddr.port();
-							for(int i=0;i<3;++i) {
-								if (--p < 1024) break;
-								tmpaddr.setPort((unsigned int)p);
-								qi->peer->attemptToContactAt(RR,tmpaddr,now);
-							}
-
-							// We've tried all strategies
-							_contactQueue.erase(qi++);
-							continue;
-						}	break;
-
+					if (qi->strategyIteration == 0) {
+						// First stragegy: send packet directly (we already tried this but try again)
+						qi->peer->attemptToContactAt(RR,qi->inaddr,now);
+					} else if (qi->strategyIteration <= 9) {
+						// Strategies 1-9: try escalating ports
+						InetAddress tmpaddr(qi->inaddr);
+						int p = (int)qi->inaddr.port() + qi->strategyIteration;
+						if (p < 0xffff) {
+							tmpaddr.setPort((unsigned int)p);
+							qi->peer->attemptToContactAt(RR,tmpaddr,now);
+						}
+					} else if (qi->strategyIteration <= 18) {
+						// Strategies 10-18: try ports below
+						InetAddress tmpaddr(qi->inaddr);
+						int p = (int)qi->inaddr.port() - (qi->strategyIteration - 9);
+						if (p >= 1024) {
+							tmpaddr.setPort((unsigned int)p);
+							qi->peer->attemptToContactAt(RR,tmpaddr,now);
+						}
+					} else {
+						// All strategies tried, expire entry
+						_contactQueue.erase(qi++);
+						continue;
 					}
-
+					++qi->strategyIteration;
 					qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
 					nextDelay = std::min(nextDelay,(unsigned long)ZT_NAT_T_TACTICAL_ESCALATION_DELAY);
 				}
