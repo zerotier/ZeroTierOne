@@ -103,11 +103,15 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 // Path under ZT1 home for controller database if controller is enabled
 #define ZT1_CONTROLLER_DB_PATH "controller.db"
 
-// TCP fallback relay host
+// TCP fallback relay host -- geo-distributed using Amazon Route53 geo-aware DNS
 #define ZT1_TCP_FALLBACK_RELAY "tcp-fallback.zerotier.com"
+#define ZT1_TCP_FALLBACK_RELAY_PORT 443
 
 // Frequency at which we re-resolve the TCP fallback relay
 #define ZT1_TCP_FALLBACK_RERESOLVE_DELAY 86400000
+
+// Attempt to engage TCP fallback after this many ms of no reply to packets sent to global-scope IPs
+#define ZT1_TCP_FALLBACK_AFTER 60000
 
 namespace ZeroTier {
 
@@ -380,7 +384,10 @@ public:
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
 		_controlPlane((ControlPlane *)0),
+		_lastDirectReceiveFromGlobal(0),
+		_lastSendToGlobal(0),
 		_nextBackgroundTaskDeadline(0),
+		_tcpFallbackTunnel((TcpConnection *)0),
 		_termReason(ONE_STILL_RUNNING),
 		_run(true)
 	{
@@ -508,6 +515,9 @@ public:
 					_tcpFallbackResolver.resolveNow();
 				}
 
+				if ((_tcpFallbackTunnel)&&((now - _lastDirectReceiveFromGlobal) < (ZT1_TCP_FALLBACK_AFTER / 2)))
+					_phy.close(_tcpFallbackTunnel->sock);
+
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
 					lastTapMulticastGroupCheck = now;
 					Mutex::Lock _l(_taps_m);
@@ -535,8 +545,8 @@ public:
 		}
 
 		try {
-			while (!_tcpConections.empty())
-				_phy.close(_tcpConections.begin()->first);
+			while (!_tcpConnections.empty())
+				_phy.close(_tcpConnections.begin()->first);
 		} catch ( ... ) {}
 
 		{
@@ -587,6 +597,8 @@ public:
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
 	{
+		if (reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)
+			_lastDirectReceiveFromGlobal = OSUtils::now();
 		ZT1_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
@@ -610,7 +622,7 @@ public:
 
 		// Outgoing TCP connections are always TCP fallback tunnel connections.
 
-		TcpConnection *tc = &(_tcpConections[sock]);
+		TcpConnection *tc = &(_tcpConnections[sock]);
 		tc->type = TcpConnection::TCP_TUNNEL_OUTGOING;
 		tc->shouldKeepAlive = true; // unused
 		tc->parent = this;
@@ -621,6 +633,8 @@ public:
 		// HTTP stuff is not used
 		tc->writeBuf = "";
 		*uptr = (void *)tc;
+
+		_tcpFallbackTunnel = tc;
 
 		// Send "hello" message
 		tc->writeBuf.push_back((char)0x17);
@@ -639,7 +653,7 @@ public:
 	{
 		// Incoming TCP connections are HTTP JSON API requests.
 
-		TcpConnection *tc = &(_tcpConections[sockN]);
+		TcpConnection *tc = &(_tcpConnections[sockN]);
 		tc->type = TcpConnection::TCP_HTTP_INCOMING;
 		tc->shouldKeepAlive = true;
 		tc->parent = this;
@@ -661,7 +675,12 @@ public:
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
 	{
-		_tcpConections.erase(sock);
+		std::map< PhySocket *,TcpConnection >::iterator tc(_tcpConnections.find(sock));
+		if (tc != _tcpConnections.end()) {
+			if (&(tc->second) == _tcpFallbackTunnel)
+				_tcpFallbackTunnel = (TcpConnection *)0;
+			_tcpConnections.erase(tc);
+		}
 	}
 
 	inline void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
@@ -726,21 +745,23 @@ public:
 									return;
 							}
 
-							ZT1_ResultCode rc = _node->processWirePacket(
-								OSUtils::now(),
-								(const struct sockaddr_storage *)&from, // Phy<> uses sockaddr_storage, so it'll always be that big
-								data,
-								plen,
-								&_nextBackgroundTaskDeadline);
-							if (ZT1_ResultCode_isFatal(rc)) {
-								char tmp[256];
-								Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
-								Mutex::Lock _l(_termReason_m);
-								_termReason = ONE_UNRECOVERABLE_ERROR;
-								_fatalErrorMessage = tmp;
-								this->terminate();
-								_phy.close(sock);
-								return;
+							if (from) {
+								ZT1_ResultCode rc = _node->processWirePacket(
+									OSUtils::now(),
+									reinterpret_cast<struct sockaddr_storage *>(&from),
+									data,
+									plen,
+									&_nextBackgroundTaskDeadline);
+								if (ZT1_ResultCode_isFatal(rc)) {
+									char tmp[256];
+									Utils::snprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+									Mutex::Lock _l(_termReason_m);
+									_termReason = ONE_UNRECOVERABLE_ERROR;
+									_fatalErrorMessage = tmp;
+									this->terminate();
+									_phy.close(sock);
+									return;
+								}
 							}
 						}
 
@@ -765,7 +786,7 @@ public:
 					tc->writeBuf = "";
 					_phy.tcpSetNotifyWritable(sock,false);
 					if (!tc->shouldKeepAlive)
-						_phy.close(sock); // will call close handler to delete from _tcpConections
+						_phy.close(sock); // will call close handler to delete from _tcpConnections
 				} else tc->writeBuf = tc->writeBuf.substr(sent);
 			}
 		} else _phy.tcpSetNotifyWritable(sock,false); // sanity check... shouldn't happen
@@ -915,17 +936,65 @@ public:
 
 	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *addr,const void *data,unsigned int len)
 	{
+		int result = -1;
 		switch(addr->ss_family) {
 			case AF_INET:
-				if (_v4UdpSocket)
-					return (_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) ? 0 : -1);
+				//if (_v4UdpSocket)
+					//result = (_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) ? 0 : -1);
+
+				if (reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL) {
+					uint64_t now = OSUtils::now();
+
+					/* Engage TCP fallback if we've sent something more than PING_CHECK_INTERVAL ago,
+					 * less than twice the fallback period ago, and haven't heard anything in the fallback
+					 * timeout period. In that case our packets to the global IP scope are probably
+					 * being blocked, so start trying to tunnel them out.
+					 *
+					 * Note that we *always* send them as plain UDP above. This way if we ever get unblocked
+					 * or if our connectivity changes for the better, we will instantly "fail forward" back
+					 * to plain vanilla UDP and abandon the tunnel.
+					 *
+					 * TCP fallback is currently only supported for tunneling to IPv4 addresses. */
+					if (((now - _lastSendToGlobal) < ZT1_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobal) > ZT_PING_CHECK_INVERVAL)&&((now - _lastDirectReceiveFromGlobal) > ZT1_TCP_FALLBACK_AFTER)) {
+						if (_tcpFallbackTunnel) {
+							if (!_tcpFallbackTunnel->writeBuf.length())
+								_phy.tcpSetNotifyWritable(_tcpFallbackTunnel->sock,true);
+							unsigned long mlen = len + 7;
+							_tcpFallbackTunnel->writeBuf.push_back((char)0x17);
+							_tcpFallbackTunnel->writeBuf.push_back((char)0x03);
+							_tcpFallbackTunnel->writeBuf.push_back((char)0x03); // fake TLS 1.2 header
+							_tcpFallbackTunnel->writeBuf.push_back((char)((mlen >> 8) & 0xff));
+							_tcpFallbackTunnel->writeBuf.push_back((char)(mlen & 0xff));
+							_tcpFallbackTunnel->writeBuf.push_back((char)4); // IPv4
+							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
+							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
+							_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
+						} else {
+							std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
+							if (tunnelIps.empty()) {
+								if (!_tcpFallbackResolver.running())
+									_tcpFallbackResolver.resolveNow();
+							} else {
+								bool connected = false;
+								InetAddress addr(tunnelIps[(unsigned long)now % tunnelIps.size()]);
+								addr.setPort(ZT1_TCP_FALLBACK_RELAY_PORT);
+								_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
+							}
+						}
+					}
+
+					_lastSendToGlobal = now;
+				}
+
 				break;
 			case AF_INET6:
 				if (_v6UdpSocket)
-					return (_phy.udpSend(_v6UdpSocket,(const struct sockaddr *)addr,data,len) ? 0 : -1);
+					result = (_phy.udpSend(_v6UdpSocket,(const struct sockaddr *)addr,data,len) ? 0 : -1);
 				break;
+			default:
+				return -1;
 		}
-		return -1;
+		return result;
 	}
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
@@ -987,7 +1056,7 @@ public:
 	inline void onHttpResponseFromClient(TcpConnection *tc)
 	{
 		if (!tc->shouldKeepAlive)
-			_phy.close(tc->sock); // will call close handler, which deletes from _tcpConections
+			_phy.close(tc->sock); // will call close handler, which deletes from _tcpConnections
 	}
 
 private:
@@ -1021,13 +1090,16 @@ private:
 	PhySocket *_v4TcpListenSocket;
 	PhySocket *_v6TcpListenSocket;
 	ControlPlane *_controlPlane;
+	uint64_t _lastDirectReceiveFromGlobal;
+	uint64_t _lastSendToGlobal;
 	volatile uint64_t _nextBackgroundTaskDeadline;
 
 	std::map< uint64_t,EthernetTap * > _taps;
 	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
 	Mutex _taps_m;
 
-	std::map< PhySocket *,TcpConnection > _tcpConections; // no mutex for this since it's done in the main loop thread only
+	std::map< PhySocket *,TcpConnection > _tcpConnections; // no mutex for this since it's done in the main loop thread only
+	TcpConnection *_tcpFallbackTunnel;
 
 	ReasonForTermination _termReason;
 	std::string _fatalErrorMessage;
