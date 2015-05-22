@@ -578,11 +578,6 @@ void WindowsEthernetTap::threadMain()
 	HANDLE wait4[3];
 	char *tapReadBuf = (char *)0;
 
-	if (!_enableTapDevice()) {
-		_enabled = false;
-		return; // only happens if devcon is missing or totally fails
-	}
-
 	/* No idea why I did this. I did it a long time ago and there was only a
 	 * a snarky comment. But I'd never do crap like this without a reason, so
 	 * I am leaving it alone with a more descriptive snarky comment. */
@@ -594,10 +589,20 @@ void WindowsEthernetTap::threadMain()
 
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
 	int prevTapResetStatus = _systemTapResetStatus;
+	bool throwOneAway = true; // Restart once on startup, because Windows.
+	bool powerCycle = true; // If true, "power cycle" the device, because Windows.
 	while (_run) {
+		if (powerCycle) {
+			_disableTapDevice();
+			Sleep(500);
+			_enableTapDevice();
+			Sleep(500);
+		}
+
 		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 		if (_tap == INVALID_HANDLE_VALUE) {
 			fprintf(stderr,"Error opening %s -- retrying.\r\n",tapPath);
+			powerCycle = true;
 			continue;
 		}
 
@@ -698,7 +703,9 @@ void WindowsEthernetTap::threadMain()
 		ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
 		bool writeInProgress = false;
 		while (_run) {
-			if (prevTapResetStatus != _systemTapResetStatus) {
+			if ((prevTapResetStatus != _systemTapResetStatus)||(throwOneAway)) {
+				powerCycle = throwOneAway;
+				throwOneAway = false;
 				prevTapResetStatus = _systemTapResetStatus;
 				break; // this will cause us to close and reopen the tap
 			}

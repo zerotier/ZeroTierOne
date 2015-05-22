@@ -58,16 +58,16 @@ Switch::~Switch()
 {
 }
 
-void Switch::onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
+void Switch::onRemotePacket(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
 		if (len == ZT_PROTO_BEACON_LENGTH) {
-			_handleBeacon(fromAddr,linkDesperation,Buffer<ZT_PROTO_BEACON_LENGTH>(data,len));
+			_handleBeacon(fromAddr,Buffer<ZT_PROTO_BEACON_LENGTH>(data,len));
 		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (((const unsigned char *)data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
-				_handleRemotePacketFragment(fromAddr,linkDesperation,data,len);
+				_handleRemotePacketFragment(fromAddr,data,len);
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) {
-				_handleRemotePacketHead(fromAddr,linkDesperation,data,len);
+				_handleRemotePacketHead(fromAddr,data,len);
 			}
 		}
 	} catch (std::exception &ex) {
@@ -291,8 +291,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 	const uint64_t now = RR->node->now();
 
-	// Right now we only unite desperation == 0 links, which will be direct
-	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now,0));
+	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
 	if (!(cg.first))
 		return false;
 
@@ -369,18 +368,18 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	return true;
 }
 
-void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr,unsigned int maxDesperation)
+void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
 
-	// Attempt to contact at zero desperation first
-	peer->attemptToContactAt(RR,atAddr,0,now);
+	// Attempt to contact directly
+	peer->attemptToContactAt(RR,atAddr,now);
 
 	// If we have not punched through after this timeout, open refreshing can of whupass
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr,maxDesperation));
+		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
 	}
 }
 
@@ -450,7 +449,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 						case 0: {
 							// First strategy: rifle method: direct packet to known port
-							qi->peer->attemptToContactAt(RR,qi->inaddr,qi->currentDesperation,now);
+							qi->peer->attemptToContactAt(RR,qi->inaddr,now);
 						}	break;
 
 						case 1: {
@@ -460,7 +459,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 							for(int i=0;i<9;++i) {
 								if (++p > 0xffff) break;
 								tmpaddr.setPort((unsigned int)p);
-								qi->peer->attemptToContactAt(RR,tmpaddr,qi->currentDesperation,now);
+								qi->peer->attemptToContactAt(RR,tmpaddr,now);
 							}
 						}	break;
 
@@ -471,19 +470,12 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 							for(int i=0;i<3;++i) {
 								if (--p < 1024) break;
 								tmpaddr.setPort((unsigned int)p);
-								qi->peer->attemptToContactAt(RR,tmpaddr,qi->currentDesperation,now);
+								qi->peer->attemptToContactAt(RR,tmpaddr,now);
 							}
 
-							// Escalate link desperation after all strategies attempted
-							++qi->currentDesperation;
-							if (qi->currentDesperation > qi->maxDesperation) {
-								// We've tried all strategies at all levels of desperation, give up.
-								_contactQueue.erase(qi++);
-								continue;
-							} else {
-								// Otherwise restart at new link desperation level (e.g. try a tougher transport)
-								qi->strategyIteration = 0;
-							}
+							// We've tried all strategies
+							_contactQueue.erase(qi++);
+							continue;
 						}	break;
 
 					}
@@ -572,7 +564,7 @@ const char *Switch::etherTypeName(const unsigned int etherType)
 	return "UNKNOWN";
 }
 
-void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
+void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	Packet::Fragment fragment(data,len);
 	Address destination(fragment.destination());
@@ -644,9 +636,9 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,int linkDes
 	}
 }
 
-void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len)
+void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,fromAddr,linkDesperation,RR->node->now()));
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,fromAddr,RR->node->now()));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -714,7 +706,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,int linkDespera
 	}
 }
 
-void Switch::_handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<ZT_PROTO_BEACON_LENGTH> &data)
+void Switch::_handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data)
 {
 	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 	if (beaconAddr == RR->identity.address())
@@ -726,7 +718,7 @@ void Switch::_handleBeacon(const InetAddress &fromAddr,int linkDesperation,const
 			_lastBeacon = now;
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
 			outp.armor(peer->key(),false);
-			RR->node->putPacket(fromAddr,outp.data(),outp.size(),linkDesperation);
+			RR->node->putPacket(fromAddr,outp.data(),outp.size());
 		}
 	}
 }

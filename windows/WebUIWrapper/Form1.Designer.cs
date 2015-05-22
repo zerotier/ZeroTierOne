@@ -36,20 +36,21 @@
             // 
             this.webContainer.AllowNavigation = false;
             this.webContainer.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.webContainer.IsWebBrowserContextMenuEnabled = false;
             this.webContainer.Location = new System.Drawing.Point(0, 0);
-            this.webContainer.MinimumSize = new System.Drawing.Size(20, 20);
+            this.webContainer.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.webContainer.MinimumSize = new System.Drawing.Size(18, 16);
             this.webContainer.Name = "webContainer";
-            this.webContainer.Size = new System.Drawing.Size(1012, 556);
+            this.webContainer.Size = new System.Drawing.Size(900, 445);
             this.webContainer.TabIndex = 0;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1012, 556);
+            this.ClientSize = new System.Drawing.Size(900, 445);
             this.Controls.Add(this.webContainer);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Form1";
             this.Text = "ZeroTier One";
             this.Load += new System.EventHandler(this.Form1_Load);

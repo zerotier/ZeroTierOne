@@ -697,6 +697,37 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 			} else {
 
 				if (!networkExists) {
+					if (path[1].substr(10) == "______") {
+						// A special POST /network/##########______ feature lets users create a network
+						// with an arbitrary unused network ID.
+						nwid = 0;
+
+						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
+						uint64_t nwidPostfix = 0;
+						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
+						nwidPostfix &= 0xffffffULL;
+						uint64_t nwidOriginalPostfix = nwidPostfix;
+						do {
+							uint64_t tryNwid = nwidPrefix | nwidPostfix;
+							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
+
+							sqlite3_reset(_sGetNetworkRevision);
+							sqlite3_bind_text(_sGetNetworkRevision,1,nwids,16,SQLITE_STATIC);
+							if (sqlite3_step(_sGetNetworkRevision) != SQLITE_ROW) {
+								nwid = tryNwid;
+								break;
+							}
+
+							++nwidPostfix;
+							nwidPostfix &= 0xffffffULL;
+						} while (nwidPostfix != nwidOriginalPostfix);
+
+						// 503 means we have no more free IDs for this prefix. You shouldn't host anywhere
+						// near 16 million networks on the same controller, so shouldn't happen.
+						if (!nwid)
+							return 503;
+					}
+
 					sqlite3_reset(_sCreateNetwork);
 					sqlite3_bind_text(_sCreateNetwork,1,nwids,16,SQLITE_STATIC);
 					sqlite3_bind_text(_sCreateNetwork,2,nwids,16,SQLITE_STATIC); // default name, will be changed below if a name is specified in JSON

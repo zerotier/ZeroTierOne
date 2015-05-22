@@ -117,77 +117,6 @@ restart_node:
 			default: // normal termination
 				break;
 		}
-
-#if 0
-		std::string authToken(ZeroTier::NodeControlClient::getAuthToken((ZeroTier::ZT_DEFAULTS.defaultHomePath + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),true));
-
-		ZeroTier::WindowsEthernetTapFactory tapFactory(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str());
-		ZeroTier::WindowsRoutingTable routingTable;
-		ZeroTier::NativeSocketManager socketManager(ZT_DEFAULT_UDP_PORT,0);
-
-		{
-			// start or restart
-			ZeroTier::Mutex::Lock _l(_lock);
-			delete _node;
-			_node = new ZeroTier::Node(ZeroTier::ZT_DEFAULTS.defaultHomePath.c_str(),&tapFactory,&routingTable,&socketManager,false,(const char *)0);
-		}
-
-		ZeroTier::NodeControlService controlService(_node,authToken.c_str());
-
-		switch(_node->run()) {
-
-			case ZeroTier::Node::NODE_RESTART_FOR_UPGRADE: {
-				// Shut down node
-				ZeroTier::Node *n;
-				{
-					ZeroTier::Mutex::Lock _l(_lock);
-					n = _node;
-					_node = (ZeroTier::Node *)0;
-				}
-
-				// Get upgrade path, which will be its reason for termination
-				std::string msiPath;
-				if (n) {
-					const char *msiPathTmp = n->terminationMessage();
-					if (msiPathTmp)
-						msiPath = msiPathTmp;
-				}
-
-				delete n;
-
-				if ((!msiPath.length())||(!ZeroTier::Utils::fileExists(msiPath.c_str()))) {
-					WriteEventLogEntry("auto-update failed: no msi path provided by Node",EVENTLOG_ERROR_TYPE);
-					Sleep(5000);
-					goto restart_node;
-				}
-
-				if (!doStartUpgrade(msiPath)) {
-					WriteEventLogEntry("auto-update failed: unable to create InstallAndRestartService.bat",EVENTLOG_ERROR_TYPE);
-					Sleep(5000);
-					goto restart_node;
-				}
-
-				// Terminate service to allow updater to update
-				Stop();
-			}	return;
-
-			case ZeroTier::Node::NODE_UNRECOVERABLE_ERROR: {
-				std::string err("ZeroTier node encountered an unrecoverable error: ");
-				const char *r = _node->terminationMessage();
-				if (r)
-					err.append(r);
-				else err.append("(unknown error)");
-				err.append(" (restarting in 5 seconds)");
-				WriteEventLogEntry(const_cast <PSTR>(err.c_str()),EVENTLOG_ERROR_TYPE);
-				Sleep(5000);
-				goto restart_node;
-			}	break;
-
-			default: // includes normal termination, which will terminate thread
-				break;
-
-		}
-#endif
 	} catch ( ... ) {
 		// sanity check, shouldn't happen since Node::run() should catch all its own errors
 		// could also happen if we're out of memory though!
@@ -201,33 +130,6 @@ restart_node:
 		delete _service;
 		_service = (ZeroTier::OneService *)0;
 	}
-}
-
-bool ZeroTierOneService::doStartUpgrade(const std::string &msiPath)
-{
-	std::string homePath(ZeroTier::OneService::platformDefaultHomePath());
-
-	std::string msiLog(homePath + "\\LastUpdateLog.txt");
-	ZeroTier::OSUtils::rm(msiLog);
-
-	std::string bat(homePath + "\\InstallAndRestartService.bat");
-	FILE *batf = fopen(bat.c_str(),"wb");
-	if (!batf)
-		return false;
-	fprintf(batf,"TIMEOUT.EXE /T 1 /NOBREAK\r\n");
-	fprintf(batf,"NET.EXE STOP \"ZeroTier One\"\r\n");
-	fprintf(batf,"MSIEXEC.EXE /i \"%s\" /l* \"%s\" /qn\r\n",msiPath.c_str(),msiLog.c_str());
-	fprintf(batf,"NET.EXE START \"ZeroTier One\"\r\n");
-	fclose(batf);
-
-	STARTUPINFOA si;
-	PROCESS_INFORMATION pi;
-	memset(&si,0,sizeof(si));
-	memset(&pi,0,sizeof(pi));
-	if (!CreateProcessA(NULL,const_cast <LPSTR>((std::string("CMD.EXE /c \"") + bat + "\"").c_str()),NULL,NULL,FALSE,CREATE_NO_WINDOW|CREATE_NEW_PROCESS_GROUP,NULL,NULL,&si,&pi))
-		return false;
-
-	return true;
 }
 
 void ZeroTierOneService::OnStart(DWORD dwArgc, LPSTR *lpszArgv)

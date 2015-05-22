@@ -32,10 +32,17 @@
 
 namespace ZeroTier {
 
-class NetworkController;
-
 /**
  * Local service for ZeroTier One as system VPN/NFV provider
+ *
+ * If built with ZT_ENABLE_NETWORK_CONTROLLER defined, this includes and
+ * runs controller/SqliteNetworkController with a database called
+ * controller.db in the specified home directory.
+ *
+ * If built with ZT_AUTO_UPDATE, an official ZeroTier update URL is
+ * periodically checked and updates are automatically downloaded, verified
+ * against a built-in list of update signing keys, and installed. This is
+ * only supported for certain platforms.
  */
 class OneService
 {
@@ -72,6 +79,11 @@ public:
 	static std::string platformDefaultHomePath();
 
 	/**
+	 * @return Auto-update URL or empty string if auto-updates unsupported or not enabled
+	 */
+	static std::string autoUpdateUrl();
+
+	/**
 	 * Create a new instance of the service
 	 *
 	 * Once created, you must call the run() method to actually start
@@ -79,13 +91,11 @@ public:
 	 *
 	 * @param hp Home path
 	 * @param port TCP and UDP port for packets and HTTP control
-	 * @param master Instance of network config master if this instance is to act as one (default: NULL)
 	 * @param overrideRootTopology String-serialized root topology (for testing, default: NULL)
 	 */
 	static OneService *newInstance(
 		const char *hp,
 		unsigned int port,
-		NetworkController *master = (NetworkController *)0,
 		const char *overrideRootTopology = (const char *)0);
 
 	virtual ~OneService();

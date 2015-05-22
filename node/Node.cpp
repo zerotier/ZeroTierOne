@@ -80,8 +80,7 @@ Node::Node(
 	_startTimeAfterInactivity(0),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0),
-	_lastBeacon(0),
-	_coreDesperation(0)
+	_lastBeacon(0)
 {
 	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
@@ -155,13 +154,12 @@ Node::~Node()
 ZT1_ResultCode Node::processWirePacket(
 	uint64_t now,
 	const struct sockaddr_storage *remoteAddress,
-	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(remoteAddress)),linkDesperation,packetData,packetLength);
+	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
 	return ZT1_RESULT_OK;
 }
 
@@ -219,8 +217,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
 		_lastPingCheck = now;
 
-		// This is used as a floor for the desperation and online status
-		// calculations if we just started up or have been asleep.
+		// This is used to compute whether we appear to be "online" or not
 		if ((now - _startTimeAfterInactivity) > (ZT_PING_CHECK_INVERVAL * 3))
 			_startTimeAfterInactivity = now;
 
@@ -229,7 +226,6 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			const uint64_t lastActivityAgo = now - std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromUpstream);
-			_coreDesperation = (unsigned int)(lastActivityAgo / (ZT_PING_CHECK_INVERVAL * ZT_CORE_DESPERATION_INCREMENT));
 			bool oldOnline = _online;
 			_online = (lastActivityAgo < ZT_PEER_ACTIVITY_TIMEOUT);
 			if (oldOnline != _online)
@@ -251,11 +247,13 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 		if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
 			_lastBeacon = now;
 			char beacon[13];
-			*(reinterpret_cast<uint32_t *>(beacon)) = RR->prng->next32();
-			*(reinterpret_cast<uint32_t *>(beacon + 4)) = RR->prng->next32();
+			void *p = beacon;
+			*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
+			p = beacon + 4;
+			*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
 			RR->identity.address().copyTo(beacon + 8,5);
 			RR->antiRec->logOutgoingZT(beacon,13);
-			putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13,0);
+			putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13);
 		}
 	}
 
@@ -441,7 +439,7 @@ std::string Node::dataStoreGet(const char *name)
 
 void Node::postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev)
 {
-	if (Peer::compareVersion(major,minor,rev,_newestVersionSeen[0],_newestVersionSeen[1],_newestVersionSeen[2]) > 0) {
+	if (Utils::compareVersion(major,minor,rev,_newestVersionSeen[0],_newestVersionSeen[1],_newestVersionSeen[2]) > 0) {
 		_newestVersionSeen[0] = major;
 		_newestVersionSeen[1] = minor;
 		_newestVersionSeen[2] = rev;
@@ -526,13 +524,12 @@ enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
 	const struct sockaddr_storage *remoteAddress,
-	unsigned int linkDesperation,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,linkDesperation,packetData,packetLength,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

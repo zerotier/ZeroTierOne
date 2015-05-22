@@ -270,11 +270,6 @@
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
 
 /**
- * Increment core desperation after this multiple of ping checks without responses from upstream peers
- */
-#define ZT_CORE_DESPERATION_INCREMENT 2
-
-/**
  * Timeout for overall peer activity (measured from last receive)
  */
 #define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_DIRECT_PING_DELAY + (ZT_PING_CHECK_INVERVAL * 3))

@@ -382,6 +382,33 @@ public:
 	static inline int64_t ntoh(int64_t n) throw() { return (int64_t)ntoh((uint64_t)n); }
 
 	/**
+	 * Compare Peer version tuples
+	 *
+	 * @return -1, 0, or 1 based on whether first tuple is less than, equal to, or greater than second
+	 */
+	static inline int compareVersion(unsigned int maj1,unsigned int min1,unsigned int rev1,unsigned int maj2,unsigned int min2,unsigned int rev2)
+		throw()
+	{
+		if (maj1 > maj2)
+			return 1;
+		else if (maj1 < maj2)
+			return -1;
+		else {
+			if (min1 > min2)
+				return 1;
+			else if (min1 < min2)
+				return -1;
+			else {
+				if (rev1 > rev2)
+					return 1;
+				else if (rev1 < rev2)
+					return -1;
+				else return 0;
+			}
+		}
+	}
+
+	/**
 	 * Hexadecimal characters 0-f
 	 */
 	static const char HEXCHARS[16];

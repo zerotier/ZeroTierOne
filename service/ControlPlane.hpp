@@ -52,6 +52,19 @@ public:
 	ControlPlane(OneService *svc,Node *n,const char *uiStaticPath);
 	~ControlPlane();
 
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	/**
+	 * Set controller, which will be available under /controller
+	 *
+	 * @param c Network controller instance
+	 */
+	inline void setController(SqliteNetworkController *c)
+	{
+		Mutex::Lock _l(_lock);
+		_controller = c;
+	}
+#endif
+
 	/**
 	 * Add an authentication token for API access
 	 */
@@ -59,23 +72,6 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		_authTokens.insert(std::string(tok));
-	}
-
-	/**
-	 * Mount a subsystem under a prefix
-	 *
-	 * Note that the prefix must not contain a dot -- this is reserved for
-	 * static pages -- and must not be a reserved prefix such as /peer
-	 * or /network. Do not include path / characters in the prefix. Example
-	 * would be 'controller' for SqliteNetworkController.
-	 *
-	 * @param prefix First element in URI path
-	 * @param subsys Object to call for results of GET and POST/PUT operations
-	 */
-	inline void mount(const char *prefix,SqliteNetworkController *subsys)
-	{
-		Mutex::Lock _l(_lock);
-		_subsystems[std::string(prefix)] = subsys;
 	}
 
 	/**
@@ -102,9 +98,11 @@ public:
 private:
 	OneService *const _svc;
 	Node *const _node;
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	SqliteNetworkController *_controller;
+#endif
 	std::string _uiStaticPath;
 	std::set<std::string> _authTokens;
-	std::map<std::string,SqliteNetworkController *> _subsystems;
 	Mutex _lock;
 };
 

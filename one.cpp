@@ -72,12 +72,7 @@
 
 #include "service/OneService.hpp"
 
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-#include "controller/SqliteNetworkController.hpp"
-#endif
-
 #define ZT1_PID_PATH "zerotier-one.pid"
-#define ZT1_CONTROLLER_DB_PATH "controller.db"
 
 using namespace ZeroTier;
 
@@ -151,7 +146,7 @@ static int cli(int argc,char **argv)
 					json = true;
 					break;
 
-				case 'p': // port for HTTP
+				case 'p':
 					port = Utils::strToUInt(argv[i] + 2);
 					if ((port > 0xffff)||(port == 0)) {
 						cliPrintHelp(argv[0],stdout);
@@ -159,7 +154,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'D': // Home path
+				case 'D':
 					if (argv[i][2]) {
 						homeDir = argv[i] + 2;
 					} else {
@@ -168,7 +163,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'H': // HTTP IP
+				case 'H':
 					if (argv[i][2]) {
 						ip = argv[i] + 2;
 					} else {
@@ -177,7 +172,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'T': // Override root topology
+				case 'T':
 					if (argv[i][2]) {
 						authToken = argv[i] + 2;
 					} else {
@@ -186,7 +181,7 @@ static int cli(int argc,char **argv)
 					}
 					break;
 
-				case 'v': // Display version
+				case 'v':
 					if (argv[i][2]) {
 						cliPrintHelp(argv[0],stdout);
 						return 1;
@@ -227,6 +222,20 @@ static int cli(int argc,char **argv)
 
 		if (!authToken.length()) {
 			OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "authtoken.secret").c_str(),authToken);
+#ifdef __UNIX_LIKE__
+			if (!authToken.length()) {
+				const char *hd = getenv("HOME");
+				if (hd) {
+					char p[4096];
+#ifdef __APPLE__
+					Utils::snprintf(p,sizeof(p),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",hd);
+#else
+					Utils::snprintf(p,sizeof(p),"%s/.zeroTierOneAuthToken",hd);
+#endif
+					OSUtils::readFile(p,authToken);
+				}
+			}
+#endif
 			if (!authToken.length()) {
 				fprintf(stderr,"%s: missing authentication token and authtoken.secret not found (or readable) in %s"ZT_EOL_S,argv[0],homeDir.c_str());
 				return 2;
@@ -741,6 +750,7 @@ static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 }
 
 // Pokes a hole in the Windows firewall (advfirewall) for the running program
+/* -- now done by Advanced Installer
 static void _winPokeAHole()
 {
 	char myPath[MAX_PATH];
@@ -777,6 +787,7 @@ static void _winPokeAHole()
 		}
 	}
 }
+*/
 
 // Returns true if this is running as the local administrator
 static BOOL IsCurrentUserLocalAdministrator(void)
@@ -877,6 +888,9 @@ static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	std::string updateUrl(OneService::autoUpdateUrl());
+	if (updateUrl.length())
+		fprintf(out,"Automatic update enabled:"ZT_EOL_S"  %s"ZT_EOL_S""ZT_EOL_S,updateUrl.c_str());
 	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
@@ -1112,13 +1126,13 @@ int main(int argc,char **argv)
 				return 1;
 			}
 		} else {
-			_winPokeAHole();
+			//_winPokeAHole();
 		}
 		SetConsoleCtrlHandler(&_winConsoleCtrlHandler,TRUE);
 		// continues on to ordinary command line execution code below...
 	} else {
 		// Running from service manager
-		_winPokeAHole();
+		//_winPokeAHole();
 		ZeroTierOneService zt1Service;
 		if (CServiceBase::Run(zt1Service) == TRUE) {
 			return 0;
@@ -1128,19 +1142,6 @@ int main(int argc,char **argv)
 		}
 	}
 #endif // __WINDOWS__
-
-	NetworkController *controller = (NetworkController *)0;
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	try {
-		controller = new SqliteNetworkController((homeDir + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str());
-	} catch (std::exception &exc) {
-		fprintf(stderr,"%s: failure initializing SqliteNetworkController: %s"ZT_EOL_S,argv[0],exc.what());
-		return 1;
-	} catch ( ... ) {
-		fprintf(stderr,"%s: failure initializing SqliteNetworkController: unknown exception"ZT_EOL_S,argv[0]);
-		return 1;
-	}
-#endif // ZT_ENABLE_NETWORK_CONTROLLER
 
 #ifdef __UNIX_LIKE__
 	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_PID_PATH);
@@ -1158,7 +1159,7 @@ int main(int argc,char **argv)
 
 	try {
 		for(;;) {
-			zt1Service = OneService::newInstance(homeDir.c_str(),port,controller,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+			zt1Service = OneService::newInstance(homeDir.c_str(),port,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
 			switch(zt1Service->run()) {
 				case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
 				case OneService::ONE_NORMAL_TERMINATION:
@@ -1191,7 +1192,6 @@ int main(int argc,char **argv)
 
 	delete zt1Service;
 	zt1Service = (OneService *)0;
-	delete controller;
 
 #ifdef __UNIX_LIKE__
 	OSUtils::rm(pidPath.c_str());

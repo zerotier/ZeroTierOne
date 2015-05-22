@@ -79,11 +79,10 @@ public:
 	 * Called when a packet is received from the real network
 	 *
 	 * @param fromAddr Internet IP address of origin
-	 * @param linkDesperation Link desperation of path over which packet was received
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len);
+	void onRemotePacket(const InetAddress &fromAddr,const void *data,unsigned int len);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
@@ -136,9 +135,8 @@ public:
 	 *
 	 * @param peer Peer to contact
 	 * @param atAddr Address of peer
-	 * @param linkDesperation Attempt up to given max desperation
 	 */
-	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr,unsigned int maxDesperation);
+	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr);
 
 	/**
 	 * Request WHOIS on a given address
@@ -182,9 +180,9 @@ public:
 		throw();
 
 private:
-	void _handleRemotePacketFragment(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len);
-	void _handleRemotePacketHead(const InetAddress &fromAddr,int linkDesperation,const void *data,unsigned int len);
-	void _handleBeacon(const InetAddress &fromAddr,int linkDesperation,const Buffer<ZT_PROTO_BEACON_LENGTH> &data);
+	void _handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len);
+	void _handleRemotePacketHead(const InetAddress &fromAddr,const void *data,unsigned int len);
+	void _handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data);
 
 	Address _sendWhoisRequest(
 		const Address &addr,
@@ -248,19 +246,15 @@ private:
 	struct ContactQueueEntry
 	{
 		ContactQueueEntry() {}
-		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &a,unsigned int md) :
+		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &a) :
 			peer(p),
 			fireAtTime(ft),
 			inaddr(a),
-			maxDesperation(md),
-			currentDesperation(0),
-			strategyIteration(1) {} // start with 2nd strategy, zero desperation, since we've already tried 0/0
+			strategyIteration(1) {} // start with 2nd strategy, since first was tried at inception
 
 		SharedPtr<Peer> peer;
 		uint64_t fireAtTime;
 		InetAddress inaddr;
-		unsigned int maxDesperation;
-		unsigned int currentDesperation;
 		unsigned int strategyIteration;
 	};
 	std::list<ContactQueueEntry> _contactQueue;

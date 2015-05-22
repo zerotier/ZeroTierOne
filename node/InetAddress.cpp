@@ -137,8 +137,7 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
 		ss_family = AF_INET6;
-		(reinterpret_cast<uint64_t *>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr))[0] = ((const uint64_t *)ipBytes)[0];
-		(reinterpret_cast<uint64_t *>(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr))[1] = ((const uint64_t *)ipBytes)[1];
+		memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,ipBytes,16);
 		reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_port = Utils::hton((uint16_t)port);
 	}
 }

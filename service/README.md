@@ -59,7 +59,7 @@ Getting /network returns an array of all networks that this node has joined. See
  * Methods: GET, POST, DELETE
  * Returns: { object }
 
-To join a network, POST to it. POST data is optional and may be omitted. Example: POST to /network/8056c2e21c000001 to join the public "Earth" network. To leave a network, DELETE it e.g. DELETE /network/8056c2e21c000001.
+To join a network, POST to it. Since networks have no mandatory writable parameters, POST data is optional and may be omitted. Example: POST to /network/8056c2e21c000001 to join the public "Earth" network. To leave a network, DELETE it e.g. DELETE /network/8056c2e21c000001.
 
 Most network settings are not writable, as they are defined by the network controller.
 
@@ -151,7 +151,13 @@ This returns an array of 16-digit hexadecimal network IDs. Unlike /network under
  * Methods: GET, POST, DELETE
  * Returns: { object }
 
-DELETE for networks is final. Don't do this unless you really mean it!
+By making queries to this path you can create, configure, and delete networks. DELETE is final, so don't do it unless you really mean it.
+
+It's important to understand how network IDs work. The first ten digits (most significant 40 bits) of a network ID are the ZeroTier address of the controller. This is how clients find it. The last six digits (least significant 24 bits) are arbitrary and serve to identify the network uniquely on the controller.
+
+Thus a network's first ten digits *must* be the controller's address. If your controller is *deadbeef01*, then the networks it controls must have IDs like *deadbeef01feed02* or *deadbeef01beef03*. This API however *does not* enforce this requirement. It will allow you to add arbitrary network IDs, but they won't work since clients will never be able to find them.
+
+To create a new network with a random last six digits safely and atomically, you can POST to */controller/network/##########\_\_\_\_\_\_* where ########## is the controller's address and the underscores are as shown. This will pick a random unallocated network ID, which will be returned in the 'nwid' field of the returned JSON object.
 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
