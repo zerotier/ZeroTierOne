@@ -229,7 +229,6 @@ private:
 	Mutex _backgroundTasksLock;
 
 	uint64_t _now;
-	uint64_t _startTimeAfterInactivity;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
 	uint64_t _lastBeacon;

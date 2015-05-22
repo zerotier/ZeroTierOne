@@ -127,6 +127,11 @@ public:
 	virtual std::string portDeviceName(uint64_t nwid) const = 0;
 
 	/**
+	 * @return True if TCP fallback is currently active
+	 */
+	virtual bool tcpFallbackActive() const = 0;
+
+	/**
 	 * Terminate background service (can be called from other threads)
 	 */
 	virtual void terminate() = 0;

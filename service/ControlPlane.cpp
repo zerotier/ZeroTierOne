@@ -360,18 +360,20 @@ unsigned int ControlPlane::handleRequest(
 				_node->status(&status);
 				Utils::snprintf(json,sizeof(json),
 					"{\n"
-					"\t\"address\":\"%.10llx\",\n"
-					"\t\"publicIdentity\":\"%s\",\n"
-					"\t\"online\":%s,\n"
-					"\t\"versionMajor\":%d,\n"
-					"\t\"versionMinor\":%d,\n"
-					"\t\"versionRev\":%d,\n"
-					"\t\"version\":\"%d.%d.%d\",\n"
+					"\t\"address\": \"%.10llx\",\n"
+					"\t\"publicIdentity\": \"%s\",\n"
+					"\t\"online\": %s,\n"
+					"\t\"tcpFallbackActive\": %s,\n"
+					"\t\"versionMajor\": %d,\n"
+					"\t\"versionMinor\": %d,\n"
+					"\t\"versionRev\": %d,\n"
+					"\t\"version\": \"%d.%d.%d\",\n"
 					"\t\"clock\": %llu\n"
 					"}\n",
 					status.address,
 					status.publicIdentity,
 					(status.online) ? "true" : "false",
+					(_svc->tcpFallbackActive()) ? "true" : "false",
 					ZEROTIER_ONE_VERSION_MAJOR,
 					ZEROTIER_ONE_VERSION_MINOR,
 					ZEROTIER_ONE_VERSION_REVISION,
