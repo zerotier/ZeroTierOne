@@ -297,7 +297,7 @@
 /**
  * Delay between initial direct NAT-t packet and more aggressive techniques
  */
-#define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 2000
+#define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
  * Size of anti-recursion history (see AntiRecursion.hpp)
