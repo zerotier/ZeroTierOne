@@ -445,7 +445,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 				} else {
 					// Nope, nothing yet. Time to kill some kittens.
 					if (qi->strategyIteration == 0) {
-						// First stragegy: send packet directly (we already tried this but try again)
+						// First strategy: send packet directly (we already tried this but try again)
 						qi->peer->attemptToContactAt(RR,qi->inaddr,now);
 					} else if (qi->strategyIteration <= 9) {
 						// Strategies 1-9: try escalating ports
