@@ -38,12 +38,10 @@ public interface PacketSender {
      * delivery. It only means that the packet appears to have been sent.</p>
      *
      * @param addr {@link InetSocketAddress} to send to
-     * @param linkDesperation
      * @param packetData data to send
      * @return 0 on success, any error code on failure.
      */
     public int onSendPacketRequested(
             InetSocketAddress addr,
-            int linkDesperation,
             byte[] packetData);
 }

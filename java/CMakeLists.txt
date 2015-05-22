@@ -73,7 +73,9 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED ${src_files})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".jnilib")
+if(APPLE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".jnilib")
+endif()
 
 set(link_libs )
 

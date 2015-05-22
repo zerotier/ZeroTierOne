@@ -75,7 +75,7 @@ public class OneService extends Thread implements Runnable, PacketSender,
 		    			{
 		    				System.out.println("Got Data From: " + p.getAddress().toString() +":" + p.getPort());
 		    				
-		    				_node.processWirePacket(System.currentTimeMillis(), new InetSocketAddress(p.getAddress(), p.getPort()), 0, p.getData(), bgtask);
+		    				_node.processWirePacket(System.currentTimeMillis(), new InetSocketAddress(p.getAddress(), p.getPort()), p.getData(), bgtask);
 		    				_nextBackgroundTaskDeadline = bgtask[0];
 		    			}
 	    			} catch (SocketTimeoutException e) {}
@@ -148,8 +148,7 @@ public class OneService extends Thread implements Runnable, PacketSender,
 	}
 
 	@Override
-	public int onSendPacketRequested(InetSocketAddress addr,
-			int linkDesperation, byte[] packetData) {
+	public int onSendPacketRequested(InetSocketAddress addr, byte[] packetData) {
 		System.out.println("onSendPacketRequested to: " + addr.getHostString() +":"+ addr.getPort() + " ");
 
     	if(_udpSocket == null)

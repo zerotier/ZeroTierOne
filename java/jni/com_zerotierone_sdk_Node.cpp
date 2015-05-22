@@ -403,7 +403,6 @@ namespace {
 
     int WirePacketSendFunction(ZT1_Node *node,void *userData,\
         const struct sockaddr_storage *address,
-        unsigned int linkDesparation,
         const void *buffer,
         unsigned int bufferSize)
     {
@@ -422,7 +421,7 @@ namespace {
         }
 
         jmethodID packetSenderCallbackMethod = cache.findMethod(packetSenderClass,
-            "onSendPacketRequested", "(Ljava/net/InetSocketAddress;I[B)I");
+            "onSendPacketRequested", "(Ljava/net/InetSocketAddress;[B)I");
         if(packetSenderCallbackMethod == NULL)
         {
             LOGE("Couldn't find onSendPacketRequested method");
@@ -432,7 +431,7 @@ namespace {
         jobject addressObj = newInetSocketAddress(env, *address);
         jbyteArray bufferObj = env->NewByteArray(bufferSize);
         env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
-        return env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, addressObj, linkDesparation, bufferObj);
+        return env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, addressObj, bufferObj);
     }
 
     typedef std::map<uint64_t, JniRef*> NodeMap;
@@ -700,7 +699,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     jlong id,
     jlong in_now, 
     jobject in_remoteAddress,
-    jint in_linkDesparation,
     jbyteArray in_packetData,
     jlongArray out_nextBackgroundTaskDeadline)
 {
@@ -719,7 +717,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     }
 
     uint64_t now = (uint64_t)in_now;
-    unsigned int linkDesparation = (unsigned int)in_linkDesparation;
 
     // get the java.net.InetSocketAddress class and getAddress() method
     jclass inetAddressClass = cache.findClass("java/net/InetAddress");
@@ -801,7 +798,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         node,
         now,
         &remoteAddress,
-        linkDesparation,
         packetData,
         packetLength,
         &nextBackgroundTaskDeadline);

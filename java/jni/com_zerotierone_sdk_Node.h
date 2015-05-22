@@ -34,10 +34,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJLjava/net/InetSockAddress;I[B[J)Lcom/zerotier/sdk/ResultCode;
+ * Signature: (JJLjava/net/InetSockAddress;[B[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket
-  (JNIEnv *, jobject, jlong, jlong, jobject, jint, jbyteArray, jlongArray);
+  (JNIEnv *, jobject, jlong, jlong, jobject, jbyteArray, jlongArray);
 
 /*
  * Class:     com_zerotier_sdk_Node

@@ -163,7 +163,6 @@ public class Node {
      *
      * @param now Current clock in milliseconds
      * @param remoteAddress Origin of packet
-     * @param linkDesperation Link desperation metric for link or protocol over which packet arrived
      * @param packetData Packet data
      * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
      * @return OK (0) or error code if a fatal error condition has occurred
@@ -171,11 +170,10 @@ public class Node {
     public ResultCode processWirePacket(
         long now,
         InetSocketAddress remoteAddress,
-        int linkDesperation,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline) {
         return processWirePacket(
-            nodeId, now, remoteAddress, linkDesperation, packetData, 
+            nodeId, now, remoteAddress, packetData, 
             nextBackgroundTaskDeadline);
     }
 
@@ -396,7 +394,6 @@ public class Node {
         long nodeId,
         long now,
         InetSocketAddress remoteAddress,
-        int linkDesperation,
         byte[] packetData,
         long[] nextBackgroundTaskDeadline);
 
