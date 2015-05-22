@@ -45,6 +45,8 @@
 #define ZT_TCP_PROXY_UDP_POOL_START_PORT 10000
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
 
+#define ZT_TCP_PROXY_TCP_PORT 443
+
 using namespace ZeroTier;
 
 /*
@@ -317,6 +319,17 @@ int main(int argc,char **argv)
 		}
 	}
 
+	{
+		struct sockaddr_in laddr;
+		memset(&laddr,0,sizeof(laddr));
+		laddr.sin_family = AF_INET;
+		laddr.sin_port = htons(ZT_TCP_PROXY_TCP_PORT);
+		if (!phy.tcpListen((const struct sockaddr *)&laddr)) {
+			fprintf(stderr,"%s: fatal error: unable to bind TCP port %d\n",argv[0],ZT_TCP_PROXY_TCP_PORT);
+			return 1;
+		}
+	}
+
 	time_t lastDidHousekeeping = time((time_t *)0);
 	for(;;) {
 		phy.poll(120000);
@@ -326,4 +339,6 @@ int main(int argc,char **argv)
 			svc.doHousekeeping();
 		}
 	}
+
+	return 0;
 }
