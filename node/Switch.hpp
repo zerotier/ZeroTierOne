@@ -250,7 +250,7 @@ private:
 			peer(p),
 			fireAtTime(ft),
 			inaddr(a),
-			strategyIteration(1) {} // start with 2nd strategy, since first was tried at inception
+			strategyIteration(0) {}
 
 		SharedPtr<Peer> peer;
 		uint64_t fireAtTime;

@@ -25,6 +25,17 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+// HACK! Will eventually use epoll() or something in Phy<> instead of select().
+// Also be sure to change ulimit -n and fs.file-max in /etc/sysctl.conf on relays.
+#if defined(__linux__) || defined(__LINUX__) || defined(__LINUX) || defined(LINUX)
+#include <linux/posix_types.h>
+#include <bits/types.h>
+#undef __FD_SETSIZE
+#define __FD_SETSIZE 1048576
+#undef FD_SETSIZE
+#define FD_SETSIZE 1048576
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,9 +52,8 @@
 
 #include "../osdep/Phy.hpp"
 
-#define ZT_TCP_PROXY_UDP_POOL_SIZE 1024
-#define ZT_TCP_PROXY_UDP_POOL_START_PORT 10000
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
+#define ZT_TCP_PROXY_TCP_PORT 443
 
 using namespace ZeroTier;
 
@@ -88,8 +98,7 @@ struct TcpProxyService;
 struct TcpProxyService
 {
 	Phy<TcpProxyService *> *phy;
-	PhySocket *udpPool[ZT_TCP_PROXY_UDP_POOL_SIZE];
-
+	int udpPortCounter;
 	struct Client
 	{
 		char tcpReadBuf[131072];
@@ -97,99 +106,101 @@ struct TcpProxyService
 		unsigned long tcpWritePtr;
 		unsigned long tcpReadPtr;
 		PhySocket *tcp;
-		PhySocket *assignedUdp;
+		PhySocket *udp;
 		time_t lastActivity;
 		bool newVersion;
 	};
-
 	std::map< PhySocket *,Client > clients;
 
-	struct ReverseMappingKey
+	PhySocket *getUnusedUdp(void *uptr)
 	{
-		uint64_t sourceZTAddress;
-		PhySocket *sendingUdpSocket;
-		uint32_t destIp;
-		unsigned int destPort;
-
-		ReverseMappingKey() {}
-		ReverseMappingKey(uint64_t zt,PhySocket *s,uint32_t ip,unsigned int port) : sourceZTAddress(zt),sendingUdpSocket(s),destIp(ip),destPort(port) {}
-		inline bool operator<(const ReverseMappingKey &k) const throw() { return (memcmp((const void *)this,(const void *)&k,sizeof(ReverseMappingKey)) < 0); }
-		inline bool operator==(const ReverseMappingKey &k) const throw() { return (memcmp((const void *)this,(const void *)&k,sizeof(ReverseMappingKey)) == 0); }
-	};
-
-	std::map< ReverseMappingKey,Client * > reverseMappings;
+		for(int i=0;i<65535;++i) {
+			++udpPortCounter;
+			if (udpPortCounter > 0xfffe)
+				udpPortCounter = 1024;
+			struct sockaddr_in laddr;
+			memset(&laddr,0,sizeof(struct sockaddr_in));
+			laddr.sin_family = AF_INET;
+			laddr.sin_port = htons((uint16_t)udpPortCounter);
+			PhySocket *udp = phy->udpBind(reinterpret_cast<struct sockaddr *>(&laddr),uptr);
+			if (udp)
+				return udp;
+		}
+		return (PhySocket *)0;
+	}
 
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
 	{
-		if ((from->sa_family == AF_INET)&&(len > 16)&&(len < 2048)) {
-			const uint64_t destZt = (
-				(((uint64_t)(((const unsigned char *)data)[8])) << 32) |
-				(((uint64_t)(((const unsigned char *)data)[9])) << 24) |
-				(((uint64_t)(((const unsigned char *)data)[10])) << 16) |
-				(((uint64_t)(((const unsigned char *)data)[11])) << 8) |
-				((uint64_t)(((const unsigned char *)data)[12])) );
-			const uint32_t fromIp = ((const struct sockaddr_in *)from)->sin_addr.s_addr;
-			const unsigned int fromPort = ntohs(((const struct sockaddr_in *)from)->sin_port);
+		if (!*uptr)
+			return;
+		if ((from->sa_family == AF_INET)&&(len >= 16)&&(len < 2048)) {
+			Client &c = *((Client *)*uptr);
+			c.lastActivity = time((time_t *)0);
 
-			std::map< ReverseMappingKey,Client * >::iterator rm(reverseMappings.find(ReverseMappingKey(destZt,sock,fromIp,fromPort)));
-			if (rm != reverseMappings.end()) {
-				Client &c = *(rm->second);
+			unsigned long mlen = len;
+			if (c.newVersion)
+				mlen += 7; // new clients get IP info
 
-				unsigned long mlen = len;
-				if (c.newVersion)
-					mlen += 7; // new clients get IP info
+			if ((c.tcpWritePtr + 5 + mlen) <= sizeof(c.tcpWriteBuf)) {
+				if (!c.tcpWritePtr)
+					phy->tcpSetNotifyWritable(c.tcp,true);
 
-				if ((c.tcpWritePtr + 5 + mlen) <= sizeof(c.tcpWriteBuf)) {
-					if (!c.tcpWritePtr)
-						phy->tcpSetNotifyWritable(c.tcp,true);
+				c.tcpWriteBuf[c.tcpWritePtr++] = 0x17; // look like TLS data
+				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
+				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
 
-					c.tcpWriteBuf[c.tcpWritePtr++] = 0x17; // look like TLS data
-					c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
-					c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
+				c.tcpWriteBuf[c.tcpWritePtr++] = (char)((mlen >> 8) & 0xff);
+				c.tcpWriteBuf[c.tcpWritePtr++] = (char)(mlen & 0xff);
 
-					c.tcpWriteBuf[c.tcpWritePtr++] = (char)((mlen >> 8) & 0xff);
-					c.tcpWriteBuf[c.tcpWritePtr++] = (char)(mlen & 0xff);
-
-					if (c.newVersion) {
-						c.tcpWriteBuf[c.tcpWritePtr++] = (char)4; // IPv4
-						*((uint32_t *)(c.tcpWriteBuf + c.tcpWritePtr)) = fromIp;
-						c.tcpWritePtr += 4;
-						c.tcpWriteBuf[c.tcpWritePtr++] = (char)((fromPort >> 8) & 0xff);
-						c.tcpWriteBuf[c.tcpWritePtr++] = (char)(fromPort & 0xff);
-					}
-
-					for(unsigned long i=0;i<len;++i)
-						c.tcpWriteBuf[c.tcpWritePtr++] = ((const char *)data)[i];
+				if (c.newVersion) {
+					c.tcpWriteBuf[c.tcpWritePtr++] = (char)4; // IPv4
+					*((uint32_t *)(c.tcpWriteBuf + c.tcpWritePtr)) = ((const struct sockaddr_in *)from)->sin_addr.s_addr;
+					c.tcpWritePtr += 4;
+					*((uint16_t *)(c.tcpWriteBuf + c.tcpWritePtr)) = ((const struct sockaddr_in *)from)->sin_port;
+					c.tcpWritePtr += 2;
 				}
+
+				for(unsigned long i=0;i<len;++i)
+					c.tcpWriteBuf[c.tcpWritePtr++] = ((const char *)data)[i];
 			}
+
+			//printf("<< UDP %s:%d -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(int)ntohs(reinterpret_cast<const struct sockaddr_in *>(from)->sin_port),(unsigned long long)&c);
 		}
 	}
 
 	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
 	{
-		// unused, we don't initiate
+		// unused, we don't initiate outbound connections
 	}
 
 	void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
 		Client &c = clients[sockN];
+		PhySocket *udp = getUnusedUdp((void *)&c);
+		if (!udp) {
+			phy->close(sockN);
+			clients.erase(sockN);
+			//printf("** TCP rejected, no more UDP ports to assign\n");
+			return;
+		}
 		c.tcpWritePtr = 0;
 		c.tcpReadPtr = 0;
 		c.tcp = sockN;
-		c.assignedUdp = udpPool[rand() % ZT_TCP_PROXY_UDP_POOL_SIZE];
+		c.udp = udp;
 		c.lastActivity = time((time_t *)0);
 		c.newVersion = false;
 		*uptrN = (void *)&c;
+		//printf("<< TCP from %s -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(unsigned long long)&c);
 	}
 
 	void phyOnTcpClose(PhySocket *sock,void **uptr)
 	{
-		for(std::map< ReverseMappingKey,Client * >::iterator rm(reverseMappings.begin());rm!=reverseMappings.end();) {
-			if (rm->second == (Client *)*uptr)
-				reverseMappings.erase(rm++);
-			else ++rm;
-		}
+		if (!*uptr)
+			return;
+		Client &c = *((Client *)*uptr);
+		phy->close(c.udp);
 		clients.erase(sock);
+		//printf("** TCP %.16llx closed\n",(unsigned long long)*uptr);
 	}
 
 	void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
@@ -210,6 +221,7 @@ struct TcpProxyService
 					if (mlen == 4) {
 						// Right now just sending this means the client is 'new enough' for the IP header
 						c.newVersion = true;
+						//printf("<< TCP %.16llx HELLO\n",(unsigned long long)*uptr);
 					} else if (mlen >= 7) {
 						char *payload = c.tcpReadBuf + 5;
 						unsigned long payloadLen = mlen;
@@ -239,22 +251,8 @@ struct TcpProxyService
 
 						// Note: we do not relay to privileged ports... just an abuse prevention rule.
 						if ((ntohs(dest.sin_port) > 1024)&&(payloadLen >= 16)) {
-							if ((payloadLen >= 28)&&(payload[13] != (char)0xff)) {
-								// Learn reverse mappings -- we will route replies to these packets
-								// back to their sending TCP socket. They're on a first come first
-								// served basis.
-								const uint64_t sourceZt = (
-									(((uint64_t)(((const unsigned char *)payload)[13])) << 32) |
-									(((uint64_t)(((const unsigned char *)payload)[14])) << 24) |
-									(((uint64_t)(((const unsigned char *)payload)[15])) << 16) |
-									(((uint64_t)(((const unsigned char *)payload)[16])) << 8) |
-									((uint64_t)(((const unsigned char *)payload)[17])) );
-								ReverseMappingKey k(sourceZt,c.assignedUdp,dest.sin_addr.s_addr,ntohl(dest.sin_port));
-								if (reverseMappings.count(k) == 0)
-									reverseMappings[k] = &c;
-							}
-
-							phy->udpSend(c.assignedUdp,(const struct sockaddr *)&dest,payload,payloadLen);
+							phy->udpSend(c.udp,(const struct sockaddr *)&dest,payload,payloadLen);
+							//printf(">> TCP %.16llx to %s:%d\n",(unsigned long long)*uptr,inet_ntoa(dest.sin_addr),(int)ntohs(dest.sin_port));
 						}
 					}
 
@@ -282,11 +280,13 @@ struct TcpProxyService
 		std::vector<PhySocket *> toClose;
 		time_t now = time((time_t *)0);
 		for(std::map< PhySocket *,Client >::iterator c(clients.begin());c!=clients.end();++c) {
-			if ((now - c->second.lastActivity) >= ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS)
+			if ((now - c->second.lastActivity) >= ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS) {
 				toClose.push_back(c->first);
+				toClose.push_back(c->second.udp);
+			}
 		}
 		for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s)
-			phy->close(*s); // will call phyOnTcpClose() which does cleanup
+			phy->close(*s);
 	}
 };
 
@@ -297,22 +297,17 @@ int main(int argc,char **argv)
 	srand(time((time_t *)0));
 
 	TcpProxyService svc;
-	Phy<TcpProxyService *> phy(&svc,true);
+	Phy<TcpProxyService *> phy(&svc,false);
 	svc.phy = &phy;
+	svc.udpPortCounter = 1023;
 
 	{
-		int poolSize = 0;
-		for(unsigned int p=ZT_TCP_PROXY_UDP_POOL_START_PORT;((poolSize<ZT_TCP_PROXY_UDP_POOL_SIZE)&&(p<=65535));++p) {
-			struct sockaddr_in laddr;
-			memset(&laddr,0,sizeof(laddr));
-			laddr.sin_family = AF_INET;
-			laddr.sin_port = htons((uint16_t)p);
-			PhySocket *s = phy.udpBind((const struct sockaddr *)&laddr);
-			if (s)
-				svc.udpPool[poolSize++] = s;
-		}
-		if (poolSize < ZT_TCP_PROXY_UDP_POOL_SIZE) {
-			fprintf(stderr,"%s: fatal error: cannot bind %d UDP ports\n",argv[0],ZT_TCP_PROXY_UDP_POOL_SIZE);
+		struct sockaddr_in laddr;
+		memset(&laddr,0,sizeof(laddr));
+		laddr.sin_family = AF_INET;
+		laddr.sin_port = htons(ZT_TCP_PROXY_TCP_PORT);
+		if (!phy.tcpListen((const struct sockaddr *)&laddr)) {
+			fprintf(stderr,"%s: fatal error: unable to bind TCP port %d\n",argv[0],ZT_TCP_PROXY_TCP_PORT);
 			return 1;
 		}
 	}
@@ -326,4 +321,6 @@ int main(int argc,char **argv)
 			svc.doHousekeeping();
 		}
 	}
+
+	return 0;
 }

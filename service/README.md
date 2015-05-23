@@ -26,6 +26,7 @@ A *jsonp* URL argument may be supplied to request JSONP encapsulation. A JSONP r
 <tr><td>address</td><td>string</td><td>10-digit hexadecimal ZeroTier address of this node</td><td>no</td></tr>
 <tr><td>publicIdentity</td><td>string</td><td>Full public ZeroTier identity of this node</td><td>no</td></tr>
 <tr><td>online</td><td>boolean</td><td>Does this node appear to have upstream network access?</td><td>no</td></tr>
+<tr><td>tcpFallbackActive</td><td>boolean</td><td>Is TCP fallback mode active?</td><td>no</td></tr>
 <tr><td>versionMajor</td><td>integer</td><td>ZeroTier major version</td><td>no</td></tr>
 <tr><td>versionMinor</td><td>integer</td><td>ZeroTier minor version</td><td>no</td></tr>
 <tr><td>versionRev</td><td>integer</td><td>ZeroTier revision</td><td>no</td></tr>

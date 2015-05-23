@@ -77,7 +77,6 @@ Node::Node(
 	_networks(),
 	_networks_m(),
 	_now(now),
-	_startTimeAfterInactivity(0),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0),
 	_lastBeacon(0)
@@ -217,17 +216,12 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
 		_lastPingCheck = now;
 
-		// This is used to compute whether we appear to be "online" or not
-		if ((now - _startTimeAfterInactivity) > (ZT_PING_CHECK_INVERVAL * 3))
-			_startTimeAfterInactivity = now;
-
 		try {
 			_PingPeersThatNeedPing pfunc(RR,now);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
-			const uint64_t lastActivityAgo = now - std::max(_startTimeAfterInactivity,pfunc.lastReceiveFromUpstream);
 			bool oldOnline = _online;
-			_online = (lastActivityAgo < ZT_PEER_ACTIVITY_TIMEOUT);
+			_online = ((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT);
 			if (oldOnline != _online)
 				postEvent(_online ? ZT1_EVENT_ONLINE : ZT1_EVENT_OFFLINE);
 		} catch ( ... ) {
