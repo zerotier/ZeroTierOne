@@ -12,7 +12,7 @@ public class DataStore implements DataStoreGetListener, DataStorePutListener {
 
 	private DataStoreFileProvider _provider;
 
-	DataStore(DataStoreFileProvider provider) {
+	public DataStore(DataStoreFileProvider provider) {
 		this._provider = provider;
 	}
 	
@@ -23,7 +23,7 @@ public class DataStore implements DataStoreGetListener, DataStorePutListener {
 			FileOutputStream fos = _provider.getOutputFileStream(name);
             fos.write(buffer);
             fos.close();
-            return buffer.length;
+            return 0;
 		} catch (FileNotFoundException fnf) {
 			fnf.printStackTrace();
 			return -1;

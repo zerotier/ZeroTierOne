@@ -38,7 +38,7 @@ public interface VirtualNetworkFrameListener {
      * @param vlanId
      * @param frameData data to send
      */
-    void onVirtualNetworkFrame(
+    public void onVirtualNetworkFrame(
                 long nwid,
                 long srcMac,
                 long destMac,
