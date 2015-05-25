@@ -97,6 +97,8 @@
 "  ipProtocol integer,\n"\
 "  ipSourcePort integer,\n"\
 "  ipDestPort integer,\n"\
+"  flags integer,\n"\
+"  invFlags integer,\n"\
 "  \"action\" varchar(4096) NOT NULL DEFAULT('accept')\n"\
 ");\n"\
 "\n"\

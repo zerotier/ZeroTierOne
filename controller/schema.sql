@@ -96,6 +96,8 @@ CREATE TABLE Rule (
   ipProtocol integer,
   ipSourcePort integer,
   ipDestPort integer,
+  flags integer,
+  invFlags integer,
   "action" varchar(4096) NOT NULL DEFAULT('accept')
 );
 

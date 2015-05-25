@@ -167,7 +167,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"SELECT n.id FROM Member AS m,Node AS n WHERE m.networkId = ? AND n.id = m.nodeId ORDER BY n.id ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.identity,n.lastAt,n.lastSeen,n.firstSeen FROM Member AS m,Node AS n WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits,ipVersion FROM IpAssignmentPool WHERE networkId = ? ORDER BY ipNetwork ASC",-1,&_sGetIpAssignmentPools2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT ruleId,nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleId ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ruleId,nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"flags\",invFlags,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleId ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleId,nodeId,vlanId,vlanPcP,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
@@ -868,6 +868,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 												const json_int_t *ipProtocol;
 												const json_int_t *ipSourcePort;
 												const json_int_t *ipDestPort;
+												const json_int_t *flags;
+												const json_int_t *invFlags;
 												const char *action;
 											} rule;
 											memset(&rule,0,sizeof(rule));
@@ -899,6 +901,10 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 													rule.ipSourcePort = &(rj->u.object.values[rk].value->u.integer);
 												else if ((!strcmp(rj->u.object.values[rk].name,"ipDestPort"))&&(rj->u.object.values[rk].value->type == json_integer))
 													rule.ipDestPort = &(rj->u.object.values[rk].value->u.integer);
+												else if ((!strcmp(rj->u.object.values[rk].name,"flags"))&&(rj->u.object.values[rk].value->type == json_integer))
+													rule.flags = &(rj->u.object.values[rk].value->u.integer);
+												else if ((!strcmp(rj->u.object.values[rk].name,"invFlags"))&&(rj->u.object.values[rk].value->type == json_integer))
+													rule.invFlags = &(rj->u.object.values[rk].value->u.integer);
 												else if ((!strcmp(rj->u.object.values[rk].name,"action"))&&(rj->u.object.values[rk].value->type == json_string))
 													rule.action = rj->u.object.values[rk].value->u.string.ptr;
 											}
@@ -908,7 +914,9 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 												sqlite3_reset(_sCreateRule);
 												sqlite3_bind_text(_sCreateRule,1,nwids,16,SQLITE_STATIC);
 												sqlite3_bind_int64(_sCreateRule,2,*rule.ruleId);
-												for(int i=3;i<=14;++i)
+
+												// Optional values: null by default
+												for(int i=3;i<=16;++i)
 													sqlite3_bind_null(_sCreateRule,i);
 												if ((rule.nodeId)&&(strlen(rule.nodeId) == 10)) sqlite3_bind_text(_sCreateRule,3,rule.nodeId,10,SQLITE_STATIC);
 												if (rule.vlanId) sqlite3_bind_int(_sCreateRule,4,(int)*rule.vlanId);
@@ -930,7 +938,10 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 												if (rule.ipProtocol) sqlite3_bind_int(_sCreateRule,12,(int)*rule.ipProtocol);
 												if (rule.ipSourcePort) sqlite3_bind_int(_sCreateRule,13,(int)*rule.ipSourcePort & (int)0xffff);
 												if (rule.ipDestPort) sqlite3_bind_int(_sCreateRule,14,(int)*rule.ipDestPort & (int)0xffff);
-												sqlite3_bind_text(_sCreateRule,15,rule.action,-1,SQLITE_STATIC);
+												if (rule.flags) sqlite3_bind_int64(_sCreateRule,15,(int64_t)*rule.flags);
+												if (rule.invFlags) sqlite3_bind_int64(_sCreateRule,16,(int64_t)*rule.invFlags);
+
+												sqlite3_bind_text(_sCreateRule,17,rule.action,-1,SQLITE_STATIC);
 												sqlite3_step(_sCreateRule);
 											}
 										}
@@ -1262,8 +1273,16 @@ unsigned int SqliteNetworkController::_doCPGet(
 							Utils::snprintf(json,sizeof(json),"\t\t\"ipDestPort\": %d,\n",sqlite3_column_int(_sListRules,12));
 							responseBody.append(json);
 						}
+						if (sqlite3_column_type(_sListRules,13) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\t\"flags\": %lu,\n",(unsigned long)sqlite3_column_int64(_sListRules,13));
+							responseBody.append(json);
+						}
+						if (sqlite3_column_type(_sListRules,14) != SQLITE_NULL) {
+							Utils::snprintf(json,sizeof(json),"\t\t\"invFlags\": %lu,\n",(unsigned long)sqlite3_column_int64(_sListRules,14));
+							responseBody.append(json);
+						}
 						responseBody.append("\t\t\"action\": \"");
-						responseBody.append(_jsonEscape((const char *)sqlite3_column_text(_sListRules,13)));
+						responseBody.append(_jsonEscape( (sqlite3_column_type(_sListRules,15) == SQLITE_NULL) ? "drop" : (const char *)sqlite3_column_text(_sListRules,15) ));
 						responseBody.append("\"\n\t}");
 					}
 
