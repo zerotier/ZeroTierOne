@@ -8,6 +8,25 @@ function ZT1Client(url,authToken)
 	this.authToken = authToken;
 }
 
+// Generate new ZeroTier identity -- mostly for testing
+ZT1Client.prototype.newIdentity = function(callback)
+{
+	request({
+		url: this.url + 'newIdentity',
+		method: 'GET',
+		json: false,
+		headers: {
+			'X-ZT1-Auth': this.authToken
+		}
+	},function(error,response,body) {
+		if (error)
+			return callback(error,null);
+		if (response.statusCode === 200)
+			return callback(null,body);
+		return callback(new Error('server responded with error: '+response.statusCode),'');
+	});
+}
+
 ZT1Client.prototype._jsonGet = function(getPath,callback)
 {
 	request({
@@ -132,6 +151,10 @@ ZT1Client.prototype.saveControllerNetwork = function(network,callback)
 			return callback(new Error('server responded with error: '+response.statusCode),null);
 		return callback(null,(typeof body === 'string') ? JSON.parse(body) : body);
 	});
+};
+
+ZT1Client.prototype.getControllerNetworkMember = function(nwid,address,callback) {
+	this._jsonGet('controller/network/' + nwid + '/member/' + address,callback);
 };
 
 exports.ZT1Client = ZT1Client;

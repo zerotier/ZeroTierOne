@@ -139,21 +139,6 @@ Network::~Network()
 	}
 }
 
-std::vector<MulticastGroup> Network::allMulticastGroups() const
-{
-	Mutex::Lock _l(_lock);
-	std::vector<MulticastGroup> mgs(_myMulticastGroups);
-	std::vector<MulticastGroup>::iterator oldend(mgs.end());
-	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i) {
-		if (!std::binary_search(mgs.begin(),oldend,i->first))
-			mgs.push_back(i->first);
-	}
-	if ((_config)&&(_config->enableBroadcast()))
-		mgs.push_back(Network::BROADCAST);
-	std::sort(mgs.begin(),mgs.end());
-	return mgs;
-}
-
 bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBridgedGroups) const
 {
 	Mutex::Lock _l(_lock);
@@ -510,6 +495,22 @@ bool Network::_isAllowed(const Address &peer) const
 	return false; // default position on any failure
 }
 
+std::vector<MulticastGroup> Network::_allMulticastGroups() const
+{
+	// Assumes _lock is locked
+	std::vector<MulticastGroup> mgs(_myMulticastGroups);
+	std::vector<MulticastGroup>::iterator oldend(mgs.end());
+	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i) {
+		if (!std::binary_search(mgs.begin(),oldend,i->first))
+			mgs.push_back(i->first);
+	}
+	if ((_config)&&(_config->enableBroadcast()))
+		mgs.push_back(Network::BROADCAST);
+	std::sort(mgs.begin(),mgs.end());
+	std::unique(mgs.begin(),mgs.end());
+	return mgs;
+}
+
 // Used in Network::_announceMulticastGroups()
 class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths
 {
@@ -518,7 +519,8 @@ public:
 		RR(renv),
 		_now(renv->node->now()),
 		_network(nw),
-		_supernodeAddresses(renv->topology->supernodeAddresses())
+		_supernodeAddresses(renv->topology->supernodeAddresses()),
+		_allMulticastGroups(nw->_allMulticastGroups())
 	{}
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
@@ -526,9 +528,8 @@ public:
 		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->address()) != _supernodeAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
-			std::vector<MulticastGroup> mgs(_network->allMulticastGroups());
-			for(std::vector<MulticastGroup>::iterator mg(mgs.begin());mg!=mgs.end();++mg) {
-				if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+			for(std::vector<MulticastGroup>::iterator mg(_allMulticastGroups.begin());mg!=_allMulticastGroups.end();++mg) {
+				if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 					outp.armor(p->key(),true);
 					p->send(RR,outp.data(),outp.size(),_now);
 					outp.reset(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
@@ -552,6 +553,7 @@ private:
 	uint64_t _now;
 	Network *_network;
 	std::vector<Address> _supernodeAddresses;
+	std::vector<MulticastGroup> _allMulticastGroups;
 };
 
 void Network::_announceMulticastGroups()
