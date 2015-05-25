@@ -95,7 +95,7 @@ namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
 #include "../osdep/WindowsEthernetTap.hpp"
 namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
 #endif
-#if defined(__BSD__) && (!defined(__APPLE__))
+#ifdef __FreeBSD__
 #include "../osdep/BSDEthernetTap.hpp"
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #endif
