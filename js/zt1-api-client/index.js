@@ -2,14 +2,14 @@
 
 var request = require('request');
 
-function ZT1Client(url,authToken)
+function ZT1ApiClient(url,authToken)
 {
 	this.url = url;
 	this.authToken = authToken;
 }
 
 // Generate new ZeroTier identity -- mostly for testing
-ZT1Client.prototype.newIdentity = function(callback)
+ZT1ApiClient.prototype.newIdentity = function(callback)
 {
 	request({
 		url: this.url + 'newIdentity',
@@ -27,7 +27,7 @@ ZT1Client.prototype.newIdentity = function(callback)
 	});
 }
 
-ZT1Client.prototype._jsonGet = function(getPath,callback)
+ZT1ApiClient.prototype._jsonGet = function(getPath,callback)
 {
 	request({
 		url: this.url + getPath,
@@ -44,7 +44,7 @@ ZT1Client.prototype._jsonGet = function(getPath,callback)
 	});
 };
 
-ZT1Client.prototype.status = function(callback)
+ZT1ApiClient.prototype.status = function(callback)
 {
 	request({
 		url: this.url + 'controller',
@@ -77,27 +77,27 @@ ZT1Client.prototype.status = function(callback)
 	}.bind(this));
 };
 
-ZT1Client.prototype.getNetworks = function(callback)
+ZT1ApiClient.prototype.getNetworks = function(callback)
 {
 	this._jsonGet('network',callback);
 };
 
-ZT1Client.prototype.getPeers = function(callback)
+ZT1ApiClient.prototype.getPeers = function(callback)
 {
 	this._jsonGet('peer',callback);
 };
 
-ZT1Client.prototype.listControllerNetworks = function(callback)
+ZT1ApiClient.prototype.listControllerNetworks = function(callback)
 {
 	this._jsonGet('controller/network',callback);
 };
 
-ZT1Client.prototype.getControllerNetwork = function(nwid,callback)
+ZT1ApiClient.prototype.getControllerNetwork = function(nwid,callback)
 {
 	this._jsonGet('controller/network/' + nwid,callback);
 };
 
-ZT1Client.prototype.saveControllerNetwork = function(network,callback)
+ZT1ApiClient.prototype.saveControllerNetwork = function(network,callback)
 {
 	if ((typeof network.nwid !== 'string')||(network.nwid.length !== 16))
 		return callback(new Error('Missing required field: nwid'),null);
@@ -153,8 +153,8 @@ ZT1Client.prototype.saveControllerNetwork = function(network,callback)
 	});
 };
 
-ZT1Client.prototype.getControllerNetworkMember = function(nwid,address,callback) {
+ZT1ApiClient.prototype.getControllerNetworkMember = function(nwid,address,callback) {
 	this._jsonGet('controller/network/' + nwid + '/member/' + address,callback);
 };
 
-exports.ZT1Client = ZT1Client;
+exports.ZT1ApiClient = ZT1ApiClient;
