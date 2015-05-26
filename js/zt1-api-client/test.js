@@ -19,9 +19,9 @@ zt1.status(function(err,status) {
 
 			if (status.controller) {
 				zt1.saveControllerNetwork({
-					nwid: status.address + 'dead01',
-					name: 'test network',
-					private: true
+					"nwid": status.address + 'dead01',
+					"name": 'test network',
+					"private": true
 				},function(err,network) {
 					if (err)
 						console.log(err);
