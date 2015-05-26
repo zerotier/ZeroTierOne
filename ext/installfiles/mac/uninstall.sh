@@ -2,49 +2,47 @@
 
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
-zthome="/Library/Application Support/ZeroTier/One"
-ztapp="/Applications/ZeroTier One.app"
-if [ -z "$ztapp" -o ! -d "$ztapp" ]; then
-	ztapp=`mdfind kMDItemCFBundleIdentifier == 'com.zerotier.ZeroTierOne' | grep -E '.*ZeroTier One[.]app$' | grep -v -F '/build-' | grep -v -F '/Volumes/ZeroTier' | sort | head -n 1`
-fi
-
 if [ "$UID" -ne 0 ]; then
 	echo "Must be run as root; try: sudo $0"
 	exit 1
 fi
 
-echo "Killing any running zerotier-one service..."
-killall -TERM zerotier-one >>/dev/null 2>&1
-sleep 3
-killall -KILL zerotier-one >>/dev/null 2>&1
-sleep 1
-
-echo "Unloading kernel extension..."
-kextunload "$zthome/pre10.8/tap.kext" >>/dev/null 2>&1
-kextunload "$zthome/tap.kext" >>/dev/null 2>&1
-
-echo "Erasing GUI app (if installed)..."
-if [ ! -z "$ztapp" -a -d "$ztapp" -a -f "$ztapp/Contents/Info.plist" ]; then
-	rm -rf "$ztapp"
+if [ ! -f '/Library/LaunchDaemons/com.zerotier.one.plist' ]; then
+	echo 'ZeroTier One does not seem to be installed.'
+	exit 1
 fi
 
-echo "Erasing service and support files..."
-rm -f /usr/bin/zerotier-cli
-rm -f /usr/bin/zerotier-idtool
-cd "$zthome"
-rm -f zerotier-one *.persist identity.public *.log *.pid *.sh shutdownIfUnreadable
-rm -rf pre10.8 tap.kext updates.d networks.d
+cd /
 
-echo "Removing LaunchDaemons item..."
-rm -f /Library/LaunchDaemons/com.zerotier.one.plist
-launchctl remove com.zerotier.one
+echo 'Stopping any running ZeroTier One service...'
+launchctl unload '/Library/LaunchDaemons/com.zerotier.one.plist' >>/dev/null 2>&1
+sleep 1
+killall -TERM zerotier-one >>/dev/null 2>&1
+sleep 1
+killall -KILL zerotier-one >>/dev/null 2>&1
 
-echo "Done."
+echo "Making sure kext is unloaded..."
+kextunload '/Library/Application Support/ZeroTier/One/tap.kext' >>/dev/null 2>&1
+
+echo "Removing ZeroTier One files..."
+
+rm -rf '/Applications/ZeroTier One.app'
+rm -f '/usr/bin/zerotier-one' '/usr/bin/zerotier-idtool' '/usr/bin/zerotier-cli' '/Library/LaunchDaemons/com.zerotier.one.plist'
+mkdir -p /tmp/ZeroTierOne_uninstall_tmp
+cp "/Library/Application Support/ZeroTier/One/*.secret" /tmp/ZeroTierOne_uninstall_tmp
+rm -rf '/Library/Application Support/ZeroTier/One'
+mkdir -p '/Library/Application Support/ZeroTier/One'
+cp "/tmp/ZeroTierOne_uninstall_tmp/*.secret" '/Library/Application Support/ZeroTier/One'
+chmod 0600 "/Library/Application Support/ZeroTier/One/*.secret"
+rm -rf /tmp/ZeroTierOne_uninstall_tmp
+
+echo 'Uninstall complete.'
 echo
-echo "Your ZeroTier One identity is still in: $zthome"
-echo "as identity.secret and can be manually deleted if you wish. Save it if"
-echo "you wish to re-use the address of this node, as it cannot be regenerated."
-
+echo 'Your identity and secret authentication token have been preserved in:'
+echo '  /Library/Application Support/ZeroTier/One'
+echo
+echo 'You can delete this folder and its contents if you do not intend to re-use'
+echo 'them.'
 echo
 
 exit 0
