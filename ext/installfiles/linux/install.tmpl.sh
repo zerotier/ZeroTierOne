@@ -12,22 +12,6 @@ if [ "$UID" -ne 0 ]; then
 	dryRun=1
 fi
 
-# Detect systemd vs. regular init
-SYSTEMDUNITDIR=
-if [ -e /bin/systemctl -o -e /usr/bin/systemctl -o -e /usr/local/bin/systemctl -o -e /sbin/systemctl -o -e /usr/sbin/systemctl ]; then
-	if [ -e /usr/bin/pkg-config ]; then
-		SYSTEMDUNITDIR=`/usr/bin/pkg-config systemd --variable=systemdsystemunitdir`
-	fi
-	if [ -z "$SYSTEMDUNITDIR" -o ! -d "$SYSTEMDUNITDIR" ]; then
-		if [ -d /usr/lib/systemd/system ]; then
-			SYSTEMDUNITDIR=/usr/lib/systemd/system
-		fi
-		if [ -d /etc/systemd/system ]; then
-			SYSTEMDUNITDIR=/etc/systemd/system
-		fi
-	fi
-fi
-
 if [ $dryRun -gt 0 ]; then
 	alias ln="echo '>> ln'"
 	alias rm="echo '>> rm'"
@@ -51,6 +35,27 @@ if [ ! -r "$scriptPath" ]; then
 	fi
 fi
 
+# Check for systemd vs. old school SysV init
+SYSTEMDUNITDIR=
+if [ -e /bin/systemctl -o -e /usr/bin/systemctl -o -e /usr/local/bin/systemctl -o -e /sbin/systemctl -o -e /usr/sbin/systemctl ]; then
+	# Second check: test if systemd appears to actually be running. Apparently Ubuntu
+	# thought it was a good idea to ship with systemd installed but not used. Issue #133
+	if [ -d /var/run/systemd/system -o -d /run/systemd/system ]; then
+		if [ -e /usr/bin/pkg-config ]; then
+			SYSTEMDUNITDIR=`/usr/bin/pkg-config systemd --variable=systemdsystemunitdir`
+		fi
+		if [ -z "$SYSTEMDUNITDIR" -o ! -d "$SYSTEMDUNITDIR" ]; then
+			if [ -d /usr/lib/systemd/system ]; then
+				SYSTEMDUNITDIR=/usr/lib/systemd/system
+			fi
+			if [ -d /etc/systemd/system ]; then
+				SYSTEMDUNITDIR=/etc/systemd/system
+			fi
+		fi
+	fi
+fi
+
+# Find the end of this script, which is where we have appended binary data.
 endMarkerIndex=`grep -a -b -E '^################' "$scriptPath" | head -c 16 | cut -d : -f 1`
 if [ "$endMarkerIndex" -le 100 ]; then
 	echo 'Internal error: unable to find end of script / start of binary data marker.'
@@ -86,7 +91,7 @@ echo -n 'Getting version of new install... '
 newVersion=`/var/lib/zerotier-one/zerotier-one -v`
 echo $newVersion
 
-echo 'Installing zerotier-cli command line utility...'
+echo 'Creating symlinks...'
 
 rm -f /usr/bin/zerotier-cli /usr/bin/zerotier-idtool
 ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-cli
@@ -94,10 +99,9 @@ ln -sf /var/lib/zerotier-one/zerotier-one /usr/bin/zerotier-idtool
 
 echo 'Installing zerotier-one service...'
 
-# Note: ensure that service restarts are the last thing this script actually
-# does, since these may kill the script itself. Also note the & to allow
-# them to finish independently.
 if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
+	# SYSTEMD
+
 	# If this was updated or upgraded from an init.d based system, clean up the old
 	# init.d stuff before installing directly via systemd.
 	if [ -f /etc/init.d/zerotier-one ]; then
@@ -114,11 +118,13 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
 	systemctl enable zerotier-one.service
-	if [ "$origVersion" != "$newVersion" ]; then
-		echo 'Version has changed, starting...'
-		systemctl restart zerotier-one.service
-	fi
+	#if [ "$origVersion" != "$newVersion" ]; then
+	#	echo 'Version has changed, starting...'
+	#	systemctl restart zerotier-one.service
+	#fi
 else
+	# SYSV INIT -- also covers upstart which supports SysVinit backward compatibility
+
 	cp -f /tmp/init.d_zerotier-one /etc/init.d/zerotier-one
 	chmod 0755 /etc/init.d/zerotier-one
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
@@ -126,6 +132,7 @@ else
 	if [ -f /sbin/chkconfig -o -f /usr/sbin/chkconfig -o -f /usr/bin/chkconfig -o -f /bin/chkconfig ]; then
 		chkconfig zerotier-one on
 	else
+		# Yes Virginia, some systems lack chkconfig.
 		if [ -d /etc/rc0.d ]; then
 			rm -f /etc/rc0.d/???zerotier-one
 			ln -sf /etc/init.d/zerotier-one /etc/rc0.d/K89zerotier-one
@@ -156,14 +163,14 @@ else
 		fi
 	fi
 
-	if [ "$origVersion" != "$newVersion" ]; then
-		echo 'Version has changed, starting...'
-		if [ -f /sbin/service -o -f /usr/sbin/service ]; then
-			service zerotier-one restart
-		else
-			/etc/init.d/zerotier-one restart
-		fi
-	fi
+	#if [ "$origVersion" != "$newVersion" ]; then
+	#	echo 'Version has changed, starting...'
+	#	if [ -f /sbin/service -o -f /usr/sbin/service ]; then
+	#		service zerotier-one restart
+	#	else
+	#		/etc/init.d/zerotier-one restart
+	#	fi
+	#fi
 fi
 
 exit 0
