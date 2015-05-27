@@ -260,6 +260,7 @@ namespace {
                 env->CallVoidMethod(ref->eventListener, onNetworkErrorMethod, addressObj);
             }
         }
+        break;
         case ZT1_EVENT_TRACE:
         {
             // call onTrace()
