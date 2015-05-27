@@ -36,7 +36,7 @@ JniCache::JniCache()
     , m_methods()
     , m_staticMethods()
 {
-    LOGD("JNI Cache Created");
+    LOGV("JNI Cache Created");
 }
 
 JniCache::JniCache(JavaVM *jvm)
@@ -47,12 +47,12 @@ JniCache::JniCache(JavaVM *jvm)
     , m_methods()
     , m_staticMethods()
 {
-    LOGD("JNI Cache Created");
+    LOGV("JNI Cache Created");
 }
 
 JniCache::~JniCache()
 {
-    LOGD("JNI Cache Destroyed");
+    LOGV("JNI Cache Destroyed");
     clearCache();
 }
 
@@ -80,7 +80,7 @@ void JniCache::clearCache()
 
 void JniCache::setJavaVM(JavaVM *jvm)
 { 
-    LOGD("Assigned JVM to object");
+    LOGV("Assigned JVM to object");
     m_jvm = jvm; 
 }
 
@@ -116,7 +116,7 @@ jclass JniCache::findClass(const std::string &name)
         return cls;
     }
 
-    LOGD("Returning cached %s", name.c_str());
+    LOGV("Returning cached %s", name.c_str());
     return found->second;
 }
 

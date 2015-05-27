@@ -324,7 +324,7 @@ namespace {
             return -2; // couldn't create long[1] array
         }
 
-        LOGD("Calling onDataStoreGet(%s, %p, %lu, %p)",
+        LOGV("Calling onDataStoreGet(%s, %p, %lu, %p)",
             objectName, buffer, bufferIndex, objectSizeObj);
 
         long retval = (long)env->CallLongMethod(
@@ -470,7 +470,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     JNIEnv *env, jobject obj, jlong now)
 {
-    LOGD("Creating ZT1_Node struct");
+    LOGV("Creating ZT1_Node struct");
     jobject resultObject = createResultObject(env, ZT1_RESULT_OK);
 
     ZT1_Node *node;
@@ -604,7 +604,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
 JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
     JNIEnv *env, jobject obj, jlong id)
 {
-    LOGD("Destroying ZT1_Node struct");
+    LOGV("Destroying ZT1_Node struct");
     uint64_t nodeId = (uint64_t)id;
 
     NodeMap::iterator found = nodeMap.find(nodeId);
