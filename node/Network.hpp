@@ -106,7 +106,11 @@ public:
 	/**
 	 * @return All multicast groups including learned groups that are behind any bridges we're attached to
 	 */
-	std::vector<MulticastGroup> allMulticastGroups() const;
+	inline std::vector<MulticastGroup> allMulticastGroups() const
+	{
+		Mutex::Lock _l(_lock);
+		return _allMulticastGroups();
+	}
 
 	/**
 	 * @param mg Multicast group
@@ -356,6 +360,7 @@ private:
 	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const Address &peer) const;
 	void _announceMulticastGroups();
+	std::vector<MulticastGroup> _allMulticastGroups() const;
 
 	const RuntimeEnvironment *RR;
 	uint64_t _id;

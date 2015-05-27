@@ -25,6 +25,7 @@
 *.obj
 *.tlog
 *.pid
+*.pkg
 /*.deb
 /*.rpm
 /build-*

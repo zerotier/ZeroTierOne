@@ -1,7 +1,7 @@
 {
-  "name": "nodejs-zt1-client",
-  "version": "1.0.0",
-  "description": "ZeroTier One Network Virtualization Service JSON API Client",
+  "name": "zt1-api-client",
+  "version": "0.0.1",
+  "description": "ZeroTier One JSON API Client",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
