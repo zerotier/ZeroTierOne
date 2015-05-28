@@ -41,7 +41,7 @@ public final class Peer {
     private int versionRev;
     private int latency;
     private PeerRole role;
-    private ArrayList<PeerPhysicalPath> paths;
+    private PeerPhysicalPath[] paths;
 
     private Peer() {}
 
@@ -104,7 +104,7 @@ public final class Peer {
     /**
      * Known network paths to peer
      */
-    public final ArrayList<PeerPhysicalPath> paths() {
+    public final PeerPhysicalPath[] paths() {
         return paths;
     }
 }

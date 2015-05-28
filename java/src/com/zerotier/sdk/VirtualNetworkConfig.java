@@ -47,8 +47,8 @@ public final class VirtualNetworkConfig {
     private int portError;
     private boolean enabled;
     private long netconfRevision;
-    private ArrayList<MulticastGroup> multicastSubscriptions;
-    private ArrayList<InetSocketAddress> assignedAddresses;
+    private MulticastGroup[] multicastSubscriptions;
+    private InetSocketAddress[] assignedAddresses;
 
     private VirtualNetworkConfig() {
 
@@ -150,7 +150,7 @@ public final class VirtualNetworkConfig {
     /**
      * Multicast group subscriptions
      */
-    public final ArrayList<MulticastGroup> multicastSubscriptions() {
+    public final MulticastGroup[] multicastSubscriptions() {
         return multicastSubscriptions;
     }
 
@@ -164,7 +164,7 @@ public final class VirtualNetworkConfig {
      * This is only used for ZeroTier-managed address assignments sent by the
      * virtual network's configuration master.
      */
-    public final ArrayList<InetSocketAddress> assignedAddresses() {
+    public final InetSocketAddress[] assignedAddresses() {
         return assignedAddresses;
     }
 }

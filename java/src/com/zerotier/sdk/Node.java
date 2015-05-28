@@ -340,7 +340,7 @@ public class Node {
      *
      * @return List of known peers or NULL on failure
      */
-    public ArrayList<Peer> peers() {
+    public Peer[] peers() {
         return peers(nodeId);
     }
 
@@ -359,7 +359,7 @@ public class Node {
      *
      * @return List of networks or NULL on failure
      */
-    public ArrayList<VirtualNetworkConfig> networks() {
+    public VirtualNetworkConfig[] networks() {
         return networks(nodeId);
     }
 
@@ -426,7 +426,7 @@ public class Node {
 
     private native Version version();
 
-    private native ArrayList<Peer> peers(long nodeId);
+    private native Peer[] peers(long nodeId);
 
-    private native ArrayList<VirtualNetworkConfig> networks(long nodeId);
+    private native VirtualNetworkConfig[] networks(long nodeId);
 }
