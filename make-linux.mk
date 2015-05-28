@@ -39,6 +39,13 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
+# Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
+ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
+        DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
+        LIBS+=-L/usr/local/lib -lsqlite3
+        OBJS+=controller/SqliteNetworkController.o 
+endif
+
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE 
@@ -74,7 +81,7 @@ selftest:	$(OBJS) selftest.o
 	$(STRIP) zerotier-selftest
 
 installer: one FORCE
-	./buildinstaller.sh
+	./ext/installfiles/linux/buildinstaller.sh
 
 clean:
 	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
