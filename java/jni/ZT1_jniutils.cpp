@@ -178,7 +178,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
     jobject vntypeObject = NULL;
 
     vntypeClass = cache.findClass("com/zerotier/sdk/VirtualNetworkType");
-    if(vntypeClass == NULL)
+    if(env->ExceptionCheck() || vntypeClass == NULL)
     {
         return NULL;
     }
@@ -205,7 +205,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
     jobject vnetConfigOpObject = NULL;
 
     vnetConfigOpClass = cache.findClass("com/zerotier/sdk/VirtualNetworkConfigOperation");
-    if(vnetConfigOpClass == NULL)
+    if(env->ExceptionCheck() || vnetConfigOpClass == NULL)
     {
         return NULL;
     }
@@ -234,65 +234,98 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
 
 jobject newArrayList(JNIEnv *env)
 {
+    LOGV("newArrayList");
     jclass arrayListClass = NULL;
     jmethodID arrayList_constructor = NULL;
 
     arrayListClass = cache.findClass("java/util/ArrayList");
-    if(arrayListClass == NULL)
+    if(env->ExceptionCheck() || arrayListClass == NULL)
     {
+        LOGE("Error looking up ArrayList class");
         return NULL;
     }
 
     arrayList_constructor = cache.findMethod(
         arrayListClass, "<init>", "()V");
-    if(arrayList_constructor == NULL)
+    if(env->ExceptionCheck() || arrayList_constructor == NULL)
     {
+        LOGE("Couldn't find ArrayList constructor");
         return NULL;
     }
 
     jobject arrayListObj = env->NewObject(arrayListClass, arrayList_constructor);
+    if(env->ExceptionCheck() || arrayListObj == NULL)
+    {
+        LOGE("Error creating ArrayList object");
+        return NULL;
+    }
 
     return arrayListObj;
 }
 
 bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object)
 {
-    assert(array != NULL);
-    assert(object != NULL);
-
-    jclass arrayListClass = NULL;
-    jmethodID arrayList_add = NULL;
-
-    arrayListClass = cache.findClass("java/util/ArrayList");
-    if(arrayListClass == NULL)
-    {
-        return NULL;
-    }
-
-    arrayList_add = cache.findMethod(arrayListClass, "add", "(Ljava.lang.Object;)Z");
-    if(arrayList_add == NULL)
-    {
+    LOGV("appendItemToArrayList");
+    if(array == NULL) {
+        LOGE("Attempted to add object to a null array");
         return false;
     }
 
-    return env->CallBooleanMethod(array, arrayList_add, object);
+    if(object == NULL ) {
+        LOGE("Attempted to add null object to array");
+        return false;
+    }
+
+    jclass arrayListClass = NULL;
+    jmethodID arrayList_add = NULL;
+    jmethodID arrayList_size = NULL;
+
+    arrayListClass = env->GetObjectClass(array);
+    if(env->ExceptionCheck() || arrayListClass == NULL)
+    {
+        LOGE("Error finding ArrayList class");
+        return false;
+    }
+
+    arrayList_add = cache.findMethod(arrayListClass, "add", "(Ljava/lang/Object;)Z");
+    if(env->ExceptionCheck() || arrayList_add == NULL)
+    {
+        LOGE("Error finding ArrayList.add()");
+        return false;
+    }
+
+    jint size = env->CallIntMethod(array, arrayList_size);
+    LOGV("Array List Size: %d", size);
+
+    jboolean success = env->CallBooleanMethod(array, arrayList_add, object);
+
+    if(env->ExceptionCheck())
+    {
+        LOGE("Exception calling arrayList_add");
+        return false;
+    }
+
+    return (success == JNI_TRUE);
 }
 
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
+    LOGV("newInetAddress");
     jclass inetAddressClass = NULL;
     jmethodID inetAddress_getByAddress = NULL;
 
     inetAddressClass = cache.findClass("java/net/InetAddress");
-    if(inetAddressClass == NULL)
+    if(env->ExceptionCheck() || inetAddressClass == NULL)
     {
+        LOGE("Error finding InetAddress class");
         return NULL;
     }
 
     inetAddress_getByAddress = cache.findStaticMethod(
         inetAddressClass, "getByAddress", "([B)Ljava/net/InetAddress;");
-    if(inetAddress_getByAddress == NULL)
+    if(env->ExceptionCheck() || inetAddress_getByAddress == NULL)
     {
+        LOGE("Erorr finding getByAddress() static method");
         return NULL;
     }
 
@@ -305,6 +338,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
             jbyteArray buff = env->NewByteArray(16);
             if(buff == NULL)
             {
+                LOGE("Error creating IPV6 byte array");
                 return NULL;
             }
 
@@ -319,6 +353,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
             jbyteArray buff = env->NewByteArray(4);
             if(buff == NULL)
             {
+                LOGE("Error creating IPV4 byte array");
                 return NULL;
             }
 
@@ -328,32 +363,40 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
         }
         break;
     }
+    if(env->ExceptionCheck() || inetAddressObj == NULL) {
+        LOGE("Error creating InetAddress object");
+        return NULL;
+    }
 
     return inetAddressObj;
 }
 
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
+    LOGV("newInetSocketAddress Called");
     jclass inetSocketAddressClass = NULL;
     jmethodID inetSocketAddress_constructor = NULL;
 
     inetSocketAddressClass = cache.findClass("java/net/InetSocketAddress");
-    if(inetSocketAddressClass == NULL)
+    if(env->ExceptionCheck() || inetSocketAddressClass == NULL)
     {
+        LOGE("Error finding InetSocketAddress Class");
         return NULL;
     }
 
     jobject inetAddressObject = newInetAddress(env, addr);
 
-    if(inetAddressObject == NULL)
+    if(env->ExceptionCheck() || inetAddressObject == NULL)
     {
+        LOGE("Error creating new inet address");
         return NULL;
     }
 
     inetSocketAddress_constructor = cache.findMethod(
         inetSocketAddressClass, "<init>", "(Ljava/net/InetAddress;I)V");
-    if(inetSocketAddress_constructor == NULL)
+    if(env->ExceptionCheck() || inetSocketAddress_constructor == NULL)
     {
+        LOGE("Error finding InetSocketAddress constructor");
         return NULL;
     }
 
@@ -375,6 +418,9 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     };
 
     jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
+    if(env->ExceptionCheck() || inetSocketAddressObject == NULL) {
+        LOGE("Error creating InetSocketAddress object");
+    }
     return inetSocketAddressObject;
 }
 
@@ -387,40 +433,34 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
     jfieldID adiField = NULL;
 
     multicastGroupClass = cache.findClass("com/zerotier/sdk/MulticastGroup");
-    if(multicastGroupClass == NULL)
+    if(env->ExceptionCheck() || multicastGroupClass == NULL)
     {
         return NULL;
     }
 
     multicastGroup_constructor = cache.findMethod(
         multicastGroupClass, "<init>", "()V");
-    if(multicastGroup_constructor == NULL)
+    if(env->ExceptionCheck() || multicastGroup_constructor == NULL)
     {
         return NULL;
     }
 
     jobject multicastGroupObj = env->NewObject(multicastGroupClass, multicastGroup_constructor);
-    if(multicastGroupObj == NULL)
+    if(env->ExceptionCheck() || multicastGroupObj == NULL)
     {
         return NULL;
     }
 
-    if(macField == NULL)
+    macField = cache.findField(multicastGroupClass, "mac", "J");
+    if(env->ExceptionCheck() || macField == NULL)
     {
-        macField = cache.findField(multicastGroupClass, "mac", "J");
-        if(macField == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
-    if(adiField == NULL)
+    adiField = cache.findField(multicastGroupClass, "adi", "J");
+    if(env->ExceptionCheck() || adiField == NULL)
     {
-        adiField = cache.findField(multicastGroupClass, "adi", "J");
-        if(adiField == NULL)
-        {
-            return NULL;
-        }
+        return NULL;
     }
 
     env->SetLongField(multicastGroupObj, macField, mc.mac);
@@ -431,6 +471,7 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
 
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp)
 {
+    LOGV("newPeerPhysicalPath Called");
     jclass pppClass = NULL;
 
     jfieldID addressField = NULL;
@@ -443,73 +484,92 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp)
     jmethodID ppp_constructor = NULL;
 
     pppClass = cache.findClass("com/zerotier/sdk/PeerPhysicalPath");
-    if(pppClass == NULL)
+    if(env->ExceptionCheck() || pppClass == NULL)
     {
+        LOGE("Error finding PeerPhysicalPath class");
         return NULL;
     }
 
-    addressField = cache.findField(pppClass, "address", "Ljava/net/InetAddress;");
-    if(addressField == NULL)
+    addressField = cache.findField(pppClass, "address", "Ljava/net/InetSocketAddress;");
+    if(env->ExceptionCheck() || addressField == NULL)
     {
+        LOGE("Error finding address field");
         return NULL;
     }
 
     lastSendField = cache.findField(pppClass, "lastSend", "J");
-    if(lastSendField == NULL)
+    if(env->ExceptionCheck() || lastSendField == NULL)
     {
+        LOGE("Error finding lastSend field");
         return NULL;
     }
 
     lastReceiveField = cache.findField(pppClass, "lastReceive", "J");
-    if(lastReceiveField == NULL)
+    if(env->ExceptionCheck() || lastReceiveField == NULL)
     {
+        LOGE("Error finding lastReceive field");
         return NULL;
     }
 
     fixedField = cache.findField(pppClass, "fixed", "Z");
-    if(fixedField == NULL)
+    if(env->ExceptionCheck() || fixedField == NULL)
     {
+        LOGE("Error finding fixed field");
         return NULL;
     }
 
     activeField = cache.findField(pppClass, "active", "Z");
-    if(activeField == NULL)
+    if(env->ExceptionCheck() || activeField == NULL)
     {
+        LOGE("Error finding active field");
         return NULL;
     }
 
     preferredField = cache.findField(pppClass, "preferred", "Z");
-    if(preferredField == NULL)
+    if(env->ExceptionCheck() || preferredField == NULL)
     {
+        LOGE("Error finding preferred field");
         return NULL;
     }
 
     ppp_constructor = cache.findMethod(pppClass, "<init>", "()V");
-    if(ppp_constructor == NULL)
+    if(env->ExceptionCheck() || ppp_constructor == NULL)
     {
+        LOGE("Error finding PeerPhysicalPath constructor");
         return NULL;
     }
 
     jobject pppObject = env->NewObject(pppClass, ppp_constructor);
-    if(pppObject == NULL)
+    if(env->ExceptionCheck() || pppObject == NULL)
     {
+        LOGE("Error creating PPP object");
         return NULL; // out of memory
     }
 
-    jobject addressObject = newInetAddress(env, ppp.address);
+    jobject addressObject = newInetSocketAddress(env, ppp.address);
+    if(env->ExceptionCheck() || addressObject == NULL) {
+        LOGE("Error creating InetSocketAddress object");
+        return NULL;
+    }
 
-    env->SetObjectField(pppClass, addressField, addressObject);
-    env->SetLongField(pppClass, lastSendField, ppp.lastSend);
-    env->SetLongField(pppClass, lastReceiveField, ppp.lastReceive);
-    env->SetBooleanField(pppClass, fixedField, ppp.fixed);
-    env->SetBooleanField(pppClass, activeField, ppp.active);
-    env->SetBooleanField(pppClass, preferredField, ppp.preferred);
+    env->SetObjectField(pppObject, addressField, addressObject);
+    env->SetLongField(pppObject, lastSendField, ppp.lastSend);
+    env->SetLongField(pppObject, lastReceiveField, ppp.lastReceive);
+    env->SetBooleanField(pppObject, fixedField, ppp.fixed);
+    env->SetBooleanField(pppObject, activeField, ppp.active);
+    env->SetBooleanField(pppObject, preferredField, ppp.preferred);
+
+    if(env->ExceptionCheck()) {
+        LOGE("Exception assigning fields to PeerPhysicalPath object");
+    }
 
     return pppObject;
 }
 
 jobject newPeer(JNIEnv *env, const ZT1_Peer &peer) 
 {
+    LOGV("newPeer called");
+
     jclass peerClass = NULL;
 
     jfieldID addressField = NULL;
@@ -525,94 +585,107 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
     jmethodID peer_constructor = NULL;
 
     peerClass = cache.findClass("com/zerotier/sdk/Peer");
-    if(peerClass == NULL)
+    if(env->ExceptionCheck() || peerClass == NULL)
     {
         return NULL;
     }
 
     addressField = cache.findField(peerClass, "address", "J");
-    if(addressField == NULL)
+    if(env->ExceptionCheck() || addressField == NULL)
     {
         return NULL;
     }
 
     lastUnicastFrameField = cache.findField(peerClass, "lastUnicastFrame", "J");
-    if(lastUnicastFrameField == NULL)
+    if(env->ExceptionCheck() || lastUnicastFrameField == NULL)
     {
         return NULL;
     }
 
     lastMulticastFrameField = cache.findField(peerClass, "lastMulticastFrame", "J");
-    if(lastMulticastFrameField == NULL)
+    if(env->ExceptionCheck() || lastMulticastFrameField == NULL)
     {
         return NULL;
     }
 
     versionMajorField = cache.findField(peerClass, "versionMajor", "I");
-    if(versionMajorField == NULL)
+    if(env->ExceptionCheck() || versionMajorField == NULL)
     {
         return NULL;
     }
 
     versionMinorField = cache.findField(peerClass, "versionMinor", "I");
-    if(versionMinorField == NULL)
+    if(env->ExceptionCheck() || versionMinorField == NULL)
     {
         return NULL;
     }
 
     versionRevField = cache.findField(peerClass, "versionRev", "I");
-    if(versionRevField == NULL)
+    if(env->ExceptionCheck() || versionRevField == NULL)
     {
         return NULL;
     }
 
     latencyField = cache.findField(peerClass, "latency", "I");
-    if(latencyField == NULL)
+    if(env->ExceptionCheck() || latencyField == NULL)
     {
         return NULL;
     }
 
     roleField = cache.findField(peerClass, "role", "Lcom/zerotier/sdk/PeerRole;");
-    if(roleField == NULL)
+    if(env->ExceptionCheck() || roleField == NULL)
     {
         return NULL;
     }
 
     pathsField = cache.findField(peerClass, "paths", "Ljava.util.ArrayList;");
-    if(pathsField == NULL)
+    if(env->ExceptionCheck() || pathsField == NULL)
     {
         return NULL;
     }
 
     peer_constructor = cache.findMethod(peerClass, "<init>", "()V");
-    if(peer_constructor == NULL)
+    if(env->ExceptionCheck() || peer_constructor == NULL)
     {
         return NULL;
     }
 
     jobject peerObject = env->NewObject(peerClass, peer_constructor);
-    if(peerObject == NULL)
+    if(env->ExceptionCheck() || peerObject == NULL)
     {
         return NULL; // out of memory
     }
 
-    env->SetLongField(peerClass, addressField, (jlong)peer.address);
-    env->SetLongField(peerClass, lastUnicastFrameField, (jlong)peer.lastUnicastFrame);
-    env->SetLongField(peerClass, lastMulticastFrameField, (jlong)peer.lastMulticastFrame);
-    env->SetIntField(peerClass, versionMajorField, peer.versionMajor);
-    env->SetIntField(peerClass, versionMinorField, peer.versionMinor);
-    env->SetIntField(peerClass, versionRevField, peer.versionRev);
-    env->SetIntField(peerClass, latencyField, peer.latency);
-    env->SetObjectField(peerClass, roleField, createPeerRole(env, peer.role));
+    env->SetLongField(peerObject, addressField, (jlong)peer.address);
+    env->SetLongField(peerObject, lastUnicastFrameField, (jlong)peer.lastUnicastFrame);
+    env->SetLongField(peerObject, lastMulticastFrameField, (jlong)peer.lastMulticastFrame);
+    env->SetIntField(peerObject, versionMajorField, peer.versionMajor);
+    env->SetIntField(peerObject, versionMinorField, peer.versionMinor);
+    env->SetIntField(peerObject, versionRevField, peer.versionRev);
+    env->SetIntField(peerObject, latencyField, peer.latency);
+    env->SetObjectField(peerObject, roleField, createPeerRole(env, peer.role));
 
     jobject arrayObject = newArrayList(env);
+    if(env->ExceptionCheck() || arrayObject == NULL) {
+        LOGE("Error creating array list for peer physical paths");
+        return NULL;
+    }
+
     for(unsigned int i = 0; i < peer.pathCount; ++i)
     {
         jobject path = newPeerPhysicalPath(env, peer.paths[i]);
-        appendItemToArrayList(env, arrayObject, path);
+        if(env->ExceptionCheck() || path == NULL) {
+            LOGE("newPeerPhysicalPath returned NULL, or exception");
+            break;
+        } else {
+            if(!appendItemToArrayList(env, arrayObject, path)) {
+                LOGE("appendItemToArrayList returned false");
+                return peerObject;
+            }
+        }
     }
 
-    env->SetObjectField(peerClass, pathsField, arrayObject);
+    env->SetObjectField(peerObject, pathsField, arrayObject);
 
     return peerObject;
 }
@@ -645,112 +718,112 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
 
     vnetConfig_constructor = cache.findMethod(
         vnetConfigClass, "<init>", "()V");
-    if(vnetConfig_constructor == NULL)
+    if(env->ExceptionCheck() || vnetConfig_constructor == NULL)
     {
         LOGE("Couldn't find VirtualNetworkConfig Constructor");
         return NULL;
     }
 
     jobject vnetConfigObj = env->NewObject(vnetConfigClass, vnetConfig_constructor);
-    if(vnetConfigObj == NULL)
+    if(env->ExceptionCheck() || vnetConfigObj == NULL)
     {
         LOGE("Error creating new VirtualNetworkConfig object");
         return NULL;
     }
 
     nwidField = cache.findField(vnetConfigClass, "nwid", "J");
-    if(nwidField == NULL)
+    if(env->ExceptionCheck() || nwidField == NULL)
     {
         LOGE("Error getting nwid field");
         return NULL;
     }
 
     macField = cache.findField(vnetConfigClass, "mac", "J");
-    if(macField == NULL)
+    if(env->ExceptionCheck() || macField == NULL)
     {
         LOGE("Error getting mac field");
         return NULL;
     }
 
     nameField = cache.findField(vnetConfigClass, "name", "Ljava/lang/String;");
-    if(nameField == NULL)
+    if(env->ExceptionCheck() || nameField == NULL)
     {
         LOGE("Error getting name field");
         return NULL;
     }
 
     statusField = cache.findField(vnetConfigClass, "status", "Lcom/zerotier/sdk/VirtualNetworkStatus;");
-    if(statusField == NULL)
+    if(env->ExceptionCheck() || statusField == NULL)
     {
         LOGE("Error getting status field");
         return NULL;
     }
 
     typeField = cache.findField(vnetConfigClass, "type", "Lcom/zerotier/sdk/VirtualNetworkType;");
-    if(typeField == NULL)
+    if(env->ExceptionCheck() || typeField == NULL)
     {
         LOGE("Error getting type field");
         return NULL;
     }
 
     mtuField = cache.findField(vnetConfigClass, "mtu", "I");
-    if(mtuField == NULL)
+    if(env->ExceptionCheck() || mtuField == NULL)
     {
         LOGE("Error getting mtu field");
         return NULL;
     }
 
     dhcpField = cache.findField(vnetConfigClass, "dhcp", "Z");
-    if(dhcpField == NULL)
+    if(env->ExceptionCheck() || dhcpField == NULL)
     {
         LOGE("Error getting dhcp field");
         return NULL;
     }
 
     bridgeField = cache.findField(vnetConfigClass, "bridge", "Z");
-    if(bridgeField == NULL)
+    if(env->ExceptionCheck() || bridgeField == NULL)
     {
         LOGE("Error getting bridge field");
         return NULL;
     }
 
     broadcastEnabledField = cache.findField(vnetConfigClass, "broadcastEnabled", "Z");
-    if(broadcastEnabledField == NULL)
+    if(env->ExceptionCheck() || broadcastEnabledField == NULL)
     {
         LOGE("Error getting broadcastEnabled field");
         return NULL;
     }
 
     portErrorField = cache.findField(vnetConfigClass, "portError", "I");
-    if(portErrorField == NULL)
+    if(env->ExceptionCheck() || portErrorField == NULL)
     {
         LOGE("Error getting portError field");
         return NULL;
     }
 
     enabledField = cache.findField(vnetConfigClass, "enabled", "Z");
-    if(enabledField == NULL)
+    if(env->ExceptionCheck() || enabledField == NULL)
     {
         LOGE("Error getting enabled field");
         return NULL;
     }
 
     netconfRevisionField = cache.findField(vnetConfigClass, "netconfRevision", "J");
-    if(netconfRevisionField == NULL)
+    if(env->ExceptionCheck() || netconfRevisionField == NULL)
     {
         LOGE("Error getting netconfRevision field");
         return NULL;
     }
 
     multicastSubscriptionsField = cache.findField(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
-    if(multicastSubscriptionsField == NULL)
+    if(env->ExceptionCheck() || multicastSubscriptionsField == NULL)
     {
         LOGE("Error getting multicastSubscriptions field");
         return NULL;
     }
 
     assignedAddressesField = cache.findField(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
-    if(assignedAddressesField == NULL)
+    if(env->ExceptionCheck() || assignedAddressesField == NULL)
     {
         LOGE("Error getting assignedAddresses field");
         return NULL;
@@ -759,21 +832,21 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     env->SetLongField(vnetConfigObj, nwidField, vnetConfig.nwid);
     env->SetLongField(vnetConfigObj, macField, vnetConfig.mac);
     jstring nameStr = env->NewStringUTF(vnetConfig.name);
-    if(nameStr == NULL)
+    if(env->ExceptionCheck() || nameStr == NULL)
     {
         return NULL; // out of memory
     }
     env->SetObjectField(vnetConfigObj, nameField, nameStr);
 
     jobject statusObject = createVirtualNetworkStatus(env, vnetConfig.status);
-    if(statusObject == NULL)
+    if(env->ExceptionCheck() || statusObject == NULL)
     {
         return NULL;
     }
     env->SetObjectField(vnetConfigObj, statusField, statusObject);
 
     jobject typeObject = createVirtualNetworkType(env, vnetConfig.type);
-    if(typeObject == NULL)
+    if(env->ExceptionCheck() || typeObject == NULL)
     {
         return NULL;
     }
@@ -814,20 +887,20 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     jmethodID versionConstructor = NULL;
 
     versionClass = cache.findClass("com/zerotier/sdk/Version");
-    if(versionClass == NULL)
+    if(env->ExceptionCheck() || versionClass == NULL)
     {
         return NULL;
     }
 
     versionConstructor = cache.findMethod(
         versionClass, "<init>", "()V");
-    if(versionConstructor == NULL)
+    if(env->ExceptionCheck() || versionConstructor == NULL)
     {
         return NULL;
     }
 
     jobject versionObj = env->NewObject(versionClass, versionConstructor);
-    if(versionObj == NULL)
+    if(env->ExceptionCheck() || versionObj == NULL)
     {
         return NULL;
     }
@@ -839,25 +912,25 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags
     jfieldID featureFlagsField = NULL;
 
     majorField = cache.findField(versionClass, "major", "I");
-    if(majorField == NULL)
+    if(env->ExceptionCheck() || majorField == NULL)
     {
         return NULL;
     }
 
     minorField = cache.findField(versionClass, "minor", "I");
-    if(minorField == NULL)
+    if(env->ExceptionCheck() || minorField == NULL)
     {
         return NULL;
     }
 
     revisionField = cache.findField(versionClass, "revision", "I");
-    if(revisionField == NULL)
+    if(env->ExceptionCheck() || revisionField == NULL)
     {
         return NULL;
     }
 
     featureFlagsField = cache.findField(versionClass, "featureFlags", "J");
-    if(featureFlagsField == NULL)
+    if(env->ExceptionCheck() || featureFlagsField == NULL)
     {
         return NULL;
     }

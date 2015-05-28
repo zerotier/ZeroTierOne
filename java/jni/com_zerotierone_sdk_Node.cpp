@@ -432,7 +432,10 @@ namespace {
         jobject addressObj = newInetSocketAddress(env, *address);
         jbyteArray bufferObj = env->NewByteArray(bufferSize);
         env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
-        return env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, addressObj, bufferObj);
+        int retval = env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, addressObj, bufferObj);
+
+        LOGD("JNI Packet Sender returned: %d", retval);
+        return retval;
     }
 
     typedef std::map<uint64_t, JniRef*> NodeMap;
