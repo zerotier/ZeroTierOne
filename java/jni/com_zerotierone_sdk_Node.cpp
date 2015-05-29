@@ -92,6 +92,7 @@ namespace {
         enum ZT1_VirtualNetworkConfigOperation operation,
         const ZT1_VirtualNetworkConfig *config)
     {
+        LOGD("VritualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -141,6 +142,7 @@ namespace {
         const void *frameData,
         unsigned int frameLength)
     {
+        LOGD("VirtualNetworkFrameFunctionCallback");
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
         JNIEnv *env = NULL;
@@ -172,6 +174,7 @@ namespace {
 
     void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event event, const void *data)
     {
+        LOGD("EventCallback");
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
         JNIEnv *env = NULL;
@@ -410,6 +413,7 @@ namespace {
         const void *buffer,
         unsigned int bufferSize)
     {
+        LOGD("WirePacketSendFunction(%p, %p, %d)", address, buffer, bufferSize);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
