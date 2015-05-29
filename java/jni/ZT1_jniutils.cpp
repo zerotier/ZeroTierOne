@@ -18,6 +18,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     resultClass = cache.findClass("com/zerotier/sdk/ResultCode");
     if(resultClass == NULL)
     {
+        LOGE("Couldnt find ResultCode class");
         return NULL; // exception thrown
     }
 
@@ -25,27 +26,40 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     switch(code)
     {
     case ZT1_RESULT_OK:
+        LOGV("ZT1_RESULT_OK");
         fieldName = "RESULT_OK";
         break;
     case ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
+        LOGV("ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY");
         fieldName = "RESULT_FATAL_ERROR_OUT_OF_MEMORY";
         break;
     case ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
+        LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_FATAL_ERROR_DATA_STORE_FAILED";
         break;
     case ZT1_RESULT_ERROR_NETWORK_NOT_FOUND:
+        LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_ERROR_NETWORK_NOT_FOUND";
         break;
     case ZT1_RESULT_FATAL_ERROR_INTERNAL:
     default:
+        LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_FATAL_ERROR_INTERNAL";
         break;
     }
 
     jfieldID enumField = cache.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotier/sdk/ResultCode;");
+    if(env->ExceptionCheck() || enumField == NULL) 
+    {
+        LOGE("Error on FindStaticField");
+        return NULL;
+    }
 
     resultObject = env->GetStaticObjectField(resultClass, enumField);
-
+    if(env->ExceptionCheck() || resultObject == NULL) 
+    {
+        LOGE("Error on GetStaticObjectField");
+    }
     return resultObject;
 }
 
@@ -230,82 +244,6 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
     jfieldID enumField = cache.findStaticField(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkConfigOperation;");
     vnetConfigOpObject = env->GetStaticObjectField(vnetConfigOpClass, enumField);
     return vnetConfigOpObject;
-}
-
-jobject newArrayList(JNIEnv *env)
-{
-    LOGV("newArrayList");
-    jclass arrayListClass = NULL;
-    jmethodID arrayList_constructor = NULL;
-
-    arrayListClass = cache.findClass("java/util/ArrayList");
-    if(env->ExceptionCheck() || arrayListClass == NULL)
-    {
-        LOGE("Error looking up ArrayList class");
-        return NULL;
-    }
-
-    arrayList_constructor = cache.findMethod(
-        arrayListClass, "<init>", "()V");
-    if(env->ExceptionCheck() || arrayList_constructor == NULL)
-    {
-        LOGE("Couldn't find ArrayList constructor");
-        return NULL;
-    }
-
-    jobject arrayListObj = env->NewObject(arrayListClass, arrayList_constructor);
-    if(env->ExceptionCheck() || arrayListObj == NULL)
-    {
-        LOGE("Error creating ArrayList object");
-        return NULL;
-    }
-
-    return arrayListObj;
-}
-
-bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object)
-{
-    LOGV("appendItemToArrayList");
-    if(array == NULL) {
-        LOGE("Attempted to add object to a null array");
-        return false;
-    }
-
-    if(object == NULL ) {
-        LOGE("Attempted to add null object to array");
-        return false;
-    }
-
-    jclass arrayListClass = NULL;
-    jmethodID arrayList_add = NULL;
-    jmethodID arrayList_size = NULL;
-
-    arrayListClass = env->GetObjectClass(array);
-    if(env->ExceptionCheck() || arrayListClass == NULL)
-    {
-        LOGE("Error finding ArrayList class");
-        return false;
-    }
-
-    arrayList_add = cache.findMethod(arrayListClass, "add", "(Ljava/lang/Object;)Z");
-    if(env->ExceptionCheck() || arrayList_add == NULL)
-    {
-        LOGE("Error finding ArrayList.add()");
-        return false;
-    }
-
-    jint size = env->CallIntMethod(array, arrayList_size);
-    LOGV("Array List Size: %d", size);
-
-    jboolean success = env->CallBooleanMethod(array, arrayList_add, object);
-
-    if(env->ExceptionCheck())
-    {
-        LOGE("Exception calling arrayList_add");
-        return false;
-    }
-
-    return (success == JNI_TRUE);
 }
 
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
@@ -587,75 +525,88 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
     peerClass = cache.findClass("com/zerotier/sdk/Peer");
     if(env->ExceptionCheck() || peerClass == NULL)
     {
+        LOGE("Error finding Peer class");
         return NULL;
     }
 
     addressField = cache.findField(peerClass, "address", "J");
     if(env->ExceptionCheck() || addressField == NULL)
     {
+        LOGE("Error finding address field of Peer object");
         return NULL;
     }
 
     lastUnicastFrameField = cache.findField(peerClass, "lastUnicastFrame", "J");
     if(env->ExceptionCheck() || lastUnicastFrameField == NULL)
     {
+        LOGE("Error finding lastUnicastFrame field of Peer object");
         return NULL;
     }
 
     lastMulticastFrameField = cache.findField(peerClass, "lastMulticastFrame", "J");
     if(env->ExceptionCheck() || lastMulticastFrameField == NULL)
     {
+        LOGE("Error finding lastMulticastFrame field of Peer object");
         return NULL;
     }
 
     versionMajorField = cache.findField(peerClass, "versionMajor", "I");
     if(env->ExceptionCheck() || versionMajorField == NULL)
     {
+        LOGE("Error finding versionMajor field of Peer object");
         return NULL;
     }
 
     versionMinorField = cache.findField(peerClass, "versionMinor", "I");
     if(env->ExceptionCheck() || versionMinorField == NULL)
     {
+        LOGE("Error finding versionMinor field of Peer object");
         return NULL;
     }
 
     versionRevField = cache.findField(peerClass, "versionRev", "I");
     if(env->ExceptionCheck() || versionRevField == NULL)
     {
+        LOGE("Error finding versionRev field of Peer object");
         return NULL;
     }
 
     latencyField = cache.findField(peerClass, "latency", "I");
     if(env->ExceptionCheck() || latencyField == NULL)
     {
+        LOGE("Error finding latency field of Peer object");
         return NULL;
     }
 
     roleField = cache.findField(peerClass, "role", "Lcom/zerotier/sdk/PeerRole;");
     if(env->ExceptionCheck() || roleField == NULL)
     {
+        LOGE("Error finding role field of Peer object");
         return NULL;
     }
 
-    pathsField = cache.findField(peerClass, "paths", "Ljava.util.ArrayList;");
+    pathsField = cache.findField(peerClass, "paths", "[Lcom/zerotier/sdk/PeerPhysicalPath;");
     if(env->ExceptionCheck() || pathsField == NULL)
     {
+        LOGE("Error finding paths field of Peer object");
         return NULL;
     }
 
     peer_constructor = cache.findMethod(peerClass, "<init>", "()V");
     if(env->ExceptionCheck() || peer_constructor == NULL)
     {
+        LOGE("Error finding Peer constructor");
         return NULL;
     }
 
     jobject peerObject = env->NewObject(peerClass, peer_constructor);
     if(env->ExceptionCheck() || peerObject == NULL)
     {
+        LOGE("Error creating Peer object");
         return NULL; // out of memory
     }
 
+    LOGD("JNI Peer Latency: %d", peer.latency);
     env->SetLongField(peerObject, addressField, (jlong)peer.address);
     env->SetLongField(peerObject, lastUnicastFrameField, (jlong)peer.lastUnicastFrame);
     env->SetLongField(peerObject, lastMulticastFrameField, (jlong)peer.lastMulticastFrame);
@@ -665,23 +616,29 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
     env->SetIntField(peerObject, latencyField, peer.latency);
     env->SetObjectField(peerObject, roleField, createPeerRole(env, peer.role));
 
-    jobject arrayObject = newArrayList(env);
-    if(env->ExceptionCheck() || arrayObject == NULL) {
-        LOGE("Error creating array list for peer physical paths");
+    jclass peerPhysicalPathClass = cache.findClass("com/zerotier/sdk/PeerPhysicalPath");
+    if(env->ExceptionCheck() || peerPhysicalPathClass == NULL)
+    {
+        LOGE("Error finding PeerPhysicalPath class");
+        return NULL;
+    }
+
+    jobjectArray arrayObject = env->NewObjectArray(
+        peer.pathCount, peerPhysicalPathClass, NULL);
+    if(env->ExceptionCheck() || arrayObject == NULL) 
+    {
+        LOGE("Error creating PeerPhysicalPath[] array");
         return NULL;
     }
 
     for(unsigned int i = 0; i < peer.pathCount; ++i)
     {
         jobject path = newPeerPhysicalPath(env, peer.paths[i]);
-        if(env->ExceptionCheck() || path == NULL) {
-            LOGE("newPeerPhysicalPath returned NULL, or exception");
+
+        env->SetObjectArrayElement(arrayObject, i, path);
+        if(env->ExceptionCheck()) {
+            LOGE("exception assigning PeerPhysicalPath to array");
             break;
-        } else {
-            if(!appendItemToArrayList(env, arrayObject, path)) {
-                LOGE("appendItemToArrayList returned false");
-                return peerObject;
-            }
         }
     }
 
@@ -815,14 +772,14 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
         return NULL;
     }
 
-    multicastSubscriptionsField = cache.findField(vnetConfigClass, "multicastSubscriptions", "Ljava/util/ArrayList;");
+    multicastSubscriptionsField = cache.findField(vnetConfigClass, "multicastSubscriptions", "[Lcom/zerotier/sdk/MulticastGroup;");
     if(env->ExceptionCheck() || multicastSubscriptionsField == NULL)
     {
         LOGE("Error getting multicastSubscriptions field");
         return NULL;
     }
 
-    assignedAddressesField = cache.findField(vnetConfigClass, "assignedAddresses", "Ljava/util/ArrayList;");
+    assignedAddressesField = cache.findField(vnetConfigClass, "assignedAddresses", "[Ljava/net/InetSocketAddress;");
     if(env->ExceptionCheck() || assignedAddressesField == NULL)
     {
         LOGE("Error getting assignedAddresses field");
@@ -858,21 +815,55 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig.broadcastEnabled);
     env->SetIntField(vnetConfigObj, portErrorField, vnetConfig.portError);
 
+    jclass multicastGroupClass = cache.findClass("com/zerotier/sdk/MulticastGroup");
+    if(env->ExceptionCheck() || multicastGroupClass == NULL) 
+    {
+        LOGE("Error finding MulticastGroup class");
+        return NULL;
+    }
 
-    jobject mcastSubsArrayObj = newArrayList(env);
+    jobjectArray mcastSubsArrayObj = env->NewObjectArray(
+        vnetConfig.multicastSubscriptionCount, multicastGroupClass, NULL);
+    if(env->ExceptionCheck() || mcastSubsArrayObj == NULL) {
+        LOGE("Error creating MulticastGroup[] array");
+        return NULL;
+    }
+
     for(unsigned int i = 0; i < vnetConfig.multicastSubscriptionCount; ++i)
     {
         jobject mcastObj = newMulticastGroup(env, vnetConfig.multicastSubscriptions[i]);
-        appendItemToArrayList(env, mcastSubsArrayObj, mcastObj);
+        env->SetObjectArrayElement(mcastSubsArrayObj, i, mcastObj);
+        if(env->ExceptionCheck())
+        {
+            LOGE("Error assigning MulticastGroup to array");
+        }
     }
     env->SetObjectField(vnetConfigObj, multicastSubscriptionsField, mcastSubsArrayObj);
 
+    jclass inetSocketAddressClass = cache.findClass("java/net/InetSocketAddress");
+    if(env->ExceptionCheck() || inetSocketAddressClass == NULL)
+    {
+        LOGE("Error finding InetSocketAddress class");
+        return NULL;
+    }
 
-    jobject assignedAddrArrayObj = newArrayList(env);
+    jobjectArray assignedAddrArrayObj = env->NewObjectArray(
+        vnetConfig.assignedAddressCount, inetSocketAddressClass, NULL);
+    if(env->ExceptionCheck() || assignedAddrArrayObj == NULL)
+    {
+        LOGE("Error creating InetSocketAddress[] array");
+        return NULL;
+    }
+
     for(unsigned int i = 0; i < vnetConfig.assignedAddressCount; ++i)
     {
         jobject inetAddrObj = newInetAddress(env, vnetConfig.assignedAddresses[i]);
-        appendItemToArrayList(env, assignedAddrArrayObj, inetAddrObj);
+        env->SetObjectArrayElement(assignedAddrArrayObj, i, inetAddrObj);
+        if(env->ExceptionCheck())
+        {
+            LOGE("Error assigning InetSocketAddress to array");
+            return NULL;
+        }
     }
 
     env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);

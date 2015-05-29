@@ -30,9 +30,6 @@ jobject createEvent(JNIEnv *env, ZT1_Event event);
 jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role);
 jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfigOperation op);
 
-jobject newArrayList(JNIEnv *env);
-bool appendItemToArrayList(JNIEnv *env, jobject array, jobject object);
-
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr);
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
 

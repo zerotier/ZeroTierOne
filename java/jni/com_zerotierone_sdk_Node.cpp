@@ -1117,9 +1117,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    peers
- * Signature: (J)Ljava/util/ArrayList;
+ * Signature: (J)[Lcom/zerotier/sdk/Peer;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_peers(
+JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
     JNIEnv *env, jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -1131,37 +1131,64 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_peers(
     }
 
     ZT1_PeerList *peerList = ZT1_Node_peers(node);
-
+    
     if(peerList == NULL)
     {
+        LOGE("ZT1_Node_peers returned NULL");
         return NULL;
     }
 
-    jobject peerListObject = newArrayList(env);
-    if(peerListObject == NULL)
+    int peerCount = peerList->peerCount * 100;
+    LOGV("Ensure Local Capacity: %d", peerCount);
+    if(env->EnsureLocalCapacity(peerCount))
     {
+        LOGE("EnsureLocalCapacity failed!!");
         ZT1_Node_freeQueryResult(node, peerList);
         return NULL;
     }
 
+    jclass peerClass = cache.findClass("com/zerotier/sdk/Peer");
+    if(env->ExceptionCheck() || peerClass == NULL)
+    {
+        LOGE("Error finding Peer class");
+        ZT1_Node_freeQueryResult(node, peerList);
+        return NULL;
+    }
+
+    jobjectArray peerArrayObj = env->NewObjectArray(
+        peerList->peerCount, peerClass, NULL);
+
+    if(env->ExceptionCheck() || peerArrayObj == NULL)
+    {
+        LOGE("Error creating Peer[] array");
+        ZT1_Node_freeQueryResult(node, peerList);
+        return NULL;
+    }
+
+
     for(unsigned int i = 0; i < peerList->peerCount; ++i)
     {
         jobject peerObj = newPeer(env, peerList->peers[i]);
-        appendItemToArrayList(env, peerListObject, peerObj);
+        env->SetObjectArrayElement(peerArrayObj, i, peerObj);
+        if(env->ExceptionCheck()) 
+        {
+            LOGE("Error assigning Peer object to array");
+            break;
+        }
     }
 
     ZT1_Node_freeQueryResult(node, peerList);
     peerList = NULL;
 
-    return peerListObject;
+    return peerArrayObj;
 }
 
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    networks
- * Signature: (J)Ljava/util/ArrayList;
+ * Signature: (J)[Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networks(
+JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
     JNIEnv *env, jobject obj, jlong id)
 {
     uint64_t nodeId = (uint64_t) id;
@@ -1178,9 +1205,19 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networks(
         return NULL;
     }
 
-    jobject networkListObject = newArrayList(env);
-    if(networkListObject == NULL)
+    jclass vnetConfigClass = cache.findClass("com/zerotier/sdk/VirtualNetworkConfig");
+    if(env->ExceptionCheck() || vnetConfigClass == NULL)
     {
+        LOGE("Error finding VirtualNetworkConfig class");
+        ZT1_Node_freeQueryResult(node, networkList);
+        return NULL;
+    }
+
+    jobjectArray networkListObject = env->NewObjectArray(
+        networkList->networkCount, vnetConfigClass, NULL);
+    if(env->ExceptionCheck() || networkListObject == NULL)
+    {
+        LOGE("Error creating VirtualNetworkConfig[] array");
         ZT1_Node_freeQueryResult(node, networkList);
         return NULL;
     }
@@ -1188,7 +1225,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networks(
     for(unsigned int i = 0; i < networkList->networkCount; ++i)
     {
         jobject networkObject = newNetworkConfig(env, networkList->networks[i]);
-        appendItemToArrayList(env, networkListObject, networkObject);
+        env->SetObjectArrayElement(networkListObject, i, networkObject);
+        if(env->ExceptionCheck())
+        {
+            LOGE("Error assigning VirtualNetworkConfig object to array");
+            break;
+        }
     }
 
     ZT1_Node_freeQueryResult(node, networkList);
