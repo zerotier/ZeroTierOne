@@ -333,10 +333,13 @@ namespace {
 
         if(retval > 0)
         {
-            env->GetByteArrayRegion(bufferObj, 0, retval, (jbyte*)buffer);
-            env->GetLongArrayRegion(objectSizeObj, 0, 1, (jlong*)out_objectSize);
-            env->DeleteLocalRef(bufferObj);
-            env->DeleteLocalRef(objectSizeObj);
+            jbyte *data = env->GetByteArrayElements(bufferObj, NULL);
+            memcpy(buffer, data, retval);
+            env->ReleaseByteArrayElements(bufferObj, data, JNI_ABORT);
+
+            jlong *objSize = env->GetLongArrayElements(objectSizeObj, NULL);
+            *out_objectSize = (unsigned long)objSize[0];
+            env->ReleaseLongArrayElements(objectSizeObj, objSize, JNI_ABORT);
         }
 
         LOGI("Out Object Size: %lu", *out_objectSize);
