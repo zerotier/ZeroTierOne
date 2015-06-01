@@ -498,12 +498,11 @@ bool Network::_isAllowed(const Address &peer) const
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
 {
 	// Assumes _lock is locked
-	std::vector<MulticastGroup> mgs(_myMulticastGroups);
-	std::vector<MulticastGroup>::iterator oldend(mgs.end());
-	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i) {
-		if (!std::binary_search(mgs.begin(),oldend,i->first))
-			mgs.push_back(i->first);
-	}
+	std::vector<MulticastGroup> mgs;
+	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
+	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
+	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i)
+		mgs.push_back(i->first);
 	if ((_config)&&(_config->enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
