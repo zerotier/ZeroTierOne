@@ -174,6 +174,9 @@
     <ClCompile Include="ZeroTierOneService.cpp">
       <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\osdep\BackgroundResolver.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -337,6 +340,9 @@
     </ClInclude>
     <ClInclude Include="ZeroTierOneService.h">
       <Filter>Header Files\windows\ZeroTierOne</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\BackgroundResolver.hpp">
+      <Filter>Header Files\osdep</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
