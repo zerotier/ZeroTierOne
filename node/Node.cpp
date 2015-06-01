@@ -188,24 +188,53 @@ public:
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
-		_supernodes(RR->topology->supernodeAddresses()) {}
+		_supernodes(RR->topology->supernodeAddresses()),
+		_networkRelays()
+	{
+		std::vector< SharedPtr<Network> > nws(renv->node->allNetworks());
+		for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
+			SharedPtr<NetworkConfig> nc((*nw)->config2());
+			if (nc)
+				_networkRelays.insert(_networkRelays.end(),nc->relays().begin(),nc->relays().end());
+		}
+		std::sort(_networkRelays.begin(),_networkRelays.end());
+		std::unique(_networkRelays.begin(),_networkRelays.end());
+	}
 
 	uint64_t lastReceiveFromUpstream;
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
 		if (std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end()) {
+			// Supernodes have fixed addresses and are always pinged
 			p->doPingAndKeepalive(RR,_now);
 			if (p->lastReceive() > lastReceiveFromUpstream)
 				lastReceiveFromUpstream = p->lastReceive();
-		} else if (p->alive(_now)) {
-			p->doPingAndKeepalive(RR,_now);
+		} else {
+			// Ping regular peers if they are alive, or if they are network
+			// designated relays with suggested IP address endpoints in a
+			// network config.
+			bool ison;
+			if (p->alive(_now))
+				ison = p->doPingAndKeepalive(RR,_now);
+			else ison = false;
+
+			if (!ison) {
+				// Note that multiple networks might designate the same peer as
+				// a preferred relay, so try all suggested endpoints.
+				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_networkRelays.begin());r!=_networkRelays.end();++r) {
+					if (r->first == p->address())
+						p->attemptToContactAt(RR,r->second,_now);
+				}
+			}
 		}
 	}
+
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	std::vector<Address> _supernodes;
+	std::vector< std::pair<Address,InetAddress> > _networkRelays;
 };
 
 ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)

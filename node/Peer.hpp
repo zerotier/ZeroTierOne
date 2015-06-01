@@ -179,8 +179,9 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
+	 * @return True if there is an active best path (regardless of whether it needed a ping or keepalive), false if no paths
 	 */
-	void doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
+	bool doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
 	 * @return All known direct paths to this peer
