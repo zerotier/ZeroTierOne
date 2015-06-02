@@ -1,11 +1,12 @@
-/ext/llvm-g++-Xcode4.6.2
-/ext/llvm-g++-Xcode4.6.2.tar.bz2
+# Main binaries created in *nix builds
 /zerotier-*
-*.o
+
+# OS-created garbage files from various platforms
 .DS_Store
 .Apple*
-*.dSYM
-/ipch
+Thumbs.db
+
+# Windows build droppings
 /windows/ZeroTierOne.sdf
 /windows/ZeroTierOne.v11.suo
 /windows/x64
@@ -16,8 +17,20 @@
 /windows/ZeroTierOneService/obj
 /windows/ZeroTierOneService/bin
 /windows/Build
+/windows/Debug
+/windows/Release
+/windows/WebUIWrapper/bin
+/windows/WebUIWrapper/obj
 /ext/installfiles/windows/ZeroTier One-SetupFiles
 /ext/installfiles/windows/Prerequisites
+/ext/installfiles/windows/*-cache
+/ZeroTier One.msi
+
+# *nix/Mac build droppings
+/build-*
+/ZeroTierOneInstaller-*
+
+# Miscellaneous file types that we don't want to check in
 *.log
 *.opensdf
 *.user
@@ -26,34 +39,35 @@
 *.tlog
 *.pid
 *.pkg
-/*.deb
-/*.rpm
-/build-*
-/ZeroTierOneInstaller-*
-.qmake.stash
+*.o
+*.core
+*.deb
+*.rpm
 *.autosave
+*.tmp
+
+# Root topology build files, temporaries, and never check in secrets
 /root-topology/bin2c
 /root-topology/mktopology
 /root-topology/*.secret
 /root-topology/test/supernodes
 /root-topology/test/test-root-topology
-/ext/mac-ui-macgap1-wrapper/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
-/ext/mac-ui-macgap1-wrapper/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
+
+# MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/xcuserdata/*
 /ext/mac-ui-macgap1-wrapper/src/build
+
+# Web UI dev temporaries
+/ui/.module-cache
+node_modules
+
+# Java/Android/JNI build droppings
 java/obj/
 java/libs/
 java/bin/
 java/classes/
 java/doc/
-windows/ZeroTierOne/Debug/
 java/build_win64/
 java/build_win32/
 /java/mac32_64/
-/ui/.module-cache
-/windows/WebUIWrapper/bin
-/windows/WebUIWrapper/obj
-node_modules
-/ZeroTier One.msi
-/ext/installfiles/windows/*-cache
