@@ -62,7 +62,7 @@ selftest: $(OBJS) selftest.o
 
 # Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
 mac-dist-pkg: FORCE
-	cd ext/installfiles/mac ; packagesbuild "ZeroTier One.pkgproj"
+	packagesbuild "ext/installfiles/mac/ZeroTier One.pkgproj"
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.pkg"
 	$(CODESIGN) -vvv "ZeroTier One.pkg"
 
