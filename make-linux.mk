@@ -91,6 +91,6 @@ debug:	FORCE
 
 official: FORCE
 	make -j 4 ZT_OFFICIAL_RELEASE=1
-	./buildinstaller.sh
+	make ZT_OFFICIAL_RELEASE=1 installer
 
 FORCE:
