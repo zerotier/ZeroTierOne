@@ -1,5 +1,5 @@
 # Pick clang or gcc, with preference for clang
-CC=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+CC=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
 CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 
 INCLUDES=
