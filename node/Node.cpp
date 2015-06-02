@@ -184,57 +184,42 @@ ZT1_ResultCode Node::processVirtualNetworkFrame(
 class _PingPeersThatNeedPing
 {
 public:
-	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now) :
+	_PingPeersThatNeedPing(const RuntimeEnvironment *renv,uint64_t now,const std::vector< std::pair<Address,InetAddress> > &relays) :
 		lastReceiveFromUpstream(0),
 		RR(renv),
 		_now(now),
-		_supernodes(RR->topology->supernodeAddresses()),
-		_relays()
+		_relays(relays),
+		_supernodes(RR->topology->supernodeAddresses())
 	{
-		std::vector< SharedPtr<Network> > nws(renv->node->allNetworks());
-		for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
-			SharedPtr<NetworkConfig> nc((*nw)->config2());
-			if (nc)
-				_relays.insert(_relays.end(),nc->relays().begin(),nc->relays().end());
-		}
-		std::sort(_relays.begin(),_relays.end());
-		std::unique(_relays.begin(),_relays.end());
 	}
 
 	uint64_t lastReceiveFromUpstream;
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if (std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end()) {
-			// Supernodes have fixed addresses and are always pinged
+		bool isRelay = false;
+		for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
+			if (r->first == p->address()) {
+				isRelay = true;
+				break;
+			}
+		}
+
+		if ((isRelay)||(std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end())) {
 			p->doPingAndKeepalive(RR,_now);
 			if (p->lastReceive() > lastReceiveFromUpstream)
 				lastReceiveFromUpstream = p->lastReceive();
 		} else {
-			// Ping regular peers if they are alive, or if they are network
-			// designated relays with suggested IP address endpoints in a
-			// network config.
-			bool ison;
 			if (p->alive(_now))
-				ison = p->doPingAndKeepalive(RR,_now);
-			else ison = false;
-
-			if (!ison) {
-				// Note that multiple networks might designate the same peer as
-				// a preferred relay, so try all suggested endpoints.
-				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-					if (r->first == p->address())
-						p->attemptToContactAt(RR,r->second,_now);
-				}
-			}
+				p->doPingAndKeepalive(RR,_now);
 		}
 	}
 
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
+	const std::vector< std::pair<Address,InetAddress> > &_relays;
 	std::vector<Address> _supernodes;
-	std::vector< std::pair<Address,InetAddress> > _relays;
 };
 
 ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
@@ -243,54 +228,70 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	Mutex::Lock bl(_backgroundTasksLock);
 
 	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
-		_lastPingCheck = now;
-
 		try {
-			_PingPeersThatNeedPing pfunc(RR,now);
+			_lastPingCheck = now;
+
+			// Get relays and networks that need config without leaving the mutex locked
+			std::vector< std::pair<Address,InetAddress> > networkRelays;
+			std::vector< SharedPtr<Network> > needConfig;
+			{
+				Mutex::Lock _l(_networks_m);
+				for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+					SharedPtr<NetworkConfig> nc(n->second->config2());
+					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
+						needConfig.push_back(n->second);
+					if (nc)
+						networkRelays.insert(networkRelays.end(),nc->relays().begin(),nc->relays().end());
+				}
+			}
+
+			// Request updated configuration for networks that need it
+			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
+				(*n)->requestConfiguration();
+	
+			// Attempt to contact network preferred relays that we don't have direct links to
+			std::sort(networkRelays.begin(),networkRelays.end());
+			std::unique(networkRelays.begin(),networkRelays.end());
+			for(std::vector< std::pair<Address,InetAddress> >::const_iterator nr(networkRelays.begin());nr!=networkRelays.end();++nr) {
+				if (nr->second) {
+					SharedPtr<Peer> rp(RR->topology->getPeer(nr->first));
+					if ((rp)&&(!rp->hasActiveDirectPath(now)))
+						rp->attemptToContactAt(RR,nr->second,now);
+				}
+			}
+	
+			// Ping living or supernode/relay peers
+			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
+			// Update online status, post status change as event
 			bool oldOnline = _online;
 			_online = ((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT);
 			if (oldOnline != _online)
 				postEvent(_online ? ZT1_EVENT_ONLINE : ZT1_EVENT_OFFLINE);
-		} catch ( ... ) {
-			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
-		}
 
-		try {
-			Mutex::Lock _l(_networks_m);
-			for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-				if ((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)
-					n->second->requestConfiguration();
+			// Send LAN beacons
+			if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
+				_lastBeacon = now;
+				char beacon[13];
+				void *p = beacon;
+				*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
+				p = beacon + 4;
+				*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
+				RR->identity.address().copyTo(beacon + 8,5);
+				RR->antiRec->logOutgoingZT(beacon,13);
+				putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13);
 			}
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}
-
-		if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
-			_lastBeacon = now;
-			char beacon[13];
-			void *p = beacon;
-			*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
-			p = beacon + 4;
-			*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
-			RR->identity.address().copyTo(beacon + 8,5);
-			RR->antiRec->logOutgoingZT(beacon,13);
-			putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13);
-		}
 	}
 
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
-		_lastHousekeepingRun = now;
-
 		try {
+			_lastHousekeepingRun = now;
 			RR->topology->clean(now);
 			RR->sa->clean(now);
-		} catch ( ... ) {
-			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
-		}
-
-		try {
 			RR->mc->clean(now);
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;

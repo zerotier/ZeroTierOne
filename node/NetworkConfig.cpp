@@ -184,9 +184,11 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
 		std::size_t semi(r->find(';')); // address;ip/port,...
-		if ((semi == ZT_ADDRESS_LENGTH)&&(r->length() > (ZT_ADDRESS_LENGTH + 1))) {
-			std::pair<Address,InetAddress> relay(Address(r->substr(0,semi)),InetAddress(r->substr(semi+1)));
-			if ((relay.first)&&(relay.second))
+		if (semi == ZT_ADDRESS_LENGTH_HEX) {
+			std::pair<Address,InetAddress> relay(
+				Address(r->substr(0,semi)),
+				((r->length() > (semi + 1)) ? InetAddress(r->substr(semi + 1)) : InetAddress()) );
+			if ((relay.first)&&(!relay.first.isReserved()))
 				_relays.push_back(relay);
 		}
 	}

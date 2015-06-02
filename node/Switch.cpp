@@ -741,9 +741,11 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 					if (nconf) {
 						unsigned int latency = ~((unsigned int)0);
 						for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
-							SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-							if ((rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
-								rp.swap(relay);
+							if (r->first != peer->address()) {
+								SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
+								if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
+									rp.swap(relay);
+							}
 						}
 					}
 				}

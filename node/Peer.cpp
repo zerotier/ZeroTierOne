@@ -191,7 +191,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 	RR->node->putPacket(atAddress,outp.data(),outp.size());
 }
 
-bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
+void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
 	Path *const bestPath = getBestPath(now);
 	if ((bestPath)&&(bestPath->active(now))) {
@@ -204,9 +204,7 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 			RR->node->putPacket(bestPath->address(),"",0);
 			bestPath->sent(now);
 		}
-		return true;
 	}
-	return false;
 }
 
 void Peer::addPath(const Path &newp)
