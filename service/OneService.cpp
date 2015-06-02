@@ -248,7 +248,7 @@ public:
 					fprintf(bash,
 						"#!/bin/bash\n"
 						"export PATH=/bin:/usr/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/sbin\n"
-						"sleep 2\n"
+						"sleep 1\n"
 						"installer -pkg \"%s\" -target /\n"
 						"sleep 1\n"
 						"rm -f \"%s\" \"%s\"\n"

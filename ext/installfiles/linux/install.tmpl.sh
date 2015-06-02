@@ -6,6 +6,7 @@ shopt -s expand_aliases
 dryRun=0
 
 echo "*** ZeroTier One install/update ***"
+echo
 
 if [ "$UID" -ne 0 ]; then
 	echo "Not running as root so doing dry run (no modifications to system)..."
@@ -118,10 +119,12 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
 	systemctl enable zerotier-one.service
-	#if [ "$origVersion" != "$newVersion" ]; then
-	#	echo 'Version has changed, starting...'
-	#	systemctl restart zerotier-one.service
-	#fi
+
+	echo
+	echo 'Done! Installed and service configured to start at system boot.'
+	echo
+	echo "To start now or restart the service if it's already running:"
+	echo '  sudo systemctl restart zerotier-one.service'
 else
 	# SYSV INIT -- also covers upstart which supports SysVinit backward compatibility
 
@@ -163,14 +166,11 @@ else
 		fi
 	fi
 
-	#if [ "$origVersion" != "$newVersion" ]; then
-	#	echo 'Version has changed, starting...'
-	#	if [ -f /sbin/service -o -f /usr/sbin/service ]; then
-	#		service zerotier-one restart
-	#	else
-	#		/etc/init.d/zerotier-one restart
-	#	fi
-	#fi
+	echo
+	echo 'Done! Installed and service configured to start at system boot.'
+	echo
+	echo "To start now or restart the service if it's already running:"
+	echo '  sudo service zerotier-one restart'
 fi
 
 exit 0
