@@ -134,6 +134,8 @@ We're working on better "official" Docker support. In the meantime there is a [u
 
 ### Building with Network Controller Support
 
+**Warning: as of beta version 1.0.3 the new network controller is not heavily tested. We recommend waiting for 1.0.4 to deploy this in production.**
+
 Network controllers are nodes responsible for issuing configurations and certificates to members of ZeroTier virtual networks. Most users won't need to run their own, so this code is by default not included in the ZeroTier One binary.
 
 You can build a network controller on Linux or Mac with:
