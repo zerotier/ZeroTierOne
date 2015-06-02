@@ -37,6 +37,7 @@
     <target name="build_android">
         <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
             <arg value="ZT1=${user.dir}/../"/>
+            <arg value="V=1"/>
         </exec>
         <copy file="libs/armeabi/libZeroTierOneJNI.so" 
               tofile="${user.dir}/classes/lib/armeabi/libZeroTierOneJNI.so" 
