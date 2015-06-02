@@ -1,13 +1,11 @@
 ZeroTier One
 ======
 
-ZeroTier is a software defined networking layer for Earth. Our mission is to directly connect the world's devices via universal network virtualization that is ridiculously easy to use.
-
-It creates virtual Ethernet networks that run over a global, secure, distributed, zero-configuration peer to peer network.
+ZeroTier is a software defined networking layer for Earth.
 
 It can be used for on-premise network virtualization, as a peer to peer VPN for mobile teams, for hybrid or multi-data-center cloud deployments, or just about anywhere else secure software defined virtual networking is useful. It even supports Ethernet bridging, allowing the seamless attachment of physical LANs to virtual ones for inter-office networking, gluing Docker an other VM/container backplanes together, remote access to legacy devices, and more.
 
-ZeroTier One is our OS-level client application. It allows Mac, Linux, Windows, FreeBSD, and soon other types of clients to join ZeroTier virtual networks. It can run on native systems, VMs, or containers (Docker, OpenVZ, etc.).
+ZeroTier One is our OS-level client service. It allows Mac, Linux, Windows, FreeBSD, and soon other types of clients to join ZeroTier virtual networks like conventional VPNs or VLANs. It can run on native systems, VMs, or containers (Docker, OpenVZ, etc.).
 
 Visit [ZeroTier's site](https://www.zerotier.com/) for more information. You can also download professionally packaged binary installers/packages for a variety of supported OSes there if you don't want to build ZeroTier One from source.
 
@@ -127,6 +125,14 @@ Linux/BSD and Mac installations have an *uninstall.sh* file in their ZeroTier ho
     sudo /path/to/ZeroTier/home/folder/uninstall.sh
 
 Windows installers are insane. We build our .MSI installers with [Advanced Installer Enterprise](http://www.advancedinstaller.com), since it's the only way we could find to allow us to build a combined 32-bit/64-bit MSI file that deploys a driver, a service, and an application properly while retaining basic human sanity and will to live. To avoid trauma we really recommend just installing the pre-build Windows binaries from our web site if you want permanent installation on Windows.
+
+### Using ZeroTier One in Docker Containers
+
+To run the ZeroTier One service in a Docker container, run it with "--device=/dev/net/tun --cap-add=NET_ADMIN". This will allow ZeroTier One to open a "tap" virtual network port inside the container.
+
+Alternately, you can use Ethernet bridging to bridge the *docker0* device on your system to a ZeroTier virtual network. This allows you to run ZeroTier One on the host and bridge the entire Docker network backplane to a virtual network or other hosts.
+
+We're working on better "official" Docker support. In the meantime there is a [user-contributed project here](https://github.com/davide/docker-zerotier).
 
 ### Building with Network Controller Support
 
