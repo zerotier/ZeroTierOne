@@ -56,11 +56,11 @@ Running ZeroTier One on a Mac is the same, but OSX requires a kernel extension. 
 
 This will create the home folder for Mac, place *tap.kext* there, and set its modes correctly to enable ZeroTier One to manage it with *kextload* and *kextunload*.
 
-Windows, of course, is special. Once again you're on your own there for now. Running the .exe with -h will show options, including one to run at an admin console rather than as a service.
+We recommend using our binary packages on Windows, since there are several prerequisites such as a tap driver that must be installed on the system *and* in the home folder.
 
 ### Joining A Network
 
-ZeroTier virtual networks are identified by 16-digit hexadecimal network IDs, which devices are identified by 10-digit addresses. To get your address run:
+ZeroTier virtual networks are identified by 16-digit hexadecimal network IDs, while devices are identified by 10-digit addresses. To get your address run:
 
     sudo zerotier-cli status
 
@@ -72,7 +72,7 @@ You should see something like:
 
 That 10-digit hex code is you. It's derived via a one-way proof of work function from your cryptographic public key. Your public key can be found in *identity.public* in ZeroTier's home folder, while *identity.secret* contains your full identity including the secret portion of the key pair.
 
-By the way -- those identity files define your device's *identity*. Moving them to another system will move that identity. Be careful when cloning virtual machines that have identities stored on them. If two devices have the same identity, they'll "fight" over it and you won't know which device will receive network packets. (Multi-homing isn't supported yet, but we have plans for something like that.)
+(The identity files define your device's *identity*. Moving them to another system will move that identity. Be careful when cloning virtual machines that have identities stored on them. If two devices have the same identity, they'll "fight" over it and you won't know which device will receive network packets.)
 
 If you want to do a quick test, you can join [Earth](https://www.zerotier.com/earth.html). It's a global public network that anyone can join. Type:
 
@@ -82,9 +82,9 @@ Then:
 
     sudo zerotier-cli listnetworks
 
-After a few seconds to a minute you should see something like:
+At first it'll be in *REQUESTING\_CONFIGURATION* state. In a few seconds to a minute you should see something like:
 
-    200 listnetworks 8056c2e21c000001 earth.zerotier.net ##:##:##:##:##:## OK PUBLIC zt0 ##.##.##.##/7
+    200 listnetworks 8056c2e21c000001 earth.zerotier.net ##:##:##:##:##:## OK PUBLIC zt0 ##.##.##.##/##
 
 Earth will assign you an IP address in the "unofficially available" globally unrouted 28.0.0.0/7 IP block so as to avoid conflicts with local networks. (Your networks can use any IP scheme, or can even leave IP addresses unmanaged.) Once you get an IP, you should be able to ping something:
 
@@ -92,13 +92,11 @@ Earth will assign you an IP address in the "unofficially available" globally unr
 
 Go to [http://earth.zerotier.net/](http://earth.zerotier.net/) to see a short little welcome page that will tell you your IP and Ethernet MAC address.
 
-Earth is a pretty public place. If you don't want to stick around run:
+Earth is a public place. If you don't want to stick around run:
 
     sudo zerotier-cli leave 8056c2e21c000001
 
 The network (and associated interface) should be gone.
-
-Joining and leaving virtual networks is almost as easy as an IRC channel or a chat room.
 
 Networks are created and administrated by network controllers. Most users will want to use our hosted controllers. Visit [our web site](https://www.zerotier.com/) for more information. Later in this README there are brief instructions about building ZeroTier One with network controller support for those who want to try running their own.
 
