@@ -114,8 +114,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 	if (to.isMulticast()) {
 		// Destination is a multicast address (including broadcast)
-
-		const uint64_t now = RR->node->now();
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
@@ -145,7 +143,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		 * multicast addresses on bridge interfaces and subscribing each slave.
 		 * But in that case this does no harm, as the sets are just merged. */
 		if (fromBridged)
-			network->learnBridgedMulticastGroup(mg,now);
+			network->learnBridgedMulticastGroup(mg,RR->node->now());
 
 		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
 		if (!network->updateAndCheckMulticastBalance(mg,len)) {
@@ -158,7 +156,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		RR->mc->send(
 			((!nconf->isPublic())&&(nconf->com())) ? &(nconf->com()) : (const CertificateOfMembership *)0,
 			nconf->multicastLimit(),
-			now,
+			RR->node->now(),
 			network->id(),
 			nconf->activeBridges(),
 			mg,
@@ -180,7 +178,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				// bundle this with EXT_FRAME instead of sending two packets.
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 				nconf->com().serialize(outp);
-				send(outp,true);
+				send(outp,true,network->id());
 			}
 
 			if (fromBridged) {
@@ -193,7 +191,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
 				outp.compress();
-				send(outp,true);
+				send(outp,true,network->id());
 			} else {
 				// FRAME is a shorter version that can be used when there's no bridging and no COM
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
@@ -201,7 +199,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				outp.append((uint16_t)etherType);
 				outp.append(data,len);
 				outp.compress();
-				send(outp,true);
+				send(outp,true,network->id());
 			}
 
 			//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged);
@@ -259,21 +257,21 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			outp.append((uint16_t)etherType);
 			outp.append(data,len);
 			outp.compress();
-			send(outp,true);
+			send(outp,true,network->id());
 		}
 	}
 }
 
-void Switch::send(const Packet &packet,bool encrypt)
+void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
 {
 	if (packet.destination() == RR->identity.address()) {
 		TRACE("BUG: caught attempt to send() to self, ignored");
 		return;
 	}
 
-	if (!_trySend(packet,encrypt)) {
+	if (!_trySend(packet,encrypt,nwid)) {
 		Mutex::Lock _l(_txQueue_m);
-		_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry(RR->node->now(),packet,encrypt)));
+		_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry(RR->node->now(),packet,encrypt,nwid)));
 	}
 }
 
@@ -423,7 +421,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 		Mutex::Lock _l(_txQueue_m);
 		std::pair< std::multimap< Address,TXQueueEntry >::iterator,std::multimap< Address,TXQueueEntry >::iterator > waitingTxQueueItems(_txQueue.equal_range(peer->address()));
 		for(std::multimap< Address,TXQueueEntry >::iterator txi(waitingTxQueueItems.first);txi!=waitingTxQueueItems.second;) {
-			if (_trySend(txi->second.packet,txi->second.encrypt))
+			if (_trySend(txi->second.packet,txi->second.encrypt,txi->second.nwid))
 				_txQueue.erase(txi++);
 			else ++txi;
 		}
@@ -505,7 +503,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	{	// Time out TX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_txQueue_m);
 		for(std::multimap< Address,TXQueueEntry >::iterator i(_txQueue.begin());i!=_txQueue.end();) {
-			if (_trySend(i->second.packet,i->second.encrypt))
+			if (_trySend(i->second.packet,i->second.encrypt,i->second.nwid))
 				_txQueue.erase(i++);
 			else if ((now - i->second.creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
 				TRACE("TX %s -> %s timed out",i->second.packet.source().toString().c_str(),i->second.packet.destination().toString().c_str());
@@ -725,7 +723,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 	return Address();
 }
 
-bool Switch::_trySend(const Packet &packet,bool encrypt)
+bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 {
 	SharedPtr<Peer> peer(RR->topology->getPeer(packet.destination()));
 
@@ -734,8 +732,29 @@ bool Switch::_trySend(const Packet &packet,bool encrypt)
 
 		Path *viaPath = peer->getBestPath(now);
 		if (!viaPath) {
-			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
-			if (!(sn)||(!(viaPath = sn->getBestPath(now))))
+			SharedPtr<Peer> relay;
+
+			if (nwid) {
+				SharedPtr<Network> network(RR->node->network(nwid));
+				if (network) {
+					SharedPtr<NetworkConfig> nconf(network->config2());
+					if (nconf) {
+						unsigned int latency = ~((unsigned int)0);
+						for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
+							if (r->first != peer->address()) {
+								SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
+								if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
+									rp.swap(relay);
+							}
+						}
+					}
+				}
+			}
+
+			if (!relay)
+				relay = RR->topology->getBestSupernode();
+
+			if (!(relay)||(!(viaPath = relay->getBestPath(now))))
 				return false;
 		}
 

@@ -157,11 +157,6 @@ public:
 	}
 
 	/**
-	 * @return True if this node's identity is in the supernode set
-	 */
-	inline bool amSupernode() const { return _amSupernode; }
-
-	/**
 	 * Clean and flush database
 	 */
 	void clean(uint64_t now);

@@ -31,9 +31,6 @@ ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
 	OBJS+=controller/SqliteNetworkController.o 
 endif
 
-# Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
-DEFS+=-DZT_SALSA20_SSE
-
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE 
@@ -65,7 +62,7 @@ selftest: $(OBJS) selftest.o
 
 # Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
 mac-dist-pkg: FORCE
-	cd ext/installfiles/mac ; packagesbuild "ZeroTier One.pkgproj"
+	packagesbuild "ext/installfiles/mac/ZeroTier One.pkgproj"
 	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.pkg"
 	$(CODESIGN) -vvv "ZeroTier One.pkg"
 

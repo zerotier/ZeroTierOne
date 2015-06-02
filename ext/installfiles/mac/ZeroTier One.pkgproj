@@ -37,9 +37,9 @@
 								<key>GID</key>
 								<integer>80</integer>
 								<key>PATH</key>
-								<string>/Users/api/Code/ZeroTierOne/ext/mac-ui-macgap1-wrapper/bin/ZeroTier One.app</string>
+								<string>../../mac-ui-macgap1-wrapper/bin/ZeroTier One.app</string>
 								<key>PATH_TYPE</key>
-								<integer>0</integer>
+								<integer>1</integer>
 								<key>PERMISSIONS</key>
 								<integer>493</integer>
 								<key>TYPE</key>
@@ -79,9 +79,9 @@
 														<key>GID</key>
 														<integer>0</integer>
 														<key>PATH</key>
-														<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/get-proxy-settings.sh</string>
+														<string>get-proxy-settings.sh</string>
 														<key>PATH_TYPE</key>
-														<integer>0</integer>
+														<integer>1</integer>
 														<key>PERMISSIONS</key>
 														<integer>493</integer>
 														<key>TYPE</key>
@@ -95,9 +95,9 @@
 														<key>GID</key>
 														<integer>0</integer>
 														<key>PATH</key>
-														<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/launch.sh</string>
+														<string>launch.sh</string>
 														<key>PATH_TYPE</key>
-														<integer>0</integer>
+														<integer>1</integer>
 														<key>PERMISSIONS</key>
 														<integer>493</integer>
 														<key>TYPE</key>
@@ -111,9 +111,9 @@
 														<key>GID</key>
 														<integer>0</integer>
 														<key>PATH</key>
-														<string>/Users/api/Code/ZeroTierOne/ext/bin/tap-mac/tap.kext</string>
+														<string>../../bin/tap-mac/tap.kext</string>
 														<key>PATH_TYPE</key>
-														<integer>0</integer>
+														<integer>1</integer>
 														<key>PERMISSIONS</key>
 														<integer>493</integer>
 														<key>TYPE</key>
@@ -130,9 +130,9 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>/Users/api/Code/ZeroTierOne/ui/index.html</string>
+																<string>../../../ui/index.html</string>
 																<key>PATH_TYPE</key>
-																<integer>0</integer>
+																<integer>1</integer>
 																<key>PERMISSIONS</key>
 																<integer>420</integer>
 																<key>TYPE</key>
@@ -146,9 +146,9 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>/Users/api/Code/ZeroTierOne/ui/main.js</string>
+																<string>../../../ui/main.js</string>
 																<key>PATH_TYPE</key>
-																<integer>0</integer>
+																<integer>1</integer>
 																<key>PERMISSIONS</key>
 																<integer>420</integer>
 																<key>TYPE</key>
@@ -162,9 +162,9 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>/Users/api/Code/ZeroTierOne/ui/react.min.js</string>
+																<string>../../../ui/react.min.js</string>
 																<key>PATH_TYPE</key>
-																<integer>0</integer>
+																<integer>1</integer>
 																<key>PERMISSIONS</key>
 																<integer>420</integer>
 																<key>TYPE</key>
@@ -178,9 +178,9 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>/Users/api/Code/ZeroTierOne/ui/simpleajax.min.js</string>
+																<string>../../../ui/simpleajax.min.js</string>
 																<key>PATH_TYPE</key>
-																<integer>0</integer>
+																<integer>1</integer>
 																<key>PERMISSIONS</key>
 																<integer>420</integer>
 																<key>TYPE</key>
@@ -194,9 +194,9 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>/Users/api/Code/ZeroTierOne/ui/zerotier.css</string>
+																<string>../../../ui/zerotier.css</string>
 																<key>PATH_TYPE</key>
-																<integer>0</integer>
+																<integer>1</integer>
 																<key>PERMISSIONS</key>
 																<integer>420</integer>
 																<key>TYPE</key>
@@ -210,9 +210,9 @@
 																<key>GID</key>
 																<integer>0</integer>
 																<key>PATH</key>
-																<string>/Users/api/Code/ZeroTierOne/ui/ztui.min.js</string>
+																<string>../../../ui/ztui.min.js</string>
 																<key>PATH_TYPE</key>
-																<integer>0</integer>
+																<integer>1</integer>
 																<key>PERMISSIONS</key>
 																<integer>420</integer>
 																<key>TYPE</key>
@@ -240,9 +240,9 @@
 														<key>GID</key>
 														<integer>0</integer>
 														<key>PATH</key>
-														<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/uninstall.sh</string>
+														<string>uninstall.sh</string>
 														<key>PATH_TYPE</key>
-														<integer>0</integer>
+														<integer>1</integer>
 														<key>PERMISSIONS</key>
 														<integer>493</integer>
 														<key>TYPE</key>
@@ -256,9 +256,9 @@
 														<key>GID</key>
 														<integer>0</integer>
 														<key>PATH</key>
-														<string>/Users/api/Code/ZeroTierOne/zerotier-one</string>
+														<string>../../../zerotier-one</string>
 														<key>PATH_TYPE</key>
-														<integer>0</integer>
+														<integer>1</integer>
 														<key>PERMISSIONS</key>
 														<integer>493</integer>
 														<key>TYPE</key>
@@ -429,9 +429,9 @@
 										<key>GID</key>
 										<integer>0</integer>
 										<key>PATH</key>
-										<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/com.zerotier.one.plist</string>
+										<string>com.zerotier.one.plist</string>
 										<key>PATH_TYPE</key>
-										<integer>0</integer>
+										<integer>1</integer>
 										<key>PERMISSIONS</key>
 										<integer>420</integer>
 										<key>TYPE</key>
@@ -734,16 +734,16 @@
 			<key>POSTINSTALL_PATH</key>
 			<dict>
 				<key>PATH</key>
-				<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/postinst.sh</string>
+				<string>postinst.sh</string>
 				<key>PATH_TYPE</key>
-				<integer>0</integer>
+				<integer>1</integer>
 			</dict>
 			<key>PREINSTALL_PATH</key>
 			<dict>
 				<key>PATH</key>
-				<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/preinst.sh</string>
+				<string>preinst.sh</string>
 				<key>PATH_TYPE</key>
-				<integer>0</integer>
+				<integer>1</integer>
 			</dict>
 			<key>RESOURCES</key>
 			<array/>

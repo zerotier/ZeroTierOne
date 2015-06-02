@@ -486,38 +486,21 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
-		/*
-		 * At the moment, we only obey RENDEZVOUS if it comes from a designated
-		 * supernode. If relay offloading is implemented to scale the net, this
-		 * will need reconsideration.
-		 *
-		 * The reason is that RENDEZVOUS could technically be used to cause a
-		 * peer to send a weird encrypted UDP packet to an arbitrary IP:port.
-		 * The sender of RENDEZVOUS has no control over the content of this
-		 * packet, but it's still maybe something we want to not allow just
-		 * anyone to order due to possible DDOS or network forensic implications.
-		 * So if we diversify relays, we'll need some way of deciding whether the
-		 * sender is someone we should trust with a RENDEZVOUS hint.
-		 */
-		if (RR->topology->isSupernode(peer->address())) {
-			const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-			const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
-			if (withPeer) {
-				const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
-				const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
-				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
-					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
-					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
-					RR->sw->contact(withPeer,atAddr);
-				} else {
-					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
-				}
+		const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		const SharedPtr<Peer> withPeer(RR->topology->getPeer(with));
+		if (withPeer) {
+			const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
+			const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
+			if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
+				InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
+				TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
+				peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
+				RR->sw->contact(withPeer,atAddr);
 			} else {
-				TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
+				TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 			}
 		} else {
-			TRACE("ignored RENDEZVOUS from %s(%s): source not supernode",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+			TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
 		}
 	} catch (std::exception &ex) {
 		TRACE("dropped RENDEZVOUS from %s(%s): %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
