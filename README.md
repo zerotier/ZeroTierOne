@@ -122,7 +122,7 @@ Linux/BSD and Mac installations have an *uninstall.sh* file in their ZeroTier ho
 
     sudo /path/to/ZeroTier/home/folder/uninstall.sh
 
-Windows installers are insane. We build our .MSI installers with [Advanced Installer Enterprise](http://www.advancedinstaller.com). The Advanced Installer project file is in *ext/installfiles/windows* along with two pre-built and signed .MSI packages that include the ZeroTier tap device driver for 32-bit or 64-bit Intel Windows systems. To avoid lasting psychological trauma we recommend leaving Windows installers alone and using the pre-built Windows binaries on our web site.
+Windows installers are insane. We build our .MSI installers with [Advanced Installer Enterprise](http://www.advancedinstaller.com). The Advanced Installer project file is in *ext/installfiles/windows*. To avoid lasting psychological trauma we recommend leaving Windows installers alone and using the pre-built Windows binaries on our web site.
 
 ### Using ZeroTier One in Docker Containers
 
