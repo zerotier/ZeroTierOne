@@ -189,16 +189,16 @@ public:
 		RR(renv),
 		_now(now),
 		_supernodes(RR->topology->supernodeAddresses()),
-		_networkRelays()
+		_relays()
 	{
 		std::vector< SharedPtr<Network> > nws(renv->node->allNetworks());
 		for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
 			SharedPtr<NetworkConfig> nc((*nw)->config2());
 			if (nc)
-				_networkRelays.insert(_networkRelays.end(),nc->relays().begin(),nc->relays().end());
+				_relays.insert(_relays.end(),nc->relays().begin(),nc->relays().end());
 		}
-		std::sort(_networkRelays.begin(),_networkRelays.end());
-		std::unique(_networkRelays.begin(),_networkRelays.end());
+		std::sort(_relays.begin(),_relays.end());
+		std::unique(_relays.begin(),_relays.end());
 	}
 
 	uint64_t lastReceiveFromUpstream;
@@ -222,7 +222,7 @@ public:
 			if (!ison) {
 				// Note that multiple networks might designate the same peer as
 				// a preferred relay, so try all suggested endpoints.
-				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_networkRelays.begin());r!=_networkRelays.end();++r) {
+				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
 					if (r->first == p->address())
 						p->attemptToContactAt(RR,r->second,_now);
 				}
@@ -234,7 +234,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	std::vector<Address> _supernodes;
-	std::vector< std::pair<Address,InetAddress> > _networkRelays;
+	std::vector< std::pair<Address,InetAddress> > _relays;
 };
 
 ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
