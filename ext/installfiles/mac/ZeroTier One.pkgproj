@@ -734,16 +734,16 @@
 			<key>POSTINSTALL_PATH</key>
 			<dict>
 				<key>PATH</key>
-				<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/postinst.sh</string>
+				<string>postinst.sh</string>
 				<key>PATH_TYPE</key>
-				<integer>0</integer>
+				<integer>1</integer>
 			</dict>
 			<key>PREINSTALL_PATH</key>
 			<dict>
 				<key>PATH</key>
-				<string>/Users/api/Code/ZeroTierOne/ext/installfiles/mac/preinst.sh</string>
+				<string>preinst.sh</string>
 				<key>PATH_TYPE</key>
-				<integer>0</integer>
+				<integer>1</integer>
 			</dict>
 			<key>RESOURCES</key>
 			<array/>
