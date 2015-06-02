@@ -187,6 +187,12 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+#ifdef ZT_SALSA20_SSE
+	std::cout << "[crypto] Salsa20 SSE: ENABLED" << std::endl;
+#else
+	std::cout << "[crypto] Salsa20 SSE: DISABLED" << std::endl;
+#endif
+
 	std::cout << "[crypto] Benchmarking Salsa20/12... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);

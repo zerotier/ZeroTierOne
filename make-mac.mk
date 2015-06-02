@@ -31,9 +31,6 @@ ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
 	OBJS+=controller/SqliteNetworkController.o 
 endif
 
-# Enable SSE-optimized Salsa20 -- all Intel macs support SSE2
-DEFS+=-DZT_SALSA20_SSE
-
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE 

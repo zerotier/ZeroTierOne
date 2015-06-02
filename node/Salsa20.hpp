@@ -7,9 +7,15 @@
 #ifndef ZT_SALSA20_HPP
 #define ZT_SALSA20_HPP
 
+#include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "Constants.hpp"
+
+#if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || defined(__WINDOWS__))
+#define ZT_SALSA20_SSE 1
+#endif
 
 #ifdef ZT_SALSA20_SSE
 #include <emmintrin.h>
