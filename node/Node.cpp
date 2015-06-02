@@ -248,7 +248,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			// Request updated configuration for networks that need it
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
-	
+
 			// Attempt to contact network preferred relays that we don't have direct links to
 			std::sort(networkRelays.begin(),networkRelays.end());
 			std::unique(networkRelays.begin(),networkRelays.end());
@@ -259,7 +259,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 						rp->attemptToContactAt(RR,nr->second,now);
 				}
 			}
-	
+
 			// Ping living or supernode/relay peers
 			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
