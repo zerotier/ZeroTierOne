@@ -264,7 +264,7 @@ void Network::requestConfiguration()
 			outp.append((uint64_t)_config->revision());
 		else outp.append((uint64_t)0);
 	}
-	RR->sw->send(outp,true);
+	RR->sw->send(outp,true,_id);
 }
 
 void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept)

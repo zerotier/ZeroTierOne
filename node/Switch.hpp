@@ -111,8 +111,9 @@ public:
 	 * 
 	 * @param packet Packet to send
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
+	 * @param nwid Network ID or 0 if message is not related to a specific network
 	 */
-	void send(const Packet &packet,bool encrypt);
+	void send(const Packet &packet,bool encrypt,uint64_t nwid);
 
 	/**
 	 * Send RENDEZVOUS to two peers to permit them to directly connect
@@ -183,15 +184,8 @@ private:
 	void _handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len);
 	void _handleRemotePacketHead(const InetAddress &fromAddr,const void *data,unsigned int len);
 	void _handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data);
-
-	Address _sendWhoisRequest(
-		const Address &addr,
-		const Address *peersAlreadyConsulted,
-		unsigned int numPeersAlreadyConsulted);
-
-	bool _trySend(
-		const Packet &packet,
-		bool encrypt);
+	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
+	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
 
 	const RuntimeEnvironment *const RR;
 	volatile uint64_t _lastBeacon;
@@ -226,13 +220,15 @@ private:
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(uint64_t ct,const Packet &p,bool enc) :
+		TXQueueEntry(uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
 			creationTime(ct),
+			nwid(nw),
 			packet(p),
 			encrypt(enc) {}
 
 		uint64_t creationTime;
-		Packet packet; // unencrypted/untagged for TX queue
+		uint64_t nwid;
+		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
 	};
 	std::multimap< Address,TXQueueEntry > _txQueue;

@@ -108,14 +108,14 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toA
 			_packetWithCom.newInitializationVector();
 			_packetWithCom.setDestination(toAddr);
 			//TRACE(">>MC %.16llx -> %s (with COM)",(unsigned long long)this,toAddr.toString().c_str());
-			RR->sw->send(_packetWithCom,true);
+			RR->sw->send(_packetWithCom,true,_nwid);
 			return;
 		}
 	}
 	//TRACE(">>MC %.16llx -> %s (without COM)",(unsigned long long)this,toAddr.toString().c_str());
 	_packetNoCom.newInitializationVector();
 	_packetNoCom.setDestination(toAddr);
-	RR->sw->send(_packetNoCom,true);
+	RR->sw->send(_packetNoCom,true,_nwid);
 }
 
 } // namespace ZeroTier
