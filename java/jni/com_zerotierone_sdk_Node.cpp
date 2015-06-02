@@ -150,7 +150,7 @@ namespace {
 
 
         jclass frameListenerClass = env->GetObjectClass(ref->frameListener);
-        if(frameListenerClass == NULL)
+        if(env->ExceptionCheck() || frameListenerClass == NULL)
         {
             LOGE("Couldn't find class for VirtualNetworkFrameListener instance");
             return;
@@ -159,16 +159,30 @@ namespace {
         jmethodID frameListenerCallbackMethod = cache.findMethod(
             frameListenerClass,
             "onVirtualNetworkFrame", "(JJJJJ[B)V");
-        if(frameListenerCallbackMethod == NULL)
+        if(env->ExceptionCheck() || frameListenerCallbackMethod == NULL)
         {
             LOGE("Couldn't find onVirtualNetworkFrame() method");
             return;
         }
 
         jbyteArray dataArray = env->NewByteArray(frameLength);
-        env->SetByteArrayRegion(dataArray, 0, frameLength, (jbyte*)frameData);
+        if(env->ExceptionCheck() || dataArray == NULL)
+        {
+            LOGE("Couldn't create frame data array");
+            return;
+        }
 
-        env->CallVoidMethod(ref->frameListener, frameListenerCallbackMethod, nwid, sourceMac, destMac, etherType, vlanid, dataArray);
+        jbyte *data = env->GetByteArrayElements(dataArray, NULL);
+        memcpy(data, frameData, frameLength);
+        env->ReleaseByteArrayElements(dataArray, data, 0);
+
+        if(env->ExceptionCheck())
+        {
+            LOGE("Error setting frame data to array");
+            return;
+        }
+
+        env->CallVoidMethod(ref->frameListener, frameListenerCallbackMethod, (jlong)nwid, (jlong)sourceMac, (jlong)destMac, (jlong)etherType, (jlong)vlanid, dataArray);
     }
 
 
@@ -237,12 +251,14 @@ namespace {
         case ZT1_EVENT_DOWN:
         case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
         {
+            LOGV("Regular Event");
             // call onEvent()
             env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
         }
         break;
         case ZT1_EVENT_SAW_MORE_RECENT_VERSION:
         {
+            LOGV("Version Event");
             // call onOutOfDate()
             if(data != NULL)
             {
@@ -255,6 +271,7 @@ namespace {
         case ZT1_EVENT_AUTHENTICATION_FAILURE:
         case ZT1_EVENT_INVALID_PACKET:
         {
+            LOGV("Network Error Event");
             // call onNetworkError()
             if(data != NULL)
             {
@@ -266,6 +283,7 @@ namespace {
         break;
         case ZT1_EVENT_TRACE:
         {
+            LOGV("Trace Event");
             // call onTrace()
             if(data != NULL)
             {
@@ -761,6 +779,23 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
+    jmethodID inetSock_getPort = cache.findMethod(
+        InetSocketAddressClass, "getPort", "()I");
+
+    if(env->ExceptionCheck() || inetSock_getPort == NULL) 
+    {
+        LOGE("Couldn't find getPort method on InetSocketAddress");
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
+    // call InetSocketAddress.getPort()
+    int port = env->CallIntMethod(in_remoteAddress, inetSock_getPort);
+    if(env->ExceptionCheck())
+    {
+        LOGE("Exception calling InetSocketAddress.getPort()");
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
+
     // Call InetAddress.getAddress()
     jbyteArray addressArray = (jbyteArray)env->CallObjectMethod(addrObject, getAddressMethod);
     if(addressArray == NULL)
@@ -781,6 +816,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         // IPV6 address
         sockaddr_in6 ipv6 = {};
         ipv6.sin6_family = AF_INET6;
+        ipv6.sin6_port = htons(port);
         memcpy(ipv6.sin6_addr.s6_addr, addr, 16);
         memcpy(&remoteAddress, &ipv6, sizeof(sockaddr_in6));
     }
@@ -789,6 +825,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         // IPV4 address
         sockaddr_in ipv4 = {};
         ipv4.sin_family = AF_INET;
+        ipv4.sin_port = htons(port);
         memcpy(&ipv4.sin_addr, addr, 4);
         memcpy(&remoteAddress, &ipv4, sizeof(sockaddr_in));
     }

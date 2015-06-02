@@ -343,17 +343,27 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     {
         case AF_INET6:
         {
+            LOGD("IPV6 Address");
             sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
             port = ntohs(ipv6->sin6_port);
+            LOGD("Port %d", port);
         }
         break;
         case AF_INET:
         {
+            LOGD("IPV4 Address");
             sockaddr_in *ipv4 = (sockaddr_in*)&addr;
             port = ntohs(ipv4->sin_port);
+            LOGD("Port: %d", port);
         }
         break;
+        default:
+        {
+            LOGE("ERROR:  addr.ss_family is not set or unknown");
+            break;
+        }
     };
+
 
     jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
     if(env->ExceptionCheck() || inetSocketAddressObject == NULL) {
@@ -606,7 +616,6 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
         return NULL; // out of memory
     }
 
-    LOGD("JNI Peer Latency: %d", peer.latency);
     env->SetLongField(peerObject, addressField, (jlong)peer.address);
     env->SetLongField(peerObject, lastUnicastFrameField, (jlong)peer.lastUnicastFrame);
     env->SetLongField(peerObject, lastMulticastFrameField, (jlong)peer.lastMulticastFrame);
@@ -857,7 +866,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
 
     for(unsigned int i = 0; i < vnetConfig.assignedAddressCount; ++i)
     {
-        jobject inetAddrObj = newInetAddress(env, vnetConfig.assignedAddresses[i]);
+        jobject inetAddrObj = newInetSocketAddress(env, vnetConfig.assignedAddresses[i]);
         env->SetObjectArrayElement(assignedAddrArrayObj, i, inetAddrObj);
         if(env->ExceptionCheck())
         {
