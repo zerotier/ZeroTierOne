@@ -94,8 +94,8 @@ static void cliPrintHelp(const char *pn,FILE *out)
 	fprintf(out,"  -D<path>           - ZeroTier home path for parameter auto-detect"ZT_EOL_S);
 	fprintf(out,"  -p<port>           - HTTP port (default: auto)"ZT_EOL_S);
 	fprintf(out,"  -T<token>          - Authentication token (default: auto)"ZT_EOL_S);
-	//fprintf(out,"  -H<ip>             - HTTP IP address (default: 127.0.0.1)"ZT_EOL_S""ZT_EOL_S);
-	fprintf(out,"Available commands:"ZT_EOL_S);
+	//fprintf(out,"  -H<ip>             - HTTP server bind address (default: 127.0.0.1)"ZT_EOL_S);
+	fprintf(out,ZT_EOL_S"Available commands:"ZT_EOL_S);
 	fprintf(out,"  info               - Display status info"ZT_EOL_S);
 	fprintf(out,"  listpeers          - List all peers"ZT_EOL_S);
 	fprintf(out,"  listnetworks       - List all networks"ZT_EOL_S);
