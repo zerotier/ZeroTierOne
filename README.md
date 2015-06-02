@@ -3,7 +3,7 @@ ZeroTier One
 
 ZeroTier is a software defined networking layer for Earth.
 
-It can be used for on-premise network virtualization, as a peer to peer VPN for mobile teams, for hybrid or multi-data-center cloud deployments, or just about anywhere else secure software defined virtual networking is useful. It even supports Ethernet bridging, allowing the seamless attachment of physical LANs to virtual ones for inter-office networking, gluing Docker an other VM/container backplanes together, remote access to legacy devices, and more.
+It can be used for on-premise network virtualization, as a peer to peer VPN for mobile teams, for hybrid or multi-data-center cloud deployments, or just about anywhere else secure software defined virtual networking is useful.
 
 ZeroTier One is our OS-level client service. It allows Mac, Linux, Windows, FreeBSD, and soon other types of clients to join ZeroTier virtual networks like conventional VPNs or VLANs. It can run on native systems, VMs, or containers (Docker, OpenVZ, etc.).
 
