@@ -14,8 +14,8 @@ Visit [ZeroTier's site](https://www.zerotier.com/) for more information. You can
 For Mac, Linux, and BSD, just type "make" (or "gmake" on BSD). You won't need much installed; here are the requirements for various platforms:
 
  * Mac: Xcode command line tools, and [Packages](http://s.sudre.free.fr/Software/Packages/about.html) if you want to build an OSX .pkg installer ("make mac-dist-pkg"). It should build on OSX 10.7 or newer.
- * Linux: the 'which' command, which is used to auto-detect whether to use the clang or the gcc compiler. (Clang is preferred if it's available, since it usually yields smaller and slightly faster binaries.)
- * FreeBSD (and other BSD): C++ compiler (g++ usually) and GNU make (gmake).
+ * Linux: gcc/g++ or clang/clang++ (Makefile will use clang by default if available.)
+ * FreeBSD (and other BSD): C++ compiler (G++ usually) and GNU make (gmake).
 
 Each supported platform has its own *make-XXX.mk* file that contains the actual make rules for the platform. The right .mk file is included by the main Makefile based on the GNU make *OSTYPE* variable. Take a look at the .mk file for your platform for other targets, debug build rules, etc.
 

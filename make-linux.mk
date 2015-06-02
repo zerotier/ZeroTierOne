@@ -1,6 +1,6 @@
 # Pick clang or gcc, with preference for clang
-CC=$(shell which clang gcc cc 2>/dev/null | head -n 1)
-CXX=$(shell which clang++ g++ c++ 2>/dev/null | head -n 1)
+CC=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 
 INCLUDES=
 DEFS=
