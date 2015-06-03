@@ -108,7 +108,7 @@ We don't have a "make install" rule quite yet. On Linux you can type:
 
     make installer
 
-This will build a binary that, when run, will install ZeroTier One on most current Linux distributions. We also have RPM and DEB build files in *ext/installfiles/linux* that wrap this installer in packages for RedHat/CentOS and Debian/Ubuntu derived distributions.
+This will build a binary that, when run, will install ZeroTier One on most current Linux distributions. We also have RPM and DEB build files in *ext/installfiles/linux* that wrap this installer in packages for RedHat/CentOS and Debian/Ubuntu derived distributions. If *rpmbuild* is present on the system, the RPM will be built. If *dpkg-deb* is present, the DEB package will be built.
 
 On Mac the best way is to install [Packages](http://s.sudre.free.fr/Software/Packages/about.html) and use:
 
