@@ -1,7 +1,6 @@
 Package: zerotier-one
 Architecture: __ARCH__
-Maintainer: ZeroTier Networks
-Depends: curl
+Maintainer: ZeroTier, Inc. <contact@zerotier.com>
 Priority: optional
 Version: __VERSION__
 Homepage: https://github.com/zerotier/ZeroTierOne

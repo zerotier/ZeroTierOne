@@ -1,9 +1,8 @@
 Name: zerotier-one
 Summary: ZeroTier One network virtualization service
-Version: __VERSION__.autoupdating
+Version: __VERSION__
 Release: 1%{?dist}
 License: GPLv3
-Requires: curl
 URL: https://www.zerotier.com/
 
 %description

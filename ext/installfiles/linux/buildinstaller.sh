@@ -74,11 +74,11 @@ case "$system" in
 
 			rm -rf build-installer-deb
 
-			debbase="build-installer-deb/zerotier-one_${vmajor}.${vminor}.${revision}.autoupdating_$debian_arch"
+			debbase="build-installer-deb/zerotier-one_${vmajor}.${vminor}.${revision}_$debian_arch"
 			debfolder="${debbase}/DEBIAN"
 			mkdir -p $debfolder
 
-			cat 'ext/installfiles/linux/DEBIAN/control.in' | sed "s/__VERSION__/${vmajor}.${vminor}.${revision}.autoupdating/" | sed "s/__ARCH__/${debian_arch}/" >$debfolder/control
+			cat 'ext/installfiles/linux/DEBIAN/control.in' | sed "s/__VERSION__/${vmajor}.${vminor}.${revision}/" | sed "s/__ARCH__/${debian_arch}/" >$debfolder/control
 			cat $debfolder/control
 			cp -f 'ext/installfiles/linux/DEBIAN/conffiles' "${debfolder}/conffiles"
 
