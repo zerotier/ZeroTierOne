@@ -11,13 +11,17 @@ OBJS+=osdep/OSXEthernetTap.o
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
-CODESIGN_CERT=
+PRODUCTSIGN=echo
+CODESIGN_APP_CERT=
+CODESIGN_INSTALLER_CERT=
 
 # For internal use only -- signs everything with ZeroTier's developer cert
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	DEFS+=-DZT_OFFICIAL_RELEASE -DZT_AUTO_UPDATE 
 	CODESIGN=codesign
-	CODESIGN_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
+	PRODUCTSIGN=productsign
+	CODESIGN_APP_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
+	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
 
 ifeq ($(ZT_AUTO_UPDATE),1)
@@ -53,7 +57,7 @@ one:	$(OBJS) one.o
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
-	$(CODESIGN) -f -s $(CODESIGN_CERT) zerotier-one
+	$(CODESIGN) -f -s $(CODESIGN_APP_CERT) zerotier-one
 	$(CODESIGN) -vvv zerotier-one
 
 selftest: $(OBJS) selftest.o
@@ -63,8 +67,9 @@ selftest: $(OBJS) selftest.o
 # Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
 mac-dist-pkg: FORCE
 	packagesbuild "ext/installfiles/mac/ZeroTier One.pkgproj"
-	$(CODESIGN) -f -s $(CODESIGN_CERT) "ZeroTier One.pkg"
-	$(CODESIGN) -vvv "ZeroTier One.pkg"
+	rm -f "ZeroTier One Signed.pkg"
+	$(PRODUCTSIGN) --sign $(CODESIGN_INSTALLER_CERT) "ZeroTier One.pkg" "ZeroTier One Signed.pkg"
+	if [ -f "ZeroTier One Signed.pkg" ]; then mv -f "ZeroTier One Signed.pkg" "ZeroTier One.pkg"; fi
 
 # For internal use only
 official: FORCE
