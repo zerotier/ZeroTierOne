@@ -170,7 +170,7 @@ html,body {
 .zeroTierNode > .bottom > .left > .statusLine {
 	font-family: monospace;
 	white-space: nowrap;
-	font-size: 12pt;
+	font-size: 11pt;
 	height: 100%;
 }
 .zeroTierNode > .bottom > .right {
