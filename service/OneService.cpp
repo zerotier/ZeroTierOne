@@ -259,6 +259,10 @@ public:
 					fclose(bash);
 					long pid = (long)vfork();
 					if (pid == 0) {
+						setsid(); // detach from parent so that shell isn't killed when parent is killed
+						signal(SIGHUP,SIG_IGN);
+						signal(SIGTERM,SIG_IGN);
+						signal(SIGQUIT,SIG_IGN);
 						execl("/bin/bash","/bin/bash",bashp,(char *)0);
 						exit(0);
 					}
