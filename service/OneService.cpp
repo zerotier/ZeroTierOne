@@ -210,7 +210,7 @@ public:
 					return;
 				}
 
-				std::string ed25519(nfo.get("ed25519",""));
+				std::string ed25519(Utils::unhex(nfo.get("ed25519","")));
 				if ((ed25519.length() == 0)||(!signedBy.verify(fileData.data(),(unsigned int)fileData.length(),ed25519.data(),(unsigned int)ed25519.length()))) {
 					//fprintf(stderr,"UPDATE %s failed signature check!\n",filePath.c_str());
 					return;
