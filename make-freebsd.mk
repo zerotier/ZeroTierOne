@@ -10,11 +10,7 @@ OBJS+=osdep/BSDEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	ZT_AUTO_UPDATE=1
 	DEFS+=-DZT_OFFICIAL_RELEASE 
-endif
-ifeq ($(ZT_AUTO_UPDATE),1)
-	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
 # "make debug" is a shortcut for this
