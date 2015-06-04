@@ -11,11 +11,7 @@ OBJS+=osdep/LinuxEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	ZT_AUTO_UPDATE=1
 	DEFS+=-DZT_OFFICIAL_RELEASE 
-endif
-ifeq ($(ZT_AUTO_UPDATE),1)
-	DEFS+=-DZT_AUTO_UPDATE 
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
