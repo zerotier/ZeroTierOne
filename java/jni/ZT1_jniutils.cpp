@@ -822,6 +822,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig.dhcp);
     env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig.bridge);
     env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig.broadcastEnabled);
+    env->SetBooleanField(vnetConfigObj, enabledField, vnetConfig.enabled);
     env->SetIntField(vnetConfigObj, portErrorField, vnetConfig.portError);
 
     jclass multicastGroupClass = cache.findClass("com/zerotier/sdk/MulticastGroup");
