@@ -101,7 +101,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #endif
 
 // Sanity limits for HTTP
-#define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 8)
+#define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
 #define ZT_MAX_HTTP_CONNECTIONS 64
 
 // Interface metric for ZeroTier taps
