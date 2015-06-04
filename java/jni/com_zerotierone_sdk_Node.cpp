@@ -416,9 +416,14 @@ namespace {
         {
             // set operation
             jbyteArray bufferObj = env->NewByteArray(bufferSize);
+            if(env->ExceptionCheck() || bufferObj == NULL)
+            {
+                LOGE("Error creating byte array buffer!");
+                return -4;
+            }
+
             env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
             bool bsecure = secure != 0;
-
 
             return env->CallIntMethod(ref->dataStorePutListener,
                 dataStorePutCallbackMethod,
@@ -736,12 +741,14 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     if(node == NULL)
     {
         // cannot find valid node.  We should  never get here.
+        LOGE("Couldn't find a valid node!");
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
     unsigned int nbtd_len = env->GetArrayLength(out_nextBackgroundTaskDeadline);
     if(nbtd_len < 1)
     {
+        LOGE("nbtd_len < 1");
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
 
@@ -751,6 +758,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     jclass inetAddressClass = cache.findClass("java/net/InetAddress");
     if(inetAddressClass == NULL)
     {
+        LOGE("Can't find InetAddress class");
         // can't find java.net.InetAddress
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
@@ -849,6 +857,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         packetData,
         packetLength,
         &nextBackgroundTaskDeadline);
+    if(rc != ZT1_RESULT_OK) 
+    {
+        LOGE("ZT1_Node_processWirePacket returned: %d", rc);
+    }
 
     jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
