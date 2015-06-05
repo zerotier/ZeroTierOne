@@ -620,7 +620,7 @@ public:
 #endif
 		}
 
-		bool atEnd = false;
+		bool atEnd = _socks.empty();
 		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin()),nexts;(!atEnd);s=nexts) {
 			nexts = s; ++nexts; // we can delete the linked list item, so traverse now
 			atEnd = (nexts == _socks.end()); // if we delete the last element, s!=_socks.end() will no longer terminate our loop
