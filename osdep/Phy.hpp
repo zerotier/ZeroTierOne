@@ -739,6 +739,8 @@ public:
 		if (!sock)
 			return;
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		if (sws.type == ZT_PHY_SOCKET_CLOSED)
+			return;
 
 		FD_CLR(sws.sock,&_readfds);
 		FD_CLR(sws.sock,&_writefds);
