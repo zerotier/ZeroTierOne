@@ -54,6 +54,44 @@ public final class VirtualNetworkConfig {
 
     }
 
+    public boolean equals(VirtualNetworkConfig cfg) {
+        boolean mcgEqual = true;
+        if(multicastSubscriptions.length == cfg.multicastSubscriptions.length) {
+            for(int i = 0; i < multicastSubscriptions.length; ++i) {
+                if(!multicastSubscriptions[i].equals(cfg.multicastSubscriptions[i]))
+                {
+                    return false;
+                }
+            }
+        } else {
+            mcgEqual = false;
+        }
+
+        boolean aaEqual = true;
+        if(assignedAddresses.length == cfg.assignedAddresses.length) {
+            for(int i = 0; i < assignedAddresses.length; ++i) {
+                if(!assignedAddresses[i].equals(cfg.assignedAddresses[i])) {
+                    return false;
+                }
+            }
+        } else {
+            aaEqual = false;
+        }
+
+        return nwid == cfg.nwid &&
+               mac == cfg.mac &&
+               name.equals(cfg.name) &&
+               status.equals(cfg.status) &&
+               type.equals(cfg.type) &&
+               mtu == cfg.mtu &&
+               dhcp == cfg.dhcp &&
+               bridge == cfg.bridge &&
+               broadcastEnabled == cfg.broadcastEnabled &&
+               portError == cfg.portError &&
+               enabled == cfg.enabled &&
+               mcgEqual && aaEqual;
+    }
+
     /**
      * 64-bit ZeroTier network ID
      */

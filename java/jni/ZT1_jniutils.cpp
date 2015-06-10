@@ -343,18 +343,18 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     {
         case AF_INET6:
         {
-            LOGD("IPV6 Address");
+            LOGV("IPV6 Address");
             sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
             port = ntohs(ipv6->sin6_port);
-            LOGD("Port %d", port);
+            LOGV("Port %d", port);
         }
         break;
         case AF_INET:
         {
-            LOGD("IPV4 Address");
+            LOGV("IPV4 Address");
             sockaddr_in *ipv4 = (sockaddr_in*)&addr;
             port = ntohs(ipv4->sin_port);
-            LOGD("Port: %d", port);
+            LOGV("Port: %d", port);
         }
         break;
         default:
@@ -818,7 +818,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig
     }
     env->SetObjectField(vnetConfigObj, typeField, typeObject);
 
-    env->SetIntField(vnetConfigObj, mtuField, vnetConfig.mtu);
+    env->SetIntField(vnetConfigObj, mtuField, (int)vnetConfig.mtu);
     env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig.dhcp);
     env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig.bridge);
     env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig.broadcastEnabled);

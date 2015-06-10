@@ -92,7 +92,7 @@ namespace {
         enum ZT1_VirtualNetworkConfigOperation operation,
         const ZT1_VirtualNetworkConfig *config)
     {
-        LOGD("VritualNetworkConfigFunctionCallback");
+        LOGV("VritualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
@@ -142,7 +142,9 @@ namespace {
         const void *frameData,
         unsigned int frameLength)
     {
-        LOGD("VirtualNetworkFrameFunctionCallback");
+        LOGV("VirtualNetworkFrameFunctionCallback");
+        unsigned char* local = (unsigned char*)frameData;
+        LOGV("Type Bytes: 0x%02x%02x", local[12], local[13]);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
         JNIEnv *env = NULL;
@@ -188,7 +190,7 @@ namespace {
 
     void EventCallback(ZT1_Node *node,void *userData,enum ZT1_Event event, const void *data)
     {
-        LOGD("EventCallback");
+        LOGV("EventCallback");
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
         JNIEnv *env = NULL;
@@ -436,7 +438,7 @@ namespace {
         const void *buffer,
         unsigned int bufferSize)
     {
-        LOGD("WirePacketSendFunction(%p, %p, %d)", address, buffer, bufferSize);
+        LOGV("WirePacketSendFunction(%p, %p, %d)", address, buffer, bufferSize);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
@@ -464,7 +466,7 @@ namespace {
         env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
         int retval = env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, addressObj, bufferObj);
 
-        LOGD("JNI Packet Sender returned: %d", retval);
+        LOGV("JNI Packet Sender returned: %d", retval);
         return retval;
     }
 
