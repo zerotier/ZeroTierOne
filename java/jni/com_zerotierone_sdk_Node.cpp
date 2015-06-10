@@ -174,9 +174,9 @@ namespace {
             return;
         }
 
-        jbyte *data = env->GetByteArrayElements(dataArray, NULL);
+        void *data = env->GetPrimitiveArrayCritical(dataArray, NULL);
         memcpy(data, frameData, frameLength);
-        env->ReleaseByteArrayElements(dataArray, data, 0);
+        env->ReleasePrimitiveArrayCritical(dataArray, data, 0);
 
         if(env->ExceptionCheck())
         {
@@ -356,13 +356,13 @@ namespace {
 
         if(retval > 0)
         {
-            jbyte *data = env->GetByteArrayElements(bufferObj, NULL);
+            void *data = env->GetPrimitiveArrayCritical(bufferObj, NULL);
             memcpy(buffer, data, retval);
-            env->ReleaseByteArrayElements(bufferObj, data, JNI_ABORT);
+            env->ReleasePrimitiveArrayCritical(bufferObj, data, 0);
 
-            jlong *objSize = env->GetLongArrayElements(objectSizeObj, NULL);
+            jlong *objSize = (jlong*)env->GetPrimitiveArrayCritical(objectSizeObj, NULL);
             *out_objectSize = (unsigned long)objSize[0];
-            env->ReleaseLongArrayElements(objectSizeObj, objSize, JNI_ABORT);
+            env->ReleasePrimitiveArrayCritical(objectSizeObj, objSize, 0);
         }
 
         LOGI("Out Object Size: %lu", *out_objectSize);
@@ -700,7 +700,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
     unsigned int vlanId = (unsigned int)in_vlanId;
 
     unsigned int frameLength = env->GetArrayLength(in_frameData);
-    jbyte *frameData =env->GetByteArrayElements(in_frameData, NULL);
+    void *frameData = env->GetPrimitiveArrayCritical(in_frameData, NULL);
+    void *localData = malloc(frameLength);
+    memcpy(localData, frameData, frameLength);
+    env->ReleasePrimitiveArrayCritical(in_frameData, frameData, 0);
 
     uint64_t nextBackgroundTaskDeadline = 0;
 
@@ -712,15 +715,15 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
         destMac,
         etherType,
         vlanId,
-        (const void*)frameData,
+        (const void*)localData,
         frameLength,
         &nextBackgroundTaskDeadline);
 
-    jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
-    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
-    env->ReleaseLongArrayElements(out_nextBackgroundTaskDeadline, outDeadline, 0);
+    
 
-    env->ReleaseByteArrayElements(in_frameData, frameData, 0);
+    jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
+    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
+    env->ReleasePrimitiveArrayCritical(out_nextBackgroundTaskDeadline, outDeadline, 0);
 
     return createResultObject(env, rc);
 }
@@ -816,8 +819,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
 
     unsigned int addrSize = env->GetArrayLength(addressArray);
     // get the address bytes
-    jbyte *addr = env->GetByteArrayElements(addressArray, NULL);
-
+    jbyte *addr = (jbyte*)env->GetPrimitiveArrayCritical(addressArray, NULL);
 
     sockaddr_storage remoteAddress = {};
 
@@ -842,13 +844,16 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     else
     {
         // unknown address type
-        env->ReleaseByteArrayElements(addressArray, addr, 0);
+        env->ReleasePrimitiveArrayCritical(addressArray, addr, 0);
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
-
+    env->ReleasePrimitiveArrayCritical(addressArray, addr, 0);
 
     unsigned int packetLength = env->GetArrayLength(in_packetData);
-    jbyte *packetData = env->GetByteArrayElements(in_packetData, NULL);
+    void *packetData = env->GetPrimitiveArrayCritical(in_packetData, NULL);
+    void *localData = malloc(packetLength);
+    memcpy(localData, packetData, packetLength);
+    env->ReleasePrimitiveArrayCritical(in_packetData, packetData, 0);
 
     uint64_t nextBackgroundTaskDeadline = 0;
 
@@ -856,7 +861,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         node,
         now,
         &remoteAddress,
-        packetData,
+        localData,
         packetLength,
         &nextBackgroundTaskDeadline);
     if(rc != ZT1_RESULT_OK) 
@@ -864,12 +869,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         LOGE("ZT1_Node_processWirePacket returned: %d", rc);
     }
 
-    jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
-    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
-    env->ReleaseLongArrayElements(out_nextBackgroundTaskDeadline, outDeadline, 0);
+    free(localData);
 
-    env->ReleaseByteArrayElements(addressArray, addr, 0);
-    env->ReleaseByteArrayElements(in_packetData, packetData, 0);
+    jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
+    outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
+    env->ReleasePrimitiveArrayCritical(out_nextBackgroundTaskDeadline, outDeadline, 0);
 
     return createResultObject(env, rc);
 }
@@ -904,9 +908,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
 
     ZT1_ResultCode rc = ZT1_Node_processBackgroundTasks(node, now, &nextBackgroundTaskDeadline);
 
-    jlong *outDeadline = env->GetLongArrayElements(out_nextBackgroundTaskDeadline, NULL);
+    jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
-    env->ReleaseLongArrayElements(out_nextBackgroundTaskDeadline, outDeadline, 0);
+    env->ReleasePrimitiveArrayCritical(out_nextBackgroundTaskDeadline, outDeadline, 0);
 
     return createResultObject(env, rc);
 }
