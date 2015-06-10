@@ -111,7 +111,7 @@ jclass JniCache::findClass(const std::string &name)
 
         jclass cls = (jclass)env->NewGlobalRef(localCls);
 
-        m_classes.insert(std::make_pair(name, cls));
+        //m_classes.insert(std::make_pair(name, cls));
 
         return cls;
     }
@@ -143,7 +143,7 @@ jmethodID JniCache::findMethod(jclass cls, const std::string &methodName, const 
             return NULL;
         }
 
-        m_methods.insert(std::make_pair(id, mid));
+        //m_methods.insert(std::make_pair(id, mid));
 
         return mid;
     }
@@ -173,7 +173,7 @@ jmethodID JniCache::findStaticMethod(jclass cls, const std::string &methodName, 
             return NULL;
         }
 
-        m_staticMethods.insert(std::make_pair(id, mid));
+        //m_staticMethods.insert(std::make_pair(id, mid));
 
         return mid;
     }
@@ -203,7 +203,7 @@ jfieldID JniCache::findField(jclass cls, const std::string &fieldName, const std
             return NULL;
         }
 
-        m_fields.insert(std::make_pair(id, fid));
+        //m_fields.insert(std::make_pair(id, fid));
 
         return fid;
     }
@@ -233,7 +233,7 @@ jfieldID JniCache::findStaticField(jclass cls, const std::string &fieldName, con
             return NULL;
         }
 
-        m_staticFields.insert(std::make_pair(id, fid));
+        //m_staticFields.insert(std::make_pair(id, fid));
 
         return fid;
     }
