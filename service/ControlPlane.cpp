@@ -525,7 +525,7 @@ unsigned int ControlPlane::handleRequest(
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
-					_controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+					scode = _controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;

@@ -179,7 +179,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Rule WHERE networkId = ?",-1,&_sDeleteRulesForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignmentPool (networkId,ipNetwork,ipNetmaskBits,ipVersion) VALUES (?,?,?,?)",-1,&_sCreateIpAssignmentPool,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignment WHERE networkId = ?; DELETE FROM IpAssignmentPool WHERE networkId = ?; DELETE FROM Member WHERE networkId = ?; DELETE FROM MulticastRate WHERE networkId = ?; DELETE FROM Relay WHERE networkId = ?; DELETE FROM Rule WHERE networkId = ?; DELETE FROM Network WHERE id = ?;",-1,&_sDeleteNetworkAndRelated,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM Network WHERE id = ?;",-1,&_sDeleteNetworkAndRelated,(const char **)0) != SQLITE_OK)
 		 ) {
 		//printf("!!! %s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
@@ -1017,8 +1017,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 			} else {
 
 				sqlite3_reset(_sDeleteNetworkAndRelated);
-				for(int i=1;i<=7;++i)
-					sqlite3_bind_text(_sDeleteNetworkAndRelated,i,nwids,16,SQLITE_STATIC);
+				sqlite3_bind_text(_sDeleteNetworkAndRelated,1,nwids,16,SQLITE_STATIC);
 				return ((sqlite3_step(_sDeleteNetworkAndRelated) == SQLITE_DONE) ? 200 : 500);
 
 			}
