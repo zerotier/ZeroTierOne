@@ -1005,6 +1005,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 					char addrs[24];
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
 
+					sqlite3_reset(_sGetMember);
+					sqlite3_bind_text(_sGetMember,1,nwids,16,SQLITE_STATIC);
+					sqlite3_bind_text(_sGetMember,2,addrs,10,SQLITE_STATIC);
+					if (sqlite3_step(_sGetMember) != SQLITE_ROW)
+						return 404;
+
 					sqlite3_reset(_sDeleteIpAllocations);
 					sqlite3_bind_text(_sDeleteIpAllocations,1,nwids,16,SQLITE_STATIC);
 					sqlite3_bind_text(_sDeleteIpAllocations,2,addrs,10,SQLITE_STATIC);
