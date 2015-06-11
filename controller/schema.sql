@@ -3,53 +3,6 @@ CREATE TABLE Config (
   v varchar(1024) NOT NULL
 );
 
-CREATE TABLE IpAssignment (
-  networkId char(16) NOT NULL,
-  nodeId char(10) NOT NULL,
-  ip blob(16) NOT NULL,
-  ipNetmaskBits integer NOT NULL DEFAULT(0),
-  ipVersion integer NOT NULL DEFAULT(4)
-);
-
-CREATE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
-
-CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
-
-CREATE INDEX IpAssignment_networkId ON IpAssignment (networkId);
-
-CREATE TABLE IpAssignmentPool (
-  networkId char(16) NOT NULL,
-  ipNetwork blob(16) NOT NULL,
-  ipNetmaskBits integer NOT NULL,
-  ipVersion integer NOT NULL DEFAULT(4)
-);
-
-CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);
-
-CREATE TABLE Member (
-  networkId char(16) NOT NULL,
-  nodeId char(10) NOT NULL,
-  authorized integer NOT NULL DEFAULT(0),
-  activeBridge integer NOT NULL DEFAULT(0)
-);
-
-CREATE INDEX Member_networkId ON Member (networkId);
-
-CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
-
-CREATE UNIQUE INDEX Member_networkId_nodeId ON Member (networkId, nodeId);
-
-CREATE TABLE MulticastRate (
-  networkId char(16) NOT NULL,
-  mgMac char(12) NOT NULL,
-  mgAdi integer NOT NULL DEFAULT(0),
-  preload integer NOT NULL,
-  maxBalance integer NOT NULL,
-  accrual integer NOT NULL
-);
-
-CREATE INDEX MulticastRate_networkId ON MulticastRate (networkId);
-
 CREATE TABLE Network (
   id char(16) PRIMARY KEY NOT NULL,
   name varchar(128) NOT NULL,
@@ -63,16 +16,6 @@ CREATE TABLE Network (
   revision integer NOT NULL DEFAULT(1)
 );
 
-CREATE TABLE Relay (
-  networkId char(16) NOT NULL,
-  nodeId char(10) NOT NULL,
-  phyAddress varchar(64) NOT NULL
-);
-
-CREATE INDEX Relay_networkId ON Relay (networkId);
-
-CREATE UNIQUE INDEX Relay_networkId_nodeId ON Relay (networkId, nodeId);
-
 CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
   identity varchar(4096) NOT NULL,
@@ -81,10 +24,65 @@ CREATE TABLE Node (
   firstSeen integer NOT NULL DEFAULT(0)
 );
 
+CREATE TABLE IpAssignment (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  ip blob(16) NOT NULL,
+  ipNetmaskBits integer NOT NULL DEFAULT(0),
+  ipVersion integer NOT NULL DEFAULT(4)
+);
+
+CREATE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
+
+CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
+
+CREATE INDEX IpAssignment_networkId ON IpAssignment (networkId);
+
+CREATE TABLE IpAssignmentPool (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  ipNetwork blob(16) NOT NULL,
+  ipNetmaskBits integer NOT NULL,
+  ipVersion integer NOT NULL DEFAULT(4)
+);
+
+CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);
+
+CREATE TABLE Member (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  authorized integer NOT NULL DEFAULT(0),
+  activeBridge integer NOT NULL DEFAULT(0),
+  PRIMARY KEY (networkId, nodeId)
+);
+
+CREATE INDEX Member_networkId ON Member (networkId);
+
+CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
+
+CREATE TABLE MulticastRate (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  mgMac char(12) NOT NULL,
+  mgAdi integer NOT NULL DEFAULT(0),
+  preload integer NOT NULL,
+  maxBalance integer NOT NULL,
+  accrual integer NOT NULL
+);
+
+CREATE INDEX MulticastRate_networkId ON MulticastRate (networkId);
+
+CREATE TABLE Relay (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  phyAddress varchar(64) NOT NULL,
+  PRIMARY KEY (networkId, nodeId)
+);
+
+CREATE INDEX Relay_networkId ON Relay (networkId);
+
 CREATE TABLE Rule (
-  networkId char(16) NOT NULL,
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ruleId integer NOT NULL,
-  nodeId char(10),
+  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
   vlanId integer,
   vlanPcp integer,
   etherType integer,
