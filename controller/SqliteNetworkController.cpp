@@ -993,6 +993,11 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 			char nwids[24];
 			Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)nwid);
 
+			sqlite3_reset(_sGetNetworkById);
+			sqlite3_bind_text(_sGetNetworkById,1,nwids,16,SQLITE_STATIC);
+			if (sqlite3_step(_sGetNetworkById) != SQLITE_ROW)
+				return 404;
+
 			if (path.size() >= 3) {
 
 				if ((path.size() == 4)&&(path[2] == "member")&&(path[3].length() == 10)) {
