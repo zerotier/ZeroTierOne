@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT1_JNICACHE_H_
-#define ZT1_JNICACHE_H_
+#ifndef ZT1_JNILOOKUP_H_
+#define ZT1_JNILOOKUP_H_
 
 #include <jni.h>
 #include <map>
@@ -34,14 +34,13 @@
 
 
 
-class JniCache {
+class JniLookup {
 public:
-    JniCache();
-    JniCache(JavaVM *jvm);
-    ~JniCache();
+    JniLookup();
+    JniLookup(JavaVM *jvm);
+    ~JniLookup();
 
     void setJavaVM(JavaVM *jvm);
-    void clearCache();
 
     jclass findClass(const std::string &name);
     jmethodID findMethod(jclass cls, const std::string &methodName, const std::string &methodSig);
@@ -49,17 +48,7 @@ public:
     jfieldID findField(jclass cls, const std::string &fieldName, const std::string &typeStr);
     jfieldID findStaticField(jclass cls, const std::string &fieldName, const std::string &typeStr);
 private:
-    typedef std::map<std::string, jmethodID> MethodMap;
-    typedef std::map<std::string, jfieldID> FieldMap;
-    typedef std::map<std::string, jclass> ClassMap;
-
     JavaVM *m_jvm;
-    ClassMap m_classes;
-    FieldMap m_fields;
-    FieldMap m_staticFields;
-    MethodMap m_methods;
-    MethodMap m_staticMethods;
-
 };
 
 #endif

@@ -39,6 +39,6 @@ LOCAL_SRC_FILES := \
 LOCAL_SRC_FILES += \
 	com_zerotierone_sdk_Node.cpp \
 	ZT1_jniutils.cpp \
-	ZT1_jnicache.cpp
+	ZT1_jnilookup.cpp
 
 include $(BUILD_SHARED_LIBRARY)
