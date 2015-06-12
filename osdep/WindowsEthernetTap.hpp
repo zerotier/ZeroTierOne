@@ -98,8 +98,8 @@ private:
 
 	GUID _deviceGuid;
 	NET_LUID _deviceLuid;
-	std::string _netCfgInstanceId; // NetCfgInstanceId, a GUID
-	std::string _deviceInstanceId; // DeviceInstanceID, another kind of "instance ID"
+	std::string _netCfgInstanceId;
+	std::string _deviceInstanceId;
 
 	std::vector<MulticastGroup> _multicastGroups;
 
