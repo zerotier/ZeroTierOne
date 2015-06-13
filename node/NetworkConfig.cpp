@@ -218,7 +218,9 @@ bool NetworkConfig::operator==(const NetworkConfig &nc) const
 	if (_name != nc._name) return false;
 	if (_description != nc._description) return false;
 	if (_staticIps != nc._staticIps) return false;
+	if (_gateways != nc._gateways) return false;
 	if (_activeBridges != nc._activeBridges) return false;
+	if (_relays != nc._relays) return false;
 	if (_multicastRates.size() == nc._multicastRates.size()) {
 		// uclibc++ doesn't seem to implement map<> != map<> correctly, so do
 		// it ourselves. Note that this depends on the maps being sorted.
