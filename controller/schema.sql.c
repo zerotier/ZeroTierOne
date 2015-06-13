@@ -33,11 +33,9 @@
 "  ipVersion integer NOT NULL DEFAULT(4)\n"\
 ");\n"\
 "\n"\
-"CREATE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);\n"\
+"CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);\n"\
 "\n"\
 "CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);\n"\
-"\n"\
-"CREATE INDEX IpAssignment_networkId ON IpAssignment (networkId);\n"\
 "\n"\
 "CREATE TABLE IpAssignmentPool (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
@@ -55,8 +53,6 @@
 "  activeBridge integer NOT NULL DEFAULT(0),\n"\
 "  PRIMARY KEY (networkId, nodeId)\n"\
 ");\n"\
-"\n"\
-"CREATE INDEX Member_networkId ON Member (networkId);\n"\
 "\n"\
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
 "\n"\
@@ -82,7 +78,7 @@
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  ruleId integer NOT NULL,\n"\
+"  ruleNo integer NOT NULL,\n"\
 "  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\
@@ -100,5 +96,5 @@
 "  \"action\" varchar(4096) NOT NULL DEFAULT('accept')\n"\
 ");\n"\
 "\n"\
-"CREATE INDEX Rule_networkId ON Rule (networkId);\n"\
+"CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);\n"\
 ""

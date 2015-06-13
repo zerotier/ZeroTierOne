@@ -32,11 +32,9 @@ CREATE TABLE IpAssignment (
   ipVersion integer NOT NULL DEFAULT(4)
 );
 
-CREATE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
+CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
 
 CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
-
-CREATE INDEX IpAssignment_networkId ON IpAssignment (networkId);
 
 CREATE TABLE IpAssignmentPool (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
@@ -54,8 +52,6 @@ CREATE TABLE Member (
   activeBridge integer NOT NULL DEFAULT(0),
   PRIMARY KEY (networkId, nodeId)
 );
-
-CREATE INDEX Member_networkId ON Member (networkId);
 
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
 
@@ -81,7 +77,7 @@ CREATE INDEX Relay_networkId ON Relay (networkId);
 
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  ruleId integer NOT NULL,
+  ruleNo integer NOT NULL,
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
   vlanId integer,
   vlanPcp integer,
@@ -99,4 +95,4 @@ CREATE TABLE Rule (
   "action" varchar(4096) NOT NULL DEFAULT('accept')
 );
 
-CREATE INDEX Rule_networkId ON Rule (networkId);
+CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);

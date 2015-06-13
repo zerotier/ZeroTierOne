@@ -167,8 +167,8 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"SELECT n.id FROM Member AS m,Node AS n WHERE m.networkId = ? AND n.id = m.nodeId ORDER BY n.id ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.identity,n.lastAt,n.lastSeen,n.firstSeen FROM Member AS m,Node AS n WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits,ipVersion FROM IpAssignmentPool WHERE networkId = ? ORDER BY ipNetwork ASC",-1,&_sGetIpAssignmentPools2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT ruleId,nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"flags\",invFlags,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleId ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleId,nodeId,vlanId,vlanPcP,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ruleNo,nodeId,vlanId,vlanPcp,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"flags\",invFlags,\"action\" FROM Rule WHERE networkId = ? ORDER BY ruleNo ASC",-1,&_sListRules,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Rule (networkId,ruleNo,nodeId,vlanId,vlanPcP,etherType,macSource,macDest,ipSource,ipDest,ipTos,ipProtocol,ipSourcePort,ipDestPort,\"action\") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",-1,&_sCreateRule,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
@@ -855,7 +855,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										json_value *rj = j->u.object.values[k].value->u.array.values[kk];
 										if ((rj)&&(rj->type == json_object)) {
 											struct { // NULL pointers indicate missing or NULL -- wildcards
-												const json_int_t *ruleId;
+												const json_int_t *ruleNo;
 												const char *nodeId;
 												const json_int_t *vlanId;
 												const json_int_t *vlanPcp;
@@ -875,8 +875,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 											memset(&rule,0,sizeof(rule));
 
 											for(unsigned int rk=0;rk<rj->u.object.length;++rk) {
-												if ((!strcmp(rj->u.object.values[rk].name,"ruleId"))&&(rj->u.object.values[rk].value->type == json_integer))
-													rule.ruleId = &(rj->u.object.values[rk].value->u.integer);
+												if ((!strcmp(rj->u.object.values[rk].name,"ruleNo"))&&(rj->u.object.values[rk].value->type == json_integer))
+													rule.ruleNo = &(rj->u.object.values[rk].value->u.integer);
 												else if ((!strcmp(rj->u.object.values[rk].name,"nodeId"))&&(rj->u.object.values[rk].value->type == json_string))
 													rule.nodeId = rj->u.object.values[rk].value->u.string.ptr;
 												else if ((!strcmp(rj->u.object.values[rk].name,"vlanId"))&&(rj->u.object.values[rk].value->type == json_integer))
@@ -909,11 +909,11 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 													rule.action = rj->u.object.values[rk].value->u.string.ptr;
 											}
 
-											if ((rule.ruleId)&&(rule.action)&&(rule.action[0])) {
+											if ((rule.ruleNo)&&(rule.action)&&(rule.action[0])) {
 												char mactmp1[16],mactmp2[16];
 												sqlite3_reset(_sCreateRule);
 												sqlite3_bind_text(_sCreateRule,1,nwids,16,SQLITE_STATIC);
-												sqlite3_bind_int64(_sCreateRule,2,*rule.ruleId);
+												sqlite3_bind_int64(_sCreateRule,2,*rule.ruleNo);
 
 												// Optional values: null by default
 												for(int i=3;i<=16;++i)
@@ -1233,7 +1233,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 					bool firstRule = true;
 					while (sqlite3_step(_sListRules) == SQLITE_ROW) {
 						responseBody.append(firstRule ? "\n\t{\n" : ",{\n");
-						Utils::snprintf(json,sizeof(json),"\t\t\"ruleId\": %lld,\n",sqlite3_column_int64(_sListRules,0));
+						Utils::snprintf(json,sizeof(json),"\t\t\"ruleNo\": %lld,\n",sqlite3_column_int64(_sListRules,0));
 						responseBody.append(json);
 						if (sqlite3_column_type(_sListRules,1) != SQLITE_NULL) {
 							Utils::snprintf(json,sizeof(json),"\t\t\"nodeId\": \"%s\",\n",(const char *)sqlite3_column_text(_sListRules,1));
