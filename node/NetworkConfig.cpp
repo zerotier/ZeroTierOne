@@ -163,6 +163,13 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	std::sort(_staticIps.begin(),_staticIps.end());
 	std::unique(_staticIps.begin(),_staticIps.end());
 
+	std::vector<std::string> gatewaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS,"").c_str(),",","",""));
+	for(std::vector<std::string>::const_iterator gwstr(gatewaysSplit.begin());gwstr!=gatewaysSplit.end();++gwstr) {
+		InetAddress gw(*gwstr);
+		if ((std::find(_gateways.begin(),_gateways.end(),gw) == _gateways.end())&&((gw.ss_family == AF_INET)||(gw.ss_family == AF_INET6)))
+			_gateways.push_back(gw);
+	}
+
 	std::vector<std::string> activeBridgesSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator a(activeBridgesSplit.begin());a!=activeBridgesSplit.end();++a) {
 		if (a->length() == ZT_ADDRESS_LENGTH_HEX) { // ignore empty or garbage fields
