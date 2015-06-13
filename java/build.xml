@@ -1,4 +1,4 @@
-<project default="build" name="ZeroTierOneSDK" basedir=".">
+<project default="build_jar" name="ZeroTierOneSDK" basedir=".">
     <property environment="env"/>
 
     <condition property="isWindows">
@@ -9,7 +9,7 @@
       <os family="mac"/>
     </condition>
 
-    <target name="clean">
+    <target name="clean_ant">
         <delete dir="bin" failonerror="false"/>
         <delete dir="classes" failonerror="false"/>
         <delete dir="build_win32" failonerror="false"/>
@@ -24,6 +24,10 @@
         <echo message="os.arch          = ${os.arch}"/>
         <echo message="ant.java.version = ${ant.java.version}"/>
         <echo message="java.version     = ${java.version}"/>
+        <echo message="ndk.loc          = ${env.NDK_BUILD_LOC}"/>
+        <echo message="sdk.loc          = ${env.ANDROID_PLATFORM}"/>
+        <echo message="user.dir         = ${user.dir}"/>
+        <echo message="zt1.dir          = ${env.ZT}"/>
         <mkdir dir="bin"/>
         <mkdir dir="classes"/>
         <javac srcdir="src"
@@ -36,20 +40,20 @@
 
     <target name="build_android">
         <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
-            <arg value="ZT1=${user.dir}/../"/>
+            <arg value="ZT1=${env.ZT}"/>
             <arg value="V=1"/>
         </exec>
         <copy file="libs/armeabi/libZeroTierOneJNI.so" 
-              tofile="${user.dir}/classes/lib/armeabi/libZeroTierOneJNI.so" 
+              tofile="classes/lib/armeabi/libZeroTierOneJNI.so"
               overwrite="true"/>
         <copy file="libs/arm64-v8a/libZeroTierOneJNI.so"
-              tofile="${user.dir}/classes/lib/arm64-v8a/libZeroTierOneJNI.so"
+              tofile="classes/lib/arm64-v8a/libZeroTierOneJNI.so"
               overwrite="true"/>
         <copy file="libs/armeabi-v7a/libZeroTierOneJNI.so"
-              tofile="${user.dir}/classes/lib/armeabi-v7a/libZeroTierOneJNI.so"
+              tofile="classes/lib/armeabi-v7a/libZeroTierOneJNI.so"
               overwrite="true"/>
         <copy file="libs/x86/libZeroTierOneJNI.so"
-              tofile="${user.dir}/classes/lib/x86/libZeroTierOneJNI.so"
+              tofile="classes/lib/x86/libZeroTierOneJNI.so"
               overwrite="true"/>
     </target>
 
@@ -91,7 +95,7 @@
             overwrite="true"/>
     </target>
 
-    <target name="build" depends="build_java,build_android,windows,mac">    
+    <target name="build_jar" depends="build_java,build_android,windows,mac">
         <jar destfile="bin/ZeroTierOneSDK.jar" basedir="classes"/>
     </target>
 
@@ -101,23 +105,4 @@
       <javadoc sourcepath="src/"
                destdir="doc/"/>
     </target>
-
-<!--    <target name="android" depends="build">
-        <echo message="OS is Android, installing..."/>
-        <copy file="libs/armeabi/libZeroTierOneJNI.so" 
-              tofile="${aproj_loc}/libs/armeabi/libZeroTierOneJNI.so" 
-              overwrite="true"/>
-        <copy file="libs/arm64-v8a/libZeroTierOneJNI.so"
-              tofile="${aproj_loc}/libs/arm64-v8a/libZeroTierOneJNI.so"
-              overwrite="true"/>
-        <copy file="libs/armeabi-v7a/libZeroTierOneJNI.so"
-              tofile="${aproj_loc}/libs/armeabi-v7a/libZeroTierOneJNI.so"
-              overwrite="true"/>
-        <copy file="libs/x86/libZeroTierOneJNI.so"
-              tofile="${aproj_loc}/libs/x86/libZeroTierOneJNI.so"
-              overwrite="true"/>
-        <copy   file="bin/ZeroTierOneSDK.jar" 
-                tofile="${aproj_loc}/libs/ZeroTierOneSDK.jar" 
-                overwrite="true"/>
-    </target> -->
 </project>
