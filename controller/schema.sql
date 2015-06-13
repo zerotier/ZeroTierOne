@@ -24,6 +24,15 @@ CREATE TABLE Node (
   firstSeen integer NOT NULL DEFAULT(0)
 );
 
+CREATE TABLE Gateway (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  ip blob(16) NOT NULL,
+  ipVersion integer NOT NULL DEFAULT(4),
+  metric integer NOT NULL DEFAULT(0)
+);
+
+CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
+
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,

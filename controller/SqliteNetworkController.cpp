@@ -179,7 +179,10 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Rule WHERE networkId = ?",-1,&_sDeleteRulesForNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO IpAssignmentPool (networkId,ipNetwork,ipNetmaskBits,ipVersion) VALUES (?,?,?,?)",-1,&_sCreateIpAssignmentPool,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"DELETE FROM Network WHERE id = ?;",-1,&_sDeleteNetworkAndRelated,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM Network WHERE id = ?",-1,&_sDeleteNetwork,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT ip,ipVersion,metric FROM Gateway WHERE networkId = ? ORDER BY metric ASC",-1,&_sGetGateways,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM Gateway WHERE networkId = ?",-1,&_sDeleteGateways,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,ip,ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
 		 ) {
 		//printf("!!! %s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
@@ -222,7 +225,10 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sDeleteIpAssignmentPoolsForNetwork);
 		sqlite3_finalize(_sDeleteRulesForNetwork);
 		sqlite3_finalize(_sCreateIpAssignmentPool);
-		sqlite3_finalize(_sDeleteNetworkAndRelated);
+		sqlite3_finalize(_sDeleteNetwork);
+		sqlite3_finalize(_sGetGateways);
+		sqlite3_finalize(_sDeleteGateways);
+		sqlite3_finalize(_sCreateGateway);
 		sqlite3_close(_db);
 	}
 }
@@ -453,6 +459,52 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			}
 			if (relays.length())
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_RELAYS] = relays;
+		}
+
+		{
+			char tmp[128];
+			std::string gateways;
+			sqlite3_reset(_sGetGateways);
+			sqlite3_bind_text(_sGetGateways,1,network.id,16,SQLITE_STATIC);
+			while (sqlite3_step(_sGetGateways) == SQLITE_ROW) {
+				const unsigned char *ip = (const unsigned char *)sqlite3_column_blob(_sGetGateways,0);
+				switch(sqlite3_column_int(_sGetGateways,1)) { // ipVersion
+					case 4:
+						Utils::snprintf(tmp,sizeof(tmp),"%s%d.%d.%d.%d/%d",
+							(gateways.length() > 0) ? "," : "",
+							(int)ip[0],
+							(int)ip[1],
+							(int)ip[2],
+							(int)ip[3],
+							(int)sqlite3_column_int(_sGetGateways,2)); // metric
+						gateways.append(tmp);
+						break;
+					case 6:
+						Utils::snprintf(tmp,sizeof(tmp),"%s%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x/%d",
+							(gateways.length() > 0) ? "," : "",
+							(int)ip[0],
+							(int)ip[1],
+							(int)ip[2],
+							(int)ip[3],
+							(int)ip[4],
+							(int)ip[5],
+							(int)ip[6],
+							(int)ip[7],
+							(int)ip[8],
+							(int)ip[9],
+							(int)ip[10],
+							(int)ip[11],
+							(int)ip[12],
+							(int)ip[13],
+							(int)ip[14],
+							(int)ip[15],
+							(int)sqlite3_column_int(_sGetGateways,2)); // metric
+						gateways.append(tmp);
+						break;
+				}
+			}
+			if (gateways.length())
+				netconf[ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS] = gateways;
 		}
 
 		if ((network.v4AssignMode)&&(!strcmp(network.v4AssignMode,"zt"))) {
@@ -808,6 +860,31 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										sqlite3_step(_sCreateRelay);
 									}
 								}
+							} else if (!strcmp(j->u.object.values[k].name,"gateways")) {
+								sqlite3_reset(_sDeleteGateways);
+								sqlite3_bind_text(_sDeleteGateways,1,nwids,16,SQLITE_STATIC);
+								sqlite3_step(_sDeleteGateways);
+								if (j->u.object.values[k].value->type == json_array) {
+									for(unsigned int kk=0;kk<j->u.object.values[k].value->u.array.length;++kk) {
+										json_value *gateway = j->u.object.values[k].value->u.array.values[kk];
+										if ((gateway)&&(gateway->type == json_string)) {
+											InetAddress gwip(gateway->u.string.ptr);
+											int ipVersion = 0;
+											if (gwip.ss_family == AF_INET)
+												ipVersion = 4;
+											else if (gwip.ss_family == AF_INET6)
+												ipVersion = 6;
+											if (ipVersion) {
+												sqlite3_reset(_sCreateGateway);
+												sqlite3_bind_text(_sCreateGateway,1,nwids,16,SQLITE_STATIC);
+												sqlite3_bind_blob(_sCreateGateway,2,gwip.rawIpData(),(gwip.ss_family == AF_INET6) ? 16 : 4,SQLITE_STATIC);
+												sqlite3_bind_int(_sCreateGateway,3,ipVersion);
+												sqlite3_bind_int(_sCreateGateway,4,(int)gwip.metric());
+												sqlite3_step(_sCreateGateway);
+											}
+										}
+									}
+								}
 							} else if (!strcmp(j->u.object.values[k].name,"ipAssignmentPools")) {
 								if (j->u.object.values[k].value->type == json_array) {
 									std::set<InetAddress> pools;
@@ -1027,9 +1104,9 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 
 			} else {
 
-				sqlite3_reset(_sDeleteNetworkAndRelated);
-				sqlite3_bind_text(_sDeleteNetworkAndRelated,1,nwids,16,SQLITE_STATIC);
-				return ((sqlite3_step(_sDeleteNetworkAndRelated) == SQLITE_DONE) ? 200 : 500);
+				sqlite3_reset(_sDeleteNetwork);
+				sqlite3_bind_text(_sDeleteNetwork,1,nwids,16,SQLITE_STATIC);
+				return ((sqlite3_step(_sDeleteNetwork) == SQLITE_DONE) ? 200 : 500);
 
 			}
 		} // else 404
@@ -1211,6 +1288,49 @@ unsigned int SqliteNetworkController::_doCPGet(
 						responseBody.append("\",\"phyAddress\":\"");
 						responseBody.append(_jsonEscape((const char *)sqlite3_column_text(_sGetRelays,1)));
 						responseBody.append("\"}");
+					}
+					responseBody.append("],\n\t\"gateways\": [");
+
+					sqlite3_reset(_sGetGateways);
+					sqlite3_bind_text(_sGetGateways,1,nwids,16,SQLITE_STATIC);
+					bool firstGateway = true;
+					while (sqlite3_step(_sGetGateways) == SQLITE_ROW) {
+						char tmp[128];
+						const unsigned char *ip = (const unsigned char *)sqlite3_column_blob(_sGetGateways,0);
+						switch(sqlite3_column_int(_sGetGateways,1)) { // ipVersion
+							case 4:
+								Utils::snprintf(tmp,sizeof(tmp),"%s%d.%d.%d.%d/%d\"",
+									(firstGateway) ? "\"" : ",\"",
+									(int)ip[0],
+									(int)ip[1],
+									(int)ip[2],
+									(int)ip[3],
+									(int)sqlite3_column_int(_sGetGateways,2)); // metric
+								break;
+							case 6:
+								Utils::snprintf(tmp,sizeof(tmp),"%s%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x:%.2x%.2x/%d\"",
+									(firstGateway) ? "\"" : ",\"",
+									(int)ip[0],
+									(int)ip[1],
+									(int)ip[2],
+									(int)ip[3],
+									(int)ip[4],
+									(int)ip[5],
+									(int)ip[6],
+									(int)ip[7],
+									(int)ip[8],
+									(int)ip[9],
+									(int)ip[10],
+									(int)ip[11],
+									(int)ip[12],
+									(int)ip[13],
+									(int)ip[14],
+									(int)ip[15],
+									(int)sqlite3_column_int(_sGetGateways,2)); // metric
+								break;
+						}
+						responseBody.append(tmp);
+						firstGateway = false;
 					}
 					responseBody.append("],\n\t\"ipAssignmentPools\": [");
 

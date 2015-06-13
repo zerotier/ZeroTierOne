@@ -25,6 +25,15 @@
 "  firstSeen integer NOT NULL DEFAULT(0)\n"\
 ");\n"\
 "\n"\
+"CREATE TABLE Gateway (\n"\
+"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
+"  ip blob(16) NOT NULL,\n"\
+"  ipVersion integer NOT NULL DEFAULT(4),\n"\
+"  metric integer NOT NULL DEFAULT(0)\n"\
+");\n"\
+"\n"\
+"CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);\n"\
+"\n"\
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
