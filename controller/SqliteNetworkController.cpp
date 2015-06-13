@@ -1169,7 +1169,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						sqlite3_bind_text(_sGetIpAssignmentsForNode2,1,nwids,16,SQLITE_STATIC);
 						sqlite3_bind_text(_sGetIpAssignmentsForNode2,2,addrs,10,SQLITE_STATIC);
 						bool firstIp = true;
-						while (sqlite3_step(_sGetIpAssignmentPools2) == SQLITE_ROW) {
+						while (sqlite3_step(_sGetIpAssignmentsForNode2) == SQLITE_ROW) {
 							InetAddress ip((const void *)sqlite3_column_blob(_sGetIpAssignmentsForNode2,0),(sqlite3_column_int(_sGetIpAssignmentsForNode2,2) == 6) ? 16 : 4,(unsigned int)sqlite3_column_int(_sGetIpAssignmentPools2,1));
 							responseBody.append(firstIp ? "\"" : ",\"");
 							firstIp = false;
