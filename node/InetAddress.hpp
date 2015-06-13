@@ -266,6 +266,16 @@ struct InetAddress : public sockaddr_storage
 	inline unsigned int netmaskBits() const throw() { return port(); }
 
 	/**
+	 * Alias for port()
+	 *
+	 * This just aliases port() because for gateways we use this field to
+	 * store the gateway metric.
+	 *
+	 * @return Gateway metric
+	 */
+	inline unsigned int metric() const throw() { return port(); }
+
+	/**
 	 * Construct a full netmask as an InetAddress
 	 */
 	InetAddress netmask() const

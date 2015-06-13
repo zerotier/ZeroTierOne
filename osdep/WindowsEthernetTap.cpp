@@ -92,9 +92,6 @@ static const WindowsEthernetTapEnv WINENV;
 // Only create or delete devices one at a time
 static Mutex _systemTapInitLock;
 
-// Incrementing this causes everyone currently open to close and reopen
-static volatile int _systemTapResetStatus = 0;
-
 } // anonymous namespace
 
 WindowsEthernetTap::WindowsEthernetTap(
@@ -268,12 +265,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 				}
 			} else break; // no more keys or error occurred
 		}
-
-		// When we create a new tap device from scratch, existing taps for
-		// some reason go into 'unplugged' state. This can be fixed by
-		// closing and re-opening them. Incrementing this causes all
-		// existing tap threads to do this.
-		++_systemTapResetStatus;
 	}
 
 	if (_netCfgInstanceId.length() > 0) {
@@ -299,7 +290,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 		throw std::runtime_error("unable to find or create tap adapter");
 	}
 
-	// Convert device GUID junk... blech... is there an easier way to do this?
 	{
 		char nobraces[128];
 		const char *nbtmp1 = _netCfgInstanceId.c_str();
@@ -573,191 +563,199 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 void WindowsEthernetTap::threadMain()
 	throw()
 {
-	char tapPath[256];
-	OVERLAPPED tapOvlRead,tapOvlWrite;
+	char tapReadBuf[ZT_IF_MTU + 32];
+	char tapPath[128];
 	HANDLE wait4[3];
-	char *tapReadBuf = (char *)0;
-
-	/* No idea why I did this. I did it a long time ago and there was only a
-	 * a snarky comment. But I'd never do crap like this without a reason, so
-	 * I am leaving it alone with a more descriptive snarky comment. */
-	while (!tapReadBuf) {
-		tapReadBuf = (char *)::malloc(ZT_IF_MTU + 32);
-		if (!tapReadBuf)
-			Sleep(1000);
-	}
+	OVERLAPPED tapOvlRead,tapOvlWrite;
 
 	Utils::snprintf(tapPath,sizeof(tapPath),"\\\\.\\Global\\%s.tap",_netCfgInstanceId.c_str());
-	int prevTapResetStatus = _systemTapResetStatus;
-	bool throwOneAway = true; // Restart once on startup, because Windows.
-	bool powerCycle = true; // If true, "power cycle" the device, because Windows.
-	while (_run) {
-		if (powerCycle) {
-			_disableTapDevice();
-			Sleep(500);
+
+	try {
+		while (_run) {
 			_enableTapDevice();
 			Sleep(500);
-		}
 
-		_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
-		if (_tap == INVALID_HANDLE_VALUE) {
-			fprintf(stderr,"Error opening %s -- retrying.\r\n",tapPath);
-			powerCycle = true;
-			continue;
-		}
-
-		{
-			uint32_t tmpi = 1;
-			DWORD bytesReturned = 0;
-			DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
-		}
-
-		{
-#ifdef ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
-			/* This inserts a fake default route and a fake ARP entry, forcing
-			 * Windows to detect this as a "real" network and apply proper
-			 * firewall rules.
-			 *
-			 * This hack is completely stupid, but Windows made me do it
-			 * by being broken and insane.
-			 *
-			 * Background: Windows tries to detect its network location by
-			 * matching it to the ARP address of the default route. Networks
-			 * without default routes are "unidentified networks" and cannot
-			 * have their firewall classification changed by the user (easily).
-			 *
-			 * Yes, you read that right.
-			 *
-			 * The common workaround is to set *NdisDeviceType to 1, which
-			 * totally disables all Windows firewall functionality. This is
-			 * the answer you'll find on most forums for things like OpenVPN.
-			 *
-			 * Yes, you read that right.
-			 *
-			 * The default route workaround is also known, but for this to
-			 * work there must be a known default IP that resolves to a known
-			 * ARP address. This works for an OpenVPN tunnel, but not here
-			 * because this isn't a tunnel. It's a mesh. There is no "other
-			 * end," or any other known always on IP.
-			 *
-			 * So let's make a fake one and shove it in there along with its
-			 * fake static ARP entry. Also makes it instant-on and static.
-			 *
-			 * We'll have to see what DHCP does with this. In the future we
-			 * probably will not want to do this on DHCP-enabled networks, so
-			 * when we enable DHCP we will go in and yank this wacko hacko from
-			 * the routing table before doing so.
-			 *
-			 * Like Jesse Pinkman would say: "YEEEEAAH BITCH!" */
-			const uint32_t fakeIp = htonl(0x19fffffe); // 25.255.255.254 -- unrouted IPv4 block
-			for(int i=0;i<8;++i) {
-				MIB_IPNET_ROW2 ipnr;
-				memset(&ipnr,0,sizeof(ipnr));
-				ipnr.Address.si_family = AF_INET;
-				ipnr.Address.Ipv4.sin_addr.s_addr = fakeIp;
-				ipnr.InterfaceLuid.Value = _deviceLuid.Value;
-				ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10; // just make something up that's consistent and not part of this net
-				ipnr.PhysicalAddress[1] = 0x00;
-				ipnr.PhysicalAddress[2] = (UCHAR)((_deviceGuid.Data1 >> 24) & 0xff);
-				ipnr.PhysicalAddress[3] = (UCHAR)((_deviceGuid.Data1 >> 16) & 0xff);
-				ipnr.PhysicalAddress[4] = (UCHAR)((_deviceGuid.Data1 >> 8) & 0xff);
-				ipnr.PhysicalAddress[5] = (UCHAR)(_deviceGuid.Data1 & 0xff);
-				ipnr.PhysicalAddressLength = 6;
-				ipnr.State = NlnsPermanent;
-				ipnr.IsRouter = 1;
-				ipnr.IsUnreachable = 0;
-				ipnr.ReachabilityTime.LastReachable = 0x0fffffff;
-				ipnr.ReachabilityTime.LastUnreachable = 1;
-				DWORD result = CreateIpNetEntry2(&ipnr);
-				if (result != NO_ERROR)
-					Sleep(500);
-				else break;
+			_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
+			if (_tap == INVALID_HANDLE_VALUE) {
+				_disableTapDevice();
+				_enableTapDevice();
+				Sleep(1000);
+				continue;
 			}
-			for(int i=0;i<8;++i) {
-				MIB_IPFORWARD_ROW2 nr;
-				memset(&nr,0,sizeof(nr));
-				InitializeIpForwardEntry(&nr);
-				nr.InterfaceLuid.Value = _deviceLuid.Value;
-				nr.DestinationPrefix.Prefix.si_family = AF_INET; // rest is left as 0.0.0.0/0
-				nr.NextHop.si_family = AF_INET;
-				nr.NextHop.Ipv4.sin_addr.s_addr = fakeIp;
-				nr.Metric = 9999; // do not use as real default route
-				nr.Protocol = MIB_IPPROTO_NETMGMT;
-				DWORD result = CreateIpForwardEntry2(&nr);
-				if (result != NO_ERROR)
-					Sleep(500);
-				else break;
+
+			{
+				uint32_t tmpi = 1;
+				DWORD bytesReturned = 0;
+				DeviceIoControl(_tap,TAP_WIN_IOCTL_SET_MEDIA_STATUS,&tmpi,sizeof(tmpi),&tmpi,sizeof(tmpi),&bytesReturned,NULL);
+			}
+
+#ifdef ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
+			{
+				/* This inserts a fake default route and a fake ARP entry, forcing
+				 * Windows to detect this as a "real" network and apply proper
+				 * firewall rules.
+				 *
+				 * This hack is completely stupid, but Windows made me do it
+				 * by being broken and insane.
+				 *
+				 * Background: Windows tries to detect its network location by
+				 * matching it to the ARP address of the default route. Networks
+				 * without default routes are "unidentified networks" and cannot
+				 * have their firewall classification changed by the user (easily).
+				 *
+				 * Yes, you read that right.
+				 *
+				 * The common workaround is to set *NdisDeviceType to 1, which
+				 * totally disables all Windows firewall functionality. This is
+				 * the answer you'll find on most forums for things like OpenVPN.
+				 *
+				 * Yes, you read that right.
+				 *
+				 * The default route workaround is also known, but for this to
+				 * work there must be a known default IP that resolves to a known
+				 * ARP address. This works for an OpenVPN tunnel, but not here
+				 * because this isn't a tunnel. It's a mesh. There is no "other
+				 * end," or any other known always on IP.
+				 *
+				 * So let's make a fake one and shove it in there along with its
+				 * fake static ARP entry. Also makes it instant-on and static.
+				 *
+				 * We'll have to see what DHCP does with this. In the future we
+				 * probably will not want to do this on DHCP-enabled networks, so
+				 * when we enable DHCP we will go in and yank this wacko hacko from
+				 * the routing table before doing so.
+				 *
+				 * Like Jesse Pinkman would say: "YEEEEAAH BITCH!" */
+				const uint32_t fakeIp = htonl(0x19fffffe); // 25.255.255.254 -- unrouted IPv4 block
+				for(int i=0;i<8;++i) {
+					MIB_IPNET_ROW2 ipnr;
+					memset(&ipnr,0,sizeof(ipnr));
+					ipnr.Address.si_family = AF_INET;
+					ipnr.Address.Ipv4.sin_addr.s_addr = fakeIp;
+					ipnr.InterfaceLuid.Value = _deviceLuid.Value;
+					ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10; // just make something up that's consistent and not part of this net
+					ipnr.PhysicalAddress[1] = 0x00;
+					ipnr.PhysicalAddress[2] = (UCHAR)((_deviceGuid.Data1 >> 24) & 0xff);
+					ipnr.PhysicalAddress[3] = (UCHAR)((_deviceGuid.Data1 >> 16) & 0xff);
+					ipnr.PhysicalAddress[4] = (UCHAR)((_deviceGuid.Data1 >> 8) & 0xff);
+					ipnr.PhysicalAddress[5] = (UCHAR)(_deviceGuid.Data1 & 0xff);
+					ipnr.PhysicalAddressLength = 6;
+					ipnr.State = NlnsPermanent;
+					ipnr.IsRouter = 1;
+					ipnr.IsUnreachable = 0;
+					ipnr.ReachabilityTime.LastReachable = 0x0fffffff;
+					ipnr.ReachabilityTime.LastUnreachable = 1;
+					DWORD result = CreateIpNetEntry2(&ipnr);
+					if (result != NO_ERROR)
+						Sleep(500);
+					else break;
+				}
+				for(int i=0;i<8;++i) {
+					MIB_IPFORWARD_ROW2 nr;
+					memset(&nr,0,sizeof(nr));
+					InitializeIpForwardEntry(&nr);
+					nr.InterfaceLuid.Value = _deviceLuid.Value;
+					nr.DestinationPrefix.Prefix.si_family = AF_INET; // rest is left as 0.0.0.0/0
+					nr.NextHop.si_family = AF_INET;
+					nr.NextHop.Ipv4.sin_addr.s_addr = fakeIp;
+					nr.Metric = 9999; // do not use as real default route
+					nr.Protocol = MIB_IPPROTO_NETMGMT;
+					DWORD result = CreateIpForwardEntry2(&nr);
+					if (result != NO_ERROR)
+						Sleep(500);
+					else break;
+				}
 			}
 #endif
-		}
 
-		memset(&tapOvlRead,0,sizeof(tapOvlRead));
-		tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-		memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
-		tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+			memset(&tapOvlRead,0,sizeof(tapOvlRead));
+			tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+			memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
+			tapOvlWrite.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 
-		wait4[0] = _injectSemaphore;
-		wait4[1] = tapOvlRead.hEvent;
-		wait4[2] = tapOvlWrite.hEvent; // only included if writeInProgress is true
+			wait4[0] = _injectSemaphore;
+			wait4[1] = tapOvlRead.hEvent;
+			wait4[2] = tapOvlWrite.hEvent; // only included if writeInProgress is true
 
-		ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
-		bool writeInProgress = false;
-		while (_run) {
-			if ((prevTapResetStatus != _systemTapResetStatus)||(throwOneAway)) {
-				powerCycle = throwOneAway;
-				throwOneAway = false;
-				prevTapResetStatus = _systemTapResetStatus;
-				break; // this will cause us to close and reopen the tap
-			}
-			DWORD r = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
-			if (!_run) break; // will also break outer while(_run)
+			ReadFile(_tap,tapReadBuf,sizeof(tapReadBuf),NULL,&tapOvlRead);
+			bool writeInProgress = false;
+			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
+			while (_run) {
+				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2,wait4,FALSE,2500,TRUE);
+				if (!_run) break; // will also break outer while(_run)
 
-			if ((r == WAIT_TIMEOUT)||(r == WAIT_FAILED))
-				continue;
-
-			if (HasOverlappedIoCompleted(&tapOvlRead)) {
-				DWORD bytesRead = 0;
-				if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
-					if ((bytesRead > 14)&&(_enabled)) {
-						MAC to(tapReadBuf,6);
-						MAC from(tapReadBuf + 6,6);
-						unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
-						try {
-							// TODO: decode vlans
-							_handler(_arg,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
-						} catch ( ... ) {} // handlers should not throw
+				// Check for issues with adapter and close/reopen if any are detected. This
+				// check fixes a while boatload of Windows adapter 'coma' issues after
+				// sleep/wake and when adapters are added/removed. Basically if the tap
+				// device is borked, whack it.
+				{
+					ULONGLONG tc = GetTickCount64();
+					if ((tc - timeOfLastBorkCheck) >= 2500) {
+						timeOfLastBorkCheck = tc;
+						MIB_IF_TABLE2 *ift = NULL;
+						if ((GetIfTable2(&ift) == NO_ERROR)&&(ift)) {
+							bool isBorked = false;
+							for(ULONG r=0;r<ift->NumEntries;++r) {
+								if (ift->Table[r].InterfaceLuid.Value == _deviceLuid.Value) {
+									if ((ift->Table[r].InterfaceAndOperStatusFlags.NotMediaConnected)||(ift->Table[r].MediaConnectState == MediaConnectStateDisconnected))
+										isBorked = true;
+									break;
+								}
+							}
+							FreeMibTable(ift);
+							if (isBorked) {
+								// Close and reopen tap device if there's an issue (outer loop)
+								break;
+							}
+						}
 					}
 				}
-				ReadFile(_tap,tapReadBuf,ZT_IF_MTU + 32,NULL,&tapOvlRead);
+
+				if ((waitResult == WAIT_TIMEOUT)||(waitResult == WAIT_FAILED))
+					continue;
+
+				if (HasOverlappedIoCompleted(&tapOvlRead)) {
+					DWORD bytesRead = 0;
+					if (GetOverlappedResult(_tap,&tapOvlRead,&bytesRead,FALSE)) {
+						if ((bytesRead > 14)&&(_enabled)) {
+							MAC to(tapReadBuf,6);
+							MAC from(tapReadBuf + 6,6);
+							unsigned int etherType = ((((unsigned int)tapReadBuf[12]) & 0xff) << 8) | (((unsigned int)tapReadBuf[13]) & 0xff);
+							try {
+								// TODO: decode vlans
+								_handler(_arg,_nwid,from,to,etherType,0,tapReadBuf + 14,bytesRead - 14);
+							} catch ( ... ) {} // handlers should not throw
+						}
+					}
+					ReadFile(_tap,tapReadBuf,ZT_IF_MTU + 32,NULL,&tapOvlRead);
+				}
+
+				if (writeInProgress) {
+					if (HasOverlappedIoCompleted(&tapOvlWrite)) {
+						writeInProgress = false;
+						_injectPending_m.lock();
+						_injectPending.pop();
+					} else continue; // still writing, so skip code below and wait
+				} else _injectPending_m.lock();
+
+				if (!_injectPending.empty()) {
+					WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&tapOvlWrite);
+					writeInProgress = true;
+				}
+
+				_injectPending_m.unlock();
 			}
 
-			if (writeInProgress) {
-				if (HasOverlappedIoCompleted(&tapOvlWrite)) {
-					writeInProgress = false;
-					_injectPending_m.lock();
-					_injectPending.pop();
-				} else continue; // still writing, so skip code below and wait
-			} else _injectPending_m.lock();
+			CancelIo(_tap);
 
-			if (!_injectPending.empty()) {
-				WriteFile(_tap,_injectPending.front().first.data,_injectPending.front().second,NULL,&tapOvlWrite);
-				writeInProgress = true;
-			}
+			CloseHandle(tapOvlRead.hEvent);
+			CloseHandle(tapOvlWrite.hEvent);
+			CloseHandle(_tap);
+			_tap = INVALID_HANDLE_VALUE;
 
-			_injectPending_m.unlock();
+			// We will restart and re-open the tap unless _run == false
 		}
-
-		CancelIo(_tap);
-
-		CloseHandle(tapOvlRead.hEvent);
-		CloseHandle(tapOvlWrite.hEvent);
-		CloseHandle(_tap);
-		_tap = INVALID_HANDLE_VALUE;
-
-		// We will restart and re-open the tap unless _run == false
-	}
-
-	::free(tapReadBuf);
+	} catch ( ... ) {} // catch unexpected exceptions -- this should not happen but would prevent program crash or other weird issues since threads should not throw
 }
 
 void WindowsEthernetTap::destroyAllPersistentTapDevices(const char *pathToHelpers)

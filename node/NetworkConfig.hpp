@@ -49,23 +49,60 @@ namespace ZeroTier {
 
 // These dictionary keys are short so they don't take up much room in
 // netconf response packets.
+
+// integer(hex)[,integer(hex),...]
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
+
+// network ID
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
+
+// integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
+
+// integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_REVISION "r"
+
+// address of member
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
+
+// integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
+
+// dictionary of one or more of: MAC/ADI=preload,maxbalance,accrual
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
+
+// 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE "p"
+
+// text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
+
+// text
 #define ZT_NETWORKCONFIG_DICT_KEY_DESC "d"
+
+// IP/bits[,IP/bits,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
+
+// IP/bits[,IP/bits,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
+
+// serialized CertificateOfMembership
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
+
+// 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
+
+// 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING "pb"
+
+// node[,node,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES "ab"
+
+// node;IP/port[,node;IP/port]
 #define ZT_NETWORKCONFIG_DICT_KEY_RELAYS "rl"
+
+// IP/metric[,IP/metric,...]
+#define ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS "gw"
 
 /**
  * Network configuration received from network controller nodes
@@ -146,6 +183,7 @@ public:
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::vector<InetAddress> &staticIps() const throw() { return _staticIps; }
+	inline const std::vector<InetAddress> &gateways() const throw() { return _gateways; }
 	inline const std::vector<Address> &activeBridges() const throw() { return _activeBridges; }
 	inline const std::vector< std::pair<Address,InetAddress> > &relays() const throw() { return _relays; }
 	inline const CertificateOfMembership &com() const throw() { return _com; }
@@ -188,6 +226,7 @@ private:
 	std::string _name;
 	std::string _description;
 	std::vector<InetAddress> _staticIps;
+	std::vector<InetAddress> _gateways;
 	std::vector<Address> _activeBridges;
 	std::vector< std::pair<Address,InetAddress> > _relays;
 	std::map<MulticastGroup,MulticastRate> _multicastRates;
