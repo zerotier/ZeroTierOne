@@ -747,6 +747,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				} // else 404
 
 			} else {
+				std::vector<std::string> path_copy(path);
 
 				if (!networkExists) {
 					if (path[1].substr(10) == "______") {
@@ -786,6 +787,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					sqlite3_bind_int64(_sCreateNetwork,3,(long long)OSUtils::now());
 					if (sqlite3_step(_sCreateNetwork) != SQLITE_DONE)
 						return 500;
+					path_copy[1].assign(nwids);
 				}
 
 				json_value *j = json_parse(body.c_str(),body.length());
@@ -1041,7 +1043,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				sqlite3_bind_text(_sSetNetworkRevision,2,nwids,16,SQLITE_STATIC);
 				sqlite3_step(_sSetNetworkRevision);
 
-				return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);
+				return _doCPGet(path_copy,urlArgs,headers,body,responseBody,responseContentType);
 			}
 
 		} // else 404
