@@ -39,7 +39,7 @@ public enum PeerRole {
     PEER_ROLE_HUB,
 
     /**
-     * planetary supernode
+     * planetary rootserver
      */
-    PEER_ROLE_SUPERNODE
+    PEER_ROLE_ROOTSERVER
 }

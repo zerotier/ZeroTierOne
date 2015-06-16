@@ -36,7 +36,7 @@ namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_amSupernode(false)
+	_amRootserver(false)
 {
 }
 
@@ -44,16 +44,16 @@ Topology::~Topology()
 {
 }
 
-void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn)
+void Topology::setRootservers(const std::map< Identity,std::vector<InetAddress> > &sn)
 {
 	Mutex::Lock _l(_lock);
 
-	if (_supernodes == sn)
+	if (_rootservers == sn)
 		return; // no change
 
-	_supernodes = sn;
-	_supernodeAddresses.clear();
-	_supernodePeers.clear();
+	_rootservers = sn;
+	_rootserverAddresses.clear();
+	_rootserverPeers.clear();
 	const uint64_t now = RR->node->now();
 
 	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
@@ -64,17 +64,17 @@ void Topology::setSupernodes(const std::map< Identity,std::vector<InetAddress> >
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
 				p->addPath(Path(*j,true));
 			p->use(now);
-			_supernodePeers.push_back(p);
+			_rootserverPeers.push_back(p);
 		}
-		_supernodeAddresses.push_back(i->first.address());
+		_rootserverAddresses.push_back(i->first.address());
 	}
 
-	std::sort(_supernodeAddresses.begin(),_supernodeAddresses.end());
+	std::sort(_rootserverAddresses.begin(),_rootserverAddresses.end());
 
-	_amSupernode = (_supernodes.find(RR->identity) != _supernodes.end());
+	_amRootserver = (_rootservers.find(RR->identity) != _rootservers.end());
 }
 
-void Topology::setSupernodes(const Dictionary &sn)
+void Topology::setRootservers(const Dictionary &sn)
 {
 	std::map< Identity,std::vector<InetAddress> > m;
 	for(Dictionary::const_iterator d(sn.begin());d!=sn.end();++d) {
@@ -86,11 +86,11 @@ void Topology::setSupernodes(const Dictionary &sn)
 				if (udp.length() > 0)
 					a.push_back(InetAddress(udp));
 			} catch ( ... ) {
-				TRACE("supernode list contained invalid entry for: %s",d->first.c_str());
+				TRACE("rootserver list contained invalid entry for: %s",d->first.c_str());
 			}
 		}
 	}
-	this->setSupernodes(m);
+	this->setRootservers(m);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -141,28 +141,28 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	return SharedPtr<Peer>();
 }
 
-SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
+SharedPtr<Peer> Topology::getBestRootserver(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
-	SharedPtr<Peer> bestSupernode;
+	SharedPtr<Peer> bestRootserver;
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
-	if (_amSupernode) {
-		/* If I am a supernode, the "best" supernode is the one whose address
+	if (_amRootserver) {
+		/* If I am a rootserver, the "best" rootserver is the one whose address
 		 * is numerically greater than mine (with wrap at top of list). This
 		 * causes packets searching for a route to pretty much literally
 		 * circumnavigate the globe rather than bouncing between just two. */
 
-		if (_supernodeAddresses.size() > 1) { // gotta be one other than me for this to work
-			std::vector<Address>::const_iterator sna(std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),RR->identity.address()));
-			if (sna != _supernodeAddresses.end()) { // sanity check -- _amSupernode should've been false in this case
+		if (_rootserverAddresses.size() > 1) { // gotta be one other than me for this to work
+			std::vector<Address>::const_iterator sna(std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),RR->identity.address()));
+			if (sna != _rootserverAddresses.end()) { // sanity check -- _amRootserver should've been false in this case
 				for(;;) {
-					if (++sna == _supernodeAddresses.end())
-						sna = _supernodeAddresses.begin(); // wrap around at end
+					if (++sna == _rootserverAddresses.end())
+						sna = _rootserverAddresses.begin(); // wrap around at end
 					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
 						std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.find(*sna));
 						if ((p != _activePeers.end())&&(p->second->hasActiveDirectPath(now))) {
-							bestSupernode = p->second;
+							bestRootserver = p->second;
 							break;
 						}
 					}
@@ -170,80 +170,80 @@ SharedPtr<Peer> Topology::getBestSupernode(const Address *avoid,unsigned int avo
 			}
 		}
 	} else {
-		/* If I am not a supernode, the best supernode is the active one with
+		/* If I am not a rootserver, the best rootserver is the active one with
 		 * the lowest latency. */
 
-		unsigned int l,bestSupernodeLatency = 65536;
+		unsigned int l,bestRootserverLatency = 65536;
 		uint64_t lds,ldr;
 
-		// First look for a best supernode by comparing latencies, but exclude
-		// supernodes that have not responded to direct messages in order to
+		// First look for a best rootserver by comparing latencies, but exclude
+		// rootservers that have not responded to direct messages in order to
 		// try to exclude any that are dead or unreachable.
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_supernodePeers.begin());sn!=_supernodePeers.end();) {
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_rootserverPeers.begin());sn!=_rootserverPeers.end();) {
 			// Skip explicitly avoided relays
 			for(unsigned int i=0;i<avoidCount;++i) {
 				if (avoid[i] == (*sn)->address())
-					goto keep_searching_for_supernodes;
+					goto keep_searching_for_rootservers;
 			}
 
 			// Skip possibly comatose or unreachable relays
 			lds = (*sn)->lastDirectSend();
 			ldr = (*sn)->lastDirectReceive();
 			if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
-				goto keep_searching_for_supernodes;
+				goto keep_searching_for_rootservers;
 
 			if ((*sn)->hasActiveDirectPath(now)) {
 				l = (*sn)->latency();
-				if (bestSupernode) {
-					if ((l)&&(l < bestSupernodeLatency)) {
-						bestSupernodeLatency = l;
-						bestSupernode = *sn;
+				if (bestRootserver) {
+					if ((l)&&(l < bestRootserverLatency)) {
+						bestRootserverLatency = l;
+						bestRootserver = *sn;
 					}
 				} else {
 					if (l)
-						bestSupernodeLatency = l;
-					bestSupernode = *sn;
+						bestRootserverLatency = l;
+					bestRootserver = *sn;
 				}
 			}
 
-keep_searching_for_supernodes:
+keep_searching_for_rootservers:
 			++sn;
 		}
 
-		if (bestSupernode) {
-			bestSupernode->use(now);
-			return bestSupernode;
+		if (bestRootserver) {
+			bestRootserver->use(now);
+			return bestRootserver;
 		} else if (strictAvoid)
 			return SharedPtr<Peer>();
 
 		// If we have nothing from above, just pick one without avoidance criteria.
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn=_supernodePeers.begin();sn!=_supernodePeers.end();++sn) {
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn=_rootserverPeers.begin();sn!=_rootserverPeers.end();++sn) {
 			if ((*sn)->hasActiveDirectPath(now)) {
 				unsigned int l = (*sn)->latency();
-				if (bestSupernode) {
-					if ((l)&&(l < bestSupernodeLatency)) {
-						bestSupernodeLatency = l;
-						bestSupernode = *sn;
+				if (bestRootserver) {
+					if ((l)&&(l < bestRootserverLatency)) {
+						bestRootserverLatency = l;
+						bestRootserver = *sn;
 					}
 				} else {
 					if (l)
-						bestSupernodeLatency = l;
-					bestSupernode = *sn;
+						bestRootserverLatency = l;
+					bestRootserver = *sn;
 				}
 			}
 		}
 	}
 
-	if (bestSupernode)
-		bestSupernode->use(now);
-	return bestSupernode;
+	if (bestRootserver)
+		bestRootserver->use(now);
+	return bestRootserver;
 }
 
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
-		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),p->first) == _supernodeAddresses.end())) {
+		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),p->first) == _rootserverAddresses.end())) {
 			_activePeers.erase(p++);
 		} else ++p;
 	}

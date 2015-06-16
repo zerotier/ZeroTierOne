@@ -626,7 +626,7 @@ public:
 		 *   [... additional tuples of network/address/adi ...]
 		 *
 		 * LIKEs are sent to peers with whom you have a direct peer to peer
-		 * connection, and always including supernodes.
+		 * connection, and always including rootservers.
 		 *
 		 * OK/ERROR are not generated.
 		 */

@@ -118,7 +118,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 
 		// For all peers for whom we forgot an address, send a packet indirectly if
 		// they are still considered alive so that we will re-establish direct links.
-		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+		SharedPtr<Peer> sn(RR->topology->getBestRootserver());
 		if (sn) {
 			Path *snp = sn->getBestPath(now);
 			if (snp) {
