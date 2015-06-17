@@ -689,6 +689,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						outp.append((uint16_t)netconfStr.length());
 						outp.append(netconfStr.data(),(unsigned int)netconfStr.length());
 						outp.compress();
+						outp.armor(peer->key(),true);
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) {
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
