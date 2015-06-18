@@ -106,7 +106,7 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 <tr><td>versionRev</td><td>integer</td><td>Revision of remote if known</td><td>no</td></tr>
 <tr><td>version</td><td>string</td><td>Version in major.minor.rev format</td><td>no</td></tr>
 <tr><td>latency</td><td>integer</td><td>Latency in milliseconds if known</td><td>no</td></tr>
-<tr><td>role</td><td>string</td><td>LEAF, HUB, or SUPERNODE</td><td>no</td></tr>
+<tr><td>role</td><td>string</td><td>LEAF, HUB, or ROOTSERVER</td><td>no</td></tr>
 <tr><td>paths</td><td>[object]</td><td>Array of path objects (see below)</td><td>no</td></tr>
 </table>
 
@@ -184,7 +184,7 @@ Relays, IP assignment pools, and rules are edited via direct POSTs to the networ
 
 **Relay object format:**
 
-Relay objects define network-specific preferred relay nodes. Traffic to peers on this network will preferentially use these relays if they are available, and otherwise will fall back to the global supernode infrastructure.
+Relay objects define network-specific preferred relay nodes. Traffic to peers on this network will preferentially use these relays if they are available, and otherwise will fall back to the global rootserver infrastructure.
 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>

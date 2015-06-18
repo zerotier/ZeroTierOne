@@ -216,7 +216,7 @@ void Multicaster::send(
 
 		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY) {
 			gs.lastExplicitGather = now;
-			SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+			SharedPtr<Peer> sn(RR->topology->getBestRootserver());
 			if (sn) {
 				TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
 
@@ -271,12 +271,12 @@ void Multicaster::send(
 		delete [] indexes;
 
 #ifdef ZT_SUPPORT_LEGACY_MULTICAST
-	// This sends a P5 multicast up to our supernode, who then
+	// This sends a P5 multicast up to our rootserver, who then
 	// redistributes it manually down to all <1.0.0 peers for
 	// legacy support. These peers don't support the new multicast
 	// frame type, so even if they receive it they will ignore it.
 	{
-		SharedPtr<Peer> sn(RR->topology->getBestSupernode());
+		SharedPtr<Peer> sn(RR->topology->getBestRootserver());
 		if (sn) {
 			uint32_t rn = RR->prng->next32();
 			Packet outp(sn->address(),RR->identity.address(),Packet::VERB_P5_MULTICAST_FRAME);

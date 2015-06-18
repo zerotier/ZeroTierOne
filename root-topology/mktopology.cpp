@@ -30,21 +30,21 @@ int main(int argc,char **argv)
 	if (OSUtils::readFile("template.dict",buf))
 		topology.fromString(buf);
 
-	// Read all entries in supernodes/ that correspond to supernode entry dictionaries
-	// and add them to topology under supernodes/ subkey.
-	Dictionary supernodes;
-	std::vector<std::string> supernodeDictionaries(OSUtils::listDirectory("supernodes"));
-	for(std::vector<std::string>::const_iterator sn(supernodeDictionaries.begin());sn!=supernodeDictionaries.end();++sn) {
+	// Read all entries in rootservers/ that correspond to rootserver entry dictionaries
+	// and add them to topology under rootservers/ subkey.
+	Dictionary rootservers;
+	std::vector<std::string> rootserverDictionaries(OSUtils::listDirectory("rootservers"));
+	for(std::vector<std::string>::const_iterator sn(rootserverDictionaries.begin());sn!=rootserverDictionaries.end();++sn) {
 		if (sn->length() == 10) {
 			buf.clear();
-			if (!OSUtils::readFile((std::string("supernodes/")+(*sn)).c_str(),buf)) {
-				std::cerr << "Cannot read supernodes/" << *sn << std::endl;
+			if (!OSUtils::readFile((std::string("rootservers/")+(*sn)).c_str(),buf)) {
+				std::cerr << "Cannot read rootservers/" << *sn << std::endl;
 				return 1;
 			}
-			supernodes[*sn] = buf;
+			rootservers[*sn] = buf;
 		}
 	}
-	topology["supernodes"] = supernodes.toString();
+	topology["rootservers"] = rootservers.toString();
 
 	if ((topologyAuthority)&&(topologyAuthority.hasPrivate())) {
 		// Sign topology with root-topology-authority.secret

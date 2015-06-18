@@ -90,7 +90,7 @@ public enum Event {
     /**
      * A more recent version was observed on the network
      * 
-     * <p>Right now this is only triggered if a hub or supernode reports a
+     * <p>Right now this is only triggered if a hub or rootserver reports a
      * more recent version, and only once. It can be used to trigger a
      * software update check.</p>
      * 
