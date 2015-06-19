@@ -519,7 +519,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 				int ipNetmaskBits = sqlite3_column_int(_sGetIpAssignmentsForNode,1);
 				if ((ip)&&(sqlite3_column_bytes(_sGetIpAssignmentsForNode,0) >= 4)&&(ipNetmaskBits > 0)&&(ipNetmaskBits <= 32)) {
 					char tmp[32];
-					Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[0],(int)ip[1],(int)ip[2],(int)ip[3],ipNetmaskBits);
+					Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[12+0],(int)ip[12+1],(int)ip[12+2],(int)ip[12+3],ipNetmaskBits);
 					if (v4s.length())
 						v4s.push_back(',');
 					v4s.append(tmp);
