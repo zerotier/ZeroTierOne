@@ -518,13 +518,13 @@ public:
 		RR(renv),
 		_now(renv->node->now()),
 		_network(nw),
-		_rootserverAddresses(renv->topology->rootserverAddresses()),
+		_rootAddresses(renv->topology->rootAddresses()),
 		_allMulticastGroups(nw->_allMulticastGroups())
 	{}
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),p->address()) != _rootserverAddresses.end()) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			for(std::vector<MulticastGroup>::iterator mg(_allMulticastGroups.begin());mg!=_allMulticastGroups.end();++mg) {
@@ -551,7 +551,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	Network *_network;
-	std::vector<Address> _rootserverAddresses;
+	std::vector<Address> _rootAddresses;
 	std::vector<MulticastGroup> _allMulticastGroups;
 };
 

@@ -216,7 +216,7 @@ void Multicaster::send(
 
 		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY) {
 			gs.lastExplicitGather = now;
-			SharedPtr<Peer> sn(RR->topology->getBestRootserver());
+			SharedPtr<Peer> sn(RR->topology->getBestRoot());
 			if (sn) {
 				TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
 
@@ -269,51 +269,6 @@ void Multicaster::send(
 	// Free allocated memory buffer if any
 	if (indexes != idxbuf)
 		delete [] indexes;
-
-#ifdef ZT_SUPPORT_LEGACY_MULTICAST
-	// This sends a P5 multicast up to our rootserver, who then
-	// redistributes it manually down to all <1.0.0 peers for
-	// legacy support. These peers don't support the new multicast
-	// frame type, so even if they receive it they will ignore it.
-	{
-		SharedPtr<Peer> sn(RR->topology->getBestRootserver());
-		if (sn) {
-			uint32_t rn = RR->prng->next32();
-			Packet outp(sn->address(),RR->identity.address(),Packet::VERB_P5_MULTICAST_FRAME);
-
-			outp.append((uint16_t)0xffff); // do not forward
-			outp.append((unsigned char)0,320 + 1024); // empty queue and bloom filter
-
-			outp.append((unsigned char)((com) ? ZT_PROTO_VERB_P5_MULTICAST_FRAME_FLAGS_HAS_MEMBERSHIP_CERTIFICATE : 0));
-			outp.append((uint64_t)nwid);
-			outp.append((uint16_t)0);
-			outp.append((unsigned char)0);
-			outp.append((unsigned char)0);
-			RR->identity.address().appendTo(outp);
-			outp.append((const void *)&rn,3); // random multicast ID
-			if (src)
-				src.appendTo(outp);
-			else MAC(RR->identity.address(),nwid).appendTo(outp);
-			mg.mac().appendTo(outp);
-			outp.append((uint32_t)mg.adi());
-			outp.append((uint16_t)etherType);
-			outp.append((uint16_t)len);
-			outp.append(data,len);
-			unsigned int signedPortionLen = outp.size() - ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION;
-
-			C25519::Signature sig(RR->identity.sign(outp.field(ZT_PROTO_VERB_P5_MULTICAST_FRAME_IDX__START_OF_SIGNED_PORTION,signedPortionLen),signedPortionLen));
-
-			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,(unsigned int)sig.size());
-
-			if (com) com->serialize(outp);
-
-			outp.compress();
-			outp.armor(sn->key(),true);
-			sn->send(RR,outp.data(),outp.size(),now);
-		}
-	}
-#endif // ZT_SUPPORT_LEGACY_MULTICAST
 }
 
 void Multicaster::clean(uint64_t now)

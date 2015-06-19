@@ -59,21 +59,19 @@ public:
 	~Topology();
 
 	/**
-	 * Set up rootservers for this network
-	 * 
-	 * @param sn Rootservers for this network
+	 * @param sn Root server identities and addresses
 	 */
-	void setRootservers(const std::map< Identity,std::vector<InetAddress> > &sn);
+	void setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn);
 
 	/**
-	 * Set up rootservers for this network
+	 * Set up root servers for this network
 	 *
 	 * This performs no signature verification of any kind. The caller must
 	 * check the signature of the root topology dictionary first.
 	 *
-	 * @param sn Rootservers dictionary from root-topology
+	 * @param sn 'rootservers' key from root-topology Dictionary (deserialized as Dictionary)
 	 */
-	void setRootservers(const Dictionary &sn);
+	void setRootServers(const Dictionary &sn);
 
 	/**
 	 * Add a peer to database
@@ -95,65 +93,52 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
-	 * @return Vector of peers that are rootservers
+	 * @return Vector of peers that are root servers
 	 */
-	inline std::vector< SharedPtr<Peer> > rootserverPeers() const
+	inline std::vector< SharedPtr<Peer> > rootPeers() const
 	{
 		Mutex::Lock _l(_lock);
-		return _rootserverPeers;
+		return _rootPeers;
 	}
 
 	/**
-	 * @return Number of rootservers
-	 */
-	inline unsigned int numRootservers() const
-	{
-		Mutex::Lock _l(_lock);
-		return (unsigned int)_rootserverPeers.size();
-	}
-
-	/**
-	 * Get the current favorite rootserver
+	 * Get the current favorite root server
 	 * 
-	 * @return Rootserver with lowest latency or NULL if none
+	 * @return Root server with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestRootserver()
+	inline SharedPtr<Peer> getBestRoot()
 	{
-		return getBestRootserver((const Address *)0,0,false);
+		return getBestRoot((const Address *)0,0,false);
 	}
 
 	/**
-	 * Get the best rootserver, avoiding rootservers listed in an array
+	 * Get the best root server, avoiding root servers listed in an array
 	 * 
-	 * This will get the best rootserver (lowest latency, etc.) but will
-	 * try to avoid the listed rootservers, only using them if no others
+	 * This will get the best root server (lowest latency, etc.) but will
+	 * try to avoid the listed root servers, only using them if no others
 	 * are available.
 	 * 
 	 * @param avoid Nodes to avoid
 	 * @param avoidCount Number of nodes to avoid
-	 * @param strictAvoid If false, consider avoided rootservers anyway if no non-avoid rootservers are available
-	 * @return Rootserver or NULL if none
+	 * @param strictAvoid If false, consider avoided root servers anyway if no non-avoid root servers are available
+	 * @return Root server or NULL if none available
 	 */
-	SharedPtr<Peer> getBestRootserver(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
+	SharedPtr<Peer> getBestRoot(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
 
 	/**
-	 * @param zta ZeroTier address
-	 * @return True if this is a designated rootserver
+	 * @param id Identity to check
+	 * @return True if this is a designated root server
 	 */
-	inline bool isRootserver(const Address &zta) const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return (std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),zta) != _rootserverAddresses.end());
-	}
+	bool isRoot(const Identity &id) const
+		throw();
 
 	/**
-	 * @return Vector of rootserver addresses
+	 * @return Vector of root server addresses
 	 */
-	inline std::vector<Address> rootserverAddresses() const
+	inline std::vector<Address> rootAddresses() const
 	{
 		Mutex::Lock _l(_lock);
-		return _rootserverAddresses;
+		return _rootAddresses;
 	}
 
 	/**
@@ -206,13 +191,13 @@ private:
 	const RuntimeEnvironment *RR;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
-	std::map< Identity,std::vector<InetAddress> > _rootservers;
-	std::vector< Address > _rootserverAddresses;
-	std::vector< SharedPtr<Peer> > _rootserverPeers;
+	std::map< Identity,std::vector<InetAddress> > _roots;
+	std::vector< Address > _rootAddresses;
+	std::vector< SharedPtr<Peer> > _rootPeers;
 
 	Mutex _lock;
 
-	bool _amRootserver;
+	bool _amRoot;
 };
 
 } // namespace ZeroTier

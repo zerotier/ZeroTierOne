@@ -36,7 +36,7 @@ namespace ZeroTier {
 
 Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_amRootserver(false)
+	_amRoot(false)
 {
 }
 
@@ -44,16 +44,16 @@ Topology::~Topology()
 {
 }
 
-void Topology::setRootservers(const std::map< Identity,std::vector<InetAddress> > &sn)
+void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn)
 {
 	Mutex::Lock _l(_lock);
 
-	if (_rootservers == sn)
+	if (_roots == sn)
 		return; // no change
 
-	_rootservers = sn;
-	_rootserverAddresses.clear();
-	_rootserverPeers.clear();
+	_roots = sn;
+	_rootAddresses.clear();
+	_rootPeers.clear();
 	const uint64_t now = RR->node->now();
 
 	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
@@ -64,17 +64,17 @@ void Topology::setRootservers(const std::map< Identity,std::vector<InetAddress> 
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
 				p->addPath(Path(*j,true));
 			p->use(now);
-			_rootserverPeers.push_back(p);
+			_rootPeers.push_back(p);
 		}
-		_rootserverAddresses.push_back(i->first.address());
+		_rootAddresses.push_back(i->first.address());
 	}
 
-	std::sort(_rootserverAddresses.begin(),_rootserverAddresses.end());
+	std::sort(_rootAddresses.begin(),_rootAddresses.end());
 
-	_amRootserver = (_rootservers.find(RR->identity) != _rootservers.end());
+	_amRoot = (_roots.find(RR->identity) != _roots.end());
 }
 
-void Topology::setRootservers(const Dictionary &sn)
+void Topology::setRootServers(const Dictionary &sn)
 {
 	std::map< Identity,std::vector<InetAddress> > m;
 	for(Dictionary::const_iterator d(sn.begin());d!=sn.end();++d) {
@@ -86,11 +86,11 @@ void Topology::setRootservers(const Dictionary &sn)
 				if (udp.length() > 0)
 					a.push_back(InetAddress(udp));
 			} catch ( ... ) {
-				TRACE("rootserver list contained invalid entry for: %s",d->first.c_str());
+				TRACE("root server list contained invalid entry for: %s",d->first.c_str());
 			}
 		}
 	}
-	this->setRootservers(m);
+	this->setRootServers(m);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -141,28 +141,28 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	return SharedPtr<Peer>();
 }
 
-SharedPtr<Peer> Topology::getBestRootserver(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
+SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
-	SharedPtr<Peer> bestRootserver;
+	SharedPtr<Peer> bestRoot;
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
-	if (_amRootserver) {
-		/* If I am a rootserver, the "best" rootserver is the one whose address
+	if (_amRoot) {
+		/* If I am a root server, the "best" root server is the one whose address
 		 * is numerically greater than mine (with wrap at top of list). This
 		 * causes packets searching for a route to pretty much literally
 		 * circumnavigate the globe rather than bouncing between just two. */
 
-		if (_rootserverAddresses.size() > 1) { // gotta be one other than me for this to work
-			std::vector<Address>::const_iterator sna(std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),RR->identity.address()));
-			if (sna != _rootserverAddresses.end()) { // sanity check -- _amRootserver should've been false in this case
+		if (_rootAddresses.size() > 1) { // gotta be one other than me for this to work
+			std::vector<Address>::const_iterator sna(std::find(_rootAddresses.begin(),_rootAddresses.end(),RR->identity.address()));
+			if (sna != _rootAddresses.end()) { // sanity check -- _amRoot should've been false in this case
 				for(;;) {
-					if (++sna == _rootserverAddresses.end())
-						sna = _rootserverAddresses.begin(); // wrap around at end
+					if (++sna == _rootAddresses.end())
+						sna = _rootAddresses.begin(); // wrap around at end
 					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
 						std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.find(*sna));
 						if ((p != _activePeers.end())&&(p->second->hasActiveDirectPath(now))) {
-							bestRootserver = p->second;
+							bestRoot = p->second;
 							break;
 						}
 					}
@@ -170,80 +170,87 @@ SharedPtr<Peer> Topology::getBestRootserver(const Address *avoid,unsigned int av
 			}
 		}
 	} else {
-		/* If I am not a rootserver, the best rootserver is the active one with
+		/* If I am not a root server, the best root server is the active one with
 		 * the lowest latency. */
 
-		unsigned int l,bestRootserverLatency = 65536;
+		unsigned int l,bestLatency = 65536;
 		uint64_t lds,ldr;
 
-		// First look for a best rootserver by comparing latencies, but exclude
-		// rootservers that have not responded to direct messages in order to
+		// First look for a best root by comparing latencies, but exclude
+		// root servers that have not responded to direct messages in order to
 		// try to exclude any that are dead or unreachable.
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_rootserverPeers.begin());sn!=_rootserverPeers.end();) {
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_rootPeers.begin());sn!=_rootPeers.end();) {
 			// Skip explicitly avoided relays
 			for(unsigned int i=0;i<avoidCount;++i) {
 				if (avoid[i] == (*sn)->address())
-					goto keep_searching_for_rootservers;
+					goto keep_searching_for_roots;
 			}
 
 			// Skip possibly comatose or unreachable relays
 			lds = (*sn)->lastDirectSend();
 			ldr = (*sn)->lastDirectReceive();
 			if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
-				goto keep_searching_for_rootservers;
+				goto keep_searching_for_roots;
 
 			if ((*sn)->hasActiveDirectPath(now)) {
 				l = (*sn)->latency();
-				if (bestRootserver) {
-					if ((l)&&(l < bestRootserverLatency)) {
-						bestRootserverLatency = l;
-						bestRootserver = *sn;
+				if (bestRoot) {
+					if ((l)&&(l < bestLatency)) {
+						bestLatency = l;
+						bestRoot = *sn;
 					}
 				} else {
 					if (l)
-						bestRootserverLatency = l;
-					bestRootserver = *sn;
+						bestLatency = l;
+					bestRoot = *sn;
 				}
 			}
 
-keep_searching_for_rootservers:
+keep_searching_for_roots:
 			++sn;
 		}
 
-		if (bestRootserver) {
-			bestRootserver->use(now);
-			return bestRootserver;
+		if (bestRoot) {
+			bestRoot->use(now);
+			return bestRoot;
 		} else if (strictAvoid)
 			return SharedPtr<Peer>();
 
 		// If we have nothing from above, just pick one without avoidance criteria.
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn=_rootserverPeers.begin();sn!=_rootserverPeers.end();++sn) {
+		for(std::vector< SharedPtr<Peer> >::const_iterator sn=_rootPeers.begin();sn!=_rootPeers.end();++sn) {
 			if ((*sn)->hasActiveDirectPath(now)) {
 				unsigned int l = (*sn)->latency();
-				if (bestRootserver) {
-					if ((l)&&(l < bestRootserverLatency)) {
-						bestRootserverLatency = l;
-						bestRootserver = *sn;
+				if (bestRoot) {
+					if ((l)&&(l < bestLatency)) {
+						bestLatency = l;
+						bestRoot = *sn;
 					}
 				} else {
 					if (l)
-						bestRootserverLatency = l;
-					bestRootserver = *sn;
+						bestLatency = l;
+					bestRoot = *sn;
 				}
 			}
 		}
 	}
 
-	if (bestRootserver)
-		bestRootserver->use(now);
-	return bestRootserver;
+	if (bestRoot)
+		bestRoot->use(now);
+	return bestRoot;
+}
+
+bool Topology::isRoot(const Identity &id) const
+	throw()
+{
+	Mutex::Lock _l(_lock);
+	return (_roots.count(id) != 0);
 }
 
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
-		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),p->first) == _rootserverAddresses.end())) {
+		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),p->first) == _rootAddresses.end())) {
 			_activePeers.erase(p++);
 		} else ++p;
 	}

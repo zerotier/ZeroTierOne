@@ -559,8 +559,8 @@ typedef struct
  */
 enum ZT1_PeerRole {
 	ZT1_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT1_PEER_ROLE_HUB = 1,      // locally federated hub
-	ZT1_PEER_ROLE_ROOTSERVER = 2 // planetary rootserver
+	ZT1_PEER_ROLE_RELAY = 1,    // relay node
+	ZT1_PEER_ROLE_ROOT = 2      // root server
 };
 
 /**
