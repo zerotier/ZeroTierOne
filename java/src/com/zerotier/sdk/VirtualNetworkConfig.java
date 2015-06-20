@@ -55,18 +55,6 @@ public final class VirtualNetworkConfig {
     }
 
     public boolean equals(VirtualNetworkConfig cfg) {
-        boolean mcgEqual = true;
-        if(multicastSubscriptions.length == cfg.multicastSubscriptions.length) {
-            for(int i = 0; i < multicastSubscriptions.length; ++i) {
-                if(!multicastSubscriptions[i].equals(cfg.multicastSubscriptions[i]))
-                {
-                    return false;
-                }
-            }
-        } else {
-            mcgEqual = false;
-        }
-
         boolean aaEqual = true;
         if(assignedAddresses.length == cfg.assignedAddresses.length) {
             for(int i = 0; i < assignedAddresses.length; ++i) {
@@ -89,7 +77,7 @@ public final class VirtualNetworkConfig {
                broadcastEnabled == cfg.broadcastEnabled &&
                portError == cfg.portError &&
                enabled == cfg.enabled &&
-               mcgEqual && aaEqual;
+               aaEqual;
     }
 
     /**
