@@ -236,13 +236,14 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
-				for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					SharedPtr<NetworkConfig> nc(n->second->config2());
-					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
-						needConfig.push_back(n->second);
+				for(std::vector< SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+					SharedPtr<NetworkConfig> nc((*n)->config2());
+					if (((now - (*n)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
+						needConfig.push_back(*n);
 					if (nc)
 						networkRelays.insert(networkRelays.end(),nc->relays().begin(),nc->relays().end());
 				}
+				std::sort(_networks.begin(),_networks.end());
 			}
 
 			// Request updated configuration for networks that need it
@@ -310,19 +311,24 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 ZT1_ResultCode Node::join(uint64_t nwid)
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> &nwe = _networks[nwid];
-	if (!nwe)
-		nwe = SharedPtr<Network>(new Network(RR,nwid));
+	SharedPtr<Network> nw = _network(nwid);
+	if(!nw) {
+		_networks.push_back(SharedPtr<Network>(new Network(RR,nwid)));
+		std::sort(_networks.begin(),_networks.end());
+	}
 	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::leave(uint64_t nwid)
 {
 	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
-	if (nw != _networks.end()) {
-		nw->second->destroy();
-		_networks.erase(nw);
+	std::vector< SharedPtr<Network> >::iterator nwi = std::lower_bound(_networks.begin(), _networks.end(), nwid, NetworkComparator());
+	if(nwi != _networks.end() && (*nwi)->id() == nwid) {
+		(*nwi)->destroy();
+		// erase element (replace by last)
+		*nwi = _networks.back();
+		_networks.pop_back();
+		std::sort(_networks.begin(),_networks.end());
 	}
 	return ZT1_RESULT_OK;
 }
@@ -406,10 +412,10 @@ ZT1_PeerList *Node::peers() const
 ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.find(nwid));
-	if (nw != _networks.end()) {
+	SharedPtr<Network> nw = _network(nwid);
+	if(nw) {
 		ZT1_VirtualNetworkConfig *nc = (ZT1_VirtualNetworkConfig *)::malloc(sizeof(ZT1_VirtualNetworkConfig));
-		nw->second->externalConfig(nc);
+		nw->externalConfig(nc);
 		return nc;
 	}
 	return (ZT1_VirtualNetworkConfig *)0;
@@ -426,8 +432,8 @@ ZT1_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT1_VirtualNetworkConfig *)(buf + sizeof(ZT1_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-		n->second->externalConfig(&(nl->networks[nl->networkCount++]));
+	for(std::vector< SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+		(*n)->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
 }

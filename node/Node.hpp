@@ -155,19 +155,16 @@ public:
 			len);
 	}
 
-	inline SharedPtr<Network> network(uint64_t nwid)
+	inline SharedPtr<Network> network(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_networks_m);
-		std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
-		return ((nw == _networks.end()) ? SharedPtr<Network>() : nw->second);
+		return _network(nwid);
 	}
 
 	inline std::vector< SharedPtr<Network> > allNetworks() const
 	{
 		Mutex::Lock _l(_networks_m);
-		std::vector< SharedPtr<Network> > nw;
-		for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-			nw.push_back(n->second);
+		std::vector< SharedPtr<Network> > nw(_networks);
 		return nw;
 	}
 
@@ -208,6 +205,23 @@ public:
 #endif
 
 private:
+	// for binary search on _networks
+	struct NetworkComparator {
+		bool operator()(const SharedPtr<Network> &n,uint64_t nwid) const {
+			return n->id() < nwid;
+		}
+	};
+
+	inline SharedPtr<Network> _network(uint64_t nwid) const
+	{
+		std::vector< SharedPtr<Network> >::const_iterator iter = std::lower_bound(_networks.begin(), _networks.end(), nwid, NetworkComparator());
+		if(iter != _networks.end() && (*iter)->id() == nwid) {
+			return *iter;
+		} else {
+			return SharedPtr<Network>();
+		}
+	}
+
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
 
@@ -223,7 +237,7 @@ private:
 	//Dictionary _localConfig; // persisted as local.conf
 	//Mutex _localConfig_m;
 
-	std::map< uint64_t,SharedPtr<Network> > _networks;
+	std::vector< SharedPtr<Network> > _networks;
 	Mutex _networks_m;
 
 	Mutex _backgroundTasksLock;
