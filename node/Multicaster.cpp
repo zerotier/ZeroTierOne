@@ -330,7 +330,9 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,Multi
 
 	for(std::vector<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
 		if (tx->atLimit()) {
-			gs.txQueue.erase(tx++);
+			// erase element (replace by last)
+			*tx = gs.txQueue.back();
+			gs.txQueue.pop_back();
 		} else {
 			tx->sendIfNew(RR,member);
 			if (tx->atLimit()) {
