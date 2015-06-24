@@ -286,11 +286,28 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 			return;
 		}
 
-		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
-		// So, verify that we signed th cert ourself
-		if (!cert.verify(RR->identity)) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return;
+		if (cert.signedBy() == RR->identity.address()) {
+			// We are the controller: RR->identity.address() == controller() == cert.signedBy()
+			// So, verify that we signed th cert ourself
+			if (!cert.verify(RR->identity)) {
+				TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+				return;
+			}
+		} else {
+
+			SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
+
+			if (!signer) {
+				// This would be rather odd, since this is our controller... could happen
+				// if we get packets before we've gotten config.
+				RR->sw->requestWhois(cert.signedBy());
+				return;
+			}
+
+			if (!cert.verify(signer->identity())) {
+				TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+				return;
+			}
 		}
 	}
 
