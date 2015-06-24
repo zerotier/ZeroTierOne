@@ -214,12 +214,11 @@ private:
 
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
-		std::vector< SharedPtr<Network> >::const_iterator iter = std::lower_bound(_networks.begin(), _networks.end(), nwid, NetworkComparator());
-		if(iter != _networks.end() && (*iter)->id() == nwid) {
-			return *iter;
-		} else {
-			return SharedPtr<Network>();
+		for(std::vector< SharedPtr<Network> >::const_iterator iter(_networks.begin());iter!=_networks.end();++iter) {
+			if((*iter)->id() == nwid)
+				return *iter;
 		}
+		return SharedPtr<Network>();
 	}
 
 	RuntimeEnvironment _RR;
