@@ -27,11 +27,13 @@
 
 package com.zerotier.sdk;
 
+import java.lang.Comparable;
+import java.lang.Override;
 import java.lang.String;
 import java.util.ArrayList;
 import java.net.InetSocketAddress;
 
-public final class VirtualNetworkConfig {
+public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT1_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
@@ -78,6 +80,14 @@ public final class VirtualNetworkConfig {
                portError == cfg.portError &&
                enabled == cfg.enabled &&
                aaEqual;
+    }
+
+    public int compareTo(VirtualNetworkConfig cfg) {
+        if(cfg.nwid == this.nwid) {
+            return 0;
+        } else {
+            return this.nwid > cfg.nwid ? 1 : -1;
+        }
     }
 
     /**
