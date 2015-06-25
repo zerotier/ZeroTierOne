@@ -1158,7 +1158,14 @@ unsigned int SqliteNetworkController::_doCPGet(
 						sqlite3_bind_text(_sGetIpAssignmentsForNode2,2,addrs,10,SQLITE_STATIC);
 						bool firstIp = true;
 						while (sqlite3_step(_sGetIpAssignmentsForNode2) == SQLITE_ROW) {
-							InetAddress ip((const void *)sqlite3_column_blob(_sGetIpAssignmentsForNode2,0),(sqlite3_column_int(_sGetIpAssignmentsForNode2,2) == 6) ? 16 : 4,(unsigned int)sqlite3_column_int(_sGetIpAssignmentPools2,1));
+							int ipversion = sqlite3_column_int(_sGetIpAssignmentsForNode2,2);
+							char ipBlob[16];
+							memcpy(ipBlob,(const void *)sqlite3_column_blob(_sGetIpAssignmentsForNode2,0),16);
+							InetAddress ip(
+								(const void *)(ipversion == 6 ? ipBlob : &ipBlob[12]),
+								(ipversion == 6 ? 16 : 4),
+								(unsigned int)sqlite3_column_int(_sGetIpAssignmentsForNode2,1)
+							);
 							responseBody.append(firstIp ? "\"" : ",\"");
 							firstIp = false;
 							responseBody.append(_jsonEscape(ip.toString()));
