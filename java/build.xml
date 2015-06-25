@@ -43,17 +43,26 @@
             <arg value="ZT1=${env.ZT}"/>
             <arg value="V=1"/>
         </exec>
-        <copy file="libs/armeabi/libZeroTierOneJNI.so" 
-              tofile="classes/lib/armeabi/libZeroTierOneJNI.so"
-              overwrite="true"/>
         <copy file="libs/arm64-v8a/libZeroTierOneJNI.so"
               tofile="classes/lib/arm64-v8a/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/armeabi/libZeroTierOneJNI.so" 
+              tofile="classes/lib/armeabi/libZeroTierOneJNI.so"
               overwrite="true"/>
         <copy file="libs/armeabi-v7a/libZeroTierOneJNI.so"
               tofile="classes/lib/armeabi-v7a/libZeroTierOneJNI.so"
               overwrite="true"/>
+        <copy file="libs/mips/libZeroTierOneJNI.so"
+              tofile="classes/lib/mips/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/mips64/libZeroTierOneJNI.so"
+              tofile="classes/lib/mips64/libZeroTierOne.so"
+              overwrite="true"/>
         <copy file="libs/x86/libZeroTierOneJNI.so"
               tofile="classes/lib/x86/libZeroTierOneJNI.so"
+              overwrite="true"/>
+        <copy file="libs/x86_64/libZeroTierOneJNI.so"
+              tofile="classes/lib/x86_64/libZeroTierOneJNI.so"
               overwrite="true"/>
     </target>
 
