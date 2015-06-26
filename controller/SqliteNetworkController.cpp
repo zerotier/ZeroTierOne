@@ -154,7 +154,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Node (id,identity,lastAt,lastSeen,firstSeen) VALUES (?,?,?,?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Node SET lastAt = ?,lastSeen = ? WHERE id = ?",-1,&_sUpdateNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Node SET lastSeen = ? WHERE id = ?",-1,&_sUpdateNode2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT etherType, CASE WHEN nodeId IS NULL THEN 1 ELSE 0 END AS general FROM Rule WHERE networkId = ? AND (nodeId = ? OR nodeId IS NULL) AND \"action\" = 'accept' ORDER BY general, ruleNo",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
@@ -381,17 +381,25 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 		{
 			std::vector<int> allowedEtherTypes;
+			bool nodeRules = false;
+			// Add member specific rules or add general rules
 			sqlite3_reset(_sGetEtherTypesFromRuleTable);
 			sqlite3_bind_text(_sGetEtherTypesFromRuleTable,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_text(_sGetEtherTypesFromRuleTable,2,member.nodeId,10,SQLITE_STATIC);
 			while (sqlite3_step(_sGetEtherTypesFromRuleTable) == SQLITE_ROW) {
 				int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
+				int isGeneral = sqlite3_column_int(_sGetEtherTypesFromRuleTable,1);
+				if (!isGeneral)
+					nodeRules = true;
+				else if (nodeRules)
+					break;
 				if ((et >= 0)&&(et <= 0xffff))
 					allowedEtherTypes.push_back(et);
 			}
 			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
-			std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end());
+			std::vector<int>::iterator end = std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end());
 			std::string allowedEtherTypesCsv;
-			for(std::vector<int>::const_iterator i(allowedEtherTypes.begin());i!=allowedEtherTypes.end();++i) {
+			for(std::vector<int>::const_iterator i(allowedEtherTypes.begin());i!=end;++i) {
 				if (allowedEtherTypesCsv.length())
 					allowedEtherTypesCsv.push_back(',');
 				char tmp[16];

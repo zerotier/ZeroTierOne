@@ -76,7 +76,7 @@ CREATE INDEX Relay_networkId ON Relay (networkId);
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ruleNo integer NOT NULL,
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,
   vlanId integer,
   vlanPcp integer,
   etherType integer,
@@ -93,4 +93,5 @@ CREATE TABLE Rule (
   "action" varchar(4096) NOT NULL DEFAULT('accept')
 );
 
-CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);
+CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo) WHERE nodeId IS NULL;
+CREATE UNIQUE INDEX Rule_networkId_nodeId_ruleNo ON Rule (networkId, ruleNo, nodeId);
