@@ -122,16 +122,16 @@ void Peer::received(
 
 		/* Announce multicast groups of interest to direct peers if they are
 		 * considered authorized members of a given network. Also announce to
-		 * supernodes and network controllers. */
+		 * root servers and network controllers. */
 		if ((pathIsConfirmed)&&((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000))) {
 			_lastAnnouncedTo = now;
 
-			const bool isSupernode = RR->topology->isSupernode(_id.address());
+			const bool isRoot = RR->topology->isRoot(_id);
 
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 			const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
 			for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n) {
-				if ( (isSupernode) || ((*n)->isAllowed(_id.address())) ) {
+				if ( (isRoot) || ((*n)->isAllowed(_id.address())) ) {
 					const std::vector<MulticastGroup> mgs((*n)->allMulticastGroups());
 					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {

@@ -133,7 +133,7 @@ Node::Node(
 		if (!rt.size())
 			rt.fromString(ZT_DEFAULTS.defaultRootTopology);
 	}
-	RR->topology->setSupernodes(Dictionary(rt.get("supernodes","")));
+	RR->topology->setRootServers(Dictionary(rt.get("rootservers","")));
 
 	postEvent(ZT1_EVENT_UP);
 }
@@ -141,7 +141,7 @@ Node::Node(
 Node::~Node()
 {
 	Mutex::Lock _l(_networks_m);
-	_networks.clear();
+	_networks.clear(); // ensure that networks are destroyed before shutdown
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->antiRec;
@@ -189,7 +189,7 @@ public:
 		RR(renv),
 		_now(now),
 		_relays(relays),
-		_supernodes(RR->topology->supernodeAddresses())
+		_rootAddresses(RR->topology->rootAddresses())
 	{
 	}
 
@@ -205,7 +205,7 @@ public:
 			}
 		}
 
-		if ((isRelay)||(std::find(_supernodes.begin(),_supernodes.end(),p->address()) != _supernodes.end())) {
+		if ((isRelay)||(std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end())) {
 			p->doPingAndKeepalive(RR,_now);
 			if (p->lastReceive() > lastReceiveFromUpstream)
 				lastReceiveFromUpstream = p->lastReceive();
@@ -219,7 +219,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	const std::vector< std::pair<Address,InetAddress> > &_relays;
-	std::vector<Address> _supernodes;
+	std::vector<Address> _rootAddresses;
 };
 
 ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
@@ -236,7 +236,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
-				for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
 					SharedPtr<NetworkConfig> nc(n->second->config2());
 					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
 						needConfig.push_back(n->second);
@@ -260,7 +260,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 				}
 			}
 
-			// Ping living or supernode/relay peers
+			// Ping living or root server/relay peers
 			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
@@ -310,20 +310,22 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 ZT1_ResultCode Node::join(uint64_t nwid)
 {
 	Mutex::Lock _l(_networks_m);
-	SharedPtr<Network> &nwe = _networks[nwid];
-	if (!nwe)
-		nwe = SharedPtr<Network>(new Network(RR,nwid));
+	SharedPtr<Network> nw = _network(nwid);
+	if(!nw)
+		_networks.push_back(std::pair< uint64_t,SharedPtr<Network> >(nwid,SharedPtr<Network>(new Network(RR,nwid))));
+	std::sort(_networks.begin(),_networks.end()); // will sort by nwid since it's the first in a pair<>
 	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::leave(uint64_t nwid)
 {
+	std::vector< std::pair< uint64_t,SharedPtr<Network> > > newn;
 	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::iterator nw(_networks.find(nwid));
-	if (nw != _networks.end()) {
-		nw->second->destroy();
-		_networks.erase(nw);
+	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+		if (n->first != nwid)
+			newn.push_back(*n);
 	}
+	_networks.swap(newn);
 	return ZT1_RESULT_OK;
 }
 
@@ -384,7 +386,7 @@ ZT1_PeerList *Node::peers() const
 			p->versionRev = -1;
 		}
 		p->latency = pi->second->latency();
-		p->role = RR->topology->isSupernode(pi->second->address()) ? ZT1_PEER_ROLE_SUPERNODE : ZT1_PEER_ROLE_LEAF;
+		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT1_PEER_ROLE_ROOT : ZT1_PEER_ROLE_LEAF;
 
 		std::vector<Path> paths(pi->second->paths());
 		Path *bestPath = pi->second->getBestPath(_now);
@@ -406,10 +408,10 @@ ZT1_PeerList *Node::peers() const
 ZT1_VirtualNetworkConfig *Node::networkConfig(uint64_t nwid) const
 {
 	Mutex::Lock _l(_networks_m);
-	std::map< uint64_t,SharedPtr<Network> >::const_iterator nw(_networks.find(nwid));
-	if (nw != _networks.end()) {
+	SharedPtr<Network> nw = _network(nwid);
+	if(nw) {
 		ZT1_VirtualNetworkConfig *nc = (ZT1_VirtualNetworkConfig *)::malloc(sizeof(ZT1_VirtualNetworkConfig));
-		nw->second->externalConfig(nc);
+		nw->externalConfig(nc);
 		return nc;
 	}
 	return (ZT1_VirtualNetworkConfig *)0;
@@ -426,7 +428,7 @@ ZT1_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT1_VirtualNetworkConfig *)(buf + sizeof(ZT1_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(std::map< uint64_t,SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n)
 		n->second->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;

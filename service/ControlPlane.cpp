@@ -211,9 +211,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 
 	const char *prole = "";
 	switch(peer->role) {
-		case ZT1_PEER_ROLE_LEAF:      prole = "LEAF"; break;
-		case ZT1_PEER_ROLE_HUB:       prole = "HUB"; break;
-		case ZT1_PEER_ROLE_SUPERNODE: prole = "SUPERNODE"; break;
+		case ZT1_PEER_ROLE_LEAF:  prole = "LEAF"; break;
+		case ZT1_PEER_ROLE_RELAY: prole = "RELAY"; break;
+		case ZT1_PEER_ROLE_ROOT:  prole = "ROOT"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),
@@ -454,7 +454,7 @@ unsigned int ControlPlane::handleRequest(
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
-					_controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+					scode = _controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;
@@ -490,7 +490,7 @@ unsigned int ControlPlane::handleRequest(
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
-					_controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+					scode = _controller->handleControlPlaneHttpPOST(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;
@@ -525,7 +525,7 @@ unsigned int ControlPlane::handleRequest(
 			} else {
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 				if (_controller)
-					_controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
+					scode = _controller->handleControlPlaneHttpDELETE(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
 				else scode = 404;
 #else
 				scode = 404;

@@ -49,23 +49,57 @@ namespace ZeroTier {
 
 // These dictionary keys are short so they don't take up much room in
 // netconf response packets.
+
+// integer(hex)[,integer(hex),...]
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
+
+// network ID
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
+
+// integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
+
+// integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_REVISION "r"
+
+// address of member
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
+
+// integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
-#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
+
+// 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE "p"
+
+// text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
+
+// text
 #define ZT_NETWORKCONFIG_DICT_KEY_DESC "d"
+
+// IP/bits[,IP/bits,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
+
+// IP/bits[,IP/bits,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
+
+// serialized CertificateOfMembership
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
+
+// 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
+
+// 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING "pb"
+
+// node[,node,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES "ab"
+
+// node;IP/port[,node;IP/port]
 #define ZT_NETWORKCONFIG_DICT_KEY_RELAYS "rl"
+
+// IP/metric[,IP/metric,...]
+#define ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS "gw"
 
 /**
  * Network configuration received from network controller nodes
@@ -77,27 +111,6 @@ class NetworkConfig
 	friend class SharedPtr<NetworkConfig>;
 
 public:
-	/**
-	 * Tuple of multicast rate parameters
-	 */
-	struct MulticastRate
-	{
-		MulticastRate() throw() {}
-		MulticastRate(uint32_t pl,uint32_t maxb,uint32_t acc) throw() : preload(pl),maxBalance(maxb),accrual(acc) {}
-
-		uint32_t preload;
-		uint32_t maxBalance;
-		uint32_t accrual;
-
-		inline bool operator==(const MulticastRate &mr) const { return ((preload == mr.preload)&&(maxBalance == mr.maxBalance)&&(accrual == mr.accrual)); }
-		inline bool operator!=(const MulticastRate &mr) const { return (!(*this == mr)); }
-	};
-
-	/**
-	 * A hard-coded default multicast rate for networks that don't specify
-	 */
-	static const MulticastRate DEFAULT_MULTICAST_RATE;
-
 	/**
 	 * Create an instance of a NetworkConfig for the test network ID
 	 *
@@ -139,13 +152,13 @@ public:
 	inline uint64_t revision() const throw() { return _revision; }
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
 	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
-	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
 	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
 	inline bool isPublic() const throw() { return (!_private); }
 	inline bool isPrivate() const throw() { return _private; }
 	inline const std::string &name() const throw() { return _name; }
 	inline const std::string &description() const throw() { return _description; }
 	inline const std::vector<InetAddress> &staticIps() const throw() { return _staticIps; }
+	inline const std::vector<InetAddress> &gateways() const throw() { return _gateways; }
 	inline const std::vector<Address> &activeBridges() const throw() { return _activeBridges; }
 	inline const std::vector< std::pair<Address,InetAddress> > &relays() const throw() { return _relays; }
 	inline const CertificateOfMembership &com() const throw() { return _com; }
@@ -159,13 +172,6 @@ public:
 	{
 		return ( (_allowPassiveBridging) || (std::find(_activeBridges.begin(),_activeBridges.end(),fromPeer) != _activeBridges.end()) );
 	}
-
-	/**
-	 * @param mg Multicast group
-	 * @return Multicast rate or DEFAULT_MULTICAST_RATE if not set
-	 */
-	const MulticastRate &multicastRate(const MulticastGroup &mg) const
-		throw();
 
 	bool operator==(const NetworkConfig &nc) const;
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
@@ -188,9 +194,9 @@ private:
 	std::string _name;
 	std::string _description;
 	std::vector<InetAddress> _staticIps;
+	std::vector<InetAddress> _gateways;
 	std::vector<Address> _activeBridges;
 	std::vector< std::pair<Address,InetAddress> > _relays;
-	std::map<MulticastGroup,MulticastRate> _multicastRates;
 	CertificateOfMembership _com;
 
 	AtomicCounter __refCount;

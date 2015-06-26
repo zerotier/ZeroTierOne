@@ -59,21 +59,19 @@ public:
 	~Topology();
 
 	/**
-	 * Set up supernodes for this network
-	 * 
-	 * @param sn Supernodes for this network
+	 * @param sn Root server identities and addresses
 	 */
-	void setSupernodes(const std::map< Identity,std::vector<InetAddress> > &sn);
+	void setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn);
 
 	/**
-	 * Set up supernodes for this network
+	 * Set up root servers for this network
 	 *
 	 * This performs no signature verification of any kind. The caller must
 	 * check the signature of the root topology dictionary first.
 	 *
-	 * @param sn Supernodes dictionary from root-topology
+	 * @param sn 'rootservers' key from root-topology Dictionary (deserialized as Dictionary)
 	 */
-	void setSupernodes(const Dictionary &sn);
+	void setRootServers(const Dictionary &sn);
 
 	/**
 	 * Add a peer to database
@@ -95,65 +93,52 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
-	 * @return Vector of peers that are supernodes
+	 * @return Vector of peers that are root servers
 	 */
-	inline std::vector< SharedPtr<Peer> > supernodePeers() const
+	inline std::vector< SharedPtr<Peer> > rootPeers() const
 	{
 		Mutex::Lock _l(_lock);
-		return _supernodePeers;
+		return _rootPeers;
 	}
 
 	/**
-	 * @return Number of supernodes
-	 */
-	inline unsigned int numSupernodes() const
-	{
-		Mutex::Lock _l(_lock);
-		return (unsigned int)_supernodePeers.size();
-	}
-
-	/**
-	 * Get the current favorite supernode
+	 * Get the current favorite root server
 	 * 
-	 * @return Supernode with lowest latency or NULL if none
+	 * @return Root server with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestSupernode()
+	inline SharedPtr<Peer> getBestRoot()
 	{
-		return getBestSupernode((const Address *)0,0,false);
+		return getBestRoot((const Address *)0,0,false);
 	}
 
 	/**
-	 * Get the best supernode, avoiding supernodes listed in an array
+	 * Get the best root server, avoiding root servers listed in an array
 	 * 
-	 * This will get the best supernode (lowest latency, etc.) but will
-	 * try to avoid the listed supernodes, only using them if no others
+	 * This will get the best root server (lowest latency, etc.) but will
+	 * try to avoid the listed root servers, only using them if no others
 	 * are available.
 	 * 
 	 * @param avoid Nodes to avoid
 	 * @param avoidCount Number of nodes to avoid
-	 * @param strictAvoid If false, consider avoided supernodes anyway if no non-avoid supernodes are available
-	 * @return Supernode or NULL if none
+	 * @param strictAvoid If false, consider avoided root servers anyway if no non-avoid root servers are available
+	 * @return Root server or NULL if none available
 	 */
-	SharedPtr<Peer> getBestSupernode(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
+	SharedPtr<Peer> getBestRoot(const Address *avoid,unsigned int avoidCount,bool strictAvoid);
 
 	/**
-	 * @param zta ZeroTier address
-	 * @return True if this is a designated supernode
+	 * @param id Identity to check
+	 * @return True if this is a designated root server
 	 */
-	inline bool isSupernode(const Address &zta) const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		return (std::find(_supernodeAddresses.begin(),_supernodeAddresses.end(),zta) != _supernodeAddresses.end());
-	}
+	bool isRoot(const Identity &id) const
+		throw();
 
 	/**
-	 * @return Vector of supernode addresses
+	 * @return Vector of root server addresses
 	 */
-	inline std::vector<Address> supernodeAddresses() const
+	inline std::vector<Address> rootAddresses() const
 	{
 		Mutex::Lock _l(_lock);
-		return _supernodeAddresses;
+		return _rootAddresses;
 	}
 
 	/**
@@ -206,13 +191,13 @@ private:
 	const RuntimeEnvironment *RR;
 
 	std::map< Address,SharedPtr<Peer> > _activePeers;
-	std::map< Identity,std::vector<InetAddress> > _supernodes;
-	std::vector< Address > _supernodeAddresses;
-	std::vector< SharedPtr<Peer> > _supernodePeers;
+	std::map< Identity,std::vector<InetAddress> > _roots;
+	std::vector< Address > _rootAddresses;
+	std::vector< SharedPtr<Peer> > _rootPeers;
 
 	Mutex _lock;
 
-	bool _amSupernode;
+	bool _amRoot;
 };
 
 } // namespace ZeroTier

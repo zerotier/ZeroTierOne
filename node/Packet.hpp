@@ -513,8 +513,8 @@ public:
 		 * Destination address types and formats (not all of these are used now):
 		 *   0 - None -- no destination address data present
 		 *   1 - Ethernet address -- format: <[6] Ethernet MAC>
-		 *   4 - 6-byte IPv4 address -- format: <[4] IP>, <[2] port>
-		 *   6 - 18-byte IPv6 address -- format: <[16] IP>, <[2] port>
+		 *   4 - 6-byte IPv4 UDP address/port -- format: <[4] IP>, <[2] port>
+		 *   6 - 18-byte IPv6 UDP address/port -- format: <[16] IP>, <[2] port>
 		 *
 		 * OK payload:
 		 *   <[8] timestamp (echoed from original HELLO)>
@@ -626,7 +626,7 @@ public:
 		 *   [... additional tuples of network/address/adi ...]
 		 *
 		 * LIKEs are sent to peers with whom you have a direct peer to peer
-		 * connection, and always including supernodes.
+		 * connection, and always including root servers.
 		 *
 		 * OK/ERROR are not generated.
 		 */
@@ -770,6 +770,9 @@ public:
 		VERB_MULTICAST_FRAME = 14,
 
 		/* Ephemeral (PFS) key push:
+		 *   <[2] flags (unused and reserved, must be 0)>
+		 *   <[2] length of padding / extra field section>
+		 *   <[...] padding / extra field section>
 		 *   <[8] 64-bit PFS key set ID sender holds for recipient (0==none)>
 		 *   <[8] 64-bit PFS key set ID of this key set>
 		 *   [... begin PFS key record ...]
@@ -790,6 +793,12 @@ public:
 		 * One or more records may be sent. If multiple records are present,
 		 * the first record with common symmetric cipher, public key type,
 		 * and relevant flags must be used.
+		 *
+		 * The padding section may be filled with an arbitrary amount of random
+		 * or empty payload. This may be used as a countermeasure to prevent PFS
+		 * key pushes from being recognized by packet size vs. other packets in
+		 * the stream. This also provides potential space for additional fields
+		 * that might be indicated in the future by flags.
 		 *
 		 * Flags (all unspecified flags must be zero):
 		 *   0x01 - FIPS mode, only use record if FIPS compliant crypto in use
@@ -814,7 +823,24 @@ public:
 		 *   <[8] PFS key set ID of received key set>
 		 *   <[1] index in record list of chosen key record>
 		 */
-		VERB_SET_EPHEMERAL_KEY = 15
+		VERB_SET_EPHEMERAL_KEY = 15,
+
+		/* "Call me at" -- push of potential endpoints for direct communication:
+		 *   <[1] flags>
+		 *   <[2] number of addresses>
+		 *   <[...] address types and addresses>
+		 *
+		 * Address types and addresses are of the same format as the destination
+		 * address type and address in HELLO.
+		 *
+		 * The receiver may, upon receiving a CMA push, attempt to establish a
+		 * direct link to one or more of the indicated addresses. Senders should
+		 * only send CMA pushes to peers that they have some relationship
+		 * with such as a shared network membership or a mutual trust.
+		 *
+		 * OK/ERROR are not generated.
+		 */
+		VERB_CMA = 16
 	};
 
 	/**

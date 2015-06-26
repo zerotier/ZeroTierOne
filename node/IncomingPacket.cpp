@@ -110,7 +110,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_OBJ_NOT_FOUND:
 				if (inReVerb == Packet::VERB_WHOIS) {
-					if (RR->topology->isSupernode(peer->address()))
+					if (RR->topology->isRoot(peer->identity()))
 						RR->sw->cancelWhoisRequest(Address(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
 				} else if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
@@ -128,7 +128,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				break;
 
 			case Packet::ERROR_IDENTITY_COLLISION:
-				if (RR->topology->isSupernode(peer->address()))
+				if (RR->topology->isRoot(peer->identity()))
 					RR->node->postEvent(ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
 				break;
 
@@ -268,7 +268,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
 
 		bool trusted = false;
-		if (RR->topology->isSupernode(id.address())) {
+		if (RR->topology->isRoot(id)) {
 			RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
 			trusted = true;
 		}
@@ -353,7 +353,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
 				bool trusted = false;
-				if (RR->topology->isSupernode(peer->address())) {
+				if (RR->topology->isRoot(peer->identity())) {
 					RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
 					trusted = true;
 				}
@@ -362,10 +362,10 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			}	break;
 
 			case Packet::VERB_WHOIS: {
-				// Right now only supernodes are allowed to send OK(WHOIS) to prevent
-				// poisoning attacks. Further decentralization will require some other
-				// kind of trust mechanism.
-				if (RR->topology->isSupernode(peer->address())) {
+				/* Right now only root servers are allowed to send OK(WHOIS) to prevent
+				 * poisoning attacks. Further decentralization will require some other
+				 * kind of trust mechanism. */
+				if (RR->topology->isRoot(peer->identity())) {
 					const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
 					if (id.locallyValidate())
 						RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR->identity,id))));
@@ -689,6 +689,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						outp.append((uint16_t)netconfStr.length());
 						outp.append(netconfStr.data(),(unsigned int)netconfStr.length());
 						outp.compress();
+						outp.armor(peer->key(),true);
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) {
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {

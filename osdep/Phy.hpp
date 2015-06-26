@@ -123,12 +123,13 @@ private:
 
 	enum PhySocketType
 	{
-		ZT_PHY_SOCKET_TCP_OUT_PENDING = 0x00,
-		ZT_PHY_SOCKET_TCP_OUT_CONNECTED = 0x01,
-		ZT_PHY_SOCKET_TCP_IN = 0x02,
-		ZT_PHY_SOCKET_TCP_LISTEN = 0x03,
-		ZT_PHY_SOCKET_RAW = 0x04,
-		ZT_PHY_SOCKET_UDP = 0x05
+		ZT_PHY_SOCKET_CLOSED = 0x00, // socket is closed, will be removed on next poll()
+		ZT_PHY_SOCKET_TCP_OUT_PENDING = 0x01,
+		ZT_PHY_SOCKET_TCP_OUT_CONNECTED = 0x02,
+		ZT_PHY_SOCKET_TCP_IN = 0x03,
+		ZT_PHY_SOCKET_TCP_LISTEN = 0x04,
+		ZT_PHY_SOCKET_RAW = 0x05,
+		ZT_PHY_SOCKET_UDP = 0x06
 	};
 
 	struct PhySocketImpl
@@ -205,8 +206,10 @@ public:
 
 	~Phy()
 	{
-		while (!_socks.empty())
-			this->close((PhySocket *)&(_socks.front()),true);
+		for(typename std::list<PhySocketImpl>::const_iterator s(_socks.begin());s!=_socks.end();++s) {
+			if (s->type != ZT_PHY_SOCKET_CLOSED)
+				this->close((PhySocket *)&(*s),true);
+		}
 		ZT_PHY_CLOSE_SOCKET(_whackReceiveSocket);
 		ZT_PHY_CLOSE_SOCKET(_whackSendSocket);
 	}
@@ -620,11 +623,7 @@ public:
 #endif
 		}
 
-		bool atEnd = false;
-		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin()),nexts;(!atEnd);s=nexts) {
-			nexts = s; ++nexts; // we can delete the linked list item, so traverse now
-			atEnd = (nexts == _socks.end()); // if we delete the last element, s!=_socks.end() will no longer terminate our loop
-
+		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin());s!=_socks.end();) {
 			switch (s->type) {
 
 				case ZT_PHY_SOCKET_TCP_OUT_PENDING:
@@ -724,6 +723,10 @@ public:
 					break;
 
 			}
+
+			if (s->type == ZT_PHY_SOCKET_CLOSED)
+				_socks.erase(s++);
+			else ++s;
 		}
 	}
 
@@ -736,6 +739,8 @@ public:
 		if (!sock)
 			return;
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		if (sws.type == ZT_PHY_SOCKET_CLOSED)
+			return;
 
 		FD_CLR(sws.sock,&_readfds);
 		FD_CLR(sws.sock,&_writefds);
@@ -765,21 +770,15 @@ public:
 				break;
 		}
 
-		long oldSock = (long)sws.sock;
+		// Causes entry to be deleted from list in poll(), ignored elsewhere
+		sws.type = ZT_PHY_SOCKET_CLOSED;
 
-		for(typename std::list<PhySocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
-			if (reinterpret_cast<PhySocket *>(&(*s)) == sock) {
-				_socks.erase(s);
-				break;
-			}
-		}
-
-		if (oldSock >= _nfds) {
+		if (sws.sock >= _nfds) {
 			long nfds = (long)_whackSendSocket;
 			if ((long)_whackReceiveSocket > nfds)
 				nfds = (long)_whackReceiveSocket;
 			for(typename std::list<PhySocketImpl>::iterator s(_socks.begin());s!=_socks.end();++s) {
-				if ((long)s->sock > nfds)
+				if ((s->type != ZT_PHY_SOCKET_CLOSED)&&((long)s->sock > nfds))
 					nfds = (long)s->sock;
 			}
 			_nfds = nfds;

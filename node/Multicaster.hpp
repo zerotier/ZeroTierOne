@@ -70,7 +70,7 @@ private:
 		MulticastGroupStatus() : lastExplicitGather(0) {}
 
 		uint64_t lastExplicitGather;
-		std::list<OutboundMulticast> txQueue; // pending outbound multicasts
+		std::vector<OutboundMulticast> txQueue; // pending outbound multicasts
 		std::vector<MulticastGroupMember> members; // members of this group
 	};
 

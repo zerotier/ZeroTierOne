@@ -145,12 +145,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		if (fromBridged)
 			network->learnBridgedMulticastGroup(mg,RR->node->now());
 
-		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
-		if (!network->updateAndCheckMulticastBalance(mg,len)) {
-			TRACE("%.16llx: didn't multicast %u bytes, quota exceeded for multicast group %s",network->id(),len,mg.toString().c_str());
-			return;
-		}
-
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
 		RR->mc->send(
@@ -320,8 +314,8 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	 * P2 in randomized order in terms of which gets sent first. This is done
 	 * since in a few cases NAT-t can be sensitive to slight timing differences
 	 * in terms of when the two peers initiate. Normally this is accounted for
-	 * by the nearly-simultaneous RENDEZVOUS kickoff from the supernode, but
-	 * given that supernodes are hosted on cloud providers this can in some
+	 * by the nearly-simultaneous RENDEZVOUS kickoff from the relay, but
+	 * given that relay are hosted on cloud providers this can in some
 	 * cases have a few ms of latency between packet departures. By randomizing
 	 * the order we make each attempted NAT-t favor one or the other going
 	 * first, meaning if it doesn't succeed the first time it might the second
@@ -565,8 +559,8 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,const void 
 			// It wouldn't hurt anything, just redundant and unnecessary.
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
-				// Don't know peer or no direct path -- so relay via supernode
-				relayTo = RR->topology->getBestSupernode();
+				// Don't know peer or no direct path -- so relay via root server
+				relayTo = RR->topology->getBestRoot();
 				if (relayTo)
 					relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now());
 			}
@@ -641,8 +635,8 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,const void *dat
 			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),RR->node->now())))) {
 				unite(source,destination,false);
 			} else {
-				// Don't know peer or no direct path -- so relay via supernode
-				relayTo = RR->topology->getBestSupernode(&source,1,true);
+				// Don't know peer or no direct path -- so relay via root server
+				relayTo = RR->topology->getBestRoot(&source,1,true);
 				if (relayTo)
 					relayTo->send(RR,packet->data(),packet->size(),RR->node->now());
 			}
@@ -712,13 +706,13 @@ void Switch::_handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEA
 
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
-	SharedPtr<Peer> supernode(RR->topology->getBestSupernode(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
-	if (supernode) {
-		Packet outp(supernode->address(),RR->identity.address(),Packet::VERB_WHOIS);
+	SharedPtr<Peer> root(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
+	if (root) {
+		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
-		outp.armor(supernode->key(),true);
-		if (supernode->send(RR,outp.data(),outp.size(),RR->node->now()))
-			return supernode->address();
+		outp.armor(root->key(),true);
+		if (root->send(RR,outp.data(),outp.size(),RR->node->now()))
+			return root->address();
 	}
 	return Address();
 }
@@ -752,7 +746,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 			}
 
 			if (!relay)
-				relay = RR->topology->getBestSupernode();
+				relay = RR->topology->getBestRoot();
 
 			if (!(relay)||(!(viaPath = relay->getBestPath(now))))
 				return false;

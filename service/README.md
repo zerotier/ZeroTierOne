@@ -106,7 +106,7 @@ Getting /peer returns an array of peer objects for all current peers. See below 
 <tr><td>versionRev</td><td>integer</td><td>Revision of remote if known</td><td>no</td></tr>
 <tr><td>version</td><td>string</td><td>Version in major.minor.rev format</td><td>no</td></tr>
 <tr><td>latency</td><td>integer</td><td>Latency in milliseconds if known</td><td>no</td></tr>
-<tr><td>role</td><td>string</td><td>LEAF, HUB, or SUPERNODE</td><td>no</td></tr>
+<tr><td>role</td><td>string</td><td>LEAF, HUB, or ROOTSERVER</td><td>no</td></tr>
 <tr><td>paths</td><td>[object]</td><td>Array of path objects (see below)</td><td>no</td></tr>
 </table>
 
@@ -184,7 +184,7 @@ Relays, IP assignment pools, and rules are edited via direct POSTs to the networ
 
 **Relay object format:**
 
-Relay objects define network-specific preferred relay nodes. Traffic to peers on this network will preferentially use these relays if they are available, and otherwise will fall back to the global supernode infrastructure.
+Relay objects define network-specific preferred relay nodes. Traffic to peers on this network will preferentially use these relays if they are available, and otherwise will fall back to the global rootserver infrastructure.
 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>
@@ -204,7 +204,7 @@ Relay objects define network-specific preferred relay nodes. Traffic to peers on
 
  * **Note**: at the moment, <u>only rules specifying allowed Ethernet types are used</u>. The database supports a richer rule set, but this is not implemented yet in the client. <u>Other types of rules will have no effect</u> (yet).
 
-Rules are matched in order of ruleId. If no rules match, the default action is 'drop'. To allow all traffic, create a single rule with all *null* fields and an action of 'accept'.
+Rules are matched in order of ruleNo. If no rules match, the default action is 'drop'. To allow all traffic, create a single rule with all *null* fields and an action of 'accept'.
 
 Rule object fields can be *null*, in which case they are omitted from the object. A null field indicates "no match on this criteria."
 
@@ -212,7 +212,7 @@ IP related fields apply only to Ethernet frames of type IPv4 or IPV6. Otherwise 
 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>
-<tr><td>ruleId</td><td>integer</td><td>User-defined rule ID and sort order</td></tr>
+<tr><td>ruleNo</td><td>integer</td><td>User-defined rule ID and sort order</td></tr>
 <tr><td>nodeId</td><td>string</td><td>10-digit hex ZeroTier address of node (a.k.a. "port on switch")</td></tr>
 <tr><td>vlanId</td><td>integer</td><td>Ethernet VLAN ID</td></tr>
 <tr><td>vlanPcp</td><td>integer</td><td>Ethernet VLAN priority code point (PCP) ID</td></tr>

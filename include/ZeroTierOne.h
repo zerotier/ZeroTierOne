@@ -251,7 +251,7 @@ enum ZT1_Event
 	/**
 	 * A more recent version was observed on the network
 	 *
-	 * Right now this is only triggered if a hub or supernode reports a
+	 * Right now this is only triggered if a hub or rootserver reports a
 	 * more recent version, and only once. It can be used to trigger a
 	 * software update check.
 	 *
@@ -559,8 +559,8 @@ typedef struct
  */
 enum ZT1_PeerRole {
 	ZT1_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT1_PEER_ROLE_HUB = 1,      // locally federated hub
-	ZT1_PEER_ROLE_SUPERNODE = 2 // planetary supernode
+	ZT1_PEER_ROLE_RELAY = 1,    // relay node
+	ZT1_PEER_ROLE_ROOT = 2      // root server
 };
 
 /**
