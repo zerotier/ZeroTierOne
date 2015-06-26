@@ -404,10 +404,12 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 
 	{	// finish processing any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<IncomingPacket> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
-			if ((*rxi)->tryDecode(RR))
-				_rxQueue.erase(rxi++);
-			else ++rxi;
+		for(std::vector< SharedPtr<IncomingPacket> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
+			if ((*rxi)->tryDecode(RR)) {
+				// erase element (replace by last)
+				*rxi = _rxQueue.back();
+				_rxQueue.pop_back();
+			} else ++rxi;
 		}
 	}
 
@@ -508,10 +510,12 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 	{	// Time out RX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_rxQueue_m);
-		for(std::list< SharedPtr<IncomingPacket> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
+		for(std::vector< SharedPtr<IncomingPacket> >::iterator i(_rxQueue.begin());i!=_rxQueue.end();) {
 			if ((now - (*i)->receiveTime()) > ZT_RECEIVE_QUEUE_TIMEOUT) {
 				TRACE("RX %s -> %s timed out",(*i)->source().toString().c_str(),(*i)->destination().toString().c_str());
-				_rxQueue.erase(i++);
+				// erase element (replace by last)
+				*i = _rxQueue.back();
+				_rxQueue.pop_back();
 			} else ++i;
 		}
 	}
