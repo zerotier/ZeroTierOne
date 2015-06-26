@@ -275,12 +275,10 @@ void Multicaster::clean(uint64_t now)
 {
 	Mutex::Lock _l(_groups_m);
 	for(std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::iterator mm(_groups.begin());mm!=_groups.end();) {
-		for(std::vector<OutboundMulticast>::iterator tx(mm->second.txQueue.begin());tx!=mm->second.txQueue.end();) {
-			if ((tx->expired(now))||(tx->atLimit())) {
-				// erase element (replace by last)
-				*tx = mm->second.txQueue.back();
-				mm->second.txQueue.pop_back();
-			} else ++tx;
+		for(std::list<OutboundMulticast>::iterator tx(mm->second.txQueue.begin());tx!=mm->second.txQueue.end();) {
+			if ((tx->expired(now))||(tx->atLimit()))
+				mm->second.txQueue.erase(tx++);
+			else ++tx;
 		}
 
 		unsigned long count = 0;
@@ -328,18 +326,14 @@ void Multicaster::_add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,Multi
 
 	//TRACE("..MC %s joined multicast group %.16llx/%s via %s",member.toString().c_str(),nwid,mg.toString().c_str(),((learnedFrom) ? learnedFrom.toString().c_str() : "(direct)"));
 
-	for(std::vector<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
-		if (tx->atLimit()) {
-			// erase element (replace by last)
-			*tx = gs.txQueue.back();
-			gs.txQueue.pop_back();
-		} else {
+	for(std::list<OutboundMulticast>::iterator tx(gs.txQueue.begin());tx!=gs.txQueue.end();) {
+		if (tx->atLimit())
+			gs.txQueue.erase(tx++);
+		else {
 			tx->sendIfNew(RR,member);
-			if (tx->atLimit()) {
-				// erase element (replace by last)
-				*tx = gs.txQueue.back();
-				gs.txQueue.pop_back();
-			} else ++tx;
+			if (tx->atLimit())
+				gs.txQueue.erase(tx++);
+			else ++tx;
 		}
 	}
 }
