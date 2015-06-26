@@ -141,7 +141,7 @@ Node::Node(
 Node::~Node()
 {
 	Mutex::Lock _l(_networks_m);
-	_networks.clear();
+	_networks.clear(); // ensure that networks are destroyed before shutdown
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->antiRec;
@@ -236,14 +236,13 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			std::vector< SharedPtr<Network> > needConfig;
 			{
 				Mutex::Lock _l(_networks_m);
-				for(std::vector< SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
-					SharedPtr<NetworkConfig> nc((*n)->config2());
-					if (((now - (*n)->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
-						needConfig.push_back(*n);
+				for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+					SharedPtr<NetworkConfig> nc(n->second->config2());
+					if (((now - n->second->lastConfigUpdate()) >= ZT_NETWORK_AUTOCONF_DELAY)||(!nc))
+						needConfig.push_back(n->second);
 					if (nc)
 						networkRelays.insert(networkRelays.end(),nc->relays().begin(),nc->relays().end());
 				}
-				std::sort(_networks.begin(),_networks.end());
 			}
 
 			// Request updated configuration for networks that need it
@@ -312,24 +311,21 @@ ZT1_ResultCode Node::join(uint64_t nwid)
 {
 	Mutex::Lock _l(_networks_m);
 	SharedPtr<Network> nw = _network(nwid);
-	if(!nw) {
-		_networks.push_back(SharedPtr<Network>(new Network(RR,nwid)));
-		std::sort(_networks.begin(),_networks.end());
-	}
+	if(!nw)
+		_networks.push_back(std::pair< uint64_t,SharedPtr<Network> >(nwid,SharedPtr<Network>(new Network(RR,nwid))));
+	std::sort(_networks.begin(),_networks.end()); // will sort by nwid since it's the first in a pair<>
 	return ZT1_RESULT_OK;
 }
 
 ZT1_ResultCode Node::leave(uint64_t nwid)
 {
+	std::vector< std::pair< uint64_t,SharedPtr<Network> > > newn;
 	Mutex::Lock _l(_networks_m);
-	std::vector< SharedPtr<Network> >::iterator nwi = std::lower_bound(_networks.begin(), _networks.end(), nwid, NetworkComparator());
-	if(nwi != _networks.end() && (*nwi)->id() == nwid) {
-		(*nwi)->destroy();
-		// erase element (replace by last)
-		*nwi = _networks.back();
-		_networks.pop_back();
-		std::sort(_networks.begin(),_networks.end());
+	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
+		if (n->first != nwid)
+			newn.push_back(*n);
 	}
+	_networks.swap(newn);
 	return ZT1_RESULT_OK;
 }
 
@@ -432,8 +428,8 @@ ZT1_VirtualNetworkList *Node::networks() const
 	nl->networks = (ZT1_VirtualNetworkConfig *)(buf + sizeof(ZT1_VirtualNetworkList));
 
 	nl->networkCount = 0;
-	for(std::vector< SharedPtr<Network> >::const_iterator n(_networks.begin());n!=_networks.end();++n)
-		(*n)->externalConfig(&(nl->networks[nl->networkCount++]));
+	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n)
+		n->second->externalConfig(&(nl->networks[nl->networkCount++]));
 
 	return nl;
 }

@@ -163,8 +163,11 @@ public:
 
 	inline std::vector< SharedPtr<Network> > allNetworks() const
 	{
+		std::vector< SharedPtr<Network> > nw;
 		Mutex::Lock _l(_networks_m);
-		std::vector< SharedPtr<Network> > nw(_networks);
+		nw.reserve(_networks.size());
+		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i)
+			nw.push_back(i->second);
 		return nw;
 	}
 
@@ -205,21 +208,14 @@ public:
 #endif
 
 private:
-	// for binary search on _networks
-	struct NetworkComparator {
-		bool operator()(const SharedPtr<Network> &n,uint64_t nwid) const {
-			return n->id() < nwid;
-		}
-	};
-
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
-		std::vector< SharedPtr<Network> >::const_iterator iter = std::lower_bound(_networks.begin(), _networks.end(), nwid, NetworkComparator());
-		if(iter != _networks.end() && (*iter)->id() == nwid) {
-			return *iter;
-		} else {
-			return SharedPtr<Network>();
+		// assumes _networks_m is locked
+		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
+			if (i->first == nwid)
+				return i->second;
 		}
+		return SharedPtr<Network>();
 	}
 
 	RuntimeEnvironment _RR;
@@ -237,7 +233,7 @@ private:
 	//Dictionary _localConfig; // persisted as local.conf
 	//Mutex _localConfig_m;
 
-	std::vector< SharedPtr<Network> > _networks;
+	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
 
 	Mutex _backgroundTasksLock;
