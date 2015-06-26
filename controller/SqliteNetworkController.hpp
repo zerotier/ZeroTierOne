@@ -99,7 +99,6 @@ private:
 	sqlite3_stmt *_sUpdateNode;
 	sqlite3_stmt *_sUpdateNode2;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
-	sqlite3_stmt *_sGetMulticastRates;
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
 	sqlite3_stmt *_sGetIpAssignmentPools;

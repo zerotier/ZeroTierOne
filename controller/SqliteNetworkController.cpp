@@ -155,7 +155,6 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"UPDATE Node SET lastAt = ?,lastSeen = ? WHERE id = ?",-1,&_sUpdateNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Node SET lastSeen = ? WHERE id = ?",-1,&_sUpdateNode2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT mgMac,mgAdi,preload,maxBalance,accrual FROM MulticastRate WHERE networkId = ?",-1,&_sGetMulticastRates,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ipNetwork,ipNetmaskBits FROM IpAssignmentPool WHERE networkId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentPools,(const char **)0) != SQLITE_OK)
@@ -204,7 +203,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sUpdateNode);
 		sqlite3_finalize(_sUpdateNode2);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
-		sqlite3_finalize(_sGetMulticastRates);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);
 		sqlite3_finalize(_sGetIpAssignmentPools);
@@ -403,26 +401,10 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			netconf[ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES] = allowedEtherTypesCsv;
 		}
 
-		{
-			std::string multicastRates;
-			sqlite3_reset(_sGetMulticastRates);
-			sqlite3_bind_text(_sGetMulticastRates,1,network.id,16,SQLITE_STATIC);
-			while (sqlite3_step(_sGetMulticastRates) == SQLITE_ROW) {
-				const char *mac = (const char *)sqlite3_column_text(_sGetMulticastRates,0);
-				if ((mac)&&(strlen(mac) == 12)) {
-					unsigned long adi = ((unsigned long)sqlite3_column_int64(_sGetMulticastRates,1)) & 0xffffffff;
-					char tmp[256];
-					Utils::snprintf(tmp,sizeof(tmp),"%s/%.4lx=%x,%x,%x\n",mac,adi,sqlite3_column_int(_sGetMulticastRates,2),sqlite3_column_int(_sGetMulticastRates,3),sqlite3_column_int(_sGetMulticastRates,4));
-					multicastRates.append(tmp);
-				}
-			}
-			if (multicastRates.length() > 0)
-				netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES] = multicastRates;
-			if (network.multicastLimit > 0) {
-				char ml[16];
-				Utils::snprintf(ml,sizeof(ml),"%lx",(unsigned long)network.multicastLimit);
-				netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = ml;
-			}
+		if (network.multicastLimit > 0) {
+			char ml[16];
+			Utils::snprintf(ml,sizeof(ml),"%lx",(unsigned long)network.multicastLimit);
+			netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = ml;
 		}
 
 		{

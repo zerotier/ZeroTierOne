@@ -357,20 +357,6 @@ void Network::clean()
 	}
 }
 
-bool Network::updateAndCheckMulticastBalance(const MulticastGroup &mg,unsigned int bytes)
-{
-	const uint64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
-	if (!_config)
-		return false;
-	std::map< MulticastGroup,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(mg));
-	if (bal == _multicastRateAccounts.end()) {
-		NetworkConfig::MulticastRate r(_config->multicastRate(mg));
-		bal = _multicastRateAccounts.insert(std::pair< MulticastGroup,BandwidthAccount >(mg,BandwidthAccount(r.preload,r.maxBalance,r.accrual,now))).first;
-	}
-	return bal->second.deduct(bytes,now);
-}
-
 void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 {
 	Mutex::Lock _l(_lock);

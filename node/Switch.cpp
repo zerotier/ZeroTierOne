@@ -145,12 +145,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		if (fromBridged)
 			network->learnBridgedMulticastGroup(mg,RR->node->now());
 
-		// Check multicast/broadcast bandwidth quotas and reject if quota exceeded
-		if (!network->updateAndCheckMulticastBalance(mg,len)) {
-			TRACE("%.16llx: didn't multicast %u bytes, quota exceeded for multicast group %s",network->id(),len,mg.toString().c_str());
-			return;
-		}
-
 		//TRACE("%.16llx: MULTICAST %s -> %s %s %u",network->id(),from.toString().c_str(),mg.toString().c_str(),etherTypeName(etherType),len);
 
 		RR->mc->send(

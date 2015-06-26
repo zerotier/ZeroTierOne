@@ -32,10 +32,6 @@
 
 namespace ZeroTier {
 
-// This is fast enough for things like Apple's mDNS spam, so it should serve
-// as a good default for your average network.
-const NetworkConfig::MulticastRate NetworkConfig::DEFAULT_MULTICAST_RATE(40000,60000,80);
-
 SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &self)
 {
 	SharedPtr<NetworkConfig> nc(new NetworkConfig());
@@ -83,18 +79,6 @@ std::vector<unsigned int> NetworkConfig::allowedEtherTypes() const
 		}
 	}
 	return ets;
-}
-
-const NetworkConfig::MulticastRate &NetworkConfig::multicastRate(const MulticastGroup &mg) const
-	throw()
-{
-	std::map<MulticastGroup,MulticastRate>::const_iterator r(_multicastRates.find(mg));
-	if (r == _multicastRates.end()) {
-		r = _multicastRates.find(MulticastGroup()); // zero MG signifies network's default rate
-		if (r == _multicastRates.end())
-			return DEFAULT_MULTICAST_RATE; // neither specific nor default found in network config
-	}
-	return r->second;
 }
 
 void NetworkConfig::_fromDictionary(const Dictionary &d)
@@ -181,13 +165,6 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	std::sort(_activeBridges.begin(),_activeBridges.end());
 	std::unique(_activeBridges.begin(),_activeBridges.end());
 
-	Dictionary multicastRateEntries(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES,std::string()));
-	for(Dictionary::const_iterator i(multicastRateEntries.begin());i!=multicastRateEntries.end();++i) {
-		std::vector<std::string> params(Utils::split(i->second.c_str(),",","",""));
-		if (params.size() >= 3)
-			_multicastRates[MulticastGroup(i->first)] = MulticastRate(Utils::hexStrToUInt(params[0].c_str()),Utils::hexStrToUInt(params[1].c_str()),Utils::hexStrToUInt(params[2].c_str()));
-	}
-
 	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
 		std::size_t semi(r->find(';')); // address;ip/port,...
@@ -221,14 +198,6 @@ bool NetworkConfig::operator==(const NetworkConfig &nc) const
 	if (_gateways != nc._gateways) return false;
 	if (_activeBridges != nc._activeBridges) return false;
 	if (_relays != nc._relays) return false;
-	if (_multicastRates.size() == nc._multicastRates.size()) {
-		// uclibc++ doesn't seem to implement map<> != map<> correctly, so do
-		// it ourselves. Note that this depends on the maps being sorted.
-		for(std::map<MulticastGroup,MulticastRate>::const_iterator a(_multicastRates.begin()),b(nc._multicastRates.begin());a!=_multicastRates.end();++a,++b) {
-			if ((a->first != b->first)||(a->second != b->second))
-				return false;
-		}
-	} else return false;
 	if (_com != nc._com) return false;
 	return true;
 }

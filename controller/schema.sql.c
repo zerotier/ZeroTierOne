@@ -65,17 +65,6 @@
 "\n"\
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
 "\n"\
-"CREATE TABLE MulticastRate (\n"\
-"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  mgMac char(12) NOT NULL,\n"\
-"  mgAdi integer NOT NULL DEFAULT(0),\n"\
-"  preload integer NOT NULL,\n"\
-"  maxBalance integer NOT NULL,\n"\
-"  accrual integer NOT NULL\n"\
-");\n"\
-"\n"\
-"CREATE INDEX MulticastRate_networkId ON MulticastRate (networkId);\n"\
-"\n"\
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
