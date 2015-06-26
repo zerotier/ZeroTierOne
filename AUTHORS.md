@@ -8,6 +8,9 @@
 
 ## Contributors
 
+ * A number of fixes and improvements to the new controller, other stuff.<br>
+   Kees Bos / https://github.com/keesbos
+
  * Debugging and testing, OpenWRT support fixes.<br>
    Moritz Warning / moritzwarning@web.de
 
