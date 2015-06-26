@@ -50,6 +50,7 @@
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
 #include "../node/Address.hpp"
+#include "../node/Switch.hpp"
 #include "../osdep/OSUtils.hpp"
 
 // Include ZT_NETCONF_SCHEMA_SQL constant to init database
@@ -387,6 +388,14 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 				int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
 				if ((et >= 0)&&(et <= 0xffff))
 					allowedEtherTypes.push_back(et);
+			}
+			if (!allowedEtherTypes.size()) {
+				// Nothing permitted is not usefull
+				// Just supply a default config allowing ARP, IPv4, IPv6
+				// allowedEtherTypes.push_back(0); this would allow anything
+				allowedEtherTypes.push_back(ZT_ETHERTYPE_IPV4);
+				allowedEtherTypes.push_back(ZT_ETHERTYPE_ARP);
+				allowedEtherTypes.push_back(ZT_ETHERTYPE_IPV6);
 			}
 			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
 			std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end());
