@@ -389,7 +389,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 					allowedEtherTypes.push_back(et);
 			}
 			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
-			std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end());
+			for(std::vector<int>::iterator end = std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end()) ; end != allowedEtherTypes.end() ; allowedEtherTypes.pop_back());
 			std::string allowedEtherTypesCsv;
 			for(std::vector<int>::const_iterator i(allowedEtherTypes.begin());i!=allowedEtherTypes.end();++i) {
 				if (allowedEtherTypesCsv.length())

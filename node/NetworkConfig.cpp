@@ -145,7 +145,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	if (_staticIps.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES)
 		throw std::invalid_argument("too many ZT-assigned IP addresses");
 	std::sort(_staticIps.begin(),_staticIps.end());
-	std::unique(_staticIps.begin(),_staticIps.end());
+	for (std::vector<InetAddress>::iterator end = std::unique(_staticIps.begin(),_staticIps.end()) ; end != _staticIps.end() ; _staticIps.pop_back());
 
 	std::vector<std::string> gatewaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator gwstr(gatewaysSplit.begin());gwstr!=gatewaysSplit.end();++gwstr) {
@@ -163,7 +163,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		}
 	}
 	std::sort(_activeBridges.begin(),_activeBridges.end());
-	std::unique(_activeBridges.begin(),_activeBridges.end());
+	for(std::vector<Address>::iterator end = std::unique(_activeBridges.begin(),_activeBridges.end()) ; end != _activeBridges.end() ; _activeBridges.pop_back());
 
 	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
@@ -177,7 +177,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		}
 	}
 	std::sort(_relays.begin(),_relays.end());
-	std::unique(_relays.begin(),_relays.end());
+	for(std::vector< std::pair<Address,InetAddress> >::iterator end = std::unique(_relays.begin(),_relays.end()) ; end != _relays.end() ; _relays.pop_back());
 
 	_com.fromString(d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP,std::string()));
 }
