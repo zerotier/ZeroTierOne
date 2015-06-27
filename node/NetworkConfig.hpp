@@ -68,9 +68,6 @@ namespace ZeroTier {
 // integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
 
-// dictionary of one or more of: MAC/ADI=preload,maxbalance,accrual
-#define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_RATES "mr"
-
 // 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE "p"
 
@@ -115,27 +112,6 @@ class NetworkConfig
 
 public:
 	/**
-	 * Tuple of multicast rate parameters
-	 */
-	struct MulticastRate
-	{
-		MulticastRate() throw() {}
-		MulticastRate(uint32_t pl,uint32_t maxb,uint32_t acc) throw() : preload(pl),maxBalance(maxb),accrual(acc) {}
-
-		uint32_t preload;
-		uint32_t maxBalance;
-		uint32_t accrual;
-
-		inline bool operator==(const MulticastRate &mr) const { return ((preload == mr.preload)&&(maxBalance == mr.maxBalance)&&(accrual == mr.accrual)); }
-		inline bool operator!=(const MulticastRate &mr) const { return (!(*this == mr)); }
-	};
-
-	/**
-	 * A hard-coded default multicast rate for networks that don't specify
-	 */
-	static const MulticastRate DEFAULT_MULTICAST_RATE;
-
-	/**
 	 * Create an instance of a NetworkConfig for the test network ID
 	 *
 	 * The test network ID is defined as ZT_TEST_NETWORK_ID. This is a
@@ -176,7 +152,6 @@ public:
 	inline uint64_t revision() const throw() { return _revision; }
 	inline const Address &issuedTo() const throw() { return _issuedTo; }
 	inline unsigned int multicastLimit() const throw() { return _multicastLimit; }
-	inline const std::map<MulticastGroup,MulticastRate> &multicastRates() const throw() { return _multicastRates; }
 	inline bool allowPassiveBridging() const throw() { return _allowPassiveBridging; }
 	inline bool isPublic() const throw() { return (!_private); }
 	inline bool isPrivate() const throw() { return _private; }
@@ -197,13 +172,6 @@ public:
 	{
 		return ( (_allowPassiveBridging) || (std::find(_activeBridges.begin(),_activeBridges.end(),fromPeer) != _activeBridges.end()) );
 	}
-
-	/**
-	 * @param mg Multicast group
-	 * @return Multicast rate or DEFAULT_MULTICAST_RATE if not set
-	 */
-	const MulticastRate &multicastRate(const MulticastGroup &mg) const
-		throw();
 
 	bool operator==(const NetworkConfig &nc) const;
 	inline bool operator!=(const NetworkConfig &nc) const { return (!(*this == nc)); }
@@ -229,7 +197,6 @@ private:
 	std::vector<InetAddress> _gateways;
 	std::vector<Address> _activeBridges;
 	std::vector< std::pair<Address,InetAddress> > _relays;
-	std::map<MulticastGroup,MulticastRate> _multicastRates;
 	CertificateOfMembership _com;
 
 	AtomicCounter __refCount;

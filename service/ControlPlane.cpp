@@ -211,9 +211,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 
 	const char *prole = "";
 	switch(peer->role) {
-		case ZT1_PEER_ROLE_LEAF:      prole = "LEAF"; break;
-		case ZT1_PEER_ROLE_HUB:       prole = "HUB"; break;
-		case ZT1_PEER_ROLE_ROOTSERVER: prole = "ROOT"; break;
+		case ZT1_PEER_ROLE_LEAF:  prole = "LEAF"; break;
+		case ZT1_PEER_ROLE_RELAY: prole = "RELAY"; break;
+		case ZT1_PEER_ROLE_ROOT:  prole = "ROOT"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),

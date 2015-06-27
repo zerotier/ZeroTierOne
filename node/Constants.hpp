@@ -254,7 +254,7 @@
 /**
  * Delay between scans of the topology active peer DB for peers that need ping
  *
- * This is also how often pings will be retried to upstream peers (rootservers)
+ * This is also how often pings will be retried to upstream peers (relays, roots)
  * constantly until something is heard.
  */
 #define ZT_PING_CHECK_INVERVAL 6250
@@ -279,9 +279,9 @@
  *
  * When we send something (including frames), we generally expect a response.
  * Switching relays if no response in a short period of time causes more
- * rapid failover if a rootserver goes down or becomes unreachable. In the
+ * rapid failover if a root server goes down or becomes unreachable. In the
  * mistaken case, little harm is done as it'll pick the next-fastest
- * rootserver and will switch back eventually.
+ * root server and will switch back eventually.
  */
 #define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
 

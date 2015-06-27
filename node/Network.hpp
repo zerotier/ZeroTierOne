@@ -47,7 +47,6 @@
 #include "MulticastGroup.hpp"
 #include "MAC.hpp"
 #include "Dictionary.hpp"
-#include "BandwidthAccount.hpp"
 #include "Multicaster.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
@@ -238,15 +237,6 @@ public:
 	}
 
 	/**
-	 * Update and check multicast rate balance for a multicast group
-	 *
-	 * @param mg Multicast group
-	 * @param bytes Size of packet
-	 * @return True if packet is within budget
-	 */
-	bool updateAndCheckMulticastBalance(const MulticastGroup &mg,unsigned int bytes);
-
-	/**
 	 * Get current network config or throw exception
 	 *
 	 * This version never returns null. Instead it throws a runtime error if
@@ -370,7 +360,6 @@ private:
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
 	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
-	std::map< MulticastGroup,BandwidthAccount > _multicastRateAccounts;
 
 	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
 

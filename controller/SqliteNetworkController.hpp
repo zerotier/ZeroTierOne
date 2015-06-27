@@ -99,7 +99,6 @@ private:
 	sqlite3_stmt *_sUpdateNode;
 	sqlite3_stmt *_sUpdateNode2;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
-	sqlite3_stmt *_sGetMulticastRates;
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
 	sqlite3_stmt *_sGetIpAssignmentPools;
@@ -122,6 +121,8 @@ private:
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;
+	sqlite3_stmt *_sUpdateMemberAuthorized;
+	sqlite3_stmt *_sUpdateMemberActiveBridge;
 	sqlite3_stmt *_sDeleteMember;
 	sqlite3_stmt *_sDeleteNetwork;
 	sqlite3_stmt *_sGetGateways;

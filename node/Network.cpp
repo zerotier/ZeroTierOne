@@ -286,18 +286,28 @@ void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool 
 			return;
 		}
 
-		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
+		if (cert.signedBy() == RR->identity.address()) {
+			// We are the controller: RR->identity.address() == controller() == cert.signedBy()
+			// So, verify that we signed th cert ourself
+			if (!cert.verify(RR->identity)) {
+				TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+				return;
+			}
+		} else {
 
-		if (!signer) {
-			// This would be rather odd, since this is our controller... could happen
-			// if we get packets before we've gotten config.
-			RR->sw->requestWhois(cert.signedBy());
-			return;
-		}
+			SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
 
-		if (!cert.verify(signer->identity())) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return;
+			if (!signer) {
+				// This would be rather odd, since this is our controller... could happen
+				// if we get packets before we've gotten config.
+				RR->sw->requestWhois(cert.signedBy());
+				return;
+			}
+
+			if (!cert.verify(signer->identity())) {
+				TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+				return;
+			}
 		}
 	}
 
@@ -355,20 +365,6 @@ void Network::clean()
 			_multicastGroupsBehindMe.erase(mg++);
 		else ++mg;
 	}
-}
-
-bool Network::updateAndCheckMulticastBalance(const MulticastGroup &mg,unsigned int bytes)
-{
-	const uint64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
-	if (!_config)
-		return false;
-	std::map< MulticastGroup,BandwidthAccount >::iterator bal(_multicastRateAccounts.find(mg));
-	if (bal == _multicastRateAccounts.end()) {
-		NetworkConfig::MulticastRate r(_config->multicastRate(mg));
-		bal = _multicastRateAccounts.insert(std::pair< MulticastGroup,BandwidthAccount >(mg,BandwidthAccount(r.preload,r.maxBalance,r.accrual,now))).first;
-	}
-	return bal->second.deduct(bytes,now);
 }
 
 void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
@@ -518,13 +514,13 @@ public:
 		RR(renv),
 		_now(renv->node->now()),
 		_network(nw),
-		_rootserverAddresses(renv->topology->rootserverAddresses()),
+		_rootAddresses(renv->topology->rootAddresses()),
 		_allMulticastGroups(nw->_allMulticastGroups())
 	{}
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_rootserverAddresses.begin(),_rootserverAddresses.end(),p->address()) != _rootserverAddresses.end()) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			for(std::vector<MulticastGroup>::iterator mg(_allMulticastGroups.begin());mg!=_allMulticastGroups.end();++mg) {
@@ -551,7 +547,7 @@ private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	Network *_network;
-	std::vector<Address> _rootserverAddresses;
+	std::vector<Address> _rootAddresses;
 	std::vector<MulticastGroup> _allMulticastGroups;
 };
 

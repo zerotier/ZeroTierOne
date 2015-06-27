@@ -64,17 +64,6 @@ CREATE TABLE Member (
 
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
 
-CREATE TABLE MulticastRate (
-  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  mgMac char(12) NOT NULL,
-  mgAdi integer NOT NULL DEFAULT(0),
-  preload integer NOT NULL,
-  maxBalance integer NOT NULL,
-  accrual integer NOT NULL
-);
-
-CREATE INDEX MulticastRate_networkId ON MulticastRate (networkId);
-
 CREATE TABLE Relay (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
