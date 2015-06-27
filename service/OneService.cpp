@@ -864,7 +864,8 @@ public:
 					for(unsigned int i=0;i<nwc->assignedAddressCount;++i)
 						newAssignedIps.push_back(InetAddress(nwc->assignedAddresses[i]));
 					std::sort(newAssignedIps.begin(),newAssignedIps.end());
-					std::unique(newAssignedIps.begin(),newAssignedIps.end());
+					for(std::vector<InetAddress>::iterator end = std::unique(newAssignedIps.begin(),newAssignedIps.end()) ; end != newAssignedIps.end() ; newAssignedIps.pop_back());
+
 					for(std::vector<InetAddress>::iterator ip(newAssignedIps.begin());ip!=newAssignedIps.end();++ip) {
 						if (!std::binary_search(assignedIps.begin(),assignedIps.end(),*ip))
 							t->second->addIp(*ip);

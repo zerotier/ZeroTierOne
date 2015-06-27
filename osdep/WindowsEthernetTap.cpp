@@ -472,7 +472,7 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 	} catch ( ... ) {} // sanity check, shouldn't happen unless out of memory
 
 	std::sort(addrs.begin(),addrs.end());
-	std::unique(addrs.begin(),addrs.end());
+	for(std::vector<InetAddress>::iterator end = std::unique(addrs.begin(),addrs.end()) ; end != addrs.end() ; addrs.pop_back());
 
 	return addrs;
 }
@@ -546,7 +546,7 @@ void WindowsEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,
 		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
 	std::sort(newGroups.begin(),newGroups.end());
-	std::unique(newGroups.begin(),newGroups.end());
+	for(std::vector<MulticastGroup>::iterator end = std::unique(newGroups.begin(),newGroups.end()) ; end != newGroups.end() ; newGroups.pop_back());
 
 	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
 		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))

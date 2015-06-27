@@ -300,7 +300,7 @@ std::vector<InetAddress> LinuxEthernetTap::ips() const
 		freeifaddrs(ifa);
 
 	std::sort(r.begin(),r.end());
-	std::unique(r.begin(),r.end());
+	for(std::vector<InetAddress>::iterator end = std::unique(r.begin(),r.end()) ; end != r.end() ; r.pop_back());
 
 	return r;
 }
@@ -362,7 +362,7 @@ void LinuxEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,st
 		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
 	std::sort(newGroups.begin(),newGroups.end());
-	std::unique(newGroups.begin(),newGroups.end());
+	for(std::vector<MulticastGroup>::iterator end = std::unique(newGroups.begin(),newGroups.end()); end != newGroups.end() ; newGroups.pop_back());
 
 	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
 		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
