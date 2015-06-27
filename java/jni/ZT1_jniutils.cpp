@@ -171,11 +171,11 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
     case ZT1_PEER_ROLE_LEAF:
         fieldName = "PEER_ROLE_LEAF";
         break;
-    case ZT1_PEER_ROLE_HUB:
-        fieldName = "PEER_ROLE_HUB";
+    case ZT1_PEER_ROLE_RELAY:
+        fieldName = "PEER_ROLE_RELAY";
         break;
-    case ZT1_PEER_ROLE_ROOTSERVER:
-        fieldName = "PEER_ROLE_ROOTSERVER";
+    case ZT1_PEER_ROLE_ROOT:
+        fieldName = "PEER_ROLE_ROOT";
         break;
     }
 
