@@ -77,7 +77,7 @@
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  ruleNo integer NOT NULL,\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\
 "  etherType integer,\n"\
@@ -94,5 +94,6 @@
 "  \"action\" varchar(4096) NOT NULL DEFAULT('accept')\n"\
 ");\n"\
 "\n"\
-"CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo);\n"\
+"CREATE UNIQUE INDEX Rule_networkId_ruleNo ON Rule (networkId, ruleNo) WHERE nodeId IS NULL;\n"\
+"CREATE UNIQUE INDEX Rule_networkId_nodeId_ruleNo ON Rule (networkId, ruleNo, nodeId);\n"\
 ""
