@@ -88,6 +88,23 @@ private:
 		std::string &responseBody,
 		std::string &responseContentType);
 
+	inline char * InetAddressToBlob(char *blob, const InetAddress *ip) {
+		if (ip->ss_family == AF_INET) {
+			memset(blob, 0, 12);
+			memcpy(blob + 12, ip->rawIpData(), 4);
+		} else {
+			memcpy(blob + 12, ip->rawIpData(), 4);
+		}
+		return blob;
+	}
+
+	inline InetAddress BlobToInetAddress(const char *blob, const unsigned int bits, const int ipVersion) {
+		if (ipVersion == 4)
+			return InetAddress(blob+12, 4, bits);
+		return InetAddress(blob, 16, bits);
+	}
+
+
 	std::string _dbPath;
 	sqlite3 *_db;
 
@@ -109,6 +126,7 @@ private:
 	sqlite3_stmt *_sListNetworks;
 	sqlite3_stmt *_sListNetworkMembers;
 	sqlite3_stmt *_sGetMember2;
+	sqlite3_stmt *_sGetRoutes;
 	sqlite3_stmt *_sGetIpAssignmentPools2;
 	sqlite3_stmt *_sListRules;
 	sqlite3_stmt *_sCreateRule;
@@ -118,6 +136,8 @@ private:
 	sqlite3_stmt *_sGetIpAssignmentsForNode2;
 	sqlite3_stmt *_sDeleteRelaysForNetwork;
 	sqlite3_stmt *_sCreateRelay;
+	sqlite3_stmt *_sDeleteRoutesForNetwork;
+	sqlite3_stmt *_sCreateRoute;
 	sqlite3_stmt *_sDeleteIpAssignmentPoolsForNetwork;
 	sqlite3_stmt *_sDeleteRulesForNetwork;
 	sqlite3_stmt *_sCreateIpAssignmentPool;

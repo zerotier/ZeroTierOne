@@ -25,35 +25,44 @@
 "  firstSeen integer NOT NULL DEFAULT(0)\n"\
 ");\n"\
 "\n"\
+"CREATE TABLE Route (\n"\
+"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
+"  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  ip blob(16) NOT NULL,\n"\
+"  ipNetmaskBits integer NOT NULL DEFAULT(0),\n"\
+"  ipVersion integer NOT NULL DEFAULT(4),\n"\
+"  PRIMARY KEY (networkId, nodeId, ip)\n"\
+");\n"\
+"\n"\
+"CREATE UNIQUE INDEX Route_networkId_ip ON Route (networkId, ip) WHERE nodeId IS NULL;\n"\
+"\n"\
 "CREATE TABLE Gateway (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  ip blob(16) NOT NULL,\n"\
 "  ipVersion integer NOT NULL DEFAULT(4),\n"\
-"  metric integer NOT NULL DEFAULT(0)\n"\
+"  metric integer NOT NULL DEFAULT(0),\n"\
+"  PRIMARY KEY (networkId, ip)\n"\
 ");\n"\
-"\n"\
-"CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);\n"\
 "\n"\
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  routeIp blob(16) NOT NULL REFERENCES Route(ip) ON DELETE CASCADE,\n"\
 "  ip blob(16) NOT NULL,\n"\
 "  ipNetmaskBits integer NOT NULL DEFAULT(0),\n"\
-"  ipVersion integer NOT NULL DEFAULT(4)\n"\
+"  ipVersion integer NOT NULL DEFAULT(4),\n"\
+"  PRIMARY KEY (networkId, nodeId, routeIp)\n"\
 ");\n"\
 "\n"\
 "CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);\n"\
 "\n"\
-"CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);\n"\
-"\n"\
 "CREATE TABLE IpAssignmentPool (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  ipNetwork blob(16) NOT NULL,\n"\
-"  ipNetmaskBits integer NOT NULL,\n"\
-"  ipVersion integer NOT NULL DEFAULT(4)\n"\
+"  routeIp blob(16) NOT NULL REFERENCES Route(ip) ON DELETE CASCADE,\n"\
+"  ipFirst blob(16) NOT NULL,\n"\
+"  ipLast blob(16) NOT NULL,\n"\
+"  PRIMARY KEY (networkId, routeIp)\n"\
 ");\n"\
-"\n"\
-"CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);\n"\
 "\n"\
 "CREATE TABLE Member (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\

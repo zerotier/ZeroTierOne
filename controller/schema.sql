@@ -24,35 +24,44 @@ CREATE TABLE Node (
   firstSeen integer NOT NULL DEFAULT(0)
 );
 
+CREATE TABLE Route (
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,
+  ip blob(16) NOT NULL,
+  ipNetmaskBits integer NOT NULL DEFAULT(0),
+  ipVersion integer NOT NULL DEFAULT(4),
+  PRIMARY KEY (networkId, nodeId, ip)
+);
+
+CREATE UNIQUE INDEX Route_networkId_ip ON Route (networkId, ip) WHERE nodeId IS NULL;
+
 CREATE TABLE Gateway (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ip blob(16) NOT NULL,
   ipVersion integer NOT NULL DEFAULT(4),
-  metric integer NOT NULL DEFAULT(0)
+  metric integer NOT NULL DEFAULT(0),
+  PRIMARY KEY (networkId, ip)
 );
-
-CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
 
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  routeIp blob(16) NOT NULL REFERENCES Route(ip) ON DELETE CASCADE,
   ip blob(16) NOT NULL,
   ipNetmaskBits integer NOT NULL DEFAULT(0),
-  ipVersion integer NOT NULL DEFAULT(4)
+  ipVersion integer NOT NULL DEFAULT(4),
+  PRIMARY KEY (networkId, nodeId, routeIp)
 );
 
 CREATE UNIQUE INDEX IpAssignment_networkId_ip ON IpAssignment (networkId, ip);
 
-CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
-
 CREATE TABLE IpAssignmentPool (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  ipNetwork blob(16) NOT NULL,
-  ipNetmaskBits integer NOT NULL,
-  ipVersion integer NOT NULL DEFAULT(4)
+  routeIp blob(16) NOT NULL REFERENCES Route(ip) ON DELETE CASCADE,
+  ipFirst blob(16) NOT NULL,
+  ipLast blob(16) NOT NULL,
+  PRIMARY KEY (networkId, routeIp)
 );
-
-CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);
 
 CREATE TABLE Member (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
