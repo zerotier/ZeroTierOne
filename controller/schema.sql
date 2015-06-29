@@ -18,10 +18,7 @@ CREATE TABLE Network (
 
 CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
-  identity varchar(4096) NOT NULL,
-  lastAt varchar(64),
-  lastSeen integer NOT NULL DEFAULT(0),
-  firstSeen integer NOT NULL DEFAULT(0)
+  identity varchar(4096) NOT NULL
 );
 
 CREATE TABLE Gateway (
@@ -53,7 +50,7 @@ CREATE TABLE IpAssignmentPool (
   ipVersion integer NOT NULL DEFAULT(4)
 );
 
-CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);
+CREATE UNIQUE INDEX IpAssignmentPool_networkId_ipRangeStart ON IpAssignmentPool (networkId,ipRangeStart);
 
 CREATE TABLE Member (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,

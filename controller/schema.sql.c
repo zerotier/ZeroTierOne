@@ -19,10 +19,7 @@
 "\n"\
 "CREATE TABLE Node (\n"\
 "  id char(10) PRIMARY KEY NOT NULL,\n"\
-"  identity varchar(4096) NOT NULL,\n"\
-"  lastAt varchar(64),\n"\
-"  lastSeen integer NOT NULL DEFAULT(0),\n"\
-"  firstSeen integer NOT NULL DEFAULT(0)\n"\
+"  identity varchar(4096) NOT NULL\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE Gateway (\n"\
@@ -54,7 +51,7 @@
 "  ipVersion integer NOT NULL DEFAULT(4)\n"\
 ");\n"\
 "\n"\
-"CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);\n"\
+"CREATE UNIQUE INDEX IpAssignmentPool_networkId_ipRangeStart ON IpAssignmentPool (networkId,ipRangeStart);\n"\
 "\n"\
 "CREATE TABLE Member (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\

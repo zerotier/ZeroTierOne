@@ -80,6 +80,13 @@ public:
 		std::string &responseContentType);
 
 private:
+	enum IpAssignmentType {
+		// IP assignment is a static IP address
+		ZT_IP_ASSIGNMENT_TYPE_ADDRESS = 0,
+		// IP assignment is a network -- a route via this interface, not an address
+		ZT_IP_ASSIGNMENT_TYPE_NETWORK = 1
+	};
+
 	unsigned int _doCPGet(
 		const std::vector<std::string> &path,
 		const std::map<std::string,std::string> &urlArgs,
