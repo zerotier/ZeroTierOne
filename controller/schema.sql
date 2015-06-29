@@ -77,8 +77,8 @@ CREATE INDEX Relay_networkId ON Relay (networkId);
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ruleNo integer NOT NULL,
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
-  portId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  nodeId char(10) REFERENCES Node(id),
+  portId char(10) REFERENCES Node(id),
   vlanId integer,
   vlanPcp integer,
   etherType integer,

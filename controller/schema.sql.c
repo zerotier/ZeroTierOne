@@ -78,8 +78,8 @@
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  ruleNo integer NOT NULL,\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
-"  portId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  nodeId char(10) REFERENCES Node(id),\n"\
+"  portId char(10) REFERENCES Node(id),\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\
 "  etherType integer,\n"\
