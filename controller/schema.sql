@@ -36,6 +36,7 @@ CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  type integer NOT NULL DEFAULT(0),
   ip blob(16) NOT NULL,
   ipNetmaskBits integer NOT NULL DEFAULT(0),
   ipVersion integer NOT NULL DEFAULT(4)
@@ -47,8 +48,8 @@ CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
 
 CREATE TABLE IpAssignmentPool (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  ipNetwork blob(16) NOT NULL,
-  ipNetmaskBits integer NOT NULL,
+  ipRangeStart blob(16) NOT NULL,
+  ipRangeEnd blob(16) NOT NULL,
   ipVersion integer NOT NULL DEFAULT(4)
 );
 
@@ -77,6 +78,7 @@ CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ruleNo integer NOT NULL,
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  portId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
   vlanId integer,
   vlanPcp integer,
   etherType integer,
