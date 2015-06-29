@@ -273,6 +273,39 @@ InetAddress InetAddress::broadcast() const
 	return r;
 }
 
+bool InetAddress::isNetwork() const
+	throw()
+{
+	switch(ss_family) {
+		case AF_INET: {
+			unsigned int bits = netmaskBits();
+			if (bits <= 0)
+				return false;
+			if (bits >= 32)
+				return false;
+			uint32_t ip = Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+			return ((ip & (0xffffffff >> bits)) == 0);
+		}
+		case AF_INET6: {
+			unsigned int bits = netmaskBits();
+			if (bits <= 0)
+				return false;
+			if (bits >= 128)
+				return false;
+			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			unsigned int p = bits / 8;
+			if ((ip[p++] & (0xff >> (bits % 8))) != 0)
+				return false;
+			while (p < 16) {
+				if (ip[p++])
+					return false;
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
 bool InetAddress::operator==(const InetAddress &a) const
 	throw()
 {

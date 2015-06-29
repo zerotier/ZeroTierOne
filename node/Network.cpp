@@ -502,7 +502,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	if ((_config)&&(_config->enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
-	std::unique(mgs.begin(),mgs.end());
+	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
 	return mgs;
 }
 

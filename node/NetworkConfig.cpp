@@ -132,10 +132,18 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 			case AF_INET:
 				if ((!addr.netmaskBits())||(addr.netmaskBits() > 32))
 					continue;
+				else if (addr.isNetwork()) {
+					// TODO: add route to network -- this is a route without an IP assignment
+					continue;
+				}
 				break;
 			case AF_INET6:
 				if ((!addr.netmaskBits())||(addr.netmaskBits() > 128))
 					continue;
+				else if (addr.isNetwork()) {
+					// TODO: add route to network -- this is a route without an IP assignment
+					continue;
+				}
 				break;
 			default: // ignore unrecognized address types or junk/empty fields
 				continue;
@@ -143,9 +151,9 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		_staticIps.push_back(addr);
 	}
 	if (_staticIps.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES)
-		throw std::invalid_argument("too many ZT-assigned IP addresses");
+		throw std::invalid_argument("too many ZT-assigned IP addresses or routes");
 	std::sort(_staticIps.begin(),_staticIps.end());
-	std::unique(_staticIps.begin(),_staticIps.end());
+	_staticIps.erase(std::unique(_staticIps.begin(),_staticIps.end()),_staticIps.end());
 
 	std::vector<std::string> gatewaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator gwstr(gatewaysSplit.begin());gwstr!=gatewaysSplit.end();++gwstr) {
@@ -163,7 +171,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		}
 	}
 	std::sort(_activeBridges.begin(),_activeBridges.end());
-	std::unique(_activeBridges.begin(),_activeBridges.end());
+	_activeBridges.erase(std::unique(_activeBridges.begin(),_activeBridges.end()),_activeBridges.end());
 
 	std::vector<std::string> relaysSplit(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_RELAYS,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator r(relaysSplit.begin());r!=relaysSplit.end();++r) {
@@ -177,7 +185,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 		}
 	}
 	std::sort(_relays.begin(),_relays.end());
-	std::unique(_relays.begin(),_relays.end());
+	_relays.erase(std::unique(_relays.begin(),_relays.end()),_relays.end());
 
 	_com.fromString(d.get(ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP,std::string()));
 }

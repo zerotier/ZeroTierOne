@@ -251,7 +251,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 
 			// Attempt to contact network preferred relays that we don't have direct links to
 			std::sort(networkRelays.begin(),networkRelays.end());
-			std::unique(networkRelays.begin(),networkRelays.end());
+			networkRelays.erase(std::unique(networkRelays.begin(),networkRelays.end()),networkRelays.end());
 			for(std::vector< std::pair<Address,InetAddress> >::const_iterator nr(networkRelays.begin());nr!=networkRelays.end();++nr) {
 				if (nr->second) {
 					SharedPtr<Peer> rp(RR->topology->getPeer(nr->first));
