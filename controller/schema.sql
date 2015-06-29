@@ -32,7 +32,7 @@ CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
 
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,
   type integer NOT NULL DEFAULT(0),
   ip blob(16) NOT NULL,
   ipNetmaskBits integer NOT NULL DEFAULT(0),
@@ -75,7 +75,8 @@ CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ruleNo integer NOT NULL,
   nodeId char(10) REFERENCES Node(id),
-  portId char(10) REFERENCES Node(id),
+  sourcePort char(10),
+  destPort char(10),
   vlanId integer,
   vlanPcp integer,
   etherType integer,

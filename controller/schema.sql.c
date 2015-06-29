@@ -33,7 +33,7 @@
 "\n"\
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,\n"\
 "  type integer NOT NULL DEFAULT(0),\n"\
 "  ip blob(16) NOT NULL,\n"\
 "  ipNetmaskBits integer NOT NULL DEFAULT(0),\n"\
@@ -76,7 +76,8 @@
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  ruleNo integer NOT NULL,\n"\
 "  nodeId char(10) REFERENCES Node(id),\n"\
-"  portId char(10) REFERENCES Node(id),\n"\
+"  sourcePort char(10),\n"\
+"  destPort char(10),\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\
 "  etherType integer,\n"\
