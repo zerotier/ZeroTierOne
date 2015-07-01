@@ -11,17 +11,40 @@
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) ((uint32_t)((v) + (w)))
 
+#ifndef ZT_SALSA20_SSE
+
 #if __BYTE_ORDER == __LITTLE_ENDIAN
+
+/* We have a slower version of these macros for CPU/compiler combos that
+ * do not allow unaligned access to a uint32_t. Another solution would be
+ * to methodically require alignment across the code, but this is quicker
+ * for now. The culprit appears to be some Android-based ARM devices. */
+#if 1
+#define U8TO32_LITTLE(p) ( ((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24) )
+static inline void U32TO8_LITTLE(uint8_t *const c,const uint32_t v)
+{
+	c[0] = (uint8_t)v;
+	c[1] = (uint8_t)(v >> 8);
+	c[2] = (uint8_t)(v >> 16);
+	c[3] = (uint8_t)(v >> 24);
+}
+#else
 #define U8TO32_LITTLE(p) (*((const uint32_t *)((const void *)(p))))
 #define U32TO8_LITTLE(c,v) *((uint32_t *)((void *)(c))) = (v)
-#else
+#endif
+
+#else // big endian
+
 #ifdef __GNUC__
 #define U8TO32_LITTLE(p) __builtin_bswap32(*((const uint32_t *)((const void *)(p))))
 #define U32TO8_LITTLE(c,v) *((uint32_t *)((void *)(c))) = __builtin_bswap32((v))
-#else
+#else // no bswap stuff... need to do it manually?
 error need be;
-#endif
-#endif
+#endif // __GNUC__ or not
+
+#endif // little/big endian
+
+#endif // !ZT_SALSA20_SSE
 
 #ifdef ZT_SALSA20_SSE
 class _s20sseconsts
