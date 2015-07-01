@@ -825,7 +825,7 @@ public:
 		 */
 		VERB_SET_EPHEMERAL_KEY = 15,
 
-		/* "Call me at" -- push of potential endpoints for direct communication:
+		/* Push of potential endpoints for direct communication:
 		 *   <[1] flags>
 		 *   <[2] number of addresses>
 		 *   <[...] address types and addresses>
@@ -833,14 +833,14 @@ public:
 		 * Address types and addresses are of the same format as the destination
 		 * address type and address in HELLO.
 		 *
-		 * The receiver may, upon receiving a CMA push, attempt to establish a
+		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. Senders should
-		 * only send CMA pushes to peers that they have some relationship
+		 * only send address pushes to peers that they have some relationship
 		 * with such as a shared network membership or a mutual trust.
 		 *
 		 * OK/ERROR are not generated.
 		 */
-		VERB_CMA = 16
+		VERB_PHYSICAL_ADDRESS_PUSH = 16
 	};
 
 	/**

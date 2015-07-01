@@ -51,7 +51,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_MULTICAST_GATHER: return "MULTICAST_GATHER";
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_SET_EPHEMERAL_KEY: return "SET_EPHEMERAL_KEY";
-		case VERB_CMA: return "CMA";
+		case VERB_PHYSICAL_ADDRESS_PUSH: return "PHYSICAL_ADDRESS_PUSH";
 	}
 	return "(unknown)";
 }

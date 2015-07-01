@@ -174,6 +174,7 @@ To create a new network with a random last six digits safely and atomically, you
 <tr><td>revision</td><td>integer</td><td>Network config revision number</td><td>no</td></tr>
 <tr><td>members</td><td>[string]</td><td>Array of ZeroTier addresses of network members</td><td>no</td></tr>
 <tr><td>relays</td><td>[object]</td><td>Array of network-specific relay nodes (see below)</td><td>yes</td></tr>
+<tr><td>ipLocalRoutes</td><td>[string]</td><td>Array of IP network/netmask entries corresponding to networks routed directly via this interface (e.g. 10.0.0.0/8 to route 10.0.0.0 via this interface)</td></tr>
 <tr><td>ipAssignmentPools</td><td>[object]</td><td>Array of IP auto-assignment pools for 'zt' assignment mode</td><td>yes</td></tr>
 <tr><td>rules</td><td>[object]</td><td>Array of network flow rules (see below)</td><td>yes</td></tr>
 </table>
@@ -194,10 +195,12 @@ Relay objects define network-specific preferred relay nodes. Traffic to peers on
 
 **IP assignment pool object format:**
 
+IP assignment pools are only used if they are within a network specified in ipLocalRoutes.
+
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>
-<tr><td>network</td><td>string</td><td>IP network e.g. 192.168.0.0</td></tr>
-<tr><td>netmaskBits</td><td>integer</td><td>IP network netmask bits e.g. 16 for 255.255.0.0</td></tr>
+<tr><td>ipRangeStart</td><td>string</td><td>Start of IP assignment range</td></tr>
+<tr><td>ipRangeEnd</td><td>integer</td><td>End of IP assignment range</td></tr>
 </table>
 
 **Rule object format:**
@@ -213,7 +216,9 @@ IP related fields apply only to Ethernet frames of type IPv4 or IPV6. Otherwise 
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>
 <tr><td>ruleNo</td><td>integer</td><td>User-defined rule ID and sort order</td></tr>
-<tr><td>nodeId</td><td>string</td><td>10-digit hex ZeroTier address of node (a.k.a. "port on switch")</td></tr>
+<tr><td>nodeId</td><td>string</td><td>10-digit hex ZeroTier address of node if this rule is local to only one member</td></tr>
+<tr><td>sourcePort</td><td>string</td><td>10-digit hex ZeroTier address of source port on virtual switch (source device address)</td></tr>
+<tr><td>destPort</td><td>string</td><td>10-digit hex ZeroTier address of destination port on virtual switch (destination device address)</td></tr>
 <tr><td>vlanId</td><td>integer</td><td>Ethernet VLAN ID</td></tr>
 <tr><td>vlanPcp</td><td>integer</td><td>Ethernet VLAN priority code point (PCP) ID</td></tr>
 <tr><td>etherType</td><td>integer</td><td>Ethernet frame type</td></tr>
@@ -240,9 +245,6 @@ IP related fields apply only to Ethernet frames of type IPv4 or IPV6. Otherwise 
 <tr><td>address</td><td>string</td><td>10-digit hex ZeroTier address</td><td>no</td></tr>
 <tr><td>authorized</td><td>boolean</td><td>Is member authorized?</td><td>yes</td></tr>
 <tr><td>activeBridge</td><td>boolean</td><td>This member is an active network bridge</td><td>yes</td></tr>
-<tr><td>lastAt</td><td>string</td><td>Socket address (e.g. IP/port) where member was last seen</td><td>no</td></tr>
-<tr><td>lastSeen</td><td>integer</td><td>Timestamp of member's last request in ms since epoch</td><td>no</td></tr>
-<tr><td>firstSeen</td><td>integer</td><td>Timestamp member was first seen in ms since epoch</td><td>no</td></tr>
 <tr><td>identity</td><td>string</td><td>Full ZeroTier identity of member</td><td>no</td></tr>
 <tr><td>ipAssignments</td><td>[string]</td><td>Array of IP/bits IP assignments</td><td>yes</td></tr>
 </table>

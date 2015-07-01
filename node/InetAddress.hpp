@@ -344,6 +344,17 @@ struct InetAddress : public sockaddr_storage
 	inline void zero() throw() { memset(this,0,sizeof(InetAddress)); }
 
 	/**
+	 * Check whether this is a network/route rather than an IP assignment
+	 *
+	 * A network is an IP/netmask where everything after the netmask is
+	 * zero e.g. 10.0.0.0/8.
+	 *
+	 * @return True if everything after netmask bits is zero
+	 */
+	bool isNetwork() const
+		throw();
+
+	/**
 	 * @return True if address family is non-zero
 	 */
 	inline operator bool() const throw() { return (ss_family != 0); }

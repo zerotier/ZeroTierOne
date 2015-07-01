@@ -18,10 +18,7 @@ CREATE TABLE Network (
 
 CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
-  identity varchar(4096) NOT NULL,
-  lastAt varchar(64),
-  lastSeen integer NOT NULL DEFAULT(0),
-  firstSeen integer NOT NULL DEFAULT(0)
+  identity varchar(4096) NOT NULL
 );
 
 CREATE TABLE Gateway (
@@ -35,7 +32,8 @@ CREATE UNIQUE INDEX Gateway_networkId_ip ON Gateway (networkId, ip);
 
 CREATE TABLE IpAssignment (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,
+  type integer NOT NULL DEFAULT(0),
   ip blob(16) NOT NULL,
   ipNetmaskBits integer NOT NULL DEFAULT(0),
   ipVersion integer NOT NULL DEFAULT(4)
@@ -47,12 +45,12 @@ CREATE INDEX IpAssignment_networkId_nodeId ON IpAssignment (networkId, nodeId);
 
 CREATE TABLE IpAssignmentPool (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  ipNetwork blob(16) NOT NULL,
-  ipNetmaskBits integer NOT NULL,
+  ipRangeStart blob(16) NOT NULL,
+  ipRangeEnd blob(16) NOT NULL,
   ipVersion integer NOT NULL DEFAULT(4)
 );
 
-CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);
+CREATE UNIQUE INDEX IpAssignmentPool_networkId_ipRangeStart ON IpAssignmentPool (networkId,ipRangeStart);
 
 CREATE TABLE Member (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
@@ -76,7 +74,9 @@ CREATE INDEX Relay_networkId ON Relay (networkId);
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ruleNo integer NOT NULL,
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  nodeId char(10) REFERENCES Node(id),
+  sourcePort char(10),
+  destPort char(10),
   vlanId integer,
   vlanPcp integer,
   etherType integer,

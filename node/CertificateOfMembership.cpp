@@ -140,7 +140,7 @@ void CertificateOfMembership::fromString(const char *s)
 	}
 
 	std::sort(_qualifiers.begin(),_qualifiers.end());
-	std::unique(_qualifiers.begin(),_qualifiers.end());
+	_qualifiers.erase(std::unique(_qualifiers.begin(),_qualifiers.end()),_qualifiers.end());
 }
 
 bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other) const

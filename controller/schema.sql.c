@@ -19,10 +19,7 @@
 "\n"\
 "CREATE TABLE Node (\n"\
 "  id char(10) PRIMARY KEY NOT NULL,\n"\
-"  identity varchar(4096) NOT NULL,\n"\
-"  lastAt varchar(64),\n"\
-"  lastSeen integer NOT NULL DEFAULT(0),\n"\
-"  firstSeen integer NOT NULL DEFAULT(0)\n"\
+"  identity varchar(4096) NOT NULL\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE Gateway (\n"\
@@ -36,7 +33,8 @@
 "\n"\
 "CREATE TABLE IpAssignment (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  nodeId char(10) REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  type integer NOT NULL DEFAULT(0),\n"\
 "  ip blob(16) NOT NULL,\n"\
 "  ipNetmaskBits integer NOT NULL DEFAULT(0),\n"\
 "  ipVersion integer NOT NULL DEFAULT(4)\n"\
@@ -48,12 +46,12 @@
 "\n"\
 "CREATE TABLE IpAssignmentPool (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  ipNetwork blob(16) NOT NULL,\n"\
-"  ipNetmaskBits integer NOT NULL,\n"\
+"  ipRangeStart blob(16) NOT NULL,\n"\
+"  ipRangeEnd blob(16) NOT NULL,\n"\
 "  ipVersion integer NOT NULL DEFAULT(4)\n"\
 ");\n"\
 "\n"\
-"CREATE INDEX IpAssignmentPool_networkId ON IpAssignmentPool (networkId);\n"\
+"CREATE UNIQUE INDEX IpAssignmentPool_networkId_ipRangeStart ON IpAssignmentPool (networkId,ipRangeStart);\n"\
 "\n"\
 "CREATE TABLE Member (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
@@ -77,7 +75,9 @@
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  ruleNo integer NOT NULL,\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  nodeId char(10) REFERENCES Node(id),\n"\
+"  sourcePort char(10),\n"\
+"  destPort char(10),\n"\
 "  vlanId integer,\n"\
 "  vlanPcp integer,\n"\
 "  etherType integer,\n"\

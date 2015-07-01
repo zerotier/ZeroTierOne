@@ -78,9 +78,11 @@ namespace ZeroTier {
 #define ZT_NETWORKCONFIG_DICT_KEY_DESC "d"
 
 // IP/bits[,IP/bits,...]
+// Note that IPs that end in all zeroes are routes with no assignment in them.
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
 
 // IP/bits[,IP/bits,...]
+// Note that IPs that end in all zeroes are routes with no assignment in them.
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
 
 // serialized CertificateOfMembership
