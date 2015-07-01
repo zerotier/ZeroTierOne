@@ -365,7 +365,7 @@ namespace {
             env->ReleasePrimitiveArrayCritical(objectSizeObj, objSize, 0);
         }
 
-        LOGI("Out Object Size: %lu", *out_objectSize);
+        LOGV("Out Object Size: %lu", *out_objectSize);
 
         return retval;
     }
@@ -410,12 +410,14 @@ namespace {
 
         if(buffer == NULL)
         {
+            LOGD("JNI: Delete file: %s", objectName);
             // delete operation
             return env->CallIntMethod(
                 ref->dataStorePutListener, deleteMethod, nameStr);
         }
         else
         {
+            LOGD("JNI: Write file: %s", objectName);
             // set operation
             jbyteArray bufferObj = env->NewByteArray(bufferSize);
             if(env->ExceptionCheck() || bufferObj == NULL)
