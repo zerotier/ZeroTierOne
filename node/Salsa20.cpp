@@ -1,51 +1,53 @@
 /*
  * Based on public domain code available at: http://cr.yp.to/snuffle.html
  *
- * This therefore is public domain.
+ * Modifications and C-native SSE macro based SSE implementation by
+ * Adam Ierymenko <adam.ierymenko@zerotier.com>.
+ *
+ * Since the original was public domain, this is too.
  */
 
-#include "Salsa20.hpp"
 #include "Constants.hpp"
+#include "Salsa20.hpp"
 
 #define ROTATE(v,c) (((v) << (c)) | ((v) >> (32 - (c))))
 #define XOR(v,w) ((v) ^ (w))
 #define PLUS(v,w) ((uint32_t)((v) + (w)))
 
+// Set up laod/store macros with appropriate endianness (we don't use these in SSE mode)
 #ifndef ZT_SALSA20_SSE
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 
-/* We have a slower version of these macros for CPU/compiler combos that
- * do not allow unaligned access to a uint32_t. Another solution would be
- * to methodically require alignment across the code, but this is quicker
- * for now. The culprit appears to be some Android-based ARM devices. */
-#if 1
-#define U8TO32_LITTLE(p) ( ((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24) )
-static inline void U32TO8_LITTLE(uint8_t *const c,const uint32_t v)
-{
-	c[0] = (uint8_t)v;
-	c[1] = (uint8_t)(v >> 8);
-	c[2] = (uint8_t)(v >> 16);
-	c[3] = (uint8_t)(v >> 24);
-}
-#else
+// Slow version that does not use type punning
+//#define U8TO32_LITTLE(p) ( ((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24) )
+//static inline void U32TO8_LITTLE(uint8_t *const c,const uint32_t v) { c[0] = (uint8_t)v; c[1] = (uint8_t)(v >> 8); c[2] = (uint8_t)(v >> 16); c[3] = (uint8_t)(v >> 24); }
+
+// Fast version that just does 32-bit load/store
 #define U8TO32_LITTLE(p) (*((const uint32_t *)((const void *)(p))))
 #define U32TO8_LITTLE(c,v) *((uint32_t *)((void *)(c))) = (v)
-#endif
 
-#else // big endian
+#else // __BYTE_ORDER == __BIG_ENDIAN (we don't support anything else... does MIDDLE_ENDIAN even still exist?)
 
 #ifdef __GNUC__
+
+// Use GNUC builtin bswap macros on big-endian machines if available
 #define U8TO32_LITTLE(p) __builtin_bswap32(*((const uint32_t *)((const void *)(p))))
 #define U32TO8_LITTLE(c,v) *((uint32_t *)((void *)(c))) = __builtin_bswap32((v))
-#else // no bswap stuff... need to do it manually?
-error need be;
+
+#else // no __GNUC__
+
+// Otherwise do it the slow, manual way on BE machines
+#define U8TO32_LITTLE(p) ( ((uint32_t)(p)[0]) | ((uint32_t)(p)[1] << 8) | ((uint32_t)(p)[2] << 16) | ((uint32_t)(p)[3] << 24) )
+static inline void U32TO8_LITTLE(uint8_t *const c,const uint32_t v) { c[0] = (uint8_t)v; c[1] = (uint8_t)(v >> 8); c[2] = (uint8_t)(v >> 16); c[3] = (uint8_t)(v >> 24); }
+
 #endif // __GNUC__ or not
 
-#endif // little/big endian
+#endif // __BYTE_ORDER little or big?
 
 #endif // !ZT_SALSA20_SSE
 
+// Statically compute and define SSE constants
 #ifdef ZT_SALSA20_SSE
 class _s20sseconsts
 {
