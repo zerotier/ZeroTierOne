@@ -5,6 +5,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := ZeroTierOneJNI
 LOCAL_C_INCLUDES := $(ZT1)/include
 LOCAL_LDLIBS := -llog
+# LOCAL_CFLAGS := -g
 
 # ZeroTierOne SDK source files
 LOCAL_SRC_FILES := \

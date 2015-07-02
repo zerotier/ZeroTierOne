@@ -42,6 +42,7 @@
         <exec dir="jni" executable="${env.NDK_BUILD_LOC}" failonerror="true">
             <arg value="ZT1=${env.ZT}"/>
             <arg value="V=1"/>
+            <!-- <arg value="NDK_DEBUG=1"/> -->
         </exec>
         <copy file="libs/arm64-v8a/libZeroTierOneJNI.so"
               tofile="classes/lib/arm64-v8a/libZeroTierOneJNI.so"

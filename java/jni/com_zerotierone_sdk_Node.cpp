@@ -192,7 +192,11 @@ namespace {
     {
         LOGV("EventCallback");
         JniRef *ref = (JniRef*)userData;
-        assert(ref->node == node);
+        if(ref->node != node)
+        {
+            LOGE("Nodes not equal. ref->node %p, node %p", ref->node, node);
+            return;
+        }
         JNIEnv *env = NULL;
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
@@ -613,6 +617,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         &VirtualNetworkConfigFunctionCallback,
         &EventCallback);
 
+    LOGI("Node Created.");
+    
     if(rc != ZT1_RESULT_OK)
     {
         LOGE("Error creating Node: %d", rc);
