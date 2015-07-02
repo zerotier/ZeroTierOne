@@ -59,6 +59,7 @@ set(src_files
 
 set(include_dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/
+    ${CMAKE_CURRENT_SOURCE_DIR}/../node/
     ${Java_INCLUDE_DIRS})
 
 if(WIN32)

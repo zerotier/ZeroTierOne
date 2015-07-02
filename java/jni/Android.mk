@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := ZeroTierOneJNI
 LOCAL_C_INCLUDES := $(ZT1)/include
+LOCAL_C_INCLUDES += $(ZT1)/node
 LOCAL_LDLIBS := -llog
 # LOCAL_CFLAGS := -g
 

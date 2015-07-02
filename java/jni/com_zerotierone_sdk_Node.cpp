@@ -30,6 +30,7 @@
 #include "ZT1_jnilookup.h"
 
 #include <ZeroTierOne.h>
+#include "Mutex.hpp"
 
 #include <map>
 #include <string>
@@ -192,9 +193,9 @@ namespace {
     {
         LOGV("EventCallback");
         JniRef *ref = (JniRef*)userData;
-        if(ref->node != node)
+        if(ref->node != node && event != ZT1_EVENT_UP)
         {
-            LOGE("Nodes not equal. ref->node %p, node %p", ref->node, node);
+            LOGE("Nodes not equal. ref->node %p, node %p. Event: %d", ref->node, node, event);
             return;
         }
         JNIEnv *env = NULL;
@@ -478,9 +479,11 @@ namespace {
 
     typedef std::map<uint64_t, JniRef*> NodeMap;
     static NodeMap nodeMap;
+    ZeroTier::Mutex nodeMapMutex;
 
     ZT1_Node* findNode(uint64_t nodeId)
     {
+        ZeroTier::Mutex::Lock lock(nodeMapMutex);
         NodeMap::iterator found = nodeMap.find(nodeId);
         if(found != nodeMap.end())
         {
@@ -633,8 +636,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         return resultObject;
     }
 
+    ZeroTier::Mutex::Lock lock(nodeMapMutex);
     ref->node = node;
     nodeMap.insert(std::make_pair(ref->id, ref));
+    
 
     return resultObject;
 }
@@ -650,7 +655,12 @@ JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
     LOGV("Destroying ZT1_Node struct");
     uint64_t nodeId = (uint64_t)id;
 
-    NodeMap::iterator found = nodeMap.find(nodeId);
+    NodeMap::iterator found;
+    {
+        ZeroTier::Mutex::Lock lock(nodeMapMutex);  
+        found = nodeMap.find(nodeId);
+    }
+
     if(found != nodeMap.end())
     {
         JniRef *ref = found->second;
@@ -819,6 +829,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     jbyteArray addressArray = (jbyteArray)env->CallObjectMethod(addrObject, getAddressMethod);
     if(addressArray == NULL)
     {
+        LOGE("Unable to call getAddress()");
         // unable to call getAddress()
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
     }
@@ -849,6 +860,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     }
     else
     {
+        LOGE("Unknown IP version");
         // unknown address type
         env->ReleasePrimitiveArrayCritical(addressArray, addr, 0);
         return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
@@ -856,6 +868,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     env->ReleasePrimitiveArrayCritical(addressArray, addr, 0);
 
     unsigned int packetLength = env->GetArrayLength(in_packetData);
+    if(packetLength == 0)
+    {
+        LOGE("Empty packet?!?");
+        return createResultObject(env, ZT1_RESULT_FATAL_ERROR_INTERNAL);
+    }
     void *packetData = env->GetPrimitiveArrayCritical(in_packetData, NULL);
     void *localData = malloc(packetLength);
     memcpy(localData, packetData, packetLength);
