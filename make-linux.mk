@@ -18,9 +18,8 @@
 #
 
 # Automagically pick clang or gcc, with preference for clang
-CC=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
-CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
-
+CC?=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+CXX?=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 INCLUDES=
 DEFS=
 LIBS=
@@ -43,16 +42,18 @@ endif
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE 
-	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
-	CXXFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS=-Wall -O3 -fPIE -fvisibility=hidden -fstack-protector -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	CXXFLAGS=-Wall -O3 -fPIE -fvisibility=hidden -fstack-protector -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CFLAGS?=-O3 -fstack-protector
+	CFLAGS+=-Wall -fPIE -fvisibility=hidden -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+	CXXFLAGS?=-O3 -fstack-protector
+	CXXFLAGS+=-Wall -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP=strip --strip-all
 endif

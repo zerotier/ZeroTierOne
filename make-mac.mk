@@ -1,5 +1,5 @@
-CC=clang
-CXX=clang++
+CC?=clang
+CXX?=clang++
 
 INCLUDES=-I/usr/local/include
 DEFS=
@@ -38,13 +38,14 @@ endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE 
-	CFLAGS=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in heavy testing without it.
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
 else
-	CFLAGS=$(ARCH_FLAGS) -Wall -O3 -flto -fPIE -fvectorize -fstack-protector -pthread -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
+	CFLAGS?=-O3 -fstack-protector
+	CFLAGS+=$(ARCH_FLAGS) -Wall -flto -fPIE -fvectorize -pthread -mmacosx-version-min=10.7 -DNDEBUG -Wno-unused-private-field $(INCLUDES) $(DEFS)
 	STRIP=strip
 endif
 
