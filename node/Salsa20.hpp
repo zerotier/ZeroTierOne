@@ -78,7 +78,7 @@ public:
 	}
 
 private:
-	volatile union {
+	union {
 #ifdef ZT_SALSA20_SSE
 		__m128i v[4];
 #endif // ZT_SALSA20_SSE
