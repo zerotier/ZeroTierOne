@@ -52,18 +52,25 @@ public:
 	RemotePath() :
 		Path(),
 		_lastSend(0),
-		_lastReceived(0) {}
+		_lastReceived(0),
+		_fixed(false) {}
 
 	RemotePath(const InetAddress &addr,bool fixed) :
-		Path(addr,0,TRUST_NORMAL,false,fixed),
+		Path(addr,0,TRUST_NORMAL,false),
 		_lastSend(0),
-		_lastReceived(0) {}
+		_lastReceived(0),
+		_fixed(fixed) {}
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
 
 	/**
-	 * @param f New value of parent 'fixed' field
+	 * @return Is this a fixed path?
+	 */
+	inline bool fixed() const throw() { return _fixed; }
+
+	/**
+	 * @param f New value of fixed flag
 	 */
 	inline void setFixed(const bool f)
 		throw()
@@ -127,6 +134,7 @@ public:
 private:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
+	bool _fixed;
 };
 
 } // namespace ZeroTier

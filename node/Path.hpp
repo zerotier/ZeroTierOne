@@ -37,28 +37,27 @@ namespace ZeroTier {
 class Path
 {
 public:
+	// Must be the same values as ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
 	enum Trust
 	{
-		TRUST_NORMAL,
-		TRUST_PRIVACY,
-		TRUST_ULTIMATE
+		TRUST_NORMAL = 0,
+		TRUST_PRIVACY = 1,
+		TRUST_ULTIMATE = 2
 	};
 
 	Path() :
 		_addr(),
 		_metric(0),
 		_trust(TRUST_NORMAL),
-		_reliable(false),
-		_fixed(false)
+		_reliable(false)
 	{
 	}
 
-	Path(const InetAddress &addr,int metric,Trust trust,bool reliable,bool fixed) :
+	Path(const InetAddress &addr,int metric,Trust trust,bool reliable) :
 		_addr(addr),
 		_metric(metric),
 		_trust(trust),
-		_reliable(reliable),
-		_fixed(fixed)
+		_reliable(reliable)
 	{
 	}
 
@@ -83,11 +82,6 @@ public:
 	inline bool reliable() const throw() { return _reliable; }
 
 	/**
-	 * @return Is this a fixed path?
-	 */
-	inline bool fixed() const throw() { return _fixed; }
-
-	/**
 	 * @return True if address is non-NULL
 	 */
 	inline operator bool() const throw() { return (_addr); }
@@ -105,7 +99,6 @@ protected:
 	int _metric; // negative == blacklisted
 	Trust _trust;
 	bool _reliable;
-	bool _fixed;
 };
 
 } // namespace ZeroTier
