@@ -46,6 +46,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
 	_lastPathConfirmationSent(0),
+	_lastDirectPathPush(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -86,7 +87,7 @@ void Peer::received(
 			if (!pathIsConfirmed) {
 				if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
 					// Learn paths if they've been confirmed via a HELLO
-					Path *slot = (Path *)0;
+					RemotePath *slot = (RemotePath *)0;
 					if (np < ZT1_MAX_PEER_NETWORK_PATHS) {
 						// Add new path
 						slot = &(_paths[np++]);
@@ -101,7 +102,7 @@ void Peer::received(
 						}
 					}
 					if (slot) {
-						slot->init(remoteAddr,false);
+						*slot = RemotePath(remoteAddr,false);
 						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;
@@ -193,7 +194,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 
 void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
-	Path *const bestPath = getBestPath(now);
+	RemotePath *const bestPath = getBestPath(now);
 	if ((bestPath)&&(bestPath->active(now))) {
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
 			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
@@ -207,7 +208,11 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-void Peer::addPath(const Path &newp)
+//void Peer::pushDirectPaths(const std::vector<Path> &dps,uint64_t now,bool force)
+//{
+//}
+
+void Peer::addPath(const RemotePath &newp)
 {
 	unsigned int np = _numPaths;
 
@@ -218,7 +223,7 @@ void Peer::addPath(const Path &newp)
 		}
 	}
 
-	Path *slot = (Path *)0;
+	RemotePath *slot = (RemotePath *)0;
 	if (np < ZT1_MAX_PEER_NETWORK_PATHS) {
 		// Add new path
 		slot = &(_paths[np++]);

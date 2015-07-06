@@ -899,16 +899,17 @@ public:
 		 * Path record format:
 		 *   <[1] flags>
 		 *   <[1] metric from 0 (highest priority) to 255 (lowest priority)>
+		 *   <[2] length of extended path characteristics or 0 for none>
+		 *   <[...] extended path characteristics>
 		 *   <[1] address type>
 		 *   <[...] address>
 		 *
 		 * Path record flags:
-		 *   0x01 - Blacklist this path, do not use
-		 *   0x02 - Reliable path (no keepalives, etc. necessary)
-		 *   0x04 - Trusted path (encryption and authentication optional)
-		 *
-		 * None of the above flags are implemented yet as of 1.0.4. They're
-		 * reserved for future use.
+		 *   0x01 - Forget this path if it is currently known
+		 *   0x02 - Blacklist this path, do not use
+		 *   0x04 - Reliable path (no NAT keepalives, etc. are necessary)
+		 *   0x08 - Disable encryption (trust: privacy)
+		 *   0x10 - Disable encryption and authentication (trust: ultimate)
 		 *
 		 * Address types and addresses are of the same format as the destination
 		 * address type and address in HELLO.
@@ -916,9 +917,24 @@ public:
 		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. It is the
 		 * responsibility of the sender to limit which peers it pushes direct
-		 * paths to to those with whom it has a trust relationship.
+		 * paths to to those with whom it has a trust relationship. The receiver
+		 * must obey any restrictions provided such as exclusivity or blacklists.
+		 * OK responses to this message are optional.
 		 *
-		 * OK/ERROR are not generated.
+		 * Note that a direct path push does not imply that learned paths can't
+		 * be used unless they are blacklisted explicitly or unless flag 0x01
+		 * is set.
+		 *
+		 * Only a subset of this functionality is currently implemented: basic
+		 * path pushing and learning. Metrics, most flags, and OK responses are
+		 * not yet implemented as of 1.0.4.
+		 *
+		 * OK response payload:
+		 *   <[2] 16-bit number of active direct paths we already have>
+		 *   <[2] 16-bit number of paths in push that we don't already have>
+		 *   <[2] 16-bit number of new paths we are trying (or will try)>
+		 *
+		 * ERROR is presently not sent.
 		 */
 		VERB_PUSH_DIRECT_PATHS = 16
 	};

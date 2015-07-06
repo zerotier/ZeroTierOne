@@ -62,7 +62,7 @@ void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> 
 			if (!p)
 				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(Path(*j,true));
+				p->addPath(RemotePath(*j,true));
 			p->use(now);
 			_rootPeers.push_back(p);
 		}

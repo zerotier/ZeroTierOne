@@ -733,7 +733,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
-		Path *viaPath = peer->getBestPath(now);
+		RemotePath *viaPath = peer->getBestPath(now);
 		if (!viaPath) {
 			SharedPtr<Peer> relay;
 

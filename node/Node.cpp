@@ -388,10 +388,10 @@ ZT1_PeerList *Node::peers() const
 		p->latency = pi->second->latency();
 		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT1_PEER_ROLE_ROOT : ZT1_PEER_ROLE_LEAF;
 
-		std::vector<Path> paths(pi->second->paths());
-		Path *bestPath = pi->second->getBestPath(_now);
+		std::vector<RemotePath> paths(pi->second->paths());
+		RemotePath *bestPath = pi->second->getBestPath(_now);
 		p->pathCount = 0;
-		for(std::vector<Path>::iterator path(paths.begin());path!=paths.end();++path) {
+		for(std::vector<RemotePath>::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = path->lastSend();
 			p->paths[p->pathCount].lastReceive = path->lastReceived();

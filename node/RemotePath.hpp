@@ -25,72 +25,56 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_PATH_HPP
-#define ZT_PATH_HPP
+#ifndef ZT_REMOTEPATH_HPP
+#define ZT_REMOTEPATH_HPP
 
 #include <stdint.h>
 #include <string.h>
 
 #include <stdexcept>
-#include <string>
 #include <algorithm>
 
-#include "Constants.hpp"
+#include "Path.hpp"
 #include "Node.hpp"
-#include "InetAddress.hpp"
-#include "Utils.hpp"
 #include "AntiRecursion.hpp"
 #include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
 
 /**
- * WAN address and protocol for reaching a peer
+ * Path to a remote peer
  *
- * This structure is volatile and memcpy-able, and depends on
- * InetAddress being similarly safe.
+ * This extends Path to include status information about path activity.
  */
-class Path
+class RemotePath : public Path
 {
 public:
-	Path() :
-		_addr(),
+	RemotePath() :
+		Path(),
 		_lastSend(0),
-		_lastReceived(0),
-		_fixed(false) {}
+		_lastReceived(0) {}
 
-	Path(const Path &p) throw() { memcpy(this,&p,sizeof(Path)); }
-
-	Path(const InetAddress &addr,bool fixed) :
-		_addr(addr),
+	RemotePath(const InetAddress &addr,bool fixed) :
+		Path(addr,0,TRUST_NORMAL,false,fixed),
 		_lastSend(0),
-		_lastReceived(0),
-		_fixed(fixed) {}
-
-	inline void init(const InetAddress &addr,bool fixed)
-	{
-		_addr = addr;
-		_lastSend = 0;
-		_lastReceived = 0;
-		_fixed = fixed;
-	}
-
-	inline Path &operator=(const Path &p)
-	{
-		if (this != &p)
-			memcpy(this,&p,sizeof(Path));
-		return *this;
-	}
-
-	inline const InetAddress &address() const throw() { return _addr; }
+		_lastReceived(0) {}
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
 
 	/**
-	 * Called when a packet is sent to this path
+	 * @param f New value of parent 'fixed' field
+	 */
+	inline void setFixed(const bool f)
+		throw()
+	{
+		_fixed = f;
+	}
+
+	/**
+	 * Called when a packet is sent to this remote path
 	 *
-	 * This is called automatically by Path::send().
+	 * This is called automatically by RemotePath::send().
 	 *
 	 * @param t Time of send
 	 */
@@ -101,7 +85,7 @@ public:
 	}
 
 	/**
-	 * Called when a packet is received from this path
+	 * Called when a packet is received from this remote path
 	 *
 	 * @param t Time of receive
 	 */
@@ -110,16 +94,6 @@ public:
 	{
 		_lastReceived = t;
 	}
-
-	/**
-	 * @return Is this a fixed path?
-	 */
-	inline bool fixed() const throw() { return _fixed; }
-
-	/**
-	 * @param f New value of fixed path flag
-	 */
-	inline void setFixed(bool f) throw() { _fixed = f; }
 
 	/**
 	 * @param now Current time
@@ -150,34 +124,9 @@ public:
 		return false;
 	}
 
-	/**
-	 * @param now Current time
-	 * @return Human-readable address and other information about this path
-	 */
-	inline std::string toString(uint64_t now) const
-	{
-		char tmp[1024];
-		Utils::snprintf(tmp,sizeof(tmp),"%s(%s)",
-			_addr.toString().c_str(),
-			((_fixed) ? "fixed" : (active(now) ? "active" : "inactive"))
-		);
-		return std::string(tmp);
-	}
-
-	inline operator bool() const throw() { return (_addr); }
-
-	inline bool operator==(const Path &p) const throw() { return (_addr == p._addr); }
-	inline bool operator!=(const Path &p) const throw() { return (_addr != p._addr); }
-	inline bool operator<(const Path &p) const throw() { return (_addr < p._addr); }
-	inline bool operator>(const Path &p) const throw() { return (_addr > p._addr); }
-	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
-	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
-
 private:
-	InetAddress _addr;
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
-	bool _fixed;
 };
 
 } // namespace ZeroTier
