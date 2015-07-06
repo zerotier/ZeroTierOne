@@ -178,7 +178,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			}
 			*/
 
-			if ((true)||(fromBridged)||(includeCom)) {
+			if ((fromBridged)||(includeCom)) {
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 				outp.append(network->id());
 				if (includeCom) {
