@@ -181,11 +181,12 @@ public:
 	/**
 	 * Push direct paths (if within rate limit)
 	 *
+	 * @param RR Runtime environment
 	 * @param dps Direct paths to me to push to this peer
 	 * @param now Current time
 	 * @param force If true, force regardless of when we pushed direct paths last
 	 */
-	void pushDirectPaths(const std::vector<InetAddress> &dps,uint64_t now,bool force);
+	void pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> &dps,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer

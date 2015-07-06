@@ -320,6 +320,11 @@
 #define ZT_MIN_PATH_CONFIRMATION_INTERVAL 5000
 
 /**
+ * Interval between direct path pushes in milliseconds
+ */
+#define ZT_DIRECT_PATH_PUSH_INTERVAL 300000
+
+/**
  * Sanity limit on maximum bridge routes
  *
  * If the number of bridge routes exceeds this, we cull routes from the

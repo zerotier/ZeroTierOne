@@ -208,9 +208,66 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-//void Peer::pushDirectPaths(const std::vector<Path> &dps,uint64_t now,bool force)
-//{
-//}
+void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> &dps,uint64_t now,bool force)
+{
+	if (((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
+		_lastDirectPathPush = now;
+
+		std::vector<Path>::const_iterator p(dps.begin());
+		while (p != dps.end()) {
+			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+			outp.addSize(2); // leave room for count
+
+			unsigned int count = 0;
+			while ((p != dps.end())&&((outp.size() + 24) < ZT_PROTO_MAX_PACKET_LENGTH)) {
+				uint8_t addressType = 4;
+				switch(p->address().ss_family) {
+					case AF_INET:
+						break;
+					case AF_INET6:
+						addressType = 6;
+						break;
+					default:
+						++p;
+						continue;
+				}
+
+				uint8_t flags = 0;
+				if (p->metric() < 0)
+					flags |= (0x01 | 0x02); // forget and blacklist
+				else {
+					if (p->reliable())
+						flags |= 0x04; // no NAT keepalives and such
+					switch(p->trust()) {
+						default:
+							break;
+						case Path::TRUST_PRIVACY:
+							flags |= 0x08; // no encryption
+							break;
+						case Path::TRUST_ULTIMATE:
+							flags |= (0x08 | 0x10); // no encryption, no authentication (redundant but go ahead and set both)
+							break;
+					}
+				}
+
+				outp.append(flags);
+				outp.append((uint8_t)((p->metric() >= 0) ? ((p->metric() <= 255) ? p->metric() : 255) : 0));
+				outp.append((uint16_t)0);
+				outp.append(addressType);
+				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));
+				outp.append((uint16_t)p->address().port());
+
+				++count;
+				++p;
+			}
+
+			if (count) {
+				outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+				RR->sw->send(outp,true,0);
+			}
+		}
+	}
+}
 
 void Peer::addPath(const RemotePath &newp)
 {

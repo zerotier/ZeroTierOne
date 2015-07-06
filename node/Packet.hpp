@@ -892,7 +892,6 @@ public:
 		VERB_SET_EPHEMERAL_KEY = 15,
 
 		/* Push of potential endpoints for direct communication:
-		 *   <[1] flags (unused, must be zero)>
 		 *   <[2] 16-bit number of paths>
 		 *   <[...] paths>
 		 *
