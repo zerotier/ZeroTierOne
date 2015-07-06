@@ -164,16 +164,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
-			/*
-			if (network->peerNeedsOurMembershipCertificate(toZT,RR->node->now())) {
-				// TODO: once there are no more <1.0.0 nodes around, we can
-				// bundle this with EXT_FRAME instead of sending two packets.
-				Packet outp(toZT,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-				nconf->com().serialize(outp);
-				send(outp,true,network->id());
-			}
-			*/
-
 			const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
 			if ((fromBridged)||(includeCom)) {
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);

@@ -106,8 +106,6 @@ void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toA
 
 	if (!network)
 		return;
-	if (!network->isAllowed(toAddr))
-		return;
 
 	if (_haveCom) {
 		if (network->peerNeedsOurMembershipCertificate(toAddr,RR->node->now())) {
