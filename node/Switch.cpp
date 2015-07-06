@@ -167,6 +167,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
+			const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
+			/*
 			if (network->peerNeedsOurMembershipCertificate(toZT,RR->node->now())) {
 				// TODO: once there are no more <1.0.0 nodes around, we can
 				// bundle this with EXT_FRAME instead of sending two packets.
@@ -174,12 +176,17 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				nconf->com().serialize(outp);
 				send(outp,true,network->id());
 			}
+			*/
 
-			if (fromBridged) {
-				// EXT_FRAME is used for bridging or if we want to include a COM
+			if ((true)||(fromBridged)||(includeCom)) {
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 				outp.append(network->id());
-				outp.append((unsigned char)0);
+				if (includeCom) {
+					outp.append((unsigned char)0x01); // 0x01 -- COM included
+					nconf->com().serialize(outp);
+				} else {
+					outp.append((unsigned char)0x00);
+				}
 				to.appendTo(outp);
 				from.appendTo(outp);
 				outp.append((uint16_t)etherType);
@@ -187,7 +194,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				outp.compress();
 				send(outp,true,network->id());
 			} else {
-				// FRAME is a shorter version that can be used when there's no bridging and no COM
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
 				outp.append(network->id());
 				outp.append((uint16_t)etherType);
@@ -196,7 +202,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				send(outp,true,network->id());
 			}
 
-			//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged);
+			//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
 		} else {
 			TRACE("%.16llx: UNICAST: %s -> %s etherType==%s dropped, destination not a member of private network",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
 		}
