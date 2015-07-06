@@ -167,7 +167,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		Address toZT(to.toAddress(network->id()));
 		if (network->isAllowed(toZT)) {
-			const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
 			/*
 			if (network->peerNeedsOurMembershipCertificate(toZT,RR->node->now())) {
 				// TODO: once there are no more <1.0.0 nodes around, we can
@@ -178,6 +177,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			}
 			*/
 
+			const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
 			if ((fromBridged)||(includeCom)) {
 				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 				outp.append(network->id());
@@ -216,16 +216,14 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		Address bridges[ZT_MAX_BRIDGE_SPAM];
 		unsigned int numBridges = 0;
 
+		/* Create an array of up to ZT_MAX_BRIDGE_SPAM recipients for this bridged frame. */
 		bridges[0] = network->findBridgeTo(to);
 		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
-			// We have a known bridge route for this MAC.
+			/* We have a known bridge route for this MAC, send it there. */
 			++numBridges;
 		} else if (!nconf->activeBridges().empty()) {
 			/* If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active
-			 * bridges. This is similar to what many switches do -- if they do not
-			 * know which port corresponds to a MAC, they send it to all ports. If
-			 * there aren't any active bridges, numBridges will stay 0 and packet
-			 * is dropped. */
+			 * bridges. If someone responds, we'll learn the route. */
 			std::vector<Address>::const_iterator ab(nconf->activeBridges().begin());
 			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
 				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, spam them all
@@ -251,7 +249,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		for(unsigned int b=0;b<numBridges;++b) {
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			outp.append((unsigned char)0);
+			if (network->peerNeedsOurMembershipCertificate(bridges[b],RR->node->now())) {
+				outp.append((unsigned char)0x01); // 0x01 -- COM included
+				nconf->com().serialize(outp);
+			} else {
+				outp.append((unsigned char)0);
+			}
 			to.appendTo(outp);
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
