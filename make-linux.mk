@@ -22,7 +22,7 @@ CC?=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
 CXX?=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 INCLUDES=
 DEFS=
-LIBS=
+LDLIBS?=
 
 include objects.mk
 OBJS+=osdep/LinuxEthernetTap.o 
@@ -35,7 +35,7 @@ endif
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
         DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
-        LIBS+=-L/usr/local/lib -lsqlite3
+        LDLIBS+=-L/usr/local/lib -lsqlite3
         OBJS+=controller/SqliteNetworkController.o 
 endif
 
@@ -67,13 +67,13 @@ endif
 all:	one
 
 one:	$(OBJS) one.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
 selftest:	$(OBJS) selftest.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
 	$(STRIP) zerotier-selftest
 
 installer: one FORCE
