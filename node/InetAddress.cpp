@@ -91,7 +91,13 @@ InetAddress::IpScope InetAddress::ipScope() const
 			const unsigned char *ip = reinterpret_cast<const unsigned char *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			if ((ip[0] & 0xf0) == 0xf0) {
 				if (ip[0] == 0xff) return IP_SCOPE_MULTICAST;                              // ff00::/8
-				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0) == 0x80)) return IP_SCOPE_LINK_LOCAL; // fe80::/10
+				if ((ip[0] == 0xfe)&&((ip[1] & 0xc0) == 0x80)) {
+					unsigned int k = 2;
+					while ((!ip[k])&&(k < 15)) ++k;
+					if ((k == 15)&&(ip[15] == 0x01))
+						return IP_SCOPE_LOOPBACK;                                              // fe80::1/128
+					else return IP_SCOPE_LINK_LOCAL;                                         // fe80::/10
+				}
 				if ((ip[0] & 0xfe) == 0xfc) return IP_SCOPE_PRIVATE;                       // fc00::/7
 			}
 			unsigned int k = 0;

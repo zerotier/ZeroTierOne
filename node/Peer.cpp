@@ -214,7 +214,6 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> 
 		_lastDirectPathPush = now;
 
 		TRACE("pushing %u direct paths to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
-		printf("pushing %u direct paths to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
 
 		std::vector<Path>::const_iterator p(dps.begin());
 		while (p != dps.end()) {

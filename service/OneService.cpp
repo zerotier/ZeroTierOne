@@ -78,8 +78,10 @@ class SqliteNetworkController;
 #include <ShlObj.h>
 #else
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <ifaddrs.h>
 #endif
 
 // Include the right tap device driver for this platform -- add new platforms here
@@ -122,6 +124,9 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 
 // Attempt to engage TCP fallback after this many ms of no reply to packets sent to global-scope IPs
 #define ZT1_TCP_FALLBACK_AFTER 60000
+
+// How often to check for local interface addresses
+#define ZT1_LOCAL_INTERFACE_CHECK_INTERVAL 300000
 
 namespace ZeroTier {
 
@@ -405,6 +410,7 @@ public:
 		_nextBackgroundTaskDeadline(0),
 		_tcpFallbackTunnel((TcpConnection *)0),
 		_termReason(ONE_STILL_RUNNING),
+		_port(port),
 		_run(true)
 	{
 		struct sockaddr_in in4;
@@ -501,6 +507,7 @@ public:
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastTcpFallbackResolve = 0;
+			uint64_t lastLocalInterfaceAddressCheck = 0;
 #ifdef ZT_AUTO_UPDATE
 			uint64_t lastSoftwareUpdateCheck = 0;
 #endif // ZT_AUTO_UPDATE
@@ -552,6 +559,66 @@ public:
 						for(std::vector<MulticastGroup>::iterator m(removed.begin());m!=removed.end();++m)
 							_node->multicastUnsubscribe(t->first,m->mac().toInt(),m->adi());
 					}
+				}
+
+				if ((now - lastLocalInterfaceAddressCheck) >= ZT1_LOCAL_INTERFACE_CHECK_INTERVAL) {
+					lastLocalInterfaceAddressCheck = now;
+
+#ifdef __UNIX_LIKE__
+					std::vector<std::string> ztDevices;
+					{
+						Mutex::Lock _l(_taps_m);
+						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
+							ztDevices.push_back(t->second->deviceName());
+					}
+
+					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
+					if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
+						_node->clearLocalInterfaceAddresses();
+						struct ifaddrs *ifa = ifatbl;
+						while (ifa) {
+							if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
+								bool isZT = false;
+								for(std::vector<std::string>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
+									if (*d == ifa->ifa_name) {
+										isZT = true;
+										break;
+									}
+								}
+								if (!isZT) {
+									InetAddress ip(ifa->ifa_addr);
+									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
+										switch(ip.ipScope()) {
+											case InetAddress::IP_SCOPE_LINK_LOCAL:
+											case InetAddress::IP_SCOPE_PRIVATE:
+											case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+											case InetAddress::IP_SCOPE_SHARED:
+											case InetAddress::IP_SCOPE_GLOBAL:
+												ip.setPort(_port);
+												_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
+												break;
+											default:
+												break;
+										}
+									}
+								}
+							}
+							ifa = ifa->ifa_next;
+						}
+						freeifaddrs(ifatbl);
+					}
+#endif // __UNIX_LIKE__
+
+#ifdef __WINDOWS__
+					std::vector<NET_LUID> ztDevices;
+					{
+						Mutex::Lock _l(_taps_m);
+						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
+							ztDevices.push_back(t->second->deviceName());
+					}
+
+					// TODO
+#endif // __WINDOWS__
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
@@ -1157,6 +1224,8 @@ private:
 	ReasonForTermination _termReason;
 	std::string _fatalErrorMessage;
 	Mutex _termReason_m;
+
+	unsigned int _port;
 
 	bool _run;
 	Mutex _run_m;
