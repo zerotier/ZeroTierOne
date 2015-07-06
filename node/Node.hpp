@@ -43,6 +43,7 @@
 #include "Mutex.hpp"
 #include "MAC.hpp"
 #include "Network.hpp"
+#include "Path.hpp"
 
 #undef TRACE
 #ifdef ZT_TRACE
@@ -171,6 +172,12 @@ public:
 		return nw;
 	}
 
+	inline std::vector<Path> directPaths() const
+	{
+		Mutex::Lock _l(_directPaths_m);
+		return _directPaths;
+	}
+
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,(const void *)0,0,0); }
@@ -235,6 +242,9 @@ private:
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
+
+	std::vector<Path> _directPaths;
+	Mutex _directPaths_m;
 
 	Mutex _backgroundTasksLock;
 

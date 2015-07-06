@@ -733,10 +733,16 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
+		if (nwid) {
+			// If this packet has an associated network, give the peer additional hints for direct connectivity
+			peer->pushDirectPaths(RR,RR->node->directPaths(),now,false);
+		}
+
 		RemotePath *viaPath = peer->getBestPath(now);
 		if (!viaPath) {
 			SharedPtr<Peer> relay;
 
+			// See if this network has a preferred relay (if packet has an associated network)
 			if (nwid) {
 				SharedPtr<Network> network(RR->node->network(nwid));
 				if (network) {
@@ -754,6 +760,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				}
 			}
 
+			// Otherwise relay off a root server
 			if (!relay)
 				relay = RR->topology->getBestRoot();
 
@@ -770,7 +777,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 
 		if (viaPath->send(RR,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {
-				// Too big for one bite, fragment the rest
+				// Too big for one packet, fragment the rest
 				unsigned int fragStart = chunkSize;
 				unsigned int remaining = tmp.size() - chunkSize;
 				unsigned int fragsRemaining = (remaining / (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
@@ -786,6 +793,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 					remaining -= chunkSize;
 				}
 			}
+
 			return true;
 		}
 	} else {
