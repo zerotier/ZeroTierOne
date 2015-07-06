@@ -78,8 +78,7 @@ Node::Node(
 	_networks_m(),
 	_now(now),
 	_lastPingCheck(0),
-	_lastHousekeepingRun(0),
-	_lastBeacon(0)
+	_lastHousekeepingRun(0)
 {
 	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
@@ -269,19 +268,6 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			_online = ((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT);
 			if (oldOnline != _online)
 				postEvent(_online ? ZT1_EVENT_ONLINE : ZT1_EVENT_OFFLINE);
-
-			// Send LAN beacons
-			if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
-				_lastBeacon = now;
-				char beacon[13];
-				void *p = beacon;
-				*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
-				p = beacon + 4;
-				*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
-				RR->identity.address().copyTo(beacon + 8,5);
-				RR->antiRec->logOutgoingZT(beacon,13);
-				putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13);
-			}
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}

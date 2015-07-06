@@ -210,8 +210,11 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> &dps,uint64_t now,bool force)
 {
-	if (((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
+	if ((!dps.empty())&&(((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
 		_lastDirectPathPush = now;
+
+		TRACE("pushing %u direct paths to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
+		printf("pushing %u direct paths to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
 
 		std::vector<Path>::const_iterator p(dps.begin());
 		while (p != dps.end()) {
@@ -254,6 +257,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> 
 				outp.append((uint8_t)((p->metric() >= 0) ? ((p->metric() <= 255) ? p->metric() : 255) : 0));
 				outp.append((uint16_t)0);
 				outp.append(addressType);
+				outp.append((addressType == 4) ? 6 : 18);
 				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));
 				outp.append((uint16_t)p->address().port());
 

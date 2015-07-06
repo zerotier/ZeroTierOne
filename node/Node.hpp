@@ -251,7 +251,6 @@ private:
 	uint64_t _now;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
-	uint64_t _lastBeacon;
 	unsigned int _newestVersionSeen[3]; // major, minor, revision
 	bool _online;
 };

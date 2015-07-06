@@ -183,12 +183,10 @@ public:
 private:
 	void _handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len);
 	void _handleRemotePacketHead(const InetAddress &fromAddr,const void *data,unsigned int len);
-	void _handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
 
 	const RuntimeEnvironment *const RR;
-	volatile uint64_t _lastBeacon;
 
 	// Outsanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest

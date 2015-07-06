@@ -305,16 +305,6 @@
 #define ZT_ANTIRECURSION_HISTORY_SIZE 16
 
 /**
- * How often to send LAN beacons
- */
-#define ZT_BEACON_INTERVAL 30000
-
-/**
- * Do not respond to any beacon more often than this
- */
-#define ZT_MIN_BEACON_RESPONSE_INTERVAL 2500
-
-/**
  * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
  */
 #define ZT_MIN_PATH_CONFIRMATION_INTERVAL 5000

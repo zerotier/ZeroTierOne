@@ -233,16 +233,6 @@
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
-/**
- * DEPRECATED: length of LAN beacon packets
- */
-#define ZT_PROTO_BEACON_LENGTH 13
-
-/**
- * DEPRECATED: index of address in a LAN beacon
- */
-#define ZT_PROTO_BEACON_IDX_ADDRESS 8
-
 // Destination address types from HELLO, OK(HELLO), and other message types
 #define ZT_PROTO_DEST_ADDRESS_TYPE_NONE 0
 #define ZT_PROTO_DEST_ADDRESS_TYPE_ZEROTIER 1   // reserved but unused
@@ -388,16 +378,6 @@ namespace ZeroTier {
  *
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
  * sent in the clear, as it's the "here is my public key" message.
- *
- * Beacon format and beacon packets:
- *   <[8] 8 random bytes>
- *   <[5] sender ZT address>
- *
- * A beacon is a 13-byte packet containing only the address of the sender.
- * Receiving peers may or may not respond to beacons with a HELLO or other
- * message to initiate direct communication.
- *
- * Beacons may be used for direct LAN announcement or NAT traversal.
  */
 class Packet : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 {
@@ -901,6 +881,7 @@ public:
 		 *   <[2] length of extended path characteristics or 0 for none>
 		 *   <[...] extended path characteristics>
 		 *   <[1] address type>
+		 *   <[1] address length in bytes>
 		 *   <[...] address>
 		 *
 		 * Path record flags:

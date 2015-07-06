@@ -885,6 +885,36 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 
 bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
+	try {
+		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
+		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
+
+		while (count) { // if ptr overflows Buffer will throw
+			unsigned int flags = (*this)[ptr++];
+			/*int metric = (*this)[ptr++];*/ ++ptr;
+			unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
+			ptr += extLen; // unused right now
+			unsigned int addrType = (*this)[ptr++];
+			unsigned int addrLen = (*this)[ptr++];
+			switch(addrType) {
+				case 4: {
+					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
+					if ((flags & (0x01 | 0x02)) == 0)
+						peer->attemptToContactAt(RR,a,RR->node->now());
+				}	break;
+				case 6: {
+					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
+					if ((flags & (0x01 | 0x02)) == 0)
+						peer->attemptToContactAt(RR,a,RR->node->now());
+				}	break;
+			}
+			ptr += addrLen;
+		}
+	} catch (std::exception &exc) {
+		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
 	return true;
 }
 

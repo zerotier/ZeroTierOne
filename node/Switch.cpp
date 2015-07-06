@@ -49,8 +49,7 @@
 namespace ZeroTier {
 
 Switch::Switch(const RuntimeEnvironment *renv) :
-	RR(renv),
-	_lastBeacon(0)
+	RR(renv)
 {
 }
 
@@ -61,9 +60,7 @@ Switch::~Switch()
 void Switch::onRemotePacket(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
-		if (len == ZT_PROTO_BEACON_LENGTH) {
-			_handleBeacon(fromAddr,Buffer<ZT_PROTO_BEACON_LENGTH>(data,len));
-		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+		if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (((const unsigned char *)data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				_handleRemotePacketFragment(fromAddr,data,len);
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) {
@@ -692,23 +689,6 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,const void *dat
 		if (!packet->tryDecode(RR)) {
 			Mutex::Lock _l(_rxQueue_m);
 			_rxQueue.push_back(packet);
-		}
-	}
-}
-
-void Switch::_handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data)
-{
-	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-	if (beaconAddr == RR->identity.address())
-		return;
-	SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
-	if (peer) {
-		const uint64_t now = RR->node->now();
-		if ((now - _lastBeacon) >= ZT_MIN_BEACON_RESPONSE_INTERVAL) {
-			_lastBeacon = now;
-			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-			outp.armor(peer->key(),false);
-			RR->node->putPacket(fromAddr,outp.data(),outp.size());
 		}
 	}
 }
