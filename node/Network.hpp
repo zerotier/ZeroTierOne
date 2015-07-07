@@ -179,9 +179,9 @@ public:
 	 * Add or update a membership certificate
 	 *
 	 * @param cert Certificate of membership
-	 * @param forceAccept If true, accept without validating signature
+	 * @return True if certificate was accepted as valid
 	 */
-	void addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept);
+	bool validateAndAddMembershipCertificate(const CertificateOfMembership &cert);
 
 	/**
 	 * Check if we should push membership certificate to a peer, and update last pushed

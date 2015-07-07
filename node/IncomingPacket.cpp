@@ -429,7 +429,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
 					SharedPtr<Network> network(RR->node->network(nwid));
 					if ((network)&&(com.hasRequiredFields()))
-						network->addMembershipCertificate(com,false);
+						network->validateAndAddMembershipCertificate(com);
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -558,7 +558,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 					if (com.hasRequiredFields())
-						network->addMembershipCertificate(com,false);
+						network->validateAndAddMembershipCertificate(com);
 				}
 
 				if (!network->isAllowed(peer->address())) {
@@ -648,7 +648,7 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 			if (com.hasRequiredFields()) {
 				SharedPtr<Network> network(RR->node->network(com.networkId()));
 				if (network)
-					network->addMembershipCertificate(com,false);
+					network->validateAndAddMembershipCertificate(com);
 			}
 		}
 
@@ -806,7 +806,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 				if (com.hasRequiredFields())
-					network->addMembershipCertificate(com,false);
+					network->validateAndAddMembershipCertificate(com);
 			}
 
 			// Check membership after we've read any included COM, since

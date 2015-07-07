@@ -680,12 +680,6 @@ public:
 		 *
 		 * Certificate contains network ID, peer it was issued for, etc.
 		 *
-		 * Note that in the current code base, separate COM pushes are not done.
-		 * Instead the "bundled COM" options are utilized in EXT_FRAME and
-		 * MULTICAST_FRAME to push the COM along with frames. This is slightly
-		 * more efficient. But we'll keep this simple message around in case we
-		 * want to use it in the future.
-		 *
 		 * OK/ERROR are not generated.
 		 */
 		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,

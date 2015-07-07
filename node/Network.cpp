@@ -267,53 +267,55 @@ void Network::requestConfiguration()
 	RR->sw->send(outp,true,_id);
 }
 
-void Network::addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept)
+bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership &cert)
 {
 	if (!cert) // sanity check
-		return;
+		return false;
 
 	Mutex::Lock _l(_lock);
 	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
 
 	// Nothing to do if the cert hasn't changed -- we get duplicates due to zealous cert pushing
 	if (old == cert)
-		return;
+		return true; // but if it's a duplicate of one we already accepted, return is 'true'
 
 	// Check signature, log and return if cert is invalid
-	if (!forceAccept) {
-		if (cert.signedBy() != controller()) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return;
+	if (cert.signedBy() != controller()) {
+		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
+		return false; // invalid signer
+	}
+
+	if (cert.signedBy() == RR->identity.address()) {
+
+		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
+		// So, verify that we signed th cert ourself
+		if (!cert.verify(RR->identity)) {
+			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			return false; // invalid signature
 		}
 
-		if (cert.signedBy() == RR->identity.address()) {
-			// We are the controller: RR->identity.address() == controller() == cert.signedBy()
-			// So, verify that we signed th cert ourself
-			if (!cert.verify(RR->identity)) {
-				TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-				return;
-			}
-		} else {
+	} else {
 
-			SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
+		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
 
-			if (!signer) {
-				// This would be rather odd, since this is our controller... could happen
-				// if we get packets before we've gotten config.
-				RR->sw->requestWhois(cert.signedBy());
-				return;
-			}
+		if (!signer) {
+			// This would be rather odd, since this is our controller... could happen
+			// if we get packets before we've gotten config.
+			RR->sw->requestWhois(cert.signedBy());
+			return false; // signer unknown
+		}
 
-			if (!cert.verify(signer->identity())) {
-				TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-				return;
-			}
+		if (!cert.verify(signer->identity())) {
+			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			return false; // invalid signature
 		}
 	}
 
 	// If we made it past authentication, update cert
 	if (cert.revision() != old.revision())
 		old = cert;
+
+	return true;
 }
 
 bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
