@@ -900,14 +900,12 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
 					if ((flags & (0x01 | 0x02)) == 0) {
-						printf("contacting %s at %s\r\n",peer->address().toString().c_str(),a.toString().c_str());
 						peer->attemptToContactAt(RR,a,RR->node->now());
 					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
 					if ((flags & (0x01 | 0x02)) == 0) {
-						printf("contacting %s at %s\r\n",peer->address().toString().c_str(),a.toString().c_str());
 						peer->attemptToContactAt(RR,a,RR->node->now());
 					}
 				}	break;
