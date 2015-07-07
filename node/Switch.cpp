@@ -162,37 +162,33 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		// Destination is another ZeroTier peer on the same network
 
-		Address toZT(to.toAddress(network->id()));
-		if (network->isAllowed(toZT)) {
-			const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
-			if ((fromBridged)||(includeCom)) {
-				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
-				outp.append(network->id());
-				if (includeCom) {
-					outp.append((unsigned char)0x01); // 0x01 -- COM included
-					nconf->com().serialize(outp);
-				} else {
-					outp.append((unsigned char)0x00);
-				}
-				to.appendTo(outp);
-				from.appendTo(outp);
-				outp.append((uint16_t)etherType);
-				outp.append(data,len);
-				outp.compress();
-				send(outp,true,network->id());
+		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
+		const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
+		if ((fromBridged)||(includeCom)) {
+			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(network->id());
+			if (includeCom) {
+				outp.append((unsigned char)0x01); // 0x01 -- COM included
+				nconf->com().serialize(outp);
 			} else {
-				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
-				outp.append(network->id());
-				outp.append((uint16_t)etherType);
-				outp.append(data,len);
-				outp.compress();
-				send(outp,true,network->id());
+				outp.append((unsigned char)0x00);
 			}
-
-			//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
+			to.appendTo(outp);
+			from.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(data,len);
+			outp.compress();
+			send(outp,true,network->id());
 		} else {
-			TRACE("%.16llx: UNICAST: %s -> %s etherType==%s dropped, destination not a member of private network",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
+			outp.append(network->id());
+			outp.append((uint16_t)etherType);
+			outp.append(data,len);
+			outp.compress();
+			send(outp,true,network->id());
 		}
+
+		//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
 
 		return;
 	}
@@ -205,7 +201,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 
 		/* Create an array of up to ZT_MAX_BRIDGE_SPAM recipients for this bridged frame. */
 		bridges[0] = network->findBridgeTo(to);
-		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
+		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->permitsBridging(bridges[0]))) {
 			/* We have a known bridge route for this MAC, send it there. */
 			++numBridges;
 		} else if (!nconf->activeBridges().empty()) {
@@ -215,8 +211,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
 				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, spam them all
 				while (ab != nconf->activeBridges().end()) {
-					if (network->isAllowed(*ab)) // config sanity check
-						bridges[numBridges++] = *ab;
+					bridges[numBridges++] = *ab;
 					++ab;
 				}
 			} else {
@@ -225,8 +220,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 					if (ab == nconf->activeBridges().end())
 						ab = nconf->activeBridges().begin();
 					if (((unsigned long)RR->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0) {
-						if (network->isAllowed(*ab)) // config sanity check
-							bridges[numBridges++] = *ab;
+						bridges[numBridges++] = *ab;
 						++ab;
 					} else ++ab;
 				}
@@ -703,29 +697,28 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
+		SharedPtr<Network> network;
+		SharedPtr<NetworkConfig> nconf;
 		if (nwid) {
-			// If this packet has an associated network, give the peer additional hints for direct connectivity
-			peer->pushDirectPaths(RR,RR->node->directPaths(),now,false);
+			network = RR->node->network(nwid);
+			if (!network)
+				return false; // we probably just left this network, let its packets die
+			nconf = network->config2();
+			if (!nconf)
+				return false; // sanity check: unconfigured network? why are we trying to talk to it?
 		}
 
 		RemotePath *viaPath = peer->getBestPath(now);
+		SharedPtr<Peer> relay;
 		if (!viaPath) {
-			SharedPtr<Peer> relay;
-
 			// See if this network has a preferred relay (if packet has an associated network)
-			if (nwid) {
-				SharedPtr<Network> network(RR->node->network(nwid));
-				if (network) {
-					SharedPtr<NetworkConfig> nconf(network->config2());
-					if (nconf) {
-						unsigned int latency = ~((unsigned int)0);
-						for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
-							if (r->first != peer->address()) {
-								SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-								if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
-									rp.swap(relay);
-							}
-						}
+			if (nconf) {
+				unsigned int latency = ~((unsigned int)0);
+				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
+					if (r->first != peer->address()) {
+						SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
+						if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
+							rp.swap(relay);
 					}
 				}
 			}
@@ -735,7 +728,12 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				relay = RR->topology->getBestRoot();
 
 			if (!(relay)||(!(viaPath = relay->getBestPath(now))))
-				return false;
+				return false; // no paths, no root servers?
+		}
+
+		if ((network)&&(relay)&&(network->isAllowed(peer->address()))) {
+			// Push hints for direct connectivity to this peer if we are relaying
+			peer->pushDirectPaths(RR,viaPath,now,false);
 		}
 
 		Packet tmp(packet);

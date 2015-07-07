@@ -661,21 +661,8 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 			ptr += com.deserialize(*this,ptr);
 			if (com.hasRequiredFields()) {
 				SharedPtr<Network> network(RR->node->network(com.networkId()));
-				if (network) {
-					if (network->validateAndAddMembershipCertificate(com)) {
-						if ((network->isAllowed(peer->address()))&&(network->peerNeedsOurMembershipCertificate(peer->address(),RR->node->now()))) {
-							// If peer passed our check and we haven't sent it our cert yet, respond
-							// and push our cert as well for instant authorization setup.
-							SharedPtr<NetworkConfig> nconf(network->config2());
-							if ((nconf)&&(nconf->com())) {
-								Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-								nconf->com().serialize(outp);
-								outp.armor(peer->key(),true);
-								RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
-							}
-						}
-					}
-				}
+				if (network)
+					network->validateAndAddMembershipCertificate(com);
 			}
 		}
 

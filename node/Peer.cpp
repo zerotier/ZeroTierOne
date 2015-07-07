@@ -208,12 +208,13 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> &dps,uint64_t now,bool force)
+void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
-	if ((!dps.empty())&&(((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
+	if ((((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
 		_lastDirectPathPush = now;
 
-		TRACE("pushing %u direct paths to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
+		std::vector<Path> dps(RR->node->directPaths());
+		TRACE("pushing %u direct paths (local interface addresses) to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
 
 		std::vector<Path>::const_iterator p(dps.begin());
 		while (p != dps.end()) {
@@ -266,7 +267,8 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> 
 
 			if (count) {
 				outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-				RR->sw->send(outp,true,0);
+				outp.armor(_key,true);
+				path->send(RR,outp.data(),outp.size(),now);
 			}
 		}
 	}

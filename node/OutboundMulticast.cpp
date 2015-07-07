@@ -102,13 +102,9 @@ void OutboundMulticast::init(
 
 void OutboundMulticast::sendOnly(const RuntimeEnvironment *RR,const Address &toAddr)
 {
-	SharedPtr<Network> network(RR->node->network(_nwid));
-
-	if (!network)
-		return;
-
 	if (_haveCom) {
-		if (network->peerNeedsOurMembershipCertificate(toAddr,RR->node->now())) {
+		SharedPtr<Network> network(RR->node->network(_nwid));
+		if ((network)&&(network->peerNeedsOurMembershipCertificate(toAddr,RR->node->now()))) {
 			_packetWithCom.newInitializationVector();
 			_packetWithCom.setDestination(toAddr);
 			//TRACE(">>MC %.16llx -> %s (with COM)",(unsigned long long)this,toAddr.toString().c_str());

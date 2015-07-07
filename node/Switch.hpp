@@ -108,10 +108,13 @@ public:
 	 * 
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
+	 *
+	 * The network ID should only be specified for frames and other actual
+	 * network traffic.
 	 * 
 	 * @param packet Packet to send
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
-	 * @param nwid Network ID or 0 if message is not related to a specific network
+	 * @param nwid Related network ID or 0 if message is not in-network traffic
 	 */
 	void send(const Packet &packet,bool encrypt,uint64_t nwid);
 

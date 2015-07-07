@@ -678,10 +678,10 @@ public:
 		 *   <[...] serialized certificate of membership>
 		 *   [ ... additional certificates may follow ...]
 		 *
-		 * OK/ERROR are not generated, but the recipient should push its network
-		 * membership certificate if the certificate the peer pushed is valid
-		 * and agrees and if it hasn't done so in too long. This ensures instant
-		 * network authentication setup between valid and authorized peers.
+		 * This is sent in response to ERROR_NEED_MEMBERSHIP_CERTIFICATE and may
+		 * be pushed at any other time to keep exchanged certificates up to date.
+		 *
+		 * OK/ERROR are not generated.
 		 */
 		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
 

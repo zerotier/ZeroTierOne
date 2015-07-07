@@ -179,14 +179,14 @@ public:
 	void doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
-	 * Push direct paths (if within rate limit)
+	 * Push direct paths if we haven't done so in [rate limit] milliseconds
 	 *
 	 * @param RR Runtime environment
-	 * @param dps Direct paths to me to push to this peer
+	 * @param path Remote path to use to send the push
 	 * @param now Current time
-	 * @param force If true, force regardless of when we pushed direct paths last
+	 * @param force If true, push regardless of rate limit
 	 */
-	void pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> &dps,uint64_t now,bool force);
+	void pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer

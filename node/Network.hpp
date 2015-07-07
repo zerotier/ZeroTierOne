@@ -184,7 +184,7 @@ public:
 	bool validateAndAddMembershipCertificate(const CertificateOfMembership &cert);
 
 	/**
-	 * Check if we should push membership certificate to a peer, and update last pushed
+	 * Check if we should push membership certificate to a peer, AND update last pushed
 	 *
 	 * If we haven't pushed a cert to this peer in a long enough time, this returns
 	 * true and updates the last pushed time. Otherwise it returns false.
