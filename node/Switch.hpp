@@ -177,13 +177,6 @@ public:
 	 */
 	unsigned long doTimerTasks(uint64_t now);
 
-	/**
-	 * @param etherType Ethernet type ID
-	 * @return Human-readable name
-	 */
-	static const char *etherTypeName(const unsigned int etherType)
-		throw();
-
 private:
 	void _handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len);
 	void _handleRemotePacketHead(const InetAddress &fromAddr,const void *data,unsigned int len);

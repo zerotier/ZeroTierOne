@@ -48,6 +48,23 @@
 
 namespace ZeroTier {
 
+#ifdef ZT_TRACE
+static const char *etherTypeName(const unsigned int etherType)
+{
+	switch(etherType) {
+		case ZT_ETHERTYPE_IPV4:  return "IPV4";
+		case ZT_ETHERTYPE_ARP:   return "ARP";
+		case ZT_ETHERTYPE_RARP:  return "RARP";
+		case ZT_ETHERTYPE_ATALK: return "ATALK";
+		case ZT_ETHERTYPE_AARP:  return "AARP";
+		case ZT_ETHERTYPE_IPX_A: return "IPX_A";
+		case ZT_ETHERTYPE_IPX_B: return "IPX_B";
+		case ZT_ETHERTYPE_IPV6:  return "IPV6";
+	}
+	return "UNKNOWN";
+}
+#endif // ZT_TRACE
+
 Switch::Switch(const RuntimeEnvironment *renv) :
 	RR(renv)
 {
@@ -517,22 +534,6 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	}
 
 	return nextDelay;
-}
-
-const char *Switch::etherTypeName(const unsigned int etherType)
-	throw()
-{
-	switch(etherType) {
-		case ZT_ETHERTYPE_IPV4:  return "IPV4";
-		case ZT_ETHERTYPE_ARP:   return "ARP";
-		case ZT_ETHERTYPE_RARP:  return "RARP";
-		case ZT_ETHERTYPE_ATALK: return "ATALK";
-		case ZT_ETHERTYPE_AARP:  return "AARP";
-		case ZT_ETHERTYPE_IPX_A: return "IPX_A";
-		case ZT_ETHERTYPE_IPX_B: return "IPX_B";
-		case ZT_ETHERTYPE_IPV6:  return "IPV6";
-	}
-	return "UNKNOWN";
 }
 
 void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len)
