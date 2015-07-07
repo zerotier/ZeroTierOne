@@ -256,7 +256,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,const std::vector<Path> 
 				outp.append((uint8_t)((p->metric() >= 0) ? ((p->metric() <= 255) ? p->metric() : 255) : 0));
 				outp.append((uint16_t)0);
 				outp.append(addressType);
-				outp.append((addressType == 4) ? 6 : 18);
+				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
 				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));
 				outp.append((uint16_t)p->address().port());
 
