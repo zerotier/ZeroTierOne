@@ -110,7 +110,8 @@ public:
 	 * won't be encrypted right. (This is not used for relaying.)
 	 *
 	 * The network ID should only be specified for frames and other actual
-	 * network traffic.
+	 * network traffic. Other traffic such as controller requests and regular
+	 * protocol messages should specify zero.
 	 * 
 	 * @param packet Packet to send
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
