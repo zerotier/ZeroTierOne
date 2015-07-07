@@ -156,7 +156,10 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			}	break;
 
 			case Packet::ERROR_UNWANTED_MULTICAST: {
-				// TODO: unsubscribe
+				uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD);
+				MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
+				TRACE("%.16llx: peer %s unsubscrubed from multicast group %s",nwid,peer->address().toString().c_str(),mg.toString().c_str());
+				RR->mc->remove(nwid,mg,peer->address());
 			}	break;
 
 			default: break;

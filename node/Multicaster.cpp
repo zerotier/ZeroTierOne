@@ -61,6 +61,20 @@ void Multicaster::addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &m
 	}
 }
 
+void Multicaster::remove(uint64_t nwid,const MulticastGroup &mg,const Address &member)
+{
+	Mutex::Lock _l(_groups_m);
+	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::iterator g(_groups.find(std::pair<uint64_t,MulticastGroup>(nwid,mg)));
+	if (g != _groups.end()) {
+		for(std::vector<MulticastGroupMember>::iterator m(g->second.members.begin());m!=g->second.members.end();++m) {
+			if (m->address == member) {
+				g->second.members.erase(m);
+				break;
+			}
+		}
+	}
+}
+
 unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Packet &appendTo,unsigned int limit) const
 {
 	unsigned char *p;
