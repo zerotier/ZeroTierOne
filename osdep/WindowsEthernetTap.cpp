@@ -692,17 +692,20 @@ void WindowsEthernetTap::threadMain()
 					ULONGLONG tc = GetTickCount64();
 					if ((tc - timeOfLastBorkCheck) >= 2500) {
 						timeOfLastBorkCheck = tc;
-						MIB_IF_TABLE2 *ift = NULL;
-						if ((GetIfTable2(&ift) == NO_ERROR)&&(ift)) {
+						char aabuf[16384];
+						ULONG aalen = sizeof(aabuf);
+						if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_UNICAST|GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER|GAA_FLAG_SKIP_FRIENDLY_NAME,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
 							bool isBorked = false;
-							for(ULONG r=0;r<ift->NumEntries;++r) {
-								if (ift->Table[r].InterfaceLuid.Value == _deviceLuid.Value) {
-									if ((ift->Table[r].InterfaceAndOperStatusFlags.NotMediaConnected)||(ift->Table[r].MediaConnectState == MediaConnectStateDisconnected))
-										isBorked = true;
+
+							PIP_ADAPTER_ADDRESSES aa = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
+							while (aa) {
+								if (_deviceLuid.Value == aa->Luid.Value) {
+									isBorked = (aa->OperStatus != IfOperStatusUp);
 									break;
 								}
+								aa = aa->Next;
 							}
-							FreeMibTable(ift);
+
 							if (isBorked) {
 								// Close and reopen tap device if there's an issue (outer loop)
 								break;
