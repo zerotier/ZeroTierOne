@@ -42,7 +42,6 @@
 #include "InetAddress.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
-#include "CMWC4096.hpp"
 #include "AntiRecursion.hpp"
 #include "Packet.hpp"
 
@@ -236,7 +235,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
 					if (ab == nconf->activeBridges().end())
 						ab = nconf->activeBridges().begin();
-					if (((unsigned long)RR->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0) {
+					if (((unsigned long)RR->node->prng() % (unsigned long)nconf->activeBridges().size()) == 0) {
 						bridges[numBridges++] = *ab;
 						++ab;
 					} else ++ab;
@@ -327,7 +326,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	 * the order we make each attempted NAT-t favor one or the other going
 	 * first, meaning if it doesn't succeed the first time it might the second
 	 * and so forth. */
-	unsigned int alt = RR->prng->next32() & 1;
+	unsigned int alt = (unsigned int)RR->node->prng() & 1;
 	unsigned int completed = alt + 2;
 	while (alt != completed) {
 		if ((alt & 1) == 0) {

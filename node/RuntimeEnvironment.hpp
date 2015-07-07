@@ -38,7 +38,6 @@ namespace ZeroTier {
 class NodeConfig;
 class Switch;
 class Topology;
-class CMWC4096;
 class Node;
 class Multicaster;
 class AntiRecursion;
@@ -55,7 +54,6 @@ public:
 		node(n),
 		identity(),
 		localNetworkController((NetworkController *)0),
-		prng((CMWC4096 *)0),
 		sw((Switch *)0),
 		mc((Multicaster *)0),
 		antiRec((AntiRecursion *)0),
@@ -83,7 +81,6 @@ public:
 	 * These are constant and never null after startup unless indicated.
 	 */
 
-	CMWC4096 *prng;
 	Switch *sw;
 	Multicaster *mc;
 	AntiRecursion *antiRec;

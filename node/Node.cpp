@@ -37,7 +37,6 @@
 #include "Node.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NetworkController.hpp"
-#include "CMWC4096.hpp"
 #include "Switch.hpp"
 #include "Multicaster.hpp"
 #include "AntiRecursion.hpp"
@@ -76,6 +75,7 @@ Node::Node(
 	_eventCallback(eventCallback),
 	_networks(),
 	_networks_m(),
+	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0)
@@ -84,6 +84,15 @@ Node::Node(
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
 	_newestVersionSeen[2] = ZEROTIER_ONE_VERSION_REVISION;
 	_online = false;
+
+	// Use Salsa20 alone as a high-quality non-crypto PRNG
+	{
+		char foo[32];
+		Utils::getSecureRandom(foo,32);
+		_prng.init(foo,256,foo,8);
+		memset(_prngStream,0,sizeof(_prngStream));
+		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
+	}
 
 	std::string idtmp(dataStoreGet("identity.secret"));
 	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
@@ -103,7 +112,6 @@ Node::Node(
 	}
 
 	try {
-		RR->prng = new CMWC4096();
 		RR->sw = new Switch(RR);
 		RR->mc = new Multicaster(RR);
 		RR->antiRec = new AntiRecursion();
@@ -115,7 +123,6 @@ Node::Node(
 		delete RR->antiRec;
 		delete RR->mc;
 		delete RR->sw;
-		delete RR->prng;
 		throw;
 	}
 
@@ -146,7 +153,6 @@ Node::~Node()
 	delete RR->antiRec;
 	delete RR->mc;
 	delete RR->sw;
-	delete RR->prng;
 }
 
 ZT1_ResultCode Node::processWirePacket(
@@ -509,6 +515,14 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 	postEvent(ZT1_EVENT_TRACE,tmp1);
 }
 #endif // ZT_TRACE
+
+uint64_t Node::prng()
+{
+	unsigned int p = (++_prngStreamPtr % (sizeof(_prngStream) / sizeof(uint64_t)));
+	if (!p)
+		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
+	return _prngStream[p];
+}
 
 } // namespace ZeroTier
 

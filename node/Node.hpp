@@ -44,6 +44,7 @@
 #include "MAC.hpp"
 #include "Network.hpp"
 #include "Path.hpp"
+#include "Salsa20.hpp"
 
 #undef TRACE
 #ifdef ZT_TRACE
@@ -219,6 +220,11 @@ public:
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
 
+	/**
+	 * @return Next 64-bit random number (not for cryptographic use)
+	 */
+	uint64_t prng();
+
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
@@ -252,6 +258,10 @@ private:
 	Mutex _directPaths_m;
 
 	Mutex _backgroundTasksLock;
+
+	unsigned int _prngStreamPtr;
+	Salsa20 _prng;
+	uint64_t _prngStream[16]; // repeatedly encrypted with _prng to yield a high-quality non-crypto PRNG stream
 
 	uint64_t _now;
 	uint64_t _lastPingCheck;
