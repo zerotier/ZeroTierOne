@@ -978,12 +978,19 @@ void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr);
  * Take care that these are never ZeroTier interface addresses, otherwise
  * strange things might happen or they simply won't work.
  *
+ * This returns a boolean indicating whether or not the address was
+ * accepted. ZeroTier will only communicate over certain address types
+ * and (for IP) address classes. Thus it's safe to just dump your OS's
+ * entire remote IP list (excluding ZeroTier interface IPs) into here
+ * and let ZeroTier determine which addresses it will use.
+ *
  * @param addr Local interface address
  * @param metric Local interface metric
  * @param trust How much do you trust the local network under this interface?
  * @param reliable If nonzero, this interface doesn't link to anything behind a NAT or stateful firewall
+ * @return Boolean: non-zero if address was accepted and added
  */
-void ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
+int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
 
 /**
  * Clear local interface addresses

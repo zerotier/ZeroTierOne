@@ -94,6 +94,39 @@ public:
 	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
 	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
 
+	/**
+	 * Check whether this address is valid for a ZeroTier path
+	 *
+	 * This checks the address type and scope against address types and scopes
+	 * that we currently support for ZeroTier communication.
+	 *
+	 * @param a Address to check
+	 * @return True if address is good for ZeroTier path use
+	 */
+	static inline bool isAddressValidForPath(const InetAddress &a)
+		throw()
+	{
+		if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
+			switch(a.ipScope()) {
+				/* Note: we don't do link-local at the moment. Unfortunately these
+				 * cause several issues. The first is that they usually require a
+				 * device qualifier, which we don't handle yet and can't portably
+				 * push in PUSH_DIRECT_PATHS. The second is that some OSes assign
+				 * these very ephemerally or otherwise strangely. So we'll use
+				 * private, pseudo-private, shared (e.g. carrier grade NAT), or
+				 * global IP addresses. */
+				case InetAddress::IP_SCOPE_PRIVATE:
+				case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+				case InetAddress::IP_SCOPE_SHARED:
+				case InetAddress::IP_SCOPE_GLOBAL:
+					return true;
+				default:
+					return false;
+			}
+		}
+		return false;
+	}
+
 protected:
 	InetAddress _addr;
 	int _metric; // negative == blacklisted

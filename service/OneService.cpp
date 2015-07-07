@@ -591,20 +591,8 @@ public:
 								}
 								if (!isZT) {
 									InetAddress ip(ifa->ifa_addr);
-									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
-										switch(ip.ipScope()) {
-											case InetAddress::IP_SCOPE_LINK_LOCAL:
-											case InetAddress::IP_SCOPE_PRIVATE:
-											case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-											case InetAddress::IP_SCOPE_SHARED:
-											case InetAddress::IP_SCOPE_GLOBAL:
-												ip.setPort(_port);
-												_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
-												break;
-											default:
-												break;
-										}
-									}
+									ip.setPort(_port);
+									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
 								}
 							}
 							ifa = ifa->ifa_next;
@@ -637,20 +625,8 @@ public:
 								PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
 								while (ua) {
 									InetAddress ip(ua->Address.lpSockaddr);
-									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
-										switch(ip.ipScope()) {
-											case InetAddress::IP_SCOPE_LINK_LOCAL:
-											case InetAddress::IP_SCOPE_PRIVATE:
-											case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-											case InetAddress::IP_SCOPE_SHARED:
-											case InetAddress::IP_SCOPE_GLOBAL:
-												ip.setPort(_port);
-												_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
-												break;
-											default:
-												break;
-										}
-									}
+									ip.setPort(_port);
+									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
 									ua = ua->Next;
 								}
 							}

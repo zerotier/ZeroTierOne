@@ -134,6 +134,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				break;
 
 			case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
+				/* Note: certificates are public so it's safe to push them to anyone
+				 * who asks. We won't communicate unless we also get a certificate
+				 * from the remote that agrees. */
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 				if (network) {
 					SharedPtr<NetworkConfig> nconf(network->config2());
@@ -170,8 +173,20 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 {
+	/* Note: this is the only packet ever sent in the clear, and it's also
+	 * the only packet that we authenticate via a different path. Authentication
+	 * occurs here and is based on the validity of the identity and the
+	 * integrity of the packet's MAC, but it must be done after we check
+	 * the identity since HELLO is a mechanism for learning new identities
+	 * in the first place. */
+
 	try {
 		const unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
+		if (protoVersion < ZT_PROTO_VERSION_MIN) {
+			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+
 		const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
@@ -179,6 +194,10 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 		Identity id;
 		unsigned int destAddrPtr = id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY) + ZT_PROTO_VERB_HELLO_IDX_IDENTITY;
+		if (source() != id.address()) {
+			TRACE("dropped HELLO from %s(%s): identity not for sending address",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
 
 		InetAddress destAddr;
 		if (destAddrPtr < size()) { // ZeroTier One < 1.0.3 did not include this field
@@ -191,16 +210,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 					destAddr.set(field(destAddrPtr,16),16,at<uint16_t>(destAddrPtr + 16));
 					break;
 			}
-		}
-
-		if (source() != id.address()) {
-			TRACE("dropped HELLO from %s(%s): identity not for sending address",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-
-		if (protoVersion < ZT_PROTO_VERSION_MIN) {
-			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
 		}
 
 		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
@@ -245,12 +254,14 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		} else {
 			// We don't already have an identity with this address -- validate and learn it
 
+			// Check identity proof of work
 			if (!id.locallyValidate()) {
 				RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
 
+			// Check packet integrity and authentication
 			SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
 			if (!dearmor(newPeer->key())) {
 				RR->node->postEvent(ZT1_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
@@ -554,14 +565,17 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				const unsigned int flags = (*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS];
 
 				unsigned int comLen = 0;
+				bool comFailed = false;
 				if ((flags & 0x01) != 0) {
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					if (com.hasRequiredFields())
-						network->validateAndAddMembershipCertificate(com);
+					if (com.hasRequiredFields()) {
+						if (!network->validateAndAddMembershipCertificate(com))
+							comFailed = true; // technically this check is redundant to isAllowed(), but do it anyway for thoroughness
+					}
 				}
 
-				if (!network->isAllowed(peer->address())) {
+				if ((comFailed)||(!network->isAllowed(peer->address()))) {
 					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
 					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
@@ -647,8 +661,21 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 			ptr += com.deserialize(*this,ptr);
 			if (com.hasRequiredFields()) {
 				SharedPtr<Network> network(RR->node->network(com.networkId()));
-				if (network)
-					network->validateAndAddMembershipCertificate(com);
+				if (network) {
+					if (network->validateAndAddMembershipCertificate(com)) {
+						if ((network->isAllowed(peer->address()))&&(network->peerNeedsOurMembershipCertificate(peer->address(),RR->node->now()))) {
+							// If peer passed our check and we haven't sent it our cert yet, respond
+							// and push our cert as well for instant authorization setup.
+							SharedPtr<NetworkConfig> nconf(network->config2());
+							if ((nconf)&&(nconf->com())) {
+								Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+								nconf->com().serialize(outp);
+								outp.armor(peer->key(),true);
+								RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -890,24 +917,25 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 
 		while (count) { // if ptr overflows Buffer will throw
+			// TODO: properly handle blacklisting, support other features... see Packet.hpp.
+
 			unsigned int flags = (*this)[ptr++];
 			/*int metric = (*this)[ptr++];*/ ++ptr;
 			unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
 			ptr += extLen; // unused right now
 			unsigned int addrType = (*this)[ptr++];
+
 			unsigned int addrLen = (*this)[ptr++];
 			switch(addrType) {
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-					if ((flags & (0x01 | 0x02)) == 0) {
+					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) )
 						peer->attemptToContactAt(RR,a,RR->node->now());
-					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-					if ((flags & (0x01 | 0x02)) == 0) {
+					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) )
 						peer->attemptToContactAt(RR,a,RR->node->now());
-					}
 				}	break;
 			}
 			ptr += addrLen;

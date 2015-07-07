@@ -104,7 +104,7 @@ public:
 	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT1_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
-	void addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
+	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
 	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
 
