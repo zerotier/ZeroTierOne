@@ -60,20 +60,10 @@ public:
 	static inline bool secureEq(const void *a,const void *b,unsigned int len)
 		throw()
 	{
-		const char *p1 = (const char *)a;
-		const char *p2 = (const char *)b;
-		uint64_t diff = 0;
-
-		while (len >= 8) {
-			diff |= (*((const uint64_t *)p1) ^ *((const uint64_t *)p2));
-			p1 += 8;
-			p2 += 8;
-			len -= 8;
-		}
-		while (len--)
-			diff |= (uint64_t)(*p1++ ^ *p2++);
-
-		return (diff == 0ULL);
+		char diff = 0;
+		for(unsigned int i=0;i<len;++i)
+			diff |= ( (reinterpret_cast<const char *>(a))[i] ^ (reinterpret_cast<const char *>(b))[i] );
+		return (diff == 0);
 	}
 
 	/**
