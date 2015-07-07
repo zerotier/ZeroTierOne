@@ -645,7 +645,6 @@ public:
 											case InetAddress::IP_SCOPE_SHARED:
 											case InetAddress::IP_SCOPE_GLOBAL:
 												ip.setPort(_port);
-												printf("found %s on %S\r\n",ip.toString().c_str(),a->FriendlyName);
 												_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
 												break;
 											default:
