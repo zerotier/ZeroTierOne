@@ -75,7 +75,11 @@ class SqliteNetworkController;
 #endif // ZT_ENABLE_NETWORK_CONTROLLER
 
 #ifdef __WINDOWS__
+#include <WinSock2.h>
+#include <Windows.h>
 #include <ShlObj.h>
+#include <netioapi.h>
+#include <iphlpapi.h>
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -614,10 +618,45 @@ public:
 					{
 						Mutex::Lock _l(_taps_m);
 						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
-							ztDevices.push_back(t->second->deviceName());
+							ztDevices.push_back(t->second->luid());
 					}
 
-					// TODO
+					char aabuf[16384];
+					ULONG aalen = sizeof(aabuf);
+					if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
+						PIP_ADAPTER_ADDRESSES a = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
+						while (a) {
+							bool isZT = false;
+							for(std::vector<NET_LUID>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
+								if (a->Luid.Value == d->Value) {
+									isZT = true;
+									break;
+								}
+							}
+							if (!isZT) {
+								PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
+								while (ua) {
+									InetAddress ip(ua->Address.lpSockaddr);
+									if ((ip.ss_family == AF_INET)||(ip.ss_family == AF_INET6)) {
+										switch(ip.ipScope()) {
+											case InetAddress::IP_SCOPE_LINK_LOCAL:
+											case InetAddress::IP_SCOPE_PRIVATE:
+											case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+											case InetAddress::IP_SCOPE_SHARED:
+											case InetAddress::IP_SCOPE_GLOBAL:
+												ip.setPort(_port);
+												_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
+												break;
+											default:
+												break;
+										}
+									}
+									ua = ua->Next;
+								}
+							}
+							a = a->Next;
+						}
+					}
 #endif // __WINDOWS__
 				}
 

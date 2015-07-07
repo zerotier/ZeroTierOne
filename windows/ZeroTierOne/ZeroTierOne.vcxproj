@@ -94,6 +94,7 @@
     <ClInclude Include="..\..\node\Path.hpp" />
     <ClInclude Include="..\..\node\Peer.hpp" />
     <ClInclude Include="..\..\node\Poly1305.hpp" />
+    <ClInclude Include="..\..\node\RemotePath.hpp" />
     <ClInclude Include="..\..\node\RuntimeEnvironment.hpp" />
     <ClInclude Include="..\..\node\Salsa20.hpp" />
     <ClInclude Include="..\..\node\SelfAwareness.hpp" />
