@@ -344,6 +344,9 @@
     <ClInclude Include="..\..\osdep\BackgroundResolver.hpp">
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\node\RemotePath.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ZeroTierOne.rc">

@@ -37,7 +37,6 @@
 #include "Node.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "NetworkController.hpp"
-#include "CMWC4096.hpp"
 #include "Switch.hpp"
 #include "Multicaster.hpp"
 #include "AntiRecursion.hpp"
@@ -76,15 +75,24 @@ Node::Node(
 	_eventCallback(eventCallback),
 	_networks(),
 	_networks_m(),
+	_prngStreamPtr(0),
 	_now(now),
 	_lastPingCheck(0),
-	_lastHousekeepingRun(0),
-	_lastBeacon(0)
+	_lastHousekeepingRun(0)
 {
 	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
 	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
 	_newestVersionSeen[2] = ZEROTIER_ONE_VERSION_REVISION;
 	_online = false;
+
+	// Use Salsa20 alone as a high-quality non-crypto PRNG
+	{
+		char foo[32];
+		Utils::getSecureRandom(foo,32);
+		_prng.init(foo,256,foo,8);
+		memset(_prngStream,0,sizeof(_prngStream));
+		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
+	}
 
 	std::string idtmp(dataStoreGet("identity.secret"));
 	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
@@ -104,7 +112,6 @@ Node::Node(
 	}
 
 	try {
-		RR->prng = new CMWC4096();
 		RR->sw = new Switch(RR);
 		RR->mc = new Multicaster(RR);
 		RR->antiRec = new AntiRecursion();
@@ -116,7 +123,6 @@ Node::Node(
 		delete RR->antiRec;
 		delete RR->mc;
 		delete RR->sw;
-		delete RR->prng;
 		throw;
 	}
 
@@ -147,7 +153,6 @@ Node::~Node()
 	delete RR->antiRec;
 	delete RR->mc;
 	delete RR->sw;
-	delete RR->prng;
 }
 
 ZT1_ResultCode Node::processWirePacket(
@@ -269,19 +274,6 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 			_online = ((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT);
 			if (oldOnline != _online)
 				postEvent(_online ? ZT1_EVENT_ONLINE : ZT1_EVENT_OFFLINE);
-
-			// Send LAN beacons
-			if ((now - _lastBeacon) >= ZT_BEACON_INTERVAL) {
-				_lastBeacon = now;
-				char beacon[13];
-				void *p = beacon;
-				*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
-				p = beacon + 4;
-				*(reinterpret_cast<uint32_t *>(p)) = RR->prng->next32();
-				RR->identity.address().copyTo(beacon + 8,5);
-				RR->antiRec->logOutgoingZT(beacon,13);
-				putPacket(ZT_DEFAULTS.v4Broadcast,beacon,13);
-			}
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}
@@ -388,10 +380,10 @@ ZT1_PeerList *Node::peers() const
 		p->latency = pi->second->latency();
 		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT1_PEER_ROLE_ROOT : ZT1_PEER_ROLE_LEAF;
 
-		std::vector<Path> paths(pi->second->paths());
-		Path *bestPath = pi->second->getBestPath(_now);
+		std::vector<RemotePath> paths(pi->second->paths());
+		RemotePath *bestPath = pi->second->getBestPath(_now);
 		p->pathCount = 0;
-		for(std::vector<Path>::iterator path(paths.begin());path!=paths.end();++path) {
+		for(std::vector<RemotePath>::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = path->lastSend();
 			p->paths[p->pathCount].lastReceive = path->lastReceived();
@@ -438,6 +430,24 @@ void Node::freeQueryResult(void *qr)
 {
 	if (qr)
 		::free(qr);
+}
+
+int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable)
+{
+	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
+		Mutex::Lock _l(_directPaths_m);
+		_directPaths.push_back(Path(*(reinterpret_cast<const InetAddress *>(addr)),metric,(Path::Trust)trust,reliable != 0));
+		std::sort(_directPaths.begin(),_directPaths.end());
+		_directPaths.erase(std::unique(_directPaths.begin(),_directPaths.end()),_directPaths.end());
+		return 1;
+	}
+	return 0;
+}
+
+void Node::clearLocalInterfaceAddresses()
+{
+	Mutex::Lock _l(_directPaths_m);
+	_directPaths.clear();
 }
 
 void Node::setNetconfMaster(void *networkControllerInstance)
@@ -505,6 +515,14 @@ void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 	postEvent(ZT1_EVENT_TRACE,tmp1);
 }
 #endif // ZT_TRACE
+
+uint64_t Node::prng()
+{
+	unsigned int p = (++_prngStreamPtr % (sizeof(_prngStream) / sizeof(uint64_t)));
+	if (!p)
+		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
+	return _prngStream[p];
+}
 
 } // namespace ZeroTier
 
@@ -690,6 +708,22 @@ void ZT1_Node_setNetconfMaster(ZT1_Node *node,void *networkControllerInstance)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkControllerInstance);
+	} catch ( ... ) {}
+}
+
+int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable)
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,metric,trust,reliable);
+	} catch ( ... ) {
+		return 0;
+	}
+}
+
+void ZT1_Node_clearLocalInterfaceAddresses(ZT1_Node *node)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->clearLocalInterfaceAddresses();
 	} catch ( ... ) {}
 }
 

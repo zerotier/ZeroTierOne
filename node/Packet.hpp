@@ -71,13 +71,14 @@
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
  * 
- * This is not necessarily the maximum hop counter after which
- * relaying is no longer performed.
+ * This is a protocol constant. It's the maximum allowed by the length
+ * of the hop counter -- three bits. See node/Constants.hpp for the
+ * pragmatic forwarding limit, which is typically lower.
  */
 #define ZT_PROTO_MAX_HOPS 7
 
 /**
- * Cipher suite: Curve25519/Poly1305/Salsa20/12 without payload encryption
+ * Cipher suite: Curve25519/Poly1305/Salsa20/12/NOCRYPT
  *
  * This specifies Poly1305 MAC using a 32-bit key derived from the first
  * 32 bytes of a Salsa20/12 keystream as in the Salsa20/12 cipher suite,
@@ -103,9 +104,7 @@
  *
  * This message is encrypted with the latest negotiated ephemeral (PFS)
  * key pair and cipher suite. If authentication fails, VERB_SET_EPHEMERAL_KEY
- * may be sent to renegotiate ephemeral keys. To prevent attacks, this
- * attempted renegotiation should be limited to some sane rate such as
- * once per second.
+ * may be sent to renegotiate ephemeral keys.
  */
 #define ZT_PROTO_CIPHER_SUITE__EPHEMERAL 7
 
@@ -113,7 +112,7 @@
  * DEPRECATED payload encrypted flag, will be removed for re-use soon.
  *
  * This has been replaced by the two-bit cipher suite selection field where
- * a value of 0 indicated unencrypted (but authenticated) messages.
+ * a value of 0 indicates unencrypted (but authenticated) messages.
  */
 #define ZT_PROTO_FLAG_ENCRYPTED 0x80
 
@@ -132,11 +131,68 @@
 
 /**
  * Rounds used for Salsa20 encryption in ZT
+ *
+ * Discussion:
+ *
+ * DJB (Salsa20's designer) designed Salsa20 with a significant margin of 20
+ * rounds, but has said repeatedly that 12 is likely sufficient. So far (as of
+ * July 2015) there are no published attacks against 12 rounds, let alone 20.
+ *
+ * In cryptography, a "break" means something different from what it means in
+ * common discussion. If a cipher is 256 bits strong and someone finds a way
+ * to reduce key search to 254 bits, this constitues a "break" in the academic
+ * literature. 254 bits is still far beyond what can be leveraged to accomplish
+ * a "break" as most people would understand it -- the actual decryption and
+ * reading of traffic.
+ *
+ * Nevertheless, "attacks only get better" as cryptographers like to say. As
+ * a result, they recommend not using anything that's shown any weakness even
+ * if that weakness is so far only meaningful to academics. It may be a sign
+ * of a deeper problem.
+ *
+ * So why choose a lower round count?
+ *
+ * Turns out the speed difference is nontrivial. On a Macbook Pro (Core i3) 20
+ * rounds of SSE-optimized Salsa20 achieves ~508mb/sec/core, while 12 rounds
+ * hits ~832mb/sec/core. ZeroTier is designed for multiple objectives:
+ * security, simplicity, and performance. In this case a deference was made
+ * for performance.
+ *
+ * Meta discussion:
+ *
+ * The cipher is not the thing you should be paranoid about.
+ *
+ * I'll qualify that. If the cipher is known to be weak, like RC4, or has a
+ * key size that is too small, like DES, then yes you should worry about
+ * the cipher.
+ *
+ * But if the cipher is strong and your adversary is anyone other than the
+ * intelligence apparatus of a major superpower, you are fine in that
+ * department.
+ *
+ * Go ahead. Search for the last ten vulnerabilities discovered in SSL. Not
+ * a single one involved the breaking of a cipher. Now broaden your search.
+ * Look for issues with SSH, IPSec, etc. The only cipher-related issues you
+ * will find might involve the use of RC4 or MD5, algorithms with known
+ * issues or small key/digest sizes. But even weak ciphers are difficult to
+ * exploit in the real world -- you usually need a lot of data and a lot of
+ * compute time. No, virtually EVERY security vulnerability you will find
+ * involves a problem with the IMPLEMENTATION not with the cipher.
+ *
+ * A flaw in ZeroTier's protocol or code is incredibly, unbelievably
+ * more likely than a flaw in Salsa20 or any other cipher or cryptographic
+ * primitive it uses. We're talking odds of dying in a car wreck vs. odds of
+ * being personally impacted on the head by a meteorite. Nobody without a
+ * billion dollar budget is going to break into your network by actually
+ * cracking Salsa20/12 (or even /8) in the field.
+ *
+ * So stop worrying about the cipher unless you are, say, the Kremlin and your
+ * adversary is the NSA and the GCHQ. In that case... well that's above my
+ * pay grade. I'll just say defense in depth.
  */
 #define ZT_PROTO_SALSA20_ROUNDS 12
 
-// Indices of fields in normal packet header -- do not change as this
-// might require both code rework and will break compatibility.
+// Field indexes in packet header
 #define ZT_PACKET_IDX_IV 0
 #define ZT_PACKET_IDX_DEST 8
 #define ZT_PACKET_IDX_SOURCE 13
@@ -147,16 +203,19 @@
 
 /**
  * Packet buffer size (can be changed)
+ *
+ * The current value is big enough for ZT_MAX_PACKET_FRAGMENTS, the pragmatic
+ * packet fragment limit, times the default UDP MTU. Most packets won't be
+ * this big.
  */
 #define ZT_PROTO_MAX_PACKET_LENGTH (ZT_MAX_PACKET_FRAGMENTS * ZT_UDP_DEFAULT_PAYLOAD_MTU)
 
 /**
- * Minimum viable packet length (also length of header)
+ * Minimum viable packet length (a.k.a. header length)
  */
 #define ZT_PROTO_MIN_PACKET_LENGTH ZT_PACKET_IDX_PAYLOAD
 
-// Indexes of fields in fragment header -- also can't be changed without
-// breaking compatibility.
+// Indexes of fields in fragment header
 #define ZT_PACKET_FRAGMENT_IDX_PACKET_ID 0
 #define ZT_PACKET_FRAGMENT_IDX_DEST 8
 #define ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR 13
@@ -165,7 +224,7 @@
 #define ZT_PACKET_FRAGMENT_IDX_PAYLOAD 16
 
 /**
- * Value found at ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR in fragments
+ * Magic number found at ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR
  */
 #define ZT_PACKET_FRAGMENT_INDICATOR ZT_ADDRESS_RESERVED_PREFIX
 
@@ -174,24 +233,17 @@
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
-/**
- * Length of LAN beacon packets
- */
-#define ZT_PROTO_BEACON_LENGTH 13
-
-/**
- * Index of address in a LAN beacon
- */
-#define ZT_PROTO_BEACON_IDX_ADDRESS 8
-
-// Destination address types from HELLO and OK(HELLO)
+// Destination address types from HELLO, OK(HELLO), and other message types
 #define ZT_PROTO_DEST_ADDRESS_TYPE_NONE 0
-#define ZT_PROTO_DEST_ADDRESS_TYPE_ETHERNET 1
+#define ZT_PROTO_DEST_ADDRESS_TYPE_ZEROTIER 1   // reserved but unused
+#define ZT_PROTO_DEST_ADDRESS_TYPE_ETHERNET 2   // future use
+#define ZT_PROTO_DEST_ADDRESS_TYPE_BLUETOOTH 3  // future use
 #define ZT_PROTO_DEST_ADDRESS_TYPE_IPV4 4
+#define ZT_PROTO_DEST_ADDRESS_TYPE_LTE_DIRECT 5 // future use
 #define ZT_PROTO_DEST_ADDRESS_TYPE_IPV6 6
 
 // Ephemeral key record flags
-#define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01
+#define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01   // future use
 
 // Ephemeral key record symmetric cipher types
 #define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_SALSA2012_POLY1305 0x01
@@ -326,16 +378,6 @@ namespace ZeroTier {
  *
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
  * sent in the clear, as it's the "here is my public key" message.
- *
- * Beacon format and beacon packets:
- *   <[8] 8 random bytes>
- *   <[5] sender ZT address>
- *
- * A beacon is a 13-byte packet containing only the address of the sender.
- * Receiving peers may or may not respond to beacons with a HELLO or other
- * message to initiate direct communication.
- *
- * Beacons may be used for direct LAN announcement or NAT traversal.
  */
 class Packet : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 {
@@ -636,7 +678,8 @@ public:
 		 *   <[...] serialized certificate of membership>
 		 *   [ ... additional certificates may follow ...]
 		 *
-		 * Certificate contains network ID, peer it was issued for, etc.
+		 * This is sent in response to ERROR_NEED_MEMBERSHIP_CERTIFICATE and may
+		 * be pushed at any other time to keep exchanged certificates up to date.
 		 *
 		 * OK/ERROR are not generated.
 		 */
@@ -680,10 +723,8 @@ public:
 		/* Network configuration refresh request:
 		 *   <[...] array of 64-bit network IDs>
 		 *
-		 * This message can be sent by the network configuration master node
-		 * to request that nodes refresh their network configuration. It can
-		 * thus be used to "push" updates so that network config changes will
-		 * take effect quickly.
+		 * This can be sent by the network controller to inform a node that it
+		 * should now make a NETWORK_CONFIG_REQUEST.
 		 *
 		 * It does not generate an OK or ERROR message, and is treated only as
 		 * a hint to refresh now.
@@ -769,7 +810,7 @@ public:
 		 */
 		VERB_MULTICAST_FRAME = 14,
 
-		/* Ephemeral (PFS) key push:
+		/* Ephemeral (PFS) key push: (UNFINISHED, NOT IMPLEMENTED YET)
 		 *   <[2] flags (unused and reserved, must be 0)>
 		 *   <[2] length of padding / extra field section>
 		 *   <[...] padding / extra field section>
@@ -826,21 +867,51 @@ public:
 		VERB_SET_EPHEMERAL_KEY = 15,
 
 		/* Push of potential endpoints for direct communication:
+		 *   <[2] 16-bit number of paths>
+		 *   <[...] paths>
+		 *
+		 * Path record format:
 		 *   <[1] flags>
-		 *   <[2] number of addresses>
-		 *   <[...] address types and addresses>
+		 *   <[1] metric from 0 (highest priority) to 255 (lowest priority)>
+		 *   <[2] length of extended path characteristics or 0 for none>
+		 *   <[...] extended path characteristics>
+		 *   <[1] address type>
+		 *   <[1] address length in bytes>
+		 *   <[...] address>
+		 *
+		 * Path record flags:
+		 *   0x01 - Forget this path if it is currently known
+		 *   0x02 - Blacklist this path, do not use
+		 *   0x04 - Reliable path (no NAT keepalives, etc. are necessary)
+		 *   0x08 - Disable encryption (trust: privacy)
+		 *   0x10 - Disable encryption and authentication (trust: ultimate)
 		 *
 		 * Address types and addresses are of the same format as the destination
 		 * address type and address in HELLO.
 		 *
 		 * The receiver may, upon receiving a push, attempt to establish a
-		 * direct link to one or more of the indicated addresses. Senders should
-		 * only send address pushes to peers that they have some relationship
-		 * with such as a shared network membership or a mutual trust.
+		 * direct link to one or more of the indicated addresses. It is the
+		 * responsibility of the sender to limit which peers it pushes direct
+		 * paths to to those with whom it has a trust relationship. The receiver
+		 * must obey any restrictions provided such as exclusivity or blacklists.
+		 * OK responses to this message are optional.
 		 *
-		 * OK/ERROR are not generated.
+		 * Note that a direct path push does not imply that learned paths can't
+		 * be used unless they are blacklisted explicitly or unless flag 0x01
+		 * is set.
+		 *
+		 * Only a subset of this functionality is currently implemented: basic
+		 * path pushing and learning. Metrics, most flags, and OK responses are
+		 * not yet implemented as of 1.0.4.
+		 *
+		 * OK response payload:
+		 *   <[2] 16-bit number of active direct paths we already have>
+		 *   <[2] 16-bit number of paths in push that we don't already have>
+		 *   <[2] 16-bit number of new paths we are trying (or will try)>
+		 *
+		 * ERROR is presently not sent.
 		 */
-		VERB_PHYSICAL_ADDRESS_PUSH = 16
+		VERB_PUSH_DIRECT_PATHS = 16
 	};
 
 	/**

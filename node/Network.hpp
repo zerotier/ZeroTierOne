@@ -179,12 +179,12 @@ public:
 	 * Add or update a membership certificate
 	 *
 	 * @param cert Certificate of membership
-	 * @param forceAccept If true, accept without validating signature
+	 * @return True if certificate was accepted as valid
 	 */
-	void addMembershipCertificate(const CertificateOfMembership &cert,bool forceAccept);
+	bool validateAndAddMembershipCertificate(const CertificateOfMembership &cert);
 
 	/**
-	 * Check if we should push membership certificate to a peer, and update last pushed
+	 * Check if we should push membership certificate to a peer, AND update last pushed
 	 *
 	 * If we haven't pushed a cert to this peer in a long enough time, this returns
 	 * true and updates the last pushed time. Otherwise it returns false.

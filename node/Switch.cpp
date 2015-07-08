@@ -42,15 +42,30 @@
 #include "InetAddress.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
-#include "CMWC4096.hpp"
 #include "AntiRecursion.hpp"
 #include "Packet.hpp"
 
 namespace ZeroTier {
 
+#ifdef ZT_TRACE
+static const char *etherTypeName(const unsigned int etherType)
+{
+	switch(etherType) {
+		case ZT_ETHERTYPE_IPV4:  return "IPV4";
+		case ZT_ETHERTYPE_ARP:   return "ARP";
+		case ZT_ETHERTYPE_RARP:  return "RARP";
+		case ZT_ETHERTYPE_ATALK: return "ATALK";
+		case ZT_ETHERTYPE_AARP:  return "AARP";
+		case ZT_ETHERTYPE_IPX_A: return "IPX_A";
+		case ZT_ETHERTYPE_IPX_B: return "IPX_B";
+		case ZT_ETHERTYPE_IPV6:  return "IPV6";
+	}
+	return "UNKNOWN";
+}
+#endif // ZT_TRACE
+
 Switch::Switch(const RuntimeEnvironment *renv) :
-	RR(renv),
-	_lastBeacon(0)
+	RR(renv)
 {
 }
 
@@ -61,9 +76,7 @@ Switch::~Switch()
 void Switch::onRemotePacket(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
-		if (len == ZT_PROTO_BEACON_LENGTH) {
-			_handleBeacon(fromAddr,Buffer<ZT_PROTO_BEACON_LENGTH>(data,len));
-		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+		if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (((const unsigned char *)data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				_handleRemotePacketFragment(fromAddr,data,len);
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) {
@@ -165,41 +178,33 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		// Destination is another ZeroTier peer on the same network
 
-		Address toZT(to.toAddress(network->id()));
-		if (network->isAllowed(toZT)) {
-			if (network->peerNeedsOurMembershipCertificate(toZT,RR->node->now())) {
-				// TODO: once there are no more <1.0.0 nodes around, we can
-				// bundle this with EXT_FRAME instead of sending two packets.
-				Packet outp(toZT,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
+		const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
+		if ((fromBridged)||(includeCom)) {
+			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
+			outp.append(network->id());
+			if (includeCom) {
+				outp.append((unsigned char)0x01); // 0x01 -- COM included
 				nconf->com().serialize(outp);
-				send(outp,true,network->id());
-			}
-
-			if (fromBridged) {
-				// EXT_FRAME is used for bridging or if we want to include a COM
-				Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
-				outp.append(network->id());
-				outp.append((unsigned char)0);
-				to.appendTo(outp);
-				from.appendTo(outp);
-				outp.append((uint16_t)etherType);
-				outp.append(data,len);
-				outp.compress();
-				send(outp,true,network->id());
 			} else {
-				// FRAME is a shorter version that can be used when there's no bridging and no COM
-				Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
-				outp.append(network->id());
-				outp.append((uint16_t)etherType);
-				outp.append(data,len);
-				outp.compress();
-				send(outp,true,network->id());
+				outp.append((unsigned char)0x00);
 			}
-
-			//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged);
+			to.appendTo(outp);
+			from.appendTo(outp);
+			outp.append((uint16_t)etherType);
+			outp.append(data,len);
+			outp.compress();
+			send(outp,true,network->id());
 		} else {
-			TRACE("%.16llx: UNICAST: %s -> %s etherType==%s dropped, destination not a member of private network",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType));
+			Packet outp(toZT,RR->identity.address(),Packet::VERB_FRAME);
+			outp.append(network->id());
+			outp.append((uint16_t)etherType);
+			outp.append(data,len);
+			outp.compress();
+			send(outp,true,network->id());
 		}
+
+		//TRACE("%.16llx: UNICAST: %s -> %s etherType==%s(%.4x) vlanId==%u len==%u fromBridged==%d includeCom==%d",network->id(),from.toString().c_str(),to.toString().c_str(),etherTypeName(etherType),etherType,vlanId,len,(int)fromBridged,(int)includeCom);
 
 		return;
 	}
@@ -210,22 +215,19 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		Address bridges[ZT_MAX_BRIDGE_SPAM];
 		unsigned int numBridges = 0;
 
+		/* Create an array of up to ZT_MAX_BRIDGE_SPAM recipients for this bridged frame. */
 		bridges[0] = network->findBridgeTo(to);
-		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->isAllowed(bridges[0]))&&(network->permitsBridging(bridges[0]))) {
-			// We have a known bridge route for this MAC.
+		if ((bridges[0])&&(bridges[0] != RR->identity.address())&&(network->permitsBridging(bridges[0]))) {
+			/* We have a known bridge route for this MAC, send it there. */
 			++numBridges;
 		} else if (!nconf->activeBridges().empty()) {
 			/* If there is no known route, spam to up to ZT_MAX_BRIDGE_SPAM active
-			 * bridges. This is similar to what many switches do -- if they do not
-			 * know which port corresponds to a MAC, they send it to all ports. If
-			 * there aren't any active bridges, numBridges will stay 0 and packet
-			 * is dropped. */
+			 * bridges. If someone responds, we'll learn the route. */
 			std::vector<Address>::const_iterator ab(nconf->activeBridges().begin());
 			if (nconf->activeBridges().size() <= ZT_MAX_BRIDGE_SPAM) {
 				// If there are <= ZT_MAX_BRIDGE_SPAM active bridges, spam them all
 				while (ab != nconf->activeBridges().end()) {
-					if (network->isAllowed(*ab)) // config sanity check
-						bridges[numBridges++] = *ab;
+					bridges[numBridges++] = *ab;
 					++ab;
 				}
 			} else {
@@ -233,9 +235,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 				while (numBridges < ZT_MAX_BRIDGE_SPAM) {
 					if (ab == nconf->activeBridges().end())
 						ab = nconf->activeBridges().begin();
-					if (((unsigned long)RR->prng->next32() % (unsigned long)nconf->activeBridges().size()) == 0) {
-						if (network->isAllowed(*ab)) // config sanity check
-							bridges[numBridges++] = *ab;
+					if (((unsigned long)RR->node->prng() % (unsigned long)nconf->activeBridges().size()) == 0) {
+						bridges[numBridges++] = *ab;
 						++ab;
 					} else ++ab;
 				}
@@ -245,7 +246,12 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		for(unsigned int b=0;b<numBridges;++b) {
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			outp.append((unsigned char)0);
+			if (network->peerNeedsOurMembershipCertificate(bridges[b],RR->node->now())) {
+				outp.append((unsigned char)0x01); // 0x01 -- COM included
+				nconf->com().serialize(outp);
+			} else {
+				outp.append((unsigned char)0);
+			}
 			to.appendTo(outp);
 			from.appendTo(outp);
 			outp.append((uint16_t)etherType);
@@ -320,7 +326,7 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	 * the order we make each attempted NAT-t favor one or the other going
 	 * first, meaning if it doesn't succeed the first time it might the second
 	 * and so forth. */
-	unsigned int alt = RR->prng->next32() & 1;
+	unsigned int alt = (unsigned int)RR->node->prng() & 1;
 	unsigned int completed = alt + 2;
 	while (alt != completed) {
 		if ((alt & 1) == 0) {
@@ -529,22 +535,6 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	return nextDelay;
 }
 
-const char *Switch::etherTypeName(const unsigned int etherType)
-	throw()
-{
-	switch(etherType) {
-		case ZT_ETHERTYPE_IPV4:  return "IPV4";
-		case ZT_ETHERTYPE_ARP:   return "ARP";
-		case ZT_ETHERTYPE_RARP:  return "RARP";
-		case ZT_ETHERTYPE_ATALK: return "ATALK";
-		case ZT_ETHERTYPE_AARP:  return "AARP";
-		case ZT_ETHERTYPE_IPX_A: return "IPX_A";
-		case ZT_ETHERTYPE_IPX_B: return "IPX_B";
-		case ZT_ETHERTYPE_IPV6:  return "IPV6";
-	}
-	return "UNKNOWN";
-}
-
 void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	Packet::Fragment fragment(data,len);
@@ -687,23 +677,6 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,const void *dat
 	}
 }
 
-void Switch::_handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data)
-{
-	Address beaconAddr(data.field(ZT_PROTO_BEACON_IDX_ADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-	if (beaconAddr == RR->identity.address())
-		return;
-	SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
-	if (peer) {
-		const uint64_t now = RR->node->now();
-		if ((now - _lastBeacon) >= ZT_MIN_BEACON_RESPONSE_INTERVAL) {
-			_lastBeacon = now;
-			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-			outp.armor(peer->key(),false);
-			RR->node->putPacket(fromAddr,outp.data(),outp.size());
-		}
-	}
-}
-
 Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted)
 {
 	SharedPtr<Peer> root(RR->topology->getBestRoot(peersAlreadyConsulted,numPeersAlreadyConsulted,false));
@@ -724,32 +697,43 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 	if (peer) {
 		const uint64_t now = RR->node->now();
 
-		Path *viaPath = peer->getBestPath(now);
-		if (!viaPath) {
-			SharedPtr<Peer> relay;
+		SharedPtr<Network> network;
+		SharedPtr<NetworkConfig> nconf;
+		if (nwid) {
+			network = RR->node->network(nwid);
+			if (!network)
+				return false; // we probably just left this network, let its packets die
+			nconf = network->config2();
+			if (!nconf)
+				return false; // sanity check: unconfigured network? why are we trying to talk to it?
+		}
 
-			if (nwid) {
-				SharedPtr<Network> network(RR->node->network(nwid));
-				if (network) {
-					SharedPtr<NetworkConfig> nconf(network->config2());
-					if (nconf) {
-						unsigned int latency = ~((unsigned int)0);
-						for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
-							if (r->first != peer->address()) {
-								SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-								if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
-									rp.swap(relay);
-							}
-						}
+		RemotePath *viaPath = peer->getBestPath(now);
+		SharedPtr<Peer> relay;
+		if (!viaPath) {
+			// See if this network has a preferred relay (if packet has an associated network)
+			if (nconf) {
+				unsigned int latency = ~((unsigned int)0);
+				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
+					if (r->first != peer->address()) {
+						SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
+						if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
+							rp.swap(relay);
 					}
 				}
 			}
 
+			// Otherwise relay off a root server
 			if (!relay)
 				relay = RR->topology->getBestRoot();
 
 			if (!(relay)||(!(viaPath = relay->getBestPath(now))))
-				return false;
+				return false; // no paths, no root servers?
+		}
+
+		if ((network)&&(relay)&&(network->isAllowed(peer->address()))) {
+			// Push hints for direct connectivity to this peer if we are relaying
+			peer->pushDirectPaths(RR,viaPath,now,false);
 		}
 
 		Packet tmp(packet);
@@ -761,7 +745,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 
 		if (viaPath->send(RR,tmp.data(),chunkSize,now)) {
 			if (chunkSize < tmp.size()) {
-				// Too big for one bite, fragment the rest
+				// Too big for one packet, fragment the rest
 				unsigned int fragStart = chunkSize;
 				unsigned int remaining = tmp.size() - chunkSize;
 				unsigned int fragsRemaining = (remaining / (ZT_UDP_DEFAULT_PAYLOAD_MTU - ZT_PROTO_MIN_FRAGMENT_LENGTH));
@@ -777,6 +761,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 					remaining -= chunkSize;
 				}
 			}
+
 			return true;
 		}
 	} else {

@@ -40,7 +40,7 @@
 #include "../include/ZeroTierOne.h"
 
 #include "RuntimeEnvironment.hpp"
-#include "Path.hpp"
+#include "RemotePath.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
@@ -53,11 +53,7 @@
 namespace ZeroTier {
 
 /**
- * Peer on P2P Network
- *
- * This struture is not locked, volatile, and memcpy-able. NonCopyable
- * semantics are just there to prevent bugs, not because it isn't safe
- * to copy.
+ * Peer on P2P Network (virtual layer 1)
  */
 class Peer : NonCopyable
 {
@@ -130,9 +126,9 @@ public:
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active (or fixed) direct paths
 	 */
-	inline Path *getBestPath(uint64_t now)
+	inline RemotePath *getBestPath(uint64_t now)
 	{
-		Path *bestPath = (Path *)0;
+		RemotePath *bestPath = (RemotePath *)0;
 		uint64_t lrMax = 0;
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
 			if ((_paths[p].active(now))&&(_paths[p].lastReceived() >= lrMax)) {
@@ -152,14 +148,14 @@ public:
 	 * @param now Current time
 	 * @return Path used on success or NULL on failure
 	 */
-	inline Path *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+	inline RemotePath *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		Path *bestPath = getBestPath(now);
+		RemotePath *bestPath = getBestPath(now);
 		if (bestPath) {
 			if (bestPath->send(RR,data,len,now))
 				return bestPath;
 		}
-		return (Path *)0;
+		return (RemotePath *)0;
 	}
 
 	/**
@@ -183,11 +179,21 @@ public:
 	void doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
+	 * Push direct paths if we haven't done so in [rate limit] milliseconds
+	 *
+	 * @param RR Runtime environment
+	 * @param path Remote path to use to send the push
+	 * @param now Current time
+	 * @param force If true, push regardless of rate limit
+	 */
+	void pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force);
+
+	/**
 	 * @return All known direct paths to this peer
 	 */
-	inline std::vector<Path> paths() const
+	inline std::vector<RemotePath> paths() const
 	{
-		std::vector<Path> pp;
+		std::vector<RemotePath> pp;
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			pp.push_back(_paths[p]);
 		return pp;
@@ -295,7 +301,7 @@ public:
 	 *
 	 * @param p New path to add
 	 */
-	void addPath(const Path &newp);
+	void addPath(const RemotePath &newp);
 
 	/**
 	 * Clear paths
@@ -412,12 +418,13 @@ private:
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastPathConfirmationSent;
+	uint64_t _lastDirectPathPush;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 	Identity _id;
-	Path _paths[ZT1_MAX_PEER_NETWORK_PATHS];
+	RemotePath _paths[ZT1_MAX_PEER_NETWORK_PATHS];
 	unsigned int _numPaths;
 	unsigned int _latency;
 

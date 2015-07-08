@@ -28,144 +28,65 @@
 #ifndef ZT_PATH_HPP
 #define ZT_PATH_HPP
 
-#include <stdint.h>
-#include <string.h>
-
-#include <stdexcept>
-#include <string>
-#include <algorithm>
-
 #include "Constants.hpp"
-#include "Node.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
-#include "AntiRecursion.hpp"
-#include "RuntimeEnvironment.hpp"
 
 namespace ZeroTier {
 
-/**
- * WAN address and protocol for reaching a peer
- *
- * This structure is volatile and memcpy-able, and depends on
- * InetAddress being similarly safe.
- */
 class Path
 {
 public:
+	// Must be the same values as ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
+	enum Trust
+	{
+		TRUST_NORMAL = 0,
+		TRUST_PRIVACY = 1,
+		TRUST_ULTIMATE = 2
+	};
+
 	Path() :
 		_addr(),
-		_lastSend(0),
-		_lastReceived(0),
-		_fixed(false) {}
+		_metric(0),
+		_trust(TRUST_NORMAL),
+		_reliable(false)
+	{
+	}
 
-	Path(const Path &p) throw() { memcpy(this,&p,sizeof(Path)); }
-
-	Path(const InetAddress &addr,bool fixed) :
+	Path(const InetAddress &addr,int metric,Trust trust,bool reliable) :
 		_addr(addr),
-		_lastSend(0),
-		_lastReceived(0),
-		_fixed(fixed) {}
-
-	inline void init(const InetAddress &addr,bool fixed)
+		_metric(metric),
+		_trust(trust),
+		_reliable(reliable)
 	{
-		_addr = addr;
-		_lastSend = 0;
-		_lastReceived = 0;
-		_fixed = fixed;
 	}
 
-	inline Path &operator=(const Path &p)
-	{
-		if (this != &p)
-			memcpy(this,&p,sizeof(Path));
-		return *this;
-	}
-
+	/**
+	 * @return Physical address
+	 */
 	inline const InetAddress &address() const throw() { return _addr; }
 
-	inline uint64_t lastSend() const throw() { return _lastSend; }
-	inline uint64_t lastReceived() const throw() { return _lastReceived; }
+	/**
+	 * @return Metric (higher == worse) or negative if path is blacklisted
+	 */
+	inline int metric() const throw() { return _metric; }
 
 	/**
-	 * Called when a packet is sent to this path
-	 *
-	 * This is called automatically by Path::send().
-	 *
-	 * @param t Time of send
+	 * @return Path trust level
 	 */
-	inline void sent(uint64_t t)
-		throw()
-	{
-		_lastSend = t;
-	}
+	inline Trust trust() const throw() { return _trust; }
 
 	/**
-	 * Called when a packet is received from this path
-	 *
-	 * @param t Time of receive
+	 * @return True if path is considered reliable (no NAT keepalives etc. are needed)
 	 */
-	inline void received(uint64_t t)
-		throw()
-	{
-		_lastReceived = t;
-	}
+	inline bool reliable() const throw() { return _reliable; }
 
 	/**
-	 * @return Is this a fixed path?
+	 * @return True if address is non-NULL
 	 */
-	inline bool fixed() const throw() { return _fixed; }
-
-	/**
-	 * @param f New value of fixed path flag
-	 */
-	inline void setFixed(bool f) throw() { _fixed = f; }
-
-	/**
-	 * @param now Current time
-	 * @return True if this path is fixed or has received data in last ACTIVITY_TIMEOUT ms
-	 */
-	inline bool active(uint64_t now) const
-		throw()
-	{
-		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
-	}
-
-	/**
-	 * Send a packet via this path
-	 *
-	 * @param RR Runtime environment
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param now Current time
-	 * @return True if transport reported success
-	 */
-	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
-	{
-		if (RR->node->putPacket(_addr,data,len)) {
-			sent(now);
-			RR->antiRec->logOutgoingZT(data,len);
-			return true;
-		}
-		return false;
-	}
-
-	/**
-	 * @param now Current time
-	 * @return Human-readable address and other information about this path
-	 */
-	inline std::string toString(uint64_t now) const
-	{
-		char tmp[1024];
-		Utils::snprintf(tmp,sizeof(tmp),"%s(%s)",
-			_addr.toString().c_str(),
-			((_fixed) ? "fixed" : (active(now) ? "active" : "inactive"))
-		);
-		return std::string(tmp);
-	}
-
 	inline operator bool() const throw() { return (_addr); }
 
+	// Comparisons are by address only
 	inline bool operator==(const Path &p) const throw() { return (_addr == p._addr); }
 	inline bool operator!=(const Path &p) const throw() { return (_addr != p._addr); }
 	inline bool operator<(const Path &p) const throw() { return (_addr < p._addr); }
@@ -173,11 +94,44 @@ public:
 	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
 	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
 
-private:
+	/**
+	 * Check whether this address is valid for a ZeroTier path
+	 *
+	 * This checks the address type and scope against address types and scopes
+	 * that we currently support for ZeroTier communication.
+	 *
+	 * @param a Address to check
+	 * @return True if address is good for ZeroTier path use
+	 */
+	static inline bool isAddressValidForPath(const InetAddress &a)
+		throw()
+	{
+		if ((a.ss_family == AF_INET)||(a.ss_family == AF_INET6)) {
+			switch(a.ipScope()) {
+				/* Note: we don't do link-local at the moment. Unfortunately these
+				 * cause several issues. The first is that they usually require a
+				 * device qualifier, which we don't handle yet and can't portably
+				 * push in PUSH_DIRECT_PATHS. The second is that some OSes assign
+				 * these very ephemerally or otherwise strangely. So we'll use
+				 * private, pseudo-private, shared (e.g. carrier grade NAT), or
+				 * global IP addresses. */
+				case InetAddress::IP_SCOPE_PRIVATE:
+				case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+				case InetAddress::IP_SCOPE_SHARED:
+				case InetAddress::IP_SCOPE_GLOBAL:
+					return true;
+				default:
+					return false;
+			}
+		}
+		return false;
+	}
+
+protected:
 	InetAddress _addr;
-	uint64_t _lastSend;
-	uint64_t _lastReceived;
-	bool _fixed;
+	int _metric; // negative == blacklisted
+	Trust _trust;
+	bool _reliable;
 };
 
 } // namespace ZeroTier

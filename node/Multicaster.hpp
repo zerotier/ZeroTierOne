@@ -107,6 +107,15 @@ public:
 	void addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const void *addresses,unsigned int count,unsigned int totalKnown);
 
 	/**
+	 * Remove a multicast group member (if present)
+	 *
+	 * @param nwid Network ID
+	 * @param mg Multicast group
+	 * @param member Member to unsubscribe
+	 */
+	void remove(uint64_t nwid,const MulticastGroup &mg,const Address &member);
+
+	/**
 	 * Append gather results to a packet by choosing registered multicast recipients at random
 	 *
 	 * This appends the following fields to the packet:

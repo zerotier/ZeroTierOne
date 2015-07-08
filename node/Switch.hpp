@@ -108,10 +108,14 @@ public:
 	 * 
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
+	 *
+	 * The network ID should only be specified for frames and other actual
+	 * network traffic. Other traffic such as controller requests and regular
+	 * protocol messages should specify zero.
 	 * 
 	 * @param packet Packet to send
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
-	 * @param nwid Network ID or 0 if message is not related to a specific network
+	 * @param nwid Related network ID or 0 if message is not in-network traffic
 	 */
 	void send(const Packet &packet,bool encrypt,uint64_t nwid);
 
@@ -173,22 +177,13 @@ public:
 	 */
 	unsigned long doTimerTasks(uint64_t now);
 
-	/**
-	 * @param etherType Ethernet type ID
-	 * @return Human-readable name
-	 */
-	static const char *etherTypeName(const unsigned int etherType)
-		throw();
-
 private:
 	void _handleRemotePacketFragment(const InetAddress &fromAddr,const void *data,unsigned int len);
 	void _handleRemotePacketHead(const InetAddress &fromAddr,const void *data,unsigned int len);
-	void _handleBeacon(const InetAddress &fromAddr,const Buffer<ZT_PROTO_BEACON_LENGTH> &data);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
 
 	const RuntimeEnvironment *const RR;
-	volatile uint64_t _lastBeacon;
 
 	// Outsanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest

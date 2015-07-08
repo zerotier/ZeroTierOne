@@ -629,6 +629,15 @@ typedef struct
 } ZT1_PeerList;
 
 /**
+ * Local interface trust levels
+ */
+typedef enum {
+	ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL = 0,
+	ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_PRIVACY = 1,
+	ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_ULTIMATE = 2
+} ZT1_LocalInterfaceAddressTrust;
+
+/**
  * An instance of a ZeroTier One node (opaque)
  */
 typedef void ZT1_Node;
@@ -957,6 +966,36 @@ ZT1_VirtualNetworkList *ZT1_Node_networks(ZT1_Node *node);
  * @param qr Query result buffer
  */
 void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr);
+
+/**
+ * Add a local interface address
+ *
+ * Local interface addresses may be added if you want remote peers
+ * with whom you have a trust relatinship (e.g. common network membership)
+ * to receive information about these endpoints as potential endpoints for
+ * direct communication.
+ *
+ * Take care that these are never ZeroTier interface addresses, otherwise
+ * strange things might happen or they simply won't work.
+ *
+ * This returns a boolean indicating whether or not the address was
+ * accepted. ZeroTier will only communicate over certain address types
+ * and (for IP) address classes. Thus it's safe to just dump your OS's
+ * entire remote IP list (excluding ZeroTier interface IPs) into here
+ * and let ZeroTier determine which addresses it will use.
+ *
+ * @param addr Local interface address
+ * @param metric Local interface metric
+ * @param trust How much do you trust the local network under this interface?
+ * @param reliable If nonzero, this interface doesn't link to anything behind a NAT or stateful firewall
+ * @return Boolean: non-zero if address was accepted and added
+ */
+int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
+
+/**
+ * Clear local interface addresses
+ */
+void ZT1_Node_clearLocalInterfaceAddresses(ZT1_Node *node);
 
 /**
  * Set a network configuration master instance for this node

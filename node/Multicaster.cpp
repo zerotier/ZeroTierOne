@@ -35,7 +35,6 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Peer.hpp"
-#include "CMWC4096.hpp"
 #include "C25519.hpp"
 #include "CertificateOfMembership.hpp"
 
@@ -59,6 +58,20 @@ void Multicaster::addMultiple(uint64_t now,uint64_t nwid,const MulticastGroup &m
 	while (p != e) {
 		_add(now,nwid,mg,gs,Address(p,5));
 		p += 5;
+	}
+}
+
+void Multicaster::remove(uint64_t nwid,const MulticastGroup &mg,const Address &member)
+{
+	Mutex::Lock _l(_groups_m);
+	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus >::iterator g(_groups.find(std::pair<uint64_t,MulticastGroup>(nwid,mg)));
+	if (g != _groups.end()) {
+		for(std::vector<MulticastGroupMember>::iterator m(g->second.members.begin());m!=g->second.members.end();++m) {
+			if (m->address == member) {
+				g->second.members.erase(m);
+				break;
+			}
+		}
 	}
 }
 
@@ -97,7 +110,7 @@ unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const
 		// will return different subsets of a large multicast group.
 		k = 0;
 		while ((added < limit)&&(k < gs->second.members.size())&&((appendTo.size() + ZT_ADDRESS_LENGTH) <= ZT_UDP_DEFAULT_PAYLOAD_MTU)) {
-			rptr = (unsigned int)RR->prng->next32();
+			rptr = (unsigned int)RR->node->prng();
 
 restart_member_scan:
 			a = gs->second.members[rptr % (unsigned int)gs->second.members.size()].address.toInt();
@@ -171,7 +184,7 @@ void Multicaster::send(
 		for(unsigned long i=0;i<gs.members.size();++i)
 			indexes[i] = i;
 		for(unsigned long i=(unsigned long)gs.members.size()-1;i>0;--i) {
-			unsigned long j = RR->prng->next32() % (i + 1);
+			unsigned long j = (unsigned long)RR->node->prng() % (i + 1);
 			unsigned long tmp = indexes[j];
 			indexes[j] = indexes[i];
 			indexes[i] = tmp;

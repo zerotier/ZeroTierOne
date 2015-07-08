@@ -43,6 +43,8 @@
 #include "Mutex.hpp"
 #include "MAC.hpp"
 #include "Network.hpp"
+#include "Path.hpp"
+#include "Salsa20.hpp"
 
 #undef TRACE
 #ifdef ZT_TRACE
@@ -103,6 +105,8 @@ public:
 	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT1_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
+	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
+	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
 
 	// Internal functions ------------------------------------------------------
@@ -171,6 +175,15 @@ public:
 		return nw;
 	}
 
+	/**
+	 * @return Potential direct paths to me a.k.a. local interface addresses
+	 */
+	inline std::vector<Path> directPaths() const
+	{
+		Mutex::Lock _l(_directPaths_m);
+		return _directPaths;
+	}
+
 	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
 	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,(const void *)0,0,0); }
@@ -207,6 +220,11 @@ public:
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
 
+	/**
+	 * @return Next 64-bit random number (not for cryptographic use)
+	 */
+	uint64_t prng();
+
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
@@ -236,12 +254,18 @@ private:
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
 
+	std::vector<Path> _directPaths;
+	Mutex _directPaths_m;
+
 	Mutex _backgroundTasksLock;
+
+	unsigned int _prngStreamPtr;
+	Salsa20 _prng;
+	uint64_t _prngStream[16]; // repeatedly encrypted with _prng to yield a high-quality non-crypto PRNG stream
 
 	uint64_t _now;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
-	uint64_t _lastBeacon;
 	unsigned int _newestVersionSeen[3]; // major, minor, revision
 	bool _online;
 };

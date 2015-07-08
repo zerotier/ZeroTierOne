@@ -46,6 +46,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
 	_lastPathConfirmationSent(0),
+	_lastDirectPathPush(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
@@ -86,7 +87,7 @@ void Peer::received(
 			if (!pathIsConfirmed) {
 				if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
 					// Learn paths if they've been confirmed via a HELLO
-					Path *slot = (Path *)0;
+					RemotePath *slot = (RemotePath *)0;
 					if (np < ZT1_MAX_PEER_NETWORK_PATHS) {
 						// Add new path
 						slot = &(_paths[np++]);
@@ -101,7 +102,7 @@ void Peer::received(
 						}
 					}
 					if (slot) {
-						slot->init(remoteAddr,false);
+						*slot = RemotePath(remoteAddr,false);
 						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;
@@ -193,7 +194,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 
 void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
-	Path *const bestPath = getBestPath(now);
+	RemotePath *const bestPath = getBestPath(now);
 	if ((bestPath)&&(bestPath->active(now))) {
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
 			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
@@ -207,7 +208,73 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-void Peer::addPath(const Path &newp)
+void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
+{
+	if ((((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
+		_lastDirectPathPush = now;
+
+		std::vector<Path> dps(RR->node->directPaths());
+		TRACE("pushing %u direct paths (local interface addresses) to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
+
+		std::vector<Path>::const_iterator p(dps.begin());
+		while (p != dps.end()) {
+			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+			outp.addSize(2); // leave room for count
+
+			unsigned int count = 0;
+			while ((p != dps.end())&&((outp.size() + 24) < ZT_PROTO_MAX_PACKET_LENGTH)) {
+				uint8_t addressType = 4;
+				switch(p->address().ss_family) {
+					case AF_INET:
+						break;
+					case AF_INET6:
+						addressType = 6;
+						break;
+					default:
+						++p;
+						continue;
+				}
+
+				uint8_t flags = 0;
+				if (p->metric() < 0)
+					flags |= (0x01 | 0x02); // forget and blacklist
+				else {
+					if (p->reliable())
+						flags |= 0x04; // no NAT keepalives and such
+					switch(p->trust()) {
+						default:
+							break;
+						case Path::TRUST_PRIVACY:
+							flags |= 0x08; // no encryption
+							break;
+						case Path::TRUST_ULTIMATE:
+							flags |= (0x08 | 0x10); // no encryption, no authentication (redundant but go ahead and set both)
+							break;
+					}
+				}
+
+				outp.append(flags);
+				outp.append((uint8_t)((p->metric() >= 0) ? ((p->metric() <= 255) ? p->metric() : 255) : 0));
+				outp.append((uint16_t)0);
+				outp.append(addressType);
+				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
+				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));
+				outp.append((uint16_t)p->address().port());
+
+				++count;
+				++p;
+			}
+
+			if (count) {
+				outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+				outp.armor(_key,true);
+				path->send(RR,outp.data(),outp.size(),now);
+			}
+		}
+	}
+}
+
+void Peer::addPath(const RemotePath &newp)
 {
 	unsigned int np = _numPaths;
 
@@ -218,7 +285,7 @@ void Peer::addPath(const Path &newp)
 		}
 	}
 
-	Path *slot = (Path *)0;
+	RemotePath *slot = (RemotePath *)0;
 	if (np < ZT1_MAX_PEER_NETWORK_PATHS) {
 		// Add new path
 		slot = &(_paths[np++]);
