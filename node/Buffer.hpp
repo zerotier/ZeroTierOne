@@ -39,7 +39,7 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && (!defined(ZT_NO_TYPE_PUNNING))
 #define ZT_VAR_MAY_ALIAS __attribute__((__may_alias__))
 #else
 #define ZT_VAR_MAY_ALIAS
@@ -204,14 +204,18 @@ public:
 	{
 		if ((i + sizeof(T)) > _l)
 			throw std::out_of_range("Buffer: setAt() beyond end of data");
+#ifdef ZT_NO_TYPE_PUNNING
+		uint8_t *p = reinterpret_cast<uint8_t *>(_b + i);
+		for(unsigned int x=1;x<=sizeof(T);++x)
+			*(p++) = (uint8_t)(v >> (8 * (sizeof(T) - x)));
+#else
 		T *const ZT_VAR_MAY_ALIAS p = reinterpret_cast<T *>(_b + i);
 		*p = Utils::hton(v);
+#endif
 	}
 
 	/**
 	 * Get a primitive integer value at a given position
-	 * 
-	 * This behaves like set() in reverse.
 	 * 
 	 * @param i Index to get integer
 	 * @tparam T Integer type (e.g. uint16_t, int64_t)
@@ -223,8 +227,18 @@ public:
 	{
 		if ((i + sizeof(T)) > _l)
 			throw std::out_of_range("Buffer: at() beyond end of data");
+#ifdef ZT_NO_TYPE_PUNNING
+		T v = 0;
+		const uint8_t *p = reinterpret_cast<const uint8_t *>(_b + i);
+		for(unsigned int x=0;x<sizeof(T);++x) {
+			v <<= 8;
+			v |= (T)*(p++);
+		}
+		return v;
+#else
 		const T *const ZT_VAR_MAY_ALIAS p = reinterpret_cast<const T *>(_b + i);
 		return Utils::ntoh(*p);
+#endif
 	}
 
 	/**
@@ -240,8 +254,14 @@ public:
 	{
 		if ((_l + sizeof(T)) > C)
 			throw std::out_of_range("Buffer: append beyond capacity");
+#ifdef ZT_NO_TYPE_PUNNING
+		uint8_t *p = reinterpret_cast<uint8_t *>(_b + _l);
+		for(unsigned int x=1;x<=sizeof(T);++x)
+			*(p++) = (uint8_t)(v >> (8 * (sizeof(T) - x)));
+#else
 		T *const ZT_VAR_MAY_ALIAS p = reinterpret_cast<T *>(_b + _l);
 		*p = Utils::hton(v);
+#endif
 		_l += sizeof(T);
 	}
 
