@@ -42,7 +42,7 @@ public interface EventListener {
     public void onEvent(Event event);
     
     /**
-     * Callback for network error events: {@link Event.EVENT_AUTHENTICATION_FAILUER}, {link Event.EVENT_INVALID_PACKET}
+     * Callback for network error events: {@link Event.EVENT_AUTHENTICATION_FAILURE}, {link Event.EVENT_INVALID_PACKET}
      *
      * @param event {@link Event} enum
      * @param source {@link InetSocketAddress} containing the origin address of the packet
