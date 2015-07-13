@@ -909,7 +909,6 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			// TODO: properly handle blacklisting, support other features... see Packet.hpp.
 
 			unsigned int flags = (*this)[ptr++];
-			/*int metric = (*this)[ptr++];*/ ++ptr;
 			unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
 			ptr += extLen; // unused right now
 			unsigned int addrType = (*this)[ptr++];

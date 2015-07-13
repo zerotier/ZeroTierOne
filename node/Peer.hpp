@@ -102,7 +102,7 @@ public:
 	 *
 	 * This is called by the decode pipe when a packet is proven to be authentic
 	 * and appears to be valid.
-	 * 
+	 *
 	 * @param RR Runtime environment
 	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
@@ -126,18 +126,7 @@ public:
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active (or fixed) direct paths
 	 */
-	inline RemotePath *getBestPath(uint64_t now)
-	{
-		RemotePath *bestPath = (RemotePath *)0;
-		uint64_t lrMax = 0;
-		for(unsigned int p=0,np=_numPaths;p<np;++p) {
-			if ((_paths[p].active(now))&&(_paths[p].lastReceived() >= lrMax)) {
-				lrMax = _paths[p].lastReceived();
-				bestPath = &(_paths[p]);
-			}
-		}
-		return bestPath;
-	}
+	RemotePath *getBestPath(uint64_t now);
 
 	/**
 	 * Send via best path

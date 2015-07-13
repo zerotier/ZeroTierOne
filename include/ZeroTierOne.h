@@ -73,7 +73,7 @@ extern "C" {
  *
  * If this does change, also change it in tap.h in the tuntaposx code under
  * mac-tap.
- * 
+ *
  * Overhead for a normal frame split into two packets:
  *
  * 1414 = 1444 (typical UDP MTU) - 28 (packet header) - 2 (ethertype)
@@ -987,10 +987,9 @@ void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr);
  * @param addr Local interface address
  * @param metric Local interface metric
  * @param trust How much do you trust the local network under this interface?
- * @param reliable If nonzero, this interface doesn't link to anything behind a NAT or stateful firewall
  * @return Boolean: non-zero if address was accepted and added
  */
-int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable);
+int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust);
 
 /**
  * Clear local interface addresses

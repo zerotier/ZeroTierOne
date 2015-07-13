@@ -70,7 +70,7 @@
 
 /**
  * Maximum hop count allowed by packet structure (3 bits, 0-7)
- * 
+ *
  * This is a protocol constant. It's the maximum allowed by the length
  * of the hop counter -- three bits. See node/Constants.hpp for the
  * pragmatic forwarding limit, which is typically lower.
@@ -352,7 +352,7 @@ namespace ZeroTier {
 
 /**
  * ZeroTier packet
- * 
+ *
  * Packet format:
  *   <[8] random initialization vector (doubles as 64-bit packet ID)>
  *   <[5] destination ZT address>
@@ -362,7 +362,7 @@ namespace ZeroTier {
  *   [... -- begin encryption envelope -- ...]
  *   <[1] encrypted flags (top 3 bits) and verb (last 5 bits)>
  *   [... verb-specific payload ...]
- * 
+ *
  * Packets smaller than 28 bytes are invalid and silently discarded.
  *
  * The flags/cipher/hops bit field is: FFCCCHHH where C is a 3-bit cipher
@@ -384,15 +384,15 @@ class Packet : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
 public:
 	/**
 	 * A packet fragment
-	 * 
+	 *
 	 * Fragments are sent if a packet is larger than UDP MTU. The first fragment
 	 * is sent with its normal header with the fragmented flag set. Remaining
 	 * fragments are sent this way.
-	 * 
+	 *
 	 * The fragmented bit indicates that there is at least one fragment. Fragments
 	 * themselves contain the total, so the receiver must "learn" this from the
 	 * first fragment it receives.
-	 * 
+	 *
 	 * Fragments are sent with the following format:
 	 *   <[8] packet ID of packet whose fragment this belongs to>
 	 *   <[5] destination ZT address>
@@ -430,7 +430,7 @@ public:
 
 		/**
 		 * Initialize from a packet
-		 * 
+		 *
 		 * @param p Original assembled packet
 		 * @param fragStart Start of fragment (raw index in packet data)
 		 * @param fragLen Length of fragment in bytes
@@ -446,7 +446,7 @@ public:
 
 		/**
 		 * Initialize from a packet
-		 * 
+		 *
 		 * @param p Original assembled packet
 		 * @param fragStart Start of fragment (raw index in packet data)
 		 * @param fragLen Length of fragment in bytes
@@ -473,7 +473,7 @@ public:
 
 		/**
 		 * Get this fragment's destination
-		 * 
+		 *
 		 * @return Destination ZT address
 		 */
 		inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
@@ -872,7 +872,6 @@ public:
 		 *
 		 * Path record format:
 		 *   <[1] flags>
-		 *   <[1] metric from 0 (highest priority) to 255 (lowest priority)>
 		 *   <[2] length of extended path characteristics or 0 for none>
 		 *   <[...] extended path characteristics>
 		 *   <[1] address type>
@@ -882,9 +881,8 @@ public:
 		 * Path record flags:
 		 *   0x01 - Forget this path if it is currently known
 		 *   0x02 - Blacklist this path, do not use
-		 *   0x04 - Reliable path (no NAT keepalives, etc. are necessary)
-		 *   0x08 - Disable encryption (trust: privacy)
-		 *   0x10 - Disable encryption and authentication (trust: ultimate)
+		 *   0x04 - Disable encryption (trust: privacy)
+		 *   0x08 - Disable encryption and authentication (trust: ultimate)
 		 *
 		 * Address types and addresses are of the same format as the destination
 		 * address type and address in HELLO.
@@ -901,15 +899,10 @@ public:
 		 * is set.
 		 *
 		 * Only a subset of this functionality is currently implemented: basic
-		 * path pushing and learning. Metrics, most flags, and OK responses are
-		 * not yet implemented as of 1.0.4.
+		 * path pushing and learning. Blacklisting and trust are not fully
+		 * implemented yet (encryption is still always used).
 		 *
-		 * OK response payload:
-		 *   <[2] 16-bit number of active direct paths we already have>
-		 *   <[2] 16-bit number of paths in push that we don't already have>
-		 *   <[2] 16-bit number of new paths we are trying (or will try)>
-		 *
-		 * ERROR is presently not sent.
+		 * OK and ERROR are not generated.
 		 */
 		VERB_PUSH_DIRECT_PATHS = 16
 	};
@@ -974,7 +967,7 @@ public:
 
 	/**
 	 * Construct a new empty packet with a unique random packet ID
-	 * 
+	 *
 	 * Flags and hops will be zero. Other fields and data region are undefined.
 	 * Use the header access methods (setDestination() and friends) to fill out
 	 * the header. Payload should be appended; initial size is header size.
@@ -1004,7 +997,7 @@ public:
 
 	/**
 	 * Construct a new empty packet with a unique random packet ID
-	 * 
+	 *
 	 * @param dest Destination ZT address
 	 * @param source Source ZT address
 	 * @param v Verb
@@ -1021,7 +1014,7 @@ public:
 
 	/**
 	 * Reset this packet structure for reuse in place
-	 * 
+	 *
 	 * @param dest Destination ZT address
 	 * @param source Source ZT address
 	 * @param v Verb
@@ -1047,28 +1040,28 @@ public:
 
 	/**
 	 * Set this packet's destination
-	 * 
+	 *
 	 * @param dest ZeroTier address of destination
 	 */
 	inline void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Set this packet's source
-	 * 
+	 *
 	 * @param source ZeroTier address of source
 	 */
 	inline void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's destination
-	 * 
+	 *
 	 * @return Destination ZT address
 	 */
 	inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
 
 	/**
 	 * Get this packet's source
-	 * 
+	 *
 	 * @return Source ZT address
 	 */
 	inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
@@ -1138,17 +1131,17 @@ public:
 
 	/**
 	 * Get this packet's unique ID (the IV field interpreted as uint64_t)
-	 * 
+	 *
 	 * @return Packet ID
 	 */
 	inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
 
 	/**
 	 * Set packet verb
-	 * 
+	 *
 	 * This also has the side-effect of clearing any verb flags, such as
 	 * compressed, and so must only be done during packet composition.
-	 * 
+	 *
 	 * @param v New packet verb
 	 */
 	inline void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
@@ -1186,22 +1179,22 @@ public:
 
 	/**
 	 * Attempt to compress payload if not already (must be unencrypted)
-	 * 
+	 *
 	 * This requires that the payload at least contain the verb byte already
 	 * set. The compressed flag in the verb is set if compression successfully
 	 * results in a size reduction. If no size reduction occurs, compression
 	 * is not done and the flag is left cleared.
-	 * 
+	 *
 	 * @return True if compression occurred
 	 */
 	bool compress();
 
 	/**
 	 * Attempt to decompress payload if it is compressed (must be unencrypted)
-	 * 
+	 *
 	 * If payload is compressed, it is decompressed and the compressed verb
 	 * flag is cleared. Otherwise nothing is done and true is returned.
-	 * 
+	 *
 	 * @return True if data is now decompressed and valid, false on error
 	 */
 	bool uncompress();

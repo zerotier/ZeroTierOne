@@ -432,11 +432,11 @@ void Node::freeQueryResult(void *qr)
 		::free(qr);
 }
 
-int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable)
+int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust)
 {
 	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
 		Mutex::Lock _l(_directPaths_m);
-		_directPaths.push_back(Path(*(reinterpret_cast<const InetAddress *>(addr)),metric,(Path::Trust)trust,reliable != 0));
+		_directPaths.push_back(Path(*(reinterpret_cast<const InetAddress *>(addr)),metric,(Path::Trust)trust));
 		std::sort(_directPaths.begin(),_directPaths.end());
 		_directPaths.erase(std::unique(_directPaths.begin(),_directPaths.end()),_directPaths.end());
 		return 1;
@@ -711,10 +711,10 @@ void ZT1_Node_setNetconfMaster(ZT1_Node *node,void *networkControllerInstance)
 	} catch ( ... ) {}
 }
 
-int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust,int reliable)
+int ZT1_Node_addLocalInterfaceAddress(ZT1_Node *node,const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,metric,trust,reliable);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,metric,trust);
 	} catch ( ... ) {
 		return 0;
 	}

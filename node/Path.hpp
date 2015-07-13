@@ -34,10 +34,31 @@
 
 namespace ZeroTier {
 
+/**
+ * Base class for paths
+ *
+ * The base Path class is an immutable value.
+ */
 class Path
 {
 public:
-	// Must be the same values as ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
+	/**
+	 * Path trust category
+	 *
+	 * Note that this is NOT peer trust and has nothing to do with root server
+	 * designations or other trust metrics. This indicates how much we trust
+	 * this path to be secure and/or private. A trust level of normal means
+	 * encrypt and authenticate all traffic. Privacy trust means we can send
+	 * traffic in the clear. Ultimate trust means we don't even need
+	 * authentication. Generally a private path would be a hard-wired local
+	 * LAN, while an ultimate trust path would be a physically isolated private
+	 * server backplane.
+	 *
+	 * Nearly all paths will be normal trust. The other levels are for high
+	 * performance local SDN use only.
+	 *
+	 * These values MUST match ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
+	 */
 	enum Trust
 	{
 		TRUST_NORMAL = 0,
@@ -47,17 +68,15 @@ public:
 
 	Path() :
 		_addr(),
-		_metric(0),
-		_trust(TRUST_NORMAL),
-		_reliable(false)
+		_ipScope(InetAddress::IP_SCOPE_NONE),
+		_trust(TRUST_NORMAL)
 	{
 	}
 
-	Path(const InetAddress &addr,int metric,Trust trust,bool reliable) :
+	Path(const InetAddress &addr,int metric,Trust trust) :
 		_addr(addr),
-		_metric(metric),
-		_trust(trust),
-		_reliable(reliable)
+		_ipScope(addr.ipScope()),
+		_trust(trust)
 	{
 	}
 
@@ -67,9 +86,14 @@ public:
 	inline const InetAddress &address() const throw() { return _addr; }
 
 	/**
-	 * @return Metric (higher == worse) or negative if path is blacklisted
+	 * @return IP scope -- faster shortcut for address().ipScope()
 	 */
-	inline int metric() const throw() { return _metric; }
+	inline InetAddress::IpScope ipScope() const throw() { return _ipScope; }
+
+	/**
+	 * @return Preference rank, higher == better
+	 */
+	inline int preferenceRank() const throw() { return (int)_ipScope; } // IP scopes are in ascending rank order in InetAddress.hpp
 
 	/**
 	 * @return Path trust level
@@ -79,7 +103,10 @@ public:
 	/**
 	 * @return True if path is considered reliable (no NAT keepalives etc. are needed)
 	 */
-	inline bool reliable() const throw() { return _reliable; }
+	inline bool reliable() const throw()
+	{
+		return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
+	}
 
 	/**
 	 * @return True if address is non-NULL
@@ -127,11 +154,10 @@ public:
 		return false;
 	}
 
-protected:
+private:
 	InetAddress _addr;
-	int _metric; // negative == blacklisted
+	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	Trust _trust;
-	bool _reliable;
 };
 
 } // namespace ZeroTier

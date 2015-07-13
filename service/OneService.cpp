@@ -592,7 +592,7 @@ public:
 								if (!isZT) {
 									InetAddress ip(ifa->ifa_addr);
 									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL,0);
+									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
 								}
 							}
 							ifa = ifa->ifa_next;
