@@ -185,18 +185,17 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 	try {
 		const unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
-		if (protoVersion < ZT_PROTO_VERSION_MIN) {
-			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-
 		const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
-
 		Identity id;
 		unsigned int destAddrPtr = id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY) + ZT_PROTO_VERB_HELLO_IDX_IDENTITY;
+
+		if (protoVersion < ZT_PROTO_VERSION_MIN) {
+			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
 		if (source() != id.address()) {
 			TRACE("dropped HELLO from %s(%s): identity not for sending address",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
