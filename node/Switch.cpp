@@ -65,7 +65,8 @@ static const char *etherTypeName(const unsigned int etherType)
 #endif // ZT_TRACE
 
 Switch::Switch(const RuntimeEnvironment *renv) :
-	RR(renv)
+	RR(renv),
+	_lastBeaconResponse(0)
 {
 }
 
@@ -76,7 +77,25 @@ Switch::~Switch()
 void Switch::onRemotePacket(const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	try {
-		if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
+		if (len == 13) {
+			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
+			 * announcements on the LAN to solve the 'same network problem.' We
+			 * no longer send these, but we'll listen for them for a while to
+			 * locate peers with versions <1.0.4. */
+			Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
+			if (beaconAddr == RR->identity.address())
+				return;
+			SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
+			if (peer) { // we'll only respond to beacons from known peers
+				const uint64_t now = RR->node->now();
+				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
+					_lastBeaconResponse = now;
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
+					outp.armor(peer->key(),false);
+					RR->node->putPacket(fromAddr,outp.data(),outp.size());
+				}
+			}
+		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (((const unsigned char *)data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				_handleRemotePacketFragment(fromAddr,data,len);
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) {
