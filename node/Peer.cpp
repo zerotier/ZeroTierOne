@@ -255,7 +255,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 
 				outp.append(flags);
 				outp.append((uint8_t)((p->metric() >= 0) ? ((p->metric() <= 255) ? p->metric() : 255) : 0));
-				outp.append((uint16_t)0);
+				outp.append((uint16_t)0); // no extensions
 				outp.append(addressType);
 				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
 				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));

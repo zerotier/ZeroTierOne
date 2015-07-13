@@ -906,7 +906,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 
-		while (count) { // if ptr overflows Buffer will throw
+		while (count--) { // if ptr overflows Buffer will throw
 			// TODO: properly handle blacklisting, support other features... see Packet.hpp.
 
 			unsigned int flags = (*this)[ptr++];
@@ -914,18 +914,22 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
 			ptr += extLen; // unused right now
 			unsigned int addrType = (*this)[ptr++];
-
 			unsigned int addrLen = (*this)[ptr++];
+
 			switch(addrType) {
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) )
+					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) ) {
+						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 						peer->attemptToContactAt(RR,a,RR->node->now());
+					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) )
+					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) ) {
+						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 						peer->attemptToContactAt(RR,a,RR->node->now());
+					}
 				}	break;
 			}
 			ptr += addrLen;
