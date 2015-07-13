@@ -229,7 +229,17 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
-		TRACE("pushing %u direct paths (local interface addresses) to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
+#ifdef ZT_TRACE
+		{
+			std::string ps;
+			for(std::vector<Path>::const_iterator p(dps.begin());p!=dps.end();++p) {
+				if (ps.length() > 0)
+					ps.push_back(',');
+				ps.append(p->address().toString());
+			}
+			TRACE("pushing %u direct paths (local interface addresses) to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
+		}
+#endif
 
 		std::vector<Path>::const_iterator p(dps.begin());
 		while (p != dps.end()) {
