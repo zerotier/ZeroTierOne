@@ -801,7 +801,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 
 					sqlite3_reset(_sCreateNetwork);
 					sqlite3_bind_text(_sCreateNetwork,1,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_text(_sCreateNetwork,2,nwids,16,SQLITE_STATIC); // default name, will be changed below if a name is specified in JSON
+					sqlite3_bind_text(_sCreateNetwork,2,"",0,SQLITE_STATIC);
 					sqlite3_bind_int64(_sCreateNetwork,3,(long long)OSUtils::now());
 					if (sqlite3_step(_sCreateNetwork) != SQLITE_DONE)
 						return 500;
