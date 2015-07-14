@@ -778,6 +778,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						uint64_t nwidOriginalPostfix = nwidPostfix;
 						do {
 							uint64_t tryNwid = nwidPrefix | nwidPostfix;
+							if (!nwidPostfix)
+								tryNwid |= 1;
 							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
 
 							sqlite3_reset(_sGetNetworkRevision);
