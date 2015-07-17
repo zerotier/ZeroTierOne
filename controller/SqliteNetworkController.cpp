@@ -1638,7 +1638,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 		sqlite3_reset(_sGetConfig);
 		sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
 		if (sqlite3_step(_sGetConfig) == SQLITE_ROW) {
-			Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n\t\"instanceId\": \"%s\"\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),(const char *)sqlite3_column_text(_sGetConfig,0));
+			Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"instanceId\": \"%s\"\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),(const char *)sqlite3_column_text(_sGetConfig,0));
 			responseBody = json;
 			responseContentType = "applicaiton/json";
 			return 200;
