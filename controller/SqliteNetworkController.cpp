@@ -203,10 +203,32 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Gateway WHERE networkId = ?",-1,&_sDeleteGateways,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,ip,ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
 
+			/* Config */
+			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
+
 		 ) {
 		//printf("!!! %s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
+	}
+
+	/* Generate a 128-bit / 32-character "instance ID" if one isn't already
+	 * defined. Clients can use this to determine if this is the same controller
+	 * database they know and love. */
+	sqlite3_reset(_sGetConfig);
+	sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
+	if (sqlite3_step(_sGetConfig) != SQLITE_ROW) {
+		char instanceId[32];
+		for(int i=0;i<32;++i)
+			instanceId[i] = "0123456789abcdef"[(rand() >> 8) & 0xf];
+		sqlite3_reset(_sSetConfig);
+		sqlite3_bind_text(_sSetConfig,1,"instanceId",10,SQLITE_STATIC);
+		sqlite3_bind_text(_sSetConfig,2,instanceId,32,SQLITE_STATIC);
+		if (sqlite3_step(_sSetConfig) != SQLITE_OK) {
+			sqlite3_close(_db);
+			throw std::runtime_error("SqliteNetworkController unable to read or initialize instanceId");
+		}
 	}
 }
 
@@ -254,6 +276,8 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sDeleteGateways);
 		sqlite3_finalize(_sCreateGateway);
 		sqlite3_finalize(_sIncrementMemberRevisionCounter);
+		sqlite3_finalize(_sGetConfig);
+		sqlite3_finalize(_sSetConfig);
 		sqlite3_close(_db);
 	}
 }
@@ -1611,10 +1635,14 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 	} else {
 		// GET /controller returns status and API version if controller is supported
-		Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
-		responseBody = json;
-		responseContentType = "applicaiton/json";
-		return 200;
+		sqlite3_reset(_sGetConfig);
+		sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
+		if (sqlite3_step(_sGetConfig) == SQLITE_ROW) {
+			Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n\t\"instanceId\": \"%s\"\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),(const char *)sqlite3_column_text(_sGetConfig,0));
+			responseBody = json;
+			responseContentType = "applicaiton/json";
+			return 200;
+		} else return 500;
 	}
 
 	return 404;
