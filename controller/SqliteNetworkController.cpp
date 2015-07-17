@@ -219,9 +219,11 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	sqlite3_reset(_sGetConfig);
 	sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
 	if (sqlite3_step(_sGetConfig) != SQLITE_ROW) {
+		unsigned char sr[32];
+		Utils::getSecureRandom(sr,32);
 		char instanceId[32];
-		for(int i=0;i<32;++i)
-			instanceId[i] = "0123456789abcdef"[(rand() >> 8) & 0xf];
+		for(unsigned int i=0;i<32;++i)
+			instanceId[i] = "0123456789abcdef"[(unsigned int)sr[i] & 0xf];
 		sqlite3_reset(_sSetConfig);
 		sqlite3_bind_text(_sSetConfig,1,"instanceId",10,SQLITE_STATIC);
 		sqlite3_bind_text(_sSetConfig,2,instanceId,32,SQLITE_STATIC);
@@ -822,10 +824,9 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
 						uint64_t nwidPostfix = 0;
 						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
-						nwidPostfix &= 0xffffffULL;
 						uint64_t nwidOriginalPostfix = nwidPostfix;
 						do {
-							uint64_t tryNwid = nwidPrefix | nwidPostfix;
+							uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
 							if (!nwidPostfix)
 								tryNwid |= 1;
 							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
@@ -838,7 +839,6 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 							}
 
 							++nwidPostfix;
-							nwidPostfix &= 0xffffffULL;
 						} while (nwidPostfix != nwidOriginalPostfix);
 
 						// 503 means we have no more free IDs for this prefix. You shouldn't host anywhere
@@ -864,12 +864,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 
 							if (!strcmp(j->u.object.values[k].name,"name")) {
 								if ((j->u.object.values[k].value->type == json_string)&&(j->u.object.values[k].value->u.string.ptr[0])) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET name = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"name\" = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
 										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"private")) {
 								if (j->u.object.values[k].value->type == json_boolean) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET private = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"private\" = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
 										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"enableBroadcast")) {
