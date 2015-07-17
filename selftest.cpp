@@ -916,7 +916,7 @@ int main(int argc,char **argv)
 	r |= testCertificate();
 	r |= testPhy();
 	r |= testResolver();
-	r |= testHttp();
+	//r |= testHttp();
 
 	if (r)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;

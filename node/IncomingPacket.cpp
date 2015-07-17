@@ -185,18 +185,17 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 	try {
 		const unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
-		if (protoVersion < ZT_PROTO_VERSION_MIN) {
-			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-
 		const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
-
 		Identity id;
 		unsigned int destAddrPtr = id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY) + ZT_PROTO_VERB_HELLO_IDX_IDENTITY;
+
+		if (protoVersion < ZT_PROTO_VERSION_MIN) {
+			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
 		if (source() != id.address()) {
 			TRACE("dropped HELLO from %s(%s): identity not for sending address",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
@@ -906,26 +905,29 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 
-		while (count) { // if ptr overflows Buffer will throw
+		while (count--) { // if ptr overflows Buffer will throw
 			// TODO: properly handle blacklisting, support other features... see Packet.hpp.
 
 			unsigned int flags = (*this)[ptr++];
-			/*int metric = (*this)[ptr++];*/ ++ptr;
 			unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
 			ptr += extLen; // unused right now
 			unsigned int addrType = (*this)[ptr++];
-
 			unsigned int addrLen = (*this)[ptr++];
+
 			switch(addrType) {
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) )
+					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) ) {
+						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 						peer->attemptToContactAt(RR,a,RR->node->now());
+					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) )
+					if ( ((flags & (0x01 | 0x02)) == 0) && (Path::isAddressValidForPath(a)) ) {
+						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 						peer->attemptToContactAt(RR,a,RR->node->now());
+					}
 				}	break;
 			}
 			ptr += addrLen;

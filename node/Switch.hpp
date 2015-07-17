@@ -99,20 +99,20 @@ public:
 
 	/**
 	 * Send a packet to a ZeroTier address (destination in packet)
-	 * 
+	 *
 	 * The packet must be fully composed with source and destination but not
 	 * yet encrypted. If the destination peer is known the packet
 	 * is sent immediately. Otherwise it is queued and a WHOIS is dispatched.
 	 *
 	 * The packet may be compressed. Compression isn't done here.
-	 * 
+	 *
 	 * Needless to say, the packet's source must be this node. Otherwise it
 	 * won't be encrypted right. (This is not used for relaying.)
 	 *
 	 * The network ID should only be specified for frames and other actual
 	 * network traffic. Other traffic such as controller requests and regular
 	 * protocol messages should specify zero.
-	 * 
+	 *
 	 * @param packet Packet to send
 	 * @param encrypt Encrypt packet payload? (always true except for HELLO)
 	 * @param nwid Related network ID or 0 if message is not in-network traffic
@@ -168,7 +168,7 @@ public:
 
 	/**
 	 * Perform retries and other periodic timer tasks
-	 * 
+	 *
 	 * This can return a very long delay if there are no pending timer
 	 * tasks. The caller should cap this comparatively vs. other values.
 	 *
@@ -184,6 +184,7 @@ private:
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
 
 	const RuntimeEnvironment *const RR;
+	uint64_t _lastBeaconResponse;
 
 	// Outsanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest

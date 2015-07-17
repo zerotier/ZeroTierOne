@@ -33,7 +33,7 @@
 #include <string>
 #include <map>
 #include <stdexcept>
- 
+
 #include "Constants.hpp"
 #include "Utils.hpp"
 
@@ -304,6 +304,21 @@ public:
 	 * @return True if signature verification OK
 	 */
 	bool verify(const Identity &id) const;
+
+  inline bool operator==(const Dictionary &d) const
+  {
+    // std::map::operator== is broken on uclibc++
+    if (size() != d.size())
+      return false;
+    const_iterator a(begin());
+    const_iterator b(d.begin());
+    while (a != end()) {
+      if (*(a++) != *(b++))
+        return false;
+    }
+    return true;
+  }
+  inline bool operator!=(const Dictionary &d) const { return (!(*this == d)); }
 
 private:
 	void _mkSigBuf(std::string &buf) const;

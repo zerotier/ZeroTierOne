@@ -63,17 +63,20 @@ struct InetAddress : public sockaddr_storage
 
 	/**
 	 * IP address scope
+	 *
+	 * Note that these values are in ascending order of path preference and
+	 * MUST remain that way or Path must be changed to reflect.
 	 */
 	enum IpScope
 	{
-		IP_SCOPE_NONE = 0,          // not an IP address -- also the number of classes, must be last entry
-		IP_SCOPE_LINK_LOCAL = 1,    // 169.254.x.x, IPv6 LL
-		IP_SCOPE_PRIVATE = 2,       // 10.x.x.x, etc.
-		IP_SCOPE_PSEUDOPRIVATE = 3, // 28.x.x.x, etc. -- unofficially unrouted IP blocks often "bogarted"
-		IP_SCOPE_SHARED = 4,        // 100.64.0.0/10, shared space for e.g. carrier-grade NAT
-		IP_SCOPE_GLOBAL = 5,        // globally routable IP address (all others)
-		IP_SCOPE_LOOPBACK = 6,      // 127.0.0.1
-		IP_SCOPE_MULTICAST = 7      // 224.0.0.0 and other multicast IPs
+		IP_SCOPE_NONE = 0,          // NULL or not an IP address
+		IP_SCOPE_MULTICAST = 1,     // 224.0.0.0 and other V4/V6 multicast IPs
+		IP_SCOPE_LOOPBACK = 2,      // 127.0.0.1, ::1, etc.
+		IP_SCOPE_PSEUDOPRIVATE = 3, // 28.x.x.x, etc. -- unofficially unrouted IPv4 blocks often "bogarted"
+		IP_SCOPE_GLOBAL = 4,        // globally routable IP address (all others)
+		IP_SCOPE_LINK_LOCAL = 5,    // 169.254.x.x, IPv6 LL
+		IP_SCOPE_SHARED = 6,        // 100.64.0.0/10, shared space for e.g. carrier-grade NAT
+		IP_SCOPE_PRIVATE = 7        // 10.x.x.x, 192.168.x.x, etc.
 	};
 
 	InetAddress() throw() { memset(this,0,sizeof(InetAddress)); }

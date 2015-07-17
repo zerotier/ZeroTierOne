@@ -161,6 +161,21 @@ void Peer::received(
 		_lastMulticastFrame = now;
 }
 
+RemotePath *Peer::getBestPath(uint64_t now)
+{
+	RemotePath *bestPath = (RemotePath *)0;
+	uint64_t lrMax = 0;
+	int rank = 0;
+	for(unsigned int p=0,np=_numPaths;p<np;++p) {
+		if ( (_paths[p].active(now)) && ((_paths[p].lastReceived() >= lrMax)||(_paths[p].preferenceRank() >= rank)) ) {
+			lrMax = _paths[p].lastReceived();
+			rank = _paths[p].preferenceRank();
+			bestPath = &(_paths[p]);
+		}
+	}
+	return bestPath;
+}
+
 void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,uint64_t now)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
@@ -200,7 +215,7 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
 			attemptToContactAt(RR,bestPath->address(),now);
 			bestPath->sent(now);
-		} else if ((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY) {
+		} else if (((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!bestPath->reliable())) {
 			TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
 			RR->node->putPacket(bestPath->address(),"",0);
 			bestPath->sent(now);
@@ -214,7 +229,17 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
-		TRACE("pushing %u direct paths (local interface addresses) to %s",(unsigned int)dps.size(),_id.address().toString().c_str());
+#ifdef ZT_TRACE
+		{
+			std::string ps;
+			for(std::vector<Path>::const_iterator p(dps.begin());p!=dps.end();++p) {
+				if (ps.length() > 0)
+					ps.push_back(',');
+				ps.append(p->address().toString());
+			}
+			TRACE("pushing %u direct paths (local interface addresses) to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
+		}
+#endif
 
 		std::vector<Path>::const_iterator p(dps.begin());
 		while (p != dps.end()) {
@@ -230,32 +255,25 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 					case AF_INET6:
 						addressType = 6;
 						break;
-					default:
+					default: // we currently only push IP addresses
 						++p;
 						continue;
 				}
 
 				uint8_t flags = 0;
-				if (p->metric() < 0)
-					flags |= (0x01 | 0x02); // forget and blacklist
-				else {
-					if (p->reliable())
-						flags |= 0x04; // no NAT keepalives and such
-					switch(p->trust()) {
-						default:
-							break;
-						case Path::TRUST_PRIVACY:
-							flags |= 0x08; // no encryption
-							break;
-						case Path::TRUST_ULTIMATE:
-							flags |= (0x08 | 0x10); // no encryption, no authentication (redundant but go ahead and set both)
-							break;
-					}
+				switch(p->trust()) {
+					default:
+						break;
+					case Path::TRUST_PRIVACY:
+						flags |= 0x04; // no encryption
+						break;
+					case Path::TRUST_ULTIMATE:
+						flags |= (0x04 | 0x08); // no encryption, no authentication (redundant but go ahead and set both)
+						break;
 				}
 
 				outp.append(flags);
-				outp.append((uint8_t)((p->metric() >= 0) ? ((p->metric() <= 255) ? p->metric() : 255) : 0));
-				outp.append((uint16_t)0);
+				outp.append((uint16_t)0); // no extensions
 				outp.append(addressType);
 				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
 				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));

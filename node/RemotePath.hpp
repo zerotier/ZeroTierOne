@@ -56,7 +56,7 @@ public:
 		_fixed(false) {}
 
 	RemotePath(const InetAddress &addr,bool fixed) :
-		Path(addr,0,TRUST_NORMAL,false),
+		Path(addr,0,TRUST_NORMAL),
 		_lastSend(0),
 		_lastReceived(0),
 		_fixed(fixed) {}
@@ -123,7 +123,7 @@ public:
 	 */
 	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		if (RR->node->putPacket(_addr,data,len)) {
+		if (RR->node->putPacket(address(),data,len)) {
 			sent(now);
 			RR->antiRec->logOutgoingZT(data,len);
 			return true;
