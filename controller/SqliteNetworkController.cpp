@@ -190,7 +190,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 			/* Member */
 			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.identity FROM Member AS m JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,m.memberRevision,n.identity FROM Member AS m JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge,memberRevision) VALUES (?,?,?,0,(SELECT memberRevisionCounter FROM Network WHERE id = ?))",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.nodeId FROM Member AS m WHERE m.networkId = ? ORDER BY m.nodeId ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
@@ -1256,13 +1256,15 @@ unsigned int SqliteNetworkController::_doCPGet(
 							"\t\"address\": \"%s\",\n"
 							"\t\"authorized\": %s,\n"
 							"\t\"activeBridge\": %s,\n"
+							"\t\"memberRevision\": %llu,\n"
 							"\t\"identity\": \"%s\",\n"
 							"\t\"ipAssignments\": [",
 							nwids,
 							addrs,
 							(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
 							(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
-							_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,2)).c_str());
+							(unsigned long long)sqlite3_column_int64(_sGetMember2,2),
+							_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,3)).c_str());
 						responseBody = json;
 
 						sqlite3_reset(_sGetIpAssignmentsForNode2);
@@ -1359,6 +1361,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"\t\"multicastLimit\": %d,\n"
 						"\t\"creationTime\": %llu,\n"
 						"\t\"revision\": %llu,\n"
+						"\t\"memberRevisionCounter\": %llu,\n"
 						"\t\"members\": [",
 						nwids,
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
@@ -1369,7 +1372,8 @@ unsigned int SqliteNetworkController::_doCPGet(
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,5)).c_str(),
 						sqlite3_column_int(_sGetNetworkById,6),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,7),
-						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,8));
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,8),
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,9));
 					responseBody = json;
 
 					sqlite3_reset(_sListNetworkMembers);

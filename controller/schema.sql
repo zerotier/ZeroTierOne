@@ -58,7 +58,7 @@ CREATE TABLE Member (
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
   authorized integer NOT NULL DEFAULT(0),
   activeBridge integer NOT NULL DEFAULT(0),
-  memberRevision integer NOT NULL DEFAULT(0)
+  memberRevision integer NOT NULL DEFAULT(0),
   PRIMARY KEY (networkId, nodeId)
 );
 

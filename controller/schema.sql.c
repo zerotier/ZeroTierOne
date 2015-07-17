@@ -59,7 +59,7 @@
 "  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
 "  authorized integer NOT NULL DEFAULT(0),\n"\
 "  activeBridge integer NOT NULL DEFAULT(0),\n"\
-"  memberRevision integer NOT NULL DEFAULT(0)\n"\
+"  memberRevision integer NOT NULL DEFAULT(0),\n"\
 "  PRIMARY KEY (networkId, nodeId)\n"\
 ");\n"\
 "\n"\

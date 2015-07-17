@@ -172,6 +172,7 @@ To create a new network with a random last six digits safely and atomically, you
 <tr><td>multicastLimit</td><td>integer</td><td>Maximum number of multicast recipients per multicast/broadcast address</td><td>yes</td></tr>
 <tr><td>creationTime</td><td>integer</td><td>Time network was created in ms since epoch</td><td>no</td></tr>
 <tr><td>revision</td><td>integer</td><td>Network config revision number</td><td>no</td></tr>
+<tr><td>memberRevisionCounter</td><td>integer</td><td>Current value of network revision counter (incremented after every member add or revision)</td><td>no</td></tr>
 <tr><td>members</td><td>[string]</td><td>Array of ZeroTier addresses of network members</td><td>no</td></tr>
 <tr><td>relays</td><td>[object]</td><td>Array of network-specific relay nodes (see below)</td><td>yes</td></tr>
 <tr><td>ipLocalRoutes</td><td>[string]</td><td>Array of IP network/netmask entries corresponding to networks routed directly via this interface (e.g. 10.0.0.0/8 to route 10.0.0.0 via this interface)</td></tr>
@@ -200,7 +201,7 @@ IP assignment pools are only used if they are within a network specified in ipLo
 <table>
 <tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>
 <tr><td>ipRangeStart</td><td>string</td><td>Start of IP assignment range</td></tr>
-<tr><td>ipRangeEnd</td><td>integer</td><td>End of IP assignment range</td></tr>
+<tr><td>ipRangeEnd</td><td>string</td><td>End of IP assignment range</td></tr>
 </table>
 
 **Rule object format:**
@@ -247,4 +248,5 @@ IP related fields apply only to Ethernet frames of type IPv4 or IPV6. Otherwise 
 <tr><td>activeBridge</td><td>boolean</td><td>This member is an active network bridge</td><td>yes</td></tr>
 <tr><td>identity</td><td>string</td><td>Full ZeroTier identity of member</td><td>no</td></tr>
 <tr><td>ipAssignments</td><td>[string]</td><td>Array of IP/bits IP assignments</td><td>yes</td></tr>
+<tr><td>memberRevision</td><td>integer</td><td>Member revision counter value from network at time of last revision or member creation</td><td>no</td></tr>
 </table>
