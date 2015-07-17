@@ -389,8 +389,10 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 	// If netconf is unchanged from client reported revision, just tell client they're up to date
 
-	if ((haveRevision > 0)&&(haveRevision == network.revision))
-		return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
+	// Temporarily disabled -- old version didn't do this, and we'll go ahead and
+	// test more thoroughly before enabling this optimization.
+	//if ((haveRevision > 0)&&(haveRevision == network.revision))
+	//	return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
 	// Create and sign netconf
 
@@ -818,7 +820,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				if (!networkExists) {
 					if (path[1].substr(10) == "______") {
 						// A special POST /network/##########______ feature lets users create a network
-						// with an arbitrary unused network ID.
+						// with an arbitrary unused network number at this controller.
 						nwid = 0;
 
 						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
@@ -1023,13 +1025,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									sqlite3_step(_sDeleteIpAssignmentPoolsForNetwork);
 
 									for(std::vector< std::pair<InetAddress,InetAddress> >::const_iterator p(pools.begin());p!=pools.end();++p) {
+										char ipBlob1[16],ipBlob2[16];
 										sqlite3_reset(_sCreateIpAssignmentPool);
 										sqlite3_bind_text(_sCreateIpAssignmentPool,1,nwids,16,SQLITE_STATIC);
 										if (p->first.ss_family == AF_INET) {
-											char ipBlob1[16];
 											memset(ipBlob1,0,12);
 											memcpy(ipBlob1 + 12,p->first.rawIpData(),4);
-											char ipBlob2[16];
 											memset(ipBlob2,0,12);
 											memcpy(ipBlob2 + 12,p->second.rawIpData(),4);
 											sqlite3_bind_blob(_sCreateIpAssignmentPool,2,(const void *)ipBlob1,16,SQLITE_STATIC);
@@ -1522,14 +1523,27 @@ unsigned int SqliteNetworkController::_doCPGet(
 					sqlite3_bind_text(_sGetIpAssignmentPools2,1,nwids,16,SQLITE_STATIC);
 					bool firstIpAssignmentPool = true;
 					while (sqlite3_step(_sGetIpAssignmentPools2) == SQLITE_ROW) {
-						responseBody.append(firstIpAssignmentPool ? "\n\t\t" : ",\n\t\t");
-						firstIpAssignmentPool = false;
-						InetAddress ipps((const void *)sqlite3_column_blob(_sGetIpAssignmentPools2,0),(sqlite3_column_int(_sGetIpAssignmentPools2,2) == 6) ? 16 : 4,0);
-						InetAddress ippe((const void *)sqlite3_column_blob(_sGetIpAssignmentPools2,1),(sqlite3_column_int(_sGetIpAssignmentPools2,2) == 6) ? 16 : 4,0);
-						Utils::snprintf(json,sizeof(json),"{\"ipRangeStart\":\"%s\",\"ipRangeEnd\":\"%s\"}",
-							_jsonEscape(ipps.toIpString()).c_str(),
-							_jsonEscape(ippe.toIpString()).c_str());
-						responseBody.append(json);
+						const char *ipRangeStartB = reinterpret_cast<const char *>(sqlite3_column_blob(_sGetIpAssignmentPools2,0));
+						const char *ipRangeEndB = reinterpret_cast<const char *>(sqlite3_column_blob(_sGetIpAssignmentPools2,1));
+						if ((ipRangeStartB)&&(ipRangeEndB)) {
+							InetAddress ipps,ippe;
+							int ipVersion = sqlite3_column_int(_sGetIpAssignmentPools2,2);
+							if (ipVersion == 4) {
+								ipps.set((const void *)(ipRangeStartB + 12),4,0);
+								ippe.set((const void *)(ipRangeEndB + 12),4,0);
+							} else if (ipVersion == 6) {
+								ipps.set((const void *)ipRangeStartB,16,0);
+								ippe.set((const void *)ipRangeEndB,16,0);
+							}
+							if (ipps) {
+								responseBody.append(firstIpAssignmentPool ? "\n\t\t" : ",\n\t\t");
+								firstIpAssignmentPool = false;
+								Utils::snprintf(json,sizeof(json),"{\"ipRangeStart\":\"%s\",\"ipRangeEnd\":\"%s\"}",
+									_jsonEscape(ipps.toIpString()).c_str(),
+									_jsonEscape(ippe.toIpString()).c_str());
+								responseBody.append(json);
+							}
+						}
 					}
 
 					responseBody.append("],\n\t\"rules\": [");
