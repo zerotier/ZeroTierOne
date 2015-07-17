@@ -137,6 +137,7 @@ private:
 	sqlite3_stmt *_sGetGateways;
 	sqlite3_stmt *_sDeleteGateways;
 	sqlite3_stmt *_sCreateGateway;
+	sqlite3_stmt *_sIncrementMemberRevisionCounter;
 
 	Mutex _lock;
 };

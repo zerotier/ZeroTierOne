@@ -13,7 +13,8 @@ CREATE TABLE Network (
   v6AssignMode varchar(8) NOT NULL DEFAULT('none'),
   multicastLimit integer NOT NULL DEFAULT(32),
   creationTime integer NOT NULL DEFAULT(0),
-  revision integer NOT NULL DEFAULT(1)
+  revision integer NOT NULL DEFAULT(1),
+  memberRevisionCounter integer NOT NULL DEFAULT(1)
 );
 
 CREATE TABLE Node (
@@ -57,10 +58,12 @@ CREATE TABLE Member (
   nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
   authorized integer NOT NULL DEFAULT(0),
   activeBridge integer NOT NULL DEFAULT(0),
+  memberRevision integer NOT NULL DEFAULT(0)
   PRIMARY KEY (networkId, nodeId)
 );
 
 CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);
+CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);
 
 CREATE TABLE Relay (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,

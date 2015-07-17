@@ -14,7 +14,8 @@
 "  v6AssignMode varchar(8) NOT NULL DEFAULT('none'),\n"\
 "  multicastLimit integer NOT NULL DEFAULT(32),\n"\
 "  creationTime integer NOT NULL DEFAULT(0),\n"\
-"  revision integer NOT NULL DEFAULT(1)\n"\
+"  revision integer NOT NULL DEFAULT(1),\n"\
+"  memberRevisionCounter integer NOT NULL DEFAULT(1)\n"\
 ");\n"\
 "\n"\
 "CREATE TABLE Node (\n"\
@@ -58,10 +59,12 @@
 "  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
 "  authorized integer NOT NULL DEFAULT(0),\n"\
 "  activeBridge integer NOT NULL DEFAULT(0),\n"\
+"  memberRevision integer NOT NULL DEFAULT(0)\n"\
 "  PRIMARY KEY (networkId, nodeId)\n"\
 ");\n"\
 "\n"\
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
+"CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);\n"\
 "\n"\
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\

@@ -108,6 +108,7 @@ struct NetworkRecord {
 	int multicastLimit;
 	uint64_t creationTime;
 	uint64_t revision;
+	uint64_t memberRevisionCounter;
 };
 
 } // anonymous namespace
@@ -149,12 +150,13 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	if (
 
 			/* Network */
-			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
+			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision,memberRevisionCounter FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Network WHERE id = ?",-1,&_sDeleteNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT id FROM Network ORDER BY id ASC",-1,&_sListNetworks,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Network SET memberRevisionCounter = (memberRevisionCounter + 1) WHERE id = ?",-1,&_sIncrementMemberRevisionCounter,(const char **)0) != SQLITE_OK)
 
 			/* Node */
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
@@ -189,11 +191,11 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			/* Member */
 			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,n.identity FROM Member AS m JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge) VALUES (?,?,?,0)",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge,memberRevision) VALUES (?,?,?,0,(SELECT memberRevisionCounter FROM Network WHERE id = ?))",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.nodeId FROM Member AS m WHERE m.networkId = ? ORDER BY m.nodeId ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ? WHERE rowid = ?",-1,&_sUpdateMemberAuthorized,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ? WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberAuthorized,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 
 			/* Gateway */
@@ -251,6 +253,7 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sGetGateways);
 		sqlite3_finalize(_sDeleteGateways);
 		sqlite3_finalize(_sCreateGateway);
+		sqlite3_finalize(_sIncrementMemberRevisionCounter);
 		sqlite3_close(_db);
 	}
 }
@@ -316,6 +319,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		network.multicastLimit = sqlite3_column_int(_sGetNetworkById,6);
 		network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
 		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
+		network.memberRevisionCounter = (uint64_t)sqlite3_column_int64(_sGetNetworkById,9);
 	} else return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
 
 	// Fetch Member record
@@ -340,11 +344,16 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		sqlite3_bind_text(_sCreateMember,1,network.id,16,SQLITE_STATIC);
 		sqlite3_bind_text(_sCreateMember,2,member.nodeId,10,SQLITE_STATIC);
 		sqlite3_bind_int(_sCreateMember,3,(member.authorized ? 1 : 0));
+		sqlite3_bind_text(_sCreateMember,4,network.id,16,SQLITE_STATIC);
 		if (sqlite3_step(_sCreateMember) != SQLITE_DONE) {
 			netconf["error"] = "unable to create new member record";
 			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
 		member.rowid = (int64_t)sqlite3_last_insert_rowid(_db);
+
+		sqlite3_reset(_sIncrementMemberRevisionCounter);
+		sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,network.id,16,SQLITE_STATIC);
+		sqlite3_step(_sIncrementMemberRevisionCounter);
 	}
 
 	// Check member authorization
@@ -683,9 +692,14 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						sqlite3_bind_text(_sCreateMember,1,nwids,16,SQLITE_STATIC);
 						sqlite3_bind_text(_sCreateMember,2,addrs,10,SQLITE_STATIC);
 						sqlite3_bind_int(_sCreateMember,3,0);
+						sqlite3_bind_text(_sCreateMember,4,nwids,16,SQLITE_STATIC);
 						if (sqlite3_step(_sCreateMember) != SQLITE_DONE)
 							return 500;
 						memberRowId = (int64_t)sqlite3_last_insert_rowid(_db);
+
+						sqlite3_reset(_sIncrementMemberRevisionCounter);
+						sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
+						sqlite3_step(_sIncrementMemberRevisionCounter);
 					}
 
 					json_value *j = json_parse(body.c_str(),body.length());
@@ -697,17 +711,27 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									if (j->u.object.values[k].value->type == json_boolean) {
 										sqlite3_reset(_sUpdateMemberAuthorized);
 										sqlite3_bind_int(_sUpdateMemberAuthorized,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-										sqlite3_bind_int64(_sUpdateMemberAuthorized,2,memberRowId);
+										sqlite3_bind_text(_sUpdateMemberAuthorized,2,nwids,16,SQLITE_STATIC);
+										sqlite3_bind_int64(_sUpdateMemberAuthorized,3,memberRowId);
 										if (sqlite3_step(_sUpdateMemberAuthorized) != SQLITE_DONE)
 											return 500;
+
+										sqlite3_reset(_sIncrementMemberRevisionCounter);
+										sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
+										sqlite3_step(_sIncrementMemberRevisionCounter);
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"activeBridge")) {
 									if (j->u.object.values[k].value->type == json_boolean) {
 										sqlite3_reset(_sUpdateMemberActiveBridge);
 										sqlite3_bind_int(_sUpdateMemberActiveBridge,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
-										sqlite3_bind_int64(_sUpdateMemberActiveBridge,2,memberRowId);
+										sqlite3_bind_text(_sUpdateMemberActiveBridge,2,nwids,16,SQLITE_STATIC);
+										sqlite3_bind_int64(_sUpdateMemberActiveBridge,3,memberRowId);
 										if (sqlite3_step(_sUpdateMemberActiveBridge) != SQLITE_DONE)
 											return 500;
+
+										sqlite3_reset(_sIncrementMemberRevisionCounter);
+										sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
+										sqlite3_step(_sIncrementMemberRevisionCounter);
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"ipAssignments")) {
 									if (j->u.object.values[k].value->type == json_array) {
