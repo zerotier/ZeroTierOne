@@ -925,8 +925,9 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									for(std::map<Address,InetAddress>::iterator rl(nodeIdToPhyAddress.begin());rl!=nodeIdToPhyAddress.end();++rl) {
 										sqlite3_reset(_sCreateRelay);
 										sqlite3_bind_text(_sCreateRelay,1,nwids,16,SQLITE_STATIC);
-										sqlite3_bind_text(_sCreateRelay,2,rl->first.toString().c_str(),-1,SQLITE_STATIC);
-										sqlite3_bind_text(_sCreateRelay,3,rl->second.toString().c_str(),-1,SQLITE_STATIC);
+										std::string a(rl->first.toString()),b(rl->second.toString()); // don't destroy strings until sqlite3_step()
+										sqlite3_bind_text(_sCreateRelay,2,a.c_str(),-1,SQLITE_STATIC);
+										sqlite3_bind_text(_sCreateRelay,3,b.c_str(),-1,SQLITE_STATIC);
 										sqlite3_step(_sCreateRelay);
 									}
 								}
