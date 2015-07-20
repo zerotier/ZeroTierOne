@@ -67,12 +67,11 @@ CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision
 
 CREATE TABLE Relay (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
-  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
-  phyAddress varchar(64) NOT NULL,
-  PRIMARY KEY (networkId, nodeId)
+  address char(10) NOT NULL,
+  phyAddress varchar(64) NOT NULL
 );
 
-CREATE INDEX Relay_networkId ON Relay (networkId);
+CREATE UNIQUE INDEX Relay_networkId_address ON Relay (networkId,address);
 
 CREATE TABLE Rule (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
