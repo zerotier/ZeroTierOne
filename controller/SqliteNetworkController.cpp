@@ -415,9 +415,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			sqlite3_reset(_sGetEtherTypesFromRuleTable);
 			sqlite3_bind_text(_sGetEtherTypesFromRuleTable,1,network.id,16,SQLITE_STATIC);
 			while (sqlite3_step(_sGetEtherTypesFromRuleTable) == SQLITE_ROW) {
-				int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
-				if ((et >= 0)&&(et <= 0xffff))
-					allowedEtherTypes.push_back(et);
+				if (sqlite3_column_type(_sGetEtherTypesFromRuleTable,0) == SQLITE_NULL) {
+					allowedEtherTypes.clear();
+					allowedEtherTypes.push_back(0); // NULL 'allow' matches ANY
+					break;
+				} else {
+					int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
+					if ((et >= 0)&&(et <= 0xffff))
+						allowedEtherTypes.push_back(et);
+				}
 			}
 			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
 			allowedEtherTypes.erase(std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end()),allowedEtherTypes.end());
