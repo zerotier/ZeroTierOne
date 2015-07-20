@@ -1560,6 +1560,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 					bool firstRule = true;
 					while (sqlite3_step(_sListRules) == SQLITE_ROW) {
 						responseBody.append(firstRule ? "\n\t{\n" : ",{\n");
+						firstRule = false;
 						Utils::snprintf(json,sizeof(json),"\t\t\"ruleNo\": %lld,\n",sqlite3_column_int64(_sListRules,0));
 						responseBody.append(json);
 						if (sqlite3_column_type(_sListRules,1) != SQLITE_NULL) {
