@@ -175,7 +175,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignmentPool WHERE networkId = ?",-1,&_sDeleteIpAssignmentPoolsForNetwork,(const char **)0) != SQLITE_OK)
 
 			/* IpAssignment */
-			||(sqlite3_prepare_v2(_db,"SELECT \"type\",ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"type\",ip,ipNetmaskBits FROM IpAssignment WHERE networkId = ? AND (nodeId = ? OR nodeId IS NULL) AND ipVersion = ?",-1,&_sGetIpAssignmentsForNode,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId = ? AND \"type\" = ? ORDER BY ip ASC",-1,&_sGetIpAssignmentsForNode2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT ip,ipNetmaskBits,ipVersion FROM IpAssignment WHERE networkId = ? AND nodeId IS NULL AND \"type\" = ?",-1,&_sGetLocalRoutes,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT 1 FROM IpAssignment WHERE networkId = ? AND ip = ? AND ipVersion = ? AND \"type\" = ?",-1,&_sCheckIfIpIsAllocated,(const char **)0) != SQLITE_OK)
@@ -329,7 +329,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		sqlite3_bind_text(_sCreateNode,1,member.nodeId,10,SQLITE_STATIC);
 		sqlite3_bind_text(_sCreateNode,2,idstr.c_str(),-1,SQLITE_STATIC);
 		if (sqlite3_step(_sCreateNode) != SQLITE_DONE) {
-			netconf["error"] = "unable to create new node record";
+			netconf["error"] = "unable to create new Node record";
 			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
 	}
@@ -349,7 +349,9 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		network.creationTime = (uint64_t)sqlite3_column_int64(_sGetNetworkById,7);
 		network.revision = (uint64_t)sqlite3_column_int64(_sGetNetworkById,8);
 		network.memberRevisionCounter = (uint64_t)sqlite3_column_int64(_sGetNetworkById,9);
-	} else return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
+	} else {
+		return NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND;
+	}
 
 	// Fetch Member record
 
