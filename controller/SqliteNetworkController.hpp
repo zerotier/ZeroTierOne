@@ -138,6 +138,8 @@ private:
 	sqlite3_stmt *_sDeleteGateways;
 	sqlite3_stmt *_sCreateGateway;
 	sqlite3_stmt *_sIncrementMemberRevisionCounter;
+	sqlite3_stmt *_sGetConfig;
+	sqlite3_stmt *_sSetConfig;
 
 	Mutex _lock;
 };

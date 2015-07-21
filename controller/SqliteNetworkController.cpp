@@ -184,9 +184,9 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM IpAssignment WHERE networkId = ? AND nodeId IS NULL AND \"type\" = ?",-1,&_sDeleteLocalRoutes,(const char **)0) != SQLITE_OK)
 
 			/* Relay */
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId,phyAddress FROM Relay WHERE networkId = ? ORDER BY nodeId ASC",-1,&_sGetRelays,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"address\",\"phyAddress\" FROM Relay WHERE \"networkId\" = ? ORDER BY \"address\" ASC",-1,&_sGetRelays,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Relay WHERE networkId = ?",-1,&_sDeleteRelaysForNetwork,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Relay (networkId,nodeId,phyAddress) VALUES (?,?,?)",-1,&_sCreateRelay,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Relay (\"networkId\",\"address\",\"phyAddress\") VALUES (?,?,?)",-1,&_sCreateRelay,(const char **)0) != SQLITE_OK)
 
 			/* Member */
 			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
@@ -203,10 +203,34 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Gateway WHERE networkId = ?",-1,&_sDeleteGateways,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,ip,ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
 
+			/* Config */
+			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
+
 		 ) {
 		//printf("!!! %s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
+	}
+
+	/* Generate a 128-bit / 32-character "instance ID" if one isn't already
+	 * defined. Clients can use this to determine if this is the same controller
+	 * database they know and love. */
+	sqlite3_reset(_sGetConfig);
+	sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
+	if (sqlite3_step(_sGetConfig) != SQLITE_ROW) {
+		unsigned char sr[32];
+		Utils::getSecureRandom(sr,32);
+		char instanceId[32];
+		for(unsigned int i=0;i<32;++i)
+			instanceId[i] = "0123456789abcdef"[(unsigned int)sr[i] & 0xf];
+		sqlite3_reset(_sSetConfig);
+		sqlite3_bind_text(_sSetConfig,1,"instanceId",10,SQLITE_STATIC);
+		sqlite3_bind_text(_sSetConfig,2,instanceId,32,SQLITE_STATIC);
+		if (sqlite3_step(_sSetConfig) != SQLITE_DONE) {
+			sqlite3_close(_db);
+			throw std::runtime_error("SqliteNetworkController unable to read or initialize instanceId");
+		}
 	}
 }
 
@@ -254,6 +278,8 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sDeleteGateways);
 		sqlite3_finalize(_sCreateGateway);
 		sqlite3_finalize(_sIncrementMemberRevisionCounter);
+		sqlite3_finalize(_sGetConfig);
+		sqlite3_finalize(_sSetConfig);
 		sqlite3_close(_db);
 	}
 }
@@ -363,8 +389,10 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 	// If netconf is unchanged from client reported revision, just tell client they're up to date
 
-	if ((haveRevision > 0)&&(haveRevision == network.revision))
-		return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
+	// Temporarily disabled -- old version didn't do this, and we'll go ahead and
+	// test more thoroughly before enabling this optimization.
+	//if ((haveRevision > 0)&&(haveRevision == network.revision))
+	//	return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
 	// Create and sign netconf
 
@@ -387,9 +415,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 			sqlite3_reset(_sGetEtherTypesFromRuleTable);
 			sqlite3_bind_text(_sGetEtherTypesFromRuleTable,1,network.id,16,SQLITE_STATIC);
 			while (sqlite3_step(_sGetEtherTypesFromRuleTable) == SQLITE_ROW) {
-				int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
-				if ((et >= 0)&&(et <= 0xffff))
-					allowedEtherTypes.push_back(et);
+				if (sqlite3_column_type(_sGetEtherTypesFromRuleTable,0) == SQLITE_NULL) {
+					allowedEtherTypes.clear();
+					allowedEtherTypes.push_back(0); // NULL 'allow' matches ANY
+					break;
+				} else {
+					int et = sqlite3_column_int(_sGetEtherTypesFromRuleTable,0);
+					if ((et >= 0)&&(et <= 0xffff))
+						allowedEtherTypes.push_back(et);
+				}
 			}
 			std::sort(allowedEtherTypes.begin(),allowedEtherTypes.end());
 			allowedEtherTypes.erase(std::unique(allowedEtherTypes.begin(),allowedEtherTypes.end()),allowedEtherTypes.end());
@@ -792,16 +826,15 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 				if (!networkExists) {
 					if (path[1].substr(10) == "______") {
 						// A special POST /network/##########______ feature lets users create a network
-						// with an arbitrary unused network ID.
+						// with an arbitrary unused network number at this controller.
 						nwid = 0;
 
 						uint64_t nwidPrefix = (Utils::hexStrToU64(path[1].substr(0,10).c_str()) << 24) & 0xffffffffff000000ULL;
 						uint64_t nwidPostfix = 0;
 						Utils::getSecureRandom(&nwidPostfix,sizeof(nwidPostfix));
-						nwidPostfix &= 0xffffffULL;
 						uint64_t nwidOriginalPostfix = nwidPostfix;
 						do {
-							uint64_t tryNwid = nwidPrefix | nwidPostfix;
+							uint64_t tryNwid = nwidPrefix | (nwidPostfix & 0xffffffULL);
 							if (!nwidPostfix)
 								tryNwid |= 1;
 							Utils::snprintf(nwids,sizeof(nwids),"%.16llx",(unsigned long long)tryNwid);
@@ -814,7 +847,6 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 							}
 
 							++nwidPostfix;
-							nwidPostfix &= 0xffffffULL;
 						} while (nwidPostfix != nwidOriginalPostfix);
 
 						// 503 means we have no more free IDs for this prefix. You shouldn't host anywhere
@@ -840,12 +872,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 
 							if (!strcmp(j->u.object.values[k].name,"name")) {
 								if ((j->u.object.values[k].value->type == json_string)&&(j->u.object.values[k].value->u.string.ptr[0])) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET name = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"name\" = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
 										sqlite3_bind_text(stmt,1,j->u.object.values[k].value->u.string.ptr,-1,SQLITE_STATIC);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"private")) {
 								if (j->u.object.values[k].value->type == json_boolean) {
-									if (sqlite3_prepare_v2(_db,"UPDATE Network SET private = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
+									if (sqlite3_prepare_v2(_db,"UPDATE Network SET \"private\" = ? WHERE id = ?",-1,&stmt,(const char **)0) == SQLITE_OK)
 										sqlite3_bind_int(stmt,1,(j->u.object.values[k].value->u.boolean == 0) ? 0 : 1);
 								}
 							} else if (!strcmp(j->u.object.values[k].name,"enableBroadcast")) {
@@ -899,8 +931,9 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									for(std::map<Address,InetAddress>::iterator rl(nodeIdToPhyAddress.begin());rl!=nodeIdToPhyAddress.end();++rl) {
 										sqlite3_reset(_sCreateRelay);
 										sqlite3_bind_text(_sCreateRelay,1,nwids,16,SQLITE_STATIC);
-										sqlite3_bind_text(_sCreateRelay,2,rl->first.toString().c_str(),-1,SQLITE_STATIC);
-										sqlite3_bind_text(_sCreateRelay,3,rl->second.toString().c_str(),-1,SQLITE_STATIC);
+										std::string a(rl->first.toString()),b(rl->second.toString()); // don't destroy strings until sqlite3_step()
+										sqlite3_bind_text(_sCreateRelay,2,a.c_str(),-1,SQLITE_STATIC);
+										sqlite3_bind_text(_sCreateRelay,3,b.c_str(),-1,SQLITE_STATIC);
 										sqlite3_step(_sCreateRelay);
 									}
 								}
@@ -999,13 +1032,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									sqlite3_step(_sDeleteIpAssignmentPoolsForNetwork);
 
 									for(std::vector< std::pair<InetAddress,InetAddress> >::const_iterator p(pools.begin());p!=pools.end();++p) {
+										char ipBlob1[16],ipBlob2[16];
 										sqlite3_reset(_sCreateIpAssignmentPool);
 										sqlite3_bind_text(_sCreateIpAssignmentPool,1,nwids,16,SQLITE_STATIC);
 										if (p->first.ss_family == AF_INET) {
-											char ipBlob1[16];
 											memset(ipBlob1,0,12);
 											memcpy(ipBlob1 + 12,p->first.rawIpData(),4);
-											char ipBlob2[16];
 											memset(ipBlob2,0,12);
 											memcpy(ipBlob2 + 12,p->second.rawIpData(),4);
 											sqlite3_bind_blob(_sCreateIpAssignmentPool,2,(const void *)ipBlob1,16,SQLITE_STATIC);
@@ -1498,14 +1530,27 @@ unsigned int SqliteNetworkController::_doCPGet(
 					sqlite3_bind_text(_sGetIpAssignmentPools2,1,nwids,16,SQLITE_STATIC);
 					bool firstIpAssignmentPool = true;
 					while (sqlite3_step(_sGetIpAssignmentPools2) == SQLITE_ROW) {
-						responseBody.append(firstIpAssignmentPool ? "\n\t\t" : ",\n\t\t");
-						firstIpAssignmentPool = false;
-						InetAddress ipps((const void *)sqlite3_column_blob(_sGetIpAssignmentPools2,0),(sqlite3_column_int(_sGetIpAssignmentPools2,2) == 6) ? 16 : 4,0);
-						InetAddress ippe((const void *)sqlite3_column_blob(_sGetIpAssignmentPools2,1),(sqlite3_column_int(_sGetIpAssignmentPools2,2) == 6) ? 16 : 4,0);
-						Utils::snprintf(json,sizeof(json),"{\"ipRangeStart\":\"%s\",\"ipRangeEnd\":\"%s\"}",
-							_jsonEscape(ipps.toIpString()).c_str(),
-							_jsonEscape(ippe.toIpString()).c_str());
-						responseBody.append(json);
+						const char *ipRangeStartB = reinterpret_cast<const char *>(sqlite3_column_blob(_sGetIpAssignmentPools2,0));
+						const char *ipRangeEndB = reinterpret_cast<const char *>(sqlite3_column_blob(_sGetIpAssignmentPools2,1));
+						if ((ipRangeStartB)&&(ipRangeEndB)) {
+							InetAddress ipps,ippe;
+							int ipVersion = sqlite3_column_int(_sGetIpAssignmentPools2,2);
+							if (ipVersion == 4) {
+								ipps.set((const void *)(ipRangeStartB + 12),4,0);
+								ippe.set((const void *)(ipRangeEndB + 12),4,0);
+							} else if (ipVersion == 6) {
+								ipps.set((const void *)ipRangeStartB,16,0);
+								ippe.set((const void *)ipRangeEndB,16,0);
+							}
+							if (ipps) {
+								responseBody.append(firstIpAssignmentPool ? "\n\t\t" : ",\n\t\t");
+								firstIpAssignmentPool = false;
+								Utils::snprintf(json,sizeof(json),"{\"ipRangeStart\":\"%s\",\"ipRangeEnd\":\"%s\"}",
+									_jsonEscape(ipps.toIpString()).c_str(),
+									_jsonEscape(ippe.toIpString()).c_str());
+								responseBody.append(json);
+							}
+						}
 					}
 
 					responseBody.append("],\n\t\"rules\": [");
@@ -1515,6 +1560,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 					bool firstRule = true;
 					while (sqlite3_step(_sListRules) == SQLITE_ROW) {
 						responseBody.append(firstRule ? "\n\t{\n" : ",{\n");
+						firstRule = false;
 						Utils::snprintf(json,sizeof(json),"\t\t\"ruleNo\": %lld,\n",sqlite3_column_int64(_sListRules,0));
 						responseBody.append(json);
 						if (sqlite3_column_type(_sListRules,1) != SQLITE_NULL) {
@@ -1611,10 +1657,14 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 	} else {
 		// GET /controller returns status and API version if controller is supported
-		Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu\n}",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now());
-		responseBody = json;
-		responseContentType = "applicaiton/json";
-		return 200;
+		sqlite3_reset(_sGetConfig);
+		sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
+		if (sqlite3_step(_sGetConfig) == SQLITE_ROW) {
+			Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"instanceId\": \"%s\"\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),(const char *)sqlite3_column_text(_sGetConfig,0));
+			responseBody = json;
+			responseContentType = "applicaiton/json";
+			return 200;
+		} else return 500;
 	}
 
 	return 404;

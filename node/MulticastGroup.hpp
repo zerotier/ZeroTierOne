@@ -89,7 +89,7 @@ public:
 		throw()
 	{
 		if (ip.isV4()) {
-			// IPv4 wants braodcast MACs, so we shove the V4 address itself into
+			// IPv4 wants broadcast MACs, so we shove the V4 address itself into
 			// the Multicast Group ADI field. Making V4 ARP work is basically why
 			// ADI was added, as well as handling other things that want mindless
 			// Ethernet broadcast to all.

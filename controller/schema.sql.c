@@ -68,12 +68,11 @@
 "\n"\
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
-"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
-"  phyAddress varchar(64) NOT NULL,\n"\
-"  PRIMARY KEY (networkId, nodeId)\n"\
+"  address char(10) NOT NULL,\n"\
+"  phyAddress varchar(64) NOT NULL\n"\
 ");\n"\
 "\n"\
-"CREATE INDEX Relay_networkId ON Relay (networkId);\n"\
+"CREATE UNIQUE INDEX Relay_networkId_address ON Relay (networkId,address);\n"\
 "\n"\
 "CREATE TABLE Rule (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
