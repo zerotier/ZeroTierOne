@@ -205,7 +205,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 			/* Config */
 			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
 
 		 ) {
 		//printf("!!! %s\n",sqlite3_errmsg(_db));
@@ -221,16 +221,19 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	if (sqlite3_step(_sGetConfig) != SQLITE_ROW) {
 		unsigned char sr[32];
 		Utils::getSecureRandom(sr,32);
-		char instanceId[32];
 		for(unsigned int i=0;i<32;++i)
-			instanceId[i] = "0123456789abcdef"[(unsigned int)sr[i] & 0xf];
+			_instanceId.push_back("0123456789abcdef"[(unsigned int)sr[i] & 0xf]);
+
 		sqlite3_reset(_sSetConfig);
 		sqlite3_bind_text(_sSetConfig,1,"instanceId",10,SQLITE_STATIC);
-		sqlite3_bind_text(_sSetConfig,2,instanceId,32,SQLITE_STATIC);
-		if (sqlite3_step(_sSetConfig) != SQLITE_DONE) {
-			sqlite3_close(_db);
+		sqlite3_bind_text(_sSetConfig,2,_instanceId.c_str(),-1,SQLITE_STATIC);
+		if (sqlite3_step(_sSetConfig) != SQLITE_DONE)
 			throw std::runtime_error("SqliteNetworkController unable to read or initialize instanceId");
-		}
+	} else {
+		const char *iid = reinterpret_cast<const char *>(sqlite3_column_text(_sGetConfig,0));
+		if (!iid)
+			throw std::runtime_error("SqliteNetworkController unable to read instanceId (it's NULL)");
+		_instanceId = iid;
 	}
 }
 
@@ -1286,6 +1289,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 							"{\n"
 							"\t\"nwid\": \"%s\",\n"
 							"\t\"address\": \"%s\",\n"
+							"\t\"controllerInstanceId\": \"%s\",\n"
 							"\t\"authorized\": %s,\n"
 							"\t\"activeBridge\": %s,\n"
 							"\t\"memberRevision\": %llu,\n"
@@ -1293,6 +1297,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 							"\t\"ipAssignments\": [",
 							nwids,
 							addrs,
+							_instanceId.c_str(),
 							(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
 							(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
 							(unsigned long long)sqlite3_column_int64(_sGetMember2,2),
@@ -1384,6 +1389,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 					Utils::snprintf(json,sizeof(json),
 						"{\n"
 						"\t\"nwid\": \"%s\",\n"
+						"\t\"controllerInstanceId\": \"%s\",\n"
 						"\t\"name\": \"%s\",\n"
 						"\t\"private\": %s,\n"
 						"\t\"enableBroadcast\": %s,\n"
@@ -1396,6 +1402,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"\t\"memberRevisionCounter\": %llu,\n"
 						"\t\"members\": [",
 						nwids,
+						_instanceId.c_str(),
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
@@ -1657,14 +1664,10 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 	} else {
 		// GET /controller returns status and API version if controller is supported
-		sqlite3_reset(_sGetConfig);
-		sqlite3_bind_text(_sGetConfig,1,"instanceId",10,SQLITE_STATIC);
-		if (sqlite3_step(_sGetConfig) == SQLITE_ROW) {
-			Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"instanceId\": \"%s\"\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),(const char *)sqlite3_column_text(_sGetConfig,0));
-			responseBody = json;
-			responseContentType = "applicaiton/json";
-			return 200;
-		} else return 500;
+		Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"instanceId\": \"%s\"\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),_instanceId.c_str());
+		responseBody = json;
+		responseContentType = "applicaiton/json";
+		return 200;
 	}
 
 	return 404;
