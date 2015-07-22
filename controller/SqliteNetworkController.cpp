@@ -142,6 +142,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 		// Prepare statement will fail if Config table doesn't exist, which means our DB
 		// needs to be initialized.
 		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
+			//printf("%s\n",sqlite3_errmsg(_db));
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController cannot initialize database and/or insert schemaVersion into Config table");
 		}
@@ -199,16 +200,20 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 
 			/* Gateway */
-			||(sqlite3_prepare_v2(_db,"SELECT ip,ipVersion,metric FROM Gateway WHERE networkId = ? ORDER BY metric ASC",-1,&_sGetGateways,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"ip\",ipVersion,metric FROM Gateway WHERE networkId = ? ORDER BY metric ASC",-1,&_sGetGateways,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Gateway WHERE networkId = ?",-1,&_sDeleteGateways,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,ip,ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,\"ip\",ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
+
+			/* Log */
+			||(sqlite3_prepare_v2(_db,"INSERT INTO \"Log\" (networkId,nodeId,\"ts\",\"authorized\",fromAddr) VALUES (?,?,?,?,?)",-1,&_sPutLog,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"ts\",\"authorized\",fromAddr FROM \"Log\" WHERE networkId = ? AND nodeId = ? AND \"ts\" >= ? ORDER BY \"ts\" ASC",-1,&_sGetMemberLog,(const char **)0) != SQLITE_OK)
 
 			/* Config */
 			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
 
 		 ) {
-		//printf("!!! %s\n",sqlite3_errmsg(_db));
+		//printf("%s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
 	}
@@ -283,6 +288,8 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sIncrementMemberRevisionCounter);
 		sqlite3_finalize(_sGetConfig);
 		sqlite3_finalize(_sSetConfig);
+		sqlite3_finalize(_sPutLog);
+		sqlite3_finalize(_sGetMemberLog);
 		sqlite3_close(_db);
 	}
 }
@@ -385,6 +392,25 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		sqlite3_reset(_sIncrementMemberRevisionCounter);
 		sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,network.id,16,SQLITE_STATIC);
 		sqlite3_step(_sIncrementMemberRevisionCounter);
+	}
+
+	// Add log entry
+	{
+		std::string fa;
+		if (fromAddr) {
+			fa = fromAddr.toString();
+			if (fa.length() > 64)
+				fa = fa.substr(0,64);
+		}
+		sqlite3_reset(_sPutLog);
+		sqlite3_bind_text(_sPutLog,1,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_text(_sPutLog,2,member.nodeId,10,SQLITE_STATIC);
+		sqlite3_bind_int64(_sPutLog,3,(long long)OSUtils::now());
+		sqlite3_bind_int(_sPutLog,4,member.authorized ? 1 : 0);
+		if (fa.length() > 0)
+			sqlite3_bind_text(_sPutLog,5,fa.c_str(),-1,SQLITE_STATIC);
+		else sqlite3_bind_null(_sPutLog,5);
+		sqlite3_step(_sPutLog);
 	}
 
 	// Check member authorization
