@@ -96,6 +96,7 @@ private:
 		std::string &responseContentType);
 
 	std::string _dbPath;
+	std::string _instanceId;
 	sqlite3 *_db;
 
 	sqlite3_stmt *_sGetNetworkById;
