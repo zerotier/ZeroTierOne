@@ -1394,8 +1394,11 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 						sqlite3_reset(_sListNetworkMembers);
 						sqlite3_bind_text(_sListNetworkMembers,1,nwids,16,SQLITE_STATIC);
+						responseBody.append("{");
+						bool firstMember = true;
 						while (sqlite3_step(_sListNetworkMembers) == SQLITE_ROW) {
-							responseBody.append((responseBody.length() > 0) ? ",\"" : "{\"");
+							responseBody.append(firstMember ? "\"" : ",\"");
+							firstMember = false;
 							responseBody.append((const char *)sqlite3_column_text(_sListNetworkMembers,0));
 							responseBody.append("\":");
 							responseBody.append((const char *)sqlite3_column_text(_sListNetworkMembers,1));
