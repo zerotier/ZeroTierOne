@@ -64,6 +64,10 @@
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
 
+// Drop requests for a given peer and network ID that occur more frequently
+// than this (ms).
+#define ZT_NETCONF_MIN_REQUEST_PERIOD 5000
+
 namespace ZeroTier {
 
 namespace {
@@ -314,6 +318,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	if (signingId.address().toInt() != (nwid >> 24)) {
 		netconf["error"] = "signing identity address does not match most significant 40 bits of network ID";
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+	}
+
+	// Check rate limit
+
+	{
+		uint64_t &lrt = _lastRequestTime[std::pair<Address,uint64_t>(identity.address(),nwid)];
+		uint64_t lrt2 = lrt;
+		if (((lrt = OSUtils::now()) - lrt2) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
+			return NetworkController::NETCONF_QUERY_IGNORE;
 	}
 
 	NetworkRecord network;

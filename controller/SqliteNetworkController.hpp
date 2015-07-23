@@ -98,6 +98,8 @@ private:
 	std::string _dbPath;
 	std::string _instanceId;
 
+	std::map< std::pair<Address,uint64_t>,uint64_t > _lastRequestTime;
+
 	sqlite3 *_db;
 
 	sqlite3_stmt *_sGetNetworkById;
