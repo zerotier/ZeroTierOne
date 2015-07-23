@@ -47,59 +47,48 @@
 
 namespace ZeroTier {
 
+// Fields for meta-data sent with network config requests
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION "majv"
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION "minv"
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION "revv"
+
 // These dictionary keys are short so they don't take up much room in
 // netconf response packets.
 
 // integer(hex)[,integer(hex),...]
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES "et"
-
 // network ID
 #define ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID "nwid"
-
 // integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP "ts"
-
 // integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_REVISION "r"
-
 // address of member
 #define ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO "id"
-
 // integer(hex)
 #define ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT "ml"
-
 // 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_PRIVATE "p"
-
 // text
 #define ZT_NETWORKCONFIG_DICT_KEY_NAME "n"
-
 // text
 #define ZT_NETWORKCONFIG_DICT_KEY_DESC "d"
-
 // IP/bits[,IP/bits,...]
 // Note that IPs that end in all zeroes are routes with no assignment in them.
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC "v4s"
-
 // IP/bits[,IP/bits,...]
 // Note that IPs that end in all zeroes are routes with no assignment in them.
 #define ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC "v6s"
-
 // serialized CertificateOfMembership
 #define ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP "com"
-
 // 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST "eb"
-
 // 0/1
 #define ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING "pb"
-
 // node[,node,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES "ab"
-
 // node;IP/port[,node;IP/port]
 #define ZT_NETWORKCONFIG_DICT_KEY_RELAYS "rl"
-
 // IP/metric[,IP/metric,...]
 #define ZT_NETWORKCONFIG_DICT_KEY_GATEWAYS "gw"
 
@@ -158,7 +147,7 @@ public:
 	inline bool isPublic() const throw() { return (!_private); }
 	inline bool isPrivate() const throw() { return _private; }
 	inline const std::string &name() const throw() { return _name; }
-	inline const std::string &description() const throw() { return _description; }
+	inline const std::vector<InetAddress> &localRoutes() const throw() { return _localRoutes; }
 	inline const std::vector<InetAddress> &staticIps() const throw() { return _staticIps; }
 	inline const std::vector<InetAddress> &gateways() const throw() { return _gateways; }
 	inline const std::vector<Address> &activeBridges() const throw() { return _activeBridges; }
@@ -194,7 +183,7 @@ private:
 	bool _private;
 	bool _enableBroadcast;
 	std::string _name;
-	std::string _description;
+	std::vector<InetAddress> _localRoutes;
 	std::vector<InetAddress> _staticIps;
 	std::vector<InetAddress> _gateways;
 	std::vector<Address> _activeBridges;
@@ -207,4 +196,3 @@ private:
 } // namespace ZeroTier
 
 #endif
-

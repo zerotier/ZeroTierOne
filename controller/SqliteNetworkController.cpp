@@ -296,6 +296,12 @@ SqliteNetworkController::~SqliteNetworkController()
 
 NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
 {
+	// Decode some stuff from metaData
+	const unsigned int clientMajorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
+	const unsigned int clientMinorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
+	const unsigned int clientRevision = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
+	const bool clientIs104 = (Utils::compareVersion(clientMajorVersion,clientMinorVersion,clientRevision,1,0,4) >= 0);
+
 	Mutex::Lock _l(_lock);
 
 	// Note: we can't reuse prepared statements that return const char * pointers without
@@ -417,13 +423,6 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 
 	if (!member.authorized)
 		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-
-	// If netconf is unchanged from client reported revision, just tell client they're up to date
-
-	// Temporarily disabled -- old version didn't do this, and we'll go ahead and
-	// test more thoroughly before enabling this optimization.
-	//if ((haveRevision > 0)&&(haveRevision == network.revision))
-	//	return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
 	// Create and sign netconf
 
@@ -581,7 +580,8 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 				if ((ipNetmaskBits <= 0)||(ipNetmaskBits > 32))
 					continue;
 
-				switch((IpAssignmentType)sqlite3_column_int(_sGetIpAssignmentsForNode,0)) {
+				const IpAssignmentType ipt = (IpAssignmentType)sqlite3_column_int(_sGetIpAssignmentsForNode,0);
+				switch(ipt) {
 					case ZT_IP_ASSIGNMENT_TYPE_ADDRESS:
 						haveStaticIpAssignment = true;
 						break;
@@ -592,13 +592,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 						continue;
 				}
 
-				// We send both routes and IP assignments -- client knows which is
-				// which by whether address ends in all zeroes after netmask.
-				char tmp[32];
-				Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[12],(int)ip[13],(int)ip[14],(int)ip[15],ipNetmaskBits);
-				if (v4s.length())
-					v4s.push_back(',');
-				v4s.append(tmp);
+				// 1.0.4 or newer clients support network routes in addition to IPs.
+				// Older clients only support IP address / netmask entries.
+				if ((clientIs104)||(ipt == ZT_IP_ASSIGNMENT_TYPE_ADDRESS)) {
+					char tmp[32];
+					Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[12],(int)ip[13],(int)ip[14],(int)ip[15],ipNetmaskBits);
+					if (v4s.length())
+						v4s.push_back(',');
+					v4s.append(tmp);
+				}
 			}
 
 			if (!haveStaticIpAssignment) {
@@ -1388,7 +1390,6 @@ unsigned int SqliteNetworkController::_doCPGet(
 										const char *result = "";
 										switch(this->doNetworkConfigRequest(InetAddress(),sigid,memid,nwid,Dictionary(),hr,netconf)) {
 											case NetworkController::NETCONF_QUERY_OK: result = "OK"; break;
-											case NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER: result = "OK_BUT_NOT_NEWER"; break;
 											case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: result = "OBJECT_NOT_FOUND"; break;
 											case NetworkController::NETCONF_QUERY_ACCESS_DENIED: result = "ACCESS_DENIED"; break;
 											case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR: result = "INTERNAL_SERVER_ERROR"; break;
