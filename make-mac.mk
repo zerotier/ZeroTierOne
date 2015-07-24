@@ -1,5 +1,9 @@
-CC?=clang
-CXX?=clang++
+ifeq ($(origin CC),default)
+	CC=$(shell if [ -e /usr/bin/clang ]; then echo clang; else echo gcc; fi)
+endif
+ifeq ($(origin CXX),default)
+	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
+endif
 
 INCLUDES=-I/usr/local/include
 DEFS=
