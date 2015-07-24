@@ -66,7 +66,7 @@
 
 // Drop requests for a given peer and network ID that occur more frequently
 // than this (ms).
-#define ZT_NETCONF_MIN_REQUEST_PERIOD 5000
+#define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
 namespace ZeroTier {
 
@@ -689,7 +689,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		// TODO: IPv6 auto-assign once it's supported in UI
 
 		if (network.isPrivate) {
-			CertificateOfMembership com(network.revision,ZT1_CERTIFICATE_OF_MEMBERSHIP_REVISION_MAX_DELTA,nwid,identity.address());
+			CertificateOfMembership com(OSUtils::now(),ZT_NETWORK_AUTOCONF_DELAY + (ZT_NETWORK_AUTOCONF_DELAY / 2),nwid,identity.address());
 			if (com.sign(signingId)) // basically can't fail unless our identity is invalid
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			else {
@@ -757,6 +757,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					char addrs[24];
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
 
+					int64_t addToNetworkRevision = 0;
+
 					int64_t memberRowId = 0;
 					sqlite3_reset(_sGetMember);
 					sqlite3_bind_text(_sGetMember,1,nwids,16,SQLITE_STATIC);
@@ -780,6 +782,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						sqlite3_reset(_sIncrementMemberRevisionCounter);
 						sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
 						sqlite3_step(_sIncrementMemberRevisionCounter);
+						addToNetworkRevision = 1;
 					}
 
 					json_value *j = json_parse(body.c_str(),body.length());
@@ -799,6 +802,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										sqlite3_reset(_sIncrementMemberRevisionCounter);
 										sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
 										sqlite3_step(_sIncrementMemberRevisionCounter);
+										addToNetworkRevision = 1;
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"activeBridge")) {
 									if (j->u.object.values[k].value->type == json_boolean) {
@@ -812,6 +816,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										sqlite3_reset(_sIncrementMemberRevisionCounter);
 										sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
 										sqlite3_step(_sIncrementMemberRevisionCounter);
+										addToNetworkRevision = 1;
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"ipAssignments")) {
 									if (j->u.object.values[k].value->type == json_array) {
@@ -855,12 +860,20 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 												}
 											}
 										}
+										addToNetworkRevision = 1;
 									}
 								}
 
 							}
 						}
 						json_value_free(j);
+					}
+
+					if ((addToNetworkRevision > 0)&&(revision > 0)) {
+						sqlite3_reset(_sSetNetworkRevision);
+						sqlite3_bind_int64(_sSetNetworkRevision,1,revision + addToNetworkRevision);
+						sqlite3_bind_text(_sSetNetworkRevision,2,nwids,16,SQLITE_STATIC);
+						sqlite3_step(_sSetNetworkRevision);
 					}
 
 					return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);

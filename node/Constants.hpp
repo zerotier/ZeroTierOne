@@ -158,7 +158,7 @@
 
 /**
  * Maximum number of packet fragments we'll support
- * 
+ *
  * The actual spec allows 16, but this is the most we'll support right
  * now. Packets with more than this many fragments are dropped.
  */
@@ -216,7 +216,7 @@
 
 /**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
- * 
+ *
  * The protocol allows up to 7, but we limit it to something smaller.
  */
 #define ZT_RELAY_MAX_HOPS 3
