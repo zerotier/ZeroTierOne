@@ -71,6 +71,7 @@
 "  nodeId char(10) NOT NULL,\n"\
 "  ts integer NOT NULL,\n"\
 "  authorized integer NOT NULL,\n"\
+"  version varchar(16),\n"\
 "  fromAddr varchar(64)\n"\
 ");\n"\
 "\n"\

@@ -146,6 +146,7 @@ private:
 	sqlite3_stmt *_sSetConfig;
 	sqlite3_stmt *_sPutLog;
 	sqlite3_stmt *_sGetMemberLog;
+	sqlite3_stmt *_sGetRecentMemberLog;
 
 	Mutex _lock;
 };

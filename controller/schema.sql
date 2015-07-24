@@ -70,6 +70,7 @@ CREATE TABLE Log (
   nodeId char(10) NOT NULL,
   ts integer NOT NULL,
   authorized integer NOT NULL,
+  version varchar(16),
   fromAddr varchar(64)
 );
 
