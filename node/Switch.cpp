@@ -451,7 +451,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 {
 	unsigned long nextDelay = 0xffffffff; // ceiling delay, caller will cap to minimum
 
-	{ // Aggressive NAT traversal time!
+	{
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
@@ -460,26 +460,17 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 					_contactQueue.erase(qi++);
 					continue;
 				} else {
-					// Nope, nothing yet. Time to kill some kittens.
 					if (qi->strategyIteration == 0) {
 						// First strategy: send packet directly (we already tried this but try again)
 						qi->peer->attemptToContactAt(RR,qi->inaddr,now);
-					} else if (qi->strategyIteration <= 9) {
-						// Strategies 1-9: try escalating ports
+					} else if (qi->strategyIteration <= 4) {
+						// Strategies 1-4: try escalating ports
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
 						if (p < 0xffff) {
 							tmpaddr.setPort((unsigned int)p);
 							qi->peer->attemptToContactAt(RR,tmpaddr,now);
 						} else qi->strategyIteration = 9;
-					} else if (qi->strategyIteration <= 18) {
-						// Strategies 10-18: try ports below
-						InetAddress tmpaddr(qi->inaddr);
-						int p = (int)qi->inaddr.port() - (qi->strategyIteration - 9);
-						if (p >= 1024) {
-							tmpaddr.setPort((unsigned int)p);
-							qi->peer->attemptToContactAt(RR,tmpaddr,now);
-						} else qi->strategyIteration = 18;
 					} else {
 						// All strategies tried, expire entry
 						_contactQueue.erase(qi++);
