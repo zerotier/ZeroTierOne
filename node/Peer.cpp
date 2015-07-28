@@ -33,6 +33,7 @@
 #include "Switch.hpp"
 #include "Network.hpp"
 #include "AntiRecursion.hpp"
+#include "SelfAwareness.hpp"
 
 #include <algorithm>
 
@@ -229,6 +230,24 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
+
+		/* Also push paths reported to us by non-root-server peers. This assists
+		 * with NAT traversal behind NATs that engage in strange or randomized
+		 * port assignment behavior. */
+		std::vector<Address> rootAddresses(RR->topology->rootAddresses());
+		std::vector< std::pair<Address,InetAddress> > surface(RR->sa->getReportedSurface());
+		for(std::vector< std::pair<Address,InetAddress> >::const_iterator s(surface.begin());s!=surface.end();++s) {
+			bool alreadyHave = false;
+			for(std::vector<Path>::const_iterator p(dps.begin());p!=dps.end();++p) {
+				if (p->address() == s->second) {
+					alreadyHave = true;
+					break;
+				}
+			}
+			if ((!alreadyHave)&&(std::find(rootAddresses.begin(),rootAddresses.end(),s->first) == rootAddresses.end()))
+				dps.push_back(Path(s->second,0,Path::TRUST_NORMAL));
+		}
+
 #ifdef ZT_TRACE
 		{
 			std::string ps;

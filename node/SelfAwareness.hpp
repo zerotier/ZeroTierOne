@@ -29,6 +29,7 @@
 #define ZT_SELFAWARENESS_HPP
 
 #include <map>
+#include <vector>
 
 #include "InetAddress.hpp"
 #include "Address.hpp"
@@ -64,6 +65,19 @@ public:
 	 * @param now Current time
 	 */
 	void clean(uint64_t now);
+
+	/**
+	 * @return List of external surface addresses as reported by peers
+	 */
+	inline std::vector< std::pair<Address,InetAddress> > getReportedSurface() const
+	{
+		std::vector< std::pair<Address,InetAddress> > r;
+		Mutex::Lock _l(_phy_m);
+		r.reserve(_phy.size());
+		for(std::map< PhySurfaceKey,PhySurfaceEntry >::const_iterator p(_phy.begin());p!=_phy.end();)
+			r.push_back(std::pair<Address,InetAddress>(p->first.reporter,p->second.mySurface));
+		return r;
+	}
 
 private:
 	struct PhySurfaceKey
