@@ -391,24 +391,15 @@ void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
 
-	/* Attempt direct contact now unless we are IPv4 and our external ports
-	 * appear to be randomized by a NAT device. In that case, we should let
-	 * the other side send a message first. Why? If the other side is also
-	 * randomized and symmetric, we are probably going to fail. But if the
-	 * other side is "port restricted" but otherwise sane, us sending a
-	 * packet first may actually close the remote's outgoing port to us!
-	 * This assists with NAT-t in cases where one side is symmetric and the
-	 * other is full cone but port restricted. */
-	if ((atAddr.ss_family != AF_INET)||(!RR->sa->areGlobalIPv4PortsRandomized())) {
+	if ((atAddr.ss_family == AF_INET)&&(RR->sa->areGlobalIPv4PortsRandomized())) {
 		peer->attemptToContactAt(RR,atAddr,now);
 	} else {
 		TRACE("behind randomizing symmetric NAT -- delaying initial message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	}
 
-	// After 1s, try again and perhaps try more NAT-t strategies
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
+		_contactQueue.push_back(ContactQueueEntry(peer,now + (ZT_NAT_T_TACTICAL_ESCALATION_DELAY / 2),atAddr));
 	}
 }
 
@@ -473,10 +464,10 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 					continue;
 				} else {
 					if (qi->strategyIteration == 0) {
-						// First strategy: send packet directly (we already tried this but try again)
+						// First strategy: send packet directly to destination
 						qi->peer->attemptToContactAt(RR,qi->inaddr,now);
 					} else if (qi->strategyIteration <= 4) {
-						// Strategies 1-4: try escalating ports
+						// Strategies 1-4: try escalating ports for symmetric NATs that remap sequentially
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
 						if (p < 0xffff) {
