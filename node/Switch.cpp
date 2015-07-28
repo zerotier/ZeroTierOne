@@ -452,8 +452,8 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if (qi->peer->hasActiveDirectPath(now)) {
-					// We've successfully NAT-t'd, so cancel attempt
+				if ((!qi->peer->alive(now))||(qi->peer->hasActiveDirectPath(now))) {
+					// Cancel attempt if we've already connected or peer is no longer "alive"
 					_contactQueue.erase(qi++);
 					continue;
 				} else {
