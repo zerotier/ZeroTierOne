@@ -23,7 +23,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{CEB9F664-D7D0-446A-BAB0-CDC553ADC137} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{C25B45D0-A473-44C1-A251-B72ED4E9C9FC} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.0.3" Type="32"/>
@@ -87,8 +87,8 @@
     <ROW File="react.min.js" Component_="index.html" FileName="REACTM~1.JS|react.min.js" Attributes="0" SourcePath="..\..\..\ui\react.min.js" SelfReg="false" NextFile="simpleajax.min.js"/>
     <ROW File="simpleajax.min.js" Component_="index.html" FileName="SIMPLE~1.JS|simpleajax.min.js" Attributes="0" SourcePath="..\..\..\ui\simpleajax.min.js" SelfReg="false" NextFile="zerotier.css"/>
     <ROW File="zerotier.css" Component_="index.html" FileName="zerotier.css" Attributes="0" SourcePath="..\..\..\ui\zerotier.css" SelfReg="false" NextFile="ztui.min.js"/>
-    <ROW File="zerotierone_x64.exe" Component_="zerotierone_x64.exe" FileName="ZEROTI~2.EXE|zerotier-one_x64.exe" Attributes="0" SourcePath="..\..\..\windows\Build\x64\Release\zerotier-one_x64.exe" SelfReg="false" NextFile="ZeroTierOne.exe" DigSign="true"/>
-    <ROW File="zerotierone_x86.exe" Component_="zerotierone_x86.exe" FileName="ZEROTI~1.EXE|zerotier-one_x86.exe" Attributes="0" SourcePath="..\..\..\windows\Build\Win32\Release\zerotier-one_x86.exe" SelfReg="false" NextFile="zerotierone_x64.exe" DigSign="true"/>
+    <ROW File="zerotierone_x64.exe" Component_="zerotierone_x64.exe" FileName="ZEROTI~2.EXE|zerotier-one_x64.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\x64\Release\zerotier-one_x64.exe" SelfReg="false" NextFile="ZeroTierOne.exe" DigSign="true"/>
+    <ROW File="zerotierone_x86.exe" Component_="zerotierone_x86.exe" FileName="ZEROTI~1.EXE|zerotier-one_x86.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\Win32\Release\zerotier-one_x86.exe" SelfReg="false" NextFile="zerotierone_x64.exe" DigSign="true"/>
     <ROW File="zttap300.cat_2" Component_="zttap300.cat" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.cat" SelfReg="false" NextFile="zttap300.sys_2"/>
     <ROW File="zttap300.cat_3" Component_="zttap300.cat_1" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.cat" SelfReg="false" NextFile="zttap300.sys_3"/>
     <ROW File="zttap300.inf" Component_="zttap300.cat" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.inf" SelfReg="false" NextFile="zttap300.cat_3"/>

@@ -47,6 +47,7 @@
     <ClCompile Include="..\..\osdep\BackgroundResolver.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
+    <ClCompile Include="..\..\osdep\UPNPClient.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
     <ClCompile Include="..\..\selftest.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -61,6 +62,22 @@
     <ClCompile Include="ZeroTierOneService.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\codelength.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\connecthostport.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\igd_desc_parse.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minisoap.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minissdpc.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpcstrings.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpctypes.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc_declspec.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniwget.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minixml.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\portlistingparse.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\receivedata.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpcommands.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnperrors.h" />
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpreplyparse.h" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json-parser\json.h" />
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
@@ -108,6 +125,7 @@
     <ClInclude Include="..\..\osdep\OSUtils.hpp" />
     <ClInclude Include="..\..\osdep\Phy.hpp" />
     <ClInclude Include="..\..\osdep\Thread.hpp" />
+    <ClInclude Include="..\..\osdep\UPNPClient.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
     <ClInclude Include="..\..\service\ControlPlane.hpp" />
     <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp" />
@@ -193,12 +211,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x86\miniupnpc.lib;wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -207,12 +226,13 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x64\miniupnpc.lib;wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -223,8 +243,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -236,7 +257,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x86\miniupnpc.lib;wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -247,8 +268,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\ext\bin\libcrypto\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -260,7 +282,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x64\miniupnpc.lib;wsock32.lib;ws2_32.lib;newdev.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>

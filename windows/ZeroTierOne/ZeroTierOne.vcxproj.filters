@@ -70,6 +70,15 @@
     <Filter Include="Header Files\windows\ZeroTierOne">
       <UniqueIdentifier>{bf604491-14c4-4a74-81a6-6105d07c5c7c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ext\bin">
+      <UniqueIdentifier>{5939db69-ab17-47c6-97fb-185e2c678737}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\bin\miniupnpc">
+      <UniqueIdentifier>{3666f510-b6da-47cb-8039-56441f2dac3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ext\bin\miniupnpc\include">
+      <UniqueIdentifier>{1a47071e-e51b-4535-89ae-858946f03118}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\service\ControlPlane.cpp">
@@ -175,6 +184,9 @@
       <Filter>Source Files\windows\ZeroTierOne</Filter>
     </ClCompile>
     <ClCompile Include="..\..\osdep\BackgroundResolver.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\UPNPClient.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
   </ItemGroup>
@@ -346,6 +358,57 @@
     </ClInclude>
     <ClInclude Include="..\..\node\RemotePath.hpp">
       <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\UPNPClient.hpp">
+      <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\codelength.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\connecthostport.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\igd_desc_parse.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minisoap.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minissdpc.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpc_declspec.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpcstrings.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniupnpctypes.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\miniwget.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\minixml.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\portlistingparse.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\receivedata.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpcommands.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnperrors.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpreplyparse.h">
+      <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

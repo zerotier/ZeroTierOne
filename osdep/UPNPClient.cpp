@@ -40,8 +40,14 @@
 #include "../node/Utils.hpp"
 #include "UPNPClient.hpp"
 
-#include <miniupnpc/miniupnpc.h>
-#include <miniupnpc/upnpcommands.h>
+#ifdef __WINDOWS__
+#ifndef MINIUPNP_STATICLIB
+#define MINIUPNP_STATICLIB
+#endif
+#endif
+
+#include "../ext/bin/miniupnpc/include/miniupnpc/miniupnpc.h"
+#include "../ext/bin/miniupnpc/include/miniupnpc/upnpcommands.h"
 
 namespace ZeroTier {
 

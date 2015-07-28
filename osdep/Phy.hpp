@@ -781,7 +781,7 @@ public:
 		// Causes entry to be deleted from list in poll(), ignored elsewhere
 		sws.type = ZT_PHY_SOCKET_CLOSED;
 
-		if (sws.sock >= _nfds) {
+		if ((long)sws.sock >= (long)_nfds) {
 			long nfds = (long)_whackSendSocket;
 			if ((long)_whackReceiveSocket > nfds)
 				nfds = (long)_whackReceiveSocket;
