@@ -297,7 +297,7 @@ int main(int argc,char **argv)
 	srand(time((time_t *)0));
 
 	TcpProxyService svc;
-	Phy<TcpProxyService *> phy(&svc,false);
+	Phy<TcpProxyService *> phy(&svc,false,true);
 	svc.phy = &phy;
 	svc.udpPortCounter = 1023;
 

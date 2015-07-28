@@ -696,7 +696,7 @@ static int testPhy()
 
 	std::cout << "[phy] Creating phy endpoint..." << std::endl;
 	TestPhyHandlers testPhyHandlers;
-	testPhyInstance = new Phy<TestPhyHandlers *>(&testPhyHandlers,false);
+	testPhyInstance = new Phy<TestPhyHandlers *>(&testPhyHandlers,false,true);
 
 	std::cout << "[phy] Binding UDP listen socket to 127.0.0.1/60002... ";
 	PhySocket *udpListenSock = testPhyInstance->udpBind((const struct sockaddr *)&bindaddr);

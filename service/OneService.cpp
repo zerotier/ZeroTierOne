@@ -404,7 +404,7 @@ public:
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		_controller((_homePath + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str()),
 #endif
-		_phy(this,false),
+		_phy(this,false,true),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
 		_controlPlane((ControlPlane *)0),

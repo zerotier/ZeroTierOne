@@ -232,7 +232,7 @@ unsigned int Http::_do(
 		handler.error = false;
 		handler.done = false;
 
-		Phy<HttpPhyHandler *> phy(&handler,true);
+		Phy<HttpPhyHandler *> phy(&handler,true,true);
 
 		bool instantConnect = false;
 		handler.phy = &phy;
