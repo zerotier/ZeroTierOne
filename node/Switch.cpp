@@ -390,16 +390,10 @@ void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
-
-	if ((atAddr.ss_family == AF_INET)&&(RR->sa->areGlobalIPv4PortsRandomized())) {
-		peer->attemptToContactAt(RR,atAddr,now);
-	} else {
-		TRACE("behind randomizing symmetric NAT -- delaying initial message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
-	}
-
+	peer->attemptToContactAt(RR,atAddr,now);
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,now + (ZT_NAT_T_TACTICAL_ESCALATION_DELAY / 2),atAddr));
+		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
 	}
 }
 
