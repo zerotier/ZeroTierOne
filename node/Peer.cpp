@@ -226,15 +226,13 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
-	if ((((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
+	if ((true)||(((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
 
-		/* Also push paths reported to us by non-root-server peers. This assists
-		 * with NAT traversal behind NATs that engage in strange or randomized
-		 * port assignment behavior. */
-		std::vector<Address> rootAddresses(RR->topology->rootAddresses());
+		// Push peer-reported surface -- tried this and it didn't help much with difficult NATs so commenting out.
+		/*
 		std::vector< std::pair<Address,InetAddress> > surface(RR->sa->getReportedSurface());
 		for(std::vector< std::pair<Address,InetAddress> >::const_iterator s(surface.begin());s!=surface.end();++s) {
 			bool alreadyHave = false;
@@ -244,9 +242,10 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 					break;
 				}
 			}
-			if ((!alreadyHave)&&(std::find(rootAddresses.begin(),rootAddresses.end(),s->first) == rootAddresses.end()))
+			if (!alreadyHave)
 				dps.push_back(Path(s->second,0,Path::TRUST_NORMAL));
 		}
+		*/
 
 #ifdef ZT_TRACE
 		{
