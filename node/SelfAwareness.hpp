@@ -72,10 +72,12 @@ public:
 	inline std::vector< std::pair<Address,InetAddress> > getReportedSurface() const
 	{
 		std::vector< std::pair<Address,InetAddress> > r;
-		Mutex::Lock _l(_phy_m);
-		r.reserve(_phy.size());
-		for(std::map< PhySurfaceKey,PhySurfaceEntry >::const_iterator p(_phy.begin());p!=_phy.end();)
-			r.push_back(std::pair<Address,InetAddress>(p->first.reporter,p->second.mySurface));
+		{
+			Mutex::Lock _l(_phy_m);
+			r.reserve(_phy.size());
+			for(std::map< PhySurfaceKey,PhySurfaceEntry >::const_iterator p(_phy.begin());p!=_phy.end();++p)
+				r.push_back(std::pair<Address,InetAddress>(p->first.reporter,p->second.mySurface));
+		}
 		return r;
 	}
 
