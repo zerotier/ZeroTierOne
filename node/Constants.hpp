@@ -60,6 +60,13 @@
 #include <endian.h>
 #endif
 
+// Disable type punning on ARM architecture -- some ARM chips throw SIGBUS on unaligned access
+#if defined(__arm__) || defined(__ARMEL__)
+#ifndef ZT_NO_TYPE_PUNNING
+#define ZT_NO_TYPE_PUNNING
+#endif
+#endif
+
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
