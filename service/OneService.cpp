@@ -584,10 +584,8 @@ public:
 
 #ifdef ZT_USE_MINIUPNPC
 					std::vector<InetAddress> upnpAddresses(_upnpClient.get());
-					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext) {
-						printf("Adding UPNP address: %s\n",ext->toString().c_str());
+					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext)
 						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
-					}
 #endif
 
 					struct ifaddrs *ifatbl = (struct ifaddrs *)0;

@@ -5,13 +5,16 @@ ifeq ($(origin CXX),default)
 	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 endif
 
-INCLUDES=-I/usr/local/include
+INCLUDES=
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64
 
 include objects.mk
 OBJS+=osdep/OSXEthernetTap.o
+
+# Comment out to disable building against shipped libminiupnpc binary for Mac
+ZT_USE_MINIUPNPC=1
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
@@ -35,7 +38,8 @@ endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	DEFS+=-DZT_USE_MINIUPNPC
-	LIBS+=/usr/local/lib/libminiupnpc.a
+	INCLUDES+=-Iext/bin/miniupnpc/include
+	LIBS+=ext/bin/miniupnpc/mac-x64/libminiupnpc.a
 	OBJS+=osdep/UPNPClient.o
 endif
 
