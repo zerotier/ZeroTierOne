@@ -66,6 +66,11 @@ public:
 	 */
 	void clean(uint64_t now);
 
+	/**
+	 * @return True if our external (global scope) IPv4 ports appear to be randomized by a NAT device
+	 */
+	bool areGlobalIPv4PortsRandomized() const;
+
 private:
 	struct PhySurfaceKey
 	{

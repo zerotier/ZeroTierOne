@@ -136,12 +136,12 @@ public:
 	bool unite(const Address &p1,const Address &p2,bool force);
 
 	/**
-	 * Send NAT traversal messages to peer at the given candidate address
+	 * Attempt NAT traversal to peer at a given physical address
 	 *
 	 * @param peer Peer to contact
 	 * @param atAddr Address of peer
 	 */
-	void contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr);
+	void rendezvous(const SharedPtr<Peer> &peer,const InetAddress &atAddr);
 
 	/**
 	 * Request WHOIS on a given address

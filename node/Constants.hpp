@@ -296,6 +296,9 @@
 
 /**
  * Delay between initial direct NAT-t packet and more aggressive techniques
+ *
+ * This may also be a delay before sending the first packet if we determine
+ * that we should wait for the remote to initiate rendezvous first.
  */
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 

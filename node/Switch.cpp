@@ -43,6 +43,7 @@
 #include "Topology.hpp"
 #include "Peer.hpp"
 #include "AntiRecursion.hpp"
+#include "SelfAwareness.hpp"
 #include "Packet.hpp"
 
 namespace ZeroTier {
@@ -385,15 +386,23 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	return true;
 }
 
-void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
+void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
 
-	// Attempt to contact directly
-	peer->attemptToContactAt(RR,atAddr,now);
+	/* Attempt direct contact now unless we are IPv4 and our external ports
+	 * appear to be randomized by a NAT device. In that case, we should let
+	 * the other side send a message first. Why? If the other side is also
+	 * randomized and symmetric, we are probably going to fail. But if the
+	 * other side is "port restricted" but otherwise sane, us sending a
+	 * packet first may actually close the remote's outgoing port to us!
+	 * This assists with NAT-t in cases where one side is symmetric and the
+	 * other is full cone but port restricted. */
+	if ((atAddr.ss_family != AF_INET)||(!RR->sa->areGlobalIPv4PortsRandomized()))
+		peer->attemptToContactAt(RR,atAddr,now);
 
-	// If we have not punched through after this timeout, open refreshing can of whupass
+	// After 1s, try again and perhaps try more NAT-t strategies
 	{
 		Mutex::Lock _l(_contactQueue_m);
 		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
