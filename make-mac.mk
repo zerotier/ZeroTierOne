@@ -14,7 +14,7 @@ include objects.mk
 OBJS+=osdep/OSXEthernetTap.o
 
 # Comment out to disable building against shipped libminiupnpc binary for Mac
-ZT_USE_MINIUPNPC=1
+ZT_USE_MINIUPNPC?=1
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
@@ -38,7 +38,6 @@ endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	DEFS+=-DZT_USE_MINIUPNPC
-	INCLUDES+=-Iext/bin/miniupnpc/include
 	LIBS+=ext/bin/miniupnpc/mac-x64/libminiupnpc.a
 	OBJS+=osdep/UPNPClient.o
 endif

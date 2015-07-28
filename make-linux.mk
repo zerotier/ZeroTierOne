@@ -43,7 +43,6 @@ endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	DEFS+=-DZT_USE_MINIUPNPC
-	INCLUDES+=-Iext/bin/miniupnpc/include
 ifeq ($(UNAME_M),armv6l)
 	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
 endif
