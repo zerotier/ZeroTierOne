@@ -448,7 +448,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 {
 	unsigned long nextDelay = 0xffffffff; // ceiling delay, caller will cap to minimum
 
-	{
+	{	// Iterate through NAT traversal strategies for entries in contact queue
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
