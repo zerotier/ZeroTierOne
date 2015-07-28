@@ -26,6 +26,8 @@ ifeq ($(origin CXX),default)
 	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 endif
 
+UNAME_M=$(shell uname -m)
+
 INCLUDES=
 DEFS=
 LDLIBS?=
@@ -36,6 +38,30 @@ OBJS+=osdep/LinuxEthernetTap.o
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	DEFS+=-DZT_OFFICIAL_RELEASE 
+	ZT_USE_MINIUPNPC=1
+endif
+
+ifeq ($(ZT_USE_MINIUPNPC),1)
+	DEFS+=-DZT_USE_MINIUPNPC
+	INCLUDES+=-Iext/bin/miniupnpc/include
+ifeq ($(UNAME_M),armv6l)
+	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
+endif
+ifeq ($(UNAME_M),armv7l)
+	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
+endif
+ifeq ($(UNAME_M),x86_64)
+	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x64/libminiupnpc.a
+endif
+ifeq ($(UNAME_M),i386)
+	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x86/libminiupnpc.a
+endif
+ifeq ($(UNAME_M),i686)
+	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x86/libminiupnpc.a
+endif
+	MINIUPNPC_LIB?=-lminiupnpc
+	LDLIBS+=$(MINIUPNPC_LIB)
+	OBJS+=osdep/UPNPClient.o
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
