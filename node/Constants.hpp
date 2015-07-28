@@ -253,10 +253,10 @@
 /**
  * How frequently to send a zero-byte UDP keepalive packet
  *
- * There are NATs with timeouts as short as 30 seconds, so this turns out
+ * There are NATs with timeouts as short as 20 seconds, so this turns out
  * to be needed.
  */
-#define ZT_NAT_KEEPALIVE_DELAY 25000
+#define ZT_NAT_KEEPALIVE_DELAY 19000
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping
