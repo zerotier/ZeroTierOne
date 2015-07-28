@@ -231,22 +231,6 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 
 		std::vector<Path> dps(RR->node->directPaths());
 
-		// Push peer-reported surface -- tried this and it didn't help much with difficult NATs so commenting out.
-		/*
-		std::vector< std::pair<Address,InetAddress> > surface(RR->sa->getReportedSurface());
-		for(std::vector< std::pair<Address,InetAddress> >::const_iterator s(surface.begin());s!=surface.end();++s) {
-			bool alreadyHave = false;
-			for(std::vector<Path>::const_iterator p(dps.begin());p!=dps.end();++p) {
-				if (p->address() == s->second) {
-					alreadyHave = true;
-					break;
-				}
-			}
-			if (!alreadyHave)
-				dps.push_back(Path(s->second,0,Path::TRUST_NORMAL));
-		}
-		*/
-
 #ifdef ZT_TRACE
 		{
 			std::string ps;
