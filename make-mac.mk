@@ -11,7 +11,7 @@ LIBS=
 ARCH_FLAGS=-arch x86_64
 
 include objects.mk
-OBJS+=osdep/OSXEthernetTap.o 
+OBJS+=osdep/OSXEthernetTap.o
 
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
@@ -21,7 +21,8 @@ CODESIGN_INSTALLER_CERT=
 
 # For internal use only -- signs everything with ZeroTier's developer cert
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE -DZT_AUTO_UPDATE 
+	DEFS+=-DZT_OFFICIAL_RELEASE -DZT_AUTO_UPDATE
+	ZT_USE_MINIUPNPC=1
 	CODESIGN=codesign
 	PRODUCTSIGN=productsign
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier Networks LLC (8ZD9JUCZ4V)"
@@ -29,19 +30,25 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 endif
 
 ifeq ($(ZT_AUTO_UPDATE),1)
-	DEFS+=-DZT_AUTO_UPDATE 
+	DEFS+=-DZT_AUTO_UPDATE
+endif
+
+ifeq ($(ZT_USE_MINIUPNPC),1)
+	DEFS+=-DZT_USE_MINIUPNPC
+	LIBS+=/usr/local/lib/libminiupnpc.a
+	OBJS+=osdep/UPNPClient.o
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
+	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
 	LIBS+=-L/usr/local/lib -lsqlite3
-	OBJS+=controller/SqliteNetworkController.o 
+	OBJS+=controller/SqliteNetworkController.o
 endif
 
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE 
+	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since
