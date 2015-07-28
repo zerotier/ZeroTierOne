@@ -399,8 +399,11 @@ void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 	 * packet first may actually close the remote's outgoing port to us!
 	 * This assists with NAT-t in cases where one side is symmetric and the
 	 * other is full cone but port restricted. */
-	if ((atAddr.ss_family != AF_INET)||(!RR->sa->areGlobalIPv4PortsRandomized()))
+	if ((atAddr.ss_family != AF_INET)||(!RR->sa->areGlobalIPv4PortsRandomized())) {
 		peer->attemptToContactAt(RR,atAddr,now);
+	} else {
+		TRACE("behind randomizing symmetric NAT -- delaying initial message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
+	}
 
 	// After 1s, try again and perhaps try more NAT-t strategies
 	{
