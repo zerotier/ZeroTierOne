@@ -226,7 +226,7 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
-	if ((true)||(((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
+	if (((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
