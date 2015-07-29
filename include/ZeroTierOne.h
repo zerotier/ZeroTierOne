@@ -967,11 +967,15 @@ void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr);
  * Take care that these are never ZeroTier interface addresses, otherwise
  * strange things might happen or they simply won't work.
  *
+ * Addresses can also be added here if they are the result of a UPnP or
+ * NAT-PMP port mapping or other discovery or mapping means.
+ *
  * This returns a boolean indicating whether or not the address was
  * accepted. ZeroTier will only communicate over certain address types
  * and (for IP) address classes. Thus it's safe to just dump your OS's
  * entire remote IP list (excluding ZeroTier interface IPs) into here
- * and let ZeroTier determine which addresses it will use.
+ * and let ZeroTier determine which addresses it will use. It will
+ * reject bad, empty, and unusable addresses.
  *
  * @param addr Local interface address
  * @param metric Local interface metric
