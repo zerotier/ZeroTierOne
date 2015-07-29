@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="12.1" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="12.3" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;MsiDriverPackagesComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;MsiEnvComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent;MsiAppSearchComponent"/>
   </COMPONENT>
@@ -23,10 +23,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{C25B45D0-A473-44C1-A251-B72ED4E9C9FC} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{04B3161E-427B-4C7D-B8FF-B38DE1DDC7F0} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.0.3" Type="32"/>
+    <ROW Property="ProductVersion" Value="1.0.4" Type="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
@@ -41,7 +41,7 @@
     <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:Windows 2000, Windows XP x86, Windows Server 2003 x86" ValueLocId="-"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
-    <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1"/>
+    <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="3"/>
     <ROW Directory="CommonAppDataFolder" Directory_Parent="TARGETDIR" DefaultDir="COMMON~1|CommonAppDataFolder" IsPseudoRoot="1"/>
     <ROW Directory="One_Dir" Directory_Parent="ZeroTier_Dir" DefaultDir="One"/>
     <ROW Directory="ProgramFilesFolder" Directory_Parent="TARGETDIR" DefaultDir="PROGRA~1|ProgramFilesFolder" IsPseudoRoot="1"/>
@@ -51,12 +51,12 @@
     <ROW Directory="networks.d_Dir" Directory_Parent="One_Dir" DefaultDir="networks.d"/>
     <ROW Directory="regid.201001.com.zerotier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="REGID2~1.ZER|regid.2010-01.com.zerotier"/>
     <ROW Directory="tapwindows_Dir" Directory_Parent="One_Dir" DefaultDir="TAP-WI~1|tap-windows"/>
-    <ROW Directory="ui_Dir" Directory_Parent="One_Dir" DefaultDir="ui"/>
+    <ROW Directory="ui_Dir" Directory_Parent="One_Dir" DefaultDir="ui" DirectoryOptions="3"/>
     <ROW Directory="x64_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x64"/>
     <ROW Directory="x86_Dir" Directory_Parent="tapwindows_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{1CA26B88-CA04-448B-8DF1-7848E80EC15D}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{BCC96839-1488-49BC-97C4-92E710FB511C}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{020DCABD-5D56-49B9-AF48-F07F0B55E590}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="ProductInformation" ComponentId="{DB078D04-EA8E-4A7C-9001-89BAD932F9D9}" Directory_="APPDIR" Attributes="4" KeyPath="Version"/>
     <ROW Component="WdfCoinstaller01011.dll" ComponentId="{2E3DD7BE-00C0-44A1-ABA9-6F0468FC9EAA}" Directory_="x64_Dir" Attributes="256" Condition="VersionNT64" KeyPath="WdfCoinstaller01011.dll"/>
@@ -79,14 +79,14 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
     <ROW File="WdfCoinstaller01011.dll" Component_="WdfCoinstaller01011.dll" FileName="WDFCOI~1.DLL|WdfCoinstaller01011.dll" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\WdfCoinstaller01011.dll" SelfReg="false" NextFile="WdfCoinstaller01011.dll_1"/>
     <ROW File="WdfCoinstaller01011.dll_1" Component_="WdfCoinstaller01011.dll_1" FileName="WDFCOI~1.DLL|WdfCoinstaller01011.dll" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\WdfCoinstaller01011.dll" SelfReg="false" NextFile="zttap300.cat_2"/>
-    <ROW File="ZeroTierOne.exe" Component_="ZeroTierOne.exe" FileName="ZEROTI~1.EXE|ZeroTier One.exe" Attributes="0" SourcePath="..\..\bin\win-ui-wrapper\ZeroTier One.exe" SelfReg="false" NextFile="WdfCoinstaller01011.dll"/>
+    <ROW File="ZeroTierOne.exe" Component_="ZeroTierOne.exe" FileName="ZEROTI~1.EXE|ZeroTier One.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\bin\win-ui-wrapper\ZeroTier One.exe" SelfReg="false" NextFile="WdfCoinstaller01011.dll"/>
     <ROW File="devcon_x64.exe" Component_="devcon_x64.exe" FileName="DEVCON~1.EXE|devcon_x64.exe" Attributes="0" SourcePath="..\..\bin\devcon\devcon_x64.exe" SelfReg="false" NextFile="devcon_x86.exe"/>
     <ROW File="devcon_x86.exe" Component_="devcon_x86.exe" FileName="DEVCON~2.EXE|devcon_x86.exe" Attributes="0" SourcePath="..\..\bin\devcon\devcon_x86.exe" SelfReg="false" NextFile="zerotierone_x86.exe"/>
-    <ROW File="index.html" Component_="index.html" FileName="INDEX~1.HTM|index.html" Attributes="0" SourcePath="..\..\..\ui\index.html" SelfReg="false" NextFile="main.js"/>
-    <ROW File="main.js" Component_="index.html" FileName="main.js" Attributes="0" SourcePath="..\..\..\ui\main.js" SelfReg="false" NextFile="react.min.js"/>
-    <ROW File="react.min.js" Component_="index.html" FileName="REACTM~1.JS|react.min.js" Attributes="0" SourcePath="..\..\..\ui\react.min.js" SelfReg="false" NextFile="simpleajax.min.js"/>
-    <ROW File="simpleajax.min.js" Component_="index.html" FileName="SIMPLE~1.JS|simpleajax.min.js" Attributes="0" SourcePath="..\..\..\ui\simpleajax.min.js" SelfReg="false" NextFile="zerotier.css"/>
-    <ROW File="zerotier.css" Component_="index.html" FileName="zerotier.css" Attributes="0" SourcePath="..\..\..\ui\zerotier.css" SelfReg="false" NextFile="ztui.min.js"/>
+    <ROW File="index.html" Component_="index.html" FileName="INDEX~1.HTM|index.html" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\ui\index.html" SelfReg="false" NextFile="main.js"/>
+    <ROW File="main.js" Component_="index.html" FileName="main.js" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\ui\main.js" SelfReg="false" NextFile="react.min.js"/>
+    <ROW File="react.min.js" Component_="index.html" FileName="REACTM~1.JS|react.min.js" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\ui\react.min.js" SelfReg="false" NextFile="simpleajax.min.js"/>
+    <ROW File="simpleajax.min.js" Component_="index.html" FileName="SIMPLE~1.JS|simpleajax.min.js" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\ui\simpleajax.min.js" SelfReg="false" NextFile="zerotier.css"/>
+    <ROW File="zerotier.css" Component_="index.html" FileName="zerotier.css" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\ui\zerotier.css" SelfReg="false" NextFile="ztui.min.js"/>
     <ROW File="zerotierone_x64.exe" Component_="zerotierone_x64.exe" FileName="ZEROTI~2.EXE|zerotier-one_x64.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\x64\Release\zerotier-one_x64.exe" SelfReg="false" NextFile="ZeroTierOne.exe" DigSign="true"/>
     <ROW File="zerotierone_x86.exe" Component_="zerotierone_x86.exe" FileName="ZEROTI~1.EXE|zerotier-one_x86.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\windows\Build\Win32\Release\zerotier-one_x86.exe" SelfReg="false" NextFile="zerotierone_x64.exe" DigSign="true"/>
     <ROW File="zttap300.cat_2" Component_="zttap300.cat" FileName="zttap300.cat" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.cat" SelfReg="false" NextFile="zttap300.sys_2"/>
@@ -95,7 +95,7 @@
     <ROW File="zttap300.inf_1" Component_="zttap300.cat_1" FileName="zttap300.inf" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.inf" SelfReg="false" NextFile="index.html"/>
     <ROW File="zttap300.sys_2" Component_="zttap300.cat" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x64\zttap300.sys" SelfReg="false" NextFile="zttap300.inf"/>
     <ROW File="zttap300.sys_3" Component_="zttap300.cat_1" FileName="zttap300.sys" Attributes="0" SourcePath="..\..\bin\tap-windows-ndis6\x86\zttap300.sys" SelfReg="false" NextFile="zttap300.inf_1"/>
-    <ROW File="ztui.min.js" Component_="index.html" FileName="ZTUIMI~1.JS|ztui.min.js" Attributes="0" SourcePath="..\..\..\ui\ztui.min.js" SelfReg="false"/>
+    <ROW File="ztui.min.js" Component_="index.html" FileName="ZTUIMI~1.JS|ztui.min.js" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\..\..\ui\ztui.min.js" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
     <ROW BuildKey="DefaultBuild" BuildName="MSI" BuildOrder="1" BuildType="1" PackageFolder="..\..\.." PackageFileName="ZeroTier One" Languages="en" InstallationType="4" ExtUI="true" UseLargeSchema="true"/>
@@ -335,28 +335,28 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Order="2" Flags="14" Text="3"/>
-    <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Order="0" Flags="14" Text="false"/>
-    <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Order="0" Flags="14" Text="1"/>
-    <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Order="1" Flags="14" Text="0"/>
-    <ROW XmlElement="swidname" ParentElement="swidproduct_version" Name="swid:name" Order="0" Flags="14" Text="[ProductVersion]"/>
-    <ROW XmlElement="swidname_1" ParentElement="swidsoftware_creator" Name="swid:name" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidname_2" ParentElement="swidsoftware_licensor" Name="swid:name" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidname_3" ParentElement="swidtag_creator" Name="swid:name" Order="0" Flags="14" Text="ZeroTier, Inc."/>
-    <ROW XmlElement="swidnumeric" ParentElement="swidproduct_version" Name="swid:numeric" Order="1" Flags="14"/>
-    <ROW XmlElement="swidproduct_title" ParentElement="swidsoftware_identification_tag" Name="swid:product_title" Order="1" Flags="14" Text="[ProductName]"/>
-    <ROW XmlElement="swidproduct_version" ParentElement="swidsoftware_identification_tag" Name="swid:product_version" Order="2" Flags="14"/>
-    <ROW XmlElement="swidregid" ParentElement="swidsoftware_creator" Name="swid:regid" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidregid_1" ParentElement="swidsoftware_licensor" Name="swid:regid" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidregid_2" ParentElement="swidtag_creator" Name="swid:regid" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidreview" ParentElement="swidnumeric" Name="swid:review" Order="3" Flags="14" Text="0"/>
-    <ROW XmlElement="swidsoftware_creator" ParentElement="swidsoftware_identification_tag" Name="swid:software_creator" Order="3" Flags="14"/>
-    <ROW XmlElement="swidsoftware_id" ParentElement="swidsoftware_identification_tag" Name="swid:software_id" Order="5" Flags="14"/>
-    <ROW XmlElement="swidsoftware_identification_tag" Name="swid:software_identification_tag" Order="0" Flags="14"/>
-    <ROW XmlElement="swidsoftware_licensor" ParentElement="swidsoftware_identification_tag" Name="swid:software_licensor" Order="4" Flags="14"/>
-    <ROW XmlElement="swidtag_creator" ParentElement="swidsoftware_identification_tag" Name="swid:tag_creator" Order="6" Flags="14"/>
-    <ROW XmlElement="swidtag_creator_regid" ParentElement="swidsoftware_id" Name="swid:tag_creator_regid" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
-    <ROW XmlElement="swidunique_id" ParentElement="swidsoftware_id" Name="swid:unique_id" Order="0" Flags="14" Text="ZeroTierOne"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="4"/>
+    <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false"/>
+    <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1"/>
+    <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="0"/>
+    <ROW XmlElement="swidname" ParentElement="swidproduct_version" Name="swid:name" Condition="1" Order="0" Flags="14" Text="[ProductVersion]"/>
+    <ROW XmlElement="swidname_1" ParentElement="swidsoftware_creator" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc."/>
+    <ROW XmlElement="swidname_2" ParentElement="swidsoftware_licensor" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc."/>
+    <ROW XmlElement="swidname_3" ParentElement="swidtag_creator" Name="swid:name" Condition="1" Order="0" Flags="14" Text="ZeroTier, Inc."/>
+    <ROW XmlElement="swidnumeric" ParentElement="swidproduct_version" Name="swid:numeric" Condition="1" Order="1" Flags="14"/>
+    <ROW XmlElement="swidproduct_title" ParentElement="swidsoftware_identification_tag" Name="swid:product_title" Condition="1" Order="1" Flags="14" Text="[ProductName]"/>
+    <ROW XmlElement="swidproduct_version" ParentElement="swidsoftware_identification_tag" Name="swid:product_version" Condition="1" Order="2" Flags="14"/>
+    <ROW XmlElement="swidregid" ParentElement="swidsoftware_creator" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
+    <ROW XmlElement="swidregid_1" ParentElement="swidsoftware_licensor" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
+    <ROW XmlElement="swidregid_2" ParentElement="swidtag_creator" Name="swid:regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
+    <ROW XmlElement="swidreview" ParentElement="swidnumeric" Name="swid:review" Condition="1" Order="3" Flags="14" Text="0"/>
+    <ROW XmlElement="swidsoftware_creator" ParentElement="swidsoftware_identification_tag" Name="swid:software_creator" Condition="1" Order="3" Flags="14"/>
+    <ROW XmlElement="swidsoftware_id" ParentElement="swidsoftware_identification_tag" Name="swid:software_id" Condition="1" Order="5" Flags="14"/>
+    <ROW XmlElement="swidsoftware_identification_tag" Name="swid:software_identification_tag" Condition="1" Order="0" Flags="14"/>
+    <ROW XmlElement="swidsoftware_licensor" ParentElement="swidsoftware_identification_tag" Name="swid:software_licensor" Condition="1" Order="4" Flags="14"/>
+    <ROW XmlElement="swidtag_creator" ParentElement="swidsoftware_identification_tag" Name="swid:tag_creator" Condition="1" Order="6" Flags="14"/>
+    <ROW XmlElement="swidtag_creator_regid" ParentElement="swidsoftware_id" Name="swid:tag_creator_regid" Condition="1" Order="1" Flags="14" Text="regid.2010-01.com.zerotier"/>
+    <ROW XmlElement="swidunique_id" ParentElement="swidsoftware_id" Name="swid:unique_id" Condition="1" Order="0" Flags="14" Text="ZeroTierOne"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlFileComponent">
     <ROW XmlFile="regid.199509.com.example_ProductName.swidtag" FileName="REGID2~1.SWI|regid.2010-01.com.zerotier_ZeroTierOne.swidtag" DirProperty="APPDIR" Component="ProductInformation" RootElement="swidsoftware_identification_tag" Flags="25" Version="1.0" Encoding="UTF-8" IndentUnits="2"/>
