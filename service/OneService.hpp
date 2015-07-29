@@ -106,8 +106,6 @@ public:
 	 * The terminate() method may be called from a signal handler or another
 	 * thread to terminate execution. Otherwise this will not return unless
 	 * another condition terminates execution such as a fatal error.
-	 *
-	 * @param 
 	 */
 	virtual ReasonForTermination run() = 0;
 
