@@ -316,6 +316,7 @@ ZT1_ResultCode Node::leave(uint64_t nwid)
 	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
 		if (n->first != nwid)
 			newn.push_back(*n);
+		else n->second->destroy();
 	}
 	_networks.swap(newn);
 	return ZT1_RESULT_OK;

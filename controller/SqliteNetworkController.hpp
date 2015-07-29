@@ -97,6 +97,9 @@ private:
 
 	std::string _dbPath;
 	std::string _instanceId;
+
+	std::map< std::pair<Address,uint64_t>,uint64_t > _lastRequestTime;
+
 	sqlite3 *_db;
 
 	sqlite3_stmt *_sGetNetworkById;
@@ -141,6 +144,9 @@ private:
 	sqlite3_stmt *_sIncrementMemberRevisionCounter;
 	sqlite3_stmt *_sGetConfig;
 	sqlite3_stmt *_sSetConfig;
+	sqlite3_stmt *_sPutLog;
+	sqlite3_stmt *_sGetMemberLog;
+	sqlite3_stmt *_sGetRecentMemberLog;
 
 	Mutex _lock;
 };

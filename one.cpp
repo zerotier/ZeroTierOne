@@ -256,7 +256,23 @@ static int cli(int argc,char **argv)
 
 	requestHeaders["X-ZT1-Auth"] = authToken;
 
-	if ((command == "info")||(command == "status")) {
+	if ((command.length() > 0)&&(command[0] == '/')) {
+		unsigned int scode = Http::GET(
+			1024 * 1024 * 16,
+			60000,
+			(const struct sockaddr *)&addr,
+			command.c_str(),
+			requestHeaders,
+			responseHeaders,
+			responseBody);
+		if (scode == 200) {
+			printf("%s",cliFixJsonCRs(responseBody).c_str());
+			return 0;
+		} else {
+			printf("%u %s %s"ZT_EOL_S,scode,command.c_str(),responseBody.c_str());
+			return 1;
+		}
+	} else if ((command == "info")||(command == "status")) {
 		unsigned int scode = Http::GET(
 			1024 * 1024 * 16,
 			60000,
@@ -363,7 +379,7 @@ static int cli(int argc,char **argv)
 													else if ((!strcmp(jpath->u.object.values[kk].name,"active"))&&(jpath->u.object.values[kk].value->type == json_boolean))
 														active = (jpath->u.object.values[kk].value->u.boolean != 0);
 												}
-												if (paddr) {
+												if ((paddr)&&((active)||(fixed))) {
 													int64_t now = (int64_t)OSUtils::now();
 													if (lastSend > 0)
 														lastSend = now - lastSend;

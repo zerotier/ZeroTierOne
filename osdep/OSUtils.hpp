@@ -121,10 +121,10 @@ public:
 
 	/**
 	 * Set modes on a file to something secure
-	 * 
+	 *
 	 * This locks a file so that only the owner can access it. What it actually
 	 * does varies by platform.
-	 * 
+	 *
 	 * @param path Path to lock
 	 * @param isDir True if this is a directory
 	 */
@@ -252,4 +252,3 @@ private:
 } // namespace ZeroTier
 
 #endif
-

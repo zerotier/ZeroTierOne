@@ -38,6 +38,8 @@
 #include "Buffer.hpp"
 #include "NetworkController.hpp"
 
+#include "../version.h"
+
 namespace ZeroTier {
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
@@ -255,9 +257,18 @@ void Network::requestConfiguration()
 	}
 
 	TRACE("requesting netconf for network %.16llx from controller %s",(unsigned long long)_id,controller().toString().c_str());
+
+	// TODO: in the future we will include things like join tokens here, etc.
+	Dictionary metaData;
+	metaData.setHex(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,ZEROTIER_ONE_VERSION_MAJOR);
+	metaData.setHex(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,ZEROTIER_ONE_VERSION_MINOR);
+	metaData.setHex(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,ZEROTIER_ONE_VERSION_REVISION);
+	std::string mds(metaData.toString());
+
 	Packet outp(controller(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
 	outp.append((uint64_t)_id);
-	outp.append((uint16_t)0); // no meta-data
+	outp.append((uint16_t)mds.length());
+	outp.append((const void *)mds.data(),(unsigned int)mds.length());
 	{
 		Mutex::Lock _l(_lock);
 		if (_config)

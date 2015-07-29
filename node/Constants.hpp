@@ -60,6 +60,13 @@
 #include <endian.h>
 #endif
 
+// Disable type punning on ARM architecture -- some ARM chips throw SIGBUS on unaligned access
+#if defined(__arm__) || defined(__ARMEL__)
+#ifndef ZT_NO_TYPE_PUNNING
+#define ZT_NO_TYPE_PUNNING
+#endif
+#endif
+
 #if defined(__FreeBSD__) || defined(__OpenBSD__)
 #ifndef __UNIX_LIKE__
 #define __UNIX_LIKE__
@@ -158,7 +165,7 @@
 
 /**
  * Maximum number of packet fragments we'll support
- * 
+ *
  * The actual spec allows 16, but this is the most we'll support right
  * now. Packets with more than this many fragments are dropped.
  */
@@ -216,7 +223,7 @@
 
 /**
  * Maximum number of ZT hops allowed (this is not IP hops/TTL)
- * 
+ *
  * The protocol allows up to 7, but we limit it to something smaller.
  */
 #define ZT_RELAY_MAX_HOPS 3
@@ -246,10 +253,10 @@
 /**
  * How frequently to send a zero-byte UDP keepalive packet
  *
- * There are NATs with timeouts as short as 30 seconds, so this turns out
+ * There are NATs with timeouts as short as 20 seconds, so this turns out
  * to be needed.
  */
-#define ZT_NAT_KEEPALIVE_DELAY 25000
+#define ZT_NAT_KEEPALIVE_DELAY 19000
 
 /**
  * Delay between scans of the topology active peer DB for peers that need ping
@@ -296,6 +303,9 @@
 
 /**
  * Delay between initial direct NAT-t packet and more aggressive techniques
+ *
+ * This may also be a delay before sending the first packet if we determine
+ * that we should wait for the remote to initiate rendezvous first.
  */
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 

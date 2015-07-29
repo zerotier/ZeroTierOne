@@ -144,7 +144,7 @@ private:
 	fd_set _readfds;
 	fd_set _writefds;
 #if defined(_WIN32) || defined(_WIN64)
-	fd_set _exceptfds;	
+	fd_set _exceptfds;
 #endif
 	long _nfds;
 
@@ -152,13 +152,15 @@ private:
 	ZT_PHY_SOCKFD_TYPE _whackSendSocket;
 
 	bool _noDelay;
+	bool _noCheck;
 
 public:
 	/**
 	 * @param handler Pointer of type HANDLER_PTR_TYPE to handler
 	 * @param noDelay If true, disable TCP NAGLE algorithm on TCP sockets
+	 * @param noCheck If true, attempt to set UDP SO_NO_CHECK option to disable sending checksums
 	 */
-	Phy(HANDLER_PTR_TYPE handler,bool noDelay) :
+	Phy(HANDLER_PTR_TYPE handler,bool noDelay,bool noCheck) :
 		_handler(handler)
 	{
 		FD_ZERO(&_readfds);
@@ -202,6 +204,7 @@ public:
 		_whackReceiveSocket = pipes[0];
 		_whackSendSocket = pipes[1];
 		_noDelay = noDelay;
+		_noCheck = noCheck;
 	}
 
 	~Phy()
@@ -296,6 +299,11 @@ public:
 #endif
 #ifdef IP_MTU_DISCOVER
 			f = 0; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
+#endif
+#ifdef SO_NO_CHECK
+			if (_noCheck) {
+				f = 1; setsockopt(s,SOL_SOCKET,SO_NO_CHECK,(void *)&f,sizeof(f));
+			}
 #endif
 		}
 #endif // Windows or not
@@ -773,7 +781,7 @@ public:
 		// Causes entry to be deleted from list in poll(), ignored elsewhere
 		sws.type = ZT_PHY_SOCKET_CLOSED;
 
-		if (sws.sock >= _nfds) {
+		if ((long)sws.sock >= (long)_nfds) {
 			long nfds = (long)_whackSendSocket;
 			if ((long)_whackReceiveSocket > nfds)
 				nfds = (long)_whackReceiveSocket;

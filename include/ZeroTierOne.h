@@ -106,17 +106,6 @@ extern "C" {
 #define ZT1_MAX_PEER_NETWORK_PATHS 4
 
 /**
- * Maximum number of revisions over which a network COM can differ and still be in-horizon (agree)
- *
- * This is the default max delta for the revision field in COMs issued
- * by network controllers, and is defined here for documentation purposes.
- * When a network is changed so as to de-authorize a member, its revision
- * should be incremented by this number. Otherwise all other changes that
- * materially affect the network should result in increment by one.
- */
-#define ZT1_CERTIFICATE_OF_MEMBERSHIP_REVISION_MAX_DELTA 16
-
-/**
  * Feature flag: ZeroTier One was built to be thread-safe -- concurrent processXXX() calls are okay
  */
 #define ZT1_FEATURE_FLAG_THREAD_SAFE 0x00000001
@@ -978,11 +967,15 @@ void ZT1_Node_freeQueryResult(ZT1_Node *node,void *qr);
  * Take care that these are never ZeroTier interface addresses, otherwise
  * strange things might happen or they simply won't work.
  *
+ * Addresses can also be added here if they are the result of a UPnP or
+ * NAT-PMP port mapping or other discovery or mapping means.
+ *
  * This returns a boolean indicating whether or not the address was
  * accepted. ZeroTier will only communicate over certain address types
  * and (for IP) address classes. Thus it's safe to just dump your OS's
  * entire remote IP list (excluding ZeroTier interface IPs) into here
- * and let ZeroTier determine which addresses it will use.
+ * and let ZeroTier determine which addresses it will use. It will
+ * reject bad, empty, and unusable addresses.
  *
  * @param addr Local interface address
  * @param metric Local interface metric

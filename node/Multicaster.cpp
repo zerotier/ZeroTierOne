@@ -211,9 +211,11 @@ void Multicaster::send(
 		unsigned int count = 0;
 
 		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
-			out.sendOnly(RR,*ast);
-			if (++count >= limit)
-				break;
+			if (*ast != RR->identity.address()) {
+				out.sendOnly(RR,*ast);
+				if (++count >= limit)
+					break;
+			}
 		}
 
 		unsigned long idx = 0;
@@ -264,9 +266,11 @@ void Multicaster::send(
 		unsigned int count = 0;
 
 		for(std::vector<Address>::const_iterator ast(alwaysSendTo.begin());ast!=alwaysSendTo.end();++ast) {
-			out.sendAndLog(RR,*ast);
-			if (++count >= limit)
-				break;
+			if (*ast != RR->identity.address()) {
+				out.sendAndLog(RR,*ast);
+				if (++count >= limit)
+					break;
+			}
 		}
 
 		unsigned long idx = 0;

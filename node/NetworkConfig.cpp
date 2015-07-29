@@ -47,7 +47,6 @@ SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &s
 	nc->_private = false;
 	nc->_enableBroadcast = true;
 	nc->_name = "ZT_TEST_NETWORK";
-	nc->_description = "Built-in dummy test network";
 
 	// Make up a V4 IP from 'self' in the 10.0.0.0/8 range -- no
 	// guarantee of uniqueness but collisions are unlikely.
@@ -111,7 +110,6 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
 	if (_name.length() > ZT1_MAX_NETWORK_SHORT_NAME_LENGTH)
 		throw std::invalid_argument("network short name too long (max: 255 characters)");
-	_description = d.get(ZT_NETWORKCONFIG_DICT_KEY_DESC,std::string());
 
 	// In dictionary IPs are split into V4 and V6 addresses, but we don't really
 	// need that so merge them here.
@@ -132,26 +130,22 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 			case AF_INET:
 				if ((!addr.netmaskBits())||(addr.netmaskBits() > 32))
 					continue;
-				else if (addr.isNetwork()) {
-					// TODO: add route to network -- this is a route without an IP assignment
-					continue;
-				}
 				break;
 			case AF_INET6:
 				if ((!addr.netmaskBits())||(addr.netmaskBits() > 128))
 					continue;
-				else if (addr.isNetwork()) {
-					// TODO: add route to network -- this is a route without an IP assignment
-					continue;
-				}
 				break;
 			default: // ignore unrecognized address types or junk/empty fields
 				continue;
 		}
-		_staticIps.push_back(addr);
+		if (addr.isNetwork())
+			_localRoutes.push_back(addr);
+		else _staticIps.push_back(addr);
 	}
-	if (_staticIps.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES)
-		throw std::invalid_argument("too many ZT-assigned IP addresses or routes");
+	if (_localRoutes.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES) throw std::invalid_argument("too many ZT-assigned routes");
+	if (_staticIps.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES) throw std::invalid_argument("too many ZT-assigned IP addresses");
+	std::sort(_localRoutes.begin(),_localRoutes.end());
+	_localRoutes.erase(std::unique(_localRoutes.begin(),_localRoutes.end()),_localRoutes.end());
 	std::sort(_staticIps.begin(),_staticIps.end());
 	_staticIps.erase(std::unique(_staticIps.begin(),_staticIps.end()),_staticIps.end());
 
@@ -201,7 +195,7 @@ bool NetworkConfig::operator==(const NetworkConfig &nc) const
 	if (_private != nc._private) return false;
 	if (_enableBroadcast != nc._enableBroadcast) return false;
 	if (_name != nc._name) return false;
-	if (_description != nc._description) return false;
+	if (_localRoutes != nc._localRoutes) return false;
 	if (_staticIps != nc._staticIps) return false;
 	if (_gateways != nc._gateways) return false;
 	if (_activeBridges != nc._activeBridges) return false;
@@ -211,4 +205,3 @@ bool NetworkConfig::operator==(const NetworkConfig &nc) const
 }
 
 } // namespace ZeroTier
-

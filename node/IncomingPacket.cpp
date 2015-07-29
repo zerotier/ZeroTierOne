@@ -392,28 +392,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					const unsigned int dictlen = at<uint16_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN);
 					const std::string dict((const char *)field(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT,dictlen),dictlen);
 					if (dict.length()) {
-						if (nw->setConfiguration(Dictionary(dict)) == 2) { // 2 == accepted and actually new
-							/* If this configuration was indeed new, we do another
-							 * controller request with its revision. We do this in
-							 * order to (a) tell the network controller we got it (it
-							 * won't send a duplicate if ts == current), and (b)
-							 * get another one if the controller is changing rapidly
-							 * until we finally have the final version.
-							 *
-							 * Note that we don't do this for network controllers with
-							 * versions <= 1.0.3, since those regenerate a new controller
-							 * with a new revision every time. In that case this double
-							 * confirmation would create a race condition. */
-							const SharedPtr<NetworkConfig> nc(nw->config2());
-							if ((peer->atLeastVersion(1,0,3))&&(nc)&&(nc->revision() > 0)) {
-								Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_CONFIG_REQUEST);
-								outp.append((uint64_t)nw->id());
-								outp.append((uint16_t)0); // no meta-data
-								outp.append((uint64_t)nc->revision());
-								outp.armor(peer->key(),true);
-								RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
-							}
-						}
+						nw->setConfiguration(Dictionary(dict));
 						TRACE("got network configuration for network %.16llx from %s",(unsigned long long)nw->id(),source().toString().c_str());
 					}
 				}
@@ -509,7 +488,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 				TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
 				peer->received(RR,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
-				RR->sw->contact(withPeer,atAddr);
+				RR->sw->rendezvous(withPeer,atAddr);
 			} else {
 				TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 			}
@@ -692,6 +671,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 		if (RR->localNetworkController) {
 			Dictionary netconf;
 			switch(RR->localNetworkController->doNetworkConfigRequest((h > 0) ? InetAddress() : _remoteAddress,RR->identity,peer->identity(),nwid,metaData,haveRevision,netconf)) {
+
 				case NetworkController::NETCONF_QUERY_OK: {
 					const std::string netconfStr(netconf.toString());
 					if (netconfStr.length() > 0xffff) { // sanity check since field ix 16-bit
@@ -712,8 +692,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						}
 					}
 				}	break;
-				case NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER: // nothing to do -- netconf has not changed
-					break;
+
 				case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
@@ -723,6 +702,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.armor(peer->key(),true);
 					RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 				}	break;
+
 				case NetworkController::NETCONF_QUERY_ACCESS_DENIED: {
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 					outp.append((unsigned char)Packet::VERB_NETWORK_CONFIG_REQUEST);
@@ -732,12 +712,18 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.armor(peer->key(),true);
 					RR->node->putPacket(_remoteAddress,outp.data(),outp.size());
 				} break;
+
 				case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR:
 					TRACE("NETWORK_CONFIG_REQUEST failed: internal error: %s",netconf.get("error","(unknown)").c_str());
 					break;
+
+				case NetworkController::NETCONF_QUERY_IGNORE:
+					break;
+
 				default:
 					TRACE("NETWORK_CONFIG_REQUEST failed: invalid return value from NetworkController::doNetworkConfigRequest()");
 					break;
+
 			}
 		} else {
 			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);

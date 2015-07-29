@@ -64,6 +64,10 @@
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
 
+// Drop requests for a given peer and network ID that occur more frequently
+// than this (ms).
+#define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
+
 namespace ZeroTier {
 
 namespace {
@@ -142,6 +146,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 		// Prepare statement will fail if Config table doesn't exist, which means our DB
 		// needs to be initialized.
 		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
+			//printf("%s\n",sqlite3_errmsg(_db));
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController cannot initialize database and/or insert schemaVersion into Config table");
 		}
@@ -199,16 +204,21 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
 
 			/* Gateway */
-			||(sqlite3_prepare_v2(_db,"SELECT ip,ipVersion,metric FROM Gateway WHERE networkId = ? ORDER BY metric ASC",-1,&_sGetGateways,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"ip\",ipVersion,metric FROM Gateway WHERE networkId = ? ORDER BY metric ASC",-1,&_sGetGateways,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Gateway WHERE networkId = ?",-1,&_sDeleteGateways,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,ip,ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO Gateway (networkId,\"ip\",ipVersion,metric) VALUES (?,?,?,?)",-1,&_sCreateGateway,(const char **)0) != SQLITE_OK)
+
+			/* Log */
+			||(sqlite3_prepare_v2(_db,"INSERT INTO \"Log\" (networkId,nodeId,\"ts\",\"authorized\",\"version\",fromAddr) VALUES (?,?,?,?,?,?)",-1,&_sPutLog,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"ts\",\"authorized\",\"version\",fromAddr FROM \"Log\" WHERE networkId = ? AND nodeId = ? AND \"ts\" >= ? ORDER BY \"ts\" ASC",-1,&_sGetMemberLog,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT \"ts\",\"authorized\",\"version\",fromAddr FROM \"Log\" WHERE networkId = ? AND nodeId = ? ORDER BY \"ts\" DESC LIMIT 10",-1,&_sGetRecentMemberLog,(const char **)0) != SQLITE_OK)
 
 			/* Config */
 			||(sqlite3_prepare_v2(_db,"SELECT \"v\" FROM \"Config\" WHERE \"k\" = ?",-1,&_sGetConfig,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
 
 		 ) {
-		//printf("!!! %s\n",sqlite3_errmsg(_db));
+		//printf("%s\n",sqlite3_errmsg(_db));
 		sqlite3_close(_db);
 		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
 	}
@@ -283,12 +293,21 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sIncrementMemberRevisionCounter);
 		sqlite3_finalize(_sGetConfig);
 		sqlite3_finalize(_sSetConfig);
+		sqlite3_finalize(_sPutLog);
+		sqlite3_finalize(_sGetMemberLog);
+		sqlite3_finalize(_sGetRecentMemberLog);
 		sqlite3_close(_db);
 	}
 }
 
 NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
 {
+	// Decode some stuff from metaData
+	const unsigned int clientMajorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
+	const unsigned int clientMinorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MINOR_VERSION,0);
+	const unsigned int clientRevision = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_REVISION,0);
+	const bool clientIs104 = (Utils::compareVersion(clientMajorVersion,clientMinorVersion,clientRevision,1,0,4) >= 0);
+
 	Mutex::Lock _l(_lock);
 
 	// Note: we can't reuse prepared statements that return const char * pointers without
@@ -301,6 +320,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 	if (signingId.address().toInt() != (nwid >> 24)) {
 		netconf["error"] = "signing identity address does not match most significant 40 bits of network ID";
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
+	}
+
+	// Check rate limit
+
+	{
+		uint64_t &lrt = _lastRequestTime[std::pair<Address,uint64_t>(identity.address(),nwid)];
+		uint64_t lrt2 = lrt;
+		if (((lrt = OSUtils::now()) - lrt2) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
+			return NetworkController::NETCONF_QUERY_IGNORE;
 	}
 
 	NetworkRecord network;
@@ -387,17 +415,34 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		sqlite3_step(_sIncrementMemberRevisionCounter);
 	}
 
+	// Add log entry
+	{
+		char ver[16];
+		std::string fa;
+		if (fromAddr) {
+			fa = fromAddr.toString();
+			if (fa.length() > 64)
+				fa = fa.substr(0,64);
+		}
+		sqlite3_reset(_sPutLog);
+		sqlite3_bind_text(_sPutLog,1,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_text(_sPutLog,2,member.nodeId,10,SQLITE_STATIC);
+		sqlite3_bind_int64(_sPutLog,3,(long long)OSUtils::now());
+		sqlite3_bind_int(_sPutLog,4,member.authorized ? 1 : 0);
+		if ((clientMajorVersion > 0)||(clientMinorVersion > 0)||(clientRevision > 0)) {
+			Utils::snprintf(ver,sizeof(ver),"%u.%u.%u",clientMajorVersion,clientMinorVersion,clientRevision);
+			sqlite3_bind_text(_sPutLog,5,ver,-1,SQLITE_STATIC);
+		} else sqlite3_bind_null(_sPutLog,5);
+		if (fa.length() > 0)
+			sqlite3_bind_text(_sPutLog,6,fa.c_str(),-1,SQLITE_STATIC);
+		else sqlite3_bind_null(_sPutLog,6);
+		sqlite3_step(_sPutLog);
+	}
+
 	// Check member authorization
 
 	if (!member.authorized)
 		return NetworkController::NETCONF_QUERY_ACCESS_DENIED;
-
-	// If netconf is unchanged from client reported revision, just tell client they're up to date
-
-	// Temporarily disabled -- old version didn't do this, and we'll go ahead and
-	// test more thoroughly before enabling this optimization.
-	//if ((haveRevision > 0)&&(haveRevision == network.revision))
-	//	return NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER;
 
 	// Create and sign netconf
 
@@ -555,7 +600,8 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 				if ((ipNetmaskBits <= 0)||(ipNetmaskBits > 32))
 					continue;
 
-				switch((IpAssignmentType)sqlite3_column_int(_sGetIpAssignmentsForNode,0)) {
+				const IpAssignmentType ipt = (IpAssignmentType)sqlite3_column_int(_sGetIpAssignmentsForNode,0);
+				switch(ipt) {
 					case ZT_IP_ASSIGNMENT_TYPE_ADDRESS:
 						haveStaticIpAssignment = true;
 						break;
@@ -566,13 +612,15 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 						continue;
 				}
 
-				// We send both routes and IP assignments -- client knows which is
-				// which by whether address ends in all zeroes after netmask.
-				char tmp[32];
-				Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[12],(int)ip[13],(int)ip[14],(int)ip[15],ipNetmaskBits);
-				if (v4s.length())
-					v4s.push_back(',');
-				v4s.append(tmp);
+				// 1.0.4 or newer clients support network routes in addition to IPs.
+				// Older clients only support IP address / netmask entries.
+				if ((clientIs104)||(ipt == ZT_IP_ASSIGNMENT_TYPE_ADDRESS)) {
+					char tmp[32];
+					Utils::snprintf(tmp,sizeof(tmp),"%d.%d.%d.%d/%d",(int)ip[12],(int)ip[13],(int)ip[14],(int)ip[15],ipNetmaskBits);
+					if (v4s.length())
+						v4s.push_back(',');
+					v4s.append(tmp);
+				}
 			}
 
 			if (!haveStaticIpAssignment) {
@@ -648,7 +696,7 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		// TODO: IPv6 auto-assign once it's supported in UI
 
 		if (network.isPrivate) {
-			CertificateOfMembership com(network.revision,ZT1_CERTIFICATE_OF_MEMBERSHIP_REVISION_MAX_DELTA,nwid,identity.address());
+			CertificateOfMembership com(OSUtils::now(),ZT_NETWORK_AUTOCONF_DELAY + (ZT_NETWORK_AUTOCONF_DELAY / 2),nwid,identity.address());
 			if (com.sign(signingId)) // basically can't fail unless our identity is invalid
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			else {
@@ -716,6 +764,8 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					char addrs[24];
 					Utils::snprintf(addrs,sizeof(addrs),"%.10llx",address);
 
+					int64_t addToNetworkRevision = 0;
+
 					int64_t memberRowId = 0;
 					sqlite3_reset(_sGetMember);
 					sqlite3_bind_text(_sGetMember,1,nwids,16,SQLITE_STATIC);
@@ -739,6 +789,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 						sqlite3_reset(_sIncrementMemberRevisionCounter);
 						sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
 						sqlite3_step(_sIncrementMemberRevisionCounter);
+						addToNetworkRevision = 1;
 					}
 
 					json_value *j = json_parse(body.c_str(),body.length());
@@ -758,6 +809,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										sqlite3_reset(_sIncrementMemberRevisionCounter);
 										sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
 										sqlite3_step(_sIncrementMemberRevisionCounter);
+										addToNetworkRevision = 1;
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"activeBridge")) {
 									if (j->u.object.values[k].value->type == json_boolean) {
@@ -771,6 +823,7 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										sqlite3_reset(_sIncrementMemberRevisionCounter);
 										sqlite3_bind_text(_sIncrementMemberRevisionCounter,1,nwids,16,SQLITE_STATIC);
 										sqlite3_step(_sIncrementMemberRevisionCounter);
+										addToNetworkRevision = 1;
 									}
 								} else if (!strcmp(j->u.object.values[k].name,"ipAssignments")) {
 									if (j->u.object.values[k].value->type == json_array) {
@@ -814,12 +867,20 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 												}
 											}
 										}
+										addToNetworkRevision = 1;
 									}
 								}
 
 							}
 						}
 						json_value_free(j);
+					}
+
+					if ((addToNetworkRevision > 0)&&(revision > 0)) {
+						sqlite3_reset(_sSetNetworkRevision);
+						sqlite3_bind_int64(_sSetNetworkRevision,1,revision + addToNetworkRevision);
+						sqlite3_bind_text(_sSetNetworkRevision,2,nwids,16,SQLITE_STATIC);
+						sqlite3_step(_sSetNetworkRevision);
 					}
 
 					return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);
@@ -1332,58 +1393,33 @@ unsigned int SqliteNetworkController::_doCPGet(
 								responseBody.push_back('"');
 							}
 
-							responseBody.append("]");
+							responseBody.append("],\n\t\"recentLog\": [");
 
-							/* It's possible to get the actual netconf dictionary by including these
-							 * three URL arguments. The member identity must be the string
-							 * serialized identity of this member, and the signing identity must be
-							 * the full secret identity of this network controller. The have revision
-							 * is optional but would designate the revision our hypothetical client
-							 * already has.
-							 *
-							 * This is primarily for testing and is not used in production. It makes
-							 * it easy to test the entire network controller via its JSON API.
-							 *
-							 * If these arguments are included, three more object fields are returned:
-							 * 'netconf', 'netconfResult', and 'netconfResultMessage'. These are all
-							 * string fields and contain the actual netconf dictionary, the query
-							 * result code, and any verbose message e.g. an error description. */
-							std::map<std::string,std::string>::const_iterator memids(urlArgs.find("memberIdentity"));
-							std::map<std::string,std::string>::const_iterator sigids(urlArgs.find("signingIdentity"));
-							std::map<std::string,std::string>::const_iterator hrs(urlArgs.find("haveRevision"));
-							if ((memids != urlArgs.end())&&(sigids != urlArgs.end())) {
-								Dictionary netconf;
-								Identity memid,sigid;
-								try {
-									if (memid.fromString(memids->second)&&sigid.fromString(sigids->second)&&sigid.hasPrivate()) {
-										uint64_t hr = 0;
-										if (hrs != urlArgs.end())
-											hr = Utils::strToU64(hrs->second.c_str());
-										const char *result = "";
-										switch(this->doNetworkConfigRequest(InetAddress(),sigid,memid,nwid,Dictionary(),hr,netconf)) {
-											case NetworkController::NETCONF_QUERY_OK: result = "OK"; break;
-											case NetworkController::NETCONF_QUERY_OK_BUT_NOT_NEWER: result = "OK_BUT_NOT_NEWER"; break;
-											case NetworkController::NETCONF_QUERY_OBJECT_NOT_FOUND: result = "OBJECT_NOT_FOUND"; break;
-											case NetworkController::NETCONF_QUERY_ACCESS_DENIED: result = "ACCESS_DENIED"; break;
-											case NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR: result = "INTERNAL_SERVER_ERROR"; break;
-											default: result = "(unrecognized result code)"; break;
-										}
-										responseBody.append(",\n\t\"netconf\": \"");
-										responseBody.append(_jsonEscape(netconf.toString().c_str()));
-										responseBody.append("\",\n\t\"netconfResult\": \"");
-										responseBody.append(result);
-										responseBody.append("\",\n\t\"netconfResultMessage\": \"");
-										responseBody.append(_jsonEscape(netconf["error"].c_str()));
-										responseBody.append("\"");
-									} else {
-										responseBody.append(",\n\t\"netconf\": \"\",\n\t\"netconfResult\": \"INTERNAL_SERVER_ERROR\",\n\t\"netconfResultMessage\": \"invalid member or signing identity\"");
-									}
-								} catch ( ... ) {
-									responseBody.append(",\n\t\"netconf\": \"\",\n\t\"netconfResult\": \"INTERNAL_SERVER_ERROR\",\n\t\"netconfResultMessage\": \"unexpected exception\"");
-								}
+							sqlite3_reset(_sGetRecentMemberLog);
+							sqlite3_bind_text(_sGetRecentMemberLog,1,nwids,16,SQLITE_STATIC);
+							sqlite3_bind_text(_sGetRecentMemberLog,2,addrs,10,SQLITE_STATIC);
+							bool firstLog = true;
+							while (sqlite3_step(_sGetRecentMemberLog) == SQLITE_ROW) {
+								responseBody.append(firstLog ? "{" : ",{");
+								firstLog = false;
+								responseBody.append("\"ts\":");
+								responseBody.append(reinterpret_cast<const char *>(sqlite3_column_text(_sGetRecentMemberLog,0)));
+								responseBody.append((sqlite3_column_int(_sGetRecentMemberLog,1) == 0) ? ",\"authorized\":false,\"version\":" : ",\"authorized\":true,\"version\":");
+								const char *ver = reinterpret_cast<const char *>(sqlite3_column_text(_sGetRecentMemberLog,2));
+								if ((ver)&&(ver[0])) {
+									responseBody.push_back('"');
+									responseBody.append(_jsonEscape(ver));
+									responseBody.append("\",\"fromAddr\":");
+								} else responseBody.append("null,\"fromAddr\":");
+								const char *fa = reinterpret_cast<const char *>(sqlite3_column_text(_sGetRecentMemberLog,3));
+								if ((fa)&&(fa[0])) {
+									responseBody.push_back('"');
+									responseBody.append(_jsonEscape(fa));
+									responseBody.append("\"}");
+								} else responseBody.append("null}");
 							}
 
-							responseBody.append("\n}\n");
+							responseBody.append("]\n}\n");
 
 							responseContentType = "application/json";
 							return 200;
@@ -1394,8 +1430,11 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 						sqlite3_reset(_sListNetworkMembers);
 						sqlite3_bind_text(_sListNetworkMembers,1,nwids,16,SQLITE_STATIC);
+						responseBody.append("{");
+						bool firstMember = true;
 						while (sqlite3_step(_sListNetworkMembers) == SQLITE_ROW) {
-							responseBody.append((responseBody.length() > 0) ? ",\"" : "{\"");
+							responseBody.append(firstMember ? "\"" : ",\"");
+							firstMember = false;
 							responseBody.append((const char *)sqlite3_column_text(_sListNetworkMembers,0));
 							responseBody.append("\":");
 							responseBody.append((const char *)sqlite3_column_text(_sListNetworkMembers,1));

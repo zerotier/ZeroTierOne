@@ -29,6 +29,7 @@
 #define ZT_SELFAWARENESS_HPP
 
 #include <map>
+#include <vector>
 
 #include "InetAddress.hpp"
 #include "Address.hpp"
@@ -64,6 +65,11 @@ public:
 	 * @param now Current time
 	 */
 	void clean(uint64_t now);
+
+	/**
+	 * @return True if our external (global scope) IPv4 ports appear to be randomized by a NAT device
+	 */
+	bool areGlobalIPv4PortsRandomized() const;
 
 private:
 	struct PhySurfaceKey

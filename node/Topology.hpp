@@ -86,7 +86,7 @@ public:
 
 	/**
 	 * Get a peer from its address
-	 * 
+	 *
 	 * @param zta ZeroTier address of peer
 	 * @return Peer or NULL if not found
 	 */
@@ -103,7 +103,7 @@ public:
 
 	/**
 	 * Get the current favorite root server
-	 * 
+	 *
 	 * @return Root server with lowest latency or NULL if none
 	 */
 	inline SharedPtr<Peer> getBestRoot()
@@ -113,11 +113,11 @@ public:
 
 	/**
 	 * Get the best root server, avoiding root servers listed in an array
-	 * 
+	 *
 	 * This will get the best root server (lowest latency, etc.) but will
 	 * try to avoid the listed root servers, only using them if no others
 	 * are available.
-	 * 
+	 *
 	 * @param avoid Nodes to avoid
 	 * @param avoidCount Number of nodes to avoid
 	 * @param strictAvoid If false, consider avoided root servers anyway if no non-avoid root servers are available

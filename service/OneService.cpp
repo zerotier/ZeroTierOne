@@ -54,6 +54,7 @@
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
 #include "../osdep/BackgroundResolver.hpp"
+#include "../osdep/UPNPClient.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -404,7 +405,7 @@ public:
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		_controller((_homePath + ZT_PATH_SEPARATOR_S + ZT1_CONTROLLER_DB_PATH).c_str()),
 #endif
-		_phy(this,false),
+		_phy(this,false,true),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
 		_controlPlane((ControlPlane *)0),
@@ -415,6 +416,9 @@ public:
 		_tcpFallbackTunnel((TcpConnection *)0),
 		_termReason(ONE_STILL_RUNNING),
 		_port(port),
+#ifdef ZT_USE_MINIUPNPC
+		_upnpClient((int)port),
+#endif
 		_run(true)
 	{
 		struct sockaddr_in in4;
@@ -511,7 +515,7 @@ public:
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastTcpFallbackResolve = 0;
-			uint64_t lastLocalInterfaceAddressCheck = 0;
+			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT1_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give UPnP time to configure and other things time to settle
 #ifdef ZT_AUTO_UPDATE
 			uint64_t lastSoftwareUpdateCheck = 0;
 #endif // ZT_AUTO_UPDATE
@@ -576,9 +580,16 @@ public:
 							ztDevices.push_back(t->second->deviceName());
 					}
 
+					_node->clearLocalInterfaceAddresses();
+
+#ifdef ZT_USE_MINIUPNPC
+					std::vector<InetAddress> upnpAddresses(_upnpClient.get());
+					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext)
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
+#endif
+
 					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
 					if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
-						_node->clearLocalInterfaceAddresses();
 						struct ifaddrs *ifa = ifatbl;
 						while (ifa) {
 							if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
@@ -1241,6 +1252,10 @@ private:
 	Mutex _termReason_m;
 
 	unsigned int _port;
+
+#ifdef ZT_USE_MINIUPNPC
+	UPNPClient _upnpClient;
+#endif
 
 	bool _run;
 	Mutex _run_m;

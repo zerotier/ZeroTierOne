@@ -39,3 +39,6 @@
    digital signature algorithm, and Poly1305 MAC algorithm, all by
    Daniel J. Bernstein (public domain)<br>
    http://cr.yp.to/
+
+ * MiniUPNPC by Thomas Bernard [BSD]
+   http://miniupnp.free.fr

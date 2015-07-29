@@ -43,6 +43,7 @@
 #include "Topology.hpp"
 #include "Peer.hpp"
 #include "AntiRecursion.hpp"
+#include "SelfAwareness.hpp"
 #include "Packet.hpp"
 
 namespace ZeroTier {
@@ -385,15 +386,11 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	return true;
 }
 
-void Switch::contact(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
+void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &atAddr)
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
-
-	// Attempt to contact directly
 	peer->attemptToContactAt(RR,atAddr,now);
-
-	// If we have not punched through after this timeout, open refreshing can of whupass
 	{
 		Mutex::Lock _l(_contactQueue_m);
 		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,atAddr));
@@ -451,35 +448,26 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 {
 	unsigned long nextDelay = 0xffffffff; // ceiling delay, caller will cap to minimum
 
-	{ // Aggressive NAT traversal time!
+	{	// Iterate through NAT traversal strategies for entries in contact queue
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if (qi->peer->hasActiveDirectPath(now)) {
-					// We've successfully NAT-t'd, so cancel attempt
+				if ((!qi->peer->alive(now))||(qi->peer->hasActiveDirectPath(now))) {
+					// Cancel attempt if we've already connected or peer is no longer "alive"
 					_contactQueue.erase(qi++);
 					continue;
 				} else {
-					// Nope, nothing yet. Time to kill some kittens.
 					if (qi->strategyIteration == 0) {
-						// First strategy: send packet directly (we already tried this but try again)
+						// First strategy: send packet directly to destination
 						qi->peer->attemptToContactAt(RR,qi->inaddr,now);
-					} else if (qi->strategyIteration <= 9) {
-						// Strategies 1-9: try escalating ports
+					} else if (qi->strategyIteration <= 4) {
+						// Strategies 1-4: try escalating ports for symmetric NATs that remap sequentially
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
 						if (p < 0xffff) {
 							tmpaddr.setPort((unsigned int)p);
 							qi->peer->attemptToContactAt(RR,tmpaddr,now);
-						} else qi->strategyIteration = 9;
-					} else if (qi->strategyIteration <= 18) {
-						// Strategies 10-18: try ports below
-						InetAddress tmpaddr(qi->inaddr);
-						int p = (int)qi->inaddr.port() - (qi->strategyIteration - 9);
-						if (p >= 1024) {
-							tmpaddr.setPort((unsigned int)p);
-							qi->peer->attemptToContactAt(RR,tmpaddr,now);
-						} else qi->strategyIteration = 18;
+						} else qi->strategyIteration = 5;
 					} else {
 						// All strategies tried, expire entry
 						_contactQueue.erase(qi++);

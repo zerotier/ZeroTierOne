@@ -66,6 +66,18 @@
 "CREATE INDEX Member_networkId_activeBridge ON Member(networkId, activeBridge);\n"\
 "CREATE INDEX Member_networkId_memberRevision ON Member(networkId, memberRevision);\n"\
 "\n"\
+"CREATE TABLE Log (\n"\
+"  networkId char(16) NOT NULL,\n"\
+"  nodeId char(10) NOT NULL,\n"\
+"  ts integer NOT NULL,\n"\
+"  authorized integer NOT NULL,\n"\
+"  version varchar(16),\n"\
+"  fromAddr varchar(64)\n"\
+");\n"\
+"\n"\
+"CREATE INDEX Log_networkId_nodeId ON Log(networkId, nodeId);\n"\
+"CREATE INDEX Log_ts ON Log(ts);\n"\
+"\n"\
 "CREATE TABLE Relay (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  address char(10) NOT NULL,\n"\

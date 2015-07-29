@@ -147,4 +147,19 @@ void SelfAwareness::clean(uint64_t now)
 	}
 }
 
+bool SelfAwareness::areGlobalIPv4PortsRandomized() const
+{
+	int port = 0;
+	Mutex::Lock _l(_phy_m);
+	for(std::map< PhySurfaceKey,PhySurfaceEntry >::const_iterator p(_phy.begin());p!=_phy.end();++p) {
+		if ((p->first.scope == InetAddress::IP_SCOPE_GLOBAL)&&(p->second.mySurface.ss_family == AF_INET)) {
+			const int tmp = (int)p->second.mySurface.port();
+			if ((port)&&(tmp != port))
+				return true;
+			else port = tmp;
+		}
+	}
+	return false;
+}
+
 } // namespace ZeroTier

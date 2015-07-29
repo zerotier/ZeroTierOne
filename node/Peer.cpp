@@ -33,6 +33,7 @@
 #include "Switch.hpp"
 #include "Network.hpp"
 #include "AntiRecursion.hpp"
+#include "SelfAwareness.hpp"
 
 #include <algorithm>
 
@@ -225,10 +226,11 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
-	if ((((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force))) {
+	if (((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
+
 #ifdef ZT_TRACE
 		{
 			std::string ps;
