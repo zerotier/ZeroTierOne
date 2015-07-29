@@ -17,6 +17,18 @@ CREATE TABLE Network (
   memberRevisionCounter integer NOT NULL DEFAULT(1)
 );
 
+CREATE TABLE AuthToken (
+  id integer PRIMARY KEY NOT NULL,
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  authMode integer NOT NULL DEFAULT(1),
+  useCount integer NOT NULL DEFAULT(0),
+  maxUses integer NOT NULL DEFAULT(0),
+  expiresAt integer NOT NULL DEFAULT(0),
+  token varchar(256) NOT NULL
+);
+
+CREATE INDEX AuthToken_networkId_token ON AuthToken(networkId,token);
+
 CREATE TABLE Node (
   id char(10) PRIMARY KEY NOT NULL,
   identity varchar(4096) NOT NULL
@@ -70,6 +82,7 @@ CREATE TABLE Log (
   nodeId char(10) NOT NULL,
   ts integer NOT NULL,
   authorized integer NOT NULL,
+  authTokenId integer,
   version varchar(16),
   fromAddr varchar(64)
 );

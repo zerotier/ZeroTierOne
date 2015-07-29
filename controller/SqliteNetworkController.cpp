@@ -146,9 +146,10 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 		// Prepare statement will fail if Config table doesn't exist, which means our DB
 		// needs to be initialized.
 		if (sqlite3_exec(_db,ZT_NETCONF_SCHEMA_SQL"INSERT INTO Config (k,v) VALUES ('schemaVersion',"ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR");",0,0,0) != SQLITE_OK) {
-			//printf("%s\n",sqlite3_errmsg(_db));
+			char err[1024];
+			Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot initialize database and/or insert schemaVersion into Config table: %s",sqlite3_errmsg(_db));
 			sqlite3_close(_db);
-			throw std::runtime_error("SqliteNetworkController cannot initialize database and/or insert schemaVersion into Config table");
+			throw std::runtime_error(err);
 		}
 	}
 
