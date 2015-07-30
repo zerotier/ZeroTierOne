@@ -871,15 +871,19 @@ void WindowsEthernetTap::threadMain()
 
 	try {
 		while (_run) {
+			// Because Windows
+			setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
+			Sleep(500);
+			setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
+			Sleep(500);
+			setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
+			Sleep(500);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
 			Sleep(500);
 
 			_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 			if (_tap == INVALID_HANDLE_VALUE) {
-				setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
-				Sleep(500);
-				setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
-				Sleep(500);
+				Sleep(1000);
 				continue;
 			}
 
