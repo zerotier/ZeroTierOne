@@ -41,6 +41,7 @@
 #include "../node/Mutex.hpp"
 #include "../node/Array.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
 
 namespace ZeroTier {
@@ -117,11 +118,10 @@ public:
 		throw();
 
 private:
-	bool _disableTapDevice();
-	bool _enableTapDevice();
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
 	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
+	void _syncIps();
 
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
@@ -136,6 +136,9 @@ private:
 	NET_LUID _deviceLuid;
 	std::string _netCfgInstanceId;
 	std::string _deviceInstanceId;
+
+	std::vector<InetAddress> _assignedIps; // IPs assigned with addIp
+	Mutex _assignedIps_m;
 
 	std::vector<MulticastGroup> _multicastGroups;
 

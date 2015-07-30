@@ -639,63 +639,28 @@ bool WindowsEthernetTap::enabled() const
 
 bool WindowsEthernetTap::addIp(const InetAddress &ip)
 {
-	if (!_initialized)
-		return false;
 	if (!ip.netmaskBits()) // sanity check... netmask of 0.0.0.0 is WUT?
 		return false;
-
-	std::vector<InetAddress> haveIps(ips());
-
-	try {
-		// Add IP to interface at the netlink level if not already assigned.
-		if (!std::binary_search(haveIps.begin(),haveIps.end(),ip)) {
-			MIB_UNICASTIPADDRESS_ROW ipr;
-
-			InitializeUnicastIpAddressEntry(&ipr);
-			if (ip.isV4()) {
-				ipr.Address.Ipv4.sin_family = AF_INET;
-				ipr.Address.Ipv4.sin_addr.S_un.S_addr = *((const uint32_t *)ip.rawIpData());
-				ipr.OnLinkPrefixLength = ip.port();
-				if (ipr.OnLinkPrefixLength >= 32)
-					return false;
-			} else if (ip.isV6()) {
-				ipr.Address.Ipv6.sin6_family = AF_INET6;
-				memcpy(ipr.Address.Ipv6.sin6_addr.u.Byte,ip.rawIpData(),16);
-				ipr.OnLinkPrefixLength = ip.port();
-				if (ipr.OnLinkPrefixLength >= 128)
-					return false;
-			} else return false;
-
-			ipr.PrefixOrigin = IpPrefixOriginManual;
-			ipr.SuffixOrigin = IpSuffixOriginManual;
-			ipr.ValidLifetime = 0xffffffff;
-			ipr.PreferredLifetime = 0xffffffff;
-
-			ipr.InterfaceLuid = _deviceLuid;
-			ipr.InterfaceIndex = _getDeviceIndex();
-
-			if (CreateUnicastIpAddressEntry(&ipr) != NO_ERROR)
-				return false;
-		}
-
-		std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
-		if (std::find(regIps.begin(),regIps.end(),ip.toIpString()) == regIps.end()) {
-			std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
-			regIps.push_back(ip.toIpString());
-			regSubnetMasks.push_back(ip.netmask().toIpString());
-			_setRegistryIPv4Value("IPAddress",regIps);
-			_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
-		}
-	} catch ( ... ) {
-		return false;
-	}
+	Mutex::Lock _l(_assignedIps_m);
+	if (std::find(_assignedIps.begin(),_assignedIps.end(),ip) != _assignedIps.end())
+		return true;
+	_assignedIps.push_back(ip);
+	_syncIps();
 	return true;
 }
 
 bool WindowsEthernetTap::removeIp(const InetAddress &ip)
 {
+	{
+		Mutex::Lock _l(_assignedIps_m);
+		std::vector<InetAddress>::iterator aip(std::find(_assignedIps.begin(),_assignedIps.end(),ip));
+		if (aip != _assignedIps.end())
+			_assignedIps.erase(aip);
+	}
+
 	if (!_initialized)
 		return false;
+
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
@@ -972,6 +937,12 @@ void WindowsEthernetTap::threadMain()
 			}
 #endif
 
+			// Assign or re-assign any should-be-assigned IPs in case we have restarted
+			{
+				Mutex::Lock _l(_assignedIps_m);
+				_syncIps();
+			}
+
 			memset(&tapOvlRead,0,sizeof(tapOvlRead));
 			tapOvlRead.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
 			memset(&tapOvlWrite,0,sizeof(tapOvlWrite));
@@ -1132,6 +1103,57 @@ void WindowsEthernetTap::_setRegistryIPv4Value(const char *regKey,const std::vec
 			RegDeleteKeyValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),regKey);
 		}
 		RegCloseKey(tcpIpInterfaces);
+	}
+}
+
+void WindowsEthernetTap::_syncIps()
+{
+	// assumes _assignedIps_m is locked
+
+	if (!_initialized)
+		return;
+
+	std::vector<InetAddress> haveIps(ips());
+
+	for(std::vector<InetAddress>::const_iterator aip(_assignedIps.begin());aip!=_assignedIps.end();++aip) {
+		if (std::find(haveIps.begin(),haveIps.end(),*aip) == haveIps.end()) {
+			MIB_UNICASTIPADDRESS_ROW ipr;
+
+			InitializeUnicastIpAddressEntry(&ipr);
+			if (aip->isV4()) {
+				ipr.Address.Ipv4.sin_family = AF_INET;
+				ipr.Address.Ipv4.sin_addr.S_un.S_addr = *((const uint32_t *)aip->rawIpData());
+				ipr.OnLinkPrefixLength = aip->netmaskBits();
+				if (ipr.OnLinkPrefixLength >= 32)
+					continue;
+			} else if (aip->isV6()) {
+				ipr.Address.Ipv6.sin6_family = AF_INET6;
+				memcpy(ipr.Address.Ipv6.sin6_addr.u.Byte,aip->rawIpData(),16);
+				ipr.OnLinkPrefixLength = aip->netmaskBits();
+				if (ipr.OnLinkPrefixLength >= 128)
+					continue;
+			} else continue;
+
+			ipr.PrefixOrigin = IpPrefixOriginManual;
+			ipr.SuffixOrigin = IpSuffixOriginManual;
+			ipr.ValidLifetime = 0xffffffff;
+			ipr.PreferredLifetime = 0xffffffff;
+
+			ipr.InterfaceLuid = _deviceLuid;
+			ipr.InterfaceIndex = _getDeviceIndex();
+
+			CreateUnicastIpAddressEntry(&ipr);
+		}
+
+		std::string ipStr(aip->toString());
+		std::vector<std::string> regIps(_getRegistryIPv4Value("IPAddress"));
+		if (std::find(regIps.begin(),regIps.end(),ipStr) == regIps.end()) {
+			std::vector<std::string> regSubnetMasks(_getRegistryIPv4Value("SubnetMask"));
+			regIps.push_back(ipStr);
+			regSubnetMasks.push_back(aip->netmask().toIpString());
+			_setRegistryIPv4Value("IPAddress",regIps);
+			_setRegistryIPv4Value("SubnetMask",regSubnetMasks);
+		}
 	}
 }
 
