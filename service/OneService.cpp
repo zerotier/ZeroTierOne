@@ -982,7 +982,7 @@ public:
 					_tapAssignedIps.erase(nwid);
 #ifdef __WINDOWS__
 					if ((op == ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
-						WindowsEthernetTap::deletePersistentTapDevice(_homePath.c_str(),winInstanceId.c_str());
+						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
 #endif
 				}
 				break;

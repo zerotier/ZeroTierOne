@@ -42,6 +42,7 @@
 #include <lmcons.h>
 #include <newdev.h>
 #include <atlbase.h>
+#include "osdep/WindowsEthernetTap.hpp"
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
 #include "windows/ZeroTierOne/ZeroTierOneService.h"
@@ -914,17 +915,20 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
+
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif // __UNIX_LIKE__
-	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
-	fprintf(out,"  -q                - Query API (zerotier-cli)"ZT_EOL_S);
+
 #ifdef __WINDOWS__
 	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -D                - Load tap driver into system driver store (Windows)"ZT_EOL_S);
+	fprintf(out,"  -D                - Remove all instances of Windows tap device (Windows)"ZT_EOL_S);
 #endif // __WINDOWS__
+
+	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
+	fprintf(out,"  -q                - Query API (zerotier-cli)"ZT_EOL_S);
 }
 
 #ifdef __WINDOWS__
@@ -1059,26 +1063,15 @@ int main(int argc,char **argv)
 						return 0;
 					} break;
 
-#if 0
-				case 'D': { // Install Windows driver (since PNPUTIL.EXE seems to be weirdly unreliable)
-						std::string pathToInf;
-#ifdef _WIN64
-						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x64\\zttap200.inf";
-#else
-						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x86\\zttap200.inf";
-#endif
-						printf("Installing ZeroTier One virtual Ethernet port driver."ZT_EOL_S""ZT_EOL_S"NOTE: If you don't see a confirmation window to allow driver installation,"ZT_EOL_S"check to make sure it didn't appear under the installer."ZT_EOL_S);
-						BOOL needReboot = FALSE;
-						if (DiInstallDriverA(NULL,pathToInf.c_str(),DIIRFLAG_FORCE_INF,&needReboot)) {
-							printf("%s: driver successfully installed from %s"ZT_EOL_S,argv[0],pathToInf.c_str());
-							return 0;
-						} else {
-							printf("%s: failed installing %s: %d"ZT_EOL_S,argv[0],pathToInf.c_str(),(int)GetLastError());
+				case 'D': {
+						std::string err = WindowsEthernetTap::destroyAllPersistentTapDevices();
+						if (err.length() > 0) {
+							fprintf(stderr,"%s: unable to uninstall one or more persistent tap devices: %s"ZT_EOL_S,argv[0],err.c_str());
 							return 3;
 						}
+						return 0;
 					} break;
 #endif // __WINDOWS__
-#endif
 
 				case 'h':
 				case '?':
@@ -1134,6 +1127,10 @@ int main(int argc,char **argv)
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
+	// Uninstall legacy tap devices. New devices will automatically be installed and configured
+	// when tap instances are created.
+	WindowsEthernetTap::destroyAllLegacyPersistentTapDevices();
+
 	if (winRunFromCommandLine) {
 		// Running in "interactive" mode (mostly for debugging)
 		if (IsCurrentUserLocalAdministrator() != TRUE) {

@@ -48,6 +48,45 @@ namespace ZeroTier {
 class WindowsEthernetTap
 {
 public:
+	/**
+	 * Installs a new instance of the ZT tap driver
+	 *
+	 * @param pathToInf Path to zttap driver .inf file
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string addNewPersistentTapDevice(const char *pathToInf);
+
+	/**
+	 * Uninstalls all persistent tap devices that have legacy drivers
+	 *
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string destroyAllLegacyPersistentTapDevices();
+
+	/**
+	 * Uninstalls all persistent tap devices on the system
+	 *
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string destroyAllPersistentTapDevices();
+
+	/**
+	 * Uninstall a specific persistent tap device by instance ID
+	 *
+	 * @param instanceId Device instance ID
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string deletePersistentTapDevice(const char *instanceId);
+
+	/**
+	 * Disable a persistent tap device by instance ID
+	 *
+	 * @param instanceId Device instance ID
+	 * @param enabled Enable device?
+	 * @return True if device was found and disabled
+	 */
+	static bool setPersistentTapDeviceState(const char *instanceId,bool enabled);
+
 	WindowsEthernetTap(
 		const char *hp,
 		const MAC &mac,
@@ -76,9 +115,6 @@ public:
 
 	void threadMain()
 		throw();
-
-	static void destroyAllPersistentTapDevices(const char *pathToHelpers);
-	static void deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId);
 
 private:
 	bool _disableTapDevice();
