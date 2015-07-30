@@ -18,6 +18,18 @@
 "  memberRevisionCounter integer NOT NULL DEFAULT(1)\n"\
 ");\n"\
 "\n"\
+"CREATE TABLE AuthToken (\n"\
+"  id integer PRIMARY KEY NOT NULL,\n"\
+"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
+"  authMode integer NOT NULL DEFAULT(1),\n"\
+"  useCount integer NOT NULL DEFAULT(0),\n"\
+"  maxUses integer NOT NULL DEFAULT(0),\n"\
+"  expiresAt integer NOT NULL DEFAULT(0),\n"\
+"  token varchar(256) NOT NULL\n"\
+");\n"\
+"\n"\
+"CREATE INDEX AuthToken_networkId_token ON AuthToken(networkId,token);\n"\
+"\n"\
 "CREATE TABLE Node (\n"\
 "  id char(10) PRIMARY KEY NOT NULL,\n"\
 "  identity varchar(4096) NOT NULL\n"\
@@ -71,6 +83,7 @@
 "  nodeId char(10) NOT NULL,\n"\
 "  ts integer NOT NULL,\n"\
 "  authorized integer NOT NULL,\n"\
+"  authTokenId integer,\n"\
 "  version varchar(16),\n"\
 "  fromAddr varchar(64)\n"\
 ");\n"\
