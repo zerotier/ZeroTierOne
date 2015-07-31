@@ -23,7 +23,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{539E07E1-8687-4B88-BA01-91ED2DD5E162} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{6E2EC2C9-F3B2-474F-9176-54E029E0442F} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.0.4" Type="32"/>
@@ -116,10 +116,7 @@
     <ROW TimeStampUrl="http://timestamp.verisign.com/scripts/timstamp.dll" SignerDescription="ZeroTier One" DescriptionUrl="https://www.zerotier.com/" SignOptions="7" SignTool="0" Thumbprint="2ad023dc7aa92bf4265b33852a2ed2406d2bee86 Subject: ZeroTier Networks LLC&#10;Issuer: DigiCert High Assurance Code Signing CA-1&#10;Valid from 04/24/2015 to 04/01/2016"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FirewallExceptionComponent">
-    <ROW FirewallException="ZeroTierOne" DisplayName="ZeroTier One (UDP_9993)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="UDP"/>
-    <ROW FirewallException="ZeroTierOneService_x64" DisplayName="ZeroTier One (Service_x64)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="((?zerotierone_x64.exe=2) AND ($zerotierone_x64.exe=3))" Profiles="7" AppPath="[#zerotierone_x64.exe]" Protocol="ANY"/>
-    <ROW FirewallException="ZeroTierOneService_x86" DisplayName="ZeroTier One (Service_x86)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="((?zerotierone_x86.exe=2) AND ($zerotierone_x86.exe=3))" Profiles="7" AppPath="[#zerotierone_x86.exe]" Protocol="ANY"/>
-    <ROW FirewallException="ZeroTierOneTCP_9993" DisplayName="ZeroTier One (TCP_9993)" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="TCP"/>
+    <ROW FirewallException="ZeroTierOneUDP9993" DisplayName="ZeroTier One UDP/9993" GroupName="ZeroTierOne" Enabled="1" Scope="*" Condition="1" Profiles="7" Port="9993" Protocol="UDP"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -198,16 +195,16 @@
     <ROW Action="AI_CommitChainers" Type="11841" Source="chainersupport.dll" Target="CommitChainedPackages" WithoutSeq="true"/>
     <ROW Action="AI_DATA_SETTER" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_1" Type="51" Source="CustomActionData" Target="[~]"/>
+    <ROW Action="AI_DATA_SETTER_2" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_3" Type="51" Source="CustomActionData" Target="[~]"/>
-    <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DOWNGRADE" Type="19" Target="4010"/>
     <ROW Action="AI_DoRemoveExternalUIStub" Type="3585" Source="ExternalUICleaner.dll" Target="DoRemoveExternalUIStub" WithoutSeq="true"/>
     <ROW Action="AI_DpiContentScale" Type="1" Source="aicustact.dll" Target="DpiContentScale"/>
     <ROW Action="AI_FwConfig" Type="11265" Source="NetFirewall.dll" Target="OnFwConfig" WithoutSeq="true"/>
-    <ROW Action="AI_FwInstall" Type="1" Source="NetFirewall.dll" Target="OnFwInstall" AdditionalSeq="AI_DATA_SETTER_3"/>
+    <ROW Action="AI_FwInstall" Type="1" Source="NetFirewall.dll" Target="OnFwInstall" AdditionalSeq="AI_DATA_SETTER_2"/>
     <ROW Action="AI_FwRemove" Type="11265" Source="NetFirewall.dll" Target="OnFwRemove" WithoutSeq="true"/>
     <ROW Action="AI_FwRollback" Type="11521" Source="NetFirewall.dll" Target="OnFwRollback" WithoutSeq="true"/>
-    <ROW Action="AI_FwUninstall" Type="1" Source="NetFirewall.dll" Target="OnFwUninstall" AdditionalSeq="AI_DATA_SETTER_4"/>
+    <ROW Action="AI_FwUninstall" Type="1" Source="NetFirewall.dll" Target="OnFwUninstall" AdditionalSeq="AI_DATA_SETTER_3"/>
     <ROW Action="AI_GetArpIconPath" Type="1" Source="aicustact.dll" Target="GetArpIconPath"/>
     <ROW Action="AI_InstallModeCheck" Type="1" Source="aicustact.dll" Target="UpdateInstallMode" WithoutSeq="true"/>
     <ROW Action="AI_LaunchApp" Type="1" Source="aicustact.dll" Target="[#ZeroTierOne.exe]"/>
@@ -257,9 +254,9 @@
     <ROW Action="TapDeviceRemove64" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( VersionNT64 )" Sequence="1602"/>
     <ROW Action="AI_PrepareChainers" Condition="VersionMsi &gt;= &quot;4.05&quot;" Sequence="5851"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
-    <ROW Action="AI_DATA_SETTER_3" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
+    <ROW Action="AI_DATA_SETTER_2" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
-    <ROW Action="AI_DATA_SETTER_4" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
+    <ROW Action="AI_DATA_SETTER_3" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -302,6 +299,9 @@
     <ROW FileKey="devcon.log" Component_="ProductInformation" FileName="devcon.log" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="devcon_x64.exe" Component_="ProductInformation" FileName="devcon_x64.exe" DirProperty="One_Dir" InstallMode="3"/>
     <ROW FileKey="devcon_x86.exe" Component_="ProductInformation" FileName="devcon_x86.exe" DirProperty="One_Dir" InstallMode="3"/>
+    <ROW FileKey="node.log" Component_="ProductInformation" FileName="node.log" DirProperty="One_Dir" InstallMode="3"/>
+    <ROW FileKey="node.log.old" Component_="ProductInformation" FileName="node.log.old" DirProperty="One_Dir" InstallMode="3"/>
+    <ROW FileKey="roottopology" Component_="ProductInformation" FileName="root-topology" DirProperty="One_Dir" InstallMode="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="zerotierone_x64.exe" Name="ZeroTierOneService" Event="163" Wait="1" Component_="zerotierone_x64.exe"/>
