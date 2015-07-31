@@ -248,9 +248,6 @@ private:
 	ZT1_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
 	ZT1_EventCallback _eventCallback;
 
-	//Dictionary _localConfig; // persisted as local.conf
-	//Mutex _localConfig_m;
-
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
 
