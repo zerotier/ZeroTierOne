@@ -234,10 +234,19 @@ std::string WindowsEthernetTap::addNewPersistentTapDevice(const char *pathToInf)
 		return std::string("SetupDiCallClassInstaller(DIF_REGISTERDEVICE) failed");
 	}
 
-	BOOL rebootRequired = FALSE;
-	if (!WINENV.UpdateDriverForPlugAndPlayDevicesA((HWND)0,WINENV.tapDriverName.c_str(),pathToInf,INSTALLFLAG_FORCE|INSTALLFLAG_NONINTERACTIVE,&rebootRequired)) {
+	// HACK: During upgrades, this can fail while the installer is still running. So make 60 attempts
+	// with a 1s delay between each attempt.
+	bool driverInstalled = false;
+	for(int retryCounter=0;retryCounter<60;++retryCounter) {
+		BOOL rebootRequired = FALSE;
+		if (WINENV.UpdateDriverForPlugAndPlayDevicesA((HWND)0,WINENV.tapDriverName.c_str(),pathToInf,INSTALLFLAG_FORCE|INSTALLFLAG_NONINTERACTIVE,&rebootRequired)) {
+			driverInstalled = true;
+			break;
+		} else Sleep(1000);
+	}
+	if (!driverInstalled) {
 		WINENV.SetupDiDestroyDeviceInfoList(deviceInfoSet);
-		return std::string("UpdateDriverForPlugAndPlayDevices() failed -- unable to install driver on device");
+		return std::string("UpdateDriverForPlugAndPlayDevices() failed (made 60 attempts)");
 	}
 
 	WINENV.SetupDiDestroyDeviceInfoList(deviceInfoSet);
@@ -285,13 +294,16 @@ std::string WindowsEthernetTap::destroyAllLegacyPersistentTapDevices()
 		RegCloseKey(nwAdapters);
 	}
 
+	std::string errlist;
 	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp) {
 		std::string err = deletePersistentTapDevice(iidp->c_str());
-		if (err.length() > 0)
-			return err;
+		if (err.length() > 0) {
+			if (errlist.length() > 0)
+				errlist.push_back(',');
+			errlist.append(err);
+		}
 	}
-
-	return std::string();
+	return errlist;
 }
 
 std::string WindowsEthernetTap::destroyAllPersistentTapDevices()
@@ -334,13 +346,16 @@ std::string WindowsEthernetTap::destroyAllPersistentTapDevices()
 		RegCloseKey(nwAdapters);
 	}
 
+	std::string errlist;
 	for(std::set<std::string>::iterator iidp(instanceIdPathsToRemove.begin());iidp!=instanceIdPathsToRemove.end();++iidp) {
 		std::string err = deletePersistentTapDevice(iidp->c_str());
-		if (err.length() > 0)
-			return err;
+		if (err.length() > 0) {
+			if (errlist.length() > 0)
+				errlist.push_back(',');
+			errlist.append(err);
+		}
 	}
-
-	return std::string();
+	return errlist;
 }
 
 std::string WindowsEthernetTap::deletePersistentTapDevice(const char *instanceId)
@@ -455,7 +470,6 @@ WindowsEthernetTap::WindowsEthernetTap(
 	char subkeyClass[4096];
 	char data[4096];
 	char tag[24];
-	std::set<std::string> existingDeviceInstances;
 	std::string mySubkeyName;
 
 	if (mtu > 2800)
@@ -487,10 +501,8 @@ WindowsEthernetTap::WindowsEthernetTap(
 					std::string instanceId;
 					type = 0;
 					dataLen = sizeof(data);
-					if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+					if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
 						instanceId.assign(data,dataLen);
-						existingDeviceInstances.insert(instanceId);
-					}
 
 					std::string instanceIdPath;
 					type = 0;
@@ -520,50 +532,61 @@ WindowsEthernetTap::WindowsEthernetTap(
 	// If there is no device, try to create one
 	bool creatingNewDevice = (_netCfgInstanceId.length() == 0);
 	if (creatingNewDevice) {
-		std::string errm = addNewPersistentTapDevice((std::string(_pathToHelpers) + WINENV.tapDriverPath).c_str());
-		if (errm.length() != 0)
-			throw std::runtime_error(errm);
+		for(int getNewAttemptCounter=0;getNewAttemptCounter<2;++getNewAttemptCounter) {
+			for(DWORD subkeyIndex=0;;++subkeyIndex) {
+				DWORD type;
+				DWORD dataLen;
+				DWORD subkeyNameLen = sizeof(subkeyName);
+				DWORD subkeyClassLen = sizeof(subkeyClass);
+				FILETIME lastWriteTime;
+				if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
+					type = 0;
+					dataLen = sizeof(data);
+					if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+						data[dataLen] = '\0';
 
-		// Scan for the new instance by simply looking for taps that weren't originally there...
-		for(DWORD subkeyIndex=0;;++subkeyIndex) {
-			DWORD type;
-			DWORD dataLen;
-			DWORD subkeyNameLen = sizeof(subkeyName);
-			DWORD subkeyClassLen = sizeof(subkeyClass);
-			FILETIME lastWriteTime;
-			if (RegEnumKeyExA(nwAdapters,subkeyIndex,subkeyName,&subkeyNameLen,(DWORD *)0,subkeyClass,&subkeyClassLen,&lastWriteTime) == ERROR_SUCCESS) {
-				type = 0;
-				dataLen = sizeof(data);
-				if (RegGetValueA(nwAdapters,subkeyName,"ComponentId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-					data[dataLen] = '\0';
-
-					if (WINENV.tapDriverName == data) {
-						type = 0;
-						dataLen = sizeof(data);
-						if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
-							if (existingDeviceInstances.count(std::string(data,dataLen)) == 0) {
-								RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,(DWORD)(strlen(tag)+1));
-								_netCfgInstanceId.assign(data,dataLen);
+						if (WINENV.tapDriverName == data) {
+							type = 0;
+							dataLen = sizeof(data);
+							if ((RegGetValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",RRF_RT_ANY,&type,(PVOID)data,&dataLen) != ERROR_SUCCESS)||(dataLen <= 0)) {
 								type = 0;
 								dataLen = sizeof(data);
-								if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
-									_deviceInstanceId.assign(data,dataLen);
-								mySubkeyName = subkeyName;
+								if (RegGetValueA(nwAdapters,subkeyName,"NetCfgInstanceId",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS) {
+									RegSetKeyValueA(nwAdapters,subkeyName,"_ZeroTierTapIdentifier",REG_SZ,tag,(DWORD)(strlen(tag)+1));
 
-								// Disable DHCP by default on newly created devices
-								HKEY tcpIpInterfaces;
-								if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
-									DWORD enable = 0;
-									RegSetKeyValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
-									RegCloseKey(tcpIpInterfaces);
+									_netCfgInstanceId.assign(data,dataLen);
+
+									type = 0;
+									dataLen = sizeof(data);
+									if (RegGetValueA(nwAdapters,subkeyName,"DeviceInstanceID",RRF_RT_ANY,&type,(PVOID)data,&dataLen) == ERROR_SUCCESS)
+										_deviceInstanceId.assign(data,dataLen);
+
+									mySubkeyName = subkeyName;
+
+									// Disable DHCP by default on new devices
+									HKEY tcpIpInterfaces;
+									if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,"SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters\\Interfaces",0,KEY_READ|KEY_WRITE,&tcpIpInterfaces) == ERROR_SUCCESS) {
+										DWORD enable = 0;
+										RegSetKeyValueA(tcpIpInterfaces,_netCfgInstanceId.c_str(),"EnableDHCP",REG_DWORD,&enable,sizeof(enable));
+										RegCloseKey(tcpIpInterfaces);
+									}
+
+									break; // found an unused zttap device
 								}
-
-								break; // found it!
 							}
 						}
 					}
-				}
-			} else break; // no more keys or error occurred
+				} else break; // no more keys or error occurred
+			}
+
+			if (_netCfgInstanceId.length() > 0) {
+				break; // found an unused zttap device
+			} else {
+				// no unused zttap devices, so create one
+				std::string errm = addNewPersistentTapDevice((std::string(_pathToHelpers) + WINENV.tapDriverPath).c_str());
+				if (errm.length() > 0)
+					throw std::runtime_error(std::string("unable to create new device instance: ")+errm);
+			}
 		}
 	}
 
