@@ -533,7 +533,7 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && (_network->_isAllowed(p->address())) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && ( (_network->_isAllowed(p->address())) || (p->address() == _network->controller()) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			for(std::vector<MulticastGroup>::iterator mg(_allMulticastGroups.begin());mg!=_allMulticastGroups.end();++mg) {
