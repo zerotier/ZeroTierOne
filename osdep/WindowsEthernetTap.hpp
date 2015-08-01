@@ -41,6 +41,7 @@
 #include "../node/Mutex.hpp"
 #include "../node/Array.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
 
 namespace ZeroTier {
@@ -48,6 +49,45 @@ namespace ZeroTier {
 class WindowsEthernetTap
 {
 public:
+	/**
+	 * Installs a new instance of the ZT tap driver
+	 *
+	 * @param pathToInf Path to zttap driver .inf file
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string addNewPersistentTapDevice(const char *pathToInf);
+
+	/**
+	 * Uninstalls all persistent tap devices that have legacy drivers
+	 *
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string destroyAllLegacyPersistentTapDevices();
+
+	/**
+	 * Uninstalls all persistent tap devices on the system
+	 *
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string destroyAllPersistentTapDevices();
+
+	/**
+	 * Uninstall a specific persistent tap device by instance ID
+	 *
+	 * @param instanceId Device instance ID
+	 * @return Empty string on success, otherwise an error message
+	 */
+	static std::string deletePersistentTapDevice(const char *instanceId);
+
+	/**
+	 * Disable a persistent tap device by instance ID
+	 *
+	 * @param instanceId Device instance ID
+	 * @param enabled Enable device?
+	 * @return True if device was found and disabled
+	 */
+	static bool setPersistentTapDeviceState(const char *instanceId,bool enabled);
+
 	WindowsEthernetTap(
 		const char *hp,
 		const MAC &mac,
@@ -77,15 +117,11 @@ public:
 	void threadMain()
 		throw();
 
-	static void destroyAllPersistentTapDevices(const char *pathToHelpers);
-	static void deletePersistentTapDevice(const char *pathToHelpers,const char *instanceId);
-
 private:
-	bool _disableTapDevice();
-	bool _enableTapDevice();
 	NET_IFINDEX _getDeviceIndex(); // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char *regKey);
 	void _setRegistryIPv4Value(const char *regKey,const std::vector<std::string> &value);
+	void _syncIps();
 
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
@@ -100,6 +136,9 @@ private:
 	NET_LUID _deviceLuid;
 	std::string _netCfgInstanceId;
 	std::string _deviceInstanceId;
+
+	std::vector<InetAddress> _assignedIps; // IPs assigned with addIp
+	Mutex _assignedIps_m;
 
 	std::vector<MulticastGroup> _multicastGroups;
 

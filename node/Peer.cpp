@@ -133,7 +133,7 @@ void Peer::received(
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 			const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
 			for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n) {
-				if ( (isRoot) || ((*n)->isAllowed(_id.address())) ) {
+				if ( (isRoot) || ((*n)->isAllowed(_id.address())) || (_id.address() == (*n)->controller()) ) {
 					const std::vector<MulticastGroup> mgs((*n)->allMulticastGroups());
 					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
@@ -211,7 +211,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
 	RemotePath *const bestPath = getBestPath(now);
-	if ((bestPath)&&(bestPath->active(now))) {
+	if (bestPath) {
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
 			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
 			attemptToContactAt(RR,bestPath->address(),now);
@@ -239,7 +239,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 					ps.push_back(',');
 				ps.append(p->address().toString());
 			}
-			TRACE("pushing %u direct paths (local interface addresses) to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
+			TRACE("pushing %u direct paths to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
 		}
 #endif
 

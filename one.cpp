@@ -42,6 +42,7 @@
 #include <lmcons.h>
 #include <newdev.h>
 #include <atlbase.h>
+#include "osdep/WindowsEthernetTap.hpp"
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
 #include "windows/ZeroTierOne/ZeroTierOneService.h"
@@ -765,8 +766,6 @@ static BOOL WINAPI _winConsoleCtrlHandler(DWORD dwCtrlType)
 	return FALSE;
 }
 
-// Pokes a hole in the Windows firewall (advfirewall) for the running program
-/* -- now done by Advanced Installer
 static void _winPokeAHole()
 {
 	char myPath[MAX_PATH];
@@ -778,7 +777,7 @@ static void _winPokeAHole()
 		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall delete rule name=\"ZeroTier One\" program=\"") + myPath + "\"").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall delete rule name=\"ZeroTier One\" program=\"") + myPath + "\"").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
@@ -787,7 +786,7 @@ static void _winPokeAHole()
 		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=in action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=in action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
@@ -796,14 +795,13 @@ static void _winPokeAHole()
 		startupInfo.cb = sizeof(startupInfo);
 		memset(&startupInfo,0,sizeof(STARTUPINFOA));
 		memset(&processInfo,0,sizeof(PROCESS_INFORMATION));
-		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=out action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,0,NULL,NULL,&startupInfo,&processInfo)) {
+		if (CreateProcessA(NULL,(LPSTR)(std::string("C:\\Windows\\System32\\netsh.exe advfirewall firewall add rule name=\"ZeroTier One\" dir=out action=allow program=\"") + myPath + "\" enable=yes").c_str(),NULL,NULL,FALSE,CREATE_NO_WINDOW,NULL,NULL,&startupInfo,&processInfo)) {
 			WaitForSingleObject(processInfo.hProcess,INFINITE);
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
 		}
 	}
 }
-*/
 
 // Returns true if this is running as the local administrator
 static BOOL IsCurrentUserLocalAdministrator(void)
@@ -906,7 +904,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
 	std::string updateUrl(OneService::autoUpdateUrl());
 	if (updateUrl.length())
-		fprintf(out,"Automatic update enabled:"ZT_EOL_S"  %s"ZT_EOL_S""ZT_EOL_S,updateUrl.c_str());
+		fprintf(out,"Automatic updates enabled:"ZT_EOL_S"  %s"ZT_EOL_S"  (all updates are securely authenticated by 256-bit ECDSA signature)"ZT_EOL_S""ZT_EOL_S,updateUrl.c_str());
 	fprintf(out,"Usage: %s [-switches] [home directory]"ZT_EOL_S""ZT_EOL_S,cn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
@@ -914,17 +912,20 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
+
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
 #endif // __UNIX_LIKE__
-	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
-	fprintf(out,"  -q                - Query API (zerotier-cli)"ZT_EOL_S);
+
 #ifdef __WINDOWS__
 	fprintf(out,"  -C                - Run from command line instead of as service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -I                - Install Windows service (Windows)"ZT_EOL_S);
 	fprintf(out,"  -R                - Uninstall Windows service (Windows)"ZT_EOL_S);
-	fprintf(out,"  -D                - Load tap driver into system driver store (Windows)"ZT_EOL_S);
+	fprintf(out,"  -D                - Remove all instances of Windows tap device (Windows)"ZT_EOL_S);
 #endif // __WINDOWS__
+
+	fprintf(out,"  -i                - Generate and manage identities (zerotier-idtool)"ZT_EOL_S);
+	fprintf(out,"  -q                - Query API (zerotier-cli)"ZT_EOL_S);
 }
 
 #ifdef __WINDOWS__
@@ -1059,26 +1060,15 @@ int main(int argc,char **argv)
 						return 0;
 					} break;
 
-#if 0
-				case 'D': { // Install Windows driver (since PNPUTIL.EXE seems to be weirdly unreliable)
-						std::string pathToInf;
-#ifdef _WIN64
-						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x64\\zttap200.inf";
-#else
-						pathToInf = ZT_DEFAULTS.defaultHomePath + "\\tap-windows\\x86\\zttap200.inf";
-#endif
-						printf("Installing ZeroTier One virtual Ethernet port driver."ZT_EOL_S""ZT_EOL_S"NOTE: If you don't see a confirmation window to allow driver installation,"ZT_EOL_S"check to make sure it didn't appear under the installer."ZT_EOL_S);
-						BOOL needReboot = FALSE;
-						if (DiInstallDriverA(NULL,pathToInf.c_str(),DIIRFLAG_FORCE_INF,&needReboot)) {
-							printf("%s: driver successfully installed from %s"ZT_EOL_S,argv[0],pathToInf.c_str());
-							return 0;
-						} else {
-							printf("%s: failed installing %s: %d"ZT_EOL_S,argv[0],pathToInf.c_str(),(int)GetLastError());
+				case 'D': {
+						std::string err = WindowsEthernetTap::destroyAllPersistentTapDevices();
+						if (err.length() > 0) {
+							fprintf(stderr,"%s: unable to uninstall one or more persistent tap devices: %s"ZT_EOL_S,argv[0],err.c_str());
 							return 3;
 						}
+						return 0;
 					} break;
 #endif // __WINDOWS__
-#endif
 
 				case 'h':
 				case '?':
@@ -1134,6 +1124,10 @@ int main(int argc,char **argv)
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
+	// Uninstall legacy tap devices. New devices will automatically be installed and configured
+	// when tap instances are created.
+	WindowsEthernetTap::destroyAllLegacyPersistentTapDevices();
+
 	if (winRunFromCommandLine) {
 		// Running in "interactive" mode (mostly for debugging)
 		if (IsCurrentUserLocalAdministrator() != TRUE) {
@@ -1142,13 +1136,13 @@ int main(int argc,char **argv)
 				return 1;
 			}
 		} else {
-			//_winPokeAHole();
+			_winPokeAHole();
 		}
 		SetConsoleCtrlHandler(&_winConsoleCtrlHandler,TRUE);
 		// continues on to ordinary command line execution code below...
 	} else {
 		// Running from service manager
-		//_winPokeAHole();
+		_winPokeAHole();
 		ZeroTierOneService zt1Service;
 		if (CServiceBase::Run(zt1Service) == TRUE) {
 			return 0;

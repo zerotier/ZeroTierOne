@@ -943,6 +943,17 @@ public:
 							friendlyName,
 							StapFrameHandler,
 							(void *)this))).first;
+					} catch (std::exception &exc) {
+#ifdef __WINDOWS__
+						FILE *tapFailLog = fopen((_homePath + ZT_PATH_SEPARATOR_S"port_error_log.txt").c_str(),"a");
+						if (tapFailLog) {
+							fprintf(tapFailLog,"%.16llx: %s"ZT_EOL_S,(unsigned long long)nwid,exc.what());
+							fclose(tapFailLog);
+						}
+#else
+						fprintf(stderr,"ERROR: unable to configure virtual network port: %s"ZT_EOL_S,exc.what());
+#endif
+						return -999;
 					} catch ( ... ) {
 						return -999; // tap init failed
 					}
@@ -982,7 +993,7 @@ public:
 					_tapAssignedIps.erase(nwid);
 #ifdef __WINDOWS__
 					if ((op == ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY)&&(winInstanceId.length() > 0))
-						WindowsEthernetTap::deletePersistentTapDevice(_homePath.c_str(),winInstanceId.c_str());
+						WindowsEthernetTap::deletePersistentTapDevice(winInstanceId.c_str());
 #endif
 				}
 				break;
