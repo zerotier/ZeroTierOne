@@ -53,9 +53,10 @@ public:
 	 * Installs a new instance of the ZT tap driver
 	 *
 	 * @param pathToInf Path to zttap driver .inf file
+	 * @param deviceInstanceId Buffer to fill with device instance ID on success (and if SetupDiGetDeviceInstanceIdA succeeds, which it should)
 	 * @return Empty string on success, otherwise an error message
 	 */
-	static std::string addNewPersistentTapDevice(const char *pathToInf);
+	static std::string addNewPersistentTapDevice(const char *pathToInf,std::string &deviceInstanceId);
 
 	/**
 	 * Uninstalls all persistent tap devices that have legacy drivers
