@@ -1395,7 +1395,7 @@
 #define MULTIFILEOPENORD                1537
 #define _WIN32_WINNT_WIN8               0x0602
 #define _WIN32_IE_WS03                  0x0602
-#define _WIN32_WINNT                    0x0602
+#define _WIN32_WINNT                    0x0600
 #define PRINTDLGORD                     1538
 #define VER_PRODUCTVERSION_W            0x0602
 #define _WIN32_IE_IE60SP2               0x0603

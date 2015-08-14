@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="12.0" version="12.0" Modules="enterprise" RootPath="." Language="en" Id="{4070644B-EC9F-4962-B14A-770B9E309DC3}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="12.0" version="12.3.1" Modules="enterprise" RootPath="." Language="en" Id="{4070644B-EC9F-4962-B14A-770B9E309DC3}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="UpdaterComponent;SerValComponent;AutorunComponent;MultipleInstancesComponent;MsiJavaComponent;MsiRegsComponent;MsiExtComponent;MsiAssemblyComponent;MsiServInstComponent;AnalyticsComponent;ActSyncAppComponent;MsiMergeModsComponent;MsiThemeComponent;BackgroundImagesComponent;DictionaryComponent;MsiEnvComponent;ScheduledTasksComponent;CPLAppletComponent;GameUxComponent;FirewallExceptionComponent;UserAccountsComponent;MsiClassComponent;WebApplicationsComponent;MsiOdbcDataSrcComponent;SqlConnectionComponent;SharePointSlnComponent;SilverlightSlnComponent;MsiAppSearchComponent"/>
   </COMPONENT>
@@ -16,7 +16,7 @@
     <ROW Property="LIMITUI" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier"/>
-    <ROW Property="ProductCode" Value="1033:{1B939799-6FE8-4379-A378-1D071825D2B5} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{6223AB10-D6CD-4580-B357-91CCD7F355D2} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One Virtual Network Port"/>
     <ROW Property="ProductVersion" Value="1.0.0" Type="32"/>

@@ -30,7 +30,7 @@ CatalogFile = zttap300.cat
 ClassGUID = {4d36e972-e325-11ce-bfc1-08002be10318}
 Provider = %Provider%
 Class = Net
-DriverVer=04/25/2015,6.2.9200.20557
+DriverVer=08/13/2015,6.2.9200.20557
 
 [Strings]
 DeviceDescription = "ZeroTier One Virtual Port"

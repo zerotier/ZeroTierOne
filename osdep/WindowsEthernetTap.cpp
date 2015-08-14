@@ -75,6 +75,8 @@ typedef BOOL (WINAPI *SetupDiOpenDeviceInfoA_t)(_In_ HDEVINFO DeviceInfoSet,_In_
 typedef BOOL (WINAPI *SetupDiEnumDeviceInfo_t)(_In_ HDEVINFO DeviceInfoSet,_In_ DWORD MemberIndex,_Out_ PSP_DEVINFO_DATA DeviceInfoData);
 typedef BOOL (WINAPI *SetupDiSetClassInstallParamsA_t)(_In_ HDEVINFO DeviceInfoSet,_In_opt_ PSP_DEVINFO_DATA DeviceInfoData,_In_reads_bytes_opt_(ClassInstallParamsSize) PSP_CLASSINSTALL_HEADER ClassInstallParams,_In_ DWORD ClassInstallParamsSize);
 typedef CONFIGRET (WINAPI *CM_Get_Device_ID_ExA_t)(_In_ DEVINST dnDevInst,_Out_writes_(BufferLen) PSTR Buffer,_In_ ULONG BufferLen,_In_ ULONG ulFlags,_In_opt_ HMACHINE hMachine);
+typedef BOOL (WINAPI *SetupDiGetDeviceInstanceIdA_t)(_In_ HDEVINFO DeviceInfoSet,_In_ PSP_DEVINFO_DATA DeviceInfoData,_Out_writes_opt_(DeviceInstanceIdSize) PSTR DeviceInstanceId,_In_ DWORD DeviceInstanceIdSize,_Out_opt_ PDWORD RequiredSize);
+
 
 namespace ZeroTier {
 
@@ -145,6 +147,10 @@ public:
 			fprintf(stderr,"FATAL: SetupDiSetClassInstallParamsA not found in setupapi.dll\r\n");
 			_exit(1);
 		}
+		if (!(this->SetupDiGetDeviceInstanceIdA = (SetupDiGetDeviceInstanceIdA_t)GetProcAddress(setupApiMod,"SetupDiGetDeviceInstanceIdA"))) {
+			fprintf(stderr,"FATAL: SetupDiGetDeviceInstanceIdA not found in setupapi.dll\r\n");
+			_exit(1);
+		}
 
 		newDevMod = LoadLibraryA("newdev.dll");
 		if (!newDevMod) {
@@ -183,6 +189,7 @@ public:
 	SetupDiOpenDeviceInfoA_t SetupDiOpenDeviceInfoA;
 	SetupDiEnumDeviceInfo_t SetupDiEnumDeviceInfo;
 	SetupDiSetClassInstallParamsA_t SetupDiSetClassInstallParamsA;
+	SetupDiGetDeviceInstanceIdA_t SetupDiGetDeviceInstanceIdA;
 
 	CM_Get_Device_ID_ExA_t CM_Get_Device_ID_ExA;
 
@@ -201,7 +208,7 @@ static Mutex _systemDeviceManagementLock;
 
 } // anonymous namespace
 
-std::string WindowsEthernetTap::addNewPersistentTapDevice(const char *pathToInf)
+std::string WindowsEthernetTap::addNewPersistentTapDevice(const char *pathToInf,std::string &deviceInstanceId)
 {
 	Mutex::Lock _l(_systemDeviceManagementLock);
 
@@ -248,6 +255,12 @@ std::string WindowsEthernetTap::addNewPersistentTapDevice(const char *pathToInf)
 		WINENV.SetupDiDestroyDeviceInfoList(deviceInfoSet);
 		return std::string("UpdateDriverForPlugAndPlayDevices() failed (made 60 attempts)");
 	}
+
+	char iidbuf[1024];
+	DWORD iidReqSize = sizeof(iidbuf);
+	if (WINENV.SetupDiGetDeviceInstanceIdA(deviceInfoSet,&deviceInfoData,iidbuf,sizeof(iidbuf),&iidReqSize)) {
+		deviceInstanceId = iidbuf;
+	} // failure here is not fatal since we only need this on Vista and 2008 -- other versions fill it into the registry automatically
 
 	WINENV.SetupDiDestroyDeviceInfoList(deviceInfoSet);
 
@@ -531,6 +544,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 
 	// If there is no device, try to create one
 	bool creatingNewDevice = (_netCfgInstanceId.length() == 0);
+	std::string newDeviceInstanceId;
 	if (creatingNewDevice) {
 		for(int getNewAttemptCounter=0;getNewAttemptCounter<2;++getNewAttemptCounter) {
 			for(DWORD subkeyIndex=0;;++subkeyIndex) {
@@ -583,7 +597,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 				break; // found an unused zttap device
 			} else {
 				// no unused zttap devices, so create one
-				std::string errm = addNewPersistentTapDevice((std::string(_pathToHelpers) + WINENV.tapDriverPath).c_str());
+				std::string errm = addNewPersistentTapDevice((std::string(_pathToHelpers) + WINENV.tapDriverPath).c_str(),newDeviceInstanceId);
 				if (errm.length() > 0)
 					throw std::runtime_error(std::string("unable to create new device instance: ")+errm);
 			}
@@ -604,6 +618,10 @@ WindowsEthernetTap::WindowsEthernetTap(
 		RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"*IfType",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
 
 		if (creatingNewDevice) {
+			// Vista/2008 does not set this
+			if (newDeviceInstanceId.length() > 0)
+				RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"DeviceInstanceID",REG_SZ,newDeviceInstanceId.c_str(),(DWORD)newDeviceInstanceId.length());
+
 			// Set EnableDHCP to 0 by default on new devices
 			tmp = 0;
 			RegSetKeyValueA(nwAdapters,mySubkeyName.c_str(),"EnableDHCP",REG_DWORD,(LPCVOID)&tmp,sizeof(tmp));
