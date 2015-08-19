@@ -173,6 +173,7 @@ To create a new network with a random last six digits safely and atomically, you
 <tr><td>creationTime</td><td>integer</td><td>Time network was created in ms since epoch</td><td>no</td></tr>
 <tr><td>revision</td><td>integer</td><td>Network config revision number</td><td>no</td></tr>
 <tr><td>memberRevisionCounter</td><td>integer</td><td>Current value of network revision counter (incremented after every member add or revision)</td><td>no</td></tr>
+<tr><td>authorizedMemberCount</td><td>integer</td><td>Number of authorized members</td><td>no</td></tr>
 <tr><td>relays</td><td>[object]</td><td>Array of network-specific relay nodes (see below)</td><td>yes</td></tr>
 <tr><td>ipLocalRoutes</td><td>[string]</td><td>Array of IP network/netmask entries corresponding to networks routed directly via this interface (e.g. 10.0.0.0/8 to route 10.0.0.0 via this interface)</td></tr>
 <tr><td>ipAssignmentPools</td><td>[object]</td><td>Array of IP auto-assignment pools for 'zt' assignment mode</td><td>yes</td></tr>
