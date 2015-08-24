@@ -100,7 +100,7 @@ The network (and associated interface) should be gone.
 
 Networks are created and administrated by network controllers. Most users will want to use our hosted controllers, but you can create your own as well. In order to achieve this you have to build ZeroTier with controller support.
 
-Joining a network defined on a self-hosted controller is easy, as the network ID namespace is global. Once you create your own network, the generated network ID contains a reference to the controller. This means that you don't have to reconfigure your client to connect to the network and you can be connected to networks hosted on different controllers.
+Joining a network defined on a self-hosted controller is easy as the network ID namespace is global. Once you create your own network, the generated network ID contains a reference to the controller. This means that you don't have to reconfigure your client to connect to the network and you can be connected to networks hosted on different controllers.
 
 Visit [our web site](https://www.zerotier.com/) for more information.
 
