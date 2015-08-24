@@ -161,7 +161,7 @@ Thus a network's first ten digits *must* be the controller's address. If your co
 To create a new network with a random last six digits safely and atomically, you can POST to */controller/network/##########\_\_\_\_\_\_* where ########## is the controller's address and the underscores are as shown. This will pick a random unallocated network ID, which will be returned in the 'nwid' field of the returned JSON object.
 
 <table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td><td><b>Required (\*)<b></td></tr>
+<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td><td><b>Required (*)<b></td></tr>
 <tr><td>nwid</td><td>string</td><td>16-digit hex network ID</td><td>no</td><td>no</td></tr>
 <tr><td>name</td><td>string</td><td>Short network name (max: 127 chars)</td><td>yes</td><td>yes</td></tr>
 <tr><td>private</td><td>boolean</td><td>False if public network, true for access control</td><td>yes</td><td>no</td></tr>
