@@ -161,27 +161,29 @@ Thus a network's first ten digits *must* be the controller's address. If your co
 To create a new network with a random last six digits safely and atomically, you can POST to */controller/network/##########\_\_\_\_\_\_* where ########## is the controller's address and the underscores are as shown. This will pick a random unallocated network ID, which will be returned in the 'nwid' field of the returned JSON object.
 
 <table>
-<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td></tr>
-<tr><td>nwid</td><td>string</td><td>16-digit hex network ID</td><td>no</td></tr>
-<tr><td>name</td><td>string</td><td>Short network name (max: 127 chars)</td><td>yes</td></tr>
-<tr><td>private</td><td>boolean</td><td>False if public network, true for access control</td><td>yes</td></tr>
-<tr><td>enableBroadcast</td><td>boolean</td><td>True to allow Ethernet broadcast (ff:ff:ff:ff:ff:ff)</td><td>yes</td></tr>
-<tr><td>allowPassiveBridging</td><td>boolean</td><td>True to allow any member to bridge (experimental!)</td><td>yes</td></tr>
-<tr><td>v4AssignMode</td><td>string</td><td>'none', 'zt', or 'dhcp' (see below)</td><td>yes</td></tr>
-<tr><td>v6AssignMode</td><td>string</td><td>'none', 'zt', or 'dhcp' (see below)</td><td>yes</td></tr>
-<tr><td>multicastLimit</td><td>integer</td><td>Maximum number of multicast recipients per multicast/broadcast address</td><td>yes</td></tr>
-<tr><td>creationTime</td><td>integer</td><td>Time network was created in ms since epoch</td><td>no</td></tr>
-<tr><td>revision</td><td>integer</td><td>Network config revision number</td><td>no</td></tr>
-<tr><td>memberRevisionCounter</td><td>integer</td><td>Current value of network revision counter (incremented after every member add or revision)</td><td>no</td></tr>
-<tr><td>relays</td><td>[object]</td><td>Array of network-specific relay nodes (see below)</td><td>yes</td></tr>
-<tr><td>ipLocalRoutes</td><td>[string]</td><td>Array of IP network/netmask entries corresponding to networks routed directly via this interface (e.g. 10.0.0.0/8 to route 10.0.0.0 via this interface)</td></tr>
-<tr><td>ipAssignmentPools</td><td>[object]</td><td>Array of IP auto-assignment pools for 'zt' assignment mode</td><td>yes</td></tr>
-<tr><td>rules</td><td>[object]</td><td>Array of network flow rules (see below)</td><td>yes</td></tr>
+<tr><td><b>Field</b></td><td><b>Type</b></td><td><b>Description</b></td><td><b>Writable</b></td><td><b>Required (*)<b></td></tr>
+<tr><td>nwid</td><td>string</td><td>16-digit hex network ID</td><td>no</td><td>no</td></tr>
+<tr><td>name</td><td>string</td><td>Short network name (max: 127 chars)</td><td>yes</td><td>yes</td></tr>
+<tr><td>private</td><td>boolean</td><td>False if public network, true for access control</td><td>yes</td><td>no</td></tr>
+<tr><td>enableBroadcast</td><td>boolean</td><td>True to allow Ethernet broadcast (ff:ff:ff:ff:ff:ff)</td><td>yes</td><td>no</td></tr>
+<tr><td>allowPassiveBridging</td><td>boolean</td><td>True to allow any member to bridge (experimental!)</td><td>yes</td><td>no</td></tr>
+<tr><td>v4AssignMode</td><td>string</td><td>'none', 'zt', or 'dhcp' (see below)</td><td>yes</td><td>no</td></tr>
+<tr><td>v6AssignMode</td><td>string</td><td>'none', 'zt', or 'dhcp' (see below)</td><td>yes</td><td>no</td></tr>
+<tr><td>multicastLimit</td><td>integer</td><td>Maximum number of multicast recipients per multicast/broadcast address</td><td>yes</td><td>no</td></tr>
+<tr><td>creationTime</td><td>integer</td><td>Time network was created in ms since epoch</td><td>no</td><td>no</td></tr>
+<tr><td>revision</td><td>integer</td><td>Network config revision number</td><td>no</td><td>no</td></tr>
+<tr><td>memberRevisionCounter</td><td>integer</td><td>Current value of network revision counter (incremented after every member add or revision)</td><td>no</td><td>no</td></tr>
+<tr><td>relays</td><td>[object]</td><td>Array of network-specific relay nodes (see below)</td><td>yes</td><td>no</td></tr>
+<tr><td>ipLocalRoutes</td><td>[string]</td><td>Array of IP network/netmask entries corresponding to networks routed directly via this interface (e.g. 10.0.0.0/8 to route 10.0.0.0 via this interface)</td><td>yes</td><td>yes</td></tr>
+<tr><td>ipAssignmentPools</td><td>[object]</td><td>Array of IP auto-assignment pools for 'zt' assignment mode</td><td>yes</td><td>no</td></tr>
+<tr><td>rules</td><td>[object]</td><td>Array of network flow rules (see below)</td><td>yes</td><td>yes</td></tr>
 </table>
 
 The network member list includes both authorized and unauthorized members. DELETE unauthorized members to remove them from the list.
 
 Relays, IP assignment pools, and rules are edited via direct POSTs to the network object. New values replace all previous values.
+
+(\*) Required column: these fields are required to set up a basic IPv4 network that can transport packets.
 
 **Relay object format:**
 
@@ -232,6 +234,24 @@ IP related fields apply only to Ethernet frames of type IPv4 or IPV6. Otherwise 
 <tr><td>ipDestPort</td><td>integer</td><td>IP destination port</td></tr>
 <tr><td>action</td><td>string</td><td>Rule action: accept, drop, etc.</td></tr>
 </table>
+
+##### Example network definition
+
+```JSON
+{
+        "name": "myearth",
+        "private": true,
+        "enableBroadcast": true,
+        "allowPassiveBridging": false,
+        "v4AssignMode": "zt",
+        "v6AssignMode": "none",
+        "multicastLimit": 32,
+        "ipLocalRoutes": ["10.181.0.0/24"],
+        "ipAssignmentPools": [{"ipRangeStart":"10.181.0.10", "ipRangeEnd":"10.181.0.50"}],
+        "rules": [ { "ruleNo": 10, "action": "accept" } ]
+}
+```
+
 
 #### /controller/network/\<network ID\>/member/\<address\>
 

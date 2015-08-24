@@ -98,7 +98,11 @@ Earth is a public place. If you don't want to stick around run:
 
 The network (and associated interface) should be gone.
 
-Networks are created and administrated by network controllers. Most users will want to use our hosted controllers. Visit [our web site](https://www.zerotier.com/) for more information. Later in this README there are brief instructions about building ZeroTier One with network controller support for those who want to try running their own.
+Networks are created and administrated by network controllers. Most users will want to use our hosted controllers, but you can create your own as well. In order to achieve this you have to build ZeroTier with controller support.
+
+Joining a network defined on a self-hosted controller is easy as the network ID namespace is global. Once you create your own network, the generated network ID contains a reference to the controller. This means that you don't have to reconfigure your client to connect to the network and you can be connected to networks hosted on different controllers.
+
+Visit [our web site](https://www.zerotier.com/) for more information.
 
 Macintosh and Windows installers also install a GUI application.
 
@@ -143,6 +147,8 @@ You can build a network controller on Linux or Mac with:
     make ZT_ENABLE_NETWORK_CONTROLLER=1
 
 This will build a version that contains the Sqlite-backed network controller and associated extensions to the JSON local service control API. You will need the development headers for sqlite3 installed. On Mac these ship as part of Xcode, while on Linux they'll be found in packages for the various distributions.
+
+Don't forget that if you run your own controller, you're on your own: you have to ensure that it will be available, protected from malicious access and it is properly backed up.
 
 See the JSON API documentation in [service/](service/) for more information about how to control controllers.
 
