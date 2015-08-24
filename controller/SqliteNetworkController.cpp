@@ -1363,6 +1363,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 								"\t\"authorized\": %s,\n"
 								"\t\"activeBridge\": %s,\n"
 								"\t\"memberRevision\": %llu,\n"
+								"\t\"clock\": %llu,\n"
 								"\t\"identity\": \"%s\",\n"
 								"\t\"ipAssignments\": [",
 								nwids,
@@ -1371,6 +1372,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 								(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
 								(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
 								(unsigned long long)sqlite3_column_int64(_sGetMember2,2),
+								(unsigned long long)OSUtils::now(),
 								_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,3)).c_str());
 							responseBody = json;
 
@@ -1457,6 +1459,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"{\n"
 						"\t\"nwid\": \"%s\",\n"
 						"\t\"controllerInstanceId\": \"%s\",\n"
+						"\t\"clock\": %llu,\n"
 						"\t\"name\": \"%s\",\n"
 						"\t\"private\": %s,\n"
 						"\t\"enableBroadcast\": %s,\n"
@@ -1471,6 +1474,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"\t\"relays\": [",
 						nwids,
 						_instanceId.c_str(),
+						(unsigned long long)OSUtils::now(),
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
