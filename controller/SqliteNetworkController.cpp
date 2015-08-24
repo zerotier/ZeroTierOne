@@ -1721,7 +1721,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 		// GET /controller returns status and API version if controller is supported
 		Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"instanceId\": \"%s\"\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),_instanceId.c_str());
 		responseBody = json;
-		responseContentType = "applicaiton/json";
+		responseContentType = "application/json";
 		return 200;
 	}
 
