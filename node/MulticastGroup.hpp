@@ -141,6 +141,8 @@ public:
 	 */
 	inline uint32_t adi() const throw() { return _adi; }
 
+	inline unsigned long hashCode() const throw() { return (_mac.hashCode() ^ (unsigned long)_adi); }
+
 	inline bool operator==(const MulticastGroup &g) const throw() { return ((_mac == g._mac)&&(_adi == g._adi)); }
 	inline bool operator!=(const MulticastGroup &g) const throw() { return ((_mac != g._mac)||(_adi != g._adi)); }
 	inline bool operator<(const MulticastGroup &g) const throw()

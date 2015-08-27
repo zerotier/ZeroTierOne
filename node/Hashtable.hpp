@@ -19,7 +19,6 @@
  *
  * ZeroTier may be used and distributed under the terms of the GPLv3, which
  * are available at: http://www.gnu.org/licenses/gpl-3.0.html
- *
  */
 
 #ifndef ZT_HASHTABLE_HPP
@@ -39,9 +38,6 @@ namespace ZeroTier {
  * This is not a drop-in replacement for STL containers, and has several
  * limitations. It's designed to be small and fast for use in the
  * ZeroTier core.
- *
- * Pairs of values can also be used as a key. In this case the first and
- * second element of the pair's hash codes are XORed.
  */
 template<typename K,typename V>
 class Hashtable
@@ -49,12 +45,11 @@ class Hashtable
 private:
 	struct _Bucket
 	{
-		_Bucket(const K &k,const V &v) :
-			k(k),
-			v(v) {}
-		_Bucket *next;
+		_Bucket(const K &k,const V &v) : k(k),v(v) {}
+		_Bucket(const K &k) : k(k),v() {}
 		K k;
 		V v;
+		_Bucket *next;
 	};
 
 public:
@@ -188,35 +183,56 @@ public:
 	/**
 	 * @param k Key
 	 * @param v Value
+	 * @return Reference to value in table
 	 */
-	inline void set(const K &k,const V &v)
+	inline V &set(const K &k,const V &v)
 	{
-		if (_s >= _bc) {
-			const unsigned long nc = _bc * 2;
-			_Bucket **nt = reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * nc));
-			if (nt) {
-				for(unsigned long i=0;i<nc;++i)
-					nt[i] = (_Bucket *)0;
-				for(unsigned long i=0;i<_bc;++i) {
-					_Bucket *b = _t[i];
-					while (b) {
-						_Bucket *const nb = b->next;
-						const unsigned long nidx = _hc(b->k) % nc;
-						b->next = nt[nidx];
-						nt[nidx] = b;
-						b = nb;
-					}
-				}
-				::free(_t);
-				_t = nt;
-				_bc = nc;
-			}
-		}
 		const unsigned long bidx = _hc(k) % _bc;
-		_Bucket *const b = new _Bucket(k,v);
+
+		_Bucket *b = _t[bidx];
+		while (b) {
+			if (b->k == k) {
+				b->v = v;
+				return b->v;
+			}
+			b = b->next;
+		}
+
+		if (_s >= _bc)
+			_grow();
+
+		b = new _Bucket(k,v);
 		b->next = _t[bidx];
 		_t[bidx] = b;
 		++_s;
+
+		return b->v;
+	}
+
+	/**
+	 * @param k Key
+	 * @return Value, possibly newly created
+	 */
+	inline V &operator[](const K &k)
+	{
+		const unsigned long bidx = _hc(k) % _bc;
+
+		_Bucket *b = _t[bidx];
+		while (b) {
+			if (b->k == k)
+				return b->v;
+			b = b->next;
+		}
+
+		if (_s >= _bc)
+			_grow();
+
+		b = new _Bucket(k);
+		b->next = _t[bidx];
+		_t[bidx] = b;
+		++_s;
+
+		return b->v;
 	}
 
 	/**
@@ -240,6 +256,29 @@ private:
 		// NOTE: this is fine for network IDs, but might be bad for other kinds
 		// of IDs if they are not evenly or randomly distributed.
 		return (unsigned long)((i ^ (i >> 32)) * 2654435761ULL);
+	}
+
+	inline void _grow()
+	{
+		const unsigned long nc = _bc * 2;
+		_Bucket **nt = reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * nc));
+		if (nt) {
+			for(unsigned long i=0;i<nc;++i)
+				nt[i] = (_Bucket *)0;
+			for(unsigned long i=0;i<_bc;++i) {
+				_Bucket *b = _t[i];
+				while (b) {
+					_Bucket *const nb = b->next;
+					const unsigned long nidx = _hc(b->k) % nc;
+					b->next = nt[nidx];
+					nt[nidx] = b;
+					b = nb;
+				}
+			}
+			::free(_t);
+			_t = nt;
+			_bc = nc;
+		}
 	}
 
 	_Bucket **_t;

@@ -242,6 +242,8 @@ public:
 	 */
 	inline unsigned int size() const throw() { return 6; }
 
+	inline unsigned long hashCode() const throw() { return (unsigned long)_m; }
+
 	inline MAC &operator=(const MAC &m)
 		throw()
 	{
