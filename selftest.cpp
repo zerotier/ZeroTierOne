@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "node/Constants.hpp"
+#include "node/Hashtable.hpp"
 #include "node/RuntimeEnvironment.hpp"
 #include "node/InetAddress.hpp"
 #include "node/Utils.hpp"
@@ -578,6 +579,119 @@ static int testPacket()
 
 static int testOther()
 {
+	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
+	{
+		Hashtable<uint64_t,std::string> ht(128);
+		std::map<uint64_t,std::string> ref; // assume std::map works correctly :)
+		for(int x=0;x<2;++x) {
+			for(int i=0;i<25000;++i) {
+				uint64_t k = rand();
+				while ((k == 0)||(ref.count(k) > 0))
+					++k;
+				std::string v;
+				for(int j=0;j<(int)(k % 64);++j)
+					v.push_back("0123456789"[rand() % 10]);
+				ht.set(k,v);
+				ref[k] = v;
+			}
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (size mismatch)" << std::endl;
+				return -1;
+			}
+			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
+				std::string *v = ht.get(i->first);
+				if (!v) {
+					std::cout << "FAILED! (key not found)" << std::endl;
+					return -1;
+				}
+				if (*v != i->second) {
+					std::cout << "FAILED! (key not equal)" << std::endl;
+					return -1;
+				}
+			}
+			{
+				uint64_t *k;
+				std::string *v;
+				Hashtable<uint64_t,std::string>::Iterator i(ht);
+				unsigned long ic = 0;
+				while (i.next(k,v)) {
+					if (ref[*k] != *v) {
+						std::cout << "FAILED! (iterate)" << std::endl;
+						return -1;
+					}
+					++ic;
+				}
+				if (ic != ht.size()) {
+					std::cout << "FAILED! (iterate coverage)" << std::endl;
+					return -1;
+				}
+			}
+			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();) {
+				if (!ht.get(i->first)) {
+					std::cout << "FAILED! (erase, check if exists)" << std::endl;
+					return -1;
+				}
+				ht.erase(i->first);
+				if (ht.get(i->first)) {
+					std::cout << "FAILED! (erase, check if erased)" << std::endl;
+					return -1;
+				}
+				ref.erase(i++);
+				if (ht.size() != ref.size()) {
+					std::cout << "FAILED! (erase, size)" << std::endl;
+					return -1;
+				}
+			}
+			if (!ht.empty()) {
+				std::cout << "FAILED! (erase, empty)" << std::endl;
+				return -1;
+			}
+			for(int i=0;i<10000;++i) {
+				uint64_t k = rand();
+				while ((k == 0)||(ref.count(k) > 0))
+					++k;
+				std::string v;
+				for(int j=0;j<(int)(k % 64);++j)
+					v.push_back("0123456789"[rand() % 10]);
+				ht.set(k,v);
+				ref[k] = v;
+			}
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (second populate)" << std::endl;
+				return -1;
+			}
+			ht.clear();
+			ref.clear();
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (clear)" << std::endl;
+				return -1;
+			}
+			for(int i=0;i<10000;++i) {
+				uint64_t k = rand();
+				while ((k == 0)||(ref.count(k) > 0))
+					++k;
+				std::string v;
+				for(int j=0;j<(int)(k % 64);++j)
+					v.push_back("0123456789"[rand() % 10]);
+				ht.set(k,v);
+				ref[k] = v;
+			}
+			{
+				Hashtable<uint64_t,std::string>::Iterator i(ht);
+				uint64_t *k;
+				std::string *v;
+				while (i.next(k,v))
+					ht.erase(*k);
+			}
+			ref.clear();
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (clear by iterate, " << ht.size() << ")" << std::endl;
+				return -1;
+			}
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
 	std::cout << "[other] Testing hex encode/decode... "; std::cout.flush();
 	for(unsigned int k=0;k<1000;++k) {
 		unsigned int flen = (rand() % 8194) + 1;
@@ -909,9 +1023,9 @@ int main(int argc,char **argv)
 	srand((unsigned int)time(0));
 
 	r |= testSqliteNetworkController();
+	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();
-	r |= testOther();
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();
