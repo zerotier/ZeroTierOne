@@ -136,7 +136,7 @@ Node::Node(
 			if (!Topology::authenticateRootTopology(rt))
 				rt.clear();
 		}
-		if (!rt.size())
+		if ((!rt.size())||(!rt.contains("rootservers")))
 			rt.fromString(ZT_DEFAULTS.defaultRootTopology);
 	}
 	RR->topology->setRootServers(Dictionary(rt.get("rootservers","")));

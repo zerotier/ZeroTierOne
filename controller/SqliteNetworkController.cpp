@@ -156,7 +156,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 	if (
 
 			/* Network */
-			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision,memberRevisionCounter FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
+			  (sqlite3_prepare_v2(_db,"SELECT name,private,enableBroadcast,allowPassiveBridging,v4AssignMode,v6AssignMode,multicastLimit,creationTime,revision,memberRevisionCounter,(SELECT COUNT(1) FROM Member WHERE Member.networkId = Network.id AND Member.authorized > 0) FROM Network WHERE id = ?",-1,&_sGetNetworkById,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT revision FROM Network WHERE id = ?",-1,&_sGetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Network SET revision = ? WHERE id = ?",-1,&_sSetNetworkRevision,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Network (id,name,creationTime,revision) VALUES (?,?,?,1)",-1,&_sCreateNetwork,(const char **)0) != SQLITE_OK)
@@ -196,7 +196,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 			/* Member */
 			||(sqlite3_prepare_v2(_db,"SELECT rowid,authorized,activeBridge FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sGetMember,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,m.memberRevision,n.identity FROM Member AS m JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT m.authorized,m.activeBridge,m.memberRevision,n.identity FROM Member AS m LEFT OUTER JOIN Node AS n ON n.id = m.nodeId WHERE m.networkId = ? AND m.nodeId = ?",-1,&_sGetMember2,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO Member (networkId,nodeId,authorized,activeBridge,memberRevision) VALUES (?,?,?,0,(SELECT memberRevisionCounter FROM Network WHERE id = ?))",-1,&_sCreateMember,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT nodeId FROM Member WHERE networkId = ? AND activeBridge > 0 AND authorized > 0",-1,&_sGetActiveBridges,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT m.nodeId,m.memberRevision FROM Member AS m WHERE m.networkId = ? ORDER BY m.nodeId ASC",-1,&_sListNetworkMembers,(const char **)0) != SQLITE_OK)
@@ -1363,6 +1363,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 								"\t\"authorized\": %s,\n"
 								"\t\"activeBridge\": %s,\n"
 								"\t\"memberRevision\": %llu,\n"
+								"\t\"clock\": %llu,\n"
 								"\t\"identity\": \"%s\",\n"
 								"\t\"ipAssignments\": [",
 								nwids,
@@ -1371,6 +1372,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 								(sqlite3_column_int(_sGetMember2,0) > 0) ? "true" : "false",
 								(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
 								(unsigned long long)sqlite3_column_int64(_sGetMember2,2),
+								(unsigned long long)OSUtils::now(),
 								_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,3)).c_str());
 							responseBody = json;
 
@@ -1457,6 +1459,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"{\n"
 						"\t\"nwid\": \"%s\",\n"
 						"\t\"controllerInstanceId\": \"%s\",\n"
+						"\t\"clock\": %llu,\n"
 						"\t\"name\": \"%s\",\n"
 						"\t\"private\": %s,\n"
 						"\t\"enableBroadcast\": %s,\n"
@@ -1467,9 +1470,11 @@ unsigned int SqliteNetworkController::_doCPGet(
 						"\t\"creationTime\": %llu,\n"
 						"\t\"revision\": %llu,\n"
 						"\t\"memberRevisionCounter\": %llu,\n"
+						"\t\"authorizedMemberCount\": %llu,\n"
 						"\t\"relays\": [",
 						nwids,
 						_instanceId.c_str(),
+						(unsigned long long)OSUtils::now(),
 						_jsonEscape((const char *)sqlite3_column_text(_sGetNetworkById,0)).c_str(),
 						(sqlite3_column_int(_sGetNetworkById,1) > 0) ? "true" : "false",
 						(sqlite3_column_int(_sGetNetworkById,2) > 0) ? "true" : "false",
@@ -1479,7 +1484,8 @@ unsigned int SqliteNetworkController::_doCPGet(
 						sqlite3_column_int(_sGetNetworkById,6),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,7),
 						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,8),
-						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,9));
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,9),
+						(unsigned long long)sqlite3_column_int64(_sGetNetworkById,10));
 					responseBody = json;
 
 					sqlite3_reset(_sGetRelays);
@@ -1719,7 +1725,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 		// GET /controller returns status and API version if controller is supported
 		Utils::snprintf(json,sizeof(json),"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"instanceId\": \"%s\"\n}\n",ZT_NETCONF_CONTROLLER_API_VERSION,(unsigned long long)OSUtils::now(),_instanceId.c_str());
 		responseBody = json;
-		responseContentType = "applicaiton/json";
+		responseContentType = "application/json";
 		return 200;
 	}
 
