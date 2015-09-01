@@ -760,7 +760,11 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 	ZT1_EventCallback eventCallback,
-	const char *overrideRootTopology = (const char *)0);
+	const char *overrideRootTopology
+#ifdef __cplusplus
+    = (const char *)0               
+#endif
+    );
 
 /**
  * Delete a node and free all resources it consumes
@@ -881,7 +885,11 @@ enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t nwid);
  * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
+enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi
+#ifdef __cplusplus
+    = 0
+#endif
+    );
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -897,7 +905,11 @@ enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uin
  * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi = 0);
+enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi
+#ifdef __cplusplus
+    = 0
+#endif
+    );
 
 /**
  * Get this node's 40-bit ZeroTier address
