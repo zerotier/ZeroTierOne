@@ -44,7 +44,7 @@ NetconEthernetTap::NetconEthernetTap(
 	const char *friendlyName,
 	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
-	_phy(this,false,true),
+	_phy(new Phy<NetconEthernetTap *>(this,false,true)),
 	_unixListenSocket((PhySocket *)0),
 	_handler(handler),
 	_arg(arg),
@@ -61,7 +61,7 @@ NetconEthernetTap::NetconEthernetTap(
 	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
 	_dev = sockPath;
 
-	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
+	_unixListenSocket = _phy->unixListen(sockPath,(void *)this);
 	if (!_unixListenSocket)
 		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
 
@@ -71,10 +71,11 @@ NetconEthernetTap::NetconEthernetTap(
 NetconEthernetTap::~NetconEthernetTap()
 {
 	_run = false;
-	_phy.whack();
-	_phy.whack();
+	_phy->whack();
+	_phy->whack();
 	Thread::join(_thread);
-	_phy.close(_unixListenSocket,false);
+	_phy->close(_unixListenSocket,false);
+	delete _phy;
 }
 
 void NetconEthernetTap::setEnabled(bool en)
@@ -126,7 +127,7 @@ void NetconEthernetTap::threadMain()
 
 		// TODO: compute timeout from LWIP stuff
 
-		_phy.poll(pollTimeout);
+		_phy->poll(pollTimeout);
 	}
 
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
