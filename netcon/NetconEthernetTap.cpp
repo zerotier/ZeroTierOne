@@ -62,7 +62,7 @@ NetconEthernetTap::NetconEthernetTap(
 	_dev = sockPath;
 
 	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
-	if (!_unixSocket)
+	if (!_unixListenSocket)
 		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
 
 	_thread = Thread::start(this);

@@ -90,22 +90,37 @@ class SqliteNetworkController;
 #endif
 
 // Include the right tap device driver for this platform -- add new platforms here
+#ifdef ZT_ENABLE_NETCON
+
+#include "../netcon/NetconEthernetTap.hpp"
+namespace ZeroTier { typedef NetconEthernetTap EthernetTap; }
+
+#else
 #ifdef __APPLE__
+
 #include "../osdep/OSXEthernetTap.hpp"
 namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
+
 #endif
 #ifdef __LINUX__
+
 #include "../osdep/LinuxEthernetTap.hpp"
 namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
+
 #endif
 #ifdef __WINDOWS__
+
 #include "../osdep/WindowsEthernetTap.hpp"
 namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
+
 #endif
 #ifdef __FreeBSD__
+
 #include "../osdep/BSDEthernetTap.hpp"
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
+
 #endif
+#endif // ZT_ENABLE_NETCON
 
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)

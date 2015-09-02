@@ -29,15 +29,15 @@ endif
 UNAME_M=$(shell uname -m)
 
 INCLUDES=
-DEFS=
+DEFS=-DZT_ENABLE_NETCON
 LDLIBS?=
 
 include objects.mk
-OBJS+=osdep/LinuxEthernetTap.o 
+OBJS+=osdep/LinuxEthernetTap.o netcon/NetconEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE 
+	DEFS+=-DZT_OFFICIAL_RELEASE
 	ZT_USE_MINIUPNPC=1
 endif
 
@@ -65,14 +65,14 @@ endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-        DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
+        DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
         LDLIBS+=-L/usr/local/lib -lsqlite3
-        OBJS+=controller/SqliteNetworkController.o 
+        OBJS+=controller/SqliteNetworkController.o
 endif
 
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE 
+	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
