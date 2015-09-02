@@ -69,6 +69,11 @@
 #define ZT_PHY_MAX_SOCKETS (FD_SETSIZE)
 #define ZT_PHY_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
 
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#define ZT_PHY_HAVE_EVENTFD 1
+#include <sys/eventfd.h>
+#endif
+
 #endif // Windows or not
 
 namespace ZeroTier {
