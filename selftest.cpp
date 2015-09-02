@@ -791,6 +791,13 @@ struct TestPhyHandlers
 			testPhyInstance->close(sock,true);
 		}
 	}
+
+#ifdef __UNIX_LIKE__
+	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
+	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
+	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
+	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
+#endif // __UNIX_LIKE__
 };
 static int testPhy()
 {

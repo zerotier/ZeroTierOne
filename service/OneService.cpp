@@ -924,6 +924,11 @@ public:
 		}
 	}
 
+	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
+	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
+	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
+	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
+
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nwc)
 	{
 		Mutex::Lock _l(_taps_m);
