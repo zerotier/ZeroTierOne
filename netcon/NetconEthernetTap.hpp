@@ -39,7 +39,9 @@
 
 #include "../node/Constants.hpp"
 #include "../node/MulticastGroup.hpp"
+#include "../node/Mutex.hpp"
 #include "../osdep/Thread.hpp"
+#include "../osdep/Phy.hpp"
 
 namespace ZeroTier {
 
@@ -48,6 +50,8 @@ namespace ZeroTier {
  */
 class NetconEthernetTap
 {
+	friend class Phy<NetconEthernetTap>;
+
 public:
 	NetconEthernetTap(
 		const char *homePath,
@@ -75,8 +79,22 @@ public:
 		throw();
 
 private:
+	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
+  void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success);
+  void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
+  void phyOnTcpClose(PhySocket *sock,void **uptr);
+  void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len);
+  void phyOnTcpWritable(PhySocket *sock,void **uptr);
+  void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN);
+  void phyOnUnixClose(PhySocket *sock,void **uptr);
+  void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
+  void phyOnUnixWritable(PhySocket *sock,void **uptr);
+
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
+
+	Phy<NetconEthernetTap> _phy;
+	PhySocket *_unixListenSocket;
 
 	uint64_t _nwid;
 	Thread _thread;
@@ -85,6 +103,7 @@ private:
 	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
 	volatile bool _enabled;
+	volatile bool _run;
 };
 
 } // namespace ZeroTier

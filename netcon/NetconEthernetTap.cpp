@@ -29,6 +29,7 @@
 
 #include "NetconEthernetTap.hpp"
 
+#include "../node/Utils.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Phy.hpp"
 
@@ -43,6 +44,8 @@ NetconEthernetTap::NetconEthernetTap(
 	const char *friendlyName,
 	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
+	_phy(this,false,true),
+	_unixListenSocket((PhySocket *)0),
 	_handler(handler),
 	_arg(arg),
 	_nwid(nwid),
@@ -51,13 +54,27 @@ NetconEthernetTap::NetconEthernetTap(
 	_dev(),
 	_multicastGroups(),
 	_mtu(mtu),
-	_enabled(true)
+	_enabled(true),
+	_run(true)
 {
+	char sockPath[4096];
+	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
+	_dev = sockPath;
+
+	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
+	if (!_unixSocket)
+		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
+
 	_thread = Thread::start(this);
 }
 
 NetconEthernetTap::~NetconEthernetTap()
 {
+	_run = false;
+	_phy.whack();
+	_phy.whack();
+	Thread::join(_thread);
+	_phy.close(_unixListenSocket,false);
 }
 
 void NetconEthernetTap::setEnabled(bool en)
@@ -84,6 +101,8 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
+	if (!_enabled)
+		return;
 }
 
 std::string NetconEthernetTap::deviceName() const
@@ -101,6 +120,39 @@ void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,s
 
 void NetconEthernetTap::threadMain()
 	throw()
+{
+	while (_run) {
+		unsigned long pollTimeout = 500;
+
+		// TODO: compute timeout from LWIP stuff
+
+		_phy.poll(pollTimeout);
+	}
+
+	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
+}
+
+// Unused
+void NetconEthernetTap::phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len) {}
+void NetconEthernetTap::phyOnTcpConnect(PhySocket *sock,void **uptr,bool success) {}
+void NetconEthernetTap::phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from) {}
+void NetconEthernetTap::phyOnTcpClose(PhySocket *sock,void **uptr) {}
+void NetconEthernetTap::phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
+void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
+
+void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
+{
+}
+
+void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
+{
+}
+
+void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
+{
+}
+
+void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 {
 }
 

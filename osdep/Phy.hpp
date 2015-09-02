@@ -58,6 +58,7 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -918,6 +919,11 @@ public:
 #endif
 
 		ZT_PHY_CLOSE_SOCKET(sws.sock);
+
+#ifdef __UNIX_LIKE__
+		if (sws.type == ZT_PHY_SOCKET_UNIX_LISTEN)
+			::unlink(((struct sockaddr_un *)(&(sws.saddr)))->sun_path);
+#endif // __UNIX_LIKE__
 
 		if (callHandlers) {
 			switch(sws.type) {
