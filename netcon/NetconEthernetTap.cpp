@@ -27,6 +27,9 @@
 
 #ifdef ZT_ENABLE_NETCON
 
+#include <algorithm>
+#include <utility>
+
 #include "NetconEthernetTap.hpp"
 
 #include "../node/Utils.hpp"
@@ -44,15 +47,12 @@ NetconEthernetTap::NetconEthernetTap(
 	const char *friendlyName,
 	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
-	_phy(new Phy<NetconEthernetTap *>(this,false,true)),
+	_phy(this,false,true),
 	_unixListenSocket((PhySocket *)0),
 	_handler(handler),
 	_arg(arg),
 	_nwid(nwid),
-	_thread(),
 	_homePath(homePath),
-	_dev(),
-	_multicastGroups(),
 	_mtu(mtu),
 	_enabled(true),
 	_run(true)
@@ -61,7 +61,7 @@ NetconEthernetTap::NetconEthernetTap(
 	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
 	_dev = sockPath;
 
-	_unixListenSocket = _phy->unixListen(sockPath,(void *)this);
+	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
 	if (!_unixListenSocket)
 		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
 
@@ -71,11 +71,10 @@ NetconEthernetTap::NetconEthernetTap(
 NetconEthernetTap::~NetconEthernetTap()
 {
 	_run = false;
-	_phy->whack();
-	_phy->whack();
+	_phy.whack();
+	_phy.whack();
 	Thread::join(_thread);
-	_phy->close(_unixListenSocket,false);
-	delete _phy;
+	_phy.close(_unixListenSocket,false);
 }
 
 void NetconEthernetTap::setEnabled(bool en)
@@ -90,14 +89,32 @@ bool NetconEthernetTap::enabled() const
 
 bool NetconEthernetTap::addIp(const InetAddress &ip)
 {
+	Mutex::Lock _l(_ips_m);
+	if (std::find(_ips.begin(),_ips.end(),ip) == _ips.end()) {
+		_ips.push_back(ip);
+		std::sort(_ips.begin(),_ips.end());
+
+		// TODO: alloc IP in LWIP
+	}
 }
 
 bool NetconEthernetTap::removeIp(const InetAddress &ip)
 {
+	Mutex::Lock _l(_ips_m);
+	std::vector<InetAddress> i(std::find(_ips.begin(),_ips.end(),ip));
+	if (i == _ips.end())
+		return false;
+
+	_ips.erase(i);
+	// TODO: dealloc IP from LWIP
+
+	return true;
 }
 
 std::vector<InetAddress> NetconEthernetTap::ips() const
 {
+	Mutex::Lock _l(_ips_m);
+	return _ips;
 }
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
@@ -117,6 +134,7 @@ void NetconEthernetTap::setFriendlyName(const char *friendlyName)
 
 void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
 {
+	// TODO: get multicast subscriptions from LWIP
 }
 
 void NetconEthernetTap::threadMain()
@@ -127,13 +145,13 @@ void NetconEthernetTap::threadMain()
 
 		// TODO: compute timeout from LWIP stuff
 
-		_phy->poll(pollTimeout);
+		_phy.poll(pollTimeout);
 	}
 
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
 }
 
-// Unused
+// Unused -- no UDP or TCP from this thread/Phy<>
 void NetconEthernetTap::phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len) {}
 void NetconEthernetTap::phyOnTcpConnect(PhySocket *sock,void **uptr,bool success) {}
 void NetconEthernetTap::phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from) {}

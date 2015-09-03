@@ -40,6 +40,7 @@
 #include "../node/Constants.hpp"
 #include "../node/MulticastGroup.hpp"
 #include "../node/Mutex.hpp"
+#include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
 #include "../osdep/Phy.hpp"
 
@@ -95,14 +96,20 @@ private:
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 
-	Phy<NetconEthernetTap *> *_phy;
+	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
 	uint64_t _nwid;
 	Thread _thread;
 	std::string _homePath;
 	std::string _dev; // path to Unix domain socket
-	std::vector<MulticastGroup> _multicastGroups;
+
+	std::vector<MulticastGroup> _lastMulticastGroupList;
+	Mutex _lastMulticastGroupList_m;
+
+	std::vector<InetAddress> _ips;
+	Mutex _ips_m;
+
 	unsigned int _mtu;
 	volatile bool _enabled;
 	volatile bool _run;
