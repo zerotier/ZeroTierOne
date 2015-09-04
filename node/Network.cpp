@@ -147,7 +147,7 @@ bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBr
 	if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
 		return true;
 	else if (includeBridgedGroups)
-		return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
+		return _multicastGroupsBehindMe.contains(mg);
 	else return false;
 }
 
@@ -373,10 +373,14 @@ void Network::clean()
 	}
 
 	// Clean learned multicast groups if we haven't heard from them in a while
-	for(std::map<MulticastGroup,uint64_t>::iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();) {
-		if ((now - mg->second) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
-			_multicastGroupsBehindMe.erase(mg++);
-		else ++mg;
+	{
+		Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
+		MulticastGroup *mg = (MulticastGroup *)0;
+		uint64_t *ts = (uint64_t *)0;
+		while (i.next(mg,ts)) {
+			if ((now - *ts) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
+				_multicastGroupsBehindMe.erase(*mg);
+		}
 	}
 }
 
@@ -408,8 +412,8 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
-	_multicastGroupsBehindMe[mg] = now;
+	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
+	_multicastGroupsBehindMe.set(mg,now);
 	if (tmp != _multicastGroupsBehindMe.size())
 		_announceMulticastGroups();
 }
@@ -510,8 +514,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
-	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i)
-		mgs.push_back(i->first);
+	_multicastGroupsBehindMe.appendKeys(mgs);
 	if ((_config)&&(_config->enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());

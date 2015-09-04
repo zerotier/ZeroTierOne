@@ -200,6 +200,26 @@ public:
 	}
 
 	/**
+	 * Append all keys (in unspecified order) to the supplied vector or list
+	 *
+	 * @param v Vector, list, or other compliant container
+	 * @tparam Type of V (generally inferred)
+	 */
+	template<typename C>
+	inline void appendKeys(C &v) const
+	{
+		if (_s) {
+			for(unsigned long i=0;i<_bc;++i) {
+				_Bucket *b = _t[i];
+				while (b) {
+					v.push_back(b->k);
+					b = b->next;
+				}
+			}
+		}
+	}
+
+	/**
 	 * @return Vector of all entries (pairs of K,V)
 	 */
 	inline typename std::vector< std::pair<K,V> > entries() const
@@ -233,6 +253,21 @@ public:
 		return (V *)0;
 	}
 	inline const V *get(const K &k) const { return const_cast<Hashtable *>(this)->get(k); }
+
+	/**
+	 * @param k Key to check
+	 * @return True if key is present
+	 */
+	inline bool contains(const K &k) const
+	{
+		_Bucket *b = _t[_hc(k) % _bc];
+		while (b) {
+			if (b->k == k)
+				return true;
+			b = b->next;
+		}
+		return false;
+	}
 
 	/**
 	 * @param k Key

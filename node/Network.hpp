@@ -40,6 +40,7 @@
 
 #include "Constants.hpp"
 #include "NonCopyable.hpp"
+#include "Hashtable.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
@@ -359,7 +360,7 @@ private:
 	volatile bool _portInitialized;
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
-	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
+	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
 
 	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
 
