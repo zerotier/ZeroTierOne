@@ -291,7 +291,7 @@ void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
 
 	if (!_trySend(packet,encrypt,nwid)) {
 		Mutex::Lock _l(_txQueue_m);
-		_txQueue.insert(std::pair< Address,TXQueueEntry >(packet.destination(),TXQueueEntry(RR->node->now(),packet,encrypt,nwid)));
+		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt,nwid));
 	}
 }
 
@@ -435,11 +435,12 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 
 	{	// finish sending any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_txQueue_m);
-		std::pair< std::multimap< Address,TXQueueEntry >::iterator,std::multimap< Address,TXQueueEntry >::iterator > waitingTxQueueItems(_txQueue.equal_range(peer->address()));
-		for(std::multimap< Address,TXQueueEntry >::iterator txi(waitingTxQueueItems.first);txi!=waitingTxQueueItems.second;) {
-			if (_trySend(txi->second.packet,txi->second.encrypt,txi->second.nwid))
-				_txQueue.erase(txi++);
-			else ++txi;
+		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
+			if (txi->dest == peer->address()) {
+				if (_trySend(txi->packet,txi->encrypt,txi->nwid))
+					_txQueue.erase(txi++);
+				else ++txi;
+			} else ++txi;
 		}
 	}
 }
@@ -509,13 +510,13 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 	{	// Time out TX queue packets that never got WHOIS lookups or other info.
 		Mutex::Lock _l(_txQueue_m);
-		for(std::multimap< Address,TXQueueEntry >::iterator i(_txQueue.begin());i!=_txQueue.end();) {
-			if (_trySend(i->second.packet,i->second.encrypt,i->second.nwid))
-				_txQueue.erase(i++);
-			else if ((now - i->second.creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
-				TRACE("TX %s -> %s timed out",i->second.packet.source().toString().c_str(),i->second.packet.destination().toString().c_str());
-				_txQueue.erase(i++);
-			} else ++i;
+		for(std::list< TXQueueEntry >::iterator txi(_txQueue.begin());txi!=_txQueue.end();) {
+			if (_trySend(txi->packet,txi->encrypt,txi->nwid))
+				_txQueue.erase(txi++);
+			else if ((now - txi->creationTime) > ZT_TRANSMIT_QUEUE_TIMEOUT) {
+				TRACE("TX %s -> %s timed out",txi->packet.source().toString().c_str(),txi->packet.destination().toString().c_str());
+				_txQueue.erase(txi++);
+			} else ++txi;
 		}
 	}
 

@@ -214,22 +214,24 @@ private:
 	std::list< SharedPtr<IncomingPacket> > _rxQueue;
 	Mutex _rxQueue_m;
 
-	// ZeroTier-layer TX queue by destination ZeroTier address
+	// ZeroTier-layer TX queue entry
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
+		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
+			dest(d),
 			creationTime(ct),
 			nwid(nw),
 			packet(p),
 			encrypt(enc) {}
 
+		Address dest;
 		uint64_t creationTime;
 		uint64_t nwid;
 		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
 	};
-	std::multimap< Address,TXQueueEntry > _txQueue;
+	std::list< TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
 
 	// Tracks sending of VERB_RENDEZVOUS to relaying peers
