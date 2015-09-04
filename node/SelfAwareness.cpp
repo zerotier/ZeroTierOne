@@ -107,10 +107,14 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 
 		// Erase all entries (other than this one) for this scope to prevent thrashing
 		// Note: we should probably not use 'entry' after this
-		for(std::map< PhySurfaceKey,PhySurfaceEntry >::iterator p(_phy.begin());p!=_phy.end();) {
-			if ((p->first.reporter != reporter)&&(p->first.scope == scope))
-				_phy.erase(p++);
-			else ++p;
+		{
+			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+			PhySurfaceKey *k = (PhySurfaceKey *)0;
+			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+			while (i.next(k,e)) {
+				if ((k->reporter != reporter)&&(k->scope == scope))
+					_phy.erase(*k);
+			}
 		}
 
 		_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
@@ -140,26 +144,13 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 void SelfAwareness::clean(uint64_t now)
 {
 	Mutex::Lock _l(_phy_m);
-	for(std::map< PhySurfaceKey,PhySurfaceEntry >::iterator p(_phy.begin());p!=_phy.end();) {
-		if ((now - p->second.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
-			_phy.erase(p++);
-		else ++p;
+	Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+	PhySurfaceKey *k = (PhySurfaceKey *)0;
+	PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+	while (i.next(k,e)) {
+		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
+			_phy.erase(*k);
 	}
-}
-
-bool SelfAwareness::areGlobalIPv4PortsRandomized() const
-{
-	int port = 0;
-	Mutex::Lock _l(_phy_m);
-	for(std::map< PhySurfaceKey,PhySurfaceEntry >::const_iterator p(_phy.begin());p!=_phy.end();++p) {
-		if ((p->first.scope == InetAddress::IP_SCOPE_GLOBAL)&&(p->second.mySurface.ss_family == AF_INET)) {
-			const int tmp = (int)p->second.mySurface.port();
-			if ((port)&&(tmp != port))
-				return true;
-			else port = tmp;
-		}
-	}
-	return false;
 }
 
 } // namespace ZeroTier
