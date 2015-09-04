@@ -347,6 +347,13 @@ public:
 	inline bool operator>=(const Network &n) const throw() { return (_id >= n._id); }
 
 private:
+	struct _RemoteMemberCertificateInfo
+	{
+		_RemoteMemberCertificateInfo() : com(),lastPushed(0) {}
+		CertificateOfMembership com; // remote member's COM
+		uint64_t lastPushed; // when did we last push ours to them?
+	};
+
 	ZT1_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const Address &peer) const;
@@ -361,11 +368,9 @@ private:
 
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
+	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
-	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for remote bridges)
-
-	std::map<Address,CertificateOfMembership> _membershipCertificates; // Other members' certificates of membership
-	std::map<Address,uint64_t> _lastPushedMembershipCertificate; // When did we last push our certificate to each remote member?
+	Hashtable< Address,_RemoteMemberCertificateInfo > _certInfo;
 
 	SharedPtr<NetworkConfig> _config; // Most recent network configuration, which is an immutable value-object
 	volatile uint64_t _lastConfigUpdate;

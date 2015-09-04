@@ -92,7 +92,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 						com.deserialize2(p,e);
 						if (!com)
 							break;
-						_membershipCertificates.insert(std::pair< Address,CertificateOfMembership >(com.issuedTo(),com));
+						_certInfo[com.issuedTo()].com = com;
 					}
 				}
 			}
@@ -125,19 +125,22 @@ Network::~Network()
 
 		clean();
 
-		std::string buf("ZTMCD0");
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
+
 		Mutex::Lock _l(_lock);
-
-		if ((!_config)||(_config->isPublic())||(_membershipCertificates.size() == 0)) {
+		if ((!_config)||(_config->isPublic())||(_certInfo.empty())) {
 			RR->node->dataStoreDelete(n);
-			return;
+		} else {
+			std::string buf("ZTMCD0");
+			Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
+			Address *a = (Address *)0;
+			_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
+			while (i.next(a,ci)) {
+				if (ci->com)
+					ci->com.serialize2(buf);
+			}
+			RR->node->dataStorePut(n,buf,true);
 		}
-
-		for(std::map<Address,CertificateOfMembership>::iterator c(_membershipCertificates.begin());c!=_membershipCertificates.end();++c)
-			c->second.serialize2(buf);
-
-		RR->node->dataStorePut(n,buf,true);
 	}
 }
 
@@ -284,11 +287,12 @@ bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership 
 		return false;
 
 	Mutex::Lock _l(_lock);
-	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
 
-	// Nothing to do if the cert hasn't changed -- we get duplicates due to zealous cert pushing
-	if (old == cert)
-		return true; // but if it's a duplicate of one we already accepted, return is 'true'
+	{
+		const _RemoteMemberCertificateInfo *ci = _certInfo.get(cert.issuedTo());
+		if ((ci)&&(ci->com == cert))
+			return true; // we already have it
+	}
 
 	// Check signature, log and return if cert is invalid
 	if (cert.signedBy() != controller()) {
@@ -322,9 +326,8 @@ bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership 
 		}
 	}
 
-	// If we made it past authentication, update cert
-	if (cert.revision() != old.revision())
-		old = cert;
+	// If we made it past authentication, add or update cert in our cert info store
+	_certInfo[cert.issuedTo()].com = cert;
 
 	return true;
 }
@@ -333,9 +336,9 @@ bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	if ((_config)&&(!_config->isPublic())&&(_config->com())) {
-		uint64_t &lastPushed = _lastPushedMembershipCertificate[to];
-		if ((now - lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
-			lastPushed = now;
+		_RemoteMemberCertificateInfo &ci = _certInfo[to];
+		if ((now - ci.lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
+			ci.lastPushed = now;
 			return true;
 		}
 	}
@@ -352,23 +355,16 @@ void Network::clean()
 
 	if ((_config)&&(_config->isPublic())) {
 		// Open (public) networks do not track certs or cert pushes at all.
-		_membershipCertificates.clear();
-		_lastPushedMembershipCertificate.clear();
+		_certInfo.clear();
 	} else if (_config) {
-		// Clean certificates that are no longer valid from the cache.
-		for(std::map<Address,CertificateOfMembership>::iterator c=(_membershipCertificates.begin());c!=_membershipCertificates.end();) {
-			if (_config->com().agreesWith(c->second))
-				++c;
-			else _membershipCertificates.erase(c++);
-		}
-
-		// Clean entries from the last pushed tracking map if they're so old as
-		// to be no longer relevant.
-		uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
-		for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
-			if (lp->second < forgetIfBefore)
-				_lastPushedMembershipCertificate.erase(lp++);
-			else ++lp;
+		// Clean obsolete entries from private network cert info table
+		Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
+		Address *a = (Address *)0;
+		_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
+		const uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
+		while (i.next(a,ci)) {
+			if ((ci->lastPushed < forgetIfBefore)&&(!ci->com.agreesWith(_config->com())))
+				_certInfo.erase(*a);
 		}
 	}
 
@@ -506,12 +502,10 @@ bool Network::_isAllowed(const Address &peer) const
 			return false;
 		if (_config->isPublic())
 			return true;
-
-		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
-		if (pc == _membershipCertificates.end())
-			return false; // no certificate on file
-
-		return _config->com().agreesWith(pc->second); // is other cert valid against ours?
+		const _RemoteMemberCertificateInfo *ci = _certInfo.get(peer);
+		if (!ci)
+			return false;
+		return _config->com().agreesWith(ci->com);
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
 	} catch ( ... ) {
