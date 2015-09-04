@@ -39,8 +39,9 @@ namespace ZeroTier {
  * A minimal hash table implementation for the ZeroTier core
  *
  * This is not a drop-in replacement for STL containers, and has several
- * limitations. It's designed to be small and fast for use in the
- * ZeroTier core.
+ * limitations. Keys can be uint64_t or an object, and if the latter they
+ * must implement a method called hashCode() that returns an unsigned long
+ * value that is evenly distributed.
  */
 template<typename K,typename V>
 class Hashtable

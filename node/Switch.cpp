@@ -309,30 +309,17 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 
 	const uint64_t now = RR->node->now();
 
-	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
-	if (!(cg.first))
-		return false;
-
-	if (cg.first.ipScope() != cg.second.ipScope())
-		return false;
-
-	// Addresses are sorted in key for last unite attempt map for order
-	// invariant lookup: (p1,p2) == (p2,p1)
-	Array<Address,2> uniteKey;
-	if (p1 >= p2) {
-		uniteKey[0] = p2;
-		uniteKey[1] = p1;
-	} else {
-		uniteKey[0] = p1;
-		uniteKey[1] = p2;
-	}
 	{
 		Mutex::Lock _l(_lastUniteAttempt_m);
-		std::map< Array< Address,2 >,uint64_t >::const_iterator e(_lastUniteAttempt.find(uniteKey));
-		if ((!force)&&(e != _lastUniteAttempt.end())&&((now - e->second) < ZT_MIN_UNITE_INTERVAL))
+		uint64_t &luts = _lastUniteAttempt[_LastUniteKey(p1,p2)];
+		if (((now - luts) < ZT_MIN_UNITE_INTERVAL)&&(!force))
 			return false;
-		else _lastUniteAttempt[uniteKey] = now;
+		luts = now;
 	}
+
+	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
+	if ((!(cg.first))||(cg.first.ipScope() != cg.second.ipScope()))
+		return false;
 
 	TRACE("unite: %s(%s) <> %s(%s)",p1.toString().c_str(),cg.second.toString().c_str(),p2.toString().c_str(),cg.first.toString().c_str());
 
@@ -540,6 +527,17 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 				TRACE("incomplete fragmented packet %.16llx timed out, fragments discarded",i->first);
 				_defragQueue.erase(*packetId);
 			}
+		}
+	}
+
+	{	// Remove really old last unite attempt entries to keep table size controlled
+		Mutex::Lock _l(_lastUniteAttempt_m);
+		Hashtable< _LastUniteKey,uint64_t >::Iterator i(_lastUniteAttempt);
+		_LastUniteKey *k = (_LastUniteKey *)0;
+		uint64_t *v = (uint64_t *)0;
+		while (i.next(k,v)) {
+			if ((now - *v) >= (ZT_MIN_UNITE_INTERVAL * 16))
+				_lastUniteAttempt.erase(*k);
 		}
 	}
 

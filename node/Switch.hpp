@@ -235,7 +235,24 @@ private:
 	Mutex _txQueue_m;
 
 	// Tracks sending of VERB_RENDEZVOUS to relaying peers
-	std::map< Array< Address,2 >,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
+	struct _LastUniteKey
+	{
+		_LastUniteKey() : x(0),y(0) {}
+		_LastUniteKey(const Address &a1,const Address &a2)
+		{
+			if (a1 > a2) {
+				x = a2.toInt();
+				y = a1.toInt();
+			} else {
+				x = a1.toInt();
+				y = a2.toInt();
+			}
+		}
+		inline unsigned long hashCode() const throw() { return ((unsigned long)x ^ (unsigned long)y); }
+		inline bool operator==(const _LastUniteKey &k) const throw() { return ((x == k.x)&&(y == k.y)); }
+		uint64_t x,y;
+	};
+	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
 
 	// Active attempts to contact remote peers, including state of multi-phase NAT traversal
