@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #include <stdexcept>
+#include <vector>
 
 namespace ZeroTier {
 
@@ -47,9 +48,11 @@ private:
 	{
 		_Bucket(const K &k,const V &v) : k(k),v(v) {}
 		_Bucket(const K &k) : k(k),v() {}
+		_Bucket(const _Bucket &b) : k(b.k),v(b.v) {}
+		inline _Bucket &operator=(const _Bucket &b) { k = b.k; v = b.v; return *this; }
 		K k;
 		V v;
-		_Bucket *next;
+		_Bucket *next; // must be set manually for each _Bucket
 	};
 
 public:
@@ -115,10 +118,45 @@ public:
 			_t[i] = (_Bucket *)0;
 	}
 
+	Hashtable(const Hashtable<K,V> &ht) :
+		_t(reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * ht._bc))),
+		_bc(ht._bc),
+		_s(ht._s)
+	{
+		if (!_t)
+			throw std::bad_alloc();
+		for(unsigned long i=0;i<_bc;++i)
+			_t[i] = (_Bucket *)0;
+		for(unsigned long i=0;i<_bc;++i) {
+			const _Bucket *b = ht._t[i];
+			while (b) {
+				_Bucket *nb = new _Bucket(*b);
+				nb->next = _t[i];
+				_t[i] = nb;
+				b = b->next;
+			}
+		}
+	}
+
 	~Hashtable()
 	{
-		clear();
+		this->clear();
 		::free(_t);
+	}
+
+	inline Hashtable &operator=(const Hashtable<K,V> &ht)
+	{
+		this->clear();
+		if (ht._s) {
+			for(unsigned long i=0;i<ht._bc;++i) {
+				const _Bucket *b = ht._t[i];
+				while (b) {
+					this->set(b->k,b->v);
+					b = b->next;
+				}
+			}
+		}
+		return *this;
 	}
 
 	/**
@@ -138,6 +176,24 @@ public:
 			}
 			_s = 0;
 		}
+	}
+
+	/**
+	 * @return Vector of all keys
+	 */
+	inline typename std::vector<K> keys()
+	{
+		typename std::vector<K> k;
+		if (_s) {
+			for(unsigned long i=0;i<_bc;++i) {
+				_Bucket *b = _t[i];
+				while (b) {
+					k.push_back(b->k);
+					b = b->next;
+				}
+			}
+		}
+		return k;
 	}
 
 	/**
@@ -187,7 +243,8 @@ public:
 	 */
 	inline V &set(const K &k,const V &v)
 	{
-		const unsigned long bidx = _hc(k) % _bc;
+		const unsigned long h = _hc(k);
+		unsigned long bidx = h % _bc;
 
 		_Bucket *b = _t[bidx];
 		while (b) {
@@ -198,8 +255,10 @@ public:
 			b = b->next;
 		}
 
-		if (_s >= _bc)
+		if (_s >= _bc) {
 			_grow();
+			bidx = h % _bc;
+		}
 
 		b = new _Bucket(k,v);
 		b->next = _t[bidx];
@@ -215,7 +274,8 @@ public:
 	 */
 	inline V &operator[](const K &k)
 	{
-		const unsigned long bidx = _hc(k) % _bc;
+		const unsigned long h = _hc(k);
+		unsigned long bidx = h % _bc;
 
 		_Bucket *b = _t[bidx];
 		while (b) {
@@ -224,8 +284,10 @@ public:
 			b = b->next;
 		}
 
-		if (_s >= _bc)
+		if (_s >= _bc) {
 			_grow();
+			bidx = h % _bc;
+		}
 
 		b = new _Bucket(k);
 		b->next = _t[bidx];
