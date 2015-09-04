@@ -389,22 +389,34 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 	Mutex::Lock _l(_lock);
 	_remoteBridgeRoutes[mac] = addr;
 
-	// If _remoteBridgeRoutes exceeds sanity limit, trim worst offenders until below -- denial of service circuit breaker
+	// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
 	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
-		std::map<Address,unsigned long> counts;
+		Hashtable< Address,unsigned long > counts;
 		Address maxAddr;
 		unsigned long maxCount = 0;
-		for(std::map<MAC,Address>::iterator br(_remoteBridgeRoutes.begin());br!=_remoteBridgeRoutes.end();++br) {
-			unsigned long c = ++counts[br->second];
-			if (c > maxCount) {
-				maxCount = c;
-				maxAddr = br->second;
+
+		MAC *m = (MAC *)0;
+		Address *a = (Address *)0;
+
+		// Find the address responsible for the most entries
+		{
+			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
+			while (i.next(m,a)) {
+				const unsigned long c = ++counts[*a];
+				if (c > maxCount) {
+					maxCount = c;
+					maxAddr = *a;
+				}
 			}
 		}
-		for(std::map<MAC,Address>::iterator br(_remoteBridgeRoutes.begin());br!=_remoteBridgeRoutes.end();) {
-			if (br->second == maxAddr)
-				_remoteBridgeRoutes.erase(br++);
-			else ++br;
+
+		// Kill this address from our table, since it's most likely spamming us
+		{
+			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
+			while (i.next(m,a)) {
+				if (*a == maxAddr)
+					_remoteBridgeRoutes.erase(*m);
+			}
 		}
 	}
 }

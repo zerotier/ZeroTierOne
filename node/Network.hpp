@@ -298,10 +298,10 @@ public:
 	inline Address findBridgeTo(const MAC &mac) const
 	{
 		Mutex::Lock _l(_lock);
-		std::map<MAC,Address>::const_iterator br(_remoteBridgeRoutes.find(mac));
-		if (br == _remoteBridgeRoutes.end())
-			return Address();
-		return br->second;
+		const Address *const br = _remoteBridgeRoutes.get(mac);
+		if (br)
+			return *br;
+		return Address();
 	}
 
 	/**
@@ -359,10 +359,10 @@ private:
 	volatile bool _enabled;
 	volatile bool _portInitialized;
 
-	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
-	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
+	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
+	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 
-	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
+	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for remote bridges)
 
 	std::map<Address,CertificateOfMembership> _membershipCertificates; // Other members' certificates of membership
 	std::map<Address,uint64_t> _lastPushedMembershipCertificate; // When did we last push our certificate to each remote member?
