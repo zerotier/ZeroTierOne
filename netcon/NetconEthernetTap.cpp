@@ -101,7 +101,7 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 bool NetconEthernetTap::removeIp(const InetAddress &ip)
 {
 	Mutex::Lock _l(_ips_m);
-	std::vector<InetAddress> i(std::find(_ips.begin(),_ips.end(),ip));
+	std::vector<InetAddress>::iterator i(std::find(_ips.begin(),_ips.end(),ip));
 	if (i == _ips.end())
 		return false;
 
