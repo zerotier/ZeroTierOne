@@ -30,6 +30,8 @@
 
 #include <stdexcept>
 #include <vector>
+#include <utility>
+#include <algorithm>
 
 namespace ZeroTier {
 
@@ -189,6 +191,24 @@ public:
 				_Bucket *b = _t[i];
 				while (b) {
 					k.push_back(b->k);
+					b = b->next;
+				}
+			}
+		}
+		return k;
+	}
+
+	/**
+	 * @return Vector of all entries (pairs of K,V)
+	 */
+	inline typename std::vector< std::pair<K,V> > entries()
+	{
+		typename std::vector< std::pair<K,V> > k;
+		if (_s) {
+			for(unsigned long i=0;i<_bc;++i) {
+				_Bucket *b = _t[i];
+				while (b) {
+					k.push_back(std::pair<K,V>(b->k,b->v));
 					b = b->next;
 				}
 			}
