@@ -67,7 +67,10 @@ static const char *etherTypeName(const unsigned int etherType)
 
 Switch::Switch(const RuntimeEnvironment *renv) :
 	RR(renv),
-	_lastBeaconResponse(0)
+	_lastBeaconResponse(0),
+	_outstandingWhoisRequests(32),
+	_defragQueue(32),
+	_lastUniteAttempt(8) // only really used on root servers and upstreams, and it'll grow there just fine
 {
 }
 
@@ -389,10 +392,13 @@ void Switch::requestWhois(const Address &addr)
 	bool inserted = false;
 	{
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
-		std::pair< std::map< Address,WhoisRequest >::iterator,bool > entry(_outstandingWhoisRequests.insert(std::pair<Address,WhoisRequest>(addr,WhoisRequest())));
-		if ((inserted = entry.second))
-			entry.first->second.lastSent = RR->node->now();
-		entry.first->second.retries = 0; // reset retry count if entry already existed
+		WhoisRequest &r = _outstandingWhoisRequests[addr];
+		if (r.lastSent) {
+			r.retries = 0; // reset retry count if entry already existed, but keep waiting and retry again after normal timeout
+		} else {
+			r.lastSent = RR->node->now();
+			inserted = true;
+		}
 	}
 	if (inserted)
 		_sendWhoisRequest(addr,(const Address *)0,0);
@@ -474,24 +480,25 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 	{	// Retry outstanding WHOIS requests
 		Mutex::Lock _l(_outstandingWhoisRequests_m);
-		for(std::map< Address,WhoisRequest >::iterator i(_outstandingWhoisRequests.begin());i!=_outstandingWhoisRequests.end();) {
-			unsigned long since = (unsigned long)(now - i->second.lastSent);
+		Hashtable< Address,WhoisRequest >::Iterator i(_outstandingWhoisRequests);
+		Address *a = (Address *)0;
+		WhoisRequest *r = (WhoisRequest *)0;
+		while (i.next(a,r)) {
+			const unsigned long since = (unsigned long)(now - r->lastSent);
 			if (since >= ZT_WHOIS_RETRY_DELAY) {
-				if (i->second.retries >= ZT_MAX_WHOIS_RETRIES) {
-					TRACE("WHOIS %s timed out",i->first.toString().c_str());
-					_outstandingWhoisRequests.erase(i++);
-					continue;
+				if (r->retries >= ZT_MAX_WHOIS_RETRIES) {
+					TRACE("WHOIS %s timed out",a->toString().c_str());
+					_outstandingWhoisRequests.erase(*a);
 				} else {
-					i->second.lastSent = now;
-					i->second.peersConsulted[i->second.retries] = _sendWhoisRequest(i->first,i->second.peersConsulted,i->second.retries);
-					++i->second.retries;
-					TRACE("WHOIS %s (retry %u)",i->first.toString().c_str(),i->second.retries);
+					r->lastSent = now;
+					r->peersConsulted[r->retries] = _sendWhoisRequest(*a,r->peersConsulted,r->retries);
+					++r->retries;
+					TRACE("WHOIS %s (retry %u)",a->toString().c_str(),r->retries);
 					nextDelay = std::min(nextDelay,(unsigned long)ZT_WHOIS_RETRY_DELAY);
 				}
 			} else {
 				nextDelay = std::min(nextDelay,ZT_WHOIS_RETRY_DELAY - since);
 			}
-			++i;
 		}
 	}
 
@@ -524,7 +531,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		DefragQueueEntry *qe = (DefragQueueEntry *)0;
 		while (i.next(packetId,qe)) {
 			if ((now - qe->creationTime) > ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT) {
-				TRACE("incomplete fragmented packet %.16llx timed out, fragments discarded",i->first);
+				TRACE("incomplete fragmented packet %.16llx timed out, fragments discarded",*packetId);
 				_defragQueue.erase(*packetId);
 			}
 		}

@@ -190,11 +190,12 @@ private:
 	// Outsanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest
 	{
+		WhoisRequest() : lastSent(0),retries(0) {}
 		uint64_t lastSent;
 		Address peersConsulted[ZT_MAX_WHOIS_RETRIES]; // by retry
 		unsigned int retries; // 0..ZT_MAX_WHOIS_RETRIES
 	};
-	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
+	Hashtable< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
 	// Packet defragmentation queue -- comes before RX queue in path
