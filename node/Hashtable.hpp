@@ -372,9 +372,12 @@ private:
 	}
 	static inline unsigned long _hc(const uint64_t i)
 	{
-		// NOTE: this is fine for network IDs, but might be bad for other kinds
-		// of IDs if they are not evenly or randomly distributed.
-		return (unsigned long)((i ^ (i >> 32)) * 2654435761ULL);
+		/* NOTE: this assumes that 'i' is evenly distributed, which is the case for
+		 * packet IDs and network IDs -- the two use cases in ZT for uint64_t keys.
+		 * These values are also greater than 0xffffffff so they'll map onto a full
+		 * bucket count just fine no matter what happens. Normally you'd want to
+		 * hash an integer key index in a hash table. */
+		return (unsigned long)i;
 	}
 
 	inline void _grow()

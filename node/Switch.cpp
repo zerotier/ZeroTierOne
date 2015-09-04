@@ -531,11 +531,14 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 
 	{	// Time out packets that didn't get all their fragments.
 		Mutex::Lock _l(_defragQueue_m);
-		for(std::map< uint64_t,DefragQueueEntry >::iterator i(_defragQueue.begin());i!=_defragQueue.end();) {
-			if ((now - i->second.creationTime) > ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT) {
+		Hashtable< uint64_t,DefragQueueEntry >::Iterator i(_defragQueue);
+		uint64_t *packetId = (uint64_t *)0;
+		DefragQueueEntry *qe = (DefragQueueEntry *)0;
+		while (i.next(packetId,qe)) {
+			if ((now - qe->creationTime) > ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT) {
 				TRACE("incomplete fragmented packet %.16llx timed out, fragments discarded",i->first);
-				_defragQueue.erase(i++);
-			} else ++i;
+				_defragQueue.erase(*packetId);
+			}
 		}
 	}
 
@@ -577,32 +580,31 @@ void Switch::_handleRemotePacketFragment(const InetAddress &fromAddr,const void 
 			// seeing a Packet::Fragment?
 
 			Mutex::Lock _l(_defragQueue_m);
-			std::map< uint64_t,DefragQueueEntry >::iterator dqe(_defragQueue.find(pid));
+			DefragQueueEntry &dq = _defragQueue[pid];
 
-			if (dqe == _defragQueue.end()) {
+			if (!dq.creationTime) {
 				// We received a Packet::Fragment without its head, so queue it and wait
 
-				DefragQueueEntry &dq = _defragQueue[pid];
 				dq.creationTime = RR->node->now();
 				dq.frags[fno - 1] = fragment;
 				dq.totalFragments = tf; // total fragment count is known
 				dq.haveFragments = 1 << fno; // we have only this fragment
 				//TRACE("fragment (%u/%u) of %.16llx from %s",fno + 1,tf,pid,fromAddr.toString().c_str());
-			} else if (!(dqe->second.haveFragments & (1 << fno))) {
+			} else if (!(dq.haveFragments & (1 << fno))) {
 				// We have other fragments and maybe the head, so add this one and check
 
-				dqe->second.frags[fno - 1] = fragment;
-				dqe->second.totalFragments = tf;
+				dq.frags[fno - 1] = fragment;
+				dq.totalFragments = tf;
 				//TRACE("fragment (%u/%u) of %.16llx from %s",fno + 1,tf,pid,fromAddr.toString().c_str());
 
-				if (Utils::countBits(dqe->second.haveFragments |= (1 << fno)) == tf) {
+				if (Utils::countBits(dq.haveFragments |= (1 << fno)) == tf) {
 					// We have all fragments -- assemble and process full Packet
 					//TRACE("packet %.16llx is complete, assembling and processing...",pid);
 
-					SharedPtr<IncomingPacket> packet(dqe->second.frag0);
+					SharedPtr<IncomingPacket> packet(dq.frag0);
 					for(unsigned int f=1;f<tf;++f)
-						packet->append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
-					_defragQueue.erase(dqe);
+						packet->append(dq.frags[f - 1].payload(),dq.frags[f - 1].payloadLength());
+					_defragQueue.erase(pid); // dq no longer valid after this
 
 					if (!packet->tryDecode(RR)) {
 						Mutex::Lock _l(_rxQueue_m);
@@ -645,26 +647,27 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,const void *dat
 
 		uint64_t pid = packet->packetId();
 		Mutex::Lock _l(_defragQueue_m);
-		std::map< uint64_t,DefragQueueEntry >::iterator dqe(_defragQueue.find(pid));
+		DefragQueueEntry &dq = _defragQueue[pid];
 
-		if (dqe == _defragQueue.end()) {
+		if (!dq.creationTime) {
 			// If we have no other fragments yet, create an entry and save the head
-			DefragQueueEntry &dq = _defragQueue[pid];
+
 			dq.creationTime = RR->node->now();
 			dq.frag0 = packet;
 			dq.totalFragments = 0; // 0 == unknown, waiting for Packet::Fragment
 			dq.haveFragments = 1; // head is first bit (left to right)
 			//TRACE("fragment (0/?) of %.16llx from %s",pid,fromAddr.toString().c_str());
-		} else if (!(dqe->second.haveFragments & 1)) {
+		} else if (!(dq.haveFragments & 1)) {
 			// If we have other fragments but no head, see if we are complete with the head
-			if ((dqe->second.totalFragments)&&(Utils::countBits(dqe->second.haveFragments |= 1) == dqe->second.totalFragments)) {
+
+			if ((dq.totalFragments)&&(Utils::countBits(dq.haveFragments |= 1) == dq.totalFragments)) {
 				// We have all fragments -- assemble and process full Packet
 
 				//TRACE("packet %.16llx is complete, assembling and processing...",pid);
 				// packet already contains head, so append fragments
-				for(unsigned int f=1;f<dqe->second.totalFragments;++f)
-					packet->append(dqe->second.frags[f - 1].payload(),dqe->second.frags[f - 1].payloadLength());
-				_defragQueue.erase(dqe);
+				for(unsigned int f=1;f<dq.totalFragments;++f)
+					packet->append(dq.frags[f - 1].payload(),dq.frags[f - 1].payloadLength());
+				_defragQueue.erase(pid); // dq no longer valid after this
 
 				if (!packet->tryDecode(RR)) {
 					Mutex::Lock _l(_rxQueue_m);
@@ -672,7 +675,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &fromAddr,const void *dat
 				}
 			} else {
 				// Still waiting on more fragments, so queue the head
-				dqe->second.frag0 = packet;
+				dq.frag0 = packet;
 			}
 		} // else this is a duplicate head, ignore
 	} else {

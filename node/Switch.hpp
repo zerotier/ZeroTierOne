@@ -45,6 +45,7 @@
 #include "Network.hpp"
 #include "SharedPtr.hpp"
 #include "IncomingPacket.hpp"
+#include "Hashtable.hpp"
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
@@ -199,13 +200,14 @@ private:
 	// Packet defragmentation queue -- comes before RX queue in path
 	struct DefragQueueEntry
 	{
+		DefragQueueEntry() : creationTime(0),totalFragments(0),haveFragments(0) {}
 		uint64_t creationTime;
 		SharedPtr<IncomingPacket> frag0;
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
 	};
-	std::map< uint64_t,DefragQueueEntry > _defragQueue;
+	Hashtable< uint64_t,DefragQueueEntry > _defragQueue;
 	Mutex _defragQueue_m;
 
 	// ZeroTier-layer RX queue of incoming packets in the process of being decoded
