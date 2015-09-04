@@ -44,6 +44,7 @@
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
 #include "Dictionary.hpp"
+#include "Hashtable.hpp"
 
 namespace ZeroTier {
 
@@ -163,17 +164,20 @@ public:
 	inline void eachPeer(F f)
 	{
 		Mutex::Lock _l(_lock);
-		for(std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.begin());p!=_activePeers.end();++p)
-			f(*this,p->second);
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_activePeers);
+		Address *a = (Address *)0;
+		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		while (i.next(a,p))
+			f(*this,*p);
 	}
 
 	/**
 	 * @return All currently active peers by address
 	 */
-	inline std::map< Address,SharedPtr<Peer> > allPeers() const
+	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
 	{
 		Mutex::Lock _l(_lock);
-		return _activePeers;
+		return _activePeers.entries();
 	}
 
 	/**
@@ -190,7 +194,7 @@ private:
 
 	const RuntimeEnvironment *RR;
 
-	std::map< Address,SharedPtr<Peer> > _activePeers;
+	Hashtable< Address,SharedPtr<Peer> > _activePeers;
 	std::map< Identity,std::vector<InetAddress> > _roots;
 	std::vector< Address > _rootAddresses;
 	std::vector< SharedPtr<Peer> > _rootPeers;

@@ -355,7 +355,8 @@ void Node::status(ZT1_NodeStatus *status) const
 
 ZT1_PeerList *Node::peers() const
 {
-	std::map< Address,SharedPtr<Peer> > peers(RR->topology->allPeers());
+	std::vector< std::pair< Address,SharedPtr<Peer> > > peers(RR->topology->allPeers());
+	std::sort(peers.begin(),peers.end());
 
 	char *buf = (char *)::malloc(sizeof(ZT1_PeerList) + (sizeof(ZT1_Peer) * peers.size()));
 	if (!buf)
@@ -364,7 +365,7 @@ ZT1_PeerList *Node::peers() const
 	pl->peers = (ZT1_Peer *)(buf + sizeof(ZT1_PeerList));
 
 	pl->peerCount = 0;
-	for(std::map< Address,SharedPtr<Peer> >::iterator pi(peers.begin());pi!=peers.end();++pi) {
+	for(std::vector< std::pair< Address,SharedPtr<Peer> > >::iterator pi(peers.begin());pi!=peers.end();++pi) {
 		ZT1_Peer *p = &(pl->peers[pl->peerCount++]);
 		p->address = pi->second->address().toInt();
 		p->lastUnicastFrame = pi->second->lastUnicastFrame();

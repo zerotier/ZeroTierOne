@@ -183,10 +183,11 @@ public:
 	/**
 	 * @return Vector of all keys
 	 */
-	inline typename std::vector<K> keys()
+	inline typename std::vector<K> keys() const
 	{
 		typename std::vector<K> k;
 		if (_s) {
+			k.reserve(_s);
 			for(unsigned long i=0;i<_bc;++i) {
 				_Bucket *b = _t[i];
 				while (b) {
@@ -201,10 +202,11 @@ public:
 	/**
 	 * @return Vector of all entries (pairs of K,V)
 	 */
-	inline typename std::vector< std::pair<K,V> > entries()
+	inline typename std::vector< std::pair<K,V> > entries() const
 	{
 		typename std::vector< std::pair<K,V> > k;
 		if (_s) {
+			k.reserve(_s);
 			for(unsigned long i=0;i<_bc;++i) {
 				_Bucket *b = _t[i];
 				while (b) {
