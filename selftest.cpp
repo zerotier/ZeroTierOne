@@ -581,31 +581,60 @@ static int testOther()
 {
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
-		Hashtable<uint64_t,std::string> ht(128);
+		Hashtable<uint64_t,std::string> ht;
+		Hashtable<uint64_t,std::string> ht2;
 		std::map<uint64_t,std::string> ref; // assume std::map works correctly :)
 		for(int x=0;x<2;++x) {
 			for(int i=0;i<25000;++i) {
 				uint64_t k = rand();
 				while ((k == 0)||(ref.count(k) > 0))
 					++k;
-				std::string v;
+				std::string v("!");
 				for(int j=0;j<(int)(k % 64);++j)
 					v.push_back("0123456789"[rand() % 10]);
 				ht.set(k,v);
 				ref[k] = v;
 			}
 			if (ht.size() != ref.size()) {
-				std::cout << "FAILED! (size mismatch)" << std::endl;
+				std::cout << "FAILED! (size mismatch, original)" << std::endl;
+				return -1;
+			}
+			ht2 = ht;
+			Hashtable<uint64_t,std::string> ht3(ht2);
+			if (ht2.size() != ref.size()) {
+				std::cout << "FAILED! (size mismatch, assigned)" << std::endl;
+				return -1;
+			}
+			if (ht3.size() != ref.size()) {
+				std::cout << "FAILED! (size mismatch, copied)" << std::endl;
 				return -1;
 			}
 			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
 				std::string *v = ht.get(i->first);
 				if (!v) {
-					std::cout << "FAILED! (key not found)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << " not found, original)" << std::endl;
 					return -1;
 				}
 				if (*v != i->second) {
-					std::cout << "FAILED! (key not equal)" << std::endl;
+					std::cout << "FAILED! (key " << i->first << "  not equal, original)" << std::endl;
+					return -1;
+				}
+				v = ht2.get(i->first);
+				if (!v) {
+					std::cout << "FAILED! (key " << i->first << "  not found, assigned)" << std::endl;
+					return -1;
+				}
+				if (*v != i->second) {
+					std::cout << "FAILED! (key " << i->first << "  not equal, assigned)" << std::endl;
+					return -1;
+				}
+				v = ht3.get(i->first);
+				if (!v) {
+					std::cout << "FAILED! (key " << i->first << "  not found, copied)" << std::endl;
+					return -1;
+				}
+				if (*v != i->second) {
+					std::cout << "FAILED! (key " << i->first << "  not equal, copied)" << std::endl;
 					return -1;
 				}
 			}
