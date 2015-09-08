@@ -75,7 +75,6 @@ public:
 	 * @param identity Originating peer ZeroTier identity
 	 * @param nwid 64-bit network ID
 	 * @param metaData Meta-data bundled with request (empty if none)
-	 * @param haveRevision Network revision ID sent by requesting peer or 0 if none
 	 * @param result Dictionary to receive resulting signed netconf on success
 	 * @return Returns NETCONF_QUERY_OK if result dictionary is valid, or an error code on error
 	 */
@@ -85,7 +84,6 @@ public:
 		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,
-		uint64_t haveRevision,
 		Dictionary &result) = 0;
 };
 

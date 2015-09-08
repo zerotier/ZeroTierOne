@@ -240,7 +240,7 @@ void Network::requestConfiguration()
 		if (RR->localNetworkController) {
 			SharedPtr<NetworkConfig> nconf(config2());
 			Dictionary newconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),(nconf) ? nconf->revision() : (uint64_t)0,newconf)) {
+			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),newconf)) {
 				case NetworkController::NETCONF_QUERY_OK:
 					this->setConfiguration(newconf,true);
 					return;
