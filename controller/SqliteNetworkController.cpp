@@ -166,7 +166,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 			/* Node */
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
@@ -870,6 +870,27 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										}
 										addToNetworkRevision = 1;
 									}
+								} else if (!strcmp(j->u.object.values[k].name,"identity")) {
+									// Identity is technically an immutable field, but if the member's Node has
+									// no identity we allow it to be populated. This is primarily for migrating
+									// node data from another controller.
+									json_value *idstr = j->u.object.values[k].value;
+									if (idstr->type == json_string) {
+										sqlite3_reset(_sGetNodeIdentity);
+										sqlite3_bind_text(_sGetNodeIdentity,1,addrs,10,SQLITE_STATIC);
+										if ((sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW)&&(!sqlite3_column_text(_sGetNodeIdentity,0))) {
+											try {
+												Identity id2(idstr->u.string.ptr);
+												if (id2) {
+													std::string idstr2(id2.toString(false)); // object must persist until after sqlite3_step() for SQLITE_STATIC
+													sqlite3_reset(_sCreateNode);
+													sqlite3_bind_text(_sCreateNode,1,addrs,10,SQLITE_STATIC);
+													sqlite3_bind_text(_sCreateNode,2,idstr2.c_str(),-1,SQLITE_STATIC);
+													sqlite3_step(_sCreateNode);
+												}
+											} catch ( ... ) {} // ignore invalid identities
+										}
+									}
 								}
 
 							}
@@ -1383,9 +1404,9 @@ unsigned int SqliteNetworkController::_doCPGet(
 										Dictionary(), // TODO: allow passing of meta-data for testing
 										testNetconf);
 									char rcs[16];
-									Utils::snprintf(rcs,sizeof(rcs),"%d",(int)rc);
+									Utils::snprintf(rcs,sizeof(rcs),"%d,\n",(int)rc);
 									testFields.append("\t\"_test\": {\n");
-									testFields.append("\t\t\"resultCode\": "); testFields.append(rcs); testFields.append(",\n");
+									testFields.append("\t\t\"resultCode\": "); testFields.append(rcs);
 									testFields.append("\t\t\"result\": \""); testFields.append(_jsonEscape(testNetconf.toString().c_str()).c_str()); testFields.append("\"");
 									testFields.append("\t}\n");
 								}
