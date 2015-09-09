@@ -54,7 +54,6 @@ public:
 		const Identity &identity,
 		uint64_t nwid,
 		const Dictionary &metaData,
-		uint64_t haveRevision,
 		Dictionary &netconf);
 
 	unsigned int handleControlPlaneHttpGET(

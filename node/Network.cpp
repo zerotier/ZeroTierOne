@@ -92,7 +92,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 						com.deserialize2(p,e);
 						if (!com)
 							break;
-						_membershipCertificates.insert(std::pair< Address,CertificateOfMembership >(com.issuedTo(),com));
+						_certInfo[com.issuedTo()].com = com;
 					}
 				}
 			}
@@ -125,19 +125,22 @@ Network::~Network()
 
 		clean();
 
-		std::string buf("ZTMCD0");
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
+
 		Mutex::Lock _l(_lock);
-
-		if ((!_config)||(_config->isPublic())||(_membershipCertificates.size() == 0)) {
+		if ((!_config)||(_config->isPublic())||(_certInfo.empty())) {
 			RR->node->dataStoreDelete(n);
-			return;
+		} else {
+			std::string buf("ZTMCD0");
+			Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
+			Address *a = (Address *)0;
+			_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
+			while (i.next(a,ci)) {
+				if (ci->com)
+					ci->com.serialize2(buf);
+			}
+			RR->node->dataStorePut(n,buf,true);
 		}
-
-		for(std::map<Address,CertificateOfMembership>::iterator c(_membershipCertificates.begin());c!=_membershipCertificates.end();++c)
-			c->second.serialize2(buf);
-
-		RR->node->dataStorePut(n,buf,true);
 	}
 }
 
@@ -147,7 +150,7 @@ bool Network::subscribedToMulticastGroup(const MulticastGroup &mg,bool includeBr
 	if (std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg))
 		return true;
 	else if (includeBridgedGroups)
-		return (_multicastGroupsBehindMe.find(mg) != _multicastGroupsBehindMe.end());
+		return _multicastGroupsBehindMe.contains(mg);
 	else return false;
 }
 
@@ -237,7 +240,7 @@ void Network::requestConfiguration()
 		if (RR->localNetworkController) {
 			SharedPtr<NetworkConfig> nconf(config2());
 			Dictionary newconf;
-			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),(nconf) ? nconf->revision() : (uint64_t)0,newconf)) {
+			switch(RR->localNetworkController->doNetworkConfigRequest(InetAddress(),RR->identity,RR->identity,_id,Dictionary(),newconf)) {
 				case NetworkController::NETCONF_QUERY_OK:
 					this->setConfiguration(newconf,true);
 					return;
@@ -284,11 +287,12 @@ bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership 
 		return false;
 
 	Mutex::Lock _l(_lock);
-	CertificateOfMembership &old = _membershipCertificates[cert.issuedTo()];
 
-	// Nothing to do if the cert hasn't changed -- we get duplicates due to zealous cert pushing
-	if (old == cert)
-		return true; // but if it's a duplicate of one we already accepted, return is 'true'
+	{
+		const _RemoteMemberCertificateInfo *ci = _certInfo.get(cert.issuedTo());
+		if ((ci)&&(ci->com == cert))
+			return true; // we already have it
+	}
 
 	// Check signature, log and return if cert is invalid
 	if (cert.signedBy() != controller()) {
@@ -322,9 +326,8 @@ bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership 
 		}
 	}
 
-	// If we made it past authentication, update cert
-	if (cert.revision() != old.revision())
-		old = cert;
+	// If we made it past authentication, add or update cert in our cert info store
+	_certInfo[cert.issuedTo()].com = cert;
 
 	return true;
 }
@@ -333,9 +336,9 @@ bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	if ((_config)&&(!_config->isPublic())&&(_config->com())) {
-		uint64_t &lastPushed = _lastPushedMembershipCertificate[to];
-		if ((now - lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
-			lastPushed = now;
+		_RemoteMemberCertificateInfo &ci = _certInfo[to];
+		if ((now - ci.lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
+			ci.lastPushed = now;
 			return true;
 		}
 	}
@@ -352,31 +355,28 @@ void Network::clean()
 
 	if ((_config)&&(_config->isPublic())) {
 		// Open (public) networks do not track certs or cert pushes at all.
-		_membershipCertificates.clear();
-		_lastPushedMembershipCertificate.clear();
+		_certInfo.clear();
 	} else if (_config) {
-		// Clean certificates that are no longer valid from the cache.
-		for(std::map<Address,CertificateOfMembership>::iterator c=(_membershipCertificates.begin());c!=_membershipCertificates.end();) {
-			if (_config->com().agreesWith(c->second))
-				++c;
-			else _membershipCertificates.erase(c++);
-		}
-
-		// Clean entries from the last pushed tracking map if they're so old as
-		// to be no longer relevant.
-		uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
-		for(std::map<Address,uint64_t>::iterator lp(_lastPushedMembershipCertificate.begin());lp!=_lastPushedMembershipCertificate.end();) {
-			if (lp->second < forgetIfBefore)
-				_lastPushedMembershipCertificate.erase(lp++);
-			else ++lp;
+		// Clean obsolete entries from private network cert info table
+		Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
+		Address *a = (Address *)0;
+		_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
+		const uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
+		while (i.next(a,ci)) {
+			if ((ci->lastPushed < forgetIfBefore)&&(!ci->com.agreesWith(_config->com())))
+				_certInfo.erase(*a);
 		}
 	}
 
 	// Clean learned multicast groups if we haven't heard from them in a while
-	for(std::map<MulticastGroup,uint64_t>::iterator mg(_multicastGroupsBehindMe.begin());mg!=_multicastGroupsBehindMe.end();) {
-		if ((now - mg->second) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
-			_multicastGroupsBehindMe.erase(mg++);
-		else ++mg;
+	{
+		Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
+		MulticastGroup *mg = (MulticastGroup *)0;
+		uint64_t *ts = (uint64_t *)0;
+		while (i.next(mg,ts)) {
+			if ((now - *ts) > (ZT_MULTICAST_LIKE_EXPIRE * 2))
+				_multicastGroupsBehindMe.erase(*mg);
+		}
 	}
 }
 
@@ -385,22 +385,34 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 	Mutex::Lock _l(_lock);
 	_remoteBridgeRoutes[mac] = addr;
 
-	// If _remoteBridgeRoutes exceeds sanity limit, trim worst offenders until below -- denial of service circuit breaker
+	// Anti-DOS circuit breaker to prevent nodes from spamming us with absurd numbers of bridge routes
 	while (_remoteBridgeRoutes.size() > ZT_MAX_BRIDGE_ROUTES) {
-		std::map<Address,unsigned long> counts;
+		Hashtable< Address,unsigned long > counts;
 		Address maxAddr;
 		unsigned long maxCount = 0;
-		for(std::map<MAC,Address>::iterator br(_remoteBridgeRoutes.begin());br!=_remoteBridgeRoutes.end();++br) {
-			unsigned long c = ++counts[br->second];
-			if (c > maxCount) {
-				maxCount = c;
-				maxAddr = br->second;
+
+		MAC *m = (MAC *)0;
+		Address *a = (Address *)0;
+
+		// Find the address responsible for the most entries
+		{
+			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
+			while (i.next(m,a)) {
+				const unsigned long c = ++counts[*a];
+				if (c > maxCount) {
+					maxCount = c;
+					maxAddr = *a;
+				}
 			}
 		}
-		for(std::map<MAC,Address>::iterator br(_remoteBridgeRoutes.begin());br!=_remoteBridgeRoutes.end();) {
-			if (br->second == maxAddr)
-				_remoteBridgeRoutes.erase(br++);
-			else ++br;
+
+		// Kill this address from our table, since it's most likely spamming us
+		{
+			Hashtable<MAC,Address>::Iterator i(_remoteBridgeRoutes);
+			while (i.next(m,a)) {
+				if (*a == maxAddr)
+					_remoteBridgeRoutes.erase(*m);
+			}
 		}
 	}
 }
@@ -408,8 +420,8 @@ void Network::learnBridgeRoute(const MAC &mac,const Address &addr)
 void Network::learnBridgedMulticastGroup(const MulticastGroup &mg,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
-	_multicastGroupsBehindMe[mg] = now;
+	const unsigned long tmp = (unsigned long)_multicastGroupsBehindMe.size();
+	_multicastGroupsBehindMe.set(mg,now);
 	if (tmp != _multicastGroupsBehindMe.size())
 		_announceMulticastGroups();
 }
@@ -490,12 +502,10 @@ bool Network::_isAllowed(const Address &peer) const
 			return false;
 		if (_config->isPublic())
 			return true;
-
-		std::map<Address,CertificateOfMembership>::const_iterator pc(_membershipCertificates.find(peer));
-		if (pc == _membershipCertificates.end())
-			return false; // no certificate on file
-
-		return _config->com().agreesWith(pc->second); // is other cert valid against ours?
+		const _RemoteMemberCertificateInfo *ci = _certInfo.get(peer);
+		if (!ci)
+			return false;
+		return _config->com().agreesWith(ci->com);
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -510,8 +520,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
-	for(std::map< MulticastGroup,uint64_t >::const_iterator i(_multicastGroupsBehindMe.begin());i!=_multicastGroupsBehindMe.end();++i)
-		mgs.push_back(i->first);
+	_multicastGroupsBehindMe.appendKeys(mgs);
 	if ((_config)&&(_config->enableBroadcast()))
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());

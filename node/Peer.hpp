@@ -40,6 +40,7 @@
 #include "../include/ZeroTierOne.h"
 
 #include "RuntimeEnvironment.hpp"
+#include "CertificateOfMembership.hpp"
 #include "RemotePath.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"

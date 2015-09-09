@@ -45,6 +45,7 @@
 #include "Network.hpp"
 #include "SharedPtr.hpp"
 #include "IncomingPacket.hpp"
+#include "Hashtable.hpp"
 
 /* Ethernet frame types that might be relevant to us */
 #define ZT_ETHERTYPE_IPV4 0x0800
@@ -189,49 +190,70 @@ private:
 	// Outsanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest
 	{
+		WhoisRequest() : lastSent(0),retries(0) {}
 		uint64_t lastSent;
 		Address peersConsulted[ZT_MAX_WHOIS_RETRIES]; // by retry
 		unsigned int retries; // 0..ZT_MAX_WHOIS_RETRIES
 	};
-	std::map< Address,WhoisRequest > _outstandingWhoisRequests;
+	Hashtable< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
 	// Packet defragmentation queue -- comes before RX queue in path
 	struct DefragQueueEntry
 	{
+		DefragQueueEntry() : creationTime(0),totalFragments(0),haveFragments(0) {}
 		uint64_t creationTime;
 		SharedPtr<IncomingPacket> frag0;
 		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
 	};
-	std::map< uint64_t,DefragQueueEntry > _defragQueue;
+	Hashtable< uint64_t,DefragQueueEntry > _defragQueue;
 	Mutex _defragQueue_m;
 
 	// ZeroTier-layer RX queue of incoming packets in the process of being decoded
 	std::list< SharedPtr<IncomingPacket> > _rxQueue;
 	Mutex _rxQueue_m;
 
-	// ZeroTier-layer TX queue by destination ZeroTier address
+	// ZeroTier-layer TX queue entry
 	struct TXQueueEntry
 	{
 		TXQueueEntry() {}
-		TXQueueEntry(uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
+		TXQueueEntry(Address d,uint64_t ct,const Packet &p,bool enc,uint64_t nw) :
+			dest(d),
 			creationTime(ct),
 			nwid(nw),
 			packet(p),
 			encrypt(enc) {}
 
+		Address dest;
 		uint64_t creationTime;
 		uint64_t nwid;
 		Packet packet; // unencrypted/unMAC'd packet -- this is done at send time
 		bool encrypt;
 	};
-	std::multimap< Address,TXQueueEntry > _txQueue;
+	std::list< TXQueueEntry > _txQueue;
 	Mutex _txQueue_m;
 
 	// Tracks sending of VERB_RENDEZVOUS to relaying peers
-	std::map< Array< Address,2 >,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
+	struct _LastUniteKey
+	{
+		_LastUniteKey() : x(0),y(0) {}
+		_LastUniteKey(const Address &a1,const Address &a2)
+		{
+			if (a1 > a2) {
+				x = a2.toInt();
+				y = a1.toInt();
+			} else {
+				x = a1.toInt();
+				y = a2.toInt();
+			}
+		}
+		inline unsigned long hashCode() const throw() { return ((unsigned long)x ^ (unsigned long)y); }
+		inline bool operator==(const _LastUniteKey &k) const throw() { return ((x == k.x)&&(y == k.y)); }
+		uint64_t x,y;
+	};
+	Hashtable< _LastUniteKey,uint64_t > _lastUniteAttempt; // key is always sorted in ascending order, for set-like behavior
 	Mutex _lastUniteAttempt_m;
 
 	// Active attempts to contact remote peers, including state of multi-phase NAT traversal

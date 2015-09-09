@@ -166,7 +166,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 			/* Node */
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
@@ -301,7 +301,7 @@ SqliteNetworkController::~SqliteNetworkController()
 	}
 }
 
-NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,uint64_t haveRevision,Dictionary &netconf)
+NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(const InetAddress &fromAddr,const Identity &signingId,const Identity &identity,uint64_t nwid,const Dictionary &metaData,Dictionary &netconf)
 {
 	// Decode some stuff from metaData
 	const unsigned int clientMajorVersion = (unsigned int)metaData.getHexUInt(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
@@ -870,6 +870,27 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 										}
 										addToNetworkRevision = 1;
 									}
+								} else if (!strcmp(j->u.object.values[k].name,"identity")) {
+									// Identity is technically an immutable field, but if the member's Node has
+									// no identity we allow it to be populated. This is primarily for migrating
+									// node data from another controller.
+									json_value *idstr = j->u.object.values[k].value;
+									if (idstr->type == json_string) {
+										sqlite3_reset(_sGetNodeIdentity);
+										sqlite3_bind_text(_sGetNodeIdentity,1,addrs,10,SQLITE_STATIC);
+										if ((sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW)&&(!sqlite3_column_text(_sGetNodeIdentity,0))) {
+											try {
+												Identity id2(idstr->u.string.ptr);
+												if (id2) {
+													std::string idstr2(id2.toString(false)); // object must persist until after sqlite3_step() for SQLITE_STATIC
+													sqlite3_reset(_sCreateNode);
+													sqlite3_bind_text(_sCreateNode,1,addrs,10,SQLITE_STATIC);
+													sqlite3_bind_text(_sCreateNode,2,idstr2.c_str(),-1,SQLITE_STATIC);
+													sqlite3_step(_sCreateNode);
+												}
+											} catch ( ... ) {} // ignore invalid identities
+										}
+									}
 								}
 
 							}
@@ -1355,8 +1376,44 @@ unsigned int SqliteNetworkController::_doCPGet(
 						sqlite3_bind_text(_sGetMember2,1,nwids,16,SQLITE_STATIC);
 						sqlite3_bind_text(_sGetMember2,2,addrs,10,SQLITE_STATIC);
 						if (sqlite3_step(_sGetMember2) == SQLITE_ROW) {
+							const char *memberIdStr = (const char *)sqlite3_column_text(_sGetMember2,3);
+
+							// If testSingingId is included in the URL or X-ZT1-TestSigningId in the headers
+							// and if it contains an identity with a secret portion, the resturned JSON
+							// will contain an extra field called _testConf. This will contain several
+							// fields that report the result of doNetworkConfigRequest() for this member.
+							std::string testFields;
+							{
+								Identity testOutputSigningId;
+								std::map<std::string,std::string>::const_iterator sid(urlArgs.find("testSigningId"));
+								if (sid != urlArgs.end()) {
+									testOutputSigningId.fromString(sid->second.c_str());
+								} else {
+									sid = headers.find("x-zt1-testsigningid");
+									if (sid != headers.end())
+										testOutputSigningId.fromString(sid->second.c_str());
+								}
+
+								if ((testOutputSigningId.hasPrivate())&&(memberIdStr)) {
+									Dictionary testNetconf;
+									NetworkController::ResultCode rc = this->doNetworkConfigRequest(
+										InetAddress(),
+										testOutputSigningId,
+										Identity(memberIdStr),
+										nwid,
+										Dictionary(), // TODO: allow passing of meta-data for testing
+										testNetconf);
+									char rcs[16];
+									Utils::snprintf(rcs,sizeof(rcs),"%d,\n",(int)rc);
+									testFields.append("\t\"_test\": {\n");
+									testFields.append("\t\t\"resultCode\": "); testFields.append(rcs);
+									testFields.append("\t\t\"result\": \""); testFields.append(_jsonEscape(testNetconf.toString().c_str()).c_str()); testFields.append("\"");
+									testFields.append("\t}\n");
+								}
+							}
+
 							Utils::snprintf(json,sizeof(json),
-								"{\n"
+								"{\n%s"
 								"\t\"nwid\": \"%s\",\n"
 								"\t\"address\": \"%s\",\n"
 								"\t\"controllerInstanceId\": \"%s\",\n"
@@ -1366,6 +1423,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 								"\t\"clock\": %llu,\n"
 								"\t\"identity\": \"%s\",\n"
 								"\t\"ipAssignments\": [",
+								testFields.c_str(),
 								nwids,
 								addrs,
 								_instanceId.c_str(),
@@ -1373,7 +1431,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 								(sqlite3_column_int(_sGetMember2,1) > 0) ? "true" : "false",
 								(unsigned long long)sqlite3_column_int64(_sGetMember2,2),
 								(unsigned long long)OSUtils::now(),
-								_jsonEscape((const char *)sqlite3_column_text(_sGetMember2,3)).c_str());
+								_jsonEscape(memberIdStr).c_str());
 							responseBody = json;
 
 							sqlite3_reset(_sGetIpAssignmentsForNode2);

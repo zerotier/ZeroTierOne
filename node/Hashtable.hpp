@@ -30,6 +30,8 @@
 
 #include <stdexcept>
 #include <vector>
+#include <utility>
+#include <algorithm>
 
 namespace ZeroTier {
 
@@ -37,8 +39,9 @@ namespace ZeroTier {
  * A minimal hash table implementation for the ZeroTier core
  *
  * This is not a drop-in replacement for STL containers, and has several
- * limitations. It's designed to be small and fast for use in the
- * ZeroTier core.
+ * limitations. Keys can be uint64_t or an object, and if the latter they
+ * must implement a method called hashCode() that returns an unsigned long
+ * value that is evenly distributed.
  */
 template<typename K,typename V>
 class Hashtable
@@ -181,14 +184,54 @@ public:
 	/**
 	 * @return Vector of all keys
 	 */
-	inline typename std::vector<K> keys()
+	inline typename std::vector<K> keys() const
 	{
 		typename std::vector<K> k;
 		if (_s) {
+			k.reserve(_s);
 			for(unsigned long i=0;i<_bc;++i) {
 				_Bucket *b = _t[i];
 				while (b) {
 					k.push_back(b->k);
+					b = b->next;
+				}
+			}
+		}
+		return k;
+	}
+
+	/**
+	 * Append all keys (in unspecified order) to the supplied vector or list
+	 *
+	 * @param v Vector, list, or other compliant container
+	 * @tparam Type of V (generally inferred)
+	 */
+	template<typename C>
+	inline void appendKeys(C &v) const
+	{
+		if (_s) {
+			for(unsigned long i=0;i<_bc;++i) {
+				_Bucket *b = _t[i];
+				while (b) {
+					v.push_back(b->k);
+					b = b->next;
+				}
+			}
+		}
+	}
+
+	/**
+	 * @return Vector of all entries (pairs of K,V)
+	 */
+	inline typename std::vector< std::pair<K,V> > entries() const
+	{
+		typename std::vector< std::pair<K,V> > k;
+		if (_s) {
+			k.reserve(_s);
+			for(unsigned long i=0;i<_bc;++i) {
+				_Bucket *b = _t[i];
+				while (b) {
+					k.push_back(std::pair<K,V>(b->k,b->v));
 					b = b->next;
 				}
 			}
@@ -211,6 +254,21 @@ public:
 		return (V *)0;
 	}
 	inline const V *get(const K &k) const { return const_cast<Hashtable *>(this)->get(k); }
+
+	/**
+	 * @param k Key to check
+	 * @return True if key is present
+	 */
+	inline bool contains(const K &k) const
+	{
+		_Bucket *b = _t[_hc(k) % _bc];
+		while (b) {
+			if (b->k == k)
+				return true;
+			b = b->next;
+		}
+		return false;
+	}
 
 	/**
 	 * @param k Key
@@ -315,9 +373,12 @@ private:
 	}
 	static inline unsigned long _hc(const uint64_t i)
 	{
-		// NOTE: this is fine for network IDs, but might be bad for other kinds
-		// of IDs if they are not evenly or randomly distributed.
-		return (unsigned long)((i ^ (i >> 32)) * 2654435761ULL);
+		/* NOTE: this assumes that 'i' is evenly distributed, which is the case for
+		 * packet IDs and network IDs -- the two use cases in ZT for uint64_t keys.
+		 * These values are also greater than 0xffffffff so they'll map onto a full
+		 * bucket count just fine no matter what happens. Normally you'd want to
+		 * hash an integer key index in a hash table. */
+		return (unsigned long)i;
 	}
 
 	inline void _grow()

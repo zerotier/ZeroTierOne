@@ -40,6 +40,7 @@
 
 #include "Constants.hpp"
 #include "NonCopyable.hpp"
+#include "Hashtable.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
@@ -297,10 +298,10 @@ public:
 	inline Address findBridgeTo(const MAC &mac) const
 	{
 		Mutex::Lock _l(_lock);
-		std::map<MAC,Address>::const_iterator br(_remoteBridgeRoutes.find(mac));
-		if (br == _remoteBridgeRoutes.end())
-			return Address();
-		return br->second;
+		const Address *const br = _remoteBridgeRoutes.get(mac);
+		if (br)
+			return *br;
+		return Address();
 	}
 
 	/**
@@ -346,6 +347,13 @@ public:
 	inline bool operator>=(const Network &n) const throw() { return (_id >= n._id); }
 
 private:
+	struct _RemoteMemberCertificateInfo
+	{
+		_RemoteMemberCertificateInfo() : com(),lastPushed(0) {}
+		CertificateOfMembership com; // remote member's COM
+		uint64_t lastPushed; // when did we last push ours to them?
+	};
+
 	ZT1_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const Address &peer) const;
@@ -358,13 +366,11 @@ private:
 	volatile bool _enabled;
 	volatile bool _portInitialized;
 
-	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to including those behind us (updated periodically)
-	std::map< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups bridged to us and when we last saw activity on each
+	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
+	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
+	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
 
-	std::map<MAC,Address> _remoteBridgeRoutes; // remote addresses where given MACs are reachable
-
-	std::map<Address,CertificateOfMembership> _membershipCertificates; // Other members' certificates of membership
-	std::map<Address,uint64_t> _lastPushedMembershipCertificate; // When did we last push our certificate to each remote member?
+	Hashtable< Address,_RemoteMemberCertificateInfo > _certInfo;
 
 	SharedPtr<NetworkConfig> _config; // Most recent network configuration, which is an immutable value-object
 	volatile uint64_t _lastConfigUpdate;
