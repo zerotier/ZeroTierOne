@@ -159,7 +159,7 @@ void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,s
 NetconConnection *NetconEthernetTap::getConnectionByPCB(struct tcp_pcb *pcb)
 {
 	NetconConnection *c;
-	for(int i=0; i<clients.size(); i++) {
+	for(size_t i=0; i<clients.size(); i++) {
 		c = clients[i]->containsPCB(pcb);
 		if(c) {
 			return c;
@@ -170,12 +170,11 @@ NetconConnection *NetconEthernetTap::getConnectionByPCB(struct tcp_pcb *pcb)
 
 NetconConnection *NetconEthernetTap::getConnectionByThisFD(int fd)
 {
-	NetconConnection *c;
-	for(int i=0; i<clients.size(); i++) {
-		for(int j=0; j<clients[i]->connections[j].size(); j++) {
-				if(_phy.getDescriptor(clients[i]->connection[j]->sock) == fd) {
-					return clients[i]->connections[j];
-				}
+	for(size_t i=0; i<clients.size(); i++) {
+		for(size_t j=0; j<clients[i]->connections.size(); j++) {
+			if(_phy.getDescriptor(clients[i]->connections[j]->sock) == fd) {
+				return clients[i]->connections[j];
+			}
 		}
 	}
 	return NULL;
@@ -183,8 +182,8 @@ NetconConnection *NetconEthernetTap::getConnectionByThisFD(int fd)
 
 NetconClient *NetconEthernetTap::getClientByPCB(struct tcp_pcb *pcb)
 {
-	for(int i=0; i<clients.size(); i++) {
-		if(clients[i].containsPCB(pcb)) {
+	for(size_t i=0; i<clients.size(); i++) {
+		if(clients[i]->containsPCB(pcb)) {
 			return clients[i];
 		}
 	}
@@ -212,7 +211,6 @@ void NetconEthernetTap::threadMain()
   strncpy(gw_str, lwipstack->ipaddr_ntoa(&gw), sizeof(gw_str));
 
 	unsigned long tcp_time = ARP_TMR_INTERVAL / 5000;
-  unsigned long ipreass_time = TCP_TMR_INTERVAL / 1000;
   unsigned long etharp_time = IP_TMR_INTERVAL / 1000;
   unsigned long prev_tcp_time = 0;
   unsigned long prev_etharp_time = 0;
@@ -243,8 +241,8 @@ void NetconEthernetTap::threadMain()
 			lwipstack->etharp_tmr();
 		}
 		// should be set every time since tv_sel is modified after each select() call
-		tv_sel.tv_sec = 0;
-		tv_sel.tv_usec = min_time;
+		//tv_sel.tv_sec = 0;
+		//tv_sel.tv_usec = min_time;
 
 		_phy.poll(min_time * 1000); // conversion from usec to millisec, TODO: double check
 	}
@@ -264,22 +262,24 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
 {
 	NetconClient *newClient = new NetconClient();
-	newClient->addConnection(NetconConnectionType.RPC, *uptrN)
+	newClient->addConnection(RPC, *uptrN);
 }
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	*uptr->close();
+	((NetconClient*)*uptr)->close();
 }
 
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {
-	NetconConnection *c = *uptr->getConnection(sock);
+	unsigned char *buf = (unsigned char*)data;
+
+	NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
 	int r;
-	if(c->type == NetconConnectionType.BUFFER) {
+	if(c->type == BUFFER) {
 		if(c) {
 			if(c->idx < DEFAULT_READ_BUFFER_SIZE) {
-				if((r = read(sws->sock, (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
+				if((r = read(_phy.getDescriptor(c->sock), (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
 					c->idx += r;
 					handle_write(c);
 				}
@@ -289,26 +289,26 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			// can't find connection for this fd
 		}
 	}
-	if(c->type == NetconConnectionType.RPC)
+	if(c->type == RPC)
 	{
 		NetconClient *client = (NetconClient*)*uptr;
-		switch((unsigned char*)data[0])
+		switch(buf[0])
 		{
 			case RPC_SOCKET:
 		    struct socket_st socket_rpc;
-		    memcpy(&socket_rpc, &data[1], sizeof(struct socket_st));
+		    memcpy(&socket_rpc, &buf[1], sizeof(struct socket_st));
 		    client->tid = socket_rpc.__tid;
 		    handle_socket(client, &socket_rpc);
 				break;
 		  case RPC_LISTEN:
 		    struct listen_st listen_rpc;
-		    memcpy(&listen_rpc, &data[1], sizeof(struct listen_st));
+		    memcpy(&listen_rpc, &buf[1], sizeof(struct listen_st));
 		    client->tid = listen_rpc.__tid;
 		    handle_listen(client, &listen_rpc);
 				break;
 		  case RPC_BIND:
 		    struct bind_st bind_rpc;
-		    memcpy(&bind_rpc, &data[1], sizeof(struct bind_st));
+		    memcpy(&bind_rpc, &buf[1], sizeof(struct bind_st));
 		    client->tid = bind_rpc.__tid;
 		    handle_bind(client, &bind_rpc);
 				break;
@@ -317,12 +317,12 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				break;
 	  	case RPC_CONNECT:
 		    struct connect_st connect_rpc;
-		    memcpy(&connect_rpc, &data[1], sizeof(struct connect_st));
+		    memcpy(&connect_rpc, &buf[1], sizeof(struct connect_st));
 		    client->tid = connect_rpc.__tid;
 		    handle_connect(client, &connect_rpc);
 				break;
 		  case RPC_FD_MAP_COMPLETION:
-		    handle_retval(client, data);
+		    handle_retval(client, buf);
 				break;
 			default:
 				break;
@@ -369,39 +369,7 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 	return ERR_OK;
 }
 
-err_t NetconEthernetTap::nc_accept(void* arg, struct tcp_pcb *newpcb, err_t err)
-{
-	NetconClient *client = getConnectionByThisFD((intptr_t)arg);
 
-	if(client)
-	{
-		int *their_fd;
-		int our_fd;
-		PhySocket *new_sock = _phy.createSocketPair(*their_fd, client)
-		NetconConnection c = addConnection(NetconConnectionType.BUFFER, new_sock);
-		our_fd = _phy.getDescriptor(c->sock);
-		if(c == NULL) return -1;
-
-		c->owner->unmapped_conn = c;
-		// write byte to let accept call know we have a new connection
-    int n = write(our_fd, "z", 1);
-    if(n > 0) {
-      sock_fd_write(c->owner->rpc, *their_fd);
-    }
-    else {
-      // unknown error writing signal byte to listening socket
-      return -1;
-    }
-    lwipstack->tcp_arg(newpcb, (void*)(intptr_t)(our_fd));
-    lwipstack->tcp_recv(newpcb, nc_recved);
-    lwipstack->tcp_err(newpcb, nc_err);
-    lwipstack->tcp_sent(newpcb, nc_sent);
-    lwipstack->tcp_poll(newpcb, nc_poll, APPLICATION_POLL_FREQ);
-    tcp_accepted(c->pcb);
-    return ERR_OK;
-	}
-  return -1;
-}
 
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
@@ -578,7 +546,7 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 	struct tcp_pcb *pcb = lwipstack->tcp_new();
   if(pcb != NULL) {
 		int *their_fd;
-		NetconConnection *new_conn = client->addConnection(NetconConnectionType.BUFFER, _phy.createSocketPair(*their_fd, client));
+		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.createSocketPair(*their_fd, client));
 		new_conn->their_fd = *their_fd;
 		new_conn->pcb = pcb;
     sock_fd_write(_phy.getDescriptor(client->rpc->sock), *their_fd);

@@ -63,19 +63,19 @@ namespace ZeroTier {
   //
   class NetconClient
   {
-  private:
+  public:
     vector<NetconConnection*> connections;
 
-  public:
     int tid;
     bool waiting_for_retval;
     NetconConnection *rpc;
     NetconConnection* unmapped_conn;
 
-    void addConnection(NetconConnectionType type, PhySocket *sock)
+    NetconConnection *addConnection(NetconConnectionType type, PhySocket *sock)
     {
       NetconConnection *new_conn = new NetconConnection(type, sock);
       new_conn->owner = this;
+      return new_conn;
     }
 
     // Check data and RPC connections
@@ -84,7 +84,7 @@ namespace ZeroTier {
       if(sock && sock == rpc->sock) {
         return rpc;
       }
-      for(int i=0; i<connections.size(); i++) {
+      for(size_t i=0; i<connections.size(); i++) {
         if(sock == connections[i]->sock) { return connections[i];}
       }
       return NULL;
@@ -93,7 +93,7 @@ namespace ZeroTier {
     //
     NetconConnection *getConnectionByTheirFD(int fd)
     {
-      for(int i=0; i<connections.size(); i++) {
+      for(size_t i=0; i<connections.size(); i++) {
         if(connections[i]->their_fd == fd) { return connections[i]; }
       }
       return NULL;
@@ -102,7 +102,7 @@ namespace ZeroTier {
     //
     NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb)
     {
-      for(int i=0; i<connections.size(); i++) {
+      for(size_t i=0; i<connections.size(); i++) {
         if(connections[i]->pcb = pcb) { return connections[i]; }
       }
       return NULL;
@@ -110,7 +110,7 @@ namespace ZeroTier {
 
     NetconConnection *containsPCB(struct tcp_pcb *pcb)
     {
-      for(int i=0; i<connections.size(); i++) {
+      for(size_t i=0; i<connections.size(); i++) {
         if(connections[i]->pcb = pcb) { return connections[i]; }
       }
       return NULL;
