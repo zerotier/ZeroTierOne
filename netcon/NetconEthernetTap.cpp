@@ -78,13 +78,10 @@ NetconEthernetTap::NetconEthernetTap(
 	if(!lwipstack) // TODO double check this check
 		throw std::runtime_error("unable to load lwip lib.");
 	lwipstack->lwip_init();
-	nc_service = new NetconService(lwipstack, sockPath); // Netcon Service
 
 	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
 	if (!_unixListenSocket)
 		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
-	else
-		_unixListenSocket.uptr = (void*) new NetconSocket(_unixListenSocket.sock, NetconSocketType.RPC);
 	_thread = Thread::start(this);
 }
 
@@ -232,15 +229,18 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 
 void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
 {
+	_phy.setuptr(sockN, new NIntercept());
 }
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
+	NIntercept *h = (NIntercept*)_phy.getuptr(sock);
+	h->close();
 }
 
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {
-	Phy<NetconEthernetTap*>::PhySocketImpl &sws = *(reinterpret_cast<Phy<NetconEthernetTap*>::PhySocketImpl *>(sock));
+	NIntercept *h = (NIntercept*)_phy.getuptr(sock);
 
 	int r;
 	nc_service->possible_state_change = true;
@@ -621,7 +621,7 @@ void NetconEthernetTap::handle_connect(NetconIntercept *h, struct connect_st* co
 		//dwr(-1, "connect(): TCP_SNDBUF = %d\n", tcp_sndbuf(nc->pcb));
 		lwipstack->tcp_sent(c->pcb, nc_sent); // FIXME: Move?
 		lwipstack->tcp_recv(c->pcb, nc_recved);
-		lwipstack->tcp_err(c->pcb, ZeroTier::NetconEthernetTap::nc_err);
+		lwipstack->tcp_err(c->pcb, nc_err);
 		lwipstack->tcp_poll(c->pcb, nc_poll, APPLICATION_POLL_FREQ);
 		lwipstack->tcp_arg(c->pcb,(void*)(intptr_t)c->our_fd);
 

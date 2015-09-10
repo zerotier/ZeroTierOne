@@ -245,6 +245,25 @@ public:
 #endif
 	}
 
+
+
+
+
+	inline void *getuptr(PhySocket *sock)
+	{
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		return sws.uptr;
+	}
+
+	inline void setuptr(PhySocket *sock, void *obj)
+	{
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		sws.uptr = obj;
+	}
+
+
+
+
 	/**
 	 * @return Number of open sockets
 	 */
