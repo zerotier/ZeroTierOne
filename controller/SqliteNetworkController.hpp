@@ -93,6 +93,13 @@ private:
 		const std::string &body,
 		std::string &responseBody,
 		std::string &responseContentType);
+	NetworkController::ResultCode _doNetworkConfigRequest(
+		const InetAddress &fromAddr,
+		const Identity &signingId,
+		const Identity &identity,
+		uint64_t nwid,
+		const Dictionary &metaData,
+		Dictionary &netconf);
 
 	std::string _dbPath;
 	std::string _instanceId;
@@ -105,7 +112,7 @@ private:
 	sqlite3_stmt *_sGetMember;
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
-	sqlite3_stmt *_sCreateNode;
+	sqlite3_stmt *_sCreateOrReplaceNode;
 	sqlite3_stmt *_sUpdateNode;
 	sqlite3_stmt *_sUpdateNode2;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;

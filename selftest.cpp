@@ -795,7 +795,7 @@ struct TestPhyHandlers
 	{
 		++phyTestTcpAcceptCount;
 		*uptrN = new std::string(ZT_TEST_PHY_TCP_MESSAGE_SIZE,(char)0xff);
-		testPhyInstance->tcpSetNotifyWritable(sockN,true);
+		testPhyInstance->setNotifyWritable(sockN,true);
 	}
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -812,7 +812,7 @@ struct TestPhyHandlers
 	{
 		std::string *testMessage = (std::string *)*uptr;
 		if ((testMessage)&&(testMessage->length() > 0)) {
-			long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),(unsigned long)testMessage->length(),true);
+			long sent = testPhyInstance->streamSend(sock,(const void *)testMessage->data(),(unsigned long)testMessage->length(),true);
 			if (sent > 0)
 				testMessage->erase(0,sent);
 		}

@@ -665,19 +665,21 @@ public:
 	}
 
 	/**
-	 * Attempt to send data to a TCP connection (non-blocking)
+	 * Attempt to send data to a stream socket (non-blocking)
 	 *
 	 * If -1 is returned, the socket should no longer be used as it is now
 	 * destroyed. If callCloseHandler is true, the close handler will be
 	 * called before the function returns.
 	 *
-	 * @param sock An open TCP socket (other socket types will fail)
+	 * This can be used with TCP, Unix, or socket pair sockets.
+	 *
+	 * @param sock An open stream socket (other socket types will fail)
 	 * @param data Data to send
 	 * @param len Length of data
 	 * @param callCloseHandler If true, call close handler on socket closing failure condition (default: true)
 	 * @return Number of bytes actually sent or -1 on fatal error (socket closure)
 	 */
-	inline long tcpSend(PhySocket *sock,const void *data,unsigned long len,bool callCloseHandler = true)
+	inline long streamSend(PhySocket *sock,const void *data,unsigned long len,bool callCloseHandler = true)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 #if defined(_WIN32) || defined(_WIN64)
@@ -755,16 +757,18 @@ public:
 #endif // __UNIX_LIKE__
 
 	/**
-	 * Set whether we want to be notified via the TCP writability handler when a socket is writable
+	 * For streams, sets whether we want to be notified that the socket is writable
+	 *
+	 * This can be used with TCP, Unix, or socket pair sockets.
 	 *
 	 * Call whack() if this is being done from another thread and you want
 	 * it to take effect immediately. Otherwise it is only guaranteed to
 	 * take effect on the next poll().
 	 *
-	 * @param sock TCP connection socket (other types are not valid)
+	 * @param sock Stream connection socket
 	 * @param notifyWritable Want writable notifications?
 	 */
-	inline const void tcpSetNotifyWritable(PhySocket *sock,bool notifyWritable)
+	inline const void setNotifyWritable(PhySocket *sock,bool notifyWritable)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 		if (notifyWritable) {

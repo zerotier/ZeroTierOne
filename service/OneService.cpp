@@ -787,7 +787,7 @@ public:
 		tc->writeBuf.push_back((char)ZEROTIER_ONE_VERSION_MINOR);
 		tc->writeBuf.push_back((char)((ZEROTIER_ONE_VERSION_REVISION >> 8) & 0xff));
 		tc->writeBuf.push_back((char)(ZEROTIER_ONE_VERSION_REVISION & 0xff));
-		_phy.tcpSetNotifyWritable(sock,true);
+		_phy.setNotifyWritable(sock,true);
 
 		_tcpFallbackTunnel = tc;
 	}
@@ -922,12 +922,12 @@ public:
 		TcpConnection *tc = reinterpret_cast<TcpConnection *>(*uptr);
 		Mutex::Lock _l(tc->writeBuf_m);
 		if (tc->writeBuf.length() > 0) {
-			long sent = (long)_phy.tcpSend(sock,tc->writeBuf.data(),(unsigned long)tc->writeBuf.length(),true);
+			long sent = (long)_phy.streamSend(sock,tc->writeBuf.data(),(unsigned long)tc->writeBuf.length(),true);
 			if (sent > 0) {
 				tc->lastActivity = OSUtils::now();
 				if ((unsigned long)sent >= (unsigned long)tc->writeBuf.length()) {
 					tc->writeBuf = "";
-					_phy.tcpSetNotifyWritable(sock,false);
+					_phy.setNotifyWritable(sock,false);
 					if (!tc->shouldKeepAlive)
 						_phy.close(sock); // will call close handler to delete from _tcpConnections
 				} else {
@@ -935,7 +935,7 @@ public:
 				}
 			}
 		} else {
-			_phy.tcpSetNotifyWritable(sock,false);
+			_phy.setNotifyWritable(sock,false);
 		}
 	}
 
@@ -1126,7 +1126,7 @@ public:
 						if (_tcpFallbackTunnel) {
 							Mutex::Lock _l(_tcpFallbackTunnel->writeBuf_m);
 							if (!_tcpFallbackTunnel->writeBuf.length())
-								_phy.tcpSetNotifyWritable(_tcpFallbackTunnel->sock,true);
+								_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
 							unsigned long mlen = len + 7;
 							_tcpFallbackTunnel->writeBuf.push_back((char)0x17);
 							_tcpFallbackTunnel->writeBuf.push_back((char)0x03);
@@ -1229,7 +1229,7 @@ public:
 				tc->writeBuf.append(data);
 		}
 
-		_phy.tcpSetNotifyWritable(tc->sock,true);
+		_phy.setNotifyWritable(tc->sock,true);
 	}
 
 	inline void onHttpResponseFromClient(TcpConnection *tc)
