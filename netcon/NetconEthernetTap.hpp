@@ -122,6 +122,7 @@ private:
 
 	NetconConnection *getConnectionByThisFD(int fd);
 	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
+	NetconClient *getClientByPCB(struct tcp_pcb *pcb);
 	void closeClient(NetconClient *client);
 
 	// Logging helper

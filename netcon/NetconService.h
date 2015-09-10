@@ -96,6 +96,7 @@ namespace ZeroTier {
       for(int i=0; i<connections.size(); i++) {
         if(connections[i]->their_fd == fd) { return connections[i]; }
       }
+      return NULL;
     }
 
     //
@@ -104,6 +105,7 @@ namespace ZeroTier {
       for(int i=0; i<connections.size(); i++) {
         if(connections[i]->pcb = pcb) { return connections[i]; }
       }
+      return NULL;
     }
 
     NetconConnection *containsPCB(struct tcp_pcb *pcb)
@@ -111,13 +113,7 @@ namespace ZeroTier {
       for(int i=0; i<connections.size(); i++) {
         if(connections[i]->pcb = pcb) { return connections[i]; }
       }
-    }
-
-    NetconConnection *containsPCB(struct tcp_pcb *pcb)
-    {
-      for(int i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb = pcb) { return connections[i]; }
-      }
+      return NULL;
     }
 
     void close()
