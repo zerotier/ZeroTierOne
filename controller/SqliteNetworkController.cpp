@@ -1007,7 +1007,18 @@ unsigned int SqliteNetworkController::_doCPGet(
 									Utils::snprintf(rcs,sizeof(rcs),"%d,\n",(int)rc);
 									testFields.append("\t\"_test\": {\n");
 									testFields.append("\t\t\"resultCode\": "); testFields.append(rcs);
-									testFields.append("\t\t\"result\": \""); testFields.append(_jsonEscape(testNetconf.toString().c_str()).c_str()); testFields.append("\"");
+									testFields.append("\t\t\"result\": \""); testFields.append(_jsonEscape(testNetconf.toString().c_str()).c_str()); testFields.append("\",\n");
+									testFields.append("\t\t\"resultJson\": {\n");
+									for(Dictionary::const_iterator i(testNetconf.begin());i!=testNetconf.end();++i) {
+										if (i != testNetconf.begin())
+											testFields.append(",\n");
+										testFields.append("\t\t\t\"");
+										testFields.append(i->first);
+										testFields.append("\": \"");
+										testFields.append(_jsonEscape(i->second.c_str()));
+										testFields.push_back('"');
+									}
+									testFields.append("\n\t\t}\n");
 									testFields.append("\t}\n");
 								}
 							}
