@@ -68,6 +68,7 @@
 #define ZT_PHY_SOCKFD_VALID(s) ((s) > -1)
 #define ZT_PHY_CLOSE_SOCKET(s) ::close(s)
 #define ZT_PHY_MAX_SOCKETS (FD_SETSIZE)
+#define ZT_PHY_MAX_INTERCEPTS (FD_SETSIZE)
 #define ZT_PHY_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
 
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)

@@ -28,7 +28,7 @@ endif
 
 UNAME_M=$(shell uname -m)
 
-INCLUDES=
+INCLUDES=-Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6
 DEFS=-DZT_ENABLE_NETCON
 LDLIBS?=
 
