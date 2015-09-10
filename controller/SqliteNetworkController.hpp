@@ -105,7 +105,7 @@ private:
 	sqlite3_stmt *_sGetMember;
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
-	sqlite3_stmt *_sCreateNode;
+	sqlite3_stmt *_sCreateOrReplaceNode;
 	sqlite3_stmt *_sUpdateNode;
 	sqlite3_stmt *_sUpdateNode2;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;

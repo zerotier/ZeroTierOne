@@ -166,7 +166,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 
 			/* Node */
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateNode,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateOrReplaceNode,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
@@ -256,7 +256,7 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sGetMember);
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
-		sqlite3_finalize(_sCreateNode);
+		sqlite3_finalize(_sCreateOrReplaceNode);
 		sqlite3_finalize(_sUpdateNode);
 		sqlite3_finalize(_sUpdateNode2);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
@@ -354,10 +354,10 @@ NetworkController::ResultCode SqliteNetworkController::doNetworkConfigRequest(co
 		}
 	} else {
 		std::string idstr(identity.toString(false));
-		sqlite3_reset(_sCreateNode);
-		sqlite3_bind_text(_sCreateNode,1,member.nodeId,10,SQLITE_STATIC);
-		sqlite3_bind_text(_sCreateNode,2,idstr.c_str(),-1,SQLITE_STATIC);
-		if (sqlite3_step(_sCreateNode) != SQLITE_DONE) {
+		sqlite3_reset(_sCreateOrReplaceNode);
+		sqlite3_bind_text(_sCreateOrReplaceNode,1,member.nodeId,10,SQLITE_STATIC);
+		sqlite3_bind_text(_sCreateOrReplaceNode,2,idstr.c_str(),-1,SQLITE_STATIC);
+		if (sqlite3_step(_sCreateOrReplaceNode) != SQLITE_DONE) {
 			netconf["error"] = "unable to create new Node record";
 			return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
@@ -876,17 +876,25 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 									// node data from another controller.
 									json_value *idstr = j->u.object.values[k].value;
 									if (idstr->type == json_string) {
+										bool alreadyHaveIdentity = false;
+
 										sqlite3_reset(_sGetNodeIdentity);
 										sqlite3_bind_text(_sGetNodeIdentity,1,addrs,10,SQLITE_STATIC);
-										if ((sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW)&&(!sqlite3_column_text(_sGetNodeIdentity,0))) {
+										if (sqlite3_step(_sGetNodeIdentity) == SQLITE_ROW) {
+											const char *tmp2 = (const char *)sqlite3_column_text(_sGetNodeIdentity,0);
+											if ((tmp2)&&(tmp2[0]))
+												alreadyHaveIdentity = true;
+										}
+
+										if (!alreadyHaveIdentity) {
 											try {
 												Identity id2(idstr->u.string.ptr);
 												if (id2) {
 													std::string idstr2(id2.toString(false)); // object must persist until after sqlite3_step() for SQLITE_STATIC
-													sqlite3_reset(_sCreateNode);
-													sqlite3_bind_text(_sCreateNode,1,addrs,10,SQLITE_STATIC);
-													sqlite3_bind_text(_sCreateNode,2,idstr2.c_str(),-1,SQLITE_STATIC);
-													sqlite3_step(_sCreateNode);
+													sqlite3_reset(_sCreateOrReplaceNode);
+													sqlite3_bind_text(_sCreateOrReplaceNode,1,addrs,10,SQLITE_STATIC);
+													sqlite3_bind_text(_sCreateOrReplaceNode,2,idstr2.c_str(),-1,SQLITE_STATIC);
+													sqlite3_step(_sCreateOrReplaceNode);
 												}
 											} catch ( ... ) {} // ignore invalid identities
 										}
