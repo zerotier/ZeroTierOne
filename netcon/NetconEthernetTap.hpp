@@ -98,14 +98,14 @@ private:
 	int send_return_value(NetconClient *client, int retval);
 
 	// For LWIP Callbacks
-	err_t nc_poll(void* arg, struct tcp_pcb *tpcb);
-	err_t nc_accept(void* arg, struct tcp_pcb *newpcb, err_t err);
-	err_t nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
-	void nc_err(void *arg, err_t err);
-	void nc_close(struct tcp_pcb* tpcb);
-	err_t nc_send(struct tcp_pcb *tpcb);
-	err_t nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len);
-	err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
+	static err_t nc_poll(void *arg, struct tcp_pcb *tpcb);
+	static err_t nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
+	static err_t nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+	static void nc_err(void *arg, err_t err);
+	static void nc_close(struct tcp_pcb *tpcb);
+	static err_t nc_send(struct tcp_pcb *tpcb);
+	static err_t nc_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
+	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 
 	// RPC handlers (from NetconIntercept)
 	void handle_bind(NetconClient *client, struct bind_st *bind_rpc);
@@ -118,13 +118,19 @@ private:
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 
+	// client helpers
+
+	NetconConnection *getConnectionByThisFD(int fd);
+	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
+	void closeClient(NetconClient *client);
+
 	// Logging helper
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
 	LWIPStack *lwipstack;
-	NetconService *nc_service;
+	std::vector<NetconClient*> clients;
 
 	uint64_t _nwid;
 	Thread _thread;

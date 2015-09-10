@@ -41,20 +41,20 @@ using namespace std;
 namespace ZeroTier {
   enum NetconConnectionType { RPC, BUFFER };
 
-
+  // prototypes
   class NetconClient;
   class NetconConnection;
 
   //
   class NetconConnection
   {
+  public:
     int their_fd;
     unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
     int idx;
     NetconConnectionType type;
     struct tcp_pcb *pcb;
     PhySocket *sock;
-
     NetconClient *owner;
 
     NetconConnection(NetconConnectionType type, PhySocket *sock) : type(type), sock(sock) {}
@@ -68,11 +68,13 @@ namespace ZeroTier {
 
   public:
     int tid;
+    bool waiting_for_retval;
     NetconConnection *rpc;
+    NetconConnection* unmapped_conn;
 
     void addConnection(NetconConnectionType type, PhySocket *sock)
     {
-      NetconConnection new_conn = new NetconConnection(type, sock);
+      NetconConnection *new_conn = new NetconConnection(type, sock);
       new_conn->owner = this;
     }
 
@@ -104,6 +106,19 @@ namespace ZeroTier {
       }
     }
 
+    NetconConnection *containsPCB(struct tcp_pcb *pcb)
+    {
+      for(int i=0; i<connections.size(); i++) {
+        if(connections[i]->pcb = pcb) { return connections[i]; }
+      }
+    }
+
+    NetconConnection *containsPCB(struct tcp_pcb *pcb)
+    {
+      for(int i=0; i<connections.size(); i++) {
+        if(connections[i]->pcb = pcb) { return connections[i]; }
+      }
+    }
 
     void close()
     {
