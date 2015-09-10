@@ -93,6 +93,13 @@ private:
 		const std::string &body,
 		std::string &responseBody,
 		std::string &responseContentType);
+	NetworkController::ResultCode _doNetworkConfigRequest(
+		const InetAddress &fromAddr,
+		const Identity &signingId,
+		const Identity &identity,
+		uint64_t nwid,
+		const Dictionary &metaData,
+		Dictionary &netconf);
 
 	std::string _dbPath;
 	std::string _instanceId;
