@@ -46,6 +46,7 @@
 #define ZT_PHY_SOCKFD_VALID(s) ((s) != INVALID_SOCKET)
 #define ZT_PHY_CLOSE_SOCKET(s) ::closesocket(s)
 #define ZT_PHY_MAX_SOCKETS (FD_SETSIZE)
+#define ZT_PHY_MAX_INTERCEPTS ZT_PHY_MAX_SOCKETS
 #define ZT_PHY_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
 
 #else // not Windows
@@ -58,6 +59,7 @@
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -67,7 +69,13 @@
 #define ZT_PHY_SOCKFD_VALID(s) ((s) > -1)
 #define ZT_PHY_CLOSE_SOCKET(s) ::close(s)
 #define ZT_PHY_MAX_SOCKETS (FD_SETSIZE)
+#define ZT_PHY_MAX_INTERCEPTS ZT_PHY_MAX_SOCKETS
 #define ZT_PHY_SOCKADDR_STORAGE_TYPE struct sockaddr_storage
+
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#define ZT_PHY_HAVE_EVENTFD 1
+#include <sys/eventfd.h>
+#endif
 
 #endif // Windows or not
 
@@ -87,16 +95,24 @@ typedef void PhySocket;
  * This class is templated on a pointer to a handler class which must
  * implement the following functions:
  *
+ * For all platforms:
+ *
  * phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
  * phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
  * phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
  * phyOnTcpClose(PhySocket *sock,void **uptr)
  * phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
  * phyOnTcpWritable(PhySocket *sock,void **uptr)
+ *
+ * On Linux/OSX/Unix only (not required/used on Windows or elsewhere):
+ *
  * phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
  * phyOnUnixClose(PhySocket *sock,void **uptr)
  * phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
  * phyOnUnixWritable(PhySocket *sock,void **uptr)
+ * phyOnSocketPairEndpointClose(PhySocket *sock,void **uptr)
+ * phyOnSocketPairEndpointData(PhySocket *sock,void **uptr,void *data,unsigned long len)
+ * phyOnSocketPairEndpointWritable(PhySocket *sock,void **uptr)
  *
  * These templates typically refer to function objects. Templates are used to
  * avoid the call overhead of indirection, which is surprisingly high for high
@@ -108,9 +124,6 @@ typedef void PhySocket;
  * resetting at any time. The ACCEPT handler takes two sets of sock and
  * uptr: sockL and uptrL for the listen socket, and sockN and uptrN for
  * the new TCP connection socket that has just been created.
- *
- * Note that phyOnUnix*() are only required and will only be used on systems
- * that support Unix domain sockets.
  *
  * Handlers are always called. On outgoing TCP connection, CONNECT is always
  * called on either success or failure followed by DATA and/or WRITABLE as
@@ -138,7 +151,8 @@ private:
 		ZT_PHY_SOCKET_RAW = 0x05,
 		ZT_PHY_SOCKET_UDP = 0x06,
 		ZT_PHY_SOCKET_UNIX_IN = 0x07,
-		ZT_PHY_SOCKET_UNIX_LISTEN = 0x08
+		ZT_PHY_SOCKET_UNIX_LISTEN = 0x08,
+		ZT_PHY_SOCKET_PAIR_ENDPOINT = 0x09
 	};
 
 	struct PhySocketImpl
@@ -227,7 +241,16 @@ public:
 	}
 
 	/**
+	 * @param s Socket object
+	 * @return Underlying OS-type (usually int or long) file descriptor associated with object
+	 */
+	static inline ZT_PHY_SOCKFD_TYPE getDescriptor(PhySocket *s) throw() { return reinterpret_cast<PhySocketImpl *>(s)->sock; }
+
+	/**
 	 * Cause poll() to stop waiting immediately
+	 *
+	 * This can be used to reset the polling loop after changes that require
+	 * attention, or to shut down a background thread that is waiting, etc.
 	 */
 	inline void whack()
 	{
@@ -247,6 +270,58 @@ public:
 	 * @return Maximum number of sockets allowed
 	 */
 	inline unsigned long maxCount() const throw() { return ZT_PHY_MAX_SOCKETS; }
+
+#ifdef __UNIX_LIKE__
+	/**
+	 * Create a two-way socket pair
+	 *
+	 * This uses socketpair() to create a local domain pair. The returned
+	 * PhySocket holds the local side of the socket pair, while the
+	 * supplied fd variable is set to the descriptor for the remote side.
+	 *
+	 * The local side is set to O_NONBLOCK to work with our poll loop, but
+	 * the remote descriptor is left untouched. It's up to the caller to
+	 * set any required fcntl(), ioctl(), or setsockopt() settings there.
+	 * It's also up to the caller to close the remote descriptor when
+	 * done, if necessary.
+	 *
+	 * @param remoteSocketDescriptor Result parameter set to remote end of socket pair's socket FD
+	 * @param uptr Pointer to associate with local side of socket pair
+	 * @return PhySocket for local side of socket pair
+	 */
+	inline PhySocket *createSocketPair(ZT_PHY_SOCKFD_TYPE &remoteSocketDescriptor,void *uptr = (void *)0)
+	{
+		if (_socks.size() >= ZT_PHY_MAX_SOCKETS)
+			return (PhySocket *)0;
+
+		int fd[2]; fd[0] = -1; fd[1] = -1;
+		if ((::socketpair(PF_LOCAL,SOCK_STREAM,0,fd) != 0)||(fd[0] <= 0)||(fd[1] <= 0))
+			return (PhySocket *)0;
+		fcntl(fd[0],F_SETFL,O_NONBLOCK);
+
+		try {
+			_socks.push_back(PhySocketImpl());
+		} catch ( ... ) {
+			ZT_PHY_CLOSE_SOCKET(fd[0]);
+			ZT_PHY_CLOSE_SOCKET(fd[1]);
+			return (PhySocket *)0;
+		}
+		PhySocketImpl &sws = _socks.back();
+
+		if ((long)fd[0] > _nfds)
+			_nfds = (long)fd[0];
+		FD_SET(fd[0],&_readfds);
+		sws.type = ZT_PHY_SOCKET_PAIR_ENDPOINT;
+		sws.sock = fd[0];
+		sws.uptr = uptr;
+		memset(&(sws.saddr),0,sizeof(struct sockaddr_storage));
+		// no sockaddr for this socket type, leave saddr null
+
+		remoteSocketDescriptor = fd[1];
+
+		return (PhySocket *)&sws;
+	}
+#endif // __UNIX_LIKE__
 
 	/**
 	 * Bind a UDP socket
@@ -883,6 +958,27 @@ public:
 #endif // __UNIX_LIKE__
 					break;
 
+				case ZT_PHY_SOCKET_PAIR_ENDPOINT: {
+#ifdef __UNIX_LIKE__
+					ZT_PHY_SOCKFD_TYPE sock = s->sock; // if closed, s->sock becomes invalid as s is no longer dereferencable
+					if (FD_ISSET(sock,&rfds)) {
+						long n = (long)::read(sock,buf,sizeof(buf));
+						if (n <= 0) {
+							this->close((PhySocket *)&(*s),true);
+						} else {
+							try {
+								_handler->phyOnSocketPairEndpointData((PhySocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
+							} catch ( ... ) {}
+						}
+					}
+					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
+						try {
+							_handler->phyOnSocketPairEndpointWritable((PhySocket *)&(*s),&(s->uptr));
+						} catch ( ... ) {}
+					}
+#endif // __UNIX_LIKE__
+				}	break;
+
 				default:
 					break;
 
@@ -914,6 +1010,11 @@ public:
 
 		ZT_PHY_CLOSE_SOCKET(sws.sock);
 
+#ifdef __UNIX_LIKE__
+		if (sws.type == ZT_PHY_SOCKET_UNIX_LISTEN)
+			::unlink(((struct sockaddr_un *)(&(sws.saddr)))->sun_path);
+#endif // __UNIX_LIKE__
+
 		if (callHandlers) {
 			switch(sws.type) {
 				case ZT_PHY_SOCKET_TCP_OUT_PENDING:
@@ -934,6 +1035,12 @@ public:
 					} catch ( ... ) {}
 #endif // __UNIX_LIKE__
 					break;
+				case ZT_PHY_SOCKET_PAIR_ENDPOINT:
+#ifdef __UNIX_LIKE__
+					try {
+						_handler->phyOnSocketPairEndpointClose(sock,&(sws.uptr));
+					} catch ( ... ) {}
+#endif // __UNIX_LIKE__
 				default:
 					break;
 			}
