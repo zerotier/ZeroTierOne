@@ -27,6 +27,9 @@
 
 #include <sys/poll.h>
 #include <string>
+
+#include "../osdep/Phy.hpp"
+
 #include "Intercept.h"
 #include "LWIPStack.hpp"
 
@@ -35,26 +38,79 @@
 
 using namespace std;
 
-enum NetconSocketType { RPC, BUFFER };
+namespace ZeroTier {
+  enum NetconConnectionType { RPC, BUFFER };
 
-class NConnection
-{
-  NetconSocketType type;
-  struct tcp_pcb *pcb;
-  PhySocket *sock;
-};
 
-class Client
-{
-public:
-  vector<NConnection*> connections;
+  class NetconClient;
+  class NetconConnection;
 
-  void close()
+  //
+  class NetconConnection
   {
-    // close all connections
-    // -- pcb
-    // -- PhySocket
-  }
-};
+    int their_fd;
+    unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
+    int idx;
+    NetconConnectionType type;
+    struct tcp_pcb *pcb;
+    PhySocket *sock;
 
+    NetconClient *owner;
+
+    NetconConnection(NetconConnectionType type, PhySocket *sock) : type(type), sock(sock) {}
+  };
+
+  //
+  class NetconClient
+  {
+  private:
+    vector<NetconConnection*> connections;
+
+  public:
+    int tid;
+    NetconConnection *rpc;
+
+    void addConnection(NetconConnectionType type, PhySocket *sock)
+    {
+      NetconConnection new_conn = new NetconConnection(type, sock);
+      new_conn->owner = this;
+    }
+
+    // Check data and RPC connections
+    NetconConnection *getConnection(PhySocket *sock)
+    {
+      if(sock && sock == rpc->sock) {
+        return rpc;
+      }
+      for(int i=0; i<connections.size(); i++) {
+        if(sock == connections[i]->sock) { return connections[i];}
+      }
+      return NULL;
+    }
+
+    //
+    NetconConnection *getConnectionByTheirFD(int fd)
+    {
+      for(int i=0; i<connections.size(); i++) {
+        if(connections[i]->their_fd == fd) { return connections[i]; }
+      }
+    }
+
+    //
+    NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb)
+    {
+      for(int i=0; i<connections.size(); i++) {
+        if(connections[i]->pcb = pcb) { return connections[i]; }
+      }
+    }
+
+
+    void close()
+    {
+      // close all connections
+      // -- pcb
+      // -- PhySocket
+    }
+  };
+} // namespace ZeroTier
 #endif
