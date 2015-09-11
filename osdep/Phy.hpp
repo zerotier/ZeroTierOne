@@ -289,7 +289,7 @@ public:
 	 * @param uptr Pointer to associate with local side of socket pair
 	 * @return PhySocket for local side of socket pair
 	 */
-	static inline PhySocket *createSocketPair(ZT_PHY_SOCKFD_TYPE &remoteSocketDescriptor,void *uptr = (void *)0)
+	inline PhySocket *createSocketPair(ZT_PHY_SOCKFD_TYPE &remoteSocketDescriptor,void *uptr = (void *)0)
 	{
 		if (_socks.size() >= ZT_PHY_MAX_SOCKETS)
 			return (PhySocket *)0;

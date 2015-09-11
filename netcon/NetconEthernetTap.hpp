@@ -44,7 +44,8 @@
 #include "../osdep/Thread.hpp"
 #include "../osdep/Phy.hpp"
 
-#include "NetconService.h"
+#include "NetconService.hpp"
+#include "NetconUtilities.hpp"
 
 namespace ZeroTier {
 
@@ -84,6 +85,15 @@ public:
 		throw();
 
 private:
+
+	// RPC handlers (from NetconIntercept)
+	void handle_bind(NetconClient *client, struct bind_st *bind_rpc);
+	void handle_listen(NetconClient *client, struct listen_st *listen_rpc);
+	void handle_retval(NetconClient *client, unsigned char* buf);
+	void handle_socket(NetconClient *client, struct socket_st* socket_rpc);
+	void handle_connect(NetconClient *client, struct connect_st* connect_rpc);
+	void handle_write(NetconConnection *c);
+
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
 	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success);
 	void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
@@ -95,10 +105,26 @@ private:
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
 	void phyOnUnixWritable(PhySocket *sock,void **uptr);
 
+	void phyOnSocketPairEndpointClose(void *sock, void **uptr);
+	void phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n);
+  void phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr);
+
+
+
 	int send_return_value(NetconClient *client, int retval);
 
 	// For LWIP Callbacks
-	static err_t nc_poll(void *arg, struct tcp_pcb *tpcb);
+	static err_t nc_poll(void* arg, struct tcp_pcb *tpcb)
+	{
+		Larg *l = (Larg*)arg;
+		NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
+		NetconEthernetTap *tap = l->tap;
+		if(c)
+			tap->handle_write(c);
+		return ERR_OK;
+	}
+
+
 	static err_t nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
 	static err_t nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 	static void nc_err(void *arg, err_t err);
@@ -107,13 +133,7 @@ private:
 	static err_t nc_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
 	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 
-	// RPC handlers (from NetconIntercept)
-	void handle_bind(NetconClient *client, struct bind_st *bind_rpc);
-	void handle_listen(NetconClient *client, struct listen_st *listen_rpc);
-	void handle_retval(NetconClient *client, unsigned char* buf);
-	void handle_socket(NetconClient *client, struct socket_st* socket_rpc);
-	void handle_connect(NetconClient *client, struct connect_st* connect_rpc);
-	void handle_write(NetconConnection *c);
+
 
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;

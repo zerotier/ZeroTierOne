@@ -29,16 +29,29 @@
 #include <string>
 
 #include "../osdep/Phy.hpp"
+#include "NetconEthernetTap.hpp"
 
 #include "Intercept.h"
 #include "LWIPStack.hpp"
 
-#ifndef _NETCON_SERVICE_H_
-#define _NETCON_SERVICE_H_
+#ifndef _NETCON_SERVICE_HPP
+#define _NETCON_SERVICE_HPP
 
 using namespace std;
 
 namespace ZeroTier {
+
+  class NetconEthernetTap;
+
+  // Helper class for passing reference to Phy to LWIP callbacks
+  class Larg
+  {
+  public:
+    NetconEthernetTap *tap;
+    PhySocket *sock;
+    Larg(NetconEthernetTap *_tap, PhySocket *_sock) : tap(_tap), sock(_sock) {}
+  };
+
   enum NetconConnectionType { RPC, BUFFER };
 
   // prototypes
@@ -103,7 +116,7 @@ namespace ZeroTier {
     NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb = pcb) { return connections[i]; }
+        if(connections[i]->pcb == pcb) { return connections[i]; }
       }
       return NULL;
     }
@@ -111,17 +124,23 @@ namespace ZeroTier {
     NetconConnection *containsPCB(struct tcp_pcb *pcb)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb = pcb) { return connections[i]; }
+        if(connections[i]->pcb == pcb) { return connections[i]; }
       }
       return NULL;
     }
 
-    void close()
+    void closeConnection(NetconConnection *c)
     {
       // close all connections
       // -- pcb
       // -- PhySocket
     }
+
+    void closeClient()
+    {
+
+    }
   };
 } // namespace ZeroTier
+
 #endif
