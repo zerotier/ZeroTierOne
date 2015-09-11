@@ -84,6 +84,8 @@ public:
 	void threadMain()
 		throw();
 
+	LWIPStack *lwipstack;
+
 private:
 
 	// LWIP callbacks
@@ -141,11 +143,11 @@ private:
 	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	NetconClient *getClientByPCB(struct tcp_pcb *pcb);
 	void closeClient(NetconClient *client);
+	void closeConnection(NetconConnection *conn);
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
-	LWIPStack *lwipstack;
 	std::vector<NetconClient*> clients;
 
 	uint64_t _nwid;

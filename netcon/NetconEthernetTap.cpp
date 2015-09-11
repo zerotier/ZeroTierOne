@@ -31,7 +31,6 @@
 #include <utility>
 #include <dlfcn.h>
 
-
 #include "NetconEthernetTap.hpp"
 
 #include "../node/Utils.hpp"
@@ -200,6 +199,14 @@ void NetconEthernetTap::closeClient(NetconClient *client)
 	client->closeClient();
 }
 
+void NetconEthernetTap::closeConnection(NetconConnection *conn)
+{
+	NetconClient *client = conn->owner;
+	_phy.close(conn->sock);
+	lwipstack->tcp_close(conn->pcb);
+	client->removeConnection(conn->sock);
+}
+
 
 void NetconEthernetTap::threadMain()
 	throw()
@@ -239,9 +246,8 @@ void NetconEthernetTap::threadMain()
 			prev_etharp_time = curr_time;
 			lwipstack->etharp_tmr();
 		}
-		_phy.poll(min_time * 1000); // conversion from usec to millisec, TODO: double check
+		_phy.poll(min_time / 1000); // conversion from usec to millisec, TODO: double check
 	}
-
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
 }
 
@@ -249,7 +255,7 @@ void NetconEthernetTap::threadMain()
 void NetconEthernetTap::phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr)
 {
 	NetconClient *client = (NetconClient*)*uptr;
-	client->closeConnection(sock);
+	closeConnection(client->getConnection(sock));
 }
 
 void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n)
@@ -268,7 +274,7 @@ void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr
 
 void NetconEthernetTap::phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr)
 {
-
+	//_phy.setNotifyWritable(sock, false);
 }
 
 // Unused -- no UDP or TCP from this thread/Phy<>
@@ -395,7 +401,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     if(c) {
       nc_close(tpcb);
       close(our_fd); // TODO: Check logic
-			c->owner->closeConnection(c);
+			tap->closeConnection(c);
     }
     else {
       // can't locate connection via (arg)
@@ -409,6 +415,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     if((n = write(our_fd, p->payload, p->len)) > 0) {
       if(n < p->len) {
         // ERROR: unable to write entire pbuf to buffer
+				//tap->_phy.setNotifyWritable(l->sock, true);
       }
       tap->lwipstack->tcp_recved(tpcb, n);
     }
@@ -427,7 +434,7 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 	NetconEthernetTap *tap = l->tap;
 	NetconConnection *c = tap->getConnectionByThisFD(tap->_phy.getDescriptor(l->sock));
   if(c) {
-    c->owner->closeConnection(c);
+    l->tap->closeConnection(c);
 		//tcp_close(c->pcb);
   }
   else {

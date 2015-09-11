@@ -129,16 +129,11 @@ namespace ZeroTier {
       return NULL;
     }
 
-    void closeConnection(NetconConnection *c)
+    void removeConnection(PhySocket *sock)
     {
-      // close all connections
-      // -- pcb
-      // -- PhySocket
-    }
-
-    void closeConnection(PhySocket *sock)
-    {
-      
+      for(size_t i=0; i<connections.size(); i++) {
+        if(connections[i]->sock == sock) { connections.erase(connections.begin() + i); }
+      }
     }
 
     void closeClient()
