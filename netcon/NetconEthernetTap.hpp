@@ -86,6 +86,15 @@ public:
 
 private:
 
+	static err_t nc_poll(void* arg, struct tcp_pcb *tpcb);
+	static err_t nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
+	static err_t nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
+	static void nc_err(void *arg, err_t err);
+	static void nc_close(struct tcp_pcb *tpcb);
+	static err_t nc_send(struct tcp_pcb *tpcb);
+	static err_t nc_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
+	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
+
 	// RPC handlers (from NetconIntercept)
 	void handle_bind(NetconClient *client, struct bind_st *bind_rpc);
 	void handle_listen(NetconClient *client, struct listen_st *listen_rpc);
@@ -105,33 +114,24 @@ private:
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
 	void phyOnUnixWritable(PhySocket *sock,void **uptr);
 
-	void phyOnSocketPairEndpointClose(void *sock, void **uptr);
+	void phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr);
 	void phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n);
   void phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr);
 
-
-
 	int send_return_value(NetconClient *client, int retval);
 
-	// For LWIP Callbacks
-	static err_t nc_poll(void* arg, struct tcp_pcb *tpcb)
+	ip_addr_t convert_ip(struct sockaddr_in * addr)
 	{
-		Larg *l = (Larg*)arg;
-		NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
-		NetconEthernetTap *tap = l->tap;
-		if(c)
-			tap->handle_write(c);
-		return ERR_OK;
+	  ip_addr_t conn_addr;
+	  struct sockaddr_in *ipv4 = addr;
+	  short a = ip4_addr1(&(ipv4->sin_addr));
+	  short b = ip4_addr2(&(ipv4->sin_addr));
+	  short c = ip4_addr3(&(ipv4->sin_addr));
+	  short d = ip4_addr4(&(ipv4->sin_addr));
+	  IP4_ADDR(&conn_addr, a,b,c,d);
+	  return conn_addr;
 	}
 
-
-	static err_t nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
-	static err_t nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
-	static void nc_err(void *arg, err_t err);
-	static void nc_close(struct tcp_pcb *tpcb);
-	static err_t nc_send(struct tcp_pcb *tpcb);
-	static err_t nc_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
-	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 
 
 

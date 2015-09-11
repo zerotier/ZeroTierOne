@@ -253,6 +253,20 @@ void NetconEthernetTap::threadMain()
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
 }
 
+
+void NetconEthernetTap::phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr)
+{
+
+}
+void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n)
+{
+
+}
+void NetconEthernetTap::phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr)
+{
+
+}
+
 // Unused -- no UDP or TCP from this thread/Phy<>
 void NetconEthernetTap::phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len) {}
 
@@ -364,7 +378,20 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 --------------------------------- LWIP callbacks -------------------------------
 ------------------------------------------------------------------------------*/
 
+err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
+{
+	Larg *l = (Larg*)arg;
+	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
+	NetconEthernetTap *tap = l->tap;
+	if(c)
+		tap->handle_write(c);
+	return ERR_OK;
+}
 
+err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
+{
+	return ERR_OK;
+}
 
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
@@ -465,6 +492,8 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 	return err;
 }
 
+
+
 /*------------------------------------------------------------------------------
 ----------------------------- RPC Handler functions ----------------------------
 ------------------------------------------------------------------------------*/
@@ -543,7 +572,7 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 {
 	struct tcp_pcb *pcb = lwipstack->tcp_new();
   if(pcb != NULL) {
-		int *their_fd;
+		int *their_fd = NULL;
 		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.createSocketPair(*their_fd, client));
 		new_conn->their_fd = *their_fd;
 		new_conn->pcb = pcb;
@@ -562,10 +591,11 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 	connaddr = (struct sockaddr_in *) &connect_rpc->__addr;
 	int conn_port = lwipstack->ntohs(connaddr->sin_port);
 	ip_addr_t conn_addr = convert_ip((struct sockaddr_in *)&connect_rpc->__addr);
+
 	NetconConnection *c = client->getConnectionByTheirFD(connect_rpc->__fd);
 
 	if(c!= NULL) {
-		lwipstack->tcp_sent(c->pcb, nc_sent); // FIXME: Move?
+		lwipstack->tcp_sent(c->pcb, NetconEthernetTap::nc_sent); // FIXME: Move?
 		lwipstack->tcp_recv(c->pcb, nc_recved);
 		lwipstack->tcp_err(c->pcb, nc_err);
 		lwipstack->tcp_poll(c->pcb, nc_poll, APPLICATION_POLL_FREQ);

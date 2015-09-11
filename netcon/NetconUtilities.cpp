@@ -9,6 +9,7 @@
 
 namespace ZeroTier
 {
+	/*
 	ip_addr_t convert_ip(struct sockaddr_in * addr)
 	{
 	  ip_addr_t conn_addr;
@@ -20,7 +21,7 @@ namespace ZeroTier
 	  IP4_ADDR(&conn_addr, a,b,c,d);
 	  return conn_addr;
 	}
-
+*/
 	ip_addr_t ip_addr_sin(register struct sockaddr_in *sin) {
 	   ip_addr_t ip;
 	   *((struct sockaddr_in*) &ip) = *sin;
@@ -28,9 +29,6 @@ namespace ZeroTier
 	}
 
 	// Functions used to pass file descriptors between processes
-
-	ssize_t sock_fd_write(int sock, int fd);
-	ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 	ssize_t sock_fd_write(int sock, int fd)
 	{
