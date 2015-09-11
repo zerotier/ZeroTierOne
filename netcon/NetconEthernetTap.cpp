@@ -334,6 +334,7 @@ void NetconEthernetTap::threadMain()
 void NetconEthernetTap::phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr)
 {
 	fprintf(stderr, "phyOnSocketPairEndpointClose\n");
+	_phy.setNotifyWritable(sock, false);
 	NetconClient *client = (NetconClient*)*uptr;
 	closeConnection(client->getConnection(sock));
 }
@@ -369,12 +370,15 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 
 void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
 {
+	fprintf(stderr, "phyOnUnixAccept\n");
 	NetconClient *newClient = new NetconClient();
-	newClient->addConnection(RPC, *uptrN);
+	newClient->rpc = newClient->addConnection(RPC, sockN);
+	*uptrN = newClient;
 }
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
+	_phy.setNotifyWritable(sock, false);
 	fprintf(stderr, "phyOnUnixClose\n");
 	closeClient(((NetconClient*)*uptr));
 }
@@ -383,6 +387,9 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 {
 	unsigned char *buf = (unsigned char*)data;
 	NetconClient *client = (NetconClient*)*uptr;
+	if(!client)
+		fprintf(stderr, "!client\n");
+
 	switch(buf[0])
 	{
 		case RPC_SOCKET:
@@ -653,11 +660,13 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 {
 	struct tcp_pcb *pcb = lwipstack->tcp_new();
   if(pcb != NULL) {
-		int *their_fd = NULL;
-		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.createSocketPair(*their_fd, client));
-		new_conn->their_fd = *their_fd;
+		int their_fd;
+		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.createSocketPair(their_fd, client));
+		new_conn->their_fd = their_fd;
 		new_conn->pcb = pcb;
-    sock_fd_write(_phy.getDescriptor(client->rpc->sock), *their_fd);
+		PhySocket *sock = client->rpc->sock;
+		int send_fd = _phy.getDescriptor(sock);
+    sock_fd_write(send_fd, their_fd);
     client->unmapped_conn = new_conn;
   }
   else {
@@ -673,10 +682,11 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 	int conn_port = lwipstack->ntohs(connaddr->sin_port);
 	ip_addr_t conn_addr = convert_ip((struct sockaddr_in *)&connect_rpc->__addr);
 
+	fprintf(stderr, "getConnectionByTheirFD(%d)\n", connect_rpc->__fd);
 	NetconConnection *c = client->getConnectionByTheirFD(connect_rpc->__fd);
 
 	if(c!= NULL) {
-		lwipstack->tcp_sent(c->pcb, NetconEthernetTap::nc_sent); // FIXME: Move?
+		lwipstack->tcp_sent(c->pcb, nc_sent); // FIXME: Move?
 		lwipstack->tcp_recv(c->pcb, nc_recved);
 		lwipstack->tcp_err(c->pcb, nc_err);
 		lwipstack->tcp_poll(c->pcb, nc_poll, APPLICATION_POLL_FREQ);
