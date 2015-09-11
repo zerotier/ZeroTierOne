@@ -195,8 +195,14 @@ NetconClient *NetconEthernetTap::getClientByPCB(struct tcp_pcb *pcb)
 
 void NetconEthernetTap::closeClient(NetconClient *client)
 {
-	// erase from clients vector
-	client->closeClient();
+	NetconConnection *temp_conn;
+	closeConnection(client->rpc);
+	for(size_t i=0; i<client->connections.size(); i++) {
+		temp_conn = client->connections[i];
+		closeConnection(client->connections[i]);
+		delete temp_conn;
+	}
+	delete client;
 }
 
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
@@ -434,8 +440,7 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 	NetconEthernetTap *tap = l->tap;
 	NetconConnection *c = tap->getConnectionByThisFD(tap->_phy.getDescriptor(l->sock));
   if(c) {
-    l->tap->closeConnection(c);
-		//tcp_close(c->pcb);
+    tap->closeConnection(c);
   }
   else {
     // can't locate connection object for PCB
