@@ -67,6 +67,7 @@ NetconEthernetTap::NetconEthernetTap(
 	_handler(handler),
 	_arg(arg),
 	_nwid(nwid),
+	_mac(mac),
 	_homePath(homePath),
 	_mtu(mtu),
 	_enabled(true),
@@ -113,6 +114,11 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 		_ips.push_back(ip);
 		std::sort(_ips.begin(),_ips.end());
 
+		if (ip.isV4()) {
+			Mutex::Lock _l2(_arp_m);
+			_arp.setLocal((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(ip)->sin_addr.s_addr),_mac);
+		}
+
 		// TODO: alloc IP in LWIP
 		//netif_set_addr(netif, ipaddr, netmask, gw);
 	}
@@ -127,6 +133,12 @@ bool NetconEthernetTap::removeIp(const InetAddress &ip)
 		return false;
 
 	_ips.erase(i);
+
+	if (ip.isV4()) {
+		Mutex::Lock _l2(_arp_m);
+		_arp.remove((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(ip)->sin_addr.s_addr));
+	}
+
 	// TODO: dealloc IP from LWIP
 
 	return true;
@@ -142,6 +154,19 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 {
 	if (!_enabled)
 		return;
+
+	if (etherType == ZT_ETHERTYPE_ARP) {
+		char arpReplyBuf[ZT_ARP_BUF_LENGTH];
+		unsigned int arpReplyLen = 0;
+		MAC arpReplyDest;
+
+		Mutex::Lock _l2(_arp_m);
+		_arp.processIncomingArp(data,len,arpReplyBuf,arpReplyLen,arpReplyDest);
+		if (arpReplyLen > 0)
+			_handler(_arg,_nwid,_mac,from,ZT_ETHERTYPE_ARP,0,arpReplyBuf,arpReplyLen);
+	} else if (etherType == ZT_ETHERTYPE_IPV4) {
+		// TODO: pass IPv4 packets into LWIP
+	}
 }
 
 std::string NetconEthernetTap::deviceName() const
@@ -155,9 +180,29 @@ void NetconEthernetTap::setFriendlyName(const char *friendlyName)
 
 void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
 {
-	// TODO: get multicast subscriptions from LWIP
-}
+	std::vector<MulticastGroup> newGroups;
+	Mutex::Lock _l(_multicastGroups_m);
 
+	// TODO: get multicast subscriptions from LWIP
+
+	std::vector<InetAddress> allIps(ips());
+	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)
+		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
+
+	std::sort(newGroups.begin(),newGroups.end());
+	std::unique(newGroups.begin(),newGroups.end());
+
+	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
+		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
+			added.push_back(*m);
+	}
+	for(std::vector<MulticastGroup>::iterator m(_multicastGroups.begin());m!=_multicastGroups.end();++m) {
+		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
+			removed.push_back(*m);
+	}
+
+	_multicastGroups.swap(newGroups);
+}
 
 NetconConnection *NetconEthernetTap::getConnectionByPCB(struct tcp_pcb *pcb)
 {

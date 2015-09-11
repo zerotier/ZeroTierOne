@@ -43,6 +43,7 @@
 #include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
 #include "../osdep/Phy.hpp"
+#include "../osdep/Arp.hpp"
 
 #include "NetconService.hpp"
 #include "NetconUtilities.hpp"
@@ -151,12 +152,16 @@ private:
 	std::vector<NetconClient*> clients;
 
 	uint64_t _nwid;
+	MAC _mac;
 	Thread _thread;
 	std::string _homePath;
 	std::string _dev; // path to Unix domain socket
 
-	std::vector<MulticastGroup> _lastMulticastGroupList;
-	Mutex _lastMulticastGroupList_m;
+	Arp _arp;
+	Mutex _arp_m;
+
+	std::vector<MulticastGroup> _multicastGroups;
+	Mutex _multicastGroups_m;
 
 	std::vector<InetAddress> _ips;
 	Mutex _ips_m;
