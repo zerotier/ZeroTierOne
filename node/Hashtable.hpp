@@ -380,6 +380,11 @@ private:
 		 * hash an integer key index in a hash table. */
 		return (unsigned long)i;
 	}
+	static inline unsigned long _hc(const uint32_t i)
+	{
+		// In the uint32_t case we use a simple multiplier for hashing to ensure coverage
+		return ((unsigned long)i * (unsigned long)2654435761);
+	}
 
 	inline void _grow()
 	{

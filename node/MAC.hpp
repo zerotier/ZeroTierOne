@@ -250,6 +250,12 @@ public:
 		_m = m._m;
 		return *this;
 	}
+	inline MAC &operator=(const uint64_t m)
+		throw()
+	{
+		_m = m;
+		return *this;
+	}
 
 	inline bool operator==(const MAC &m) const throw() { return (_m == m._m); }
 	inline bool operator!=(const MAC &m) const throw() { return (_m != m._m); }
