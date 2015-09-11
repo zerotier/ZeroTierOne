@@ -136,6 +136,11 @@ namespace ZeroTier {
       // -- PhySocket
     }
 
+    void closeConnection(PhySocket *sock)
+    {
+      
+    }
+
     void closeClient()
     {
 

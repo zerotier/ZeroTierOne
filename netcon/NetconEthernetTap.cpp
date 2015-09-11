@@ -220,14 +220,11 @@ void NetconEthernetTap::threadMain()
   unsigned long curr_time;
   unsigned long since_tcp;
   unsigned long since_etharp;
-
 	struct timeval tv;
-  //struct timeval tv_sel;
 
 	while (_run) {
 		gettimeofday(&tv, NULL);
 	  curr_time = (unsigned long)(tv.tv_sec) * 1000 + (unsigned long)(tv.tv_usec) / 1000;
-
 	  since_tcp = curr_time - prev_tcp_time;
 	  since_etharp = curr_time - prev_etharp_time;
 	  int min_time = min(since_tcp, since_etharp) * 1000; // usec
@@ -237,16 +234,11 @@ void NetconEthernetTap::threadMain()
 	    prev_tcp_time = curr_time+1;
 	    lwipstack->tcp_tmr();
 	  }
-
 		if(since_etharp > etharp_time)
 		{
 			prev_etharp_time = curr_time;
 			lwipstack->etharp_tmr();
 		}
-		// should be set every time since tv_sel is modified after each select() call
-		//tv_sel.tv_sec = 0;
-		//tv_sel.tv_usec = min_time;
-
 		_phy.poll(min_time * 1000); // conversion from usec to millisec, TODO: double check
 	}
 
@@ -256,12 +248,24 @@ void NetconEthernetTap::threadMain()
 
 void NetconEthernetTap::phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr)
 {
-
+	NetconClient *client = (NetconClient*)*uptr;
+	client->closeConnection(sock);
 }
+
 void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n)
 {
-
+	int r;
+	NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
+	if(c) {
+		if(c->idx < DEFAULT_READ_BUFFER_SIZE) {
+			if((r = read(_phy.getDescriptor(c->sock), (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
+				c->idx += r;
+				handle_write(c);
+			}
+		}
+	}
 }
+
 void NetconEthernetTap::phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr)
 {
 
@@ -290,60 +294,41 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {
 	unsigned char *buf = (unsigned char*)data;
-
-	NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
-	int r;
-	if(c->type == BUFFER) {
-		if(c) {
-			if(c->idx < DEFAULT_READ_BUFFER_SIZE) {
-				if((r = read(_phy.getDescriptor(c->sock), (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
-					c->idx += r;
-					handle_write(c);
-				}
-			}
-		}
-		else {
-			// can't find connection for this fd
-		}
-	}
-	if(c->type == RPC)
+	NetconClient *client = (NetconClient*)*uptr;
+	switch(buf[0])
 	{
-		NetconClient *client = (NetconClient*)*uptr;
-		switch(buf[0])
-		{
-			case RPC_SOCKET:
-		    struct socket_st socket_rpc;
-		    memcpy(&socket_rpc, &buf[1], sizeof(struct socket_st));
-		    client->tid = socket_rpc.__tid;
-		    handle_socket(client, &socket_rpc);
-				break;
-		  case RPC_LISTEN:
-		    struct listen_st listen_rpc;
-		    memcpy(&listen_rpc, &buf[1], sizeof(struct listen_st));
-		    client->tid = listen_rpc.__tid;
-		    handle_listen(client, &listen_rpc);
-				break;
-		  case RPC_BIND:
-		    struct bind_st bind_rpc;
-		    memcpy(&bind_rpc, &buf[1], sizeof(struct bind_st));
-		    client->tid = bind_rpc.__tid;
-		    handle_bind(client, &bind_rpc);
-				break;
-		  case RPC_KILL_INTERCEPT:
-		    client->closeClient();
-				break;
-	  	case RPC_CONNECT:
-		    struct connect_st connect_rpc;
-		    memcpy(&connect_rpc, &buf[1], sizeof(struct connect_st));
-		    client->tid = connect_rpc.__tid;
-		    handle_connect(client, &connect_rpc);
-				break;
-		  case RPC_FD_MAP_COMPLETION:
-		    handle_retval(client, buf);
-				break;
-			default:
-				break;
-		}
+		case RPC_SOCKET:
+	    struct socket_st socket_rpc;
+	    memcpy(&socket_rpc, &buf[1], sizeof(struct socket_st));
+	    client->tid = socket_rpc.__tid;
+	    handle_socket(client, &socket_rpc);
+			break;
+	  case RPC_LISTEN:
+	    struct listen_st listen_rpc;
+	    memcpy(&listen_rpc, &buf[1], sizeof(struct listen_st));
+	    client->tid = listen_rpc.__tid;
+	    handle_listen(client, &listen_rpc);
+			break;
+	  case RPC_BIND:
+	    struct bind_st bind_rpc;
+	    memcpy(&bind_rpc, &buf[1], sizeof(struct bind_st));
+	    client->tid = bind_rpc.__tid;
+	    handle_bind(client, &bind_rpc);
+			break;
+	  case RPC_KILL_INTERCEPT:
+	    client->closeClient();
+			break;
+  	case RPC_CONNECT:
+	    struct connect_st connect_rpc;
+	    memcpy(&connect_rpc, &buf[1], sizeof(struct connect_st));
+	    client->tid = connect_rpc.__tid;
+	    handle_connect(client, &connect_rpc);
+			break;
+	  case RPC_FD_MAP_COMPLETION:
+	    handle_retval(client, buf);
+			break;
+		default:
+			break;
 	}
 }
 
@@ -403,20 +388,13 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   struct pbuf* q = p;
 	int our_fd = tap->_phy.getDescriptor(c->sock);
 
-  if(c) {
-    //dwr(c->owner->tid, "nc_recved(%d)\n", (intptr_t)arg);
-  }
-  else {
-    //dwr(-1, "nc_recved(%d): unable to locate connection\n", (intptr_t)arg);
+  if(!c) {
     return ERR_OK; // ?
   }
   if(p == NULL) {
-      //dwr(c->owner->tid, "nc_recved()\n");
     if(c) {
-      //dwr(c->owner->tid, "closing connection\n");
       nc_close(tpcb);
-      close(our_fd); /* TODO: Check logic */
-      //nc_service->remove_connection(c);
+      close(our_fd); // TODO: Check logic
 			c->owner->closeConnection(c);
     }
     else {

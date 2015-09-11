@@ -86,6 +86,7 @@ public:
 
 private:
 
+	// LWIP callbacks
 	static err_t nc_poll(void* arg, struct tcp_pcb *tpcb);
 	static err_t nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
 	static err_t nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
@@ -132,20 +133,14 @@ private:
 	  return conn_addr;
 	}
 
-
-
-
 	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 
-	// client helpers
-
+	// Client helpers
 	NetconConnection *getConnectionByThisFD(int fd);
 	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	NetconClient *getClientByPCB(struct tcp_pcb *pcb);
 	void closeClient(NetconClient *client);
-
-	// Logging helper
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
