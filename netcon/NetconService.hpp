@@ -135,11 +135,6 @@ namespace ZeroTier {
         if(connections[i]->sock == sock) { connections.erase(connections.begin() + i); }
       }
     }
-
-    void closeClient()
-    {
-
-    }
   };
 } // namespace ZeroTier
 
