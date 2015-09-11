@@ -143,6 +143,7 @@ private:
 	sqlite3_stmt *_sUpdateMemberAuthorized;
 	sqlite3_stmt *_sUpdateMemberActiveBridge;
 	sqlite3_stmt *_sDeleteMember;
+	sqlite3_stmt *_sDeleteAllNetworkMembers;
 	sqlite3_stmt *_sDeleteNetwork;
 	sqlite3_stmt *_sGetGateways;
 	sqlite3_stmt *_sDeleteGateways;

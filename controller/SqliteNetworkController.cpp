@@ -203,6 +203,7 @@ SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET authorized = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberAuthorized,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"UPDATE Member SET activeBridge = ?,memberRevision = (SELECT memberRevisionCounter FROM Network WHERE id = ?) WHERE rowid = ?",-1,&_sUpdateMemberActiveBridge,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ? AND nodeId = ?",-1,&_sDeleteMember,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM Member WHERE networkId = ?",-1,&_sDeleteAllNetworkMembers,(const char **)0) != SQLITE_OK)
 
 			/* Gateway */
 			||(sqlite3_prepare_v2(_db,"SELECT \"ip\",ipVersion,metric FROM Gateway WHERE networkId = ? ORDER BY metric ASC",-1,&_sGetGateways,(const char **)0) != SQLITE_OK)
@@ -287,6 +288,7 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sUpdateMemberAuthorized);
 		sqlite3_finalize(_sUpdateMemberActiveBridge);
 		sqlite3_finalize(_sDeleteMember);
+		sqlite3_finalize(_sDeleteAllNetworkMembers);
 		sqlite3_finalize(_sDeleteNetwork);
 		sqlite3_finalize(_sGetGateways);
 		sqlite3_finalize(_sDeleteGateways);
@@ -932,7 +934,12 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 
 				sqlite3_reset(_sDeleteNetwork);
 				sqlite3_bind_text(_sDeleteNetwork,1,nwids,16,SQLITE_STATIC);
-				return ((sqlite3_step(_sDeleteNetwork) == SQLITE_DONE) ? 200 : 500);
+				if (sqlite3_step(_sDeleteNetwork) == SQLITE_DONE) {
+					sqlite3_reset(_sDeleteAllNetworkMembers);
+					sqlite3_bind_text(_sDeleteAllNetworkMembers,1,nwids,16,SQLITE_STATIC);
+					sqlite3_step(_sDeleteAllNetworkMembers);
+					return 200;
+				} else return 500;
 
 			}
 		} // else 404
