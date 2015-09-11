@@ -652,6 +652,7 @@ void NetconEthernetTap::handle_retval(NetconClient *client, unsigned char* buf)
 {
 	if(client->unmapped_conn != NULL) {
 		memcpy(&(client->unmapped_conn->their_fd), &buf[1], sizeof(int));
+		client->connections.push_back(client->unmapped_conn);
 		client->unmapped_conn = NULL;
 	}
 }
@@ -703,6 +704,7 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 			//   that's it!
 			// - Most instances of a retval for a connect() should happen
 			//   in the nc_connect() and nc_err() callbacks!
+			fprintf(stderr, "failed to connect: %s\n", lwiperror(err));
 			send_return_value(client, err);
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
