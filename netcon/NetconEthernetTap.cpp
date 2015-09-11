@@ -116,7 +116,7 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 
 		if (ip.isV4()) {
 			Mutex::Lock _l2(_arp_m);
-			_arp.setLocal((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(ip)->sin_addr.s_addr),_mac);
+			_arp.addLocal((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),_mac);
 		}
 
 		// TODO: alloc IP in LWIP
@@ -136,7 +136,7 @@ bool NetconEthernetTap::removeIp(const InetAddress &ip)
 
 	if (ip.isV4()) {
 		Mutex::Lock _l2(_arp_m);
-		_arp.remove((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(ip)->sin_addr.s_addr));
+		_arp.remove((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr));
 	}
 
 	// TODO: dealloc IP from LWIP
@@ -165,7 +165,28 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		if (arpReplyLen > 0)
 			_handler(_arg,_nwid,_mac,from,ZT_ETHERTYPE_ARP,0,arpReplyBuf,arpReplyLen);
 	} else if (etherType == ZT_ETHERTYPE_IPV4) {
-		// TODO: pass IPv4 packets into LWIP
+
+		// Pass IPV4 packets to LWIP
+
+		struct pbuf *p, *q;
+		u16_t len;
+		char *bufptr;
+
+		// allocate a pbuf chain of pbufs from the pool
+	  p = lwipstack->pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
+
+	  if(p != NULL) {
+	    // We iterate over the pbuf chain until we have read the entire packet into the pbuf.
+	    bufptr = (char*)data;
+			for(q = p; q != NULL; q = q->next) {
+	      // read data into(q->payload, q->len);
+	      memcpy(q->payload, bufptr, q->len);
+	      bufptr += q->len;
+	    }
+	    // acknowledge that packet has been read();
+	  } else {
+	    TRACE("packet dropped");
+	  }
 	}
 }
 
