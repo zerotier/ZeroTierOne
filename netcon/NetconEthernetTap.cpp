@@ -34,7 +34,7 @@
 #include "NetconEthernetTap.hpp"
 
 #include "../node/Utils.hpp"
-#include "../node/Node.hpp" // for TRACE
+#include "../node/Node.hpp" // for //TRACE
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Phy.hpp"
 
@@ -116,7 +116,7 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 
 		if (ip.isV4()) {
 			Mutex::Lock _l2(_arp_m);
-			_arp.setLocal((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(ip)->sin_addr.s_addr),_mac);
+			_arp.addLocal((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),_mac);
 		}
 
 		// TODO: alloc IP in LWIP
@@ -136,7 +136,7 @@ bool NetconEthernetTap::removeIp(const InetAddress &ip)
 
 	if (ip.isV4()) {
 		Mutex::Lock _l2(_arp_m);
-		_arp.remove((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(ip)->sin_addr.s_addr));
+		_arp.remove((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr));
 	}
 
 	// TODO: dealloc IP from LWIP
@@ -152,6 +152,7 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
+	fprintf(stderr, "put\n");
 	if (!_enabled)
 		return;
 
@@ -165,7 +166,28 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		if (arpReplyLen > 0)
 			_handler(_arg,_nwid,_mac,from,ZT_ETHERTYPE_ARP,0,arpReplyBuf,arpReplyLen);
 	} else if (etherType == ZT_ETHERTYPE_IPV4) {
-		// TODO: pass IPv4 packets into LWIP
+
+		// Pass IPV4 packets to LWIP
+
+		struct pbuf *p, *q;
+		u16_t len;
+		char *bufptr;
+
+		// allocate a pbuf chain of pbufs from the pool
+	  p = lwipstack->pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
+
+	  if(p != NULL) {
+	    // We iterate over the pbuf chain until we have read the entire packet into the pbuf.
+	    bufptr = (char*)data;
+			for(q = p; q != NULL; q = q->next) {
+	      // read data into(q->payload, q->len);
+	      memcpy(q->payload, bufptr, q->len);
+	      bufptr += q->len;
+	    }
+	    // acknowledge that packet has been read();
+	  } else {
+	    fprintf(stderr, "packet dropped\n");
+	  }
 	}
 }
 
@@ -180,6 +202,7 @@ void NetconEthernetTap::setFriendlyName(const char *friendlyName)
 
 void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
 {
+	fprintf(stderr, "scanMulticastGroups\n");
 	std::vector<MulticastGroup> newGroups;
 	Mutex::Lock _l(_multicastGroups_m);
 
@@ -241,6 +264,7 @@ NetconClient *NetconEthernetTap::getClientByPCB(struct tcp_pcb *pcb)
 
 void NetconEthernetTap::closeClient(NetconClient *client)
 {
+	fprintf(stderr, "closeClient\n");
 	NetconConnection *temp_conn;
 	closeConnection(client->rpc);
 	for(size_t i=0; i<client->connections.size(); i++) {
@@ -253,6 +277,7 @@ void NetconEthernetTap::closeClient(NetconClient *client)
 
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
 {
+	fprintf(stderr, "closeConnection\n");
 	NetconClient *client = conn->owner;
 	_phy.close(conn->sock);
 	lwipstack->tcp_close(conn->pcb);
@@ -263,7 +288,7 @@ void NetconEthernetTap::closeConnection(NetconConnection *conn)
 void NetconEthernetTap::threadMain()
 	throw()
 {
-	TRACE("starting threadMain()");
+	fprintf(stderr, "starting threadMain()\n");
 	static ip_addr_t ipaddr, netmask, gw;
 	char ip_str[16] = {0}, nm_str[16] = {0}, gw_str[16] = {0};
   IP4_ADDR(&gw, 192,168,0,1);
@@ -299,6 +324,7 @@ void NetconEthernetTap::threadMain()
 			prev_etharp_time = curr_time;
 			lwipstack->etharp_tmr();
 		}
+		fprintf(stderr, "_run\n");
 		_phy.poll(min_time / 1000); // conversion from usec to millisec, TODO: double check
 	}
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
@@ -307,12 +333,15 @@ void NetconEthernetTap::threadMain()
 
 void NetconEthernetTap::phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr)
 {
+	fprintf(stderr, "phyOnSocketPairEndpointClose\n");
+	_phy.setNotifyWritable(sock, false);
 	NetconClient *client = (NetconClient*)*uptr;
 	closeConnection(client->getConnection(sock));
 }
 
 void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n)
 {
+	fprintf(stderr, "phyOnSocketPairEndpointData\n");
 	int r;
 	NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
 	if(c) {
@@ -341,12 +370,16 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 
 void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
 {
+	fprintf(stderr, "phyOnUnixAccept\n");
 	NetconClient *newClient = new NetconClient();
-	newClient->addConnection(RPC, *uptrN);
+	newClient->rpc = newClient->addConnection(RPC, sockN);
+	*uptrN = newClient;
 }
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
+	_phy.setNotifyWritable(sock, false);
+	fprintf(stderr, "phyOnUnixClose\n");
 	closeClient(((NetconClient*)*uptr));
 }
 
@@ -354,42 +387,45 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 {
 	unsigned char *buf = (unsigned char*)data;
 	NetconClient *client = (NetconClient*)*uptr;
+	if(!client)
+		fprintf(stderr, "!client\n");
+
 	switch(buf[0])
 	{
 		case RPC_SOCKET:
-			TRACE("RPC_SOCKET");
+			fprintf(stderr, "RPC_SOCKET\n");
 	    struct socket_st socket_rpc;
 	    memcpy(&socket_rpc, &buf[1], sizeof(struct socket_st));
 	    client->tid = socket_rpc.__tid;
 	    handle_socket(client, &socket_rpc);
 			break;
 	  case RPC_LISTEN:
-			TRACE("RPC_LISTEN");
+			fprintf(stderr, "RPC_LISTEN\n");
 	    struct listen_st listen_rpc;
 	    memcpy(&listen_rpc, &buf[1], sizeof(struct listen_st));
 	    client->tid = listen_rpc.__tid;
 	    handle_listen(client, &listen_rpc);
 			break;
 	  case RPC_BIND:
-			TRACE("RPC_BIND");
+			fprintf(stderr, "RPC_BIND\n");
 	    struct bind_st bind_rpc;
 	    memcpy(&bind_rpc, &buf[1], sizeof(struct bind_st));
 	    client->tid = bind_rpc.__tid;
 	    handle_bind(client, &bind_rpc);
 			break;
 	  case RPC_KILL_INTERCEPT:
-			TRACE("RPC_KILL_INTERCEPT");
+			fprintf(stderr, "RPC_KILL_INTERCEPT\n");
 	    closeClient(client);
 			break;
   	case RPC_CONNECT:
-			TRACE("RPC_CONNECT");
+			fprintf(stderr, "RPC_CONNECT\n");
 	    struct connect_st connect_rpc;
 	    memcpy(&connect_rpc, &buf[1], sizeof(struct connect_st));
 	    client->tid = connect_rpc.__tid;
 	    handle_connect(client, &connect_rpc);
 			break;
 	  case RPC_FD_MAP_COMPLETION:
-			TRACE("RPC_FD_MAP_COMPLETION");
+			fprintf(stderr, "RPC_FD_MAP_COMPLETION\n");
 	    handle_retval(client, buf);
 			break;
 		default:
@@ -403,8 +439,9 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 
 int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 {
+	fprintf(stderr, "send_return_value\n");
   if(!client->waiting_for_retval){
-    TRACE("intercept isn't waiting for return value. Why are we here?");
+    fprintf(stderr, "intercept isn't waiting for return value. Why are we here?\n");
     return 0;
   }
   char retmsg[4];
@@ -418,7 +455,7 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
     client->waiting_for_retval = false;
   }
   else {
-    TRACE("unable to send return value to the intercept");
+    fprintf(stderr, "unable to send return value to the intercept\n");
 		closeClient(client);
   }
   return n;
@@ -430,7 +467,7 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
-	TRACE("nc_poll");
+	fprintf(stderr, "nc_poll\n");
 	Larg *l = (Larg*)arg;
 	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
 	NetconEthernetTap *tap = l->tap;
@@ -441,13 +478,13 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 
 err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 {
-	TRACE("nc_accept");
+	fprintf(stderr, "nc_accept\n");
 	return ERR_OK;
 }
 
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
-	TRACE("nc_recved");
+	fprintf(stderr, "nc_recved\n");
 	Larg *l = (Larg*)arg;
 	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
 	NetconEthernetTap *tap = l->tap;
@@ -466,7 +503,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 			tap->closeConnection(c);
     }
     else {
-      TRACE("can't locate connection via (arg)");
+      fprintf(stderr, "can't locate connection via (arg)\n");
     }
     return err;
   }
@@ -476,13 +513,13 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
       break; // ?
     if((n = write(our_fd, p->payload, p->len)) > 0) {
       if(n < p->len) {
-        TRACE("ERROR: unable to write entire pbuf to buffer");
+        fprintf(stderr, "ERROR: unable to write entire pbuf to buffer\n");
 				//tap->_phy.setNotifyWritable(l->sock, true);
       }
       tap->lwipstack->tcp_recved(tpcb, n);
     }
     else {
-      TRACE("Error: No data written to intercept buffer");
+      fprintf(stderr, "Error: No data written to intercept buffer\n");
     }
     p = p->next;
   }
@@ -492,7 +529,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 
 void NetconEthernetTap::nc_err(void *arg, err_t err)
 {
-	TRACE("nc_err");
+	fprintf(stderr, "nc_err\n");
 	Larg *l = (Larg*)arg;
 	NetconEthernetTap *tap = l->tap;
 	NetconConnection *c = tap->getConnectionByThisFD(tap->_phy.getDescriptor(l->sock));
@@ -500,13 +537,13 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
     tap->closeConnection(c);
   }
   else {
-    TRACE("can't locate connection object for PCB");
+    fprintf(stderr, "can't locate connection object for PCB\n");
   }
 }
 
 void NetconEthernetTap::nc_close(struct tcp_pcb* tpcb)
 {
-	TRACE("nc_close");
+	fprintf(stderr, "nc_close\n");
 	//closeConnection(getConnectionByPCB(tpcb));
 	/*
   lwipstack->tcp_arg(tpcb, NULL);
@@ -520,19 +557,19 @@ void NetconEthernetTap::nc_close(struct tcp_pcb* tpcb)
 
 err_t NetconEthernetTap::nc_send(struct tcp_pcb *tpcb)
 {
-	TRACE("nc_send");
+	fprintf(stderr, "nc_send\n");
 	return ERR_OK;
 }
 
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
-	TRACE("nc_sent");
+	fprintf(stderr, "nc_sent\n");
 	return len;
 }
 
 err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
-	TRACE("nc_connected");
+	fprintf(stderr, "nc_connected\n");
 	Larg *l = (Larg*)arg;
 	NetconEthernetTap *tap = l->tap;
 	for(size_t i=0; i<tap->clients.size(); i++) {
@@ -572,18 +609,18 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
     if(c->pcb->state == CLOSED){
       int err = lwipstack->tcp_bind(c->pcb, &conn_addr, conn_port);
       if(err != ERR_OK) {
-        TRACE("error while binding to addr/port");
+        fprintf(stderr, "error while binding to addr/port\n");
       }
       else {
-        TRACE("bind successful");
+        fprintf(stderr, "bind successful\n");
       }
     }
     else {
-      TRACE("PCB not in CLOSED state. Ignoring BIND request.");
+      fprintf(stderr, "PCB not in CLOSED state. Ignoring BIND request.\n");
     }
   }
   else {
-    TRACE("can't locate connection for PCB");
+    fprintf(stderr, "can't locate connection for PCB\n");
   }
 }
 
@@ -592,7 +629,7 @@ void NetconEthernetTap::handle_listen(NetconClient *client, struct listen_st *li
 	NetconConnection *c = client->getConnectionByTheirFD(listen_rpc->sockfd);
   if(c) {
     if(c->pcb->state == LISTEN) {
-      TRACE("PCB is already in listening state.");
+      fprintf(stderr, "PCB is already in listening state.\n");
       return;
     }
     struct tcp_pcb* listening_pcb = lwipstack->tcp_listen(c->pcb);
@@ -603,11 +640,11 @@ void NetconEthernetTap::handle_listen(NetconClient *client, struct listen_st *li
       client->waiting_for_retval=true;
     }
     else {
-			TRACE("unable to allocate memory for new listening PCB");
+			fprintf(stderr, "unable to allocate memory for new listening PCB\n");
     }
   }
   else {
-    TRACE("can't locate connection for PCB");
+    fprintf(stderr, "can't locate connection for PCB\n");
   }
 }
 
@@ -615,6 +652,7 @@ void NetconEthernetTap::handle_retval(NetconClient *client, unsigned char* buf)
 {
 	if(client->unmapped_conn != NULL) {
 		memcpy(&(client->unmapped_conn->their_fd), &buf[1], sizeof(int));
+		client->connections.push_back(client->unmapped_conn);
 		client->unmapped_conn = NULL;
 	}
 }
@@ -623,15 +661,17 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 {
 	struct tcp_pcb *pcb = lwipstack->tcp_new();
   if(pcb != NULL) {
-		int *their_fd = NULL;
-		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.createSocketPair(*their_fd, client));
-		new_conn->their_fd = *their_fd;
+		int their_fd;
+		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.createSocketPair(their_fd, client));
+		new_conn->their_fd = their_fd;
 		new_conn->pcb = pcb;
-    sock_fd_write(_phy.getDescriptor(client->rpc->sock), *their_fd);
+		PhySocket *sock = client->rpc->sock;
+		int send_fd = _phy.getDescriptor(sock);
+    sock_fd_write(send_fd, their_fd);
     client->unmapped_conn = new_conn;
   }
   else {
-    TRACE("Memory not available for new PCB");
+    fprintf(stderr, "Memory not available for new PCB\n");
   }
 }
 
@@ -643,10 +683,11 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 	int conn_port = lwipstack->ntohs(connaddr->sin_port);
 	ip_addr_t conn_addr = convert_ip((struct sockaddr_in *)&connect_rpc->__addr);
 
+	fprintf(stderr, "getConnectionByTheirFD(%d)\n", connect_rpc->__fd);
 	NetconConnection *c = client->getConnectionByTheirFD(connect_rpc->__fd);
 
 	if(c!= NULL) {
-		lwipstack->tcp_sent(c->pcb, NetconEthernetTap::nc_sent); // FIXME: Move?
+		lwipstack->tcp_sent(c->pcb, nc_sent); // FIXME: Move?
 		lwipstack->tcp_recv(c->pcb, nc_recved);
 		lwipstack->tcp_err(c->pcb, nc_err);
 		lwipstack->tcp_poll(c->pcb, nc_poll, APPLICATION_POLL_FREQ);
@@ -663,13 +704,14 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 			//   that's it!
 			// - Most instances of a retval for a connect() should happen
 			//   in the nc_connect() and nc_err() callbacks!
+			fprintf(stderr, "failed to connect: %s\n", lwiperror(err));
 			send_return_value(client, err);
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
 		client->waiting_for_retval=true;
 	}
 	else {
-		TRACE("could not locate PCB based on their fd");
+		fprintf(stderr, "could not locate PCB based on their fd\n");
 	}
 }
 
@@ -690,7 +732,7 @@ void NetconEthernetTap::handle_write(NetconConnection *c)
 		if(write_allowance > 0) {
 			int err = lwipstack->tcp_write(c->pcb, &c->buf, write_allowance, TCP_WRITE_FLAG_COPY);
 			if(err != ERR_OK) {
-				TRACE("error while writing to PCB");
+				fprintf(stderr, "error while writing to PCB\n");
 				return;
 			}
 			else {
@@ -704,12 +746,12 @@ void NetconEthernetTap::handle_write(NetconConnection *c)
 			}
 		}
 		else {
-			TRACE("lwIP stack full");
+			fprintf(stderr, "lwIP stack full\n");
 			return;
 		}
 	}
 	else {
-		TRACE("could not locate connection for this fd");
+		fprintf(stderr, "could not locate connection for this fd\n");
 	}
 }
 

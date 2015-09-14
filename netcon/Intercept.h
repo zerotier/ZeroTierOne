@@ -175,7 +175,7 @@ struct shutdown_st
 
 
 /* LWIP error beautification */
-/*
+
 const char *lwiperror(int n)
 {
 	switch(n)
@@ -216,6 +216,6 @@ const char *lwiperror(int n)
 			return "UNKNOWN_RET_VAL";
 	}
 }
-*/
+
 
 #endif

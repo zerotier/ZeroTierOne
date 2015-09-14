@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
+#include "lwip/ip.h"
+#include "lwip/ip_addr.h"
+#include "lwip/ip_frag.h"
+
 #ifndef _NETCON_UTILITIES_CPP
 #define _NETCON_UTILITIES_CPP
 
@@ -22,12 +26,14 @@ namespace ZeroTier
 	  return conn_addr;
 	}
 */
+
+/*
 	ip_addr_t ip_addr_sin(register struct sockaddr_in *sin) {
 	   ip_addr_t ip;
 	   *((struct sockaddr_in*) &ip) = *sin;
 	   return ip;
 	}
-
+*/
 	// Functions used to pass file descriptors between processes
 
 	ssize_t sock_fd_write(int sock, int fd)
