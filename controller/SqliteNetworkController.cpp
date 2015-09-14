@@ -1026,7 +1026,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 										testFields.push_back('"');
 									}
 									testFields.append("\n\t\t}\n");
-									testFields.append("\t}\n");
+									testFields.append("\t},\n");
 								}
 							}
 
