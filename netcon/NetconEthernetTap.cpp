@@ -34,7 +34,6 @@
 #include "NetconEthernetTap.hpp"
 
 #include "../node/Utils.hpp"
-#include "../node/Node.hpp" // for //TRACE
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Phy.hpp"
 
@@ -43,6 +42,7 @@
 #include "lwip/ip.h"
 #include "lwip/ip_addr.h"
 #include "lwip/ip_frag.h"
+#include "lwip/tcp.h"
 
 #include "LWIPStack.hpp"
 #include "NetconService.hpp"
@@ -52,6 +52,7 @@
 #define APPLICATION_POLL_FREQ 1
 
 namespace ZeroTier {
+
 
 NetconEthernetTap::NetconEthernetTap(
 	const char *homePath,
@@ -120,7 +121,7 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 		}
 
 		// TODO: alloc IP in LWIP
-		//netif_set_addr(netif, ipaddr, netmask, gw);
+		fprintf(stderr, "ASSIGNING IP = %s\n", ip.toIpString().c_str());
 	}
 	return true; // TODO: what is exapected?
 }
@@ -152,7 +153,6 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	fprintf(stderr, "put\n");
 	if (!_enabled)
 		return;
 
@@ -164,30 +164,48 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		Mutex::Lock _l2(_arp_m);
 		_arp.processIncomingArp(data,len,arpReplyBuf,arpReplyLen,arpReplyDest);
 		if (arpReplyLen > 0)
+			fprintf(stderr, "ARP reply generated\n");
 			_handler(_arg,_nwid,_mac,from,ZT_ETHERTYPE_ARP,0,arpReplyBuf,arpReplyLen);
-	} else if (etherType == ZT_ETHERTYPE_IPV4) {
+	}
+	else if (etherType == ZT_ETHERTYPE_IPV4) {
 
-		// Pass IPV4 packets to LWIP
-
+		// Copy data into a pbuf chain
 		struct pbuf *p, *q;
-		u16_t len;
-		char *bufptr;
+	  //u16_t len;
+	  char buf[1514];
+	  char *bufptr;
 
-		// allocate a pbuf chain of pbufs from the pool
-	  p = lwipstack->pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
+		// We allocate a pbuf chain of pbufs from the pool.
+		p = lwipstack->pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
 
-	  if(p != NULL) {
-	    // We iterate over the pbuf chain until we have read the entire packet into the pbuf.
-	    bufptr = (char*)data;
+		if(p != NULL) {
+			/* We iterate over the pbuf chain until we have read the entire
+				 packet into the pbuf. */
+			bufptr = &buf[0];
 			for(q = p; q != NULL; q = q->next) {
-	      // read data into(q->payload, q->len);
-	      memcpy(q->payload, bufptr, q->len);
-	      bufptr += q->len;
-	    }
-	    // acknowledge that packet has been read();
-	  } else {
-	    fprintf(stderr, "packet dropped\n");
-	  }
+				/* Read enough bytes to fill this pbuf in the chain. The
+					 available data in the pbuf is given by the q->len
+					 variable. */
+				/* read data into(q->payload, q->len); */
+				memcpy(q->payload, bufptr, q->len);
+				bufptr += q->len;
+			}
+			/* acknowledge that packet has been read(); */
+		} else {
+			/* drop packet(); */
+		}
+
+		// Assemble ethernet header and call netif->output
+		struct eth_hdr *ethhdr;
+		ethhdr = (struct eth_hdr *)p->payload;
+		from.copyTo(ethhdr->src.addr, 6);
+		_mac.copyTo(ethhdr->dest.addr, 6);
+		ethhdr->type = ZT_ETHERTYPE_IPV4;
+
+		if(interface.input(p, &interface) != ERR_OK)
+		{
+			fprintf(stderr, "IP error (netif->input)\n");
+		}
 	}
 }
 
@@ -285,18 +303,35 @@ void NetconEthernetTap::closeConnection(NetconConnection *conn)
 }
 
 
+/*------------------------------------------------------------------------------
+------------------------ low-level Interface functions -------------------------
+------------------------------------------------------------------------------*/
+
+
 void NetconEthernetTap::threadMain()
 	throw()
 {
 	fprintf(stderr, "starting threadMain()\n");
+
 	static ip_addr_t ipaddr, netmask, gw;
 	char ip_str[16] = {0}, nm_str[16] = {0}, gw_str[16] = {0};
-  IP4_ADDR(&gw, 192,168,0,1);
-  IP4_ADDR(&netmask, 255,255,255,0);
-  IP4_ADDR(&ipaddr, 192,168,0,2);
+
+	if(_ips.size() == 0) {
+		fprintf(stderr, "no IP assigned. Exiting.\n");
+		exit(0);
+	}
+
+	IP4_ADDR(&gw,0,0,0,0);
+	ipaddr.addr = *((u32_t *)_ips[0].rawIpData());
+	netmask.addr = *((u32_t *)_ips[0].netmask().rawIpData());
+
 	strncpy(ip_str, lwipstack->ipaddr_ntoa(&ipaddr), sizeof(ip_str));
   strncpy(nm_str, lwipstack->ipaddr_ntoa(&netmask), sizeof(nm_str));
   strncpy(gw_str, lwipstack->ipaddr_ntoa(&gw), sizeof(gw_str));
+
+	fprintf(stderr, "ip_str = %s\n", ip_str);
+	fprintf(stderr, "nm_str = %s\n", nm_str);
+	fprintf(stderr, "gw_str = %s\n", gw_str);
 
 	unsigned long tcp_time = ARP_TMR_INTERVAL / 5000;
   unsigned long etharp_time = IP_TMR_INTERVAL / 1000;
@@ -306,6 +341,37 @@ void NetconEthernetTap::threadMain()
   unsigned long since_tcp;
   unsigned long since_etharp;
 	struct timeval tv;
+
+	/* set up the faux-netif for LWIP's sake */
+	fprintf(stderr, "netif_add\n");
+	lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->ethernet_input);
+
+
+	fprintf(stderr, "initializing interface\n");
+	struct tapif *tapif;
+  tapif = (struct tapif *)mem_malloc(sizeof(struct tapif));
+  if (!tapif) {
+  	//return ERR_MEM;
+  }
+  //interface.state = tapif;
+  interface.state = this;
+	interface.name[0] = 't';
+  interface.name[1] = 'p';
+  interface.output = lwipstack->etharp_output;
+  interface.linkoutput = low_level_output;
+  interface.mtu = 1500;
+  /* hardware address length */
+  interface.hwaddr_len = 6;
+  tapif->ethaddr = (struct eth_addr *)&(interface.hwaddr[0]);
+  interface.flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
+  low_level_init(&interface);
+
+	fprintf(stderr, "netif_set_default\n");
+  lwipstack->netif_set_default(&interface);
+	fprintf(stderr, "netif_set_up\n");
+  lwipstack->netif_set_up(&interface);
+	fprintf(stderr, "complete\n");
+
 
 	while (_run) {
 		gettimeofday(&tv, NULL);
@@ -325,7 +391,8 @@ void NetconEthernetTap::threadMain()
 			lwipstack->etharp_tmr();
 		}
 		fprintf(stderr, "_run\n");
-		_phy.poll(min_time / 1000); // conversion from usec to millisec, TODO: double check
+		_phy.poll(100); // conversion from usec to millisec, TODO: double check
+
 	}
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
 }
@@ -704,7 +771,7 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 			//   that's it!
 			// - Most instances of a retval for a connect() should happen
 			//   in the nc_connect() and nc_err() callbacks!
-			fprintf(stderr, "failed to connect: %s\n", lwiperror(err));
+			//fprintf(stderr, "failed to connect: %s\n", lwiperror(err));
 			send_return_value(client, err);
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
@@ -717,6 +784,7 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 
 void NetconEthernetTap::handle_write(NetconConnection *c)
 {
+	fprintf(stderr, "handle_write");
 	if(c) {
 		int sndbuf = c->pcb->snd_buf;
 		float avail = (float)sndbuf;

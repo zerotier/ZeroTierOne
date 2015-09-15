@@ -48,6 +48,14 @@
 #include "NetconService.hpp"
 #include "NetconUtilities.hpp"
 
+#include "netif/etharp.h"
+
+struct tapif {
+  struct eth_addr *ethaddr;
+  /* Add whatever per-interface state that is needed here. */
+  int fd;
+};
+
 namespace ZeroTier {
 
 class NetconEthernetTap;
@@ -86,6 +94,9 @@ public:
 		throw();
 
 	LWIPStack *lwipstack;
+  uint64_t _nwid;
+  void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
+  void *_arg;
 
 private:
 
@@ -136,9 +147,6 @@ private:
 	  return conn_addr;
 	}
 
-	void (*_handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
-	void *_arg;
-
 	// Client helpers
 	NetconConnection *getConnectionByThisFD(int fd);
 	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
@@ -146,12 +154,14 @@ private:
 	void closeClient(NetconClient *client);
 	void closeConnection(NetconConnection *conn);
 
+
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
 	std::vector<NetconClient*> clients;
+	netif interface;
 
-	uint64_t _nwid;
+
 	MAC _mac;
 	Thread _thread;
 	std::string _homePath;
@@ -170,6 +180,66 @@ private:
 	volatile bool _enabled;
 	volatile bool _run;
 };
+
+
+/*------------------------------------------------------------------------------
+------------------------ low-level Interface functions -------------------------
+------------------------------------------------------------------------------*/
+
+  static void low_level_init(struct netif *netif)
+  {
+  }
+
+  static err_t tapif_init(struct netif *netif)
+  {
+    return ERR_OK;
+  }
+
+  static err_t low_level_output(struct netif *netif, struct pbuf *p)
+  {
+    struct pbuf *q;
+    char buf[1514];
+    char *bufptr;
+    //struct tapif *tapif;
+    int tot_len = 0;
+
+    //tapif = (struct tapif *)netif->state;
+    ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
+
+  #if 0
+      if(((double)rand()/(double)RAND_MAX) < 0.2) {
+      printf("drop output\n");
+      return ERR_OK;
+      }
+  #endif
+    /* initiate transfer(); */
+
+    bufptr = &buf[0];
+
+    for(q = p; q != NULL; q = q->next) {
+      /* Send the data from the pbuf to the interface, one pbuf at a
+         time. The size of the data in each pbuf is kept in the ->len
+         variable. */
+      /* send data from(q->payload, q->len); */
+      memcpy(bufptr, q->payload, q->len);
+      bufptr += q->len;
+      tot_len += q->len;
+    }
+
+    // signal that packet should be sent();
+    // Split ethernet header and feed into handler
+    struct eth_hdr *ethhdr;
+    ethhdr = (struct eth_hdr *)p->payload;
+
+    ZeroTier::MAC src_mac;
+    ZeroTier::MAC dest_mac;
+
+    src_mac.setTo(ethhdr->src.addr, 6);
+    dest_mac.setTo(ethhdr->dest.addr, 6);
+
+    tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,ZT_ETHERTYPE_IPV4,0,buf,p->tot_len);
+    return ERR_OK;
+  }
 
 } // namespace ZeroTier
 

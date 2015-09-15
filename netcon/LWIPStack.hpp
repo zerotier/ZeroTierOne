@@ -29,6 +29,7 @@
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
 #include "lwip/ip_addr.h"
+#include "lwip/netif.h"
 
 /*
 #include "lwip/timers.h"
@@ -78,9 +79,6 @@ typedef ip_addr ip_addr_t;
 #define TCP_LISTEN_SIG struct tcp_pcb * pcb
 #define TCP_LISTEN_WITH_BACKLOG_SIG struct tcp_pcb * pcb, u8_t backlog
 #define TCP_BIND_SIG struct tcp_pcb * pcb, struct ip_addr * ipaddr, u16_t port
-//#define NETIF_SET_DEFAULT_SIG struct netif *netif
-//#define NETIF_ADD_SIG struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask, ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input
-//#define NETIF_SET_UP_SIG struct netif *netif
 //#define TAPIF_INIT_SIG struct netif *netif
 //#define TAPIF_INPUT_SIG LWIPStack* ls, struct netif *netif
 #define PBUF_FREE_SIG struct pbuf *p
@@ -90,6 +88,13 @@ typedef ip_addr ip_addr_t;
 #define IPADDR_NTOA_SIG const ip_addr_t *addr
 #define ETHARP_OUTPUT_SIG struct netif *netif, struct pbuf *q, ip_addr_t *ipaddr
 #define ETHERNET_INPUT_SIG struct pbuf *p, struct netif *netif
+
+#define TCP_INPUT_SIG struct pbuf *p, struct netif *inp
+#define IP_INPUT_SIG struct pbuf *p, struct netif *inp
+
+#define NETIF_SET_DEFAULT_SIG struct netif *netif
+#define NETIF_ADD_SIG struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask, ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input
+#define NETIF_SET_UP_SIG struct netif *netif
 
 
 
@@ -116,9 +121,6 @@ public:
   struct tcp_pcb * (*tcp_listen)(TCP_LISTEN_SIG);
   struct tcp_pcb * (*tcp_listen_with_backlog)(TCP_LISTEN_WITH_BACKLOG_SIG);
   err_t (*tcp_bind)(TCP_BIND_SIG);
-  //void (*netif_set_default)(NETIF_SET_DEFAULT_SIG);
-  //struct netif* (*netif_add)(NETIF_ADD_SIG);
-  //void (*netif_set_up)(NETIF_SET_UP_SIG);
   void (*etharp_tmr)(void);
   void (*tcp_tmr)(void);
   //err_t (*tapif_init)(TAPIF_INIT_SIG);
@@ -130,6 +132,12 @@ public:
   char* (*ipaddr_ntoa)(IPADDR_NTOA_SIG);
   err_t (*etharp_output)(ETHARP_OUTPUT_SIG);
   err_t (*ethernet_input)(ETHERNET_INPUT_SIG);
+  void (*tcp_input)(TCP_INPUT_SIG);
+  err_t (*ip_input)(IP_INPUT_SIG);
+
+  void (*netif_set_default)(NETIF_SET_DEFAULT_SIG);
+  struct netif * (*netif_add)(NETIF_ADD_SIG);
+  void (*netif_set_up)(NETIF_SET_UP_SIG);
 
 
 
@@ -158,9 +166,6 @@ public:
     tcp_listen = (struct tcp_pcb*(*)(TCP_LISTEN_SIG))dlsym(libref, "tcp_listen");
     tcp_listen_with_backlog = (struct tcp_pcb*(*)(TCP_LISTEN_WITH_BACKLOG_SIG))dlsym(libref, "tcp_listen_with_backlog");
     tcp_bind = (err_t(*)(TCP_BIND_SIG))dlsym(libref, "tcp_bind");
-    //netif_set_default = (void(*)(NETIF_SET_DEFAULT_SIG))dlsym(libref, "netif_set_default");
-    //netif_add = (struct netif*(*)(NETIF_ADD_SIG))dlsym(libref, "netif_add");
-    //netif_set_up = (void(*)(NETIF_SET_UP_SIG))dlsym(libref, "netif_set_up");
     etharp_tmr = (void(*)(void))dlsym(libref, "etharp_tmr");
     tcp_tmr = (void(*)(void))dlsym(libref, "tcp_tmr");
     //tapif_init = (err_t(*)(TAPIF_INIT_SIG))dlsym(libref, "tapif_init");
@@ -172,6 +177,13 @@ public:
     ipaddr_ntoa = (char*(*)(IPADDR_NTOA_SIG))dlsym(libref, "ipaddr_ntoa");
     etharp_output = (err_t(*)(ETHARP_OUTPUT_SIG))dlsym(libref, "etharp_output");
     ethernet_input = (err_t(*)(ETHERNET_INPUT_SIG))dlsym(libref, "ethernet_input");
+
+    tcp_input = (void(*)(TCP_INPUT_SIG))dlsym(libref, "tcp_input");
+    ip_input = (err_t(*)(IP_INPUT_SIG))dlsym(libref, "ip_input");
+
+    netif_set_default = (void(*)(NETIF_SET_DEFAULT_SIG))dlsym(libref, "netif_set_default");
+    netif_add = (struct netif*(*)(NETIF_ADD_SIG))dlsym(libref, "netif_add");
+    netif_set_up = (void(*)(NETIF_SET_UP_SIG))dlsym(libref, "netif_set_up");
   }
 };
 
