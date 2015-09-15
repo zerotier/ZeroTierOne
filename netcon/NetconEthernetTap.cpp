@@ -120,10 +120,28 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 			_arp.addLocal((uint32_t)(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),_mac);
 		}
 
-		// TODO: alloc IP in LWIP
-		fprintf(stderr, "ASSIGNING IP = %s\n", ip.toIpString().c_str());
+		// Set IP
+		static ip_addr_t ipaddr, netmask, gw;
+		IP4_ADDR(&gw,0,0,0,0);
+		ipaddr.addr = *((u32_t *)_ips[0].rawIpData());
+		netmask.addr = *((u32_t *)_ips[0].netmask().rawIpData());
+
+		// Set up the lwip-netif for LWIP's sake
+		fprintf(stderr, "initializing interface\n");
+		lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->ethernet_input);
+		interface.state = this;
+		interface.output = lwipstack->etharp_output;
+		_mac.copyTo(interface.hwaddr, 6);
+		interface.mtu = _mtu;
+		interface.name[0] = 't';
+		interface.name[1] = 'p';
+		interface.linkoutput = low_level_output;
+		interface.hwaddr_len = 6;
+		interface.flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
+		lwipstack->netif_set_default(&interface);
+		lwipstack->netif_set_up(&interface);
 	}
-	return true; // TODO: what is exapected?
+	return true;
 }
 
 bool NetconEthernetTap::removeIp(const InetAddress &ip)
@@ -304,26 +322,6 @@ void NetconEthernetTap::closeConnection(NetconConnection *conn)
 void NetconEthernetTap::threadMain()
 	throw()
 {
-	// Set up IPs (will be moved into add/removeIP later)
-	static ip_addr_t ipaddr, netmask, gw;
-
-	if(_ips.size() == 0) {
-		fprintf(stderr, "no IP assigned. Exiting.\n");
-		exit(0);
-	}
-
-	IP4_ADDR(&gw,0,0,0,0);
-	ipaddr.addr = *((u32_t *)_ips[0].rawIpData());
-	netmask.addr = *((u32_t *)_ips[0].netmask().rawIpData());
-
-	//char ip_str[16] = {0}, nm_str[16] = {0}, gw_str[16] = {0};
-	//strncpy(ip_str, lwipstack->ipaddr_ntoa(&ipaddr), sizeof(ip_str));
-  //strncpy(nm_str, lwipstack->ipaddr_ntoa(&netmask), sizeof(nm_str));
-  //strncpy(gw_str, lwipstack->ipaddr_ntoa(&gw), sizeof(gw_str));
-	//fprintf(stderr, "ip_str = %s\n", ip_str);
-	//fprintf(stderr, "nm_str = %s\n", nm_str);
-	//fprintf(stderr, "gw_str = %s\n", gw_str);
-
 	unsigned long tcp_time = ARP_TMR_INTERVAL / 5000;
   unsigned long etharp_time = IP_TMR_INTERVAL / 1000;
   unsigned long prev_tcp_time = 0;
@@ -332,21 +330,6 @@ void NetconEthernetTap::threadMain()
   unsigned long since_tcp;
   unsigned long since_etharp;
 	struct timeval tv;
-
-	// set up the lwip-netif for LWIP's sake
-	fprintf(stderr, "initializing interface\n");
-	lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->ethernet_input);
-  interface.state = this;
-	interface.output = lwipstack->etharp_output;
-  _mac.copyTo(interface.hwaddr, 6);
-	interface.mtu = _mtu;
-	interface.name[0] = 't';
-  interface.name[1] = 'p';
-  interface.linkoutput = low_level_output;
-  interface.hwaddr_len = 6;
-  interface.flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
-  lwipstack->netif_set_default(&interface);
-  lwipstack->netif_set_up(&interface);
 
 	// Main timer loop
 	while (_run) {
