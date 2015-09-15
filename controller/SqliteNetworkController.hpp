@@ -40,6 +40,9 @@
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
 
+// Number of in-memory last log entries to maintain per user
+#define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
+
 namespace ZeroTier {
 
 class SqliteNetworkController : public NetworkController
@@ -104,7 +107,34 @@ private:
 	std::string _dbPath;
 	std::string _instanceId;
 
-	std::map< std::pair<Address,uint64_t>,uint64_t > _lastRequestTime;
+	// A circular buffer last log
+	struct _LLEntry
+	{
+		_LLEntry()
+		{
+			for(long i=0;i<ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE;++i)
+				this->l[i].ts = 0;
+			this->lastRequestTime = 0;
+			this->totalRequests = 0;
+		}
+
+		// Circular buffer of last log entries
+		struct {
+			uint64_t ts; // timestamp or 0 if circular buffer entry unused
+			char version[64];
+			InetAddress fromAddr;
+			bool authorized;
+		} l[ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE];
+
+		// Time of last request whether successful or not
+		uint64_t lastRequestTime;
+
+		// Total requests by this address / network ID pair (also serves mod IN_MEMORY_LOG_SIZE as circular buffer ptr)
+		uint64_t totalRequests;
+	};
+
+	// Last log entries by address and network ID pair
+	std::map< std::pair<Address,uint64_t>,_LLEntry > _lastLog;
 
 	sqlite3 *_db;
 
@@ -151,9 +181,6 @@ private:
 	sqlite3_stmt *_sIncrementMemberRevisionCounter;
 	sqlite3_stmt *_sGetConfig;
 	sqlite3_stmt *_sSetConfig;
-	sqlite3_stmt *_sPutLog;
-	sqlite3_stmt *_sGetMemberLog;
-	sqlite3_stmt *_sGetRecentMemberLog;
 
 	Mutex _lock;
 };
