@@ -50,12 +50,6 @@
 
 #include "netif/etharp.h"
 
-struct tapif {
-  struct eth_addr *ethaddr;
-  /* Add whatever per-interface state that is needed here. */
-  int fd;
-};
-
 namespace ZeroTier {
 
 class NetconEthernetTap;
@@ -152,15 +146,14 @@ private:
 	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	NetconClient *getClientByPCB(struct tcp_pcb *pcb);
 	void closeClient(NetconClient *client);
+  void closeAllClients();
 	void closeConnection(NetconConnection *conn);
-
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
 	std::vector<NetconClient*> clients;
 	netif interface;
-
 
 	MAC _mac;
 	Thread _thread;
@@ -188,76 +181,49 @@ private:
 
 static err_t low_level_output(struct netif *netif, struct pbuf *p);
 
+static err_t tapif_init(struct netif *netif)
+{
+  // Actual init functionality is in threadMain() of tap
+  return ERR_OK;
+}
 
-  static void low_level_init(struct netif *netif)
-  {
-    fprintf(stderr, "low_level_init\n");
+static err_t low_level_output(struct netif *netif, struct pbuf *p)
+{
+  struct pbuf *q;
+  char buf[ZT1_MAX_MTU+32];
+  char *bufptr;
+  int tot_len = 0;
+
+  ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
+
+  /* initiate transfer(); */
+  bufptr = &buf[0];
+
+  for(q = p; q != NULL; q = q->next) {
+    /* Send the data from the pbuf to the interface, one pbuf at a
+       time. The size of the data in each pbuf is kept in the ->len
+       variable. */
+    /* send data from(q->payload, q->len); */
+    memcpy(bufptr, q->payload, q->len);
+    bufptr += q->len;
+    tot_len += q->len;
   }
 
-  static err_t tapif_init(struct netif *netif)
-  {
-    //netif->state = tapif;
-    netif->name[0] = 't';
-    netif->name[1] = 'p';
-    //netif->output = netif->state.lwipstack->etharp_output;
-    netif->linkoutput = low_level_output;
-    //netif->mtu = 1500;
-    /* hardware address length */
-    netif->hwaddr_len = 6;
+  // [Send packet to network]
+  // Split ethernet header and feed into handler
+  struct eth_hdr *ethhdr;
+  ethhdr = (struct eth_hdr *)p->payload;
 
-    //tapif->ethaddr = (struct eth_addr *)&(netif->hwaddr[0]);
-    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
-    //low_level_init(netif);
-    return ERR_OK;
-  }
+  ZeroTier::MAC src_mac;
+  ZeroTier::MAC dest_mac;
 
-  static err_t low_level_output(struct netif *netif, struct pbuf *p)
-  {
-    struct pbuf *q;
-    char buf[2800+14];
-    char *bufptr;
-    //struct tapif *tapif;
-    int tot_len = 0;
+  src_mac.setTo(ethhdr->src.addr, 6);
+  dest_mac.setTo(ethhdr->dest.addr, 6);
 
-    //tapif = (struct tapif *)netif->state;
-    ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
-
-    /* initiate transfer(); */
-
-    bufptr = &buf[0];
-
-    for(q = p; q != NULL; q = q->next) {
-      /* Send the data from the pbuf to the interface, one pbuf at a
-         time. The size of the data in each pbuf is kept in the ->len
-         variable. */
-      /* send data from(q->payload, q->len); */
-      memcpy(bufptr, q->payload, q->len);
-      bufptr += q->len;
-      tot_len += q->len;
-    }
-
-    // signal that packet should be sent();
-    // Split ethernet header and feed into handler
-    struct eth_hdr *ethhdr;
-    ethhdr = (struct eth_hdr *)p->payload;
-
-    ZeroTier::MAC src_mac;
-    ZeroTier::MAC dest_mac;
-
-    src_mac.setTo(ethhdr->src.addr, 6);
-    dest_mac.setTo(ethhdr->dest.addr, 6);
-
-    tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),p->tot_len);
-    fprintf(stderr, "ethhdr->type = %x\n", ethhdr->type);
-    fprintf(stderr, "p->tot_len = %x\n", p->tot_len);
-    fprintf(stderr, "src_mac = %s\n", src_mac.toString().c_str());
-    fprintf(stderr, "dest_mac = %s\n", dest_mac.toString().c_str());
-
-    //fprintf(stderr, "htons(ethhdr->type) = %x\n", Utils::hton((uint16_t)ethhdr->type));
-    fprintf(stderr, "low_level_output(%x)\n", tap->_nwid);
-
-    return ERR_OK;
-  }
+  tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
+    Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),p->tot_len);
+  return ERR_OK;
+}
 
 } // namespace ZeroTier
 
