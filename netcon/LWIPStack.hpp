@@ -95,6 +95,7 @@ typedef ip_addr ip_addr_t;
 #define NETIF_SET_DEFAULT_SIG struct netif *netif
 #define NETIF_ADD_SIG struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask, ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input
 #define NETIF_SET_UP_SIG struct netif *netif
+#define NETIF_POLL_SIG struct netif *netif
 
 
 
@@ -138,6 +139,7 @@ public:
   void (*netif_set_default)(NETIF_SET_DEFAULT_SIG);
   struct netif * (*netif_add)(NETIF_ADD_SIG);
   void (*netif_set_up)(NETIF_SET_UP_SIG);
+  void (*netif_poll)(NETIF_POLL_SIG);
 
 
 
@@ -184,6 +186,7 @@ public:
     netif_set_default = (void(*)(NETIF_SET_DEFAULT_SIG))dlsym(libref, "netif_set_default");
     netif_add = (struct netif*(*)(NETIF_ADD_SIG))dlsym(libref, "netif_add");
     netif_set_up = (void(*)(NETIF_SET_UP_SIG))dlsym(libref, "netif_set_up");
+    netif_poll = (void(*)(NETIF_POLL_SIG))dlsym(libref, "netif_poll");
   }
 };
 

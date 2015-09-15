@@ -173,35 +173,48 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		// Copy data into a pbuf chain
 		struct pbuf *p, *q;
 	  //u16_t len;
-	  char buf[1514];
-	  char *bufptr;
+	  //char buf[1514];
+	  const char *bufptr;
+		// Assemble ethernet header and call netif->output
+		struct eth_hdr *ethhdr = NULL;
 
 		// We allocate a pbuf chain of pbufs from the pool.
-		p = lwipstack->pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
+		p = lwipstack->pbuf_alloc(PBUF_RAW, len+sizeof(struct eth_hdr), PBUF_POOL);
 
 		if(p != NULL) {
+			fprintf(stderr, "p != NULL\n");
 			/* We iterate over the pbuf chain until we have read the entire
 				 packet into the pbuf. */
-			bufptr = &buf[0];
+			bufptr = (const char *)data;
 			for(q = p; q != NULL; q = q->next) {
 				/* Read enough bytes to fill this pbuf in the chain. The
 					 available data in the pbuf is given by the q->len
 					 variable. */
 				/* read data into(q->payload, q->len); */
-				memcpy(q->payload, bufptr, q->len);
-				bufptr += q->len;
+				char *pload = (char*)q->payload;
+				int plen = q->len;
+				if (!ethhdr) {
+					ethhdr = (struct eth_hdr *)p->payload;
+					pload += sizeof(struct eth_hdr);
+					plen -= sizeof(struct eth_hdr);
+				}
+				memcpy(pload, bufptr, plen);
+				bufptr += plen;
 			}
 			/* acknowledge that packet has been read(); */
 		} else {
+			return;
 			/* drop packet(); */
 		}
 
-		// Assemble ethernet header and call netif->output
-		struct eth_hdr *ethhdr;
-		ethhdr = (struct eth_hdr *)p->payload;
 		from.copyTo(ethhdr->src.addr, 6);
 		_mac.copyTo(ethhdr->dest.addr, 6);
-		ethhdr->type = ZT_ETHERTYPE_IPV4;
+		ethhdr->type = Utils::hton((uint16_t)etherType);
+
+		fprintf(stderr, "from = %s\n", from.toString().c_str());
+		fprintf(stderr, "_mac = %s\n", _mac.toString().c_str());
+		fprintf(stderr, "ethhdr->type = %x\n", ethhdr->type);
+		fprintf(stderr, "ethhdr->type = %x\n", ethhdr->type);
 
 		if(interface.input(p, &interface) != ERR_OK) {
 			fprintf(stderr, "IP error (netif->input)\n");
@@ -351,14 +364,20 @@ void NetconEthernetTap::threadMain()
 	lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->ethernet_input);
 
   interface.state = this;
+	interface.output = lwipstack->etharp_output;
+  _mac.copyTo(interface.hwaddr, 6);
+	interface.mtu = 2800;
+
+	/*
 	interface.name[0] = 't';
   interface.name[1] = 'p';
   interface.output = lwipstack->etharp_output;
   interface.linkoutput = low_level_output;
-  interface.mtu = 1500;
+
   interface.hwaddr_len = 6;
-	_mac.copyTo(interface.hwaddr, 6);
+
   interface.flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
+	*/
 
 	fprintf(stderr, "netif_set_default\n");
   lwipstack->netif_set_default(&interface);
@@ -377,16 +396,17 @@ void NetconEthernetTap::threadMain()
 	  if(since_tcp > tcp_time)
 	  {
 	    prev_tcp_time = curr_time+1;
-			fprintf(stderr, "tcp_tmr\n");
+			//fprintf(stderr, "tcp_tmr\n");
 	    lwipstack->tcp_tmr();
 	  }
 		if(since_etharp > etharp_time)
 		{
 			prev_etharp_time = curr_time;
-			fprintf(stderr, "etharp_tmr\n");
+			//fprintf(stderr, "etharp_tmr\n");
 			lwipstack->etharp_tmr();
 		}
-		fprintf(stderr, "_run\n");
+		//fprintf(stderr, "_run\n");
+		//lwipstack->netif_poll(&interface);
 		_phy.poll(100); // conversion from usec to millisec, TODO: double check
 
 	}

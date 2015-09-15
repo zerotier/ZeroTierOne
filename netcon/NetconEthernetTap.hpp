@@ -186,6 +186,9 @@ private:
 ------------------------ low-level Interface functions -------------------------
 ------------------------------------------------------------------------------*/
 
+static err_t low_level_output(struct netif *netif, struct pbuf *p);
+
+
   static void low_level_init(struct netif *netif)
   {
     fprintf(stderr, "low_level_init\n");
@@ -193,14 +196,25 @@ private:
 
   static err_t tapif_init(struct netif *netif)
   {
-    fprintf(stderr, "tapif_init\n");
+    //netif->state = tapif;
+    netif->name[0] = 't';
+    netif->name[1] = 'p';
+    //netif->output = netif->state.lwipstack->etharp_output;
+    netif->linkoutput = low_level_output;
+    //netif->mtu = 1500;
+    /* hardware address length */
+    netif->hwaddr_len = 6;
+
+    //tapif->ethaddr = (struct eth_addr *)&(netif->hwaddr[0]);
+    netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
+    //low_level_init(netif);
     return ERR_OK;
   }
 
   static err_t low_level_output(struct netif *netif, struct pbuf *p)
   {
     struct pbuf *q;
-    char buf[1514];
+    char buf[2800+14];
     char *bufptr;
     //struct tapif *tapif;
     int tot_len = 0;
@@ -233,8 +247,14 @@ private:
     src_mac.setTo(ethhdr->src.addr, 6);
     dest_mac.setTo(ethhdr->dest.addr, 6);
 
-    tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,ZT_ETHERTYPE_IPV4,0,buf,p->tot_len);
-    fprintf(stderr, "low_level_output(%d)\n", tap->_nwid);
+    tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),p->tot_len);
+    fprintf(stderr, "ethhdr->type = %x\n", ethhdr->type);
+    fprintf(stderr, "p->tot_len = %x\n", p->tot_len);
+    fprintf(stderr, "src_mac = %s\n", src_mac.toString().c_str());
+    fprintf(stderr, "dest_mac = %s\n", dest_mac.toString().c_str());
+
+    //fprintf(stderr, "htons(ethhdr->type) = %x\n", Utils::hton((uint16_t)ethhdr->type));
+    fprintf(stderr, "low_level_output(%x)\n", tap->_nwid);
 
     return ERR_OK;
   }
