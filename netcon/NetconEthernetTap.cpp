@@ -156,6 +156,8 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 	if (!_enabled)
 		return;
 
+		fprintf(stderr, "put\n");
+/*
 	if (etherType == ZT_ETHERTYPE_ARP) {
 		char arpReplyBuf[ZT_ARP_BUF_LENGTH];
 		unsigned int arpReplyLen = 0;
@@ -167,8 +169,7 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 			fprintf(stderr, "ARP reply generated\n");
 			_handler(_arg,_nwid,_mac,from,ZT_ETHERTYPE_ARP,0,arpReplyBuf,arpReplyLen);
 	}
-	else if (etherType == ZT_ETHERTYPE_IPV4) {
-
+*/
 		// Copy data into a pbuf chain
 		struct pbuf *p, *q;
 	  //u16_t len;
@@ -202,11 +203,12 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		_mac.copyTo(ethhdr->dest.addr, 6);
 		ethhdr->type = ZT_ETHERTYPE_IPV4;
 
-		if(interface.input(p, &interface) != ERR_OK)
-		{
+		if(interface.input(p, &interface) != ERR_OK) {
 			fprintf(stderr, "IP error (netif->input)\n");
 		}
-	}
+		else {
+			fprintf(stderr, "interface.input(...) len = %d\n", len);
+		}
 }
 
 std::string NetconEthernetTap::deviceName() const
@@ -342,29 +344,21 @@ void NetconEthernetTap::threadMain()
   unsigned long since_etharp;
 	struct timeval tv;
 
+	fprintf(stderr, "initializing interface\n");
+
 	/* set up the faux-netif for LWIP's sake */
 	fprintf(stderr, "netif_add\n");
 	lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->ethernet_input);
 
-
-	fprintf(stderr, "initializing interface\n");
-	struct tapif *tapif;
-  tapif = (struct tapif *)mem_malloc(sizeof(struct tapif));
-  if (!tapif) {
-  	//return ERR_MEM;
-  }
-  //interface.state = tapif;
   interface.state = this;
 	interface.name[0] = 't';
   interface.name[1] = 'p';
   interface.output = lwipstack->etharp_output;
   interface.linkoutput = low_level_output;
   interface.mtu = 1500;
-  /* hardware address length */
   interface.hwaddr_len = 6;
-  tapif->ethaddr = (struct eth_addr *)&(interface.hwaddr[0]);
+	_mac.copyTo(interface.hwaddr, 6);
   interface.flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP;
-  low_level_init(&interface);
 
 	fprintf(stderr, "netif_set_default\n");
   lwipstack->netif_set_default(&interface);
@@ -383,11 +377,13 @@ void NetconEthernetTap::threadMain()
 	  if(since_tcp > tcp_time)
 	  {
 	    prev_tcp_time = curr_time+1;
+			fprintf(stderr, "tcp_tmr\n");
 	    lwipstack->tcp_tmr();
 	  }
 		if(since_etharp > etharp_time)
 		{
 			prev_etharp_time = curr_time;
+			fprintf(stderr, "etharp_tmr\n");
 			lwipstack->etharp_tmr();
 		}
 		fprintf(stderr, "_run\n");
@@ -660,7 +656,9 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
-  IP4_ADDR(&conn_addr, 192,168,0,2);
+  //IP4_ADDR(&conn_addr, 192,168,0,2);
+	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
+
 
 	/*
   int ip = connaddr->sin_addr.s_addr;
@@ -671,6 +669,8 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
   bytes[3] = (ip >> 24) & 0xFF;
   "binding to: %d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]
   */
+
+	fprintf(stderr, "PORT = %d\n", conn_port);
 	NetconConnection *c = client->getConnectionByTheirFD(bind_rpc->sockfd);
   if(c) {
     if(c->pcb->state == CLOSED){

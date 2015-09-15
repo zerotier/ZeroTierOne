@@ -188,10 +188,12 @@ private:
 
   static void low_level_init(struct netif *netif)
   {
+    fprintf(stderr, "low_level_init\n");
   }
 
   static err_t tapif_init(struct netif *netif)
   {
+    fprintf(stderr, "tapif_init\n");
     return ERR_OK;
   }
 
@@ -206,12 +208,6 @@ private:
     //tapif = (struct tapif *)netif->state;
     ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
 
-  #if 0
-      if(((double)rand()/(double)RAND_MAX) < 0.2) {
-      printf("drop output\n");
-      return ERR_OK;
-      }
-  #endif
     /* initiate transfer(); */
 
     bufptr = &buf[0];
@@ -238,6 +234,8 @@ private:
     dest_mac.setTo(ethhdr->dest.addr, 6);
 
     tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,ZT_ETHERTYPE_IPV4,0,buf,p->tot_len);
+    fprintf(stderr, "low_level_output(%d)\n", tap->_nwid);
+
     return ERR_OK;
   }
 
