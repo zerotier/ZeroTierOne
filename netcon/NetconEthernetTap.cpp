@@ -286,7 +286,7 @@ NetconClient *NetconEthernetTap::getClientByPCB(struct tcp_pcb *pcb)
 
 void NetconEthernetTap::closeClient(NetconClient *client)
 {
-	fprintf(stderr, "closeClient\n");
+	//fprintf(stderr, "closeClient\n");
 	NetconConnection *temp_conn;
 	closeConnection(client->rpc);
 	for(size_t i=0; i<client->connections.size(); i++) {
@@ -306,7 +306,7 @@ void NetconEthernetTap::closeAllClients()
 
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
 {
-	fprintf(stderr, "closeConnection\n");
+	//fprintf(stderr, "closeConnection\n");
 	NetconClient *client = conn->owner;
 	_phy.close(conn->sock);
 	lwipstack->tcp_close(conn->pcb);
@@ -380,7 +380,7 @@ void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr
 
 void NetconEthernetTap::phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr)
 {
-	//_phy.setNotifyWritable(sock, false);
+	_phy.setNotifyWritable(sock, false);
 }
 
 // Unused -- no UDP or TCP from this thread/Phy<>
@@ -403,7 +403,7 @@ void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void *
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
 	_phy.setNotifyWritable(sock, false);
-	fprintf(stderr, "phyOnUnixClose\n");
+	//fprintf(stderr, "phyOnUnixClose\n");
 	closeClient(((NetconClient*)*uptr));
 }
 
@@ -503,6 +503,44 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 {
 	fprintf(stderr, "nc_accept\n");
+
+	Larg *l = (Larg*)arg;
+	NetconEthernetTap *tap = l->tap;
+	NetconConnection *c = tap->getConnectionByPCB(newpcb);
+	NetconClient *client = c->owner;
+
+  if(c && client) {
+		int their_fd;
+		NetconConnection *new_conn = client->addConnection(BUFFER, tap->_phy.createSocketPair(their_fd, client));
+		new_conn->their_fd = their_fd;
+		new_conn->pcb = newpcb;
+		PhySocket *sock = client->rpc->sock;
+		int send_fd = tap->_phy.getDescriptor(sock);
+
+    int n = write(tap->_phy.getDescriptor(new_conn->sock), "z", 1);
+    if(n > 0) {
+			sock_fd_write(send_fd, their_fd);
+			client->unmapped_conn = new_conn;
+    }
+    else {
+      //dwr(c->owner->tid, "nc_accept() - unknown error writing signal byte to listening socket\n");
+      return -1;
+    }
+    tap->lwipstack->tcp_arg(newpcb, (void*)(intptr_t)(tap->_phy.getDescriptor(new_conn->sock)));
+    tap->lwipstack->tcp_recv(newpcb, nc_recved);
+    tap->lwipstack->tcp_err(newpcb, nc_err);
+    tap->lwipstack->tcp_sent(newpcb, nc_sent);
+    tap->lwipstack->tcp_poll(newpcb, nc_poll, 1);
+    tcp_accepted(c->pcb);
+
+		return ERR_OK;
+  }
+  else {
+    //dwr("can't locate Connection object for PCB\n");
+  }
+  return -1;
+
+
 	return ERR_OK;
 }
 
