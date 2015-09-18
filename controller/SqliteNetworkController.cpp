@@ -1544,7 +1544,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	netconf.clear();
 	{
 		char tss[24],rs[24];
-		Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)OSUtils::now());
+		Utils::snprintf(tss,sizeof(tss),"%.16llx",(unsigned long long)now);
 		Utils::snprintf(rs,sizeof(rs),"%.16llx",(unsigned long long)network.revision);
 		netconf[ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP] = tss;
 		netconf[ZT_NETWORKCONFIG_DICT_KEY_REVISION] = rs;
@@ -1788,10 +1788,13 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV4_STATIC] = v4s;
 		}
 
-		// TODO: IPv6 auto-assign once it's supported in UI
+		if ((network.v6AssignMode)&&(!strcmp(network.v6AssignMode,"rfc4193"))) {
+			InetAddress rfc4193Addr(InetAddress::makeIpv6rfc4193(nwid,identity.address().toInt()));
+			netconf[ZT_NETWORKCONFIG_DICT_KEY_IPV6_STATIC] = rfc4193Addr.toString();
+		}
 
 		if (network.isPrivate) {
-			CertificateOfMembership com(OSUtils::now(),ZT_NETWORK_AUTOCONF_DELAY + (ZT_NETWORK_AUTOCONF_DELAY / 2),nwid,identity.address());
+			CertificateOfMembership com(now,ZT_NETWORK_AUTOCONF_DELAY + (ZT_NETWORK_AUTOCONF_DELAY / 2),nwid,identity.address());
 			if (com.sign(signingId)) // basically can't fail unless our identity is invalid
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			else {
@@ -1800,7 +1803,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			}
 		}
 
-		if (!netconf.sign(signingId,OSUtils::now())) {
+		if (!netconf.sign(signingId,now)) {
 			netconf["error"] = "unable to sign netconf dictionary";
 			return NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 		}
