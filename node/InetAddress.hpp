@@ -375,6 +375,50 @@ struct InetAddress : public sockaddr_storage
 	 */
 	static InetAddress makeIpv6LinkLocal(const MAC &mac)
 		throw();
+
+	/**
+	 * Compute private IPv6 unicast address from network ID and ZeroTier address
+	 *
+	 * This generates a private unicast IPv6 address that is mostly compliant
+	 * with the letter of RFC4193 and certainly compliant in spirit.
+	 *
+	 * RFC4193 specifies a format of:
+	 *
+	 * | 7 bits |1|  40 bits   |  16 bits  |          64 bits           |
+	 * | Prefix |L| Global ID  | Subnet ID |        Interface ID        |
+	 *
+	 * The 'L' bit is set to 1, yielding an address beginning with 0xfd. Then
+	 * the network ID is filled into the global ID, subnet ID, and first byte
+	 * of the "interface ID" field. Since the first 40 bits of the network ID
+	 * is the unique ZeroTier address of its controller, this makes a very
+	 * good random global ID. Since network IDs have 24 more bits, we let it
+	 * overflow into the interface ID.
+	 *
+	 * After that we pad with two bytes: 0x99, 0x93, namely the default ZeroTier
+	 * port in hex.
+	 *
+	 * Finally we fill the remaining 40 bits of the interface ID field with
+	 * the 40-bit unique ZeroTier device ID of the network member.
+	 *
+	 * This yields a valid RFC4193 address with a random global ID, a
+	 * meaningful subnet ID, and a unique interface ID, all mappable back onto
+	 * ZeroTier space.
+	 *
+	 * This in turn could allow us, on networks numbered this way, to emulate
+	 * IPv6 NDP and eliminate all multicast. This could be beneficial for
+	 * small devices and huge networks, e.g. IoT applications.
+	 *
+	 * The returned address is given an odd prefix length of /88, since within
+	 * a given network only the last 40 bits (device ID) are variable. This
+	 * is a bit unusual but as far as we know should not cause any problems with
+	 * any non-braindead IPv6 stack.
+	 *
+	 * @param nwid 64-bit network ID
+	 * @param zeroTierAddress 40-bit device address (in least significant 40 bits, highest 24 bits ignored)
+	 * @return IPv6 private unicast address with /88 netmask
+	 */
+	static InetAddress makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
+		throw();
 };
 
 } // namespace ZeroTier

@@ -399,4 +399,30 @@ InetAddress InetAddress::makeIpv6LinkLocal(const MAC &mac)
 	return InetAddress(sin6);
 }
 
+InetAddress InetAddress::makeIpv6rfc4193(uint64_t nwid,uint64_t zeroTierAddress)
+	throw()
+{
+	InetAddress r;
+	struct sockaddr_in6 *const sin6 = reinterpret_cast<struct sockaddr_in6 *>(&r);
+	sin6->sin6_family = AF_INET6;
+	sin6->sin6_addr.s6_addr[0] = 0xfd;
+	sin6->sin6_addr.s6_addr[1] = (uint8_t)(nwid >> 56);
+	sin6->sin6_addr.s6_addr[2] = (uint8_t)(nwid >> 48);
+	sin6->sin6_addr.s6_addr[3] = (uint8_t)(nwid >> 40);
+	sin6->sin6_addr.s6_addr[4] = (uint8_t)(nwid >> 32);
+	sin6->sin6_addr.s6_addr[5] = (uint8_t)(nwid >> 24);
+	sin6->sin6_addr.s6_addr[6] = (uint8_t)(nwid >> 16);
+	sin6->sin6_addr.s6_addr[7] = (uint8_t)(nwid >> 8);
+	sin6->sin6_addr.s6_addr[8] = (uint8_t)nwid;
+	sin6->sin6_addr.s6_addr[9] = 0x99;
+	sin6->sin6_addr.s6_addr[10] = 0x93;
+	sin6->sin6_addr.s6_addr[11] = (uint8_t)(zeroTierAddress >> 32);
+	sin6->sin6_addr.s6_addr[12] = (uint8_t)(zeroTierAddress >> 24);
+	sin6->sin6_addr.s6_addr[13] = (uint8_t)(zeroTierAddress >> 16);
+	sin6->sin6_addr.s6_addr[14] = (uint8_t)(zeroTierAddress >> 8);
+	sin6->sin6_addr.s6_addr[15] = (uint8_t)zeroTierAddress;
+	sin6->sin6_port = Utils::hton((uint16_t)88); // /88 includes 0xfd + network ID, discriminating by device ID below that
+	return r;
+}
+
 } // namespace ZeroTier
