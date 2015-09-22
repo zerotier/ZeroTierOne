@@ -223,6 +223,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
   tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
     Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),p->tot_len);
+	printf("low_level_output(): length = %d\n", p->tot_len);
   return ERR_OK;
 }
 

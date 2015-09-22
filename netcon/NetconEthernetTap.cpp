@@ -214,6 +214,7 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 	if(interface.input(p, &interface) != ERR_OK) {
 		fprintf(stderr, "Error while RXing packet (netif->input)\n");
 	}
+	printf("put(): length = %d\n", len);
 }
 
 std::string NetconEthernetTap::deviceName() const
