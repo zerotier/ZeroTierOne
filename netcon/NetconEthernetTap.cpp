@@ -203,6 +203,7 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		}
 		/* acknowledge that packet has been read(); */
 	} else {
+		fprintf(stderr, "put(): Dropped packet\n");
 		return;
 		/* drop packet(); */
 	}
