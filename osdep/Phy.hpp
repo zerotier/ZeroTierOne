@@ -297,7 +297,7 @@ public:
 		int fd[2]; fd[0] = -1; fd[1] = -1;
 		if ((::socketpair(PF_LOCAL,SOCK_STREAM,0,fd) != 0)||(fd[0] <= 0)||(fd[1] <= 0))
 			return (PhySocket *)0;
-		fcntl(fd[0],F_SETFL,O_NONBLOCK);
+		//fcntl(fd[0],F_SETFL,O_NONBLOCK);
 
 		try {
 			_socks.push_back(PhySocketImpl());

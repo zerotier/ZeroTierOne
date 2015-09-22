@@ -43,7 +43,6 @@
 #include "../node/InetAddress.hpp"
 #include "../osdep/Thread.hpp"
 #include "../osdep/Phy.hpp"
-#include "../osdep/Arp.hpp"
 
 #include "NetconService.hpp"
 #include "NetconUtilities.hpp"
@@ -110,7 +109,9 @@ private:
 	void handle_retval(NetconClient *client, unsigned char* buf);
 	void handle_socket(NetconClient *client, struct socket_st* socket_rpc);
 	void handle_connect(NetconClient *client, struct connect_st* connect_rpc);
-	void handle_write(NetconConnection *c);
+	//void handle_write(NetconConnection *c);
+	void handle_write(NetconConnection *c, void *buf, unsigned long len);
+
 
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
 	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success);
@@ -160,9 +161,6 @@ private:
 	std::string _homePath;
 	std::string _dev; // path to Unix domain socket
 
-	Arp _arp;
-	Mutex _arp_m;
-
 	std::vector<MulticastGroup> _multicastGroups;
 	Mutex _multicastGroups_m;
 
@@ -198,7 +196,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
 
   /* initiate transfer(); */
-  bufptr = &buf[0];
+  bufptr = buf;
 
   for(q = p; q != NULL; q = q->next) {
     /* Send the data from the pbuf to the interface, one pbuf at a
@@ -213,7 +211,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   // [Send packet to network]
   // Split ethernet header and feed into handler
   struct eth_hdr *ethhdr;
-  ethhdr = (struct eth_hdr *)p->payload;
+  ethhdr = (struct eth_hdr *)buf;
 
   ZeroTier::MAC src_mac;
   ZeroTier::MAC dest_mac;
@@ -222,8 +220,9 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   dest_mac.setTo(ethhdr->dest.addr, 6);
 
   tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
-    Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),p->tot_len - sizeof(struct eth_hdr));
-	printf("low_level_output(): length = %d\n", p->tot_len);
+    Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),tot_len - sizeof(struct eth_hdr));
+	printf("low_level_output(): length = %d -- ethertype = %d\n", tot_len - sizeof(struct eth_hdr), Utils::ntoh((uint16_t)ethhdr->type));
+
   return ERR_OK;
 }
 
