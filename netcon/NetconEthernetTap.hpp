@@ -148,9 +148,10 @@ private:
 	NetconConnection *getConnectionByThisFD(int fd);
 	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	NetconClient *getClientByPCB(struct tcp_pcb *pcb);
-	void closeClient(NetconClient *client);
   void closeAllClients();
 	void closeConnection(NetconConnection *conn);
+
+	void closeClient(NetconClient *client);
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
@@ -189,7 +190,7 @@ static err_t tapif_init(struct netif *netif)
 
 static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
-	fprintf(stderr, "low_level_output()\n");
+	//fprintf(stderr, "low_level_output()\n");
   struct pbuf *q;
   char buf[ZT1_MAX_MTU+32];
   char *bufptr;
@@ -223,7 +224,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
 
   tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
     Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),tot_len - sizeof(struct eth_hdr));
-	printf("low_level_output(): length = %d -- ethertype = %d\n", tot_len - sizeof(struct eth_hdr), Utils::ntoh((uint16_t)ethhdr->type));
+	//printf("low_level_output(): length = %d -- ethertype = %d\n", tot_len - sizeof(struct eth_hdr), Utils::ntoh((uint16_t)ethhdr->type));
 
   return ERR_OK;
 }
