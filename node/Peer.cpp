@@ -39,6 +39,9 @@
 
 namespace ZeroTier {
 
+// Used to send varying values for NAT keepalive
+static uint32_t _natKeepaliveBuf = 0;
+
 Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	throw(std::runtime_error) :
 	_lastUsed(0),
@@ -217,8 +220,9 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 			attemptToContactAt(RR,bestPath->address(),now);
 			bestPath->sent(now);
 		} else if (((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!bestPath->reliable())) {
+			_natKeepaliveBuf += (uint32_t)now * 2654435761; // tumble this around to send constantly varying (meaningless) payloads
 			TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
-			RR->node->putPacket(bestPath->address(),"",0);
+			RR->node->putPacket(bestPath->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
 			bestPath->sent(now);
 		}
 	}
