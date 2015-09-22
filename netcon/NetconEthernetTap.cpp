@@ -367,17 +367,21 @@ void NetconEthernetTap::threadMain()
 	  since_etharp = curr_time - prev_etharp_time;
 	  int min_time = min(since_tcp, since_etharp) * 1000; // usec
 
+		fprintf(stderr, "_run\n");
+
 	  if(since_tcp > tcp_time)
 	  {
 	    prev_tcp_time = curr_time+1;
+			fprintf(stderr, "tcp_tmr\n");
 	    lwipstack->tcp_tmr();
 	  }
 		if(since_etharp > etharp_time)
 		{
 			prev_etharp_time = curr_time;
+			fprintf(stderr, "etharp_tmr\n");
 			lwipstack->etharp_tmr();
 		}
-		_phy.poll(min_time / 1000); // conversion from usec to millisec, TODO: double check
+		_phy.poll(100); // conversion from usec to millisec, TODO: double check
 	}
 	closeAllClients();
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
@@ -440,7 +444,7 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {
-	fprintf(stderr, "phyOnUnixData\n");
+	fprintf(stderr, "phyOnUnixData(): rpc = %d\n", _phy.getDescriptor(sock));
 	unsigned char *buf = (unsigned char*)data;
 	NetconClient *client = (NetconClient*)*uptr;
 	if(!client)
@@ -523,8 +527,8 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
-	fprintf(stderr, "nc_poll(): [pcb = %x], [larg = %x]\n", tpcb, l);
 	Larg *l = (Larg*)arg;
+	fprintf(stderr, "nc_poll(): [pcb = %x], [larg = %x]\n", tpcb, l);
 	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
 	NetconEthernetTap *tap = l->tap;
 	if(c && c->idx > 0){
@@ -561,12 +565,13 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
     if(n > 0) {
 			sock_fd_write(send_fd, their_fd);
 			client->unmapped_conn = new_conn;
+			fprintf(stderr, "nc_accept(): writing signal byte (rpc_fd = %d, send_fd = %d, their_fd = %d)\n", rpc_fd, send_fd, their_fd);
     }
     else {
       fprintf(stderr, "nc_accept(): error writing signal byte (rpc_fd = %d, send_fd = %d, their_fd = %d)\n", rpc_fd, send_fd, their_fd);
       return -1;
     }
-    tap->lwipstack->tcp_arg(newpcb, l);
+    tap->lwipstack->tcp_arg(newpcb, new Larg(tap, new_conn->sock));
     tap->lwipstack->tcp_recv(newpcb, nc_recved);
     tap->lwipstack->tcp_err(newpcb, nc_err);
     tap->lwipstack->tcp_sent(newpcb, nc_sent);
@@ -701,7 +706,6 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
-  //IP4_ADDR(&conn_addr, 192,168,0,2);
 	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
 
   int ip = connaddr->sin_addr.s_addr;
@@ -710,9 +714,9 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
   bytes[1] = (ip >> 8) & 0xFF;
   bytes[2] = (ip >> 16) & 0xFF;
   bytes[3] = (ip >> 24) & 0xFF;
-  fprintf(stderr, "binding to: %d.%d.%d.%d", bytes[0], bytes[1], bytes[2], bytes[3]);
-
+  fprintf(stderr, "binding to: %d.%d.%d.%d\n", bytes[0], bytes[1], bytes[2], bytes[3]);
 	fprintf(stderr, "PORT = %d\n", conn_port);
+
 	NetconConnection *c = client->getConnectionByTheirFD(bind_rpc->sockfd);
   if(c) {
     if(c->pcb->state == CLOSED){
@@ -735,6 +739,7 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
 
 void NetconEthernetTap::handle_listen(NetconClient *client, struct listen_st *listen_rpc)
 {
+	fprintf(stderr, "client->rpc->sock->fd = %d\n", _phy.getDescriptor(client->rpc->sock));
 	NetconConnection *c = client->getConnectionByTheirFD(listen_rpc->sockfd);
   if(c) {
     if(c->pcb->state == LISTEN) {
