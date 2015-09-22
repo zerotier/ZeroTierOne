@@ -367,21 +367,21 @@ void NetconEthernetTap::threadMain()
 	  since_etharp = curr_time - prev_etharp_time;
 	  int min_time = min(since_tcp, since_etharp) * 1000; // usec
 
-		fprintf(stderr, "_run\n");
+		//fprintf(stderr, "_run\n");
 
 	  if(since_tcp > tcp_time)
 	  {
 	    prev_tcp_time = curr_time+1;
-			fprintf(stderr, "tcp_tmr\n");
+			//fprintf(stderr, "tcp_tmr\n");
 	    lwipstack->tcp_tmr();
 	  }
 		if(since_etharp > etharp_time)
 		{
 			prev_etharp_time = curr_time;
-			fprintf(stderr, "etharp_tmr\n");
+			//fprintf(stderr, "etharp_tmr\n");
 			lwipstack->etharp_tmr();
 		}
-		_phy.poll(100); // conversion from usec to millisec, TODO: double check
+		_phy.poll(50); // conversion from usec to millisec, TODO: double check
 	}
 	closeAllClients();
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
