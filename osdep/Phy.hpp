@@ -965,7 +965,6 @@ public:
 					break;
 
 				case ZT_PHY_SOCKET_FD: {
-#ifdef __UNIX_LIKE__
 					ZT_PHY_SOCKFD_TYPE sock = s->sock;
 					const bool readable = ((FD_ISSET(sock,&rfds))&&(FD_ISSET(sock,&_readfds)));
 					const bool writable = ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds)));
@@ -974,7 +973,6 @@ public:
 							_handler->phyOnFileDescriptorActivity((PhySocket *)&(*s),&(s->uptr),readable,writable);
 						} catch ( ... ) {}
 					}
-#endif // __UNIX_LIKE__
 				}	break;
 
 				default:
