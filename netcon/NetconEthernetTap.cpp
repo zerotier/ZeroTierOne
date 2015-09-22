@@ -326,18 +326,22 @@ void NetconEthernetTap::closeConnection(NetconConnection *conn)
 ------------------------ low-level Interface functions -------------------------
 ------------------------------------------------------------------------------*/
 
+#define ZT_LWIP_TCP_TIMER_INTERVAL (ARP_TMR_INTERVAL / 5000)
+#define ZT_LWIP_IP_TIMER_INTERVAL (IP_TMR_INTERVAL / 1000)
 
 void NetconEthernetTap::threadMain()
 	throw()
 {
-	unsigned long tcp_time = ARP_TMR_INTERVAL / 5000;
-  unsigned long etharp_time = IP_TMR_INTERVAL / 1000;
-  unsigned long prev_tcp_time = 0;
-  unsigned long prev_etharp_time = 0;
-  unsigned long curr_time;
-  unsigned long since_tcp;
-  unsigned long since_etharp;
-	struct timeval tv;
+	//unsigned long tcp_time = ARP_TMR_INTERVAL / 5000;
+  //unsigned long etharp_time = IP_TMR_INTERVAL / 1000;
+  //unsigned long prev_tcp_time = 0;
+  //unsigned long prev_etharp_time = 0;
+  //unsigned long curr_time;
+  //unsigned long since_tcp;
+  //unsigned long since_etharp;
+	//struct timeval tv;
+	uint64_t prev_tcp_time = 0;
+	uint64_t prev_etharp_time = 0;
 
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
 	fprintf(stderr, "- TCP_SND_BUF = %dK\n", TCP_SND_BUF / 1024);
@@ -358,9 +362,32 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
 	fprintf(stderr, "- DEFAULT_READ_BUFFER_SIZE  = %d\n", DEFAULT_READ_BUFFER_SIZE);
 
-
 	// Main timer loop
 	while (_run) {
+		uint64_t now = OSUtils::now();
+
+		uint64_t since_tcp = now - prev_tcp_time;
+		uint64_t since_etharp = now - prev_etharp_time;
+
+		uint64_t tcp_remaining = ZT_LWIP_TCP_TIMER_INTERVAL;
+		uint64_t etharp_remaining = ZT_LWIP_IP_TIMER_INTERVAL;
+
+		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
+			prev_tcp_time = now;
+			lwipstack->tcp_tmr();
+		} else {
+			tcp_remaining = ZT_LWIP_TCP_TIMER_INTERVAL - since_tcp;
+		}
+		if (since_etharp >= ZT_LWIP_IP_TIMER_INTERVAL) {
+			prev_etharp_time = now;
+			lwipstack->etharp_tmr();
+		} else {
+			etharp_remaining = ZT_LWIP_IP_TIMER_INTERVAL - since_etharp;
+		}
+
+		_phy.poll((unsigned long)std::min(tcp_remaining,etharp_remaining));
+
+		/*
 		gettimeofday(&tv, NULL);
 	  curr_time = (unsigned long)(tv.tv_sec) * 1000 + (unsigned long)(tv.tv_usec) / 1000;
 	  since_tcp = curr_time - prev_tcp_time;
@@ -382,6 +409,7 @@ void NetconEthernetTap::threadMain()
 			lwipstack->etharp_tmr();
 		}
 		_phy.poll(50); // conversion from usec to millisec, TODO: double check
+		*/
 	}
 	closeAllClients();
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
