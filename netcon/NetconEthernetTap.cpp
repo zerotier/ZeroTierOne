@@ -430,9 +430,30 @@ void NetconEthernetTap::phyOnSocketPairEndpointData(PhySocket *sock, void **uptr
 		}
 	}
 	*/
+	/*
 	fprintf(stderr, "OnData(): len = %u\n", n);
 	NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
 	handle_write(c, buf, n);
+	*/
+}
+
+
+void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable)
+{
+	fprintf(stderr, "phyOnFileDescriptorActivity()\n");
+	if(readable)
+	{
+		int r;
+		fprintf(stderr, "  is readable\n");
+		NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
+		if(c->idx < DEFAULT_READ_BUFFER_SIZE) {
+			//tcp_output(c->pcb);
+			if((r = read(_phy.getDescriptor(sock), (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
+				c->idx += r;
+				handle_write(c);
+			}
+		}
+	}
 }
 
 void NetconEthernetTap::phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr)
@@ -580,22 +601,26 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 			fprintf(stderr, "nc_accpet(): unable to locate client for this PCB\n");
 			return -1;
 		}
-		int their_fd;
-		PhySocket *new_sock = tap->_phy.createSocketPair(their_fd, client);
+
+		ZT_PHY_SOCKFD_TYPE fds[2];
+		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
+
+		PhySocket *new_sock = tap->_phy.wrapSocket(fds[0], client);
+
 		NetconConnection *new_conn = client->addConnection(BUFFER, new_sock);
 		int our_fd = tap->_phy.getDescriptor(new_sock);
 		client->connections.push_back(new_conn);
-		new_conn->their_fd = their_fd;
+		new_conn->their_fd = fds[1];
 		new_conn->pcb = newpcb;
 		int send_fd = tap->_phy.getDescriptor(client->rpc->sock);
 		int n = write(larg_fd, "z", 1);
     if(n > 0) {
-			sock_fd_write(send_fd, their_fd);
+			sock_fd_write(send_fd, fds[1]);
 			client->unmapped_conn = new_conn;
-			fprintf(stderr, "creating new conn (%d). Sending (%d) for their fd over (%d)\n", our_fd, their_fd, send_fd);
+			fprintf(stderr, "creating new conn (%d). Sending (%d) for their fd over (%d)\n", our_fd, fds[1], send_fd);
     }
     else {
-      fprintf(stderr, "nc_accept(): error writing signal byte (our_fd = %d, send_fd = %d, their_fd = %d)\n", our_fd, send_fd, their_fd);
+      fprintf(stderr, "nc_accept(): error writing signal byte (our_fd = %d, send_fd = %d, their_fd = %d)\n", our_fd, send_fd, fds[1]);
       return -1;
     }
     tap->lwipstack->tcp_arg(newpcb, new Larg(tap, new_conn->sock));
@@ -816,17 +841,18 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 {
 	struct tcp_pcb *pcb = lwipstack->tcp_new();
   if(pcb != NULL) {
-		int their_fd;
-		PhySocket *our_sock = _phy.createSocketPair(their_fd, client);
+		ZT_PHY_SOCKFD_TYPE fds[2];
+		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
+		PhySocket *our_sock = _phy.wrapSocket(fds[0], client);
 		int our_fd = _phy.getDescriptor(our_sock);
 		NetconConnection *new_conn = client->addConnection(BUFFER, our_sock);
-		new_conn->their_fd = their_fd;
+		new_conn->their_fd = fds[1];
 		new_conn->pcb = pcb;
 		PhySocket *sock = client->rpc->sock;
 		int send_fd = _phy.getDescriptor(sock);
-    sock_fd_write(send_fd, their_fd);
+    sock_fd_write(send_fd, fds[1]);
     client->unmapped_conn = new_conn;
-		fprintf(stderr, "handle_socket(): [pcb = %x], their_fd = %d, send_fd = %d, our_fd = %d\n", pcb, their_fd, send_fd, our_fd);
+		fprintf(stderr, "handle_socket(): [pcb = %x], their_fd = %d, send_fd = %d, our_fd = %d\n", pcb, fds[1], send_fd, our_fd);
   }
   else {
     fprintf(stderr, "Memory not available for new PCB\n");
@@ -873,7 +899,7 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 	}
 }
 
-void NetconEthernetTap::handle_write(NetconConnection *c, void *buf, unsigned long len)
+void NetconEthernetTap::handle_write(NetconConnection *c)
 {
 	fprintf(stderr, "handle_write()\n");
 	if(c) {
@@ -886,11 +912,8 @@ void NetconEthernetTap::handle_write(NetconConnection *c, void *buf, unsigned lo
 			return;
 		}
 
-
-
-		c->idx += len;
+		//c->idx += len;
 		// TODO: write logic here!
-
 
 		int write_allowance =  sndbuf < c->idx ? sndbuf : c->idx;
 		int sz;
