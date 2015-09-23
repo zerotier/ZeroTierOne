@@ -157,13 +157,14 @@ Node::~Node()
 
 ZT1_ResultCode Node::processWirePacket(
 	uint64_t now,
+	int localInterfaceId,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
+	RR->sw->onRemotePacket(localInterfaceId,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
 	return ZT1_RESULT_OK;
 }
 
@@ -261,7 +262,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 				if (nr->second) {
 					SharedPtr<Peer> rp(RR->topology->getPeer(nr->first));
 					if ((rp)&&(!rp->hasActiveDirectPath(now)))
-						rp->attemptToContactAt(RR,nr->second,now);
+						rp->attemptToContactAt(RR,-1,nr->second,now);
 				}
 			}
 
@@ -569,13 +570,14 @@ void ZT1_Node_delete(ZT1_Node *node)
 enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
+	int localInterfaceId,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,localInterfaceId,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

@@ -344,7 +344,7 @@ static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t 
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData);
 static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize);
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure);
-static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,const void *data,unsigned int len);
+static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,int localInterfaceId,const struct sockaddr_storage *addr,const void *data,unsigned int len);
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
@@ -727,6 +727,7 @@ public:
 			_lastDirectReceiveFromGlobal = OSUtils::now();
 		ZT1_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
+			0,
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
@@ -875,6 +876,7 @@ public:
 							if (from) {
 								ZT1_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
+									0,
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,
@@ -1288,7 +1290,7 @@ static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure)
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
-static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,const void *data,unsigned int len)
+static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,int localInterfaceId,const struct sockaddr_storage *addr,const void *data,unsigned int len)
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(addr,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }

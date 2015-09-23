@@ -80,6 +80,7 @@ public:
 
 	ZT1_ResultCode processWirePacket(
 		uint64_t now,
+		int localInterfaceId,
 		const struct sockaddr_storage *remoteAddress,
 		const void *packetData,
 		unsigned int packetLength,
@@ -119,16 +120,18 @@ public:
 	/**
 	 * Enqueue a ZeroTier message to be sent
 	 *
+	 * @param localInterfaceId Local interface ID, -1 for unspecified/random
 	 * @param addr Destination address
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(const InetAddress &addr,const void *data,unsigned int len)
+	inline bool putPacket(int localInterfaceId,const InetAddress &addr,const void *data,unsigned int len)
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT1_Node *>(this),
 			_uPtr,
+			localInterfaceId,
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			data,
 			len) == 0);

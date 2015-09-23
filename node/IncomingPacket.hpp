@@ -72,14 +72,16 @@ public:
 	 *
 	 * @param data Packet data
 	 * @param len Packet length
+	 * @param localInterfaceId Local interface ID
 	 * @param remoteAddress Address from which packet came
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,const InetAddress &remoteAddress,uint64_t now) :
+	IncomingPacket(const void *data,unsigned int len,int localInterfaceId,const InetAddress &remoteAddress,uint64_t now) :
  		Packet(data,len),
  		_receiveTime(now),
  		_remoteAddress(remoteAddress),
+ 		_localInterfaceId(localInterfaceId),
  		__refCount()
 	{
 	}
@@ -128,6 +130,7 @@ private:
 
 	uint64_t _receiveTime;
 	InetAddress _remoteAddress;
+	int _localInterfaceId;
 	AtomicCounter __refCount;
 };
 

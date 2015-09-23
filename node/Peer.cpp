@@ -64,6 +64,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 
 void Peer::received(
 	const RuntimeEnvironment *RR,
+	int localInterfaceId,
 	const InetAddress &remoteAddr,
 	unsigned int hops,
 	uint64_t packetId,
@@ -81,7 +82,7 @@ void Peer::received(
 		{
 			unsigned int np = _numPaths;
 			for(unsigned int p=0;p<np;++p) {
-				if (_paths[p].address() == remoteAddr) {
+				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localInterfaceId() == localInterfaceId)) {
 					_paths[p].received(now);
 					pathIsConfirmed = true;
 					break;
@@ -106,7 +107,7 @@ void Peer::received(
 						}
 					}
 					if (slot) {
-						*slot = RemotePath(remoteAddr,false);
+						*slot = RemotePath(localInterfaceId,remoteAddr,false);
 						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;
@@ -119,7 +120,7 @@ void Peer::received(
 					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
 						_lastPathConfirmationSent = now;
 						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-						attemptToContactAt(RR,remoteAddr,now);
+						attemptToContactAt(RR,localInterfaceId,remoteAddr,now);
 					}
 				}
 			}
@@ -141,7 +142,7 @@ void Peer::received(
 					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
 						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
 							outp.armor(_key,true);
-							RR->node->putPacket(remoteAddr,outp.data(),outp.size());
+							RR->node->putPacket(localInterfaceId,remoteAddr,outp.data(),outp.size());
 							outp.reset(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 						}
 
@@ -154,7 +155,7 @@ void Peer::received(
 			}
 			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
 				outp.armor(_key,true);
-				RR->node->putPacket(remoteAddr,outp.data(),outp.size());
+				RR->node->putPacket(localInterfaceId,remoteAddr,outp.data(),outp.size());
 			}
 		}
 	}
@@ -180,7 +181,7 @@ RemotePath *Peer::getBestPath(uint64_t now)
 	return bestPath;
 }
 
-void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,uint64_t now)
+void Peer::attemptToContactAt(const RuntimeEnvironment *RR,int localInterfaceId,const InetAddress &atAddress,uint64_t now)
 {
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
@@ -208,7 +209,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &at
 	}
 
 	outp.armor(_key,false); // HELLO is sent in the clear
-	RR->node->putPacket(atAddress,outp.data(),outp.size());
+	RR->node->putPacket(localInterfaceId,atAddress,outp.data(),outp.size());
 }
 
 void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
@@ -217,12 +218,12 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	if (bestPath) {
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
 			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
-			attemptToContactAt(RR,bestPath->address(),now);
+			attemptToContactAt(RR,bestPath->localInterfaceId(),bestPath->address(),now);
 			bestPath->sent(now);
 		} else if (((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!bestPath->reliable())) {
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
-			RR->node->putPacket(bestPath->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
+			RR->node->putPacket(bestPath->localInterfaceId(),bestPath->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
 			bestPath->sent(now);
 		}
 	}
@@ -354,7 +355,7 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
 			if (_paths[x].fixed()) {
-				attemptToContactAt(RR,_paths[x].address(),now);
+				attemptToContactAt(RR,_paths[x].localInterfaceId(),_paths[x].address(),now);
 				_paths[y++] = _paths[x]; // keep fixed paths
 			}
 		} else {
