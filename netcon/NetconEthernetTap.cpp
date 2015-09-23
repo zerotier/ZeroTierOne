@@ -78,7 +78,7 @@ NetconEthernetTap::NetconEthernetTap(
 	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
 	_dev = sockPath;
 
-	lwipstack = new LWIPStack("/root/dev/netcon/liblwip.so");
+	lwipstack = new LWIPStack("netcon/liblwip.so");
 	if(!lwipstack) // TODO double check this check
 		throw std::runtime_error("unable to load lwip lib.");
 	lwipstack->lwip_init();
@@ -340,6 +340,10 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
 	fprintf(stderr, "- DEFAULT_READ_BUFFER_SIZE  = %d\n", DEFAULT_READ_BUFFER_SIZE);
 	*/
+
+	//fprintf(stderr, "- LWIP_DEBUG = %d\n", LWIP_DEBUG);
+	fprintf(stderr, "- TCP_DEBUG = %d\n", TCP_DEBUG);
+
 	// Main timer loop
 	while (_run) {
 		uint64_t now = OSUtils::now();
@@ -520,7 +524,7 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
 	NetconEthernetTap *tap = l->tap;
 	if(c && c->idx > 0){
-		fprintf(stderr, "nc_poll(): calling handle_Write()\n");
+		fprintf(stderr, "nc_poll(): calling handle_write()\n");
 		tap->handle_write(c);
 	}
 	return ERR_OK;
@@ -563,7 +567,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		int send_fd = tap->_phy.getDescriptor(client->rpc->sock);
 		int n = write(larg_fd, "z", 1);
     if(n > 0) {
-			if(sock_fd_write(send_fd, fds[1]) < 0) {
+			if(sock_fd_write(send_fd, fds[1]) > 0) {
 				client->unmapped_conn = new_conn;
 			}
 			else {
@@ -628,7 +632,6 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   }
   q = p;
   while(p != NULL) { // Cycle through pbufs and write them to the socket
-		fprintf(stderr, "nc_recved(): writing pbufs to socket\n");
     if(p->len <= 0)
       break; // ?
     if((n = tap->_phy.streamSend(c->sock,p->payload, p->len)) > 0) {

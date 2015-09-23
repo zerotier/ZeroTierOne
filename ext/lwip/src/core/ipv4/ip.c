@@ -304,7 +304,6 @@ return_noroute:
 err_t
 ip_input(struct pbuf *p, struct netif *inp)
 {
-  printf("--------IP INPUT()\n");
   struct ip_hdr *iphdr;
   struct netif *netif;
   u16_t iphdr_hlen;
