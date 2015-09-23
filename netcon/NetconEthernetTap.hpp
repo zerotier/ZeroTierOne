@@ -109,7 +109,6 @@ private:
 	void handle_retval(NetconClient *client, unsigned char* buf);
 	void handle_socket(NetconClient *client, struct socket_st* socket_rpc);
 	void handle_connect(NetconClient *client, struct connect_st* connect_rpc);
-	//void handle_write(NetconConnection *c);
 	void handle_write(NetconConnection *c);
 
 
@@ -184,13 +183,12 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p);
 
 static err_t tapif_init(struct netif *netif)
 {
-  // Actual init functionality is in threadMain() of tap
+  // Actual init functionality is in addIp() of tap
   return ERR_OK;
 }
 
 static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
-	//fprintf(stderr, "low_level_output()\n");
   struct pbuf *q;
   char buf[ZT1_MAX_MTU+32];
   char *bufptr;
@@ -225,7 +223,6 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
     Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),tot_len - sizeof(struct eth_hdr));
 	//printf("low_level_output(): length = %d -- ethertype = %d\n", tot_len - sizeof(struct eth_hdr), Utils::ntoh((uint16_t)ethhdr->type));
-
   return ERR_OK;
 }
 
