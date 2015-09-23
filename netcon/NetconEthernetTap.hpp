@@ -111,7 +111,6 @@ private:
 	void handle_connect(NetconClient *client, struct connect_st* connect_rpc);
 	void handle_write(NetconConnection *c);
 
-
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
 	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success);
 	void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from);
@@ -121,12 +120,6 @@ private:
 	void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN);
 	void phyOnUnixClose(PhySocket *sock,void **uptr);
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
-	void phyOnUnixWritable(PhySocket *sock,void **uptr);
-
-	void phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr);
-	void phyOnSocketPairEndpointData(PhySocket *sock, void **uptr, void *buf, unsigned long n);
-  void phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr);
-
 	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
 
 	int send_return_value(NetconClient *client, int retval);

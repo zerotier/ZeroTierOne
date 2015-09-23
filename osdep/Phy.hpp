@@ -929,7 +929,7 @@ public:
 					}
 					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
 						try {
-							_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr));
+							//_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr));
 						} catch ( ... ) {}
 					}
 #endif // __UNIX_LIKE__

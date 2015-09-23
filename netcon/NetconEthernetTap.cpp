@@ -372,12 +372,10 @@ void NetconEthernetTap::threadMain()
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
 }
 
-void NetconEthernetTap::phyOnSocketPairEndpointClose(PhySocket *sock, void **uptr)
+void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	//fprintf(stderr, "phyOnSocketPairEndpointClose\n");
-	_phy.setNotifyWritable(sock, false);
-	//NetconClient *client = (NetconClient*)*uptr;
-	//closeConnection(client->getConnection(sock));
+	fprintf(stderr, "phyOnUnixClose()\n");
+	close(_phy.getDescriptor(sock));
 }
 
 /*
@@ -395,12 +393,6 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 			}
 		}
 	}
-}
-
-void NetconEthernetTap::phyOnSocketPairEndpointWritable(PhySocket *sock, void **uptr)
-{
-	//fprintf(stderr, "phyOnSocketPairEndpointWritable\n");
-	_phy.setNotifyWritable(sock, false);
 }
 
 // Unused -- no UDP or TCP from this thread/Phy<>
@@ -425,12 +417,6 @@ void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void *
 	clients.push_back(newClient);
 }
 
-void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
-{
-	fprintf(stderr, "phyOnUnixClose()\n");
-	close(_phy.getDescriptor(sock));
-}
-
 /*
  * Processes incoming data on a client-specific RPC connection
  */
@@ -442,39 +428,39 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	switch(buf[0])
 	{
 		case RPC_SOCKET:
-			//fprintf(stderr, "RPC_SOCKET\n");
+			fprintf(stderr, "RPC_SOCKET\n");
 	    struct socket_st socket_rpc;
 	    memcpy(&socket_rpc, &buf[1], sizeof(struct socket_st));
 	    client->tid = socket_rpc.__tid;
 	    handle_socket(client, &socket_rpc);
 			break;
 	  case RPC_LISTEN:
-			//fprintf(stderr, "RPC_LISTEN\n");
+			fprintf(stderr, "RPC_LISTEN\n");
 	    struct listen_st listen_rpc;
 	    memcpy(&listen_rpc, &buf[1], sizeof(struct listen_st));
 	    client->tid = listen_rpc.__tid;
 	    handle_listen(client, &listen_rpc);
 			break;
 	  case RPC_BIND:
-			//fprintf(stderr, "RPC_BIND\n");
+			fprintf(stderr, "RPC_BIND\n");
 	    struct bind_st bind_rpc;
 	    memcpy(&bind_rpc, &buf[1], sizeof(struct bind_st));
 	    client->tid = bind_rpc.__tid;
 	    handle_bind(client, &bind_rpc);
 			break;
 	  case RPC_KILL_INTERCEPT:
-			//fprintf(stderr, "RPC_KILL_INTERCEPT\n");
+			fprintf(stderr, "RPC_KILL_INTERCEPT\n");
 	    closeClient(client);
 			break;
   	case RPC_CONNECT:
-			//fprintf(stderr, "RPC_CONNECT\n");
+			fprintf(stderr, "RPC_CONNECT\n");
 	    struct connect_st connect_rpc;
 	    memcpy(&connect_rpc, &buf[1], sizeof(struct connect_st));
 	    client->tid = connect_rpc.__tid;
 	    handle_connect(client, &connect_rpc);
 			break;
 	  case RPC_FD_MAP_COMPLETION:
-			//fprintf(stderr, "RPC_FD_MAP_COMPLETION\n");
+			fprintf(stderr, "RPC_FD_MAP_COMPLETION\n");
 	    handle_retval(client, buf);
 			break;
 		default:
@@ -482,9 +468,6 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	}
 }
 
-void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
-{
-}
 /*
  * Send a return value to the client for an RPC
  */
@@ -523,10 +506,8 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 	Larg *l = (Larg*)arg;
 	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
 	NetconEthernetTap *tap = l->tap;
-	if(c && c->idx > 0){
-		fprintf(stderr, "nc_poll(): calling handle_write()\n");
+	if(c)
 		tap->handle_write(c);
-	}
 	return ERR_OK;
 }
 
@@ -562,7 +543,6 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
 		NetconConnection *new_conn = client->addConnection(BUFFER, tap->_phy.wrapSocket(fds[0], client));
 		client->connections.push_back(new_conn);
-		new_conn->their_fd = fds[1];
 		new_conn->pcb = newpcb;
 		int send_fd = tap->_phy.getDescriptor(client->rpc->sock);
 		int n = write(larg_fd, "z", 1);
@@ -621,7 +601,6 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   if(p == NULL) {
     if(c) {
 			fprintf(stderr, "nc_recved(): closing connection\n");
-      //tap->_phy.lwipstack->tcp_close(tpcb);
 			tap->_phy.close(c->sock);
 			tap->closeConnection(c);
     }
@@ -637,7 +616,6 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     if((n = tap->_phy.streamSend(c->sock,p->payload, p->len)) > 0) {
       if(n < p->len) {
         fprintf(stderr, "nc_recved(): unable to write entire pbuf to buffer\n");
-				//tap->_phy.setNotifyWritable(l->sock, true);
       }
       tap->lwipstack->tcp_recved(tpcb, n);
     }
@@ -747,7 +725,6 @@ void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_r
 				d[3] = (ip >> 24) & 0xFF;
 				fprintf(stderr, "handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
       }
-      //else fprintf(stderr, "bind successful\n");
     }
     else fprintf(stderr, "handle_bind(): PCB not in CLOSED state. Ignoring BIND request.\n");
   }
@@ -823,7 +800,6 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 		ZT_PHY_SOCKFD_TYPE fds[2];
 		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
 		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.wrapSocket(fds[0], client));
-		new_conn->their_fd = fds[1];
 		new_conn->pcb = pcb;
 		PhySocket *sock = client->rpc->sock;
     sock_fd_write(_phy.getDescriptor(sock), fds[1]);
