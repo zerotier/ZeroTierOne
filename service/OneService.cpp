@@ -396,6 +396,10 @@ struct TcpConnection
 	Mutex writeBuf_m;
 };
 
+// Interface IDs -- the uptr for UDP sockets is set to point to one of these
+static const int ZT1_INTERFACE_ID_DEFAULT = 0; // default, usually port 9993
+static const int ZT1_INTERFACE_ID_UPNP = 1; // a randomly chosen UDP socket used with uPnP mappings, if enabled
+
 class OneServiceImpl : public OneService
 {
 public:
@@ -417,6 +421,7 @@ public:
 		_termReason(ONE_STILL_RUNNING),
 		_port(0),
 #ifdef ZT_USE_MINIUPNPC
+		_v4UpnpUdpSocket((PhySocket *)0),
 		_upnpClient((UPNPClient *)0),
 #endif
 		_run(true)
@@ -432,18 +437,23 @@ public:
 				port = 40000 + (randp % 25500);
 			}
 
-			::memset((void *)&in4,0,sizeof(in4));
+			memset((void *)&in4,0,sizeof(in4));
 			in4.sin_family = AF_INET;
 			in4.sin_port = Utils::hton((uint16_t)port);
-			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,this,131072);
+
+			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,reinterpret_cast<void *>(const_cast<int *>(&ZT1_INTERFACE_ID_DEFAULT)),131072);
+
 			if (_v4UdpSocket) {
 				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @localhost
 				_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+
 				if (_v4TcpListenSocket) {
-					::memset((void *)&in6,0,sizeof(in6));
+					memset((void *)&in6,0,sizeof(in6));
 					in6.sin6_family = AF_INET6;
 					in6.sin6_port = in4.sin_port;
-					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,this,131072);
+
+					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,reinterpret_cast<void *>(const_cast<int *>(&ZT1_INTERFACE_ID_DEFAULT)),131072);
+
 					in6.sin6_addr.s6_addr[15] = 1; // listen for TCP only at localhost
 					_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
@@ -465,7 +475,25 @@ public:
 		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
 
 #ifdef ZT_USE_MINIUPNPC
-		_upnpClient = new UPNPClient(_port);
+		// Bind a random secondary port for use with uPnP, since some NAT routers
+		// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
+		// NAT-t and uPnP from behind the same port. I think this is a bug, but
+		// everyone else's router bugs are our problem. :P
+		for(int k=0;k<256;++k) {
+			unsigned int randp = 0;
+			Utils::getSecureRandom(&randp,sizeof(randp));
+			unsigned int upnport = 40000 + (randp % 25500);
+
+			memset((void *)&in4,0,sizeof(in4));
+			in4.sin_family = AF_INET;
+			in4.sin_port = Utils::hton((uint16_t)upnport);
+
+			_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&in4,reinterpret_cast<void *>(const_cast<int *>(&ZT1_INTERFACE_ID_UPNP)),131072);
+			if (_v4UpnpUdpSocket) {
+				_upnpClient = new UPNPClient(upnport);
+				break;
+			}
+		}
 #endif
 	}
 
@@ -476,6 +504,7 @@ public:
 		_phy.close(_v4TcpListenSocket);
 		_phy.close(_v6TcpListenSocket);
 #ifdef ZT_USE_MINIUPNPC
+		_phy.close(_v4UpnpUdpSocket);
 		delete _upnpClient;
 #endif
 	}
@@ -750,7 +779,7 @@ public:
 			_lastDirectReceiveFromGlobal = OSUtils::now();
 		ZT1_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
-			0,
+			*(reinterpret_cast<const int *>(*uptr)), // for UDP sockets, we set uptr to point to their interface ID
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
@@ -1112,6 +1141,20 @@ public:
 
 	inline int nodeWirePacketSendFunction(int localInterfaceId,const struct sockaddr_storage *addr,const void *data,unsigned int len)
 	{
+#ifdef ZT_USE_MINIUPNPC
+		if (localInterfaceId == ZT1_INTERFACE_ID_UPNP) {
+#ifdef ZT_BREAK_UDP
+			if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
+#endif
+			if (addr->ss_family == AF_INET)
+				return ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
+			else return -1;
+#ifdef ZT_BREAK_UDP
+			}
+#endif
+		}
+#endif // ZT_USE_MINIUPNPC
+
 		int result = -1;
 		switch(addr->ss_family) {
 			case AF_INET:
@@ -1300,6 +1343,7 @@ private:
 	unsigned int _port;
 
 #ifdef ZT_USE_MINIUPNPC
+	PhySocket *_v4UpnpUdpSocket;
 	UPNPClient *_upnpClient;
 #endif
 
