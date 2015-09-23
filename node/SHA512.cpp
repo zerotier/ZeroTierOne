@@ -48,10 +48,8 @@ Public domain.
 
 #define uint64 uint64_t
 
-#define load_bigendian(x) Utils::ntoh(*((const uint64_t *)(x)))
-#define store_bigendian(x,u) (*((uint64_t *)(x)) = Utils::hton((u)))
+#ifdef ZT_NO_TYPE_PUNNING
 
-#if 0
 static uint64 load_bigendian(const unsigned char *x)
 {
   return
@@ -77,7 +75,13 @@ static void store_bigendian(unsigned char *x,uint64 u)
   x[1] = u; u >>= 8;
   x[0] = u;
 }
-#endif
+
+#else // !ZT_NO_TYPE_PUNNING
+
+#define load_bigendian(x) Utils::ntoh(*((const uint64_t *)(x)))
+#define store_bigendian(x,u) (*((uint64_t *)(x)) = Utils::hton((u)))
+
+#endif // ZT_NO_TYPE_PUNNING
 
 #define SHR(x,c) ((x) >> (c))
 #define ROTR(x,c) (((x) >> (c)) | ((x) << (64 - (c))))
