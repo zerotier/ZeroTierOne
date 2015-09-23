@@ -220,7 +220,7 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 			attemptToContactAt(RR,bestPath->address(),now);
 			bestPath->sent(now);
 		} else if (((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!bestPath->reliable())) {
-			_natKeepaliveBuf += (uint32_t)now * 2654435761; // tumble this around to send constantly varying (meaningless) payloads
+			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
 			RR->node->putPacket(bestPath->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
 			bestPath->sent(now);
