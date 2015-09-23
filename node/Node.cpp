@@ -233,7 +233,9 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
-	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
+	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
+	const uint64_t timeSinceLastPingCheck = now - _lastPingCheck;
+	if (timeSinceLastPingCheck >= ZT_PING_CHECK_INVERVAL) {
 		try {
 			_lastPingCheck = now;
 
@@ -278,6 +280,8 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}
+	} else {
+		timeUntilNextPingCheck -= (unsigned long)timeSinceLastPingCheck;
 	}
 
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
@@ -292,7 +296,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	}
 
 	try {
-		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min((unsigned long)ZT_PING_CHECK_INVERVAL,RR->sw->doTimerTasks(now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
+		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
 	} catch ( ... ) {
 		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
