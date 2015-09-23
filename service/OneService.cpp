@@ -566,7 +566,7 @@ public:
 
 #ifdef ZT_AUTO_UPDATE
 				if ((now - lastSoftwareUpdateCheck) >= ZT_AUTO_UPDATE_CHECK_PERIOD) {
-					lastSoftwareUpdateCheck = OSUtils::now();
+					lastSoftwareUpdateCheck = now;
 					Thread::start(&backgroundSoftwareUpdateChecker);
 				}
 #endif // ZT_AUTO_UPDATE
