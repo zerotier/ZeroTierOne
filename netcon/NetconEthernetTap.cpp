@@ -254,12 +254,10 @@ NetconConnection *NetconEthernetTap::getConnectionByPCB(struct tcp_pcb *pcb)
 
 NetconConnection *NetconEthernetTap::getConnectionByThisFD(int fd)
 {
-	//fprintf(stderr, "  getConnectionByThisFD\n");
 	for(size_t i=0; i<clients.size(); i++) {
 		for(size_t j=0; j<clients[i]->connections.size(); j++) {
-			if(_phy.getDescriptor(clients[i]->connections[j]->sock) == fd) {
+			if(_phy.getDescriptor(clients[i]->connections[j]->sock) == fd)
 				return clients[i]->connections[j];
-			}
 		}
 	}
 	return NULL;
@@ -268,9 +266,8 @@ NetconConnection *NetconEthernetTap::getConnectionByThisFD(int fd)
 NetconClient *NetconEthernetTap::getClientByPCB(struct tcp_pcb *pcb)
 {
 	for(size_t i=0; i<clients.size(); i++) {
-		if(clients[i]->containsPCB(pcb)) {
+		if(clients[i]->containsPCB(pcb))
 			return clients[i];
-		}
 	}
 	return NULL;
 }
@@ -282,16 +279,30 @@ void NetconEthernetTap::closeAllClients()
 	}
 }
 
+/*
+ * Closes a NetconConnection and associated LWIP PCB strcuture.
+ */
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
 {
 	NetconClient *client = conn->owner;
+  lwipstack->tcp_arg(conn->pcb, NULL);
+  lwipstack->tcp_sent(conn->pcb, NULL);
+  lwipstack->tcp_recv(conn->pcb, NULL);
+  lwipstack->tcp_err(conn->pcb, NULL);
+  lwipstack->tcp_poll(conn->pcb, NULL, 0);
+  lwipstack->tcp_close(conn->pcb);
 	_phy.close(conn->sock);
 	lwipstack->tcp_close(conn->pcb);
 	client->removeConnection(conn->sock);
 }
 
+/*
+ * Closes a NetconClient and all associated NetconConnections (rpc, data, and unmapped)
+ */
 void NetconEthernetTap::closeClient(NetconClient *client)
 {
+	closeConnection(client->rpc);
+	closeConnection(client->unmapped_conn);
 	for(size_t i=0; i<client->connections.size(); i++)
 	{
 		close(_phy.getDescriptor(client->connections[i]->sock));
@@ -300,10 +311,6 @@ void NetconEthernetTap::closeClient(NetconClient *client)
 		client->connections.erase(client->connections.begin() + i);
 	}
 }
-
-/*------------------------------------------------------------------------------
------------------------- low-level Interface functions -------------------------
-------------------------------------------------------------------------------*/
 
 #define ZT_LWIP_TCP_TIMER_INTERVAL 10
 
@@ -425,7 +432,6 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
  */
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {
-	fprintf(stderr, "phyOnUnixData(): rpc = %d\n", _phy.getDescriptor(sock));
 	unsigned char *buf = (unsigned char*)data;
 	NetconClient *client = (NetconClient*)*uptr;
 
@@ -475,7 +481,9 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 {
 }
-
+/*
+ * Send a return value to the client for an RPC
+ */
 int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 {
   char retmsg[4];
@@ -483,7 +491,6 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
   retmsg[0]=RPC_RETVAL;
   memcpy(&retmsg[1], &retval, sizeof(retval));
   int n = write(_phy.getDescriptor(client->rpc->sock), &retmsg, sizeof(retmsg));
-
   if(n > 0) {
 		// signal that we've satisfied this requirement
     client->waiting_for_retval = false;
@@ -501,6 +508,11 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 
 /*
  * Callback from LWIP to do whatever work we might need to do.
+ *
+ * @param associated service state object
+ * @param PCB we're polling on
+ * @return ERR_OK if everything is ok, -1 otherwise
+ *
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
@@ -523,6 +535,12 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
  * is then required to tell the service what new file descriptor it has allocated
  * for this connection. After the mapping is complete, the accepted socket can be
  * used.
+ *
+ * @param associated service state object
+ * @param newly allocated PCB
+ * @param error code
+ * @return ERR_OK if everything is ok, -1 otherwise
+ *
  */
 err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 {
@@ -575,6 +593,13 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
  *
  * Data is in the form of a linked list of struct pbufs, it is then recombined and
  * send to the client over the associated unix socket.
+ *
+ * @param associated service state object
+ * @param allocated PCB
+ * @param chain of pbufs
+ * @param error code
+ * @return ERR_OK if everything is ok, -1 otherwise
+ *
  */
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
@@ -591,8 +616,8 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   }
   if(p == NULL) {
     if(c) {
-			//fprintf(stderr, "nc_recved(): closing connection (p==NULL)\n");
-      nc_close(tpcb);
+			fprintf(stderr, "nc_recved(): closing connection\n");
+      //tap->_phy.lwipstack->tcp_close(tpcb);
 			tap->_phy.close(c->sock);
 			tap->closeConnection(c);
     }
@@ -627,6 +652,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
  *
  * Since the PCB related to this error might no longer exist, only its perviously
  * associated (arg) is provided to us.
+ *
+ * @param associated service state object
+ * @param error code
+ *
  */
 void NetconEthernetTap::nc_err(void *arg, err_t err)
 {
@@ -643,43 +672,31 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 }
 
 /*
- * Callback from LWIP when this PCB has been closed
- */
-void NetconEthernetTap::nc_close(struct tcp_pcb* tpcb)
-{
-	fprintf(stderr, "nc_close\n");
-	//closeConnection(getConnectionByPCB(tpcb));
-	/*
-  lwipstack->tcp_arg(tpcb, NULL);
-  lwipstack->tcp_sent(tpcb, NULL);
-  lwipstack->tcp_recv(tpcb, NULL);
-  lwipstack->tcp_err(tpcb, NULL);
-  lwipstack->tcp_poll(tpcb, NULL, 0);
-  lwipstack->tcp_close(tpcb);
-	*/
-}
-
-/*
  * Callback from LWIP
- */
-err_t NetconEthernetTap::nc_send(struct tcp_pcb *tpcb)
-{
-	fprintf(stderr, "nc_send\n");
-	return ERR_OK;
-}
-
-/*
- * Callback from LWIP
+ *
+ * This could be used to track the amount of data sent by a connection.
+ *
+ * @param associated service state object
+ * @param relevant PCB
+ * @param length of data sent
+ * @return ERR_OK if everything is ok, -1 otherwise
+ *
  */
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
-	fprintf(stderr, "nc_sent\n");
+	//fprintf(stderr, "nc_sent\n");
 	return len;
 }
 
 /*
  * Callback from LWIP which sends a return value to the client to signal that
  * a connection was established for this PCB
+ *
+ * @param associated service state object
+ * @param relevant PCB
+ * @param error code
+ * @return ERR_OK if everything is ok, -1 otherwise
+ *
  */
 err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
@@ -702,49 +719,44 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 
 /*
  * Handles an RPC to bind an LWIP PCB to a given address and port
+ *
+ * @param Client that is making the RPC
+ * @param structure containing the data and parameters for this client's RPC
+ *
  */
 void NetconEthernetTap::handle_bind(NetconClient *client, struct bind_st *bind_rpc)
 {
-	// FIXME: Is this hack still needed?
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
 	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
-
-  /*
-  int ip = connaddr->sin_addr.s_addr;
-  unsigned char bytes[4];
-  bytes[0] = ip & 0xFF;
-  bytes[1] = (ip >> 8) & 0xFF;
-  bytes[2] = (ip >> 16) & 0xFF;
-  bytes[3] = (ip >> 24) & 0xFF;
-  fprintf(stderr, "binding to: %d.%d.%d.%d\n", bytes[0], bytes[1], bytes[2], bytes[3]);
-	fprintf(stderr, "PORT = %d\n", conn_port);
-  */
-
 	NetconConnection *c = client->getConnectionByTheirFD(bind_rpc->sockfd);
   if(c) {
     if(c->pcb->state == CLOSED){
       int err = lwipstack->tcp_bind(c->pcb, &conn_addr, conn_port);
       if(err != ERR_OK) {
-        fprintf(stderr, "error while binding to addr/port\n");
+				int ip = connaddr->sin_addr.s_addr;
+				unsigned char d[4];
+				d[0] = ip & 0xFF;
+				d[1] = (ip >> 8) & 0xFF;
+				d[2] = (ip >> 16) & 0xFF;
+				d[3] = (ip >> 24) & 0xFF;
+				fprintf(stderr, "handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
       }
-      else {
-        fprintf(stderr, "bind successful\n");
-      }
+      //else fprintf(stderr, "bind successful\n");
     }
-    else {
-      fprintf(stderr, "PCB not in CLOSED state. Ignoring BIND request.\n");
-    }
+    else fprintf(stderr, "handle_bind(): PCB not in CLOSED state. Ignoring BIND request.\n");
   }
-  else {
-    fprintf(stderr, "can't locate connection for PCB\n");
-  }
+  else fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
 }
 
 /*
  * Handles an RPC to put an LWIP PCB into LISTEN mode
+ *
+ * @param Client that is making the RPC
+ * @param structure containing the data and parameters for this client's RPC
+ *
  */
 void NetconEthernetTap::handle_listen(NetconClient *client, struct listen_st *listen_rpc)
 {
@@ -775,6 +787,10 @@ void NetconEthernetTap::handle_listen(NetconClient *client, struct listen_st *li
 /**
  * Handles a return value (client's perceived fd) and completes a mapping
  * so that we know what connection an RPC call should be associated with.
+ *
+ * @param Client that is making the RPC
+ * @param structure containing the data and parameters for this client's RPC
+ *
  */
 void NetconEthernetTap::handle_retval(NetconClient *client, unsigned char* buf)
 {
@@ -792,6 +808,10 @@ void NetconEthernetTap::handle_retval(NetconClient *client, unsigned char* buf)
  * for use in the main ZT I/O loop, and one end is sent to the client. The client
  * is then required to tell the service what new file descriptor it has allocated
  * for this connection. After the mapping is complete, the socket can be used.
+ *
+ * @param Client that is making the RPC
+ * @param structure containing the data and parameters for this client's RPC
+ *
  */
 void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* socket_rpc)
 {
@@ -815,6 +835,10 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 
 /*
  * Handles an RPC to connect to a given address and port
+ *
+ * @param Client that is making the RPC
+ * @param structure containing the data and parameters for this client's RPC
+ *
  */
 void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* connect_rpc)
 {
@@ -855,9 +879,11 @@ void NetconEthernetTap::handle_connect(NetconClient *client, struct connect_st* 
 /*
  * Writes data pulled from the client's socket buffer to LWIP. This merely sends the
  * data to LWIP to be enqueued and eventually sent to the network.
+ * *
+ * @param Client that is making the RPC
+ * @param structure containing the data and parameters for this client's RPC
  *
  * TODO: Optimize write logic (should we stop using poll?)
- *
  */
 void NetconEthernetTap::handle_write(NetconConnection *c)
 {

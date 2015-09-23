@@ -41,9 +41,13 @@ using namespace std;
 
 namespace ZeroTier {
 
+  enum NetconConnectionType { RPC, BUFFER };
+
   class NetconEthernetTap;
 
-  // Helper class for passing reference to Phy to LWIP callbacks
+  /*
+   * A helper class for passing a reference to _phy to LWIP callbacks as a "state"
+   */
   class Larg
   {
   public:
@@ -52,13 +56,13 @@ namespace ZeroTier {
     Larg(NetconEthernetTap *_tap, PhySocket *_sock) : tap(_tap), sock(_sock) {}
   };
 
-  enum NetconConnectionType { RPC, BUFFER };
-
   // prototypes
   class NetconClient;
   class NetconConnection;
 
-  //
+  /*
+   * A data connection, any number of these may be associated with a NetconClient
+   */
   class NetconConnection
   {
   public:
@@ -73,7 +77,9 @@ namespace ZeroTier {
     NetconConnection(NetconConnectionType type, PhySocket *sock) : type(type), sock(sock) {}
   };
 
-  //
+  /*
+   * A "harnessed" client with associated rpc and data connections.
+   */
   class NetconClient
   {
   public:
@@ -98,7 +104,7 @@ namespace ZeroTier {
         return rpc;
       }
       for(size_t i=0; i<connections.size(); i++) {
-        if(sock == connections[i]->sock) { return connections[i];}
+        if(sock == connections[i]->sock)  return connections[i];
       }
       return NULL;
     }
@@ -107,7 +113,7 @@ namespace ZeroTier {
     NetconConnection *getConnectionByTheirFD(int fd)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->their_fd == fd) { return connections[i]; }
+        if(connections[i]->their_fd == fd) return connections[i];
       }
       return NULL;
     }
@@ -116,7 +122,7 @@ namespace ZeroTier {
     NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb == pcb) { return connections[i]; }
+        if(connections[i]->pcb == pcb) return connections[i];
       }
       return NULL;
     }
@@ -124,7 +130,7 @@ namespace ZeroTier {
     NetconConnection *containsPCB(struct tcp_pcb *pcb)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb == pcb) { return connections[i]; }
+        if(connections[i]->pcb == pcb) return connections[i];
       }
       return NULL;
     }
@@ -132,7 +138,8 @@ namespace ZeroTier {
     void removeConnection(PhySocket *sock)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->sock == sock) { connections.erase(connections.begin() + i); }
+        if(connections[i]->sock == sock)
+          connections.erase(connections.begin() + i);
       }
     }
   };
