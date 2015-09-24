@@ -374,8 +374,9 @@ void NetconEthernetTap::threadMain()
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	fprintf(stderr, "phyOnUnixClose()\n");
-	close(_phy.getDescriptor(sock));
+	//fprintf(stderr, "phyOnUnixClose()\n");
+	//close(_phy.getDescriptor(sock));
+	// TODO: close client
 }
 
 /*
@@ -387,7 +388,9 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 		int r;
 		NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
 		if(c->idx < DEFAULT_READ_BUFFER_SIZE) {
-			if((r = read(_phy.getDescriptor(sock), (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
+			int read_fd = _phy.getDescriptor(sock);
+			fprintf(stderr, "phyOnFileDescriptorActivity(): read_fd = %d\n", read_fd);
+			if((r = read(read_fd, (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
 				c->idx += r;
 				handle_write(c);
 			}
@@ -503,10 +506,11 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
+	//fprintf(stderr, "nc_poll\n");
 	Larg *l = (Larg*)arg;
 	NetconConnection *c = l->tap->getConnectionByPCB(tpcb);
 	NetconEthernetTap *tap = l->tap;
-	if(c)
+	if(c && c->idx) // if valid connection and non-zero index (indicating data present)
 		tap->handle_write(c);
 	return ERR_OK;
 }
@@ -549,6 +553,8 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
     if(n > 0) {
 			if(sock_fd_write(send_fd, fds[1]) > 0) {
 				client->unmapped_conn = new_conn;
+				fprintf(stderr, "nc_accept(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);
+
 			}
 			else {
 				fprintf(stderr, "nc_accept(%d): unable to send fd to client\n", larg_fd);
@@ -776,6 +782,7 @@ void NetconEthernetTap::handle_retval(NetconClient *client, unsigned char* buf)
 {
 	if(client->unmapped_conn != NULL) {
 		memcpy(&(client->unmapped_conn->their_fd), &buf[1], sizeof(int));
+		fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n", _phy.getDescriptor(client->unmapped_conn->sock), client->unmapped_conn->their_fd);
 		client->connections.push_back(client->unmapped_conn);
 		client->unmapped_conn = NULL;
 	}
@@ -803,6 +810,7 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 		new_conn->pcb = pcb;
 		PhySocket *sock = client->rpc->sock;
     sock_fd_write(_phy.getDescriptor(sock), fds[1]);
+		fprintf(stderr, "handle_socket(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);
 		/* Once the client tells us what its fd is for the other end,
 		we can then complete the mapping */
     client->unmapped_conn = new_conn;
@@ -875,7 +883,10 @@ void NetconEthernetTap::handle_write(NetconConnection *c)
 		if(load >= 0.9) {
 			return;
 		}
+
 		int sz, write_allowance =  sndbuf < c->idx ? sndbuf : c->idx;
+		fprintf(stderr, "handle_write(): allow = %d\n", write_allowance);
+
 		if(write_allowance > 0) {
 			int err = lwipstack->tcp_write(c->pcb, &c->buf, write_allowance, TCP_WRITE_FLAG_COPY);
 			if(err != ERR_OK) {
