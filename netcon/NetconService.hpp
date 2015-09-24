@@ -41,7 +41,7 @@ using namespace std;
 
 namespace ZeroTier {
 
-  enum NetconConnectionType { RPC, BUFFER };
+  enum NetconConnectionType { RPC, TCP_DATA };
 
   class NetconEthernetTap;
 

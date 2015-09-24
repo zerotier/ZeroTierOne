@@ -166,8 +166,6 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	fprintf(stderr, "__put(): len = %d\n", len);
-
 	struct pbuf *p,*q;
 	//fprintf(stderr, "_put(%s,%s,%.4x,[data],%u)\n",from.toString().c_str(),to.toString().c_str(),etherType,len);
 	if (!_enabled)
@@ -291,20 +289,25 @@ void NetconEthernetTap::closeAllClients()
  */
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
 {
+	fprintf(stderr, "closeConnection(): closing: conn->type = %d, fd=%d\n", conn->type, _phy.getDescriptor(conn->sock));
+
 	NetconClient *client = conn->owner;
-	if(conn->pcb == NULL) {
+	if(conn->type == TCP_DATA && conn->pcb == NULL) {
 		fprintf(stderr, "closeConnection(): PCB is null\n");
 		return;
 	}
-  lwipstack->_tcp_arg(conn->pcb, NULL);
-  lwipstack->_tcp_sent(conn->pcb, NULL);
-  lwipstack->_tcp_recv(conn->pcb, NULL);
-  lwipstack->_tcp_err(conn->pcb, NULL);
-  lwipstack->_tcp_poll(conn->pcb, NULL, 0);
+	if(conn->type == TCP_DATA)
+	{
+		lwipstack->_tcp_arg(conn->pcb, NULL);
+	  lwipstack->_tcp_sent(conn->pcb, NULL);
+	  lwipstack->_tcp_recv(conn->pcb, NULL);
+	  lwipstack->_tcp_err(conn->pcb, NULL);
+	  lwipstack->_tcp_poll(conn->pcb, NULL, 0);
+		lwipstack->_tcp_close(conn->pcb);
+	}
 	close(_phy.getDescriptor(conn->sock));
 	close(conn->their_fd);
 	_phy.close(conn->sock);
-	lwipstack->_tcp_close(conn->pcb);
 	delete conn;
 }
 
@@ -353,9 +356,6 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- DEFAULT_READ_BUFFER_SIZE  = %d\n", DEFAULT_READ_BUFFER_SIZE);
 	*/
 
-	//fprintf(stderr, "- LWIP_DEBUG = %d\n", LWIP_DEBUG);
-	fprintf(stderr, "- TCP_DEBUG = %d\n", TCP_DEBUG);
-
 	// Main timer loop
 	while (_run) {
 		uint64_t now = OSUtils::now();
@@ -386,9 +386,9 @@ void NetconEthernetTap::threadMain()
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	fprintf(stderr, "phyOnUnixClose()\n");
+	fprintf(stderr, "phyOnUnixClose() CLOSING: %d\n", _phy.getDescriptor(sock));
 	//close(_phy.getDescriptor(sock));
-	closeClient((NetconClient*)*uptr);
+	//closeClient((NetconClient*)*uptr);
 }
 
 /*
@@ -401,7 +401,7 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 		NetconConnection *c = ((NetconClient*)*uptr)->getConnection(sock);
 		if(c->idx < DEFAULT_READ_BUFFER_SIZE) {
 			int read_fd = _phy.getDescriptor(sock);
-			fprintf(stderr, "phyOnFileDescriptorActivity(): read_fd = %d\n", read_fd);
+			//fprintf(stderr, "phyOnFileDescriptorActivity(): read_fd = %d\n", read_fd);
 			if((r = read(read_fd, (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
 				c->idx += r;
 				Mutex::Lock _l(lwipstack->_lock);
@@ -427,6 +427,8 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
  */
 void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
 {
+	fprintf(stderr, "phyOnUnixAccept() NEW CLIENT RPC: %d\n", _phy.getDescriptor(sockN));
+
 	NetconClient *newClient = new NetconClient();
 	newClient->rpc = newClient->addConnection(RPC, sockN);
 	*uptrN = newClient;
@@ -561,7 +563,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		}
 		ZT_PHY_SOCKFD_TYPE fds[2];
 		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
-		NetconConnection *new_conn = client->addConnection(BUFFER, tap->_phy.wrapSocket(fds[0], client));
+		NetconConnection *new_conn = client->addConnection(TCP_DATA, tap->_phy.wrapSocket(fds[0], client));
 		client->connections.push_back(new_conn);
 		new_conn->pcb = newpcb;
 		new_conn->their_fd = fds[1];
@@ -823,7 +825,7 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
   if(pcb != NULL) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
 		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
-		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.wrapSocket(fds[0], client));
+		NetconConnection *new_conn = client->addConnection(TCP_DATA, _phy.wrapSocket(fds[0], client));
 		new_conn->pcb = pcb;
 	  new_conn->their_fd = fds[1];
 		PhySocket *sock = client->rpc->sock;
@@ -903,8 +905,6 @@ void NetconEthernetTap::handle_write(NetconConnection *c)
 		}
 
 		int sz, write_allowance =  sndbuf < c->idx ? sndbuf : c->idx;
-		fprintf(stderr, "handle_write(): allow = %d\n", write_allowance);
-
 		if(write_allowance > 0) {
 			// NOTE: this assumes that lwipstack->_lock is locked, either
 			// because we are in a callback or have locked it manually.
