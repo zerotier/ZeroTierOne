@@ -110,7 +110,7 @@ namespace ZeroTier {
  */
 class LWIPStack
 {
-private:
+public:
   void *_libref;
 
   void (*_lwip_init)();
@@ -150,7 +150,6 @@ private:
 
   Mutex _lock;
 
-public:
   LWIPStack(const char* path) :
     _libref(NULL)
   {

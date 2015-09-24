@@ -206,8 +206,11 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 	}
 
 	//printf("p->len == %u, p->payload == %s\n",p->len,Utils::hex(p->payload,p->len).c_str());
-	if(interface.input(p, &interface) != ERR_OK) {
-		fprintf(stderr, "_put(): Error while RXing packet (netif->input)\n");
+	{
+		Mutex::Lock _l2(lwipstack->_lock);
+		if(interface.input(p, &interface) != ERR_OK) {
+			fprintf(stderr, "_put(): Error while RXing packet (netif->input)\n");
+		}
 	}
 }
 
@@ -396,6 +399,7 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 			fprintf(stderr, "phyOnFileDescriptorActivity(): read_fd = %d\n", read_fd);
 			if((r = read(read_fd, (&c->buf)+c->idx, DEFAULT_READ_BUFFER_SIZE-(c->idx))) > 0) {
 				c->idx += r;
+				Mutex::Lock _l(lwipstack->_lock);
 				handle_write(c);
 			}
 		}
@@ -500,6 +504,9 @@ int NetconEthernetTap::send_return_value(NetconClient *client, int retval)
 --------------------------------- LWIP callbacks -------------------------------
 ------------------------------------------------------------------------------*/
 
+// NOTE: these are called from within LWIP, meaning that lwipstack->_lock is ALREADY
+// locked in this case!
+
 /*
  * Callback from LWIP to do whatever work we might need to do.
  *
@@ -568,11 +575,11 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
       fprintf(stderr, "nc_accept(%d): error writing signal byte (send_fd = %d, their_fd = %d)\n", larg_fd, send_fd, fds[1]);
       return -1;
     }
-    tap->lwipstack->tcp_arg(newpcb, new Larg(tap, new_conn->sock));
-    tap->lwipstack->tcp_recv(newpcb, nc_recved);
-    tap->lwipstack->tcp_err(newpcb, nc_err);
-    tap->lwipstack->tcp_sent(newpcb, nc_sent);
-    tap->lwipstack->tcp_poll(newpcb, nc_poll, 1);
+    tap->lwipstack->_tcp_arg(newpcb, new Larg(tap, new_conn->sock));
+    tap->lwipstack->_tcp_recv(newpcb, nc_recved);
+    tap->lwipstack->_tcp_err(newpcb, nc_err);
+    tap->lwipstack->_tcp_sent(newpcb, nc_sent);
+    tap->lwipstack->_tcp_poll(newpcb, nc_poll, 1);
     tcp_accepted(c->pcb);
 		return ERR_OK;
   }
@@ -627,14 +634,14 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
       if(n < p->len) {
         fprintf(stderr, "nc_recved(): unable to write entire pbuf to buffer\n");
       }
-      tap->lwipstack->tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
+      tap->lwipstack->_tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
     }
     else {
       fprintf(stderr, "nc_recved(): No data written to intercept buffer\n");
     }
     p = p->next;
   }
-  tap->lwipstack->pbuf_free(q); // free pbufs
+  tap->lwipstack->_pbuf_free(q); // free pbufs
   return ERR_OK;
 }
 
@@ -892,7 +899,9 @@ void NetconEthernetTap::handle_write(NetconConnection *c)
 		fprintf(stderr, "handle_write(): allow = %d\n", write_allowance);
 
 		if(write_allowance > 0) {
-			int err = lwipstack->tcp_write(c->pcb, &c->buf, write_allowance, TCP_WRITE_FLAG_COPY);
+			// NOTE: this assumes that lwipstack->_lock is locked, either
+			// because we are in a callback or have locked it manually.
+			int err = lwipstack->_tcp_write(c->pcb, &c->buf, write_allowance, TCP_WRITE_FLAG_COPY);
 			if(err != ERR_OK) {
 				fprintf(stderr, "handle_write(): error while writing to PCB\n");
 				return;
