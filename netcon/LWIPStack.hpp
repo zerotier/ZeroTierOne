@@ -97,13 +97,21 @@ typedef ip_addr ip_addr_t;
 #define NETIF_SET_UP_SIG struct netif *netif
 #define NETIF_POLL_SIG struct netif *netif
 
-
-
-class LWIPStack{
+/**
+ * Loads an instance of liblwip.so in a private memory arena
+ *
+ * This uses dlmopen() to load an instance of the LWIP stack into its
+ * own private memory space. This is done to get around the stack's
+ * lack of thread-safety or multi-instance support. The alternative
+ * would be to massively refactor the stack so everything lives in a
+ * state object instead of static memory space.
+ */
+class LWIPStack
+{
+private:
   void* libref;
 
 public:
-
   void (*lwip_init)();
   err_t (*tcp_write)(TCP_WRITE_SIG);
   void (*tcp_sent)(TCP_SENT_SIG);
@@ -140,8 +148,6 @@ public:
   struct netif * (*netif_add)(NETIF_ADD_SIG);
   void (*netif_set_up)(NETIF_SET_UP_SIG);
   void (*netif_poll)(NETIF_POLL_SIG);
-
-
 
   LWIPStack(const char* path)
   {
@@ -187,6 +193,12 @@ public:
     netif_add = (struct netif*(*)(NETIF_ADD_SIG))dlsym(libref, "netif_add");
     netif_set_up = (void(*)(NETIF_SET_UP_SIG))dlsym(libref, "netif_set_up");
     netif_poll = (void(*)(NETIF_POLL_SIG))dlsym(libref, "netif_poll");
+  }
+
+  ~LWIPStack()
+  {
+    if (lebref)
+      dlclose(libref);
   }
 };
 
