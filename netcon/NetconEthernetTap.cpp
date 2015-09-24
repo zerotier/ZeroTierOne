@@ -292,15 +292,20 @@ void NetconEthernetTap::closeAllClients()
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
 {
 	NetconClient *client = conn->owner;
+	if(conn->pcb == NULL) {
+		fprintf(stderr, "closeConnection(): PCB is null\n");
+		return;
+	}
   lwipstack->_tcp_arg(conn->pcb, NULL);
   lwipstack->_tcp_sent(conn->pcb, NULL);
   lwipstack->_tcp_recv(conn->pcb, NULL);
   lwipstack->_tcp_err(conn->pcb, NULL);
   lwipstack->_tcp_poll(conn->pcb, NULL, 0);
-  lwipstack->_tcp_close(conn->pcb);
+	close(_phy.getDescriptor(conn->sock));
 	_phy.close(conn->sock);
 	lwipstack->_tcp_close(conn->pcb);
 	client->removeConnection(conn->sock);
+	delete conn;
 }
 
 /*
@@ -313,12 +318,9 @@ void NetconEthernetTap::closeClient(NetconClient *client)
 		closeConnection(client->rpc);
 		closeConnection(client->unmapped_conn);
 	}
-	for(size_t i=0; i<client->connections.size(); i++)
-	{
-		close(_phy.getDescriptor(client->connections[i]->sock));
-		lwipstack->tcp_close(client->connections[i]->pcb);
-		delete client->connections[i];
-		client->connections.erase(client->connections.begin() + i);
+	while(client->connections.size()){
+		closeConnection(client->connections.front());
+		client->connections.erase(client->connections.begin());
 	}
 }
 
@@ -384,9 +386,9 @@ void NetconEthernetTap::threadMain()
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	//fprintf(stderr, "phyOnUnixClose()\n");
+	fprintf(stderr, "phyOnUnixClose()\n");
 	//close(_phy.getDescriptor(sock));
-	// TODO: close client
+	closeClient((NetconClient*)*uptr);
 }
 
 /*
