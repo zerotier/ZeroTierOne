@@ -157,13 +157,14 @@ Node::~Node()
 
 ZT1_ResultCode Node::processWirePacket(
 	uint64_t now,
+	int localInterfaceId,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	_now = now;
-	RR->sw->onRemotePacket(*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
+	RR->sw->onRemotePacket(localInterfaceId,*(reinterpret_cast<const InetAddress *>(remoteAddress)),packetData,packetLength);
 	return ZT1_RESULT_OK;
 }
 
@@ -232,7 +233,9 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	_now = now;
 	Mutex::Lock bl(_backgroundTasksLock);
 
-	if ((now - _lastPingCheck) >= ZT_PING_CHECK_INVERVAL) {
+	unsigned long timeUntilNextPingCheck = ZT_PING_CHECK_INVERVAL;
+	const uint64_t timeSinceLastPingCheck = now - _lastPingCheck;
+	if (timeSinceLastPingCheck >= ZT_PING_CHECK_INVERVAL) {
 		try {
 			_lastPingCheck = now;
 
@@ -261,7 +264,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 				if (nr->second) {
 					SharedPtr<Peer> rp(RR->topology->getPeer(nr->first));
 					if ((rp)&&(!rp->hasActiveDirectPath(now)))
-						rp->attemptToContactAt(RR,nr->second,now);
+						rp->attemptToContactAt(RR,-1,nr->second,now);
 				}
 			}
 
@@ -277,6 +280,8 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 		} catch ( ... ) {
 			return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 		}
+	} else {
+		timeUntilNextPingCheck -= (unsigned long)timeSinceLastPingCheck;
 	}
 
 	if ((now - _lastHousekeepingRun) >= ZT_HOUSEKEEPING_PERIOD) {
@@ -291,7 +296,7 @@ ZT1_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *next
 	}
 
 	try {
-		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min((unsigned long)ZT_PING_CHECK_INVERVAL,RR->sw->doTimerTasks(now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
+		*nextBackgroundTaskDeadline = now + (uint64_t)std::max(std::min(timeUntilNextPingCheck,RR->sw->doTimerTasks(now)),(unsigned long)ZT_CORE_TIMER_TASK_GRANULARITY);
 	} catch ( ... ) {
 		return ZT1_RESULT_FATAL_ERROR_INTERNAL;
 	}
@@ -569,13 +574,14 @@ void ZT1_Node_delete(ZT1_Node *node)
 enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
+	int localInterfaceId,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
 	volatile uint64_t *nextBackgroundTaskDeadline)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
+		return reinterpret_cast<ZeroTier::Node *>(node)->processWirePacket(now,localInterfaceId,remoteAddress,packetData,packetLength,nextBackgroundTaskDeadline);
 	} catch (std::bad_alloc &exc) {
 		return ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {

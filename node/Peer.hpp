@@ -105,6 +105,7 @@ public:
 	 * and appears to be valid.
 	 *
 	 * @param RR Runtime environment
+	 * @param localInterfaceId Local interface ID or -1 if unspecified
 	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
@@ -114,6 +115,7 @@ public:
 	 */
 	void received(
 		const RuntimeEnvironment *RR,
+		int localInterfaceId,
 		const InetAddress &remoteAddr,
 		unsigned int hops,
 		uint64_t packetId,
@@ -155,10 +157,11 @@ public:
 	 * for NAT traversal and path verification.
 	 *
 	 * @param RR Runtime environment
+	 * @param localInterfaceId Local interface ID or -1 for unspecified
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 */
-	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,uint64_t now);
+	void attemptToContactAt(const RuntimeEnvironment *RR,int localInterfaceId,const InetAddress &atAddress,uint64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts

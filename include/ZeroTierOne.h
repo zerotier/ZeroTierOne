@@ -656,7 +656,12 @@ typedef void ZT1_Node;
  * on failure, and this results in the network being placed into the
  * PORT_ERROR state.
  */
-typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,void *,uint64_t,enum ZT1_VirtualNetworkConfigOperation,const ZT1_VirtualNetworkConfig *);
+typedef int (*ZT1_VirtualNetworkConfigFunction)(
+	ZT1_Node *,
+	void *,
+	uint64_t,
+	enum ZT1_VirtualNetworkConfigOperation,
+	const ZT1_VirtualNetworkConfig *);
 
 /**
  * Function to send a frame out to a virtual network port
@@ -665,7 +670,16 @@ typedef int (*ZT1_VirtualNetworkConfigFunction)(ZT1_Node *,void *,uint64_t,enum 
  * (5) destination MAC, (6) ethertype, (7) VLAN ID, (8) frame data,
  * (9) frame length.
  */
-typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,void *,uint64_t,uint64_t,uint64_t,unsigned int,unsigned int,const void *,unsigned int);
+typedef void (*ZT1_VirtualNetworkFrameFunction)(
+	ZT1_Node *,
+	void *,
+	uint64_t,
+	uint64_t,
+	uint64_t,
+	unsigned int,
+	unsigned int,
+	const void *,
+	unsigned int);
 
 /**
  * Callback for events
@@ -676,7 +690,11 @@ typedef void (*ZT1_VirtualNetworkFrameFunction)(ZT1_Node *,void *,uint64_t,uint6
  * whether it is present at all) is event type dependent. See the comments
  * in the definition of ZT1_Event.
  */
-typedef void (*ZT1_EventCallback)(ZT1_Node *,void *,enum ZT1_Event,const void *);
+typedef void (*ZT1_EventCallback)(
+	ZT1_Node *,
+	void *,
+	enum ZT1_Event,
+	const void *);
 
 /**
  * Function to get an object from the data store
@@ -698,7 +716,14 @@ typedef void (*ZT1_EventCallback)(ZT1_Node *,void *,enum ZT1_Event,const void *)
  * read. The caller may call the function multiple times to read the whole
  * object.
  */
-typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,void *,const char *,void *,unsigned long,unsigned long,unsigned long *);
+typedef long (*ZT1_DataStoreGetFunction)(
+	ZT1_Node *,
+	void *,
+	const char *,
+	void *,
+	unsigned long,
+	unsigned long,
+	unsigned long *);
 
 /**
  * Function to store an object in the data store
@@ -716,19 +741,40 @@ typedef long (*ZT1_DataStoreGetFunction)(ZT1_Node *,void *,const char *,void *,u
  * If the data pointer is null, this must be interpreted as a delete
  * operation.
  */
-typedef int (*ZT1_DataStorePutFunction)(ZT1_Node *,void *,const char *,const void *,unsigned long,int);
+typedef int (*ZT1_DataStorePutFunction)(
+	ZT1_Node *,
+	void *,
+	const char *,
+	const void *,
+	unsigned long,
+	int);
 
 /**
  * Function to send a ZeroTier packet out over the wire
  *
- * Parameters: (1) node, (2) user ptr, (3) address, (4) packet data,
- * (5) packet data length.
+ * Parameters:
+ *  (1) Node
+ *  (2) User pointer
+ *  (3) Local interface ID, -1==unspcified/random
+ *  (4) Remote address
+ *  (5) Packet data
+ *  (6) Packet length
+ *
+ * If you have only one local interface it is fine to ignore the local
+ * interface ID field. This is used to support different local interface
+ * endpoints and differentiation between them.
  *
  * The function must return zero on success and may return any error code
  * on failure. Note that success does not (of course) guarantee packet
  * delivery. It only means that the packet appears to have been sent.
  */
-typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,void *,const struct sockaddr_storage *,const void *,unsigned int);
+typedef int (*ZT1_WirePacketSendFunction)(
+	ZT1_Node *,                      /* Node */
+	void *,                          /* User ptr */
+	int,                             /* Local interface ID, -1 for unspecified/random */
+	const struct sockaddr_storage *, /* Remote address */
+	const void *,                    /* Packet data */
+	unsigned int);                   /* Packet length */
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -747,7 +793,7 @@ typedef int (*ZT1_WirePacketSendFunction)(ZT1_Node *,void *,const struct sockadd
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param eventCallback Function to receive status updates and non-fatal error notices
- * @param overrideRootTopology If not NULL, must contain string-serialize root topology (for testing, default: NULL)
+ * @param overrideRootTopology Alternative root server topology or NULL for default (mostly for test/debug use)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT1_ResultCode ZT1_Node_new(
@@ -760,11 +806,7 @@ enum ZT1_ResultCode ZT1_Node_new(
 	ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
 	ZT1_EventCallback eventCallback,
-	const char *overrideRootTopology
-#ifdef __cplusplus
-    = (const char *)0               
-#endif
-    );
+	const char *overrideRootTopology);
 
 /**
  * Delete a node and free all resources it consumes
@@ -781,6 +823,7 @@ void ZT1_Node_delete(ZT1_Node *node);
  *
  * @param node Node instance
  * @param now Current clock in milliseconds
+ * @param localInterfaceId Local interface ID on which packet was received (use 0 if only one interface or unsure)
  * @param remoteAddress Origin of packet
  * @param packetData Packet data
  * @param packetLength Packet length
@@ -790,6 +833,7 @@ void ZT1_Node_delete(ZT1_Node *node);
 enum ZT1_ResultCode ZT1_Node_processWirePacket(
 	ZT1_Node *node,
 	uint64_t now,
+	const int localInterfaceId,
 	const struct sockaddr_storage *remoteAddress,
 	const void *packetData,
 	unsigned int packetLength,
@@ -882,14 +926,10 @@ enum ZT1_ResultCode ZT1_Node_leave(ZT1_Node *node,uint64_t nwid);
  * @param node Node instance
  * @param nwid 64-bit network ID
  * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
- * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
+ * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi
-#ifdef __cplusplus
-    = 0
-#endif
-    );
+enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
  * Unsubscribe from an Ethernet multicast group (or all groups)
@@ -902,14 +942,10 @@ enum ZT1_ResultCode ZT1_Node_multicastSubscribe(ZT1_Node *node,uint64_t nwid,uin
  * @param node Node instance
  * @param nwid 64-bit network ID
  * @param multicastGroup Ethernet multicast or broadcast MAC (least significant 48 bits)
- * @param multicastAdi Multicast ADI (least significant 32 bits only, default: 0)
+ * @param multicastAdi Multicast ADI (least significant 32 bits only, use 0 if not needed)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi
-#ifdef __cplusplus
-    = 0
-#endif
-    );
+enum ZT1_ResultCode ZT1_Node_multicastUnsubscribe(ZT1_Node *node,uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 
 /**
  * Get this node's 40-bit ZeroTier address

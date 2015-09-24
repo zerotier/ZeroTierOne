@@ -89,8 +89,12 @@ public:
 	 * Once created, you must call the run() method to actually start
 	 * processing.
 	 *
+	 * The port is saved to a file in the home path called zerotier-one.port,
+	 * which is used by the CLI and can be used to see which port was chosen if
+	 * 0 (random port) is picked.
+	 *
 	 * @param hp Home path
-	 * @param port TCP and UDP port for packets and HTTP control
+	 * @param port TCP and UDP port for packets and HTTP control (if 0, pick random port)
 	 * @param overrideRootTopology String-serialized root topology (for testing, default: NULL)
 	 */
 	static OneService *newInstance(

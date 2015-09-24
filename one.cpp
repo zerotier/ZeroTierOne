@@ -910,7 +910,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993)"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
@@ -985,7 +985,7 @@ int main(int argc,char **argv)
 
 				case 'p': // port -- for both UDP and TCP, packets and control plane
 					port = Utils::strToUInt(argv[i] + 2);
-					if ((port > 0xffff)||(port == 0)) {
+					if (port > 0xffff) {
 						printHelp(argv[0],stdout);
 						return 1;
 					}

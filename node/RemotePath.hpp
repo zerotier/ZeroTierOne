@@ -53,13 +53,17 @@ public:
 		Path(),
 		_lastSend(0),
 		_lastReceived(0),
+		_localInterfaceId(-1),
 		_fixed(false) {}
 
-	RemotePath(const InetAddress &addr,bool fixed) :
+	RemotePath(int localInterfaceId,const InetAddress &addr,bool fixed) :
 		Path(addr,0,TRUST_NORMAL),
 		_lastSend(0),
 		_lastReceived(0),
+		_localInterfaceId(localInterfaceId),
 		_fixed(fixed) {}
+
+	inline int localInterfaceId() const throw() { return _localInterfaceId; }
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
@@ -123,7 +127,7 @@ public:
 	 */
 	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		if (RR->node->putPacket(address(),data,len)) {
+		if (RR->node->putPacket(_localInterfaceId,address(),data,len)) {
 			sent(now);
 			RR->antiRec->logOutgoingZT(data,len);
 			return true;
@@ -134,6 +138,7 @@ public:
 private:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
+	int _localInterfaceId;
 	bool _fixed;
 };
 

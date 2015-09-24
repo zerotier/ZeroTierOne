@@ -359,7 +359,7 @@ static int SnodeVirtualNetworkConfigFunction(ZT1_Node *node,void *uptr,uint64_t 
 static void SnodeEventCallback(ZT1_Node *node,void *uptr,enum ZT1_Event event,const void *metaData);
 static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize);
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure);
-static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,const void *data,unsigned int len);
+static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,int localInterfaceId,const struct sockaddr_storage *addr,const void *data,unsigned int len);
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
@@ -411,6 +411,10 @@ struct TcpConnection
 	Mutex writeBuf_m;
 };
 
+// Interface IDs -- the uptr for UDP sockets is set to point to one of these
+static const int ZT1_INTERFACE_ID_DEFAULT = 0; // default, usually port 9993
+static const int ZT1_INTERFACE_ID_UPNP = 1; // a randomly chosen UDP socket used with uPnP mappings, if enabled
+
 class OneServiceImpl : public OneService
 {
 public:
@@ -430,38 +434,82 @@ public:
 		_nextBackgroundTaskDeadline(0),
 		_tcpFallbackTunnel((TcpConnection *)0),
 		_termReason(ONE_STILL_RUNNING),
-		_port(port),
+		_port(0),
 #ifdef ZT_USE_MINIUPNPC
-		_upnpClient((int)port),
+		_v4UpnpUdpSocket((PhySocket *)0),
+		_upnpClient((UPNPClient *)0),
 #endif
 		_run(true)
 	{
 		struct sockaddr_in in4;
 		struct sockaddr_in6 in6;
 
-		::memset((void *)&in4,0,sizeof(in4));
-		in4.sin_family = AF_INET;
-		in4.sin_port = Utils::hton((uint16_t)port);
-		_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,this,131072);
-		if (!_v4UdpSocket)
-			throw std::runtime_error("cannot bind to port (UDP/IPv4)");
-		in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @localhost
-		_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
-		if (!_v4TcpListenSocket) {
-			_phy.close(_v4UdpSocket);
-			throw std::runtime_error("cannot bind to port (TCP/IPv4)");
+		const int portTrials = (port == 0) ? 256 : 1; // if port is 0, pick random
+		for(int k=0;k<portTrials;++k) {
+			if (port == 0) {
+				unsigned int randp = 0;
+				Utils::getSecureRandom(&randp,sizeof(randp));
+				port = 40000 + (randp % 25500);
+			}
+
+			memset((void *)&in4,0,sizeof(in4));
+			in4.sin_family = AF_INET;
+			in4.sin_port = Utils::hton((uint16_t)port);
+
+			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&in4,reinterpret_cast<void *>(const_cast<int *>(&ZT1_INTERFACE_ID_DEFAULT)),131072);
+
+			if (_v4UdpSocket) {
+				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @localhost
+				_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+
+				if (_v4TcpListenSocket) {
+					memset((void *)&in6,0,sizeof(in6));
+					in6.sin6_family = AF_INET6;
+					in6.sin6_port = in4.sin_port;
+
+					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,reinterpret_cast<void *>(const_cast<int *>(&ZT1_INTERFACE_ID_DEFAULT)),131072);
+
+					in6.sin6_addr.s6_addr[15] = 1; // listen for TCP only at localhost
+					_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
+
+					_port = port;
+					break; // success!
+				} else {
+					_phy.close(_v4UdpSocket,false);
+				}
+			}
+
+			port = 0;
 		}
 
-		::memset((void *)&in6,0,sizeof(in6));
-		in6.sin6_family = AF_INET6;
-		in6.sin6_port = in4.sin_port;
-		_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&in6,this,131072);
-		in6.sin6_addr.s6_addr[15] = 1; // listen for TCP only at localhost
-		_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
+		if (_port == 0)
+			throw std::runtime_error("cannot bind to port");
 
 		char portstr[64];
-		Utils::snprintf(portstr,sizeof(portstr),"%u",port);
+		Utils::snprintf(portstr,sizeof(portstr),"%u",_port);
 		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
+
+#ifdef ZT_USE_MINIUPNPC
+		// Bind a random secondary port for use with uPnP, since some NAT routers
+		// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
+		// NAT-t and uPnP from behind the same port. I think this is a bug, but
+		// everyone else's router bugs are our problem. :P
+		for(int k=0;k<256;++k) {
+			unsigned int randp = 0;
+			Utils::getSecureRandom(&randp,sizeof(randp));
+			unsigned int upnport = 40000 + (randp % 25500);
+
+			memset((void *)&in4,0,sizeof(in4));
+			in4.sin_family = AF_INET;
+			in4.sin_port = Utils::hton((uint16_t)upnport);
+
+			_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&in4,reinterpret_cast<void *>(const_cast<int *>(&ZT1_INTERFACE_ID_UPNP)),131072);
+			if (_v4UpnpUdpSocket) {
+				_upnpClient = new UPNPClient(upnport);
+				break;
+			}
+		}
+#endif
 	}
 
 	virtual ~OneServiceImpl()
@@ -470,6 +518,10 @@ public:
 		_phy.close(_v6UdpSocket);
 		_phy.close(_v4TcpListenSocket);
 		_phy.close(_v6TcpListenSocket);
+#ifdef ZT_USE_MINIUPNPC
+		_phy.close(_v4UpnpUdpSocket);
+		delete _upnpClient;
+#endif
 	}
 
 	virtual ReasonForTermination run()
@@ -558,7 +610,7 @@ public:
 
 #ifdef ZT_AUTO_UPDATE
 				if ((now - lastSoftwareUpdateCheck) >= ZT_AUTO_UPDATE_CHECK_PERIOD) {
-					lastSoftwareUpdateCheck = OSUtils::now();
+					lastSoftwareUpdateCheck = now;
 					Thread::start(&backgroundSoftwareUpdateChecker);
 				}
 #endif // ZT_AUTO_UPDATE
@@ -598,7 +650,7 @@ public:
 					_node->clearLocalInterfaceAddresses();
 
 #ifdef ZT_USE_MINIUPNPC
-					std::vector<InetAddress> upnpAddresses(_upnpClient.get());
+					std::vector<InetAddress> upnpAddresses(_upnpClient->get());
 					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext)
 						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)),0,ZT1_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
 #endif
@@ -742,6 +794,7 @@ public:
 			_lastDirectReceiveFromGlobal = OSUtils::now();
 		ZT1_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
+			*(reinterpret_cast<const int *>(*uptr)), // for UDP sockets, we set uptr to point to their interface ID
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
@@ -890,6 +943,7 @@ public:
 							if (from) {
 								ZT1_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
+									0,
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,
@@ -1098,8 +1152,22 @@ public:
 		}
 	}
 
-	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *addr,const void *data,unsigned int len)
+	inline int nodeWirePacketSendFunction(int localInterfaceId,const struct sockaddr_storage *addr,const void *data,unsigned int len)
 	{
+#ifdef ZT_USE_MINIUPNPC
+		if (localInterfaceId == ZT1_INTERFACE_ID_UPNP) {
+#ifdef ZT_BREAK_UDP
+			if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
+#endif
+			if (addr->ss_family == AF_INET)
+				return ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
+			else return -1;
+#ifdef ZT_BREAK_UDP
+			}
+#endif
+		}
+#endif // ZT_USE_MINIUPNPC
+
 		int result = -1;
 		switch(addr->ss_family) {
 			case AF_INET:
@@ -1155,6 +1223,7 @@ public:
 #endif // ZT1_TCP_FALLBACK_RELAY
 
 				break;
+
 			case AF_INET6:
 #ifdef ZT_BREAK_UDP
 				if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
@@ -1165,6 +1234,7 @@ public:
 				}
 #endif
 				break;
+
 			default:
 				return -1;
 		}
@@ -1286,7 +1356,8 @@ private:
 	unsigned int _port;
 
 #ifdef ZT_USE_MINIUPNPC
-	UPNPClient _upnpClient;
+	PhySocket *_v4UpnpUdpSocket;
+	UPNPClient *_upnpClient;
 #endif
 
 	bool _run;
@@ -1301,8 +1372,8 @@ static long SnodeDataStoreGetFunction(ZT1_Node *node,void *uptr,const char *name
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
 static int SnodeDataStorePutFunction(ZT1_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure)
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
-static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,const struct sockaddr_storage *addr,const void *data,unsigned int len)
-{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(addr,data,len); }
+static int SnodeWirePacketSendFunction(ZT1_Node *node,void *uptr,int localInterfaceId,const struct sockaddr_storage *addr,const void *data,unsigned int len)
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(localInterfaceId,addr,data,len); }
 static void SnodeVirtualNetworkFrameFunction(ZT1_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
 
