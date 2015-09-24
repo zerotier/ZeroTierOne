@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <utility>
 #include <dlfcn.h>
+//#include <sys/types.h>
 
 #include "NetconEthernetTap.hpp"
 
@@ -165,6 +166,8 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
+	//fprintf(stderr, "__put(): tid = %d\n", gettid());
+
 	struct pbuf *p,*q;
 	//fprintf(stderr, "_put(%s,%s,%.4x,[data],%u)\n",from.toString().c_str(),to.toString().c_str(),etherType,len);
 	if (!_enabled)
@@ -624,7 +627,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
       if(n < p->len) {
         fprintf(stderr, "nc_recved(): unable to write entire pbuf to buffer\n");
       }
-      tap->lwipstack->tcp_recved(tpcb, n);
+      tap->lwipstack->tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
     }
     else {
       fprintf(stderr, "nc_recved(): No data written to intercept buffer\n");
@@ -673,7 +676,7 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
 	//fprintf(stderr, "nc_sent\n");
-	return len;
+	return ERR_OK;
 }
 
 /*
@@ -696,7 +699,7 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 			tap->send_return_value(tap->clients[i],err);
 		}
 	}
-	return err;
+	return ERR_OK;
 }
 
 

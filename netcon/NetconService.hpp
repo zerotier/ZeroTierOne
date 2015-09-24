@@ -83,7 +83,7 @@ namespace ZeroTier {
   class NetconClient
   {
   public:
-    vector<NetconConnection*> connections;
+    vector<NetconConnection*> connections; // TODO: Switch to storing the actual object here
 
     int tid;
     bool waiting_for_retval;

@@ -197,7 +197,7 @@ public:
 
   ~LWIPStack()
   {
-    if (lebref)
+    if (libref)
       dlclose(libref);
   }
 };
