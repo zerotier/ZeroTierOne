@@ -73,7 +73,7 @@
 
 #include "service/OneService.hpp"
 
-#define ZT1_PID_PATH "zerotier-one.pid"
+#define ZT_PID_PATH "zerotier-one.pid"
 
 using namespace ZeroTier;
 
@@ -976,7 +976,7 @@ int main(int argc,char **argv)
 
 	std::string overrideRootTopology;
 	std::string homeDir;
-	unsigned int port = ZT1_DEFAULT_PORT;
+	unsigned int port = ZT_DEFAULT_PORT;
 	bool skipRootCheck = false;
 
 	for(int i=1;i<argc;++i) {
@@ -1154,7 +1154,7 @@ int main(int argc,char **argv)
 #endif // __WINDOWS__
 
 #ifdef __UNIX_LIKE__
-	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_PID_PATH);
+	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT_PID_PATH);
 	{
 		// Write .pid file to home folder
 		FILE *pf = fopen(pidPath.c_str(),"w");

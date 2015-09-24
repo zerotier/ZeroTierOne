@@ -90,7 +90,7 @@ restart_node:
 			_service = (ZeroTier::OneService *)0; // in case newInstance() fails
 			_service = ZeroTier::OneService::newInstance(
 				ZeroTier::OneService::platformDefaultHomePath().c_str(),
-				ZT1_DEFAULT_PORT);
+				ZT_DEFAULT_PORT);
 		}
 		switch(_service->run()) {
 			case ZeroTier::OneService::ONE_UNRECOVERABLE_ERROR: {

@@ -75,7 +75,7 @@ static inline std::map< Address,Identity > _mkRootTopologyAuth()
 Defaults::Defaults() :
 	defaultRootTopology((const char *)ZT_DEFAULT_ROOT_TOPOLOGY,ZT_DEFAULT_ROOT_TOPOLOGY_LEN),
 	rootTopologyAuthorities(_mkRootTopologyAuth()),
-	v4Broadcast(((uint32_t)0xffffffff),ZT1_DEFAULT_PORT)
+	v4Broadcast(((uint32_t)0xffffffff),ZT_DEFAULT_PORT)
 {
 }
 

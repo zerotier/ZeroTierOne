@@ -100,28 +100,28 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	}
 
 	if (!_portInitialized) {
-		ZT1_VirtualNetworkConfig ctmp;
+		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
 }
 
 Network::~Network()
 {
-	ZT1_VirtualNetworkConfig ctmp;
+	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
 
 	char n[128];
 	if (_destroyed) {
-		RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
+		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
 		RR->node->dataStoreDelete(n);
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
 		RR->node->dataStoreDelete(n);
 	} else {
-		RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
+		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
 
 		clean();
 
@@ -184,7 +184,7 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 		return false;
 	try {
 		if ((conf->networkId() == _id)&&(conf->issuedTo() == RR->identity.address())) {
-			ZT1_VirtualNetworkConfig ctmp;
+			ZT_VirtualNetworkConfig ctmp;
 			bool portInitialized;
 			{
 				Mutex::Lock _l(_lock);
@@ -195,7 +195,7 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 				portInitialized = _portInitialized;
 				_portInitialized = true;
 			}
-			_portError = RR->node->configureVirtualNetworkPort(_id,(portInitialized) ? ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+			_portError = RR->node->configureVirtualNetworkPort(_id,(portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 			return true;
 		} else {
 			TRACE("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
@@ -431,9 +431,9 @@ void Network::setEnabled(bool enabled)
 	Mutex::Lock _l(_lock);
 	if (_enabled != enabled) {
 		_enabled = enabled;
-		ZT1_VirtualNetworkConfig ctmp;
+		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
 	}
 }
 
@@ -444,24 +444,24 @@ void Network::destroy()
 	_destroyed = true;
 }
 
-ZT1_VirtualNetworkStatus Network::_status() const
+ZT_VirtualNetworkStatus Network::_status() const
 {
 	// assumes _lock is locked
 	if (_portError)
-		return ZT1_NETWORK_STATUS_PORT_ERROR;
+		return ZT_NETWORK_STATUS_PORT_ERROR;
 	switch(_netconfFailure) {
 		case NETCONF_FAILURE_ACCESS_DENIED:
-			return ZT1_NETWORK_STATUS_ACCESS_DENIED;
+			return ZT_NETWORK_STATUS_ACCESS_DENIED;
 		case NETCONF_FAILURE_NOT_FOUND:
-			return ZT1_NETWORK_STATUS_NOT_FOUND;
+			return ZT_NETWORK_STATUS_NOT_FOUND;
 		case NETCONF_FAILURE_NONE:
-			return ((_config) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
+			return ((_config) ? ZT_NETWORK_STATUS_OK : ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION);
 		default:
-			return ZT1_NETWORK_STATUS_PORT_ERROR;
+			return ZT_NETWORK_STATUS_PORT_ERROR;
 	}
 }
 
-void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
+void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 {
 	// assumes _lock is locked
 	ec->nwid = _id;
@@ -470,7 +470,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 		Utils::scopy(ec->name,sizeof(ec->name),_config->name().c_str());
 	else ec->name[0] = (char)0;
 	ec->status = _status();
-	ec->type = (_config) ? (_config->isPrivate() ? ZT1_NETWORK_TYPE_PRIVATE : ZT1_NETWORK_TYPE_PUBLIC) : ZT1_NETWORK_TYPE_PRIVATE;
+	ec->type = (_config) ? (_config->isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = ZT_IF_MTU;
 	ec->dhcp = 0;
 	ec->bridge = (_config) ? ((_config->allowPassiveBridging() || (std::find(_config->activeBridges().begin(),_config->activeBridges().end(),RR->identity.address()) != _config->activeBridges().end())) ? 1 : 0) : 0;
@@ -479,7 +479,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 	ec->enabled = (_enabled) ? 1 : 0;
 	ec->netconfRevision = (_config) ? (unsigned long)_config->revision() : 0;
 
-	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
+	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
 	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
 		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
@@ -487,7 +487,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 
 	if (_config) {
 		ec->assignedAddressCount = (unsigned int)_config->staticIps().size();
-		for(unsigned long i=0;i<ZT1_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
+		for(unsigned long i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
 			if (i < _config->staticIps().size())
 				memcpy(&(ec->assignedAddresses[i]),&(_config->staticIps()[i]),sizeof(struct sockaddr_storage));
 		}

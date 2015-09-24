@@ -108,7 +108,7 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0);
 	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
 	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
-	if (_name.length() > ZT1_MAX_NETWORK_SHORT_NAME_LENGTH)
+	if (_name.length() > ZT_MAX_NETWORK_SHORT_NAME_LENGTH)
 		throw std::invalid_argument("network short name too long (max: 255 characters)");
 
 	// In dictionary IPs are split into V4 and V6 addresses, but we don't really
@@ -142,8 +142,8 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 			_localRoutes.push_back(addr);
 		else _staticIps.push_back(addr);
 	}
-	if (_localRoutes.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES) throw std::invalid_argument("too many ZT-assigned routes");
-	if (_staticIps.size() > ZT1_MAX_ZT_ASSIGNED_ADDRESSES) throw std::invalid_argument("too many ZT-assigned IP addresses");
+	if (_localRoutes.size() > ZT_MAX_ZT_ASSIGNED_ADDRESSES) throw std::invalid_argument("too many ZT-assigned routes");
+	if (_staticIps.size() > ZT_MAX_ZT_ASSIGNED_ADDRESSES) throw std::invalid_argument("too many ZT-assigned IP addresses");
 	std::sort(_localRoutes.begin(),_localRoutes.end());
 	_localRoutes.erase(std::unique(_localRoutes.begin(),_localRoutes.end()),_localRoutes.end());
 	std::sort(_staticIps.begin(),_staticIps.end());

@@ -222,7 +222,7 @@ public:
 	/**
 	 * @return Status of this network
 	 */
-	inline ZT1_VirtualNetworkStatus status() const
+	inline ZT_VirtualNetworkStatus status() const
 	{
 		Mutex::Lock _l(_lock);
 		return _status();
@@ -231,7 +231,7 @@ public:
 	/**
 	 * @param ec Buffer to fill with externally-visible network configuration
 	 */
-	inline void externalConfig(ZT1_VirtualNetworkConfig *ec) const
+	inline void externalConfig(ZT_VirtualNetworkConfig *ec) const
 	{
 		Mutex::Lock _l(_lock);
 		_externalConfig(ec);
@@ -354,8 +354,8 @@ private:
 		uint64_t lastPushed; // when did we last push ours to them?
 	};
 
-	ZT1_VirtualNetworkStatus _status() const;
-	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
+	ZT_VirtualNetworkStatus _status() const;
+	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const Address &peer) const;
 	void _announceMulticastGroups();
 	std::vector<MulticastGroup> _allMulticastGroups() const;

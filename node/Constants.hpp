@@ -161,7 +161,7 @@
 /**
  * Default MTU used for Ethernet tap device
  */
-#define ZT_IF_MTU ZT1_MAX_MTU
+#define ZT_IF_MTU ZT_MAX_MTU
 
 /**
  * Maximum number of packet fragments we'll support

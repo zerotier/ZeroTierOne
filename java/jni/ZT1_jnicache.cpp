@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "ZT1_jnicache.h"
-#include "ZT1_jniutils.h"
+#include "ZT_jnicache.h"
+#include "ZT_jniutils.h"
 
 JniCache::JniCache()
     : m_jvm(NULL)

@@ -64,7 +64,7 @@ static std::string _jsonEscape(const char *s)
 }
 static std::string _jsonEscape(const std::string &s) { return _jsonEscape(s.c_str()); }
 
-static std::string _jsonEnumerate(const ZT1_MulticastGroup *mg,unsigned int count)
+static std::string _jsonEnumerate(const ZT_MulticastGroup *mg,unsigned int count)
 {
 	std::string buf;
 	char tmp[128];
@@ -101,7 +101,7 @@ static std::string _jsonEnumerate(const struct sockaddr_storage *ss,unsigned int
 	return buf;
 }
 
-static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_VirtualNetworkConfig *nc,const std::string &portDeviceName)
+static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_VirtualNetworkConfig *nc,const std::string &portDeviceName)
 {
 	char json[4096];
 	char prefix[32];
@@ -114,16 +114,16 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_VirtualNet
 
 	const char *nstatus = "",*ntype = "";
 	switch(nc->status) {
-		case ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION: nstatus = "REQUESTING_CONFIGURATION"; break;
-		case ZT1_NETWORK_STATUS_OK:                       nstatus = "OK"; break;
-		case ZT1_NETWORK_STATUS_ACCESS_DENIED:            nstatus = "ACCESS_DENIED"; break;
-		case ZT1_NETWORK_STATUS_NOT_FOUND:                nstatus = "NOT_FOUND"; break;
-		case ZT1_NETWORK_STATUS_PORT_ERROR:               nstatus = "PORT_ERROR"; break;
-		case ZT1_NETWORK_STATUS_CLIENT_TOO_OLD:           nstatus = "CLIENT_TOO_OLD"; break;
+		case ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION: nstatus = "REQUESTING_CONFIGURATION"; break;
+		case ZT_NETWORK_STATUS_OK:                       nstatus = "OK"; break;
+		case ZT_NETWORK_STATUS_ACCESS_DENIED:            nstatus = "ACCESS_DENIED"; break;
+		case ZT_NETWORK_STATUS_NOT_FOUND:                nstatus = "NOT_FOUND"; break;
+		case ZT_NETWORK_STATUS_PORT_ERROR:               nstatus = "PORT_ERROR"; break;
+		case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:           nstatus = "CLIENT_TOO_OLD"; break;
 	}
 	switch(nc->type) {
-		case ZT1_NETWORK_TYPE_PRIVATE:                    ntype = "PRIVATE"; break;
-		case ZT1_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
+		case ZT_NETWORK_TYPE_PRIVATE:                    ntype = "PRIVATE"; break;
+		case ZT_NETWORK_TYPE_PUBLIC:                     ntype = "PUBLIC"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),
@@ -162,7 +162,7 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_VirtualNet
 	buf.append(json);
 }
 
-static std::string _jsonEnumerate(unsigned int depth,const ZT1_PeerPhysicalPath *pp,unsigned int count)
+static std::string _jsonEnumerate(unsigned int depth,const ZT_PeerPhysicalPath *pp,unsigned int count)
 {
 	char json[1024];
 	char prefix[32];
@@ -198,7 +198,7 @@ static std::string _jsonEnumerate(unsigned int depth,const ZT1_PeerPhysicalPath 
 	return buf;
 }
 
-static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer)
+static void _jsonAppend(unsigned int depth,std::string &buf,const ZT_Peer *peer)
 {
 	char json[1024];
 	char prefix[32];
@@ -211,9 +211,9 @@ static void _jsonAppend(unsigned int depth,std::string &buf,const ZT1_Peer *peer
 
 	const char *prole = "";
 	switch(peer->role) {
-		case ZT1_PEER_ROLE_LEAF:  prole = "LEAF"; break;
-		case ZT1_PEER_ROLE_RELAY: prole = "RELAY"; break;
-		case ZT1_PEER_ROLE_ROOT:  prole = "ROOT"; break;
+		case ZT_PEER_ROLE_LEAF:  prole = "LEAF"; break;
+		case ZT_PEER_ROLE_RELAY: prole = "RELAY"; break;
+		case ZT_PEER_ROLE_ROOT:  prole = "ROOT"; break;
 	}
 
 	Utils::snprintf(json,sizeof(json),
@@ -356,7 +356,7 @@ unsigned int ControlPlane::handleRequest(
 
 			if (ps[0] == "status") {
 				responseContentType = "application/json";
-				ZT1_NodeStatus status;
+				ZT_NodeStatus status;
 				_node->status(&status);
 				Utils::snprintf(json,sizeof(json),
 					"{\n"
@@ -386,7 +386,7 @@ unsigned int ControlPlane::handleRequest(
 				responseBody = "{}"; // TODO
 				scode = 200;
 			} else if (ps[0] == "network") {
-				ZT1_VirtualNetworkList *nws = _node->networks();
+				ZT_VirtualNetworkList *nws = _node->networks();
 				if (nws) {
 					if (ps.size() == 1) {
 						// Return [array] of all networks
@@ -415,7 +415,7 @@ unsigned int ControlPlane::handleRequest(
 					_node->freeQueryResult((void *)nws);
 				} else scode = 500;
 			} else if (ps[0] == "peer") {
-				ZT1_PeerList *pl = _node->peers();
+				ZT_PeerList *pl = _node->peers();
 				if (pl) {
 					if (ps.size() == 1) {
 						// Return [array] of all peers
@@ -473,7 +473,7 @@ unsigned int ControlPlane::handleRequest(
 				if (ps.size() == 2) {
 					uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
 					_node->join(wantnw); // does nothing if we are a member
-					ZT1_VirtualNetworkList *nws = _node->networks();
+					ZT_VirtualNetworkList *nws = _node->networks();
 					if (nws) {
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (nws->networks[i].nwid == wantnw) {
@@ -506,7 +506,7 @@ unsigned int ControlPlane::handleRequest(
 			if (ps[0] == "config") {
 				// TODO
 			} else if (ps[0] == "network") {
-				ZT1_VirtualNetworkList *nws = _node->networks();
+				ZT_VirtualNetworkList *nws = _node->networks();
 				if (nws) {
 					if (ps.size() == 2) {
 						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());

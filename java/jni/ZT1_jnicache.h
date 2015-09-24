@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT1_JNICACHE_H_
-#define ZT1_JNICACHE_H_
+#ifndef ZT_JNICACHE_H_
+#define ZT_JNICACHE_H_
 
 #include <jni.h>
 #include <map>

@@ -57,7 +57,7 @@ public:
 	 * Nearly all paths will be normal trust. The other levels are for high
 	 * performance local SDN use only.
 	 *
-	 * These values MUST match ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
+	 * These values MUST match ZT_LocalInterfaceAddressTrust in ZeroTierOne.h
 	 */
 	enum Trust
 	{
