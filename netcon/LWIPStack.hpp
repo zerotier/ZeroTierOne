@@ -145,6 +145,9 @@ public:
   void (*_netif_set_up)(NETIF_SET_UP_SIG);
   void (*_netif_poll)(NETIF_POLL_SIG);
 
+
+  Mutex _lock;
+
   LWIPStack(const char* path) :
     _libref(NULL)
   {

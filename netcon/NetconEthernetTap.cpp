@@ -292,14 +292,14 @@ void NetconEthernetTap::closeAllClients()
 void NetconEthernetTap::closeConnection(NetconConnection *conn)
 {
 	NetconClient *client = conn->owner;
-  lwipstack->tcp_arg(conn->pcb, NULL);
-  lwipstack->tcp_sent(conn->pcb, NULL);
-  lwipstack->tcp_recv(conn->pcb, NULL);
-  lwipstack->tcp_err(conn->pcb, NULL);
-  lwipstack->tcp_poll(conn->pcb, NULL, 0);
-  lwipstack->tcp_close(conn->pcb);
+  lwipstack->_tcp_arg(conn->pcb, NULL);
+  lwipstack->_tcp_sent(conn->pcb, NULL);
+  lwipstack->_tcp_recv(conn->pcb, NULL);
+  lwipstack->_tcp_err(conn->pcb, NULL);
+  lwipstack->_tcp_poll(conn->pcb, NULL, 0);
+  lwipstack->_tcp_close(conn->pcb);
 	_phy.close(conn->sock);
-	lwipstack->tcp_close(conn->pcb);
+	lwipstack->_tcp_close(conn->pcb);
 	client->removeConnection(conn->sock);
 }
 
@@ -308,8 +308,11 @@ void NetconEthernetTap::closeConnection(NetconConnection *conn)
  */
 void NetconEthernetTap::closeClient(NetconClient *client)
 {
-	closeConnection(client->rpc);
-	closeConnection(client->unmapped_conn);
+	{
+		Mutex::Lock _l(lwipstack->_lock);
+		closeConnection(client->rpc);
+		closeConnection(client->unmapped_conn);
+	}
 	for(size_t i=0; i<client->connections.size(); i++)
 	{
 		close(_phy.getDescriptor(client->connections[i]->sock));
