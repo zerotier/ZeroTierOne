@@ -96,6 +96,7 @@ NetconEthernetTap::~NetconEthernetTap()
 	_phy.whack();
 	Thread::join(_thread);
 	_phy.close(_unixListenSocket,false);
+	delete lwipstack;
 }
 
 void NetconEthernetTap::setEnabled(bool en)
