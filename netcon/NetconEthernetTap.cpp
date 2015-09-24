@@ -302,9 +302,9 @@ void NetconEthernetTap::closeConnection(NetconConnection *conn)
   lwipstack->_tcp_err(conn->pcb, NULL);
   lwipstack->_tcp_poll(conn->pcb, NULL, 0);
 	close(_phy.getDescriptor(conn->sock));
+	close(conn->their_fd);
 	_phy.close(conn->sock);
 	lwipstack->_tcp_close(conn->pcb);
-	client->removeConnection(conn->sock);
 	delete conn;
 }
 
@@ -564,6 +564,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		NetconConnection *new_conn = client->addConnection(BUFFER, tap->_phy.wrapSocket(fds[0], client));
 		client->connections.push_back(new_conn);
 		new_conn->pcb = newpcb;
+		new_conn->their_fd = fds[1];
 		int send_fd = tap->_phy.getDescriptor(client->rpc->sock);
 		int n = write(larg_fd, "z", 1);
     if(n > 0) {
@@ -577,7 +578,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 			}
     }
     else {
-      fprintf(stderr, "nc_accept(%d): error writing signal byte (send_fd = %d, their_fd = %d)\n", larg_fd, send_fd, fds[1]);
+      fprintf(stderr, "nc_accept(%d): error writing signal byte (send_fd = %d, perceived_fd = %d)\n", larg_fd, send_fd, fds[1]);
       return -1;
     }
     tap->lwipstack->_tcp_arg(newpcb, new Larg(tap, new_conn->sock));
@@ -797,8 +798,8 @@ void NetconEthernetTap::handle_listen(NetconClient *client, struct listen_st *li
 void NetconEthernetTap::handle_retval(NetconClient *client, unsigned char* buf)
 {
 	if(client->unmapped_conn != NULL) {
-		memcpy(&(client->unmapped_conn->their_fd), &buf[1], sizeof(int));
-		fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n", _phy.getDescriptor(client->unmapped_conn->sock), client->unmapped_conn->their_fd);
+		memcpy(&(client->unmapped_conn->perceived_fd), &buf[1], sizeof(int));
+		fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n", _phy.getDescriptor(client->unmapped_conn->sock), client->unmapped_conn->perceived_fd);
 		client->connections.push_back(client->unmapped_conn);
 		client->unmapped_conn = NULL;
 	}
@@ -824,6 +825,7 @@ void NetconEthernetTap::handle_socket(NetconClient *client, struct socket_st* so
 		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
 		NetconConnection *new_conn = client->addConnection(BUFFER, _phy.wrapSocket(fds[0], client));
 		new_conn->pcb = pcb;
+	  new_conn->their_fd = fds[1];
 		PhySocket *sock = client->rpc->sock;
     sock_fd_write(_phy.getDescriptor(sock), fds[1]);
 		fprintf(stderr, "handle_socket(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);

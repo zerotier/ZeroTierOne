@@ -66,6 +66,7 @@ namespace ZeroTier {
   class NetconConnection
   {
   public:
+    int perceived_fd;
     int their_fd;
     unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
     int idx;
@@ -113,7 +114,7 @@ namespace ZeroTier {
     NetconConnection *getConnectionByTheirFD(int fd)
     {
       for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->their_fd == fd) return connections[i];
+        if(connections[i]->perceived_fd == fd) return connections[i];
       }
       return NULL;
     }
@@ -133,14 +134,6 @@ namespace ZeroTier {
         if(connections[i]->pcb == pcb) return connections[i];
       }
       return NULL;
-    }
-
-    void removeConnection(PhySocket *sock)
-    {
-      for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->sock == sock)
-          connections.erase(connections.begin() + i);
-      }
     }
   };
 } // namespace ZeroTier
