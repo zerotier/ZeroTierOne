@@ -125,9 +125,9 @@ bool NetconEthernetTap::addIp(const InetAddress &ip)
 			netmask.addr = *((u32_t *)ip.netmask().rawIpData());
 
 			// Set up the lwip-netif for LWIP's sake
-			lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->ethernet_input);
+			lwipstack->netif_add(&interface,&ipaddr, &netmask, &gw, NULL, tapif_init, lwipstack->_ethernet_input);
 			interface.state = this;
-			interface.output = lwipstack->etharp_output;
+			interface.output = lwipstack->_etharp_output;
 			_mac.copyTo(interface.hwaddr, 6);
 			interface.mtu = _mtu;
 			interface.name[0] = 't';
@@ -166,7 +166,7 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
-	//fprintf(stderr, "__put(): tid = %d\n", gettid());
+	fprintf(stderr, "__put(): len = %d\n", len);
 
 	struct pbuf *p,*q;
 	//fprintf(stderr, "_put(%s,%s,%.4x,[data],%u)\n",from.toString().c_str(),to.toString().c_str(),etherType,len);

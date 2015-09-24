@@ -62,6 +62,8 @@
 
 typedef ip_addr ip_addr_t;
 
+struct tcp_pcb;
+
 #define TCP_WRITE_SIG struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags
 #define TCP_SENT_SIG struct tcp_pcb * pcb, err_t (* sent)(void * arg, struct tcp_pcb * tpcb, u16_t len)
 #define TCP_NEW_SIG void
@@ -79,8 +81,6 @@ typedef ip_addr ip_addr_t;
 #define TCP_LISTEN_SIG struct tcp_pcb * pcb
 #define TCP_LISTEN_WITH_BACKLOG_SIG struct tcp_pcb * pcb, u8_t backlog
 #define TCP_BIND_SIG struct tcp_pcb * pcb, struct ip_addr * ipaddr, u16_t port
-//#define TAPIF_INIT_SIG struct netif *netif
-//#define TAPIF_INPUT_SIG LWIPStack* ls, struct netif *netif
 #define PBUF_FREE_SIG struct pbuf *p
 #define PBUF_ALLOC_SIG pbuf_layer layer, u16_t length, pbuf_type type
 #define LWIP_HTONS_SIG u16_t x
@@ -88,10 +88,8 @@ typedef ip_addr ip_addr_t;
 #define IPADDR_NTOA_SIG const ip_addr_t *addr
 #define ETHARP_OUTPUT_SIG struct netif *netif, struct pbuf *q, ip_addr_t *ipaddr
 #define ETHERNET_INPUT_SIG struct pbuf *p, struct netif *netif
-
 #define TCP_INPUT_SIG struct pbuf *p, struct netif *inp
 #define IP_INPUT_SIG struct pbuf *p, struct netif *inp
-
 #define NETIF_SET_DEFAULT_SIG struct netif *netif
 #define NETIF_ADD_SIG struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask, ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input
 #define NETIF_SET_UP_SIG struct netif *netif
@@ -142,13 +140,10 @@ public:
   err_t (*_ethernet_input)(ETHERNET_INPUT_SIG);
   void (*_tcp_input)(TCP_INPUT_SIG);
   err_t (*_ip_input)(IP_INPUT_SIG);
-
   void (*_netif_set_default)(NETIF_SET_DEFAULT_SIG);
   struct netif * (*_netif_add)(NETIF_ADD_SIG);
   void (*_netif_set_up)(NETIF_SET_UP_SIG);
   void (*_netif_poll)(NETIF_POLL_SIG);
-
-  Mutex _lock;
 
   LWIPStack(const char* path) :
     _libref(NULL)
@@ -157,47 +152,45 @@ public:
     if(_libref == NULL)
       printf("dlerror(): %s\n", dlerror());
 
-    _lwip_init = (void(*)(void))dlsym(libref, "lwip_init");
-    _tcp_write = (err_t(*)(TCP_WRITE_SIG))dlsym(libref, "tcp_write");
-    _tcp_sent = (void(*)(TCP_SENT_SIG))dlsym(libref, "tcp_sent");
-    _tcp_new = (struct tcp_pcb*(*)(TCP_NEW_SIG))dlsym(libref, "tcp_new");
-    _tcp_sndbuf = (u16_t(*)(TCP_SNDBUF_SIG))dlsym(libref, "tcp_sndbuf");
-    _tcp_connect = (err_t(*)(TCP_CONNECT_SIG))dlsym(libref, "tcp_connect");
-    _tcp_recv = (void(*)(TCP_RECV_SIG))dlsym(libref, "tcp_recv");
-    _tcp_recved = (void(*)(TCP_RECVED_SIG))dlsym(libref, "tcp_recved");
-    _tcp_err = (void(*)(TCP_ERR_SIG))dlsym(libref, "tcp_err");
-    _tcp_poll = (void(*)(TCP_POLL_SIG))dlsym(libref, "tcp_poll");
-    _tcp_arg = (void(*)(TCP_ARG_SIG))dlsym(libref, "tcp_arg");
-    _tcp_close = (err_t(*)(TCP_CLOSE_SIG))dlsym(libref, "tcp_close");
-    _tcp_abort = (void(*)(TCP_ABORT_SIG))dlsym(libref, "tcp_abort");
-    _tcp_output = (err_t(*)(TCP_OUTPUT_SIG))dlsym(libref, "tcp_output");
-    _tcp_accept = (void(*)(TCP_ACCEPT_SIG))dlsym(libref, "tcp_accept");
-    _tcp_listen = (struct tcp_pcb*(*)(TCP_LISTEN_SIG))dlsym(libref, "tcp_listen");
-    _tcp_listen_with_backlog = (struct tcp_pcb*(*)(TCP_LISTEN_WITH_BACKLOG_SIG))dlsym(libref, "tcp_listen_with_backlog");
-    _tcp_bind = (err_t(*)(TCP_BIND_SIG))dlsym(libref, "tcp_bind");
-    _etharp_tmr = (void(*)(void))dlsym(libref, "etharp_tmr");
-    _tcp_tmr = (void(*)(void))dlsym(libref, "tcp_tmr");
-    _pbuf_free = (u8_t(*)(PBUF_FREE_SIG))dlsym(libref, "pbuf_free");
-    _pbuf_alloc = (struct pbuf*(*)(PBUF_ALLOC_SIG))dlsym(libref, "pbuf_alloc");
-    _lwip_htons = (u16_t(*)(LWIP_HTONS_SIG))dlsym(libref, "lwip_htons");
-    _lwip_ntohs = (u16_t(*)(LWIP_NTOHS_SIG))dlsym(libref, "lwip_ntohs");
-    _ipaddr_ntoa = (char*(*)(IPADDR_NTOA_SIG))dlsym(libref, "ipaddr_ntoa");
-    _etharp_output = (err_t(*)(ETHARP_OUTPUT_SIG))dlsym(libref, "etharp_output");
-    _ethernet_input = (err_t(*)(ETHERNET_INPUT_SIG))dlsym(libref, "ethernet_input");
-
-    _tcp_input = (void(*)(TCP_INPUT_SIG))dlsym(libref, "tcp_input");
-    _ip_input = (err_t(*)(IP_INPUT_SIG))dlsym(libref, "ip_input");
-
-    _netif_set_default = (void(*)(NETIF_SET_DEFAULT_SIG))dlsym(libref, "netif_set_default");
-    _netif_add = (struct netif*(*)(NETIF_ADD_SIG))dlsym(libref, "netif_add");
-    _netif_set_up = (void(*)(NETIF_SET_UP_SIG))dlsym(libref, "netif_set_up");
-    _netif_poll = (void(*)(NETIF_POLL_SIG))dlsym(libref, "netif_poll");
+    _lwip_init = (void(*)(void))dlsym(_libref, "lwip_init");
+    _tcp_write = (err_t(*)(TCP_WRITE_SIG))dlsym(_libref, "tcp_write");
+    _tcp_sent = (void(*)(TCP_SENT_SIG))dlsym(_libref, "tcp_sent");
+    _tcp_new = (struct tcp_pcb*(*)(TCP_NEW_SIG))dlsym(_libref, "tcp_new");
+    _tcp_sndbuf = (u16_t(*)(TCP_SNDBUF_SIG))dlsym(_libref, "tcp_sndbuf");
+    _tcp_connect = (err_t(*)(TCP_CONNECT_SIG))dlsym(_libref, "tcp_connect");
+    _tcp_recv = (void(*)(TCP_RECV_SIG))dlsym(_libref, "tcp_recv");
+    _tcp_recved = (void(*)(TCP_RECVED_SIG))dlsym(_libref, "tcp_recved");
+    _tcp_err = (void(*)(TCP_ERR_SIG))dlsym(_libref, "tcp_err");
+    _tcp_poll = (void(*)(TCP_POLL_SIG))dlsym(_libref, "tcp_poll");
+    _tcp_arg = (void(*)(TCP_ARG_SIG))dlsym(_libref, "tcp_arg");
+    _tcp_close = (err_t(*)(TCP_CLOSE_SIG))dlsym(_libref, "tcp_close");
+    _tcp_abort = (void(*)(TCP_ABORT_SIG))dlsym(_libref, "tcp_abort");
+    _tcp_output = (err_t(*)(TCP_OUTPUT_SIG))dlsym(_libref, "tcp_output");
+    _tcp_accept = (void(*)(TCP_ACCEPT_SIG))dlsym(_libref, "tcp_accept");
+    _tcp_listen = (struct tcp_pcb*(*)(TCP_LISTEN_SIG))dlsym(_libref, "tcp_listen");
+    _tcp_listen_with_backlog = (struct tcp_pcb*(*)(TCP_LISTEN_WITH_BACKLOG_SIG))dlsym(_libref, "tcp_listen_with_backlog");
+    _tcp_bind = (err_t(*)(TCP_BIND_SIG))dlsym(_libref, "tcp_bind");
+    _etharp_tmr = (void(*)(void))dlsym(_libref, "etharp_tmr");
+    _tcp_tmr = (void(*)(void))dlsym(_libref, "tcp_tmr");
+    _pbuf_free = (u8_t(*)(PBUF_FREE_SIG))dlsym(_libref, "pbuf_free");
+    _pbuf_alloc = (struct pbuf*(*)(PBUF_ALLOC_SIG))dlsym(_libref, "pbuf_alloc");
+    _lwip_htons = (u16_t(*)(LWIP_HTONS_SIG))dlsym(_libref, "lwip_htons");
+    _lwip_ntohs = (u16_t(*)(LWIP_NTOHS_SIG))dlsym(_libref, "lwip_ntohs");
+    _ipaddr_ntoa = (char*(*)(IPADDR_NTOA_SIG))dlsym(_libref, "ipaddr_ntoa");
+    _etharp_output = (err_t(*)(ETHARP_OUTPUT_SIG))dlsym(_libref, "etharp_output");
+    _ethernet_input = (err_t(*)(ETHERNET_INPUT_SIG))dlsym(_libref, "ethernet_input");
+    _tcp_input = (void(*)(TCP_INPUT_SIG))dlsym(_libref, "tcp_input");
+    _ip_input = (err_t(*)(IP_INPUT_SIG))dlsym(_libref, "ip_input");
+    _netif_set_default = (void(*)(NETIF_SET_DEFAULT_SIG))dlsym(_libref, "netif_set_default");
+    _netif_add = (struct netif*(*)(NETIF_ADD_SIG))dlsym(_libref, "netif_add");
+    _netif_set_up = (void(*)(NETIF_SET_UP_SIG))dlsym(_libref, "netif_set_up");
+    _netif_poll = (void(*)(NETIF_POLL_SIG))dlsym(_libref, "netif_poll");
   }
 
   ~LWIPStack()
   {
-    if (libref)
-      dlclose(libref);
+    if (_libref)
+      dlclose(_libref);
   }
 
   inline void lwip_init() throw() { Mutex::Lock _l(_lock); return _lwip_init(); }
@@ -209,7 +202,7 @@ public:
   inline void tcp_recv(TCP_RECV_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_recv(pcb,recv); }
   inline void tcp_recved(TCP_RECVED_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_recved(pcb,len); }
   inline void tcp_err(TCP_ERR_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_err(pcb,err); }
-  inline void tcp_poll(TCP_POLL_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_poll(pcb,poll); }
+  inline void tcp_poll(TCP_POLL_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_poll(pcb,poll,interval); }
   inline void tcp_arg(TCP_ARG_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_arg(pcb,arg); }
   inline err_t tcp_close(TCP_CLOSE_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_close(pcb); }
   inline void tcp_abort(TCP_ABORT_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_abort(pcb); }
@@ -229,7 +222,6 @@ public:
   inline err_t ethernet_input(ETHERNET_INPUT_SIG) throw() { Mutex::Lock _l(_lock); return _ethernet_input(p,netif); }
   inline void tcp_input(TCP_INPUT_SIG) throw() { Mutex::Lock _l(_lock); return _tcp_input(p,inp); }
   inline err_t ip_input(IP_INPUT_SIG) throw() { Mutex::Lock _l(_lock); return _ip_input(p,inp); }
-
   inline void netif_set_default(NETIF_SET_DEFAULT_SIG) throw() { Mutex::Lock _l(_lock); return _netif_set_default(netif); }
   inline struct netif * netif_add(NETIF_ADD_SIG) throw() { Mutex::Lock _l(_lock); return _netif_add(netif,ipaddr,netmask,gw,state,init,input); }
   inline void netif_set_up(NETIF_SET_UP_SIG) throw() { Mutex::Lock _l(_lock); return _netif_set_up(netif); }
