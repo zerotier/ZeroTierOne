@@ -1,5 +1,5 @@
-#include "ZT1_jniutils.h"
-#include "ZT1_jnilookup.h"
+#include "ZT_jniutils.h"
+#include "ZT_jnilookup.h"
 #include <string>
 #include <assert.h>
 
@@ -9,7 +9,7 @@ extern JniLookup lookup;
 extern "C" {
 #endif
 
-jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
+jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
     jclass resultClass = NULL;
     
@@ -25,23 +25,23 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
     std::string fieldName;
     switch(code)
     {
-    case ZT1_RESULT_OK:
-        LOGV("ZT1_RESULT_OK");
+    case ZT_RESULT_OK:
+        LOGV("ZT_RESULT_OK");
         fieldName = "RESULT_OK";
         break;
-    case ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
-        LOGV("ZT1_RESULT_FATAL_ERROR_OUT_OF_MEMORY");
+    case ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
+        LOGV("ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY");
         fieldName = "RESULT_FATAL_ERROR_OUT_OF_MEMORY";
         break;
-    case ZT1_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
+    case ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
         LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_FATAL_ERROR_DATA_STORE_FAILED";
         break;
-    case ZT1_RESULT_ERROR_NETWORK_NOT_FOUND:
+    case ZT_RESULT_ERROR_NETWORK_NOT_FOUND:
         LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_ERROR_NETWORK_NOT_FOUND";
         break;
-    case ZT1_RESULT_FATAL_ERROR_INTERNAL:
+    case ZT_RESULT_FATAL_ERROR_INTERNAL:
     default:
         LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_FATAL_ERROR_INTERNAL";
@@ -64,7 +64,7 @@ jobject createResultObject(JNIEnv *env, ZT1_ResultCode code)
 }
 
 
-jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
+jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
 {
     jobject statusObject = NULL;
 
@@ -77,22 +77,22 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
     std::string fieldName;
     switch(status)
     {
-    case ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION:
+    case ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION:
         fieldName = "NETWORK_STATUS_REQUESTING_CONFIGURATION";
         break;
-    case ZT1_NETWORK_STATUS_OK:
+    case ZT_NETWORK_STATUS_OK:
         fieldName = "NETWORK_STATUS_OK";
         break;
-    case ZT1_NETWORK_STATUS_ACCESS_DENIED:
+    case ZT_NETWORK_STATUS_ACCESS_DENIED:
         fieldName = "NETWORK_STATUS_ACCESS_DENIED";
         break;
-    case ZT1_NETWORK_STATUS_NOT_FOUND:
+    case ZT_NETWORK_STATUS_NOT_FOUND:
         fieldName = "NETWORK_STATUS_NOT_FOUND";
         break;
-    case ZT1_NETWORK_STATUS_PORT_ERROR:
+    case ZT_NETWORK_STATUS_PORT_ERROR:
         fieldName = "NETWORK_STATUS_PORT_ERROR";
         break;
-    case ZT1_NETWORK_STATUS_CLIENT_TOO_OLD:
+    case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:
         fieldName = "NETWORK_STATUS_CLIENT_TOO_OLD";
         break;
     }
@@ -104,7 +104,7 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status)
     return statusObject;
 }
 
-jobject createEvent(JNIEnv *env, ZT1_Event event)
+jobject createEvent(JNIEnv *env, ZT_Event event)
 {
     jclass eventClass = NULL;
     jobject eventObject = NULL;
@@ -118,31 +118,31 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
     std::string fieldName;
     switch(event)
     {
-    case ZT1_EVENT_UP:
+    case ZT_EVENT_UP:
         fieldName = "EVENT_UP";
         break;
-    case ZT1_EVENT_OFFLINE:
+    case ZT_EVENT_OFFLINE:
         fieldName = "EVENT_OFFLINE";
         break;
-    case ZT1_EVENT_ONLINE:
+    case ZT_EVENT_ONLINE:
         fieldName = "EVENT_ONLINE";
         break;
-    case ZT1_EVENT_DOWN:
+    case ZT_EVENT_DOWN:
         fieldName = "EVENT_DOWN";
         break;
-    case ZT1_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
+    case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
         fieldName = "EVENT_FATAL_ERROR_IDENTITY_COLLISION";
         break;
-    case ZT1_EVENT_SAW_MORE_RECENT_VERSION:
+    case ZT_EVENT_SAW_MORE_RECENT_VERSION:
         fieldName = "EVENT_SAW_MORE_RECENT_VERSION";
         break;
-    case ZT1_EVENT_AUTHENTICATION_FAILURE:
+    case ZT_EVENT_AUTHENTICATION_FAILURE:
         fieldName = "EVENT_AUTHENTICATION_FAILURE";
         break;
-    case ZT1_EVENT_INVALID_PACKET:
+    case ZT_EVENT_INVALID_PACKET:
         fieldName = "EVENT_INVALID_PACKET";
         break;
-    case ZT1_EVENT_TRACE:
+    case ZT_EVENT_TRACE:
         fieldName = "EVENT_TRACE";
         break;
     }
@@ -154,7 +154,7 @@ jobject createEvent(JNIEnv *env, ZT1_Event event)
     return eventObject;
 }
 
-jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
+jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
 {
     jclass peerRoleClass = NULL;
     jobject peerRoleObject = NULL;
@@ -168,14 +168,14 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
     std::string fieldName;
     switch(role)
     {
-    case ZT1_PEER_ROLE_LEAF:
+    case ZT_PEER_ROLE_LEAF:
         fieldName = "PEER_ROLE_LEAF";
         break;
-    case ZT1_PEER_ROLE_RELAY:
+    case ZT_PEER_ROLE_RELAY:
         fieldName = "PEER_ROLE_RELAY";
         break;
-    case ZT1_PEER_ROLE_ROOT:
-        fieldName = "PEER_ROLE_ROOT";
+    case ZT_PEER_ROLE_ROOT:
+        fieldName = "PEER_ROLE_ROOTS";
         break;
     }
 
@@ -186,7 +186,7 @@ jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role)
     return peerRoleObject;
 }
 
-jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
+jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type)
 {
     jclass vntypeClass = NULL;
     jobject vntypeObject = NULL;
@@ -200,10 +200,10 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
     std::string fieldName;
     switch(type)
     {
-    case ZT1_NETWORK_TYPE_PRIVATE:
+    case ZT_NETWORK_TYPE_PRIVATE:
         fieldName = "NETWORK_TYPE_PRIVATE";
         break;
-    case ZT1_NETWORK_TYPE_PUBLIC:
+    case ZT_NETWORK_TYPE_PUBLIC:
         fieldName = "NETWORK_TYPE_PUBLIC";
         break;
     }
@@ -213,7 +213,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type)
     return vntypeObject;
 }
 
-jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfigOperation op)
+jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfigOperation op)
 {
     jclass vnetConfigOpClass = NULL;
     jobject vnetConfigOpObject = NULL;
@@ -227,16 +227,16 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfi
     std::string fieldName;
     switch(op)
     {
-    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
+    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
         fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_UP";
         break;
-    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
         fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE";
         break;
-    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
+    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
         fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN";
         break;
-    case ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
+    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
         fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY";
         break;
     }
@@ -372,7 +372,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     return inetSocketAddressObject;
 }
 
-jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
+jobject newMulticastGroup(JNIEnv *env, const ZT_MulticastGroup &mc)
 {
     jclass multicastGroupClass = NULL;
     jmethodID multicastGroup_constructor = NULL;
@@ -417,7 +417,7 @@ jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc)
     return multicastGroupObj;
 }
 
-jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp)
+jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 {
     LOGV("newPeerPhysicalPath Called");
     jclass pppClass = NULL;
@@ -514,7 +514,7 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp)
     return pppObject;
 }
 
-jobject newPeer(JNIEnv *env, const ZT1_Peer &peer) 
+jobject newPeer(JNIEnv *env, const ZT_Peer &peer) 
 {
     LOGV("newPeer called");
 
@@ -656,7 +656,7 @@ jobject newPeer(JNIEnv *env, const ZT1_Peer &peer)
     return peerObject;
 }
 
-jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &vnetConfig)
+jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 {
     jclass vnetConfigClass = NULL;
     jmethodID vnetConfig_constructor = NULL;

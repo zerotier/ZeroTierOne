@@ -68,7 +68,7 @@ struct HttpPhyHandler
 	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
 	{
 		if (success) {
-			phy->tcpSetNotifyWritable(sock,true);
+			phy->setNotifyWritable(sock,true);
 		} else {
 			*responseBody = "connection failed";
 			error = true;
@@ -92,12 +92,12 @@ struct HttpPhyHandler
 	inline void phyOnTcpWritable(PhySocket *sock,void **uptr)
 	{
 		if (writePtr < writeSize) {
-			long n = phy->tcpSend(sock,writeBuf + writePtr,writeSize - writePtr,true);
+			long n = phy->streamSend(sock,writeBuf + writePtr,writeSize - writePtr,true);
 			if (n > 0)
 				writePtr += n;
 		}
 		if (writePtr >= writeSize)
-			phy->tcpSetNotifyWritable(sock,false);
+			phy->setNotifyWritable(sock,false);
 	}
 
 	http_parser parser;

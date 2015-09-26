@@ -167,6 +167,15 @@ public:
 	}
 
 	/**
+	 * @return Hash code for use with Hashtable
+	 */
+	inline unsigned long hashCode() const
+		throw()
+	{
+		return (unsigned long)_a;
+	}
+
+	/**
 	 * @return Hexadecimal string
 	 */
 	inline std::string toString() const
@@ -197,11 +206,11 @@ public:
 
 	/**
 	 * Check if this address is reserved
-	 * 
+	 *
 	 * The all-zero null address and any address beginning with 0xff are
 	 * reserved. (0xff is reserved for future use to designate possibly
 	 * longer addresses, addresses based on IPv6 innards, etc.)
-	 * 
+	 *
 	 * @return True if address is reserved and may not be used
 	 */
 	inline bool isReserved() const
@@ -230,4 +239,3 @@ private:
 } // namespace ZeroTier
 
 #endif
-

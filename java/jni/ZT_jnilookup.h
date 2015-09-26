@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT1_JNILOOKUP_H_
-#define ZT1_JNILOOKUP_H_
+#ifndef ZT_JNILOOKUP_H_
+#define ZT_JNILOOKUP_H_
 
 #include <jni.h>
 #include <map>

@@ -25,8 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#include "ZT1_jnilookup.h"
-#include "ZT1_jniutils.h"
+#include "ZT_jnilookup.h"
+#include "ZT_jniutils.h"
 
 JniLookup::JniLookup()
     : m_jvm(NULL)

@@ -40,6 +40,7 @@
 #include "../include/ZeroTierOne.h"
 
 #include "RuntimeEnvironment.hpp"
+#include "CertificateOfMembership.hpp"
 #include "RemotePath.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
@@ -104,6 +105,7 @@ public:
 	 * and appears to be valid.
 	 *
 	 * @param RR Runtime environment
+	 * @param localAddr Local address
 	 * @param remoteAddr Internet address of sender
 	 * @param hops ZeroTier (not IP) hops
 	 * @param packetId Packet ID
@@ -113,6 +115,7 @@ public:
 	 */
 	void received(
 		const RuntimeEnvironment *RR,
+		const InetAddress &localAddr,
 		const InetAddress &remoteAddr,
 		unsigned int hops,
 		uint64_t packetId,
@@ -154,10 +157,11 @@ public:
 	 * for NAT traversal and path verification.
 	 *
 	 * @param RR Runtime environment
+	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 */
-	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &atAddress,uint64_t now);
+	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
@@ -413,7 +417,7 @@ private:
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 	Identity _id;
-	RemotePath _paths[ZT1_MAX_PEER_NETWORK_PATHS];
+	RemotePath _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	unsigned int _numPaths;
 	unsigned int _latency;
 

@@ -53,13 +53,17 @@ public:
 		Path(),
 		_lastSend(0),
 		_lastReceived(0),
+		_localAddress(),
 		_fixed(false) {}
 
-	RemotePath(const InetAddress &addr,bool fixed) :
+	RemotePath(const InetAddress &localAddress,const InetAddress &addr,bool fixed) :
 		Path(addr,0,TRUST_NORMAL),
 		_lastSend(0),
 		_lastReceived(0),
+		_localAddress(localAddress),
 		_fixed(fixed) {}
+
+	inline const InetAddress &localAddress() const throw() { return _localAddress; }
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
@@ -123,7 +127,7 @@ public:
 	 */
 	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		if (RR->node->putPacket(address(),data,len)) {
+		if (RR->node->putPacket(_localAddress,address(),data,len)) {
 			sent(now);
 			RR->antiRec->logOutgoingZT(data,len);
 			return true;
@@ -134,6 +138,7 @@ public:
 private:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
+	InetAddress _localAddress;
 	bool _fixed;
 };
 

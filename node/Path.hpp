@@ -57,7 +57,7 @@ public:
 	 * Nearly all paths will be normal trust. The other levels are for high
 	 * performance local SDN use only.
 	 *
-	 * These values MUST match ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
+	 * These values MUST match ZT_LocalInterfaceAddressTrust in ZeroTierOne.h
 	 */
 	enum Trust
 	{
@@ -93,7 +93,16 @@ public:
 	/**
 	 * @return Preference rank, higher == better
 	 */
-	inline int preferenceRank() const throw() { return (int)_ipScope; } // IP scopes are in ascending rank order in InetAddress.hpp
+	inline int preferenceRank() const throw()
+	{
+		// First, since the scope enum values in InetAddress.hpp are in order of
+		// use preference rank, we take that. Then we multiple by two, yielding
+		// a sequence like 0, 2, 4, 6, etc. Then if it's IPv6 we add one. This
+		// makes IPv6 addresses of a given scope outrank IPv4 addresses of the
+		// same scope -- e.g. 1 outranks 0. This makes us prefer IPv6, but not
+		// if the address scope/class is of a fundamentally lower rank.
+		return ( ((int)_ipScope * 2) + ((_addr.ss_family == AF_INET6) ? 1 : 0) );
+	}
 
 	/**
 	 * @return Path trust level

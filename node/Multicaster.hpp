@@ -36,6 +36,7 @@
 #include <list>
 
 #include "Constants.hpp"
+#include "Hashtable.hpp"
 #include "Address.hpp"
 #include "MAC.hpp"
 #include "MulticastGroup.hpp"
@@ -56,6 +57,18 @@ class Packet;
 class Multicaster : NonCopyable
 {
 private:
+	struct Key
+	{
+		Key() : nwid(0),mg() {}
+		Key(uint64_t n,const MulticastGroup &g) : nwid(n),mg(g) {}
+
+		uint64_t nwid;
+		MulticastGroup mg;
+
+		inline bool operator==(const Key &k) const throw() { return ((nwid == k.nwid)&&(mg == k.mg)); }
+		inline unsigned long hashCode() const throw() { return (mg.hashCode() ^ (unsigned long)(nwid ^ (nwid >> 32))); }
+	};
+
 	struct MulticastGroupMember
 	{
 		MulticastGroupMember() {}
@@ -89,7 +102,7 @@ public:
 	inline void add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,const Address &member)
 	{
 		Mutex::Lock _l(_groups_m);
-		_add(now,nwid,mg,_groups[std::pair<uint64_t,MulticastGroup>(nwid,mg)],member);
+		_add(now,nwid,mg,_groups[Multicaster::Key(nwid,mg)],member);
 	}
 
 	/**
@@ -181,7 +194,7 @@ private:
 	void _add(uint64_t now,uint64_t nwid,const MulticastGroup &mg,MulticastGroupStatus &gs,const Address &member);
 
 	const RuntimeEnvironment *RR;
-	std::map< std::pair<uint64_t,MulticastGroup>,MulticastGroupStatus > _groups;
+	Hashtable<Multicaster::Key,MulticastGroupStatus> _groups;
 	Mutex _groups_m;
 };
 

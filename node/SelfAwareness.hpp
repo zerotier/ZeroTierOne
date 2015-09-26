@@ -28,10 +28,9 @@
 #ifndef ZT_SELFAWARENESS_HPP
 #define ZT_SELFAWARENESS_HPP
 
-#include <map>
-#include <vector>
-
+#include "Constants.hpp"
 #include "InetAddress.hpp"
+#include "Hashtable.hpp"
 #include "Address.hpp"
 #include "Mutex.hpp"
 
@@ -66,16 +65,13 @@ public:
 	 */
 	void clean(uint64_t now);
 
-	/**
-	 * @return True if our external (global scope) IPv4 ports appear to be randomized by a NAT device
-	 */
-	bool areGlobalIPv4PortsRandomized() const;
-
 private:
 	struct PhySurfaceKey
 	{
 		Address reporter;
 		InetAddress::IpScope scope;
+
+		inline unsigned long hashCode() const throw() { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
 
 		PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
 		PhySurfaceKey(const Address &r,InetAddress::IpScope s) : reporter(r),scope(s) {}
@@ -93,7 +89,7 @@ private:
 
 	const RuntimeEnvironment *RR;
 
-	std::map< PhySurfaceKey,PhySurfaceEntry > _phy;
+	Hashtable< PhySurfaceKey,PhySurfaceEntry > _phy;
 	Mutex _phy_m;
 };
 

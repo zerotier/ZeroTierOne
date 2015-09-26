@@ -73,7 +73,7 @@
 
 #include "service/OneService.hpp"
 
-#define ZT1_PID_PATH "zerotier-one.pid"
+#define ZT_PID_PATH "zerotier-one.pid"
 
 using namespace ZeroTier;
 
@@ -910,7 +910,7 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -h                - Display this help"ZT_EOL_S);
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
-	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993)"ZT_EOL_S);
+	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)"ZT_EOL_S);
 	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
@@ -976,7 +976,7 @@ int main(int argc,char **argv)
 
 	std::string overrideRootTopology;
 	std::string homeDir;
-	unsigned int port = ZT1_DEFAULT_PORT;
+	unsigned int port = ZT_DEFAULT_PORT;
 	bool skipRootCheck = false;
 
 	for(int i=1;i<argc;++i) {
@@ -985,7 +985,7 @@ int main(int argc,char **argv)
 
 				case 'p': // port -- for both UDP and TCP, packets and control plane
 					port = Utils::strToUInt(argv[i] + 2);
-					if ((port > 0xffff)||(port == 0)) {
+					if (port > 0xffff) {
 						printHelp(argv[0],stdout);
 						return 1;
 					}
@@ -1154,7 +1154,7 @@ int main(int argc,char **argv)
 #endif // __WINDOWS__
 
 #ifdef __UNIX_LIKE__
-	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT1_PID_PATH);
+	std::string pidPath(homeDir + ZT_PATH_SEPARATOR_S + ZT_PID_PATH);
 	{
 		// Write .pid file to home folder
 		FILE *pf = fopen(pidPath.c_str(),"w");

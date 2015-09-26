@@ -62,7 +62,7 @@ void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> 
 			if (!p)
 				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(RemotePath(*j,true));
+				p->addPath(RemotePath(InetAddress(),*j,true));
 			p->use(now);
 			_rootPeers.push_back(p);
 		}
@@ -103,7 +103,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
-	SharedPtr<Peer> p(_activePeers.insert(std::pair< Address,SharedPtr<Peer> >(peer->address(),peer)).first->second);
+	SharedPtr<Peer> &p = _activePeers.set(peer->address(),peer);
 	p->use(now);
 	_saveIdentity(p->identity());
 
@@ -160,9 +160,9 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 					if (++sna == _rootAddresses.end())
 						sna = _rootAddresses.begin(); // wrap around at end
 					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
-						std::map< Address,SharedPtr<Peer> >::const_iterator p(_activePeers.find(*sna));
-						if ((p != _activePeers.end())&&(p->second->hasActiveDirectPath(now))) {
-							bestRoot = p->second;
+						SharedPtr<Peer> *p = _activePeers.get(*sna);
+						if ((p)&&((*p)->hasActiveDirectPath(now))) {
+							bestRoot = *p;
 							break;
 						}
 					}
@@ -249,10 +249,12 @@ bool Topology::isRoot(const Identity &id) const
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	for(std::map< Address,SharedPtr<Peer> >::iterator p(_activePeers.begin());p!=_activePeers.end();) {
-		if (((now - p->second->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),p->first) == _rootAddresses.end())) {
-			_activePeers.erase(p++);
-		} else ++p;
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_activePeers);
+	Address *a = (Address *)0;
+	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	while (i.next(a,p))
+		if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())) {
+			_activePeers.erase(*a);
 	}
 }
 

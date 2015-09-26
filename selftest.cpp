@@ -36,6 +36,7 @@
 #include <vector>
 
 #include "node/Constants.hpp"
+#include "node/Hashtable.hpp"
 #include "node/RuntimeEnvironment.hpp"
 #include "node/InetAddress.hpp"
 #include "node/Utils.hpp"
@@ -578,6 +579,148 @@ static int testPacket()
 
 static int testOther()
 {
+	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
+	{
+		Hashtable<uint64_t,std::string> ht;
+		Hashtable<uint64_t,std::string> ht2;
+		std::map<uint64_t,std::string> ref; // assume std::map works correctly :)
+		for(int x=0;x<2;++x) {
+			for(int i=0;i<25000;++i) {
+				uint64_t k = rand();
+				while ((k == 0)||(ref.count(k) > 0))
+					++k;
+				std::string v("!");
+				for(int j=0;j<(int)(k % 64);++j)
+					v.push_back("0123456789"[rand() % 10]);
+				ht.set(k,v);
+				ref[k] = v;
+			}
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (size mismatch, original)" << std::endl;
+				return -1;
+			}
+			ht2 = ht;
+			Hashtable<uint64_t,std::string> ht3(ht2);
+			if (ht2.size() != ref.size()) {
+				std::cout << "FAILED! (size mismatch, assigned)" << std::endl;
+				return -1;
+			}
+			if (ht3.size() != ref.size()) {
+				std::cout << "FAILED! (size mismatch, copied)" << std::endl;
+				return -1;
+			}
+			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
+				std::string *v = ht.get(i->first);
+				if (!v) {
+					std::cout << "FAILED! (key " << i->first << " not found, original)" << std::endl;
+					return -1;
+				}
+				if (*v != i->second) {
+					std::cout << "FAILED! (key " << i->first << "  not equal, original)" << std::endl;
+					return -1;
+				}
+				v = ht2.get(i->first);
+				if (!v) {
+					std::cout << "FAILED! (key " << i->first << "  not found, assigned)" << std::endl;
+					return -1;
+				}
+				if (*v != i->second) {
+					std::cout << "FAILED! (key " << i->first << "  not equal, assigned)" << std::endl;
+					return -1;
+				}
+				v = ht3.get(i->first);
+				if (!v) {
+					std::cout << "FAILED! (key " << i->first << "  not found, copied)" << std::endl;
+					return -1;
+				}
+				if (*v != i->second) {
+					std::cout << "FAILED! (key " << i->first << "  not equal, copied)" << std::endl;
+					return -1;
+				}
+			}
+			{
+				uint64_t *k;
+				std::string *v;
+				Hashtable<uint64_t,std::string>::Iterator i(ht);
+				unsigned long ic = 0;
+				while (i.next(k,v)) {
+					if (ref[*k] != *v) {
+						std::cout << "FAILED! (iterate)" << std::endl;
+						return -1;
+					}
+					++ic;
+				}
+				if (ic != ht.size()) {
+					std::cout << "FAILED! (iterate coverage)" << std::endl;
+					return -1;
+				}
+			}
+			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();) {
+				if (!ht.get(i->first)) {
+					std::cout << "FAILED! (erase, check if exists)" << std::endl;
+					return -1;
+				}
+				ht.erase(i->first);
+				if (ht.get(i->first)) {
+					std::cout << "FAILED! (erase, check if erased)" << std::endl;
+					return -1;
+				}
+				ref.erase(i++);
+				if (ht.size() != ref.size()) {
+					std::cout << "FAILED! (erase, size)" << std::endl;
+					return -1;
+				}
+			}
+			if (!ht.empty()) {
+				std::cout << "FAILED! (erase, empty)" << std::endl;
+				return -1;
+			}
+			for(int i=0;i<10000;++i) {
+				uint64_t k = rand();
+				while ((k == 0)||(ref.count(k) > 0))
+					++k;
+				std::string v;
+				for(int j=0;j<(int)(k % 64);++j)
+					v.push_back("0123456789"[rand() % 10]);
+				ht.set(k,v);
+				ref[k] = v;
+			}
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (second populate)" << std::endl;
+				return -1;
+			}
+			ht.clear();
+			ref.clear();
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (clear)" << std::endl;
+				return -1;
+			}
+			for(int i=0;i<10000;++i) {
+				uint64_t k = rand();
+				while ((k == 0)||(ref.count(k) > 0))
+					++k;
+				std::string v;
+				for(int j=0;j<(int)(k % 64);++j)
+					v.push_back("0123456789"[rand() % 10]);
+				ht.set(k,v);
+				ref[k] = v;
+			}
+			{
+				Hashtable<uint64_t,std::string>::Iterator i(ht);
+				uint64_t *k;
+				std::string *v;
+				while (i.next(k,v))
+					ht.erase(*k);
+			}
+			ref.clear();
+			if (ht.size() != ref.size()) {
+				std::cout << "FAILED! (clear by iterate, " << ht.size() << ")" << std::endl;
+				return -1;
+			}
+		}
+	}
+	std::cout << "PASS" << std::endl;
+
 	std::cout << "[other] Testing hex encode/decode... "; std::cout.flush();
 	for(unsigned int k=0;k<1000;++k) {
 		unsigned int flen = (rand() % 8194) + 1;
@@ -652,7 +795,7 @@ struct TestPhyHandlers
 	{
 		++phyTestTcpAcceptCount;
 		*uptrN = new std::string(ZT_TEST_PHY_TCP_MESSAGE_SIZE,(char)0xff);
-		testPhyInstance->tcpSetNotifyWritable(sockN,true);
+		testPhyInstance->setNotifyWritable(sockN,true);
 	}
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -669,7 +812,7 @@ struct TestPhyHandlers
 	{
 		std::string *testMessage = (std::string *)*uptr;
 		if ((testMessage)&&(testMessage->length() > 0)) {
-			long sent = testPhyInstance->tcpSend(sock,(const void *)testMessage->data(),(unsigned long)testMessage->length(),true);
+			long sent = testPhyInstance->streamSend(sock,(const void *)testMessage->data(),(unsigned long)testMessage->length(),true);
 			if (sent > 0)
 				testMessage->erase(0,sent);
 		}
@@ -677,6 +820,16 @@ struct TestPhyHandlers
 			testPhyInstance->close(sock,true);
 		}
 	}
+
+#ifdef __UNIX_LIKE__
+	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
+	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
+	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
+	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
+	inline void phyOnSocketPairEndpointClose(PhySocket *sock,void **uptr) {}
+  inline void phyOnSocketPairEndpointData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
+  inline void phyOnSocketPairEndpointWritable(PhySocket *sock,void **uptr) {}
+#endif // __UNIX_LIKE__
 };
 static int testPhy()
 {
@@ -909,9 +1062,9 @@ int main(int argc,char **argv)
 	srand((unsigned int)time(0));
 
 	r |= testSqliteNetworkController();
+	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();
-	r |= testOther();
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();

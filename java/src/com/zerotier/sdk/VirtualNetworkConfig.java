@@ -35,7 +35,7 @@ import java.net.InetSocketAddress;
 
 public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
-    public static final int ZT1_MAX_ZT_ASSIGNED_ADDRESSES = 16;
+    public static final int ZT_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
     private long nwid;
     private long mac;

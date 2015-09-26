@@ -72,13 +72,15 @@ public:
 	 *
 	 * @param data Packet data
 	 * @param len Packet length
+	 * @param localAddress Local interface address
 	 * @param remoteAddress Address from which packet came
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,const InetAddress &remoteAddress,uint64_t now) :
+	IncomingPacket(const void *data,unsigned int len,const InetAddress &localAddress,const InetAddress &remoteAddress,uint64_t now) :
  		Packet(data,len),
  		_receiveTime(now),
+ 		_localAddress(localAddress),
  		_remoteAddress(remoteAddress),
  		__refCount()
 	{
@@ -127,6 +129,7 @@ private:
 	void _sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid);
 
 	uint64_t _receiveTime;
+	InetAddress _localAddress;
 	InetAddress _remoteAddress;
 	AtomicCounter __refCount;
 };

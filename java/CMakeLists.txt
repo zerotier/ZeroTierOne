@@ -53,8 +53,8 @@ set(src_files
     ../osdep/Http.cpp
     ../osdep/OSUtils.cpp
     jni/com_zerotierone_sdk_Node.cpp
-    jni/ZT1_jniutils.cpp
-    jni/ZT1_jnilookup.cpp
+    jni/ZT_jniutils.cpp
+    jni/ZT_jnicache.cpp
     )
 
 set(include_dirs
