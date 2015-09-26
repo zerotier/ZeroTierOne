@@ -469,7 +469,12 @@ namespace {
             return -2;
         }
         
-        jobject localAddressObj = newInetSocketAddress(env, *localAddress);
+        jobject localAddressObj = NULL;
+        if(memcmp(localAddress, &ZT_SOCKADDR_NULL, sizeof(sockaddr_storage)) != 0)
+        {
+            localAddressObj = newInetSocketAddress(env, *localAddress);
+        }
+
         jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
         jbyteArray bufferObj = env->NewByteArray(bufferSize);
         env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
