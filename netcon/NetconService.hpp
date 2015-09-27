@@ -41,9 +41,28 @@ using namespace std;
 
 namespace ZeroTier {
 
-  enum NetconConnectionType { RPC, TCP_DATA };
-
   class NetconEthernetTap;
+
+  // prototypes
+  class TcpConnection;
+
+  /*
+   *
+   */
+  class TcpConnection
+  {
+  public:
+    int perceived_fd;
+    int their_fd;
+    bool pending;
+
+    PhySocket *rpcSock;
+    PhySocket *dataSock;
+    struct tcp_pcb *pcb;
+
+    unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
+    int idx;
+  };
 
   /*
    * A helper class for passing a reference to _phy to LWIP callbacks as a "state"
@@ -52,90 +71,11 @@ namespace ZeroTier {
   {
   public:
     NetconEthernetTap *tap;
-    PhySocket *sock;
-    Larg(NetconEthernetTap *_tap, PhySocket *_sock) : tap(_tap), sock(_sock) {}
+    TcpConnection *conn;
+    Larg(NetconEthernetTap *_tap, TcpConnection *conn) : tap(_tap), conn(conn) {}
   };
 
-  // prototypes
-  class NetconClient;
-  class NetconConnection;
 
-  /*
-   * A data connection, any number of these may be associated with a NetconClient
-   */
-  class NetconConnection
-  {
-  public:
-    int perceived_fd;
-    int their_fd;
-    unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
-    int idx;
-    NetconConnectionType type;
-    struct tcp_pcb *pcb;
-    PhySocket *sock;
-    NetconClient *owner;
-
-    NetconConnection(NetconConnectionType type, PhySocket *sock) : type(type), sock(sock) {}
-  };
-
-  /*
-   * A "harnessed" client with associated rpc and data connections.
-   */
-  class NetconClient
-  {
-  public:
-    vector<NetconConnection*> connections; // TODO: Switch to storing the actual object here
-
-    int tid;
-    bool waiting_for_retval;
-    NetconConnection *rpc;
-    NetconConnection* unmapped_conn;
-
-    NetconConnection *addConnection(NetconConnectionType type, PhySocket *sock)
-    {
-      NetconConnection *new_conn = new NetconConnection(type, sock);
-      new_conn->owner = this;
-      return new_conn;
-    }
-
-    // Check data and RPC connections
-    NetconConnection *getConnection(PhySocket *sock)
-    {
-      if(sock && sock == rpc->sock) {
-        return rpc;
-      }
-      for(size_t i=0; i<connections.size(); i++) {
-        if(sock == connections[i]->sock)  return connections[i];
-      }
-      return NULL;
-    }
-
-    //
-    NetconConnection *getConnectionByTheirFD(int fd)
-    {
-      for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->perceived_fd == fd) return connections[i];
-      }
-      return NULL;
-    }
-
-    //
-    NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb)
-    {
-      for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb == pcb) return connections[i];
-      }
-      return NULL;
-    }
-
-    NetconConnection *containsPCB(struct tcp_pcb *pcb)
-    {
-      for(size_t i=0; i<connections.size(); i++) {
-        if(connections[i]->pcb == pcb) return connections[i];
-      }
-      return NULL;
-    }
-  };
 } // namespace ZeroTier
 
 #endif

@@ -104,12 +104,14 @@ private:
 	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 
 	// RPC handlers (from NetconIntercept)
-	void handle_bind(NetconClient *client, struct bind_st *bind_rpc);
-	void handle_listen(NetconClient *client, struct listen_st *listen_rpc);
-	void handle_retval(NetconClient *client, unsigned char* buf);
-	void handle_socket(NetconClient *client, struct socket_st* socket_rpc);
-	void handle_connect(NetconClient *client, struct connect_st* connect_rpc);
-	void handle_write(NetconConnection *c);
+	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
+	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
+	void handle_retval(PhySocket *sock, void **uptr, unsigned char* buf);
+	void handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
+	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
+
+	void handle_write(TcpConnection *conn);
+	int send_return_value(TcpConnection *conn, int retval);
 
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
 	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success);
@@ -122,7 +124,6 @@ private:
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
 	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
 
-	int send_return_value(NetconClient *client, int retval);
 
 	ip_addr_t convert_ip(struct sockaddr_in * addr)
 	{
@@ -137,18 +138,19 @@ private:
 	}
 
 	// Client helpers
-	NetconConnection *getConnectionByThisFD(int fd);
-	NetconConnection *getConnectionByPCB(struct tcp_pcb *pcb);
-	NetconClient *getClientByPCB(struct tcp_pcb *pcb);
-  void closeAllClients();
-	void closeConnection(NetconConnection *conn);
+	TcpConnection *getConnectionByTheirFD(int fd);
+	TcpConnection *getConnectionByPCB(struct tcp_pcb *pcb);
+	void closeConnection(TcpConnection *conn);
+	void closeAll();
 
-	void closeClient(NetconClient *client);
+	void closeClient(PhySocket *sock);
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
-	std::vector<NetconClient*> clients;
+	std::vector<TcpConnection*> tcp_connections;
+	std::vector<PhySocket*> rpc_sockets;
+
 	netif interface;
 
 	MAC _mac;
