@@ -8,7 +8,10 @@ echo '*** https://www.zerotier.com/'
 echo '***'
 echo '*** Starting ZeroTier network container host...'
 
-/zerotier-one -d -U -p9993 >>/zerotier-one.out 2>&1
+chown -R daemon /var/lib/zerotier-one
+chgrp -R daemon /var/lib/zerotier-one
+
+su daemon -s /bin/bash -c '/zerotier-one -d -U -p9993 >>/tmp/zerotier-one.out 2>&1'
 
 echo '*** Waiting for initial identity generation...'
 
@@ -21,20 +24,36 @@ cat /var/lib/zerotier-one/identity.public
 echo '*** Waiting for network configuration...'
 
 virtip4=""
-while [ ! -s /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf ]; do
+while [ ! -s /var/lib/zerotier-one/networks.d/8056c2e21c000001.conf ]; do
 	sleep 0.5
 done
 while [ -z "$virtip4" ]; do
-	virtip4=`/zerotier-cli listnetworks | grep -F e5cd7a9e1c5311ab | cut -d ' ' -f 9 | sed 's/,/\n/g' | grep -F '.' | cut -d / -f 1`
+	virtip4=`/zerotier-cli listnetworks | grep -F 8056c2e21c000001 | cut -d ' ' -f 9 | sed 's/,/\n/g' | grep -F '.' | cut -d / -f 1`
 done
 
+echo '*** Starting Apache...'
+
+sleep 1
+rm -rf /run/httpd/* /tmp/httpd*
+intercept /usr/sbin/httpd >>/tmp/apache.out 2>&1
+
 echo '***'
-echo '*** Up and running at ' $virtip4 ' -- join network e5cd7a9e1c5311ab and try:'
-echo '*** > ping ' $virtip4
+echo '*** Up and running at' $virtip4 '-- join network 8056c2e21c000001 and try:'
+echo '*** > ping' $virtip4
 echo -n '*** > curl http://'
 echo -n $virtip4
 echo '/'
 echo '***'
+echo "*** You might need to wait a minute or two."
+echo '***'
+echo '*** Look, no root!'
+echo
+ps aux
+echo
+echo '***'
+echo '*** Follow https://www.zerotier.com/blog for news and release announcements!'
+echo '***'
 
-rm -rf /run/httpd/* /tmp/httpd*
-exec intercept /usr/sbin/httpd -D FOREGROUND >>/apache.out 2>&1
+while /bin/true; do
+	sleep 1000000
+done

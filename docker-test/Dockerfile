@@ -27,7 +27,7 @@ EXPOSE 9993/udp
 
 # Start ZeroTier-One
 RUN mkdir -p /var/lib/zerotier-one/networks.d
-RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
+RUN touch /var/lib/zerotier-one/networks.d/8056c2e21c000001.conf
 
 ADD entrypoint.sh /entrypoint.sh
 RUN chmod -v +x /entrypoint.sh
