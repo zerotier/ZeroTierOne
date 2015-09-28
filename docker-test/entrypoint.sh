@@ -36,7 +36,7 @@ echo '*** Starting Apache...'
 
 sleep 1
 rm -rf /run/httpd/* /tmp/httpd*
-intercept /usr/sbin/httpd >>/tmp/apache.out 2>&1
+intercept /usr/sbin/httpd >>/tmp/apache.out 2>&1 &
 
 echo '***'
 echo '*** Up and running at' $virtip4 '-- join network 8056c2e21c000001 and try:'
