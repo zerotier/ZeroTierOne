@@ -79,7 +79,7 @@ NetconEthernetTap::NetconEthernetTap(
 	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
 	_dev = sockPath;
 
-	lwipstack = new LWIPStack("ext/bin/lwip/liblwip.so"); // ext/bin/liblwip.so.debug for debug symbols
+	lwipstack = new LWIPStack("lib/liblwip.so"); // ext/bin/liblwip.so.debug for debug symbols
 	if(!lwipstack) // TODO double check this check
 		throw std::runtime_error("unable to load lwip lib.");
 	lwipstack->lwip_init();
