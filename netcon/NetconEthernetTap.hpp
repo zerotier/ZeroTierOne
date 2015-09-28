@@ -184,6 +184,7 @@ static err_t tapif_init(struct netif *netif)
 
 static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
+	fprintf(stderr, "low_level_output()\n");
   struct pbuf *q;
   char buf[ZT1_MAX_MTU+32];
   char *bufptr;

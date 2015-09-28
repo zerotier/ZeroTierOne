@@ -1,3 +1,5 @@
 #!/bin/bash
 
-#exec ./zerotier-one -U -p9993 FOREGROUND
+rm -rf /run/httpd/* /tmp/httpd*
+
+exec /usr/sbin/httpd -D FOREGROUND
