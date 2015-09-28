@@ -1,5 +1,6 @@
 #!/bin/bash
 
-rm -rf /run/httpd/* /tmp/httpd*
+./zerotier-one -d -U -p9993
 
-exec /usr/sbin/httpd -D FOREGROUND
+rm -rf /run/httpd/* /tmp/httpd*
+exec intercept /usr/sbin/httpd -D FOREGROUND
