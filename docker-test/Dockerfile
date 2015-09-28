@@ -30,5 +30,3 @@ RUN mkdir -p /var/lib/zerotier-one/networks.d
 RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
 RUN ./zerotier-one -d -U -p9993 /root/dev/ztest
 
-# Start Applications
-
