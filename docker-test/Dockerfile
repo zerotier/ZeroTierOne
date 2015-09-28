@@ -3,6 +3,10 @@ FROM fedora:20
 
 MAINTAINER https://www.zerotier.com/
 
+# Install Apache
+RUN yum -y update && yum clean all
+RUN yum -y install httpd && yum clean all
+
 # Add files
 ADD zerotier-one /
 ADD zerotier-cli /
@@ -18,9 +22,6 @@ RUN cp libintercept.so.1.0 /lib/libintercept.so.1.0
 RUN ln -sf /lib/libintercept.so.1.0 /lib/libintercept
 RUN /usr/bin/install -c intercept /usr/bin
 
-# Install Apache
-RUN yum -y update && yum clean all
-RUN yum -y install httpd && yum clean all
 RUN echo "Apache" >> /var/www/html/index.html
 EXPOSE 9993/udp
 
