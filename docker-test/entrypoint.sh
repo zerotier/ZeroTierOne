@@ -20,6 +20,7 @@ while [ ! -s /var/lib/zerotier-one/identity.secret ]; do
 done
 
 cat /var/lib/zerotier-one/identity.public
+echo
 
 echo '*** Waiting for network configuration...'
 
