@@ -13,6 +13,8 @@ ADD zerotier-cli /
 ADD intercept /
 ADD lib/libintercept.so.1.0 /
 ADD lib/liblwip.so /
+ADD htdocs/index.html /
+ADD htdocs/ZeroTierIcon.png /
 
 RUN cp libintercept.so.1.0 lib/libintercept.so.1.0
 RUN cp liblwip.so lib/liblwip.so
@@ -24,6 +26,9 @@ RUN /usr/bin/install -c intercept /usr/bin
 
 RUN echo "Apache" >> /var/www/html/index.html
 EXPOSE 9993/udp
+
+RUN mv index.html /var/www/html/index.html
+RUN mv ZeroTierIcon.png /var/www/html/ZeroTierIcon.png
 
 # Start ZeroTier-One
 RUN mkdir -p /var/lib/zerotier-one/networks.d
