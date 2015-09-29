@@ -11,6 +11,7 @@ echo '*** Starting ZeroTier network container host...'
 chown -R daemon /var/lib/zerotier-one
 chgrp -R daemon /var/lib/zerotier-one
 su daemon -s /bin/bash -c '/zerotier-one -d -U -p9993 >>/tmp/zerotier-one.out 2>&1'
+#/zerotier-one -d -U -p9993 >>/tmp/zerotier-one.out 2>&1
 
 echo '*** Waiting for initial identity generation...'
 
@@ -34,10 +35,6 @@ done
 
 echo '*** Starting Apache...'
 
-sleep 0.5
-rm -rf /run/httpd/* /tmp/httpd*
-intercept /usr/sbin/httpd -D FOREGROUND >>/tmp/apache.out 2>&1 &
-
 echo '***'
 echo '*** Up and running at' $virtip4 '-- join network 8056c2e21c000001 and try:'
 echo '*** > ping' $virtip4
@@ -50,6 +47,10 @@ echo '***'
 echo '*** Follow https://www.zerotier.com/blog for news and release announcements!'
 echo '***'
 
-while /bin/true; do
-	sleep 1000000
-done
+#while /bin/true; do
+#	sleep 1000000
+#done
+
+sleep 0.5
+rm -rf /run/httpd/* /tmp/httpd*
+intercept /usr/sbin/httpd -D FOREGROUND >>/tmp/apache.out 2>&1
