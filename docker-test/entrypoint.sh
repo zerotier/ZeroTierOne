@@ -19,9 +19,6 @@ while [ ! -s /var/lib/zerotier-one/identity.secret ]; do
 	sleep 0.2
 done
 
-# HACK: permissions model nonexistent yet... make sure httpd's can talk to this...
-chmod 0777 /tmp/.zt*
-
 echo '*** Waiting for network config...'
 
 virtip4=""
