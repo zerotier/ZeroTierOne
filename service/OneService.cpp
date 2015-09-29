@@ -130,7 +130,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_IF_METRIC 32768
 
 // How often to check for new multicast subscriptions on a tap device
-#define ZT_TAP_CHECK_MULTICAST_INTERVAL 30000
+#define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
 // Path under ZT1 home for controller database if controller is enabled
 #define ZT1_CONTROLLER_DB_PATH "controller.db"
