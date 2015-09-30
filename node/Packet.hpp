@@ -1105,19 +1105,12 @@ public:
 		ERROR_UNWANTED_MULTICAST = 8
 	};
 
-	/**
-	 * @param v Verb
-	 * @return String representation (e.g. HELLO, OK)
-	 */
+#ifdef ZT_TRACE
 	static const char *verbString(Verb v)
 		throw();
-
-	/**
-	 * @param e Error code
-	 * @return String error name
-	 */
 	static const char *errorString(ErrorCode e)
 		throw();
+#endif
 
 	template<unsigned int C2>
 	Packet(const Buffer<C2> &b) :
