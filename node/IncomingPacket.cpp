@@ -85,6 +85,8 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_MULTICAST_GATHER:               return _doMULTICAST_GATHER(RR,peer);
 				case Packet::VERB_MULTICAST_FRAME:                return _doMULTICAST_FRAME(RR,peer);
 				case Packet::VERB_PUSH_DIRECT_PATHS:              return _doPUSH_DIRECT_PATHS(RR,peer);
+				case Packet::VERB_CIRCUIT_TEST:                   return _doCIRCUIT_TEST(RR,peer);
+				case Packet::VERB_CIRCUIT_TEST_REPORT:            return _doCIRCUIT_TEST_REPORT(RR,peer);
 			}
 		} else {
 			RR->sw->requestWhois(source());
@@ -923,6 +925,67 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 	} catch ( ... ) {
 		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
+	return true;
+}
+
+bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+	try {
+		const Address originatorAddress(field(ZT_PACKET_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		SharedPtr<Peer> originator(RR->topology->getPeer(originatorAddress));
+		if (!originator) {
+			RR->sw->requestWhois(originatorAddress);
+			return false;
+		}
+
+		const unsigned int flags = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 5);
+		const uint64_t timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 7);
+		const uint64_t testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 15);
+
+		unsigned int vlf = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23); // variable length field length
+		switch((*this)[ZT_PACKET_IDX_PAYLOAD + 25]) {
+			case 0x01: { // 64-bit network ID, originator must be controller
+			}	break;
+			default: break;
+		}
+
+		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 26 + vlf); // length of additional fields, currently unused
+
+		const unsigned int signatureLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 28 + vlf);
+		if (!originator->identity().verify(field(ZT_PACKET_IDX_PAYLOAD,28 + vlf),28 + vlf,field(30 + vlf,signatureLength),signatureLength)) {
+			TRACE("dropped CIRCUIT_TEST from %s(%s): signature by originator %s invalid",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str());
+			return true;
+		}
+		vlf += signatureLength;
+
+		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 30 + vlf);
+		switch((*this)[ZT_PACKET_IDX_PAYLOAD + 32 + vlf]) {
+			case 0x01: { // network certificate of membership for previous hop
+			}	break;
+			default: break;
+		}
+
+		if ((ZT_PACKET_IDX_PAYLOAD + 33 + vlf) < size()) {
+			const unsigned int breadth = (*this)[ZT_PACKET_IDX_PAYLOAD + 33 + vlf];
+			Address nextHops[255];
+			SharedPtr<Peer> nextHopPeers[255];
+			unsigned int hptr = ZT_PACKET_IDX_PAYLOAD + 34 + vlf;
+			for(unsigned int h=0;((h<breadth)&&(h<255));++h) { // breadth can't actually be >256 but be safe anyway
+				nextHops[h].setTo(field(hptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+				hptr += ZT_ADDRESS_LENGTH;
+				nextHopPeers[h] = RR->topology->getPeer(nextHops[h]);
+			}
+		}
+	} catch (std::exception &exc) {
+		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
+	} catch ( ... ) {
+		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
+}
+
+bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
 	return true;
 }
 

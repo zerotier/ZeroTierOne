@@ -911,12 +911,15 @@ public:
 		 *   <[2] 16-bit flags>
 		 *   <[8] 64-bit timestamp>
 		 *   <[8] 64-bit test ID (arbitrary, set by tester)>
+		 *   <[2] 16-bit originator credential length>
 		 *   <[1] originator credential type (for authorizing test)>
 		 *   <[...] credential>
 		 *   <[2] 16-bit length of additional fields>
 		 *   <[...] additional fields>
+		 *   [ ... end of signed portion of request ... ]
 		 *   <[2] 16-bit length of signature of request>
 		 *   <[...] signature of request by originator>
+		 *   <[2] 16-bit previous hop credential length>
 		 *   <[1] previous hop credential type>
 		 *   <[...] previous hop credential>
 		 *   <[...] next hop(s) in path>
@@ -939,7 +942,7 @@ public:
 		 *   <[...] one or more ZeroTier addresses of next hops>
 		 *
 		 * Path record flags (in each path record):
-		 *   0x80 - End of path (should be set on last entry)
+		 *   (unused, must be zero)
 		 *
 		 * The circuit test allows a device to send a message that will traverse
 		 * the network along a specified path, with each hop optionally reporting
