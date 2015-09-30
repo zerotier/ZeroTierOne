@@ -114,7 +114,7 @@ public:
 	 */
 	inline bool reliable() const throw()
 	{
-		return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
+		return ( (_addr.ss_family == AF_INET6) || ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE)) );
 	}
 
 	/**
