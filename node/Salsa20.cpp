@@ -122,7 +122,7 @@ void Salsa20::init(const void *key,unsigned int kbits,const void *iv,unsigned in
 	_state.i[0] = U8TO32_LITTLE(constants + 0);
 #endif
 
-	_roundsDiv2 = rounds / 2;
+	_roundsDiv4 = rounds / 4;
 }
 
 void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
@@ -180,8 +180,44 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		__m128i X2s = X2;
 		__m128i X3s = X3;
 
-		for (i=0;i<_roundsDiv2;++i) {
+		for (i=0;i<_roundsDiv4;++i) {
 			__m128i T = _mm_add_epi32(X0, X3);
+			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 7));
+			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 25));
+			T = _mm_add_epi32(X1, X0);
+			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
+			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			T = _mm_add_epi32(X2, X1);
+			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 13));
+			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 19));
+			T = _mm_add_epi32(X3, X2);
+			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
+			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+
+			X1 = _mm_shuffle_epi32(X1, 0x93);
+			X2 = _mm_shuffle_epi32(X2, 0x4E);
+			X3 = _mm_shuffle_epi32(X3, 0x39);
+
+			T = _mm_add_epi32(X0, X1);
+			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 7));
+			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 25));
+			T = _mm_add_epi32(X3, X0);
+			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
+			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			T = _mm_add_epi32(X2, X3);
+			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 13));
+			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 19));
+			T = _mm_add_epi32(X1, X2);
+			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
+			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+
+			X1 = _mm_shuffle_epi32(X1, 0x39);
+			X2 = _mm_shuffle_epi32(X2, 0x4E);
+			X3 = _mm_shuffle_epi32(X3, 0x93);
+
+			// --
+
+			T = _mm_add_epi32(X0, X3);
 			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 7));
 			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 25));
 			T = _mm_add_epi32(X1, X0);
@@ -260,7 +296,42 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		x14 = j14;
 		x15 = j15;
 
-		for(i=0;i<_roundsDiv2;++i) {
+		for(i=0;i<_roundsDiv4;++i) {
+			 x4 = XOR( x4,ROTATE(PLUS( x0,x12), 7));
+			 x8 = XOR( x8,ROTATE(PLUS( x4, x0), 9));
+			x12 = XOR(x12,ROTATE(PLUS( x8, x4),13));
+			 x0 = XOR( x0,ROTATE(PLUS(x12, x8),18));
+			 x9 = XOR( x9,ROTATE(PLUS( x5, x1), 7));
+			x13 = XOR(x13,ROTATE(PLUS( x9, x5), 9));
+			 x1 = XOR( x1,ROTATE(PLUS(x13, x9),13));
+			 x5 = XOR( x5,ROTATE(PLUS( x1,x13),18));
+			x14 = XOR(x14,ROTATE(PLUS(x10, x6), 7));
+			 x2 = XOR( x2,ROTATE(PLUS(x14,x10), 9));
+			 x6 = XOR( x6,ROTATE(PLUS( x2,x14),13));
+			x10 = XOR(x10,ROTATE(PLUS( x6, x2),18));
+			 x3 = XOR( x3,ROTATE(PLUS(x15,x11), 7));
+			 x7 = XOR( x7,ROTATE(PLUS( x3,x15), 9));
+			x11 = XOR(x11,ROTATE(PLUS( x7, x3),13));
+			x15 = XOR(x15,ROTATE(PLUS(x11, x7),18));
+			 x1 = XOR( x1,ROTATE(PLUS( x0, x3), 7));
+			 x2 = XOR( x2,ROTATE(PLUS( x1, x0), 9));
+			 x3 = XOR( x3,ROTATE(PLUS( x2, x1),13));
+			 x0 = XOR( x0,ROTATE(PLUS( x3, x2),18));
+			 x6 = XOR( x6,ROTATE(PLUS( x5, x4), 7));
+			 x7 = XOR( x7,ROTATE(PLUS( x6, x5), 9));
+			 x4 = XOR( x4,ROTATE(PLUS( x7, x6),13));
+			 x5 = XOR( x5,ROTATE(PLUS( x4, x7),18));
+			x11 = XOR(x11,ROTATE(PLUS(x10, x9), 7));
+			 x8 = XOR( x8,ROTATE(PLUS(x11,x10), 9));
+			 x9 = XOR( x9,ROTATE(PLUS( x8,x11),13));
+			x10 = XOR(x10,ROTATE(PLUS( x9, x8),18));
+			x12 = XOR(x12,ROTATE(PLUS(x15,x14), 7));
+			x13 = XOR(x13,ROTATE(PLUS(x12,x15), 9));
+			x14 = XOR(x14,ROTATE(PLUS(x13,x12),13));
+			x15 = XOR(x15,ROTATE(PLUS(x14,x13),18));
+
+			// --
+
 			 x4 = XOR( x4,ROTATE(PLUS( x0,x12), 7));
 			 x8 = XOR( x8,ROTATE(PLUS( x4, x0), 9));
 			x12 = XOR(x12,ROTATE(PLUS( x8, x4),13));

@@ -84,7 +84,7 @@ private:
 #endif // ZT_SALSA20_SSE
 		uint32_t i[16];
 	} _state;
-	unsigned int _roundsDiv2;
+	unsigned int _roundsDiv4;
 };
 
 } // namespace ZeroTier
