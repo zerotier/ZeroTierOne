@@ -493,10 +493,8 @@ public:
 		// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
 		// NAT-t and uPnP from behind the same port. I think this is a bug, but
 		// everyone else's router bugs are our problem. :P
-		for(int k=0;k<256;++k) {
-			unsigned int randp = 0;
-			Utils::getSecureRandom(&randp,sizeof(randp));
-			unsigned int upnport = 40000 + (randp % 25500);
+		for(int k=0;k<512;++k) {
+			unsigned int upnport = 40000 + (((port + 1) * (k + 1)) % 25500);
 
 			_v4UpnpLocalAddress = InetAddress(0,upnport);
 			_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),131072);
