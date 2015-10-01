@@ -238,9 +238,9 @@ void Multicaster::send(
 				TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
 
 				const CertificateOfMembership *com = (CertificateOfMembership *)0;
+				SharedPtr<NetworkConfig> nconf;
 				if (sn->needsOurNetworkMembershipCertificate(nwid,now,true)) {
 					SharedPtr<Network> nw = RR->node->network(nwid);
-					SharedPtr<NetworkConfig> nconf;
 					if (nw) {
 						nconf = nw->config2();
 						if (nconf)
