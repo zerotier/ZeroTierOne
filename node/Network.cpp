@@ -400,11 +400,53 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 	return false; // default position on any failure
 }
 
-// Used in Network::_announceMulticastGroups()
-class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths
+bool Network::_tryAnnounceMulticastGroupsTo(const std::vector<Address> &alwaysAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const
+{
+	// assumes _lock is locked
+	if (
+	    (_isAllowed(peer)) ||
+	    (peer->address() == this->controller()) ||
+	    (std::find(alwaysAddresses.begin(),alwaysAddresses.end(),peer->address()) != alwaysAddresses.end())
+	   ) {
+
+		if ((_config)&&(_config->com())&&(!_config->isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,now,true))) {
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+			_config->com().serialize(outp);
+			outp.armor(peer->key(),true);
+			peer->send(RR,outp.data(),outp.size(),now);
+		}
+
+		{
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+
+			for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
+				if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+					outp.armor(peer->key(),true);
+					peer->send(RR,outp.data(),outp.size(),now);
+					outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+				}
+
+				// network ID, MAC, ADI
+				outp.append((uint64_t)_id);
+				mg->mac().appendTo(outp);
+				outp.append((uint32_t)mg->adi());
+			}
+
+			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+				outp.armor(peer->key(),true);
+				peer->send(RR,outp.data(),outp.size(),now);
+			}
+		}
+
+		return true;
+	}
+	return false;
+}
+
+class _AnnounceMulticastGroupsToAll
 {
 public:
-	_AnnounceMulticastGroupsToPeersWithActiveDirectPaths(const RuntimeEnvironment *renv,Network *nw) :
+	_AnnounceMulticastGroupsToAll(const RuntimeEnvironment *renv,Network *nw) :
 		_now(renv->node->now()),
 		RR(renv),
 		_network(nw),
@@ -421,40 +463,11 @@ private:
 	std::vector<Address> _rootAddresses;
 	std::vector<MulticastGroup> _allMulticastGroups;
 };
-
-bool Network::_tryAnnounceMulticastGroupsTo(const std::vector<Address> &alwaysAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const
-{
-	if ( ( (peer->hasActiveDirectPath(now)) && ( _isAllowed(peer) || (peer->address() == this->controller()) ) ) || (std::find(alwaysAddresses.begin(),alwaysAddresses.end(),peer->address()) != alwaysAddresses.end()) ) {
-		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-
-		for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
-			if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-				outp.armor(peer->key(),true);
-				peer->send(RR,outp.data(),outp.size(),now);
-				outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-			}
-
-			// network ID, MAC, ADI
-			outp.append((uint64_t)_id);
-			mg->mac().appendTo(outp);
-			outp.append((uint32_t)mg->adi());
-		}
-
-		if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
-			outp.armor(peer->key(),true);
-			peer->send(RR,outp.data(),outp.size(),now);
-		}
-
-		return true;
-	}
-	return false;
-}
-
 void Network::_announceMulticastGroups()
 {
 	// Assumes _lock is locked
-	_AnnounceMulticastGroupsToPeersWithActiveDirectPaths afunc(RR,this);
-	RR->topology->eachPeer<_AnnounceMulticastGroupsToPeersWithActiveDirectPaths &>(afunc);
+	_AnnounceMulticastGroupsToAll afunc(RR,this);
+	RR->topology->eachPeer<_AnnounceMulticastGroupsToAll &>(afunc);
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const

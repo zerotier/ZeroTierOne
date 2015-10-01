@@ -55,8 +55,8 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
 class Peer;
+class _AnnounceMulticastGroupsToAll; // internal function object in Network.cpp
 
 /**
  * A virtual LAN
@@ -64,7 +64,7 @@ class Peer;
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
-	friend class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
+	friend class _AnnounceMulticastGroupsToAll;
 
 public:
 	/**
