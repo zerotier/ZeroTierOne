@@ -193,6 +193,7 @@ public:
 	inline std::vector<RemotePath> paths() const
 	{
 		std::vector<RemotePath> pp;
+		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			pp.push_back(_paths[p]);
 		return pp;
@@ -204,6 +205,7 @@ public:
 	inline uint64_t lastDirectReceive() const
 		throw()
 	{
+		Mutex::Lock _l(_lock);
 		uint64_t x = 0;
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			x = std::max(x,_paths[p].lastReceived());
@@ -216,6 +218,7 @@ public:
 	inline uint64_t lastDirectSend() const
 		throw()
 	{
+		Mutex::Lock _l(_lock);
 		uint64_t x = 0;
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			x = std::max(x,_paths[p].lastSend());
@@ -288,6 +291,7 @@ public:
 	inline bool hasActiveDirectPath(uint64_t now) const
 		throw()
 	{
+		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
 			if (_paths[p].active(now))
 				return true;
@@ -338,6 +342,7 @@ public:
 	 */
 	inline void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
 	{
+		Mutex::Lock _l(_lock);
 		_vProto = (uint16_t)vproto;
 		_vMajor = (uint16_t)vmaj;
 		_vMinor = (uint16_t)vmin;
@@ -361,6 +366,7 @@ public:
 	inline bool atLeastVersion(unsigned int major,unsigned int minor,unsigned int rev)
 		throw()
 	{
+		Mutex::Lock _l(_lock);
 		if ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)) {
 			if (_vMajor > major)
 				return true;
