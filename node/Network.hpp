@@ -93,7 +93,7 @@ public:
 	/**
 	 * @return Address of network's controller (most significant 40 bits of ID)
 	 */
-	inline Address controller() throw() { return Address(_id >> 24); }
+	inline Address controller() const throw() { return Address(_id >> 24); }
 
 	/**
 	 * @param nwid Network ID
@@ -139,6 +139,14 @@ public:
 	 * @param mg Multicast group
 	 */
 	void multicastUnsubscribe(const MulticastGroup &mg);
+
+	/**
+	 * Announce multicast groups to a peer if that peer is authorized on this network
+	 *
+	 * @param peer Peer to try to announce multicast groups to
+	 * @return True if peer was authorized and groups were announced
+	 */
+	bool tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer);
 
 	/**
 	 * Apply a NetworkConfig to this network
@@ -334,6 +342,7 @@ private:
 	ZT_VirtualNetworkStatus _status() const;
 	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
 	bool _isAllowed(const SharedPtr<Peer> &peer) const;
+	bool _tryAnnounceMulticastGroupsTo(const std::vector<Address> &rootAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const;
 	void _announceMulticastGroups();
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 

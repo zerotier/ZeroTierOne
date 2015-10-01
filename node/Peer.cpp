@@ -96,106 +96,86 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 	const uint64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
+	bool needMulticastGroupAnnounce = false;
 
-	_lastReceive = now;
+	{
+		Mutex::Lock _l(_lock);
 
-	if (!hops) {
-		bool pathIsConfirmed = false;
+		_lastReceive = now;
 
-		/* Learn new paths from direct (hops == 0) packets */
-		{
-			unsigned int np = _numPaths;
-			for(unsigned int p=0;p<np;++p) {
-				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
-					_paths[p].received(now);
-					pathIsConfirmed = true;
-					break;
+		if (!hops) {
+			bool pathIsConfirmed = false;
+
+			/* Learn new paths from direct (hops == 0) packets */
+			{
+				unsigned int np = _numPaths;
+				for(unsigned int p=0;p<np;++p) {
+					if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
+						_paths[p].received(now);
+						pathIsConfirmed = true;
+						break;
+					}
 				}
-			}
 
-			if (!pathIsConfirmed) {
-				if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
+				if (!pathIsConfirmed) {
+					if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
 
-					// Learn paths if they've been confirmed via a HELLO
-					RemotePath *slot = (RemotePath *)0;
-					if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-						// Add new path
-						slot = &(_paths[np++]);
-					} else {
-						// Replace oldest non-fixed path
-						uint64_t slotLRmin = 0xffffffffffffffffULL;
-						for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-							if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
-								slotLRmin = _paths[p].lastReceived();
-								slot = &(_paths[p]);
+						// Learn paths if they've been confirmed via a HELLO
+						RemotePath *slot = (RemotePath *)0;
+						if (np < ZT_MAX_PEER_NETWORK_PATHS) {
+							// Add new path
+							slot = &(_paths[np++]);
+						} else {
+							// Replace oldest non-fixed path
+							uint64_t slotLRmin = 0xffffffffffffffffULL;
+							for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
+								if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
+									slotLRmin = _paths[p].lastReceived();
+									slot = &(_paths[p]);
+								}
 							}
 						}
-					}
-					if (slot) {
-						*slot = RemotePath(localAddr,remoteAddr,false);
-						slot->received(now);
-						_numPaths = np;
-						pathIsConfirmed = true;
-						_sortPaths(now);
-					}
-
-				} else {
-
-					/* If this path is not known, send a HELLO. We don't learn
-					 * paths without confirming that a bidirectional link is in
-					 * fact present, but any packet that decodes and authenticates
-					 * correctly is considered valid. */
-					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
-						_lastPathConfirmationSent = now;
-						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-						attemptToContactAt(RR,localAddr,remoteAddr,now);
-					}
-
-				}
-			}
-		}
-
-		/* Announce multicast groups of interest to direct peers if they are
-		 * considered authorized members of a given network. Also announce to
-		 * root servers and network controllers. */
-		/*
-		if ((pathIsConfirmed)&&((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000))) {
-			_lastAnnouncedTo = now;
-
-			const bool isRoot = RR->topology->isRoot(_id);
-
-			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-			const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
-			for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n) {
-				if ( (isRoot) || ((*n)->isAllowed(_id.address())) || (_id.address() == (*n)->controller()) ) {
-					const std::vector<MulticastGroup> mgs((*n)->allMulticastGroups());
-					for(std::vector<MulticastGroup>::const_iterator mg(mgs.begin());mg!=mgs.end();++mg) {
-						if ((outp.size() + 18) > ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-							outp.armor(_key,true);
-							RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-							outp.reset(_id.address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+						if (slot) {
+							*slot = RemotePath(localAddr,remoteAddr,false);
+							slot->received(now);
+							_numPaths = np;
+							pathIsConfirmed = true;
+							_sortPaths(now);
 						}
 
-						// network ID, MAC, ADI
-						outp.append((uint64_t)(*n)->id());
-						mg->mac().appendTo(outp);
-						outp.append((uint32_t)mg->adi());
+					} else {
+
+						/* If this path is not known, send a HELLO. We don't learn
+						 * paths without confirming that a bidirectional link is in
+						 * fact present, but any packet that decodes and authenticates
+						 * correctly is considered valid. */
+						if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
+							_lastPathConfirmationSent = now;
+							TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+							attemptToContactAt(RR,localAddr,remoteAddr,now);
+						}
+
 					}
 				}
 			}
-			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
-				outp.armor(_key,true);
-				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-			}
 		}
-		*/
+
+		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+			_lastAnnouncedTo = now;
+			needMulticastGroupAnnounce = true;
+		}
+
+		if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
+			_lastUnicastFrame = now;
+		else if (verb == Packet::VERB_MULTICAST_FRAME)
+			_lastMulticastFrame = now;
 	}
 
-	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
-		_lastUnicastFrame = now;
-	else if (verb == Packet::VERB_MULTICAST_FRAME)
-		_lastMulticastFrame = now;
+	if (needMulticastGroupAnnounce) {
+		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
+		for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n)
+			(*n)->tryAnnounceMulticastGroupsTo(SharedPtr<Peer>(this));
+	}
 }
 
 void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
