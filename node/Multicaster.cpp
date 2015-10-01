@@ -240,7 +240,7 @@ void Multicaster::send(
 				const CertificateOfMembership *com = (CertificateOfMembership *)0;
 				SharedPtr<NetworkConfig> nconf;
 				if (sn->needsOurNetworkMembershipCertificate(nwid,now,true)) {
-					SharedPtr<Network> nw = RR->node->network(nwid);
+					SharedPtr<Network> nw(RR->node->network(nwid));
 					if (nw) {
 						nconf = nw->config2();
 						if (nconf)
