@@ -453,7 +453,7 @@ bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool 
 	const uint64_t tmp = lastPushed;
 	if (updateLastPushedTime)
 		lastPushed = now;
-	return ((now - tmp) < (ZT_NETWORK_AUTOCONF_DELAY / 2));
+	return ((now - tmp) >= (ZT_NETWORK_AUTOCONF_DELAY / 2));
 }
 
 void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
