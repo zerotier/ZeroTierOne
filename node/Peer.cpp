@@ -67,24 +67,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 		throw std::runtime_error("new peer identity key agreement failed");
 }
 
-struct _SortPathsByQuality
-{
-	uint64_t _now;
-	_SortPathsByQuality(const uint64_t now) : _now(now) {}
-	inline bool operator()(const RemotePath &a,const RemotePath &b) const
-	{
-		const uint64_t qa = (
-			((uint64_t)a.active(_now) << 63) |
-			(((uint64_t)(a.preferenceRank() & 0xfff)) << 51) |
-			((uint64_t)a.lastReceived() & 0x7ffffffffffffULL) );
-		const uint64_t qb = (
-			((uint64_t)b.active(_now) << 63) |
-			(((uint64_t)(b.preferenceRank() & 0xfff)) << 51) |
-			((uint64_t)b.lastReceived() & 0x7ffffffffffffULL) );
-		return (qb < qa); // invert sense to sort in descending order
-	}
-};
-
 void Peer::received(
 	const RuntimeEnvironment *RR,
 	const InetAddress &localAddr,
@@ -511,6 +493,23 @@ void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
+struct _SortPathsByQuality
+{
+	uint64_t _now;
+	_SortPathsByQuality(const uint64_t now) : _now(now) {}
+	inline bool operator()(const RemotePath &a,const RemotePath &b) const
+	{
+		const uint64_t qa = (
+			((uint64_t)a.active(_now) << 63) |
+			(((uint64_t)(a.preferenceRank() & 0xfff)) << 51) |
+			((uint64_t)a.lastReceived() & 0x7ffffffffffffULL) );
+		const uint64_t qb = (
+			((uint64_t)b.active(_now) << 63) |
+			(((uint64_t)(b.preferenceRank() & 0xfff)) << 51) |
+			((uint64_t)b.lastReceived() & 0x7ffffffffffffULL) );
+		return (qb < qa); // invert sense to sort in descending order
+	}
+};
 void Peer::_sortPaths(const uint64_t now)
 {
 	// assumes _lock is locked
