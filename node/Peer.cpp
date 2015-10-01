@@ -37,6 +37,8 @@
 
 #include <algorithm>
 
+#define ZT_PEER_PATH_SORT_INTERVAL 5000
+
 namespace ZeroTier {
 
 // Used to send varying values for NAT keepalive
@@ -51,16 +53,37 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastAnnouncedTo(0),
 	_lastPathConfirmationSent(0),
 	_lastDirectPathPush(0),
+	_lastPathSort(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),
 	_id(peerIdentity),
 	_numPaths(0),
-	_latency(0)
+	_latency(0),
+	_networkComs(4),
+	_lastPushedComs(4)
 {
 	if (!myIdentity.agree(peerIdentity,_key,ZT_PEER_SECRET_KEY_LENGTH))
 		throw std::runtime_error("new peer identity key agreement failed");
 }
+
+struct _SortPathsByQuality
+{
+	uint64_t _now;
+	_SortPathsByQuality(const uint64_t now) : _now(now) {}
+	inline bool operator()(const RemotePath &a,const RemotePath &b) const
+	{
+		const uint64_t qa = (
+			((uint64_t)a.active(_now) << 63) |
+			(((uint64_t)(a.preferenceRank() & 0xfff)) << 51) |
+			((uint64_t)a.lastReceived() & 0x7ffffffffffffULL) );
+		const uint64_t qb = (
+			((uint64_t)b.active(_now) << 63) |
+			(((uint64_t)(b.preferenceRank() & 0xfff)) << 51) |
+			((uint64_t)b.lastReceived() & 0x7ffffffffffffULL) );
+		return (qb < qa); // invert sense to sort in descending order
+	}
+};
 
 void Peer::received(
 	const RuntimeEnvironment *RR,
@@ -73,6 +96,8 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 	const uint64_t now = RR->node->now();
+	Mutex::Lock _l(_lock);
+
 	_lastReceive = now;
 
 	if (!hops) {
@@ -91,6 +116,7 @@ void Peer::received(
 
 			if (!pathIsConfirmed) {
 				if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
+
 					// Learn paths if they've been confirmed via a HELLO
 					RemotePath *slot = (RemotePath *)0;
 					if (np < ZT_MAX_PEER_NETWORK_PATHS) {
@@ -111,8 +137,11 @@ void Peer::received(
 						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;
+						_sortPaths(now);
 					}
+
 				} else {
+
 					/* If this path is not known, send a HELLO. We don't learn
 					 * paths without confirming that a bidirectional link is in
 					 * fact present, but any packet that decodes and authenticates
@@ -122,6 +151,7 @@ void Peer::received(
 						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
 						attemptToContactAt(RR,localAddr,remoteAddr,now);
 					}
+
 				}
 			}
 		}
@@ -129,6 +159,7 @@ void Peer::received(
 		/* Announce multicast groups of interest to direct peers if they are
 		 * considered authorized members of a given network. Also announce to
 		 * root servers and network controllers. */
+		/*
 		if ((pathIsConfirmed)&&((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000))) {
 			_lastAnnouncedTo = now;
 
@@ -158,6 +189,7 @@ void Peer::received(
 				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			}
 		}
+		*/
 	}
 
 	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
@@ -166,23 +198,10 @@ void Peer::received(
 		_lastMulticastFrame = now;
 }
 
-RemotePath *Peer::getBestPath(uint64_t now)
-{
-	RemotePath *bestPath = (RemotePath *)0;
-	uint64_t lrMax = 0;
-	int rank = 0;
-	for(unsigned int p=0,np=_numPaths;p<np;++p) {
-		if ( (_paths[p].active(now)) && ((_paths[p].lastReceived() >= lrMax)||(_paths[p].preferenceRank() >= rank)) ) {
-			lrMax = _paths[p].lastReceived();
-			rank = _paths[p].preferenceRank();
-			bestPath = &(_paths[p]);
-		}
-	}
-	return bestPath;
-}
-
 void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
 {
+	// _lock not required here since _id is immutable and nothing else is accessed
+
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
@@ -214,7 +233,8 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &lo
 
 void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
-	RemotePath *const bestPath = getBestPath(now);
+	Mutex::Lock _l(_lock);
+	RemotePath *const bestPath = _getBestPath(now);
 	if (bestPath) {
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
 			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
@@ -231,6 +251,8 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
+	Mutex::Lock _l(_lock);
+
 	if (((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
 		_lastDirectPathPush = now;
 
@@ -299,13 +321,16 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 	}
 }
 
-void Peer::addPath(const RemotePath &newp)
+void Peer::addPath(const RemotePath &newp,uint64_t now)
 {
+	Mutex::Lock _l(_lock);
+
 	unsigned int np = _numPaths;
 
 	for(unsigned int p=0;p<np;++p) {
 		if (_paths[p].address() == newp.address()) {
 			_paths[p].setFixed(newp.fixed());
+			_sortPaths(now);
 			return;
 		}
 	}
@@ -328,6 +353,8 @@ void Peer::addPath(const RemotePath &newp)
 		*slot = newp;
 		_numPaths = np;
 	}
+
+	_sortPaths(now);
 }
 
 void Peer::clearPaths(bool fixedToo)
@@ -349,6 +376,7 @@ void Peer::clearPaths(bool fixedToo)
 
 bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now)
 {
+	Mutex::Lock _l(_lock);
 	unsigned int np = _numPaths;
 	unsigned int x = 0;
 	unsigned int y = 0;
@@ -364,11 +392,13 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 		++x;
 	}
 	_numPaths = y;
+	_sortPaths(now);
 	return (y < np);
 }
 
 void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
 {
+	Mutex::Lock _l(_lock);
 	uint64_t bestV4 = 0,bestV6 = 0;
 	for(unsigned int p=0,np=_numPaths;p<np;++p) {
 		if (_paths[p].active(now)) {
@@ -388,6 +418,139 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 			}
 		}
 	}
+}
+
+bool Peer::networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfMembership &com) const
+{
+	Mutex::Lock _l(_lock);
+	const _NetworkCom *ourCom = _networkComs.get(nwid);
+	if (ourCom)
+		return ourCom->com.agreesWith(com);
+	return false;
+}
+
+bool Peer::validateAndSetNetworkMembershipCertificate(const RuntimeEnvironment *RR,uint64_t nwid,const CertificateOfMembership &com)
+{
+	// Sanity checks
+	if ((!com)||(com.issuedTo() != _id.address()))
+		return false;
+
+	// Return true if we already have this *exact* COM
+	{
+		Mutex::Lock _l(_lock);
+		_NetworkCom *ourCom = _networkComs.get(nwid);
+		if ((ourCom)&&(ourCom->com == com))
+			return true;
+	}
+
+	// Check signature, log and return if cert is invalid
+	if (com.signedBy() != Network::controllerFor(nwid)) {
+		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
+		return false; // invalid signer
+	}
+
+	if (com.signedBy() == RR->identity.address()) {
+
+		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
+		// So, verify that we signed th cert ourself
+		if (!com.verify(RR->identity)) {
+			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			return false; // invalid signature
+		}
+
+	} else {
+
+		SharedPtr<Peer> signer(RR->topology->getPeer(com.signedBy()));
+
+		if (!signer) {
+			// This would be rather odd, since this is our controller... could happen
+			// if we get packets before we've gotten config.
+			RR->sw->requestWhois(com.signedBy());
+			return false; // signer unknown
+		}
+
+		if (!com.verify(signer->identity())) {
+			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
+			return false; // invalid signature
+		}
+	}
+
+	// If we made it past all those checks, add or update cert in our cert info store
+	{
+		Mutex::Lock _l(_lock);
+		_networkComs.set(nwid,_NetworkCom(RR->node->now(),com));
+	}
+
+	return true;
+}
+
+bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime)
+{
+	Mutex::Lock _l(_lock);
+	uint64_t &lastPushed = _lastPushedComs[nwid];
+	const uint64_t tmp = lastPushed;
+	if (updateLastPushedTime)
+		lastPushed = now;
+	return ((now - tmp) < (ZT_NETWORK_AUTOCONF_DELAY / 2));
+}
+
+void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
+{
+	Mutex::Lock _l(_lock);
+
+	{
+		unsigned int np = _numPaths;
+		unsigned int x = 0;
+		unsigned int y = 0;
+		while (x < np) {
+			if (_paths[x].active(now))
+				_paths[y++] = _paths[x];
+			++x;
+		}
+		_numPaths = y;
+	}
+
+	{
+		uint64_t *k = (uint64_t *)0;
+		_NetworkCom *v = (_NetworkCom *)0;
+		Hashtable< uint64_t,_NetworkCom >::Iterator i(_networkComs);
+		while (i.next(k,v)) {
+			if ( (!RR->node->belongsToNetwork(*k)) && ((now - v->ts) >= ZT_PEER_NETWORK_COM_EXPIRATION) )
+				_networkComs.erase(*k);
+		}
+	}
+
+	{
+		uint64_t *k = (uint64_t *)0;
+		uint64_t *v = (uint64_t *)0;
+		Hashtable< uint64_t,uint64_t >::Iterator i(_lastPushedComs);
+		while (i.next(k,v)) {
+			if ((now - *v) > (ZT_NETWORK_AUTOCONF_DELAY * 2))
+				_lastPushedComs.erase(*k);
+		}
+	}
+}
+
+void Peer::_sortPaths(const uint64_t now)
+{
+	// assumes _lock is locked
+	_lastPathSort = now;
+	std::sort(&(_paths[0]),&(_paths[_numPaths]),_SortPathsByQuality(now));
+}
+
+RemotePath *Peer::_getBestPath(const uint64_t now)
+{
+	// assumes _lock is locked
+	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
+		_sortPaths(now);
+	if (_paths[0].active(now)) {
+		return &(_paths[0]);
+	} else {
+		_sortPaths(now);
+		if (_paths[0].active(now))
+			return &(_paths[0]);
+	}
+	return (RemotePath *)0;
 }
 
 } // namespace ZeroTier

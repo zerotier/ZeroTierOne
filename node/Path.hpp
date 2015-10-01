@@ -122,14 +122,6 @@ public:
 	 */
 	inline operator bool() const throw() { return (_addr); }
 
-	// Comparisons are by address only
-	inline bool operator==(const Path &p) const throw() { return (_addr == p._addr); }
-	inline bool operator!=(const Path &p) const throw() { return (_addr != p._addr); }
-	inline bool operator<(const Path &p) const throw() { return (_addr < p._addr); }
-	inline bool operator>(const Path &p) const throw() { return (_addr > p._addr); }
-	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
-	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
-
 	/**
 	 * Check whether this address is valid for a ZeroTier path
 	 *

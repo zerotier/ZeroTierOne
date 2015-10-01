@@ -59,6 +59,9 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
 	Utils::snprintf(mcdbn,sizeof(mcdbn),"networks.d/%.16llx.mcerts",_id);
 
+	// These files are no longer used, so clean them.
+	RR->node->dataStoreDelete(mcdbn);
+
 	if (_id == ZT_TEST_NETWORK_ID) {
 		applyConfiguration(NetworkConfig::createTestNetworkConfig(RR->identity.address()));
 
@@ -79,24 +82,6 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 			// Save a one-byte CR to persist membership while we request a real netconf
 			RR->node->dataStorePut(confn,"\n",1,false);
 		}
-
-		try {
-			std::string mcdb(RR->node->dataStoreGet(mcdbn));
-			if (mcdb.length() > 6) {
-				const char *p = mcdb.data();
-				const char *e = p + mcdb.length();
-				if (!memcmp("ZTMCD0",p,6)) {
-					p += 6;
-					while (p != e) {
-						CertificateOfMembership com;
-						com.deserialize2(p,e);
-						if (!com)
-							break;
-						_certInfo[com.issuedTo()].com = com;
-					}
-				}
-			}
-		} catch ( ... ) {} // ignore invalid MCDB, we'll re-learn from peers
 	}
 
 	if (!_portInitialized) {
@@ -115,32 +100,10 @@ Network::~Network()
 	char n[128];
 	if (_destroyed) {
 		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
-
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
-		RR->node->dataStoreDelete(n);
-		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
 		RR->node->dataStoreDelete(n);
 	} else {
 		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
-
-		clean();
-
-		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
-
-		Mutex::Lock _l(_lock);
-		if ((!_config)||(_config->isPublic())||(_certInfo.empty())) {
-			RR->node->dataStoreDelete(n);
-		} else {
-			std::string buf("ZTMCD0");
-			Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
-			Address *a = (Address *)0;
-			_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
-			while (i.next(a,ci)) {
-				if (ci->com)
-					ci->com.serialize2(buf);
-			}
-			RR->node->dataStorePut(n,buf,true);
-		}
 	}
 }
 
@@ -281,70 +244,6 @@ void Network::requestConfiguration()
 	RR->sw->send(outp,true,0);
 }
 
-bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership &cert)
-{
-	if (!cert) // sanity check
-		return false;
-
-	Mutex::Lock _l(_lock);
-
-	{
-		const _RemoteMemberCertificateInfo *ci = _certInfo.get(cert.issuedTo());
-		if ((ci)&&(ci->com == cert))
-			return true; // we already have it
-	}
-
-	// Check signature, log and return if cert is invalid
-	if (cert.signedBy() != controller()) {
-		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
-		return false; // invalid signer
-	}
-
-	if (cert.signedBy() == RR->identity.address()) {
-
-		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
-		// So, verify that we signed th cert ourself
-		if (!cert.verify(RR->identity)) {
-			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-
-	} else {
-
-		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
-
-		if (!signer) {
-			// This would be rather odd, since this is our controller... could happen
-			// if we get packets before we've gotten config.
-			RR->sw->requestWhois(cert.signedBy());
-			return false; // signer unknown
-		}
-
-		if (!cert.verify(signer->identity())) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-	}
-
-	// If we made it past authentication, add or update cert in our cert info store
-	_certInfo[cert.issuedTo()].com = cert;
-
-	return true;
-}
-
-bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
-{
-	Mutex::Lock _l(_lock);
-	if ((_config)&&(!_config->isPublic())&&(_config->com())) {
-		_RemoteMemberCertificateInfo &ci = _certInfo[to];
-		if ((now - ci.lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
-			ci.lastPushed = now;
-			return true;
-		}
-	}
-	return false;
-}
-
 void Network::clean()
 {
 	const uint64_t now = RR->node->now();
@@ -353,22 +252,6 @@ void Network::clean()
 	if (_destroyed)
 		return;
 
-	if ((_config)&&(_config->isPublic())) {
-		// Open (public) networks do not track certs or cert pushes at all.
-		_certInfo.clear();
-	} else if (_config) {
-		// Clean obsolete entries from private network cert info table
-		Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
-		Address *a = (Address *)0;
-		_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
-		const uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
-		while (i.next(a,ci)) {
-			if ((ci->lastPushed < forgetIfBefore)&&(!ci->com.agreesWith(_config->com())))
-				_certInfo.erase(*a);
-		}
-	}
-
-	// Clean learned multicast groups if we haven't heard from them in a while
 	{
 		Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
 		MulticastGroup *mg = (MulticastGroup *)0;
@@ -494,7 +377,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	} else ec->assignedAddressCount = 0;
 }
 
-bool Network::_isAllowed(const Address &peer) const
+bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 {
 	// Assumes _lock is locked
 	try {
@@ -502,10 +385,7 @@ bool Network::_isAllowed(const Address &peer) const
 			return false;
 		if (_config->isPublic())
 			return true;
-		const _RemoteMemberCertificateInfo *ci = _certInfo.get(peer);
-		if (!ci)
-			return false;
-		return _config->com().agreesWith(ci->com);
+		return ((_config->com())&&(peer->networkMembershipCertificatesAgree(_id,_config->com())));
 	} catch (std::exception &exc) {
 		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -542,7 +422,7 @@ public:
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if ( ( (p->hasActiveDirectPath(_now)) && ( (_network->_isAllowed(p->address())) || (p->address() == _network->controller()) ) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
+		if ( ( (p->hasActiveDirectPath(_now)) && ( (_network->_isAllowed(p)) || (p->address() == _network->controller()) ) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
 			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
 
 			for(std::vector<MulticastGroup>::iterator mg(_allMulticastGroups.begin());mg!=_allMulticastGroups.end();++mg) {

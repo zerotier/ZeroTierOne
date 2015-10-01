@@ -421,9 +421,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					// OK(MULTICAST_FRAME) includes certificate of membership update
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					SharedPtr<Network> network(RR->node->network(nwid));
-					if ((network)&&(com.hasRequiredFields()))
-						network->validateAndAddMembershipCertificate(com);
+					peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -511,7 +509,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID)));
 		if (network) {
 			if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
-				if (!network->isAllowed(peer->address())) {
+				if (!network->isAllowed(peer)) {
 					TRACE("dropped FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
 					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
@@ -552,13 +550,11 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				if ((flags & 0x01) != 0) {
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					if (com.hasRequiredFields()) {
-						if (!network->validateAndAddMembershipCertificate(com))
-							comFailed = true; // technically this check is redundant to isAllowed(), but do it anyway for thoroughness
-					}
+					if (!peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com))
+						comFailed = true;
 				}
 
-				if ((comFailed)||(!network->isAllowed(peer->address()))) {
+				if ((comFailed)||(!network->isAllowed(peer))) {
 					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
 					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
@@ -642,11 +638,7 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
 		while (ptr < size()) {
 			ptr += com.deserialize(*this,ptr);
-			if (com.hasRequiredFields()) {
-				SharedPtr<Network> network(RR->node->network(com.networkId()));
-				if (network)
-					network->validateAndAddMembershipCertificate(com);
-			}
+			peer->validateAndSetNetworkMembershipCertificate(RR,com.networkId(),com);
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
@@ -809,13 +801,12 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			if ((flags & 0x01) != 0) {
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-				if (com.hasRequiredFields())
-					network->validateAndAddMembershipCertificate(com);
+				peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
 			}
 
 			// Check membership after we've read any included COM, since
 			// that cert might be what we needed.
-			if (!network->isAllowed(peer->address())) {
+			if (!network->isAllowed(peer)) {
 				TRACE("dropped MULTICAST_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),(unsigned long long)network->id());
 				_sendErrorNeedCertificate(RR,peer,network->id());
 				return true;

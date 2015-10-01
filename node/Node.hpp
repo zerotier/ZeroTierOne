@@ -168,6 +168,16 @@ public:
 		return _network(nwid);
 	}
 
+	inline bool belongsToNetwork(uint64_t nwid) const
+	{
+		Mutex::Lock _l(_networks_m);
+		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
+			if (i->first == nwid)
+				return true;
+		}
+		return false;
+	}
+
 	inline std::vector< SharedPtr<Network> > allNetworks() const
 	{
 		std::vector< SharedPtr<Network> > nw;

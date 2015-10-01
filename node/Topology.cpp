@@ -62,7 +62,7 @@ void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> 
 			if (!p)
 				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(RemotePath(InetAddress(),*j,true));
+				p->addPath(RemotePath(InetAddress(),*j,true),now);
 			p->use(now);
 			_rootPeers.push_back(p);
 		}
@@ -252,9 +252,12 @@ void Topology::clean(uint64_t now)
 	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_activePeers);
 	Address *a = (Address *)0;
 	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	while (i.next(a,p))
+	while (i.next(a,p)) {
 		if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())) {
 			_activePeers.erase(*a);
+		} else {
+			(*p)->clean(RR,now);
+		}
 	}
 }
 

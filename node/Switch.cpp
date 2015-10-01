@@ -202,7 +202,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		// Destination is another ZeroTier peer on the same network
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
-		const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
+		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
+		const bool includeCom = ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true)));;
 		if ((fromBridged)||(includeCom)) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
@@ -267,9 +268,10 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		for(unsigned int b=0;b<numBridges;++b) {
+			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if (network->peerNeedsOurMembershipCertificate(bridges[b],RR->node->now())) {
+			if ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) {
 				outp.append((unsigned char)0x01); // 0x01 -- COM included
 				nconf->com().serialize(outp);
 			} else {
@@ -747,7 +749,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				return false; // no paths, no root servers?
 		}
 
-		if ((network)&&(relay)&&(network->isAllowed(peer->address()))) {
+		if ((network)&&(relay)&&(network->isAllowed(peer))) {
 			// Push hints for direct connectivity to this peer if we are relaying
 			peer->pushDirectPaths(RR,viaPath,now,false);
 		}

@@ -49,6 +49,8 @@
 #include "Packet.hpp"
 #include "SharedPtr.hpp"
 #include "AtomicCounter.hpp"
+#include "Hashtable.hpp"
+#include "Mutex.hpp"
 #include "NonCopyable.hpp"
 
 namespace ZeroTier {
@@ -129,7 +131,11 @@ public:
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active (or fixed) direct paths
 	 */
-	RemotePath *getBestPath(uint64_t now);
+	inline RemotePath *getBestPath(uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		return _getBestPath(now);
+	}
 
 	/**
 	 * Send via best path
@@ -293,8 +299,9 @@ public:
 	 * Add a path (if we don't already have it)
 	 *
 	 * @param p New path to add
+	 * @param now Current time
 	 */
-	void addPath(const RemotePath &newp);
+	void addPath(const RemotePath &newp,uint64_t now);
 
 	/**
 	 * Clear paths
@@ -382,6 +389,37 @@ public:
 	void getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const;
 
 	/**
+	 * Check network COM agreement with this peer
+	 *
+	 * @param nwid Network ID
+	 * @param com Another certificate of membership
+	 * @return True if supplied COM agrees with ours, false if not or if we don't have one
+	 */
+	bool networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfMembership &com) const;
+
+	/**
+	 * Check the validity of the COM and add/update if valid and new
+	 *
+	 * @param RR Runtime Environment
+	 * @param nwid Network ID
+	 * @param com Externally supplied COM
+	 */
+	bool validateAndSetNetworkMembershipCertificate(const RuntimeEnvironment *RR,uint64_t nwid,const CertificateOfMembership &com);
+
+	/**
+	 * @param nwid Network ID
+	 * @param now Current time
+	 * @param updateLastPushedTime If true, go ahead and update the last pushed time regardless of return value
+	 * @return Whether or not this peer needs another COM push from us
+	 */
+	bool needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime);
+
+	/**
+	 * Perform periodic cleaning operations
+	 */
+	void clean(const RuntimeEnvironment *RR,uint64_t now);
+
+	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A
@@ -402,7 +440,8 @@ public:
 	}
 
 private:
-	void _announceMulticastGroups(const RuntimeEnvironment *RR,uint64_t now);
+	void _sortPaths(const uint64_t now);
+	RemotePath *_getBestPath(const uint64_t now);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	uint64_t _lastUsed;
@@ -412,6 +451,7 @@ private:
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastPathConfirmationSent;
 	uint64_t _lastDirectPathPush;
+	uint64_t _lastPathSort;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
@@ -421,6 +461,17 @@ private:
 	unsigned int _numPaths;
 	unsigned int _latency;
 
+	struct _NetworkCom
+	{
+		_NetworkCom() {}
+		_NetworkCom(uint64_t t,const CertificateOfMembership &c) : ts(t),com(c) {}
+		uint64_t ts;
+		CertificateOfMembership com;
+	};
+	Hashtable<uint64_t,_NetworkCom> _networkComs;
+	Hashtable<uint64_t,uint64_t> _lastPushedComs;
+
+	Mutex _lock;
 	AtomicCounter __refCount;
 };
 
