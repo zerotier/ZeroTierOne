@@ -257,14 +257,6 @@ public:
 	}
 
 	/**
-	 * Trim whitespace from the start and end of a string
-	 *
-	 * @param s String to trim
-	 * @return Trimmed string
-	 */
-	static std::string trim(const std::string &s);
-
-	/**
 	 * Variant of snprintf that is portable and throws an exception
 	 *
 	 * This just wraps the local implementation whatever it's called, while

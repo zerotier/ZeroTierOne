@@ -338,6 +338,25 @@ public:
 static BackgroundSoftwareUpdateChecker backgroundSoftwareUpdateChecker;
 #endif // ZT_AUTO_UPDATE
 
+static std::string _trimString(const std::string &s)
+{
+	unsigned long end = (unsigned long)s.length();
+	while (end) {
+		char c = s[end - 1];
+		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
+			--end;
+		else break;
+	}
+	unsigned long start = 0;
+	while (start < end) {
+		char c = s[start];
+		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
+			++start;
+		else break;
+	}
+	return s.substr(start,end - start);
+}
+
 class OneServiceImpl;
 
 static int SnodeVirtualNetworkConfigFunction(ZT_Node *node,void *uptr,uint64_t nwid,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwconf);
@@ -521,7 +540,7 @@ public:
 					} else OSUtils::lockDownFile(authTokenPath.c_str(),false);
 				}
 			}
-			authToken = Utils::trim(authToken);
+			authToken = _trimString(authToken);
 
 			_node = new Node(
 				OSUtils::now(),
