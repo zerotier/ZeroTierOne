@@ -445,6 +445,127 @@ public:
 		else return std::pair<InetAddress,InetAddress>();
 	}
 
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		Mutex::Lock _l(_lock);
+
+		const unsigned int lengthAt = b.size();
+		b.addSize(4); // space for uint32_t field length
+
+		b.append((uint32_t)1); // version of serialized Peer data
+
+		_id.serialize(b,false);
+
+		b.append((uint64_t)_lastUsed);
+		b.append((uint64_t)_lastReceive);
+		b.append((uint64_t)_lastUnicastFrame);
+		b.append((uint64_t)_lastMulticastFrame);
+		b.append((uint64_t)_lastAnnouncedTo);
+		b.append((uint64_t)_lastPathConfirmationSent);
+		b.append((uint64_t)_lastDirectPathPush);
+		b.append((uint64_t)_lastPathSort);
+		b.append((uint16_t)_vProto);
+		b.append((uint16_t)_vMajor);
+		b.append((uint16_t)_vMinor);
+		b.append((uint16_t)_vRevision);
+		b.append((uint32_t)_latency);
+
+		b.append((uint32_t)_numPaths);
+		for(unsigned int i=0;i<_numPaths;++i)
+			_paths[i].serialize(b);
+
+		b.append((uint32_t)_networkComs.size());
+		{
+			uint64_t *k = (uint64_t *)0;
+			_NetworkCom *v = (_NetworkCom *)0;
+			Hashtable<uint64_t,_NetworkCom>::Iterator i(const_cast<Peer *>(this)->_networkComs);
+			while (i.next(k,v)) {
+				b.append((uint64_t)*k);
+				b.append((uint64_t)v->ts);
+				v->com.serialize(b);
+			}
+		}
+
+		b.append((uint32_t)_lastPushedComs.size());
+		{
+			uint64_t *k = (uint64_t *)0;
+			uint64_t *v = (uint64_t *)0;
+			Hashtable<uint64_t,uint64_t>::Iterator i(const_cast<Peer *>(this)->_lastPushedComs);
+			while (i.next(k,v)) {
+				b.append((uint64_t)*k);
+				b.append((uint64_t)*v);
+			}
+		}
+
+		b.setAt(lengthAt,(uint32_t)((b.size() - 4) - lengthAt)); // set size, not including size field itself
+	}
+
+	/**
+	 * Create a new Peer from a serialized instance
+	 *
+	 * @param myIdentity This node's identity
+	 * @param b Buffer containing serialized Peer data
+	 * @param p Pointer to current position in buffer, will be updated in place as buffer is read (value/result)
+	 * @return New instance of Peer or NULL if serialized data was corrupt or otherwise invalid (may also throw an exception via Buffer)
+	 */
+	template<unsigned int C>
+	static inline SharedPtr<Peer> deserializeNew(const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
+	{
+		const uint32_t recSize = b.template at<uint32_t>(p); p += 4;
+		if ((p + recSize) > b.size())
+			return SharedPtr<Peer>(); // size invalid
+		if (b.template at<uint32_t>(p) != 1)
+			return SharedPtr<Peer>(); // version mismatch
+		p += 4;
+
+		Identity npid;
+		p += npid.deserialize(b,p);
+		if (!npid)
+			return SharedPtr<Peer>();
+
+		SharedPtr<Peer> np(new Peer(myIdentity,npid));
+
+		np->_lastUsed = b.template at<uint64_t>(p); p += 8;
+		np->_lastReceive = b.template at<uint64_t>(p); p += 8;
+		np->_lastUnicastFrame = b.template at<uint64_t>(p); p += 8;
+		np->_lastMulticastFrame = b.template at<uint64_t>(p); p += 8;
+		np->_lastAnnouncedTo = b.template at<uint64_t>(p); p += 8;
+		np->_lastPathConfirmationSent = b.template at<uint64_t>(p); p += 8;
+		np->_lastDirectPathPush = b.template at<uint64_t>(p); p += 8;
+		np->_lastPathSort = b.template at<uint64_t>(p); p += 8;
+		np->_vProto = b.template at<uint16_t>(p); p += 2;
+		np->_vMajor = b.template at<uint16_t>(p); p += 2;
+		np->_vMinor = b.template at<uint16_t>(p); p += 2;
+		np->_vRevision = b.template at<uint16_t>(p); p += 2;
+		np->_latency = b.template at<uint32_t>(p); p += 4;
+
+		const unsigned int numPaths = b.template at<uint32_t>(p); p += 2;
+		for(unsigned int i=0;i<numPaths;++i) {
+			if (i < ZT_MAX_PEER_NETWORK_PATHS) {
+				p += np->_paths[np->_numPaths++].deserialize(b,p);
+			} else {
+				// Skip any paths beyond max, but still read stream
+				RemotePath foo;
+				p += foo.deserialize(b,p);
+			}
+		}
+
+		const unsigned int numNetworkComs = b.template at<uint32_t>(p); p += 4;
+		for(unsigned int i=0;i<numNetworkComs;++i) {
+			_NetworkCom &c = np->_networkComs[b.template at<uint64_t>(p)]; p += 8;
+			c.ts = b.template at<uint64_t>(p); p += 8;
+			p += c.com.deserialize(b,p);
+		}
+
+		const unsigned int numLastPushed = b.template at<uint32_t>(p); p += 4;
+		for(unsigned int i=0;i<numLastPushed;++i) {
+			const uint64_t nwid = b.template at<uint64_t>(p); p += 8;
+			const uint64_t ts = b.template at<uint64_t>(p); p += 8;
+			np->_lastPushedComs.set(nwid,ts);
+		}
+	}
+
 private:
 	void _sortPaths(const uint64_t now);
 	RemotePath *_getBestPath(const uint64_t now);

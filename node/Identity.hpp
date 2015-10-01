@@ -220,7 +220,6 @@ public:
 	 */
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
-		throw(std::out_of_range)
 	{
 		_address.appendTo(b);
 		b.append((unsigned char)IDENTITY_TYPE_C25519);
@@ -245,7 +244,6 @@ public:
 	 */
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-		throw(std::out_of_range,std::invalid_argument)
 	{
 		delete _privateKey;
 		_privateKey = (C25519::Private *)0;

@@ -59,11 +59,11 @@ public:
 	 *
 	 * These values MUST match ZT_LocalInterfaceAddressTrust in ZeroTierOne.h
 	 */
-	enum Trust
+	enum Trust // NOTE: max 255
 	{
 		TRUST_NORMAL = 0,
-		TRUST_PRIVACY = 1,
-		TRUST_ULTIMATE = 2
+		TRUST_PRIVACY = 10,
+		TRUST_ULTIMATE = 20
 	};
 
 	Path() :
@@ -155,7 +155,7 @@ public:
 		return false;
 	}
 
-private:
+protected:
 	InetAddress _addr;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	Trust _trust;

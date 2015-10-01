@@ -39,6 +39,8 @@
 #include "AntiRecursion.hpp"
 #include "RuntimeEnvironment.hpp"
 
+#define ZT_REMOTEPATH_FLAG_FIXED 0x0001
+
 namespace ZeroTier {
 
 /**
@@ -54,14 +56,14 @@ public:
 		_lastSend(0),
 		_lastReceived(0),
 		_localAddress(),
-		_fixed(false) {}
+		_flags(0) {}
 
 	RemotePath(const InetAddress &localAddress,const InetAddress &addr,bool fixed) :
 		Path(addr,0,TRUST_NORMAL),
 		_lastSend(0),
 		_lastReceived(0),
 		_localAddress(localAddress),
-		_fixed(fixed) {}
+		_flags(fixed ? ZT_REMOTEPATH_FLAG_FIXED : 0) {}
 
 	inline const InetAddress &localAddress() const throw() { return _localAddress; }
 
@@ -71,7 +73,7 @@ public:
 	/**
 	 * @return Is this a fixed path?
 	 */
-	inline bool fixed() const throw() { return _fixed; }
+	inline bool fixed() const throw() { return ((_flags & ZT_REMOTEPATH_FLAG_FIXED) != 0); }
 
 	/**
 	 * @param f New value of fixed flag
@@ -79,7 +81,9 @@ public:
 	inline void setFixed(const bool f)
 		throw()
 	{
-		_fixed = f;
+		if (f)
+			_flags |= ZT_REMOTEPATH_FLAG_FIXED;
+		else _flags &= ~ZT_REMOTEPATH_FLAG_FIXED;
 	}
 
 	/**
@@ -113,7 +117,7 @@ public:
 	inline bool active(uint64_t now) const
 		throw()
 	{
-		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
+		return ( ((_flags & ZT_REMOTEPATH_FLAG_FIXED) != 0) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
 	}
 
 	/**
@@ -135,11 +139,39 @@ public:
 		return false;
 	}
 
-private:
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		b.append((uint8_t)1); // version
+		_addr.serialize(b);
+		b.append((uint8_t)_trust);
+		b.append((uint64_t)_lastSend);
+		b.append((uint64_t)_lastReceived);
+		_localAddress.serialize(b);
+		b.append((uint16_t)_flags);
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+		if (b[p++] != 1)
+			throw std::invalid_argument("invalid serialized RemotePath");
+		p += _addr.deserialize(b,p);
+		_ipScope = _addr.ipScope();
+		_trust = (Path::Trust)b[p++];
+		_lastSend = b.template at<uint64_t>(p); p += 8;
+		_lastReceived = b.template at<uint64_t>(p); p += 8;
+		p += _localAddress.deserialize(b,p);
+		_flags = b.template at<uint16_t>(p); p += 4;
+		return (startAt - p);
+	}
+
+protected:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
 	InetAddress _localAddress;
-	bool _fixed;
+	uint16_t _flags;
 };
 
 } // namespace ZeroTier
