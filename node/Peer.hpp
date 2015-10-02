@@ -53,6 +53,10 @@
 #include "Mutex.hpp"
 #include "NonCopyable.hpp"
 
+// Very rough computed estimate: (8 + 256 + 80 + (16 * 64) + (128 * 256) + (128 * 16))
+// 1048576 provides tons of headroom -- overflow would just cause peer not to be persisted
+#define ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE 1048576
+
 namespace ZeroTier {
 
 /**
@@ -450,7 +454,7 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 
-		const unsigned int lengthAt = b.size();
+		const unsigned int atPos = b.size();
 		b.addSize(4); // space for uint32_t field length
 
 		b.append((uint32_t)1); // version of serialized Peer data
@@ -498,7 +502,7 @@ public:
 			}
 		}
 
-		b.setAt(lengthAt,(uint32_t)((b.size() - 4) - lengthAt)); // set size, not including size field itself
+		b.setAt(atPos,(uint32_t)(b.size() - atPos)); // set size
 	}
 
 	/**
@@ -512,9 +516,10 @@ public:
 	template<unsigned int C>
 	static inline SharedPtr<Peer> deserializeNew(const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
 	{
-		const uint32_t recSize = b.template at<uint32_t>(p); p += 4;
+		const uint32_t recSize = b.template at<uint32_t>(p);
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
+		p += 4;
 		if (b.template at<uint32_t>(p) != 1)
 			return SharedPtr<Peer>(); // version mismatch
 		p += 4;
@@ -540,7 +545,7 @@ public:
 		np->_vRevision = b.template at<uint16_t>(p); p += 2;
 		np->_latency = b.template at<uint32_t>(p); p += 4;
 
-		const unsigned int numPaths = b.template at<uint32_t>(p); p += 2;
+		const unsigned int numPaths = b.template at<uint32_t>(p); p += 4;
 		for(unsigned int i=0;i<numPaths;++i) {
 			if (i < ZT_MAX_PEER_NETWORK_PATHS) {
 				p += np->_paths[np->_numPaths++].deserialize(b,p);
@@ -564,6 +569,8 @@ public:
 			const uint64_t ts = b.template at<uint64_t>(p); p += 8;
 			np->_lastPushedComs.set(nwid,ts);
 		}
+
+		return np;
 	}
 
 private:

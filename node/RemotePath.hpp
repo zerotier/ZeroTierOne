@@ -163,8 +163,8 @@ public:
 		_lastSend = b.template at<uint64_t>(p); p += 8;
 		_lastReceived = b.template at<uint64_t>(p); p += 8;
 		p += _localAddress.deserialize(b,p);
-		_flags = b.template at<uint16_t>(p); p += 4;
-		return (startAt - p);
+		_flags = b.template at<uint16_t>(p); p += 2;
+		return (p - startAt);
 	}
 
 protected:
