@@ -87,27 +87,27 @@ void NetworkConfig::_fromDictionary(const Dictionary &d)
 
 	// NOTE: d.get(name) throws if not found, d.get(name,default) returns default
 
-	_nwid = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID).c_str());
+	_nwid = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,"0").c_str());
 	if (!_nwid)
 		throw std::invalid_argument("configuration contains zero network ID");
 
-	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP).c_str());
+	_timestamp = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,"0").c_str());
 	_revision = Utils::hexStrToU64(d.get(ZT_NETWORKCONFIG_DICT_KEY_REVISION,"1").c_str()); // older controllers don't send this, so default to 1
 
 	memset(_etWhitelist,0,sizeof(_etWhitelist));
-	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES).c_str(),",","",""));
+	std::vector<std::string> ets(Utils::split(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOWED_ETHERNET_TYPES,"").c_str(),",","",""));
 	for(std::vector<std::string>::const_iterator et(ets.begin());et!=ets.end();++et) {
 		unsigned int tmp = Utils::hexStrToUInt(et->c_str()) & 0xffff;
 		_etWhitelist[tmp >> 3] |= (1 << (tmp & 7));
 	}
 
-	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO));
+	_issuedTo = Address(d.get(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,"0"));
 	_multicastLimit = Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,zero).c_str());
 	if (_multicastLimit == 0) _multicastLimit = ZT_MULTICAST_DEFAULT_LIMIT;
 	_allowPassiveBridging = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ALLOW_PASSIVE_BRIDGING,zero).c_str()) != 0);
 	_private = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_PRIVATE,one).c_str()) != 0);
 	_enableBroadcast = (Utils::hexStrToUInt(d.get(ZT_NETWORKCONFIG_DICT_KEY_ENABLE_BROADCAST,one).c_str()) != 0);
-	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME);
+	_name = d.get(ZT_NETWORKCONFIG_DICT_KEY_NAME,"");
 	if (_name.length() > ZT_MAX_NETWORK_SHORT_NAME_LENGTH)
 		throw std::invalid_argument("network short name too long (max: 255 characters)");
 

@@ -140,7 +140,7 @@ void Topology::setRootServers(const Dictionary &sn)
 		if ((d->first.length() == ZT_ADDRESS_LENGTH_HEX)&&(d->second.length() > 0)) {
 			try {
 				Dictionary snspec(d->second);
-				std::vector<InetAddress> &a = m[Identity(snspec.get("id"))];
+				std::vector<InetAddress> &a = m[Identity(snspec.get("id",""))];
 				std::string udp(snspec.get("udp",std::string()));
 				if (udp.length() > 0)
 					a.push_back(InetAddress(udp));
