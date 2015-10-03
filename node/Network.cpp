@@ -393,9 +393,9 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 			return true;
 		return ((_config->com())&&(peer->networkMembershipCertificatesAgree(_id,_config->com())));
 	} catch (std::exception &exc) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s","" /*peer->toString().c_str() */,exc.what());
 	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer.toString().c_str());
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception", "" /*peer.toString().c_str()*/);
 	}
 	return false; // default position on any failure
 }
