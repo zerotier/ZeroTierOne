@@ -422,7 +422,7 @@ public:
 		_homePath((hp) ? hp : "."),
 		_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY),
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-		_controller((_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str()),
+		_controller((SqliteNetworkController *)0),
 #endif
 		_phy(this,false,true),
 		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
@@ -515,6 +515,9 @@ public:
 		_phy.close(_v4UpnpUdpSocket);
 		delete _upnpClient;
 #endif
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+		delete _controller;
+#endif
 	}
 
 	virtual ReasonForTermination run()
@@ -551,14 +554,15 @@ public:
 				((_overrideRootTopology.length() > 0) ? _overrideRootTopology.c_str() : (const char *)0));
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-			_node->setNetconfMaster((void *)&_controller);
+			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
+			_node->setNetconfMaster((void *)_controller);
 #endif
 
 			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
 			_controlPlane->addAuthToken(authToken.c_str());
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-			_controlPlane->setController(&_controller);
+			_controlPlane->setController(_controller);
 #endif
 
 			{	// Remember networks from previous session
@@ -1322,7 +1326,7 @@ private:
 	const std::string _homePath;
 	BackgroundResolver _tcpFallbackResolver;
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	SqliteNetworkController _controller;
+	SqliteNetworkController *_controller;
 #endif
 	Phy<OneServiceImpl *> _phy;
 	std::string _overrideRootTopology;
