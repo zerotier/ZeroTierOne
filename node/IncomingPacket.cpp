@@ -30,6 +30,7 @@
 #include <stdlib.h>
 
 #include "../version.h"
+#include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
 #include "Defaults.hpp"
@@ -1033,13 +1034,13 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			outp.append((uint64_t)timestamp);
 			outp.append((uint64_t)testId);
 			outp.append((uint64_t)now);
-			outp.append((uint8_t)0); // vendor ID, currently unused
+			outp.append((uint8_t)ZT_VENDOR_ZEROTIER);
 			outp.append((uint8_t)ZT_PROTO_VERSION);
 			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MAJOR);
 			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MINOR);
 			outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-			outp.append((uint16_t)CIRCUIT_TEST_REPORT_PLATFORM_UNSPECIFIED);
-			outp.append((uint16_t)CIRCUIT_TEST_REPORT_ARCH_UNSPECIFIED);
+			outp.append((uint16_t)ZT_PLATFORM_UNSPECIFIED);
+			outp.append((uint16_t)ZT_ARCHITECTURE_UNSPECIFIED);
 			outp.append((uint16_t)0); // error code, currently unused
 			outp.append((uint64_t)0); // flags, currently unused
 			outp.append((uint64_t)packetId());

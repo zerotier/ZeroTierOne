@@ -464,6 +464,28 @@ void Node::setNetconfMaster(void *networkControllerInstance)
 	RR->localNetworkController = reinterpret_cast<NetworkController *>(networkControllerInstance);
 }
 
+ZT_ResultCode Node::circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
+{
+	{
+		test->_internalPtr = reinterpret_cast<void *>(reportCallback);
+		Mutex::Lock _l(_circuitTests_m);
+		if (std::find(_circuitTests.begin(),_circuitTests.end(),test) == _circuitTests.end())
+			_circuitTests.push_back(test);
+	}
+	return ZT_RESULT_OK;
+}
+
+void Node::circuitTestEnd(ZT_CircuitTest *test)
+{
+	Mutex::Lock _l(_circuitTests_m);
+	for(;;) {
+		std::vector< ZT_CircuitTest * >::iterator ct(std::find(_circuitTests.begin(),_circuitTests.end(),test));
+		if (ct == _circuitTests.end())
+			break;
+		else _circuitTests.erase(ct);
+	}
+}
+
 /****************************************************************************/
 /* Node methods used only within node/                                      */
 /****************************************************************************/
@@ -531,6 +553,20 @@ uint64_t Node::prng()
 	if (!p)
 		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
 	return _prngStream[p];
+}
+
+void Node::postCircuitTestReport(const ZT_CircuitTestReport *report)
+{
+	std::vector< ZT_CircuitTest * > toNotify;
+	{
+		Mutex::Lock _l(_circuitTests_m);
+		for(std::vector< ZT_CircuitTest * >::iterator i(_circuitTests.begin());i!=_circuitTests.end();++i) {
+			if ((*i)->testId == report->testId)
+				toNotify.push_back(*i);
+		}
+	}
+	for(std::vector< ZT_CircuitTest * >::iterator i(toNotify.begin());i!=toNotify.end();++i)
+		(reinterpret_cast<void (*)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *)>((*i)->_internalPtr))(reinterpret_cast<ZT_Node *>(this),*i,report);
 }
 
 } // namespace ZeroTier
@@ -718,6 +754,22 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->setNetconfMaster(networkControllerInstance);
+	} catch ( ... ) {}
+}
+
+ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
+{
+	try {
+		return reinterpret_cast<ZeroTier::Node *>(node)->circuitTestBegin(test,reportCallback);
+	} catch ( ... ) {
+		return ZT_RESULT_FATAL_ERROR_INTERNAL;
+	}
+}
+
+void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->circuitTestEnd(test);
 	} catch ( ... ) {}
 }
 

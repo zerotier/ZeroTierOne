@@ -109,6 +109,8 @@ public:
 	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust);
 	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
+	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
+	void circuitTestEnd(ZT_CircuitTest *test);
 
 	// Internal functions ------------------------------------------------------
 
@@ -238,6 +240,13 @@ public:
 	 */
 	uint64_t prng();
 
+	/**
+	 * Post a circuit test report to any listeners for a given test ID
+	 *
+	 * @param report Report (includes test ID)
+	 */
+	void postCircuitTestReport(const ZT_CircuitTestReport *report);
+
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
@@ -263,6 +272,9 @@ private:
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
+
+	std::vector< ZT_CircuitTest * > _circuitTests;
+	Mutex _circuitTests_m;
 
 	std::vector<Path> _directPaths;
 	Mutex _directPaths_m;

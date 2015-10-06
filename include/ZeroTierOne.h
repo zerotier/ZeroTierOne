@@ -116,6 +116,19 @@ extern "C" {
 #define ZT_FEATURE_FLAG_FIPS 0x00000002
 
 /**
+ * Maximum number of hops in a ZeroTier circuit test
+ *
+ * This is more or less the max that can be fit in a given packet (with
+ * fragmentation) and only one address per hop.
+ */
+#define ZT_CIRCUIT_TEST_MAX_HOPS 512
+
+/**
+ * Maximum number of addresses per hop in a circuit test
+ */
+#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 256
+
+/**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
  */
 extern const struct sockaddr_storage ZT_SOCKADDR_NULL;
@@ -632,6 +645,231 @@ typedef enum {
 } ZT_LocalInterfaceAddressTrust;
 
 /**
+ * Vendor ID
+ */
+typedef enum {
+	ZT_VENDOR_UNSPECIFIED = 0,
+	ZT_VENDOR_ZEROTIER = 1
+} ZT_Vendor;
+
+/**
+ * Platform type
+ */
+typedef enum {
+	ZT_PLATFORM_UNSPECIFIED = 0,
+	ZT_PLATFORM_LINUX = 1,
+	ZT_PLATFORM_WINDOWS = 2,
+	ZT_PLATFORM_MACOS = 3,
+	ZT_PLATFORM_ANDROID = 4,
+	ZT_PLATFORM_IOS = 5,
+	ZT_PLATFORM_SOLARIS_SMARTOS = 6,
+	ZT_PLATFORM_FREEBSD = 7,
+	ZT_PLATFORM_NETBSD = 8,
+	ZT_PLATFORM_OPENBSD = 9,
+	ZT_PLATFORM_RISCOS = 10,
+	ZT_PLATFORM_VXWORKS = 11,
+	ZT_PLATFORM_FREERTOS = 12,
+	ZT_PLATFORM_SYSBIOS = 13,
+	ZT_PLATFORM_HURD = 14
+} ZT_Platform;
+
+/**
+ * Architecture type
+ */
+typedef enum {
+	ZT_ARCHITECTURE_UNSPECIFIED = 0,
+	ZT_ARCHITECTURE_X86 = 1,
+	ZT_ARCHITECTURE_X64 = 2,
+	ZT_ARCHITECTURE_ARM32 = 3,
+	ZT_ARCHITECTURE_ARM64 = 4,
+	ZT_ARCHITECTURE_MIPS32 = 5,
+	ZT_ARCHITECTURE_MIPS64 = 6,
+	ZT_ARCHITECTURE_POWER32 = 7,
+	ZT_ARCHITECTURE_POWER64 = 8
+} ZT_Architecture;
+
+/**
+ * ZeroTier circuit test configuration and path
+ */
+typedef struct {
+	/**
+	 * Test ID -- an arbitrary 64-bit identifier
+	 */
+	uint64_t testId;
+
+	/**
+	 * Timestamp -- sent with test and echoed back by each reporter
+	 */
+	uint64_t timestamp;
+
+	/**
+	 * Originator credential: network ID
+	 *
+	 * If this is nonzero, a network ID will be set for this test and
+	 * the originator must be its primary network controller. This is
+	 * currently the only authorization method available, so it must
+	 * be set to run a test.
+	 */
+	uint64_t credentialNetworkId;
+
+	/**
+	 * Hops in circuit test (a.k.a. FIFO for graph traversal)
+	 */
+	struct {
+		/**
+		 * Hop flags (currently unused, must be zero)
+		 */
+		unsigned int flags;
+
+		/**
+		 * Number of addresses in this hop (max: ZT_CIRCUIT_TEST_MAX_HOP_BREADTH)
+		 */
+		unsigned int breadth;
+
+		/**
+		 * 40-bit ZeroTier addresses (most significant 24 bits ignored)
+		 */
+		uint64_t addresses[ZT_CIRCUIT_TEST_MAX_HOP_BREADTH];
+	} hops[ZT_CIRCUIT_TEST_MAX_HOPS];
+
+	/**
+	 * Number of hops (max: ZT_CIRCUIT_TEST_MAX_HOPS)
+	 */
+	unsigned int hopCount;
+
+	/**
+	 * If non-zero, circuit test will report back at every hop
+	 */
+	int reportAtEveryHop;
+
+	/**
+	 * An arbitrary user-settable pointer
+	 */
+	void *ptr;
+
+	/**
+	 * Pointer for internal use -- initialize to zero and do not modify
+	 */
+	void *_internalPtr;
+} ZT_CircuitTest;
+
+/**
+ * Circuit test result report
+ */
+typedef struct {
+	/**
+	 * 64-bit test ID
+	 */
+	uint64_t testId;
+
+	/**
+	 * Timestamp from original test (echoed back at each hop)
+	 */
+	uint64_t timestamp;
+
+	/**
+	 * Timestamp on remote device
+	 */
+	uint64_t remoteTimestamp;
+
+	/**
+	 * 64-bit packet ID of packet received by the reporting device
+	 */
+	uint64_t sourcePacketId;
+
+	/**
+	 * Flags (currently unused, will be zero)
+	 */
+	uint64_t flags;
+
+	/**
+	 * ZeroTier protocol-level hop count of packet received by reporting device (>0 indicates relayed)
+	 */
+	unsigned int sourcePacketHopCount;
+
+	/**
+	 * Error code (currently unused, will be zero)
+	 */
+	unsigned int errorCode;
+
+	/**
+	 * Remote device vendor ID
+	 */
+	ZT_Vendor vendor;
+
+	/**
+	 * Remote device protocol compliance version
+	 */
+	unsigned int protocolVersion;
+
+	/**
+	 * Software major version
+	 */
+	unsigned int majorVersion;
+
+	/**
+	 * Software minor version
+	 */
+	unsigned int minorVersion;
+
+	/**
+	 * Software revision
+	 */
+	unsigned int revision;
+
+	/**
+	 * Platform / OS
+	 */
+	ZT_Platform platform;
+
+	/**
+	 * System architecture
+	 */
+	ZT_Architecture architecture;
+
+	/**
+	 * Local device address on which packet was received by reporting device
+	 *
+	 * This may have ss_family equal to zero (null address) if unspecified.
+	 */
+	struct sockaddr_storage receivedOnLocalAddress;
+
+	/**
+	 * Remote address from which reporter received the test packet
+	 *
+	 * This may have ss_family set to zero (null address) if unspecified.
+	 */
+	struct sockaddr_storage receivedFromAddress;
+
+	/**
+	 * Next hops to which packets are being or will be sent by the reporter
+	 *
+	 * In addition to reporting back, the reporter may send the test on if
+	 * there are more recipients in the FIFO. If it does this, it can report
+	 * back the address(es) that make up the next hop and the physical address
+	 * for each if it has one. The physical address being null/unspecified
+	 * typically indicates that no direct path exists and the next packet
+	 * will be relayed.
+	 */
+	struct {
+		/**
+		 * 40-bit ZeroTier address
+		 */
+		uint64_t address;
+
+		/**
+		 * Physical address or null address (ss_family == 0) if unspecified or unknown
+		 */
+		struct sockaddr_storage physicalAddress;
+	} nextHops[ZT_CIRCUIT_TEST_MAX_HOP_BREADTH];
+
+	/**
+	 * Number of next hops reported in nextHops[]
+	 */
+	unsigned int nextHopCount;
+} ZT_CircuitTestReport;
+
+/**
  * An instance of a ZeroTier One node (opaque)
  */
 typedef void ZT_Node;
@@ -1060,6 +1298,39 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
+
+/**
+ * Initiate a VL1 circuit test
+ *
+ * This sends an initial VERB_CIRCUIT_TEST and reports results back to the
+ * supplied callback until circuitTestEnd() is called. The supplied
+ * ZT_CircuitTest structure should be initially zeroed and then filled
+ * in with settings and hops.
+ *
+ * It is the caller's responsibility to call circuitTestEnd() and then
+ * to dispose of the test structure. Otherwise this node will listen
+ * for results forever.
+ *
+ * @param node Node instance
+ * @param test Test configuration
+ * @param reportCallback Function to call each time a report is received
+ * @return OK or error if, for example, test is too big for a packet or support isn't compiled in
+ */
+ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
+
+/**
+ * Stop listening for results to a given circuit test
+ *
+ * This does not free the 'test' structure. The caller may do that
+ * after calling this method to unregister it.
+ *
+ * Any reports that are received for a given test ID after it is
+ * terminated are ignored.
+ *
+ * @param node Node instance
+ * @param test Test configuration to unregister
+ */
+void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test);
 
 /**
  * Get ZeroTier One version
