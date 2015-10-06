@@ -933,38 +933,146 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		const uint64_t timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 7);
 		const uint64_t testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 15);
 
-		unsigned int vlf = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23); // variable length field length
-		switch((*this)[ZT_PACKET_IDX_PAYLOAD + 25]) {
-			case 0x01: { // 64-bit network ID, originator must be controller
-			}	break;
-			default: break;
+		// Tracks total length of variable length fields, initialized to originator credential length below
+		unsigned int vlf;
+
+		// Originator credentials
+		const unsigned int originatorCredentialLength = vlf = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23);
+		uint64_t originatorCredentialNetworkId = 0;
+		if (originatorCredentialLength >= 1) {
+			switch((*this)[ZT_PACKET_IDX_PAYLOAD + 25]) {
+				case 0x01: { // 64-bit network ID, originator must be controller
+					if (originatorCredentialLength >= 9)
+						originatorCredentialNetworkId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 26);
+				}	break;
+				default: break;
+			}
 		}
 
-		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 26 + vlf); // length of additional fields, currently unused
+		// Add length of "additional fields," which are currently unused
+		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 25 + vlf);
 
-		const unsigned int signatureLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 28 + vlf);
-		if (!originator->identity().verify(field(ZT_PACKET_IDX_PAYLOAD,28 + vlf),28 + vlf,field(30 + vlf,signatureLength),signatureLength)) {
+		// Verify signature -- only tests signed by their originators are allowed
+		const unsigned int signatureLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 27 + vlf);
+		if (!originator->identity().verify(field(ZT_PACKET_IDX_PAYLOAD,27 + vlf),27 + vlf,field(ZT_PACKET_IDX_PAYLOAD + 29 + vlf,signatureLength),signatureLength)) {
 			TRACE("dropped CIRCUIT_TEST from %s(%s): signature by originator %s invalid",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str());
 			return true;
 		}
 		vlf += signatureLength;
 
-		vlf += at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 30 + vlf);
-		switch((*this)[ZT_PACKET_IDX_PAYLOAD + 32 + vlf]) {
-			case 0x01: { // network certificate of membership for previous hop
-			}	break;
-			default: break;
+		// Save this length so we can copy the immutable parts of this test
+		// into the one we send along to next hops.
+		const unsigned int lengthOfSignedPortionAndSignature = 29 + vlf;
+
+		// Get previous hop's credential, if any
+		const unsigned int previousHopCredentialLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 29 + vlf);
+		CertificateOfMembership previousHopCom;
+		if (previousHopCredentialLength >= 1) {
+			switch((*this)[ZT_PACKET_IDX_PAYLOAD + 31 + vlf]) {
+				case 0x01: { // network certificate of membership for previous hop
+					if (previousHopCom.deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 32 + vlf) != (previousHopCredentialLength - 1)) {
+						TRACE("dropped CIRCUIT_TEST from %s(%s): previous hop COM invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
+						return true;
+					}
+				}	break;
+				default: break;
+			}
+		}
+		vlf += previousHopCredentialLength;
+
+		// Check credentials (signature already verified)
+		SharedPtr<NetworkConfig> originatorCredentialNetworkConfig;
+		if (originatorCredentialNetworkId) {
+			if (Network::controllerFor(originatorCredentialNetworkId) == originatorAddress) {
+				SharedPtr<Network> nw(RR->node->network(originatorCredentialNetworkId));
+				if (nw) {
+					originatorCredentialNetworkConfig = nw->config2();
+					if ( (originatorCredentialNetworkConfig) && (originatorCredentialNetworkConfig->isPublic()||((originatorCredentialNetworkConfig->com())&&(previousHopCom)&&(originatorCredentialNetworkConfig->com().agreesWith(previousHopCom)))) ) {
+						TRACE("CIRCUIT_TEST %.16llx received from hop %s(%s) and originator %s with valid network ID credential %.16llx (verified from originator and next hop)",testId,source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+					} else {
+						TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and previous hop %s did not supply a valid COM",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId,peer->address().toString().c_str());
+						return true;
+					}
+				} else {
+					TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and we are not a member",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+					return true;
+				}
+			} else {
+				TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID as credential, is not controller for %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
+				return true;
+			}
+		} else {
+			TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s did not specify a credential or credential type",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str());
+			return true;
 		}
 
-		if ((ZT_PACKET_IDX_PAYLOAD + 33 + vlf) < size()) {
-			const unsigned int breadth = (*this)[ZT_PACKET_IDX_PAYLOAD + 33 + vlf];
-			Address nextHops[255];
-			SharedPtr<Peer> nextHopPeers[255];
-			unsigned int hptr = ZT_PACKET_IDX_PAYLOAD + 34 + vlf;
-			for(unsigned int h=0;((h<breadth)&&(h<255));++h) { // breadth can't actually be >256 but be safe anyway
-				nextHops[h].setTo(field(hptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
-				hptr += ZT_ADDRESS_LENGTH;
-				nextHopPeers[h] = RR->topology->getPeer(nextHops[h]);
+		const uint64_t now = RR->node->now();
+
+		unsigned int breadth = 0;
+		Address nextHop[256]; // breadth is a uin8_t, so this is the max
+		InetAddress nextHopBestPathAddress[256];
+		unsigned int remainingHopsPtr = ZT_PACKET_IDX_PAYLOAD + 33 + vlf;
+		if ((ZT_PACKET_IDX_PAYLOAD + 31 + vlf) < size()) {
+			// unsigned int nextHopFlags = (*this)[ZT_PACKET_IDX_PAYLOAD + 31 + vlf]
+			breadth = (*this)[ZT_PACKET_IDX_PAYLOAD + 32 + vlf];
+			for(unsigned int h=0;h<breadth;++h) {
+				nextHop[h].setTo(field(remainingHopsPtr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+				remainingHopsPtr += ZT_ADDRESS_LENGTH;
+				SharedPtr<Peer> nhp(RR->topology->getPeer(nextHop[h]));
+				if (nhp) {
+					RemotePath *const rp = nhp->getBestPath(now);
+					if (rp)
+						nextHopBestPathAddress[h] = rp->address();
+				}
+			}
+		}
+
+		// Report back to originator, depending on flags and whether we are last hop
+		if ( ((flags & 0x01) != 0) || ((breadth == 0)&&((flags & 0x02) != 0)) ) {
+			Packet outp(originatorAddress,RR->identity.address(),Packet::VERB_CIRCUIT_TEST_REPORT);
+			outp.append((uint64_t)timestamp);
+			outp.append((uint64_t)testId);
+			outp.append((uint64_t)now);
+			outp.append((uint8_t)0); // vendor ID, currently unused
+			outp.append((uint8_t)ZT_PROTO_VERSION);
+			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MAJOR);
+			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MINOR);
+			outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+			outp.append((uint16_t)CIRCUIT_TEST_REPORT_PLATFORM_UNSPECIFIED);
+			outp.append((uint16_t)CIRCUIT_TEST_REPORT_ARCH_UNSPECIFIED);
+			outp.append((uint16_t)0); // error code, currently unused
+			outp.append((uint64_t)0); // flags, currently unused
+			outp.append((uint64_t)packetId());
+			outp.append((uint8_t)hops());
+			_localAddress.serialize(outp);
+			_remoteAddress.serialize(outp);
+			outp.append((uint16_t)0); // no additional fields
+			outp.append((uint8_t)breadth);
+			for(unsigned int h=0;h<breadth;++h) {
+				nextHop[h].appendTo(outp);
+				nextHopBestPathAddress[h].serialize(outp); // appends 0 if null InetAddress
+			}
+			RR->sw->send(outp,true,0);
+		}
+
+		// If there are next hops, forward the test along through the graph
+		if (breadth > 0) {
+			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
+			outp.append(field(ZT_PACKET_IDX_PAYLOAD,lengthOfSignedPortionAndSignature),lengthOfSignedPortionAndSignature);
+			const unsigned int previousHopCredentialPos = outp.size();
+			outp.append((uint16_t)0); // no previous hop credentials: default
+			if ((originatorCredentialNetworkConfig)&&(!originatorCredentialNetworkConfig->isPublic())&&(originatorCredentialNetworkConfig->com())) {
+				outp.append((uint8_t)0x01); // COM
+				originatorCredentialNetworkConfig->com().serialize(outp);
+				outp.setAt<uint16_t>(previousHopCredentialPos,(uint16_t)(size() - previousHopCredentialPos));
+			}
+			if (remainingHopsPtr < size())
+				outp.append(field(remainingHopsPtr,size() - remainingHopsPtr),size() - remainingHopsPtr);
+
+			for(unsigned int h=0;h<breadth;++h) {
+				outp.newInitializationVector();
+				outp.setDestination(nextHop[h]);
+				RR->sw->send(outp,true,originatorCredentialNetworkId);
 			}
 		}
 	} catch (std::exception &exc) {

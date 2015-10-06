@@ -911,38 +911,33 @@ public:
 		 *   <[2] 16-bit flags>
 		 *   <[8] 64-bit timestamp>
 		 *   <[8] 64-bit test ID (arbitrary, set by tester)>
-		 *   <[2] 16-bit originator credential length>
-		 *   <[1] originator credential type (for authorizing test)>
-		 *   <[...] credential>
+		 *   <[2] 16-bit originator credential length (includes type)>
+		 *   [[1] originator credential type (for authorizing test)]
+		 *   [[...] originator credential]
 		 *   <[2] 16-bit length of additional fields>
-		 *   <[...] additional fields>
+		 *   [[...] additional fields]
 		 *   [ ... end of signed portion of request ... ]
 		 *   <[2] 16-bit length of signature of request>
 		 *   <[...] signature of request by originator>
-		 *   <[2] 16-bit previous hop credential length>
-		 *   <[1] previous hop credential type>
-		 *   <[...] previous hop credential>
+		 *   <[2] 16-bit previous hop credential length (including type)>
+		 *   [[1] previous hop credential type]
+		 *   [[...] previous hop credential]
 		 *   <[...] next hop(s) in path>
 		 *
 		 * Flags:
-		 *   0x01 - Report back to originator at each hop
+		 *   0x01 - Report back to originator at middle hops
 		 *   0x02 - Report back to originator at last hop
 		 *
 		 * Originator credential types:
-		 *   0x00 - No credentials included
 		 *   0x01 - 64-bit network ID for which originator is controller
 		 *
 		 * Previous hop credential types:
-		 *   0x00 - No credentials included
 		 *   0x01 - Certificate of network membership
 		 *
 		 * Path record format:
-		 *   <[1] 8-bit flags>
+		 *   <[1] 8-bit flags (unused, must be zero)>
 		 *   <[1] 8-bit breadth (number of next hops)>
 		 *   <[...] one or more ZeroTier addresses of next hops>
-		 *
-		 * Path record flags (in each path record):
-		 *   (unused, must be zero)
 		 *
 		 * The circuit test allows a device to send a message that will traverse
 		 * the network along a specified path, with each hop optionally reporting
@@ -1001,28 +996,19 @@ public:
 		 *   <[2] 16-bit reporter OS/platform>
 		 *   <[2] 16-bit reporter architecture>
 		 *   <[2] 16-bit error code (set to 0, currently unused)>
-		 *   <[8] 64-bit report flags>
+		 *   <[8] 64-bit report flags (set to 0, currently unused)>
 		 *   <[8] 64-bit source packet ID>
-		 *   <[1] 8-bit source packet hop count>
-		 *   <[1] 8-bit source address type>
-		 *   [<[...] source address>]
-		 *   <[2] 16-bit length of network information>
-		 *   <[...] network information>
+		 *   <[1] 8-bit source packet hop count (ZeroTier hop count)>
+		 *   <[...] local wire address on which packet was received>
+		 *   <[...] remote wire address from which packet was received>
 		 *   <[2] 16-bit length of additional fields>
 		 *   <[...] additional fields>
-		 *   <[2] 16-bit number of next hops to which something is being sent>
+		 *   <[1] 8-bit number of next hops (breadth)>
 		 *   <[...] next hop information>
-		 *
-		 * Circuit test report flags:
-		 *   (currently none, must be zero)
 		 *
 		 * Next hop information record format:
 		 *   <[5] ZeroTier address of next hop>
-		 *   <[1] 8-bit destination wire address type>
-		 *   <[...] destination wire address>
-		 *
-		 * See enums below for OS/platform and architecture. Source address format
-		 * is the same as specified in HELLO.
+		 *   <[...] current best direct path address, if any, 0 if none>
 		 *
 		 * Circuit test reports can be sent by hops in a circuit test to report
 		 * back results. They should include information about the sender as well
