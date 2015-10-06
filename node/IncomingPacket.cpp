@@ -988,7 +988,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				SharedPtr<Network> nw(RR->node->network(originatorCredentialNetworkId));
 				if (nw) {
 					originatorCredentialNetworkConfig = nw->config2();
-					if ( (originatorCredentialNetworkConfig) && (originatorCredentialNetworkConfig->isPublic()||((originatorCredentialNetworkConfig->com())&&(previousHopCom)&&(originatorCredentialNetworkConfig->com().agreesWith(previousHopCom)))) ) {
+					if ( (originatorCredentialNetworkConfig) && ((originatorCredentialNetworkConfig->isPublic())||(peer->address() == originatorAddress)||((originatorCredentialNetworkConfig->com())&&(previousHopCom)&&(originatorCredentialNetworkConfig->com().agreesWith(previousHopCom)))) ) {
 						TRACE("CIRCUIT_TEST %.16llx received from hop %s(%s) and originator %s with valid network ID credential %.16llx (verified from originator and next hop)",testId,source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId);
 					} else {
 						TRACE("dropped CIRCUIT_TEST from %s(%s): originator %s specified network ID %.16llx as credential, and previous hop %s did not supply a valid COM",source().toString().c_str(),_remoteAddress.toString().c_str(),originatorAddress.toString().c_str(),originatorCredentialNetworkId,peer->address().toString().c_str());

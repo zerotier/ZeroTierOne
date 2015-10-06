@@ -466,12 +466,48 @@ void Node::setNetconfMaster(void *networkControllerInstance)
 
 ZT_ResultCode Node::circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
 {
+	if (test->hopCount > 0) {
+		try {
+			Packet outp(Address(),RR->identity.address(),Packet::VERB_CIRCUIT_TEST);
+			RR->identity.address().appendTo(outp);
+			outp.append((uint16_t)((test->reportAtEveryHop != 0) ? 0x03 : 0x02));
+			outp.append((uint64_t)test->timestamp);
+			outp.append((uint64_t)test->testId);
+			outp.append((uint16_t)0); // originator credential length, updated later
+			if (test->credentialNetworkId) {
+				outp.append((uint8_t)0x01);
+				outp.append((uint64_t)test->credentialNetworkId);
+				outp.setAt<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 23,(uint16_t)9);
+			}
+			outp.append((uint16_t)0);
+			C25519::Signature sig(RR->identity.sign(reinterpret_cast<const char *>(outp.data()) + ZT_PACKET_IDX_PAYLOAD,outp.size() - ZT_PACKET_IDX_PAYLOAD));
+			outp.append((uint16_t)sig.size());
+			outp.append(sig.data,sig.size());
+			outp.append((uint16_t)0); // originator doesn't need an extra credential, since it's the originator
+			for(unsigned int h=1;h<test->hopCount;++h) {
+				outp.append((uint8_t)0);
+				outp.append((uint8_t)(test->hops[h].breadth & 0xff));
+				for(unsigned int a=0;a<test->hops[h].breadth;++a)
+					Address(test->hops[h].addresses[a]).appendTo(outp);
+			}
+
+			for(unsigned int a=0;a<test->hops[0].breadth;++a) {
+				outp.newInitializationVector();
+				outp.setDestination(Address(test->hops[0].addresses[a]));
+				RR->sw->send(outp,true,test->credentialNetworkId);
+			}
+		} catch ( ... ) {
+			return ZT_RESULT_FATAL_ERROR_INTERNAL; // probably indicates FIFO too big for packet
+		}
+	}
+
 	{
 		test->_internalPtr = reinterpret_cast<void *>(reportCallback);
 		Mutex::Lock _l(_circuitTests_m);
 		if (std::find(_circuitTests.begin(),_circuitTests.end(),test) == _circuitTests.end())
 			_circuitTests.push_back(test);
 	}
+
 	return ZT_RESULT_OK;
 }
 
