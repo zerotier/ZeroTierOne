@@ -191,7 +191,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	if (devURandomFd <= 0) {
 		devURandomFd = ::open("/dev/urandom",O_RDONLY);
 		if (devURandomFd <= 0) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\r\n");
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 			exit(1);
 			return;
 		}
@@ -200,7 +200,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
 			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\r\n");
+				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
 				exit(1);
 				return;
 			}
