@@ -227,7 +227,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
 					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-						RR->node->postEvent(ZT_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 						TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
 						outp.append((unsigned char)Packet::VERB_HELLO);
@@ -236,11 +235,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 						outp.armor(key,true);
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					} else {
-						RR->node->postEvent(ZT_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					}
 				} else {
-					RR->node->postEvent(ZT_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 					TRACE("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				}
 
@@ -249,7 +246,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				// Identity is the same as the one we already have -- check packet integrity
 
 				if (!dearmor(peer->key())) {
-					RR->node->postEvent(ZT_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 					TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					return true;
 				}
@@ -261,7 +257,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 			// Check identity proof of work
 			if (!id.locallyValidate()) {
-				RR->node->postEvent(ZT_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
@@ -269,7 +264,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			// Check packet integrity and authentication
 			SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
 			if (!dearmor(newPeer->key())) {
-				RR->node->postEvent(ZT_EVENT_AUTHENTICATION_FAILURE,(const void *)&_remoteAddress);
 				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
@@ -284,11 +278,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP);
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
 
-		bool trusted = false;
-		if (RR->topology->isRoot(id)) {
-			RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
-			trusted = true;
-		}
+		bool trusted = RR->topology->isRoot(id);
 		if (destAddr)
 			RR->sa->iam(id.address(),_remoteAddress,destAddr,trusted,RR->node->now());
 
@@ -369,11 +359,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->addDirectLatencyMeasurment(latency);
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
-				bool trusted = false;
-				if (RR->topology->isRoot(peer->identity())) {
-					RR->node->postNewerVersionIfNewer(vMajor,vMinor,vRevision);
-					trusted = true;
-				}
+				bool trusted = RR->topology->isRoot(peer->identity());
 				if (destAddr)
 					RR->sa->iam(peer->address(),_remoteAddress,destAddr,trusted,RR->node->now());
 			}	break;

@@ -226,11 +226,6 @@ public:
 	 */
 	inline bool online() const throw() { return _online; }
 
-	/**
-	 * If this version is newer than the newest we've seen, post a new version seen event
-	 */
-	void postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev);
-
 #ifdef ZT_TRACE
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
 #endif
@@ -288,7 +283,6 @@ private:
 	uint64_t _now;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
-	unsigned int _newestVersionSeen[3]; // major, minor, revision
 	bool _online;
 };
 

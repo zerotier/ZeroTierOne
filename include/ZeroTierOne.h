@@ -256,38 +256,13 @@ enum ZT_Event
 	ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION = 4,
 
 	/**
-	 * A more recent version was observed on the network
-	 *
-	 * Right now this is only triggered if a hub or rootserver reports a
-	 * more recent version, and only once. It can be used to trigger a
-	 * software update check.
-	 *
-	 * Meta-data: unsigned int[3], more recent version number
-	 */
-	ZT_EVENT_SAW_MORE_RECENT_VERSION = 5,
-
-	/**
-	 * A packet failed authentication
-	 *
-	 * Meta-data: struct sockaddr_storage containing origin address of packet
-	 */
-	ZT_EVENT_AUTHENTICATION_FAILURE = 6,
-
-	/**
-	 * A received packet was not valid
-	 *
-	 * Meta-data: struct sockaddr_storage containing origin address of packet
-	 */
-	ZT_EVENT_INVALID_PACKET = 7,
-
-	/**
 	 * Trace (debugging) message
 	 *
 	 * These events are only generated if this is a TRACE-enabled build.
 	 *
 	 * Meta-data: C string, TRACE message
 	 */
-	ZT_EVENT_TRACE = 8
+	ZT_EVENT_TRACE = 5
 };
 
 /**

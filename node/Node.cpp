@@ -82,9 +82,6 @@ Node::Node(
 	_lastPingCheck(0),
 	_lastHousekeepingRun(0)
 {
-	_newestVersionSeen[0] = ZEROTIER_ONE_VERSION_MAJOR;
-	_newestVersionSeen[1] = ZEROTIER_ONE_VERSION_MINOR;
-	_newestVersionSeen[2] = ZEROTIER_ONE_VERSION_REVISION;
 	_online = false;
 
 	// Use Salsa20 alone as a high-quality non-crypto PRNG
@@ -540,16 +537,6 @@ std::string Node::dataStoreGet(const char *name)
 	return r;
 }
 
-void Node::postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev)
-{
-	if (Utils::compareVersion(major,minor,rev,_newestVersionSeen[0],_newestVersionSeen[1],_newestVersionSeen[2]) > 0) {
-		_newestVersionSeen[0] = major;
-		_newestVersionSeen[1] = minor;
-		_newestVersionSeen[2] = rev;
-		this->postEvent(ZT_EVENT_SAW_MORE_RECENT_VERSION,(const void *)_newestVersionSeen);
-	}
-}
-
 #ifdef ZT_TRACE
 void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 {
@@ -659,8 +646,7 @@ enum ZT_ResultCode ZT_Node_processWirePacket(
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
-		reinterpret_cast<ZeroTier::Node *>(node)->postEvent(ZT_EVENT_INVALID_PACKET,(const void *)remoteAddress);
-		return ZT_RESULT_OK;
+		return ZT_RESULT_OK; // "OK" since invalid packets are simply dropped, but the system is still up
 	}
 }
 
