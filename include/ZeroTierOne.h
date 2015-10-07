@@ -758,6 +758,11 @@ typedef struct {
  */
 typedef struct {
 	/**
+	 * Sender of report
+	 */
+	uint64_t address;
+
+	/**
 	 * 64-bit test ID
 	 */
 	uint64_t testId;
@@ -839,7 +844,7 @@ typedef struct {
 	 *
 	 * This may have ss_family set to zero (null address) if unspecified.
 	 */
-	struct sockaddr_storage receivedFromAddress;
+	struct sockaddr_storage receivedFromRemoteAddress;
 
 	/**
 	 * Next hops to which packets are being or will be sent by the reporter

@@ -269,6 +269,22 @@ static int testCrypto()
 	}
 	std::cout << "PASS" << std::endl;
 
+	std::cout << "[crypto] Benchmarking Poly1305... "; std::cout.flush();
+	{
+		unsigned char *bb = (unsigned char *)::malloc(1234567);
+		for(unsigned int i=0;i<1234567;++i)
+			bb[i] = (unsigned char)i;
+		double bytes = 0.0;
+		uint64_t start = OSUtils::now();
+		for(unsigned int i=0;i<200;++i) {
+			Poly1305::compute(buf1,bb,1234567,poly1305TV0Key);
+			bytes += 1234567.0;
+		}
+		uint64_t end = OSUtils::now();
+		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
+		::free((void *)bb);
+	}
+
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
 		C25519::Pair p1,p2;
