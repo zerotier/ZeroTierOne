@@ -315,7 +315,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				InetAddress destAddr;
 				if ((ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2) < size()) // ZeroTier One < 1.0.3 did not include this field
 					destAddr.deserialize(*this,ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2);
-				printf("OK(HELLO) %s\n",destAddr.toString().c_str());
 
 				if (vProto < ZT_PROTO_VERSION_MIN) {
 					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_remoteAddress.toString().c_str());
