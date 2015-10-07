@@ -71,7 +71,7 @@
 /* these are originally defined in tcp_impl.h */
 #ifndef TCP_TMR_INTERVAL
 /* The TCP timer interval in milliseconds. */
-#define TCP_TMR_INTERVAL       25
+#define TCP_TMR_INTERVAL       250
 #endif /* TCP_TMR_INTERVAL */
 
 #ifndef TCP_FAST_INTERVAL

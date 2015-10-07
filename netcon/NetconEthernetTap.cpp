@@ -79,7 +79,7 @@ NetconEthernetTap::NetconEthernetTap(
 	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
 	_dev = sockPath;
 
-	lwipstack = new LWIPStack("lib/liblwip.so"); // ext/bin/liblwip.so.debug for debug symbols
+	lwipstack = new LWIPStack("ext/bin/lwip/liblwip.so"); // ext/bin/liblwip.so.debug for debug symbols
 	if(!lwipstack) // TODO double check this check
 		throw std::runtime_error("unable to load lwip lib.");
 	lwipstack->lwip_init();
@@ -307,7 +307,8 @@ void NetconEthernetTap::closeAll()
 		closeConnection(tcp_connections.front());
 }
 
-#define ZT_LWIP_TCP_TIMER_INTERVAL 10
+#define ZT_LWIP_TCP_TIMER_INTERVAL 5
+//#define ZT_LWIP_ARP_TIMER_INTERVAL 5000
 
 void NetconEthernetTap::threadMain()
 	throw()
@@ -316,7 +317,6 @@ void NetconEthernetTap::threadMain()
 	uint64_t prev_tcp_time = 0;
 	uint64_t prev_etharp_time = 0;
 
-	/*
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
 	fprintf(stderr, "- TCP_SND_BUF = %dK\n", TCP_SND_BUF / 1024);
 	fprintf(stderr, "- MEMP_NUM_PBUF = %d\n", MEMP_NUM_PBUF);
@@ -335,7 +335,6 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- TCP_TMR_INTERVAL = %d\n", TCP_TMR_INTERVAL);
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
 	fprintf(stderr, "- DEFAULT_READ_BUFFER_SIZE  = %d\n", DEFAULT_READ_BUFFER_SIZE);
-	*/
 
 	// Main timer loop
 	while (_run) {
@@ -361,7 +360,7 @@ void NetconEthernetTap::threadMain()
 		}
 		_phy.poll((unsigned long)std::min(tcp_remaining,etharp_remaining));
 	}
-	//closeAllClients();
+	closeAll();
 	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
 }
 
@@ -378,16 +377,73 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable)
 {
 	if(readable) {
+		float max = (float)TCP_SND_BUF;
 		int r;
 		TcpConnection *conn = (TcpConnection*)*uptr;
-		if(conn->idx < DEFAULT_READ_BUFFER_SIZE) {
+
+		if(!conn) {
+			fprintf(stderr, "phyOnFileDescriptorActivity(): could not locate connection for this fd\n");
+			return;
+		}
+		if(conn->idx < max) {
+			Mutex::Lock _l(lwipstack->_lock);
+			int sndbuf = conn->pcb->snd_buf; // How much we are currently allowed to write to the connection
+
+			/*
+			float avail = (float)sndbuf;
+			float load = 1.0 - (avail / max);
+
+			if(load >= 0.80) {
+				fprintf(stderr, "load too high\n");
+				return;
+			}
+			*/
+
+			/* PCB send buffer is full,turn off readability notifications for the
+			corresponding PhySocket until nc_sent() is called and confirms that there is
+			now space on the buffer */
+			if(sndbuf == 0) {
+				_phy.setNotifyReadable(sock, false);
+				return;
+			}
+
 			int read_fd = _phy.getDescriptor(sock);
-			if((r = read(read_fd, (&conn->buf)+conn->idx, DEFAULT_READ_BUFFER_SIZE-(conn->idx))) > 0) {
+
+			if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
 				conn->idx += r;
-				Mutex::Lock _l(lwipstack->_lock);
-				handle_write(conn);
+				/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
+				 * data to LWIP to be enqueued and eventually sent to the network. */
+				if(r > 0) {
+					int sz;
+					// NOTE: this assumes that lwipstack->_lock is locked, either
+					// because we are in a callback or have locked it manually.
+					//fprintf(stderr, "phyOnFileDescriptorActivity(): Can read %d bytes, did read %d bytes\n", sndbuf, r);
+					int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
+					if(err != ERR_OK) {
+						fprintf(stderr, "phyOnFileDescriptorActivity(): error while writing to PCB\n");
+						return;
+					}
+					else {
+						sz = (conn->idx)-r;
+						if(sz) {
+							memmove(&conn->buf, (conn->buf+r), sz);
+						}
+						conn->idx -= r;
+						return;
+					}
+				}
+				else {
+					fprintf(stderr, "phyOnFileDescriptorActivity(): LWIP stack full\n");
+					return;
+				}
+			}
+			else {
+				fprintf(stderr, "phyOnFileDescriptorActivity(): could not read from PhySocket for this connection\n");
 			}
 		}
+	}
+	else {
+		fprintf(stderr, "phyOnFileDescriptorActivity(): PhySocket not readable\n");
 	}
 }
 
@@ -495,11 +551,13 @@ int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval)
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
 	//fprintf(stderr, "nc_poll\n");
+	/*
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
 	NetconEthernetTap *tap = l->tap;
 	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
 		tap->handle_write(conn);
+	*/
 	return ERR_OK;
 }
 
@@ -596,6 +654,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     if(l->conn) {
 			fprintf(stderr, "nc_recved(): closing connection\n");
 			l->tap->closeConnection(l->conn);
+			exit(0);
     }
     else {
       fprintf(stderr, "nc_recved(): can't locate connection via (arg)\n");
@@ -611,6 +670,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
         fprintf(stderr, "nc_recved(): unable to write entire pbuf to buffer\n");
       }
       l->tap->lwipstack->_tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
+			fprintf(stderr, "nc_recved(): streamSend(%d bytes)\n", n);
     }
     else {
       fprintf(stderr, "nc_recved(): No data written to intercept buffer\n");
@@ -633,9 +693,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
  */
 void NetconEthernetTap::nc_err(void *arg, err_t err)
 {
-	fprintf(stderr, "nc_err\n");
+	//fprintf(stderr, "nc_err\n");
 	Larg *l = (Larg*)arg;
   if(l->conn) {
+		fprintf(stderr, "nc_err(): closing connection\n");
     l->tap->closeConnection(l->conn);
   }
   else {
@@ -644,9 +705,11 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 }
 
 /*
- * Callback from LWIP
+ * Callback from LWIP to signal that 'len' bytes have successfully been sent.
+ * As a result, we should put our socket back into a notify-on-readability state
+ * since there is now room on the PCB buffer to write to.
  *
- * This could be used to track the amount of data sent by a connection.
+ * NOTE: This could be used to track the amount of data sent by a connection.
  *
  * @param associated service state object
  * @param relevant PCB
@@ -656,7 +719,11 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
  */
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
-	fprintf(stderr, "nc_sent\n");
+	Larg *l = (Larg*)arg;
+	if(len) {
+		//fprintf(stderr, "len = %d\n", len);
+		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
+	}
 	return ERR_OK;
 }
 
@@ -672,7 +739,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
  */
 err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
-	fprintf(stderr, "nc_connected\n");
+	//fprintf(stderr, "nc_connected\n");
 	Larg *l = (Larg*)arg;
 	l->tap->send_return_value(l->conn, err);
 	return ERR_OK;
@@ -847,56 +914,6 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 		fprintf(stderr, "could not locate PCB based on their fd\n");
 	}
 }
-
-/*
- * Writes data pulled from the client's socket buffer to LWIP. This merely sends the
- * data to LWIP to be enqueued and eventually sent to the network.
- * *
- * @param Client that is making the RPC
- * @param structure containing the data and parameters for this client's RPC
- *
- * TODO: Optimize write logic (should we stop using poll?)
- */
-void NetconEthernetTap::handle_write(TcpConnection *conn)
-{
-	if(conn) {
-		int sndbuf = conn->pcb->snd_buf;
-		float avail = (float)sndbuf;
-		float max = (float)TCP_SND_BUF;
-		float load = 1.0 - (avail / max);
-
-		if(load >= 0.9) {
-			return;
-		}
-
-		int sz, write_allowance =  sndbuf < conn->idx ? sndbuf : conn->idx;
-		if(write_allowance > 0) {
-			// NOTE: this assumes that lwipstack->_lock is locked, either
-			// because we are in a callback or have locked it manually.
-			int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, write_allowance, TCP_WRITE_FLAG_COPY);
-			if(err != ERR_OK) {
-				fprintf(stderr, "handle_write(): error while writing to PCB\n");
-				return;
-			}
-			else {
-				sz = (conn->idx)-write_allowance;
-				if(sz) {
-					memmove(&conn->buf, (conn->buf+write_allowance), sz);
-				}
-				conn->idx -= write_allowance;
-				return;
-			}
-		}
-		else {
-			fprintf(stderr, "handle_write(): LWIP stack full\n");
-			return;
-		}
-	}
-	else {
-		fprintf(stderr, "handle_write(): could not locate connection for this fd\n");
-	}
-}
-
 } // namespace ZeroTier
 
 #endif // ZT_ENABLE_NETCON
