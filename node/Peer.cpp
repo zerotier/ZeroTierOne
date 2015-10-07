@@ -173,6 +173,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &lo
 	RR->identity.serialize(outp,false);
 	atAddress.serialize(outp);
 	outp.armor(_key,false); // HELLO is sent in the clear
+	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
 
@@ -182,12 +183,12 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 	RemotePath *const bestPath = _getBestPath(now);
 	if (bestPath) {
 		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
-			TRACE("PING %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
+			TRACE("PING %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),bestPath->address().toString().c_str(),now - bestPath->lastSend(),now - bestPath->lastReceived());
 			attemptToContactAt(RR,bestPath->localAddress(),bestPath->address(),now);
 			bestPath->sent(now);
 		} else if (((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!bestPath->reliable())) {
+			TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),bestPath->address().toString().c_str(),now - bestPath->lastSend(),now - bestPath->lastReceived());
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
-			TRACE("NAT keepalive %s(%s)",_id.address().toString().c_str(),bestPath->address().toString().c_str());
 			RR->node->putPacket(bestPath->localAddress(),bestPath->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
 			bestPath->sent(now);
 		}
@@ -202,6 +203,8 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 		_lastDirectPathPush = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
+		if (dps.empty())
+			return;
 
 #ifdef ZT_TRACE
 		{

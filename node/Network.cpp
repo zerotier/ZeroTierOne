@@ -448,7 +448,6 @@ class _AnnounceMulticastGroupsToAll
 public:
 	_AnnounceMulticastGroupsToAll(const RuntimeEnvironment *renv,Network *nw) :
 		_now(renv->node->now()),
-		RR(renv),
 		_network(nw),
 		_rootAddresses(renv->topology->rootAddresses()),
 		_allMulticastGroups(nw->_allMulticastGroups())
@@ -458,7 +457,6 @@ public:
 
 private:
 	uint64_t _now;
-	const RuntimeEnvironment *RR;
 	Network *_network;
 	std::vector<Address> _rootAddresses;
 	std::vector<MulticastGroup> _allMulticastGroups;

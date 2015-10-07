@@ -264,7 +264,7 @@
  * This is also how often pings will be retried to upstream peers (relays, roots)
  * constantly until something is heard.
  */
-#define ZT_PING_CHECK_INVERVAL 6250
+#define ZT_PING_CHECK_INVERVAL 9500
 
 /**
  * Delay between ordinary case pings of direct links
