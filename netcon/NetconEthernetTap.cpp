@@ -308,7 +308,6 @@ void NetconEthernetTap::closeAll()
 }
 
 #define ZT_LWIP_TCP_TIMER_INTERVAL 5
-//#define ZT_LWIP_ARP_TIMER_INTERVAL 5000
 
 void NetconEthernetTap::threadMain()
 	throw()
@@ -328,13 +327,9 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- IP_REASSEMBLY = %d\n", IP_REASSEMBLY);
 	fprintf(stderr, "- TCP_WND = %d\n", TCP_WND);
 	fprintf(stderr, "- TCP_MSS = %d\n", TCP_MSS);
-	fprintf(stderr, "- NO_SYS           = %d\n", NO_SYS);
-	fprintf(stderr, "- LWIP_SOCKET      = %d\n", LWIP_SOCKET);
-	fprintf(stderr, "- LWIP_NETCONN     = %d\n", LWIP_NETCONN);
 	fprintf(stderr, "- ARP_TMR_INTERVAL = %d\n", ARP_TMR_INTERVAL);
 	fprintf(stderr, "- TCP_TMR_INTERVAL = %d\n", TCP_TMR_INTERVAL);
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
-	fprintf(stderr, "- DEFAULT_READ_BUFFER_SIZE  = %d\n", DEFAULT_READ_BUFFER_SIZE);
 
 	// Main timer loop
 	while (_run) {
@@ -670,7 +665,6 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
         fprintf(stderr, "nc_recved(): unable to write entire pbuf to buffer\n");
       }
       l->tap->lwipstack->_tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
-			fprintf(stderr, "nc_recved(): streamSend(%d bytes)\n", n);
     }
     else {
       fprintf(stderr, "nc_recved(): No data written to intercept buffer\n");
@@ -830,8 +824,8 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 	TcpConnection *conn = (TcpConnection*)*uptr;
 	if(conn->pending) {
 		memcpy(&(conn->perceived_fd), &buf[1], sizeof(int));
-		fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n",
-			_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
+		//fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n",
+		//_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
 		conn->pending = false;
 	}
 }
@@ -862,7 +856,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	  new_conn->their_fd = fds[1];
 		tcp_connections.push_back(new_conn);
     sock_fd_write(_phy.getDescriptor(sock), fds[1]);
-		fprintf(stderr, "handle_socket(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);
+		//fprintf(stderr, "handle_socket(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);
 		/* Once the client tells us what its fd is for the other end,
 		we can then complete the mapping */
     new_conn->pending = true;

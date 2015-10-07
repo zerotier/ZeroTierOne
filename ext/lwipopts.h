@@ -71,7 +71,7 @@
 /* these are originally defined in tcp_impl.h */
 #ifndef TCP_TMR_INTERVAL
 /* The TCP timer interval in milliseconds. */
-#define TCP_TMR_INTERVAL       250
+#define TCP_TMR_INTERVAL       20
 #endif /* TCP_TMR_INTERVAL */
 
 #ifndef TCP_FAST_INTERVAL
@@ -113,7 +113,7 @@
 ------------------------------------------------------------------------------*/
 
 
-#define LWIP_CHKSUM_ALGORITHM 2
+#define LWIP_CHKSUM_ALGORITHM 0
 
 
 /**
@@ -146,7 +146,7 @@
  * MEMP_NUM_RAW_PCB: Number of raw connection PCBs
  * (requires the LWIP_RAW option)
  */
-#define MEMP_NUM_RAW_PCB                32
+#define MEMP_NUM_RAW_PCB                128
 
 /**
  * MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
