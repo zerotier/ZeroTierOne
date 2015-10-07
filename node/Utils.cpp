@@ -181,7 +181,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 #ifdef __UNIX_LIKE__
 
-	static char randomBuf[65536];
+	static char randomBuf[131072];
 	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
 	static Mutex globalLock;
@@ -199,10 +199,16 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
-			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\n");
-				exit(1);
-				return;
+			for(;;) {
+				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+					::close(devURandomFd);
+					devURandomFd = ::open("/dev/urandom",O_RDONLY);
+					if (devURandomFd <= 0) {
+						fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+						exit(1);
+						return;
+					}
+				} else break;
 			}
 			randomPtr = 0;
 		}
