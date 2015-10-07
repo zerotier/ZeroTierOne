@@ -664,6 +664,8 @@ public:
 		 *
 		 * This generates OK with a copy of the transmitted payload. No ERROR
 		 * is generated. Response to ECHO requests is optional.
+		 *
+		 * Note that fragmented ECHO packets may not work.
 		 */
 		VERB_ECHO = 8,
 

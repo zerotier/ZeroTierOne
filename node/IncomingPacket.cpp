@@ -573,11 +573,13 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
+		const uint64_t pid = packetId();
 		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_ECHO);
-		outp.append(packetId());
+		outp.append((uint64_t)pid);
 		outp.append(field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD),size() - ZT_PACKET_IDX_PAYLOAD);
-		RR->sw->send(outp,true,0);
+		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
 	} catch ( ... ) {}
 	return true;
 }
@@ -881,6 +883,8 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			}
 			ptr += addrLen;
 		}
+
+		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP);
 	} catch (std::exception &exc) {
 		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -1045,6 +1049,8 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				RR->sw->send(outp,true,originatorCredentialNetworkId);
 			}
 		}
+
+		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP);
 	} catch (std::exception &exc) {
 		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
@@ -1063,6 +1069,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 	try {
 		// Right now this is only allowed from root servers -- may be allowed from controllers and relays later.
 		if (RR->topology->isRoot(peer->identity())) {
+			const uint64_t pid = packetId();
 			const unsigned int difficulty = (*this)[ZT_PACKET_IDX_PAYLOAD + 1];
 			const unsigned int challengeLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 2);
 			if (challengeLength > ZT_PROTO_MAX_PACKET_LENGTH)
@@ -1079,7 +1086,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						TRACE("PROOF_OF_WORK computed for %s: difficulty==%u, challengeLength==%u, result: %.16llx%.16llx",peer->address().toString().c_str(),difficulty,challengeLength,Utils::ntoh(*(reinterpret_cast<const uint64_t *>(result))),Utils::ntoh(*(reinterpret_cast<const uint64_t *>(result + 8))));
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 						outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
-						outp.append(packetId());
+						outp.append(pid);
 						outp.append((uint16_t)sizeof(result));
 						outp.append(result,sizeof(result));
 						outp.armor(peer->key(),true);
@@ -1087,7 +1094,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 					} else {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
 						outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
-						outp.append(packetId());
+						outp.append(pid);
 						outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
 						outp.armor(peer->key(),true);
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
@@ -1098,6 +1105,8 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 					TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unrecognized proof of work type",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 					break;
 			}
+
+			peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_REQUEST_PROOF_OF_WORK,0,Packet::VERB_NOP);
 		} else {
 			TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): not trusted enough",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 		}
