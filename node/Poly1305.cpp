@@ -20,6 +20,9 @@ namespace ZeroTier {
 
 #if 0
 
+// "Naive" implementation, which is slower... might still want this on some older
+// or weird platforms if the later versions have issues.
+
 static inline void add(unsigned int h[17],const unsigned int c[17])
 {
   unsigned int j;
@@ -132,10 +135,10 @@ typedef struct poly1305_context {
   unsigned char opaque[136];
 } poly1305_context;
 
-#if defined(_MSC_VER) || defined(__GNUC__)
+#if (defined(_MSC_VER) || defined(__GNUC__)) && (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
 
 //////////////////////////////////////////////////////////////////////////////
-// 128-bit implementation for MSC and GCC
+// 128-bit implementation for MSC and GCC from Poly1305-donna
 
 #if defined(_MSC_VER)
   #include <intrin.h>
