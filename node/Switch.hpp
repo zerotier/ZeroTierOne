@@ -69,12 +69,12 @@ public:
 	/**
 	 * Called when a packet is received from the real network
 	 *
-	 * @param localInterfaceId Local interface ID or -1 for unspecified
+	 * @param localAddr Local interface address
 	 * @param fromAddr Internet IP address of origin
 	 * @param data Packet data
 	 * @param len Packet length
 	 */
-	void onRemotePacket(int localInterfaceId,const InetAddress &fromAddr,const void *data,unsigned int len);
+	void onRemotePacket(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
 
 	/**
 	 * Called when a packet comes from a local Ethernet tap
@@ -131,10 +131,10 @@ public:
 	 * Attempt NAT traversal to peer at a given physical address
 	 *
 	 * @param peer Peer to contact
-	 * @param localInterfaceId Local interface ID or -1 if unspecified
+	 * @param localAddr Local interface address
 	 * @param atAddr Address of peer
 	 */
-	void rendezvous(const SharedPtr<Peer> &peer,int localInterfaceId,const InetAddress &atAddr);
+	void rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr,const InetAddress &atAddr);
 
 	/**
 	 * Request WHOIS on a given address
@@ -171,8 +171,8 @@ public:
 	unsigned long doTimerTasks(uint64_t now);
 
 private:
-	void _handleRemotePacketFragment(int localInterfaceId,const InetAddress &fromAddr,const void *data,unsigned int len);
-	void _handleRemotePacketHead(int localInterfaceId,const InetAddress &fromAddr,const void *data,unsigned int len);
+	void _handleRemotePacketFragment(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
+	void _handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
 
@@ -252,17 +252,17 @@ private:
 	struct ContactQueueEntry
 	{
 		ContactQueueEntry() {}
-		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,int liid,const InetAddress &a) :
+		ContactQueueEntry(const SharedPtr<Peer> &p,uint64_t ft,const InetAddress &laddr,const InetAddress &a) :
 			peer(p),
 			fireAtTime(ft),
 			inaddr(a),
-			localInterfaceId(liid),
+			localAddr(laddr),
 			strategyIteration(0) {}
 
 		SharedPtr<Peer> peer;
 		uint64_t fireAtTime;
 		InetAddress inaddr;
-		int localInterfaceId;
+		InetAddress localAddr;
 		unsigned int strategyIteration;
 	};
 	std::list<ContactQueueEntry> _contactQueue;

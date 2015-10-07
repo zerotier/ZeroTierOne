@@ -57,13 +57,13 @@ public:
 	 * Nearly all paths will be normal trust. The other levels are for high
 	 * performance local SDN use only.
 	 *
-	 * These values MUST match ZT1_LocalInterfaceAddressTrust in ZeroTierOne.h
+	 * These values MUST match ZT_LocalInterfaceAddressTrust in ZeroTierOne.h
 	 */
-	enum Trust
+	enum Trust // NOTE: max 255
 	{
 		TRUST_NORMAL = 0,
-		TRUST_PRIVACY = 1,
-		TRUST_ULTIMATE = 2
+		TRUST_PRIVACY = 10,
+		TRUST_ULTIMATE = 20
 	};
 
 	Path() :
@@ -114,21 +114,13 @@ public:
 	 */
 	inline bool reliable() const throw()
 	{
-		return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
+		return ( (_addr.ss_family == AF_INET6) || ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE)) );
 	}
 
 	/**
 	 * @return True if address is non-NULL
 	 */
 	inline operator bool() const throw() { return (_addr); }
-
-	// Comparisons are by address only
-	inline bool operator==(const Path &p) const throw() { return (_addr == p._addr); }
-	inline bool operator!=(const Path &p) const throw() { return (_addr != p._addr); }
-	inline bool operator<(const Path &p) const throw() { return (_addr < p._addr); }
-	inline bool operator>(const Path &p) const throw() { return (_addr > p._addr); }
-	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
-	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
 
 	/**
 	 * Check whether this address is valid for a ZeroTier path
@@ -163,7 +155,7 @@ public:
 		return false;
 	}
 
-private:
+protected:
 	InetAddress _addr;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	Trust _trust;

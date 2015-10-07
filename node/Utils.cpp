@@ -261,25 +261,6 @@ std::vector<std::string> Utils::split(const char *s,const char *const sep,const 
 	return fields;
 }
 
-std::string Utils::trim(const std::string &s)
-{
-	unsigned long end = (unsigned long)s.length();
-	while (end) {
-		char c = s[end - 1];
-		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-			--end;
-		else break;
-	}
-	unsigned long start = 0;
-	while (start < end) {
-		char c = s[start];
-		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-			++start;
-		else break;
-	}
-	return s.substr(start,end - start);
-}
-
 unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)
 	throw(std::length_error)
 {

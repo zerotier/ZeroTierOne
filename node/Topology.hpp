@@ -164,7 +164,7 @@ public:
 	inline void eachPeer(F f)
 	{
 		Mutex::Lock _l(_lock);
-		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_activePeers);
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p))
@@ -177,7 +177,7 @@ public:
 	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
 	{
 		Mutex::Lock _l(_lock);
-		return _activePeers.entries();
+		return _peers.entries();
 	}
 
 	/**
@@ -194,7 +194,7 @@ private:
 
 	const RuntimeEnvironment *RR;
 
-	Hashtable< Address,SharedPtr<Peer> > _activePeers;
+	Hashtable< Address,SharedPtr<Peer> > _peers;
 	std::map< Identity,std::vector<InetAddress> > _roots;
 	std::vector< Address > _rootAddresses;
 	std::vector< SharedPtr<Peer> > _rootPeers;

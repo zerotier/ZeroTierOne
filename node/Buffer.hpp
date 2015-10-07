@@ -392,6 +392,23 @@ public:
 	}
 
 	/**
+	 * Erase something from the middle of the buffer
+	 *
+	 * @param start Starting position
+	 * @param length Length of block to erase
+	 * @throw std::out_of_range Position plus length is beyond size of buffer
+	 */
+	inline void erase(const unsigned int at,const unsigned int length)
+		throw(std::out_of_range)
+	{
+		const unsigned int endr = at + length;
+		if (endr > _l)
+			throw std::out_of_range("Buffer: erase() range beyond end of buffer");
+		::memmove(_b + at,_b + endr,_l - endr);
+		_l -= length;
+	}
+
+	/**
 	 * Set buffer data length to zero
 	 */
 	inline void clear()

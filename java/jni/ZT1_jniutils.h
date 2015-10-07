@@ -1,5 +1,5 @@
-#ifndef ZT1_jniutils_h_
-#define ZT1_jniutils_h_
+#ifndef ZT_jniutils_h_
+#define ZT_jniutils_h_
 #include <stdio.h>
 #include <jni.h>
 #include <ZeroTierOne.h>
@@ -23,22 +23,22 @@ extern "C" {
 #define LOGE(...) fprintf(stdout, __VA_ARGS__)
 #endif
 
-jobject createResultObject(JNIEnv *env, ZT1_ResultCode code);
-jobject createVirtualNetworkStatus(JNIEnv *env, ZT1_VirtualNetworkStatus status);
-jobject createVirtualNetworkType(JNIEnv *env, ZT1_VirtualNetworkType type);
-jobject createEvent(JNIEnv *env, ZT1_Event event);
-jobject createPeerRole(JNIEnv *env, ZT1_PeerRole role);
-jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT1_VirtualNetworkConfigOperation op);
+jobject createResultObject(JNIEnv *env, ZT_ResultCode code);
+jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status);
+jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type);
+jobject createEvent(JNIEnv *env, ZT_Event event);
+jobject createPeerRole(JNIEnv *env, ZT_PeerRole role);
+jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfigOperation op);
 
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr);
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
 
-jobject newMulticastGroup(JNIEnv *env, const ZT1_MulticastGroup &mc);
+jobject newMulticastGroup(JNIEnv *env, const ZT_MulticastGroup &mc);
 
-jobject newPeer(JNIEnv *env, const ZT1_Peer &peer);
-jobject newPeerPhysicalPath(JNIEnv *env, const ZT1_PeerPhysicalPath &ppp);
+jobject newPeer(JNIEnv *env, const ZT_Peer &peer);
+jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp);
 
-jobject newNetworkConfig(JNIEnv *env, const ZT1_VirtualNetworkConfig &config);
+jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &config);
 
 jobject newVersion(JNIEnv *env, int major, int minor, int rev, long featureFlags);
 

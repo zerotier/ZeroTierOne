@@ -58,7 +58,7 @@ namespace ZeroTier {
 /**
  * Implementation of Node object as defined in CAPI
  *
- * The pointer returned by ZT1_Node_new() is an instance of this class.
+ * The pointer returned by ZT_Node_new() is an instance of this class.
  */
 class Node
 {
@@ -66,26 +66,26 @@ public:
 	Node(
 		uint64_t now,
 		void *uptr,
-		ZT1_DataStoreGetFunction dataStoreGetFunction,
-		ZT1_DataStorePutFunction dataStorePutFunction,
-		ZT1_WirePacketSendFunction wirePacketSendFunction,
-		ZT1_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
-		ZT1_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-		ZT1_EventCallback eventCallback,
+		ZT_DataStoreGetFunction dataStoreGetFunction,
+		ZT_DataStorePutFunction dataStorePutFunction,
+		ZT_WirePacketSendFunction wirePacketSendFunction,
+		ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
+		ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
+		ZT_EventCallback eventCallback,
 		const char *overrideRootTopology);
 
 	~Node();
 
 	// Public API Functions ----------------------------------------------------
 
-	ZT1_ResultCode processWirePacket(
+	ZT_ResultCode processWirePacket(
 		uint64_t now,
-		int localInterfaceId,
+		const struct sockaddr_storage *localAddress,
 		const struct sockaddr_storage *remoteAddress,
 		const void *packetData,
 		unsigned int packetLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT1_ResultCode processVirtualNetworkFrame(
+	ZT_ResultCode processVirtualNetworkFrame(
 		uint64_t now,
 		uint64_t nwid,
 		uint64_t sourceMac,
@@ -95,20 +95,22 @@ public:
 		const void *frameData,
 		unsigned int frameLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT1_ResultCode processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT1_ResultCode join(uint64_t nwid);
-	ZT1_ResultCode leave(uint64_t nwid);
-	ZT1_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
-	ZT1_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT_ResultCode processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
+	ZT_ResultCode join(uint64_t nwid);
+	ZT_ResultCode leave(uint64_t nwid);
+	ZT_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
+	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	uint64_t address() const;
-	void status(ZT1_NodeStatus *status) const;
-	ZT1_PeerList *peers() const;
-	ZT1_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
-	ZT1_VirtualNetworkList *networks() const;
+	void status(ZT_NodeStatus *status) const;
+	ZT_PeerList *peers() const;
+	ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
+	ZT_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
-	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT1_LocalInterfaceAddressTrust trust);
+	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust);
 	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
+	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
+	void circuitTestEnd(ZT_CircuitTest *test);
 
 	// Internal functions ------------------------------------------------------
 
@@ -120,18 +122,18 @@ public:
 	/**
 	 * Enqueue a ZeroTier message to be sent
 	 *
-	 * @param localInterfaceId Local interface ID, -1 for unspecified/random
+	 * @param localAddress Local address
 	 * @param addr Destination address
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(int localInterfaceId,const InetAddress &addr,const void *data,unsigned int len)
+	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len)
 	{
 		return (_wirePacketSendFunction(
-			reinterpret_cast<ZT1_Node *>(this),
+			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
-			localInterfaceId,
+			reinterpret_cast<const struct sockaddr_storage *>(&localAddress),
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			data,
 			len) == 0);
@@ -151,7 +153,7 @@ public:
 	inline void putFrame(uint64_t nwid,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_virtualNetworkFrameFunction(
-			reinterpret_cast<ZT1_Node *>(this),
+			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
 			nwid,
 			source.toInt(),
@@ -166,6 +168,16 @@ public:
 	{
 		Mutex::Lock _l(_networks_m);
 		return _network(nwid);
+	}
+
+	inline bool belongsToNetwork(uint64_t nwid) const
+	{
+		Mutex::Lock _l(_networks_m);
+		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
+			if (i->first == nwid)
+				return true;
+		}
+		return false;
 	}
 
 	inline std::vector< SharedPtr<Network> > allNetworks() const
@@ -187,9 +199,9 @@ public:
 		return _directPaths;
 	}
 
-	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
+	inline bool dataStorePut(const char *name,const void *data,unsigned int len,bool secure) { return (_dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,data,len,(int)secure) == 0); }
 	inline bool dataStorePut(const char *name,const std::string &data,bool secure) { return dataStorePut(name,(const void *)data.data(),(unsigned int)data.length(),secure); }
-	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,name,(const void *)0,0,0); }
+	inline void dataStoreDelete(const char *name) { _dataStorePutFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,name,(const void *)0,0,0); }
 	std::string dataStoreGet(const char *name);
 
 	/**
@@ -198,7 +210,7 @@ public:
 	 * @param ev Event type
 	 * @param md Meta-data (default: NULL/none)
 	 */
-	inline void postEvent(ZT1_Event ev,const void *md = (const void *)0) { _eventCallback(reinterpret_cast<ZT1_Node *>(this),_uPtr,ev,md); }
+	inline void postEvent(ZT_Event ev,const void *md = (const void *)0) { _eventCallback(reinterpret_cast<ZT_Node *>(this),_uPtr,ev,md); }
 
 	/**
 	 * Update virtual network port configuration
@@ -207,7 +219,7 @@ public:
 	 * @param op Configuration operation
 	 * @param nc Network configuration
 	 */
-	inline int configureVirtualNetworkPort(uint64_t nwid,ZT1_VirtualNetworkConfigOperation op,const ZT1_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT1_Node *>(this),_uPtr,nwid,op,nc); }
+	inline int configureVirtualNetworkPort(uint64_t nwid,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,op,nc); }
 
 	/**
 	 * @return True if we appear to be online
@@ -228,6 +240,13 @@ public:
 	 */
 	uint64_t prng();
 
+	/**
+	 * Post a circuit test report to any listeners for a given test ID
+	 *
+	 * @param report Report (includes test ID)
+	 */
+	void postCircuitTestReport(const ZT_CircuitTestReport *report);
+
 private:
 	inline SharedPtr<Network> _network(uint64_t nwid) const
 	{
@@ -244,15 +263,18 @@ private:
 
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P
 
-	ZT1_DataStoreGetFunction _dataStoreGetFunction;
-	ZT1_DataStorePutFunction _dataStorePutFunction;
-	ZT1_WirePacketSendFunction _wirePacketSendFunction;
-	ZT1_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
-	ZT1_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
-	ZT1_EventCallback _eventCallback;
+	ZT_DataStoreGetFunction _dataStoreGetFunction;
+	ZT_DataStorePutFunction _dataStorePutFunction;
+	ZT_WirePacketSendFunction _wirePacketSendFunction;
+	ZT_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
+	ZT_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
+	ZT_EventCallback _eventCallback;
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
 	Mutex _networks_m;
+
+	std::vector< ZT_CircuitTest * > _circuitTests;
+	Mutex _circuitTests_m;
 
 	std::vector<Path> _directPaths;
 	Mutex _directPaths_m;

@@ -237,12 +237,25 @@ void Multicaster::send(
 			if (sn) {
 				TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
 
+				const CertificateOfMembership *com = (CertificateOfMembership *)0;
+				SharedPtr<NetworkConfig> nconf;
+				if (sn->needsOurNetworkMembershipCertificate(nwid,now,true)) {
+					SharedPtr<Network> nw(RR->node->network(nwid));
+					if (nw) {
+						nconf = nw->config2();
+						if (nconf)
+							com = &(nconf->com());
+					}
+				}
+
 				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 				outp.append(nwid);
-				outp.append((uint8_t)0);
+				outp.append((uint8_t)(com ? 0x01 : 0x00));
 				mg.mac().appendTo(outp);
 				outp.append((uint32_t)mg.adi());
 				outp.append((uint32_t)gatherLimit);
+				if (com)
+					com->serialize(outp);
 				outp.armor(sn->key(),true);
 				sn->send(RR,outp.data(),outp.size(),now);
 			}

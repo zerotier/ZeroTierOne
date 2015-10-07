@@ -72,16 +72,16 @@ public:
 	 *
 	 * @param data Packet data
 	 * @param len Packet length
-	 * @param localInterfaceId Local interface ID
+	 * @param localAddress Local interface address
 	 * @param remoteAddress Address from which packet came
 	 * @param now Current time
 	 * @throws std::out_of_range Range error processing packet
 	 */
-	IncomingPacket(const void *data,unsigned int len,int localInterfaceId,const InetAddress &remoteAddress,uint64_t now) :
+	IncomingPacket(const void *data,unsigned int len,const InetAddress &localAddress,const InetAddress &remoteAddress,uint64_t now) :
  		Packet(data,len),
  		_receiveTime(now),
+ 		_localAddress(localAddress),
  		_remoteAddress(remoteAddress),
- 		_localInterfaceId(localInterfaceId),
  		__refCount()
 	{
 	}
@@ -124,13 +124,15 @@ private:
 	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
+	bool _doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
+	bool _doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 
-	// Send an ERROR_NEED_MEMBERSHIP_CERTIFICATE to a peer indicating that an updated cert is needed to join
+	// Send an ERROR_NEED_MEMBERSHIP_CERTIFICATE to a peer indicating that an updated cert is needed to communicate
 	void _sendErrorNeedCertificate(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer,uint64_t nwid);
 
 	uint64_t _receiveTime;
+	InetAddress _localAddress;
 	InetAddress _remoteAddress;
-	int _localInterfaceId;
 	AtomicCounter __refCount;
 };
 

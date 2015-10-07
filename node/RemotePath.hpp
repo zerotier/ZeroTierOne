@@ -39,6 +39,8 @@
 #include "AntiRecursion.hpp"
 #include "RuntimeEnvironment.hpp"
 
+#define ZT_REMOTEPATH_FLAG_FIXED 0x0001
+
 namespace ZeroTier {
 
 /**
@@ -53,17 +55,17 @@ public:
 		Path(),
 		_lastSend(0),
 		_lastReceived(0),
-		_localInterfaceId(-1),
-		_fixed(false) {}
+		_localAddress(),
+		_flags(0) {}
 
-	RemotePath(int localInterfaceId,const InetAddress &addr,bool fixed) :
+	RemotePath(const InetAddress &localAddress,const InetAddress &addr,bool fixed) :
 		Path(addr,0,TRUST_NORMAL),
 		_lastSend(0),
 		_lastReceived(0),
-		_localInterfaceId(localInterfaceId),
-		_fixed(fixed) {}
+		_localAddress(localAddress),
+		_flags(fixed ? ZT_REMOTEPATH_FLAG_FIXED : 0) {}
 
-	inline int localInterfaceId() const throw() { return _localInterfaceId; }
+	inline const InetAddress &localAddress() const throw() { return _localAddress; }
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
@@ -71,7 +73,7 @@ public:
 	/**
 	 * @return Is this a fixed path?
 	 */
-	inline bool fixed() const throw() { return _fixed; }
+	inline bool fixed() const throw() { return ((_flags & ZT_REMOTEPATH_FLAG_FIXED) != 0); }
 
 	/**
 	 * @param f New value of fixed flag
@@ -79,7 +81,9 @@ public:
 	inline void setFixed(const bool f)
 		throw()
 	{
-		_fixed = f;
+		if (f)
+			_flags |= ZT_REMOTEPATH_FLAG_FIXED;
+		else _flags &= ~ZT_REMOTEPATH_FLAG_FIXED;
 	}
 
 	/**
@@ -113,7 +117,7 @@ public:
 	inline bool active(uint64_t now) const
 		throw()
 	{
-		return ( (_fixed) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
+		return ( ((_flags & ZT_REMOTEPATH_FLAG_FIXED) != 0) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
 	}
 
 	/**
@@ -127,7 +131,7 @@ public:
 	 */
 	inline bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		if (RR->node->putPacket(_localInterfaceId,address(),data,len)) {
+		if (RR->node->putPacket(_localAddress,address(),data,len)) {
 			sent(now);
 			RR->antiRec->logOutgoingZT(data,len);
 			return true;
@@ -135,11 +139,39 @@ public:
 		return false;
 	}
 
-private:
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		b.append((uint8_t)1); // version
+		_addr.serialize(b);
+		b.append((uint8_t)_trust);
+		b.append((uint64_t)_lastSend);
+		b.append((uint64_t)_lastReceived);
+		_localAddress.serialize(b);
+		b.append((uint16_t)_flags);
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+		if (b[p++] != 1)
+			throw std::invalid_argument("invalid serialized RemotePath");
+		p += _addr.deserialize(b,p);
+		_ipScope = _addr.ipScope();
+		_trust = (Path::Trust)b[p++];
+		_lastSend = b.template at<uint64_t>(p); p += 8;
+		_lastReceived = b.template at<uint64_t>(p); p += 8;
+		p += _localAddress.deserialize(b,p);
+		_flags = b.template at<uint16_t>(p); p += 2;
+		return (p - startAt);
+	}
+
+protected:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
-	int _localInterfaceId;
-	bool _fixed;
+	InetAddress _localAddress;
+	uint16_t _flags;
 };
 
 } // namespace ZeroTier

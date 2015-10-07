@@ -78,11 +78,8 @@ Switch::~Switch()
 {
 }
 
-void Switch::onRemotePacket(int localInterfaceId,const InetAddress &fromAddr,const void *data,unsigned int len)
+void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
-	if (localInterfaceId < 0)
-		localInterfaceId = 0;
-
 	try {
 		if (len == 13) {
 			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
@@ -99,14 +96,14 @@ void Switch::onRemotePacket(int localInterfaceId,const InetAddress &fromAddr,con
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
 					outp.armor(peer->key(),false);
-					RR->node->putPacket(localInterfaceId,fromAddr,outp.data(),outp.size());
+					RR->node->putPacket(localAddr,fromAddr,outp.data(),outp.size());
 				}
 			}
 		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (((const unsigned char *)data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
-				_handleRemotePacketFragment(localInterfaceId,fromAddr,data,len);
+				_handleRemotePacketFragment(localAddr,fromAddr,data,len);
 			} else if (len >= ZT_PROTO_MIN_PACKET_LENGTH) {
-				_handleRemotePacketHead(localInterfaceId,fromAddr,data,len);
+				_handleRemotePacketHead(localAddr,fromAddr,data,len);
 			}
 		}
 	} catch (std::exception &ex) {
@@ -205,7 +202,8 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		// Destination is another ZeroTier peer on the same network
 
 		Address toZT(to.toAddress(network->id())); // since in-network MACs are derived from addresses and network IDs, we can reverse this
-		const bool includeCom = network->peerNeedsOurMembershipCertificate(toZT,RR->node->now());
+		SharedPtr<Peer> toPeer(RR->topology->getPeer(toZT));
+		const bool includeCom = ((!toPeer)||(toPeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true)));;
 		if ((fromBridged)||(includeCom)) {
 			Packet outp(toZT,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
@@ -270,9 +268,10 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		}
 
 		for(unsigned int b=0;b<numBridges;++b) {
+			SharedPtr<Peer> bridgePeer(RR->topology->getPeer(bridges[b]));
 			Packet outp(bridges[b],RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(network->id());
-			if (network->peerNeedsOurMembershipCertificate(bridges[b],RR->node->now())) {
+			if ((!bridgePeer)||(bridgePeer->needsOurNetworkMembershipCertificate(network->id(),RR->node->now(),true))) {
 				outp.append((unsigned char)0x01); // 0x01 -- COM included
 				nconf->com().serialize(outp);
 			} else {
@@ -379,14 +378,14 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 	return true;
 }
 
-void Switch::rendezvous(const SharedPtr<Peer> &peer,int localInterfaceId,const InetAddress &atAddr)
+void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr,const InetAddress &atAddr)
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
-	peer->attemptToContactAt(RR,localInterfaceId,atAddr,now);
+	peer->attemptToContactAt(RR,localAddr,atAddr,now);
 	{
 		Mutex::Lock _l(_contactQueue_m);
-		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,localInterfaceId,atAddr));
+		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,localAddr,atAddr));
 	}
 }
 
@@ -456,14 +455,14 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 				} else {
 					if (qi->strategyIteration == 0) {
 						// First strategy: send packet directly to destination
-						qi->peer->attemptToContactAt(RR,qi->localInterfaceId,qi->inaddr,now);
+						qi->peer->attemptToContactAt(RR,qi->localAddr,qi->inaddr,now);
 					} else if (qi->strategyIteration <= 4) {
 						// Strategies 1-4: try escalating ports for symmetric NATs that remap sequentially
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
 						if (p < 0xffff) {
 							tmpaddr.setPort((unsigned int)p);
-							qi->peer->attemptToContactAt(RR,qi->localInterfaceId,tmpaddr,now);
+							qi->peer->attemptToContactAt(RR,qi->localAddr,tmpaddr,now);
 						} else qi->strategyIteration = 5;
 					} else {
 						// All strategies tried, expire entry
@@ -554,7 +553,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 	return nextDelay;
 }
 
-void Switch::_handleRemotePacketFragment(int localInterfaceId,const InetAddress &fromAddr,const void *data,unsigned int len)
+void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
 	Packet::Fragment fragment(data,len);
 	Address destination(fragment.destination());
@@ -625,9 +624,9 @@ void Switch::_handleRemotePacketFragment(int localInterfaceId,const InetAddress 
 	}
 }
 
-void Switch::_handleRemotePacketHead(int localInterfaceId,const InetAddress &fromAddr,const void *data,unsigned int len)
+void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,localInterfaceId,fromAddr,RR->node->now()));
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,localAddr,fromAddr,RR->node->now()));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -750,7 +749,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				return false; // no paths, no root servers?
 		}
 
-		if ((network)&&(relay)&&(network->isAllowed(peer->address()))) {
+		if ((network)&&(relay)&&(network->isAllowed(peer))) {
 			// Push hints for direct connectivity to this peer if we are relaying
 			peer->pushDirectPaths(RR,viaPath,now,false);
 		}

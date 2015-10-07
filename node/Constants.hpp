@@ -161,7 +161,7 @@
 /**
  * Default MTU used for Ethernet tap device
  */
-#define ZT_IF_MTU ZT1_MAX_MTU
+#define ZT_IF_MTU ZT_MAX_MTU
 
 /**
  * Maximum number of packet fragments we'll support
@@ -323,6 +323,13 @@
  * Interval between direct path pushes in milliseconds
  */
 #define ZT_DIRECT_PATH_PUSH_INTERVAL 300000
+
+/**
+ * How long (max) to remember network certificates of membership?
+ *
+ * This only applies to networks we don't belong to.
+ */
+#define ZT_PEER_NETWORK_COM_EXPIRATION 3600000
 
 /**
  * Sanity limit on maximum bridge routes

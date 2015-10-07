@@ -38,6 +38,7 @@
 #include "../include/ZeroTierOne.h"
 #include "Utils.hpp"
 #include "MAC.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -361,6 +362,51 @@ struct InetAddress : public sockaddr_storage
 	 * @return True if address family is non-zero
 	 */
 	inline operator bool() const throw() { return (ss_family != 0); }
+
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		// Format is the same as in VERB_HELLO in Packet.hpp
+		switch(ss_family) {
+			case AF_INET:
+				b.append((uint8_t)0x04);
+				b.append(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr),4);
+				b.append((uint16_t)port()); // just in case sin_port != uint16_t
+				return;
+			case AF_INET6:
+				b.append((uint8_t)0x06);
+				b.append(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
+				b.append((uint16_t)port()); // just in case sin_port != uint16_t
+				return;
+			default:
+				b.append((uint8_t)0);
+				return;
+		}
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+		memset(this,0,sizeof(InetAddress));
+		switch(b[p++]) {
+			case 0:
+				return 1;
+			case 0x04:
+				ss_family = AF_INET;
+				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;
+				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
+				break;
+			case 0x06:
+				ss_family = AF_INET6;
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16); p += 16;
+				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
+				break;
+			default:
+				throw std::invalid_argument("invalid serialized InetAddress");
+		}
+		return (p - startAt);
+	}
 
 	bool operator==(const InetAddress &a) const throw();
 	bool operator<(const InetAddress &a) const throw();

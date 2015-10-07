@@ -32,6 +32,68 @@
 
 namespace ZeroTier {
 
+Dictionary::iterator Dictionary::find(const std::string &key)
+{
+	for(iterator i(begin());i!=end();++i) {
+		if (i->first == key)
+			return i;
+	}
+	return end();
+}
+Dictionary::const_iterator Dictionary::find(const std::string &key) const
+{
+	for(const_iterator i(begin());i!=end();++i) {
+		if (i->first == key)
+			return i;
+	}
+	return end();
+}
+
+bool Dictionary::getBoolean(const std::string &key,bool dfl) const
+{
+	const_iterator e(find(key));
+	if (e == end())
+		return dfl;
+	if (e->second.length() < 1)
+		return dfl;
+	switch(e->second[0]) {
+		case '1':
+		case 't':
+		case 'T':
+		case 'y':
+		case 'Y':
+			return true;
+	}
+	return false;
+}
+
+std::string &Dictionary::operator[](const std::string &key)
+{
+	for(iterator i(begin());i!=end();++i) {
+		if (i->first == key)
+			return i->second;
+	}
+	push_back(std::pair<std::string,std::string>(key,std::string()));
+	std::sort(begin(),end());
+	for(iterator i(begin());i!=end();++i) {
+		if (i->first == key)
+			return i->second;
+	}
+	return front().second; // should be unreachable!
+}
+
+std::string Dictionary::toString() const
+{
+	std::string s;
+	for(const_iterator kv(begin());kv!=end();++kv) {
+		_appendEsc(kv->first.data(),(unsigned int)kv->first.length(),s);
+		s.push_back('=');
+		_appendEsc(kv->second.data(),(unsigned int)kv->second.length(),s);
+		s.append(ZT_EOL_S);
+	}
+	return s;
+}
+
 void Dictionary::updateFromString(const char *s,unsigned int maxlen)
 {
 	bool escapeState = false;
@@ -78,6 +140,16 @@ void Dictionary::fromString(const char *s,unsigned int maxlen)
 {
 	clear();
 	updateFromString(s,maxlen);
+}
+
+void Dictionary::eraseKey(const std::string &key)
+{
+	for(iterator i(begin());i!=end();++i) {
+		if (i->first == key) {
+			this->erase(i);
+			return;
+		}
+	}
 }
 
 bool Dictionary::sign(const Identity &id,uint64_t now)

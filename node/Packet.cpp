@@ -31,6 +31,8 @@ namespace ZeroTier {
 
 const unsigned char Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
+#ifdef ZT_TRACE
+
 const char *Packet::verbString(Verb v)
 	throw()
 {
@@ -52,6 +54,8 @@ const char *Packet::verbString(Verb v)
 		case VERB_MULTICAST_FRAME: return "MULTICAST_FRAME";
 		case VERB_SET_EPHEMERAL_KEY: return "SET_EPHEMERAL_KEY";
 		case VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
+		case VERB_CIRCUIT_TEST: return "CIRCUIT_TEST";
+		case VERB_CIRCUIT_TEST_REPORT: return "CIRCUIT_TEST_REPORT";
 	}
 	return "(unknown)";
 }
@@ -72,6 +76,8 @@ const char *Packet::errorString(ErrorCode e)
 	}
 	return "(unknown)";
 }
+
+#endif // ZT_TRACE
 
 void Packet::armor(const void *key,bool encryptPayload)
 {

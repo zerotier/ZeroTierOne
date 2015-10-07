@@ -31,6 +31,7 @@
 #include "Defaults.hpp"
 #include "Dictionary.hpp"
 #include "Node.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
 
@@ -38,10 +39,68 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
 	_amRoot(false)
 {
+	std::string alls(RR->node->dataStoreGet("peers.save"));
+	const uint8_t *all = reinterpret_cast<const uint8_t *>(alls.data());
+	RR->node->dataStoreDelete("peers.save");
+
+	unsigned int ptr = 0;
+	while ((ptr + 4) < alls.size()) {
+		// Each Peer serializes itself prefixed by a record length (not including the size of the length itself)
+		unsigned int reclen = (unsigned int)all[ptr] & 0xff;
+		reclen <<= 8;
+		reclen |= (unsigned int)all[ptr + 1] & 0xff;
+		reclen <<= 8;
+		reclen |= (unsigned int)all[ptr + 2] & 0xff;
+		reclen <<= 8;
+		reclen |= (unsigned int)all[ptr + 3] & 0xff;
+
+		if (((ptr + reclen) > alls.size())||(reclen > ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE))
+			break;
+
+		try {
+			unsigned int pos = 0;
+			SharedPtr<Peer> p(Peer::deserializeNew(RR->identity,Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE>(all + ptr,reclen),pos));
+			if (pos != reclen)
+				break;
+			ptr += pos;
+			if ((p)&&(p->address() != RR->identity.address())) {
+				_peers[p->address()] = p;
+			} else {
+				break; // stop if invalid records
+			}
+		} catch (std::exception &exc) {
+			break;
+		} catch ( ... ) {
+			break; // stop if invalid records
+		}
+	}
+
+	clean(RR->node->now());
 }
 
 Topology::~Topology()
 {
+	Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE> pbuf;
+	std::string all;
+
+	Address *a = (Address *)0;
+	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+	while (i.next(a,p)) {
+		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end()) {
+			pbuf.clear();
+			try {
+				(*p)->serialize(pbuf);
+				try {
+					all.append((const char *)pbuf.data(),pbuf.size());
+				} catch ( ... ) {
+					return; // out of memory? just skip
+				}
+			} catch ( ... ) {} // peer too big? shouldn't happen, but it so skip
+		}
+	}
+
+	RR->node->dataStorePut("peers.save",all,true);
 }
 
 void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn)
@@ -58,11 +117,11 @@ void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> 
 
 	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
 		if (i->first != RR->identity) { // do not add self as a peer
-			SharedPtr<Peer> &p = _activePeers[i->first.address()];
+			SharedPtr<Peer> &p = _peers[i->first.address()];
 			if (!p)
 				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
 			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(RemotePath(0,*j,true));
+				p->addPath(RemotePath(InetAddress(),*j,true),now);
 			p->use(now);
 			_rootPeers.push_back(p);
 		}
@@ -81,7 +140,7 @@ void Topology::setRootServers(const Dictionary &sn)
 		if ((d->first.length() == ZT_ADDRESS_LENGTH_HEX)&&(d->second.length() > 0)) {
 			try {
 				Dictionary snspec(d->second);
-				std::vector<InetAddress> &a = m[Identity(snspec.get("id"))];
+				std::vector<InetAddress> &a = m[Identity(snspec.get("id",""))];
 				std::string udp(snspec.get("udp",std::string()));
 				if (udp.length() > 0)
 					a.push_back(InetAddress(udp));
@@ -103,7 +162,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
-	SharedPtr<Peer> &p = _activePeers.set(peer->address(),peer);
+	SharedPtr<Peer> &p = _peers.set(peer->address(),peer);
 	p->use(now);
 	_saveIdentity(p->identity());
 
@@ -120,7 +179,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
-	SharedPtr<Peer> &ap = _activePeers[zta];
+	SharedPtr<Peer> &ap = _peers[zta];
 
 	if (ap) {
 		ap->use(now);
@@ -136,7 +195,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		} catch ( ... ) {} // invalid identity?
 	}
 
-	_activePeers.erase(zta);
+	_peers.erase(zta);
 
 	return SharedPtr<Peer>();
 }
@@ -160,7 +219,7 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 					if (++sna == _rootAddresses.end())
 						sna = _rootAddresses.begin(); // wrap around at end
 					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
-						SharedPtr<Peer> *p = _activePeers.get(*sna);
+						SharedPtr<Peer> *p = _peers.get(*sna);
 						if ((p)&&((*p)->hasActiveDirectPath(now))) {
 							bestRoot = *p;
 							break;
@@ -249,12 +308,15 @@ bool Topology::isRoot(const Identity &id) const
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_activePeers);
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 	Address *a = (Address *)0;
 	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	while (i.next(a,p))
+	while (i.next(a,p)) {
 		if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())) {
-			_activePeers.erase(*a);
+			_peers.erase(*a);
+		} else {
+			(*p)->clean(RR,now);
+		}
 	}
 }
 

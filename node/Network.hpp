@@ -55,7 +55,8 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
+class Peer;
+class _AnnounceMulticastGroupsToAll; // internal function object in Network.cpp
 
 /**
  * A virtual LAN
@@ -63,7 +64,7 @@ class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
-	friend class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths;
+	friend class _AnnounceMulticastGroupsToAll;
 
 public:
 	/**
@@ -92,7 +93,13 @@ public:
 	/**
 	 * @return Address of network's controller (most significant 40 bits of ID)
 	 */
-	inline Address controller() throw() { return Address(_id >> 24); }
+	inline Address controller() const throw() { return Address(_id >> 24); }
+
+	/**
+	 * @param nwid Network ID
+	 * @return Address of network's controller
+	 */
+	static inline Address controllerFor(uint64_t nwid) throw() { return Address(nwid >> 24); }
 
 	/**
 	 * @return Multicast group memberships for this network's port (local, not learned via bridging)
@@ -132,6 +139,14 @@ public:
 	 * @param mg Multicast group
 	 */
 	void multicastUnsubscribe(const MulticastGroup &mg);
+
+	/**
+	 * Announce multicast groups to a peer if that peer is authorized on this network
+	 *
+	 * @param peer Peer to try to announce multicast groups to
+	 * @return True if peer was authorized and groups were announced
+	 */
+	bool tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer);
 
 	/**
 	 * Apply a NetworkConfig to this network
@@ -177,33 +192,10 @@ public:
 	void requestConfiguration();
 
 	/**
-	 * Add or update a membership certificate
-	 *
-	 * @param cert Certificate of membership
-	 * @return True if certificate was accepted as valid
-	 */
-	bool validateAndAddMembershipCertificate(const CertificateOfMembership &cert);
-
-	/**
-	 * Check if we should push membership certificate to a peer, AND update last pushed
-	 *
-	 * If we haven't pushed a cert to this peer in a long enough time, this returns
-	 * true and updates the last pushed time. Otherwise it returns false.
-	 *
-	 * This doesn't actually send anything, since COMs can hitch a ride with several
-	 * different kinds of packets.
-	 *
-	 * @param to Destination peer
-	 * @param now Current time
-	 * @return True if we should include a COM with whatever we're currently sending
-	 */
-	bool peerNeedsOurMembershipCertificate(const Address &to,uint64_t now);
-
-	/**
-	 * @param peer Peer address to check
+	 * @param peer Peer to check
 	 * @return True if peer is allowed to communicate on this network
 	 */
-	inline bool isAllowed(const Address &peer) const
+	inline bool isAllowed(const SharedPtr<Peer> &peer) const
 	{
 		Mutex::Lock _l(_lock);
 		return _isAllowed(peer);
@@ -222,7 +214,7 @@ public:
 	/**
 	 * @return Status of this network
 	 */
-	inline ZT1_VirtualNetworkStatus status() const
+	inline ZT_VirtualNetworkStatus status() const
 	{
 		Mutex::Lock _l(_lock);
 		return _status();
@@ -231,7 +223,7 @@ public:
 	/**
 	 * @param ec Buffer to fill with externally-visible network configuration
 	 */
-	inline void externalConfig(ZT1_VirtualNetworkConfig *ec) const
+	inline void externalConfig(ZT_VirtualNetworkConfig *ec) const
 	{
 		Mutex::Lock _l(_lock);
 		_externalConfig(ec);
@@ -347,16 +339,10 @@ public:
 	inline bool operator>=(const Network &n) const throw() { return (_id >= n._id); }
 
 private:
-	struct _RemoteMemberCertificateInfo
-	{
-		_RemoteMemberCertificateInfo() : com(),lastPushed(0) {}
-		CertificateOfMembership com; // remote member's COM
-		uint64_t lastPushed; // when did we last push ours to them?
-	};
-
-	ZT1_VirtualNetworkStatus _status() const;
-	void _externalConfig(ZT1_VirtualNetworkConfig *ec) const; // assumes _lock is locked
-	bool _isAllowed(const Address &peer) const;
+	ZT_VirtualNetworkStatus _status() const;
+	void _externalConfig(ZT_VirtualNetworkConfig *ec) const; // assumes _lock is locked
+	bool _isAllowed(const SharedPtr<Peer> &peer) const;
+	bool _tryAnnounceMulticastGroupsTo(const std::vector<Address> &rootAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const;
 	void _announceMulticastGroups();
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
@@ -369,8 +355,6 @@ private:
 	std::vector< MulticastGroup > _myMulticastGroups; // multicast groups that we belong to (according to tap)
 	Hashtable< MulticastGroup,uint64_t > _multicastGroupsBehindMe; // multicast groups that seem to be behind us and when we last saw them (if we are a bridge)
 	Hashtable< MAC,Address > _remoteBridgeRoutes; // remote addresses where given MACs are reachable (for tracking devices behind remote bridges)
-
-	Hashtable< Address,_RemoteMemberCertificateInfo > _certInfo;
 
 	SharedPtr<NetworkConfig> _config; // Most recent network configuration, which is an immutable value-object
 	volatile uint64_t _lastConfigUpdate;

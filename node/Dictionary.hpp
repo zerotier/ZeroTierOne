@@ -31,8 +31,9 @@
 #include <stdint.h>
 
 #include <string>
-#include <map>
+#include <vector>
 #include <stdexcept>
+#include <algorithm>
 
 #include "Constants.hpp"
 #include "Utils.hpp"
@@ -56,12 +57,12 @@ class Identity;
  *
  * Keys beginning with "~!" are reserved for signature data fields.
  *
- * Note: the signature code depends on std::map<> being sorted, but no
- * other code does. So if the underlying data structure is ever swapped
- * out for an unsorted one, the signature code will have to be updated
- * to sort before composing the string to sign.
+ * It's stored as a simple vector and can be linearly scanned or
+ * binary searched. Dictionaries are only used for very small things
+ * outside the core loop, so this is not a significant performance
+ * issue and it reduces memory use and code footprint.
  */
-class Dictionary : public std::map<std::string,std::string>
+class Dictionary : public std::vector< std::pair<std::string,std::string> >
 {
 public:
 	Dictionary() {}
@@ -77,21 +78,8 @@ public:
 	 */
 	Dictionary(const std::string &s) { fromString(s.c_str(),(unsigned int)s.length()); }
 
-	/**
-	 * Get a key, throwing an exception if it is not present
-	 *
-	 * @param key Key to look up
-	 * @return Reference to value
-	 * @throws std::invalid_argument Key not found
-	 */
-	inline const std::string &get(const std::string &key) const
-		throw(std::invalid_argument)
-	{
-		const_iterator e(find(key));
-		if (e == end())
-			throw std::invalid_argument(std::string("missing required field: ")+key);
-		return e->second;
-	}
+	iterator find(const std::string &key);
+	const_iterator find(const std::string &key) const;
 
 	/**
 	 * Get a key, returning a default if not present
@@ -113,23 +101,7 @@ public:
 	 * @param dfl Default boolean result if key not found or empty (default: false)
 	 * @return Boolean value of key
 	 */
-	inline bool getBoolean(const std::string &key,bool dfl = false) const
-	{
-		const_iterator e(find(key));
-		if (e == end())
-			return dfl;
-		if (e->second.length() < 1)
-			return dfl;
-		switch(e->second[0]) {
-			case '1':
-			case 't':
-			case 'T':
-			case 'y':
-			case 'Y':
-				return true;
-		}
-		return false;
-	}
+	bool getBoolean(const std::string &key,bool dfl = false) const;
 
 	/**
 	 * @param key Key to get
@@ -169,6 +141,8 @@ public:
 			return dfl;
 		return Utils::strTo64(e->second.c_str());
 	}
+
+	std::string &operator[](const std::string &key);
 
 	/**
 	 * @param key Key to set
@@ -239,17 +213,7 @@ public:
 	/**
 	 * @return String-serialized dictionary
 	 */
-	inline std::string toString() const
-	{
-		std::string s;
-		for(const_iterator kv(begin());kv!=end();++kv) {
-			_appendEsc(kv->first.data(),(unsigned int)kv->first.length(),s);
-			s.push_back('=');
-			_appendEsc(kv->second.data(),(unsigned int)kv->second.length(),s);
-			s.append(ZT_EOL_S);
-		}
-		return s;
-	}
+	std::string toString() const;
 
 	/**
 	 * Clear and initialize from a string
@@ -279,13 +243,18 @@ public:
 	uint64_t signatureTimestamp() const;
 
 	/**
+	 * @param key Key to erase
+	 */
+	void eraseKey(const std::string &key);
+
+	/**
 	 * Remove any signature from this dictionary
 	 */
 	inline void removeSignature()
 	{
-		erase(ZT_DICTIONARY_SIGNATURE);
-		erase(ZT_DICTIONARY_SIGNATURE_IDENTITY);
-		erase(ZT_DICTIONARY_SIGNATURE_TIMESTAMP);
+		eraseKey(ZT_DICTIONARY_SIGNATURE);
+		eraseKey(ZT_DICTIONARY_SIGNATURE_IDENTITY);
+		eraseKey(ZT_DICTIONARY_SIGNATURE_TIMESTAMP);
 	}
 
 	/**
@@ -304,21 +273,6 @@ public:
 	 * @return True if signature verification OK
 	 */
 	bool verify(const Identity &id) const;
-
-  inline bool operator==(const Dictionary &d) const
-  {
-    // std::map::operator== is broken on uclibc++
-    if (size() != d.size())
-      return false;
-    const_iterator a(begin());
-    const_iterator b(d.begin());
-    while (a != end()) {
-      if (*(a++) != *(b++))
-        return false;
-    }
-    return true;
-  }
-  inline bool operator!=(const Dictionary &d) const { return (!(*this == d)); }
 
 private:
 	void _mkSigBuf(std::string &buf) const;

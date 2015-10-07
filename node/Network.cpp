@@ -59,6 +59,9 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	Utils::snprintf(confn,sizeof(confn),"networks.d/%.16llx.conf",_id);
 	Utils::snprintf(mcdbn,sizeof(mcdbn),"networks.d/%.16llx.mcerts",_id);
 
+	// These files are no longer used, so clean them.
+	RR->node->dataStoreDelete(mcdbn);
+
 	if (_id == ZT_TEST_NETWORK_ID) {
 		applyConfiguration(NetworkConfig::createTestNetworkConfig(RR->identity.address()));
 
@@ -79,68 +82,28 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 			// Save a one-byte CR to persist membership while we request a real netconf
 			RR->node->dataStorePut(confn,"\n",1,false);
 		}
-
-		try {
-			std::string mcdb(RR->node->dataStoreGet(mcdbn));
-			if (mcdb.length() > 6) {
-				const char *p = mcdb.data();
-				const char *e = p + mcdb.length();
-				if (!memcmp("ZTMCD0",p,6)) {
-					p += 6;
-					while (p != e) {
-						CertificateOfMembership com;
-						com.deserialize2(p,e);
-						if (!com)
-							break;
-						_certInfo[com.issuedTo()].com = com;
-					}
-				}
-			}
-		} catch ( ... ) {} // ignore invalid MCDB, we'll re-learn from peers
 	}
 
 	if (!_portInitialized) {
-		ZT1_VirtualNetworkConfig ctmp;
+		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
 }
 
 Network::~Network()
 {
-	ZT1_VirtualNetworkConfig ctmp;
+	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
 
 	char n[128];
 	if (_destroyed) {
-		RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
-
+		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
 		RR->node->dataStoreDelete(n);
-		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
-		RR->node->dataStoreDelete(n);
 	} else {
-		RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
-
-		clean();
-
-		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.mcerts",_id);
-
-		Mutex::Lock _l(_lock);
-		if ((!_config)||(_config->isPublic())||(_certInfo.empty())) {
-			RR->node->dataStoreDelete(n);
-		} else {
-			std::string buf("ZTMCD0");
-			Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
-			Address *a = (Address *)0;
-			_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
-			while (i.next(a,ci)) {
-				if (ci->com)
-					ci->com.serialize2(buf);
-			}
-			RR->node->dataStorePut(n,buf,true);
-		}
+		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
 	}
 }
 
@@ -178,13 +141,19 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 		_myMulticastGroups.swap(nmg);
 }
 
+bool Network::tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer)
+{
+	Mutex::Lock _l(_lock);
+	return _tryAnnounceMulticastGroupsTo(RR->topology->rootAddresses(),_allMulticastGroups(),peer,RR->node->now());
+}
+
 bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 {
 	if (_destroyed) // sanity check
 		return false;
 	try {
 		if ((conf->networkId() == _id)&&(conf->issuedTo() == RR->identity.address())) {
-			ZT1_VirtualNetworkConfig ctmp;
+			ZT_VirtualNetworkConfig ctmp;
 			bool portInitialized;
 			{
 				Mutex::Lock _l(_lock);
@@ -195,7 +164,7 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 				portInitialized = _portInitialized;
 				_portInitialized = true;
 			}
-			_portError = RR->node->configureVirtualNetworkPort(_id,(portInitialized) ? ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+			_portError = RR->node->configureVirtualNetworkPort(_id,(portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 			return true;
 		} else {
 			TRACE("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
@@ -281,70 +250,6 @@ void Network::requestConfiguration()
 	RR->sw->send(outp,true,0);
 }
 
-bool Network::validateAndAddMembershipCertificate(const CertificateOfMembership &cert)
-{
-	if (!cert) // sanity check
-		return false;
-
-	Mutex::Lock _l(_lock);
-
-	{
-		const _RemoteMemberCertificateInfo *ci = _certInfo.get(cert.issuedTo());
-		if ((ci)&&(ci->com == cert))
-			return true; // we already have it
-	}
-
-	// Check signature, log and return if cert is invalid
-	if (cert.signedBy() != controller()) {
-		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,cert.signedBy().toString().c_str());
-		return false; // invalid signer
-	}
-
-	if (cert.signedBy() == RR->identity.address()) {
-
-		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
-		// So, verify that we signed th cert ourself
-		if (!cert.verify(RR->identity)) {
-			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-
-	} else {
-
-		SharedPtr<Peer> signer(RR->topology->getPeer(cert.signedBy()));
-
-		if (!signer) {
-			// This would be rather odd, since this is our controller... could happen
-			// if we get packets before we've gotten config.
-			RR->sw->requestWhois(cert.signedBy());
-			return false; // signer unknown
-		}
-
-		if (!cert.verify(signer->identity())) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,cert.signedBy().toString().c_str());
-			return false; // invalid signature
-		}
-	}
-
-	// If we made it past authentication, add or update cert in our cert info store
-	_certInfo[cert.issuedTo()].com = cert;
-
-	return true;
-}
-
-bool Network::peerNeedsOurMembershipCertificate(const Address &to,uint64_t now)
-{
-	Mutex::Lock _l(_lock);
-	if ((_config)&&(!_config->isPublic())&&(_config->com())) {
-		_RemoteMemberCertificateInfo &ci = _certInfo[to];
-		if ((now - ci.lastPushed) > (ZT_NETWORK_AUTOCONF_DELAY / 2)) {
-			ci.lastPushed = now;
-			return true;
-		}
-	}
-	return false;
-}
-
 void Network::clean()
 {
 	const uint64_t now = RR->node->now();
@@ -353,22 +258,6 @@ void Network::clean()
 	if (_destroyed)
 		return;
 
-	if ((_config)&&(_config->isPublic())) {
-		// Open (public) networks do not track certs or cert pushes at all.
-		_certInfo.clear();
-	} else if (_config) {
-		// Clean obsolete entries from private network cert info table
-		Hashtable< Address,_RemoteMemberCertificateInfo >::Iterator i(_certInfo);
-		Address *a = (Address *)0;
-		_RemoteMemberCertificateInfo *ci = (_RemoteMemberCertificateInfo *)0;
-		const uint64_t forgetIfBefore = now - (ZT_PEER_ACTIVITY_TIMEOUT * 16); // arbitrary reasonable cutoff
-		while (i.next(a,ci)) {
-			if ((ci->lastPushed < forgetIfBefore)&&(!ci->com.agreesWith(_config->com())))
-				_certInfo.erase(*a);
-		}
-	}
-
-	// Clean learned multicast groups if we haven't heard from them in a while
 	{
 		Hashtable< MulticastGroup,uint64_t >::Iterator i(_multicastGroupsBehindMe);
 		MulticastGroup *mg = (MulticastGroup *)0;
@@ -431,9 +320,9 @@ void Network::setEnabled(bool enabled)
 	Mutex::Lock _l(_lock);
 	if (_enabled != enabled) {
 		_enabled = enabled;
-		ZT1_VirtualNetworkConfig ctmp;
+		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,ZT1_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
 	}
 }
 
@@ -444,24 +333,24 @@ void Network::destroy()
 	_destroyed = true;
 }
 
-ZT1_VirtualNetworkStatus Network::_status() const
+ZT_VirtualNetworkStatus Network::_status() const
 {
 	// assumes _lock is locked
 	if (_portError)
-		return ZT1_NETWORK_STATUS_PORT_ERROR;
+		return ZT_NETWORK_STATUS_PORT_ERROR;
 	switch(_netconfFailure) {
 		case NETCONF_FAILURE_ACCESS_DENIED:
-			return ZT1_NETWORK_STATUS_ACCESS_DENIED;
+			return ZT_NETWORK_STATUS_ACCESS_DENIED;
 		case NETCONF_FAILURE_NOT_FOUND:
-			return ZT1_NETWORK_STATUS_NOT_FOUND;
+			return ZT_NETWORK_STATUS_NOT_FOUND;
 		case NETCONF_FAILURE_NONE:
-			return ((_config) ? ZT1_NETWORK_STATUS_OK : ZT1_NETWORK_STATUS_REQUESTING_CONFIGURATION);
+			return ((_config) ? ZT_NETWORK_STATUS_OK : ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION);
 		default:
-			return ZT1_NETWORK_STATUS_PORT_ERROR;
+			return ZT_NETWORK_STATUS_PORT_ERROR;
 	}
 }
 
-void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
+void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 {
 	// assumes _lock is locked
 	ec->nwid = _id;
@@ -470,7 +359,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 		Utils::scopy(ec->name,sizeof(ec->name),_config->name().c_str());
 	else ec->name[0] = (char)0;
 	ec->status = _status();
-	ec->type = (_config) ? (_config->isPrivate() ? ZT1_NETWORK_TYPE_PRIVATE : ZT1_NETWORK_TYPE_PUBLIC) : ZT1_NETWORK_TYPE_PRIVATE;
+	ec->type = (_config) ? (_config->isPrivate() ? ZT_NETWORK_TYPE_PRIVATE : ZT_NETWORK_TYPE_PUBLIC) : ZT_NETWORK_TYPE_PRIVATE;
 	ec->mtu = ZT_IF_MTU;
 	ec->dhcp = 0;
 	ec->bridge = (_config) ? ((_config->allowPassiveBridging() || (std::find(_config->activeBridges().begin(),_config->activeBridges().end(),RR->identity.address()) != _config->activeBridges().end())) ? 1 : 0) : 0;
@@ -479,7 +368,7 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 	ec->enabled = (_enabled) ? 1 : 0;
 	ec->netconfRevision = (_config) ? (unsigned long)_config->revision() : 0;
 
-	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT1_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
+	ec->multicastSubscriptionCount = std::min((unsigned int)_myMulticastGroups.size(),(unsigned int)ZT_MAX_NETWORK_MULTICAST_SUBSCRIPTIONS);
 	for(unsigned int i=0;i<ec->multicastSubscriptionCount;++i) {
 		ec->multicastSubscriptions[i].mac = _myMulticastGroups[i].mac().toInt();
 		ec->multicastSubscriptions[i].adi = _myMulticastGroups[i].adi();
@@ -487,14 +376,14 @@ void Network::_externalConfig(ZT1_VirtualNetworkConfig *ec) const
 
 	if (_config) {
 		ec->assignedAddressCount = (unsigned int)_config->staticIps().size();
-		for(unsigned long i=0;i<ZT1_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
+		for(unsigned long i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
 			if (i < _config->staticIps().size())
 				memcpy(&(ec->assignedAddresses[i]),&(_config->staticIps()[i]),sizeof(struct sockaddr_storage));
 		}
 	} else ec->assignedAddressCount = 0;
 }
 
-bool Network::_isAllowed(const Address &peer) const
+bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 {
 	// Assumes _lock is locked
 	try {
@@ -502,16 +391,83 @@ bool Network::_isAllowed(const Address &peer) const
 			return false;
 		if (_config->isPublic())
 			return true;
-		const _RemoteMemberCertificateInfo *ci = _certInfo.get(peer);
-		if (!ci)
-			return false;
-		return _config->com().agreesWith(ci->com);
+		return ((_config->com())&&(peer->networkMembershipCertificatesAgree(_id,_config->com())));
 	} catch (std::exception &exc) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer.toString().c_str(),exc.what());
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: %s",peer->address().toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer.toString().c_str());
+		TRACE("isAllowed() check failed for peer %s: unexpected exception: unknown exception",peer->address().toString().c_str());
 	}
 	return false; // default position on any failure
+}
+
+bool Network::_tryAnnounceMulticastGroupsTo(const std::vector<Address> &alwaysAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const
+{
+	// assumes _lock is locked
+	if (
+	    (_isAllowed(peer)) ||
+	    (peer->address() == this->controller()) ||
+	    (std::find(alwaysAddresses.begin(),alwaysAddresses.end(),peer->address()) != alwaysAddresses.end())
+	   ) {
+
+		if ((_config)&&(_config->com())&&(!_config->isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,now,true))) {
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+			_config->com().serialize(outp);
+			outp.armor(peer->key(),true);
+			peer->send(RR,outp.data(),outp.size(),now);
+		}
+
+		{
+			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+
+			for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
+				if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+					outp.armor(peer->key(),true);
+					peer->send(RR,outp.data(),outp.size(),now);
+					outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+				}
+
+				// network ID, MAC, ADI
+				outp.append((uint64_t)_id);
+				mg->mac().appendTo(outp);
+				outp.append((uint32_t)mg->adi());
+			}
+
+			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
+				outp.armor(peer->key(),true);
+				peer->send(RR,outp.data(),outp.size(),now);
+			}
+		}
+
+		return true;
+	}
+	return false;
+}
+
+class _AnnounceMulticastGroupsToAll
+{
+public:
+	_AnnounceMulticastGroupsToAll(const RuntimeEnvironment *renv,Network *nw) :
+		_now(renv->node->now()),
+		RR(renv),
+		_network(nw),
+		_rootAddresses(renv->topology->rootAddresses()),
+		_allMulticastGroups(nw->_allMulticastGroups())
+	{}
+
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { _network->_tryAnnounceMulticastGroupsTo(_rootAddresses,_allMulticastGroups,p,_now); }
+
+private:
+	uint64_t _now;
+	const RuntimeEnvironment *RR;
+	Network *_network;
+	std::vector<Address> _rootAddresses;
+	std::vector<MulticastGroup> _allMulticastGroups;
+};
+void Network::_announceMulticastGroups()
+{
+	// Assumes _lock is locked
+	_AnnounceMulticastGroupsToAll afunc(RR,this);
+	RR->topology->eachPeer<_AnnounceMulticastGroupsToAll &>(afunc);
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
@@ -526,58 +482,6 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
 	return mgs;
-}
-
-// Used in Network::_announceMulticastGroups()
-class _AnnounceMulticastGroupsToPeersWithActiveDirectPaths
-{
-public:
-	_AnnounceMulticastGroupsToPeersWithActiveDirectPaths(const RuntimeEnvironment *renv,Network *nw) :
-		RR(renv),
-		_now(renv->node->now()),
-		_network(nw),
-		_rootAddresses(renv->topology->rootAddresses()),
-		_allMulticastGroups(nw->_allMulticastGroups())
-	{}
-
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
-	{
-		if ( ( (p->hasActiveDirectPath(_now)) && ( (_network->_isAllowed(p->address())) || (p->address() == _network->controller()) ) ) || (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end()) ) {
-			Packet outp(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-
-			for(std::vector<MulticastGroup>::iterator mg(_allMulticastGroups.begin());mg!=_allMulticastGroups.end();++mg) {
-				if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-					outp.armor(p->key(),true);
-					p->send(RR,outp.data(),outp.size(),_now);
-					outp.reset(p->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-				}
-
-				// network ID, MAC, ADI
-				outp.append((uint64_t)_network->id());
-				mg->mac().appendTo(outp);
-				outp.append((uint32_t)mg->adi());
-			}
-
-			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
-				outp.armor(p->key(),true);
-				p->send(RR,outp.data(),outp.size(),_now);
-			}
-		}
-	}
-
-private:
-	const RuntimeEnvironment *RR;
-	uint64_t _now;
-	Network *_network;
-	std::vector<Address> _rootAddresses;
-	std::vector<MulticastGroup> _allMulticastGroups;
-};
-
-void Network::_announceMulticastGroups()
-{
-	// Assumes _lock is locked
-	_AnnounceMulticastGroupsToPeersWithActiveDirectPaths afunc(RR,this);
-	RR->topology->eachPeer<_AnnounceMulticastGroupsToPeersWithActiveDirectPaths &>(afunc);
 }
 
 } // namespace ZeroTier

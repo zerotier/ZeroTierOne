@@ -44,12 +44,15 @@
 #include "../ext/json-parser/json.h"
 
 #include "SqliteNetworkController.hpp"
+
+#include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
 #include "../node/Address.hpp"
+
 #include "../osdep/OSUtils.hpp"
 
 // Include ZT_NETCONF_SCHEMA_SQL constant to init database
@@ -117,8 +120,10 @@ struct NetworkRecord {
 
 } // anonymous namespace
 
-SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
+SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath) :
+	_node(node),
 	_dbPath(dbPath),
+	_circuitTestPath(circuitTestPath),
 	_db((sqlite3 *)0)
 {
 	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
@@ -1742,6 +1747,8 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 					for(uint32_t k=ipRangeStart,l=0;(k<=ipRangeEnd)&&(l < 1000000);++k,++l) {
 						uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
 						++ipTrialCounter;
+						if ((ip & 0x000000ff) == 0x000000ff)
+							continue; // don't allow addresses that end in .255
 
 						for(std::vector< std::pair<uint32_t,int> >::const_iterator r(routedNetworks.begin());r!=routedNetworks.end();++r) {
 							if ((ip & (0xffffffff << (32 - r->second))) == r->first) {

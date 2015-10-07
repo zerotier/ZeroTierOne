@@ -45,10 +45,12 @@
 
 namespace ZeroTier {
 
+class Node;
+
 class SqliteNetworkController : public NetworkController
 {
 public:
-	SqliteNetworkController(const char *dbPath);
+	SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath);
 	virtual ~SqliteNetworkController();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
@@ -104,7 +106,9 @@ private:
 		const Dictionary &metaData,
 		Dictionary &netconf);
 
+	Node *_node;
 	std::string _dbPath;
+	std::string _circuitTestPath;
 	std::string _instanceId;
 
 	// A circular buffer last log
