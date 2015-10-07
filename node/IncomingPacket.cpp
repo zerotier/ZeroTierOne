@@ -1060,24 +1060,33 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 
 				// Salsa20/12+SHA512 hashcash
 				case 0x01: {
-					unsigned char result[16];
-					computeSalsa2012Sha512ProofOfWork(difficulty,challenge,challengeLength,result);
-
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
-					outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
-					outp.append(packetId());
-					outp.append((uint16_t)sizeof(result));
-					outp.append(result,sizeof(result));
-					outp.armor(peer->key(),true);
-					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					if (difficulty <= 14) {
+						unsigned char result[16];
+						computeSalsa2012Sha512ProofOfWork(difficulty,challenge,challengeLength,result);
+						TRACE("PROOF_OF_WORK computed for %s: difficulty==%u, challengeLength==%u, result: %.16llx%.16llx",peer->address().toString().c_str(),difficulty,challengeLength,Utils::ntoh(*(reinterpret_cast<const uint64_t *>(result))),Utils::ntoh(*(reinterpret_cast<const uint64_t *>(result + 8))));
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+						outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
+						outp.append(packetId());
+						outp.append((uint16_t)sizeof(result));
+						outp.append(result,sizeof(result));
+						outp.armor(peer->key(),true);
+						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					} else {
+						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
+						outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
+						outp.append(packetId());
+						outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
+						outp.armor(peer->key(),true);
+						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					}
 				}	break;
 
 				default:
-					TRACE("dropped REQUEST_PROO_OF_WORK from %s(%s): unrecognized proof of work type",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+					TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unrecognized proof of work type",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 					break;
 			}
 		} else {
-			TRACE("dropped REQUEST_PROO_OF_WORK from %s(%s): not trusted enough",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+			TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): not trusted enough",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 		}
 	} catch ( ... ) {
 		TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
