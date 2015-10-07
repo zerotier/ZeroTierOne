@@ -523,10 +523,13 @@ public:
 	 */
 	enum Verb /* Max value: 32 (5 bits) */
 	{
-		/* No operation, payload ignored, no reply */
+		/**
+		 * No operation (ignored, no reply)
+		 */
 		VERB_NOP = 0,
 
-		/* Announcement of a node's existence:
+		/**
+		 * Announcement of a node's existence:
 		 *   <[1] protocol version>
 		 *   <[1] software major version>
 		 *   <[1] software minor version>
@@ -564,7 +567,8 @@ public:
 		 */
 		VERB_HELLO = 1,
 
-		/* Error response:
+		/**
+		 * Error response:
 		 *   <[1] in-re verb>
 		 *   <[8] in-re packet ID>
 		 *   <[1] error code>
@@ -572,14 +576,16 @@ public:
 		 */
 		VERB_ERROR = 2,
 
-		/* Success response:
+		/**
+		 * Success response:
 		 *   <[1] in-re verb>
 		 *   <[8] in-re packet ID>
 		 *   <[...] request-specific payload>
 		 */
 		VERB_OK = 3,
 
-		/* Query an identity by address:
+		/**
+		 * Query an identity by address:
 		 *   <[5] address to look up>
 		 *
 		 * OK response payload:
@@ -590,7 +596,8 @@ public:
 		 */
 		VERB_WHOIS = 4,
 
-		/* Meet another node at a given protocol address:
+		/**
+		 * Meet another node at a given protocol address:
 		 *   <[1] flags (unused, currently 0)>
 		 *   <[5] ZeroTier address of peer that might be found at this address>
 		 *   <[2] 16-bit protocol address port>
@@ -613,7 +620,8 @@ public:
 		 */
 		VERB_RENDEZVOUS = 5,
 
-		/* ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
+		/**
+		 * ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
@@ -628,7 +636,8 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/* Full Ethernet frame with MAC addressing and optional fields:
+		/**
+		 * Full Ethernet frame with MAC addressing and optional fields:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *  [<[...] certificate of network membership>]
@@ -652,9 +661,10 @@ public:
 		VERB_EXT_FRAME = 7,
 
 		/* DEPRECATED */
-		VERB_P5_MULTICAST_FRAME = 8,
+		//VERB_P5_MULTICAST_FRAME = 8,
 
-		/* Announce interest in multicast group(s):
+		/**
+		 * Announce interest in multicast group(s):
 		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast Ethernet address>
 		 *   <[4] multicast additional distinguishing information (ADI)>
@@ -667,7 +677,8 @@ public:
 		 */
 		VERB_MULTICAST_LIKE = 9,
 
-		/* Network member certificate replication/push:
+		/**
+		 * Network member certificate replication/push:
 		 *   <[...] serialized certificate of membership>
 		 *   [ ... additional certificates may follow ...]
 		 *
@@ -678,7 +689,8 @@ public:
 		 */
 		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
 
-		/* Network configuration request:
+		/**
+		 * Network configuration request:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of request meta-data dictionary>
 		 *   <[...] string-serialized request meta-data>
@@ -713,7 +725,8 @@ public:
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 11,
 
-		/* Network configuration refresh request:
+		/**
+		 * Network configuration refresh request:
 		 *   <[...] array of 64-bit network IDs>
 		 *
 		 * This can be sent by the network controller to inform a node that it
@@ -724,7 +737,8 @@ public:
 		 */
 		VERB_NETWORK_CONFIG_REFRESH = 12,
 
-		/* Request endpoints for multicast distribution:
+		/**
+		 * Request endpoints for multicast distribution:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *   <[6] MAC address of multicast group being queried>
@@ -762,7 +776,8 @@ public:
 		 */
 		VERB_MULTICAST_GATHER = 13,
 
-		/* Multicast frame:
+		/**
+		 * Multicast frame:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *  [<[...] network certificate of membership>]
@@ -803,7 +818,8 @@ public:
 		 */
 		VERB_MULTICAST_FRAME = 14,
 
-		/* Ephemeral (PFS) key push: (UNFINISHED, NOT IMPLEMENTED YET)
+		/**
+		 * Ephemeral (PFS) key push: (UNFINISHED, NOT IMPLEMENTED YET)
 		 *   <[2] flags (unused and reserved, must be 0)>
 		 *   <[2] length of padding / extra field section>
 		 *   <[...] padding / extra field section>
@@ -859,7 +875,8 @@ public:
 		 */
 		VERB_SET_EPHEMERAL_KEY = 15,
 
-		/* Push of potential endpoints for direct communication:
+		/**
+		 * Push of potential endpoints for direct communication:
 		 *   <[2] 16-bit number of paths>
 		 *   <[...] paths>
 		 *
@@ -899,7 +916,8 @@ public:
 		 */
 		VERB_PUSH_DIRECT_PATHS = 16,
 
-		/* Source-routed circuit test message:
+		/**
+		 * Source-routed circuit test message:
 		 *   <[5] address of originator of circuit test>
 		 *   <[2] 16-bit flags>
 		 *   <[8] 64-bit timestamp>
@@ -977,7 +995,8 @@ public:
 		 */
 		VERB_CIRCUIT_TEST = 17,
 
-		/* Circuit test hop report:
+		/**
+		 * Circuit test hop report:
 		 *   <[8] 64-bit timestamp (from original test)>
 		 *   <[8] 64-bit test ID (from original test)>
 		 *   <[8] 64-bit reporter timestamp (reporter's clock, 0 if unspec)>
@@ -1010,7 +1029,50 @@ public:
 		 * If a test report is received and no circuit test was sent, it should be
 		 * ignored. This message generates no OK or ERROR response.
 		 */
-		VERB_CIRCUIT_TEST_REPORT = 18
+		VERB_CIRCUIT_TEST_REPORT = 18,
+
+		/**
+		 * Request proof of work:
+		 *   <[1] 8-bit proof of work type>
+		 *   <[1] 8-bit proof of work difficulty>
+		 *   <[2] 16-bit length of proof of work challenge>
+		 *   <[...] proof of work challenge>
+		 *
+		 * This requests that a peer perform a proof of work calucation. It can be
+		 * sent by highly trusted peers (e.g. root servers, network controllers)
+		 * under suspected denial of service conditions in an attempt to filter
+		 * out "non-serious" peers and remain responsive to those proving their
+		 * intent to actually communicate.
+		 *
+		 * If the peer obliges to perform the work, it does so and responds with
+		 * an OK containing the result. Otherwise it may ignore the message or
+		 * response with an ERROR_INVALID_REQUEST or ERROR_UNSUPPORTED_OPERATION.
+		 *
+		 * Proof of work type IDs:
+		 *   0x01 - Salsa20/12+SHA512 hashcash function
+		 *
+		 * Salsa20/12+SHA512 is based on the following composite hash function:
+		 *
+		 * (1) Compute SHA512(candidate)
+		 * (2) Use the first 256 bits of the result of #1 as a key to encrypt
+		 *     131072 zero bytes with Salsa20/12 (with a zero IV).
+		 * (3) Compute SHA512(the result of step #2)
+		 * (4) Accept this candiate if the first [difficulty] bits of the result
+		 *     from step #3 are zero. Otherwise generate a new candidate and try
+		 *     again.
+		 *
+		 * This is performed repeatedly on candidates generated by appending the
+		 * supplied challenge to an arbitrary nonce until a valid candidate
+		 * is found. This chosen prepended nonce is then returned as the result
+		 * in OK.
+		 *
+		 * OK payload:
+		 *   <[2] 16-bit length of result>
+		 *   <[...] computed proof of work>
+		 *
+		 * ERROR has no payload.
+		 */
+		VERB_REQUEST_PROOF_OF_WORK = 19
 	};
 
 	/**

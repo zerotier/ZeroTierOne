@@ -45,7 +45,6 @@ const char *Packet::verbString(Verb v)
 		case VERB_RENDEZVOUS: return "RENDEZVOUS";
 		case VERB_FRAME: return "FRAME";
 		case VERB_EXT_FRAME: return "EXT_FRAME";
-		case VERB_P5_MULTICAST_FRAME: return "P5_MULTICAST_FRAME";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
 		case VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return "NETWORK_MEMBERSHIP_CERTIFICATE";
 		case VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
@@ -56,6 +55,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
 		case VERB_CIRCUIT_TEST: return "CIRCUIT_TEST";
 		case VERB_CIRCUIT_TEST_REPORT: return "CIRCUIT_TEST_REPORT";
+		case VERB_REQUEST_PROOF_OF_WORK: return "REQUEST_PROOF_OF_WORK";
 	}
 	return "(unknown)";
 }

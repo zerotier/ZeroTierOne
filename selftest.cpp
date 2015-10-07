@@ -52,6 +52,7 @@
 #include "node/CertificateOfMembership.hpp"
 #include "node/Defaults.hpp"
 #include "node/Node.hpp"
+#include "node/IncomingPacket.hpp"
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
@@ -284,6 +285,19 @@ static int testCrypto()
 		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
 		::free((void *)bb);
 	}
+
+	/*
+	for(unsigned int d=8;d<=10;++d) {
+		for(int k=0;k<8;++k) {
+			std::cout << "[crypto] computeSalsa2012Sha512ProofOfWork(" << d << ",\"foobarbaz\",9) == "; std::cout.flush();
+			unsigned char result[16];
+			uint64_t start = OSUtils::now();
+			IncomingPacket::computeSalsa2012Sha512ProofOfWork(d,"foobarbaz",9,result);
+			uint64_t end = OSUtils::now();
+			std::cout << Utils::hex(result,16) << " -- valid: " << IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(d,"foobarbaz",9,result) << ", " << (end - start) << "ms" << std::endl;
+		}
+	}
+	*/
 
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {

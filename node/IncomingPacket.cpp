@@ -41,6 +41,8 @@
 #include "Peer.hpp"
 #include "NetworkController.hpp"
 #include "SelfAwareness.hpp"
+#include "Salsa20.hpp"
+#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -90,6 +92,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_PUSH_DIRECT_PATHS:              return _doPUSH_DIRECT_PATHS(RR,peer);
 				case Packet::VERB_CIRCUIT_TEST:                   return _doCIRCUIT_TEST(RR,peer);
 				case Packet::VERB_CIRCUIT_TEST_REPORT:            return _doCIRCUIT_TEST_REPORT(RR,peer);
+				case Packet::VERB_REQUEST_PROOF_OF_WORK:          return _doREQUEST_PROOF_OF_WORK(RR,peer);
 			}
 		} else {
 			RR->sw->requestWhois(sourceAddress);
@@ -1039,6 +1042,124 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 
 bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
+	return true;
+}
+
+bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+	try {
+		// Right now this is only allowed from root servers -- may be allowed from controllers and relays later.
+		if (RR->topology->isRoot(peer->identity())) {
+			const unsigned int difficulty = (*this)[ZT_PACKET_IDX_PAYLOAD + 1];
+			const unsigned int challengeLength = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 2);
+			if (challengeLength > ZT_PROTO_MAX_PACKET_LENGTH)
+				return true; // sanity check, drop invalid size
+			const unsigned char *challenge = field(ZT_PACKET_IDX_PAYLOAD + 4,challengeLength);
+
+			switch((*this)[ZT_PACKET_IDX_PAYLOAD]) {
+
+				// Salsa20/12+SHA512 hashcash
+				case 0x01: {
+					unsigned char result[16];
+					computeSalsa2012Sha512ProofOfWork(difficulty,challenge,challengeLength,result);
+
+					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+					outp.append((unsigned char)Packet::VERB_REQUEST_PROOF_OF_WORK);
+					outp.append(packetId());
+					outp.append((uint16_t)sizeof(result));
+					outp.append(result,sizeof(result));
+					outp.armor(peer->key(),true);
+					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+				}	break;
+
+				default:
+					TRACE("dropped REQUEST_PROO_OF_WORK from %s(%s): unrecognized proof of work type",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+					break;
+			}
+		} else {
+			TRACE("dropped REQUEST_PROO_OF_WORK from %s(%s): not trusted enough",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+		}
+	} catch ( ... ) {
+		TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+	}
+	return true;
+}
+
+void IncomingPacket::computeSalsa2012Sha512ProofOfWork(unsigned int difficulty,const void *challenge,unsigned int challengeLength,unsigned char result[16])
+{
+	unsigned char salsabuf[131072]; // 131072 == protocol constant, size of memory buffer for this proof of work function
+	char candidatebuf[ZT_PROTO_MAX_PACKET_LENGTH + 256];
+	unsigned char shabuf[ZT_SHA512_DIGEST_LEN];
+	const uint64_t s20iv = 0; // zero IV for Salsa20
+	char *const candidate = (char *)(( ((uintptr_t)&(candidatebuf[0])) | 0xf ) + 1); // align to 16-byte boundary to ensure that uint64_t type punning of initial nonce is okay
+	Salsa20 s20;
+	unsigned int d;
+	unsigned char *p;
+
+	Utils::getSecureRandom(candidate,16);
+	memcpy(candidate + 16,challenge,challengeLength);
+
+	if (difficulty > 512)
+		difficulty = 512; // sanity check
+
+try_salsa2012sha512_again:
+	++*(reinterpret_cast<volatile uint64_t *>(candidate));
+
+	SHA512::hash(shabuf,candidate,16 + challengeLength);
+	s20.init(shabuf,256,&s20iv,12);
+	memset(salsabuf,0,sizeof(salsabuf));
+	s20.encrypt(salsabuf,salsabuf,sizeof(salsabuf));
+	SHA512::hash(shabuf,salsabuf,sizeof(salsabuf));
+
+	d = difficulty;
+	p = shabuf;
+	while (d >= 8) {
+		if (*(p++))
+			goto try_salsa2012sha512_again;
+		d -= 8;
+	}
+	if (d > 0) {
+		if ( ((((unsigned int)*p) << d) & 0xff00) != 0 )
+			goto try_salsa2012sha512_again;
+	}
+
+	memcpy(result,candidate,16);
+}
+
+bool IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(unsigned int difficulty,const void *challenge,unsigned int challengeLength,const unsigned char proposedResult[16])
+{
+	unsigned char salsabuf[131072]; // 131072 == protocol constant, size of memory buffer for this proof of work function
+	char candidate[ZT_PROTO_MAX_PACKET_LENGTH + 256];
+	unsigned char shabuf[ZT_SHA512_DIGEST_LEN];
+	const uint64_t s20iv = 0; // zero IV for Salsa20
+	Salsa20 s20;
+	unsigned int d;
+	unsigned char *p;
+
+	if (difficulty > 512)
+		difficulty = 512; // sanity check
+
+	memcpy(candidate,proposedResult,16);
+	memcpy(candidate + 16,challenge,challengeLength);
+
+	SHA512::hash(shabuf,candidate,16 + challengeLength);
+	s20.init(shabuf,256,&s20iv,12);
+	memset(salsabuf,0,sizeof(salsabuf));
+	s20.encrypt(salsabuf,salsabuf,sizeof(salsabuf));
+	SHA512::hash(shabuf,salsabuf,sizeof(salsabuf));
+
+	d = difficulty;
+	p = shabuf;
+	while (d >= 8) {
+		if (*(p++))
+			return false;
+		d -= 8;
+	}
+	if (d > 0) {
+		if ( ((((unsigned int)*p) << d) & 0xff00) != 0 )
+			return false;
+	}
+
 	return true;
 }
 
