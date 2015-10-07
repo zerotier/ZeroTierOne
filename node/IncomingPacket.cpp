@@ -83,6 +83,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_RENDEZVOUS:                     return _doRENDEZVOUS(RR,peer);
 				case Packet::VERB_FRAME:                          return _doFRAME(RR,peer);
 				case Packet::VERB_EXT_FRAME:                      return _doEXT_FRAME(RR,peer);
+				case Packet::VERB_ECHO:                           return _doECHO(RR,peer);
 				case Packet::VERB_MULTICAST_LIKE:                 return _doMULTICAST_LIKE(RR,peer);
 				case Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return _doNETWORK_MEMBERSHIP_CERTIFICATE(RR,peer);
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:         return _doNETWORK_CONFIG_REQUEST(RR,peer);
@@ -569,6 +570,18 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 	return true;
 }
 
+bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
+{
+	try {
+		Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
+		outp.append((unsigned char)Packet::VERB_ECHO);
+		outp.append(packetId());
+		outp.append(field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD),size() - ZT_PACKET_IDX_PAYLOAD);
+		RR->sw->send(outp,true,0);
+	} catch ( ... ) {}
+	return true;
+}
+
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
@@ -636,7 +649,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						outp.append(netconfStr.data(),(unsigned int)netconfStr.length());
 						outp.compress();
 						outp.armor(peer->key(),true);
-						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) {
+						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
 							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());

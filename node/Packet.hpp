@@ -46,22 +46,20 @@
 #include "../ext/lz4/lz4.h"
 
 /**
- * Protocol version -- incremented only for MAJOR changes
+ * Protocol version -- incremented only for major changes
  *
  * 1 - 0.2.0 ... 0.2.5
  * 2 - 0.3.0 ... 0.4.5
- *   * Added signature and originating peer to multicast frame
- *   * Double size of multicast frame bloom filter
+ *   + Added signature and originating peer to multicast frame
+ *   + Double size of multicast frame bloom filter
  * 3 - 0.5.0 ... 0.6.0
- *   * Yet another multicast redesign
- *   * New crypto completely changes key agreement cipher
+ *   + Yet another multicast redesign
+ *   + New crypto completely changes key agreement cipher
  * 4 - 0.6.0 ... 1.0.6
- *   * New identity format based on hashcash design
+ *   + New identity format based on hashcash design
  * 5 - 1.0.6 ... CURRENT
- *   * Supports CIRCUIT_TEST and friends, otherwise compatibie w/v4
- *
- * This isn't going to change again for a long time unless your
- * author wakes up again at 4am with another great idea. :P
+ *   + Supports circuit test, proof of work, and echo
+ *   + Otherwise backward compatible with 4
  */
 #define ZT_PROTO_VERSION 5
 
@@ -660,8 +658,14 @@ public:
 		 */
 		VERB_EXT_FRAME = 7,
 
-		/* DEPRECATED */
-		//VERB_P5_MULTICAST_FRAME = 8,
+		/**
+		 * ECHO request (a.k.a. ping):
+		 *   <[...] arbitrary payload to be echoed back>
+		 *
+		 * This generates OK with a copy of the transmitted payload. No ERROR
+		 * is generated. Response to ECHO requests is optional.
+		 */
+		VERB_ECHO = 8,
 
 		/**
 		 * Announce interest in multicast group(s):

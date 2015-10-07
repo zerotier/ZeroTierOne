@@ -45,6 +45,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_RENDEZVOUS: return "RENDEZVOUS";
 		case VERB_FRAME: return "FRAME";
 		case VERB_EXT_FRAME: return "EXT_FRAME";
+		case VERB_ECHO: return "ECHO";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
 		case VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return "NETWORK_MEMBERSHIP_CERTIFICATE";
 		case VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
