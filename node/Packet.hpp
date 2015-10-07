@@ -365,6 +365,10 @@ namespace ZeroTier {
  * immutable. This is because intermediate nodes can increment the hop
  * count up to 7 (protocol max).
  *
+ * A hop count of 7 also indicates that receiving peers should not attempt
+ * to learn direct paths from this packet. (Right now direct paths are only
+ * learned from direct packets anyway.)
+ *
  * http://tonyarcieri.com/all-the-crypto-code-youve-ever-written-is-probably-broken
  *
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
