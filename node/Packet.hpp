@@ -55,13 +55,15 @@
  * 3 - 0.5.0 ... 0.6.0
  *   * Yet another multicast redesign
  *   * New crypto completely changes key agreement cipher
- * 4 - 0.6.0 ... CURRENT
+ * 4 - 0.6.0 ... 1.0.6
  *   * New identity format based on hashcash design
+ * 5 - 1.0.6 ... CURRENT
+ *   * Supports CIRCUIT_TEST and friends, otherwise compatibie w/v4
  *
  * This isn't going to change again for a long time unless your
  * author wakes up again at 4am with another great idea. :P
  */
-#define ZT_PROTO_VERSION 4
+#define ZT_PROTO_VERSION 5
 
 /**
  * Minimum supported protocol version
@@ -232,15 +234,6 @@
  * Minimum viable fragment length
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
-
-// Destination address types from HELLO, OK(HELLO), and other message types
-#define ZT_PROTO_DEST_ADDRESS_TYPE_NONE 0
-#define ZT_PROTO_DEST_ADDRESS_TYPE_ZEROTIER 1   // reserved but unused
-#define ZT_PROTO_DEST_ADDRESS_TYPE_ETHERNET 2   // future use
-#define ZT_PROTO_DEST_ADDRESS_TYPE_BLUETOOTH 3  // future use
-#define ZT_PROTO_DEST_ADDRESS_TYPE_IPV4 4
-#define ZT_PROTO_DEST_ADDRESS_TYPE_LTE_DIRECT 5 // future use
-#define ZT_PROTO_DEST_ADDRESS_TYPE_IPV6 6
 
 // Ephemeral key record flags
 #define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01   // future use

@@ -46,6 +46,7 @@ namespace ZeroTier {
 
 bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 {
+	const Address sourceAddress(source());
 	try {
 		if ((cipher() == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
 			// Unencrypted HELLOs are handled here since they are used to
@@ -54,23 +55,24 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 			return _doHELLO(RR);
 		}
 
-		SharedPtr<Peer> peer = RR->topology->getPeer(source());
+		SharedPtr<Peer> peer = RR->topology->getPeer(sourceAddress);
 		if (peer) {
 			if (!dearmor(peer->key())) {
-				TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",source().toString().c_str(),_remoteAddress.toString().c_str(),size());
+				TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),size());
 				return true;
 			}
 			if (!uncompress()) {
-				TRACE("dropped packet from %s(%s), compressed data invalid",source().toString().c_str(),_remoteAddress.toString().c_str());
+				TRACE("dropped packet from %s(%s), compressed data invalid",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
 
-			//TRACE("<< %s from %s(%s)",Packet::verbString(verb()),source().toString().c_str(),_remoteAddress.toString().c_str());
+			//TRACE("<< %s from %s(%s)",Packet::verbString(v),sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
 
-			switch(verb()) {
+			const Packet::Verb v = verb();
+			switch(v) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
-					peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),verb(),0,Packet::VERB_NOP);
+					peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),v,0,Packet::VERB_NOP);
 					return true;
 				case Packet::VERB_HELLO:                          return _doHELLO(RR);
 				case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
@@ -90,13 +92,13 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				case Packet::VERB_CIRCUIT_TEST_REPORT:            return _doCIRCUIT_TEST_REPORT(RR,peer);
 			}
 		} else {
-			RR->sw->requestWhois(source());
+			RR->sw->requestWhois(sourceAddress);
 			return false;
 		}
 	} catch ( ... ) {
 		// Exceptions are more informatively caught in _do...() handlers but
 		// this outer try/catch will catch anything else odd.
-		TRACE("dropped ??? from %s(%s): unexpected exception in tryDecode()",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped ??? from %s(%s): unexpected exception in tryDecode()",sourceAddress.toString().c_str(),_remoteAddress.toString().c_str());
 		return true;
 	}
 }
@@ -108,7 +110,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID);
 		const Packet::ErrorCode errorCode = (Packet::ErrorCode)(*this)[ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE];
 
-		//TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),source().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
+		//TRACE("ERROR %s from %s(%s) in-re %s",Packet::errorString(errorCode),peer->address().toString().c_str(),_remoteAddress.toString().c_str(),Packet::verbString(inReVerb));
 
 		switch(errorCode) {
 
@@ -118,7 +120,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 						RR->sw->cancelWhoisRequest(Address(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
 				} else if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-					if ((network)&&(network->controller() == source()))
+					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
 				}
 				break;
@@ -126,7 +128,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			case Packet::ERROR_UNSUPPORTED_OPERATION:
 				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-					if ((network)&&(network->controller() == source()))
+					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
 				}
 				break;
@@ -154,7 +156,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
 				SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->controller() == source()))
+				if ((network)&&(network->controller() == peer->address()))
 					network->setAccessDenied();
 			}	break;
 
@@ -170,9 +172,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
 	} catch (std::exception &ex) {
-		TRACE("dropped ERROR from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
+		TRACE("dropped ERROR from %s(%s): unexpected exception: %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped ERROR from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped ERROR from %s(%s): unexpected exception: (unknown)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -187,34 +189,27 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 	 * in the first place. */
 
 	try {
+		const uint64_t pid = packetId();
+		const Address fromAddress(source());
 		const unsigned int protoVersion = (*this)[ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION];
 		const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION];
 		const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION];
 		const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO_IDX_REVISION);
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
+
 		Identity id;
-		unsigned int destAddrPtr = id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY) + ZT_PROTO_VERB_HELLO_IDX_IDENTITY;
+		const unsigned int destAddrPtr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
+		InetAddress destAddr;
+		if (destAddrPtr < size()) // ZeroTier One < 1.0.3 did not include this field
+			destAddr.deserialize(*this,destAddrPtr);
 
 		if (protoVersion < ZT_PROTO_VERSION_MIN) {
 			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
-		if (source() != id.address()) {
-			TRACE("dropped HELLO from %s(%s): identity not for sending address",source().toString().c_str(),_remoteAddress.toString().c_str());
+		if (fromAddress != id.address()) {
+			TRACE("dropped HELLO from %s(%s): identity not for sending address",fromAddress.toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
-		}
-
-		InetAddress destAddr;
-		if (destAddrPtr < size()) { // ZeroTier One < 1.0.3 did not include this field
-			const unsigned int destAddrType = (*this)[destAddrPtr++];
-			switch(destAddrType) {
-				case ZT_PROTO_DEST_ADDRESS_TYPE_IPV4:
-					destAddr.set(field(destAddrPtr,4),4,at<uint16_t>(destAddrPtr + 4));
-					break;
-				case ZT_PROTO_DEST_ADDRESS_TYPE_IPV6:
-					destAddr.set(field(destAddrPtr,16),16,at<uint16_t>(destAddrPtr + 16));
-					break;
-			}
 		}
 
 		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
@@ -230,7 +225,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 						TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
 						outp.append((unsigned char)Packet::VERB_HELLO);
-						outp.append(packetId());
+						outp.append((uint64_t)pid);
 						outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
 						outp.armor(key,true);
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
@@ -273,41 +268,23 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			// Continue at // VALID
 		}
 
-		// VALID -- continues here
+		// VALID -- if we made it here, packet passed identity and authenticity checks!
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_HELLO,0,Packet::VERB_NOP);
+		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
 
-		bool trusted = RR->topology->isRoot(id);
 		if (destAddr)
-			RR->sa->iam(id.address(),_remoteAddress,destAddr,trusted,RR->node->now());
+			RR->sa->iam(id.address(),_remoteAddress,destAddr,RR->topology->isRoot(id),RR->node->now());
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
-
 		outp.append((unsigned char)Packet::VERB_HELLO);
-		outp.append(packetId());
-		outp.append(timestamp);
+		outp.append((uint64_t)pid);
+		outp.append((uint64_t)timestamp);
 		outp.append((unsigned char)ZT_PROTO_VERSION);
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-
-		switch(_remoteAddress.ss_family) {
-			case AF_INET:
-				outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV4);
-				outp.append(_remoteAddress.rawIpData(),4);
-				outp.append((uint16_t)_remoteAddress.port());
-				break;
-			case AF_INET6:
-				outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV6);
-				outp.append(_remoteAddress.rawIpData(),16);
-				outp.append((uint16_t)_remoteAddress.port());
-				break;
-			default:
-				outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_NONE);
-				break;
-		}
-
+		_remoteAddress.serialize(outp);
 		outp.armor(peer->key(),true);
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 	} catch (std::exception &ex) {
@@ -336,18 +313,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
 
 				InetAddress destAddr;
-				unsigned int destAddrPtr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2; // dest address, if present, will start after 16-bit revision
-				if (destAddrPtr < size()) { // ZeroTier One < 1.0.3 did not include this field
-					const unsigned int destAddrType = (*this)[destAddrPtr++];
-					switch(destAddrType) {
-						case ZT_PROTO_DEST_ADDRESS_TYPE_IPV4:
-							destAddr.set(field(destAddrPtr,4),4,at<uint16_t>(destAddrPtr + 4));
-							break;
-						case ZT_PROTO_DEST_ADDRESS_TYPE_IPV6:
-							destAddr.set(field(destAddrPtr,16),16,at<uint16_t>(destAddrPtr + 16));
-							break;
-					}
-				}
+				if ((ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2) < size()) // ZeroTier One < 1.0.3 did not include this field
+					destAddr.deserialize(*this,ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2);
+				printf("OK(HELLO) %s\n",destAddr.toString().c_str());
 
 				if (vProto < ZT_PROTO_VERSION_MIN) {
 					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_remoteAddress.toString().c_str());

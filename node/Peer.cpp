@@ -170,25 +170,8 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &lo
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 	outp.append(now);
-
 	RR->identity.serialize(outp,false);
-
-	switch(atAddress.ss_family) {
-		case AF_INET:
-			outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV4);
-			outp.append(atAddress.rawIpData(),4);
-			outp.append((uint16_t)atAddress.port());
-			break;
-		case AF_INET6:
-			outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_IPV6);
-			outp.append(atAddress.rawIpData(),16);
-			outp.append((uint16_t)atAddress.port());
-			break;
-		default:
-			outp.append((unsigned char)ZT_PROTO_DEST_ADDRESS_TYPE_NONE);
-			break;
-	}
-
+	atAddress.serialize(outp);
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }

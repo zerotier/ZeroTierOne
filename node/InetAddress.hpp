@@ -366,7 +366,8 @@ struct InetAddress : public sockaddr_storage
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		// Format is the same as in VERB_HELLO in Packet.hpp
+		// This is used in the protocol and must be the same as describe in places
+		// like VERB_HELLO in Packet.hpp.
 		switch(ss_family) {
 			case AF_INET:
 				b.append((uint8_t)0x04);
@@ -387,8 +388,8 @@ struct InetAddress : public sockaddr_storage
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
-		unsigned int p = startAt;
 		memset(this,0,sizeof(InetAddress));
+		unsigned int p = startAt;
 		switch(b[p++]) {
 			case 0:
 				return 1;
