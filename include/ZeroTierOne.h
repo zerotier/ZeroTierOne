@@ -390,6 +390,68 @@ enum ZT_VirtualNetworkConfigOperation
 };
 
 /**
+ * Local interface trust levels
+ */
+enum ZT_LocalInterfaceAddressTrust {
+	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL = 0,
+	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_PRIVACY = 10,
+	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_ULTIMATE = 20
+};
+
+/**
+ * What trust hierarchy role does this peer have?
+ */
+enum ZT_PeerRole {
+	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
+	ZT_PEER_ROLE_RELAY = 1,    // relay node
+	ZT_PEER_ROLE_ROOT = 2      // root server
+};
+
+/**
+ * Vendor ID
+ */
+enum ZT_Vendor {
+	ZT_VENDOR_UNSPECIFIED = 0,
+	ZT_VENDOR_ZEROTIER = 1
+};
+
+/**
+ * Platform type
+ */
+enum ZT_Platform {
+	ZT_PLATFORM_UNSPECIFIED = 0,
+	ZT_PLATFORM_LINUX = 1,
+	ZT_PLATFORM_WINDOWS = 2,
+	ZT_PLATFORM_MACOS = 3,
+	ZT_PLATFORM_ANDROID = 4,
+	ZT_PLATFORM_IOS = 5,
+	ZT_PLATFORM_SOLARIS_SMARTOS = 6,
+	ZT_PLATFORM_FREEBSD = 7,
+	ZT_PLATFORM_NETBSD = 8,
+	ZT_PLATFORM_OPENBSD = 9,
+	ZT_PLATFORM_RISCOS = 10,
+	ZT_PLATFORM_VXWORKS = 11,
+	ZT_PLATFORM_FREERTOS = 12,
+	ZT_PLATFORM_SYSBIOS = 13,
+	ZT_PLATFORM_HURD = 14
+};
+
+/**
+ * Architecture type
+ */
+enum ZT_Architecture {
+	ZT_ARCHITECTURE_UNSPECIFIED = 0,
+	ZT_ARCHITECTURE_X86 = 1,
+	ZT_ARCHITECTURE_X64 = 2,
+	ZT_ARCHITECTURE_ARM32 = 3,
+	ZT_ARCHITECTURE_ARM64 = 4,
+	ZT_ARCHITECTURE_MIPS32 = 5,
+	ZT_ARCHITECTURE_MIPS64 = 6,
+	ZT_ARCHITECTURE_POWER32 = 7,
+	ZT_ARCHITECTURE_POWER64 = 8
+};
+
+/**
  * Virtual network configuration
  */
 typedef struct
@@ -537,15 +599,6 @@ typedef struct
 } ZT_PeerPhysicalPath;
 
 /**
- * What trust hierarchy role does this peer have?
- */
-enum ZT_PeerRole {
-	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT_PEER_ROLE_RELAY = 1,    // relay node
-	ZT_PEER_ROLE_ROOT = 2      // root server
-};
-
-/**
  * Peer status result buffer
  */
 typedef struct
@@ -609,59 +662,6 @@ typedef struct
 	ZT_Peer *peers;
 	unsigned long peerCount;
 } ZT_PeerList;
-
-/**
- * Local interface trust levels
- */
-typedef enum {
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL = 0,
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_PRIVACY = 10,
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_ULTIMATE = 20
-} ZT_LocalInterfaceAddressTrust;
-
-/**
- * Vendor ID
- */
-typedef enum {
-	ZT_VENDOR_UNSPECIFIED = 0,
-	ZT_VENDOR_ZEROTIER = 1
-} ZT_Vendor;
-
-/**
- * Platform type
- */
-typedef enum {
-	ZT_PLATFORM_UNSPECIFIED = 0,
-	ZT_PLATFORM_LINUX = 1,
-	ZT_PLATFORM_WINDOWS = 2,
-	ZT_PLATFORM_MACOS = 3,
-	ZT_PLATFORM_ANDROID = 4,
-	ZT_PLATFORM_IOS = 5,
-	ZT_PLATFORM_SOLARIS_SMARTOS = 6,
-	ZT_PLATFORM_FREEBSD = 7,
-	ZT_PLATFORM_NETBSD = 8,
-	ZT_PLATFORM_OPENBSD = 9,
-	ZT_PLATFORM_RISCOS = 10,
-	ZT_PLATFORM_VXWORKS = 11,
-	ZT_PLATFORM_FREERTOS = 12,
-	ZT_PLATFORM_SYSBIOS = 13,
-	ZT_PLATFORM_HURD = 14
-} ZT_Platform;
-
-/**
- * Architecture type
- */
-typedef enum {
-	ZT_ARCHITECTURE_UNSPECIFIED = 0,
-	ZT_ARCHITECTURE_X86 = 1,
-	ZT_ARCHITECTURE_X64 = 2,
-	ZT_ARCHITECTURE_ARM32 = 3,
-	ZT_ARCHITECTURE_ARM64 = 4,
-	ZT_ARCHITECTURE_MIPS32 = 5,
-	ZT_ARCHITECTURE_MIPS64 = 6,
-	ZT_ARCHITECTURE_POWER32 = 7,
-	ZT_ARCHITECTURE_POWER64 = 8
-} ZT_Architecture;
 
 /**
  * ZeroTier circuit test configuration and path
@@ -775,7 +775,7 @@ typedef struct {
 	/**
 	 * Remote device vendor ID
 	 */
-	ZT_Vendor vendor;
+	enum ZT_Vendor vendor;
 
 	/**
 	 * Remote device protocol compliance version
@@ -800,12 +800,12 @@ typedef struct {
 	/**
 	 * Platform / OS
 	 */
-	ZT_Platform platform;
+	enum ZT_Platform platform;
 
 	/**
 	 * System architecture
 	 */
-	ZT_Architecture architecture;
+	enum ZT_Architecture architecture;
 
 	/**
 	 * Local device address on which packet was received by reporting device
