@@ -505,6 +505,52 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					}
 
 					return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);
+				} else if ((path.size() == 3)&&(path[2] == "test")) {
+					ZT_CircuitTest *test = (ZT_CircuitTest *)malloc(sizeof(ZT_CircuitTest));
+					memset(test,0,sizeof(ZT_CircuitTest));
+
+					Utils::getSecureRandom(&(test->testId),sizeof(test->testId));
+					test->credentialNetworkId = nwid;
+					test->ptr = (void *)this;
+
+					json_value *j = json_parse(body.c_str(),body.length());
+					if (j) {
+						if (j->type == json_object) {
+							for(unsigned int k=0;k<j->u.object.length;++k) {
+
+								if (!strcmp(j->u.object.values[k].name,"hops")) {
+									if (j->u.object.values[k].value->type == json_array) {
+										for(unsigned int kk=0;kk<j->u.object.values[k].value->u.array.length;++kk) {
+											json_value *hop = j->u.object.values[k].value->u.array.values[kk];
+											if (hop->type == json_array) {
+												for(unsigned int kkk=0;kkk<hop->u.array.length;++kkk) {
+													if (hop->u.array.values[kkk].type == json_string) {
+														test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(hop->u.array.values[kkk].u.string.ptr) & 0xffffffffffULL;
+													}
+												}
+												++test->hopCount;
+											}
+										}
+									}
+								} else if (!strcmp(j->u.object.values[k].name,"reportAtEveryHop")) {
+									if (j->u.object.values[k].value->type == json_boolean)
+										test->reportAtEveryHop = (j->u.object.values[k].value->u.boolean == 0) ? 0 : 1;
+								}
+
+							}
+						}
+						json_value_free(j);
+					}
+
+					if (!test->hopCount) {
+						::free((void *)test);
+						return 500;
+					}
+
+					test->timestamp = OSUtils::now();
+					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
+
+					return 200;
 				} // else 404
 
 			} else {
@@ -1817,6 +1863,10 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	}
 
 	return NetworkController::NETCONF_QUERY_OK;
+}
+
+static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
+{
 }
 
 } // namespace ZeroTier

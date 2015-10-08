@@ -175,10 +175,8 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
-	} catch (std::exception &ex) {
-		TRACE("dropped ERROR from %s(%s): unexpected exception: %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped ERROR from %s(%s): unexpected exception: (unknown)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped ERROR from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -291,8 +289,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		_remoteAddress.serialize(outp);
 		outp.armor(peer->key(),true);
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-	} catch (std::exception &ex) {
-		TRACE("dropped HELLO from %s(%s): %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -395,10 +391,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb);
-	} catch (std::exception &ex) {
-		TRACE("dropped OK from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped OK from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped OK from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -453,8 +447,6 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 		} else {
 			TRACE("ignored RENDEZVOUS from %s(%s) to meet unknown peer %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),with.toString().c_str());
 		}
-	} catch (std::exception &ex) {
-		TRACE("dropped RENDEZVOUS from %s(%s): %s",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
 		TRACE("dropped RENDEZVOUS from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -487,10 +479,8 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
-	} catch (std::exception &ex) {
-		TRACE("dropped FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -562,10 +552,8 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
-	} catch (std::exception &ex) {
-		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped EXT_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -580,7 +568,9 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		outp.append(field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD),size() - ZT_PACKET_IDX_PAYLOAD);
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
-	} catch ( ... ) {}
+	} catch ( ... ) {
+		TRACE("dropped ECHO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
 	return true;
 }
 
@@ -594,10 +584,8 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 			RR->mc->add(now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
-	} catch (std::exception &ex) {
-		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -614,10 +602,8 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
-	} catch (std::exception &ex) {
-		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),ex.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -700,10 +686,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.armor(peer->key(),true);
 			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		}
-	} catch (std::exception &exc) {
-		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped NETWORK_CONFIG_REQUEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -720,10 +704,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 			ptr += 8;
 		}
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
-	} catch (std::exception &exc) {
-		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -751,10 +733,8 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
-	} catch (std::exception &exc) {
-		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -842,10 +822,8 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 		} // else ignore -- not a member of this network
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP);
-	} catch (std::exception &exc) {
-		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -885,10 +863,8 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP);
-	} catch (std::exception &exc) {
-		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
@@ -1051,16 +1027,52 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP);
-	} catch (std::exception &exc) {
-		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception: %s",source().toString().c_str(),_remoteAddress.toString().c_str(),exc.what());
 	} catch ( ... ) {
-		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception: (unknown)",source().toString().c_str(),_remoteAddress.toString().c_str());
+		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
 	return true;
 }
 
 bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
+	try {
+		ZT_CircuitTestReport report;
+		memset(&report,0,sizeof(report));
+
+		report.address = peer->address().toInt();
+		report.testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 8);
+		report.timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
+		report.remoteTimestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 16);
+		report.sourcePacketId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 44);
+		report.flags = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 36);
+		report.sourcePacketHopCount = (*this)[ZT_PACKET_IDX_PAYLOAD + 52];
+		report.errorCode = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 34);
+		report.vendor = (enum ZT_Vendor)((*this)[ZT_PACKET_IDX_PAYLOAD + 24]);
+		report.protocolVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 25];
+		report.majorVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 26];
+		report.minorVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 27];
+		report.revision = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 28);
+		report.platform = (enum ZT_Platform)at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 30);
+		report.architecture = (enum ZT_Architecture)at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 32);
+
+		const unsigned int receivedOnLocalAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedOnLocalAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 53);
+		const unsigned int receivedFromRemoteAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedFromRemoteAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 53 + receivedOnLocalAddressLen);
+
+		unsigned int nhptr = ZT_PACKET_IDX_PAYLOAD + 53 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
+		nhptr += at<uint16_t>(nhptr) + 2; // add "additional field" length, which right now will be zero
+
+		report.nextHopCount = (*this)[nhptr++];
+		if (report.nextHopCount > ZT_CIRCUIT_TEST_MAX_HOP_BREADTH) // sanity check, shouldn't be possible
+			report.nextHopCount = ZT_CIRCUIT_TEST_MAX_HOP_BREADTH;
+		for(unsigned int h=0;h<report.nextHopCount;++h) {
+			report.nextHops[h].address = at<uint64_t>(nhptr); nhptr += 8;
+			nhptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,nhptr);
+		}
+
+		RR->node->postCircuitTestReport(&report);
+	} catch ( ... ) {
+		TRACE("dropped CIRCUIT_TEST_REPORT from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
+	}
 	return true;
 }
 

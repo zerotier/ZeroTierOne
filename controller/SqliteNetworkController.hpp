@@ -43,6 +43,9 @@
 // Number of in-memory last log entries to maintain per user
 #define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
 
+// How long do circuit tests "live"? This is just to prevent buildup in memory.
+#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 300000
+
 namespace ZeroTier {
 
 class Node;
@@ -106,6 +109,8 @@ private:
 		const Dictionary &metaData,
 		Dictionary &netconf);
 
+	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
+
 	Node *_node;
 	std::string _dbPath;
 	std::string _circuitTestPath;
@@ -139,6 +144,9 @@ private:
 
 	// Last log entries by address and network ID pair
 	std::map< std::pair<Address,uint64_t>,_LLEntry > _lastLog;
+
+	// Circuit tests outstanding
+	std::map< uint64_t,ZT_CircuitTest * > _circuitTests;
 
 	sqlite3 *_db;
 
