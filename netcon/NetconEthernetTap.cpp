@@ -652,7 +652,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     if(l->conn) {
 			fprintf(stderr, "nc_recved(): closing connection\n");
 			l->tap->closeConnection(l->conn);
-			exit(0);
+			//exit(0);
     }
     else {
       fprintf(stderr, "nc_recved(): can't locate connection via (arg)\n");
