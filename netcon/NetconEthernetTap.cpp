@@ -307,7 +307,7 @@ void NetconEthernetTap::closeAll()
 		closeConnection(tcp_connections.front());
 }
 
-#define ZT_LWIP_TCP_TIMER_INTERVAL 1
+#define ZT_LWIP_TCP_TIMER_INTERVAL 50
 
 void NetconEthernetTap::threadMain()
 	throw()
@@ -374,71 +374,9 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable)
 {
 	if(readable) {
-		float max = (float)TCP_SND_BUF;
-		int r;
 		TcpConnection *conn = (TcpConnection*)*uptr;
-
-		if(!conn) {
-			fprintf(stderr, "phyOnFileDescriptorActivity(): could not locate connection for this fd\n");
-			return;
-		}
-		if(conn->idx < max) {
-			Mutex::Lock _l(lwipstack->_lock);
-			int sndbuf = conn->pcb->snd_buf; // How much we are currently allowed to write to the connection
-
-			/*
-			float avail = (float)sndbuf;
-			float load = 1.0 - (avail / max);
-
-			if(load >= 0.80) {
-				fprintf(stderr, "load too high\n");
-				return;
-			}
-			*/
-
-			/* PCB send buffer is full,turn off readability notifications for the
-			corresponding PhySocket until nc_sent() is called and confirms that there is
-			now space on the buffer */
-			if(sndbuf == 0) {
-				_phy.setNotifyReadable(sock, false);
-				lwipstack->_tcp_output(conn->pcb);
-				return;
-			}
-
-			int read_fd = _phy.getDescriptor(sock);
-
-			if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
-				conn->idx += r;
-				/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
-				 * data to LWIP to be enqueued and eventually sent to the network. */
-				if(r > 0) {
-					int sz;
-					// NOTE: this assumes that lwipstack->_lock is locked, either
-					// because we are in a callback or have locked it manually.
-					//fprintf(stderr, "phyOnFileDescriptorActivity(): Can read %d bytes, did read %d bytes\n", sndbuf, r);
-					int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
-					if(err != ERR_OK) {
-						fprintf(stderr, "phyOnFileDescriptorActivity(): error while writing to PCB\n");
-						return;
-					}
-					else {
-						sz = (conn->idx)-r;
-						if(sz) {
-							memmove(&conn->buf, (conn->buf+r), sz);
-						}
-						conn->idx -= r;
-						return;
-					}
-				}
-				else {
-					fprintf(stderr, "phyOnFileDescriptorActivity(): LWIP stack full\n");
-					return;
-				}
-			}
-			else {
-				fprintf(stderr, "phyOnFileDescriptorActivity(): could not read from PhySocket for this connection\n");
-			}
-		}
+		Mutex::Lock _l(lwipstack->_lock);
+		handle_write(conn);
 	}
 	else {
 		fprintf(stderr, "phyOnFileDescriptorActivity(): PhySocket not readable\n");
@@ -652,7 +590,6 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     if(l->conn) {
 			fprintf(stderr, "nc_recved(): closing connection\n");
 			l->tap->closeConnection(l->conn);
-			//exit(0);
     }
     else {
       fprintf(stderr, "nc_recved(): can't locate connection via (arg)\n");
@@ -718,8 +655,9 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
 	Larg *l = (Larg*)arg;
 	if(len) {
-		//fprintf(stderr, "len = %d\n", len);
+		//fprintf(stderr, "ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
+		l->tap->handle_write(l->conn);
 	}
 	return ERR_OK;
 }
@@ -911,6 +849,67 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 		fprintf(stderr, "could not locate PCB based on their fd\n");
 	}
 }
+
+
+void NetconEthernetTap::handle_write(TcpConnection *conn)
+{
+	float max = (float)TCP_SND_BUF;
+	int r;
+
+	if(!conn) {
+		fprintf(stderr, "handle_write(): could not locate connection for this fd\n");
+		return;
+	}
+	if(conn->idx < max) {
+		int sndbuf = conn->pcb->snd_buf; // How much we are currently allowed to write to the connection
+
+		/* PCB send buffer is full,turn off readability notifications for the
+		corresponding PhySocket until nc_sent() is called and confirms that there is
+		now space on the buffer */
+		if(sndbuf == 0) {
+			//fprintf(stderr, "sndbuf = 0, setting read-notify = false\n");
+			_phy.setNotifyReadable(conn->dataSock, false);
+			lwipstack->_tcp_output(conn->pcb);
+			return;
+		}
+
+		int read_fd = _phy.getDescriptor(conn->dataSock);
+
+		if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
+			//fprintf(stderr, "read = %d\n", r);
+			conn->idx += r;
+			/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
+			 * data to LWIP to be enqueued and eventually sent to the network. */
+			if(r > 0) {
+				int sz;
+				// NOTE: this assumes that lwipstack->_lock is locked, either
+				// because we are in a callback or have locked it manually.
+				int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
+				if(err != ERR_OK) {
+					fprintf(stderr, "handle_write(): error while writing to PCB\n");
+					return;
+				}
+				else {
+					sz = (conn->idx)-r;
+					if(sz) {
+						memmove(&conn->buf, (conn->buf+r), sz);
+					}
+					conn->idx -= r;
+					return;
+				}
+			}
+			else {
+				fprintf(stderr, "handle_write(): LWIP stack full\n");
+				return;
+			}
+		}
+		//else {
+		//	fprintf(stderr, "handle_write(): could not read from PhySocket for this connection\n");
+		//}
+	}
+}
+
+
 } // namespace ZeroTier
 
 #endif // ZT_ENABLE_NETCON

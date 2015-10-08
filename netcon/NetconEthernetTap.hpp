@@ -109,6 +109,7 @@ private:
 	void handle_retval(PhySocket *sock, void **uptr, unsigned char* buf);
 	void handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
 	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
+	void handle_write(TcpConnection *conn);
 
 	int send_return_value(TcpConnection *conn, int retval);
 
