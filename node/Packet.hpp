@@ -345,11 +345,11 @@ namespace ZeroTier {
  * ZeroTier packet
  *
  * Packet format:
- *   <[8] random initialization vector (doubles as 64-bit packet ID)>
+ *   <[8] 64-bit random packet ID and crypto initialization vector>
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
  *   <[1] flags/cipher (top 5 bits) and ZT hop count (last 3 bits)>
- *   <[8] 8-bit MAC (currently first 8 bytes of poly1305 tag)>
+ *   <[8] 64-bit MAC>
  *   [... -- begin encryption envelope -- ...]
  *   <[1] encrypted flags (top 3 bits) and verb (last 5 bits)>
  *   [... verb-specific payload ...]
