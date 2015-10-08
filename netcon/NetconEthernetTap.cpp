@@ -307,7 +307,7 @@ void NetconEthernetTap::closeAll()
 		closeConnection(tcp_connections.front());
 }
 
-#define ZT_LWIP_TCP_TIMER_INTERVAL 5
+#define ZT_LWIP_TCP_TIMER_INTERVAL 1
 
 void NetconEthernetTap::threadMain()
 	throw()
@@ -344,6 +344,7 @@ void NetconEthernetTap::threadMain()
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
 			prev_tcp_time = now;
 			lwipstack->tcp_tmr();
+			//fprintf(stderr, "tcp_tmr\n");
 		} else {
 			tcp_remaining = ZT_LWIP_TCP_TIMER_INTERVAL - since_tcp;
 		}
@@ -353,6 +354,7 @@ void NetconEthernetTap::threadMain()
 		} else {
 			etharp_remaining = ARP_TMR_INTERVAL - since_etharp;
 		}
+		//fprintf(stderr, "poll_wait_time = %d\n", (unsigned long)std::min(tcp_remaining,etharp_remaining));
 		_phy.poll((unsigned long)std::min(tcp_remaining,etharp_remaining));
 	}
 	closeAll();
@@ -399,6 +401,7 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 			now space on the buffer */
 			if(sndbuf == 0) {
 				_phy.setNotifyReadable(sock, false);
+				lwipstack->_tcp_output(conn->pcb);
 				return;
 			}
 

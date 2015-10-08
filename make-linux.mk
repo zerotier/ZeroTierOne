@@ -73,8 +73,8 @@ endif
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
-	CFLAGS+=-Wall -pg -g -pthread $(INCLUDES) $(DEFS)
-	CXXFLAGS+=-Wall -pg -g -pthread $(INCLUDES) $(DEFS)
+	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
+	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=-ldl
 	STRIP=echo
 	# The following line enables optimization for the crypto code, since

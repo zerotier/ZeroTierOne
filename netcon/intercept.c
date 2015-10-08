@@ -137,7 +137,7 @@ static int is_initialized = 0;
 static int fdret_sock; // used for fd-transfers
 static int newfd; // used for "this_end" socket
 
-static char* af_sock_name  = "/tmp/.ztnc_8056c2e21c000001";
+static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
 static char* logfilename   = "intercept.log";
 FILE *logfile       = NULL;
 static char* logmode       = "a";
@@ -791,7 +791,7 @@ int listen(LISTEN_SIG)
     return(reallisten(sockfd, backlog));
 
   char cmd[BUF_SZ];
-  //dwr("listen(%d)\n", sockfd);
+  dwr("listen(%d)\n", sockfd);
   /* Assemble and route command */
   memset(cmd, '\0', BUF_SZ);
   struct listen_st rpc_st;
