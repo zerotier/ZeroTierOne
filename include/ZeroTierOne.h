@@ -1255,7 +1255,7 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
  * @param trust How much do you trust the local network under this interface?
  * @return Boolean: non-zero if address was accepted and added
  */
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust);
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric, enum ZT_LocalInterfaceAddressTrust trust);
 
 /**
  * Clear local interface addresses
@@ -1296,7 +1296,7 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
  * @param reportCallback Function to call each time a report is received
  * @return OK or error if, for example, test is too big for a packet or support isn't compiled in
  */
-ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
+enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *, ZT_CircuitTest *,const ZT_CircuitTestReport *));
 
 /**
  * Stop listening for results to a given circuit test

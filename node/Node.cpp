@@ -779,7 +779,7 @@ void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkControllerInstance)
 	} catch ( ... ) {}
 }
 
-ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
+enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *))
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->circuitTestBegin(test,reportCallback);
@@ -795,7 +795,7 @@ void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test)
 	} catch ( ... ) {}
 }
 
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust)
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric, enum ZT_LocalInterfaceAddressTrust trust)
 {
 	try {
 		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,metric,trust);
