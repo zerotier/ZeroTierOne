@@ -72,7 +72,6 @@ char *progname = "";
 #include "intercept.h"
 #include "common.h"
 #include "defs.h"
-#include "utils.c"
 
 /* Global Declarations */
 #ifdef USE_SOCKS_DNS

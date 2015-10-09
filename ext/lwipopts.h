@@ -42,31 +42,11 @@
  * Include user defined options first. Anything not defined in these files
  * will be set to standard values. Override anything you dont like!
  */
-#include "lwipopts.h"
 #include "lwip/debug.h"
 
 
-
-/*
-
-#define LWIP_MALLOC_MEMPOOL 1
-*/
-
-/*
-#define LWIP_CHECKSUM_ON_COPY 1
-
-#define TCP_OVERSIZE TCP_MSS
-*/
-//#define TCP_SND_QUEUELEN 128
-
-//#define TCP_WND
-
-
-//#define PBUF_POOL_BUFSIZE 2048
-
-
-#define TCP_MSS 2048
-#define TCP_WND 512
+//#define TCP_MSS 2048
+//#define TCP_WND 512
 
 /*------------------------------------------------------------------------------
 ---------------------------------- Timers --------------------------------------
