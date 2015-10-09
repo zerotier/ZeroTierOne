@@ -669,7 +669,8 @@ public:
 		 * This generates OK with a copy of the transmitted payload. No ERROR
 		 * is generated. Response to ECHO requests is optional.
 		 *
-		 * Note that fragmented ECHO packets may not work.
+		 * Support for fragmented echo packets is optional and their use is not
+		 * recommended.
 		 */
 		VERB_ECHO = 8,
 
@@ -680,8 +681,18 @@ public:
 		 *   <[4] multicast additional distinguishing information (ADI)>
 		 *   [... additional tuples of network/address/adi ...]
 		 *
-		 * LIKEs are sent to peers with whom you have a direct peer to peer
-		 * connection, and always including root servers.
+		 * LIKEs may be sent to any peer, though a good implementation should
+		 * restrict them to peers on the same network they're for and to network
+		 * controllers and root servers. In the current network, root servers
+		 * will provide the service of final multicast cache.
+		 *
+		 * It is recommended that NETWORK_MEMBERSHIP_CERTIFICATE pushes be sent
+		 * along with MULTICAST_LIKE when pushing LIKEs to peers that do not
+		 * share a network membership (such as root servers), since this can be
+		 * used to authenticate GATHER requests and limit responses to peers
+		 * authorized to talk on a network. (Should be an optional field here,
+		 * but saving one or two packets every five minutes is not worth an
+		 * ugly hack or protocol rev.)
 		 *
 		 * OK/ERROR are not generated.
 		 */
