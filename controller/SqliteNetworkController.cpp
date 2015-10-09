@@ -258,8 +258,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateOrReplaceNode);
-		sqlite3_finalize(_sUpdateNode);
-		sqlite3_finalize(_sUpdateNode2);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);

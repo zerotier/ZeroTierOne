@@ -20,6 +20,6 @@ else
 fi
 
 rm -f /var/lib/zerotier-one/identity.*
-echo "$ZEROTIER_IDENTITY_SECRET" >identity.secret
+echo "$ZEROTIER_IDENTITY_SECRET" >/var/lib/zerotier-one/identity.secret
 
 /var/lib/zerotier-one/zerotier-one
