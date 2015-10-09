@@ -657,7 +657,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 	if(len) {
 		//fprintf(stderr, "ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
-		l->tap->_phy.whack();
+		//l->tap->_phy.whack();
 		//l->tap->handle_write(l->conn);
 	}
 	return ERR_OK;
