@@ -18,3 +18,9 @@ After POSTing you can double check the network config with:
     curl -H 'X-ZT1-Auth:AUTHTOKEN' http://127.0.0.1:9993/controller/network/################
 
 Once this network is created (and if your controller is online, etc.) you can then join this network from any device anywhere in the world and it will receive a valid network configuration.
+
+---
+
+**public.json**: A valid configuration for a public network that allows IPv4 and IPv6 traffic.
+
+**circuit-test-pingpong.json**: An example circuit test that can be posted to /controller/network/################/test to order a test -- you will have to edit this to insert the hops you want since the two hard coded device IDs are from our own test instances.
