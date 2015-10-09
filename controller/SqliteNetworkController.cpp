@@ -1881,7 +1881,7 @@ void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest 
 	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.16llx",test->timestamp,test->testId);
 	reportSavePath.append(tmp);
 	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.10llx_%.10llx",report->upstream,report->current);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.10llx_%.10llx",now,report->upstream,report->current);
 	reportSavePath.append(tmp);
 
 	{

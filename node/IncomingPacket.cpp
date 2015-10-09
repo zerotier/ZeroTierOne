@@ -1021,9 +1021,11 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				outp.append(field(remainingHopsPtr,size() - remainingHopsPtr),size() - remainingHopsPtr);
 
 			for(unsigned int h=0;h<breadth;++h) {
-				outp.newInitializationVector();
-				outp.setDestination(nextHop[h]);
-				RR->sw->send(outp,true,originatorCredentialNetworkId);
+				if (RR->identity.address() != nextHop[h]) { // next hops that loop back to the current hop are not valid
+					outp.newInitializationVector();
+					outp.setDestination(nextHop[h]);
+					RR->sw->send(outp,true,originatorCredentialNetworkId);
+				}
 			}
 		}
 
@@ -1067,7 +1069,7 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 		if (report.nextHopCount > ZT_CIRCUIT_TEST_MAX_HOP_BREADTH) // sanity check, shouldn't be possible
 			report.nextHopCount = ZT_CIRCUIT_TEST_MAX_HOP_BREADTH;
 		for(unsigned int h=0;h<report.nextHopCount;++h) {
-			report.nextHops[h].address = at<uint64_t>(nhptr); nhptr += 8;
+			report.nextHops[h].address = Address(field(nhptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt(); nhptr += ZT_ADDRESS_LENGTH;
 			nhptr += reinterpret_cast<InetAddress *>(&(report.nextHops[h].physicalAddress))->deserialize(*this,nhptr);
 		}
 
