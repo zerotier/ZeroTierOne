@@ -1149,9 +1149,9 @@ try_salsa2012sha512_again:
 	++*(reinterpret_cast<volatile uint64_t *>(candidate));
 
 	SHA512::hash(shabuf,candidate,16 + challengeLength);
-	s20.init(shabuf,256,&s20iv,12);
+	s20.init(shabuf,256,&s20iv);
 	memset(salsabuf,0,sizeof(salsabuf));
-	s20.encrypt(salsabuf,salsabuf,sizeof(salsabuf));
+	s20.encrypt12(salsabuf,salsabuf,sizeof(salsabuf));
 	SHA512::hash(shabuf,salsabuf,sizeof(salsabuf));
 
 	d = difficulty;
@@ -1186,9 +1186,9 @@ bool IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(unsigned int difficult
 	memcpy(candidate + 16,challenge,challengeLength);
 
 	SHA512::hash(shabuf,candidate,16 + challengeLength);
-	s20.init(shabuf,256,&s20iv,12);
+	s20.init(shabuf,256,&s20iv);
 	memset(salsabuf,0,sizeof(salsabuf));
-	s20.encrypt(salsabuf,salsabuf,sizeof(salsabuf));
+	s20.encrypt12(salsabuf,salsabuf,sizeof(salsabuf));
 	SHA512::hash(shabuf,salsabuf,sizeof(salsabuf));
 
 	d = difficulty;

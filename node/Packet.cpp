@@ -92,14 +92,14 @@ void Packet::armor(const void *key,bool encryptPayload)
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
-	Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
+	Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8)/*,ZT_PROTO_SALSA20_ROUNDS*/);
 
 	// MAC key is always the first 32 bytes of the Salsa20 key stream
 	// This is the same construction DJB's NaCl library uses
-	s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
+	s20.encrypt12(ZERO_KEY,macKey,sizeof(macKey));
 
 	if (encryptPayload)
-		s20.encrypt(payload,payload,payloadLen);
+		s20.encrypt12(payload,payload,payloadLen);
 
 	Poly1305::compute(mac,payload,payloadLen,macKey);
 	memcpy(field(ZT_PACKET_IDX_MAC,8),mac,8);
@@ -116,15 +116,15 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8)/*,ZT_PROTO_SALSA20_ROUNDS*/);
 
-		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
+		s20.encrypt12(ZERO_KEY,macKey,sizeof(macKey));
 		Poly1305::compute(mac,payload,payloadLen,macKey);
 		if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
 			return false;
 
 		if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
-			s20.decrypt(payload,payload,payloadLen);
+			s20.decrypt12(payload,payload,payloadLen);
 
 		return true;
 	} else return false; // unrecognized cipher suite

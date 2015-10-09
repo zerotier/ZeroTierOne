@@ -88,9 +88,9 @@ Node::Node(
 	{
 		char foo[32];
 		Utils::getSecureRandom(foo,32);
-		_prng.init(foo,256,foo,8);
+		_prng.init(foo,256,foo);
 		memset(_prngStream,0,sizeof(_prngStream));
-		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
+		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 	}
 
 	std::string idtmp(dataStoreGet("identity.secret"));
@@ -574,7 +574,7 @@ uint64_t Node::prng()
 {
 	unsigned int p = (++_prngStreamPtr % (sizeof(_prngStream) / sizeof(uint64_t)));
 	if (!p)
-		_prng.encrypt(_prngStream,_prngStream,sizeof(_prngStream));
+		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 	return _prngStream[p];
 }
 
