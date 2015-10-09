@@ -29,6 +29,8 @@ Thumbs.db
 # *nix/Mac build droppings
 /build-*
 /ZeroTierOneInstaller-*
+/examples/docker/zerotier-one
+/examples/docker/test-*.env
 
 # Miscellaneous file types that we don't want to check in
 *.log
