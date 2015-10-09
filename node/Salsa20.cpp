@@ -175,41 +175,34 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		__m128i X1 = _mm_loadu_si128((const __m128i *)&(_state.v[1]));
 		__m128i X2 = _mm_loadu_si128((const __m128i *)&(_state.v[2]));
 		__m128i X3 = _mm_loadu_si128((const __m128i *)&(_state.v[3]));
+		__m128i T;
 		__m128i X0s = X0;
 		__m128i X1s = X1;
 		__m128i X2s = X2;
 		__m128i X3s = X3;
 
 		for (i=0;i<_roundsDiv4;++i) {
-			__m128i T = _mm_add_epi32(X0, X3);
-			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 7));
-			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 25));
+			T = _mm_add_epi32(X0, X3);
+			X1 = _mm_xor_si128(_mm_xor_si128(X1, _mm_slli_epi32(T, 7)), _mm_srli_epi32(T, 25));
 			T = _mm_add_epi32(X1, X0);
-			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
-			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			X2 = _mm_xor_si128(_mm_xor_si128(X2, _mm_slli_epi32(T, 9)), _mm_srli_epi32(T, 23));
 			T = _mm_add_epi32(X2, X1);
-			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 13));
-			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 19));
+			X3 = _mm_xor_si128(_mm_xor_si128(X3, _mm_slli_epi32(T, 13)), _mm_srli_epi32(T, 19));
 			T = _mm_add_epi32(X3, X2);
-			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
-			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+			X0 = _mm_xor_si128(_mm_xor_si128(X0, _mm_slli_epi32(T, 18)), _mm_srli_epi32(T, 14));
 
 			X1 = _mm_shuffle_epi32(X1, 0x93);
 			X2 = _mm_shuffle_epi32(X2, 0x4E);
 			X3 = _mm_shuffle_epi32(X3, 0x39);
 
 			T = _mm_add_epi32(X0, X1);
-			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 7));
-			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 25));
+			X3 = _mm_xor_si128(_mm_xor_si128(X3, _mm_slli_epi32(T, 7)), _mm_srli_epi32(T, 25));
 			T = _mm_add_epi32(X3, X0);
-			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
-			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			X2 = _mm_xor_si128(_mm_xor_si128(X2, _mm_slli_epi32(T, 9)), _mm_srli_epi32(T, 23));
 			T = _mm_add_epi32(X2, X3);
-			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 13));
-			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 19));
+			X1 = _mm_xor_si128(_mm_xor_si128(X1, _mm_slli_epi32(T, 13)), _mm_srli_epi32(T, 19));
 			T = _mm_add_epi32(X1, X2);
-			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
-			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+			X0 = _mm_xor_si128(_mm_xor_si128(X0, _mm_slli_epi32(T, 18)), _mm_srli_epi32(T, 14));
 
 			X1 = _mm_shuffle_epi32(X1, 0x39);
 			X2 = _mm_shuffle_epi32(X2, 0x4E);
@@ -218,34 +211,26 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 			// --
 
 			T = _mm_add_epi32(X0, X3);
-			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 7));
-			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 25));
+			X1 = _mm_xor_si128(_mm_xor_si128(X1, _mm_slli_epi32(T, 7)), _mm_srli_epi32(T, 25));
 			T = _mm_add_epi32(X1, X0);
-			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
-			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			X2 = _mm_xor_si128(_mm_xor_si128(X2, _mm_slli_epi32(T, 9)), _mm_srli_epi32(T, 23));
 			T = _mm_add_epi32(X2, X1);
-			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 13));
-			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 19));
+			X3 = _mm_xor_si128(_mm_xor_si128(X3, _mm_slli_epi32(T, 13)), _mm_srli_epi32(T, 19));
 			T = _mm_add_epi32(X3, X2);
-			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
-			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+			X0 = _mm_xor_si128(_mm_xor_si128(X0, _mm_slli_epi32(T, 18)), _mm_srli_epi32(T, 14));
 
 			X1 = _mm_shuffle_epi32(X1, 0x93);
 			X2 = _mm_shuffle_epi32(X2, 0x4E);
 			X3 = _mm_shuffle_epi32(X3, 0x39);
 
 			T = _mm_add_epi32(X0, X1);
-			X3 = _mm_xor_si128(X3, _mm_slli_epi32(T, 7));
-			X3 = _mm_xor_si128(X3, _mm_srli_epi32(T, 25));
+			X3 = _mm_xor_si128(_mm_xor_si128(X3, _mm_slli_epi32(T, 7)), _mm_srli_epi32(T, 25));
 			T = _mm_add_epi32(X3, X0);
-			X2 = _mm_xor_si128(X2, _mm_slli_epi32(T, 9));
-			X2 = _mm_xor_si128(X2, _mm_srli_epi32(T, 23));
+			X2 = _mm_xor_si128(_mm_xor_si128(X2, _mm_slli_epi32(T, 9)), _mm_srli_epi32(T, 23));
 			T = _mm_add_epi32(X2, X3);
-			X1 = _mm_xor_si128(X1, _mm_slli_epi32(T, 13));
-			X1 = _mm_xor_si128(X1, _mm_srli_epi32(T, 19));
+			X1 = _mm_xor_si128(_mm_xor_si128(X1, _mm_slli_epi32(T, 13)), _mm_srli_epi32(T, 19));
 			T = _mm_add_epi32(X1, X2);
-			X0 = _mm_xor_si128(X0, _mm_slli_epi32(T, 18));
-			X0 = _mm_xor_si128(X0, _mm_srli_epi32(T, 14));
+			X0 = _mm_xor_si128(_mm_xor_si128(X0, _mm_slli_epi32(T, 18)), _mm_srli_epi32(T, 14));
 
 			X1 = _mm_shuffle_epi32(X1, 0x39);
 			X2 = _mm_shuffle_epi32(X2, 0x4E);
@@ -257,22 +242,14 @@ void Salsa20::encrypt(const void *in,void *out,unsigned int bytes)
 		X2 = _mm_add_epi32(X2s,X2);
 		X3 = _mm_add_epi32(X3s,X3);
 
-		{
-			__m128i k02 = _mm_or_si128(_mm_slli_epi64(X0, 32), _mm_srli_epi64(X3, 32));
-			k02 = _mm_shuffle_epi32(k02, _MM_SHUFFLE(0, 1, 2, 3));
-			__m128i k13 = _mm_or_si128(_mm_slli_epi64(X1, 32), _mm_srli_epi64(X0, 32));
-			k13 = _mm_shuffle_epi32(k13, _MM_SHUFFLE(0, 1, 2, 3));
-			__m128i k20 = _mm_or_si128(_mm_and_si128(X2, _S20SSECONSTANTS.maskLo32), _mm_and_si128(X1, _S20SSECONSTANTS.maskHi32));
-			__m128i k31 = _mm_or_si128(_mm_and_si128(X3, _S20SSECONSTANTS.maskLo32), _mm_and_si128(X2, _S20SSECONSTANTS.maskHi32));
-
-			const float *const mv = (const float *)m;
-			float *const cv = (float *)c;
-
-			_mm_storeu_ps(cv,_mm_castsi128_ps(_mm_xor_si128(_mm_unpackhi_epi64(k02,k20),_mm_castps_si128(_mm_loadu_ps(mv)))));
-			_mm_storeu_ps(cv + 4,_mm_castsi128_ps(_mm_xor_si128(_mm_unpackhi_epi64(k13,k31),_mm_castps_si128(_mm_loadu_ps(mv + 4)))));
-			_mm_storeu_ps(cv + 8,_mm_castsi128_ps(_mm_xor_si128(_mm_unpacklo_epi64(k20,k02),_mm_castps_si128(_mm_loadu_ps(mv + 8)))));
-			_mm_storeu_ps(cv + 12,_mm_castsi128_ps(_mm_xor_si128(_mm_unpacklo_epi64(k31,k13),_mm_castps_si128(_mm_loadu_ps(mv + 12)))));
-		}
+		__m128i k02 = _mm_shuffle_epi32(_mm_or_si128(_mm_slli_epi64(X0, 32), _mm_srli_epi64(X3, 32)), _MM_SHUFFLE(0, 1, 2, 3));
+		__m128i k13 = _mm_shuffle_epi32(_mm_or_si128(_mm_slli_epi64(X1, 32), _mm_srli_epi64(X0, 32)), _MM_SHUFFLE(0, 1, 2, 3));
+		__m128i k20 = _mm_or_si128(_mm_and_si128(X2, _S20SSECONSTANTS.maskLo32), _mm_and_si128(X1, _S20SSECONSTANTS.maskHi32));
+		__m128i k31 = _mm_or_si128(_mm_and_si128(X3, _S20SSECONSTANTS.maskLo32), _mm_and_si128(X2, _S20SSECONSTANTS.maskHi32));
+		_mm_storeu_ps(reinterpret_cast<float *>(c),_mm_castsi128_ps(_mm_xor_si128(_mm_unpackhi_epi64(k02,k20),_mm_castps_si128(_mm_loadu_ps(reinterpret_cast<const float *>(m))))));
+		_mm_storeu_ps(reinterpret_cast<float *>(c) + 4,_mm_castsi128_ps(_mm_xor_si128(_mm_unpackhi_epi64(k13,k31),_mm_castps_si128(_mm_loadu_ps(reinterpret_cast<const float *>(m) + 4)))));
+		_mm_storeu_ps(reinterpret_cast<float *>(c) + 8,_mm_castsi128_ps(_mm_xor_si128(_mm_unpacklo_epi64(k20,k02),_mm_castps_si128(_mm_loadu_ps(reinterpret_cast<const float *>(m) + 8)))));
+		_mm_storeu_ps(reinterpret_cast<float *>(c) + 12,_mm_castsi128_ps(_mm_xor_si128(_mm_unpacklo_epi64(k31,k13),_mm_castps_si128(_mm_loadu_ps(reinterpret_cast<const float *>(m) + 12)))));
 
 		if (!(++_state.i[8])) {
 			++_state.i[5]; // state reordered for SSE
