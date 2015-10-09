@@ -40,7 +40,6 @@ char *progname = "";
 #include <sys/time.h>
 #include <pwd.h>
 #include <errno.h>
-#include <common.h>
 #include <stdarg.h>
 #include <netdb.h>
 #include <string.h>
@@ -55,7 +54,7 @@ char *progname = "";
 #include <arpa/inet.h>
 
 #include <poll.h>
-
+#include <pthread.h>
 #include <unistd.h>
 
 /* For NPs */
@@ -69,12 +68,11 @@ char *progname = "";
 #ifdef USE_SOCKS_DNS
 #include <resolv.h>
 #endif
-#include <intercept.h>
 
+#include "intercept.h"
+#include "common.h"
 #include "defs.h"
 #include "utils.c"
-
-#include <pthread.h>
 
 /* Global Declarations */
 #ifdef USE_SOCKS_DNS
