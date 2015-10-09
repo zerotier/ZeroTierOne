@@ -993,6 +993,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			outp.append((uint16_t)0); // error code, currently unused
 			outp.append((uint64_t)0); // flags, currently unused
 			outp.append((uint64_t)packetId());
+			peer->address().appendTo(outp);
 			outp.append((uint8_t)hops());
 			_localAddress.serialize(outp);
 			_remoteAddress.serialize(outp);
@@ -1039,13 +1040,14 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 		ZT_CircuitTestReport report;
 		memset(&report,0,sizeof(report));
 
-		report.address = peer->address().toInt();
+		report.current = peer->address().toInt();
+		report.upstream = Address(field(ZT_PACKET_IDX_PAYLOAD + 52,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
 		report.testId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 8);
 		report.timestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD);
 		report.remoteTimestamp = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 16);
 		report.sourcePacketId = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 44);
 		report.flags = at<uint64_t>(ZT_PACKET_IDX_PAYLOAD + 36);
-		report.sourcePacketHopCount = (*this)[ZT_PACKET_IDX_PAYLOAD + 52];
+		report.sourcePacketHopCount = (*this)[ZT_PACKET_IDX_PAYLOAD + 57]; // end of fixed length headers: 58
 		report.errorCode = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 34);
 		report.vendor = (enum ZT_Vendor)((*this)[ZT_PACKET_IDX_PAYLOAD + 24]);
 		report.protocolVersion = (*this)[ZT_PACKET_IDX_PAYLOAD + 25];
@@ -1055,10 +1057,10 @@ bool IncomingPacket::_doCIRCUIT_TEST_REPORT(const RuntimeEnvironment *RR,const S
 		report.platform = (enum ZT_Platform)at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 30);
 		report.architecture = (enum ZT_Architecture)at<uint16_t>(ZT_PACKET_IDX_PAYLOAD + 32);
 
-		const unsigned int receivedOnLocalAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedOnLocalAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 53);
-		const unsigned int receivedFromRemoteAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedFromRemoteAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 53 + receivedOnLocalAddressLen);
+		const unsigned int receivedOnLocalAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedOnLocalAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58);
+		const unsigned int receivedFromRemoteAddressLen = reinterpret_cast<InetAddress *>(&(report.receivedFromRemoteAddress))->deserialize(*this,ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen);
 
-		unsigned int nhptr = ZT_PACKET_IDX_PAYLOAD + 53 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
+		unsigned int nhptr = ZT_PACKET_IDX_PAYLOAD + 58 + receivedOnLocalAddressLen + receivedFromRemoteAddressLen;
 		nhptr += at<uint16_t>(nhptr) + 2; // add "additional field" length, which right now will be zero
 
 		report.nextHopCount = (*this)[nhptr++];

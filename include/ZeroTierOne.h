@@ -733,9 +733,14 @@ typedef struct {
  */
 typedef struct {
 	/**
-	 * Sender of report
+	 * Sender of report (current hop)
 	 */
-	uint64_t address;
+	uint64_t current;
+
+	/**
+	 * Previous hop
+	 */
+	uint64_t upstream;
 
 	/**
 	 * 64-bit test ID

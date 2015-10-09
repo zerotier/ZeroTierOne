@@ -1031,6 +1031,7 @@ public:
 		 *   <[2] 16-bit error code (set to 0, currently unused)>
 		 *   <[8] 64-bit report flags (set to 0, currently unused)>
 		 *   <[8] 64-bit source packet ID>
+		 *   <[5] upstream ZeroTier address from which test was received>
 		 *   <[1] 8-bit source packet hop count (ZeroTier hop count)>
 		 *   <[...] local wire address on which packet was received>
 		 *   <[...] remote wire address from which packet was received>

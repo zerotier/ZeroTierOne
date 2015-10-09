@@ -1881,7 +1881,7 @@ void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest 
 	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.16llx",test->timestamp,test->testId);
 	reportSavePath.append(tmp);
 	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.10llx",report->address);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.10llx_%.10llx",report->upstream,report->current);
 	reportSavePath.append(tmp);
 
 	{
@@ -1891,7 +1891,8 @@ void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest 
 			return;
 		fseek(f,0,SEEK_END);
 		fprintf(f,"%s{\n"
-			"\t\"address\": \"%.10llx\","ZT_EOL_S
+			"\t\"current\": \"%.10llx\","ZT_EOL_S
+			"\t\"upstream\": \"%.10llx\","ZT_EOL_S
 			"\t\"testId\": \"%.16llx\","ZT_EOL_S
 			"\t\"timestamp\": %llu,"ZT_EOL_S
 			"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
@@ -1911,7 +1912,8 @@ void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest 
 			"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
 			"}",
 			((ftell(f) > 0) ? ",\n" : ""),
-			(unsigned long long)report->address,
+			(unsigned long long)report->current,
+			(unsigned long long)report->upstream,
 			(unsigned long long)test->testId,
 			(unsigned long long)report->timestamp,
 			(unsigned long long)now,
