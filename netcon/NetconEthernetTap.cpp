@@ -344,7 +344,6 @@ void NetconEthernetTap::threadMain()
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
 			prev_tcp_time = now;
 			lwipstack->tcp_tmr();
-			//fprintf(stderr, "tcp_tmr\n");
 		} else {
 			tcp_remaining = ZT_LWIP_TCP_TIMER_INTERVAL - since_tcp;
 		}
@@ -354,7 +353,6 @@ void NetconEthernetTap::threadMain()
 		} else {
 			etharp_remaining = ARP_TMR_INTERVAL - since_etharp;
 		}
-		//fprintf(stderr, "poll_wait_time = %d\n", (unsigned long)std::min(tcp_remaining,etharp_remaining));
 		_phy.poll((unsigned long)std::min(tcp_remaining,etharp_remaining));
 	}
 	closeAll();
@@ -477,27 +475,6 @@ int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval)
 // locked in this case!
 
 /*
- * Callback from LWIP to do whatever work we might need to do.
- *
- * @param associated service state object
- * @param PCB we're polling on
- * @return ERR_OK if everything is ok, -1 otherwise
- *
- */
-err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
-{
-	//fprintf(stderr, "nc_poll\n");
-	/*
-	Larg *l = (Larg*)arg;
-	TcpConnection *conn = l->conn;
-	NetconEthernetTap *tap = l->tap;
-	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
-		tap->handle_write(conn);
-	*/
-	return ERR_OK;
-}
-
-/*
  * Callback from LWIP for when a connection has been accepted and the PCB has been
  * put into an ACCEPT state.
  *
@@ -552,7 +529,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
     tap->lwipstack->_tcp_recv(newpcb, nc_recved);
     tap->lwipstack->_tcp_err(newpcb, nc_err);
     tap->lwipstack->_tcp_sent(newpcb, nc_sent);
-    tap->lwipstack->_tcp_poll(newpcb, nc_poll, 1);
+    tap->lwipstack->_tcp_poll(newpcb, nc_poll, 0.5);
     tcp_accepted(conn->pcb);
 		return ERR_OK;
   }
@@ -639,6 +616,29 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 }
 
 /*
+ * Callback from LWIP to do whatever work we might need to do.
+ *
+ * @param associated service state object
+ * @param PCB we're polling on
+ * @return ERR_OK if everything is ok, -1 otherwise
+ *
+ */
+err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
+{
+	uint64_t now = OSUtils::now();
+	//fprintf(stderr, "nc_poll(): now = %u\n", now);
+	//fprintf(stderr, "nc_poll\n");
+
+	Larg *l = (Larg*)arg;
+	TcpConnection *conn = l->conn;
+	NetconEthernetTap *tap = l->tap;
+	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
+		tap->handle_write(conn);
+	
+	return ERR_OK;
+}
+
+/*
  * Callback from LWIP to signal that 'len' bytes have successfully been sent.
  * As a result, we should put our socket back into a notify-on-readability state
  * since there is now room on the PCB buffer to write to.
@@ -657,6 +657,8 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 	if(len) {
 		//fprintf(stderr, "ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
+		//uint64_t now = OSUtils::now();
+		//fprintf(stderr, "nc_sent(): now = %u\n", now);
 		//l->tap->_phy.whack();
 		//l->tap->handle_write(l->conn);
 	}
