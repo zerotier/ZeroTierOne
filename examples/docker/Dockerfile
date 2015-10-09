@@ -2,7 +2,7 @@ FROM centos:7
 
 MAINTAINER https://www.zerotier.com/
 
-RUN yum -y update && yum clean all
+RUN yum -y update && yum install -y sqlite net-tools && yum clean all
 
 EXPOSE 9993/udp
 
