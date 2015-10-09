@@ -5,4 +5,4 @@ This is a simple Docker example using ZeroTier One in normal tun/tap mode. It us
 
 This is not a very secure way to load an identity secret, but it's useful for testing since it allows you to repeatedly launch Docker containers with the same identity. For production we'd recommend using something like Hashicorp Vault, or modifying main.sh to leave identities unspecified and allow the container to generate a new identity at runtime. Then you could script approval of containers using the controller API, approving them as they launch, etc. (We are working on better ways of doing mass provisioning.)
 
-To use in normal tun/tap mode with Docker, containers must be run with the options "--device=/dev/net/tun --cap-add=NET_ADMIN". The main.sh script supplied here will complain and exit if these options are not present (no /dev/net/tun device).
+To use in normal tun/tap mode with Docker, containers must be run with the options "--device=/dev/net/tun --privileged". The main.sh script supplied here will complain and exit if these options are not present (no /dev/net/tun device).
