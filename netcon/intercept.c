@@ -71,7 +71,6 @@ char *progname = "";
 
 #include "intercept.h"
 #include "common.h"
-#include "defs.h"
 
 /* Global Declarations */
 #ifdef USE_SOCKS_DNS
@@ -119,6 +118,9 @@ it conflicts with our overriden symbols for read/write */
 #define STDOUT_FILENO   1
 #define STDERR_FILENO   2
 
+#define BUF_SZ                    1024
+#define SERVICE_CONNECT_ATTEMPTS  30
+
 ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 /* threading */
@@ -133,12 +135,7 @@ pthread_mutex_t loglock;
 static int is_initialized = 0;
 static int fdret_sock; // used for fd-transfers
 static int newfd; // used for "this_end" socket
-
 static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
-static char* logfilename   = "intercept.log";
-FILE *logfile       = NULL;
-static char* logmode       = "a";
-static int flog = -1;
 
 static int thispid;
 
@@ -208,8 +205,6 @@ void my_dest(void) {
   dwr("closing connections to service...\n");
   close(fdret_sock);
   pthread_mutex_destroy(&lock);
-  //close(flog);
-  //close(logfile);
 }
 
 
@@ -218,9 +213,7 @@ void load_symbols(void)
 #ifdef USE_OLD_DLSYM
   void *lib;
 #endif
-
  /* possibly add check to beginning of each method to avoid needing to cll the constructor */
-
   if(thispid == getpid()) {
     dwr("detected duplicate call to global ctor (pid=%d).\n", thispid);
   }
@@ -722,8 +715,6 @@ int accept(ACCEPT_SIG)
 
   int sock_type = -1;
   socklen_t sock_type_len = sizeof(sock_type);
-  struct sockaddr_in *connaddr;
-  connaddr = (struct sockaddr_in *) addr;
 
   getsockopt(sockfd, SOL_SOCKET, SO_TYPE,
        (void *) &sock_type, &sock_type_len);

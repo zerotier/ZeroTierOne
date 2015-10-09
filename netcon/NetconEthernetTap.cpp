@@ -30,7 +30,6 @@
 #include <algorithm>
 #include <utility>
 #include <dlfcn.h>
-//#include <sys/types.h>
 
 #include "NetconEthernetTap.hpp"
 
@@ -634,7 +633,7 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 	NetconEthernetTap *tap = l->tap;
 	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
 		tap->handle_write(conn);
-	
+
 	return ERR_OK;
 }
 

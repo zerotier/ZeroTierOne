@@ -41,27 +41,6 @@
 
 namespace ZeroTier
 {
-	/*
-	ip_addr_t convert_ip(struct sockaddr_in * addr)
-	{
-	  ip_addr_t conn_addr;
-	  struct sockaddr_in *ipv4 = addr;
-	  short a = ip4_addr1(&(ipv4->sin_addr));
-	  short b = ip4_addr2(&(ipv4->sin_addr));
-	  short c = ip4_addr3(&(ipv4->sin_addr));
-	  short d = ip4_addr4(&(ipv4->sin_addr));
-	  IP4_ADDR(&conn_addr, a,b,c,d);
-	  return conn_addr;
-	}
-*/
-
-/*
-	ip_addr_t ip_addr_sin(register struct sockaddr_in *sin) {
-	   ip_addr_t ip;
-	   *((struct sockaddr_in*) &ip) = *sin;
-	   return ip;
-	}
-*/
 	// Functions used to pass file descriptors between processes
 
 	ssize_t sock_fd_write(int sock, int fd)

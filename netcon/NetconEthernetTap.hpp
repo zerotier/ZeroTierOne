@@ -142,7 +142,6 @@ private:
 	TcpConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	void closeConnection(TcpConnection *conn);
 	void closeAll();
-
 	void closeClient(PhySocket *sock);
 
 	Phy<NetconEthernetTap *> _phy;
