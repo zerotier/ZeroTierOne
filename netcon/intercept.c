@@ -675,6 +675,30 @@ int bind(BIND_SIG)
   pthread_mutex_lock(&lock);
   write(fdret_sock, cmd, BUF_SZ);
   pthread_mutex_unlock(&lock);
+
+  /*
+    If we successfully wrote the RPC, try to read a return value
+     - Also get errno value
+  */
+  if(fdret_sock >= 0) {
+    int retval;
+    int _errno;
+    char mynewbuf[BUF_SZ];
+    memset(&mynewbuf, '\0', sizeof(mynewbuf));
+    int n_read = read(fdret_sock, &mynewbuf, sizeof(mynewbuf));
+    if(n_read > 0) {
+      memcpy(&retval, &mynewbuf[1], sizeof(retval));
+      memcpy(&_errno, &mynewbuf[1]+sizeof(retval), sizeof(_errno));
+      dwr("errno = %d\n", _errno);
+      errno = _errno;
+      pthread_mutex_unlock(&lock);
+      return retval;
+    }
+    else {
+      pthread_mutex_unlock(&lock);
+      dwr("unable to read connect: return value\n");
+    }
+  }
   return 0; /* FIXME: get real return value */
 #endif
 }

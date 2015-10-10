@@ -47,7 +47,7 @@ lib:
 install:
 	cp libintercept.so.1.0 /lib/libintercept.so.1.0
 	ln -sf /lib/libintercept.so.1.0 /lib/libintercept
-	/usr/bin/install -c netcon/intercept /usr/bin
+	/usr/bin/install -c intercept /usr/bin
 
 uninstall:
 	rm -r /lib/libintercept.so.1.0

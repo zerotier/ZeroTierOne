@@ -166,11 +166,9 @@ std::vector<InetAddress> NetconEthernetTap::ips() const
 void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
 {
 	struct pbuf *p,*q;
-	//fprintf(stderr, "_put(%s,%s,%.4x,[data],%u)\n",from.toString().c_str(),to.toString().c_str(),etherType,len);
 	if (!_enabled)
 		return;
 
-	//printf(">> %.4x %s\n",etherType,Utils::hex(data,len).c_str());
 	struct eth_hdr ethhdr;
 	from.copyTo(ethhdr.src.addr, 6);
 	to.copyTo(ethhdr.dest.addr, 6);
@@ -202,7 +200,6 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		return;
 	}
 
-	//printf("p->len == %u, p->payload == %s\n",p->len,Utils::hex(p->payload,p->len).c_str());
 	{
 		Mutex::Lock _l2(lwipstack->_lock);
 		if(interface.input(p, &interface) != ERR_OK) {
@@ -448,19 +445,19 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 /*
  * Send a return value to the client for an RPC
  */
-int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval)
+int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval, int _errno = 0)
 {
-  char retmsg[4];
+  char retmsg[sizeof(retval) + sizeof(_errno)];
   memset(&retmsg, '\0', sizeof(retmsg));
   retmsg[0]=RPC_RETVAL;
   memcpy(&retmsg[1], &retval, sizeof(retval));
+	memcpy(&retmsg[1]+sizeof(retval), &_errno, sizeof(_errno));
+	fprintf(stderr, "errno = %d\n", _errno);
   int n = write(_phy.getDescriptor(conn->rpcSock), &retmsg, sizeof(retmsg));
-  if(n > 0) {
-		// signal that we've satisfied this requirement
+  if(n > 0)
     conn->pending = false;
-  }
   else {
-    fprintf(stderr, "unable to send return value to the intercept\n");
+    fprintf(stderr, "Unable to send return value to the intercept. Closing connection\n");
 		closeConnection(conn);
   }
   return n;
@@ -628,12 +625,13 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 	//fprintf(stderr, "nc_poll(): now = %u\n", now);
 	//fprintf(stderr, "nc_poll\n");
 
+/*
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
 	NetconEthernetTap *tap = l->tap;
 	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
 		tap->handle_write(conn);
-
+*/
 	return ERR_OK;
 }
 
@@ -658,7 +656,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
 		//uint64_t now = OSUtils::now();
 		//fprintf(stderr, "nc_sent(): now = %u\n", now);
-		//l->tap->_phy.whack();
+		l->tap->_phy.whack();
 		//l->tap->handle_write(l->conn);
 	}
 	return ERR_OK;
@@ -692,9 +690,30 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
  * @param Client that is making the RPC
  * @param structure containing the data and parameters for this client's RPC
  *
+
+	TODO: set errno appropriately
+
+	[ ]	EACCES - The address is protected, and the user is not the superuser.
+	[X]	EADDRINUSE - The given address is already in use.
+	[ ]	EBADF - sockfd is not a valid descriptor.
+	[ ]	EINVAL - The socket is already bound to an address.
+	[ ]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
+	[ ]	The following errors are specific to UNIX domain (AF_UNIX) sockets:
+	[ ]	EACCES - Search permission is denied on a component of the path prefix. (See also path_resolution(7).)
+	[ ]	EADDRNOTAVAIL - A nonexistent interface was requested or the requested address was not local.
+	[ ]	EFAULT - addr points outside the user's accessible address space.
+	[ ]	EINVAL - The addrlen is wrong, or the socket was not in the AF_UNIX family.
+	[ ]	ELOOP - Too many symbolic links were encountered in resolving addr.
+	[ ]	ENAMETOOLONG -s addr is too long.
+	[ ]	ENOENT - The file does not exist.
+	[ ]	ENOMEM - Insufficient kernel memory was available.
+	[ ]	ENOTDIR - A component of the path prefix is not a directory.
+	[ ]	EROFS - The socket inode would reside on a read-only file system.
+
  */
 void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc)
 {
+	int _errno;
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
@@ -706,11 +725,16 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   if(conn) {
     if(conn->pcb->state == CLOSED){
       int err = lwipstack->tcp_bind(conn->pcb, &conn_addr, conn_port);
-      if(err != ERR_OK) {
+			send_return_value(conn, err, -99);
+      if(err == ERR_USE) {
+				_errno = EADDRINUSE;
+				send_return_value(conn, err, -99);
+			}
+			if(err != ERR_OK) {
 				int ip = connaddr->sin_addr.s_addr;
 				unsigned char d[4];
 				d[0] = ip & 0xFF;
-				d[1] = (ip >> 8) & 0xFF;
+				d[1] = (ip >>  8) & 0xFF;
 				d[2] = (ip >> 16) & 0xFF;
 				d[3] = (ip >> 24) & 0xFF;
 				fprintf(stderr, "handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
@@ -784,6 +808,18 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
  * @param Client that is making the RPC
  * @param structure containing the data and parameters for this client's RPC
  *
+
+	TODO: set errno appropriately
+
+	[ ] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
+  [ ] EAFNOSUPPORT - The implementation does not support the specified address family.
+  [ ] EINVAL - Unknown protocol, or protocol family not available.
+  [ ] EINVAL - Invalid flags in type.
+  [ ] EMFILE - Process file table overflow.
+  [ ] ENFILE - The system limit on the total number of open files has been reached.
+  [ ] ENOBUFS or ENOMEM - Insufficient memory is available.  The socket cannot be created until sufficient resources are freed.
+  [ ] EPROTONOSUPPORT - The protocol type or the specified protocol is not supported within this domain.
+
  */
 void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc)
 {
@@ -869,7 +905,6 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		corresponding PhySocket until nc_sent() is called and confirms that there is
 		now space on the buffer */
 		if(sndbuf == 0) {
-			//fprintf(stderr, "sndbuf = 0, setting read-notify = false\n");
 			_phy.setNotifyReadable(conn->dataSock, false);
 			lwipstack->_tcp_output(conn->pcb);
 			return;
@@ -878,7 +913,6 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		int read_fd = _phy.getDescriptor(conn->dataSock);
 
 		if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
-			//fprintf(stderr, "read = %d\n", r);
 			conn->idx += r;
 			/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
 			 * data to LWIP to be enqueued and eventually sent to the network. */
@@ -905,9 +939,6 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 				return;
 			}
 		}
-		//else {
-		//	fprintf(stderr, "handle_write(): could not read from PhySocket for this connection\n");
-		//}
 	}
 }
 
