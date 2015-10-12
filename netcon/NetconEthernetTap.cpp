@@ -447,20 +447,28 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
  */
 int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval, int _errno = 0)
 {
+	if(conn) {
+		int n = send_return_value(_phy.getDescriptor(conn->rpcSock), retval, _errno);
+		if(n > 0)
+			conn->pending = false;
+		else {
+			fprintf(stderr, "Unable to send return value to the intercept. Closing connection\n");
+			closeConnection(conn);
+		}
+		return n;
+	}
+	return -1;
+}
+
+int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
+{
 	int sz = sizeof(char) + sizeof(retval) + sizeof(errno);
-  char retmsg[sz];
-  memset(&retmsg, '\0', sizeof(retmsg));
-  retmsg[0]=RPC_RETVAL;
+	char retmsg[sz];
+	memset(&retmsg, '\0', sizeof(retmsg));
+	retmsg[0]=RPC_RETVAL;
 	memcpy(&retmsg[1], &retval, sizeof(retval));
 	memcpy(&retmsg[1]+sizeof(retval), &_errno, sizeof(_errno));
-	int n = write(_phy.getDescriptor(conn->rpcSock), &retmsg, sz);
-  if(n > 0)
-    conn->pending = false;
-  else {
-    fprintf(stderr, "Unable to send return value to the intercept. Closing connection\n");
-		closeConnection(conn);
-  }
-  return n;
+	return write(fd, &retmsg, sz);
 }
 
 /*------------------------------------------------------------------------------
@@ -484,6 +492,24 @@ int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval, int _e
  * @param newly allocated PCB
  * @param error code
  * @return ERR_OK if everything is ok, -1 otherwise
+
+	[ ] EAGAIN or EWOULDBLOCK - The socket is marked nonblocking and no connections are present
+													to be accepted. POSIX.1-2001 allows either error to be returned for
+													this case, and does not require these constants to have the same value,
+													so a portable application should check for both possibilities.
+	[ ] EBADF - The descriptor is invalid.
+	[?] ECONNABORTED - A connection has been aborted.
+	[ ] EFAULT - The addr argument is not in a writable part of the user address space.
+	[ ] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
+	[ ] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
+	[ ] EINVAL - (accept4()) invalid value in flags.
+	[ ] EMFILE - The per-process limit of open file descriptors has been reached.
+	[ ] ENFILE - The system limit on the total number of open files has been reached.
+	[ ] ENOBUFS, ENOMEM - Not enough free memory. This often means that the memory allocation is limited by the socket buffer limits, not by the system memory.
+	[ ] ENOTSOCK - The descriptor references a file, not a socket.
+	[ ] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
+	[ ] EPROTO - Protocol error.
+
  *
  */
 err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
@@ -507,11 +533,10 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 
 		int send_fd = tap->_phy.getDescriptor(conn->rpcSock);
 
-		int n = write(larg_fd, "z", 1);
+		int n = write(larg_fd, "z", 1); // accept() in library waits for this byte
     if(n > 0) {
 			if(sock_fd_write(send_fd, fds[1]) > 0) {
 				new_tcp_conn->pending = true;
-				fprintf(stderr, "nc_accept(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);
 			}
 			else {
 				fprintf(stderr, "nc_accept(%d): unable to send fd to client\n", larg_fd);
@@ -526,7 +551,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
     tap->lwipstack->_tcp_err(newpcb, nc_err);
     tap->lwipstack->_tcp_sent(newpcb, nc_sent);
     tap->lwipstack->_tcp_poll(newpcb, nc_poll, 0.5);
-    tcp_accepted(conn->pcb);
+    tcp_accepted(conn->pcb); // Let lwIP know that it can queue additional incoming connections
 		return ERR_OK;
   }
   else {
@@ -691,8 +716,6 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
  * @param structure containing the data and parameters for this client's RPC
  *
 
-	TODO: set errno appropriately
-
 	[ ]	EACCES - The address is protected, and the user is not the superuser.
 	[X]	EADDRINUSE - The given address is already in use.
 	[X]	EBADF - sockfd is not a valid descriptor.
@@ -718,7 +741,6 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
 	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
-
 	TcpConnection *conn = getConnectionByTheirFD(bind_rpc->sockfd);
 
   if(conn) {
@@ -738,14 +760,18 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 					send_return_value(conn, -1, ENOMEM);
 			}
 			else {
-				send_return_value(conn, ERR_OK, 0); // OK
+				send_return_value(conn, ERR_OK, ERR_OK); // Success
 			}
     }
-    else fprintf(stderr, "handle_bind(): PCB not in CLOSED state. Ignoring BIND request.\n");
-		send_return_value(conn, -1, EINVAL);
+    else {
+			fprintf(stderr, "handle_bind(): PCB not in CLOSED state. Ignoring BIND request.\n");
+			send_return_value(conn, -1, EINVAL);
+		}
   }
-  else fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
-	send_return_value(conn, -1, EBADF);
+  else {
+		fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
+		send_return_value(conn, -1, EBADF); // FIXME: This makes no sense
+	}
 }
 
 /*
@@ -754,6 +780,12 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
  * @param Client that is making the RPC
  * @param structure containing the data and parameters for this client's RPC
  *
+
+  [ ] EADDRINUSE - Another socket is already listening on the same port.
+	[X] EBADF - The argument sockfd is not a valid descriptor.
+	[ ] ENOTSOCK - The argument sockfd is not a socket.
+	[ ] EOPNOTSUPP - The socket is not of a type that supports the listen() operation.
+
  */
 void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc)
 {
@@ -771,13 +803,16 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
 			/* we need to wait for the client to send us the fd allocated on their end
 			for this listening socket */
       conn->pending = true;
+			send_return_value(conn, ERR_OK, ERR_OK);
     }
     else {
 			fprintf(stderr, "handle_listen(): unable to allocate memory for new listening PCB\n");
+			send_return_value(conn, -1, ENOMEM); // FIXME: This does not have an equivalent errno value
     }
   }
   else {
     fprintf(stderr, "handle_listen(): can't locate connection for PCB\n");
+		send_return_value(conn, -1, EBADF);
   }
 }
 
@@ -838,13 +873,16 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	  new_conn->their_fd = fds[1];
 		tcp_connections.push_back(new_conn);
     sock_fd_write(_phy.getDescriptor(sock), fds[1]);
-		//fprintf(stderr, "handle_socket(): socketpair = { our=%d, their=%d}\n", fds[0], fds[1]);
-		/* Once the client tells us what its fd is for the other end,
-		we can then complete the mapping */
+		// Once the client tells us what its fd is for the other end, we can then complete the mapping
     new_conn->pending = true;
   }
   else {
+		int rpc_fd = _phy.getDescriptor(sock);
+		sock_fd_write(rpc_fd, -1); // Send a bad fd, to signal error
     fprintf(stderr, "handle_socket(): Memory not available for new PCB\n");
+		if(send_return_value(rpc_fd, -1, ENOMEM) < 0) {
+			fprintf(stderr, "handle_socket(): Unable to send return value\n");
+		}
   }
 }
 

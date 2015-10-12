@@ -130,7 +130,7 @@
  * MEMP_NUM_RAW_PCB: Number of raw connection PCBs
  * (requires the LWIP_RAW option)
  */
-#define MEMP_NUM_RAW_PCB                32
+#define MEMP_NUM_RAW_PCB                128
 
 /**
  * MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One

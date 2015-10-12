@@ -112,6 +112,7 @@ private:
 	void handle_write(TcpConnection *conn);
 
 	int send_return_value(TcpConnection *conn, int retval, int _errno);
+	int send_return_value(int fd, int retval, int _errno);
 
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
 	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success);

@@ -121,6 +121,8 @@ it conflicts with our overriden symbols for read/write */
 #define BUF_SZ                    1024
 #define SERVICE_CONNECT_ATTEMPTS  30
 
+#define ERR_OK          0
+
 ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 /* threading */
@@ -535,20 +537,30 @@ int socket(SOCKET_SIG)
   ssize_t size = sock_fd_read(fdret_sock, gmybuf, sizeof(gmybuf), &newfd);
   if(size > 0)
   {
-    dwr("socket(): RXed FD = %d\n", newfd);
     /* send our local-fd number back to service so
      it can complete its mapping table entry */
     memset(cmd, '\0', BUF_SZ);
     cmd[0] = RPC_FD_MAP_COMPLETION;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
-    write(fdret_sock, cmd, BUF_SZ);
-    pthread_mutex_unlock(&lock);
-    return newfd;
+    if(newfd > -1) {
+      int n_write = write(fdret_sock, cmd, BUF_SZ);
+      if(n_write < 0) {
+        dwr("Error writing perceived FD to service.\n");
+        return get_retval();
+      }
+      pthread_mutex_unlock(&lock);
+      errno = ERR_OK;
+      return newfd;
+    }
+    else { // Try to read retval+errno since we RXed a bad fd
+      dwr("Error, service sent bad fd.\n");
+      return get_retval();
+    }
   }
   else {
     dwr("Error while receiving new FD.\n");
     pthread_mutex_unlock(&lock);
-    return -1;
+    return get_retval();
   }
   return realsocket(socket_family, socket_type, protocol);
 #endif
@@ -704,7 +716,7 @@ int bind(BIND_SIG)
   pthread_mutex_lock(&lock);
   write(fdret_sock, cmd, BUF_SZ);
   pthread_mutex_unlock(&lock);
-
+  errno = ERR_OK;
   return get_retval();
 #endif
 }
@@ -769,24 +781,31 @@ int accept(ACCEPT_SIG)
     ssize_t size = sock_fd_read(fdret_sock, gmybuf, sizeof(gmybuf), &new_conn_socket);
     if(size > 0)
     {
-      dwr("accept(): RXed FD = %d\n", new_conn_socket);
       /* Send our local-fd number back to service so it can complete its mapping table */
       memset(cmd, '\0', BUF_SZ);
       cmd[0] = RPC_FD_MAP_COMPLETION;
       memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
       pthread_mutex_lock(&lock);
-      write(fdret_sock, cmd, BUF_SZ);
+      int n_write = write(fdret_sock, cmd, BUF_SZ);
+      if(n_write < 0) {
+        dwr("Error sending perceived FD to service. Service might be down.\n");
+        errno = ECONNABORTED;
+        return -1;
+      }
       pthread_mutex_unlock(&lock);
-      return new_conn_socket;
+      errno = ERR_OK;
+      return new_conn_socket; // OK
     }
     else {
-      dwr("Error while receiving new FD.\n");
+      dwr("Error receiving new FD from service. Service might be down.\n");
+      errno = ECONNABORTED;
       return -1;
     }
   }
-  errno = EWOULDBLOCK;
+  dwr("Error reading signal byte from service. Service might be down.\n");
+  //errno = EWOULDBLOCK;
+  errno = ECONNABORTED;
   return -1;
-  /* TODO/FIXME: Set errno */
 #endif
 }
 
@@ -822,9 +841,7 @@ int listen(LISTEN_SIG)
   pthread_mutex_lock(&lock);
   write(fdret_sock,cmd, BUF_SZ);
   pthread_mutex_unlock(&lock);
-
-  return 0;
-  /* FIXME: get real return value (should be 0 / -1) */
-  /* FIXME: Also set errno */
+  errno = ERR_OK;
+  return get_retval();
 #endif
 }
