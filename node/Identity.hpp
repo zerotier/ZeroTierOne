@@ -39,8 +39,6 @@
 #include "C25519.hpp"
 #include "Buffer.hpp"
 
-#define ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN)
-
 namespace ZeroTier {
 
 /**
