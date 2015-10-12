@@ -139,6 +139,11 @@ static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
 
 static int thispid;
 
+/*
+*
+* Check for forking
+*
+*/
 int checkpid() {
   if(thispid != getpid()) {
     printf("clone/fork detected. re-initializing this instance.\n");
@@ -147,6 +152,31 @@ int checkpid() {
     thispid = getpid();
   }
   return 0;
+}
+
+/*
+*
+* Reads a return value from the service and sets errno (if applicable)
+*
+*/
+int get_retval()
+{
+  if(fdret_sock >= 0) {
+    int retval;
+    int sz = sizeof(char) + sizeof(retval) + sizeof(errno);
+    char retbuf[BUF_SZ];
+    memset(&retbuf, '\0', sz);
+    int n_read = read(fdret_sock, &retbuf, sz);
+    if(n_read > 0) {
+      memcpy(&retval, &retbuf[1], sizeof(retval));
+      memcpy(&errno, &retbuf[1+sizeof(retval)], sizeof(errno));
+      return retval;
+    }
+    else {
+      dwr("unable to read connect: return value\n");
+      return -1;
+    }
+  }
 }
 
 #define SLEEP_TIME 0
@@ -474,7 +504,6 @@ int socket(SOCKET_SIG)
 {
 #ifdef DUMMY
   dwr("socket(fam=%d, type=%d, prot=%d)\n", socket_family, socket_type, protocol);
-  //usleep(DUMMY_WAIT);
   return realsocket(socket_family, socket_type, protocol);
 
 #else
@@ -676,32 +705,10 @@ int bind(BIND_SIG)
   write(fdret_sock, cmd, BUF_SZ);
   pthread_mutex_unlock(&lock);
 
-  /*
-    If we successfully wrote the RPC, try to read a return value
-     - Also get errno value
-  */
-  if(fdret_sock >= 0) {
-    int retval;
-    int _errno;
-    char mynewbuf[BUF_SZ];
-    memset(&mynewbuf, '\0', sizeof(mynewbuf));
-    int n_read = read(fdret_sock, &mynewbuf, sizeof(mynewbuf));
-    if(n_read > 0) {
-      memcpy(&retval, &mynewbuf[1], sizeof(retval));
-      memcpy(&_errno, &mynewbuf[1]+sizeof(retval), sizeof(_errno));
-      dwr("errno = %d\n", _errno);
-      errno = _errno;
-      pthread_mutex_unlock(&lock);
-      return retval;
-    }
-    else {
-      pthread_mutex_unlock(&lock);
-      dwr("unable to read connect: return value\n");
-    }
-  }
-  return 0; /* FIXME: get real return value */
+  return get_retval();
 #endif
 }
+
 
 /*------------------------------------------------------------------------------
 ----------------------------------- accept4() ----------------------------------

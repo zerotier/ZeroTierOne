@@ -447,13 +447,13 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
  */
 int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval, int _errno = 0)
 {
-  char retmsg[sizeof(retval) + sizeof(_errno)];
+	int sz = sizeof(char) + sizeof(retval) + sizeof(errno);
+  char retmsg[sz];
   memset(&retmsg, '\0', sizeof(retmsg));
   retmsg[0]=RPC_RETVAL;
-  memcpy(&retmsg[1], &retval, sizeof(retval));
+	memcpy(&retmsg[1], &retval, sizeof(retval));
 	memcpy(&retmsg[1]+sizeof(retval), &_errno, sizeof(_errno));
-	fprintf(stderr, "errno = %d\n", _errno);
-  int n = write(_phy.getDescriptor(conn->rpcSock), &retmsg, sizeof(retmsg));
+	int n = write(_phy.getDescriptor(conn->rpcSock), &retmsg, sz);
   if(n > 0)
     conn->pending = false;
   else {
@@ -695,8 +695,8 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 
 	[ ]	EACCES - The address is protected, and the user is not the superuser.
 	[X]	EADDRINUSE - The given address is already in use.
-	[ ]	EBADF - sockfd is not a valid descriptor.
-	[ ]	EINVAL - The socket is already bound to an address.
+	[X]	EBADF - sockfd is not a valid descriptor.
+	[X]	EINVAL - The socket is already bound to an address.
 	[ ]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
 	[ ]	The following errors are specific to UNIX domain (AF_UNIX) sockets:
 	[ ]	EACCES - Search permission is denied on a component of the path prefix. (See also path_resolution(7).)
@@ -704,16 +704,15 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 	[ ]	EFAULT - addr points outside the user's accessible address space.
 	[ ]	EINVAL - The addrlen is wrong, or the socket was not in the AF_UNIX family.
 	[ ]	ELOOP - Too many symbolic links were encountered in resolving addr.
-	[ ]	ENAMETOOLONG -s addr is too long.
+	[ ]	ENAMETOOLONG - s addr is too long.
 	[ ]	ENOENT - The file does not exist.
-	[ ]	ENOMEM - Insufficient kernel memory was available.
+	[X]	ENOMEM - Insufficient kernel memory was available.
 	[ ]	ENOTDIR - A component of the path prefix is not a directory.
 	[ ]	EROFS - The socket inode would reside on a read-only file system.
 
  */
 void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc)
 {
-	int _errno;
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
@@ -725,11 +724,6 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   if(conn) {
     if(conn->pcb->state == CLOSED){
       int err = lwipstack->tcp_bind(conn->pcb, &conn_addr, conn_port);
-			send_return_value(conn, err, -99);
-      if(err == ERR_USE) {
-				_errno = EADDRINUSE;
-				send_return_value(conn, err, -99);
-			}
 			if(err != ERR_OK) {
 				int ip = connaddr->sin_addr.s_addr;
 				unsigned char d[4];
@@ -738,11 +732,20 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				d[2] = (ip >> 16) & 0xFF;
 				d[3] = (ip >> 24) & 0xFF;
 				fprintf(stderr, "handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
-      }
+				if(err == ERR_USE)
+					send_return_value(conn, -1, EADDRINUSE);
+				if(err == ERR_MEM)
+					send_return_value(conn, -1, ENOMEM);
+			}
+			else {
+				send_return_value(conn, ERR_OK, 0); // OK
+			}
     }
     else fprintf(stderr, "handle_bind(): PCB not in CLOSED state. Ignoring BIND request.\n");
+		send_return_value(conn, -1, EINVAL);
   }
   else fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
+	send_return_value(conn, -1, EBADF);
 }
 
 /*
