@@ -53,7 +53,6 @@
 
 namespace ZeroTier {
 
-
 NetconEthernetTap::NetconEthernetTap(
 	const char *homePath,
 	const MAC &mac,
@@ -285,6 +284,9 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
 	delete conn;
 }
 
+/*
+ * Close a single RPC connection and associated PhySocket
+ */
 void NetconEthernetTap::closeClient(PhySocket *sock)
 {
 	for(int i=0; i<rpc_sockets.size(); i++) {
@@ -295,6 +297,9 @@ void NetconEthernetTap::closeClient(PhySocket *sock)
   _phy.close(sock);
 }
 
+/*
+ * Close all RPC and TCP connections
+ */
 void NetconEthernetTap::closeAll()
 {
 	while(rpc_sockets.size())
@@ -357,9 +362,7 @@ void NetconEthernetTap::threadMain()
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	//fprintf(stderr, "phyOnUnixClose() CLOSING: %d\n", _phy.getDescriptor(sock));
-	//closeClient(sock);
-	// FIXME:
+	// FIXME: What do?
 }
 
 /*
@@ -420,7 +423,6 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			break;
 	  case RPC_KILL_INTERCEPT:
 			fprintf(stderr, "RPC_KILL_INTERCEPT\n");
-	    //scloseClient(sock);
 			break;
   	case RPC_CONNECT:
 			fprintf(stderr, "RPC_CONNECT\n");
@@ -633,8 +635,7 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 				l->tap->send_return_value(l->conn, -1, ENOMEM);
 				break;
 			case ERR_BUF:
-				// FIXME: From user's perspective, this is the same as an ENOMEM error. I think.
-				l->tap->send_return_value(l->conn, -1, ENOMEM);
+				l->tap->send_return_value(l->conn, -1, ENOBUFS);
 				break;
 			case ERR_TIMEOUT:
 				l->tap->send_return_value(l->conn, -1, ETIMEDOUT);
@@ -752,9 +753,8 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
  */
 err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
-	//fprintf(stderr, "nc_connected\n");
 	Larg *l = (Larg*)arg;
-	l->tap->send_return_value(l->conn, err);
+	l->tap->send_return_value(l->conn, ERR_OK);
 	return ERR_OK;
 }
 
@@ -762,10 +762,29 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 ----------------------------- RPC Handler functions ----------------------------
 ------------------------------------------------------------------------------*/
 
+/**
+ * Handles a return value (client's perceived fd) and completes a mapping
+ * so that we know what connection an RPC call should be associated with.
+ *
+ * @param PhySocket associated with this RPC connection
+ * @param structure containing the data and parameters for this client's RPC
+ *
+ */
+void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned char* buf)
+{
+	TcpConnection *conn = (TcpConnection*)*uptr;
+	if(conn->pending) {
+		memcpy(&(conn->perceived_fd), &buf[1], sizeof(int));
+		//fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n",
+		//_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
+		conn->pending = false;
+	}
+}
+
 /*
  * Handles an RPC to bind an LWIP PCB to a given address and port
  *
- * @param Client that is making the RPC
+ * @param PhySocket associated with this RPC connection
  * @param structure containing the data and parameters for this client's RPC
  *
 
@@ -773,18 +792,18 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 	[X]	EADDRINUSE - The given address is already in use.
 	[X]	EBADF - sockfd is not a valid descriptor.
 	[X]	EINVAL - The socket is already bound to an address.
-	[ ]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
-	[ ]	The following errors are specific to UNIX domain (AF_UNIX) sockets:
-	[ ]	EACCES - Search permission is denied on a component of the path prefix. (See also path_resolution(7).)
-	[ ]	EADDRNOTAVAIL - A nonexistent interface was requested or the requested address was not local.
-	[ ]	EFAULT - addr points outside the user's accessible address space.
-	[ ]	EINVAL - The addrlen is wrong, or the socket was not in the AF_UNIX family.
-	[ ]	ELOOP - Too many symbolic links were encountered in resolving addr.
-	[ ]	ENAMETOOLONG - s addr is too long.
-	[ ]	ENOENT - The file does not exist.
+	[i]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
+	[-]	The following errors are specific to UNIX domain (AF_UNIX) sockets:
+	[-]	EACCES - Search permission is denied on a component of the path prefix. (See also path_resolution(7).)
+	[-]	EADDRNOTAVAIL - A nonexistent interface was requested or the requested address was not local.
+	[-]	EFAULT - addr points outside the user's accessible address space.
+	[-]	EINVAL - The addrlen is wrong, or the socket was not in the AF_UNIX family.
+	[-]	ELOOP - Too many symbolic links were encountered in resolving addr.
+	[-]	ENAMETOOLONG - s addr is too long.
+	[-]	ENOENT - The file does not exist.
 	[X]	ENOMEM - Insufficient kernel memory was available.
-	[ ]	ENOTDIR - A component of the path prefix is not a directory.
-	[ ]	EROFS - The socket inode would reside on a read-only file system.
+	[-]	ENOTDIR - A component of the path prefix is not a directory.
+	[-]	EROFS - The socket inode would reside on a read-only file system.
 
  */
 void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc)
@@ -824,16 +843,16 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 			send_return_value(conn, -1, EINVAL);
 		}
   }
-  else {
-		fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
-		send_return_value(conn, -1, EBADF); // FIXME: This makes no sense
-	}
+  //else {
+	//	fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
+	//	send_return_value(conn, -1, EBADF); // FIXME: This makes no sense
+	//}
 }
 
 /*
  * Handles an RPC to put an LWIP PCB into LISTEN mode
  *
- * @param Client that is making the RPC
+ * @param PhySocket associated with this RPC connection
  * @param structure containing the data and parameters for this client's RPC
  *
 
@@ -872,25 +891,6 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
   }
 }
 
-/**
- * Handles a return value (client's perceived fd) and completes a mapping
- * so that we know what connection an RPC call should be associated with.
- *
- * @param Client that is making the RPC
- * @param structure containing the data and parameters for this client's RPC
- *
- */
-void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned char* buf)
-{
-	TcpConnection *conn = (TcpConnection*)*uptr;
-	if(conn->pending) {
-		memcpy(&(conn->perceived_fd), &buf[1], sizeof(int));
-		//fprintf(stderr, "handle_retval(): Mapping [our=%d -> their=%d]\n",
-		//_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
-		conn->pending = false;
-	}
-}
-
 /*
  * Handles an RPC to create a socket (LWIP PCB and associated socketpair)
  *
@@ -899,20 +899,20 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
  * is then required to tell the service what new file descriptor it has allocated
  * for this connection. After the mapping is complete, the socket can be used.
  *
- * @param Client that is making the RPC
+ * @param PhySocket associated with this RPC connection
  * @param structure containing the data and parameters for this client's RPC
  *
 
 	TODO: set errno appropriately
 
-	[ ] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
+	[-] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
   [?] EAFNOSUPPORT - The implementation does not support the specified address family.
   [?] EINVAL - Unknown protocol, or protocol family not available.
   [?] EINVAL - Invalid flags in type.
-  [ ] EMFILE - Process file table overflow.
-  [ ] ENFILE - The system limit on the total number of open files has been reached.
+  [i] EMFILE - Process file table overflow.
+  [i] ENFILE - The system limit on the total number of open files has been reached.
   [X] ENOBUFS or ENOMEM - Insufficient memory is available.  The socket cannot be created until sufficient resources are freed.
-  [ ] EPROTONOSUPPORT - The protocol type or the specified protocol is not supported within this domain.
+  [?] EPROTONOSUPPORT - The protocol type or the specified protocol is not supported within this domain.
 
  */
 void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc)
@@ -945,7 +945,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 /*
  * Handles an RPC to connect to a given address and port
  *
- * @param Client that is making the RPC
+ * @param PhySocket associated with this RPC connection
  * @param structure containing the data and parameters for this client's RPC
 
 	--- Error handling in this method will only catch problems which are immeidately
@@ -961,11 +961,11 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	[ ] ECONNREFUSED - No-one listening on the remote address.
 	[i] EFAULT - The socket structure address is outside the user's address space.
 	[ ] EINPROGRESS - The socket is nonblocking and the connection cannot be completed immediately.
-	[ ] EINTR - The system call was interrupted by a signal that was caught.
+	[?] EINTR - The system call was interrupted by a signal that was caught.
 	[X] EISCONN - The socket is already connected.
 	[?] ENETUNREACH - Network is unreachable.
 	[ ] ENOTSOCK - The file descriptor is not associated with a socket.
-	[ ] ETIMEDOUT - Timeout while attempting connection.
+	[X] ETIMEDOUT - Timeout while attempting connection.
 
  *
  */

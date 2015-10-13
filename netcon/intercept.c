@@ -135,13 +135,12 @@ pthread_mutex_t loglock;
 static int is_initialized = 0;
 static int fdret_sock; // used for fd-transfers
 static int newfd; // used for "this_end" socket
+static int thispid;
 static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
 
-static int thispid;
-
 /*
-  * Check for forking
-  */
+ * Check for forking
+ */
 int checkpid() {
   if(thispid != getpid()) {
     printf("clone/fork detected. re-initializing this instance.\n");
@@ -166,8 +165,8 @@ void send_command(int rpc_fd, char *cmd)
 
 }
 /*
-* Reads a return value from the service and sets errno (if applicable)
-*/
+ * Reads a return value from the service and sets errno (if applicable)
+ */
 int get_retval()
 {
   if(fdret_sock >= 0) {
