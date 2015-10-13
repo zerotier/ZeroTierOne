@@ -700,17 +700,13 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
-	uint64_t now = OSUtils::now();
-	//fprintf(stderr, "nc_poll(): now = %u\n", now);
-	//fprintf(stderr, "nc_poll\n");
-
-
+	/*
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
 	NetconEthernetTap *tap = l->tap;
 	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
 		tap->handle_write(conn);
-
+	*/
 	return ERR_OK;
 }
 
@@ -736,7 +732,6 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 		//uint64_t now = OSUtils::now();
 		//fprintf(stderr, "nc_sent(): now = %u\n", now);
 		l->tap->_phy.whack();
-		//l->tap->handle_write(l->conn);
 	}
 	return ERR_OK;
 }
@@ -856,10 +851,10 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
  * @param structure containing the data and parameters for this client's RPC
  *
 
-  [ ] EADDRINUSE - Another socket is already listening on the same port.
+  [?] EADDRINUSE - Another socket is already listening on the same port.
 	[X] EBADF - The argument sockfd is not a valid descriptor.
-	[ ] ENOTSOCK - The argument sockfd is not a socket.
-	[ ] EOPNOTSUPP - The socket is not of a type that supports the listen() operation.
+	[i] ENOTSOCK - The argument sockfd is not a socket.
+	[i] EOPNOTSUPP - The socket is not of a type that supports the listen() operation.
 
  */
 void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc)
@@ -886,6 +881,7 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
     }
   }
   else {
+		// We can't find a connection mapped to the socket fd provided
     fprintf(stderr, "handle_listen(): can't locate connection for PCB\n");
 		send_return_value(conn, -1, EBADF);
   }
@@ -954,7 +950,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	[i] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
 	[ ] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
 	[i] EADDRINUSE - Local address is already in use.
-	[?] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
+	[i] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
 	[ ] EAGAIN - No more free local ports or insufficient entries in the routing cache.
 	[ ] EALREADY - The socket is nonblocking and a previous connection attempt has not yet been completed.
 	[ ] EBADF - The file descriptor is not a valid index in the descriptor table.

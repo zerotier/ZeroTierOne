@@ -27,7 +27,7 @@
 
 SHCC=gcc
 
-intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -D_GNU_SOURCE -DNETCON_INTERCEPT
+intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -D_GNU_SOURCE -DCHECKS -DNETCON_INTERCEPT
 LIB_NAME = intercept
 SHLIB_EXT=dylib
 SHLIB_MAJOR = 1

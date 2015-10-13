@@ -66,11 +66,18 @@ char *progname = "";
 #include <sys/mman.h>
 
 #ifdef USE_SOCKS_DNS
-#include <resolv.h>
+  #include <resolv.h>
 #endif
 
 #include "intercept.h"
 #include "common.h"
+
+#ifdef CHECKS
+  #include <linux/net.h> /* for NPROTO */
+
+  #define SOCK_MAX (SOCK_PACKET + 1)
+  #define SOCK_TYPE_MASK 0xf
+#endif
 
 /* Global Declarations */
 #ifdef USE_SOCKS_DNS
@@ -504,8 +511,21 @@ void sock_domain_to_str(int domain)
 
 /* int socket_family, int socket_type, int protocol
    socket() intercept function */
+
 int socket(SOCKET_SIG)
 {
+#ifdef CHECKS
+  /* Check protocol is in range */
+  if (socket_family < 0 || socket_family >= NPROTO)
+    return -EAFNOSUPPORT;
+  if (socket_type < 0 || socket_type >= SOCK_MAX)
+    return -EINVAL;
+  /* Check that type makes sense */
+  int flags = socket_type & ~SOCK_TYPE_MASK;
+  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
+    return -EINVAL;
+#endif
+
 #ifdef DUMMY
   dwr("socket(fam=%d, type=%d, prot=%d)\n", socket_family, socket_type, protocol);
   return realsocket(socket_family, socket_type, protocol);
@@ -519,9 +539,6 @@ int socket(SOCKET_SIG)
     || socket_family == AF_UNIX) {
     return realsocket(socket_family, socket_type, protocol);
   }
-
-  /* FIXME: Check type, protocol, return EINVAL errno */
-  /* FIXME: Check family, return EAFNOSUPPORT errno */
 
   /* Assemble and route command */
   struct socket_st rpc_st;
@@ -573,6 +590,9 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
+
+  /* FIXME: Check that address is in user space, return EFAULT ? */
+
 #ifdef DUMMY
   dwr("connect(%d)\n", __fd);
   return realconnect(__fd, __addr, __len);
@@ -728,6 +748,10 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
+#ifdef CHECKS
+  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
+    return -EINVAL;
+#endif
 #ifdef DUMMY
   dwr("accept4(%d)\n", sockfd);
   return accept(sockfd, addr, addrlen);
@@ -816,6 +840,9 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
+  /* FIXME: Check that this socket supports listen(), return EOPNOTSUPP */
+  /* FIXME: Check that the provided fd is a socket, return ENOTSOCK */
+
 #ifdef DUMMY
     dwr("listen(%d)\n", sockfd);
     return reallisten(sockfd, backlog);
