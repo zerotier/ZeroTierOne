@@ -951,7 +951,7 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
   [I] EINVAL - Unknown protocol, or protocol family not available.
   [I] EINVAL - Invalid flags in type.
   [I] EMFILE - Process file table overflow.
-  [i] ENFILE - The system limit on the total number of open files has been reached.
+  [?] ENFILE - The system limit on the total number of open files has been reached.
   [X] ENOBUFS or ENOMEM - Insufficient memory is available.  The socket cannot be created until sufficient resources are freed.
   [?] EPROTONOSUPPORT - The protocol type or the specified protocol is not supported within this domain.
 
@@ -1004,10 +1004,10 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
  	 - := Not needed
 
 	[-] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
-	[ ] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
+	[?] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
 	[i] EADDRINUSE - Local address is already in use.
-	[?] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
-	[ ] EAGAIN - No more free local ports or insufficient entries in the routing cache.
+	[I] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
+	[?] EAGAIN - No more free local ports or insufficient entries in the routing cache.
 	[ ] EALREADY - The socket is nonblocking and a previous connection attempt has not yet been completed.
 	[I] EBADF - The file descriptor is not a valid index in the descriptor table.
 	[ ] ECONNREFUSED - No-one listening on the remote address.

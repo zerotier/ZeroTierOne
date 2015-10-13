@@ -607,6 +607,9 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
+  struct sockaddr_in *connaddr;
+  connaddr = (struct sockaddr_in *) __addr;
+
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(__fd, F_GETFD) < 0) {
@@ -618,6 +621,11 @@ int connect(CONNECT_SIG)
   socklen_t sock_type_len = sizeof(sock_type);
   if(getsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
     errno = ENOTSOCK;
+    return -1;
+  }
+  /* Check family */
+  if (connaddr->sin_family < 0 || connaddr->sin_family >= NPROTO){
+    errno = EAFNOSUPPORT;
     return -1;
   }
   /* FIXME: Check that address is in user space, return EFAULT ? */
@@ -636,9 +644,6 @@ int connect(CONNECT_SIG)
     }
     return(realconnect(__fd, __addr, __len));
   }
-
-  struct sockaddr_in *connaddr;
-	connaddr = (struct sockaddr_in *) __addr;
 
   if(__addr != NULL && (connaddr->sin_family == AF_LOCAL
     || connaddr->sin_family == PF_NETLINK
