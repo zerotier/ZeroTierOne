@@ -490,6 +490,12 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
  * @param error code
  * @return ERR_OK if everything is ok, -1 otherwise
 
+	 i := should be implemented in intercept lib
+	 I := is implemented in intercept lib
+	 X := is implemented in service
+	 ? := required treatment Unknown
+	 - := Not needed
+
 	[ ] EAGAIN or EWOULDBLOCK - The socket is marked nonblocking and no connections are present
 													to be accepted. POSIX.1-2001 allows either error to be returned for
 													this case, and does not require these constants to have the same value,
@@ -499,12 +505,12 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 	[i] EFAULT - The addr argument is not in a writable part of the user address space.
 	[ ] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
 	[ ] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
-	[ ] EINVAL - (accept4()) invalid value in flags.
+	[I] EINVAL - (accept4()) invalid value in flags.
 	[I] EMFILE - The per-process limit of open file descriptors has been reached.
 	[ ] ENFILE - The system limit on the total number of open files has been reached.
 	[ ] ENOBUFS, ENOMEM - Not enough free memory. This often means that the memory allocation is
 												limited by the socket buffer limits, not by the system memory.
-	[i] ENOTSOCK - The descriptor references a file, not a socket.
+	[I] ENOTSOCK - The descriptor references a file, not a socket.
 	[I] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
 	[ ] EPROTO - Protocol error.
 
@@ -802,10 +808,12 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 
 	[ ]	EACCES - The address is protected, and the user is not the superuser.
 	[X]	EADDRINUSE - The given address is already in use.
-	[X]	EBADF - sockfd is not a valid descriptor.
+	[I]	EBADF - sockfd is not a valid descriptor.
 	[X]	EINVAL - The socket is already bound to an address.
-	[i]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
-	[-]	The following errors are specific to UNIX domain (AF_UNIX) sockets:
+	[I]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
+
+	  - The following errors are specific to UNIX domain (AF_UNIX) sockets:
+
 	[-]	EACCES - Search permission is denied on a component of the path prefix. (See also path_resolution(7).)
 	[-]	EADDRNOTAVAIL - A nonexistent interface was requested or the requested address was not local.
 	[-]	EFAULT - addr points outside the user's accessible address space.

@@ -688,6 +688,21 @@ int poll(POLL_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
+#ifdef CHECKS
+  /* Check that this is a valid fd */
+  if(fcntl(sockfd, F_GETFD) < 0) {
+    return -1;
+    errno = EBADF;
+  }
+  /* Check that it is a socket */
+  int sock_type = -1;
+  socklen_t sock_type_len = sizeof(sock_type);
+  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
+    errno = ENOTSOCK;
+    return -1;
+  }
+#endif
+
   int err;
 #ifdef DUMMY
     dwr("bind(%d)\n", sockfd);
@@ -697,28 +712,23 @@ int bind(BIND_SIG)
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(realbind(sockfd, addr, addrlen));
 
-  int sock_type = -1;
-  socklen_t sock_type_len = sizeof(sock_type);
+  /* If local, just use normal syscall */
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) addr;
-
-  getsockopt(sockfd, SOL_SOCKET, SO_TYPE,
-       (void *) &sock_type, &sock_type_len);
 
   if (addr != NULL && (connaddr->sin_family == AF_LOCAL
     || connaddr->sin_family == PF_NETLINK
     || connaddr->sin_family == AF_NETLINK
-    || connaddr->sin_family == AF_UNIX)) {
-   return(realbind(sockfd, addr, addrlen));
+    || connaddr->sin_family == AF_UNIX))
+  {
+      if(realbind == NULL) {
+        dwr("Unresolved symbol: bind(). Library is exiting.\n");
+        exit(-1);
+      }
+      return(realbind(sockfd, addr, addrlen));
   }
-
-  char cmd[BUF_SZ];
-  if(realbind == NULL) {
-    dwr("Unresolved symbol: bind()\n");
-    return -1;
-  }
-
   /* Assemble and route command */
+  char cmd[BUF_SZ];
   struct bind_st rpc_st;
   rpc_st.sockfd = sockfd;
   rpc_st.__tid = syscall(SYS_gettid);
@@ -768,16 +778,22 @@ int accept(ACCEPT_SIG)
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
+    dwr("EBADF\n");
     return -1;
     errno = EBADF;
   }
-  int sock_type = -1;
+  /* Check that it is a socket */
+  int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
-  getsockopt(sockfd, SOL_SOCKET, SO_TYPE,
-       (void *) &sock_type, &sock_type_len);
+  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
+    errno = ENOTSOCK;
+    dwr("ENOTSOCK\n");
+    return -1;
+  }
   /* Check that this socket supports accept() */
-  if(!(sock_type & (SOCK_STREAM | SOCK_SEQPACKET))) {
+  if(!(sock_type && (SOCK_STREAM | SOCK_SEQPACKET))) {
     errno = EOPNOTSUPP;
+    dwr("EOPNOTSUPP\n");
     return -1;
   }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
@@ -785,6 +801,7 @@ int accept(ACCEPT_SIG)
   getrlimit(RLIMIT_NOFILE, &rl);
   if(sockfd >= rl.rlim_cur){
     errno = EMFILE;
+    dwr("EMFILE\n");
     return -1;
   }
 #endif
