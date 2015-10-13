@@ -50,7 +50,6 @@
 #include "node/C25519.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
-#include "node/Defaults.hpp"
 #include "node/Node.hpp"
 #include "node/IncomingPacket.hpp"
 

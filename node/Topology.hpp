@@ -43,8 +43,8 @@
 #include "Peer.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
-#include "Dictionary.hpp"
 #include "Hashtable.hpp"
+#include "World.hpp"
 
 namespace ZeroTier {
 
@@ -58,21 +58,6 @@ class Topology
 public:
 	Topology(const RuntimeEnvironment *renv);
 	~Topology();
-
-	/**
-	 * @param sn Root server identities and addresses
-	 */
-	void setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn);
-
-	/**
-	 * Set up root servers for this network
-	 *
-	 * This performs no signature verification of any kind. The caller must
-	 * check the signature of the root topology dictionary first.
-	 *
-	 * @param sn 'rootservers' key from root-topology Dictionary (deserialized as Dictionary)
-	 */
-	void setRootServers(const Dictionary &sn);
 
 	/**
 	 * Add a peer to database
@@ -128,10 +113,20 @@ public:
 
 	/**
 	 * @param id Identity to check
-	 * @return True if this is a designated root server
+	 * @return True if this is a designated root server in this world
 	 */
-	bool isRoot(const Identity &id) const
-		throw();
+	inline bool isRoot(const Identity &id) const
+	{
+		Mutex::Lock _l(_lock);
+		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),id.address()) != _rootAddresses.end()) {
+			// Double check full identity for security reasons
+			for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+				if (id == r->identity)
+					return true;
+			}
+		}
+		return false;
+	}
 
 	/**
 	 * @return Vector of root server addresses
@@ -140,6 +135,15 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		return _rootAddresses;
+	}
+
+	/**
+	 * @return Current World (copy)
+	 */
+	inline World world() const
+	{
+		Mutex::Lock _l(_lock);
+		return _world;
 	}
 
 	/**
@@ -180,28 +184,19 @@ public:
 		return _peers.entries();
 	}
 
-	/**
-	 * Validate a root topology dictionary against the identities specified in Defaults
-	 *
-	 * @param rt Root topology dictionary
-	 * @return True if dictionary signature is valid
-	 */
-	static bool authenticateRootTopology(const Dictionary &rt);
-
 private:
 	Identity _getIdentity(const Address &zta);
 	void _saveIdentity(const Identity &id);
 
 	const RuntimeEnvironment *RR;
 
+	World _world;
 	Hashtable< Address,SharedPtr<Peer> > _peers;
-	std::map< Identity,std::vector<InetAddress> > _roots;
 	std::vector< Address > _rootAddresses;
 	std::vector< SharedPtr<Peer> > _rootPeers;
+	bool _amRoot;
 
 	Mutex _lock;
-
-	bool _amRoot;
 };
 
 } // namespace ZeroTier

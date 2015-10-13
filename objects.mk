@@ -4,7 +4,6 @@ OBJS=\
 	ext/http-parser/http_parser.o \
 	node/C25519.o \
 	node/CertificateOfMembership.o \
-	node/Defaults.o \
 	node/Dictionary.o \
 	node/Identity.o \
 	node/IncomingPacket.o \

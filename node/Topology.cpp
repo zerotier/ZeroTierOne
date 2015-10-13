@@ -28,17 +28,37 @@
 #include "Constants.hpp"
 #include "Topology.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Defaults.hpp"
 #include "Dictionary.hpp"
 #include "Node.hpp"
 #include "Buffer.hpp"
 
 namespace ZeroTier {
 
+// Default World
+#define ZT_DEFAULT_WORLD_LENGTH 1
+static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = { 0 };
+
 Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
 	_amRoot(false)
 {
+	try {
+		std::string dsWorld(RR->node->dataStoreGet("world"));
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),dsWorld.length());
+		_world.deserialize(dswtmp,0);
+	} catch ( ... ) {
+		_world = World(); // set to null if cached world is invalid
+	}
+	{
+		World defaultWorld;
+		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
+		defaultWorld.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
+		if (_world.verifyUpdate(defaultWorld)) {
+			_world = defaultWorld;
+			RR->node->dataStorePut("world",ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH,false);
+		}
+	}
+
 	std::string alls(RR->node->dataStoreGet("peers.save"));
 	const uint8_t *all = reinterpret_cast<const uint8_t *>(alls.data());
 	RR->node->dataStoreDelete("peers.save");
@@ -76,6 +96,20 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	}
 
 	clean(RR->node->now());
+
+	for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+		if (r->identity == RR->identity)
+			_amRoot = true;
+		_rootAddresses.push_back(r->identity.address());
+		SharedPtr<Peer> *rp = _peers.get(r->identity.address());
+		if (rp) {
+			_rootPeers.push_back(*rp);
+		} else if (r->identity.address() != RR->identity.address()) {
+			SharedPtr<Peer> newrp(new Peer(RR->identity,r->identity));
+			_peers.set(r->identity.address(),newrp);
+			_rootPeers.push_back(newrp);
+		}
+	}
 }
 
 Topology::~Topology()
@@ -101,55 +135,6 @@ Topology::~Topology()
 	}
 
 	RR->node->dataStorePut("peers.save",all,true);
-}
-
-void Topology::setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn)
-{
-	Mutex::Lock _l(_lock);
-
-	if (_roots == sn)
-		return; // no change
-
-	_roots = sn;
-	_rootAddresses.clear();
-	_rootPeers.clear();
-	const uint64_t now = RR->node->now();
-
-	for(std::map< Identity,std::vector<InetAddress> >::const_iterator i(sn.begin());i!=sn.end();++i) {
-		if (i->first != RR->identity) { // do not add self as a peer
-			SharedPtr<Peer> &p = _peers[i->first.address()];
-			if (!p)
-				p = SharedPtr<Peer>(new Peer(RR->identity,i->first));
-			for(std::vector<InetAddress>::const_iterator j(i->second.begin());j!=i->second.end();++j)
-				p->addPath(RemotePath(InetAddress(),*j,true),now);
-			p->use(now);
-			_rootPeers.push_back(p);
-		}
-		_rootAddresses.push_back(i->first.address());
-	}
-
-	std::sort(_rootAddresses.begin(),_rootAddresses.end());
-
-	_amRoot = (_roots.find(RR->identity) != _roots.end());
-}
-
-void Topology::setRootServers(const Dictionary &sn)
-{
-	std::map< Identity,std::vector<InetAddress> > m;
-	for(Dictionary::const_iterator d(sn.begin());d!=sn.end();++d) {
-		if ((d->first.length() == ZT_ADDRESS_LENGTH_HEX)&&(d->second.length() > 0)) {
-			try {
-				Dictionary snspec(d->second);
-				std::vector<InetAddress> &a = m[Identity(snspec.get("id",""))];
-				std::string udp(snspec.get("udp",std::string()));
-				if (udp.length() > 0)
-					a.push_back(InetAddress(udp));
-			} catch ( ... ) {
-				TRACE("root server list contained invalid entry for: %s",d->first.c_str());
-			}
-		}
-	}
-	this->setRootServers(m);
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
@@ -298,13 +283,6 @@ keep_searching_for_roots:
 	return bestRoot;
 }
 
-bool Topology::isRoot(const Identity &id) const
-	throw()
-{
-	Mutex::Lock _l(_lock);
-	return (_roots.count(id) != 0);
-}
-
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
@@ -317,24 +295,6 @@ void Topology::clean(uint64_t now)
 		} else {
 			(*p)->clean(RR,now);
 		}
-	}
-}
-
-bool Topology::authenticateRootTopology(const Dictionary &rt)
-{
-	try {
-		std::string signer(rt.signingIdentity());
-		if (!signer.length())
-			return false;
-		Identity signerId(signer);
-		std::map< Address,Identity >::const_iterator authority(ZT_DEFAULTS.rootTopologyAuthorities.find(signerId.address()));
-		if (authority == ZT_DEFAULTS.rootTopologyAuthorities.end())
-			return false;
-		if (signerId != authority->second)
-			return false;
-		return rt.verify(authority->second);
-	} catch ( ... ) {
-		return false;
 	}
 }
 
