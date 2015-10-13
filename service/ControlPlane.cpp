@@ -360,6 +360,8 @@ unsigned int ControlPlane::handleRequest(
 					"{\n"
 					"\t\"address\": \"%.10llx\",\n"
 					"\t\"publicIdentity\": \"%s\",\n"
+					"\t\"worldId\": %llu,\n"
+					"\t\"worldTimestamp\": %llu,\n"
 					"\t\"online\": %s,\n"
 					"\t\"tcpFallbackActive\": %s,\n"
 					"\t\"versionMajor\": %d,\n"
@@ -370,6 +372,8 @@ unsigned int ControlPlane::handleRequest(
 					"}\n",
 					status.address,
 					status.publicIdentity,
+					status.worldId,
+					status.worldTimestamp,
 					(status.online) ? "true" : "false",
 					(_svc->tcpFallbackActive()) ? "true" : "false",
 					ZEROTIER_ONE_VERSION_MAJOR,
