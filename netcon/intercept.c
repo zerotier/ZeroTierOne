@@ -174,14 +174,11 @@ int get_retval()
       memcpy(&errno, &retbuf[1+sizeof(retval)], sizeof(errno));
       return retval;
     }
-    else {
-      dwr("unable to read connect: return value\n");
-      return -1;
-    }
   }
+  dwr("unable to read connect: return value\n");
+  return -1;
 }
 
-#define SLEEP_TIME 0
 
 /*------------------------------------------------------------------------------
 ----------  Unix-domain socket lazy initializer (for fd-transfers)--------------
@@ -190,7 +187,6 @@ int get_retval()
 /* Sets up the connection pipes and sockets to the service */
 int init_service_connection()
 {
-  usleep(SLEEP_TIME);
   if(!is_initialized)
   {
     struct sockaddr_un addr;
@@ -515,9 +511,11 @@ int socket(SOCKET_SIG)
   if(socket_family == AF_LOCAL
     || socket_family == AF_NETLINK
     || socket_family == AF_UNIX) {
-    int err = realsocket(socket_family, socket_type, protocol);
-    return err;
+    return realsocket(socket_family, socket_type, protocol);
   }
+
+  /* FIXME: Check type, protocol, return EINVAL errno */
+  /* FIXME: Check family, return EAFNOSUPPORT errno */
 
   /* Assemble and route command */
   struct socket_st rpc_st;
@@ -549,7 +547,7 @@ int socket(SOCKET_SIG)
         return get_retval();
       }
       pthread_mutex_unlock(&lock);
-      errno = ERR_OK;
+      errno = ERR_OK; // OK
       return newfd;
     }
     else { // Try to read retval+errno since we RXed a bad fd
@@ -562,7 +560,6 @@ int socket(SOCKET_SIG)
     pthread_mutex_unlock(&lock);
     return get_retval();
   }
-  return realsocket(socket_family, socket_type, protocol);
 #endif
 }
 
@@ -765,6 +762,8 @@ int accept(ACCEPT_SIG)
   addr->sa_family = AF_INET;
   /* TODO: also get address info */
 
+  /* FIXME: Check that socket is type SOCK_STREAM */
+
   char cmd[BUF_SZ];
   if(realaccept == NULL) {
     dwr( "Unresolved symbol: accept()\n");
@@ -788,7 +787,7 @@ int accept(ACCEPT_SIG)
       pthread_mutex_lock(&lock);
       int n_write = write(fdret_sock, cmd, BUF_SZ);
       if(n_write < 0) {
-        dwr("Error sending perceived FD to service. Service might be down.\n");
+        dwr("Error sending perceived FD to service.\n");
         errno = ECONNABORTED;
         return -1;
       }
@@ -797,12 +796,12 @@ int accept(ACCEPT_SIG)
       return new_conn_socket; // OK
     }
     else {
-      dwr("Error receiving new FD from service. Service might be down.\n");
+      dwr("Error receiving new FD from service.\n");
       errno = ECONNABORTED;
       return -1;
     }
   }
-  dwr("Error reading signal byte from service. Service might be down.\n");
+  dwr("Error reading signal byte from service.\n");
   //errno = EWOULDBLOCK;
   errno = ECONNABORTED;
   return -1;

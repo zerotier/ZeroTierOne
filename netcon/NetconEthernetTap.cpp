@@ -252,10 +252,10 @@ TcpConnection *NetconEthernetTap::getConnectionByPCB(struct tcp_pcb *pcb)
 	return NULL;
 }
 
-TcpConnection *NetconEthernetTap::getConnectionByTheirFD(int fd)
+TcpConnection *NetconEthernetTap::getConnectionByTheirFD(PhySocket *sock, int fd)
 {
 	for(size_t i=0; i<tcp_connections.size(); i++) {
-		if(tcp_connections[i]->perceived_fd == fd)
+		if(tcp_connections[i]->perceived_fd == fd && tcp_connections[i]->rpcSock == sock)
 			return tcp_connections[i];
 	}
 	return NULL;
@@ -498,16 +498,16 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 													this case, and does not require these constants to have the same value,
 													so a portable application should check for both possibilities.
 	[ ] EBADF - The descriptor is invalid.
-	[?] ECONNABORTED - A connection has been aborted.
-	[ ] EFAULT - The addr argument is not in a writable part of the user address space.
+	[i] ECONNABORTED - A connection has been aborted.
+	[i] EFAULT - The addr argument is not in a writable part of the user address space.
 	[ ] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
 	[ ] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
 	[ ] EINVAL - (accept4()) invalid value in flags.
 	[ ] EMFILE - The per-process limit of open file descriptors has been reached.
 	[ ] ENFILE - The system limit on the total number of open files has been reached.
 	[ ] ENOBUFS, ENOMEM - Not enough free memory. This often means that the memory allocation is limited by the socket buffer limits, not by the system memory.
-	[ ] ENOTSOCK - The descriptor references a file, not a socket.
-	[ ] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
+	[i] ENOTSOCK - The descriptor references a file, not a socket.
+	[i] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
 	[ ] EPROTO - Protocol error.
 
  *
@@ -625,9 +625,66 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
  */
 void NetconEthernetTap::nc_err(void *arg, err_t err)
 {
-	//fprintf(stderr, "nc_err\n");
 	Larg *l = (Larg*)arg;
+	fprintf(stderr, "larg = %x, nc_err() = %d\n", l, err);
+
   if(l->conn) {
+		switch(err)
+		{
+			// FIXME: Check if connection is pending first?
+
+			case ERR_MEM:
+				l->tap->send_return_value(l->conn, -1, ENOMEM);
+				break;
+			case ERR_BUF:
+				// FIXME: From user's perspective, this is the same as an ENOMEM error. I think.
+				l->tap->send_return_value(l->conn, -1, ENOMEM);
+				break;
+			case ERR_TIMEOUT:
+				l->tap->send_return_value(l->conn, -1, ETIMEDOUT);
+				break;
+			case ERR_RTE:
+				l->tap->send_return_value(l->conn, -1, ENETUNREACH);
+				break;
+			case ERR_INPROGRESS:
+				l->tap->send_return_value(l->conn, -1, EINPROGRESS);
+				break;
+			case ERR_VAL:
+				l->tap->send_return_value(l->conn, -1, EINVAL);
+				break;
+			case ERR_WOULDBLOCK:
+				l->tap->send_return_value(l->conn, -1, EWOULDBLOCK);
+				break;
+			case ERR_USE:
+				l->tap->send_return_value(l->conn, -1, EADDRINUSE);
+				break;
+			case ERR_ISCONN:
+				l->tap->send_return_value(l->conn, -1, EISCONN);
+				break;
+
+				// FIXME: Below are errors which don't have a standard errno correlate
+
+			case ERR_ABRT:
+				l->tap->send_return_value(l->conn, -1, -1);
+				break;
+			case ERR_RST:
+				l->tap->send_return_value(l->conn, -1, -1);
+				break;
+			case ERR_CLSD:
+				l->tap->send_return_value(l->conn, -1, -1);
+				break;
+			case ERR_CONN:
+				l->tap->send_return_value(l->conn, -1, -1);
+				break;
+			case ERR_ARG:
+				l->tap->send_return_value(l->conn, -1, -1);
+				break;
+			case ERR_IF:
+				l->tap->send_return_value(l->conn, -1, -1);
+				break;
+			default:
+				break;
+		}
 		fprintf(stderr, "nc_err(): closing connection\n");
     l->tap->closeConnection(l->conn);
   }
@@ -741,7 +798,8 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
 	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
-	TcpConnection *conn = getConnectionByTheirFD(bind_rpc->sockfd);
+
+	TcpConnection *conn = getConnectionByTheirFD(sock, bind_rpc->sockfd);
 
   if(conn) {
     if(conn->pcb->state == CLOSED){
@@ -789,7 +847,7 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
  */
 void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc)
 {
-	TcpConnection *conn = getConnectionByTheirFD(listen_rpc->sockfd);
+	TcpConnection *conn = getConnectionByTheirFD(sock, listen_rpc->sockfd);
   if(conn) {
     if(conn->pcb->state == LISTEN) {
       fprintf(stderr, "handle_listen(): PCB is already in listening state.\n");
@@ -850,12 +908,12 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 	TODO: set errno appropriately
 
 	[ ] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
-  [ ] EAFNOSUPPORT - The implementation does not support the specified address family.
-  [ ] EINVAL - Unknown protocol, or protocol family not available.
-  [ ] EINVAL - Invalid flags in type.
+  [?] EAFNOSUPPORT - The implementation does not support the specified address family.
+  [?] EINVAL - Unknown protocol, or protocol family not available.
+  [?] EINVAL - Invalid flags in type.
   [ ] EMFILE - Process file table overflow.
   [ ] ENFILE - The system limit on the total number of open files has been reached.
-  [ ] ENOBUFS or ENOMEM - Insufficient memory is available.  The socket cannot be created until sufficient resources are freed.
+  [X] ENOBUFS or ENOMEM - Insufficient memory is available.  The socket cannot be created until sufficient resources are freed.
   [ ] EPROTONOSUPPORT - The protocol type or the specified protocol is not supported within this domain.
 
  */
@@ -891,6 +949,26 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
  *
  * @param Client that is making the RPC
  * @param structure containing the data and parameters for this client's RPC
+
+	--- Error handling in this method will only catch problems which are immeidately
+	    apprent. Some errors will need to be caught in the nc_connected(0 callback
+
+	[i] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
+	[ ] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
+	[i] EADDRINUSE - Local address is already in use.
+	[?] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
+	[ ] EAGAIN - No more free local ports or insufficient entries in the routing cache.
+	[ ] EALREADY - The socket is nonblocking and a previous connection attempt has not yet been completed.
+	[ ] EBADF - The file descriptor is not a valid index in the descriptor table.
+	[ ] ECONNREFUSED - No-one listening on the remote address.
+	[i] EFAULT - The socket structure address is outside the user's address space.
+	[ ] EINPROGRESS - The socket is nonblocking and the connection cannot be completed immediately.
+	[ ] EINTR - The system call was interrupted by a signal that was caught.
+	[X] EISCONN - The socket is already connected.
+	[?] ENETUNREACH - Network is unreachable.
+	[ ] ENOTSOCK - The file descriptor is not associated with a socket.
+	[ ] ETIMEDOUT - Timeout while attempting connection.
+
  *
  */
 void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc)
@@ -911,7 +989,27 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 		int err = 0;
 		if((err = lwipstack->tcp_connect(conn->pcb,&conn_addr,conn_port, nc_connected)) < 0)
 		{
-			fprintf(stderr, "handle_connect(): unable to connect\n");
+			if(err == ERR_USE) {
+				send_return_value(conn, -1, EISCONN); // Already in use
+				return;
+			}
+			if(err == ERR_VAL) {
+				send_return_value(conn, -1, EAFNOSUPPORT); // FIXME: Invalid arguments?
+				return;
+			}
+			if(err == ERR_RTE) {
+				send_return_value(conn, -1, ENETUNREACH); // FIXME: Host unreachable
+				return;
+			}
+			if(err == ERR_BUF)
+			{
+				// FIXME
+			}
+			if(err == ERR_MEM)
+			{
+				// FIXME: return value originates from tcp_enqueue_flags()
+			}
+
 			// We should only return a value if failure happens immediately
 			// Otherwise, we still need to wait for a callback from lwIP.
 			// - This is because an ERR_OK from tcp_connect() only verifies
@@ -919,7 +1017,8 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 			//   that's it!
 			// - Most instances of a retval for a connect() should happen
 			//   in the nc_connect() and nc_err() callbacks!
-			send_return_value(conn, err);
+			fprintf(stderr, "handle_connect(): unable to connect\n");
+			send_return_value(conn, -1, err); // FIXME: Only catch unhandled errors
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
 		conn->pending=true;

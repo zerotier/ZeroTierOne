@@ -139,7 +139,7 @@ private:
 	}
 
 	// Client helpers
-	TcpConnection *getConnectionByTheirFD(int fd);
+	TcpConnection *getConnectionByTheirFD(PhySocket *sock, int fd);
 	TcpConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	void closeConnection(TcpConnection *conn);
 	void closeAll();
