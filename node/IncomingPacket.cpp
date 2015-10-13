@@ -33,7 +33,6 @@
 #include "../include/ZeroTierOne.h"
 
 #include "Constants.hpp"
-#include "Defaults.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "IncomingPacket.hpp"
 #include "Topology.hpp"

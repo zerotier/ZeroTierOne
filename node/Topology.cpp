@@ -42,23 +42,6 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	RR(renv),
 	_amRoot(false)
 {
-	try {
-		std::string dsWorld(RR->node->dataStoreGet("world"));
-		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),dsWorld.length());
-		_world.deserialize(dswtmp,0);
-	} catch ( ... ) {
-		_world = World(); // set to null if cached world is invalid
-	}
-	{
-		World defaultWorld;
-		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
-		defaultWorld.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
-		if (_world.verifyUpdate(defaultWorld)) {
-			_world = defaultWorld;
-			RR->node->dataStorePut("world",ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH,false);
-		}
-	}
-
 	std::string alls(RR->node->dataStoreGet("peers.save"));
 	const uint8_t *all = reinterpret_cast<const uint8_t *>(alls.data());
 	RR->node->dataStoreDelete("peers.save");
@@ -97,19 +80,24 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 
 	clean(RR->node->now());
 
-	for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-		if (r->identity == RR->identity)
-			_amRoot = true;
-		_rootAddresses.push_back(r->identity.address());
-		SharedPtr<Peer> *rp = _peers.get(r->identity.address());
-		if (rp) {
-			_rootPeers.push_back(*rp);
-		} else if (r->identity.address() != RR->identity.address()) {
-			SharedPtr<Peer> newrp(new Peer(RR->identity,r->identity));
-			_peers.set(r->identity.address(),newrp);
-			_rootPeers.push_back(newrp);
-		}
+	std::string dsWorld(RR->node->dataStoreGet("world"));
+	World cachedWorld;
+	try {
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),dsWorld.length());
+		cachedWorld.deserialize(dswtmp,0);
+	} catch ( ... ) {
+		cachedWorld = World(); // clear if cached world is invalid
 	}
+	World defaultWorld;
+	{
+		Buffer<ZT_DEFAULT_WORLD_LENGTH> wtmp(ZT_DEFAULT_WORLD,ZT_DEFAULT_WORLD_LENGTH);
+		defaultWorld.deserialize(wtmp,0); // throws on error, which would indicate a bad static variable up top
+	}
+	if (cachedWorld.shouldBeReplacedBy(defaultWorld,false)) {
+		_setWorld(defaultWorld);
+		if (dsWorld.length() > 0)
+			RR->node->dataStoreDelete("world");
+	} else _setWorld(cachedWorld);
 }
 
 Topology::~Topology()
@@ -283,6 +271,16 @@ keep_searching_for_roots:
 	return bestRoot;
 }
 
+bool Topology::worldUpdateIfValid(const World &newWorld)
+{
+	Mutex::Lock _l(_lock);
+	if (_world.shouldBeReplacedBy(newWorld,true)) {
+		_setWorld(newWorld);
+		return true;
+	}
+	return false;
+}
+
 void Topology::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
@@ -317,6 +315,28 @@ void Topology::_saveIdentity(const Identity &id)
 		char p[128];
 		Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)id.address().toInt());
 		RR->node->dataStorePut(p,id.toString(false),false);
+	}
+}
+
+void Topology::_setWorld(const World &newWorld)
+{
+	// assumed _lock is locked (or in constructor)
+	_world = newWorld;
+	_amRoot = false;
+	_rootAddresses.clear();
+	_rootPeers.clear();
+	for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+		if (r->identity == RR->identity)
+			_amRoot = true;
+		_rootAddresses.push_back(r->identity.address());
+		SharedPtr<Peer> *rp = _peers.get(r->identity.address());
+		if (rp) {
+			_rootPeers.push_back(*rp);
+		} else if (r->identity.address() != RR->identity.address()) {
+			SharedPtr<Peer> newrp(new Peer(RR->identity,r->identity));
+			_peers.set(r->identity.address(),newrp);
+			_rootPeers.push_back(newrp);
+		}
 	}
 }
 

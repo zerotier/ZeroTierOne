@@ -540,6 +540,8 @@ public:
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[1] destination address type>
 		 *   [<[...] destination address>]
+		 *   <[8] 64-bit world ID of current world>
+		 *   <[8] 64-bit timestamp of current world>
 		 *
 		 * This is the only message that ever must be sent in the clear, since it
 		 * is used to push an identity to a new peer.
@@ -564,8 +566,8 @@ public:
 		 *   <[2] software revision (of responder)>
 		 *   <[1] destination address type (for this OK, not copied from HELLO)>
 		 *   [<[...] destination address>]
-		 *   <[8] 64-bit world ID of current world>
-		 *   <[8] 64-bit timestamp of current world>
+		 *   <[8] 64-bit world ID of current world (of responder)>
+		 *   <[8] 64-bit timestamp of current world (of responder)>
 		 *
 		 * ERROR has no payload.
 		 */

@@ -31,10 +31,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <map>
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
+#include <utility>
 
 #include "Constants.hpp"
 
@@ -147,6 +147,23 @@ public:
 	}
 
 	/**
+	 * @return Pair containing world ID and world timestamp (faster than world().id() etc.)
+	 */
+	inline std::pair<uint64_t,uint64_t> worldIdentification() const
+	{
+		Mutex::Lock _l(_lock);
+		return std::pair<uint64_t,uint64_t>(_world.id(),_world.timestamp());
+	}
+
+	/**
+	 * Validate new world and update if newer and signature is okay
+	 *
+	 * @param newWorld Potential new world definition revision
+	 * @return True if an update actually occurred
+	 */
+	bool worldUpdateIfValid(const World &newWorld);
+
+	/**
 	 * Clean and flush database
 	 */
 	void clean(uint64_t now);
@@ -176,7 +193,7 @@ public:
 	}
 
 	/**
-	 * @return All currently active peers by address
+	 * @return All currently active peers by address (unsorted)
 	 */
 	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
 	{
@@ -187,6 +204,7 @@ public:
 private:
 	Identity _getIdentity(const Address &zta);
 	void _saveIdentity(const Identity &id);
+	void _setWorld(const World &newWorld);
 
 	const RuntimeEnvironment *RR;
 

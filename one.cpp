@@ -911,7 +911,6 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)"ZT_EOL_S);
-	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
@@ -974,7 +973,6 @@ int main(int argc,char **argv)
 	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
 		return cli(argc,argv);
 
-	std::string overrideRootTopology;
 	std::string homeDir;
 	unsigned int port = ZT_DEFAULT_PORT;
 	bool skipRootCheck = false;
@@ -999,18 +997,6 @@ int main(int argc,char **argv)
 
 				case 'U':
 					skipRootCheck = true;
-					break;
-
-				case 'T': // Override root topology
-					if (argv[i][2]) {
-						if (!OSUtils::readFile(argv[i] + 2,overrideRootTopology)) {
-							fprintf(stderr,"%s: cannot read root topology from %s"ZT_EOL_S,argv[0],argv[i] + 2);
-							return 1;
-						}
-					} else {
-						printHelp(argv[0],stdout);
-						return 1;
-					}
 					break;
 
 				case 'v': // Display version
@@ -1169,7 +1155,7 @@ int main(int argc,char **argv)
 
 	try {
 		for(;;) {
-			zt1Service = OneService::newInstance(homeDir.c_str(),port,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
+			zt1Service = OneService::newInstance(homeDir.c_str(),port);
 			switch(zt1Service->run()) {
 				case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
 				case OneService::ONE_NORMAL_TERMINATION:

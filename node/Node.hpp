@@ -71,8 +71,7 @@ public:
 		ZT_WirePacketSendFunction wirePacketSendFunction,
 		ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 		ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-		ZT_EventCallback eventCallback,
-		const char *overrideRootTopology);
+		ZT_EventCallback eventCallback);
 
 	~Node();
 

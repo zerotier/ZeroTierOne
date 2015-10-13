@@ -1023,7 +1023,6 @@ typedef int (*ZT_WirePacketSendFunction)(
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param eventCallback Function to receive status updates and non-fatal error notices
- * @param overrideRootTopology Alternative root server topology or NULL for default (mostly for test/debug use)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT_ResultCode ZT_Node_new(
@@ -1035,8 +1034,7 @@ enum ZT_ResultCode ZT_Node_new(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_EventCallback eventCallback,
-	const char *overrideRootTopology);
+	ZT_EventCallback eventCallback);
 
 /**
  * Delete a node and free all resources it consumes

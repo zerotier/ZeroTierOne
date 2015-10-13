@@ -418,14 +418,13 @@ struct TcpConnection
 class OneServiceImpl : public OneService
 {
 public:
-	OneServiceImpl(const char *hp,unsigned int port,const char *overrideRootTopology) :
+	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : "."),
 		_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY),
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		_controller((SqliteNetworkController *)0),
 #endif
 		_phy(this,false,true),
-		_overrideRootTopology((overrideRootTopology) ? overrideRootTopology : ""),
 		_node((Node *)0),
 		_controlPlane((ControlPlane *)0),
 		_lastDirectReceiveFromGlobal(0),
@@ -550,8 +549,7 @@ public:
 				SnodeWirePacketSendFunction,
 				SnodeVirtualNetworkFrameFunction,
 				SnodeVirtualNetworkConfigFunction,
-				SnodeEventCallback,
-				((_overrideRootTopology.length() > 0) ? _overrideRootTopology.c_str() : (const char *)0));
+				SnodeEventCallback);
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
@@ -1329,7 +1327,6 @@ private:
 	SqliteNetworkController *_controller;
 #endif
 	Phy<OneServiceImpl *> _phy;
-	std::string _overrideRootTopology;
 	Node *_node;
 	InetAddress _v4LocalAddress,_v6LocalAddress;
 	PhySocket *_v4UdpSocket;
@@ -1526,7 +1523,7 @@ std::string OneService::autoUpdateUrl()
 	return std::string();
 }
 
-OneService *OneService::newInstance(const char *hp,unsigned int port,const char *overrideRootTopology) { return new OneServiceImpl(hp,port,overrideRootTopology); }
+OneService *OneService::newInstance(const char *hp,unsigned int port) { return new OneServiceImpl(hp,port); }
 OneService::~OneService() {}
 
 } // namespace ZeroTier

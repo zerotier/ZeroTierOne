@@ -46,7 +46,6 @@
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
-#include "Defaults.hpp"
 
 const struct sockaddr_storage ZT_SOCKADDR_NULL = {0};
 
@@ -64,8 +63,7 @@ Node::Node(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_EventCallback eventCallback,
-	const char *overrideRootTopology) :
+	ZT_EventCallback eventCallback) :
 	_RR(this),
 	RR(&_RR),
 	_uPtr(uptr),
@@ -124,21 +122,6 @@ Node::Node(
 		delete RR->sw;
 		throw;
 	}
-
-	Dictionary rt;
-	if (overrideRootTopology) {
-		rt.fromString(std::string(overrideRootTopology));
-	} else {
-		std::string rttmp(dataStoreGet("root-topology"));
-		if (rttmp.length() > 0) {
-			rt.fromString(rttmp);
-			if (!Topology::authenticateRootTopology(rt))
-				rt.clear();
-		}
-		if ((!rt.size())||(!rt.contains("rootservers")))
-			rt.fromString(ZT_DEFAULTS.defaultRootTopology);
-	}
-	RR->topology->setRootServers(Dictionary(rt.get("rootservers","")));
 
 	postEvent(ZT_EVENT_UP);
 }
@@ -609,12 +592,11 @@ enum ZT_ResultCode ZT_Node_new(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_EventCallback eventCallback,
-	const char *overrideRootTopology)
+	ZT_EventCallback eventCallback)
 {
 	*node = (ZT_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,eventCallback,overrideRootTopology));
+		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,eventCallback));
 		return ZT_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

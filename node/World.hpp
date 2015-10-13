@@ -55,7 +55,7 @@
 /**
  * The (more than) maximum length of a serialized World
  */
-#define ZT_WORLD_MAX_SERIALIZED_LENGTH (((1024 + (32 * ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT)) * ZT_WORLD_MAX_ROOTS) + ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_SIGNATURE_LEN + 64)
+#define ZT_WORLD_MAX_SERIALIZED_LENGTH (((1024 + (32 * ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT)) * ZT_WORLD_MAX_ROOTS) + ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_SIGNATURE_LEN + 128)
 
 /**
  * World ID indicating null / empty World object
@@ -68,15 +68,11 @@
 #define ZT_WORLD_ID_TESTNET 1
 
 /**
- * World ID for Earth -- its approximate distance from the sun in kilometers
+ * World ID for Earth
  *
  * This is the ID for the ZeroTier World used on planet Earth. It is unrelated
- * to the public network 8056c2e21c000001 of the same name.
- *
- * It's advisable to create a new World for network regions spaced more than
- * 2-3 light seconds, since RTT times in excess of 5s are problematic for some
- * protocols. Earth could therefore include its low and high orbits, the Moon,
- * and nearby Lagrange points.
+ * to the public network 8056c2e21c000001 of the same name. It was chosen
+ * from Earth's approximate distance from the sun in kilometers.
  */
 #define ZT_WORLD_ID_EARTH 149604618
 
@@ -90,9 +86,24 @@ namespace ZeroTier {
 /**
  * A world definition (formerly known as a root topology)
  *
- * A world consists of a set of root servers and a signature scheme enabling
- * it to be updated going forward. It defines a single ZeroTier VL1 network
- * area within which any device can reach any other.
+ * Think of a World as a single data center. Within this data center a set
+ * of distributed fault tolerant root servers provide stable anchor points
+ * for a peer to peer network that provides VLAN service. Updates to a world
+ * definition can be published by signing them with the previous revision's
+ * signing key, and should be very infrequent.
+ *
+ * The maximum data center size is approximately 2.5 cubic light seconds,
+ * since many protocols have issues with >5s RTT latencies.
+ *
+ * ZeroTier operates a World for Earth capable of encompassing the planet, its
+ * orbits, the Moon (about 1.3 light seconds), and nearby Lagrange points. A
+ * world ID for Mars and nearby space is defined but not yet used, and a test
+ * world ID is provided for testing purposes.
+ *
+ * If you absolutely must run your own "unofficial" ZeroTier network, please
+ * define your world IDs above 0xffffffff (4294967295). Code to make a World
+ * is in mkworld.cpp in the parent directory and must be edited to change
+ * settings.
  */
 class World
 {
@@ -130,24 +141,28 @@ public:
 	inline uint64_t timestamp() const throw() { return _ts; }
 
 	/**
-	 * Verify a world update
+	 * Check whether a world update should replace this one
 	 *
 	 * A new world update is valid if it is for the same world ID, is newer,
 	 * and is signed by the current world's signing key. If this world object
 	 * is null, it can always be updated.
 	 *
 	 * @param update Candidate update
+	 * @param fullSignatureCheck Perform full cryptographic signature check (true == yes, false == skip)
 	 * @return True if update is newer than current and is properly signed
 	 */
-	inline bool verifyUpdate(const World &update)
+	inline bool shouldBeReplacedBy(const World &update,bool fullSignatureCheck)
 	{
 		if (_id == ZT_WORLD_ID_NULL)
 			return true;
-		if ((update._id != _id)||(update._ts <= _ts))
-			return false;
-		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
-		update.serialize(tmp);
-		return C25519::verify(_updateSigningKey,tmp.data(),tmp.size(),update._signature);
+		if ((_id == update._id)&&(_ts < update._ts)) {
+			if (fullSignatureCheck) {
+				Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
+				update.serialize(tmp,true);
+				return C25519::verify(_updateSigningKey,tmp.data(),tmp.size(),update._signature);
+			} else return true;
+		}
+		return false;
 	}
 
 	/**
@@ -156,13 +171,16 @@ public:
 	inline operator bool() const throw() { return (_id != ZT_WORLD_ID_NULL); }
 
 	template<unsigned int C>
-	inline void serialize(Buffer<C> &b) const
+	inline void serialize(Buffer<C> &b,bool forSign = false) const
 	{
+		if (forSign)
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
 		b.append((uint8_t)0x01); // version -- only one valid value for now
 		b.append((uint64_t)_id);
 		b.append((uint64_t)_ts);
 		b.append(_updateSigningKey.data,ZT_C25519_PUBLIC_KEY_LEN);
-		b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+		if (!forSign)
+			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
 		b.append((uint8_t)_roots.size());
 		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
 			r->identity.serialize(b);
@@ -170,6 +188,8 @@ public:
 			for(std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin());ep!=r->stableEndpoints.end();++ep)
 				ep->serialize(b);
 		}
+		if (forSign)
+			b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
 	}
 
 	template<unsigned int C>
