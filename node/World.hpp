@@ -225,7 +225,7 @@ public:
 		return (p - startAt);
 	}
 
-	inline bool operator==(const World &w) const throw() { return ((_id == w._id)&&(_ts == w._ts)&&(_roots == w._roots)); }
+	inline bool operator==(const World &w) const throw() { return ((_id == w._id)&&(_ts == w._ts)&&(_updateSigningKey == w._updateSigningKey)&&(_signature == w._signature)&&(_roots == w._roots)); }
 	inline bool operator!=(const World &w) const throw() { return (!(*this == w)); }
 
 protected:

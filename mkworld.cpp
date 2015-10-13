@@ -144,10 +144,27 @@ int main(int argc,char **argv)
 
 	Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> outtmp;
 	nw.serialize(outtmp,false);
+	World testw;
+	testw.deserialize(outtmp,0);
+	if (testw != nw) {
+		fprintf(stderr,"FATAL: serialization test failed!"ZT_EOL_S);
+		return 1;
+	}
 	fwrite(outtmp.data(),outtmp.size(),1,stdout);
 	fflush(stdout);
 
 	fprintf(stderr,"INFO: wrote %u bytes to stdout"ZT_EOL_S,outtmp.size());
+
+	fprintf(stderr,ZT_EOL_S);
+	fprintf(stderr,"#define ZT_DEFAULT_WORLD_LENGTH %u"ZT_EOL_S,outtmp.size());
+	fprintf(stderr,"static const unsigned char ZT_DEFAULT_WORLD[ZT_DEFAULT_WORLD_LENGTH] = {");
+	for(unsigned int i=0;i<outtmp.size();++i) {
+		const unsigned char *d = (const unsigned char *)outtmp.data();
+		if (i > 0)
+			fprintf(stderr,",");
+		fprintf(stderr,"0x%.2x",(unsigned int)d[i]);
+	}
+	fprintf(stderr,"};"ZT_EOL_S);
 
 	return 0;
 }
