@@ -28,7 +28,6 @@
 #include "Constants.hpp"
 #include "Topology.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Dictionary.hpp"
 #include "Node.hpp"
 #include "Buffer.hpp"
 
