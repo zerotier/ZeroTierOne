@@ -59,6 +59,7 @@
  *   + New identity format based on hashcash design
  * 5 - 1.0.6 ... CURRENT
  *   + Supports circuit test, proof of work, and echo
+ *   + Supports in-band world (root definition) updates
  *   + Otherwise backward compatible with 4
  */
 #define ZT_PROTO_VERSION 5
