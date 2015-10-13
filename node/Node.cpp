@@ -345,6 +345,8 @@ uint64_t Node::address() const
 void Node::status(ZT_NodeStatus *status) const
 {
 	status->address = RR->identity.address().toInt();
+	status->worldId = RR->topology->worldId();
+	status->worldTimestamp = RR->topology->worldTimestamp();
 	status->publicIdentity = RR->publicIdentityStr.c_str();
 	status->secretIdentity = RR->secretIdentityStr.c_str();
 	status->online = _online ? 1 : 0;

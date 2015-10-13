@@ -276,6 +276,16 @@ typedef struct
 	uint64_t address;
 
 	/**
+	 * Current world ID
+	 */
+	uint64_t worldId;
+
+	/**
+	 * Current world revision/timestamp
+	 */
+	uint64_t worldTimestamp;
+
+	/**
 	 * Public identity in string-serialized form (safe to send to others)
 	 *
 	 * This pointer will remain valid as long as the node exists.
