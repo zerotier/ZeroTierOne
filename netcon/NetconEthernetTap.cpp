@@ -628,7 +628,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 void NetconEthernetTap::nc_err(void *arg, err_t err)
 {
 	Larg *l = (Larg*)arg;
-	fprintf(stderr, "larg = %x, nc_err() = %d\n", l, err);
+	//fprintf(stderr, "larg = %x, nc_err() = %d\n", l, err);
+
+	if(!l->conn)
+		fprintf(stderr, "nc_err(): Connection is NULL!\n");
 
   if(l->conn) {
 		switch(err)
@@ -636,38 +639,48 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 			// FIXME: Check if connection is pending first?
 
 			case ERR_MEM:
+			  fprintf(stderr, "nc_err(): ERR_MEM->ENOMEM\n");
 				l->tap->send_return_value(l->conn, -1, ENOMEM);
 				break;
 			case ERR_BUF:
+				fprintf(stderr, "nc_err(): ERR_BUF->ENOBUFS\n");
 				l->tap->send_return_value(l->conn, -1, ENOBUFS);
 				break;
 			case ERR_TIMEOUT:
+				fprintf(stderr, "nc_err(): ERR_TIMEOUT->ETIMEDOUT\n");
 				l->tap->send_return_value(l->conn, -1, ETIMEDOUT);
 				break;
 			case ERR_RTE:
+				fprintf(stderr, "nc_err(): ERR_RTE->ENETUNREACH\n");
 				l->tap->send_return_value(l->conn, -1, ENETUNREACH);
 				break;
 			case ERR_INPROGRESS:
+				fprintf(stderr, "nc_err(): ERR_INPROGRESS->EINPROGRESS\n");
 				l->tap->send_return_value(l->conn, -1, EINPROGRESS);
 				break;
 			case ERR_VAL:
+				fprintf(stderr, "nc_err(): ERR_VAL->EINVAL\n");
 				l->tap->send_return_value(l->conn, -1, EINVAL);
 				break;
 			case ERR_WOULDBLOCK:
+				fprintf(stderr, "nc_err(): ERR_WOULDBLOCK->EWOULDBLOCK\n");
 				l->tap->send_return_value(l->conn, -1, EWOULDBLOCK);
 				break;
 			case ERR_USE:
+				fprintf(stderr, "nc_err(): ERR_USE->EADDRINUSE\n");
 				l->tap->send_return_value(l->conn, -1, EADDRINUSE);
 				break;
 			case ERR_ISCONN:
+				fprintf(stderr, "nc_err(): ERR_ISCONN->EISCONN\n");
 				l->tap->send_return_value(l->conn, -1, EISCONN);
+				break;
+			case ERR_ABRT:
+				fprintf(stderr, "nc_err(): ERR_ABRT->ETIMEDOUT\n"); // FIXME: Correct?
+				l->tap->send_return_value(l->conn, -1, ETIMEDOUT);
 				break;
 
 				// FIXME: Below are errors which don't have a standard errno correlate
 
-			case ERR_ABRT:
-				l->tap->send_return_value(l->conn, -1, -1);
-				break;
 			case ERR_RST:
 				l->tap->send_return_value(l->conn, -1, -1);
 				break;

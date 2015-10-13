@@ -514,6 +514,7 @@ void sock_domain_to_str(int domain)
 
 int socket(SOCKET_SIG)
 {
+  int err;
 #ifdef CHECKS
   /* Check that type makes sense */
   int flags = socket_type & ~SOCK_TYPE_MASK;
@@ -572,13 +573,16 @@ int socket(SOCKET_SIG)
     }
     else { // Try to read retval+errno since we RXed a bad fd
       dwr("Error, service sent bad fd.\n");
-      return get_retval();
+      err = get_retval();
+      pthread_mutex_unlock(&lock);
+      return err;
     }
   }
   else {
     dwr("Error while receiving new FD.\n");
+    err = get_retval();
     pthread_mutex_unlock(&lock);
-    return get_retval();
+    return err;
   }
 #endif
 }
@@ -591,7 +595,7 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-
+  int err;
   /* FIXME: Check that address is in user space, return EFAULT ? */
 
 #ifdef DUMMY
@@ -635,23 +639,9 @@ int connect(CONNECT_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
-
-  if(fdret_sock >= 0) {
-    int retval;
-    char mynewbuf[BUF_SZ];
-    memset(&mynewbuf, '\0', sizeof(mynewbuf));
-    int n_read = read(fdret_sock, &mynewbuf, sizeof(mynewbuf));
-    if(n_read > 0) {
-      memcpy(&retval, &mynewbuf[1], sizeof(int));
-      pthread_mutex_unlock(&lock);
-      return retval;
-    }
-    else {
-      pthread_mutex_unlock(&lock);
-      dwr("unable to read connect: return value\n");
-    }
-  }
-  return -1;
+  err = get_retval();
+  pthread_mutex_unlock(&lock);
+  return err;
 #endif
 }
 
@@ -696,6 +686,7 @@ int poll(POLL_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
+  int err;
 #ifdef DUMMY
     dwr("bind(%d)\n", sockfd);
     return realbind(sockfd, addr, addrlen);
@@ -735,9 +726,10 @@ int bind(BIND_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct bind_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
+  err = get_retval();
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
-  return get_retval();
+  return err;
 #endif
 }
 
@@ -842,6 +834,7 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
+  int err;
   /* FIXME: Check that this socket supports listen(), return EOPNOTSUPP */
   /* FIXME: Check that the provided fd is a socket, return ENOTSOCK */
 
@@ -865,8 +858,9 @@ int listen(LISTEN_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
+  err = get_retval();
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
-  return get_retval();
+  return err;
 #endif
 }
