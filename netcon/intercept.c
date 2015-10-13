@@ -515,14 +515,15 @@ void sock_domain_to_str(int domain)
 int socket(SOCKET_SIG)
 {
 #ifdef CHECKS
+  /* Check that type makes sense */
+  int flags = socket_type & ~SOCK_TYPE_MASK;
+  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
+    return -EINVAL;
+  socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
   if (socket_family < 0 || socket_family >= NPROTO)
     return -EAFNOSUPPORT;
   if (socket_type < 0 || socket_type >= SOCK_MAX)
-    return -EINVAL;
-  /* Check that type makes sense */
-  int flags = socket_type & ~SOCK_TYPE_MASK;
-  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
     return -EINVAL;
 #endif
 
@@ -658,7 +659,8 @@ int connect(CONNECT_SIG)
 ---------------------------------- select() ------------------------------------
 ------------------------------------------------------------------------------*/
 
-/* int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout */
+/* int n, fd_set *readfds, fd_set *writefds,
+fd_set *exceptfds, struct timeval *timeout */
 int select(SELECT_SIG)
 {
 #ifdef DUMMY

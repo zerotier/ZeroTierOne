@@ -520,8 +520,12 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 
   if(conn) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
-		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
-
+		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
+			if(errno < 0) {
+				l->tap->send_return_value(conn, -1, errno);
+				return ERR_MEM;
+			}
+		}
 		TcpConnection *new_tcp_conn = new TcpConnection();
 		new_tcp_conn->dataSock = tap->_phy.wrapSocket(fds[0], new_tcp_conn);
 		new_tcp_conn->rpcSock = conn->rpcSock;
@@ -916,7 +920,12 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	struct tcp_pcb *newpcb = lwipstack->tcp_new();
   if(newpcb != NULL) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
-		socketpair(PF_LOCAL, SOCK_STREAM, 0, fds);
+		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
+			if(errno < 0) {
+				send_return_value(_phy.getDescriptor(sock), -1, errno);
+				return;
+			}
+		}
 		TcpConnection *new_conn = new TcpConnection();
 		new_conn->dataSock = _phy.wrapSocket(fds[0], new_conn);
 		*uptr = new_conn;
@@ -950,7 +959,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	[i] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
 	[ ] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
 	[i] EADDRINUSE - Local address is already in use.
-	[i] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
+	[?] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
 	[ ] EAGAIN - No more free local ports or insufficient entries in the routing cache.
 	[ ] EALREADY - The socket is nonblocking and a previous connection attempt has not yet been completed.
 	[ ] EBADF - The file descriptor is not a valid index in the descriptor table.
