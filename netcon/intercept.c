@@ -73,6 +73,8 @@ char *progname = "";
 #include "common.h"
 
 #ifdef CHECKS
+  //#include <sys/time.h>
+  #include <sys/resource.h>
   #include <linux/net.h> /* for NPROTO */
 
   #define SOCK_MAX (SOCK_PACKET + 1)
@@ -763,6 +765,30 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
+#ifdef CHECKS
+  /* Check that this is a valid fd */
+  if(fcntl(sockfd, F_GETFD) < 0) {
+    return -1;
+    errno = EBADF;
+  }
+  int sock_type = -1;
+  socklen_t sock_type_len = sizeof(sock_type);
+  getsockopt(sockfd, SOL_SOCKET, SO_TYPE,
+       (void *) &sock_type, &sock_type_len);
+  /* Check that this socket supports accept() */
+  if(!(sock_type & (SOCK_STREAM | SOCK_SEQPACKET))) {
+    errno = EOPNOTSUPP;
+    return -1;
+  }
+  /* Check that we haven't hit the soft-limit file descriptors allowed */
+  struct rlimit rl;
+  getrlimit(RLIMIT_NOFILE, &rl);
+  if(sockfd >= rl.rlim_cur){
+    errno = EMFILE;
+    return -1;
+  }
+#endif
+
 #ifdef DUMMY
     return realaccept(sockfd, addr, addrlen);
 #else
@@ -770,16 +796,8 @@ int accept(ACCEPT_SIG)
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(realaccept(sockfd, addr, addrlen));
 
-  int sock_type = -1;
-  socklen_t sock_type_len = sizeof(sock_type);
-
-  getsockopt(sockfd, SOL_SOCKET, SO_TYPE,
-       (void *) &sock_type, &sock_type_len);
-
   addr->sa_family = AF_INET;
   /* TODO: also get address info */
-
-  /* FIXME: Check that socket is type SOCK_STREAM */
 
   char cmd[BUF_SZ];
   if(realaccept == NULL) {

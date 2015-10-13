@@ -494,18 +494,18 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 													to be accepted. POSIX.1-2001 allows either error to be returned for
 													this case, and does not require these constants to have the same value,
 													so a portable application should check for both possibilities.
-	[ ] EBADF - The descriptor is invalid.
-	[i] ECONNABORTED - A connection has been aborted.
+	[I] EBADF - The descriptor is invalid.
+	[I] ECONNABORTED - A connection has been aborted.
 	[i] EFAULT - The addr argument is not in a writable part of the user address space.
 	[ ] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
 	[ ] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
 	[ ] EINVAL - (accept4()) invalid value in flags.
-	[ ] EMFILE - The per-process limit of open file descriptors has been reached.
+	[I] EMFILE - The per-process limit of open file descriptors has been reached.
 	[ ] ENFILE - The system limit on the total number of open files has been reached.
 	[ ] ENOBUFS, ENOMEM - Not enough free memory. This often means that the memory allocation is
 												limited by the socket buffer limits, not by the system memory.
 	[i] ENOTSOCK - The descriptor references a file, not a socket.
-	[i] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
+	[I] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
 	[ ] EPROTO - Protocol error.
 
  *
@@ -675,8 +675,8 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 				l->tap->send_return_value(l->conn, -1, EISCONN);
 				break;
 			case ERR_ABRT:
-				fprintf(stderr, "nc_err(): ERR_ABRT->ETIMEDOUT\n"); // FIXME: Correct?
-				l->tap->send_return_value(l->conn, -1, ETIMEDOUT);
+				fprintf(stderr, "nc_err(): ERR_ABRT->ECONNREFUSED\n");
+				l->tap->send_return_value(l->conn, -1, ECONNREFUSED);
 				break;
 
 				// FIXME: Below are errors which don't have a standard errno correlate
