@@ -112,11 +112,6 @@ void load_symbols(void);
 void set_up_intercept();
 int checkpid();
 
-/* defined in unistd.h, but we don't include it because
-it conflicts with our overriden symbols for read/write */
-#define STDIN_FILENO    0
-#define STDOUT_FILENO   1
-#define STDERR_FILENO   2
 
 #define BUF_SZ                    1024
 #define SERVICE_CONNECT_ATTEMPTS  30
@@ -134,6 +129,9 @@ pthread_mutex_t loglock;
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
 ------------------------------------------------------------------------------*/
 
+// TODO: Find minimum BUF_SZ for RPC
+// TODO: Refactor RPC send logic
+
 static int is_initialized = 0;
 static int fdret_sock; // used for fd-transfers
 static int newfd; // used for "this_end" socket
@@ -142,10 +140,8 @@ static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
 static int thispid;
 
 /*
-*
-* Check for forking
-*
-*/
+  * Check for forking
+  */
 int checkpid() {
   if(thispid != getpid()) {
     printf("clone/fork detected. re-initializing this instance.\n");
@@ -157,9 +153,20 @@ int checkpid() {
 }
 
 /*
-*
+ * Sends an RPC command to the service
+ */
+void send_command(int rpc_fd, char *cmd)
+{
+  int n_write = write(rpc_fd, cmd, BUF_SZ);
+  if(n_write < 0){
+    dwr("Error writing command to service (CMD = %d)\n", cmd[0]);
+    errno = 0;
+    //return -1;
+  }
+
+}
+/*
 * Reads a return value from the service and sets errno (if applicable)
-*
 */
 int get_retval()
 {
@@ -541,11 +548,7 @@ int socket(SOCKET_SIG)
     cmd[0] = RPC_FD_MAP_COMPLETION;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
     if(newfd > -1) {
-      int n_write = write(fdret_sock, cmd, BUF_SZ);
-      if(n_write < 0) {
-        dwr("Error writing perceived FD to service.\n");
-        return get_retval();
-      }
+      send_command(fdret_sock, cmd);
       pthread_mutex_unlock(&lock);
       errno = ERR_OK; // OK
       return newfd;
@@ -611,7 +614,7 @@ int connect(CONNECT_SIG)
   cmd[0] = RPC_CONNECT;
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
   pthread_mutex_lock(&lock);
-  write(fdret_sock,cmd, BUF_SZ);
+  send_command(fdret_sock, cmd);
 
   if(fdret_sock >= 0) {
     int retval;
@@ -675,7 +678,6 @@ int bind(BIND_SIG)
 #ifdef DUMMY
     dwr("bind(%d)\n", sockfd);
     return realbind(sockfd, addr, addrlen);
-
 #else
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
@@ -711,7 +713,7 @@ int bind(BIND_SIG)
   cmd[0]=RPC_BIND;
   memcpy(&cmd[1], &rpc_st, sizeof(struct bind_st));
   pthread_mutex_lock(&lock);
-  write(fdret_sock, cmd, BUF_SZ);
+  send_command(fdret_sock, cmd);
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
   return get_retval();
@@ -730,7 +732,6 @@ int accept4(ACCEPT4_SIG)
 #ifdef DUMMY
   dwr("accept4(%d)\n", sockfd);
   return accept(sockfd, addr, addrlen);
-
 #else
   return accept(sockfd, addr, addrlen);
 #endif
@@ -747,7 +748,6 @@ int accept(ACCEPT_SIG)
 {
 #ifdef DUMMY
     return realaccept(sockfd, addr, addrlen);
-
 #else
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
@@ -820,9 +820,7 @@ int listen(LISTEN_SIG)
 #ifdef DUMMY
     dwr("listen(%d)\n", sockfd);
     return reallisten(sockfd, backlog);
-
 #else
-
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(reallisten(sockfd, backlog));
@@ -838,7 +836,7 @@ int listen(LISTEN_SIG)
   cmd[0] = RPC_LISTEN;
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
   pthread_mutex_lock(&lock);
-  write(fdret_sock,cmd, BUF_SZ);
+  send_command(fdret_sock, cmd);
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
   return get_retval();

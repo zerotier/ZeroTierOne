@@ -386,14 +386,9 @@ void NetconEthernetTap::phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsi
 void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 
 /*
- * Creates a new NetconClient for the accepted RPC connection (unix domain socket)
- *
- * Subsequent socket connections from this client will be associated with this
- * NetconClient object.
+ * Add a new PhySocket for the client connection
  */
-void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN)
-{
-	//fprintf(stderr, "phyOnUnixAccept() NEW CLIENT RPC: %d\n", _phy.getDescriptor(sockN));
+void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {
 	rpc_sockets.push_back(sockN);
 }
 
@@ -505,7 +500,8 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 	[ ] EINVAL - (accept4()) invalid value in flags.
 	[ ] EMFILE - The per-process limit of open file descriptors has been reached.
 	[ ] ENFILE - The system limit on the total number of open files has been reached.
-	[ ] ENOBUFS, ENOMEM - Not enough free memory. This often means that the memory allocation is limited by the socket buffer limits, not by the system memory.
+	[ ] ENOBUFS, ENOMEM - Not enough free memory. This often means that the memory allocation is
+												limited by the socket buffer limits, not by the system memory.
 	[i] ENOTSOCK - The descriptor references a file, not a socket.
 	[i] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
 	[ ] EPROTO - Protocol error.
@@ -707,13 +703,13 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 	//fprintf(stderr, "nc_poll(): now = %u\n", now);
 	//fprintf(stderr, "nc_poll\n");
 
-/*
+
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
 	NetconEthernetTap *tap = l->tap;
 	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
 		tap->handle_write(conn);
-*/
+
 	return ERR_OK;
 }
 
@@ -815,6 +811,8 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				if(err == ERR_USE)
 					send_return_value(conn, -1, EADDRINUSE);
 				if(err == ERR_MEM)
+					send_return_value(conn, -1, ENOMEM); // FIXME: Likely won't happen
+				if(err == ERR_BUF)
 					send_return_value(conn, -1, ENOMEM);
 			}
 			else {
