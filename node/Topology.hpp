@@ -147,12 +147,19 @@ public:
 	}
 
 	/**
-	 * @return Pair containing world ID and world timestamp (faster than world().id() etc.)
+	 * @return Current world ID
 	 */
-	inline std::pair<uint64_t,uint64_t> worldIdentification() const
+	inline uint64_t worldId() const
 	{
-		Mutex::Lock _l(_lock);
-		return std::pair<uint64_t,uint64_t>(_world.id(),_world.timestamp());
+		return _world.id(); // safe to read without lock, and used from within eachPeer() so don't lock
+	}
+
+	/**
+	 * @return Current world timestamp
+	 */
+	inline uint64_t worldTimestamp() const
+	{
+		return _world.timestamp(); // safe to read without lock, and used from within eachPeer() so don't lock
 	}
 
 	/**

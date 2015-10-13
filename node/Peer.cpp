@@ -108,17 +108,16 @@ void Peer::received(
 							// Add new path
 							slot = &(_paths[np++]);
 						} else {
-							// Replace oldest non-fixed path
 							uint64_t slotLRmin = 0xffffffffffffffffULL;
 							for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-								if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
+								if (_paths[p].lastReceived() <= slotLRmin) {
 									slotLRmin = _paths[p].lastReceived();
 									slot = &(_paths[p]);
 								}
 							}
 						}
 						if (slot) {
-							*slot = RemotePath(localAddr,remoteAddr,false);
+							*slot = RemotePath(localAddr,remoteAddr);
 							slot->received(now);
 							_numPaths = np;
 							pathIsConfirmed = true;
@@ -172,12 +171,15 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &lo
 	outp.append(now);
 	RR->identity.serialize(outp,false);
 	atAddress.serialize(outp);
+	outp.append((uint64_t)RR->topology->worldId());
+	outp.append((uint64_t)RR->topology->worldTimestamp());
+
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
 
-void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
+RemotePath *Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	RemotePath *const bestPath = _getBestPath(now);
@@ -193,6 +195,7 @@ void Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
 			bestPath->sent(now);
 		}
 	}
+	return bestPath;
 }
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
@@ -269,59 +272,6 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 	}
 }
 
-void Peer::addPath(const RemotePath &newp,uint64_t now)
-{
-	Mutex::Lock _l(_lock);
-
-	unsigned int np = _numPaths;
-
-	for(unsigned int p=0;p<np;++p) {
-		if (_paths[p].address() == newp.address()) {
-			_paths[p].setFixed(newp.fixed());
-			_sortPaths(now);
-			return;
-		}
-	}
-
-	RemotePath *slot = (RemotePath *)0;
-	if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-		// Add new path
-		slot = &(_paths[np++]);
-	} else {
-		// Replace oldest non-fixed path
-		uint64_t slotLRmin = 0xffffffffffffffffULL;
-		for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-			if ((!_paths[p].fixed())&&(_paths[p].lastReceived() <= slotLRmin)) {
-				slotLRmin = _paths[p].lastReceived();
-				slot = &(_paths[p]);
-			}
-		}
-	}
-	if (slot) {
-		*slot = newp;
-		_numPaths = np;
-	}
-
-	_sortPaths(now);
-}
-
-void Peer::clearPaths(bool fixedToo)
-{
-	if (fixedToo) {
-		_numPaths = 0;
-	} else {
-		unsigned int np = _numPaths;
-		unsigned int x = 0;
-		unsigned int y = 0;
-		while (x < np) {
-			if (_paths[x].fixed())
-				_paths[y++] = _paths[x];
-			++x;
-		}
-		_numPaths = y;
-	}
-}
-
 bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
@@ -330,12 +280,9 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	unsigned int y = 0;
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
-			if (_paths[x].fixed()) {
-				attemptToContactAt(RR,_paths[x].localAddress(),_paths[x].address(),now);
-				_paths[y++] = _paths[x]; // keep fixed paths
-			}
+			attemptToContactAt(RR,_paths[x].localAddress(),_paths[x].address(),now);
 		} else {
-			_paths[y++] = _paths[x]; // keep paths not in this scope
+			_paths[y++] = _paths[x];
 		}
 		++x;
 	}

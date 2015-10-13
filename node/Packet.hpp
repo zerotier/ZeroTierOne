@@ -566,8 +566,8 @@ public:
 		 *   <[2] software revision (of responder)>
 		 *   <[1] destination address type (for this OK, not copied from HELLO)>
 		 *   [<[...] destination address>]
-		 *   <[8] 64-bit world ID of current world (of responder)>
-		 *   <[8] 64-bit timestamp of current world (of responder)>
+		 *   <[2] 16-bit length of world update or 0 if none>
+		 *   [[...] world update]
 		 *
 		 * ERROR has no payload.
 		 */
@@ -1098,36 +1098,7 @@ public:
 		 *
 		 * ERROR has no payload.
 		 */
-		VERB_REQUEST_PROOF_OF_WORK = 19,
-
-		/**
-		 * Generic binary object access:
-		 *   <[8] 64-bit request ID>
-		 *   <[4] 32-bit index in blob to retrieve>
-		 *   <[2] 16-bit max length of block to retrieve>
-		 *   <[2] 16-bit length of blob identifier>
-		 *   <[...] blob identifier>
-		 *
-		 * This is used as a generic remote object retrieval mechanism. It returns
-		 * OK if the object is accessible, INVALID_REQUEST if the index is beyond
-		 * the size of the blob or another element is invalid, and OBJ_NOT_FOUND
-		 * if no blob with the given identifier is available.
-		 *
-		 * Blob identifiers follow a de facto path-like schema, with the following
-		 * names reserved:
-		 *   world - Current world definition (see World.hpp)
-		 *   updates.d/<any> - Software updates (not used yet, but reserved)
-		 *
-		 * OK payload:
-		 *   <[8] 64-bit request ID>
-		 *   <[4] 32-bit total length of blob>
-		 *   <[4] 32-bit index of this data in blob>
-		 *   <[...] data>
-		 *
-		 * ERROR payload:
-		 *   <[8] 64-bit request ID>
-		 */
-		VERB_GET_OBJECT = 20
+		VERB_REQUEST_PROOF_OF_WORK = 19
 	};
 
 	/**

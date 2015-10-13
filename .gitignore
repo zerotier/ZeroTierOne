@@ -31,7 +31,8 @@ Thumbs.db
 /ZeroTierOneInstaller-*
 /examples/docker/zerotier-one
 /examples/docker/test-*.env
-/mkworld
+/world/mkworld
+/world/*.c25519
 
 # Miscellaneous file types that we don't want to check in
 *.log

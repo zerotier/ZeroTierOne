@@ -39,8 +39,6 @@
 #include "AntiRecursion.hpp"
 #include "RuntimeEnvironment.hpp"
 
-#define ZT_REMOTEPATH_FLAG_FIXED 0x0001
-
 namespace ZeroTier {
 
 /**
@@ -58,33 +56,17 @@ public:
 		_localAddress(),
 		_flags(0) {}
 
-	RemotePath(const InetAddress &localAddress,const InetAddress &addr,bool fixed) :
+	RemotePath(const InetAddress &localAddress,const InetAddress &addr) :
 		Path(addr,0,TRUST_NORMAL),
 		_lastSend(0),
 		_lastReceived(0),
 		_localAddress(localAddress),
-		_flags(fixed ? ZT_REMOTEPATH_FLAG_FIXED : 0) {}
+		_flags(0) {}
 
 	inline const InetAddress &localAddress() const throw() { return _localAddress; }
 
 	inline uint64_t lastSend() const throw() { return _lastSend; }
 	inline uint64_t lastReceived() const throw() { return _lastReceived; }
-
-	/**
-	 * @return Is this a fixed path?
-	 */
-	inline bool fixed() const throw() { return ((_flags & ZT_REMOTEPATH_FLAG_FIXED) != 0); }
-
-	/**
-	 * @param f New value of fixed flag
-	 */
-	inline void setFixed(const bool f)
-		throw()
-	{
-		if (f)
-			_flags |= ZT_REMOTEPATH_FLAG_FIXED;
-		else _flags &= ~ZT_REMOTEPATH_FLAG_FIXED;
-	}
 
 	/**
 	 * Called when a packet is sent to this remote path
@@ -112,12 +94,12 @@ public:
 
 	/**
 	 * @param now Current time
-	 * @return True if this path is fixed or has received data in last ACTIVITY_TIMEOUT ms
+	 * @return True if this path appears active
 	 */
 	inline bool active(uint64_t now) const
 		throw()
 	{
-		return ( ((_flags & ZT_REMOTEPATH_FLAG_FIXED) != 0) || ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT) );
+		return ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT);
 	}
 
 	/**

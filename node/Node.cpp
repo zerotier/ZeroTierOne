@@ -177,37 +177,47 @@ public:
 		RR(renv),
 		_now(now),
 		_relays(relays),
-		_rootAddresses(RR->topology->rootAddresses())
+		_world(RR->topology->world())
 	{
 	}
 
-	uint64_t lastReceiveFromUpstream;
+	uint64_t lastReceiveFromUpstream; // tracks last time we got a packet from an 'upstream' peer like a root or a relay
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		bool isRelay = false;
-		for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
-			if (r->first == p->address()) {
-				isRelay = true;
+		bool upstream = false;
+		InetAddress stableEndpoint;
+		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
+			if (r->identity.address() == p->address()) {
+				if (r->stableEndpoints.size() > 0)
+					stableEndpoint = r->stableEndpoints[(unsigned long)RR->node->prng() % r->stableEndpoints.size()];
+				upstream = true;
 				break;
 			}
 		}
 
-		if ((isRelay)||(std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end())) {
-			p->doPingAndKeepalive(RR,_now);
-			if (p->lastReceive() > lastReceiveFromUpstream)
-				lastReceiveFromUpstream = p->lastReceive();
-		} else {
-			if (p->alive(_now))
-				p->doPingAndKeepalive(RR,_now);
+		if (!upstream) {
+			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
+				if (r->first == p->address()) {
+					stableEndpoint = r->second;
+					upstream = true;
+					break;
+				}
+			}
 		}
+
+		if ((!p->doPingAndKeepalive(RR,_now))&&(stableEndpoint))
+			p->attemptToContactAt(RR,InetAddress(),stableEndpoint,_now);
+
+		if (upstream)
+			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 	}
 
 private:
 	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	const std::vector< std::pair<Address,InetAddress> > &_relays;
-	std::vector<Address> _rootAddresses;
+	World _world;
 };
 
 ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline)
@@ -376,7 +386,6 @@ ZT_PeerList *Node::peers() const
 			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = path->lastSend();
 			p->paths[p->pathCount].lastReceive = path->lastReceived();
-			p->paths[p->pathCount].fixed = path->fixed() ? 1 : 0;
 			p->paths[p->pathCount].active = path->active(_now) ? 1 : 0;
 			p->paths[p->pathCount].preferred = ((bestPath)&&(*path == *bestPath)) ? 1 : 0;
 			++p->pathCount;

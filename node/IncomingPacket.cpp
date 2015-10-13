@@ -42,6 +42,7 @@
 #include "SelfAwareness.hpp"
 #include "Salsa20.hpp"
 #include "SHA512.hpp"
+#include "World.hpp"
 
 namespace ZeroTier {
 
@@ -199,10 +200,18 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 
 		Identity id;
-		const unsigned int destAddrPtr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 		InetAddress destAddr;
-		if (destAddrPtr < size()) // ZeroTier One < 1.0.3 did not include this field
-			destAddr.deserialize(*this,destAddrPtr);
+		uint64_t worldId = ZT_WORLD_ID_NULL;
+		uint64_t worldTimestamp = 0;
+		{
+			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
+			if (ptr < size()) // ZeroTier One < 1.0.3 did not include physical destination address info
+				ptr += destAddr.deserialize(*this,ptr);
+			if ((ptr + 16) <= size()) { // older versions also did not include World IDs or timestamps
+				worldId = at<uint64_t>(ptr); ptr += 8;
+				worldTimestamp = at<uint64_t>(ptr);
+			}
+		}
 
 		if (protoVersion < ZT_PROTO_VERSION_MIN) {
 			TRACE("dropped HELLO from %s(%s): protocol version too old",id.address().toString().c_str(),_remoteAddress.toString().c_str());
@@ -286,8 +295,23 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 		_remoteAddress.serialize(outp);
-		outp.armor(peer->key(),true);
-		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+
+		if ((worldId != ZT_WORLD_ID_NULL)&&(worldId == RR->topology->worldId())) {
+			if (RR->topology->worldTimestamp() > worldTimestamp) {
+				World w(RR->topology->world());
+				const unsigned int sizeAt = outp.size();
+				outp.addSize(2); // make room for 16-bit size field
+				w.serialize(outp,false);
+				outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - sizeAt));
+			} else {
+				outp.append((uint16_t)0); // no world update needed
+			}
+
+			outp.armor(peer->key(),true);
+			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+		} else {
+			TRACE("dropped HELLO from %s(%s): world ID mismatch: peer is %llu and we are %llu",source().toString().c_str(),_remoteAddress.toString().c_str(),worldId,RR->topology->worldId());
+		}
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}

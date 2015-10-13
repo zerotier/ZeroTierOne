@@ -133,7 +133,7 @@ public:
 	 * Get the best direct path to this peer
 	 *
 	 * @param now Current time
-	 * @return Best path or NULL if there are no active (or fixed) direct paths
+	 * @return Best path or NULL if there are no active direct paths
 	 */
 	inline RemotePath *getBestPath(uint64_t now)
 	{
@@ -178,8 +178,9 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
+	 * @return Current best path or NULL if no active paths
 	 */
-	void doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
+	RemotePath *doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
 	 * Push direct paths if we haven't done so in [rate limit] milliseconds
@@ -290,7 +291,7 @@ public:
 
 	/**
 	 * @param now Current time
-	 * @return True if this peer has at least one active or fixed direct path
+	 * @return True if this peer has at least one active direct path
 	 */
 	inline bool hasActiveDirectPath(uint64_t now) const
 		throw()
@@ -304,25 +305,7 @@ public:
 	}
 
 	/**
-	 * Add a path (if we don't already have it)
-	 *
-	 * @param p New path to add
-	 * @param now Current time
-	 */
-	void addPath(const RemotePath &newp,uint64_t now);
-
-	/**
-	 * Clear paths
-	 *
-	 * @param fixedToo If true, clear fixed paths as well as learned ones
-	 */
-	void clearPaths(bool fixedToo);
-
-	/**
 	 * Reset paths within a given scope
-	 *
-	 * For fixed paths in this scope, a packet is sent. Non-fixed paths in this
-	 * scope are forgotten.
 	 *
 	 * @param RR Runtime environment
 	 * @param scope IP scope of paths to reset

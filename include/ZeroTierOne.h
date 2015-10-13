@@ -583,11 +583,6 @@ typedef struct
 	uint64_t lastReceive;
 
 	/**
-	 * Is path fixed? (i.e. not learned, static)
-	 */
-	int fixed;
-
-	/**
 	 * Is path active?
 	 */
 	int active;

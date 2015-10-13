@@ -79,10 +79,6 @@ selftest: $(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LIBS)
 	$(STRIP) zerotier-selftest
 
-mkworld: $(OBJS)
-	rm -f mkworld
-	$(CXX) $(CXXFLAGS) -o mkworld mkworld.cpp $(OBJS) $(LIBS)
-
 # Requires Packages: http://s.sudre.free.fr/Software/Packages/about.html
 mac-dist-pkg: FORCE
 	packagesbuild "ext/installfiles/mac/ZeroTier One.pkgproj"
