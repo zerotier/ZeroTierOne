@@ -503,7 +503,7 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 	[I] EBADF - The descriptor is invalid.
 	[I] ECONNABORTED - A connection has been aborted.
 	[i] EFAULT - The addr argument is not in a writable part of the user address space.
-	[ ] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
+	[-] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
 	[ ] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
 	[I] EINVAL - (accept4()) invalid value in flags.
 	[I] EMFILE - The per-process limit of open file descriptors has been reached.
@@ -806,6 +806,12 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
  * @param structure containing the data and parameters for this client's RPC
  *
 
+ i := should be implemented in intercept lib
+ I := is implemented in intercept lib
+ X := is implemented in service
+ ? := required treatment Unknown
+ - := Not needed
+
 	[ ]	EACCES - The address is protected, and the user is not the superuser.
 	[X]	EADDRINUSE - The given address is already in use.
 	[I]	EBADF - sockfd is not a valid descriptor.
@@ -876,10 +882,16 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
  * @param structure containing the data and parameters for this client's RPC
  *
 
-  [?] EADDRINUSE - Another socket is already listening on the same port.
-	[X] EBADF - The argument sockfd is not a valid descriptor.
-	[i] ENOTSOCK - The argument sockfd is not a socket.
-	[i] EOPNOTSUPP - The socket is not of a type that supports the listen() operation.
+ i := should be implemented in intercept lib
+ I := is implemented in intercept lib
+ X := is implemented in service
+ ? := required treatment Unknown
+ - := Not needed
+
+[?] EADDRINUSE - Another socket is already listening on the same port.
+[I] EBADF - The argument sockfd is not a valid descriptor.
+[I] ENOTSOCK - The argument sockfd is not a socket.
+[I] EOPNOTSUPP - The socket is not of a type that supports the listen() operation.
 
  */
 void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc)
@@ -890,6 +902,10 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
       fprintf(stderr, "handle_listen(): PCB is already in listening state.\n");
       return;
     }
+
+		// TODO: Implement liste_with_backlog
+		// FIXME: Correct return values from this method, most is handled in intercept lib
+
     struct tcp_pcb* listening_pcb = lwipstack->tcp_listen(conn->pcb);
     if(listening_pcb != NULL) {
       conn->pcb = listening_pcb;
@@ -924,13 +940,17 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
  * @param structure containing the data and parameters for this client's RPC
  *
 
-	TODO: set errno appropriately
+ i := should be implemented in intercept lib
+ I := is implemented in intercept lib
+ X := is implemented in service
+ ? := required treatment Unknown
+ - := Not needed
 
 	[-] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
-  [?] EAFNOSUPPORT - The implementation does not support the specified address family.
-  [?] EINVAL - Unknown protocol, or protocol family not available.
-  [?] EINVAL - Invalid flags in type.
-  [i] EMFILE - Process file table overflow.
+  [I] EAFNOSUPPORT - The implementation does not support the specified address family.
+  [I] EINVAL - Unknown protocol, or protocol family not available.
+  [I] EINVAL - Invalid flags in type.
+  [I] EMFILE - Process file table overflow.
   [i] ENFILE - The system limit on the total number of open files has been reached.
   [X] ENOBUFS or ENOMEM - Insufficient memory is available.  The socket cannot be created until sufficient resources are freed.
   [?] EPROTONOSUPPORT - The protocol type or the specified protocol is not supported within this domain.
@@ -974,23 +994,29 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
  * @param PhySocket associated with this RPC connection
  * @param structure containing the data and parameters for this client's RPC
 
-	--- Error handling in this method will only catch problems which are immeidately
+	--- Error handling in this method will only catch problems which are immedately
 	    apprent. Some errors will need to be caught in the nc_connected(0 callback
 
-	[i] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
+	 i := should be implemented in intercept lib
+ 	 I := is implemented in intercept lib
+ 	 X := is implemented in service
+ 	 ? := required treatment Unknown
+ 	 - := Not needed
+
+	[-] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
 	[ ] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
 	[i] EADDRINUSE - Local address is already in use.
 	[?] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
 	[ ] EAGAIN - No more free local ports or insufficient entries in the routing cache.
 	[ ] EALREADY - The socket is nonblocking and a previous connection attempt has not yet been completed.
-	[ ] EBADF - The file descriptor is not a valid index in the descriptor table.
+	[I] EBADF - The file descriptor is not a valid index in the descriptor table.
 	[ ] ECONNREFUSED - No-one listening on the remote address.
 	[i] EFAULT - The socket structure address is outside the user's address space.
 	[ ] EINPROGRESS - The socket is nonblocking and the connection cannot be completed immediately.
-	[?] EINTR - The system call was interrupted by a signal that was caught.
+	[-] EINTR - The system call was interrupted by a signal that was caught.
 	[X] EISCONN - The socket is already connected.
 	[?] ENETUNREACH - Network is unreachable.
-	[ ] ENOTSOCK - The file descriptor is not associated with a socket.
+	[I] ENOTSOCK - The file descriptor is not associated with a socket.
 	[X] ETIMEDOUT - Timeout while attempting connection.
 
  *

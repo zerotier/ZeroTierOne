@@ -528,6 +528,16 @@ int socket(SOCKET_SIG)
     return -EAFNOSUPPORT;
   if (socket_type < 0 || socket_type >= SOCK_MAX)
     return -EINVAL;
+  /* Check that we haven't hit the soft-limit file descriptors allowed */
+  /* FIXME: Find number of open fds
+  struct rlimit rl;
+  getrlimit(RLIMIT_NOFILE, &rl);
+  if(sockfd >= rl.rlim_cur){
+    errno = EMFILE;
+    return -1;
+  }
+  */
+  /* FIXME: detect ENFILE condition */
 #endif
 
 #ifdef DUMMY
@@ -597,8 +607,21 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-  int err;
+#ifdef CHECKS
+  /* Check that this is a valid fd */
+  if(fcntl(__fd, F_GETFD) < 0) {
+    return -1;
+    errno = EBADF;
+  }
+  /* Check that it is a socket */
+  int sock_type;
+  socklen_t sock_type_len = sizeof(sock_type);
+  if(getsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
+    errno = ENOTSOCK;
+    return -1;
+  }
   /* FIXME: Check that address is in user space, return EFAULT ? */
+#endif
 
 #ifdef DUMMY
   dwr("connect(%d)\n", __fd);
@@ -606,15 +629,16 @@ int connect(CONNECT_SIG)
 
 #else
   /* make sure we don't touch any standard outputs */
-  if(__fd == STDIN_FILENO || __fd == STDOUT_FILENO || __fd == STDERR_FILENO)
+  if(__fd == STDIN_FILENO || __fd == STDOUT_FILENO || __fd == STDERR_FILENO){
+    if (realconnect == NULL) {
+      dwr("Unresolved symbol: connect(). Library is exiting.\n");
+      exit(-1);
+    }
     return(realconnect(__fd, __addr, __len));
-  int sock_type = -1;
-  socklen_t sock_type_len = sizeof(sock_type);
+  }
+
   struct sockaddr_in *connaddr;
 	connaddr = (struct sockaddr_in *) __addr;
-
-  getsockopt(__fd, SOL_SOCKET, SO_TYPE,
-		   (void *) &sock_type, &sock_type_len);
 
   if(__addr != NULL && (connaddr->sin_family == AF_LOCAL
     || connaddr->sin_family == PF_NETLINK
@@ -624,13 +648,9 @@ int connect(CONNECT_SIG)
     return err;
   }
 
-  char cmd[BUF_SZ];
-  if (realconnect == NULL) {
-    dwr("Unresolved symbol: connect()\n");
-    return -1;
-  }
-
   /* assemble and route command */
+  int err;
+  char cmd[BUF_SZ];
   memset(cmd, '\0', BUF_SZ);
   struct connect_st rpc_st;
   rpc_st.__tid = syscall(SYS_gettid);
@@ -778,7 +798,6 @@ int accept(ACCEPT_SIG)
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
-    dwr("EBADF\n");
     return -1;
     errno = EBADF;
   }
@@ -787,13 +806,11 @@ int accept(ACCEPT_SIG)
   socklen_t sock_type_len = sizeof(sock_type);
   if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
     errno = ENOTSOCK;
-    dwr("ENOTSOCK\n");
     return -1;
   }
   /* Check that this socket supports accept() */
   if(!(sock_type && (SOCK_STREAM | SOCK_SEQPACKET))) {
     errno = EOPNOTSUPP;
-    dwr("EOPNOTSUPP\n");
     return -1;
   }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
@@ -801,7 +818,6 @@ int accept(ACCEPT_SIG)
   getrlimit(RLIMIT_NOFILE, &rl);
   if(sockfd >= rl.rlim_cur){
     errno = EMFILE;
-    dwr("EMFILE\n");
     return -1;
   }
 #endif
@@ -822,16 +838,12 @@ int accept(ACCEPT_SIG)
     return -1;
   }
 
-  char gmybuf[16];
-  int new_conn_socket;
-
-  char c[1];
-  int n = read(sockfd, c, sizeof(c));
+  char gmybuf[16], c[1];
+  int new_conn_socket, n = read(sockfd, c, sizeof(c));
   if(n > 0)
   {
     ssize_t size = sock_fd_read(fdret_sock, gmybuf, sizeof(gmybuf), &new_conn_socket);
-    if(size > 0)
-    {
+    if(size > 0) {
       /* Send our local-fd number back to service so it can complete its mapping table */
       memset(cmd, '\0', BUF_SZ);
       cmd[0] = RPC_FD_MAP_COMPLETION;
@@ -869,9 +881,27 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
+  #ifdef CHECKS
+  /* Check that this is a valid fd */
+  if(fcntl(sockfd, F_GETFD) < 0) {
+    return -1;
+    errno = EBADF;
+  }
+  /* Check that it is a socket */
+  int sock_type;
+  socklen_t sock_type_len = sizeof(sock_type);
+  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
+    errno = ENOTSOCK;
+    return -1;
+  }
+  /* Check that this socket supports accept() */
+  if(!(sock_type && (SOCK_STREAM | SOCK_SEQPACKET))) {
+    errno = EOPNOTSUPP;
+    return -1;
+  }
+  #endif
+
   int err;
-  /* FIXME: Check that this socket supports listen(), return EOPNOTSUPP */
-  /* FIXME: Check that the provided fd is a socket, return ENOTSOCK */
 
 #ifdef DUMMY
     dwr("listen(%d)\n", sockfd);
