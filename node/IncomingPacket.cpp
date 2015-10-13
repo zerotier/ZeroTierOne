@@ -335,9 +335,21 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION];
 				const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
 
+				const bool trusted = RR->topology->isRoot(peer->identity());
+
 				InetAddress destAddr;
-				if ((ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2) < size()) // ZeroTier One < 1.0.3 did not include this field
-					destAddr.deserialize(*this,ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2);
+				unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
+				if (ptr < size()) // ZeroTier One < 1.0.3 did not include this field
+					ptr += destAddr.deserialize(*this,ptr);
+				if ((trusted)&&((ptr + 2) <= size())) { // older versions also did not include this field, and right now we only use if from a root
+					World worldUpdate;
+					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
+					if (worldLen > 0) {
+						World w;
+						w.deserialize(*this,ptr);
+						RR->topology->worldUpdateIfValid(w);
+					}
+				}
 
 				if (vProto < ZT_PROTO_VERSION_MIN) {
 					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -349,7 +361,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				peer->addDirectLatencyMeasurment(latency);
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
-				bool trusted = RR->topology->isRoot(peer->identity());
 				if (destAddr)
 					RR->sa->iam(peer->address(),_remoteAddress,destAddr,trusted,RR->node->now());
 			}	break;
