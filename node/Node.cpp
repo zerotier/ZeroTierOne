@@ -206,8 +206,10 @@ public:
 			}
 		}
 
-		if ((!p->doPingAndKeepalive(RR,_now))&&(stableEndpoint))
-			p->attemptToContactAt(RR,InetAddress(),stableEndpoint,_now);
+		if ((p->alive(_now))||(upstream)) {
+			if ((!p->doPingAndKeepalive(RR,_now))&&(stableEndpoint))
+				p->attemptToContactAt(RR,InetAddress(),stableEndpoint,_now);
+		}
 
 		if (upstream)
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
