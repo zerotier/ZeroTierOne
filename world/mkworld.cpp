@@ -50,12 +50,12 @@
 #include <vector>
 #include <algorithm>
 
-#include "node/Constants.hpp"
-#include "node/World.hpp"
-#include "node/C25519.hpp"
-#include "node/Identity.hpp"
-#include "node/InetAddress.hpp"
-#include "osdep/OSUtils.hpp"
+#include "../node/Constants.hpp"
+#include "../node/World.hpp"
+#include "../node/C25519.hpp"
+#include "../node/Identity.hpp"
+#include "../node/InetAddress.hpp"
+#include "../osdep/OSUtils.hpp"
 
 using namespace ZeroTier;
 
