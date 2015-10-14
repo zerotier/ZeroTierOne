@@ -442,7 +442,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 }
 
 /*
- * Send a return value to the client for an RPC
+ * Send a 'retval' and 'errno' to the client for an RPC over connection->rpcSock
  */
 int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval, int _errno = 0)
 {
@@ -642,8 +642,6 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
   if(l->conn) {
 		switch(err)
 		{
-			// FIXME: Check if connection is pending first?
-
 			case ERR_MEM:
 			  fprintf(stderr, "nc_err(): ERR_MEM->ENOMEM\n");
 				l->tap->send_return_value(l->conn, -1, ENOMEM);
@@ -818,7 +816,7 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 	[X]	EINVAL - The socket is already bound to an address.
 	[I]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
 
-	[X]	ENOMEM - Insufficient kernel memory was available. ???
+	[X]	ENOMEM - Insufficient kernel memory was available.
 
 	  - The following errors are specific to UNIX domain (AF_UNIX) sockets:
 
@@ -857,9 +855,9 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				if(err == ERR_USE)
 					send_return_value(conn, -1, EADDRINUSE);
 				if(err == ERR_MEM)
-					send_return_value(conn, -1, ENOMEM); // FIXME: Likely won't happen
-				if(err == ERR_BUF)
 					send_return_value(conn, -1, ENOMEM);
+				if(err == ERR_BUF)
+					send_return_value(conn, -1, ENOMEM); // FIXME: Closest match
 			}
 			else {
 				send_return_value(conn, ERR_OK, ERR_OK); // Success
@@ -870,10 +868,10 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 			send_return_value(conn, -1, EINVAL);
 		}
   }
-  //else {
-	//	fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
-	//	send_return_value(conn, -1, EBADF); // FIXME: This makes no sense
-	//}
+  else {
+		fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
+		send_return_value(conn, -1, EBADF);
+	}
 }
 
 /*
@@ -890,7 +888,7 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
  - := Not needed
 
 [?] EADDRINUSE - Another socket is already listening on the same port.
-[I] EBADF - The argument sockfd is not a valid descriptor.
+[IX] EBADF - The argument sockfd is not a valid descriptor.
 [I] ENOTSOCK - The argument sockfd is not a socket.
 [I] EOPNOTSUPP - The socket is not of a type that supports the listen() operation.
 
@@ -923,7 +921,13 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
     }
     else {
 			fprintf(stderr, "handle_listen(): unable to allocate memory for new listening PCB\n");
-			send_return_value(conn, -1, ENOMEM); // FIXME: This does not have an equivalent errno value
+			 // FIXME: This does not have an equivalent errno value
+			 // lwip will reclaim space with a tcp_listen call since a PCB in a LISTEN
+			 // state takes up less space. If something goes wrong during the creation of a
+			 // new listening socket we should return an error that implies we can't use this
+			 // socket, even if the reason isn't describing what really happened internally.
+			 // See: http://lwip.wikia.com/wiki/Raw/TCP
+			send_return_value(conn, -1, EBADF);
     }
   }
   else {
@@ -963,12 +967,13 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
  */
 void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc)
 {
+	int rpc_fd = _phy.getDescriptor(sock);
 	struct tcp_pcb *newpcb = lwipstack->tcp_new();
   if(newpcb != NULL) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
 		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
 			if(errno < 0) {
-				send_return_value(_phy.getDescriptor(sock), -1, errno);
+				send_return_value(rpc_fd, -1, errno);
 				return;
 			}
 		}
@@ -984,7 +989,6 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
     new_conn->pending = true;
   }
   else {
-		int rpc_fd = _phy.getDescriptor(sock);
 		sock_fd_write(rpc_fd, -1); // Send a bad fd, to signal error
     fprintf(stderr, "handle_socket(): Memory not available for new PCB\n");
 		send_return_value(rpc_fd, -1, ENOMEM);
@@ -1008,19 +1012,21 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 
 	[-] EACCES - For UNIX domain sockets, which are identified by pathname: Write permission is denied ...
 	[?] EACCES, EPERM - The user tried to connect to a broadcast address without having the socket broadcast flag enabled ...
-	[i] EADDRINUSE - Local address is already in use.
+	[X] EADDRINUSE - Local address is already in use.
 	[I] EAFNOSUPPORT - The passed address didn't have the correct address family in its sa_family field.
-	[?] EAGAIN - No more free local ports or insufficient entries in the routing cache.
+	[X] EAGAIN - No more free local ports or insufficient entries in the routing cache.
 	[ ] EALREADY - The socket is nonblocking and a previous connection attempt has not yet been completed.
-	[I] EBADF - The file descriptor is not a valid index in the descriptor table.
+	[IX] EBADF - The file descriptor is not a valid index in the descriptor table.
 	[ ] ECONNREFUSED - No-one listening on the remote address.
 	[i] EFAULT - The socket structure address is outside the user's address space.
 	[ ] EINPROGRESS - The socket is nonblocking and the connection cannot be completed immediately.
 	[-] EINTR - The system call was interrupted by a signal that was caught.
 	[X] EISCONN - The socket is already connected.
-	[?] ENETUNREACH - Network is unreachable.
+	[X] ENETUNREACH - Network is unreachable.
 	[I] ENOTSOCK - The file descriptor is not associated with a socket.
 	[X] ETIMEDOUT - Timeout while attempting connection.
+
+	[X] EINVAL - Invalid argument, SVr4, generally makes sense to set this
 
  *
  */
@@ -1033,7 +1039,7 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 	ip_addr_t conn_addr = convert_ip((struct sockaddr_in *)&connect_rpc->__addr);
 
 	if(conn != NULL) {
-		lwipstack->tcp_sent(conn->pcb, nc_sent); // FIXME: Move?
+		lwipstack->tcp_sent(conn->pcb, nc_sent);
 		lwipstack->tcp_recv(conn->pcb, nc_recved);
 		lwipstack->tcp_err(conn->pcb, nc_err);
 		lwipstack->tcp_poll(conn->pcb, nc_poll, APPLICATION_POLL_FREQ);
@@ -1042,25 +1048,41 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 		int err = 0;
 		if((err = lwipstack->tcp_connect(conn->pcb,&conn_addr,conn_port, nc_connected)) < 0)
 		{
+			if(err == ERR_ISCONN) {
+				send_return_value(conn, -1, EISCONN); // Already in connected state
+				return;
+			}
 			if(err == ERR_USE) {
-				send_return_value(conn, -1, EISCONN); // Already in use
+				send_return_value(conn, -1, EADDRINUSE); // Already in use
 				return;
 			}
 			if(err == ERR_VAL) {
-				send_return_value(conn, -1, EAFNOSUPPORT); // FIXME: Invalid arguments?
+				send_return_value(conn, -1, EINVAL); // Invalid ipaddress parameter
 				return;
 			}
 			if(err == ERR_RTE) {
-				send_return_value(conn, -1, ENETUNREACH); // FIXME: Host unreachable
+				send_return_value(conn, -1, ENETUNREACH); // No route to host
 				return;
 			}
-			if(err == ERR_BUF)
-			{
-				// FIXME
+			if(err == ERR_BUF) {
+				send_return_value(conn, -1, EAGAIN); // No more ports available
+				return;
 			}
 			if(err == ERR_MEM)
 			{
-				// FIXME: return value originates from tcp_enqueue_flags()
+				/* Can occur for the following reasons: tcp_enqueue_flags()
+
+				1) tcp_enqueue_flags is always called with either SYN or FIN in flags.
+				  We need one available snd_buf byte to do that.
+				  This means we can't send FIN while snd_buf==0. A better fix would be to
+				  not include SYN and FIN sequence numbers in the snd_buf count.
+
+				2) Cannot allocate new pbuf
+				3) Cannot allocate new TCP segment
+
+				*/
+				send_return_value(conn, -1, EAGAIN); // FIXME: Doesn't describe the problem well, but closest match
+				return;
 			}
 
 			// We should only return a value if failure happens immediately
@@ -1071,13 +1093,14 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 			// - Most instances of a retval for a connect() should happen
 			//   in the nc_connect() and nc_err() callbacks!
 			fprintf(stderr, "handle_connect(): unable to connect\n");
-			send_return_value(conn, -1, err); // FIXME: Only catch unhandled errors
+			send_return_value(conn, -1, EAGAIN);
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
 		conn->pending=true;
 	}
 	else {
 		fprintf(stderr, "could not locate PCB based on their fd\n");
+		send_return_value(conn, -1, EBADF);
 	}
 }
 
