@@ -79,6 +79,24 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
+	 * Get the identity of a peer
+	 *
+	 * @param zta ZeroTier address of peer
+	 * @return Identity or NULL Identity if not found
+	 */
+	Identity getIdentity(const Address &zta);
+
+	/**
+	 * Cache an identity
+	 *
+	 * This is done automatically on addPeer(), and so is only useful for
+	 * cluster identity replication.
+	 *
+	 * @param id Identity to cache
+	 */
+	void saveIdentity(const Identity &id);
+
+	/**
 	 * @return Vector of peers that are root servers
 	 */
 	inline std::vector< SharedPtr<Peer> > rootPeers() const
@@ -210,7 +228,6 @@ public:
 
 private:
 	Identity _getIdentity(const Address &zta);
-	void _saveIdentity(const Identity &id);
 	void _setWorld(const World &newWorld);
 
 	const RuntimeEnvironment *RR;

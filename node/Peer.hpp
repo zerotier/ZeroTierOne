@@ -560,7 +560,8 @@ private:
 	void _sortPaths(const uint64_t now);
 	RemotePath *_getBestPath(const uint64_t now);
 
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
+	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH]; // computed with key agreement, not serialized
+
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;

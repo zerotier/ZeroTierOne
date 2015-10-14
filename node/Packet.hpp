@@ -623,6 +623,10 @@ public:
 		 * may also ignore these messages if a peer is not known or is not being
 		 * actively communicated with.
 		 *
+		 * Unfortunately the physical address format in this message pre-dates
+		 * InetAddress's serialization format. :( ZeroTier is four years old and
+		 * yes we've accumulated a tiny bit of cruft here and there.
+		 *
 		 * No OK or ERROR is generated.
 		 */
 		VERB_RENDEZVOUS = 5,

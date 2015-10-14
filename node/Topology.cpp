@@ -136,7 +136,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 
 	SharedPtr<Peer> &p = _peers.set(peer->address(),peer);
 	p->use(now);
-	_saveIdentity(p->identity());
+	saveIdentity(p->identity());
 
 	return p;
 }
@@ -170,6 +170,26 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	_peers.erase(zta);
 
 	return SharedPtr<Peer>();
+}
+
+Identity Topology::getIdentity(const Address &zta)
+{
+	{
+		Mutex::Lock _l(_lock);
+		SharedPtr<Peer> &ap = _peers[zta];
+		if (ap)
+			return ap->identity();
+	}
+	return _getIdentity(zta);
+}
+
+void saveIdentity(const Identity &id)
+{
+	if (id) {
+		char p[128];
+		Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)id.address().toInt());
+		RR->node->dataStorePut(p,id.toString(false),false);
+	}
 }
 
 SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
@@ -313,15 +333,6 @@ Identity Topology::_getIdentity(const Address &zta)
 		} catch ( ... ) {} // ignore invalid IDs
 	}
 	return Identity();
-}
-
-void Topology::_saveIdentity(const Identity &id)
-{
-	if (id) {
-		char p[128];
-		Utils::snprintf(p,sizeof(p),"iddb.d/%.10llx",(unsigned long long)id.address().toInt());
-		RR->node->dataStorePut(p,id.toString(false),false);
-	}
 }
 
 void Topology::_setWorld(const World &newWorld)

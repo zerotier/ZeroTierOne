@@ -182,7 +182,7 @@
 #define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 1000
 
 /**
- * Length of secret key in bytes -- 256-bit for Salsa20
+ * Length of secret key in bytes -- 256-bit -- do not change
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
