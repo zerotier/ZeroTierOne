@@ -183,7 +183,7 @@ Identity Topology::getIdentity(const Address &zta)
 	return _getIdentity(zta);
 }
 
-void saveIdentity(const Identity &id)
+void Topology::saveIdentity(const Identity &id)
 {
 	if (id) {
 		char p[128];

@@ -195,8 +195,12 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							const Address destinationAddress(reinterpret_cast<const char *>(packet) + 8,ZT_ADDRESS_LENGTH);
 							SharedPtr<Peer> destinationPeer(RR->topology->getPeer(destinationAddress));
 							if (destinationPeer) {
-								RemotePath *destinationPath = destinationPeer->send(RR,packet,packetLen,RR->node->now());
-								if ((destinationPath)&&(numRemotePeerPaths > 0)&&(packetLen >= 18)&&(reinterpret_cast<const unsigned char *>(packet)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR)) {
+								if (
+								    (destinationPeer->send(RR,packet,packetLen,RR->node->now()))&&
+								    (numRemotePeerPaths > 0)&&
+								    (packetLen >= 18)&&
+								    (reinterpret_cast<const unsigned char *>(packet)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR)
+								   ) {
 									// If remote peer paths were sent with this relayed packet, we do
 									// RENDEZVOUS. It's handled here for cluster-relayed packets since
 									// we don't have both Peer records so this is a different path.
