@@ -327,6 +327,7 @@ void set_up_intercept()
 ------------------------- ioctl(), fcntl(), setsockopt()------------------------
 ------------------------------------------------------------------------------*/
 
+/*
 char *cmd_to_str(int cmd)
 {
 	switch(cmd)
@@ -352,7 +353,8 @@ char *cmd_to_str(int cmd)
 	}
 	return "?";
 }
-
+*/
+/*
 void arg_to_str(int arg)
 {
 	if(arg & O_RDONLY) dwr("O_RDONLY ");
@@ -370,7 +372,8 @@ void arg_to_str(int arg)
 	if(arg & O_DSYNC) dwr("O_DSYNC ");
 	if(arg & O_SYNC) dwr("O_SYNC ");
 }
-
+*/
+/*
 char* level_to_str(int level)
 {
 	switch(level)
@@ -384,7 +387,8 @@ char* level_to_str(int level)
 	}
 	return "?";
 }
-
+*/
+/*
 char* option_name_to_str(int opt)
 {
 	if(opt == SO_DEBUG) return "SO_DEBUG";
@@ -403,6 +407,62 @@ char* option_name_to_str(int opt)
 	if(opt == SO_SNDTIMEO)return  "SO_SNDTIMEO";
 	return "?";
 }
+*/
+
+/*------------------------------------------------------------------------------
+---------------------------------- shutdown() ----------------------------------
+------------------------------------------------------------------------------*/
+
+/*
+void shutdown_arg_to_str(int arg)
+{
+	if(arg & O_RDONLY) dwr("O_RDONLY ");
+	if(arg & O_WRONLY) dwr("O_WRONLY ");
+	if(arg & O_RDWR) dwr("O_RDWR ");
+	if(arg & O_CREAT) dwr("O_CREAT ");
+	if(arg & O_EXCL) dwr("O_EXCL ");
+	if(arg & O_NOCTTY) dwr("O_NOCTTY ");
+	if(arg & O_TRUNC) dwr("O_TRUNC ");
+	if(arg & O_APPEND) dwr("O_APPEND ");
+	if(arg & O_ASYNC) dwr("O_ASYNC ");
+	if(arg & O_DIRECT) dwr("O_DIRECT ");
+	if(arg & O_NOATIME) dwr("O_NOATIME ");
+	if(arg & O_NONBLOCK) dwr("O_NONBLOCK ");
+	if(arg & O_DSYNC) dwr("O_DSYNC ");
+	if(arg & O_SYNC) dwr("O_SYNC ");
+}
+*/
+
+/*
+void sock_type_to_str(int arg)
+{
+	if(arg == SOCK_STREAM) printf("SOCK_STREAM ");
+  if(arg == SOCK_DGRAM) printf("SOCK_DGRAM ");
+  if(arg == SOCK_SEQPACKET) printf("SOCK_SEQPACKET ");
+  if(arg == SOCK_RAW) printf("SOCK_RAW ");
+  if(arg == SOCK_RDM) printf("SOCK_RDM ");
+  if(arg == SOCK_PACKET) printf("SOCK_PACKET ");
+  if(arg & SOCK_NONBLOCK) printf("| SOCK_NONBLOCK ");
+  if(arg & SOCK_CLOEXEC) printf("| SOCK_CLOEXEC ");
+}
+*/
+
+/*
+void sock_domain_to_str(int domain)
+{
+  if(domain == AF_UNIX) printf("AF_UNIX ");
+  if(domain == AF_LOCAL) printf("AF_LOCAL ");
+  if(domain == AF_INET) printf("AF_INET ");
+  if(domain == AF_INET6) printf("AF_INET6 ");
+  if(domain == AF_IPX) printf("AF_IPX ");
+  if(domain == AF_NETLINK) printf("AF_NETLINK ");
+  if(domain == AF_X25) printf("AF_X25 ");
+  if(domain == AF_AX25) printf("AF_AX25 ");
+  if(domain == AF_ATMPVC) printf("AF_ATMPVC ");
+  if(domain == AF_APPLETALK) printf("AF_APPLETALK ");
+  if(domain == AF_PACKET) printf("AF_PACKET ");
+}
+*/
 
 /*------------------------------------------------------------------------------
 --------------------------------- setsockopt() ---------------------------------
@@ -459,57 +519,8 @@ int getsockopt(GETSOCKOPT_SIG)
 
 
 /*------------------------------------------------------------------------------
----------------------------------- shutdown() ----------------------------------
-------------------------------------------------------------------------------*/
-
-void shutdown_arg_to_str(int arg)
-{
-	if(arg & O_RDONLY) dwr("O_RDONLY ");
-	if(arg & O_WRONLY) dwr("O_WRONLY ");
-	if(arg & O_RDWR) dwr("O_RDWR ");
-	if(arg & O_CREAT) dwr("O_CREAT ");
-	if(arg & O_EXCL) dwr("O_EXCL ");
-	if(arg & O_NOCTTY) dwr("O_NOCTTY ");
-	if(arg & O_TRUNC) dwr("O_TRUNC ");
-	if(arg & O_APPEND) dwr("O_APPEND ");
-	if(arg & O_ASYNC) dwr("O_ASYNC ");
-	if(arg & O_DIRECT) dwr("O_DIRECT ");
-	if(arg & O_NOATIME) dwr("O_NOATIME ");
-	if(arg & O_NONBLOCK) dwr("O_NONBLOCK ");
-	if(arg & O_DSYNC) dwr("O_DSYNC ");
-	if(arg & O_SYNC) dwr("O_SYNC ");
-}
-
-/*------------------------------------------------------------------------------
 ----------------------------------- socket() -----------------------------------
 ------------------------------------------------------------------------------*/
-
-void sock_type_to_str(int arg)
-{
-	if(arg == SOCK_STREAM) printf("SOCK_STREAM ");
-  if(arg == SOCK_DGRAM) printf("SOCK_DGRAM ");
-  if(arg == SOCK_SEQPACKET) printf("SOCK_SEQPACKET ");
-  if(arg == SOCK_RAW) printf("SOCK_RAW ");
-  if(arg == SOCK_RDM) printf("SOCK_RDM ");
-  if(arg == SOCK_PACKET) printf("SOCK_PACKET ");
-  if(arg & SOCK_NONBLOCK) printf("| SOCK_NONBLOCK ");
-  if(arg & SOCK_CLOEXEC) printf("| SOCK_CLOEXEC ");
-}
-
-void sock_domain_to_str(int domain)
-{
-  if(domain == AF_UNIX) printf("AF_UNIX ");
-  if(domain == AF_LOCAL) printf("AF_LOCAL ");
-  if(domain == AF_INET) printf("AF_INET ");
-  if(domain == AF_INET6) printf("AF_INET6 ");
-  if(domain == AF_IPX) printf("AF_IPX ");
-  if(domain == AF_NETLINK) printf("AF_NETLINK ");
-  if(domain == AF_X25) printf("AF_X25 ");
-  if(domain == AF_AX25) printf("AF_AX25 ");
-  if(domain == AF_ATMPVC) printf("AF_ATMPVC ");
-  if(domain == AF_APPLETALK) printf("AF_APPLETALK ");
-  if(domain == AF_PACKET) printf("AF_PACKET ");
-}
 
 /* int socket_family, int socket_type, int protocol
    socket() intercept function */
@@ -520,14 +531,20 @@ int socket(SOCKET_SIG)
 #ifdef CHECKS
   /* Check that type makes sense */
   int flags = socket_type & ~SOCK_TYPE_MASK;
-  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
-    return -EINVAL;
+  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
+      errno = EINVAL;
+      return -1;
+  }
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
-  if (socket_family < 0 || socket_family >= NPROTO)
-    return -EAFNOSUPPORT;
-  if (socket_type < 0 || socket_type >= SOCK_MAX)
-    return -EINVAL;
+  if (socket_family < 0 || socket_family >= NPROTO){
+    errno = EAFNOSUPPORT;
+    return -1;
+  }
+  if (socket_type < 0 || socket_type >= SOCK_MAX) {
+    errno = EINVAL;
+    return -1;
+  }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
   /* FIXME: Find number of open fds
   struct rlimit rl;
@@ -565,12 +582,12 @@ int socket(SOCKET_SIG)
   cmd[0] = RPC_SOCKET;
   memcpy(&cmd[1], &rpc_st, sizeof(struct socket_st));
   pthread_mutex_lock(&lock);
-  write(fdret_sock,cmd, BUF_SZ);
+  send_command(fdret_sock, cmd);
 
   /* get new fd */
-  char gmybuf[16];
-  ssize_t size = sock_fd_read(fdret_sock, gmybuf, sizeof(gmybuf), &newfd);
-  if(size > 0)
+  char rbuf[16];
+  ssize_t sz = sock_fd_read(fdret_sock, rbuf, sizeof(rbuf), &newfd);
+  if(sz > 0)
   {
     /* send our local-fd number back to service so
      it can complete its mapping table entry */
@@ -780,8 +797,10 @@ int bind(BIND_SIG)
 int accept4(ACCEPT4_SIG)
 {
 #ifdef CHECKS
-  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK))
-    return -EINVAL;
+  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
+    errno = EINVAL;
+    return -1;
+  }
 #endif
 #ifdef DUMMY
   dwr("accept4(%d)\n", sockfd);
@@ -843,11 +862,12 @@ int accept(ACCEPT_SIG)
     return -1;
   }
 
-  char gmybuf[16], c[1];
-  int new_conn_socket, n = read(sockfd, c, sizeof(c));
+  char rbuf[16], c[1];
+  int new_conn_socket;
+  int n = read(sockfd, c, sizeof(c)); // Read signal byte
   if(n > 0)
   {
-    ssize_t size = sock_fd_read(fdret_sock, gmybuf, sizeof(gmybuf), &new_conn_socket);
+    ssize_t size = sock_fd_read(fdret_sock, rbuf, sizeof(rbuf), &new_conn_socket);
     if(size > 0) {
       /* Send our local-fd number back to service so it can complete its mapping table */
       memset(cmd, '\0', BUF_SZ);
@@ -857,7 +877,7 @@ int accept(ACCEPT_SIG)
       int n_write = write(fdret_sock, cmd, BUF_SZ);
       if(n_write < 0) {
         dwr("Error sending perceived FD to service.\n");
-        errno = ECONNABORTED;
+        errno = ECONNABORTED; // FIXME: Closest match, service unreachable
         return -1;
       }
       pthread_mutex_unlock(&lock);
@@ -866,13 +886,13 @@ int accept(ACCEPT_SIG)
     }
     else {
       dwr("Error receiving new FD from service.\n");
-      errno = ECONNABORTED;
+      errno = ECONNABORTED; // FIXME: Closest match, service unreachable
       return -1;
     }
   }
   dwr("Error reading signal byte from service.\n");
   //errno = EWOULDBLOCK;
-  errno = ECONNABORTED;
+  errno = ECONNABORTED; // FIXME: Closest match, service unreachable
   return -1;
 #endif
 }

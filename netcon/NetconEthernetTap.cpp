@@ -265,20 +265,21 @@ TcpConnection *NetconEthernetTap::getConnectionByTheirFD(PhySocket *sock, int fd
  */
 void NetconEthernetTap::closeConnection(TcpConnection *conn)
 {
-	//fprintf(stderr, "closeConnection(): closing: conn->type = %d, fd=%d\n", conn->type, _phy.getDescriptor(conn->sock));
 	lwipstack->_tcp_arg(conn->pcb, NULL);
   lwipstack->_tcp_sent(conn->pcb, NULL);
   lwipstack->_tcp_recv(conn->pcb, NULL);
   lwipstack->_tcp_err(conn->pcb, NULL);
   lwipstack->_tcp_poll(conn->pcb, NULL, 0);
 	lwipstack->_tcp_close(conn->pcb);
-	close(_phy.getDescriptor(conn->dataSock));
 	close(conn->their_fd);
-	_phy.close(conn->dataSock);
-
+	if(conn->dataSock) {
+		close(_phy.getDescriptor(conn->dataSock));
+		_phy.close(conn->dataSock);
+	}
 	for(int i=0; i<tcp_connections.size(); i++) {
 		if(tcp_connections[i] == conn) {
 			tcp_connections.erase(tcp_connections.begin() + i);
+			break;
 		}
 	}
 	delete conn;
@@ -373,7 +374,8 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 	if(readable) {
 		TcpConnection *conn = (TcpConnection*)*uptr;
 		Mutex::Lock _l(lwipstack->_lock);
-		handle_write(conn);
+		if(conn->dataSock) // Sometimes a connection may be closed via nc_recved, check first
+			handle_write(conn);
 	}
 	else {
 		fprintf(stderr, "phyOnFileDescriptorActivity(): PhySocket not readable\n");
@@ -504,7 +506,7 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 	[I] ECONNABORTED - A connection has been aborted.
 	[i] EFAULT - The addr argument is not in a writable part of the user address space.
 	[-] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
-	[ ] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
+	[?] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
 	[I] EINVAL - (accept4()) invalid value in flags.
 	[I] EMFILE - The per-process limit of open file descriptors has been reached.
 	[ ] ENFILE - The system limit on the total number of open files has been reached.
@@ -583,7 +585,6 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
  */
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
-	//fprintf(stderr, "nc_recved()\n");
 	Larg *l = (Larg*)arg;
 	int n;
   struct pbuf* q = p;
@@ -1095,22 +1096,13 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		/* PCB send buffer is full,turn off readability notifications for the
 		corresponding PhySocket until nc_sent() is called and confirms that there is
 		now space on the buffer */
-
 		if(sndbuf == 0) {
 			_phy.setNotifyReadable(conn->dataSock, false);
 			lwipstack->_tcp_output(conn->pcb);
 			return;
 		}
-/*
-		if(conn->dataSock == NULL)
-		{
-			fprintf(stderr, "their_fd = %d, perc_fd = %d\n", conn->their_fd, conn->perceived_fd);
-			fprintf(stderr, "No dataSock assigned\n");
-			exit(1);
-		}
-*/
-		int read_fd = _phy.getDescriptor(conn->dataSock);
 
+		int read_fd = _phy.getDescriptor(conn->dataSock);
 		if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
 			conn->idx += r;
 			/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
