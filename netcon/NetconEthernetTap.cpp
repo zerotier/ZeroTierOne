@@ -49,7 +49,9 @@
 #include "Intercept.h"
 #include "NetconUtilities.hpp"
 
-#define APPLICATION_POLL_FREQ 1
+#define APPLICATION_POLL_FREQ 				1
+#define ZT_LWIP_TCP_TIMER_INTERVAL 		10
+
 
 namespace ZeroTier {
 
@@ -238,7 +240,6 @@ void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,s
 		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
 			removed.push_back(*m);
 	}
-
 	_multicastGroups.swap(newGroups);
 }
 
@@ -291,8 +292,10 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
 void NetconEthernetTap::closeClient(PhySocket *sock)
 {
 	for(int i=0; i<rpc_sockets.size(); i++) {
-		if(rpc_sockets[i] == sock)
+		if(rpc_sockets[i] == sock){
 			rpc_sockets.erase(rpc_sockets.begin() + i);
+			break;
+		}
 	}
 	close(_phy.getDescriptor(sock));
   _phy.close(sock);
@@ -309,8 +312,6 @@ void NetconEthernetTap::closeAll()
 		closeConnection(tcp_connections.front());
 }
 
-#define ZT_LWIP_TCP_TIMER_INTERVAL 10
-
 void NetconEthernetTap::threadMain()
 	throw()
 {
@@ -318,6 +319,7 @@ void NetconEthernetTap::threadMain()
 	uint64_t prev_tcp_time = 0;
 	uint64_t prev_etharp_time = 0;
 
+/*
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
 	fprintf(stderr, "- TCP_SND_BUF = %dK\n", TCP_SND_BUF / 1024);
 	fprintf(stderr, "- MEMP_NUM_PBUF = %d\n", MEMP_NUM_PBUF);
@@ -332,6 +334,7 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- ARP_TMR_INTERVAL = %d\n", ARP_TMR_INTERVAL);
 	fprintf(stderr, "- TCP_TMR_INTERVAL = %d\n", TCP_TMR_INTERVAL);
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
+*/
 
 	// Main timer loop
 	while (_run) {
@@ -531,6 +534,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
 			if(errno < 0) {
 				l->tap->send_return_value(conn, -1, errno);
+				//fprintf(stderr, "**************\n");
 				return ERR_MEM;
 			}
 		}
@@ -745,7 +749,7 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
  *
  */
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
-{
+{fprintf(stderr, "nc_sent()\n");
 	Larg *l = (Larg*)arg;
 	if(len) {
 		//fprintf(stderr, "ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
@@ -769,6 +773,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
  */
 err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
+	fprintf(stderr, "nc_connected()\n");
 	Larg *l = (Larg*)arg;
 	l->tap->send_return_value(l->conn, ERR_OK);
 	return ERR_OK;

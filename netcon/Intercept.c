@@ -111,7 +111,7 @@ int getsockopt(GETSOCKOPT_SIG);
 int accept4(ACCEPT4_SIG);
 
 #ifdef USE_SOCKS_DNS
-int res_init(void);
+  int res_init(void);
 #endif
 
 int connect_to_service(void);
@@ -122,7 +122,7 @@ void set_up_intercept();
 int checkpid();
 
 
-#define BUF_SZ                    1024
+#define BUF_SZ                    32
 #define SERVICE_CONNECT_ATTEMPTS  30
 #define ERR_OK                    0
 
@@ -136,9 +136,6 @@ pthread_mutex_t loglock;
 /*------------------------------------------------------------------------------
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
 ------------------------------------------------------------------------------*/
-
-// TODO: Find minimum BUF_SZ for RPC
-// TODO: Refactor RPC send logic
 
 static int is_initialized = 0;
 static int fdret_sock; // used for fd-transfers
@@ -168,10 +165,9 @@ void send_command(int rpc_fd, char *cmd)
   if(n_write < 0){
     dwr("Error writing command to service (CMD = %d)\n", cmd[0]);
     errno = 0;
-    //return -1;
   }
-
 }
+
 /*
  * Reads a return value from the service and sets errno (if applicable)
  */
@@ -204,22 +200,18 @@ int init_service_connection()
   if(!is_initialized)
   {
     struct sockaddr_un addr;
-    int tfd = -1;
+    int tfd = -1, attempts = 0, conn_err = -1;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, af_sock_name, sizeof(addr.sun_path)-1);
-
-    int attempts = 0;
-    int conn_err = -1;
 
     if ( (tfd = realsocket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
       perror("socket error");
       exit(-1);
     }
-
     while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS)
     {
-      dwr("trying connection (%d): %s\n", tfd, af_sock_name);
+      //dwr("trying connection (%d): %s\n", tfd, af_sock_name);
       conn_err = realconnect(tfd, (struct sockaddr*)&addr, sizeof(addr));
 
       if(conn_err < 0) {
@@ -252,19 +244,6 @@ void my_dest(void) {
 
 void load_symbols(void)
 {
-  /*
-  dwr("sizeof(connect_st) = %d\n", sizeof(struct connect_st));
-  dwr("sizeof(bind_st) = %d\n", sizeof(struct bind_st));
-  dwr("sizeof(close_st) = %d\n", sizeof(struct close_st));
-  dwr("sizeof(read_st) = %d\n", sizeof(struct read_st));
-  dwr("sizeof(write_st) = %d\n", sizeof(struct write_st));
-  dwr("sizeof(listen_st) = %d\n", sizeof(struct listen_st));
-  dwr("sizeof(socket_st) = %d\n", sizeof(struct socket_st));
-  dwr("sizeof(accept_st) = %d\n", sizeof(struct accept_st));
-  dwr("sizeof(shutdown_st) = %d\n", sizeof(struct shutdown_st));
-  dwr("sizeof(struct sockaddr) = %d\n", sizeof(struct sockaddr));
-  */
-
 #ifdef USE_OLD_DLSYM
   void *lib;
 #endif
@@ -272,8 +251,8 @@ void load_symbols(void)
   if(thispid == getpid()) {
     dwr("detected duplicate call to global ctor (pid=%d).\n", thispid);
   }
-  dwr(" -- pid = %d\n", getpid());
-	dwr(" -- uid = %d\n", getuid());
+  //dwr(" -- pid = %d\n", getpid());
+	//dwr(" -- uid = %d\n", getuid());
   thispid = getpid();
 
 #ifndef USE_OLD_DLSYM
@@ -288,10 +267,9 @@ void load_symbols(void)
 	realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
   realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
-
-  #ifdef USE_SOCKS_DNS
+#ifdef USE_SOCKS_DNS
   realresinit = dlsym(RTLD_NEXT, "res_init");
-  #endif
+#endif
 
 #else
   lib = dlopen(LIBCONNECT, RTLD_LAZY);
@@ -305,12 +283,10 @@ void load_symbols(void)
 	realsetsockopt = dlsym(lib, "setsockopt");
   realgetsockopt = dlsym(lib, "getsockopt");
   realaccept4 = dlsym(lib), "accept4");
-
-  #ifdef USE_SOCKS_DNS
+#ifdef USE_SOCKS_DNS
   realresinit = dlsym(lib, "res_init");
-  #endif
+#endif
   dlclose(lib);
-
   lib = dlopen(LIBC, RTLD_LAZY);
   dlclose(lib);
 #endif
@@ -334,147 +310,6 @@ void set_up_intercept()
   }
 }
 
-
-/*------------------------------------------------------------------------------
-------------------------- ioctl(), fcntl(), setsockopt()------------------------
-------------------------------------------------------------------------------*/
-
-/*
-char *cmd_to_str(int cmd)
-{
-	switch(cmd)
-	{
-		case F_DUPFD:
-			return "F_DUPFD";
-		case F_GETFD:
-			return "F_GETFD";
-		case F_SETFD:
-			return "F_SETFD";
-		case F_GETFL:
-			return "F_GETFL";
-		case F_SETFL:
-			return "F_SETFL";
-		case F_GETLK:
-			return "F_GETLK";
-		case F_SETLK:
-			return "F_SETLK";
-		case F_SETLKW:
-			return "F_SETLKW";
-		default:
-			return "?";
-	}
-	return "?";
-}
-*/
-/*
-void arg_to_str(int arg)
-{
-	if(arg & O_RDONLY) dwr("O_RDONLY ");
-	if(arg & O_WRONLY) dwr("O_WRONLY ");
-	if(arg & O_RDWR) dwr("O_RDWR ");
-	if(arg & O_CREAT) dwr("O_CREAT ");
-	if(arg & O_EXCL) dwr("O_EXCL ");
-	if(arg & O_NOCTTY) dwr("O_NOCTTY ");
-	if(arg & O_TRUNC) dwr("O_TRUNC ");
-	if(arg & O_APPEND) dwr("O_APPEND ");
-	if(arg & O_ASYNC) dwr("O_ASYNC ");
-	if(arg & O_DIRECT) dwr("O_DIRECT ");
-	if(arg & O_NOATIME) dwr("O_NOATIME ");
-	if(arg & O_NONBLOCK) dwr("O_NONBLOCK ");
-	if(arg & O_DSYNC) dwr("O_DSYNC ");
-	if(arg & O_SYNC) dwr("O_SYNC ");
-}
-*/
-/*
-char* level_to_str(int level)
-{
-	switch(level)
-	{
-		case SOL_SOCKET:
-			return "SOL_SOCKET";
-		case IPPROTO_TCP:
-			return "IPPROTO_TCP";
-		default:
-			return "?";
-	}
-	return "?";
-}
-*/
-/*
-char* option_name_to_str(int opt)
-{
-	if(opt == SO_DEBUG) return "SO_DEBUG";
-	if(opt == SO_BROADCAST) return "SO_BROADCAST";
-	if(opt == SO_BINDTODEVICE) return "SO_BINDTODEVICE";
-	if(opt == SO_REUSEADDR) return "SO_REUSEADDR";
-	if(opt == SO_KEEPALIVE) return "SO_KEEPALIVE";
-	if(opt == SO_LINGER) return "SO_LINGER";
-	if(opt == SO_OOBINLINE) return "SO_OOBINLINE";
-	if(opt == SO_SNDBUF) return "SO_SNDBUF";
-	if(opt == SO_RCVBUF) return "SO_RCVBUF";
-	if(opt == SO_DONTROUTE) return "SO_DONTROUTEO_ASYNC";
-	if(opt == SO_RCVLOWAT) return "SO_RCVLOWAT";
-	if(opt == SO_RCVTIMEO) return "SO_RCVTIMEO";
-	if(opt == SO_SNDLOWAT) return "SO_SNDLOWAT";
-	if(opt == SO_SNDTIMEO)return  "SO_SNDTIMEO";
-	return "?";
-}
-*/
-
-/*------------------------------------------------------------------------------
----------------------------------- shutdown() ----------------------------------
-------------------------------------------------------------------------------*/
-
-/*
-void shutdown_arg_to_str(int arg)
-{
-	if(arg & O_RDONLY) dwr("O_RDONLY ");
-	if(arg & O_WRONLY) dwr("O_WRONLY ");
-	if(arg & O_RDWR) dwr("O_RDWR ");
-	if(arg & O_CREAT) dwr("O_CREAT ");
-	if(arg & O_EXCL) dwr("O_EXCL ");
-	if(arg & O_NOCTTY) dwr("O_NOCTTY ");
-	if(arg & O_TRUNC) dwr("O_TRUNC ");
-	if(arg & O_APPEND) dwr("O_APPEND ");
-	if(arg & O_ASYNC) dwr("O_ASYNC ");
-	if(arg & O_DIRECT) dwr("O_DIRECT ");
-	if(arg & O_NOATIME) dwr("O_NOATIME ");
-	if(arg & O_NONBLOCK) dwr("O_NONBLOCK ");
-	if(arg & O_DSYNC) dwr("O_DSYNC ");
-	if(arg & O_SYNC) dwr("O_SYNC ");
-}
-*/
-
-/*
-void sock_type_to_str(int arg)
-{
-	if(arg == SOCK_STREAM) printf("SOCK_STREAM ");
-  if(arg == SOCK_DGRAM) printf("SOCK_DGRAM ");
-  if(arg == SOCK_SEQPACKET) printf("SOCK_SEQPACKET ");
-  if(arg == SOCK_RAW) printf("SOCK_RAW ");
-  if(arg == SOCK_RDM) printf("SOCK_RDM ");
-  if(arg == SOCK_PACKET) printf("SOCK_PACKET ");
-  if(arg & SOCK_NONBLOCK) printf("| SOCK_NONBLOCK ");
-  if(arg & SOCK_CLOEXEC) printf("| SOCK_CLOEXEC ");
-}
-*/
-
-/*
-void sock_domain_to_str(int domain)
-{
-  if(domain == AF_UNIX) printf("AF_UNIX ");
-  if(domain == AF_LOCAL) printf("AF_LOCAL ");
-  if(domain == AF_INET) printf("AF_INET ");
-  if(domain == AF_INET6) printf("AF_INET6 ");
-  if(domain == AF_IPX) printf("AF_IPX ");
-  if(domain == AF_NETLINK) printf("AF_NETLINK ");
-  if(domain == AF_X25) printf("AF_X25 ");
-  if(domain == AF_AX25) printf("AF_AX25 ");
-  if(domain == AF_ATMPVC) printf("AF_ATMPVC ");
-  if(domain == AF_APPLETALK) printf("AF_APPLETALK ");
-  if(domain == AF_PACKET) printf("AF_PACKET ");
-}
-*/
 
 /*------------------------------------------------------------------------------
 --------------------------------- setsockopt() ---------------------------------
@@ -844,7 +679,7 @@ int accept(ACCEPT_SIG)
         return -1;
       }
       pthread_mutex_unlock(&lock);
-      errno = ERR_OK;
+      //errno = ERR_OK;
       return new_conn_socket; // OK
     }
     else {
@@ -895,7 +730,6 @@ int listen(LISTEN_SIG)
     return(reallisten(sockfd, backlog));
 
   char cmd[BUF_SZ];
-  dwr("listen(%d)\n", sockfd);
   /* Assemble and route command */
   memset(cmd, '\0', BUF_SZ);
   struct listen_st rpc_st;
