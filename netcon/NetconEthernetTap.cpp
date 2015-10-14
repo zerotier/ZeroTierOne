@@ -542,7 +542,6 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		tap->tcp_connections.push_back(new_tcp_conn);
 
 		int send_fd = tap->_phy.getDescriptor(conn->rpcSock);
-
 		int n = write(larg_fd, "z", 1); // accept() in library waits for this byte
     if(n > 0) {
 			if(sock_fd_write(send_fd, fds[1]) > 0) {
@@ -905,10 +904,14 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
       return;
     }
 
-		// TODO: Implement liste_with_backlog
+		struct tcp_pcb* listening_pcb;
+		if(listen_rpc->backlog > 0)
+			listening_pcb = lwipstack->tcp_listen_with_backlog(conn->pcb, listen_rpc->backlog);
+		else
+			listening_pcb = lwipstack->tcp_listen(conn->pcb);
+
 		// FIXME: Correct return values from this method, most is handled in intercept lib
 
-    struct tcp_pcb* listening_pcb = lwipstack->tcp_listen(conn->pcb);
     if(listening_pcb != NULL) {
       conn->pcb = listening_pcb;
       lwipstack->tcp_accept(listening_pcb, nc_accept);
@@ -1092,7 +1095,6 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 	}
 	if(conn->idx < max) {
 		int sndbuf = conn->pcb->snd_buf; // How much we are currently allowed to write to the connection
-
 		/* PCB send buffer is full,turn off readability notifications for the
 		corresponding PhySocket until nc_sent() is called and confirms that there is
 		now space on the buffer */
