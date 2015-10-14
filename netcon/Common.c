@@ -37,7 +37,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#include "common.h"
+#include "Common.h"
 
 void dwr(const char *fmt, ...);
 

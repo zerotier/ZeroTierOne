@@ -32,17 +32,17 @@ LIB_NAME = intercept
 SHLIB_EXT=dylib
 SHLIB_MAJOR = 1
 SHLIB_MINOR = 8
-COMMON = common
-OBJS= intercept.o
+COMMON = Common
+OBJS= Intercept.o
 SHLIB = ${LIB_NAME}.${SHLIB_EXT}.${SHLIB_MAJOR}.${SHLIB_MINOR}
 SHLDFLAGS = -g -O2 -Wall -I. -nostdlib -shared
 LIBS = -ldl -lc -lrt -lpthread
 
 lib:
-	${SHCC} $(intercept_CFLAGS) -I. intercept.c -o intercept.o
-	${SHCC} $(intercept_CFLAGS) -I. common.c -o common.o
-	${SHCC} $(intercept_CFLAGS) -I. sendfd.c -o sendfd.o
-	${SHCC} $(SHLDFLAGS) intercept.o common.o sendfd.o -o libintercept.so.1.0 $(LIBS)
+	${SHCC} $(intercept_CFLAGS) -I. Intercept.c -o Intercept.o
+	${SHCC} $(intercept_CFLAGS) -I. Common.c -o Common.o
+	${SHCC} $(intercept_CFLAGS) -I. Sendfd.c -o Sendfd.o
+	${SHCC} $(SHLDFLAGS) Intercept.o Common.o Sendfd.o -o libintercept.so.1.0 $(LIBS)
 
 install:
 	cp libintercept.so.1.0 /lib/libintercept.so.1.0
