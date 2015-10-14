@@ -124,8 +124,7 @@ int checkpid();
 
 #define BUF_SZ                    1024
 #define SERVICE_CONNECT_ATTEMPTS  30
-
-#define ERR_OK          0
+#define ERR_OK                    0
 
 ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
@@ -253,6 +252,19 @@ void my_dest(void) {
 
 void load_symbols(void)
 {
+  /*
+  dwr("sizeof(connect_st) = %d\n", sizeof(struct connect_st));
+  dwr("sizeof(bind_st) = %d\n", sizeof(struct bind_st));
+  dwr("sizeof(close_st) = %d\n", sizeof(struct close_st));
+  dwr("sizeof(read_st) = %d\n", sizeof(struct read_st));
+  dwr("sizeof(write_st) = %d\n", sizeof(struct write_st));
+  dwr("sizeof(listen_st) = %d\n", sizeof(struct listen_st));
+  dwr("sizeof(socket_st) = %d\n", sizeof(struct socket_st));
+  dwr("sizeof(accept_st) = %d\n", sizeof(struct accept_st));
+  dwr("sizeof(shutdown_st) = %d\n", sizeof(struct shutdown_st));
+  dwr("sizeof(struct sockaddr) = %d\n", sizeof(struct sockaddr));
+  */
+
 #ifdef USE_OLD_DLSYM
   void *lib;
 #endif
@@ -470,11 +482,6 @@ void sock_domain_to_str(int domain)
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
-#ifdef DUMMY
-  dwr("setsockopt(%d)\n", socket);
-  return realsetsockopt(socket, level, option_name, option_value, option_len);
-
-#else
   /* make sure we don't touch any standard outputs */
   if(socket == STDIN_FILENO || socket == STDOUT_FILENO || socket == STDERR_FILENO)
     return(realsetsockopt(socket, level, option_name, option_value, option_len));
@@ -483,7 +490,6 @@ int setsockopt(SETSOCKOPT_SIG)
     //perror("setsockopt():\n");
   }
   return 0;
-#endif
 }
 
 
@@ -494,11 +500,6 @@ int setsockopt(SETSOCKOPT_SIG)
 
 int getsockopt(GETSOCKOPT_SIG)
 {
-#ifdef DUMMY
-  dwr("getsockopt(%d)\n", sockfd);
-  return realgetsockopt(sockfd, level, optname, optval, optlen);
-
-#else
   // make sure we don't touch any standard outputs
   int err = realgetsockopt(sockfd, level, optname, optval, optlen);
 
@@ -514,7 +515,6 @@ int getsockopt(GETSOCKOPT_SIG)
     //perror("setsockopt():\n");
   }
   return 0;
-#endif
 }
 
 
@@ -557,11 +557,6 @@ int socket(SOCKET_SIG)
   /* FIXME: detect ENFILE condition */
 #endif
 
-#ifdef DUMMY
-  dwr("socket(fam=%d, type=%d, prot=%d)\n", socket_family, socket_type, protocol);
-  return realsocket(socket_family, socket_type, protocol);
-
-#else
   char cmd[BUF_SZ];
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
 
@@ -613,7 +608,6 @@ int socket(SOCKET_SIG)
     pthread_mutex_unlock(&lock);
     return err;
   }
-#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -648,11 +642,6 @@ int connect(CONNECT_SIG)
   /* FIXME: Check that address is in user space, return EFAULT ? */
 #endif
 
-#ifdef DUMMY
-  dwr("connect(%d)\n", __fd);
-  return realconnect(__fd, __addr, __len);
-
-#else
   /* make sure we don't touch any standard outputs */
   if(__fd == STDIN_FILENO || __fd == STDOUT_FILENO || __fd == STDERR_FILENO){
     if (realconnect == NULL) {
@@ -686,7 +675,6 @@ int connect(CONNECT_SIG)
   err = get_retval();
   pthread_mutex_unlock(&lock);
   return err;
-#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -697,13 +685,7 @@ int connect(CONNECT_SIG)
 fd_set *exceptfds, struct timeval *timeout */
 int select(SELECT_SIG)
 {
-#ifdef DUMMY
-  dwr("select(n=%d, <readfds>, <writefds>, <exceptfds>, <timeout>)\n", n);
   return realselect(n, readfds, writefds, exceptfds, timeout);
-
-#else
-  return realselect(n, readfds, writefds, exceptfds, timeout);
-#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -713,13 +695,7 @@ int select(SELECT_SIG)
 /* struct pollfd *__fds, nfds_t __nfds, int __timeout */
 int poll(POLL_SIG)
 {
-#ifdef DUMMY
-  dwr("poll(<ufds>, nfds=%d, timeout=%d)\n", __fds, __timeout);
   return realpoll(__fds, __nfds, __timeout);
-
-#else
-  return realpoll(__fds, __nfds, __timeout);
-#endif
 }
 
 /*------------------------------------------------------------------------------
@@ -746,10 +722,6 @@ int bind(BIND_SIG)
 #endif
 
   int err;
-#ifdef DUMMY
-    dwr("bind(%d)\n", sockfd);
-    return realbind(sockfd, addr, addrlen);
-#else
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(realbind(sockfd, addr, addrlen));
@@ -784,7 +756,6 @@ int bind(BIND_SIG)
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
   return err;
-#endif
 }
 
 
@@ -802,12 +773,7 @@ int accept4(ACCEPT4_SIG)
     return -1;
   }
 #endif
-#ifdef DUMMY
-  dwr("accept4(%d)\n", sockfd);
   return accept(sockfd, addr, addrlen);
-#else
-  return accept(sockfd, addr, addrlen);
-#endif
 }
 
 
@@ -846,9 +812,6 @@ int accept(ACCEPT_SIG)
   }
 #endif
 
-#ifdef DUMMY
-    return realaccept(sockfd, addr, addrlen);
-#else
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(realaccept(sockfd, addr, addrlen));
@@ -894,7 +857,6 @@ int accept(ACCEPT_SIG)
   //errno = EWOULDBLOCK;
   errno = ECONNABORTED; // FIXME: Closest match, service unreachable
   return -1;
-#endif
 }
 
 
@@ -928,10 +890,6 @@ int listen(LISTEN_SIG)
 
   int err;
 
-#ifdef DUMMY
-    dwr("listen(%d)\n", sockfd);
-    return reallisten(sockfd, backlog);
-#else
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(reallisten(sockfd, backlog));
@@ -952,5 +910,4 @@ int listen(LISTEN_SIG)
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
   return err;
-#endif
 }

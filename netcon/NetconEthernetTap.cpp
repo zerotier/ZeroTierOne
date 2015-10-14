@@ -905,11 +905,11 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
     }
 
 		struct tcp_pcb* listening_pcb;
-		if(listen_rpc->backlog > 0)
+#ifdef TCP_LISTEN_BACKLOG
 			listening_pcb = lwipstack->tcp_listen_with_backlog(conn->pcb, listen_rpc->backlog);
-		else
+#else
 			listening_pcb = lwipstack->tcp_listen(conn->pcb);
-
+#endif
 		// FIXME: Correct return values from this method, most is handled in intercept lib
 
     if(listening_pcb != NULL) {
@@ -987,9 +987,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 		int rpc_fd = _phy.getDescriptor(sock);
 		sock_fd_write(rpc_fd, -1); // Send a bad fd, to signal error
     fprintf(stderr, "handle_socket(): Memory not available for new PCB\n");
-		if(send_return_value(rpc_fd, -1, ENOMEM) < 0) {
-			fprintf(stderr, "handle_socket(): Unable to send return value\n");
-		}
+		send_return_value(rpc_fd, -1, ENOMEM);
   }
 }
 
