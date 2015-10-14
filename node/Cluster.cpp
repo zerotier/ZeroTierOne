@@ -108,8 +108,8 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 			return;
 
 		// Decrypt!
-		dmsg.setSize(len - 16);
-		s20.decrypt12(reinterpret_cast<const char *>(msg) + 16,const_cast<void *>(dmsg.data()),dmsg.size());
+		dmsg.setSize(len - 24);
+		s20.decrypt12(reinterpret_cast<const char *>(msg) + 24,const_cast<void *>(dmsg.data()),dmsg.size());
 	}
 
 	if (dmsg.size() < 2)
@@ -343,6 +343,7 @@ void Cluster::addMember(uint16_t memberId)
 	Utils::getSecureRandom(iv,16);
 	_members[memberId].q.append(iv,16);
 	_members[memberId].q.addSize(8); // room for MAC
+	_members[memberId].q.append((uint16_t)_id);
 }
 
 void Cluster::_send(uint16_t memberId,const void *msg,unsigned int len)
@@ -363,7 +364,7 @@ void Cluster::_flush(uint16_t memberId)
 {
 	_Member &m = _members[memberId];
 	// assumes m.lock is locked!
-	if (m.q.size() > 24) {
+	if (m.q.size() > 26) { // 16-byte IV + 8-byte MAC + 2-byte cluster member ID (latter two bytes are inside crypto envelope)
 		// Create key from member's key and IV
 		char keytmp[32];
 		memcpy(keytmp,m.key,32);
@@ -394,6 +395,7 @@ void Cluster::_flush(uint16_t memberId)
 		Utils::getSecureRandom(iv,16);
 		m.q.append(iv,16);
 		m.q.addSize(8); // room for MAC
+		m.q.append((uint16_t)_id);
 	}
 }
 
