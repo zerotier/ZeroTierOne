@@ -1095,7 +1095,7 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		/* PCB send buffer is full,turn off readability notifications for the
 		corresponding PhySocket until nc_sent() is called and confirms that there is
 		now space on the buffer */
-		/
+
 		if(sndbuf == 0) {
 			_phy.setNotifyReadable(conn->dataSock, false);
 			lwipstack->_tcp_output(conn->pcb);
