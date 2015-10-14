@@ -583,7 +583,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
  */
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
-	fprintf(stderr, "nc_recved()\n");
+	//fprintf(stderr, "nc_recved()\n");
 	Larg *l = (Larg*)arg;
 	int n;
   struct pbuf* q = p;
@@ -818,6 +818,8 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 	[X]	EINVAL - The socket is already bound to an address.
 	[I]	ENOTSOCK - sockfd is a descriptor for a file, not a socket.
 
+	[X]	ENOMEM - Insufficient kernel memory was available. ???
+
 	  - The following errors are specific to UNIX domain (AF_UNIX) sockets:
 
 	[-]	EACCES - Search permission is denied on a component of the path prefix. (See also path_resolution(7).)
@@ -827,7 +829,6 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 	[-]	ELOOP - Too many symbolic links were encountered in resolving addr.
 	[-]	ENAMETOOLONG - s addr is too long.
 	[-]	ENOENT - The file does not exist.
-	[X]	ENOMEM - Insufficient kernel memory was available.
 	[-]	ENOTDIR - A component of the path prefix is not a directory.
 	[-]	EROFS - The socket inode would reside on a read-only file system.
 
@@ -975,7 +976,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	  new_conn->their_fd = fds[1];
 		tcp_connections.push_back(new_conn);
     sock_fd_write(_phy.getDescriptor(sock), fds[1]);
-		// Once the client tells us what its fd is for the other end, we can then complete the mapping
+		// Once the client tells us what its fd is on the other end, we can then complete the mapping
     new_conn->pending = true;
   }
   else {
@@ -1094,12 +1095,20 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		/* PCB send buffer is full,turn off readability notifications for the
 		corresponding PhySocket until nc_sent() is called and confirms that there is
 		now space on the buffer */
+		/
 		if(sndbuf == 0) {
 			_phy.setNotifyReadable(conn->dataSock, false);
 			lwipstack->_tcp_output(conn->pcb);
 			return;
 		}
-
+/*
+		if(conn->dataSock == NULL)
+		{
+			fprintf(stderr, "their_fd = %d, perc_fd = %d\n", conn->their_fd, conn->perceived_fd);
+			fprintf(stderr, "No dataSock assigned\n");
+			exit(1);
+		}
+*/
 		int read_fd = _phy.getDescriptor(conn->dataSock);
 
 		if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
