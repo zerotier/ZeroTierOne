@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "Constants.hpp"
+#include "Utils.hpp"
 
 #if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || defined(__WINDOWS__))
 #define ZT_SALSA20_SSE 1
@@ -30,6 +31,8 @@ class Salsa20
 {
 public:
 	Salsa20() throw() {}
+
+	~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
 
 	/**
 	 * @param key Key bits
