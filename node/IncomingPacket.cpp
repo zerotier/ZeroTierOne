@@ -302,7 +302,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				const unsigned int sizeAt = outp.size();
 				outp.addSize(2); // make room for 16-bit size field
 				w.serialize(outp,false);
-				outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - sizeAt));
+				outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - (sizeAt + 2)));
 			} else {
 				outp.append((uint16_t)0); // no world update needed
 			}
@@ -435,12 +435,12 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 {
 	try {
 		if (payloadLength() == ZT_ADDRESS_LENGTH) {
-			const SharedPtr<Peer> queried(RR->topology->getPeer(Address(payload(),ZT_ADDRESS_LENGTH)));
+			Identity queried(RR->topology->getIdentity(Address(payload(),ZT_ADDRESS_LENGTH)));
 			if (queried) {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 				outp.append((unsigned char)Packet::VERB_WHOIS);
 				outp.append(packetId());
-				queried->identity().serialize(outp,false);
+				queried.serialize(outp,false);
 				outp.armor(peer->key(),true);
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			} else {
