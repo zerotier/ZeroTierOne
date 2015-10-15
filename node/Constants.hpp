@@ -348,6 +348,11 @@
 #define ZT_MAX_BRIDGE_SPAM 16
 
 /**
+ * Maximum number of endpoints to contact per address type (to limit pushes like GitHub issue #235)
+ */
+#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 8
+
+/**
  * A test pseudo-network-ID that can be joined
  *
  * Joining this network ID will result in a network with no IP addressing

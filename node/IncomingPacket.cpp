@@ -296,22 +296,18 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
 		_remoteAddress.serialize(outp);
 
-		if ((worldId != ZT_WORLD_ID_NULL)&&(worldId == RR->topology->worldId())) {
-			if (RR->topology->worldTimestamp() > worldTimestamp) {
-				World w(RR->topology->world());
-				const unsigned int sizeAt = outp.size();
-				outp.addSize(2); // make room for 16-bit size field
-				w.serialize(outp,false);
-				outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - (sizeAt + 2)));
-			} else {
-				outp.append((uint16_t)0); // no world update needed
-			}
-
-			outp.armor(peer->key(),true);
-			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+		if ((worldId != ZT_WORLD_ID_NULL)&&(RR->topology->worldTimestamp() > worldTimestamp)&&(worldId == RR->topology->worldId())) {
+			World w(RR->topology->world());
+			const unsigned int sizeAt = outp.size();
+			outp.addSize(2); // make room for 16-bit size field
+			w.serialize(outp,false);
+			outp.setAt<uint16_t>(sizeAt,(uint16_t)(outp.size() - (sizeAt + 2)));
 		} else {
-			TRACE("dropped HELLO from %s(%s): world ID mismatch: peer is %llu and we are %llu",source().toString().c_str(),_remoteAddress.toString().c_str(),worldId,RR->topology->worldId());
+			outp.append((uint16_t)0); // no world update needed
 		}
+
+		outp.armor(peer->key(),true);
+		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -867,6 +863,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 	try {
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
+		unsigned int v4Count = 0,v6Count = 0;
 
 		while (count--) { // if ptr overflows Buffer will throw
 			// TODO: some flags are not yet implemented
@@ -882,14 +879,16 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE)
+							peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
 					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE)
+							peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
 					}
 				}	break;
 			}
