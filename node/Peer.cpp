@@ -101,9 +101,9 @@ void Peer::received(
 				}
 
 				if (!pathIsConfirmed) {
-					if ((verb == Packet::VERB_OK)&&(inReVerb == Packet::VERB_HELLO)) {
+					if ((verb == Packet::VERB_OK)&&((inReVerb == Packet::VERB_HELLO)||(inReVerb == Packet::VERB_ECHO))) {
 
-						// Learn paths if they've been confirmed via a HELLO
+						// Learn paths if they've been confirmed via a HELLO or an ECHO
 						RemotePath *slot = (RemotePath *)0;
 						if (np < ZT_MAX_PEER_NETWORK_PATHS) {
 							// Add new path
