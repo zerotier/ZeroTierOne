@@ -61,6 +61,11 @@
  */
 #define ZT_CLUSTER_MEMBER_MAX_PHYSICAL_ADDRS 8
 
+/**
+ * How frequently should doPeriodicTasks() be ideally called? (ms)
+ */
+#define ZT_CLUSTER_PERIODIC_TASK_DEADLINE 10
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -238,7 +243,7 @@ public:
 	void replicateCertificateOfNetworkMembership(const CertificateOfMembership &com);
 
 	/**
-	 * This should be called no less frequently than once every 10 seconds.
+	 * Call every ~ZT_CLUSTER_PERIODIC_TASK_DEADLINE milliseconds.
 	 */
 	void doPeriodicTasks();
 
