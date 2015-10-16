@@ -47,31 +47,20 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 
 	unsigned int ptr = 0;
 	while ((ptr + 4) < alls.size()) {
-		// Each Peer serializes itself prefixed by a record length (not including the size of the length itself)
-		unsigned int reclen = (unsigned int)all[ptr] & 0xff;
-		reclen <<= 8;
-		reclen |= (unsigned int)all[ptr + 1] & 0xff;
-		reclen <<= 8;
-		reclen |= (unsigned int)all[ptr + 2] & 0xff;
-		reclen <<= 8;
-		reclen |= (unsigned int)all[ptr + 3] & 0xff;
-
-		if (((ptr + reclen) > alls.size())||(reclen > ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE))
-			break;
-
 		try {
+			const unsigned int reclen = ( // each Peer serialized record is prefixed by a record length
+					((((unsigned int)all[ptr]) & 0xff) << 24) |
+					((((unsigned int)all[ptr + 1]) & 0xff) << 16) |
+					((((unsigned int)all[ptr + 2]) & 0xff) << 8) |
+					(((unsigned int)all[ptr + 3]) & 0xff)
+				);
 			unsigned int pos = 0;
-			SharedPtr<Peer> p(Peer::deserializeNew(RR->identity,Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE>(all + ptr,reclen),pos));
-			if (pos != reclen)
-				break;
+			SharedPtr<Peer> p(Peer::deserializeNew(RR->identity,Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE>(all + ptr,reclen + 4),pos));
 			ptr += pos;
-			if ((p)&&(p->address() != RR->identity.address())) {
-				_peers[p->address()] = p;
-			} else {
+			if (!p)
 				break; // stop if invalid records
-			}
-		} catch (std::exception &exc) {
-			break;
+			if (p->address() != RR->identity.address())
+				_peers[p->address()] = p;
 		} catch ( ... ) {
 			break; // stop if invalid records
 		}

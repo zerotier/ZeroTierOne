@@ -470,7 +470,7 @@ public:
 		b.append((uint16_t)_vRevision);
 		b.append((uint32_t)_latency);
 
-		b.append((uint32_t)_numPaths);
+		b.append((uint16_t)_numPaths);
 		for(unsigned int i=0;i<_numPaths;++i)
 			_paths[i].serialize(b);
 
@@ -497,7 +497,7 @@ public:
 			}
 		}
 
-		b.setAt(recSizePos,(uint32_t)((b.size() - 4) - recSizePos)); // set size
+		b.template setAt<uint32_t>(recSizePos,(uint32_t)(b.size() - (recSizePos + 4))); // set size
 	}
 
 	/**
@@ -511,7 +511,7 @@ public:
 	template<unsigned int C>
 	static inline SharedPtr<Peer> deserializeNew(const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
 	{
-		const uint32_t recSize = b.template at<uint32_t>(p); p += 4;
+		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
 		if (b.template at<uint16_t>(p) != 1)
@@ -540,7 +540,7 @@ public:
 		np->_vRevision = b.template at<uint16_t>(p); p += 2;
 		np->_latency = b.template at<uint32_t>(p); p += 4;
 
-		const unsigned int numPaths = b.template at<uint32_t>(p); p += 4;
+		const unsigned int numPaths = b.template at<uint16_t>(p); p += 2;
 		for(unsigned int i=0;i<numPaths;++i) {
 			if (i < ZT_MAX_PEER_NETWORK_PATHS) {
 				p += np->_paths[np->_numPaths++].deserialize(b,p);
