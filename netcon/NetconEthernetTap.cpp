@@ -925,6 +925,7 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
 			send_return_value(conn, ERR_OK, ERR_OK);
     }
     else {
+			/*
 			fprintf(stderr, "handle_listen(): unable to allocate memory for new listening PCB\n");
 			 // FIXME: This does not have an equivalent errno value
 			 // lwip will reclaim space with a tcp_listen call since a PCB in a LISTEN
@@ -933,13 +934,16 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
 			 // socket, even if the reason isn't describing what really happened internally.
 			 // See: http://lwip.wikia.com/wiki/Raw/TCP
 			send_return_value(conn, -1, EBADF);
-    }
+    	*/
+		}
   }
   else {
+		/*
 		// We can't find a connection mapped to the socket fd provided
     fprintf(stderr, "handle_listen(): can't locate connection for PCB\n");
 		send_return_value(conn, -1, EBADF);
-  }
+  	*/
+	}
 }
 
 /*

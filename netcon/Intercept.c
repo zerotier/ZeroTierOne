@@ -740,8 +740,8 @@ int listen(LISTEN_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
-  err = get_retval();
+  //err = get_retval();
   pthread_mutex_unlock(&lock);
-  errno = ERR_OK;
-  return err;
+  //errno = ERR_OK;
+  return ERR_OK;
 }
