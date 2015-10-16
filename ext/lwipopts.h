@@ -116,7 +116,7 @@
 #define MEM_SIZE                        1024 * 1024 * 64
 #define TCP_SND_BUF                     1024 * 63
 
-
+#define TCP_SND_QUEUELEN                1024
 /*------------------------------------------------------------------------------
 -------------------------- Internal Memory Pool Sizes --------------------------
 ------------------------------------------------------------------------------*/
@@ -157,7 +157,7 @@
  * MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP segments.
  * (requires the LWIP_TCP option)
  */
-#define MEMP_NUM_TCP_SEG                128
+#define MEMP_NUM_TCP_SEG                1024
 
 /**
  * MEMP_NUM_REASSDATA: the number of simultaneously IP packets queued for

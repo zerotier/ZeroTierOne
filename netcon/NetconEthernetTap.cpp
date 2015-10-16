@@ -318,6 +318,8 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "_threadMain()\n");
 	uint64_t prev_tcp_time = 0;
 	uint64_t prev_etharp_time = 0;
+fprintf(stderr, "- TCP_SND_QUEUELEN = %d\n", TCP_SND_QUEUELEN);
+fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
 
 /*
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
@@ -327,7 +329,7 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- MEMP_NUM_TCP_PCB_LISTEN = %d\n", MEMP_NUM_TCP_PCB_LISTEN);
 	fprintf(stderr, "- MEMP_NUM_TCP_SEG = %d\n", MEMP_NUM_TCP_SEG);
 	fprintf(stderr, "- PBUF_POOL_SIZE = %d\n", PBUF_POOL_SIZE);
-	fprintf(stderr, "- TCP_SND_QUEUELEN = %d\n", TCP_SND_QUEUELEN);
+
 	fprintf(stderr, "- IP_REASSEMBLY = %d\n", IP_REASSEMBLY);
 	fprintf(stderr, "- TCP_WND = %d\n", TCP_WND);
 	fprintf(stderr, "- TCP_MSS = %d\n", TCP_MSS);
@@ -376,9 +378,13 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 {
 	if(readable) {
 		TcpConnection *conn = (TcpConnection*)*uptr;
-		Mutex::Lock _l(lwipstack->_lock);
 		if(conn->dataSock) // Sometimes a connection may be closed via nc_recved, check first
+		{
+			//Mutex::Lock _l(lwipstack->_lock);
+			//lwipstack->_lock.lock();
 			handle_write(conn);
+			//lwipstack->_lock.unlock();
+		}
 	}
 	else {
 		fprintf(stderr, "phyOnFileDescriptorActivity(): PhySocket not readable\n");
@@ -1144,8 +1150,9 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 				// NOTE: this assumes that lwipstack->_lock is locked, either
 				// because we are in a callback or have locked it manually.
 				int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
+				lwipstack->_tcp_output(conn->pcb);
 				if(err != ERR_OK) {
-					fprintf(stderr, "handle_write(): error while writing to PCB\n");
+					fprintf(stderr, "handle_write(): error while writing to PCB, (err = %d)\n", err);
 					return;
 				}
 				else {

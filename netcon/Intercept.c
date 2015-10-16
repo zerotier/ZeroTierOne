@@ -494,6 +494,13 @@ int connect(CONNECT_SIG)
     return err;
   }
 
+  //int flags = fcntl(__fd, F_GETFD);
+  //dwr("connect(): socket flags = %d\n", flags);
+
+  if(sock_type && O_NONBLOCK) {
+    dwr("connect(): O_NONBLOCK\n");
+  }
+
   /* assemble and route command */
   int err;
   char cmd[BUF_SZ];
@@ -507,6 +514,10 @@ int connect(CONNECT_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
+  if(sock_type && O_NONBLOCK) {
+    //pthread_mutex_unlock(&lock);
+    //return EINPROGRESS;
+  }
   err = get_retval();
   pthread_mutex_unlock(&lock);
   return err;
