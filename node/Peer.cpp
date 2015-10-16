@@ -55,6 +55,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceived(0),
 	_lastPathSort(0),
+	_vProto(0),
 	_vMajor(0),
 	_vMinor(0),
 	_vRevision(0),

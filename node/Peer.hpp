@@ -330,7 +330,6 @@ public:
 	 */
 	inline void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
 	{
-		Mutex::Lock _l(_lock);
 		_vProto = (uint16_t)vproto;
 		_vMajor = (uint16_t)vmaj;
 		_vMinor = (uint16_t)vmin;
