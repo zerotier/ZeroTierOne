@@ -496,10 +496,9 @@ int connect(CONNECT_SIG)
 
   //int flags = fcntl(__fd, F_GETFD);
   //dwr("connect(): socket flags = %d\n", flags);
-
-  if(sock_type && O_NONBLOCK) {
-    dwr("connect(): O_NONBLOCK\n");
-  }
+  //if(sock_type && O_NONBLOCK) {
+  //  dwr("connect(): O_NONBLOCK\n");
+  //}
 
   /* assemble and route command */
   int err;
@@ -654,6 +653,11 @@ int accept(ACCEPT_SIG)
   getrlimit(RLIMIT_NOFILE, &rl);
   if(sockfd >= rl.rlim_cur){
     errno = EMFILE;
+    return -1;
+  }
+  /* Check address length */
+  if(addrlen < 0) {
+    errno = EINVAL;
     return -1;
   }
 #endif

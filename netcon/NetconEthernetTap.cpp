@@ -51,6 +51,7 @@
 
 #define APPLICATION_POLL_FREQ 				1
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		10
+#define STATUS_TMR_INTERVAL						1000
 
 
 namespace ZeroTier {
@@ -317,9 +318,8 @@ void NetconEthernetTap::threadMain()
 {
 	fprintf(stderr, "_threadMain()\n");
 	uint64_t prev_tcp_time = 0;
+	uint64_t prev_status_time = 0;
 	uint64_t prev_etharp_time = 0;
-fprintf(stderr, "- TCP_SND_QUEUELEN = %d\n", TCP_SND_QUEUELEN);
-fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
 
 /*
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
@@ -329,7 +329,8 @@ fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
 	fprintf(stderr, "- MEMP_NUM_TCP_PCB_LISTEN = %d\n", MEMP_NUM_TCP_PCB_LISTEN);
 	fprintf(stderr, "- MEMP_NUM_TCP_SEG = %d\n", MEMP_NUM_TCP_SEG);
 	fprintf(stderr, "- PBUF_POOL_SIZE = %d\n", PBUF_POOL_SIZE);
-
+	fprintf(stderr, "- TCP_SND_QUEUELEN = %d\n", TCP_SND_QUEUELEN);
+	fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
 	fprintf(stderr, "- IP_REASSEMBLY = %d\n", IP_REASSEMBLY);
 	fprintf(stderr, "- TCP_WND = %d\n", TCP_WND);
 	fprintf(stderr, "- TCP_MSS = %d\n", TCP_MSS);
@@ -340,14 +341,20 @@ fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
 
 	// Main timer loop
 	while (_run) {
+
 		uint64_t now = OSUtils::now();
 
 		uint64_t since_tcp = now - prev_tcp_time;
 		uint64_t since_etharp = now - prev_etharp_time;
-
+		uint64_t since_status = now - prev_status_time;
 		uint64_t tcp_remaining = ZT_LWIP_TCP_TIMER_INTERVAL;
 		uint64_t etharp_remaining = ARP_TMR_INTERVAL;
+		uint64_t status_remaining = STATUS_TMR_INTERVAL;
 
+		if (since_status >= STATUS_TMR_INTERVAL) {
+			prev_status_time = now;
+			fprintf(stderr, "tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
+		}
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
 			prev_tcp_time = now;
 			lwipstack->tcp_tmr();
@@ -381,9 +388,9 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 		if(conn->dataSock) // Sometimes a connection may be closed via nc_recved, check first
 		{
 			//Mutex::Lock _l(lwipstack->_lock);
-			//lwipstack->_lock.lock();
+			lwipstack->_lock.lock();
 			handle_write(conn);
-			//lwipstack->_lock.unlock();
+			lwipstack->_lock.unlock();
 		}
 	}
 	else {
@@ -515,7 +522,7 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 	[I] ECONNABORTED - A connection has been aborted.
 	[i] EFAULT - The addr argument is not in a writable part of the user address space.
 	[-] EINTR - The system call was interrupted by a signal that was caught before a valid connection arrived; see signal(7).
-	[?] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
+	[I] EINVAL - Socket is not listening for connections, or addrlen is invalid (e.g., is negative).
 	[I] EINVAL - (accept4()) invalid value in flags.
 	[I] EMFILE - The per-process limit of open file descriptors has been reached.
 	[ ] ENFILE - The system limit on the total number of open files has been reached.
@@ -755,7 +762,8 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
  *
  */
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
-{fprintf(stderr, "nc_sent()\n");
+{
+	//fprintf(stderr, "nc_sent()\n");
 	Larg *l = (Larg*)arg;
 	if(len) {
 		//fprintf(stderr, "ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
@@ -1150,7 +1158,7 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 				// NOTE: this assumes that lwipstack->_lock is locked, either
 				// because we are in a callback or have locked it manually.
 				int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
-				lwipstack->_tcp_output(conn->pcb);
+				//lwipstack->_tcp_output(conn->pcb);
 				if(err != ERR_OK) {
 					fprintf(stderr, "handle_write(): error while writing to PCB, (err = %d)\n", err);
 					return;
