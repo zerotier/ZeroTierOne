@@ -179,23 +179,31 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &lo
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
 }
 
-RemotePath *Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now)
+bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily)
 {
+	RemotePath *p = (RemotePath *)0;
+
 	Mutex::Lock _l(_lock);
-	RemotePath *const bestPath = _getBestPath(now);
-	if (bestPath) {
-		if ((now - bestPath->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
-			TRACE("PING %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),bestPath->address().toString().c_str(),now - bestPath->lastSend(),now - bestPath->lastReceived());
-			attemptToContactAt(RR,bestPath->localAddress(),bestPath->address(),now);
-			bestPath->sent(now);
-		} else if (((now - bestPath->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!bestPath->reliable())) {
-			TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),bestPath->address().toString().c_str(),now - bestPath->lastSend(),now - bestPath->lastReceived());
-			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
-			RR->node->putPacket(bestPath->localAddress(),bestPath->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
-			bestPath->sent(now);
-		}
+	if (inetAddressFamily != 0) {
+		p = _getBestPath(now,inetAddressFamily);
+	} else {
+		p = _getBestPath(now);
 	}
-	return bestPath;
+
+	if (p) {
+		if ((now - p->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
+			TRACE("PING %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
+			attemptToContactAt(RR,p->localAddress(),p->address(),now);
+			p->sent(now);
+		} else if (((now - p->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!p->reliable())) {
+			TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
+			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
+			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
+			p->sent(now);
+		}
+		return true;
+	}
+	return false;
 }
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
@@ -461,6 +469,21 @@ RemotePath *Peer::_getBestPath(const uint64_t now)
 		_sortPaths(now);
 		if (_paths[0].active(now))
 			return &(_paths[0]);
+	}
+	return (RemotePath *)0;
+}
+
+RemotePath *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
+{
+	// assumes _lock is locked
+	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
+		_sortPaths(now);
+	for(int k=0;k<2;++k) { // try once, and if it fails sort and try one more time
+		for(unsigned int i=0;i<_numPaths;++i) {
+			if ((_paths[i].active(now))&&((int)_paths[i].address().ss_family == inetAddressFamily))
+				return &(_paths[i]);
+		}
+		_sortPaths(now);
 	}
 	return (RemotePath *)0;
 }

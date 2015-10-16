@@ -186,33 +186,52 @@ public:
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
 		bool upstream = false;
-		InetAddress stableEndpoint;
+		InetAddress stableEndpoint4,stableEndpoint6;
+
+		// If this is a world root, pick (if possible) both an IPv4 and an IPv6 stable endpoint to use if link isn't currently alive.
 		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
 			if (r->identity.address() == p->address()) {
-				if (r->stableEndpoints.size() > 0)
-					stableEndpoint = r->stableEndpoints[(unsigned long)RR->node->prng() % r->stableEndpoints.size()];
 				upstream = true;
+				for(unsigned long k=0,ptr=RR->node->prng();k<r->stableEndpoints.size();++k) {
+					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
+					if (!stableEndpoint4) {
+						if (addr.ss_family == AF_INET)
+							stableEndpoint4 = addr;
+					} else if (!stableEndpoint6) {
+						if (addr.ss_family == AF_INET6)
+							stableEndpoint6 = addr;
+					} else break; // have both!
+				}
 				break;
 			}
 		}
 
+		// If this is a network preferred relay, also always ping and if a stable endpoint is specified use that if not alive
 		if (!upstream) {
 			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
 				if (r->first == p->address()) {
-					stableEndpoint = r->second;
+					if (r->second.ss_family == AF_INET)
+						stableEndpoint4 = r->second;
+					else if (r->second.ss_family == AF_INET6)
+						stableEndpoint6 = r->second;
 					upstream = true;
 					break;
 				}
 			}
 		}
 
-		if ((p->alive(_now))||(upstream)) {
-			if ((!p->doPingAndKeepalive(RR,_now))&&(stableEndpoint))
-				p->attemptToContactAt(RR,InetAddress(),stableEndpoint,_now);
-		}
-
-		if (upstream)
+		if (upstream) {
+			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
+			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
+			if ((!p->doPingAndKeepalive(RR,_now,AF_INET))&&(stableEndpoint4))
+				p->attemptToContactAt(RR,InetAddress(),stableEndpoint4,_now);
+			if ((!p->doPingAndKeepalive(RR,_now,AF_INET6))&&(stableEndpoint6))
+				p->attemptToContactAt(RR,InetAddress(),stableEndpoint6,_now);
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
+		} else if (p->alive(_now)) {
+			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
+			p->doPingAndKeepalive(RR,_now,0);
+		}
 	}
 
 private:

@@ -130,7 +130,7 @@ public:
 		Packet::Verb inReVerb = Packet::VERB_NOP);
 
 	/**
-	 * Get the best direct path to this peer
+	 * Get the current best direct path to this peer
 	 *
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active direct paths
@@ -178,9 +178,10 @@ public:
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
-	 * @return Current best path or NULL if no active paths
+	 * @param inetAddressFamily Keep this address family alive, or 0 to simply pick current best ignoring family
+	 * @return True if at least one direct path seems alive
 	 */
-	RemotePath *doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
+	bool doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily);
 
 	/**
 	 * Push direct paths if we haven't done so in [rate limit] milliseconds
@@ -559,6 +560,7 @@ public:
 private:
 	void _sortPaths(const uint64_t now);
 	RemotePath *_getBestPath(const uint64_t now);
+	RemotePath *_getBestPath(const uint64_t now,int inetAddressFamily);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH]; // computed with key agreement, not serialized
 
