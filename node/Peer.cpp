@@ -52,7 +52,8 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
 	_lastPathConfirmationSent(0),
-	_lastDirectPathPush(0),
+	_lastDirectPathPushSent(0),
+	_lastDirectPathPushReceived(0),
 	_lastPathSort(0),
 	_vMajor(0),
 	_vMinor(0),
@@ -210,8 +211,8 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 {
 	Mutex::Lock _l(_lock);
 
-	if (((now - _lastDirectPathPush) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
-		_lastDirectPathPush = now;
+	if (((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
+		_lastDirectPathPushSent = now;
 
 		std::vector<Path> dps(RR->node->directPaths());
 		if (dps.empty())

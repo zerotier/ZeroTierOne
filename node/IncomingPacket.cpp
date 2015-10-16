@@ -861,6 +861,13 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer)
 {
 	try {
+		const uint64_t now = RR->node->now();
+		if ((now - peer->lastDirectPathPushReceived()) >= ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL) {
+			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): too frequent!",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+		peer->setLastDirectPathPushReceived(now);
+
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 		unsigned int v4Count = 0,v6Count = 0;
