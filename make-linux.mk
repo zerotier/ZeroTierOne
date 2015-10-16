@@ -86,7 +86,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	CXXFLAGS+=-Wall -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
-	STRIP=strip --strip-all
+	STRIP+=--strip-all
 endif
 
 # Uncomment for gprof profile build
