@@ -29,6 +29,8 @@
 #include "Topology.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Node.hpp"
+#include "Network.hpp"
+#include "NetworkConfig.hpp"
 #include "Buffer.hpp"
 
 namespace ZeroTier {
@@ -281,6 +283,23 @@ keep_searching_for_roots:
 	if (bestRoot)
 		bestRoot->use(now);
 	return bestRoot;
+}
+
+bool Topology::isUpstream(const Identity &id) const
+{
+	if (isRoot(id))
+		return true;
+	std::vector< SharedPtr<Network> > nws(RR->node->allNetworks());
+	for(std::vector< SharedPtr<Network> >::const_iterator nw(nws.begin());nw!=nws.end();++nw) {
+		SharedPtr<NetworkConfig> nc((*nw)->config2());
+		if (nc) {
+			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nc->relays().begin());r!=nc->relays().end();++r) {
+				if (r->first == id.address())
+					return true;
+			}
+		}
+	}
+	return false;
 }
 
 bool Topology::worldUpdateIfValid(const World &newWorld)

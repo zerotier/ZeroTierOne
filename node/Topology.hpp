@@ -136,15 +136,14 @@ public:
 	inline bool isRoot(const Identity &id) const
 	{
 		Mutex::Lock _l(_lock);
-		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),id.address()) != _rootAddresses.end()) {
-			// Double check full identity for security reasons
-			for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-				if (id == r->identity)
-					return true;
-			}
-		}
-		return false;
+		return (std::find(_rootAddresses.begin(),_rootAddresses.end(),id.address()) != _rootAddresses.end());
 	}
+
+	/**
+	 * @param id Identity to check
+	 * @return True if this is a root server or a network preferred relay from one of our networks
+	 */
+	bool isUpstream(const Identity &id) const;
 
 	/**
 	 * @return Vector of root server addresses
