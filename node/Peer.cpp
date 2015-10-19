@@ -205,6 +205,7 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 		}
 		return true;
 	}
+
 	return false;
 }
 

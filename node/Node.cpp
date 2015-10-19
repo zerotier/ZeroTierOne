@@ -197,10 +197,11 @@ public:
 					if (!stableEndpoint4) {
 						if (addr.ss_family == AF_INET)
 							stableEndpoint4 = addr;
-					} else if (!stableEndpoint6) {
+					}
+					if (!stableEndpoint6) {
 						if (addr.ss_family == AF_INET6)
 							stableEndpoint6 = addr;
-					} else break; // have both!
+					}
 				}
 				break;
 			}
@@ -223,10 +224,29 @@ public:
 		if (upstream) {
 			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
 			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
-			if ((!p->doPingAndKeepalive(RR,_now,AF_INET))&&(stableEndpoint4))
-				p->attemptToContactAt(RR,InetAddress(),stableEndpoint4,_now);
-			if ((!p->doPingAndKeepalive(RR,_now,AF_INET6))&&(stableEndpoint6))
-				p->attemptToContactAt(RR,InetAddress(),stableEndpoint6,_now);
+			bool needToContactIndirect = true;
+			if (!p->doPingAndKeepalive(RR,_now,AF_INET)) {
+				if (stableEndpoint4) {
+					needToContactIndirect = false;
+					p->attemptToContactAt(RR,InetAddress(),stableEndpoint4,_now);
+				}
+			} else needToContactIndirect = false;
+			if (!p->doPingAndKeepalive(RR,_now,AF_INET6)) {
+				if (stableEndpoint6) {
+					needToContactIndirect = false;
+					p->attemptToContactAt(RR,InetAddress(),stableEndpoint6,_now);
+				}
+			} else needToContactIndirect = false;
+
+			if (needToContactIndirect) {
+				// If this is an upstream and we have no stable endpoint for either IPv4 or IPv6,
+				// send a NOP indirectly if possible to see if we can get to this peer in any
+				// way whatsoever. This will e.g. find network preferred relays that lack
+				// stable endpoints by using root servers.
+				Packet outp(p->address(),RR->identity.address(),Packet::VERB_NOP);
+				RR->sw->send(outp,true,0);
+			}
+
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 		} else if (p->alive(_now)) {
 			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
