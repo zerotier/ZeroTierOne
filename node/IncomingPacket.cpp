@@ -529,15 +529,13 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				const unsigned int flags = (*this)[ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS];
 
 				unsigned int comLen = 0;
-				bool comFailed = false;
 				if ((flags & 0x01) != 0) {
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					if (!peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com))
-						comFailed = true;
+					peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com);
 				}
 
-				if ((comFailed)||(!network->isAllowed(peer))) {
+				if (!network->isAllowed(peer)) {
 					TRACE("dropped EXT_FRAME from %s(%s): not a member of private network %.16llx",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),network->id());
 					_sendErrorNeedCertificate(RR,peer,network->id());
 					return true;
