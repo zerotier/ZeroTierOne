@@ -135,7 +135,7 @@ int main(int argc,char **argv)
 
 	// ALICE TEST
 	roots.push_back(World::Root());
-	roots.back().identity = Identity("");
+	roots.back().identity = Identity("d6ddca6ab5:0:4e761207d8b4200be44f478e3da148c16099110ee71b64586dda118e4022ab63682ce137da8ba817fc7f73aa3163f2e333933e2994c46b4f4119307be8855a72");
 	roots.back().stableEndpoints.push_back(InetAddress("169.57.143.104/9993"));
 	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 
