@@ -303,7 +303,7 @@ private:
 		~_Member() { Utils::burn(key,sizeof(key)); }
 	};
 
-	_Member _members[65536]; // cluster IDs can be from 0 to 65535 (16-bit)
+	_Member *const _members; // cluster IDs can be from 0 to 65535 (16-bit)
 
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;

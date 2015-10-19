@@ -56,7 +56,8 @@ Cluster::Cluster(const RuntimeEnvironment *renv,uint16_t id,DistanceAlgorithm da
 	_y(y),
 	_z(z),
 	_da(da),
-	_id(id)
+	_id(id),
+	_members(new _Member[65536])
 {
 	uint16_t stmp[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 
@@ -76,6 +77,7 @@ Cluster::~Cluster()
 {
 	Utils::burn(_masterSecret,sizeof(_masterSecret));
 	Utils::burn(_key,sizeof(_key));
+	delete [] _members;
 }
 
 void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
