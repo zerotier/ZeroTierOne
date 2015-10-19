@@ -203,7 +203,7 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
 			p->sent(now);
 		} else {
-			TRACE("no PING or NAT keepalive: %llums/%llums send/receive inactivity",now - p->lastSend(),now - p->lastReceived())
+			TRACE("no PING or NAT keepalive: %llums/%llums send/receive inactivity",now - p->lastSend(),now - p->lastReceived());
 		}
 		return true;
 	}
