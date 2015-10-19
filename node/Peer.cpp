@@ -202,6 +202,8 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
 			p->sent(now);
+		} else {
+			TRACE("no PING or NAT keepalive: %llums/%llums send/receive inactivity",now - p->lastSend(),now - p->lastReceived())
 		}
 		return true;
 	}
