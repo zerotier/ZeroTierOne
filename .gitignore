@@ -75,3 +75,5 @@ java/doc/
 java/build_win64/
 java/build_win32/
 /java/mac32_64/
+windows/WinUI/obj/
+windows/WinUI/bin/
