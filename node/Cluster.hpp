@@ -42,11 +42,17 @@
 #include "Buffer.hpp"
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
+#include "Hashtable.hpp"
 
 /**
  * Timeout for cluster members being considered "alive"
  */
 #define ZT_CLUSTER_TIMEOUT 30000
+
+/**
+ * How often should we announce that we have a peer?
+ */
+#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD 60000
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds
@@ -238,7 +244,7 @@ public:
 	bool redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPhysicalAddress,bool offload);
 
 private:
-	void _send(uint16_t memberId,const void *msg,unsigned int len);
+	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);
 	void _flush(uint16_t memberId);
 
 	// These are initialized in the constructor and remain static
@@ -292,7 +298,7 @@ private:
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	// Record tracking which members have which peers and how recently they claimed this
+	// Record tracking which members have which peers and how recently they claimed this -- also used to track our last claimed time
 	struct _PeerAffinity
 	{
 		_PeerAffinity(const Address &a,uint16_t mid,uint64_t ts) :

@@ -34,6 +34,7 @@
 #include "Network.hpp"
 #include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
+#include "Cluster.hpp"
 
 #include <algorithm>
 
@@ -107,7 +108,6 @@ void Peer::received(
 						// Learn paths if they've been confirmed via a HELLO or an ECHO
 						RemotePath *slot = (RemotePath *)0;
 						if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-							// Add new path
 							slot = &(_paths[np++]);
 						} else {
 							uint64_t slotLRmin = 0xffffffffffffffffULL;
@@ -141,6 +141,11 @@ void Peer::received(
 					}
 				}
 			}
+
+#ifdef ZT_ENABLE_CLUSTER
+			if ((pathIsConfirmed)&&(RR->cluster))
+				RR->cluster->replicateHavePeer(_id);
+#endif
 		}
 
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {

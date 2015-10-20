@@ -272,7 +272,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
-
 			peer = RR->topology->addPeer(newPeer);
 
 			// Continue at // VALID
