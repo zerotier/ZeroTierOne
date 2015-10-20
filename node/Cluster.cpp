@@ -186,19 +186,21 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						try {
 							Identity id;
 							ptr += id.deserialize(dmsg,ptr);
-							RR->topology->saveIdentity(id);
+							if (id) {
+								RR->topology->saveIdentity(id);
 
-							{	// Add or update peer affinity entry
-								_PeerAffinity pa(id.address(),fromMemberId,RR->node->now());
-								Mutex::Lock _l2(_peerAffinities_m);
-								std::vector<_PeerAffinity>::iterator i(std::lower_bound(_peerAffinities.begin(),_peerAffinities.end(),pa)); // O(log(n))
-								if ((i != _peerAffinities.end())&&(i->key == pa.key)) {
-									i->timestamp = pa.timestamp;
-								} else {
-									_peerAffinities.push_back(pa);
-									std::sort(_peerAffinities.begin(),_peerAffinities.end()); // probably a more efficient way to insert but okay for now
-								}
-	 						}
+								{	// Add or update peer affinity entry
+									_PeerAffinity pa(id.address(),fromMemberId,RR->node->now());
+									Mutex::Lock _l2(_peerAffinities_m);
+									std::vector<_PeerAffinity>::iterator i(std::lower_bound(_peerAffinities.begin(),_peerAffinities.end(),pa)); // O(log(n))
+									if ((i != _peerAffinities.end())&&(i->key == pa.key)) {
+										i->timestamp = pa.timestamp;
+									} else {
+										_peerAffinities.push_back(pa);
+										std::sort(_peerAffinities.begin(),_peerAffinities.end()); // probably a more efficient way to insert but okay for now
+									}
+		 						}
+		 					}
 						} catch ( ... ) {
 							// ignore invalid identities
 						}

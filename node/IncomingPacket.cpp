@@ -43,6 +43,7 @@
 #include "Salsa20.hpp"
 #include "SHA512.hpp"
 #include "World.hpp"
+#include "Cluster.hpp"
 
 namespace ZeroTier {
 
@@ -612,8 +613,15 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 		const uint64_t now = RR->node->now();
 
 		// Iterate through 18-byte network,MAC,ADI tuples
-		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18)
-			RR->mc->add(now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
+			const uint32_t nwid(at<uint64_t>(ptr));
+			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
+			RR->mc->add(now,nwid,group,peer->address());
+#ifdef ZT_ENABLE_CLUSTER
+			if (RR->cluster)
+				RR->cluster->replicateMulticastLike(nwid,peer->address(),group);
+#endif
+		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
 	} catch ( ... ) {
@@ -870,7 +878,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		}
 		peer->setLastDirectPathPushReceived(now);
 
-		const RemotePath *currentBest = peer->getBestPath();
+		const RemotePath *currentBest = peer->getBestPath(now);
 
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
