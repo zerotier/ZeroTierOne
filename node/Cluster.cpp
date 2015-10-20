@@ -172,14 +172,28 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						ptr += 8; // skip local clock, not used
 						m.load = dmsg.at<uint64_t>(ptr); ptr += 8;
 						ptr += 8; // skip flags, unused
+#ifdef ZT_TRACE
+						std::string addrs;
+#endif
 						unsigned int physicalAddressCount = dmsg[ptr++];
 						for(unsigned int i=0;i<physicalAddressCount;++i) {
 							m.zeroTierPhysicalEndpoints.push_back(InetAddress());
 							ptr += m.zeroTierPhysicalEndpoints.back().deserialize(dmsg,ptr);
-							if (!(m.zeroTierPhysicalEndpoints.back()))
+							if (!(m.zeroTierPhysicalEndpoints.back())) {
 								m.zeroTierPhysicalEndpoints.pop_back();
+							}
+#ifdef ZT_TRACE
+							else {
+								if (addrs.length() > 0)
+									addrs.push_back(',');
+								addrs.append(m.zeroTierPhysicalEndpoints.back().toString());
+							}
+#endif
 						}
 						m.lastReceivedAliveAnnouncement = RR->node->now();
+#ifdef ZT_TRACE
+						TRACE("[%u] I'm alive! send me peers at %s",(unsigned int)fromMemberId,addrs.c_str());
+#endif
 					}	break;
 
 					case STATE_MESSAGE_HAVE_PEER: {
@@ -200,6 +214,8 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 										std::sort(_peerAffinities.begin(),_peerAffinities.end()); // probably a more efficient way to insert but okay for now
 									}
 		 						}
+
+		 						TRACE("[%u] has %s",(unsigned int)fromMemberId,id.address().toString().c_str());
 		 					}
 						} catch ( ... ) {
 							// ignore invalid identities
@@ -212,10 +228,15 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						const MAC mac(dmsg.field(ptr,6),6); ptr += 6;
 						const uint32_t adi = dmsg.at<uint32_t>(ptr); ptr += 4;
 						RR->mc->add(RR->node->now(),nwid,MulticastGroup(mac,adi),address);
+						TRACE("[%u] %s likes %s/%u on %.16llu",(unsigned int)fromMemberId,address.toString().c_str(),mac.toString().c_str(),(unsigned int)adi,nwid);
 					}	break;
 
 					case STATE_MESSAGE_COM: {
-						// TODO: not used yet
+						CertificateOfMembership com;
+						ptr += com.deserialize(dmsg,ptr);
+						if (com) {
+							TRACE("[%u] COM for %s on %.16llu rev %llu",(unsigned int)fromMemberId,com.issuedTo().toString().c_str(),com.networkId(),com.revision());
+						}
 					}	break;
 
 					case STATE_MESSAGE_RELAY: {
@@ -228,6 +249,8 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 
 						if (packetLen >= ZT_PROTO_MIN_FRAGMENT_LENGTH) { // ignore anything too short to contain a dest address
 							const Address destinationAddress(reinterpret_cast<const char *>(packet) + 8,ZT_ADDRESS_LENGTH);
+							TRACE("[%u] relay %u bytes to %s (%u remote paths included)",(unsigned int)fromMemberId,packetLen,destinationAddress.toString().c_str(),numRemotePeerPaths);
+
 							SharedPtr<Peer> destinationPeer(RR->topology->getPeer(destinationAddress));
 							if (destinationPeer) {
 								if (
@@ -313,6 +336,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						Packet outp(rcpt,RR->identity.address(),verb);
 						outp.append(dmsg.field(ptr,len),len);
 						RR->sw->send(outp,true,0);
+						TRACE("[%u] proxy send %s to %s length %u",(unsigned int)fromMemberId,Packet::verbString(verb),rcpt.toString().c_str(),len);
 					}	break;
 				}
 			} catch ( ... ) {
