@@ -213,6 +213,12 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
+#ifdef ZT_ENABLE_CLUSTER
+	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
+	if (RR->cluster)
+		return;
+#endif
+
 	Mutex::Lock _l(_lock);
 
 	if (((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {

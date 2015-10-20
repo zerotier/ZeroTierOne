@@ -110,6 +110,20 @@ public:
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
 	void circuitTestEnd(ZT_CircuitTest *test);
+	ZT_ResultCode clusterInit(
+		unsigned int myId,
+		const struct sockaddr_storage *zeroTierPhysicalEndpoints,
+		unsigned int numZeroTierPhysicalEndpoints,
+		int x,
+		int y,
+		int z,
+		void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
+		void *sendFunctionArg,
+		int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
+		void *addressToLocationFunctionArg);
+	ZT_ResultCode clusterAddMember(unsigned int memberId);
+	void clusterRemoveMember(unsigned int memberId);
+	void clusterHandleIncomingMessage(const void *msg,unsigned int len);
 
 	// Internal functions ------------------------------------------------------
 

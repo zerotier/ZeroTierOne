@@ -871,6 +871,8 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		}
 		peer->setLastDirectPathPushReceived(now);
 
+		const RemotePath *currentBest = peer->getBestPath();
+
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 		unsigned int v4Count = 0,v6Count = 0;
@@ -889,16 +891,20 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE)
-							peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
+							if ((!currentBest)||(currentBest->address() != a))
+								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						}
 					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE)
-							peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
+							if ((!currentBest)||(currentBest->address() != a))
+								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						}
 					}
 				}	break;
 			}

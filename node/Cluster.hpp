@@ -34,43 +34,32 @@
 #include <algorithm>
 
 #include "Constants.hpp"
+#include "../include/ZeroTierOne.h"
 #include "Address.hpp"
 #include "InetAddress.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"
 #include "Buffer.hpp"
 #include "Mutex.hpp"
+#include "SharedPtr.hpp"
 
 /**
  * Timeout for cluster members being considered "alive"
  */
-#define ZT_CLUSTER_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
+#define ZT_CLUSTER_TIMEOUT 30000
 
 /**
- * Maximum cluster message length in bytes
- *
- * Cluster nodes speak via TCP, with data encapsulated into individually
- * encrypted and authenticated messages. The maximum message size is
- * 65535 (0xffff) since the TCP stream uses 16-bit message size headers
- * (and this is a reasonable chunk size anyway).
+ * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_MAX_MESSAGE_LENGTH 65535
-
-/**
- * Maximum number of physical addresses we will cache for a cluster member
- */
-#define ZT_CLUSTER_MEMBER_MAX_PHYSICAL_ADDRS 8
-
-/**
- * How frequently should doPeriodicTasks() be ideally called? (ms)
- */
-#define ZT_CLUSTER_PERIODIC_TASK_DEADLINE 10
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 50
 
 namespace ZeroTier {
 
 class RuntimeEnvironment;
 class CertificateOfMembership;
 class MulticastGroup;
+class Peer;
+class Identity;
 
 /**
  * Multi-homing cluster state replication and packet relaying
@@ -95,22 +84,6 @@ class MulticastGroup;
 class Cluster
 {
 public:
-	/**
-	 * Which distance algorithm is this cluster using?
-	 */
-	enum DistanceAlgorithm
-	{
-		/**
-		 * Simple linear distance in three dimensions
-		 */
-		DISTANCE_SIMPLE = 0,
-
-		/**
-		 * Haversine formula using X,Y as lat,long and ignoring Z
-		 */
-		DISTANCE_HAVERSINE = 1
-	};
-
 	/**
 	 * State message types
 	 */
@@ -184,25 +157,18 @@ public:
 
 	/**
 	 * Construct a new cluster
-	 *
-	 * @param renv Runtime environment
-	 * @param id This member's ID in the cluster
-	 * @param da Distance algorithm this cluster uses to compute distance and hand off peers
-	 * @param x My X
-	 * @param y My Y
-	 * @param z My Z
-	 * @param sendFunction Function to call to send messages to other cluster members
-	 * @param arg First argument to sendFunction
 	 */
 	Cluster(
 		const RuntimeEnvironment *renv,
 		uint16_t id,
-		DistanceAlgorithm da,
+		const std::vector<InetAddress> &zeroTierPhysicalEndpoints,
 		int32_t x,
 		int32_t y,
 		int32_t z,
-		void (*sendFunction)(void *,uint16_t,const void *,unsigned int),
-		void *arg);
+		void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
+		void *sendFunctionArg,
+		int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
+		void *addressToLocationFunctionArg);
 
 	~Cluster();
 
@@ -222,9 +188,9 @@ public:
 	/**
 	 * Advertise to the cluster that we have this peer
 	 *
-	 * @param peerAddress Peer address that we have
+	 * @param peerId Identity of peer that we have
 	 */
-	void replicateHavePeer(const Address &peerAddress);
+	void replicateHavePeer(const Identity &peerId);
 
 	/**
 	 * Advertise a multicast LIKE to the cluster
@@ -243,7 +209,7 @@ public:
 	void replicateCertificateOfNetworkMembership(const CertificateOfMembership &com);
 
 	/**
-	 * Call every ~ZT_CLUSTER_PERIODIC_TASK_DEADLINE milliseconds.
+	 * Call every ~ZT_CLUSTER_PERIODIC_TASK_PERIOD milliseconds.
 	 */
 	void doPeriodicTasks();
 
@@ -254,6 +220,23 @@ public:
 	 */
 	void addMember(uint16_t memberId);
 
+	/**
+	 * Remove a member ID from this cluster
+	 *
+	 * @param memberId Member ID to remove
+	 */
+	void removeMember(uint16_t memberId);
+
+	/**
+	 * Redirect this peer to a better cluster member if needed
+	 *
+	 * @param peer Peer to (possibly) redirect
+	 * @param peerPhysicalAddress Physical address of peer's current best path (where packet was most recently received or getBestPath()->address())
+	 * @param offload Always redirect if possible -- can be used to offload peers during shutdown
+	 * @return True if peer was redirected
+	 */
+	bool redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPhysicalAddress,bool offload);
+
 private:
 	void _send(uint16_t memberId,const void *msg,unsigned int len);
 	void _flush(uint16_t memberId);
@@ -262,44 +245,45 @@ private:
 	uint16_t _masterSecret[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	const RuntimeEnvironment *RR;
-	void (*_sendFunction)(void *,uint16_t,const void *,unsigned int);
-	void *_arg;
+	void (*_sendFunction)(void *,unsigned int,const void *,unsigned int);
+	void *_sendFunctionArg;
+	int (*_addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *);
+	void *_addressToLocationFunctionArg;
 	const int32_t _x;
 	const int32_t _y;
 	const int32_t _z;
-	const DistanceAlgorithm _da;
 	const uint16_t _id;
+	const std::vector<InetAddress> _zeroTierPhysicalEndpoints;
 
 	struct _Member
 	{
 		unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
 
-		uint64_t lastReceivedFrom;
 		uint64_t lastReceivedAliveAnnouncement;
-		uint64_t lastSentTo;
 		uint64_t lastAnnouncedAliveTo;
 
 		uint64_t load;
 		int32_t x,y,z;
 
-		InetAddress physicalAddresses[ZT_CLUSTER_MEMBER_MAX_PHYSICAL_ADDRS];
-		unsigned int physicalAddressCount;
+		std::vector<InetAddress> zeroTierPhysicalEndpoints;
 
 		Buffer<ZT_CLUSTER_MAX_MESSAGE_LENGTH> q;
 
 		Mutex lock;
 
-		_Member() :
-			lastReceivedFrom(0),
-			lastReceivedAliveAnnouncement(0),
-			lastSentTo(0),
-			lastAnnouncedAliveTo(0),
-			load(0),
-			x(0),
-			y(0),
-			z(0),
-			physicalAddressCount(0) {}
+		inline void clear()
+		{
+			lastReceivedAliveAnnouncement = 0;
+			lastAnnouncedAliveTo = 0;
+			load = 0;
+			x = 0;
+			y = 0;
+			z = 0;
+			zeroTierPhysicalEndpoints.clear();
+			q.clear();
+		}
 
+		_Member() { this->clear(); }
 		~_Member() { Utils::burn(key,sizeof(key)); }
 	};
 

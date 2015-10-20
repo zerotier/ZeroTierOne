@@ -129,6 +129,16 @@ extern "C" {
 #define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 256
 
 /**
+ * Maximum number of cluster members (and max member ID plus one)
+ */
+#define ZT_CLUSTER_MAX_MEMBERS 256
+
+/**
+ * Maximum allowed cluster message length in bytes
+ */
+#define ZT_CLUSTER_MAX_MESSAGE_LENGTH 65535
+
+/**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
  */
 extern const struct sockaddr_storage ZT_SOCKADDR_NULL;
@@ -174,7 +184,17 @@ enum ZT_ResultCode
 	/**
 	 * Network ID not valid
 	 */
-	ZT_RESULT_ERROR_NETWORK_NOT_FOUND = 1000
+	ZT_RESULT_ERROR_NETWORK_NOT_FOUND = 1000,
+
+	/**
+	 * The requested operation is not supported on this version or build
+	 */
+	ZT_RESULT_ERROR_UNSUPPORTED_OPERATION = 1001,
+
+	/**
+	 * The requestion operation was given a bad parameter or was called in an invalid state
+	 */
+	ZT_RESULT_ERROR_BAD_PARAMETER = 1002
 };
 
 /**
@@ -1319,6 +1339,105 @@ enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,v
  * @param test Test configuration to unregister
  */
 void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test);
+
+/**
+ * Initialize cluster operation
+ *
+ * This initializes the internal structures and state for cluster operation.
+ * It takes two function pointers. The first is to a function that can be
+ * used to send data to cluster peers (mechanism is not defined by Node),
+ * and the second is to a function that can be used to get the location of
+ * a physical address in X,Y,Z coordinate space (e.g. as cartesian coordinates
+ * projected from the center of the Earth).
+ *
+ * Send function takes an arbitrary pointer followed by the cluster member ID
+ * to send data to, a pointer to the data, and the length of the data. The
+ * maximum message length is ZT_CLUSTER_MAX_MESSAGE_LENGTH (65535). Messages
+ * must be delivered whole and may be dropped or transposed, though high
+ * failure rates are undesirable and can cause problems. Validity checking or
+ * CRC is also not required since the Node validates the authenticity of
+ * cluster messages using cryptogrphic methods and will silently drop invalid
+ * messages.
+ *
+ * Address to location function is optional and if NULL geo-handoff is not
+ * enabled (in this case x, y, and z in clusterInit are also unused). It
+ * takes an arbitrary pointer followed by a physical address and three result
+ * parameters for x, y, and z. It returns zero on failure or nonzero if these
+ * three coordinates have been set. Coordinate space is arbitrary and can be
+ * e.g. coordinates on Earth relative to Earth's center. These can be obtained
+ * from latitutde and longitude with versions of the Haversine formula.
+ *
+ * See: http://stackoverflow.com/questions/1185408/converting-from-longitude-latitude-to-cartesian-coordinates
+ *
+ * Neither the send nor the address to location function should block. If the
+ * address to location function does not have a location for an address, it
+ * should return zero and then look up the address for future use since it
+ * will be called again in (typically) 1-3 minutes.
+ *
+ * Note that both functions can be called from any thread from which the
+ * various Node functions are called, and so must be thread safe if multiple
+ * threads are being used.
+ *
+ * @param node Node instance
+ * @param myId My cluster member ID (less than or equal to ZT_CLUSTER_MAX_MEMBERS)
+ * @param zeroTierPhysicalEndpoints Preferred physical address(es) for ZeroTier clients to contact this cluster member (for peer redirect)
+ * @param numZeroTierPhysicalEndpoints Number of physical endpoints in zeroTierPhysicalEndpoints[] (max allowed: 255)
+ * @param x My cluster member's X location
+ * @param y My cluster member's Y location
+ * @param z My cluster member's Z location
+ * @param sendFunction Function to be called to send data to other cluster members
+ * @param sendFunctionArg First argument to sendFunction()
+ * @param addressToLocationFunction Function to be called to get the location of a physical address or NULL to disable geo-handoff
+ * @param addressToLocationFunctionArg First argument to addressToLocationFunction()
+ * @return OK or UNSUPPORTED_OPERATION if this Node was not built with cluster support
+ */
+enum ZT_ResultCode ZT_Node_clusterInit(
+	ZT_Node *node,
+	unsigned int myId,
+	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
+	unsigned int numZeroTierPhysicalEndpoints,
+	int x,
+	int y,
+	int z,
+	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
+	void *sendFunctionArg,
+	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
+	void *addressToLocationFunctionArg);
+
+/**
+ * Add a member to this cluster
+ *
+ * Calling this without having called clusterInit() will do nothing.
+ *
+ * @param node Node instance
+ * @param memberId Member ID (must be less than or equal to ZT_CLUSTER_MAX_MEMBERS)
+ * @return OK or error if clustering is disabled, ID invalid, etc.
+ */
+enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId);
+
+/**
+ * Remove a member from this cluster
+ *
+ * Calling this without having called clusterInit() will do nothing.
+ *
+ * @param node Node instance
+ * @param memberId Member ID to remove (nothing happens if not present)
+ */
+void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId);
+
+/**
+ * Handle an incoming cluster state message
+ *
+ * The message itself contains cluster member IDs, and invalid or badly
+ * addressed messages will be silently discarded.
+ *
+ * Calling this without having called clusterInit() will do nothing.
+ *
+ * @param node Node instance
+ * @param msg Cluster message
+ * @param len Length of cluster message
+ */
+void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len);
 
 /**
  * Get ZeroTier One version
