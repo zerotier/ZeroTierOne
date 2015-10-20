@@ -400,11 +400,6 @@ bool Peer::validateAndSetNetworkMembershipCertificate(const RuntimeEnvironment *
 		_networkComs.set(nwid,_NetworkCom(RR->node->now(),com));
 	}
 
-#ifdef ZT_ENABLE_CLUSTER
-	if (RR->cluster)
-		RR->cluster->replicateCertificateOfNetworkMembership(com);
-#endif
-
 	return true;
 }
 

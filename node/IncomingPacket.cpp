@@ -406,6 +406,10 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
 					peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
+#ifdef ZT_ENABLE_CLUSTER
+					if (RR->cluster)
+						RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -533,6 +537,10 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 					peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com);
+#ifdef ZT_ENABLE_CLUSTER
+					if (RR->cluster)
+						RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 				}
 
 				if (!network->isAllowed(peer)) {
@@ -639,6 +647,10 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		while (ptr < size()) {
 			ptr += com.deserialize(*this,ptr);
 			peer->validateAndSetNetworkMembershipCertificate(RR,com.networkId(),com);
+#ifdef ZT_ENABLE_CLUSTER
+			if (RR->cluster)
+				RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
@@ -794,6 +806,10 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 				peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
+#ifdef ZT_ENABLE_CLUSTER
+				if (RR->cluster)
+					RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 			}
 
 			// Check membership after we've read any included COM, since
