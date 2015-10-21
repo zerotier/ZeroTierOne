@@ -394,6 +394,8 @@ bool Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPee
 			Mutex::Lock _l2(_members[canHasPeer].lock);
 			_send(canHasPeer,STATE_MESSAGE_RELAY,buf.data(),buf.size());
 		}
+
+		return true;
 	}
 
 	return false;
