@@ -247,12 +247,12 @@ public:
 	/**
 	 * Redirect this peer to a better cluster member if needed
 	 *
-	 * @param peer Peer to (possibly) redirect
+	 * @param peerAddress Peer to (possibly) redirect
 	 * @param peerPhysicalAddress Physical address of peer's current best path (where packet was most recently received or getBestPath()->address())
 	 * @param offload Always redirect if possible -- can be used to offload peers during shutdown
 	 * @return True if peer was redirected
 	 */
-	bool redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPhysicalAddress,bool offload);
+	bool redirectPeer(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
 
 private:
 	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);

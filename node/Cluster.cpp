@@ -549,7 +549,7 @@ void Cluster::removeMember(uint16_t memberId)
 	_memberIds = newMemberIds;
 }
 
-bool Cluster::redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPhysicalAddress,bool offload)
+bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload)
 {
 	if (!peerPhysicalAddress) // sanity check
 		return false;
@@ -585,7 +585,7 @@ bool Cluster::redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPh
 		}
 
 		if (best.size() > 0) {
-			TRACE("peer %s is at [%d,%d,%d], distance to us is %f, sending to %u instead for better distance %f",peer->address().toString().c_str(),px,py,pz,currentDistance,bestMember,bestDistance);
+			TRACE("peer %s is at [%d,%d,%d], distance to us is %f, sending to %u instead for better distance %f",peerAddress.toString().c_str(),px,py,pz,currentDistance,bestMember,bestDistance);
 
 			/* if (peer->remoteVersionProtocol() >= 5) {
 				// If it's a newer peer send VERB_PUSH_DIRECT_PATHS which is more idiomatic
@@ -593,7 +593,7 @@ bool Cluster::redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPh
 				// Otherwise send VERB_RENDEZVOUS for ourselves, which will trick peers into trying other endpoints for us even if they're too old for PUSH_DIRECT_PATHS
 				for(std::vector<InetAddress>::const_iterator a(best.begin());a!=best.end();++a) {
 					if ((a->ss_family == AF_INET)||(a->ss_family == AF_INET6)) {
-						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
+						Packet outp(peerAddress,RR->identity.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0); // no flags
 						RR->identity.address().appendTo(outp); // HACK: rendezvous with ourselves! with really old peers this will only work if I'm a root server!
 						outp.append((uint16_t)a->port());
@@ -611,7 +611,7 @@ bool Cluster::redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &peerPh
 
 			return true;
 		} else {
-			TRACE("peer %s is at [%d,%d,%d], distance to us is %f and this seems to be the best",peer->address().toString().c_str(),px,py,pz,currentDistance);
+			TRACE("peer %s is at [%d,%d,%d], distance to us is %f and this seems to be the best",peerAddress.toString().c_str(),px,py,pz,currentDistance);
 			return false;
 		}
 	} else {

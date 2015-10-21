@@ -82,6 +82,7 @@ void Peer::received(
 {
 	const uint64_t now = RR->node->now();
 	bool needMulticastGroupAnnounce = false;
+	bool pathIsConfirmed = false;
 
 	{
 		Mutex::Lock _l(_lock);
@@ -89,8 +90,6 @@ void Peer::received(
 		_lastReceive = now;
 
 		if (!hops) {
-			bool pathIsConfirmed = false;
-
 			/* Learn new paths from direct (hops == 0) packets */
 			{
 				unsigned int np = _numPaths;
@@ -141,11 +140,6 @@ void Peer::received(
 					}
 				}
 			}
-
-#ifdef ZT_ENABLE_CLUSTER
-			if ((pathIsConfirmed)&&(RR->cluster))
-				RR->cluster->replicateHavePeer(_id);
-#endif
 		}
 
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
@@ -158,6 +152,14 @@ void Peer::received(
 		else if (verb == Packet::VERB_MULTICAST_FRAME)
 			_lastMulticastFrame = now;
 	}
+
+#ifdef ZT_ENABLE_CLUSTER
+	if ((pathIsConfirmed)&&(RR->cluster)) {
+		// Either shuttle this peer off somewhere else or report to other members that we have it
+		if (!RR->cluster->redirectPeer(_id.address(),remoteAddr,false))
+			RR->cluster->replicateHavePeer(_id);
+	}
+#endif
 
 	if (needMulticastGroupAnnounce) {
 		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
