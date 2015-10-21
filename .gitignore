@@ -49,22 +49,16 @@ Thumbs.db
 *.rpm
 *.autosave
 *.tmp
+node_modules
 
-# Root topology build files, temporaries, and never check in secrets
-/root-topology/bin2c
-/root-topology/mktopology
-/root-topology/*.secret
-/root-topology/test/supernodes
-/root-topology/test/test-root-topology
+# cluster-geo stuff
+cluster-geo/config.js
+cluster-geo/cache.*
 
 # MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/xcuserdata/*
 /ext/mac-ui-macgap1-wrapper/src/build
-
-# Web UI dev temporaries
-/ui/.module-cache
-node_modules
 
 # Java/Android/JNI build droppings
 java/obj/
