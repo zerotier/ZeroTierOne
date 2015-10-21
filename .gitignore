@@ -52,8 +52,8 @@ Thumbs.db
 node_modules
 
 # cluster-geo stuff
-cluster-geo/config.js
-cluster-geo/cache.*
+cluster-geo/cluster-geo/config.js
+cluster-geo/cluster-geo/cache.*
 
 # MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
