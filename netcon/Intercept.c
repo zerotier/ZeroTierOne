@@ -33,6 +33,9 @@
 /* Name used in err msgs    */
 char *progname = "";
 
+#include <unistd.h>
+#include <stdint.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <dlfcn.h>
 #include <strings.h>
@@ -44,39 +47,18 @@ char *progname = "";
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
-
-#include <netinet/in.h>
-#include <net/if.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
 
-#include <poll.h>
-#include <pthread.h>
-#include <unistd.h>
-
-/* For NPs */
-#include <sys/stat.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-
-/* for mmap */
-#include <sys/mman.h>
-
-#ifdef USE_SOCKS_DNS
-  #include <resolv.h>
-#endif
-
 #include "Intercept.h"
 #include "Common.h"
 
 #ifdef CHECKS
-  //#include <sys/time.h>
   #include <sys/resource.h>
   #include <linux/net.h> /* for NPROTO */
-
   #define SOCK_MAX (SOCK_PACKET + 1)
   #define SOCK_TYPE_MASK 0xf
 #endif
@@ -87,7 +69,6 @@ static int (*realresinit)(void);
 #endif
 static int (*realconnect)(CONNECT_SIG);
 static int (*realselect)(SELECT_SIG);
-static int (*realpoll)(POLL_SIG);
 static int (*realbind)(BIND_SIG);
 static int (*realaccept)(ACCEPT_SIG);
 static int (*reallisten)(LISTEN_SIG);
@@ -95,12 +76,12 @@ static int (*realsocket)(SOCKET_SIG);
 static int (*realsetsockopt)(SETSOCKOPT_SIG);
 static int (*realgetsockopt)(GETSOCKOPT_SIG);
 static int (*realaccept4)(ACCEPT4_SIG);
+static long (*realsyscall)(SYSCALL_SIG);
 
 /* Exported Function Prototypes */
 void my_init(void);
 int connect(CONNECT_SIG);
 int select(SELECT_SIG);
-int poll(POLL_SIG);
 int close(CLOSE_SIG);
 int bind(BIND_SIG);
 int accept(ACCEPT_SIG);
@@ -109,6 +90,7 @@ int socket(SOCKET_SIG);
 int setsockopt(SETSOCKOPT_SIG);
 int getsockopt(GETSOCKOPT_SIG);
 int accept4(ACCEPT4_SIG);
+long syscall(SYSCALL_SIG);
 
 #ifdef USE_SOCKS_DNS
   int res_init(void);
@@ -120,7 +102,6 @@ void dwr(const char *fmt, ...);
 void load_symbols(void);
 void set_up_intercept();
 int checkpid();
-
 
 #define BUF_SZ                    32
 #define SERVICE_CONNECT_ATTEMPTS  30
@@ -197,8 +178,7 @@ int get_retval()
 /* Sets up the connection pipes and sockets to the service */
 int init_service_connection()
 {
-  if(!is_initialized)
-  {
+  if(!is_initialized) {
     struct sockaddr_un addr;
     int tfd = -1, attempts = 0, conn_err = -1;
     memset(&addr, 0, sizeof(addr));
@@ -209,11 +189,8 @@ int init_service_connection()
       perror("socket error");
       exit(-1);
     }
-    while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS)
-    {
-      //dwr("trying connection (%d): %s\n", tfd, af_sock_name);
+    while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS) {
       conn_err = realconnect(tfd, (struct sockaddr*)&addr, sizeof(addr));
-
       if(conn_err < 0) {
         dwr("re-attempting connection in %ds\n", 1+attempts);
         sleep(1);
@@ -235,12 +212,10 @@ int init_service_connection()
 
 void my_dest(void) __attribute__ ((destructor));
 void my_dest(void) {
-
-  dwr("closing connections to service...\n");
+  //dwr("closing connections to service...\n");
   close(fdret_sock);
   pthread_mutex_destroy(&lock);
 }
-
 
 void load_symbols(void)
 {
@@ -262,11 +237,12 @@ void load_symbols(void)
   reallisten = dlsym(RTLD_NEXT, "listen");
   realsocket = dlsym(RTLD_NEXT, "socket");
   realbind = dlsym(RTLD_NEXT, "bind");
-  realpoll = dlsym(RTLD_NEXT, "poll");
   realselect = dlsym(RTLD_NEXT, "select");
 	realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
   realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
+  //realclone = dlsym(RTLD_NEXT, "clone");
+  realsyscall = dlsym(RTLD_NEXT, "syscall");
 #ifdef USE_SOCKS_DNS
   realresinit = dlsym(RTLD_NEXT, "res_init");
 #endif
@@ -278,11 +254,12 @@ void load_symbols(void)
   realaccept = dlsym(lib, "accept");
   reallisten = dlsym(lib, "listen");
   realsocket = dlsym(lib, "socket");
-	realpoll = dlsym(lib, "poll");
   realselect = dlsym(lib, "select");
 	realsetsockopt = dlsym(lib, "setsockopt");
   realgetsockopt = dlsym(lib, "getsockopt");
   realaccept4 = dlsym(lib), "accept4");
+  //realclone = dlsym(lib, "clone");
+  realsyscall = dlsym(lib, "syscall");
 #ifdef USE_SOCKS_DNS
   realresinit = dlsym(lib, "res_init");
 #endif
@@ -317,6 +294,9 @@ void set_up_intercept()
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
+  if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE)){
+    return 0;
+  }
   /* make sure we don't touch any standard outputs */
   if(socket == STDIN_FILENO || socket == STDOUT_FILENO || socket == STDERR_FILENO)
     return(realsetsockopt(socket, level, option_name, option_value, option_len));
@@ -362,6 +342,7 @@ int getsockopt(GETSOCKOPT_SIG)
 
 int socket(SOCKET_SIG)
 {
+  //dwr("socket()*:\n");
   int err;
 #ifdef CHECKS
   /* Check that type makes sense */
@@ -401,7 +382,7 @@ int socket(SOCKET_SIG)
     return realsocket(socket_family, socket_type, protocol);
   }
 
-  /* Assemble and route command */
+  /* Assemble and send RPC */
   struct socket_st rpc_st;
   rpc_st.socket_family = socket_family;
   rpc_st.socket_type = socket_type;
@@ -453,6 +434,7 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
+  //dwr("connect()*:\n");
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
 
@@ -494,13 +476,7 @@ int connect(CONNECT_SIG)
     return err;
   }
 
-  //int flags = fcntl(__fd, F_GETFD);
-  //dwr("connect(): socket flags = %d\n", flags);
-  //if(sock_type && O_NONBLOCK) {
-  //  dwr("connect(): O_NONBLOCK\n");
-  //}
-
-  /* assemble and route command */
+  /* Assemble and send RPC */
   int err;
   char cmd[BUF_SZ];
   memset(cmd, '\0', BUF_SZ);
@@ -513,10 +489,12 @@ int connect(CONNECT_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
+  /*
   if(sock_type && O_NONBLOCK) {
     //pthread_mutex_unlock(&lock);
     //return EINPROGRESS;
   }
+  */
   err = get_retval();
   pthread_mutex_unlock(&lock);
   return err;
@@ -530,17 +508,8 @@ int connect(CONNECT_SIG)
 fd_set *exceptfds, struct timeval *timeout */
 int select(SELECT_SIG)
 {
+  //dwr("select()*:\n");
   return realselect(n, readfds, writefds, exceptfds, timeout);
-}
-
-/*------------------------------------------------------------------------------
------------------------------------ poll() -------------------------------------
-------------------------------------------------------------------------------*/
-
-/* struct pollfd *__fds, nfds_t __nfds, int __timeout */
-int poll(POLL_SIG)
-{
-  return realpoll(__fds, __nfds, __timeout);
 }
 
 /*------------------------------------------------------------------------------
@@ -551,6 +520,7 @@ int poll(POLL_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
+  //dwr("bind()*:\n");
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -558,9 +528,9 @@ int bind(BIND_SIG)
     errno = EBADF;
   }
   /* Check that it is a socket */
-  int sock_type = -1;
-  socklen_t sock_type_len = sizeof(sock_type);
-  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
+  int opt = -1;
+  socklen_t opt_len;
+  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &opt, &opt_len) < 0) {
     errno = ENOTSOCK;
     return -1;
   }
@@ -586,7 +556,7 @@ int bind(BIND_SIG)
       }
       return(realbind(sockfd, addr, addrlen));
   }
-  /* Assemble and route command */
+  /* Assemble and send RPC */
   char cmd[BUF_SZ];
   struct bind_st rpc_st;
   rpc_st.sockfd = sockfd;
@@ -612,13 +582,21 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
+  //dwr("accept4()*:\n");
 #ifdef CHECKS
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
     errno = EINVAL;
     return -1;
   }
 #endif
-  return accept(sockfd, addr, addrlen);
+  int newfd = accept(sockfd, addr, addrlen);
+  if(newfd > 0) {
+    if(flags & SOCK_CLOEXEC)
+      fcntl(newfd, F_SETFL, FD_CLOEXEC);
+    if(flags & SOCK_NONBLOCK)
+      fcntl(newfd, F_SETFL, O_NONBLOCK);
+  }
+  return newfd;
 }
 
 
@@ -630,6 +608,7 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
+  //dwr("accept()*:\n");
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -637,14 +616,14 @@ int accept(ACCEPT_SIG)
     errno = EBADF;
   }
   /* Check that it is a socket */
-  int sock_type;
-  socklen_t sock_type_len = sizeof(sock_type);
-  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
+  int opt;
+  socklen_t opt_len;
+  if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &opt, &opt_len) < 0) {
     errno = ENOTSOCK;
     return -1;
   }
   /* Check that this socket supports accept() */
-  if(!(sock_type && (SOCK_STREAM | SOCK_SEQPACKET))) {
+  if(!(opt && (SOCK_STREAM | SOCK_SEQPACKET))) {
     errno = EOPNOTSUPP;
     return -1;
   }
@@ -662,18 +641,22 @@ int accept(ACCEPT_SIG)
   }
 #endif
 
-  /* make sure we don't touch any standard outputs */
+  /* redirect calls for standard I/O descriptors to kernel */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(realaccept(sockfd, addr, addrlen));
 
-  addr->sa_family = AF_INET;
-  /* TODO: also get address info */
+  if(addr)
+    addr->sa_family = AF_INET;
+    /* TODO: also get address info */
 
   char cmd[BUF_SZ];
   if(realaccept == NULL) {
     dwr( "Unresolved symbol: accept()\n");
     return -1;
   }
+
+  //if(opt & O_NONBLOCK)
+    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
   char rbuf[16], c[1];
   int new_conn_socket;
@@ -694,7 +677,8 @@ int accept(ACCEPT_SIG)
         return -1;
       }
       pthread_mutex_unlock(&lock);
-      //errno = ERR_OK;
+      errno = ERR_OK;
+      dwr("accepting for %d\n", new_conn_socket);
       return new_conn_socket; // OK
     }
     else {
@@ -704,9 +688,8 @@ int accept(ACCEPT_SIG)
     }
   }
   dwr("Error reading signal byte from service.\n");
-  //errno = EWOULDBLOCK;
-  errno = ECONNABORTED; // FIXME: Closest match, service unreachable
-  return -1;
+  errno = EAGAIN; /* necessary? */
+  return -EAGAIN;
 }
 
 
@@ -718,6 +701,7 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
+  //dwr("listen()*:\n");
   #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -738,14 +722,12 @@ int listen(LISTEN_SIG)
   }
   #endif
 
-  int err;
-
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(reallisten(sockfd, backlog));
 
+  /* Assemble and send RPC */
   char cmd[BUF_SZ];
-  /* Assemble and route command */
   memset(cmd, '\0', BUF_SZ);
   struct listen_st rpc_st;
   rpc_st.sockfd = sockfd;
@@ -757,6 +739,41 @@ int listen(LISTEN_SIG)
   send_command(fdret_sock, cmd);
   //err = get_retval();
   pthread_mutex_unlock(&lock);
-  //errno = ERR_OK;
   return ERR_OK;
+}
+
+/*------------------------------------------------------------------------------
+------------------------------------ syscall()----------------------------------
+------------------------------------------------------------------------------*/
+
+long syscall(SYSCALL_SIG)
+{
+  va_list ap;
+  uintptr_t a,b,c,d,e,f;
+  va_start(ap, number);
+  a=va_arg(ap, uintptr_t);
+  b=va_arg(ap, uintptr_t);
+  c=va_arg(ap, uintptr_t);
+  d=va_arg(ap, uintptr_t);
+  e=va_arg(ap, uintptr_t);
+  f=va_arg(ap, uintptr_t);
+  va_end(ap);
+
+#if defined(__i386__)
+  /* TODO: Implement for 32-bit systems: syscall(__NR_socketcall, 18, args);
+  args[0] = (unsigned long) fd;
+  args[1] = (unsigned long) addr;
+  args[2] = (unsigned long) addrlen;
+  args[3] = (unsigned long) flags;
+  */
+#else
+  if(number == __NR_accept4) {
+    int sockfd = a;
+    struct sockaddr * addr = (struct sockaddr*)b;
+    socklen_t * addrlen = (socklen_t*)c;
+    int flags = d;
+    return accept4(sockfd, addr, addrlen, flags);
+  }
+#endif
+  return realsyscall(number,a,b,c,d,e,f);
 }

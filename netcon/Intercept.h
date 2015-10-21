@@ -165,58 +165,11 @@ struct shutdown_st
 
 #define CONNECT_SOCKARG struct sockaddr *
 #define SELECT_SIG int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout
-#define POLL_SIG struct pollfd *__fds, nfds_t __nfds, int __timeout
 #define IOCTL_SIG int __fd, unsigned long int __request, ...
 #define FCNTL_SIG int __fd, int __cmd, ...
-#define CLONE_SIG int (*fn) (void *arg), void *child_stack, int flags, void *arg
 #define DAEMON_SIG int nochdir, int noclose
 #define SETSOCKOPT_SIG int socket, int level, int option_name, const void *option_value, socklen_t option_len
 #define GETSOCKOPT_SIG int sockfd, int level, int optname, void *optval, socklen_t *optlen
-
-
-/* LWIP error beautification */
-
-/*
-const char *lwiperror(int n)
-{
-	switch(n)
-	{
-		case 0:
-			return "ERR_OK";
-		case -1:
-			return "ERR_MEM (out of memory)";
-		case -2:
-			return "ERR_BUF (buffer error)";
-		case -3:
-			return "ERR_TIMEOUT (timeout)";
-		case -4:
-			return "ERR_RTE (routing problem)";
-		case -5:
-			return "ERR_INPROGRESS (operation in progress)";
-		case -6:
-			return "ERR_VAL (illegal value)";
-		case -7:
-			return "ERR_WOULDBLOCK (operation would block)";
-		case -8:
-			return "ERR_USE (address in use)";
-		case -9:
-			return "ERR_ISCONN (already connected)";
-		case -10:
-			return "Fatal: ERR_ABRT (connection aborted)";
-		case -11:
-			return "Fatal: ERR_RST (connection reset)";
-		case -12:
-			return "Fatal: ERR_CLSD (connection closed)";
-		case -13:
-			return "Fatal: ERR_CONN (not connected)";
-		case -14:
-			return "Fatal: ERR_ARG (illegal argument)";
-		case -15:
-			return "Fatal: ERR_IF (low level netif error)";
-		default:
-			return "UNKNOWN_RET_VAL";
-	}
-}
-*/
+#define SYSCALL_SIG	long number, ...
 
 #endif

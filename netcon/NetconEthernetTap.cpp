@@ -547,7 +547,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
 			if(errno < 0) {
 				l->tap->send_return_value(conn, -1, errno);
-				//fprintf(stderr, "**************\n");
+				fprintf(stderr, "nc_accept(): unable to create socketpair\n");
 				return ERR_MEM;
 			}
 		}
@@ -857,7 +857,6 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
 	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
-
 	TcpConnection *conn = getConnectionByTheirFD(sock, bind_rpc->sockfd);
 
   if(conn) {
@@ -878,9 +877,8 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				if(err == ERR_BUF)
 					send_return_value(conn, -1, ENOMEM); // FIXME: Closest match
 			}
-			else {
+			else
 				send_return_value(conn, ERR_OK, ERR_OK); // Success
-			}
     }
     else {
 			fprintf(stderr, "handle_bind(): PCB not in CLOSED state. Ignoring BIND request.\n");
