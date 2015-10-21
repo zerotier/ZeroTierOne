@@ -192,6 +192,17 @@ public:
 	void handleIncomingStateMessage(const void *msg,unsigned int len);
 
 	/**
+	 * Send this packet via another node in this cluster if another node has this peer
+	 *
+	 * @param fromPeerAddress Source peer address (if known, should be NULL for fragments)
+	 * @param toPeerAddress Destination peer address
+	 * @param data Packet or packet fragment data
+	 * @param len Length of packet or fragment
+	 * @return True if this data was sent via another cluster member, false if none have this peer
+	 */
+	bool sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len);
+
+	/**
 	 * Advertise to the cluster that we have this peer
 	 *
 	 * @param peerId Identity of peer that we have
