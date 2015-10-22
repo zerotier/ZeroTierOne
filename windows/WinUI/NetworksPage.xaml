@@ -5,7 +5,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-    <WrapPanel x:Name="wrapPanel" Background="#FF555555">
+    <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <WrapPanel x:Name="wrapPanel" Background="#FF555555"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
-    </WrapPanel>
+        </WrapPanel>
+    </ScrollViewer>
 </UserControl>

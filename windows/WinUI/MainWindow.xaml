@@ -88,8 +88,14 @@
 		</StatusBar>
 		<TabControl>
             <TabItem x:Name="Networks" Header="Networks" Background="#FF234447" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
-                <Grid>
-                    <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
                 </Grid>
             </TabItem>
             <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
