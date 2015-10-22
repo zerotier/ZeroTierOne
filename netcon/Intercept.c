@@ -375,8 +375,7 @@ int socket(SOCKET_SIG)
 
   char cmd[BUF_SZ];
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
-  if(fdret_sock < 0)
-  {
+  if(fdret_sock < 0) {
     dwr("BAD service connection. exiting.\n");
     exit(-1);
   }

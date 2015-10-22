@@ -49,9 +49,9 @@
 #include "Intercept.h"
 #include "NetconUtilities.hpp"
 
-#define APPLICATION_POLL_FREQ 				1
+#define APPLICATION_POLL_FREQ 				5
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		10
-#define STATUS_TMR_INTERVAL						1000
+#define STATUS_TMR_INTERVAL						500
 
 
 namespace ZeroTier {
@@ -278,6 +278,7 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
 		close(_phy.getDescriptor(conn->dataSock));
 		_phy.close(conn->dataSock,false);
 	}
+	/* Eventually we might want to use a map here instead */
 	for(int i=0; i<tcp_connections.size(); i++) {
 		if(tcp_connections[i] == conn) {
 			tcp_connections.erase(tcp_connections.begin() + i);
@@ -341,7 +342,6 @@ void NetconEthernetTap::threadMain()
 
 	// Main timer loop
 	while (_run) {
-
 		uint64_t now = OSUtils::now();
 
 		uint64_t since_tcp = now - prev_tcp_time;
@@ -354,6 +354,29 @@ void NetconEthernetTap::threadMain()
 		if (since_status >= STATUS_TMR_INTERVAL) {
 			prev_status_time = now;
 			fprintf(stderr, "tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
+
+			/* Here we will periodically check the list of rpc_sockets for any which
+			do not currently have any data connection associated with them. If they are
+			unused, then we will try to read from them, if they fail, we can safely assumes
+			that the client has closed their and we can close ours */
+
+			for(int i=0, associated = 0; i<rpc_sockets.size(); i++, associated = 0) {
+				for(int j=0; j<tcp_connections.size(); j++) {
+					if(tcp_connections[j]->rpcSock == rpc_sockets[i])
+						associated++;
+				}
+				if(!associated){
+					// No TCP connections are associated, this is a candidate for removal
+					//fprintf(stderr, "removing RPC connection... \n");
+					char c;
+					if(read(_phy.getDescriptor(rpc_sockets[i]),&c,1) < 0) {
+						closeClient(rpc_sockets[i]);
+					}
+					else {
+						//fprintf(stderr, "this appears to be in use.\n");
+					}
+				}
+			}
 		}
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
 			prev_tcp_time = now;
@@ -738,6 +761,12 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
+	//Larg *l = (Larg*)arg;
+
+
+
+
+
 	/*
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
@@ -1135,6 +1164,10 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		return;
 	}
 	if(conn->idx < max) {
+		if(!conn->pcb) {
+			fprintf(stderr, "handle_write(): conn->pcb == NULL. Failed to write.\n");
+			return;
+		}
 		int sndbuf = conn->pcb->snd_buf; // How much we are currently allowed to write to the connection
 		/* PCB send buffer is full,turn off readability notifications for the
 		corresponding PhySocket until nc_sent() is called and confirms that there is
