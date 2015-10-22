@@ -122,18 +122,22 @@ Topology::~Topology()
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 {
 	if (peer->address() == RR->identity.address()) {
-		TRACE("BUG: addNewPeer() caught and ignored attempt to add peer for self");
+		TRACE("BUG: addPeer() caught and ignored attempt to add peer for self");
 		throw std::logic_error("cannot add peer for self");
 	}
 
-	const uint64_t now = RR->node->now();
-	Mutex::Lock _l(_lock);
+	SharedPtr<Peer> np;
+	{
+		Mutex::Lock _l(_lock);
+		SharedPtr<Peer> &hp = _peers[peer->address()];
+		if (!hp)
+			hp = peer;
+		np = hp;
+	}
+	np->use(RR->node->now());
+	saveIdentity(np->identity());
 
-	SharedPtr<Peer> &p = _peers.set(peer->address(),peer);
-	p->use(now);
-	saveIdentity(p->identity());
-
-	return p;
+	return np;
 }
 
 SharedPtr<Peer> Topology::getPeer(const Address &zta)
@@ -143,13 +147,12 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		return SharedPtr<Peer>();
 	}
 
-	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
 	SharedPtr<Peer> &ap = _peers[zta];
 
 	if (ap) {
-		ap->use(now);
+		ap->use(RR->node->now());
 		return ap;
 	}
 
@@ -157,13 +160,13 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	if (id) {
 		try {
 			ap = SharedPtr<Peer>(new Peer(RR->identity,id));
-			ap->use(now);
+			ap->use(RR->node->now());
 			return ap;
 		} catch ( ... ) {} // invalid identity?
 	}
 
+	// If we get here it means we read an invalid cache identity or had some other error
 	_peers.erase(zta);
-
 	return SharedPtr<Peer>();
 }
 

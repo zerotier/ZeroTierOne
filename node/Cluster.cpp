@@ -31,9 +31,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <algorithm>
 #include <utility>
+
+#include "../version.h"
 
 #include "Cluster.hpp"
 #include "RuntimeEnvironment.hpp"
@@ -42,22 +45,44 @@
 #include "Salsa20.hpp"
 #include "Poly1305.hpp"
 #include "Packet.hpp"
+#include "Identity.hpp"
 #include "Peer.hpp"
 #include "Switch.hpp"
 #include "Node.hpp"
 
 namespace ZeroTier {
 
-Cluster::Cluster(const RuntimeEnvironment *renv,uint16_t id,DistanceAlgorithm da,int32_t x,int32_t y,int32_t z,void (*sendFunction)(void *,uint16_t,const void *,unsigned int),void *arg) :
+static inline double _dist3d(int x1,int y1,int z1,int x2,int y2,int z2)
+	throw()
+{
+	double dx = ((double)x2 - (double)x1);
+	double dy = ((double)y2 - (double)y1);
+	double dz = ((double)z2 - (double)z1);
+	return sqrt((dx * dx) + (dy * dy) + (dz * dz));
+}
+
+Cluster::Cluster(
+	const RuntimeEnvironment *renv,
+	uint16_t id,
+	const std::vector<InetAddress> &zeroTierPhysicalEndpoints,
+	int32_t x,
+	int32_t y,
+	int32_t z,
+	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
+	void *sendFunctionArg,
+	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
+	void *addressToLocationFunctionArg) :
 	RR(renv),
 	_sendFunction(sendFunction),
-	_arg(arg),
+	_sendFunctionArg(sendFunctionArg),
+	_addressToLocationFunction(addressToLocationFunction),
+	_addressToLocationFunctionArg(addressToLocationFunctionArg),
 	_x(x),
 	_y(y),
 	_z(z),
-	_da(da),
 	_id(id),
-	_members(new _Member[65536])
+	_zeroTierPhysicalEndpoints(zeroTierPhysicalEndpoints),
+	_members(new _Member[ZT_CLUSTER_MAX_MEMBERS])
 {
 	uint16_t stmp[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 
@@ -114,15 +139,19 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 		s20.decrypt12(reinterpret_cast<const char *>(msg) + 24,const_cast<void *>(dmsg.data()),dmsg.size());
 	}
 
-	if (dmsg.size() < 2)
+	if (dmsg.size() < 4)
 		return;
 	const uint16_t fromMemberId = dmsg.at<uint16_t>(0);
 	unsigned int ptr = 2;
+	if (fromMemberId == _id)
+		return;
+	const uint16_t toMemberId = dmsg.at<uint16_t>(ptr);
+	ptr += 2;
+	if (toMemberId != _id)
+		return;
 
 	_Member &m = _members[fromMemberId];
 	Mutex::Lock mlck(m.lock);
-
-	m.lastReceivedFrom = RR->node->now();
 
 	try {
 		while (ptr < dmsg.size()) {
@@ -143,31 +172,51 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						ptr += 8; // skip local clock, not used
 						m.load = dmsg.at<uint64_t>(ptr); ptr += 8;
 						ptr += 8; // skip flags, unused
-						m.physicalAddressCount = dmsg[ptr++];
-						if (m.physicalAddressCount > ZT_CLUSTER_MEMBER_MAX_PHYSICAL_ADDRS)
-							m.physicalAddressCount = ZT_CLUSTER_MEMBER_MAX_PHYSICAL_ADDRS;
-						for(unsigned int i=0;i<m.physicalAddressCount;++i)
-							ptr += m.physicalAddresses[i].deserialize(dmsg,ptr);
+#ifdef ZT_TRACE
+						std::string addrs;
+#endif
+						unsigned int physicalAddressCount = dmsg[ptr++];
+						for(unsigned int i=0;i<physicalAddressCount;++i) {
+							m.zeroTierPhysicalEndpoints.push_back(InetAddress());
+							ptr += m.zeroTierPhysicalEndpoints.back().deserialize(dmsg,ptr);
+							if (!(m.zeroTierPhysicalEndpoints.back())) {
+								m.zeroTierPhysicalEndpoints.pop_back();
+							}
+#ifdef ZT_TRACE
+							else {
+								if (addrs.length() > 0)
+									addrs.push_back(',');
+								addrs.append(m.zeroTierPhysicalEndpoints.back().toString());
+							}
+#endif
+						}
 						m.lastReceivedAliveAnnouncement = RR->node->now();
+#ifdef ZT_TRACE
+						TRACE("[%u] I'm alive! send me peers at %s",(unsigned int)fromMemberId,addrs.c_str());
+#endif
 					}	break;
 
 					case STATE_MESSAGE_HAVE_PEER: {
 						try {
 							Identity id;
 							ptr += id.deserialize(dmsg,ptr);
-							RR->topology->saveIdentity(id);
+							if (id) {
+								RR->topology->saveIdentity(id);
 
-							{	// Add or update peer affinity entry
-								_PeerAffinity pa(id.address(),fromMemberId,RR->node->now());
-								Mutex::Lock _l2(_peerAffinities_m);
-								std::vector<_PeerAffinity>::iterator i(std::lower_bound(_peerAffinities.begin(),_peerAffinities.end(),pa)); // O(log(n))
-								if ((i != _peerAffinities.end())&&(i->key == pa.key)) {
-									i->timestamp = pa.timestamp;
-								} else {
-									_peerAffinities.push_back(pa);
-									std::sort(_peerAffinities.begin(),_peerAffinities.end()); // probably a more efficient way to insert but okay for now
-								}
-	 						}
+								{	// Add or update peer affinity entry
+									_PeerAffinity pa(id.address(),fromMemberId,RR->node->now());
+									Mutex::Lock _l2(_peerAffinities_m);
+									std::vector<_PeerAffinity>::iterator i(std::lower_bound(_peerAffinities.begin(),_peerAffinities.end(),pa)); // O(log(n))
+									if ((i != _peerAffinities.end())&&(i->key == pa.key)) {
+										i->timestamp = pa.timestamp;
+									} else {
+										_peerAffinities.push_back(pa);
+										std::sort(_peerAffinities.begin(),_peerAffinities.end()); // probably a more efficient way to insert but okay for now
+									}
+		 						}
+
+		 						TRACE("[%u] has %s",(unsigned int)fromMemberId,id.address().toString().c_str());
+		 					}
 						} catch ( ... ) {
 							// ignore invalid identities
 						}
@@ -179,10 +228,15 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						const MAC mac(dmsg.field(ptr,6),6); ptr += 6;
 						const uint32_t adi = dmsg.at<uint32_t>(ptr); ptr += 4;
 						RR->mc->add(RR->node->now(),nwid,MulticastGroup(mac,adi),address);
+						TRACE("[%u] %s likes %s/%u on %.16llu",(unsigned int)fromMemberId,address.toString().c_str(),mac.toString().c_str(),(unsigned int)adi,nwid);
 					}	break;
 
 					case STATE_MESSAGE_COM: {
-						// TODO: not used yet
+						CertificateOfMembership com;
+						ptr += com.deserialize(dmsg,ptr);
+						if (com) {
+							TRACE("[%u] COM for %s on %.16llu rev %llu",(unsigned int)fromMemberId,com.issuedTo().toString().c_str(),com.networkId(),com.revision());
+						}
 					}	break;
 
 					case STATE_MESSAGE_RELAY: {
@@ -195,6 +249,8 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 
 						if (packetLen >= ZT_PROTO_MIN_FRAGMENT_LENGTH) { // ignore anything too short to contain a dest address
 							const Address destinationAddress(reinterpret_cast<const char *>(packet) + 8,ZT_ADDRESS_LENGTH);
+							TRACE("[%u] relay %u bytes to %s (%u remote paths included)",(unsigned int)fromMemberId,packetLen,destinationAddress.toString().c_str(),numRemotePeerPaths);
+
 							SharedPtr<Peer> destinationPeer(RR->topology->getPeer(destinationAddress));
 							if (destinationPeer) {
 								if (
@@ -232,8 +288,6 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 									remotePeerAddress.appendTo(rendezvousForDest);
 
 									Buffer<2048> rendezvousForOtherEnd;
-									rendezvousForOtherEnd.addSize(2); // leave room for payload size
-									rendezvousForOtherEnd.append((uint8_t)STATE_MESSAGE_PROXY_SEND);
 									remotePeerAddress.appendTo(rendezvousForOtherEnd);
 									rendezvousForOtherEnd.append((uint8_t)Packet::VERB_RENDEZVOUS);
 									const unsigned int rendezvousForOtherEndPayloadSizePtr = rendezvousForOtherEnd.size();
@@ -267,9 +321,8 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 									}
 
 									if (haveMatch) {
+										_send(fromMemberId,STATE_MESSAGE_PROXY_SEND,rendezvousForOtherEnd.data(),rendezvousForOtherEnd.size());
 										RR->sw->send(rendezvousForDest,true,0);
-										rendezvousForOtherEnd.setAt<uint16_t>(0,(uint16_t)(rendezvousForOtherEnd.size() - 2));
-										_send(fromMemberId,rendezvousForOtherEnd.data(),rendezvousForOtherEnd.size());
 									}
 								}
 							}
@@ -283,6 +336,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						Packet outp(rcpt,RR->identity.address(),verb);
 						outp.append(dmsg.field(ptr,len),len);
 						RR->sw->send(outp,true,0);
+						TRACE("[%u] proxy send %s to %s length %u",(unsigned int)fromMemberId,Packet::verbString(verb),rcpt.toString().c_str(),len);
 					}	break;
 				}
 			} catch ( ... ) {
@@ -298,37 +352,172 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 	}
 }
 
-void Cluster::replicateHavePeer(const Address &peerAddress)
+bool Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len)
 {
+	if (len > 16384) // sanity check
+		return false;
+
+	uint64_t mostRecentTimestamp = 0;
+	uint16_t canHasPeer = 0;
+
+	{	// Anyone got this peer?
+		Mutex::Lock _l2(_peerAffinities_m);
+		std::vector<_PeerAffinity>::iterator i(std::lower_bound(_peerAffinities.begin(),_peerAffinities.end(),_PeerAffinity(toPeerAddress,0,0))); // O(log(n))
+		while ((i != _peerAffinities.end())&&(i->address() == toPeerAddress)) {
+			uint16_t mid = i->clusterMemberId();
+			if ((mid != _id)&&(i->timestamp > mostRecentTimestamp)) {
+				mostRecentTimestamp = i->timestamp;
+				canHasPeer = mid;
+			}
+		}
+	}
+
+	const uint64_t now = RR->node->now();
+	if ((now - mostRecentTimestamp) < ZT_PEER_ACTIVITY_TIMEOUT) {
+		Buffer<16384> buf;
+
+		InetAddress v4,v6;
+		if (fromPeerAddress) {
+			SharedPtr<Peer> fromPeer(RR->topology->getPeer(fromPeerAddress));
+			if (fromPeer)
+				fromPeer->getBestActiveAddresses(now,v4,v6);
+		}
+		buf.append((uint8_t)( (v4) ? ((v6) ? 2 : 1) : ((v6) ? 1 : 0) ));
+		if (v4)
+			v4.serialize(buf);
+		if (v6)
+			v6.serialize(buf);
+		buf.append((uint16_t)len);
+		buf.append(data,len);
+
+		{
+			Mutex::Lock _l2(_members[canHasPeer].lock);
+			_send(canHasPeer,STATE_MESSAGE_RELAY,buf.data(),buf.size());
+		}
+
+		return true;
+	}
+
+	return false;
 }
 
-void Cluster::replicateMulticastLike(uint64_t nwid,const Address &peerAddress,const MulticastGroup &group)
+void Cluster::replicateHavePeer(const Identity &peerId)
 {
-}
+	{	// Use peer affinity table to track our own last announce time for peers
+		_PeerAffinity pa(peerId.address(),_id,RR->node->now());
+		Mutex::Lock _l2(_peerAffinities_m);
+		std::vector<_PeerAffinity>::iterator i(std::lower_bound(_peerAffinities.begin(),_peerAffinities.end(),pa)); // O(log(n))
+		if ((i != _peerAffinities.end())&&(i->key == pa.key)) {
+			if ((pa.timestamp - i->timestamp) >= ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD) {
+				i->timestamp = pa.timestamp;
+				// continue to announcement
+			} else {
+				// we've already announced this peer recently, so skip
+				return;
+			}
+		} else {
+			_peerAffinities.push_back(pa);
+			std::sort(_peerAffinities.begin(),_peerAffinities.end()); // probably a more efficient way to insert but okay for now
+			// continue to announcement
+		}
+	}
 
-void Cluster::replicateCertificateOfNetworkMembership(const CertificateOfMembership &com)
-{
-}
-
-void Cluster::doPeriodicTasks()
-{
-	// Go ahead and flush whenever possible right now
+	// announcement
+	Buffer<4096> buf;
+	peerId.serialize(buf,false);
 	{
 		Mutex::Lock _l(_memberIds_m);
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
 			Mutex::Lock _l2(_members[*mid].lock);
-			_flush(*mid);
+			_send(*mid,STATE_MESSAGE_HAVE_PEER,buf.data(),buf.size());
+		}
+	}
+}
+
+void Cluster::replicateMulticastLike(uint64_t nwid,const Address &peerAddress,const MulticastGroup &group)
+{
+	Buffer<4096> buf;
+	buf.append((uint64_t)nwid);
+	peerAddress.appendTo(buf);
+	group.mac().appendTo(buf);
+	buf.append((uint32_t)group.adi());
+	{
+		Mutex::Lock _l(_memberIds_m);
+		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+			Mutex::Lock _l2(_members[*mid].lock);
+			_send(*mid,STATE_MESSAGE_MULTICAST_LIKE,buf.data(),buf.size());
+		}
+	}
+}
+
+void Cluster::replicateCertificateOfNetworkMembership(const CertificateOfMembership &com)
+{
+	Buffer<4096> buf;
+	com.serialize(buf);
+	{
+		Mutex::Lock _l(_memberIds_m);
+		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+			Mutex::Lock _l2(_members[*mid].lock);
+			_send(*mid,STATE_MESSAGE_COM,buf.data(),buf.size());
+		}
+	}
+}
+
+void Cluster::doPeriodicTasks()
+{
+	const uint64_t now = RR->node->now();
+
+	{
+		Mutex::Lock _l(_memberIds_m);
+		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+			Mutex::Lock _l2(_members[*mid].lock);
+
+			if ((now - _members[*mid].lastAnnouncedAliveTo) >= ((ZT_CLUSTER_TIMEOUT / 2) - 1000)) {
+				Buffer<2048> alive;
+				alive.append((uint16_t)ZEROTIER_ONE_VERSION_MAJOR);
+				alive.append((uint16_t)ZEROTIER_ONE_VERSION_MINOR);
+				alive.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
+				alive.append((uint8_t)ZT_PROTO_VERSION);
+				if (_addressToLocationFunction) {
+					alive.append((int32_t)_x);
+					alive.append((int32_t)_y);
+					alive.append((int32_t)_z);
+				} else {
+					alive.append((int32_t)0);
+					alive.append((int32_t)0);
+					alive.append((int32_t)0);
+				}
+				alive.append((uint64_t)now);
+				alive.append((uint64_t)0); // TODO: compute and send load average
+				alive.append((uint64_t)0); // unused/reserved flags
+				alive.append((uint8_t)_zeroTierPhysicalEndpoints.size());
+				for(std::vector<InetAddress>::const_iterator pe(_zeroTierPhysicalEndpoints.begin());pe!=_zeroTierPhysicalEndpoints.end();++pe)
+					pe->serialize(alive);
+				_send(*mid,STATE_MESSAGE_ALIVE,alive.data(),alive.size());
+				_members[*mid].lastAnnouncedAliveTo = now;
+			}
+
+			_flush(*mid); // does nothing if nothing to flush
 		}
 	}
 }
 
 void Cluster::addMember(uint16_t memberId)
 {
+	if (memberId >= ZT_CLUSTER_MAX_MEMBERS)
+		return;
+
 	Mutex::Lock _l2(_members[memberId].lock);
 
-	Mutex::Lock _l(_memberIds_m);
-	_memberIds.push_back(memberId);
-	std::sort(_memberIds.begin(),_memberIds.end());
+	{
+		Mutex::Lock _l(_memberIds_m);
+		if (std::find(_memberIds.begin(),_memberIds.end(),memberId) != _memberIds.end())
+			return;
+		_memberIds.push_back(memberId);
+		std::sort(_memberIds.begin(),_memberIds.end());
+	}
+
+	_members[memberId].clear();
 
 	// Generate this member's message key from the master and its ID
 	uint16_t stmp[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
@@ -346,27 +535,107 @@ void Cluster::addMember(uint16_t memberId)
 	_members[memberId].q.append(iv,16);
 	_members[memberId].q.addSize(8); // room for MAC
 	_members[memberId].q.append((uint16_t)_id);
+	_members[memberId].q.append((uint16_t)memberId);
 }
 
-void Cluster::_send(uint16_t memberId,const void *msg,unsigned int len)
+void Cluster::removeMember(uint16_t memberId)
+{
+	Mutex::Lock _l(_memberIds_m);
+	std::vector<uint16_t> newMemberIds;
+	for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+		if (*mid != memberId)
+			newMemberIds.push_back(*mid);
+	}
+	_memberIds = newMemberIds;
+}
+
+bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload)
+{
+	if (!peerPhysicalAddress) // sanity check
+		return false;
+	if (_addressToLocationFunction) {
+		// Pick based on location if it can be determined
+		int px = 0,py = 0,pz = 0;
+		if (_addressToLocationFunction(_addressToLocationFunctionArg,reinterpret_cast<const struct sockaddr_storage *>(&peerPhysicalAddress),&px,&py,&pz) == 0) {
+			// No geo-info so no change
+			return false;
+		}
+
+		// Find member closest to this peer
+		const uint64_t now = RR->node->now();
+		std::vector<InetAddress> best; // initial "best" is for peer to stay put
+		const double currentDistance = _dist3d(_x,_y,_z,px,py,pz);
+		double bestDistance = (offload ? 2147483648.0 : currentDistance);
+		unsigned int bestMember = _id;
+		{
+			Mutex::Lock _l(_memberIds_m);
+			for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+				_Member &m = _members[*mid];
+				Mutex::Lock _ml(m.lock);
+
+				// Consider member if it's alive and has sent us a location and one or more physical endpoints to send peers to
+				if ( ((now - m.lastReceivedAliveAnnouncement) < ZT_CLUSTER_TIMEOUT) && ((m.x != 0)||(m.y != 0)||(m.z != 0)) && (m.zeroTierPhysicalEndpoints.size() > 0) ) {
+					double mdist = _dist3d(m.x,m.y,m.z,px,py,pz);
+					if (mdist < bestDistance) {
+						bestMember = *mid;
+						best = m.zeroTierPhysicalEndpoints;
+					}
+				}
+			}
+		}
+
+		if (best.size() > 0) {
+			TRACE("peer %s is at [%d,%d,%d], distance to us is %f, sending to %u instead for better distance %f",peerAddress.toString().c_str(),px,py,pz,currentDistance,bestMember,bestDistance);
+
+			/* if (peer->remoteVersionProtocol() >= 5) {
+				// If it's a newer peer send VERB_PUSH_DIRECT_PATHS which is more idiomatic
+			} else { */
+				// Otherwise send VERB_RENDEZVOUS for ourselves, which will trick peers into trying other endpoints for us even if they're too old for PUSH_DIRECT_PATHS
+				for(std::vector<InetAddress>::const_iterator a(best.begin());a!=best.end();++a) {
+					if ((a->ss_family == AF_INET)||(a->ss_family == AF_INET6)) {
+						Packet outp(peerAddress,RR->identity.address(),Packet::VERB_RENDEZVOUS);
+						outp.append((uint8_t)0); // no flags
+						RR->identity.address().appendTo(outp); // HACK: rendezvous with ourselves! with really old peers this will only work if I'm a root server!
+						outp.append((uint16_t)a->port());
+						if (a->ss_family == AF_INET) {
+							outp.append((uint8_t)4);
+							outp.append(a->rawIpData(),4);
+						} else {
+							outp.append((uint8_t)16);
+							outp.append(a->rawIpData(),16);
+						}
+						RR->sw->send(outp,true,0);
+					}
+				}
+			//}
+
+			return true;
+		} else {
+			TRACE("peer %s is at [%d,%d,%d], distance to us is %f and this seems to be the best",peerAddress.toString().c_str(),px,py,pz,currentDistance);
+			return false;
+		}
+	} else {
+		// TODO: pick based on load if no location info?
+		return false;
+	}
+}
+
+void Cluster::_send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len)
 {
 	_Member &m = _members[memberId];
 	// assumes m.lock is locked!
-	for(;;) {
-		if ((m.q.size() + len) > ZT_CLUSTER_MAX_MESSAGE_LENGTH)
-			_flush(memberId);
-		else {
-			m.q.append(msg,len);
-			break;
-		}
-	}
+	if ((m.q.size() + len + 3) > ZT_CLUSTER_MAX_MESSAGE_LENGTH)
+		_flush(memberId);
+	m.q.append((uint16_t)(len + 1));
+	m.q.append((uint8_t)type);
+	m.q.append(msg,len);
 }
 
 void Cluster::_flush(uint16_t memberId)
 {
 	_Member &m = _members[memberId];
 	// assumes m.lock is locked!
-	if (m.q.size() > 26) { // 16-byte IV + 8-byte MAC + 2-byte cluster member ID (latter two bytes are inside crypto envelope)
+	if (m.q.size() > (24 + 2 + 2)) { // 16-byte IV + 8-byte MAC + 2 byte from-member-ID + 2 byte to-member-ID
 		// Create key from member's key and IV
 		char keytmp[32];
 		memcpy(keytmp,m.key,32);
@@ -389,7 +658,7 @@ void Cluster::_flush(uint16_t memberId)
 		memcpy(m.q.field(16,8),mac,8);
 
 		// Send!
-		_sendFunction(_arg,memberId,m.q.data(),m.q.size());
+		_sendFunction(_sendFunctionArg,memberId,m.q.data(),m.q.size());
 
 		// Prepare for more
 		m.q.clear();
@@ -397,7 +666,8 @@ void Cluster::_flush(uint16_t memberId)
 		Utils::getSecureRandom(iv,16);
 		m.q.append(iv,16);
 		m.q.addSize(8); // room for MAC
-		m.q.append((uint16_t)_id);
+		m.q.append((uint16_t)_id); // from member ID
+		m.q.append((uint16_t)memberId); // to member ID
 	}
 }
 

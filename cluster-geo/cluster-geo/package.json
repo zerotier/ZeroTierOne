@@ -1,0 +1,16 @@
+{
+  "name": "cluster-geo",
+  "version": "1.0.0",
+  "description": "Cluster GEO-IP Query Service",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ZeroTier, Inc.",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "geoip2ws": "^1.7.1",
+    "leveldown": "^1.4.2",
+    "levelup": "^1.2.1"
+  }
+}

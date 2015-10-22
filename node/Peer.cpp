@@ -34,6 +34,7 @@
 #include "Network.hpp"
 #include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
+#include "Cluster.hpp"
 
 #include <algorithm>
 
@@ -81,6 +82,7 @@ void Peer::received(
 {
 	const uint64_t now = RR->node->now();
 	bool needMulticastGroupAnnounce = false;
+	bool pathIsConfirmed = false;
 
 	{
 		Mutex::Lock _l(_lock);
@@ -88,8 +90,6 @@ void Peer::received(
 		_lastReceive = now;
 
 		if (!hops) {
-			bool pathIsConfirmed = false;
-
 			/* Learn new paths from direct (hops == 0) packets */
 			{
 				unsigned int np = _numPaths;
@@ -107,7 +107,6 @@ void Peer::received(
 						// Learn paths if they've been confirmed via a HELLO or an ECHO
 						RemotePath *slot = (RemotePath *)0;
 						if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-							// Add new path
 							slot = &(_paths[np++]);
 						} else {
 							uint64_t slotLRmin = 0xffffffffffffffffULL;
@@ -153,6 +152,14 @@ void Peer::received(
 		else if (verb == Packet::VERB_MULTICAST_FRAME)
 			_lastMulticastFrame = now;
 	}
+
+#ifdef ZT_ENABLE_CLUSTER
+	if ((pathIsConfirmed)&&(RR->cluster)) {
+		// Either shuttle this peer off somewhere else or report to other members that we have it
+		if (!RR->cluster->redirectPeer(_id.address(),remoteAddr,false))
+			RR->cluster->replicateHavePeer(_id);
+	}
+#endif
 
 	if (needMulticastGroupAnnounce) {
 		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
@@ -213,6 +220,12 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 
 void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
 {
+#ifdef ZT_ENABLE_CLUSTER
+	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
+	if (RR->cluster)
+		return;
+#endif
+
 	Mutex::Lock _l(_lock);
 
 	if (((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {

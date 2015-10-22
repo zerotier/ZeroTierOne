@@ -45,6 +45,7 @@
 #include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
+#include "Cluster.hpp"
 
 namespace ZeroTier {
 
@@ -567,6 +568,11 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 			// It wouldn't hurt anything, just redundant and unnecessary.
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
+#ifdef ZT_ENABLE_CLUSTER
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size())))
+					return; // sent by way of another member of this cluster
+#endif
+
 				// Don't know peer or no direct path -- so relay via root server
 				relayTo = RR->topology->getBestRoot();
 				if (relayTo)
@@ -642,7 +648,11 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),RR->node->now())))) {
 				unite(source,destination,false);
 			} else {
-				// Don't know peer or no direct path -- so relay via root server
+#ifdef ZT_ENABLE_CLUSTER
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size())))
+					return; // sent by way of another member of this cluster
+#endif
+
 				relayTo = RR->topology->getBestRoot(&source,1,true);
 				if (relayTo)
 					relayTo->send(RR,packet->data(),packet->size(),RR->node->now());

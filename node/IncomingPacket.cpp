@@ -43,6 +43,7 @@
 #include "Salsa20.hpp"
 #include "SHA512.hpp"
 #include "World.hpp"
+#include "Cluster.hpp"
 
 namespace ZeroTier {
 
@@ -272,7 +273,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 				return true;
 			}
-
 			peer = RR->topology->addPeer(newPeer);
 
 			// Continue at // VALID
@@ -406,6 +406,10 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
 					peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
+#ifdef ZT_ENABLE_CLUSTER
+					if (RR->cluster)
+						RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -533,6 +537,10 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 					peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com);
+#ifdef ZT_ENABLE_CLUSTER
+					if (RR->cluster)
+						RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 				}
 
 				if (!network->isAllowed(peer)) {
@@ -613,8 +621,15 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 		const uint64_t now = RR->node->now();
 
 		// Iterate through 18-byte network,MAC,ADI tuples
-		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18)
-			RR->mc->add(now,at<uint64_t>(ptr),MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
+			const uint32_t nwid(at<uint64_t>(ptr));
+			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
+			RR->mc->add(now,nwid,group,peer->address());
+#ifdef ZT_ENABLE_CLUSTER
+			if (RR->cluster)
+				RR->cluster->replicateMulticastLike(nwid,peer->address(),group);
+#endif
+		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
 	} catch ( ... ) {
@@ -632,6 +647,10 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		while (ptr < size()) {
 			ptr += com.deserialize(*this,ptr);
 			peer->validateAndSetNetworkMembershipCertificate(RR,com.networkId(),com);
+#ifdef ZT_ENABLE_CLUSTER
+			if (RR->cluster)
+				RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
@@ -787,6 +806,10 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 				peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
+#ifdef ZT_ENABLE_CLUSTER
+				if (RR->cluster)
+					RR->cluster->replicateCertificateOfNetworkMembership(com);
+#endif
 			}
 
 			// Check membership after we've read any included COM, since
@@ -871,6 +894,8 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 		}
 		peer->setLastDirectPathPushReceived(now);
 
+		const RemotePath *currentBest = peer->getBestPath(now);
+
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
 		unsigned int v4Count = 0,v6Count = 0;
@@ -889,16 +914,20 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE)
-							peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
+							if ((!currentBest)||(currentBest->address() != a))
+								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						}
 					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE)
-							peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
+							if ((!currentBest)||(currentBest->address() != a))
+								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						}
 					}
 				}	break;
 			}

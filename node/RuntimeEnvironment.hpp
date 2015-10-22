@@ -43,6 +43,7 @@ class Multicaster;
 class AntiRecursion;
 class NetworkController;
 class SelfAwareness;
+class Cluster;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -51,14 +52,17 @@ class RuntimeEnvironment
 {
 public:
 	RuntimeEnvironment(Node *n) :
-		node(n),
-		identity(),
-		localNetworkController((NetworkController *)0),
-		sw((Switch *)0),
-		mc((Multicaster *)0),
-		antiRec((AntiRecursion *)0),
-		topology((Topology *)0),
-		sa((SelfAwareness *)0)
+		node(n)
+		,identity()
+		,localNetworkController((NetworkController *)0)
+		,sw((Switch *)0)
+		,mc((Multicaster *)0)
+		,antiRec((AntiRecursion *)0)
+		,topology((Topology *)0)
+		,sa((SelfAwareness *)0)
+#ifdef ZT_ENABLE_CLUSTER
+		,cluster((Cluster *)0)
+#endif
 	{
 	}
 
@@ -86,6 +90,10 @@ public:
 	AntiRecursion *antiRec;
 	Topology *topology;
 	SelfAwareness *sa;
+
+#ifdef ZT_ENABLE_CLUSTER
+	Cluster *cluster;
+#endif
 };
 
 } // namespace ZeroTier
