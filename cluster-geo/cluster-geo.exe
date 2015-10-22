@@ -10,4 +10,4 @@ fi
 
 cd cluster-geo
 
-exec node index.js
+exec node cluster-geo.js
