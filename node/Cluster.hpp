@@ -47,7 +47,7 @@
 /**
  * Timeout for cluster members being considered "alive"
  */
-#define ZT_CLUSTER_TIMEOUT 30000
+#define ZT_CLUSTER_TIMEOUT 10000
 
 /**
  * How often should we announce that we have a peer?
@@ -57,7 +57,7 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 50
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
 
 namespace ZeroTier {
 

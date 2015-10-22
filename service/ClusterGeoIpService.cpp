@@ -165,7 +165,6 @@ void ClusterGeoIpService::threadMain()
 									{
 										Mutex::Lock _l2(_cache_m);
 										_cache[rip] = ce;
-										std::cout << ">> " << linebuf << std::endl;
 									}
 								}
 							}

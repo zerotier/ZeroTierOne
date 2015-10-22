@@ -504,7 +504,7 @@ void Cluster::doPeriodicTasks()
 
 void Cluster::addMember(uint16_t memberId)
 {
-	if (memberId >= ZT_CLUSTER_MAX_MEMBERS)
+	if ((memberId >= ZT_CLUSTER_MAX_MEMBERS)||(memberId == _id))
 		return;
 
 	Mutex::Lock _l2(_members[memberId].lock);
@@ -622,6 +622,8 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 
 void Cluster::_send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len)
 {
+	if ((len + 3) > (ZT_CLUSTER_MAX_MESSAGE_LENGTH - (24 + 2 + 2))) // sanity check
+		return;
 	_Member &m = _members[memberId];
 	// assumes m.lock is locked!
 	if ((m.q.size() + len + 3) > ZT_CLUSTER_MAX_MESSAGE_LENGTH)

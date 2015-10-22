@@ -131,12 +131,12 @@ extern "C" {
 /**
  * Maximum number of cluster members (and max member ID plus one)
  */
-#define ZT_CLUSTER_MAX_MEMBERS 256
+#define ZT_CLUSTER_MAX_MEMBERS 128
 
 /**
  * Maximum allowed cluster message length in bytes
  */
-#define ZT_CLUSTER_MAX_MESSAGE_LENGTH 65535
+#define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1444 * 6)
 
 /**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
