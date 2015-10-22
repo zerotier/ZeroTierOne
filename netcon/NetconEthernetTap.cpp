@@ -51,7 +51,7 @@
 
 #define APPLICATION_POLL_FREQ 				5
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		10
-#define STATUS_TMR_INTERVAL						500
+#define STATUS_TMR_INTERVAL						500 // How often we check connection statuses
 
 
 namespace ZeroTier {
@@ -293,7 +293,7 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
  */
 void NetconEthernetTap::closeClient(PhySocket *sock)
 {
-	for(int i=0; i<rpc_sockets.size(); i++) {
+	for(size_t i=0; i<rpc_sockets.size(); i++) {
 		if(rpc_sockets[i] == sock){
 			rpc_sockets.erase(rpc_sockets.begin() + i);
 			break;
@@ -314,10 +314,11 @@ void NetconEthernetTap::closeAll()
 		closeConnection(tcp_connections.front());
 }
 
+#include <sys/resource.h>
+
 void NetconEthernetTap::threadMain()
 	throw()
 {
-	fprintf(stderr, "_threadMain()\n");
 	uint64_t prev_tcp_time = 0;
 	uint64_t prev_status_time = 0;
 	uint64_t prev_etharp_time = 0;
@@ -353,29 +354,25 @@ void NetconEthernetTap::threadMain()
 
 		if (since_status >= STATUS_TMR_INTERVAL) {
 			prev_status_time = now;
-			fprintf(stderr, "tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
-
-			/* Here we will periodically check the list of rpc_sockets for any which
-			do not currently have any data connection associated with them. If they are
-			unused, then we will try to read from them, if they fail, we can safely assumes
-			that the client has closed their and we can close ours */
-
-			for(int i=0, associated = 0; i<rpc_sockets.size(); i++, associated = 0) {
-				for(int j=0; j<tcp_connections.size(); j++) {
-					if(tcp_connections[j]->rpcSock == rpc_sockets[i])
-						associated++;
-				}
-				if(!associated){
-					// No TCP connections are associated, this is a candidate for removal
-					//fprintf(stderr, "removing RPC connection... \n");
-					char c;
-					if(read(_phy.getDescriptor(rpc_sockets[i]),&c,1) < 0) {
-						closeClient(rpc_sockets[i]);
+			if(rpc_sockets.size() || tcp_connections.size()) {
+				/* Here we will periodically check the list of rpc_sockets for those that
+				do not currently have any data connection associated with them. If they are
+				unused, then we will try to read from them, if they fail, we can safely assume
+				that the client has closed their end and we can close ours */
+				for(size_t i=0, associated = 0; i<rpc_sockets.size(); i++, associated = 0) {
+					for(size_t j=0; j<tcp_connections.size(); j++) {
+						if(tcp_connections[j]->rpcSock == rpc_sockets[i])
+							associated++;
 					}
-					else {
-						//fprintf(stderr, "this appears to be in use.\n");
+					if(!associated){
+						// No TCP connections are associated, this is a candidate for removal
+						char c;
+						if(read(_phy.getDescriptor(rpc_sockets[i]),&c,1) < 0) {
+							closeClient(rpc_sockets[i]);
+						}
 					}
 				}
+				fprintf(stderr, "tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
 			}
 		}
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
@@ -393,7 +390,7 @@ void NetconEthernetTap::threadMain()
 		_phy.poll((unsigned long)std::min(tcp_remaining,etharp_remaining));
 	}
 	closeAll();
-	// TODO: cleanup -- destroy LWIP state, kill any clients, unload .so, etc.
+	dlclose(lwipstack->_libref);
 }
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
