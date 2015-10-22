@@ -20,9 +20,30 @@ namespace WinUI
     /// </summary>
     public partial class MainWindow : Window
     {
+        APIHandler handler = new APIHandler();
+
         public MainWindow()
         {
             InitializeComponent();
+
+            updateStatus();
+            updateNetworks();
+        }
+
+        private void updateStatus()
+        {
+            var status = handler.getStatus();
+
+            this.networkId.Content = status.address;
+            this.versionString.Content = status.version;
+            this.onlineStatus.Content = (status.online ? "ONLINE" : "OFFLINE");
+        }
+
+        private void updateNetworks()
+        {
+            var networks = handler.getNetworks();
+
+            networksPage.setNetworks(networks);
         }
     }
 }

@@ -1,7 +1,10 @@
 ﻿<Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="WinUI.MainWindow"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:local="clr-namespace:WinUI"
+        mc:Ignorable="d" x:Class="WinUI.MainWindow"
         Title="ZeroTier One" Height="495" Width="705" Icon="ZeroTierIcon.ico">
 	
 	<Window.Resources>
@@ -84,10 +87,12 @@
 			</StatusBarItem>
 		</StatusBar>
 		<TabControl>
-			<TabItem x:Name="Networks" Header="Networks" Background="#FF234447" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
-				<Grid Background="#FFE5E5E5"/>
-			</TabItem>
-			<TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
+            <TabItem x:Name="Networks" Header="Networks" Background="#FF234447" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
+                <Grid>
+                    <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
 				<Grid Background="#FFE5E5E5"/>
 			</TabItem>
 		</TabControl>
