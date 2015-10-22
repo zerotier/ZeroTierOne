@@ -26,5 +26,6 @@ OBJS=\
 	osdep/BackgroundResolver.o \
 	osdep/Http.o \
 	osdep/OSUtils.o \
+	service/ClusterGeoIpService.o \
 	service/ControlPlane.o \
 	service/OneService.o
