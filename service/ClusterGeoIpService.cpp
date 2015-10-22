@@ -37,6 +37,8 @@
 #include <signal.h>
 #include <errno.h>
 
+#include <iostream>
+
 #include "ClusterGeoIpService.hpp"
 #include "../node/Utils.hpp"
 #include "../osdep/OSUtils.hpp"
@@ -163,6 +165,7 @@ void ClusterGeoIpService::threadMain()
 									{
 										Mutex::Lock _l2(_cache_m);
 										_cache[rip] = ce;
+										std::cout << ">> " << linebuf << std::endl;
 									}
 								}
 							}

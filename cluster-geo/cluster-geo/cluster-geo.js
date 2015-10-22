@@ -1,3 +1,5 @@
+"use strict";
+
 //
 // GeoIP lookup service
 //
@@ -20,10 +22,10 @@ function lookup(ip,callback)
 	cache.get(ip,function(err,cachedEntryJson) {
 		if ((!err)&&(cachedEntryJson)) {
 			try {
-				var cachedEntry = JSON.parse(cachedEntryJson.toString());
+				let cachedEntry = JSON.parse(cachedEntryJson.toString());
 				if (cachedEntry) {
-					var ts = cachedEntry.ts;
-					var r = cachedEntry.r;
+					let ts = cachedEntry.ts;
+					let r = cachedEntry.r;
 					if ((ts)&&(r)) {
 						if ((Date.now() - ts) < CACHE_TTL) {
 							r._cached = true;
@@ -57,24 +59,24 @@ process.stdin.on('readable',function() {
 	var chunk;
 	while (null !== (chunk = process.stdin.read())) {
 		for(var i=0;i<chunk.length;++i) {
-			var c = chunk[i];
+			let c = chunk[i];
 			if ((c == 0x0d)||(c == 0x0a)) {
 				if (linebuf.length > 0) {
-					var ip = linebuf;
+					let ip = linebuf;
 					lookup(ip,function(err,result) {
 						if ((err)||(!result)||(!result.location)) {
 							return process.stdout.write(ip+',0,0,0,0,0,0\n');
 						} else {
-							var lat = parseFloat(result.location.latitude);
-							var lon = parseFloat(result.location.longitude);
+							let lat = parseFloat(result.location.latitude);
+							let lon = parseFloat(result.location.longitude);
 
 							// Convert to X,Y,Z coordinates from Earth's origin, Earth-as-sphere approximation.
-							var latRadians = lat * 0.01745329251994; // PI / 180
-							var lonRadians = lon * 0.01745329251994; // PI / 180
-							var cosLat = Math.cos(latRadians);
-							var x = Math.round((-6371.0) * cosLat * Math.cos(lonRadians)); // 6371 == Earth's approximate radius in kilometers
-							var y = Math.round(6371.0 * Math.sin(latRadians));
-							var z = Math.round(6371.0 * cosLat * Math.sin(lonRadians));
+							let latRadians = lat * 0.01745329251994; // PI / 180
+							let lonRadians = lon * 0.01745329251994; // PI / 180
+							let cosLat = Math.cos(latRadians);
+							let x = Math.round((-6371.0) * cosLat * Math.cos(lonRadians)); // 6371 == Earth's approximate radius in kilometers
+							let y = Math.round(6371.0 * Math.sin(latRadians));
+							let z = Math.round(6371.0 * cosLat * Math.sin(lonRadians));
 
 							return process.stdout.write(ip+',1,'+lat+','+lon+','+x+','+y+','+z+'\n');
 						}
