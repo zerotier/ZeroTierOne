@@ -276,7 +276,7 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
 	close(conn->their_fd);
 	if(conn->dataSock) {
 		close(_phy.getDescriptor(conn->dataSock));
-		_phy.close(conn->dataSock);
+		_phy.close(conn->dataSock,false);
 	}
 	for(int i=0; i<tcp_connections.size(); i++) {
 		if(tcp_connections[i] == conn) {
@@ -918,14 +918,13 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
       fprintf(stderr, "handle_listen(): PCB is already in listening state.\n");
       return;
     }
-
 		struct tcp_pcb* listening_pcb;
+
 #ifdef TCP_LISTEN_BACKLOG
 			listening_pcb = lwipstack->tcp_listen_with_backlog(conn->pcb, listen_rpc->backlog);
 #else
 			listening_pcb = lwipstack->tcp_listen(conn->pcb);
 #endif
-		// FIXME: Correct return values from this method, most is handled in intercept lib
 
     if(listening_pcb != NULL) {
       conn->pcb = listening_pcb;
@@ -1146,33 +1145,35 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 			return;
 		}
 
-		int read_fd = _phy.getDescriptor(conn->dataSock);
-		if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
-			conn->idx += r;
-			/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
-			 * data to LWIP to be enqueued and eventually sent to the network. */
-			if(r > 0) {
-				int sz;
-				// NOTE: this assumes that lwipstack->_lock is locked, either
-				// because we are in a callback or have locked it manually.
-				int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
-				//lwipstack->_tcp_output(conn->pcb);
-				if(err != ERR_OK) {
-					fprintf(stderr, "handle_write(): error while writing to PCB, (err = %d)\n", err);
-					return;
+		if(conn->dataSock) {
+			int read_fd = _phy.getDescriptor(conn->dataSock);
+			if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
+				conn->idx += r;
+				/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
+				 * data to LWIP to be enqueued and eventually sent to the network. */
+				if(r > 0) {
+					int sz;
+					// NOTE: this assumes that lwipstack->_lock is locked, either
+					// because we are in a callback or have locked it manually.
+					int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
+					//lwipstack->_tcp_output(conn->pcb);
+					if(err != ERR_OK) {
+						fprintf(stderr, "handle_write(): error while writing to PCB, (err = %d)\n", err);
+						return;
+					}
+					else {
+						sz = (conn->idx)-r;
+						if(sz) {
+							memmove(&conn->buf, (conn->buf+r), sz);
+						}
+						conn->idx -= r;
+						return;
+					}
 				}
 				else {
-					sz = (conn->idx)-r;
-					if(sz) {
-						memmove(&conn->buf, (conn->buf+r), sz);
-					}
-					conn->idx -= r;
+					fprintf(stderr, "handle_write(): LWIP stack full\n");
 					return;
 				}
-			}
-			else {
-				fprintf(stderr, "handle_write(): LWIP stack full\n");
-				return;
 			}
 		}
 	}

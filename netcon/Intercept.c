@@ -166,7 +166,7 @@ int get_retval()
       return retval;
     }
   }
-  dwr("unable to read connect: return value\n");
+  dwr("unable to read return value\n");
   return -1;
 }
 
@@ -342,7 +342,7 @@ int getsockopt(GETSOCKOPT_SIG)
 
 int socket(SOCKET_SIG)
 {
-  //dwr("socket()*:\n");
+  dwr("socket()*:\n");
   int err;
 #ifdef CHECKS
   /* Check that type makes sense */
@@ -375,6 +375,11 @@ int socket(SOCKET_SIG)
 
   char cmd[BUF_SZ];
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
+  if(fdret_sock < 0)
+  {
+    dwr("BAD service connection. exiting.\n");
+    exit(-1);
+  }
 
   if(socket_family == AF_LOCAL
     || socket_family == AF_NETLINK
@@ -405,18 +410,21 @@ int socket(SOCKET_SIG)
     memset(cmd, '\0', BUF_SZ);
     cmd[0] = RPC_FD_MAP_COMPLETION;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
-    if(newfd > -1) {
+
+    //if(newfd > -1) {
       send_command(fdret_sock, cmd);
       pthread_mutex_unlock(&lock);
       errno = ERR_OK; // OK
       return newfd;
-    }
+    //}
+    /*
     else { // Try to read retval+errno since we RXed a bad fd
       dwr("Error, service sent bad fd.\n");
       err = get_retval();
       pthread_mutex_unlock(&lock);
       return err;
     }
+    */
   }
   else {
     dwr("Error while receiving new FD.\n");
@@ -434,7 +442,7 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-  //dwr("connect()*:\n");
+  dwr("connect()*:\n");
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
 
@@ -520,7 +528,7 @@ int select(SELECT_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
-  //dwr("bind()*:\n");
+  dwr("bind()*:\n");
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -582,7 +590,7 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
-  //dwr("accept4()*:\n");
+  dwr("accept4()*:\n");
 #ifdef CHECKS
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
     errno = EINVAL;
@@ -608,7 +616,7 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
-  //dwr("accept()*:\n");
+  dwr("accept()*:\n");
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -701,7 +709,7 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
-  //dwr("listen()*:\n");
+  dwr("listen()*:\n");
   #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {

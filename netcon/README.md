@@ -1,11 +1,12 @@
 Network Containers have been tested with the following:
 
-sshd			[ WORKS as of 20151010] Long ~15-20s delay for client during connect
-ssh			[ WORKS as of 20151010]
-curl			[ WORKS as of 20151021]
+sshd			[ WORKS as of 20151022] Long ~15-20s delay for client during connect
+ssh			[ WORKS as of 20151022]
+sftp			[ WORKS as of 20151022]
+curl			[ WORKS as of 20151021] Sometimes "tcp_input: pcb->next != pcb (before cache)" is seen
 apache (debug mode)	[ WORKS as of 2015xxxx]
 apache (prefork MPM)	[ WORKS as of 20151021]
-nginx			[ WORKS as of 2015xxxx]
+nginx			[ WORKS as of 20151022]
 nodejs			[ WORKS as of 20151021]
 java			[ WORKS as of 2015xxxx]
 tomcat			[ WORKS as of 2015xxxx]
