@@ -49,7 +49,14 @@ namespace WinUI
 
         private void joinButton_Click(object sender, RoutedEventArgs e)
         {
-
+            if (joinNetworkID.Text.Length < 16)
+            {
+                MessageBox.Show("Invalid Network ID");
+            }
+            else
+            {
+                handler.JoinNetwork(joinNetworkID.Text);
+            }
         }
 
         private void OnNetworkEntered(object sender, TextCompositionEventArgs e)
