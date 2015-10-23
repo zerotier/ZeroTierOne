@@ -80,7 +80,7 @@
 			<StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White" Margin="0"/>
 			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White" Margin="6,0,-6,-9"/>
 			<StatusBarItem Grid.Column="4">
-				<TextBox x:Name="joinNetworkID" Height="23" TextWrapping="Wrap" Width="120" HorizontalAlignment="Right" RenderTransformOrigin="1.168,0.478" ToolTip="Enter Network ID" TextChanged="joinNetworkID_TextChanged"/>
+				<TextBox x:Name="joinNetworkID" Height="23" TextWrapping="Wrap" Width="120" HorizontalAlignment="Right" RenderTransformOrigin="1.168,0.478" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16"/>
 			</StatusBarItem>
 			<StatusBarItem Grid.Column="5" x:Name="statusBarButton" Foreground="White" RenderTransformOrigin="0.789,0.442">
 				<Button x:Name="joinButton" Content="Join" Background="#FFFFB354" Width="77.423" Click="joinButton_Click"/>
