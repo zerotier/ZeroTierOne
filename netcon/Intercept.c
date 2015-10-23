@@ -663,7 +663,7 @@ int accept(ACCEPT_SIG)
   }
 
   //if(opt & O_NONBLOCK)
-    fcntl(sockfd, F_SETFL, O_NONBLOCK);
+    //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
   char rbuf[16], c[1];
   int new_conn_socket;

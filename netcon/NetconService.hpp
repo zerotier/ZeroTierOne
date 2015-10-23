@@ -55,6 +55,7 @@ namespace ZeroTier {
     int perceived_fd;
     int their_fd;
     bool pending;
+    bool listening;
 
     PhySocket *rpcSock;
     PhySocket *dataSock;
