@@ -27,7 +27,7 @@ namespace WinUI
             url = "http://" + host + ":" + port;
         }
 
-        public ZeroTierStatus getStatus()
+        public ZeroTierStatus GetStatus()
         {
             var request = WebRequest.Create(url + "/status" + "?auth=" + authtoken) as HttpWebRequest;
             if (request != null)
@@ -46,14 +46,16 @@ namespace WinUI
             }
         }
 
-        public List<ZeroTierNetwork> getNetworks()
+        public List<ZeroTierNetwork> GetNetworks()
         {
             var request = WebRequest.Create(url + "/network" + "?auth=" + authtoken) as HttpWebRequest;
-            if (request != null)
+            if (request == null)
             {
-                request.Method = "GET";
-                request.ContentType = "application/json";
+                return null;
             }
+
+            request.Method = "GET";
+            request.ContentType = "application/json";
 
             var httpResponse = (HttpWebResponse)request.GetResponse();
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
@@ -63,6 +65,64 @@ namespace WinUI
 
                 List<ZeroTierNetwork> networkList = JsonConvert.DeserializeObject<List<ZeroTierNetwork>>(responseText);
                 return networkList;
+            }
+        }
+
+        public void JoinNetwork(string nwid)
+        {
+            var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
+            if (request == null)
+            {
+                return;
+            }
+
+            request.Method = "POST";
+
+            var httpResponse = (HttpWebResponse)request.GetResponse();
+
+            if (httpResponse.StatusCode != HttpStatusCode.OK)
+            {
+                Console.WriteLine("Error sending join network message");
+            }
+        }
+
+        public void LeaveNetwork(string nwid)
+        {
+            var request = WebRequest.Create(url + "/network/" + nwid + "?auth=" + authtoken) as HttpWebRequest;
+            if (request == null)
+            {
+                return;
+            }
+
+            request.Method = "DELETE";
+
+            var httpResponse = (HttpWebResponse)request.GetResponse();
+
+            if (httpResponse.StatusCode != HttpStatusCode.OK)
+            {
+                Console.WriteLine("Error sending leave network message");
+            }
+        }
+
+        public List<ZeroTierPeer> GetPeers()
+        {
+            var request = WebRequest.Create(url + "/peer" + "?auth=" + authtoken) as HttpWebRequest;
+            if (request == null)
+            {
+                return null;
+            }
+
+            request.Method = "GET";
+            request.ContentType = "application/json";
+
+            var httpResponse = (HttpWebResponse)request.GetResponse();
+            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            {
+                var responseText = streamReader.ReadToEnd();
+                Console.WriteLine(responseText);
+
+                List<ZeroTierPeer> peerList = JsonConvert.DeserializeObject<List<ZeroTierPeer>>(responseText);
+                return peerList;
             }
         }
     }
