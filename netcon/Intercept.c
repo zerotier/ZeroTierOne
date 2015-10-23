@@ -103,9 +103,7 @@ void load_symbols(void);
 void set_up_intercept();
 int checkpid();
 
-#define BUF_SZ                    32
 #define SERVICE_CONNECT_ATTEMPTS  30
-#define ERR_OK                    0
 
 ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 

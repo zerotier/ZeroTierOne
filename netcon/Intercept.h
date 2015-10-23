@@ -31,6 +31,8 @@
 
 #include <sys/socket.h>
 
+#define BUF_SZ                  32
+#define ERR_OK                  0
 
 /* Userland RPC codes */
 #define RPC_UNDEFINED			 			0

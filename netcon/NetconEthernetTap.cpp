@@ -53,7 +53,6 @@
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		10
 #define STATUS_TMR_INTERVAL						500 // How often we check connection statuses
 
-
 namespace ZeroTier {
 
 NetconEthernetTap::NetconEthernetTap(
@@ -361,16 +360,16 @@ void NetconEthernetTap::threadMain()
 				that the client has closed their end and we can close ours */
 				for(size_t i = 0; i<tcp_connections.size(); i++) {
 					if(tcp_connections[i]->listening) {
-							char c;
-							if (read(_phy.getDescriptor(tcp_connections[i]->dataSock), &c, 1) < 0) {
-								// Still in listening state
-							}
-							else {
-								// Here we should handle the case there there is incoming data (?)
-								fprintf(stderr, "Listening socketpair closed. Removing RPC connection (%d)\n",
-									_phy.getDescriptor(tcp_connections[i]->dataSock));
-								closeConnection(tcp_connections[i]);
-							}
+						char c;
+						if (read(_phy.getDescriptor(tcp_connections[i]->dataSock), &c, 1) < 0) {
+							// Still in listening state
+						}
+						else {
+							// Here we should handle the case there there is incoming data (?)
+							fprintf(stderr, "Listening socketpair closed. Removing RPC connection (%d)\n",
+								_phy.getDescriptor(tcp_connections[i]->dataSock));
+							closeConnection(tcp_connections[i]);
+						}
 					}
 				}
 			}
@@ -382,13 +381,15 @@ void NetconEthernetTap::threadMain()
 				}
 				if(!associated){
 					// No TCP connections are associated, this is a candidate for removal
-					char c;
-					if(read(_phy.getDescriptor(rpc_sockets[i]),&c,1) < 0) {
+					unsigned char tmpbuf[BUF_SZ];
+					if(read(_phy.getDescriptor(rpc_sockets[i]),&tmpbuf,BUF_SZ) < 0) {
 						closeClient(rpc_sockets[i]);
 					}
 					else {
 							// Handle RPC call, this is rare
-							// phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
+							fprintf(stderr, "run(): RPC read during connection check\n");
+							exit(0);
+							phyOnUnixData(rpc_sockets[i],NULL,&tmpbuf,BUF_SZ);
 					}
 				}
 			}
