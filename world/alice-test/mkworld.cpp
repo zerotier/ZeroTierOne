@@ -133,13 +133,35 @@ int main(int argc,char **argv)
 	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 #endif
 
-	// ALICE TEST
+	// NOTE -- these are temporary test identities -- this is not yet the 'real' network.
+	// (but these are the real nodes)
+
+	// Alice -- global geo-clustered root #1
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("d6ddca6ab5:0:4e761207d8b4200be44f478e3da148c16099110ee71b64586dda118e4022ab63682ce137da8ba817fc7f73aa3163f2e333933e2994c46b4f4119307be8855a72");
-	roots.back().stableEndpoints.push_back(InetAddress("169.57.143.104/9993"));
-	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
+	roots.back().stableEndpoints.push_back(InetAddress("188.166.94.177/9993")); // Amsterdam IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2a03:b0c0:2:d0::7d:1/9993")); // Amsterdam IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("159.203.97.171/9993")); // New York IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:800:a1::54:6001/9993 ")); // New York IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("169.57.143.104/9993")); // Sao Paolo IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2607:f0d0:1d01:57::2/9993")); // Sao Paolo IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("104.238.182.83/9993")); // San Francisco IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:ac00:809:5400:ff:fe15:f3f4/9993")); // San Francisco IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("128.199.182.9/9993")); // Singapore IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2400:6180:0:d0::1b:1001/9993")); // Singapore IPv6
 
-	std::sort(roots.begin(),roots.end());
+	// Bob -- global geo-clustered root #2
+	roots.back().identity = Identity("16ebbd6c5d:0:47d39bca9d0a5cf70148e39f6c45199e17e0e32e4e46cac01ae5bcb21224137b097f40bdd982a921c3aabdcb9ada8b4f2bb0593753bfdb21cf12eac28c8d9042");
+	roots.back().stableEndpoints.push_back(InetAddress("45.33.4.67/9993")); // Dallas IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2600:3c00::f03c:91ff:fe67:b704/9993")); // Dallas IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("139.162.157.243/9993")); // Frankfurt (Germany) IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2a01:7e01::f03c:91ff:fe67:3ffd/9993")); // Frankfurt (Germany) IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("45.32.246.179/9993")); // Sydney IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:5800:8bf8:5400:ff:fe15:b39a/9993")); // Sydney IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("45.32.248.87/9993")); // Tokyo IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:7000:9bc9:5400:00ff:fe15:c4f5/9993")); // Tokyo IPv6
+	roots.back().stableEndpoints.push_back(InetAddress("159.203.2.154/9993")); // Toronto IPv4
+	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:cad:d0::26:7001/9993")); // Toronto IPv6
 
 	const uint64_t id = ZT_WORLD_ID_EARTH;
 	const uint64_t ts = OSUtils::now();
