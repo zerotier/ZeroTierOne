@@ -10,4 +10,4 @@ fi
 
 cd cluster-geo
 
-exec node cluster-geo.js
+exec node --harmony cluster-geo.js
