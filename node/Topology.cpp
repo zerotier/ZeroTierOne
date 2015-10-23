@@ -358,16 +358,18 @@ void Topology::_setWorld(const World &newWorld)
 	_rootAddresses.clear();
 	_rootPeers.clear();
 	for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
-		if (r->identity == RR->identity)
-			_amRoot = true;
 		_rootAddresses.push_back(r->identity.address());
-		SharedPtr<Peer> *rp = _peers.get(r->identity.address());
-		if (rp) {
-			_rootPeers.push_back(*rp);
-		} else if (r->identity.address() != RR->identity.address()) {
-			SharedPtr<Peer> newrp(new Peer(RR->identity,r->identity));
-			_peers.set(r->identity.address(),newrp);
-			_rootPeers.push_back(newrp);
+		if (r->identity.address() == RR->identity.address()) {
+			_amRoot = true;
+		} else {
+			SharedPtr<Peer> *rp = _peers.get(r->identity.address());
+			if (rp) {
+				_rootPeers.push_back(*rp);
+			} else {
+				SharedPtr<Peer> newrp(new Peer(RR->identity,r->identity));
+				_peers.set(r->identity.address(),newrp);
+				_rootPeers.push_back(newrp);
+			}
 		}
 	}
 }

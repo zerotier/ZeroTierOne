@@ -225,6 +225,11 @@ public:
 		return _peers.entries();
 	}
 
+	/**
+	 * @return True if I am a root server in the current World
+	 */
+	inline bool amRoot() const throw() { return _amRoot; }
+
 private:
 	Identity _getIdentity(const Address &zta);
 	void _setWorld(const World &newWorld);
