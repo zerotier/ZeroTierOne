@@ -449,11 +449,12 @@ void Cluster::replicateHavePeer(const Identity &peerId)
 
 void Cluster::replicateMulticastLike(uint64_t nwid,const Address &peerAddress,const MulticastGroup &group)
 {
-	Buffer<4096> buf;
+	Buffer<2048> buf;
 	buf.append((uint64_t)nwid);
 	peerAddress.appendTo(buf);
 	group.mac().appendTo(buf);
 	buf.append((uint32_t)group.adi());
+	TRACE("replicating %s MULTICAST_LIKE %.16llx/%s/%u to all members",peerAddress.toString().c_str(),nwid,group.mac().toString().c_str(),(unsigned int)group.adi());
 	{
 		Mutex::Lock _l(_memberIds_m);
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
@@ -465,8 +466,9 @@ void Cluster::replicateMulticastLike(uint64_t nwid,const Address &peerAddress,co
 
 void Cluster::replicateCertificateOfNetworkMembership(const CertificateOfMembership &com)
 {
-	Buffer<4096> buf;
+	Buffer<2048> buf;
 	com.serialize(buf);
+	TRACE("replicating %s COM for %.16llx to all members",com.issuedTo().toString().c_str(),com.networkId());
 	{
 		Mutex::Lock _l(_memberIds_m);
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
