@@ -211,8 +211,15 @@ public:
 			}
 		}
 
-		// If this is a network preferred relay, also always ping and if a stable endpoint is specified use that if not alive
 		if (!upstream) {
+			// If I am a root server, only ping other root servers -- roots don't ping "down"
+			// since that would just be a waste of bandwidth and could potentially cause route
+			// flapping in Cluster mode.
+			if (RR->topology->amRoot())
+				return;
+
+			// Check for network preferred relays, also considered 'upstream' and thus always
+			// pinged to keep links up. If they have stable addresses we will try them there.
 			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
 				if (r->first == p->address()) {
 					if (r->second.ss_family == AF_INET)
@@ -229,18 +236,22 @@ public:
 			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
 			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
 			bool needToContactIndirect = true;
-			if (!p->doPingAndKeepalive(RR,_now,AF_INET)) {
+			if (p->doPingAndKeepalive(RR,_now,AF_INET)) {
+				needToContactIndirect = false;
+			} else {
 				if (stableEndpoint4) {
 					needToContactIndirect = false;
 					p->attemptToContactAt(RR,InetAddress(),stableEndpoint4,_now);
 				}
-			} else needToContactIndirect = false;
-			if (!p->doPingAndKeepalive(RR,_now,AF_INET6)) {
+			}
+			if (p->doPingAndKeepalive(RR,_now,AF_INET6)) {
+				needToContactIndirect = false;
+			} else {
 				if (stableEndpoint6) {
 					needToContactIndirect = false;
 					p->attemptToContactAt(RR,InetAddress(),stableEndpoint6,_now);
 				}
-			} else needToContactIndirect = false;
+			}
 
 			if (needToContactIndirect) {
 				// If this is an upstream and we have no stable endpoint for either IPv4 or IPv6,
