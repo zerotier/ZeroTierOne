@@ -72,11 +72,14 @@ ClusterGeoIpService::~ClusterGeoIpService()
 
 bool ClusterGeoIpService::locate(const InetAddress &ip,int &x,int &y,int &z)
 {
+	InetAddress ipNoPort(ip);
+	ipNoPort.setPort(0); // we index cache by IP only
 	const uint64_t now = OSUtils::now();
+
 	bool r = false;
 	{
 		Mutex::Lock _l(_cache_m);
-		std::map< InetAddress,_CE >::iterator c(_cache.find(ip));
+		std::map< InetAddress,_CE >::iterator c(_cache.find(ipNoPort));
 		if (c != _cache.end()) {
 			x = c->second.x;
 			y = c->second.y;
@@ -90,8 +93,9 @@ bool ClusterGeoIpService::locate(const InetAddress &ip,int &x,int &y,int &z)
 	{
 		Mutex::Lock _l(_sOutputLock);
 		if (_sOutputFd >= 0) {
-			std::string ips(ip.toIpString());
+			std::string ips(ipNoPort.toIpString());
 			ips.push_back('\n');
+			//fprintf(stderr,"ClusterGeoIpService: << %s",ips.c_str());
 			::write(_sOutputFd,ips.data(),ips.length());
 		}
 	}
@@ -153,6 +157,7 @@ void ClusterGeoIpService::threadMain()
 				if ((buf[i] == '\n')||(buf[i] == '\r')) {
 					linebuf[lineptr] = (char)0;
 					if (lineptr > 0) {
+						//fprintf(stderr,"ClusterGeoIpService: >> %s\n",linebuf);
 						try {
 							std::vector<std::string> result(Utils::split(linebuf,",","",""));
 							if ((result.size() >= 7)&&(result[1] == "1")) {
@@ -163,6 +168,7 @@ void ClusterGeoIpService::threadMain()
 									ce.x = (int)::strtol(result[4].c_str(),(char **)0,10);
 									ce.y = (int)::strtol(result[5].c_str(),(char **)0,10);
 									ce.z = (int)::strtol(result[6].c_str(),(char **)0,10);
+									//fprintf(stderr,"ClusterGeoIpService: %s is at %d,%d,%d\n",rip.toIpString().c_str(),ce.x,ce.y,ce.z);
 									{
 										Mutex::Lock _l2(_cache_m);
 										_cache[rip] = ce;

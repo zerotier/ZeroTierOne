@@ -145,7 +145,7 @@ public:
 		STATE_MESSAGE_RELAY = 5,
 
 		/**
-		 * Request to send a packet to a locally-known peer:
+		 * Request that a cluster member send a packet to a locally-known peer:
 		 *   <[5] ZeroTier address of recipient>
 		 *   <[1] packet verb>
 		 *   <[2] length of packet payload>

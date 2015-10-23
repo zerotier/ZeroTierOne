@@ -202,7 +202,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							}
 							m.lastReceivedAliveAnnouncement = RR->node->now();
 #ifdef ZT_TRACE
-							TRACE("[%u] I'm alive! peers may be redirected to: %s",(unsigned int)fromMemberId,addrs.c_str());
+							TRACE("[%u] I'm alive! peers close to %d,%d,%d can be redirected to: %s",(unsigned int)fromMemberId,m.x,m.y,m.z,addrs.c_str());
 #endif
 						}	break;
 
@@ -406,10 +406,12 @@ bool Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPee
 			_send(canHasPeer,STATE_MESSAGE_RELAY,buf.data(),buf.size());
 		}
 
+		TRACE("sendViaCluster(): relaying %u bytes from %s to %s by way of %u",len,fromPeerAddress.toString().c_str(),toPeerAddress.toString().c_str(),(unsigned int)canHasPeer);
 		return true;
+	} else {
+		TRACE("sendViaCluster(): unable to relay %u bytes from %s to %s since no cluster members seem to have it!",len,fromPeerAddress.toString().c_str(),toPeerAddress.toString().c_str());
+		return false;
 	}
-
-	return false;
 }
 
 void Cluster::replicateHavePeer(const Identity &peerId)
@@ -564,11 +566,12 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 {
 	if (!peerPhysicalAddress) // sanity check
 		return false;
+
 	if (_addressToLocationFunction) {
 		// Pick based on location if it can be determined
 		int px = 0,py = 0,pz = 0;
 		if (_addressToLocationFunction(_addressToLocationFunctionArg,reinterpret_cast<const struct sockaddr_storage *>(&peerPhysicalAddress),&px,&py,&pz) == 0) {
-			// No geo-info so no change
+			TRACE("no geolocation available for %s",peerPhysicalAddress.toIpString().c_str());
 			return false;
 		}
 
@@ -578,6 +581,7 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 		const double currentDistance = _dist3d(_x,_y,_z,px,py,pz);
 		double bestDistance = (offload ? 2147483648.0 : currentDistance);
 		unsigned int bestMember = _id;
+		TRACE("%s is at %d,%d,%d -- looking for anyone closer than %d,%d,%d (%fkm)",peerPhysicalAddress.toString().c_str(),px,py,pz,_x,_y,_z,bestDistance);
 		{
 			Mutex::Lock _l(_memberIds_m);
 			for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
@@ -588,6 +592,7 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 				if ( ((now - m.lastReceivedAliveAnnouncement) < ZT_CLUSTER_TIMEOUT) && ((m.x != 0)||(m.y != 0)||(m.z != 0)) && (m.zeroTierPhysicalEndpoints.size() > 0) ) {
 					double mdist = _dist3d(m.x,m.y,m.z,px,py,pz);
 					if (mdist < bestDistance) {
+						bestDistance = mdist;
 						bestMember = *mid;
 						best = m.zeroTierPhysicalEndpoints;
 					}
@@ -596,7 +601,7 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 		}
 
 		if (best.size() > 0) {
-			TRACE("peer %s is at [%d,%d,%d], distance to us is %f, sending to %u instead for better distance %f",peerAddress.toString().c_str(),px,py,pz,currentDistance,bestMember,bestDistance);
+			TRACE("%s seems closer to %u at %fkm, suggesting redirect...",peerAddress.toString().c_str(),bestMember,bestDistance);
 
 			/* if (peer->remoteVersionProtocol() >= 5) {
 				// If it's a newer peer send VERB_PUSH_DIRECT_PATHS which is more idiomatic

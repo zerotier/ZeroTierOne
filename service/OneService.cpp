@@ -1473,6 +1473,7 @@ static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct soc
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
 
+#ifdef ZT_ENABLE_CLUSTER
 static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len)
 {
 	OneServiceImpl *const impl = reinterpret_cast<OneServiceImpl *>(uptr);
@@ -1485,6 +1486,7 @@ static int SclusterGeoIpFunction(void *uptr,const struct sockaddr_storage *addr,
 	OneServiceImpl *const impl = reinterpret_cast<OneServiceImpl *>(uptr);
 	return (int)(impl->_clusterGeoIpService->locate(*(reinterpret_cast<const InetAddress *>(addr)),*x,*y,*z));
 }
+#endif
 
 static void StapFrameHandler(void *uptr,uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->tapFrameHandler(nwid,from,to,etherType,vlanId,data,len); }
