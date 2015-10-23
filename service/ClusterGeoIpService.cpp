@@ -148,7 +148,7 @@ void ClusterGeoIpService::threadMain()
 				else break;
 			}
 			for(long i=0;i<n;++i) {
-				if (lineptr > sizeof(linebuf))
+				if (lineptr > (long)sizeof(linebuf))
 					lineptr = 0;
 				if ((buf[i] == '\n')||(buf[i] == '\r')) {
 					linebuf[lineptr] = (char)0;
