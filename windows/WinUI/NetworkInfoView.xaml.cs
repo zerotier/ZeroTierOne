@@ -27,35 +27,35 @@ namespace WinUI
             InitializeComponent();
             this.network = network;
 
-            updateNetworkData();
+            UpdateNetworkData();
         }
 
-        private void updateNetworkData()
+        private void UpdateNetworkData()
         {
-            this.networkId.Text = network.nwid;
-            this.networkName.Text = network.name;
-            this.networkStatus.Text = network.status;
-            this.networkType.Text = network.type;
-            this.macAddress.Text = network.mac;
-            this.mtu.Text = network.mtu.ToString();
-            this.broadcastEnabled.Text = (network.broadcastEnabled ? "ENABLED" : "DISABLED");
-            this.bridgingEnabled.Text = (network.bridge ? "ENABLED" : "DISABLED");
-            this.deviceName.Text = network.portDeviceName;
+            this.networkId.Text = network.NetworkId;
+            this.networkName.Text = network.NetworkName;
+            this.networkStatus.Text = network.NetworkStatus;
+            this.networkType.Text = network.NetworkType;
+            this.macAddress.Text = network.MacAddress;
+            this.mtu.Text = network.MTU.ToString();
+            this.broadcastEnabled.Text = (network.BroadcastEnabled ? "ENABLED" : "DISABLED");
+            this.bridgingEnabled.Text = (network.Bridge ? "ENABLED" : "DISABLED");
+            this.deviceName.Text = network.DeviceName;
 
             string iplist = "";
-            for (int i = 0; i < network.assignedAddresses.Length; ++i)
+            for (int i = 0; i < network.AssignedAddresses.Length; ++i)
             {
-                iplist += network.assignedAddresses[i];
-                if (i < (network.assignedAddresses.Length - 1))
+                iplist += network.AssignedAddresses[i];
+                if (i < (network.AssignedAddresses.Length - 1))
                     iplist += "\n";
             }
 
             this.managedIps.Text = iplist;
         }
 
-        public bool hasNetwork(ZeroTierNetwork network)
+        public bool HasNetwork(ZeroTierNetwork network)
         {
-            if (this.network.nwid.Equals(network.nwid))
+            if (this.network.NetworkId.Equals(network.NetworkId))
                 return true;
 
             return false;

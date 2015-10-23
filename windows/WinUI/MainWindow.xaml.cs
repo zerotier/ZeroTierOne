@@ -32,18 +32,30 @@ namespace WinUI
 
         private void updateStatus()
         {
-            var status = handler.getStatus();
+            var status = handler.GetStatus();
 
-            this.networkId.Content = status.address;
-            this.versionString.Content = status.version;
-            this.onlineStatus.Content = (status.online ? "ONLINE" : "OFFLINE");
+            this.networkId.Content = status.Address;
+            this.versionString.Content = status.Version;
+            this.onlineStatus.Content = (status.Online ? "ONLINE" : "OFFLINE");
         }
 
         private void updateNetworks()
         {
-            var networks = handler.getNetworks();
+            var networks = handler.GetNetworks();
 
             networksPage.setNetworks(networks);
         }
+
+        private void joinButton_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        private void joinNetworkID_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+        }
+
+
     }
 }

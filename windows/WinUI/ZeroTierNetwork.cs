@@ -3,24 +3,52 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace WinUI
 {
     public class ZeroTierNetwork
     {
-        public string nwid;
-        public string mac;
-        public string name;
-        public string status;
-        public string type;
-        public int mtu;
-        public bool dhcp;
-        public bool bridge;
-        public bool broadcastEnabled;
-        public int portError;
-        public int netconfRevision;
-        public string[] multicastSubscriptions;
-        public string[] assignedAddresses;
-        public string portDeviceName;
+        [JsonProperty("nwid")]
+        public string NetworkId { get; set; }
+
+        [JsonProperty("mac")]
+        public string MacAddress { get; set; }
+
+        [JsonProperty("name")]
+        public string NetworkName { get; set; }
+
+        [JsonProperty("status")]
+        public string NetworkStatus { get; set; }
+
+        [JsonProperty("type")]
+        public string NetworkType { get; set; }
+
+        [JsonProperty("mtu")]
+        public int MTU { get; set; }
+
+        [JsonProperty("dhcp")]
+        public bool DHCP { get; set; }
+
+        [JsonProperty("bridge")]
+        public bool Bridge { get; set ; }
+
+        [JsonProperty("broadcastEnabled")]
+        public bool BroadcastEnabled { get ; set; }
+
+        [JsonProperty("portError")]
+        public int PortError { get; set; }
+
+        [JsonProperty("netconfRevision")]
+        public int NetconfRevision { get; set; }
+
+        [JsonProperty("multicastSubscriptions")]
+        public string[] MulticastSubscriptions { get; set; }
+
+        [JsonProperty("assignedAddresses")]
+        public string[] AssignedAddresses { get; set; }
+
+        [JsonProperty("portDeviceName")]
+        public string DeviceName { get; set; }
     }
 }

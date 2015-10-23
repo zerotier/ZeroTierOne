@@ -7,19 +7,16 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    public class ZeroTierStatus
+    public class ZeroTierPeer
     {
         [JsonProperty("address")]
         public string Address { get; set; }
 
-        [JsonProperty("publicIdentity")]
-        public string PublicIdentity { get; set; }
+        [JsonProperty("lastUnicastFrame")]
+        public int LastUnicastFrame { get; set; }
 
-        [JsonProperty("online")]
-        public bool Online { get; set; }
-
-        [JsonProperty("tcpFallbackActive")]
-        public bool TcpFallbackActive { get; set; }
+        [JsonProperty("lastMulticastFrame")]
+        public int LastMulticastFrame { get; set; }
 
         [JsonProperty("versionMajor")]
         public int VersionMajor { get; set; }
@@ -28,12 +25,18 @@ namespace WinUI
         public int VersionMinor { get; set; }
 
         [JsonProperty("versionRev")]
-        public int VersionRev { get; set; }
+        public int Versionrev { get; set; }
 
         [JsonProperty("version")]
         public string Version { get; set; }
 
-        [JsonProperty("clock")]
-        public UInt64 Clock { get; set; }
+        [JsonProperty("latency")]
+        public string Latency { get; set; }
+
+        [JsonProperty("role")]
+        public string Role { get; set; }
+
+        [JsonProperty("paths")]
+        public List<ZeroTierPeerPhysicalPath> Paths { get; set; }
     }
 }

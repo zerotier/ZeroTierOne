@@ -100,6 +100,8 @@
     <Compile Include="NetworksPage.xaml.cs">
       <DependentUpon>NetworksPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="ZeroTierPeerPhysicalPath.cs" />
+    <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
     <Compile Include="ZeroTierStatus.cs" />
     <Page Include="MainWindow.xaml">
