@@ -193,6 +193,11 @@ public:
 	void clean(uint64_t now);
 
 	/**
+	 * @return Number of 'alive' peers
+	 */
+	unsigned long countAlive() const;
+
+	/**
 	 * Apply a function or function object to all peers
 	 *
 	 * Note: explicitly template this by reference if you want the object

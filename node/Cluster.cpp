@@ -638,6 +638,62 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 	}
 }
 
+void Cluster::status(ZT_ClusterStatus &status) const
+{
+	const uint64_t now = RR->node->now();
+	memset(&status,0,sizeof(ZT_ClusterStatus));
+	ZT_ClusterMemberStatus *ms[ZT_CLUSTER_MAX_MEMBERS];
+	memset(ms,0,sizeof(ms));
+
+	status.myId = _id;
+
+	ms[_id] = &(status.member[status.clusterSize++]);
+	ms[_id]->id = _id;
+	ms[_id]->alive = 1;
+	ms[_id]->x = _x;
+	ms[_id]->y = _y;
+	ms[_id]->z = _z;
+	ms[_id]->peers = RR->topology->countAlive();
+	for(std::vector<InetAddress>::const_iterator ep(_zeroTierPhysicalEndpoints.begin());ep!=_zeroTierPhysicalEndpoints.end();++ep) {
+		if (ms[_id]->numZeroTierPhysicalEndpoints >= ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES) // sanity check
+			break;
+		memcpy(&(ms[_id]->zeroTierPhysicalEndpoints[ms[_id]->numZeroTierPhysicalEndpoints++]),&(*ep),sizeof(struct sockaddr_storage));
+	}
+
+	{
+		Mutex::Lock _l1(_memberIds_m);
+		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+			if (status.clusterSize >= ZT_CLUSTER_MAX_MEMBERS) // sanity check
+				break;
+			ZT_ClusterMemberStatus *s = ms[*mid] = &(status.member[status.clusterSize++]);
+			_Member &m = _members[*mid];
+			Mutex::Lock ml(m.lock);
+
+			s->id = *mid;
+			s->msSinceLastHeartbeat = (unsigned int)std::min((uint64_t)(~((unsigned int)0)),(now - m.lastReceivedAliveAnnouncement));
+			s->alive = (s->msSinceLastHeartbeat < ZT_CLUSTER_TIMEOUT) ? 1 : 0;
+			s->x = m.x;
+			s->y = m.y;
+			s->z = m.z;
+			s->load = m.load;
+			for(std::vector<InetAddress>::const_iterator ep(m.zeroTierPhysicalEndpoints.begin());ep!=m.zeroTierPhysicalEndpoints.end();++ep) {
+				if (s->numZeroTierPhysicalEndpoints >= ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES) // sanity check
+					break;
+				memcpy(&(s->zeroTierPhysicalEndpoints[s->numZeroTierPhysicalEndpoints++]),&(*ep),sizeof(struct sockaddr_storage));
+			}
+		}
+	}
+
+	{
+		Mutex::Lock _l2(_peerAffinities_m);
+		for(std::vector<_PeerAffinity>::const_iterator pi(_peerAffinities.begin());pi!=_peerAffinities.end();++pi) {
+			unsigned int mid = pi->clusterMemberId();
+			if ((ms[mid])&&(mid != _id)&&((now - pi->timestamp) < ZT_PEER_ACTIVITY_TIMEOUT))
+				++ms[mid]->peers;
+		}
+	}
+}
+
 void Cluster::_send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len)
 {
 	if ((len + 3) > (ZT_CLUSTER_MAX_MESSAGE_LENGTH - (24 + 2 + 2))) // sanity check

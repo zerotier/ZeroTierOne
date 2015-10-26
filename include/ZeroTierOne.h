@@ -134,6 +134,11 @@ extern "C" {
 #define ZT_CLUSTER_MAX_MEMBERS 128
 
 /**
+ * Maximum number of physical ZeroTier addresses a cluster member can report
+ */
+#define ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES 16
+
+/**
  * Maximum allowed cluster message length in bytes
  */
 #define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1444 * 6)
@@ -878,6 +883,78 @@ typedef struct {
 	 */
 	unsigned int nextHopCount;
 } ZT_CircuitTestReport;
+
+/**
+ * A cluster member's status
+ */
+typedef struct {
+	/**
+	 * This cluster member's ID (from 0 to 1-ZT_CLUSTER_MAX_MEMBERS)
+	 */
+	unsigned int id;
+
+	/**
+	 * Number of milliseconds since last 'alive' heartbeat message received via cluster backplane address
+	 */
+	unsigned int msSinceLastHeartbeat;
+
+	/**
+	 * Non-zero if cluster member is alive
+	 */
+	int alive;
+
+	/**
+	 * X, Y, and Z coordinates of this member (if specified, otherwise zero)
+	 *
+	 * What these mean depends on the location scheme being used for
+	 * location-aware clustering. At present this is GeoIP and these
+	 * will be the X, Y, and Z coordinates of the location on a spherical
+	 * approximation of Earth where Earth's core is the origin (in km).
+	 * They don't have to be perfect and need only be comparable with others
+	 * to find shortest path via the standard vector distance formula.
+	 */
+	int x,y,z;
+
+	/**
+	 * Cluster member's last reported load
+	 */
+	uint64_t load;
+
+	/**
+	 * Number of peers this cluster member "has"
+	 */
+	uint64_t peers;
+
+	/**
+	 * Physical ZeroTier endpoints for this member (where peers are sent when directed here)
+	 */
+	struct sockaddr_storage zeroTierPhysicalEndpoints[ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES];
+
+	/**
+	 * Number of physical ZeroTier endpoints this member is announcing
+	 */
+	unsigned int numZeroTierPhysicalEndpoints;
+} ZT_ClusterMemberStatus;
+
+/**
+ * ZeroTier cluster status
+ */
+typedef struct {
+	/**
+	 * My cluster member ID (a record for 'self' is included in member[])
+	 */
+	unsigned int myId;
+
+	/**
+	 * Number of cluster members
+	 */
+	unsigned int clusterSize;
+
+	/**
+	 * Cluster member statuses
+	 */
+	ZT_ClusterMemberStatus member[ZT_CLUSTER_MAX_MEMBERS];
+} ZT_ClusterStatus;
 
 /**
  * An instance of a ZeroTier One node (opaque)

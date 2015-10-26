@@ -332,6 +332,21 @@ void Topology::clean(uint64_t now)
 	}
 }
 
+unsigned long Topology::countAlive() const
+{
+	const uint64_t now = RR->node->now();
+	unsigned long cnt = 0;
+	Mutex::Lock _l(_lock);
+	Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
+	Address *a = (Address *)0;
+	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+	while (i.next(a,p)) {
+		if ((*p)->alive(now))
+			++cnt;
+	}
+	return cnt;
+}
+
 Identity Topology::_getIdentity(const Address &zta)
 {
 	char p[128];

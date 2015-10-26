@@ -254,6 +254,13 @@ public:
 	 */
 	bool redirectPeer(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
 
+	/**
+	 * Fill out ZT_ClusterStatus structure (from core API)
+	 *
+	 * @param status Reference to structure to hold result (anything there is replaced)
+	 */
+	void status(ZT_ClusterStatus &status) const;
+
 private:
 	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);
 	void _flush(uint16_t memberId);
