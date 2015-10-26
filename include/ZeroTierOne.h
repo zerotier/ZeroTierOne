@@ -953,7 +953,7 @@ typedef struct {
 	/**
 	 * Cluster member statuses
 	 */
-	ZT_ClusterMemberStatus member[ZT_CLUSTER_MAX_MEMBERS];
+	ZT_ClusterMemberStatus members[ZT_CLUSTER_MAX_MEMBERS];
 } ZT_ClusterStatus;
 
 /**

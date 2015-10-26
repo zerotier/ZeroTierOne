@@ -354,8 +354,36 @@ unsigned int ControlPlane::handleRequest(
 
 			if (ps[0] == "status") {
 				responseContentType = "application/json";
+
 				ZT_NodeStatus status;
 				_node->status(&status);
+
+				std::string clusterJson;
+#ifdef ZT_ENABLE_CLUSTER
+				{
+					ZT_ClusterStatus cs;
+					_node->clusterStatus(&cs);
+
+					char t[4096];
+					Utils::snprintf(t,sizeof(t),"{\n\t\t\"myId\": %u,\n\t\t\"clusterSize\": %u,\n\t\t\"members: [\n",cs.myId,cs.clusterSize);
+					clusterJson.append(t);
+					for(unsigned int i=0;i<cs.clusterSize;++i) {
+						Utils::snprintf(t,sizeof(t),"\t\t\t{\n\t\t\t\t\"id\": %u,\n\t\t\t\t\"msSinceLastHeartbeat\": %u,\n\t\t\t\t\"alive\": %s,\n\t\t\t\t\"x\": %d,\n\t\t\t\t\"y\": %d,\n\t\t\t\t\"z\": %d,\n\t\t\t\t\"load\": %llu\n\t\t\t\t\"peers\": %llu\n\t\t\t}%s",
+							cs.members[i].id,
+							cs.members[i].msSinceLastHeartbeat,
+							(cs.members[i].alive != 0) ? "true" : "false",
+							cs.members[i].x,
+							cs.members[i].y,
+							cs.members[i].z,
+							cs.members[i].load,
+							cs.members[i].peers,
+							(i == (cs.clusterSize - 1)) ? "," : "");
+						clusterJson.append(t);
+					}
+					clusterJson.append(" ]\n\t\t}");
+				}
+#endif
+
 				Utils::snprintf(json,sizeof(json),
 					"{\n"
 					"\t\"address\": \"%.10llx\",\n"
@@ -368,7 +396,8 @@ unsigned int ControlPlane::handleRequest(
 					"\t\"versionMinor\": %d,\n"
 					"\t\"versionRev\": %d,\n"
 					"\t\"version\": \"%d.%d.%d\",\n"
-					"\t\"clock\": %llu\n"
+					"\t\"clock\": %llu,\n"
+					"\t\"cluster\": %s\n"
 					"}\n",
 					status.address,
 					status.publicIdentity,
@@ -380,7 +409,8 @@ unsigned int ControlPlane::handleRequest(
 					ZEROTIER_ONE_VERSION_MINOR,
 					ZEROTIER_ONE_VERSION_REVISION,
 					ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,
-					(unsigned long long)OSUtils::now());
+					(unsigned long long)OSUtils::now(),
+					((clusterJson.length() > 0) ? clusterJson.c_str() : "null"));
 				responseBody = json;
 				scode = 200;
 			} else if (ps[0] == "config") {

@@ -647,7 +647,7 @@ void Cluster::status(ZT_ClusterStatus &status) const
 
 	status.myId = _id;
 
-	ms[_id] = &(status.member[status.clusterSize++]);
+	ms[_id] = &(status.members[status.clusterSize++]);
 	ms[_id]->id = _id;
 	ms[_id]->alive = 1;
 	ms[_id]->x = _x;
@@ -665,7 +665,7 @@ void Cluster::status(ZT_ClusterStatus &status) const
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
 			if (status.clusterSize >= ZT_CLUSTER_MAX_MEMBERS) // sanity check
 				break;
-			ZT_ClusterMemberStatus *s = ms[*mid] = &(status.member[status.clusterSize++]);
+			ZT_ClusterMemberStatus *s = ms[*mid] = &(status.members[status.clusterSize++]);
 			_Member &m = _members[*mid];
 			Mutex::Lock ml(m.lock);
 
