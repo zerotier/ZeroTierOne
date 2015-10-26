@@ -364,23 +364,25 @@ unsigned int ControlPlane::handleRequest(
 					ZT_ClusterStatus cs;
 					_node->clusterStatus(&cs);
 
-					char t[4096];
-					Utils::snprintf(t,sizeof(t),"{\n\t\t\"myId\": %u,\n\t\t\"clusterSize\": %u,\n\t\t\"members: [\n",cs.myId,cs.clusterSize);
-					clusterJson.append(t);
-					for(unsigned int i=0;i<cs.clusterSize;++i) {
-						Utils::snprintf(t,sizeof(t),"\t\t\t{\n\t\t\t\t\"id\": %u,\n\t\t\t\t\"msSinceLastHeartbeat\": %u,\n\t\t\t\t\"alive\": %s,\n\t\t\t\t\"x\": %d,\n\t\t\t\t\"y\": %d,\n\t\t\t\t\"z\": %d,\n\t\t\t\t\"load\": %llu\n\t\t\t\t\"peers\": %llu\n\t\t\t}%s",
-							cs.members[i].id,
-							cs.members[i].msSinceLastHeartbeat,
-							(cs.members[i].alive != 0) ? "true" : "false",
-							cs.members[i].x,
-							cs.members[i].y,
-							cs.members[i].z,
-							cs.members[i].load,
-							cs.members[i].peers,
-							(i == (cs.clusterSize - 1)) ? "," : "");
+					if (cs.clusterSize >= 1) {
+						char t[4096];
+						Utils::snprintf(t,sizeof(t),"{\n\t\t\"myId\": %u,\n\t\t\"clusterSize\": %u,\n\t\t\"members: [\n",cs.myId,cs.clusterSize);
 						clusterJson.append(t);
+						for(unsigned int i=0;i<cs.clusterSize;++i) {
+							Utils::snprintf(t,sizeof(t),"\t\t\t{\n\t\t\t\t\"id\": %u,\n\t\t\t\t\"msSinceLastHeartbeat\": %u,\n\t\t\t\t\"alive\": %s,\n\t\t\t\t\"x\": %d,\n\t\t\t\t\"y\": %d,\n\t\t\t\t\"z\": %d,\n\t\t\t\t\"load\": %llu\n\t\t\t\t\"peers\": %llu\n\t\t\t}%s",
+								cs.members[i].id,
+								cs.members[i].msSinceLastHeartbeat,
+								(cs.members[i].alive != 0) ? "true" : "false",
+								cs.members[i].x,
+								cs.members[i].y,
+								cs.members[i].z,
+								cs.members[i].load,
+								cs.members[i].peers,
+								(i == (cs.clusterSize - 1)) ? "," : "");
+							clusterJson.append(t);
+						}
+						clusterJson.append(" ]\n\t\t}");
 					}
-					clusterJson.append(" ]\n\t\t}");
 				}
 #endif
 
