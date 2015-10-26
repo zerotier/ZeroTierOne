@@ -151,6 +151,7 @@ int main(int argc,char **argv)
 	roots.back().stableEndpoints.push_back(InetAddress("2400:6180:0:d0::1b:1001/9993")); // Singapore IPv6
 
 	// Bob -- global geo-clustered root #2
+	roots.push_back(World::Root());
 	roots.back().identity = Identity("16ebbd6c5d:0:47d39bca9d0a5cf70148e39f6c45199e17e0e32e4e46cac01ae5bcb21224137b097f40bdd982a921c3aabdcb9ada8b4f2bb0593753bfdb21cf12eac28c8d9042");
 	roots.back().stableEndpoints.push_back(InetAddress("45.33.4.67/9993")); // Dallas IPv4
 	roots.back().stableEndpoints.push_back(InetAddress("2600:3c00::f03c:91ff:fe67:b704/9993")); // Dallas IPv6

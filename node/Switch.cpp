@@ -295,6 +295,8 @@ void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
 		return;
 	}
 
+	//TRACE(">> %s to %s (%u bytes, encrypt==%d, nwid==%.16llx)",Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(int)encrypt,nwid);
+
 	if (!_trySend(packet,encrypt,nwid)) {
 		Mutex::Lock _l(_txQueue_m);
 		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt,nwid));
@@ -636,6 +638,11 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 
 	Address source(packet->source());
 	Address destination(packet->destination());
+
+	// Catch this and toss it -- it would never work, but it could happen if we somehow
+	// mistakenly guessed an address we're bound to as a destination for another peer.
+	if (source == RR->identity.address())
+		return;
 
 	//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
