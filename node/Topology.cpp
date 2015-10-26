@@ -202,18 +202,16 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 		 * circumnavigate the globe rather than bouncing between just two. */
 
 		if (_rootAddresses.size() > 1) { // gotta be one other than me for this to work
-			std::vector<Address>::const_iterator sna(std::find(_rootAddresses.begin(),_rootAddresses.end(),RR->identity.address()));
-			if (sna != _rootAddresses.end()) { // sanity check -- _amRoot should've been false in this case
-				for(;;) {
-					if (++sna == _rootAddresses.end())
-						sna = _rootAddresses.begin(); // wrap around at end
-					if (*sna != RR->identity.address()) { // pick one other than us -- starting from me+1 in sorted set order
-						SharedPtr<Peer> *p = _peers.get(*sna);
-						if ((p)&&((*p)->hasActiveDirectPath(now))) {
-							bestRoot = *p;
+			for(unsigned long p=0;p<_rootAddresses.size();++p) {
+				if (_rootAddresses[p] == RR->identity.address()) {
+					for(unsigned long q=1;q<_rootAddresses.size();++q) {
+						SharedPtr<Peer> *nextsn = _peers.get(_rootAddresses[(p + q) % _rootAddresses.size()]);
+						if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now))) {
+							bestRoot = *nextsn;
 							break;
 						}
 					}
+					break;
 				}
 			}
 		}

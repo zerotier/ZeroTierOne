@@ -265,7 +265,7 @@ unsigned int ControlPlane::handleRequest(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	char json[1024];
+	char json[8194];
 	unsigned int scode = 404;
 	std::vector<std::string> ps(Utils::split(path.c_str(),"/","",""));
 	std::map<std::string,std::string> urlArgs;
@@ -365,11 +365,12 @@ unsigned int ControlPlane::handleRequest(
 					_node->clusterStatus(&cs);
 
 					if (cs.clusterSize >= 1) {
-						char t[4096];
-						Utils::snprintf(t,sizeof(t),"{\n\t\t\"myId\": %u,\n\t\t\"clusterSize\": %u,\n\t\t\"members: [\n",cs.myId,cs.clusterSize);
+						char t[1024];
+						Utils::snprintf(t,sizeof(t),"{\n\t\t\"myId\": %u,\n\t\t\"clusterSize\": %u,\n\t\t\"members\": [",cs.myId,cs.clusterSize);
 						clusterJson.append(t);
 						for(unsigned int i=0;i<cs.clusterSize;++i) {
-							Utils::snprintf(t,sizeof(t),"\t\t\t{\n\t\t\t\t\"id\": %u,\n\t\t\t\t\"msSinceLastHeartbeat\": %u,\n\t\t\t\t\"alive\": %s,\n\t\t\t\t\"x\": %d,\n\t\t\t\t\"y\": %d,\n\t\t\t\t\"z\": %d,\n\t\t\t\t\"load\": %llu\n\t\t\t\t\"peers\": %llu\n\t\t\t}%s",
+							Utils::snprintf(t,sizeof(t),"%s\t\t\t{\n\t\t\t\t\"id\": %u,\n\t\t\t\t\"msSinceLastHeartbeat\": %u,\n\t\t\t\t\"alive\": %s,\n\t\t\t\t\"x\": %d,\n\t\t\t\t\"y\": %d,\n\t\t\t\t\"z\": %d,\n\t\t\t\t\"load\": %llu,\n\t\t\t\t\"peers\": %llu\n\t\t\t}",
+								((i == 0) ? "\n" : ",\n"),
 								cs.members[i].id,
 								cs.members[i].msSinceLastHeartbeat,
 								(cs.members[i].alive != 0) ? "true" : "false",
@@ -377,8 +378,7 @@ unsigned int ControlPlane::handleRequest(
 								cs.members[i].y,
 								cs.members[i].z,
 								cs.members[i].load,
-								cs.members[i].peers,
-								(i == (cs.clusterSize - 1)) ? "," : "");
+								cs.members[i].peers);
 							clusterJson.append(t);
 						}
 						clusterJson.append(" ]\n\t\t}");
