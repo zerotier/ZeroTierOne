@@ -636,6 +636,18 @@ void Node::clusterHandleIncomingMessage(const void *msg,unsigned int len)
 #endif
 }
 
+void Node::clusterStatus(ZT_ClusterStatus *cs)
+{
+	if (!cs)
+		return;
+#ifdef ZT_ENABLE_CLUSTER
+	if (RR->cluster)
+		RR->cluster->status(*cs);
+	else
+#endif
+	memset(cs,0,sizeof(ZT_ClusterStatus));
+}
+
 /****************************************************************************/
 /* Node methods used only within node/                                      */
 /****************************************************************************/
@@ -947,15 +959,6 @@ enum ZT_ResultCode ZT_Node_clusterInit(
 	}
 }
 
-/**
- * Add a member to this cluster
- *
- * Calling this without having called clusterInit() will do nothing.
- *
- * @param node Node instance
- * @param memberId Member ID (must be less than or equal to ZT_CLUSTER_MAX_MEMBERS)
- * @return OK or error if clustering is disabled, ID invalid, etc.
- */
 enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
 {
 	try {
@@ -965,14 +968,6 @@ enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
 	}
 }
 
-/**
- * Remove a member from this cluster
- *
- * Calling this without having called clusterInit() will do nothing.
- *
- * @param node Node instance
- * @param memberId Member ID to remove (nothing happens if not present)
- */
 void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId)
 {
 	try {
@@ -980,22 +975,17 @@ void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId)
 	} catch ( ... ) {}
 }
 
-/**
- * Handle an incoming cluster state message
- *
- * The message itself contains cluster member IDs, and invalid or badly
- * addressed messages will be silently discarded.
- *
- * Calling this without having called clusterInit() will do nothing.
- *
- * @param node Node instance
- * @param msg Cluster message
- * @param len Length of cluster message
- */
 void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clusterHandleIncomingMessage(msg,len);
+	} catch ( ... ) {}
+}
+
+void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->clusterStatus(cs);
 	} catch ( ... ) {}
 }
 

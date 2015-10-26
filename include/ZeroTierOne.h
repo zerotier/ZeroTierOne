@@ -1517,6 +1517,17 @@ void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId);
 void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len);
 
 /**
+ * Get the current status of the cluster from this node's point of view
+ *
+ * Calling this without clusterInit() or without cluster support will just
+ * zero out the structure and show a cluster size of zero.
+ *
+ * @param node Node instance
+ * @param cs Cluster status structure to fill with data
+ */
+void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
+
+/**
  * Get ZeroTier One version
  *
  * @param major Result: major version
