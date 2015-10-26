@@ -200,10 +200,12 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 								}
 #endif
 							}
-							m.lastReceivedAliveAnnouncement = RR->node->now();
 #ifdef ZT_TRACE
-							TRACE("[%u] I'm alive! peers close to %d,%d,%d can be redirected to: %s",(unsigned int)fromMemberId,m.x,m.y,m.z,addrs.c_str());
+							if ((RR->node->now() - m.lastReceivedAliveAnnouncement) >= ZT_CLUSTER_TIMEOUT) {
+								TRACE("[%u] I'm alive! peers close to %d,%d,%d can be redirected to: %s",(unsigned int)fromMemberId,m.x,m.y,m.z,addrs.c_str());
+							}
 #endif
+							m.lastReceivedAliveAnnouncement = RR->node->now();
 						}	break;
 
 						case STATE_MESSAGE_HAVE_PEER: {
@@ -583,7 +585,7 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 		const double currentDistance = _dist3d(_x,_y,_z,px,py,pz);
 		double bestDistance = (offload ? 2147483648.0 : currentDistance);
 		unsigned int bestMember = _id;
-		TRACE("%s is at %d,%d,%d -- looking for anyone closer than %d,%d,%d (%fkm)",peerPhysicalAddress.toString().c_str(),px,py,pz,_x,_y,_z,bestDistance);
+		//TRACE("%s is at %d,%d,%d -- looking for anyone closer than %d,%d,%d (%fkm)",peerPhysicalAddress.toString().c_str(),px,py,pz,_x,_y,_z,bestDistance);
 		{
 			Mutex::Lock _l(_memberIds_m);
 			for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
@@ -610,7 +612,7 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 			} else { */
 				// Otherwise send VERB_RENDEZVOUS for ourselves, which will trick peers into trying other endpoints for us even if they're too old for PUSH_DIRECT_PATHS
 				for(std::vector<InetAddress>::const_iterator a(best.begin());a!=best.end();++a) {
-					if ((a->ss_family == AF_INET)||(a->ss_family == AF_INET6)) {
+					if (a->ss_family == peerPhysicalAddress.ss_family) {
 						Packet outp(peerAddress,RR->identity.address(),Packet::VERB_RENDEZVOUS);
 						outp.append((uint8_t)0); // no flags
 						RR->identity.address().appendTo(outp); // HACK: rendezvous with ourselves! with really old peers this will only work if I'm a root server!
@@ -629,7 +631,7 @@ bool Cluster::redirectPeer(const Address &peerAddress,const InetAddress &peerPhy
 
 			return true;
 		} else {
-			TRACE("peer %s is at [%d,%d,%d], distance to us is %f and this seems to be the best",peerAddress.toString().c_str(),px,py,pz,currentDistance);
+			//TRACE("peer %s is at [%d,%d,%d], distance to us is %f and this seems to be the best",peerAddress.toString().c_str(),px,py,pz,currentDistance);
 			return false;
 		}
 	} else {
