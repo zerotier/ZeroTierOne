@@ -867,6 +867,7 @@ public:
 	{
 #ifdef ZT_ENABLE_CLUSTER
 		if (sock == _clusterMessageSocket) {
+			_lastDirectReceiveFromGlobal = OSUtils::now();
 			_node->clusterHandleIncomingMessage(data,len);
 			return;
 		}
@@ -1030,7 +1031,7 @@ public:
 							if (from) {
 								ZT_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
-									0,
+									&ZT_SOCKADDR_NULL,
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,

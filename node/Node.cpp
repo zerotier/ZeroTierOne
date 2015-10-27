@@ -321,8 +321,8 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			// Update online status, post status change as event
-			bool oldOnline = _online;
-			_online = ((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT);
+			const bool oldOnline = _online;
+			_online = (((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT)||(RR->topology->amRoot()));
 			if (oldOnline != _online)
 				postEvent(_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 		} catch ( ... ) {
