@@ -100,6 +100,14 @@ struct HttpPhyHandler
 			phy->setNotifyWritable(sock,false);
 	}
 
+	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
+#ifdef __UNIX_LIKE__
+	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
+	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
+	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
+	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
+#endif // __UNIX_LIKE__
+
 	http_parser parser;
 	std::string currentHeaderField;
 	std::string currentHeaderValue;

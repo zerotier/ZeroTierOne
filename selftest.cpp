@@ -837,9 +837,7 @@ struct TestPhyHandlers
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
 	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
-	inline void phyOnSocketPairEndpointClose(PhySocket *sock,void **uptr) {}
-  inline void phyOnSocketPairEndpointData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
-  inline void phyOnSocketPairEndpointWritable(PhySocket *sock,void **uptr) {}
+	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
 #endif // __UNIX_LIKE__
 };
 static int testPhy()
