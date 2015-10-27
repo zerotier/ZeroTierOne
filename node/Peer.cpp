@@ -288,7 +288,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,
 #ifdef ZT_TRACE
 		{
 			std::string ps;
-			for(std::vector<Path>::const_iterator p(dps.begin());p!=dps.end();++p) {
+			for(std::vector<InetAddress>::const_iterator p(dps.begin());p!=dps.end();++p) {
 				if (ps.length() > 0)
 					ps.push_back(',');
 				ps.append(p->toString());
