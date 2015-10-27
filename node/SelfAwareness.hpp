@@ -69,14 +69,14 @@ private:
 	struct PhySurfaceKey
 	{
 		Address reporter;
+		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
-		inline unsigned long hashCode() const throw() { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
-
 		PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
-		PhySurfaceKey(const Address &r,InetAddress::IpScope s) : reporter(r),scope(s) {}
-		inline bool operator<(const PhySurfaceKey &k) const throw() { return ((reporter < k.reporter) ? true : ((reporter == k.reporter) ? ((int)scope < (int)k.scope) : false)); }
-		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(scope == k.scope)); }
+		PhySurfaceKey(const Address &r,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),reporterPhysicalAddress(ra),scope(s) {}
+
+		inline unsigned long hashCode() const throw() { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
+		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
 	};
 	struct PhySurfaceEntry
 	{

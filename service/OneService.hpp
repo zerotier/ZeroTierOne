@@ -43,6 +43,9 @@ namespace ZeroTier {
  * periodically checked and updates are automatically downloaded, verified
  * against a built-in list of update signing keys, and installed. This is
  * only supported for certain platforms.
+ *
+ * If built with ZT_ENABLE_CLUSTER, a 'cluster' file is checked and if
+ * present is read to determine the identity of other cluster members.
  */
 class OneService
 {

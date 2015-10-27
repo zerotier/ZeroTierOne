@@ -409,6 +409,16 @@ struct InetAddress : public sockaddr_storage
 		switch(b[p++]) {
 			case 0:
 				return 1;
+			case 0x01:
+				// TODO: Ethernet address (but accept for forward compatibility)
+				return 7;
+			case 0x02:
+				// TODO: Bluetooth address (but accept for forward compatibility) 
+				return 7;
+			case 0x03:
+				// TODO: Other address types (but accept for forward compatibility)
+				// These could be extended/optional things like AF_UNIX, LTE Direct, shared memory, etc.
+				return (unsigned int)(b.template at<uint16_t>(p) + 3); // other addresses begin with 16-bit non-inclusive length
 			case 0x04:
 				ss_family = AF_INET;
 				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;

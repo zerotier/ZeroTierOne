@@ -64,6 +64,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifndef IPV6_DONTFRAG
+#define IPV6_DONTFRAG 62
+#endif
+#endif
+
 #define ZT_PHY_SOCKFD_TYPE int
 #define ZT_PHY_SOCKFD_NULL (-1)
 #define ZT_PHY_SOCKFD_VALID(s) ((s) > -1)
@@ -374,6 +380,9 @@ public:
 				f = 1; setsockopt(s,IPPROTO_IPV6,IPV6_V6ONLY,(void *)&f,sizeof(f));
 #ifdef IPV6_MTU_DISCOVER
 				f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_MTU_DISCOVER,&f,sizeof(f));
+#endif
+#ifdef IPV6_DONTFRAG
+				f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_DONTFRAG,&f,sizeof(f));
 #endif
 			}
 			f = 0; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));

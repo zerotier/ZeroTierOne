@@ -56,7 +56,7 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Peer;
-class _AnnounceMulticastGroupsToAll; // internal function object in Network.cpp
+class _GetPeersThatNeedMulticastAnnouncement;
 
 /**
  * A virtual LAN
@@ -64,7 +64,7 @@ class _AnnounceMulticastGroupsToAll; // internal function object in Network.cpp
 class Network : NonCopyable
 {
 	friend class SharedPtr<Network>;
-	friend class _AnnounceMulticastGroupsToAll;
+	friend class _GetPeersThatNeedMulticastAnnouncement; // internal function object
 
 public:
 	/**
@@ -344,6 +344,7 @@ private:
 	bool _isAllowed(const SharedPtr<Peer> &peer) const;
 	bool _tryAnnounceMulticastGroupsTo(const std::vector<Address> &rootAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const;
 	void _announceMulticastGroups();
+	void _announceMulticastGroupsTo(const Address &peerAddress,const std::vector<MulticastGroup> &allMulticastGroups) const;
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
 	const RuntimeEnvironment *RR;

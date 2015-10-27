@@ -211,8 +211,15 @@ public:
 			}
 		}
 
-		// If this is a network preferred relay, also always ping and if a stable endpoint is specified use that if not alive
 		if (!upstream) {
+			// If I am a root server, only ping other root servers -- roots don't ping "down"
+			// since that would just be a waste of bandwidth and could potentially cause route
+			// flapping in Cluster mode.
+			if (RR->topology->amRoot())
+				return;
+
+			// Check for network preferred relays, also considered 'upstream' and thus always
+			// pinged to keep links up. If they have stable addresses we will try them there.
 			for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(_relays.begin());r!=_relays.end();++r) {
 				if (r->first == p->address()) {
 					if (r->second.ss_family == AF_INET)
@@ -229,18 +236,22 @@ public:
 			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
 			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
 			bool needToContactIndirect = true;
-			if (!p->doPingAndKeepalive(RR,_now,AF_INET)) {
+			if (p->doPingAndKeepalive(RR,_now,AF_INET)) {
+				needToContactIndirect = false;
+			} else {
 				if (stableEndpoint4) {
 					needToContactIndirect = false;
 					p->attemptToContactAt(RR,InetAddress(),stableEndpoint4,_now);
 				}
-			} else needToContactIndirect = false;
-			if (!p->doPingAndKeepalive(RR,_now,AF_INET6)) {
+			}
+			if (p->doPingAndKeepalive(RR,_now,AF_INET6)) {
+				needToContactIndirect = false;
+			} else {
 				if (stableEndpoint6) {
 					needToContactIndirect = false;
 					p->attemptToContactAt(RR,InetAddress(),stableEndpoint6,_now);
 				}
-			} else needToContactIndirect = false;
+			}
 
 			if (needToContactIndirect) {
 				// If this is an upstream and we have no stable endpoint for either IPv4 or IPv6,
@@ -625,6 +636,18 @@ void Node::clusterHandleIncomingMessage(const void *msg,unsigned int len)
 #endif
 }
 
+void Node::clusterStatus(ZT_ClusterStatus *cs)
+{
+	if (!cs)
+		return;
+#ifdef ZT_ENABLE_CLUSTER
+	if (RR->cluster)
+		RR->cluster->status(*cs);
+	else
+#endif
+	memset(cs,0,sizeof(ZT_ClusterStatus));
+}
+
 /****************************************************************************/
 /* Node methods used only within node/                                      */
 /****************************************************************************/
@@ -936,15 +959,6 @@ enum ZT_ResultCode ZT_Node_clusterInit(
 	}
 }
 
-/**
- * Add a member to this cluster
- *
- * Calling this without having called clusterInit() will do nothing.
- *
- * @param node Node instance
- * @param memberId Member ID (must be less than or equal to ZT_CLUSTER_MAX_MEMBERS)
- * @return OK or error if clustering is disabled, ID invalid, etc.
- */
 enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
 {
 	try {
@@ -954,14 +968,6 @@ enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId)
 	}
 }
 
-/**
- * Remove a member from this cluster
- *
- * Calling this without having called clusterInit() will do nothing.
- *
- * @param node Node instance
- * @param memberId Member ID to remove (nothing happens if not present)
- */
 void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId)
 {
 	try {
@@ -969,22 +975,17 @@ void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId)
 	} catch ( ... ) {}
 }
 
-/**
- * Handle an incoming cluster state message
- *
- * The message itself contains cluster member IDs, and invalid or badly
- * addressed messages will be silently discarded.
- *
- * Calling this without having called clusterInit() will do nothing.
- *
- * @param node Node instance
- * @param msg Cluster message
- * @param len Length of cluster message
- */
 void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clusterHandleIncomingMessage(msg,len);
+	} catch ( ... ) {}
+}
+
+void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->clusterStatus(cs);
 	} catch ( ... ) {}
 }
 

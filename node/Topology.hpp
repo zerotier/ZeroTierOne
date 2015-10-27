@@ -193,6 +193,11 @@ public:
 	void clean(uint64_t now);
 
 	/**
+	 * @return Number of 'alive' peers
+	 */
+	unsigned long countAlive() const;
+
+	/**
 	 * Apply a function or function object to all peers
 	 *
 	 * Note: explicitly template this by reference if you want the object
@@ -224,6 +229,11 @@ public:
 		Mutex::Lock _l(_lock);
 		return _peers.entries();
 	}
+
+	/**
+	 * @return True if I am a root server in the current World
+	 */
+	inline bool amRoot() const throw() { return _amRoot; }
 
 private:
 	Identity _getIdentity(const Address &zta);

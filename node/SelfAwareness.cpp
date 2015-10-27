@@ -94,7 +94,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 
 	Mutex::Lock _l(_phy_m);
 
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,scope)];
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,reporterPhysicalAddress,scope)];
 
 	if ((now - entry.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT) {
 		entry.mySurface = myPhysicalAddress;
@@ -105,14 +105,15 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		entry.ts = now;
 		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced %s, resetting all in scope)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
 
-		// Erase all entries (other than this one) for this scope to prevent thrashing
-		// Note: we should probably not use 'entry' after this
+		// Erase all entries in this scope that were not reported by this remote address to prevent 'thrashing'
+		// due to multiple reports of endpoint change.
+		// Don't use 'entry' after this since hash table gets modified.
 		{
 			Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
 			PhySurfaceKey *k = (PhySurfaceKey *)0;
 			PhySurfaceEntry *e = (PhySurfaceEntry *)0;
 			while (i.next(k,e)) {
-				if ((k->reporter != reporter)&&(k->scope == scope))
+				if ((k->reporterPhysicalAddress != reporterPhysicalAddress)&&(k->scope == scope))
 					_phy.erase(*k);
 			}
 		}

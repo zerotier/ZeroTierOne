@@ -3,11 +3,11 @@
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin
 
 cd `dirname $0`
-if [ ! -d cluster-geo -o ! -f cluster-geo/index.js ]; then
+if [ ! -d cluster-geo -o ! -f cluster-geo/cluster-geo.js ]; then
 	echo 'Cannot find ./cluster-geo containing NodeJS script files.'
 	exit 1
 fi
 
 cd cluster-geo
 
-exec node index.js
+exec node --harmony cluster-geo.js

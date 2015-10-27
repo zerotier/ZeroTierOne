@@ -124,6 +124,7 @@ public:
 	ZT_ResultCode clusterAddMember(unsigned int memberId);
 	void clusterRemoveMember(unsigned int memberId);
 	void clusterHandleIncomingMessage(const void *msg,unsigned int len);
+	void clusterStatus(ZT_ClusterStatus *cs);
 
 	// Internal functions ------------------------------------------------------
 

@@ -47,7 +47,7 @@
 /**
  * Timeout for cluster members being considered "alive"
  */
-#define ZT_CLUSTER_TIMEOUT 30000
+#define ZT_CLUSTER_TIMEOUT 10000
 
 /**
  * How often should we announce that we have a peer?
@@ -57,7 +57,7 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 50
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
 
 namespace ZeroTier {
 
@@ -145,7 +145,7 @@ public:
 		STATE_MESSAGE_RELAY = 5,
 
 		/**
-		 * Request to send a packet to a locally-known peer:
+		 * Request that a cluster member send a packet to a locally-known peer:
 		 *   <[5] ZeroTier address of recipient>
 		 *   <[1] packet verb>
 		 *   <[2] length of packet payload>
@@ -253,6 +253,13 @@ public:
 	 * @return True if peer was redirected
 	 */
 	bool redirectPeer(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
+
+	/**
+	 * Fill out ZT_ClusterStatus structure (from core API)
+	 *
+	 * @param status Reference to structure to hold result (anything there is replaced)
+	 */
+	void status(ZT_ClusterStatus &status) const;
 
 private:
 	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);
