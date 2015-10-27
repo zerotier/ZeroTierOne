@@ -563,17 +563,14 @@ void Cluster::removeMember(uint16_t memberId)
 	_memberIds = newMemberIds;
 }
 
-InetAddress Cluster::findBetterEndpoint(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload)
+bool Cluster::findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload)
 {
-	if (!peerPhysicalAddress) // sanity check
-		return InetAddress();
-
 	if (_addressToLocationFunction) {
 		// Pick based on location if it can be determined
 		int px = 0,py = 0,pz = 0;
 		if (_addressToLocationFunction(_addressToLocationFunctionArg,reinterpret_cast<const struct sockaddr_storage *>(&peerPhysicalAddress),&px,&py,&pz) == 0) {
 			TRACE("no geolocation data for %s (geo-lookup is lazy/async so it may work next time)",peerPhysicalAddress.toIpString().c_str());
-			return InetAddress();
+			return false;
 		}
 
 		// Find member closest to this peer
@@ -603,14 +600,15 @@ InetAddress Cluster::findBetterEndpoint(const Address &peerAddress,const InetAdd
 		for(std::vector<InetAddress>::const_iterator a(best.begin());a!=best.end();++a) {
 			if (a->ss_family == peerPhysicalAddress.ss_family) {
 				TRACE("%s at [%d,%d,%d] is %f from us but %f from %u, can redirect to %s",peerAddress.toString().c_str(),px,py,pz,currentDistance,bestDistance,bestMember,a->toString().c_str());
-				return *a;
+				redirectTo = *a;
+				return true;
 			}
 		}
 		TRACE("%s at [%d,%d,%d] is %f from us, no better endpoints found",peerAddress.toString().c_str(),px,py,pz,currentDistance);
-		return InetAddress();
+		return false;
 	} else {
 		// TODO: pick based on load if no location info?
-		return InetAddress();
+		return false;
 	}
 }
 

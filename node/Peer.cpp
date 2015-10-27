@@ -81,47 +81,49 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 #ifdef ZT_ENABLE_CLUSTER
-	bool redirected = false;
-	if ((RR->cluster)&&(hops == 0)&&(verb != Packet::VERB_OK)&&(verb != Packet::VERB_ERROR)&&(verb != Packet::VERB_RENDEZVOUS)&&(verb != Packet::VERB_PUSH_DIRECT_PATHS)) {
-		InetAddress redirectTo(RR->cluster->findBetterEndpoint(_id.address(),remoteAddr,false));
-		if ((redirectTo.ss_family == AF_INET)||(redirectTo.ss_family == AF_INET6)) {
-			if (_vProto >= 5) {
-				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-				outp.append((uint16_t)1); // count == 1
-				outp.append((uint8_t)0); // no flags
-				outp.append((uint16_t)0); // no extensions
-				if (redirectTo.ss_family == AF_INET) {
-					outp.append((uint8_t)4);
-					outp.append((uint8_t)6);
-					outp.append(redirectTo.rawIpData(),4);
+	InetAddress redirectTo;
+	if ((RR->cluster)&&(hops == 0)) {
+		// Note: findBetterEndpoint() is first since we still want to check
+		// for a better endpoint even if we don't actually send a redirect.
+		if ( (RR->cluster->findBetterEndpoint(redirectTo,_id.address(),remoteAddr,false)) && (verb != Packet::VERB_OK)&&(verb != Packet::VERB_ERROR)&&(verb != Packet::VERB_RENDEZVOUS)&&(verb != Packet::VERB_PUSH_DIRECT_PATHS) ) {
+			if ((redirectTo.ss_family == AF_INET)||(redirectTo.ss_family == AF_INET6)) {
+				if (_vProto >= 5) {
+					// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
+					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+					outp.append((uint16_t)1); // count == 1
+					outp.append((uint8_t)0); // no flags
+					outp.append((uint16_t)0); // no extensions
+					if (redirectTo.ss_family == AF_INET) {
+						outp.append((uint8_t)4);
+						outp.append((uint8_t)6);
+						outp.append(redirectTo.rawIpData(),4);
+					} else {
+						outp.append((uint8_t)6);
+						outp.append((uint8_t)18);
+						outp.append(redirectTo.rawIpData(),16);
+					}
+					outp.append((uint16_t)redirectTo.port());
+					outp.armor(_key,true);
+					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+					RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 				} else {
-					outp.append((uint8_t)6);
-					outp.append((uint8_t)18);
-					outp.append(redirectTo.rawIpData(),16);
+					// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
+					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
+					outp.append((uint8_t)0); // no flags
+					RR->identity.address().appendTo(outp);
+					outp.append((uint16_t)redirectTo.port());
+					if (redirectTo.ss_family == AF_INET) {
+						outp.append((uint8_t)4);
+						outp.append(redirectTo.rawIpData(),4);
+					} else {
+						outp.append((uint8_t)16);
+						outp.append(redirectTo.rawIpData(),16);
+					}
+					outp.armor(_key,true);
+					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+					RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 				}
-				outp.append((uint16_t)redirectTo.port());
-				outp.armor(_key,true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-			} else {
-				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
-				outp.append((uint8_t)0); // no flags
-				RR->identity.address().appendTo(outp);
-				outp.append((uint16_t)redirectTo.port());
-				if (redirectTo.ss_family == AF_INET) {
-					outp.append((uint8_t)4);
-					outp.append(redirectTo.rawIpData(),4);
-				} else {
-					outp.append((uint8_t)16);
-					outp.append(redirectTo.rawIpData(),16);
-				}
-				outp.armor(_key,true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			}
-			redirected = true;
 		}
 	}
 #endif
@@ -140,11 +142,13 @@ void Peer::received(
 			_lastMulticastFrame = now;
 
 #ifdef ZT_ENABLE_CLUSTER
-		// If we're in cluster mode and have sent the peer a better endpoint, stop
-		// here and don't confirm paths, replicate multicast info, etc. The new
-		// endpoint should do that.
-		if (redirected)
+		// If we're in cluster mode and there's a better endpoint, stop here and don't
+		// learn or confirm paths. Also reset any existing paths, since they should
+		// go there and no longer talk to us here.
+		if (redirectTo) {
+			_numPaths = 0;
 			return;
+		}
 #endif
 
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
