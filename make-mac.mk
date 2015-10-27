@@ -6,7 +6,7 @@ ifeq ($(origin CXX),default)
 endif
 
 INCLUDES=
-DEFS=-DZT_ENABLE_CLUSTER
+DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64
 
