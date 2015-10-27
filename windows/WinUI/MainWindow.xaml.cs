@@ -22,6 +22,8 @@ namespace WinUI
     public partial class MainWindow : Window
     {
         APIHandler handler = new APIHandler();
+        Regex charRegex = new Regex("[0-9a-fxA-FX]");
+        Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
         public MainWindow()
         {
@@ -29,6 +31,8 @@ namespace WinUI
 
             updateStatus();
             updateNetworks();
+
+            DataObject.AddPastingHandler(joinNetworkID, OnPaste);
         }
 
         private void updateStatus()
@@ -61,8 +65,20 @@ namespace WinUI
 
         private void OnNetworkEntered(object sender, TextCompositionEventArgs e)
         {
-            Regex regex = new Regex("[0-9a-fxA-FX]");
-            e.Handled = !regex.IsMatch(e.Text);
+            e.Handled = !charRegex.IsMatch(e.Text);
+        }
+
+        private void OnPaste(object sender, DataObjectPastingEventArgs e)
+        {
+            var isText = e.SourceDataObject.GetDataPresent(DataFormats.UnicodeText, true);
+            if (!isText) return;
+
+            var text = e.SourceDataObject.GetData(DataFormats.UnicodeText) as string;
+
+            if (!wholeStringRegex.IsMatch(text))
+            {
+                e.CancelCommand();
+            }
         }
     }
 }
