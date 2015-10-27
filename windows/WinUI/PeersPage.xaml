@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Background="White" Foreground="Black">
-    <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" CanUserResizeColumns="True" Margin="0,0,0,0" CanUserReorderColumns="False" Width="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualWidth}" Height="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualHeight}">
+    <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" CanUserResizeColumns="True" Margin="0,0,0,0" CanUserReorderColumns="False" Width="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualWidth}" Height="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualHeight}" CanUserSortColumns="False">
         <DataGrid.Columns>
             <DataGridTextColumn Header="Address" Binding="{Binding Address}"/>
             <DataGridTextColumn Header="Version" Binding="{Binding VersionString}"/>
