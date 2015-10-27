@@ -35,6 +35,7 @@
 #include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
 #include "Cluster.hpp"
+#include "Packet.hpp"
 
 #include <algorithm>
 
@@ -81,9 +82,28 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 #ifdef ZT_ENABLE_CLUSTER
-	if ((RR->cluster)&&(hops == 0)&&(verb != VERB_OK)&&(verb != VERB_ERROR)&&(verb != VERB_RENDEZVOUS)&&(verb != VERB_PUSH_DIRECT_PATHS)) {
-		if (RR->cluster->redirectPeer(SharedPtr<Peer>(this),localAddr,remoteAddr,false))
-			return;
+	bool redirected = false;
+	if ((RR->cluster)&&(hops == 0)&&(verb != Packet::VERB_OK)&&(verb != Packet::VERB_ERROR)&&(verb != Packet::VERB_RENDEZVOUS)&&(verb != Packet::VERB_PUSH_DIRECT_PATHS)) {
+		InetAddress redirectTo(RR->cluster->findBetterEndpoint(_id.address(),remoteAddr,false));
+		if (redirectTo) {
+			// For older peers we send RENDEZVOUS with ourselves. This will only work if we are
+			// a root server.
+			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
+			outp.append((uint8_t)0); // no flags
+			RR->identity.address().appendTo(outp);
+			outp.append((uint16_t)redirectTo.port());
+			if (redirectTo.ss_family == AF_INET) {
+				outp.append((uint8_t)4);
+				outp.append(redirectTo.rawIpData(),4);
+			} else {
+				outp.append((uint8_t)16);
+				outp.append(redirectTo.rawIpData(),16);
+			}
+			outp.armor(_key,true);
+			RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+			RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
+			redirected = true;
+		}
 	}
 #endif
 
@@ -95,6 +115,23 @@ void Peer::received(
 		Mutex::Lock _l(_lock);
 
 		_lastReceive = now;
+		if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
+			_lastUnicastFrame = now;
+		else if (verb == Packet::VERB_MULTICAST_FRAME)
+			_lastMulticastFrame = now;
+
+#ifdef ZT_ENABLE_CLUSTER
+		// If we're in cluster mode and have sent the peer a better endpoint, stop
+		// here and don't confirm paths, replicate multicast info, etc. The new
+		// endpoint should do that.
+		if (redirected)
+			return;
+#endif
+
+		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+			_lastAnnouncedTo = now;
+			needMulticastGroupAnnounce = true;
+		}
 
 		if (hops == 0) {
 			unsigned int np = _numPaths;
@@ -144,16 +181,6 @@ void Peer::received(
 				}
 			}
 		}
-
-		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-			_lastAnnouncedTo = now;
-			needMulticastGroupAnnounce = true;
-		}
-
-		if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
-			_lastUnicastFrame = now;
-		else if (verb == Packet::VERB_MULTICAST_FRAME)
-			_lastMulticastFrame = now;
 	}	// end _lock
 
 #ifdef ZT_ENABLE_CLUSTER

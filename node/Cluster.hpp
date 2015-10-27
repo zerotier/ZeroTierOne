@@ -245,15 +245,22 @@ public:
 	void removeMember(uint16_t memberId);
 
 	/**
-	 * Redirect this peer to a better cluster member if needed
+	 * Find a better cluster endpoint for this peer
 	 *
-	 * @param peer Peer to (possibly) redirect
-	 * @param localAddress Local address for path or NULL for none/any
+	 * If this endpoint appears to be the best, a NULL/0 InetAddres is returned.
+	 * Otherwise the InetAddress of a better endpoint is returned and the peer
+	 * can then then be told to contact us there.
+	 *
+	 * Redirection is only done within the same address family, so the returned
+	 * endpoint will always be the same ss_family as the supplied physical
+	 * address.
+	 *
+	 * @param peerAddress Address of peer to (possibly) redirect
 	 * @param peerPhysicalAddress Physical address of peer's current best path (where packet was most recently received or getBestPath()->address())
 	 * @param offload Always redirect if possible -- can be used to offload peers during shutdown
-	 * @return True if peer was redirected
+	 * @return InetAddress or NULL if there does not seem to be a better endpoint
 	 */
-	bool redirectPeer(const SharedPtr<Peer> &peer,const InetAddress &localAddress,const InetAddress &peerPhysicalAddress,bool offload);
+	InetAddress findBetterEndpoint(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
 
 	/**
 	 * Fill out ZT_ClusterStatus structure (from core API)
