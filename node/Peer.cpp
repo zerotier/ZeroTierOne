@@ -80,64 +80,67 @@ void Peer::received(
 	uint64_t inRePacketId,
 	Packet::Verb inReVerb)
 {
+#ifdef ZT_ENABLE_CLUSTER
+	if ((RR->cluster)&&(hops == 0)&&((verb == Packet::VERB_HELLO)||(verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME)||(verb == Packet::VERB_MULTICAST_FRAME))) {
+		if (RR->cluster->redirectPeer(SharedPtr<Peer>(this),localAddr,remoteAddr,false))
+			return;
+	}
+#endif
+
 	const uint64_t now = RR->node->now();
 	bool needMulticastGroupAnnounce = false;
 	bool pathIsConfirmed = false;
 
-	{
+	{	// begin _lock
 		Mutex::Lock _l(_lock);
 
 		_lastReceive = now;
 
-		if (!hops) {
-			/* Learn new paths from direct (hops == 0) packets */
-			{
-				unsigned int np = _numPaths;
-				for(unsigned int p=0;p<np;++p) {
-					if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
-						_paths[p].received(now);
-						pathIsConfirmed = true;
-						break;
-					}
+		if (hops == 0) {
+			unsigned int np = _numPaths;
+			for(unsigned int p=0;p<np;++p) {
+				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
+					_paths[p].received(now);
+					pathIsConfirmed = true;
+					break;
 				}
+			}
 
-				if (!pathIsConfirmed) {
-					if ((verb == Packet::VERB_OK)&&((inReVerb == Packet::VERB_HELLO)||(inReVerb == Packet::VERB_ECHO))) {
+			if (!pathIsConfirmed) {
+				if (verb == Packet::VERB_OK) {
 
-						// Learn paths if they've been confirmed via a HELLO or an ECHO
-						RemotePath *slot = (RemotePath *)0;
-						if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-							slot = &(_paths[np++]);
-						} else {
-							uint64_t slotLRmin = 0xffffffffffffffffULL;
-							for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-								if (_paths[p].lastReceived() <= slotLRmin) {
-									slotLRmin = _paths[p].lastReceived();
-									slot = &(_paths[p]);
-								}
+					RemotePath *slot = (RemotePath *)0;
+					if (np < ZT_MAX_PEER_NETWORK_PATHS) {
+						slot = &(_paths[np++]);
+					} else {
+						uint64_t slotLRmin = 0xffffffffffffffffULL;
+						for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
+							if (_paths[p].lastReceived() <= slotLRmin) {
+								slotLRmin = _paths[p].lastReceived();
+								slot = &(_paths[p]);
 							}
 						}
-						if (slot) {
-							*slot = RemotePath(localAddr,remoteAddr);
-							slot->received(now);
-							_numPaths = np;
-							pathIsConfirmed = true;
-							_sortPaths(now);
-						}
-
-					} else {
-
-						/* If this path is not known, send a HELLO. We don't learn
-						 * paths without confirming that a bidirectional link is in
-						 * fact present, but any packet that decodes and authenticates
-						 * correctly is considered valid. */
-						if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
-							_lastPathConfirmationSent = now;
-							TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-							attemptToContactAt(RR,localAddr,remoteAddr,now);
-						}
-
 					}
+					if (slot) {
+						*slot = RemotePath(localAddr,remoteAddr);
+						slot->received(now);
+						_numPaths = np;
+						pathIsConfirmed = true;
+						_sortPaths(now);
+					}
+
+				} else {
+
+					/* If this path is not known, send a HELLO. We don't learn
+					 * paths without confirming that a bidirectional link is in
+					 * fact present, but any packet that decodes and authenticates
+					 * correctly is considered valid. */
+					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
+						_lastPathConfirmationSent = now;
+						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+						attemptToContactAt(RR,localAddr,remoteAddr,now);
+					}
+
 				}
 			}
 		}
@@ -151,14 +154,11 @@ void Peer::received(
 			_lastUnicastFrame = now;
 		else if (verb == Packet::VERB_MULTICAST_FRAME)
 			_lastMulticastFrame = now;
-	}
+	}	// end _lock
 
 #ifdef ZT_ENABLE_CLUSTER
-	if ((pathIsConfirmed)&&(RR->cluster)) {
-		// Either shuttle this peer off somewhere else or report to other members that we have it
-		if (!RR->cluster->redirectPeer(_id.address(),remoteAddr,false))
-			RR->cluster->replicateHavePeer(_id);
-	}
+	if ((RR->cluster)&&(pathIsConfirmed))
+		RR->cluster->replicateHavePeer(_id);
 #endif
 
 	if (needMulticastGroupAnnounce) {
