@@ -191,7 +191,6 @@ void Topology::saveIdentity(const Identity &id)
 
 SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCount,bool strictAvoid)
 {
-	SharedPtr<Peer> bestRoot;
 	const uint64_t now = RR->node->now();
 	Mutex::Lock _l(_lock);
 
@@ -207,8 +206,8 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 					for(unsigned long q=1;q<_rootAddresses.size();++q) {
 						SharedPtr<Peer> *nextsn = _peers.get(_rootAddresses[(p + q) % _rootAddresses.size()]);
 						if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now))) {
-							bestRoot = *nextsn;
-							break;
+							(*nextsn)->use(now);
+							return *nextsn;
 						}
 					}
 					break;
@@ -247,11 +246,13 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 			}
 		}
 
-		if (bestNotAvoid)
+		if (bestNotAvoid) {
+			(*bestNotAvoid)->use(now);
 			return *bestNotAvoid;
-		else if ((!strictAvoid)&&(bestOverall))
+		} else if ((!strictAvoid)&&(bestOverall)) {
+			(*bestOverall)->use(now);
 			return *bestOverall;
-		return SharedPtr<Peer>();
+		}
 
 		/*
 		unsigned int l,bestLatency = 65536;
@@ -315,10 +316,7 @@ keep_searching_for_roots:
 		}
 		*/
 	}
-
-	if (bestRoot)
-		bestRoot->use(now);
-	return bestRoot;
+	return SharedPtr<Peer>();
 }
 
 bool Topology::isUpstream(const Identity &id) const
