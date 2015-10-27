@@ -52,7 +52,7 @@
 /**
  * How often should we announce that we have a peer?
  */
-#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD 60000
+#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD 30000
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds
@@ -285,7 +285,7 @@ private:
 	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);
 	void _flush(uint16_t memberId);
 
-	// These are initialized in the constructor and remain static
+	// These are initialized in the constructor and remain immutable
 	uint16_t _masterSecret[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	const RuntimeEnvironment *RR;
@@ -298,6 +298,7 @@ private:
 	const int32_t _z;
 	const uint16_t _id;
 	const std::vector<InetAddress> _zeroTierPhysicalEndpoints;
+	// end immutable fields
 
 	struct _Member
 	{
@@ -330,30 +331,18 @@ private:
 		_Member() { this->clear(); }
 		~_Member() { Utils::burn(key,sizeof(key)); }
 	};
-
-	_Member *const _members; // cluster IDs can be from 0 to 65535 (16-bit)
+	_Member *const _members;
 
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	// Record tracking which members have which peers and how recently they claimed this -- also used to track our last claimed time
-	struct _PeerAffinity
+	struct _PA
 	{
-		_PeerAffinity(const Address &a,uint16_t mid,uint64_t ts) :
-			key((a.toInt() << 16) | (uint64_t)mid),
-			timestamp(ts) {}
-
-		uint64_t key;
-		uint64_t timestamp;
-
-		inline Address address() const throw() { return Address(key >> 16); }
-		inline uint16_t clusterMemberId() const throw() { return (uint16_t)(key & 0xffff); }
-
-		inline bool operator<(const _PeerAffinity &pi) const throw() { return (key < pi.key); }
+		_PA() : ts(0),mid(0xffff) {}
+		uint64_t ts;
+		uint16_t mid;
 	};
-
-	// A memory-efficient packed map of _PeerAffinity records searchable with std::binary_search() and std::lower_bound()
-	std::vector<_PeerAffinity> _peerAffinities;
+	Hashtable< Address,_PA > _peerAffinities;
 	Mutex _peerAffinities_m;
 };
 
