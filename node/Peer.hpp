@@ -413,6 +413,25 @@ public:
 	void clean(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
+	 * Remove all paths with this remote address
+	 *
+	 * @param addr Remote address to remove
+	 */
+	inline void removePathByAddress(const InetAddress &addr)
+	{
+		Mutex::Lock _l(_lock);
+		unsigned int np = _numPaths;
+		unsigned int x = 0;
+		unsigned int y = 0;
+		while (x < np) {
+			if (_paths[x].address() != addr)
+				_paths[y++] = _paths[x];
+			++x;
+		}
+		_numPaths = y;
+	}
+
+	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A

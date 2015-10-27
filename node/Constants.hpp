@@ -317,7 +317,7 @@
 /**
  * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
  */
-#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 5000
+#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 1000
 
 /**
  * Interval between direct path pushes in milliseconds
@@ -350,7 +350,7 @@
 /**
  * Maximum number of endpoints to contact per address type (to limit pushes like GitHub issue #235)
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 2
+#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 4
 
 /**
  * A test pseudo-network-ID that can be joined

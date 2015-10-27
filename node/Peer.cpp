@@ -140,13 +140,10 @@ void Peer::received(
 			_lastMulticastFrame = now;
 
 #ifdef ZT_ENABLE_CLUSTER
-		// If we're in cluster mode and there's a better endpoint, stop here and don't
-		// learn or confirm paths. Also reset any existing paths, since they should
-		// go there and no longer talk to us here.
-		if (redirectTo) {
-			_numPaths = 0;
+		// If we think this peer belongs elsewhere, don't learn this path or
+		// do other connection init stuff.
+		if (redirectTo)
 			return;
-		}
 #endif
 
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
@@ -206,7 +203,7 @@ void Peer::received(
 
 #ifdef ZT_ENABLE_CLUSTER
 	if ((RR->cluster)&&(pathIsConfirmed))
-		RR->cluster->replicateHavePeer(_id);
+		RR->cluster->replicateHavePeer(_id,remoteAddr);
 #endif
 
 	if (needMulticastGroupAnnounce) {

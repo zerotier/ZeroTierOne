@@ -210,22 +210,30 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						}	break;
 
 						case STATE_MESSAGE_HAVE_PEER: {
-							try {
-								Identity id;
-								ptr += id.deserialize(dmsg,ptr);
-								if (id) {
-									RR->topology->saveIdentity(id);
-									{
-										Mutex::Lock _l2(_peerAffinities_m);
-										_PA &pa = _peerAffinities[id.address()];
-										pa.ts = RR->node->now();
-										pa.mid = fromMemberId;
-			 						}
-			 						TRACE("[%u] has %s",(unsigned int)fromMemberId,id.address().toString().c_str());
-			 					}
-							} catch ( ... ) {
-								// ignore invalid identities
-							}
+							Identity id;
+							InetAddress physicalAddress;
+							ptr += id.deserialize(dmsg,ptr);
+							ptr += physicalAddress.deserialize(dmsg,ptr);
+							if (id) {
+								// Forget any paths that we have to this peer at its address
+								if (physicalAddress) {
+									SharedPtr<Peer> myPeerRecord(RR->topology->getPeer(id.address()));
+									if (myPeerRecord)
+										myPeerRecord->removePathByAddress(physicalAddress);
+								}
+
+								// Always save identity to update file time
+								RR->topology->saveIdentity(id);
+
+								// Set peer affinity to its new home
+								{
+									Mutex::Lock _l2(_peerAffinities_m);
+									_PA &pa = _peerAffinities[id.address()];
+									pa.ts = RR->node->now();
+									pa.mid = fromMemberId;
+		 						}
+		 						TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
+		 					}
 						}	break;
 
 						case STATE_MESSAGE_MULTICAST_LIKE: {
@@ -396,7 +404,7 @@ bool Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPee
 	return true;
 }
 
-void Cluster::replicateHavePeer(const Identity &peerId)
+void Cluster::replicateHavePeer(const Identity &peerId,const InetAddress &physicalAddress)
 {
 	const uint64_t now = RR->node->now();
 	{	// Use peer affinity table to track our own last announce time for peers
@@ -405,7 +413,7 @@ void Cluster::replicateHavePeer(const Identity &peerId)
 		if (pa.mid != _id) {
 			pa.ts = now;
 			pa.mid = _id;
-		} else if ((now - pa.ts) >= ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD) {
+		} else if ((now - pa.ts) < ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD) {
 			return;
 		} else {
 			pa.ts = now;
@@ -415,6 +423,7 @@ void Cluster::replicateHavePeer(const Identity &peerId)
 	// announcement
 	Buffer<4096> buf;
 	peerId.serialize(buf,false);
+	physicalAddress.serialize(buf);
 	{
 		Mutex::Lock _l(_memberIds_m);
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
