@@ -81,7 +81,7 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 #ifdef ZT_ENABLE_CLUSTER
-	if ((RR->cluster)&&(hops == 0)&&((verb == Packet::VERB_HELLO)||(verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME)||(verb == Packet::VERB_MULTICAST_FRAME))) {
+	if ((RR->cluster)&&(hops == 0)&&(verb != VERB_OK)&&(verb != VERB_ERROR)&&(verb != VERB_RENDEZVOUS)&&(verb != VERB_PUSH_DIRECT_PATHS)) {
 		if (RR->cluster->redirectPeer(SharedPtr<Peer>(this),localAddr,remoteAddr,false))
 			return;
 	}
