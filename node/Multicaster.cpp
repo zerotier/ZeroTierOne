@@ -37,6 +37,7 @@
 #include "Peer.hpp"
 #include "C25519.hpp"
 #include "CertificateOfMembership.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 

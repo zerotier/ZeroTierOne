@@ -736,7 +736,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				return false; // sanity check: unconfigured network? why are we trying to talk to it?
 		}
 
-		RemotePath *viaPath = peer->getBestPath(now);
+		Path *viaPath = peer->getBestPath(now);
 		SharedPtr<Peer> relay;
 		if (!viaPath) {
 			// See if this network has a preferred relay (if packet has an associated network)

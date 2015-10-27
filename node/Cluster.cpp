@@ -48,6 +48,7 @@
 #include "Topology.hpp"
 #include "Packet.hpp"
 #include "Switch.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 

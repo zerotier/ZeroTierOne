@@ -448,10 +448,10 @@ ZT_PeerList *Node::peers() const
 		p->latency = pi->second->latency();
 		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
 
-		std::vector<RemotePath> paths(pi->second->paths());
-		RemotePath *bestPath = pi->second->getBestPath(_now);
+		std::vector<Path> paths(pi->second->paths());
+		Path *bestPath = pi->second->getBestPath(_now);
 		p->pathCount = 0;
-		for(std::vector<RemotePath>::iterator path(paths.begin());path!=paths.end();++path) {
+		for(std::vector<Path>::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = path->lastSend();
 			p->paths[p->pathCount].lastReceive = path->lastReceived();
@@ -499,11 +499,11 @@ void Node::freeQueryResult(void *qr)
 		::free(qr);
 }
 
-int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust)
+int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,ZT_LocalInterfaceAddressTrust trust)
 {
 	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
 		Mutex::Lock _l(_directPaths_m);
-		_directPaths.push_back(Path(*(reinterpret_cast<const InetAddress *>(addr)),metric,(Path::Trust)trust));
+		_directPaths.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
 		std::sort(_directPaths.begin(),_directPaths.end());
 		_directPaths.erase(std::unique(_directPaths.begin(),_directPaths.end()),_directPaths.end());
 		return 1;
@@ -900,10 +900,10 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr)
 	} catch ( ... ) {}
 }
 
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric, enum ZT_LocalInterfaceAddressTrust trust)
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,enum ZT_LocalInterfaceAddressTrust trust)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,metric,trust);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,trust);
 	} catch ( ... ) {
 		return 0;
 	}

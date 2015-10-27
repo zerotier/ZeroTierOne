@@ -44,6 +44,7 @@
 #include "SHA512.hpp"
 #include "World.hpp"
 #include "Cluster.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 
@@ -888,7 +889,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 {
 	try {
 		const uint64_t now = RR->node->now();
-		const RemotePath *currentBest = peer->getBestPath(now);
+		const Path *currentBest = peer->getBestPath(now);
 
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
@@ -1036,7 +1037,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				remainingHopsPtr += ZT_ADDRESS_LENGTH;
 				SharedPtr<Peer> nhp(RR->topology->getPeer(nextHop[h]));
 				if (nhp) {
-					RemotePath *const rp = nhp->getBestPath(now);
+					Path *const rp = nhp->getBestPath(now);
 					if (rp)
 						nextHopBestPathAddress[h] = rp->address();
 				}

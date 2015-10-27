@@ -28,11 +28,18 @@
 #ifndef ZT_PATH_HPP
 #define ZT_PATH_HPP
 
+#include <stdint.h>
+#include <string.h>
+
+#include <stdexcept>
+#include <algorithm>
+
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "Utils.hpp"
 
 namespace ZeroTier {
+
+class RuntimeEnvironment;
 
 /**
  * Base class for paths
@@ -67,18 +74,86 @@ public:
 	};
 
 	Path() :
+		_lastSend(0),
+		_lastReceived(0),
 		_addr(),
+		_localAddress(),
 		_ipScope(InetAddress::IP_SCOPE_NONE),
-		_trust(TRUST_NORMAL)
+		_trust(TRUST_NORMAL),
+		_flags(0)
 	{
 	}
 
-	Path(const InetAddress &addr,int metric,Trust trust) :
+	Path(const InetAddress &localAddress,const InetAddress &addr,Trust trust) :
+		_lastSend(0),
+		_lastReceived(0),
 		_addr(addr),
+		_localAddress(localAddress),
 		_ipScope(addr.ipScope()),
-		_trust(trust)
+		_trust(trust),
+		_flags(0)
 	{
 	}
+
+	/**
+	 * Called when a packet is sent to this remote path
+	 *
+	 * This is called automatically by Path::send().
+	 *
+	 * @param t Time of send
+	 */
+	inline void sent(uint64_t t)
+		throw()
+	{
+		_lastSend = t;
+	}
+
+	/**
+	 * Called when a packet is received from this remote path
+	 *
+	 * @param t Time of receive
+	 */
+	inline void received(uint64_t t)
+		throw()
+	{
+		_lastReceived = t;
+	}
+
+	/**
+	 * @param now Current time
+	 * @return True if this path appears active
+	 */
+	inline bool active(uint64_t now) const
+		throw()
+	{
+		return ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT);
+	}
+
+	/**
+	 * Send a packet via this path
+	 *
+	 * @param RR Runtime environment
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param now Current time
+	 * @return True if transport reported success
+	 */
+	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
+
+	/**
+	 * @return Address of local side of this path or NULL if unspecified
+	 */
+	inline const InetAddress &localAddress() const throw() { return _localAddress; }
+
+	/**
+	 * @return Time of last send to this path
+	 */
+	inline uint64_t lastSend() const throw() { return _lastSend; }
+
+	/**
+	 * @return Time of last receive from this path
+	 */
+	inline uint64_t lastReceived() const throw() { return _lastReceived; }
 
 	/**
 	 * @return Physical address
@@ -157,10 +232,42 @@ public:
 		return false;
 	}
 
-protected:
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		b.append((uint8_t)0); // version
+		b.append((uint64_t)_lastSend);
+		b.append((uint64_t)_lastReceived);
+		_addr.serialize(b);
+		_localAddress.serialize(b);
+		b.append((uint8_t)_trust);
+		b.append((uint16_t)_flags);
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+		if (b[p++] != 0)
+			throw std::invalid_argument("invalid serialized Path");
+		_lastSend = b.template at<uint64_t>(p); p += 8;
+		_lastReceived = b.template at<uint64_t>(p); p += 8;
+		p += _addr.deserialize(b,p);
+		p += _localAddress.deserialize(b,p);
+		_ipScope = _addr.ipScope();
+		_trust = (Path::Trust)b[p++];
+		_flags = b.template at<uint16_t>(p); p += 2;
+		return (p - startAt);
+	}
+
+private:
+	uint64_t _lastSend;
+	uint64_t _lastReceived;
 	InetAddress _addr;
+	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 	Trust _trust;
+	uint16_t _flags;
 };
 
 } // namespace ZeroTier

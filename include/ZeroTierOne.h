@@ -1356,11 +1356,10 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
  * reject bad, empty, and unusable addresses.
  *
  * @param addr Local interface address
- * @param metric Local interface metric
  * @param trust How much do you trust the local network under this interface?
  * @return Boolean: non-zero if address was accepted and added
  */
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric, enum ZT_LocalInterfaceAddressTrust trust);
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,enum ZT_LocalInterfaceAddressTrust trust);
 
 /**
  * Clear local interface addresses

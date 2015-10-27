@@ -125,7 +125,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		// they are still considered alive so that we will re-establish direct links.
 		SharedPtr<Peer> r(RR->topology->getBestRoot());
 		if (r) {
-			RemotePath *rp = r->getBestPath(now);
+			Path *rp = r->getBestPath(now);
 			if (rp) {
 				for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
 					if ((*p)->alive(now)) {

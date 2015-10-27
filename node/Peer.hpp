@@ -41,7 +41,7 @@
 
 #include "RuntimeEnvironment.hpp"
 #include "CertificateOfMembership.hpp"
-#include "RemotePath.hpp"
+#include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
@@ -135,7 +135,7 @@ public:
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active direct paths
 	 */
-	inline RemotePath *getBestPath(uint64_t now)
+	inline Path *getBestPath(uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
 		return _getBestPath(now);
@@ -150,14 +150,14 @@ public:
 	 * @param now Current time
 	 * @return Path used on success or NULL on failure
 	 */
-	inline RemotePath *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+	inline Path *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		RemotePath *bestPath = getBestPath(now);
+		Path *bestPath = getBestPath(now);
 		if (bestPath) {
 			if (bestPath->send(RR,data,len,now))
 				return bestPath;
 		}
-		return (RemotePath *)0;
+		return (Path *)0;
 	}
 
 	/**
@@ -191,14 +191,14 @@ public:
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
 	 */
-	void pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force);
+	void pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer
 	 */
-	inline std::vector<RemotePath> paths() const
+	inline std::vector<Path> paths() const
 	{
-		std::vector<RemotePath> pp;
+		std::vector<Path> pp;
 		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			pp.push_back(_paths[p]);
@@ -533,7 +533,7 @@ public:
 				p += np->_paths[np->_numPaths++].deserialize(b,p);
 			} else {
 				// Skip any paths beyond max, but still read stream
-				RemotePath foo;
+				Path foo;
 				p += foo.deserialize(b,p);
 			}
 		}
@@ -557,8 +557,8 @@ public:
 
 private:
 	void _sortPaths(const uint64_t now);
-	RemotePath *_getBestPath(const uint64_t now);
-	RemotePath *_getBestPath(const uint64_t now,int inetAddressFamily);
+	Path *_getBestPath(const uint64_t now);
+	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH]; // computed with key agreement, not serialized
 
@@ -575,7 +575,7 @@ private:
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 	Identity _id;
-	RemotePath _paths[ZT_MAX_PEER_NETWORK_PATHS];
+	Path _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	unsigned int _numPaths;
 	unsigned int _latency;
 

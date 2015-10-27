@@ -169,7 +169,7 @@ void Peer::received(
 			if (!pathIsConfirmed) {
 				if (verb == Packet::VERB_OK) {
 
-					RemotePath *slot = (RemotePath *)0;
+					Path *slot = (Path *)0;
 					if (np < ZT_MAX_PEER_NETWORK_PATHS) {
 						slot = &(_paths[np++]);
 					} else {
@@ -182,7 +182,7 @@ void Peer::received(
 						}
 					}
 					if (slot) {
-						*slot = RemotePath(localAddr,remoteAddr);
+						*slot = Path(localAddr,remoteAddr,Path::TRUST_NORMAL);
 						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;
@@ -240,7 +240,7 @@ void Peer::attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &lo
 
 bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily)
 {
-	RemotePath *p = (RemotePath *)0;
+	Path *p = (Path *)0;
 
 	Mutex::Lock _l(_lock);
 	if (inetAddressFamily != 0) {
@@ -268,7 +268,7 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 	return false;
 }
 
-void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force)
+void Peer::pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,bool force)
 {
 #ifdef ZT_ENABLE_CLUSTER
 	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
@@ -281,7 +281,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 	if (((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
 		_lastDirectPathPushSent = now;
 
-		std::vector<Path> dps(RR->node->directPaths());
+		std::vector<InetAddress> dps(RR->node->directPaths());
 		if (dps.empty())
 			return;
 
@@ -291,13 +291,13 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 			for(std::vector<Path>::const_iterator p(dps.begin());p!=dps.end();++p) {
 				if (ps.length() > 0)
 					ps.push_back(',');
-				ps.append(p->address().toString());
+				ps.append(p->toString());
 			}
 			TRACE("pushing %u direct paths to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
 		}
 #endif
 
-		std::vector<Path>::const_iterator p(dps.begin());
+		std::vector<InetAddress>::const_iterator p(dps.begin());
 		while (p != dps.end()) {
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
 			outp.addSize(2); // leave room for count
@@ -305,7 +305,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 			unsigned int count = 0;
 			while ((p != dps.end())&&((outp.size() + 24) < ZT_PROTO_MAX_PACKET_LENGTH)) {
 				uint8_t addressType = 4;
-				switch(p->address().ss_family) {
+				switch(p->ss_family) {
 					case AF_INET:
 						break;
 					case AF_INET6:
@@ -317,6 +317,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 				}
 
 				uint8_t flags = 0;
+				/* TODO: path trust is not implemented yet
 				switch(p->trust()) {
 					default:
 						break;
@@ -327,13 +328,14 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_
 						flags |= (0x04 | 0x08); // no encryption, no authentication (redundant but go ahead and set both)
 						break;
 				}
+				*/
 
 				outp.append(flags);
 				outp.append((uint16_t)0); // no extensions
 				outp.append(addressType);
 				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
-				outp.append(p->address().rawIpData(),((addressType == 4) ? 4 : 16));
-				outp.append((uint16_t)p->address().port());
+				outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
+				outp.append((uint16_t)p->port());
 
 				++count;
 				++p;
@@ -506,7 +508,7 @@ struct _SortPathsByQuality
 {
 	uint64_t _now;
 	_SortPathsByQuality(const uint64_t now) : _now(now) {}
-	inline bool operator()(const RemotePath &a,const RemotePath &b) const
+	inline bool operator()(const Path &a,const Path &b) const
 	{
 		const uint64_t qa = (
 			((uint64_t)a.active(_now) << 63) |
@@ -526,7 +528,7 @@ void Peer::_sortPaths(const uint64_t now)
 	std::sort(&(_paths[0]),&(_paths[_numPaths]),_SortPathsByQuality(now));
 }
 
-RemotePath *Peer::_getBestPath(const uint64_t now)
+Path *Peer::_getBestPath(const uint64_t now)
 {
 	// assumes _lock is locked
 	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
@@ -538,10 +540,10 @@ RemotePath *Peer::_getBestPath(const uint64_t now)
 		if (_paths[0].active(now))
 			return &(_paths[0]);
 	}
-	return (RemotePath *)0;
+	return (Path *)0;
 }
 
-RemotePath *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
+Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 {
 	// assumes _lock is locked
 	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
@@ -553,7 +555,7 @@ RemotePath *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 		}
 		_sortPaths(now);
 	}
-	return (RemotePath *)0;
+	return (Path *)0;
 }
 
 } // namespace ZeroTier

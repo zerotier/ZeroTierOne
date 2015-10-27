@@ -15,6 +15,7 @@ OBJS=\
 	node/Node.o \
 	node/OutboundMulticast.o \
 	node/Packet.o \
+	node/Path.o \
 	node/Peer.o \
 	node/Poly1305.o \
 	node/Salsa20.o \
