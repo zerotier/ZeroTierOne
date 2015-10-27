@@ -99,8 +99,14 @@
                 </Grid>
             </TabItem>
             <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
-                <Grid Background="#FFE5E5E5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <local:PeersPage x:Name="peersPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"></local:PeersPage>
+                <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <local:PeersPage x:Name="peersPage" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
                 </Grid>
             </TabItem>
 		</TabControl>

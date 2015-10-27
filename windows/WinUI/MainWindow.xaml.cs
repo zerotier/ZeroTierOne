@@ -35,6 +35,7 @@ namespace WinUI
 
             updateStatus();
             updateNetworks();
+            updatePeers();
 
             DataObject.AddPastingHandler(joinNetworkID, OnPaste);
 
