@@ -79,6 +79,23 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
+	 * Get a peer only if it is presently in memory (no disk cache)
+	 *
+	 * @param zta ZeroTier address
+	 * @param now Current time
+	 */
+	inline SharedPtr<Peer> getPeerNoCache(const Address &zta,const uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		const SharedPtr<Peer> *ap = _peers.get(zta);
+		if (ap) {
+			(*ap)->use(now);
+			return *ap;
+		}
+		return SharedPtr<Peer>();
+	}
+
+	/**
 	 * Get the identity of a peer
 	 *
 	 * @param zta ZeroTier address of peer

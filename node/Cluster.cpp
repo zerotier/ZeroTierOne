@@ -210,6 +210,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						}	break;
 
 						case STATE_MESSAGE_HAVE_PEER: {
+							const uint64_t now = RR->node->now();
 							Identity id;
 							InetAddress physicalAddress;
 							ptr += id.deserialize(dmsg,ptr);
@@ -217,7 +218,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							if (id) {
 								// Forget any paths that we have to this peer at its address
 								if (physicalAddress) {
-									SharedPtr<Peer> myPeerRecord(RR->topology->getPeer(id.address()));
+									SharedPtr<Peer> myPeerRecord(RR->topology->getPeerNoCache(id.address(),now));
 									if (myPeerRecord)
 										myPeerRecord->removePathByAddress(physicalAddress);
 								}
@@ -229,7 +230,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 								{
 									Mutex::Lock _l2(_peerAffinities_m);
 									_PA &pa = _peerAffinities[id.address()];
-									pa.ts = RR->node->now();
+									pa.ts = now;
 									pa.mid = fromMemberId;
 		 						}
 		 						TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
