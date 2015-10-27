@@ -57,7 +57,7 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 250
 
 namespace ZeroTier {
 
