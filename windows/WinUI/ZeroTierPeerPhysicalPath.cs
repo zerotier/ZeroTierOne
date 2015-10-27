@@ -13,10 +13,10 @@ namespace WinUI
         public string Address { get; set; }
 
         [JsonProperty("lastSend")]
-        public int LastSend { get; set; }
+        public UInt64 LastSend { get; set; }
 
         [JsonProperty("lastReceive")]
-        public int LastReceive { get; set; }
+        public UInt64 LastReceive { get; set; }
 
         [JsonProperty("fixed")]
         public bool Fixed { get; set; }

@@ -13,10 +13,10 @@ namespace WinUI
         public string Address { get; set; }
 
         [JsonProperty("lastUnicastFrame")]
-        public int LastUnicastFrame { get; set; }
+        public UInt64 LastUnicastFrame { get; set; }
 
         [JsonProperty("lastMulticastFrame")]
-        public int LastMulticastFrame { get; set; }
+        public UInt64 LastMulticastFrame { get; set; }
 
         [JsonProperty("versionMajor")]
         public int VersionMajor { get; set; }
