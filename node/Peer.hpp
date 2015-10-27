@@ -408,16 +408,6 @@ public:
 	bool needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime);
 
 	/**
-	 * @return Time last direct path push was received
-	 */
-	inline uint64_t lastDirectPathPushReceived() const throw() { return _lastDirectPathPushReceived; }
-
-	/**
-	 * @param t New time of last direct path push received
-	 */
-	inline void setLastDirectPathPushReceived(uint64_t t) throw() { _lastDirectPathPushReceived = t; }
-
-	/**
 	 * Perform periodic cleaning operations
 	 */
 	void clean(const RuntimeEnvironment *RR,uint64_t now);
@@ -450,7 +440,7 @@ public:
 		const unsigned int recSizePos = b.size();
 		b.addSize(4); // space for uint32_t field length
 
-		b.append((uint16_t)1); // version of serialized Peer data
+		b.append((uint16_t)0); // version of serialized Peer data
 
 		_id.serialize(b,false);
 
@@ -461,7 +451,6 @@ public:
 		b.append((uint64_t)_lastAnnouncedTo);
 		b.append((uint64_t)_lastPathConfirmationSent);
 		b.append((uint64_t)_lastDirectPathPushSent);
-		b.append((uint64_t)_lastDirectPathPushReceived);
 		b.append((uint64_t)_lastPathSort);
 		b.append((uint16_t)_vProto);
 		b.append((uint16_t)_vMajor);
@@ -513,7 +502,7 @@ public:
 		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
-		if (b.template at<uint16_t>(p) != 1)
+		if (b.template at<uint16_t>(p) != 0)
 			return SharedPtr<Peer>(); // version mismatch
 		p += 2;
 
@@ -531,7 +520,6 @@ public:
 		np->_lastAnnouncedTo = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathConfirmationSent = b.template at<uint64_t>(p); p += 8;
 		np->_lastDirectPathPushSent = b.template at<uint64_t>(p); p += 8;
-		np->_lastDirectPathPushReceived = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathSort = b.template at<uint64_t>(p); p += 8;
 		np->_vProto = b.template at<uint16_t>(p); p += 2;
 		np->_vMajor = b.template at<uint16_t>(p); p += 2;
@@ -581,7 +569,6 @@ private:
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastPathConfirmationSent;
 	uint64_t _lastDirectPathPushSent;
-	uint64_t _lastDirectPathPushReceived;
 	uint64_t _lastPathSort;
 	uint16_t _vProto;
 	uint16_t _vMajor;

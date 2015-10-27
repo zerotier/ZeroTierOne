@@ -123,16 +123,16 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 
 		// For all peers for whom we forgot an address, send a packet indirectly if
 		// they are still considered alive so that we will re-establish direct links.
-		SharedPtr<Peer> sn(RR->topology->getBestRoot());
-		if (sn) {
-			RemotePath *snp = sn->getBestPath(now);
-			if (snp) {
+		SharedPtr<Peer> r(RR->topology->getBestRoot());
+		if (r) {
+			RemotePath *rp = r->getBestPath(now);
+			if (rp) {
 				for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
 					if ((*p)->alive(now)) {
-						TRACE("sending indirect NOP to %s via %s(%s) to re-establish link",(*p)->address().toString().c_str(),sn->address().toString().c_str(),snp->address().toString().c_str());
+						TRACE("sending indirect NOP to %s via %s to re-establish link",(*p)->address().toString().c_str(),r->address().toString().c_str());
 						Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
 						outp.armor((*p)->key(),true);
-						snp->send(RR,outp.data(),outp.size(),now);
+						rp->send(RR,outp.data(),outp.size(),now);
 					}
 				}
 			}

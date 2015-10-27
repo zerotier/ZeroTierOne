@@ -254,68 +254,8 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 			return *bestOverall;
 		}
 
-		/*
-		unsigned int l,bestLatency = 65536;
-		uint64_t lds,ldr;
-
-		// First look for a best root by comparing latencies, but exclude
-		// root servers that have not responded to direct messages in order to
-		// try to exclude any that are dead or unreachable.
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn(_rootPeers.begin());sn!=_rootPeers.end();) {
-			// Skip explicitly avoided relays
-			for(unsigned int i=0;i<avoidCount;++i) {
-				if (avoid[i] == (*sn)->address())
-					goto keep_searching_for_roots;
-			}
-
-			// Skip possibly comatose or unreachable relays
-			lds = (*sn)->lastDirectSend();
-			ldr = (*sn)->lastDirectReceive();
-			if ((lds)&&(lds > ldr)&&((lds - ldr) > ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD))
-				goto keep_searching_for_roots;
-
-			if ((*sn)->hasActiveDirectPath(now)) {
-				l = (*sn)->latency();
-				if (bestRoot) {
-					if ((l)&&(l < bestLatency)) {
-						bestLatency = l;
-						bestRoot = *sn;
-					}
-				} else {
-					if (l)
-						bestLatency = l;
-					bestRoot = *sn;
-				}
-			}
-
-keep_searching_for_roots:
-			++sn;
-		}
-
-		if (bestRoot) {
-			bestRoot->use(now);
-			return bestRoot;
-		} else if (strictAvoid)
-			return SharedPtr<Peer>();
-
-		// If we have nothing from above, just pick one without avoidance criteria.
-		for(std::vector< SharedPtr<Peer> >::const_iterator sn=_rootPeers.begin();sn!=_rootPeers.end();++sn) {
-			if ((*sn)->hasActiveDirectPath(now)) {
-				unsigned int l = (*sn)->latency();
-				if (bestRoot) {
-					if ((l)&&(l < bestLatency)) {
-						bestLatency = l;
-						bestRoot = *sn;
-					}
-				} else {
-					if (l)
-						bestLatency = l;
-					bestRoot = *sn;
-				}
-			}
-		}
-		*/
 	}
+
 	return SharedPtr<Peer>();
 }
 

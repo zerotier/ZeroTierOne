@@ -622,7 +622,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 
 		// Iterate through 18-byte network,MAC,ADI tuples
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
-			const uint64_t nwid(at<uint64_t>(ptr));
+			const uint64_t nwid = at<uint64_t>(ptr);
 			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
 			RR->mc->add(now,nwid,group,peer->address());
 #ifdef ZT_ENABLE_CLUSTER
@@ -888,12 +888,6 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 {
 	try {
 		const uint64_t now = RR->node->now();
-		if ((now - peer->lastDirectPathPushReceived()) < ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL) {
-			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): too frequent!",source().toString().c_str(),_remoteAddress.toString().c_str());
-			return true;
-		}
-		peer->setLastDirectPathPushReceived(now);
-
 		const RemotePath *currentBest = peer->getBestPath(now);
 
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
@@ -916,7 +910,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
 							if ((!currentBest)||(currentBest->address() != a))
-								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+								peer->attemptToContactAt(RR,_localAddress,a,now);
 						}
 					}
 				}	break;
@@ -926,7 +920,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
 							if ((!currentBest)||(currentBest->address() != a))
-								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+								peer->attemptToContactAt(RR,_localAddress,a,now);
 						}
 					}
 				}	break;

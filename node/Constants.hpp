@@ -325,11 +325,6 @@
 #define ZT_DIRECT_PATH_PUSH_INTERVAL 120000
 
 /**
- * Minimum interval between direct path pushes from a given peer or we will ignore them
- */
-#define ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL 2000
-
-/**
  * How long (max) to remember network certificates of membership?
  *
  * This only applies to networks we don't belong to.
@@ -355,7 +350,7 @@
 /**
  * Maximum number of endpoints to contact per address type (to limit pushes like GitHub issue #235)
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 8
+#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 2
 
 /**
  * A test pseudo-network-ID that can be joined
