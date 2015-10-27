@@ -141,7 +141,7 @@ extern "C" {
 /**
  * Maximum allowed cluster message length in bytes
  */
-#define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1444 * 4)
+#define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
 
 /**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address

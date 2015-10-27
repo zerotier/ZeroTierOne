@@ -303,11 +303,10 @@ void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
 	}
 }
 
-bool Switch::unite(const Address &p1,const Address &p2,bool force)
+bool Switch::unite(const Address &p1,const Address &p2)
 {
 	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
 		return false;
-
 	SharedPtr<Peer> p1p = RR->topology->getPeer(p1);
 	if (!p1p)
 		return false;
@@ -316,14 +315,6 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 		return false;
 
 	const uint64_t now = RR->node->now();
-
-	{
-		Mutex::Lock _l(_lastUniteAttempt_m);
-		uint64_t &luts = _lastUniteAttempt[_LastUniteKey(p1,p2)];
-		if (((now - luts) < ZT_MIN_UNITE_INTERVAL)&&(!force))
-			return false;
-		luts = now;
-	}
 
 	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
 	if ((!(cg.first))||(cg.first.ipScope() != cg.second.ipScope()))
@@ -571,7 +562,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
 #ifdef ZT_ENABLE_CLUSTER
-				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size())))
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false)))
 					return; // sent by way of another member of this cluster
 #endif
 
@@ -634,7 +625,8 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 
 void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,localAddr,fromAddr,RR->node->now()));
+	const uint64_t now = RR->node->now();
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,localAddr,fromAddr,now));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
@@ -652,17 +644,18 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 			packet->incrementHops();
 
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),RR->node->now())))) {
-				unite(source,destination,false);
+			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),now)))) {
+				if (_shouldTryUnite(now,source,destination))
+					unite(source,destination);
 			} else {
 #ifdef ZT_ENABLE_CLUSTER
-				if ((RR->cluster)&&(RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size())))
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),_shouldTryUnite(now,source,destination))))
 					return; // sent by way of another member of this cluster
 #endif
 
 				relayTo = RR->topology->getBestRoot(&source,1,true);
 				if (relayTo)
-					relayTo->send(RR,packet->data(),packet->size(),RR->node->now());
+					relayTo->send(RR,packet->data(),packet->size(),now);
 			}
 		} else {
 			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet->source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -677,7 +670,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 		if (!dq.creationTime) {
 			// If we have no other fragments yet, create an entry and save the head
 
-			dq.creationTime = RR->node->now();
+			dq.creationTime = now;
 			dq.frag0 = packet;
 			dq.totalFragments = 0; // 0 == unknown, waiting for Packet::Fragment
 			dq.haveFragments = 1; // head is first bit (left to right)
@@ -803,6 +796,16 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		requestWhois(packet.destination());
 	}
 	return false;
+}
+
+bool Switch::_shouldTryUnite(const uint64_t now,const Address &p1,const Address &p2)
+{
+	Mutex::Lock _l(_lastUniteAttempt_m);
+	uint64_t &luts = _lastUniteAttempt[_LastUniteKey(p1,p2)];
+	if ((now - luts) < ZT_MIN_UNITE_INTERVAL)
+		return false;
+	luts = now;
+	return true;
 }
 
 } // namespace ZeroTier

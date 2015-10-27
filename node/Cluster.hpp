@@ -57,7 +57,7 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 50
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
 
 namespace ZeroTier {
 
@@ -136,13 +136,18 @@ public:
 		STATE_MESSAGE_COM = 4,
 
 		/**
-		 * Relay a packet to a peer:
-		 *   <[1] 8-bit number of sending peer active path addresses>
-		 *   <[...] series of serialized InetAddresses of sending peer's paths>
-		 *   <[2] 16-bit packet length>
-		 *   <[...] packet or packet fragment>
+		 * Request that VERB_RENDEZVOUS be sent to a peer that we have:
+		 *   <[5] ZeroTier address of peer on recipient's side>
+		 *   <[5] ZeroTier address of peer on sender's side>
+		 *   <[1] 8-bit number of sender's peer's active path addresses>
+		 *   <[...] series of serialized InetAddresses of sender's peer's paths>
+		 *
+		 * This requests that we perform NAT-t introduction between a peer that
+		 * we have and one on the sender's side. The sender furnishes contact
+		 * info for its peer, and we send VERB_RENDEZVOUS to both sides: to ours
+		 * directly and with PROXY_SEND to theirs.
 		 */
-		STATE_MESSAGE_RELAY = 5,
+		STATE_MESSAGE_PROXY_UNITE = 5,
 
 		/**
 		 * Request that a cluster member send a packet to a locally-known peer:
@@ -211,9 +216,10 @@ public:
 	 * @param toPeerAddress Destination peer address
 	 * @param data Packet or packet fragment data
 	 * @param len Length of packet or fragment
+	 * @param unite If true, also request proxy unite across cluster
 	 * @return True if this data was sent via another cluster member, false if none have this peer
 	 */
-	bool sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len);
+	bool sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
 
 	/**
 	 * Advertise to the cluster that we have this peer
