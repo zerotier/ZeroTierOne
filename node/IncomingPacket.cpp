@@ -622,7 +622,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 
 		// Iterate through 18-byte network,MAC,ADI tuples
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
-			const uint32_t nwid(at<uint64_t>(ptr));
+			const uint64_t nwid(at<uint64_t>(ptr));
 			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
 			RR->mc->add(now,nwid,group,peer->address());
 #ifdef ZT_ENABLE_CLUSTER
