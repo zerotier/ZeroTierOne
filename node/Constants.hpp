@@ -327,7 +327,7 @@
 /**
  * Minimum interval between direct path pushes from a given peer or we will ignore them
  */
-#define ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL 2500
+#define ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL 2000
 
 /**
  * How long (max) to remember network certificates of membership?
