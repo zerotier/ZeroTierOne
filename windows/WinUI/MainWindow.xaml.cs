@@ -73,7 +73,12 @@ namespace WinUI
 
         private void updatePeers()
         {
+            var peers = handler.GetPeers();
 
+            peersPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            {
+                peersPage.SetPeers(peers);
+            }));
         }
 
         private void OnUpdateTimer(object source, ElapsedEventArgs e)

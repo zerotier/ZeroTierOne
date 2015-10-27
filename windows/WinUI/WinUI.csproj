@@ -100,6 +100,9 @@
     <Compile Include="NetworksPage.xaml.cs">
       <DependentUpon>NetworksPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PeersPage.xaml.cs">
+      <DependentUpon>PeersPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ZeroTierPeerPhysicalPath.cs" />
     <Compile Include="ZeroTierPeer.cs" />
     <Compile Include="ZeroTierNetwork.cs" />
@@ -122,6 +125,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="NetworksPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PeersPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

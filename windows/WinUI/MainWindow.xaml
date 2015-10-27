@@ -99,8 +99,10 @@
                 </Grid>
             </TabItem>
             <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
-				<Grid Background="#FFE5E5E5"/>
-			</TabItem>
+                <Grid Background="#FFE5E5E5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <local:PeersPage x:Name="peersPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"></local:PeersPage>
+                </Grid>
+            </TabItem>
 		</TabControl>
 	</DockPanel>
 </Window>

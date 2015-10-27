@@ -30,6 +30,17 @@ namespace WinUI
         [JsonProperty("version")]
         public string Version { get; set; }
 
+        public string VersionString
+        {
+            get
+            {
+                if (Version == "-1.-1.-1")
+                    return "-";
+                else
+                    return Version;
+            }
+        }
+
         [JsonProperty("latency")]
         public string Latency { get; set; }
 
@@ -38,5 +49,18 @@ namespace WinUI
 
         [JsonProperty("paths")]
         public List<ZeroTierPeerPhysicalPath> Paths { get; set; }
+
+        public string DataPaths
+        {
+            get
+            {
+                string pathStr = "";
+                foreach(ZeroTierPeerPhysicalPath path in Paths)
+                {
+                    pathStr += path.Address + "\n";
+                }
+                return pathStr;
+            }
+        }
     }
 }
