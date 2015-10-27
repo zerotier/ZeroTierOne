@@ -239,7 +239,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							const MAC mac(dmsg.field(ptr,6),6); ptr += 6;
 							const uint32_t adi = dmsg.at<uint32_t>(ptr); ptr += 4;
 							RR->mc->add(RR->node->now(),nwid,MulticastGroup(mac,adi),address);
-							TRACE("[%u] %s likes %s/%u on %.16llu",(unsigned int)fromMemberId,address.toString().c_str(),mac.toString().c_str(),(unsigned int)adi,nwid);
+							TRACE("[%u] %s likes %s/%.8x on %.16llu",(unsigned int)fromMemberId,address.toString().c_str(),mac.toString().c_str(),(unsigned int)adi,nwid);
 						}	break;
 
 						case STATE_MESSAGE_COM: {

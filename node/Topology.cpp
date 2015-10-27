@@ -215,10 +215,45 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 				}
 			}
 		}
+
 	} else {
 		/* If I am not a root server, the best root server is the active one with
 		 * the lowest latency. */
 
+		unsigned int bestLatencyOverall = ~((unsigned int)0);
+		unsigned int bestLatencyNotAvoid = ~((unsigned int)0);
+		const SharedPtr<Peer> *bestOverall = (const SharedPtr<Peer> *)0;
+		const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
+
+		for(std::vector< SharedPtr<Peer> >::const_iterator r(_rootPeers.begin());r!=_rootPeers.end();++r) {
+			if ((*r)->hasActiveDirectPath(now)) {
+				bool avoiding = false;
+				for(unsigned int i=0;i<avoidCount;++i) {
+					if (avoid[i] == (*r)->address()) {
+						avoiding = true;
+						break;
+					}
+				}
+				unsigned int l = (*r)->latency();
+				if (!l) l = ~l; // zero latency indicates no measurment, so make this 'max'
+				if (l <= bestLatencyOverall) {
+					bestLatencyOverall = l;
+					bestOverall = &(*r);
+				}
+				if ((!avoiding)&&(l <= bestLatencyNotAvoid)) {
+					bestLatencyNotAvoid = l;
+					bestNotAvoid = &(*r);
+				}
+			}
+		}
+
+		if (bestNotAvoid)
+			return *bestNotAvoid;
+		else if ((!strictAvoid)&&(bestOverall))
+			return *bestOverall;
+		return SharedPtr<Peer>();
+
+		/*
 		unsigned int l,bestLatency = 65536;
 		uint64_t lds,ldr;
 
@@ -278,6 +313,7 @@ keep_searching_for_roots:
 				}
 			}
 		}
+		*/
 	}
 
 	if (bestRoot)

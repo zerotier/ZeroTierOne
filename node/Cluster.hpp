@@ -158,7 +158,20 @@ public:
 		 * while PROXY_SEND is used to implement proxy sending (which right
 		 * now is only used to send RENDEZVOUS).
 		 */
-		STATE_MESSAGE_PROXY_SEND = 6
+		STATE_MESSAGE_PROXY_SEND = 6,
+
+		/**
+		 * Replicate a network config for a network we belong to:
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of network config>
+		 *   <[...] serialized network config>
+		 *
+		 * This is used by clusters to avoid every member having to query
+		 * for the same netconf for networks all members belong to.
+		 *
+		 * TODO: not implemented yet!
+		 */
+		STATE_MESSAGE_NETWORK_CONFIG = 7
 	};
 
 	/**
