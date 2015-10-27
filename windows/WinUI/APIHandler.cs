@@ -41,7 +41,15 @@ namespace WinUI
             {
                 var responseText = streamReader.ReadToEnd();
 
-                ZeroTierStatus status = JsonConvert.DeserializeObject<ZeroTierStatus>(responseText);
+                ZeroTierStatus status = null;
+                try
+                {
+                    status = JsonConvert.DeserializeObject<ZeroTierStatus>(responseText);
+                }
+                catch (JsonReaderException e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
                 return status;
             }
         }
@@ -61,9 +69,16 @@ namespace WinUI
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
                 var responseText = streamReader.ReadToEnd();
-                Console.WriteLine(responseText);
 
-                List<ZeroTierNetwork> networkList = JsonConvert.DeserializeObject<List<ZeroTierNetwork>>(responseText);
+                List<ZeroTierNetwork> networkList = null;
+                try
+                {
+                    networkList = JsonConvert.DeserializeObject<List<ZeroTierNetwork>>(responseText);
+                }
+                catch (JsonReaderException e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
                 return networkList;
             }
         }
@@ -119,9 +134,16 @@ namespace WinUI
             using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
             {
                 var responseText = streamReader.ReadToEnd();
-                Console.WriteLine(responseText);
 
-                List<ZeroTierPeer> peerList = JsonConvert.DeserializeObject<List<ZeroTierPeer>>(responseText);
+                List<ZeroTierPeer> peerList = null;
+                try
+                {
+                    peerList = JsonConvert.DeserializeObject<List<ZeroTierPeer>>(responseText);
+                }
+                catch (JsonReaderException e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
                 return peerList;
             }
         }
