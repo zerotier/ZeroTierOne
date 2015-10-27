@@ -888,7 +888,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 {
 	try {
 		const uint64_t now = RR->node->now();
-		if ((now - peer->lastDirectPathPushReceived()) >= ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL) {
+		if ((now - peer->lastDirectPathPushReceived()) < ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL) {
 			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): too frequent!",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
