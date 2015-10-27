@@ -85,23 +85,43 @@ void Peer::received(
 	bool redirected = false;
 	if ((RR->cluster)&&(hops == 0)&&(verb != Packet::VERB_OK)&&(verb != Packet::VERB_ERROR)&&(verb != Packet::VERB_RENDEZVOUS)&&(verb != Packet::VERB_PUSH_DIRECT_PATHS)) {
 		InetAddress redirectTo(RR->cluster->findBetterEndpoint(_id.address(),remoteAddr,false));
-		if (redirectTo) {
-			// For older peers we send RENDEZVOUS with ourselves. This will only work if we are
-			// a root server.
-			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
-			outp.append((uint8_t)0); // no flags
-			RR->identity.address().appendTo(outp);
-			outp.append((uint16_t)redirectTo.port());
-			if (redirectTo.ss_family == AF_INET) {
-				outp.append((uint8_t)4);
-				outp.append(redirectTo.rawIpData(),4);
+		if ((redirectTo.ss_family == AF_INET)||(redirectTo.ss_family == AF_INET6)) {
+			if (_vProto >= 5) {
+				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
+				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+				outp.append((uint16_t)1); // count == 1
+				outp.append((uint8_t)0); // no flags
+				outp.append((uint16_t)0); // no extensions
+				if (redirectTo.ss_family == AF_INET) {
+					outp.append((uint8_t)4);
+					outp.append((uint8_t)6);
+					outp.append(redirectTo.rawIpData(),4);
+				} else {
+					outp.append((uint8_t)6);
+					outp.append((uint8_t)18);
+					outp.append(redirectTo.rawIpData(),16);
+				}
+				outp.append((uint16_t)redirectTo.port());
+				outp.armor(_key,true);
+				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			} else {
-				outp.append((uint8_t)16);
-				outp.append(redirectTo.rawIpData(),16);
+				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
+				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
+				outp.append((uint8_t)0); // no flags
+				RR->identity.address().appendTo(outp);
+				outp.append((uint16_t)redirectTo.port());
+				if (redirectTo.ss_family == AF_INET) {
+					outp.append((uint8_t)4);
+					outp.append(redirectTo.rawIpData(),4);
+				} else {
+					outp.append((uint8_t)16);
+					outp.append(redirectTo.rawIpData(),16);
+				}
+				outp.armor(_key,true);
+				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
+				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			}
-			outp.armor(_key,true);
-			RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-			RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			redirected = true;
 		}
 	}

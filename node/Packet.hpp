@@ -924,9 +924,6 @@ public:
 		 *   0x04 - Disable encryption (trust: privacy)
 		 *   0x08 - Disable encryption and authentication (trust: ultimate)
 		 *
-		 * Address types and addresses are of the same format as the destination
-		 * address type and address in HELLO.
-		 *
 		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. It is the
 		 * responsibility of the sender to limit which peers it pushes direct

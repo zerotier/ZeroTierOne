@@ -280,8 +280,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 		// VALID -- if we made it here, packet passed identity and authenticity checks!
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
+		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
 
 		if (destAddr)
 			RR->sa->iam(id.address(),_remoteAddress,destAddr,RR->topology->isRoot(id),RR->node->now());
