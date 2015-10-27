@@ -656,6 +656,36 @@ public:
 	}
 
 	/**
+	 * Try to set buffer sizes as close to the given value as possible
+	 *
+	 * This will try the specified value and then lower values in 16K increments
+	 * until one works.
+	 *
+	 * @param sock Socket
+	 * @param bufferSize Desired buffer sizes
+	 */
+	inline void setBufferSizes(const PhySocket *sock,int bufferSize)
+	{
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		if (bufferSize > 0) {
+			int bs = bufferSize;
+			while (bs >= 65536) {
+				int tmpbs = bs;
+				if (::setsockopt(sws.sock,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
+					break;
+				bs -= 16384;
+			}
+			bs = bufferSize;
+			while (bs >= 65536) {
+				int tmpbs = bs;
+				if (::setsockopt(sws.sock,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
+					break;
+				bs -= 16384;
+			}
+		}
+	}
+
+	/**
 	 * Attempt to send data to a stream socket (non-blocking)
 	 *
 	 * If -1 is returned, the socket should no longer be used as it is now
