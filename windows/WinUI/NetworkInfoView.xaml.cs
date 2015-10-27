@@ -20,11 +20,14 @@ namespace WinUI
     /// </summary>
     public partial class NetworkInfoView : UserControl
     {
-        ZeroTierNetwork network;
+        private APIHandler handler;
+        private ZeroTierNetwork network;
 
-        public NetworkInfoView(ZeroTierNetwork network)
+        public NetworkInfoView(APIHandler handler, ZeroTierNetwork network)
         {
             InitializeComponent();
+
+            this.handler = handler;
             this.network = network;
 
             UpdateNetworkData();
@@ -59,6 +62,11 @@ namespace WinUI
                 return true;
 
             return false;
+        }
+
+        private void leaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            handler.LeaveNetwork(network.NetworkId);
         }
     }
 }

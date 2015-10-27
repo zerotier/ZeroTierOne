@@ -33,6 +33,8 @@ namespace WinUI
         {
             InitializeComponent();
 
+            networksPage.SetAPIHandler(handler);
+
             updateStatus();
             updateNetworks();
             updatePeers();
