@@ -233,22 +233,21 @@ void Multicaster::send(
 
 		if ((now - gs.lastExplicitGather) >= ZT_MULTICAST_EXPLICIT_GATHER_DELAY) {
 			gs.lastExplicitGather = now;
-			SharedPtr<Peer> sn(RR->topology->getBestRoot());
-			if (sn) {
+			SharedPtr<Peer> r(RR->topology->getBestRoot());
+			if (r) {
 				TRACE(">>MC upstream GATHER up to %u for group %.16llx/%s",gatherLimit,nwid,mg.toString().c_str());
 
 				const CertificateOfMembership *com = (CertificateOfMembership *)0;
-				SharedPtr<NetworkConfig> nconf;
-				if (sn->needsOurNetworkMembershipCertificate(nwid,now,true)) {
+				{
 					SharedPtr<Network> nw(RR->node->network(nwid));
 					if (nw) {
-						nconf = nw->config2();
-						if (nconf)
+						SharedPtr<NetworkConfig> nconf(nw->config2());
+						if ((nconf)&&(nconf->com())&&(nconf->isPrivate())&&(r->needsOurNetworkMembershipCertificate(nwid,now,true)))
 							com = &(nconf->com());
 					}
 				}
 
-				Packet outp(sn->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
+				Packet outp(r->address(),RR->identity.address(),Packet::VERB_MULTICAST_GATHER);
 				outp.append(nwid);
 				outp.append((uint8_t)(com ? 0x01 : 0x00));
 				mg.mac().appendTo(outp);
@@ -256,8 +255,8 @@ void Multicaster::send(
 				outp.append((uint32_t)gatherLimit);
 				if (com)
 					com->serialize(outp);
-				outp.armor(sn->key(),true);
-				sn->send(RR,outp.data(),outp.size(),now);
+				outp.armor(r->key(),true);
+				r->send(RR,outp.data(),outp.size(),now);
 			}
 			gatherLimit = 0;
 		}
