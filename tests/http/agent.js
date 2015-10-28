@@ -204,7 +204,7 @@ function doTestsAndReport()
 			});
 		}
 	});
-}
+};
 
 // Agents just serve up a test payload
 app.get('/',function(req,res) {
