@@ -42,7 +42,6 @@
 namespace ZeroTier
 {
 	// Functions used to pass file descriptors between processes
-
 	ssize_t sock_fd_write(int sock, int fd)
 	{
 		ssize_t size;

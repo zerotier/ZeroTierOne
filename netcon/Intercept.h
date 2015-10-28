@@ -50,7 +50,7 @@
 #define RPC_SHUTDOWN		 				12
 
 /* Administration RPC codes */
-#define RPC_FD_MAP_COMPLETION		20	// Give the service the value we "see" for the new buffer fd
+#define RPC_MAP									20	// Give the service the value we "see" for the new buffer fd
 #define RPC_RETVAL							21	// not RPC per se, but something we should codify
 #define RPC_KILL_INTERCEPT			22  // Tells the service we need to shut down all connections
 
@@ -173,5 +173,7 @@ struct shutdown_st
 #define SETSOCKOPT_SIG int socket, int level, int option_name, const void *option_value, socklen_t option_len
 #define GETSOCKOPT_SIG int sockfd, int level, int optname, void *optval, socklen_t *optlen
 #define SYSCALL_SIG	long number, ...
+#define CLONE_SIG int (*fn)(void *), void *child_stack, int flags, void *arg, ...
+#define POLL_SIG struct pollfd *fds, nfds_t nfds, int timeout
 
 #endif

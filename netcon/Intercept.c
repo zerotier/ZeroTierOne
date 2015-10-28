@@ -43,6 +43,7 @@ char *progname = "";
 #include <sys/time.h>
 #include <pwd.h>
 #include <errno.h>
+#include <linux/errno.h>
 #include <stdarg.h>
 #include <netdb.h>
 #include <string.h>
@@ -50,6 +51,7 @@ char *progname = "";
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/poll.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
 
@@ -77,6 +79,8 @@ static int (*realsetsockopt)(SETSOCKOPT_SIG);
 static int (*realgetsockopt)(GETSOCKOPT_SIG);
 static int (*realaccept4)(ACCEPT4_SIG);
 static long (*realsyscall)(SYSCALL_SIG);
+//static int (*realclone)(CLONE_SIG);
+//static int (*realpoll)(POLL_SIG);
 
 /* Exported Function Prototypes */
 void my_init(void);
@@ -91,6 +95,8 @@ int setsockopt(SETSOCKOPT_SIG);
 int getsockopt(GETSOCKOPT_SIG);
 int accept4(ACCEPT4_SIG);
 long syscall(SYSCALL_SIG);
+//int clone(CLONE_SIG);
+//int poll(POLL_SIG);
 
 #ifdef USE_SOCKS_DNS
   int res_init(void);
@@ -111,6 +117,18 @@ ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 pthread_mutex_t lock;
 pthread_mutex_t loglock;
 
+void handle_error(char *name, char *info, int err)
+{
+#ifdef ERRORS_ARE_FATAL
+  if(err < 0) {
+    dwr("handle_error(%s)=%d: FATAL: %s\n", name, err, info);
+    //exit(-1);
+  }
+#endif
+#ifdef VERBOSE
+  dwr("%s()=%d\n", name, err);
+#endif
+}
 
 /*------------------------------------------------------------------------------
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
@@ -241,6 +259,7 @@ void load_symbols(void)
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
   //realclone = dlsym(RTLD_NEXT, "clone");
   realsyscall = dlsym(RTLD_NEXT, "syscall");
+  //realsyscall = dlsym(RTLD_NEXT, "poll");
 #ifdef USE_SOCKS_DNS
   realresinit = dlsym(RTLD_NEXT, "res_init");
 #endif
@@ -258,6 +277,7 @@ void load_symbols(void)
   realaccept4 = dlsym(lib), "accept4");
   //realclone = dlsym(lib, "clone");
   realsyscall = dlsym(lib, "syscall");
+  //realsyscall = dlsym(lib, "poll");
 #ifdef USE_SOCKS_DNS
   realresinit = dlsym(lib, "res_init");
 #endif
@@ -292,6 +312,9 @@ void set_up_intercept()
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
+  dwr("setsockopt(%d)\n", socket);
+  //return(realsetsockopt(socket, level, option_name, option_value, option_len));
+
   if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE)){
     return 0;
   }
@@ -313,9 +336,8 @@ int setsockopt(SETSOCKOPT_SIG)
 
 int getsockopt(GETSOCKOPT_SIG)
 {
-  // make sure we don't touch any standard outputs
+  dwr("setsockopt(%d)\n", sockfd);
   int err = realgetsockopt(sockfd, level, optname, optval, optlen);
-
   // FIXME: this condition will need a little more intelligence later on
   // -- we will need to know if this fd is a local we are spoofing, or a true local
   if(optname == SO_TYPE)
@@ -347,16 +369,19 @@ int socket(SOCKET_SIG)
   int flags = socket_type & ~SOCK_TYPE_MASK;
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
       errno = EINVAL;
+      handle_error("socket", "", -1);
       return -1;
   }
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
   if (socket_family < 0 || socket_family >= NPROTO){
     errno = EAFNOSUPPORT;
+    handle_error("socket", "", -1);
     return -1;
   }
   if (socket_type < 0 || socket_type >= SOCK_MAX) {
     errno = EINVAL;
+    handle_error("socket", "", -1);
     return -1;
   }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
@@ -375,13 +400,18 @@ int socket(SOCKET_SIG)
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
   if(fdret_sock < 0) {
     dwr("BAD service connection. exiting.\n");
+    handle_error("socket", "", -1);
     exit(-1);
   }
 
   if(socket_family == AF_LOCAL
     || socket_family == AF_NETLINK
     || socket_family == AF_UNIX) {
-    return realsocket(socket_family, socket_type, protocol);
+
+      int err = realsocket(socket_family, socket_type, protocol);
+      dwr("realsocket, err = %d\n", err);
+      handle_error("socket", "", err);
+      return err;
   }
 
   /* Assemble and send RPC */
@@ -395,6 +425,8 @@ int socket(SOCKET_SIG)
   cmd[0] = RPC_SOCKET;
   memcpy(&cmd[1], &rpc_st, sizeof(struct socket_st));
   pthread_mutex_lock(&lock);
+
+  dwr("sending RPC...\n");
   send_command(fdret_sock, cmd);
 
   /* get new fd */
@@ -405,13 +437,14 @@ int socket(SOCKET_SIG)
     /* send our local-fd number back to service so
      it can complete its mapping table entry */
     memset(cmd, '\0', BUF_SZ);
-    cmd[0] = RPC_FD_MAP_COMPLETION;
+    cmd[0] = RPC_MAP;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
 
     //if(newfd > -1) {
       send_command(fdret_sock, cmd);
       pthread_mutex_unlock(&lock);
       errno = ERR_OK; // OK
+      handle_error("socket", "", newfd);
       return newfd;
     //}
     /*
@@ -427,6 +460,7 @@ int socket(SOCKET_SIG)
     dwr("Error while receiving new FD.\n");
     err = get_retval();
     pthread_mutex_unlock(&lock);
+    handle_error("socket", "", -1);
     return err;
   }
 }
@@ -439,26 +473,30 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-  dwr("connect()*:\n");
+  dwr("connect(%d):\n", __fd);
+  print_addr(__addr);
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
 
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(__fd, F_GETFD) < 0) {
-    return -1;
     errno = EBADF;
+    handle_error("connect", "EBADF", -1);
+    return -1;
   }
   /* Check that it is a socket */
   int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
   if(getsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
     errno = ENOTSOCK;
+    handle_error("connect", "ENOTSOCK", -1);
     return -1;
   }
   /* Check family */
   if (connaddr->sin_family < 0 || connaddr->sin_family >= NPROTO){
     errno = EAFNOSUPPORT;
+    handle_error("connect", "EAFNOSUPPORT", -1);
     return -1;
   }
   /* FIXME: Check that address is in user space, return EFAULT ? */
@@ -467,7 +505,7 @@ int connect(CONNECT_SIG)
   /* make sure we don't touch any standard outputs */
   if(__fd == STDIN_FILENO || __fd == STDOUT_FILENO || __fd == STDERR_FILENO){
     if (realconnect == NULL) {
-      dwr("Unresolved symbol: connect(). Library is exiting.\n");
+      handle_error("connect", "Unresolved symbol [connect]", -1);
       exit(-1);
     }
     return(realconnect(__fd, __addr, __len));
@@ -478,6 +516,8 @@ int connect(CONNECT_SIG)
     || connaddr->sin_family == AF_NETLINK
     || connaddr->sin_family == AF_UNIX)) {
     int err = realconnect(__fd, __addr, __len);
+    perror("connect():");
+    //handle_error("connect", "Cannot connect to local socket", err);
     return err;
   }
 
@@ -502,6 +542,7 @@ int connect(CONNECT_SIG)
   */
   err = get_retval();
   pthread_mutex_unlock(&lock);
+  //handle_error("connect", "", err);
   return err;
 }
 
@@ -525,18 +566,21 @@ int select(SELECT_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
-  dwr("bind()*:\n");
+  dwr("bind(%d):\n", sockfd);
+  print_addr(addr);
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
-    return -1;
     errno = EBADF;
+    handle_error("bind", "EBADF", -1);
+    return -1;
   }
   /* Check that it is a socket */
   int opt = -1;
   socklen_t opt_len;
   if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &opt, &opt_len) < 0) {
     errno = ENOTSOCK;
+    handle_error("bind", "ENOTSOCK", -1);
     return -1;
   }
 #endif
@@ -555,11 +599,11 @@ int bind(BIND_SIG)
     || connaddr->sin_family == AF_NETLINK
     || connaddr->sin_family == AF_UNIX))
   {
-      if(realbind == NULL) {
-        dwr("Unresolved symbol: bind(). Library is exiting.\n");
-        exit(-1);
-      }
-      return(realbind(sockfd, addr, addrlen));
+    if(realbind == NULL) {
+      handle_error("bind", "Unresolved symbol [bind]", -1);
+      exit(-1);
+    }
+    return(realbind(sockfd, addr, addrlen));
   }
   /* Assemble and send RPC */
   char cmd[BUF_SZ];
@@ -575,6 +619,7 @@ int bind(BIND_SIG)
   err = get_retval();
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
+  handle_error("bind", "", err);
   return err;
 }
 
@@ -587,7 +632,7 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
-  dwr("accept4()*:\n");
+  dwr("accept4(%d):\n", sockfd);
 #ifdef CHECKS
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
     errno = EINVAL;
@@ -601,6 +646,7 @@ int accept4(ACCEPT4_SIG)
     if(flags & SOCK_NONBLOCK)
       fcntl(newfd, F_SETFL, O_NONBLOCK);
   }
+  handle_error("accept4", "", newfd);
   return newfd;
 }
 
@@ -613,23 +659,30 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
-  dwr("accept()*:\n");
+  dwr("accept(%d):\n", sockfd);
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
     return -1;
     errno = EBADF;
+    dwr("EBADF\n");
+    handle_error("accept", "EBADF", -1);
+    return -1;
   }
   /* Check that it is a socket */
   int opt;
   socklen_t opt_len;
   if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &opt, &opt_len) < 0) {
     errno = ENOTSOCK;
+    dwr("ENOTSOCK\n");
+    handle_error("accept", "ENOTSOCK", -1);
     return -1;
   }
   /* Check that this socket supports accept() */
   if(!(opt && (SOCK_STREAM | SOCK_SEQPACKET))) {
     errno = EOPNOTSUPP;
+    dwr("EOPNOTSUPP\n");
+    handle_error("accept", "EOPNOTSUPP", -1);
     return -1;
   }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
@@ -637,18 +690,24 @@ int accept(ACCEPT_SIG)
   getrlimit(RLIMIT_NOFILE, &rl);
   if(sockfd >= rl.rlim_cur){
     errno = EMFILE;
+    dwr("EMFILE\n");
+    handle_error("accept", "EMFILE", -1);
     return -1;
   }
   /* Check address length */
   if(addrlen < 0) {
     errno = EINVAL;
+    dwr("EINVAL\n");
+    handle_error("accept", "EINVAL", -1);
     return -1;
   }
 #endif
 
   /* redirect calls for standard I/O descriptors to kernel */
-  if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
+  if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO){
+    dwr("realaccept():\n");
     return(realaccept(sockfd, addr, addrlen));
+  }
 
   if(addr)
     addr->sa_family = AF_INET;
@@ -656,15 +715,15 @@ int accept(ACCEPT_SIG)
 
   char cmd[BUF_SZ];
   if(realaccept == NULL) {
-    dwr( "Unresolved symbol: accept()\n");
+    handle_error("accept", "Unresolved symbol [accept]", -1);
     return -1;
   }
-
   //if(opt & O_NONBLOCK)
     //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
   char rbuf[16], c[1];
   int new_conn_socket;
+
   int n = read(sockfd, c, sizeof(c)); // Read signal byte
   if(n > 0)
   {
@@ -672,28 +731,29 @@ int accept(ACCEPT_SIG)
     if(size > 0) {
       /* Send our local-fd number back to service so it can complete its mapping table */
       memset(cmd, '\0', BUF_SZ);
-      cmd[0] = RPC_FD_MAP_COMPLETION;
+      cmd[0] = RPC_MAP;
       memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
       pthread_mutex_lock(&lock);
       int n_write = write(fdret_sock, cmd, BUF_SZ);
       if(n_write < 0) {
-        dwr("Error sending perceived FD to service.\n");
         errno = ECONNABORTED; // FIXME: Closest match, service unreachable
+        handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
         return -1;
       }
       pthread_mutex_unlock(&lock);
       errno = ERR_OK;
-      dwr("accepting for %d\n", new_conn_socket);
+      dwr("accept()=%d\n", new_conn_socket);
+      handle_error("accept", "", new_conn_socket);
       return new_conn_socket; // OK
     }
     else {
-      dwr("Error receiving new FD from service.\n");
       errno = ECONNABORTED; // FIXME: Closest match, service unreachable
+      handle_error("accept", "ECONNABORTED - Error receiving new FD from service", -1);
       return -1;
     }
   }
-  dwr("Error reading signal byte from service.\n");
   errno = EAGAIN; /* necessary? */
+  handle_error("accept", "EAGAIN - Error reading signal byte from service", -1);
   return -EAGAIN;
 }
 
@@ -706,23 +766,26 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
-  dwr("listen()*:\n");
+  dwr("listen(%d):\n", sockfd);
   #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
-    return -1;
     errno = EBADF;
+    handle_error("listen", "EBADF", -1);
+    return -1;
   }
   /* Check that it is a socket */
   int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
   if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
     errno = ENOTSOCK;
+    handle_error("listen", "ENOTSOCK", -1);
     return -1;
   }
   /* Check that this socket supports accept() */
   if(!(sock_type && (SOCK_STREAM | SOCK_SEQPACKET))) {
     errno = EOPNOTSUPP;
+    handle_error("listen", "EOPNOTSUPP", -1);
     return -1;
   }
   #endif
@@ -744,8 +807,41 @@ int listen(LISTEN_SIG)
   send_command(fdret_sock, cmd);
   //err = get_retval();
   pthread_mutex_unlock(&lock);
+  handle_error("listen", "", ERR_OK);
   return ERR_OK;
 }
+
+
+
+
+/*------------------------------------------------------------------------------
+-------------------------------------- clone()----------------------------------
+------------------------------------------------------------------------------*/
+
+// int (*fn)(void *), void *child_stack, int flags, void *arg, ...
+/*
+int clone(CLONE_SIG)
+{
+  dwr("clone()\n");
+  return realclone(fn, child_stack, flags, arg);
+}
+*/
+
+
+
+/*------------------------------------------------------------------------------
+-------------------------------------- poll()-----------------------------------
+------------------------------------------------------------------------------*/
+
+// struct pollfd *fds, nfds_t nfds, int timeout
+/*
+int poll(POLL_SIG)
+{
+  dwr("poll()\n");
+  return realpoll(fds, nfds, timeout);
+  //return ERESTART_RESTARTBLOCK;
+}
+*/
 
 /*------------------------------------------------------------------------------
 ------------------------------------ syscall()----------------------------------
@@ -753,6 +849,7 @@ int listen(LISTEN_SIG)
 
 long syscall(SYSCALL_SIG)
 {
+  dwr("syscall():\n");
   va_list ap;
   uintptr_t a,b,c,d,e,f;
   va_start(ap, number);
