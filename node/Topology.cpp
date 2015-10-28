@@ -308,7 +308,7 @@ void Topology::clean(uint64_t now)
 	}
 }
 
-unsigned long Topology::countAlive() const
+unsigned long Topology::countActive() const
 {
 	const uint64_t now = RR->node->now();
 	unsigned long cnt = 0;
@@ -317,7 +317,7 @@ unsigned long Topology::countAlive() const
 	Address *a = (Address *)0;
 	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 	while (i.next(a,p)) {
-		if ((*p)->alive(now))
+		if ((*p)->hasActiveDirectPath(now))
 			++cnt;
 	}
 	return cnt;

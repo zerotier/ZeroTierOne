@@ -634,7 +634,7 @@ void Cluster::status(ZT_ClusterStatus &status) const
 	ms[_id]->x = _x;
 	ms[_id]->y = _y;
 	ms[_id]->z = _z;
-	ms[_id]->peers = RR->topology->countAlive();
+	ms[_id]->peers = RR->topology->countActive();
 	for(std::vector<InetAddress>::const_iterator ep(_zeroTierPhysicalEndpoints.begin());ep!=_zeroTierPhysicalEndpoints.end();++ep) {
 		if (ms[_id]->numZeroTierPhysicalEndpoints >= ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES) // sanity check
 			break;

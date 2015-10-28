@@ -210,9 +210,9 @@ public:
 	void clean(uint64_t now);
 
 	/**
-	 * @return Number of 'alive' peers
+	 * @return Number of peers with active direct paths
 	 */
-	unsigned long countAlive() const;
+	unsigned long countActive() const;
 
 	/**
 	 * Apply a function or function object to all peers
