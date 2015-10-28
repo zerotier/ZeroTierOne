@@ -108,7 +108,7 @@ Network Containers have been tested with the following:
 	vsftpd			[BROKEN as of 20151021] Server sends 500 when 220 is expected
 	mysql			[BROKEN as of 20151021]
 	postresql		[BROKEN as of 20151021]
-	MongoDB			[ WORKS as of 20151021] Only basic connection tested, no DB operations yet
+	MongoDB			[ WORKS as of 20151028]
 	Redis-server		[ WORKS as of 20151027]
 	pure-ftpd		[BROKEN as of 20151021] Socket operation on non-socket
 

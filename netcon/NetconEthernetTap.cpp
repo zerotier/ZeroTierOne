@@ -51,7 +51,7 @@
 
 #define APPLICATION_POLL_FREQ 				20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		10
-#define STATUS_TMR_INTERVAL						500 // How often we check connection statuses
+#define STATUS_TMR_INTERVAL						2000 // How often we check connection statuses
 
 namespace ZeroTier {
 
@@ -267,11 +267,12 @@ TcpConnection *NetconEthernetTap::getConnectionByTheirFD(PhySocket *sock, int fd
 void NetconEthernetTap::closeConnection(TcpConnection *conn)
 {
 	fprintf(stderr, "closeConnection(%x, %d)\n", conn->pcb, _phy.getDescriptor(conn->dataSock));
-	lwipstack->_tcp_arg(conn->pcb, NULL);
-  lwipstack->_tcp_sent(conn->pcb, NULL);
-  lwipstack->_tcp_recv(conn->pcb, NULL);
-  lwipstack->_tcp_err(conn->pcb, NULL);
-  lwipstack->_tcp_poll(conn->pcb, NULL, 0);
+
+  //lwipstack->_tcp_sent(conn->pcb, NULL);
+  //lwipstack->_tcp_recv(conn->pcb, NULL);
+  //lwipstack->_tcp_err(conn->pcb, NULL);
+  //lwipstack->_tcp_poll(conn->pcb, NULL, 0);
+	//lwipstack->_tcp_arg(conn->pcb, NULL);
 	lwipstack->_tcp_close(conn->pcb);
 	if(conn->dataSock) {
 		close(_phy.getDescriptor(conn->dataSock));
@@ -352,7 +353,7 @@ void NetconEthernetTap::threadMain()
 		uint64_t etharp_remaining = ARP_TMR_INTERVAL;
 		uint64_t status_remaining = STATUS_TMR_INTERVAL;
 
-		if (since_status >= STATUS_TMR_INTERVAL && true == false) {
+		if (since_status >= STATUS_TMR_INTERVAL) {
 			prev_status_time = now;
 			if(rpc_sockets.size() || tcp_connections.size()) {
 				/* Here we will periodically check the list of rpc_sockets for those that
@@ -582,7 +583,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
 	NetconEthernetTap *tap = l->tap;
-	int larg_fd = tap->_phy.getDescriptor(conn->dataSock);
+	int listening_fd = tap->_phy.getDescriptor(conn->dataSock);
 
   if(conn) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
@@ -600,20 +601,24 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		new_tcp_conn->their_fd = fds[1];
 		tap->tcp_connections.push_back(new_tcp_conn);
 		fprintf(stderr, "socketpair = {%d, %d}\n", fds[0], fds[1]);
-		int send_fd = tap->_phy.getDescriptor(conn->rpcSock);
-		fprintf(stderr, "write(%d,...)\n", larg_fd);
-		int n = write(larg_fd, "z", 1); // accept() in library waits for this byte
-    if(n > 0) {
+		int n, send_fd = tap->_phy.getDescriptor(conn->rpcSock);
+		fprintf(stderr, "write(%d,...)\n", listening_fd);
+		//int n = write(listening_fd, "z", 1); // accept() in library waits for this byte
+		if((n = send(listening_fd, "z", 1, MSG_NOSIGNAL)) < 0) {
+			fprintf(stderr, " nc_accept(): Error: [send(listening_fd,...) = MSG_NOSIGNAL].\n");
+			return -1;
+		}
+		else if(n > 0) {
 			if(sock_fd_write(send_fd, fds[1]) > 0) {
 				close(fds[1]); // close other end of socketpair
 				new_tcp_conn->pending = true;
 			}
 			else {
-				fprintf(stderr, "nc_accept(%d): unable to send fd to client\n", larg_fd);
+				fprintf(stderr, "nc_accept(%d): unable to send fd to client\n", listening_fd);
 			}
     }
     else {
-      fprintf(stderr, "nc_accept(%d): error writing signal byte (send_fd = %d, perceived_fd = %d)\n", larg_fd, send_fd, fds[1]);
+      fprintf(stderr, "nc_accept(%d): error writing signal byte (send_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
       return -1;
     }
     tap->lwipstack->_tcp_arg(newpcb, new Larg(tap, new_tcp_conn));
@@ -625,7 +630,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		return ERR_OK;
   }
   else {
-    fprintf(stderr, "nc_accept(%d): can't locate Connection object for PCB.\n", larg_fd);
+    fprintf(stderr, "nc_accept(%d): can't locate Connection object for PCB.\n", listening_fd);
   }
   return -1;
 }
@@ -813,13 +818,11 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
  */
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
-	//fprintf(stderr, "nc_sent()\n");
+	//fprintf(stderr, " nc_sent()\n");
 	Larg *l = (Larg*)arg;
 	if(len) {
-		//fprintf(stderr, "ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
+		fprintf(stderr, " nc_sent(): ACKING len = %d, setting read-notify = true, (sndbuf = %d)\n", len, l->conn->pcb->snd_buf);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
-		//uint64_t now = OSUtils::now();
-		//fprintf(stderr, "nc_sent(): now = %u\n", now);
 		l->tap->_phy.whack();
 	}
 	return ERR_OK;
