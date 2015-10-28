@@ -129,7 +129,6 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		// other relay.
 		for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
 			if ((*p)->alive(now)) {
-				TRACE("sending indirect NOP to %s via %s to re-establish link",(*p)->address().toString().c_str(),r->address().toString().c_str());
 				Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
 				RR->sw->send(outp,true,0);
 			}
