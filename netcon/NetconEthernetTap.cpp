@@ -490,6 +490,10 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			fprintf(stderr, "RPC_MAP\n");
 	    handle_retval(sock, uptr, buf);
 			break;
+		case RPC_MAP_REQ:
+			fprintf(stderr, "RPC_MAP_REQ\n");
+			handle_map_request(sock, uptr, buf);
+			break;
 		default:
 			break;
 	}
@@ -843,6 +847,29 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 ----------------------------- RPC Handler functions ----------------------------
 ------------------------------------------------------------------------------*/
 
+/*
+	Responds to a request from the [intercept] to determine whether a local socket is
+	mapped to this service. In other words, how do the intercept's overridden calls
+	tell the difference between regular AF_LOCAL sockets and one of our socketpairs
+	that is used to communicate over the network?
+*/
+void NetconEthernetTap::handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf)
+{
+	TcpConnection *conn = (TcpConnection*)*uptr;
+	int req_fd;
+	memcpy(&req_fd, &buf[1], sizeof(req_fd));
+	for(size_t i=0; i<tcp_connections.size(); i++) {
+		if(tcp_connections[i]->rpcSock == conn->rpcSock && tcp_connections[i]->perceived_fd == req_fd){
+			send_return_value(conn, 1, ERR_OK); // True
+			fprintf(stderr, " handle_map_request(their=%d): MAPPED (to %d)\n", req_fd,
+				_phy.getDescriptor(tcp_connections[i]->dataSock));
+			return;
+		}
+	}
+	send_return_value(conn, 0, ERR_OK); // False
+	fprintf(stderr, " handle_map_request(their=%d): NOT MAPPED\n", req_fd);
+}
+
 /**
  * Handles a return value (client's perceived fd) and completes a mapping
  * so that we know what connection an RPC call should be associated with.
@@ -861,7 +888,7 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 	memcpy(&(conn->perceived_fd), &buf[1], sizeof(int));
 	conn->pending = false;
 
-	fprintf(stderr, "handle_retval(): CONN:%x - Mapping [our=%d -> their=%d]\n",conn,
+	fprintf(stderr, " handle_retval(): CONN:%x - Mapping [our=%d -> their=%d]\n",conn,
 	_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
 
 	/* Check for pre-existing connection for this socket ---
@@ -878,11 +905,11 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, unsigned cha
 			if(tcp_connections[i]->perceived_fd == conn->perceived_fd) {
 				int n;
 				if((n = send(_phy.getDescriptor(tcp_connections[i]->dataSock), "z", 1, MSG_NOSIGNAL)) < 0) {
-					fprintf(stderr, "handle_retval(): CONN:%x - Socket (%d) already mapped (originally CONN:%x)\n", conn, tcp_connections[i]->perceived_fd, tcp_connections[i]);
+					fprintf(stderr, " handle_retval(): CONN:%x - Socket (%d) already mapped (originally CONN:%x)\n", conn, tcp_connections[i]->perceived_fd, tcp_connections[i]);
 					closeConnection(tcp_connections[i]);
 				}
 				else {
-					fprintf(stderr, "handle_retval(): CONN:%x - This socket is mapped to two different pipes (?). Exiting.\n", conn);
+					fprintf(stderr, " handle_retval(): CONN:%x - This socket is mapped to two different pipes (?). Exiting.\n", conn);
 					exit(0);
 				}
 			}
@@ -943,8 +970,9 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				d[1] = (ip >>  8) & 0xFF;
 				d[2] = (ip >> 16) & 0xFF;
 				d[3] = (ip >> 24) & 0xFF;
-				fprintf(stderr, "handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
-				fprintf(stderr, "err = %d\n", err);
+				fprintf(stderr, " handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
+				fprintf(stderr, " handle_bind(): err = %d\n", err);
+
 				if(err == ERR_USE)
 					send_return_value(conn, -1, EADDRINUSE);
 				if(err == ERR_MEM)
@@ -956,12 +984,12 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				send_return_value(conn, ERR_OK, ERR_OK); // Success
     }
     else {
-			fprintf(stderr, "handle_bind(): PCB (%x) not in CLOSED state. Ignoring BIND request.\n", conn->pcb);
+			fprintf(stderr, " handle_bind(): PCB (%x) not in CLOSED state. Ignoring BIND request.\n", conn->pcb);
 			send_return_value(conn, -1, EINVAL);
 		}
   }
   else {
-		fprintf(stderr, "handle_bind(): can't locate connection for PCB\n");
+		fprintf(stderr, " handle_bind(): can't locate connection for PCB\n");
 		send_return_value(conn, -1, EBADF);
 	}
 }
@@ -987,48 +1015,47 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
  */
 void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc)
 {
+	fprintf(stderr, " handle_listen(their=%d):\n", listen_rpc->sockfd);
 	TcpConnection *conn = getConnectionByTheirFD(sock, listen_rpc->sockfd);
-  if(conn) {
-    if(conn->pcb->state == LISTEN) {
-      fprintf(stderr, "handle_listen(): PCB is already in listening state.\n");
-      return;
-    }
-		struct tcp_pcb* listening_pcb;
+	if(!conn){
+		fprintf(stderr, " handle_listen(): unable to locate connection object\n");
+		// ? send_return_value(conn, -1, EBADF);
+		return;
+	}
+	fprintf(stderr, " handle_listen(our=%d -> their=%d)\n", _phy.getDescriptor(conn->dataSock), conn->perceived_fd);
+
+  if(conn->pcb->state == LISTEN) {
+    fprintf(stderr, " handle_listen(): PCB is already in listening state.\n");
+    return;
+  }
+	struct tcp_pcb* listening_pcb;
 
 #ifdef TCP_LISTEN_BACKLOG
-			listening_pcb = lwipstack->tcp_listen_with_backlog(conn->pcb, listen_rpc->backlog);
+		listening_pcb = lwipstack->tcp_listen_with_backlog(conn->pcb, listen_rpc->backlog);
 #else
-			listening_pcb = lwipstack->tcp_listen(conn->pcb);
+		listening_pcb = lwipstack->tcp_listen(conn->pcb);
 #endif
 
-    if(listening_pcb != NULL) {
-      conn->pcb = listening_pcb;
-      lwipstack->tcp_accept(listening_pcb, nc_accept);
-			lwipstack->tcp_arg(listening_pcb, new Larg(this, conn));
-			/* we need to wait for the client to send us the fd allocated on their end
-			for this listening socket */
-			fcntl(_phy.getDescriptor(conn->dataSock), F_SETFL, O_NONBLOCK);
-			conn->listening = true;
-			conn->pending = true;
-			send_return_value(conn, ERR_OK, ERR_OK);
-    }
-    else {
-			/*
-			fprintf(stderr, "handle_listen(): unable to allocate memory for new listening PCB\n");
-			 // FIXME: This does not have an equivalent errno value
-			 // lwip will reclaim space with a tcp_listen call since a PCB in a LISTEN
-			 // state takes up less space. If something goes wrong during the creation of a
-			 // new listening socket we should return an error that implies we can't use this
-			 // socket, even if the reason isn't describing what really happened internally.
-			 // See: http://lwip.wikia.com/wiki/Raw/TCP
-			send_return_value(conn, -1, EBADF);
-    	*/
-		}
+  if(listening_pcb != NULL) {
+    conn->pcb = listening_pcb;
+    lwipstack->tcp_accept(listening_pcb, nc_accept);
+		lwipstack->tcp_arg(listening_pcb, new Larg(this, conn));
+		/* we need to wait for the client to send us the fd allocated on their end
+		for this listening socket */
+		fcntl(_phy.getDescriptor(conn->dataSock), F_SETFL, O_NONBLOCK);
+		conn->listening = true;
+		conn->pending = true;
+		send_return_value(conn, ERR_OK, ERR_OK);
   }
   else {
 		/*
-		// We can't find a connection mapped to the socket fd provided
-    fprintf(stderr, "handle_listen(): can't locate connection for PCB\n");
+		fprintf(stderr, "handle_listen(): unable to allocate memory for new listening PCB\n");
+		 // FIXME: This does not have an equivalent errno value
+		 // lwip will reclaim space with a tcp_listen call since a PCB in a LISTEN
+		 // state takes up less space. If something goes wrong during the creation of a
+		 // new listening socket we should return an error that implies we can't use this
+		 // socket, even if the reason isn't describing what really happened internally.
+		 // See: http://lwip.wikia.com/wiki/Raw/TCP
 		send_return_value(conn, -1, EBADF);
   	*/
 	}
@@ -1067,7 +1094,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 	int rpc_fd = _phy.getDescriptor(sock);
 	struct tcp_pcb *newpcb = lwipstack->tcp_new();
 
-	fprintf(stderr, "handle_socket(): pcb=%x, (state == CLOSED) = %d\n", newpcb, (newpcb->state==CLOSED));
+	fprintf(stderr, " handle_socket(): pcb=%x\n", newpcb);
 
   if(newpcb != NULL) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
@@ -1077,7 +1104,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
 				return;
 			}
 		}
-		fprintf(stderr, "socketpair = {%d, %d}\n", fds[0], fds[1]);
+		fprintf(stderr, " handle_socket(): socketpair = {%d, %d}\n", fds[0], fds[1]);
 		TcpConnection *new_conn = new TcpConnection();
 		new_conn->dataSock = _phy.wrapSocket(fds[0], new_conn);
 		*uptr = new_conn;
@@ -1092,7 +1119,7 @@ void NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, struct socke
   }
   else {
 		sock_fd_write(rpc_fd, -1); // Send a bad fd, to signal error
-    fprintf(stderr, "handle_socket(): Memory not available for new PCB\n");
+    fprintf(stderr, " handle_socket(): Memory not available for new PCB\n");
 		send_return_value(rpc_fd, -1, ENOMEM);
   }
 }
@@ -1194,14 +1221,14 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 			//   that's it!
 			// - Most instances of a retval for a connect() should happen
 			//   in the nc_connect() and nc_err() callbacks!
-			fprintf(stderr, "handle_connect(): unable to connect\n");
+			fprintf(stderr, " handle_connect(): unable to connect\n");
 			send_return_value(conn, -1, EAGAIN);
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
 		conn->pending=true;
 	}
 	else {
-		fprintf(stderr, "could not locate PCB based on their fd\n");
+		fprintf(stderr, " handle_connect(): could not locate PCB based on their fd\n");
 		send_return_value(conn, -1, EBADF);
 	}
 }
@@ -1213,12 +1240,12 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 	int r;
 
 	if(!conn) {
-		fprintf(stderr, "handle_write(): could not locate connection for this fd\n");
+		fprintf(stderr, " handle_write(): could not locate connection for this fd\n");
 		return;
 	}
 	if(conn->idx < max) {
 		if(!conn->pcb) {
-			fprintf(stderr, "handle_write(): conn->pcb == NULL. Failed to write.\n");
+			fprintf(stderr, " handle_write(): conn->pcb == NULL. Failed to write.\n");
 			return;
 		}
 		int sndbuf = conn->pcb->snd_buf; // How much we are currently allowed to write to the connection
@@ -1245,7 +1272,7 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 					int err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
 					lwipstack->_tcp_output(conn->pcb);
 					if(err != ERR_OK) {
-						fprintf(stderr, "handle_write(): error while writing to PCB, (err = %d)\n", err);
+						fprintf(stderr, " handle_write(): error while writing to PCB, (err = %d)\n", err);
 						return;
 					}
 					else {
@@ -1258,14 +1285,13 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 					}
 				}
 				else {
-					fprintf(stderr, "handle_write(): LWIP stack full\n");
+					fprintf(stderr, " handle_write(): LWIP stack full\n");
 					return;
 				}
 			}
 		}
 	}
 }
-
 
 } // namespace ZeroTier
 

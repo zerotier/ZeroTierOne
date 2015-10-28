@@ -170,6 +170,7 @@ void send_command(int rpc_fd, char *cmd)
  */
 int get_retval()
 {
+  dwr("get_retval()\n");
   if(fdret_sock >= 0) {
     int retval;
     int sz = sizeof(char) + sizeof(retval) + sizeof(errno);
@@ -186,6 +187,21 @@ int get_retval()
   return -1;
 }
 
+/* Check whether the socket is mapped to the service or not. We
+need to know if this is a regular AF_LOCAL socket or an end of a socketpair
+that the service uses. We don't want to keep state in the intercept, so
+we simply ask the service via an RPC */
+int is_mapped_to_service(int sockfd)
+{
+  dwr("is_mapped_to_service()\n");
+  char cmd[BUF_SZ];
+  memset(cmd, '\0', BUF_SZ);
+  cmd[0] = RPC_MAP_REQ;
+  memcpy(&cmd[1], &sockfd, sizeof(sockfd));
+  send_command(fdret_sock, cmd);
+  return get_retval();
+}
+
 
 /*------------------------------------------------------------------------------
 ----------  Unix-domain socket lazy initializer (for fd-transfers)--------------
@@ -194,6 +210,7 @@ int get_retval()
 /* Sets up the connection pipes and sockets to the service */
 int init_service_connection()
 {
+  dwr("init_service_connection()\n");
   if(!is_initialized) {
     struct sockaddr_un addr;
     int tfd = -1, attempts = 0, conn_err = -1;
@@ -309,6 +326,7 @@ void set_up_intercept()
 /*------------------------------------------------------------------------------
 --------------------------------- setsockopt() ---------------------------------
 ------------------------------------------------------------------------------*/
+
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
@@ -332,8 +350,8 @@ int setsockopt(SETSOCKOPT_SIG)
 /*------------------------------------------------------------------------------
 --------------------------------- getsockopt() ---------------------------------
 ------------------------------------------------------------------------------*/
-/* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 
+/* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 int getsockopt(GETSOCKOPT_SIG)
 {
   dwr("setsockopt(%d)\n", sockfd);
@@ -359,7 +377,6 @@ int getsockopt(GETSOCKOPT_SIG)
 
 /* int socket_family, int socket_type, int protocol
    socket() intercept function */
-
 int socket(SOCKET_SIG)
 {
   dwr("socket()*:\n");
@@ -407,7 +424,6 @@ int socket(SOCKET_SIG)
   if(socket_family == AF_LOCAL
     || socket_family == AF_NETLINK
     || socket_family == AF_UNIX) {
-
       int err = realsocket(socket_family, socket_type, protocol);
       dwr("realsocket, err = %d\n", err);
       handle_error("socket", "", err);
@@ -554,7 +570,7 @@ int connect(CONNECT_SIG)
 fd_set *exceptfds, struct timeval *timeout */
 int select(SELECT_SIG)
 {
-  //dwr("select()*:\n");
+  //dwr("select():\n");
   return realselect(n, readfds, writefds, exceptfds, timeout);
 }
 
@@ -592,19 +608,16 @@ int bind(BIND_SIG)
 
   /* If local, just use normal syscall */
   struct sockaddr_in *connaddr;
-  connaddr = (struct sockaddr_in *) addr;
+  connaddr = (struct sockaddr_in *)addr;
 
-  if (addr != NULL && (connaddr->sin_family == AF_LOCAL
-    || connaddr->sin_family == PF_NETLINK
+  if(connaddr->sin_family == AF_LOCAL
     || connaddr->sin_family == AF_NETLINK
-    || connaddr->sin_family == AF_UNIX))
-  {
-    if(realbind == NULL) {
-      handle_error("bind", "Unresolved symbol [bind]", -1);
-      exit(-1);
-    }
-    return(realbind(sockfd, addr, addrlen));
+    || connaddr->sin_family == AF_UNIX) {
+      int err = realbind(sockfd, addr, addrlen);
+      dwr("realbind, err = %d\n", err);
+      return err;
   }
+
   /* Assemble and send RPC */
   char cmd[BUF_SZ];
   struct bind_st rpc_st;
@@ -767,6 +780,9 @@ int accept(ACCEPT_SIG)
 int listen(LISTEN_SIG)
 {
   dwr("listen(%d):\n", sockfd);
+  int sock_type;
+  socklen_t sock_type_len = sizeof(sock_type);
+
   #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -775,8 +791,6 @@ int listen(LISTEN_SIG)
     return -1;
   }
   /* Check that it is a socket */
-  int sock_type;
-  socklen_t sock_type_len = sizeof(sock_type);
   if(getsockopt(sockfd, SOL_SOCKET, SO_TYPE, (void *) &sock_type, &sock_type_len) < 0) {
     errno = ENOTSOCK;
     handle_error("listen", "ENOTSOCK", -1);
@@ -794,6 +808,13 @@ int listen(LISTEN_SIG)
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(reallisten(sockfd, backlog));
 
+  if(!is_mapped_to_service(sockfd)) {
+    // We now know this socket is not one of our socketpairs
+    int err = reallisten(sockfd, backlog);
+    dwr("reallisten()=%d\n", err);
+    return err;
+  }
+
   /* Assemble and send RPC */
   char cmd[BUF_SZ];
   memset(cmd, '\0', BUF_SZ);
@@ -810,9 +831,6 @@ int listen(LISTEN_SIG)
   handle_error("listen", "", ERR_OK);
   return ERR_OK;
 }
-
-
-
 
 /*------------------------------------------------------------------------------
 -------------------------------------- clone()----------------------------------
@@ -849,7 +867,7 @@ int poll(POLL_SIG)
 
 long syscall(SYSCALL_SIG)
 {
-  dwr("syscall():\n");
+  //dwr("syscall(%u, ...):\n", number);
   va_list ap;
   uintptr_t a,b,c,d,e,f;
   va_start(ap, number);

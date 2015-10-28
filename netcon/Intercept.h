@@ -51,8 +51,9 @@
 
 /* Administration RPC codes */
 #define RPC_MAP									20	// Give the service the value we "see" for the new buffer fd
-#define RPC_RETVAL							21	// not RPC per se, but something we should codify
-#define RPC_KILL_INTERCEPT			22  // Tells the service we need to shut down all connections
+#define RPC_MAP_REQ							21  // A call to determine whether an fd is mapped to the service
+#define RPC_RETVAL							22	// not RPC per se, but something we should codify
+#define RPC_KILL_INTERCEPT			23  // Tells the service we need to shut down all connections
 
 /* Connection statuses */
 #define UNSTARTED								0

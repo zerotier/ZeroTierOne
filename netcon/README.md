@@ -108,7 +108,7 @@ Network Containers have been tested with the following:
 	vsftpd			[BROKEN as of 20151021] Server sends 500 when 220 is expected
 	mysql			[BROKEN as of 20151021]
 	postresql		[BROKEN as of 20151021]
-	MongoDB			[BROKEN as of 20151021]
+	MongoDB			[ WORKS as of 20151021] Only basic connection tested, no DB operations yet
 	Redis-server		[ WORKS as of 20151027]
 	pure-ftpd		[BROKEN as of 20151021] Socket operation on non-socket
 
@@ -124,6 +124,12 @@ To Test:
 
 
 ### Extended Version Notes
+
+20151028 Added MongoDB support:
+
+	- Added logic (RPC_MAP_REQ) to check whether a given AF_LOCAL socket is mapped to anything
+	inside the service instance. 
+
 
 20151027 Added Redis-server support:
 
