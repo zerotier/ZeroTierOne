@@ -449,7 +449,7 @@ public:
 			++_directPathPushCutoffCount;
 		else _directPathPushCutoffCount = 0;
 		_lastDirectPathPushReceive = now;
-		return (_directPathPushCutoffCount >= ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
+		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
 	}
 
 	/**
