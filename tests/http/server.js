@@ -5,6 +5,8 @@ var SERVER_PORT = 18080;
 
 // ---------------------------------------------------------------------------
 
+var fs = require('fs');
+
 var express = require('express');
 var app = express();
 
@@ -28,6 +30,8 @@ app.post('/:agentId',function(req,res) {
 	var agentId = req.params.agentId;
 	if ((!agentId)||(agentId.length !== 32))
 		return res.status(404).send('');
+
+	var receiveTime = Date.now();
 	var resultData = null;
 	try {
 		resultData = JSON.parse(req.rawBody);
@@ -36,9 +40,17 @@ app.post('/:agentId',function(req,res) {
 	}
 	result = {
 		agentId: agentId,
+		receiveTime: receiveTime,
 		result: resultData
 	};
-	console.log(result);
+
+	var nows = receiveTime.toString(16);
+	while (nows.length < 16)
+		nows = '0' + nows;
+	fs.writeFile('result_'+agentId+'_'+nows,JSON.stringify(result),function(err) {
+		console.log(result);
+	});
+
 	return res.status(200).send('');
 });
 

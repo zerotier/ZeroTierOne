@@ -9,14 +9,14 @@ var RUN_TEST_EVERY = 1000;
 var TEST_DURATION = (60 * 1000);
 
 // Where should I contact to register and query a list of other nodes?
-var SERVER_HOST = '127.0.0.1';
+var SERVER_HOST = '174.136.102.178';
 var SERVER_PORT = 18080;
 
 // Which port should agents use for their HTTP?
 var AGENT_PORT = 18888;
 
 // Payload size in bytes
-var PAYLOAD_SIZE = 4096;
+var PAYLOAD_SIZE = 100000;
 
 // ---------------------------------------------------------------------------
 
@@ -66,9 +66,9 @@ if (thisAgentId === null) {
 //console.log(thisAgentId);
 
 // Create a random (and therefore not very compressable) payload
-var payload = '';
-while (payload.length < PAYLOAD_SIZE) {
-	payload += String.fromCharCode(Math.round(Math.random() * 255.0));
+var payload = new Buffer(PAYLOAD_SIZE);
+for(var xx=0;xx<PAYLOAD_SIZE;++xx) {
+	payload.writeUInt8(Math.round(Math.random() * 255.0),xx);
 }
 
 // Incremented for each test
@@ -147,7 +147,9 @@ function performTestOnAllPeers(peers,callback)
 			path: '/'
 		},function(res) {
 			var bytes = 0;
-			res.on('data',function(chunk) { bytes += chunk.length; });
+			res.on('data',function(chunk) {
+				bytes += chunk.length;
+			});
 			res.on('end',function() {
 				if (timedOut)
 					return next(null);
@@ -204,7 +206,7 @@ var expressServer = app.listen(AGENT_PORT,function () {
 				}
 
 				performTestOnAllPeers(peers,function(results) {
-					console.log(results);
+					//console.log(results);
 
 					var submit = http.request({
 						host: SERVER_HOST,
