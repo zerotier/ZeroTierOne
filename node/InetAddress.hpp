@@ -52,8 +52,8 @@ namespace ZeroTier {
  *
  * This is basically a "mixin" for sockaddr_storage. It adds methods and
  * operators, but does not modify the structure. This can be cast to/from
- * sockaddr_storage and used interchangeably. Don't change this as it's
- * used in a few places.
+ * sockaddr_storage and used interchangeably. DO NOT change this by e.g.
+ * adding non-static fields, since much code depends on this identity.
  */
 struct InetAddress : public sockaddr_storage
 {
@@ -326,7 +326,7 @@ struct InetAddress : public sockaddr_storage
 	inline bool isV6() const throw() { return (ss_family == AF_INET6); }
 
 	/**
-	 * @return pointer to raw IP address bytes
+	 * @return pointer to raw address bytes or NULL if not available
 	 */
 	inline const void *rawIpData() const
 		throw()
@@ -334,19 +334,6 @@ struct InetAddress : public sockaddr_storage
 		switch(ss_family) {
 			case AF_INET: return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
 			case AF_INET6: return (const void *)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			default: return 0;
-		}
-	}
-
-	/**
-	 * @return pointer to raw IP address bytes
-	 */
-	inline void *rawIpData()
-		throw()
-	{
-		switch(ss_family) {
-			case AF_INET: return (void *)&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr);
-			case AF_INET6: return (void *)(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 			default: return 0;
 		}
 	}
