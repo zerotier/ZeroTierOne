@@ -211,7 +211,7 @@ app.get('/',function(req,res) {
 	return res.status(200).send(payload);
 });
 
-var expressServer = app.listen(AGENT_PORT,agentIdToIp(thisAgentId),function () {
+var expressServer = app.listen(AGENT_PORT,function () {
 	registerAndGetPeers(function(err,peers) {
 		if (err) {
 			console.error('FATAL: unable to contact or query server: '+err.toString());

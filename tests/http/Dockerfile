@@ -4,7 +4,8 @@ MAINTAINER https://www.zerotier.com/
 
 EXPOSE 9993/udp
 
-RUN yum -y update && yum -y install epel-release && yum -y install nodejs npm && yum clean all
+ADD nodesource-el.repo /etc/yum.repos.d/nodesource-el.repo
+RUN yum -y update && yum install -y nodejs && yum clean all
 
 RUN mkdir -p /var/lib/zerotier-one
 RUN mkdir -p /var/lib/zerotier-one/networks.d
