@@ -217,6 +217,7 @@ var expressServer = app.listen(AGENT_PORT,agentIdToIp(thisAgentId),function () {
 			console.error('FATAL: unable to contact or query server: '+err.toString());
 			process.exit(1);
 		}
+		doTestsAndReport();
 		setInterval(doTestsAndReport,TEST_INTERVAL);
 	});
 });

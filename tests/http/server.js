@@ -41,15 +41,15 @@ app.post('/:testNumber/:agentId',function(req,res) {
 	}
 	result = {
 		agentId: agentId,
-		testNumber: testNumber,
+		testNumber: parseInt(testNumber),
 		receiveTime: receiveTime,
 		results: resultData
 	};
 
-	var nows = receiveTime.toString(16);
-	while (nows.length < 16)
-		nows = '0' + nows;
-	fs.writeFile('result_'+agentId+'_'+nows,JSON.stringify(result),function(err) {
+	testNumber = testNumber.toString();
+	while (testNumber.length < 10)
+		testNumber = '0' + testNumber;
+	fs.writeFile('result_'+testNumber+'_'+agentId,JSON.stringify(result),function(err) {
 		console.log(result);
 	});
 
