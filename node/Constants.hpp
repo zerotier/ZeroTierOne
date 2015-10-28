@@ -320,11 +320,6 @@
 #define ZT_MIN_PATH_CONFIRMATION_INTERVAL 1000
 
 /**
- * Interval between direct path pushes in milliseconds
- */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL 120000
-
-/**
  * How long (max) to remember network certificates of membership?
  *
  * This only applies to networks we don't belong to.
@@ -348,9 +343,28 @@
 #define ZT_MAX_BRIDGE_SPAM 16
 
 /**
+ * Interval between direct path pushes in milliseconds
+ */
+#define ZT_DIRECT_PATH_PUSH_INTERVAL 120000
+
+/**
  * Maximum number of endpoints to contact per address type (to limit pushes like GitHub issue #235)
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 4
+#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 5
+
+/**
+ * Time horizon for push direct paths cutoff
+ */
+#define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 60000
+
+/**
+ * Maximum number of direct path pushes within cutoff time
+ *
+ * This limits response to PUSH_DIRECT_PATHS to CUTOFF_LIMIT responses
+ * per CUTOFF_TIME milliseconds per peer to prevent this from being
+ * useful for DOS amplification attacks.
+ */
+#define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 5
 
 /**
  * A test pseudo-network-ID that can be joined

@@ -55,6 +55,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastAnnouncedTo(0),
 	_lastPathConfirmationSent(0),
 	_lastDirectPathPushSent(0),
+	_lastDirectPathPushReceive(0),
 	_lastPathSort(0),
 	_vProto(0),
 	_vMajor(0),
@@ -63,6 +64,7 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_id(peerIdentity),
 	_numPaths(0),
 	_latency(0),
+	_directPathPushCutoffCount(0),
 	_networkComs(4),
 	_lastPushedComs(4)
 {

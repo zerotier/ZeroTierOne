@@ -901,6 +901,11 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 {
 	try {
 		const uint64_t now = RR->node->now();
+		if (!peer->shouldRespondToDirectPathPush(now)) {
+			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_remoteAddress.toString().c_str());
+			return true;
+		}
+
 		const Path *currentBest = peer->getBestPath(now);
 
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);

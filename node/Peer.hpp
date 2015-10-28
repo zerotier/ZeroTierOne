@@ -432,6 +432,27 @@ public:
 	}
 
 	/**
+	 * Update direct path push stats and return true if we should respond
+	 *
+	 * This is a circuit breaker to make VERB_PUSH_DIRECT_PATHS not particularly
+	 * useful as a DDOS amplification attack vector. Otherwise a malicious peer
+	 * could send loads of these and cause others to bombard arbitrary IPs with
+	 * traffic.
+	 *
+	 * @param now Current time
+	 * @return True if we should respond
+	 */
+	inline bool shouldRespondToDirectPathPush(const uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
+			++_directPathPushCutoffCount;
+		else _directPathPushCutoffCount = 0;
+		_lastDirectPathPushReceive = now;
+		return (_directPathPushCutoffCount >= ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
+	}
+
+	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A
@@ -459,7 +480,7 @@ public:
 		const unsigned int recSizePos = b.size();
 		b.addSize(4); // space for uint32_t field length
 
-		b.append((uint16_t)0); // version of serialized Peer data
+		b.append((uint16_t)1); // version of serialized Peer data
 
 		_id.serialize(b,false);
 
@@ -470,12 +491,14 @@ public:
 		b.append((uint64_t)_lastAnnouncedTo);
 		b.append((uint64_t)_lastPathConfirmationSent);
 		b.append((uint64_t)_lastDirectPathPushSent);
+		b.append((uint64_t)_lastDirectPathPushReceive);
 		b.append((uint64_t)_lastPathSort);
 		b.append((uint16_t)_vProto);
 		b.append((uint16_t)_vMajor);
 		b.append((uint16_t)_vMinor);
 		b.append((uint16_t)_vRevision);
 		b.append((uint32_t)_latency);
+		b.append((uint16_t)_directPathPushCutoffCount);
 
 		b.append((uint16_t)_numPaths);
 		for(unsigned int i=0;i<_numPaths;++i)
@@ -521,7 +544,7 @@ public:
 		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
-		if (b.template at<uint16_t>(p) != 0)
+		if (b.template at<uint16_t>(p) != 1)
 			return SharedPtr<Peer>(); // version mismatch
 		p += 2;
 
@@ -539,12 +562,14 @@ public:
 		np->_lastAnnouncedTo = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathConfirmationSent = b.template at<uint64_t>(p); p += 8;
 		np->_lastDirectPathPushSent = b.template at<uint64_t>(p); p += 8;
+		np->_lastDirectPathPushReceive = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathSort = b.template at<uint64_t>(p); p += 8;
 		np->_vProto = b.template at<uint16_t>(p); p += 2;
 		np->_vMajor = b.template at<uint16_t>(p); p += 2;
 		np->_vMinor = b.template at<uint16_t>(p); p += 2;
 		np->_vRevision = b.template at<uint16_t>(p); p += 2;
 		np->_latency = b.template at<uint32_t>(p); p += 4;
+		np->_directPathPushCutoffCount = b.template at<uint16_t>(p); p += 2;
 
 		const unsigned int numPaths = b.template at<uint16_t>(p); p += 2;
 		for(unsigned int i=0;i<numPaths;++i) {
@@ -588,6 +613,7 @@ private:
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastPathConfirmationSent;
 	uint64_t _lastDirectPathPushSent;
+	uint64_t _lastDirectPathPushReceive;
 	uint64_t _lastPathSort;
 	uint16_t _vProto;
 	uint16_t _vMajor;
@@ -597,6 +623,7 @@ private:
 	Path _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	unsigned int _numPaths;
 	unsigned int _latency;
+	unsigned int _directPathPushCutoffCount;
 
 	struct _NetworkCom
 	{
