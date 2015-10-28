@@ -26,7 +26,8 @@ app.get('/:agentId',function(req,res) {
 	return res.status(200).send(JSON.stringify(Object.keys(knownAgents)));
 });
 
-app.post('/:agentId',function(req,res) {
+app.post('/:testNumber/:agentId',function(req,res) {
+	var testNumber = req.params.testNumber;
 	var agentId = req.params.agentId;
 	if ((!agentId)||(agentId.length !== 32))
 		return res.status(404).send('');
@@ -40,8 +41,9 @@ app.post('/:agentId',function(req,res) {
 	}
 	result = {
 		agentId: agentId,
+		testNumber: testNumber,
 		receiveTime: receiveTime,
-		result: resultData
+		results: resultData
 	};
 
 	var nows = receiveTime.toString(16);

@@ -1,14 +1,13 @@
 // ---------------------------------------------------------------------------
 // Customizable parameters:
 
-// How frequently in ms to run tests
-//var RUN_TEST_EVERY = (60 * 5 * 1000);
-var RUN_TEST_EVERY = 1000;
+// Maximum test duration in milliseconds
+var TEST_DURATION = (30 * 1000);
 
-// Maximum test duration in milliseconds (must be less than RUN_TEST_EVERY)
-var TEST_DURATION = (60 * 1000);
+// Interval between tests (should be several times longer than TEST_DURATION)
+var TEST_INTERVAL = (60 * 2 * 1000);
 
-// Where should I contact to register and query a list of other nodes?
+// Where should I contact to register and query a list of other test agents?
 var SERVER_HOST = '174.136.102.178';
 var SERVER_PORT = 18080;
 
@@ -71,8 +70,29 @@ for(var xx=0;xx<PAYLOAD_SIZE;++xx) {
 	payload.writeUInt8(Math.round(Math.random() * 255.0),xx);
 }
 
-// Incremented for each test
-var testCounter = 0;
+// Incremented with each test
+var testNumber = 0;
+
+function agentIdToIp(agentId)
+{
+	var ip = '';
+	ip += agentId.substr(0,4);
+	ip += ':';
+	ip += agentId.substr(4,4);
+	ip += ':';
+	ip += agentId.substr(8,4);
+	ip += ':';
+	ip += agentId.substr(12,4);
+	ip += ':';
+	ip += agentId.substr(16,4);
+	ip += ':';
+	ip += agentId.substr(20,4);
+	ip += ':';
+	ip += agentId.substr(24,4);
+	ip += ':';
+	ip += agentId.substr(28,4);
+	return ip;
+};
 
 function registerAndGetPeers(callback)
 {
@@ -84,13 +104,15 @@ function registerAndGetPeers(callback)
 		var body = '';
 		res.on('data',function(chunk) { body += chunk.toString(); });
 		res.on('end',function() {
+			if (!body)
+				return callback(null,[]);
 			try {
 				var peers = JSON.parse(body);
 				if (Array.isArray(peers))
 					return callback(null,peers);
 				else return callback(new Error('invalid JSON response from server'),null);
 			} catch (e) {
-				return callback(new Error('invalid JSON response from server'),null);
+				return callback(new Error('invalid JSON response from server: '+e.toString()),null);
 			}
 		});
 	}).on('error',function(e) {
@@ -101,12 +123,13 @@ function registerAndGetPeers(callback)
 function performTestOnAllPeers(peers,callback)
 {
 	var allResults = {};
+	var allRequests = [];
 	var timedOut = false;
 	var endOfTestTimer = setTimeout(function() {
 		timedOut = true;
-		return callback(allResults);
+		for(var x=0;x<allRequests.length;++x)
+			allRequests[x].abort();
 	},TEST_DURATION);
-	var testStartTime = Date.now();
 
 	async.each(peers,function(peer,next) {
 		if (timedOut)
@@ -116,33 +139,15 @@ function performTestOnAllPeers(peers,callback)
 
 		var connectionStartTime = Date.now();
 		allResults[peer] = {
-			testStart: testStartTime,
 			start: connectionStartTime,
-			end: null,
+			end: 0,
 			error: null,
-			bytes: 0,
-			test: testCounter
+			timedOut: false,
+			bytes: 0
 		};
 
-		var peerHost = '';
-		peerHost += peer.substr(0,4);
-		peerHost += ':';
-		peerHost += peer.substr(4,4);
-		peerHost += ':';
-		peerHost += peer.substr(8,4);
-		peerHost += ':';
-		peerHost += peer.substr(12,4);
-		peerHost += ':';
-		peerHost += peer.substr(16,4);
-		peerHost += ':';
-		peerHost += peer.substr(20,4);
-		peerHost += ':';
-		peerHost += peer.substr(24,4);
-		peerHost += ':';
-		peerHost += peer.substr(28,4);
-
-		http.get({
-			host: peerHost,
+		allRequests.push(http.get({
+			host: agentIdToIp(peer),
 			port: AGENT_PORT,
 			path: '/'
 		},function(res) {
@@ -151,76 +156,67 @@ function performTestOnAllPeers(peers,callback)
 				bytes += chunk.length;
 			});
 			res.on('end',function() {
-				if (timedOut)
-					return next(null);
 				allResults[peer] = {
-					testStart: testStartTime,
 					start: connectionStartTime,
 					end: Date.now(),
 					error: null,
-					bytes: bytes,
-					test: testCounter
+					timedOut: timedOut,
+					bytes: bytes
 				};
 				return next(null);
 			});
 		}).on('error',function(e) {
-			if (timedOut)
-				return next(null);
 			allResults[peer] = {
-				testStart: testStartTime,
 				start: connectionStartTime,
 				end: Date.now(),
 				error: e.toString(),
-				bytes: 0,
-				test: testCounter
+				timedOut: timedOut,
+				bytes: 0
 			};
 			return next(null);
-		});
+		}));
 	},function(err) {
-		if (!timedOut) {
+		if (!timedOut)
 			clearTimeout(endOfTestTimer);
-			return callback(allResults);
-		}
+		return callback(allResults);
 	});
 };
+
+function doTestsAndReport()
+{
+	registerAndGetPeers(function(err,peers) {
+		if (err) {
+			console.error('WARNING: skipping test: unable to contact or query server: '+err.toString());
+		} else {
+			performTestOnAllPeers(peers,function(results) {
+				++testNumber;
+				var submit = http.request({
+					host: SERVER_HOST,
+					port: SERVER_PORT,
+					path: '/'+testNumber+'/'+thisAgentId,
+					method: 'POST'
+				},function(res) {
+				}).on('error',function(e) {
+					console.error('WARNING: unable to submit results to server: '+err.toString());
+				});
+				submit.write(JSON.stringify(results));
+				submit.end();
+			});
+		}
+	});
+}
 
 // Agents just serve up a test payload
 app.get('/',function(req,res) {
 	return res.status(200).send(payload);
 });
 
-var expressServer = app.listen(AGENT_PORT,function () {
+var expressServer = app.listen(AGENT_PORT,agentIdToIp(thisAgentId),function () {
 	registerAndGetPeers(function(err,peers) {
 		if (err) {
 			console.error('FATAL: unable to contact or query server: '+err.toString());
 			process.exit(1);
 		}
-
-		setInterval(function() {
-			++testCounter;
-
-			registerAndGetPeers(function(err,peers) {
-				if (err) {
-					console.error('WARNING: unable to contact or query server, test aborted: '+err.toString());
-					return;
-				}
-
-				performTestOnAllPeers(peers,function(results) {
-					//console.log(results);
-
-					var submit = http.request({
-						host: SERVER_HOST,
-						port: SERVER_PORT,
-						path: '/'+thisAgentId,
-						method: 'POST'
-					},function(res) {
-					}).on('error',function(e) {
-						console.error('WARNING: unable to submit results to server: '+err.toString());
-					});
-					submit.write(JSON.stringify(results));
-					submit.end();
-				});
-			});
-		},RUN_TEST_EVERY);
+		setInterval(doTestsAndReport,TEST_INTERVAL);
 	});
 });

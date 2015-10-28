@@ -3,4 +3,9 @@
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin
 
 /zerotier-one -d
-exec node --harmony /agent.js
+
+while [ ! -d "/proc/sys/net/ipv6/conf/zt0" ]; do
+	sleep 0.25
+done
+
+exec node --harmony /agent.js >>agent.out 2>&1

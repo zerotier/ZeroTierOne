@@ -17,7 +17,7 @@ ADD zerotier-one /
 RUN chmod a+x /zerotier-one
 
 ADD agent.js /
-ADD main.sh /
+ADD docker-main.sh /
 RUN chmod a+x /docker-main.sh
 
 CMD ["./docker-main.sh"]
