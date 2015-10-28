@@ -348,11 +348,6 @@
 #define ZT_DIRECT_PATH_PUSH_INTERVAL 120000
 
 /**
- * Maximum number of endpoints to contact per address type (to limit pushes like GitHub issue #235)
- */
-#define ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE 5
-
-/**
  * Time horizon for push direct paths cutoff
  */
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 60000
@@ -365,6 +360,11 @@
  * useful for DOS amplification attacks.
  */
 #define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 5
+
+/**
+ * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
+ */
+#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 1
 
 /**
  * A test pseudo-network-ID that can be joined

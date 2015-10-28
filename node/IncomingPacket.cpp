@@ -901,16 +901,19 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 {
 	try {
 		const uint64_t now = RR->node->now();
+
+		// First, subject this to a rate limit
 		if (!peer->shouldRespondToDirectPathPush(now)) {
 			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
 
-		const Path *currentBest = peer->getBestPath(now);
+		// Second, limit addresses by scope and type
+		uint8_t countPerScope[ZT_INETADDRESS_MAX_SCOPE+1][2]; // [][0] is v4, [][1] is v6
+		memset(countPerScope,0,sizeof(countPerScope));
 
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
-		unsigned int v4Count = 0,v6Count = 0;
 
 		while (count--) { // if ptr overflows Buffer will throw
 			// TODO: some flags are not yet implemented
@@ -925,20 +928,22 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
-						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
-							if ((!currentBest)||(currentBest->address() != a))
-								peer->attemptToContactAt(RR,_localAddress,a,now);
+						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
+							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
+							peer->attemptToContactAt(RR,_localAddress,a,now);
+						} else {
+							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
-						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
-							if ((!currentBest)||(currentBest->address() != a))
-								peer->attemptToContactAt(RR,_localAddress,a,now);
+						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
+							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
+							peer->attemptToContactAt(RR,_localAddress,a,now);
+						} else {
+							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;

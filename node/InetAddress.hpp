@@ -43,6 +43,11 @@
 namespace ZeroTier {
 
 /**
+ * Maximum integer value of enum IpScope
+ */
+#define ZT_INETADDRESS_MAX_SCOPE 7
+
+/**
  * Extends sockaddr_storage with friendly C++ methods
  *
  * This is basically a "mixin" for sockaddr_storage. It adds methods and
@@ -66,7 +71,8 @@ struct InetAddress : public sockaddr_storage
 	 * IP address scope
 	 *
 	 * Note that these values are in ascending order of path preference and
-	 * MUST remain that way or Path must be changed to reflect.
+	 * MUST remain that way or Path must be changed to reflect. Also be sure
+	 * to change ZT_INETADDRESS_MAX_SCOPE if the max changes.
 	 */
 	enum IpScope
 	{
