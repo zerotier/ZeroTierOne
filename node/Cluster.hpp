@@ -47,7 +47,7 @@
 /**
  * Timeout for cluster members being considered "alive"
  */
-#define ZT_CLUSTER_TIMEOUT 10000
+#define ZT_CLUSTER_TIMEOUT 20000
 
 /**
  * How often should we announce that we have a peer?
@@ -349,6 +349,7 @@ private:
 	};
 	Hashtable< Address,_PA > _peerAffinities;
 	Mutex _peerAffinities_m;
+	uint64_t _lastCleanedPeerAffinities;
 };
 
 } // namespace ZeroTier

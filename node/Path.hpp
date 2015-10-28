@@ -95,6 +95,14 @@ public:
 	{
 	}
 
+	inline Path &operator=(const Path &p)
+		throw()
+	{
+		if (this != &p)
+			memcpy(this,&p,sizeof(Path));
+		return *this;
+	}
+
 	/**
 	 * Called when a packet is sent to this remote path
 	 *
