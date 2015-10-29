@@ -79,18 +79,16 @@ public:
 		_addr(),
 		_localAddress(),
 		_ipScope(InetAddress::IP_SCOPE_NONE),
-		_trust(TRUST_NORMAL),
 		_flags(0)
 	{
 	}
 
-	Path(const InetAddress &localAddress,const InetAddress &addr,Trust trust) :
+	Path(const InetAddress &localAddress,const InetAddress &addr) :
 		_lastSend(0),
 		_lastReceived(0),
 		_addr(addr),
 		_localAddress(localAddress),
 		_ipScope(addr.ipScope()),
-		_trust(trust),
 		_flags(0)
 	{
 	}
@@ -188,11 +186,6 @@ public:
 	}
 
 	/**
-	 * @return Path trust level
-	 */
-	inline Trust trust() const throw() { return _trust; }
-
-	/**
 	 * @return True if path is considered reliable (no NAT keepalives etc. are needed)
 	 */
 	inline bool reliable() const throw()
@@ -243,12 +236,11 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		b.append((uint8_t)0); // version
+		b.append((uint8_t)1); // version
 		b.append((uint64_t)_lastSend);
 		b.append((uint64_t)_lastReceived);
 		_addr.serialize(b);
 		_localAddress.serialize(b);
-		b.append((uint8_t)_trust);
 		b.append((uint16_t)_flags);
 	}
 
@@ -256,14 +248,13 @@ public:
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		unsigned int p = startAt;
-		if (b[p++] != 0)
+		if (b[p++] != 1)
 			throw std::invalid_argument("invalid serialized Path");
 		_lastSend = b.template at<uint64_t>(p); p += 8;
 		_lastReceived = b.template at<uint64_t>(p); p += 8;
 		p += _addr.deserialize(b,p);
 		p += _localAddress.deserialize(b,p);
 		_ipScope = _addr.ipScope();
-		_trust = (Path::Trust)b[p++];
 		_flags = b.template at<uint16_t>(p); p += 2;
 		return (p - startAt);
 	}
@@ -274,7 +265,6 @@ private:
 	InetAddress _addr;
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
-	Trust _trust;
 	uint16_t _flags;
 };
 

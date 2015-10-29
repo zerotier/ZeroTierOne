@@ -105,7 +105,7 @@ public:
 	ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
-	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,ZT_LocalInterfaceAddressTrust trust);
+	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));

@@ -179,7 +179,7 @@ void Peer::received(
 						}
 					}
 					if (slot) {
-						*slot = Path(localAddr,remoteAddr,Path::TRUST_NORMAL);
+						*slot = Path(localAddr,remoteAddr);
 						slot->received(now);
 						_numPaths = np;
 						pathIsConfirmed = true;

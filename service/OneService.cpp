@@ -731,7 +731,7 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 					std::vector<InetAddress> upnpAddresses(_upnpClient->get());
 					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext)
-						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)),ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
 #endif
 
 					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
@@ -749,7 +749,7 @@ public:
 								if (!isZT) {
 									InetAddress ip(ifa->ifa_addr);
 									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
+									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
 								}
 							}
 							ifa = ifa->ifa_next;

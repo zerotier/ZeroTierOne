@@ -499,7 +499,7 @@ void Node::freeQueryResult(void *qr)
 		::free(qr);
 }
 
-int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,ZT_LocalInterfaceAddressTrust trust)
+int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr)
 {
 	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
 		Mutex::Lock _l(_directPaths_m);
@@ -900,10 +900,10 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr)
 	} catch ( ... ) {}
 }
 
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,enum ZT_LocalInterfaceAddressTrust trust)
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,trust);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr);
 	} catch ( ... ) {
 		return 0;
 	}
