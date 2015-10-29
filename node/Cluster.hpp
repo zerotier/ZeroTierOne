@@ -46,18 +46,21 @@
 
 /**
  * Timeout for cluster members being considered "alive"
+ *
+ * A cluster member is considered dead and will no longer have peers
+ * redirected to it if we have not heard a heartbeat in this long.
  */
-#define ZT_CLUSTER_TIMEOUT 20000
+#define ZT_CLUSTER_TIMEOUT 10000
 
 /**
  * How often should we announce that we have a peer?
  */
-#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD 30000
+#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD ((ZT_PEER_ACTIVITY_TIMEOUT / 2) - 1000)
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 250
 
 namespace ZeroTier {
 
@@ -349,7 +352,9 @@ private:
 	};
 	Hashtable< Address,_PA > _peerAffinities;
 	Mutex _peerAffinities_m;
+
 	uint64_t _lastCleanedPeerAffinities;
+	uint64_t _lastCheckedPeersForAnnounce;
 };
 
 } // namespace ZeroTier
