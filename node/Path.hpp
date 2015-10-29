@@ -49,37 +49,12 @@ class RuntimeEnvironment;
 class Path
 {
 public:
-	/**
-	 * Path trust category
-	 *
-	 * Note that this is NOT peer trust and has nothing to do with root server
-	 * designations or other trust metrics. This indicates how much we trust
-	 * this path to be secure and/or private. A trust level of normal means
-	 * encrypt and authenticate all traffic. Privacy trust means we can send
-	 * traffic in the clear. Ultimate trust means we don't even need
-	 * authentication. Generally a private path would be a hard-wired local
-	 * LAN, while an ultimate trust path would be a physically isolated private
-	 * server backplane.
-	 *
-	 * Nearly all paths will be normal trust. The other levels are for high
-	 * performance local SDN use only.
-	 *
-	 * These values MUST match ZT_LocalInterfaceAddressTrust in ZeroTierOne.h
-	 */
-	enum Trust // NOTE: max 255
-	{
-		TRUST_NORMAL = 0,
-		TRUST_PRIVACY = 10,
-		TRUST_ULTIMATE = 20
-	};
-
 	Path() :
 		_lastSend(0),
 		_lastReceived(0),
 		_addr(),
 		_localAddress(),
-		_ipScope(InetAddress::IP_SCOPE_NONE),
-		_flags(0)
+		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
 	}
 
@@ -88,8 +63,7 @@ public:
 		_lastReceived(0),
 		_addr(addr),
 		_localAddress(localAddress),
-		_ipScope(addr.ipScope()),
-		_flags(0)
+		_ipScope(addr.ipScope())
 	{
 	}
 
@@ -241,7 +215,6 @@ public:
 		b.append((uint64_t)_lastReceived);
 		_addr.serialize(b);
 		_localAddress.serialize(b);
-		b.append((uint16_t)_flags);
 	}
 
 	template<unsigned int C>
@@ -255,7 +228,6 @@ public:
 		p += _addr.deserialize(b,p);
 		p += _localAddress.deserialize(b,p);
 		_ipScope = _addr.ipScope();
-		_flags = b.template at<uint16_t>(p); p += 2;
 		return (p - startAt);
 	}
 
@@ -265,7 +237,6 @@ private:
 	InetAddress _addr;
 	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
-	uint16_t _flags;
 };
 
 } // namespace ZeroTier
