@@ -206,32 +206,6 @@ public:
 	}
 
 	/**
-	 * @return Time of last direct packet receive for any path
-	 */
-	inline uint64_t lastDirectReceive() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		uint64_t x = 0;
-		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			x = std::max(x,_paths[p].lastReceived());
-		return x;
-	}
-
-	/**
-	 * @return Time of last direct packet send for any path
-	 */
-	inline uint64_t lastDirectSend() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		uint64_t x = 0;
-		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			x = std::max(x,_paths[p].lastSend());
-		return x;
-	}
-
-	/**
 	 * @return Time of last receive of anything, whether direct or relayed
 	 */
 	inline uint64_t lastReceive() const throw() { return _lastReceive; }
@@ -284,11 +258,6 @@ public:
 			_latency = (ol + std::min(l,(unsigned int)65535)) / 2;
 		else _latency = std::min(l,(unsigned int)65535);
 	}
-
-	/**
-	 * @return True if this peer has at least one direct IP address path
-	 */
-	inline bool hasDirectPath() const throw() { return (_numPaths != 0); }
 
 	/**
 	 * @param now Current time
