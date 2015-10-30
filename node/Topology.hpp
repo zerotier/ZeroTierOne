@@ -237,7 +237,7 @@ public:
 		while (i.next(a,p)) {
 #ifdef ZT_TRACE
 			if (!(*p)) {
-				TRACE("eachPeer() caught NULL peer for %s",a->toString().c_str());
+				fprintf(stderr,"eachPeer() caught NULL peer for %s",a->toString().c_str());
 				abort();
 			}
 #endif
