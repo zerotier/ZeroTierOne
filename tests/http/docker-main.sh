@@ -2,7 +2,7 @@
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin
 
-/zerotier-one -d
+/zerotier-one -d >>zerotier-one.out 2>&1
 
 while [ ! -d "/proc/sys/net/ipv6/conf/zt0" ]; do
 	sleep 0.25
