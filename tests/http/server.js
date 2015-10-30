@@ -1,3 +1,5 @@
+// ZeroTier distributed HTTP test coordinator and result-reporting server
+
 // ---------------------------------------------------------------------------
 // Customizable parameters:
 

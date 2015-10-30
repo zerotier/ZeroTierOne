@@ -1,3 +1,5 @@
+// ZeroTier distributed HTTP test agent
+
 // ---------------------------------------------------------------------------
 // Customizable parameters:
 
