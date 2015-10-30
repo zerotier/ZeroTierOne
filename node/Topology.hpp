@@ -237,7 +237,7 @@ public:
 		while (i.next(a,p)) {
 #ifdef ZT_TRACE
 			if (!(*p)) {
-				fprintf(stderr,"eachPeer() caught NULL peer for %s",a->toString().c_str());
+				fprintf(stderr,"FATAL BUG: eachPeer() caught NULL peer for %s -- peer pointers in Topology should NEVER be NULL",a->toString().c_str());
 				abort();
 			}
 #endif
