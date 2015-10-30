@@ -87,7 +87,7 @@ public:
 	inline SharedPtr<Peer> getPeerNoCache(const Address &zta,const uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		const SharedPtr<Peer> *ap = _peers.get(zta);
+		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap) {
 			(*ap)->use(now);
 			return *ap;

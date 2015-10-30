@@ -146,26 +146,30 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 		return SharedPtr<Peer>();
 	}
 
-	Mutex::Lock _l(_lock);
-
-	SharedPtr<Peer> &ap = _peers[zta];
-
-	if (ap) {
-		ap->use(RR->node->now());
-		return ap;
+	{
+		Mutex::Lock _l(_lock);
+		const SharedPtr<Peer> *const ap = _peers.get(zta);
+		if (ap) {
+			(*ap)->use(RR->node->now());
+			return *ap;
+		}
 	}
 
-	Identity id(_getIdentity(zta));
-	if (id) {
-		try {
-			ap = SharedPtr<Peer>(new Peer(RR->identity,id));
-			ap->use(RR->node->now());
-			return ap;
-		} catch ( ... ) {} // invalid identity?
-	}
+	try {
+		Identity id(_getIdentity(zta));
+		if (id) {
+			SharedPtr<Peer> np(new Peer(RR->identity,id));
+			{
+				Mutex::Lock _l(_lock);
+				SharedPtr<Peer> &ap = _peers[zta];
+				if (!ap)
+					ap.swap(np);
+				ap->use(RR->node->now());
+				return ap;
+			}
+		}
+	} catch ( ... ) {} // invalid identity on disk?
 
-	// If we get here it means we read an invalid cache identity or had some other error
-	_peers.erase(zta);
 	return SharedPtr<Peer>();
 }
 
