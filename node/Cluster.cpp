@@ -476,7 +476,7 @@ struct _ClusterAnnouncePeers
 	_ClusterAnnouncePeers(const uint64_t now_,Cluster *parent_) : now(now_),parent(parent_) {}
 	const uint64_t now;
 	Cluster *const parent;
-	inline void operator()(const Topology &t,const SharedPtr<Peer> &peer)
+	inline void operator()(const Topology &t,const SharedPtr<Peer> &peer) const
 	{
 		Path *p = peer->getBestPath(now);
 		if (p)

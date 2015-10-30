@@ -65,7 +65,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 			if (!p)
 				break; // stop if invalid records
 			if (p->address() != RR->identity.address())
-				_peers[p->address()] = p;
+				_peers.set(p->address(),p);
 		} catch ( ... ) {
 			break; // stop if invalid records
 		}
@@ -122,7 +122,9 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 {
 #ifdef ZT_TRACE
 	if ((!peer)||(peer->address() == RR->identity.address())) {
-		TRACE("BUG: addPeer() caught and ignored attempt to add peer for self or add a NULL peer");
+		if (!peer)
+			fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add NULL peer"ZT_EOL_S);
+		else fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add peer for self"ZT_EOL_S);
 		abort();
 	}
 #endif
@@ -171,7 +173,10 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 				return ap;
 			}
 		}
-	} catch ( ... ) {} // invalid identity on disk?
+	} catch ( ... ) {
+		fprintf(stderr,"EXCEPTION in getPeer() part 2\n");
+		abort();
+	} // invalid identity on disk?
 
 	return SharedPtr<Peer>();
 }
@@ -180,9 +185,9 @@ Identity Topology::getIdentity(const Address &zta)
 {
 	{
 		Mutex::Lock _l(_lock);
-		SharedPtr<Peer> &ap = _peers[zta];
+		const SharedPtr<Peer> *const ap = _peers.get(zta);
 		if (ap)
-			return ap->identity();
+			return (*ap)->identity();
 	}
 	return _getIdentity(zta);
 }
@@ -207,18 +212,16 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 		 * causes packets searching for a route to pretty much literally
 		 * circumnavigate the globe rather than bouncing between just two. */
 
-		if (_rootAddresses.size() > 1) { // gotta be one other than me for this to work
-			for(unsigned long p=0;p<_rootAddresses.size();++p) {
-				if (_rootAddresses[p] == RR->identity.address()) {
-					for(unsigned long q=1;q<_rootAddresses.size();++q) {
-						SharedPtr<Peer> *nextsn = _peers.get(_rootAddresses[(p + q) % _rootAddresses.size()]);
-						if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now))) {
-							(*nextsn)->use(now);
-							return *nextsn;
-						}
+		for(unsigned long p=0;p<_rootAddresses.size();++p) {
+			if (_rootAddresses[p] == RR->identity.address()) {
+				for(unsigned long q=1;q<_rootAddresses.size();++q) {
+					const SharedPtr<Peer> *const nextsn = _peers.get(_rootAddresses[(p + q) % _rootAddresses.size()]);
+					if ((nextsn)&&((*nextsn)->hasActiveDirectPath(now))) {
+						(*nextsn)->use(now);
+						return *nextsn;
 					}
-					break;
 				}
+				break;
 			}
 		}
 

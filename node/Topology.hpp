@@ -114,23 +114,11 @@ public:
 	void saveIdentity(const Identity &id);
 
 	/**
-	 * @return Vector of peers that are root servers
-	 */
-	inline std::vector< SharedPtr<Peer> > rootPeers() const
-	{
-		Mutex::Lock _l(_lock);
-		return _rootPeers;
-	}
-
-	/**
 	 * Get the current favorite root server
 	 *
 	 * @return Root server with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestRoot()
-	{
-		return getBestRoot((const Address *)0,0,false);
-	}
+	inline SharedPtr<Peer> getBestRoot() { return getBestRoot((const Address *)0,0,false); }
 
 	/**
 	 * Get the best root server, avoiding root servers listed in an array
@@ -237,7 +225,7 @@ public:
 		while (i.next(a,p)) {
 #ifdef ZT_TRACE
 			if (!(*p)) {
-				fprintf(stderr,"FATAL BUG: eachPeer() caught NULL peer for %s -- peer pointers in Topology should NEVER be NULL",a->toString().c_str());
+				fprintf(stderr,"FATAL BUG: eachPeer() caught NULL peer for %s -- peer pointers in Topology should NEVER be NULL"ZT_EOL_S,a->toString().c_str());
 				abort();
 			}
 #endif
