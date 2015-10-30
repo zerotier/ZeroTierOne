@@ -234,8 +234,15 @@ public:
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-		while (i.next(a,p))
-			f(*this,*p);
+		while (i.next(a,p)) {
+#ifdef ZT_TRACE
+			if (!(*p)) {
+				ZT_TRACE("eachPeer() caught NULL peer for %s",a->toString().c_str());
+				abort();
+			}
+#endif
+			f(*this,*((const SharedPtr<Peer> *)p));
+		}
 	}
 
 	/**

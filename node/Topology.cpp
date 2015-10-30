@@ -120,10 +120,12 @@ Topology::~Topology()
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 {
-	if (peer->address() == RR->identity.address()) {
-		TRACE("BUG: addPeer() caught and ignored attempt to add peer for self");
-		throw std::logic_error("cannot add peer for self");
+#ifdef ZT_TRACE
+	if ((!peer)||(peer->address() == RR->identity.address())) {
+		TRACE("BUG: addPeer() caught and ignored attempt to add peer for self or add a NULL peer");
+		abort();
 	}
+#endif
 
 	SharedPtr<Peer> np;
 	{
@@ -133,6 +135,7 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 			hp = peer;
 		np = hp;
 	}
+
 	np->use(RR->node->now());
 	saveIdentity(np->identity());
 
@@ -321,8 +324,7 @@ unsigned long Topology::countActive() const
 	Address *a = (Address *)0;
 	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 	while (i.next(a,p)) {
-		if ((*p)->hasActiveDirectPath(now))
-			++cnt;
+		cnt += (unsigned long)((*p)->hasActiveDirectPath(now));
 	}
 	return cnt;
 }
