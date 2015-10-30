@@ -310,11 +310,6 @@
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
- * Size of anti-recursion history (see AntiRecursion.hpp)
- */
-#define ZT_ANTIRECURSION_HISTORY_SIZE 16
-
-/**
  * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
  */
 #define ZT_MIN_PATH_CONFIRMATION_INTERVAL 1000
