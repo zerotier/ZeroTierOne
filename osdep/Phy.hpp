@@ -238,6 +238,14 @@ public:
 	 */
 	static inline ZT_PHY_SOCKFD_TYPE getDescriptor(PhySocket *s) throw() { return reinterpret_cast<PhySocketImpl *>(s)->sock; }
 
+
+	/**
+	 * @param s Socket object
+	 * @return Pointer to user object
+	 */
+	static inline void** getuptr(PhySocket *s) throw() { return &(reinterpret_cast<PhySocketImpl *>(s)->uptr); }
+
+
 	/**
 	 * Cause poll() to stop waiting immediately
 	 *

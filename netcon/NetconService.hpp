@@ -56,7 +56,8 @@ namespace ZeroTier {
     int their_fd;
     bool pending;
     bool listening;
-
+    int pid;
+    
     PhySocket *rpcSock;
     PhySocket *dataSock;
     struct tcp_pcb *pcb;

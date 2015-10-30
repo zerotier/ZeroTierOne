@@ -202,7 +202,6 @@ int is_mapped_to_service(int sockfd)
   return get_retval();
 }
 
-
 /*------------------------------------------------------------------------------
 ----------  Unix-domain socket lazy initializer (for fd-transfers)--------------
 ------------------------------------------------------------------------------*/
@@ -439,10 +438,10 @@ int socket(SOCKET_SIG)
 
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_SOCKET;
-  memcpy(&cmd[1], &rpc_st, sizeof(struct socket_st));
+  dwr("pid = %d\n", thispid);
+  memcpy(&cmd[1], &thispid, sizeof(pid_t));
+  memcpy(&cmd[1]+sizeof(pid_t), &rpc_st, sizeof(struct socket_st));
   pthread_mutex_lock(&lock);
-
-  dwr("sending RPC...\n");
   send_command(fdret_sock, cmd);
 
   /* get new fd */

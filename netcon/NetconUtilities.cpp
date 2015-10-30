@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <sys/socket.h>
 
 #include "lwip/ip.h"
@@ -41,6 +42,45 @@
 
 namespace ZeroTier
 {
+	void dwr(char *fmt, ... )
+	{
+//#ifdef ZT_DEBUG
+		va_list ap;
+		va_start(ap, fmt);
+		vfprintf(stderr, fmt, ap);
+		fflush(stderr);
+		va_end(ap);
+//#endif
+	}
+
+	void clearscreen()
+	{
+		fprintf(stderr, "\033[2J");
+	}
+
+	//void reset_cursor()
+	void gotoxy(int x,int y) {
+	    fprintf(stderr, "%c[%d;%df",0x1B,y,x);
+	}
+
+	// Gets the process/path name associated with a pid
+	void get_path_from_pid(char* dest, int pid)
+	{
+	  char ppath[80];
+	  sprintf(ppath, "/proc/%d/exe", pid);
+		if (readlink (ppath, dest, 80) != -1){
+	  }
+	}
+
+	// Gets the process/path name associated with a fd
+	void get_path_from_fd(char* dest, int pid, int fd)
+	{
+		char ppfd[80];
+		sprintf(ppfd, "/proc/%d/fd/%d", pid, fd);
+		if (readlink (ppfd, dest, 80) != -1){
+		}
+	}
+
 	// Functions used to pass file descriptors between processes
 	ssize_t sock_fd_write(int sock, int fd)
 	{

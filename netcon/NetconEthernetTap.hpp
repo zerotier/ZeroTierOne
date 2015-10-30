@@ -107,8 +107,9 @@ private:
 	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
 	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
 	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);
+	void handle_i_am(PhySocket *sock, void **uptr, unsigned char* buf);
 	void handle_retval(PhySocket *sock, void **uptr, unsigned char* buf);
-	void handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
+	int handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
 	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
 	void handle_write(TcpConnection *conn);
 
@@ -141,16 +142,19 @@ private:
 
 	// Client helpers
 	TcpConnection *getConnectionByTheirFD(PhySocket *sock, int fd);
-	TcpConnection *getConnectionByPCB(struct tcp_pcb *pcb);
 	void closeConnection(TcpConnection *conn);
 	void closeAll();
 	void closeClient(PhySocket *sock);
+	void compact_dump();
+	void dump();
+	void die(int exret);
 
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
 	std::vector<TcpConnection*> tcp_connections;
 	std::vector<PhySocket*> rpc_sockets;
+	std::map<PhySocket*, pid_t> pidmap;
 
 	netif interface;
 
