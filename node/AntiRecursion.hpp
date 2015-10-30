@@ -35,7 +35,7 @@
 
 namespace ZeroTier {
 
-#define ZT_ANTIRECURSION_TAIL_LEN 256
+#define ZT_ANTIRECURSION_TAIL_LEN 128
 
 /**
  * Filter to prevent recursion (ZeroTier-over-ZeroTier)
