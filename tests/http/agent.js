@@ -10,7 +10,7 @@ var TEST_DURATION = (30 * 1000);
 var TEST_INTERVAL = (60 * 2 * 1000);
 
 // Where should I contact to register and query a list of other test agents?
-var SERVER_HOST = '174.136.102.178';
+var SERVER_HOST = '104.238.141.145';
 var SERVER_PORT = 18080;
 
 // Which port should agents use for their HTTP?
