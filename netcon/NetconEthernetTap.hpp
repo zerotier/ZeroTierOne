@@ -109,7 +109,7 @@ private:
 	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);
 	void handle_i_am(PhySocket *sock, void **uptr, unsigned char* buf);
 	void handle_retval(PhySocket *sock, void **uptr, unsigned char* buf);
-	int handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
+	TcpConnection * handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
 	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
 	void handle_write(TcpConnection *conn);
 

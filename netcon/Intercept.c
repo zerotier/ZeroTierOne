@@ -331,6 +331,11 @@ int setsockopt(SETSOCKOPT_SIG)
 {
   dwr("setsockopt(%d)\n", socket);
   //return(realsetsockopt(socket, level, option_name, option_value, option_len));
+  if(level == SOL_IPV6 && option_name == IPV6_V6ONLY)
+    return 0;
+
+  if(level == SOL_IP && option_name == IP_TTL)
+    return 0;
 
   if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE)){
     return 0;
@@ -353,7 +358,7 @@ int setsockopt(SETSOCKOPT_SIG)
 /* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 int getsockopt(GETSOCKOPT_SIG)
 {
-  dwr("setsockopt(%d)\n", sockfd);
+  dwr("getsockopt(%d)\n", sockfd);
   int err = realgetsockopt(sockfd, level, optname, optval, optlen);
   // FIXME: this condition will need a little more intelligence later on
   // -- we will need to know if this fd is a local we are spoofing, or a true local
@@ -385,19 +390,19 @@ int socket(SOCKET_SIG)
   int flags = socket_type & ~SOCK_TYPE_MASK;
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
       errno = EINVAL;
-      handle_error("socket", "", -1);
+      handle_error("socket1", "", -1);
       return -1;
   }
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
   if (socket_family < 0 || socket_family >= NPROTO){
     errno = EAFNOSUPPORT;
-    handle_error("socket", "", -1);
+    handle_error("socket2", "", -1);
     return -1;
   }
   if (socket_type < 0 || socket_type >= SOCK_MAX) {
     errno = EINVAL;
-    handle_error("socket", "", -1);
+    handle_error("socket3", "", -1);
     return -1;
   }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
@@ -416,7 +421,7 @@ int socket(SOCKET_SIG)
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
   if(fdret_sock < 0) {
     dwr("BAD service connection. exiting.\n");
-    handle_error("socket", "", -1);
+    handle_error("socket4", "", -1);
     exit(-1);
   }
 
@@ -425,7 +430,7 @@ int socket(SOCKET_SIG)
     || socket_family == AF_UNIX) {
       int err = realsocket(socket_family, socket_type, protocol);
       dwr("realsocket, err = %d\n", err);
-      handle_error("socket", "", err);
+      handle_error("socket5", "", err);
       return err;
   }
 
@@ -447,6 +452,7 @@ int socket(SOCKET_SIG)
   /* get new fd */
   char rbuf[16];
   ssize_t sz = sock_fd_read(fdret_sock, rbuf, sizeof(rbuf), &newfd);
+  dwr("read %d bytes (%s)\n", sz, &rbuf);
   if(sz > 0)
   {
     /* send our local-fd number back to service so
@@ -455,27 +461,27 @@ int socket(SOCKET_SIG)
     cmd[0] = RPC_MAP;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
 
-    //if(newfd > -1) {
+    if(newfd > -1) { // FIXME: check logic
       send_command(fdret_sock, cmd);
       pthread_mutex_unlock(&lock);
       errno = ERR_OK; // OK
-      handle_error("socket", "", newfd);
+      handle_error("socket6", "", newfd);
       return newfd;
-    //}
-    /*
+    }
     else { // Try to read retval+errno since we RXed a bad fd
       dwr("Error, service sent bad fd.\n");
       err = get_retval();
       pthread_mutex_unlock(&lock);
+      handle_error("socket7", "", -1);
       return err;
     }
-    */
+
   }
   else {
     dwr("Error while receiving new FD.\n");
     err = get_retval();
     pthread_mutex_unlock(&lock);
-    handle_error("socket", "", -1);
+    handle_error("socket8", "", -1);
     return err;
   }
 }
@@ -764,9 +770,9 @@ int accept(ACCEPT_SIG)
       return -1;
     }
   }
-  errno = EAGAIN; /* necessary? */
-  handle_error("accept", "EAGAIN - Error reading signal byte from service", -1);
-  return -EAGAIN;
+  errno = EBADF; /* necessary? */
+  handle_error("accept", "EBADF - Error reading signal byte from service", -1);
+  return -1;
 }
 
 
@@ -825,7 +831,7 @@ int listen(LISTEN_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
-  //err = get_retval();
+  int err = get_retval();
   pthread_mutex_unlock(&lock);
   handle_error("listen", "", ERR_OK);
   return ERR_OK;
@@ -866,7 +872,8 @@ int poll(POLL_SIG)
 
 long syscall(SYSCALL_SIG)
 {
-  //dwr("syscall(%u, ...):\n", number);
+  dwr("syscall(%u, ...):\n", number);
+
   va_list ap;
   uintptr_t a,b,c,d,e,f;
   va_start(ap, number);
@@ -891,7 +898,17 @@ long syscall(SYSCALL_SIG)
     struct sockaddr * addr = (struct sockaddr*)b;
     socklen_t * addrlen = (socklen_t*)c;
     int flags = d;
-    return accept4(sockfd, addr, addrlen, flags);
+    int old_errno = errno;
+    int err = accept4(sockfd, addr, addrlen, flags);
+    errno = old_errno;
+
+    if(err == -EBADF) {
+      //errno = EAGAIN;
+      err = -EAGAIN;
+      //exit(0);
+    }
+
+    return err;
   }
 #endif
   return realsyscall(number,a,b,c,d,e,f);
