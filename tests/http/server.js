@@ -20,42 +20,22 @@ app.use(function(req,res,next) {
 
 var knownAgents = {};
 
-app.get('/:agentId',function(req,res) {
+app.post('/:agentId',function(req,res) {
 	var agentId = req.params.agentId;
 	if ((!agentId)||(agentId.length !== 32))
 		return res.status(404).send('');
+
+	if (req.rawBody) {
+		var receiveTime = Date.now();
+		var resultData = null;
+		try {
+			resultData = JSON.parse(req.rawBody);
+			console.log(resultData.source+','+resultData.target+','+resultData.time+','+resultData.bytes+','+resultData.timedOut+',"'+((resultData.error) ? resultData.error : '')+'"');
+		} catch (e) {}
+	}
+
 	knownAgents[agentId] = Date.now();
 	return res.status(200).send(JSON.stringify(Object.keys(knownAgents)));
-});
-
-app.post('/:testNumber/:agentId',function(req,res) {
-	var testNumber = req.params.testNumber;
-	var agentId = req.params.agentId;
-	if ((!agentId)||(agentId.length !== 32))
-		return res.status(404).send('');
-
-	var receiveTime = Date.now();
-	var resultData = null;
-	try {
-		resultData = JSON.parse(req.rawBody);
-	} catch (e) {
-		resultData = req.rawBody;
-	}
-	result = {
-		agentId: agentId,
-		testNumber: parseInt(testNumber),
-		receiveTime: receiveTime,
-		results: resultData
-	};
-
-	testNumber = testNumber.toString();
-	while (testNumber.length < 10)
-		testNumber = '0' + testNumber;
-	fs.writeFile('result_'+testNumber+'_'+agentId,JSON.stringify(result),function(err) {
-		console.log(result);
-	});
-
-	return res.status(200).send('');
 });
 
 var expressServer = app.listen(SERVER_PORT,function () {

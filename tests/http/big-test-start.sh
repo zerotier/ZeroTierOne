@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Edit as needed -- note that >1000 per host is likely problematic due to Linux kernel limits
-NUM_CONTAINERS=64
+NUM_CONTAINERS=100
 CONTAINER_IMAGE=zerotier/http-test
 
 #
@@ -25,6 +25,6 @@ export PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin:/sbin
 #	docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE
 #done
 
-pssh -o big-test-out -h big-test-hosts -i -t 128 -p 256 "for ((n=0;n<$NUM_CONTAINERS;n++)); do docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE; done"
+pssh -h big-test-hosts -i -t 128 -p 256 "for ((n=0;n<$NUM_CONTAINERS;n++)); do docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE; sleep 0.25; done"
 
 exit 0

@@ -3,21 +3,23 @@
 // ---------------------------------------------------------------------------
 // Customizable parameters:
 
-// Maximum test duration in milliseconds
-var TEST_DURATION = (30 * 1000);
+// Maximum interval between test attempts
+//var TEST_INTERVAL_MAX = (60 * 1 * 1000);
+var TEST_INTERVAL_MAX = 1000;
 
-// Interval between tests (should be several times longer than TEST_DURATION)
-var TEST_INTERVAL = (60 * 2 * 1000);
+// Test timeout in ms
+var TEST_TIMEOUT = 30000;
 
 // Where should I contact to register and query a list of other test agents?
-var SERVER_HOST = '104.238.141.145';
+var SERVER_HOST = '127.0.0.1';
+//var SERVER_HOST = '104.238.141.145';
 var SERVER_PORT = 18080;
 
 // Which port should agents use for their HTTP?
 var AGENT_PORT = 18888;
 
 // Payload size in bytes
-var PAYLOAD_SIZE = 100000;
+var PAYLOAD_SIZE = 10000;
 
 // ---------------------------------------------------------------------------
 
@@ -72,9 +74,6 @@ for(var xx=0;xx<PAYLOAD_SIZE;++xx) {
 	payload.writeUInt8(Math.round(Math.random() * 255.0),xx);
 }
 
-// Incremented with each test
-var testNumber = 0;
-
 function agentIdToIp(agentId)
 {
 	var ip = '';
@@ -96,32 +95,93 @@ function agentIdToIp(agentId)
 	return ip;
 };
 
-function registerAndGetPeers(callback)
+var lastTestResult = null;
+var allOtherAgents = [];
+
+function doTest()
 {
-	http.get({
+	var submit = http.request({
 		host: SERVER_HOST,
 		port: SERVER_PORT,
-		path: '/'+thisAgentId
+		path: '/'+thisAgentId,
+		method: 'POST'
 	},function(res) {
 		var body = '';
 		res.on('data',function(chunk) { body += chunk.toString(); });
 		res.on('end',function() {
-			if (!body)
-				return callback(null,[]);
-			try {
-				var peers = JSON.parse(body);
-				if (Array.isArray(peers))
-					return callback(null,peers);
-				else return callback(new Error('invalid JSON response from server'),null);
-			} catch (e) {
-				return callback(new Error('invalid JSON response from server: '+e.toString()),null);
+
+			if (body) {
+				try {
+					var peers = JSON.parse(body);
+					if (Array.isArray(peers))
+						allOtherAgents = peers;
+				} catch (e) {}
 			}
+
+			if (allOtherAgents.length > 0) {
+
+				var target = allOtherAgents[Math.floor(Math.random() * allOtherAgents.length)];
+
+				var testRequest = null;
+				var timeoutId = null;
+				timeoutId = setTimeout(function() {
+					if (testRequest !== null)
+						testRequest.abort();
+					timeoutId = null;
+				});
+				var startTime = Date.now();
+
+				testRequest = http.get({
+					host: agentIdToIp(target),
+					port: AGENT_PORT,
+					path: '/'
+				},function(res) {
+					var bytes = 0;
+					res.on('data',function(chunk) { bytes += chunk.length; });
+					res.on('end',function() {
+						lastTestResult = {
+							source: thisAgentId,
+							target: target,
+							time: (Date.now() - startTime),
+							bytes: bytes,
+							timedOut: (timeoutId === null),
+							error: null
+						};
+						if (timeoutId !== null)
+							clearTimeout(timeoutId);
+						return setTimeout(doTest,Math.round(Math.random() * TEST_INTERVAL_MAX) + 1);
+					});
+				}).on('error',function(e) {
+					lastTestResult = {
+						source: thisAgentId,
+						target: target,
+						time: (Date.now() - startTime),
+						bytes: 0,
+						timedOut: (timeoutId === null),
+						error: e.toString()
+					};
+					if (timeoutId !== null)
+						clearTimeout(timeoutId);
+					return setTimeout(doTest,Math.round(Math.random() * TEST_INTERVAL_MAX) + 1);
+				});
+
+			} else {
+				return setTimeout(doTest,Math.round(Math.random() * TEST_INTERVAL_MAX) + 1);
+			}
+
 		});
 	}).on('error',function(e) {
-		return callback(e,null);
+		console.log('POST failed: '+e.toString());
+		return setTimeout(doTest,1000);
 	});
+	if (lastTestResult !== null) {
+		submit.write(JSON.stringify(lastTestResult));
+		lastTestResult = null;
+	}
+	submit.end();
 };
 
+/*
 function performTestOnAllPeers(peers,callback)
 {
 	var allResults = {};
@@ -191,11 +251,10 @@ function doTestsAndReport()
 			console.error('WARNING: skipping test: unable to contact or query server: '+err.toString());
 		} else {
 			performTestOnAllPeers(peers,function(results) {
-				++testNumber;
 				var submit = http.request({
 					host: SERVER_HOST,
 					port: SERVER_PORT,
-					path: '/'+testNumber+'/'+thisAgentId,
+					path: '/'+thisAgentId,
 					method: 'POST'
 				},function(res) {
 				}).on('error',function(e) {
@@ -207,29 +266,12 @@ function doTestsAndReport()
 		}
 	});
 };
+*/
 
 // Agents just serve up a test payload
-app.get('/',function(req,res) {
-	return res.status(200).send(payload);
-});
+app.get('/',function(req,res) { return res.status(200).send(payload); });
 
 var expressServer = app.listen(AGENT_PORT,function () {
-	var serverUp = false;
-	async.whilst(
-		function() { return (!serverUp); },
-		function(nextTry) {
-			registerAndGetPeers(function(err,peers) {
-				if ((err)||(!peers)) {
-					setTimeout(nextTry,1000);
-				} else {
-					serverUp = true;
-					return nextTry(null);
-				}
-			});
-		},
-		function(err) {
-			console.log('Server up, starting!');
-			doTestsAndReport();
-			setInterval(doTestsAndReport,TEST_INTERVAL);
-		});
+	// Start timeout-based loop
+	doTest();
 });
