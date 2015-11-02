@@ -40,7 +40,7 @@
 #ifndef _NETCON_UTILITIES_CPP
 #define _NETCON_UTILITIES_CPP
 
-#define DEBUG_LEVEL	3
+#define DEBUG_LEVEL	5
 
 namespace ZeroTier
 {
