@@ -55,12 +55,17 @@
 /**
  * How often should we announce that we have a peer?
  */
-#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD ((ZT_PEER_ACTIVITY_TIMEOUT / 2) - 1000)
+#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD (ZT_PEER_DIRECT_PING_DELAY / 2)
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
 #define ZT_CLUSTER_PERIODIC_TASK_PERIOD 250
+
+/**
+ * How often to flush outgoing message queues (maximum interval)
+ */
+#define ZT_CLUSTER_FLUSH_PERIOD 500
 
 namespace ZeroTier {
 
@@ -355,6 +360,7 @@ private:
 
 	uint64_t _lastCleanedPeerAffinities;
 	uint64_t _lastCheckedPeersForAnnounce;
+	uint64_t _lastFlushed;
 };
 
 } // namespace ZeroTier

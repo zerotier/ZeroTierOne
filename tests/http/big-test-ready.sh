@@ -25,6 +25,6 @@ export PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin:/sbin
 #	docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE
 #done
 
-pssh -h big-test-hosts -i -t 128 -p 256 "docker pull $CONTAINER_IMAGE"
+pssh -h big-test-hosts -i -t 0 -p 256 "docker pull $CONTAINER_IMAGE"
 
 exit 0

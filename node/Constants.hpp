@@ -173,13 +173,8 @@
 
 /**
  * Timeout for receipt of fragmented packets in ms
- *
- * Since there's no retransmits, this is just a really bad case scenario for
- * transit time. It's short enough that a DOS attack from exhausing buffers is
- * very unlikely, as the transfer rate would have to be fast enough to fill
- * system memory in this time.
  */
-#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 1000
+#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 500
 
 /**
  * Length of secret key in bytes -- 256-bit -- do not change
@@ -194,7 +189,7 @@
 /**
  * Overriding granularity for timer tasks to prevent CPU-intensive thrashing on every packet
  */
-#define ZT_CORE_TIMER_TASK_GRANULARITY 1000
+#define ZT_CORE_TIMER_TASK_GRANULARITY 500
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -269,7 +264,7 @@
 /**
  * Delay between ordinary case pings of direct links
  */
-#define ZT_PEER_DIRECT_PING_DELAY 120000
+#define ZT_PEER_DIRECT_PING_DELAY 60000
 
 /**
  * Delay between requests for updated network autoconf information
@@ -279,18 +274,7 @@
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_DIRECT_PING_DELAY + (ZT_PING_CHECK_INVERVAL * 3))
-
-/**
- * Stop relaying via peers that have not responded to direct sends
- *
- * When we send something (including frames), we generally expect a response.
- * Switching relays if no response in a short period of time causes more
- * rapid failover if a root server goes down or becomes unreachable. In the
- * mistaken case, little harm is done as it'll pick the next-fastest
- * root server and will switch back eventually.
- */
-#define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
+#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 3) + (ZT_PING_CHECK_INVERVAL * 2))
 
 /**
  * Minimum interval between attempts by relays to unite peers

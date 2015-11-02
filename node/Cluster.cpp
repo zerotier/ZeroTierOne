@@ -85,7 +85,8 @@ Cluster::Cluster(
 	_members(new _Member[ZT_CLUSTER_MAX_MEMBERS]),
 	_peerAffinities(65536),
 	_lastCleanedPeerAffinities(0),
-	_lastCheckedPeersForAnnounce(0)
+	_lastCheckedPeersForAnnounce(0),
+	_lastFlushed(0)
 {
 	uint16_t stmp[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 
@@ -510,7 +511,8 @@ void Cluster::doPeriodicTasks()
 	}
 
 	// Flush outgoing packet send queue every doPeriodicTasks()
-	{
+	if ((now - _lastFlushed) >= ZT_CLUSTER_FLUSH_PERIOD) {
+		_lastFlushed = now;
 		Mutex::Lock _l(_memberIds_m);
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
 			Mutex::Lock _l2(_members[*mid].lock);
