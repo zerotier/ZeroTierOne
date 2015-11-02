@@ -214,12 +214,22 @@ app.get('/',function(req,res) {
 });
 
 var expressServer = app.listen(AGENT_PORT,function () {
-	registerAndGetPeers(function(err,peers) {
-		if (err) {
-			console.error('FATAL: unable to contact or query server: '+err.toString());
-			process.exit(1);
-		}
-		doTestsAndReport();
-		setInterval(doTestsAndReport,TEST_INTERVAL);
-	});
+	var serverUp = false;
+	async.whilst(
+		function() { return (!serverUp); },
+		function(nextTry) {
+			registerAndGetPeers(function(err,peers) {
+				if ((err)||(!peers)) {
+					setTimeout(nextTry,1000);
+				} else {
+					serverUp = true;
+					return nextTry(null);
+				}
+			});
+		},
+		function(err) {
+			console.log('Server up, starting!');
+			doTestsAndReport();
+			setInterval(doTestsAndReport,TEST_INTERVAL);
+		});
 });
