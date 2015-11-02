@@ -333,9 +333,11 @@ void set_up_intercept()
 int setsockopt(SETSOCKOPT_SIG)
 {
   dwr("setsockopt(%d)\n", socket);
+  /*
   if(is_mapped_to_service(socket) < 0) { // First, check if the service manages this
     return realsetsockopt(socket, level, option_name, option_value, option_len);
   }
+  */
   //return(realsetsockopt(socket, level, option_name, option_value, option_len));
   if(level == SOL_IPV6 && option_name == IPV6_V6ONLY)
     return 0;
@@ -362,9 +364,11 @@ int setsockopt(SETSOCKOPT_SIG)
 int getsockopt(GETSOCKOPT_SIG)
 {
   dwr("getsockopt(%d)\n", sockfd);
+  /*
   if(is_mapped_to_service(sockfd) < 0) { // First, check if the service manages this
     return realgetsockopt(sockfd, level, optname, optval, optlen);
   }
+  */
   int err = realgetsockopt(sockfd, level, optname, optval, optlen);
   // FIXME: this condition will need a little more intelligence later on
   // -- we will need to know if this fd is a local we are spoofing, or a true local
