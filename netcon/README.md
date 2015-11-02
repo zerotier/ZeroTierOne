@@ -160,5 +160,6 @@ To Test:
 ### Alpha Unaddressed bug log
 
  - Possible CPU max-out during sshd kill or multiple ssh connect/disconnects
+ - sshd will enter an infinite accept loop maxing out CPU if service dies
 
 

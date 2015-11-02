@@ -126,7 +126,7 @@ void handle_error(char *name, char *info, int err)
   }
 #endif
 #ifdef VERBOSE
-  dwr("%s()=%d\n", name, err);
+  //dwr("%s()=%d\n", name, err);
 #endif
 }
 
@@ -156,13 +156,15 @@ int checkpid() {
 /*
  * Sends an RPC command to the service
  */
-void send_command(int rpc_fd, char *cmd)
+int send_command(int rpc_fd, char *cmd)
 {
   int n_write = write(rpc_fd, cmd, BUF_SZ);
   if(n_write < 0){
     dwr("Error writing command to service (CMD = %d)\n", cmd[0]);
     errno = 0;
+    return -1;
   }
+  return 0;
 }
 
 /*
@@ -198,7 +200,8 @@ int is_mapped_to_service(int sockfd)
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_MAP_REQ;
   memcpy(&cmd[1], &sockfd, sizeof(sockfd));
-  send_command(fdret_sock, cmd);
+  if(send_command(fdret_sock, cmd) < 0)
+    return -1;
   return get_retval();
 }
 
@@ -330,16 +333,16 @@ void set_up_intercept()
 int setsockopt(SETSOCKOPT_SIG)
 {
   dwr("setsockopt(%d)\n", socket);
+  if(is_mapped_to_service(socket) < 0) { // First, check if the service manages this
+    return realsetsockopt(socket, level, option_name, option_value, option_len);
+  }
   //return(realsetsockopt(socket, level, option_name, option_value, option_len));
   if(level == SOL_IPV6 && option_name == IPV6_V6ONLY)
     return 0;
-
   if(level == SOL_IP && option_name == IP_TTL)
     return 0;
-
-  if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE)){
+  if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE))
     return 0;
-  }
   /* make sure we don't touch any standard outputs */
   if(socket == STDIN_FILENO || socket == STDOUT_FILENO || socket == STDERR_FILENO)
     return(realsetsockopt(socket, level, option_name, option_value, option_len));
@@ -359,6 +362,9 @@ int setsockopt(SETSOCKOPT_SIG)
 int getsockopt(GETSOCKOPT_SIG)
 {
   dwr("getsockopt(%d)\n", sockfd);
+  if(is_mapped_to_service(sockfd) < 0) { // First, check if the service manages this
+    return realgetsockopt(sockfd, level, optname, optval, optlen);
+  }
   int err = realgetsockopt(sockfd, level, optname, optval, optlen);
   // FIXME: this condition will need a little more intelligence later on
   // -- we will need to know if this fd is a local we are spoofing, or a true local
@@ -760,7 +766,7 @@ int accept(ACCEPT_SIG)
       }
       pthread_mutex_unlock(&lock);
       errno = ERR_OK;
-      dwr("accept()=%d\n", new_conn_socket);
+      dwr("*accept()=%d\n", new_conn_socket);
       handle_error("accept", "", new_conn_socket);
       return new_conn_socket; // OK
     }
@@ -770,7 +776,7 @@ int accept(ACCEPT_SIG)
       return -1;
     }
   }
-  errno = EBADF; /* necessary? */
+  errno = EBADF;
   handle_error("accept", "EBADF - Error reading signal byte from service", -1);
   return -1;
 }
@@ -813,7 +819,7 @@ int listen(LISTEN_SIG)
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(reallisten(sockfd, backlog));
 
-  if(!is_mapped_to_service(sockfd)) {
+  if(is_mapped_to_service(sockfd) < 0) {
     // We now know this socket is not one of our socketpairs
     int err = reallisten(sockfd, backlog);
     dwr("reallisten()=%d\n", err);
