@@ -85,7 +85,7 @@ else
 	CFLAGS+=-Wall -fPIE -fvisibility=hidden -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
 	CXXFLAGS+=-Wall -Wreorder -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	LDFLAGS=-ldl -lcurses -pie -Wl,-z,relro,-z,now
+	LDFLAGS=-ldl -pie -Wl,-z,relro,-z,now
 	STRIP=strip --strip-all
 endif
 

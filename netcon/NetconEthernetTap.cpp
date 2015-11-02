@@ -49,8 +49,6 @@
 #include "Intercept.h"
 #include "NetconUtilities.hpp"
 
-#include <curses.h>
-
 #define APPLICATION_POLL_FREQ 				20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		10
 #define STATUS_TMR_INTERVAL						1000 // How often we check connection statuses

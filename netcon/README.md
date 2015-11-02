@@ -94,12 +94,12 @@ To run a simple RX/TX test:
 
 Network Containers have been tested with the following:
 
-	sshd			[ WORKS as of 20151022] Long ~15-20s delay for client during connect
-	ssh			[ WORKS as of 20151022]
+	sshd			[ WORKS as of 20151102] Long ~15-20s delay for client during connect
+	ssh			[ WORKS as of 20151102]
 	sftp			[ WORKS as of 20151022]
-	curl			[ WORKS as of 20151021] Sometimes "tcp_input: pcb->next != pcb (before cache)" is seen
+	curl			[ WORKS as of 20151021] 
 	apache (debug mode)	[ WORKS as of 20150810]
-	apache (prefork MPM)	[ WORKS as of 20151021]
+	apache (prefork MPM)	[ WORKS as of 20151102]
 	nginx			[ WORKS as of 20151022]
 	nodejs			[ WORKS as of 20151021]
 	java			[ WORKS as of 20151010]
