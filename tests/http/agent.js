@@ -4,15 +4,13 @@
 // Customizable parameters:
 
 // Maximum interval between test attempts
-//var TEST_INTERVAL_MAX = (60 * 1 * 1000);
-var TEST_INTERVAL_MAX = 1000;
+var TEST_INTERVAL_MAX = 60000;
 
 // Test timeout in ms
 var TEST_TIMEOUT = 30000;
 
 // Where should I contact to register and query a list of other test agents?
-var SERVER_HOST = '127.0.0.1';
-//var SERVER_HOST = '104.238.141.145';
+var SERVER_HOST = '104.238.141.145';
 var SERVER_PORT = 18080;
 
 // Which port should agents use for their HTTP?
@@ -118,9 +116,11 @@ function doTest()
 				} catch (e) {}
 			}
 
-			if (allOtherAgents.length > 0) {
+			if (allOtherAgents.length > 1) {
 
 				var target = allOtherAgents[Math.floor(Math.random() * allOtherAgents.length)];
+				while (target === thisAgentId)
+					target = allOtherAgents[Math.floor(Math.random() * allOtherAgents.length)];
 
 				var testRequest = null;
 				var timeoutId = null;
@@ -128,7 +128,7 @@ function doTest()
 					if (testRequest !== null)
 						testRequest.abort();
 					timeoutId = null;
-				});
+				},TEST_TIMEOUT);
 				var startTime = Date.now();
 
 				testRequest = http.get({
@@ -166,7 +166,7 @@ function doTest()
 				});
 
 			} else {
-				return setTimeout(doTest,Math.round(Math.random() * TEST_INTERVAL_MAX) + 1);
+				return setTimeout(doTest,1000);
 			}
 
 		});
