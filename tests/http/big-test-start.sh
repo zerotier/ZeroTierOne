@@ -14,15 +14,17 @@ CONTAINER_IMAGE=zerotier/http-test
 export PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin:/sbin
 
 # Kill and clean up old test containers if any -- note that this kills all containers on the system!
-docker ps -q | xargs -n 1 docker kill
-docker ps -aq | xargs -n 1 docker rm
+#docker ps -q | xargs -n 1 docker kill
+#docker ps -aq | xargs -n 1 docker rm
 
 # Pull latest if needed -- change this to your image name and/or where to pull it from
-docker pull $CONTAINER_IMAGE
+#docker pull $CONTAINER_IMAGE
 
 # Run NUM_CONTAINERS
-for ((n=0;n<$NUM_CONTAINERS;n++)); do
-	docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE
-done
+#for ((n=0;n<$NUM_CONTAINERS;n++)); do
+#	docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE
+#done
+
+pssh -o big-test-out -h big-test-hosts -i -p 256 "docker pull $CONTAINER_IMAGE && for ((n=0;n<$NUM_CONTAINERS;n++)); do docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE; done"
 
 exit 0
