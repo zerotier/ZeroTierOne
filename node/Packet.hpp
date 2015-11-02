@@ -57,10 +57,11 @@
  *   + New crypto completely changes key agreement cipher
  * 4 - 0.6.0 ... 1.0.6
  *   + New identity format based on hashcash design
- * 5 - 1.0.6 ... CURRENT
+ * 5 - 1.1.0 ... CURRENT
  *   + Supports circuit test, proof of work, and echo
- *   + Supports in-band world (root definition) updates
- *   + Otherwise backward compatible with 4
+ *   + Supports in-band world (root server definition) updates
+ *   + Clustering! (Though this will work with protocol v4 clients.)
+ *   + Otherwise backward compatible with protocol v4
  */
 #define ZT_PROTO_VERSION 5
 
