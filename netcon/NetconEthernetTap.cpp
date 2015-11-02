@@ -463,7 +463,7 @@ void NetconEthernetTap::threadMain()
 					}
 				}
 			}
-			dwr(" tap_thread(): tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
+			//dwr(" tap_thread(): tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
 			for(size_t i=0, associated = 0; i<rpc_sockets.size(); i++, associated = 0) {
 				for(size_t j=0; j<tcp_connections.size(); j++) {
 					if (tcp_connections[j]->rpcSock == rpc_sockets[i])
@@ -600,25 +600,9 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			dwr("RPC_MAP_REQ\n");
 			handle_map_request(sock, uptr, buf);
 			break;
-		case RPC_I_AM:
-			dwr("RPC_I_AM\n");
-			handle_i_am(sock, uptr, buf);
-			break;
 		default:
 			break;
 	}
-}
-
-
-void NetconEthernetTap::handle_i_am(PhySocket *sock, void **uptr, unsigned char* buf)
-{
-	TcpConnection *conn = (TcpConnection*)*uptr;
-	if(!conn)
-		return;
-	int pid;
-	memcpy(&pid, &buf[1], sizeof(pid));
-	dwr(" pid = %d\n", pid);
-	conn->pid = pid;
 }
 
 /*
@@ -641,14 +625,13 @@ int NetconEthernetTap::send_return_value(TcpConnection *conn, int retval, int _e
 
 int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 {
-	fprintf(stderr, "send_return_value(): fd = %d, retval = %d, errno = %d\n", fd, retval, _errno);
+	dwr(" send_return_value(): fd = %d, retval = %d, errno = %d\n", fd, retval, _errno);
 	int sz = sizeof(char) + sizeof(retval) + sizeof(errno);
 	char retmsg[sz];
 	memset(&retmsg, '\0', sizeof(retmsg));
 	retmsg[0]=RPC_RETVAL;
 	memcpy(&retmsg[1], &retval, sizeof(retval));
 	memcpy(&retmsg[1]+sizeof(retval), &_errno, sizeof(_errno));
-	fprintf(stderr, "send_return_value(): retmsg = %s, sizeof(retmsg) = %d\n", &retmsg, sizeof(retmsg));
 	return write(fd, &retmsg, sz);
 }
 
@@ -778,16 +761,17 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   struct pbuf* q = p;
 
   if(!l->conn) {
-		dwr("nc_recved(): no connection object\n");
+		dwr(" nc_recved(): no connection object\n");
     return ERR_OK; // ?
   }
   if(p == NULL) {
     if(l->conn) {
-			dwr("nc_recved(): closing connection\n");
+			dwr(" nc_recved(): closing connection\n");
 			l->tap->closeConnection(l->conn);
+			return ERR_ABRT;
     }
     else {
-      dwr("nc_recved(): can't locate connection via (arg)\n");
+      dwr(" nc_recved(): can't locate connection via (arg)\n");
     }
     return err;
   }
@@ -797,12 +781,12 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
       break; // ?
     if((n = l->tap->_phy.streamSend(l->conn->dataSock,p->payload, p->len)) > 0) {
       if(n < p->len) {
-        dwr("nc_recved(): unable to write entire pbuf to buffer\n");
+        dwr(" nc_recved(): unable to write entire pbuf to buffer\n");
       }
       l->tap->lwipstack->_tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
     }
     else {
-      dwr("nc_recved(): No data written to intercept buffer\n");
+      dwr(" nc_recved(): No data written to intercept buffer\n");
     }
     p = p->next;
   }

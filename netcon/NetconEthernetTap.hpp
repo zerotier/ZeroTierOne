@@ -107,7 +107,6 @@ private:
 	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
 	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
 	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);
-	void handle_i_am(PhySocket *sock, void **uptr, unsigned char* buf);
 	void handle_retval(PhySocket *sock, void **uptr, unsigned char* buf);
 	TcpConnection * handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
 	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
