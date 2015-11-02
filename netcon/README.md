@@ -157,5 +157,8 @@ To Test:
 	32/64-bit systems
 
 
+### Alpha Unaddressed bug log
+
+ - Possible CPU max-out during sshd kill or multiple ssh connect/disconnects
 
 

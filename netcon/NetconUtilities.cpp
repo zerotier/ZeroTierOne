@@ -40,15 +40,28 @@
 #ifndef _NETCON_UTILITIES_CPP
 #define _NETCON_UTILITIES_CPP
 
+#define DEBUG_LEVEL	3
+
 namespace ZeroTier
 {
+	void dwr(int level, char *fmt, ... )
+	{
+		if(level > DEBUG_LEVEL)
+			return;
+		va_list ap;
+		va_start(ap, fmt);
+		vfprintf(stderr, fmt, ap);
+		fflush(stderr);
+		va_end(ap);
+	}
+
 	void dwr(char *fmt, ... )
 	{
 		va_list ap;
 		va_start(ap, fmt);
 		vfprintf(stderr, fmt, ap);
 		fflush(stderr);
-		va_end(ap);	
+		va_end(ap);
 	}
 
 	void clearscreen()
