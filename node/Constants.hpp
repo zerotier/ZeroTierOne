@@ -267,14 +267,14 @@
 #define ZT_PEER_DIRECT_PING_DELAY 60000
 
 /**
+ * Timeout for overall peer activity (measured from last receive)
+ */
+#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 4) + ZT_PING_CHECK_INVERVAL)
+
+/**
  * Delay between requests for updated network autoconf information
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
-
-/**
- * Timeout for overall peer activity (measured from last receive)
- */
-#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 3) + (ZT_PING_CHECK_INVERVAL * 2))
 
 /**
  * Minimum interval between attempts by relays to unite peers
@@ -283,7 +283,7 @@
  * a RENDEZVOUS message no more than this often. This instructs the peers
  * to attempt NAT-t and gives each the other's corresponding IP:port pair.
  */
-#define ZT_MIN_UNITE_INTERVAL 60000
+#define ZT_MIN_UNITE_INTERVAL 30000
 
 /**
  * Delay between initial direct NAT-t packet and more aggressive techniques

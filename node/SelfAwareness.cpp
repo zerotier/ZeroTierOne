@@ -128,7 +128,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		// links to be re-established if possible, possibly using a root server or some
 		// other relay.
 		for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
-			if ((*p)->alive(now)) {
+			if ((*p)->activelyTransferringFrames(now)) {
 				Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
 				RR->sw->send(outp,true,0);
 			}

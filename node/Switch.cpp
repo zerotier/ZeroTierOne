@@ -442,8 +442,8 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if ((!qi->peer->alive(now))||(qi->peer->hasActiveDirectPath(now))) {
-					// Cancel attempt if we've already connected or peer is no longer "alive"
+				if (qi->peer->hasActiveDirectPath(now)) {
+					// Cancel if connection has succeeded
 					_contactQueue.erase(qi++);
 					continue;
 				} else {
@@ -539,7 +539,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		_LastUniteKey *k = (_LastUniteKey *)0;
 		uint64_t *v = (uint64_t *)0;
 		while (i.next(k,v)) {
-			if ((now - *v) >= (ZT_MIN_UNITE_INTERVAL * 16))
+			if ((now - *v) >= (ZT_MIN_UNITE_INTERVAL * 8))
 				_lastUniteAttempt.erase(*k);
 		}
 	}

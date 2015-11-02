@@ -231,9 +231,9 @@ public:
 	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
-	 * @return True if peer has received an actual data frame within ZT_PEER_ACTIVITY_TIMEOUT milliseconds
+	 * @return True if this peer is actively sending real network frames
 	 */
-	inline uint64_t alive(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline uint64_t activelyTransferringFrames(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
 	 * @return Current latency or 0 if unknown (max: 65535)

@@ -81,6 +81,11 @@ public:
 	/**
 	 * Get a peer only if it is presently in memory (no disk cache)
 	 *
+	 * This also does not update the lastUsed() time for peers, which means
+	 * that it won't prevent them from falling out of RAM. This is currently
+	 * used in the Cluster code to update peer info without forcing all peers
+	 * across the entire cluster to remain in memory cache.
+	 *
 	 * @param zta ZeroTier address
 	 * @param now Current time
 	 */
@@ -88,10 +93,8 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		if (ap) {
-			(*ap)->use(now);
+		if (ap)
 			return *ap;
-		}
 		return SharedPtr<Peer>();
 	}
 

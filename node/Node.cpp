@@ -263,7 +263,7 @@ public:
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
-		} else if (p->alive(_now)) {
+		} else if (p->activelyTransferringFrames(_now)) {
 			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
 			p->doPingAndKeepalive(RR,_now,0);
 		}

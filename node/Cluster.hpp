@@ -55,7 +55,7 @@
 /**
  * How often should we announce that we have a peer?
  */
-#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD (ZT_PEER_DIRECT_PING_DELAY / 2)
+#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD ZT_PEER_DIRECT_PING_DELAY
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds
