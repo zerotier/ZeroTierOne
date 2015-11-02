@@ -814,7 +814,6 @@ public:
 
 		tv.tv_sec = (long)(timeout / 1000);
 		tv.tv_usec = (long)((timeout % 1000) * 1000);
-		//fprintf(stderr, "Phy.poll()\n");
 		if (::select((int)_nfds + 1,&rfds,&wfds,&efds,(timeout > 0) ? &tv : (struct timeval *)0) <= 0)
 			return;
 

@@ -201,14 +201,14 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 			dataptr += q->len;
 		}
 	} else {
-		dwr("_put(): Dropped packet: no pbufs available\n");
+		dwr("put(): Dropped packet: no pbufs available\n");
 		return;
 	}
 
 	{
 		Mutex::Lock _l2(lwipstack->_lock);
 		if(interface.input(p, &interface) != ERR_OK) {
-			dwr("_put(): Error while RXing packet (netif->input)\n");
+			dwr("put(): Error while RXing packet (netif->input)\n");
 		}
 	}
 }
@@ -296,8 +296,10 @@ void NetconEthernetTap::compact_dump()
  */
 void NetconEthernetTap::dump()
 {
-  clearscreen();
+	/*
+	clearscreen();
 	gotoxy(0,0);
+	*/
 	fprintf(stderr, "\n\n---\n\ndie(): BEGIN SERVICE STATE DUMP\n");
 	fprintf(stderr, "*** IF YOU SEE THIS, EMAIL THE DUMP TEXT TO joseph.henry@zerotier.com ***\n");
 	fprintf(stderr, " tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
@@ -323,7 +325,7 @@ void NetconEthernetTap::dump()
 			get_path_from_pid(buf, tcp_connections[j]->pid);
 			if(tcp_connections[j]->rpcSock==rpc_sockets[i]){
 				fprintf(stderr, "  |\n");
-				fprintf(stderr, "  | Connection(0x%x):\n", tcp_connections[j]);
+				fprintf(stderr, "  |-Connection(0x%x):\n", tcp_connections[j]);
 				fprintf(stderr, "  |      path\t\t\t= %s\n", buf);
 				fprintf(stderr, "  |      perceived_fd\t\t= %d\t(fd)\n", tcp_connections[j]->perceived_fd);
 				fprintf(stderr, "  |      their_fd\t\t= %d\t(fd)\n", tcp_connections[j]->their_fd);
@@ -351,6 +353,8 @@ void NetconEthernetTap::die(int exret) {
  */
 void NetconEthernetTap::closeConnection(TcpConnection *conn)
 {
+	if(!conn)
+		return;
 	dwr(3, " closeConnection(%x, %d)\n", conn->pcb, _phy.getDescriptor(conn->dataSock));
   //lwipstack->_tcp_sent(conn->pcb, NULL);
   //lwipstack->_tcp_recv(conn->pcb, NULL);
@@ -481,7 +485,7 @@ void NetconEthernetTap::threadMain()
 					unsigned char tmpbuf[BUF_SZ];
 					int n;
 					if((n = read(fd,&tmpbuf,BUF_SZ)) < 0) {
-						dwr(3, " tap_thread(): RPC close(%d)\n", _phy.getDescriptor(rpc_sockets[i]));
+						dwr(3, " tap_thread(): closing RPC (%d)\n", _phy.getDescriptor(rpc_sockets[i]));
 						closeClient(rpc_sockets[i]);
 					}
 					// < 0 is failure
@@ -524,9 +528,9 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr)
 {
-	dwr(1, "phyOnUnixClose(): ?\n");
-	die(0);
-	// FIXME: What do?
+	dwr(3, " phyOnUnixClose(sock=0x%x, uptr=0x%x): fd = %d\n", sock, uptr, _phy.getDescriptor(sock));
+	TcpConnection *conn = (TcpConnection*)*uptr;
+	closeConnection(conn);
 }
 
 /*
@@ -570,7 +574,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	switch(buf[0])
 	{
 		case RPC_SOCKET:
-			dwr(3, "RPC_SOCKET\n");
+			dwr(2, "RPC_SOCKET\n");
 	    struct socket_st socket_rpc;
 			pid_t pid;
 			memcpy(&pid, &buf[1], sizeof(pid_t)); // PID for client RPC tracking (only for debug)
@@ -582,29 +586,29 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			}
 			break;
 	  case RPC_LISTEN:
-			dwr(3, "RPC_LISTEN\n");
+			dwr(2, "RPC_LISTEN\n");
 	    struct listen_st listen_rpc;
 	    memcpy(&listen_rpc, &buf[1], sizeof(struct listen_st));
 	    handle_listen(sock, uptr, &listen_rpc);
 			break;
 	  case RPC_BIND:
-			dwr(3, "RPC_BIND\n");
+			dwr(2, "RPC_BIND\n");
 	    struct bind_st bind_rpc;
 	    memcpy(&bind_rpc, &buf[1], sizeof(struct bind_st));
 	    handle_bind(sock, uptr, &bind_rpc);
 			break;
   	case RPC_CONNECT:
-			dwr(3, "RPC_CONNECT\n");
+			dwr(2, "RPC_CONNECT\n");
 	    struct connect_st connect_rpc;
 	    memcpy(&connect_rpc, &buf[1], sizeof(struct connect_st));
 	    handle_connect(sock, uptr, &connect_rpc);
 			break;
 	  case RPC_MAP:
-			dwr(3, "RPC_MAP\n");
+			dwr(2, "RPC_MAP\n");
 	    handle_retval(sock, uptr, buf);
 			break;
 		case RPC_MAP_REQ:
-			dwr(3, "RPC_MAP_REQ\n");
+			dwr(2, "RPC_MAP_REQ\n");
 			handle_map_request(sock, uptr, buf);
 			break;
 		default:
