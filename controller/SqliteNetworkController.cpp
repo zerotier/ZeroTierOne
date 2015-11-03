@@ -44,12 +44,15 @@
 #include "../ext/json-parser/json.h"
 
 #include "SqliteNetworkController.hpp"
+
+#include "../node/Node.hpp"
 #include "../node/Utils.hpp"
 #include "../node/CertificateOfMembership.hpp"
 #include "../node/NetworkConfig.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/MAC.hpp"
 #include "../node/Address.hpp"
+
 #include "../osdep/OSUtils.hpp"
 
 // Include ZT_NETCONF_SCHEMA_SQL constant to init database
@@ -117,8 +120,10 @@ struct NetworkRecord {
 
 } // anonymous namespace
 
-SqliteNetworkController::SqliteNetworkController(const char *dbPath) :
+SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath) :
+	_node(node),
 	_dbPath(dbPath),
+	_circuitTestPath(circuitTestPath),
 	_db((sqlite3 *)0)
 {
 	if (sqlite3_open_v2(dbPath,&_db,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK)
@@ -253,8 +258,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateOrReplaceNode);
-		sqlite3_finalize(_sUpdateNode);
-		sqlite3_finalize(_sUpdateNode2);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);
@@ -500,6 +503,53 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					}
 
 					return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);
+				} else if ((path.size() == 3)&&(path[2] == "test")) {
+					ZT_CircuitTest *test = (ZT_CircuitTest *)malloc(sizeof(ZT_CircuitTest));
+					memset(test,0,sizeof(ZT_CircuitTest));
+
+					Utils::getSecureRandom(&(test->testId),sizeof(test->testId));
+					test->credentialNetworkId = nwid;
+					test->ptr = (void *)this;
+
+					json_value *j = json_parse(body.c_str(),body.length());
+					if (j) {
+						if (j->type == json_object) {
+							for(unsigned int k=0;k<j->u.object.length;++k) {
+
+								if (!strcmp(j->u.object.values[k].name,"hops")) {
+									if (j->u.object.values[k].value->type == json_array) {
+										for(unsigned int kk=0;kk<j->u.object.values[k].value->u.array.length;++kk) {
+											json_value *hop = j->u.object.values[k].value->u.array.values[kk];
+											if (hop->type == json_array) {
+												for(unsigned int kkk=0;kkk<hop->u.array.length;++kkk) {
+													if (hop->u.array.values[kkk]->type == json_string) {
+														test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(hop->u.array.values[kkk]->u.string.ptr) & 0xffffffffffULL;
+													}
+												}
+												++test->hopCount;
+											}
+										}
+									}
+								} else if (!strcmp(j->u.object.values[k].name,"reportAtEveryHop")) {
+									if (j->u.object.values[k].value->type == json_boolean)
+										test->reportAtEveryHop = (j->u.object.values[k].value->u.boolean == 0) ? 0 : 1;
+								}
+
+							}
+						}
+						json_value_free(j);
+					}
+
+					if (!test->hopCount) {
+						::free((void *)test);
+						return 500;
+					}
+
+					test->timestamp = OSUtils::now();
+					_circuitTests[test->testId] = test;
+					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
+
+					return 200;
 				} // else 404
 
 			} else {
@@ -1742,6 +1792,8 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 					for(uint32_t k=ipRangeStart,l=0;(k<=ipRangeEnd)&&(l < 1000000);++k,++l) {
 						uint32_t ip = (ipRangeLen > 0) ? (ipRangeStart + (ipTrialCounter % ipRangeLen)) : ipRangeStart;
 						++ipTrialCounter;
+						if ((ip & 0x000000ff) == 0x000000ff)
+							continue; // don't allow addresses that end in .255
 
 						for(std::vector< std::pair<uint32_t,int> >::const_iterator r(routedNetworks.begin());r!=routedNetworks.end();++r) {
 							if ((ip & (0xffffffff << (32 - r->second))) == r->first) {
@@ -1810,6 +1862,77 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	}
 
 	return NetworkController::NETCONF_QUERY_OK;
+}
+
+void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
+{
+	static Mutex circuitTestWriteLock;
+
+	const uint64_t now = OSUtils::now();
+
+	SqliteNetworkController *const c = reinterpret_cast<SqliteNetworkController *>(test->ptr);
+	char tmp[128];
+
+	std::string reportSavePath(c->_circuitTestPath);
+	OSUtils::mkdir(reportSavePath);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx",test->credentialNetworkId);
+	reportSavePath.append(tmp);
+	OSUtils::mkdir(reportSavePath);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.16llx",test->timestamp,test->testId);
+	reportSavePath.append(tmp);
+	OSUtils::mkdir(reportSavePath);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.10llx_%.10llx",now,report->upstream,report->current);
+	reportSavePath.append(tmp);
+
+	{
+		Mutex::Lock _l(circuitTestWriteLock);
+		FILE *f = fopen(reportSavePath.c_str(),"a");
+		if (!f)
+			return;
+		fseek(f,0,SEEK_END);
+		fprintf(f,"%s{\n"
+			"\t\"timestamp\": %llu,"ZT_EOL_S
+			"\t\"testId\": \"%.16llx\","ZT_EOL_S
+			"\t\"upstream\": \"%.10llx\","ZT_EOL_S
+			"\t\"current\": \"%.10llx\","ZT_EOL_S
+			"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
+			"\t\"remoteTimestamp\": %llu,"ZT_EOL_S
+			"\t\"sourcePacketId\": \"%.16llx\","ZT_EOL_S
+			"\t\"flags\": %llu,"ZT_EOL_S
+			"\t\"sourcePacketHopCount\": %u,"ZT_EOL_S
+			"\t\"errorCode\": %u,"ZT_EOL_S
+			"\t\"vendor\": %d,"ZT_EOL_S
+			"\t\"protocolVersion\": %u,"ZT_EOL_S
+			"\t\"majorVersion\": %u,"ZT_EOL_S
+			"\t\"minorVersion\": %u,"ZT_EOL_S
+			"\t\"revision\": %u,"ZT_EOL_S
+			"\t\"platform\": %d,"ZT_EOL_S
+			"\t\"architecture\": %d,"ZT_EOL_S
+			"\t\"receivedOnLocalAddress\": \"%s\","ZT_EOL_S
+			"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
+			"}",
+			((ftell(f) > 0) ? ",\n" : ""),
+			(unsigned long long)report->timestamp,
+			(unsigned long long)test->testId,
+			(unsigned long long)report->upstream,
+			(unsigned long long)report->current,
+			(unsigned long long)now,
+			(unsigned long long)report->remoteTimestamp,
+			(unsigned long long)report->sourcePacketId,
+			(unsigned long long)report->flags,
+			report->sourcePacketHopCount,
+			report->errorCode,
+			(int)report->vendor,
+			report->protocolVersion,
+			report->majorVersion,
+			report->minorVersion,
+			report->revision,
+			(int)report->platform,
+			(int)report->architecture,
+			reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
+			reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
+		fclose(f);
+	}
 }
 
 } // namespace ZeroTier

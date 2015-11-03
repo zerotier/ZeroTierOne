@@ -28,11 +28,18 @@
 #ifndef ZT_PATH_HPP
 #define ZT_PATH_HPP
 
+#include <stdint.h>
+#include <string.h>
+
+#include <stdexcept>
+#include <algorithm>
+
 #include "Constants.hpp"
 #include "InetAddress.hpp"
-#include "Utils.hpp"
 
 namespace ZeroTier {
+
+class RuntimeEnvironment;
 
 /**
  * Base class for paths
@@ -42,43 +49,91 @@ namespace ZeroTier {
 class Path
 {
 public:
-	/**
-	 * Path trust category
-	 *
-	 * Note that this is NOT peer trust and has nothing to do with root server
-	 * designations or other trust metrics. This indicates how much we trust
-	 * this path to be secure and/or private. A trust level of normal means
-	 * encrypt and authenticate all traffic. Privacy trust means we can send
-	 * traffic in the clear. Ultimate trust means we don't even need
-	 * authentication. Generally a private path would be a hard-wired local
-	 * LAN, while an ultimate trust path would be a physically isolated private
-	 * server backplane.
-	 *
-	 * Nearly all paths will be normal trust. The other levels are for high
-	 * performance local SDN use only.
-	 *
-	 * These values MUST match ZT_LocalInterfaceAddressTrust in ZeroTierOne.h
-	 */
-	enum Trust
-	{
-		TRUST_NORMAL = 0,
-		TRUST_PRIVACY = 1,
-		TRUST_ULTIMATE = 2
-	};
-
 	Path() :
+		_lastSend(0),
+		_lastReceived(0),
 		_addr(),
-		_ipScope(InetAddress::IP_SCOPE_NONE),
-		_trust(TRUST_NORMAL)
+		_localAddress(),
+		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
 	}
 
-	Path(const InetAddress &addr,int metric,Trust trust) :
+	Path(const InetAddress &localAddress,const InetAddress &addr) :
+		_lastSend(0),
+		_lastReceived(0),
 		_addr(addr),
-		_ipScope(addr.ipScope()),
-		_trust(trust)
+		_localAddress(localAddress),
+		_ipScope(addr.ipScope())
 	{
 	}
+
+	inline Path &operator=(const Path &p)
+		throw()
+	{
+		if (this != &p)
+			memcpy(this,&p,sizeof(Path));
+		return *this;
+	}
+
+	/**
+	 * Called when a packet is sent to this remote path
+	 *
+	 * This is called automatically by Path::send().
+	 *
+	 * @param t Time of send
+	 */
+	inline void sent(uint64_t t)
+		throw()
+	{
+		_lastSend = t;
+	}
+
+	/**
+	 * Called when a packet is received from this remote path
+	 *
+	 * @param t Time of receive
+	 */
+	inline void received(uint64_t t)
+		throw()
+	{
+		_lastReceived = t;
+	}
+
+	/**
+	 * @param now Current time
+	 * @return True if this path appears active
+	 */
+	inline bool active(uint64_t now) const
+		throw()
+	{
+		return ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT);
+	}
+
+	/**
+	 * Send a packet via this path
+	 *
+	 * @param RR Runtime environment
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param now Current time
+	 * @return True if transport reported success
+	 */
+	bool send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now);
+
+	/**
+	 * @return Address of local side of this path or NULL if unspecified
+	 */
+	inline const InetAddress &localAddress() const throw() { return _localAddress; }
+
+	/**
+	 * @return Time of last send to this path
+	 */
+	inline uint64_t lastSend() const throw() { return _lastSend; }
+
+	/**
+	 * @return Time of last receive from this path
+	 */
+	inline uint64_t lastReceived() const throw() { return _lastReceived; }
 
 	/**
 	 * @return Physical address
@@ -105,30 +160,19 @@ public:
 	}
 
 	/**
-	 * @return Path trust level
-	 */
-	inline Trust trust() const throw() { return _trust; }
-
-	/**
 	 * @return True if path is considered reliable (no NAT keepalives etc. are needed)
 	 */
 	inline bool reliable() const throw()
 	{
-		return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
+		if (_addr.ss_family == AF_INET)
+			return ((_ipScope != InetAddress::IP_SCOPE_GLOBAL)&&(_ipScope != InetAddress::IP_SCOPE_PSEUDOPRIVATE));
+		return true;
 	}
 
 	/**
 	 * @return True if address is non-NULL
 	 */
 	inline operator bool() const throw() { return (_addr); }
-
-	// Comparisons are by address only
-	inline bool operator==(const Path &p) const throw() { return (_addr == p._addr); }
-	inline bool operator!=(const Path &p) const throw() { return (_addr != p._addr); }
-	inline bool operator<(const Path &p) const throw() { return (_addr < p._addr); }
-	inline bool operator>(const Path &p) const throw() { return (_addr > p._addr); }
-	inline bool operator<=(const Path &p) const throw() { return (_addr <= p._addr); }
-	inline bool operator>=(const Path &p) const throw() { return (_addr >= p._addr); }
 
 	/**
 	 * Check whether this address is valid for a ZeroTier path
@@ -163,10 +207,36 @@ public:
 		return false;
 	}
 
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		b.append((uint8_t)1); // version
+		b.append((uint64_t)_lastSend);
+		b.append((uint64_t)_lastReceived);
+		_addr.serialize(b);
+		_localAddress.serialize(b);
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		unsigned int p = startAt;
+		if (b[p++] != 1)
+			throw std::invalid_argument("invalid serialized Path");
+		_lastSend = b.template at<uint64_t>(p); p += 8;
+		_lastReceived = b.template at<uint64_t>(p); p += 8;
+		p += _addr.deserialize(b,p);
+		p += _localAddress.deserialize(b,p);
+		_ipScope = _addr.ipScope();
+		return (p - startAt);
+	}
+
 private:
+	uint64_t _lastSend;
+	uint64_t _lastReceived;
 	InetAddress _addr;
+	InetAddress _localAddress;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
-	Trust _trust;
 };
 
 } // namespace ZeroTier

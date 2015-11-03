@@ -31,10 +31,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <map>
 #include <vector>
 #include <stdexcept>
 #include <algorithm>
+#include <utility>
 
 #include "Constants.hpp"
 
@@ -43,8 +43,8 @@
 #include "Peer.hpp"
 #include "Mutex.hpp"
 #include "InetAddress.hpp"
-#include "Dictionary.hpp"
 #include "Hashtable.hpp"
+#include "World.hpp"
 
 namespace ZeroTier {
 
@@ -58,21 +58,6 @@ class Topology
 public:
 	Topology(const RuntimeEnvironment *renv);
 	~Topology();
-
-	/**
-	 * @param sn Root server identities and addresses
-	 */
-	void setRootServers(const std::map< Identity,std::vector<InetAddress> > &sn);
-
-	/**
-	 * Set up root servers for this network
-	 *
-	 * This performs no signature verification of any kind. The caller must
-	 * check the signature of the root topology dictionary first.
-	 *
-	 * @param sn 'rootservers' key from root-topology Dictionary (deserialized as Dictionary)
-	 */
-	void setRootServers(const Dictionary &sn);
 
 	/**
 	 * Add a peer to database
@@ -94,23 +79,49 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
-	 * @return Vector of peers that are root servers
+	 * Get a peer only if it is presently in memory (no disk cache)
+	 *
+	 * This also does not update the lastUsed() time for peers, which means
+	 * that it won't prevent them from falling out of RAM. This is currently
+	 * used in the Cluster code to update peer info without forcing all peers
+	 * across the entire cluster to remain in memory cache.
+	 *
+	 * @param zta ZeroTier address
+	 * @param now Current time
 	 */
-	inline std::vector< SharedPtr<Peer> > rootPeers() const
+	inline SharedPtr<Peer> getPeerNoCache(const Address &zta,const uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
-		return _rootPeers;
+		const SharedPtr<Peer> *const ap = _peers.get(zta);
+		if (ap)
+			return *ap;
+		return SharedPtr<Peer>();
 	}
+
+	/**
+	 * Get the identity of a peer
+	 *
+	 * @param zta ZeroTier address of peer
+	 * @return Identity or NULL Identity if not found
+	 */
+	Identity getIdentity(const Address &zta);
+
+	/**
+	 * Cache an identity
+	 *
+	 * This is done automatically on addPeer(), and so is only useful for
+	 * cluster identity replication.
+	 *
+	 * @param id Identity to cache
+	 */
+	void saveIdentity(const Identity &id);
 
 	/**
 	 * Get the current favorite root server
 	 *
 	 * @return Root server with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestRoot()
-	{
-		return getBestRoot((const Address *)0,0,false);
-	}
+	inline SharedPtr<Peer> getBestRoot() { return getBestRoot((const Address *)0,0,false); }
 
 	/**
 	 * Get the best root server, avoiding root servers listed in an array
@@ -128,10 +139,19 @@ public:
 
 	/**
 	 * @param id Identity to check
-	 * @return True if this is a designated root server
+	 * @return True if this is a designated root server in this world
 	 */
-	bool isRoot(const Identity &id) const
-		throw();
+	inline bool isRoot(const Identity &id) const
+	{
+		Mutex::Lock _l(_lock);
+		return (std::find(_rootAddresses.begin(),_rootAddresses.end(),id.address()) != _rootAddresses.end());
+	}
+
+	/**
+	 * @param id Identity to check
+	 * @return True if this is a root server or a network preferred relay from one of our networks
+	 */
+	bool isUpstream(const Identity &id) const;
 
 	/**
 	 * @return Vector of root server addresses
@@ -143,9 +163,47 @@ public:
 	}
 
 	/**
+	 * @return Current World (copy)
+	 */
+	inline World world() const
+	{
+		Mutex::Lock _l(_lock);
+		return _world;
+	}
+
+	/**
+	 * @return Current world ID
+	 */
+	inline uint64_t worldId() const
+	{
+		return _world.id(); // safe to read without lock, and used from within eachPeer() so don't lock
+	}
+
+	/**
+	 * @return Current world timestamp
+	 */
+	inline uint64_t worldTimestamp() const
+	{
+		return _world.timestamp(); // safe to read without lock, and used from within eachPeer() so don't lock
+	}
+
+	/**
+	 * Validate new world and update if newer and signature is okay
+	 *
+	 * @param newWorld Potential new world definition revision
+	 * @return True if an update actually occurred
+	 */
+	bool worldUpdateIfValid(const World &newWorld);
+
+	/**
 	 * Clean and flush database
 	 */
 	void clean(uint64_t now);
+
+	/**
+	 * @return Number of peers with active direct paths
+	 */
+	unsigned long countActive() const;
 
 	/**
 	 * Apply a function or function object to all peers
@@ -164,44 +222,47 @@ public:
 	inline void eachPeer(F f)
 	{
 		Mutex::Lock _l(_lock);
-		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_activePeers);
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-		while (i.next(a,p))
-			f(*this,*p);
+		while (i.next(a,p)) {
+#ifdef ZT_TRACE
+			if (!(*p)) {
+				fprintf(stderr,"FATAL BUG: eachPeer() caught NULL peer for %s -- peer pointers in Topology should NEVER be NULL"ZT_EOL_S,a->toString().c_str());
+				abort();
+			}
+#endif
+			f(*this,*((const SharedPtr<Peer> *)p));
+		}
 	}
 
 	/**
-	 * @return All currently active peers by address
+	 * @return All currently active peers by address (unsorted)
 	 */
 	inline std::vector< std::pair< Address,SharedPtr<Peer> > > allPeers() const
 	{
 		Mutex::Lock _l(_lock);
-		return _activePeers.entries();
+		return _peers.entries();
 	}
 
 	/**
-	 * Validate a root topology dictionary against the identities specified in Defaults
-	 *
-	 * @param rt Root topology dictionary
-	 * @return True if dictionary signature is valid
+	 * @return True if I am a root server in the current World
 	 */
-	static bool authenticateRootTopology(const Dictionary &rt);
+	inline bool amRoot() const throw() { return _amRoot; }
 
 private:
 	Identity _getIdentity(const Address &zta);
-	void _saveIdentity(const Identity &id);
+	void _setWorld(const World &newWorld);
 
 	const RuntimeEnvironment *RR;
 
-	Hashtable< Address,SharedPtr<Peer> > _activePeers;
-	std::map< Identity,std::vector<InetAddress> > _roots;
+	World _world;
+	Hashtable< Address,SharedPtr<Peer> > _peers;
 	std::vector< Address > _rootAddresses;
 	std::vector< SharedPtr<Peer> > _rootPeers;
+	bool _amRoot;
 
 	Mutex _lock;
-
-	bool _amRoot;
 };
 
 } // namespace ZeroTier

@@ -29,7 +29,7 @@ endif
 UNAME_M=$(shell uname -m)
 
 INCLUDES=
-DEFS=
+DEFS=-DZT_ENABLE_CLUSTER
 LDLIBS?=
 
 include objects.mk

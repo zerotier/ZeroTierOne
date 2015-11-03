@@ -322,7 +322,6 @@ public:
 		b->next = _t[bidx];
 		_t[bidx] = b;
 		++_s;
-
 		return b->v;
 	}
 
@@ -351,7 +350,6 @@ public:
 		b->next = _t[bidx];
 		_t[bidx] = b;
 		++_s;
-
 		return b->v;
 	}
 
@@ -382,7 +380,10 @@ private:
 	}
 	static inline unsigned long _hc(const uint32_t i)
 	{
-		// In the uint32_t case we use a simple multiplier for hashing to ensure coverage
+		return ((unsigned long)i * (unsigned long)0x9e3779b1);
+	}
+	static inline unsigned long _hc(const uint16_t i)
+	{
 		return ((unsigned long)i * (unsigned long)0x9e3779b1);
 	}
 

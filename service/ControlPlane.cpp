@@ -182,14 +182,12 @@ static std::string _jsonEnumerate(unsigned int depth,const ZT_PeerPhysicalPath *
 			"%s\t\"address\": \"%s\",\n"
 			"%s\t\"lastSend\": %llu,\n"
 			"%s\t\"lastReceive\": %llu,\n"
-			"%s\t\"fixed\": %s,\n"
 			"%s\t\"active\": %s,\n"
 			"%s\t\"preferred\": %s\n"
 			"%s}",
 			prefix,_jsonEscape(reinterpret_cast<const InetAddress *>(&(pp[i].address))->toString()).c_str(),
 			prefix,pp[i].lastSend,
 			prefix,pp[i].lastReceive,
-			prefix,(pp[i].fixed == 0) ? "false" : "true",
 			prefix,(pp[i].active == 0) ? "false" : "true",
 			prefix,(pp[i].preferred == 0) ? "false" : "true",
 			prefix);
@@ -267,7 +265,7 @@ unsigned int ControlPlane::handleRequest(
 	std::string &responseBody,
 	std::string &responseContentType)
 {
-	char json[1024];
+	char json[8194];
 	unsigned int scode = 404;
 	std::vector<std::string> ps(Utils::split(path.c_str(),"/","",""));
 	std::map<std::string,std::string> urlArgs;
@@ -356,29 +354,65 @@ unsigned int ControlPlane::handleRequest(
 
 			if (ps[0] == "status") {
 				responseContentType = "application/json";
+
 				ZT_NodeStatus status;
 				_node->status(&status);
+
+				std::string clusterJson;
+#ifdef ZT_ENABLE_CLUSTER
+				{
+					ZT_ClusterStatus cs;
+					_node->clusterStatus(&cs);
+
+					if (cs.clusterSize >= 1) {
+						char t[1024];
+						Utils::snprintf(t,sizeof(t),"{\n\t\t\"myId\": %u,\n\t\t\"clusterSize\": %u,\n\t\t\"members\": [",cs.myId,cs.clusterSize);
+						clusterJson.append(t);
+						for(unsigned int i=0;i<cs.clusterSize;++i) {
+							Utils::snprintf(t,sizeof(t),"%s\t\t\t{\n\t\t\t\t\"id\": %u,\n\t\t\t\t\"msSinceLastHeartbeat\": %u,\n\t\t\t\t\"alive\": %s,\n\t\t\t\t\"x\": %d,\n\t\t\t\t\"y\": %d,\n\t\t\t\t\"z\": %d,\n\t\t\t\t\"load\": %llu,\n\t\t\t\t\"peers\": %llu\n\t\t\t}",
+								((i == 0) ? "\n" : ",\n"),
+								cs.members[i].id,
+								cs.members[i].msSinceLastHeartbeat,
+								(cs.members[i].alive != 0) ? "true" : "false",
+								cs.members[i].x,
+								cs.members[i].y,
+								cs.members[i].z,
+								cs.members[i].load,
+								cs.members[i].peers);
+							clusterJson.append(t);
+						}
+						clusterJson.append(" ]\n\t\t}");
+					}
+				}
+#endif
+
 				Utils::snprintf(json,sizeof(json),
 					"{\n"
 					"\t\"address\": \"%.10llx\",\n"
 					"\t\"publicIdentity\": \"%s\",\n"
+					"\t\"worldId\": %llu,\n"
+					"\t\"worldTimestamp\": %llu,\n"
 					"\t\"online\": %s,\n"
 					"\t\"tcpFallbackActive\": %s,\n"
 					"\t\"versionMajor\": %d,\n"
 					"\t\"versionMinor\": %d,\n"
 					"\t\"versionRev\": %d,\n"
 					"\t\"version\": \"%d.%d.%d\",\n"
-					"\t\"clock\": %llu\n"
+					"\t\"clock\": %llu,\n"
+					"\t\"cluster\": %s\n"
 					"}\n",
 					status.address,
 					status.publicIdentity,
+					status.worldId,
+					status.worldTimestamp,
 					(status.online) ? "true" : "false",
 					(_svc->tcpFallbackActive()) ? "true" : "false",
 					ZEROTIER_ONE_VERSION_MAJOR,
 					ZEROTIER_ONE_VERSION_MINOR,
 					ZEROTIER_ONE_VERSION_REVISION,
 					ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION,
-					(unsigned long long)OSUtils::now());
+					(unsigned long long)OSUtils::now(),
+					((clusterJson.length() > 0) ? clusterJson.c_str() : "null"));
 				responseBody = json;
 				scode = 200;
 			} else if (ps[0] == "config") {

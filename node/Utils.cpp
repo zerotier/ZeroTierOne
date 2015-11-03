@@ -181,7 +181,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 #ifdef __UNIX_LIKE__
 
-	static char randomBuf[65536];
+	static char randomBuf[131072];
 	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
 	static Mutex globalLock;
@@ -191,7 +191,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	if (devURandomFd <= 0) {
 		devURandomFd = ::open("/dev/urandom",O_RDONLY);
 		if (devURandomFd <= 0) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\r\n");
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 			exit(1);
 			return;
 		}
@@ -199,10 +199,16 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
-			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\r\n");
-				exit(1);
-				return;
+			for(;;) {
+				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+					::close(devURandomFd);
+					devURandomFd = ::open("/dev/urandom",O_RDONLY);
+					if (devURandomFd <= 0) {
+						fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+						exit(1);
+						return;
+					}
+				} else break;
 			}
 			randomPtr = 0;
 		}
@@ -259,25 +265,6 @@ std::vector<std::string> Utils::split(const char *s,const char *const sep,const 
 		fields.push_back(buf);
 
 	return fields;
-}
-
-std::string Utils::trim(const std::string &s)
-{
-	unsigned long end = (unsigned long)s.length();
-	while (end) {
-		char c = s[end - 1];
-		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-			--end;
-		else break;
-	}
-	unsigned long start = 0;
-	while (start < end) {
-		char c = s[start];
-		if ((c == ' ')||(c == '\r')||(c == '\n')||(!c)||(c == '\t'))
-			++start;
-		else break;
-	}
-	return s.substr(start,end - start);
 }
 
 unsigned int Utils::snprintf(char *buf,unsigned int len,const char *fmt,...)

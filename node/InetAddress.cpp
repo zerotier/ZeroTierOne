@@ -77,14 +77,12 @@ InetAddress::IpScope InetAddress::ipScope() const
 					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;				// 192.168.0.0/16
 					break;
 				case 0xff: return IP_SCOPE_NONE;                                      // 255.0.0.0/8 (broadcast, or unused/unusable)
-				default:
-					switch(ip >> 28) {
-						case 0xe: return IP_SCOPE_MULTICAST;                              // 224.0.0.0/4
-						case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                          // 240.0.0.0/4 ("reserved," usually unusable)
-						default: return IP_SCOPE_GLOBAL;                                  // everything else
-					}
-					break;
 			}
+			switch(ip >> 28) {
+				case 0xe: return IP_SCOPE_MULTICAST;                              // 224.0.0.0/4
+				case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                          // 240.0.0.0/4 ("reserved," usually unusable)
+			}
+			return IP_SCOPE_GLOBAL;
 		}	break;
 
 		case AF_INET6: {

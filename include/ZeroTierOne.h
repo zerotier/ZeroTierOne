@@ -116,6 +116,34 @@ extern "C" {
 #define ZT_FEATURE_FLAG_FIPS 0x00000002
 
 /**
+ * Maximum number of hops in a ZeroTier circuit test
+ *
+ * This is more or less the max that can be fit in a given packet (with
+ * fragmentation) and only one address per hop.
+ */
+#define ZT_CIRCUIT_TEST_MAX_HOPS 512
+
+/**
+ * Maximum number of addresses per hop in a circuit test
+ */
+#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 256
+
+/**
+ * Maximum number of cluster members (and max member ID plus one)
+ */
+#define ZT_CLUSTER_MAX_MEMBERS 128
+
+/**
+ * Maximum number of physical ZeroTier addresses a cluster member can report
+ */
+#define ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES 16
+
+/**
+ * Maximum allowed cluster message length in bytes
+ */
+#define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
+
+/**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
  */
 extern const struct sockaddr_storage ZT_SOCKADDR_NULL;
@@ -161,7 +189,17 @@ enum ZT_ResultCode
 	/**
 	 * Network ID not valid
 	 */
-	ZT_RESULT_ERROR_NETWORK_NOT_FOUND = 1000
+	ZT_RESULT_ERROR_NETWORK_NOT_FOUND = 1000,
+
+	/**
+	 * The requested operation is not supported on this version or build
+	 */
+	ZT_RESULT_ERROR_UNSUPPORTED_OPERATION = 1001,
+
+	/**
+	 * The requestion operation was given a bad parameter or was called in an invalid state
+	 */
+	ZT_RESULT_ERROR_BAD_PARAMETER = 1002
 };
 
 /**
@@ -243,38 +281,13 @@ enum ZT_Event
 	ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION = 4,
 
 	/**
-	 * A more recent version was observed on the network
-	 *
-	 * Right now this is only triggered if a hub or rootserver reports a
-	 * more recent version, and only once. It can be used to trigger a
-	 * software update check.
-	 *
-	 * Meta-data: unsigned int[3], more recent version number
-	 */
-	ZT_EVENT_SAW_MORE_RECENT_VERSION = 5,
-
-	/**
-	 * A packet failed authentication
-	 *
-	 * Meta-data: struct sockaddr_storage containing origin address of packet
-	 */
-	ZT_EVENT_AUTHENTICATION_FAILURE = 6,
-
-	/**
-	 * A received packet was not valid
-	 *
-	 * Meta-data: struct sockaddr_storage containing origin address of packet
-	 */
-	ZT_EVENT_INVALID_PACKET = 7,
-
-	/**
 	 * Trace (debugging) message
 	 *
 	 * These events are only generated if this is a TRACE-enabled build.
 	 *
 	 * Meta-data: C string, TRACE message
 	 */
-	ZT_EVENT_TRACE = 8
+	ZT_EVENT_TRACE = 5
 };
 
 /**
@@ -286,6 +299,16 @@ typedef struct
 	 * 40-bit ZeroTier address of this node
 	 */
 	uint64_t address;
+
+	/**
+	 * Current world ID
+	 */
+	uint64_t worldId;
+
+	/**
+	 * Current world revision/timestamp
+	 */
+	uint64_t worldTimestamp;
 
 	/**
 	 * Public identity in string-serialized form (safe to send to others)
@@ -399,6 +422,59 @@ enum ZT_VirtualNetworkConfigOperation
 	 * Network is going down permanently (leave/delete)
 	 */
 	ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY = 4
+};
+
+/**
+ * What trust hierarchy role does this peer have?
+ */
+enum ZT_PeerRole {
+	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
+	ZT_PEER_ROLE_RELAY = 1,    // relay node
+	ZT_PEER_ROLE_ROOT = 2      // root server
+};
+
+/**
+ * Vendor ID
+ */
+enum ZT_Vendor {
+	ZT_VENDOR_UNSPECIFIED = 0,
+	ZT_VENDOR_ZEROTIER = 1
+};
+
+/**
+ * Platform type
+ */
+enum ZT_Platform {
+	ZT_PLATFORM_UNSPECIFIED = 0,
+	ZT_PLATFORM_LINUX = 1,
+	ZT_PLATFORM_WINDOWS = 2,
+	ZT_PLATFORM_MACOS = 3,
+	ZT_PLATFORM_ANDROID = 4,
+	ZT_PLATFORM_IOS = 5,
+	ZT_PLATFORM_SOLARIS_SMARTOS = 6,
+	ZT_PLATFORM_FREEBSD = 7,
+	ZT_PLATFORM_NETBSD = 8,
+	ZT_PLATFORM_OPENBSD = 9,
+	ZT_PLATFORM_RISCOS = 10,
+	ZT_PLATFORM_VXWORKS = 11,
+	ZT_PLATFORM_FREERTOS = 12,
+	ZT_PLATFORM_SYSBIOS = 13,
+	ZT_PLATFORM_HURD = 14
+};
+
+/**
+ * Architecture type
+ */
+enum ZT_Architecture {
+	ZT_ARCHITECTURE_UNSPECIFIED = 0,
+	ZT_ARCHITECTURE_X86 = 1,
+	ZT_ARCHITECTURE_X64 = 2,
+	ZT_ARCHITECTURE_ARM32 = 3,
+	ZT_ARCHITECTURE_ARM64 = 4,
+	ZT_ARCHITECTURE_MIPS32 = 5,
+	ZT_ARCHITECTURE_MIPS64 = 6,
+	ZT_ARCHITECTURE_POWER32 = 7,
+	ZT_ARCHITECTURE_POWER64 = 8
 };
 
 /**
@@ -533,11 +609,6 @@ typedef struct
 	uint64_t lastReceive;
 
 	/**
-	 * Is path fixed? (i.e. not learned, static)
-	 */
-	int fixed;
-
-	/**
 	 * Is path active?
 	 */
 	int active;
@@ -547,15 +618,6 @@ typedef struct
 	 */
 	int preferred;
 } ZT_PeerPhysicalPath;
-
-/**
- * What trust hierarchy role does this peer have?
- */
-enum ZT_PeerRole {
-	ZT_PEER_ROLE_LEAF = 0,     // ordinary node
-	ZT_PEER_ROLE_RELAY = 1,    // relay node
-	ZT_PEER_ROLE_ROOT = 2      // root server
-};
 
 /**
  * Peer status result buffer
@@ -623,13 +685,267 @@ typedef struct
 } ZT_PeerList;
 
 /**
- * Local interface trust levels
+ * ZeroTier circuit test configuration and path
  */
-typedef enum {
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL = 0,
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_PRIVACY = 1,
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_ULTIMATE = 2
-} ZT_LocalInterfaceAddressTrust;
+typedef struct {
+	/**
+	 * Test ID -- an arbitrary 64-bit identifier
+	 */
+	uint64_t testId;
+
+	/**
+	 * Timestamp -- sent with test and echoed back by each reporter
+	 */
+	uint64_t timestamp;
+
+	/**
+	 * Originator credential: network ID
+	 *
+	 * If this is nonzero, a network ID will be set for this test and
+	 * the originator must be its primary network controller. This is
+	 * currently the only authorization method available, so it must
+	 * be set to run a test.
+	 */
+	uint64_t credentialNetworkId;
+
+	/**
+	 * Hops in circuit test (a.k.a. FIFO for graph traversal)
+	 */
+	struct {
+		/**
+		 * Hop flags (currently unused, must be zero)
+		 */
+		unsigned int flags;
+
+		/**
+		 * Number of addresses in this hop (max: ZT_CIRCUIT_TEST_MAX_HOP_BREADTH)
+		 */
+		unsigned int breadth;
+
+		/**
+		 * 40-bit ZeroTier addresses (most significant 24 bits ignored)
+		 */
+		uint64_t addresses[ZT_CIRCUIT_TEST_MAX_HOP_BREADTH];
+	} hops[ZT_CIRCUIT_TEST_MAX_HOPS];
+
+	/**
+	 * Number of hops (max: ZT_CIRCUIT_TEST_MAX_HOPS)
+	 */
+	unsigned int hopCount;
+
+	/**
+	 * If non-zero, circuit test will report back at every hop
+	 */
+	int reportAtEveryHop;
+
+	/**
+	 * An arbitrary user-settable pointer
+	 */
+	void *ptr;
+
+	/**
+	 * Pointer for internal use -- initialize to zero and do not modify
+	 */
+	void *_internalPtr;
+} ZT_CircuitTest;
+
+/**
+ * Circuit test result report
+ */
+typedef struct {
+	/**
+	 * Sender of report (current hop)
+	 */
+	uint64_t current;
+
+	/**
+	 * Previous hop
+	 */
+	uint64_t upstream;
+
+	/**
+	 * 64-bit test ID
+	 */
+	uint64_t testId;
+
+	/**
+	 * Timestamp from original test (echoed back at each hop)
+	 */
+	uint64_t timestamp;
+
+	/**
+	 * Timestamp on remote device
+	 */
+	uint64_t remoteTimestamp;
+
+	/**
+	 * 64-bit packet ID of packet received by the reporting device
+	 */
+	uint64_t sourcePacketId;
+
+	/**
+	 * Flags (currently unused, will be zero)
+	 */
+	uint64_t flags;
+
+	/**
+	 * ZeroTier protocol-level hop count of packet received by reporting device (>0 indicates relayed)
+	 */
+	unsigned int sourcePacketHopCount;
+
+	/**
+	 * Error code (currently unused, will be zero)
+	 */
+	unsigned int errorCode;
+
+	/**
+	 * Remote device vendor ID
+	 */
+	enum ZT_Vendor vendor;
+
+	/**
+	 * Remote device protocol compliance version
+	 */
+	unsigned int protocolVersion;
+
+	/**
+	 * Software major version
+	 */
+	unsigned int majorVersion;
+
+	/**
+	 * Software minor version
+	 */
+	unsigned int minorVersion;
+
+	/**
+	 * Software revision
+	 */
+	unsigned int revision;
+
+	/**
+	 * Platform / OS
+	 */
+	enum ZT_Platform platform;
+
+	/**
+	 * System architecture
+	 */
+	enum ZT_Architecture architecture;
+
+	/**
+	 * Local device address on which packet was received by reporting device
+	 *
+	 * This may have ss_family equal to zero (null address) if unspecified.
+	 */
+	struct sockaddr_storage receivedOnLocalAddress;
+
+	/**
+	 * Remote address from which reporter received the test packet
+	 *
+	 * This may have ss_family set to zero (null address) if unspecified.
+	 */
+	struct sockaddr_storage receivedFromRemoteAddress;
+
+	/**
+	 * Next hops to which packets are being or will be sent by the reporter
+	 *
+	 * In addition to reporting back, the reporter may send the test on if
+	 * there are more recipients in the FIFO. If it does this, it can report
+	 * back the address(es) that make up the next hop and the physical address
+	 * for each if it has one. The physical address being null/unspecified
+	 * typically indicates that no direct path exists and the next packet
+	 * will be relayed.
+	 */
+	struct {
+		/**
+		 * 40-bit ZeroTier address
+		 */
+		uint64_t address;
+
+		/**
+		 * Physical address or null address (ss_family == 0) if unspecified or unknown
+		 */
+		struct sockaddr_storage physicalAddress;
+	} nextHops[ZT_CIRCUIT_TEST_MAX_HOP_BREADTH];
+
+	/**
+	 * Number of next hops reported in nextHops[]
+	 */
+	unsigned int nextHopCount;
+} ZT_CircuitTestReport;
+
+/**
+ * A cluster member's status
+ */
+typedef struct {
+	/**
+	 * This cluster member's ID (from 0 to 1-ZT_CLUSTER_MAX_MEMBERS)
+	 */
+	unsigned int id;
+
+	/**
+	 * Number of milliseconds since last 'alive' heartbeat message received via cluster backplane address
+	 */
+	unsigned int msSinceLastHeartbeat;
+
+	/**
+	 * Non-zero if cluster member is alive
+	 */
+	int alive;
+
+	/**
+	 * X, Y, and Z coordinates of this member (if specified, otherwise zero)
+	 *
+	 * What these mean depends on the location scheme being used for
+	 * location-aware clustering. At present this is GeoIP and these
+	 * will be the X, Y, and Z coordinates of the location on a spherical
+	 * approximation of Earth where Earth's core is the origin (in km).
+	 * They don't have to be perfect and need only be comparable with others
+	 * to find shortest path via the standard vector distance formula.
+	 */
+	int x,y,z;
+
+	/**
+	 * Cluster member's last reported load
+	 */
+	uint64_t load;
+
+	/**
+	 * Number of peers this cluster member "has"
+	 */
+	uint64_t peers;
+
+	/**
+	 * Physical ZeroTier endpoints for this member (where peers are sent when directed here)
+	 */
+	struct sockaddr_storage zeroTierPhysicalEndpoints[ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES];
+
+	/**
+	 * Number of physical ZeroTier endpoints this member is announcing
+	 */
+	unsigned int numZeroTierPhysicalEndpoints;
+} ZT_ClusterMemberStatus;
+
+/**
+ * ZeroTier cluster status
+ */
+typedef struct {
+	/**
+	 * My cluster member ID (a record for 'self' is included in member[])
+	 */
+	unsigned int myId;
+
+	/**
+	 * Number of cluster members
+	 */
+	unsigned int clusterSize;
+
+	/**
+	 * Cluster member statuses
+	 */
+	ZT_ClusterMemberStatus members[ZT_CLUSTER_MAX_MEMBERS];
+} ZT_ClusterStatus;
 
 /**
  * An instance of a ZeroTier One node (opaque)
@@ -800,7 +1116,6 @@ typedef int (*ZT_WirePacketSendFunction)(
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
  * @param eventCallback Function to receive status updates and non-fatal error notices
- * @param overrideRootTopology Alternative root server topology or NULL for default (mostly for test/debug use)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 enum ZT_ResultCode ZT_Node_new(
@@ -812,8 +1127,7 @@ enum ZT_ResultCode ZT_Node_new(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-	ZT_EventCallback eventCallback,
-	const char *overrideRootTopology);
+	ZT_EventCallback eventCallback);
 
 /**
  * Delete a node and free all resources it consumes
@@ -1014,11 +1328,6 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 /**
  * Add a local interface address
  *
- * Local interface addresses may be added if you want remote peers
- * with whom you have a trust relatinship (e.g. common network membership)
- * to receive information about these endpoints as potential endpoints for
- * direct communication.
- *
  * Take care that these are never ZeroTier interface addresses, otherwise
  * strange things might happen or they simply won't work.
  *
@@ -1033,11 +1342,9 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
  * reject bad, empty, and unusable addresses.
  *
  * @param addr Local interface address
- * @param metric Local interface metric
- * @param trust How much do you trust the local network under this interface?
  * @return Boolean: non-zero if address was accepted and added
  */
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust);
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr);
 
 /**
  * Clear local interface addresses
@@ -1060,6 +1367,149 @@ void ZT_Node_clearLocalInterfaceAddresses(ZT_Node *node);
  * @return OK (0) or error code if a fatal error condition has occurred
  */
 void ZT_Node_setNetconfMaster(ZT_Node *node,void *networkConfigMasterInstance);
+
+/**
+ * Initiate a VL1 circuit test
+ *
+ * This sends an initial VERB_CIRCUIT_TEST and reports results back to the
+ * supplied callback until circuitTestEnd() is called. The supplied
+ * ZT_CircuitTest structure should be initially zeroed and then filled
+ * in with settings and hops.
+ *
+ * It is the caller's responsibility to call circuitTestEnd() and then
+ * to dispose of the test structure. Otherwise this node will listen
+ * for results forever.
+ *
+ * @param node Node instance
+ * @param test Test configuration
+ * @param reportCallback Function to call each time a report is received
+ * @return OK or error if, for example, test is too big for a packet or support isn't compiled in
+ */
+enum ZT_ResultCode ZT_Node_circuitTestBegin(ZT_Node *node,ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *, ZT_CircuitTest *,const ZT_CircuitTestReport *));
+
+/**
+ * Stop listening for results to a given circuit test
+ *
+ * This does not free the 'test' structure. The caller may do that
+ * after calling this method to unregister it.
+ *
+ * Any reports that are received for a given test ID after it is
+ * terminated are ignored.
+ *
+ * @param node Node instance
+ * @param test Test configuration to unregister
+ */
+void ZT_Node_circuitTestEnd(ZT_Node *node,ZT_CircuitTest *test);
+
+/**
+ * Initialize cluster operation
+ *
+ * This initializes the internal structures and state for cluster operation.
+ * It takes two function pointers. The first is to a function that can be
+ * used to send data to cluster peers (mechanism is not defined by Node),
+ * and the second is to a function that can be used to get the location of
+ * a physical address in X,Y,Z coordinate space (e.g. as cartesian coordinates
+ * projected from the center of the Earth).
+ *
+ * Send function takes an arbitrary pointer followed by the cluster member ID
+ * to send data to, a pointer to the data, and the length of the data. The
+ * maximum message length is ZT_CLUSTER_MAX_MESSAGE_LENGTH (65535). Messages
+ * must be delivered whole and may be dropped or transposed, though high
+ * failure rates are undesirable and can cause problems. Validity checking or
+ * CRC is also not required since the Node validates the authenticity of
+ * cluster messages using cryptogrphic methods and will silently drop invalid
+ * messages.
+ *
+ * Address to location function is optional and if NULL geo-handoff is not
+ * enabled (in this case x, y, and z in clusterInit are also unused). It
+ * takes an arbitrary pointer followed by a physical address and three result
+ * parameters for x, y, and z. It returns zero on failure or nonzero if these
+ * three coordinates have been set. Coordinate space is arbitrary and can be
+ * e.g. coordinates on Earth relative to Earth's center. These can be obtained
+ * from latitutde and longitude with versions of the Haversine formula.
+ *
+ * See: http://stackoverflow.com/questions/1185408/converting-from-longitude-latitude-to-cartesian-coordinates
+ *
+ * Neither the send nor the address to location function should block. If the
+ * address to location function does not have a location for an address, it
+ * should return zero and then look up the address for future use since it
+ * will be called again in (typically) 1-3 minutes.
+ *
+ * Note that both functions can be called from any thread from which the
+ * various Node functions are called, and so must be thread safe if multiple
+ * threads are being used.
+ *
+ * @param node Node instance
+ * @param myId My cluster member ID (less than or equal to ZT_CLUSTER_MAX_MEMBERS)
+ * @param zeroTierPhysicalEndpoints Preferred physical address(es) for ZeroTier clients to contact this cluster member (for peer redirect)
+ * @param numZeroTierPhysicalEndpoints Number of physical endpoints in zeroTierPhysicalEndpoints[] (max allowed: 255)
+ * @param x My cluster member's X location
+ * @param y My cluster member's Y location
+ * @param z My cluster member's Z location
+ * @param sendFunction Function to be called to send data to other cluster members
+ * @param sendFunctionArg First argument to sendFunction()
+ * @param addressToLocationFunction Function to be called to get the location of a physical address or NULL to disable geo-handoff
+ * @param addressToLocationFunctionArg First argument to addressToLocationFunction()
+ * @return OK or UNSUPPORTED_OPERATION if this Node was not built with cluster support
+ */
+enum ZT_ResultCode ZT_Node_clusterInit(
+	ZT_Node *node,
+	unsigned int myId,
+	const struct sockaddr_storage *zeroTierPhysicalEndpoints,
+	unsigned int numZeroTierPhysicalEndpoints,
+	int x,
+	int y,
+	int z,
+	void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
+	void *sendFunctionArg,
+	int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
+	void *addressToLocationFunctionArg);
+
+/**
+ * Add a member to this cluster
+ *
+ * Calling this without having called clusterInit() will do nothing.
+ *
+ * @param node Node instance
+ * @param memberId Member ID (must be less than or equal to ZT_CLUSTER_MAX_MEMBERS)
+ * @return OK or error if clustering is disabled, ID invalid, etc.
+ */
+enum ZT_ResultCode ZT_Node_clusterAddMember(ZT_Node *node,unsigned int memberId);
+
+/**
+ * Remove a member from this cluster
+ *
+ * Calling this without having called clusterInit() will do nothing.
+ *
+ * @param node Node instance
+ * @param memberId Member ID to remove (nothing happens if not present)
+ */
+void ZT_Node_clusterRemoveMember(ZT_Node *node,unsigned int memberId);
+
+/**
+ * Handle an incoming cluster state message
+ *
+ * The message itself contains cluster member IDs, and invalid or badly
+ * addressed messages will be silently discarded.
+ *
+ * Calling this without having called clusterInit() will do nothing.
+ *
+ * @param node Node instance
+ * @param msg Cluster message
+ * @param len Length of cluster message
+ */
+void ZT_Node_clusterHandleIncomingMessage(ZT_Node *node,const void *msg,unsigned int len);
+
+/**
+ * Get the current status of the cluster from this node's point of view
+ *
+ * Calling this without clusterInit() or without cluster support will just
+ * zero out the structure and show a cluster size of zero.
+ *
+ * @param node Node instance
+ * @param cs Cluster status structure to fill with data
+ */
+void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs);
 
 /**
  * Get ZeroTier One version

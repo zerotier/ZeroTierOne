@@ -38,16 +38,22 @@
 #include "../include/ZeroTierOne.h"
 #include "Utils.hpp"
 #include "MAC.hpp"
+#include "Buffer.hpp"
 
 namespace ZeroTier {
+
+/**
+ * Maximum integer value of enum IpScope
+ */
+#define ZT_INETADDRESS_MAX_SCOPE 7
 
 /**
  * Extends sockaddr_storage with friendly C++ methods
  *
  * This is basically a "mixin" for sockaddr_storage. It adds methods and
  * operators, but does not modify the structure. This can be cast to/from
- * sockaddr_storage and used interchangeably. Don't change this as it's
- * used in a few places.
+ * sockaddr_storage and used interchangeably. DO NOT change this by e.g.
+ * adding non-static fields, since much code depends on this identity.
  */
 struct InetAddress : public sockaddr_storage
 {
@@ -65,7 +71,8 @@ struct InetAddress : public sockaddr_storage
 	 * IP address scope
 	 *
 	 * Note that these values are in ascending order of path preference and
-	 * MUST remain that way or Path must be changed to reflect.
+	 * MUST remain that way or Path must be changed to reflect. Also be sure
+	 * to change ZT_INETADDRESS_MAX_SCOPE if the max changes.
 	 */
 	enum IpScope
 	{
@@ -99,74 +106,88 @@ struct InetAddress : public sockaddr_storage
 	inline InetAddress &operator=(const InetAddress &a)
 		throw()
 	{
-		memcpy(this,&a,sizeof(InetAddress));
+		if (&a != this)
+			memcpy(this,&a,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const InetAddress *a)
 		throw()
 	{
-		memcpy(this,a,sizeof(InetAddress));
+		if (a != this)
+			memcpy(this,a,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage &ss)
 		throw()
 	{
-		memcpy(this,&ss,sizeof(InetAddress));
+		if (reinterpret_cast<const InetAddress *>(&ss) != this)
+			memcpy(this,&ss,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage *ss)
 		throw()
 	{
-		memcpy(this,ss,sizeof(InetAddress));
+		if (reinterpret_cast<const InetAddress *>(ss) != this)
+			memcpy(this,ss,sizeof(InetAddress));
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in &sa)
 		throw()
 	{
-		memset(this,0,sizeof(InetAddress));
-		memcpy(this,&sa,sizeof(struct sockaddr_in));
+		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
+			memset(this,0,sizeof(InetAddress));
+			memcpy(this,&sa,sizeof(struct sockaddr_in));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in *sa)
 		throw()
 	{
-		memset(this,0,sizeof(InetAddress));
-		memcpy(this,sa,sizeof(struct sockaddr_in));
+		if (reinterpret_cast<const InetAddress *>(sa) != this) {
+			memset(this,0,sizeof(InetAddress));
+			memcpy(this,sa,sizeof(struct sockaddr_in));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in6 &sa)
 		throw()
 	{
-		memset(this,0,sizeof(InetAddress));
-		memcpy(this,&sa,sizeof(struct sockaddr_in6));
+		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
+			memset(this,0,sizeof(InetAddress));
+			memcpy(this,&sa,sizeof(struct sockaddr_in6));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_in6 *sa)
 		throw()
 	{
-		memset(this,0,sizeof(InetAddress));
-		memcpy(this,sa,sizeof(struct sockaddr_in6));
+		if (reinterpret_cast<const InetAddress *>(sa) != this) {
+			memset(this,0,sizeof(InetAddress));
+			memcpy(this,sa,sizeof(struct sockaddr_in6));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr &sa)
 		throw()
 	{
-		memset(this,0,sizeof(InetAddress));
-		switch(sa.sa_family) {
-			case AF_INET:
-				memcpy(this,&sa,sizeof(struct sockaddr_in));
-				break;
-			case AF_INET6:
-				memcpy(this,&sa,sizeof(struct sockaddr_in6));
-				break;
+		if (reinterpret_cast<const InetAddress *>(&sa) != this) {
+			memset(this,0,sizeof(InetAddress));
+			switch(sa.sa_family) {
+				case AF_INET:
+					memcpy(this,&sa,sizeof(struct sockaddr_in));
+					break;
+				case AF_INET6:
+					memcpy(this,&sa,sizeof(struct sockaddr_in6));
+					break;
+			}
 		}
 		return *this;
 	}
@@ -174,14 +195,16 @@ struct InetAddress : public sockaddr_storage
 	inline InetAddress &operator=(const struct sockaddr *sa)
 		throw()
 	{
-		memset(this,0,sizeof(InetAddress));
-		switch(sa->sa_family) {
-			case AF_INET:
-				memcpy(this,sa,sizeof(struct sockaddr_in));
-				break;
-			case AF_INET6:
-				memcpy(this,sa,sizeof(struct sockaddr_in6));
-				break;
+		if (reinterpret_cast<const InetAddress *>(sa) != this) {
+			memset(this,0,sizeof(InetAddress));
+			switch(sa->sa_family) {
+				case AF_INET:
+					memcpy(this,sa,sizeof(struct sockaddr_in));
+					break;
+				case AF_INET6:
+					memcpy(this,sa,sizeof(struct sockaddr_in6));
+					break;
+			}
 		}
 		return *this;
 	}
@@ -303,7 +326,7 @@ struct InetAddress : public sockaddr_storage
 	inline bool isV6() const throw() { return (ss_family == AF_INET6); }
 
 	/**
-	 * @return pointer to raw IP address bytes
+	 * @return pointer to raw address bytes or NULL if not available
 	 */
 	inline const void *rawIpData() const
 		throw()
@@ -316,27 +339,19 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	/**
-	 * @return pointer to raw IP address bytes
-	 */
-	inline void *rawIpData()
-		throw()
-	{
-		switch(ss_family) {
-			case AF_INET: return (void *)&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr);
-			case AF_INET6: return (void *)(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			default: return 0;
-		}
-	}
-
-	/**
+	 * Performs an IP-only comparison or, if that is impossible, a memcmp()
+	 *
 	 * @param a InetAddress to compare again
 	 * @return True if only IP portions are equal (false for non-IP or null addresses)
 	 */
 	inline bool ipsEqual(const InetAddress &a) const
 	{
-		switch(ss_family) {
-			case AF_INET: return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
-			case AF_INET6: return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
+		if (ss_family == a.ss_family) {
+			if (ss_family == AF_INET)
+				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
+			if (ss_family == AF_INET6)
+				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
+			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
 		return false;
 	}
@@ -361,6 +376,62 @@ struct InetAddress : public sockaddr_storage
 	 * @return True if address family is non-zero
 	 */
 	inline operator bool() const throw() { return (ss_family != 0); }
+
+	template<unsigned int C>
+	inline void serialize(Buffer<C> &b) const
+	{
+		// This is used in the protocol and must be the same as describe in places
+		// like VERB_HELLO in Packet.hpp.
+		switch(ss_family) {
+			case AF_INET:
+				b.append((uint8_t)0x04);
+				b.append(&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr),4);
+				b.append((uint16_t)port()); // just in case sin_port != uint16_t
+				return;
+			case AF_INET6:
+				b.append((uint8_t)0x06);
+				b.append(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,16);
+				b.append((uint16_t)port()); // just in case sin_port != uint16_t
+				return;
+			default:
+				b.append((uint8_t)0);
+				return;
+		}
+	}
+
+	template<unsigned int C>
+	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	{
+		memset(this,0,sizeof(InetAddress));
+		unsigned int p = startAt;
+		switch(b[p++]) {
+			case 0:
+				return 1;
+			case 0x01:
+				// TODO: Ethernet address (but accept for forward compatibility)
+				return 7;
+			case 0x02:
+				// TODO: Bluetooth address (but accept for forward compatibility) 
+				return 7;
+			case 0x03:
+				// TODO: Other address types (but accept for forward compatibility)
+				// These could be extended/optional things like AF_UNIX, LTE Direct, shared memory, etc.
+				return (unsigned int)(b.template at<uint16_t>(p) + 3); // other addresses begin with 16-bit non-inclusive length
+			case 0x04:
+				ss_family = AF_INET;
+				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;
+				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
+				break;
+			case 0x06:
+				ss_family = AF_INET6;
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16); p += 16;
+				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
+				break;
+			default:
+				throw std::invalid_argument("invalid serialized InetAddress");
+		}
+		return (p - startAt);
+	}
 
 	bool operator==(const InetAddress &a) const throw();
 	bool operator<(const InetAddress &a) const throw();

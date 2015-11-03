@@ -25,50 +25,21 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_DEFAULTS_HPP
-#define ZT_DEFAULTS_HPP
-
-#include <stdexcept>
-#include <string>
-#include <vector>
-#include <map>
-
-#include "Constants.hpp"
-#include "Identity.hpp"
-#include "InetAddress.hpp"
+#include "Path.hpp"
+#include "AntiRecursion.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Node.hpp"
 
 namespace ZeroTier {
 
-/**
- * Static configuration defaults
- * 
- * These are the default values that ship baked into the ZeroTier binary. They
- * define the basic parameters required for it to connect to the rest of the
- * network and obtain software updates.
- */
-class Defaults
+bool Path::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 {
-public:
-	Defaults();
-
-	/**
-	 * Default root topology dictionary
-	 */
-	const std::string defaultRootTopology;
-
-	/**
-	 * Identities permitted to sign root topology dictionaries
-	 */
-	const std::map< Address,Identity > rootTopologyAuthorities;
-
-	/**
-	 * Address for IPv4 LAN auto-location broadcasts: 255.255.255.255:9993
-	 */
-	const InetAddress v4Broadcast;
-};
-
-extern const Defaults ZT_DEFAULTS;
+	if (RR->node->putPacket(_localAddress,address(),data,len)) {
+		sent(now);
+		RR->antiRec->logOutgoingZT(data,len);
+		return true;
+	}
+	return false;
+}
 
 } // namespace ZeroTier
-
-#endif

@@ -46,22 +46,24 @@
 #include "../ext/lz4/lz4.h"
 
 /**
- * Protocol version -- incremented only for MAJOR changes
+ * Protocol version -- incremented only for major changes
  *
  * 1 - 0.2.0 ... 0.2.5
  * 2 - 0.3.0 ... 0.4.5
- *   * Added signature and originating peer to multicast frame
- *   * Double size of multicast frame bloom filter
+ *   + Added signature and originating peer to multicast frame
+ *   + Double size of multicast frame bloom filter
  * 3 - 0.5.0 ... 0.6.0
- *   * Yet another multicast redesign
- *   * New crypto completely changes key agreement cipher
- * 4 - 0.6.0 ... CURRENT
- *   * New identity format based on hashcash design
- *
- * This isn't going to change again for a long time unless your
- * author wakes up again at 4am with another great idea. :P
+ *   + Yet another multicast redesign
+ *   + New crypto completely changes key agreement cipher
+ * 4 - 0.6.0 ... 1.0.6
+ *   + New identity format based on hashcash design
+ * 5 - 1.1.0 ... CURRENT
+ *   + Supports circuit test, proof of work, and echo
+ *   + Supports in-band world (root server definition) updates
+ *   + Clustering! (Though this will work with protocol v4 clients.)
+ *   + Otherwise backward compatible with protocol v4
  */
-#define ZT_PROTO_VERSION 4
+#define ZT_PROTO_VERSION 5
 
 /**
  * Minimum supported protocol version
@@ -233,15 +235,6 @@
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
-// Destination address types from HELLO, OK(HELLO), and other message types
-#define ZT_PROTO_DEST_ADDRESS_TYPE_NONE 0
-#define ZT_PROTO_DEST_ADDRESS_TYPE_ZEROTIER 1   // reserved but unused
-#define ZT_PROTO_DEST_ADDRESS_TYPE_ETHERNET 2   // future use
-#define ZT_PROTO_DEST_ADDRESS_TYPE_BLUETOOTH 3  // future use
-#define ZT_PROTO_DEST_ADDRESS_TYPE_IPV4 4
-#define ZT_PROTO_DEST_ADDRESS_TYPE_LTE_DIRECT 5 // future use
-#define ZT_PROTO_DEST_ADDRESS_TYPE_IPV6 6
-
 // Ephemeral key record flags
 #define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01   // future use
 
@@ -354,11 +347,11 @@ namespace ZeroTier {
  * ZeroTier packet
  *
  * Packet format:
- *   <[8] random initialization vector (doubles as 64-bit packet ID)>
+ *   <[8] 64-bit random packet ID and crypto initialization vector>
  *   <[5] destination ZT address>
  *   <[5] source ZT address>
  *   <[1] flags/cipher (top 5 bits) and ZT hop count (last 3 bits)>
- *   <[8] 8-bit MAC (currently first 8 bytes of poly1305 tag)>
+ *   <[8] 64-bit MAC>
  *   [... -- begin encryption envelope -- ...]
  *   <[1] encrypted flags (top 3 bits) and verb (last 5 bits)>
  *   [... verb-specific payload ...]
@@ -373,6 +366,10 @@ namespace ZeroTier {
  * transit without invalidating the MAC. All other bits in the packet are
  * immutable. This is because intermediate nodes can increment the hop
  * count up to 7 (protocol max).
+ *
+ * A hop count of 7 also indicates that receiving peers should not attempt
+ * to learn direct paths from this packet. (Right now direct paths are only
+ * learned from direct packets anyway.)
  *
  * http://tonyarcieri.com/all-the-crypto-code-youve-ever-written-is-probably-broken
  *
@@ -530,10 +527,13 @@ public:
 	 */
 	enum Verb /* Max value: 32 (5 bits) */
 	{
-		/* No operation, payload ignored, no reply */
+		/**
+		 * No operation (ignored, no reply)
+		 */
 		VERB_NOP = 0,
 
-		/* Announcement of a node's existence:
+		/**
+		 * Announcement of a node's existence:
 		 *   <[1] protocol version>
 		 *   <[1] software major version>
 		 *   <[1] software minor version>
@@ -542,6 +542,8 @@ public:
 		 *   <[...] binary serialized identity (see Identity)>
 		 *   <[1] destination address type>
 		 *   [<[...] destination address>]
+		 *   <[8] 64-bit world ID of current world>
+		 *   <[8] 64-bit timestamp of current world>
 		 *
 		 * This is the only message that ever must be sent in the clear, since it
 		 * is used to push an identity to a new peer.
@@ -553,10 +555,10 @@ public:
 		 * address that require re-establishing connectivity.
 		 *
 		 * Destination address types and formats (not all of these are used now):
-		 *   0 - None -- no destination address data present
-		 *   1 - Ethernet address -- format: <[6] Ethernet MAC>
-		 *   4 - 6-byte IPv4 UDP address/port -- format: <[4] IP>, <[2] port>
-		 *   6 - 18-byte IPv6 UDP address/port -- format: <[16] IP>, <[2] port>
+		 *   0x00 - None -- no destination address data present
+		 *   0x01 - Ethernet address -- format: <[6] Ethernet MAC>
+		 *   0x04 - 6-byte IPv4 UDP address/port -- format: <[4] IP>, <[2] port>
+		 *   0x06 - 18-byte IPv6 UDP address/port -- format: <[16] IP>, <[2] port>
 		 *
 		 * OK payload:
 		 *   <[8] timestamp (echoed from original HELLO)>
@@ -566,12 +568,15 @@ public:
 		 *   <[2] software revision (of responder)>
 		 *   <[1] destination address type (for this OK, not copied from HELLO)>
 		 *   [<[...] destination address>]
+		 *   <[2] 16-bit length of world update or 0 if none>
+		 *   [[...] world update]
 		 *
 		 * ERROR has no payload.
 		 */
 		VERB_HELLO = 1,
 
-		/* Error response:
+		/**
+		 * Error response:
 		 *   <[1] in-re verb>
 		 *   <[8] in-re packet ID>
 		 *   <[1] error code>
@@ -579,14 +584,16 @@ public:
 		 */
 		VERB_ERROR = 2,
 
-		/* Success response:
+		/**
+		 * Success response:
 		 *   <[1] in-re verb>
 		 *   <[8] in-re packet ID>
 		 *   <[...] request-specific payload>
 		 */
 		VERB_OK = 3,
 
-		/* Query an identity by address:
+		/**
+		 * Query an identity by address:
 		 *   <[5] address to look up>
 		 *
 		 * OK response payload:
@@ -597,7 +604,8 @@ public:
 		 */
 		VERB_WHOIS = 4,
 
-		/* Meet another node at a given protocol address:
+		/**
+		 * Meet another node at a given protocol address:
 		 *   <[1] flags (unused, currently 0)>
 		 *   <[5] ZeroTier address of peer that might be found at this address>
 		 *   <[2] 16-bit protocol address port>
@@ -616,11 +624,16 @@ public:
 		 * may also ignore these messages if a peer is not known or is not being
 		 * actively communicated with.
 		 *
+		 * Unfortunately the physical address format in this message pre-dates
+		 * InetAddress's serialization format. :( ZeroTier is four years old and
+		 * yes we've accumulated a tiny bit of cruft here and there.
+		 *
 		 * No OK or ERROR is generated.
 		 */
 		VERB_RENDEZVOUS = 5,
 
-		/* ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
+		/**
+		 * ZT-to-ZT unicast ethernet frame (shortened EXT_FRAME):
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit ethertype>
 		 *   <[...] ethernet payload>
@@ -635,7 +648,8 @@ public:
 		 */
 		VERB_FRAME = 6,
 
-		/* Full Ethernet frame with MAC addressing and optional fields:
+		/**
+		 * Full Ethernet frame with MAC addressing and optional fields:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *  [<[...] certificate of network membership>]
@@ -658,23 +672,44 @@ public:
 		 */
 		VERB_EXT_FRAME = 7,
 
-		/* DEPRECATED */
-		VERB_P5_MULTICAST_FRAME = 8,
+		/**
+		 * ECHO request (a.k.a. ping):
+		 *   <[...] arbitrary payload to be echoed back>
+		 *
+		 * This generates OK with a copy of the transmitted payload. No ERROR
+		 * is generated. Response to ECHO requests is optional.
+		 *
+		 * Support for fragmented echo packets is optional and their use is not
+		 * recommended.
+		 */
+		VERB_ECHO = 8,
 
-		/* Announce interest in multicast group(s):
+		/**
+		 * Announce interest in multicast group(s):
 		 *   <[8] 64-bit network ID>
 		 *   <[6] multicast Ethernet address>
 		 *   <[4] multicast additional distinguishing information (ADI)>
 		 *   [... additional tuples of network/address/adi ...]
 		 *
-		 * LIKEs are sent to peers with whom you have a direct peer to peer
-		 * connection, and always including root servers.
+		 * LIKEs may be sent to any peer, though a good implementation should
+		 * restrict them to peers on the same network they're for and to network
+		 * controllers and root servers. In the current network, root servers
+		 * will provide the service of final multicast cache.
+		 *
+		 * It is recommended that NETWORK_MEMBERSHIP_CERTIFICATE pushes be sent
+		 * along with MULTICAST_LIKE when pushing LIKEs to peers that do not
+		 * share a network membership (such as root servers), since this can be
+		 * used to authenticate GATHER requests and limit responses to peers
+		 * authorized to talk on a network. (Should be an optional field here,
+		 * but saving one or two packets every five minutes is not worth an
+		 * ugly hack or protocol rev.)
 		 *
 		 * OK/ERROR are not generated.
 		 */
 		VERB_MULTICAST_LIKE = 9,
 
-		/* Network member certificate replication/push:
+		/**
+		 * Network member certificate replication/push:
 		 *   <[...] serialized certificate of membership>
 		 *   [ ... additional certificates may follow ...]
 		 *
@@ -685,7 +720,8 @@ public:
 		 */
 		VERB_NETWORK_MEMBERSHIP_CERTIFICATE = 10,
 
-		/* Network configuration request:
+		/**
+		 * Network configuration request:
 		 *   <[8] 64-bit network ID>
 		 *   <[2] 16-bit length of request meta-data dictionary>
 		 *   <[...] string-serialized request meta-data>
@@ -720,7 +756,8 @@ public:
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 11,
 
-		/* Network configuration refresh request:
+		/**
+		 * Network configuration refresh request:
 		 *   <[...] array of 64-bit network IDs>
 		 *
 		 * This can be sent by the network controller to inform a node that it
@@ -731,7 +768,8 @@ public:
 		 */
 		VERB_NETWORK_CONFIG_REFRESH = 12,
 
-		/* Request endpoints for multicast distribution:
+		/**
+		 * Request endpoints for multicast distribution:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *   <[6] MAC address of multicast group being queried>
@@ -769,7 +807,8 @@ public:
 		 */
 		VERB_MULTICAST_GATHER = 13,
 
-		/* Multicast frame:
+		/**
+		 * Multicast frame:
 		 *   <[8] 64-bit network ID>
 		 *   <[1] flags>
 		 *  [<[...] network certificate of membership>]
@@ -810,7 +849,8 @@ public:
 		 */
 		VERB_MULTICAST_FRAME = 14,
 
-		/* Ephemeral (PFS) key push: (UNFINISHED, NOT IMPLEMENTED YET)
+		/**
+		 * Ephemeral (PFS) key push: (UNFINISHED, NOT IMPLEMENTED YET)
 		 *   <[2] flags (unused and reserved, must be 0)>
 		 *   <[2] length of padding / extra field section>
 		 *   <[...] padding / extra field section>
@@ -866,7 +906,8 @@ public:
 		 */
 		VERB_SET_EPHEMERAL_KEY = 15,
 
-		/* Push of potential endpoints for direct communication:
+		/**
+		 * Push of potential endpoints for direct communication:
 		 *   <[2] 16-bit number of paths>
 		 *   <[...] paths>
 		 *
@@ -880,12 +921,9 @@ public:
 		 *
 		 * Path record flags:
 		 *   0x01 - Forget this path if it is currently known
-		 *   0x02 - Blacklist this path, do not use
+		 *   0x02 - (Unused)
 		 *   0x04 - Disable encryption (trust: privacy)
 		 *   0x08 - Disable encryption and authentication (trust: ultimate)
-		 *
-		 * Address types and addresses are of the same format as the destination
-		 * address type and address in HELLO.
 		 *
 		 * The receiver may, upon receiving a push, attempt to establish a
 		 * direct link to one or more of the indicated addresses. It is the
@@ -904,7 +942,166 @@ public:
 		 *
 		 * OK and ERROR are not generated.
 		 */
-		VERB_PUSH_DIRECT_PATHS = 16
+		VERB_PUSH_DIRECT_PATHS = 16,
+
+		/**
+		 * Source-routed circuit test message:
+		 *   <[5] address of originator of circuit test>
+		 *   <[2] 16-bit flags>
+		 *   <[8] 64-bit timestamp>
+		 *   <[8] 64-bit test ID (arbitrary, set by tester)>
+		 *   <[2] 16-bit originator credential length (includes type)>
+		 *   [[1] originator credential type (for authorizing test)]
+		 *   [[...] originator credential]
+		 *   <[2] 16-bit length of additional fields>
+		 *   [[...] additional fields]
+		 *   [ ... end of signed portion of request ... ]
+		 *   <[2] 16-bit length of signature of request>
+		 *   <[...] signature of request by originator>
+		 *   <[2] 16-bit previous hop credential length (including type)>
+		 *   [[1] previous hop credential type]
+		 *   [[...] previous hop credential]
+		 *   <[...] next hop(s) in path>
+		 *
+		 * Flags:
+		 *   0x01 - Report back to originator at middle hops
+		 *   0x02 - Report back to originator at last hop
+		 *
+		 * Originator credential types:
+		 *   0x01 - 64-bit network ID for which originator is controller
+		 *
+		 * Previous hop credential types:
+		 *   0x01 - Certificate of network membership
+		 *
+		 * Path record format:
+		 *   <[1] 8-bit flags (unused, must be zero)>
+		 *   <[1] 8-bit breadth (number of next hops)>
+		 *   <[...] one or more ZeroTier addresses of next hops>
+		 *
+		 * The circuit test allows a device to send a message that will traverse
+		 * the network along a specified path, with each hop optionally reporting
+		 * back to the tester via VERB_CIRCUIT_TEST_REPORT.
+		 *
+		 * Each circuit test packet includes a digital signature by the originator
+		 * of the request, as well as a credential by which that originator claims
+		 * authorization to perform the test. Currently this signature is ed25519,
+		 * but in the future flags might be used to indicate an alternative
+		 * algorithm. For example, the originator might be a network controller.
+		 * In this case the test might be authorized if the recipient is a member
+		 * of a network controlled by it, and if the previous hop(s) are also
+		 * members. Each hop may include its certificate of network membership.
+		 *
+		 * Circuit test paths consist of a series of records. When a node receives
+		 * an authorized circuit test, it:
+		 *
+		 * (1) Reports back to circuit tester as flags indicate
+		 * (2) Reads and removes the next hop from the packet's path
+		 * (3) Sends the packet along to next hop(s), if any.
+		 *
+		 * It is perfectly legal for a path to contain the same hop more than
+		 * once. In fact, this can be a very useful test to determine if a hop
+		 * can be reached bidirectionally and if so what that connectivity looks
+		 * like.
+		 *
+		 * The breadth field in source-routed path records allows a hop to forward
+		 * to more than one recipient, allowing the tester to specify different
+		 * forms of graph traversal in a test.
+		 *
+		 * There is no hard limit to the number of hops in a test, but it is
+		 * practically limited by the maximum size of a (possibly fragmented)
+		 * ZeroTier packet.
+		 *
+		 * Support for circuit tests is optional. If they are not supported, the
+		 * node should respond with an UNSUPPORTED_OPERATION error. If a circuit
+		 * test request is not authorized, it may be ignored or reported as
+		 * an INVALID_REQUEST. No OK messages are generated, but TEST_REPORT
+		 * messages may be sent (see below).
+		 *
+		 * ERROR packet format:
+		 *   <[8] 64-bit timestamp (echoed from original>
+		 *   <[8] 64-bit test ID (echoed from original)>
+		 */
+		VERB_CIRCUIT_TEST = 17,
+
+		/**
+		 * Circuit test hop report:
+		 *   <[8] 64-bit timestamp (from original test)>
+		 *   <[8] 64-bit test ID (from original test)>
+		 *   <[8] 64-bit reporter timestamp (reporter's clock, 0 if unspec)>
+		 *   <[1] 8-bit vendor ID (set to 0, currently unused)>
+		 *   <[1] 8-bit reporter protocol version>
+		 *   <[1] 8-bit reporter major version>
+		 *   <[1] 8-bit reporter minor version>
+		 *   <[2] 16-bit reporter revision>
+		 *   <[2] 16-bit reporter OS/platform>
+		 *   <[2] 16-bit reporter architecture>
+		 *   <[2] 16-bit error code (set to 0, currently unused)>
+		 *   <[8] 64-bit report flags (set to 0, currently unused)>
+		 *   <[8] 64-bit source packet ID>
+		 *   <[5] upstream ZeroTier address from which test was received>
+		 *   <[1] 8-bit source packet hop count (ZeroTier hop count)>
+		 *   <[...] local wire address on which packet was received>
+		 *   <[...] remote wire address from which packet was received>
+		 *   <[2] 16-bit length of additional fields>
+		 *   <[...] additional fields>
+		 *   <[1] 8-bit number of next hops (breadth)>
+		 *   <[...] next hop information>
+		 *
+		 * Next hop information record format:
+		 *   <[5] ZeroTier address of next hop>
+		 *   <[...] current best direct path address, if any, 0 if none>
+		 *
+		 * Circuit test reports can be sent by hops in a circuit test to report
+		 * back results. They should include information about the sender as well
+		 * as about the paths to which next hops are being sent.
+		 *
+		 * If a test report is received and no circuit test was sent, it should be
+		 * ignored. This message generates no OK or ERROR response.
+		 */
+		VERB_CIRCUIT_TEST_REPORT = 18,
+
+		/**
+		 * Request proof of work:
+		 *   <[1] 8-bit proof of work type>
+		 *   <[1] 8-bit proof of work difficulty>
+		 *   <[2] 16-bit length of proof of work challenge>
+		 *   <[...] proof of work challenge>
+		 *
+		 * This requests that a peer perform a proof of work calucation. It can be
+		 * sent by highly trusted peers (e.g. root servers, network controllers)
+		 * under suspected denial of service conditions in an attempt to filter
+		 * out "non-serious" peers and remain responsive to those proving their
+		 * intent to actually communicate.
+		 *
+		 * If the peer obliges to perform the work, it does so and responds with
+		 * an OK containing the result. Otherwise it may ignore the message or
+		 * response with an ERROR_INVALID_REQUEST or ERROR_UNSUPPORTED_OPERATION.
+		 *
+		 * Proof of work type IDs:
+		 *   0x01 - Salsa20/12+SHA512 hashcash function
+		 *
+		 * Salsa20/12+SHA512 is based on the following composite hash function:
+		 *
+		 * (1) Compute SHA512(candidate)
+		 * (2) Use the first 256 bits of the result of #1 as a key to encrypt
+		 *     131072 zero bytes with Salsa20/12 (with a zero IV).
+		 * (3) Compute SHA512(the result of step #2)
+		 * (4) Accept this candiate if the first [difficulty] bits of the result
+		 *     from step #3 are zero. Otherwise generate a new candidate and try
+		 *     again.
+		 *
+		 * This is performed repeatedly on candidates generated by appending the
+		 * supplied challenge to an arbitrary nonce until a valid candidate
+		 * is found. This chosen prepended nonce is then returned as the result
+		 * in OK.
+		 *
+		 * OK payload:
+		 *   <[2] 16-bit length of result>
+		 *   <[...] computed proof of work>
+		 *
+		 * ERROR has no payload.
+		 */
+		VERB_REQUEST_PROOF_OF_WORK = 19
 	};
 
 	/**
@@ -940,19 +1137,12 @@ public:
 		ERROR_UNWANTED_MULTICAST = 8
 	};
 
-	/**
-	 * @param v Verb
-	 * @return String representation (e.g. HELLO, OK)
-	 */
+#ifdef ZT_TRACE
 	static const char *verbString(Verb v)
 		throw();
-
-	/**
-	 * @param e Error code
-	 * @return String error name
-	 */
 	static const char *errorString(ErrorCode e)
 		throw();
+#endif
 
 	template<unsigned int C2>
 	Packet(const Buffer<C2> &b) :

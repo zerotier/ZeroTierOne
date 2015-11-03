@@ -173,16 +173,11 @@
 
 /**
  * Timeout for receipt of fragmented packets in ms
- *
- * Since there's no retransmits, this is just a really bad case scenario for
- * transit time. It's short enough that a DOS attack from exhausing buffers is
- * very unlikely, as the transfer rate would have to be fast enough to fill
- * system memory in this time.
  */
-#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 1000
+#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 500
 
 /**
- * Length of secret key in bytes -- 256-bit for Salsa20
+ * Length of secret key in bytes -- 256-bit -- do not change
  */
 #define ZT_PEER_SECRET_KEY_LENGTH 32
 
@@ -194,7 +189,7 @@
 /**
  * Overriding granularity for timer tasks to prevent CPU-intensive thrashing on every packet
  */
-#define ZT_CORE_TIMER_TASK_GRANULARITY 1000
+#define ZT_CORE_TIMER_TASK_GRANULARITY 500
 
 /**
  * How long to remember peer records in RAM if they haven't been used
@@ -264,33 +259,22 @@
  * This is also how often pings will be retried to upstream peers (relays, roots)
  * constantly until something is heard.
  */
-#define ZT_PING_CHECK_INVERVAL 6250
+#define ZT_PING_CHECK_INVERVAL 9500
 
 /**
  * Delay between ordinary case pings of direct links
  */
-#define ZT_PEER_DIRECT_PING_DELAY 120000
+#define ZT_PEER_DIRECT_PING_DELAY 60000
+
+/**
+ * Timeout for overall peer activity (measured from last receive)
+ */
+#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 4) + ZT_PING_CHECK_INVERVAL)
 
 /**
  * Delay between requests for updated network autoconf information
  */
 #define ZT_NETWORK_AUTOCONF_DELAY 60000
-
-/**
- * Timeout for overall peer activity (measured from last receive)
- */
-#define ZT_PEER_ACTIVITY_TIMEOUT (ZT_PEER_DIRECT_PING_DELAY + (ZT_PING_CHECK_INVERVAL * 3))
-
-/**
- * Stop relaying via peers that have not responded to direct sends
- *
- * When we send something (including frames), we generally expect a response.
- * Switching relays if no response in a short period of time causes more
- * rapid failover if a root server goes down or becomes unreachable. In the
- * mistaken case, little harm is done as it'll pick the next-fastest
- * root server and will switch back eventually.
- */
-#define ZT_PEER_RELAY_CONVERSATION_LATENCY_THRESHOLD 10000
 
 /**
  * Minimum interval between attempts by relays to unite peers
@@ -299,7 +283,7 @@
  * a RENDEZVOUS message no more than this often. This instructs the peers
  * to attempt NAT-t and gives each the other's corresponding IP:port pair.
  */
-#define ZT_MIN_UNITE_INTERVAL 60000
+#define ZT_MIN_UNITE_INTERVAL 30000
 
 /**
  * Delay between initial direct NAT-t packet and more aggressive techniques
@@ -310,19 +294,16 @@
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
- * Size of anti-recursion history (see AntiRecursion.hpp)
- */
-#define ZT_ANTIRECURSION_HISTORY_SIZE 16
-
-/**
  * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
  */
-#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 5000
+#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 1000
 
 /**
- * Interval between direct path pushes in milliseconds
+ * How long (max) to remember network certificates of membership?
+ *
+ * This only applies to networks we don't belong to.
  */
-#define ZT_DIRECT_PATH_PUSH_INTERVAL 300000
+#define ZT_PEER_NETWORK_COM_EXPIRATION 3600000
 
 /**
  * Sanity limit on maximum bridge routes
@@ -339,6 +320,30 @@
  * If there is no known route, spam to up to this many active bridges
  */
 #define ZT_MAX_BRIDGE_SPAM 16
+
+/**
+ * Interval between direct path pushes in milliseconds
+ */
+#define ZT_DIRECT_PATH_PUSH_INTERVAL 120000
+
+/**
+ * Time horizon for push direct paths cutoff
+ */
+#define ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME 60000
+
+/**
+ * Maximum number of direct path pushes within cutoff time
+ *
+ * This limits response to PUSH_DIRECT_PATHS to CUTOFF_LIMIT responses
+ * per CUTOFF_TIME milliseconds per peer to prevent this from being
+ * useful for DOS amplification attacks.
+ */
+#define ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT 5
+
+/**
+ * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
+ */
+#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 1
 
 /**
  * A test pseudo-network-ID that can be joined

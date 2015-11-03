@@ -43,12 +43,17 @@
 // Number of in-memory last log entries to maintain per user
 #define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
 
+// How long do circuit tests "live"? This is just to prevent buildup in memory.
+#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 300000
+
 namespace ZeroTier {
+
+class Node;
 
 class SqliteNetworkController : public NetworkController
 {
 public:
-	SqliteNetworkController(const char *dbPath);
+	SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath);
 	virtual ~SqliteNetworkController();
 
 	virtual NetworkController::ResultCode doNetworkConfigRequest(
@@ -104,7 +109,11 @@ private:
 		const Dictionary &metaData,
 		Dictionary &netconf);
 
+	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
+
+	Node *_node;
 	std::string _dbPath;
+	std::string _circuitTestPath;
 	std::string _instanceId;
 
 	// A circular buffer last log
@@ -136,6 +145,9 @@ private:
 	// Last log entries by address and network ID pair
 	std::map< std::pair<Address,uint64_t>,_LLEntry > _lastLog;
 
+	// Circuit tests outstanding
+	std::map< uint64_t,ZT_CircuitTest * > _circuitTests;
+
 	sqlite3 *_db;
 
 	sqlite3_stmt *_sGetNetworkById;
@@ -143,8 +155,6 @@ private:
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
 	sqlite3_stmt *_sCreateOrReplaceNode;
-	sqlite3_stmt *_sUpdateNode;
-	sqlite3_stmt *_sUpdateNode2;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;

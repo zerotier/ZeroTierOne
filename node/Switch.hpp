@@ -127,15 +127,10 @@ public:
 	 * This only works if both peers are known, with known working direct
 	 * links to this peer. The best link for each peer is sent to the other.
 	 *
-	 * A rate limiter is in effect via the _lastUniteAttempt map. If force
-	 * is true, a unite attempt is made even if one has been made less than
-	 * ZT_MIN_UNITE_INTERVAL milliseconds ago.
-	 *
 	 * @param p1 One of two peers (order doesn't matter)
 	 * @param p2 Second of pair
-	 * @param force If true, send now regardless of interval
 	 */
-	bool unite(const Address &p1,const Address &p2,bool force);
+	bool unite(const Address &p1,const Address &p2);
 
 	/**
 	 * Attempt NAT traversal to peer at a given physical address
@@ -185,6 +180,7 @@ private:
 	void _handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
+	bool _shouldTryUnite(const uint64_t now,const Address &p1,const Address &p2);
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;
