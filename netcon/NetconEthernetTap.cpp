@@ -576,7 +576,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	    struct socket_st socket_rpc;
 			pid_t pid;
 			memcpy(&pid, &buf[1], sizeof(pid_t)); // PID for client RPC tracking (only for debug)
-	    memcpy(&socket_rpc, &buf[64], sizeof(struct socket_st));
+	    memcpy(&socket_rpc, &buf[sizeof(pid_t)], sizeof(struct socket_st));
 			TcpConnection * new_conn;
 			if(new_conn = handle_socket(sock, uptr, &socket_rpc)) {
 				pidmap[sock] = pid;
