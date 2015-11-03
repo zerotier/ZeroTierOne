@@ -88,6 +88,9 @@ else
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP=strip --strip-all
 endif
+ifeq ($(ZT_TRACE),1)
+	DEFS+=-DZT_TRACE 
+endif
 
 # Uncomment for gprof profile build
 #CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
