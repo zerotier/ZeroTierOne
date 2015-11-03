@@ -4,20 +4,20 @@
 // Customizable parameters:
 
 // Maximum interval between test attempts
-var TEST_INTERVAL_MAX = 60000;
+var TEST_INTERVAL_MAX = (60000 * 5);
 
 // Test timeout in ms
-var TEST_TIMEOUT = 30000;
+var TEST_TIMEOUT = 60000;
 
 // Where should I contact to register and query a list of other test agents?
-var SERVER_HOST = '104.238.141.145';
+var SERVER_HOST = '174.136.102.178';
 var SERVER_PORT = 18080;
 
 // Which port should agents use for their HTTP?
 var AGENT_PORT = 18888;
 
 // Payload size in bytes
-var PAYLOAD_SIZE = 10000;
+var PAYLOAD_SIZE = 5000;
 
 // ---------------------------------------------------------------------------
 

@@ -1,18 +1,9 @@
 #!/bin/bash
 
-# Edit as needed -- note that >1000 per host is likely problematic due to Linux kernel limits
-NUM_CONTAINERS=100
-CONTAINER_IMAGE=zerotier/http-test
-
-#
-# This script is designed to be run on Docker hosts to run NUM_CONTAINERS
-#
-# It can then be run on each Docker host via pssh or similar to run very
-# large scale tests.
-#
+# Kills all running Docker containers on all big-test-hosts
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin:/sbin
 
-pssh -h big-test-hosts -i -t 0 -p 256 "docker ps -aq | xargs -r docker rm -f"
+pssh -h big-test-hosts -i -t 0 -p 256 "sudo docker ps -aq | xargs -r sudo docker rm -f"
 
 exit 0

@@ -53,8 +53,7 @@ node_modules
 cluster-geo/cluster-geo/config.js
 cluster-geo/cluster-geo/cache.*
 tests/http/zerotier-one
-tests/http/result_*
-tests/http/big-test-out
+tests/http/big-test-hosts
 
 # MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
