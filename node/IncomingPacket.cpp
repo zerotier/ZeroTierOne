@@ -44,6 +44,8 @@
 #include "SHA512.hpp"
 #include "World.hpp"
 #include "Cluster.hpp"
+#include "Node.hpp"
+#include "AntiRecursion.hpp"
 
 namespace ZeroTier {
 
@@ -121,7 +123,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 
 			case Packet::ERROR_OBJ_NOT_FOUND:
 				if (inReVerb == Packet::VERB_WHOIS) {
-					if (RR->topology->isRoot(peer->identity()))
+					if (RR->topology->isUpstream(peer->identity()))
 						RR->sw->cancelWhoisRequest(Address(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
 				} else if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
@@ -154,6 +156,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 						nconf->com().serialize(outp);
 						outp.armor(peer->key(),true);
+						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}
@@ -201,13 +204,13 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		const uint64_t timestamp = at<uint64_t>(ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP);
 
 		Identity id;
-		InetAddress destAddr;
+		InetAddress externalSurfaceAddress;
 		uint64_t worldId = ZT_WORLD_ID_NULL;
 		uint64_t worldTimestamp = 0;
 		{
 			unsigned int ptr = ZT_PROTO_VERB_HELLO_IDX_IDENTITY + id.deserialize(*this,ZT_PROTO_VERB_HELLO_IDX_IDENTITY);
 			if (ptr < size()) // ZeroTier One < 1.0.3 did not include physical destination address info
-				ptr += destAddr.deserialize(*this,ptr);
+				ptr += externalSurfaceAddress.deserialize(*this,ptr);
 			if ((ptr + 16) <= size()) { // older versions also did not include World IDs or timestamps
 				worldId = at<uint64_t>(ptr); ptr += 8;
 				worldTimestamp = at<uint64_t>(ptr);
@@ -280,11 +283,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 
 		// VALID -- if we made it here, packet passed identity and authenticity checks!
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
-		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
-
-		if (destAddr)
-			RR->sa->iam(id.address(),_remoteAddress,destAddr,RR->topology->isRoot(id),RR->node->now());
+		if (externalSurfaceAddress)
+			RR->sa->iam(id.address(),_remoteAddress,externalSurfaceAddress,RR->topology->isRoot(id),RR->node->now());
 
 		Packet outp(id.address(),RR->identity.address(),Packet::VERB_OK);
 		outp.append((unsigned char)Packet::VERB_HELLO);
@@ -294,7 +294,36 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 		outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 		outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-		_remoteAddress.serialize(outp);
+		if (protoVersion >= 5) {
+			_remoteAddress.serialize(outp);
+		} else {
+			/* LEGACY COMPATIBILITY HACK:
+			 *
+			 * For a while now (since 1.0.3), ZeroTier has recognized changes in
+			 * its network environment empirically by examining its external network
+			 * address as reported by trusted peers. In versions prior to 1.1.0
+			 * (protocol version < 5), they did this by saving a snapshot of this
+			 * information (in SelfAwareness.hpp) keyed by reporting device ID and
+			 * address type.
+			 *
+			 * This causes problems when clustering is combined with symmetric NAT.
+			 * Symmetric NAT remaps ports, so different endpoints in a cluster will
+			 * report back different exterior addresses. Since the old code keys
+			 * this by device ID and not sending physical address and compares the
+			 * entire address including port, it constantly thinks its external
+			 * surface is changing and resets connections when talking to a cluster.
+			 *
+			 * In new code we key by sending physical address and device and we also
+			 * take the more conservative position of only interpreting changes in
+			 * IP address (neglecting port) as a change in network topology that
+			 * necessitates a reset. But we can make older clients work here by
+			 * nulling out the port field. Since this info is only used for empirical
+			 * detection of link changes, it doesn't break anything else.
+			 */
+			InetAddress tmpa(_remoteAddress);
+			tmpa.setPort(0);
+			tmpa.serialize(outp);
+		}
 
 		if ((worldId != ZT_WORLD_ID_NULL)&&(RR->topology->worldTimestamp() > worldTimestamp)&&(worldId == RR->topology->worldId())) {
 			World w(RR->topology->world());
@@ -307,7 +336,11 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 		}
 
 		outp.armor(peer->key(),true);
+		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+
+		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision);
+		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -331,12 +364,17 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 				const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION];
 				const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
 
+				if (vProto < ZT_PROTO_VERSION_MIN) {
+					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_remoteAddress.toString().c_str());
+					return true;
+				}
+
 				const bool trusted = RR->topology->isRoot(peer->identity());
 
-				InetAddress destAddr;
+				InetAddress externalSurfaceAddress;
 				unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
 				if (ptr < size()) // ZeroTier One < 1.0.3 did not include this field
-					ptr += destAddr.deserialize(*this,ptr);
+					ptr += externalSurfaceAddress.deserialize(*this,ptr);
 				if ((trusted)&&((ptr + 2) <= size())) { // older versions also did not include this field, and right now we only use if from a root
 					World worldUpdate;
 					const unsigned int worldLen = at<uint16_t>(ptr); ptr += 2;
@@ -347,18 +385,13 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					}
 				}
 
-				if (vProto < ZT_PROTO_VERSION_MIN) {
-					TRACE("%s(%s): OK(HELLO) dropped, protocol version too old",source().toString().c_str(),_remoteAddress.toString().c_str());
-					return true;
-				}
-
-				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u, reported external address %s",source().toString().c_str(),_remoteAddress.toString().c_str(),vMajor,vMinor,vRevision,latency,((destAddr) ? destAddr.toString().c_str() : "(none)"));
+				TRACE("%s(%s): OK(HELLO), version %u.%u.%u, latency %u, reported external address %s",source().toString().c_str(),_remoteAddress.toString().c_str(),vMajor,vMinor,vRevision,latency,((externalSurfaceAddress) ? externalSurfaceAddress.toString().c_str() : "(none)"));
 
 				peer->addDirectLatencyMeasurment(latency);
 				peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
-				if (destAddr)
-					RR->sa->iam(peer->address(),_remoteAddress,destAddr,trusted,RR->node->now());
+				if (externalSurfaceAddress)
+					RR->sa->iam(peer->address(),_remoteAddress,externalSurfaceAddress,trusted,RR->node->now());
 			}	break;
 
 			case Packet::VERB_WHOIS: {
@@ -442,6 +475,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				outp.append(packetId());
 				queried.serialize(outp,false);
 				outp.armor(peer->key(),true);
+				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			} else {
 				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
@@ -450,6 +484,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 				outp.append(payload(),ZT_ADDRESS_LENGTH);
 				outp.armor(peer->key(),true);
+				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			}
 		} else {
@@ -607,6 +642,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		outp.append((unsigned char)Packet::VERB_ECHO);
 		outp.append((uint64_t)pid);
 		outp.append(field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD),size() - ZT_PACKET_IDX_PAYLOAD);
+		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
 	} catch ( ... ) {
@@ -622,7 +658,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 
 		// Iterate through 18-byte network,MAC,ADI tuples
 		for(unsigned int ptr=ZT_PACKET_IDX_PAYLOAD;ptr<size();ptr+=18) {
-			const uint32_t nwid(at<uint64_t>(ptr));
+			const uint64_t nwid = at<uint64_t>(ptr);
 			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
 			RR->mc->add(now,nwid,group,peer->address());
 #ifdef ZT_ENABLE_CLUSTER
@@ -692,6 +728,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
+							RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 						}
 					}
@@ -704,6 +741,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
+					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}	break;
 
@@ -714,6 +752,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
+					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				} break;
 
@@ -736,6 +775,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);
+			RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		}
 	} catch ( ... ) {
@@ -780,6 +820,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			outp.append((uint32_t)mg.adi());
 			if (RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit)) {
 				outp.armor(peer->key(),true);
+				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			}
 		}
@@ -872,6 +913,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
 					outp.armor(peer->key(),true);
+					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}
 			}
@@ -888,17 +930,19 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 {
 	try {
 		const uint64_t now = RR->node->now();
-		if ((now - peer->lastDirectPathPushReceived()) >= ZT_DIRECT_PATH_PUSH_MIN_RECEIVE_INTERVAL) {
-			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): too frequent!",source().toString().c_str(),_remoteAddress.toString().c_str());
+
+		// First, subject this to a rate limit
+		if (!peer->shouldRespondToDirectPathPush(now)) {
+			TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): circuit breaker tripped",source().toString().c_str(),_remoteAddress.toString().c_str());
 			return true;
 		}
-		peer->setLastDirectPathPushReceived(now);
 
-		const RemotePath *currentBest = peer->getBestPath(now);
+		// Second, limit addresses by scope and type
+		uint8_t countPerScope[ZT_INETADDRESS_MAX_SCOPE+1][2]; // [][0] is v4, [][1] is v6
+		memset(countPerScope,0,sizeof(countPerScope));
 
 		unsigned int count = at<uint16_t>(ZT_PACKET_IDX_PAYLOAD);
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD + 2;
-		unsigned int v4Count = 0,v6Count = 0;
 
 		while (count--) { // if ptr overflows Buffer will throw
 			// TODO: some flags are not yet implemented
@@ -913,20 +957,22 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
-						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v4Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
-							if ((!currentBest)||(currentBest->address() != a))
-								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
+							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
+							peer->attemptToContactAt(RR,_localAddress,a,now);
+						} else {
+							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
-						TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-						if (v6Count++ < ZT_PUSH_DIRECT_PATHS_MAX_ENDPOINTS_PER_TYPE) {
-							if ((!currentBest)||(currentBest->address() != a))
-								peer->attemptToContactAt(RR,_localAddress,a,RR->node->now());
+						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
+							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
+							peer->attemptToContactAt(RR,_localAddress,a,now);
+						} else {
+							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
 					}
 				}	break;
@@ -1042,7 +1088,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 				remainingHopsPtr += ZT_ADDRESS_LENGTH;
 				SharedPtr<Peer> nhp(RR->topology->getPeer(nextHop[h]));
 				if (nhp) {
-					RemotePath *const rp = nhp->getBestPath(now);
+					Path *const rp = nhp->getBestPath(now);
 					if (rp)
 						nextHopBestPathAddress[h] = rp->address();
 				}
@@ -1178,6 +1224,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						outp.append((uint16_t)sizeof(result));
 						outp.append(result,sizeof(result));
 						outp.armor(peer->key(),true);
+						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					} else {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
@@ -1185,6 +1232,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						outp.append(pid);
 						outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
 						outp.armor(peer->key(),true);
+						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}	break;
@@ -1290,6 +1338,7 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 	outp.append(nwid);
 	outp.armor(peer->key(),true);
+	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 }
 

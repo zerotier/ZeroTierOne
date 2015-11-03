@@ -731,7 +731,7 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 					std::vector<InetAddress> upnpAddresses(_upnpClient->get());
 					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext)
-						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)),0,ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
 #endif
 
 					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
@@ -749,7 +749,7 @@ public:
 								if (!isZT) {
 									InetAddress ip(ifa->ifa_addr);
 									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
+									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
 								}
 							}
 							ifa = ifa->ifa_next;
@@ -867,6 +867,7 @@ public:
 	{
 #ifdef ZT_ENABLE_CLUSTER
 		if (sock == _clusterMessageSocket) {
+			_lastDirectReceiveFromGlobal = OSUtils::now();
 			_node->clusterHandleIncomingMessage(data,len);
 			return;
 		}
@@ -1030,7 +1031,7 @@ public:
 							if (from) {
 								ZT_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
-									0,
+									&ZT_SOCKADDR_NULL,
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,
@@ -1084,9 +1085,7 @@ public:
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
 	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
-	inline void phyOnSocketPairEndpointClose(PhySocket *sock,void **uptr) {}
-  inline void phyOnSocketPairEndpointData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
-  inline void phyOnSocketPairEndpointWritable(PhySocket *sock,void **uptr) {}
+	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwc)
 	{

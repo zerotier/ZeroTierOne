@@ -36,6 +36,7 @@
 #include "Topology.hpp"
 #include "Packet.hpp"
 #include "Peer.hpp"
+#include "Switch.hpp"
 
 // Entry timeout -- make it fairly long since this is just to prevent stale buildup
 #define ZT_SELFAWARENESS_ENTRY_TIMEOUT 3600000
@@ -65,7 +66,8 @@ private:
 };
 
 SelfAwareness::SelfAwareness(const RuntimeEnvironment *renv) :
-	RR(renv)
+	RR(renv),
+	_phy(32)
 {
 }
 
@@ -77,35 +79,35 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
+	// This would be weird, e.g. a public IP talking to 10.0.0.1, so just ignore it.
+	// If your network is this weird it's probably not reliable information.
+	if (scope != reporterPhysicalAddress.ipScope())
+		return;
+
+	// Some scopes we ignore, and global scope IPs are only used for this
+	// mechanism if they come from someone we trust (e.g. a root).
 	switch(scope) {
 		case InetAddress::IP_SCOPE_NONE:
 		case InetAddress::IP_SCOPE_LOOPBACK:
 		case InetAddress::IP_SCOPE_MULTICAST:
 			return;
 		case InetAddress::IP_SCOPE_GLOBAL:
-			if ((!trusted)||(scope != reporterPhysicalAddress.ipScope()))
+			if (!trusted)
 				return;
 			break;
 		default:
-			if (scope != reporterPhysicalAddress.ipScope())
-				return;
 			break;
 	}
 
 	Mutex::Lock _l(_phy_m);
-
 	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,reporterPhysicalAddress,scope)];
 
-	if ((now - entry.ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT) {
+	if ( ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
-		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced <null>)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str());
-	} else if (entry.mySurface != myPhysicalAddress) {
-		entry.mySurface = myPhysicalAddress;
-		entry.ts = now;
-		TRACE("learned physical address %s for scope %u as seen from %s(%s) (replaced %s, resetting all in scope)",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
+		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
 
-		// Erase all entries in this scope that were not reported by this remote address to prevent 'thrashing'
+		// Erase all entries in this scope that were not reported from this remote address to prevent 'thrashing'
 		// due to multiple reports of endpoint change.
 		// Don't use 'entry' after this since hash table gets modified.
 		{
@@ -118,26 +120,21 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 			}
 		}
 
+		// Reset all paths within this scope
 		_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
-		// For all peers for whom we forgot an address, send a packet indirectly if
-		// they are still considered alive so that we will re-establish direct links.
-		SharedPtr<Peer> sn(RR->topology->getBestRoot());
-		if (sn) {
-			RemotePath *snp = sn->getBestPath(now);
-			if (snp) {
-				for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
-					if ((*p)->alive(now)) {
-						TRACE("sending indirect NOP to %s via %s(%s) to re-establish link",(*p)->address().toString().c_str(),sn->address().toString().c_str(),snp->address().toString().c_str());
-						Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
-						outp.armor((*p)->key(),true);
-						snp->send(RR,outp.data(),outp.size(),now);
-					}
-				}
+		// Send a NOP to all peers for whom we forgot a path. This will cause direct
+		// links to be re-established if possible, possibly using a root server or some
+		// other relay.
+		for(std::vector< SharedPtr<Peer> >::const_iterator p(rset.peersReset.begin());p!=rset.peersReset.end();++p) {
+			if ((*p)->activelyTransferringFrames(now)) {
+				Packet outp((*p)->address(),RR->identity.address(),Packet::VERB_NOP);
+				RR->sw->send(outp,true,0);
 			}
 		}
 	} else {
+		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 	}
 }

@@ -79,6 +79,26 @@ public:
 	SharedPtr<Peer> getPeer(const Address &zta);
 
 	/**
+	 * Get a peer only if it is presently in memory (no disk cache)
+	 *
+	 * This also does not update the lastUsed() time for peers, which means
+	 * that it won't prevent them from falling out of RAM. This is currently
+	 * used in the Cluster code to update peer info without forcing all peers
+	 * across the entire cluster to remain in memory cache.
+	 *
+	 * @param zta ZeroTier address
+	 * @param now Current time
+	 */
+	inline SharedPtr<Peer> getPeerNoCache(const Address &zta,const uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		const SharedPtr<Peer> *const ap = _peers.get(zta);
+		if (ap)
+			return *ap;
+		return SharedPtr<Peer>();
+	}
+
+	/**
 	 * Get the identity of a peer
 	 *
 	 * @param zta ZeroTier address of peer
@@ -97,23 +117,11 @@ public:
 	void saveIdentity(const Identity &id);
 
 	/**
-	 * @return Vector of peers that are root servers
-	 */
-	inline std::vector< SharedPtr<Peer> > rootPeers() const
-	{
-		Mutex::Lock _l(_lock);
-		return _rootPeers;
-	}
-
-	/**
 	 * Get the current favorite root server
 	 *
 	 * @return Root server with lowest latency or NULL if none
 	 */
-	inline SharedPtr<Peer> getBestRoot()
-	{
-		return getBestRoot((const Address *)0,0,false);
-	}
+	inline SharedPtr<Peer> getBestRoot() { return getBestRoot((const Address *)0,0,false); }
 
 	/**
 	 * Get the best root server, avoiding root servers listed in an array
@@ -193,9 +201,9 @@ public:
 	void clean(uint64_t now);
 
 	/**
-	 * @return Number of 'alive' peers
+	 * @return Number of peers with active direct paths
 	 */
-	unsigned long countAlive() const;
+	unsigned long countActive() const;
 
 	/**
 	 * Apply a function or function object to all peers
@@ -217,8 +225,15 @@ public:
 		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 		Address *a = (Address *)0;
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-		while (i.next(a,p))
-			f(*this,*p);
+		while (i.next(a,p)) {
+#ifdef ZT_TRACE
+			if (!(*p)) {
+				fprintf(stderr,"FATAL BUG: eachPeer() caught NULL peer for %s -- peer pointers in Topology should NEVER be NULL"ZT_EOL_S,a->toString().c_str());
+				abort();
+			}
+#endif
+			f(*this,*((const SharedPtr<Peer> *)p));
+		}
 	}
 
 	/**

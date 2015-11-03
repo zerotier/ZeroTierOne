@@ -263,7 +263,7 @@ public:
 			}
 
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
-		} else if (p->alive(_now)) {
+		} else if (p->activelyTransferringFrames(_now)) {
 			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
 			p->doPingAndKeepalive(RR,_now,0);
 		}
@@ -305,24 +305,13 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 			for(std::vector< SharedPtr<Network> >::const_iterator n(needConfig.begin());n!=needConfig.end();++n)
 				(*n)->requestConfiguration();
 
-			// Attempt to contact network preferred relays that we don't have direct links to
-			std::sort(networkRelays.begin(),networkRelays.end());
-			networkRelays.erase(std::unique(networkRelays.begin(),networkRelays.end()),networkRelays.end());
-			for(std::vector< std::pair<Address,InetAddress> >::const_iterator nr(networkRelays.begin());nr!=networkRelays.end();++nr) {
-				if (nr->second) {
-					SharedPtr<Peer> rp(RR->topology->getPeer(nr->first));
-					if ((rp)&&(!rp->hasActiveDirectPath(now)))
-						rp->attemptToContactAt(RR,InetAddress(),nr->second,now);
-				}
-			}
-
-			// Ping living or root server/relay peers
+			// Do pings and keepalives
 			_PingPeersThatNeedPing pfunc(RR,now,networkRelays);
 			RR->topology->eachPeer<_PingPeersThatNeedPing &>(pfunc);
 
 			// Update online status, post status change as event
-			bool oldOnline = _online;
-			_online = ((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT);
+			const bool oldOnline = _online;
+			_online = (((now - pfunc.lastReceiveFromUpstream) < ZT_PEER_ACTIVITY_TIMEOUT)||(RR->topology->amRoot()));
 			if (oldOnline != _online)
 				postEvent(_online ? ZT_EVENT_ONLINE : ZT_EVENT_OFFLINE);
 		} catch ( ... ) {
@@ -448,10 +437,10 @@ ZT_PeerList *Node::peers() const
 		p->latency = pi->second->latency();
 		p->role = RR->topology->isRoot(pi->second->identity()) ? ZT_PEER_ROLE_ROOT : ZT_PEER_ROLE_LEAF;
 
-		std::vector<RemotePath> paths(pi->second->paths());
-		RemotePath *bestPath = pi->second->getBestPath(_now);
+		std::vector<Path> paths(pi->second->paths());
+		Path *bestPath = pi->second->getBestPath(_now);
 		p->pathCount = 0;
-		for(std::vector<RemotePath>::iterator path(paths.begin());path!=paths.end();++path) {
+		for(std::vector<Path>::iterator path(paths.begin());path!=paths.end();++path) {
 			memcpy(&(p->paths[p->pathCount].address),&(path->address()),sizeof(struct sockaddr_storage));
 			p->paths[p->pathCount].lastSend = path->lastSend();
 			p->paths[p->pathCount].lastReceive = path->lastReceived();
@@ -499,11 +488,11 @@ void Node::freeQueryResult(void *qr)
 		::free(qr);
 }
 
-int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust)
+int Node::addLocalInterfaceAddress(const struct sockaddr_storage *addr)
 {
 	if (Path::isAddressValidForPath(*(reinterpret_cast<const InetAddress *>(addr)))) {
 		Mutex::Lock _l(_directPaths_m);
-		_directPaths.push_back(Path(*(reinterpret_cast<const InetAddress *>(addr)),metric,(Path::Trust)trust));
+		_directPaths.push_back(*(reinterpret_cast<const InetAddress *>(addr)));
 		std::sort(_directPaths.begin(),_directPaths.end());
 		_directPaths.erase(std::unique(_directPaths.begin(),_directPaths.end()),_directPaths.end());
 		return 1;
@@ -900,10 +889,10 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr)
 	} catch ( ... ) {}
 }
 
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric, enum ZT_LocalInterfaceAddressTrust trust)
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr,metric,trust);
+		return reinterpret_cast<ZeroTier::Node *>(node)->addLocalInterfaceAddress(addr);
 	} catch ( ... ) {
 		return 0;
 	}

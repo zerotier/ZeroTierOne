@@ -295,17 +295,18 @@ void Switch::send(const Packet &packet,bool encrypt,uint64_t nwid)
 		return;
 	}
 
+	//TRACE(">> %s to %s (%u bytes, encrypt==%d, nwid==%.16llx)",Packet::verbString(packet.verb()),packet.destination().toString().c_str(),packet.size(),(int)encrypt,nwid);
+
 	if (!_trySend(packet,encrypt,nwid)) {
 		Mutex::Lock _l(_txQueue_m);
 		_txQueue.push_back(TXQueueEntry(packet.destination(),RR->node->now(),packet,encrypt,nwid));
 	}
 }
 
-bool Switch::unite(const Address &p1,const Address &p2,bool force)
+bool Switch::unite(const Address &p1,const Address &p2)
 {
 	if ((p1 == RR->identity.address())||(p2 == RR->identity.address()))
 		return false;
-
 	SharedPtr<Peer> p1p = RR->topology->getPeer(p1);
 	if (!p1p)
 		return false;
@@ -314,14 +315,6 @@ bool Switch::unite(const Address &p1,const Address &p2,bool force)
 		return false;
 
 	const uint64_t now = RR->node->now();
-
-	{
-		Mutex::Lock _l(_lastUniteAttempt_m);
-		uint64_t &luts = _lastUniteAttempt[_LastUniteKey(p1,p2)];
-		if (((now - luts) < ZT_MIN_UNITE_INTERVAL)&&(!force))
-			return false;
-		luts = now;
-	}
 
 	std::pair<InetAddress,InetAddress> cg(Peer::findCommonGround(*p1p,*p2p,now));
 	if ((!(cg.first))||(cg.first.ipScope() != cg.second.ipScope()))
@@ -449,8 +442,8 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if ((!qi->peer->alive(now))||(qi->peer->hasActiveDirectPath(now))) {
-					// Cancel attempt if we've already connected or peer is no longer "alive"
+				if (qi->peer->hasActiveDirectPath(now)) {
+					// Cancel if connection has succeeded
 					_contactQueue.erase(qi++);
 					continue;
 				} else {
@@ -546,7 +539,7 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		_LastUniteKey *k = (_LastUniteKey *)0;
 		uint64_t *v = (uint64_t *)0;
 		while (i.next(k,v)) {
-			if ((now - *v) >= (ZT_MIN_UNITE_INTERVAL * 16))
+			if ((now - *v) >= (ZT_MIN_UNITE_INTERVAL * 8))
 				_lastUniteAttempt.erase(*k);
 		}
 	}
@@ -569,7 +562,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
 #ifdef ZT_ENABLE_CLUSTER
-				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size())))
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false)))
 					return; // sent by way of another member of this cluster
 #endif
 
@@ -632,10 +625,16 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 
 void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len)
 {
-	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,localAddr,fromAddr,RR->node->now()));
+	const uint64_t now = RR->node->now();
+	SharedPtr<IncomingPacket> packet(new IncomingPacket(data,len,localAddr,fromAddr,now));
 
 	Address source(packet->source());
 	Address destination(packet->destination());
+
+	// Catch this and toss it -- it would never work, but it could happen if we somehow
+	// mistakenly guessed an address we're bound to as a destination for another peer.
+	if (source == RR->identity.address())
+		return;
 
 	//TRACE("<< %.16llx %s -> %s (size: %u)",(unsigned long long)packet->packetId(),source.toString().c_str(),destination.toString().c_str(),packet->size());
 
@@ -645,17 +644,18 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 			packet->incrementHops();
 
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),RR->node->now())))) {
-				unite(source,destination,false);
+			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),now)))) {
+				if (_shouldTryUnite(now,source,destination))
+					unite(source,destination);
 			} else {
 #ifdef ZT_ENABLE_CLUSTER
-				if ((RR->cluster)&&(RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size())))
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),_shouldTryUnite(now,source,destination))))
 					return; // sent by way of another member of this cluster
 #endif
 
 				relayTo = RR->topology->getBestRoot(&source,1,true);
 				if (relayTo)
-					relayTo->send(RR,packet->data(),packet->size(),RR->node->now());
+					relayTo->send(RR,packet->data(),packet->size(),now);
 			}
 		} else {
 			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet->source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -670,7 +670,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 		if (!dq.creationTime) {
 			// If we have no other fragments yet, create an entry and save the head
 
-			dq.creationTime = RR->node->now();
+			dq.creationTime = now;
 			dq.frag0 = packet;
 			dq.totalFragments = 0; // 0 == unknown, waiting for Packet::Fragment
 			dq.haveFragments = 1; // head is first bit (left to right)
@@ -736,17 +736,20 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				return false; // sanity check: unconfigured network? why are we trying to talk to it?
 		}
 
-		RemotePath *viaPath = peer->getBestPath(now);
+		Path *viaPath = peer->getBestPath(now);
 		SharedPtr<Peer> relay;
 		if (!viaPath) {
 			// See if this network has a preferred relay (if packet has an associated network)
 			if (nconf) {
-				unsigned int latency = ~((unsigned int)0);
+				unsigned int bestq = ~((unsigned int)0);
 				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
 					if (r->first != peer->address()) {
 						SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-						if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
+						const unsigned int q = rp->relayQuality(now);
+						if ((rp)&&(q < bestq)) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
+							bestq = q;
 							rp.swap(relay);
+						}
 					}
 				}
 			}
@@ -796,6 +799,16 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		requestWhois(packet.destination());
 	}
 	return false;
+}
+
+bool Switch::_shouldTryUnite(const uint64_t now,const Address &p1,const Address &p2)
+{
+	Mutex::Lock _l(_lastUniteAttempt_m);
+	uint64_t &luts = _lastUniteAttempt[_LastUniteKey(p1,p2)];
+	if ((now - luts) < ZT_MIN_UNITE_INTERVAL)
+		return false;
+	luts = now;
+	return true;
 }
 
 } // namespace ZeroTier

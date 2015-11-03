@@ -34,7 +34,7 @@ Thumbs.db
 /world/mkworld
 /world/*.c25519
 
-# Miscellaneous file types that we don't want to check in
+# Miscellaneous temporaries, build files, etc.
 *.log
 *.opensdf
 *.user
@@ -50,10 +50,11 @@ Thumbs.db
 *.autosave
 *.tmp
 node_modules
-
-# cluster-geo stuff
 cluster-geo/cluster-geo/config.js
 cluster-geo/cluster-geo/cache.*
+tests/http/zerotier-one
+tests/http/result_*
+tests/http/big-test-out
 
 # MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*

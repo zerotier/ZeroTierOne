@@ -105,7 +105,7 @@ public:
 	ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
-	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust);
+	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
@@ -207,7 +207,7 @@ public:
 	/**
 	 * @return Potential direct paths to me a.k.a. local interface addresses
 	 */
-	inline std::vector<Path> directPaths() const
+	inline std::vector<InetAddress> directPaths() const
 	{
 		Mutex::Lock _l(_directPaths_m);
 		return _directPaths;
@@ -285,7 +285,7 @@ private:
 	std::vector< ZT_CircuitTest * > _circuitTests;
 	Mutex _circuitTests_m;
 
-	std::vector<Path> _directPaths;
+	std::vector<InetAddress> _directPaths;
 	Mutex _directPaths_m;
 
 	Mutex _backgroundTasksLock;

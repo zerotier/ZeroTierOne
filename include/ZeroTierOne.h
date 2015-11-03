@@ -141,7 +141,7 @@ extern "C" {
 /**
  * Maximum allowed cluster message length in bytes
  */
-#define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1444 * 6)
+#define ZT_CLUSTER_MAX_MESSAGE_LENGTH (1500 - 48)
 
 /**
  * A null/empty sockaddr (all zero) to signify an unspecified socket address
@@ -422,15 +422,6 @@ enum ZT_VirtualNetworkConfigOperation
 	 * Network is going down permanently (leave/delete)
 	 */
 	ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY = 4
-};
-
-/**
- * Local interface trust levels
- */
-enum ZT_LocalInterfaceAddressTrust {
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL = 0,
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_PRIVACY = 10,
-	ZT_LOCAL_INTERFACE_ADDRESS_TRUST_ULTIMATE = 20
 };
 
 /**
@@ -1337,11 +1328,6 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 /**
  * Add a local interface address
  *
- * Local interface addresses may be added if you want remote peers
- * with whom you have a trust relatinship (e.g. common network membership)
- * to receive information about these endpoints as potential endpoints for
- * direct communication.
- *
  * Take care that these are never ZeroTier interface addresses, otherwise
  * strange things might happen or they simply won't work.
  *
@@ -1356,11 +1342,9 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
  * reject bad, empty, and unusable addresses.
  *
  * @param addr Local interface address
- * @param metric Local interface metric
- * @param trust How much do you trust the local network under this interface?
  * @return Boolean: non-zero if address was accepted and added
  */
-int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr,int metric, enum ZT_LocalInterfaceAddressTrust trust);
+int ZT_Node_addLocalInterfaceAddress(ZT_Node *node,const struct sockaddr_storage *addr);
 
 /**
  * Clear local interface addresses

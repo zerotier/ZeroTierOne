@@ -37,6 +37,7 @@
 #include "Packet.hpp"
 #include "Buffer.hpp"
 #include "NetworkController.hpp"
+#include "Node.hpp"
 
 #include "../version.h"
 

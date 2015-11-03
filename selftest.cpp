@@ -593,23 +593,44 @@ static int testOther()
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
 		Hashtable<uint64_t,std::string> ht;
-		Hashtable<uint64_t,std::string> ht2;
 		std::map<uint64_t,std::string> ref; // assume std::map works correctly :)
 		for(int x=0;x<2;++x) {
-			for(int i=0;i<25000;++i) {
+			for(int i=0;i<77777;++i) {
 				uint64_t k = rand();
 				while ((k == 0)||(ref.count(k) > 0))
 					++k;
 				std::string v("!");
 				for(int j=0;j<(int)(k % 64);++j)
 					v.push_back("0123456789"[rand() % 10]);
-				ht.set(k,v);
 				ref[k] = v;
+				ht.set(0xffffffffffffffffULL,v);
+				std::string &vref = ht[k];
+				vref = v;
+				ht.erase(0xffffffffffffffffULL);
 			}
 			if (ht.size() != ref.size()) {
 				std::cout << "FAILED! (size mismatch, original)" << std::endl;
 				return -1;
 			}
+			{
+				Hashtable<uint64_t,std::string>::Iterator i(ht);
+				uint64_t *k = (uint64_t *)0;
+				std::string *v = (std::string *)0;
+				while(i.next(k,v)) {
+					if (ref.find(*k)->second != *v) {
+						std::cout << "FAILED! (data mismatch!)" << std::endl;
+						return -1;
+					}
+				}
+			}
+			for(std::map<uint64_t,std::string>::const_iterator i(ref.begin());i!=ref.end();++i) {
+				if (ht[i->first] != i->second) {
+					std::cout << "FAILED! (data mismatch!)" << std::endl;
+					return -1;
+				}
+			}
+
+			Hashtable<uint64_t,std::string> ht2;
 			ht2 = ht;
 			Hashtable<uint64_t,std::string> ht3(ht2);
 			if (ht2.size() != ref.size()) {
@@ -620,6 +641,7 @@ static int testOther()
 				std::cout << "FAILED! (size mismatch, copied)" << std::endl;
 				return -1;
 			}
+
 			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
 				std::string *v = ht.get(i->first);
 				if (!v) {
@@ -837,9 +859,7 @@ struct TestPhyHandlers
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
 	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
-	inline void phyOnSocketPairEndpointClose(PhySocket *sock,void **uptr) {}
-  inline void phyOnSocketPairEndpointData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
-  inline void phyOnSocketPairEndpointWritable(PhySocket *sock,void **uptr) {}
+	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
 #endif // __UNIX_LIKE__
 };
 static int testPhy()

@@ -322,7 +322,6 @@ public:
 		b->next = _t[bidx];
 		_t[bidx] = b;
 		++_s;
-
 		return b->v;
 	}
 
@@ -351,7 +350,6 @@ public:
 		b->next = _t[bidx];
 		_t[bidx] = b;
 		++_s;
-
 		return b->v;
 	}
 

@@ -43,12 +43,17 @@
 namespace ZeroTier {
 
 /**
+ * Maximum integer value of enum IpScope
+ */
+#define ZT_INETADDRESS_MAX_SCOPE 7
+
+/**
  * Extends sockaddr_storage with friendly C++ methods
  *
  * This is basically a "mixin" for sockaddr_storage. It adds methods and
  * operators, but does not modify the structure. This can be cast to/from
- * sockaddr_storage and used interchangeably. Don't change this as it's
- * used in a few places.
+ * sockaddr_storage and used interchangeably. DO NOT change this by e.g.
+ * adding non-static fields, since much code depends on this identity.
  */
 struct InetAddress : public sockaddr_storage
 {
@@ -66,7 +71,8 @@ struct InetAddress : public sockaddr_storage
 	 * IP address scope
 	 *
 	 * Note that these values are in ascending order of path preference and
-	 * MUST remain that way or Path must be changed to reflect.
+	 * MUST remain that way or Path must be changed to reflect. Also be sure
+	 * to change ZT_INETADDRESS_MAX_SCOPE if the max changes.
 	 */
 	enum IpScope
 	{
@@ -320,7 +326,7 @@ struct InetAddress : public sockaddr_storage
 	inline bool isV6() const throw() { return (ss_family == AF_INET6); }
 
 	/**
-	 * @return pointer to raw IP address bytes
+	 * @return pointer to raw address bytes or NULL if not available
 	 */
 	inline const void *rawIpData() const
 		throw()
@@ -333,27 +339,19 @@ struct InetAddress : public sockaddr_storage
 	}
 
 	/**
-	 * @return pointer to raw IP address bytes
-	 */
-	inline void *rawIpData()
-		throw()
-	{
-		switch(ss_family) {
-			case AF_INET: return (void *)&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr);
-			case AF_INET6: return (void *)(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			default: return 0;
-		}
-	}
-
-	/**
+	 * Performs an IP-only comparison or, if that is impossible, a memcmp()
+	 *
 	 * @param a InetAddress to compare again
 	 * @return True if only IP portions are equal (false for non-IP or null addresses)
 	 */
 	inline bool ipsEqual(const InetAddress &a) const
 	{
-		switch(ss_family) {
-			case AF_INET: return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
-			case AF_INET6: return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
+		if (ss_family == a.ss_family) {
+			if (ss_family == AF_INET)
+				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
+			if (ss_family == AF_INET6)
+				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
+			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
 		return false;
 	}

@@ -46,18 +46,26 @@
 
 /**
  * Timeout for cluster members being considered "alive"
+ *
+ * A cluster member is considered dead and will no longer have peers
+ * redirected to it if we have not heard a heartbeat in this long.
  */
 #define ZT_CLUSTER_TIMEOUT 10000
 
 /**
  * How often should we announce that we have a peer?
  */
-#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD 60000
+#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD ZT_PEER_DIRECT_PING_DELAY
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 250
+
+/**
+ * How often to flush outgoing message queues (maximum interval)
+ */
+#define ZT_CLUSTER_FLUSH_PERIOD 500
 
 namespace ZeroTier {
 
@@ -117,6 +125,10 @@ public:
 		/**
 		 * Cluster member has this peer:
 		 *   <[...] binary serialized peer identity>
+		 *   <[...] binary serialized peer remote physical address>
+		 *
+		 * Clusters send this message when they learn a path to a peer. The
+		 * replicated physical address is the one learned.
 		 */
 		STATE_MESSAGE_HAVE_PEER = 2,
 
@@ -136,13 +148,18 @@ public:
 		STATE_MESSAGE_COM = 4,
 
 		/**
-		 * Relay a packet to a peer:
-		 *   <[1] 8-bit number of sending peer active path addresses>
-		 *   <[...] series of serialized InetAddresses of sending peer's paths>
-		 *   <[2] 16-bit packet length>
-		 *   <[...] packet or packet fragment>
+		 * Request that VERB_RENDEZVOUS be sent to a peer that we have:
+		 *   <[5] ZeroTier address of peer on recipient's side>
+		 *   <[5] ZeroTier address of peer on sender's side>
+		 *   <[1] 8-bit number of sender's peer's active path addresses>
+		 *   <[...] series of serialized InetAddresses of sender's peer's paths>
+		 *
+		 * This requests that we perform NAT-t introduction between a peer that
+		 * we have and one on the sender's side. The sender furnishes contact
+		 * info for its peer, and we send VERB_RENDEZVOUS to both sides: to ours
+		 * directly and with PROXY_SEND to theirs.
 		 */
-		STATE_MESSAGE_RELAY = 5,
+		STATE_MESSAGE_PROXY_UNITE = 5,
 
 		/**
 		 * Request that a cluster member send a packet to a locally-known peer:
@@ -158,7 +175,20 @@ public:
 		 * while PROXY_SEND is used to implement proxy sending (which right
 		 * now is only used to send RENDEZVOUS).
 		 */
-		STATE_MESSAGE_PROXY_SEND = 6
+		STATE_MESSAGE_PROXY_SEND = 6,
+
+		/**
+		 * Replicate a network config for a network we belong to:
+		 *   <[8] 64-bit network ID>
+		 *   <[2] 16-bit length of network config>
+		 *   <[...] serialized network config>
+		 *
+		 * This is used by clusters to avoid every member having to query
+		 * for the same netconf for networks all members belong to.
+		 *
+		 * TODO: not implemented yet!
+		 */
+		STATE_MESSAGE_NETWORK_CONFIG = 7
 	};
 
 	/**
@@ -198,16 +228,18 @@ public:
 	 * @param toPeerAddress Destination peer address
 	 * @param data Packet or packet fragment data
 	 * @param len Length of packet or fragment
+	 * @param unite If true, also request proxy unite across cluster
 	 * @return True if this data was sent via another cluster member, false if none have this peer
 	 */
-	bool sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len);
+	bool sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
 
 	/**
 	 * Advertise to the cluster that we have this peer
 	 *
 	 * @param peerId Identity of peer that we have
+	 * @param physicalAddress Physical address of peer (from our POV)
 	 */
-	void replicateHavePeer(const Identity &peerId);
+	void replicateHavePeer(const Identity &peerId,const InetAddress &physicalAddress);
 
 	/**
 	 * Advertise a multicast LIKE to the cluster
@@ -245,14 +277,15 @@ public:
 	void removeMember(uint16_t memberId);
 
 	/**
-	 * Redirect this peer to a better cluster member if needed
+	 * Find a better cluster endpoint for this peer (if any)
 	 *
-	 * @param peerAddress Peer to (possibly) redirect
+	 * @param redirectTo InetAddress to be set to a better endpoint (if there is one)
+	 * @param peerAddress Address of peer to (possibly) redirect
 	 * @param peerPhysicalAddress Physical address of peer's current best path (where packet was most recently received or getBestPath()->address())
 	 * @param offload Always redirect if possible -- can be used to offload peers during shutdown
-	 * @return True if peer was redirected
+	 * @return True if redirectTo was set to a new address, false if redirectTo was not modified
 	 */
-	bool redirectPeer(const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
+	bool findBetterEndpoint(InetAddress &redirectTo,const Address &peerAddress,const InetAddress &peerPhysicalAddress,bool offload);
 
 	/**
 	 * Fill out ZT_ClusterStatus structure (from core API)
@@ -265,7 +298,7 @@ private:
 	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);
 	void _flush(uint16_t memberId);
 
-	// These are initialized in the constructor and remain static
+	// These are initialized in the constructor and remain immutable
 	uint16_t _masterSecret[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	const RuntimeEnvironment *RR;
@@ -278,6 +311,7 @@ private:
 	const int32_t _z;
 	const uint16_t _id;
 	const std::vector<InetAddress> _zeroTierPhysicalEndpoints;
+	// end immutable fields
 
 	struct _Member
 	{
@@ -310,31 +344,23 @@ private:
 		_Member() { this->clear(); }
 		~_Member() { Utils::burn(key,sizeof(key)); }
 	};
-
-	_Member *const _members; // cluster IDs can be from 0 to 65535 (16-bit)
+	_Member *const _members;
 
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	// Record tracking which members have which peers and how recently they claimed this -- also used to track our last claimed time
-	struct _PeerAffinity
+	struct _PA
 	{
-		_PeerAffinity(const Address &a,uint16_t mid,uint64_t ts) :
-			key((a.toInt() << 16) | (uint64_t)mid),
-			timestamp(ts) {}
-
-		uint64_t key;
-		uint64_t timestamp;
-
-		inline Address address() const throw() { return Address(key >> 16); }
-		inline uint16_t clusterMemberId() const throw() { return (uint16_t)(key & 0xffff); }
-
-		inline bool operator<(const _PeerAffinity &pi) const throw() { return (key < pi.key); }
+		_PA() : ts(0),mid(0xffff) {}
+		uint64_t ts;
+		uint16_t mid;
 	};
-
-	// A memory-efficient packed map of _PeerAffinity records searchable with std::binary_search() and std::lower_bound()
-	std::vector<_PeerAffinity> _peerAffinities;
+	Hashtable< Address,_PA > _peerAffinities;
 	Mutex _peerAffinities_m;
+
+	uint64_t _lastCleanedPeerAffinities;
+	uint64_t _lastCheckedPeersForAnnounce;
+	uint64_t _lastFlushed;
 };
 
 } // namespace ZeroTier

@@ -166,6 +166,10 @@ If you're interested, there's a [technical deep dive about NAT traversal on our 
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 
+### Contributing
+
+There are three main branches: **edge**, **test**, and **master**. Other branches may be for specific features, tests, or use cases. In general **edge** is "bleeding" and may or may not work, while **test** should be relatively stable and **master** is the latest tagged release. Pull requests should generally be done against **test** or **edge**, since pull requests against **master** may be working against a branch that is somewhat out of date.
+
 ### License
 
 The ZeroTier source code is open source and is licensed under the GNU GPL v3 (not LGPL). If you'd like to embed it in a closed-source commercial product or appliance, please e-mail [contact@zerotier.com](mailto:contact@zerotier.com) to discuss commercial licensing. Otherwise it can be used for free.
