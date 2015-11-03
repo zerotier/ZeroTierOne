@@ -927,6 +927,8 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 	dwr(5, " nc_sent()\n");
 	Larg *l = (Larg*)arg;
 	if(len) {
+		l->conn->acked+=len;
+		dwr("W = %d, A = %d\n", l->conn->written, l->conn->acked);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
 		l->tap->_phy.whack();
 	}
@@ -1395,6 +1397,7 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 							memmove(&conn->buf, (conn->buf+r), sz);
 						}
 						conn->idx -= r;
+						conn->written+=err;
 						return;
 					}
 				}

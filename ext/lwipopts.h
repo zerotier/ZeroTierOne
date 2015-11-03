@@ -48,6 +48,7 @@
 //#define TCP_MSS 2048
 //#define TCP_WND 512
 
+#define LWIP_NOASSERT 1
 #define TCP_LISTEN_BACKLOG   0
 
 /*------------------------------------------------------------------------------
