@@ -71,6 +71,9 @@
 // than this (ms).
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
+// Delay between backups in milliseconds
+#define ZT_NETCONF_BACKUP_PERIOD 60000
+
 namespace ZeroTier {
 
 namespace {
@@ -122,6 +125,7 @@ struct NetworkRecord {
 
 SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath) :
 	_node(node),
+	_backupThreadRun(true),
 	_dbPath(dbPath),
 	_circuitTestPath(circuitTestPath),
 	_db((sqlite3 *)0)
@@ -247,10 +251,15 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			throw std::runtime_error("SqliteNetworkController unable to read instanceId (it's NULL)");
 		_instanceId = iid;
 	}
+
+	_backupThread = Thread::start(this);
 }
 
 SqliteNetworkController::~SqliteNetworkController()
 {
+	_backupThreadRun = false;
+	Thread::join(_backupThread);
+
 	Mutex::Lock _l(_lock);
 	if (_db) {
 		sqlite3_finalize(_sGetNetworkById);
@@ -989,6 +998,52 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 	} // else 404
 
 	return 404;
+}
+
+void SqliteNetworkController::threadMain()
+	throw()
+{
+	uint64_t lastBackupTime = 0;
+	while (_backupThreadRun) {
+		if ((OSUtils::now() - lastBackupTime) >= ZT_NETCONF_BACKUP_PERIOD) {
+			lastBackupTime = OSUtils::now();
+
+			char backupPath[4096],backupPath2[4096];
+			Utils::snprintf(backupPath,sizeof(backupPath),"%s.backupInProgress",_dbPath.c_str());
+			Utils::snprintf(backupPath2,sizeof(backupPath),"%s.backup",_dbPath.c_str());
+			OSUtils::rm(backupPath); // delete any unfinished backups
+
+			sqlite3 *bakdb = (sqlite3 *)0;
+			sqlite3_backup *bak = (sqlite3_backup *)0;
+			if (sqlite3_open_v2(backupPath,&bakdb,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK) {
+				fprintf(stderr,"SqliteNetworkController: CRITICAL: backup failed on sqlite3_open_v2()"ZT_EOL_S);
+				continue;
+			}
+			bak = sqlite3_backup_init(bakdb,"main",_db,"main");
+			if (!bak) {
+				sqlite3_close(bakdb);
+				OSUtils::rm(backupPath); // delete any unfinished backups
+				fprintf(stderr,"SqliteNetworkController: CRITICAL: backup failed on sqlite3_backup_init()"ZT_EOL_S);
+				continue;
+			}
+
+			int rc = SQLITE_OK;
+			for(;;) {
+				rc = sqlite3_backup_step(bak,1);
+				if ((rc == SQLITE_OK)||(rc == SQLITE_LOCKED)||(rc == SQLITE_BUSY))
+					Thread::sleep(100);
+				else break;
+			}
+
+			sqlite3_backup_finish(bak);
+			sqlite3_close(bakdb);
+
+			OSUtils::rm(backupPath2);
+			::rename(backupPath,backupPath2);
+		}
+
+		Thread::sleep(500);
+	}
 }
 
 unsigned int SqliteNetworkController::_doCPGet(

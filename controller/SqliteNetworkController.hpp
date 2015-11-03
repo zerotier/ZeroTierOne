@@ -39,6 +39,7 @@
 #include "../node/Constants.hpp"
 #include "../node/NetworkController.hpp"
 #include "../node/Mutex.hpp"
+#include "../osdep/Thread.hpp"
 
 // Number of in-memory last log entries to maintain per user
 #define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
@@ -86,6 +87,10 @@ public:
 		std::string &responseBody,
 		std::string &responseContentType);
 
+	// threadMain() for backup thread -- do not call directly
+	void threadMain()
+		throw();
+
 private:
 	enum IpAssignmentType {
 		// IP assignment is a static IP address
@@ -112,6 +117,8 @@ private:
 	static void _circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report);
 
 	Node *_node;
+	Thread _backupThread;
+	volatile bool _backupThreadRun;
 	std::string _dbPath;
 	std::string _circuitTestPath;
 	std::string _instanceId;
