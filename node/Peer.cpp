@@ -83,10 +83,10 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 #ifdef ZT_ENABLE_CLUSTER
-	InetAddress redirectTo;
 	if ((RR->cluster)&&(hops == 0)) {
 		// Note: findBetterEndpoint() is first since we still want to check
 		// for a better endpoint even if we don't actually send a redirect.
+		InetAddress redirectTo;
 		if ( (RR->cluster->findBetterEndpoint(redirectTo,_id.address(),remoteAddr,false)) && (verb != Packet::VERB_OK)&&(verb != Packet::VERB_ERROR)&&(verb != Packet::VERB_RENDEZVOUS)&&(verb != Packet::VERB_PUSH_DIRECT_PATHS) ) {
 			if (_vProto >= 5) {
 				// For newer peers we can send a more idiomatic verb: PUSH_DIRECT_PATHS.
@@ -140,13 +140,6 @@ void Peer::received(
 			_lastUnicastFrame = now;
 		else if (verb == Packet::VERB_MULTICAST_FRAME)
 			_lastMulticastFrame = now;
-
-#ifdef ZT_ENABLE_CLUSTER
-		// If we think this peer belongs elsewhere, don't learn this path or
-		// do other connection init stuff.
-		if (redirectTo)
-			return;
-#endif
 
 		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
 			_lastAnnouncedTo = now;
