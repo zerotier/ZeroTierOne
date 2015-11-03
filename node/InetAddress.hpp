@@ -411,7 +411,7 @@ struct InetAddress : public sockaddr_storage
 				// TODO: Ethernet address (but accept for forward compatibility)
 				return 7;
 			case 0x02:
-				// TODO: Bluetooth address (but accept for forward compatibility) 
+				// TODO: Bluetooth address (but accept for forward compatibility)
 				return 7;
 			case 0x03:
 				// TODO: Other address types (but accept for forward compatibility)

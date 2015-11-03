@@ -154,24 +154,83 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 		MulticastGroup mg(to,0);
 
 		if (to.isBroadcast()) {
-			if (
-			    (etherType == ZT_ETHERTYPE_ARP)&&
-			    (len >= 28)&&
-			    (
-			     (((const unsigned char *)data)[2] == 0x08)&&
-			     (((const unsigned char *)data)[3] == 0x00)&&
-			     (((const unsigned char *)data)[4] == 6)&&
-			     (((const unsigned char *)data)[5] == 4)&&
-			     (((const unsigned char *)data)[7] == 0x01)
-			    )
-				 ) {
-				// Cram IPv4 IP into ADI field to make IPv4 ARP broadcast channel specific and scalable
-				// Also: enableBroadcast() does not apply to ARP since it's required for IPv4
+			if ( (etherType == ZT_ETHERTYPE_ARP) && (len >= 28) && ((((const uint8_t *)data)[2] == 0x08)&&(((const uint8_t *)data)[3] == 0x00)&&(((const uint8_t *)data)[4] == 6)&&(((const uint8_t *)data)[5] == 4)&&(((const uint8_t *)data)[7] == 0x01)) ) {
+				/* IPv4 ARP is one of the few special cases that we impose upon what is
+				 * otherwise a straightforward Ethernet switch emulation. Vanilla ARP
+				 * is dumb old broadcast and simply doesn't scale. ZeroTier multicast
+				 * groups have an additional field called ADI (additional distinguishing
+			   * information) which was added specifically for ARP though it could
+				 * be used for other things too. We then take ARP broadcasts and turn
+				 * them into multicasts by stuffing the IP address being queried into
+				 * the 32-bit ADI field. In practice this uses our multicast pub/sub
+				 * system to implement a kind of extended/distributed ARP table. */
 				mg = MulticastGroup::deriveMulticastGroupForAddressResolution(InetAddress(((const unsigned char *)data) + 24,4,0));
 			} else if (!nconf->enableBroadcast()) {
 				// Don't transmit broadcasts if this network doesn't want them
 				TRACE("%.16llx: dropped broadcast since ff:ff:ff:ff:ff:ff is not enabled",network->id());
 				return;
+			}
+		} else if ((etherType == ZT_ETHERTYPE_IPV6)&&(len >= (40 + 8 + 16))) {
+			/* IPv6 NDP emulation on ZeroTier-RFC4193 addressed networks! This allows
+			 * for multicast-free operation in IPv6 networks, which both improves
+			 * performance and is friendlier to mobile and (especially) IoT devices.
+			 * In the future there may be a no-multicast build option for embedded
+			 * and IoT use and this will be the preferred addressing mode. Note that
+			 * it plays nice with our L2 emulation philosophy and even with bridging.
+			 * While "real" devices behind the bridge can't have ZT-RFC4193 addresses
+			 * themselves, they can look these addresses up with NDP and it will
+			 * work just fine. */
+			if ((reinterpret_cast<const uint8_t *>(data)[6] == 0x3a)&&(reinterpret_cast<const uint8_t *>(data)[40] == 0x87)) { // ICMPv6 neighbor solicitation
+				for(std::vector<InetAddress>::const_iterator sip(nconf->staticIps().begin()),sipend(nconf->staticIps().end());sip!=sipend;++sip) {
+					if ((sip->ss_family == AF_INET6)&&(Utils::ntoh((uint16_t)reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_port) == 88)) {
+						const uint8_t *my6 = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&(*sip))->sin6_addr.s6_addr);
+						if ((my6[0] == 0xfd)&&(my6[9] == 0x99)&&(my6[10] == 0x93)) { // ZT-RFC4193 == fd__:____:____:____:__99:93__:____:____ / 88
+							const uint8_t *pkt6 = reinterpret_cast<const uint8_t *>(data) + 40 + 8;
+							unsigned int ptr = 0;
+							while (ptr != 11) {
+								if (pkt6[ptr] != my6[ptr])
+									break;
+								++ptr;
+							}
+							if (ptr == 11) { // /88 matches an assigned address on this network
+								const Address atPeer(pkt6 + ptr,5);
+								if (atPeer != RR->identity.address()) {
+									const MAC atPeerMac(atPeer,network->id());
+									TRACE("ZT-RFC4193 NDP emulation: %.16llx: forging response for %s/%s",network->id(),atPeer.toString().c_str(),atPeerMac.toString().c_str());
+
+									uint8_t adv[72];
+									adv[0] = 0x60; adv[1] = 0x00; adv[2] = 0x00; adv[3] = 0x00;
+									adv[4] = 0x00; adv[5] = 0x20;
+									adv[6] = 0x3a; adv[7] = 0xff;
+									for(int i=0;i<16;++i) adv[8 + i] = pkt6[i];
+									for(int i=0;i<16;++i) adv[24 + i] = my6[i];
+									adv[40] = 0x88; adv[41] = 0x00;
+									adv[42] = 0x00; adv[43] = 0x00; // future home of checksum
+									adv[44] = 0x60; adv[45] = 0x00; adv[46] = 0x00; adv[47] = 0x00;
+									for(int i=0;i<16;++i) adv[48 + i] = pkt6[i];
+									adv[64] = 0x02; adv[65] = 0x01;
+									adv[66] = atPeerMac[0]; adv[67] = atPeerMac[1]; adv[68] = atPeerMac[2]; adv[69] = atPeerMac[3]; adv[70] = atPeerMac[4]; adv[71] = atPeerMac[5];
+
+									uint16_t pseudo_[36];
+									uint8_t *const pseudo = reinterpret_cast<uint8_t *>(pseudo_);
+									for(int i=0;i<32;++i) pseudo[i] = adv[8 + i];
+									pseudo[32] = 0x00; pseudo[33] = 0x00; pseudo[34] = 0x00; pseudo[35] = 0x20;
+									pseudo[36] = 0x00; pseudo[37] = 0x00; pseudo[38] = 0x00; pseudo[39] = 0x3a;
+									for(int i=0;i<32;++i) pseudo[40 + i] = adv[40 + i];
+									uint32_t checksum = 0;
+									for(int i=0;i<36;++i) checksum += Utils::hton(pseudo_[i]);
+									while ((checksum >> 16)) checksum = (checksum & 0xffff) + (checksum >> 16);
+									checksum = ~checksum;
+									adv[42] = (checksum >> 8) & 0xff;
+									adv[43] = checksum & 0xff;
+
+									RR->node->putFrame(network->id(),atPeerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
+									return; // stop processing: we have handled this frame with a spoofed local reply so no need to send it anywhere
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 

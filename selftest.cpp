@@ -41,6 +41,7 @@
 #include "node/InetAddress.hpp"
 #include "node/Utils.hpp"
 #include "node/Identity.hpp"
+#include "node/Buffer.hpp"
 #include "node/Packet.hpp"
 #include "node/Salsa20.hpp"
 #include "node/MAC.hpp"
