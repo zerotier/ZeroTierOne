@@ -133,15 +133,6 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
     case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
         fieldName = "EVENT_FATAL_ERROR_IDENTITY_COLLISION";
         break;
-    case ZT_EVENT_SAW_MORE_RECENT_VERSION:
-        fieldName = "EVENT_SAW_MORE_RECENT_VERSION";
-        break;
-    case ZT_EVENT_AUTHENTICATION_FAILURE:
-        fieldName = "EVENT_AUTHENTICATION_FAILURE";
-        break;
-    case ZT_EVENT_INVALID_PACKET:
-        fieldName = "EVENT_INVALID_PACKET";
-        break;
     case ZT_EVENT_TRACE:
         fieldName = "EVENT_TRACE";
         break;
@@ -425,7 +416,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     jfieldID addressField = NULL;
     jfieldID lastSendField = NULL;
     jfieldID lastReceiveField = NULL;
-    jfieldID fixedField = NULL;
     jfieldID activeField = NULL;
     jfieldID preferredField = NULL;
 
@@ -456,13 +446,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     if(env->ExceptionCheck() || lastReceiveField == NULL)
     {
         LOGE("Error finding lastReceive field");
-        return NULL;
-    }
-
-    fixedField = lookup.findField(pppClass, "fixed", "Z");
-    if(env->ExceptionCheck() || fixedField == NULL)
-    {
-        LOGE("Error finding fixed field");
         return NULL;
     }
 
@@ -503,7 +486,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     env->SetObjectField(pppObject, addressField, addressObject);
     env->SetLongField(pppObject, lastSendField, ppp.lastSend);
     env->SetLongField(pppObject, lastReceiveField, ppp.lastReceive);
-    env->SetBooleanField(pppObject, fixedField, ppp.fixed);
     env->SetBooleanField(pppObject, activeField, ppp.active);
     env->SetBooleanField(pppObject, preferredField, ppp.preferred);
 

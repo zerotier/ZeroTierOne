@@ -134,7 +134,8 @@ namespace {
             (jlong)nwid, operationObject, networkConfigObject);
     }
 
-    void VirtualNetworkFrameFunctionCallback(ZT_Node *node,void *userData,
+    void VirtualNetworkFrameFunctionCallback(ZT_Node *node,
+        void *userData,
         uint64_t nwid,
         uint64_t sourceMac,
         uint64_t destMac,
@@ -189,7 +190,10 @@ namespace {
     }
 
 
-    void EventCallback(ZT_Node *node,void *userData,enum ZT_Event event, const void *data)
+    void EventCallback(ZT_Node *node,
+        void *userData,
+        enum ZT_Event event, 
+        const void *data)
     {
         LOGV("EventCallback");
         JniRef *ref = (JniRef*)userData;
@@ -216,25 +220,6 @@ namespace {
             LOGE("Couldn't find onEvent method");
             return;
         }
-
-
-        jmethodID onOutOfDateMethod = lookup.findMethod(eventListenerClass,
-            "onOutOfDate", "(Lcom/zerotier/sdk/Version;)V");
-        if(onOutOfDateMethod == NULL)
-        {
-            LOGE("Couldn't find onOutOfDate method");
-            return;
-        }
-
-
-        jmethodID onNetworkErrorMethod = lookup.findMethod(eventListenerClass,
-            "onNetworkError", "(Lcom/zerotier/sdk/Event;Ljava/net/InetSocketAddress;)V");
-        if(onNetworkErrorMethod == NULL)
-        {
-            LOGE("Couldn't find onNetworkError method");
-            return;
-        }
-
 
         jmethodID onTraceMethod = lookup.findMethod(eventListenerClass,
             "onTrace", "(Ljava/lang/String;)V");
@@ -263,31 +248,6 @@ namespace {
             env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
         }
         break;
-        case ZT_EVENT_SAW_MORE_RECENT_VERSION:
-        {
-            LOGV("Version Event");
-            // call onOutOfDate()
-            if(data != NULL)
-            {
-                int *version = (int*)data;
-                jobject verisonObj = newVersion(env, version[0], version[1], version[2], 0);
-                env->CallVoidMethod(ref->eventListener, onOutOfDateMethod, verisonObj);
-            }
-        }
-        break;
-        case ZT_EVENT_AUTHENTICATION_FAILURE:
-        case ZT_EVENT_INVALID_PACKET:
-        {
-            LOGV("Network Error Event");
-            // call onNetworkError()
-            if(data != NULL)
-            {
-                sockaddr_storage *addr = (sockaddr_storage*)data;
-                jobject addressObj = newInetSocketAddress(env, *addr);
-                env->CallVoidMethod(ref->eventListener, onNetworkErrorMethod, addressObj);
-            }
-        }
-        break;
         case ZT_EVENT_TRACE:
         {
             LOGV("Trace Event");
@@ -303,7 +263,8 @@ namespace {
         }
     }
 
-    long DataStoreGetFunction(ZT_Node *node,void *userData,
+    long DataStoreGetFunction(ZT_Node *node,
+        void *userData,
         const char *objectName,
         void *buffer,
         unsigned long bufferSize,
@@ -375,7 +336,8 @@ namespace {
         return retval;
     }
 
-    int DataStorePutFunction(ZT_Node *node,void *userData,
+    int DataStorePutFunction(ZT_Node *node,
+        void *userData,
         const char *objectName,
         const void *buffer,
         unsigned long bufferSize,
@@ -440,7 +402,8 @@ namespace {
         }
     }
 
-    int WirePacketSendFunction(ZT_Node *node,void *userData,\
+    int WirePacketSendFunction(ZT_Node *node,
+        void *userData,
         const struct sockaddr_storage *localAddress,
         const struct sockaddr_storage *remoteAddress,
         const void *buffer,
@@ -625,8 +588,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         &WirePacketSendFunction,
         &VirtualNetworkFrameFunctionCallback,
         &VirtualNetworkConfigFunctionCallback,
-        &EventCallback,
-        NULL);
+        &EventCallback);
 
     if(rc != ZT_RESULT_OK)
     {

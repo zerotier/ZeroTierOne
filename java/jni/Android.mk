@@ -15,7 +15,6 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/ext/http-parser/http_parser.c \
 	$(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \
-	$(ZT1)/node/Defaults.cpp \
 	$(ZT1)/node/Dictionary.cpp \
 	$(ZT1)/node/Identity.cpp \
 	$(ZT1)/node/IncomingPacket.cpp \
@@ -26,6 +25,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/node/Node.cpp \
 	$(ZT1)/node/OutboundMulticast.cpp \
 	$(ZT1)/node/Packet.cpp \
+	$(ZT1)/node/Path.cpp \
 	$(ZT1)/node/Peer.cpp \
 	$(ZT1)/node/Poly1305.cpp \
 	$(ZT1)/node/Salsa20.cpp \
