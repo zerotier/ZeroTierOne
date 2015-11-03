@@ -227,32 +227,29 @@ SharedPtr<Peer> Topology::getBestRoot(const Address *avoid,unsigned int avoidCou
 
 	} else {
 		/* If I am not a root server, the best root server is the active one with
-		 * the lowest latency. */
+		 * the lowest quality score. (lower == better) */
 
-		unsigned int bestLatencyOverall = ~((unsigned int)0);
-		unsigned int bestLatencyNotAvoid = ~((unsigned int)0);
+		unsigned int bestQualityOverall = ~((unsigned int)0);
+		unsigned int bestQualityNotAvoid = ~((unsigned int)0);
 		const SharedPtr<Peer> *bestOverall = (const SharedPtr<Peer> *)0;
 		const SharedPtr<Peer> *bestNotAvoid = (const SharedPtr<Peer> *)0;
 
 		for(std::vector< SharedPtr<Peer> >::const_iterator r(_rootPeers.begin());r!=_rootPeers.end();++r) {
-			if ((*r)->hasActiveDirectPath(now)) {
-				bool avoiding = false;
-				for(unsigned int i=0;i<avoidCount;++i) {
-					if (avoid[i] == (*r)->address()) {
-						avoiding = true;
-						break;
-					}
+			bool avoiding = false;
+			for(unsigned int i=0;i<avoidCount;++i) {
+				if (avoid[i] == (*r)->address()) {
+					avoiding = true;
+					break;
 				}
-				unsigned int l = (*r)->latency();
-				if (!l) l = ~l; // zero latency indicates no measurment, so make this 'max'
-				if (l <= bestLatencyOverall) {
-					bestLatencyOverall = l;
-					bestOverall = &(*r);
-				}
-				if ((!avoiding)&&(l <= bestLatencyNotAvoid)) {
-					bestLatencyNotAvoid = l;
-					bestNotAvoid = &(*r);
-				}
+			}
+			const unsigned int q = (*r)->relayQuality(now);
+			if (q <= bestQualityOverall) {
+				bestQualityOverall = q;
+				bestOverall = &(*r);
+			}
+			if ((!avoiding)&&(q <= bestQualityNotAvoid)) {
+				bestQualityNotAvoid = q;
+				bestNotAvoid = &(*r);
 			}
 		}
 

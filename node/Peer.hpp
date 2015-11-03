@@ -236,14 +236,32 @@ public:
 	inline uint64_t activelyTransferringFrames(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
-	 * @return Current latency or 0 if unknown (max: 65535)
+	 * @return Latency in milliseconds or 0 if unknown
 	 */
-	inline unsigned int latency() const
-		throw()
+	inline unsigned int latency() const { return _latency; }
+
+	/**
+	 * This computes a quality score for relays and root servers
+	 *
+	 * If we haven't heard anything from these in ZT_PEER_ACTIVITY_TIMEOUT, they
+	 * receive the worst possible quality (max unsigned int). Otherwise the
+	 * quality is a product of latency and the number of potential missed
+	 * pings. This causes roots and relays to switch over a bit faster if they
+	 * fail.
+	 *
+	 * @return Relay quality score computed from latency and other factors, lower is better
+	 */
+	inline unsigned int relayQuality(const uint64_t now) const
 	{
+		const uint64_t tsr = now - _lastReceive;
+		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
+			return (~(unsigned int)0);
 		unsigned int l = _latency;
-		return std::min(l,(unsigned int)65535);
+		if (!l)
+			l = 0xffff;
+		return (l * (((unsigned int)tsr / (ZT_PEER_DIRECT_PING_DELAY + 1000)) + 1));
 	}
+
 
 	/**
 	 * Update latency with a new direct measurment

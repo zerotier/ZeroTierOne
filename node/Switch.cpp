@@ -741,12 +741,15 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 		if (!viaPath) {
 			// See if this network has a preferred relay (if packet has an associated network)
 			if (nconf) {
-				unsigned int latency = ~((unsigned int)0);
+				unsigned int bestq = ~((unsigned int)0);
 				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
 					if (r->first != peer->address()) {
 						SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-						if ((rp)&&(rp->hasActiveDirectPath(now))&&(rp->latency() <= latency))
+						const unsigned int q = rp->relayQuality(now);
+						if ((rp)&&(q < bestq)) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
+							bestq = q;
 							rp.swap(relay);
+						}
 					}
 				}
 			}
