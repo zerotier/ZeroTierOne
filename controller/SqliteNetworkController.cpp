@@ -1029,9 +1029,11 @@ void SqliteNetworkController::threadMain()
 
 			int rc = SQLITE_OK;
 			for(;;) {
-				rc = sqlite3_backup_step(bak,1);
+				_lock.lock();
+				rc = sqlite3_backup_step(bak,64);
+				_lock.unlock();
 				if ((rc == SQLITE_OK)||(rc == SQLITE_LOCKED)||(rc == SQLITE_BUSY))
-					Thread::sleep(100);
+					Thread::sleep(50);
 				else break;
 			}
 
@@ -1041,8 +1043,7 @@ void SqliteNetworkController::threadMain()
 			OSUtils::rm(backupPath2);
 			::rename(backupPath,backupPath2);
 		}
-
-		Thread::sleep(500);
+		Thread::sleep(250);
 	}
 }
 
