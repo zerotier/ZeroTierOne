@@ -3,17 +3,17 @@
 // ---------------------------------------------------------------------------
 // Customizable parameters:
 
-// Maximum interval between test attempts
-var TEST_INTERVAL_MAX = (60000 * 5);
+// Maximum interval between test attempts (actual timing is random % this)
+var TEST_INTERVAL_MAX = (60000 * 10);
 
 // Test timeout in ms
 var TEST_TIMEOUT = 60000;
 
-// Where should I contact to register and query a list of other test agents?
+// Where should I get other agents' IDs and POST results?
 var SERVER_HOST = '174.136.102.178';
 var SERVER_PORT = 18080;
 
-// Which port should agents use for their HTTP?
+// Which port do agents use to serve up test data to each other?
 var AGENT_PORT = 18888;
 
 // Payload size in bytes
@@ -180,93 +180,6 @@ function doTest()
 	}
 	submit.end();
 };
-
-/*
-function performTestOnAllPeers(peers,callback)
-{
-	var allResults = {};
-	var allRequests = [];
-	var timedOut = false;
-	var endOfTestTimer = setTimeout(function() {
-		timedOut = true;
-		for(var x=0;x<allRequests.length;++x)
-			allRequests[x].abort();
-	},TEST_DURATION);
-
-	async.each(peers,function(peer,next) {
-		if (timedOut)
-			return next(null);
-		if (peer.length !== 32)
-			return next(null);
-
-		var connectionStartTime = Date.now();
-		allResults[peer] = {
-			start: connectionStartTime,
-			end: 0,
-			error: null,
-			timedOut: false,
-			bytes: 0
-		};
-
-		allRequests.push(http.get({
-			host: agentIdToIp(peer),
-			port: AGENT_PORT,
-			path: '/'
-		},function(res) {
-			var bytes = 0;
-			res.on('data',function(chunk) {
-				bytes += chunk.length;
-			});
-			res.on('end',function() {
-				allResults[peer] = {
-					start: connectionStartTime,
-					end: Date.now(),
-					error: null,
-					timedOut: timedOut,
-					bytes: bytes
-				};
-				return next(null);
-			});
-		}).on('error',function(e) {
-			allResults[peer] = {
-				start: connectionStartTime,
-				end: Date.now(),
-				error: e.toString(),
-				timedOut: timedOut,
-				bytes: 0
-			};
-			return next(null);
-		}));
-	},function(err) {
-		if (!timedOut)
-			clearTimeout(endOfTestTimer);
-		return callback(allResults);
-	});
-};
-
-function doTestsAndReport()
-{
-	registerAndGetPeers(function(err,peers) {
-		if (err) {
-			console.error('WARNING: skipping test: unable to contact or query server: '+err.toString());
-		} else {
-			performTestOnAllPeers(peers,function(results) {
-				var submit = http.request({
-					host: SERVER_HOST,
-					port: SERVER_PORT,
-					path: '/'+thisAgentId,
-					method: 'POST'
-				},function(res) {
-				}).on('error',function(e) {
-					console.error('WARNING: unable to submit results to server: '+err.toString());
-				});
-				submit.write(JSON.stringify(results));
-				submit.end();
-			});
-		}
-	});
-};
-*/
 
 // Agents just serve up a test payload
 app.get('/',function(req,res) { return res.status(200).send(payload); });
