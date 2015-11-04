@@ -50,8 +50,8 @@
 #include "NetconUtilities.hpp"
 
 #define APPLICATION_POLL_FREQ 				20
-#define ZT_LWIP_TCP_TIMER_INTERVAL 		10
-#define STATUS_TMR_INTERVAL						1000 // How often we check connection statuses
+#define ZT_LWIP_TCP_TIMER_INTERVAL 		50
+#define STATUS_TMR_INTERVAL						2000 // How often we check connection statuses
 #define DEBUG_LEVEL 									3
 
 namespace ZeroTier {
@@ -416,7 +416,7 @@ void NetconEthernetTap::threadMain()
 	uint64_t prev_status_time = 0;
 	uint64_t prev_etharp_time = 0;
 
-/*
+
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
 	fprintf(stderr, "- TCP_SND_BUF = %dK\n", TCP_SND_BUF / 1024);
 	fprintf(stderr, "- MEMP_NUM_PBUF = %d\n", MEMP_NUM_PBUF);
@@ -432,7 +432,7 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- ARP_TMR_INTERVAL = %d\n", ARP_TMR_INTERVAL);
 	fprintf(stderr, "- TCP_TMR_INTERVAL = %d\n", TCP_TMR_INTERVAL);
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
-*/
+
 
 	// Main timer loop
 	while (_run) {
@@ -928,7 +928,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 	Larg *l = (Larg*)arg;
 	if(len) {
 		l->conn->acked+=len;
-		dwr("W = %d, A = %d\n", l->conn->written, l->conn->acked);
+		//dwr("W = %d, A = %d\n", l->conn->written, l->conn->acked);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
 		l->tap->_phy.whack();
 	}
@@ -1397,7 +1397,7 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 							memmove(&conn->buf, (conn->buf+r), sz);
 						}
 						conn->idx -= r;
-						conn->written+=err;
+						conn->written+=r;
 						return;
 					}
 				}

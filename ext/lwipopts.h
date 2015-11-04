@@ -44,9 +44,21 @@
  */
 #include "lwip/debug.h"
 
+#define TCP_MSS 1400
 
-//#define TCP_MSS 2048
-//#define TCP_WND 512
+/*
+The TCP window size can be adjusted by changing the define TCP_WND. However,
+do keep in mind that this should be at least twice the size of TCP_MSS (thus
+on ethernet, where TCP_MSS is 1460, it should be set to at least 2920). If
+memory allows it, set this as high as possible (16-bit, so 0xFFFF is the highest
+value), but keep in mind that for every active connection, the full window may
+have to be buffered until it is acknowledged by the remote side (although this
+buffer size can still be controlled by TCP_SND_BUF and TCP_SND_QUEUELEN). The
+reason for "twice" are both the nagle algorithm and delayed ACK from the
+remote peer.
+*/
+
+#define TCP_WND TCP_MSS*10 // max = 0xffff
 
 #define LWIP_NOASSERT 1
 #define TCP_LISTEN_BACKLOG   0
@@ -54,7 +66,14 @@
 /*------------------------------------------------------------------------------
 ---------------------------------- Timers --------------------------------------
 ------------------------------------------------------------------------------*/
-
+/*
+Be careful about setting this too small.  lwIP just counts the number
+of times its timer is called and uses this to control time sensitive
+operations (such as TCP retransmissions), rather than actually
+measuring time using something more accurate.  If you call the timer
+functions very frequently you may see things (such as retransmissions)
+happening sooner than they should.
+*/
 /* these are originally defined in tcp_impl.h */
 #ifndef TCP_TMR_INTERVAL
 /* The TCP timer interval in milliseconds. */
@@ -116,8 +135,9 @@
  */
 #define MEM_SIZE                        1024 * 1024 * 64
 #define TCP_SND_BUF                     1024 * 63
+//#define TCP_OVERSIZE                    TCP_MSS
 
-#define TCP_SND_QUEUELEN                1024
+#define TCP_SND_QUEUELEN                (2 * TCP_SND_BUF/TCP_MSS)
 /*------------------------------------------------------------------------------
 -------------------------- Internal Memory Pool Sizes --------------------------
 ------------------------------------------------------------------------------*/
@@ -209,7 +229,7 @@
 /**
  * PBUF_POOL_SIZE: the number of buffers in the pbuf pool.
  */
-#define PBUF_POOL_SIZE                  128 /* was 32 */
+#define PBUF_POOL_SIZE                  2048 /* was 32 */
 
 
 /*------------------------------------------------------------------------------
