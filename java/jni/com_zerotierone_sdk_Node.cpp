@@ -238,12 +238,32 @@ namespace {
         switch(event)
         {
         case ZT_EVENT_UP:
+        {
+            LOGD("Event Up");
+            env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+            break;
+        }
         case ZT_EVENT_OFFLINE:
+        {
+            LOGD("Event Offline");
+            env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+            break;
+        }
         case ZT_EVENT_ONLINE:
+        {
+            LOGD("Event Online");
+            env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+            break;
+        }
         case ZT_EVENT_DOWN:
+        {
+            LOGD("Event Down");
+            env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+            break;
+        }
         case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
         {
-            LOGV("Regular Event");
+            LOGV("Identity Collision");
             // call onEvent()
             env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
         }
