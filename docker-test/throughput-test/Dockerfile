@@ -2,17 +2,13 @@
 FROM fedora:22
 MAINTAINER https://www.zerotier.com/
 
-# Install Apache
-RUN yum -y update && yum clean all
-RUN yum -y install httpd && yum clean all
+# Install apps
+RUN yum -y update
+RUN yum -y install httpd
+RUN yum -y install nano
+RUN yum clean all
 
 EXPOSE 9993/udp 9992/udp 9991/udp 9990/udp
-
-# Add ZT files
-RUN mkdir -p /var/lib/zerotier-one/networks.d
-RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
-ADD zerotier-one /
-ADD zerotier-cli /
 
 # Install sys-call intercept library
 ADD intercept /
@@ -21,6 +17,12 @@ RUN cp libintercept.so.1.0 lib/libintercept.so.1.0
 RUN cp libintercept.so.1.0 /lib/libintercept.so.1.0
 RUN ln -sf /lib/libintercept.so.1.0 /lib/libintercept
 RUN /usr/bin/install -c intercept /usr/bin
+
+# Add ZT files
+RUN mkdir -p /var/lib/zerotier-one/networks.d
+RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
+ADD zerotier-one /
+ADD zerotier-cli /
 
 # Install test-setup scripts
 ADD generate_file.sh /generate_file.sh

@@ -163,3 +163,11 @@ To Test:
  - sshd will enter an infinite accept loop maxing out CPU if service dies
 
 
+### Speed Notes
+
+http://lwip.100.n7.nabble.com/Performance-question-td4545.html
+ - 120-140Mbps, erroneous reports of 300-400 Mbps, claims linux stack is capable of 180Mbps
+
+
+ 
+

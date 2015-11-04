@@ -50,7 +50,7 @@
 #include "NetconUtilities.hpp"
 
 #define APPLICATION_POLL_FREQ 				20
-#define ZT_LWIP_TCP_TIMER_INTERVAL 		50
+#define ZT_LWIP_TCP_TIMER_INTERVAL 		5
 #define STATUS_TMR_INTERVAL						2000 // How often we check connection statuses
 #define DEBUG_LEVEL 									3
 
@@ -418,20 +418,24 @@ void NetconEthernetTap::threadMain()
 
 
 	fprintf(stderr, "- MEM_SIZE = %dM\n", MEM_SIZE / (1024*1024));
-	fprintf(stderr, "- TCP_SND_BUF = %dK\n", TCP_SND_BUF / 1024);
+	fprintf(stderr, "- PBUF_POOL_SIZE = %d\n", PBUF_POOL_SIZE);
+	fprintf(stderr, "- PBUF_POOL_BUFSIZE  = %d\n", PBUF_POOL_BUFSIZE);
 	fprintf(stderr, "- MEMP_NUM_PBUF = %d\n", MEMP_NUM_PBUF);
 	fprintf(stderr, "- MEMP_NUM_TCP_PCB = %d\n", MEMP_NUM_TCP_PCB);
 	fprintf(stderr, "- MEMP_NUM_TCP_PCB_LISTEN = %d\n", MEMP_NUM_TCP_PCB_LISTEN);
-	fprintf(stderr, "- MEMP_NUM_TCP_SEG = %d\n", MEMP_NUM_TCP_SEG);
-	fprintf(stderr, "- PBUF_POOL_SIZE = %d\n", PBUF_POOL_SIZE);
-	fprintf(stderr, "- TCP_SND_QUEUELEN = %d\n", TCP_SND_QUEUELEN);
-	fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
-	fprintf(stderr, "- IP_REASSEMBLY = %d\n", IP_REASSEMBLY);
+	fprintf(stderr, "- MEMP_NUM_TCP_SEG = %d\n\n", MEMP_NUM_TCP_SEG);
+
+	fprintf(stderr, "- TCP_SND_BUF = %dK\n", TCP_SND_BUF / 1024);
+	fprintf(stderr, "- TCP_SND_QUEUELEN = %d\n\n", TCP_SND_QUEUELEN);
+
 	fprintf(stderr, "- TCP_WND = %d\n", TCP_WND);
 	fprintf(stderr, "- TCP_MSS = %d\n", TCP_MSS);
+	fprintf(stderr, "- TCP_MAXRTX = %d\n", TCP_MAXRTX);
+	fprintf(stderr, "- IP_REASSEMBLY = %d\n\n", IP_REASSEMBLY);
 	fprintf(stderr, "- ARP_TMR_INTERVAL = %d\n", ARP_TMR_INTERVAL);
 	fprintf(stderr, "- TCP_TMR_INTERVAL = %d\n", TCP_TMR_INTERVAL);
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
+
 
 
 	// Main timer loop
@@ -929,6 +933,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 	if(len) {
 		l->conn->acked+=len;
 		//dwr("W = %d, A = %d\n", l->conn->written, l->conn->acked);
+		dwr("ACK = %d\n", len);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
 		l->tap->_phy.whack();
 	}

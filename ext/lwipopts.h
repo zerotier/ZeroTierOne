@@ -44,7 +44,10 @@
  */
 #include "lwip/debug.h"
 
-#define TCP_MSS 1400
+#define LWIP_CHKSUM_ALGORITHM 2
+
+
+#define TCP_MSS 1460
 
 /*
 The TCP window size can be adjusted by changing the define TCP_WND. However,
@@ -119,7 +122,11 @@ happening sooner than they should.
 ------------------------------------------------------------------------------*/
 
 
-#define LWIP_CHKSUM_ALGORITHM 2
+
+/* Misc */
+#define MEM_LIBC_MALLOC 1
+#define MEMP_MEM_MALLOC 1
+
 
 
 /**
@@ -137,7 +144,28 @@ happening sooner than they should.
 #define TCP_SND_BUF                     1024 * 63
 //#define TCP_OVERSIZE                    TCP_MSS
 
-#define TCP_SND_QUEUELEN                (2 * TCP_SND_BUF/TCP_MSS)
+#define TCP_SND_QUEUELEN                1024
+
+/*------------------------------------------------------------------------------
+-------------------------------- Pbuf Options ----------------------------------
+------------------------------------------------------------------------------*/
+
+/**
+ * PBUF_LINK_HLEN: the number of bytes that should be allocated for a
+ * link level header. The default is 14, the standard value for
+ * Ethernet.
+ */
+#define PBUF_LINK_HLEN                  16
+
+/**
+ * PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. The default is
+ * designed to accomodate single full size TCP frame in one pbuf, including
+ * TCP_MSS, IP header, and link header.
+*
+ */
+#define PBUF_POOL_BUFSIZE               LWIP_MEM_ALIGN_SIZE(TCP_MSS+40+PBUF_LINK_HLEN)
+
+
 /*------------------------------------------------------------------------------
 -------------------------- Internal Memory Pool Sizes --------------------------
 ------------------------------------------------------------------------------*/
@@ -398,26 +426,6 @@ happening sooner than they should.
 
 
 /*------------------------------------------------------------------------------
--------------------------------- Pbuf Options ----------------------------------
-------------------------------------------------------------------------------*/
-
-/**
- * PBUF_LINK_HLEN: the number of bytes that should be allocated for a
- * link level header. The default is 14, the standard value for
- * Ethernet.
- */
-#define PBUF_LINK_HLEN                  16
-
-/**
- * PBUF_POOL_BUFSIZE: the size of each pbuf in the pbuf pool. The default is
- * designed to accomodate single full size TCP frame in one pbuf, including
- * TCP_MSS, IP header, and link header.
-*
- */
-#define PBUF_POOL_BUFSIZE               LWIP_MEM_ALIGN_SIZE(TCP_MSS+40+PBUF_LINK_HLEN)
-
-
-/*------------------------------------------------------------------------------
 --------------------------------- LOOPIF Options -------------------------------
 ------------------------------------------------------------------------------*/
 
@@ -453,7 +461,7 @@ happening sooner than they should.
 /**
  * LWIP_STATS==1: Enable statistics collection in lwip_stats.
  */
-#define LWIP_STATS                      1
+#define LWIP_STATS                      0
 
 /*------------------------------------------------------------------------------
 --------------------------------- PPP Options ----------------------------------
@@ -464,10 +472,4 @@ happening sooner than they should.
  */
 #define PPP_SUPPORT                     0
 
-
-/* Misc */
-
-
-#define MEM_LIBC_MALLOC 1
-#define MEMP_MEM_MALLOC 0
 #endif /* __LWIPOPTS_H__ */

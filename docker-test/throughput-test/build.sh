@@ -1,4 +1,5 @@
 cd ../../
+make clean
 make
 cd netcon
 make -f make-intercept.mk lib
