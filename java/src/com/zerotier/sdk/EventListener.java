@@ -42,21 +42,6 @@ public interface EventListener {
     public void onEvent(Event event);
     
     /**
-     * Callback for network error events: {@link Event.EVENT_AUTHENTICATION_FAILUER}, {link Event.EVENT_INVALID_PACKET}
-     *
-     * @param event {@link Event} enum
-     * @param source {@link InetSocketAddress} containing the origin address of the packet
-     */
-    public void onNetworkError(Event event, InetSocketAddress source);
-
-    /**
-     * Callback when the node detects that it's out of date.
-     *
-     * @param newVersion {@link Version} object with the latest version of ZeroTier One
-     */
-    public void onOutOfDate(Version newVersion);
-
-    /**
      * Trace messages
      * 
      * <p>These events are only generated if the underlying ZeroTierOne SDK is a TRACE-enabled build.</p>

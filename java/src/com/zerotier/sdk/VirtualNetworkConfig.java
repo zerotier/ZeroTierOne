@@ -27,11 +27,13 @@
 
 package com.zerotier.sdk;
 
+import java.lang.Comparable;
+import java.lang.Override;
 import java.lang.String;
 import java.util.ArrayList;
 import java.net.InetSocketAddress;
 
-public final class VirtualNetworkConfig {
+public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
@@ -52,6 +54,40 @@ public final class VirtualNetworkConfig {
 
     private VirtualNetworkConfig() {
 
+    }
+
+    public boolean equals(VirtualNetworkConfig cfg) {
+        boolean aaEqual = true;
+        if(assignedAddresses.length == cfg.assignedAddresses.length) {
+            for(int i = 0; i < assignedAddresses.length; ++i) {
+                if(!assignedAddresses[i].equals(cfg.assignedAddresses[i])) {
+                    return false;
+                }
+            }
+        } else {
+            aaEqual = false;
+        }
+
+        return nwid == cfg.nwid &&
+               mac == cfg.mac &&
+               name.equals(cfg.name) &&
+               status.equals(cfg.status) &&
+               type.equals(cfg.type) &&
+               mtu == cfg.mtu &&
+               dhcp == cfg.dhcp &&
+               bridge == cfg.bridge &&
+               broadcastEnabled == cfg.broadcastEnabled &&
+               portError == cfg.portError &&
+               enabled == cfg.enabled &&
+               aaEqual;
+    }
+
+    public int compareTo(VirtualNetworkConfig cfg) {
+        if(cfg.nwid == this.nwid) {
+            return 0;
+        } else {
+            return this.nwid > cfg.nwid ? 1 : -1;
+        }
     }
 
     /**

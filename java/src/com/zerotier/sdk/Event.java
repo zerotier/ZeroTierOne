@@ -86,31 +86,6 @@ public enum Event {
      * umbrellas prevent rain and smoke detectors prevent fires. They do, right?</p>
      */
 	EVENT_FATAL_ERROR_IDENTITY_COLLISION,
-    
-    /**
-     * A more recent version was observed on the network
-     * 
-     * <p>Right now this is only triggered if a hub or rootserver reports a
-     * more recent version, and only once. It can be used to trigger a
-     * software update check.</p>
-     * 
-     * <p>Meta-data: {@link Version}, more recent version number</p>
-     */
-    EVENT_SAW_MORE_RECENT_VERSION,
-
-    /**
-     * A packet failed authentication
-     *
-     * <p>Meta-data: {@link InetSocketAddress} containing origin address of packet</p>
-     */
-	EVENT_AUTHENTICATION_FAILURE,
-
-    /**
-     * A received packet was not valid
-     *
-     * <p>Meta-data: {@link InetSocketAddress} containing origin address of packet</p>
-     */
-	EVENT_INVALID_PACKET,
 
     /**
      * Trace (debugging) message

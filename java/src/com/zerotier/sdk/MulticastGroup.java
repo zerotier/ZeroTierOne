@@ -33,6 +33,10 @@ public final class MulticastGroup {
     private long mac;
     private long adi;
 
+    public boolean equals(MulticastGroup other) {
+        return mac == other.mac && adi == other.adi;
+    }
+
     /**
      * MAC address (least significant 48 bits)
      */
