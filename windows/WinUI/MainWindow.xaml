@@ -1,0 +1,114 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:local="clr-namespace:WinUI"
+        mc:Ignorable="d" x:Class="WinUI.MainWindow"
+        Title="ZeroTier One" Height="500" Width="700" Icon="ZeroTierIcon.ico">
+	
+	<Window.Resources>
+		<ResourceDictionary>
+			<Style TargetType="{x:Type TabItem}">
+				<Setter Property="BorderThickness"
+						Value="3" />
+				<Setter Property="BorderBrush"
+						Value="Blue" />
+				<Setter Property="VerticalContentAlignment"
+						Value="Center" />
+				<Setter Property="HorizontalContentAlignment"
+						Value="Center" />
+				<Setter Property="Template">
+					<Setter.Value>
+						<ControlTemplate TargetType="{x:Type TabItem}">
+							<Border>
+								<Grid>
+									<Grid>
+										<Border x:Name="border" 
+												CornerRadius="3,3,0,0"
+												Background="{TemplateBinding Background}"
+												BorderBrush="{TemplateBinding BorderBrush}"
+												BorderThickness="1,1,1,0" />
+									</Grid>
+									<Border BorderThickness="{TemplateBinding BorderThickness}"
+											Padding="{TemplateBinding Padding}">
+										<ContentPresenter ContentSource="Header"
+														  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+														  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+									</Border>
+								</Grid>
+							</Border>
+							<ControlTemplate.Triggers>
+								<Trigger Property="IsSelected"
+										 Value="True">
+									<Setter TargetName="border"
+											Property="BorderBrush"
+												Value="#ff91a2a3" />
+									<Setter TargetName="border"
+											Property="BorderThickness"
+											Value="0,3,0,0" />
+								</Trigger>
+							</ControlTemplate.Triggers>
+						</ControlTemplate>
+					</Setter.Value>
+				</Setter>
+			</Style>
+		</ResourceDictionary>
+	</Window.Resources>
+
+	<DockPanel>
+		<StatusBar DockPanel.Dock="Bottom" Height="34" Background="#FF234447" Margin="0">
+			<StatusBar.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                    </Grid>
+                </ItemsPanelTemplate>
+            </StatusBar.ItemsPanel>
+			<StatusBarItem Grid.Column="0" x:Name="networkId" Content="Network ID" Foreground="White"/>
+			<StatusBarItem Grid.Column="1" x:Name="onlineStatus" Content="ONLINE" Foreground="White"/>
+			<StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White" Margin="0"/>
+			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White" Margin="6,0,-6,-9"/>
+			<StatusBarItem Grid.Column="4">
+				<TextBox x:Name="joinNetworkID" Height="23" TextWrapping="Wrap" Width="120" HorizontalAlignment="Right" RenderTransformOrigin="1.168,0.478" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16"/>
+			</StatusBarItem>
+			<StatusBarItem Grid.Column="5" x:Name="statusBarButton" Foreground="White" RenderTransformOrigin="0.789,0.442">
+				<Button x:Name="joinButton" Content="Join" Background="#FFFFB354" Width="77.423" Click="joinButton_Click"/>
+			</StatusBarItem>
+		</StatusBar>
+		<TabControl>
+            <TabItem x:Name="Networks" Header="Networks" Background="#FF234447" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
+                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
+                <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <local:PeersPage x:Name="peersPage" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
+                </Grid>
+            </TabItem>
+		</TabControl>
+	</DockPanel>
+</Window>
