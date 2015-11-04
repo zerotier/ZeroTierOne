@@ -1029,6 +1029,12 @@ void SqliteNetworkController::threadMain()
 
 			int rc = SQLITE_OK;
 			for(;;) {
+				if (!_backupThreadRun) {
+					sqlite3_backup_finish(bak);
+					sqlite3_close(bakdb);
+					OSUtils::rm(backupPath);
+					return;
+				}
 				_lock.lock();
 				rc = sqlite3_backup_step(bak,64);
 				_lock.unlock();
