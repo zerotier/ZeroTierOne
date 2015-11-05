@@ -29,6 +29,8 @@ namespace WinUI
 
         Timer timer = new Timer();
 
+        bool connected = false;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -36,6 +38,11 @@ namespace WinUI
             networksPage.SetAPIHandler(handler);
 
             updateStatus();
+            if (!connected)
+            {
+                MessageBox.Show("Unable to connect to ZeroTier Service.");
+            }
+
             updateNetworks();
             updatePeers();
 
@@ -50,18 +57,40 @@ namespace WinUI
         {
             var status = handler.GetStatus();
 
-            networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => 
-            { 
-                this.networkId.Content = status.Address; 
-            }));
-            versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            if (status != null)
             {
-                this.versionString.Content = status.Version;
-            }));
-            onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                connected = true;
+
+                networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.networkId.Content = status.Address;
+                }));
+                versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.versionString.Content = status.Version;
+                }));
+                onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.onlineStatus.Content = (status.Online ? "ONLINE" : "OFFLINE");
+                }));
+            }
+            else
             {
-                this.onlineStatus.Content = (status.Online ? "ONLINE" : "OFFLINE");
-            }));
+                connected = false;
+
+                networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.networkId.Content = "";
+                }));
+                versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.versionString.Content = "0";
+                }));
+                onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.onlineStatus.Content = "OFFLINE";
+                }));
+            }
         }
 
         private void updateNetworks()

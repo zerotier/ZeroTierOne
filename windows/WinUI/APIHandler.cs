@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net;
 using System.IO;
+using System.Windows;
 using Newtonsoft.Json;
 
 namespace WinUI
@@ -36,21 +37,32 @@ namespace WinUI
                 request.ContentType = "application/json";
             }
 
-            var httpResponse = (HttpWebResponse)request.GetResponse();
-            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            try
             {
-                var responseText = streamReader.ReadToEnd();
+                var httpResponse = (HttpWebResponse)request.GetResponse();
+                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var responseText = streamReader.ReadToEnd();
 
-                ZeroTierStatus status = null;
-                try
-                {
-                    status = JsonConvert.DeserializeObject<ZeroTierStatus>(responseText);
+                    ZeroTierStatus status = null;
+                    try
+                    {
+                        status = JsonConvert.DeserializeObject<ZeroTierStatus>(responseText);
+                    }
+                    catch (JsonReaderException e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                    return status;
                 }
-                catch (JsonReaderException e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-                return status;
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                return null;
+            }
+            catch (System.Net.WebException)
+            {
+                return null;
             }
         }
 
@@ -65,21 +77,32 @@ namespace WinUI
             request.Method = "GET";
             request.ContentType = "application/json";
 
-            var httpResponse = (HttpWebResponse)request.GetResponse();
-            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            try
             {
-                var responseText = streamReader.ReadToEnd();
+                var httpResponse = (HttpWebResponse)request.GetResponse();
+                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var responseText = streamReader.ReadToEnd();
 
-                List<ZeroTierNetwork> networkList = null;
-                try
-                {
-                    networkList = JsonConvert.DeserializeObject<List<ZeroTierNetwork>>(responseText);
+                    List<ZeroTierNetwork> networkList = null;
+                    try
+                    {
+                        networkList = JsonConvert.DeserializeObject<List<ZeroTierNetwork>>(responseText);
+                    }
+                    catch (JsonReaderException e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                    return networkList;
                 }
-                catch (JsonReaderException e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-                return networkList;
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                return null;
+            }
+            catch (System.Net.WebException)
+            {
+                return null;
             }
         }
 
@@ -93,11 +116,22 @@ namespace WinUI
 
             request.Method = "POST";
 
-            var httpResponse = (HttpWebResponse)request.GetResponse();
-
-            if (httpResponse.StatusCode != HttpStatusCode.OK)
+            try
             {
-                Console.WriteLine("Error sending join network message");
+                var httpResponse = (HttpWebResponse)request.GetResponse();
+
+                if (httpResponse.StatusCode != HttpStatusCode.OK)
+                {
+                    Console.WriteLine("Error sending join network message");
+                }
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
+            }
+            catch (System.Net.WebException)
+            {
+                MessageBox.Show("Error Joining Network: Cannot connect to ZeroTier service.");
             }
         }
 
@@ -111,11 +145,22 @@ namespace WinUI
 
             request.Method = "DELETE";
 
-            var httpResponse = (HttpWebResponse)request.GetResponse();
-
-            if (httpResponse.StatusCode != HttpStatusCode.OK)
+            try
             {
-                Console.WriteLine("Error sending leave network message");
+                var httpResponse = (HttpWebResponse)request.GetResponse();
+
+                if (httpResponse.StatusCode != HttpStatusCode.OK)
+                {
+                    Console.WriteLine("Error sending leave network message");
+                }
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
+            }
+            catch (System.Net.WebException)
+            {
+                MessageBox.Show("Error Leaving Network: Cannot connect to ZeroTier service.");
             }
         }
 
@@ -130,21 +175,32 @@ namespace WinUI
             request.Method = "GET";
             request.ContentType = "application/json";
 
-            var httpResponse = (HttpWebResponse)request.GetResponse();
-            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            try
             {
-                var responseText = streamReader.ReadToEnd();
+                var httpResponse = (HttpWebResponse)request.GetResponse();
+                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                {
+                    var responseText = streamReader.ReadToEnd();
 
-                List<ZeroTierPeer> peerList = null;
-                try
-                {
-                    peerList = JsonConvert.DeserializeObject<List<ZeroTierPeer>>(responseText);
+                    List<ZeroTierPeer> peerList = null;
+                    try
+                    {
+                        peerList = JsonConvert.DeserializeObject<List<ZeroTierPeer>>(responseText);
+                    }
+                    catch (JsonReaderException e)
+                    {
+                        Console.WriteLine(e.ToString());
+                    }
+                    return peerList;
                 }
-                catch (JsonReaderException e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-                return peerList;
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                return null;
+            }
+            catch (System.Net.WebException)
+            {
+                return null;
             }
         }
     }

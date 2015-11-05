@@ -31,6 +31,9 @@ namespace WinUI
 
         public void SetPeers(List<ZeroTierPeer> peerList)
         {
+            if (peerList == null)
+                return;
+
             this.peersList = peerList;
             dataGrid.ItemsSource = this.peersList;
             dataGrid.Items.Refresh();
