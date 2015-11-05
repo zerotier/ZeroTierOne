@@ -14,7 +14,7 @@ namespace WinUI
 
     public class APIHandler
     {
-        static string authtoken = "p3ptrzds5jkr2hbx5ipbyf04";  // delete me!
+        private string authtoken;
 
         private string url = null;
 
@@ -23,9 +23,10 @@ namespace WinUI
             url = "http://127.0.0.1:9993";
         }
 
-        public APIHandler(string host, int port)
+        public APIHandler(int port, string authtoken)
         {
-            url = "http://" + host + ":" + port;
+            url = "http://localhost:" + port;
+            this.authtoken = authtoken;
         }
 
         public ZeroTierStatus GetStatus()

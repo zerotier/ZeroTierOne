@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -23,7 +24,7 @@ namespace WinUI
     /// </summary>
     public partial class MainWindow : Window
     {
-        APIHandler handler = new APIHandler();
+        APIHandler handler;
         Regex charRegex = new Regex("[0-9a-fxA-FX]");
         Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
@@ -35,22 +36,63 @@ namespace WinUI
         {
             InitializeComponent();
 
-            networksPage.SetAPIHandler(handler);
-
-            updateStatus();
-            if (!connected)
+            if (InitAPIHandler())
             {
-                MessageBox.Show("Unable to connect to ZeroTier Service.");
+                networksPage.SetAPIHandler(handler);
+
+                updateStatus();
+                if (!connected)
+                {
+                    MessageBox.Show("Unable to connect to ZeroTier Service.");
+                }
+
+                updateNetworks();
+                updatePeers();
+
+                DataObject.AddPastingHandler(joinNetworkID, OnPaste);
+
+                timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
+                timer.Interval = 2000;
+                timer.Enabled = true;
+            }
+        }
+
+        private bool InitAPIHandler()
+        {
+            String ztDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\ZeroTier\\One";
+            String authToken = "";
+            Int32 port = 9993;
+            try
+            {
+                byte[] tmp = File.ReadAllBytes(ztDir + "\\authtoken.secret");
+                authToken = System.Text.Encoding.ASCII.GetString(tmp).Trim();
+            }
+            catch
+            {
+                MessageBox.Show("Unable to read ZeroTier One authtoken.secret from:\r\n" + ztDir, "ZeroTier One");
+                this.Close();
+                return false;
             }
 
-            updateNetworks();
-            updatePeers();
+            if ((authToken == null) || (authToken.Length <= 0))
+            {
+                MessageBox.Show("Unable to read ZeroTier One authtoken.secret from:\r\n" + ztDir, "ZeroTier One");
+                this.Close();
+                return false;
+            }
+            try
+            {
+                byte[] tmp = File.ReadAllBytes(ztDir + "\\zerotier-one.port");
+                port = Int32.Parse(System.Text.Encoding.ASCII.GetString(tmp).Trim());
+                if ((port <= 0) || (port > 65535))
+                    port = 9993;
+            }
+            catch
+            {
+            }
 
-            DataObject.AddPastingHandler(joinNetworkID, OnPaste);
-
-            timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
-            timer.Interval = 2000;
-            timer.Enabled = true;
+            handler = new APIHandler(port, authToken);
+            return true;
         }
 
         private void updateStatus()
