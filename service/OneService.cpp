@@ -656,6 +656,10 @@ public:
 				}
 			}
 
+			// Start two background threads to handle expensive ops out of line
+			Thread::start(_node);
+			Thread::start(_node);
+
 			_nextBackgroundTaskDeadline = 0;
 			uint64_t clockShouldBe = OSUtils::now();
 			_lastRestart = clockShouldBe;
