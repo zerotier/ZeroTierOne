@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d" x:Class="WinUI.MainWindow"
-        Title="ZeroTier One" Height="500" Width="700" Icon="ZeroTierIcon.ico">
+        Title="ZeroTier One" Height="500" Width="600" Icon="ZeroTierIcon.ico">
 	
     <Window.Resources>
         <SolidColorBrush x:Key="GreenBrush" Color="#ff91a2a3"/>
