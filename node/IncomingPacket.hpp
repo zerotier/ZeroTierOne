@@ -93,14 +93,21 @@ public:
 	 * about whether the packet was valid. A rejection is 'complete.'
 	 *
 	 * Once true is returned, this must not be called again. The packet's state
-	 * may no longer be valid.
+	 * may no longer be valid. The only exception is deferred decoding. In this
+	 * case true is returned to indicate to the normal decode path that it is
+	 * finished with the packet. The packet will have added itself to the
+	 * deferred queue and will expect tryDecode() to be called one more time
+	 * with deferred set to true.
+	 *
+	 * Deferred decoding is performed by DeferredPackets.cpp and should not be
+	 * done elsewhere. Under deferred decoding packets only get one shot and
+	 * so the return value of tryDecode() is ignored.
 	 *
 	 * @param RR Runtime environment
+	 * @param deferred If true, this is a deferred decode and the return is ignored
 	 * @return True if decoding and processing is complete, false if caller should try again
-	 * @throws std::out_of_range Range error processing packet (should be discarded)
-	 * @throws std::runtime_error Other error processing packet (should be discarded)
 	 */
-	bool tryDecode(const RuntimeEnvironment *RR);
+	bool tryDecode(const RuntimeEnvironment *RR,bool deferred);
 
 	/**
 	 * @return Time of packet receipt / start of decode
@@ -132,7 +139,7 @@ private:
 	// These are called internally to handle packet contents once it has
 	// been authenticated, decrypted, decompressed, and classified.
 	bool _doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
-	bool _doHELLO(const RuntimeEnvironment *RR);
+	bool _doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer); // can be called with NULL peer, while all others cannot
 	bool _doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);
 	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<Peer> &peer);

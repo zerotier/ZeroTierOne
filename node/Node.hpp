@@ -125,6 +125,7 @@ public:
 	void clusterRemoveMember(unsigned int memberId);
 	void clusterHandleIncomingMessage(const void *msg,unsigned int len);
 	void clusterStatus(ZT_ClusterStatus *cs);
+	void backgroundThreadMain();
 
 	// Internal functions ------------------------------------------------------
 

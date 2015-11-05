@@ -46,21 +46,31 @@
 #include "Cluster.hpp"
 #include "Node.hpp"
 #include "AntiRecursion.hpp"
+#include "DeferredPackets.hpp"
 
 namespace ZeroTier {
 
-bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
+bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 {
 	const Address sourceAddress(source());
 	try {
 		if ((cipher() == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
-			// Unencrypted HELLOs are handled here since they are used to
-			// populate our identity cache in the first place. _doHELLO() is special
-			// in that it contains its own authentication logic.
-			return _doHELLO(RR);
+			// Unencrypted HELLOs require some potentially expensive verification, so
+			// do this in the background if background processing is enabled.
+			DeferredPackets *const dp = RR->dp; // read volatile pointer
+			if ((dp)&&(!deferred)) {
+				dp->enqueue(this);
+				return true; // 'handled' via deferring to background thread(s)
+			} else {
+				// A null pointer for peer to _doHELLO() tells it to run its own
+				// special internal authentication logic. This is done for unencrypted
+				// HELLOs to learn new identities, etc.
+				SharedPtr<Peer> tmp;
+				return _doHELLO(RR,tmp);
+			}
 		}
 
-		SharedPtr<Peer> peer = RR->topology->getPeer(sourceAddress);
+		SharedPtr<Peer> peer(RR->topology->getPeer(sourceAddress));
 		if (peer) {
 			if (!dearmor(peer->key())) {
 				TRACE("dropped packet from %s(%s), MAC authentication failed (size: %u)",peer->address().toString().c_str(),_remoteAddress.toString().c_str(),size());
@@ -79,7 +89,8 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR)
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
 					peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),v,0,Packet::VERB_NOP);
 					return true;
-				case Packet::VERB_HELLO:                          return _doHELLO(RR);
+
+				case Packet::VERB_HELLO:                          return _doHELLO(RR,peer);
 				case Packet::VERB_ERROR:                          return _doERROR(RR,peer);
 				case Packet::VERB_OK:                             return _doOK(RR,peer);
 				case Packet::VERB_WHOIS:                          return _doWHOIS(RR,peer);
@@ -185,7 +196,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 	return true;
 }
 
-bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
+bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer)
 {
 	/* Note: this is the only packet ever sent in the clear, and it's also
 	 * the only packet that we authenticate via a different path. Authentication
@@ -226,62 +237,64 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR)
 			return true;
 		}
 
-		SharedPtr<Peer> peer(RR->topology->getPeer(id.address()));
-		if (peer) {
-			// We already have an identity with this address -- check for collisions
+		if (!peer) {
+			peer = RR->topology->getPeer(id.address());
+			if (peer) {
+				// We already have an identity with this address -- check for collisions
 
-			if (peer->identity() != id) {
-				// Identity is different from the one we already have -- address collision
+				if (peer->identity() != id) {
+					// Identity is different from the one we already have -- address collision
 
-				unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
-				if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
-					if (dearmor(key)) { // ensure packet is authentic, otherwise drop
-						TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
-						outp.append((unsigned char)Packet::VERB_HELLO);
-						outp.append((uint64_t)pid);
-						outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
-						outp.armor(key,true);
-						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+					unsigned char key[ZT_PEER_SECRET_KEY_LENGTH];
+					if (RR->identity.agree(id,key,ZT_PEER_SECRET_KEY_LENGTH)) {
+						if (dearmor(key)) { // ensure packet is authentic, otherwise drop
+							TRACE("rejected HELLO from %s(%s): address already claimed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+							Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
+							outp.append((unsigned char)Packet::VERB_HELLO);
+							outp.append((uint64_t)pid);
+							outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
+							outp.armor(key,true);
+							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+						} else {
+							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						}
 					} else {
-						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						TRACE("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					}
+
+					return true;
 				} else {
-					TRACE("rejected HELLO from %s(%s): key agreement failed",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+					// Identity is the same as the one we already have -- check packet integrity
+
+					if (!dearmor(peer->key())) {
+						TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+						return true;
+					}
+
+					// Continue at // VALID
 				}
-
-				return true;
 			} else {
-				// Identity is the same as the one we already have -- check packet integrity
+				// We don't already have an identity with this address -- validate and learn it
 
-				if (!dearmor(peer->key())) {
-					TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+				// Check identity proof of work
+				if (!id.locallyValidate()) {
+					TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					return true;
 				}
 
+				// Check packet integrity and authentication
+				SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
+				if (!dearmor(newPeer->key())) {
+					TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
+					return true;
+				}
+				peer = RR->topology->addPeer(newPeer);
+
 				// Continue at // VALID
 			}
-		} else {
-			// We don't already have an identity with this address -- validate and learn it
 
-			// Check identity proof of work
-			if (!id.locallyValidate()) {
-				TRACE("dropped HELLO from %s(%s): identity invalid",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
-			}
-
-			// Check packet integrity and authentication
-			SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
-			if (!dearmor(newPeer->key())) {
-				TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
-				return true;
-			}
-			peer = RR->topology->addPeer(newPeer);
-
-			// Continue at // VALID
+			// VALID -- if we made it here, packet passed identity and authenticity checks!
 		}
-
-		// VALID -- if we made it here, packet passed identity and authenticity checks!
 
 		if (externalSurfaceAddress)
 			RR->sa->iam(id.address(),_remoteAddress,externalSurfaceAddress,RR->topology->isRoot(id),RR->node->now());

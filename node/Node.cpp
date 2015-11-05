@@ -47,6 +47,7 @@
 #include "Identity.hpp"
 #include "SelfAwareness.hpp"
 #include "Cluster.hpp"
+#include "DeferredPackets.hpp"
 
 const struct sockaddr_storage ZT_SOCKADDR_NULL = {0};
 
@@ -130,7 +131,14 @@ Node::Node(
 Node::~Node()
 {
 	Mutex::Lock _l(_networks_m);
-	_networks.clear(); // ensure that networks are destroyed before shutdown
+	Mutex::Lock _l2(RR->dpSetLock);
+
+	_networks.clear(); // ensure that networks are destroyed before shutdow
+
+	DeferredPackets *dp = RR->dp;
+	RR->dp = (DeferredPackets *)0;
+	delete dp;
+
 	delete RR->sa;
 	delete RR->topology;
 	delete RR->antiRec;
@@ -637,6 +645,27 @@ void Node::clusterStatus(ZT_ClusterStatus *cs)
 	memset(cs,0,sizeof(ZT_ClusterStatus));
 }
 
+void Node::backgroundThreadMain()
+{
+	RR->dpSetLock.lock();
+	if (!RR->dp) {
+		try {
+			RR->dp = new DeferredPackets(RR);
+		} catch ( ... ) { // sanity check -- could only really happen if out of memory
+			RR->dpSetLock.unlock();
+			return;
+		}
+	}
+	RR->dpSetLock.unlock();
+
+	for(;;) {
+		try {
+			if (RR->dp->process() < 0)
+				break;
+		} catch ( ... ) {} // sanity check -- should not throw
+	}
+}
+
 /****************************************************************************/
 /* Node methods used only within node/                                      */
 /****************************************************************************/
@@ -975,6 +1004,13 @@ void ZT_Node_clusterStatus(ZT_Node *node,ZT_ClusterStatus *cs)
 {
 	try {
 		reinterpret_cast<ZeroTier::Node *>(node)->clusterStatus(cs);
+	} catch ( ... ) {}
+}
+
+void ZT_Node_backgroundThreadMain(ZT_Node *node)
+{
+	try {
+		reinterpret_cast<ZeroTier::Node *>(node)->backgroundThreadMain();
 	} catch ( ... ) {}
 }
 

@@ -475,7 +475,7 @@ void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)
 	{	// finish processing any packets waiting on peer's public key / identity
 		Mutex::Lock _l(_rxQueue_m);
 		for(std::list< SharedPtr<IncomingPacket> >::iterator rxi(_rxQueue.begin());rxi!=_rxQueue.end();) {
-			if ((*rxi)->tryDecode(RR))
+			if ((*rxi)->tryDecode(RR,false))
 				_rxQueue.erase(rxi++);
 			else ++rxi;
 		}
@@ -672,7 +672,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 						packet->append(dq.frags[f - 1].payload(),dq.frags[f - 1].payloadLength());
 					_defragQueue.erase(pid); // dq no longer valid after this
 
-					if (!packet->tryDecode(RR)) {
+					if (!packet->tryDecode(RR,false)) {
 						Mutex::Lock _l(_rxQueue_m);
 						_rxQueue.push_back(packet);
 					}
@@ -746,7 +746,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 					packet->append(dq.frags[f - 1].payload(),dq.frags[f - 1].payloadLength());
 				_defragQueue.erase(pid); // dq no longer valid after this
 
-				if (!packet->tryDecode(RR)) {
+				if (!packet->tryDecode(RR,false)) {
 					Mutex::Lock _l(_rxQueue_m);
 					_rxQueue.push_back(packet);
 				}
@@ -757,7 +757,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 		} // else this is a duplicate head, ignore
 	} else {
 		// Packet is unfragmented, so just process it
-		if (!packet->tryDecode(RR)) {
+		if (!packet->tryDecode(RR,false)) {
 			Mutex::Lock _l(_rxQueue_m);
 			_rxQueue.push_back(packet);
 		}
