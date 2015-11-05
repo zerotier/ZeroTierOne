@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -23,45 +24,115 @@ namespace WinUI
     /// </summary>
     public partial class MainWindow : Window
     {
-        APIHandler handler = new APIHandler();
+        APIHandler handler;
         Regex charRegex = new Regex("[0-9a-fxA-FX]");
         Regex wholeStringRegex = new Regex("^[0-9a-fxA-FX]+$");
 
         Timer timer = new Timer();
 
+        bool connected = false;
+
         public MainWindow()
         {
             InitializeComponent();
 
-            networksPage.SetAPIHandler(handler);
+            if (InitAPIHandler())
+            {
+                networksPage.SetAPIHandler(handler);
 
-            updateStatus();
-            updateNetworks();
-            updatePeers();
+                updateStatus();
+                if (!connected)
+                {
+                    MessageBox.Show("Unable to connect to ZeroTier Service.");
+                }
 
-            DataObject.AddPastingHandler(joinNetworkID, OnPaste);
+                updateNetworks();
+                updatePeers();
 
-            timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
-            timer.Interval = 2000;
-            timer.Enabled = true;
+                DataObject.AddPastingHandler(joinNetworkID, OnPaste);
+
+                timer.Elapsed += new ElapsedEventHandler(OnUpdateTimer);
+                timer.Interval = 2000;
+                timer.Enabled = true;
+            }
+        }
+
+        private bool InitAPIHandler()
+        {
+            String ztDir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\ZeroTier\\One";
+            String authToken = "";
+            Int32 port = 9993;
+            try
+            {
+                byte[] tmp = File.ReadAllBytes(ztDir + "\\authtoken.secret");
+                authToken = System.Text.Encoding.ASCII.GetString(tmp).Trim();
+            }
+            catch
+            {
+                MessageBox.Show("Unable to read ZeroTier One authtoken.secret from:\r\n" + ztDir, "ZeroTier One");
+                this.Close();
+                return false;
+            }
+
+            if ((authToken == null) || (authToken.Length <= 0))
+            {
+                MessageBox.Show("Unable to read ZeroTier One authtoken.secret from:\r\n" + ztDir, "ZeroTier One");
+                this.Close();
+                return false;
+            }
+            try
+            {
+                byte[] tmp = File.ReadAllBytes(ztDir + "\\zerotier-one.port");
+                port = Int32.Parse(System.Text.Encoding.ASCII.GetString(tmp).Trim());
+                if ((port <= 0) || (port > 65535))
+                    port = 9993;
+            }
+            catch
+            {
+            }
+
+            handler = new APIHandler(port, authToken);
+            return true;
         }
 
         private void updateStatus()
         {
             var status = handler.GetStatus();
 
-            networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => 
-            { 
-                this.networkId.Content = status.Address; 
-            }));
-            versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            if (status != null)
             {
-                this.versionString.Content = status.Version;
-            }));
-            onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                connected = true;
+
+                networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.networkId.Content = status.Address;
+                }));
+                versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.versionString.Content = status.Version;
+                }));
+                onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.onlineStatus.Content = (status.Online ? "ONLINE" : "OFFLINE");
+                }));
+            }
+            else
             {
-                this.onlineStatus.Content = (status.Online ? "ONLINE" : "OFFLINE");
-            }));
+                connected = false;
+
+                networkId.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.networkId.Content = "";
+                }));
+                versionString.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.versionString.Content = "0";
+                }));
+                onlineStatus.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+                {
+                    this.onlineStatus.Content = "OFFLINE";
+                }));
+            }
         }
 
         private void updateNetworks()

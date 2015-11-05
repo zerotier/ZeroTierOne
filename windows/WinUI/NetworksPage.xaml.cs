@@ -35,6 +35,10 @@ namespace WinUI
         public void setNetworks(List<ZeroTierNetwork> networks)
         {
             this.wrapPanel.Children.Clear();
+            if (networks == null)
+            {
+                return;
+            }
 
             for (int i = 0; i < networks.Count; ++i)
             {

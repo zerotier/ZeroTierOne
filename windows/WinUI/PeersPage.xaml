@@ -5,7 +5,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Background="White" Foreground="Black">
-    <DataGrid x:Name="dataGrid" AutoGenerateColumns="False" CanUserResizeColumns="True" Margin="0,0,0,0" CanUserReorderColumns="False" Width="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualWidth}" Height="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualHeight}" CanUserSortColumns="False">
+
+    <DataGrid x:Name="dataGrid" GridLinesVisibility="None" AutoGenerateColumns="False" CanUserResizeColumns="True" Margin="0,0,0,0" CanUserReorderColumns="False" HorizontalAlignment="Stretch" VerticalScrollBarVisibility="Auto" CanUserSortColumns="False">
+        <DataGrid.CellStyle>
+            <Style TargetType="DataGridCell">
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            </Style>
+        </DataGrid.CellStyle>
         <DataGrid.Columns>
             <DataGridTextColumn Header="Address" Binding="{Binding Address}"/>
             <DataGridTextColumn Header="Version" Binding="{Binding VersionString}"/>
@@ -13,7 +20,7 @@
             <DataGridTextColumn Header="Data Paths" Binding="{Binding DataPaths}"/>
             <DataGridTextColumn Header="Last Unicast" Binding="{Binding LastUnicastFrame}"/>
             <DataGridTextColumn Header="Last Multicast" Binding="{Binding LastMulticastFrame}"/>
-            <DataGridTextColumn Header="Role" Binding="{Binding Role}"/>
+            <DataGridTextColumn Width="*" Header="Role" Binding="{Binding Role}"/>
         </DataGrid.Columns>
     </DataGrid>
 </UserControl>

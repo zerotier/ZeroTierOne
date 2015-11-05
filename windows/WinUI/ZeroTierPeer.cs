@@ -7,16 +7,48 @@ using Newtonsoft.Json;
 
 namespace WinUI
 {
-    public class ZeroTierPeer
+    public class ZeroTierPeer : IEquatable<ZeroTierPeer>
     {
         [JsonProperty("address")]
         public string Address { get; set; }
 
+        private Int64 _lastUnicast;
         [JsonProperty("lastUnicastFrame")]
-        public UInt64 LastUnicastFrame { get; set; }
+        public Int64 LastUnicastFrame
+        {
+            get
+            {
+                if (_lastUnicast == 0)
+                    return 0;
 
+                TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
+                Int64 millisecondsSinceEpoch = (Int64)t.TotalMilliseconds;
+                return (millisecondsSinceEpoch - _lastUnicast) / 1000;
+            }
+            set
+            {
+                _lastUnicast = value;
+            }
+        }
+
+        private Int64 _lastMulticast;
         [JsonProperty("lastMulticastFrame")]
-        public UInt64 LastMulticastFrame { get; set; }
+        public Int64 LastMulticastFrame 
+        {
+            get
+            {
+                if (_lastMulticast == 0)
+                    return 0;
+
+                TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
+                Int64 millisecondsSinceEpoch = (Int64)t.TotalMilliseconds;
+                return (millisecondsSinceEpoch - _lastMulticast) / 1000;
+            }
+            set
+            {
+                _lastMulticast = value;
+            }
+        }
 
         [JsonProperty("versionMajor")]
         public int VersionMajor { get; set; }
@@ -25,7 +57,7 @@ namespace WinUI
         public int VersionMinor { get; set; }
 
         [JsonProperty("versionRev")]
-        public int Versionrev { get; set; }
+        public int VersionRev { get; set; }
 
         [JsonProperty("version")]
         public string Version { get; set; }
@@ -61,6 +93,24 @@ namespace WinUI
                 }
                 return pathStr;
             }
+        }
+
+        public bool Equals(ZeroTierPeer other)
+        {
+            return this.Address.Equals(other.Address, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+        public void Update(ZeroTierPeer other)
+        {
+            _lastUnicast = other._lastUnicast;
+            _lastMulticast = other._lastMulticast;
+            VersionMajor = other.VersionMajor;
+            VersionMinor = other.VersionMinor;
+            VersionRev = other.VersionRev;
+            Version = other.Version;
+            Latency = other.Latency;
+            Role = other.Role;
+            Paths = other.Paths;
         }
     }
 }

@@ -5,58 +5,76 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d" x:Class="WinUI.MainWindow"
-        Title="ZeroTier One" Height="500" Width="700" Icon="ZeroTierIcon.ico">
+        Title="ZeroTier One" Height="500" Width="600" Icon="ZeroTierIcon.ico">
 	
-	<Window.Resources>
-		<ResourceDictionary>
-			<Style TargetType="{x:Type TabItem}">
-				<Setter Property="BorderThickness"
-						Value="3" />
-				<Setter Property="BorderBrush"
-						Value="Blue" />
-				<Setter Property="VerticalContentAlignment"
-						Value="Center" />
-				<Setter Property="HorizontalContentAlignment"
-						Value="Center" />
-				<Setter Property="Template">
-					<Setter.Value>
-						<ControlTemplate TargetType="{x:Type TabItem}">
-							<Border>
-								<Grid>
-									<Grid>
-										<Border x:Name="border" 
-												CornerRadius="3,3,0,0"
-												Background="{TemplateBinding Background}"
-												BorderBrush="{TemplateBinding BorderBrush}"
-												BorderThickness="1,1,1,0" />
-									</Grid>
-									<Border BorderThickness="{TemplateBinding BorderThickness}"
-											Padding="{TemplateBinding Padding}">
-										<ContentPresenter ContentSource="Header"
-														  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-														  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-									</Border>
-								</Grid>
-							</Border>
-							<ControlTemplate.Triggers>
-								<Trigger Property="IsSelected"
-										 Value="True">
-									<Setter TargetName="border"
-											Property="BorderBrush"
-												Value="#ff91a2a3" />
-									<Setter TargetName="border"
-											Property="BorderThickness"
-											Value="0,3,0,0" />
-								</Trigger>
-							</ControlTemplate.Triggers>
-						</ControlTemplate>
-					</Setter.Value>
-				</Setter>
-			</Style>
-		</ResourceDictionary>
-	</Window.Resources>
+    <Window.Resources>
+        <SolidColorBrush x:Key="GreenBrush" Color="#ff91a2a3"/>
 
-	<DockPanel>
+        <SolidColorBrush x:Key="SolidBorderBrush" Color="#888" />
+
+        <SolidColorBrush x:Key="GreenDisabledBrush" Color="#FF234447" />
+
+        <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#EEE" />
+
+        <SolidColorBrush x:Key="DisabledBorderBrush" Color="#AAA" />
+
+        <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#888" />
+        
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="Background" Value="#FFF" />
+            <Setter Property="AlternationCount" Value="2" />
+        </Style>
+
+        <Style TargetType="{x:Type DataGridRow}">
+            <Style.Triggers>
+                <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                    <Setter Property="Background" Value="#EEE"></Setter>
+                </Trigger>
+                <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                    <Setter Property="Background" Value="#FFF"></Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style TargetType="{x:Type TabItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Grid>
+                            <Border 
+                                Name="Border"
+                                Margin="0,0,-4,0" 
+                                Background="{StaticResource GreenBrush}"
+                                BorderBrush="{StaticResource  SolidBorderBrush}" 
+                                BorderThickness="1,1,1,1" 
+                                CornerRadius="2,12,0,0" >
+                                <ContentPresenter x:Name="ContentSite"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    ContentSource="Header"
+                                    Margin="12,2,12,2"
+                                    RecognizesAccessKey="True"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Panel.ZIndex" Value="100" />
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource GreenDisabledBrush}" />
+                                <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource DisabledBorderBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    
+    <DockPanel>
 		<StatusBar DockPanel.Dock="Bottom" Height="34" Background="#FF234447" Margin="0">
 			<StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -77,17 +95,17 @@
             </StatusBar.ItemsPanel>
 			<StatusBarItem Grid.Column="0" x:Name="networkId" Content="Network ID" Foreground="White"/>
 			<StatusBarItem Grid.Column="1" x:Name="onlineStatus" Content="ONLINE" Foreground="White"/>
-			<StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White" Margin="0"/>
-			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White" Margin="6,0,-6,-9"/>
+			<StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White"/>
+			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White"/>
 			<StatusBarItem Grid.Column="4">
-				<TextBox x:Name="joinNetworkID" Height="23" TextWrapping="Wrap" Width="120" HorizontalAlignment="Right" RenderTransformOrigin="1.168,0.478" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16"/>
+				<TextBox x:Name="joinNetworkID" Height="23" TextWrapping="Wrap" Width="120" HorizontalAlignment="Right" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16"/>
 			</StatusBarItem>
 			<StatusBarItem Grid.Column="5" x:Name="statusBarButton" Foreground="White" RenderTransformOrigin="0.789,0.442">
 				<Button x:Name="joinButton" Content="Join" Background="#FFFFB354" Width="77.423" Click="joinButton_Click"/>
 			</StatusBarItem>
 		</StatusBar>
-		<TabControl>
-            <TabItem x:Name="Networks" Header="Networks" Background="#FF234447" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
+		<TabControl Margin="0,0,0,0">
+            <TabItem x:Name="Networks" Header="Networks" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
                 <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -98,7 +116,7 @@
                     <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
                 </Grid>
             </TabItem>
-            <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
+            <TabItem x:Name="Peers" Header="Peers" Foreground="White">
                 <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
