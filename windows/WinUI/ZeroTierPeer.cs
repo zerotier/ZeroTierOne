@@ -12,11 +12,43 @@ namespace WinUI
         [JsonProperty("address")]
         public string Address { get; set; }
 
+        private Int64 _lastUnicast;
         [JsonProperty("lastUnicastFrame")]
-        public UInt64 LastUnicastFrame { get; set; }
+        public Int64 LastUnicastFrame
+        {
+            get
+            {
+                if (_lastUnicast == 0)
+                    return 0;
 
+                TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
+                Int64 millisecondsSinceEpoch = (Int64)t.TotalMilliseconds;
+                return (millisecondsSinceEpoch - _lastUnicast) / 1000;
+            }
+            set
+            {
+                _lastUnicast = value;
+            }
+        }
+
+        private Int64 _lastMulticast;
         [JsonProperty("lastMulticastFrame")]
-        public UInt64 LastMulticastFrame { get; set; }
+        public Int64 LastMulticastFrame 
+        {
+            get
+            {
+                if (_lastMulticast == 0)
+                    return 0;
+
+                TimeSpan t = DateTime.UtcNow - new DateTime(1970, 1, 1);
+                Int64 millisecondsSinceEpoch = (Int64)t.TotalMilliseconds;
+                return (millisecondsSinceEpoch - _lastMulticast) / 1000;
+            }
+            set
+            {
+                _lastMulticast = value;
+            }
+        }
 
         [JsonProperty("versionMajor")]
         public int VersionMajor { get; set; }

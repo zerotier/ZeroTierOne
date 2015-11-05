@@ -181,7 +181,7 @@ namespace WinUI
                 using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
                 {
                     var responseText = streamReader.ReadToEnd();
-
+                    //Console.WriteLine(responseText);
                     List<ZeroTierPeer> peerList = null;
                     try
                     {
