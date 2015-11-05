@@ -29,13 +29,25 @@ namespace WinUI
             dataGrid.ItemsSource = peersList;
         }
 
-        public void SetPeers(List<ZeroTierPeer> peerList)
+        public void SetPeers(List<ZeroTierPeer> list)
         {
-            if (peerList == null)
+            if (list == null)
                 return;
 
-            this.peersList = peerList;
-            dataGrid.ItemsSource = this.peersList;
+            
+            foreach(ZeroTierPeer p in list)
+            {
+                ZeroTierPeer curPeer = peersList.Find(peer => peer.Equals(p));
+                if (curPeer == null)
+                {
+                    peersList.Add(p);                    
+                }
+                else
+                {
+                    curPeer.Update(p);
+                }
+            }
+
             dataGrid.Items.Refresh();
         }
     }
