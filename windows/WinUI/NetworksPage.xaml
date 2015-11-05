@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
-    <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualWidth}" Height="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=ActualHeight}">
+    <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Width="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=RenderSize.ActualWidth}" Height="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=RenderSize.ActualHeight}">
         <WrapPanel x:Name="wrapPanel" Background="#FFDDDDDD"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
 
         </WrapPanel>
