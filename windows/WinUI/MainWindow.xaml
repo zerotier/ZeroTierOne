@@ -7,56 +7,58 @@
         mc:Ignorable="d" x:Class="WinUI.MainWindow"
         Title="ZeroTier One" Height="500" Width="700" Icon="ZeroTierIcon.ico">
 	
-	<Window.Resources>
-		<ResourceDictionary>
-			<Style TargetType="{x:Type TabItem}">
-				<Setter Property="BorderThickness"
-						Value="3" />
-				<Setter Property="BorderBrush"
-						Value="Blue" />
-				<Setter Property="VerticalContentAlignment"
-						Value="Center" />
-				<Setter Property="HorizontalContentAlignment"
-						Value="Center" />
-				<Setter Property="Template">
-					<Setter.Value>
-						<ControlTemplate TargetType="{x:Type TabItem}">
-							<Border>
-								<Grid>
-									<Grid>
-										<Border x:Name="border" 
-												CornerRadius="3,3,0,0"
-												Background="{TemplateBinding Background}"
-												BorderBrush="{TemplateBinding BorderBrush}"
-												BorderThickness="1,1,1,0" />
-									</Grid>
-									<Border BorderThickness="{TemplateBinding BorderThickness}"
-											Padding="{TemplateBinding Padding}">
-										<ContentPresenter ContentSource="Header"
-														  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-														  VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-									</Border>
-								</Grid>
-							</Border>
-							<ControlTemplate.Triggers>
-								<Trigger Property="IsSelected"
-										 Value="True">
-									<Setter TargetName="border"
-											Property="BorderBrush"
-												Value="#ff91a2a3" />
-									<Setter TargetName="border"
-											Property="BorderThickness"
-											Value="0,3,0,0" />
-								</Trigger>
-							</ControlTemplate.Triggers>
-						</ControlTemplate>
-					</Setter.Value>
-				</Setter>
-			</Style>
-		</ResourceDictionary>
-	</Window.Resources>
+    <Window.Resources>
+        <SolidColorBrush x:Key="GreenBrush" Color="#ff91a2a3"/>
 
-	<DockPanel>
+        <SolidColorBrush x:Key="SolidBorderBrush" Color="#888" />
+
+        <SolidColorBrush x:Key="GreenDisabledBrush" Color="#FF234447" />
+
+        <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#EEE" />
+
+        <SolidColorBrush x:Key="DisabledBorderBrush" Color="#AAA" />
+
+        <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#888" />
+
+        <Style TargetType="{x:Type TabItem}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Grid>
+                            <Border 
+                                Name="Border"
+                                Margin="0,0,-4,0" 
+                                Background="{StaticResource GreenBrush}"
+                                BorderBrush="{StaticResource  SolidBorderBrush}" 
+                                BorderThickness="1,1,1,1" 
+                                CornerRadius="2,12,0,0" >
+                                <ContentPresenter x:Name="ContentSite"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    ContentSource="Header"
+                                    Margin="12,2,12,2"
+                                    RecognizesAccessKey="True"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Panel.ZIndex" Value="100" />
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource GreenDisabledBrush}" />
+                                <Setter TargetName="Border" Property="BorderThickness" Value="1,1,1,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource DisabledBackgroundBrush}" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource DisabledBorderBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    
+    <DockPanel>
 		<StatusBar DockPanel.Dock="Bottom" Height="34" Background="#FF234447" Margin="0">
 			<StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -87,7 +89,7 @@
 			</StatusBarItem>
 		</StatusBar>
 		<TabControl>
-            <TabItem x:Name="Networks" Header="Networks" Background="#FF234447" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
+            <TabItem x:Name="Networks" Header="Networks" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
                 <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -98,7 +100,7 @@
                     <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
                 </Grid>
             </TabItem>
-            <TabItem x:Name="Peers" Header="Peers" Background="#FF234447" Foreground="White">
+            <TabItem x:Name="Peers" Header="Peers" Foreground="White">
                 <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
