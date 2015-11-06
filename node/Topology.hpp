@@ -87,9 +87,8 @@ public:
 	 * across the entire cluster to remain in memory cache.
 	 *
 	 * @param zta ZeroTier address
-	 * @param now Current time
 	 */
-	inline SharedPtr<Peer> getPeerNoCache(const Address &zta,const uint64_t now)
+	inline SharedPtr<Peer> getPeerNoCache(const Address &zta)
 	{
 		Mutex::Lock _l(_lock);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);

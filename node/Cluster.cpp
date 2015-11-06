@@ -213,31 +213,25 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 						}	break;
 
 						case STATE_MESSAGE_HAVE_PEER: {
-							const uint64_t now = RR->node->now();
-							Identity id;
+							const Address zeroTierAddress(dmsg.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); ptr += ZT_ADDRESS_LENGTH;
 							InetAddress physicalAddress;
-							ptr += id.deserialize(dmsg,ptr);
 							ptr += physicalAddress.deserialize(dmsg,ptr);
-							if (id) {
-								// Forget any paths that we have to this peer at its address
-								if (physicalAddress) {
-									SharedPtr<Peer> myPeerRecord(RR->topology->getPeerNoCache(id.address(),now));
-									if (myPeerRecord)
-										myPeerRecord->removePathByAddress(physicalAddress);
-								}
 
-								// Always save identity to update file time
-								RR->topology->saveIdentity(id);
+							// Forget any paths that we have to this peer at its address
+							if (physicalAddress) {
+								SharedPtr<Peer> myPeerRecord(RR->topology->getPeerNoCache(zeroTierAddress));
+								if (myPeerRecord)
+									myPeerRecord->removePathByAddress(physicalAddress);
+							}
 
-								// Set peer affinity to its new home
-								{
-									Mutex::Lock _l2(_peerAffinities_m);
-									_PA &pa = _peerAffinities[id.address()];
-									pa.ts = now;
-									pa.mid = fromMemberId;
-		 						}
-		 						TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
-		 					}
+							// Set peer affinity to its new home
+							{
+								Mutex::Lock _l2(_peerAffinities_m);
+								_PA &pa = _peerAffinities[zeroTierAddress];
+								pa.ts = RR->node->now();
+								pa.mid = fromMemberId;
+	 						}
+	 						TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
 						}	break;
 
 						case STATE_MESSAGE_MULTICAST_LIKE: {
@@ -270,7 +264,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							TRACE("[%u] requested that we unite local %s with remote %s",(unsigned int)fromMemberId,localPeerAddress.toString().c_str(),remotePeerAddress.toString().c_str());
 
 							const uint64_t now = RR->node->now();
-							SharedPtr<Peer> localPeer(RR->topology->getPeerNoCache(localPeerAddress,now));
+							SharedPtr<Peer> localPeer(RR->topology->getPeerNoCache(localPeerAddress));
 							if ((localPeer)&&(numRemotePeerPaths > 0)) {
 								InetAddress bestLocalV4,bestLocalV6;
 								localPeer->getBestActiveAddresses(now,bestLocalV4,bestLocalV6);
@@ -380,7 +374,7 @@ bool Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPee
 	if (unite) {
 		InetAddress v4,v6;
 		if (fromPeerAddress) {
-			SharedPtr<Peer> fromPeer(RR->topology->getPeerNoCache(fromPeerAddress,now));
+			SharedPtr<Peer> fromPeer(RR->topology->getPeerNoCache(fromPeerAddress));
 			if (fromPeer)
 				fromPeer->getBestActiveAddresses(now,v4,v6);
 		}
@@ -428,9 +422,8 @@ void Cluster::replicateHavePeer(const Identity &peerId,const InetAddress &physic
 		}
 	}
 
-	// announcement
-	Buffer<4096> buf;
-	peerId.serialize(buf,false);
+	Buffer<1024> buf;
+	peerId.address().appendTo(buf);
 	physicalAddress.serialize(buf);
 	{
 		Mutex::Lock _l(_memberIds_m);

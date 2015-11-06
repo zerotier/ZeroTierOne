@@ -124,7 +124,7 @@ public:
 
 		/**
 		 * Cluster member has this peer:
-		 *   <[...] binary serialized peer identity>
+		 *   <[5] ZeroTier address of peer>
 		 *   <[...] binary serialized peer remote physical address>
 		 *
 		 * Clusters send this message when they learn a path to a peer. The
