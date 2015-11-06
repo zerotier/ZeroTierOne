@@ -351,9 +351,9 @@ private:
 
 	struct _PA
 	{
-		_PA() : ts(0),mid(0xffff) {}
+		_PA() : ts(0),mid(0xffffffff) {}
 		uint64_t ts;
-		uint16_t mid;
+	 	unsigned int mid;
 	};
 	Hashtable< Address,_PA > _peerAffinities;
 	Mutex _peerAffinities_m;

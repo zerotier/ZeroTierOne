@@ -216,22 +216,18 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							const Address zeroTierAddress(dmsg.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); ptr += ZT_ADDRESS_LENGTH;
 							InetAddress physicalAddress;
 							ptr += physicalAddress.deserialize(dmsg,ptr);
-
-							// Forget any paths that we have to this peer at its address
 							if (physicalAddress) {
 								SharedPtr<Peer> myPeerRecord(RR->topology->getPeerNoCache(zeroTierAddress));
 								if (myPeerRecord)
 									myPeerRecord->removePathByAddress(physicalAddress);
 							}
-
-							// Set peer affinity to its new home
 							{
 								Mutex::Lock _l2(_peerAffinities_m);
 								_PA &pa = _peerAffinities[zeroTierAddress];
 								pa.ts = RR->node->now();
 								pa.mid = fromMemberId;
-	 						}
-	 						TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
+							}
+							TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
 						}	break;
 
 						case STATE_MESSAGE_MULTICAST_LIKE: {
@@ -415,10 +411,12 @@ void Cluster::replicateHavePeer(const Identity &peerId,const InetAddress &physic
 		if (pa.mid != _id) {
 			pa.ts = now;
 			pa.mid = _id;
+			// fall through to send code below
 		} else if ((now - pa.ts) < ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD) {
 			return;
 		} else {
 			pa.ts = now;
+			// fall through to send code below
 		}
 	}
 
@@ -453,6 +451,7 @@ void Cluster::replicateMulticastLike(uint64_t nwid,const Address &peerAddress,co
 
 void Cluster::replicateCertificateOfNetworkMembership(const CertificateOfMembership &com)
 {
+	/* not used yet, so don't do this yet
 	Buffer<4096> buf;
 	com.serialize(buf);
 	TRACE("replicating %s COM for %.16llx to all members",com.issuedTo().toString().c_str(),com.networkId());
@@ -463,6 +462,7 @@ void Cluster::replicateCertificateOfNetworkMembership(const CertificateOfMembers
 			_send(*mid,STATE_MESSAGE_COM,buf.data(),buf.size());
 		}
 	}
+	*/
 }
 
 struct _ClusterAnnouncePeers
