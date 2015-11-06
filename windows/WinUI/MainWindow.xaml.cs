@@ -47,7 +47,7 @@ namespace WinUI
                 }
 
                 updateNetworks();
-                updatePeers();
+                //updatePeers();
 
                 DataObject.AddPastingHandler(joinNetworkID, OnPaste);
 
@@ -147,19 +147,19 @@ namespace WinUI
 
         private void updatePeers()
         {
-            var peers = handler.GetPeers();
+            //var peers = handler.GetPeers();
 
-            peersPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-            {
-                peersPage.SetPeers(peers);
-            }));
+            //peersPage.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            //{
+            //    peersPage.SetPeers(peers);
+            //}));
         }
 
         private void OnUpdateTimer(object source, ElapsedEventArgs e)
         {
             updateStatus();
             updateNetworks();
-            updatePeers();
+            //updatePeers();
         }
 
         private void joinButton_Click(object sender, RoutedEventArgs e)

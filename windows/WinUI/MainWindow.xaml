@@ -116,7 +116,7 @@
                     <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
                 </Grid>
             </TabItem>
-            <TabItem x:Name="Peers" Header="Peers" Foreground="White">
+            <!--<TabItem x:Name="Peers" Header="Peers" Foreground="White">
                 <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -126,7 +126,7 @@
                     </Grid.RowDefinitions>
                     <local:PeersPage x:Name="peersPage" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
                 </Grid>
-            </TabItem>
+            </TabItem>-->
 		</TabControl>
 	</DockPanel>
 </Window>
