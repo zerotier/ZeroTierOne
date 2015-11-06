@@ -422,6 +422,15 @@ struct TcpConnection
 	Mutex writeBuf_m;
 };
 
+// Use a bigger buffer on AMD64 since these are likely to be bigger and
+// servers. Otherwise use a smaller buffer. This makes no difference
+// except under very high load.
+#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
+#define ZT_UDP_DESIRED_BUF_SIZE 1048576
+#else
+#define ZT_UDP_DESIRED_BUF_SIZE 131072
+#endif
+
 class OneServiceImpl : public OneService
 {
 public:
@@ -462,7 +471,7 @@ public:
 			}
 
 			_v4LocalAddress = InetAddress((uint32_t)0,port);
-			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&_v4LocalAddress,reinterpret_cast<void *>(&_v4LocalAddress),131072);
+			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&_v4LocalAddress,reinterpret_cast<void *>(&_v4LocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
 
 			if (_v4UdpSocket) {
 				struct sockaddr_in in4;
@@ -474,7 +483,7 @@ public:
 
 				if (_v4TcpListenSocket) {
 					_v6LocalAddress = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port);
-					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&_v6LocalAddress,reinterpret_cast<void *>(&_v6LocalAddress),131072);
+					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&_v6LocalAddress,reinterpret_cast<void *>(&_v6LocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
 
 					struct sockaddr_in6 in6;
 					memset((void *)&in6,0,sizeof(in6));
