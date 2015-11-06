@@ -7,6 +7,6 @@ CONTAINER_IMAGE=zerotier/http-test
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin:/sbin
 
-pssh -h big-test-hosts -x '-t -t' -i -OUserKnownHostsFile=/dev/null -OStrictHostKeyChecking=no -t 600 -p 256 "for ((n=0;n<$NUM_CONTAINERS;n++)); do sudo docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE; sleep 0.1; done"
+pssh -h big-test-hosts -x '-t -t' -i -OUserKnownHostsFile=/dev/null -OStrictHostKeyChecking=no -t 600 -p 256 "sysctl -w net.netfilter.nf_conntrack_max=262144 ; for ((n=0;n<$NUM_CONTAINERS;n++)); do sudo docker run --device=/dev/net/tun --privileged -d $CONTAINER_IMAGE; sleep 0.1; done"
 
 exit 0
