@@ -6,8 +6,8 @@
       mc:Ignorable="d"
 	>
     
-    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" CornerRadius="8,8,3,3">
-        <Grid Background="#FFFFFFFF" Margin="10,10,10,10">
+    <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1" CornerRadius="8,8,8,8">
+        <Grid Background="GhostWhite" Margin="10,10,10,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="auto"/>
                 <ColumnDefinition Width="10"/>
@@ -62,7 +62,7 @@
 
             <Separator Grid.Column="0" Grid.Row="10" Grid.ColumnSpan="3"/>
             
-            <Grid Grid.Column="0" Grid.Row="11" Grid.ColumnSpan="3" Background="#FFFFFFFF">
+            <Grid Grid.Column="0" Grid.Row="11" Grid.ColumnSpan="3" Background="GhostWhite">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
