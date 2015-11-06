@@ -435,7 +435,7 @@ void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
-	peer->attemptToContactAt(RR,localAddr,atAddr,now);
+	peer->sendHELLO(RR,localAddr,atAddr,now);
 	{
 		Mutex::Lock _l(_contactQueue_m);
 		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,localAddr,atAddr));
@@ -508,14 +508,14 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 				} else {
 					if (qi->strategyIteration == 0) {
 						// First strategy: send packet directly to destination
-						qi->peer->attemptToContactAt(RR,qi->localAddr,qi->inaddr,now);
+						qi->peer->sendHELLO(RR,qi->localAddr,qi->inaddr,now);
 					} else if (qi->strategyIteration <= 4) {
 						// Strategies 1-4: try escalating ports for symmetric NATs that remap sequentially
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
 						if (p < 0xffff) {
 							tmpaddr.setPort((unsigned int)p);
-							qi->peer->attemptToContactAt(RR,qi->localAddr,tmpaddr,now);
+							qi->peer->sendHELLO(RR,qi->localAddr,tmpaddr,now);
 						} else qi->strategyIteration = 5;
 					} else {
 						// All strategies tried, expire entry

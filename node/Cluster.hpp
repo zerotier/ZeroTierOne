@@ -125,10 +125,6 @@ public:
 		/**
 		 * Cluster member has this peer:
 		 *   <[5] ZeroTier address of peer>
-		 *   <[...] binary serialized peer remote physical address>
-		 *
-		 * Clusters send this message when they learn a path to a peer. The
-		 * replicated physical address is the one learned.
 		 */
 		STATE_MESSAGE_HAVE_PEER = 2,
 
@@ -237,9 +233,8 @@ public:
 	 * Advertise to the cluster that we have this peer
 	 *
 	 * @param peerId Identity of peer that we have
-	 * @param physicalAddress Physical address of peer (from our POV)
 	 */
-	void replicateHavePeer(const Identity &peerId,const InetAddress &physicalAddress);
+	void replicateHavePeer(const Identity &peerId);
 
 	/**
 	 * Advertise a multicast LIKE to the cluster

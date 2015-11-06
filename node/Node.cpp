@@ -249,7 +249,7 @@ public:
 			} else {
 				if (stableEndpoint4) {
 					needToContactIndirect = false;
-					p->attemptToContactAt(RR,InetAddress(),stableEndpoint4,_now);
+					p->sendHELLO(RR,InetAddress(),stableEndpoint4,_now);
 				}
 			}
 			if (p->doPingAndKeepalive(RR,_now,AF_INET6)) {
@@ -257,7 +257,7 @@ public:
 			} else {
 				if (stableEndpoint6) {
 					needToContactIndirect = false;
-					p->attemptToContactAt(RR,InetAddress(),stableEndpoint6,_now);
+					p->sendHELLO(RR,InetAddress(),stableEndpoint6,_now);
 				}
 			}
 

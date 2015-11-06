@@ -214,19 +214,10 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 
 						case STATE_MESSAGE_HAVE_PEER: {
 							const Address zeroTierAddress(dmsg.field(ptr,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); ptr += ZT_ADDRESS_LENGTH;
-							InetAddress physicalAddress;
-							ptr += physicalAddress.deserialize(dmsg,ptr);
-							if (physicalAddress) {
-								SharedPtr<Peer> myPeerRecord(RR->topology->getPeerNoCache(zeroTierAddress));
-								if (myPeerRecord)
-									myPeerRecord->removePathByAddress(physicalAddress);
-							}
-							{
-								Mutex::Lock _l2(_peerAffinities_m);
-								_PA &pa = _peerAffinities[zeroTierAddress];
-								pa.ts = RR->node->now();
-								pa.mid = fromMemberId;
-							}
+							Mutex::Lock _l2(_peerAffinities_m);
+							_PA &pa = _peerAffinities[zeroTierAddress];
+							pa.ts = RR->node->now();
+							pa.mid = fromMemberId;
 							TRACE("[%u] has %s @ %s",(unsigned int)fromMemberId,id.address().toString().c_str(),physicalAddress.toString().c_str());
 						}	break;
 
@@ -402,7 +393,7 @@ bool Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPee
 	return true;
 }
 
-void Cluster::replicateHavePeer(const Identity &peerId,const InetAddress &physicalAddress)
+void Cluster::replicateHavePeer(const Identity &peerId)
 {
 	const uint64_t now = RR->node->now();
 	{
@@ -420,14 +411,13 @@ void Cluster::replicateHavePeer(const Identity &peerId,const InetAddress &physic
 		}
 	}
 
-	Buffer<1024> buf;
-	peerId.address().appendTo(buf);
-	physicalAddress.serialize(buf);
+	char buf[ZT_ADDRESS_LENGTH];
+	peerId.address().copyTo(buf,ZT_ADDRESS_LENGTH);
 	{
 		Mutex::Lock _l(_memberIds_m);
 		for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
 			Mutex::Lock _l2(_members[*mid].lock);
-			_send(*mid,STATE_MESSAGE_HAVE_PEER,buf.data(),buf.size());
+			_send(*mid,STATE_MESSAGE_HAVE_PEER,buf,ZT_ADDRESS_LENGTH);
 		}
 	}
 }
@@ -472,9 +462,8 @@ struct _ClusterAnnouncePeers
 	Cluster *const parent;
 	inline void operator()(const Topology &t,const SharedPtr<Peer> &peer) const
 	{
-		Path *p = peer->getBestPath(now);
-		if (p)
-			parent->replicateHavePeer(peer->identity(),p->address());
+		if (peer->hasActiveDirectPath(now))
+			parent->replicateHavePeer(peer->identity());
 	}
 };
 void Cluster::doPeriodicTasks()
