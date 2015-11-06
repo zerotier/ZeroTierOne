@@ -10,7 +10,7 @@ var TEST_INTERVAL_MAX = (60000 * 10);
 var TEST_TIMEOUT = 60000;
 
 // Where should I get other agents' IDs and POST results?
-var SERVER_HOST = '52.23.172.206';
+var SERVER_HOST = '52.32.186.221';
 var SERVER_PORT = 18080;
 
 // Which port do agents use to serve up test data to each other?
