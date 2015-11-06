@@ -180,7 +180,6 @@ private:
 	void _handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
-	bool _shouldTryUnite(const uint64_t now,const Address &p1,const Address &p2);
 
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;
