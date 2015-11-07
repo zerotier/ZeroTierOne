@@ -912,7 +912,7 @@ typedef struct {
 	uint64_t load;
 
 	/**
-	 * Number of peers this cluster member "has"
+	 * Number of peers
 	 */
 	uint64_t peers;
 

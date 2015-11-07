@@ -156,8 +156,15 @@ void Peer::received(
 				}
 			}
 
-			if (!pathIsConfirmed) {
-				if ((verb == Packet::VERB_OK)||(RR->topology->amRoot())) {
+			if (pathIsConfirmed) {
+
+#ifdef ZT_ENABLE_CLUSTER
+				if ((RR->cluster)&&(verb == Packet::VERB_HELLO))
+					RR->cluster->replicateHavePeer(_id);
+#endif
+
+			} else {
+				if (verb == Packet::VERB_OK) {
 
 					Path *slot = (Path *)0;
 					if (np < ZT_MAX_PEER_NETWORK_PATHS) {
@@ -179,6 +186,11 @@ void Peer::received(
 						_sortPaths(now);
 					}
 
+#ifdef ZT_ENABLE_CLUSTER
+					if (RR->cluster)
+						RR->cluster->replicateHavePeer(_id);
+#endif
+
 				} else {
 
 					/* If this path is not known, send a HELLO. We don't learn
@@ -195,11 +207,6 @@ void Peer::received(
 			}
 		}
 	}	// end _lock
-
-#ifdef ZT_ENABLE_CLUSTER
-	if ((RR->cluster)&&(pathIsConfirmed))
-		RR->cluster->replicateHavePeer(_id);
-#endif
 
 	if (needMulticastGroupAnnounce) {
 		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());

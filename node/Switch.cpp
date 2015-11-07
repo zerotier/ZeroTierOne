@@ -616,15 +616,15 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 		if (fragment.hops() < ZT_RELAY_MAX_HOPS) {
 			fragment.incrementHops();
 
-#ifdef ZT_ENABLE_CLUSTER
-			if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false)))
-				return;
-#endif
-
 			// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 			// It wouldn't hurt anything, just redundant and unnecessary.
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
+#ifdef ZT_ENABLE_CLUSTER
+				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false)))
+					return;
+#endif
+
 				// Don't know peer or no direct path -- so relay via root server
 				relayTo = RR->topology->getBestRoot();
 				if (relayTo)
@@ -702,19 +702,6 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 		if (packet->hops() < ZT_RELAY_MAX_HOPS) {
 			packet->incrementHops();
 
-#ifdef ZT_ENABLE_CLUSTER
-			if (RR->cluster) {
-				Mutex::Lock _l(_lastUniteAttempt_m);
-				uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-				const bool shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
-				if (RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),shouldUnite)) {
-					if (shouldUnite)
-						luts = now;
-					return;
-				}
-			}
-#endif
-
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),now)))) {
 				Mutex::Lock _l(_lastUniteAttempt_m);
@@ -724,6 +711,19 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 					unite(source,destination);
 				}
 			} else {
+#ifdef ZT_ENABLE_CLUSTER
+				if (RR->cluster) {
+					Mutex::Lock _l(_lastUniteAttempt_m);
+					uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
+					const bool shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
+					if (RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),shouldUnite)) {
+						if (shouldUnite)
+							luts = now;
+						return;
+					}
+				}
+#endif
+
 				relayTo = RR->topology->getBestRoot(&source,1,true);
 				if (relayTo)
 					relayTo->send(RR,packet->data(),packet->size(),now);
