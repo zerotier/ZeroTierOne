@@ -133,10 +133,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		switch(errorCode) {
 
 			case Packet::ERROR_OBJ_NOT_FOUND:
-				if (inReVerb == Packet::VERB_WHOIS) {
-					if (RR->topology->isUpstream(peer->identity()))
-						RR->sw->cancelWhoisRequest(Address(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH));
-				} else if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
+				if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 					SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
 					if ((network)&&(network->controller() == peer->address()))
 						network->setNotFound();
@@ -237,7 +234,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 			return true;
 		}
 
-		if (!peer) {
+		if (!peer) { // peer == NULL is the normal case here
 			peer = RR->topology->getPeer(id.address());
 			if (peer) {
 				// We already have an identity with this address -- check for collisions
@@ -452,10 +449,6 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
 					peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
-#ifdef ZT_ENABLE_CLUSTER
-					if (RR->cluster)
-						RR->cluster->replicateCertificateOfNetworkMembership(com);
-#endif
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -491,14 +484,10 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			} else {
-				Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
-				outp.append((unsigned char)Packet::VERB_WHOIS);
-				outp.append(packetId());
-				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
-				outp.append(payload(),ZT_ADDRESS_LENGTH);
-				outp.armor(peer->key(),true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
+#ifdef ZT_ENABLE_CLUSTER
+				if (RR->cluster)
+					RR->cluster->sendDistributedQuery(*this);
+#endif
 			}
 		} else {
 			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
@@ -585,10 +574,6 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
 					peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com);
-#ifdef ZT_ENABLE_CLUSTER
-					if (RR->cluster)
-						RR->cluster->replicateCertificateOfNetworkMembership(com);
-#endif
 				}
 
 				if (!network->isAllowed(peer)) {
@@ -674,10 +659,6 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 			const uint64_t nwid = at<uint64_t>(ptr);
 			const MulticastGroup group(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14));
 			RR->mc->add(now,nwid,group,peer->address());
-#ifdef ZT_ENABLE_CLUSTER
-			if (RR->cluster)
-				RR->cluster->replicateMulticastLike(nwid,peer->address(),group);
-#endif
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
@@ -696,10 +677,6 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		while (ptr < size()) {
 			ptr += com.deserialize(*this,ptr);
 			peer->validateAndSetNetworkMembershipCertificate(RR,com.networkId(),com);
-#ifdef ZT_ENABLE_CLUSTER
-			if (RR->cluster)
-				RR->cluster->replicateCertificateOfNetworkMembership(com);
-#endif
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
@@ -831,11 +808,17 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			outp.append(nwid);
 			mg.mac().appendTo(outp);
 			outp.append((uint32_t)mg.adi());
-			if (RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit)) {
+			const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
+			if (gatheredLocally) {
 				outp.armor(peer->key(),true);
 				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			}
+
+#ifdef ZT_ENABLE_CLUSTER
+			if ((RR->cluster)&&(gatheredLocally < gatherLimit))
+				RR->cluster->sendDistributedQuery(*this);
+#endif
 		}
 
 		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
@@ -860,10 +843,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
 				peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
-#ifdef ZT_ENABLE_CLUSTER
-				if (RR->cluster)
-					RR->cluster->replicateCertificateOfNetworkMembership(com);
-#endif
 			}
 
 			// Check membership after we've read any included COM, since

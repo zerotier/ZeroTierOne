@@ -322,8 +322,6 @@
 
 #define ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 
-#define ZT_PROTO_VERB_WHOIS__ERROR__IDX_ZTADDRESS (ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)
-
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID + 8)
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN + 2)
@@ -599,8 +597,11 @@ public:
 		 * OK response payload:
 		 *   <[...] binary serialized identity>
 		 *
-		 * ERROR response payload:
-		 *   <[5] address>
+		 * If querying a cluster, duplicate OK responses may occasionally occur.
+		 * These should be discarded.
+		 *
+		 * If the address is not found, no response is generated. WHOIS requests
+		 * will time out much like ARP requests and similar do in L2.
 		 */
 		VERB_WHOIS = 4,
 
@@ -785,6 +786,9 @@ public:
 		 * to send multicast but does not have the desired number of recipient
 		 * peers.
 		 *
+		 * More than one OK response can occur if the response is broken up across
+		 * multiple packets or if querying a clustered node.
+		 *
 		 * OK response payload:
 		 *   <[8] 64-bit network ID>
 		 *   <[6] MAC address of multicast group being queried>
@@ -794,16 +798,7 @@ public:
 		 *   <[2] 16-bit number of members enumerated in this packet>
 		 *   <[...] series of 5-byte ZeroTier addresses of enumerated members>
 		 *
-		 * If no endpoints are known, OK and ERROR are both optional. It's okay
-		 * to return nothing in that case since gathering is "lazy."
-		 *
-		 * ERROR response payload:
-		 *   <[8] 64-bit network ID>
-		 *   <[6] MAC address of multicast group being queried>
-		 *   <[4] 32-bit ADI for multicast group being queried>
-		 *
-		 * ERRORs are optional and are only generated if permission is denied,
-		 * certificate of membership is out of date, etc.
+		 * ERROR is not generated; queries that return no response are dropped.
 		 */
 		VERB_MULTICAST_GATHER = 13,
 
@@ -1118,7 +1113,7 @@ public:
 		/* Bad/unsupported protocol version */
 		ERROR_BAD_PROTOCOL_VERSION = 2,
 
-		/* Unknown object queried (e.g. with WHOIS) */
+		/* Unknown object queried */
 		ERROR_OBJ_NOT_FOUND = 3,
 
 		/* HELLO pushed an identity whose address is already claimed */

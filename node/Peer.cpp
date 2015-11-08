@@ -156,14 +156,7 @@ void Peer::received(
 				}
 			}
 
-			if (pathIsConfirmed) {
-
-#ifdef ZT_ENABLE_CLUSTER
-				if ((RR->cluster)&&(verb == Packet::VERB_HELLO))
-					RR->cluster->replicateHavePeer(_id);
-#endif
-
-			} else {
+			if (!pathIsConfirmed) {
 				if (verb == Packet::VERB_OK) {
 
 					Path *slot = (Path *)0;
@@ -185,11 +178,6 @@ void Peer::received(
 						pathIsConfirmed = true;
 						_sortPaths(now);
 					}
-
-#ifdef ZT_ENABLE_CLUSTER
-					if (RR->cluster)
-						RR->cluster->replicateHavePeer(_id);
-#endif
 
 				} else {
 

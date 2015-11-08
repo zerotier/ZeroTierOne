@@ -32,6 +32,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <map>
+#include <utility>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
@@ -61,6 +63,16 @@
  * How often to flush outgoing message queues (maximum interval)
  */
 #define ZT_CLUSTER_FLUSH_PERIOD 500
+
+/**
+ * Maximum number of queued outgoing packets per sender address
+ */
+#define ZT_CLUSTER_MAX_QUEUE_PER_SENDER 8
+
+/**
+ * Expiration time for send queue entries
+ */
+#define ZT_CLUSTER_QUEUE_EXPIRATION 2500
 
 namespace ZeroTier {
 
@@ -98,7 +110,7 @@ public:
 	 */
 	enum StateMessageType
 	{
-		STATE_MESSAGE_NOP = 0,
+		CLUSTER_MESSAGE_NOP = 0,
 
 		/**
 		 * This cluster member is alive:
@@ -115,35 +127,46 @@ public:
 		 *   <[8] flags (currently unused, must be zero)>
 		 *   <[1] number of preferred ZeroTier endpoints>
 		 *   <[...] InetAddress(es) of preferred ZeroTier endpoint(s)>
+		 *
+		 * Cluster members constantly broadcast an alive heartbeat and will only
+		 * receive peer redirects if they've done so within the timeout.
 		 */
-		STATE_MESSAGE_ALIVE = 1,
+		CLUSTER_MESSAGE_ALIVE = 1,
 
 		/**
 		 * Cluster member has this peer:
-		 *   <[5] ZeroTier address of peer>
+		 *   <[...] serialized identity of peer>
+		 *
+		 * This is typically sent in response to WANT_PEER but can also be pushed
+		 * to prepopulate if this makes sense.
 		 */
-		STATE_MESSAGE_HAVE_PEER = 2,
+		CLUSTER_MESSAGE_HAVE_PEER = 2,
 
 		/**
 		 * Cluster member wants this peer:
 		 *   <[5] ZeroTier address of peer>
+		 *
+		 * Members that have a direct link to this peer will respond with
+		 * HAVE_PEER.
 		 */
-		STATE_MESSAGE_WANT_PEER = 3,
+		CLUSTER_MESSAGE_WANT_PEER = 3,
 
 		/**
-		 * Peer subscription to multicast group:
-		 *   <[8] network ID>
-		 *   <[5] peer ZeroTier address>
-		 *   <[6] MAC address of multicast group>
-		 *   <[4] 32-bit multicast group ADI>
+		 * A remote packet that we should also possibly respond to:
+		 *   <[2] 16-bit length of remote packet>
+		 *   <[...] remote packet payload>
+		 *
+		 * Cluster members may relay requests by relaying the request packet.
+		 * These may include requests such as WHOIS and MULTICAST_GATHER. The
+		 * packet must be already decrypted, decompressed, and authenticated.
+		 *
+		 * This can only be used for small request packets as per the cluster
+		 * message size limit, but since these are the only ones in question
+		 * this is fine.
+		 *
+		 * If a response is generated it is sent via PROXY_SEND.
 		 */
-		STATE_MESSAGE_MULTICAST_LIKE = 4,
-
-		/**
-		 * Certificate of network membership for a peer:
-		 *   <[...] serialized COM>
-		 */
-		STATE_MESSAGE_COM = 5,
+		CLUSTER_MESSAGE_REMOTE_PACKET = 4,
 
 		/**
 		 * Request that VERB_RENDEZVOUS be sent to a peer that we have:
@@ -157,7 +180,7 @@ public:
 		 * info for its peer, and we send VERB_RENDEZVOUS to both sides: to ours
 		 * directly and with PROXY_SEND to theirs.
 		 */
-		STATE_MESSAGE_PROXY_UNITE = 6,
+		CLUSTER_MESSAGE_PROXY_UNITE = 5,
 
 		/**
 		 * Request that a cluster member send a packet to a locally-known peer:
@@ -173,7 +196,7 @@ public:
 		 * while PROXY_SEND is used to implement proxy sending (which right
 		 * now is only used to send RENDEZVOUS).
 		 */
-		STATE_MESSAGE_PROXY_SEND = 7,
+		CLUSTER_MESSAGE_PROXY_SEND = 6,
 
 		/**
 		 * Replicate a network config for a network we belong to:
@@ -186,7 +209,7 @@ public:
 		 *
 		 * TODO: not implemented yet!
 		 */
-		STATE_MESSAGE_NETWORK_CONFIG = 8
+		CLUSTER_MESSAGE_NETWORK_CONFIG = 7
 	};
 
 	/**
@@ -222,37 +245,28 @@ public:
 	/**
 	 * Send this packet via another node in this cluster if another node has this peer
 	 *
+	 * This is used in the outgoing packet and relaying logic in Switch to
+	 * relay packets to other cluster members. It isn't PROXY_SEND-- that is
+	 * used internally in Cluster to send responses to peer queries.
+	 *
 	 * @param fromPeerAddress Source peer address (if known, should be NULL for fragments)
 	 * @param toPeerAddress Destination peer address
 	 * @param data Packet or packet fragment data
 	 * @param len Length of packet or fragment
 	 * @param unite If true, also request proxy unite across cluster
-	 * @return True if this data was sent via another cluster member, false if none have this peer
 	 */
-	bool sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
+	void sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite);
 
 	/**
-	 * Advertise to the cluster that we have this peer
+	 * Send a distributed query to other cluster members
 	 *
-	 * @param peerId Identity of peer that we have
-	 */
-	void replicateHavePeer(const Identity &peerId);
-
-	/**
-	 * Advertise a multicast LIKE to the cluster
+	 * Some queries such as WHOIS or MULTICAST_GATHER need a response from other
+	 * cluster members. Replies (if any) will be sent back to the peer via
+	 * PROXY_SEND across the cluster.
 	 *
-	 * @param nwid Network ID
-	 * @param peerAddress Peer address that sent LIKE
-	 * @param group Multicast group
+	 * @param pkt Packet to distribute
 	 */
-	void replicateMulticastLike(uint64_t nwid,const Address &peerAddress,const MulticastGroup &group);
-
-	/**
-	 * Advertise a network COM to the cluster
-	 *
-	 * @param com Certificate of network membership (contains peer and network ID)
-	 */
-	void replicateCertificateOfNetworkMembership(const CertificateOfMembership &com);
+	void sendDistributedQuery(const Packet &pkt);
 
 	/**
 	 * Call every ~ZT_CLUSTER_PERIODIC_TASK_PERIOD milliseconds.
@@ -294,6 +308,9 @@ public:
 private:
 	void _send(uint16_t memberId,StateMessageType type,const void *msg,unsigned int len);
 	void _flush(uint16_t memberId);
+
+	void _doREMOTE_WHOIS(uint64_t fromMemberId,const Packet &remotep);
+	void _doREMOTE_MULTICAST_GATHER(uint64_t fromMemberId,const Packet &remotep);
 
 	// These are initialized in the constructor and remain immutable
 	uint16_t _masterSecret[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
@@ -348,10 +365,28 @@ private:
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	Hashtable< Address,unsigned int > _peerAffinities;
-	Mutex _peerAffinities_m;
+	std::map< std::pair<Address,unsigned int>,uint64_t > _remotePeers; // we need ordered behavior and lower_bound here
+	Mutex _remotePeers_m;
+
+	struct _SQE
+	{
+		_SQE() : timestamp(0),len(0),unite(false) {}
+		_SQE(const uint64_t ts,const Address &t,const void *d,const unsigned int l,const bool u) :
+			timestamp(ts),
+			toPeerAddress(t),
+			len(l),
+			unite(u) { memcpy(data,d,l); }
+		uint64_t timestamp;
+		Address toPeerAddress;
+		unsigned int len;
+		bool unite;
+		unsigned char data[ZT_PROTO_MAX_PACKET_LENGTH];
+	};
+	std::multimap<Address,_SQE *> _sendViaClusterQueue; // queue by from peer address
+	Mutex _sendViaClusterQueue_m;
 
 	uint64_t _lastFlushed;
+	uint64_t _lastCleanedRemotePeers;
 };
 
 } // namespace ZeroTier
