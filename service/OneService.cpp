@@ -517,7 +517,7 @@ public:
 		for(int k=0;k<512;++k) {
 			const unsigned int upnport = 40000 + (((port + 1) * (k + 1)) % 25500);
 			_v4UpnpLocalAddress = InetAddress(0,upnport);
-			_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),131072);
+			_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
 			if (_v4UpnpUdpSocket) {
 				_upnpClient = new UPNPClient(upnport);
 				break;

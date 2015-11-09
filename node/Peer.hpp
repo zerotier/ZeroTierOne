@@ -269,7 +269,6 @@ public:
 	 * @param l Direct latency measurment in ms
 	 */
 	inline void addDirectLatencyMeasurment(unsigned int l)
-		throw()
 	{
 		unsigned int ol = _latency;
 		if ((ol > 0)&&(ol < 10000))
@@ -282,7 +281,6 @@ public:
 	 * @return True if this peer has at least one active direct path
 	 */
 	inline bool hasActiveDirectPath(uint64_t now) const
-		throw()
 	{
 		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
@@ -291,6 +289,22 @@ public:
 		}
 		return false;
 	}
+
+#ifdef ZT_ENABLE_CLUSTER
+	/**
+	 * @param now Current time
+	 * @return True if this peer has at least one active direct path that is not cluster-suboptimal
+	 */
+	inline bool hasClusterOptimalPath(uint64_t now) const
+	{
+		Mutex::Lock _l(_lock);
+		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+			if ((_paths[p].active(now))&&(!_paths[p].isClusterSuboptimal()))
+				return true;
+		}
+		return false;
+	}
+#endif
 
 	/**
 	 * Reset paths within a given scope
@@ -328,33 +342,6 @@ public:
 	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
-
-	/**
-	 * Check whether this peer's version is both known and is at least what is specified
-	 *
-	 * @param major Major version to check against
-	 * @param minor Minor version
-	 * @param rev Revision
-	 * @return True if peer's version is at least supplied tuple
-	 */
-	inline bool atLeastVersion(unsigned int major,unsigned int minor,unsigned int rev)
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		if ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)) {
-			if (_vMajor > major)
-				return true;
-			else if (_vMajor == major) {
-				if (_vMinor > minor)
-					return true;
-				else if (_vMinor == minor) {
-					if (_vRevision >= rev)
-						return true;
-				}
-			}
-		}
-		return false;
-	}
 
 	/**
 	 * Get most recently active path addresses for IPv4 and/or IPv6
@@ -467,7 +454,7 @@ public:
 		const unsigned int recSizePos = b.size();
 		b.addSize(4); // space for uint32_t field length
 
-		b.append((uint16_t)1); // version of serialized Peer data
+		b.append((uint16_t)0); // version of serialized Peer data
 
 		_id.serialize(b,false);
 
@@ -531,7 +518,7 @@ public:
 		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
-		if (b.template at<uint16_t>(p) != 1)
+		if (b.template at<uint16_t>(p) != 0)
 			return SharedPtr<Peer>(); // version mismatch
 		p += 2;
 

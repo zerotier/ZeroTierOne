@@ -55,7 +55,7 @@
  * A cluster member is considered dead and will no longer have peers
  * redirected to it if we have not heard a heartbeat in this long.
  */
-#define ZT_CLUSTER_TIMEOUT 10000
+#define ZT_CLUSTER_TIMEOUT 5000
 
 /**
  * Desired period between doPeriodicTasks() in milliseconds

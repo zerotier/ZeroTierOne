@@ -37,6 +37,16 @@
 #include "Constants.hpp"
 #include "InetAddress.hpp"
 
+/**
+ * Flag indicating that this path is suboptimal
+ *
+ * This is used in cluster mode to indicate that the peer has been directed
+ * to a better path. This path can continue to be used but shouldn't be kept
+ * or advertised to other cluster members. Not used if clustering is not
+ * built and enabled.
+ */
+#define ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL 0x0001
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -54,6 +64,7 @@ public:
 		_lastReceived(0),
 		_addr(),
 		_localAddress(),
+		_flags(0),
 		_ipScope(InetAddress::IP_SCOPE_NONE)
 	{
 	}
@@ -63,12 +74,12 @@ public:
 		_lastReceived(0),
 		_addr(addr),
 		_localAddress(localAddress),
+		_flags(0),
 		_ipScope(addr.ipScope())
 	{
 	}
 
 	inline Path &operator=(const Path &p)
-		throw()
 	{
 		if (this != &p)
 			memcpy(this,&p,sizeof(Path));
@@ -82,22 +93,14 @@ public:
 	 *
 	 * @param t Time of send
 	 */
-	inline void sent(uint64_t t)
-		throw()
-	{
-		_lastSend = t;
-	}
+	inline void sent(uint64_t t) { _lastSend = t; }
 
 	/**
 	 * Called when a packet is received from this remote path
 	 *
 	 * @param t Time of receive
 	 */
-	inline void received(uint64_t t)
-		throw()
-	{
-		_lastReceived = t;
-	}
+	inline void received(uint64_t t) { _lastReceived = t; }
 
 	/**
 	 * @param now Current time
@@ -207,26 +210,40 @@ public:
 		return false;
 	}
 
+#ifdef ZT_ENABLE_CLUSTER
+	/**
+	 * @param f New value of ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL
+	 */
+	inline void setClusterSuboptimal(bool f) { _flags = ((f) ? (_flags | ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) : (_flags & (~ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL))); }
+
+	/**
+	 * @return True if ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL is set
+	 */
+	inline bool isClusterSuboptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) != 0); }
+#endif
+
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		b.append((uint8_t)1); // version
+		b.append((uint8_t)0); // version
 		b.append((uint64_t)_lastSend);
 		b.append((uint64_t)_lastReceived);
 		_addr.serialize(b);
 		_localAddress.serialize(b);
+		b.append((uint16_t)_flags);
 	}
 
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		unsigned int p = startAt;
-		if (b[p++] != 1)
+		if (b[p++] != 0)
 			throw std::invalid_argument("invalid serialized Path");
 		_lastSend = b.template at<uint64_t>(p); p += 8;
 		_lastReceived = b.template at<uint64_t>(p); p += 8;
 		p += _addr.deserialize(b,p);
 		p += _localAddress.deserialize(b,p);
+		_flags = b.template at<uint16_t>(p); p += 2;
 		_ipScope = _addr.ipScope();
 		return (p - startAt);
 	}
@@ -236,6 +253,7 @@ private:
 	uint64_t _lastReceived;
 	InetAddress _addr;
 	InetAddress _localAddress;
+	unsigned int _flags;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 };
 

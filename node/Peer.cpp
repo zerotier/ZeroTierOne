@@ -83,6 +83,7 @@ void Peer::received(
 	Packet::Verb inReVerb)
 {
 #ifdef ZT_ENABLE_CLUSTER
+	bool suboptimalPath = false;
 	if ((RR->cluster)&&(hops == 0)) {
 		// Note: findBetterEndpoint() is first since we still want to check
 		// for a better endpoint even if we don't actually send a redirect.
@@ -124,6 +125,7 @@ void Peer::received(
 				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			}
+			suboptimalPath = true;
 		}
 	}
 #endif
@@ -151,6 +153,9 @@ void Peer::received(
 			for(unsigned int p=0;p<np;++p) {
 				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
 					_paths[p].received(now);
+#ifdef ZT_ENABLE_CLUSTER
+					_paths[p].setClusterSuboptimal(suboptimalPath);
+#endif
 					pathIsConfirmed = true;
 					break;
 				}
@@ -174,6 +179,9 @@ void Peer::received(
 					if (slot) {
 						*slot = Path(localAddr,remoteAddr);
 						slot->received(now);
+#ifdef ZT_ENABLE_CLUSTER
+						slot->setClusterSuboptimal(suboptimalPath);
+#endif
 						_numPaths = np;
 						pathIsConfirmed = true;
 						_sortPaths(now);
