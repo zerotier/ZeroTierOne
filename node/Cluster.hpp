@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <map>
 #include <utility>
+#include <list>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
@@ -63,7 +64,7 @@
 /**
  * How often to flush outgoing message queues (maximum interval)
  */
-#define ZT_CLUSTER_FLUSH_PERIOD 300
+#define ZT_CLUSTER_FLUSH_PERIOD 250
 
 /**
  * Maximum number of queued outgoing packets per sender address
@@ -73,7 +74,7 @@
 /**
  * Expiration time for send queue entries
  */
-#define ZT_CLUSTER_QUEUE_EXPIRATION 2500
+#define ZT_CLUSTER_QUEUE_EXPIRATION 1500
 
 namespace ZeroTier {
 
@@ -382,7 +383,7 @@ private:
 		bool unite;
 		unsigned char data[ZT_PROTO_MAX_PACKET_LENGTH];
 	};
-	std::multimap<Address,_SQE *> _sendViaClusterQueue; // queue by from peer address
+	std::map< Address,std::list<_SQE> > _sendViaClusterQueue;
 	Mutex _sendViaClusterQueue_m;
 
 	uint64_t _lastFlushed;
