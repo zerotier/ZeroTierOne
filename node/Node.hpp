@@ -149,9 +149,10 @@ public:
 	 * @param addr Destination address
 	 * @param data Packet data
 	 * @param len Packet length
+	 * @param ttl Desired TTL (default: 0 for unchanged/default TTL)
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len)
+	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -159,7 +160,8 @@ public:
 			reinterpret_cast<const struct sockaddr_storage *>(&localAddress),
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			data,
-			len) == 0);
+			len,
+			ttl) == 0);
 	}
 
 	/**

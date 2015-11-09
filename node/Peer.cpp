@@ -211,7 +211,7 @@ void Peer::received(
 	}
 }
 
-void Peer::sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now)
+void Peer::sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl)
 {
 	// _lock not required here since _id is immutable and nothing else is accessed
 
@@ -228,7 +228,7 @@ void Peer::sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,c
 
 	outp.armor(_key,false); // HELLO is sent in the clear
 	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
-	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size());
+	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size(),ttl);
 }
 
 bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily)

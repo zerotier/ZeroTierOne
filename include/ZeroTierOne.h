@@ -1080,6 +1080,7 @@ typedef int (*ZT_DataStorePutFunction)(
  *  (4) Remote address
  *  (5) Packet data
  *  (6) Packet length
+ *  (7) Desired IP TTL or 0 to use default
  *
  * If there is only one local interface it is safe to ignore the local
  * interface address. Otherwise if running with multiple interfaces, the
@@ -1087,17 +1088,22 @@ typedef int (*ZT_DataStorePutFunction)(
  * the ss_family field is zero (NULL address), a random or preferred
  * default interface should be used.
  *
+ * If TTL is nonzero, packets should have their IP TTL value set to this
+ * value if possible. If this is not possible it is acceptable to ignore
+ * this value and send anyway with normal or default TTL.
+ *
  * The function must return zero on success and may return any error code
  * on failure. Note that success does not (of course) guarantee packet
  * delivery. It only means that the packet appears to have been sent.
  */
 typedef int (*ZT_WirePacketSendFunction)(
-	ZT_Node *,                      /* Node */
+	ZT_Node *,                       /* Node */
 	void *,                          /* User ptr */
 	const struct sockaddr_storage *, /* Local address */
 	const struct sockaddr_storage *, /* Remote address */
 	const void *,                    /* Packet data */
-	unsigned int);                   /* Packet length */
+	unsigned int,                    /* Packet length */
+	unsigned int);                   /* TTL or 0 to use default */
 
 /****************************************************************************/
 /* C Node API                                                               */

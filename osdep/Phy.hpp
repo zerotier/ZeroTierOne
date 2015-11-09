@@ -415,6 +415,24 @@ public:
 	}
 
 	/**
+	 * Set the IP TTL for the next outgoing packet (for IPv4 UDP sockets only)
+	 *
+	 * @param ttl New TTL (0 or >255 will set it to 255)
+	 * @return True on success
+	 */
+	inline bool setIp4UdpTtl(PhySocket *sock,unsigned int ttl)
+	{
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+#if defined(_WIN32) || defined(_WIN64)
+		DWORD tmp = ((ttl == 0)||(ttl > 255)) ? 255 : (DWORD)ttl;
+		return (::setsockopt(sws.sock,IPPROTO_IP,IP_TTL,(const char *)&tmp,sizeof(tmp)) == 0);
+#else
+		int tmp = ((ttl == 0)||(ttl > 255)) ? 255 : (int)ttl;
+		return (::setsockopt(sws.sock,IPPROTO_IP,IP_TTL,(void *)&tmp,sizeof(tmp)) == 0);
+#endif
+	}
+
+	/**
 	 * Send a UDP packet
 	 *
 	 * @param sock UDP socket

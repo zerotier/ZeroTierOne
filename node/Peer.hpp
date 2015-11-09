@@ -170,8 +170,9 @@ public:
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @param ttl Desired IP TTL (default: 0 to leave alone)
 	 */
-	void sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+	void sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl = 0);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts

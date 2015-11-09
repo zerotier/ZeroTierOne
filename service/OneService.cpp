@@ -365,7 +365,7 @@ static int SnodeVirtualNetworkConfigFunction(ZT_Node *node,void *uptr,uint64_t n
 static void SnodeEventCallback(ZT_Node *node,void *uptr,enum ZT_Event event,const void *metaData);
 static long SnodeDataStoreGetFunction(ZT_Node *node,void *uptr,const char *name,void *buf,unsigned long bufSize,unsigned long readIndex,unsigned long *totalSize);
 static int SnodeDataStorePutFunction(ZT_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure);
-static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len);
+static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl);
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
 
 #ifdef ZT_ENABLE_CLUSTER
@@ -1253,16 +1253,23 @@ public:
 		}
 	}
 
-	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len)
+	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 	{
 #ifdef ZT_USE_MINIUPNPC
 		if ((localAddr->ss_family == AF_INET)&&(reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&_v4UpnpLocalAddress)->sin_port)) {
 #ifdef ZT_BREAK_UDP
 			if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
 #endif
-			if (addr->ss_family == AF_INET)
-				return ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-			else return -1;
+				if (addr->ss_family == AF_INET) {
+					if (ttl)
+						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,ttl);
+					const int result = ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
+					if (ttl)
+						_phy.setIp4UdlTtl(_v4UpnpUdpSocket,255);
+					return result;
+				} else {
+					return -1;
+				}
 #ifdef ZT_BREAK_UDP
 			}
 #endif
@@ -1275,8 +1282,13 @@ public:
 #ifdef ZT_BREAK_UDP
 				if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
 #endif
-				if (_v4UdpSocket)
-					result = ((_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
+					if (_v4UdpSocket) {
+						if (ttl)
+							_phy.setIp4UdpTtl(_v4UdpSocket,ttl);
+						result = ((_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
+						if (ttl)
+							_phy.setIp4UdpTtl(_v4UdpSocket,255);
+					}
 #ifdef ZT_BREAK_UDP
 				}
 #endif
@@ -1480,8 +1492,8 @@ static long SnodeDataStoreGetFunction(ZT_Node *node,void *uptr,const char *name,
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStoreGetFunction(name,buf,bufSize,readIndex,totalSize); }
 static int SnodeDataStorePutFunction(ZT_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure)
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeDataStorePutFunction(name,data,len,secure); }
-static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len)
-{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(localAddr,addr,data,len); }
+static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(localAddr,addr,data,len,ttl); }
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
 
