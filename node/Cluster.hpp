@@ -58,12 +58,12 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 250
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
 
 /**
  * How often to flush outgoing message queues (maximum interval)
  */
-#define ZT_CLUSTER_FLUSH_PERIOD 500
+#define ZT_CLUSTER_FLUSH_PERIOD 300
 
 /**
  * Maximum number of queued outgoing packets per sender address

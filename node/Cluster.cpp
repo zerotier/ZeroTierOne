@@ -308,7 +308,6 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 							Buffer<2048> rendezvousForRemote;
 							remotePeerAddress.appendTo(rendezvousForRemote);
 							rendezvousForRemote.append((uint8_t)Packet::VERB_RENDEZVOUS);
-							const unsigned int rendezvousForOtherEndPayloadSizePtr = rendezvousForRemote.size();
 							rendezvousForRemote.addSize(2); // space for actual packet payload length
 							rendezvousForRemote.append((uint8_t)0); // flags == 0
 							localPeerAddress.appendTo(rendezvousForRemote);
@@ -324,7 +323,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 								rendezvousForRemote.append((uint16_t)bestLocalV6.port());
 								rendezvousForRemote.append((uint8_t)16);
 								rendezvousForRemote.append(bestLocalV6.rawIpData(),16);
-								rendezvousForRemote.setAt<uint16_t>(rendezvousForOtherEndPayloadSizePtr,(uint16_t)(9 + 16));
+								rendezvousForRemote.setAt<uint16_t>(ZT_ADDRESS_LENGTH + 1,(uint16_t)(9 + 16));
 							} else if ((bestLocalV4)&&(bestRemoteV4)) {
 								haveMatch = true;
 
@@ -335,7 +334,7 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 								rendezvousForRemote.append((uint16_t)bestLocalV4.port());
 								rendezvousForRemote.append((uint8_t)4);
 								rendezvousForRemote.append(bestLocalV4.rawIpData(),4);
-								rendezvousForRemote.setAt<uint16_t>(rendezvousForOtherEndPayloadSizePtr,(uint16_t)(9 + 4));
+								rendezvousForRemote.setAt<uint16_t>(ZT_ADDRESS_LENGTH + 1,(uint16_t)(9 + 4));
 							}
 
 							if (haveMatch) {
@@ -749,11 +748,13 @@ void Cluster::_doREMOTE_WHOIS(uint64_t fromMemberId,const Packet &remotep)
 			Buffer<1024> routp;
 			remotep.source().appendTo(routp);
 			routp.append((uint8_t)Packet::VERB_OK);
+			routp.addSize(2); // space for length
 			routp.append((uint8_t)Packet::VERB_WHOIS);
 			routp.append(remotep.packetId());
 			queried.serialize(routp);
 
 			Mutex::Lock _l2(_members[fromMemberId].lock);
+			routp.setAt<uint16_t>(ZT_ADDRESS_LENGTH + 1,(uint16_t)(routp.size() - ZT_ADDRESS_LENGTH - 3));
 			_send(fromMemberId,CLUSTER_MESSAGE_PROXY_SEND,routp.data(),routp.size());
 			_flush(fromMemberId);
 		}
@@ -771,15 +772,17 @@ void Cluster::_doREMOTE_MULTICAST_GATHER(uint64_t fromMemberId,const Packet &rem
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH> routp;
 		remotePeerAddress.appendTo(routp);
 		routp.append((uint8_t)Packet::VERB_OK);
+		routp.addSize(2); // space for length
 		routp.append((uint8_t)Packet::VERB_MULTICAST_GATHER);
 		routp.append(remotep.packetId());
 		routp.append(nwid);
 		mg.mac().appendTo(routp);
 		routp.append((uint32_t)mg.adi());
 
-		if (gatherLimit > ((ZT_CLUSTER_MAX_MESSAGE_LENGTH - 64) / 5))
-			gatherLimit = ((ZT_CLUSTER_MAX_MESSAGE_LENGTH - 64) / 5);
+		if (gatherLimit > ((ZT_CLUSTER_MAX_MESSAGE_LENGTH - 80) / 5))
+			gatherLimit = ((ZT_CLUSTER_MAX_MESSAGE_LENGTH - 80) / 5);
 		if (RR->mc->gather(remotePeerAddress,nwid,mg,routp,gatherLimit)) {
+			routp.setAt<uint16_t>(ZT_ADDRESS_LENGTH + 1,(uint16_t)(routp.size() - ZT_ADDRESS_LENGTH - 3));
 			Mutex::Lock _l2(_members[fromMemberId].lock);
 			_send(fromMemberId,CLUSTER_MESSAGE_PROXY_SEND,routp.data(),routp.size());
 		}
