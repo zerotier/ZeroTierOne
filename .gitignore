@@ -44,6 +44,7 @@ Thumbs.db
 *.pid
 *.pkg
 *.o
+*.o-*
 *.core
 *.deb
 *.rpm
