@@ -972,7 +972,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(RR,_localAddress,a,now);
+							peer->sendHELLO(RR,_localAddress,a,now);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -983,7 +983,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->attemptToContactAt(RR,_localAddress,a,now);
+							peer->sendHELLO(RR,_localAddress,a,now);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}

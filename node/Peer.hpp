@@ -171,7 +171,7 @@ public:
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 */
-	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+	void sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts

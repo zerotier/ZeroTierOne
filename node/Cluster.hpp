@@ -53,11 +53,6 @@
 #define ZT_CLUSTER_TIMEOUT 10000
 
 /**
- * How often should we announce that we have a peer?
- */
-#define ZT_CLUSTER_HAVE_PEER_ANNOUNCE_PERIOD ((ZT_PEER_DIRECT_PING_DELAY / 2) - 1000)
-
-/**
  * Desired period between doPeriodicTasks() in milliseconds
  */
 #define ZT_CLUSTER_PERIODIC_TASK_PERIOD 250
@@ -116,6 +111,7 @@ public:
 		 *   <[4] Z location (signed 32-bit)>
 		 *   <[8] local clock at this member>
 		 *   <[8] load average>
+		 *   <[8] number of peers>
 		 *   <[8] flags (currently unused, must be zero)>
 		 *   <[1] number of preferred ZeroTier endpoints>
 		 *   <[...] InetAddress(es) of preferred ZeroTier endpoint(s)>
@@ -125,12 +121,14 @@ public:
 		/**
 		 * Cluster member has this peer:
 		 *   <[5] ZeroTier address of peer>
-		 *   <[...] binary serialized peer remote physical address>
-		 *
-		 * Clusters send this message when they learn a path to a peer. The
-		 * replicated physical address is the one learned.
 		 */
 		STATE_MESSAGE_HAVE_PEER = 2,
+
+		/**
+		 * Cluster member wants this peer:
+		 *   <[5] ZeroTier address of peer>
+		 */
+		STATE_MESSAGE_WANT_PEER = 3,
 
 		/**
 		 * Peer subscription to multicast group:
@@ -139,13 +137,13 @@ public:
 		 *   <[6] MAC address of multicast group>
 		 *   <[4] 32-bit multicast group ADI>
 		 */
-		STATE_MESSAGE_MULTICAST_LIKE = 3,
+		STATE_MESSAGE_MULTICAST_LIKE = 4,
 
 		/**
 		 * Certificate of network membership for a peer:
 		 *   <[...] serialized COM>
 		 */
-		STATE_MESSAGE_COM = 4,
+		STATE_MESSAGE_COM = 5,
 
 		/**
 		 * Request that VERB_RENDEZVOUS be sent to a peer that we have:
@@ -159,7 +157,7 @@ public:
 		 * info for its peer, and we send VERB_RENDEZVOUS to both sides: to ours
 		 * directly and with PROXY_SEND to theirs.
 		 */
-		STATE_MESSAGE_PROXY_UNITE = 5,
+		STATE_MESSAGE_PROXY_UNITE = 6,
 
 		/**
 		 * Request that a cluster member send a packet to a locally-known peer:
@@ -175,7 +173,7 @@ public:
 		 * while PROXY_SEND is used to implement proxy sending (which right
 		 * now is only used to send RENDEZVOUS).
 		 */
-		STATE_MESSAGE_PROXY_SEND = 6,
+		STATE_MESSAGE_PROXY_SEND = 7,
 
 		/**
 		 * Replicate a network config for a network we belong to:
@@ -188,7 +186,7 @@ public:
 		 *
 		 * TODO: not implemented yet!
 		 */
-		STATE_MESSAGE_NETWORK_CONFIG = 7
+		STATE_MESSAGE_NETWORK_CONFIG = 8
 	};
 
 	/**
@@ -237,9 +235,8 @@ public:
 	 * Advertise to the cluster that we have this peer
 	 *
 	 * @param peerId Identity of peer that we have
-	 * @param physicalAddress Physical address of peer (from our POV)
 	 */
-	void replicateHavePeer(const Identity &peerId,const InetAddress &physicalAddress);
+	void replicateHavePeer(const Identity &peerId);
 
 	/**
 	 * Advertise a multicast LIKE to the cluster
@@ -321,6 +318,7 @@ private:
 		uint64_t lastAnnouncedAliveTo;
 
 		uint64_t load;
+		uint64_t peers;
 		int32_t x,y,z;
 
 		std::vector<InetAddress> zeroTierPhysicalEndpoints;
@@ -334,6 +332,7 @@ private:
 			lastReceivedAliveAnnouncement = 0;
 			lastAnnouncedAliveTo = 0;
 			load = 0;
+			peers = 0;
 			x = 0;
 			y = 0;
 			z = 0;
@@ -349,17 +348,9 @@ private:
 	std::vector<uint16_t> _memberIds;
 	Mutex _memberIds_m;
 
-	struct _PA
-	{
-		_PA() : ts(0),mid(0xffffffff) {}
-		uint64_t ts;
-	 	unsigned int mid;
-	};
-	Hashtable< Address,_PA > _peerAffinities;
+	Hashtable< Address,unsigned int > _peerAffinities;
 	Mutex _peerAffinities_m;
 
-	uint64_t _lastCleanedPeerAffinities;
-	uint64_t _lastCheckedPeersForAnnounce;
 	uint64_t _lastFlushed;
 };
 
