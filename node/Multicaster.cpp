@@ -78,7 +78,7 @@ void Multicaster::remove(uint64_t nwid,const MulticastGroup &mg,const Address &m
 	}
 }
 
-unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Packet &appendTo,unsigned int limit) const
+unsigned int Multicaster::gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &appendTo,unsigned int limit) const
 {
 	unsigned char *p;
 	unsigned int added = 0,i,k,rptr,totalKnown = 0;
