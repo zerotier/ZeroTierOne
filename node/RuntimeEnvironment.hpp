@@ -57,12 +57,12 @@ public:
 		node(n)
 		,identity()
 		,localNetworkController((NetworkController *)0)
-		,dp((DeferredPackets *)0)
 		,sw((Switch *)0)
 		,mc((Multicaster *)0)
 		,antiRec((AntiRecursion *)0)
 		,topology((Topology *)0)
 		,sa((SelfAwareness *)0)
+		,dp((DeferredPackets *)0)
 #ifdef ZT_ENABLE_CLUSTER
 		,cluster((Cluster *)0)
 #endif
@@ -80,10 +80,6 @@ public:
 	// This is set externally to an instance of this base class
 	NetworkController *localNetworkController;
 
-	// This is created if background threads call Node::backgroundThreadMain().
-	DeferredPackets *volatile dp; // can be read without lock but not written
-	Mutex dpSetLock;
-
 	/*
 	 * Order matters a bit here. These are constructed in this order
 	 * and then deleted in the opposite order on Node exit. The order ensures
@@ -97,10 +93,15 @@ public:
 	AntiRecursion *antiRec;
 	Topology *topology;
 	SelfAwareness *sa;
+	DeferredPackets *dp;
 
 #ifdef ZT_ENABLE_CLUSTER
 	Cluster *cluster;
 #endif
+
+	// This is set to >0 if background threads are waiting on deferred
+	// packets, otherwise 'dp' should not be used.
+	volatile int dpEnabled;
 };
 
 } // namespace ZeroTier

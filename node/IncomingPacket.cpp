@@ -57,9 +57,8 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 		if ((cipher() == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)&&(verb() == Packet::VERB_HELLO)) {
 			// Unencrypted HELLOs require some potentially expensive verification, so
 			// do this in the background if background processing is enabled.
-			DeferredPackets *const dp = RR->dp; // read volatile pointer
-			if ((dp)&&(!deferred)) {
-				dp->enqueue(this);
+			if ((RR->dpEnabled > 0)&&(!deferred)) {
+				RR->dp->enqueue(this);
 				return true; // 'handled' via deferring to background thread(s)
 			} else {
 				// A null pointer for peer to _doHELLO() tells it to run its own
@@ -405,12 +404,12 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			}	break;
 
 			case Packet::VERB_WHOIS: {
-				/* Right now only root servers are allowed to send OK(WHOIS) to prevent
-				 * poisoning attacks. Further decentralization will require some other
-				 * kind of trust mechanism. */
 				if (RR->topology->isRoot(peer->identity())) {
 					const Identity id(*this,ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY);
-					if (id.locallyValidate())
+					// Right now we can skip this since OK(WHOIS) is only accepted from
+					// roots. In the future it should be done if we query less trusted
+					// sources.
+					//if (id.locallyValidate())
 						RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR->identity,id))));
 				}
 			} break;
