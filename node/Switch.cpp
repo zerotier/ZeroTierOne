@@ -621,8 +621,10 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
 #ifdef ZT_ENABLE_CLUSTER
-				if ((RR->cluster)&&(RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false)))
+				if (RR->cluster) {
+					RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
 					return;
+				}
 #endif
 
 				// Don't know peer or no direct path -- so relay via root server
@@ -713,14 +715,15 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 			} else {
 #ifdef ZT_ENABLE_CLUSTER
 				if (RR->cluster) {
-					Mutex::Lock _l(_lastUniteAttempt_m);
-					uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
-					const bool shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
-					if (RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),shouldUnite)) {
-						if (shouldUnite)
-							luts = now;
-						return;
+					bool shouldUnite;
+					{
+						Mutex::Lock _l(_lastUniteAttempt_m);
+						uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
+						shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
+						luts = now;
 					}
+					RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),shouldUnite);
+					return;
 				}
 #endif
 
