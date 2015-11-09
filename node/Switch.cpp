@@ -720,7 +720,8 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 						Mutex::Lock _l(_lastUniteAttempt_m);
 						uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
 						shouldUnite = ((now - luts) >= ZT_MIN_UNITE_INTERVAL);
-						luts = now;
+						if (shouldUnite)
+							luts = now;
 					}
 					RR->cluster->sendViaCluster(source,destination,packet->data(),packet->size(),shouldUnite);
 					return;

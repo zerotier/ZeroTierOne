@@ -395,6 +395,7 @@ void Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPee
 				mostRecentTs = rpe->second;
 				mostRecentMemberId = rpe->first.second;
 			}
+			++rpe;
 		}
 	}
 
