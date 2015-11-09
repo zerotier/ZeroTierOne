@@ -45,6 +45,7 @@
 #include "Mutex.hpp"
 #include "SharedPtr.hpp"
 #include "Hashtable.hpp"
+#include "Packet.hpp"
 
 /**
  * Timeout for cluster members being considered "alive"
@@ -77,7 +78,6 @@
 namespace ZeroTier {
 
 class RuntimeEnvironment;
-class CertificateOfMembership;
 class MulticastGroup;
 class Peer;
 class Identity;
