@@ -767,8 +767,6 @@ void Cluster::_doREMOTE_MULTICAST_GATHER(uint64_t fromMemberId,const Packet &rem
 	unsigned int gatherLimit = remotep.at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT);
 	const Address remotePeerAddress(remotep.source());
 
-	//TRACE("<<MC %s(%s) GATHER up to %u in %.16llx/%s",source().toString().c_str(),_remoteAddress.toString().c_str(),gatherLimit,nwid,mg.toString().c_str());
-
 	if (gatherLimit) {
 		Buffer<ZT_PROTO_MAX_PACKET_LENGTH> routp;
 		remotePeerAddress.appendTo(routp);
