@@ -3,14 +3,17 @@
 // ---------------------------------------------------------------------------
 // Customizable parameters:
 
+// Time between startup and first test attempt
+var TEST_STARTUP_LAG = 10000;
+
 // Maximum interval between test attempts (actual timing is random % this)
 var TEST_INTERVAL_MAX = (60000 * 10);
 
 // Test timeout in ms
-var TEST_TIMEOUT = 60000;
+var TEST_TIMEOUT = 30000;
 
 // Where should I get other agents' IDs and POST results?
-var SERVER_HOST = '52.32.186.221';
+var SERVER_HOST = '52.26.196.147';
 var SERVER_PORT = 18080;
 
 // Which port do agents use to serve up test data to each other?
@@ -186,5 +189,5 @@ app.get('/',function(req,res) { return res.status(200).send(payload); });
 
 var expressServer = app.listen(AGENT_PORT,function () {
 	// Start timeout-based loop
-	doTest();
+	setTimeout(doTest(),TEST_STARTUP_LAG);
 });

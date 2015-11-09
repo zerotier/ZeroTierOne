@@ -39,6 +39,7 @@
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
 #include "Address.hpp"
+#include "Array.hpp"
 #include "InetAddress.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"
@@ -74,7 +75,7 @@
 /**
  * Expiration time for send queue entries
  */
-#define ZT_CLUSTER_QUEUE_EXPIRATION 1500
+#define ZT_CLUSTER_QUEUE_EXPIRATION 500
 
 namespace ZeroTier {
 
@@ -372,18 +373,20 @@ private:
 	struct _SQE
 	{
 		_SQE() : timestamp(0),len(0),unite(false) {}
-		_SQE(const uint64_t ts,const Address &t,const void *d,const unsigned int l,const bool u) :
+		_SQE(const uint64_t ts,const Address &f,const Address &t,const void *d,const unsigned int l,const bool u) :
 			timestamp(ts),
+			fromPeerAddress(f),
 			toPeerAddress(t),
 			len(l),
 			unite(u) { memcpy(data,d,l); }
 		uint64_t timestamp;
+		Address fromPeerAddress;
 		Address toPeerAddress;
 		unsigned int len;
 		bool unite;
 		unsigned char data[ZT_PROTO_MAX_PACKET_LENGTH];
 	};
-	std::map< Address,std::list<_SQE> > _sendViaClusterQueue;
+	std::list<_SQE> _sendViaClusterQueue;
 	Mutex _sendViaClusterQueue_m;
 
 	uint64_t _lastFlushed;
