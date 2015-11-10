@@ -30,16 +30,11 @@
 
 #ifdef ZT_ENABLE_CLUSTER
 
-#include <vector>
-#include <algorithm>
 #include <map>
-#include <utility>
-#include <list>
 
 #include "Constants.hpp"
 #include "../include/ZeroTierOne.h"
 #include "Address.hpp"
-#include "Array.hpp"
 #include "InetAddress.hpp"
 #include "SHA512.hpp"
 #include "Utils.hpp"
@@ -48,6 +43,7 @@
 #include "SharedPtr.hpp"
 #include "Hashtable.hpp"
 #include "Packet.hpp"
+#include "SharedPtr.hpp"
 
 /**
  * Timeout for cluster members being considered "alive"
@@ -60,12 +56,12 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 100
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 25
 
 /**
  * How often to flush outgoing message queues (maximum interval)
  */
-#define ZT_CLUSTER_FLUSH_PERIOD 250
+#define ZT_CLUSTER_FLUSH_PERIOD 100
 
 /**
  * Maximum number of queued outgoing packets per sender address
@@ -75,7 +71,7 @@
 /**
  * Expiration time for send queue entries
  */
-#define ZT_CLUSTER_QUEUE_EXPIRATION 500
+#define ZT_CLUSTER_QUEUE_EXPIRATION 1500
 
 namespace ZeroTier {
 
@@ -83,6 +79,9 @@ class RuntimeEnvironment;
 class MulticastGroup;
 class Peer;
 class Identity;
+
+// Internal class implemented inside Cluster.cpp
+class _ClusterSendQueue;
 
 /**
  * Multi-homing cluster state replication and packet relaying
@@ -323,10 +322,11 @@ private:
 	void _doREMOTE_WHOIS(uint64_t fromMemberId,const Packet &remotep);
 	void _doREMOTE_MULTICAST_GATHER(uint64_t fromMemberId,const Packet &remotep);
 
-	// These are initialized in the constructor and remain immutable
+	// These are initialized in the constructor and remain immutable ------------
 	uint16_t _masterSecret[ZT_SHA512_DIGEST_LEN / sizeof(uint16_t)];
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
 	const RuntimeEnvironment *RR;
+	_ClusterSendQueue *const _sendQueue;
 	void (*_sendFunction)(void *,unsigned int,const void *,unsigned int);
 	void *_sendFunctionArg;
 	int (*_addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *);
@@ -336,7 +336,7 @@ private:
 	const int32_t _z;
 	const uint16_t _id;
 	const std::vector<InetAddress> _zeroTierPhysicalEndpoints;
-	// end immutable fields
+	// end immutable fields -----------------------------------------------------
 
 	struct _Member
 	{
@@ -379,27 +379,9 @@ private:
 	std::map< std::pair<Address,unsigned int>,uint64_t > _remotePeers; // we need ordered behavior and lower_bound here
 	Mutex _remotePeers_m;
 
-	struct _SQE
-	{
-		_SQE() : timestamp(0),len(0),unite(false) {}
-		_SQE(const uint64_t ts,const Address &f,const Address &t,const void *d,const unsigned int l,const bool u) :
-			timestamp(ts),
-			fromPeerAddress(f),
-			toPeerAddress(t),
-			len(l),
-			unite(u) { memcpy(data,d,l); }
-		uint64_t timestamp;
-		Address fromPeerAddress;
-		Address toPeerAddress;
-		unsigned int len;
-		bool unite;
-		unsigned char data[ZT_PROTO_MAX_PACKET_LENGTH];
-	};
-	std::list<_SQE> _sendViaClusterQueue;
-	Mutex _sendViaClusterQueue_m;
-
 	uint64_t _lastFlushed;
 	uint64_t _lastCleanedRemotePeers;
+	uint64_t _lastCleanedQueue;
 };
 
 } // namespace ZeroTier
