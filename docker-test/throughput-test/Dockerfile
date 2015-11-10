@@ -1,10 +1,10 @@
 # ZT Netcon Throughput test
-FROM fedora:22
+FROM fedora:23
 MAINTAINER https://www.zerotier.com/
 
 # Install apps
 RUN yum -y update
-RUN yum -y install httpd
+RUN yum -y install httpd-2.4.16-1.fc23
 RUN yum -y install nano
 RUN yum clean all
 
