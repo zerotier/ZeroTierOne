@@ -30,7 +30,7 @@ app.post('/:agentId',function(req,res) {
 		var resultData = null;
 		try {
 			resultData = JSON.parse(req.rawBody);
-			console.log(resultData.source+','+resultData.target+','+resultData.time+','+resultData.bytes+','+resultData.timedOut+',"'+((resultData.error) ? resultData.error : '')+'"');
+			console.log(Date.now()+','+resultData.source+','+resultData.target+','+resultData.time+','+resultData.bytes+','+resultData.timedOut+',"'+((resultData.error) ? resultData.error : '')+'"');
 		} catch (e) {}
 	}
 

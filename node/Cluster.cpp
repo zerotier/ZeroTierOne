@@ -363,6 +363,17 @@ void Cluster::handleIncomingStateMessage(const void *msg,unsigned int len)
 	}
 }
 
+void Cluster::broadcastHavePeer(const Identity &id)
+{
+	Buffer<1024> buf;
+	id.serialize(buf);
+	Mutex::Lock _l(_memberIds_m);
+	for(std::vector<uint16_t>::const_iterator mid(_memberIds.begin());mid!=_memberIds.end();++mid) {
+		Mutex::Lock _l2(_members[*mid].lock);
+		_send(*mid,CLUSTER_MESSAGE_HAVE_PEER,buf.data(),buf.size());
+	}
+}
+
 void Cluster::sendViaCluster(const Address &fromPeerAddress,const Address &toPeerAddress,const void *data,unsigned int len,bool unite)
 {
 	if (len > ZT_PROTO_MAX_PACKET_LENGTH) // sanity check

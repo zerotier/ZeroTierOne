@@ -245,6 +245,15 @@ public:
 	void handleIncomingStateMessage(const void *msg,unsigned int len);
 
 	/**
+	 * Broadcast that we have a given peer
+	 *
+	 * This should be done when new peers are first contacted.
+	 *
+	 * @param id Identity of peer
+	 */
+	void broadcastHavePeer(const Identity &id);
+
+	/**
 	 * Send this packet via another node in this cluster if another node has this peer
 	 *
 	 * This is used in the outgoing packet and relaying logic in Switch to

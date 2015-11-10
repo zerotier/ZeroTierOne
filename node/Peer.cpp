@@ -187,6 +187,11 @@ void Peer::received(
 						_sortPaths(now);
 					}
 
+#ifdef ZT_ENABLE_CLUSTER
+					if ((RR->cluster)&&(!suboptimalPath))
+						RR->cluster->broadcastHavePeer(_id);
+#endif
+
 				} else {
 
 					/* If this path is not known, send a HELLO. We don't learn
