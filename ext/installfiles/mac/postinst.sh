@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin
 
 launchctl unload /Library/LaunchDaemons/com.zerotier.one.plist >>/dev/null 2>&1
 
@@ -16,7 +16,8 @@ rm -f zerotier-cli zerotier-idtool
 ln -sf zerotier-one zerotier-cli
 ln -sf zerotier-one zerotier-idtool
 
-cd /usr/bin
+mkdir -p /usr/local/bin
+cd /usr/local/bin
 rm -f zerotier-cli zerotier-idtool
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-cli
 ln -sf "/Library/Application Support/ZeroTier/One/zerotier-one" zerotier-idtool
