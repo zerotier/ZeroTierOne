@@ -97,7 +97,7 @@ function agentIdToIp(agentId)
 };
 
 var lastTestResult = null;
-var allOtherAgents = [];
+var allOtherAgents = {};
 
 function doTest()
 {
@@ -114,16 +114,19 @@ function doTest()
 			if (body) {
 				try {
 					var peers = JSON.parse(body);
-					if (Array.isArray(peers))
-						allOtherAgents = allOtherAgents.concat(peers);
+					if (Array.isArray(peers)) {
+						for(var xx=0;xx<peers.length;++xx)
+							allOtherAgents[peers[xx]] = true;
+					}
 				} catch (e) {}
 			}
 
-			if (allOtherAgents.length > 1) {
+			var agents = Object.keys(allOtherAgents);
+			if (agents.length > 1) {
 
-				var target = allOtherAgents[Math.floor(Math.random() * allOtherAgents.length)];
+				var target = agents[Math.floor(Math.random() * agents.length)];
 				while (target === thisAgentId)
-					target = allOtherAgents[Math.floor(Math.random() * allOtherAgents.length)];
+					target = agents[Math.floor(Math.random() * agents.length)];
 
 				var testRequest = null;
 				var timeoutId = null;

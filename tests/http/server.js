@@ -34,16 +34,16 @@ app.post('/:agentId',function(req,res) {
 		} catch (e) {}
 	}
 
-	var thisUpdate = null;
-	if (!(agentId in knownAgents)) {
-		thisUpdate = Object.keys(knownAgents);
-		for(var id in knownAgents)
-			knownAgents[id].push(agentId);
-		knownAgents[agentId] = [];
-	} else {
-		thisUpdate = knownAgents[agentId];
-		knownAgents[agentId] = [];
+	knownAgents[agentId] = true;
+	var thisUpdate = [];
+	var agents = Object.keys(knownAgents);
+	if (agents.length < 100)
+		thisUpdate = agents;
+	else {
+		for(var xx=0;xx<100;++xx)
+			thisUpdate.push(agents[Math.floor(Math.random() * agents.length)]);
 	}
+
 	return res.status(200).send(JSON.stringify(thisUpdate));
 });
 
