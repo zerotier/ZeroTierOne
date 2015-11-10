@@ -3,56 +3,58 @@
 // suitable for graphing.
 //
 
-// Average over this interval of time
-var GRAPH_INTERVAL = 60000;
+// Number of requests per statistical bracket
+var BRACKET_SIZE = 1000;
 
 // Number of bytes expected from each test
 var EXPECTED_BYTES = 5000;
 
 var readline = require('readline');
 var rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: false
+	input: process.stdin,
+	output: process.stdout,
+	terminal: false
 });
 
-var startTS = 0;
-
 var count = 0.0;
-var totalFailures = 0;
-var totalPartialFailures = 0;
+var overallCount = 0.0;
+var totalFailures = 0.0;
+var totalOverallFailures = 0.0;
 var totalMs = 0;
 var totalData = 0;
+var devices = {};
 
 rl.on('line',function(line) {
-  line = line.trim();
-  var ls = line.split(',');
-  if (ls.length == 7) {
-    var ts = parseInt(ls[0]);
-    var from = ls[1];
-    var to = ls[2];
-    var ms = parseFloat(ls[3]);
-    var bytes = parseInt(ls[4]);
-    var timedOut = (ls[5] == 'true') ? true : false;
-    var errMsg = ls[6];
+	line = line.trim();
+	var ls = line.split(',');
+	if (ls.length == 7) {
+		var ts = parseInt(ls[0]);
+		var fromId = ls[1];
+		var toId = ls[2];
+		var ms = parseFloat(ls[3]);
+		var bytes = parseInt(ls[4]);
+		var timedOut = (ls[5] == 'true') ? true : false;
+		var errMsg = ls[6];
 
-    count += 1.0;
-    if ((bytes <= 0)||(timedOut))
-      ++totalFailures;
-    if (bytes !== EXPECTED_BYTES)
-      ++totalPartialFailures;
-    totalMs += ms;
-    totalData += bytes;
+		count += 1.0;
+		overallCount += 1.0;
+		if ((bytes !== EXPECTED_BYTES)||(timedOut)) {
+			totalFailures += 1.0;
+			totalOverallFailures += 1.0;
+		}
+		totalMs += ms;
+		totalData += bytes;
 
-    if (startTS === 0) {
-      startTS = ts;
-    } else if (((ts - startTS) >= GRAPH_INTERVAL)&&(count > 0.0)) {
-      console.log(count.toString()+','+(totalMs / count)+','+totalFailures+','+totalPartialFailures+','+totalData);
+		devices[fromId] = true;
+		devices[toId] = true;
 
-      count = 0.0;
-      totalFailures = 0;
-      totalPartialFailures = 0;
-      totalMs = 0;
-    }
-  } // else ignore junk
+		if (count >= BRACKET_SIZE) {
+			console.log(count.toString()+','+overallCount.toString()+','+(totalMs / count)+','+(totalFailures / count)+','+(totalOverallFailures / overallCount)+','+totalData+','+Object.keys(devices).length);
+
+			count = 0.0;
+			totalFailures = 0.0;
+			totalMs = 0;
+			totalData = 0;
+		}
+	} // else ignore junk
 });

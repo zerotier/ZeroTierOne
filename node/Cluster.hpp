@@ -56,7 +56,7 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 25
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 50
 
 /**
  * How often to flush outgoing message queues (maximum interval)
@@ -71,7 +71,7 @@
 /**
  * Expiration time for send queue entries
  */
-#define ZT_CLUSTER_QUEUE_EXPIRATION 1500
+#define ZT_CLUSTER_QUEUE_EXPIRATION 5000
 
 namespace ZeroTier {
 

@@ -30,12 +30,21 @@ app.post('/:agentId',function(req,res) {
 		var resultData = null;
 		try {
 			resultData = JSON.parse(req.rawBody);
-			console.log(Date.now()+','+resultData.source+','+resultData.target+','+resultData.time+','+resultData.bytes+','+resultData.timedOut+',"'+((resultData.error) ? resultData.error : '')+'"');
+			console.log(Date.now().toString()+','+resultData.source+','+resultData.target+','+resultData.time+','+resultData.bytes+','+resultData.timedOut+',"'+((resultData.error) ? resultData.error : '')+'"');
 		} catch (e) {}
 	}
 
-	knownAgents[agentId] = Date.now();
-	return res.status(200).send(JSON.stringify(Object.keys(knownAgents)));
+	var thisUpdate = null;
+	if (!(agentId in knownAgents)) {
+		thisUpdate = Object.keys(knownAgents);
+		for(var id in knownAgents)
+			knownAgents[id].push(agentId);
+		knownAgents[agentId] = [];
+	} else {
+		thisUpdate = knownAgents[agentId];
+		knownAgents[agentId] = [];
+	}
+	return res.status(200).send(JSON.stringify(thisUpdate));
 });
 
 var expressServer = app.listen(SERVER_PORT,function () {

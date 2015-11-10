@@ -115,7 +115,7 @@ function doTest()
 				try {
 					var peers = JSON.parse(body);
 					if (Array.isArray(peers))
-						allOtherAgents = peers;
+						allOtherAgents = allOtherAgents.concat(peers);
 				} catch (e) {}
 			}
 

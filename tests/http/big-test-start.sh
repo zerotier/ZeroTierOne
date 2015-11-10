@@ -4,7 +4,7 @@
 # 250 with a 16GB RAM VM like Amazon m4.xlarge seems good
 NUM_CONTAINERS=250
 CONTAINER_IMAGE=zerotier/http-test
-SCALE_UP_DELAY=4
+SCALE_UP_DELAY=10
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/usr/sbin:/sbin
 
