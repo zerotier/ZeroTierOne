@@ -6,7 +6,8 @@ make -f make-intercept.mk lib
 rm *.o
 rm liblwip.so
 make -f make-liblwip.mk
-cd ../docker-test/throughput-test
+
+cd ../docker-test/throughput
 
 cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli

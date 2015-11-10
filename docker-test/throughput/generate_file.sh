@@ -1,1 +1,1 @@
-dd if=/dev/urandom of=/var/www/html/bigfile  bs=100M  count=1
+dd if=/dev/urandom of=/var/www/html/big  bs=100M  count=1
