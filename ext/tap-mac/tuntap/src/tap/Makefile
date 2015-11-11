@@ -19,18 +19,18 @@ BUNDLE_SIGNATURE = ????
 BUNDLE_PACKAGETYPE = KEXT
 BUNDLE_VERSION = $(TAP_KEXT_VERSION)
 
-INCLUDE = -I.. -I/System/Library/Frameworks/Kernel.framework/Headers -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk/System/Library/Frameworks/Kernel.framework/Headers
-CFLAGS = -Wall -mkernel -force_cpusubtype_ALL \
-	-fno-builtin -fno-stack-protector -arch i386 -arch x86_64 \
-	-DKERNEL -D__APPLE__ -DKERNEL_PRIVATE -DTUNTAP_VERSION=\"$(TUNTAP_VERSION)\" \
+INCLUDE = -I.. -I/System/Library/Frameworks/Kernel.framework/Headers
+CFLAGS = -Wall -Werror -mkernel -force_cpusubtype_ALL \
+	-nostdinc -fno-builtin -fno-stack-protector -msoft-float -fno-common \
+	-arch x86_64 \
+	-DKERNEL -DAPPLE -DKERNEL_PRIVATE -DTUNTAP_VERSION=\"$(TUNTAP_VERSION)\" \
 	-DTAP_KEXT_VERSION=\"$(TAP_KEXT_VERSION)\"
 CCFLAGS = $(CFLAGS)
-LDFLAGS = -Wall -mkernel -nostdlib -r -lcc_kext -arch i386 -arch x86_64 -Xlinker -kext
+LDFLAGS = -Wall -Werror -arch x86_64 -Xlinker -kext -nostdlib -lkmodc++ -lkmod -lcc_kext
 
-#CCP = g++
-#CC = gcc
-CCP = ../../../../llvm-g++-Xcode4.6.2/bin/llvm-g++
-CC = ../../../../llvm-g++-Xcode4.6.2/bin/llvm-gcc
+CCP = clang -x c++
+CC = clang -x c
+LD = clang
 
 all: $(KMOD_BIN) bundle
 
@@ -40,7 +40,7 @@ all: $(KMOD_BIN) bundle
 	$(CCP) $(CCFLAGS) $(INCLUDE) -c $< -o $@
 
 $(KMOD_BIN):	$(OBJS)
-	$(CCP) $(LDFLAGS) -o $(KMOD_BIN) $(OBJS)
+	$(LD) $(LDFLAGS) -o $(KMOD_BIN) $(OBJS)
 
 bundle:	$(KMOD_BIN)
 	rm -rf $(BUNDLE_DIR)/$(BUNDLE_NAME)

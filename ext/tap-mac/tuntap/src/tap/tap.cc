@@ -38,6 +38,8 @@ extern "C" {
 #include <sys/random.h>
 #include <sys/kern_event.h>
 
+#include <mach/thread_policy.h>
+
 #include <net/if_types.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
@@ -89,10 +91,25 @@ struct ifmediareq32 {
 #define	SIOCGIFMEDIA32	_IOWR('i', 56, struct ifmediareq32) /* get net media */
 #define	SIOCGIFMEDIA64	_IOWR('i', 56, struct ifmediareq64) /* get net media (64-bit) */
 
+/* thread_policy_set is exported in Mach.kext, but commented in mach/thread_policy.h in the
+ * Kernel.Framework headers (why?). Add a local declaration to work around that.
+ */
+extern "C" {
+kern_return_t thread_policy_set(
+	thread_t thread,
+	thread_policy_flavor_t flavor,
+	thread_policy_t policy_info,
+	mach_msg_type_number_t count);
+}
 
 static unsigned char ETHER_BROADCAST_ADDR[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 /* members */
+tap_interface::tap_interface() {
+	bzero(attached_protos, sizeof(attached_protos));
+	input_thread = THREAD_NULL;
+}
+
 bool
 tap_interface::initialize(unsigned short major, unsigned short unit)
 {
@@ -166,6 +183,30 @@ tap_interface::initialize_interface()
 	 */
 	bpfattach(ifp, DLT_EN10MB, ifnet_hdrlen(ifp));
 
+	/* Inject an empty packet to trigger the input thread calling demux(), which will unblock
+	 * thread_sync_lock. This is part of a hack to avoid a kernel crash on re-attaching
+	 * interfaces, see comment in shutdown_interface for more information.
+	 */
+	mbuf_t empty_mbuf;
+	mbuf_gethdr(MBUF_WAITOK, MBUF_TYPE_DATA, &empty_mbuf);
+	if (empty_mbuf != NULL) {
+		mbuf_pkthdr_setrcvif(empty_mbuf, ifp);
+		mbuf_pkthdr_setlen(empty_mbuf, 0);
+		mbuf_pkthdr_setheader(empty_mbuf, mbuf_data(empty_mbuf));
+		mbuf_set_csum_performed(empty_mbuf, 0, 0);
+		if (ifnet_input(ifp, empty_mbuf, NULL) == 0) {
+			auto_lock l(&thread_sync_lock);
+			for (int i = 0; i < 100 && input_thread == THREAD_NULL; ++i) {
+				dprintf("input thread not found, waiting...\n");
+				thread_sync_lock.sleep(&input_thread, 10000000);
+			}
+		} else {
+			mbuf_freem(empty_mbuf);
+		}
+	}
+	if (input_thread == THREAD_NULL)
+		dprintf("Failed to determine input thread!\n");
+
 	return 0;
 }
 
@@ -186,6 +227,36 @@ tap_interface::shutdown_interface()
 
 	cleanup_interface();
 	unregister_interface();
+
+	/* There's a race condition in the kernel that may cause crashes when quickly re-attaching
+	 * interfaces. The crash happens when the interface gets re-attached before the input thread
+	 * for the interface managed to terminate, in which case an assert on the input_waiting flag
+	 * to be clear triggers in ifnet_attach. The bug is really that there's no synchronization
+	 * for terminating the input thread. To work around this, the following code does add the
+	 * missing synchronization to wait for the input thread to terminate. Of course, threading
+	 * primitives available to kexts are few, and I'm not aware of a way to wait for a thread to
+	 * terminate. Hence, the code calls thread_policy_set (passing bogus parameters) in a loop,
+	 * until it returns KERN_TERMINATED. Since this is all rather fragile, there's an upper
+	 * limit on the loop iteratations we're willing to make, so this terminates eventually even
+	 * if things change on the kernel side eventually.
+	 */
+	if (input_thread != THREAD_NULL) {
+		dprintf("Waiting for input thread...\n");
+		kern_return_t result = 0;
+		for (int i = 0; i < 100; ++i) {
+			result = thread_policy_set(input_thread, -1, NULL, 0);
+			dprintf("thread_policy_set result: %d\n", result);
+			if (result == KERN_TERMINATED) {
+				dprintf("Input thread terminated.\n");
+				thread_deallocate(input_thread);
+				input_thread = THREAD_NULL;
+				break;
+			}
+
+			auto_lock l(&thread_sync_lock);
+			thread_sync_lock.sleep(&input_thread, 10000000);
+		}
+	}
 }
 
 errno_t
@@ -262,6 +333,16 @@ tap_interface::if_demux(mbuf_t m, char *header, protocol_family_t *proto)
 	unsigned char lladdr[ETHER_ADDR_LEN];
 
 	dprintf("tap: if_demux\n");
+
+	/* Make note of what input thread this interface is running on. This is part of a hack to
+	 * avoid a crash on re-attaching interfaces, see comment in shutdown_interface for details.
+	 */
+	if (input_thread == THREAD_NULL) {
+		auto_lock l(&thread_sync_lock);
+		input_thread = current_thread();
+		thread_reference(input_thread);
+		thread_sync_lock.wakeup(&input_thread);
+	}
 
 	/* size check */
 	if (mbuf_len(m) < sizeof(struct ether_header))

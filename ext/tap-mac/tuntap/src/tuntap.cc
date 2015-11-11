@@ -384,10 +384,10 @@ tuntap_interface::unregister_interface()
 		dprintf("interface detaching\n");
 
 		/* Wait until the interface has completely been detached. */
-		detach_lock.lock();
+		thread_sync_lock.lock();
 		while (!interface_detached)
-			detach_lock.sleep(&interface_detached);
-		detach_lock.unlock();
+			thread_sync_lock.sleep(&interface_detached);
+		thread_sync_lock.unlock();
 
 		dprintf("interface detached\n");
 
@@ -642,15 +642,14 @@ tuntap_interface::cdev_write(uio_t uio, int ioflag)
 	unsigned int mlen = mbuf_maxlen(first);
 	unsigned int chunk_len;
 	unsigned int copied = 0;
+	unsigned int max_data_len = ifnet_mtu(ifp) + ifnet_hdrlen(ifp);
 	int error;
 
 	/* stuff the data into the mbuf(s) */
 	mb = first;
 	while (uio_resid(uio) > 0) {
 		/* copy a chunk. enforce mtu (don't know if this is correct behaviour) */
-		// ... evidently not :) -- Adam Ierymenko <adam.ierymenko@zerotier.com>
-		//chunk_len = min(ifnet_mtu(ifp), min(uio_resid(uio), mlen));
-		chunk_len = min(uio_resid(uio),mlen);
+		chunk_len = min(max_data_len - copied, min(uio_resid(uio), mlen));
 		error = uiomove((caddr_t) mbuf_data(mb), chunk_len, uio);
 		if (error) {
 			log(LOG_ERR, "tuntap: could not copy data from userspace: %d\n", error);
@@ -666,9 +665,7 @@ tuntap_interface::cdev_write(uio_t uio, int ioflag)
 		copied += chunk_len;
 
 		/* if done, break the loop */
-		//if (uio_resid(uio) <= 0 || copied >= ifnet_mtu(ifp))
-		//	break;
-		if (uio_resid(uio) <= 0)
+		if (uio_resid(uio) <= 0 || copied >= max_data_len)
 			break;
 
 		/* allocate a new mbuf if the current is filled */
@@ -956,10 +953,10 @@ tuntap_interface::if_detached()
 	dprintf("tuntap: if_detached\n");
 
 	/* wake unregister_interface() */
-	detach_lock.lock();
+	thread_sync_lock.lock();
 	interface_detached = true;
-	detach_lock.wakeup(&interface_detached);
-	detach_lock.unlock();
+	thread_sync_lock.wakeup(&interface_detached);
+	thread_sync_lock.unlock();
 
 	dprintf("if_detached done\n");
 }
