@@ -116,7 +116,7 @@ On Mac the best way is to install [Packages](http://s.sudre.free.fr/Software/Pac
 
 This builds a .pkg file that can be installed.
 
-BSD has no installer yet. We're working on it.
+In FreeBSD there is now an official .pkg in the FreeBSD repository. Type "pkg install zerotier". It can also be built and installed from source.
 
 Linux/BSD and Mac installations have an *uninstall.sh* file in their ZeroTier home folder that cleanly removes ZeroTier One from the system. Run this with:
 

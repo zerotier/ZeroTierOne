@@ -199,7 +199,7 @@
 /**
  * Delay between WHOIS retries in ms
  */
-#define ZT_WHOIS_RETRY_DELAY 500
+#define ZT_WHOIS_RETRY_DELAY 1000
 
 /**
  * Maximum identity WHOIS retries (each attempt tries consulting a different peer)
