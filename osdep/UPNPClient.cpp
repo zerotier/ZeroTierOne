@@ -115,7 +115,7 @@ public:
 								Utils::snprintf(outport,sizeof(outport),"%u",tryPort);
 
 								int mapResult = 0;
-								if ((mapResult = UPNP_AddPortMapping(urls.controlURL,data.first.servicetype,outport,inport,lanaddr,"ZeroTier","UDP",(const char *)0,ZT_UPNP_LEASE_DURATION)) == UPNPCOMMAND_SUCCESS) {
+								if ((mapResult = UPNP_AddPortMapping(urls.controlURL,data.first.servicetype,outport,inport,lanaddr,"ZeroTier","UDP",(const char *)0,"0")) == UPNPCOMMAND_SUCCESS) {
 	#ifdef ZT_UPNP_TRACE
 									fprintf(stderr,"UPNPClient: reserved external port: %s"ZT_EOL_S,outport);
 	#endif
