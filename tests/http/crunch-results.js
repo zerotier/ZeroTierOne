@@ -3,8 +3,8 @@
 // suitable for graphing.
 //
 
-// Number of requests per statistical bracket
-var BRACKET_SIZE = 1000;
+// Time duration per statistical bracket
+var BRACKET_SIZE = 10000;
 
 // Number of bytes expected from each test
 var EXPECTED_BYTES = 5000;
@@ -23,6 +23,7 @@ var totalOverallFailures = 0.0;
 var totalMs = 0;
 var totalData = 0;
 var devices = {};
+var lastBracketTs = 0;
 
 rl.on('line',function(line) {
 	line = line.trim();
@@ -48,13 +49,17 @@ rl.on('line',function(line) {
 		devices[fromId] = true;
 		devices[toId] = true;
 
-		if (count >= BRACKET_SIZE) {
+		if (lastBracketTs === 0)
+			lastBracketTs = ts;
+
+		if (((ts - lastBracketTs) >= BRACKET_SIZE)&&(count > 0.0)) {
 			console.log(count.toString()+','+overallCount.toString()+','+(totalMs / count)+','+(totalFailures / count)+','+(totalOverallFailures / overallCount)+','+totalData+','+Object.keys(devices).length);
 
 			count = 0.0;
 			totalFailures = 0.0;
 			totalMs = 0;
 			totalData = 0;
+			lastBracketTs = ts;
 		}
 	} // else ignore junk
 });
