@@ -188,7 +188,7 @@ void Peer::received(
 					}
 
 #ifdef ZT_ENABLE_CLUSTER
-					if ((RR->cluster)&&(!suboptimalPath))
+					if (RR->cluster)
 						RR->cluster->broadcastHavePeer(_id);
 #endif
 
