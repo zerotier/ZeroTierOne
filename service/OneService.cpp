@@ -1265,7 +1265,7 @@ public:
 						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,ttl);
 					const int result = ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
 					if (ttl)
-						_phy.setIp4UdlTtl(_v4UpnpUdpSocket,255);
+						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,255);
 					return result;
 				} else {
 					return -1;

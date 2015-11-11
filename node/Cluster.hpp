@@ -73,6 +73,33 @@
  */
 #define ZT_CLUSTER_QUEUE_EXPIRATION 5000
 
+/**
+ * Chunk size for allocating queue entries
+ *
+ * Queue entries are allocated in chunks of this many and are added to a pool.
+ * ZT_CLUSTER_MAX_QUEUE_GLOBAL must be evenly divisible by this.
+ */
+#define ZT_CLUSTER_QUEUE_CHUNK_SIZE 32
+
+/**
+ * Maximum number of chunks to ever allocate
+ *
+ * This is a global sanity limit to prevent resource exhaustion attacks. It
+ * works out to about 600mb of RAM. You'll never see this on a normal edge
+ * node. We're unlikely to see this on a root server unless someone is DOSing
+ * us. In that case cluster relaying will be affected but other functions
+ * should continue to operate normally.
+ */
+#define ZT_CLUSTER_MAX_QUEUE_CHUNKS 8194
+
+/**
+ * Max data per queue entry
+ *
+ * If we ever support larger transport MTUs this must be increased. The plus
+ * 16 is just a small margin and has no special meaning.
+ */
+#define ZT_CLUSTER_SEND_QUEUE_DATA_MAX (ZT_UDP_DEFAULT_PAYLOAD_MTU + 16)
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
