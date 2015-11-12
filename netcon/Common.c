@@ -36,14 +36,14 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <fcntl.h>
+
 
 #define DEBUG_LEVEL 5
 
 #define MSG_ERROR 0 // Errors 
 #define MSG_INFO  1 // Information which is generally useful to any user
 #define MSG_DEBUG 2 // Information which is only useful to someone debugging
-
-#include "Common.h"
 
 #ifdef NETCON_INTERCEPT
 
