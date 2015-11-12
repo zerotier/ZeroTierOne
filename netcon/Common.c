@@ -39,11 +39,12 @@
 #include <fcntl.h>
 
 
-#define DEBUG_LEVEL 5
+#define DEBUG_LEVEL 2
 
-#define MSG_ERROR 0 // Errors 
-#define MSG_INFO  1 // Information which is generally useful to any user
-#define MSG_DEBUG 2 // Information which is only useful to someone debugging
+#define MSG_ERROR       0 // Errors 
+#define MSG_INFO        1 // Information which is generally useful to any user
+#define MSG_DEBUG       2 // Information which is only useful to someone debugging
+#define MSG_DEBUG_EXTRA 3 // 
 
 #ifdef NETCON_INTERCEPT
 
@@ -78,22 +79,18 @@ void print_addr(struct sockaddr *addr)
 #endif
   void dwr(int level, char *fmt, ... )
   {
-  #ifdef NETCON_SERVICE
     if(level > DEBUG_LEVEL)
         return;
-  #endif
     int saveerr;
     saveerr = errno;
     va_list ap;
     va_start(ap, fmt);
-
+  #ifdef VERBOSE // So we can cut out some clutter in the strace output while debugging
     char timestring[20];
     time_t timestamp;
     timestamp = time(NULL);
     strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
-
     pid_t pid = getpid();
-  #ifdef VERBOSE
     fprintf(stderr, "%s [pid=%7d] ", timestring, pid);  
   #endif
     vfprintf(stderr, fmt, ap);

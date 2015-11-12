@@ -87,7 +87,7 @@ NetconEthernetTap::NetconEthernetTap(
 	lwipstack->lwip_init();
 
 	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
-	dwr(1, " NetconEthernetTap(): RPC listening on: %d\n", _phy.getDescriptor(_unixListenSocket));
+	dwr(MSG_INFO, " NetconEthernetTap initialized!\n", _phy.getDescriptor(_unixListenSocket));
 	if (!_unixListenSocket)
 		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
 	_thread = Thread::start(this);
@@ -187,7 +187,7 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 		// First pbuf gets ethernet header at start
 		q = p;
 		if (q->len < sizeof(ethhdr)) {
-			dwr(1, "_put(): Dropped packet: first pbuf smaller than ethernet header\n");
+			dwr(MSG_ERROR, "_put(): Dropped packet: first pbuf smaller than ethernet header\n");
 			return;
 		}
 		memcpy(q->payload,&ethhdr,sizeof(ethhdr));
@@ -200,25 +200,23 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 			dataptr += q->len;
 		}
 	} else {
-		dwr(1, "put(): Dropped packet: no pbufs available\n");
+		dwr(MSG_ERROR, "put(): Dropped packet: no pbufs available\n");
 		return;
 	}
 
 	{
 		Mutex::Lock _l2(lwipstack->_lock);
 		if(interface.input(p, &interface) != ERR_OK) {
-			dwr(1, "put(): Error while RXing packet (netif->input)\n");
+			dwr(MSG_ERROR, "put(): Error while RXing packet (netif->input)\n");
 		}
 	}
 }
 
-std::string NetconEthernetTap::deviceName() const
-{
+std::string NetconEthernetTap::deviceName() const {
 	return _dev;
 }
 
-void NetconEthernetTap::setFriendlyName(const char *friendlyName)
-{
+void NetconEthernetTap::setFriendlyName(const char *friendlyName) {
 }
 
 void NetconEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
@@ -361,7 +359,7 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
   //lwipstack->_tcp_poll(conn->pcb, NULL, 0);
 	//lwipstack->_tcp_arg(conn->pcb, NULL);
 	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
-		dwr(3, " closeConnection(): Error while calling tcp_close()\n");
+		dwr(MSG_ERROR, " closeConnection(): Error while calling tcp_close()\n");
 		exit(0);
 	}
 	else {
@@ -631,7 +629,6 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 		default:
 			break;
 	}
-	//memset(data, '\0', 256);
 }
 
 /*
@@ -714,7 +711,7 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
  */
 err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 {
-	dwr(MSG_DEBUG, "nc_accept()\n");
+	dwr(MSG_DEBUG, " nc_accept()\n");
 	Larg *l = (Larg*)arg;
 	TcpConnection *conn = l->conn;
 	NetconEthernetTap *tap = l->tap;
@@ -725,7 +722,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
 			if(errno < 0) {
 				l->tap->send_return_value(conn, -1, errno);
-				dwr(MSG_ERROR, "nc_accept(): unable to create socketpair\n");
+				dwr(MSG_ERROR, " nc_accept(): unable to create socketpair\n");
 				return ERR_MEM;
 			}
 		}
@@ -735,7 +732,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		new_tcp_conn->pcb = newpcb;
 		new_tcp_conn->their_fd = fds[1];
 		tap->tcp_connections.push_back(new_tcp_conn);
-		dwr(MSG_DEBUG, "socketpair = {%d, %d}\n", fds[0], fds[1]);
+		dwr(MSG_DEBUG, " nc_accept(): socketpair = {%d, %d}\n", fds[0], fds[1]);
 		int n, send_fd = tap->_phy.getDescriptor(conn->rpcSock);
 		if((n = send(listening_fd, "z", 1, MSG_NOSIGNAL)) < 0) {
 			dwr(MSG_ERROR, " nc_accept(): Error: [send(listening_fd,...) = MSG_NOSIGNAL].\n");
@@ -747,11 +744,11 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 				new_tcp_conn->pending = true;
 			}
 			else {
-				dwr(MSG_ERROR, "nc_accept(%d): unable to send fd to client\n", listening_fd);
+				dwr(MSG_ERROR, " nc_accept(%d): unable to send fd to client\n", listening_fd);
 			}
     }
     else {
-      dwr(MSG_ERROR, "nc_accept(%d): error writing signal byte (send_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
+      dwr(MSG_ERROR, " nc_accept(%d): error writing signal byte (send_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
       return -1;
     }
     tap->lwipstack->_tcp_arg(newpcb, new Larg(tap, new_tcp_conn));
@@ -763,7 +760,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 		return ERR_OK;
   }
   else {
-    dwr(MSG_ERROR, "nc_accept(%d): can't locate Connection object for PCB.\n", listening_fd);
+    dwr(MSG_ERROR, " nc_accept(%d): can't locate Connection object for PCB.\n", listening_fd);
   }
   return -1;
 }
@@ -985,8 +982,6 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid, int &rpc_
 	memcpy(&rpc_count, 	&buf[IDX_COUNT], 		sizeof(int));
 	memcpy(timestamp, 	&buf[IDX_TIME], 		20);
 	memcpy(&cmd, 			&buf[IDX_PAYLOAD], 	sizeof(char));
-	payload = buf+IDX_PAYLOAD+1;
-	//dwr("RX: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d\n", pid, tid, rpc_count, timestamp, cmd);
 }
 
 /*

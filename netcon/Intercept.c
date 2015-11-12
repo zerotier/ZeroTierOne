@@ -980,7 +980,7 @@ int dup3(DUP3_SIG)
 
 long syscall(SYSCALL_SIG)
 {
-  dwr(MSG_DEBUG,"syscall(%u, ...):\n", number);
+  dwr(MSG_DEBUG_EXTRA,"syscall(%u, ...):\n", number);
 
   va_list ap;
   uintptr_t a,b,c,d,e,f;
