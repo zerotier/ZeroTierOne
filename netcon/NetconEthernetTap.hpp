@@ -53,6 +53,7 @@ namespace ZeroTier {
 
 class NetconEthernetTap;
 
+
 /**
  * Network Containers instance -- emulates an Ethernet tap device as far as OneService knows
  */
@@ -104,6 +105,8 @@ private:
 	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 
 	// RPC handlers (from NetconIntercept)
+	void unload_rpc(void *data, pid_t &pid, pid_t &tid, int &rpc_count, char (timestamp[20]), char &cmd, void* &payload);
+
 	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
 	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
 	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);

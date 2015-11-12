@@ -31,8 +31,6 @@
 
 namespace ZeroTier
 {
-  void dwr(int level, char *fmt, ... );
-  void dwr(char *fmt, ... );
   void clearscreen();
   void gotoxy(int x,int y);
   void get_path_from_pid(char* dest, int pid);

@@ -37,14 +37,15 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#define DEBUG_LEVEL 5
+
+#define MSG_ERROR 0 // Errors 
+#define MSG_INFO  1 // Information which is generally useful to any user
+#define MSG_DEBUG 2 // Information which is only useful to someone debugging
+
 #include "Common.h"
 
-void dwr(const char *fmt, ...);
-
-/* defined in intercept and service */
-//extern FILE* logfile;
-//extern char* logfilename;
-//extern flog = -1;
+#ifdef NETCON_INTERCEPT
 
 extern pthread_mutex_t loglock;
 
@@ -70,83 +71,38 @@ void print_addr(struct sockaddr *addr)
   fprintf(stderr, "IP address: %s\n", s);
   free(s);
 }
-
+#endif
 
 #ifdef NETCON_SERVICE
-   void dwr(int, const char *fmt, ...);
-
-   void dwr(const char *fmt, ...)
-   {
-      int saveerr;
-      va_list ap;
-      va_start(ap, fmt);
-      saveerr = errno;
-      dwr(-1, fmt, ap);
-      errno = saveerr;
-      va_end(ap);
-   }
-
-   void dwr(int pid, const char *fmt, ...)
+  namespace ZeroTier { 
 #endif
-#ifdef NETCON_INTERCEPT
-   void dwr(const char *fmt, ...)
-#endif
-{
-	va_list ap;
-	int saveerr;
-	char timestring[20];
-	time_t timestamp;
+  void dwr(int level, char *fmt, ... )
+  {
+  #ifdef NETCON_SERVICE
+    if(level > DEBUG_LEVEL)
+        return;
+  #endif
+    int saveerr;
+    saveerr = errno;
+    va_list ap;
+    va_start(ap, fmt);
 
-	timestamp = time(NULL);
-	strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
+    char timestring[20];
+    time_t timestamp;
+    timestamp = time(NULL);
+    strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
 
-  //if(logfile)
-  //  fprintf(logfile, "%s ", timestring);
-  fprintf(stderr, "%s ", timestring);
+    pid_t pid = getpid();
+  #ifdef VERBOSE
+    fprintf(stderr, "%s [pid=%7d] ", timestring, pid);  
+  #endif
+    vfprintf(stderr, fmt, ap);
+    fflush(stderr);
 
-#ifdef NETCON_SERVICE
-	if(ns != NULL)
-	{
-    size_t num_intercepts = ns->intercepts.size();
-    size_t num_connections = ns->connections.size();
-    //if(logfile)
-    //  fprintf(logfile, "[i/c/tid=%3lu|%3lu|%7d]", num_intercepts, num_connections, pid);
-    fprintf(stderr, "[i/c/tid=%3lu|%3lu|%7d]", num_intercepts, num_connections, pid);
-	}
-	else {
-    //if(logfile)
-    //  fprintf(logfile, "[i/c/tid=%3d|%3d|%7d]", 0, 0, -1);
-    fprintf(stderr, "[i/c/tid=%3d|%3d|%7d]", 0, 0, -1);
+    errno = saveerr;
+    va_end(ap);
   }
-
-#endif
-
-#ifdef NETCON_INTERCEPT
-  //pthread_mutex_lock(&loglock);
-  int pid = getpid();
-  //if(logfile)
-	//  fprintf(logfile, "[tid=%7d]", pid);
-  fprintf(stderr, "[tid=%7d]", pid);
-  //pthread_mutex_unlock(&loglock);
-#endif
-
-	//if(logfile)
-  //  fputs(" ", logfile);
-  fputs(" ", stderr);
-
-  /* logfile */
-	va_start(ap, fmt);
-	saveerr = errno;
-	//if(logfile){
-  //  vfprintf(logfile, fmt, ap);
-  //  fflush(logfile);
-  //}
-  va_end(ap);
-
-  /* console */
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-	fflush(stderr);
-  errno = saveerr;
-	va_end(ap);
+#ifdef NETCON_SERVICE
 }
+#endif
+

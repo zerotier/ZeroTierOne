@@ -37,15 +37,14 @@
 #include "lwip/ip_addr.h"
 #include "lwip/ip_frag.h"
 
-#include "Intercept.h"
-
 #ifndef _NETCON_UTILITIES_CPP
 #define _NETCON_UTILITIES_CPP
 
-#define DEBUG_LEVEL	5
+#define DEBUG_LEVEL	4
 
 namespace ZeroTier
 {
+	/*
 	void dwr(int level, char *fmt, ... )
 	{
 		if(level > DEBUG_LEVEL)
@@ -65,27 +64,7 @@ namespace ZeroTier
 		fflush(stderr);
 		va_end(ap);
 	}
-
-	void unload_rpc(void *data, pid_t &pid, pid_t &tid, int &rpc_count, char (timestamp[20]), char &cmd, void* &payload)
-	{
-		unsigned char *buf = (unsigned char*)data;
-
-/*
-		dwr(" - IDX_PID = %d\n", IDX_PID);	
-		dwr(" - IDX_TID = %d\n", IDX_TID);			
-		dwr(" - IDX_COUNT = %d\n", IDX_COUNT);		
-		dwr(" - IDX_TIME = %d\n", IDX_TIME);		
-		dwr(" - IDX_PAYLOAD = %d\n", IDX_PAYLOAD);		
 */
-		memcpy(&pid, 		&buf[IDX_PID], 		sizeof(pid_t));
-		memcpy(&tid, 		&buf[IDX_TID], 		sizeof(pid_t));
-		memcpy(&rpc_count, 	&buf[IDX_COUNT], 	sizeof(int));
-		memcpy(timestamp, 	&buf[IDX_TIME], 	20);
-		memcpy(&cmd, 		&buf[IDX_PAYLOAD], 	sizeof(char));
-		payload = buf+IDX_PAYLOAD+1;
-		//dwr("RX: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d\n", pid, tid, rpc_count, timestamp, cmd);
-	}
-
 	void clearscreen(){
 		fprintf(stderr, "\033[2J");
 	}

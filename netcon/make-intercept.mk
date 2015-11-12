@@ -27,7 +27,7 @@
 
 SHCC=gcc
 
-intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -DERRORS_ARE_FATAL -DDEBUG -DVERBOSE -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT
+intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -DERRORS_ARE_FATAL -DDEBUG_RPC -DVERBOSE -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT
 LIB_NAME = intercept
 SHLIB_EXT=dylib
 SHLIB_MAJOR = 1
@@ -40,9 +40,8 @@ LIBS = -ldl -lc -lrt -lpthread
 
 lib:
 	${SHCC} $(intercept_CFLAGS) -I. Intercept.c -o Intercept.o
-	${SHCC} $(intercept_CFLAGS) -I. Common.c -o Common.o
 	${SHCC} $(intercept_CFLAGS) -I. Sendfd.c -o Sendfd.o
-	${SHCC} $(SHLDFLAGS) Intercept.o Common.o Sendfd.o -o libintercept.so.1.0 $(LIBS)
+	${SHCC} $(SHLDFLAGS) Intercept.o Sendfd.o -o libintercept.so.1.0 $(LIBS)
 
 install:
 	cp libintercept.so.1.0 /lib/libintercept.so.1.0

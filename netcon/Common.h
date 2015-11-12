@@ -21,14 +21,10 @@
 #include <signal.h>
 #include <sys/socket.h>
 
-
+/*
 void set_log_options(int, char *, int);
 void show_msg(int level, char *, ...);
 unsigned int resolve_ip(char *, int, int);
-
-
-#define MSGERR    0
-#define MSGDEBUG  1
-
+*/
 
 #endif

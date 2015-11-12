@@ -37,7 +37,9 @@
 #define IDX_TIME			IDX_COUNT + sizeof(int)
 #define IDX_PAYLOAD			IDX_TIME + 20 // 20 being the length of the timestamp string
 
-#define BUF_SZ                  256
+#define BUF_SZ              256
+#define PAYLOAD_SZ			223 // BUF_SZ-IDX_PAYLOAD
+
 #define ERR_OK                  0
 
 /* Userland RPC codes */

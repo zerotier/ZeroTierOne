@@ -29,7 +29,8 @@ endif
 UNAME_M=$(shell uname -m)
 
 INCLUDES=-Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6
-DEFS=-DZT_ENABLE_NETCON
+DEFS=-DZT_ENABLE_NETCON #-DVERBOSE
+CXXFLAGS+=-Wc++11-compat-deprecated-writable-strings
 LDLIBS?=
 
 include objects.mk
