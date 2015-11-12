@@ -26,7 +26,7 @@ ifeq ($(origin CXX),default)
 	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 endif
 
-UNAME_M=$(shell uname -m)
+UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 
 INCLUDES=
 DEFS=-DZT_ENABLE_CLUSTER
