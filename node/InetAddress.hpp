@@ -303,17 +303,27 @@ struct InetAddress : public sockaddr_storage
 
 	/**
 	 * Construct a full netmask as an InetAddress
+	 *
+	 * @return Netmask such as 255.255.255.0 if this address is /24 (port field will be unchanged)
 	 */
-	InetAddress netmask() const
-		throw();
+	InetAddress netmask() const;
 
 	/**
 	 * Constructs a broadcast address from a network/netmask address
 	 *
+	 * This is only valid for IPv4 and will return a NULL InetAddress for other
+	 * address families.
+	 *
 	 * @return Broadcast address (only IP portion is meaningful)
 	 */
-	InetAddress broadcast() const
-		throw();
+	InetAddress broadcast() const;
+
+	/**
+	 * Return the network -- a.k.a. the IP ANDed with the netmask
+	 *
+	 * @return Network e.g. 10.0.1.0/24 from 10.0.1.200/24
+	 */
+	InetAddress network() const;
 
 	/**
 	 * @return True if this is an IPv4 address
