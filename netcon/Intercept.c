@@ -79,14 +79,16 @@ static int (*realsetsockopt)(SETSOCKOPT_SIG);
 static int (*realgetsockopt)(GETSOCKOPT_SIG);
 static int (*realaccept4)(ACCEPT4_SIG);
 static long (*realsyscall)(SYSCALL_SIG);
+static int (*realclose)(CLOSE_SIG);
 //static int (*realclone)(CLONE_SIG);
 //static int (*realpoll)(POLL_SIG);
+static int (*realdup2)(DUP2_SIG);
+static int (*realdup3)(DUP3_SIG);
 
 /* Exported Function Prototypes */
 void my_init(void);
 int connect(CONNECT_SIG);
 int select(SELECT_SIG);
-int close(CLOSE_SIG);
 int bind(BIND_SIG);
 int accept(ACCEPT_SIG);
 int listen(LISTEN_SIG);
@@ -95,8 +97,12 @@ int setsockopt(SETSOCKOPT_SIG);
 int getsockopt(GETSOCKOPT_SIG);
 int accept4(ACCEPT4_SIG);
 long syscall(SYSCALL_SIG);
+int close(CLOSE_SIG);
 //int clone(CLONE_SIG);
 //int poll(POLL_SIG);
+int dup2(DUP2_SIG);
+int dup3(DUP3_SIG);
+
 
 #ifdef USE_SOCKS_DNS
   int res_init(void);
@@ -110,6 +116,7 @@ void set_up_intercept();
 int checkpid();
 
 #define SERVICE_CONNECT_ATTEMPTS  30
+#define RPC_FD                    1023
 
 ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
@@ -126,9 +133,11 @@ void handle_error(char *name, char *info, int err)
   }
 #endif
 #ifdef VERBOSE
-  //dwr("%s()=%d\n", name, err);
+  dwr("%s()=%d\n", name, err);
 #endif
 }
+
+static unsigned long rpc_count = 0;
 
 /*------------------------------------------------------------------------------
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
@@ -158,7 +167,45 @@ int checkpid() {
  */
 int send_command(int rpc_fd, char *cmd)
 {
-  int n_write = write(rpc_fd, cmd, BUF_SZ);
+#ifdef DEBUG
+/*
+  dwr(" - IDX_PID = %d\n", IDX_PID);  
+  dwr(" - IDX_TID = %d\n", IDX_TID);      
+  dwr(" - IDX_COUNT = %d\n", IDX_COUNT);   
+  dwr(" - IDX_TIME = %d\n", IDX_TIME);    
+  dwr(" - IDX_PAYLOAD = %d\n", IDX_PAYLOAD);    
+*/
+/*
+  #define IDX_PID       0
+  #define IDX_TID       sizeof(pid_t)
+  #define IDX_COUNT     IDX_TID + sizeof(pid_t)
+  #define IDX_TIME      IDX_COUNT + sizeof(int)
+  #define IDX_CMD       IDX_TIME + 20 // 20 being the length of the timestamp string
+  #define IDX_PAYLOAD   IDX_TIME + sizeof(char) 
+*/
+
+  // [pid_t] [pid_t] [rpc_count] [int] [...]
+  char metabuf[BUF_SZ]; // portion of buffer which contains RPC meta-data for debugging
+  memset(metabuf, '\0', BUF_SZ);
+  pid_t pid = syscall(SYS_getpid);
+  pid_t tid = syscall(SYS_gettid);
+  int payload_idx = sizeof(pid_t)*2 + sizeof(rpc_count);
+  rpc_count++;
+  char timestring[20];
+  time_t timestamp;
+  timestamp = time(NULL);
+  strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
+
+  memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); // pid
+  memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); // tid
+  memcpy(&metabuf[IDX_COUNT],   &rpc_count,   sizeof(rpc_count)  ); // rpc_count
+  memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); // timestamp
+#endif
+  // copy payload into final command buffer
+  int copied = BUF_SZ-IDX_PAYLOAD;
+  memcpy(&metabuf[IDX_PAYLOAD], cmd, 200);
+  //dwr(" RX: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d\n", pid, tid, rpc_count, timestring, cmd[0]);
+  int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
     dwr("Error writing command to service (CMD = %d)\n", cmd[0]);
     errno = 0;
@@ -200,9 +247,12 @@ int is_mapped_to_service(int sockfd)
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_MAP_REQ;
   memcpy(&cmd[1], &sockfd, sizeof(sockfd));
+  pthread_mutex_lock(&lock);
   if(send_command(fdret_sock, cmd) < 0)
     return -1;
-  return get_retval();
+  int err = get_retval();
+  pthread_mutex_unlock(&lock);
+  return err;
 }
 
 /*------------------------------------------------------------------------------
@@ -233,7 +283,10 @@ int init_service_connection()
       else {
         dwr("AF_UNIX connection established: %d\n", tfd);
         is_initialized = 1;
-        return tfd;
+        int newtfd = realdup2(tfd, 1023);
+        dwr("dup'd to rpc_fd = %d\n", newtfd);
+        close(tfd);
+        return newtfd;
       }
       attempts++;
     }
@@ -277,8 +330,11 @@ void load_symbols(void)
   realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
   //realclone = dlsym(RTLD_NEXT, "clone");
+  realclose = dlsym(RTLD_NEXT, "close");
   realsyscall = dlsym(RTLD_NEXT, "syscall");
   //realsyscall = dlsym(RTLD_NEXT, "poll");
+  realdup2 = dlsym(RTLD_NEXT, "dup2");
+  realdup3 = dlsym(RTLD_NEXT, "dup3");
 #ifdef USE_SOCKS_DNS
   realresinit = dlsym(RTLD_NEXT, "res_init");
 #endif
@@ -295,8 +351,11 @@ void load_symbols(void)
   realgetsockopt = dlsym(lib, "getsockopt");
   realaccept4 = dlsym(lib), "accept4");
   //realclone = dlsym(lib, "clone");
+  realclose = dlsym(lib, "close");
   realsyscall = dlsym(lib, "syscall");
   //realsyscall = dlsym(lib, "poll");
+  realdup2 = dlsym(RTLD_NEXT, "dup2");
+  realdup3 = dlsym(RTLD_NEXT, "dup3");
 #ifdef USE_SOCKS_DNS
   realresinit = dlsym(lib, "res_init");
 #endif
@@ -332,7 +391,7 @@ void set_up_intercept()
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
-  dwr("setsockopt(%d)\n", socket);
+  dwr("\n\nsetsockopt(%d)\n", socket);
   /*
   if(is_mapped_to_service(socket) < 0) { // First, check if the service manages this
     return realsetsockopt(socket, level, option_name, option_value, option_len);
@@ -363,7 +422,7 @@ int setsockopt(SETSOCKOPT_SIG)
 /* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 int getsockopt(GETSOCKOPT_SIG)
 {
-  dwr("getsockopt(%d)\n", sockfd);
+  dwr("\n\ngetsockopt(%d)\n", sockfd);
   /*
   if(is_mapped_to_service(sockfd) < 0) { // First, check if the service manages this
     return realgetsockopt(sockfd, level, optname, optval, optlen);
@@ -393,7 +452,7 @@ int getsockopt(GETSOCKOPT_SIG)
    socket() intercept function */
 int socket(SOCKET_SIG)
 {
-  dwr("socket()*:\n");
+  dwr("\n\nsocket()*:\n");
   int err;
 #ifdef CHECKS
   /* Check that type makes sense */
@@ -426,7 +485,6 @@ int socket(SOCKET_SIG)
   */
   /* FIXME: detect ENFILE condition */
 #endif
-
   char cmd[BUF_SZ];
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
   if(fdret_sock < 0) {
@@ -434,7 +492,6 @@ int socket(SOCKET_SIG)
     handle_error("socket4", "", -1);
     exit(-1);
   }
-
   if(socket_family == AF_LOCAL
     || socket_family == AF_NETLINK
     || socket_family == AF_UNIX) {
@@ -443,18 +500,15 @@ int socket(SOCKET_SIG)
       handle_error("socket5", "", err);
       return err;
   }
-
   /* Assemble and send RPC */
   struct socket_st rpc_st;
   rpc_st.socket_family = socket_family;
   rpc_st.socket_type = socket_type;
   rpc_st.protocol = protocol;
   rpc_st.__tid = syscall(SYS_gettid);
-
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_SOCKET;
   dwr("pid = %d\n", thispid);
-  memcpy(&cmd[1], &thispid, sizeof(pid_t));
   memcpy(&cmd[1]+sizeof(pid_t), &rpc_st, sizeof(struct socket_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
@@ -462,9 +516,11 @@ int socket(SOCKET_SIG)
   /* get new fd */
   char rbuf[16];
   ssize_t sz = sock_fd_read(fdret_sock, rbuf, sizeof(rbuf), &newfd);
+  int tmp = newfd;
   dwr("read %d bytes (%s)\n", sz, &rbuf);
   if(sz > 0)
   {
+    dwr("sending fd = %d to Service over (%d)\n", newfd, fdret_sock);
     /* send our local-fd number back to service so
      it can complete its mapping table entry */
     memset(cmd, '\0', BUF_SZ);
@@ -504,7 +560,7 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-  dwr("connect(%d):\n", __fd);
+  dwr("\n\nconnect(%d):\n", __fd);
   print_addr(__addr);
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
@@ -597,7 +653,7 @@ int select(SELECT_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
-  dwr("bind(%d):\n", sockfd);
+  dwr("\n\nbind(%d):\n", sockfd);
   print_addr(addr);
 #ifdef CHECKS
   /* Check that this is a valid fd */
@@ -660,7 +716,7 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
-  dwr("accept4(%d):\n", sockfd);
+  dwr("\n\naccept4(%d):\n", sockfd);
 #ifdef CHECKS
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
     errno = EINVAL;
@@ -687,7 +743,7 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
-  dwr("accept(%d):\n", sockfd);
+  dwr("\n\naccept(%d):\n", sockfd);
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -794,7 +850,7 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
-  dwr("listen(%d):\n", sockfd);
+  dwr("\n\nlisten(%d):\n", sockfd);
   int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
 
@@ -861,7 +917,6 @@ int clone(CLONE_SIG)
 */
 
 
-
 /*------------------------------------------------------------------------------
 -------------------------------------- poll()-----------------------------------
 ------------------------------------------------------------------------------*/
@@ -875,6 +930,59 @@ int poll(POLL_SIG)
   //return ERESTART_RESTARTBLOCK;
 }
 */
+
+/*------------------------------------------------------------------------------
+-------------------------------------- close()-----------------------------------
+------------------------------------------------------------------------------*/
+
+// int fd
+int close(CLOSE_SIG)
+{
+  dwr("close(%d)\n", fd);
+  if(fd == fdret_sock)
+    return 0; // FIXME: Ignore request to shut down our rpc fd, this is *almost always* safe
+  if(fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO){
+    return realclose(fd);
+  }
+}
+
+/*------------------------------------------------------------------------------
+-------------------------------------- dup2()-----------------------------------
+------------------------------------------------------------------------------*/
+
+// int oldfd, int newfd
+int dup2(DUP2_SIG)
+{
+  dwr("dup2(%d, %d)\n", oldfd, newfd);
+    if(oldfd == fdret_sock) {
+    dwr("client application attempted to dup2 RPC socket (%d). This is not allowed.\n", oldfd);
+    errno = EBADF;
+    return -1;
+  }
+  if(oldfd != STDIN_FILENO && oldfd != STDOUT_FILENO && oldfd != STDERR_FILENO) {
+    return realdup2(oldfd, newfd);
+  }
+}
+
+/*------------------------------------------------------------------------------
+-------------------------------------- dup3()-----------------------------------
+------------------------------------------------------------------------------*/
+
+// int oldfd, int newfd, int flags
+int dup3(DUP3_SIG)
+{
+  dwr("dup3(%d, %d, %d)\n", oldfd, newfd, flags);
+#ifdef DEBUG
+  // Only do this check if we want to debug the intercept, otherwise, dont mess with 
+  // the client application's logging methods
+  if(newfd == STDIN_FILENO || newfd == STDOUT_FILENO || newfd == STDERR_FILENO)
+    return newfd; // FIXME: This is to prevent httpd from dup'ing over our stderr 
+                  //and preventing us from debugging
+  else
+#endif
+    return realdup3(oldfd, newfd, flags);
+}
+
 
 /*------------------------------------------------------------------------------
 ------------------------------------ syscall()----------------------------------

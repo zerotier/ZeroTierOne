@@ -107,7 +107,7 @@ private:
 	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
 	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
 	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);
-	void handle_retval(PhySocket *sock, void **uptr, unsigned char* buf);
+	void handle_retval(PhySocket *sock, void **uptr, int rpc_count, int newfd);
 	TcpConnection * handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
 	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
 	void handle_write(TcpConnection *conn);
@@ -154,6 +154,7 @@ private:
 	std::vector<TcpConnection*> tcp_connections;
 	std::vector<PhySocket*> rpc_sockets;
 	std::map<PhySocket*, pid_t> pidmap;
+	pid_t rpc_counter = -1;
 
 	netif interface;
 

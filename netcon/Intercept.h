@@ -31,7 +31,13 @@
 
 #include <sys/socket.h>
 
-#define BUF_SZ                  128
+#define IDX_PID				0
+#define IDX_TID				sizeof(pid_t)
+#define IDX_COUNT			IDX_TID + sizeof(pid_t)
+#define IDX_TIME			IDX_COUNT + sizeof(int)
+#define IDX_PAYLOAD			IDX_TIME + 20 // 20 being the length of the timestamp string
+
+#define BUF_SZ                  256
 #define ERR_OK                  0
 
 /* Userland RPC codes */
@@ -176,5 +182,8 @@ struct shutdown_st
 #define SYSCALL_SIG	long number, ...
 #define CLONE_SIG int (*fn)(void *), void *child_stack, int flags, void *arg, ...
 #define POLL_SIG struct pollfd *fds, nfds_t nfds, int timeout
+
+#define DUP2_SIG int oldfd, int newfd
+#define DUP3_SIG int oldfd, int newfd, int flags
 
 #endif
