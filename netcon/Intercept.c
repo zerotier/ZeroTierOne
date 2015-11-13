@@ -499,8 +499,7 @@ int socket(SOCKET_SIG)
   rpc_st.__tid = syscall(SYS_gettid);
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_SOCKET;
-  dwr(MSG_DEBUG,"pid = %d\n", thispid);
-  memcpy(&cmd[1]+sizeof(pid_t), &rpc_st, sizeof(struct socket_st));
+  memcpy(&cmd[1], &rpc_st, sizeof(struct socket_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
 
