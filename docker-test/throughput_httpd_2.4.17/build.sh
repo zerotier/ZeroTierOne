@@ -14,4 +14,5 @@ cp ../../zerotier-cli zerotier-cli
 
 cp ../../netcon/liblwip.so liblwip.so
 cp ../../netcon/libintercept.so.1.0 libintercept.so.1.0
+cp ../../netcon/intercept intercept
 

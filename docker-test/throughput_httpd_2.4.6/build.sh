@@ -7,7 +7,7 @@ rm *.o
 rm liblwip.so
 make -f make-liblwip.mk
 
-cd ../docker-test/throughput_httpd_2.4.16
+cd ../docker-test/throughput_httpd_2.4.6
 
 cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli
@@ -15,3 +15,4 @@ cp ../../zerotier-cli zerotier-cli
 cp ../../netcon/liblwip.so liblwip.so
 cp ../../netcon/libintercept.so.1.0 libintercept.so.1.0
 cp ../../netcon/intercept intercept
+

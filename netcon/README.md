@@ -94,23 +94,23 @@ To run a simple RX/TX test:
 
 Network Containers have been tested with the following:
 
-	sshd			[ WORKS as of 20151102] Long ~15-20s delay for client during connect
-	ssh			[ WORKS as of 20151102]
-	sftp			[ WORKS as of 20151022]
-	curl			[ WORKS as of 20151021] 
-	apache (debug mode)	[ WORKS as of 20150810]
-	apache (prefork MPM)	[ WORKS as of 20151102]
-	nginx			[ WORKS as of 20151022]
-	nodejs			[ WORKS as of 20151021]
-	java			[ WORKS as of 20151010]
-	tomcat			[ WORKS as of 2015xxxx]
-	thttpd			[ WORKS as of 2015xxxx]
-	vsftpd			[BROKEN as of 20151021] Server sends 500 when 220 is expected
-	mysql			[BROKEN as of 20151021]
-	postresql		[BROKEN as of 20151021]
-	MongoDB			[ WORKS as of 20151028]
-	Redis-server		[ WORKS as of 20151027]
-	pure-ftpd		[BROKEN as of 20151021] Socket operation on non-socket
+	sshd					[ WORKS as of 20151102] Long ~15-20s delay for client during connect
+	ssh						[ WORKS as of 20151102]
+	sftp					[ WORKS as of 20151022]
+	curl					[ WORKS as of 20151021] 
+	apache (debug mode)		[ WORKS as of 20150810]
+	apache (prefork MPM)	[ WORKS as of 20151112] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
+	nginx					[ WORKS as of 20151022]
+	nodejs					[ WORKS as of 20151021]
+	java					[ WORKS as of 20151010]
+	tomcat					[ WORKS as of 2015xxxx]
+	thttpd					[ WORKS as of 2015xxxx] 
+	vsftpd					[BROKEN as of 20151021] Server sends 500 when 220 is expected
+	mysql					[BROKEN as of 20151021]
+	postresql				[BROKEN as of 20151021]
+	MongoDB					[ WORKS as of 20151028]
+	Redis-server			[ WORKS as of 20151027]
+	pure-ftpd				[BROKEN as of 20151021] Socket operation on non-socket
 
 To Test:
 
