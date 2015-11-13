@@ -94,8 +94,8 @@ To run a simple RX/TX test:
 
 Network Containers have been tested with the following:
 
-	sshd					[ WORKS as of 20151102] Long ~15-20s delay for client during connect
-	ssh						[ WORKS as of 20151102]
+	sshd					[ WORKS as of 20151112] Long ~15-20s delay for client during connect
+	ssh						[ WORKS as of 20151112]
 	sftp					[ WORKS as of 20151022]
 	curl					[ WORKS as of 20151021] 
 	apache (debug mode)		[ WORKS as of 20150810]
