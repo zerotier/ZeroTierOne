@@ -96,9 +96,6 @@
     <ClCompile Include="..\..\osdep\OSUtils.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\selftest.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\C25519.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -190,6 +187,9 @@
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="..\..\node\DeferredPackets.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\Cluster.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>
@@ -417,6 +417,9 @@
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\DeferredPackets.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\World.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>

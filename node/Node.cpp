@@ -93,21 +93,22 @@ Node::Node(
 		_prng.encrypt12(_prngStream,_prngStream,sizeof(_prngStream));
 	}
 
-	std::string idtmp(dataStoreGet("identity.secret"));
-	if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
-		TRACE("identity.secret not found, generating...");
-		RR->identity.generate();
-		idtmp = RR->identity.toString(true);
-		if (!dataStorePut("identity.secret",idtmp,true))
-			throw std::runtime_error("unable to write identity.secret");
-	}
-	RR->publicIdentityStr = RR->identity.toString(false);
-	RR->secretIdentityStr = RR->identity.toString(true);
-
-	idtmp = dataStoreGet("identity.public");
-	if (idtmp != RR->publicIdentityStr) {
-		if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
-			throw std::runtime_error("unable to write identity.public");
+	{
+		std::string idtmp(dataStoreGet("identity.secret"));
+		if ((!idtmp.length())||(!RR->identity.fromString(idtmp))||(!RR->identity.hasPrivate())) {
+			TRACE("identity.secret not found, generating...");
+			RR->identity.generate();
+			idtmp = RR->identity.toString(true);
+			if (!dataStorePut("identity.secret",idtmp,true))
+				throw std::runtime_error("unable to write identity.secret");
+		}
+		RR->publicIdentityStr = RR->identity.toString(false);
+		RR->secretIdentityStr = RR->identity.toString(true);
+		idtmp = dataStoreGet("identity.public");
+		if (idtmp != RR->publicIdentityStr) {
+			if (!dataStorePut("identity.public",RR->publicIdentityStr,false))
+				throw std::runtime_error("unable to write identity.public");
+		}
 	}
 
 	try {
@@ -662,7 +663,7 @@ void Node::backgroundThreadMain()
 
 std::string Node::dataStoreGet(const char *name)
 {
-	char buf[16384];
+	char buf[1024];
 	std::string r;
 	unsigned long olen = 0;
 	do {

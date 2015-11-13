@@ -50,6 +50,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	const uint8_t *all = reinterpret_cast<const uint8_t *>(alls.data());
 	RR->node->dataStoreDelete("peers.save");
 
+	Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE> *deserializeBuf = new Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE>();
 	unsigned int ptr = 0;
 	while ((ptr + 4) < alls.size()) {
 		try {
@@ -60,7 +61,8 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 					(((unsigned int)all[ptr + 3]) & 0xff)
 				);
 			unsigned int pos = 0;
-			SharedPtr<Peer> p(Peer::deserializeNew(RR->identity,Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE>(all + ptr,reclen + 4),pos));
+			deserializeBuf->copyFrom(all + ptr,reclen + 4);
+			SharedPtr<Peer> p(Peer::deserializeNew(RR->identity,*deserializeBuf,pos));
 			ptr += pos;
 			if (!p)
 				break; // stop if invalid records
@@ -70,16 +72,19 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 			break; // stop if invalid records
 		}
 	}
+	delete deserializeBuf;
 
 	clean(RR->node->now());
 
 	std::string dsWorld(RR->node->dataStoreGet("world"));
 	World cachedWorld;
-	try {
-		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),(unsigned int)dsWorld.length());
-		cachedWorld.deserialize(dswtmp,0);
-	} catch ( ... ) {
-		cachedWorld = World(); // clear if cached world is invalid
+	if (dsWorld.length() > 0) {
+		try {
+			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),(unsigned int)dsWorld.length());
+			cachedWorld.deserialize(dswtmp,0);
+		} catch ( ... ) {
+			cachedWorld = World(); // clear if cached world is invalid
+		}
 	}
 	World defaultWorld;
 	{
@@ -313,20 +318,6 @@ void Topology::clean(uint64_t now)
 			(*p)->clean(RR,now);
 		}
 	}
-}
-
-unsigned long Topology::countActive() const
-{
-	const uint64_t now = RR->node->now();
-	unsigned long cnt = 0;
-	Mutex::Lock _l(_lock);
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
-	Address *a = (Address *)0;
-	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	while (i.next(a,p)) {
-		cnt += (unsigned long)((*p)->hasActiveDirectPath(now));
-	}
-	return cnt;
 }
 
 Identity Topology::_getIdentity(const Address &zta)

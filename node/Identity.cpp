@@ -158,7 +158,7 @@ bool Identity::fromString(const char *str)
 		return false;
 
 	char *saveptr = (char *)0;
-	char tmp[4096];
+	char tmp[1024];
 	if (!Utils::scopy(tmp,sizeof(tmp),str))
 		return false;
 

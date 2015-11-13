@@ -58,7 +58,12 @@ class AntiRecursion
 public:
 	AntiRecursion()
 	{
-		memset(_history,0,sizeof(_history));
+		for(int i=0;i<ZT_ANTIRECURSION_HISTORY_SIZE;++i) {
+			_history[i].tail[0] = 0;
+			_history[i].tail[1] = 0;
+			_history[i].tail[2] = 0;
+			_history[i].tail[3] = 0;
+		}
 		_ptr = 0;
 	}
 

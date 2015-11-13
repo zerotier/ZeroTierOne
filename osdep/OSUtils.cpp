@@ -206,7 +206,7 @@ skip_add_inetaddr:
 
 bool OSUtils::readFile(const char *path,std::string &buf)
 {
-	char tmp[4096];
+	char tmp[1024];
 	FILE *f = fopen(path,"rb");
 	if (f) {
 		for(;;) {

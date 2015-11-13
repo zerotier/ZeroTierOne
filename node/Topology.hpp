@@ -200,9 +200,21 @@ public:
 	void clean(uint64_t now);
 
 	/**
+	 * @param now Current time
 	 * @return Number of peers with active direct paths
 	 */
-	unsigned long countActive() const;
+	inline unsigned long countActive(uint64_t now) const
+	{
+		unsigned long cnt = 0;
+		Mutex::Lock _l(_lock);
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(const_cast<Topology *>(this)->_peers);
+		Address *a = (Address *)0;
+		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		while (i.next(a,p)) {
+			cnt += (unsigned long)((*p)->hasActiveDirectPath(now));
+		}
+		return cnt;
+	}
 
 	/**
 	 * Apply a function or function object to all peers
@@ -253,7 +265,7 @@ private:
 	Identity _getIdentity(const Address &zta);
 	void _setWorld(const World &newWorld);
 
-	const RuntimeEnvironment *RR;
+	const RuntimeEnvironment *const RR;
 
 	World _world;
 	Hashtable< Address,SharedPtr<Peer> > _peers;

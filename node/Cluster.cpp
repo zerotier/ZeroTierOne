@@ -628,7 +628,7 @@ void Cluster::doPeriodicTasks()
 				}
 				alive.append((uint64_t)now);
 				alive.append((uint64_t)0); // TODO: compute and send load average
-				alive.append((uint64_t)RR->topology->countActive());
+				alive.append((uint64_t)RR->topology->countActive(now));
 				alive.append((uint64_t)0); // unused/reserved flags
 				alive.append((uint8_t)_zeroTierPhysicalEndpoints.size());
 				for(std::vector<InetAddress>::const_iterator pe(_zeroTierPhysicalEndpoints.begin());pe!=_zeroTierPhysicalEndpoints.end();++pe)
@@ -769,7 +769,7 @@ void Cluster::status(ZT_ClusterStatus &status) const
 		s->y = _y;
 		s->z = _z;
 		s->load = 0; // TODO
-		s->peers = RR->topology->countActive();
+		s->peers = RR->topology->countActive(now);
 		for(std::vector<InetAddress>::const_iterator ep(_zeroTierPhysicalEndpoints.begin());ep!=_zeroTierPhysicalEndpoints.end();++ep) {
 			if (s->numZeroTierPhysicalEndpoints >= ZT_CLUSTER_MAX_ZT_PHYSICAL_ADDRESSES) // sanity check
 				break;
