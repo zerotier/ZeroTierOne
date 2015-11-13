@@ -76,7 +76,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 	std::string dsWorld(RR->node->dataStoreGet("world"));
 	World cachedWorld;
 	try {
-		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),dsWorld.length());
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> dswtmp(dsWorld.data(),(unsigned int)dsWorld.length());
 		cachedWorld.deserialize(dswtmp,0);
 	} catch ( ... ) {
 		cachedWorld = World(); // clear if cached world is invalid

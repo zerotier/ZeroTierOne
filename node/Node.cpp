@@ -203,7 +203,7 @@ public:
 		for(std::vector<World::Root>::const_iterator r(_world.roots().begin());r!=_world.roots().end();++r) {
 			if (r->identity.address() == p->address()) {
 				upstream = true;
-				for(unsigned long k=0,ptr=RR->node->prng();k<r->stableEndpoints.size();++k) {
+				for(unsigned long k=0,ptr=(unsigned long)RR->node->prng();k<(unsigned long)r->stableEndpoints.size();++k) {
 					const InetAddress &addr = r->stableEndpoints[ptr++ % r->stableEndpoints.size()];
 					if (!stableEndpoint4) {
 						if (addr.ss_family == AF_INET)
@@ -536,7 +536,7 @@ ZT_ResultCode Node::circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)
 			outp.append((uint16_t)0);
 			C25519::Signature sig(RR->identity.sign(reinterpret_cast<const char *>(outp.data()) + ZT_PACKET_IDX_PAYLOAD,outp.size() - ZT_PACKET_IDX_PAYLOAD));
 			outp.append((uint16_t)sig.size());
-			outp.append(sig.data,sig.size());
+			outp.append(sig.data,(unsigned int)sig.size());
 			outp.append((uint16_t)0); // originator doesn't need an extra credential, since it's the originator
 			for(unsigned int h=1;h<test->hopCount;++h) {
 				outp.append((uint8_t)0);
