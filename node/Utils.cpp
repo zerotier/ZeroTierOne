@@ -168,14 +168,14 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 			exit(1);
 		}
-		s20.init(s20key,256,s20key,8);
+		s20.init(s20key,256,s20key);
 	}
 
 	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
 		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 		exit(1);
 	}
-	s20.encrypt(buf,buf,bytes);
+	s20.encrypt12(buf,buf,bytes);
 
 #else // not __WINDOWS__
 

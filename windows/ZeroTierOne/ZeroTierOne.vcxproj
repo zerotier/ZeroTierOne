@@ -24,7 +24,7 @@
     <ClCompile Include="..\..\ext\lz4\lz4.c" />
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
-    <ClCompile Include="..\..\node\Defaults.cpp" />
+    <ClCompile Include="..\..\node\DeferredPackets.cpp" />
     <ClCompile Include="..\..\node\Dictionary.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
@@ -35,6 +35,7 @@
     <ClCompile Include="..\..\node\Node.cpp" />
     <ClCompile Include="..\..\node\OutboundMulticast.cpp" />
     <ClCompile Include="..\..\node\Packet.cpp" />
+    <ClCompile Include="..\..\node\Path.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp" />
     <ClCompile Include="..\..\node\Salsa20.cpp" />
@@ -87,13 +88,16 @@
     <ClInclude Include="..\..\node\Array.hpp" />
     <ClInclude Include="..\..\node\AtomicCounter.hpp" />
     <ClInclude Include="..\..\node\BandwidthAccount.hpp" />
+    <ClInclude Include="..\..\node\BinarySemaphore.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
     <ClInclude Include="..\..\node\C25519.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
+    <ClInclude Include="..\..\node\Cluster.hpp" />
     <ClInclude Include="..\..\node\CMWC4096.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />
-    <ClInclude Include="..\..\node\Defaults.hpp" />
+    <ClInclude Include="..\..\node\DeferredPackets.hpp" />
     <ClInclude Include="..\..\node\Dictionary.hpp" />
+    <ClInclude Include="..\..\node\Hashtable.hpp" />
     <ClInclude Include="..\..\node\Identity.hpp" />
     <ClInclude Include="..\..\node\IncomingPacket.hpp" />
     <ClInclude Include="..\..\node\InetAddress.hpp" />
@@ -111,7 +115,6 @@
     <ClInclude Include="..\..\node\Path.hpp" />
     <ClInclude Include="..\..\node\Peer.hpp" />
     <ClInclude Include="..\..\node\Poly1305.hpp" />
-    <ClInclude Include="..\..\node\RemotePath.hpp" />
     <ClInclude Include="..\..\node\RuntimeEnvironment.hpp" />
     <ClInclude Include="..\..\node\Salsa20.hpp" />
     <ClInclude Include="..\..\node\SelfAwareness.hpp" />

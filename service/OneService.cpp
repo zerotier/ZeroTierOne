@@ -796,7 +796,7 @@ public:
 								while (ua) {
 									InetAddress ip(ua->Address.lpSockaddr);
 									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip),0,ZT_LOCAL_INTERFACE_ADDRESS_TRUST_NORMAL);
+									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
 									ua = ua->Next;
 								}
 							}

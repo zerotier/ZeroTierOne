@@ -103,7 +103,7 @@ public:
 	private:
 		unsigned long _idx;
 		Hashtable *_ht;
-		Hashtable::_Bucket *_b;
+		_Bucket *_b;
 	};
 	friend class Hashtable::Iterator;
 

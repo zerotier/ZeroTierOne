@@ -105,9 +105,6 @@
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\node\Defaults.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Dictionary.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -189,6 +186,12 @@
     <ClCompile Include="..\..\osdep\UPNPClient.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\node\Path.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\node\DeferredPackets.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -252,9 +255,6 @@
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Constants.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\node\Defaults.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Dictionary.hpp">
@@ -356,9 +356,6 @@
     <ClInclude Include="..\..\osdep\BackgroundResolver.hpp">
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\RemotePath.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\osdep\UPNPClient.hpp">
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
@@ -409,6 +406,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpreplyparse.h">
       <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\BinarySemaphore.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\Cluster.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\Hashtable.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\DeferredPackets.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
