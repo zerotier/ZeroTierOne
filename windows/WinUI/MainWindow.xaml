@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:local="clr-namespace:WinUI"
         mc:Ignorable="d" x:Class="WinUI.MainWindow"
-        Title="ZeroTier One" Height="500" Width="600" Icon="ZeroTierIcon.ico">
+        Title="ZeroTier One" Height="500" Width="425" Icon="ZeroTierIcon.ico">
 	
     <Window.Resources>
         <SolidColorBrush x:Key="GreenBrush" Color="#ff91a2a3"/>
@@ -75,7 +75,7 @@
     </Window.Resources>
     
     <DockPanel>
-		<StatusBar DockPanel.Dock="Bottom" Height="34" Background="#FF234447" Margin="0">
+		<StatusBar DockPanel.Dock="Bottom" Height="26" Background="#FF234447" Margin="0">
 			<StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
                     <Grid>
@@ -93,20 +93,20 @@
                     </Grid>
                 </ItemsPanelTemplate>
             </StatusBar.ItemsPanel>
-			<StatusBarItem Grid.Column="0" x:Name="networkId" Content="Network ID" Foreground="White"/>
-			<StatusBarItem Grid.Column="1" x:Name="onlineStatus" Content="ONLINE" Foreground="White"/>
-			<StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White"/>
+			<StatusBarItem Grid.Column="0" x:Name="networkId" Content="deadbeef00" Foreground="White" FontFamily="Lucida Console"/>
+            <StatusBarItem Grid.Column="1" x:Name="onlineStatus" Content="ONLINE" Foreground="White" FontFamily="Lucida Console"/>
+            <StatusBarItem Grid.Column="2" x:Name="versionString" Content="1.0.5" Foreground="White" FontFamily="Lucida Console"/>
 			<StatusBarItem Grid.Column="3" x:Name="blank" Content="" Height="43" Foreground="White"/>
 			<StatusBarItem Grid.Column="4">
-				<TextBox x:Name="joinNetworkID" Height="23" TextWrapping="Wrap" Width="120" HorizontalAlignment="Right" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16"/>
+				<TextBox x:Name="joinNetworkID" TextWrapping="Wrap" Width="140" HorizontalAlignment="Right" ToolTip="Enter Network ID" PreviewTextInput="OnNetworkEntered" MaxLength="16" FontFamily="Lucida Console" FontSize="12" BorderThickness="1"/>
 			</StatusBarItem>
 			<StatusBarItem Grid.Column="5" x:Name="statusBarButton" Foreground="White" RenderTransformOrigin="0.789,0.442">
-				<Button x:Name="joinButton" Content="Join" Background="#FFFFB354" Width="77.423" Click="joinButton_Click"/>
+				<Button x:Name="joinButton" Content="Join" Background="#FFFFB354" Width="76" Click="joinButton_Click"/>
 			</StatusBarItem>
 		</StatusBar>
-		<TabControl Margin="0,0,0,0">
-            <TabItem x:Name="Networks" Header="Networks" Foreground="White" IsSelected="True" IsManipulationEnabled="True">
-                <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+		<!--<TabControl Margin="0,0,0,0">
+            <TabItem x:Name="Networks" Header="Networks" Foreground="White" IsSelected="True" IsManipulationEnabled="True">-->
+                <Grid Background="LightGray" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
@@ -115,7 +115,7 @@
                     </Grid.RowDefinitions>
                     <local:NetworksPage x:Name="networksPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="0" Grid.Row="0" Margin="0,0,0,0"/>
                 </Grid>
-            </TabItem>
+            <!--</TabItem>-->
             <!--<TabItem x:Name="Peers" Header="Peers" Foreground="White">
                 <Grid Background="#FFE5E5E5" HorizontalAlignment="Left" VerticalAlignment="Top">
                     <Grid.ColumnDefinitions>
@@ -127,6 +127,6 @@
                     <local:PeersPage x:Name="peersPage" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="0" Grid.Row="0"/>
                 </Grid>
             </TabItem>-->
-		</TabControl>
+		<!--</TabControl>-->
 	</DockPanel>
 </Window>

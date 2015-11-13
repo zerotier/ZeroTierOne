@@ -6,8 +6,8 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <ScrollViewer x:Name="MyScrollViewer" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-        <WrapPanel x:Name="wrapPanel" Background="#FFDDDDDD"  HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <UniformGrid x:Name="wrapPanel" Background="#FFDDDDDD"  HorizontalAlignment="Stretch" VerticalAlignment="Top" Columns="1">
 
-        </WrapPanel>
+        </UniformGrid>
     </ScrollViewer>
 </UserControl>
