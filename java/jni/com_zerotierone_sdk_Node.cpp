@@ -427,7 +427,8 @@ namespace {
         const struct sockaddr_storage *localAddress,
         const struct sockaddr_storage *remoteAddress,
         const void *buffer,
-        unsigned int bufferSize)
+        unsigned int bufferSize,
+        unsigned int ttl)
     {
         LOGV("WirePacketSendFunction(%p, %p, %p, %d)", localAddress, remoteAddress, buffer, bufferSize);
         JniRef *ref = (JniRef*)userData;
@@ -445,7 +446,7 @@ namespace {
         }
 
         jmethodID packetSenderCallbackMethod = lookup.findMethod(packetSenderClass,
-            "onSendPacketRequested", "(Ljava/net/InetSocketAddress;Ljava/net/InetSocketAddress;[B)I");
+            "onSendPacketRequested", "(Ljava/net/InetSocketAddress;Ljava/net/InetSocketAddress;[BI)I");
         if(packetSenderCallbackMethod == NULL)
         {
             LOGE("Couldn't find onSendPacketRequested method");

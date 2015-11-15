@@ -45,5 +45,6 @@ public interface PacketSender {
     public int onSendPacketRequested(
             InetSocketAddress localAddr,
             InetSocketAddress remoteAddr,
-            byte[] packetData);
+            byte[] packetData,
+            int ttl);
 }
