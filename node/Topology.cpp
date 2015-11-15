@@ -128,8 +128,8 @@ SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)
 #ifdef ZT_TRACE
 	if ((!peer)||(peer->address() == RR->identity.address())) {
 		if (!peer)
-			fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add NULL peer"ZT_EOL_S);
-		else fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add peer for self"ZT_EOL_S);
+			fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add NULL peer" ZT_EOL_S);
+		else fprintf(stderr,"FATAL BUG: addPeer() caught attempt to add peer for self" ZT_EOL_S);
 		abort();
 	}
 #endif
