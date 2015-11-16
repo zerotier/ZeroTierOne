@@ -156,10 +156,9 @@ int main(int argc,char **argv)
 		fprintf(stderr,"FATAL: serialization test failed!"ZT_EOL_S);
 		return 1;
 	}
-	//fwrite(outtmp.data(),outtmp.size(),1,stdout);
-	//fflush(stdout);
 
-	//fprintf(stderr,"INFO: wrote %u bytes to stdout"ZT_EOL_S,outtmp.size());
+	OSUtils::writeFile("world.bin",std::string((const char *)outtmp.data(),outtmp.size()));
+	fprintf(stderr,"INFO: world.bin written with %u bytes of binary world data."ZT_EOL_S,outtmp.size());
 
 	fprintf(stdout,ZT_EOL_S);
 	fprintf(stdout,"#define ZT_DEFAULT_WORLD_LENGTH %u"ZT_EOL_S,outtmp.size());
