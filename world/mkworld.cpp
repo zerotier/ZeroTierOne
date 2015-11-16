@@ -89,7 +89,7 @@ int main(int argc,char **argv)
 		current = previous;
 		OSUtils::writeFile("previous.c25519",previous);
 		OSUtils::writeFile("current.c25519",current);
-		fprintf(stderr,"INFO: created initial world keys: previous.c25519, current.c25519"ZT_EOL_S);
+		fprintf(stderr,"INFO: created initial world keys: previous.c25519 and current.c25519 (both initially the same)"ZT_EOL_S);
 	}
 
 	if ((previous.length() != (ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_PRIVATE_KEY_LEN))||(current.length() != (ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_PRIVATE_KEY_LEN))) {
@@ -103,40 +103,46 @@ int main(int argc,char **argv)
 	memcpy(currentKP.pub.data,current.data(),ZT_C25519_PUBLIC_KEY_LEN);
 	memcpy(currentKP.priv.data,current.data() + ZT_C25519_PUBLIC_KEY_LEN,ZT_C25519_PRIVATE_KEY_LEN);
 
-	// EDIT BELOW HERE ---------------------------------------------------------
+	// =========================================================================
+	// EDIT BELOW HERE
 
 	std::vector<World::Root> roots;
+
+	//
+	// The initial version of the World uses the old root server infrastructure.
+	// The new "Alice and Bob" infrastructure will replace this gradually, with
+	// Paris probably being the first node to be taken over and clusterized.
+	//
+	// ZeroTier does actual World generation on an air-gapped machine by copying
+	// this code over, building it there and running, then saving the results
+	// onto a USB key.
+	//
+
+	const uint64_t id = ZT_WORLD_ID_EARTH;
+	const uint64_t ts = 1447696577275ULL; // November 16th, 2015 ~9:56AM
 
 	// old US-SFO
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa");
 	roots.back().stableEndpoints.push_back(InetAddress("198.199.97.220/9993"));
-	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 
 	// old EU-PARIS
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("8841408a2e:0:bb1d31f2c323e264e9e64172c1a74f77899555ed10751cd56e86405cde118d02dffe555d462ccf6a85b5631c12350c8d5dc409ba10b9025d0f445cf449d92b1c");
 	roots.back().stableEndpoints.push_back(InetAddress("107.191.46.210/9993"));
-	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 
 	// old US-NYC
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5");
 	roots.back().stableEndpoints.push_back(InetAddress("162.243.77.111/9993"));
-	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 
 	// old AP-SNG
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("9d219039f3:0:01f0922a98e3b34ebcbff333269dc265d7a020aab69d72be4d4acc9c8c9294785771256cd1d942a90d1bd1d2dca3ea84ef7d85afe6611fb43ff0b74126d90a6e");
 	roots.back().stableEndpoints.push_back(InetAddress("128.199.197.217/9993"));
-	std::sort(roots.back().stableEndpoints.begin(),roots.back().stableEndpoints.end());
 
-	std::sort(roots.begin(),roots.end());
-
-	const uint64_t id = ZT_WORLD_ID_EARTH;
-	const uint64_t ts = OSUtils::now();
-
-	// END WORLD SETUP ---------------------------------------------------------
+	// END WORLD DEFINITION
+	// =========================================================================
 
 	fprintf(stderr,"INFO: generating and signing id==%llu ts==%llu"ZT_EOL_S,(unsigned long long)id,(unsigned long long)ts);
 
