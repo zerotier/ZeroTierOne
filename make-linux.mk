@@ -43,23 +43,7 @@ endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	DEFS+=-DZT_USE_MINIUPNPC
-ifeq ($(UNAME_M),armv6l)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),armv7l)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),x86_64)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x64/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),i386)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x86/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),i686)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x86/libminiupnpc.a
-endif
-	MINIUPNPC_LIB?=-lminiupnpc
-	LDLIBS+=$(MINIUPNPC_LIB)
+	LDLIBS+=ext/miniupnpc/libminiupnpc.a
 	OBJS+=osdep/UPNPClient.o
 endif
 
@@ -106,6 +90,9 @@ endif
 all:	one
 
 one:	$(OBJS) one.o
+ifeq ($(ZT_USE_MINIUPNPC),1)
+	cd ext/miniupnpc ; make clean ; make 'CFLAGS=-O2 -fstack-protector -fPIE -fno-common -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600' -j 2 libminiupnpc.a
+endif
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -120,6 +107,7 @@ installer: one FORCE
 
 clean:
 	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
+	cd ext/miniupnpc ; make clean
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
