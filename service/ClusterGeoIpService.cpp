@@ -44,8 +44,8 @@
 #include "../node/Utils.hpp"
 #include "../osdep/OSUtils.hpp"
 
-// Same as in cluster-geo.js but unlike cluster-geo this cache is volatile
-#define ZT_CLUSTERGEOIPSERVICE_INTERNAL_CACHE_TTL (60 * 60 * 24 * 120 * 1000)
+// 120 days
+#define ZT_CLUSTERGEOIPSERVICE_INTERNAL_CACHE_TTL 10368000000ULL
 
 namespace ZeroTier {
 
