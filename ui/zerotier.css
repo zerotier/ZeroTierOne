@@ -37,7 +37,7 @@ html,body {
 	width: 100%;
 	height: 100%;
 	display: table-cell;
-	border-bottom: 1px solid #000000;
+	border-bottom: 1px solid #cfcfcf;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll {
 	display: block;
@@ -72,8 +72,8 @@ html,body {
 	width: 100%;
 	overflow: hidden;
 	display: table-row;
-	background: #000000;
-	color: #ffffff;
+	color: #000000;
+	background: #dfdfdf;
 }
 .zeroTierNode > .bottom > .left {
 	text-align: left;
