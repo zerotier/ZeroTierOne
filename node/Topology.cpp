@@ -96,27 +96,34 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 
 Topology::~Topology()
 {
-	Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE> pbuf;
-	std::string all;
+	Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE> *pbuf = 0;
+	try {
+		pbuf = new Buffer<ZT_PEER_SUGGESTED_SERIALIZATION_BUFFER_SIZE>();
+		std::string all;
 
-	Address *a = (Address *)0;
-	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
-	while (i.next(a,p)) {
-		if (std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end()) {
-			pbuf.clear();
-			try {
-				(*p)->serialize(pbuf);
+		Address *a = (Address *)0;
+		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
+		Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
+		while (i.next(a,p)) {
+			if (std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end()) {
+				pbuf->clear();
 				try {
-					all.append((const char *)pbuf.data(),pbuf.size());
-				} catch ( ... ) {
-					return; // out of memory? just skip
-				}
-			} catch ( ... ) {} // peer too big? shouldn't happen, but it so skip
+					(*p)->serialize(*pbuf);
+					try {
+						all.append((const char *)pbuf->data(),pbuf->size());
+					} catch ( ... ) {
+						return; // out of memory? just skip
+					}
+				} catch ( ... ) {} // peer too big? shouldn't happen, but it so skip
+			}
 		}
-	}
 
-	RR->node->dataStorePut("peers.save",all,true);
+		RR->node->dataStorePut("peers.save",all,true);
+
+		delete pbuf;
+	} catch ( ... ) {
+		delete pbuf;
+	}
 }
 
 SharedPtr<Peer> Topology::addPeer(const SharedPtr<Peer> &peer)

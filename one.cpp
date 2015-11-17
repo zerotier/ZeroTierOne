@@ -966,7 +966,7 @@ int main(int argc,char **argv)
 #ifdef ZT_WIN_RUN_IN_CONSOLE
 	bool winRunFromCommandLine = true;
 #else
-	bool winRunFromCommandLine = true;
+	bool winRunFromCommandLine = false;
 #endif
 #endif // __WINDOWS__
 
