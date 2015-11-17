@@ -1,0 +1,1635 @@
+6631  execve("/usr/bin/intercept", ["intercept", "nginx"], [/* 29 vars */]) = 0
+6631  brk(0)                            = 0x558469633000
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f30850df000
+6631  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+6631  open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+6631  fstat(3, {st_mode=S_IFREG|0644, st_size=86380, ...}) = 0
+6631  mmap(NULL, 86380, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f30850c9000
+6631  close(3)                          = 0
+6631  open("/lib64/libtinfo.so.5", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0@\316\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=172000, ...}) = 0
+6631  mmap(NULL, 2267936, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f3084c96000
+6631  mprotect(0x7f3084cbc000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f3084ebb000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x25000) = 0x7f3084ebb000
+6631  close(3)                          = 0
+6631  open("/lib64/libdl.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0`\16\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=19344, ...}) = 0
+6631  mmap(NULL, 2109712, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f3084a92000
+6631  mprotect(0x7f3084a95000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f3084c94000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f3084c94000
+6631  close(3)                          = 0
+6631  open("/lib64/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\6\2\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=2102288, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f30850c8000
+6631  mmap(NULL, 3934784, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f30846d1000
+6631  mprotect(0x7f3084888000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f3084a88000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1b7000) = 0x7f3084a88000
+6631  mmap(0x7f3084a8e000, 14912, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f3084a8e000
+6631  close(3)                          = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f30850c7000
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f30850c6000
+6631  arch_prctl(ARCH_SET_FS, 0x7f30850c7700) = 0
+6631  mprotect(0x7f3084a88000, 16384, PROT_READ) = 0
+6631  mprotect(0x7f3084c94000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f3084ebb000, 16384, PROT_READ) = 0
+6631  mprotect(0x558468a31000, 16384, PROT_READ) = 0
+6631  mprotect(0x7f30850e0000, 4096, PROT_READ) = 0
+6631  munmap(0x7f30850c9000, 86380)     = 0
+6631  open("/dev/tty", O_RDWR|O_NONBLOCK) = 3
+6631  close(3)                          = 0
+6631  brk(0)                            = 0x558469633000
+6631  brk(0x558469654000)               = 0x558469654000
+6631  brk(0)                            = 0x558469654000
+6631  open("/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+6631  fstat(3, {st_mode=S_IFREG|0644, st_size=110439344, ...}) = 0
+6631  mmap(NULL, 110439344, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f307dd7e000
+6631  close(3)                          = 0
+6631  getuid()                          = 0
+6631  getgid()                          = 0
+6631  geteuid()                         = 0
+6631  getegid()                         = 0
+6631  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+6631  brk(0)                            = 0x558469654000
+6631  open("/proc/meminfo", O_RDONLY|O_CLOEXEC) = 3
+6631  fstat(3, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f30850de000
+6631  read(3, "MemTotal:        3120024 kB\nMemF"..., 1024) = 1024
+6631  close(3)                          = 0
+6631  munmap(0x7f30850de000, 4096)      = 0
+6631  rt_sigaction(SIGCHLD, {SIG_DFL, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, {SIG_DFL, [], 0}, 8) = 0
+6631  rt_sigaction(SIGCHLD, {SIG_DFL, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, {SIG_DFL, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, 8) = 0
+6631  rt_sigaction(SIGINT, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, {SIG_DFL, [], 0}, 8) = 0
+6631  rt_sigaction(SIGINT, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, 8) = 0
+6631  rt_sigaction(SIGQUIT, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, {SIG_DFL, [], 0}, 8) = 0
+6631  rt_sigaction(SIGQUIT, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, 8) = 0
+6631  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+6631  rt_sigaction(SIGQUIT, {SIG_IGN, [], SA_RESTORER, 0x7f3084705b20}, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, 8) = 0
+6631  uname({sysname="Linux", nodename="localhost.localdomain", ...}) = 0
+6631  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+6631  open("/usr/lib64/gconv/gconv-modules.cache", O_RDONLY) = 3
+6631  fstat(3, {st_mode=S_IFREG|0644, st_size=26254, ...}) = 0
+6631  mmap(NULL, 26254, PROT_READ, MAP_SHARED, 3, 0) = 0x7f30850d8000
+6631  close(3)                          = 0
+6631  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+6631  stat("/home/joseph/dev/zerotierone/netcon", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  stat(".", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  getpid()                          = 6631
+6631  getppid()                         = 6629
+6631  getpgrp()                         = 6629
+6631  rt_sigaction(SIGCHLD, {0x55846878e320, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, {SIG_DFL, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, 8) = 0
+6631  getrlimit(RLIMIT_NPROC, {rlim_cur=12104, rlim_max=12104}) = 0
+6631  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+6631  open("/usr/bin/intercept", O_RDONLY) = 3
+6631  ioctl(3, TCGETS, 0x7ffc6f34ab30)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(3, 0, SEEK_CUR)             = 0
+6631  read(3, "#!/bin/sh\n# usage:\n# /usr/bin/in"..., 80) = 80
+6631  lseek(3, 0, SEEK_SET)             = 0
+6631  getrlimit(RLIMIT_NOFILE, {rlim_cur=1024, rlim_max=4*1024}) = 0
+6631  fcntl(255, F_GETFD)               = -1 EBADF (Bad file descriptor)
+6631  dup2(3, 255)                      = 255
+6631  close(3)                          = 0
+6631  fcntl(255, F_SETFD, FD_CLOEXEC)   = 0
+6631  fcntl(255, F_GETFL)               = 0x8000 (flags O_RDONLY|O_LARGEFILE)
+6631  fstat(255, {st_mode=S_IFREG|0755, st_size=926, ...}) = 0
+6631  lseek(255, 0, SEEK_CUR)           = 0
+6631  read(255, "#!/bin/sh\n# usage:\n# /usr/bin/in"..., 926) = 926
+6631  stat(".", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  stat("/usr/local/sbin/nginx", 0x7ffc6f34a420) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/bin/nginx", 0x7ffc6f34a420) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/sbin/nginx", {st_mode=S_IFREG|0755, st_size=1154208, ...}) = 0
+6631  stat("/usr/sbin/nginx", {st_mode=S_IFREG|0755, st_size=1154208, ...}) = 0
+6631  geteuid()                         = 0
+6631  getegid()                         = 0
+6631  getuid()                          = 0
+6631  getgid()                          = 0
+6631  access("/usr/sbin/nginx", X_OK)   = 0
+6631  stat("/usr/sbin/nginx", {st_mode=S_IFREG|0755, st_size=1154208, ...}) = 0
+6631  geteuid()                         = 0
+6631  getegid()                         = 0
+6631  getuid()                          = 0
+6631  getgid()                          = 0
+6631  access("/usr/sbin/nginx", R_OK)   = 0
+6631  stat("/usr/sbin/nginx", {st_mode=S_IFREG|0755, st_size=1154208, ...}) = 0
+6631  stat("/usr/sbin/nginx", {st_mode=S_IFREG|0755, st_size=1154208, ...}) = 0
+6631  geteuid()                         = 0
+6631  getegid()                         = 0
+6631  getuid()                          = 0
+6631  getgid()                          = 0
+6631  access("/usr/sbin/nginx", X_OK)   = 0
+6631  stat("/usr/sbin/nginx", {st_mode=S_IFREG|0755, st_size=1154208, ...}) = 0
+6631  geteuid()                         = 0
+6631  getegid()                         = 0
+6631  getuid()                          = 0
+6631  getgid()                          = 0
+6631  access("/usr/sbin/nginx", R_OK)   = 0
+6631  rt_sigaction(SIGINT, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, 8) = 0
+6631  rt_sigaction(SIGQUIT, {SIG_DFL, [], SA_RESTORER, 0x7f3084705b20}, {SIG_IGN, [], SA_RESTORER, 0x7f3084705b20}, 8) = 0
+6631  rt_sigaction(SIGCHLD, {SIG_DFL, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, {0x55846878e320, [], SA_RESTORER|SA_RESTART, 0x7f3084705b20}, 8) = 0
+6631  execve("/usr/sbin/nginx", ["nginx"], [/* 28 vars */]) = 0
+6631  brk(0)                            = 0x557070994000
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f9000
+6631  open("/lib/libintercept.so.1.0", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340\22\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=57440, ...}) = 0
+6631  mmap(NULL, 2114152, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cacdd5000
+6631  mprotect(0x7f9cacdd9000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cacfd8000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x3000) = 0x7f9cacfd8000
+6631  close(3)                          = 0
+6631  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+6631  open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+6631  fstat(3, {st_mode=S_IFREG|0644, st_size=86380, ...}) = 0
+6631  mmap(NULL, 86380, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f9cad1e3000
+6631  close(3)                          = 0
+6631  open("/lib64/libpthread.so.0", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260`\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=148912, ...}) = 0
+6631  mmap(NULL, 2213040, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cacbb8000
+6631  mprotect(0x7f9cacbd0000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cacdcf000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x17000) = 0x7f9cacdcf000
+6631  mmap(0x7f9cacdd1000, 13488, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9cacdd1000
+6631  close(3)                          = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1e2000
+6631  open("/lib64/libcrypt.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300\r\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=36488, ...}) = 0
+6631  mmap(NULL, 2314784, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cac982000
+6631  mprotect(0x7f9cac989000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cacb88000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6000) = 0x7f9cacb88000
+6631  mmap(0x7f9cacb8a000, 184864, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9cacb8a000
+6631  close(3)                          = 0
+6631  open("/lib64/libpcre.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360\26\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=459240, ...}) = 0
+6631  mmap(NULL, 2552072, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cac712000
+6631  mprotect(0x7f9cac780000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9cac980000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6e000) = 0x7f9cac980000
+6631  close(3)                          = 0
+6631  open("/lib64/libssl.so.10", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\271\1\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=498296, ...}) = 0
+6631  mmap(NULL, 2591344, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cac499000
+6631  mprotect(0x7f9cac506000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9cac706000, 49152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6d000) = 0x7f9cac706000
+6631  close(3)                          = 0
+6631  open("/lib64/libcrypto.so.10", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\277\6\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=2406528, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1e1000
+6631  mmap(NULL, 4506208, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cac04c000
+6631  mprotect(0x7f9cac26d000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9cac46d000, 163840, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x221000) = 0x7f9cac46d000
+6631  mmap(0x7f9cac495000, 12896, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9cac495000
+6631  close(3)                          = 0
+6631  open("/lib64/libdl.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0`\16\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=19344, ...}) = 0
+6631  mmap(NULL, 2109712, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cabe48000
+6631  mprotect(0x7f9cabe4b000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cac04a000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f9cac04a000
+6631  close(3)                          = 0
+6631  open("/lib64/libz.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=89472, ...}) = 0
+6631  mmap(NULL, 2183272, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cabc32000
+6631  mprotect(0x7f9cabc47000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cabe46000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x14000) = 0x7f9cabe46000
+6631  close(3)                          = 0
+6631  open("/lib64/libxml2.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340\344\2\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=1489584, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1e0000
+6631  mmap(NULL, 3561880, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cab8cc000
+6631  mprotect(0x7f9caba27000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9cabc27000, 40960, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15b000) = 0x7f9cabc27000
+6631  mmap(0x7f9cabc31000, 2456, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9cabc31000
+6631  close(3)                          = 0
+6631  open("/lib64/libxslt.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0`\254\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=257256, ...}) = 0
+6631  mmap(NULL, 2351336, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cab68d000
+6631  mprotect(0x7f9cab6ca000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cab8c9000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x3c000) = 0x7f9cab8c9000
+6631  mmap(0x7f9cab8cb000, 232, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9cab8cb000
+6631  close(3)                          = 0
+6631  open("/lib64/libexslt.so.0", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0 =\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=87304, ...}) = 0
+6631  mmap(NULL, 2180320, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cab478000
+6631  mprotect(0x7f9cab48c000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cab68b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x13000) = 0x7f9cab68b000
+6631  close(3)                          = 0
+6631  open("/lib64/libgd.so.3", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\20\352\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=429792, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1df000
+6631  mmap(NULL, 2542192, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9cab20b000
+6631  mprotect(0x7f9cab24f000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9cab44e000, 151552, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x43000) = 0x7f9cab44e000
+6631  mmap(0x7f9cab473000, 19056, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9cab473000
+6631  close(3)                          = 0
+6631  open("/lib64/libGeoIP.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\320o\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=204096, ...}) = 0
+6631  mmap(NULL, 2298224, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caafd9000
+6631  mprotect(0x7f9cab008000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9cab208000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2f000) = 0x7f9cab208000
+6631  close(3)                          = 0
+6631  open("/lib64/libprofiler.so.0", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0PX\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=67880, ...}) = 0
+6631  mmap(NULL, 2180896, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caadc4000
+6631  mprotect(0x7f9caadd3000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9caafd3000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xf000) = 0x7f9caafd3000
+6631  mmap(0x7f9caafd5000, 14112, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9caafd5000
+6631  close(3)                          = 0
+6631  open("/lib64/libperl.so.5.22", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\3405\3\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=1989352, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1de000
+6631  mmap(NULL, 4077384, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caa9e0000
+6631  mprotect(0x7f9caabbb000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9caadba000, 40960, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1da000) = 0x7f9caadba000
+6631  close(3)                          = 0
+6631  open("/lib64/libresolv.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\2009\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=114568, ...}) = 0
+6631  mmap(NULL, 2206280, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caa7c5000
+6631  mprotect(0x7f9caa7dc000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9caa9dc000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x17000) = 0x7f9caa9dc000
+6631  mmap(0x7f9caa9de000, 6728, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9caa9de000
+6631  close(3)                          = 0
+6631  open("/lib64/libnsl.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240@\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=113232, ...}) = 0
+6631  mmap(NULL, 2198136, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caa5ac000
+6631  mprotect(0x7f9caa5c2000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9caa7c1000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15000) = 0x7f9caa7c1000
+6631  mmap(0x7f9caa7c3000, 6776, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9caa7c3000
+6631  close(3)                          = 0
+6631  open("/lib64/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0PU\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=1140704, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1dd000
+6631  mmap(NULL, 3150104, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caa2aa000
+6631  mprotect(0x7f9caa3ab000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9caa5aa000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x100000) = 0x7f9caa5aa000
+6631  close(3)                          = 0
+6631  open("/lib64/libutil.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\16\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=14432, ...}) = 0
+6631  mmap(NULL, 2105616, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9caa0a7000
+6631  mprotect(0x7f9caa0a9000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9caa2a8000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1000) = 0x7f9caa2a8000
+6631  close(3)                          = 0
+6631  open("/lib64/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\6\2\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=2102288, ...}) = 0
+6631  mmap(NULL, 3934784, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca9ce6000
+6631  mprotect(0x7f9ca9e9d000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9caa09d000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1b7000) = 0x7f9caa09d000
+6631  mmap(0x7f9caa0a3000, 14912, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9caa0a3000
+6631  close(3)                          = 0
+6631  open("/lib64/librt.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P!\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=43304, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1dc000
+6631  mmap(NULL, 2128800, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca9ade000
+6631  mprotect(0x7f9ca9ae5000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca9ce4000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6000) = 0x7f9ca9ce4000
+6631  close(3)                          = 0
+6631  open("/lib64/libfreebl3.so", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0009\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=502104, ...}) = 0
+6631  mmap(NULL, 2606920, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca9861000
+6631  mprotect(0x7f9ca98d8000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca9ad7000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x76000) = 0x7f9ca9ad7000
+6631  mmap(0x7f9ca9ada000, 14152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca9ada000
+6631  close(3)                          = 0
+6631  open("/lib64/libgssapi_krb5.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\300\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=315888, ...}) = 0
+6631  mmap(NULL, 2406528, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca9615000
+6631  mprotect(0x7f9ca965e000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca985e000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x49000) = 0x7f9ca985e000
+6631  close(3)                          = 0
+6631  open("/lib64/libkrb5.so.3", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360J\2\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=947224, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1db000
+6631  mmap(NULL, 3032160, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca9330000
+6631  mprotect(0x7f9ca9405000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca9604000, 69632, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xd4000) = 0x7f9ca9604000
+6631  close(3)                          = 0
+6631  open("/lib64/libcom_err.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0p\25\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=15232, ...}) = 0
+6631  mmap(NULL, 2109608, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca912c000
+6631  mprotect(0x7f9ca912f000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca932e000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f9ca932e000
+6631  close(3)                          = 0
+6631  open("/lib64/libk5crypto.so.3", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0pG\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=205536, ...}) = 0
+6631  mmap(NULL, 2301720, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca8efa000
+6631  mprotect(0x7f9ca8f29000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca9129000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2f000) = 0x7f9ca9129000
+6631  close(3)                          = 0
+6631  open("/lib64/liblzma.so.5", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\00000\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=156328, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1da000
+6631  mmap(NULL, 2248712, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca8cd4000
+6631  mprotect(0x7f9ca8cf9000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca8ef8000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x24000) = 0x7f9ca8ef8000
+6631  mmap(0x7f9ca8ef9000, 8, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca8ef9000
+6631  close(3)                          = 0
+6631  open("/lib64/libgcrypt.so.20", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\211\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=946424, ...}) = 0
+6631  mmap(NULL, 3031840, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca89ef000
+6631  mprotect(0x7f9ca8aca000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca8cca000, 36864, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xdb000) = 0x7f9ca8cca000
+6631  mmap(0x7f9ca8cd3000, 800, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca8cd3000
+6631  close(3)                          = 0
+6631  open("/lib64/libgpg-error.so.0", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0@'\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=78192, ...}) = 0
+6631  mmap(NULL, 2171000, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca87dc000
+6631  mprotect(0x7f9ca87ee000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca89ed000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x11000) = 0x7f9ca89ed000
+6631  close(3)                          = 0
+6631  open("/lib64/libjpeg.so.62", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\220<\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=368176, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d9000
+6631  mmap(NULL, 2457608, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca8583000
+6631  mprotect(0x7f9ca85da000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca87da000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x57000) = 0x7f9ca87da000
+6631  mmap(0x7f9ca87db000, 8, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca87db000
+6631  close(3)                          = 0
+6631  open("/lib64/libpng16.so.16", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300T\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=210232, ...}) = 0
+6631  mmap(NULL, 2301960, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca8350000
+6631  mprotect(0x7f9ca8382000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca8581000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x31000) = 0x7f9ca8581000
+6631  mmap(0x7f9ca8582000, 8, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca8582000
+6631  close(3)                          = 0
+6631  open("/lib64/libfreetype.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\354\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=704896, ...}) = 0
+6631  mmap(NULL, 2789384, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca80a6000
+6631  mprotect(0x7f9ca8149000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca8349000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xa3000) = 0x7f9ca8349000
+6631  mmap(0x7f9ca834f000, 8, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca834f000
+6631  close(3)                          = 0
+6631  open("/lib64/libfontconfig.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340m\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=283208, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d8000
+6631  mmap(NULL, 2372648, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca7e62000
+6631  mprotect(0x7f9ca7e9f000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca809f000, 28672, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x3d000) = 0x7f9ca809f000
+6631  close(3)                          = 0
+6631  open("/lib64/libXpm.so.4", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\3400\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=73048, ...}) = 0
+6631  mmap(NULL, 2167088, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca7c50000
+6631  mprotect(0x7f9ca7c61000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca7e60000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x10000) = 0x7f9ca7e60000
+6631  close(3)                          = 0
+6631  open("/lib64/libX11.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340\337\1\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=1316904, ...}) = 0
+6631  mmap(NULL, 3406072, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca7910000
+6631  mprotect(0x7f9ca7a4a000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca7c49000, 28672, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x139000) = 0x7f9ca7c49000
+6631  close(3)                          = 0
+6631  open("/lib64/libvpx.so.2", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P:\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=1593088, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d7000
+6631  mmap(NULL, 3678456, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca758d000
+6631  mprotect(0x7f9ca770b000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca790a000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x17d000) = 0x7f9ca790a000
+6631  mmap(0x7f9ca790d000, 8440, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca790d000
+6631  close(3)                          = 0
+6631  open("/lib64/libtiff.so.5", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360\202\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=475840, ...}) = 0
+6631  mmap(NULL, 2567024, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca731a000
+6631  mprotect(0x7f9ca7389000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca7589000, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6f000) = 0x7f9ca7589000
+6631  close(3)                          = 0
+6631  open("/lib64/libunwind.so.8", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\25\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=44064, ...}) = 0
+6631  mmap(NULL, 2198984, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca7101000
+6631  mprotect(0x7f9ca710b000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca730a000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x9000) = 0x7f9ca730a000
+6631  mmap(0x7f9ca730c000, 56776, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca730c000
+6631  close(3)                          = 0
+6631  open("/lib64/libstdc++.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\237\10\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=1566600, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d6000
+6631  mmap(NULL, 3675328, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca6d7f000
+6631  mprotect(0x7f9ca6ef1000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca70f1000, 49152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x172000) = 0x7f9ca70f1000
+6631  mmap(0x7f9ca70fd000, 13504, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca70fd000
+6631  close(3)                          = 0
+6631  open("/lib64/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360*\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=92816, ...}) = 0
+6631  mmap(NULL, 2188320, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca6b68000
+6631  mprotect(0x7f9ca6b7e000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca6d7d000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x15000) = 0x7f9ca6d7d000
+6631  close(3)                          = 0
+6631  open("/lib64/libkrb5support.so.0", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\3406\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=61280, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d5000
+6631  mmap(NULL, 2155208, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca6959000
+6631  mprotect(0x7f9ca6966000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca6b66000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xd000) = 0x7f9ca6b66000
+6631  close(3)                          = 0
+6631  open("/lib64/libkeyutils.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0p\25\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=15112, ...}) = 0
+6631  mmap(NULL, 2109448, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca6755000
+6631  mprotect(0x7f9ca6758000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca6957000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f9ca6957000
+6631  mmap(0x7f9ca6958000, 8, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca6958000
+6631  close(3)                          = 0
+6631  open("/lib64/libbz2.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0`\27\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=67464, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d4000
+6631  mmap(NULL, 2161672, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca6545000
+6631  mprotect(0x7f9ca6554000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca6753000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xe000) = 0x7f9ca6753000
+6631  close(3)                          = 0
+6631  open("/lib64/libexpat.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0>\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=172816, ...}) = 0
+6631  mmap(NULL, 2265096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca631b000
+6631  mprotect(0x7f9ca6342000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca6541000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x26000) = 0x7f9ca6541000
+6631  mmap(0x7f9ca6544000, 8, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca6544000
+6631  close(3)                          = 0
+6631  open("/lib64/libxcb.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\320\233\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=138496, ...}) = 0
+6631  mmap(NULL, 2232488, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca60f9000
+6631  mprotect(0x7f9ca611a000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca6319000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x20000) = 0x7f9ca6319000
+6631  close(3)                          = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d3000
+6631  open("/lib64/libjbig.so.2.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0`\20\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=51096, ...}) = 0
+6631  mmap(NULL, 2145256, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca5eed000
+6631  mprotect(0x7f9ca5ef6000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca60f5000, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x8000) = 0x7f9ca60f5000
+6631  close(3)                          = 0
+6631  open("/lib64/libselinux.so.1", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260b\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=136600, ...}) = 0
+6631  mmap(NULL, 2237248, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca5cca000
+6631  mprotect(0x7f9ca5ce9000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca5ee9000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1f000) = 0x7f9ca5ee9000
+6631  mmap(0x7f9ca5eeb000, 4928, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca5eeb000
+6631  close(3)                          = 0
+6631  open("/lib64/libXau.so.6", O_RDONLY|O_CLOEXEC) = 3
+6631  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300\16\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(3, {st_mode=S_IFREG|0755, st_size=15064, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d2000
+6631  mmap(NULL, 2109472, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f9ca5ac6000
+6631  mprotect(0x7f9ca5ac8000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca5cc8000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f9ca5cc8000
+6631  mmap(0x7f9ca5cc9000, 32, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca5cc9000
+6631  close(3)                          = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d1000
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1d0000
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1cf000
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1ce000
+6631  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1cc000
+6631  arch_prctl(ARCH_SET_FS, 0x7f9cad1cc840) = 0
+6631  mprotect(0x7f9caa09d000, 16384, PROT_READ) = 0
+6631  mprotect(0x7f9ca5cc8000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cacdcf000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cac980000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cac04a000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca5ee9000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca60f5000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca6319000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca6541000, 12288, PROT_READ) = 0
+6631  mprotect(0x7f9ca6753000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca6957000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9caa9dc000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca6b66000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca6d7d000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9caa5aa000, 4096, PROT_READ) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1cb000
+6631  mprotect(0x7f9ca70f1000, 40960, PROT_READ) = 0
+6631  mprotect(0x7f9ca730a000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cabe46000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca87da000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca7589000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca790a000, 8192, PROT_READ) = 0
+6631  mprotect(0x7f9ca7c49000, 12288, PROT_READ) = 0
+6631  mprotect(0x7f9ca7e60000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca8581000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca8349000, 24576, PROT_READ) = 0
+6631  mprotect(0x7f9ca809f000, 8192, PROT_READ) = 0
+6631  mprotect(0x7f9ca89ed000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca8cca000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca8ef8000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca9129000, 8192, PROT_READ) = 0
+6631  mprotect(0x7f9ca932e000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9ca9604000, 61440, PROT_READ) = 0
+6631  mprotect(0x7f9ca985e000, 8192, PROT_READ) = 0
+6631  mprotect(0x7f9ca9ad7000, 8192, PROT_READ) = 0
+6631  mprotect(0x7f9ca9ce4000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9caa2a8000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9caa7c1000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cacb88000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9caadba000, 20480, PROT_READ) = 0
+6631  mprotect(0x7f9caafd3000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cab208000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cab44e000, 24576, PROT_READ) = 0
+6631  mprotect(0x7f9cabc27000, 32768, PROT_READ) = 0
+6631  mprotect(0x7f9cab8c9000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cab68b000, 4096, PROT_READ) = 0
+6631  mprotect(0x7f9cac46d000, 110592, PROT_READ) = 0
+6631  mprotect(0x7f9cac706000, 20480, PROT_READ) = 0
+6631  mprotect(0x7f9cacfd8000, 4096, PROT_READ) = 0
+6631  mprotect(0x557070179000, 8192, PROT_READ) = 0
+6631  mprotect(0x7f9cad1fa000, 4096, PROT_READ) = 0
+6631  munmap(0x7f9cad1e3000, 86380)     = 0
+6631  set_tid_address(0x7f9cad1ccb10)   = 6631
+6631  set_robust_list(0x7f9cad1ccb20, 24) = 0
+6631  rt_sigaction(SIGRTMIN, {0x7f9cacbbdb50, [], SA_RESTORER|SA_SIGINFO, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGRT_1, {0x7f9cacbbdbe0, [], SA_RESTORER|SA_RESTART|SA_SIGINFO, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigprocmask(SIG_UNBLOCK, [RTMIN RT_1], NULL, 8) = 0
+6631  getrlimit(RLIMIT_STACK, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0
+6631  statfs("/sys/fs/selinux", 0x7fff6e968440) = -1 ENOENT (No such file or directory)
+6631  statfs("/selinux", 0x7fff6e968440) = -1 ENOENT (No such file or directory)
+6631  brk(0)                            = 0x557070994000
+6631  brk(0x5570709b5000)               = 0x5570709b5000
+6631  open("/proc/filesystems", O_RDONLY) = 3
+6631  fstat(3, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  read(3, "nodev\tsysfs\nnodev\trootfs\nnodev\tr"..., 1024) = 312
+6631  read(3, "", 1024)                 = 0
+6631  close(3)                          = 0
+6631  munmap(0x7f9cad1f8000, 4096)      = 0
+6631  access("/etc/selinux/config", F_OK) = 0
+6631  access("/etc/system-fips", F_OK)  = -1 ENOENT (No such file or directory)
+6631  rt_sigaction(SIGPROF, NULL, {SIG_DFL, [], 0}, 8) = 0
+6631  rt_sigaction(SIGPROF, {SIG_IGN, [], SA_RESTORER|SA_RESTART, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  futex(0x7f9caafd45a0, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6631  setitimer(ITIMER_PROF, {it_interval={0, 10000}, it_value={0, 10000}}, NULL) = 0
+6631  open("/proc/self/auxv", O_RDONLY) = 3
+6631  read(3, "!\0\0\0\0\0\0\0\0p\232n\377\177\0\0", 16) = 16
+6631  open("/etc/localtime", O_RDONLY|O_CLOEXEC) = 4
+6631  fstat(4, {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  fstat(4, {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  read(4, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\5\0\0\0\5\0\0\0\0"..., 4096) = 2845
+6631  lseek(4, -1811, SEEK_CUR)         = 1034
+6631  read(4, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\5\0\0\0\5\0\0\0\0"..., 4096) = 1811
+6631  close(4)                          = 0
+6631  munmap(0x7f9cad1f8000, 4096)      = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "Symbol 'close(...)' not defined!"..., 33) = 33
+6631  open("/sys/devices/system/cpu/cpu0/tsc_freq_khz", O_RDONLY) = -1 ENOENT (No such file or directory)
+6631  open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", O_RDONLY) = -1 ENOENT (No such file or directory)
+6631  open("/proc/cpuinfo", O_RDONLY)   = 4
+6631  read(4, "processor\t: 0\nvendor_id\t: Genuin"..., 1023) = 1023
+6631  read(4, "u MHz\t\t: 2700.000\ncache size\t: 3"..., 1021) = 719
+6631  read(4, "", 1023)                 = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "Symbol 'close(...)' not defined!"..., 33) = 33
+6631  futex(0x7fff6e968524, FUTEX_WAKE, 1) = 0
+6631  futex(0x7fff6e968524, FUTEX_WAKE_PRIVATE, 1) = 0
+6631  access("/etc/system-fips", F_OK)  = -1 ENOENT (No such file or directory)
+6631  futex(0x7f9cac04b0c8, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6631  open("/var/log/nginx/error.log", O_WRONLY|O_CREAT|O_APPEND, 0644) = 5
+6631  open("/etc/pki/tls/openssl.cnf", O_RDONLY) = 6
+6631  fstat(6, {st_mode=S_IFREG|0644, st_size=10923, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  read(6, "#\n# OpenSSL example configuratio"..., 4096) = 4096
+6631  read(6, "ancient versions of Netscape cra"..., 4096) = 4096
+6631  read(6, "gainst PKIX guidelines but some "..., 4096) = 2731
+6631  read(6, "", 4096)                 = 0
+6631  close(6)                          = 0
+6631  munmap(0x7f9cad1f8000, 4096)      = 0
+6631  brk(0)                            = 0x5570709b5000
+6631  brk(0x5570709d6000)               = 0x5570709d6000
+6631  uname({sysname="Linux", nodename="localhost.localdomain", ...}) = 0
+6631  open("/sys/devices/system/cpu/online", O_RDONLY|O_CLOEXEC) = 6
+6631  read(6, "0-1\n", 8192)            = 4
+6631  close(6)                          = 0
+6631  getrlimit(RLIMIT_NOFILE, {rlim_cur=1024, rlim_max=4*1024}) = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  uname({sysname="Linux", nodename="localhost.localdomain", ...}) = 0
+6631  open("/etc/nginx/nginx.conf", O_RDONLY) = 6
+6631  fstat(6, {st_mode=S_IFREG|0644, st_size=2313, ...}) = 0
+6631  pread(6, "# For more information on config"..., 2313, 0) = 2313
+6631  geteuid()                         = 0
+6631  socket(PF_LOCAL, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 7
+6631  connect(7, {sa_family=AF_LOCAL, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+6631  close(7)                          = 0
+6631  socket(PF_LOCAL, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 7
+6631  connect(7, {sa_family=AF_LOCAL, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+6631  close(7)                          = 0
+6631  open("/etc/nsswitch.conf", O_RDONLY|O_CLOEXEC) = 7
+6631  fstat(7, {st_mode=S_IFREG|0644, st_size=1739, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  read(7, "#\n# /etc/nsswitch.conf\n#\n# An ex"..., 4096) = 1739
+6631  read(7, "", 4096)                 = 0
+6631  close(7)                          = 0
+6631  munmap(0x7f9cad1f8000, 4096)      = 0
+6631  open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 7
+6631  fstat(7, {st_mode=S_IFREG|0644, st_size=86380, ...}) = 0
+6631  mmap(NULL, 86380, PROT_READ, MAP_PRIVATE, 7, 0) = 0x7f9cad1e3000
+6631  close(7)                          = 0
+6631  open("/lib64/libnss_files.so.2", O_RDONLY|O_CLOEXEC) = 7
+6631  read(7, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\320!\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(7, {st_mode=S_IFREG|0755, st_size=56856, ...}) = 0
+6631  mmap(NULL, 2168600, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 7, 0) = 0x7f9ca58b4000
+6631  mprotect(0x7f9ca58bf000, 2093056, PROT_NONE) = 0
+6631  mmap(0x7f9ca5abe000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 7, 0xa000) = 0x7f9ca5abe000
+6631  mmap(0x7f9ca5ac0000, 22296, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f9ca5ac0000
+6631  close(7)                          = 0
+6631  mprotect(0x7f9ca5abe000, 4096, PROT_READ) = 0
+6631  munmap(0x7f9cad1e3000, 86380)     = 0
+6631  open("/etc/passwd", O_RDONLY|O_CLOEXEC) = 7
+6631  fstat(7, {st_mode=S_IFREG|0644, st_size=2536, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  read(7, "root:x:0:0:root:/root:/bin/bash\n"..., 4096) = 2536
+6631  close(7)                          = 0
+6631  munmap(0x7f9cad1f8000, 4096)      = 0
+6631  socket(PF_LOCAL, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 7
+6631  connect(7, {sa_family=AF_LOCAL, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+6631  close(7)                          = 0
+6631  socket(PF_LOCAL, SOCK_STREAM|SOCK_CLOEXEC|SOCK_NONBLOCK, 0) = 7
+6631  connect(7, {sa_family=AF_LOCAL, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+6631  close(7)                          = 0
+6631  open("/etc/group", O_RDONLY|O_CLOEXEC) = 7
+6631  fstat(7, {st_mode=S_IFREG|0644, st_size=1006, ...}) = 0
+6631  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  read(7, "root:x:0:\nbin:x:1:\ndaemon:x:2:\ns"..., 4096) = 1006
+6631  close(7)                          = 0
+6631  munmap(0x7f9cad1f8000, 4096)      = 0
+6631  epoll_create(100)                 = 7
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(7)\n", 9)         = 9
+6631  close(7)                          = 0
+6631  brk(0)                            = 0x5570709d6000
+6631  brk(0x5570709f7000)               = 0x5570709f7000
+6631  futex(0x7f9cabc31688, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6631  open("/etc/nginx/mime.types", O_RDONLY) = 7
+6631  fstat(7, {st_mode=S_IFREG|0644, st_size=30634, ...}) = 0
+6631  pread(7, "types {\napplication/A2L\t\t\t\t\ta2l;"..., 4096, 0) = 4096
+6631  pread(7, "rql-results+xml\t\t\tsrx;\napplicati"..., 4081, 4096) = 4081
+6631  pread(7, ".ecowin.chart\t\t\tmag;\napplication"..., 4081, 8177) = 4081
+6631  pread(7, "\tlbe;\napplication/vnd.lotus-1-2-"..., 4041, 12258) = 4041
+6631  brk(0)                            = 0x5570709f7000
+6631  brk(0x557070a1a000)               = 0x557070a1a000
+6631  pread(7, "n/vnd.oasis.opendocument.text-te"..., 4086, 16299) = 4086
+6631  pread(7, "dy-inter model-inter;\napplicatio"..., 4093, 20385) = 4093
+6631  pread(7, "vnd.zbrush.pcx\t\t\t\tpcx;\nmessage/g"..., 4090, 24478) = 4090
+6631  pread(7, "ication/x-futuresplash\t\t\tspl;\nap"..., 2066, 28568) = 2066
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(7)\n", 9)         = 9
+6631  close(7)                          = 0
+6631  stat("/etc/nginx/conf.d", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  open("/etc/nginx/conf.d", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 7
+6631  fstat(7, {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  getdents(7, /* 2 entries */, 32768) = 48
+6631  getdents(7, /* 0 entries */, 32768) = 0
+6631  close(7)                          = 0
+6631  stat("/etc/nginx/default.d", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  open("/etc/nginx/default.d", O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC) = 7
+6631  fstat(7, {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+6631  getdents(7, /* 2 entries */, 32768) = 48
+6631  getdents(7, /* 0 entries */, 32768) = 0
+6631  close(7)                          = 0
+6631  --- SIGPROF {si_signo=SIGPROF, si_code=SI_KERNEL, si_value={int=875903538, ptr=0x4354552034353a32}} ---
+6631  brk(0)                            = 0x557070a1a000
+6631  brk(0x557070a48000)               = 0x557070a48000
+6631  rt_sigaction(SIGFPE, {SIG_IGN, [FPE], SA_RESTORER|SA_RESTART, 0x7f9ca9d1ab20}, {SIG_DFL, [], 0}, 8) = 0
+6631  getuid()                          = 0
+6631  geteuid()                         = 0
+6631  getgid()                          = 0
+6631  getegid()                         = 0
+6631  open("/dev/urandom", O_RDONLY)    = 7
+6631  read(7, "\245`O\242", 4)          = 4
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(7)\n", 9)         = 9
+6631  close(7)                          = 0
+6631  readlink("/proc/self/exe", "/usr/sbin/nginx", 4095) = 15
+6631  getuid()                          = 0
+6631  geteuid()                         = 0
+6631  getgid()                          = 0
+6631  getegid()                         = 0
+6631  ioctl(0, TCGETS, {B38400 opost isig icanon echo ...}) = 0
+6631  lseek(0, 0, SEEK_CUR)             = -1 ESPIPE (Illegal seek)
+6631  ioctl(1, TCGETS, {B38400 opost isig icanon echo ...}) = 0
+6631  lseek(1, 0, SEEK_CUR)             = -1 ESPIPE (Illegal seek)
+6631  ioctl(2, TCGETS, {B38400 opost isig icanon echo ...}) = 0
+6631  lseek(2, 0, SEEK_CUR)             = -1 ESPIPE (Illegal seek)
+6631  open("/dev/null", O_RDONLY)       = 7
+6631  ioctl(7, TCGETS, 0x7fff6e9677a0)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(7, 0, SEEK_CUR)             = 0
+6631  fcntl(7, F_SETFD, FD_CLOEXEC)     = 0
+6631  fstat(7, {st_mode=S_IFCHR|0666, st_rdev=makedev(1, 3), ...}) = 0
+6631  getuid()                          = 0
+6631  geteuid()                         = 0
+6631  getgid()                          = 0
+6631  getegid()                         = 0
+6631  rt_sigaction(SIGCHLD, NULL, {SIG_DFL, [], 0}, 8) = 0
+6631  brk(0)                            = 0x557070a48000
+6631  brk(0x557070a69000)               = 0x557070a69000
+6631  stat("/usr/local/share/perl5/sitecustomize.pl", 0x5570709e62a8) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/nginx.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/nginx.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/nginx.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/nginx.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/nginx.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/nginx.pm", {st_mode=S_IFREG|0444, st_size=3302, ...}) = 0
+6631  open("/usr/lib64/perl5/vendor_perl/nginx.pm", O_RDONLY) = 8
+6631  ioctl(8, TCGETS, 0x7fff6e967000)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(8, 0, SEEK_CUR)             = 0
+6631  read(8, "package nginx;\n\nuse 5.006001;\nus"..., 8192) = 3302
+6631  stat("/usr/local/lib64/perl5/strict.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/strict.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/strict.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/strict.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/strict.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/strict.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/strict.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/strict.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/strict.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/strict.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/strict.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/strict.pm", {st_mode=S_IFREG|0644, st_size=4433, ...}) = 0
+6631  open("/usr/share/perl5/strict.pm", O_RDONLY) = 9
+6631  ioctl(9, TCGETS, 0x7fff6e966990)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(9, 0, SEEK_CUR)             = 0
+6631  read(9, "package strict;\n\n$strict::VERSIO"..., 8192) = 4433
+6631  lseek(9, 1513, SEEK_SET)          = 1513
+6631  lseek(9, 0, SEEK_CUR)             = 1513
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(9)\n", 9)         = 9
+6631  close(9)                          = 0
+6631  stat("/usr/local/lib64/perl5/warnings.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/warnings.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/warnings.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/warnings.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/warnings.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/warnings.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/warnings.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/warnings.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/warnings.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/warnings.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/warnings.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/warnings.pm", {st_mode=S_IFREG|0644, st_size=44835, ...}) = 0
+6631  open("/usr/share/perl5/warnings.pm", O_RDONLY) = 9
+6631  ioctl(9, TCGETS, 0x7fff6e966990)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(9, 0, SEEK_CUR)             = 0
+6631  read(9, "# -*- buffer-read-only: t -*-\n# "..., 8192) = 8192
+6631  brk(0)                            = 0x557070a69000
+6631  brk(0x557070a8b000)               = 0x557070a8b000
+6631  read(9, "\\x00\\x00\\x00\\x00\\x00\", # [21..25"..., 8192) = 8192
+6631  read(9, " 'void'\t\t\t\t=> \"\\x00\\x00\\x00\\x00\\"..., 8192) = 8192
+6631  brk(0)                            = 0x557070a8b000
+6631  brk(0x557070aac000)               = 0x557070aac000
+6631  lseek(9, 21927, SEEK_SET)         = 21927
+6631  lseek(9, 0, SEEK_CUR)             = 21927
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(9)\n", 9)         = 9
+6631  close(9)                          = 0
+6631  stat("/usr/local/lib64/perl5/constant.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/constant.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/constant.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/constant.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/constant.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/constant.pm", 0x7fff6e966bf0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/constant.pmc", 0x7fff6e966cc0) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/constant.pm", {st_mode=S_IFREG|0644, st_size=14724, ...}) = 0
+6631  open("/usr/share/perl5/vendor_perl/constant.pm", O_RDONLY) = 9
+6631  ioctl(9, TCGETS, 0x7fff6e966990)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(9, 0, SEEK_CUR)             = 0
+6631  read(9, "package constant;\nuse 5.008;\nuse"..., 8192) = 8192
+6631  stat("/usr/local/lib64/perl5/warnings/register.pmc", 0x7fff6e966650) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/warnings/register.pm", 0x7fff6e966580) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/warnings/register.pmc", 0x7fff6e966650) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/warnings/register.pm", 0x7fff6e966580) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/warnings/register.pmc", 0x7fff6e966650) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/warnings/register.pm", 0x7fff6e966580) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/warnings/register.pmc", 0x7fff6e966650) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/warnings/register.pm", 0x7fff6e966580) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/warnings/register.pmc", 0x7fff6e966650) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/warnings/register.pm", 0x7fff6e966580) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/warnings/register.pmc", 0x7fff6e966650) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/warnings/register.pm", {st_mode=S_IFREG|0644, st_size=759, ...}) = 0
+6631  open("/usr/share/perl5/warnings/register.pm", O_RDONLY) = 10
+6631  ioctl(10, TCGETS, 0x7fff6e966320) = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(10, 0, SEEK_CUR)            = 0
+6631  read(10, "package warnings::register;\n\nour"..., 8192) = 759
+6631  lseek(10, 487, SEEK_SET)          = 487
+6631  lseek(10, 0, SEEK_CUR)            = 487
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(10)\n", 10)       = 10
+6631  close(10)                         = 0
+6631  brk(0)                            = 0x557070aac000
+6631  brk(0x557070acd000)               = 0x557070acd000
+6631  brk(0)                            = 0x557070acd000
+6631  brk(0)                            = 0x557070acd000
+6631  brk(0x557070aca000)               = 0x557070aca000
+6631  brk(0)                            = 0x557070aca000
+6631  brk(0)                            = 0x557070aca000
+6631  brk(0x557070aec000)               = 0x557070aec000
+6631  brk(0)                            = 0x557070aec000
+6631  brk(0x557070b0f000)               = 0x557070b0f000
+6631  brk(0)                            = 0x557070b0f000
+6631  brk(0x557070b31000)               = 0x557070b31000
+6631  brk(0)                            = 0x557070b31000
+6631  brk(0x557070b53000)               = 0x557070b53000
+6631  brk(0)                            = 0x557070b53000
+6631  brk(0x557070b75000)               = 0x557070b75000
+6631  --- SIGPROF {si_signo=SIGPROF, si_code=SI_KERNEL, si_value={int=875903538, ptr=0x4354552034353a32}} ---
+6631  brk(0)                            = 0x557070b75000
+6631  brk(0x557070b99000)               = 0x557070b99000
+6631  lseek(9, 5736, SEEK_SET)          = 5736
+6631  lseek(9, 0, SEEK_CUR)             = 5736
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(9)\n", 9)         = 9
+6631  close(9)                          = 0
+6631  lseek(8, 2923, SEEK_SET)          = 2923
+6631  lseek(8, 0, SEEK_CUR)             = 2923
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(8)\n", 9)         = 9
+6631  close(8)                          = 0
+6631  stat("/usr/local/lib64/perl5/Exporter.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/Exporter.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/Exporter.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/Exporter.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/Exporter.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/Exporter.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/Exporter.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/Exporter.pm", {st_mode=S_IFREG|0644, st_size=18746, ...}) = 0
+6631  open("/usr/share/perl5/vendor_perl/Exporter.pm", O_RDONLY) = 8
+6631  ioctl(8, TCGETS, 0x7fff6e967000)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(8, 0, SEEK_CUR)             = 0
+6631  read(8, "package Exporter;\n\nrequire 5.006"..., 8192) = 8192
+6631  lseek(8, 2366, SEEK_SET)          = 2366
+6631  lseek(8, 0, SEEK_CUR)             = 2366
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(8)\n", 9)         = 9
+6631  close(8)                          = 0
+6631  getuid()                          = 0
+6631  geteuid()                         = 0
+6631  getgid()                          = 0
+6631  getegid()                         = 0
+6631  stat("/usr/local/lib64/perl5/XSLoader.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/lib64/perl5/XSLoader.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/XSLoader.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/local/share/perl5/XSLoader.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/XSLoader.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/XSLoader.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/XSLoader.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/vendor_perl/XSLoader.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/XSLoader.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/XSLoader.pm", 0x7fff6e967260) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/XSLoader.pmc", 0x7fff6e967330) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/share/perl5/XSLoader.pm", {st_mode=S_IFREG|0644, st_size=10305, ...}) = 0
+6631  open("/usr/share/perl5/XSLoader.pm", O_RDONLY) = 8
+6631  ioctl(8, TCGETS, 0x7fff6e967000)  = -1 ENOTTY (Inappropriate ioctl for device)
+6631  lseek(8, 0, SEEK_CUR)             = 0
+6631  read(8, "# Generated from XSLoader.pm.PL "..., 8192) = 8192
+6631  lseek(8, 2957, SEEK_SET)          = 2957
+6631  lseek(8, 0, SEEK_CUR)             = 2957
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(8)\n", 9)         = 9
+6631  close(8)                          = 0
+6631  stat("/usr/lib64/perl5/vendor_perl/auto/nginx/nginx.bs", 0x5570709e62a8) = -1 ENOENT (No such file or directory)
+6631  stat("/usr/lib64/perl5/vendor_perl/auto/nginx/nginx.so", {st_mode=S_IFREG|0755, st_size=28056, ...}) = 0
+6631  open("/usr/lib64/perl5/vendor_perl/auto/nginx/nginx.so", O_RDONLY|O_CLOEXEC) = 8
+6631  read(8, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\20\25\0\0\0\0\0\0"..., 832) = 832
+6631  fstat(8, {st_mode=S_IFREG|0755, st_size=28056, ...}) = 0
+6631  mmap(NULL, 2122104, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 8, 0) = 0x7f9ca56ad000
+6631  mprotect(0x7f9ca56b2000, 2097152, PROT_NONE) = 0
+6631  mmap(0x7f9ca58b2000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 8, 0x5000) = 0x7f9ca58b2000
+6631  close(8)                          = 0
+6631  mprotect(0x7f9ca58b2000, 4096, PROT_READ) = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(7)\n", 9)         = 9
+6631  close(7)                          = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(6)\n", 9)         = 9
+6631  close(6)                          = 0
+6631  mkdir("/var/lib/nginx/tmp/client_body", 0700) = -1 EEXIST (File exists)
+6631  stat("/var/lib/nginx/tmp/client_body", {st_mode=S_IFDIR|0700, st_size=4096, ...}) = 0
+6631  mkdir("/var/lib/nginx/tmp/proxy", 0700) = -1 EEXIST (File exists)
+6631  stat("/var/lib/nginx/tmp/proxy", {st_mode=S_IFDIR|0700, st_size=4096, ...}) = 0
+6631  mkdir("/var/lib/nginx/tmp/fastcgi", 0700) = -1 EEXIST (File exists)
+6631  stat("/var/lib/nginx/tmp/fastcgi", {st_mode=S_IFDIR|0700, st_size=4096, ...}) = 0
+6631  mkdir("/var/lib/nginx/tmp/uwsgi", 0700) = -1 EEXIST (File exists)
+6631  stat("/var/lib/nginx/tmp/uwsgi", {st_mode=S_IFDIR|0700, st_size=4096, ...}) = 0
+6631  mkdir("/var/lib/nginx/tmp/scgi", 0700) = -1 EEXIST (File exists)
+6631  stat("/var/lib/nginx/tmp/scgi", {st_mode=S_IFDIR|0700, st_size=4096, ...}) = 0
+6631  open("/var/log/nginx/error.log", O_WRONLY|O_CREAT|O_APPEND, 0644) = 6
+6631  fcntl(6, F_SETFD, FD_CLOEXEC)     = 0
+6631  open("/var/log/nginx/access.log", O_WRONLY|O_CREAT|O_APPEND, 0644) = 7
+6631  fcntl(7, F_SETFD, FD_CLOEXEC)     = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\nsocket():\n", 12)   = 12
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "init_service_connection()\n", 26) = 26
+6631  socket(PF_LOCAL, SOCK_STREAM, 0)  = 8
+6631  connect(8, {sa_family=AF_LOCAL, sun_path="/tmp/.ztnc_e5cd7a9e1c5311ab"}, 110) = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "AF_UNIX connection established: "..., 34) = 34
+6631  dup2(8, 1023)                     = 1023
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "dup'd to rpc_fd = 1023\n", 23) = 23
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "close(8)\n", 9)         = 9
+6631  close(8)                          = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\1\0\0\00014:01:53\0{\274\254\234\177\0\0\2207\n\252"..., 256) = 256
+6631  recvmsg(1023, {msg_name(0)=NULL, msg_iov(1)=[{"\0", 16}], msg_controllen=24, [{cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=SCM_RIGHTS, [8]}], msg_flags=0}, 0) = 1
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "read 1 bytes ()\n", 16) = 16
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "sending fd = 8 to Service over ("..., 38) = 38
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\2\0\0\00014:01:53\0\203\335\254\234\177\0\0\320\307\34\255"..., 256) = 256
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "socket6()=8\n", 12)     = 12
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\nsetsockopt(8)\n", 16) = 16
+6631  setsockopt(8, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+6631  ioctl(8, FIONBIO, [1])            = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\nbind(8):\n", 11)    = 11
+6631  write(2, "IP address: 0.0.0.0\n", 20) = 20
+6631  fcntl(8, F_GETFD)                 = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\ngetsockopt(8)\n", 16) = 16
+6631  getsockopt(8, SOL_SOCKET, SO_TYPE, [1], [4]) = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\3\0\0\00014:01:53\0\231\336\251\234\177\0\0\f\177\226n"..., 256) = 256
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "get_retval()\n", 13)    = 13
+6631  read(1023, "\26\0\0\0\0\0\0\0\0", 9) = 9
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "bind()=0\n", 9)         = 9
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\nlisten(8):\n", 13)  = 13
+6631  fcntl(8, F_GETFD)                 = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\ngetsockopt(8)\n", 16) = 16
+6631  getsockopt(8, SOL_SOCKET, SO_TYPE, [1], [4]) = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "is_mapped_to_service()\n", 23) = 23
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\4\0\0\00014:01:53\0\177\335\254\234\177\0\0\320\307\34\255"..., 256) = 256
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "get_retval()\n", 13)    = 13
+6631  read(1023, "\26\1\0\0\0\0\0\0\0", 9) = 9
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  --- SIGPROF {si_signo=SIGPROF, si_code=SI_KERNEL, si_value={int=875903538, ptr=0x4354552034353a32}} ---
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\5\0\0\00014:01:53\0\0\0\0\0\0\0\0\0\0\0\0"..., 256) = 256
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "get_retval()\n", 13)    = 13
+6631  read(1023, "\26\0\0\0\0\0\0\0\0", 9) = 9
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "listen()=0\n", 11)      = 11
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\nlisten(8):\n", 13)  = 13
+6631  fcntl(8, F_GETFD)                 = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "\n\ngetsockopt(8)\n", 16) = 16
+6631  getsockopt(8, SOL_SOCKET, SO_TYPE, [1], [4]) = 0
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "is_mapped_to_service()\n", 23) = 23
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\6\0\0\00014:01:53\0\177\335\254\234\177\0\0\320\307\34\255"..., 256) = 256
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "get_retval()\n", 13)    = 13
+6631  read(1023, "\26\1\0\0\0\0\0\0\0", 9) = 9
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(39, ...):\n", 18) = 18
+6631  getpid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "syscall(186, ...):\n", 19) = 19
+6631  gettid()                          = 6631
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(1023, "\347\31\0\0\347\31\0\0\7\0\0\00014:01:53\0\0\0\0\0\0\0\0\0\0\0\0"..., 256) = 256
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:53 [pid=   6631] ", 23) = 23
+6631  write(2, "get_retval()\n", 13)    = 13
+6631  read(1023, "\0", 9)               = 1
+6631  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6631  write(2, "14:01:57 [pid=   6631] ", 23) = 23
+6631  write(2, "listen()=0\n", 11)      = 11
+6631  getrlimit(RLIMIT_NOFILE, {rlim_cur=1024, rlim_max=4*1024}) = 0
+6631  mmap(NULL, 1280, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f8000
+6631  rt_sigaction(SIGHUP, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGUSR1, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGWINCH, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGTERM, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGQUIT, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGUSR2, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGALRM, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGINT, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGIO, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGCHLD, {0x55706febd660, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGSYS, {SIG_IGN, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  rt_sigaction(SIGPIPE, {SIG_IGN, [], SA_RESTORER, 0x7f9cacbc89f0}, NULL, 8) = 0
+6631  clone(child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9cad1ccb10) = 6632
+6632  set_robust_list(0x7f9cad1ccb20, 24) = 0
+6632  setsid()                          = 6632
+6631  stat("/etc/localtime",  <unfinished ...>
+6632  umask(0)                          = 022
+6631  <... stat resumed> {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  open("/dev/null", O_RDWR <unfinished ...>
+6631  write(2, "14:01:57 [pid=   6631] ", 23 <unfinished ...>
+6632  <... open resumed> )              = 9
+6632  stat("/etc/localtime",  <unfinished ...>
+6631  <... write resumed> )             = 23
+6631  write(2, "close(1023)\n", 12)     = 12
+6632  <... stat resumed> {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:01:57 [pid=   6632] ", 23) = 23
+6632  write(2, "dup2(9, 0)\n", 11)      = 11
+6632  dup2(9, 0)                        = 0
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:01:57 [pid=   6632] ", 23) = 23
+6632  write(2, "dup2(9, 1)\n", 11)      = 11
+6632  dup2(9, 1)                        = 1
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:01:57 [pid=   6632] ", 23) = 23
+6632  write(2, "close(9)\n", 9)         = 9
+6632  close(9)                          = 0
+6632  open("/run/nginx.pid", O_RDWR|O_CREAT|O_TRUNC, 0644) = 9
+6632  pwrite(9, "6632\n", 5, 0)         = 5
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:01:57 [pid=   6632] ", 23) = 23
+6632  write(2, "close(9)\n", 9)         = 9
+6632  close(9)                          = 0
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:01:57 [pid=   6632] ", 23) = 23
+6632  write(2, "dup2(6, 2)\n", 11)      = 11
+6632  dup2(6, 2)                        = 2
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:01:57 [pid=   6632] ", 23) = 23
+6632  write(2, "close(5)\n", 9)         = 9
+6632  close(5)                          = 0
+6632  rt_sigprocmask(SIG_BLOCK, [HUP INT QUIT USR1 USR2 ALRM TERM CHLD WINCH IO], NULL, 8) = 0
+6632  socketpair(PF_LOCAL, SOCK_STREAM, 0, [5, 9]) = 0
+6632  ioctl(5, FIONBIO, [1])            = 0
+6632  ioctl(9, FIONBIO, [1])            = 0
+6632  ioctl(5, FIOASYNC, [1])           = 0
+6631  exit_group(0)                     = ?
+6632  fcntl(5, F_SETOWN, 6632)          = 0
+6632  fcntl(5, F_SETFD, FD_CLOEXEC)     = 0
+6632  fcntl(9, F_SETFD, FD_CLOEXEC)     = 0
+6632  clone(child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9cad1ccb10) = 6633
+6632  socketpair(PF_LOCAL, SOCK_STREAM, 0, [10, 11]) = 0
+6632  ioctl(10, FIONBIO, [1])           = 0
+6632  ioctl(11, FIONBIO, [1])           = 0
+6632  ioctl(10, FIOASYNC, [1])          = 0
+6632  fcntl(10, F_SETOWN, 6632)         = 0
+6632  fcntl(10, F_SETFD, FD_CLOEXEC)    = 0
+6632  fcntl(11, F_SETFD, FD_CLOEXEC)    = 0
+6632  clone( <unfinished ...>
+6631  +++ exited with 0 +++
+6632  <... clone resumed> child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f9cad1ccb10) = 6634
+6632  sendmsg(5, {msg_name(0)=NULL, msg_iov(1)=[{"\1\0\0\0\0\0\0\0\352\31\0\0\0\0\0\0\1\0\0\0\0\0\0\0\n\0\0\0\0\0\0\0", 32}], msg_controllen=24, [{cmsg_len=20, cmsg_level=SOL_SOCKET, cmsg_type=SCM_RIGHTS, [10]}], msg_flags=0}, 0) = 32
+6632  rt_sigsuspend([], 8 <unfinished ...>
+6633  set_robust_list(0x7f9cad1ccb20, 24) = 0
+6633  geteuid()                         = 0
+6633  setgid(977)                       = 0
+6633  open("/proc/sys/kernel/ngroups_max", O_RDONLY) = 10
+6633  read(10, "65536\n", 31)           = 6
+6633  close(10)                         = 0
+6633  open("/etc/group", O_RDONLY|O_CLOEXEC) = 10
+6633  lseek(10, 0, SEEK_CUR)            = 0
+6633  fstat(10, {st_mode=S_IFREG|0644, st_size=1006, ...}) = 0
+6633  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f7000
+6633  read(10, "root:x:0:\nbin:x:1:\ndaemon:x:2:\ns"..., 4096) = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  lseek(10, 0, SEEK_CUR)            = 1006
+6633  read(10, "", 4096)                = 0
+6633  close(10)                         = 0
+6633  munmap(0x7f9cad1f7000, 4096)      = 0
+6633  open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 10
+6633  fstat(10, {st_mode=S_IFREG|0644, st_size=86380, ...}) = 0
+6633  mmap(NULL, 86380, PROT_READ, MAP_PRIVATE, 10, 0) = 0x7f9cad1b5000
+6633  close(10)                         = 0
+6633  open("/lib64/libnss_sss.so.2", O_RDONLY|O_CLOEXEC) = 10
+6633  read(10, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\30\0\0\0\0\0\0"..., 832) = 832
+6633  fstat(10, {st_mode=S_IFREG|0755, st_size=36720, ...}) = 0
+6633  mmap(NULL, 2130640, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 10, 0) = 0x7f9ca54a4000
+6633  mprotect(0x7f9ca54ac000, 2093056, PROT_NONE) = 0
+6633  mmap(0x7f9ca56ab000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 10, 0x7000) = 0x7f9ca56ab000
+6633  close(10)                         = 0
+6633  mprotect(0x7f9ca56ab000, 4096, PROT_READ) = 0
+6633  munmap(0x7f9cad1b5000, 86380)     = 0
+6633  futex(0x7f9ca56ac048, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6633  open("/var/lib/sss/mc/initgroups", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+6633  futex(0x7f9ca56ac0c8, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6633  open("/var/lib/sss/mc/initgroups", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+6633  fstat(-1, 0x7fff6e967d10)         = -1 EBADF (Bad file descriptor)
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "\n\nsocket():\n", 12)   = 12
+6633  socket(PF_LOCAL, SOCK_STREAM, 0)  = 10
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "realsocket, err = 10\n", 21) = 21
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "socket5()=10\n", 13)    = 13
+6633  fcntl(10, F_GETFL)                = 0x2 (flags O_RDWR)
+6633  fcntl(10, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+6633  fcntl(10, F_GETFD)                = 0
+6633  fcntl(10, F_SETFD, FD_CLOEXEC)    = 0
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "\n\nconnect(10):\n", 15) = 15
+6633  write(2, "IP address: (null)\n", 19) = 19
+6633  fcntl(10, F_GETFD)                = 0x1 (flags FD_CLOEXEC)
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "\n\ngetsockopt(10)\n", 17) = 17
+6633  getsockopt(10, SOL_SOCKET, SO_TYPE, [1], [4]) = 0
+6633  connect(10, {sa_family=AF_LOCAL, sun_path="/var/lib/sss/pipes/nss"}, 110) = -1 ENOENT (No such file or directory)
+6633  write(2, "connect():: No such file or dire"..., 38) = 38
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "close(10)\n", 10)       = 10
+6633  close(10)                         = 0
+6633  setgroups(1, [977])               = 0
+6633  setuid(983)                       = 0
+6633  prctl(PR_SET_DUMPABLE, 1)         = 0
+6633  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+6633  epoll_create(512)                 = 10
+6633  eventfd2(0, 0)                    = 11
+6633  epoll_ctl(10, EPOLL_CTL_ADD, 11, {EPOLLIN|EPOLLET, {u32=1880700352, u64=93941405398464}}) = 0
+6633  eventfd2(0, 0)                    = 12
+6633  ioctl(12, FIONBIO, [1])           = 0
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "syscall(206, ...):\n", 19) = 19
+6633  io_setup(32, {140310896136192})   = 0
+6633  epoll_ctl(10, EPOLL_CTL_ADD, 12, {EPOLLIN|EPOLLET, {u32=1880700000, u64=93941405398112}}) = 0
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "close(5)\n", 9)         = 9
+6633  close(5)                          = 0
+6633  epoll_ctl(10, EPOLL_CTL_ADD, 9, {EPOLLIN|EPOLLRDHUP, {u32=1890362216, u64=93941415060328}}) = 0
+6633  epoll_ctl(10, EPOLL_CTL_ADD, 8, {EPOLLIN|EPOLLRDHUP, {u32=1890362000, u64=93941415060112}}) = 0
+6633  epoll_wait(10, {{EPOLLIN, {u32=1890362216, u64=93941415060328}}, {EPOLLIN, {u32=1890362000, u64=93941415060112}}}, 512, -1) = 2
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "\n\naccept4(8):\n", 14) = 14
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "\n\naccept(8):\n", 13)  = 13
+6633  fcntl(8, F_GETFD)                 = 0
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:01:57 [pid=   6633] ", 23) = 23
+6633  write(2, "\n\ngetsockopt(8)\n", 16) = 16
+6633  getsockopt(8, SOL_SOCKET, SO_TYPE, [1], [4]) = 0
+6633  getrlimit(RLIMIT_NOFILE, {rlim_cur=1024, rlim_max=4*1024}) = 0
+6633  read(8, "z", 1)                   = 1
+6633  recvmsg(1023,  <unfinished ...>
+6634  set_robust_list(0x7f9cad1ccb20, 24) = 0
+6634  geteuid()                         = 0
+6634  setgid(977)                       = 0
+6634  open("/proc/sys/kernel/ngroups_max", O_RDONLY) = 12
+6634  read(12, "65536\n", 31)           = 6
+6634  close(12)                         = 0
+6634  open("/etc/group", O_RDONLY|O_CLOEXEC) = 12
+6634  lseek(12, 0, SEEK_CUR)            = 0
+6634  fstat(12, {st_mode=S_IFREG|0644, st_size=1006, ...}) = 0
+6634  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f9cad1f7000
+6634  read(12, "root:x:0:\nbin:x:1:\ndaemon:x:2:\ns"..., 4096) = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  lseek(12, 0, SEEK_CUR)            = 1006
+6634  read(12, "", 4096)                = 0
+6634  close(12)                         = 0
+6634  munmap(0x7f9cad1f7000, 4096)      = 0
+6634  open("/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 12
+6634  fstat(12, {st_mode=S_IFREG|0644, st_size=86380, ...}) = 0
+6634  mmap(NULL, 86380, PROT_READ, MAP_PRIVATE, 12, 0) = 0x7f9cad1b5000
+6634  close(12)                         = 0
+6634  open("/lib64/libnss_sss.so.2", O_RDONLY|O_CLOEXEC) = 12
+6634  read(12, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0000\30\0\0\0\0\0\0"..., 832) = 832
+6634  fstat(12, {st_mode=S_IFREG|0755, st_size=36720, ...}) = 0
+6634  mmap(NULL, 2130640, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 12, 0) = 0x7f9ca54a4000
+6634  mprotect(0x7f9ca54ac000, 2093056, PROT_NONE) = 0
+6634  mmap(0x7f9ca56ab000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 12, 0x7000) = 0x7f9ca56ab000
+6634  close(12)                         = 0
+6634  mprotect(0x7f9ca56ab000, 4096, PROT_READ) = 0
+6634  munmap(0x7f9cad1b5000, 86380)     = 0
+6634  futex(0x7f9ca56ac048, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6634  open("/var/lib/sss/mc/initgroups", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+6634  futex(0x7f9ca56ac0c8, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+6634  open("/var/lib/sss/mc/initgroups", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+6634  fstat(-1, 0x7fff6e967d10)         = -1 EBADF (Bad file descriptor)
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "\n\nsocket():\n", 12)   = 12
+6634  socket(PF_LOCAL, SOCK_STREAM, 0)  = 12
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "realsocket, err = 12\n", 21) = 21
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "socket5()=12\n", 13)    = 13
+6634  fcntl(12, F_GETFL)                = 0x2 (flags O_RDWR)
+6634  fcntl(12, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+6634  fcntl(12, F_GETFD)                = 0
+6634  fcntl(12, F_SETFD, FD_CLOEXEC)    = 0
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "\n\nconnect(12):\n", 15) = 15
+6634  write(2, "IP address: (null)\n", 19) = 19
+6634  fcntl(12, F_GETFD)                = 0x1 (flags FD_CLOEXEC)
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "\n\ngetsockopt(12)\n", 17) = 17
+6634  getsockopt(12, SOL_SOCKET, SO_TYPE, [1], [4]) = 0
+6634  connect(12, {sa_family=AF_LOCAL, sun_path="/var/lib/sss/pipes/nss"}, 110) = -1 ENOENT (No such file or directory)
+6634  write(2, "connect():: No such file or dire"..., 38) = 38
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "close(12)\n", 10)       = 10
+6634  close(12)                         = 0
+6634  setgroups(1, [977])               = 0
+6634  setuid(983)                       = 0
+6634  prctl(PR_SET_DUMPABLE, 1)         = 0
+6634  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+6634  epoll_create(512)                 = 12
+6634  eventfd2(0, 0)                    = 13
+6634  epoll_ctl(12, EPOLL_CTL_ADD, 13, {EPOLLIN|EPOLLET, {u32=1880700352, u64=93941405398464}}) = 0
+6634  eventfd2(0, 0)                    = 14
+6634  ioctl(14, FIONBIO, [1])           = 0
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "syscall(206, ...):\n", 19) = 19
+6634  io_setup(32, {140310896136192})   = 0
+6634  epoll_ctl(12, EPOLL_CTL_ADD, 14, {EPOLLIN|EPOLLET, {u32=1880700000, u64=93941405398112}}) = 0
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "close(9)\n", 9)         = 9
+6634  close(9)                          = 0
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:01:57 [pid=   6634] ", 23) = 23
+6634  write(2, "close(10)\n", 10)       = 10
+6634  close(10)                         = 0
+6634  epoll_ctl(12, EPOLL_CTL_ADD, 11, {EPOLLIN|EPOLLRDHUP, {u32=1890362216, u64=93941415060328}}) = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12, {}, 512, 500)      = 0
+6634  epoll_wait(12,  <unfinished ...>
+6632  <... rt_sigsuspend resumed> )     = ? ERESTARTNOHAND (To be restarted if no handler)
+6632  --- SIGTERM {si_signo=SIGTERM, si_code=SI_USER, si_pid=6635, si_uid=0} ---
+6632  rt_sigreturn({mask=[HUP INT QUIT USR1 USR2 ALRM TERM CHLD WINCH IO]}) = -1 EINTR (Interrupted system call)
+6632  sendmsg(5, {msg_name(0)=NULL, msg_iov(1)=[{"\4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\377\377\377\377\0\0\0\0", 32}], msg_controllen=0, msg_flags=0}, 0) = 32
+6632  sendmsg(10, {msg_name(0)=NULL, msg_iov(1)=[{"\4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\377\377\377\377\0\0\0\0", 32}], msg_controllen=0, msg_flags=0}, 0) = 32
+6632  setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={0, 50000}}, NULL) = 0
+6632  rt_sigsuspend([], 8 <unfinished ...>
+6633  <... recvmsg resumed> 0x7fff6e967c90, 0) = ? ERESTARTSYS (To be restarted if SA_RESTART is set)
+6633  --- SIGTERM {si_signo=SIGTERM, si_code=SI_USER, si_pid=6635, si_uid=0} ---
+6633  rt_sigreturn({mask=[]})           = -1 EINTR (Interrupted system call)
+6633  write(2, "recvmsg: Interrupted system call"..., 33) = 33
+6633  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6633  write(2, "14:02:06 [pid=   6633] ", 23) = 23
+6633  write(2, "close(1023)\n", 12)     = 12
+6633  exit_group(1)                     = ?
+6634  <... epoll_wait resumed> {{EPOLLIN, {u32=1890362216, u64=93941415060328}}}, 512, 500) = 1
+6634  --- SIGTERM {si_signo=SIGTERM, si_code=SI_USER, si_pid=6635, si_uid=0} ---
+6634  rt_sigreturn({mask=[]})           = 1
+6634  recvmsg(11, {msg_name(0)=NULL, msg_iov(1)=[{"\4\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\377\377\377\377\0\0\0\0", 32}], msg_controllen=0, msg_flags=0}, 0) = 32
+6634  recvmsg(11, 0x7fff6e967ec0, 0)    = -1 EAGAIN (Resource temporarily unavailable)
+6634  brk(0)                            = 0x557070b99000
+6634  brk(0)                            = 0x557070b99000
+6634  brk(0x557070b55000)               = 0x557070b55000
+6634  brk(0)                            = 0x557070b55000
+6634  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6634  write(2, "14:02:06 [pid=   6634] ", 23) = 23
+6634  write(2, "close(1023)\n", 12)     = 12
+6634  exit_group(0)                     = ?
+6633  +++ exited with 1 +++
+6632  <... rt_sigsuspend resumed> )     = ? ERESTARTNOHAND (To be restarted if no handler)
+6632  --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=6633, si_uid=983, si_status=1, si_utime=0, si_stime=0} ---
+6632  wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 1}], WNOHANG, NULL) = 6633
+6632  wait4(-1, 0x7fff6e967b74, WNOHANG, NULL) = 0
+6632  rt_sigreturn({mask=[HUP INT QUIT USR1 USR2 ALRM TERM CHLD WINCH IO]}) = -1 EINTR (Interrupted system call)
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:02:06 [pid=   6632] ", 23) = 23
+6632  write(2, "close(5)\n", 9)         = 9
+6632  close(5)                          = 0
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:02:06 [pid=   6632] ", 23) = 23
+6632  write(2, "close(9)\n", 9)         = 9
+6632  close(9)                          = 0
+6632  sendmsg(10, {msg_name(0)=NULL, msg_iov(1)=[{"\2\0\0\0\0\0\0\0\351\31\0\0\0\0\0\0\0\0\0\0\0\0\0\0\377\377\377\377\0\0\0\0", 32}], msg_controllen=0, msg_flags=0}, 0) = 32
+6632  setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={0, 50000}}, NULL) = 0
+6632  rt_sigsuspend([], 8)              = ? ERESTARTNOHAND (To be restarted if no handler)
+6632  --- SIGIO {si_signo=SIGIO, si_code=SI_KERNEL} ---
+6632  rt_sigreturn({mask=[HUP INT QUIT USR1 USR2 ALRM TERM CHLD WINCH IO]}) = -1 EINTR (Interrupted system call)
+6632  setitimer(ITIMER_REAL, {it_interval={0, 0}, it_value={0, 50000}}, NULL) = 0
+6632  rt_sigsuspend([], 8 <unfinished ...>
+6634  +++ exited with 0 +++
+6632  <... rt_sigsuspend resumed> )     = ? ERESTARTNOHAND (To be restarted if no handler)
+6632  --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=6634, si_uid=983, si_status=0, si_utime=0, si_stime=0} ---
+6632  wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], WNOHANG, NULL) = 6634
+6632  wait4(-1, 0x7fff6e967b74, WNOHANG, NULL) = -1 ECHILD (No child processes)
+6632  rt_sigreturn({mask=[HUP INT QUIT USR1 USR2 ALRM TERM CHLD WINCH IO]}) = -1 EINTR (Interrupted system call)
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:02:06 [pid=   6632] ", 23) = 23
+6632  write(2, "close(10)\n", 10)       = 10
+6632  close(10)                         = 0
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:02:06 [pid=   6632] ", 23) = 23
+6632  write(2, "close(11)\n", 10)       = 10
+6632  close(11)                         = 0
+6632  unlink("/run/nginx.pid")          = 0
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:02:06 [pid=   6632] ", 23) = 23
+6632  write(2, "close(8)\n", 9)         = 9
+6632  close(8)                          = 0
+6632  brk(0)                            = 0x557070b99000
+6632  brk(0)                            = 0x557070b99000
+6632  brk(0x557070ae9000)               = 0x557070ae9000
+6632  brk(0)                            = 0x557070ae9000
+6632  stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=2845, ...}) = 0
+6632  write(2, "14:02:06 [pid=   6632] ", 23) = 23
+6632  write(2, "close(1023)\n", 12)     = 12
+6632  exit_group(0)                     = ?
+6632  +++ exited with 0 +++

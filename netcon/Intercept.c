@@ -927,6 +927,7 @@ int poll(POLL_SIG)
 // int fd
 int close(CLOSE_SIG)
 {
+  checkpid();
   dwr(MSG_DEBUG,"close(%d)\n", fd);
   if(fd == fdret_sock)
     return 0; // FIXME: Ignore request to shut down our rpc fd, this is *almost always* safe
