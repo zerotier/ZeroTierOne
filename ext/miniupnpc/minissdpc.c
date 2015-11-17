@@ -1,3 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 /* $Id: minissdpc.c,v 1.30 2015/10/26 17:05:07 nanard Exp $ */
 /* Project : miniupnp
  * Web : http://miniupnp.free.fr/

@@ -5,6 +5,8 @@
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
 
+#define _CRT_SECURE_NO_WARNINGS
+
 /* use getaddrinfo() or gethostbyname()
  * uncomment the following line in order to use gethostbyname() */
 #ifdef NO_GETADDRINFO

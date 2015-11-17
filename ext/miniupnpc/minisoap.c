@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 /* $Id: minisoap.c,v 1.24 2015/10/26 17:05:07 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas Bernard
@@ -19,7 +20,13 @@
 #include <sys/socket.h>
 #endif
 #include "minisoap.h"
+#ifdef _WIN32
+#define OS_STRING "Win32"
+#define MINIUPNPC_VERSION_STRING "1.9"
+#define UPNP_VERSION_STRING "UPnP/1.1"
+#else
 #include "miniupnpcstrings.h"
+#endif
 
 /* only for malloc */
 #include <stdlib.h>

@@ -46,8 +46,8 @@
 #endif
 #endif
 
-#include "../ext/bin/miniupnpc/include/miniupnpc/miniupnpc.h"
-#include "../ext/bin/miniupnpc/include/miniupnpc/upnpcommands.h"
+#include "../ext/miniupnpc/miniupnpc.h"
+#include "../ext/miniupnpc/upnpcommands.h"
 
 namespace ZeroTier {
 
@@ -81,7 +81,7 @@ public:
 		while (run) {
 			{
 				int upnpError = 0;
-				UPNPDev *devlist = upnpDiscover(2000,(const char *)0,(const char *)0,0,0,&upnpError);
+				UPNPDev *devlist = upnpDiscover(2000,(const char *)0,(const char *)0,0,0,0,&upnpError);
 				if (devlist) {
 #ifdef ZT_UPNP_TRACE
 					{

@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 /* $Id: miniwget.c,v 1.72 2015/10/26 17:05:08 nanard Exp $ */
 /* Project : miniupnp
  * Website : http://miniupnp.free.fr/
@@ -49,7 +50,13 @@
 #endif /* MIN */
 
 
+#ifdef _WIN32
+#define OS_STRING "Win32"
+#define MINIUPNPC_VERSION_STRING "1.9"
+#define UPNP_VERSION_STRING "UPnP/1.1"
+#else
 #include "miniupnpcstrings.h"
+#endif
 #include "miniwget.h"
 #include "connecthostport.h"
 #include "receivedata.h"

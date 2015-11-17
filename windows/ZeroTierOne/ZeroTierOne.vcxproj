@@ -22,6 +22,19 @@
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
     <ClCompile Include="..\..\ext\json-parser\json.c" />
     <ClCompile Include="..\..\ext\lz4\lz4.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\connecthostport.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\igd_desc_parse.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\minisoap.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\minissdpc.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\miniupnpc.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\miniwget.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\minixml.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\portlistingparse.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\receivedata.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\upnpcommands.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\upnpdev.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\upnperrors.c" />
+    <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c" />
     <ClCompile Include="..\..\node\C25519.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\Cluster.cpp" />
@@ -79,6 +92,22 @@
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json-parser\json.h" />
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\codelength.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\connecthostport.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\igd_desc_parse.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\minisoap.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\minissdpc.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\miniupnpc.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\miniupnpctypes.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\miniupnpc_declspec.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\miniwget.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\minixml.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\portlistingparse.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\receivedata.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\upnpcommands.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\upnpdev.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\upnperrors.h" />
+    <ClInclude Include="..\..\ext\miniupnpc\upnpreplyparse.h" />
     <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
     <ClInclude Include="..\..\node\AntiRecursion.hpp" />
@@ -214,11 +243,11 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x86\miniupnpc.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -229,12 +258,12 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x64\miniupnpc.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -247,7 +276,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -259,7 +288,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x86\miniupnpc.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
@@ -272,7 +301,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -284,7 +313,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>$(SolutionDir)..\ext\bin\miniupnpc\windows-x64\miniupnpc.lib;wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wsock32.lib;ws2_32.lib;Iphlpapi.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>

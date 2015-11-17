@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 /* $Id: miniupnpc.c,v 1.141 2015/10/26 17:05:07 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab */
 /* Project : miniupnp
