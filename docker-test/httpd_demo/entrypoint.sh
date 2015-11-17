@@ -2,6 +2,8 @@
 
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/
 
+touch /opt/results/results.txt
+
 echo '***'
 echo '*** ZeroTier Network Containers Preview'
 echo '*** https://www.zerotier.com/'

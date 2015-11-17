@@ -100,7 +100,7 @@ Network Containers have been tested with the following:
 	curl					[ WORKS as of 20151021] 
 	apache (debug mode)		[ WORKS as of 20150810]
 	apache (prefork MPM)	[ WORKS as of 20151112] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
-	nginx					[ WORKS as of 20151022]
+	nginx					[BROKEN as of 20151022] 1.8.0-3 and 1.8.0-4 both suffer from lost intercept connections
 	nodejs					[ WORKS as of 20151021]
 	java					[ WORKS as of 20151010]
 	tomcat					[ WORKS as of 2015xxxx]

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-touch /opt/results/results.txt 
-
 export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/
 
 echo '***'
