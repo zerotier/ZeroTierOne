@@ -449,12 +449,12 @@ void NetconEthernetTap::threadMain()
 			compact_dump();
 			prev_status_time = now;
 			if(rpc_sockets.size() || tcp_connections.size()) {
-
-				//dump();
-				/* Here we will periodically check the list of rpc_sockets for those that
-				do not currently have any data connection associated with them. If they are
-				unused, then we will try to read from them, if they fail, we can safely assume
-				that the client has closed their end and we can close ours */
+/*
+				// dump();
+				// Here we will periodically check the list of rpc_sockets for those that
+				// do not currently have any data connection associated with them. If they are
+				// unused, then we will try to read from them, if they fail, we can safely assume
+				// that the client has closed their end and we can close ours
 				for(size_t i = 0; i<tcp_connections.size(); i++) {
 					if(tcp_connections[i]->listening) {
 						char c;
@@ -495,6 +495,7 @@ void NetconEthernetTap::threadMain()
 							phyOnUnixData(rpc_sockets[i],_phy.getuptr(rpc_sockets[i]),&tmpbuf,BUF_SZ);
 					}
 				}
+				*/
 			}
 		}
 		// Main TCP/ETHARP timer section
@@ -527,7 +528,7 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr) {
 	dwr(MSG_DEBUG, " phyOnUnixClose(sock=0x%x, uptr=0x%x): fd = %d\n", sock, uptr, _phy.getDescriptor(sock));
 	TcpConnection *conn = (TcpConnection*)*uptr;
-	closeConnection(conn);
+	//closeConnection(conn);
 }
 
 /*
@@ -537,9 +538,7 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
 {
 	if(readable) {
 		TcpConnection *conn = (TcpConnection*)*uptr;
-		if(conn->dataSock) // Sometimes a connection may be closed via nc_recved, check first
-		{
-			//Mutex::Lock _l(lwipstack->_lock);
+		if(conn->dataSock) { // Sometimes a connection may be closed via nc_recved, check first
 			lwipstack->_lock.lock();
 			handle_write(conn);
 			lwipstack->_lock.unlock();
@@ -554,6 +553,7 @@ void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,
  * Add a new PhySocket for the client connections
  */
 void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {
+	dwr(MSG_DEBUG, " phyOnUnixAccept(): accepting new connection\n");
 	if(find(rpc_sockets.begin(), rpc_sockets.end(), sockN) != rpc_sockets.end()){
 		dwr(MSG_ERROR, " phyOnUnixAccept(): SockN (0x%x) already exists!\n", sockN);
 		return;
@@ -806,9 +806,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
         dwr(MSG_INFO, " nc_recved(): unable to write entire pbuf to buffer\n");
       }
       l->tap->lwipstack->_tcp_recved(tpcb, n); // TODO: would it be more efficient to call this once at the end?
+      dwr(MSG_DEBUG, " nc_recved(): wrote %d bytes to (%d)\n", n, l->tap->_phy.getDescriptor(l->conn->dataSock));
     }
     else {
-      dwr(MSG_INFO, " nc_recved(): No data written to intercept buffer\n");
+      dwr(MSG_INFO, " nc_recved(): No data written to intercept buffer (%d)\n", l->tap->_phy.getDescriptor(l->conn->dataSock));
     }
     p = p->next;
   }
@@ -1015,22 +1016,20 @@ void NetconEthernetTap::handle_map_request(PhySocket *sock, void **uptr, unsigne
  */
 void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_count, int newfd)
 {
-	dwr(4, " handle_retval()\n");
+	dwr(MSG_DEBUG, " handle_retval()\n");
 	TcpConnection *conn = (TcpConnection*)*uptr;
 	if(!conn->pending)
 		return;
-
 	conn->pending = false;
     conn->perceived_fd = newfd;
-
     if(rpc_count==rpc_counter) {
-    	dwr(2, "Detected repeat RPC.\n");
+    	dwr(MSG_ERROR, " handle_retval(): Detected repeat RPC.\n");
     	//return;
     }
     else
     	rpc_counter = rpc_count;    	
 
-	dwr(4, " handle_retval(): CONN:%x - Mapping [our=%d -> their=%d]\n",conn,
+	dwr(MSG_DEBUG, " handle_retval(): CONN:%x - Mapping [our=%d -> their=%d]\n",conn,
 	_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
 
 	/* Check for pre-existing connection for this socket ---
@@ -1103,7 +1102,7 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
 	TcpConnection *conn = getConnectionByTheirFD(sock, bind_rpc->sockfd);
 
-  dwr(3, " handle_bind(%d)\n", bind_rpc->sockfd);
+  dwr(MSG_DEBUG, " handle_bind(%d)\n", bind_rpc->sockfd);
 
   if(conn) {
     if(conn->pcb->state == CLOSED){

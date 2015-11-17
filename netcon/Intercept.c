@@ -35,7 +35,7 @@ char *progname = "";
 
 #include <unistd.h>
 #include <stdint.h>
-#include <pthread.h>
+//#include <pthread.h>
 #include <stdio.h>
 #include <dlfcn.h>
 #include <strings.h>
@@ -47,7 +47,7 @@ char *progname = "";
 #include <stdarg.h>
 #include <netdb.h>
 #include <string.h>
-#include <stdlib.h>
+//#include <stdlib.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -80,7 +80,7 @@ static int (*realgetsockopt)(GETSOCKOPT_SIG);
 static int (*realaccept4)(ACCEPT4_SIG);
 static long (*realsyscall)(SYSCALL_SIG);
 static int (*realclose)(CLOSE_SIG);
-//static int (*realclone)(CLONE_SIG);
+static int (*realclone)(CLONE_SIG);
 //static int (*realpoll)(POLL_SIG);
 static int (*realdup2)(DUP2_SIG);
 static int (*realdup3)(DUP3_SIG);
@@ -98,7 +98,7 @@ int getsockopt(GETSOCKOPT_SIG);
 int accept4(ACCEPT4_SIG);
 long syscall(SYSCALL_SIG);
 int close(CLOSE_SIG);
-//int clone(CLONE_SIG);
+int clone(CLONE_SIG);
 //int poll(POLL_SIG);
 int dup2(DUP2_SIG);
 int dup3(DUP3_SIG);
@@ -148,6 +148,7 @@ static int fdret_sock; // used for fd-transfers
 static int newfd; // used for "this_end" socket
 static int thispid;
 static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
+static int instance_count = 0;
 
 /*
  * Check for forking
@@ -156,7 +157,7 @@ int checkpid() {
   if(thispid != getpid()) {
     printf("clone/fork detected. re-initializing this instance.\n");
     set_up_intercept();
-    //fdret_sock = init_service_connection();
+    fdret_sock = init_service_connection();
     thispid = getpid();
   }
   return 0;
@@ -167,7 +168,8 @@ int checkpid() {
  */
 int send_command(int rpc_fd, char *cmd)
 {
-#ifdef DEBUG_RPC
+  char metabuf[BUF_SZ]; // portion of buffer which contains RPC metadata for debugging
+#ifdef VERBOSE
   /*
   #define IDX_PID       0
   #define IDX_TID       sizeof(pid_t)
@@ -177,7 +179,6 @@ int send_command(int rpc_fd, char *cmd)
   #define IDX_PAYLOAD   IDX_TIME + sizeof(char) 
   */
   // [pid_t] [pid_t] [rpc_count] [int] [...]
-  char metabuf[BUF_SZ]; // portion of buffer which contains RPC meta-data for debugging
   memset(metabuf, '\0', BUF_SZ);
   pid_t pid = syscall(SYS_getpid);
   pid_t tid = syscall(SYS_gettid);
@@ -186,15 +187,13 @@ int send_command(int rpc_fd, char *cmd)
   time_t timestamp;
   timestamp = time(NULL);
   strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
-
   memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); // pid
   memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); // tid
   memcpy(&metabuf[IDX_COUNT],   &rpc_count,   sizeof(rpc_count)  ); // rpc_count
   memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); // timestamp
 #endif
-  // copy payload into final command buffer
+  // Combine command flag+payload with RPC metadata 
   memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
-  //dwr(MSG_DEBUG," RX: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d\n", pid, tid, rpc_count, timestring, cmd[0]);
   int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
     dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
@@ -232,7 +231,7 @@ int get_new_fd(int oversock)
   char buf[BUF_SZ];
   int newfd;
   ssize_t size = sock_fd_read(oversock, buf, sizeof(buf), &newfd);
-  dwr(MSG_DEBUG, "get_new_fd(): RX: fd = %d\n", newfd);
+  dwr(MSG_DEBUG, "get_new_fd(): RX: fd = (%d) over (%d)\n", newfd, oversock);
   return newfd;
 }
 
@@ -262,20 +261,28 @@ int is_mapped_to_service(int sockfd)
 /* Sets up the connection pipes and sockets to the service */
 int init_service_connection()
 {
+  instance_count++;
   dwr(MSG_DEBUG,"init_service_connection()\n");
-  if(!is_initialized) {
+  //if(!is_initialized) {
     struct sockaddr_un addr;
     int tfd = -1, attempts = 0, conn_err = -1;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, af_sock_name, sizeof(addr.sun_path)-1);
 
+    dwr(MSG_DEBUG, "init(): pre-realsocket\n");
     if ( (tfd = realsocket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
       perror("socket error");
       exit(-1);
     }
+    dwr(MSG_DEBUG, "init(): post-realsocket, conn_err = %d, attempts = %d\n", conn_err, attempts);
+
     while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS) {
+      dwr(MSG_DEBUG, "init(): Attempting!\n");
+
       conn_err = realconnect(tfd, (struct sockaddr*)&addr, sizeof(addr));
+      dwr(MSG_DEBUG, "init(): post-realconnect\n");
+
       if(conn_err < 0) {
         dwr(MSG_DEBUG,"re-attempting connection in %ds\n", 1+attempts);
         sleep(1);
@@ -283,14 +290,14 @@ int init_service_connection()
       else {
         dwr(MSG_DEBUG,"AF_UNIX connection established: %d\n", tfd);
         is_initialized = 1;
-        int newtfd = realdup2(tfd, 1023);
+        int newtfd = realdup2(tfd, RPC_FD-instance_count);
         dwr(MSG_DEBUG,"dup'd to rpc_fd = %d\n", newtfd);
         close(tfd);
         return newtfd;
       }
       attempts++;
     }
-  }
+  //}
   return -1;
 }
 
@@ -330,7 +337,7 @@ void load_symbols(void)
 	realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
   realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
-  //realclone = dlsym(RTLD_NEXT, "clone");
+  realclone = dlsym(RTLD_NEXT, "clone");
   realclose = dlsym(RTLD_NEXT, "close");
   realsyscall = dlsym(RTLD_NEXT, "syscall");
   //realsyscall = dlsym(RTLD_NEXT, "poll");
@@ -351,7 +358,7 @@ void load_symbols(void)
 	realsetsockopt = dlsym(lib, "setsockopt");
   realgetsockopt = dlsym(lib, "getsockopt");
   realaccept4 = dlsym(lib), "accept4");
-  //realclone = dlsym(lib, "clone");
+  realclone = dlsym(lib, "clone");
   realclose = dlsym(lib, "close");
   realsyscall = dlsym(lib, "syscall");
   //realsyscall = dlsym(lib, "poll");
@@ -392,7 +399,11 @@ void set_up_intercept()
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
-  dwr(MSG_DEBUG,"\n\nsetsockopt(%d)\n", socket);
+  if(realsetsockopt == NULL){
+    dwr(MSG_ERROR, "setsockopt(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\nsetsockopt(%d)\n", socket);
   /*
   if(is_mapped_to_service(socket) < 0) { // First, check if the service manages this
     return realsetsockopt(socket, level, option_name, option_value, option_len);
@@ -423,7 +434,11 @@ int setsockopt(SETSOCKOPT_SIG)
 /* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 int getsockopt(GETSOCKOPT_SIG)
 {
-  dwr(MSG_DEBUG,"\n\ngetsockopt(%d)\n", sockfd);
+  if(realgetsockopt == NULL){
+    dwr(MSG_ERROR, "getsockopt(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\ngetsockopt(%d)\n", sockfd);
   /*
   if(is_mapped_to_service(sockfd) < 0) { // First, check if the service manages this
     return realgetsockopt(sockfd, level, optname, optval, optlen);
@@ -453,7 +468,11 @@ int getsockopt(GETSOCKOPT_SIG)
    socket() intercept function */
 int socket(SOCKET_SIG)
 {
-  dwr(MSG_DEBUG,"\n\nsocket():\n");
+  if(realsocket == NULL){
+    dwr(MSG_ERROR, "socket(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\nsocket():\n");
   int err;
 #ifdef CHECKS
   /* Check that type makes sense */
@@ -558,7 +577,11 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-  dwr(MSG_DEBUG,"\n\nconnect(%d):\n", __fd);
+  if(realconnect == NULL){
+    dwr(MSG_ERROR, "connect(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\nconnect(%d):\n", __fd);
   print_addr(__addr);
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
@@ -639,6 +662,10 @@ int connect(CONNECT_SIG)
 fd_set *exceptfds, struct timeval *timeout */
 int select(SELECT_SIG)
 {
+  if(realselect == NULL){
+    dwr(MSG_ERROR, "select(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
   //dwr(MSG_DEBUG,"select():\n");
   return realselect(n, readfds, writefds, exceptfds, timeout);
 }
@@ -651,7 +678,11 @@ int select(SELECT_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
-  dwr(MSG_DEBUG,"\n\nbind(%d):\n", sockfd);
+  if(realbind == NULL){
+    dwr(MSG_ERROR, "bind(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\nbind(%d):\n", sockfd);
   print_addr(addr);
 #ifdef CHECKS
   /* Check that this is a valid fd */
@@ -714,7 +745,11 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
-  dwr(MSG_DEBUG,"\n\naccept4(%d):\n", sockfd);
+  if(realaccept4 == NULL){
+    dwr(MSG_ERROR, "accept4(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\naccept4(%d):\n", sockfd);
 #ifdef CHECKS
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
     errno = EINVAL;
@@ -741,7 +776,11 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
-  dwr(MSG_DEBUG,"\n\naccept(%d):\n", sockfd);
+  if(realaccept == NULL){
+    dwr(MSG_ERROR, "accept(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\naccept(%d):\n", sockfd);
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -810,13 +849,19 @@ int accept(ACCEPT_SIG)
   if(n > 0)
   {
     new_conn_socket = get_new_fd(fdret_sock);
+    dwr(MSG_DEBUG, " accept(): RX: fd = (%d) over (%d)\n", new_conn_socket, fdret_sock);
     if(new_conn_socket > 0) {
       /* Send our local-fd number back to service so it can complete its mapping table */
       memset(cmd, '\0', BUF_SZ);
       cmd[0] = RPC_MAP;
       memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
       pthread_mutex_lock(&lock);
-      int n_write = write(fdret_sock, cmd, BUF_SZ);
+
+      dwr(MSG_DEBUG, "accept(): sending perceived fd (%d) to service.\n", new_conn_socket);
+      //int n_write = write(fdret_sock, cmd, BUF_SZ);
+
+      int n_write = send_command(fdret_sock, cmd);
+
       if(n_write < 0) {
         errno = ECONNABORTED; // FIXME: Closest match, service unreachable
         handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
@@ -848,7 +893,11 @@ int accept(ACCEPT_SIG)
    listen() intercept function */
 int listen(LISTEN_SIG)
 {
-  dwr(MSG_DEBUG,"\n\nlisten(%d):\n", sockfd);
+  if(reallisten == NULL){
+    dwr(MSG_ERROR, "listen(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+  dwr(MSG_DEBUG,"\nlisten(%d):\n", sockfd);
   int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
 
@@ -906,13 +955,17 @@ int listen(LISTEN_SIG)
 ------------------------------------------------------------------------------*/
 
 // int (*fn)(void *), void *child_stack, int flags, void *arg, ...
-/*
 int clone(CLONE_SIG)
 {
+  if(realclone == NULL){
+    dwr(MSG_ERROR, "clone(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
   dwr(MSG_DEBUG,"clone()\n");
-  return realclone(fn, child_stack, flags, arg);
+  int err = realclone(fn, child_stack, flags, arg);
+  checkpid();
+  return err;
 }
-*/
 
 
 /*------------------------------------------------------------------------------
@@ -936,10 +989,14 @@ int poll(POLL_SIG)
 // int fd
 int close(CLOSE_SIG)
 {
-  checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet
+  //checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet
+  if(realclose == NULL){
+    dwr(MSG_ERROR, "close(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
   dwr(MSG_DEBUG,"close(%d)\n", fd);
   if(fd == fdret_sock)
-    return 0; // FIXME: Ignore request to shut down our rpc fd, this is *almost always* safe
+    return -1; // FIXME: Ignore request to shut down our rpc fd, this is *almost always* safe
   if(fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
     return realclose(fd);
   return -1;
@@ -952,6 +1009,10 @@ int close(CLOSE_SIG)
 // int oldfd, int newfd
 int dup2(DUP2_SIG)
 {
+  if(realdup2 == NULL){
+    dwr(MSG_ERROR, "dup2(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
   dwr(MSG_DEBUG,"dup2(%d, %d)\n", oldfd, newfd);
     if(oldfd == fdret_sock) {
     dwr(MSG_DEBUG,"client application attempted to dup2 RPC socket (%d). This is not allowed.\n", oldfd);
@@ -959,7 +1020,8 @@ int dup2(DUP2_SIG)
     return -1;
   }
   if(oldfd != STDIN_FILENO && oldfd != STDOUT_FILENO && oldfd != STDERR_FILENO)
-    return realdup2(oldfd, newfd);
+    if(newfd != STDIN_FILENO && newfd != STDOUT_FILENO && newfd != STDERR_FILENO)
+      return realdup2(oldfd, newfd);
   return -1;
 }
 
@@ -970,6 +1032,10 @@ int dup2(DUP2_SIG)
 // int oldfd, int newfd, int flags
 int dup3(DUP3_SIG)
 {
+  if(realdup3 == NULL){
+    dwr(MSG_ERROR, "dup3(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
   dwr(MSG_DEBUG,"dup3(%d, %d, %d)\n", oldfd, newfd, flags);
 #ifdef DEBUG
   // Only do this check if we want to debug the intercept, otherwise, dont mess with 
@@ -987,8 +1053,11 @@ int dup3(DUP3_SIG)
 ------------------------------------ syscall()----------------------------------
 ------------------------------------------------------------------------------*/
 
-long syscall(SYSCALL_SIG)
-{
+long syscall(SYSCALL_SIG){
+  if(realsyscall == NULL){
+    dwr(MSG_ERROR, "syscall(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
   dwr(MSG_DEBUG_EXTRA,"syscall(%u, ...):\n", number);
 
   va_list ap;
@@ -1019,10 +1088,8 @@ long syscall(SYSCALL_SIG)
     int err = accept4(sockfd, addr, addrlen, flags);
     errno = old_errno;
 
-    if(err == -EBADF) {
-      //errno = EAGAIN;
-      err = -EAGAIN;
-      //exit(0);
+    if(err == -EBADF) { 
+      err = -EAGAIN; // For hysterical raisons
     }
 
     return err;
