@@ -50,10 +50,9 @@
 #include "NetconUtilities.hpp"
 #include "Common.c"
 
-#define APPLICATION_POLL_FREQ 				20
+#define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
-#define STATUS_TMR_INTERVAL						2000 // How often we check connection statuses
-#define DEBUG_LEVEL 									3
+#define STATUS_TMR_INTERVAL				3000 // How often we check connection statuses
 
 namespace ZeroTier {
 
@@ -151,13 +150,10 @@ bool NetconEthernetTap::removeIp(const InetAddress &ip)
 	std::vector<InetAddress>::iterator i(std::find(_ips.begin(),_ips.end(),ip));
 	if (i == _ips.end())
 		return false;
-
 	_ips.erase(i);
-
 	if (ip.isV4()) {
 		// TODO: dealloc from LWIP
 	}
-
 	return true;
 }
 
@@ -259,11 +255,6 @@ TcpConnection *NetconEthernetTap::getConnectionByTheirFD(PhySocket *sock, int fd
 void NetconEthernetTap::compact_dump()
 {
 	/*
-	//
-	refresh();
-	clear();
-	gotoxy(0,0);
-	*/
 	clearscreen();
 	gotoxy(0,0);
 
@@ -286,6 +277,14 @@ void NetconEthernetTap::compact_dump()
 			}
 		}
 	}
+	*/
+	for(size_t i=0; i<rpc_sockets.size(); i++) {
+		fprintf(stderr, "\n\n\nrpc(%d)\n", _phy.getDescriptor(rpc_sockets[i]));
+		for(size_t j=0; j<tcp_connections.size(); j++) {
+			if(_phy.getDescriptor(tcp_connections[j]->rpcSock) == _phy.getDescriptor(rpc_sockets[i]))
+				fprintf(stderr, "\t(%d) ----> (%d)\n\n", _phy.getDescriptor(tcp_connections[j]->dataSock), tcp_connections[j]->perceived_fd);
+		}
+	}
 }
 
 /*
@@ -301,7 +300,7 @@ void NetconEthernetTap::dump()
 	fprintf(stderr, "*** IF YOU SEE THIS, EMAIL THE DUMP TEXT TO joseph.henry@zerotier.com ***\n");
 	fprintf(stderr, " tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
 
-  // TODO: Add logic to detect bad mapping conditions
+  	// TODO: Add logic to detect bad mapping conditions
 	for(size_t i=0; i<rpc_sockets.size(); i++) {
 		for(size_t j=0; j<rpc_sockets.size(); j++) {
 			if(j != i && rpc_sockets[i] == rpc_sockets[j]) {
@@ -353,10 +352,10 @@ void NetconEthernetTap::closeConnection(TcpConnection *conn)
 	if(!conn)
 		return;
 	dwr(MSG_DEBUG, " closeConnection(%x, %d)\n", conn->pcb, _phy.getDescriptor(conn->dataSock));
-  //lwipstack->_tcp_sent(conn->pcb, NULL);
-  //lwipstack->_tcp_recv(conn->pcb, NULL);
-  //lwipstack->_tcp_err(conn->pcb, NULL);
-  //lwipstack->_tcp_poll(conn->pcb, NULL, 0);
+  	//lwipstack->_tcp_sent(conn->pcb, NULL);
+  	//lwipstack->_tcp_recv(conn->pcb, NULL);
+  	//lwipstack->_tcp_err(conn->pcb, NULL);
+  	//lwipstack->_tcp_poll(conn->pcb, NULL, 0);
 	//lwipstack->_tcp_arg(conn->pcb, NULL);
 	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
 		dwr(MSG_ERROR, " closeConnection(): Error while calling tcp_close()\n");
@@ -409,7 +408,6 @@ void NetconEthernetTap::closeAll()
 void NetconEthernetTap::threadMain()
 	throw()
 {
-	//initscr();
 	//signal(SIGPIPE, SIG_IGN);
 	uint64_t prev_tcp_time = 0;
 	uint64_t prev_status_time = 0;
@@ -436,7 +434,6 @@ void NetconEthernetTap::threadMain()
 	fprintf(stderr, "- IP_TMR_INTERVAL  = %d\n", IP_TMR_INTERVAL);
 */
 
-
 	// Main timer loop
 	while (_run) {
 		uint64_t now = OSUtils::now();
@@ -449,7 +446,7 @@ void NetconEthernetTap::threadMain()
 
 		// Connection prunning
 		if (since_status >= STATUS_TMR_INTERVAL) {
-			//compact_dump();
+			compact_dump();
 			prev_status_time = now;
 			if(rpc_sockets.size() || tcp_connections.size()) {
 

@@ -156,7 +156,7 @@ int checkpid() {
   if(thispid != getpid()) {
     printf("clone/fork detected. re-initializing this instance.\n");
     set_up_intercept();
-    fdret_sock = init_service_connection();
+    //fdret_sock = init_service_connection();
     thispid = getpid();
   }
   return 0;
@@ -224,6 +224,16 @@ int get_retval()
   }
   dwr(MSG_DEBUG,"unable to read return value\n");
   return -1;
+}
+
+/* Reads a new file descriptor from the service */
+int get_new_fd(int oversock)
+{
+  char buf[BUF_SZ];
+  int newfd;
+  ssize_t size = sock_fd_read(oversock, buf, sizeof(buf), &newfd);
+  dwr(MSG_DEBUG, "get_new_fd(): RX: fd = %d\n", newfd);
+  return newfd;
 }
 
 /* Check whether the socket is mapped to the service or not. We
@@ -505,9 +515,8 @@ int socket(SOCKET_SIG)
 
   /* get new fd */
   char rbuf[16];
-  ssize_t sz = sock_fd_read(fdret_sock, rbuf, sizeof(rbuf), &newfd);
-  dwr(MSG_DEBUG,"read %d bytes (%s)\n", sz, &rbuf);
-  if(sz > 0)
+  newfd = get_new_fd(fdret_sock);
+  if(newfd > 0)
   {
     dwr(MSG_DEBUG,"sending fd = %d to Service over (%d)\n", newfd, fdret_sock);
     /* send our local-fd number back to service so
@@ -800,8 +809,8 @@ int accept(ACCEPT_SIG)
   int n = read(sockfd, c, sizeof(c)); // Read signal byte
   if(n > 0)
   {
-    ssize_t size = sock_fd_read(fdret_sock, rbuf, sizeof(rbuf), &new_conn_socket);
-    if(size > 0) {
+    new_conn_socket = get_new_fd(fdret_sock);
+    if(new_conn_socket > 0) {
       /* Send our local-fd number back to service so it can complete its mapping table */
       memset(cmd, '\0', BUF_SZ);
       cmd[0] = RPC_MAP;
@@ -927,7 +936,7 @@ int poll(POLL_SIG)
 // int fd
 int close(CLOSE_SIG)
 {
-  checkpid();
+  checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet
   dwr(MSG_DEBUG,"close(%d)\n", fd);
   if(fd == fdret_sock)
     return 0; // FIXME: Ignore request to shut down our rpc fd, this is *almost always* safe

@@ -39,7 +39,7 @@
 #include <fcntl.h>
 
 
-#define DEBUG_LEVEL 2
+#define DEBUG_LEVEL 3
 
 #define MSG_ERROR       0 // Errors 
 #define MSG_INFO        1 // Information which is generally useful to any user
