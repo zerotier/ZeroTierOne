@@ -29,7 +29,7 @@ endif
 UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 
 INCLUDES=
-DEFS=-DZT_ENABLE_CLUSTER
+DEFS=
 LDLIBS?=
 
 include objects.mk
@@ -68,6 +68,11 @@ ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
         DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
         LDLIBS+=-L/usr/local/lib -lsqlite3
         OBJS+=controller/SqliteNetworkController.o 
+endif
+
+# Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
+ifeq ($(ZT_ENABLE_CLUSTER),1)
+	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
 # "make debug" is a shortcut for this

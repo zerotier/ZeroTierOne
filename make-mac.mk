@@ -32,6 +32,11 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
 
+# Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
+ifeq ($(ZT_ENABLE_CLUSTER),1)
+        DEFS+=-DZT_ENABLE_CLUSTER
+endif
+
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE
 endif
