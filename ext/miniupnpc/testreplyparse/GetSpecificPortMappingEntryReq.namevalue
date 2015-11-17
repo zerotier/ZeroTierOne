@@ -1,0 +1,3 @@
+NewProtocol=UDP
+NewExternalPort=12345
+NewRemoteHost=

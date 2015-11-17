@@ -1,0 +1,14 @@
+# values for linksys_WAG200G_desc.xml
+
+CIF:
+ servicetype = urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1
+ controlurl = /upnp/control/WANCommonIFC1
+ eventsuburl = /upnp/event/WANCommonIFC1
+ scpdurl = /cmnicfg.xml
+
+first:
+ servicetype = urn:schemas-upnp-org:service:WANPPPConnection:1
+ controlurl = /upnp/control/WANPPPConn1
+ eventsuburl = /upnp/event/WANPPPConn1
+ scpdurl = /pppcfg.xml
+

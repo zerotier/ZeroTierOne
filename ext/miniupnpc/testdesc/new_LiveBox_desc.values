@@ -1,0 +1,20 @@
+# values for new_LiveBox_desc.xml
+
+CIF:
+ servicetype = urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1
+ controlurl = /87895a19/upnp/control/WANCommonIFC1
+ eventsuburl = /87895a19/upnp/control/WANCommonIFC1
+ scpdurl = /87895a19/gateicfgSCPD.xml
+
+first:
+ servicetype = urn:schemas-upnp-org:service:WANPPPConnection:2
+ controlurl = /87895a19/upnp/control/WANIPConn1
+ eventsuburl = /87895a19/upnp/control/WANIPConn1
+ scpdurl = /87895a19/gateconnSCPD_PPP.xml
+
+IPv6FC:
+ servicetype = urn:schemas-upnp-org:service:WANIPv6FirewallControl:1
+ controlurl = /87895a19/upnp/control/WANIPv6FwCtrl1
+ eventsuburl = /87895a19/upnp/control/WANIPv6FwCtrl1
+ scpdurl = /87895a19/wanipv6fwctrlSCPD.xml
+
