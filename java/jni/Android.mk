@@ -15,6 +15,7 @@ LOCAL_SRC_FILES := \
 	$(ZT1)/ext/http-parser/http_parser.c \
 	$(ZT1)/node/C25519.cpp \
 	$(ZT1)/node/CertificateOfMembership.cpp \
+	$(ZT1)/node/DeferredPackets.cpp \
 	$(ZT1)/node/Dictionary.cpp \
 	$(ZT1)/node/Identity.cpp \
 	$(ZT1)/node/IncomingPacket.cpp \
