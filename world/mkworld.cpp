@@ -121,25 +121,47 @@ int main(int argc,char **argv)
 	const uint64_t id = ZT_WORLD_ID_EARTH;
 	const uint64_t ts = 1447696577275ULL; // November 16th, 2015 ~9:56AM
 
+	// Alice
+	roots.push_back(World::Root());
+	roots.back().identity = Identity("9d219039f3:0:01f0922a98e3b34ebcbff333269dc265d7a020aab69d72be4d4acc9c8c9294785771256cd1d942a90d1bd1d2dca3ea84ef7d85afe6611fb43ff0b74126d90a6e");
+	roots.back().stableEndpoints.push_back(InetAddress("188.166.94.177/9993")); // Amsterdam
+	roots.back().stableEndpoints.push_back(InetAddress("2a03:b0c0:2:d0::7d:1/9993")); // Amsterdam
+	roots.back().stableEndpoints.push_back(InetAddress("154.66.197.33/9993")); // Johannesburg
+	roots.back().stableEndpoints.push_back(InetAddress("2c0f:f850:154:197::33/9993")); // Johannesburg
+	roots.back().stableEndpoints.push_back(InetAddress("159.203.97.171/9993")); // New York
+	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:800:a1::54:6001/9993")); // New York
+	roots.back().stableEndpoints.push_back(InetAddress("169.57.143.104/9993")); // Sao Paolo
+	roots.back().stableEndpoints.push_back(InetAddress("2607:f0d0:1d01:57::2/9993")); // Sao Paolo
+	roots.back().stableEndpoints.push_back(InetAddress("107.170.197.14/9993")); // San Francisco
+	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:1:20::200:e001/9993")); // San Francisco
+	roots.back().stableEndpoints.push_back(InetAddress("128.199.197.217/9993")); // Singapore
+	roots.back().stableEndpoints.push_back(InetAddress("2400:6180:0:d0::b7:4001/9993")); // Singapore
+
+	// Bob
+	roots.push_back(World::Root());
+	roots.back().identity = Identity("8841408a2e:0:bb1d31f2c323e264e9e64172c1a74f77899555ed10751cd56e86405cde118d02dffe555d462ccf6a85b5631c12350c8d5dc409ba10b9025d0f445cf449d92b1c");
+	roots.back().stableEndpoints.push_back(InetAddress("45.32.198.130/9993")); // Dallas
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:6400:81c3:5400:00ff:fe18:1d61/9993")); // Dallas
+	roots.back().stableEndpoints.push_back(InetAddress("46.101.160.249/9993")); // Frankfurt
+	roots.back().stableEndpoints.push_back(InetAddress("2a03:b0c0:3:d0::6a:3001/9993")); // Frankfurt
+	roots.back().stableEndpoints.push_back(InetAddress("107.191.46.210/9993")); // Paris
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:6800:83a4::64/9993")); // Paris
+	roots.back().stableEndpoints.push_back(InetAddress("45.32.246.179/9993")); // Sydney
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:5800:8bf8:5400:ff:fe15:b39a/9993")); // Sydney
+	roots.back().stableEndpoints.push_back(InetAddress("45.32.248.87/9993")); // Tokyo
+	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:7000:9bc9:5400:00ff:fe15:c4f5/9993")); // Tokyo
+	roots.back().stableEndpoints.push_back(InetAddress("159.203.2.154/9993")); // Toronto
+	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:cad:d0::26:7001/9993")); // Toronto
+
 	// old US-SFO
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa");
 	roots.back().stableEndpoints.push_back(InetAddress("198.199.97.220/9993"));
 
-	// old EU-PARIS
-	roots.push_back(World::Root());
-	roots.back().identity = Identity("8841408a2e:0:bb1d31f2c323e264e9e64172c1a74f77899555ed10751cd56e86405cde118d02dffe555d462ccf6a85b5631c12350c8d5dc409ba10b9025d0f445cf449d92b1c");
-	roots.back().stableEndpoints.push_back(InetAddress("107.191.46.210/9993"));
-
 	// old US-NYC
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5");
 	roots.back().stableEndpoints.push_back(InetAddress("162.243.77.111/9993"));
-
-	// old AP-SNG
-	roots.push_back(World::Root());
-	roots.back().identity = Identity("9d219039f3:0:01f0922a98e3b34ebcbff333269dc265d7a020aab69d72be4d4acc9c8c9294785771256cd1d942a90d1bd1d2dca3ea84ef7d85afe6611fb43ff0b74126d90a6e");
-	roots.back().stableEndpoints.push_back(InetAddress("128.199.197.217/9993"));
 
 	// END WORLD DEFINITION
 	// =========================================================================
