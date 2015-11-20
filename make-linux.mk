@@ -117,6 +117,7 @@ clean:
 	find netcon/ -name "*.so" -type f -delete
 	find netcon/ -name "zerotier-one" -type f -delete
 	find netcon/ -name "zerotier-cli" -type f -delete
+	find netcon/docker-test -name "zerotier-intercept" -type f -delete
 	rm -rf netcon/*.o netcon/*.so netcon/*.1.0
 	rm -rf node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
 

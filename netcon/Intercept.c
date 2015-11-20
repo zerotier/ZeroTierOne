@@ -326,7 +326,7 @@ void load_symbols(void)
   realsocket = dlsym(RTLD_NEXT, "socket");
   realbind = dlsym(RTLD_NEXT, "bind");
   realselect = dlsym(RTLD_NEXT, "select");
-	realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
+  realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
   realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
   realclone = dlsym(RTLD_NEXT, "clone");
@@ -347,7 +347,7 @@ void load_symbols(void)
   reallisten = dlsym(lib, "listen");
   realsocket = dlsym(lib, "socket");
   realselect = dlsym(lib, "select");
-	realsetsockopt = dlsym(lib, "setsockopt");
+  realsetsockopt = dlsym(lib, "setsockopt");
   realgetsockopt = dlsym(lib, "getsockopt");
   realaccept4 = dlsym(lib), "accept4");
   realclone = dlsym(lib, "clone");
