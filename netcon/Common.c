@@ -44,7 +44,7 @@
 #define MSG_ERROR       0 // Errors 
 #define MSG_INFO        1 // Information which is generally useful to any user
 #define MSG_DEBUG       2 // Information which is only useful to someone debugging
-#define MSG_DEBUG_EXTRA 3 // 
+#define MSG_DEBUG_EXTRA 3 // If nothing in your world makes sense
 
 #ifdef NETCON_INTERCEPT
 
@@ -77,7 +77,7 @@ void print_addr(struct sockaddr *addr)
 #ifdef NETCON_SERVICE
   namespace ZeroTier { 
 #endif
-  void dwr(int level, char *fmt, ... )
+  void dwr(int level, const char *fmt, ... )
   {
     if(level > DEBUG_LEVEL)
         return;

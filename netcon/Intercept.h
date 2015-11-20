@@ -31,68 +31,68 @@
 
 #include <sys/socket.h>
 
-#define IDX_PID				0
-#define IDX_TID				sizeof(pid_t)
-#define IDX_COUNT			IDX_TID + sizeof(pid_t)
-#define IDX_TIME			IDX_COUNT + sizeof(int)
-#define IDX_PAYLOAD			IDX_TIME + 20 // 20 being the length of the timestamp string
+#define IDX_PID			0
+#define IDX_TID			sizeof(pid_t)
+#define IDX_COUNT		IDX_TID + sizeof(pid_t)
+#define IDX_TIME		IDX_COUNT + sizeof(int)
+#define IDX_PAYLOAD		IDX_TIME + 20 /* 20 being the length of the timestamp string */
 
-#define BUF_SZ              256
-#define PAYLOAD_SZ			223 // BUF_SZ-IDX_PAYLOAD
+#define BUF_SZ          256
+#define PAYLOAD_SZ		223 /* BUF_SZ-IDX_PAYLOAD */
 
-#define ERR_OK                  0
+#define ERR_OK          0
 
 /* Userland RPC codes */
-#define RPC_UNDEFINED			 			0
-#define RPC_CONNECT				 			1
+#define RPC_UNDEFINED			 	0
+#define RPC_CONNECT				 	1
 #define RPC_CONNECT_SOCKARG		 	2
-#define RPC_SELECT			 				3
-#define RPC_POLL				 				4
-#define RPC_CLOSE				 				5
-#define RPC_READ				 				6
-#define RPC_WRITE				 				7
-#define RPC_BIND				 				8
-#define RPC_ACCEPT			 				9
-#define RPC_LISTEN			 				10
-#define RPC_SOCKET			 				11
-#define RPC_SHUTDOWN		 				12
+#define RPC_SELECT			 		3
+#define RPC_POLL				 	4
+#define RPC_CLOSE				 	5
+#define RPC_READ				 	6
+#define RPC_WRITE				 	7
+#define RPC_BIND				 	8
+#define RPC_ACCEPT			 		9
+#define RPC_LISTEN			 		10
+#define RPC_SOCKET			 		11
+#define RPC_SHUTDOWN		 		12
 
 /* Administration RPC codes */
-#define RPC_MAP									20	// Give the service the value we "see" for the new buffer fd
-#define RPC_MAP_REQ							21  // A call to determine whether an fd is mapped to the service
-#define RPC_RETVAL							22	// not RPC per se, but something we should codify
-#define RPC_KILL_INTERCEPT			23  // Tells the service we need to shut down all connections
+#define RPC_MAP						20	/* Give the service the value we "see" for the new buffer fd */
+#define RPC_MAP_REQ					21  /* A call to determine whether an fd is mapped to the service */
+#define RPC_RETVAL					22	/* not RPC per se, but something we should codify */
+#define RPC_KILL_INTERCEPT			23  /* Tells the service we need to shut down all connections */
 
 /* Connection statuses */
-#define UNSTARTED								0
-#define CONNECTING			 				1
-#define CONNECTED				 				2
-#define SENDING					 				3
-#define RECEIVING				 				4
-#define SENTV4REQ				 				5
-#define GOTV4REQ				 				6
-#define SENTV5METHOD			 			7
-#define GOTV5METHOD				 			8
-#define SENTV5AUTH			 				9
-#define GOTV5AUTH				 				10
-#define SENTV5CONNECT			 			11
-#define GOTV5CONNECT			 			12
-#define DONE					 					13
-#define FAILED				 					14
+#define UNSTARTED					0
+#define CONNECTING			 		1
+#define CONNECTED				 	2
+#define SENDING					 	3
+#define RECEIVING				 	4
+#define SENTV4REQ				 	5
+#define GOTV4REQ				 	6
+#define SENTV5METHOD			 	7
+#define GOTV5METHOD				 	8
+#define SENTV5AUTH			 		9
+#define GOTV5AUTH				 	10
+#define SENTV5CONNECT			 	11
+#define GOTV5CONNECT			 	12
+#define DONE					 	13
+#define FAILED				 		14
 
 /* Flags to indicate what events a
    socket was select()ed for */
-#define READ					 					(POLLIN|POLLRDNORM)
-#define WRITE					 					(POLLOUT|POLLWRNORM|POLLWRBAND)
-#define EXCEPT				 					(POLLRDBAND|POLLPRI)
-#define READWRITE				 				(READ|WRITE)
-#define READWRITEEXCEPT			 		(READ|WRITE|EXCEPT)
+#define READ (POLLIN|POLLRDNORM)
+#define WRITE (POLLOUT|POLLWRNORM|POLLWRBAND)
+#define EXCEPT (POLLRDBAND|POLLPRI)
+#define READWRITE (READ|WRITE)
+#define READWRITEEXCEPT (READ|WRITE|EXCEPT)
 
 
 /* for AF_UNIX sockets */
 #define MAX_PATH_NAME_SIZE 64
 
-// bind
+/* bind */
 #define BIND_SIG int sockfd, const struct sockaddr *addr, socklen_t addrlen
 struct bind_st
 {
@@ -102,7 +102,7 @@ struct bind_st
 	int __tid;
 };
 
-// connect
+/* connect */
 #define CONNECT_SIG int __fd, const struct sockaddr * __addr, socklen_t __len
 struct connect_st
 {
@@ -112,16 +112,16 @@ struct connect_st
 	int __tid;
 };
 
-// close
+/* close */
 #define CLOSE_SIG int fd
 struct close_st
 {
 	int fd;
 };
 
-// read
+/* read */
 #define DEFAULT_READ_BUFFER_SIZE	1024 * 63
-// read buffer sizes (on test machine) min: 4096    default: 87380   max:6147872
+/* read buffer sizes (on test machine) min: 4096    default: 87380   max:6147872 */
 #define READ_SIG int __fd, void *__buf, size_t __nbytes
 struct read_st
 {
@@ -130,8 +130,9 @@ struct read_st
 	unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
 };
 
+/* write */
 #define DEFAULT_WRITE_BUFFER_SIZE	1024 * 63
-// write buffer sizes (on test machine) min: 4096    default: 16384   max:4194304
+/* write buffer sizes (on test machine) min: 4096    default: 16384   max:4194304 */
 #define WRITE_SIG int __fd, const void *__buf, size_t __n
 struct write_st
 {

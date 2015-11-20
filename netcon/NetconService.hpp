@@ -42,12 +42,10 @@ using namespace std;
 namespace ZeroTier {
 
   class NetconEthernetTap;
-
-  // prototypes
   class TcpConnection;
 
   /*
-   *
+   * TCP connection administered by service
    */
   class TcpConnection
   {
@@ -79,8 +77,6 @@ namespace ZeroTier {
     TcpConnection *conn;
     Larg(NetconEthernetTap *_tap, TcpConnection *conn) : tap(_tap), conn(conn) {}
   };
-
-
 } // namespace ZeroTier
 
 #endif

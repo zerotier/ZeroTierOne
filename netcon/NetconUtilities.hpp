@@ -35,8 +35,5 @@ namespace ZeroTier
   void gotoxy(int x,int y);
   void get_path_from_pid(char* dest, int pid);
   void get_path_from_fd(char* dest, int pid, int fd);
-  ip_addr_t ip_addr_sin(register struct sockaddr_in *sin);
-  ssize_t sock_fd_write(int sock, int fd);
-  ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 }
 #endif

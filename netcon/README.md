@@ -1,11 +1,9 @@
-ZeroTier Network Containers 'service' and 'intercept'
+ZeroTier Network Containers 
 ======
-ZeroTier Network Containers is a blisteringly-fast and easy-to-use networking integration for Docker containers.
-
 
 ### Functional Overview:
 
-This system exists as a dynamically-linked library, and a stand-alone background service.
+This system exists as a dynamically-linked library, and a service/IP-stack built into ZeroTier
 
 The intercept is compiled as a shared library and installed in some user-accessible directory. When you want to intercept
 a user application you dynamically link the shared library to the application during runtime. When the application starts, the 
@@ -51,7 +49,7 @@ To start a service and automatically intercept an application:
 
 Alternatively, to intercept a specific application (requires an already running service):
 
-    intercept ./my_app
+    zerotier-intercept ./my_app
 
 To start the Network Containers service:
 

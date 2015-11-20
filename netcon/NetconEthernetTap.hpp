@@ -157,7 +157,7 @@ private:
 	std::vector<TcpConnection*> tcp_connections;
 	std::vector<PhySocket*> rpc_sockets;
 	std::map<PhySocket*, pid_t> pidmap;
-	pid_t rpc_counter = -1;
+	pid_t rpc_counter;
 
 	netif interface;
 

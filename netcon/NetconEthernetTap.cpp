@@ -49,6 +49,7 @@
 #include "Intercept.h"
 #include "NetconUtilities.hpp"
 #include "Common.c"
+#include "Sendfd.c"
 
 #define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
@@ -76,6 +77,7 @@ NetconEthernetTap::NetconEthernetTap(
 	_enabled(true),
 	_run(true)
 {
+	rpc_counter = -1;
 	char sockPath[4096];
 	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
 	_dev = sockPath;
@@ -292,19 +294,15 @@ void NetconEthernetTap::compact_dump()
  */
 void NetconEthernetTap::dump()
 {
-	/*
-	clearscreen();
-	gotoxy(0,0);
-	*/
 	fprintf(stderr, "\n\n---\n\ndie(): BEGIN SERVICE STATE DUMP\n");
 	fprintf(stderr, "*** IF YOU SEE THIS, EMAIL THE DUMP TEXT TO joseph.henry@zerotier.com ***\n");
-	fprintf(stderr, " tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
+	fprintf(stderr, " tcp_conns = %lu, rpc_socks = %lu\n", tcp_connections.size(), rpc_sockets.size());
 
   	// TODO: Add logic to detect bad mapping conditions
 	for(size_t i=0; i<rpc_sockets.size(); i++) {
 		for(size_t j=0; j<rpc_sockets.size(); j++) {
 			if(j != i && rpc_sockets[i] == rpc_sockets[j]) {
-				fprintf(stderr, "Duplicate PhySockets found! (0x%x)\n", rpc_sockets[i]);
+				fprintf(stderr, "Duplicate PhySockets found! (0x%p)\n", rpc_sockets[i]);
 			}
 		}
 	}
@@ -316,20 +314,20 @@ void NetconEthernetTap::dump()
 		int pid = pidmap[rpc_sockets[i]];
 		get_path_from_pid(buf, pid);
 
-		fprintf(stderr, "\nClient(addr=0x%x, rpc=%d, pid=%d) %s\n", rpc_sockets[i], rpc_fd, pid, buf);
+		fprintf(stderr, "\nClient(addr=0x%p, rpc=%d, pid=%d) %s\n", rpc_sockets[i], rpc_fd, pid, buf);
 		for(size_t j=0; j<tcp_connections.size(); j++) {
 			get_path_from_pid(buf, tcp_connections[j]->pid);
 			if(tcp_connections[j]->rpcSock==rpc_sockets[i]){
 				fprintf(stderr, "  |\n");
-				fprintf(stderr, "  |-Connection(0x%x):\n", tcp_connections[j]);
+				fprintf(stderr, "  |-Connection(0x%p):\n", tcp_connections[j]);
 				fprintf(stderr, "  |      path\t\t\t= %s\n", buf);
 				fprintf(stderr, "  |      perceived_fd\t\t= %d\t(fd)\n", tcp_connections[j]->perceived_fd);
 				fprintf(stderr, "  |      their_fd\t\t= %d\t(fd)\n", tcp_connections[j]->their_fd);
-				fprintf(stderr, "  |      dataSock(0x%x)\t= %d\t(fd)\n", tcp_connections[j]->dataSock, _phy.getDescriptor(tcp_connections[j]->dataSock));
-				fprintf(stderr, "  |      rpcSock(0x%x)\t= %d\t(fd)\n", tcp_connections[j]->rpcSock, _phy.getDescriptor(tcp_connections[j]->rpcSock));
+				fprintf(stderr, "  |      dataSock(0x%p)\t= %d\t(fd)\n", tcp_connections[j]->dataSock, _phy.getDescriptor(tcp_connections[j]->dataSock));
+				fprintf(stderr, "  |      rpcSock(0x%p)\t= %d\t(fd)\n", tcp_connections[j]->rpcSock, _phy.getDescriptor(tcp_connections[j]->rpcSock));
 				fprintf(stderr, "  |      pending\t\t= %d\n", tcp_connections[j]->pending);
 				fprintf(stderr, "  |      listening\t\t= %d\n", tcp_connections[j]->listening);
-				fprintf(stderr, "  \\------pcb(0x%x)->state\t= %d\n", tcp_connections[j]->pcb, tcp_connections[j]->pcb->state);
+				fprintf(stderr, "  \\------pcb(0x%p)->state\t= %d\n", tcp_connections[j]->pcb, tcp_connections[j]->pcb->state);
 			}
 		}
 	}
@@ -408,7 +406,6 @@ void NetconEthernetTap::closeAll()
 void NetconEthernetTap::threadMain()
 	throw()
 {
-	//signal(SIGPIPE, SIG_IGN);
 	uint64_t prev_tcp_time = 0;
 	uint64_t prev_status_time = 0;
 	uint64_t prev_etharp_time = 0;
@@ -446,10 +443,11 @@ void NetconEthernetTap::threadMain()
 
 		// Connection prunning
 		if (since_status >= STATUS_TMR_INTERVAL) {
-			compact_dump();
+			//compact_dump();
 			prev_status_time = now;
+			status_remaining = STATUS_TMR_INTERVAL - since_status;
 			if(rpc_sockets.size() || tcp_connections.size()) {
-/*
+
 				// dump();
 				// Here we will periodically check the list of rpc_sockets for those that
 				// do not currently have any data connection associated with them. If they are
@@ -495,7 +493,6 @@ void NetconEthernetTap::threadMain()
 							phyOnUnixData(rpc_sockets[i],_phy.getuptr(rpc_sockets[i]),&tmpbuf,BUF_SZ);
 					}
 				}
-				*/
 			}
 		}
 		// Main TCP/ETHARP timer section
@@ -528,7 +525,7 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr) {
 	dwr(MSG_DEBUG, " phyOnUnixClose(sock=0x%x, uptr=0x%x): fd = %d\n", sock, uptr, _phy.getDescriptor(sock));
 	TcpConnection *conn = (TcpConnection*)*uptr;
-	//closeConnection(conn);
+	closeConnection(conn);
 }
 
 /*
@@ -752,7 +749,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
     tap->lwipstack->_tcp_recv(newpcb, nc_recved);
     tap->lwipstack->_tcp_err(newpcb, nc_err);
     tap->lwipstack->_tcp_sent(newpcb, nc_sent);
-    tap->lwipstack->_tcp_poll(newpcb, nc_poll, 0.5);
+    tap->lwipstack->_tcp_poll(newpcb, nc_poll, 1);
     tcp_accepted(conn->pcb); // Let lwIP know that it can queue additional incoming connections
 		return ERR_OK;
   }
@@ -1238,7 +1235,7 @@ TcpConnection * NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, s
 	int rpc_fd = _phy.getDescriptor(sock);
 	struct tcp_pcb *newpcb = lwipstack->tcp_new();
 	dwr(MSG_DEBUG, " handle_socket(): pcb=%x\n", newpcb);
-  if(newpcb != NULL) {
+  	if(newpcb != NULL) {
 		ZT_PHY_SOCKFD_TYPE fds[2];
 		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
 			if(errno < 0) {
@@ -1252,12 +1249,12 @@ TcpConnection * NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, s
 		*uptr = new_conn;
 		new_conn->rpcSock = sock;
 		new_conn->pcb = newpcb;
-	  new_conn->their_fd = fds[1];
+	    new_conn->their_fd = fds[1];
 		tcp_connections.push_back(new_conn);
-    int n = sock_fd_write(_phy.getDescriptor(sock), fds[1]);
+    	sock_fd_write(_phy.getDescriptor(sock), fds[1]);
 		close(fds[1]); // close other end of socketpair
 		// Once the client tells us what its fd is on the other end, we can then complete the mapping
-    new_conn->pending = true;
+    	new_conn->pending = true;
 		return new_conn;
   }
   else {

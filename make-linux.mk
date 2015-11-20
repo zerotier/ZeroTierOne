@@ -30,7 +30,7 @@ UNAME_M=$(shell uname -m)
 
 INCLUDES=-Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6
 DEFS=-DZT_ENABLE_NETCON #-DVERBOSE
-CXXFLAGS+=-Wc++11-compat-deprecated-writable-strings
+CXXFLAGS+=-Wc++11-compat-deprecated-writable-strings -Wformat
 LDLIBS?=
 
 include objects.mk
@@ -113,10 +113,10 @@ installer: one FORCE
 
 clean:
 	rm -rf *.o
-	find docker-test/ -name "*.1.0" -type f -delete
-	find docker-test/ -name "*.so" -type f -delete
-	find docker-test/ -name "zerotier-one" -type f -delete
-	find docker-test/ -name "zerotier-cli" -type f -delete
+	find netcon/ -name "*.1.0" -type f -delete
+	find netcon/ -name "*.so" -type f -delete
+	find netcon/ -name "zerotier-one" -type f -delete
+	find netcon/ -name "zerotier-cli" -type f -delete
 	rm -rf netcon/*.o netcon/*.so netcon/*.1.0
 	rm -rf node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
 

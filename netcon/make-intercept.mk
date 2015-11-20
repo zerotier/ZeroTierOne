@@ -27,28 +27,28 @@
 
 SHCC=gcc
 
-intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -DERRORS_ARE_FATAL -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT
-LIB_NAME = intercept
+intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT
+#LIB_NAME = intercept
 SHLIB_EXT=dylib
 SHLIB_MAJOR = 1
 SHLIB_MINOR = 8
 COMMON = Common
 OBJS= Intercept.o
-SHLIB = ${LIB_NAME}.${SHLIB_EXT}.${SHLIB_MAJOR}.${SHLIB_MINOR}
+#SHLIB = ${LIB_NAME}.${SHLIB_EXT}.${SHLIB_MAJOR}.${SHLIB_MINOR}
 SHLDFLAGS = -g -O2 -Wall -I. -nostdlib -shared
 LIBS = -ldl -lc -lrt -lpthread
 
 lib:
 	${SHCC} $(intercept_CFLAGS) -I. Intercept.c -o Intercept.o
 	${SHCC} $(intercept_CFLAGS) -I. Sendfd.c -o Sendfd.o
-	${SHCC} $(SHLDFLAGS) Intercept.o Sendfd.o -o libintercept.so.1.0 $(LIBS)
+	${SHCC} $(SHLDFLAGS) Intercept.o Sendfd.o -o libzerotierintercept.so.1.0 $(LIBS)
 
 install:
-	cp libintercept.so.1.0 /lib/libintercept.so.1.0
-	ln -sf /lib/libintercept.so.1.0 /lib/libintercept
-	/usr/bin/install -c intercept /usr/bin
+	cp libzerotierintercept.so.1.0 /lib/libzerotierintercept.so.1.0
+	ln -sf /lib/libzerotierintercept.so.1.0 /lib/libzerotierintercept
+	/usr/bin/install -c zerotier-intercept /usr/bin
 
 uninstall:
-	rm -r /lib/libintercept.so.1.0
-	rm -r /lib/libintercept
-	rm -r /usr/bin/intercept
+	rm -r /lib/libzerotierintercept.so.1.0
+	rm -r /lib/libzerotierintercept
+	rm -r /usr/bin/zerotier-intercept

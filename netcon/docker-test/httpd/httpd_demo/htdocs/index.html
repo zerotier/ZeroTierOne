@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="http://bootswatch.com/cosmo/bootstrap.min.css">
+	<title>ZeroTier Network Containers Preview</title>
+</head>
+<body>
+
+<br><br>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-xs-1 col-xs-offset-1"><img src="ZeroTierIcon.png" style="width: 100%; height: 100%;"></div>
+		<div class="col-xs-9">
+			<h1>ZeroTier Network Containers Preview</h1>
+			(a.k.a. super bleeding edge pre-alphe pre-release demo)
+		</div>
+	</div>
+</div>
+
+<br>
+<hr>
+<br>
+
+<div class="container-fluid"><div class="row"><div class="col-xs-10 col-xs-offset-1 lead">
+
+<p><b>This page is being served from a Docker container with its own private TCP/IP microservice.</b></p>
+
+<p>
+It's connected to a virtual network, but if you "docker exec" into it and look around you won't find any special devices. No special privileges or configuration changes on the Docker host were needed. Everything is completely "stock" and completely self-contained.
+</p>
+
+<p>
+There's nothing special about the web server. It's just Apache. There's nothing special about the Linux image. It's based on a regular Fedora Docker base image. Other than Apache, the only thing this image contains is the ZeroTier network containers microservice and dynamic library.
+</p>
+
+<p>
+When Apache is run, our launcher script configures it to load a special dynamic library. This library intercepts calls to the Linux C networking API, redirecting network I/O to our private network stack microservice instead of the standard Linux kernel network path. This microservice takes care of the rest, automatically encapsulating traffic and sending it over the virtual network instead of the physical.
+</p>
+
+<p>
+It's a bit like how networking would work on a microkernel: modular, composable, portable, and independent.
+</p>
+
+<p>
+Network Containers allows a Docker (or LXC, CoreOS/rkt, runc, OpenVZ, SmartOS/Triton, <a target="_blank" href="https://github.com/p8952/bocker">bocker</a>, or even just bare metal Linux) system to connect to virtual networks without requiring <u>any</u> special permissions or special configuration on the host node. Processes inside the container don't even need to run with root permissions. It's 100% user-space, making it ideal for multi-tenant deployments or any other situation where modifying the configuration of the host node is impossible or just inconvenient.
+</p>
+
+<p>
+Once properly tuned and optimized, Network Containers also has the potential to be much faster than tun/tap or pcap based network overlays. It imposes only a single context switch from application/service to virtual network microservice as opposed to at least four for tun/tap and pcap-based solutions, since the latter require two trips through the kernel network stack. We believe it may be possible to approach or even equal the performance of VXLAN/IPSec or other fully kernel-mode configurations, but with the ease and total independence of a fully container-based solution.
+</p>
+
+<p>
+We created this container image to show you a preview of one of the projects we've been working on at ZeroTier. We still have a good deal of packaging, testing, and performance optimization work to do before Network Containers will be ready for a real public beta release. Follow the <a href="https://www.zerotier.com/blog">blog</a> or <a href="https://twitter.com/zerotier">@zerotier</a> for updates and announcements.
+</p>
+
+<p>
+P.S. If you want to use ZeroTier in Docker today, you can do it with the same ZeroTier One endpoint service you're using to access this network. The only catch is that you have to launch your containers with "--device=/dev/net/tun --cap-add=NET_ADMIN". Network Containers eliminates the need for these special options.
+</p>
+
+</div></div></div>
+
+<hr>
+
+</body>
+</html>

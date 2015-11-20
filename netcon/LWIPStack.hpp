@@ -31,23 +31,6 @@
 #include "lwip/ip_addr.h"
 #include "lwip/netif.h"
 
-/*
-#include "lwip/timers.h"
-#include "lwip/opt.h"
-#include "lwip/init.h"
-#include "lwip/mem.h"
-#include "lwip/memp.h"
-#include "lwip/sys.h"
-#include "lwip/stats.h"
-//#include "lwip/tcp_impl.h"
-//#include "lwip/inet_chksum.h"
-#include "lwip/tcpip.h"
-//#include "lwip/ip_addr.h"
-#include "lwip/debug.h"
-//#include "lwip/ip.h"
-//#include "lwip/ip_frag.h"
-*/
-
 #include "../node/Mutex.hpp"
 
 #include <stdio.h>
@@ -61,7 +44,6 @@
 #endif
 
 typedef ip_addr ip_addr_t;
-
 struct tcp_pcb;
 
 #define TCP_WRITE_SIG struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags
