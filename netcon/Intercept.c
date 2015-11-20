@@ -228,8 +228,13 @@ int get_new_fd(int oversock)
   char buf[BUF_SZ];
   int newfd;
   ssize_t size = sock_fd_read(oversock, buf, sizeof(buf), &newfd);
-  dwr(MSG_DEBUG, "get_new_fd(): RX: fd = (%d) over (%d)\n", newfd, oversock);
-  return newfd;
+
+  if(size > 0){
+    dwr(MSG_DEBUG, "get_new_fd(): RX: fd = (%d) over (%d)\n", newfd, oversock);
+    return newfd;
+  }
+  dwr(MSG_ERROR, "get_new_fd(): ERROR: unable to read fd over (%d)\n", oversock);
+  return -1;
 }
 
 /* Check whether the socket is mapped to the service or not. We
@@ -525,7 +530,6 @@ int socket(SOCKET_SIG)
   send_command(fdret_sock, cmd);
 
   /* get new fd */
-  char rbuf[16];
   newfd = get_new_fd(fdret_sock);
   if(newfd > 0)
   {
@@ -574,7 +578,7 @@ int connect(CONNECT_SIG)
     return -1;
   }
   dwr(MSG_DEBUG,"\nconnect(%d):\n", __fd);
-  print_addr(__addr);
+  /* print_addr(__addr); */
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
 
@@ -675,7 +679,7 @@ int bind(BIND_SIG)
     return -1;
   }
   dwr(MSG_DEBUG,"\nbind(%d):\n", sockfd);
-  print_addr(addr);
+  /* print_addr(addr); */
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -835,7 +839,7 @@ int accept(ACCEPT_SIG)
       fcntl(sockfd, F_SETFL, O_NONBLOCK);
   */
 
-  char rbuf[16], c[1];
+  char c[1];
   int new_conn_socket;
   int n = read(sockfd, c, sizeof(c)); /* Read signal byte */
 

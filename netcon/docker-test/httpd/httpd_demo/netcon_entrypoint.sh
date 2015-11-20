@@ -47,7 +47,8 @@ dd if=/dev/urandom of=/var/www/html/"$bigfile_name"  bs="$bigfile_size"  count=1
 #md5sum /var/www/html/"$bigfile_name" >> "$tx_md5sumfile"
 md5sum < /var/www/html/"$bigfile_name" >> "$tx_md5sumfile"
 echo '*** Wrote MD5 sum to ' "$tx_md5sumfile"
-echo '*** Starting httpd...'
+
+echo '*** Starting application...'
 sleep 0.5
 rm -rf /run/httpd/* /tmp/httpd*
 zerotier-intercept /usr/sbin/httpd -D FOREGROUND >>/tmp/apache.out 2>&1
