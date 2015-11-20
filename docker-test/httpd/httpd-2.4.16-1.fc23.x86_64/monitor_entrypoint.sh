@@ -2,7 +2,7 @@
 
 # Parameters for test
 test_name=httpd_bigfile
-nwid=e5cd7a9e1c5311ab # test network
+nwid=$(ls *.conf) # test network (assume *.conf file in root directory is where we want to test)
 netcon_wait_time=45 # wait for test container to come online
 app_timeout_time=10 # app-specific timeout
 file_path=/opt/results/ # test result output file path (fs shared between host and containers)
@@ -37,7 +37,7 @@ while [ -z "$virtip4" ]; do
 done
 
 echo '*** Starting Test...'
-echo '*** Up and running at' $virtip4
+echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Sleeping for 30s while we wait for the Network Container to come online...'
 sleep "$netcon_wait_time"s
 ncvirtip=$(<$address_file)

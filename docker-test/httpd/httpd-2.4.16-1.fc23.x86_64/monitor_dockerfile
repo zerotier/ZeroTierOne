@@ -8,7 +8,8 @@ EXPOSE 9993/udp
 RUN mkdir -p /var/lib/zerotier-one/networks.d
 ADD monitor_identity.public /var/lib/zerotier-one/identity.public
 ADD monitor_identity.secret /var/lib/zerotier-one/identity.secret
-RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
+ADD *.conf /var/lib/zerotier-one/networks.d/
+ADD *.conf /
 ADD zerotier-one /
 ADD zerotier-cli /
 

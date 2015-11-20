@@ -21,7 +21,9 @@ RUN /usr/bin/install -c intercept /usr/bin
 RUN mkdir -p /var/lib/zerotier-one/networks.d
 ADD netcon_identity.public /var/lib/zerotier-one/identity.public
 ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
-RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
+ADD *.conf /var/lib/zerotier-one/networks.d/
+ADD *.conf /
+
 ADD zerotier-one /
 ADD zerotier-cli /
 

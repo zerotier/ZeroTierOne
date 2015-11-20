@@ -2,7 +2,7 @@
 
 # Parameters for test
 test_name=httpd_bigfile
-nwid=e5cd7a9e1c5311ab # test network
+nwid=$(ls *.conf) # test network
 file_path=/opt/results/ # test result output file path (fs shared between host and containers)
 file_base="$test_name".txt # test result output file
 address_file="$file_path$test_name"_addr.txt # file shared between host and containers for sharing address (optional)
@@ -31,7 +31,7 @@ while [ -z "$virtip4" ]; do
 	virtip4=`/zerotier-cli listnetworks | grep -F $nwid | cut -d ' ' -f 9 | sed 's/,/\n/g' | grep -F '.' | cut -d / -f 1`
 done
 
-echo '*** Up and running at' $virtip4
+echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo $virtip4 > "$address_file"
 
 # Generate large random file for transfer test

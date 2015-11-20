@@ -3,6 +3,7 @@ testname=${PWD##*/}
 echo 'Building dockerfiles for test: ' "$testname"
 
 # Docker won't allow the inclusion of files outside of the build directory
+cp ../../*.conf .
 cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli
 cp ../../intercept intercept
@@ -12,7 +13,6 @@ cp ../../netcon_identity.public netcon_identity.public
 cp ../../netcon_identity.secret netcon_identity.secret
 cp ../../monitor_identity.public monitor_identity.public
 cp ../../monitor_identity.secret monitor_identity.secret
-
 
 docker build --tag="$testname" -f netcon_dockerfile .
 docker build --tag="$testname"_monitor -f monitor_dockerfile .
@@ -26,6 +26,7 @@ rm -f netcon_identity.public
 rm -f netcon_identity.secret
 rm -f monitor_identity.public
 rm -f monitor_identity.secret
+rm -f *.conf
 
 # Start netcon container to be tested
 docker run -d -it -v $PWD/../../_results:/opt/results --device=/dev/net/tun "$testname":latest
