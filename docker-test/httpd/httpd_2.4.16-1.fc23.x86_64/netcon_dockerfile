@@ -1,16 +1,15 @@
-# ZT Netcon Throughput test
+# ZT Network Containers Test
 FROM fedora:23
 MAINTAINER https://www.zerotier.com/
 
 # Install apps
 RUN yum -y update
-RUN yum -y install httpd-2.4.16-1.fc23
-RUN yum -y install nano
+RUN yum -y install httpd-2.4.16-1.fc23.x86_64
 RUN yum clean all
 
-EXPOSE 9993/udp 9992/udp 9991/udp 9990/udp
+EXPOSE 9993/udp
 
-# Install sys-call intercept library
+# Install syscall intercept library
 ADD intercept /
 ADD libintercept.so.1.0 /
 RUN cp libintercept.so.1.0 lib/libintercept.so.1.0
@@ -20,15 +19,15 @@ RUN /usr/bin/install -c intercept /usr/bin
 
 # Add ZT files
 RUN mkdir -p /var/lib/zerotier-one/networks.d
+ADD netcon_identity.public /var/lib/zerotier-one/identity.public
+ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
 RUN touch /var/lib/zerotier-one/networks.d/e5cd7a9e1c5311ab.conf
 ADD zerotier-one /
 ADD zerotier-cli /
 
-# Install test-setup scripts
-ADD generate_file.sh /generate_file.sh
-RUN chmod -v +x /generate_file.sh
-ADD entrypoint.sh /entrypoint.sh
-RUN chmod -v +x /entrypoint.sh
+# Install test scripts
+ADD netcon_entrypoint.sh /netcon_entrypoint.sh
+RUN chmod -v +x /netcon_entrypoint.sh
 
 # Install LWIP library used by service
 ADD liblwip.so /
@@ -36,4 +35,4 @@ RUN mkdir -p ext/bin/lwip
 RUN cp liblwip.so ext/bin/lwip/liblwip.so
 
 # Start ZeroTier-One
-CMD ["./entrypoint.sh"]
+CMD ["./netcon_entrypoint.sh"]
