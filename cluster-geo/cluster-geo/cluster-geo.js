@@ -8,9 +8,9 @@
 var CACHE_TTL = (60 * 60 * 24 * 120 * 1000); // 120 days
 
 // Globally increase event emitter maximum listeners
-var EventEmitter = require('events');
-EventEmitter.prototype._maxListeners = 1000;
-process.setMaxListeners(1000);
+//var EventEmitter = require('events');
+//EventEmitter.prototype._maxListeners = 1000;
+//process.setMaxListeners(1000);
 
 // Load config
 var config = require(__dirname + '/config.js');
