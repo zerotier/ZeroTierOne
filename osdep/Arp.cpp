@@ -65,7 +65,7 @@ uint32_t Arp::processIncomingArp(const void *arp,unsigned int len,void *response
 	responseLen = 0;
 	responseDest.zero();
 
-	if (len > 28) {
+	if (len >= 28) {
 		if (!memcmp(arp,ARP_REQUEST_HEADER,8)) {
 			// Respond to ARP requests for locally-known IPs
 			_ArpEntry *targetEntry = _cache.get(reinterpret_cast<const uint32_t *>(arp)[6]);
