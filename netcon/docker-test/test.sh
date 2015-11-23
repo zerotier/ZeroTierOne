@@ -1,5 +1,7 @@
 #./build.sh
 
+# Relative paths are used in each test script, hence the need to change directories
+
 # httpd
 cd httpd
 cd httpd-2.4.16-1.fc23.x86_64
@@ -28,5 +30,9 @@ cd redis-3.0.4-1.fc23.x86_64
 ./test.sh
 cd ..
 
+#node.js
+cd nodejs-0.10.36-4.fc23
+./test.sh
+cd ..
 
 cd ..

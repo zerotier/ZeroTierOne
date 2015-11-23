@@ -5,72 +5,49 @@ ZeroTier Network Containers
 
 This system exists as a dynamically-linked library, and a service/IP-stack built into ZeroTier
 
+If you care about the technicals, 
+
 The intercept is compiled as a shared library and installed in some user-accessible directory. When you want to intercept
 a user application you dynamically link the shared library to the application during runtime. When the application starts, the 
 intercept's global constructor is called which sets up a hidden pipe which is used to communicate remote procedure calls (RPC) to the host Netcon service running in the background.
 
-When an RPC for a socket() is received by the Netcon service from the harnessed application, the Netcon service will ask the lwIP stack for a new PCB structure (used to represent a connection), if the system permits its allocation, it will be passed to Netcon where a PCB/socket table entry will be created. The table is used for mapping [callbacks from lwIP] and [RPCs from the intercept] to the correct connections.
+When an RPC for a socket() is received by the Netcon service from the intercepted application, the Netcon service will ask the lwIP stack for a new PCB structure (used to represent a connection), if the system permits its allocation, it will be passed to Netcon where a PCB/socket table entry will be created. The table is used for mapping [callbacks from lwIP] and [RPCs from the intercept] to the correct connections.
 
 Upon the first call to a intercept-overriden system call, a Unix-domain socket is opened between the Netcon service and the application's intercept. This socket provides us the ability to pass file descriptors of newly-created socketpairs to the intercept (used as the read/write buffer). More specifically, after the socketpair creation, one end is kept in a table entry in Netcon and one end is sent to the intercept.
 
-### Reading and Writing from application
-When the application reads or writes data to a socket, the intercept will override the call and read/write from one end of the socketpair created for that specific connection. The Netcon service is continually polling the file descriptors for the opposite end of the socketpair. When an available event is detected (such as the presence of data on the buffer), Netcon will consult the routing table and determine which PCB should receive this new data. A call is then made to lwIP's tcp_write(). 
 
 ### How Netcon receives data
-When data is received by lwIP, a callback in the Netcon service is called which then consults the internal routing table and maps the data to the correct socketpair. From here, it's up to the harnessed application to either poll() the opposite end of the socketpair, or read from it. No notification is sent to the intercept.
+When data is received by lwIP, a callback in the Netcon service is called which then consults the TCP connection list the data to the correct socketpair. From here, it's up to the harnessed application to either poll() the opposite end of the socketpair, or read from it. No notification is sent to the intercept.
 
 
 
 ### Building from Source (and Installing)
 
-Build library:
+Build library zerotier-intercept:
 
-    make lib
-
-Build service:
-
-    make service
-
-Build test applications (linked with library):
-
-    make tests
+    make -f make-intercept.mk
 
 Install:
 
-    make install
+    make -f make-intercept install
+
+Build LWIP library:
+
+    make -f make-liblwip.mk
+
+Run automated tests:
+
+    /netcon/docker-test/build.sh
+    /netcon/docker-test/test.sh
+
 
 
 
 ### Running
 
-To start a service and automatically intercept an application:
+To intercept a specific application (requires an already running instance of Zerotier-One with Network Containers enabled):
 
-    ./service my_app
-
-Alternatively, to intercept a specific application (requires an already running service):
-
-    zerotier-intercept ./my_app
-
-To start the Network Containers service:
-
-    ./service
-
-To monitor lwIP network I/O:
-
-    tcpdump -l -n -i tap0
-
-Show what dynamic libraries are set for inclusion:
-
-    intercept show
-
-Start example server (with harness):
-
-    intercept ./test_tx.o 
-
-Start example client (with intercept) to communicate with server:
-
-    intercept ./test_rx.o 127.0.0.1
-
+    zerotier-intercept my_app
 
 
 ### Testing
@@ -92,25 +69,19 @@ To run a simple RX/TX test:
 
 Network Containers have been tested with the following:
 
-	sshd					[ WORKS as of 20151112] Long ~15-20s delay for client during connect
+	sshd					[ WORKS as of 20151112]
 	ssh						[ WORKS as of 20151112]
 	sftp					[ WORKS as of 20151022]
 	curl					[ WORKS as of 20151021] 
 	apache (debug mode)		[ WORKS as of 20150810]
-	apache (prefork MPM)	[ WORKS as of 20151112] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
-	nginx					[BROKEN as of 20151022] 1.8.0-3 and 1.8.0-4 both suffer from lost intercept connections
-	nodejs					[ WORKS as of 20151021]
+	apache (prefork MPM)	[ WORKS as of 20151123] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
+	nginx					[ WORKS as of 20151123] Broken on Centos 7, unreliable on Fedora 23
+	nodejs					[ WORKS as of 20151123]
 	java					[ WORKS as of 20151010]
-	tomcat					[ WORKS as of 2015xxxx]
-	thttpd					[ WORKS as of 2015xxxx] 
-	vsftpd					[BROKEN as of 20151021] Server sends 500 when 220 is expected
-	mysql					[BROKEN as of 20151021]
-	postresql				[BROKEN as of 20151021]
 	MongoDB					[ WORKS as of 20151028]
-	Redis-server			[ WORKS as of 20151027]
-	pure-ftpd				[BROKEN as of 20151021] Socket operation on non-socket
+	Redis-server			[ WORKS as of 20151123]
 
-To Test:
+Future:
 
 	GET many different files via HTTP (web stress)
 	LARGE continuous transfer (e.g. /dev/urandom all night)
@@ -118,6 +89,7 @@ To Test:
 	Simulate packet loss (can be done with iptables)
 	Many parallel TCP transfers
 	Multithreaded software (e.g. apache in thread mode)
+	UDP support
 
 
 
@@ -153,19 +125,6 @@ To Test:
 
 	- Careful attention should be given to how arguments are passed in the intercepted syscall() function, this differs for 
 	32/64-bit systems
-
-
-### Alpha Unaddressed bug log
-
- - Possible CPU max-out during sshd kill or multiple ssh connect/disconnects
- - sshd will enter an infinite accept loop maxing out CPU if service dies
-
-
-### Speed Notes
-
-http://lwip.100.n7.nabble.com/Performance-question-td4545.html
- - 120-140Mbps, erroneous reports of 300-400 Mbps, claims linux stack is capable of 180Mbps
-
 
  
 

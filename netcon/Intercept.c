@@ -269,20 +269,12 @@ int init_service_connection()
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, af_sock_name, sizeof(addr.sun_path)-1);
-
-  dwr(MSG_DEBUG, "init(): pre-realsocket\n");
   if ( (tfd = realsocket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
     perror("socket error");
     exit(-1);
   }
-  dwr(MSG_DEBUG, "init(): post-realsocket, conn_err = %d, attempts = %d\n", conn_err, attempts);
-
   while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS) {
-    dwr(MSG_DEBUG, "init(): Attempting!\n");
-
     conn_err = realconnect(tfd, (struct sockaddr*)&addr, sizeof(addr));
-    dwr(MSG_DEBUG, "init(): post-realconnect\n");
-
     if(conn_err < 0) {
       dwr(MSG_DEBUG,"re-attempting connection in %ds\n", 1+attempts);
       sleep(1);
@@ -399,7 +391,7 @@ int setsockopt(SETSOCKOPT_SIG)
     dwr(MSG_ERROR, "setsockopt(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\nsetsockopt(%d)\n", socket);
+  dwr(MSG_DEBUG,"setsockopt(%d)\n", socket);
   /*
   if(is_mapped_to_service(socket) < 0) { // First, check if the service manages this
     return realsetsockopt(socket, level, option_name, option_value, option_len);
@@ -434,7 +426,7 @@ int getsockopt(GETSOCKOPT_SIG)
     dwr(MSG_ERROR, "getsockopt(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\ngetsockopt(%d)\n", sockfd);
+  dwr(MSG_DEBUG,"getsockopt(%d)\n", sockfd);
   /*
   if(is_mapped_to_service(sockfd) < 0) { // First, check if the service manages this
     return realgetsockopt(sockfd, level, optname, optval, optlen);
@@ -468,26 +460,26 @@ int socket(SOCKET_SIG)
     dwr(MSG_ERROR, "socket(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\nsocket():\n");
+  dwr(MSG_DEBUG,"socket():\n");
   int err;
 #ifdef CHECKS
   /* Check that type makes sense */
   int flags = socket_type & ~SOCK_TYPE_MASK;
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
       errno = EINVAL;
-      handle_error("socket1", "", -1);
+      handle_error("socket", "", -1);
       return -1;
   }
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
   if (socket_family < 0 || socket_family >= NPROTO){
     errno = EAFNOSUPPORT;
-    handle_error("socket2", "", -1);
+    handle_error("socket", "", -1);
     return -1;
   }
   if (socket_type < 0 || socket_type >= SOCK_MAX) {
     errno = EINVAL;
-    handle_error("socket3", "", -1);
+    handle_error("socket", "", -1);
     return -1;
   }
   /* Check that we haven't hit the soft-limit file descriptors allowed */
@@ -505,7 +497,7 @@ int socket(SOCKET_SIG)
   fdret_sock = !is_initialized ? init_service_connection() : fdret_sock;
   if(fdret_sock < 0) {
     dwr(MSG_DEBUG,"BAD service connection. exiting.\n");
-    handle_error("socket4", "", -1);
+    handle_error("socket", "", -1);
     exit(-1);
   }
   if(socket_family == AF_LOCAL
@@ -513,7 +505,7 @@ int socket(SOCKET_SIG)
     || socket_family == AF_UNIX) {
       int err = realsocket(socket_family, socket_type, protocol);
       dwr(MSG_DEBUG,"realsocket, err = %d\n", err);
-      handle_error("socket5", "", err);
+      handle_error("socket", "", err);
       return err;
   }
   /* Assemble and send RPC */
@@ -543,14 +535,14 @@ int socket(SOCKET_SIG)
       send_command(fdret_sock, cmd);
       pthread_mutex_unlock(&lock);
       errno = ERR_OK; /* OK */
-      handle_error("socket6", "", newfd);
+      handle_error("socket", "", newfd);
       return newfd;
     }
     else { /* Try to read retval+errno since we RXed a bad fd */
       dwr(MSG_DEBUG,"Error, service sent bad fd.\n");
       err = get_retval();
       pthread_mutex_unlock(&lock);
-      handle_error("socket7", "", -1);
+      handle_error("socket", "", -1);
       return err;
     }
 
@@ -559,7 +551,7 @@ int socket(SOCKET_SIG)
     dwr(MSG_DEBUG,"Error while receiving new FD.\n");
     err = get_retval();
     pthread_mutex_unlock(&lock);
-    handle_error("socket8", "", -1);
+    handle_error("socket", "", -1);
     return err;
   }
 }
@@ -576,7 +568,7 @@ int connect(CONNECT_SIG)
     dwr(MSG_ERROR, "connect(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\nconnect(%d):\n", __fd);
+  dwr(MSG_DEBUG,"connect(%d):\n", __fd);
   /* print_addr(__addr); */
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
@@ -677,7 +669,7 @@ int bind(BIND_SIG)
     dwr(MSG_ERROR, "bind(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\nbind(%d):\n", sockfd);
+  dwr(MSG_DEBUG,"bind(%d):\n", sockfd);
   /* print_addr(addr); */
 #ifdef CHECKS
   /* Check that this is a valid fd */
@@ -743,7 +735,7 @@ int accept4(ACCEPT4_SIG)
     dwr(MSG_ERROR, "accept4(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\naccept4(%d):\n", sockfd);
+  dwr(MSG_DEBUG,"accept4(%d):\n", sockfd);
 #ifdef CHECKS
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
     errno = EINVAL;
@@ -774,7 +766,7 @@ int accept(ACCEPT_SIG)
     dwr(MSG_ERROR, "accept(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\naccept(%d):\n", sockfd);
+  dwr(MSG_DEBUG,"accept(%d):\n", sockfd);
 #ifdef CHECKS
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -899,7 +891,7 @@ int listen(LISTEN_SIG)
     dwr(MSG_ERROR, "listen(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"\nlisten(%d):\n", sockfd);
+  dwr(MSG_DEBUG,"listen(%d):\n", sockfd);
   int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
 
@@ -995,7 +987,7 @@ int close(CLOSE_SIG)
     dwr(MSG_ERROR, "close(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG,"close(%d)\n", fd);
+  /* dwr(MSG_DEBUG,"close(%d)\n", fd); */
   if(fd == fdret_sock)
     return -1; /* TODO: Ignore request to shut down our rpc fd, this is *almost always* safe */
   if(fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
