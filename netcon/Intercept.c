@@ -72,7 +72,6 @@ static int (*realaccept4)(ACCEPT4_SIG);
 static long (*realsyscall)(SYSCALL_SIG);
 static int (*realclose)(CLOSE_SIG);
 static int (*realclone)(CLONE_SIG);
-/* static int (*realpoll)(POLL_SIG); */
 static int (*realdup2)(DUP2_SIG);
 static int (*realdup3)(DUP3_SIG);
 
@@ -90,7 +89,6 @@ int accept4(ACCEPT4_SIG);
 long syscall(SYSCALL_SIG);
 int close(CLOSE_SIG);
 int clone(CLONE_SIG);
-/* int poll(POLL_SIG); */
 int dup2(DUP2_SIG);
 int dup3(DUP3_SIG);
 
