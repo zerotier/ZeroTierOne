@@ -40,8 +40,7 @@ LIBS = -ldl -lc -lrt -lpthread
 
 lib:
 	${SHCC} $(intercept_CFLAGS) -I. Intercept.c -o Intercept.o
-	${SHCC} $(intercept_CFLAGS) -I. Sendfd.c -o Sendfd.o
-	${SHCC} $(SHLDFLAGS) Intercept.o Sendfd.o -o libzerotierintercept.so.1.0 $(LIBS)
+	${SHCC} $(SHLDFLAGS) Intercept.o -o libzerotierintercept.so.1.0 $(LIBS)
 
 install:
 	cp libzerotierintercept.so.1.0 /lib/libzerotierintercept.so.1.0

@@ -50,7 +50,6 @@
 #include "lwip/tcp.h"
 
 #include "Common.c"
-#include "Sendfd.c"
 
 #define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5

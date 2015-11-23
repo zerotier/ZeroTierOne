@@ -105,7 +105,6 @@ ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 /* threading */
 static pthread_mutex_t lock;
-static pthread_mutex_t loglock;
 
 void handle_error(char *name, char *info, int err)
 {
