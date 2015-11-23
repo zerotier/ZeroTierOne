@@ -73,13 +73,13 @@ A) Each unit test's test.sh will:
  - remove temporary files
  - run each container and perform test and monitoring specified in netcon_entrypoint.sh and monitor_entrypoint.sh
 
-B) Results will be written to the 'zerotierone/docker-test/_result' directory
+B) Results will be written to the 'netcon/docker-test/_results/' directory
  - Results will be a combination of raw and formatted dumps to files whose names reflect the test performed
  - In the event of failure, 'FAIL.' will be appended to the result file's name
   - (e.g. FAIL.my_application_1.0.2.x86_64)
  - In the event of success, 'OK.' will be appended
 
- 
+
 ### Compatibility
 
 Network Containers have been tested with the following:
