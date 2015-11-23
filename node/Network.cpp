@@ -37,6 +37,7 @@
 #include "Packet.hpp"
 #include "Buffer.hpp"
 #include "NetworkController.hpp"
+#include "Node.hpp"
 
 #include "../version.h"
 
@@ -144,7 +145,15 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 bool Network::tryAnnounceMulticastGroupsTo(const SharedPtr<Peer> &peer)
 {
 	Mutex::Lock _l(_lock);
-	return _tryAnnounceMulticastGroupsTo(RR->topology->rootAddresses(),_allMulticastGroups(),peer,RR->node->now());
+	if (
+	    (_isAllowed(peer)) ||
+	    (peer->address() == this->controller()) ||
+	    (RR->topology->isRoot(peer->identity()))
+	   ) {
+		_announceMulticastGroupsTo(peer->address(),_allMulticastGroups());
+		return true;
+	}
+	return false;
 }
 
 bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
@@ -400,79 +409,80 @@ bool Network::_isAllowed(const SharedPtr<Peer> &peer) const
 	return false; // default position on any failure
 }
 
-bool Network::_tryAnnounceMulticastGroupsTo(const std::vector<Address> &alwaysAddresses,const std::vector<MulticastGroup> &allMulticastGroups,const SharedPtr<Peer> &peer,uint64_t now) const
-{
-	// assumes _lock is locked
-	if (
-	    (_isAllowed(peer)) ||
-	    (peer->address() == this->controller()) ||
-	    (std::find(alwaysAddresses.begin(),alwaysAddresses.end(),peer->address()) != alwaysAddresses.end())
-	   ) {
-
-		if ((_config)&&(_config->com())&&(!_config->isPublic())&&(peer->needsOurNetworkMembershipCertificate(_id,now,true))) {
-			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
-			_config->com().serialize(outp);
-			outp.armor(peer->key(),true);
-			peer->send(RR,outp.data(),outp.size(),now);
-		}
-
-		{
-			Packet outp(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-
-			for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
-				if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
-					outp.armor(peer->key(),true);
-					peer->send(RR,outp.data(),outp.size(),now);
-					outp.reset(peer->address(),RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
-				}
-
-				// network ID, MAC, ADI
-				outp.append((uint64_t)_id);
-				mg->mac().appendTo(outp);
-				outp.append((uint32_t)mg->adi());
-			}
-
-			if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH) {
-				outp.armor(peer->key(),true);
-				peer->send(RR,outp.data(),outp.size(),now);
-			}
-		}
-
-		return true;
-	}
-	return false;
-}
-
-class _AnnounceMulticastGroupsToAll
+class _GetPeersThatNeedMulticastAnnouncement
 {
 public:
-	_AnnounceMulticastGroupsToAll(const RuntimeEnvironment *renv,Network *nw) :
+	_GetPeersThatNeedMulticastAnnouncement(const RuntimeEnvironment *renv,Network *nw) :
 		_now(renv->node->now()),
-		RR(renv),
+		_controller(nw->controller()),
 		_network(nw),
-		_rootAddresses(renv->topology->rootAddresses()),
-		_allMulticastGroups(nw->_allMulticastGroups())
+		_rootAddresses(renv->topology->rootAddresses())
 	{}
-
-	inline void operator()(Topology &t,const SharedPtr<Peer> &p) { _network->_tryAnnounceMulticastGroupsTo(_rootAddresses,_allMulticastGroups,p,_now); }
-
+	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
+	{
+		if (
+		    (_network->_isAllowed(p)) ||
+		    (p->address() == _controller) ||
+		    (std::find(_rootAddresses.begin(),_rootAddresses.end(),p->address()) != _rootAddresses.end())
+		   ) {
+			peers.push_back(p->address());
+		}
+	}
+	std::vector<Address> peers;
 private:
 	uint64_t _now;
-	const RuntimeEnvironment *RR;
+	Address _controller;
 	Network *_network;
 	std::vector<Address> _rootAddresses;
-	std::vector<MulticastGroup> _allMulticastGroups;
 };
 void Network::_announceMulticastGroups()
 {
 	// Assumes _lock is locked
-	_AnnounceMulticastGroupsToAll afunc(RR,this);
-	RR->topology->eachPeer<_AnnounceMulticastGroupsToAll &>(afunc);
+
+	_GetPeersThatNeedMulticastAnnouncement gpfunc(RR,this);
+	RR->topology->eachPeer<_GetPeersThatNeedMulticastAnnouncement &>(gpfunc);
+
+	std::vector<MulticastGroup> allMulticastGroups(_allMulticastGroups());
+	for(std::vector<Address>::const_iterator pa(gpfunc.peers.begin());pa!=gpfunc.peers.end();++pa)
+		_announceMulticastGroupsTo(*pa,allMulticastGroups);
+}
+
+void Network::_announceMulticastGroupsTo(const Address &peerAddress,const std::vector<MulticastGroup> &allMulticastGroups) const
+{
+	// Assumes _lock is locked
+
+	// We push COMs ahead of MULTICAST_LIKE since they're used for access control -- a COM is a public
+	// credential so "over-sharing" isn't really an issue (and we only do so with roots).
+	if ((_config)&&(_config->com())&&(!_config->isPublic())) {
+		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
+		_config->com().serialize(outp);
+		RR->sw->send(outp,true,0);
+	}
+
+	{
+		Packet outp(peerAddress,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+
+		for(std::vector<MulticastGroup>::const_iterator mg(allMulticastGroups.begin());mg!=allMulticastGroups.end();++mg) {
+			if ((outp.size() + 18) >= ZT_UDP_DEFAULT_PAYLOAD_MTU) {
+				RR->sw->send(outp,true,0);
+				outp.reset(peerAddress,RR->identity.address(),Packet::VERB_MULTICAST_LIKE);
+			}
+
+			// network ID, MAC, ADI
+			outp.append((uint64_t)_id);
+			mg->mac().appendTo(outp);
+			outp.append((uint32_t)mg->adi());
+		}
+
+		if (outp.size() > ZT_PROTO_MIN_PACKET_LENGTH)
+			RR->sw->send(outp,true,0);
+	}
 }
 
 std::vector<MulticastGroup> Network::_allMulticastGroups() const
 {
 	// Assumes _lock is locked
+
 	std::vector<MulticastGroup> mgs;
 	mgs.reserve(_myMulticastGroups.size() + _multicastGroupsBehindMe.size() + 1);
 	mgs.insert(mgs.end(),_myMulticastGroups.begin(),_myMulticastGroups.end());
@@ -481,6 +491,7 @@ std::vector<MulticastGroup> Network::_allMulticastGroups() const
 		mgs.push_back(Network::BROADCAST);
 	std::sort(mgs.begin(),mgs.end());
 	mgs.erase(std::unique(mgs.begin(),mgs.end()),mgs.end());
+
 	return mgs;
 }
 

@@ -13,14 +13,14 @@ ARCH_FLAGS=-arch x86_64
 include objects.mk
 OBJS+=osdep/OSXEthernetTap.o
 
-# Comment out to disable building against shipped libminiupnpc binary for Mac
-ZT_USE_MINIUPNPC?=1
-
 # Disable codesign since open source users will not have ZeroTier's certs
 CODESIGN=echo
 PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
 CODESIGN_INSTALLER_CERT=
+
+# Build with libminiupnpc by default for Mac
+ZT_USE_MINIUPNPC?=1
 
 # For internal use only -- signs everything with ZeroTier's developer cert
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
@@ -32,13 +32,18 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier Networks LLC (8ZD9JUCZ4V)"
 endif
 
+# Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
+ifeq ($(ZT_ENABLE_CLUSTER),1)
+	DEFS+=-DZT_ENABLE_CLUSTER
+endif
+
 ifeq ($(ZT_AUTO_UPDATE),1)
 	DEFS+=-DZT_AUTO_UPDATE
 endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	DEFS+=-DZT_USE_MINIUPNPC
-	LIBS+=ext/bin/miniupnpc/mac-x64/libminiupnpc.a
+	LIBS+=ext/miniupnpc/libminiupnpc.a
 	OBJS+=osdep/UPNPClient.o
 endif
 
@@ -68,6 +73,9 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 all: one
 
 one:	$(OBJS) one.o
+ifeq ($(ZT_USE_MINIUPNPC),1)
+	cd ext/miniupnpc ; make clean ; make 'CFLAGS=-D_DARWIN_C_SOURCE -O2 -fstack-protector -fPIE -flto -pthread -mmacosx-version-min=10.7 -fno-common -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE' -j 2 libminiupnpc.a
+endif
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -93,7 +101,8 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
-	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-*
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-* mkworld
+	cd ext/miniupnpc ; make clean
 
 # For those building from source -- installs signed binary tap driver in system ZT home
 install-mac-tap: FORCE

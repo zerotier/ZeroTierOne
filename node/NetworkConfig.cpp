@@ -55,6 +55,9 @@ SharedPtr<NetworkConfig> NetworkConfig::createTestNetworkConfig(const Address &s
 	if ((ip & 0x000000ff) == 0x00000000) ip ^= 0x00000001; // or .0
 	nc->_staticIps.push_back(InetAddress(Utils::hton(ip),8));
 
+	// Assign an RFC4193-compliant IPv6 address -- will never collide
+	nc->_staticIps.push_back(InetAddress::makeIpv6rfc4193(ZT_TEST_NETWORK_ID,self.toInt()));
+
 	return nc;
 }
 

@@ -25,34 +25,6 @@ html,body {
 	display: table;
 }
 
-.zeroTierNode > .top {
-	width: 100%;
-	overflow: hidden;
-	display: table-row;
-	white-space: nowrap;
-	background: #234447;
-	color: #ffffff;
-	padding: 0;
-	margin: 0;
-}
-.zeroTierNode > .top button {
-	display: inline-block;
-	padding: 0.25rem 0.75rem 0.25rem 0.75rem;
-	color: #ffffff;
-	margin: 0;
-	border: 0;
-	outline: none;
-	background: #234447;
-	font-size: 12pt;
-	cursor: pointer;
-}
-.zeroTierNode > .top button:hover {
-	background: #91a2a3;
-}
-.zeroTierNode > .top button:disabled {
-	background: #91a2a3;
-}
-
 .zeroTierNode > .middle {
 	width: 100%;
 	height: 100%;
@@ -65,6 +37,7 @@ html,body {
 	width: 100%;
 	height: 100%;
 	display: table-cell;
+	border-bottom: 1px solid #cfcfcf;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll {
 	display: block;
@@ -87,68 +60,11 @@ html,body {
 	border-collapse: collapse;
 }
 .zeroTierNode > .middle > .middleCell > .middleScroll > .networks > .network {
-	display: inline-block;
+	display: block;
+	border-top: 0.12rem solid #dddddd;
+	border-bottom: 0.12rem solid #dddddd;
 	padding: 0.25rem;
-	margin: 0.25rem 0 0 1%;
-	min-width: 31%;
-	max-width: 98%;
-	border: 1px solid #234447;
 	background: #ffffff;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers {
-	display: table;
-	width: 100%;
-	margin: 0;
-	border-collapse: collapse;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer {
-	width: 100%;
-	display: table-row;
-	background: #ffffff;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer:nth-child(odd) {
-	background: #f3f3f3;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer:nth-child(even) {
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathActive {
-	font-size: 8pt;
-	color: #555555;
-	font-style: italic;
-	font-family: monospace;
-	white-space: nowrap;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathPreferred {
-	font-size: 8pt;
-	color: #000000;
-	font-family: monospace;
-	white-space: nowrap;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer .peerPathInactive {
-	font-size: 8pt;
-	font-family: monospace;
-	color: #aaaaaa;
-	font-style: italic;
-	text-decoration: line-through;
-	white-space: nowrap;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peer > .f {
-	display: table-cell;
-	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
-	font-size: 8pt;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peerHeader {
-	width: 100%;
-	font-size: 8pt;
-	display: table-row;
-	background: #ffffff;
-	border-bottom: 1px solid #000000;
-}
-.zeroTierNode > .middle > .middleCell > .middleScroll > .peers > .peerHeader > .f {
-	display: table-cell;
-	font-size: 8pt;
-	padding: 0.05rem 0.15rem 0.05rem 0.15rem;
-	font-weight: bold;
 }
 
 .zeroTierNode > .bottom {
@@ -156,8 +72,8 @@ html,body {
 	width: 100%;
 	overflow: hidden;
 	display: table-row;
-	background: #234447;
-	color: #ffffff;
+	color: #000000;
+	background: #dfdfdf;
 }
 .zeroTierNode > .bottom > .left {
 	text-align: left;
@@ -233,7 +149,7 @@ html,body {
 .zeroTierNetwork .networkInfo .networkId {
 	font-size: 11pt;
 	font-family: monospace;
-	color: #91a2a3;
+	color: #000000;
 }
 .zeroTierNetwork .networkInfo .networkName {
 	padding: 0 0 0 1rem;
@@ -271,7 +187,7 @@ html,body {
 .zeroTierNetwork .leaveNetworkButton {
 	padding: 0.25rem 0.5rem 0.25rem 0.5rem;
 	margin: 0.25rem 0 0 0;
-	font-size: 10pt;
+	font-size: 9pt;
 	background: #ffffff;
 	outline: none;
 	background: #ffb354;

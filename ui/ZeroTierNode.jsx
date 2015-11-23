@@ -122,7 +122,6 @@ var ZeroTierNode = React.createClass({
 	},
 
 	componentDidMount: function() {
-		this.tabIndex = 0;
 		this.updateAll();
 		this.updateIntervalId = setInterval(this.updateAll,2500);
 	},
@@ -130,74 +129,19 @@ var ZeroTierNode = React.createClass({
 		clearInterval(this.updateIntervalId);
 	},
 	render: function() {
-		/* We implement tabs in a very simple way here with a React JSX conditional. The tabIndex
-		 * local variable indicates the tab, and switching it determines which set of things we
-		 * render in the main middle portion. On tab switch calls forceUpdate(). */
 		return (
 			<div className="zeroTierNode">
-				<div className="top">&nbsp;&nbsp;
-					<button disabled={this.tabIndex === 0} onClick={function() {this.tabIndex = 0; this.forceUpdate();}.bind(this)}>Networks</button>
-					<button disabled={this.tabIndex === 1} onClick={function() {this.tabIndex = 1; this.forceUpdate();}.bind(this)}>Peers</button>
-				</div>
 				<div className="middle"><div className="middleCell">
 					<div className="middleScroll">
-						{
-							(this.tabIndex === 1) ? (
-								<div className="peers" key="_peers">
-									<div className="peerHeader" key="_peersHeader">
-										<div className="f">Address</div>
-										<div className="f">Version</div>
-										<div className="f">Latency</div>
-										<div className="f">Data&nbsp;Paths</div>
-										<div className="f">Last&nbsp;Unicast</div>
-										<div className="f">Last&nbsp;Multicast</div>
-										<div className="f">Role</div>
-									</div>
-									{
-										this.state._peers.map(function(peer) {
-											return (
-												<div className="peer" key={peer['address']}>
-													<div className="f zeroTierAddress">{peer['address']}</div>
-													<div className="f">{(peer['version'] === '-1.-1.-1') ? '-' : peer['version']}</div>
-													<div className="f">{peer['latency']}</div>
-													<div className="f">
-														{
-															(peer['paths'].length === 0) ? (
-																<div className="peerPath"></div>
-															) : (
-																<div>
-																{
-																	peer['paths'].map(function(path) {
-																		var cn = ((path.active)||(path.fixed)) ? (path.preferred ? 'peerPathPreferred' : 'peerPathActive') : 'peerPathInactive';
-																		return (
-																			<div className={cn}>{path.address}&nbsp;&nbsp;{this.ago(path.lastSend)}/{this.ago(path.lastReceive)}</div>
-																		);
-																	}.bind(this))
-																}
-																</div>
-															)
-														}
-													</div>
-													<div className="f">{this.ago(peer['lastUnicastFrame'])}</div>
-													<div className="f">{this.ago(peer['lastMulticastFrame'])}</div>
-													<div className="f">{peer['role']}</div>
-												</div>
-											);
-										}.bind(this))
-									}
-								</div>
-							) : (
-								<div className="networks" key="_networks">
-									{
-										this.state._networks.map(function(network) {
-											network['authToken'] = this.props.authToken;
-											network['onNetworkDeleted'] = this.handleNetworkDelete;
-											return React.createElement('div',{className: 'network',key: network.nwid},React.createElement(ZeroTierNetwork,network));
-										}.bind(this))
-									}
-								</div>
-							)
-						}
+						<div className="networks" key="_networks">
+							{
+								this.state._networks.map(function(network) {
+									network['authToken'] = this.props.authToken;
+									network['onNetworkDeleted'] = this.handleNetworkDelete;
+									return React.createElement('div',{className: 'network',key: network.nwid},React.createElement(ZeroTierNetwork,network));
+								}.bind(this))
+							}
+						</div>
 					</div>
 				</div></div>
 				<div className="bottom">

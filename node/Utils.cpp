@@ -168,20 +168,20 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 			exit(1);
 		}
-		s20.init(s20key,256,s20key,8);
+		s20.init(s20key,256,s20key);
 	}
 
 	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
 		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 		exit(1);
 	}
-	s20.encrypt(buf,buf,bytes);
+	s20.encrypt12(buf,buf,bytes);
 
 #else // not __WINDOWS__
 
 #ifdef __UNIX_LIKE__
 
-	static char randomBuf[65536];
+	static char randomBuf[131072];
 	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
 	static Mutex globalLock;
@@ -191,7 +191,7 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 	if (devURandomFd <= 0) {
 		devURandomFd = ::open("/dev/urandom",O_RDONLY);
 		if (devURandomFd <= 0) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\r\n");
+			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
 			exit(1);
 			return;
 		}
@@ -199,10 +199,16 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 
 	for(unsigned int i=0;i<bytes;++i) {
 		if (randomPtr >= sizeof(randomBuf)) {
-			if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
-				fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to read from /dev/urandom\r\n");
-				exit(1);
-				return;
+			for(;;) {
+				if ((int)::read(devURandomFd,randomBuf,sizeof(randomBuf)) != (int)sizeof(randomBuf)) {
+					::close(devURandomFd);
+					devURandomFd = ::open("/dev/urandom",O_RDONLY);
+					if (devURandomFd <= 0) {
+						fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() unable to open /dev/urandom\n");
+						exit(1);
+						return;
+					}
+				} else break;
 			}
 			randomPtr = 0;
 		}

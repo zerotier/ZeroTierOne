@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:DeletePortMapping xmlns:u="urn:schemas-upnp-org:service:WANIPConnection:1"><NewRemoteHost></NewRemoteHost><NewExternalPort>123</NewExternalPort>
+<NewProtocol>TCP</NewProtocol></u:DeletePortMapping></s:Body>
+ 
+</s:Envelope>
+

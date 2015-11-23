@@ -129,13 +129,14 @@ public:
 	 * MAC returned is non-null.
 	 *
 	 * @param localMac Local MAC address of host interface
-	 * @param ip IP to look up
+     * @param localIp Local IP address of host interface
+	 * @param targetIp IP to look up
 	 * @param query Buffer for generated query -- MUST be a minimum of ZT_ARP_BUF_LENGTH in size
 	 * @param queryLen Length of generated query, or set to 0 if no query generated
 	 * @param queryDest Destination of query, or set to null if no query generated
 	 * @return MAC or 0 if no cached entry for this IP
 	 */
-	MAC query(const MAC &localMac,uint32_t ip,void *query,unsigned int &queryLen,MAC &queryDest);
+	MAC query(const MAC &localMac,uint32_t localIp,uint32_t targetIp,void *query,unsigned int &queryLen,MAC &queryDest);
 
 private:
 	struct _ArpEntry

@@ -38,8 +38,7 @@
 #include "Address.hpp"
 #include "C25519.hpp"
 #include "Buffer.hpp"
-
-#define ZT_IDENTITY_MAX_BINARY_SERIALIZED_LENGTH (ZT_ADDRESS_LENGTH + 1 + ZT_C25519_PUBLIC_KEY_LEN + 1 + ZT_C25519_PRIVATE_KEY_LEN)
+#include "SHA512.hpp"
 
 namespace ZeroTier {
 
@@ -93,8 +92,7 @@ public:
 	}
 
 	template<unsigned int C>
-	Identity(const Buffer<C> &b,unsigned int startAt = 0)
-		throw(std::out_of_range,std::invalid_argument) :
+	Identity(const Buffer<C> &b,unsigned int startAt = 0) :
 		_privateKey((C25519::Private *)0)
 	{
 		deserialize(b,startAt);
@@ -138,6 +136,21 @@ public:
 	 * @return True if this identity contains a private key
 	 */
 	inline bool hasPrivate() const throw() { return (_privateKey != (C25519::Private *)0); }
+
+	/**
+	 * Compute the SHA512 hash of our private key (if we have one)
+	 *
+	 * @param sha Buffer to receive SHA512 (MUST be ZT_SHA512_DIGEST_LEN (64) bytes in length)
+	 * @return True on success, false if no private key
+	 */
+	inline bool sha512PrivateKey(void *sha) const
+	{
+		if (_privateKey) {
+			SHA512::hash(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Sign a message with this identity (private key required)

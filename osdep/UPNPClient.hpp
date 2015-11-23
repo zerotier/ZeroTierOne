@@ -42,11 +42,6 @@
  */
 #define ZT_UPNP_CLIENT_REFRESH_DELAY 600000
 
-/**
- * UPNP lease duration in seconds (as string)
- */
-#define ZT_UPNP_LEASE_DURATION "3600"
-
 namespace ZeroTier {
 
 class UPNPClientImpl;

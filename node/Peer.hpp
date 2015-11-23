@@ -41,7 +41,7 @@
 
 #include "RuntimeEnvironment.hpp"
 #include "CertificateOfMembership.hpp"
-#include "RemotePath.hpp"
+#include "Path.hpp"
 #include "Address.hpp"
 #include "Utils.hpp"
 #include "Identity.hpp"
@@ -130,12 +130,12 @@ public:
 		Packet::Verb inReVerb = Packet::VERB_NOP);
 
 	/**
-	 * Get the best direct path to this peer
+	 * Get the current best direct path to this peer
 	 *
 	 * @param now Current time
-	 * @return Best path or NULL if there are no active (or fixed) direct paths
+	 * @return Best path or NULL if there are no active direct paths
 	 */
-	inline RemotePath *getBestPath(uint64_t now)
+	inline Path *getBestPath(uint64_t now)
 	{
 		Mutex::Lock _l(_lock);
 		return _getBestPath(now);
@@ -150,14 +150,14 @@ public:
 	 * @param now Current time
 	 * @return Path used on success or NULL on failure
 	 */
-	inline RemotePath *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+	inline Path *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		RemotePath *bestPath = getBestPath(now);
+		Path *bestPath = getBestPath(now);
 		if (bestPath) {
 			if (bestPath->send(RR,data,len,now))
 				return bestPath;
 		}
-		return (RemotePath *)0;
+		return (Path *)0;
 	}
 
 	/**
@@ -170,16 +170,19 @@ public:
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @param ttl Desired IP TTL (default: 0 to leave alone)
 	 */
-	void attemptToContactAt(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now);
+	void sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl = 0);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
 	 * @param RR Runtime environment
 	 * @param now Current time
+	 * @param inetAddressFamily Keep this address family alive, or 0 to simply pick current best ignoring family
+	 * @return True if at least one direct path seems alive
 	 */
-	void doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now);
+	bool doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily);
 
 	/**
 	 * Push direct paths if we haven't done so in [rate limit] milliseconds
@@ -189,44 +192,18 @@ public:
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
 	 */
-	void pushDirectPaths(const RuntimeEnvironment *RR,RemotePath *path,uint64_t now,bool force);
+	void pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer
 	 */
-	inline std::vector<RemotePath> paths() const
+	inline std::vector<Path> paths() const
 	{
-		std::vector<RemotePath> pp;
+		std::vector<Path> pp;
 		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			pp.push_back(_paths[p]);
 		return pp;
-	}
-
-	/**
-	 * @return Time of last direct packet receive for any path
-	 */
-	inline uint64_t lastDirectReceive() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		uint64_t x = 0;
-		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			x = std::max(x,_paths[p].lastReceived());
-		return x;
-	}
-
-	/**
-	 * @return Time of last direct packet send for any path
-	 */
-	inline uint64_t lastDirectSend() const
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		uint64_t x = 0;
-		for(unsigned int p=0,np=_numPaths;p<np;++p)
-			x = std::max(x,_paths[p].lastSend());
-		return x;
 	}
 
 	/**
@@ -255,19 +232,37 @@ public:
 	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
-	 * @return True if peer has received an actual data frame within ZT_PEER_ACTIVITY_TIMEOUT milliseconds
+	 * @return True if this peer is actively sending real network frames
 	 */
-	inline uint64_t alive(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
+	inline uint64_t activelyTransferringFrames(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
 	/**
-	 * @return Current latency or 0 if unknown (max: 65535)
+	 * @return Latency in milliseconds or 0 if unknown
 	 */
-	inline unsigned int latency() const
-		throw()
+	inline unsigned int latency() const { return _latency; }
+
+	/**
+	 * This computes a quality score for relays and root servers
+	 *
+	 * If we haven't heard anything from these in ZT_PEER_ACTIVITY_TIMEOUT, they
+	 * receive the worst possible quality (max unsigned int). Otherwise the
+	 * quality is a product of latency and the number of potential missed
+	 * pings. This causes roots and relays to switch over a bit faster if they
+	 * fail.
+	 *
+	 * @return Relay quality score computed from latency and other factors, lower is better
+	 */
+	inline unsigned int relayQuality(const uint64_t now) const
 	{
+		const uint64_t tsr = now - _lastReceive;
+		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
+			return (~(unsigned int)0);
 		unsigned int l = _latency;
-		return std::min(l,(unsigned int)65535);
+		if (!l)
+			l = 0xffff;
+		return (l * (((unsigned int)tsr / (ZT_PEER_DIRECT_PING_DELAY + 1000)) + 1));
 	}
+
 
 	/**
 	 * Update latency with a new direct measurment
@@ -275,7 +270,6 @@ public:
 	 * @param l Direct latency measurment in ms
 	 */
 	inline void addDirectLatencyMeasurment(unsigned int l)
-		throw()
 	{
 		unsigned int ol = _latency;
 		if ((ol > 0)&&(ol < 10000))
@@ -284,16 +278,10 @@ public:
 	}
 
 	/**
-	 * @return True if this peer has at least one direct IP address path
-	 */
-	inline bool hasDirectPath() const throw() { return (_numPaths != 0); }
-
-	/**
 	 * @param now Current time
-	 * @return True if this peer has at least one active or fixed direct path
+	 * @return True if this peer has at least one active direct path
 	 */
 	inline bool hasActiveDirectPath(uint64_t now) const
-		throw()
 	{
 		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
@@ -303,26 +291,24 @@ public:
 		return false;
 	}
 
+#ifdef ZT_ENABLE_CLUSTER
 	/**
-	 * Add a path (if we don't already have it)
-	 *
-	 * @param p New path to add
 	 * @param now Current time
+	 * @return True if this peer has at least one active direct path that is not cluster-suboptimal
 	 */
-	void addPath(const RemotePath &newp,uint64_t now);
-
-	/**
-	 * Clear paths
-	 *
-	 * @param fixedToo If true, clear fixed paths as well as learned ones
-	 */
-	void clearPaths(bool fixedToo);
+	inline bool hasClusterOptimalPath(uint64_t now) const
+	{
+		Mutex::Lock _l(_lock);
+		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+			if ((_paths[p].active(now))&&(!_paths[p].isClusterSuboptimal()))
+				return true;
+		}
+		return false;
+	}
+#endif
 
 	/**
 	 * Reset paths within a given scope
-	 *
-	 * For fixed paths in this scope, a packet is sent. Non-fixed paths in this
-	 * scope are forgotten.
 	 *
 	 * @param RR Runtime environment
 	 * @param scope IP scope of paths to reset
@@ -346,7 +332,6 @@ public:
 	 */
 	inline void setRemoteVersion(unsigned int vproto,unsigned int vmaj,unsigned int vmin,unsigned int vrev)
 	{
-		Mutex::Lock _l(_lock);
 		_vProto = (uint16_t)vproto;
 		_vMajor = (uint16_t)vmaj;
 		_vMinor = (uint16_t)vmin;
@@ -358,33 +343,6 @@ public:
 	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
-
-	/**
-	 * Check whether this peer's version is both known and is at least what is specified
-	 *
-	 * @param major Major version to check against
-	 * @param minor Minor version
-	 * @param rev Revision
-	 * @return True if peer's version is at least supplied tuple
-	 */
-	inline bool atLeastVersion(unsigned int major,unsigned int minor,unsigned int rev)
-		throw()
-	{
-		Mutex::Lock _l(_lock);
-		if ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)) {
-			if (_vMajor > major)
-				return true;
-			else if (_vMajor == major) {
-				if (_vMinor > minor)
-					return true;
-				else if (_vMinor == minor) {
-					if (_vRevision >= rev)
-						return true;
-				}
-			}
-		}
-		return false;
-	}
 
 	/**
 	 * Get most recently active path addresses for IPv4 and/or IPv6
@@ -430,6 +388,46 @@ public:
 	void clean(const RuntimeEnvironment *RR,uint64_t now);
 
 	/**
+	 * Remove all paths with this remote address
+	 *
+	 * @param addr Remote address to remove
+	 */
+	inline void removePathByAddress(const InetAddress &addr)
+	{
+		Mutex::Lock _l(_lock);
+		unsigned int np = _numPaths;
+		unsigned int x = 0;
+		unsigned int y = 0;
+		while (x < np) {
+			if (_paths[x].address() != addr)
+				_paths[y++] = _paths[x];
+			++x;
+		}
+		_numPaths = y;
+	}
+
+	/**
+	 * Update direct path push stats and return true if we should respond
+	 *
+	 * This is a circuit breaker to make VERB_PUSH_DIRECT_PATHS not particularly
+	 * useful as a DDOS amplification attack vector. Otherwise a malicious peer
+	 * could send loads of these and cause others to bombard arbitrary IPs with
+	 * traffic.
+	 *
+	 * @param now Current time
+	 * @return True if we should respond
+	 */
+	inline bool shouldRespondToDirectPathPush(const uint64_t now)
+	{
+		Mutex::Lock _l(_lock);
+		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
+			++_directPathPushCutoffCount;
+		else _directPathPushCutoffCount = 0;
+		_lastDirectPathPushReceive = now;
+		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
+	}
+
+	/**
 	 * Find a common set of addresses by which two peers can link, if any
 	 *
 	 * @param a Peer A
@@ -454,10 +452,10 @@ public:
 	{
 		Mutex::Lock _l(_lock);
 
-		const unsigned int atPos = b.size();
+		const unsigned int recSizePos = b.size();
 		b.addSize(4); // space for uint32_t field length
 
-		b.append((uint32_t)1); // version of serialized Peer data
+		b.append((uint16_t)0); // version of serialized Peer data
 
 		_id.serialize(b,false);
 
@@ -467,15 +465,17 @@ public:
 		b.append((uint64_t)_lastMulticastFrame);
 		b.append((uint64_t)_lastAnnouncedTo);
 		b.append((uint64_t)_lastPathConfirmationSent);
-		b.append((uint64_t)_lastDirectPathPush);
+		b.append((uint64_t)_lastDirectPathPushSent);
+		b.append((uint64_t)_lastDirectPathPushReceive);
 		b.append((uint64_t)_lastPathSort);
 		b.append((uint16_t)_vProto);
 		b.append((uint16_t)_vMajor);
 		b.append((uint16_t)_vMinor);
 		b.append((uint16_t)_vRevision);
 		b.append((uint32_t)_latency);
+		b.append((uint16_t)_directPathPushCutoffCount);
 
-		b.append((uint32_t)_numPaths);
+		b.append((uint16_t)_numPaths);
 		for(unsigned int i=0;i<_numPaths;++i)
 			_paths[i].serialize(b);
 
@@ -502,7 +502,7 @@ public:
 			}
 		}
 
-		b.setAt(atPos,(uint32_t)(b.size() - atPos)); // set size
+		b.template setAt<uint32_t>(recSizePos,(uint32_t)(b.size() - (recSizePos + 4))); // set size
 	}
 
 	/**
@@ -516,13 +516,12 @@ public:
 	template<unsigned int C>
 	static inline SharedPtr<Peer> deserializeNew(const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
 	{
-		const uint32_t recSize = b.template at<uint32_t>(p);
+		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
-		p += 4;
-		if (b.template at<uint32_t>(p) != 1)
+		if (b.template at<uint16_t>(p) != 0)
 			return SharedPtr<Peer>(); // version mismatch
-		p += 4;
+		p += 2;
 
 		Identity npid;
 		p += npid.deserialize(b,p);
@@ -537,21 +536,23 @@ public:
 		np->_lastMulticastFrame = b.template at<uint64_t>(p); p += 8;
 		np->_lastAnnouncedTo = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathConfirmationSent = b.template at<uint64_t>(p); p += 8;
-		np->_lastDirectPathPush = b.template at<uint64_t>(p); p += 8;
+		np->_lastDirectPathPushSent = b.template at<uint64_t>(p); p += 8;
+		np->_lastDirectPathPushReceive = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathSort = b.template at<uint64_t>(p); p += 8;
 		np->_vProto = b.template at<uint16_t>(p); p += 2;
 		np->_vMajor = b.template at<uint16_t>(p); p += 2;
 		np->_vMinor = b.template at<uint16_t>(p); p += 2;
 		np->_vRevision = b.template at<uint16_t>(p); p += 2;
 		np->_latency = b.template at<uint32_t>(p); p += 4;
+		np->_directPathPushCutoffCount = b.template at<uint16_t>(p); p += 2;
 
-		const unsigned int numPaths = b.template at<uint32_t>(p); p += 4;
+		const unsigned int numPaths = b.template at<uint16_t>(p); p += 2;
 		for(unsigned int i=0;i<numPaths;++i) {
 			if (i < ZT_MAX_PEER_NETWORK_PATHS) {
 				p += np->_paths[np->_numPaths++].deserialize(b,p);
 			} else {
 				// Skip any paths beyond max, but still read stream
-				RemotePath foo;
+				Path foo;
 				p += foo.deserialize(b,p);
 			}
 		}
@@ -575,25 +576,29 @@ public:
 
 private:
 	void _sortPaths(const uint64_t now);
-	RemotePath *_getBestPath(const uint64_t now);
+	Path *_getBestPath(const uint64_t now);
+	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 
-	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH];
+	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH]; // computed with key agreement, not serialized
+
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
 	uint64_t _lastPathConfirmationSent;
-	uint64_t _lastDirectPathPush;
+	uint64_t _lastDirectPathPushSent;
+	uint64_t _lastDirectPathPushReceive;
 	uint64_t _lastPathSort;
 	uint16_t _vProto;
 	uint16_t _vMajor;
 	uint16_t _vMinor;
 	uint16_t _vRevision;
 	Identity _id;
-	RemotePath _paths[ZT_MAX_PEER_NETWORK_PATHS];
+	Path _paths[ZT_MAX_PEER_NETWORK_PATHS];
 	unsigned int _numPaths;
 	unsigned int _latency;
+	unsigned int _directPathPushCutoffCount;
 
 	struct _NetworkCom
 	{

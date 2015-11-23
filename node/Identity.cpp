@@ -41,7 +41,6 @@
 
 #define ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN 17
 #define ZT_IDENTITY_GEN_MEMORY 2097152
-#define ZT_IDENTITY_GEN_SALSA20_ROUNDS 20
 
 namespace ZeroTier {
 
@@ -55,8 +54,8 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 	// ordinary Salsa20 is randomly seekable. This is good for a cipher
 	// but is not what we want for sequential memory-harndess.
 	memset(genmem,0,ZT_IDENTITY_GEN_MEMORY);
-	Salsa20 s20(digest,256,(char *)digest + 32,ZT_IDENTITY_GEN_SALSA20_ROUNDS);
-	s20.encrypt((char *)genmem,(char *)genmem,64);
+	Salsa20 s20(digest,256,(char *)digest + 32);
+	s20.encrypt20((char *)genmem,(char *)genmem,64);
 	for(unsigned long i=64;i<ZT_IDENTITY_GEN_MEMORY;i+=64) {
 		unsigned long k = i - 64;
 		*((uint64_t *)((char *)genmem + i)) = *((uint64_t *)((char *)genmem + k));
@@ -67,7 +66,7 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 		*((uint64_t *)((char *)genmem + i + 40)) = *((uint64_t *)((char *)genmem + k + 40));
 		*((uint64_t *)((char *)genmem + i + 48)) = *((uint64_t *)((char *)genmem + k + 48));
 		*((uint64_t *)((char *)genmem + i + 56)) = *((uint64_t *)((char *)genmem + k + 56));
-		s20.encrypt((char *)genmem + i,(char *)genmem + i,64);
+		s20.encrypt20((char *)genmem + i,(char *)genmem + i,64);
 	}
 
 	// Render final digest using genmem as a lookup table
@@ -77,7 +76,7 @@ static inline void _computeMemoryHardHash(const void *publicKey,unsigned int pub
 		uint64_t tmp = ((uint64_t *)genmem)[idx2];
 		((uint64_t *)genmem)[idx2] = ((uint64_t *)digest)[idx1];
 		((uint64_t *)digest)[idx1] = tmp;
-		s20.encrypt(digest,digest,64);
+		s20.encrypt20(digest,digest,64);
 	}
 }
 
@@ -159,7 +158,7 @@ bool Identity::fromString(const char *str)
 		return false;
 
 	char *saveptr = (char *)0;
-	char tmp[4096];
+	char tmp[1024];
 	if (!Utils::scopy(tmp,sizeof(tmp),str))
 		return false;
 

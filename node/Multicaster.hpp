@@ -146,7 +146,7 @@ public:
 	 * @return Number of addresses appended
 	 * @throws std::out_of_range Buffer overflow writing to packet
 	 */
-	unsigned int gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Packet &appendTo,unsigned int limit) const;
+	unsigned int gather(const Address &queryingPeer,uint64_t nwid,const MulticastGroup &mg,Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &appendTo,unsigned int limit) const;
 
 	/**
 	 * Get subscribers to a multicast group

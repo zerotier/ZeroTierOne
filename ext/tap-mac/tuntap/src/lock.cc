@@ -31,6 +31,8 @@
 
 extern "C" {
 
+#include <kern/clock.h>
+
 #include <sys/syslog.h>
 #include <sys/proc.h>
 
@@ -120,10 +122,13 @@ tt_mutex::sleep(void *cond)
 }
 
 void
-tt_mutex::sleep(void *cond, uint64_t timeout)
+tt_mutex::sleep(void *cond, uint64_t nanoseconds)
 {
-	if (lck != NULL)
-		lck_rw_sleep_deadline(lck, LCK_SLEEP_DEFAULT, cond, THREAD_INTERRUPTIBLE, timeout);
+	if (lck != NULL) {
+		uint64_t abstime;
+		nanoseconds_to_absolutetime(nanoseconds, &abstime);
+		lck_rw_sleep_deadline(lck, LCK_SLEEP_DEFAULT, cond, THREAD_INTERRUPTIBLE, abstime);
+	}
 }
 
 void
@@ -188,9 +193,9 @@ tt_gate::sleep(void* cond)
 }
 
 void
-tt_gate::sleep(void* cond, uint64_t timeout)
+tt_gate::sleep(void* cond, uint64_t nanoseconds)
 {
-	slock.sleep(cond, timeout);
+	slock.sleep(cond, nanoseconds);
 }
 
 void

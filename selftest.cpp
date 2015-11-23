@@ -41,6 +41,7 @@
 #include "node/InetAddress.hpp"
 #include "node/Utils.hpp"
 #include "node/Identity.hpp"
+#include "node/Buffer.hpp"
 #include "node/Packet.hpp"
 #include "node/Salsa20.hpp"
 #include "node/MAC.hpp"
@@ -50,8 +51,8 @@
 #include "node/C25519.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
-#include "node/Defaults.hpp"
 #include "node/Node.hpp"
+#include "node/IncomingPacket.hpp"
 
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
@@ -161,27 +162,27 @@ static int testCrypto()
 		memset(buf2,0,sizeof(buf2));
 		memset(buf3,0,sizeof(buf3));
 		Salsa20 s20;
-		s20.init("12345678123456781234567812345678",256,"12345678",20);
-		s20.encrypt(buf1,buf2,sizeof(buf1));
-		s20.init("12345678123456781234567812345678",256,"12345678",20);
-		s20.decrypt(buf2,buf3,sizeof(buf2));
+		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.encrypt20(buf1,buf2,sizeof(buf1));
+		s20.init("12345678123456781234567812345678",256,"12345678");
+		s20.decrypt20(buf2,buf3,sizeof(buf2));
 		if (memcmp(buf1,buf3,sizeof(buf1))) {
 			std::cout << "FAIL (encrypt/decrypt test)" << std::endl;
 			return -1;
 		}
 	}
-	Salsa20 s20(s20TV0Key,256,s20TV0Iv,20);
+	Salsa20 s20(s20TV0Key,256,s20TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt(buf1,buf2,64);
+	s20.encrypt20(buf1,buf2,64);
 	if (memcmp(buf2,s20TV0Ks,64)) {
 		std::cout << "FAIL (test vector 0)" << std::endl;
 		return -1;
 	}
-	s20.init(s2012TV0Key,256,s2012TV0Iv,12);
+	s20.init(s2012TV0Key,256,s2012TV0Iv);
 	memset(buf1,0,sizeof(buf1));
 	memset(buf2,0,sizeof(buf2));
-	s20.encrypt(buf1,buf2,64);
+	s20.encrypt12(buf1,buf2,64);
 	if (memcmp(buf2,s2012TV0Ks,64)) {
 		std::cout << "FAIL (test vector 1)" << std::endl;
 		return -1;
@@ -194,34 +195,16 @@ static int testCrypto()
 	std::cout << "[crypto] Salsa20 SSE: DISABLED" << std::endl;
 #endif
 
-	std::cout << "[crypto] Benchmarking Salsa20/8... "; std::cout.flush();
-	{
-		unsigned char *bb = (unsigned char *)::malloc(1234567);
-		for(unsigned int i=0;i<1234567;++i)
-			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv,8);
-		double bytes = 0.0;
-		uint64_t start = OSUtils::now();
-		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt(bb,bb,1234567);
-			bytes += 1234567.0;
-		}
-		uint64_t end = OSUtils::now();
-		SHA512::hash(buf1,bb,1234567);
-		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second (" << Utils::hex(buf1,16) << ')' << std::endl;
-		::free((void *)bb);
-	}
-
 	std::cout << "[crypto] Benchmarking Salsa20/12... "; std::cout.flush();
 	{
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv,12);
+		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt(bb,bb,1234567);
+			s20.encrypt12(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
@@ -235,11 +218,11 @@ static int testCrypto()
 		unsigned char *bb = (unsigned char *)::malloc(1234567);
 		for(unsigned int i=0;i<1234567;++i)
 			bb[i] = (unsigned char)i;
-		Salsa20 s20(s20TV0Key,256,s20TV0Iv,20);
+		Salsa20 s20(s20TV0Key,256,s20TV0Iv);
 		double bytes = 0.0;
 		uint64_t start = OSUtils::now();
 		for(unsigned int i=0;i<200;++i) {
-			s20.encrypt(bb,bb,1234567);
+			s20.encrypt20(bb,bb,1234567);
 			bytes += 1234567.0;
 		}
 		uint64_t end = OSUtils::now();
@@ -284,6 +267,19 @@ static int testCrypto()
 		std::cout << ((bytes / 1048576.0) / ((double)(end - start) / 1000.0)) << " MiB/second" << std::endl;
 		::free((void *)bb);
 	}
+
+	/*
+	for(unsigned int d=8;d<=10;++d) {
+		for(int k=0;k<8;++k) {
+			std::cout << "[crypto] computeSalsa2012Sha512ProofOfWork(" << d << ",\"foobarbaz\",9) == "; std::cout.flush();
+			unsigned char result[16];
+			uint64_t start = OSUtils::now();
+			IncomingPacket::computeSalsa2012Sha512ProofOfWork(d,"foobarbaz",9,result);
+			uint64_t end = OSUtils::now();
+			std::cout << Utils::hex(result,16) << " -- valid: " << IncomingPacket::testSalsa2012Sha512ProofOfWorkResult(d,"foobarbaz",9,result) << ", " << (end - start) << "ms" << std::endl;
+		}
+	}
+	*/
 
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
@@ -598,23 +594,44 @@ static int testOther()
 	std::cout << "[other] Testing Hashtable... "; std::cout.flush();
 	{
 		Hashtable<uint64_t,std::string> ht;
-		Hashtable<uint64_t,std::string> ht2;
 		std::map<uint64_t,std::string> ref; // assume std::map works correctly :)
 		for(int x=0;x<2;++x) {
-			for(int i=0;i<25000;++i) {
+			for(int i=0;i<77777;++i) {
 				uint64_t k = rand();
 				while ((k == 0)||(ref.count(k) > 0))
 					++k;
 				std::string v("!");
 				for(int j=0;j<(int)(k % 64);++j)
 					v.push_back("0123456789"[rand() % 10]);
-				ht.set(k,v);
 				ref[k] = v;
+				ht.set(0xffffffffffffffffULL,v);
+				std::string &vref = ht[k];
+				vref = v;
+				ht.erase(0xffffffffffffffffULL);
 			}
 			if (ht.size() != ref.size()) {
 				std::cout << "FAILED! (size mismatch, original)" << std::endl;
 				return -1;
 			}
+			{
+				Hashtable<uint64_t,std::string>::Iterator i(ht);
+				uint64_t *k = (uint64_t *)0;
+				std::string *v = (std::string *)0;
+				while(i.next(k,v)) {
+					if (ref.find(*k)->second != *v) {
+						std::cout << "FAILED! (data mismatch!)" << std::endl;
+						return -1;
+					}
+				}
+			}
+			for(std::map<uint64_t,std::string>::const_iterator i(ref.begin());i!=ref.end();++i) {
+				if (ht[i->first] != i->second) {
+					std::cout << "FAILED! (data mismatch!)" << std::endl;
+					return -1;
+				}
+			}
+
+			Hashtable<uint64_t,std::string> ht2;
 			ht2 = ht;
 			Hashtable<uint64_t,std::string> ht3(ht2);
 			if (ht2.size() != ref.size()) {
@@ -625,6 +642,7 @@ static int testOther()
 				std::cout << "FAILED! (size mismatch, copied)" << std::endl;
 				return -1;
 			}
+
 			for(std::map<uint64_t,std::string>::iterator i(ref.begin());i!=ref.end();++i) {
 				std::string *v = ht.get(i->first);
 				if (!v) {
@@ -837,14 +855,14 @@ struct TestPhyHandlers
 		}
 	}
 
-	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
-
 #ifdef __UNIX_LIKE__
 	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
 	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
 #endif // __UNIX_LIKE__
+
+	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
 };
 static int testPhy()
 {

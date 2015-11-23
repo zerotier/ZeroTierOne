@@ -71,6 +71,9 @@
 // than this (ms).
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
+// Delay between backups in milliseconds
+#define ZT_NETCONF_BACKUP_PERIOD 60000
+
 namespace ZeroTier {
 
 namespace {
@@ -122,6 +125,7 @@ struct NetworkRecord {
 
 SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,const char *circuitTestPath) :
 	_node(node),
+	_backupThreadRun(true),
 	_dbPath(dbPath),
 	_circuitTestPath(circuitTestPath),
 	_db((sqlite3 *)0)
@@ -247,10 +251,15 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			throw std::runtime_error("SqliteNetworkController unable to read instanceId (it's NULL)");
 		_instanceId = iid;
 	}
+
+	_backupThread = Thread::start(this);
 }
 
 SqliteNetworkController::~SqliteNetworkController()
 {
+	_backupThreadRun = false;
+	Thread::join(_backupThread);
+
 	Mutex::Lock _l(_lock);
 	if (_db) {
 		sqlite3_finalize(_sGetNetworkById);
@@ -258,8 +267,6 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateOrReplaceNode);
-		sqlite3_finalize(_sUpdateNode);
-		sqlite3_finalize(_sUpdateNode2);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);
@@ -505,6 +512,53 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					}
 
 					return _doCPGet(path,urlArgs,headers,body,responseBody,responseContentType);
+				} else if ((path.size() == 3)&&(path[2] == "test")) {
+					ZT_CircuitTest *test = (ZT_CircuitTest *)malloc(sizeof(ZT_CircuitTest));
+					memset(test,0,sizeof(ZT_CircuitTest));
+
+					Utils::getSecureRandom(&(test->testId),sizeof(test->testId));
+					test->credentialNetworkId = nwid;
+					test->ptr = (void *)this;
+
+					json_value *j = json_parse(body.c_str(),body.length());
+					if (j) {
+						if (j->type == json_object) {
+							for(unsigned int k=0;k<j->u.object.length;++k) {
+
+								if (!strcmp(j->u.object.values[k].name,"hops")) {
+									if (j->u.object.values[k].value->type == json_array) {
+										for(unsigned int kk=0;kk<j->u.object.values[k].value->u.array.length;++kk) {
+											json_value *hop = j->u.object.values[k].value->u.array.values[kk];
+											if (hop->type == json_array) {
+												for(unsigned int kkk=0;kkk<hop->u.array.length;++kkk) {
+													if (hop->u.array.values[kkk]->type == json_string) {
+														test->hops[test->hopCount].addresses[test->hops[test->hopCount].breadth++] = Utils::hexStrToU64(hop->u.array.values[kkk]->u.string.ptr) & 0xffffffffffULL;
+													}
+												}
+												++test->hopCount;
+											}
+										}
+									}
+								} else if (!strcmp(j->u.object.values[k].name,"reportAtEveryHop")) {
+									if (j->u.object.values[k].value->type == json_boolean)
+										test->reportAtEveryHop = (j->u.object.values[k].value->u.boolean == 0) ? 0 : 1;
+								}
+
+							}
+						}
+						json_value_free(j);
+					}
+
+					if (!test->hopCount) {
+						::free((void *)test);
+						return 500;
+					}
+
+					test->timestamp = OSUtils::now();
+					_circuitTests[test->testId] = test;
+					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
+
+					return 200;
 				} // else 404
 
 			} else {
@@ -944,6 +998,59 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 	} // else 404
 
 	return 404;
+}
+
+void SqliteNetworkController::threadMain()
+	throw()
+{
+	uint64_t lastBackupTime = 0;
+	while (_backupThreadRun) {
+		if ((OSUtils::now() - lastBackupTime) >= ZT_NETCONF_BACKUP_PERIOD) {
+			lastBackupTime = OSUtils::now();
+
+			char backupPath[4096],backupPath2[4096];
+			Utils::snprintf(backupPath,sizeof(backupPath),"%s.backupInProgress",_dbPath.c_str());
+			Utils::snprintf(backupPath2,sizeof(backupPath),"%s.backup",_dbPath.c_str());
+			OSUtils::rm(backupPath); // delete any unfinished backups
+
+			sqlite3 *bakdb = (sqlite3 *)0;
+			sqlite3_backup *bak = (sqlite3_backup *)0;
+			if (sqlite3_open_v2(backupPath,&bakdb,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,(const char *)0) != SQLITE_OK) {
+				fprintf(stderr,"SqliteNetworkController: CRITICAL: backup failed on sqlite3_open_v2()"ZT_EOL_S);
+				continue;
+			}
+			bak = sqlite3_backup_init(bakdb,"main",_db,"main");
+			if (!bak) {
+				sqlite3_close(bakdb);
+				OSUtils::rm(backupPath); // delete any unfinished backups
+				fprintf(stderr,"SqliteNetworkController: CRITICAL: backup failed on sqlite3_backup_init()"ZT_EOL_S);
+				continue;
+			}
+
+			int rc = SQLITE_OK;
+			for(;;) {
+				if (!_backupThreadRun) {
+					sqlite3_backup_finish(bak);
+					sqlite3_close(bakdb);
+					OSUtils::rm(backupPath);
+					return;
+				}
+				_lock.lock();
+				rc = sqlite3_backup_step(bak,64);
+				_lock.unlock();
+				if ((rc == SQLITE_OK)||(rc == SQLITE_LOCKED)||(rc == SQLITE_BUSY))
+					Thread::sleep(50);
+				else break;
+			}
+
+			sqlite3_backup_finish(bak);
+			sqlite3_close(bakdb);
+
+			OSUtils::rm(backupPath2);
+			::rename(backupPath,backupPath2);
+		}
+		Thread::sleep(250);
+	}
 }
 
 unsigned int SqliteNetworkController::_doCPGet(
@@ -1817,6 +1924,77 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 	}
 
 	return NetworkController::NETCONF_QUERY_OK;
+}
+
+void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
+{
+	static Mutex circuitTestWriteLock;
+
+	const uint64_t now = OSUtils::now();
+
+	SqliteNetworkController *const c = reinterpret_cast<SqliteNetworkController *>(test->ptr);
+	char tmp[128];
+
+	std::string reportSavePath(c->_circuitTestPath);
+	OSUtils::mkdir(reportSavePath);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx",test->credentialNetworkId);
+	reportSavePath.append(tmp);
+	OSUtils::mkdir(reportSavePath);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.16llx",test->timestamp,test->testId);
+	reportSavePath.append(tmp);
+	OSUtils::mkdir(reportSavePath);
+	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.10llx_%.10llx",now,report->upstream,report->current);
+	reportSavePath.append(tmp);
+
+	{
+		Mutex::Lock _l(circuitTestWriteLock);
+		FILE *f = fopen(reportSavePath.c_str(),"a");
+		if (!f)
+			return;
+		fseek(f,0,SEEK_END);
+		fprintf(f,"%s{\n"
+			"\t\"timestamp\": %llu,"ZT_EOL_S
+			"\t\"testId\": \"%.16llx\","ZT_EOL_S
+			"\t\"upstream\": \"%.10llx\","ZT_EOL_S
+			"\t\"current\": \"%.10llx\","ZT_EOL_S
+			"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
+			"\t\"remoteTimestamp\": %llu,"ZT_EOL_S
+			"\t\"sourcePacketId\": \"%.16llx\","ZT_EOL_S
+			"\t\"flags\": %llu,"ZT_EOL_S
+			"\t\"sourcePacketHopCount\": %u,"ZT_EOL_S
+			"\t\"errorCode\": %u,"ZT_EOL_S
+			"\t\"vendor\": %d,"ZT_EOL_S
+			"\t\"protocolVersion\": %u,"ZT_EOL_S
+			"\t\"majorVersion\": %u,"ZT_EOL_S
+			"\t\"minorVersion\": %u,"ZT_EOL_S
+			"\t\"revision\": %u,"ZT_EOL_S
+			"\t\"platform\": %d,"ZT_EOL_S
+			"\t\"architecture\": %d,"ZT_EOL_S
+			"\t\"receivedOnLocalAddress\": \"%s\","ZT_EOL_S
+			"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
+			"}",
+			((ftell(f) > 0) ? ",\n" : ""),
+			(unsigned long long)report->timestamp,
+			(unsigned long long)test->testId,
+			(unsigned long long)report->upstream,
+			(unsigned long long)report->current,
+			(unsigned long long)now,
+			(unsigned long long)report->remoteTimestamp,
+			(unsigned long long)report->sourcePacketId,
+			(unsigned long long)report->flags,
+			report->sourcePacketHopCount,
+			report->errorCode,
+			(int)report->vendor,
+			report->protocolVersion,
+			report->majorVersion,
+			report->minorVersion,
+			report->revision,
+			(int)report->platform,
+			(int)report->architecture,
+			reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
+			reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
+		fclose(f);
+	}
 }
 
 } // namespace ZeroTier

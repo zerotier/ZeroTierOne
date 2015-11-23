@@ -64,20 +64,6 @@ public:
 		++obj->__refCount;
 	}
 
-	SharedPtr(T *obj,bool runAwayFromZombies)
-		throw() :
-		_ptr(obj)
-	{
-		// HACK: this is used in "handlers" to take ownership of naked pointers,
-		// an ugly pattern that really ought to be factored out.
-		if (runAwayFromZombies) {
-			if ((int)(++obj->__refCount) < 2) {
-				--obj->__refCount;
-				_ptr = (T *)0;
-			}
-		} else ++obj->__refCount;
-	}
-
 	SharedPtr(const SharedPtr &sp)
 		throw() :
 		_ptr(sp._getAndInc())
@@ -105,6 +91,25 @@ public:
 		return *this;
 	}
 
+	/**
+	 * Set to a naked pointer and increment its reference count
+	 *
+	 * This assumes this SharedPtr is NULL and that ptr is not a 'zombie.' No
+	 * checks are performed.
+	 *
+	 * @param ptr Naked pointer to assign
+	 */
+	inline void setToUnsafe(T *ptr)
+	{
+		++ptr->__refCount;
+		_ptr = ptr;
+	}
+
+	/**
+	 * Swap with another pointer 'for free' without ref count overhead
+	 *
+	 * @param with Pointer to swap with
+	 */
 	inline void swap(SharedPtr &with)
 		throw()
 	{

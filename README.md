@@ -116,7 +116,7 @@ On Mac the best way is to install [Packages](http://s.sudre.free.fr/Software/Pac
 
 This builds a .pkg file that can be installed.
 
-BSD has no installer yet. We're working on it.
+In FreeBSD there is now an official .pkg in the FreeBSD repository. Type "pkg install zerotier". It can also be built and installed from source.
 
 Linux/BSD and Mac installations have an *uninstall.sh* file in their ZeroTier home folder that cleanly removes ZeroTier One from the system. Run this with:
 
@@ -165,6 +165,10 @@ Users behind certain types of firewalls and "symmetric" NAT devices may not able
 If you're interested, there's a [technical deep dive about NAT traversal on our blog](https://www.zerotier.com/blog/?p=226). A troubleshooting tool to help you diagnose NAT issues is planned for the future as are uPnP/IGD/NAT-PMP and IPv6 transport.
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
+
+### Contributing
+
+There are three main branches: **edge**, **test**, and **master**. Other branches may be for specific features, tests, or use cases. In general **edge** is "bleeding" and may or may not work, while **test** should be relatively stable and **master** is the latest tagged release. Pull requests should generally be done against **test** or **edge**, since pull requests against **master** may be working against a branch that is somewhat out of date.
 
 ### License
 

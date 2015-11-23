@@ -41,7 +41,7 @@ case "$system" in
 				machine="x64"
 				debian_arch="amd64"
 				;;
-			armv6l|arm|armhf)
+			armv6l|arm|armhf|arm7l|armv7l)
 				machine="armv6l"
 				debian_arch="armhf"
 				;;

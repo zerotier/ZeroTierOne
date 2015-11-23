@@ -197,7 +197,7 @@ class tuntap_interface {
 		/* synchronization */
 		tt_mutex lock;
 		tt_mutex bpf_lock;
-		tt_mutex detach_lock;
+		tt_mutex thread_sync_lock;
 
 		/* the interface structure registered */
 		ifnet_t ifp;

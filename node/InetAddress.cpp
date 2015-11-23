@@ -77,14 +77,12 @@ InetAddress::IpScope InetAddress::ipScope() const
 					if ((ip & 0xffff0000) == 0xc0a80000) return IP_SCOPE_PRIVATE;				// 192.168.0.0/16
 					break;
 				case 0xff: return IP_SCOPE_NONE;                                      // 255.0.0.0/8 (broadcast, or unused/unusable)
-				default:
-					switch(ip >> 28) {
-						case 0xe: return IP_SCOPE_MULTICAST;                              // 224.0.0.0/4
-						case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                          // 240.0.0.0/4 ("reserved," usually unusable)
-						default: return IP_SCOPE_GLOBAL;                                  // everything else
-					}
-					break;
 			}
+			switch(ip >> 28) {
+				case 0xe: return IP_SCOPE_MULTICAST;                              // 224.0.0.0/4
+				case 0xf: return IP_SCOPE_PSEUDOPRIVATE;                          // 240.0.0.0/4 ("reserved," usually unusable)
+			}
+			return IP_SCOPE_GLOBAL;
 		}	break;
 
 		case AF_INET6: {
@@ -236,7 +234,6 @@ void InetAddress::fromString(const std::string &ipSlashPort)
 }
 
 InetAddress InetAddress::netmask() const
-	throw()
 {
 	InetAddress r(*this);
 	switch(r.ss_family) {
@@ -244,36 +241,40 @@ InetAddress InetAddress::netmask() const
 			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr = Utils::hton((uint32_t)(0xffffffff << (32 - netmaskBits())));
 			break;
 		case AF_INET6: {
-			unsigned char *bf = reinterpret_cast<unsigned char *>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
-			signed int bitsLeft = (signed int)netmaskBits();
-			for(unsigned int i=0;i<16;++i) {
-				if (bitsLeft > 0) {
-					bf[i] |= (unsigned char)((bitsLeft >= 8) ? 0x00 : (0xff >> bitsLeft));
-					bitsLeft -= 8;
-				}
-			}
+			uint64_t nm[2];
+			const unsigned int bits = netmaskBits();
+			nm[0] = Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+			nm[1] = Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
+			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
 		}	break;
 	}
 	return r;
 }
 
 InetAddress InetAddress::broadcast() const
-	throw()
+{
+	if (ss_family == AF_INET) {
+		InetAddress r(*this);
+		reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffff >> netmaskBits()));
+		return r;
+	}
+	return InetAddress();
+}
+
+InetAddress InetAddress::network() const
 {
 	InetAddress r(*this);
 	switch(r.ss_family) {
 		case AF_INET:
-			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr |= Utils::hton((uint32_t)(0xffffffff >> netmaskBits()));
+			reinterpret_cast<struct sockaddr_in *>(&r)->sin_addr.s_addr &= Utils::hton((uint32_t)(0xffffffff << (32 - netmaskBits())));
 			break;
 		case AF_INET6: {
-			unsigned char *bf = reinterpret_cast<unsigned char *>(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr);
-			signed int bitsLeft = (signed int)netmaskBits();
-			for(unsigned int i=0;i<16;++i) {
-				if (bitsLeft > 0) {
-					bf[i] |= (unsigned char)((bitsLeft >= 8) ? 0x00 : (0xff >> bitsLeft));
-					bitsLeft -= 8;
-				}
-			}
+			uint64_t nm[2];
+			const unsigned int bits = netmaskBits();
+			memcpy(nm,reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,16);
+			nm[0] &= Utils::hton((uint64_t)((bits >= 64) ? 0xffffffffffffffffULL : (0xffffffffffffffffULL << (64 - bits))));
+			nm[1] &= Utils::hton((uint64_t)((bits <= 64) ? 0ULL : (0xffffffffffffffffULL << (128 - bits))));
+			memcpy(reinterpret_cast<struct sockaddr_in6 *>(&r)->sin6_addr.s6_addr,nm,16);
 		}	break;
 	}
 	return r;

@@ -26,11 +26,11 @@ ifeq ($(origin CXX),default)
 	CXX=$(shell if [ -e /usr/bin/clang++ ]; then echo clang++; else echo g++; fi)
 endif
 
-UNAME_M=$(shell uname -m)
+#UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 
 INCLUDES=-Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6
-DEFS=-DZT_ENABLE_NETCON #-DVERBOSE
-CXXFLAGS+=-Wc++11-compat-deprecated-writable-strings -Wformat
+DEFS=-DZT_ENABLE_NETCON
+#CXXFLAGS+=-Wc++11-compat-deprecated-writable-strings -Wformat
 LDLIBS?=
 
 include objects.mk
@@ -44,31 +44,20 @@ endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
 	DEFS+=-DZT_USE_MINIUPNPC
-ifeq ($(UNAME_M),armv6l)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),armv7l)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-arm32/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),x86_64)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x64/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),i386)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x86/libminiupnpc.a
-endif
-ifeq ($(UNAME_M),i686)
-	MINIUPNPC_LIB=ext/bin/miniupnpc/linux-x86/libminiupnpc.a
-endif
-	MINIUPNPC_LIB?=-lminiupnpc
-	LDLIBS+=$(MINIUPNPC_LIB)
+	LDLIBS+=ext/miniupnpc/libminiupnpc.a
 	OBJS+=osdep/UPNPClient.o
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-        DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
-        LDLIBS+=-L/usr/local/lib -lsqlite3
-        OBJS+=controller/SqliteNetworkController.o
+	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
+	LDLIBS+=-L/usr/local/lib -lsqlite3
+	OBJS+=controller/SqliteNetworkController.o
+endif
+
+# Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
+ifeq ($(ZT_ENABLE_CLUSTER),1)
+	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
 # "make debug" is a shortcut for this
@@ -90,6 +79,10 @@ else
 	STRIP=strip --strip-all
 endif
 
+ifeq ($(ZT_TRACE),1)
+	DEFS+=-DZT_TRACE
+endif
+
 # Uncomment for gprof profile build
 #CFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
 #CXXFLAGS=-Wall -g -pg -pthread $(INCLUDES) $(DEFS)
@@ -99,6 +92,9 @@ endif
 all:	one
 
 one:	$(OBJS) one.o
+ifeq ($(ZT_USE_MINIUPNPC),1)
+	cd ext/miniupnpc ; make clean ; make 'CFLAGS=-O2 -fstack-protector -fPIE -fno-common -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600' -j 2 libminiupnpc.a
+endif
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -112,14 +108,14 @@ installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
 clean:
-	rm -rf *.o
-	find netcon/ -name "*.1.0" -type f -delete
-	find netcon/ -name "*.so" -type f -delete
-	find netcon/ -name "zerotier-one" -type f -delete
-	find netcon/ -name "zerotier-cli" -type f -delete
+	find ./ -type f -name '*.o' -delete
+	find netcon/ -type f -name '*.so' -delete
+	find netcon/ -type f -name '*.1.0' -delete
+	find netcon/ -type f -name 'zerotier-one' -delete
+	find netcon/ -type f -name 'zerotier-cli' -delete
 	find netcon/docker-test -name "zerotier-intercept" -type f -delete
-	rm -rf netcon/*.o netcon/*.so netcon/*.1.0
-	rm -rf node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
+	rm -rf zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon build-* ZeroTierOneInstaller-* *.deb *.rpm *.pkg *.tgz
+	cd ext/miniupnpc ; make clean
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

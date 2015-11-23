@@ -213,7 +213,7 @@ std::string WindowsEthernetTap::addNewPersistentTapDevice(const char *pathToInf,
 	Mutex::Lock _l(_systemDeviceManagementLock);
 
 	GUID classGuid;
-	char className[4096];
+	char className[1024];
 	if (!WINENV.SetupDiGetINFClassA(pathToInf,&classGuid,className,sizeof(className),(PDWORD)0)) {
 		return std::string("SetupDiGetINFClassA() failed -- unable to read zttap driver INF file");
 	}
@@ -269,9 +269,9 @@ std::string WindowsEthernetTap::addNewPersistentTapDevice(const char *pathToInf,
 
 std::string WindowsEthernetTap::destroyAllLegacyPersistentTapDevices()
 {
-	char subkeyName[4096];
-	char subkeyClass[4096];
-	char data[4096];
+	char subkeyName[1024];
+	char subkeyClass[1024];
+	char data[1024];
 
 	std::set<std::string> instanceIdPathsToRemove;
 	{
@@ -321,9 +321,9 @@ std::string WindowsEthernetTap::destroyAllLegacyPersistentTapDevices()
 
 std::string WindowsEthernetTap::destroyAllPersistentTapDevices()
 {
-	char subkeyName[4096];
-	char subkeyClass[4096];
-	char data[4096];
+	char subkeyName[1024];
+	char subkeyClass[1024];
+	char data[1024];
 
 	std::set<std::string> instanceIdPathsToRemove;
 	{
@@ -479,9 +479,9 @@ WindowsEthernetTap::WindowsEthernetTap(
 	_initialized(false),
 	_enabled(true)
 {
-	char subkeyName[4096];
-	char subkeyClass[4096];
-	char data[4096];
+	char subkeyName[1024];
+	char subkeyClass[1024];
+	char data[1024];
 	char tag[24];
 	std::string mySubkeyName;
 

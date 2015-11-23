@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "Constants.hpp"
+#include "Utils.hpp"
 
 #if (!defined(ZT_SALSA20_SSE)) && (defined(__SSE2__) || defined(__WINDOWS__))
 #define ZT_SALSA20_SSE 1
@@ -31,16 +32,17 @@ class Salsa20
 public:
 	Salsa20() throw() {}
 
+	~Salsa20() { Utils::burn(&_state,sizeof(_state)); }
+
 	/**
 	 * @param key Key bits
 	 * @param kbits Number of key bits: 128 or 256 (recommended)
 	 * @param iv 64-bit initialization vector
-	 * @param rounds Number of rounds: 8, 12, or 20
 	 */
-	Salsa20(const void *key,unsigned int kbits,const void *iv,unsigned int rounds)
+	Salsa20(const void *key,unsigned int kbits,const void *iv)
 		throw()
 	{
-		init(key,kbits,iv,rounds);
+		init(key,kbits,iv);
 	}
 
 	/**
@@ -49,19 +51,28 @@ public:
 	 * @param key Key bits
 	 * @param kbits Number of key bits: 128 or 256 (recommended)
 	 * @param iv 64-bit initialization vector
-	 * @param rounds Number of rounds: 8, 12, or 20
 	 */
-	void init(const void *key,unsigned int kbits,const void *iv,unsigned int rounds)
+	void init(const void *key,unsigned int kbits,const void *iv)
 		throw();
 
 	/**
-	 * Encrypt data
+	 * Encrypt data using Salsa20/12
 	 *
 	 * @param in Input data
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	void encrypt(const void *in,void *out,unsigned int bytes)
+	void encrypt12(const void *in,void *out,unsigned int bytes)
+		throw();
+
+	/**
+	 * Encrypt data using Salsa20/20
+	 *
+	 * @param in Input data
+	 * @param out Output buffer
+	 * @param bytes Length of data
+	 */
+	void encrypt20(const void *in,void *out,unsigned int bytes)
 		throw();
 
 	/**
@@ -71,10 +82,23 @@ public:
 	 * @param out Output buffer
 	 * @param bytes Length of data
 	 */
-	inline void decrypt(const void *in,void *out,unsigned int bytes)
+	inline void decrypt12(const void *in,void *out,unsigned int bytes)
 		throw()
 	{
-		encrypt(in,out,bytes);
+		encrypt12(in,out,bytes);
+	}
+
+	/**
+	 * Decrypt data
+	 *
+	 * @param in Input data
+	 * @param out Output buffer
+	 * @param bytes Length of data
+	 */
+	inline void decrypt20(const void *in,void *out,unsigned int bytes)
+		throw()
+	{
+		encrypt20(in,out,bytes);
 	}
 
 private:
@@ -84,7 +108,6 @@ private:
 #endif // ZT_SALSA20_SSE
 		uint32_t i[16];
 	} _state;
-	unsigned int _roundsDiv4;
 };
 
 } // namespace ZeroTier

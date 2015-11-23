@@ -71,8 +71,7 @@ public:
 		ZT_WirePacketSendFunction wirePacketSendFunction,
 		ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 		ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
-		ZT_EventCallback eventCallback,
-		const char *overrideRootTopology);
+		ZT_EventCallback eventCallback);
 
 	~Node();
 
@@ -106,13 +105,37 @@ public:
 	ZT_VirtualNetworkConfig *networkConfig(uint64_t nwid) const;
 	ZT_VirtualNetworkList *networks() const;
 	void freeQueryResult(void *qr);
-	int addLocalInterfaceAddress(const struct sockaddr_storage *addr,int metric,ZT_LocalInterfaceAddressTrust trust);
+	int addLocalInterfaceAddress(const struct sockaddr_storage *addr);
 	void clearLocalInterfaceAddresses();
 	void setNetconfMaster(void *networkControllerInstance);
 	ZT_ResultCode circuitTestBegin(ZT_CircuitTest *test,void (*reportCallback)(ZT_Node *,ZT_CircuitTest *,const ZT_CircuitTestReport *));
 	void circuitTestEnd(ZT_CircuitTest *test);
+	ZT_ResultCode clusterInit(
+		unsigned int myId,
+		const struct sockaddr_storage *zeroTierPhysicalEndpoints,
+		unsigned int numZeroTierPhysicalEndpoints,
+		int x,
+		int y,
+		int z,
+		void (*sendFunction)(void *,unsigned int,const void *,unsigned int),
+		void *sendFunctionArg,
+		int (*addressToLocationFunction)(void *,const struct sockaddr_storage *,int *,int *,int *),
+		void *addressToLocationFunctionArg);
+	ZT_ResultCode clusterAddMember(unsigned int memberId);
+	void clusterRemoveMember(unsigned int memberId);
+	void clusterHandleIncomingMessage(const void *msg,unsigned int len);
+	void clusterStatus(ZT_ClusterStatus *cs);
+	void backgroundThreadMain();
 
 	// Internal functions ------------------------------------------------------
+
+	/**
+	 * Convenience threadMain() for easy background thread launch
+	 *
+	 * This allows background threads to be launched with Thread::start
+	 * that will run against this node.
+	 */
+	inline void threadMain() throw() { this->backgroundThreadMain(); }
 
 	/**
 	 * @return Time as of last call to run()
@@ -126,9 +149,10 @@ public:
 	 * @param addr Destination address
 	 * @param data Packet data
 	 * @param len Packet length
+	 * @param ttl Desired TTL (default: 0 for unchanged/default TTL)
 	 * @return True if packet appears to have been sent
 	 */
-	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len)
+	inline bool putPacket(const InetAddress &localAddress,const InetAddress &addr,const void *data,unsigned int len,unsigned int ttl = 0)
 	{
 		return (_wirePacketSendFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -136,7 +160,8 @@ public:
 			reinterpret_cast<const struct sockaddr_storage *>(&localAddress),
 			reinterpret_cast<const struct sockaddr_storage *>(&addr),
 			data,
-			len) == 0);
+			len,
+			ttl) == 0);
 	}
 
 	/**
@@ -193,7 +218,7 @@ public:
 	/**
 	 * @return Potential direct paths to me a.k.a. local interface addresses
 	 */
-	inline std::vector<Path> directPaths() const
+	inline std::vector<InetAddress> directPaths() const
 	{
 		Mutex::Lock _l(_directPaths_m);
 		return _directPaths;
@@ -225,11 +250,6 @@ public:
 	 * @return True if we appear to be online
 	 */
 	inline bool online() const throw() { return _online; }
-
-	/**
-	 * If this version is newer than the newest we've seen, post a new version seen event
-	 */
-	void postNewerVersionIfNewer(unsigned int major,unsigned int minor,unsigned int rev);
 
 #ifdef ZT_TRACE
 	void postTrace(const char *module,unsigned int line,const char *fmt,...);
@@ -276,7 +296,7 @@ private:
 	std::vector< ZT_CircuitTest * > _circuitTests;
 	Mutex _circuitTests_m;
 
-	std::vector<Path> _directPaths;
+	std::vector<InetAddress> _directPaths;
 	Mutex _directPaths_m;
 
 	Mutex _backgroundTasksLock;
@@ -288,7 +308,6 @@ private:
 	uint64_t _now;
 	uint64_t _lastPingCheck;
 	uint64_t _lastHousekeepingRun;
-	unsigned int _newestVersionSeen[3]; // major, minor, revision
 	bool _online;
 };
 

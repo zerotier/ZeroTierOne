@@ -64,6 +64,12 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+#ifndef IPV6_DONTFRAG
+#define IPV6_DONTFRAG 62
+#endif
+#endif
+
 #define ZT_PHY_SOCKFD_TYPE int
 #define ZT_PHY_SOCKFD_NULL (-1)
 #define ZT_PHY_SOCKFD_VALID(s) ((s) > -1)
@@ -365,6 +371,9 @@ public:
 #ifdef IPV6_MTU_DISCOVER
 				f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_MTU_DISCOVER,&f,sizeof(f));
 #endif
+#ifdef IPV6_DONTFRAG
+				f = 0; setsockopt(s,IPPROTO_IPV6,IPV6_DONTFRAG,&f,sizeof(f));
+#endif
 			}
 			f = 0; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(void *)&f,sizeof(f));
 			f = 1; setsockopt(s,SOL_SOCKET,SO_BROADCAST,(void *)&f,sizeof(f));
@@ -411,6 +420,24 @@ public:
 		memcpy(&(sws.saddr),localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 
 		return (PhySocket *)&sws;
+	}
+
+	/**
+	 * Set the IP TTL for the next outgoing packet (for IPv4 UDP sockets only)
+	 *
+	 * @param ttl New TTL (0 or >255 will set it to 255)
+	 * @return True on success
+	 */
+	inline bool setIp4UdpTtl(PhySocket *sock,unsigned int ttl)
+	{
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+#if defined(_WIN32) || defined(_WIN64)
+		DWORD tmp = ((ttl == 0)||(ttl > 255)) ? 255 : (DWORD)ttl;
+		return (::setsockopt(sws.sock,IPPROTO_IP,IP_TTL,(const char *)&tmp,sizeof(tmp)) == 0);
+#else
+		int tmp = ((ttl == 0)||(ttl > 255)) ? 255 : (int)ttl;
+		return (::setsockopt(sws.sock,IPPROTO_IP,IP_TTL,(void *)&tmp,sizeof(tmp)) == 0);
+#endif
 	}
 
 	/**
@@ -652,6 +679,36 @@ public:
 		}
 
 		return (PhySocket *)&sws;
+	}
+
+	/**
+	 * Try to set buffer sizes as close to the given value as possible
+	 *
+	 * This will try the specified value and then lower values in 16K increments
+	 * until one works.
+	 *
+	 * @param sock Socket
+	 * @param bufferSize Desired buffer sizes
+	 */
+	inline void setBufferSizes(const PhySocket *sock,int bufferSize)
+	{
+		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		if (bufferSize > 0) {
+			int bs = bufferSize;
+			while (bs >= 65536) {
+				int tmpbs = bs;
+				if (::setsockopt(sws.sock,SOL_SOCKET,SO_RCVBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
+					break;
+				bs -= 16384;
+			}
+			bs = bufferSize;
+			while (bs >= 65536) {
+				int tmpbs = bs;
+				if (::setsockopt(sws.sock,SOL_SOCKET,SO_SNDBUF,(const char *)&tmpbs,sizeof(tmpbs)) == 0)
+					break;
+				bs -= 16384;
+			}
+		}
 	}
 
 	/**

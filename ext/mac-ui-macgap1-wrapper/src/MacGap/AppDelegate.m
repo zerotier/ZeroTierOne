@@ -32,6 +32,7 @@
 
 - (void) applicationDidFinishLaunching:(NSNotification *)aNotification { 
     char buf[16384],userAuthTokenPath[4096];
+    struct stat systemAuthTokenStat,userAuthTokenStat;
 
     FILE *pf = fopen("/Library/Application Support/ZeroTier/One/zerotier-one.port","r");
     long port = 9993; // default
@@ -50,14 +51,27 @@
     const char *homeDir = getenv("HOME");
     if (homeDir) {
         snprintf(userAuthTokenPath,sizeof(userAuthTokenPath),"%s/Library/Application Support/ZeroTier/One/authtoken.secret",homeDir);
-        pf = fopen(userAuthTokenPath,"r");
-        if (pf) {
-            long n = fread(buf,1,sizeof(buf)-1,pf);
-            if (n > 0) {
-                buf[n] = (char)0;
-                snprintf(url,sizeof(url),"http://127.0.0.1:%ld/index.html?authToken=%s",port,buf);
+
+        bool userAuthTokenOutOfDate = false;
+        memset(&systemAuthTokenStat,0,sizeof(systemAuthTokenStat));
+        memset(&userAuthTokenStat,0,sizeof(userAuthTokenStat));
+        if (stat("/Library/Application Support/ZeroTier/One/authtoken.secret",&systemAuthTokenStat) == 0) {
+            if (stat(userAuthTokenPath,&userAuthTokenStat) == 0) {
+                if (userAuthTokenStat.st_mtimespec.tv_sec < systemAuthTokenStat.st_mtimespec.tv_sec)
+                    userAuthTokenOutOfDate = true;
             }
-            fclose(pf);
+        }
+
+        if (!userAuthTokenOutOfDate) {
+            pf = fopen(userAuthTokenPath,"r");
+            if (pf) {
+                long n = fread(buf,1,sizeof(buf)-1,pf);
+                if (n > 0) {
+                    buf[n] = (char)0;
+                    snprintf(url,sizeof(url),"http://127.0.0.1:%ld/index.html?authToken=%s",port,buf);
+                }
+                fclose(pf);
+            }
         }
     }
 

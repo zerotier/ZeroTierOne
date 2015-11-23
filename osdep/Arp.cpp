@@ -104,11 +104,11 @@ uint32_t Arp::processIncomingArp(const void *arp,unsigned int len,void *response
 	return ip;
 }
 
-MAC Arp::query(const MAC &localMac,uint32_t ip,void *query,unsigned int &queryLen,MAC &queryDest)
+MAC Arp::query(const MAC &localMac,uint32_t localIp,uint32_t targetIp,void *query,unsigned int &queryLen,MAC &queryDest)
 {
 	const uint64_t now = OSUtils::now();
 
-	_ArpEntry &e = _cache[ip];
+	_ArpEntry &e = _cache[targetIp];
 
 	if ( ((e.mac)&&((now - e.lastResponseReceived) >= (ZT_ARP_EXPIRE / 3))) ||
 	     ((!e.mac)&&((now - e.lastQuerySent) >= ZT_ARP_QUERY_INTERVAL)) ) {
@@ -116,9 +116,10 @@ MAC Arp::query(const MAC &localMac,uint32_t ip,void *query,unsigned int &queryLe
 
 		uint8_t *q = reinterpret_cast<uint8_t *>(query);
 		memcpy(q,ARP_REQUEST_HEADER,8); q += 8; // ARP request header information, always the same
-		localMac.copyTo(q,6); q += 6; // sending host address
-		memset(q,0,10); q += 10; // sending IP and target media address are ignored in requests
-		memcpy(q,&ip,4); // target IP address for resolution (IP already in big-endian byte order)
+		localMac.copyTo(q,6); q += 6; // sending host MAC address
+        memcpy(q,&localIp,4); q += 4; // sending host IP (IP already in big-endian byte order)
+		memset(q,0,6); q += 6; // sending zeros for target MAC address as thats what we want to find
+		memcpy(q,&targetIp,4); // target IP address for resolution (IP already in big-endian byte order)
 		queryLen = 28;
 		if (e.mac)
 			queryDest = e.mac; // confirmation query, send directly to address holder

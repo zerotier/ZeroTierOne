@@ -95,7 +95,6 @@ public:
 	static inline bool rm(const std::string &path) throw() { return rm(path.c_str()); }
 
 	static inline bool mkdir(const char *path)
-		throw()
 	{
 #ifdef __WINDOWS__
 		if (::PathIsDirectoryA(path))

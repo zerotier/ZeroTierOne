@@ -911,7 +911,6 @@ static void printHelp(const char *cn,FILE *out)
 	fprintf(out,"  -v                - Show version"ZT_EOL_S);
 	fprintf(out,"  -U                - Run as unprivileged user (skip privilege check)"ZT_EOL_S);
 	fprintf(out,"  -p<port>          - Port for UDP and TCP/HTTP (default: 9993, 0 for random)"ZT_EOL_S);
-	//fprintf(out,"  -T<path>          - Override root topology, do not authenticate or update"ZT_EOL_S);
 
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)"ZT_EOL_S);
@@ -959,8 +958,10 @@ int main(int argc,char **argv)
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2,2),&wsaData);
+	{
+		WSADATA wsaData;
+		WSAStartup(MAKEWORD(2,2),&wsaData);
+	}
 
 #ifdef ZT_WIN_RUN_IN_CONSOLE
 	bool winRunFromCommandLine = true;
@@ -974,7 +975,6 @@ int main(int argc,char **argv)
 	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
 		return cli(argc,argv);
 
-	std::string overrideRootTopology;
 	std::string homeDir;
 	unsigned int port = ZT_DEFAULT_PORT;
 	bool skipRootCheck = false;
@@ -999,18 +999,6 @@ int main(int argc,char **argv)
 
 				case 'U':
 					skipRootCheck = true;
-					break;
-
-				case 'T': // Override root topology
-					if (argv[i][2]) {
-						if (!OSUtils::readFile(argv[i] + 2,overrideRootTopology)) {
-							fprintf(stderr,"%s: cannot read root topology from %s"ZT_EOL_S,argv[0],argv[i] + 2);
-							return 1;
-						}
-					} else {
-						printHelp(argv[0],stdout);
-						return 1;
-					}
 					break;
 
 				case 'v': // Display version
@@ -1167,37 +1155,29 @@ int main(int argc,char **argv)
 
 	unsigned int returnValue = 0;
 
-	try {
-		for(;;) {
-			zt1Service = OneService::newInstance(homeDir.c_str(),port,(overrideRootTopology.length() > 0) ? overrideRootTopology.c_str() : (const char *)0);
-			switch(zt1Service->run()) {
-				case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
-				case OneService::ONE_NORMAL_TERMINATION:
-					break;
-				case OneService::ONE_UNRECOVERABLE_ERROR:
-					fprintf(stderr,"%s: fatal error: %s"ZT_EOL_S,argv[0],zt1Service->fatalErrorMessage().c_str());
-					returnValue = 1;
-					break;
-				case OneService::ONE_IDENTITY_COLLISION: {
-					delete zt1Service;
-					zt1Service = (OneService *)0;
-					std::string oldid;
-					OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),oldid);
-					if (oldid.length()) {
-						OSUtils::writeFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret.saved_after_collision").c_str(),oldid);
-						OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
-						OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
-					}
-				}	continue; // restart!
-			}
-			break; // terminate loop -- normally we don't keep restarting
+	for(;;) {
+		zt1Service = OneService::newInstance(homeDir.c_str(),port);
+		switch(zt1Service->run()) {
+			case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
+			case OneService::ONE_NORMAL_TERMINATION:
+				break;
+			case OneService::ONE_UNRECOVERABLE_ERROR:
+				fprintf(stderr,"%s: fatal error: %s"ZT_EOL_S,argv[0],zt1Service->fatalErrorMessage().c_str());
+				returnValue = 1;
+				break;
+			case OneService::ONE_IDENTITY_COLLISION: {
+				delete zt1Service;
+				zt1Service = (OneService *)0;
+				std::string oldid;
+				OSUtils::readFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str(),oldid);
+				if (oldid.length()) {
+					OSUtils::writeFile((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret.saved_after_collision").c_str(),oldid);
+					OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.secret").c_str());
+					OSUtils::rm((homeDir + ZT_PATH_SEPARATOR_S + "identity.public").c_str());
+				}
+			}	continue; // restart!
 		}
-	} catch (std::exception &exc) {
-		fprintf(stderr,"%s: fatal error: %s"ZT_EOL_S,argv[0],exc.what());
-		returnValue = 1;
-	} catch ( ... ) {
-		fprintf(stderr,"%s: fatal error: unknown exception"ZT_EOL_S,argv[0]);
-		returnValue = 1;
+		break; // terminate loop -- normally we don't keep restarting
 	}
 
 	delete zt1Service;

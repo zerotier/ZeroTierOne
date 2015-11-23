@@ -43,6 +43,9 @@ namespace ZeroTier {
  * periodically checked and updates are automatically downloaded, verified
  * against a built-in list of update signing keys, and installed. This is
  * only supported for certain platforms.
+ *
+ * If built with ZT_ENABLE_CLUSTER, a 'cluster' file is checked and if
+ * present is read to determine the identity of other cluster members.
  */
 class OneService
 {
@@ -95,12 +98,10 @@ public:
 	 *
 	 * @param hp Home path
 	 * @param port TCP and UDP port for packets and HTTP control (if 0, pick random port)
-	 * @param overrideRootTopology String-serialized root topology (for testing, default: NULL)
 	 */
 	static OneService *newInstance(
 		const char *hp,
-		unsigned int port,
-		const char *overrideRootTopology = (const char *)0);
+		unsigned int port);
 
 	virtual ~OneService();
 

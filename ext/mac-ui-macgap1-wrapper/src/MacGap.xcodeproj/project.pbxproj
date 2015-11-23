@@ -269,7 +269,7 @@
 		FAE451B114BA79C600190544 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0450;
+				LastUpgradeCheck = 0710;
 				ORGANIZATIONNAME = Twitter;
 			};
 			buildConfigurationList = FAE451B414BA79C600190544 /* Build configuration list for PBXProject "MacGap" */;
@@ -374,9 +374,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COPY_PHASE_STRIP = NO;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -402,7 +402,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -434,6 +433,7 @@
 				GCC_VERSION = "";
 				INFOPLIST_FILE = "MacGap/MacGap-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zerotier.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "ZeroTier One";
 				SDKROOT = macosx;
 				WRAPPER_EXTENSION = app;
@@ -455,6 +455,7 @@
 				GCC_VERSION = "";
 				INFOPLIST_FILE = "MacGap/MacGap-Info.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zerotier.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "ZeroTier One";
 				SDKROOT = macosx;
 				WRAPPER_EXTENSION = app;

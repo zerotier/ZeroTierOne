@@ -30,12 +30,15 @@
 
 #include "tuntap.h"
 
+extern "C" {
+
+#include <kern/thread.h>
+
+}
+
 #define TAP_FAMILY_NAME			((char *) "zt")
-
 #define TAP_IF_COUNT			32	/* max number of tap interfaces */
-
 #define TAP_MTU				2800
-
 #define TAP_LLADDR			tap_lladdr
 
 /* the mac address of our interfaces. note that the last byte will be replaced by the unit number */
@@ -52,6 +55,8 @@ class tap_manager : public tuntap_manager {
 
 /* the tap network interface */
 class tap_interface : public tuntap_interface {
+        public:
+	   	tap_interface();
 
 	protected:
 		/* maximum number of protocols that can be attached */
@@ -66,6 +71,9 @@ class tap_interface : public tuntap_interface {
 			/* protocol passed to add_proto */
 			protocol_family_t proto;
 		} attached_protos[MAX_ATTACHED_PROTOS];
+
+		/* The input thread for the network interface. */
+		thread_t input_thread;
 
 		/* initializes the interface */
 		virtual bool initialize(unsigned short major, unsigned short unit);

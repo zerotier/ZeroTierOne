@@ -29,8 +29,12 @@ Thumbs.db
 # *nix/Mac build droppings
 /build-*
 /ZeroTierOneInstaller-*
+/examples/docker/zerotier-one
+/examples/docker/test-*.env
+/world/mkworld
+/world/*.c25519
 
-# Miscellaneous file types that we don't want to check in
+# Miscellaneous temporaries, build files, etc.
 *.log
 *.opensdf
 *.user
@@ -40,27 +44,25 @@ Thumbs.db
 *.pid
 *.pkg
 *.o
+*.a
+*.dylib
+*.so
+*.o-*
 *.core
 *.deb
 *.rpm
 *.autosave
 *.tmp
-
-# Root topology build files, temporaries, and never check in secrets
-/root-topology/bin2c
-/root-topology/mktopology
-/root-topology/*.secret
-/root-topology/test/supernodes
-/root-topology/test/test-root-topology
+node_modules
+cluster-geo/cluster-geo/config.js
+cluster-geo/cluster-geo/cache.*
+tests/http/zerotier-one
+tests/http/big-test-hosts
 
 # MacGap wrapper build files
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/project.xcworkspace/xcuserdata/*
 /ext/mac-ui-macgap1-wrapper/src/MacGap.xcodeproj/xcuserdata/*
 /ext/mac-ui-macgap1-wrapper/src/build
-
-# Web UI dev temporaries
-/ui/.module-cache
-node_modules
 
 # Java/Android/JNI build droppings
 java/obj/
@@ -71,3 +73,6 @@ java/doc/
 java/build_win64/
 java/build_win32/
 /java/mac32_64/
+windows/WinUI/obj/
+windows/WinUI/bin/
+windows/ZeroTierOne/Debug/

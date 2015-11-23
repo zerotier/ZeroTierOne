@@ -45,7 +45,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_RENDEZVOUS: return "RENDEZVOUS";
 		case VERB_FRAME: return "FRAME";
 		case VERB_EXT_FRAME: return "EXT_FRAME";
-		case VERB_P5_MULTICAST_FRAME: return "P5_MULTICAST_FRAME";
+		case VERB_ECHO: return "ECHO";
 		case VERB_MULTICAST_LIKE: return "MULTICAST_LIKE";
 		case VERB_NETWORK_MEMBERSHIP_CERTIFICATE: return "NETWORK_MEMBERSHIP_CERTIFICATE";
 		case VERB_NETWORK_CONFIG_REQUEST: return "NETWORK_CONFIG_REQUEST";
@@ -56,6 +56,7 @@ const char *Packet::verbString(Verb v)
 		case VERB_PUSH_DIRECT_PATHS: return "PUSH_DIRECT_PATHS";
 		case VERB_CIRCUIT_TEST: return "CIRCUIT_TEST";
 		case VERB_CIRCUIT_TEST_REPORT: return "CIRCUIT_TEST_REPORT";
+		case VERB_REQUEST_PROOF_OF_WORK: return "REQUEST_PROOF_OF_WORK";
 	}
 	return "(unknown)";
 }
@@ -91,14 +92,14 @@ void Packet::armor(const void *key,bool encryptPayload)
 	setCipher(encryptPayload ? ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 : ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE);
 
 	_salsa20MangleKey((const unsigned char *)key,mangledKey);
-	Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
+	Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8)/*,ZT_PROTO_SALSA20_ROUNDS*/);
 
 	// MAC key is always the first 32 bytes of the Salsa20 key stream
 	// This is the same construction DJB's NaCl library uses
-	s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
+	s20.encrypt12(ZERO_KEY,macKey,sizeof(macKey));
 
 	if (encryptPayload)
-		s20.encrypt(payload,payload,payloadLen);
+		s20.encrypt12(payload,payload,payloadLen);
 
 	Poly1305::compute(mac,payload,payloadLen,macKey);
 	memcpy(field(ZT_PACKET_IDX_MAC,8),mac,8);
@@ -115,15 +116,15 @@ bool Packet::dearmor(const void *key)
 
 	if ((cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)||(cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)) {
 		_salsa20MangleKey((const unsigned char *)key,mangledKey);
-		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8),ZT_PROTO_SALSA20_ROUNDS);
+		Salsa20 s20(mangledKey,256,field(ZT_PACKET_IDX_IV,8)/*,ZT_PROTO_SALSA20_ROUNDS*/);
 
-		s20.encrypt(ZERO_KEY,macKey,sizeof(macKey));
+		s20.encrypt12(ZERO_KEY,macKey,sizeof(macKey));
 		Poly1305::compute(mac,payload,payloadLen,macKey);
 		if (!Utils::secureEq(mac,field(ZT_PACKET_IDX_MAC,8),8))
 			return false;
 
 		if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
-			s20.decrypt(payload,payload,payloadLen);
+			s20.decrypt12(payload,payload,payloadLen);
 
 		return true;
 	} else return false; // unrecognized cipher suite
