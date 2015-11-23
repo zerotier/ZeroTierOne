@@ -44,8 +44,6 @@
 #include "../osdep/Thread.hpp"
 #include "../osdep/Phy.hpp"
 
-#include "NetconUtilities.hpp"
-
 #include "netif/etharp.h"
 
 struct tcp_pcb;

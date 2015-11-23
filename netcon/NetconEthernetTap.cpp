@@ -40,7 +40,6 @@
 
 #include "Intercept.h"
 #include "LWIPStack.hpp"
-#include "NetconUtilities.hpp"
 
 #include "lwip/tcp_impl.h"
 #include "netif/etharp.h"
@@ -58,6 +57,37 @@
 #define STATUS_TMR_INTERVAL				3000 // How often we check connection statuses
 
 namespace ZeroTier {
+
+// ---------------------------------------------------------------------------
+
+/*
+static void clearscreen(){
+	fprintf(stderr, "\033[2J");
+}
+static void gotoxy(int x,int y) {
+    fprintf(stderr, "%c[%d;%df",0x1B,y,x);
+}
+*/
+
+// Gets the process/path name associated with a pid
+static void get_path_from_pid(char* dest, int pid)
+{
+  char ppath[80];
+  sprintf(ppath, "/proc/%d/exe", pid);
+	if (readlink (ppath, dest, 80) != -1){
+  }
+}
+
+// Gets the process/path name associated with a fd
+/*
+static void get_path_from_fd(char* dest, int pid, int fd)
+{
+	char ppfd[80];
+	sprintf(ppfd, "/proc/%d/fd/%d", pid, fd);
+	if (readlink (ppfd, dest, 80) != -1){
+	}
+}
+*/
 
 static err_t tapif_init(struct netif *netif)
 {
@@ -137,6 +167,8 @@ public:
   Larg(NetconEthernetTap *_tap, TcpConnection *conn) : tap(_tap), conn(conn) {}
 };
 
+// ---------------------------------------------------------------------------
+
 NetconEthernetTap::NetconEthernetTap(
 	const char *homePath,
 	const MAC &mac,
@@ -157,14 +189,15 @@ NetconEthernetTap::NetconEthernetTap(
 	_enabled(true),
 	_run(true)
 {
+	char sockPath[4096],lwipPath[4096];
 	rpc_counter = -1;
-	char sockPath[4096];
-	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",(unsigned long long)nwid);
-	_dev = sockPath;
+	Utils::snprintf(sockPath,sizeof(sockPath),"%s%snetcon_service_%.16llx",homePath,ZT_PATH_SEPARATOR_S,(unsigned long long)nwid);
+  _dev = sockPath; // in netcon mode, set device to be just the network ID
 
-	lwipstack = new LWIPStack("ext/bin/lwip/liblwip.so"); // ext/bin/liblwip.so.debug for debug symbols
+	Utils::snprintf(lwipPath,sizeof(lwipPath),"%s%sliblwip.so",homePath,ZT_PATH_SEPARATOR_S);
+	lwipstack = new LWIPStack(lwipPath);
 	if(!lwipstack)
-		throw std::runtime_error("unable to load lwip lib.");
+		throw std::runtime_error("unable to dynamically load a new instance of liblwip.so (searched ZeroTier home path)");
 	lwipstack->lwip_init();
 
 	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
@@ -290,7 +323,8 @@ void NetconEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType
 	}
 }
 
-std::string NetconEthernetTap::deviceName() const {
+std::string NetconEthernetTap::deviceName() const
+{
 	return _dev;
 }
 

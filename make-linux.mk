@@ -34,7 +34,7 @@ DEFS=-DZT_ENABLE_NETCON
 LDLIBS?=
 
 include objects.mk
-OBJS+=osdep/LinuxEthernetTap.o netcon/NetconEthernetTap.o osdep/Arp.o netcon/NetconUtilities.o
+OBJS+=osdep/LinuxEthernetTap.o netcon/NetconEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
