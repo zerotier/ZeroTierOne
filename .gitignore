@@ -47,6 +47,7 @@ Thumbs.db
 *.a
 *.dylib
 *.so
+*.so.*
 *.o-*
 *.core
 *.deb
