@@ -16,29 +16,24 @@ When an RPC for a socket() is received by the Netcon service from the intercepte
 Upon the first call to a intercept-overriden system call, a Unix-domain socket is opened between the Netcon service and the application's intercept. This socket provides us the ability to pass file descriptors of newly-created socketpairs to the intercept (used as the read/write buffer). More specifically, after the socketpair creation, one end is kept in a table entry in Netcon and one end is sent to the intercept.
 
 
-### How Netcon receives data
-When data is received by lwIP, a callback in the Netcon service is called which then consults the TCP connection list the data to the correct socketpair. From here, it's up to the harnessed application to either poll() the opposite end of the socketpair, or read from it. No notification is sent to the intercept.
-
-
-
 ### Building from Source (and Installing)
 
-Build library zerotier-intercept:
+Build zerotier-intercept library:
 
     make -f make-intercept.mk
 
 Install:
 
-    make -f make-intercept install
+    make -f make-intercept.mk install
 
 Build LWIP library:
 
     make -f make-liblwip.mk
 
-Run automated tests:
+Run automated tests (from netcon/docker-test/ directory):
 
-    /netcon/docker-test/build.sh
-    /netcon/docker-test/test.sh
+    ./build.sh
+    ./test.sh
 
 
 
@@ -48,21 +43,6 @@ Run automated tests:
 To intercept a specific application (requires an already running instance of Zerotier-One with Network Containers enabled):
 
     zerotier-intercept my_app
-
-
-### Testing
-
-To run a simple RX/TX test:
-
-    make service
-    make lib
-    make install
-    make tests
-    
-    ./service
-    ./multitransfer.sh
-
-
 
 
 ### Compatibility
