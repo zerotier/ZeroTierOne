@@ -50,7 +50,8 @@
 #include <arpa/inet.h>
 
 #include "Intercept.h"
-#include "Common.c"
+
+#include "common.inc.c"
 
 #ifdef CHECKS
   #include <sys/resource.h>

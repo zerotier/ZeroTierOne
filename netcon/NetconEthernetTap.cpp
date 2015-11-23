@@ -49,7 +49,7 @@
 #include "lwip/ip_frag.h"
 #include "lwip/tcp.h"
 
-#include "Common.c"
+#include "common.inc.c"
 
 #define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
