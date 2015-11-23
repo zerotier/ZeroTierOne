@@ -25,7 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-
 #ifdef USE_GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -834,10 +833,10 @@ int accept(ACCEPT_SIG)
     handle_error("accept", "Unresolved symbol [accept]", -1);
     return -1;
   }
-  /*
-    if(opt & O_NONBLOCK)
-      fcntl(sockfd, F_SETFL, O_NONBLOCK);
-  */
+  
+  //  if(opt & O_NONBLOCK)
+      fcntl(sockfd, F_SETFL, O_NONBLOCK); /* required by libuv in nodejs */
+  
 
   char c[1];
   int new_conn_socket;
@@ -874,9 +873,17 @@ int accept(ACCEPT_SIG)
       return -1;
     }
   }
+  
+  errno = EAGAIN; /* necessary? */		
+  handle_error("accept", "EAGAIN - Error reading signal byte from service", -1);
+  return -EAGAIN;
+
+/* Prevents libuv in nodejs from accepting properly (it looks for a -EAGAIN) */
+/*  
   errno = EBADF;
   handle_error("accept", "EBADF - Error reading signal byte from service", -1);
-  return -1;
+  return -1; 
+*/
 }
 
 
@@ -1080,12 +1087,10 @@ long syscall(SYSCALL_SIG){
     int flags = d;
     int old_errno = errno;
     int err = accept4(sockfd, addr, addrlen, flags);
+    
     errno = old_errno;
-
-    if(err == -EBADF) { 
-      err = -EAGAIN; /* For hysterical raisins */
-    }
-
+    if(err == -EBADF) 
+      err = -EAGAIN;
     return err;
   }
 #endif
