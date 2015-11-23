@@ -29,9 +29,6 @@
 #define _GNU_SOURCE
 #endif
 
-/* Name used in err msgs    */
-char *progname = "";
-
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -63,9 +60,6 @@ char *progname = "";
 #endif
 
 /* Global Declarations */
-#ifdef USE_SOCKS_DNS
-static int (*realresinit)(void);
-#endif
 static int (*realconnect)(CONNECT_SIG);
 static int (*realselect)(SELECT_SIG);
 static int (*realbind)(BIND_SIG);
@@ -100,11 +94,6 @@ int clone(CLONE_SIG);
 int dup2(DUP2_SIG);
 int dup3(DUP3_SIG);
 
-
-#ifdef USE_SOCKS_DNS
-  int res_init(void);
-#endif
-
 int connect_to_service(void);
 int init_service_connection();
 void load_symbols(void);
@@ -117,8 +106,8 @@ int checkpid();
 ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 /* threading */
-pthread_mutex_t lock;
-pthread_mutex_t loglock;
+static pthread_mutex_t lock;
+static pthread_mutex_t loglock;
 
 void handle_error(char *name, char *info, int err)
 {
@@ -172,7 +161,7 @@ int send_command(int rpc_fd, char *cmd)
   #define IDX_COUNT     IDX_TID + sizeof(pid_t)
   #define IDX_TIME      IDX_COUNT + sizeof(int)
   #define IDX_CMD       IDX_TIME + 20 // 20 being the length of the timestamp string
-  #define IDX_PAYLOAD   IDX_TIME + sizeof(char) 
+  #define IDX_PAYLOAD   IDX_TIME + sizeof(char)
   */
   /* [pid_t] [pid_t] [rpc_count] [int] [...] */
   memset(metabuf, '\0', BUF_SZ);
@@ -188,7 +177,7 @@ int send_command(int rpc_fd, char *cmd)
   memcpy(&metabuf[IDX_COUNT],   &rpc_count,   sizeof(rpc_count)  ); /* rpc_count */
   memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); /* timestamp */
 #endif
-  /* Combine command flag+payload with RPC metadata */ 
+  /* Combine command flag+payload with RPC metadata */
   memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
   int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
@@ -328,13 +317,8 @@ void load_symbols(void)
   realclone = dlsym(RTLD_NEXT, "clone");
   realclose = dlsym(RTLD_NEXT, "close");
   realsyscall = dlsym(RTLD_NEXT, "syscall");
-  /* realsyscall = dlsym(RTLD_NEXT, "poll"); */
   realdup2 = dlsym(RTLD_NEXT, "dup2");
   realdup3 = dlsym(RTLD_NEXT, "dup3");
-#ifdef USE_SOCKS_DNS
-  realresinit = dlsym(RTLD_NEXT, "res_init");
-#endif
-
 #else
   lib = dlopen(LIBCONNECT, RTLD_LAZY);
   realconnect = dlsym(lib, "connect");
@@ -349,12 +333,8 @@ void load_symbols(void)
   realclone = dlsym(lib, "clone");
   realclose = dlsym(lib, "close");
   realsyscall = dlsym(lib, "syscall");
-  /* realsyscall = dlsym(lib, "poll"); */
   realdup2 = dlsym(RTLD_NEXT, "dup2");
   realdup3 = dlsym(RTLD_NEXT, "dup3");
-#ifdef USE_SOCKS_DNS
-  realresinit = dlsym(lib, "res_init");
-#endif
   dlclose(lib);
   lib = dlopen(LIBC, RTLD_LAZY);
   dlclose(lib);
@@ -531,7 +511,7 @@ int socket(SOCKET_SIG)
     cmd[0] = RPC_MAP;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
 
-    if(newfd > -1) { 
+    if(newfd > -1) {
       send_command(fdret_sock, cmd);
       pthread_mutex_unlock(&lock);
       errno = ERR_OK; /* OK */
@@ -825,10 +805,10 @@ int accept(ACCEPT_SIG)
     handle_error("accept", "Unresolved symbol [accept]", -1);
     return -1;
   }
-  
+
   //  if(opt & O_NONBLOCK)
       fcntl(sockfd, F_SETFL, O_NONBLOCK); /* required by libuv in nodejs */
-  
+
 
   char c[1];
   int new_conn_socket;
@@ -865,16 +845,16 @@ int accept(ACCEPT_SIG)
       return -1;
     }
   }
-  
-  errno = EAGAIN; /* necessary? */		
+
+  errno = EAGAIN; /* necessary? */
   handle_error("accept", "EAGAIN - Error reading signal byte from service", -1);
   return -EAGAIN;
 
 /* Prevents libuv in nodejs from accepting properly (it looks for a -EAGAIN) */
-/*  
+/*
   errno = EBADF;
   handle_error("accept", "EBADF - Error reading signal byte from service", -1);
-  return -1; 
+  return -1;
 */
 }
 
@@ -1031,10 +1011,10 @@ int dup3(DUP3_SIG)
   }
   dwr(MSG_DEBUG,"dup3(%d, %d, %d)\n", oldfd, newfd, flags);
 #ifdef DEBUG
-  /* Only do this check if we want to debug the intercept, otherwise, dont mess with 
+  /* Only do this check if we want to debug the intercept, otherwise, dont mess with
    the client application's logging methods */
   if(newfd == STDIN_FILENO || newfd == STDOUT_FILENO || newfd == STDERR_FILENO)
-    return newfd; /* FIXME: This is to prevent httpd from dup'ing over our stderr 
+    return newfd; /* FIXME: This is to prevent httpd from dup'ing over our stderr
                    and preventing us from debugging */
   else
 #endif
@@ -1079,9 +1059,9 @@ long syscall(SYSCALL_SIG){
     int flags = d;
     int old_errno = errno;
     int err = accept4(sockfd, addr, addrlen, flags);
-    
+
     errno = old_errno;
-    if(err == -EBADF) 
+    if(err == -EBADF)
       err = -EAGAIN;
     return err;
   }
