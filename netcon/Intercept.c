@@ -97,7 +97,6 @@ int connect_to_service(void);
 int init_service_connection();
 void load_symbols(void);
 void set_up_intercept();
-int checkpid();
 
 #define SERVICE_CONNECT_ATTEMPTS  30
 #define RPC_FD                    1023
@@ -126,24 +125,29 @@ static unsigned long rpc_count = 0;
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
 ------------------------------------------------------------------------------*/
 
+#define ZT_NC_NWID_ENV "ZT_NC_NWID"
+
 static int is_initialized = 0;
-static int fdret_sock; // used for fd-transfers
-static int newfd; // used for "this_end" socket
-static int thispid;
-static char* af_sock_name  = "/tmp/.ztnc_e5cd7a9e1c5311ab";
+static int fdret_sock; /* used for fd-transfers */
+static int newfd; /* used for "this_end" socket */
+static int thispid = -1;
 static int instance_count = 0;
 
 /*
  * Check for forking
  */
-int checkpid() {
-  if(thispid != getpid()) {
+void checkpid()
+{
+  /* Do noting if not configured (sanity check -- should never get here in this case) */
+  if (!getenv(ZT_NC_NWID_ENV))
+    return;
+
+  if (thispid != getpid()) {
     printf("clone/fork detected. re-initializing this instance.\n");
     set_up_intercept();
     fdret_sock = init_service_connection();
     thispid = getpid();
   }
-  return 0;
 }
 
 /*
@@ -249,17 +253,29 @@ int is_mapped_to_service(int sockfd)
 /* Sets up the connection pipes and sockets to the service */
 int init_service_connection()
 {
-  instance_count++;
-  dwr(MSG_DEBUG,"init_service_connection()\n");
   struct sockaddr_un addr;
   int tfd = -1, attempts = 0, conn_err = -1;
+  const char *network_id;
+  char af_sock_name[1024];
+
+  network_id = getenv(ZT_NC_NWID_ENV);
+  if ((!network_id)||(strlen(network_id) != 16))
+    return -1;
+  snprintf(af_sock_name,sizeof(af_sock_name),"/tmp/.ztnc_%s",network_id);
+
+  instance_count++;
+
+  dwr(MSG_DEBUG,"init_service_connection()\n");
+
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, af_sock_name, sizeof(addr.sun_path)-1);
   if ( (tfd = realsocket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-    perror("socket error");
-    exit(-1);
+    return -1;
+    /*perror("socket error");
+    exit(-1);*/
   }
+
   while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS) {
     conn_err = realconnect(tfd, (struct sockaddr*)&addr, sizeof(addr));
     if(conn_err < 0) {
@@ -276,6 +292,7 @@ int init_service_connection()
     }
     attempts++;
   }
+
   return -1;
 }
 
@@ -341,14 +358,18 @@ void load_symbols(void)
 
 /* Private Function Prototypes */
 void _init(void) __attribute__ ((constructor));
-void _init(void) {
-  set_up_intercept();
-}
+void _init(void) { set_up_intercept(); }
 
 /* get symbols and initialize mutexes */
 void set_up_intercept()
 {
+  /* If ZT_NC_NWID_ENV is not set, do nothing -- not configured */
+  if (!getenv(ZT_NC_NWID_ENV))
+    return;
+
+  /* Hook/intercept Posix net API symbols */
   load_symbols();
+
   if(pthread_mutex_init(&lock, NULL) != 0) {
     dwr(MSG_ERROR, "error while initializing service call mutex\n");
   }
@@ -356,7 +377,6 @@ void set_up_intercept()
     dwr(MSG_ERROR, "error while initializing log mutex mutex\n");
   }
 }
-
 
 /*------------------------------------------------------------------------------
 --------------------------------- setsockopt() ---------------------------------
