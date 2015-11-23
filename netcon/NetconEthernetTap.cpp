@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <utility>
 #include <dlfcn.h>
+#include <sys/poll.h>
 
 #include "NetconEthernetTap.hpp"
 
@@ -37,17 +38,18 @@
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Phy.hpp"
 
+#include "Intercept.h"
+#include "LWIPStack.hpp"
+#include "NetconUtilities.hpp"
+
 #include "lwip/tcp_impl.h"
 #include "netif/etharp.h"
+#include "lwip/api.h"
 #include "lwip/ip.h"
 #include "lwip/ip_addr.h"
 #include "lwip/ip_frag.h"
 #include "lwip/tcp.h"
 
-#include "LWIPStack.hpp"
-#include "NetconService.hpp"
-#include "Intercept.h"
-#include "NetconUtilities.hpp"
 #include "Common.c"
 #include "Sendfd.c"
 
@@ -56,8 +58,6 @@
 #define STATUS_TMR_INTERVAL				3000 // How often we check connection statuses
 
 namespace ZeroTier {
-
-namespace {
 
 static err_t tapif_init(struct netif *netif)
 {
@@ -103,7 +103,39 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   return ERR_OK;
 }
 
-} // anonymous namespace
+/*
+ * TCP connection administered by service
+ */
+class TcpConnection
+{
+public:
+  int perceived_fd;
+  int their_fd;
+  bool pending;
+  bool listening;
+  int pid;
+
+  unsigned long written;
+  unsigned long acked;
+
+  PhySocket *rpcSock;
+  PhySocket *dataSock;
+  struct tcp_pcb *pcb;
+
+  unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
+  int idx;
+};
+
+/*
+ * A helper class for passing a reference to _phy to LWIP callbacks as a "state"
+ */
+class Larg
+{
+public:
+  NetconEthernetTap *tap;
+  TcpConnection *conn;
+  Larg(NetconEthernetTap *_tap, TcpConnection *conn) : tap(_tap), conn(conn) {}
+};
 
 NetconEthernetTap::NetconEthernetTap(
 	const char *homePath,

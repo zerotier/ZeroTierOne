@@ -25,6 +25,8 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
+#ifndef ZT_LWIPSTACK_H
+#define ZT_LWIPSTACK_H
 
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
@@ -35,9 +37,6 @@
 
 #include <stdio.h>
 #include <dlfcn.h>
-
-#ifndef LWIPSTACK_H
-#define LWIPSTACK_H
 
 #ifdef D_GNU_SOURCE
   #define _GNU_SOURCE

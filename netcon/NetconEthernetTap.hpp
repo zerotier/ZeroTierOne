@@ -44,15 +44,22 @@
 #include "../osdep/Thread.hpp"
 #include "../osdep/Phy.hpp"
 
-#include "NetconService.hpp"
 #include "NetconUtilities.hpp"
 
 #include "netif/etharp.h"
 
+struct tcp_pcb;
+struct socket_st;
+struct listen_st;
+struct bind_st;
+struct connect_st;
+
 namespace ZeroTier {
 
 class NetconEthernetTap;
-
+class TcpConnection;
+class Larg;
+class LWIPStack;
 
 /**
  * Network Containers instance -- emulates an Ethernet tap device as far as OneService knows
