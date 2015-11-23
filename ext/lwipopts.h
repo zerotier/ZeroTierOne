@@ -46,7 +46,7 @@
 
 #define LWIP_CHKSUM_ALGORITHM 2
 
-
+#undef TCP_MSS
 #define TCP_MSS 1460
 
 /*

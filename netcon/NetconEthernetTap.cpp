@@ -57,6 +57,54 @@
 
 namespace ZeroTier {
 
+namespace {
+
+static err_t tapif_init(struct netif *netif)
+{
+  // Actual init functionality is in addIp() of tap
+  return ERR_OK;
+}
+
+static err_t low_level_output(struct netif *netif, struct pbuf *p)
+{
+  struct pbuf *q;
+  char buf[ZT_MAX_MTU+32];
+  char *bufptr;
+  int tot_len = 0;
+
+  ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
+
+  /* initiate transfer(); */
+  bufptr = buf;
+
+  for(q = p; q != NULL; q = q->next) {
+    /* Send the data from the pbuf to the interface, one pbuf at a
+       time. The size of the data in each pbuf is kept in the ->len
+       variable. */
+    /* send data from(q->payload, q->len); */
+    memcpy(bufptr, q->payload, q->len);
+    bufptr += q->len;
+    tot_len += q->len;
+  }
+
+  // [Send packet to network]
+  // Split ethernet header and feed into handler
+  struct eth_hdr *ethhdr;
+  ethhdr = (struct eth_hdr *)buf;
+
+  ZeroTier::MAC src_mac;
+  ZeroTier::MAC dest_mac;
+
+  src_mac.setTo(ethhdr->src.addr, 6);
+  dest_mac.setTo(ethhdr->dest.addr, 6);
+
+  tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
+    Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),tot_len - sizeof(struct eth_hdr));
+  return ERR_OK;
+}
+
+} // anonymous namespace
+
 NetconEthernetTap::NetconEthernetTap(
 	const char *homePath,
 	const MAC &mac,
@@ -66,11 +114,11 @@ NetconEthernetTap::NetconEthernetTap(
 	const char *friendlyName,
 	void (*handler)(void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
 	void *arg) :
-	_phy(this,false,true),
-	_unixListenSocket((PhySocket *)0),
+  _nwid(nwid),
 	_handler(handler),
 	_arg(arg),
-	_nwid(nwid),
+  _phy(this,false,true),
+  _unixListenSocket((PhySocket *)0),
 	_mac(mac),
 	_homePath(homePath),
 	_mtu(mtu),
@@ -570,7 +618,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	unload_rpc(data, pid, tid, rpc_count, timestamp, cmd, payload);
 	dwr(MSG_DEBUG, "\n\nRPC: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d\n", pid, tid, rpc_count, timestamp, cmd);
 	unsigned char *buf = (unsigned char*)data;
-    
+
 	switch(cmd)
 	{
 		case RPC_SOCKET:
@@ -1024,7 +1072,7 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_coun
     	//return;
     }
     else
-    	rpc_counter = rpc_count;    	
+    	rpc_counter = rpc_count;
 
 	dwr(MSG_DEBUG, " handle_retval(): CONN:%x - Mapping [our=%d -> their=%d]\n",conn,
 	_phy.getDescriptor(conn->dataSock), conn->perceived_fd);
@@ -1091,7 +1139,7 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_coun
  */
 void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc)
 {
-	
+
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);

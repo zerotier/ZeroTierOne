@@ -93,7 +93,6 @@ public:
   void *_arg;
 
 private:
-
 	// LWIP callbacks
 	static err_t nc_poll(void* arg, struct tcp_pcb *tpcb);
 	static err_t nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
@@ -128,7 +127,6 @@ private:
 	void phyOnUnixClose(PhySocket *sock,void **uptr);
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
 	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
-
 
 	ip_addr_t convert_ip(struct sockaddr_in * addr)
 	{
@@ -176,57 +174,6 @@ private:
 	volatile bool _enabled;
 	volatile bool _run;
 };
-
-
-/*------------------------------------------------------------------------------
------------------------- low-level Interface functions -------------------------
-------------------------------------------------------------------------------*/
-
-static err_t low_level_output(struct netif *netif, struct pbuf *p);
-
-static err_t tapif_init(struct netif *netif)
-{
-  // Actual init functionality is in addIp() of tap
-  return ERR_OK;
-}
-
-static err_t low_level_output(struct netif *netif, struct pbuf *p)
-{
-  struct pbuf *q;
-  char buf[ZT_MAX_MTU+32];
-  char *bufptr;
-  int tot_len = 0;
-
-  ZeroTier::NetconEthernetTap *tap = (ZeroTier::NetconEthernetTap*)netif->state;
-
-  /* initiate transfer(); */
-  bufptr = buf;
-
-  for(q = p; q != NULL; q = q->next) {
-    /* Send the data from the pbuf to the interface, one pbuf at a
-       time. The size of the data in each pbuf is kept in the ->len
-       variable. */
-    /* send data from(q->payload, q->len); */
-    memcpy(bufptr, q->payload, q->len);
-    bufptr += q->len;
-    tot_len += q->len;
-  }
-
-  // [Send packet to network]
-  // Split ethernet header and feed into handler
-  struct eth_hdr *ethhdr;
-  ethhdr = (struct eth_hdr *)buf;
-
-  ZeroTier::MAC src_mac;
-  ZeroTier::MAC dest_mac;
-
-  src_mac.setTo(ethhdr->src.addr, 6);
-  dest_mac.setTo(ethhdr->dest.addr, 6);
-
-  tap->_handler(tap->_arg,tap->_nwid,src_mac,dest_mac,
-    Utils::ntoh((uint16_t)ethhdr->type),0,buf + sizeof(struct eth_hdr),tot_len - sizeof(struct eth_hdr));
-  return ERR_OK;
-}
 
 } // namespace ZeroTier
 
