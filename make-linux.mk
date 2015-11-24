@@ -64,13 +64,8 @@ ifeq ($(ZT_DEBUG),1)
 	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
-<<<<<<< HEAD
 	LDFLAGS=-ldl
-	STRIP=echo
-=======
-	LDFLAGS=
 	STRIP?=echo
->>>>>>> origin/dev
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -78,16 +73,10 @@ else
 	CFLAGS?=-O3 -fstack-protector
 	CFLAGS+=-Wall -fPIE -fvisibility=hidden -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
-<<<<<<< HEAD
 	CXXFLAGS+=-Wall -Wreorder -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-ldl -pie -Wl,-z,relro,-z,now
-	STRIP=strip --strip-all
-=======
-	CXXFLAGS+=-Wall -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	LDFLAGS=-pie -Wl,-z,relro,-z,now
 	STRIP?=strip
 	STRIP+=--strip-all
->>>>>>> origin/dev
 endif
 
 ifeq ($(ZT_TRACE),1)
@@ -116,18 +105,10 @@ installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
 clean:
-<<<<<<< HEAD
-	find ./ -type f -name '*.o' -delete
-	find netcon/ -type f -name '*.so' -delete
-	find netcon/ -type f -name '*.1.0' -delete
-	find netcon/ -type f -name 'zerotier-one' -delete
-	find netcon/ -type f -name 'zerotier-cli' -delete
-	find netcon/docker-test -name "zerotier-intercept" -type f -delete
-	rm -rf zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon build-* ZeroTierOneInstaller-* *.deb *.rpm *.pkg *.tgz
-	cd ext/miniupnpc ; make clean
-=======
 	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
->>>>>>> origin/dev
+	# Remove files from all the funny places we put them for tests
+	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' \) -delete
+	find netcon/docker-test -name "zerotier-intercept" -type f -delete
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
