@@ -1147,11 +1147,13 @@ public:
 					newAssignedIps.erase(std::unique(newAssignedIps.begin(),newAssignedIps.end()),newAssignedIps.end());
 					for(std::vector<InetAddress>::iterator ip(newAssignedIps.begin());ip!=newAssignedIps.end();++ip) {
 						if (!std::binary_search(assignedIps.begin(),assignedIps.end(),*ip))
-							t->second->addIp(*ip);
+							if (!t->second->addIp(*ip))
+								fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
 					}
 					for(std::vector<InetAddress>::iterator ip(assignedIps.begin());ip!=assignedIps.end();++ip) {
 						if (!std::binary_search(newAssignedIps.begin(),newAssignedIps.end(),*ip))
-							t->second->removeIp(*ip);
+							if (!t->second->removeIp(*ip))
+								fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
 					}
 					assignedIps.swap(newAssignedIps);
 				} else {

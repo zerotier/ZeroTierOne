@@ -210,8 +210,8 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
-		::execl("/sbin/ip","/sbin/ip","addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
-		::execl("/usr/sbin/ip","/usr/sbin/ip","addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
+		::execlp("ip","ip","addr","del",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
 		::_exit(-1);
 	} else {
 		int exitcode = -1;
@@ -238,12 +238,11 @@ bool LinuxEthernetTap::addIp(const InetAddress &ip)
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 		OSUtils::redirectUnixOutputs("/dev/null",(const char *)0);
+		setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin", 1);
 		if (ip.isV4()) {
-			::execl("/sbin/ip","/sbin/ip","addr","add",ip.toString().c_str(),"broadcast",ip.broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
-			::execl("/usr/sbin/ip","/usr/sbin/ip","addr","add",ip.toString().c_str(),"broadcast",ip.broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
+			::execlp("ip","ip","addr","add",ip.toString().c_str(),"broadcast",ip.broadcast().toIpString().c_str(),"dev",_dev.c_str(),(const char *)0);
 		} else {
-			::execl("/sbin/ip","/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
-			::execl("/usr/sbin/ip","/usr/sbin/ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
+			::execlp("ip","ip","addr","add",ip.toString().c_str(),"dev",_dev.c_str(),(const char *)0);
 		}
 		::_exit(-1);
 	} else if (cpid > 0) {
