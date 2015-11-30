@@ -588,67 +588,67 @@ public:
 #endif
 
 #ifdef ZT_ENABLE_CLUSTER
-		if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str())) {
-			_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str());
-			if (_clusterDefinition->size() > 0) {
-				std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
-				for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
-					PhySocket *cs = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(m->clusterEndpoint)));
-					if (cs) {
-						if (_clusterMessageSocket) {
-							_phy.close(_clusterMessageSocket,false);
-							_phy.close(cs,false);
-
-							Mutex::Lock _l(_termReason_m);
-							_termReason = ONE_UNRECOVERABLE_ERROR;
-							_fatalErrorMessage = "Cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
-							return _termReason;
-						}
-						_clusterMessageSocket = cs;
-						_clusterMemberId = m->id;
-					}
-				}
-
-				if (!_clusterMessageSocket) {
-					Mutex::Lock _l(_termReason_m);
-					_termReason = ONE_UNRECOVERABLE_ERROR;
-					_fatalErrorMessage = "Cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
-					return _termReason;
-				}
-
-				if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str()))
-					_clusterGeoIpService = new ClusterGeoIpService((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str());
-
-				const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
-				InetAddress endpoints[255];
-				unsigned int numEndpoints = 0;
-				for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
-					endpoints[numEndpoints++] = *i;
-
-				if (_node->clusterInit(
-					_clusterMemberId,
-					reinterpret_cast<const struct sockaddr_storage *>(endpoints),
-					numEndpoints,
-					me.x,
-					me.y,
-					me.z,
-					&SclusterSendFunction,
-					this,
-					(_clusterGeoIpService) ? &SclusterGeoIpFunction : 0,
-					this) == ZT_RESULT_OK) {
-
+			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str())) {
+				_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str());
+				if (_clusterDefinition->size() > 0) {
 					std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
 					for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
-						if (m->id != _clusterMemberId)
-							_node->clusterAddMember(m->id);
+						PhySocket *cs = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(m->clusterEndpoint)));
+						if (cs) {
+							if (_clusterMessageSocket) {
+								_phy.close(_clusterMessageSocket,false);
+								_phy.close(cs,false);
+
+								Mutex::Lock _l(_termReason_m);
+								_termReason = ONE_UNRECOVERABLE_ERROR;
+								_fatalErrorMessage = "Cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
+								return _termReason;
+							}
+							_clusterMessageSocket = cs;
+							_clusterMemberId = m->id;
+						}
 					}
 
+					if (!_clusterMessageSocket) {
+						Mutex::Lock _l(_termReason_m);
+						_termReason = ONE_UNRECOVERABLE_ERROR;
+						_fatalErrorMessage = "Cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
+						return _termReason;
+					}
+
+					if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str()))
+						_clusterGeoIpService = new ClusterGeoIpService((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str());
+
+					const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
+					InetAddress endpoints[255];
+					unsigned int numEndpoints = 0;
+					for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
+						endpoints[numEndpoints++] = *i;
+
+					if (_node->clusterInit(
+						_clusterMemberId,
+						reinterpret_cast<const struct sockaddr_storage *>(endpoints),
+						numEndpoints,
+						me.x,
+						me.y,
+						me.z,
+						&SclusterSendFunction,
+						this,
+						(_clusterGeoIpService) ? &SclusterGeoIpFunction : 0,
+						this) == ZT_RESULT_OK) {
+
+						std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
+						for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
+							if (m->id != _clusterMemberId)
+								_node->clusterAddMember(m->id);
+						}
+
+					}
+				} else {
+					delete _clusterDefinition;
+					_clusterDefinition = (ClusterDefinition *)0;
 				}
-			} else {
-				delete _clusterDefinition;
-				_clusterDefinition = (ClusterDefinition *)0;
 			}
-		}
 #endif
 
 			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
