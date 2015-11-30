@@ -120,6 +120,7 @@ public:
 #ifdef ZT_PORTMAPPER_TRACE
 						fprintf(stderr,"PortMapper: NAT-PMP: request for external address failed, aborting..."ZT_EOL_S);
 #endif
+						closenatpmp(&natpmp);
 						break;
 					}
 
