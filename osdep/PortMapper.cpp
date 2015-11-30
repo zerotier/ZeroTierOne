@@ -102,7 +102,7 @@ public:
 
 					InetAddress publicAddress;
 					sendpublicaddressrequest(&natpmp);
-					uint64_t myTimeout = OSUtils::now() + 30000;
+					uint64_t myTimeout = OSUtils::now() + 5000;
 					do {
 						fd_set fds;
 						struct timeval timeout;

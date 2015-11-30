@@ -33,25 +33,24 @@ DEFS=
 LDLIBS?=
 
 include objects.mk
-OBJS+=osdep/LinuxEthernetTap.o 
+OBJS+=osdep/LinuxEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE 
+	DEFS+=-DZT_OFFICIAL_RELEASE
 	ZT_USE_MINIUPNPC=1
 endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
-	DEFS+=-DZT_USE_MINIUPNPC
-	LDLIBS+=ext/miniupnpc/libminiupnpc.a
-	OBJS+=osdep/UPNPClient.o
+	DEFS+=-DZT_USE_MINIUPNPC -DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING=\"Linux\" -DMINIUPNPC_VERSION_STRING=\"1.9\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
 ifeq ($(ZT_ENABLE_NETWORK_CONTROLLER),1)
-        DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER 
-        LDLIBS+=-L/usr/local/lib -lsqlite3
-        OBJS+=controller/SqliteNetworkController.o 
+	DEFS+=-DZT_ENABLE_NETWORK_CONTROLLER
+	LDLIBS+=-L/usr/local/lib -lsqlite3
+	OBJS+=controller/SqliteNetworkController.o
 endif
 
 # Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
@@ -61,11 +60,11 @@ endif
 
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE 
+	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	CXXFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS=
-	STRIP=echo
+	STRIP?=echo
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 ext/lz4/lz4.o node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CFLAGS = -Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -75,10 +74,11 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	CXXFLAGS+=-Wall -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
+	STRIP?=strip
 	STRIP+=--strip-all
 endif
 ifeq ($(ZT_TRACE),1)
-	DEFS+=-DZT_TRACE 
+	DEFS+=-DZT_TRACE
 endif
 
 # Uncomment for gprof profile build
@@ -90,9 +90,6 @@ endif
 all:	one
 
 one:	$(OBJS) one.o
-ifeq ($(ZT_USE_MINIUPNPC),1)
-	cd ext/miniupnpc ; make clean ; make 'CFLAGS=-O2 -fstack-protector -fPIE -fno-common -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600' -j 2 libminiupnpc.a
-endif
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -106,8 +103,7 @@ installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
-	cd ext/miniupnpc ; make clean
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
