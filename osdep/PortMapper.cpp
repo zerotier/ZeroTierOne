@@ -124,6 +124,7 @@ public:
 					}
 
 				  sendnewportmappingrequest(&natpmp,NATPMP_PROTOCOL_UDP,localPort,tryPort,(ZT_PORTMAPPER_REFRESH_DELAY * 2) / 1000);
+					myTimeout = OSUtils::now() + 10000;
 					do {
 				    fd_set fds;
 				    struct timeval timeout;
@@ -132,6 +133,8 @@ public:
 				    getnatpmprequesttimeout(&natpmp, &timeout);
 				    select(FD_SETSIZE, &fds, NULL, NULL, &timeout);
 				    r = readnatpmpresponseorretry(&natpmp, &response);
+						if (OSUtils::now() >= myTimeout)
+							break;
 				  } while (r == NATPMP_TRYAGAIN);
 					if (r == 0) {
 						publicAddress.setPort(response.pnu.newportmapping.mappedpublicport);
