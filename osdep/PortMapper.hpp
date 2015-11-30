@@ -25,10 +25,10 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_UPNPCLIENT_HPP
-#define ZT_UPNPCLIENT_HPP
-
 #ifdef ZT_USE_MINIUPNPC
+
+#ifndef ZT_PORTMAPPER_HPP
+#define ZT_PORTMAPPER_HPP
 
 #include <vector>
 
@@ -75,6 +75,6 @@ private:
 
 } // namespace ZeroTier
 
-#endif // ZT_USE_MINIUPNPC
-
 #endif
+
+#endif // ZT_USE_MINIUPNPC
