@@ -42,9 +42,8 @@ ifeq ($(ZT_AUTO_UPDATE),1)
 endif
 
 ifeq ($(ZT_USE_MINIUPNPC),1)
-	DEFS+=-DZT_USE_MINIUPNPC
-	LIBS+=ext/miniupnpc/libminiupnpc.a
-	OBJS+=osdep/UPNPClient.o
+	DEFS+=-DMACOSX -DZT_USE_MINIUPNPC -D_DARWIN_C_SOURCE -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -DOS_STRING=\"Darwin/15.0.0\" -DMINIUPNPC_VERSION_STRING=\"1.9\" -DUPNP_VERSION_STRING=\"UPnP/1.1\" -DENABLE_STRNATPMPERR
+	OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o osdep/PortMapper.o
 endif
 
 # Build with ZT_ENABLE_NETWORK_CONTROLLER=1 to build with the Sqlite network controller
@@ -73,9 +72,6 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 all: one
 
 one:	$(OBJS) one.o
-ifeq ($(ZT_USE_MINIUPNPC),1)
-	cd ext/miniupnpc ; make clean ; make 'CFLAGS=-D_DARWIN_C_SOURCE -O2 -fstack-protector -fPIE -flto -pthread -mmacosx-version-min=10.7 -fno-common -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE' -j 2 libminiupnpc.a
-endif
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
@@ -101,8 +97,7 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
 clean:
-	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-* mkworld
-	cd ext/miniupnpc ; make clean
+	rm -rf *.dSYM build-* *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli ZeroTierOneInstaller-* mkworld
 
 # For those building from source -- installs signed binary tap driver in system ZT home
 install-mac-tap: FORCE

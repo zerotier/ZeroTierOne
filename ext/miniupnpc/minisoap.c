@@ -24,8 +24,6 @@
 #define OS_STRING "Win32"
 #define MINIUPNPC_VERSION_STRING "1.9"
 #define UPNP_VERSION_STRING "UPnP/1.1"
-#else
-#include "miniupnpcstrings.h"
 #endif
 
 /* only for malloc */
@@ -126,5 +124,3 @@ int soapPostSubmit(int fd,
 #endif
 	return httpWrite(fd, body, bodysize, headerbuf, headerssize);
 }
-
-
