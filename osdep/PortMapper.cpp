@@ -146,10 +146,12 @@ public:
 						surface.clear();
 						surface.push_back(publicAddress);
 						natPmpSuccess = true;
+						closenatpmp(&natpmp);
 						break;
+					} else {
+						closenatpmp(&natpmp);
+						// continue
 					}
-
-					closenatpmp(&natpmp);
 				}
 
 				if (!natPmpSuccess) {
