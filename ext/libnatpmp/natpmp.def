@@ -1,0 +1,11 @@
+LIBRARY
+; libnatpmp library
+
+EXPORTS
+  initnatpmp
+  closenatpmp
+  sendpublicaddressrequest
+  sendnewportmappingrequest
+  getnatpmprequesttimeout
+  readnatpmpresponseorretry
+  strnatpmperr

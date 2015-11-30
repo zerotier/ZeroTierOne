@@ -1,0 +1,19 @@
+.TH natpmpc 1
+
+.SH NAME
+natpmpc \- NAT\-PMP library test client and mapping setter.
+
+.SH "SYNOPSIS"
+Display the public IP address:
+.br
+\fBnatpmpc\fP
+
+Add a port mapping:
+.br
+\fBnatpmpc\fP \-a <public port> <private port> <protocol> [lifetime]
+
+.SH DESCRIPTION
+
+In order to remove a mapping, set it with a lifetime of 0 seconds.
+To remove all mappings for your machine, use 0 as private port and        
+lifetime.

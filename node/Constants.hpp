@@ -343,7 +343,7 @@
 /**
  * Maximum number of paths per IP scope (e.g. global, link-local) and family (e.g. v4/v6)
  */
-#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 1
+#define ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY 4
 
 /**
  * A test pseudo-network-ID that can be joined

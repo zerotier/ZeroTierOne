@@ -25,10 +25,10 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifndef ZT_UPNPCLIENT_HPP
-#define ZT_UPNPCLIENT_HPP
-
 #ifdef ZT_USE_MINIUPNPC
+
+#ifndef ZT_PORTMAPPER_HPP
+#define ZT_PORTMAPPER_HPP
 
 #include <vector>
 
@@ -40,28 +40,29 @@
 /**
  * How frequently should we refresh our UPNP/NAT-PnP/whatever state?
  */
-#define ZT_UPNP_CLIENT_REFRESH_DELAY 600000
+#define ZT_PORTMAPPER_REFRESH_DELAY 300000
 
 namespace ZeroTier {
 
-class UPNPClientImpl;
+class PortMapperImpl;
 
 /**
- * UPnP/NAT-PnP daemon thread
+ * UPnP/NAT-PnP port mapping "daemon"
  */
-class UPNPClient
+class PortMapper
 {
-	friend class UPNPClientImpl;
+	friend class PortMapperImpl;
 
 public:
 	/**
-	 * Create and start UPNP client service
+	 * Create and start port mapper service
 	 *
 	 * @param localUdpPortToMap Port we want visible to the outside world
+	 * @param name Unique name of this endpoint (based on ZeroTier address)
 	 */
-	UPNPClient(int localUdpPortToMap);
+	PortMapper(int localUdpPortToMap,const char *uniqueName);
 
-	~UPNPClient();
+	~PortMapper();
 
 	/**
 	 * @return All current external mappings for our port
@@ -69,11 +70,11 @@ public:
 	std::vector<InetAddress> get() const;
 
 private:
-	UPNPClientImpl *_impl;
+	PortMapperImpl *_impl;
 };
 
 } // namespace ZeroTier
 
-#endif // ZT_USE_MINIUPNPC
-
 #endif
+
+#endif // ZT_USE_MINIUPNPC

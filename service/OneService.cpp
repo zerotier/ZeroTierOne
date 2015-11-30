@@ -54,7 +54,7 @@
 #include "../osdep/OSUtils.hpp"
 #include "../osdep/Http.hpp"
 #include "../osdep/BackgroundResolver.hpp"
-#include "../osdep/UPNPClient.hpp"
+#include "../osdep/PortMapper.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -467,7 +467,7 @@ public:
 		,_port(0)
 #ifdef ZT_USE_MINIUPNPC
 		,_v4UpnpUdpSocket((PhySocket *)0)
-		,_upnpClient((UPNPClient *)0)
+		,_portMapper((PortMapper *)0)
 #endif
 #ifdef ZT_ENABLE_CLUSTER
 		,_clusterMessageSocket((PhySocket *)0)
@@ -523,22 +523,6 @@ public:
 		char portstr[64];
 		Utils::snprintf(portstr,sizeof(portstr),"%u",_port);
 		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
-
-#ifdef ZT_USE_MINIUPNPC
-		// Bind a secondary port for use with uPnP, since some NAT routers
-		// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
-		// NAT-t and uPnP from behind the same port. I think this is a bug, but
-		// everyone else's router bugs are our problem. :P
-		for(int k=0;k<512;++k) {
-			const unsigned int upnport = 40000 + (((port + 1) * (k + 1)) % 25500);
-			_v4UpnpLocalAddress = InetAddress(0,upnport);
-			_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
-			if (_v4UpnpUdpSocket) {
-				_upnpClient = new UPNPClient(upnport);
-				break;
-			}
-		}
-#endif
 	}
 
 	virtual ~OneServiceImpl()
@@ -552,7 +536,7 @@ public:
 #endif
 #ifdef ZT_USE_MINIUPNPC
 		_phy.close(_v4UpnpUdpSocket);
-		delete _upnpClient;
+		delete _portMapper;
 #endif
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 		delete _controller;
@@ -595,73 +579,91 @@ public:
 				SnodeVirtualNetworkConfigFunction,
 				SnodeEventCallback);
 
+#ifdef ZT_USE_MINIUPNPC
+			// Bind a secondary port for use with uPnP, since some NAT routers
+			// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
+			// NAT-t and uPnP from behind the same port. I think this is a bug, but
+			// everyone else's router bugs are our problem. :P
+			for(int k=0;k<512;++k) {
+				unsigned int mapperPort = 40000 + (((_port + 1) * (k + 1)) % 25500);
+				char uniqueName[64];
+				_v4UpnpLocalAddress = InetAddress(0,mapperPort);
+				_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
+				if (_v4UpnpUdpSocket) {
+					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.16llx",_node->address());
+					_portMapper = new PortMapper(mapperPort,uniqueName);
+					break;
+				}
+			}
+#endif
+
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
 			_node->setNetconfMaster((void *)_controller);
 #endif
 
 #ifdef ZT_ENABLE_CLUSTER
-		if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str())) {
-			_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str());
-			if (_clusterDefinition->size() > 0) {
-				std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
-				for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
-					PhySocket *cs = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(m->clusterEndpoint)));
-					if (cs) {
-						if (_clusterMessageSocket) {
-							_phy.close(_clusterMessageSocket,false);
-							_phy.close(cs,false);
-
-							Mutex::Lock _l(_termReason_m);
-							_termReason = ONE_UNRECOVERABLE_ERROR;
-							_fatalErrorMessage = "Cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
-							return _termReason;
-						}
-						_clusterMessageSocket = cs;
-						_clusterMemberId = m->id;
-					}
-				}
-
-				if (!_clusterMessageSocket) {
-					Mutex::Lock _l(_termReason_m);
-					_termReason = ONE_UNRECOVERABLE_ERROR;
-					_fatalErrorMessage = "Cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
-					return _termReason;
-				}
-
-				if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str()))
-					_clusterGeoIpService = new ClusterGeoIpService((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str());
-
-				const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
-				InetAddress endpoints[255];
-				unsigned int numEndpoints = 0;
-				for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
-					endpoints[numEndpoints++] = *i;
-
-				if (_node->clusterInit(
-					_clusterMemberId,
-					reinterpret_cast<const struct sockaddr_storage *>(endpoints),
-					numEndpoints,
-					me.x,
-					me.y,
-					me.z,
-					&SclusterSendFunction,
-					this,
-					(_clusterGeoIpService) ? &SclusterGeoIpFunction : 0,
-					this) == ZT_RESULT_OK) {
-
+			if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str())) {
+				_clusterDefinition = new ClusterDefinition(_node->address(),(_homePath + ZT_PATH_SEPARATOR_S + "cluster").c_str());
+				if (_clusterDefinition->size() > 0) {
 					std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
 					for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
-						if (m->id != _clusterMemberId)
-							_node->clusterAddMember(m->id);
+						PhySocket *cs = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(m->clusterEndpoint)));
+						if (cs) {
+							if (_clusterMessageSocket) {
+								_phy.close(_clusterMessageSocket,false);
+								_phy.close(cs,false);
+
+								Mutex::Lock _l(_termReason_m);
+								_termReason = ONE_UNRECOVERABLE_ERROR;
+								_fatalErrorMessage = "Cluster: can't determine my cluster member ID: able to bind more than one cluster message socket IP/port!";
+								return _termReason;
+							}
+							_clusterMessageSocket = cs;
+							_clusterMemberId = m->id;
+						}
 					}
 
+					if (!_clusterMessageSocket) {
+						Mutex::Lock _l(_termReason_m);
+						_termReason = ONE_UNRECOVERABLE_ERROR;
+						_fatalErrorMessage = "Cluster: can't determine my cluster member ID: unable to bind to any cluster message socket IP/port.";
+						return _termReason;
+					}
+
+					if (OSUtils::fileExists((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str()))
+						_clusterGeoIpService = new ClusterGeoIpService((_homePath + ZT_PATH_SEPARATOR_S + "cluster-geo.exe").c_str());
+
+					const ClusterDefinition::MemberDefinition &me = (*_clusterDefinition)[_clusterMemberId];
+					InetAddress endpoints[255];
+					unsigned int numEndpoints = 0;
+					for(std::vector<InetAddress>::const_iterator i(me.zeroTierEndpoints.begin());i!=me.zeroTierEndpoints.end();++i)
+						endpoints[numEndpoints++] = *i;
+
+					if (_node->clusterInit(
+						_clusterMemberId,
+						reinterpret_cast<const struct sockaddr_storage *>(endpoints),
+						numEndpoints,
+						me.x,
+						me.y,
+						me.z,
+						&SclusterSendFunction,
+						this,
+						(_clusterGeoIpService) ? &SclusterGeoIpFunction : 0,
+						this) == ZT_RESULT_OK) {
+
+						std::vector<ClusterDefinition::MemberDefinition> members(_clusterDefinition->members());
+						for(std::vector<ClusterDefinition::MemberDefinition>::iterator m(members.begin());m!=members.end();++m) {
+							if (m->id != _clusterMemberId)
+								_node->clusterAddMember(m->id);
+						}
+
+					}
+				} else {
+					delete _clusterDefinition;
+					_clusterDefinition = (ClusterDefinition *)0;
 				}
-			} else {
-				delete _clusterDefinition;
-				_clusterDefinition = (ClusterDefinition *)0;
 			}
-		}
 #endif
 
 			_controlPlane = new ControlPlane(this,_node,(_homePath + ZT_PATH_SEPARATOR_S + "ui").c_str());
@@ -689,7 +691,7 @@ public:
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastTcpFallbackResolve = 0;
-			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give UPnP time to configure and other things time to settle
+			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 #ifdef ZT_AUTO_UPDATE
 			uint64_t lastSoftwareUpdateCheck = 0;
 #endif // ZT_AUTO_UPDATE
@@ -757,8 +759,8 @@ public:
 					_node->clearLocalInterfaceAddresses();
 
 #ifdef ZT_USE_MINIUPNPC
-					std::vector<InetAddress> upnpAddresses(_upnpClient->get());
-					for(std::vector<InetAddress>::const_iterator ext(upnpAddresses.begin());ext!=upnpAddresses.end();++ext)
+					std::vector<InetAddress> mappedAddresses(_portMapper->get());
+					for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
 						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
 #endif
 
@@ -1162,11 +1164,13 @@ public:
 					newAssignedIps.erase(std::unique(newAssignedIps.begin(),newAssignedIps.end()),newAssignedIps.end());
 					for(std::vector<InetAddress>::iterator ip(newAssignedIps.begin());ip!=newAssignedIps.end();++ip) {
 						if (!std::binary_search(assignedIps.begin(),assignedIps.end(),*ip))
-							t->second->addIp(*ip);
+							if (!t->second->addIp(*ip))
+								fprintf(stderr,"ERROR: unable to add ip address %s"ZT_EOL_S, ip->toString().c_str());
 					}
 					for(std::vector<InetAddress>::iterator ip(assignedIps.begin());ip!=assignedIps.end();++ip) {
 						if (!std::binary_search(newAssignedIps.begin(),newAssignedIps.end(),*ip))
-							t->second->removeIp(*ip);
+							if (!t->second->removeIp(*ip))
+								fprintf(stderr,"ERROR: unable to remove ip address %s"ZT_EOL_S, ip->toString().c_str());
 					}
 					assignedIps.swap(newAssignedIps);
 				} else {
@@ -1485,7 +1489,7 @@ public:
 #ifdef ZT_USE_MINIUPNPC
 	InetAddress _v4UpnpLocalAddress;
 	PhySocket *_v4UpnpUdpSocket;
-	UPNPClient *_upnpClient;
+	PortMapper *_portMapper;
 #endif
 
 #ifdef ZT_ENABLE_CLUSTER
