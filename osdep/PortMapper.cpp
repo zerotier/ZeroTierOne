@@ -169,7 +169,7 @@ public:
 				struct IGDdatas data;
 
 				int upnpError = 0;
-				UPNPDev *devlist = upnpDiscover(5000,(const char *)0,(const char *)0,0,0,0,&upnpError);
+				UPNPDev *devlist = upnpDiscoverAll(5000,(const char *)0,(const char *)0,0,0,2,&upnpError);
 				if (devlist) {
 
 #ifdef ZT_PORTMAPPER_TRACE
