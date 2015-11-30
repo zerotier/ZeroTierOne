@@ -75,7 +75,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	CXXFLAGS+=-Wall -fPIE -fvisibility=hidden -fno-rtti -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
-	STRIP=strip --strip-all
+	STRIP+=--strip-all
 endif
 ifeq ($(ZT_TRACE),1)
 	DEFS+=-DZT_TRACE 
