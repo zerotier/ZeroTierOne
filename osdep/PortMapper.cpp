@@ -28,7 +28,7 @@
 #ifdef ZT_USE_MINIUPNPC
 
 // Uncomment to dump debug messages
-#define ZT_PORTMAPPER_TRACE 1
+//#define ZT_PORTMAPPER_TRACE 1
 
 #include <stdio.h>
 #include <stdlib.h>
