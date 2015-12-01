@@ -263,7 +263,6 @@ public:
 		return (l * (((unsigned int)tsr / (ZT_PEER_DIRECT_PING_DELAY + 1000)) + 1));
 	}
 
-
 	/**
 	 * Update latency with a new direct measurment
 	 *
