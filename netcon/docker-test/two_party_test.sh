@@ -31,10 +31,11 @@ rm -f *.conf
 rm -f *.name
 
 # Start netcon container to be tested
-docker run -d -it -v $PWD/../../_results:/opt/results --device=/dev/net/tun "$test_name":latest
-docker run -d -it -v $PWD/../../_results:/opt/results --device=/dev/net/tun "$test_name"_monitor:latest
+test_container=$(docker run -d -it -v $PWD/../../_results:/opt/results --device=/dev/net/tun "$test_name":latest)
+monitor_container=$(docker run -d -it -v $PWD/../../_results:/opt/results --device=/dev/net/tun "$test_name"_monitor:latest)
 
-sleep 45s
+echo "waiting $netcon_test_wait_time for test to complete."
+sleep $netcon_test_wait_time
 docker kill $(docker ps -a -q)
-
-rm -rf ../../_results/*.tmp
+docker rm $test_container
+docker rm $monitor_container

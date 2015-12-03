@@ -1,42 +1,21 @@
 #./build.sh
 
-# Relative paths are used in each test script, hence the need to change directories
+# Remove previous test results
+rm _results/*.txt 
 
-# --- httpd
-cd httpd
+# How long we shall wait for each test to conclude
+export netcon_test_wait_time=45s
 
-cd httpd-2.4.16-1.fc23.x86_64
-./test.sh
-cd ..
+# Test structure, in later releases more complex multi-party scripts will be included
+export testscript=two_party_test.sh
 
-cd httpd-2.4.17-3.fc23.x86_64
-./test.sh
-cd ../../
-
-
-# --- nginx
-cd nginx
-
-cd nginx-1.8.0-13.fc23.x86_64
-./test.sh
-cd ..
-
-cd nginx-1.8.0-14.fc23.x86_64
-./test.sh
-cd ../../
-
-
-# --- redis
-cd redis
-
-cd redis-3.0.4-1.fc23.x86_64
-./test.sh
-cd ../../
-
-
-# --- node.js
-cd nodejs
-
-cd nodejs-0.10.36-4.fc23
-./test.sh
-cd ../../
+# Iterate over all depth=2 (relatively-speaking) directories and perform each test
+find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do
+    echo "*** Testing: '$testdir'..."
+    rm _results/*.tmp
+    cp $testscript $testdir/$testscript
+    cd $testdir
+    ./$testscript
+    rm $testscript
+    cd ../../
+done

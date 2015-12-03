@@ -7,7 +7,10 @@ RUN yum -y update
 RUN yum -y install nginx-1:1.8.0-13.fc23.x86_64
 RUN yum clean all
 
-EXPOSE 9993/udp
+EXPOSE 9993/udp 80/udp
+
+# Install LWIP library used by service
+ADD liblwip.so /var/lib/zerotier-one/liblwip.so
 
 # Install syscall intercept library
 ADD zerotier-intercept /
@@ -31,11 +34,6 @@ ADD zerotier-cli /
 # Install test scripts
 ADD netcon_entrypoint.sh /netcon_entrypoint.sh
 RUN chmod -v +x /netcon_entrypoint.sh
-
-# Install LWIP library used by service
-ADD liblwip.so /
-RUN mkdir -p ext/bin/lwip
-RUN cp liblwip.so ext/bin/lwip/liblwip.so
 
 # Start ZeroTier-One
 CMD ["./netcon_entrypoint.sh"]

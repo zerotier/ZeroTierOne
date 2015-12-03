@@ -6,6 +6,9 @@ RUN yum -y install redis-3.0.4-1.fc23.x86_64
 
 EXPOSE 9993/udp
 
+# Install LWIP library used by service
+ADD liblwip.so /var/lib/zerotier-one/liblwip.so
+
 ADD hello.lua /
 
 # Add ZT files
@@ -17,11 +20,6 @@ ADD *.conf /
 ADD *.name /
 ADD zerotier-one /
 ADD zerotier-cli /
-
-# Install LWIP library used by service
-ADD liblwip.so /
-RUN mkdir -p ext/bin/lwip
-RUN cp liblwip.so ext/bin/lwip/liblwip.so
 
 # Start ZeroTier-One
 ADD monitor_entrypoint.sh /monitor_entrypoint.sh

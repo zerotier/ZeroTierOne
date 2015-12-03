@@ -26,15 +26,7 @@ echo '*** ZeroTier Network Containers Test Monitor'
 chown -R daemon /var/lib/zerotier-one
 chgrp -R daemon /var/lib/zerotier-one
 su daemon -s /bin/bash -c '/zerotier-one -d -U -p9993 >>/tmp/zerotier-one.out 2>&1'
-echo '*** Waiting for initial identity generation...'
-while [ ! -s /var/lib/zerotier-one/identity.secret ]; do
-	sleep 0.2
-done
-echo '*** Waiting for network config...'
 virtip4=""
-while [ ! -s /var/lib/zerotier-one/networks.d/"$nwconf" ]; do
-	sleep 0.2
-done
 while [ -z "$virtip4" ]; do
 	sleep 0.2
 	virtip4=`/zerotier-cli listnetworks | grep -F $nwid | cut -d ' ' -f 9 | sed 's/,/\n/g' | grep -F '.' | cut -d / -f 1`
@@ -63,7 +55,7 @@ tx_md5sum=$(<$tx_md5sumfile)
 
 echo '*** Comparing md5: ' "$rx_md5sum" ' and ' "$tx_md5sum"
 
-if [ $rx_md5sum != $tx_md5sum ]; 
+if [ "$rx_md5sum" != "$tx_md5sum" ]; 
 then
 	echo 'MD5 FAIL'
 	touch "$file_path$fail$test_name.txt"
@@ -72,6 +64,8 @@ else
 	echo 'MD5 OK'
 	touch "$file_path$ok$test_name.txt"
 	printf 'Test: md5 sum ok!\n' >> "$file_path$ok$test_name.txt"
+	cat "$rx_md5sumfile" >> "$file_path$ok$test_name.txt"
+	cat "$tx_md5sumfile" >> "$file_path$ok$test_name.txt"
 fi
 
 

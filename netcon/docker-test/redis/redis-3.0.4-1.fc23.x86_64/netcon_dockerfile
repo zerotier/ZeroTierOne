@@ -9,6 +9,9 @@ RUN yum clean all
 
 EXPOSE 9993/udp 6379/udp
 
+# Install LWIP library used by service
+ADD liblwip.so /var/lib/zerotier-one/liblwip.so
+
 # Install syscall intercept library
 ADD zerotier-intercept /
 ADD libzerotierintercept.so.1.0 /
@@ -31,11 +34,6 @@ ADD zerotier-cli /
 # Install test scripts
 ADD netcon_entrypoint.sh /netcon_entrypoint.sh
 RUN chmod -v +x /netcon_entrypoint.sh
-
-# Install LWIP library used by service
-ADD liblwip.so /
-RUN mkdir -p ext/bin/lwip
-RUN cp liblwip.so ext/bin/lwip/liblwip.so
 
 # Start ZeroTier-One
 CMD ["./netcon_entrypoint.sh"]
