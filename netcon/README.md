@@ -1,139 +1,108 @@
-ZeroTier Network Containers
+Network Containers (beta)
 ======
 
-### Functional Overview:
+ZeroTier Network Containers offers a microkernel-like networking paradigm for containerized applications and application-specific virtual networking.
 
-This system exists as a dynamically-linked library, and a service/IP-stack built into ZeroTier
+Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. Our intercept library implements full binary compatibility with the standard network API, permitting servers and applications to be used without modification or recompilation.
 
-If you care about the technicals,
+It can be used to run services on virtual networks without requiring the creation of kernel-mode virtual network ports or modification of system network settings and without special privileges. It's ideal for containerized microservices that are designed exclusively for use on an isolated virtual network and that are to be deployed on commodity container hosting infrastructure. With Network Containers such services can be deployed without special permissions and connected to arbitrary virtual networks without configuration changes to the host node.
 
-The intercept is compiled as a shared library and installed in some user-accessible directory. When you want to intercept
-a user application you dynamically link the shared library to the application during runtime. When the application starts, the
-intercept's global constructor is called which sets up a hidden pipe which is used to communicate remote procedure calls (RPC) to the host Netcon service running in the background.
+Network Containers is ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/), allowing connectivity to a virtual network to be built into and deployed with containers without host awareness or configuration. It can also be used without containers to network-containerize applications on an ordinary VM or bare metal host. It works entirely at the library/application level and requires no special kernel extensions.
 
-When an RPC for a socket() is received by the Netcon service from the intercepted application, the Netcon service will ask the lwIP stack for a new PCB structure (used to represent a connection), if the system permits its allocation, it will be passed to Netcon where a PCB/socket table entry will be created. The table is used for mapping [callbacks from lwIP] and [RPCs from the intercept] to the correct connections.
+Our long term goal with network containers is to facilitate the total commoditization of the container host by allowing virtual networking without elevated privileges or host configuration. We think this will help ease the path toward commodity multi-tenant container hosting and total application portability across hosts, data centers, and cloud providers.
 
-Upon the first call to a intercept-overriden system call, a Unix-domain socket is opened between the Netcon service and the application's intercept. This socket provides us the ability to pass file descriptors of newly-created socketpairs to the intercept (used as the read/write buffer). More specifically, after the socketpair creation, one end is kept in a table entry in Netcon and one end is sent to the intercept.
+Network Containers are currently in **beta** and are suitable for testing, experimentation, and prototyping. There are still some issues with compatibility with some applications, as documented in the compatibility matrix below. There's also some remaining work to be done on performance and overall stability before this will be ready for production use.
 
-### Building from Source (and Installing)
+# Limitations and Compatibility
 
-Build zerotier-intercept library:
+The current version of Network Containers **only supports TCP over IPv4**. There is no IPv6 support and no support for UDP or ICMP (or RAW sockets). That means network-containerizing *ping* won't work, nor will UDP-based apps like VoIP servers, DNS servers, or P2P apps.
 
-    make -f make-intercept.mk
+The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which means that you can ping it from another host on the same ZeroTier virtual network. This is useful for testing.
 
-Install:
+**Network Containers are currently all or nothing.** If engaged, the intercept library intercepts all network I/O calls and redirects them through the new path. A network-containerized application cannot communicate over the regular network connection of its host or container or with anything else except other hosts on its ZeroTier virtual LAN. Support for optional "fall-through" to the host IP stack for outgoing connections outside the virtual network and for gateway routes within the virtual network is also planned for the near future.
 
-    make -f make-intercept.mk install
+#### Compatibility Test Results
 
-Build LWIP library:
+	sshd                     [ WORKS as of 20151112 ]
+	ssh                      [ WORKS as of 20151112 ]
+	sftp                     [ WORKS as of 20151022 ]
+	curl                     [ WORKS as of 20151021 ]
+	apache (debug mode)      [ WORKS as of 20150810 ]
+	apache (prefork MPM)     [ WORKS as of 20151123 ] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
+	nginx                    [ MARGINAL as of 20151123 ] Broken on Centos 7, unreliable on Fedora 23
+	nodejs                   [ WORKS as of 20151123 ]
+	java                     [ WORKS as of 20151010 ]
+	MongoDB                  [ WORKS as of 20151028 ]
+	Redis-server             [ WORKS as of 20151123 ]
 
-    make -f make-liblwip.mk
+It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
 
-Run automated tests (from netcon/docker-test/ directory):
+# Building Network Containers
 
-    ./build.sh
-    ./test.sh
+Network Containers are currently only for Linux. To build the network container host and intercept library, from the base of the ZeroTier One tree type:
 
+    make netcon
 
+This will build a binary called *zerotier-netcon-service* and a library called *libzerotierintercept.so*. The former is the same as a regular ZeroTier One build except instead of creating virtual network ports using Linux's */dev/net/tun* interface, it instead creates instances of a user-space TCP/IP stack for each virtual network and provides RPC access to this stack via a Unix domain socket called */tmp/.ztnc_##NETWORK_ID##*. The latter is a library that can be loaded with the Linux *LD\_PRELOAD* environment variable or by placement into */etc/ld.so.preload* on a Linux system or container.
 
+The intercept library does nothing unless the *ZT\_NC\_NWID* environment variable is set. If on program launch (or fork) it detects the presence of this environment variable, it will attempt to connect to a running *zerotier-netcon-service* at the aforementioned Unix domain socket location and will intercept calls to the Posix sockets API and redirect network traffic through the virtual network.
 
-### Running
+Unlike *zerotier-one*, *zerotier-netcon-service* does not need to be run with root privileges and will not modify the host's network configuration in any way.
 
-To intercept a specific application (requires an already running instance of Zerotier-One with Network Containers enabled):
+# Starting the Network Containers Service
 
-    zerotier-intercept my_app
+You don't need Docker or any other container engine to try Network Containers. A simple test can be performed in user space in your own home directory.
 
+First, build the netcon service and intercept library as describe above. Then create a directory to act as a temporary ZeroTier home for your test netcon service instance.
 
-### Unit Tests
+    mkdir /tmp/netcon-test-home
 
-To run unit tests:
+Now you can run the service (no sudo needed):
 
-1) Set up your own network, use its network id as follows:
+    ./zerotier-netcon-service -d /tmp/netcon-test-home
 
-2) Place a blank network config file in this directory (e.g. "e5cd7a9e1c5311ab.conf")
- - This will be used to inform test-specific scripts what network to use for testing
+As with ZeroTier One in its normal incarnation, you'll need to join a network:
 
-3) run build.sh
- - Builds ZeroTier-One with Network Containers enabled
- - Builds LWIP library
- - Builds intercept library
- - Copies all aformentioned files into unit test directory to be used for building docker files
+    ./zerotier-cli -D/tmp/netcon-test-home join 8056c2e21c000001
 
-4) run test.sh
- - Will execute each unit test's (test.sh) one at a time and populate _results/
+(If you don't want to use [Earth](https://www.zerotier.com/public.shtml) for this test, replace its network ID with one of your own.)
 
+Note the *-D* option. This tells *zerotier-cli* not to look in /var/lib/zerotier-one for information about a running instance of the ZeroTier system service but instead to look in /tmp/netcon-test-home. That's because *even if you do happen to be running ZeroTier on your local machine, what you are doing now has no impact on it and does not involve it in any way.* So if you have *zerotier-one* running, forget about it. It doesn't matter for this test.
 
-### Anatomy of a unit test
+Now type:
 
-A) Each unit test's test.sh will:
- - temporarily copy all built files into local directory
- - build test container
- - build monitor container
- - remove temporary files
- - run each container and perform test and monitoring specified in netcon_entrypoint.sh and monitor_entrypoint.sh
+    ./zerotier-cli -D/tmp/netcon-test-home listnetworks
 
-B) Results will be written to the 'netcon/docker-test/_results/' directory
- - Results will be a combination of raw and formatted dumps to files whose names reflect the test performed
- - In the event of failure, 'FAIL.' will be appended to the result file's name
-  - (e.g. FAIL.my_application_1.0.2.x86_64)
- - In the event of success, 'OK.' will be appended
+Try it a few times until you see that you've successfully joined the network and have an IP address.
 
+You'll also want to have ZeroTier One (the normal build, not network containers) running somewhere else, such as on another Linux system or VM. Technically you could run it on the *same* Linux system and it wouldn't matter at all, but many people find this intensely confusing until they grasp just what exactly is happening here.
 
-### Compatibility
+On the other Linux system, join the same network if you haven't already (8056c2e21c000001 if you're using Earth) and wait until you have an IP address. Then try pinging the IP address your netcon instance received. You should see ping replies.
 
-Network Containers have been tested with the following:
+Back on the host that's running *zerotier-netcon-service*, type *ip list all* or *ifconfig* (ifconfig is technically deprecated so some Linux systems might not have it). Notice that the IP address of the network containers endpoint is not listed and no network device is listed for it either. That's because as far as the Linux kernel is concerned it doesn't exist.
 
-	sshd                     [ WORKS as of 20151112]
-	ssh                      [ WORKS as of 20151112]
-	sftp                     [ WORKS as of 20151022]
-	curl                     [ WORKS as of 20151021]
-	apache (debug mode)      [ WORKS as of 20150810]
-	apache (prefork MPM)     [ WORKS as of 20151123] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
-	nginx                    [ WORKS as of 20151123] Broken on Centos 7, unreliable on Fedora 23
-	nodejs                   [ WORKS as of 20151123]
-	java                     [ WORKS as of 20151010]
-	MongoDB                  [ WORKS as of 20151028]
-	Redis-server             [ WORKS as of 20151123]
+What are you pinging? What is happening here?
 
-Future:
+The *zerotier-netcon-service* binary has joined a *virtual* network and is running a *virtual* TCP/IP stack entirely in user space. As far as your system is concerned it's just another program exchanging UDP packets with a few other hosts on the Internet and nothing out of the ordinary is happening at all. That's why you never had to type *sudo*. It didn't change anything on the host.
 
-	GET many different files via HTTP (web stress)
-	LARGE continuous transfer (e.g. /dev/urandom all night)
-	Open and close many TCP connections constantly
-	Simulate packet loss (can be done with iptables)
-	Many parallel TCP transfers
-	Multithreaded software (e.g. apache in thread mode)
-	UDP support
+Now you can run a containerized application. Open another terminal window (since you might not want these environment variables to stick elsewhere) on the same machine the netcon service is running on and install something like *darkhttpd* (a simple http server) to act as a test app:
 
+On Debian and Ubuntu:
 
+    sudo apt-get install darkhttpd
 
-### Extended Version Notes
+Or for CentOS/EPEL or Fedora:
 
-20151028 Added MongoDB support:
+    sudo yum install darkhttpd
 
-	- Added logic (RPC_MAP_REQ) to check whether a given AF_LOCAL socket is mapped to anything
-	inside the service instance.
+Now try:
 
-20151027 Added Redis-server support:
+    export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
+		export ZT_NC_NWID=8056c2e21c000001
+		darkhttpd . --port 8080
 
-	- Added extra logic to detect socket re-issuing and consequent service-side double mapping.
-	Redis appears to try to set its initial listen socket to IPV6 only, this currently fails. As
-	a result, Redis will close the socket and re-open it. The server will now test for closures
-	during mapping and will eliminate any mappings to broken pipes.
+Going to port 8080 on your machine won't work. Darkhttpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
-20151021 Added Node.js support:
+    curl http://NETCON.INSTANCE.IP:8080/README.md
 
-	- syscall(long number, ...) is now intercepted and re-directs the __NR_accept4 call to our intercepted accept4() function
-
-	- accept() now returns -EAGAIN in the case that we cannot read a signal byte from the descriptor linked to the service. This
-	is because the uv__server_io() function in libuv used by Node.js looks for this return value upon failure, without it we
-	were observing an innfinite loop in the I/O polling code in libuv.
-
-	- accept4() now correctly sets given flags for descriptor returned by accept()
-
-	- setsockopt() was modified to return success on any call with the following conditions:
-	level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE)
-	This might be unnecessary or might need a better workaround
-
-	- Careful attention should be given to how arguments are passed in the intercepted syscall() function, this differs for
-	32/64-bit systems
+Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
