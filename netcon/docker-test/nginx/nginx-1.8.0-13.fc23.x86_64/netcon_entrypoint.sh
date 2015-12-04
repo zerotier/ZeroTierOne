@@ -35,12 +35,13 @@ echo $virtip4 > "$address_file"
 export ZT_NC_NWID=$dev
 
 # --- Test section ---
+cp -f nginx.conf /etc/nginx/nginx.conf
 nginx_html_path=/usr/share/nginx/html/
 # Generate large random file for transfer test, share md5sum for monitor container to check
 echo '*** Generating ' "$bigfile_size" ' file'
 dd if=/dev/urandom of="$nginx_html_path$bigfile_name"  bs="$bigfile_size"  count=1
 #md5sum /var/www/html/"$bigfile_name" >> "$tx_md5sumfile"
-md5sum < "$nginx_html_path$bigfile_name" >> "$tx_md5sumfile"
+md5sum < "$nginx_html_path$bigfile_name" > "$tx_md5sumfile"
 echo '*** Wrote MD5 sum to ' "$tx_md5sumfile"
 
 echo '*** Starting application...'

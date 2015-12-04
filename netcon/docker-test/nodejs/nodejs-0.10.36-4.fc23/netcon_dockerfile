@@ -9,6 +9,14 @@ RUN yum clean all
 
 EXPOSE 9993/udp 8080/udp
 
+# Add ZT files
+RUN mkdir -p /var/lib/zerotier-one/networks.d
+ADD netcon_identity.public /var/lib/zerotier-one/identity.public
+ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
+ADD *.conf /var/lib/zerotier-one/networks.d/
+ADD *.conf /
+ADD *.name /
+
 # Install LWIP library used by service
 ADD liblwip.so /var/lib/zerotier-one/liblwip.so
 
@@ -22,14 +30,6 @@ RUN cp libzerotierintercept.so.1.0 lib/libzerotierintercept.so.1.0
 RUN cp libzerotierintercept.so.1.0 /lib/libzerotierintercept.so.1.0
 RUN ln -sf /lib/libzerotierintercept.so.1.0 /lib/libzerotierintercept
 RUN /usr/bin/install -c zerotier-intercept /usr/bin
-
-# Add ZT files
-RUN mkdir -p /var/lib/zerotier-one/networks.d
-ADD netcon_identity.public /var/lib/zerotier-one/identity.public
-ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
-ADD *.conf /var/lib/zerotier-one/networks.d/
-ADD *.conf /
-ADD *.name /
 
 ADD zerotier-one /
 ADD zerotier-cli /

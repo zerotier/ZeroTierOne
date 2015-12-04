@@ -43,7 +43,7 @@ echo '*** Copying file to intercepted server at' $ncvirtip
 touch "$bigfile_name"
 
 # Check md5
-md5sum < "$bigfile_name" >> "$rx_md5sumfile"
+md5sum < "$bigfile_name" > "$rx_md5sumfile"
 tx_md5sum=$(<$tx_md5sumfile)
 
 # ...

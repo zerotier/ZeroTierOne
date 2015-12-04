@@ -49,7 +49,7 @@ touch "$bigfile_name"
 curl --connect-timeout "$app_timeout_time" -v -o "$bigfile_name" http://"$ncvirtip"/"$bigfile_name"
 
 # Check md5
-md5sum < "$bigfile_name" >> "$rx_md5sumfile"
+md5sum < "$bigfile_name" > "$rx_md5sumfile"
 rx_md5sum=$(<$rx_md5sumfile)
 tx_md5sum=$(<$tx_md5sumfile)
 

@@ -7,6 +7,14 @@ RUN yum -y update
 RUN yum -y install redis-3.0.4-1.fc23.x86_64
 RUN yum clean all
 
+# Add ZT files
+RUN mkdir -p /var/lib/zerotier-one/networks.d
+ADD netcon_identity.public /var/lib/zerotier-one/identity.public
+ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
+ADD *.conf /var/lib/zerotier-one/networks.d/
+ADD *.conf /
+ADD *.name /
+
 EXPOSE 9993/udp 6379/udp
 
 # Install LWIP library used by service
@@ -19,14 +27,6 @@ RUN cp libzerotierintercept.so.1.0 lib/libzerotierintercept.so.1.0
 RUN cp libzerotierintercept.so.1.0 /lib/libzerotierintercept.so.1.0
 RUN ln -sf /lib/libzerotierintercept.so.1.0 /lib/libzerotierintercept
 RUN /usr/bin/install -c zerotier-intercept /usr/bin
-
-# Add ZT files
-RUN mkdir -p /var/lib/zerotier-one/networks.d
-ADD netcon_identity.public /var/lib/zerotier-one/identity.public
-ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
-ADD *.conf /var/lib/zerotier-one/networks.d/
-ADD *.conf /
-ADD *.name /
 
 ADD zerotier-one /
 ADD zerotier-cli /
