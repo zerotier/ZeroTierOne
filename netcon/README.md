@@ -58,7 +58,7 @@ You don't need Docker or any other container engine to try Network Containers. A
 First, build the netcon service and intercept library as describe above. Then create a directory to act as a temporary ZeroTier home for your test netcon service instance. You'll need to move the liblwip.so binary that was built with *make netcon* into there, since the service must be able to find it there and load it.
 
     mkdir /tmp/netcon-test-home
-		cp -f ./netcon/liblwip.so /tmp/netcon-test-home
+    cp -f ./netcon/liblwip.so /tmp/netcon-test-home
 
 Now you can run the service (no sudo needed):
 
