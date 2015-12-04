@@ -190,7 +190,7 @@ NetconEthernetTap::NetconEthernetTap(
 {
 	char sockPath[4096],lwipPath[4096];
 	rpc_counter = -1;
-	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",homePath,ZT_PATH_SEPARATOR_S,(unsigned long long)nwid);
+	Utils::snprintf(sockPath,sizeof(sockPath),"/tmp/.ztnc_%.16llx",_nwid,ZT_PATH_SEPARATOR_S,(unsigned long long)nwid);
   _dev = sockPath; // in netcon mode, set device to be just the network ID
 
 	Utils::snprintf(lwipPath,sizeof(lwipPath),"%s%sliblwip.so",homePath,ZT_PATH_SEPARATOR_S);

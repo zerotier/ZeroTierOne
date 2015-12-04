@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Runs test images
-
-echo "*** Running unit tests..."
+# Merely RUNS test images
 
 # Remove previous test results
 rm _results/*.txt 
@@ -28,5 +26,3 @@ find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do
 
     cd ../../
 done
-
-echo "*** Done"
