@@ -820,10 +820,12 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				for(std::vector< std::pair<Address,InetAddress> >::const_iterator r(nconf->relays().begin());r!=nconf->relays().end();++r) {
 					if (r->first != peer->address()) {
 						SharedPtr<Peer> rp(RR->topology->getPeer(r->first));
-						const unsigned int q = rp->relayQuality(now);
-						if ((rp)&&(q < bestq)) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
-							bestq = q;
-							rp.swap(relay);
+						if (rp) {
+							const unsigned int q = rp->relayQuality(now);
+							if (q < bestq) { // SUBTILE: < == don't use these if they are nil quality (unsigned int max), instead use a root
+								bestq = q;
+								rp.swap(relay);
+							}
 						}
 					}
 				}

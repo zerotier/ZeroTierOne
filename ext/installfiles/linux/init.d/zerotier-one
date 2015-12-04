@@ -7,21 +7,20 @@
 #              networks. See https://www.zerotier.com/ for more information.
 
 ### BEGIN INIT INFO
-# Provides: zerotier-one
-# Required-Start: $local_fs $network
-# Required-Stop: $local_fs
-# Default-Start:  2345
-# Default-Stop: 90
-# Short-Description: start ZeroTier One
-# Description: ZeroTier One provides public and private distributed ethernet \
-#              networks. See https://www.zerotier.com/ for more information.
+# Provides:          zerotier-one
+# Required-Start:    $local_fs $network
+# Required-Stop:     $local_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start ZeroTier One
+# Description:       ZeroTier One provides public and private distributed ethernet \
+#                    networks. See https://www.zerotier.com/ for more information.
 ### END INIT INFO
 
 #
 # This script is written to avoid distro-specific dependencies, so it does not
 # use the rc bash script libraries found on some systems. It should work on
-# just about anything, even systems using Upstart. Upstart native support may
-# come in the future.
+# just about anything.
 #
 
 zthome=/var/lib/zerotier-one

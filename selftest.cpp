@@ -1096,7 +1096,7 @@ int main(int argc,char **argv)
 
 	srand((unsigned int)time(0));
 
-	/*
+	///*
 	r |= testSqliteNetworkController();
 	r |= testOther();
 	r |= testCrypto();
@@ -1106,17 +1106,19 @@ int main(int argc,char **argv)
 	r |= testPhy();
 	r |= testResolver();
 	//r |= testHttp();
-	*/
+	//*/
 
 	if (r)
 		std::cout << std::endl << "SOMETHING FAILED!" << std::endl;
 
+	/*
 #ifdef ZT_USE_MINIUPNPC
 	std::cout << std::endl;
 	std::cout << "[portmapper] Starting port mapper and waiting forever... use CTRL+C to exit. (enable ZT_PORTMAPPER_TRACE in PortMapper.cpp for output)" << std::endl;
 	PortMapper mapper(12345,"ZeroTier/__selftest");
 	Thread::sleep(0xffffffff);
 #endif
+	*/
 
 	return r;
 }

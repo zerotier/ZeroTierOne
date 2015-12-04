@@ -143,7 +143,7 @@ static inline int _intl_getifmaddrs(struct _intl_ifmaddrs **pif)
 			}
 			free(buf);
 			buf = NULL;
-		} 
+		}
 	} while (buf == NULL);
 
 	for (next = buf; next < buf + needed; next += rtm->rtm_msglen) {
@@ -475,36 +475,10 @@ bool OSXEthernetTap::enabled() const
 	return _enabled;
 }
 
-static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
-{
-	long cpid = (long)vfork();
-	if (cpid == 0) {
-		execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
-		_exit(-1);
-	} else if (cpid > 0) {
-		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
-		return (exitcode == 0);
-	}
-	return false; // never reached, make compiler shut up about return value
-}
-
 bool OSXEthernetTap::addIp(const InetAddress &ip)
 {
 	if (!ip)
 		return false;
-
-	std::vector<InetAddress> allIps(ips());
-	if (std::binary_search(allIps.begin(),allIps.end(),ip))
-		return true;
-
-	// Remove and reconfigure if address is the same but netmask is different
-	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
-		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
-			if (___removeIp(_dev,*i))
-				break;
-		}
-	}
 
 	long cpid = (long)vfork();
 	if (cpid == 0) {
@@ -524,9 +498,18 @@ bool OSXEthernetTap::removeIp(const InetAddress &ip)
 	if (!ip)
 		return true;
 	std::vector<InetAddress> allIps(ips());
-	if (!std::binary_search(allIps.begin(),allIps.end(),ip)) {
-		if (___removeIp(_dev,ip))
-			return true;
+	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
+		if (*i == ip) {
+			long cpid = (long)vfork();
+			if (cpid == 0) {
+				execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString().c_str(),"-alias",(const char *)0);
+				_exit(-1);
+			} else if (cpid > 0) {
+				int exitcode = -1;
+				waitpid(cpid,&exitcode,0);
+				return (exitcode == 0);
+			}
+		}
 	}
 	return false;
 }
@@ -564,7 +547,7 @@ std::vector<InetAddress> OSXEthernetTap::ips() const
 		freeifaddrs(ifa);
 
 	std::sort(r.begin(),r.end());
-	std::unique(r.begin(),r.end());
+	r.erase(std::unique(r.begin(),r.end()),r.end());
 
 	return r;
 }

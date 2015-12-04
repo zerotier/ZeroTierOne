@@ -355,6 +355,26 @@ public:
 static BackgroundSoftwareUpdateChecker backgroundSoftwareUpdateChecker;
 #endif // ZT_AUTO_UPDATE
 
+static bool isBlacklistedLocalInterfaceForZeroTierTraffic(const char *ifn)
+{
+#if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
+	if ((ifn[0] == 'l')&&(ifn[1] == 'o')) return true; // loopback
+	if ((ifn[0] == 'z')&&(ifn[1] == 't')) return true; // sanity check: zt#
+	if ((ifn[0] == 't')&&(ifn[1] == 'u')&&(ifn[2] == 'n')) return true; // tun# is probably an OpenVPN tunnel or similar
+	if ((ifn[0] == 't')&&(ifn[1] == 'a')&&(ifn[2] == 'p')) return true; // tap# is probably an OpenVPN tunnel or similar
+#endif
+
+#ifdef __APPLE__
+	if ((ifn[0] == 'l')&&(ifn[1] == 'o')) return true; // loopback
+	if ((ifn[0] == 'z')&&(ifn[1] == 't')) return true; // sanity check: zt#
+	if ((ifn[0] == 't')&&(ifn[1] == 'u')&&(ifn[2] == 'n')) return true; // tun# is probably an OpenVPN tunnel or similar
+	if ((ifn[0] == 't')&&(ifn[1] == 'a')&&(ifn[2] == 'p')) return true; // tap# is probably an OpenVPN tunnel or similar
+	if ((ifn[0] == 'u')&&(ifn[1] == 't')&&(ifn[2] == 'u')&&(ifn[3] == 'n')) return true; // ... as is utun#
+#endif
+
+	return false;
+}
+
 static std::string _trimString(const std::string &s)
 {
 	unsigned long end = (unsigned long)s.length();
@@ -768,7 +788,7 @@ public:
 					if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
 						struct ifaddrs *ifa = ifatbl;
 						while (ifa) {
-							if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
+							if ((ifa->ifa_name)&&(ifa->ifa_addr)&&(!isBlacklistedLocalInterfaceForZeroTierTraffic(ifa->ifa_name))) {
 								bool isZT = false;
 								for(std::vector<std::string>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
 									if (*d == ifa->ifa_name) {
