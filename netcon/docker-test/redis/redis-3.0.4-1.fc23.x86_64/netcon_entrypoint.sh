@@ -23,11 +23,13 @@ virtip4=""
 while [ -z "$virtip4" ]; do
 	sleep 0.2
 	virtip4=`/zerotier-cli listnetworks | grep -F $nwid | cut -d ' ' -f 9 | sed 's/,/\n/g' | grep -F '.' | cut -d / -f 1`
+	dev=`/zerotier-cli listnetworks | grep -F "" | cut -d ' ' -f 8 | cut -d "_" -f 2 | sed "s/^<dev>//" | tr '\n' '\0'`
 done
 echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Writing address to ' "$address_file"
 echo $virtip4 > "$address_file"
 
+export ZT_NC_NWID=$dev
 
 # --- Test section ---
 echo '*** Starting application...'
