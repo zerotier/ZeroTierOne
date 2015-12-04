@@ -39,11 +39,13 @@ It is *likely* to work with other things but there are no guarantees. UDP, ICMP/
 
 # Building Network Containers
 
-Network Containers are currently only for Linux. To build the network container host and intercept library, from the base of the ZeroTier One tree type:
+Network Containers are currently only for Linux. To build the network container host, IP stack, and intercept library, from the base of the ZeroTier One tree run:
 
     make netcon
 
-This will build a binary called *zerotier-netcon-service* and a library called *libzerotierintercept.so*. The former is the same as a regular ZeroTier One build except instead of creating virtual network ports using Linux's */dev/net/tun* interface, it instead creates instances of a user-space TCP/IP stack for each virtual network and provides RPC access to this stack via a Unix domain socket called */tmp/.ztnc_##NETWORK_ID##*. The latter is a library that can be loaded with the Linux *LD\_PRELOAD* environment variable or by placement into */etc/ld.so.preload* on a Linux system or container.
+This will build a binary called *zerotier-netcon-service* and a library called *libzerotierintercept.so*. It will also build the IP stack as *netcon/liblwip.so*.
+
+The *zerotier-netcon-service* binary is almost the same as a regular ZeroTier One build except instead of creating virtual network ports using Linux's */dev/net/tun* interface, it creates instances of a user-space TCP/IP stack for each virtual network and provides RPC access to this stack via a Unix domain socket called */tmp/.ztnc_##NETWORK_ID##*. The latter is a library that can be loaded with the Linux *LD\_PRELOAD* environment variable or by placement into */etc/ld.so.preload* on a Linux system or container.
 
 The intercept library does nothing unless the *ZT\_NC\_NWID* environment variable is set. If on program launch (or fork) it detects the presence of this environment variable, it will attempt to connect to a running *zerotier-netcon-service* at the aforementioned Unix domain socket location and will intercept calls to the Posix sockets API and redirect network traffic through the virtual network.
 
@@ -53,9 +55,10 @@ Unlike *zerotier-one*, *zerotier-netcon-service* does not need to be run with ro
 
 You don't need Docker or any other container engine to try Network Containers. A simple test can be performed in user space in your own home directory.
 
-First, build the netcon service and intercept library as describe above. Then create a directory to act as a temporary ZeroTier home for your test netcon service instance.
+First, build the netcon service and intercept library as describe above. Then create a directory to act as a temporary ZeroTier home for your test netcon service instance. You'll need to move the liblwip.so binary that was built with *make netcon* into there, since the service must be able to find it there and load it.
 
     mkdir /tmp/netcon-test-home
+		cp -f ./netcon/liblwip.so /tmp/netcon-test-home
 
 Now you can run the service (no sudo needed):
 
@@ -106,3 +109,16 @@ Going to port 8080 on your machine won't work. Darkhttpd is listening, but only 
     curl http://NETCON.INSTANCE.IP:8080/README.md
 
 Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
+
+# Installing in a Docker Container (or any other container engine)
+
+If it's not immediately obvious, installation into a Docker container is easy. Just install *zerotier-netcon-service*, *libzerotierintercept.so*, and *liblwip.so* into the container at an appropriate location. We suggest putting it all in */var/lib/zerotier-one* since this is the default ZeroTier home and will eliminate the need to supply a path to any of ZeroTier's services or utilities. Then, in your Docker container entry point script launch the service with *-d* to run it in the background, set the appropriate environment variables as described above, and launch your container's main application.
+
+The only bit of complexity is configuring which virtual network to join. ZeroTier's service automatically joins networks that have *.conf* files in *ZTHOME/networks.d* even if the *.conf* file is empty. So one way of doing this very easily is to add the following commands to your Dockerfile or container entry point script:
+
+    mkdir -p /var/lib/zerotier-one/networks.d
+    touch /var/lib/zerotier-one/networks.d/8056c2e21c000001.conf
+
+Replace 8056c2e21c000001 with the network ID of the network you want your container to automaticlaly join.
+
+Now your container will automatically join the specified network on startup. Authorizing the container on a private network still requires a manual authorization step either via the ZeroTier Central web UI or the API. We're working on some ideas to automate this via bearer token auth or similar since doing this manually or with scripts for large deployments is tedious. We'll have something in this area by the time Network Containers itself is ready to be pronounced no-longer-beta.

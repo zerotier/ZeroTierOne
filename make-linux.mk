@@ -121,7 +121,7 @@ debug:	FORCE
 	make ZT_DEBUG=1 selftest
 
 official: FORCE
-	make -j 4 ZT_OFFICIAL_RELEASE=1
+	make -j 4 ZT_OFFICIAL_RELEASE=1 one
 	make ZT_OFFICIAL_RELEASE=1 installer
 
 FORCE:
