@@ -11,7 +11,7 @@ rm _results/*.txt
 export netcon_test_wait_time=60s
 
 # Test structure, in later releases more complex multi-party scripts will be included
-export test_script=two_party_test.sh
+export test_script=_two_party_test.sh
 
 # Iterate over all depth=2 (relatively-speaking) directories and perform each test
 find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do

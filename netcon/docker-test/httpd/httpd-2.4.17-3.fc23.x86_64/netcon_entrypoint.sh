@@ -39,7 +39,7 @@ export ZT_NC_NWID=$dev
 echo '*** Generating ' "$bigfile_size" ' file'
 dd if=/dev/urandom of=/var/www/html/"$bigfile_name"  bs="$bigfile_size"  count=1
 #md5sum /var/www/html/"$bigfile_name" >> "$tx_md5sumfile"
-md5sum < /var/www/html/"$bigfile_name" >> "$tx_md5sumfile"
+md5sum < /var/www/html/"$bigfile_name" > "$tx_md5sumfile"
 echo '*** Wrote MD5 sum to ' "$tx_md5sumfile"
 
 echo '*** Starting application...'

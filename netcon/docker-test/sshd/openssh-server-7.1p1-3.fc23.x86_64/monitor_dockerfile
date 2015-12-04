@@ -4,9 +4,6 @@ MAINTAINER https://www.zerotier.com/
 
 EXPOSE 9993/udp
 
-# Install LWIP library used by service
-ADD liblwip.so /var/lib/zerotier-one/liblwip.so
-
 # Add ZT files
 RUN mkdir -p /var/lib/zerotier-one/networks.d
 ADD monitor_identity.public /var/lib/zerotier-one/identity.public
@@ -14,6 +11,10 @@ ADD monitor_identity.secret /var/lib/zerotier-one/identity.secret
 ADD *.conf /var/lib/zerotier-one/networks.d/
 ADD *.conf /
 ADD *.name /
+
+# Install LWIP library used by service
+ADD liblwip.so /var/lib/zerotier-one/liblwip.so
+
 ADD zerotier-one /
 ADD zerotier-cli /
 

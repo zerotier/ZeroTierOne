@@ -980,7 +980,7 @@ int poll(POLL_SIG)
 /* int fd */
 int close(CLOSE_SIG)
 {
-  //checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet */
+  checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet */
   if(realclose == NULL){
     dwr(MSG_ERROR, "close(): SYMBOL NOT FOUND.\n");
     return -1;
