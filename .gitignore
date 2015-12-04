@@ -54,6 +54,7 @@ Thumbs.db
 *.rpm
 *.autosave
 *.tmp
+.depend
 node_modules
 cluster-geo/cluster-geo/config.js
 cluster-geo/cluster-geo/cache.*

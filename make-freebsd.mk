@@ -6,21 +6,21 @@ DEFS=
 LIBS=
 
 include objects.mk
-OBJS+=osdep/BSDEthernetTap.o 
+OBJS+=osdep/BSDEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
-	DEFS+=-DZT_OFFICIAL_RELEASE 
+	DEFS+=-DZT_OFFICIAL_RELEASE
 endif
 
 # Build with ZT_ENABLE_CLUSTER=1 to build with cluster support
 ifeq ($(ZT_ENABLE_CLUSTER),1)
-        DEFS+=-DZT_ENABLE_CLUSTER
+	DEFS+=-DZT_ENABLE_CLUSTER
 endif
 
 # "make debug" is a shortcut for this
 ifeq ($(ZT_DEBUG),1)
-	DEFS+=-DZT_TRACE 
+	DEFS+=-DZT_TRACE
 	CFLAGS+=-Wall -g -pthread $(INCLUDES) $(DEFS)
 	LDFLAGS+=
 	STRIP=echo
@@ -38,8 +38,8 @@ CXXFLAGS+=$(CFLAGS) -fno-rtti
 
 all:	one
 
-one:	$(OBJS) one.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
+one:	$(OBJS) service/OneService.o one.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli

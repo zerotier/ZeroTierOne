@@ -25,8 +25,6 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-#ifdef ZT_ENABLE_NETCON
-
 #include <algorithm>
 #include <utility>
 #include <dlfcn.h>
@@ -1551,5 +1549,3 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 }
 
 } // namespace ZeroTier
-
-#endif // ZT_ENABLE_NETCON

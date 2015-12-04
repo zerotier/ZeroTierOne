@@ -1096,10 +1096,12 @@ int main(int argc,char **argv)
 	}
 
 #ifdef __UNIX_LIKE__
+#ifndef ZT_ONE_NO_ROOT_CHECK
 	if ((!skipRootCheck)&&(getuid() != 0)) {
 		fprintf(stderr,"%s: must be run as root (uid 0)"ZT_EOL_S,argv[0]);
 		return 1;
 	}
+#endif // !ZT_ONE_NO_ROOT_CHECK
 	if (runAsDaemon) {
 		long p = (long)fork();
 		if (p < 0) {

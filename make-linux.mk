@@ -28,13 +28,11 @@ endif
 
 #UNAME_M=$(shell $(CC) -dumpmachine | cut -d '-' -f 1)
 
-INCLUDES=-Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6
-DEFS=-DZT_ENABLE_NETCON
-#CXXFLAGS+=-Wc++11-compat-deprecated-writable-strings -Wformat
+INCLUDES?=
+DEFS?=
 LDLIBS?=
 
 include objects.mk
-OBJS+=osdep/LinuxEthernetTap.o netcon/NetconEthernetTap.o
 
 # "make official" is a shortcut for this
 ifeq ($(ZT_OFFICIAL_RELEASE),1)
@@ -91,11 +89,19 @@ endif
 
 all:	one
 
-one:	$(OBJS) one.o
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) one.o $(LDLIBS)
+one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
+
+netcon: one
+	# Need to selectively rebuild one.cpp and OneService.cpp with ZT_SERVICE_NETCON and ZT_ONE_NO_ROOT_CHECK defined, and also NetconEthernetTap
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6 -o zerotier-netcon-service one.cpp service/OneService.cpp netcon/NetconEthernetTap.cpp $(OBJS) $(LDLIBS) -ldl
+	# Build netcon/liblwip.so which must be placed in ZT home for zerotier-netcon-service to work
+	cd netcon ; make -f make-liblwip.mk
+	# Use gcc not clang to build standalone intercept library since gcc is typically used for libc and we want to ensure maximal ABI compatibility
+	cd netcon ; gcc -g -O2 -Wall -std=c99 -fPIC -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared -o ../libzerotierintercept.so Intercept.c
 
 selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
@@ -105,9 +111,9 @@ installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
-	# Remove files from all the funny places we put them for tests
-	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' \) -delete
+	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm
+	# Remove files from all the funny places we put them for netcon tests
+	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '.depend' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' \) -delete
 	find netcon/docker-test -name "zerotier-intercept" -type f -delete
 
 debug:	FORCE

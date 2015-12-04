@@ -28,8 +28,6 @@
 #ifndef ZT_NETCONETHERNETTAP_HPP
 #define ZT_NETCONETHERNETTAP_HPP
 
-#ifdef ZT_ENABLE_NETCON
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -181,7 +179,5 @@ private:
 };
 
 } // namespace ZeroTier
-
-#endif // ZT_ENABLE_NETCON
 
 #endif

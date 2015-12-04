@@ -71,8 +71,8 @@ CXXFLAGS=$(CFLAGS) -fno-rtti
 
 all: one
 
-one:	$(OBJS) one.o
-	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) one.o $(LIBS)
+one:	$(OBJS) service/OneService.o one.o
+	$(CXX) $(CXXFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o $(LIBS)
 	$(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
