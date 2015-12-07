@@ -13,9 +13,9 @@ cd netcon/docker-test
 
 cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli
-cp ../../zerotier-cli zerotier-netcon-service
+cp ../../zerotier-netcon-service zerotier-netcon-service
+cp ../../libzerotierintercept.so libzerotierintercept.so
 
 cp ../liblwip.so liblwip.so
-cp ../libzerotierintercept.so.1.0 libzerotierintercept.so.1.0
 cp ../zerotier-intercept zerotier-intercept
 

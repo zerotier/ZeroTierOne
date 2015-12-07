@@ -30,17 +30,14 @@ SHCC=gcc
 intercept_CFLAGS = -c -fPIC -g -O2 -Wall -std=c99 -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT
 #LIB_NAME = intercept
 SHLIB_EXT=dylib
-SHLIB_MAJOR = 1
-SHLIB_MINOR = 8
 COMMON = Common
 OBJS= Intercept.o
-#SHLIB = ${LIB_NAME}.${SHLIB_EXT}.${SHLIB_MAJOR}.${SHLIB_MINOR}
 SHLDFLAGS = -g -O2 -Wall -I. -nostdlib -shared
 LIBS = -ldl -lc -lrt -lpthread
 
 lib:
 	${SHCC} $(intercept_CFLAGS) -I. Intercept.c -o Intercept.o
-	${SHCC} $(SHLDFLAGS) Intercept.o -o libzerotierintercept.so.1.0 $(LIBS)
+	${SHCC} $(SHLDFLAGS) Intercept.o -o libzerotierintercept.so $(LIBS)
 
 install:
 	cp ../libzerotierintercept.so /lib/libzerotierintercept.so
