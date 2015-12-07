@@ -85,23 +85,23 @@ What are you pinging? What is happening here?
 
 The *zerotier-netcon-service* binary has joined a *virtual* network and is running a *virtual* TCP/IP stack entirely in user space. As far as your system is concerned it's just another program exchanging UDP packets with a few other hosts on the Internet and nothing out of the ordinary is happening at all. That's why you never had to type *sudo*. It didn't change anything on the host.
 
-Now you can run a containerized application. Open another terminal window (since you might not want these environment variables to stick elsewhere) on the same machine the netcon service is running on and install something like *darkhttpd* (a simple http server) to act as a test app:
+Now you can run a containerized application. Open another terminal window (since you might not want these environment variables to stick elsewhere) on the same machine the netcon service is running on and install something like *httpd* (a simple http server) to act as a test app:
 
 On Debian and Ubuntu:
 
-    sudo apt-get install darkhttpd
+    sudo apt-get install httpd
 
 Or for CentOS/EPEL or Fedora:
 
-    sudo yum install darkhttpd
+    sudo yum install httpd
 
 Now try:
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
 		export ZT_NC_NWID=8056c2e21c000001
-		darkhttpd . --port 8080
 
-Going to port 8080 on your machine won't work. Darkhttpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
+
+Going to port 8080 on your machine won't work. Httpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
     curl http://NETCON.INSTANCE.IP:8080/README.md
 
@@ -111,7 +111,7 @@ Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* 
 
 Each unit test will temporarily copy all required ZeroTier binaries into its local directory, then build the *netcon_dockerfile* and *monitor_dockerfile*. Once built, each container will be run and perform tests and monitoring specified in *netcon_entrypoint.sh* and *monitor_entrypoint.sh*
 
-Results will be written to the *netcon/docker-test/_results/* directory which is a common shared volume between all containers involved in the test and will be a combination of raw and formatted dumps to files whose names reflect the test performed. In the event of failure, *FAIL.* will be appended to the result file's name (e.g. *FAIL.my_application_1.0.2.x86_64*), likewise in the event of success, *OK.* will be appended.
+Results will be written to the *netcon/docker-test/_results/* directory which is a common shared volume between all containers involved in the test and will be a combination of raw and formatted dumps to files whose names reflect the test performed. In the event of failure, *FAIL.* will be prepended to the result file's name (e.g. *FAIL.my_application_1.0.2.x86_64*), likewise in the event of success, *OK.* will be prepended.
 
 To run unit tests:
 
