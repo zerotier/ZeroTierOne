@@ -90,7 +90,7 @@ Now you can run a containerized application. Open another terminal window (since
 
 On Debian and Ubuntu:
 
-    sudo apt-get install httpd
+    sudo apt-get install apache2
 
 Or for CentOS/EPEL or Fedora:
 
