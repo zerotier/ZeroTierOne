@@ -8,6 +8,7 @@ touch "$test_name".name
 cp ../../*.conf .
 cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli
+cp ../../zerotier-cli zerotier-netcon-service
 cp ../../zerotier-intercept zerotier-intercept
 cp ../../libzerotierintercept.so.1.0 libzerotierintercept.so.1.0
 cp ../../liblwip.so liblwip.so
@@ -21,6 +22,7 @@ docker build --tag="$test_name"_monitor -f monitor_dockerfile .
 
 rm -f zerotier-one
 rm -f zerotier-cli
+rm -f zerotier-netcon-service
 rm -f zerotier-intercept
 rm -f libzerotierintercept.so.1.0
 rm -f liblwip.so

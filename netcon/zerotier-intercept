@@ -11,14 +11,14 @@ case "$1" in
 	on)
 		if [ -z "$LD_PRELOAD" ]
 			then
-				export LD_PRELOAD="/lib/libzerotierintercept.so.1.0"
+				export LD_PRELOAD="/lib/libzerotierintercept.so"
 			else
-				echo $LD_PRELOAD | grep -q "/lib/libzerotierintercept\.so.1.0" || \
+				echo $LD_PRELOAD | grep -q "/lib/libzerotierintercept\.so" || \
 				export LD_PRELOAD="/lib/libzerotierintercept.so $LD_PRELOAD"
 		fi
 	;;
 	off)
-		export LD_PRELOAD=`echo -n $LD_PRELOAD | sed 's/\/lib\/libzerotierintercept.so.1.0 \?//'`
+		export LD_PRELOAD=`echo -n $LD_PRELOAD | sed 's/\/lib\/libzerotierintercept.so \?//'`
 		if [ -z "$LD_PRELOAD" ]
 			then
 				unset LD_PRELOAD
@@ -33,10 +33,10 @@ case "$1" in
 	*)
 		if [ -z "$LD_PRELOAD" ]
 		then
-			export LD_PRELOAD="/lib/libzerotierintercept.so.1.0"
+			export LD_PRELOAD="/lib/libzerotierintercept.so"
 		else
-			echo $LD_PRELOAD | grep -q "/lib/libzerotierintercept\.so.1.0" || \
-			export LD_PRELOAD="/lib/libzerotierintercept.so.1.0 $LD_PRELOAD"
+			echo $LD_PRELOAD | grep -q "/lib/libzerotierintercept\.so" || \
+			export LD_PRELOAD="/lib/libzerotierintercept.so $LD_PRELOAD"
 		fi
 
 		if [ $# = 0 ]

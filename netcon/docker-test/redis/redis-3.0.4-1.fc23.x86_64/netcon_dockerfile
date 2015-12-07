@@ -30,6 +30,7 @@ RUN /usr/bin/install -c zerotier-intercept /usr/bin
 
 ADD zerotier-one /
 ADD zerotier-cli /
+Add zerotier-netcon-service /
 
 # Install test scripts
 ADD netcon_entrypoint.sh /netcon_entrypoint.sh

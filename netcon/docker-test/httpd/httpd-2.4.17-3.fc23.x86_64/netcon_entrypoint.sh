@@ -19,9 +19,9 @@ tx_md5sumfile="$file_path"tx_"$bigfile_name"_md5sum"$tmp_ext"
 
 # --- Network Config ---
 echo '*** ZeroTier Network Containers Test: ' "$test_name"
-chown -R daemon /var/lib/zerotier-one
-chgrp -R daemon /var/lib/zerotier-one
-su daemon -s /bin/bash -c '/zerotier-one -d -U -p9993 >>/tmp/zerotier-one.out 2>&1'
+chown -R daemon /var/lib/zerotier-netcon-service
+chgrp -R daemon /var/lib/zerotier-netcon-service
+su daemon -s /bin/bash -c '/zerotier-netcon-service -d -U -p9993 >>/tmp/zerotier-netcon-service.out 2>&1'
 virtip4=""
 while [ -z "$virtip4" ]; do
 	sleep 0.2

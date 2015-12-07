@@ -97,6 +97,14 @@ one:	$(OBJS) one.o
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
+netcon: $(OBJS) one.o
+	# Need to selectively rebuild one.cpp and OneService.cpp with ZT_SERVICE_NETCON and ZT_ONE_NO_ROOT_CHECK defined, and also NetconEthernetTap
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) 	-DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -o zerotier-netcon-service $(OBJS) one.o $(LDLIBS) -ldl
+	# Build netcon/liblwip.so which must be placed in ZT home for zerotier-netcon-service to work
+	cd netcon ; make -f make-liblwip.mk
+	# Use gcc not clang to build standalone intercept library since gcc is typically used for libc and we want to ensure maximal ABI compatibility
+	cd netcon ; gcc -g -O2 -Wall -std=c99 -fPIC -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared -o ../libzerotierintercept.so Intercept.c
+
 selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
 	$(STRIP) zerotier-selftest
@@ -105,7 +113,7 @@ installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
 clean:
-	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
+	rm -rf *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-netcon-service zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm
 	# Remove files from all the funny places we put them for tests
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' \) -delete
 	find netcon/docker-test -name "zerotier-intercept" -type f -delete

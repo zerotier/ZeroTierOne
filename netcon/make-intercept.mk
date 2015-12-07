@@ -43,11 +43,11 @@ lib:
 	${SHCC} $(SHLDFLAGS) Intercept.o -o libzerotierintercept.so.1.0 $(LIBS)
 
 install:
-	cp libzerotierintercept.so.1.0 /lib/libzerotierintercept.so.1.0
-	ln -sf /lib/libzerotierintercept.so.1.0 /lib/libzerotierintercept
+	cp ../libzerotierintercept.so /lib/libzerotierintercept.so
+	ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept
 	/usr/bin/install -c zerotier-intercept /usr/bin
 
 uninstall:
-	rm -r /lib/libzerotierintercept.so.1.0
+	rm -r /lib/libzerotierintercept.so
 	rm -r /lib/libzerotierintercept
 	rm -r /usr/bin/zerotier-intercept
