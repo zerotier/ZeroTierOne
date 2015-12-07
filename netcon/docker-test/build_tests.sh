@@ -12,6 +12,12 @@ export image_build_script=_build_single_image.sh
 
 # Iterate over all depth=2 (relatively-speaking) directories and perform each test
 find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do
+   
+    if [[ $testdir != *$1* ]]
+    then
+	continue    
+    fi
+
     echo "*** Building: '$testdir'..."
     rm _results/*.tmp
 

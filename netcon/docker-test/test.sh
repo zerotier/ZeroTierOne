@@ -18,6 +18,11 @@ find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do
     echo "*** Testing: '$testdir'..."
     rm _results/*.tmp
 
+    if [[ $testdir != *$1* ]]
+    then
+        continue
+    fi
+
     # Stage scripts
     cp $test_script $testdir/$test_script
     cd $testdir
