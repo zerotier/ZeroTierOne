@@ -303,7 +303,7 @@ int init_service_connection()
 void my_dest(void) __attribute__ ((destructor));
 void my_dest(void) {
   dwr(MSG_DEBUG,"closing connections to service...\n");
-  close(fdret_sock);
+  //close(fdret_sock);
   pthread_mutex_destroy(&lock);
 }
 
@@ -1010,8 +1010,8 @@ int dup2(DUP2_SIG)
     errno = EBADF;
     return -1;
   }
-  if(oldfd != STDIN_FILENO && oldfd != STDOUT_FILENO && oldfd != STDERR_FILENO)
-    if(newfd != STDIN_FILENO && newfd != STDOUT_FILENO && newfd != STDERR_FILENO)
+  //if(oldfd != STDIN_FILENO && oldfd != STDOUT_FILENO && oldfd != STDERR_FILENO)
+  //  if(newfd != STDIN_FILENO && newfd != STDOUT_FILENO && newfd != STDERR_FILENO)
       return realdup2(oldfd, newfd);
   return -1;
 }

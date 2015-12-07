@@ -23,17 +23,17 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 #### Compatibility Test Results
 
-	sshd                     [ WORKS as of 20151112 ]
-	ssh                      [ WORKS as of 20151112 ]
-	sftp                     [ WORKS as of 20151022 ]
-	curl                     [ WORKS as of 20151021 ]
-	apache (debug mode)      [ WORKS as of 20150810 ]
-	apache (prefork MPM)     [ WORKS as of 20151123 ] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
-	nginx                    [ MARGINAL as of 20151123 ] Broken on Centos 7, unreliable on Fedora 23
-	nodejs                   [ WORKS as of 20151123 ]
-	java                     [ WORKS as of 20151010 ]
-	MongoDB                  [ WORKS as of 20151028 ]
-	Redis-server             [ WORKS as of 20151123 ]
+	sshd                     [ WORKS  as of 20151207 ] Should be run with in debug mode with -d
+	ssh                      [ WORKS  as of 20151112 ]
+	sftp                     [ WORKS  as of 20151022 ]
+	curl                     [ WORKS  as of 20151021 ]
+	apache (debug mode -X)   [ WORKS  as of 20151207 ] (2.4.6-31.x86_64 on Centos 7), (2.4.16-1.x84_64 on F22/F23), (2.4.17-3.x86_64 on F22/F23)
+	apache (prefork MPM)     [ WORKS  as of 20151123 ]
+	nginx                    [ BROKEN as of 20151207 ]
+	nodejs                   [ WORKS  as of 20151207 ] (0.10.36-4.fc23)
+	java                     [ WORKS  as of 20151010 ]
+	MongoDB                  [ WORKS  as of 20151028 ]
+	Redis-server             [ WORKS  as of 20151207 ] (3.0.4-1.fc23.x86_64)
 
 It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
 

@@ -1,0 +1,40 @@
+# ZT Network Containers Test
+FROM ubuntu:14.04
+MAINTAINER https://www.zerotier.com/
+
+RUN \
+  sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
+  apt-get update && \
+  apt-get -y upgrade && \
+  apt-get -y install apache2
+
+EXPOSE 9993/udp 80/udp
+
+# Add ZT files
+RUN mkdir -p /var/lib/zerotier-one/networks.d
+ADD netcon_identity.public /var/lib/zerotier-one/identity.public
+ADD netcon_identity.secret /var/lib/zerotier-one/identity.secret
+ADD *.conf /var/lib/zerotier-one/networks.d/
+ADD *.conf /
+ADD *.name /
+
+# Install LWIP library used by service
+ADD liblwip.so /var/lib/zerotier-one/liblwip.so
+
+# Install syscall intercept library
+ADD zerotier-intercept /
+ADD libzerotierintercept.so /
+RUN cp libzerotierintercept.so lib/libzerotierintercept.so
+RUN ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept
+RUN /usr/bin/install -c zerotier-intercept /usr/bin
+
+ADD zerotier-one /
+ADD zerotier-cli /
+ADD zerotier-netcon-service /
+
+# Install test scripts
+ADD netcon_entrypoint.sh /netcon_entrypoint.sh
+RUN chmod -v +x /netcon_entrypoint.sh
+
+# Start ZeroTier-One
+CMD ["./netcon_entrypoint.sh"]
