@@ -106,3 +106,34 @@ Going to port 8080 on your machine won't work. Darkhttpd is listening, but only 
     curl http://NETCON.INSTANCE.IP:8080/README.md
 
 Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
+
+# Unit Tests
+
+To run unit tests:
+
+1) Set up your own network, use its network id as follows:
+
+2) Place a blank network config file in the *netcon/docker-test* directory (e.g. "e5cd7a9e1c5311ab.conf")
+ - This will be used to inform test-specific scripts what network to use for testing
+
+After you've created your network and placed its blank config file in *netcon/docker-test* run the following to perform unit tests for httpd:
+
+	./build.sh httpd
+	./test.sh httpd
+
+It's useful to note that the keyword *httpd* in this example is merely a substring for a test name, this means that if we replaced it with *x86_64* or *fc23*, it would run all unit tests for *x86_64* systems or *Fedora 23* respectively.
+
+# Anatomy of a unit test
+
+A) Each unit test's will:
+ - temporarily copy all ZeroTier binaries files into local directory
+ - build test container
+ - build monitor container
+ - remove temporary files
+ - run each container and perform test and monitoring specified in *netcon_entrypoint.sh* and *monitor_entrypoint.sh*
+
+B) Results will be written to the *netcon/docker-test/_results/* directory
+ - Results will be a combination of raw and formatted dumps to files whose names reflect the test performed
+ - In the event of failure, *FAIL.* will be appended to the result file's name
+  - (e.g. FAIL.my_application_1.0.2.x86_64)
+ - In the event of success, *OK.* will be appended
