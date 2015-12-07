@@ -42,6 +42,7 @@ It is *likely* to work with other things but there are no guarantees. UDP, ICMP/
 Network Containers are currently only for Linux. To build the network container host and intercept library, from the base of the ZeroTier One tree type:
 
     make netcon
+    make install-intercept
 
 This will build a binary called *zerotier-netcon-service* and a library called *libzerotierintercept.so*. The former is the same as a regular ZeroTier One build except instead of creating virtual network ports using Linux's */dev/net/tun* interface, it instead creates instances of a user-space TCP/IP stack for each virtual network and provides RPC access to this stack via a Unix domain socket called */tmp/.ztnc_##NETWORK_ID##*. The latter is a library that can be loaded with the Linux *LD\_PRELOAD* environment variable or by placement into */etc/ld.so.preload* on a Linux system or container.
 
@@ -98,10 +99,11 @@ Or for CentOS/EPEL or Fedora:
 Now try:
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
-		export ZT_NC_NWID=8056c2e21c000001
+	export ZT_NC_NWID=8056c2e21c000001
+	zerotier-intercept httpd
 
 
-Going to port 8080 on your machine won't work. Httpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
+Going to port 80 on your machine won't work. Httpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
     curl http://NETCON.INSTANCE.IP:8080/README.md
 

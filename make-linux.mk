@@ -99,11 +99,21 @@ one:	$(OBJS) one.o
 
 netcon: $(OBJS) one.o
 	# Need to selectively rebuild one.cpp and OneService.cpp with ZT_SERVICE_NETCON and ZT_ONE_NO_ROOT_CHECK defined, and also NetconEthernetTap
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) 	-DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -o zerotier-netcon-service $(OBJS) one.o $(LDLIBS) -ldl
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -o zerotier-netcon-service $(OBJS) one.o $(LDLIBS) -ldl
 	# Build netcon/liblwip.so which must be placed in ZT home for zerotier-netcon-service to work
 	cd netcon ; make -f make-liblwip.mk
 	# Use gcc not clang to build standalone intercept library since gcc is typically used for libc and we want to ensure maximal ABI compatibility
 	cd netcon ; gcc -g -O2 -Wall -std=c99 -fPIC -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared -o ../libzerotierintercept.so Intercept.c
+
+install-intercept:
+	cp libzerotierintercept.so /lib/libzerotierintercept.so
+	ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept
+	/usr/bin/install -c netcon/zerotier-intercept /usr/bin
+
+uninstall-intercept:
+	rm -r /lib/libzerotierintercept.so
+	rm -r /lib/libzerotierintercept
+	rm -r /usr/bin/zerotier-intercept
 
 selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)
