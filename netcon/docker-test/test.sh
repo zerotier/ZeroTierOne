@@ -15,13 +15,14 @@ export test_script=_two_party_test.sh
 
 # Iterate over all depth=2 (relatively-speaking) directories and perform each test
 find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do
-    echo "*** Testing: '$testdir'..."
-    rm _results/*.tmp
 
     if [[ $testdir != *$1* ]]
     then
         continue
     fi
+
+    echo "*** Testing: '$testdir'..."
+    rm _results/*.tmp
 
     # Stage scripts
     cp $test_script $testdir/$test_script
