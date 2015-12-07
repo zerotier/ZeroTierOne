@@ -109,6 +109,10 @@ Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* 
 
 # Unit Tests
 
+Each unit test will temporarily copy all required ZeroTier binaries into its local directory, then build the *netcon_dockerfile* and *monitor_dockerfile*. Once built, each container will be run and perform tests and monitoring specified in *netcon_entrypoint.sh* and *monitor_entrypoint.sh*
+
+Results will be written to the *netcon/docker-test/_results/* directory which is a common shared volume between all containers involved in the test and will be a combination of raw and formatted dumps to files whose names reflect the test performed. In the event of failure, *FAIL.* will be appended to the result file's name (e.g. *FAIL.my_application_1.0.2.x86_64*), likewise in the event of success, *OK.* will be appended.
+
 To run unit tests:
 
 1) Set up your own network, use its network id as follows:
@@ -122,18 +126,3 @@ After you've created your network and placed its blank config file in *netcon/do
 	./test.sh httpd
 
 It's useful to note that the keyword *httpd* in this example is merely a substring for a test name, this means that if we replaced it with *x86_64* or *fc23*, it would run all unit tests for *x86_64* systems or *Fedora 23* respectively.
-
-# Anatomy of a unit test
-
-A) Each unit test's will:
- - temporarily copy all ZeroTier binaries files into local directory
- - build test container
- - build monitor container
- - remove temporary files
- - run each container and perform test and monitoring specified in *netcon_entrypoint.sh* and *monitor_entrypoint.sh*
-
-B) Results will be written to the *netcon/docker-test/_results/* directory
- - Results will be a combination of raw and formatted dumps to files whose names reflect the test performed
- - In the event of failure, *FAIL.* will be appended to the result file's name
-  - (e.g. FAIL.my_application_1.0.2.x86_64)
- - In the event of success, *OK.* will be appended
