@@ -303,7 +303,7 @@ int init_service_connection()
 void my_dest(void) __attribute__ ((destructor));
 void my_dest(void) {
   dwr(MSG_DEBUG,"closing connections to service...\n");
-  close(fdret_sock);
+  //close(fdret_sock);
   pthread_mutex_destroy(&lock);
 }
 
@@ -824,9 +824,10 @@ int accept(ACCEPT_SIG)
     return -1;
   }
 
-  //  if(opt & O_NONBLOCK)
-      fcntl(sockfd, F_SETFL, O_NONBLOCK); /* required by libuv in nodejs */
-
+  /* The following line is required for libuv/nodejs to accept connections properly,
+  however, this has the side effect of causing certain webservers to max out the CPU 
+  in an accept loop */
+  //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
   char c[1];
   int new_conn_socket;
@@ -936,7 +937,7 @@ int listen(LISTEN_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
-  get_retval();
+  //get_retval();
   pthread_mutex_unlock(&lock);
   handle_error("listen", "", ERR_OK);
   return ERR_OK;
@@ -1010,8 +1011,8 @@ int dup2(DUP2_SIG)
     errno = EBADF;
     return -1;
   }
-  if(oldfd != STDIN_FILENO && oldfd != STDOUT_FILENO && oldfd != STDERR_FILENO)
-    if(newfd != STDIN_FILENO && newfd != STDOUT_FILENO && newfd != STDERR_FILENO)
+  //if(oldfd != STDIN_FILENO && oldfd != STDOUT_FILENO && oldfd != STDERR_FILENO)
+  //  if(newfd != STDIN_FILENO && newfd != STDOUT_FILENO && newfd != STDERR_FILENO)
       return realdup2(oldfd, newfd);
   return -1;
 }

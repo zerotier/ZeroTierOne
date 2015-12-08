@@ -3,15 +3,17 @@ Network Containers (beta)
 
 ZeroTier Network Containers offers a microkernel-like networking paradigm for containerized applications and application-specific virtual networking.
 
-Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. Our intercept library implements full binary compatibility with the standard network API, permitting servers and applications to be used without modification or recompilation.
-
-It can be used to run services on virtual networks without requiring the creation of kernel-mode virtual network ports or modification of system network settings and without special privileges. It's ideal for containerized microservices that are designed exclusively for use on an isolated virtual network and that are to be deployed on commodity container hosting infrastructure. With Network Containers such services can be deployed without special permissions and connected to arbitrary virtual networks without configuration changes to the host node.
+Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. Our intercept library implements full binary compatibility with the standard network API, permitting servers and applications to be used without modification or recompilation. It can be used to run services on virtual networks without elevated privileges, special configuration of the physical host, kernel support, or any other application specific configuration.
 
 Network Containers is ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/), allowing connectivity to a virtual network to be built into and deployed with containers without host awareness or configuration. It can also be used without containers to network-containerize applications on an ordinary VM or bare metal host. It works entirely at the library/application level and requires no special kernel extensions.
 
-Our long term goal with network containers is to facilitate the total commoditization of the container host by allowing virtual networking without elevated privileges or host configuration. We think this will help ease the path toward commodity multi-tenant container hosting and total application portability across hosts, data centers, and cloud providers.
+Tighter Docker integration using Docker's *libnetwork* API is planned for the future, allowing use with unmodified container images. In the end we plan to support two complimentary deployment scenarios with Docker: intra-container deployment without host involvement, and host deployment without container modification. The former is useful when building your own containers, while the latter is useful when using unmodified containers from Docker Hub.
 
-Network Containers are currently in **beta** and are suitable for testing, experimentation, and prototyping. There are still some issues with compatibility with some applications, as documented in the compatibility matrix below. There's also some remaining work to be done on performance and overall stability before this will be ready for production use.
+Our long term goal is to allow total commoditization of the container host by providing fully independent network virtualization. We think this will help ease the path toward commodity multi-tenant container hosting and total application portability across hosts, data centers, and cloud providers.
+
+[More discussion can be found in our original blog announcement.](https://www.zerotier.com/blog/?p=490)
+
+Network Containers is currently in **beta** and is suitable for testing, experimentation, and prototyping. There are still some issues with compatibility with some applications, as documented in the compatibility matrix below. There's also some remaining work to be done on performance and overall stability before this will be ready for production use.
 
 # Limitations and Compatibility
 
@@ -23,17 +25,11 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 #### Compatibility Test Results
 
-	sshd                     [ WORKS as of 20151112 ]
-	ssh                      [ WORKS as of 20151112 ]
-	sftp                     [ WORKS as of 20151022 ]
-	curl                     [ WORKS as of 20151021 ]
-	apache (debug mode)      [ WORKS as of 20150810 ]
-	apache (prefork MPM)     [ WORKS as of 20151123 ] (2.4.6-31.x86-64 on Centos 7), (2.4.16-1.x84-64 on F22), (2.4.17-3.x86-64 on F22)
-	nginx                    [ MARGINAL as of 20151123 ] Broken on Centos 7, unreliable on Fedora 23
-	nodejs                   [ WORKS as of 20151123 ]
-	java                     [ WORKS as of 20151010 ]
-	MongoDB                  [ WORKS as of 20151028 ]
-	Redis-server             [ WORKS as of 20151123 ]
+	sshd (debug mode -d)     [ WORKS  as of 20151208 ] Fedora 22/23, Centos 7, Ubuntu 14.04
+	apache (debug mode -X)   [ WORKS  as of 20151208 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
+	nginx                    [ WORKS  as of 20151208 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
+	nodejs                   [ WORKS  as of 20151208 ] 0.10.36 Fedora 22/23 (disabled, see note in accept() in netcon/Intercept.c)
+	redis-server             [ WORKS  as of 20151208 ] 3.0.4 on Fedora 22/23
 
 It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
 
@@ -42,6 +38,7 @@ It is *likely* to work with other things but there are no guarantees. UDP, ICMP/
 Network Containers are currently only for Linux. To build the network container host, IP stack, and intercept library, from the base of the ZeroTier One tree run:
 
     make netcon
+    make install-intercept
 
 This will build a binary called *zerotier-netcon-service* and a library called *libzerotierintercept.so*. It will also build the IP stack as *netcon/liblwip.so*.
 
@@ -88,25 +85,26 @@ What are you pinging? What is happening here?
 
 The *zerotier-netcon-service* binary has joined a *virtual* network and is running a *virtual* TCP/IP stack entirely in user space. As far as your system is concerned it's just another program exchanging UDP packets with a few other hosts on the Internet and nothing out of the ordinary is happening at all. That's why you never had to type *sudo*. It didn't change anything on the host.
 
-Now you can run a containerized application. Open another terminal window (since you might not want these environment variables to stick elsewhere) on the same machine the netcon service is running on and install something like *darkhttpd* (a simple http server) to act as a test app:
+Now you can run a containerized application. Open another terminal window (since you might not want these environment variables to stick elsewhere) on the same machine the netcon service is running on and install something like *httpd* (a simple http server) to act as a test app:
 
 On Debian and Ubuntu:
 
-    sudo apt-get install darkhttpd
+    sudo apt-get install apache2
 
 Or for CentOS/EPEL or Fedora:
 
-    sudo yum install darkhttpd
+    sudo yum install httpd
 
 Now try:
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
-		export ZT_NC_NWID=8056c2e21c000001
-		darkhttpd . --port 8080
+	export ZT_NC_NWID=8056c2e21c000001
+	zerotier-intercept httpd -X
 
-Going to port 8080 on your machine won't work. Darkhttpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
-    curl http://NETCON.INSTANCE.IP:8080/README.md
+Going to port 80 on your machine won't work. Httpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
+
+    curl http://NETCON.INSTANCE.IP:80/
 
 Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
 
@@ -122,3 +120,23 @@ The only bit of complexity is configuring which virtual network to join. ZeroTie
 Replace 8056c2e21c000001 with the network ID of the network you want your container to automaticlaly join.
 
 Now your container will automatically join the specified network on startup. Authorizing the container on a private network still requires a manual authorization step either via the ZeroTier Central web UI or the API. We're working on some ideas to automate this via bearer token auth or similar since doing this manually or with scripts for large deployments is tedious. We'll have something in this area by the time Network Containers itself is ready to be pronounced no-longer-beta.
+
+# Unit Tests
+
+Each unit test will temporarily copy all required ZeroTier binaries into its local directory, then build the *netcon_dockerfile* and *monitor_dockerfile*. Once built, each container will be run and perform tests and monitoring specified in *netcon_entrypoint.sh* and *monitor_entrypoint.sh*
+
+Results will be written to the *netcon/docker-test/_results/* directory which is a common shared volume between all containers involved in the test and will be a combination of raw and formatted dumps to files whose names reflect the test performed. In the event of failure, *FAIL.* will be prepended to the result file's name (e.g. *FAIL.my_application_1.0.2.x86_64*), likewise in the event of success, *OK.* will be prepended.
+
+To run unit tests:
+
+1) Set up your own network, use its network id as follows:
+
+2) Place a blank network config file in the *netcon/docker-test* directory (e.g. "e5cd7a9e1c5311ab.conf")
+ - This will be used to inform test-specific scripts what network to use for testing
+
+After you've created your network and placed its blank config file in *netcon/docker-test* run the following to perform unit tests for httpd:
+
+	./build.sh httpd
+	./test.sh httpd
+
+It's useful to note that the keyword *httpd* in this example is merely a substring for a test name, this means that if we replaced it with *x86_64* or *fc23*, it would run all unit tests for *x86_64* systems or *Fedora 23* respectively.

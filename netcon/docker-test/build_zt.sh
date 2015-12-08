@@ -6,19 +6,16 @@
 cd ../../
 
 make clean
-make
-cd netcon
-make -f make-intercept.mk lib
-rm *.o
-rm liblwip.so
-make -f make-liblwip.mk
+make netcon
+make one
 
-cd docker-test
+cd netcon/docker-test
 
 cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli
+cp ../../zerotier-netcon-service zerotier-netcon-service
+cp ../../libzerotierintercept.so libzerotierintercept.so
 
 cp ../liblwip.so liblwip.so
-cp ../libzerotierintercept.so.1.0 libzerotierintercept.so.1.0
 cp ../zerotier-intercept zerotier-intercept
 

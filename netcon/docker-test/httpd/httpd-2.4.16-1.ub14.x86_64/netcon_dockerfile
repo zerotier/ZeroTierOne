@@ -1,13 +1,14 @@
 # ZT Network Containers Test
-FROM fedora:23
+FROM ubuntu:14.04
 MAINTAINER https://www.zerotier.com/
 
-# Install apps
-RUN yum -y update
-RUN yum -y install openssh-server
-RUN yum clean all
+RUN \
+  sed -i 's/# \(.*multiverse$\)/\1/g' /etc/apt/sources.list && \
+  apt-get update && \
+  apt-get -y upgrade && \
+  apt-get -y install apache2
 
-EXPOSE 9993/udp
+EXPOSE 9993/udp 80/udp
 
 # Add ZT files
 RUN mkdir -p /var/lib/zerotier-one/networks.d
@@ -29,6 +30,7 @@ RUN /usr/bin/install -c zerotier-intercept /usr/bin
 
 ADD zerotier-one /
 ADD zerotier-cli /
+ADD zerotier-netcon-service /
 
 # Install test scripts
 ADD netcon_entrypoint.sh /netcon_entrypoint.sh
