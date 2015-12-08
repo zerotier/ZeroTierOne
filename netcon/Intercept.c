@@ -824,9 +824,10 @@ int accept(ACCEPT_SIG)
     return -1;
   }
 
-  //  if(opt & O_NONBLOCK)
-      fcntl(sockfd, F_SETFL, O_NONBLOCK); /* required by libuv in nodejs */
-
+  /* The following line is required for libuv/nodejs to accept connections properly,
+  however, this has the side effect of causing certain webservers to max out the CPU 
+  in an accept loop */
+  //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
   char c[1];
   int new_conn_socket;
@@ -980,7 +981,7 @@ int poll(POLL_SIG)
 /* int fd */
 int close(CLOSE_SIG)
 {
-  //checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet */
+  checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet */
   if(realclose == NULL){
     dwr(MSG_ERROR, "close(): SYMBOL NOT FOUND.\n");
     return -1;

@@ -45,4 +45,4 @@ echo '*** Wrote MD5 sum to ' "$tx_md5sumfile"
 echo '*** Starting application...'
 sleep 0.5
 rm -rf /run/httpd/* /tmp/httpd*
-zerotier-intercept /usr/sbin/httpd -D FOREGROUND >>/tmp/apache.out 2>&1
+zerotier-intercept /usr/sbin/httpd -X

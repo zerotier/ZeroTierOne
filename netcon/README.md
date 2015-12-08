@@ -23,17 +23,11 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 #### Compatibility Test Results
 
-	sshd                     [ WORKS  as of 20151207 ] Should be run with in debug mode with -d
-	ssh                      [ WORKS  as of 20151112 ]
-	sftp                     [ WORKS  as of 20151022 ]
-	curl                     [ WORKS  as of 20151021 ]
-	apache (debug mode -X)   [ WORKS  as of 20151207 ] (2.4.6-31.x86_64 on Centos 7), (2.4.16-1.x84_64 on F22/F23), (2.4.17-3.x86_64 on F22/F23)
-	apache (prefork MPM)     [ WORKS  as of 20151123 ]
-	nginx                    [ BROKEN as of 20151207 ]
-	nodejs                   [ WORKS  as of 20151207 ] (0.10.36-4.fc23)
-	java                     [ WORKS  as of 20151010 ]
-	MongoDB                  [ WORKS  as of 20151028 ]
-	Redis-server             [ WORKS  as of 20151207 ] (3.0.4-1.fc23.x86_64)
+	sshd (debug mode -d)     [ WORKS  as of 20151208 ] Fedora 22/23, Centos 7, Ubuntu 14.04
+	apache (debug mode -X)   [ WORKS  as of 20151208 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
+	nginx                    [ WORKS  as of 20151208 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
+	nodejs                   [ WORKS  as of 20151208 ] 0.10.36 Fedora 22/23 (disabled, see note in accept() in netcon/Intercept.c)
+	redis-server             [ WORKS  as of 20151208 ] 3.0.4 on Fedora 22/23
 
 It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
 
@@ -100,12 +94,12 @@ Now try:
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
 	export ZT_NC_NWID=8056c2e21c000001
-	zerotier-intercept httpd
+	zerotier-intercept httpd -X
 
 
 Going to port 80 on your machine won't work. Httpd is listening, but only inside the network container. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
-    curl http://NETCON.INSTANCE.IP:8080/README.md
+    curl http://NETCON.INSTANCE.IP:80/
 
 Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
 
