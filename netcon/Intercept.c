@@ -1046,7 +1046,7 @@ int getsockname(GETSOCKNAME_SIG)
   memset(addrbuf, '\0', sizeof(struct sockaddr));
   read(fdret_sock, &addrbuf, sizeof(struct sockaddr)); // read address from service
   memcpy(addr, addrbuf, sizeof(struct sockaddr)); 
-  *addrlen = 16;
+  *addrlen = sizeof(struct sockaddr);
 
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) &addr;
