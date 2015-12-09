@@ -122,7 +122,7 @@ selftest:	$(OBJS) selftest.o
 installer: one FORCE
 	./ext/installfiles/linux/buildinstaller.sh
 
-clean:
+clean: FORCE
 	rm -rf *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/lz4/*.o ext/json-parser/*.o $(OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest zerotier-netcon-service build-* ZeroTierOneInstaller-* *.deb *.rpm
 	# Remove files from all the funny places we put them for tests
 	find netcon -type f \( -name '*.o' -o -name '*.so' -o -name '*.1.0' -o -name 'zerotier-one' -o -name 'zerotier-cli' -o -name 'zerotier-netcon-service' \) -delete
