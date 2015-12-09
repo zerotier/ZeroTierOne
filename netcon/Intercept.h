@@ -185,6 +185,7 @@ struct shutdown_st
 #define SYSCALL_SIG	long number, ...
 #define CLONE_SIG int (*fn)(void *), void *child_stack, int flags, void *arg, ...
 #define POLL_SIG struct pollfd *fds, nfds_t nfds, int timeout
+#define GETSOCKNAME_SIG int sockfd, struct sockaddr *addr, socklen_t *addrlen
 
 #define DUP2_SIG int oldfd, int newfd
 #define DUP3_SIG int oldfd, int newfd, int flags

@@ -33,8 +33,6 @@ Thumbs.db
 /examples/docker/test-*.env
 /world/mkworld
 /world/*.c25519
-/tiny-httpd
-/netcon/tiny-httpd
 
 # Miscellaneous temporaries, build files, etc.
 *.log

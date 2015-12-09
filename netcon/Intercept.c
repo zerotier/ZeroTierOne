@@ -75,6 +75,7 @@ static int (*realclose)(CLOSE_SIG);
 static int (*realclone)(CLONE_SIG);
 static int (*realdup2)(DUP2_SIG);
 static int (*realdup3)(DUP3_SIG);
+static int (*realgetsockname)(GETSOCKNAME_SIG);
 
 /* Exported Function Prototypes */
 void my_init(void);
@@ -92,6 +93,7 @@ int close(CLOSE_SIG);
 int clone(CLONE_SIG);
 int dup2(DUP2_SIG);
 int dup3(DUP3_SIG);
+int getsockname(GETSOCKNAME_SIG);
 
 int connect_to_service(void);
 int init_service_connection();
@@ -309,16 +311,11 @@ void my_dest(void) {
 
 void load_symbols(void)
 {
-#ifdef USE_OLD_DLSYM
-  void *lib;
-#endif
- /* possibly add check to beginning of each method to avoid needing to cll the constructor */
   if(thispid == getpid()) {
-    dwr(MSG_DEBUG,"detected duplicate call to global ctor (pid=%d).\n", thispid);
+    dwr(MSG_DEBUG,"detected duplicate call to global constructor (pid=%d).\n", thispid);
   }
   thispid = getpid();
 
-#ifndef USE_OLD_DLSYM
   realconnect = dlsym(RTLD_NEXT, "connect");
   realbind = dlsym(RTLD_NEXT, "bind");
   realaccept = dlsym(RTLD_NEXT, "accept");
@@ -334,26 +331,7 @@ void load_symbols(void)
   realsyscall = dlsym(RTLD_NEXT, "syscall");
   realdup2 = dlsym(RTLD_NEXT, "dup2");
   realdup3 = dlsym(RTLD_NEXT, "dup3");
-#else
-  lib = dlopen(LIBCONNECT, RTLD_LAZY);
-  realconnect = dlsym(lib, "connect");
-  realbind = dlsym(lib, "bind");
-  realaccept = dlsym(lib, "accept");
-  reallisten = dlsym(lib, "listen");
-  realsocket = dlsym(lib, "socket");
-  realselect = dlsym(lib, "select");
-  realsetsockopt = dlsym(lib, "setsockopt");
-  realgetsockopt = dlsym(lib, "getsockopt");
-  realaccept4 = dlsym(lib), "accept4");
-  realclone = dlsym(lib, "clone");
-  realclose = dlsym(lib, "close");
-  realsyscall = dlsym(lib, "syscall");
-  realdup2 = dlsym(RTLD_NEXT, "dup2");
-  realdup3 = dlsym(RTLD_NEXT, "dup3");
-  dlclose(lib);
-  lib = dlopen(LIBC, RTLD_LAZY);
-  dlclose(lib);
-#endif
+  realgetsockname = dlsym(RTLD_NEXT, "getsockname");
 }
 
 /* Private Function Prototypes */
@@ -825,7 +803,7 @@ int accept(ACCEPT_SIG)
   }
 
   /* The following line is required for libuv/nodejs to accept connections properly,
-  however, this has the side effect of causing certain webservers to max out the CPU 
+  however, this has the side effect of causing certain webservers to max out the CPU
   in an accept loop */
   //fcntl(sockfd, F_SETFL, O_NONBLOCK);
 
@@ -1040,6 +1018,21 @@ int dup3(DUP3_SIG)
     return realdup3(oldfd, newfd, flags);
 }
 
+/*------------------------------------------------------------------------------
+-------------------------------------- getsockname()----------------------------
+------------------------------------------------------------------------------*/
+
+int getsockname(GETSOCKNAME_SIG)
+{
+  if (realgetsockname == NULL) {
+    dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND.\n");
+    return -1;
+  }
+
+  // TODO
+
+  return realgetsockname(sockfd,addr,addrlen);
+}
 
 /*------------------------------------------------------------------------------
 ------------------------------------ syscall()----------------------------------
