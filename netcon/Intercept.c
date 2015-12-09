@@ -691,6 +691,7 @@ int bind(BIND_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct bind_st));
   pthread_mutex_lock(&lock);
   send_command(fdret_sock, cmd);
+
   err = get_retval();
   pthread_mutex_unlock(&lock);
   errno = ERR_OK;
@@ -1022,6 +1023,7 @@ int dup3(DUP3_SIG)
 -------------------------------------- getsockname()----------------------------
 ------------------------------------------------------------------------------*/
 
+/* define GETSOCKNAME_SIG int sockfd, struct sockaddr *addr, socklen_t *addrlen */
 int getsockname(GETSOCKNAME_SIG)
 {
   if (realgetsockname == NULL) {
@@ -1029,9 +1031,37 @@ int getsockname(GETSOCKNAME_SIG)
     return -1;
   }
 
-  // TODO
+  char cmd[BUF_SZ];
+  struct getsockname_st rpc_st;
+  rpc_st.sockfd = sockfd;
+  memcpy(&rpc_st.addr, addr, sizeof(struct sockaddr));
+  memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
+  cmd[0] = RPC_GETSOCKNAME;
+  memcpy(&cmd[1], &rpc_st, sizeof(struct getsockname_st));
+  pthread_mutex_lock(&lock);
+  send_command(fdret_sock, cmd);
+  pthread_mutex_unlock(&lock);
 
-  return realgetsockname(sockfd,addr,addrlen);
+  char addrbuf[sizeof(struct sockaddr)];
+  memset(addrbuf, '\0', sizeof(struct sockaddr));
+  read(fdret_sock, &addrbuf, sizeof(struct sockaddr)); // read address from service
+  memcpy(addr, addrbuf, sizeof(struct sockaddr)); 
+  *addrlen = 16;
+
+  struct sockaddr_in *connaddr;
+  connaddr = (struct sockaddr_in *) &addr;
+
+  int ip = connaddr->sin_addr.s_addr;
+  unsigned char d[4];
+  d[0] = ip & 0xFF;
+  d[1] = (ip >>  8) & 0xFF;
+  d[2] = (ip >> 16) & 0xFF;
+  d[3] = (ip >> 24) & 0xFF;
+
+  int port = connaddr->sin_port;
+  dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
+
+  return 0;
 }
 
 /*------------------------------------------------------------------------------

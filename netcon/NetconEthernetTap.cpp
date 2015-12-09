@@ -149,6 +149,8 @@ public:
   PhySocket *dataSock;
   struct tcp_pcb *pcb;
 
+  struct sockaddr_in *addr;
+
   unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
   int idx;
 };
@@ -715,7 +717,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	    memcpy(&bind_rpc,  &buf[IDX_PAYLOAD+1], sizeof(struct bind_st));
 	    handle_bind(sock, uptr, &bind_rpc);
 			break;
-  	case RPC_CONNECT:
+  	  case RPC_CONNECT:
 			dwr(MSG_DEBUG, "RPC_CONNECT\n");
 	    struct connect_st connect_rpc;
 	    memcpy(&connect_rpc,  &buf[IDX_PAYLOAD+1], sizeof(struct connect_st));
@@ -727,11 +729,17 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	    	memcpy(&newfd, &buf[IDX_PAYLOAD+1], sizeof(int));
 	    	handle_retval(sock, uptr, rpc_count, newfd);
 			break;
-		case RPC_MAP_REQ:
+	  case RPC_MAP_REQ:
 			dwr(MSG_DEBUG, "RPC_MAP_REQ\n");
 			handle_map_request(sock, uptr, buf);
 			break;
-		default:
+	  case RPC_GETSOCKNAME:
+	  		dwr(MSG_DEBUG, "RPC_GETSOCKNAME\n");
+	  		struct getsockname_st getsockname_rpc;
+	    	memcpy(&getsockname_rpc,  &buf[IDX_PAYLOAD+1], sizeof(struct getsockname_st));
+	  		handle_getsockname(sock, uptr, &getsockname_rpc);
+	  		break;
+	  default:
 			break;
 	}
 }
@@ -1166,6 +1174,35 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_coun
 	}
 }
 
+
+/* Return the address that the socket is bound to */
+void NetconEthernetTap::handle_getsockname(PhySocket *sock, void **uptr, struct getsockname_st *getsockname_rpc)
+{
+	TcpConnection *conn = getConnectionByTheirFD(sock, getsockname_rpc->sockfd);
+	dwr(MSG_DEBUG, "handle_getsockname(): sockfd = %d\n", getsockname_rpc->sockfd);
+
+	/*
+	int ip = conn->addr->sin_addr.s_addr;
+	unsigned char d[4];
+	d[0] = ip & 0xFF;
+	d[1] = (ip >>  8) & 0xFF;
+	d[2] = (ip >> 16) & 0xFF;
+	d[3] = (ip >> 24) & 0xFF;
+	int port = conn->addr->sin_port;
+	dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
+	*/
+	
+	// Assemble address "command" to send to intercept
+	char retmsg[sizeof(struct sockaddr)];
+	memset(&retmsg, '\0', sizeof(retmsg));
+	dwr(MSG_ERROR, " handle_getsockname(): %d\n", sizeof(retmsg));
+	memcpy(&retmsg, conn->addr, sizeof(struct sockaddr));
+
+	// Get connection's RPC fd and send structure containing bound address
+	int fd = _phy.getDescriptor(conn->rpcSock);
+	write(fd, &retmsg, sizeof(struct sockaddr));
+}
+
 /*
  * Handles an RPC to bind an LWIP PCB to a given address and port
  *
@@ -1207,8 +1244,8 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   connaddr = (struct sockaddr_in *) &bind_rpc->addr;
   int conn_port = lwipstack->ntohs(connaddr->sin_port);
   ip_addr_t conn_addr;
-	conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
-	TcpConnection *conn = getConnectionByTheirFD(sock, bind_rpc->sockfd);
+  conn_addr.addr = *((u32_t *)_ips[0].rawIpData());
+  TcpConnection *conn = getConnectionByTheirFD(sock, bind_rpc->sockfd);
 
   dwr(MSG_DEBUG, " handle_bind(%d)\n", bind_rpc->sockfd);
 
@@ -1233,7 +1270,10 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 					send_return_value(conn, -1, ENOMEM); // FIXME: Closest match
 			}
 			else
+			{
+				conn->addr = (struct sockaddr_in *) &bind_rpc->addr;
 				send_return_value(conn, ERR_OK, ERR_OK); // Success
+			}
     }
     else {
 			dwr(MSG_ERROR, " handle_bind(): PCB (%x) not in CLOSED state. Ignoring BIND request.\n", conn->pcb);

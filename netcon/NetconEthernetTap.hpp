@@ -49,6 +49,9 @@ struct socket_st;
 struct listen_st;
 struct bind_st;
 struct connect_st;
+struct getsockname_st;
+struct accept_st;
+
 
 namespace ZeroTier {
 
@@ -109,6 +112,7 @@ private:
 	// RPC handlers (from NetconIntercept)
 	void unload_rpc(void *data, pid_t &pid, pid_t &tid, int &rpc_count, char (timestamp[20]), char &cmd, void* &payload);
 
+	void handle_getsockname(PhySocket *sock, void **uptr, struct getsockname_st *getsockname_rpc);
 	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
 	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
 	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);

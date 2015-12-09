@@ -56,6 +56,7 @@
 #define RPC_LISTEN			 		10
 #define RPC_SOCKET			 		11
 #define RPC_SHUTDOWN		 		12
+#define RPC_GETSOCKNAME				13
 
 /* Administration RPC codes */
 #define RPC_MAP						20	/* Give the service the value we "see" for the new buffer fd */
@@ -174,6 +175,14 @@ struct shutdown_st
 	int socket;
 	int how;
 };
+
+struct getsockname_st
+{
+	int sockfd;
+	struct sockaddr addr;
+	socklen_t addrlen;
+};
+
 
 #define CONNECT_SOCKARG struct sockaddr *
 #define SELECT_SIG int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout
