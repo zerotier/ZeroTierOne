@@ -740,6 +740,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	  		handle_getsockname(sock, uptr, &getsockname_rpc);
 	  		break;
 	  default:
+	  		dwr(MSG_ERROR, "POSSIBLE RPC CORRUPTION. TRY AGAIN!\n");
 			break;
 	}
 }
@@ -1191,7 +1192,7 @@ void NetconEthernetTap::handle_getsockname(PhySocket *sock, void **uptr, struct 
 	int port = conn->addr->sin_port;
 	dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
 	*/
-	
+
 	// Assemble address "command" to send to intercept
 	char retmsg[sizeof(struct sockaddr)];
 	memset(&retmsg, '\0', sizeof(retmsg));
@@ -1406,6 +1407,7 @@ TcpConnection * NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, s
 		close(fds[1]); // close other end of socketpair
 		// Once the client tells us what its fd is on the other end, we can then complete the mapping
     	new_conn->pending = true;
+    	send_return_value(rpc_fd, 0, ERR_OK);
 		return new_conn;
   }
   else {

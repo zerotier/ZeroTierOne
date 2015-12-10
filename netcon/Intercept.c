@@ -152,45 +152,6 @@ void checkpid()
   }
 }
 
-/*
- * Sends an RPC command to the service
- */
-int send_command(int rpc_fd, char *cmd)
-{
-  char metabuf[BUF_SZ]; // portion of buffer which contains RPC metadata for debugging
-#ifdef VERBOSE
-  /*
-  #define IDX_PID       0
-  #define IDX_TID       sizeof(pid_t)
-  #define IDX_COUNT     IDX_TID + sizeof(pid_t)
-  #define IDX_TIME      IDX_COUNT + sizeof(int)
-  #define IDX_CMD       IDX_TIME + 20 // 20 being the length of the timestamp string
-  #define IDX_PAYLOAD   IDX_TIME + sizeof(char)
-  */
-  /* [pid_t] [pid_t] [rpc_count] [int] [...] */
-  memset(metabuf, '\0', BUF_SZ);
-  pid_t pid = syscall(SYS_getpid);
-  pid_t tid = syscall(SYS_gettid);
-  rpc_count++;
-  char timestring[20];
-  time_t timestamp;
-  timestamp = time(NULL);
-  strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
-  memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); /* pid       */
-  memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); /* tid       */
-  memcpy(&metabuf[IDX_COUNT],   &rpc_count,   sizeof(rpc_count)  ); /* rpc_count */
-  memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); /* timestamp */
-#endif
-  /* Combine command flag+payload with RPC metadata */
-  memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
-  int n_write = write(rpc_fd, &metabuf, BUF_SZ);
-  if(n_write < 0){
-    dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
-    errno = 0;
-    return -1;
-  }
-  return 0;
-}
 
 /*
  * Reads a return value from the service and sets errno (if applicable)
@@ -220,7 +181,6 @@ int get_new_fd(int oversock)
   char buf[BUF_SZ];
   int newfd;
   ssize_t size = sock_fd_read(oversock, buf, sizeof(buf), &newfd);
-
   if(size > 0){
     dwr(MSG_DEBUG, "get_new_fd(): RX: fd = (%d) over (%d)\n", newfd, oversock);
     return newfd;
@@ -228,6 +188,69 @@ int get_new_fd(int oversock)
   dwr(MSG_ERROR, "get_new_fd(): ERROR: unable to read fd over (%d)\n", oversock);
   return -1;
 }
+
+
+
+
+
+int send_cmd(int rpc_fd, char *cmd)
+{
+  //dwr(MSG_DEBUG, "\n---send_cmd[start]\n");
+  pthread_mutex_lock(&lock);	
+  char metabuf[BUF_SZ]; // portion of buffer which contains RPC metadata for debugging
+#ifdef VERBOSE
+  /*
+  #define IDX_PID       0
+  #define IDX_TID       sizeof(pid_t)
+  #define IDX_COUNT     IDX_TID + sizeof(pid_t)
+  #define IDX_TIME      IDX_COUNT + sizeof(int)
+  #define IDX_CMD       IDX_TIME + 20 // 20 being the length of the timestamp string
+  #define IDX_PAYLOAD   IDX_TIME + sizeof(char)
+  */
+  /* [pid_t] [pid_t] [rpc_count] [int] [...] */
+  memset(metabuf, '\0', BUF_SZ);
+  pid_t pid = syscall(SYS_getpid);
+  pid_t tid = syscall(SYS_gettid);
+  rpc_count++;
+  char timestring[20];
+  time_t timestamp;
+  timestamp = time(NULL);
+  strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
+  memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); /* pid       */
+  memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); /* tid       */
+  memcpy(&metabuf[IDX_COUNT],   &rpc_count,   sizeof(rpc_count)  ); /* rpc_count */
+  memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); /* timestamp */
+#endif
+  /* Combine command flag+payload with RPC metadata */
+  memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
+  usleep(100000);
+  int n_write = write(rpc_fd, &metabuf, BUF_SZ);
+  if(n_write < 0){
+    dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
+    errno = 0;
+    return -1;
+  }
+
+  int ret = ERR_OK;
+
+  if(cmd[0]==RPC_SOCKET) {
+  	dwr(MSG_DEBUG,"   waiting on get_new_fd()...\n");
+  	ret = get_new_fd(fdret_sock);
+  }
+  if(cmd[0]==RPC_MAP || cmd[0]==RPC_CONNECT || cmd[0]==RPC_BIND) {
+  	dwr(MSG_DEBUG,"   waiting on get_retval()...\n");
+  	ret = get_retval();
+  }
+  if(cmd[0]==RPC_LISTEN || cmd[0]==RPC_GETSOCKNAME) {
+  	dwr(MSG_DEBUG,"   waiting on get_retval()...\n");
+  	/* Do Nothing */
+  }
+  pthread_mutex_unlock(&lock);
+  //dwr(MSG_DEBUG, "---send_cmd[end]\n\n");
+  return ret;
+}
+
+
 
 /* Check whether the socket is mapped to the service or not. We
 need to know if this is a regular AF_LOCAL socket or an end of a socketpair
@@ -493,11 +516,9 @@ int socket(SOCKET_SIG)
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_SOCKET;
   memcpy(&cmd[1], &rpc_st, sizeof(struct socket_st));
-  pthread_mutex_lock(&lock);
-  send_command(fdret_sock, cmd);
 
-  /* get new fd */
-  newfd = get_new_fd(fdret_sock);
+  /* send command and get new fd */
+  newfd = send_cmd(fdret_sock, cmd);
   if(newfd > 0)
   {
     dwr(MSG_DEBUG,"sending fd = %d to Service over (%d)\n", newfd, fdret_sock);
@@ -506,29 +527,24 @@ int socket(SOCKET_SIG)
     memset(cmd, '\0', BUF_SZ);
     cmd[0] = RPC_MAP;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
-
-    if(newfd > -1) {
-      send_command(fdret_sock, cmd);
-      pthread_mutex_unlock(&lock);
-      errno = ERR_OK; /* OK */
-      handle_error("socket", "", newfd);
-      return newfd;
+	/* send fd mapping and get confirmation */
+	dwr(MSG_DEBUG, "pre-send_cmd\n");	
+	err = send_cmd(fdret_sock, cmd);
+	dwr(MSG_DEBUG, "post-send_cmd\n");
+	  
+	if(err > -1) {
+	  errno = ERR_OK;
+	  dwr(MSG_DEBUG, "RXd fd confirmation. Mapped!\n");
+      return newfd; /* Mapping complete, everything is OK */
     }
-    else { /* Try to read retval+errno since we RXed a bad fd */
-      dwr(MSG_DEBUG,"Error, service sent bad fd.\n");
-      err = get_retval();
-      pthread_mutex_unlock(&lock);
-      handle_error("socket", "", -1);
-      return err;
+    else{
+    	dwr(MSG_DEBUG,"Error, service sent bad fd.\n");
+    	return err; /* Mapping failed */
     }
-
   }
   else {
-    dwr(MSG_DEBUG,"Error while receiving new FD.\n");
-    err = get_retval();
-    pthread_mutex_unlock(&lock);
-    handle_error("socket", "", -1);
-    return err;
+    dwr(MSG_DEBUG,"Error while receiving new fd.\n");
+    return newfd;
   }
 }
 
@@ -603,18 +619,8 @@ int connect(CONNECT_SIG)
   memcpy(&rpc_st.__len, &__len, sizeof(socklen_t));
   cmd[0] = RPC_CONNECT;
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
-  pthread_mutex_lock(&lock);
-  send_command(fdret_sock, cmd);
-  /*
-  if(sock_type && O_NONBLOCK) {
-    pthread_mutex_unlock(&lock);
-    return EINPROGRESS;
-  }
-  */
-  err = get_retval();
-  pthread_mutex_unlock(&lock);
-  /* handle_error("connect", "", err); */
-  return err;
+
+  return send_cmd(fdret_sock, cmd);
 }
 
 /*------------------------------------------------------------------------------
@@ -689,14 +695,7 @@ int bind(BIND_SIG)
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
   cmd[0]=RPC_BIND;
   memcpy(&cmd[1], &rpc_st, sizeof(struct bind_st));
-  pthread_mutex_lock(&lock);
-  send_command(fdret_sock, cmd);
-
-  err = get_retval();
-  pthread_mutex_unlock(&lock);
-  errno = ERR_OK;
-  handle_error("bind", "", err);
-  return err;
+  return send_cmd(fdret_sock, cmd);
 }
 
 
@@ -914,12 +913,7 @@ int listen(LISTEN_SIG)
   rpc_st.__tid = syscall(SYS_gettid);
   cmd[0] = RPC_LISTEN;
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
-  pthread_mutex_lock(&lock);
-  send_command(fdret_sock, cmd);
-  //get_retval();
-  pthread_mutex_unlock(&lock);
-  handle_error("listen", "", ERR_OK);
-  return ERR_OK;
+  return send_command(fdret_sock, cmd);
 }
 
 /*------------------------------------------------------------------------------
@@ -960,12 +954,12 @@ int poll(POLL_SIG)
 /* int fd */
 int close(CLOSE_SIG)
 {
-  checkpid(); // Required for httpd-2.4.17-3.x86_64 -- After clone, some symbols aren't initialized yet */
+  //checkpid(); // Add for nginx support, remove for apache support. 
+  dwr(MSG_DEBUG, "close(%d)\n", fd);
   if(realclose == NULL){
-    dwr(MSG_ERROR, "close(): SYMBOL NOT FOUND.\n");
+    dwr(MSG_ERROR, "close(%d): SYMBOL NOT FOUND.\n", fd);
     return -1;
   }
-  /* dwr(MSG_DEBUG,"close(%d)\n", fd); */
   if(fd == fdret_sock)
     return -1; /* TODO: Ignore request to shut down our rpc fd, this is *almost always* safe */
   if(fd != STDIN_FILENO && fd != STDOUT_FILENO && fd != STDERR_FILENO)
@@ -1030,7 +1024,9 @@ int getsockname(GETSOCKNAME_SIG)
     dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND.\n");
     return -1;
   }
+  return realgetsockname(sockfd, addr, addrlen);
 
+  /* assemble command */
   char cmd[BUF_SZ];
   struct getsockname_st rpc_st;
   rpc_st.sockfd = sockfd;
@@ -1038,9 +1034,8 @@ int getsockname(GETSOCKNAME_SIG)
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
   cmd[0] = RPC_GETSOCKNAME;
   memcpy(&cmd[1], &rpc_st, sizeof(struct getsockname_st));
-  pthread_mutex_lock(&lock);
-  send_command(fdret_sock, cmd);
-  pthread_mutex_unlock(&lock);
+
+  send_cmd(fdret_sock, cmd);
 
   char addrbuf[sizeof(struct sockaddr)];
   memset(addrbuf, '\0', sizeof(struct sockaddr));
