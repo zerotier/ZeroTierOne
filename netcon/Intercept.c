@@ -223,7 +223,7 @@ int send_cmd(int rpc_fd, char *cmd)
 #endif
   /* Combine command flag+payload with RPC metadata */
   memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
-  usleep(100000);
+  usleep(10000);
   int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
     dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
@@ -233,17 +233,24 @@ int send_cmd(int rpc_fd, char *cmd)
 
   int ret = ERR_OK;
 
-  if(cmd[0]==RPC_SOCKET) {
-  	dwr(MSG_DEBUG,"   waiting on get_new_fd()...\n");
-  	ret = get_new_fd(fdret_sock);
+  if(n_write > 0) {
+    if(cmd[0]==RPC_SOCKET) {
+    	dwr(MSG_DEBUG,"   waiting on get_new_fd()...\n");
+    	ret = get_new_fd(fdret_sock);
+    }
+    if(cmd[0]==RPC_MAP) {
+      ret = n_write;
+    }
+    if(cmd[0]==RPC_MAP_REQ || cmd[0]==RPC_CONNECT || cmd[0]==RPC_BIND) {
+    	dwr(MSG_DEBUG,"   waiting on get_retval()...\n");
+    	ret = get_retval();
+    }
+    if(cmd[0]==RPC_LISTEN || cmd[0]==RPC_GETSOCKNAME) {
+    	/* Do Nothing */
+    }
   }
-  if(cmd[0]==RPC_MAP || cmd[0]==RPC_CONNECT || cmd[0]==RPC_BIND) {
-  	dwr(MSG_DEBUG,"   waiting on get_retval()...\n");
-  	ret = get_retval();
-  }
-  if(cmd[0]==RPC_LISTEN || cmd[0]==RPC_GETSOCKNAME) {
-  	dwr(MSG_DEBUG,"   waiting on get_retval()...\n");
-  	/* Do Nothing */
+  else {
+    ret = -1;
   }
   pthread_mutex_unlock(&lock);
   //dwr(MSG_DEBUG, "---send_cmd[end]\n\n");
@@ -263,12 +270,7 @@ int is_mapped_to_service(int sockfd)
   memset(cmd, '\0', BUF_SZ);
   cmd[0] = RPC_MAP_REQ;
   memcpy(&cmd[1], &sockfd, sizeof(sockfd));
-  pthread_mutex_lock(&lock);
-  if(send_command(fdret_sock, cmd) < 0)
-    return -1;
-  int err = get_retval();
-  pthread_mutex_unlock(&lock);
-  return err;
+  return send_cmd(fdret_sock, cmd);
 }
 
 /*------------------------------------------------------------------------------
@@ -820,17 +822,15 @@ int accept(ACCEPT_SIG)
       memset(cmd, '\0', BUF_SZ);
       cmd[0] = RPC_MAP;
       memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
-      pthread_mutex_lock(&lock);
 
       dwr(MSG_DEBUG, "accept(): sending perceived fd (%d) to service.\n", new_conn_socket);
-      int n_write = send_command(fdret_sock, cmd);
+      int n_write = send_cmd(fdret_sock, cmd);
 
       if(n_write < 0) {
         errno = ECONNABORTED; /* TODO: Closest match, service unreachable */
         handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
         return -1;
       }
-      pthread_mutex_unlock(&lock);
       errno = ERR_OK;
       dwr(MSG_DEBUG,"*accept()=%d\n", new_conn_socket);
       handle_error("accept", "", new_conn_socket);
@@ -913,7 +913,7 @@ int listen(LISTEN_SIG)
   rpc_st.__tid = syscall(SYS_gettid);
   cmd[0] = RPC_LISTEN;
   memcpy(&cmd[1], &rpc_st, sizeof(struct listen_st));
-  return send_command(fdret_sock, cmd);
+  return send_cmd(fdret_sock, cmd);
 }
 
 /*------------------------------------------------------------------------------
@@ -948,15 +948,15 @@ int poll(POLL_SIG)
 */
 
 /*------------------------------------------------------------------------------
--------------------------------------- close()-----------------------------------
+------------------------------------- close()-----------------------------------
 ------------------------------------------------------------------------------*/
 
 /* int fd */
 int close(CLOSE_SIG)
 {
-  //checkpid(); // Add for nginx support, remove for apache support. 
   dwr(MSG_DEBUG, "close(%d)\n", fd);
   if(realclose == NULL){
+    checkpid(); // Add for nginx support, remove for apache support. 
     dwr(MSG_ERROR, "close(%d): SYMBOL NOT FOUND.\n", fd);
     return -1;
   }
