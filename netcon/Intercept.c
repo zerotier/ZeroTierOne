@@ -195,7 +195,6 @@ int get_new_fd(int oversock)
 
 int send_cmd(int rpc_fd, char *cmd)
 {
-  //dwr(MSG_DEBUG, "\n---send_cmd[start]\n");
   pthread_mutex_lock(&lock);	
   char metabuf[BUF_SZ]; // portion of buffer which contains RPC metadata for debugging
 #ifdef VERBOSE
@@ -223,7 +222,7 @@ int send_cmd(int rpc_fd, char *cmd)
 #endif
   /* Combine command flag+payload with RPC metadata */
   memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
-  usleep(10000);
+  usleep(1000);
   int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
     dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
@@ -235,14 +234,12 @@ int send_cmd(int rpc_fd, char *cmd)
 
   if(n_write > 0) {
     if(cmd[0]==RPC_SOCKET) {
-    	dwr(MSG_DEBUG,"   waiting on get_new_fd()...\n");
     	ret = get_new_fd(fdret_sock);
     }
     if(cmd[0]==RPC_MAP) {
       ret = n_write;
     }
     if(cmd[0]==RPC_MAP_REQ || cmd[0]==RPC_CONNECT || cmd[0]==RPC_BIND) {
-    	dwr(MSG_DEBUG,"   waiting on get_retval()...\n");
     	ret = get_retval();
     }
     if(cmd[0]==RPC_LISTEN || cmd[0]==RPC_GETSOCKNAME) {
@@ -253,7 +250,6 @@ int send_cmd(int rpc_fd, char *cmd)
     ret = -1;
   }
   pthread_mutex_unlock(&lock);
-  //dwr(MSG_DEBUG, "---send_cmd[end]\n\n");
   return ret;
 }
 
@@ -529,10 +525,8 @@ int socket(SOCKET_SIG)
     memset(cmd, '\0', BUF_SZ);
     cmd[0] = RPC_MAP;
     memcpy(&cmd[1], &newfd, sizeof(newfd));
-	/* send fd mapping and get confirmation */
-	dwr(MSG_DEBUG, "pre-send_cmd\n");	
-	err = send_cmd(fdret_sock, cmd);
-	dwr(MSG_DEBUG, "post-send_cmd\n");
+  	/* send fd mapping and get confirmation */
+  	err = send_cmd(fdret_sock, cmd);
 	  
 	if(err > -1) {
 	  errno = ERR_OK;
@@ -611,7 +605,6 @@ int connect(CONNECT_SIG)
   }
 
   /* Assemble and send RPC */
-  int err;
   char cmd[BUF_SZ];
   memset(cmd, '\0', BUF_SZ);
   struct connect_st rpc_st;
@@ -621,7 +614,6 @@ int connect(CONNECT_SIG)
   memcpy(&rpc_st.__len, &__len, sizeof(socklen_t));
   cmd[0] = RPC_CONNECT;
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
-
   return send_cmd(fdret_sock, cmd);
 }
 
@@ -672,7 +664,6 @@ int bind(BIND_SIG)
   }
 #endif
 
-  int err;
   /* make sure we don't touch any standard outputs */
   if(sockfd == STDIN_FILENO || sockfd == STDOUT_FILENO || sockfd == STDERR_FILENO)
     return(realbind(sockfd, addr, addrlen));
@@ -807,42 +798,31 @@ int accept(ACCEPT_SIG)
   /* The following line is required for libuv/nodejs to accept connections properly,
   however, this has the side effect of causing certain webservers to max out the CPU
   in an accept loop */
-  //fcntl(sockfd, F_SETFL, O_NONBLOCK);
+  fcntl(sockfd, F_SETFL, O_NONBLOCK);
+  int new_conn_socket = get_new_fd(sockfd);
 
-  char c[1];
-  int new_conn_socket;
-  int n = read(sockfd, c, sizeof(c)); /* Read signal byte */
-
-  if(n > 0)
+  if(new_conn_socket > 0)
   {
-    new_conn_socket = get_new_fd(fdret_sock);
+    //new_conn_socket = get_new_fd(fdret_sock);
     dwr(MSG_DEBUG, " accept(): RX: fd = (%d) over (%d)\n", new_conn_socket, fdret_sock);
-    if(new_conn_socket > 0) {
-      /* Send our local-fd number back to service so it can complete its mapping table */
-      memset(cmd, '\0', BUF_SZ);
-      cmd[0] = RPC_MAP;
-      memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
+    /* Send our local-fd number back to service so it can complete its mapping table */
+    memset(cmd, '\0', BUF_SZ);
+    cmd[0] = RPC_MAP;
+    memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
 
-      dwr(MSG_DEBUG, "accept(): sending perceived fd (%d) to service.\n", new_conn_socket);
-      int n_write = send_cmd(fdret_sock, cmd);
+    dwr(MSG_DEBUG, "accept(): sending perceived fd (%d) to service.\n", new_conn_socket);
+    int n_write = send_cmd(fdret_sock, cmd);
 
-      if(n_write < 0) {
-        errno = ECONNABORTED; /* TODO: Closest match, service unreachable */
-        handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
-        return -1;
-      }
-      errno = ERR_OK;
-      dwr(MSG_DEBUG,"*accept()=%d\n", new_conn_socket);
-      handle_error("accept", "", new_conn_socket);
-      return new_conn_socket; /* OK */
-    }
-    else {
-      errno = ECONNABORTED; /* TODO: Closest match, service unreachable */
-      handle_error("accept", "ECONNABORTED - Error receiving new FD from service", -1);
+    if(n_write < 0) {
+      errno = ECONNABORTED; 
+      handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
       return -1;
     }
+    errno = ERR_OK;
+    dwr(MSG_DEBUG,"accept()=%d\n", new_conn_socket);
+    handle_error("accept", "", new_conn_socket);
+    return new_conn_socket; /* OK */
   }
-
   errno = EAGAIN; /* necessary? */
   handle_error("accept", "EAGAIN - Error reading signal byte from service", -1);
   return -EAGAIN;
@@ -1024,8 +1004,7 @@ int getsockname(GETSOCKNAME_SIG)
     dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  return realgetsockname(sockfd, addr, addrlen);
-
+return realgetsockname(sockfd, addr, addrlen);
   /* assemble command */
   char cmd[BUF_SZ];
   struct getsockname_st rpc_st;

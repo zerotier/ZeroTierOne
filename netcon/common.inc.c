@@ -171,17 +171,17 @@ ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
     size = recvmsg (sock, &msg, 0);
     if (size < 0) {
       perror ("recvmsg");
-      exit(1);
+      return -1;
     }
     cmsg = CMSG_FIRSTHDR(&msg);
     if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
       if (cmsg->cmsg_level != SOL_SOCKET) {
         fprintf (stderr, "invalid cmsg_level %d\n",cmsg->cmsg_level);
-        exit(1);
+        return -1;
       }
       if (cmsg->cmsg_type != SCM_RIGHTS) {
           fprintf (stderr, "invalid cmsg_type %d\n",cmsg->cmsg_type);
-          exit(1);
+          return -1;
       }
 
       *fd = *((int *) CMSG_DATA(cmsg));
@@ -190,7 +190,7 @@ ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
     size = read (sock, buf, bufsize);
     if (size < 0) {
       perror("read");
-      exit(1);
+      return -1;
     }
   }
   return size;

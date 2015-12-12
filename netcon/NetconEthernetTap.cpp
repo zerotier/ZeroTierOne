@@ -832,46 +832,38 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 	int listening_fd = tap->_phy.getDescriptor(conn->dataSock);
 
   if(conn) {
-		ZT_PHY_SOCKFD_TYPE fds[2];
-		if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
-			if(errno < 0) {
-				l->tap->send_return_value(conn, -1, errno);
-				dwr(MSG_ERROR, " nc_accept(): unable to create socketpair\n");
-				return ERR_MEM;
-			}
+	ZT_PHY_SOCKFD_TYPE fds[2];
+	if(socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) < 0) {
+		if(errno < 0) {
+			l->tap->send_return_value(conn, -1, errno);
+			dwr(MSG_ERROR, " nc_accept(): unable to create socketpair\n");
+			return ERR_MEM;
 		}
-		TcpConnection *new_tcp_conn = new TcpConnection();
-		new_tcp_conn->dataSock = tap->_phy.wrapSocket(fds[0], new_tcp_conn);
-		new_tcp_conn->rpcSock = conn->rpcSock;
-		new_tcp_conn->pcb = newpcb;
-		new_tcp_conn->their_fd = fds[1];
-		tap->tcp_connections.push_back(new_tcp_conn);
-		dwr(MSG_DEBUG, " nc_accept(): socketpair = {%d, %d}\n", fds[0], fds[1]);
-		int n, send_fd = tap->_phy.getDescriptor(conn->rpcSock);
-		if((n = send(listening_fd, "z", 1, MSG_NOSIGNAL)) < 0) {
-			dwr(MSG_ERROR, " nc_accept(): Error: [send(listening_fd,...) = MSG_NOSIGNAL].\n");
-			return -1;
-		}
-		else if(n > 0) {
-			if(sock_fd_write(send_fd, fds[1]) > 0) {
-				close(fds[1]); // close other end of socketpair
-				new_tcp_conn->pending = true;
-			}
-			else {
-				dwr(MSG_ERROR, " nc_accept(%d): unable to send fd to client\n", listening_fd);
-			}
-    }
-    else {
-      dwr(MSG_ERROR, " nc_accept(%d): error writing signal byte (send_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
-      return -1;
-    }
+	}
+	TcpConnection *new_tcp_conn = new TcpConnection();
+	new_tcp_conn->dataSock = tap->_phy.wrapSocket(fds[0], new_tcp_conn);
+	new_tcp_conn->rpcSock = conn->rpcSock;
+	new_tcp_conn->pcb = newpcb;
+	new_tcp_conn->their_fd = fds[1];
+	tap->tcp_connections.push_back(new_tcp_conn);
+	dwr(MSG_DEBUG, " nc_accept(): socketpair = {%d, %d}\n", fds[0], fds[1]);
+	int send_fd = tap->_phy.getDescriptor(conn->rpcSock);
+
+	if(sock_fd_write(listening_fd, fds[1]) < 0){
+		dwr(MSG_ERROR, " nc_accept(%d): error writing signal byte (listen_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
+  		return -1;
+	}
+	else {
+		close(fds[1]); // close other end of socketpair
+		new_tcp_conn->pending = true;
+	}
     tap->lwipstack->_tcp_arg(newpcb, new Larg(tap, new_tcp_conn));
     tap->lwipstack->_tcp_recv(newpcb, nc_recved);
     tap->lwipstack->_tcp_err(newpcb, nc_err);
     tap->lwipstack->_tcp_sent(newpcb, nc_sent);
     tap->lwipstack->_tcp_poll(newpcb, nc_poll, 1);
     tcp_accepted(conn->pcb); // Let lwIP know that it can queue additional incoming connections
-		return ERR_OK;
+	return ERR_OK;
   }
   else {
     dwr(MSG_ERROR, " nc_accept(%d): can't locate Connection object for PCB.\n", listening_fd);
@@ -904,10 +896,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
     return ERR_OK; // ?
   }
   if(p == NULL) {
-    if(l->conn) {
-			dwr(MSG_INFO, " nc_recved(): closing connection\n");
-			l->tap->closeConnection(l->conn);
-			return ERR_ABRT;
+    if(l->conn && !l->conn->listening) {
+		dwr(MSG_INFO, " nc_recved(): closing connection\n");
+	//	l->tap->closeConnection(l->conn);
+		return ERR_ABRT;
     }
     else {
       dwr(MSG_ERROR, " nc_recved(): can't locate connection via (arg)\n");
@@ -1092,11 +1084,11 @@ err_t NetconEthernetTap::nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err
 void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid, int &rpc_count, char (timestamp[20]), char &cmd, void* &payload)
 {
 	unsigned char *buf = (unsigned char*)data;
-	memcpy(&pid, 			&buf[IDX_PID], 		sizeof(pid_t));
-	memcpy(&tid, 			&buf[IDX_TID], 		sizeof(pid_t));
-	memcpy(&rpc_count, 	&buf[IDX_COUNT], 		sizeof(int));
-	memcpy(timestamp, 	&buf[IDX_TIME], 		20);
-	memcpy(&cmd, 			&buf[IDX_PAYLOAD], 	sizeof(char));
+	memcpy(&pid, &buf[IDX_PID], sizeof(pid_t));
+	memcpy(&tid, &buf[IDX_TID], sizeof(pid_t));
+	memcpy(&rpc_count, &buf[IDX_COUNT], sizeof(int));
+	memcpy(timestamp, &buf[IDX_TIME], 20);
+	memcpy(&cmd, &buf[IDX_PAYLOAD], sizeof(char));
 }
 
 /*
@@ -1182,23 +1174,23 @@ void NetconEthernetTap::handle_getsockname(PhySocket *sock, void **uptr, struct 
 	TcpConnection *conn = getConnectionByTheirFD(sock, getsockname_rpc->sockfd);
 	dwr(MSG_DEBUG, "handle_getsockname(): sockfd = %d\n", getsockname_rpc->sockfd);
 
-	/*
+/*
+	int port = conn->addr->sin_port;
 	int ip = conn->addr->sin_addr.s_addr;
 	unsigned char d[4];
 	d[0] = ip & 0xFF;
 	d[1] = (ip >>  8) & 0xFF;
 	d[2] = (ip >> 16) & 0xFF;
 	d[3] = (ip >> 24) & 0xFF;
-	int port = conn->addr->sin_port;
 	dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
-	*/
+*/
 
 	// Assemble address "command" to send to intercept
 	char retmsg[sizeof(struct sockaddr)];
 	memset(&retmsg, '\0', sizeof(retmsg));
 	dwr(MSG_ERROR, " handle_getsockname(): %d\n", sizeof(retmsg));
-	memcpy(&retmsg, conn->addr, sizeof(struct sockaddr));
-
+	if(conn == NULL) return;
+	memcpy(&retmsg, conn->addr, 1);
 	// Get connection's RPC fd and send structure containing bound address
 	int fd = _phy.getDescriptor(conn->rpcSock);
 	write(fd, &retmsg, sizeof(struct sockaddr));
