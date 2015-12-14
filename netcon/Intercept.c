@@ -138,7 +138,7 @@ static void checkpid()
     return;
 
   if (thispid != getpid()) {
-    printf("clone/fork detected. re-initializing this instance.\n");
+    dwr(MSG_DEBUG, "checkpid(): clone/fork detected. Re-initializing this instance.\n");
     set_up_intercept();
     fdret_sock = init_service_connection();
     thispid = getpid();
@@ -216,12 +216,11 @@ static int send_cmd(int rpc_fd, char *cmd)
 #endif
   /* Combine command flag+payload with RPC metadata */
   memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
-  usleep(1000);
+  usleep(100000);
   int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
     dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
     errno = 0;
-    return -1;
   }
 
   int ret = ERR_OK;

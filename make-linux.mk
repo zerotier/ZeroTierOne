@@ -105,10 +105,10 @@ netcon: $(OBJS)
 	ln -sf zerotier-netcon-service zerotier-cli
 	ln -sf zerotier-netcon-service zerotier-idtool
 
-#install-intercept:
-#	cp libzerotierintercept.so /lib/libzerotierintercept.so
-#	ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept
-#	/usr/bin/install -c netcon/zerotier-intercept /usr/bin
+install-intercept:
+	cp libzerotierintercept.so /lib/libzerotierintercept.so
+	ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept
+	/usr/bin/install -c netcon/zerotier-intercept /usr/bin
 
 #uninstall-intercept:
 #	rm -r /lib/libzerotierintercept.so

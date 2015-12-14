@@ -39,9 +39,9 @@
 #include <fcntl.h>
 
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 4
 
-#define MSG_WARNING     0
+#define MSG_WARNING     4
 #define MSG_ERROR       1 // Errors
 #define MSG_INFO        2 // Information which is generally useful to any user
 #define MSG_DEBUG       3 // Information which is only useful to someone debugging
@@ -171,7 +171,7 @@ static ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
     msg.msg_controllen = sizeof(cmsgu.control);
     size = recvmsg (sock, &msg, 0);
     if (size < 0) {
-      perror ("recvmsg");
+      dwr(MSG_DEBUG, "sock_fd_read(): recvmsg: Error\n");
       return -1;
     }
     cmsg = CMSG_FIRSTHDR(&msg);
@@ -190,7 +190,7 @@ static ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
   } else {
     size = read (sock, buf, bufsize);
     if (size < 0) {
-      perror("read");
+      dwr(MSG_DEBUG, "sock_fd_read(): read: Error\n");
       return -1;
     }
   }

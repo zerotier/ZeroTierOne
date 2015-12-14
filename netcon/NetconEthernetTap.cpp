@@ -848,6 +848,8 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 	dwr(MSG_DEBUG, " nc_accept(): socketpair = {%d, %d}\n", fds[0], fds[1]);
 	int send_fd = tap->_phy.getDescriptor(conn->rpcSock);
 
+dwr(MSG_DEBUG, "nc_accept(): sending %d via %d\n", fds[1], listening_fd);
+
 	if(sock_fd_write(listening_fd, fds[1]) < 0){
 		dwr(MSG_ERROR, " nc_accept(%d): error writing signal byte (listen_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
   		return -1;
