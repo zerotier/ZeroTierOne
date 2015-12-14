@@ -32,11 +32,9 @@ function lookup(ip,callback)
 				if (cachedEntry) {
 					let ts = cachedEntry.ts;
 					let r = cachedEntry.r;
-					if ((ts)&&(r)) {
-						if ((Date.now() - ts) < CACHE_TTL) {
-							r._cached = true;
+					if (ts) {
+						if ((Date.now() - ts) < CACHE_TTL)
 							return callback(null,r);
-						}
 					}
 				}
 			} catch (e) {}
@@ -45,8 +43,8 @@ function lookup(ip,callback)
 		geo(ip,function(err,result) {
 			if (err)
 				return callback(err,null);
-			if ((!result)||(!result.location))
-				return callback(new Error('null result'),null);
+			if (!result)
+				result = null;
 
 			cache.put(ip,JSON.stringify({
 				ts: Date.now(),
