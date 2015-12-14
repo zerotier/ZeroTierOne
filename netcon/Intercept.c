@@ -62,7 +62,6 @@
 
 /* Global Declarations */
 static int (*realconnect)(CONNECT_SIG);
-static int (*realselect)(SELECT_SIG);
 static int (*realbind)(BIND_SIG);
 static int (*realaccept)(ACCEPT_SIG);
 static int (*reallisten)(LISTEN_SIG);
@@ -80,7 +79,6 @@ static int (*realgetsockname)(GETSOCKNAME_SIG);
 /* Exported Function Prototypes */
 void my_init(void);
 int connect(CONNECT_SIG);
-int select(SELECT_SIG);
 int bind(BIND_SIG);
 int accept(ACCEPT_SIG);
 int listen(LISTEN_SIG);
@@ -95,18 +93,15 @@ int dup2(DUP2_SIG);
 int dup3(DUP3_SIG);
 int getsockname(GETSOCKNAME_SIG);
 
-int connect_to_service(void);
-int init_service_connection();
-void load_symbols(void);
-void set_up_intercept();
+static int init_service_connection();
+static void load_symbols(void);
+static void set_up_intercept();
 
 #define SERVICE_CONNECT_ATTEMPTS  30
 #define RPC_FD                    1023
 
-ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
-
-/* threading */
 static pthread_mutex_t lock;
+static ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 void handle_error(char *name, char *info, int err)
 {
@@ -120,8 +115,6 @@ void handle_error(char *name, char *info, int err)
   dwr(MSG_DEBUG,"%s()=%d\n", name, err);
 #endif
 }
-
-static unsigned long rpc_count = 0;
 
 /*------------------------------------------------------------------------------
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
@@ -138,7 +131,7 @@ static int instance_count = 0;
 /*
  * Check for forking
  */
-void checkpid()
+static void checkpid()
 {
   /* Do noting if not configured (sanity check -- should never get here in this case) */
   if (!getenv(ZT_NC_NWID_ENV))
@@ -156,7 +149,7 @@ void checkpid()
 /*
  * Reads a return value from the service and sets errno (if applicable)
  */
-int get_retval()
+static int get_retval()
 {
   dwr(MSG_DEBUG,"get_retval()\n");
   if(fdret_sock >= 0) {
@@ -176,7 +169,7 @@ int get_retval()
 }
 
 /* Reads a new file descriptor from the service */
-int get_new_fd(int oversock)
+static int get_new_fd(int oversock)
 {
   char buf[BUF_SZ];
   int newfd;
@@ -189,11 +182,12 @@ int get_new_fd(int oversock)
   return -1;
 }
 
-
-
-
-
-int send_cmd(int rpc_fd, char *cmd)
+#ifdef VERBOSE
+  static unsigned long rpc_count = 0;
+#endif
+  
+/* Sends an RPC command to the service */
+static int send_cmd(int rpc_fd, char *cmd)
 {
   pthread_mutex_lock(&lock);	
   char metabuf[BUF_SZ]; // portion of buffer which contains RPC metadata for debugging
@@ -259,7 +253,7 @@ int send_cmd(int rpc_fd, char *cmd)
 need to know if this is a regular AF_LOCAL socket or an end of a socketpair
 that the service uses. We don't want to keep state in the intercept, so
 we simply ask the service via an RPC */
-int is_mapped_to_service(int sockfd)
+static int is_mapped_to_service(int sockfd)
 {
   dwr(MSG_DEBUG,"is_mapped_to_service()\n");
   char cmd[BUF_SZ];
@@ -274,7 +268,7 @@ int is_mapped_to_service(int sockfd)
 ------------------------------------------------------------------------------*/
 
 /* Sets up the connection pipes and sockets to the service */
-int init_service_connection()
+static int init_service_connection()
 {
   struct sockaddr_un addr;
   int tfd = -1, attempts = 0, conn_err = -1;
@@ -285,7 +279,6 @@ int init_service_connection()
   if ((!network_id)||(strlen(network_id) != 16))
     return -1;
   snprintf(af_sock_name,sizeof(af_sock_name),"/tmp/.ztnc_%s",network_id);
-
   instance_count++;
 
   dwr(MSG_DEBUG,"init_service_connection()\n");
@@ -293,11 +286,8 @@ int init_service_connection()
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, af_sock_name, sizeof(addr.sun_path)-1);
-  if ( (tfd = realsocket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+  if((tfd = realsocket(AF_UNIX, SOCK_STREAM, 0)) == -1)
     return -1;
-    /*perror("socket error");
-    exit(-1);*/
-  }
 
   while(conn_err < 0 && attempts < SERVICE_CONNECT_ATTEMPTS) {
     conn_err = realconnect(tfd, (struct sockaddr*)&addr, sizeof(addr));
@@ -315,7 +305,6 @@ int init_service_connection()
     }
     attempts++;
   }
-
   return -1;
 }
 
@@ -323,14 +312,13 @@ int init_service_connection()
 ------------------------  ctors and dtors (and friends)-------------------------
 ------------------------------------------------------------------------------*/
 
-void my_dest(void) __attribute__ ((destructor));
-void my_dest(void) {
+static void my_dest(void) __attribute__ ((destructor));
+static void my_dest(void) {
   dwr(MSG_DEBUG,"closing connections to service...\n");
-  //close(fdret_sock);
   pthread_mutex_destroy(&lock);
 }
 
-void load_symbols(void)
+static void load_symbols(void)
 {
   if(thispid == getpid()) {
     dwr(MSG_DEBUG,"detected duplicate call to global constructor (pid=%d).\n", thispid);
@@ -343,7 +331,6 @@ void load_symbols(void)
   reallisten = dlsym(RTLD_NEXT, "listen");
   realsocket = dlsym(RTLD_NEXT, "socket");
   realbind = dlsym(RTLD_NEXT, "bind");
-  realselect = dlsym(RTLD_NEXT, "select");
   realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
   realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
   realaccept4 = dlsym(RTLD_NEXT, "accept4");
@@ -356,19 +343,17 @@ void load_symbols(void)
 }
 
 /* Private Function Prototypes */
-void _init(void) __attribute__ ((constructor));
-void _init(void) { set_up_intercept(); }
+static void _init(void) __attribute__ ((constructor));
+static void _init(void) { set_up_intercept(); }
 
 /* get symbols and initialize mutexes */
-void set_up_intercept()
+static void set_up_intercept()
 {
   /* If ZT_NC_NWID_ENV is not set, do nothing -- not configured */
   if (!getenv(ZT_NC_NWID_ENV))
     return;
-
   /* Hook/intercept Posix net API symbols */
   load_symbols();
-
   if(pthread_mutex_init(&lock, NULL) != 0) {
     dwr(MSG_ERROR, "error while initializing service call mutex\n");
   }
@@ -618,22 +603,6 @@ int connect(CONNECT_SIG)
 }
 
 /*------------------------------------------------------------------------------
----------------------------------- select() ------------------------------------
-------------------------------------------------------------------------------*/
-
-/* int n, fd_set *readfds, fd_set *writefds,
-fd_set *exceptfds, struct timeval *timeout */
-int select(SELECT_SIG)
-{
-  if(realselect == NULL){
-    dwr(MSG_ERROR, "select(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
-  /* dwr(MSG_DEBUG,"select():\n"); */
-  return realselect(n, readfds, writefds, exceptfds, timeout);
-}
-
-/*------------------------------------------------------------------------------
 ------------------------------------ bind() ------------------------------------
 ------------------------------------------------------------------------------*/
 
@@ -690,7 +659,6 @@ int bind(BIND_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct bind_st));
   return send_cmd(fdret_sock, cmd);
 }
-
 
 /*------------------------------------------------------------------------------
 ----------------------------------- accept4() ----------------------------------
@@ -790,10 +758,6 @@ int accept(ACCEPT_SIG)
     /* TODO: also get address info */
 
   char cmd[BUF_SZ];
-  if(realaccept == NULL) {
-    handle_error("accept", "Unresolved symbol [accept]", -1);
-    return -1;
-  }
 
   /* The following line is required for libuv/nodejs to accept connections properly,
   however, this has the side effect of causing certain webservers to max out the CPU
@@ -803,8 +767,7 @@ int accept(ACCEPT_SIG)
 
   if(new_conn_socket > 0)
   {
-    //new_conn_socket = get_new_fd(fdret_sock);
-    dwr(MSG_DEBUG, " accept(): RX: fd = (%d) over (%d)\n", new_conn_socket, fdret_sock);
+    dwr(MSG_DEBUG, "accept(): RX: fd = (%d) over (%d)\n", new_conn_socket, fdret_sock);
     /* Send our local-fd number back to service so it can complete its mapping table */
     memset(cmd, '\0', BUF_SZ);
     cmd[0] = RPC_MAP;
@@ -820,19 +783,11 @@ int accept(ACCEPT_SIG)
     }
     errno = ERR_OK;
     dwr(MSG_DEBUG,"accept()=%d\n", new_conn_socket);
-    handle_error("accept", "", new_conn_socket);
     return new_conn_socket; /* OK */
   }
   errno = EAGAIN; /* necessary? */
   handle_error("accept", "EAGAIN - Error reading signal byte from service", -1);
   return -EAGAIN;
-
-/* Prevents libuv in nodejs from accepting properly (it looks for a -EAGAIN) */
-/*
-  errno = EBADF;
-  handle_error("accept", "EBADF - Error reading signal byte from service", -1);
-  return -1;
-*/
 }
 
 
@@ -840,8 +795,7 @@ int accept(ACCEPT_SIG)
 ------------------------------------- listen()----------------------------------
 ------------------------------------------------------------------------------*/
 
-/* int sockfd, int backlog
-   listen() intercept function */
+/* int sockfd, int backlog */
 int listen(LISTEN_SIG)
 {
   if(reallisten == NULL){
@@ -912,20 +866,6 @@ int clone(CLONE_SIG)
   checkpid();
   return err;
 }
-
-
-/*------------------------------------------------------------------------------
--------------------------------------- poll()-----------------------------------
-------------------------------------------------------------------------------*/
-
-/* struct pollfd *fds, nfds_t nfds, int timeout */
-/*
-int poll(POLL_SIG)
-{
-  dwr(MSG_DEBUG,"poll()\n");
-  return realpoll(fds, nfds, timeout);
-}
-*/
 
 /*------------------------------------------------------------------------------
 ------------------------------------- close()-----------------------------------
@@ -1001,10 +941,10 @@ int dup3(DUP3_SIG)
 int getsockname(GETSOCKNAME_SIG)
 {
   if (realgetsockname == NULL) {
-    dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND.\n");
+    dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND. \n");
     return -1;
   }
-return realgetsockname(sockfd, addr, addrlen);
+  /* return realgetsockname(sockfd, addr, addrlen); */
   /* assemble command */
   char cmd[BUF_SZ];
   struct getsockname_st rpc_st;
@@ -1018,7 +958,7 @@ return realgetsockname(sockfd, addr, addrlen);
 
   char addrbuf[sizeof(struct sockaddr)];
   memset(addrbuf, '\0', sizeof(struct sockaddr));
-  read(fdret_sock, &addrbuf, sizeof(struct sockaddr)); // read address from service
+  read(fdret_sock, &addrbuf, sizeof(struct sockaddr)); /* read address from service */
   memcpy(addr, addrbuf, sizeof(struct sockaddr)); 
   *addrlen = sizeof(struct sockaddr);
 
@@ -1034,7 +974,6 @@ return realgetsockname(sockfd, addr, addrlen);
 
   int port = connaddr->sin_port;
   dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
-
   return 0;
 }
 

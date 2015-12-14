@@ -39,12 +39,13 @@
 #include <fcntl.h>
 
 
-#define DEBUG_LEVEL 3
+#define DEBUG_LEVEL 0
 
-#define MSG_ERROR       0 // Errors
-#define MSG_INFO        1 // Information which is generally useful to any user
-#define MSG_DEBUG       2 // Information which is only useful to someone debugging
-#define MSG_DEBUG_EXTRA 3 // If nothing in your world makes sense
+#define MSG_WARNING     0
+#define MSG_ERROR       1 // Errors
+#define MSG_INFO        2 // Information which is generally useful to any user
+#define MSG_DEBUG       3 // Information which is only useful to someone debugging
+#define MSG_DEBUG_EXTRA 4 // If nothing in your world makes sense
 
 #ifdef NETCON_INTERCEPT
 
@@ -103,10 +104,10 @@ void print_addr(struct sockaddr *addr)
 }
 #endif
 
-ssize_t sock_fd_write(int sock, int fd);
-ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
+static ssize_t sock_fd_write(int sock, int fd);
+static ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
-ssize_t sock_fd_write(int sock, int fd)
+static ssize_t sock_fd_write(int sock, int fd)
 {
 	ssize_t size;
 	struct msghdr msg;
@@ -147,7 +148,7 @@ ssize_t sock_fd_write(int sock, int fd)
 	return size;
 }
 
-ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
+static ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
 {
   ssize_t size;
   if (fd) {

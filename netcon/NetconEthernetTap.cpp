@@ -581,7 +581,6 @@ void NetconEthernetTap::threadMain()
 					}
 				}
 			}
-			//dwr(4, " tap_thread(): tcp_conns = %d, rpc_socks = %d\n", tcp_connections.size(), rpc_sockets.size());
 			for(size_t i=0, associated = 0; i<rpc_sockets.size(); i++, associated = 0) {
 				for(size_t j=0; j<tcp_connections.size(); j++) {
 					if (tcp_connections[j]->rpcSock == rpc_sockets[i])
@@ -898,7 +897,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   if(p == NULL) {
     if(l->conn && !l->conn->listening) {
 		dwr(MSG_INFO, " nc_recved(): closing connection\n");
-	//	l->tap->closeConnection(l->conn);
+		l->tap->closeConnection(l->conn);
 		return ERR_ABRT;
     }
     else {

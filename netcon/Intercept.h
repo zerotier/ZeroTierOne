@@ -46,17 +46,15 @@
 #define RPC_UNDEFINED			 	0
 #define RPC_CONNECT				 	1
 #define RPC_CONNECT_SOCKARG		 	2
-#define RPC_SELECT			 		3
-#define RPC_POLL				 	4
-#define RPC_CLOSE				 	5
-#define RPC_READ				 	6
-#define RPC_WRITE				 	7
-#define RPC_BIND				 	8
-#define RPC_ACCEPT			 		9
-#define RPC_LISTEN			 		10
-#define RPC_SOCKET			 		11
-#define RPC_SHUTDOWN		 		12
-#define RPC_GETSOCKNAME				13
+#define RPC_CLOSE				 	3
+#define RPC_READ				 	4
+#define RPC_WRITE				 	5
+#define RPC_BIND				 	6
+#define RPC_ACCEPT			 		7
+#define RPC_LISTEN			 		8
+#define RPC_SOCKET			 		9
+#define RPC_SHUTDOWN		 		10
+#define RPC_GETSOCKNAME				11
 
 /* Administration RPC codes */
 #define RPC_MAP						20	/* Give the service the value we "see" for the new buffer fd */
@@ -183,9 +181,7 @@ struct getsockname_st
 	socklen_t addrlen;
 };
 
-
 #define CONNECT_SOCKARG struct sockaddr *
-#define SELECT_SIG int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout
 #define IOCTL_SIG int __fd, unsigned long int __request, ...
 #define FCNTL_SIG int __fd, int __cmd, ...
 #define DAEMON_SIG int nochdir, int noclose
@@ -193,9 +189,7 @@ struct getsockname_st
 #define GETSOCKOPT_SIG int sockfd, int level, int optname, void *optval, socklen_t *optlen
 #define SYSCALL_SIG	long number, ...
 #define CLONE_SIG int (*fn)(void *), void *child_stack, int flags, void *arg, ...
-#define POLL_SIG struct pollfd *fds, nfds_t nfds, int timeout
 #define GETSOCKNAME_SIG int sockfd, struct sockaddr *addr, socklen_t *addrlen
-
 #define DUP2_SIG int oldfd, int newfd
 #define DUP3_SIG int oldfd, int newfd, int flags
 
