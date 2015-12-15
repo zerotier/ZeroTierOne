@@ -3,9 +3,9 @@ Network Containers (beta)
 
 ZeroTier Network Containers offers a microkernel-like networking paradigm for containerized applications and application-specific virtual networking.
 
-Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. Our intercept library implements full binary compatibility with the standard network API, permitting servers and applications to be used without modification or recompilation. It can be used to run services on virtual networks without elevated privileges, special configuration of the physical host, kernel support, or any other application specific configuration.
+Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. This allows servers and applications to be used without modification or recompilation. It can be used to run services on virtual networks without elevated privileges, special configuration of the physical host, kernel support, or any other application specific configuration.
 
-Network Containers is ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/), allowing connectivity to a virtual network to be built into and deployed with containers without host awareness or configuration. It can also be used without containers to network-containerize applications on an ordinary VM or bare metal host. It works entirely at the library/application level and requires no special kernel extensions.
+Network Containers is ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/), allowing connectivity to a virtual network to be built into and deployed with containers without host awareness or configuration. It can also be used without containers to network-containerize stand-alone services and applications. It runs entirely at the library/application level and requires no special kernel extensions or operating system support.
 
 Tighter Docker integration using Docker's *libnetwork* API is planned for the future, allowing use with unmodified container images. In the end we plan to support two complimentary deployment scenarios with Docker: intra-container deployment without host involvement, and host deployment without container modification. The former is useful when building your own containers, while the latter is useful when using unmodified containers from Docker Hub.
 
@@ -84,7 +84,7 @@ What are you pinging? What is happening here?
 
 The *zerotier-netcon-service* binary has joined a *virtual* network and is running a *virtual* TCP/IP stack entirely in user space. As far as your system is concerned it's just another program exchanging UDP packets with a few other hosts on the Internet and nothing out of the ordinary is happening at all. That's why you never had to type *sudo*. It didn't change anything on the host.
 
-Now you can run an application inside your network container. 
+Now you can run an application inside your network container.
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
     export ZT_NC_NWID=8056c2e21c000001
