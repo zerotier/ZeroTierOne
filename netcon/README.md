@@ -25,11 +25,13 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 #### Compatibility Test Results
 
-	sshd (debug mode -d)     [ WORKS  as of 20151208 ] Fedora 22/23, Centos 7, Ubuntu 14.04
-	apache (debug mode -X)   [ WORKS  as of 20151208 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
-	nginx                    [ WORKS  as of 20151208 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
-	nodejs                   [ WORKS  as of 20151208 ] 0.10.36 Fedora 22/23 (disabled, see note in accept() in netcon/Intercept.c)
-	redis-server             [ WORKS  as of 20151208 ] 3.0.4 on Fedora 22/23
+The following applications have been tested and confirmed to work for the beta release:
+
+	sshd (debug mode -d)     [ WORKS  as of 20151215 ] Fedora 22/23, Centos 7, Ubuntu 14.04
+	apache (debug mode -X)   [ WORKS  as of 20151215 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
+	nginx                    [ WORKS  as of 20151215 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
+	nodejs                   [ WORKS  as of 20151215 ] (note: some LTS versions are known to have a connection accept bug)
+	redis-server             [ WORKS  as of 20151215 ] 3.0.4 on Fedora 22/23
 
 It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
 
@@ -82,23 +84,19 @@ What are you pinging? What is happening here?
 
 The *zerotier-netcon-service* binary has joined a *virtual* network and is running a *virtual* TCP/IP stack entirely in user space. As far as your system is concerned it's just another program exchanging UDP packets with a few other hosts on the Internet and nothing out of the ordinary is happening at all. That's why you never had to type *sudo*. It didn't change anything on the host.
 
-Now you can run an application inside your network container. For testing we've included in the *misc/* subfolder a [tiny single-C-file HTTP server](https://github.com/elly/1k/blob/master/httpd.c). To build it run (from *ZeroTierOne/netcon*):
-
-    gcc -o tiny-httpd netcon/misc/httpd.c
-
-That builds a very tiny HTTP server that serves static pages. Now you can run it network-containerized:
+Now you can run an application inside your network container. 
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
     export ZT_NC_NWID=8056c2e21c000001
-    ./tiny-httpd -p 80 .
+    zerotier-intercept python -m SimpleHTTPServer 8080
 
 Note the lack of sudo, even to bind to port 80. That's because you're not binding to port 80, at least not as far as the Linux kernel is concerned. If all went well the HTTP server is now listening, but only inside the network container. Going to port 80 on your machine won't work. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
-    curl http://NETCON.INSTANCE.IP/
+    curl http://NETCON.INSTANCE.IP:8080/
 
 Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
 
-In the original shell where you ran *tiny-httpd* you can type CTRL+C to kill it. To turn off network containers you can clear the environment variables:
+In the original shell where you ran *python -m SimpleHTTPServer* you can type CTRL+C to kill it. To turn off network containers you can clear the environment variables:
 
     unset LD_PRELOAD
     unset ZT_NC_NWID

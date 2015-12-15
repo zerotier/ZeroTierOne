@@ -4,18 +4,17 @@
 # copies the binaries into the test directory.
 
 cd ../../
-
 make clean
-make netcon
 make one
-
+make netcon
 cd netcon/docker-test
 
-cp ../../zerotier-one zerotier-one
 cp ../../zerotier-cli zerotier-cli
 cp ../../zerotier-netcon-service zerotier-netcon-service
 cp ../../libzerotierintercept.so libzerotierintercept.so
 
 cp ../liblwip.so liblwip.so
 cp ../zerotier-intercept zerotier-intercept
+
+cp ../../zerotier-one zerotier-one
 

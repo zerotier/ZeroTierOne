@@ -57,15 +57,6 @@ namespace ZeroTier {
 
 // ---------------------------------------------------------------------------
 
-/*
-static void clearscreen(){
-	fprintf(stderr, "\033[2J");
-}
-static void gotoxy(int x,int y) {
-    fprintf(stderr, "%c[%d;%df",0x1B,y,x);
-}
-*/
-
 // Gets the process/path name associated with a pid
 static void get_path_from_pid(char* dest, int pid)
 {
@@ -74,17 +65,6 @@ static void get_path_from_pid(char* dest, int pid)
 	if (readlink (ppath, dest, 80) != -1){
   }
 }
-
-// Gets the process/path name associated with a fd
-/*
-static void get_path_from_fd(char* dest, int pid, int fd)
-{
-	char ppfd[80];
-	sprintf(ppfd, "/proc/%d/fd/%d", pid, fd);
-	if (readlink (ppfd, dest, 80) != -1){
-	}
-}
-*/
 
 static err_t tapif_init(struct netif *netif)
 {
@@ -1021,14 +1001,6 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
-	//Larg *l = (Larg*)arg;
-	/*
-	Larg *l = (Larg*)arg;
-	TcpConnection *conn = l->conn;
-	NetconEthernetTap *tap = l->tap;
-	if(conn && conn->idx) // if valid connection and non-zero index (indicating data present)
-		tap->handle_write(conn);
-	*/
 	return ERR_OK;
 }
 
@@ -1365,7 +1337,7 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
  ? := required treatment Unknown
  - := Not needed
 
-	[-] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
+  [-] EACCES - Permission to create a socket of the specified type and/or protocol is denied.
   [I] EAFNOSUPPORT - The implementation does not support the specified address family.
   [I] EINVAL - Unknown protocol, or protocol family not available.
   [I] EINVAL - Invalid flags in type.
@@ -1524,7 +1496,6 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 
 void NetconEthernetTap::handle_write(TcpConnection *conn)
 {
-	//dwr(MSG_DEBUG, " handle_write()\n");
 	float max = (float)TCP_SND_BUF;
 	int r;
 

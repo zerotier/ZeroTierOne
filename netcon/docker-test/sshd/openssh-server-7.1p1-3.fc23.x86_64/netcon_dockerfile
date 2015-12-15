@@ -27,7 +27,6 @@ RUN cp libzerotierintercept.so lib/libzerotierintercept.so
 RUN ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept
 RUN /usr/bin/install -c zerotier-intercept /usr/bin
 
-ADD zerotier-one /
 ADD zerotier-cli /
 
 # Install test scripts

@@ -20,7 +20,6 @@ cp ../../monitor_identity.secret monitor_identity.secret
 docker build --tag="$test_name" -f netcon_dockerfile .
 docker build --tag="$test_name"_monitor -f monitor_dockerfile .
 
-rm -f zerotier-one
 rm -f zerotier-cli
 rm -f zerotier-netcon-service
 rm -f zerotier-intercept

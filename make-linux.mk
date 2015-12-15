@@ -96,6 +96,7 @@ one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	ln -sf zerotier-one zerotier-cli
 
 netcon: $(OBJS)
+	rm -f *.o
 	# Need to selectively rebuild one.cpp and OneService.cpp with ZT_SERVICE_NETCON and ZT_ONE_NO_ROOT_CHECK defined, and also NetconEthernetTap
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6 -o zerotier-netcon-service $(OBJS) service/OneService.cpp netcon/NetconEthernetTap.cpp one.cpp $(LDLIBS) -ldl
 	# Build netcon/liblwip.so which must be placed in ZT home for zerotier-netcon-service to work

@@ -30,7 +30,6 @@ ADD *.conf /var/lib/zerotier-one/networks.d/
 ADD *.conf /
 ADD *.name /
 
-ADD zerotier-one /
 ADD zerotier-cli /
 
 # Install test scripts
