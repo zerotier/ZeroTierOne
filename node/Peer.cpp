@@ -194,8 +194,8 @@ void Peer::received(
 
 					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
 
-					if ((_vMajor >= 1)&&(_vMinor >= 1)&&(_vRevision >= 1)) {
-						// 1.1.1 and newer nodes support ECHO, which is smaller
+					if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+						// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
 						Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 						outp.armor(_key,true);
 						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
