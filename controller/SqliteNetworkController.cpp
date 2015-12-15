@@ -1719,7 +1719,9 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_ACTIVE_BRIDGES] = activeBridges;
 		}
 
-		{
+		// Do not send relays to 1.1.0 since it had a serious bug in using them
+		// 1.1.0 will still work, it'll just fall back to roots instead of using network preferred relays
+		if (!((clientMajorVersion == 1)&&(clientMinorVersion == 1)&&(clientRevision == 0))) {
 			std::string relays;
 			sqlite3_reset(_sGetRelays);
 			sqlite3_bind_text(_sGetRelays,1,network.id,16,SQLITE_STATIC);
