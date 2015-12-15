@@ -3,21 +3,15 @@ Network Containers (beta)
 
 ZeroTier Network Containers offers a microkernel-like networking paradigm for containerized applications and application-specific virtual networking.
 
-Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. This allows servers and applications to be used without modification or recompilation. It can be used to run services on virtual networks without elevated privileges, special configuration of the physical host, kernel support, or any other application specific configuration.
-
-Network Containers is ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/), allowing connectivity to a virtual network to be built into and deployed with containers without host awareness or configuration. It can also be used without containers to network-containerize stand-alone services and applications. It runs entirely at the library/application level and requires no special kernel extensions or operating system support.
-
-Tighter Docker integration using Docker's *libnetwork* API is planned for the future, allowing use with unmodified container images. In the end we plan to support two complimentary deployment scenarios with Docker: intra-container deployment without host involvement, and host deployment without container modification. The former is useful when building your own containers, while the latter is useful when using unmodified containers from Docker Hub.
-
-Our long term goal is to allow total commoditization of the container host by providing fully independent network virtualization. We think this will help ease the path toward commodity multi-tenant container hosting and total application portability across hosts, data centers, and cloud providers.
+Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. This allows servers and applications to be used without modification or recompilation. It can be used to run services on virtual networks without elevated privileges, special configuration of the physical host, kernel support, or any other application specific configuration. It's ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/) to build container images that automatically connect to a virtual network when deployed. It can also be used on a plain un-containerized Linux system to run applications on virtual networks without elevated privileges or system modification.
 
 [More discussion can be found in our original blog announcement.](https://www.zerotier.com/blog/?p=490)
 
-Network Containers is currently in **beta** and is suitable for testing, experimentation, and prototyping. There are still some issues with compatibility with some applications, as documented in the compatibility matrix below. There's also some remaining work to be done on performance and overall stability before this will be ready for production use.
+Network Containers is currently in **beta** and is suitable for testing, experimentation, and prototyping. There are still some issues with compatibility with some applications as documented in the compatibility matrix below. There's also some remaining work to be done on performance and overall stability before this will be ready for production use.
 
 # Limitations and Compatibility
 
-The current version of Network Containers **only supports TCP over IPv4**. There is no IPv6 support and no support for UDP or ICMP (or RAW sockets). That means network-containerizing *ping* won't work, nor will UDP-based apps like VoIP servers, DNS servers, or P2P apps.
+The current version of Network Containers **only supports TCP over IPv4**. There is no IPv6 support and no support for UDP or ICMP (or RAW sockets). That means network-containerizing *ping* won't work, nor will UDP-based apps like VoIP servers, DNS servers, or P2P apps. IPv6 and other socket type support is coming in future releases.
 
 The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which means that you can ping it from another host on the same ZeroTier virtual network. This is useful for testing.
 
@@ -27,27 +21,28 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 The following applications have been tested and confirmed to work for the beta release:
 
-	sshd            [ WORKS  as of 20151215 ] Fedora 22/23, Centos 7, Ubuntu 14.04
-	apache          [ WORKS  as of 20151215 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
-	nginx           [ WORKS  as of 20151215 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
-	nodejs          [ WORKS  as of 20151215 ] (note: some older LTS versions are known to have a connection accept bug)
-	redis-server    [ WORKS  as of 20151215 ] 3.0.4 on Fedora 22/23
+	sshd            [ WORKS as of 20151215 ] Fedora 22/23, Centos 7, Ubuntu 14.04
+	apache          [ WORKS as of 20151215 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
+	nginx           [ WORKS as of 20151215 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
+	nodejs          [ WORKS as of 20151215 ] 4.2.2, 6.0.0-pre (note: some older LTS versions are known to have a connection accept bug)
+	redis-server    [ WORKS as of 20151215 ] 3.0.4 on Fedora 22/23
 
-It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
+It is *likely* to work with other things but there are no guarantees.
 
 # Building Network Containers
 
 Network Containers are currently only for Linux. To build the network container host, IP stack, and intercept library, from the base of the ZeroTier One tree run:
 
+    make clean
     make netcon
 
 This will build a binary called *zerotier-netcon-service* and a library called *libzerotierintercept.so*. It will also build the IP stack as *netcon/liblwip.so*.
 
-The *zerotier-netcon-service* binary is almost the same as a regular ZeroTier One build except instead of creating virtual network ports using Linux's */dev/net/tun* interface, it creates instances of a user-space TCP/IP stack for each virtual network and provides RPC access to this stack via a Unix domain socket called */tmp/.ztnc_##NETWORK_ID##*. The latter is a library that can be loaded with the Linux *LD\_PRELOAD* environment variable or by placement into */etc/ld.so.preload* on a Linux system or container. Additional magic involving nameless Unix domain socket pairs and interprocess socket handoff is used to emulate TCP sockets with extremely low overhead and in a way that's compatible with select, poll, epoll, and other I/O event mechanisms.
+The *zerotier-netcon-service* binary is almost the same as a regular ZeroTier One build except instead of creating virtual network ports using Linux's */dev/net/tun* interface, it creates instances of a user-space TCP/IP stack for each virtual network and provides RPC access to this stack via a Unix domain socket. The latter is a library that can be loaded with the Linux *LD\_PRELOAD* environment variable or by placement into */etc/ld.so.preload* on a Linux system or container. Additional magic involving nameless Unix domain socket pairs and interprocess socket handoff is used to emulate TCP sockets with extremely low overhead and in a way that's compatible with select, poll, epoll, and other I/O event mechanisms.
 
-The intercept library does nothing unless the *ZT\_NC\_NWID* environment variable is set. If on program launch (or fork) it detects the presence of this environment variable, it will attempt to connect to a running *zerotier-netcon-service* at the aforementioned Unix domain socket location and will intercept calls to the Posix sockets API and redirect network traffic through the virtual network.
+The intercept library does nothing unless the *ZT\_NC\_NETWORK* environment variable is set. If on program launch (or fork) it detects the presence of this environment variable, it will attempt to connect to a running *zerotier-netcon-service* at the specified Unix domain socket path.
 
-Unlike *zerotier-one*, *zerotier-netcon-service* does not need to be run with root privileges and will not modify the host's network configuration in any way. It can be run alongside *zerotier-one* on the same host with no ill effect, though this can be confusing since you'll have to remember the difference between "real host interfaces" and network containerized endpoints.
+Unlike *zerotier-one*, *zerotier-netcon-service* does not need to be run with root privileges and will not modify the host's network configuration in any way. It can be run alongside *zerotier-one* on the same host with no ill effect, though this can be confusing since you'll have to remember the difference between "real" host interfaces (tun/tap) and network containerized endpoints. The latter are completely unknown to the kernel and will not show up in *ifconfig*.
 
 # Starting the Network Containers Service
 
@@ -58,7 +53,7 @@ First, build the netcon service and intercept library as described above. Then c
     mkdir /tmp/netcon-test-home
     cp -f ./netcon/liblwip.so /tmp/netcon-test-home
 
-Now you can run the service (no sudo needed, and *-d* tells it to run in the background and can be omitted if you want it not to daemonize):
+Now you can run the service (no sudo needed, and *-d* tells it to run in the background):
 
     ./zerotier-netcon-service -d /tmp/netcon-test-home
 
@@ -66,13 +61,13 @@ As with ZeroTier One in its normal incarnation, you'll need to join a network:
 
     ./zerotier-cli -D/tmp/netcon-test-home join 8056c2e21c000001
 
-If you don't want to use [Earth](https://www.zerotier.com/public.shtml) for this test, replace 8056c2e21c000001 with a different network ID. The *-D* option tells *zerotier-cli* not to look in /var/lib/zerotier-one for information about a running instance of the ZeroTier system service but instead to look in /tmp/netcon-test-home. That's because *even if you do happen to be running ZeroTier on your local machine, what you are doing now has no impact on it and does not involve it in any way.* So if you have *zerotier-one* running, forget about it. It doesn't matter for this test.
+If you don't want to use [Earth](https://www.zerotier.com/public.shtml) for this test, replace 8056c2e21c000001 with a different network ID. The *-D* option tells *zerotier-cli* not to look in /var/lib/zerotier-one for information about a running instance of the ZeroTier system service but instead to look in */tmp/netcon-test-home*.
 
 Now type:
 
     ./zerotier-cli -D/tmp/netcon-test-home listnetworks
 
-Try it a few times until you see that you've successfully joined the network and have an IP address.
+Try it a few times until you see that you've successfully joined the network and have an IP address. Instead of a *zt#* device, a path to a Unix domain socket will be listed for the network's port.
 
 Now you will want to have ZeroTier One (the normal *zerotier-one* build, not network containers) running somewhere else, such as on another Linux system or VM. Technically you could run it on the *same* Linux system and it wouldn't matter at all, but many people find this intensely confusing until they grasp just what exactly is happening here.
 
@@ -87,12 +82,14 @@ The *zerotier-netcon-service* binary has joined a *virtual* network and is runni
 Now you can run an application inside your network container.
 
     export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
-    export ZT_NC_NWID=8056c2e21c000001
-    zerotier-intercept python -m SimpleHTTPServer 8080
+    export ZT_NC_NETWORK=/tmp/netcon-test-home/nc_8056c2e21c000001
+    python -m SimpleHTTPServer 80
+
+(If you are using Python 3, use "-m http.server".)
 
 Note the lack of sudo, even to bind to port 8080. That's because you're not binding to port 80, at least not as far as the Linux kernel is concerned. If all went well the HTTP server is now listening, but only inside the network container. Going to port 80 on your machine won't work. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
-    curl http://NETCON.INSTANCE.IP:8080/
+    curl http://NETCON.INSTANCE.IP/
 
 Replace *NETCON.INSTANCE.IP* with the IP address that *zerotier-netcon-service* was assigned on the virtual network. (This is the same IP you pinged in your first test.) If everything works, you should get back a copy of ZeroTier One's main README.md file.
 

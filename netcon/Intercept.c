@@ -120,8 +120,6 @@ void handle_error(char *name, char *info, int err)
 ------------------- Intercept<--->Service Comm mechanisms-----------------------
 ------------------------------------------------------------------------------*/
 
-#define ZT_NC_NWID_ENV "ZT_NC_NWID"
-
 static int is_initialized = 0;
 static int fdret_sock; /* used for fd-transfers */
 static int newfd; /* used for "this_end" socket */
@@ -134,7 +132,7 @@ static int instance_count = 0;
 static void checkpid()
 {
   /* Do noting if not configured (sanity check -- should never get here in this case) */
-  if (!getenv(ZT_NC_NWID_ENV))
+  if (!getenv("ZT_NC_NETWORK"))
     return;
 
   if (thispid != getpid()) {
@@ -185,11 +183,11 @@ static int get_new_fd(int oversock)
 #ifdef VERBOSE
   static unsigned long rpc_count = 0;
 #endif
-  
+
 /* Sends an RPC command to the service */
 static int send_cmd(int rpc_fd, char *cmd)
 {
-  pthread_mutex_lock(&lock);	
+  pthread_mutex_lock(&lock);
   char metabuf[BUF_SZ]; // portion of buffer which contains RPC metadata for debugging
 #ifdef VERBOSE
   /*
@@ -274,10 +272,10 @@ static int init_service_connection()
   const char *network_id;
   char af_sock_name[1024];
 
-  network_id = getenv(ZT_NC_NWID_ENV);
-  if ((!network_id)||(strlen(network_id) != 16))
+  network_id = getenv("ZT_NC_NETWORK");
+  if (!network_id)
     return -1;
-  snprintf(af_sock_name,sizeof(af_sock_name),"/tmp/.ztnc_%s",network_id);
+  strncpy(af_sock_name,network_id,sizeof(af_sock_name));
   instance_count++;
 
   dwr(MSG_DEBUG,"init_service_connection()\n");
@@ -348,8 +346,7 @@ static void _init(void) { set_up_intercept(); }
 /* get symbols and initialize mutexes */
 static void set_up_intercept()
 {
-  /* If ZT_NC_NWID_ENV is not set, do nothing -- not configured */
-  if (!getenv(ZT_NC_NWID_ENV))
+  if (!getenv("ZT_NC_NETWORK"))
     return;
   /* Hook/intercept Posix net API symbols */
   load_symbols();
@@ -510,7 +507,7 @@ int socket(SOCKET_SIG)
     memcpy(&cmd[1], &newfd, sizeof(newfd));
   	/* send fd mapping and get confirmation */
   	err = send_cmd(fdret_sock, cmd);
-	  
+
 	if(err > -1) {
 	  errno = ERR_OK;
 	  dwr(MSG_DEBUG, "RXd fd confirmation. Mapped!\n");
@@ -774,7 +771,7 @@ int accept(ACCEPT_SIG)
     int n_write = send_cmd(fdret_sock, cmd);
 
     if(n_write < 0) {
-      errno = ECONNABORTED; 
+      errno = ECONNABORTED;
       handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
       return -1;
     }
@@ -873,7 +870,7 @@ int close(CLOSE_SIG)
 {
   dwr(MSG_DEBUG, "close(%d)\n", fd);
   if(realclose == NULL){
-    checkpid(); // Add for nginx support, remove for apache support. 
+    checkpid(); // Add for nginx support, remove for apache support.
     dwr(MSG_ERROR, "close(%d): SYMBOL NOT FOUND.\n", fd);
     return -1;
   }
@@ -956,7 +953,7 @@ int getsockname(GETSOCKNAME_SIG)
   char addrbuf[sizeof(struct sockaddr)];
   memset(addrbuf, '\0', sizeof(struct sockaddr));
   read(fdret_sock, &addrbuf, sizeof(struct sockaddr)); /* read address from service */
-  memcpy(addr, addrbuf, sizeof(struct sockaddr)); 
+  memcpy(addr, addrbuf, sizeof(struct sockaddr));
   *addrlen = sizeof(struct sockaddr);
 
   struct sockaddr_in *connaddr;
