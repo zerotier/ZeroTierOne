@@ -96,7 +96,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),false);
+					outp.armor(peer->key(),true);
 					RR->node->putPacket(localAddr,fromAddr,outp.data(),outp.size());
 				}
 			}

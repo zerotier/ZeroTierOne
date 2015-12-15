@@ -454,7 +454,7 @@ public:
 		const unsigned int recSizePos = b.size();
 		b.addSize(4); // space for uint32_t field length
 
-		b.append((uint16_t)0); // version of serialized Peer data
+		b.append((uint16_t)1); // version of serialized Peer data
 
 		_id.serialize(b,false);
 
@@ -463,7 +463,6 @@ public:
 		b.append((uint64_t)_lastUnicastFrame);
 		b.append((uint64_t)_lastMulticastFrame);
 		b.append((uint64_t)_lastAnnouncedTo);
-		b.append((uint64_t)_lastPathConfirmationSent);
 		b.append((uint64_t)_lastDirectPathPushSent);
 		b.append((uint64_t)_lastDirectPathPushReceive);
 		b.append((uint64_t)_lastPathSort);
@@ -518,7 +517,7 @@ public:
 		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
 			return SharedPtr<Peer>(); // size invalid
-		if (b.template at<uint16_t>(p) != 0)
+		if (b.template at<uint16_t>(p) != 1)
 			return SharedPtr<Peer>(); // version mismatch
 		p += 2;
 
@@ -534,7 +533,6 @@ public:
 		np->_lastUnicastFrame = b.template at<uint64_t>(p); p += 8;
 		np->_lastMulticastFrame = b.template at<uint64_t>(p); p += 8;
 		np->_lastAnnouncedTo = b.template at<uint64_t>(p); p += 8;
-		np->_lastPathConfirmationSent = b.template at<uint64_t>(p); p += 8;
 		np->_lastDirectPathPushSent = b.template at<uint64_t>(p); p += 8;
 		np->_lastDirectPathPushReceive = b.template at<uint64_t>(p); p += 8;
 		np->_lastPathSort = b.template at<uint64_t>(p); p += 8;
@@ -585,7 +583,6 @@ private:
 	uint64_t _lastUnicastFrame;
 	uint64_t _lastMulticastFrame;
 	uint64_t _lastAnnouncedTo;
-	uint64_t _lastPathConfirmationSent;
 	uint64_t _lastDirectPathPushSent;
 	uint64_t _lastDirectPathPushReceive;
 	uint64_t _lastPathSort;

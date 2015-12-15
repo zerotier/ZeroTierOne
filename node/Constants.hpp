@@ -294,11 +294,6 @@
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
- * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
- */
-#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 1000
-
-/**
  * How long (max) to remember network certificates of membership?
  *
  * This only applies to networks we don't belong to.

@@ -53,7 +53,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
-	_lastPathConfirmationSent(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
 	_lastPathSort(0),
@@ -132,7 +131,6 @@ void Peer::received(
 
 	const uint64_t now = RR->node->now();
 	bool needMulticastGroupAnnounce = false;
-	bool pathIsConfirmed = false;
 
 	{	// begin _lock
 		Mutex::Lock _l(_lock);
@@ -149,6 +147,7 @@ void Peer::received(
 		}
 
 		if (hops == 0) {
+			bool pathIsConfirmed = false;
 			unsigned int np = _numPaths;
 			for(unsigned int p=0;p<np;++p) {
 				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
@@ -183,7 +182,6 @@ void Peer::received(
 						slot->setClusterSuboptimal(suboptimalPath);
 #endif
 						_numPaths = np;
-						pathIsConfirmed = true;
 						_sortPaths(now);
 					}
 
@@ -194,13 +192,14 @@ void Peer::received(
 
 				} else {
 
-					/* If this path is not known, send a HELLO. We don't learn
-					 * paths without confirming that a bidirectional link is in
-					 * fact present, but any packet that decodes and authenticates
-					 * correctly is considered valid. */
-					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
-						_lastPathConfirmationSent = now;
-						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+
+					if ((_vMajor >= 1)&&(_vMinor >= 1)&&(_vRevision >= 1)) {
+						// 1.1.1 and newer nodes support ECHO, which is smaller
+						Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+						outp.armor(_key,true);
+						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
+					} else {
 						sendHELLO(RR,localAddr,remoteAddr,now);
 					}
 

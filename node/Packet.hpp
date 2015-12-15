@@ -678,7 +678,14 @@ public:
 		 *   <[...] arbitrary payload to be echoed back>
 		 *
 		 * This generates OK with a copy of the transmitted payload. No ERROR
-		 * is generated. Response to ECHO requests is optional.
+		 * is generated. Response to ECHO requests is optional and ECHO may be
+		 * ignored if a node detects a possible flood.
+		 *
+		 * There is a de-facto standard for ECHO payload. No payload indicates an
+		 * ECHO used for path confirmation. Otherwise the first byte contains
+		 * flags, in which currently the only flag is 0x01 for a user-requested
+		 * echo. For user-requested echoes the result may be reported back through
+		 * the API. Otherwise the payload is for internal use.
 		 *
 		 * Support for fragmented echo packets is optional and their use is not
 		 * recommended.
