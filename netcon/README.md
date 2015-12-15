@@ -27,11 +27,11 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 The following applications have been tested and confirmed to work for the beta release:
 
-	sshd (debug mode -d)     [ WORKS  as of 20151215 ] Fedora 22/23, Centos 7, Ubuntu 14.04
-	apache (debug mode -X)   [ WORKS  as of 20151215 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
-	nginx                    [ WORKS  as of 20151215 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
-	nodejs                   [ WORKS  as of 20151215 ] (note: some LTS versions are known to have a connection accept bug)
-	redis-server             [ WORKS  as of 20151215 ] 3.0.4 on Fedora 22/23
+	sshd            [ WORKS  as of 20151215 ] Fedora 22/23, Centos 7, Ubuntu 14.04
+	apache          [ WORKS  as of 20151215 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
+	nginx           [ WORKS  as of 20151215 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
+	nodejs          [ WORKS  as of 20151215 ] (note: some older LTS versions are known to have a connection accept bug)
+	redis-server    [ WORKS  as of 20151215 ] 3.0.4 on Fedora 22/23
 
 It is *likely* to work with other things but there are no guarantees. UDP, ICMP/RAW, and IPv6 support are planned for the near future.
 
@@ -90,7 +90,7 @@ Now you can run an application inside your network container.
     export ZT_NC_NWID=8056c2e21c000001
     zerotier-intercept python -m SimpleHTTPServer 8080
 
-Note the lack of sudo, even to bind to port 80. That's because you're not binding to port 80, at least not as far as the Linux kernel is concerned. If all went well the HTTP server is now listening, but only inside the network container. Going to port 80 on your machine won't work. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
+Note the lack of sudo, even to bind to port 8080. That's because you're not binding to port 80, at least not as far as the Linux kernel is concerned. If all went well the HTTP server is now listening, but only inside the network container. Going to port 80 on your machine won't work. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
     curl http://NETCON.INSTANCE.IP:8080/
 
