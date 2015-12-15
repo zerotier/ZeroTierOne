@@ -83,7 +83,7 @@ Now you can run an application inside your network container.
 
     export LD_PRELOAD=`pwd`/libzerotierintercept.so
     export ZT_NC_NETWORK=/tmp/netcon-test-home/nc_8056c2e21c000001
-    python -m SimpleHTTPServer 80
+    python -m SimpleHTTPServer
 
 (If you are using Python 3, use "-m http.server".)
 
