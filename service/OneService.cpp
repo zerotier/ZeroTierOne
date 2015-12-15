@@ -605,7 +605,7 @@ public:
 				_v4UpnpLocalAddress = InetAddress(0,mapperPort);
 				_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
 				if (_v4UpnpUdpSocket) {
-					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.16llx",_node->address());
+					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
 					_portMapper = new PortMapper(mapperPort,uniqueName);
 					break;
 				}
