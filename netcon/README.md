@@ -55,7 +55,7 @@ First, build the netcon service and intercept library as described above. Then c
 
 Now you can run the service (no sudo needed, and *-d* tells it to run in the background):
 
-    ./zerotier-netcon-service -d /tmp/netcon-test-home
+    ./zerotier-netcon-service -d -p8000 /tmp/netcon-test-home
 
 As with ZeroTier One in its normal incarnation, you'll need to join a network:
 
@@ -81,7 +81,7 @@ The *zerotier-netcon-service* binary has joined a *virtual* network and is runni
 
 Now you can run an application inside your network container.
 
-    export LD_PRELOAD=/path/to/ZeroTierOne/libzerotierintercept.so
+    export LD_PRELOAD=`pwd`/libzerotierintercept.so
     export ZT_NC_NETWORK=/tmp/netcon-test-home/nc_8056c2e21c000001
     python -m SimpleHTTPServer 80
 
