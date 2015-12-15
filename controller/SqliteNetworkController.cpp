@@ -72,7 +72,7 @@
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
 // Delay between backups in milliseconds
-#define ZT_NETCONF_BACKUP_PERIOD 60000
+#define ZT_NETCONF_BACKUP_PERIOD 120000
 
 namespace ZeroTier {
 
