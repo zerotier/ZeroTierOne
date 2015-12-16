@@ -1159,14 +1159,12 @@ void NetconEthernetTap::handle_getsockname(PhySocket *sock, void **uptr, struct 
 */
 
 	// Assemble address "command" to send to intercept
-	char retmsg[sizeof(struct sockaddr)];
-	memset(&retmsg, '\0', sizeof(retmsg));
+	char retmsg[sizeof(struct sockaddr_storage)];
+	memset(&retmsg, 0, sizeof(retmsg));
 	dwr(MSG_ERROR, " handle_getsockname(): %d\n", sizeof(retmsg));
-	if(conn == NULL) return;
-	memcpy(&retmsg, conn->addr, 1);
-	// Get connection's RPC fd and send structure containing bound address
-	int fd = _phy.getDescriptor(conn->rpcSock);
-	write(fd, &retmsg, sizeof(struct sockaddr));
+	if ((conn)&&(conn->addr))
+    memcpy(&retmsg, conn->addr, sizeof(struct sockaddr_in));
+	write(_phy.getDescriptor(conn->rpcSock), &retmsg, sizeof(struct sockaddr_storage));
 }
 
 /*

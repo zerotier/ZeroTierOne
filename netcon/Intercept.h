@@ -96,7 +96,7 @@
 struct bind_st
 {
 	int sockfd;
-	struct sockaddr addr;
+	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int __tid;
 };
@@ -106,7 +106,7 @@ struct bind_st
 struct connect_st
 {
 	int __fd;
-	struct sockaddr __addr;
+	struct sockaddr_storage __addr;
 	socklen_t __len;
 	int __tid;
 };
@@ -162,7 +162,7 @@ struct socket_st
 struct accept_st
 {
 	int sockfd;
-	struct sockaddr addr;
+	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int __tid;
 };
@@ -177,7 +177,7 @@ struct shutdown_st
 struct getsockname_st
 {
 	int sockfd;
-	struct sockaddr addr;
+	struct sockaddr_storage addr;
 	socklen_t addrlen;
 };
 

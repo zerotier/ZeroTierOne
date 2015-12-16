@@ -590,7 +590,7 @@ int connect(CONNECT_SIG)
   struct connect_st rpc_st;
   rpc_st.__tid = syscall(SYS_gettid);
   rpc_st.__fd = __fd;
-  memcpy(&rpc_st.__addr, __addr, sizeof(struct sockaddr));
+  memcpy(&rpc_st.__addr, __addr, sizeof(struct sockaddr_storage));
   memcpy(&rpc_st.__len, &__len, sizeof(socklen_t));
   cmd[0] = RPC_CONNECT;
   memcpy(&cmd[1], &rpc_st, sizeof(struct connect_st));
@@ -648,7 +648,7 @@ int bind(BIND_SIG)
   struct bind_st rpc_st;
   rpc_st.sockfd = sockfd;
   rpc_st.__tid = syscall(SYS_gettid);
-  memcpy(&rpc_st.addr, addr, sizeof(struct sockaddr));
+  memcpy(&rpc_st.addr, addr, sizeof(struct sockaddr_storage));
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
   cmd[0]=RPC_BIND;
   memcpy(&cmd[1], &rpc_st, sizeof(struct bind_st));
@@ -924,7 +924,7 @@ int dup3(DUP3_SIG)
                    and preventing us from debugging */
   else
 #endif
-    return realdup3(oldfd, newfd, flags);
+  return realdup3(oldfd, newfd, flags);
 }
 
 /*------------------------------------------------------------------------------
@@ -938,36 +938,43 @@ int getsockname(GETSOCKNAME_SIG)
     dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND. \n");
     return -1;
   }
+
   /* return realgetsockname(sockfd, addr, addrlen); */
+
+  /* This is kind of a hack as it stands -- assumes sockaddr is sockaddr_in
+   * and is an IPv4 address. */
+
   /* assemble command */
   char cmd[BUF_SZ];
   struct getsockname_st rpc_st;
   rpc_st.sockfd = sockfd;
-  memcpy(&rpc_st.addr, addr, sizeof(struct sockaddr));
+  memcpy(&rpc_st.addr, addr, *addrlen);
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
   cmd[0] = RPC_GETSOCKNAME;
   memcpy(&cmd[1], &rpc_st, sizeof(struct getsockname_st));
 
   send_cmd(fdret_sock, cmd);
 
-  char addrbuf[sizeof(struct sockaddr)];
-  memset(addrbuf, '\0', sizeof(struct sockaddr));
-  read(fdret_sock, &addrbuf, sizeof(struct sockaddr)); /* read address from service */
-  memcpy(addr, addrbuf, sizeof(struct sockaddr));
-  *addrlen = sizeof(struct sockaddr);
+  char addrbuf[sizeof(struct sockaddr_storage)];
+  memset(addrbuf, 0, sizeof(struct sockaddr_storage));
+  read(fdret_sock, &addrbuf, sizeof(struct sockaddr_storage)); /* read address from service */
+
+  memcpy(addr, addrbuf, sizeof(struct sockaddr_in));
+  addr->sa_family = AF_INET;
+  *addrlen = sizeof(struct sockaddr_in);
 
   struct sockaddr_in *connaddr;
-  connaddr = (struct sockaddr_in *) &addr;
+  connaddr = (struct sockaddr_in *)&addr;
 
-  int ip = connaddr->sin_addr.s_addr;
+  unsigned int ip = connaddr->sin_addr.s_addr;
   unsigned char d[4];
   d[0] = ip & 0xFF;
   d[1] = (ip >>  8) & 0xFF;
   d[2] = (ip >> 16) & 0xFF;
   d[3] = (ip >> 24) & 0xFF;
-
   int port = connaddr->sin_port;
   dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
+
   return 0;
 }
 
