@@ -129,7 +129,7 @@ public:
   PhySocket *dataSock;
   struct tcp_pcb *pcb;
 
-  struct sockaddr_in *addr;
+  struct sockaddr_storage *addr;
 
   unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
   int idx;
@@ -828,7 +828,7 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 	dwr(MSG_DEBUG, " nc_accept(): socketpair = {%d, %d}\n", fds[0], fds[1]);
 	int send_fd = tap->_phy.getDescriptor(conn->rpcSock);
 
-dwr(MSG_DEBUG, "nc_accept(): sending %d via %d\n", fds[1], listening_fd);
+dwr(MSG_DEBUG, " nc_accept(): sending %d via %d\n", fds[1], listening_fd);
 
 	if(sock_fd_write(listening_fd, fds[1]) < 0){
 		dwr(MSG_ERROR, " nc_accept(%d): error writing signal byte (listen_fd = %d, perceived_fd = %d)\n", listening_fd, send_fd, fds[1]);
@@ -1100,12 +1100,15 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_coun
 {
 	dwr(MSG_DEBUG, " handle_retval()\n");
 	TcpConnection *conn = (TcpConnection*)*uptr;
-	if(!conn->pending)
+	if(!conn->pending){
+		send_return_value(conn, -1, -1);
 		return;
+	}
 	conn->pending = false;
     conn->perceived_fd = newfd;
     if(rpc_count==rpc_counter) {
     	dwr(MSG_ERROR, " handle_retval(): Detected repeat RPC.\n");
+    	send_return_value(conn, -1, -1);
     	//return;
     }
     else
@@ -1138,6 +1141,7 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_coun
 			}
 		}
 	}
+	send_return_value(conn, ERR_OK, ERR_OK); // Success
 }
 
 
@@ -1145,26 +1149,30 @@ void NetconEthernetTap::handle_retval(PhySocket *sock, void **uptr, int rpc_coun
 void NetconEthernetTap::handle_getsockname(PhySocket *sock, void **uptr, struct getsockname_st *getsockname_rpc)
 {
 	TcpConnection *conn = getConnectionByTheirFD(sock, getsockname_rpc->sockfd);
-	dwr(MSG_DEBUG, "handle_getsockname(): sockfd = %d\n", getsockname_rpc->sockfd);
-
-/*
-	int port = conn->addr->sin_port;
-	int ip = conn->addr->sin_addr.s_addr;
+	dwr(MSG_DEBUG, " handle_getsockname(): sockfd = %d\n", getsockname_rpc->sockfd);
+	dwr(MSG_DEBUG, " handle_getsockname(): conn   = 0x%x\n", conn);
+	
+	/*
+	if(!conn){
+		return;
+	}
+	struct sockaddr_in * myaddr = (struct sockaddr_in*)conn->addr;
+	int port = myaddr->sin_port;
+	int ip = myaddr->sin_addr.s_addr;
 	unsigned char d[4];
 	d[0] = ip & 0xFF;
 	d[1] = (ip >>  8) & 0xFF;
 	d[2] = (ip >> 16) & 0xFF;
 	d[3] = (ip >> 24) & 0xFF;
-	dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
-*/
-
+	dwr(MSG_ERROR, " handle_getsockname(): addr   = %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], lwipstack->ntohs(port));
+	*/
 	// Assemble address "command" to send to intercept
 	char retmsg[sizeof(struct sockaddr_storage)];
 	memset(&retmsg, 0, sizeof(retmsg));
-	dwr(MSG_ERROR, " handle_getsockname(): %d\n", sizeof(retmsg));
 	if ((conn)&&(conn->addr))
-    memcpy(&retmsg, conn->addr, sizeof(struct sockaddr_in));
-	write(_phy.getDescriptor(conn->rpcSock), &retmsg, sizeof(struct sockaddr_storage));
+    	memcpy(&retmsg, conn->addr, sizeof(struct sockaddr_storage));
+	int n = write(_phy.getDescriptor(conn->rpcSock), &retmsg, sizeof(struct sockaddr_storage));
+	dwr(MSG_DEBUG, " handle_getsockname(): wrote %d bytes\n", n);
 }
 
 /*
@@ -1216,16 +1224,17 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
   if(conn) {
     if(conn->pcb->state == CLOSED){
       int err = lwipstack->tcp_bind(conn->pcb, &conn_addr, conn_port);
-			if(err != ERR_OK) {
-				int ip = connaddr->sin_addr.s_addr;
-				unsigned char d[4];
-				d[0] = ip & 0xFF;
-				d[1] = (ip >>  8) & 0xFF;
-				d[2] = (ip >> 16) & 0xFF;
-				d[3] = (ip >> 24) & 0xFF;
-				dwr(MSG_ERROR, " handle_bind(): error binding to %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
-				dwr(MSG_ERROR, " handle_bind(): err = %d\n", err);
 
+  			int ip = connaddr->sin_addr.s_addr;
+			unsigned char d[4];
+			d[0] = ip & 0xFF;
+			d[1] = (ip >>  8) & 0xFF;
+			d[2] = (ip >> 16) & 0xFF;
+			d[3] = (ip >> 24) & 0xFF;
+			dwr(MSG_DEBUG, " handle_bind(): %d.%d.%d.%d : %d\n", d[0],d[1],d[2],d[3], conn_port);
+
+			if(err != ERR_OK) {
+				dwr(MSG_ERROR, " handle_bind(): err = %d\n", err);
 				if(err == ERR_USE)
 					send_return_value(conn, -1, EADDRINUSE);
 				if(err == ERR_MEM)
@@ -1233,9 +1242,8 @@ void NetconEthernetTap::handle_bind(PhySocket *sock, void **uptr, struct bind_st
 				if(err == ERR_BUF)
 					send_return_value(conn, -1, ENOMEM); // FIXME: Closest match
 			}
-			else
-			{
-				conn->addr = (struct sockaddr_in *) &bind_rpc->addr;
+			else {
+				conn->addr = (struct sockaddr_storage *) &bind_rpc->addr;
 				send_return_value(conn, ERR_OK, ERR_OK); // Success
 			}
     }
@@ -1275,13 +1283,14 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
 	TcpConnection *conn = getConnectionByTheirFD(sock, listen_rpc->sockfd);
 	if(!conn){
 		dwr(MSG_ERROR, " handle_listen(): unable to locate connection object\n");
-		// ? send_return_value(conn, -1, EBADF);
+		send_return_value(conn, -1, EBADF);
 		return;
 	}
 	dwr(3, " handle_listen(our=%d -> their=%d)\n", _phy.getDescriptor(conn->dataSock), conn->perceived_fd);
 
   if(conn->pcb->state == LISTEN) {
     dwr(MSG_ERROR, " handle_listen(): PCB is already in listening state.\n");
+    send_return_value(conn, ERR_OK, ERR_OK);
     return;
   }
 	struct tcp_pcb* listening_pcb;
@@ -1302,19 +1311,9 @@ void NetconEthernetTap::handle_listen(PhySocket *sock, void **uptr, struct liste
 		conn->listening = true;
 		conn->pending = true;
 		send_return_value(conn, ERR_OK, ERR_OK);
+		return;
   }
-  else {
-		/*
-		dwr"handle_listen(): unable to allocate memory for new listening PCB\n");
-		 // FIXME: This does not have an equivalent errno value
-		 // lwip will reclaim space with a tcp_listen call since a PCB in a LISTEN
-		 // state takes up less space. If something goes wrong during the creation of a
-		 // new listening socket we should return an error that implies we can't use this
-		 // socket, even if the reason isn't describing what really happened internally.
-		 // See: http://lwip.wikia.com/wiki/Raw/TCP
-		send_return_value(conn, -1, EBADF);
-  	*/
-	}
+  send_return_value(conn, -1, -1);
 }
 
 /*
@@ -1370,15 +1369,12 @@ TcpConnection * NetconEthernetTap::handle_socket(PhySocket *sock, void **uptr, s
 		close(fds[1]); // close other end of socketpair
 		// Once the client tells us what its fd is on the other end, we can then complete the mapping
     	new_conn->pending = true;
-    	send_return_value(rpc_fd, 0, ERR_OK);
 		return new_conn;
-  }
-  else {
-		sock_fd_write(rpc_fd, -1); // Send a bad fd, to signal error
-    dwr(MSG_ERROR, " handle_socket(): Memory not available for new PCB\n");
-		send_return_value(rpc_fd, -1, ENOMEM);
-		return NULL;
-  }
+	}
+	sock_fd_write(rpc_fd, -1); // Send a bad fd, to signal error
+	dwr(MSG_ERROR, " handle_socket(): Memory not available for new PCB\n");
+	send_return_value(rpc_fd, -1, ENOMEM);
+	return NULL;
 }
 
 /*

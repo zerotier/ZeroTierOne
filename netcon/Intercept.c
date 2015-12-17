@@ -214,27 +214,26 @@ static int send_cmd(int rpc_fd, char *cmd)
 #endif
   /* Combine command flag+payload with RPC metadata */
   memcpy(&metabuf[IDX_PAYLOAD], cmd, PAYLOAD_SZ);
-  //usleep(100000);
   int n_write = write(rpc_fd, &metabuf, BUF_SZ);
   if(n_write < 0){
     dwr(MSG_DEBUG,"Error writing command to service (CMD = %d)\n", cmd[0]);
     errno = 0;
   }
-
   int ret = ERR_OK;
 
   if(n_write > 0) {
     if(cmd[0]==RPC_SOCKET) {
     	ret = get_new_fd(fdret_sock);
     }
-    if(cmd[0]==RPC_MAP) {
-      ret = n_write;
-    }
-    if(cmd[0]==RPC_MAP_REQ || cmd[0]==RPC_CONNECT || cmd[0]==RPC_BIND) {
+    if(cmd[0]==RPC_MAP_REQ 
+      || cmd[0]==RPC_CONNECT 
+      || cmd[0]==RPC_BIND
+      || cmd[0]==RPC_LISTEN
+      || cmd[0]==RPC_MAP) {
     	ret = get_retval();
     }
-    if(cmd[0]==RPC_LISTEN || cmd[0]==RPC_GETSOCKNAME) {
-    	/* Do Nothing */
+    if(cmd[0]==RPC_GETSOCKNAME) {
+      ret = n_write;
     }
   }
   else {
@@ -643,6 +642,17 @@ int bind(BIND_SIG)
       dwr(MSG_DEBUG,"realbind, err = %d\n", err);
       return err;
   }
+
+  int port = connaddr->sin_port;
+  int ip = connaddr->sin_addr.s_addr;
+  unsigned char d[4];
+  d[0] = ip & 0xFF;
+  d[1] = (ip >>  8) & 0xFF;
+  d[2] = (ip >> 16) & 0xFF;
+  d[3] = (ip >> 24) & 0xFF;
+  dwr(MSG_DEBUG, "bind(): %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], ntohs(port));
+
+
   /* Assemble and send RPC */
   char cmd[BUF_SZ];
   struct bind_st rpc_st;
@@ -768,13 +778,14 @@ int accept(ACCEPT_SIG)
     memcpy(&cmd[1], &new_conn_socket, sizeof(new_conn_socket));
 
     dwr(MSG_DEBUG, "accept(): sending perceived fd (%d) to service.\n", new_conn_socket);
-    int n_write = send_cmd(fdret_sock, cmd);
-
+    send_cmd(fdret_sock, cmd);
+    /*
     if(n_write < 0) {
       errno = ECONNABORTED;
       handle_error("accept", "ECONNABORTED - Error sending perceived FD to service", -1);
       return -1;
     }
+    */
     errno = ERR_OK;
     dwr(MSG_DEBUG,"accept()=%d\n", new_conn_socket);
     return new_conn_socket; /* OK */
@@ -938,13 +949,15 @@ int getsockname(GETSOCKNAME_SIG)
     dwr(MSG_ERROR, "getsockname(): SYMBOL NOT FOUND. \n");
     return -1;
   }
+  dwr(MSG_DEBUG, "getsockname(%d)\n", sockfd);
+  if(!is_mapped_to_service(sockfd))
+    return realgetsockname(sockfd, addr, addrlen); 
 
-  /* return realgetsockname(sockfd, addr, addrlen); */
-
+  dwr(MSG_DEBUG, "getsockname(): sockfd = %d is mapped\n", sockfd);
   /* This is kind of a hack as it stands -- assumes sockaddr is sockaddr_in
    * and is an IPv4 address. */
 
-  /* assemble command */
+  /* assemble and send command */
   char cmd[BUF_SZ];
   struct getsockname_st rpc_st;
   rpc_st.sockfd = sockfd;
@@ -952,19 +965,19 @@ int getsockname(GETSOCKNAME_SIG)
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
   cmd[0] = RPC_GETSOCKNAME;
   memcpy(&cmd[1], &rpc_st, sizeof(struct getsockname_st));
-
   send_cmd(fdret_sock, cmd);
 
+  //pthread_mutex_lock(&lock);
+  /* read address info from service */
   char addrbuf[sizeof(struct sockaddr_storage)];
-  memset(addrbuf, 0, sizeof(struct sockaddr_storage));
-  read(fdret_sock, &addrbuf, sizeof(struct sockaddr_storage)); /* read address from service */
+  memset(&addrbuf, '\0', sizeof(struct sockaddr_storage));
+  int n = read(fdret_sock, &addrbuf, sizeof(struct sockaddr_storage));
+  dwr(MSG_DEBUG, "getsockname(): read %d bytes\n", n);
+  struct sockaddr_storage sock_storage;
+  memcpy(&sock_storage, &addrbuf, sizeof(struct sockaddr_storage));
 
-  memcpy(addr, addrbuf, sizeof(struct sockaddr_in));
-  addr->sa_family = AF_INET;
-  *addrlen = sizeof(struct sockaddr_in);
-
-  struct sockaddr_in *connaddr;
-  connaddr = (struct sockaddr_in *)&addr;
+  struct sockaddr_in *connaddr = (struct sockaddr_in *)&sock_storage;
+  //addr = (struct sockaddr *)&sock_storage;
 
   unsigned int ip = connaddr->sin_addr.s_addr;
   unsigned char d[4];
@@ -973,8 +986,11 @@ int getsockname(GETSOCKNAME_SIG)
   d[2] = (ip >> 16) & 0xFF;
   d[3] = (ip >> 24) & 0xFF;
   int port = connaddr->sin_port;
-  dwr(MSG_ERROR, " handle_getsockname(): returning address: %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], port);
+  dwr(MSG_ERROR, "getsockname(): %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], ntohs(port));
 
+  //pthread_mutex_unlock(&lock);
+  addr->sa_family = AF_INET;
+  *addrlen = sizeof(struct sockaddr_in);
   return 0;
 }
 
@@ -987,7 +1003,7 @@ long syscall(SYSCALL_SIG){
     dwr(MSG_ERROR, "syscall(): SYMBOL NOT FOUND.\n");
     return -1;
   }
-  dwr(MSG_DEBUG_EXTRA,"syscall(%u, ...):\n", number);
+  //dwr(MSG_DEBUG_EXTRA,"syscall(%u, ...):\n", number);
 
   va_list ap;
   uintptr_t a,b,c,d,e,f;

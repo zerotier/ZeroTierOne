@@ -39,7 +39,7 @@
 #include <fcntl.h>
 
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 4
 
 #define MSG_WARNING     4
 #define MSG_ERROR       1 // Errors

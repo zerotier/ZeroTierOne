@@ -102,7 +102,7 @@ netcon: $(OBJS)
 	# Build netcon/liblwip.so which must be placed in ZT home for zerotier-netcon-service to work
 	cd netcon ; make -f make-liblwip.mk
 	# Use gcc not clang to build standalone intercept library since gcc is typically used for libc and we want to ensure maximal ABI compatibility
-	cd netcon ; gcc -g -O2 -Wall -std=c99 -fPIC -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared -o ../libzerotierintercept.so Intercept.c -ldl
+	cd netcon ; gcc -g -O2 -Wall -std=c99 -fPIC -DVERBOSE -DDEBUG_RPC -DCHECKS -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared -o ../libzerotierintercept.so Intercept.c -ldl
 	ln -sf zerotier-netcon-service zerotier-cli
 	ln -sf zerotier-netcon-service zerotier-idtool
 
