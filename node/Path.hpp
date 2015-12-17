@@ -266,6 +266,9 @@ public:
 		return (p - startAt);
 	}
 
+	inline bool operator==(const Path &p) const { return ((p._addr == _addr)&&(p._localAddress == _localAddress)); }
+	inline bool operator!=(const Path &p) const { return ((p._addr != _addr)||(p._localAddress != _localAddress)); }
+
 private:
 	uint64_t _lastSend;
 	uint64_t _lastReceived;
