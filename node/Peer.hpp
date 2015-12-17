@@ -152,7 +152,7 @@ public:
 	 */
 	inline Path *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 	{
-		Path *bestPath = getBestPath(now);
+		Path *const bestPath = getBestPath(now);
 		if (bestPath) {
 			if (bestPath->send(RR,data,len,now))
 				return bestPath;
@@ -185,7 +185,7 @@ public:
 	bool doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily);
 
 	/**
-	 * Push direct paths if we haven't done so in [rate limit] milliseconds
+	 * Push direct paths back to self if we haven't done so in the configured timeout
 	 *
 	 * @param RR Runtime environment
 	 * @param path Remote path to use to send the push
@@ -232,7 +232,7 @@ public:
 	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
-	 * @return True if this peer is actively sending real network frames
+	 * @return True if this peer has sent us real network traffic recently
 	 */
 	inline uint64_t activelyTransferringFrames(uint64_t now) const throw() { return ((now - lastFrame()) < ZT_PEER_ACTIVITY_TIMEOUT); }
 
@@ -283,7 +283,7 @@ public:
 	inline bool hasActiveDirectPath(uint64_t now) const
 	{
 		Mutex::Lock _l(_lock);
-		for(unsigned int p=0,np=_numPaths;p<np;++p) {
+		for(unsigned int p=0;p<_numPaths;++p) {
 			if (_paths[p].active(now))
 				return true;
 		}
@@ -305,6 +305,21 @@ public:
 		return false;
 	}
 #endif
+
+	/**
+	 * @param now Current time
+	 * @param addr Remote address
+	 * @return True if peer currently has an active direct path to addr
+	 */
+	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
+	{
+		Mutex::Lock _l(_lock);
+		for(unsigned int p=0;p<_numPaths;++p) {
+			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
+				return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Reset paths within a given scope
@@ -341,6 +356,7 @@ public:
 	inline unsigned int remoteVersionMajor() const throw() { return _vMajor; }
 	inline unsigned int remoteVersionMinor() const throw() { return _vMinor; }
 	inline unsigned int remoteVersionRevision() const throw() { return _vRevision; }
+
 	inline bool remoteVersionKnown() const throw() { return ((_vMajor > 0)||(_vMinor > 0)||(_vRevision > 0)); }
 
 	/**
@@ -385,25 +401,6 @@ public:
 	 * Perform periodic cleaning operations
 	 */
 	void clean(const RuntimeEnvironment *RR,uint64_t now);
-
-	/**
-	 * Remove all paths with this remote address
-	 *
-	 * @param addr Remote address to remove
-	 */
-	inline void removePathByAddress(const InetAddress &addr)
-	{
-		Mutex::Lock _l(_lock);
-		unsigned int np = _numPaths;
-		unsigned int x = 0;
-		unsigned int y = 0;
-		while (x < np) {
-			if (_paths[x].address() != addr)
-				_paths[y++] = _paths[x];
-			++x;
-		}
-		_numPaths = y;
-	}
 
 	/**
 	 * Update direct path push stats and return true if we should respond
@@ -572,7 +569,6 @@ public:
 	}
 
 private:
-	void _sortPaths(const uint64_t now);
 	Path *_getBestPath(const uint64_t now);
 	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 

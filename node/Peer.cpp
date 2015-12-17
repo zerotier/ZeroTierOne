@@ -182,7 +182,6 @@ void Peer::received(
 						slot->setClusterSuboptimal(suboptimalPath);
 #endif
 						_numPaths = np;
-						_sortPaths(now);
 					}
 
 #ifdef ZT_ENABLE_CLUSTER
@@ -362,7 +361,6 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 		++x;
 	}
 	_numPaths = y;
-	_sortPaths(now);
 	return (y < np);
 }
 
@@ -501,58 +499,34 @@ void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-struct _SortPathsByQuality
-{
-	uint64_t _now;
-	_SortPathsByQuality(const uint64_t now) : _now(now) {}
-	inline bool operator()(const Path &a,const Path &b) const
-	{
-		const uint64_t qa = (
-			((uint64_t)a.active(_now) << 63) |
-			(((uint64_t)(a.preferenceRank() & 0xfff)) << 51) |
-			((uint64_t)a.lastReceived() & 0x7ffffffffffffULL) );
-		const uint64_t qb = (
-			((uint64_t)b.active(_now) << 63) |
-			(((uint64_t)(b.preferenceRank() & 0xfff)) << 51) |
-			((uint64_t)b.lastReceived() & 0x7ffffffffffffULL) );
-		return (qb < qa); // invert sense to sort in descending order
-	}
-};
-void Peer::_sortPaths(const uint64_t now)
-{
-	// assumes _lock is locked
-	_lastPathSort = now;
-	std::sort(&(_paths[0]),&(_paths[_numPaths]),_SortPathsByQuality(now));
-}
-
 Path *Peer::_getBestPath(const uint64_t now)
 {
 	// assumes _lock is locked
-	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
-		_sortPaths(now);
-	if (_paths[0].active(now)) {
-		return &(_paths[0]);
-	} else {
-		_sortPaths(now);
-		if (_paths[0].active(now))
-			return &(_paths[0]);
+	Path *bestPath = (Path *)0;
+	uint64_t bestPathScore = 0;
+	for(unsigned int i=0;i<_numPaths;++i) {
+		const uint64_t score = _paths[i].score();
+		if ((score >= bestPathScore)&&(_paths[i].active(now))) {
+			bestPathScore = score;
+			bestPath = &(_paths[i]);
+		}
 	}
-	return (Path *)0;
+	return bestPath;
 }
 
 Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 {
 	// assumes _lock is locked
-	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
-		_sortPaths(now);
-	for(int k=0;k<2;++k) { // try once, and if it fails sort and try one more time
-		for(unsigned int i=0;i<_numPaths;++i) {
-			if ((_paths[i].active(now))&&((int)_paths[i].address().ss_family == inetAddressFamily))
-				return &(_paths[i]);
+	Path *bestPath = (Path *)0;
+	uint64_t bestPathScore = 0;
+	for(unsigned int i=0;i<_numPaths;++i) {
+		const uint64_t score = _paths[i].score();
+		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_paths[i].active(now))) {
+			bestPathScore = score;
+			bestPath = &(_paths[i]);
 		}
-		_sortPaths(now);
 	}
-	return (Path *)0;
+	return bestPath;
 }
 
 } // namespace ZeroTier
