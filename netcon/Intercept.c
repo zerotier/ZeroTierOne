@@ -226,8 +226,8 @@ static int send_cmd(int rpc_fd, char *cmd)
     if(cmd[0]==RPC_SOCKET) {
     	ret = get_new_fd(fdret_sock);
     }
-    if(cmd[0]==RPC_MAP_REQ 
-      || cmd[0]==RPC_CONNECT 
+    if(cmd[0]==RPC_MAP_REQ
+      || cmd[0]==RPC_CONNECT
       || cmd[0]==RPC_BIND
       || cmd[0]==RPC_LISTEN
       || cmd[0]==RPC_MAP) {
@@ -404,7 +404,7 @@ int getsockopt(GETSOCKOPT_SIG)
     return -1;
   }
   dwr(MSG_DEBUG,"getsockopt(%d)\n", sockfd);
-  
+
   if(is_mapped_to_service(sockfd) <= 0) { // First, check if the service manages this
     return realgetsockopt(sockfd, level, optname, optval, optlen);
   }
@@ -414,7 +414,7 @@ int getsockopt(GETSOCKOPT_SIG)
   //int err = realgetsockopt(sockfd, level, optname, optval, optlen);
   /* TODO: this condition will need a little more intelligence later on
    -- we will need to know if this fd is a local we are spoofing, or a true local */
-  
+
   if(optname == SO_TYPE)
   {
     int* val = (int*)optval;
@@ -684,19 +684,11 @@ int accept4(ACCEPT4_SIG)
     return -1;
   }
   dwr(MSG_DEBUG,"accept4(%d):\n", sockfd);
-#ifdef CHECKS
-  if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
-    errno = EINVAL;
-    return -1;
-  }
-#endif
+  if ((flags & SOCK_CLOEXEC))
+    fcntl(sockfd, F_SETFL, FD_CLOEXEC);
+  if ((flags & SOCK_NONBLOCK))
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
   int newfd = accept(sockfd, addr, addrlen);
-  if(newfd > 0) {
-    if(flags & SOCK_CLOEXEC)
-      fcntl(newfd, F_SETFL, FD_CLOEXEC);
-    if(flags & SOCK_NONBLOCK)
-      fcntl(newfd, F_SETFL, O_NONBLOCK);
-  }
   handle_error("accept4", "", newfd);
   return newfd;
 }
@@ -772,7 +764,7 @@ int accept(ACCEPT_SIG)
   /* The following line is required for libuv/nodejs to accept connections properly,
   however, this has the side effect of causing certain webservers to max out the CPU
   in an accept loop */
-  fcntl(sockfd, F_SETFL, SOCK_NONBLOCK);
+  //fcntl(sockfd, F_SETFL, SOCK_NONBLOCK);
   int new_conn_socket = get_new_fd(sockfd);
 
   if(new_conn_socket > 0)
@@ -957,7 +949,7 @@ int getsockname(GETSOCKNAME_SIG)
   }
   dwr(MSG_DEBUG, "getsockname(%d)\n", sockfd);
   if(!is_mapped_to_service(sockfd))
-    return realgetsockname(sockfd, addr, addrlen); 
+    return realgetsockname(sockfd, addr, addrlen);
 
   /* This is kind of a hack as it stands -- assumes sockaddr is sockaddr_in
    * and is an IPv4 address. */
