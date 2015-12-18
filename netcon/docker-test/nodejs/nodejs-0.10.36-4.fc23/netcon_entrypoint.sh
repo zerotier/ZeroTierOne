@@ -29,9 +29,11 @@ echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Writing address to ' "$address_file"
 echo $virtip4 > "$address_file"
 
-export ZT_NC_NWID=$dev
+export ZT_NC_NETWORK=/var/lib/zerotier-one/nc_"$dev"
+echo $ZT_NC_NETWORK
+export LD_PRELOAD ./libzerotierintercept.so
 
 # --- Test section ---
 echo '*** Starting application...'
 sleep 0.5
-zerotier-intercept node httpserver.js
+node httpserver.js
