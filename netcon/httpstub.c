@@ -1,6 +1,8 @@
 /* A simple http server for performance test.
    Copyright (C) 2013 Sun, Junyi <ccnusjy@gmail.com> */
 
+/* https://github.com/fxsjy/httpstub */
+
 #include <sys/time.h>
 #include <sys/types.h>
 #include <ctype.h>
@@ -31,7 +33,7 @@
 
 #define MAX_EPOLL_FD 4096
 #define MAX_BUF_SIZE (1<<20)
-#define WORKER_COUNT 2 
+#define WORKER_COUNT 2
 
 int ep_fd[WORKER_COUNT],listen_fd;
 int g_delay;
@@ -63,8 +65,8 @@ struct slice_t {
 
 struct thread_data_t{
         struct slice_t data_from_file;
-        int myep_fd; 
-        int mypipe_fd;  
+        int myep_fd;
+        int mypipe_fd;
 };
 
 static void *handle_io_loop(void *param);
@@ -154,7 +156,7 @@ static void destroy_io_data(struct io_data_t *io_data_ptr)
 void exit_hook(int number)
 {
         close(listen_fd);
-        g_shutdown_flag=1;    
+        g_shutdown_flag=1;
         printf(">> [%d]will shutdown...[%d]\n", getpid(),number);
 }
 
@@ -287,7 +289,7 @@ int main(int argc, char **argv)
                 pthread_attr_init(tattr+i);
                 pthread_attr_setdetachstate(tattr+i, PTHREAD_CREATE_JOINABLE);
                 tdata[i].data_from_file = data_from_file;
-                tdata[i].myep_fd = ep_fd[i];         
+                tdata[i].myep_fd = ep_fd[i];
                 tdata[i].mypipe_fd = g_pipe[i][0];
                 if (pthread_create(tid+i, tattr+i, handle_io_loop, tdata+i ) != 0) {
                         fprintf(stderr, "pthread_create failed\n");
@@ -314,7 +316,7 @@ int main(int argc, char **argv)
                 else{
                         if(0 == g_shutdown_flag){
                                 perror("please check ulimit -n");
-                                sleep(1);    
+                                sleep(1);
                         }
                 }
         }
@@ -329,12 +331,12 @@ int main(int argc, char **argv)
                 perror("Accep failed, try ulimit -n");
                 httpstub_log("[ERROR]too many fds open, try ulimit -n");
                 g_shutdown_flag = 1;
-        }    
+        }
         fclose(g_logger);
         printf(">> [%d]waiting worker thread....\n",getpid());
 
         for(i=0; i< worker_count; i++)
-                pthread_join(tid[i], NULL);    
+                pthread_join(tid[i], NULL);
 
         printf(">> [%d]Bye~\n",getpid());
         return 0;
@@ -488,7 +490,7 @@ static void handle_input(int myep_fd, struct io_data_t *client_io_ptr, struct sl
 
 static void * handle_io_loop(void *param)
 {
-        register int i;    
+        register int i;
         int cfd, nfds, case_no, new_sock_fd;
         struct epoll_event events[MAX_EPOLL_FD],ev;
 
@@ -513,12 +515,12 @@ static void * handle_io_loop(void *param)
                                 if(read(my_tdata.mypipe_fd,&new_sock_fd,4)==-1){
                                         perror("faild to read pipe");
                                         exit(1);
-                                }       
+                                }
 				setnonblocking(new_sock_fd);
                                 ev.data.ptr = alloc_io_data(new_sock_fd, (struct sockaddr_in *)NULL);
                                 ev.events = EPOLLIN;
                                 epoll_ctl(my_tdata.myep_fd, EPOLL_CTL_ADD, new_sock_fd, &ev);
-                                continue;       
+                                continue;
                         }
                         client_io_ptr = (struct io_data_t *)events[i].data.ptr;
                         if(client_io_ptr->fd<=0) continue;
@@ -538,4 +540,3 @@ static void * handle_io_loop(void *param)
         }
         return NULL;
 }
-
