@@ -953,7 +953,6 @@ int getsockname(GETSOCKNAME_SIG)
   if(!is_mapped_to_service(sockfd))
     return realgetsockname(sockfd, addr, addrlen); 
 
-  dwr(MSG_DEBUG, "getsockname(): sockfd = %d is mapped\n", sockfd);
   /* This is kind of a hack as it stands -- assumes sockaddr is sockaddr_in
    * and is an IPv4 address. */
 
@@ -967,30 +966,15 @@ int getsockname(GETSOCKNAME_SIG)
   memcpy(&cmd[1], &rpc_st, sizeof(struct getsockname_st));
   send_cmd(fdret_sock, cmd);
 
-  //pthread_mutex_lock(&lock);
   /* read address info from service */
   char addrbuf[sizeof(struct sockaddr_storage)];
-  memset(&addrbuf, '\0', sizeof(struct sockaddr_storage));
-  int n = read(fdret_sock, &addrbuf, sizeof(struct sockaddr_storage));
-  dwr(MSG_DEBUG, "getsockname(): read %d bytes\n", n);
+  memset(&addrbuf, 0, sizeof(struct sockaddr_storage));
+  read(fdret_sock, &addrbuf, sizeof(struct sockaddr_storage));
   struct sockaddr_storage sock_storage;
-  memcpy(&sock_storage, &addrbuf, sizeof(struct sockaddr_storage));
-
-  struct sockaddr_in *connaddr = (struct sockaddr_in *)&sock_storage;
-  //addr = (struct sockaddr *)&sock_storage;
-
-  unsigned int ip = connaddr->sin_addr.s_addr;
-  unsigned char d[4];
-  d[0] = ip & 0xFF;
-  d[1] = (ip >>  8) & 0xFF;
-  d[2] = (ip >> 16) & 0xFF;
-  d[3] = (ip >> 24) & 0xFF;
-  int port = connaddr->sin_port;
-  dwr(MSG_ERROR, "getsockname(): %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], ntohs(port));
-
-  //pthread_mutex_unlock(&lock);
-  addr->sa_family = AF_INET;
+  memcpy(&sock_storage, addrbuf, sizeof(struct sockaddr_storage));
   *addrlen = sizeof(struct sockaddr_in);
+  memcpy(addr, &sock_storage, (*addrlen > sizeof(sock_storage)) ? sizeof(sock_storage) : *addrlen);
+  addr->sa_family = AF_INET;
   return 0;
 }
 
