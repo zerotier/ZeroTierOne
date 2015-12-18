@@ -159,6 +159,7 @@ static int get_retval()
     if(n_read > 0) {
       memcpy(&retval, &retbuf[1], sizeof(retval));
       memcpy(&errno, &retbuf[1+sizeof(retval)], sizeof(errno));
+      dwr(MSG_DEBUG, "get_retval(): ret = %d\n", retval);
       return retval;
     }
   }
@@ -403,23 +404,28 @@ int getsockopt(GETSOCKOPT_SIG)
     return -1;
   }
   dwr(MSG_DEBUG,"getsockopt(%d)\n", sockfd);
-  /*
-  if(is_mapped_to_service(sockfd) < 0) { // First, check if the service manages this
+  
+  if(is_mapped_to_service(sockfd) <= 0) { // First, check if the service manages this
     return realgetsockopt(sockfd, level, optname, optval, optlen);
   }
-  */
-  int err = realgetsockopt(sockfd, level, optname, optval, optlen);
+  //return 0;
+
+
+  //int err = realgetsockopt(sockfd, level, optname, optval, optlen);
   /* TODO: this condition will need a little more intelligence later on
    -- we will need to know if this fd is a local we are spoofing, or a true local */
+  
   if(optname == SO_TYPE)
   {
     int* val = (int*)optval;
     *val = 2;
     optval = (void*)val;
   }
+  /*
   if(err < 0){
-    perror("setsockopt():\n");
+    perror("getsockopt():\n");
   }
+  */
   return 0;
 }
 

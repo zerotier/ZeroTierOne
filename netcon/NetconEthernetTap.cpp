@@ -440,6 +440,8 @@ void NetconEthernetTap::die(int exret) {
  */
 void NetconEthernetTap::closeConnection(TcpConnection *conn)
 {
+	//return;
+	//dwr(MSG_DEBUG, "closeConnection(): conn = 0x%x\n", conn);
 	if(!conn)
 		return;
 	dwr(MSG_DEBUG, " closeConnection(%x, %d)\n", conn->pcb, _phy.getDescriptor(conn->dataSock));
