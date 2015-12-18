@@ -312,21 +312,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,
 						continue;
 				}
 
-				uint8_t flags = 0;
-				/* TODO: path trust is not implemented yet
-				switch(p->trust()) {
-					default:
-						break;
-					case Path::TRUST_PRIVACY:
-						flags |= 0x04; // no encryption
-						break;
-					case Path::TRUST_ULTIMATE:
-						flags |= (0x04 | 0x08); // no encryption, no authentication (redundant but go ahead and set both)
-						break;
-				}
-				*/
-
-				outp.append(flags);
+				outp.append((uint8_t)0); // no flags
 				outp.append((uint16_t)0); // no extensions
 				outp.append(addressType);
 				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
