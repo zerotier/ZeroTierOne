@@ -547,6 +547,9 @@ void NetconEthernetTap::threadMain()
 						if (read(_phy.getDescriptor(tcp_connections[i]->dataSock), &c, 1) < 0) {
 							// Still in listening state
 						}
+						else if (read(_phy.getDescriptor(tcp_connections[i]->rpcSock), &c, 1) < 0) {
+							// Still in listening state
+						}
 						else {
 							// Here we should handle the case there there is incoming data (?)
 							dwr(MSG_DEBUG, " tap_thread(): Listening socketpair closed. Removing RPC connection (%d)\n",
