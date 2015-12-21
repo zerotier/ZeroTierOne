@@ -55,10 +55,9 @@ int get_new_fd(int sock)
   int newfd;
   ssize_t size = sock_fd_read(sock, buf, sizeof(buf), &newfd);
   if(size > 0){
-    fprintf(stderr, "get_new_fd(): RX: fd = (%d) over (%d)\n", newfd, sock);
     return newfd;
   }
-  fprintf(stderr, "get_new_fd(): ERROR: unable to read fd over (%d)\n", sock);
+  fprintf(stderr, "get_new_fd(): Error, unable to read fd over (%d)\n", sock);
   return -1;
 }
 

@@ -358,7 +358,7 @@ int connect(CONNECT_SIG)
     || connaddr->sin_family == AF_NETLINK
     || connaddr->sin_family == AF_UNIX)) {
     int err = realconnect(__fd, __addr, __len);
-    perror("connect():");
+    //perror("connect():");
     return err;
   }
 
