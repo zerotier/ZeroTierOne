@@ -55,7 +55,7 @@
 #define SOCK_TYPE_MASK 0xf
 
 #include "Intercept.h"
-#include "rpc.h"
+#include "RPC.h"
 #include "common.inc.c"
 
 /* Global Declarations */

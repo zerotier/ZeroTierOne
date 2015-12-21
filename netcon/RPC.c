@@ -7,7 +7,7 @@
 
 #include <sys/socket.h>
 #include <strings.h>
-#include "rpc.h"
+#include "RPC.h"
 
 #define RPC_FD 1023
 #define SERVICE_CONNECT_ATTEMPTS 30

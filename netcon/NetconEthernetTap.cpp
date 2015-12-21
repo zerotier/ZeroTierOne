@@ -48,7 +48,7 @@
 #include "lwip/tcp.h"
 
 #include "common.inc.c"
-#include "rpc.h"
+#include "RPC.h"
 
 #define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5

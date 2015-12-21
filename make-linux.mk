@@ -109,8 +109,8 @@ netcon: rpc_lib $(OBJS)
 
 
 rpc_lib:
-	g++ -c -fPIC -lpthread netcon/rpc.c -DVERBOSE -o netcon/rpc.o
-	ar -rv netcon/librpc.a netcon/rpc.o
+	g++ -c -fPIC -lpthread netcon/RPC.c -DVERBOSE -o netcon/RPC.o
+	ar -rv netcon/librpc.a netcon/RPC.o
 
 
 selftest:	$(OBJS) selftest.o
