@@ -37,7 +37,7 @@ CentOS 7:
 
     httpstub.c
     nginx 1.6.3
-    httpd (debug mode -X)
+    httpd 2.4.6 (debug mode -X)
     darkhttpd 1.11
     node 4.2.2
     redis 2.8.19
