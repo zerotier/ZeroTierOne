@@ -40,9 +40,13 @@
 #include "OSUtils.hpp"
 #include "PortMapper.hpp"
 
+// These must be defined to get rid of dynamic export stuff in libminiupnpc and libnatpmp
 #ifdef __WINDOWS__
 #ifndef MINIUPNP_STATICLIB
 #define MINIUPNP_STATICLIB
+#endif
+#ifndef STATICLIB
+#define STATICLIB
 #endif
 #endif
 
