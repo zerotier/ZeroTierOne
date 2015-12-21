@@ -135,9 +135,7 @@ static int init_service_connection()
 
   strncpy(rpcname,network_id,sizeof(rpcname));
   instance_count++;
-  rpcfd = rpc_join(rpcname);
-  fprintf(stderr, "rpc_join = %d\n", rpcfd);
-  return rpcfd;
+  return rpc_join(rpcname);
 }
 
 /*------------------------------------------------------------------------------
@@ -152,7 +150,7 @@ static void my_dest(void) {
 
 static void load_symbols(void)
 {
-    if(thispid == getpid()) {
+  if(thispid == getpid()) {
     dwr(MSG_DEBUG,"detected duplicate call to global constructor (pid=%d).\n", thispid);
   }
   thispid = getpid();
@@ -276,15 +274,6 @@ int socket(SOCKET_SIG)
     errno = EINVAL;
     return -1;
   }
-  /* Check that we haven't hit the soft-limit file descriptors allowed */
-  /* FIXME: Find number of open fds
-  struct rlimit rl;
-  getrlimit(RLIMIT_NOFILE, &rl);
-  if(sockfd >= rl.rlim_cur){
-    errno = EMFILE;
-    return -1;
-  }
-  */
   /* TODO: detect ENFILE condition */
 
   if(socket_family == AF_LOCAL
@@ -338,7 +327,6 @@ int connect(CONNECT_SIG)
     return -1;
   }
   dwr(MSG_DEBUG,"connect(%d):\n", __fd);
-  /* print_addr(__addr); */
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
 

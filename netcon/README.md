@@ -21,11 +21,37 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 The following applications have been tested and confirmed to work for the beta release:
 
-	sshd            [ WORKS as of 20151215 ] Fedora 22/23, Centos 7, Ubuntu 14.04
-	apache          [ WORKS as of 20151215 ] 2.4.6 on Centos 7, 2.4.16 and 2.4.17 on Fedora 22/23
-	nginx           [ WORKS as of 20151215 ] 1.8.0 on both Fedora 22/23 and Ubuntu 14.04
-	nodejs          [ WORKS as of 20151215 ] 4.2.2, 6.0.0-pre (note: some older LTS versions are known to have a connection accept bug)
-	redis-server    [ WORKS as of 20151215 ] 3.0.4 on Fedora 22/23
+Fedora 23: 
+    
+    httpstub.c
+    nginx 1.8.0
+    http 2.4.16, 2.4.17
+    darkhttpd 1.11
+    python 2.7.10 (python -m SimpleHTTPServer)
+    python 3.4.3 (python -m http.server)
+    redis 3.0.4
+    node 6.0.0-pre
+    sshd
+
+CentOS 7:
+
+    httpstub.c
+    nginx 1.6.3
+    httpd (debug mode -X)
+    darkhttpd 1.11
+    node 4.2.2
+    redis 2.8.19
+    sshd
+
+Ubuntu 14.04.3:
+    
+    httpstub.c
+    nginx 1.4.6
+    python 2.7.6 (python -m SimpleHTTPServer)
+    python 3.4.0 (python -m http.server)
+    node 5.2.0
+    redis 2.8.4
+    sshd
 
 It is *likely* to work with other things but there are no guarantees.
 

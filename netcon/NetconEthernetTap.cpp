@@ -440,16 +440,9 @@ void NetconEthernetTap::die(int exret) {
  */
 void NetconEthernetTap::closeConnection(TcpConnection *conn)
 {
-	//return;
-	//dwr(MSG_DEBUG, "closeConnection(): conn = 0x%x\n", conn);
 	if(!conn)
 		return;
 	dwr(MSG_DEBUG, " closeConnection(%x, %d)\n", conn->pcb, _phy.getDescriptor(conn->dataSock));
-  	//lwipstack->_tcp_sent(conn->pcb, NULL);
-  	//lwipstack->_tcp_recv(conn->pcb, NULL);
-  	//lwipstack->_tcp_err(conn->pcb, NULL);
-  	//lwipstack->_tcp_poll(conn->pcb, NULL, 0);
-	//lwipstack->_tcp_arg(conn->pcb, NULL);
 	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
 		dwr(MSG_ERROR, " closeConnection(): Error while calling tcp_close()\n");
 		exit(0);
@@ -876,7 +869,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 
   if(!l->conn) {
 		dwr(MSG_ERROR, " nc_recved(): no connection object\n");
-    return ERR_OK; // ?
+    return ERR_OK; 
   }
   if(p == NULL) {
     if(l->conn && !l->conn->listening) {
@@ -892,7 +885,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
   q = p;
   while(p != NULL) { // Cycle through pbufs and write them to the socket
     if(p->len <= 0)
-      break; // ?
+      break; 
     if((n = l->tap->_phy.streamSend(l->conn->dataSock,p->payload, p->len)) > 0) {
       if(n < p->len) {
         dwr(MSG_INFO, " nc_recved(): unable to write entire pbuf to buffer\n");
@@ -993,7 +986,7 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 			break;
 	}
 	dwr(MSG_ERROR, "nc_err(): closing connection\n");
-  l->tap->closeConnection(l->conn);
+	l->tap->closeConnection(l->conn);
 }
 
 /*
@@ -1024,12 +1017,9 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
  */
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
-	//dwr(5, " nc_sent()\n");
 	Larg *l = (Larg*)arg;
 	if(len) {
 		l->conn->acked+=len;
-		//dwr("W = %d, A = %d\n", l->conn->written, l->conn->acked);
-		//dwr("ACK = %d\n", len);
 		l->tap->_phy.setNotifyReadable(l->conn->dataSock, true);
 		l->tap->_phy.whack();
 	}
