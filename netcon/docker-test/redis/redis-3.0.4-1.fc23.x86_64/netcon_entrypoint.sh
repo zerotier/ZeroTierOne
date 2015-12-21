@@ -29,9 +29,10 @@ echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Writing address to ' "$address_file"
 echo $virtip4 > "$address_file"
 
-export ZT_NC_NWID=$dev
-
 # --- Test section ---
 echo '*** Starting application...'
 sleep 0.5
-zerotier-intercept /usr/bin/redis-server --port 6379
+
+export ZT_NC_NETWORK=/var/lib/zerotier-one/nc_"$dev"
+export LD_PRELOAD=./libzerotierintercept.so
+/usr/bin/redis-server --port 6379

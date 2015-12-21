@@ -32,8 +32,6 @@ echo '*** Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Writing address to ' "$address_file"
 echo $virtip4 > "$address_file"
 
-export ZT_NC_NWID=$dev
-
 # --- Test section ---
 cp -f nginx.conf_ /etc/nginx/nginx.conf
 nginx_html_path=/usr/share/nginx/html/
@@ -46,4 +44,7 @@ echo '*** Wrote MD5 sum to ' "$tx_md5sumfile"
 
 echo '*** Starting application...'
 sleep 0.5
-zerotier-intercept nginx
+
+export ZT_NC_NETWORK=/var/lib/zerotier-one/nc_"$dev"
+export LD_PRELOAD=./libzerotierintercept.so
+nginx

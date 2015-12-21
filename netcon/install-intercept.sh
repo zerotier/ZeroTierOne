@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script is only needed for debugging purposes
 
 cp libzerotierintercept.so /lib/libzerotierintercept.so
 ln -sf /lib/libzerotierintercept.so /lib/libzerotierintercept

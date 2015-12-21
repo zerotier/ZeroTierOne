@@ -31,8 +31,6 @@ echo '--- Up and running at' $virtip4 ' on network: ' $nwid
 echo '*** Writing address to ' "$address_file"
 echo $virtip4 > "$address_file"
 
-export ZT_NC_NWID=$dev
-
 # --- Test section ---
 # Generate large random file for transfer test, share md5sum for monitor container to check
 echo '*** Generating ' "$bigfile_size" ' file'
@@ -43,4 +41,7 @@ echo '*** Wrote MD5 sum to ' "$tx_md5sumfile"
 echo '*** Starting application...'
 sleep 0.5
 rm -rf /run/httpd/* /tmp/httpd*
-zerotier-intercept /usr/sbin/httpd -X
+
+export ZT_NC_NETWORK=/var/lib/zerotier-one/nc_"$dev"
+export LD_PRELOAD=./libzerotierintercept.so
+/usr/sbin/httpd -X

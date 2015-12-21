@@ -48,10 +48,12 @@
 #include "lwip/tcp.h"
 
 #include "common.inc.c"
+#include "rpc.h"
 
 #define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
 #define STATUS_TMR_INTERVAL				3000 // How often we check connection statuses
+#define DEFAULT_READ_BUFFER_SIZE		1024 * 63
 
 namespace ZeroTier {
 
@@ -128,9 +130,7 @@ public:
   PhySocket *rpcSock;
   PhySocket *dataSock;
   struct tcp_pcb *pcb;
-
   struct sockaddr_storage *addr;
-
   unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
   int idx;
 };
@@ -926,6 +926,9 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
 	if(!l->conn)
 		dwr(MSG_ERROR, "nc_err(): Connection is NULL!\n");
 
+	if(l->conn->listening)
+		return;
+
 	switch(err)
 	{
 		case ERR_MEM:
@@ -1424,7 +1427,8 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 	ip_addr_t conn_addr = convert_ip((struct sockaddr_in *)&connect_rpc->__addr);
 
 	if(conn != NULL) {
-		lwipstack->tcp_sent(conn->pcb, nc_sent);
+		if (!conn->listening)
+			lwipstack->tcp_sent(conn->pcb, nc_sent);
 		lwipstack->tcp_recv(conn->pcb, nc_recved);
 		lwipstack->tcp_err(conn->pcb, nc_err);
 		lwipstack->tcp_poll(conn->pcb, nc_poll, APPLICATION_POLL_FREQ);
@@ -1482,6 +1486,8 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, void **uptr, struct conn
 		}
 		// Everything seems to be ok, but we don't have enough info to retval
 		conn->pending=true;
+		conn->listening=true;
+		send_return_value(conn, -1);
 	}
 	else {
 		dwr(MSG_ERROR, " handle_connect(): could not locate PCB based on their fd\n");
@@ -1515,9 +1521,9 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		if(!conn->listening)
 			lwipstack->_tcp_output(conn->pcb);
 
-		if(conn->dataSock) {
+		if(conn->dataSock && !conn->listening) {
 			int read_fd = _phy.getDescriptor(conn->dataSock);
-			if((r = read(read_fd, (&conn->buf)+conn->idx, sndbuf)) > 0) {
+			if((r = recvfrom(read_fd, (&conn->buf)+conn->idx, sndbuf, MSG_DONTWAIT, NULL, NULL)) > 0) {
 				conn->idx += r;
 				/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
 				 * data to LWIP to be enqueued and eventually sent to the network. */
