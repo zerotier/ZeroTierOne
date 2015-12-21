@@ -152,19 +152,25 @@ To run unit tests:
 
 2) Generate two pairs of identity keys. Each public/private pair will be used by the *netcon* and *monitor* containers:
 
+    mkdir -p /tmp/netcon_first
+    cp -f ./netcon/liblwip.so /tmp/netcon_first
     ./zerotier-netcon-service -d -p8100 /tmp/netcon_first
     ./zerotier-cli -D/tmp/netcon_first join 8056c2e21c000001
+    kill `cat /tmp/netcon_first/zerotier-one.pid`
 
+    mkdir -p /tmp/netcon_second
+    cp -f ./netcon/liblwip.so /tmp/netcon_second
     ./zerotier-netcon-service -d -p8101 /tmp/netcon_second
     ./zerotier-cli -D/tmp/netcon_second join 8056c2e21c000001
+    kill `cat /tmp/netcon_second/zerotier-one.pid`
 
 3) Copy the identity files to your *docker-test* directory. Names will be altered during copy step so the dockerfiles know which identities to use for each image/container:
 
-    cp /tmp/netcon_first/identity.public docker-test/netcon_identity.public
-    cp /tmp/netcon_first/identity.private docker-test/netcon_identity.private
+    cp /tmp/netcon_first/identity.public ./netcon/docker-test/netcon_identity.public
+    cp /tmp/netcon_first/identity.secret ./netcon/docker-test/netcon_identity.secret
 
-    cp /tmp/netcon_second/identity.public docker-test/monitor_identity.public
-    cp /tmp/netcon_second/identity.private docker-test/monitor_identity.private
+    cp /tmp/netcon_second/identity.public ./netcon/docker-test/monitor_identity.public
+    cp /tmp/netcon_second/secret.private ./netcon/docker-test/monitor_identity.secret
 
 
 4) Place a blank network config file in the *netcon/docker-test* directory (e.g. "8056c2e21c000001.conf")
