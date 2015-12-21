@@ -66,7 +66,7 @@ public:
 #ifdef ZT_ENABLE_CLUSTER
 		,cluster((Cluster *)0)
 #endif
-		,dpEnabled(false)
+		,dpEnabled(0)
 	{
 	}
 
