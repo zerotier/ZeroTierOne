@@ -366,8 +366,8 @@ static int cli(int argc,char **argv)
 												const char *paddr = (const char *)0;
 												int64_t lastSend = 0;
 												int64_t lastReceive = 0;
-												bool fixed = false;
-												bool active = false; // fixed/active/inactive
+												bool preferred = false;
+												bool active = false;
 												for(unsigned int kk=0;kk<jpath->u.object.length;++kk) {
 													if ((!strcmp(jpath->u.object.values[kk].name,"address"))&&(jpath->u.object.values[kk].value->type == json_string))
 														paddr = jpath->u.object.values[kk].value->u.string.ptr;
@@ -375,12 +375,12 @@ static int cli(int argc,char **argv)
 														lastSend = jpath->u.object.values[kk].value->u.integer;
 													else if ((!strcmp(jpath->u.object.values[kk].name,"lastReceive"))&&(jpath->u.object.values[kk].value->type == json_integer))
 														lastReceive = jpath->u.object.values[kk].value->u.integer;
-													else if ((!strcmp(jpath->u.object.values[kk].name,"fixed"))&&(jpath->u.object.values[kk].value->type == json_boolean))
-														fixed = (jpath->u.object.values[kk].value->u.boolean != 0);
+													else if ((!strcmp(jpath->u.object.values[kk].name,"preferred"))&&(jpath->u.object.values[kk].value->type == json_boolean))
+														preferred = (jpath->u.object.values[kk].value->u.boolean != 0);
 													else if ((!strcmp(jpath->u.object.values[kk].name,"active"))&&(jpath->u.object.values[kk].value->type == json_boolean))
 														active = (jpath->u.object.values[kk].value->u.boolean != 0);
 												}
-												if ((paddr)&&((active)||(fixed))) {
+												if ((paddr)&&(active)) {
 													int64_t now = (int64_t)OSUtils::now();
 													if (lastSend > 0)
 														lastSend = now - lastSend;
@@ -391,7 +391,7 @@ static int cli(int argc,char **argv)
 														paddr,
 														lastSend,
 														lastReceive,
-														(fixed ? "fixed" : (active ? "active" : "inactive")));
+														(preferred ? "preferred" : "active"));
 													if (paths.length())
 														paths.push_back(',');
 													paths.append(pathtmp);
@@ -1096,10 +1096,12 @@ int main(int argc,char **argv)
 	}
 
 #ifdef __UNIX_LIKE__
+#ifndef ZT_ONE_NO_ROOT_CHECK
 	if ((!skipRootCheck)&&(getuid() != 0)) {
 		fprintf(stderr,"%s: must be run as root (uid 0)"ZT_EOL_S,argv[0]);
 		return 1;
 	}
+#endif // !ZT_ONE_NO_ROOT_CHECK
 	if (runAsDaemon) {
 		long p = (long)fork();
 		if (p < 0) {

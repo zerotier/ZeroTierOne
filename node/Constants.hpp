@@ -294,11 +294,6 @@
 #define ZT_NAT_T_TACTICAL_ESCALATION_DELAY 1000
 
 /**
- * Minimum delay between attempts to confirm new paths to peers (to avoid HELLO flooding)
- */
-#define ZT_MIN_PATH_CONFIRMATION_INTERVAL 1000
-
-/**
  * How long (max) to remember network certificates of membership?
  *
  * This only applies to networks we don't belong to.
@@ -357,5 +352,15 @@
  * prefix.
  */
 #define ZT_TEST_NETWORK_ID 0xffffffffffffffffULL
+
+/* Ethernet frame types that might be relevant to us */
+#define ZT_ETHERTYPE_IPV4 0x0800
+#define ZT_ETHERTYPE_ARP 0x0806
+#define ZT_ETHERTYPE_RARP 0x8035
+#define ZT_ETHERTYPE_ATALK 0x809b
+#define ZT_ETHERTYPE_AARP 0x80f3
+#define ZT_ETHERTYPE_IPX_A 0x8137
+#define ZT_ETHERTYPE_IPX_B 0x8138
+#define ZT_ETHERTYPE_IPV6 0x86dd
 
 #endif

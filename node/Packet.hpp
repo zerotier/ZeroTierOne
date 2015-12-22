@@ -678,7 +678,14 @@ public:
 		 *   <[...] arbitrary payload to be echoed back>
 		 *
 		 * This generates OK with a copy of the transmitted payload. No ERROR
-		 * is generated. Response to ECHO requests is optional.
+		 * is generated. Response to ECHO requests is optional and ECHO may be
+		 * ignored if a node detects a possible flood.
+		 *
+		 * There is a de-facto standard for ECHO payload. No payload indicates an
+		 * ECHO used for path confirmation. Otherwise the first byte contains
+		 * flags, in which currently the only flag is 0x01 for a user-requested
+		 * echo. For user-requested echoes the result may be reported back through
+		 * the API. Otherwise the payload is for internal use.
 		 *
 		 * Support for fragmented echo packets is optional and their use is not
 		 * recommended.
@@ -843,63 +850,6 @@ public:
 		 *   <[4] 32-bit multicast group ADI>
 		 */
 		VERB_MULTICAST_FRAME = 14,
-
-		/**
-		 * Ephemeral (PFS) key push: (UNFINISHED, NOT IMPLEMENTED YET)
-		 *   <[2] flags (unused and reserved, must be 0)>
-		 *   <[2] length of padding / extra field section>
-		 *   <[...] padding / extra field section>
-		 *   <[8] 64-bit PFS key set ID sender holds for recipient (0==none)>
-		 *   <[8] 64-bit PFS key set ID of this key set>
-		 *   [... begin PFS key record ...]
-		 *   <[1] flags>
-		 *   <[1] symmetric cipher ID>
-		 *   <[1] public key type ID>
-		 *   <[2] public key length in bytes>
-		 *   <[...] public key>
-		 *   [... additional records may follow up to max packet length ...]
-		 *
-		 * This message is sent to negotiate an ephemeral key. If the recipient's
-		 * current key pair for the sender does not match the one the sender
-		 * claims to have on file, it must respond with its own SET_EPHEMERAL_KEY.
-		 *
-		 * PFS key IDs are random and must not be zero, since zero indicates that
-		 * the sender does not have an ephemeral key on file for the recipient.
-		 *
-		 * One or more records may be sent. If multiple records are present,
-		 * the first record with common symmetric cipher, public key type,
-		 * and relevant flags must be used.
-		 *
-		 * The padding section may be filled with an arbitrary amount of random
-		 * or empty payload. This may be used as a countermeasure to prevent PFS
-		 * key pushes from being recognized by packet size vs. other packets in
-		 * the stream. This also provides potential space for additional fields
-		 * that might be indicated in the future by flags.
-		 *
-		 * Flags (all unspecified flags must be zero):
-		 *   0x01 - FIPS mode, only use record if FIPS compliant crypto in use
-		 *
-		 * Symmetric cipher IDs:
-		 *   0x01 - Salsa20/12 with Poly1305 authentication (ZT default)
-		 *   0x02 - AES256-GCM combined crypto and authentication
-		 *
-		 * Public key types:
-		 *   0x01 - Curve25519 ECDH with SHA-512 KDF
-		 *   0x02 - NIST P-256 ECDH with SHA-512 KDF
-		 *
-		 * Once both peers have a PFS key, they will attempt to send PFS key
-		 * encrypted messages with the PFS flag set using the negotiated
-		 * cipher/auth type.
-		 *
-		 * Note: most of these features such as FIPS and other cipher suites are
-		 * not implemented yet. They're just specified in the protocol for future
-		 * use to support e.g. FIPS requirements.
-		 *
-		 * OK response payload:
-		 *   <[8] PFS key set ID of received key set>
-		 *   <[1] index in record list of chosen key record>
-		 */
-		VERB_SET_EPHEMERAL_KEY = 15,
 
 		/**
 		 * Push of potential endpoints for direct communication:

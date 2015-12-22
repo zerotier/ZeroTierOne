@@ -37,6 +37,7 @@ DeferredPackets::DeferredPackets(const RuntimeEnvironment *renv) :
 	RR(renv),
 	_readPtr(0),
 	_writePtr(0),
+	_waiting(0),
 	_die(false)
 {
 }
@@ -45,8 +46,11 @@ DeferredPackets::~DeferredPackets()
 {
 	_q_m.lock();
 	_die = true;
-	_q_m.unlock();
-	_q_s.post();
+	while (_waiting > 0) {
+		_q_m.unlock();
+		_q_s.post();
+		_q_m.lock();
+	}
 }
 
 bool DeferredPackets::enqueue(IncomingPacket *pkt)
@@ -72,16 +76,16 @@ int DeferredPackets::process()
 	_q_m.lock();
 	if (_die) {
 		_q_m.unlock();
-		_q_s.post();
 		return -1;
 	}
 	while (_readPtr == _writePtr) {
+		++_waiting;
 		_q_m.unlock();
 		_q_s.wait();
 		_q_m.lock();
+		--_waiting;
 		if (_die) {
 			_q_m.unlock();
-			_q_s.post();
 			return -1;
 		}
 	}

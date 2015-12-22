@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="..\..\ext\http-parser\http_parser.c" />
     <ClCompile Include="..\..\ext\json-parser\json.c" />
+    <ClCompile Include="..\..\ext\libnatpmp\getgateway.c" />
+    <ClCompile Include="..\..\ext\libnatpmp\natpmp.c" />
+    <ClCompile Include="..\..\ext\libnatpmp\wingettimeofday.c" />
     <ClCompile Include="..\..\ext\lz4\lz4.c" />
     <ClCompile Include="..\..\ext\miniupnpc\connecthostport.c" />
     <ClCompile Include="..\..\ext\miniupnpc\igd_desc_parse.c" />
@@ -64,7 +67,7 @@
     <ClCompile Include="..\..\osdep\BackgroundResolver.cpp" />
     <ClCompile Include="..\..\osdep\Http.cpp" />
     <ClCompile Include="..\..\osdep\OSUtils.cpp" />
-    <ClCompile Include="..\..\osdep\UPNPClient.cpp" />
+    <ClCompile Include="..\..\osdep\PortMapper.cpp" />
     <ClCompile Include="..\..\osdep\WindowsEthernetTap.cpp" />
     <ClCompile Include="..\..\service\ControlPlane.cpp" />
     <ClCompile Include="..\..\service\OneService.cpp" />
@@ -91,6 +94,9 @@
     <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\upnpreplyparse.h" />
     <ClInclude Include="..\..\ext\http-parser\http_parser.h" />
     <ClInclude Include="..\..\ext\json-parser\json.h" />
+    <ClInclude Include="..\..\ext\libnatpmp\getgateway.h" />
+    <ClInclude Include="..\..\ext\libnatpmp\natpmp.h" />
+    <ClInclude Include="..\..\ext\libnatpmp\wingettimeofday.h" />
     <ClInclude Include="..\..\ext\lz4\lz4.h" />
     <ClInclude Include="..\..\ext\miniupnpc\codelength.h" />
     <ClInclude Include="..\..\ext\miniupnpc\connecthostport.h" />
@@ -154,8 +160,8 @@
     <ClInclude Include="..\..\osdep\Http.hpp" />
     <ClInclude Include="..\..\osdep\OSUtils.hpp" />
     <ClInclude Include="..\..\osdep\Phy.hpp" />
+    <ClInclude Include="..\..\osdep\PortMapper.hpp" />
     <ClInclude Include="..\..\osdep\Thread.hpp" />
-    <ClInclude Include="..\..\osdep\UPNPClient.hpp" />
     <ClInclude Include="..\..\osdep\WindowsEthernetTap.hpp" />
     <ClInclude Include="..\..\service\ControlPlane.hpp" />
     <ClInclude Include="..\..\service\ControlPlaneSubsystem.hpp" />
@@ -243,7 +249,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -258,7 +264,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NOMINMAX;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
@@ -276,7 +282,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STATICLIB;ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>
@@ -301,7 +307,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STATICLIB;ZT_OFFICIAL_RELEASE;ZT_AUTO_UPDATE;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <StringPooling>true</StringPooling>

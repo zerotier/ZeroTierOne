@@ -19,8 +19,8 @@ if (!config.maxmind) {
 	console.error('FATAL: only MaxMind GeoIP2 is currently supported and is not configured in config.js');
 	process.exit(1);
 }
-var geo = require('geoip2ws')(config.maxmind);
 
+var geo = require('geoip2ws')(config.maxmind);
 var cache = require('levelup')(__dirname + '/cache.leveldb');
 
 function lookup(ip,callback)
@@ -32,31 +32,40 @@ function lookup(ip,callback)
 				if (cachedEntry) {
 					let ts = cachedEntry.ts;
 					let r = cachedEntry.r;
-					if ((ts)&&(r)) {
-						if ((Date.now() - ts) < CACHE_TTL) {
-							r._cached = true;
-							return callback(null,r);
-						}
+					if ((ts)&&((Date.now() - ts) < CACHE_TTL)) {
+						//console.error(ip+': cached!');
+						return callback(null,(r) ? r : null);
 					}
 				}
 			} catch (e) {}
 		}
 
-		geo(ip,function(err,result) {
-			if (err)
-				return callback(err,null);
-			if ((!result)||(!result.location))
-				return callback(new Error('null result'),null);
+		cache.put(ip,JSON.stringify({
+			ts: Date.now() - (CACHE_TTL - 30000), // set ts to expire in 30 seconds while the query is in progress
+			r: null
+		}),function(err) {
 
-			cache.put(ip,JSON.stringify({
-				ts: Date.now(),
-				r: result
-			}),function(err) {
-				if (err)
-					console.error('Error saving to cache: '+err);
-				return callback(null,result);
+			geo(ip,function(err,result) {
+				if (err) {
+					//console.error(err);
+					return callback(err,null);
+				}
+
+				if (!result)
+					result = null;
+
+				cache.put(ip,JSON.stringify({
+					ts: Date.now(),
+					r: result
+				}),function(err) {
+					if (err)
+						console.error('Error saving to cache: '+err);
+					return callback(null,result);
+				});
 			});
+
 		});
+
 	});
 };
 

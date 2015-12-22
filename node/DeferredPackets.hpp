@@ -88,7 +88,8 @@ private:
 	const RuntimeEnvironment *const RR;
 	unsigned long _readPtr;
 	unsigned long _writePtr;
-	bool _die;
+ 	volatile int _waiting;
+	volatile bool _die;
 	Mutex _q_m;
 	BinarySemaphore _q_s;
 };

@@ -109,7 +109,7 @@ int main(int argc,char **argv)
 	std::vector<World::Root> roots;
 
 	const uint64_t id = ZT_WORLD_ID_EARTH;
-	const uint64_t ts = 1448048819338ULL; // November 20th, 2015 ~11:47AM
+	const uint64_t ts = 1450381818269ULL; // December 17th, 2015
 
 	// Alice
 	roots.push_back(World::Root());
@@ -143,15 +143,11 @@ int main(int argc,char **argv)
 	roots.back().stableEndpoints.push_back(InetAddress("159.203.2.154/9993")); // Toronto
 	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:cad:d0::26:7001/9993")); // Toronto
 
-	// old US-SFO -- we will keep these around for a little while
+	// old US-SFO, which is being kept alive for now
 	roots.push_back(World::Root());
 	roots.back().identity = Identity("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa");
 	roots.back().stableEndpoints.push_back(InetAddress("198.199.97.220/9993"));
-
-	// old US-NYC -- we will keep these around for a little while
-	roots.push_back(World::Root());
-	roots.back().identity = Identity("8acf059fe3:0:482f6ee5dfe902319b419de5bdc765209c0ecda38c4d6e4fcf0d33658398b4527dcd22f93112fb9befd02fd78bf7261b333fc105d192a623ca9e50fc60b374a5");
-	roots.back().stableEndpoints.push_back(InetAddress("162.243.77.111/9993"));
+	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:1:20::c5:f001/9993"));
 
 	// END WORLD DEFINITION
 	// =========================================================================

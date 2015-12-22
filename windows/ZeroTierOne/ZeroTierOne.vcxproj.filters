@@ -85,6 +85,12 @@
     <Filter Include="Source Files\ext\miniupnpc">
       <UniqueIdentifier>{56cc3ab8-3336-4a22-9471-c267ee46cd54}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ext\libnatpmp">
+      <UniqueIdentifier>{d7292d0d-72a0-4ed6-b717-21debb120737}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ext\libnatpmp">
+      <UniqueIdentifier>{409ec37e-ff36-4c13-b18d-52d6052e0ca2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\service\ControlPlane.cpp">
@@ -186,9 +192,6 @@
     <ClCompile Include="..\..\osdep\BackgroundResolver.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\osdep\UPNPClient.cpp">
-      <Filter>Source Files\osdep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\node\Path.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
@@ -236,6 +239,18 @@
     </ClCompile>
     <ClCompile Include="..\..\ext\miniupnpc\upnpreplyparse.c">
       <Filter>Source Files\ext\miniupnpc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\osdep\PortMapper.cpp">
+      <Filter>Source Files\osdep</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ext\libnatpmp\getgateway.c">
+      <Filter>Source Files\ext\libnatpmp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ext\libnatpmp\natpmp.c">
+      <Filter>Source Files\ext\libnatpmp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\ext\libnatpmp\wingettimeofday.c">
+      <Filter>Source Files\ext\libnatpmp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -401,9 +416,6 @@
     <ClInclude Include="..\..\osdep\BackgroundResolver.hpp">
       <Filter>Header Files\osdep</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\osdep\UPNPClient.hpp">
-      <Filter>Header Files\osdep</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\ext\bin\miniupnpc\include\miniupnpc\codelength.h">
       <Filter>Header Files\ext\bin\miniupnpc\include</Filter>
     </ClInclude>
@@ -514,6 +526,18 @@
     </ClInclude>
     <ClInclude Include="..\..\ext\miniupnpc\upnpreplyparse.h">
       <Filter>Header Files\ext\miniupnpc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\osdep\PortMapper.hpp">
+      <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\libnatpmp\getgateway.h">
+      <Filter>Header Files\ext\libnatpmp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\libnatpmp\natpmp.h">
+      <Filter>Header Files\ext\libnatpmp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\ext\libnatpmp\wingettimeofday.h">
+      <Filter>Header Files\ext\libnatpmp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

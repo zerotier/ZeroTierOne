@@ -92,22 +92,32 @@ class SqliteNetworkController;
 #endif
 
 // Include the right tap device driver for this platform -- add new platforms here
+#ifdef ZT_SERVICE_NETCON
+
+// In network containers builds, use the virtual netcon endpoint instead of a tun/tap port driver
+#include "../netcon/NetconEthernetTap.hpp"
+namespace ZeroTier { typedef NetconEthernetTap EthernetTap; }
+
+#else // not ZT_SERVICE_NETCON so pick a tap driver
+
 #ifdef __APPLE__
 #include "../osdep/OSXEthernetTap.hpp"
 namespace ZeroTier { typedef OSXEthernetTap EthernetTap; }
-#endif
+#endif // __APPLE__
 #ifdef __LINUX__
 #include "../osdep/LinuxEthernetTap.hpp"
 namespace ZeroTier { typedef LinuxEthernetTap EthernetTap; }
-#endif
+#endif // __LINUX__
 #ifdef __WINDOWS__
 #include "../osdep/WindowsEthernetTap.hpp"
 namespace ZeroTier { typedef WindowsEthernetTap EthernetTap; }
-#endif
+#endif // __WINDOWS__
 #ifdef __FreeBSD__
 #include "../osdep/BSDEthernetTap.hpp"
 namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
-#endif
+#endif // __FreeBSD__
+
+#endif // ZT_SERVICE_NETCON
 
 // Sanity limits for HTTP
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
@@ -117,7 +127,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_IF_METRIC 32768
 
 // How often to check for new multicast subscriptions on a tap device
-#define ZT_TAP_CHECK_MULTICAST_INTERVAL 30000
+#define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
 
 // Path under ZT1 home for controller database if controller is enabled
 #define ZT_CONTROLLER_DB_PATH "controller.db"
@@ -595,7 +605,7 @@ public:
 				_v4UpnpLocalAddress = InetAddress(0,mapperPort);
 				_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
 				if (_v4UpnpUdpSocket) {
-					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.16llx",_node->address());
+					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
 					_portMapper = new PortMapper(mapperPort,uniqueName);
 					break;
 				}
@@ -1116,11 +1126,11 @@ public:
 		}
 	}
 
+	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
 	inline void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {}
 	inline void phyOnUnixClose(PhySocket *sock,void **uptr) {}
 	inline void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len) {}
 	inline void phyOnUnixWritable(PhySocket *sock,void **uptr) {}
-	inline void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {}
 
 	inline int nodeVirtualNetworkConfigFunction(uint64_t nwid,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwc)
 	{

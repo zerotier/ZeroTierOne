@@ -53,7 +53,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 	_lastUnicastFrame(0),
 	_lastMulticastFrame(0),
 	_lastAnnouncedTo(0),
-	_lastPathConfirmationSent(0),
 	_lastDirectPathPushSent(0),
 	_lastDirectPathPushReceive(0),
 	_lastPathSort(0),
@@ -132,7 +131,6 @@ void Peer::received(
 
 	const uint64_t now = RR->node->now();
 	bool needMulticastGroupAnnounce = false;
-	bool pathIsConfirmed = false;
 
 	{	// begin _lock
 		Mutex::Lock _l(_lock);
@@ -149,6 +147,7 @@ void Peer::received(
 		}
 
 		if (hops == 0) {
+			bool pathIsConfirmed = false;
 			unsigned int np = _numPaths;
 			for(unsigned int p=0;p<np;++p) {
 				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
@@ -183,8 +182,6 @@ void Peer::received(
 						slot->setClusterSuboptimal(suboptimalPath);
 #endif
 						_numPaths = np;
-						pathIsConfirmed = true;
-						_sortPaths(now);
 					}
 
 #ifdef ZT_ENABLE_CLUSTER
@@ -194,13 +191,14 @@ void Peer::received(
 
 				} else {
 
-					/* If this path is not known, send a HELLO. We don't learn
-					 * paths without confirming that a bidirectional link is in
-					 * fact present, but any packet that decodes and authenticates
-					 * correctly is considered valid. */
-					if ((now - _lastPathConfirmationSent) >= ZT_MIN_PATH_CONFIRMATION_INTERVAL) {
-						_lastPathConfirmationSent = now;
-						TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+
+					if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+						// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
+						Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+						outp.armor(_key,true);
+						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
+					} else {
 						sendHELLO(RR,localAddr,remoteAddr,now);
 					}
 
@@ -314,21 +312,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,
 						continue;
 				}
 
-				uint8_t flags = 0;
-				/* TODO: path trust is not implemented yet
-				switch(p->trust()) {
-					default:
-						break;
-					case Path::TRUST_PRIVACY:
-						flags |= 0x04; // no encryption
-						break;
-					case Path::TRUST_ULTIMATE:
-						flags |= (0x04 | 0x08); // no encryption, no authentication (redundant but go ahead and set both)
-						break;
-				}
-				*/
-
-				outp.append(flags);
+				outp.append((uint8_t)0); // no flags
 				outp.append((uint16_t)0); // no extensions
 				outp.append(addressType);
 				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
@@ -363,7 +347,6 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 		++x;
 	}
 	_numPaths = y;
-	_sortPaths(now);
 	return (y < np);
 }
 
@@ -502,58 +485,34 @@ void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
-struct _SortPathsByQuality
-{
-	uint64_t _now;
-	_SortPathsByQuality(const uint64_t now) : _now(now) {}
-	inline bool operator()(const Path &a,const Path &b) const
-	{
-		const uint64_t qa = (
-			((uint64_t)a.active(_now) << 63) |
-			(((uint64_t)(a.preferenceRank() & 0xfff)) << 51) |
-			((uint64_t)a.lastReceived() & 0x7ffffffffffffULL) );
-		const uint64_t qb = (
-			((uint64_t)b.active(_now) << 63) |
-			(((uint64_t)(b.preferenceRank() & 0xfff)) << 51) |
-			((uint64_t)b.lastReceived() & 0x7ffffffffffffULL) );
-		return (qb < qa); // invert sense to sort in descending order
-	}
-};
-void Peer::_sortPaths(const uint64_t now)
-{
-	// assumes _lock is locked
-	_lastPathSort = now;
-	std::sort(&(_paths[0]),&(_paths[_numPaths]),_SortPathsByQuality(now));
-}
-
 Path *Peer::_getBestPath(const uint64_t now)
 {
 	// assumes _lock is locked
-	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
-		_sortPaths(now);
-	if (_paths[0].active(now)) {
-		return &(_paths[0]);
-	} else {
-		_sortPaths(now);
-		if (_paths[0].active(now))
-			return &(_paths[0]);
+	Path *bestPath = (Path *)0;
+	uint64_t bestPathScore = 0;
+	for(unsigned int i=0;i<_numPaths;++i) {
+		const uint64_t score = _paths[i].score();
+		if ((score >= bestPathScore)&&(_paths[i].active(now))) {
+			bestPathScore = score;
+			bestPath = &(_paths[i]);
+		}
 	}
-	return (Path *)0;
+	return bestPath;
 }
 
 Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 {
 	// assumes _lock is locked
-	if ((now - _lastPathSort) >= ZT_PEER_PATH_SORT_INTERVAL)
-		_sortPaths(now);
-	for(int k=0;k<2;++k) { // try once, and if it fails sort and try one more time
-		for(unsigned int i=0;i<_numPaths;++i) {
-			if ((_paths[i].active(now))&&((int)_paths[i].address().ss_family == inetAddressFamily))
-				return &(_paths[i]);
+	Path *bestPath = (Path *)0;
+	uint64_t bestPathScore = 0;
+	for(unsigned int i=0;i<_numPaths;++i) {
+		const uint64_t score = _paths[i].score();
+		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_paths[i].active(now))) {
+			bestPathScore = score;
+			bestPath = &(_paths[i]);
 		}
-		_sortPaths(now);
 	}
-	return (Path *)0;
+	return bestPath;
 }
 
 } // namespace ZeroTier

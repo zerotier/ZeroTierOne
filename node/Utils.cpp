@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <time.h>
 #include <sys/stat.h>
 
 #include "Constants.hpp"
@@ -149,13 +150,32 @@ unsigned int Utils::unhex(const char *hex,unsigned int maxlen,void *buf,unsigned
 
 void Utils::getSecureRandom(void *buf,unsigned int bytes)
 {
+	static Mutex globalLock;
+	static Salsa20 s20;
+	static bool s20Initialized = false;
+
+	Mutex::Lock _l(globalLock);
+
+	/* Just for posterity we Salsa20 encrypt the result of whatever system
+	 * CSPRNG we use. There have been several bugs at the OS or OS distribution
+	 * level in the past that resulted in systematically weak or predictable
+	 * keys due to random seeding problems. This mitigates that by grabbing
+	 * a bit of extra entropy and further randomizing the result, and comes
+	 * at almost no cost and with no real downside if the random source is
+	 * good. */
+	if (!s20Initialized) {
+		s20Initialized = true;
+		uint64_t s20Key[4];
+		s20Key[0] = (uint64_t)time(0); // system clock
+		s20Key[1] = (uint64_t)buf; // address of buf
+		s20Key[2] = (uint64_t)s20Key; // address of s20Key[]
+		s20Key[3] = (uint64_t)&s20; // address of s20
+		s20.init(s20Key,256,s20Key);
+	}
+
 #ifdef __WINDOWS__
 
 	static HCRYPTPROV cryptProvider = NULL;
-	static Mutex globalLock;
-	static Salsa20 s20;
-
-	Mutex::Lock _l(globalLock);
 
 	if (cryptProvider == NULL) {
 		if (!CryptAcquireContextA(&cryptProvider,NULL,NULL,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT|CRYPT_SILENT)) {
@@ -163,30 +183,17 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 			exit(1);
 			return;
 		}
-		char s20key[32];
-		if (!CryptGenRandom(cryptProvider,(DWORD)sizeof(s20key),(BYTE *)s20key)) {
-			fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
-			exit(1);
-		}
-		s20.init(s20key,256,s20key);
 	}
-
 	if (!CryptGenRandom(cryptProvider,(DWORD)bytes,(BYTE *)buf)) {
 		fprintf(stderr,"FATAL ERROR: Utils::getSecureRandom() CryptGenRandom failed!\r\n");
 		exit(1);
 	}
-	s20.encrypt12(buf,buf,bytes);
 
 #else // not __WINDOWS__
-
-#ifdef __UNIX_LIKE__
 
 	static char randomBuf[131072];
 	static unsigned int randomPtr = sizeof(randomBuf);
 	static int devURandomFd = -1;
-	static Mutex globalLock;
-
-	Mutex::Lock _l(globalLock);
 
 	if (devURandomFd <= 0) {
 		devURandomFd = ::open("/dev/urandom",O_RDONLY);
@@ -215,12 +222,9 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 		((char *)buf)[i] = randomBuf[randomPtr++];
 	}
 
-#else // not __UNIX_LIKE__
+#endif // __WINDOWS__ or not
 
-#error No getSecureRandom() implementation available.
-
-#endif // __UNIX_LIKE__
-#endif // __WINDOWS__
+	s20.encrypt12(buf,buf,bytes);
 }
 
 std::vector<std::string> Utils::split(const char *s,const char *const sep,const char *esc,const char *quot)

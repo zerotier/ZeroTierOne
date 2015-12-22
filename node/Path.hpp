@@ -47,6 +47,11 @@
  */
 #define ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL 0x0001
 
+/**
+ * Maximum return value of preferenceRank()
+ */
+#define ZT_PATH_MAX_PREFERENCE_RANK ((ZT_INETADDRESS_MAX_SCOPE << 1) | 1)
+
 namespace ZeroTier {
 
 class RuntimeEnvironment;
@@ -149,9 +154,9 @@ public:
 	inline InetAddress::IpScope ipScope() const throw() { return _ipScope; }
 
 	/**
-	 * @return Preference rank, higher == better
+	 * @return Preference rank, higher == better (will be less than 255)
 	 */
-	inline int preferenceRank() const throw()
+	inline unsigned int preferenceRank() const throw()
 	{
 		// First, since the scope enum values in InetAddress.hpp are in order of
 		// use preference rank, we take that. Then we multiple by two, yielding
@@ -159,7 +164,20 @@ public:
 		// makes IPv6 addresses of a given scope outrank IPv4 addresses of the
 		// same scope -- e.g. 1 outranks 0. This makes us prefer IPv6, but not
 		// if the address scope/class is of a fundamentally lower rank.
-		return ( ((int)_ipScope * 2) + ((_addr.ss_family == AF_INET6) ? 1 : 0) );
+		return ( ((unsigned int)_ipScope << 1) | (unsigned int)(_addr.ss_family == AF_INET6) );
+	}
+
+	/**
+	 * @return This path's overall score (higher == better)
+	 */
+	inline uint64_t score() const throw()
+	{
+		/* We compute the score based on the "freshness" of the path (when we last
+		 * received something) scaled/corrected by the preference rank within the
+		 * ping keepalive window. That way higher ranking paths are preferred but
+		 * not to the point of overriding timeouts and choosing potentially dead
+		 * paths. */
+		return (_lastReceived + (preferenceRank() * (ZT_PEER_DIRECT_PING_DELAY / ZT_PATH_MAX_PREFERENCE_RANK)));
 	}
 
 	/**
@@ -247,6 +265,9 @@ public:
 		_ipScope = _addr.ipScope();
 		return (p - startAt);
 	}
+
+	inline bool operator==(const Path &p) const { return ((p._addr == _addr)&&(p._localAddress == _localAddress)); }
+	inline bool operator!=(const Path &p) const { return ((p._addr != _addr)||(p._localAddress != _localAddress)); }
 
 private:
 	uint64_t _lastSend;

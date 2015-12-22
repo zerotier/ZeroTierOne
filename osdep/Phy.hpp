@@ -245,6 +245,12 @@ public:
 	static inline ZT_PHY_SOCKFD_TYPE getDescriptor(PhySocket *s) throw() { return reinterpret_cast<PhySocketImpl *>(s)->sock; }
 
 	/**
+	 * @param s Socket object
+	 * @return Pointer to user object
+	 */
+	static inline void** getuptr(PhySocket *s) throw() { return &(reinterpret_cast<PhySocketImpl *>(s)->uptr); }
+
+	/**
 	 * Cause poll() to stop waiting immediately
 	 *
 	 * This can be used to reset the polling loop after changes that require
@@ -376,7 +382,10 @@ public:
 			f = 0; setsockopt(s,IPPROTO_IP,IP_MTU_DISCOVER,&f,sizeof(f));
 #endif
 #ifdef SO_NO_CHECK
-			if (_noCheck) {
+			// For now at least we only set SO_NO_CHECK on IPv4 sockets since some
+			// IPv6 stacks incorrectly discard zero checksum packets. May remove
+			// this restriction later once broken stuff dies more.
+			if ((localAddress->sa_family == AF_INET)&&(_noCheck)) {
 				f = 1; setsockopt(s,SOL_SOCKET,SO_NO_CHECK,(void *)&f,sizeof(f));
 			}
 #endif
