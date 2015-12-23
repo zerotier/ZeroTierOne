@@ -170,7 +170,7 @@ To run unit tests:
     cp /tmp/netcon_first/identity.secret ./netcon/docker-test/netcon_identity.secret
 
     cp /tmp/netcon_second/identity.public ./netcon/docker-test/monitor_identity.public
-    cp /tmp/netcon_second/secret.secret ./netcon/docker-test/monitor_identity.secret
+    cp /tmp/netcon_second/identity.secret ./netcon/docker-test/monitor_identity.secret
 
 
 4) Place a blank network config file in the *netcon/docker-test* directory (e.g. "8056c2e21c000001.conf")
