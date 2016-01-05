@@ -664,20 +664,32 @@ public:
 
 		/**
 		 * ECHO request (a.k.a. ping):
-		 *   <[...] arbitrary payload to be echoed back>
+		 *   <[1] 8-bit purpose of echo request>
+		 *   <[...] additional arbitrary payload>
 		 *
 		 * This generates OK with a copy of the transmitted payload. No ERROR
 		 * is generated. Response to ECHO requests is optional and ECHO may be
 		 * ignored if a node detects a possible flood.
 		 *
-		 * There is a de-facto standard for ECHO payload. No payload indicates an
-		 * ECHO used for path confirmation. Otherwise the first byte contains
-		 * flags, in which currently the only flag is 0x01 for a user-requested
-		 * echo. For user-requested echoes the result may be reported back through
-		 * the API. Otherwise the payload is for internal use.
+		 * An empty payload is permitted. This is used in some versions for
+		 * path checking and validation. If a payload is present it must
+		 * follow the above format, though the recipient does not have to check
+		 * this. It can simply echo it back.
+		 *
+		 * Echo purpose codes:
+		 *   0x00 - User ECHO request
+		 *   0x01 - Dead path detection
 		 *
 		 * Support for fragmented echo packets is optional and their use is not
 		 * recommended.
+		 *
+		 * Dead path detection is performed by sending ECHOs with the same random
+		 * payload to the best (or every) direct path and then once indirectly
+		 * (such as via a root server). When an OK is received echoing back this
+		 * test payload, all paths that have not yet received this OK are cancelled
+		 * or re-tested. This can be done after a short period of inactivity to
+		 * detect and automatically cancel dead paths without requiring any
+		 * special logic (other than support for ECHO) at the remote end.
 		 */
 		VERB_ECHO = 8,
 
