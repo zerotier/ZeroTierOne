@@ -102,15 +102,6 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
- * Cipher suite: PFS negotiated ephemeral cipher suite and authentication
- *
- * This message is encrypted with the latest negotiated ephemeral (PFS)
- * key pair and cipher suite. If authentication fails, VERB_SET_EPHEMERAL_KEY
- * may be sent to renegotiate ephemeral keys.
- */
-#define ZT_PROTO_CIPHER_SUITE__EPHEMERAL 7
-
-/**
  * DEPRECATED payload encrypted flag, will be removed for re-use soon.
  *
  * This has been replaced by the two-bit cipher suite selection field where
