@@ -235,17 +235,6 @@
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
 
-// Ephemeral key record flags
-#define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01   // future use
-
-// Ephemeral key record symmetric cipher types
-#define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_SALSA2012_POLY1305 0x01
-#define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_AES256_GCM 0x02
-
-// Ephemeral key record public key types
-#define ZT_PROTO_EPHEMERAL_KEY_PK_C25519 0x01
-#define ZT_PROTO_EPHEMERAL_KEY_PK_NISTP256 0x02
-
 // Field incides for parsing verbs -------------------------------------------
 
 // Some verbs have variable-length fields. Those aren't fully defined here
