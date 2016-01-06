@@ -168,7 +168,10 @@ void Peer::received(
 					} else {
 						uint64_t slotLRmin = 0xffffffffffffffffULL;
 						for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-							if (_paths[p].lastReceived() <= slotLRmin) {
+							if (!_paths[p].active(now)) {
+								slot = &(_paths[p]);
+								break;
+							} else if (_paths[p].lastReceived() <= slotLRmin) {
 								slotLRmin = _paths[p].lastReceived();
 								slot = &(_paths[p]);
 							}
@@ -249,11 +252,12 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 			//TRACE("PING %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
 			sendHELLO(p->localAddress(),p->address(),now);
 			p->sent(now);
-		} else if (((now - p->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!p->reliable())) {
+			p->pinged(now);
+		} else if (((now - std::max(p->lastSend(),p->lastKeepalive())) >= ZT_NAT_KEEPALIVE_DELAY)&&(!p->reliable())) {
 			//TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
-			p->sent(now);
+			p->sentKeepalive(now);
 		} else {
 			//TRACE("no PING or NAT keepalive: addr==%s reliable==%d %llums/%llums send/receive inactivity",p->address().toString().c_str(),(int)p->reliable(),now - p->lastSend(),now - p->lastReceived());
 		}
@@ -339,6 +343,8 @@ bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
 	unsigned int y = 0;
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
+			// Resetting a path means sending a HELLO and then forgetting it. If we
+			// get OK(HELLO) then it will be re-learned.
 			sendHELLO(_paths[x].localAddress(),_paths[x].address(),now);
 		} else {
 			_paths[y++] = _paths[x];
@@ -491,7 +497,22 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 	if (!p.active(now))
 		return false;
 
-	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
+	/* Dead path detection: if we have sent something to this peer and have not
+	 * yet received a reply, double check this path. The majority of outbound
+	 * packets including Ethernet frames do generate some kind of reply either
+	 * immediately or at some point in the near future. This will occasionally
+	 * (every NO_ANSWER_TIMEOUT ms) check paths unnecessarily if traffic that
+	 * does not generate a response is being sent such as multicast announcements
+	 * or frames belonging to unidirectional UDP protocols, but the cost is very
+	 * tiny and the benefit in reliability is very large. This takes care of many
+	 * failure modes including crap NATs that forget links and spurious changes
+	 * to physical network topology that cannot be otherwise detected.
+	 *
+	 * Each time we do this we increment a probation counter in the path. This
+	 * counter is reset on any packet receive over this path. If it reaches the
+	 * MAX_PROBATION threshold the path is considred dead. */
+
+	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) && ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
 		TRACE("%s(%s) has not answered, checking if dead (probation: %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
 
 		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
@@ -499,9 +520,11 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 			outp.armor(_key,true);
 			p.send(RR,outp.data(),outp.size(),now);
+			p.pinged(now);
 		} else {
 			sendHELLO(p.localAddress(),p.address(),now);
 			p.sent(now);
+			p.pinged(now);
 		}
 
 		p.increaseProbation();
