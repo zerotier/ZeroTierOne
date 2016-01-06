@@ -408,7 +408,7 @@ bool Switch::unite(const Address &p1,const Address &p2)
 				outp.append(cg.first.rawIpData(),4);
 			}
 			outp.armor(p1p->key(),true);
-			p1p->send(RR,outp.data(),outp.size(),now);
+			p1p->send(outp.data(),outp.size(),now);
 		} else {
 			// Tell p2 where to find p1.
 			Packet outp(p2,RR->identity.address(),Packet::VERB_RENDEZVOUS);
@@ -423,7 +423,7 @@ bool Switch::unite(const Address &p1,const Address &p2)
 				outp.append(cg.second.rawIpData(),4);
 			}
 			outp.armor(p2p->key(),true);
-			p2p->send(RR,outp.data(),outp.size(),now);
+			p2p->send(outp.data(),outp.size(),now);
 		}
 		++alt; // counts up and also flips LSB
 	}
@@ -435,7 +435,7 @@ void Switch::rendezvous(const SharedPtr<Peer> &peer,const InetAddress &localAddr
 {
 	TRACE("sending NAT-t message to %s(%s)",peer->address().toString().c_str(),atAddr.toString().c_str());
 	const uint64_t now = RR->node->now();
-	peer->sendHELLO(RR,localAddr,atAddr,now,2); // first attempt: send low-TTL packet to 'open' local NAT
+	peer->sendHELLO(localAddr,atAddr,now,2); // first attempt: send low-TTL packet to 'open' local NAT
 	{
 		Mutex::Lock _l(_contactQueue_m);
 		_contactQueue.push_back(ContactQueueEntry(peer,now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY,localAddr,atAddr));
@@ -508,14 +508,14 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 				} else {
 					if (qi->strategyIteration == 0) {
 						// First strategy: send packet directly to destination
-						qi->peer->sendHELLO(RR,qi->localAddr,qi->inaddr,now);
+						qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
 					} else if (qi->strategyIteration <= 3) {
 						// Strategies 1-3: try escalating ports for symmetric NATs that remap sequentially
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
 						if (p < 0xffff) {
 							tmpaddr.setPort((unsigned int)p);
-							qi->peer->sendHELLO(RR,qi->localAddr,tmpaddr,now);
+							qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
 						} else qi->strategyIteration = 5;
 					} else {
 						// All strategies tried, expire entry
@@ -619,7 +619,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 			// Note: we don't bother initiating NAT-t for fragments, since heads will set that off.
 			// It wouldn't hurt anything, just redundant and unnecessary.
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-			if ((!relayTo)||(!relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now()))) {
+			if ((!relayTo)||(!relayTo->send(fragment.data(),fragment.size(),RR->node->now()))) {
 #ifdef ZT_ENABLE_CLUSTER
 				if (RR->cluster) {
 					RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
@@ -630,7 +630,7 @@ void Switch::_handleRemotePacketFragment(const InetAddress &localAddr,const Inet
 				// Don't know peer or no direct path -- so relay via root server
 				relayTo = RR->topology->getBestRoot();
 				if (relayTo)
-					relayTo->send(RR,fragment.data(),fragment.size(),RR->node->now());
+					relayTo->send(fragment.data(),fragment.size(),RR->node->now());
 			}
 		} else {
 			TRACE("dropped relay [fragment](%s) -> %s, max hops exceeded",fromAddr.toString().c_str(),destination.toString().c_str());
@@ -705,7 +705,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 			packet->incrementHops();
 
 			SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
-			if ((relayTo)&&((relayTo->send(RR,packet->data(),packet->size(),now)))) {
+			if ((relayTo)&&((relayTo->send(packet->data(),packet->size(),now)))) {
 				Mutex::Lock _l(_lastUniteAttempt_m);
 				uint64_t &luts = _lastUniteAttempt[_LastUniteKey(source,destination)];
 				if ((now - luts) >= ZT_MIN_UNITE_INTERVAL) {
@@ -730,7 +730,7 @@ void Switch::_handleRemotePacketHead(const InetAddress &localAddr,const InetAddr
 
 				relayTo = RR->topology->getBestRoot(&source,1,true);
 				if (relayTo)
-					relayTo->send(RR,packet->data(),packet->size(),now);
+					relayTo->send(packet->data(),packet->size(),now);
 			}
 		} else {
 			TRACE("dropped relay %s(%s) -> %s, max hops exceeded",packet->source().toString().c_str(),fromAddr.toString().c_str(),destination.toString().c_str());
@@ -787,7 +787,7 @@ Address Switch::_sendWhoisRequest(const Address &addr,const Address *peersAlread
 		Packet outp(root->address(),RR->identity.address(),Packet::VERB_WHOIS);
 		addr.appendTo(outp);
 		outp.armor(root->key(),true);
-		if (root->send(RR,outp.data(),outp.size(),RR->node->now()))
+		if (root->send(outp.data(),outp.size(),RR->node->now()))
 			return root->address();
 	}
 	return Address();
@@ -841,7 +841,7 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 
 		if ((network)&&(relay)&&(network->isAllowed(peer))) {
 			// Push hints for direct connectivity to this peer if we are relaying
-			peer->pushDirectPaths(RR,viaPath,now,false);
+			peer->pushDirectPaths(viaPath,now,false);
 		}
 
 		Packet tmp(packet);

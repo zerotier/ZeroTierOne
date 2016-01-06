@@ -66,6 +66,8 @@ class Path
 public:
 	Path() :
 		_lastSend(0),
+		_lastPing(0),
+		_lastKeepalive(0),
 		_lastReceived(0),
 		_addr(),
 		_localAddress(),
@@ -76,6 +78,8 @@ public:
 
 	Path(const InetAddress &localAddress,const InetAddress &addr) :
 		_lastSend(0),
+		_lastPing(0),
+		_lastKeepalive(0),
 		_lastReceived(0),
 		_addr(addr),
 		_localAddress(localAddress),
@@ -101,11 +105,29 @@ public:
 	inline void sent(uint64_t t) { _lastSend = t; }
 
 	/**
+	 * Called when we've sent a ping or echo
+	 *
+	 * @param t Time of send
+	 */
+	inline void pinged(uint64_t t) { _lastPing = t; }
+
+	/**
+	 * Called when we send a NAT keepalive
+	 *
+	 * @param t Time of send
+	 */
+	inline void sentKeepalive(uint64_t t) { _lastKeepalive = t; }
+
+	/**
 	 * Called when a packet is received from this remote path
 	 *
 	 * @param t Time of receive
 	 */
-	inline void received(uint64_t t) { _lastReceived = t; }
+	inline void received(uint64_t t)
+	{
+		_lastReceived = t;
+		_probation = 0;
+	}
 
 	/**
 	 * @param now Current time
@@ -114,7 +136,7 @@ public:
 	inline bool active(uint64_t now) const
 		throw()
 	{
-		return ((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT);
+		return (((now - _lastReceived) < ZT_PEER_ACTIVITY_TIMEOUT)&&(_probation < ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION));
 	}
 
 	/**
@@ -137,6 +159,16 @@ public:
 	 * @return Time of last send to this path
 	 */
 	inline uint64_t lastSend() const throw() { return _lastSend; }
+
+	/**
+	 * @return Time we last pinged or dead path checked this link
+	 */
+	inline uint64_t lastPing() const throw() { return _lastPing; }
+
+	/**
+	 * @return Time of last keepalive
+	 */
+	inline uint64_t lastKeepalive() const throw() { return _lastKeepalive; }
 
 	/**
 	 * @return Time of last receive from this path
@@ -240,28 +272,44 @@ public:
 	inline bool isClusterSuboptimal() const { return ((_flags & ZT_PATH_FLAG_CLUSTER_SUBOPTIMAL) != 0); }
 #endif
 
+	/**
+	 * @return Current path probation count (for dead path detect)
+	 */
+	inline unsigned int probation() const { return _probation; }
+
+	/**
+	 * Increase this path's probation violation count (for dead path detect)
+	 */
+	inline void increaseProbation() { ++_probation; }
+
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		b.append((uint8_t)0); // version
+		b.append((uint8_t)2); // version
 		b.append((uint64_t)_lastSend);
+		b.append((uint64_t)_lastPing);
+		b.append((uint64_t)_lastKeepalive);
 		b.append((uint64_t)_lastReceived);
 		_addr.serialize(b);
 		_localAddress.serialize(b);
 		b.append((uint16_t)_flags);
+		b.append((uint16_t)_probation);
 	}
 
 	template<unsigned int C>
 	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
 	{
 		unsigned int p = startAt;
-		if (b[p++] != 0)
+		if (b[p++] != 2)
 			throw std::invalid_argument("invalid serialized Path");
 		_lastSend = b.template at<uint64_t>(p); p += 8;
+		_lastPing = b.template at<uint64_t>(p); p += 8;
+		_lastKeepalive = b.template at<uint64_t>(p); p += 8;
 		_lastReceived = b.template at<uint64_t>(p); p += 8;
 		p += _addr.deserialize(b,p);
 		p += _localAddress.deserialize(b,p);
 		_flags = b.template at<uint16_t>(p); p += 2;
+		_probation = b.template at<uint16_t>(p); p += 2;
 		_ipScope = _addr.ipScope();
 		return (p - startAt);
 	}
@@ -271,10 +319,13 @@ public:
 
 private:
 	uint64_t _lastSend;
+	uint64_t _lastPing;
+	uint64_t _lastKeepalive;
 	uint64_t _lastReceived;
 	InetAddress _addr;
 	InetAddress _localAddress;
 	unsigned int _flags;
+	unsigned int _probation;
 	InetAddress::IpScope _ipScope; // memoize this since it's a computed value checked often
 };
 

@@ -102,15 +102,6 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
- * Cipher suite: PFS negotiated ephemeral cipher suite and authentication
- *
- * This message is encrypted with the latest negotiated ephemeral (PFS)
- * key pair and cipher suite. If authentication fails, VERB_SET_EPHEMERAL_KEY
- * may be sent to renegotiate ephemeral keys.
- */
-#define ZT_PROTO_CIPHER_SUITE__EPHEMERAL 7
-
-/**
  * DEPRECATED payload encrypted flag, will be removed for re-use soon.
  *
  * This has been replaced by the two-bit cipher suite selection field where
@@ -234,17 +225,6 @@
  * Minimum viable fragment length
  */
 #define ZT_PROTO_MIN_FRAGMENT_LENGTH ZT_PACKET_FRAGMENT_IDX_PAYLOAD
-
-// Ephemeral key record flags
-#define ZT_PROTO_EPHEMERAL_KEY_FLAG_FIPS 0x01   // future use
-
-// Ephemeral key record symmetric cipher types
-#define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_SALSA2012_POLY1305 0x01
-#define ZT_PROTO_EPHEMERAL_KEY_SYMMETRIC_CIPHER_AES256_GCM 0x02
-
-// Ephemeral key record public key types
-#define ZT_PROTO_EPHEMERAL_KEY_PK_C25519 0x01
-#define ZT_PROTO_EPHEMERAL_KEY_PK_NISTP256 0x02
 
 // Field incides for parsing verbs -------------------------------------------
 
@@ -675,20 +655,11 @@ public:
 
 		/**
 		 * ECHO request (a.k.a. ping):
-		 *   <[...] arbitrary payload to be echoed back>
+		 *   <[...] arbitrary payload>
 		 *
 		 * This generates OK with a copy of the transmitted payload. No ERROR
 		 * is generated. Response to ECHO requests is optional and ECHO may be
 		 * ignored if a node detects a possible flood.
-		 *
-		 * There is a de-facto standard for ECHO payload. No payload indicates an
-		 * ECHO used for path confirmation. Otherwise the first byte contains
-		 * flags, in which currently the only flag is 0x01 for a user-requested
-		 * echo. For user-requested echoes the result may be reported back through
-		 * the API. Otherwise the payload is for internal use.
-		 *
-		 * Support for fragmented echo packets is optional and their use is not
-		 * recommended.
 		 */
 		VERB_ECHO = 8,
 

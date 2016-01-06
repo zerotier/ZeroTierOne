@@ -46,8 +46,8 @@ namespace ZeroTier {
 // Used to send varying values for NAT keepalive
 static uint32_t _natKeepaliveBuf = 0;
 
-Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
-	throw(std::runtime_error) :
+Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
+	RR(renv),
 	_lastUsed(0),
 	_lastReceive(0),
 	_lastUnicastFrame(0),
@@ -72,7 +72,6 @@ Peer::Peer(const Identity &myIdentity,const Identity &peerIdentity)
 }
 
 void Peer::received(
-	const RuntimeEnvironment *RR,
 	const InetAddress &localAddr,
 	const InetAddress &remoteAddr,
 	unsigned int hops,
@@ -169,7 +168,10 @@ void Peer::received(
 					} else {
 						uint64_t slotLRmin = 0xffffffffffffffffULL;
 						for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-							if (_paths[p].lastReceived() <= slotLRmin) {
+							if (!_paths[p].active(now)) {
+								slot = &(_paths[p]);
+								break;
+							} else if (_paths[p].lastReceived() <= slotLRmin) {
 								slotLRmin = _paths[p].lastReceived();
 								slot = &(_paths[p]);
 							}
@@ -199,7 +201,7 @@ void Peer::received(
 						outp.armor(_key,true);
 						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 					} else {
-						sendHELLO(RR,localAddr,remoteAddr,now);
+						sendHELLO(localAddr,remoteAddr,now);
 					}
 
 				}
@@ -214,7 +216,7 @@ void Peer::received(
 	}
 }
 
-void Peer::sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl)
+void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl)
 {
 	// _lock not required here since _id is immutable and nothing else is accessed
 
@@ -234,7 +236,7 @@ void Peer::sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,c
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size(),ttl);
 }
 
-bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily)
+bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 {
 	Path *p = (Path *)0;
 
@@ -248,13 +250,14 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 	if (p) {
 		if ((now - p->lastReceived()) >= ZT_PEER_DIRECT_PING_DELAY) {
 			//TRACE("PING %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
-			sendHELLO(RR,p->localAddress(),p->address(),now);
+			sendHELLO(p->localAddress(),p->address(),now);
 			p->sent(now);
-		} else if (((now - p->lastSend()) >= ZT_NAT_KEEPALIVE_DELAY)&&(!p->reliable())) {
+			p->pinged(now);
+		} else if ( ((now - std::max(p->lastSend(),p->lastKeepalive())) >= ZT_NAT_KEEPALIVE_DELAY) && (!p->reliable()) ) {
 			//TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
-			p->sent(now);
+			p->sentKeepalive(now);
 		} else {
 			//TRACE("no PING or NAT keepalive: addr==%s reliable==%d %llums/%llums send/receive inactivity",p->address().toString().c_str(),(int)p->reliable(),now - p->lastSend(),now - p->lastReceived());
 		}
@@ -264,7 +267,7 @@ bool Peer::doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inet
 	return false;
 }
 
-void Peer::pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,bool force)
+void Peer::pushDirectPaths(Path *path,uint64_t now,bool force)
 {
 #ifdef ZT_ENABLE_CLUSTER
 	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
@@ -332,7 +335,7 @@ void Peer::pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,
 	}
 }
 
-bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now)
+bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 	unsigned int np = _numPaths;
@@ -340,7 +343,9 @@ bool Peer::resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope sc
 	unsigned int y = 0;
 	while (x < np) {
 		if (_paths[x].address().ipScope() == scope) {
-			sendHELLO(RR,_paths[x].localAddress(),_paths[x].address(),now);
+			// Resetting a path means sending a HELLO and then forgetting it. If we
+			// get OK(HELLO) then it will be re-learned.
+			sendHELLO(_paths[x].localAddress(),_paths[x].address(),now);
 		} else {
 			_paths[y++] = _paths[x];
 		}
@@ -383,7 +388,7 @@ bool Peer::networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfM
 	return false;
 }
 
-bool Peer::validateAndSetNetworkMembershipCertificate(const RuntimeEnvironment *RR,uint64_t nwid,const CertificateOfMembership &com)
+bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const CertificateOfMembership &com)
 {
 	// Sanity checks
 	if ((!com)||(com.issuedTo() != _id.address()))
@@ -448,7 +453,7 @@ bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool 
 	return ((now - tmp) >= (ZT_NETWORK_AUTOCONF_DELAY / 2));
 }
 
-void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
+void Peer::clean(uint64_t now)
 {
 	Mutex::Lock _l(_lock);
 
@@ -485,6 +490,49 @@ void Peer::clean(const RuntimeEnvironment *RR,uint64_t now)
 	}
 }
 
+bool Peer::_checkPath(Path &p,const uint64_t now)
+{
+	// assumes _lock is locked
+
+	if (!p.active(now))
+		return false;
+
+	/* Dead path detection: if we have sent something to this peer and have not
+	 * yet received a reply, double check this path. The majority of outbound
+	 * packets including Ethernet frames do generate some kind of reply either
+	 * immediately or at some point in the near future. This will occasionally
+	 * (every NO_ANSWER_TIMEOUT ms) check paths unnecessarily if traffic that
+	 * does not generate a response is being sent such as multicast announcements
+	 * or frames belonging to unidirectional UDP protocols, but the cost is very
+	 * tiny and the benefit in reliability is very large. This takes care of many
+	 * failure modes including crap NATs that forget links and spurious changes
+	 * to physical network topology that cannot be otherwise detected.
+	 *
+	 * Each time we do this we increment a probation counter in the path. This
+	 * counter is reset on any packet receive over this path. If it reaches the
+	 * MAX_PROBATION threshold the path is considred dead. */
+
+	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) && ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
+		TRACE("%s(%s) does not seem to be answering in a timely manner, checking if dead (probation == %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
+
+		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+			// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
+			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+			outp.armor(_key,true);
+			p.send(RR,outp.data(),outp.size(),now);
+			p.pinged(now);
+		} else {
+			sendHELLO(p.localAddress(),p.address(),now);
+			p.sent(now);
+			p.pinged(now);
+		}
+
+		p.increaseProbation();
+	}
+
+	return true;
+}
+
 Path *Peer::_getBestPath(const uint64_t now)
 {
 	// assumes _lock is locked
@@ -492,7 +540,7 @@ Path *Peer::_getBestPath(const uint64_t now)
 	uint64_t bestPathScore = 0;
 	for(unsigned int i=0;i<_numPaths;++i) {
 		const uint64_t score = _paths[i].score();
-		if ((score >= bestPathScore)&&(_paths[i].active(now))) {
+		if ((score >= bestPathScore)&&(_checkPath(_paths[i],now))) {
 			bestPathScore = score;
 			bestPath = &(_paths[i]);
 		}
@@ -507,7 +555,7 @@ Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 	uint64_t bestPathScore = 0;
 	for(unsigned int i=0;i<_numPaths;++i) {
 		const uint64_t score = _paths[i].score();
-		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_paths[i].active(now))) {
+		if (((int)_paths[i].address().ss_family == inetAddressFamily)&&(score >= bestPathScore)&&(_checkPath(_paths[i],now))) {
 			bestPathScore = score;
 			bestPath = &(_paths[i]);
 		}

@@ -67,7 +67,7 @@ Topology::Topology(const RuntimeEnvironment *renv) :
 				);
 			unsigned int pos = 0;
 			deserializeBuf->copyFrom(all + ptr,reclen + 4);
-			SharedPtr<Peer> p(Peer::deserializeNew(RR->identity,*deserializeBuf,pos));
+			SharedPtr<Peer> p(Peer::deserializeNew(RR,RR->identity,*deserializeBuf,pos));
 			ptr += pos;
 			if (!p)
 				break; // stop if invalid records
@@ -180,7 +180,7 @@ SharedPtr<Peer> Topology::getPeer(const Address &zta)
 	try {
 		Identity id(_getIdentity(zta));
 		if (id) {
-			SharedPtr<Peer> np(new Peer(RR->identity,id));
+			SharedPtr<Peer> np(new Peer(RR,RR->identity,id));
 			{
 				Mutex::Lock _l(_lock);
 				SharedPtr<Peer> &ap = _peers[zta];
@@ -327,7 +327,7 @@ void Topology::clean(uint64_t now)
 		if (((now - (*p)->lastUsed()) >= ZT_PEER_IN_MEMORY_EXPIRATION)&&(std::find(_rootAddresses.begin(),_rootAddresses.end(),*a) == _rootAddresses.end())) {
 			_peers.erase(*a);
 		} else {
-			(*p)->clean(RR,now);
+			(*p)->clean(now);
 		}
 	}
 }
@@ -361,7 +361,7 @@ void Topology::_setWorld(const World &newWorld)
 			if (rp) {
 				_rootPeers.push_back(*rp);
 			} else {
-				SharedPtr<Peer> newrp(new Peer(RR->identity,r->identity));
+				SharedPtr<Peer> newrp(new Peer(RR,RR->identity,r->identity));
 				_peers.set(r->identity.address(),newrp);
 				_rootPeers.push_back(newrp);
 			}

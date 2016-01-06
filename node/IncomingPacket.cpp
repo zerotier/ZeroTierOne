@@ -86,7 +86,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,bool deferred)
 			switch(v) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
-					peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),v,0,Packet::VERB_NOP);
+					peer->received(_localAddress,_remoteAddress,hops(),packetId(),v,0,Packet::VERB_NOP);
 					return true;
 
 				case Packet::VERB_HELLO:                          return _doHELLO(RR,peer);
@@ -185,7 +185,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 			default: break;
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_ERROR,inRePacketId,inReVerb);
 	} catch ( ... ) {
 		TRACE("dropped ERROR from %s(%s): unexpected exception",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -279,7 +279,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 				}
 
 				// Check packet integrity and authentication
-				SharedPtr<Peer> newPeer(new Peer(RR->identity,id));
+				SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
 				if (!dearmor(newPeer->key())) {
 					TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
 					return true;
@@ -349,7 +349,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
-		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_HELLO,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped HELLO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -410,7 +410,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					// roots. In the future it should be done if we query less trusted
 					// sources.
 					//if (id.locallyValidate())
-						RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR->identity,id))));
+						RR->sw->doAnythingWaitingForPeer(RR->topology->addPeer(SharedPtr<Peer>(new Peer(RR,RR->identity,id))));
 				}
 			} break;
 
@@ -450,7 +450,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 					// OK(MULTICAST_FRAME) includes certificate of membership update
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
+					peer->validateAndSetNetworkMembershipCertificate(nwid,com);
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -465,7 +465,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,const SharedPtr<Peer> &p
 			default: break;
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_OK,inRePacketId,inReVerb);
 	} catch ( ... ) {
 		TRACE("dropped OK from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -494,7 +494,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 		} else {
 			TRACE("dropped WHOIS from %s(%s): missing or invalid address",source().toString().c_str(),_remoteAddress.toString().c_str());
 		}
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_WHOIS,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped WHOIS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -513,7 +513,7 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
 					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
+					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
 					RR->sw->rendezvous(withPeer,_localAddress,atAddr);
 				} else {
 					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
@@ -553,7 +553,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				RR->node->putFrame(network->id(),MAC(peer->address(),network->id()),network->mac(),etherType,0,field(ZT_PROTO_VERB_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
 			}
 
-			peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP);
+			peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_FRAME,0,Packet::VERB_NOP);
 		} else {
 			TRACE("dropped FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -575,7 +575,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				if ((flags & 0x01) != 0) {
 					CertificateOfMembership com;
 					comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-					peer->validateAndSetNetworkMembershipCertificate(RR,network->id(),com);
+					peer->validateAndSetNetworkMembershipCertificate(network->id(),com);
 				}
 
 				if (!network->isAllowed(peer)) {
@@ -624,7 +624,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,const SharedPtr<P
 				RR->node->putFrame(network->id(),from,to,etherType,0,field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,payloadLen),payloadLen);
 			}
 
-			peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP);
+			peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP);
 		} else {
 			TRACE("dropped EXT_FRAME from %s(%s): we are not connected to network %.16llx",source().toString().c_str(),_remoteAddress.toString().c_str(),at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID));
 		}
@@ -646,7 +646,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		outp.armor(peer->key(),true);
 		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
-		peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped ECHO from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -665,7 +665,7 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,const Shared
 			RR->mc->add(now,nwid,group,peer->address());
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_LIKE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -680,10 +680,10 @@ bool IncomingPacket::_doNETWORK_MEMBERSHIP_CERTIFICATE(const RuntimeEnvironment 
 		unsigned int ptr = ZT_PACKET_IDX_PAYLOAD;
 		while (ptr < size()) {
 			ptr += com.deserialize(*this,ptr);
-			peer->validateAndSetNetworkMembershipCertificate(RR,com.networkId(),com);
+			peer->validateAndSetNetworkMembershipCertificate(com.networkId(),com);
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_MEMBERSHIP_CERTIFICATE from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -700,7 +700,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 
 		const unsigned int h = hops();
 		const uint64_t pid = packetId();
-		peer->received(RR,_localAddress,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,h,pid,Packet::VERB_NETWORK_CONFIG_REQUEST,0,Packet::VERB_NOP);
 
 		if (RR->localNetworkController) {
 			Dictionary netconf;
@@ -789,7 +789,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REFRESH(const RuntimeEnvironment *RR,cons
 				nw->requestConfiguration();
 			ptr += 8;
 		}
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_NETWORK_CONFIG_REFRESH,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped NETWORK_CONFIG_REFRESH from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -825,7 +825,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 #endif
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_GATHER,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_GATHER from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -846,7 +846,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			if ((flags & 0x01) != 0) {
 				CertificateOfMembership com;
 				offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-				peer->validateAndSetNetworkMembershipCertificate(RR,nwid,com);
+				peer->validateAndSetNetworkMembershipCertificate(nwid,com);
 			}
 
 			// Check membership after we've read any included COM, since
@@ -915,7 +915,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 			}
 		} // else ignore -- not a member of this network
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_MULTICAST_FRAME,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped MULTICAST_FRAME from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -955,7 +955,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->sendHELLO(RR,_localAddress,a,now);
+							peer->sendHELLO(_localAddress,a,now);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -966,7 +966,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
-							peer->sendHELLO(RR,_localAddress,a,now);
+							peer->sendHELLO(_localAddress,a,now);
 						} else {
 							TRACE("ignoring contact for %s at %s -- too many per scope",peer->address().toString().c_str(),a.toString().c_str());
 						}
@@ -976,7 +976,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			ptr += addrLen;
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_PUSH_DIRECT_PATHS,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped PUSH_DIRECT_PATHS from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -1143,7 +1143,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			}
 		}
 
-		peer->received(RR,_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP);
+		peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_CIRCUIT_TEST,0,Packet::VERB_NOP);
 	} catch ( ... ) {
 		TRACE("dropped CIRCUIT_TEST from %s(%s): unexpected exception",source().toString().c_str(),_remoteAddress.toString().c_str());
 	}
@@ -1238,7 +1238,7 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 					break;
 			}
 
-			peer->received(RR,_localAddress,_remoteAddress,hops(),pid,Packet::VERB_REQUEST_PROOF_OF_WORK,0,Packet::VERB_NOP);
+			peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_REQUEST_PROOF_OF_WORK,0,Packet::VERB_NOP);
 		} else {
 			TRACE("dropped REQUEST_PROOF_OF_WORK from %s(%s): not trusted enough",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 		}

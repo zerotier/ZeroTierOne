@@ -75,12 +75,12 @@ public:
 	/**
 	 * Construct a new peer
 	 *
+	 * @param renv Runtime environment
 	 * @param myIdentity Identity of THIS node (for key agreement)
 	 * @param peerIdentity Identity of peer
 	 * @throws std::runtime_error Key agreement with peer's identity failed
 	 */
-	Peer(const Identity &myIdentity,const Identity &peerIdentity)
-		throw(std::runtime_error);
+	Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity);
 
 	/**
 	 * @return Time peer record was last used in any way
@@ -120,7 +120,6 @@ public:
 	 * @param inReVerb Verb in reply to (for OK/ERROR, default: VERB_NOP)
 	 */
 	void received(
-		const RuntimeEnvironment *RR,
 		const InetAddress &localAddr,
 		const InetAddress &remoteAddr,
 		unsigned int hops,
@@ -144,13 +143,12 @@ public:
 	/**
 	 * Send via best path
 	 *
-	 * @param RR Runtime environment
 	 * @param data Packet data
 	 * @param len Packet length
 	 * @param now Current time
 	 * @return Path used on success or NULL on failure
 	 */
-	inline Path *send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
+	inline Path *send(const void *data,unsigned int len,uint64_t now)
 	{
 		Path *const bestPath = getBestPath(now);
 		if (bestPath) {
@@ -166,33 +164,30 @@ public:
 	 * This does not update any statistics. It's used to send initial HELLOs
 	 * for NAT traversal and path verification.
 	 *
-	 * @param RR Runtime environment
 	 * @param localAddr Local address
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param ttl Desired IP TTL (default: 0 to leave alone)
 	 */
-	void sendHELLO(const RuntimeEnvironment *RR,const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl = 0);
+	void sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl = 0);
 
 	/**
 	 * Send pings or keepalives depending on configured timeouts
 	 *
-	 * @param RR Runtime environment
 	 * @param now Current time
 	 * @param inetAddressFamily Keep this address family alive, or 0 to simply pick current best ignoring family
 	 * @return True if at least one direct path seems alive
 	 */
-	bool doPingAndKeepalive(const RuntimeEnvironment *RR,uint64_t now,int inetAddressFamily);
+	bool doPingAndKeepalive(uint64_t now,int inetAddressFamily);
 
 	/**
 	 * Push direct paths back to self if we haven't done so in the configured timeout
 	 *
-	 * @param RR Runtime environment
 	 * @param path Remote path to use to send the push
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
 	 */
-	void pushDirectPaths(const RuntimeEnvironment *RR,Path *path,uint64_t now,bool force);
+	void pushDirectPaths(Path *path,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer
@@ -324,12 +319,11 @@ public:
 	/**
 	 * Reset paths within a given scope
 	 *
-	 * @param RR Runtime environment
 	 * @param scope IP scope of paths to reset
 	 * @param now Current time
 	 * @return True if at least one path was forgotten
 	 */
-	bool resetWithinScope(const RuntimeEnvironment *RR,InetAddress::IpScope scope,uint64_t now);
+	bool resetWithinScope(InetAddress::IpScope scope,uint64_t now);
 
 	/**
 	 * @return 256-bit secret symmetric encryption key
@@ -383,11 +377,10 @@ public:
 	/**
 	 * Check the validity of the COM and add/update if valid and new
 	 *
-	 * @param RR Runtime Environment
 	 * @param nwid Network ID
 	 * @param com Externally supplied COM
 	 */
-	bool validateAndSetNetworkMembershipCertificate(const RuntimeEnvironment *RR,uint64_t nwid,const CertificateOfMembership &com);
+	bool validateAndSetNetworkMembershipCertificate(uint64_t nwid,const CertificateOfMembership &com);
 
 	/**
 	 * @param nwid Network ID
@@ -399,8 +392,10 @@ public:
 
 	/**
 	 * Perform periodic cleaning operations
+	 *
+	 * @param now Current time
 	 */
-	void clean(const RuntimeEnvironment *RR,uint64_t now);
+	void clean(uint64_t now);
 
 	/**
 	 * Update direct path push stats and return true if we should respond
@@ -503,13 +498,14 @@ public:
 	/**
 	 * Create a new Peer from a serialized instance
 	 *
+	 * @param renv Runtime environment
 	 * @param myIdentity This node's identity
 	 * @param b Buffer containing serialized Peer data
 	 * @param p Pointer to current position in buffer, will be updated in place as buffer is read (value/result)
 	 * @return New instance of Peer or NULL if serialized data was corrupt or otherwise invalid (may also throw an exception via Buffer)
 	 */
 	template<unsigned int C>
-	static inline SharedPtr<Peer> deserializeNew(const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
+	static inline SharedPtr<Peer> deserializeNew(const RuntimeEnvironment *renv,const Identity &myIdentity,const Buffer<C> &b,unsigned int &p)
 	{
 		const unsigned int recSize = b.template at<uint32_t>(p); p += 4;
 		if ((p + recSize) > b.size())
@@ -523,7 +519,7 @@ public:
 		if (!npid)
 			return SharedPtr<Peer>();
 
-		SharedPtr<Peer> np(new Peer(myIdentity,npid));
+		SharedPtr<Peer> np(new Peer(renv,myIdentity,npid));
 
 		np->_lastUsed = b.template at<uint64_t>(p); p += 8;
 		np->_lastReceive = b.template at<uint64_t>(p); p += 8;
@@ -569,11 +565,13 @@ public:
 	}
 
 private:
+	bool _checkPath(Path &p,const uint64_t now);
 	Path *_getBestPath(const uint64_t now);
 	Path *_getBestPath(const uint64_t now,int inetAddressFamily);
 
 	unsigned char _key[ZT_PEER_SECRET_KEY_LENGTH]; // computed with key agreement, not serialized
 
+	const RuntimeEnvironment *RR;
 	uint64_t _lastUsed;
 	uint64_t _lastReceive; // direct or indirect
 	uint64_t _lastUnicastFrame;

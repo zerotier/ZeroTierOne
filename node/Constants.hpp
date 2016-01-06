@@ -264,12 +264,22 @@
 /**
  * Delay between ordinary case pings of direct links
  */
-#define ZT_PEER_DIRECT_PING_DELAY 60000
+#define ZT_PEER_DIRECT_PING_DELAY 90000
 
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
 #define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 4) + ZT_PING_CHECK_INVERVAL)
+
+/**
+ * No answer timeout to trigger dead path detection
+ */
+#define ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT 2500
+
+/**
+ * Probation threshold after which a path becomes dead
+ */
+#define ZT_PEER_DEAD_PATH_DETECTION_MAX_PROBATION 3
 
 /**
  * Delay between requests for updated network autoconf information

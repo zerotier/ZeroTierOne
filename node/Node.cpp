@@ -244,20 +244,20 @@ public:
 			// "Upstream" devices are roots and relays and get special treatment -- they stay alive
 			// forever and we try to keep (if available) both IPv4 and IPv6 channels open to them.
 			bool needToContactIndirect = true;
-			if (p->doPingAndKeepalive(RR,_now,AF_INET)) {
+			if (p->doPingAndKeepalive(_now,AF_INET)) {
 				needToContactIndirect = false;
 			} else {
 				if (stableEndpoint4) {
 					needToContactIndirect = false;
-					p->sendHELLO(RR,InetAddress(),stableEndpoint4,_now);
+					p->sendHELLO(InetAddress(),stableEndpoint4,_now);
 				}
 			}
-			if (p->doPingAndKeepalive(RR,_now,AF_INET6)) {
+			if (p->doPingAndKeepalive(_now,AF_INET6)) {
 				needToContactIndirect = false;
 			} else {
 				if (stableEndpoint6) {
 					needToContactIndirect = false;
-					p->sendHELLO(RR,InetAddress(),stableEndpoint6,_now);
+					p->sendHELLO(InetAddress(),stableEndpoint6,_now);
 				}
 			}
 
@@ -273,7 +273,7 @@ public:
 			lastReceiveFromUpstream = std::max(p->lastReceive(),lastReceiveFromUpstream);
 		} else if (p->activelyTransferringFrames(_now)) {
 			// Normal nodes get their preferred link kept alive if the node has generated frame traffic recently
-			p->doPingAndKeepalive(RR,_now,0);
+			p->doPingAndKeepalive(_now,0);
 		}
 	}
 
