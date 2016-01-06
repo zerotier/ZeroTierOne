@@ -491,22 +491,20 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 	if (!p.active(now))
 		return false;
 
-	if (p.lastSend() > p.lastReceived()) {
-		if ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) {
-			TRACE("%s(%s) has not answered, checking if dead (probation: %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
+	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
+		TRACE("%s(%s) has not answered, checking if dead (probation: %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
 
-			if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
-				// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
-				Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
-				outp.armor(_key,true);
-				p.send(RR,outp.data(),outp.size(),now);
-			} else {
-				sendHELLO(p.localAddress(),p.address(),now);
-				p.sent(now);
-			}
-
-			p.increaseProbation();
+		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+			// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
+			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+			outp.armor(_key,true);
+			p.send(RR,outp.data(),outp.size(),now);
+		} else {
+			sendHELLO(p.localAddress(),p.address(),now);
+			p.sent(now);
 		}
+
+		p.increaseProbation();
 	}
 
 	return true;
