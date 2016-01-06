@@ -46,21 +46,19 @@ namespace ZeroTier {
 class _ResetWithinScope
 {
 public:
-	_ResetWithinScope(const RuntimeEnvironment *renv,uint64_t now,InetAddress::IpScope scope) :
-		RR(renv),
+	_ResetWithinScope(uint64_t now,InetAddress::IpScope scope) :
 		_now(now),
 		_scope(scope) {}
 
 	inline void operator()(Topology &t,const SharedPtr<Peer> &p)
 	{
-		if (p->resetWithinScope(RR,_scope,_now))
+		if (p->resetWithinScope(_scope,_now))
 			peersReset.push_back(p);
 	}
 
 	std::vector< SharedPtr<Peer> > peersReset;
 
 private:
-	const RuntimeEnvironment *RR;
 	uint64_t _now;
 	InetAddress::IpScope _scope;
 };
@@ -121,7 +119,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		}
 
 		// Reset all paths within this scope
-		_ResetWithinScope rset(RR,now,(InetAddress::IpScope)scope);
+		_ResetWithinScope rset(now,(InetAddress::IpScope)scope);
 		RR->topology->eachPeer<_ResetWithinScope &>(rset);
 
 		// Send a NOP to all peers for whom we forgot a path. This will cause direct
