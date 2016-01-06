@@ -253,7 +253,7 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 			sendHELLO(p->localAddress(),p->address(),now);
 			p->sent(now);
 			p->pinged(now);
-		} else if (((now - std::max(p->lastSend(),p->lastKeepalive())) >= ZT_NAT_KEEPALIVE_DELAY)&&(!p->reliable())) {
+		} else if ( ((now - std::max(p->lastSend(),p->lastKeepalive())) >= ZT_NAT_KEEPALIVE_DELAY) && (!p->reliable()) ) {
 			//TRACE("NAT keepalive %s(%s) after %llums/%llums send/receive inactivity",_id.address().toString().c_str(),p->address().toString().c_str(),now - p->lastSend(),now - p->lastReceived());
 			_natKeepaliveBuf += (uint32_t)((now * 0x9e3779b1) >> 1); // tumble this around to send constantly varying (meaningless) payloads
 			RR->node->putPacket(p->localAddress(),p->address(),&_natKeepaliveBuf,sizeof(_natKeepaliveBuf));
@@ -513,7 +513,7 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 	 * MAX_PROBATION threshold the path is considred dead. */
 
 	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) && ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
-		TRACE("%s(%s) has not answered, checking if dead (probation: %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
+		TRACE("%s(%s) does not seem to be answering in a timely manner, checking if dead (probation == %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
 
 		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
 			// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too

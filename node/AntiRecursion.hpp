@@ -105,8 +105,9 @@ public:
 		const _ArItem *const end = i + ZT_ANTIRECURSION_HISTORY_SIZE;
 		while (i != end) {
 #ifdef ZT_NO_TYPE_PUNNING
-			if (!memcmp(pp,i->tail,32))
+			if (!memcmp(pp,i->tail,32)) {
 				return false;
+			}
 #else
 			const uint64_t *t = i->tail;
 			const uint64_t *p = reinterpret_cast<const uint64_t *>(pp);
@@ -114,8 +115,9 @@ public:
 			bits |= *(t++) ^ *(p++);
 			bits |= *(t++) ^ *(p++);
 			bits |= *t ^ *p;
-			if (!bits)
+			if (!bits) {
 				return false;
+			}
 #endif
 			++i;
 		}
