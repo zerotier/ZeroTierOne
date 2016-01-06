@@ -512,7 +512,12 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 	 * counter is reset on any packet receive over this path. If it reaches the
 	 * MAX_PROBATION threshold the path is considred dead. */
 
-	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) && ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
+	if (
+	     (p.lastSend() > p.lastReceived()) &&
+			 ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
+			 ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
+			 (!RR->topology->amRoot())
+		 ) {
 		TRACE("%s(%s) does not seem to be answering in a timely manner, checking if dead (probation == %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
 
 		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
