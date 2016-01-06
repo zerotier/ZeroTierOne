@@ -199,6 +199,7 @@ void Peer::received(
 						// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
 						Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 						outp.armor(_key,true);
+						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 					} else {
 						sendHELLO(localAddr,remoteAddr,now);

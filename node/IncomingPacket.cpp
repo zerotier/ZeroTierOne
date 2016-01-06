@@ -250,6 +250,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 							outp.append((uint64_t)pid);
 							outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
 							outp.armor(key,true);
+							RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 						} else {
 							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());

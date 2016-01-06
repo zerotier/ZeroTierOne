@@ -97,6 +97,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
 					outp.armor(peer->key(),true);
+					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(localAddr,fromAddr,outp.data(),outp.size());
 				}
 			}
