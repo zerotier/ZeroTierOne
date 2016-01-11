@@ -42,7 +42,6 @@
 #include "InetAddress.hpp"
 #include "Topology.hpp"
 #include "Peer.hpp"
-#include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
 #include "Packet.hpp"
 #include "Cluster.hpp"
@@ -97,7 +96,6 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(localAddr,fromAddr,outp.data(),outp.size());
 				}
 			}
@@ -124,15 +122,6 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 	// Sanity check -- bridge loop? OS problem?
 	if (to == network->mac())
 		return;
-
-	/* Check anti-recursion module to ensure that this is not ZeroTier talking over its own links.
-	 * Note: even when we introduce a more purposeful binding of the main UDP port, this can
-	 * still happen because Windows likes to send broadcasts over interfaces that have little
-	 * to do with their intended target audience. :P */
-	if (!RR->antiRec->checkEthernetFrame(data,len)) {
-		TRACE("%.16llx: rejected recursively addressed ZeroTier packet by tail match (type %s, length: %u)",network->id(),etherTypeName(etherType),len);
-		return;
-	}
 
 	// Check to make sure this protocol is allowed on this network
 	if (!nconf->permitsEtherType(etherType)) {

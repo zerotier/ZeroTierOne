@@ -45,7 +45,6 @@
 #include "World.hpp"
 #include "Cluster.hpp"
 #include "Node.hpp"
-#include "AntiRecursion.hpp"
 #include "DeferredPackets.hpp"
 
 namespace ZeroTier {
@@ -163,7 +162,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 						nconf->com().serialize(outp);
 						outp.armor(peer->key(),true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}
@@ -250,7 +248,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 							outp.append((uint64_t)pid);
 							outp.append((unsigned char)Packet::ERROR_IDENTITY_COLLISION);
 							outp.armor(key,true);
-							RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 						} else {
 							TRACE("rejected HELLO from %s(%s): packet failed authentication",id.address().toString().c_str(),_remoteAddress.toString().c_str());
@@ -346,7 +343,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		}
 
 		outp.armor(peer->key(),true);
-		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
@@ -484,7 +480,6 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				outp.append(packetId());
 				queried.serialize(outp,false);
 				outp.armor(peer->key(),true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			} else {
 #ifdef ZT_ENABLE_CLUSTER
@@ -645,7 +640,6 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		if (size() > ZT_PACKET_IDX_PAYLOAD)
 			outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
 		outp.armor(peer->key(),true);
-		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
 	} catch ( ... ) {
@@ -723,7 +717,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
-							RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 						}
 					}
@@ -736,7 +729,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}	break;
 
@@ -747,7 +739,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				} break;
 
@@ -770,7 +761,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);
-			RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		}
 	} catch ( ... ) {
@@ -816,7 +806,6 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 			if (gatheredLocally) {
 				outp.armor(peer->key(),true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			}
 
@@ -910,7 +899,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}
 			}
@@ -1221,7 +1209,6 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						outp.append((uint16_t)sizeof(result));
 						outp.append(result,sizeof(result));
 						outp.armor(peer->key(),true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					} else {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
@@ -1229,7 +1216,6 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						outp.append(pid);
 						outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
 						outp.armor(peer->key(),true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}	break;
@@ -1335,7 +1321,6 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 	outp.append(nwid);
 	outp.armor(peer->key(),true);
-	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 }
 

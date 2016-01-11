@@ -26,7 +26,6 @@
  */
 
 #include "Path.hpp"
-#include "AntiRecursion.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Node.hpp"
 
@@ -34,7 +33,6 @@ namespace ZeroTier {
 
 bool Path::send(const RuntimeEnvironment *RR,const void *data,unsigned int len,uint64_t now)
 {
-	RR->antiRec->logOutgoingZT(data,len);
 	if (RR->node->putPacket(_localAddress,address(),data,len)) {
 		sent(now);
 		return true;

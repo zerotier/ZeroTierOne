@@ -39,7 +39,6 @@
 #include "NetworkController.hpp"
 #include "Switch.hpp"
 #include "Multicaster.hpp"
-#include "AntiRecursion.hpp"
 #include "Topology.hpp"
 #include "Buffer.hpp"
 #include "Packet.hpp"
@@ -114,7 +113,6 @@ Node::Node(
 	try {
 		RR->sw = new Switch(RR);
 		RR->mc = new Multicaster(RR);
-		RR->antiRec = new AntiRecursion();
 		RR->topology = new Topology(RR);
 		RR->sa = new SelfAwareness(RR);
 		RR->dp = new DeferredPackets(RR);
@@ -122,7 +120,6 @@ Node::Node(
 		delete RR->dp;
 		delete RR->sa;
 		delete RR->topology;
-		delete RR->antiRec;
 		delete RR->mc;
 		delete RR->sw;
 		throw;
@@ -141,7 +138,6 @@ Node::~Node()
 	delete RR->dp;
 	delete RR->sa;
 	delete RR->topology;
-	delete RR->antiRec;
 	delete RR->mc;
 	delete RR->sw;
 #ifdef ZT_ENABLE_CLUSTER

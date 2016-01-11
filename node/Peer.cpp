@@ -32,7 +32,6 @@
 #include "Node.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
-#include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
 #include "Cluster.hpp"
 #include "Packet.hpp"
@@ -104,7 +103,6 @@ void Peer::received(
 				}
 				outp.append((uint16_t)redirectTo.port());
 				outp.armor(_key,true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			} else {
 				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
@@ -120,7 +118,6 @@ void Peer::received(
 					outp.append(redirectTo.rawIpData(),16);
 				}
 				outp.armor(_key,true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			}
 			suboptimalPath = true;
@@ -199,7 +196,6 @@ void Peer::received(
 						// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
 						Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 						outp.armor(_key,true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 					} else {
 						sendHELLO(localAddr,remoteAddr,now);
@@ -233,7 +229,6 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	outp.append((uint64_t)RR->topology->worldTimestamp());
 
 	outp.armor(_key,false); // HELLO is sent in the clear
-	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size(),ttl);
 }
 
