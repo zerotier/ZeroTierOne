@@ -33,7 +33,9 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 #include <stdexcept>
+#include <stdint.h>
 
 #include "../node/Constants.hpp"
 #include "../node/MulticastGroup.hpp"
@@ -110,18 +112,17 @@ private:
 	static err_t nc_connected(void *arg, struct tcp_pcb *tpcb, err_t err);
 
 	// RPC handlers (from NetconIntercept)
-	void unload_rpc(void *data, pid_t &pid, pid_t &tid, int &rpc_count, char (timestamp[20]), char &cmd, void* &payload);
+	void unload_rpc(void *data, pid_t &pid, pid_t &tid, 
+		int &rpc_count, char (timestamp[20]), char (magic[sizeof(uint64_t)]), char &cmd, void* &payload);
 
-	void handle_getsockname(PhySocket *sock, void **uptr, struct getsockname_st *getsockname_rpc);
-	void handle_bind(PhySocket *sock, void **uptr, struct bind_st *bind_rpc);
-	void handle_listen(PhySocket *sock, void **uptr, struct listen_st *listen_rpc);
-	void handle_map_request(PhySocket *sock, void **uptr, unsigned char* buf);
-	void handle_retval(PhySocket *sock, void **uptr, int rpc_count, int newfd);
+	void handle_getsockname(PhySocket *sock, PhySocket *rpcsock, void **uptr, struct getsockname_st *getsockname_rpc);
+	void handle_bind(PhySocket *sock, PhySocket *rpcsock, void **uptr, struct bind_st *bind_rpc);
+	void handle_listen(PhySocket *sock, PhySocket *rpcsock, void **uptr, struct listen_st *listen_rpc);
 	TcpConnection * handle_socket(PhySocket *sock, void **uptr, struct socket_st* socket_rpc);
-	void handle_connect(PhySocket *sock, void **uptr, struct connect_st* connect_rpc);
+	void handle_connect(PhySocket *sock, PhySocket *rpcsock, TcpConnection *conn, struct connect_st* connect_rpc);
 	void handle_write(TcpConnection *conn);
 
-	int send_return_value(TcpConnection *conn, int retval, int _errno);
+	int send_return_value(PhySocket *sock, int retval, int _errno);
 	int send_return_value(int fd, int retval, int _errno);
 
 	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len);
@@ -135,6 +136,9 @@ private:
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
 	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
 
+	TcpConnection *getConnection(PhySocket *sock);
+	void closeConnection(PhySocket *sock);
+
 	ip_addr_t convert_ip(struct sockaddr_in * addr)
 	{
 	  ip_addr_t conn_addr;
@@ -147,23 +151,16 @@ private:
 	  return conn_addr;
 	}
 
-	// Client helpers
-	TcpConnection *getConnectionByTheirFD(PhySocket *sock, int fd);
-	void closeConnection(TcpConnection *conn);
-	void closeAll();
-	void closeClient(PhySocket *sock);
-	void compact_dump();
-	void dump();
-	void die(int exret);
-
 	Phy<NetconEthernetTap *> _phy;
 	PhySocket *_unixListenSocket;
 
 	std::vector<TcpConnection*> tcp_connections;
-	std::vector<PhySocket*> rpc_sockets;
 	std::map<PhySocket*, pid_t> pidmap;
-	pid_t rpc_counter;
 
+	std::map<uint64_t, std::pair<PhySocket*, void*> > jobmap;
+	std::map<uint64_t, PhySocket*> sockmap;
+
+	pid_t rpc_counter;
 	netif interface;
 
 	MAC _mac;

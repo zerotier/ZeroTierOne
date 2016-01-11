@@ -1,11 +1,24 @@
 #ifndef __RPCLIB_H_
 #define __RPCLIB_H_
 
-#define IDX_PID			0
-#define IDX_TID			sizeof(pid_t)
+#include <stdint.h>
+
+#define MAGIC_SIZE			sizeof(uint64_t)
+#define MAGIC_PADDING_SIZE	12
+#define TOKEN_SIZE			MAGIC_SIZE+MAGIC_PADDING_SIZE
+
+// 1st section
+#define IDX_SIGNAL_BYTE	0
+#define IDX_PID			1
+#define IDX_TID			sizeof(pid_t) + 1
 #define IDX_COUNT		IDX_TID + sizeof(pid_t)
 #define IDX_TIME		IDX_COUNT + sizeof(int)
 #define IDX_PAYLOAD		IDX_TIME + 20 /* 20 being the length of the timestamp string */
+
+// 2nd section
+#define CMD_ID_IDX		0
+#define MAGIC_IDX		1
+#define STRUCT_IDX		MAGIC_IDX+MAGIC_SIZE
 
 #define BUF_SZ          256
 #define PAYLOAD_SZ		223 /* BUF_SZ-IDX_PAYLOAD */
@@ -37,17 +50,18 @@
 extern "C" {
 #endif
 
+int get_retval(int);
+
+int rpc_join(const char * sockname);
+int rpc_send_command(int cmd, int forfd, void *data, int len);
+
+int get_new_fd(int sock);
+ssize_t sock_fd_write(int sock, int fd);
+ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
+
 void rpc_mutex_destroy();
 void rpc_mutex_init();
 
-int get_retval(int);
-int get_new_fd(int);
-
-int rpc_join(const char * sockname);
-int rpc_send_command(int cmd, int rpc_sock, void *data, int len);
-
-ssize_t sock_fd_write(int sock, int fd);
-ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd);
 
 /* Structures used for sending commands via RPC mechanism */
 

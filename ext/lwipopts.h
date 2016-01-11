@@ -49,6 +49,14 @@
 #undef TCP_MSS
 #define TCP_MSS 1460
 
+
+/**
+ * MEMP_NUM_REASSDATA: the number of IP packets simultaneously queued for
+ * reassembly (whole packets, not fragments!)
+ */
+// #undef MEMP_NUM_REASSDATA
+//#define MEMP_NUM_REASSDATA              64
+
 /*
 The TCP window size can be adjusted by changing the define TCP_WND. However,
 do keep in mind that this should be at least twice the size of TCP_MSS (thus

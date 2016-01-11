@@ -309,7 +309,7 @@ public:
 		if ((long)fd > _nfds)
 			_nfds = (long)fd;
 		FD_SET(fd,&_readfds);
-		sws.type = ZT_PHY_SOCKET_FD;
+		sws.type = ZT_PHY_SOCKET_UNIX_IN; /* TODO: Type was changed to allow for CBs with new RPC model */
 		sws.sock = fd;
 		sws.uptr = uptr;
 		memset(&(sws.saddr),0,sizeof(struct sockaddr_storage));

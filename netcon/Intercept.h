@@ -53,4 +53,35 @@
 #define DUP2_SIG int oldfd, int newfd
 #define DUP3_SIG int oldfd, int newfd, int flags
 
+void my_init(void);
+int connect(CONNECT_SIG);
+int bind(BIND_SIG);
+int accept(ACCEPT_SIG);
+int listen(LISTEN_SIG);
+int socket(SOCKET_SIG);
+int setsockopt(SETSOCKOPT_SIG);
+int getsockopt(GETSOCKOPT_SIG);
+int accept4(ACCEPT4_SIG);
+long syscall(SYSCALL_SIG);
+int close(CLOSE_SIG);
+int clone(CLONE_SIG);
+int dup2(DUP2_SIG);
+int dup3(DUP3_SIG);
+int getsockname(GETSOCKNAME_SIG);
+
+static int (*realconnect)(CONNECT_SIG);
+static int (*realbind)(BIND_SIG);
+static int (*realaccept)(ACCEPT_SIG);
+static int (*reallisten)(LISTEN_SIG);
+static int (*realsocket)(SOCKET_SIG);
+static int (*realsetsockopt)(SETSOCKOPT_SIG);
+static int (*realgetsockopt)(GETSOCKOPT_SIG);
+static int (*realaccept4)(ACCEPT4_SIG);
+static long (*realsyscall)(SYSCALL_SIG);
+static int (*realclose)(CLOSE_SIG);
+static int (*realclone)(CLONE_SIG);
+static int (*realdup2)(DUP2_SIG);
+static int (*realdup3)(DUP3_SIG);
+static int (*realgetsockname)(GETSOCKNAME_SIG);
+
 #endif
