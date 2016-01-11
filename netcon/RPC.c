@@ -133,8 +133,7 @@ int rpc_send_command(int cmd, int forfd, void *data, int len)
   time_t timestamp;
   timestamp = time(NULL);
   strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
-
-  metabuf[IDX_SIGNAL_BYTE] = 'R';
+  memcpy(metabuf, RPC_PHRASE, RPC_PHRASE_SIZE); // Write signal phrase
   
   memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); /* pid       */
   memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); /* tid       */

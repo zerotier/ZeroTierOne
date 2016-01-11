@@ -7,13 +7,15 @@
 #define MAGIC_PADDING_SIZE	12
 #define TOKEN_SIZE			MAGIC_SIZE+MAGIC_PADDING_SIZE
 
+#define RPC_PHRASE 			"zerotier\0"
+#define RPC_PHRASE_SIZE		9
 // 1st section
-#define IDX_SIGNAL_BYTE	0
-#define IDX_PID			1
-#define IDX_TID			sizeof(pid_t) + 1
-#define IDX_COUNT		IDX_TID + sizeof(pid_t)
-#define IDX_TIME		IDX_COUNT + sizeof(int)
-#define IDX_PAYLOAD		IDX_TIME + 20 /* 20 being the length of the timestamp string */
+#define IDX_SIGNAL_PHRASE	0
+#define IDX_PID				IDX_SIGNAL_PHRASE + RPC_PHRASE_SIZE
+#define IDX_TID				sizeof(pid_t) + IDX_PID
+#define IDX_COUNT			IDX_TID + sizeof(pid_t)
+#define IDX_TIME			IDX_COUNT + sizeof(int)
+#define IDX_PAYLOAD			IDX_TIME + 20 /* 20 being the length of the timestamp string */
 
 // 2nd section
 #define CMD_ID_IDX		0

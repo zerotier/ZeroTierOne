@@ -56,7 +56,7 @@
 
 #define APPLICATION_POLL_FREQ 			20
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
-#define STATUS_TMR_INTERVAL				10000 // How often we check connection statuses (in ms)
+#define STATUS_TMR_INTERVAL				60000 // How often we check connection statuses (in ms)
 #define DEFAULT_READ_BUFFER_SIZE		1024 * 1024 * 5
 
 namespace ZeroTier {
@@ -363,7 +363,6 @@ void NetconEthernetTap::threadMain()
 		uint64_t status_remaining = STATUS_TMR_INTERVAL;
 
 		// Connection prunning
-		/*
 		if (since_status >= STATUS_TMR_INTERVAL) {
 			prev_status_time = now;
 			status_remaining = STATUS_TMR_INTERVAL - since_status;
@@ -392,17 +391,15 @@ void NetconEthernetTap::threadMain()
 					phyOnUnixData(tcp_connections[i]->sock,_phy.getuptr(tcp_connections[i]->sock),&tmpbuf,BUF_SZ);
 				}				
 			}
-		}*/
+		}
 		// Main TCP/ETHARP timer section
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
 			prev_tcp_time = now;
 			lwipstack->tcp_tmr();
 
 			// Makeshift poll
-
 			for(size_t i=0; i<tcp_connections.size(); i++) {
 				if(tcp_connections[i]->idx > 0){
-					//dwr(MSG_DEBUG, "writing from poll\n");
 					lwipstack->_lock.lock();
 					handle_write(tcp_connections[i]);
 					lwipstack->_lock.unlock();
@@ -497,7 +494,6 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid,
  */
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {		
-	//dwr(MSG_DEBUG,"\n\n\n<%x> phyOnUnixData(): len = %d\n", sock, len);
 	uint64_t magic_num;
 	pid_t pid, tid;
 	int rpc_count;
@@ -506,13 +502,19 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	unsigned char *buf = (unsigned char*)data;
 	std::pair<PhySocket*, void*> sockdata;
 	PhySocket *streamsock, *rpcsock;
-	bool found_job = false;
-
+	bool found_job = false, detected_rpc = false;
 	TcpConnection *conn;
 	int wlen = len;
 
 	// RPC
-	if(buf[IDX_SIGNAL_BYTE] == 'R') {
+	char phrase[RPC_PHRASE_SIZE];
+	memset(phrase, 0, RPC_PHRASE_SIZE);
+	if(len == BUF_SZ) {
+		memcpy(phrase, buf, RPC_PHRASE_SIZE);
+		if(strcmp(phrase, RPC_PHRASE) == 0)
+			detected_rpc = true;
+	}
+	if(detected_rpc) {
 		unload_rpc(data, pid, tid, rpc_count, timestamp, magic, cmd, payload);
 		memcpy(&magic_num, magic, MAGIC_SIZE);
 		dwr(MSG_DEBUG," <%x> RPC: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d)\n", sock, pid, tid, rpc_count, timestamp, cmd);
@@ -526,11 +528,8 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				pidmap[sock] = pid;
 				new_conn->pid = pid;
 			}
-			//return; // Don't close the socket, we'll use this later for data
 		}
 		else { // All RPCs other than RPC_SOCKET
-			// No matching stream has been encountered, create jobmap entry
-			dwr(MSG_DEBUG," <%x> creating jobmap (cmd=%d) entry for %llu\n", sock, cmd, magic_num);
 			jobmap[magic_num] = std::make_pair<PhySocket*, void*>(sock, data);
 		}
 		write(_phy.getDescriptor(sock), "z", 1); // RPC ACK byte to maintain RPC->Stream order
@@ -597,10 +596,8 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				}
 			}
 		}
-
 		// Write data from stream
 		if(conn->idx > (DEFAULT_READ_BUFFER_SIZE / 2)) {
-			dwr(MSG_DEBUG,"Buffer near full. Slowing\n");
 			_phy.setNotifyReadable(sock, false);
 		}
 		lwipstack->_lock.lock();
@@ -618,8 +615,6 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	if(found_job) {
 		conn = getConnection(sock);
 		unload_rpc(buf, pid, tid, rpc_count, timestamp, magic, cmd, payload);
-		//dwr(MSG_DEBUG," <%x> RPC: (pid=, tid=, rpc_count=, timestamp=, cmd=%d)\n", sock, /*pid, tid, rpc_count, timestamp, */cmd);
-
 		switch(cmd) {
 			case RPC_BIND:
 				dwr(MSG_DEBUG,"  <%x> RPC_BIND\n", sock);
@@ -939,10 +934,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
 	Larg *l = (Larg*)arg;
 	if(len) {
-		//dwr(MSG_DEBUG,"nc_sent(ACKED): len = %d\n",len);
-		//l->conn->acked+=len;
-		if(l->conn->idx < DEFAULT_READ_BUFFER_SIZE / 2)
-		{
+		if(l->conn->idx < DEFAULT_READ_BUFFER_SIZE / 2) {
 			l->tap->_phy.setNotifyReadable(l->conn->sock, true);
 			l->tap->_phy.whack();
 		}
