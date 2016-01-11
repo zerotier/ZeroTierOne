@@ -158,7 +158,6 @@ private:
 	std::map<PhySocket*, pid_t> pidmap;
 
 	std::map<uint64_t, std::pair<PhySocket*, void*> > jobmap;
-	std::map<uint64_t, PhySocket*> sockmap;
 
 	pid_t rpc_counter;
 	netif interface;
