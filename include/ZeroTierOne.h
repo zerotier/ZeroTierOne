@@ -1334,8 +1334,10 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 /**
  * Add a local interface address
  *
- * Take care that these are never ZeroTier interface addresses, otherwise
- * strange things might happen or they simply won't work.
+ * It is the responsibility of the caller to take care that these are never
+ * ZeroTier interface addresses, whether these are assigned by ZeroTier or
+ * are otherwise assigned to an interface managed by this ZeroTier instance.
+ * This can cause recursion or other undesirable behavior.
  *
  * Addresses can also be added here if they are the result of a UPnP or
  * NAT-PMP port mapping or other discovery or mapping means.

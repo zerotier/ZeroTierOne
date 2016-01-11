@@ -811,6 +811,14 @@ public:
 							ztDevices.push_back(t->second->luid());
 					}
 
+					_node->clearLocalInterfaceAddresses();
+
+#ifdef ZT_USE_MINIUPNPC
+					std::vector<InetAddress> mappedAddresses(_portMapper->get());
+					for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+#endif
+
 					char aabuf[16384];
 					ULONG aalen = sizeof(aabuf);
 					if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
