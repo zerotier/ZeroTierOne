@@ -397,6 +397,7 @@ static long SnodeDataStoreGetFunction(ZT_Node *node,void *uptr,const char *name,
 static int SnodeDataStorePutFunction(ZT_Node *node,void *uptr,const char *name,const void *data,unsigned long len,int secure);
 static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl);
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len);
+static int SnodePathCheckFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr);
 
 #ifdef ZT_ENABLE_CLUSTER
 static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len);
@@ -592,6 +593,7 @@ public:
 				SnodeWirePacketSendFunction,
 				SnodeVirtualNetworkFrameFunction,
 				SnodeVirtualNetworkConfigFunction,
+				SnodePathCheckFunction,
 				SnodeEventCallback);
 
 #ifdef ZT_USE_MINIUPNPC
@@ -763,6 +765,13 @@ public:
 				if ((now - lastLocalInterfaceAddressCheck) >= ZT_LOCAL_INTERFACE_CHECK_INTERVAL) {
 					lastLocalInterfaceAddressCheck = now;
 
+				_node->clearLocalInterfaceAddresses();
+#ifdef ZT_USE_MINIUPNPC
+				std::vector<InetAddress> mappedAddresses(_portMapper->get());
+				for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
+					_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+#endif
+
 #ifdef __UNIX_LIKE__
 					std::vector<std::string> ztDevices;
 					{
@@ -770,15 +779,6 @@ public:
 						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
 							ztDevices.push_back(t->second->deviceName());
 					}
-
-					_node->clearLocalInterfaceAddresses();
-
-#ifdef ZT_USE_MINIUPNPC
-					std::vector<InetAddress> mappedAddresses(_portMapper->get());
-					for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
-						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
-#endif
-
 					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
 					if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
 						struct ifaddrs *ifa = ifatbl;
@@ -810,7 +810,6 @@ public:
 						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
 							ztDevices.push_back(t->second->luid());
 					}
-
 					char aabuf[16384];
 					ULONG aalen = sizeof(aabuf);
 					if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
@@ -1396,6 +1395,22 @@ public:
 			t->second->put(MAC(sourceMac),MAC(destMac),etherType,data,len);
 	}
 
+	inline int nodePathCheckFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
+	{
+		Mutex::Lock _l(_taps_m);
+		for(std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.begin());t!=_taps.end();++t) {
+			if (t->second) {
+				std::vector<InetAddress> ips(t->second->ips());
+				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+					if (i->containsAddress(*(reinterpret_cast<const InetAddress *>(remoteAddr)))) {
+						return 0;
+					}
+				}
+			}
+		}
+		return 1;
+	}
+
 	inline void tapFrameHandler(uint64_t nwid,const MAC &from,const MAC &to,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_node->processVirtualNetworkFrame(OSUtils::now(),nwid,from.toInt(),to.toInt(),etherType,vlanId,data,len,&_nextBackgroundTaskDeadline);
@@ -1530,6 +1545,8 @@ static int SnodeWirePacketSendFunction(ZT_Node *node,void *uptr,const struct soc
 { return reinterpret_cast<OneServiceImpl *>(uptr)->nodeWirePacketSendFunction(localAddr,addr,data,len,ttl); }
 static void SnodeVirtualNetworkFrameFunction(ZT_Node *node,void *uptr,uint64_t nwid,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 { reinterpret_cast<OneServiceImpl *>(uptr)->nodeVirtualNetworkFrameFunction(nwid,sourceMac,destMac,etherType,vlanId,data,len); }
+static int SnodePathCheckFunction(ZT_Node *node,void *uptr,const struct sockaddr_storage *localAddr,const struct sockaddr_storage *remoteAddr)
+{ return reinterpret_cast<OneServiceImpl *>(uptr)->nodePathCheckFunction(localAddr,remoteAddr); }
 
 #ifdef ZT_ENABLE_CLUSTER
 static void SclusterSendFunction(void *uptr,unsigned int toMemberId,const void *data,unsigned int len)

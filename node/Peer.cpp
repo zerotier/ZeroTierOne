@@ -32,7 +32,6 @@
 #include "Node.hpp"
 #include "Switch.hpp"
 #include "Network.hpp"
-#include "AntiRecursion.hpp"
 #include "SelfAwareness.hpp"
 #include "Cluster.hpp"
 #include "Packet.hpp"
@@ -104,7 +103,6 @@ void Peer::received(
 				}
 				outp.append((uint16_t)redirectTo.port());
 				outp.armor(_key,true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			} else {
 				// For older peers we use RENDEZVOUS to coax them into contacting us elsewhere.
@@ -120,7 +118,6 @@ void Peer::received(
 					outp.append(redirectTo.rawIpData(),16);
 				}
 				outp.armor(_key,true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
 			}
 			suboptimalPath = true;
@@ -159,7 +156,7 @@ void Peer::received(
 				}
 			}
 
-			if (!pathIsConfirmed) {
+			if ((!pathIsConfirmed)&&(RR->node->shouldUsePathForZeroTierTraffic(localAddr,remoteAddr))) {
 				if (verb == Packet::VERB_OK) {
 
 					Path *slot = (Path *)0;
@@ -232,7 +229,6 @@ void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,u
 	outp.append((uint64_t)RR->topology->worldTimestamp());
 
 	outp.armor(_key,false); // HELLO is sent in the clear
-	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(localAddr,atAddress,outp.data(),outp.size(),ttl);
 }
 
@@ -512,7 +508,12 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 	 * counter is reset on any packet receive over this path. If it reaches the
 	 * MAX_PROBATION threshold the path is considred dead. */
 
-	if ( (p.lastSend() > p.lastReceived()) && ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) && ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) ) {
+	if (
+	     (p.lastSend() > p.lastReceived()) &&
+			 ((p.lastSend() - p.lastReceived()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
+			 ((now - p.lastPing()) >= ZT_PEER_DEAD_PATH_DETECTION_NO_ANSWER_TIMEOUT) &&
+			 (!RR->topology->amRoot())
+		 ) {
 		TRACE("%s(%s) does not seem to be answering in a timely manner, checking if dead (probation == %u)",_id.address().toString().c_str(),p.address().toString().c_str(),p.probation());
 
 		if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {

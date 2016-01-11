@@ -45,7 +45,6 @@
 #include "World.hpp"
 #include "Cluster.hpp"
 #include "Node.hpp"
-#include "AntiRecursion.hpp"
 #include "DeferredPackets.hpp"
 
 namespace ZeroTier {
@@ -163,7 +162,6 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NETWORK_MEMBERSHIP_CERTIFICATE);
 						nconf->com().serialize(outp);
 						outp.armor(peer->key(),true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}
@@ -345,7 +343,6 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,SharedPtr<Peer> &peer
 		}
 
 		outp.armor(peer->key(),true);
-		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 
 		peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
@@ -483,7 +480,6 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,const SharedPtr<Peer>
 				outp.append(packetId());
 				queried.serialize(outp,false);
 				outp.armor(peer->key(),true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			} else {
 #ifdef ZT_ENABLE_CLUSTER
@@ -511,10 +507,12 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,const SharedPtr<
 				const unsigned int port = at<uint16_t>(ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT);
 				const unsigned int addrlen = (*this)[ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN];
 				if ((port > 0)&&((addrlen == 4)||(addrlen == 16))) {
+					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
+
 					InetAddress atAddr(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS,addrlen),addrlen,port);
 					TRACE("RENDEZVOUS from %s says %s might be at %s, starting NAT-t",peer->address().toString().c_str(),with.toString().c_str(),atAddr.toString().c_str());
-					peer->received(_localAddress,_remoteAddress,hops(),packetId(),Packet::VERB_RENDEZVOUS,0,Packet::VERB_NOP);
-					RR->sw->rendezvous(withPeer,_localAddress,atAddr);
+					if (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,atAddr))
+						RR->sw->rendezvous(withPeer,_localAddress,atAddr);
 				} else {
 					TRACE("dropped corrupt RENDEZVOUS from %s(%s) (bad address or port)",peer->address().toString().c_str(),_remoteAddress.toString().c_str());
 				}
@@ -644,7 +642,6 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,const SharedPtr<Peer> 
 		if (size() > ZT_PACKET_IDX_PAYLOAD)
 			outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
 		outp.armor(peer->key(),true);
-		RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 		RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		peer->received(_localAddress,_remoteAddress,hops(),pid,Packet::VERB_ECHO,0,Packet::VERB_NOP);
 	} catch ( ... ) {
@@ -722,7 +719,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 						if (outp.size() > ZT_PROTO_MAX_PACKET_LENGTH) { // sanity check
 							TRACE("NETWORK_CONFIG_REQUEST failed: internal error: netconf size %u is too large",(unsigned int)netconfStr.length());
 						} else {
-							RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 							RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 						}
 					}
@@ -735,7 +731,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}	break;
 
@@ -746,7 +741,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 					outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
 					outp.append(nwid);
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				} break;
 
@@ -769,7 +763,6 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,cons
 			outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 			outp.append(nwid);
 			outp.armor(peer->key(),true);
-			RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 			RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 		}
 	} catch ( ... ) {
@@ -815,7 +808,6 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,const Shar
 			const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 			if (gatheredLocally) {
 				outp.armor(peer->key(),true);
-				RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 				RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 			}
 
@@ -909,7 +901,6 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,const Share
 				outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 				if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
 					outp.armor(peer->key(),true);
-					RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 					RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 				}
 			}
@@ -952,7 +943,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			switch(addrType) {
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) ) {
+					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 							peer->sendHELLO(_localAddress,a,now);
@@ -963,7 +954,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) ) {
+					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 							peer->sendHELLO(_localAddress,a,now);
@@ -1220,7 +1211,6 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						outp.append((uint16_t)sizeof(result));
 						outp.append(result,sizeof(result));
 						outp.armor(peer->key(),true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					} else {
 						Packet outp(peer->address(),RR->identity.address(),Packet::VERB_ERROR);
@@ -1228,7 +1218,6 @@ bool IncomingPacket::_doREQUEST_PROOF_OF_WORK(const RuntimeEnvironment *RR,const
 						outp.append(pid);
 						outp.append((unsigned char)Packet::ERROR_INVALID_REQUEST);
 						outp.armor(peer->key(),true);
-						RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 						RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 					}
 				}	break;
@@ -1334,7 +1323,6 @@ void IncomingPacket::_sendErrorNeedCertificate(const RuntimeEnvironment *RR,cons
 	outp.append((unsigned char)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 	outp.append(nwid);
 	outp.armor(peer->key(),true);
-	RR->antiRec->logOutgoingZT(outp.data(),outp.size());
 	RR->node->putPacket(_localAddress,_remoteAddress,outp.data(),outp.size());
 }
 

@@ -1097,13 +1097,42 @@ typedef int (*ZT_DataStorePutFunction)(
  * delivery. It only means that the packet appears to have been sent.
  */
 typedef int (*ZT_WirePacketSendFunction)(
-	ZT_Node *,                       /* Node */
-	void *,                          /* User ptr */
-	const struct sockaddr_storage *, /* Local address */
-	const struct sockaddr_storage *, /* Remote address */
-	const void *,                    /* Packet data */
-	unsigned int,                    /* Packet length */
-	unsigned int);                   /* TTL or 0 to use default */
+	ZT_Node *,                        /* Node */
+	void *,                           /* User ptr */
+	const struct sockaddr_storage *,  /* Local address */
+	const struct sockaddr_storage *,  /* Remote address */
+	const void *,                     /* Packet data */
+	unsigned int,                     /* Packet length */
+	unsigned int);                    /* TTL or 0 to use default */
+
+/**
+ * Function to check whether a path should be used for ZeroTier traffic
+ *
+ * Paramters:
+ *  (1) Node
+ *  (2) User pointer
+ *  (3) Local interface address
+ *  (4) Remote address
+ *
+ * This function must return nonzero (true) if the path should be used.
+ *
+ * If no path check function is specified, ZeroTier will still exclude paths
+ * that overlap with ZeroTier-assigned and managed IP address blocks. But the
+ * use of a path check function is recommended to ensure that recursion does
+ * not occur in cases where addresses are assigned by the OS or managed by
+ * an out of band mechanism like DHCP. The path check function should examine
+ * all configured ZeroTier interfaces and check to ensure that the supplied
+ * addresses will not result in ZeroTier traffic being sent over a ZeroTier
+ * interface (recursion).
+ *
+ * Obviously this is not required in configurations where this can't happen,
+ * such as network containers or embedded.
+ */
+typedef int (*ZT_PathCheckFunction)(
+	ZT_Node *,                        /* Node */
+	void *,                           /* User ptr */
+	const struct sockaddr_storage *,  /* Local address */
+	const struct sockaddr_storage *); /* Remote address */
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -1121,6 +1150,7 @@ typedef int (*ZT_WirePacketSendFunction)(
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
+ * @param pathCheckFunction A function to check whether a path should be used for ZeroTier traffic, or NULL to allow any path
  * @param eventCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -1133,6 +1163,7 @@ enum ZT_ResultCode ZT_Node_new(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
+	ZT_PathCheckFunction pathCheckFunction,
 	ZT_EventCallback eventCallback);
 
 /**
@@ -1334,18 +1365,21 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 /**
  * Add a local interface address
  *
- * Take care that these are never ZeroTier interface addresses, otherwise
- * strange things might happen or they simply won't work.
+ * This is used to make ZeroTier aware of those local interface addresses
+ * that you wish to use for ZeroTier communication. This is optional, and if
+ * it is not used ZeroTier will rely upon upstream peers (and roots) to
+ * perform empirical address discovery and NAT traversal. But the use of this
+ * method is recommended as it improves peer discovery when both peers are
+ * on the same LAN.
  *
- * Addresses can also be added here if they are the result of a UPnP or
- * NAT-PMP port mapping or other discovery or mapping means.
+ * It is the responsibility of the caller to take care that these are never
+ * ZeroTier interface addresses, whether these are assigned by ZeroTier or
+ * are otherwise assigned to an interface managed by this ZeroTier instance.
+ * This can cause recursion or other undesirable behavior.
  *
  * This returns a boolean indicating whether or not the address was
  * accepted. ZeroTier will only communicate over certain address types
- * and (for IP) address classes. Thus it's safe to just dump your OS's
- * entire remote IP list (excluding ZeroTier interface IPs) into here
- * and let ZeroTier determine which addresses it will use. It will
- * reject bad, empty, and unusable addresses.
+ * and (for IP) address classes.
  *
  * @param addr Local interface address
  * @return Boolean: non-zero if address was accepted and added
