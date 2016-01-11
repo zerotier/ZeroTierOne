@@ -98,7 +98,7 @@ int rpc_join(const char * sockname)
 int rpc_send_command(int cmd, int forfd, void *data, int len)
 {
   pthread_mutex_lock(&lock);
-  char padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
+  char c, padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
   char cmdbuf[BUF_SZ], magic[TOKEN_SIZE], metabuf[BUF_SZ];
   memcpy(magic+MAGIC_SIZE, padding, TOKEN_SIZE);
   uint64_t magic_num;
@@ -151,8 +151,8 @@ int rpc_send_command(int cmd, int forfd, void *data, int len)
     errno = 0;
   }
   // Write token to corresponding data stream
-  if(n_write > 0 && forfd > -1){
-    usleep(5000);
+  read(rpc_sock, &c, 1);
+  if(c == 'z' && n_write > 0 && forfd > -1){
     int w = send(forfd, &magic, TOKEN_SIZE, 0);
   }
   // Process response from service

@@ -377,7 +377,7 @@ void NetconEthernetTap::threadMain()
 				int fd = _phy.getDescriptor(tcp_connections[i]->sock);
 
 					if(tcp_connections[i]->idx > 0){
-						dwr(MSG_DEBUG, "----------------------writing from poll\n");
+						dwr(MSG_DEBUG, "writing from poll\n");
 						lwipstack->_lock.lock();
 						handle_write(tcp_connections[i]);
 						lwipstack->_lock.unlock();
@@ -431,6 +431,7 @@ void NetconEthernetTap::phyOnTcpWritable(PhySocket *sock,void **uptr) {}
  */
 void NetconEthernetTap::closeConnection(PhySocket *sock)
 {
+	dwr(MSG_DEBUG,"closeConnection(%x)",sock);
 	TcpConnection *conn = getConnection(sock);
 	if(conn) {
 		if(!conn->pcb)
@@ -492,7 +493,6 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid,
  */
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {		
-	//usleep(5000);
 	//dwr(MSG_DEBUG,"\n\n\n<%x> phyOnUnixData(): len = %d\n", sock, len);
 	uint64_t magic_num;
 	pid_t pid, tid;
@@ -524,7 +524,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				pidmap[sock] = pid;
 				new_conn->pid = pid;
 			}
-			return; // Don't close the socket, we'll use this later for data
+			//return; // Don't close the socket, we'll use this later for data
 		}
 		else { // All RPCs other than RPC_SOCKET
 			streamsock = sockmap[magic_num];
@@ -539,6 +539,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				jobmap[magic_num] = std::make_pair<PhySocket*, void*>(sock, data);
 			}
 		}
+		write(_phy.getDescriptor(sock), "z", 1); // RPC ACK byte to maintain RPC->Stream order
 	}
 	
 	// STREAM
@@ -563,10 +564,8 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 					dwr(MSG_DEBUG,"       <%x> creating sockmap entry for %llu\n", sock, magic_num);
 					sockmap[magic_num] = sock;
 				}
-				else {
-					dwr(MSG_DEBUG,"    <%x> found_job\n", sock);
+				else
 					found_job = true;
-				}
 			}
 		}
 
@@ -574,17 +573,10 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 		if(!conn)
 			return;
 
-		if(padding_pos == -1) // [DATA]
-		{
-			dwr(MSG_DEBUG, "copy everything... wlen = %d, conn = %x, conn->buf = %x, buf = %x\n", wlen, conn, conn->buf, buf);
-			dwr(MSG_DEBUG, "  copy everything... conn->idx = %d, sizeof(conn->buf) = %d\n", conn->idx, sizeof(conn->buf));
+		if(padding_pos == -1) { // [DATA]
 			memcpy(&conn->buf[conn->idx], buf, wlen);
-			dwr(MSG_DEBUG, "finished\n");
 		}
 		else { // Padding found, implies a token is present
-			
-			dwr(MSG_DEBUG, "    <%x> token_pos = %d, GRABBING DATA\n", sock, token_pos);
-
 			// [TOKEN]
 			if(len == TOKEN_SIZE && token_pos == 0) {
 				wlen = 0; // Nothing to write
