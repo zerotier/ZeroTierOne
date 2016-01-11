@@ -156,7 +156,7 @@ void Peer::received(
 				}
 			}
 
-			if (!pathIsConfirmed) {
+			if ((!pathIsConfirmed)&&(RR->node->shouldUsePathForZeroTierTraffic(localAddr,remoteAddr))) {
 				if (verb == Packet::VERB_OK) {
 
 					Path *slot = (Path *)0;

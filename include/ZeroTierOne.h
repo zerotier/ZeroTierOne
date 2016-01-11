@@ -1097,13 +1097,42 @@ typedef int (*ZT_DataStorePutFunction)(
  * delivery. It only means that the packet appears to have been sent.
  */
 typedef int (*ZT_WirePacketSendFunction)(
-	ZT_Node *,                       /* Node */
-	void *,                          /* User ptr */
-	const struct sockaddr_storage *, /* Local address */
-	const struct sockaddr_storage *, /* Remote address */
-	const void *,                    /* Packet data */
-	unsigned int,                    /* Packet length */
-	unsigned int);                   /* TTL or 0 to use default */
+	ZT_Node *,                        /* Node */
+	void *,                           /* User ptr */
+	const struct sockaddr_storage *,  /* Local address */
+	const struct sockaddr_storage *,  /* Remote address */
+	const void *,                     /* Packet data */
+	unsigned int,                     /* Packet length */
+	unsigned int);                    /* TTL or 0 to use default */
+
+/**
+ * Function to check whether a path should be used for ZeroTier traffic
+ *
+ * Paramters:
+ *  (1) Node
+ *  (2) User pointer
+ *  (3) Local interface address
+ *  (4) Remote address
+ *
+ * This function must return nonzero (true) if the path should be used.
+ *
+ * If no path check function is specified, ZeroTier will still exclude paths
+ * that overlap with ZeroTier-assigned and managed IP address blocks. But the
+ * use of a path check function is recommended to ensure that recursion does
+ * not occur in cases where addresses are assigned by the OS or managed by
+ * an out of band mechanism like DHCP. The path check function should examine
+ * all configured ZeroTier interfaces and check to ensure that the supplied
+ * addresses will not result in ZeroTier traffic being sent over a ZeroTier
+ * interface (recursion).
+ *
+ * Obviously this is not required in configurations where this can't happen,
+ * such as network containers or embedded.
+ */
+typedef int (*ZT_PathCheckFunction)(
+	ZT_Node *,                        /* Node */
+	void *,                           /* User ptr */
+	const struct sockaddr_storage *,  /* Local address */
+	const struct sockaddr_storage *); /* Remote address */
 
 /****************************************************************************/
 /* C Node API                                                               */
@@ -1121,6 +1150,7 @@ typedef int (*ZT_WirePacketSendFunction)(
  * @param dataStoreGetFunction Function called to get objects from persistent storage
  * @param dataStorePutFunction Function called to put objects in persistent storage
  * @param virtualNetworkConfigFunction Function to be called when virtual LANs are created, deleted, or their config parameters change
+ * @param pathCheckFunction A function to check whether a path should be used for ZeroTier traffic, or NULL to allow any path
  * @param eventCallback Function to receive status updates and non-fatal error notices
  * @return OK (0) or error code if a fatal error condition has occurred
  */
@@ -1133,6 +1163,7 @@ enum ZT_ResultCode ZT_Node_new(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
+	ZT_PathCheckFunction pathCheckFunction,
 	ZT_EventCallback eventCallback);
 
 /**

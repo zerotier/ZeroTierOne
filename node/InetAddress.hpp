@@ -326,6 +326,14 @@ struct InetAddress : public sockaddr_storage
 	InetAddress network() const;
 
 	/**
+	 * Test whether this IP/netmask contains this address
+	 *
+	 * @param addr Address to check
+	 * @return True if this IP/netmask (route) contains this address
+	 */
+	bool containsAddress(const InetAddress &addr) const;
+
+	/**
 	 * @return True if this is an IPv4 address
 	 */
 	inline bool isV4() const throw() { return (ss_family == AF_INET); }

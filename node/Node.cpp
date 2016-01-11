@@ -64,6 +64,7 @@ Node::Node(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
+	ZT_PathCheckFunction pathCheckFunction,
 	ZT_EventCallback eventCallback) :
 	_RR(this),
 	RR(&_RR),
@@ -73,6 +74,7 @@ Node::Node(
 	_wirePacketSendFunction(wirePacketSendFunction),
 	_virtualNetworkFrameFunction(virtualNetworkFrameFunction),
 	_virtualNetworkConfigFunction(virtualNetworkConfigFunction),
+	_pathCheckFunction(pathCheckFunction),
 	_eventCallback(eventCallback),
 	_networks(),
 	_networks_m(),
@@ -671,6 +673,27 @@ std::string Node::dataStoreGet(const char *name)
 	return r;
 }
 
+bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress)
+{
+	{
+		Mutex::Lock _l(_networks_m);
+		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {
+			SharedPtr<NetworkConfig> nc(i->second->config2());
+			if (nc) {
+				for(std::vector<InetAddress>::const_iterator a(nc->staticIps().begin());a!=nc->staticIps().end();++a) {
+					if (a->containsAddress(remoteAddress)) {
+						return false;
+					}
+				}
+			}
+		}
+	}
+
+	if (_pathCheckFunction)
+		return (_pathCheckFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,reinterpret_cast<const struct sockaddr_storage *>(&localAddress),reinterpret_cast<const struct sockaddr_storage *>(&remoteAddress)) != 0);
+	else return true;
+}
+
 #ifdef ZT_TRACE
 void Node::postTrace(const char *module,unsigned int line,const char *fmt,...)
 {
@@ -743,11 +766,12 @@ enum ZT_ResultCode ZT_Node_new(
 	ZT_WirePacketSendFunction wirePacketSendFunction,
 	ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 	ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
+	ZT_PathCheckFunction pathCheckFunction,
 	ZT_EventCallback eventCallback)
 {
 	*node = (ZT_Node *)0;
 	try {
-		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,eventCallback));
+		*node = reinterpret_cast<ZT_Node *>(new ZeroTier::Node(now,uptr,dataStoreGetFunction,dataStorePutFunction,wirePacketSendFunction,virtualNetworkFrameFunction,virtualNetworkConfigFunction,pathCheckFunction,eventCallback));
 		return ZT_RESULT_OK;
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;

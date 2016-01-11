@@ -280,6 +280,30 @@ InetAddress InetAddress::network() const
 	return r;
 }
 
+bool InetAddress::containsAddress(const InetAddress &addr) const
+{
+	if (addr.ss_family == ss_family) {
+		switch(ss_family) {
+			case AF_INET: {
+				const unsigned int bits = netmaskBits();
+				return ( (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(&addr)->sin_addr.s_addr) >> (32 - bits)) == (Utils::ntoh((uint32_t)reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr) >> (32 - bits)) );
+			}
+			case AF_INET6: {
+				const InetAddress mask(netmask());
+				const uint8_t *m = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&mask)->sin6_addr.s6_addr);
+				const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&addr)->sin6_addr.s6_addr);
+				const uint8_t *b = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+				for(unsigned int i=0;i<16;++i) {
+					if ((a[i] & m[i]) != b[i])
+						return false;
+				}
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool InetAddress::isNetwork() const
 	throw()
 {

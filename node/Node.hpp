@@ -71,6 +71,7 @@ public:
 		ZT_WirePacketSendFunction wirePacketSendFunction,
 		ZT_VirtualNetworkFrameFunction virtualNetworkFrameFunction,
 		ZT_VirtualNetworkConfigFunction virtualNetworkConfigFunction,
+		ZT_PathCheckFunction pathCheckFunction,
 		ZT_EventCallback eventCallback);
 
 	~Node();
@@ -189,6 +190,13 @@ public:
 			len);
 	}
 
+	/**
+	 * @param localAddress Local address
+	 * @param remoteAddress Remote address
+	 * @return True if path should be used
+	 */
+	bool shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress);
+
 	inline SharedPtr<Network> network(uint64_t nwid) const
 	{
 		Mutex::Lock _l(_networks_m);
@@ -288,6 +296,7 @@ private:
 	ZT_WirePacketSendFunction _wirePacketSendFunction;
 	ZT_VirtualNetworkFrameFunction _virtualNetworkFrameFunction;
 	ZT_VirtualNetworkConfigFunction _virtualNetworkConfigFunction;
+	ZT_PathCheckFunction _pathCheckFunction;
 	ZT_EventCallback _eventCallback;
 
 	std::vector< std::pair< uint64_t, SharedPtr<Network> > > _networks;
