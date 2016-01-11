@@ -1334,20 +1334,21 @@ void ZT_Node_freeQueryResult(ZT_Node *node,void *qr);
 /**
  * Add a local interface address
  *
+ * This is used to make ZeroTier aware of those local interface addresses
+ * that you wish to use for ZeroTier communication. This is optional, and if
+ * it is not used ZeroTier will rely upon upstream peers (and roots) to
+ * perform empirical address discovery and NAT traversal. But the use of this
+ * method is recommended as it improves peer discovery when both peers are
+ * on the same LAN.
+ *
  * It is the responsibility of the caller to take care that these are never
  * ZeroTier interface addresses, whether these are assigned by ZeroTier or
  * are otherwise assigned to an interface managed by this ZeroTier instance.
  * This can cause recursion or other undesirable behavior.
  *
- * Addresses can also be added here if they are the result of a UPnP or
- * NAT-PMP port mapping or other discovery or mapping means.
- *
  * This returns a boolean indicating whether or not the address was
  * accepted. ZeroTier will only communicate over certain address types
- * and (for IP) address classes. Thus it's safe to just dump your OS's
- * entire remote IP list (excluding ZeroTier interface IPs) into here
- * and let ZeroTier determine which addresses it will use. It will
- * reject bad, empty, and unusable addresses.
+ * and (for IP) address classes.
  *
  * @param addr Local interface address
  * @return Boolean: non-zero if address was accepted and added
