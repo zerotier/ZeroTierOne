@@ -58,15 +58,11 @@
 #include "RPC.h"
 #include "common.inc.c"
 
-static void load_symbols(void);
-static void set_up_intercept();
-
 /*------------------------------------------------------------------------------
 ------------------- Intercept<--->Service Comm mechanisms ----------------------
 ------------------------------------------------------------------------------*/
 
-static int thispid = -1;
-char *network_pathname;
+static char *network_pathname = (char *)0;
 
 /* Check whether the socket is mapped to the service or not. We
 need to know if this is a regular AF_LOCAL socket or an end of a socketpair
@@ -87,59 +83,48 @@ static int connected_to_service(int sockfd)
       dwr(MSG_DEBUG_EXTRA,"connected_to_service(): Yes, %s\n", addr_un->sun_path);
       return 1;
     }
-  } 
-  dwr(MSG_DEBUG_EXTRA,"connected_to_service(): Not connected to service\n");  
+  }
+  dwr(MSG_DEBUG_EXTRA,"connected_to_service(): Not connected to service\n");
   return 0;
 }
 
-
-/*------------------------------------------------------------------------------
------------------------- ctors and dtors (and friends) ------------------------
-------------------------------------------------------------------------------*/
-
-static void my_dest(void) __attribute__ ((destructor));
+/*static void my_dest(void) __attribute__ ((destructor));
 static void my_dest(void) {
   dwr(MSG_DEBUG,"closing connections to service...\n");
   rpc_mutex_destroy();
-}
-
-static void load_symbols(void)
-{
-  if(thispid == getpid()) {
-    dwr(MSG_DEBUG,"detected duplicate call to global constructor (pid=%d).\n", thispid);
-  }
-  thispid = getpid();
-  realconnect = dlsym(RTLD_NEXT, "connect");
-  realbind = dlsym(RTLD_NEXT, "bind");
-  realaccept = dlsym(RTLD_NEXT, "accept");
-  reallisten = dlsym(RTLD_NEXT, "listen");
-  realsocket = dlsym(RTLD_NEXT, "socket");
-  realbind = dlsym(RTLD_NEXT, "bind");
-  realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
-  realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
-  realaccept4 = dlsym(RTLD_NEXT, "accept4");
-  realclone = dlsym(RTLD_NEXT, "clone");
-  realclose = dlsym(RTLD_NEXT, "close");
-  realsyscall = dlsym(RTLD_NEXT, "syscall");
-  realdup2 = dlsym(RTLD_NEXT, "dup2");
-  realdup3 = dlsym(RTLD_NEXT, "dup3");
-  realgetsockname = dlsym(RTLD_NEXT, "getsockname");
-}
+}*/
 
 /* Private Function Prototypes */
-static void _init(void) __attribute__ ((constructor));
-static void _init(void) { set_up_intercept(); }
+/*static void _init(void) __attribute__ ((constructor));
+static void _init(void) { set_up_intercept(); } */
 
 /* get symbols and initialize mutexes */
-static void set_up_intercept()
+static int set_up_intercept()
 {
-  network_pathname = getenv("ZT_NC_NETWORK");
-  dwr(MSG_DEBUG,"Connecting to service at: %s\n", network_pathname);
-  if (!getenv("ZT_NC_NETWORK"))
-    return;
-  /* Hook/intercept Posix net API symbols */
-  rpc_mutex_init();
-  load_symbols();
+  if (!realconnect) {
+    realconnect = dlsym(RTLD_NEXT, "connect");
+    realbind = dlsym(RTLD_NEXT, "bind");
+    realaccept = dlsym(RTLD_NEXT, "accept");
+    reallisten = dlsym(RTLD_NEXT, "listen");
+    realsocket = dlsym(RTLD_NEXT, "socket");
+    realbind = dlsym(RTLD_NEXT, "bind");
+    realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
+    realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
+    realaccept4 = dlsym(RTLD_NEXT, "accept4");
+    realclose = dlsym(RTLD_NEXT, "close");
+    realsyscall = dlsym(RTLD_NEXT, "syscall");
+    realgetsockname = dlsym(RTLD_NEXT, "getsockname");
+  }
+
+  if (!network_pathname) {
+    network_pathname = getenv("ZT_NC_NETWORK");
+    if (!network_pathname)
+      return 0;
+    dwr(MSG_DEBUG,"Connecting to service at: %s\n", network_pathname);
+    /* Hook/intercept Posix net API symbols */
+    rpc_mutex_init();
+  }
+  return 1;
 }
 
 /*------------------------------------------------------------------------------
@@ -149,10 +134,9 @@ static void set_up_intercept()
 /* int socket, int level, int option_name, const void *option_value, socklen_t option_len */
 int setsockopt(SETSOCKOPT_SIG)
 {
-  if(realsetsockopt == NULL){
-    dwr(MSG_ERROR,"setsockopt(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return realsetsockopt(socket, level, option_name, option_value, option_len);
+
   dwr(MSG_DEBUG,"setsockopt(%d)\n", socket);
   /* return(realsetsockopt(socket, level, option_name, option_value, option_len)); */
   if(level == SOL_IPV6 && option_name == IPV6_V6ONLY)
@@ -177,10 +161,9 @@ int setsockopt(SETSOCKOPT_SIG)
 /* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 int getsockopt(GETSOCKOPT_SIG)
 {
-  if(realgetsockopt == NULL){
-    dwr(MSG_ERROR,"getsockopt(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return realgetsockopt(sockfd, level, optname, optval, optlen);
+
   dwr(MSG_DEBUG,"getsockopt(%d)\n", sockfd);
   if(!connected_to_service(sockfd)) {
     return realgetsockopt(sockfd, level, optname, optval, optlen);
@@ -200,9 +183,10 @@ int getsockopt(GETSOCKOPT_SIG)
 /* int socket_family, int socket_type, int protocol
    socket() intercept function */
 int socket(SOCKET_SIG)
-{  
-  if(realsocket == NULL)
-    set_up_intercept();
+{
+  if (!set_up_intercept())
+    return realsocket(socket_family, socket_type, protocol);
+
   dwr(MSG_DEBUG,"socket():\n");
   /* Check that type makes sense */
   int flags = socket_type & ~SOCK_TYPE_MASK;
@@ -246,10 +230,9 @@ int socket(SOCKET_SIG)
    connect() intercept function */
 int connect(CONNECT_SIG)
 {
-  if(realconnect == NULL){
-    dwr(MSG_ERROR,"connect(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return realconnect(__fd, __addr, __len);
+
   dwr(MSG_DEBUG,"connect(%d):\n", __fd);
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *) __addr;
@@ -298,10 +281,9 @@ int connect(CONNECT_SIG)
    bind() intercept function */
 int bind(BIND_SIG)
 {
-  if(realbind == NULL){
-    dwr(MSG_ERROR,"bind(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return realbind(sockfd, addr, addrlen);
+
   dwr(MSG_DEBUG,"bind(%d):\n", sockfd);
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -353,10 +335,6 @@ int bind(BIND_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
 int accept4(ACCEPT4_SIG)
 {
-  if(realaccept4 == NULL){
-    dwr(MSG_ERROR,"accept4(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
   dwr(MSG_DEBUG,"accept4(%d):\n", sockfd);
   if ((flags & SOCK_CLOEXEC))
     fcntl(sockfd, F_SETFL, FD_CLOEXEC);
@@ -373,10 +351,9 @@ int accept4(ACCEPT4_SIG)
    accept() intercept function */
 int accept(ACCEPT_SIG)
 {
-  if(realaccept == NULL){
-    dwr(MSG_ERROR,"accept(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return realaccept(sockfd, addr, addrlen);
+
   dwr(MSG_DEBUG,"accept(%d):\n", sockfd);
   /* Check that this is a valid fd */
   if(fcntl(sockfd, F_GETFD) < 0) {
@@ -441,10 +418,9 @@ int accept(ACCEPT_SIG)
 /* int sockfd, int backlog */
 int listen(LISTEN_SIG)
 {
-  if(reallisten == NULL){
-    dwr(MSG_ERROR,"listen(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return(reallisten(sockfd, backlog));
+
   dwr(MSG_DEBUG,"listen(%d):\n", sockfd);
   int sock_type;
   socklen_t sock_type_len = sizeof(sock_type);
@@ -480,23 +456,6 @@ int listen(LISTEN_SIG)
 }
 
 /*------------------------------------------------------------------------------
--------------------------------------- clone() ---------------------------------
-------------------------------------------------------------------------------*/
-
-/* int (*fn)(void *), void *child_stack, int flags, void *arg, ... */
-int clone(CLONE_SIG)
-{
-  if(realclone == NULL){
-    dwr(MSG_ERROR,"clone(): SYMBOL NOT FOUND.\n");
-    return -1;
-  }
-  dwr(MSG_DEBUG,"clone()\n");
-  int err = realclone(fn, child_stack, flags, arg);
-  set_up_intercept();
-  return err;
-}
-
-/*------------------------------------------------------------------------------
 ------------------------------------- close() ----------------------------------
 ------------------------------------------------------------------------------*/
 
@@ -504,8 +463,7 @@ int clone(CLONE_SIG)
 int close(CLOSE_SIG)
 {
   dwr(MSG_DEBUG, "close(%d)\n", fd);
-  if(realclose == NULL)
-    set_up_intercept();    
+  set_up_intercept();
   return realclose(fd);
 }
 
@@ -516,10 +474,9 @@ int close(CLOSE_SIG)
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen */
 int getsockname(GETSOCKNAME_SIG)
 {
-  if (realgetsockname == NULL) {
-    dwr(MSG_ERROR,"getsockname(): SYMBOL NOT FOUND. \n");
-    return -1;
-  }
+  if (!set_up_intercept())
+    return realgetsockname(sockfd, addr, addrlen);
+
   dwr(MSG_DEBUG,"getsockname(%d)\n", sockfd);
   if(connected_to_service(sockfd) == 0) {
     dwr(MSG_DEBUG,"getsockname(): not used by service\n");
@@ -537,11 +494,11 @@ int getsockname(GETSOCKNAME_SIG)
   /* read address info from service */
   char addrbuf[sizeof(struct sockaddr_storage)];
   memset(&addrbuf, 0, sizeof(struct sockaddr_storage));
-  
+
   if(rpcfd > -1)
     if(read(rpcfd, &addrbuf, sizeof(struct sockaddr_storage)) > 0)
       close(rpcfd);
-  
+
   struct sockaddr_storage sock_storage;
   memcpy(&sock_storage, addrbuf, sizeof(struct sockaddr_storage));
   *addrlen = sizeof(struct sockaddr_in);
@@ -554,8 +511,8 @@ int getsockname(GETSOCKNAME_SIG)
 ------------------------------------ syscall() ---------------------------------
 ------------------------------------------------------------------------------*/
 
-long syscall(SYSCALL_SIG){
-  dwr(MSG_DEBUG_EXTRA,"syscall(%u, ...):\n", number);
+long syscall(SYSCALL_SIG)
+{
   va_list ap;
   uintptr_t a,b,c,d,e,f;
   va_start(ap, number);
@@ -567,8 +524,10 @@ long syscall(SYSCALL_SIG){
   f=va_arg(ap, uintptr_t);
   va_end(ap);
 
-  if(realsyscall == NULL)
-    return -1;
+  if (!set_up_intercept())
+    return realsyscall(number,a,b,c,d,e,f);
+
+  dwr(MSG_DEBUG_EXTRA,"syscall(%u, ...):\n", number);
 
 #if defined(__i386__)
   /* TODO: Implement for 32-bit systems: syscall(__NR_socketcall, 18, args);

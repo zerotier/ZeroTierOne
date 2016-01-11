@@ -69,19 +69,16 @@ int dup2(DUP2_SIG);
 int dup3(DUP3_SIG);
 int getsockname(GETSOCKNAME_SIG);
 
-static int (*realconnect)(CONNECT_SIG);
-static int (*realbind)(BIND_SIG);
-static int (*realaccept)(ACCEPT_SIG);
-static int (*reallisten)(LISTEN_SIG);
-static int (*realsocket)(SOCKET_SIG);
-static int (*realsetsockopt)(SETSOCKOPT_SIG);
-static int (*realgetsockopt)(GETSOCKOPT_SIG);
-static int (*realaccept4)(ACCEPT4_SIG);
-static long (*realsyscall)(SYSCALL_SIG);
-static int (*realclose)(CLOSE_SIG);
-static int (*realclone)(CLONE_SIG);
-static int (*realdup2)(DUP2_SIG);
-static int (*realdup3)(DUP3_SIG);
-static int (*realgetsockname)(GETSOCKNAME_SIG);
+static int (*realconnect)(CONNECT_SIG) = 0;
+static int (*realbind)(BIND_SIG) = 0;
+static int (*realaccept)(ACCEPT_SIG) = 0;
+static int (*reallisten)(LISTEN_SIG) = 0;
+static int (*realsocket)(SOCKET_SIG) = 0;
+static int (*realsetsockopt)(SETSOCKOPT_SIG) = 0;
+static int (*realgetsockopt)(GETSOCKOPT_SIG) = 0;
+static int (*realaccept4)(ACCEPT4_SIG) = 0;
+static long (*realsyscall)(SYSCALL_SIG) = 0;
+static int (*realclose)(CLOSE_SIG) = 0;
+static int (*realgetsockname)(GETSOCKNAME_SIG) = 0;
 
 #endif
