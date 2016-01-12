@@ -109,9 +109,15 @@ Now you can run an application inside your network container.
 
     export LD_PRELOAD=`pwd`/libzerotierintercept.so
     export ZT_NC_NETWORK=/tmp/netcon-test-home/nc_8056c2e21c000001
-    python -m SimpleHTTPServer
+    node netcon/httpserver.js
 
-If you are running Python 3, use "-m http.server". Also note that the "pwd" in LD_PRELOAD assumes you are in the ZeroTier source root and have built netcon there. If not, substitute the full path to *libzerotierintercept.so*. If you want to remove those environment variables later, use "unset LD_PRELOAD" and "unset ZT_NC_NETWORK".
+Also note that the "pwd" in LD_PRELOAD assumes you are in the ZeroTier source root and have built netcon there. If not, substitute the full path to *libzerotierintercept.so*. If you want to remove those environment variables later, use "unset LD_PRELOAD" and "unset ZT_NC_NETWORK".
+
+If you don't have node.js installed, an alternative test using python would be:
+    
+    python -m SimpleHTTPServer 80
+
+If you are running Python 3, use "-m http.server".
 
 If all went well a small static HTTP server is now serving up the current directory, but only inside the network container. Going to port 80 on your machine won't work. To reach it, go to the other system where you joined the same network with a conventional ZeroTier instance and try:
 
