@@ -335,7 +335,7 @@ public:
 	/**
 	 * @return Pointer to user PTR (modifiable user ptr used in API)
 	 */
-	inline void **userPtr() throw() { return &_uptr; }
+	inline void **userPtr() throw() { return &_uPtr; }
 
 	inline bool operator==(const Network &n) const throw() { return (_id == n._id); }
 	inline bool operator!=(const Network &n) const throw() { return (_id != n._id); }
@@ -354,7 +354,7 @@ private:
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
 	const RuntimeEnvironment *RR;
-	void *_uptr;
+	void *_uPtr;
 	uint64_t _id;
 	MAC _mac; // local MAC address
 	volatile bool _enabled;
