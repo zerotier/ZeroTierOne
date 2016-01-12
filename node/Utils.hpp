@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,15 +14,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * ZeroTier may be used and distributed under the terms of the GPLv3, which
- * are available at: http://www.gnu.org/licenses/gpl-3.0.html
- *
- * If you would like to embed ZeroTier into a commercial application or
- * redistribute it in a modified binary form, please contact ZeroTier Networks
- * LLC. Start here: http://www.zerotier.com/
  */
 
 #ifndef ZT_UTILS_HPP
@@ -317,13 +308,13 @@ public:
 		return __builtin_bswap64(n);
 #else
 		return (
-			((n & 0x00000000000000FFULL) << 56) | 
-			((n & 0x000000000000FF00ULL) << 40) | 
-			((n & 0x0000000000FF0000ULL) << 24) | 
-			((n & 0x00000000FF000000ULL) <<  8) | 
-			((n & 0x000000FF00000000ULL) >>  8) | 
-			((n & 0x0000FF0000000000ULL) >> 24) | 
-			((n & 0x00FF000000000000ULL) >> 40) | 
+			((n & 0x00000000000000FFULL) << 56) |
+			((n & 0x000000000000FF00ULL) << 40) |
+			((n & 0x0000000000FF0000ULL) << 24) |
+			((n & 0x00000000FF000000ULL) <<  8) |
+			((n & 0x000000FF00000000ULL) >>  8) |
+			((n & 0x0000FF0000000000ULL) >> 24) |
+			((n & 0x00FF000000000000ULL) >> 40) |
 			((n & 0xFF00000000000000ULL) >> 56)
 		);
 #endif
@@ -347,13 +338,13 @@ public:
 		return __builtin_bswap64(n);
 #else
 		return (
-			((n & 0x00000000000000FFULL) << 56) | 
-			((n & 0x000000000000FF00ULL) << 40) | 
-			((n & 0x0000000000FF0000ULL) << 24) | 
-			((n & 0x00000000FF000000ULL) <<  8) | 
-			((n & 0x000000FF00000000ULL) >>  8) | 
-			((n & 0x0000FF0000000000ULL) >> 24) | 
-			((n & 0x00FF000000000000ULL) >> 40) | 
+			((n & 0x00000000000000FFULL) << 56) |
+			((n & 0x000000000000FF00ULL) << 40) |
+			((n & 0x0000000000FF0000ULL) << 24) |
+			((n & 0x00000000FF000000ULL) <<  8) |
+			((n & 0x000000FF00000000ULL) >>  8) |
+			((n & 0x0000FF0000000000ULL) >> 24) |
+			((n & 0x00FF000000000000ULL) >> 40) |
 			((n & 0xFF00000000000000ULL) >> 56)
 		);
 #endif
@@ -399,4 +390,3 @@ public:
 } // namespace ZeroTier
 
 #endif
-
