@@ -333,9 +333,9 @@ public:
 	void destroy();
 
 	/**
-	 * @return User ptr
+	 * @return Pointer to user PTR (modifiable user ptr used in API)
 	 */
-	inline void *userPtr() const throw() { return _uptr; }
+	inline void **userPtr() throw() { return &_uptr; }
 
 	inline bool operator==(const Network &n) const throw() { return (_id == n._id); }
 	inline bool operator!=(const Network &n) const throw() { return (_id != n._id); }

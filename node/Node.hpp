@@ -177,7 +177,7 @@ public:
 	 * @param data Frame data
 	 * @param len Frame length
 	 */
-	inline void putFrame(uint64_t nwid,void *nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	inline void putFrame(uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
@@ -255,7 +255,7 @@ public:
 	 * @param op Configuration operation
 	 * @param nc Network configuration
 	 */
-	inline int configureVirtualNetworkPort(uint64_t nwid,void *nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
+	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
 
 	/**
 	 * @return True if we appear to be online

@@ -981,7 +981,7 @@ typedef int (*ZT_VirtualNetworkConfigFunction)(
 	ZT_Node *,                             /* Node */
 	void *,                                /* User ptr */
 	uint64_t,                              /* Network ID */
-	void *,                                /* Network user ptr (set w/join) */
+	void **,                               /* Modifiable network user PTR */
 	enum ZT_VirtualNetworkConfigOperation, /* Config operation */
 	const ZT_VirtualNetworkConfig *);      /* Network configuration */
 
@@ -996,7 +996,7 @@ typedef void (*ZT_VirtualNetworkFrameFunction)(
 	ZT_Node *,                             /* Node */
 	void *,                                /* User ptr */
 	uint64_t,                              /* Network ID */
-	void *,                                /* Network user PTR (set w/join) */
+	void **,                               /* Modifiable network user PTR */
 	uint64_t,                              /* Source MAC */
 	uint64_t,                              /* Destination MAC */
 	unsigned int,                          /* Ethernet type */
@@ -1247,10 +1247,10 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
  *
  * @param node Node instance
  * @param nwid 64-bit ZeroTier network ID
- * @param uptr An arbitrary pointer to associate with this network
+ * @param uptr An arbitrary pointer to associate with this network (default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr);
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr = (void *)0);
 
 /**
  * Leave a network
