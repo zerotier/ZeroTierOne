@@ -216,7 +216,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 									adv[42] = (checksum >> 8) & 0xff;
 									adv[43] = checksum & 0xff;
 
-									RR->node->putFrame(network->id(),atPeerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
+									RR->node->putFrame(network->id(),network->userPtr(),atPeerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
 									return; // stop processing: we have handled this frame with a spoofed local reply so no need to send it anywhere
 								}
 							}

@@ -45,8 +45,9 @@ namespace ZeroTier {
 
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
-Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
+Network::Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr) :
 	RR(renv),
+	_uptr(uptr),
 	_id(nwid),
 	_mac(renv->identity.address(),nwid),
 	_enabled(true),
@@ -88,7 +89,7 @@ Network::Network(const RuntimeEnvironment *renv,uint64_t nwid) :
 	if (!_portInitialized) {
 		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,_uptr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
 }
@@ -100,11 +101,11 @@ Network::~Network()
 
 	char n[128];
 	if (_destroyed) {
-		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
+		RR->node->configureVirtualNetworkPort(_id,_uptr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 		Utils::snprintf(n,sizeof(n),"networks.d/%.16llx.conf",_id);
 		RR->node->dataStoreDelete(n);
 	} else {
-		RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
+		RR->node->configureVirtualNetworkPort(_id,_uptr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,&ctmp);
 	}
 }
 
@@ -173,7 +174,7 @@ bool Network::applyConfiguration(const SharedPtr<NetworkConfig> &conf)
 				portInitialized = _portInitialized;
 				_portInitialized = true;
 			}
-			_portError = RR->node->configureVirtualNetworkPort(_id,(portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
+			_portError = RR->node->configureVirtualNetworkPort(_id,_uptr,(portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 			return true;
 		} else {
 			TRACE("ignored invalid configuration for network %.16llx (configuration contains mismatched network ID or issued-to address)",(unsigned long long)_id);
@@ -331,7 +332,7 @@ void Network::setEnabled(bool enabled)
 		_enabled = enabled;
 		ZT_VirtualNetworkConfig ctmp;
 		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(_id,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(_id,_uptr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,&ctmp);
 	}
 }
 

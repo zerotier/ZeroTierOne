@@ -506,7 +506,7 @@ unsigned int ControlPlane::handleRequest(
 			} else if (ps[0] == "network") {
 				if (ps.size() == 2) {
 					uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
-					_node->join(wantnw); // does nothing if we are a member
+					_node->join(wantnw,(void *)0); // does nothing if we are a member
 					ZT_VirtualNetworkList *nws = _node->networks();
 					if (nws) {
 						for(unsigned long i=0;i<nws->networkCount;++i) {
@@ -546,7 +546,7 @@ unsigned int ControlPlane::handleRequest(
 						uint64_t wantnw = Utils::hexStrToU64(ps[1].c_str());
 						for(unsigned long i=0;i<nws->networkCount;++i) {
 							if (nws->networks[i].nwid == wantnw) {
-								_node->leave(wantnw);
+								_node->leave(wantnw,(void **)0);
 								responseBody = "true";
 								responseContentType = "application/json";
 								scode = 200;

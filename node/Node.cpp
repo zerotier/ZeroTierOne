@@ -358,24 +358,28 @@ ZT_ResultCode Node::processBackgroundTasks(uint64_t now,volatile uint64_t *nextB
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::join(uint64_t nwid)
+ZT_ResultCode Node::join(uint64_t nwid,void *uptr)
 {
 	Mutex::Lock _l(_networks_m);
 	SharedPtr<Network> nw = _network(nwid);
 	if(!nw)
-		_networks.push_back(std::pair< uint64_t,SharedPtr<Network> >(nwid,SharedPtr<Network>(new Network(RR,nwid))));
+		_networks.push_back(std::pair< uint64_t,SharedPtr<Network> >(nwid,SharedPtr<Network>(new Network(RR,nwid,uptr))));
 	std::sort(_networks.begin(),_networks.end()); // will sort by nwid since it's the first in a pair<>
 	return ZT_RESULT_OK;
 }
 
-ZT_ResultCode Node::leave(uint64_t nwid)
+ZT_ResultCode Node::leave(uint64_t nwid,void **uptr)
 {
 	std::vector< std::pair< uint64_t,SharedPtr<Network> > > newn;
 	Mutex::Lock _l(_networks_m);
 	for(std::vector< std::pair< uint64_t,SharedPtr<Network> > >::const_iterator n(_networks.begin());n!=_networks.end();++n) {
 		if (n->first != nwid)
 			newn.push_back(*n);
-		else n->second->destroy();
+		else {
+			if (uptr)
+				*uptr = n->second->userPtr();
+			n->second->destroy();
+		}
 	}
 	_networks.swap(newn);
 	return ZT_RESULT_OK;
@@ -839,10 +843,10 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
 	}
 }
 
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid)
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid);
+		return reinterpret_cast<ZeroTier::Node *>(node)->join(nwid,uptr);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
@@ -850,10 +854,10 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid)
 	}
 }
 
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid)
+enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr)
 {
 	try {
-		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid);
+		return reinterpret_cast<ZeroTier::Node *>(node)->leave(nwid,uptr);
 	} catch (std::bad_alloc &exc) {
 		return ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY;
 	} catch ( ... ) {
