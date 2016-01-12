@@ -126,87 +126,77 @@ void Peer::received(
 #endif
 
 	const uint64_t now = RR->node->now();
-	bool needMulticastGroupAnnounce = false;
+	_lastReceive = now;
+	if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
+		_lastUnicastFrame = now;
+	else if (verb == Packet::VERB_MULTICAST_FRAME)
+		_lastMulticastFrame = now;
 
-	{	// begin _lock
-		Mutex::Lock _l(_lock);
-
-		_lastReceive = now;
-		if ((verb == Packet::VERB_FRAME)||(verb == Packet::VERB_EXT_FRAME))
-			_lastUnicastFrame = now;
-		else if (verb == Packet::VERB_MULTICAST_FRAME)
-			_lastMulticastFrame = now;
-
-		if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
-			_lastAnnouncedTo = now;
-			needMulticastGroupAnnounce = true;
+	if (hops == 0) {
+		bool pathIsConfirmed = false;
+		unsigned int np = _numPaths;
+		for(unsigned int p=0;p<np;++p) {
+			if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
+				_paths[p].received(now);
+#ifdef ZT_ENABLE_CLUSTER
+				_paths[p].setClusterSuboptimal(suboptimalPath);
+#endif
+				pathIsConfirmed = true;
+				break;
+			}
 		}
 
-		if (hops == 0) {
-			bool pathIsConfirmed = false;
-			unsigned int np = _numPaths;
-			for(unsigned int p=0;p<np;++p) {
-				if ((_paths[p].address() == remoteAddr)&&(_paths[p].localAddress() == localAddr)) {
-					_paths[p].received(now);
-#ifdef ZT_ENABLE_CLUSTER
-					_paths[p].setClusterSuboptimal(suboptimalPath);
-#endif
-					pathIsConfirmed = true;
-					break;
-				}
-			}
+		if ((!pathIsConfirmed)&&(RR->node->shouldUsePathForZeroTierTraffic(localAddr,remoteAddr))) {
+			if (verb == Packet::VERB_OK) {
 
-			if ((!pathIsConfirmed)&&(RR->node->shouldUsePathForZeroTierTraffic(localAddr,remoteAddr))) {
-				if (verb == Packet::VERB_OK) {
-
-					Path *slot = (Path *)0;
-					if (np < ZT_MAX_PEER_NETWORK_PATHS) {
-						slot = &(_paths[np++]);
-					} else {
-						uint64_t slotLRmin = 0xffffffffffffffffULL;
-						for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
-							if (!_paths[p].active(now)) {
-								slot = &(_paths[p]);
-								break;
-							} else if (_paths[p].lastReceived() <= slotLRmin) {
-								slotLRmin = _paths[p].lastReceived();
-								slot = &(_paths[p]);
-							}
+				Path *slot = (Path *)0;
+				if (np < ZT_MAX_PEER_NETWORK_PATHS) {
+					slot = &(_paths[np++]);
+				} else {
+					uint64_t slotLRmin = 0xffffffffffffffffULL;
+					for(unsigned int p=0;p<ZT_MAX_PEER_NETWORK_PATHS;++p) {
+						if (!_paths[p].active(now)) {
+							slot = &(_paths[p]);
+							break;
+						} else if (_paths[p].lastReceived() <= slotLRmin) {
+							slotLRmin = _paths[p].lastReceived();
+							slot = &(_paths[p]);
 						}
 					}
-					if (slot) {
-						*slot = Path(localAddr,remoteAddr);
-						slot->received(now);
-#ifdef ZT_ENABLE_CLUSTER
-						slot->setClusterSuboptimal(suboptimalPath);
-#endif
-						_numPaths = np;
-					}
-
-#ifdef ZT_ENABLE_CLUSTER
-					if (RR->cluster)
-						RR->cluster->broadcastHavePeer(_id);
-#endif
-
-				} else {
-
-					TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
-
-					if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
-						// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
-						Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
-						outp.armor(_key,true);
-						RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
-					} else {
-						sendHELLO(localAddr,remoteAddr,now);
-					}
-
 				}
+				if (slot) {
+					*slot = Path(localAddr,remoteAddr);
+					slot->received(now);
+#ifdef ZT_ENABLE_CLUSTER
+					slot->setClusterSuboptimal(suboptimalPath);
+#endif
+					_numPaths = np;
+				}
+
+#ifdef ZT_ENABLE_CLUSTER
+				if (RR->cluster)
+					RR->cluster->broadcastHavePeer(_id);
+#endif
+
+			} else {
+
+				TRACE("got %s via unknown path %s(%s), confirming...",Packet::verbString(verb),_id.address().toString().c_str(),remoteAddr.toString().c_str());
+
+				if ( (_vProto >= 5) && ( !((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0)) ) ) {
+					// 1.1.1 and newer nodes support ECHO, which is smaller -- but 1.1.0 has a bug so use HELLO there too
+					Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
+					outp.armor(_key,true);
+					RR->node->putPacket(localAddr,remoteAddr,outp.data(),outp.size());
+				} else {
+					sendHELLO(localAddr,remoteAddr,now);
+				}
+
 			}
 		}
-	}	// end _lock
+	}
 
-	if (needMulticastGroupAnnounce) {
+	if ((now - _lastAnnouncedTo) >= ((ZT_MULTICAST_LIKE_EXPIRE / 2) - 1000)) {
+		_lastAnnouncedTo = now;
 		const std::vector< SharedPtr<Network> > networks(RR->node->allNetworks());
 		for(std::vector< SharedPtr<Network> >::const_iterator n(networks.begin());n!=networks.end();++n)
 			(*n)->tryAnnounceMulticastGroupsTo(SharedPtr<Peer>(this));
@@ -215,8 +205,6 @@ void Peer::received(
 
 void Peer::sendHELLO(const InetAddress &localAddr,const InetAddress &atAddress,uint64_t now,unsigned int ttl)
 {
-	// _lock not required here since _id is immutable and nothing else is accessed
-
 	Packet outp(_id.address(),RR->identity.address(),Packet::VERB_HELLO);
 	outp.append((unsigned char)ZT_PROTO_VERSION);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
@@ -236,7 +224,6 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 {
 	Path *p = (Path *)0;
 
-	Mutex::Lock _l(_lock);
 	if (inetAddressFamily != 0) {
 		p = _getBestPath(now,inetAddressFamily);
 	} else {
@@ -270,8 +257,6 @@ void Peer::pushDirectPaths(Path *path,uint64_t now,bool force)
 	if (RR->cluster)
 		return;
 #endif
-
-	Mutex::Lock _l(_lock);
 
 	if (((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
 		_lastDirectPathPushSent = now;
@@ -333,7 +318,6 @@ void Peer::pushDirectPaths(Path *path,uint64_t now,bool force)
 
 bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
 {
-	Mutex::Lock _l(_lock);
 	unsigned int np = _numPaths;
 	unsigned int x = 0;
 	unsigned int y = 0;
@@ -353,7 +337,6 @@ bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)
 
 void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) const
 {
-	Mutex::Lock _l(_lock);
 	uint64_t bestV4 = 0,bestV6 = 0;
 	for(unsigned int p=0,np=_numPaths;p<np;++p) {
 		if (_paths[p].active(now)) {
@@ -377,7 +360,7 @@ void Peer::getBestActiveAddresses(uint64_t now,InetAddress &v4,InetAddress &v6) 
 
 bool Peer::networkMembershipCertificatesAgree(uint64_t nwid,const CertificateOfMembership &com) const
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_networkComs_m);
 	const _NetworkCom *ourCom = _networkComs.get(nwid);
 	if (ourCom)
 		return ourCom->com.agreesWith(com);
@@ -392,7 +375,7 @@ bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const Certif
 
 	// Return true if we already have this *exact* COM
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_networkComs_m);
 		_NetworkCom *ourCom = _networkComs.get(nwid);
 		if ((ourCom)&&(ourCom->com == com))
 			return true;
@@ -432,7 +415,7 @@ bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const Certif
 
 	// If we made it past all those checks, add or update cert in our cert info store
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_networkComs_m);
 		_networkComs.set(nwid,_NetworkCom(RR->node->now(),com));
 	}
 
@@ -441,7 +424,7 @@ bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const Certif
 
 bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool updateLastPushedTime)
 {
-	Mutex::Lock _l(_lock);
+	Mutex::Lock _l(_networkComs_m);
 	uint64_t &lastPushed = _lastPushedComs[nwid];
 	const uint64_t tmp = lastPushed;
 	if (updateLastPushedTime)
@@ -451,8 +434,6 @@ bool Peer::needsOurNetworkMembershipCertificate(uint64_t nwid,uint64_t now,bool 
 
 void Peer::clean(uint64_t now)
 {
-	Mutex::Lock _l(_lock);
-
 	{
 		unsigned int np = _numPaths;
 		unsigned int x = 0;
@@ -466,30 +447,30 @@ void Peer::clean(uint64_t now)
 	}
 
 	{
-		uint64_t *k = (uint64_t *)0;
-		_NetworkCom *v = (_NetworkCom *)0;
-		Hashtable< uint64_t,_NetworkCom >::Iterator i(_networkComs);
-		while (i.next(k,v)) {
-			if ( (!RR->node->belongsToNetwork(*k)) && ((now - v->ts) >= ZT_PEER_NETWORK_COM_EXPIRATION) )
-				_networkComs.erase(*k);
+		Mutex::Lock _l(_networkComs_m);
+		{
+			uint64_t *k = (uint64_t *)0;
+			_NetworkCom *v = (_NetworkCom *)0;
+			Hashtable< uint64_t,_NetworkCom >::Iterator i(_networkComs);
+			while (i.next(k,v)) {
+				if ( (!RR->node->belongsToNetwork(*k)) && ((now - v->ts) >= ZT_PEER_NETWORK_COM_EXPIRATION) )
+					_networkComs.erase(*k);
+			}
 		}
-	}
-
-	{
-		uint64_t *k = (uint64_t *)0;
-		uint64_t *v = (uint64_t *)0;
-		Hashtable< uint64_t,uint64_t >::Iterator i(_lastPushedComs);
-		while (i.next(k,v)) {
-			if ((now - *v) > (ZT_NETWORK_AUTOCONF_DELAY * 2))
-				_lastPushedComs.erase(*k);
+		{
+			uint64_t *k = (uint64_t *)0;
+			uint64_t *v = (uint64_t *)0;
+			Hashtable< uint64_t,uint64_t >::Iterator i(_lastPushedComs);
+			while (i.next(k,v)) {
+				if ((now - *v) > (ZT_NETWORK_AUTOCONF_DELAY * 2))
+					_lastPushedComs.erase(*k);
+			}
 		}
 	}
 }
 
 bool Peer::_checkPath(Path &p,const uint64_t now)
 {
-	// assumes _lock is locked
-
 	if (!p.active(now))
 		return false;
 
@@ -536,7 +517,6 @@ bool Peer::_checkPath(Path &p,const uint64_t now)
 
 Path *Peer::_getBestPath(const uint64_t now)
 {
-	// assumes _lock is locked
 	Path *bestPath = (Path *)0;
 	uint64_t bestPathScore = 0;
 	for(unsigned int i=0;i<_numPaths;++i) {
@@ -551,7 +531,6 @@ Path *Peer::_getBestPath(const uint64_t now)
 
 Path *Peer::_getBestPath(const uint64_t now,int inetAddressFamily)
 {
-	// assumes _lock is locked
 	Path *bestPath = (Path *)0;
 	uint64_t bestPathScore = 0;
 	for(unsigned int i=0;i<_numPaths;++i) {
