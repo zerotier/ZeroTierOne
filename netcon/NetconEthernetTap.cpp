@@ -114,7 +114,7 @@ class TcpConnection
 {
 public:
 
-  uint64_t accept_token;
+  uint64_t accept_canary;
 
   bool pending, listening;
   int pid, idx;
@@ -530,18 +530,18 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	
 	// STREAM
 	else {
-		int data_start = -1, data_end = -1, token_pos = -1, padding_pos = -1;
+		int data_start = -1, data_end = -1, canary_pos = -1, padding_pos = -1;
 		char padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
 		dwr(MSG_DEBUG," <%x> stream data, len = %d\n", sock, len);
 		// Look for padding
 		std::string padding_pattern(padding, padding+CANARY_PADDING_SIZE);
 		std::string buffer(buf, buf + len);
 		padding_pos = buffer.find(padding_pattern);
-		token_pos = padding_pos-CANARY_SIZE;
+		canary_pos = padding_pos-CANARY_SIZE;
 		dwr(MSG_DEBUG, " <%x> padding_pos = %d\n", sock, padding_pos);
-		// Grab token, next we'll use it to look up an RPC job
-		if(token_pos > -1) {
-			memcpy(&CANARY_num, buf+token_pos, CANARY_SIZE);
+		// Grab canary, next we'll use it to look up an RPC job
+		if(canary_pos > -1) {
+			memcpy(&CANARY_num, buf+canary_pos, CANARY_SIZE);
 			if(CANARY_num != 0) { // TODO: Added to address CANARY_num==0 bug, last seeen 20160108
 				// Find job
 				sockdata = jobmap[CANARY_num];
@@ -561,31 +561,31 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 		if(padding_pos == -1) { // [DATA]
 			memcpy(&conn->buf[conn->idx], buf, wlen);
 		}
-		else { // Padding found, implies a token is present
-			// [TOKEN]
-			if(len == TOKEN_SIZE && token_pos == 0) {
+		else { // Padding found, implies a canary is present
+			// [CANARY]
+			if(len == CANARY_SIZE && canary_pos == 0) {
 				wlen = 0; // Nothing to write
 			}
 			else {
-				// [TOKEN] + [DATA]
-				if(len > TOKEN_SIZE && token_pos == 0) {
-					wlen = len - TOKEN_SIZE;
+				// [CANARY] + [DATA]
+				if(len > CANARY_SIZE && canary_pos == 0) {
+					wlen = len - CANARY_SIZE;
 					data_start = padding_pos+CANARY_PADDING_SIZE;
 					memcpy((&conn->buf)+conn->idx, buf+data_start, wlen);
 				}
-				// [DATA] + [TOKEN]
-				if(len > TOKEN_SIZE && token_pos > 0 && token_pos == len - TOKEN_SIZE) {
-					wlen = len - TOKEN_SIZE;
+				// [DATA] + [CANARY]
+				if(len > CANARY_SIZE && canary_pos > 0 && canary_pos == len - CANARY_SIZE) {
+					wlen = len - CANARY_SIZE;
 					data_start = 0;
 					memcpy((&conn->buf)+conn->idx, buf+data_start, wlen);												
 				}
-				// [DATA] + [TOKEN] + [DATA]
-				if(len > TOKEN_SIZE && token_pos > 0 && len > (token_pos + TOKEN_SIZE)) {
-					wlen = len - TOKEN_SIZE;
+				// [DATA] + [CANARY] + [DATA]
+				if(len > CANARY_SIZE && canary_pos > 0 && len > (canary_pos + CANARY_SIZE)) {
+					wlen = len - CANARY_SIZE;
 					data_start = 0;
 					data_end = padding_pos-CANARY_SIZE;
 					memcpy((&conn->buf)+conn->idx, buf+data_start, (data_end-data_start)+1);
-					memcpy((&conn->buf)+conn->idx, buf+(padding_pos+CANARY_PADDING_SIZE), len-(token_pos+TOKEN_SIZE));
+					memcpy((&conn->buf)+conn->idx, buf+(padding_pos+CANARY_PADDING_SIZE), len-(canary_pos+CANARY_SIZE));
 				}
 			}
 		}
