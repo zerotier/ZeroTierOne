@@ -95,23 +95,17 @@ one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
-netcon: rpc_lib $(OBJS)
+netcon: $(OBJS)
 	rm -f *.o
 	# Need to selectively rebuild one.cpp and OneService.cpp with ZT_SERVICE_NETCON and ZT_ONE_NO_ROOT_CHECK defined, and also NetconEthernetTap
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6 -o zerotier-netcon-service $(OBJS) service/OneService.cpp netcon/NetconEthernetTap.cpp one.cpp $(LDLIBS) -ldl -Lnetcon/ -lrpc
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DZT_SERVICE_NETCON -DZT_ONE_NO_ROOT_CHECK -Iext/lwip/src/include -Iext/lwip/src/include/ipv4 -Iext/lwip/src/include/ipv6 -o zerotier-netcon-service $(OBJS) service/OneService.cpp netcon/NetconEthernetTap.cpp one.cpp -x c netcon/RPC.c $(LDLIBS) -ldl
 	# Build netcon/liblwip.so which must be placed in ZT home for zerotier-netcon-service to work
 	cd netcon ; make -f make-liblwip.mk
 	# Use gcc not clang to build standalone intercept library since gcc is typically used for libc and we want to ensure maximal ABI compatibility
-	cd netcon ; gcc -Wl,--whole-archive -g -O2 -Wall -std=c99 -fPIC -DVERBOSE -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared librpc.a -o libzerotierintercept.so Intercept.c -ldl
+	cd netcon ; gcc -g -O2 -Wall -std=c99 -fPIC -DVERBOSE -D_GNU_SOURCE -DNETCON_INTERCEPT -I. -nostdlib -shared -o libzerotierintercept.so Intercept.c RPC.c -ldl
 	cp netcon/libzerotierintercept.so libzerotierintercept.so
 	ln -sf zerotier-netcon-service zerotier-cli
 	ln -sf zerotier-netcon-service zerotier-idtool
-
-
-rpc_lib:
-	g++ -c -fPIC -lpthread netcon/RPC.c -DVERBOSE -o netcon/RPC.o
-	ar -rv netcon/librpc.a netcon/RPC.o
-
 
 selftest:	$(OBJS) selftest.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-selftest selftest.o $(OBJS) $(LDLIBS)

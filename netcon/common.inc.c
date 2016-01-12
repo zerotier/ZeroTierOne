@@ -42,7 +42,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H  1
 
-#define DEBUG_LEVEL     0
+#define DEBUG_LEVEL     3
 
 #define MSG_WARNING     4
 #define MSG_ERROR       1 // Errors

@@ -62,7 +62,7 @@
 ------------------- Intercept<--->Service Comm mechanisms ----------------------
 ------------------------------------------------------------------------------*/
 
-static char *network_pathname = (char *)0;
+static char *netpath = (char *)0;
 
 /* Check whether the socket is mapped to the service or not. We
 need to know if this is a regular AF_LOCAL socket or an end of a socketpair
@@ -79,7 +79,7 @@ static int connected_to_service(int sockfd)
   getpeername(sockfd, (struct sockaddr*)&addr, &len);
   if (addr.ss_family == AF_LOCAL || addr.ss_family == AF_LOCAL) {
     addr_un = (struct sockaddr_un*)&addr;
-    if(strcmp(addr_un->sun_path, network_pathname) == 0) {
+    if(strcmp(addr_un->sun_path, netpath) == 0) {
       dwr(MSG_DEBUG_EXTRA,"connected_to_service(): Yes, %s\n", addr_un->sun_path);
       return 1;
     }
@@ -115,12 +115,11 @@ static int set_up_intercept()
     realsyscall = dlsym(RTLD_NEXT, "syscall");
     realgetsockname = dlsym(RTLD_NEXT, "getsockname");
   }
-
-  if (!network_pathname) {
-    network_pathname = getenv("ZT_NC_NETWORK");
-    if (!network_pathname)
+  if (!netpath) {
+    netpath = getenv("ZT_NC_NETWORK");
+    if (!netpath)
       return 0;
-    dwr(MSG_DEBUG,"Connecting to service at: %s\n", network_pathname);
+    dwr(MSG_DEBUG,"Connecting to service at: %s\n", netpath);
     /* Hook/intercept Posix net API symbols */
     rpc_mutex_init();
   }
@@ -194,6 +193,14 @@ int socket(SOCKET_SIG)
       errno = EINVAL;
       return -1;
   }
+
+/*
+  if(flags & SOCK_DGRAM) {
+    fprintf(stderr, "socket(): DGRAM, passing through\n");
+    return realsocket(socket_family, socket_type, protocol);
+  }
+*/
+  
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
   if (socket_family < 0 || socket_family >= NPROTO){
@@ -219,7 +226,7 @@ int socket(SOCKET_SIG)
   rpc_st.protocol = protocol;
   rpc_st.__tid = syscall(SYS_gettid);
   /* -1 is passed since we we're generating the new socket in this call */
-  return rpc_send_command(RPC_SOCKET, -1, &rpc_st, sizeof(struct socket_st));
+  return rpc_send_command(netpath, RPC_SOCKET, -1, &rpc_st, sizeof(struct socket_st));
 }
 
 /*------------------------------------------------------------------------------
@@ -233,9 +240,42 @@ int connect(CONNECT_SIG)
   if (!set_up_intercept())
     return realconnect(__fd, __addr, __len);
 
-  dwr(MSG_DEBUG,"connect(%d):\n", __fd);
+/*
+  int opt;
+  socklen_t opt_len;
+  realgetsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *) &opt, &opt_len);
+
+  if(opt & SOCK_DGRAM)
+  {
+    fprintf(stderr, "connect(): DGRAM, passing through.\n");
+    return realconnect(__fd, __addr, __len);
+  }
+*/
+
   struct sockaddr_in *connaddr;
-  connaddr = (struct sockaddr_in *) __addr;
+  connaddr = (struct sockaddr_in *)__addr;
+
+  if(__addr->sa_family == AF_LOCAL || __addr->sa_family == AF_UNIX) {
+  	struct sockaddr_storage storage;
+   	memcpy(&storage, __addr, __len);
+  	struct sockaddr_un *s_un = (struct sockaddr_un*)&storage;
+  	fprintf(stderr, "connect(): address = %s\n", s_un->sun_path);	
+  }
+
+  int port = connaddr->sin_port;
+  int ip = connaddr->sin_addr.s_addr;
+  unsigned char d[4];
+  d[0] = ip & 0xFF;
+  d[1] = (ip >>  8) & 0xFF;
+  d[2] = (ip >> 16) & 0xFF;
+  d[3] = (ip >> 24) & 0xFF;
+  dwr(MSG_DEBUG,"connect(): %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], ntohs(port));
+
+
+  if (!set_up_intercept())
+    return realconnect(__fd, __addr, __len);
+
+  dwr(MSG_DEBUG,"connect(%d):\n", __fd);
   /* Check that this is a valid fd */
   if(fcntl(__fd, F_GETFD) < 0) {
     errno = EBADF;
@@ -261,8 +301,7 @@ int connect(CONNECT_SIG)
     || connaddr->sin_family == PF_NETLINK
     || connaddr->sin_family == AF_NETLINK
     || connaddr->sin_family == AF_UNIX)) {
-    int err = realconnect(__fd, __addr, __len);
-    return err;
+    return realconnect(__fd, __addr, __len);
   }
   /* Assemble and send RPC */
   struct connect_st rpc_st;
@@ -270,7 +309,7 @@ int connect(CONNECT_SIG)
   rpc_st.__fd = __fd;
   memcpy(&rpc_st.__addr, __addr, sizeof(struct sockaddr_storage));
   memcpy(&rpc_st.__len, &__len, sizeof(socklen_t));
-  return rpc_send_command(RPC_CONNECT, __fd, &rpc_st, sizeof(struct connect_st));
+  return rpc_send_command(netpath, RPC_CONNECT, __fd, &rpc_st, sizeof(struct connect_st));
 }
 
 /*------------------------------------------------------------------------------
@@ -325,7 +364,7 @@ int bind(BIND_SIG)
   rpc_st.__tid = syscall(SYS_gettid);
   memcpy(&rpc_st.addr, addr, sizeof(struct sockaddr_storage));
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
-  return rpc_send_command(RPC_BIND, sockfd, &rpc_st, sizeof(struct bind_st));
+  return rpc_send_command(netpath, RPC_BIND, sockfd, &rpc_st, sizeof(struct bind_st));
 }
 
 /*------------------------------------------------------------------------------
@@ -398,10 +437,6 @@ int accept(ACCEPT_SIG)
   if(addr)
     addr->sa_family = AF_INET;
 
-  /* The following line is required for libuv/nodejs to accept connections properly,
-  however, this has the side effect of causing certain webservers to max out the CPU
-  in an accept loop */
-  //fcntl(sockfd, F_SETFL, SOCK_NONBLOCK);
   int new_fd = get_new_fd(sockfd);
   if(new_fd > 0) {
     errno = ERR_OK;
@@ -452,7 +487,7 @@ int listen(LISTEN_SIG)
   rpc_st.sockfd = sockfd;
   rpc_st.backlog = backlog;
   rpc_st.__tid = syscall(SYS_gettid);
-  return rpc_send_command(RPC_LISTEN, sockfd, &rpc_st, sizeof(struct listen_st));
+  return rpc_send_command(netpath, RPC_LISTEN, sockfd, &rpc_st, sizeof(struct listen_st));
 }
 
 /*------------------------------------------------------------------------------
@@ -490,7 +525,7 @@ int getsockname(GETSOCKNAME_SIG)
   rpc_st.sockfd = sockfd;
   memcpy(&rpc_st.addr, addr, *addrlen);
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
-  int rpcfd = rpc_send_command(RPC_GETSOCKNAME, sockfd, &rpc_st, sizeof(struct getsockname_st));
+  int rpcfd = rpc_send_command(netpath, RPC_GETSOCKNAME, sockfd, &rpc_st, sizeof(struct getsockname_st));
   /* read address info from service */
   char addrbuf[sizeof(struct sockaddr_storage)];
   memset(&addrbuf, 0, sizeof(struct sockaddr_storage));

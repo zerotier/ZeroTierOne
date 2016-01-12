@@ -6,16 +6,21 @@
 #include <sys/syscall.h>
 
 #include <fcntl.h>
+#include <dlfcn.h>
 #include <stdint.h>
 
 #include <sys/socket.h>
 #include <strings.h>
 #include "RPC.h"
 
-#define RPC_FD 1023
 #define SERVICE_CONNECT_ATTEMPTS 30
 
-static int instance_count;
+#define CONNECT_SIG int __fd, const struct sockaddr * __addr, socklen_t __len
+#define SOCKET_SIG int socket_family, int socket_type, int protocol
+
+static int (*realconnect)(CONNECT_SIG) = 0;
+static int (*realsocket)(SOCKET_SIG) = 0;
+
 static int rpc_count;
 
 static pthread_mutex_t lock;
@@ -63,30 +68,40 @@ int get_retval(int rpc_sock)
   return -1;
 }
 
+int load_symbols_rpc()
+{
+  #ifdef NETCON_INTERCEPT
+  realsocket = dlsym(RTLD_NEXT, "socket");
+  realconnect = dlsym(RTLD_NEXT, "connect");
+  if(!realconnect || !realsocket)
+    return -1;
+  #endif
+  return 1;
+}
+
 int rpc_join(const char * sockname)
 {
+  if(!load_symbols_rpc())
+    return -1;
+
 	struct sockaddr_un addr;
 	int conn_err = -1, attempts = 0;
-
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
 	strncpy(addr.sun_path, sockname, sizeof(addr.sun_path)-1);
 
 	int sock;
-	if((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0){
+	if((sock = realsocket(AF_UNIX, SOCK_STREAM, 0)) < 0){
 		fprintf(stderr, "Error while creating RPC socket\n");
 		return -1;
 	}
 	while((conn_err != 0) && (attempts < SERVICE_CONNECT_ATTEMPTS)){
-		if((conn_err = connect(sock, (struct sockaddr*)&addr, sizeof(addr))) != 0) {
+		if((conn_err = realconnect(sock, (struct sockaddr*)&addr, sizeof(addr))) != 0) {
 			fprintf(stderr, "Error while connecting to RPC socket. Re-attempting...\n");
 			sleep(1);
 		}
-		else {
-			//int newfd = dup2(sock, RPC_FD-instance_count);
-			//close(sock);
+		else
 			return sock;
-		}
 		attempts++;
 	}
 	return -1;
@@ -95,36 +110,24 @@ int rpc_join(const char * sockname)
 /*
  * Send a command to the service 
  */
-int rpc_send_command(int cmd, int forfd, void *data, int len)
+int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
 {
   pthread_mutex_lock(&lock);
   char c, padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
-  char cmdbuf[BUF_SZ], magic[TOKEN_SIZE], metabuf[BUF_SZ];
-  memcpy(magic+MAGIC_SIZE, padding, TOKEN_SIZE);
-  uint64_t magic_num;
-
+  char cmdbuf[BUF_SZ], CANARY[TOKEN_SIZE], metabuf[BUF_SZ];
+  memcpy(CANARY+CANARY_SIZE, padding, TOKEN_SIZE);
+  uint64_t canary_num;
   // ephemeral RPC socket used only for this command
-  int rpc_sock = rpc_join("/root/dev/ztest/nc_e5cd7a9e1c3511dd");
+  int rpc_sock = rpc_join(path);
   // Generate token
   int fdrand = open("/dev/urandom", O_RDONLY);
-  read(fdrand, &magic, MAGIC_SIZE);
-  memcpy(&magic_num, magic, MAGIC_SIZE);  
+  read(fdrand, &CANARY, CANARY_SIZE);
+  memcpy(&canary_num, CANARY, CANARY_SIZE);  
   cmdbuf[CMD_ID_IDX] = cmd;
-  memcpy(&cmdbuf[MAGIC_IDX], &magic_num, MAGIC_SIZE);
+  memcpy(&cmdbuf[CANARY_IDX], &canary_num, CANARY_SIZE);
   memcpy(&cmdbuf[STRUCT_IDX], data, len);
 
-  // Format: [sig_byte] + [cmd_id] + [magic] + [meta] + [payload]
-
 #ifdef VERBOSE
-  /*
-  #define IDX_PID       0
-  #define IDX_TID       sizeof(pid_t)
-  #define IDX_COUNT     IDX_TID + sizeof(pid_t)
-  #define IDX_TIME      IDX_COUNT + sizeof(int)
-  #define IDX_CMD       IDX_TIME + 20 // 20 being the length of the timestamp string
-  #define IDX_PAYLOAD   IDX_TIME + sizeof(char)
-  */
-  /* [pid_t] [pid_t] [rpc_count] [int] [...] */
   memset(metabuf, 0, BUF_SZ);
   pid_t pid = syscall(SYS_getpid);
   pid_t tid = syscall(SYS_gettid);
@@ -141,7 +144,7 @@ int rpc_send_command(int cmd, int forfd, void *data, int len)
   memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); /* timestamp */
 #endif
   /* Combine command flag+payload with RPC metadata */
-  memcpy(&metabuf[IDX_PAYLOAD], cmdbuf, len + 1 + MAGIC_SIZE);
+  memcpy(&metabuf[IDX_PAYLOAD], cmdbuf, len + 1 + CANARY_SIZE);
   
   // Write RPC
   int n_write = write(rpc_sock, &metabuf, BUF_SZ);
@@ -152,7 +155,10 @@ int rpc_send_command(int cmd, int forfd, void *data, int len)
   // Write token to corresponding data stream
   read(rpc_sock, &c, 1);
   if(c == 'z' && n_write > 0 && forfd > -1){
-    int w = send(forfd, &magic, TOKEN_SIZE, 0);
+    if(send(forfd, &CANARY, TOKEN_SIZE, 0) < 0) {
+      fprintf(stderr,"unable to write canary to stream\n");
+      return -1;
+    }
   }
   // Process response from service
   int ret = ERR_OK;

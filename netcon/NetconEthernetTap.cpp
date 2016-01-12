@@ -63,15 +63,6 @@ namespace ZeroTier {
 
 // ---------------------------------------------------------------------------
 
-// Gets the process/path name associated with a pid
-static void get_path_from_pid(char* dest, int pid)
-{
-  char ppath[80];
-  sprintf(ppath, "/proc/%d/exe", pid);
-	if (readlink (ppath, dest, 80) != -1){
-  }
-}
-
 static err_t tapif_init(struct netif *netif)
 {
   // Actual init functionality is in addIp() of tap
@@ -438,10 +429,12 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 	if(conn) {
 		if(!conn->pcb)
 			return;
+		// TODO: Removed to address double-free segfault when killing a python simple server
+
 		// tell LWIP to close the associated PCB 
-		if(conn->pcb->state != CLOSED && lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
-			dwr(MSG_ERROR," closeConnection(): Error while calling tcp_close()\n");
-		}
+		//if(conn->pcb->state != CLOSED && lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
+		//	dwr(MSG_ERROR," closeConnection(): Error while calling tcp_close()\n");
+		//}
 		// remove from connection list
 		for(size_t i=0; i<tcp_connections.size(); i++) {
 			if(tcp_connections[i]->sock == sock){
@@ -478,7 +471,7 @@ void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void *
 
 /* Unpacks the buffer from an RPC command */
 void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid, 
-	int &rpc_count, char (timestamp[20]), char (magic[sizeof(uint64_t)]), char &cmd, void* &payload)
+	int &rpc_count, char (timestamp[20]), char (CANARY[sizeof(uint64_t)]), char &cmd, void* &payload)
 {
 	unsigned char *buf = (unsigned char*)data;
 	memcpy(&pid, &buf[IDX_PID], sizeof(pid_t));
@@ -486,7 +479,7 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid,
 	memcpy(&rpc_count, &buf[IDX_COUNT], sizeof(int));
 	memcpy(timestamp, &buf[IDX_TIME], 20);
 	memcpy(&cmd, &buf[IDX_PAYLOAD], sizeof(char));
-	memcpy(magic, &buf[IDX_PAYLOAD+1], MAGIC_SIZE);
+	memcpy(CANARY, &buf[IDX_PAYLOAD+1], CANARY_SIZE);
 }
 
 /*
@@ -494,14 +487,14 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid,
  */
 void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 {		
-	uint64_t magic_num;
+	uint64_t CANARY_num;
 	pid_t pid, tid;
 	int rpc_count;
-	char cmd, timestamp[20], magic[MAGIC_SIZE];
+	char cmd, timestamp[20], CANARY[CANARY_SIZE];
 	void *payload;
 	unsigned char *buf = (unsigned char*)data;
 	std::pair<PhySocket*, void*> sockdata;
-	PhySocket *streamsock, *rpcsock;
+	PhySocket *rpcsock;
 	bool found_job = false, detected_rpc = false;
 	TcpConnection *conn;
 	int wlen = len;
@@ -515,8 +508,8 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			detected_rpc = true;
 	}
 	if(detected_rpc) {
-		unload_rpc(data, pid, tid, rpc_count, timestamp, magic, cmd, payload);
-		memcpy(&magic_num, magic, MAGIC_SIZE);
+		unload_rpc(data, pid, tid, rpc_count, timestamp, CANARY, cmd, payload);
+		memcpy(&CANARY_num, CANARY, CANARY_SIZE);
 		dwr(MSG_DEBUG," <%x> RPC: (pid=%d, tid=%d, rpc_count=%d, timestamp=%s, cmd=%d)\n", sock, pid, tid, rpc_count, timestamp, cmd);
 		if(cmd == RPC_SOCKET) {				
 			dwr(MSG_DEBUG,"  <%x> RPC_SOCKET\n", sock);
@@ -530,7 +523,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			}
 		}
 		else { // All RPCs other than RPC_SOCKET
-			jobmap[magic_num] = std::make_pair<PhySocket*, void*>(sock, data);
+			jobmap[CANARY_num] = std::make_pair<PhySocket*, void*>(sock, data);
 		}
 		write(_phy.getDescriptor(sock), "z", 1); // RPC ACK byte to maintain RPC->Stream order
 	}
@@ -541,19 +534,19 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 		char padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
 		dwr(MSG_DEBUG," <%x> stream data, len = %d\n", sock, len);
 		// Look for padding
-		std::string padding_pattern(padding, padding+MAGIC_PADDING_SIZE);
+		std::string padding_pattern(padding, padding+CANARY_PADDING_SIZE);
 		std::string buffer(buf, buf + len);
 		padding_pos = buffer.find(padding_pattern);
-		token_pos = padding_pos-MAGIC_SIZE;
+		token_pos = padding_pos-CANARY_SIZE;
 		dwr(MSG_DEBUG, " <%x> padding_pos = %d\n", sock, padding_pos);
 		// Grab token, next we'll use it to look up an RPC job
 		if(token_pos > -1) {
-			memcpy(&magic_num, buf+token_pos, MAGIC_SIZE);
-			if(magic_num != 0) { // TODO: Added to address magic_num==0 bug, last seeen 20160108
+			memcpy(&CANARY_num, buf+token_pos, CANARY_SIZE);
+			if(CANARY_num != 0) { // TODO: Added to address CANARY_num==0 bug, last seeen 20160108
 				// Find job
-				sockdata = jobmap[magic_num];
+				sockdata = jobmap[CANARY_num];
 				if(!sockdata.first) { // Stream before RPC
-					dwr(MSG_DEBUG,"       <%x> unable to locate job entry for %llu\n", sock, magic_num);
+					dwr(MSG_DEBUG,"       <%x> unable to locate job entry for %llu\n", sock, CANARY_num);
 					return;
 				}
 				else
@@ -577,7 +570,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				// [TOKEN] + [DATA]
 				if(len > TOKEN_SIZE && token_pos == 0) {
 					wlen = len - TOKEN_SIZE;
-					data_start = padding_pos+MAGIC_PADDING_SIZE;
+					data_start = padding_pos+CANARY_PADDING_SIZE;
 					memcpy((&conn->buf)+conn->idx, buf+data_start, wlen);
 				}
 				// [DATA] + [TOKEN]
@@ -590,9 +583,9 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				if(len > TOKEN_SIZE && token_pos > 0 && len > (token_pos + TOKEN_SIZE)) {
 					wlen = len - TOKEN_SIZE;
 					data_start = 0;
-					data_end = padding_pos-MAGIC_SIZE;
+					data_end = padding_pos-CANARY_SIZE;
 					memcpy((&conn->buf)+conn->idx, buf+data_start, (data_end-data_start)+1);
-					memcpy((&conn->buf)+conn->idx, buf+(padding_pos+MAGIC_PADDING_SIZE), len-(token_pos+TOKEN_SIZE));
+					memcpy((&conn->buf)+conn->idx, buf+(padding_pos+CANARY_PADDING_SIZE), len-(token_pos+TOKEN_SIZE));
 				}
 			}
 		}
@@ -614,7 +607,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	// Process RPC if we have a corresponding jobmap entry
 	if(found_job) {
 		conn = getConnection(sock);
-		unload_rpc(buf, pid, tid, rpc_count, timestamp, magic, cmd, payload);
+		unload_rpc(buf, pid, tid, rpc_count, timestamp, CANARY, cmd, payload);
 		switch(cmd) {
 			case RPC_BIND:
 				dwr(MSG_DEBUG,"  <%x> RPC_BIND\n", sock);
@@ -644,7 +637,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				break;
 		}
 		closeConnection(sockdata.first); // close RPC after sending retval, no longer needed
-		jobmap.erase(magic_num);
+		jobmap.erase(CANARY_num);
 		return;
 	}
 }
@@ -973,7 +966,7 @@ void NetconEthernetTap::handle_getsockname(PhySocket *sock, PhySocket *rpcsock, 
 	memset(&retmsg, 0, sizeof(retmsg));
 	if ((conn)&&(conn->addr))
     	memcpy(&retmsg, conn->addr, sizeof(struct sockaddr_storage));
-	int n = write(_phy.getDescriptor(rpcsock), &retmsg, sizeof(struct sockaddr_storage));
+	write(_phy.getDescriptor(rpcsock), &retmsg, sizeof(struct sockaddr_storage));
 }
 
 /*
