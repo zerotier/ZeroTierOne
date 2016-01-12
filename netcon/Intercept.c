@@ -238,7 +238,7 @@ int connect(CONNECT_SIG)
   	struct sockaddr_storage storage;
    	memcpy(&storage, __addr, __len);
   	struct sockaddr_un *s_un = (struct sockaddr_un*)&storage;
-  	fprintf(stderr, "connect(): address = %s\n", s_un->sun_path);	
+  	dwr(MSG_DEBUG, "connect(): address = %s\n", s_un->sun_path);	
   }
 
   int port = connaddr->sin_port;

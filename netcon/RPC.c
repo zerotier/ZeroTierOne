@@ -43,10 +43,8 @@ int get_new_fd(int sock)
   char buf[BUF_SZ];
   int newfd;
   ssize_t size = sock_fd_read(sock, buf, sizeof(buf), &newfd);
-  if(size > 0){
+  if(size > 0)
     return newfd;
-  }
-  fprintf(stderr, "get_new_fd(): Error, unable to read fd over (%d)\n", sock);
   return -1;
 }
 
@@ -254,10 +252,8 @@ ssize_t sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
     msg.msg_control = cmsgu.control;
     msg.msg_controllen = sizeof(cmsgu.control);
     size = recvmsg (sock, &msg, 0);
-    if (size < 0) {
-      fprintf(stderr, "sock_fd_read(): recvmsg: Error\n");
+    if (size < 0)
       return -1;
-    }
     cmsg = CMSG_FIRSTHDR(&msg);
     if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
       if (cmsg->cmsg_level != SOL_SOCKET) {
