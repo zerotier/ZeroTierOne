@@ -3,29 +3,28 @@
 
 #include <stdint.h>
 
-#define MAGIC_SIZE			sizeof(uint64_t)
-#define MAGIC_PADDING_SIZE	12
-#define TOKEN_SIZE			MAGIC_SIZE+MAGIC_PADDING_SIZE
+#define CANARY_SIZE			sizeof(uint64_t)
+#define CANARY_PADDING_SIZE	12
+#define TOKEN_SIZE			CANARY_SIZE+CANARY_PADDING_SIZE
 
 #define RPC_PHRASE 			"zerotier\0"
 #define RPC_PHRASE_SIZE		9
-// 1st section
+// 1st RPC section (metdata)
 #define IDX_SIGNAL_PHRASE	0
 #define IDX_PID				IDX_SIGNAL_PHRASE + RPC_PHRASE_SIZE
 #define IDX_TID				sizeof(pid_t) + IDX_PID
 #define IDX_COUNT			IDX_TID + sizeof(pid_t)
 #define IDX_TIME			IDX_COUNT + sizeof(int)
 #define IDX_PAYLOAD			IDX_TIME + 20 /* 20 being the length of the timestamp string */
+// 2nd RPC section (payload and canary)
+#define CMD_ID_IDX			0
+#define CANARY_IDX			1
+#define STRUCT_IDX			CANARY_IDX+CANARY_SIZE
 
-// 2nd section
-#define CMD_ID_IDX		0
-#define MAGIC_IDX		1
-#define STRUCT_IDX		MAGIC_IDX+MAGIC_SIZE
+#define BUF_SZ          	256
+#define PAYLOAD_SZ			223 /* BUF_SZ-IDX_PAYLOAD */
 
-#define BUF_SZ          256
-#define PAYLOAD_SZ		223 /* BUF_SZ-IDX_PAYLOAD */
-
-#define ERR_OK          0
+#define ERR_OK          	0
 
 /* RPC codes */
 #define RPC_UNDEFINED			 	0
@@ -54,8 +53,10 @@ extern "C" {
 
 int get_retval(int);
 
+//#ifdef NETCON_INTERCEPT
 int rpc_join(const char * sockname);
-int rpc_send_command(int cmd, int forfd, void *data, int len);
+int rpc_send_command(char *path, int cmd, int forfd, void *data, int len);
+//#endif
 
 int get_new_fd(int sock);
 ssize_t sock_fd_write(int sock, int fd);
