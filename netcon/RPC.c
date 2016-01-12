@@ -21,7 +21,9 @@
 static int (*realconnect)(CONNECT_SIG) = 0;
 static int (*realsocket)(SOCKET_SIG) = 0;
 
+#ifdef NETCON_INTERCEPT
 static int rpc_count;
+#endif
 
 static pthread_mutex_t lock;
 void rpc_mutex_init() {
@@ -115,13 +117,17 @@ int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
   pthread_mutex_lock(&lock);
   char c, padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
   char cmdbuf[BUF_SZ], CANARY[TOKEN_SIZE], metabuf[BUF_SZ];
-  memcpy(CANARY+CANARY_SIZE, padding, TOKEN_SIZE);
+  memcpy(CANARY+CANARY_SIZE, padding, sizeof(padding));
   uint64_t canary_num;
   // ephemeral RPC socket used only for this command
   int rpc_sock = rpc_join(path);
   // Generate token
   int fdrand = open("/dev/urandom", O_RDONLY);
-  read(fdrand, &CANARY, CANARY_SIZE);
+
+  if(read(fdrand, &CANARY, CANARY_SIZE) < 0) {
+     fprintf(stderr,"unable to read from /dev/urandom for RPC canary data\n");
+     return -1;  
+  }
   memcpy(&canary_num, CANARY, CANARY_SIZE);  
   cmdbuf[CMD_ID_IDX] = cmd;
   memcpy(&cmdbuf[CANARY_IDX], &canary_num, CANARY_SIZE);
@@ -153,7 +159,10 @@ int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
     errno = 0;
   }
   // Write token to corresponding data stream
-  read(rpc_sock, &c, 1);
+  if(read(rpc_sock, &c, 1) < 0) {
+    fprintf(stderr, "unable to read RPC ACK byte from service.\n");
+    return -1;
+  }
   if(c == 'z' && n_write > 0 && forfd > -1){
     if(send(forfd, &CANARY, TOKEN_SIZE, 0) < 0) {
       fprintf(stderr,"unable to write canary to stream\n");
