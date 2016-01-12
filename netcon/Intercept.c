@@ -193,14 +193,6 @@ int socket(SOCKET_SIG)
       errno = EINVAL;
       return -1;
   }
-
-/*
-  if(flags & SOCK_DGRAM) {
-    fprintf(stderr, "socket(): DGRAM, passing through\n");
-    return realsocket(socket_family, socket_type, protocol);
-  }
-*/
-  
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
   if (socket_family < 0 || socket_family >= NPROTO){
@@ -240,21 +232,8 @@ int connect(CONNECT_SIG)
   if (!set_up_intercept())
     return realconnect(__fd, __addr, __len);
 
-/*
-  int opt;
-  socklen_t opt_len;
-  realgetsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *) &opt, &opt_len);
-
-  if(opt & SOCK_DGRAM)
-  {
-    fprintf(stderr, "connect(): DGRAM, passing through.\n");
-    return realconnect(__fd, __addr, __len);
-  }
-*/
-
   struct sockaddr_in *connaddr;
   connaddr = (struct sockaddr_in *)__addr;
-
   if(__addr->sa_family == AF_LOCAL || __addr->sa_family == AF_UNIX) {
   	struct sockaddr_storage storage;
    	memcpy(&storage, __addr, __len);
@@ -270,10 +249,6 @@ int connect(CONNECT_SIG)
   d[2] = (ip >> 16) & 0xFF;
   d[3] = (ip >> 24) & 0xFF;
   dwr(MSG_DEBUG,"connect(): %d.%d.%d.%d: %d\n", d[0],d[1],d[2],d[3], ntohs(port));
-
-
-  if (!set_up_intercept())
-    return realconnect(__fd, __addr, __len);
 
   dwr(MSG_DEBUG,"connect(%d):\n", __fd);
   /* Check that this is a valid fd */
