@@ -1,6 +1,6 @@
 /*
  * ZeroTier One - Network Virtualization Everywhere
- * Copyright (C) 2011-2015  ZeroTier, Inc.
+ * Copyright (C) 2011-2016  ZeroTier, Inc.  https://www.zerotier.com/
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,15 +14,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * --
- *
- * ZeroTier may be used and distributed under the terms of the GPLv3, which
- * are available at: http://www.gnu.org/licenses/gpl-3.0.html
- *
- * If you would like to embed ZeroTier into a commercial application or
- * redistribute it in a modified binary form, please contact ZeroTier Networks
- * LLC. Start here: http://www.zerotier.com/
  */
 
 #ifndef ZT_BUFFER_HPP
@@ -170,7 +161,7 @@ public:
 	 * the pointer, but its use provides both a sanity check and
 	 * documentation / reminder to the calling code to treat the returned
 	 * pointer as being of size [l].
-	 * 
+	 *
 	 * @param i Index of field in buffer
 	 * @param l Length of field in bytes
 	 * @return Pointer to field data
@@ -193,7 +184,7 @@ public:
 
 	/**
 	 * Place a primitive integer value at a given position
-	 * 
+	 *
 	 * @param i Index to place value
 	 * @param v Value
 	 * @tparam T Integer type (e.g. uint16_t, int64_t)
@@ -216,7 +207,7 @@ public:
 
 	/**
 	 * Get a primitive integer value at a given position
-	 * 
+	 *
 	 * @param i Index to get integer
 	 * @tparam T Integer type (e.g. uint16_t, int64_t)
 	 * @return Integer value
@@ -243,7 +234,7 @@ public:
 
 	/**
 	 * Append an integer type to this buffer
-	 * 
+	 *
 	 * @param v Value to append
 	 * @tparam T Integer type (e.g. uint16_t, int64_t)
 	 * @throws std::out_of_range Attempt to append beyond capacity
@@ -283,7 +274,7 @@ public:
 
 	/**
 	 * Append a C-array of bytes
-	 * 
+	 *
 	 * @param b Data
 	 * @param l Length
 	 * @throws std::out_of_range Attempt to append beyond capacity
@@ -345,9 +336,9 @@ public:
 
 	/**
 	 * Increment size by a given number of bytes
-	 * 
+	 *
 	 * The contents of new space are undefined.
-	 * 
+	 *
 	 * @param i Bytes to increment
 	 * @throws std::out_of_range Capacity exceeded
 	 */
@@ -361,9 +352,9 @@ public:
 
 	/**
 	 * Set size of data in buffer
-	 * 
+	 *
 	 * The contents of new space are undefined.
-	 * 
+	 *
 	 * @param i New size
 	 * @throws std::out_of_range Size larger than capacity
 	 */
