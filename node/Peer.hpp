@@ -186,7 +186,7 @@ public:
 	void pushDirectPaths(Path *path,uint64_t now,bool force);
 
 	/**
-	 * @return All known direct paths to this peer
+	 * @return All known direct paths to this peer (active or inactive)
 	 */
 	inline std::vector<Path> paths() const
 	{
@@ -215,11 +215,6 @@ public:
 	 * @return Time of most recent frame of any kind (unicast or multicast)
 	 */
 	inline uint64_t lastFrame() const throw() { return std::max(_lastUnicastFrame,_lastMulticastFrame); }
-
-	/**
-	 * @return Time we last announced state TO this peer, such as multicast LIKEs
-	 */
-	inline uint64_t lastAnnouncedTo() const throw() { return _lastAnnouncedTo; }
 
 	/**
 	 * @return True if this peer has sent us real network traffic recently
