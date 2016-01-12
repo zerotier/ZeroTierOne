@@ -134,11 +134,7 @@ public:
 	 * @param now Current time
 	 * @return Best path or NULL if there are no active direct paths
 	 */
-	inline Path *getBestPath(uint64_t now)
-	{
-		Mutex::Lock _l(_lock);
-		return _getBestPath(now);
-	}
+	inline Path *getBestPath(uint64_t now) { return _getBestPath(now); }
 
 	/**
 	 * Send via best path
@@ -195,7 +191,6 @@ public:
 	inline std::vector<Path> paths() const
 	{
 		std::vector<Path> pp;
-		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p)
 			pp.push_back(_paths[p]);
 		return pp;
@@ -277,7 +272,6 @@ public:
 	 */
 	inline bool hasActiveDirectPath(uint64_t now) const
 	{
-		Mutex::Lock _l(_lock);
 		for(unsigned int p=0;p<_numPaths;++p) {
 			if (_paths[p].active(now))
 				return true;
@@ -292,7 +286,6 @@ public:
 	 */
 	inline bool hasClusterOptimalPath(uint64_t now) const
 	{
-		Mutex::Lock _l(_lock);
 		for(unsigned int p=0,np=_numPaths;p<np;++p) {
 			if ((_paths[p].active(now))&&(!_paths[p].isClusterSuboptimal()))
 				return true;
@@ -308,7 +301,6 @@ public:
 	 */
 	inline bool hasActivePathTo(uint64_t now,const InetAddress &addr) const
 	{
-		Mutex::Lock _l(_lock);
 		for(unsigned int p=0;p<_numPaths;++p) {
 			if ((_paths[p].active(now))&&(_paths[p].address() == addr))
 				return true;
@@ -410,7 +402,6 @@ public:
 	 */
 	inline bool shouldRespondToDirectPathPush(const uint64_t now)
 	{
-		Mutex::Lock _l(_lock);
 		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
 			++_directPathPushCutoffCount;
 		else _directPathPushCutoffCount = 0;
@@ -441,7 +432,7 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b) const
 	{
-		Mutex::Lock _l(_lock);
+		Mutex::Lock _l(_networkComs_m);
 
 		const unsigned int recSizePos = b.size();
 		b.addSize(4); // space for uint32_t field length
@@ -599,8 +590,8 @@ private:
 	};
 	Hashtable<uint64_t,_NetworkCom> _networkComs;
 	Hashtable<uint64_t,uint64_t> _lastPushedComs;
+	Mutex _networkComs_m;
 
-	Mutex _lock;
 	AtomicCounter __refCount;
 };
 

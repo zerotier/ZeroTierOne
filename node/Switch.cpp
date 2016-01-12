@@ -89,6 +89,8 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 			Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
 			if (beaconAddr == RR->identity.address())
 				return;
+			if (!RR->node->shouldUsePathForZeroTierTraffic(localAddr,fromAddr))
+				return;
 			SharedPtr<Peer> peer(RR->topology->getPeer(beaconAddr));
 			if (peer) { // we'll only respond to beacons from known peers
 				const uint64_t now = RR->node->now();
@@ -214,7 +216,7 @@ void Switch::onLocalEthernet(const SharedPtr<Network> &network,const MAC &from,c
 									adv[42] = (checksum >> 8) & 0xff;
 									adv[43] = checksum & 0xff;
 
-									RR->node->putFrame(network->id(),atPeerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
+									RR->node->putFrame(network->id(),network->userPtr(),atPeerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
 									return; // stop processing: we have handled this frame with a spoofed local reply so no need to send it anywhere
 								}
 							}
@@ -447,12 +449,6 @@ void Switch::requestWhois(const Address &addr)
 	}
 	if (inserted)
 		_sendWhoisRequest(addr,(const Address *)0,0);
-}
-
-void Switch::cancelWhoisRequest(const Address &addr)
-{
-	Mutex::Lock _l(_outstandingWhoisRequests_m);
-	_outstandingWhoisRequests.erase(addr);
 }
 
 void Switch::doAnythingWaitingForPeer(const SharedPtr<Peer> &peer)

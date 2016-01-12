@@ -978,11 +978,12 @@ typedef void ZT_Node;
  * PORT_ERROR state.
  */
 typedef int (*ZT_VirtualNetworkConfigFunction)(
-	ZT_Node *,
-	void *,
-	uint64_t,
-	enum ZT_VirtualNetworkConfigOperation,
-	const ZT_VirtualNetworkConfig *);
+	ZT_Node *,                             /* Node */
+	void *,                                /* User ptr */
+	uint64_t,                              /* Network ID */
+	void **,                               /* Modifiable network user PTR */
+	enum ZT_VirtualNetworkConfigOperation, /* Config operation */
+	const ZT_VirtualNetworkConfig *);      /* Network configuration */
 
 /**
  * Function to send a frame out to a virtual network port
@@ -992,15 +993,16 @@ typedef int (*ZT_VirtualNetworkConfigFunction)(
  * (9) frame length.
  */
 typedef void (*ZT_VirtualNetworkFrameFunction)(
-	ZT_Node *,
-	void *,
-	uint64_t,
-	uint64_t,
-	uint64_t,
-	unsigned int,
-	unsigned int,
-	const void *,
-	unsigned int);
+	ZT_Node *,                             /* Node */
+	void *,                                /* User ptr */
+	uint64_t,                              /* Network ID */
+	void **,                               /* Modifiable network user PTR */
+	uint64_t,                              /* Source MAC */
+	uint64_t,                              /* Destination MAC */
+	unsigned int,                          /* Ethernet type */
+	unsigned int,                          /* VLAN ID (0 for none) */
+	const void *,                          /* Frame data */
+	unsigned int);                         /* Frame length */
 
 /**
  * Callback for events
@@ -1245,9 +1247,10 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
  *
  * @param node Node instance
  * @param nwid 64-bit ZeroTier network ID
+ * @param uptr An arbitrary pointer to associate with this network (default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid);
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr = (void *)0);
 
 /**
  * Leave a network
@@ -1256,11 +1259,15 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid);
  * to the port config callback with a NULL second parameter to indicate that
  * the port is now deleted.
  *
+ * The uptr parameter is optional and is NULL by default. If it is not NULL,
+ * the pointer it points to is set to this network's uptr on success.
+ *
  * @param node Node instance
  * @param nwid 64-bit network ID
+ * @param uptr Target pointer is set to uptr (if not NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid);
+enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr = (void **)0);
 
 /**
  * Subscribe to an Ethernet multicast group

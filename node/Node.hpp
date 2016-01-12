@@ -96,8 +96,8 @@ public:
 		unsigned int frameLength,
 		volatile uint64_t *nextBackgroundTaskDeadline);
 	ZT_ResultCode processBackgroundTasks(uint64_t now,volatile uint64_t *nextBackgroundTaskDeadline);
-	ZT_ResultCode join(uint64_t nwid);
-	ZT_ResultCode leave(uint64_t nwid);
+	ZT_ResultCode join(uint64_t nwid,void *uptr);
+	ZT_ResultCode leave(uint64_t nwid,void **uptr);
 	ZT_ResultCode multicastSubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	ZT_ResultCode multicastUnsubscribe(uint64_t nwid,uint64_t multicastGroup,unsigned long multicastAdi);
 	uint64_t address() const;
@@ -169,6 +169,7 @@ public:
 	 * Enqueue a frame to be injected into a tap device (port)
 	 *
 	 * @param nwid Network ID
+	 * @param nuptr Network user ptr
 	 * @param source Source MAC
 	 * @param dest Destination MAC
 	 * @param etherType 16-bit ethernet type
@@ -176,12 +177,13 @@ public:
 	 * @param data Frame data
 	 * @param len Frame length
 	 */
-	inline void putFrame(uint64_t nwid,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
+	inline void putFrame(uint64_t nwid,void **nuptr,const MAC &source,const MAC &dest,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
 	{
 		_virtualNetworkFrameFunction(
 			reinterpret_cast<ZT_Node *>(this),
 			_uPtr,
 			nwid,
+			nuptr,
 			source.toInt(),
 			dest.toInt(),
 			etherType,
@@ -249,10 +251,11 @@ public:
 	 * Update virtual network port configuration
 	 *
 	 * @param nwid Network ID
+	 * @param nuptr Network user ptr
 	 * @param op Configuration operation
 	 * @param nc Network configuration
 	 */
-	inline int configureVirtualNetworkPort(uint64_t nwid,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,op,nc); }
+	inline int configureVirtualNetworkPort(uint64_t nwid,void **nuptr,ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nc) { return _virtualNetworkConfigFunction(reinterpret_cast<ZT_Node *>(this),_uPtr,nwid,nuptr,op,nc); }
 
 	/**
 	 * @return True if we appear to be online

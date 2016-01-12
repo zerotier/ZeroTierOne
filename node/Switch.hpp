@@ -139,13 +139,6 @@ public:
 	void requestWhois(const Address &addr);
 
 	/**
-	 * Cancel WHOIS for an address
-	 *
-	 * @param addr Address to cancel
-	 */
-	void cancelWhoisRequest(const Address &addr);
-
-	/**
 	 * Run any processes that are waiting for this peer's identity
 	 *
 	 * Called when we learn of a peer's identity from HELLO, OK(WHOIS), etc.
@@ -174,7 +167,7 @@ private:
 	const RuntimeEnvironment *const RR;
 	uint64_t _lastBeaconResponse;
 
-	// Outsanding WHOIS requests and how many retries they've undergone
+	// Outstanding WHOIS requests and how many retries they've undergone
 	struct WhoisRequest
 	{
 		WhoisRequest() : lastSent(0),retries(0) {}

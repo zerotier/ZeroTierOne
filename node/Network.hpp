@@ -80,8 +80,9 @@ public:
 	 *
 	 * @param renv Runtime environment
 	 * @param nwid Network ID
+	 * @param uptr Arbitrary pointer used by externally-facing API (for user use)
 	 */
-	Network(const RuntimeEnvironment *renv,uint64_t nwid);
+	Network(const RuntimeEnvironment *renv,uint64_t nwid,void *uptr);
 
 	~Network();
 
@@ -331,6 +332,11 @@ public:
 	 */
 	void destroy();
 
+	/**
+	 * @return Pointer to user PTR (modifiable user ptr used in API)
+	 */
+	inline void **userPtr() throw() { return &_uptr; }
+
 	inline bool operator==(const Network &n) const throw() { return (_id == n._id); }
 	inline bool operator!=(const Network &n) const throw() { return (_id != n._id); }
 	inline bool operator<(const Network &n) const throw() { return (_id < n._id); }
@@ -348,6 +354,7 @@ private:
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 
 	const RuntimeEnvironment *RR;
+	void *_uptr;
 	uint64_t _id;
 	MAC _mac; // local MAC address
 	volatile bool _enabled;
