@@ -54,7 +54,7 @@
 #include "common.inc.c"
 #include "RPC.h"
 
-#define APPLICATION_POLL_FREQ 			20
+#define APPLICATION_POLL_FREQ 			2
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
 #define STATUS_TMR_INTERVAL				250 // How often we check connection statuses (in ms)
 #define DEFAULT_READ_BUFFER_SIZE		1024 * 1024
@@ -348,6 +348,7 @@ void NetconEthernetTap::threadMain()
 			prev_status_time = now;
 			status_remaining = STATUS_TMR_INTERVAL - since_status;
 
+
 			dwr(MSG_DEBUG," tap_thread(): tcp\\jobs = {%d, %d}\n", tcp_connections.size(), jobmap.size());
 			for(size_t i=0; i<tcp_connections.size(); i++) {
 
@@ -372,6 +373,7 @@ void NetconEthernetTap::threadMain()
 					phyOnUnixData(tcp_connections[i]->sock,_phy.getuptr(tcp_connections[i]->sock),&tmpbuf,BUF_SZ);
 				}				
 			}
+
 		}
 		// Main TCP/ETHARP timer section
 		if (since_tcp >= ZT_LWIP_TCP_TIMER_INTERVAL) {
@@ -448,7 +450,11 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 		return;
 	}
 	TcpConnection *conn = getConnection(sock);
-	if(!conn || !conn->pcb)
+	if(!conn)
+		return;
+	else
+		removeConnection(conn);
+	if(!conn->pcb)
 		return;
 	if(conn->pcb->state == SYN_SENT) {
 		dwr(MSG_DEBUG," closeConnection(): invalid PCB state (SYN_SENT) -- cannot close right now\n");
@@ -457,7 +463,6 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
 		dwr(MSG_ERROR," closeConnection(): Error while calling tcp_close()\n");
 	}
-	removeConnection(conn);
 	if(!sock)
 		return;
 	close(_phy.getDescriptor(sock)); // close underlying fd
@@ -922,6 +927,7 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
+	dwr(MSG_DEBUG," nc_poll()\n");
 	return ERR_OK;
 }
 
