@@ -56,8 +56,8 @@
 
 #define APPLICATION_POLL_FREQ 			2
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
-#define STATUS_TMR_INTERVAL				250 // How often we check connection statuses (in ms)
-#define DEFAULT_READ_BUFFER_SIZE		1024 * 1024
+#define STATUS_TMR_INTERVAL				1000 // How often we check connection statuses (in ms)
+#define DEFAULT_READ_BUFFER_SIZE		1024 * 1024 * 2
 
 namespace ZeroTier {
 
@@ -360,7 +360,7 @@ void NetconEthernetTap::threadMain()
 				fcntl(fd, F_SETFL, O_NONBLOCK);
 				unsigned char tmpbuf[BUF_SZ];
 				int n = read(fd,&tmpbuf,BUF_SZ);
-				//dwr(MSG_DEBUG,"  tap_thread(): <%x> n = %d\n", tcp_connections[i]->sock, n);
+				dwr(MSG_DEBUG,"  tap_thread(): <%x> conn->idx = %d\n", tcp_connections[i]->sock, tcp_connections[i]->idx);
 				if(tcp_connections[i]->pcb->state == SYN_SENT) {
 					dwr(MSG_DEBUG,"  tap_thread(): <%x> state = SYN_SENT, candidate for removal\n", tcp_connections[i]->sock);
 				}
@@ -460,6 +460,7 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 		dwr(MSG_DEBUG," closeConnection(): invalid PCB state (SYN_SENT) -- cannot close right now\n");
 		return;
 	}	
+	dwr(MSG_DEBUG," closeConnection(): PCB->state = %d\n", conn->pcb->state);
 	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
 		dwr(MSG_ERROR," closeConnection(): Error while calling tcp_close()\n");
 	}
@@ -791,7 +792,6 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
  */
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
-	dwr(MSG_DEBUG," nc_recved()\n");
 	Larg *l = (Larg*)arg;
 	int n;
   	struct pbuf* q = p;
@@ -818,6 +818,8 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 	while(p != NULL) { // Cycle through pbufs and write them to the socket
 		if(p->len <= 0)
 			break; 
+		else
+			dwr(MSG_DEBUG," nc_recved(): p->len = %d\n", p->len);
 		if((n = l->tap->_phy.streamSend(l->conn->sock,p->payload, p->len)) > 0) {
 			if(n < p->len) {
 		    	dwr(MSG_INFO," nc_recved(): unable to write entire pbuf to stream\n");
@@ -825,8 +827,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 		  	l->tap->lwipstack->_tcp_recved(tpcb, n);
 		  	dwr(MSG_DEBUG," nc_recved(): wrote %d bytes to <%x>\n", n, l->conn->sock);
 		}
-		else
-			dwr(MSG_INFO," nc_recved(): No data written to stream <%d>\n", l->conn->sock);
+		else{
+			perror("\n");
+			dwr(MSG_INFO," nc_recved(): No data written to stream <%x>\n", l->conn->sock);
+		}
 		p = p->next;
 	}
 	l->tap->lwipstack->_pbuf_free(q); // free pbufs
@@ -927,7 +931,6 @@ void NetconEthernetTap::nc_err(void *arg, err_t err)
  */
 err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *tpcb)
 {
-	dwr(MSG_DEBUG," nc_poll()\n");
 	return ERR_OK;
 }
 

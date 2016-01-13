@@ -88,16 +88,6 @@ static int connected_to_service(int sockfd)
   return 0;
 }
 
-/*static void my_dest(void) __attribute__ ((destructor));
-static void my_dest(void) {
-  dwr(MSG_DEBUG,"closing connections to service...\n");
-  rpc_mutex_destroy();
-}*/
-
-/* Private Function Prototypes */
-/*static void _init(void) __attribute__ ((constructor));
-static void _init(void) { set_up_intercept(); } */
-
 /* get symbols and initialize mutexes */
 static int set_up_intercept()
 {
@@ -137,18 +127,13 @@ int setsockopt(SETSOCKOPT_SIG)
     return realsetsockopt(socket, level, option_name, option_value, option_len);
 
   dwr(MSG_DEBUG,"setsockopt(%d)\n", socket);
-  /* return(realsetsockopt(socket, level, option_name, option_value, option_len)); */
   if(level == SOL_IPV6 && option_name == IPV6_V6ONLY)
     return 0;
-  if(level == SOL_IP && option_name == IP_TTL)
+  if(level == SOL_IP && (option_name == IP_TTL || option_name == IP_TOS))
     return 0;
   if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE))
     return 0;
-  /* make sure we don't touch any standard outputs */
-  if(socket == STDIN_FILENO || socket == STDOUT_FILENO || socket == STDERR_FILENO)
-    return(realsetsockopt(socket, level, option_name, option_value, option_len));
-  int err = realsetsockopt(socket, level, option_name, option_value, option_len);
-  if(err < 0)
+  if(realsetsockopt(socket, level, option_name, option_value, option_len) < 0)
     perror("setsockopt():\n");
   return 0;
 }
@@ -160,13 +145,9 @@ int setsockopt(SETSOCKOPT_SIG)
 /* int sockfd, int level, int optname, void *optval, socklen_t *optlen */
 int getsockopt(GETSOCKOPT_SIG)
 {
-  if (!set_up_intercept())
-    return realgetsockopt(sockfd, level, optname, optval, optlen);
-
   dwr(MSG_DEBUG,"getsockopt(%d)\n", sockfd);
-  if(!connected_to_service(sockfd)) {
+  if (!set_up_intercept() || !connected_to_service(sockfd))
     return realgetsockopt(sockfd, level, optname, optval, optlen);
-  }
   if(optname == SO_TYPE) {
     int* val = (int*)optval;
     *val = 2;
@@ -508,7 +489,7 @@ int getsockname(GETSOCKNAME_SIG)
   if(rpcfd > -1)
     if(read(rpcfd, &addrbuf, sizeof(struct sockaddr_storage)) > 0)
      close(rpcfd);
-   
+
   struct sockaddr_storage sock_storage;
   memcpy(&sock_storage, addrbuf, sizeof(struct sockaddr_storage));
   *addrlen = sizeof(struct sockaddr_in);
