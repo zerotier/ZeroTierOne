@@ -71,7 +71,7 @@ we simply ask the service via an RPC */
 
 static int connected_to_service(int sockfd)
 {
-  dwr(MSG_DEBUG_EXTRA,"connected_to_service():\n");
+  dwr(MSG_DEBUG,"connected_to_service():\n");
   socklen_t len;
   struct sockaddr_storage addr;
   len = sizeof addr;
@@ -80,11 +80,11 @@ static int connected_to_service(int sockfd)
   if (addr.ss_family == AF_LOCAL || addr.ss_family == AF_LOCAL) {
     addr_un = (struct sockaddr_un*)&addr;
     if(strcmp(addr_un->sun_path, netpath) == 0) {
-      dwr(MSG_DEBUG_EXTRA,"connected_to_service(): Yes, %s\n", addr_un->sun_path);
+      dwr(MSG_DEBUG,"connected_to_service(): Yes, %s\n", addr_un->sun_path);
       return 1;
     }
   }
-  dwr(MSG_DEBUG_EXTRA,"connected_to_service(): Not connected to service\n");
+  dwr(MSG_DEBUG,"connected_to_service(): Not connected to service\n");
   return 0;
 }
 
@@ -488,7 +488,7 @@ int getsockname(GETSOCKNAME_SIG)
     return realgetsockname(sockfd, addr, addrlen);
 
   dwr(MSG_DEBUG,"getsockname(%d)\n", sockfd);
-  if(connected_to_service(sockfd) == 0) {
+  if(!connected_to_service(sockfd)) {
     dwr(MSG_DEBUG,"getsockname(): not used by service\n");
     return realgetsockname(sockfd, addr, addrlen);
   }
@@ -507,8 +507,8 @@ int getsockname(GETSOCKNAME_SIG)
 
   if(rpcfd > -1)
     if(read(rpcfd, &addrbuf, sizeof(struct sockaddr_storage)) > 0)
-      close(rpcfd);
-
+     close(rpcfd);
+   
   struct sockaddr_storage sock_storage;
   memcpy(&sock_storage, addrbuf, sizeof(struct sockaddr_storage));
   *addrlen = sizeof(struct sockaddr_in);

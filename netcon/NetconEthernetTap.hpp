@@ -137,6 +137,8 @@ private:
 	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
 
 	TcpConnection *getConnection(PhySocket *sock);
+	void addConnection(TcpConnection *conn);
+	void removeConnection(TcpConnection *conn);
 	void closeConnection(PhySocket *sock);
 
 	ip_addr_t convert_ip(struct sockaddr_in * addr)
@@ -171,7 +173,7 @@ private:
 	Mutex _multicastGroups_m;
 
 	std::vector<InetAddress> _ips;
-	Mutex _ips_m;
+	Mutex _ips_m, _tcpconns_m;
 
 	unsigned int _mtu;
 	volatile bool _enabled;

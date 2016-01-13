@@ -39,7 +39,8 @@ LWIPDIR=../ext/lwip/src
 
 CCDEP=gcc
 CC=gcc
-CFLAGS=-O3 -g -Wall -DIPv4 -fPIC
+CFLAGS=-O3 -g -Wall -DIPv4 -fPIC 
+#-DLWIP_DEBUG
 
 CFLAGS:=$(CFLAGS) \
 	-I$(LWIPDIR)/include -I$(LWIPARCH)/include -I$(LWIPDIR)/include/ipv4 \

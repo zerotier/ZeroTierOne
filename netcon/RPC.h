@@ -21,8 +21,7 @@
 #define CANARY_IDX			1
 #define STRUCT_IDX			CANARY_IDX+CANARY_SIZE
 
-#define BUF_SZ          	256
-#define PAYLOAD_SZ			223 /* BUF_SZ-IDX_PAYLOAD */
+#define BUF_SZ          	512
 
 #define ERR_OK          	0
 
