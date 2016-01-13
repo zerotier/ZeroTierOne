@@ -100,7 +100,7 @@ int main(int argc,char **argv)
 	std::vector<World::Root> roots;
 
 	const uint64_t id = ZT_WORLD_ID_EARTH;
-	const uint64_t ts = 1450381818269ULL; // December 17th, 2015
+	const uint64_t ts = 1452708876314ULL; // January 13th, 2016
 
 	// Alice
 	roots.push_back(World::Root());
@@ -133,12 +133,6 @@ int main(int argc,char **argv)
 	roots.back().stableEndpoints.push_back(InetAddress("2001:19f0:7000:9bc9:5400:00ff:fe15:c4f5/9993")); // Tokyo
 	roots.back().stableEndpoints.push_back(InetAddress("159.203.2.154/9993")); // Toronto
 	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:cad:d0::26:7001/9993")); // Toronto
-
-	// old US-SFO, which is being kept alive for now
-	roots.push_back(World::Root());
-	roots.back().identity = Identity("7e19876aba:0:2a6e2b2318930f60eb097f70d0f4b028b2cd6d3d0c63c014b9039ff35390e41181f216fb2e6fa8d95c1ee9667156411905c3dccfea78d8c6dfafba688170b3fa");
-	roots.back().stableEndpoints.push_back(InetAddress("198.199.97.220/9993"));
-	roots.back().stableEndpoints.push_back(InetAddress("2604:a880:1:20::c5:f001/9993"));
 
 	// END WORLD DEFINITION
 	// =========================================================================
