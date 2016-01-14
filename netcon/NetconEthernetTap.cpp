@@ -56,9 +56,8 @@
 
 #define APPLICATION_POLL_FREQ 			2
 #define ZT_LWIP_TCP_TIMER_INTERVAL 		5
-#define STATUS_TMR_INTERVAL				1000 // How often we check connection statuses (in ms)
-
-#define DEFAULT_READ_BUFFER_SIZE   1024 * 1024 * 2
+#define STATUS_TMR_INTERVAL				250 // How often we check connection statuses (in ms)
+#define DEFAULT_READ_BUFFER_SIZE   		1024 * 1024 * 2
 
 
 namespace ZeroTier {
@@ -118,13 +117,13 @@ public:
 
   bool pending, listening;
   int pid, idx;
-  unsigned long written, acked;
-
   PhySocket *rpcsock;
   PhySocket *sock;
   struct tcp_pcb *pcb;
   struct sockaddr_storage *addr;
   unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
+  unsigned char rcq[DEFAULT_READ_BUFFER_SIZE];
+  int rcqidx;
 };
 
 /*
@@ -162,9 +161,8 @@ NetconEthernetTap::NetconEthernetTap(
 {
 	char sockPath[4096],lwipPath[4096];
 	rpc_counter = -1;
-	rcqidx = 0;
 	Utils::snprintf(sockPath,sizeof(sockPath),"%s%snc_%.16llx",homePath,ZT_PATH_SEPARATOR_S,_nwid,ZT_PATH_SEPARATOR_S,(unsigned long long)nwid);
-  _dev = sockPath; // in netcon mode, set device to be just the network ID
+    _dev = sockPath; // in netcon mode, set device to be just the network ID
 
 	Utils::snprintf(lwipPath,sizeof(lwipPath),"%s%sliblwip.so",homePath,ZT_PATH_SEPARATOR_S);
 	lwipstack = new LWIPStack(lwipPath);
@@ -352,7 +350,7 @@ void NetconEthernetTap::threadMain()
 			status_remaining = STATUS_TMR_INTERVAL - since_status;
 
 
-			//dwr(MSG_DEBUG," tap_thread(): tcp\\jobs = {%d, %d}\n", tcp_connections.size(), jobmap.size());
+			dwr(MSG_DEBUG_EXTRA," tap_thread(): tcp\\jobs = {%d, %d}\n", tcp_connections.size(), jobmap.size());
 			for(size_t i=0; i<tcp_connections.size(); i++) {
 
 				// No TCP connections are associated, this is a candidate for removal
@@ -363,9 +361,9 @@ void NetconEthernetTap::threadMain()
 				fcntl(fd, F_SETFL, O_NONBLOCK);
 				unsigned char tmpbuf[BUF_SZ];
 				int n = read(fd,&tmpbuf,BUF_SZ);
-				//dwr(MSG_DEBUG,"  tap_thread(): <%x> conn->idx = %d\n", tcp_connections[i]->sock, tcp_connections[i]->idx);
+				dwr(MSG_DEBUG_EXTRA,"  tap_thread(): <%x> conn->idx = %d\n", tcp_connections[i]->sock, tcp_connections[i]->idx);
 				if(tcp_connections[i]->pcb->state == SYN_SENT) {
-					dwr(MSG_DEBUG,"  tap_thread(): <%x> state = SYN_SENT, candidate for removal\n", tcp_connections[i]->sock);
+					dwr(MSG_DEBUG_EXTRA,"  tap_thread(): <%x> state = SYN_SENT, candidate for removal\n", tcp_connections[i]->sock);
 				}
 				if((n < 0 && errno != EAGAIN) || (n == 0 && errno == EAGAIN)) {
 					dwr(MSG_DEBUG," tap_thread(): closing sock (%x)\n", tcp_connections[i]->sock);
@@ -435,9 +433,8 @@ TcpConnection *NetconEthernetTap::getConnection(PhySocket *sock)
 {
 	Mutex::Lock _l(_tcpconns_m);
 	for(size_t i=0; i<tcp_connections.size(); i++) {
-		if(tcp_connections[i]->sock == sock){
+		if(tcp_connections[i]->sock == sock)
 			return tcp_connections[i];
-		}
 	}
 	return NULL;
 }
@@ -473,6 +470,9 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 	_phy.close(sock, false); // close PhySocket
 }
 
+/*
+ * Signals us to close the TcpConnection associated with this PhySocket
+ */
 void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr) {
 	dwr(MSG_DEBUG,"\nphyOnUnixClose(): close connection = %x\n", sock);
 	closeConnection(sock);
@@ -492,7 +492,9 @@ void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void *
 	dwr(MSG_DEBUG,"\nphyOnUnixAccept(): new connection = %x\n", sockN);
 }
 
-/* Unpacks the buffer from an RPC command */
+/* 
+ * Unpacks the buffer from an RPC command
+ */
 void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid, 
 	int &rpc_count, char (timestamp[20]), char (CANARY[sizeof(uint64_t)]), char &cmd, void* &payload)
 {
@@ -505,22 +507,24 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid,
 	memcpy(CANARY, &buf[IDX_PAYLOAD+1], CANARY_SIZE);
 }
 
-
+/* 
+ * Notifies us that we can write to the application's socket
+ */
 void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 {
 	TcpConnection *conn = getConnection(sock);
-	int len = rcqidx;
-	int n = _phy.streamSend(conn->sock, rcq, len);
+	int len = conn->rcqidx;
+	int n = _phy.streamSend(conn->sock, conn->rcq, len);
 	if(n > 0) {
 		if(n < len) {
 		    dwr(MSG_INFO,"\n phyOnUnixWritable(): unable to write entire \"block\" to stream\n");
 		}
-		memcpy(rcq, rcq+n, rcqidx-n);
-	  	rcqidx -= n;
+		memcpy(conn->rcq, conn->rcq+n, conn->rcqidx-n);
+	  	conn->rcqidx -= n;
 	  	lwipstack->_tcp_recved(conn->pcb, n);
-	  	if(rcqidx == 0)
+	  	if(conn->rcqidx == 0)
 	  		_phy.setNotifyWritable(conn->sock, false); // Nothing more to be notified about
-		dwr(MSG_DEBUG," phyOnUnixWritable(): wrote %d bytes from RX buffer to <%x> (idx = %d)\n", n, conn->sock, rcqidx);
+		dwr(MSG_DEBUG," phyOnUnixWritable(): wrote %d bytes from RX buffer to <%x> (idx = %d)\n", n, conn->sock, conn->rcqidx);
 	}
 	else {
 		perror("\n");
@@ -528,7 +532,6 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 		dwr(MSG_INFO," phyOnUnixWritable(): No data written to stream <%x>\n", conn->sock);
 	}
 }
-
 
 /*
  * Processes incoming data on a client-specific RPC connection
@@ -691,10 +694,15 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 	}
 }
 
+/*
+ * Sends a return value to the intercepted application
+ */
 int NetconEthernetTap::send_return_value(PhySocket *sock, int retval, int _errno = 0){
 	return send_return_value(_phy.getDescriptor(sock), retval, _errno);
 }
-
+/*
+ * Sends a return value to the intercepted application
+ */
 int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 {
 	dwr(MSG_DEBUG," send_return_value(): fd = %d, retval = %d, errno = %d\n", fd, retval, _errno);
@@ -752,7 +760,6 @@ int NetconEthernetTap::send_return_value(int fd, int retval, int _errno = 0)
 	[I] ENOTSOCK - The descriptor references a file, not a socket.
 	[I] EOPNOTSUPP - The referenced socket is not of type SOCK_STREAM.
 	[ ] EPROTO - Protocol error.
-
  *
  */
 err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
@@ -821,7 +828,6 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
 err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 {
 	Larg *l = (Larg*)arg;
-	NetconEthernetTap *tap = l->tap;
 	int tot = 0;
   	struct pbuf* q = p;
 
@@ -832,10 +838,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 	if(p == NULL) {
 		if(l->conn && !l->conn->listening) {
 			dwr(MSG_INFO," nc_recved(): closing connection\n");
-			if(tap->lwipstack->_tcp_close(l->conn->pcb) != ERR_OK) {
+			if(l->tap->lwipstack->_tcp_close(l->conn->pcb) != ERR_OK) {
 				dwr(MSG_ERROR," nc_recved(): Error while calling tcp_close()\n");
 			}
-			tap->closeConnection(l->conn->sock);
+			l->tap->closeConnection(l->conn->sock);
 			return ERR_ABRT;
 		}
 		else {
@@ -848,20 +854,20 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 	while(p != NULL) {
 		if(p->len <= 0)
 			break;
-		int avail = DEFAULT_READ_BUFFER_SIZE - tap->rcqidx;
+		int avail = DEFAULT_READ_BUFFER_SIZE - l->conn->rcqidx;
 		int len = p->len;
 		if(avail < len) {
 			dwr(MSG_DEBUG," nc_recv(): not enough room (%d bytes) on RX buffer\n", avail);
 			exit(1);
 		}
-		memcpy(tap->rcq + (tap->rcqidx), p->payload, len);
-		tap->rcqidx += len;
-		tap->_phy.setNotifyWritable(l->conn->sock, true); // Signal that we're interested in knowing when we can write
+		memcpy(l->conn->rcq + (l->conn->rcqidx), p->payload, len);
+		l->conn->rcqidx += len;
+		l->tap->_phy.setNotifyWritable(l->conn->sock, true); // Signal that we're interested in knowing when we can write
 		p = p->next;
 		tot += len;
 	}
-	dwr(MSG_DEBUG," nc_recv(): wrote %d bytes to RX buffer (idx = %d)\n", tot, tap->rcqidx);
-	tap->lwipstack->_pbuf_free(q);
+	dwr(MSG_DEBUG," nc_recv(): wrote %d bytes to RX buffer for <%x> (idx = %d)\n", tot, l->conn->sock, l->conn->rcqidx);
+	l->tap->lwipstack->_pbuf_free(q);
 	return ERR_OK;
 }
 
@@ -1329,8 +1335,9 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, PhySocket *rpcsock, TcpC
 	}
 }
 
-
-
+/* 
+ * Writes data from the application's socket to the LWIP connection
+ */
 void NetconEthernetTap::handle_write(TcpConnection *conn)
 {
 	dwr(MSG_DEBUG_EXTRA,"handle_write(): conn->idx = %d, conn->sock = %x\n", conn->idx, conn->sock);
@@ -1376,11 +1383,9 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 			}
 			else {
 				sz = (conn->idx)-r;
-				if(sz) {
+				if(sz)
 					memmove(&conn->buf, (conn->buf+r), sz);
-				}
 				conn->idx -= r;
-				conn->written+=r;
 				return;
 			}
 		}
