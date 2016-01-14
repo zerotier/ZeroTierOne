@@ -974,6 +974,11 @@ public:
 				case ZT_PHY_SOCKET_UNIX_IN: {
 #ifdef __UNIX_LIKE__
 					ZT_PHY_SOCKFD_TYPE sock = s->sock; // if closed, s->sock becomes invalid as s is no longer dereferencable
+					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
+						try {
+							_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr));
+						} catch ( ... ) {}
+					}
 					if (FD_ISSET(sock,&rfds)) {
 						long n = (long)::read(sock,buf,sizeof(buf));
 						if (n <= 0) {
@@ -983,11 +988,6 @@ public:
 								_handler->phyOnUnixData((PhySocket *)&(*s),&(s->uptr),(void *)buf,(unsigned long)n);
 							} catch ( ... ) {}
 						}
-					}
-					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
-						try {
-							//_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr));
-						} catch ( ... ) {}
 					}
 #endif // __UNIX_LIKE__
 				}	break;

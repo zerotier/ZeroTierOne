@@ -46,6 +46,8 @@
 
 #include "netif/etharp.h"
 
+#define DEFAULT_READ_BUFFER_SIZE   1024 * 1024 * 2
+
 struct tcp_pcb;
 struct socket_st;
 struct listen_st;
@@ -134,6 +136,7 @@ private:
 	void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN);
 	void phyOnUnixClose(PhySocket *sock,void **uptr);
 	void phyOnUnixData(PhySocket *sock,void **uptr,void *data,unsigned long len);
+	void phyOnUnixWritable(PhySocket *sock,void **uptr);
 	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
 
 	TcpConnection *getConnection(PhySocket *sock);
@@ -159,6 +162,9 @@ private:
 	std::vector<TcpConnection*> tcp_connections;
 	std::map<PhySocket*, pid_t> pidmap;
 
+
+	char rcq[DEFAULT_READ_BUFFER_SIZE];
+	int rcqidx;
 	std::map<uint64_t, std::pair<PhySocket*, void*> > jobmap;
 
 	pid_t rpc_counter;
