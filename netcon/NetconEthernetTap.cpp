@@ -116,14 +116,13 @@ class TcpConnection
 public:
 
   bool pending, listening;
-  int pid, idx;
+  int pid, txidx, rxidx;
   PhySocket *rpcsock;
   PhySocket *sock;
   struct tcp_pcb *pcb;
   struct sockaddr_storage *addr;
-  unsigned char buf[DEFAULT_READ_BUFFER_SIZE];
-  unsigned char rcq[DEFAULT_READ_BUFFER_SIZE];
-  int rcqidx;
+  unsigned char txbuf[DEFAULT_READ_BUFFER_SIZE];
+  unsigned char rxbuf[DEFAULT_READ_BUFFER_SIZE];
 };
 
 /*
@@ -361,7 +360,7 @@ void NetconEthernetTap::threadMain()
 				fcntl(fd, F_SETFL, O_NONBLOCK);
 				unsigned char tmpbuf[BUF_SZ];
 				int n = read(fd,&tmpbuf,BUF_SZ);
-				dwr(MSG_DEBUG_EXTRA,"  tap_thread(): <%x> conn->idx = %d\n", tcp_connections[i]->sock, tcp_connections[i]->idx);
+				dwr(MSG_DEBUG_EXTRA,"  tap_thread(): <%x> conn->txidx = %d\n", tcp_connections[i]->sock, tcp_connections[i]->txidx);
 				if(tcp_connections[i]->pcb->state == SYN_SENT) {
 					dwr(MSG_DEBUG_EXTRA,"  tap_thread(): <%x> state = SYN_SENT, candidate for removal\n", tcp_connections[i]->sock);
 				}
@@ -383,7 +382,7 @@ void NetconEthernetTap::threadMain()
 
 			// Makeshift poll
 			for(size_t i=0; i<tcp_connections.size(); i++) {
-				if(tcp_connections[i]->idx > 0){
+				if(tcp_connections[i]->txidx > 0){
 					lwipstack->_lock.lock();
 					handle_write(tcp_connections[i]);
 					lwipstack->_lock.unlock();
@@ -513,18 +512,18 @@ void NetconEthernetTap::unload_rpc(void *data, pid_t &pid, pid_t &tid,
 void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 {
 	TcpConnection *conn = getConnection(sock);
-	int len = conn->rcqidx;
-	int n = _phy.streamSend(conn->sock, conn->rcq, len);
+	int len = conn->rxidx;
+	int n = _phy.streamSend(conn->sock, conn->rxbuf, len);
 	if(n > 0) {
 		if(n < len) {
 		    dwr(MSG_INFO,"\n phyOnUnixWritable(): unable to write entire \"block\" to stream\n");
 		}
-		memcpy(conn->rcq, conn->rcq+n, conn->rcqidx-n);
-	  	conn->rcqidx -= n;
+		memcpy(conn->rxbuf, conn->rxbuf+n, conn->rxidx-n);
+	  	conn->rxidx -= n;
 	  	lwipstack->_tcp_recved(conn->pcb, n);
-	  	if(conn->rcqidx == 0)
+	  	if(conn->rxidx == 0)
 	  		_phy.setNotifyWritable(conn->sock, false); // Nothing more to be notified about
-		dwr(MSG_DEBUG," phyOnUnixWritable(): wrote %d bytes from RX buffer to <%x> (idx = %d)\n", n, conn->sock, conn->rcqidx);
+		dwr(MSG_DEBUG," phyOnUnixWritable(): wrote %d bytes from RX buffer to <%x> (idx = %d)\n", n, conn->sock, conn->rxidx);
 	}
 	else {
 		perror("\n");
@@ -610,7 +609,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 			return;
 
 		if(padding_pos == -1) { // [DATA]
-			memcpy(&conn->buf[conn->idx], buf, wlen);
+			memcpy(&conn->txbuf[conn->txidx], buf, wlen);
 		}
 		else { // Padding found, implies a token is present
 			// [TOKEN]
@@ -622,30 +621,30 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 				if(len > TOKEN_SIZE && token_pos == 0) {
 					wlen = len - TOKEN_SIZE;
 					data_start = padding_pos+CANARY_PADDING_SIZE;
-					memcpy((&conn->buf)+conn->idx, buf+data_start, wlen);
+					memcpy((&conn->txbuf)+conn->txidx, buf+data_start, wlen);
 				}
 				// [DATA] + [TOKEN]
 				if(len > TOKEN_SIZE && token_pos > 0 && token_pos == len - TOKEN_SIZE) {
 					wlen = len - TOKEN_SIZE;
 					data_start = 0;
-					memcpy((&conn->buf)+conn->idx, buf+data_start, wlen);												
+					memcpy((&conn->txbuf)+conn->txidx, buf+data_start, wlen);												
 				}
 				// [DATA] + [TOKEN] + [DATA]
 				if(len > TOKEN_SIZE && token_pos > 0 && len > (token_pos + TOKEN_SIZE)) {
 					wlen = len - TOKEN_SIZE;
 					data_start = 0;
 					data_end = padding_pos-CANARY_SIZE;
-					memcpy((&conn->buf)+conn->idx, buf+data_start, (data_end-data_start)+1);
-					memcpy((&conn->buf)+conn->idx, buf+(padding_pos+CANARY_PADDING_SIZE), len-(token_pos+TOKEN_SIZE));
+					memcpy((&conn->txbuf)+conn->txidx, buf+data_start, (data_end-data_start)+1);
+					memcpy((&conn->txbuf)+conn->txidx, buf+(padding_pos+CANARY_PADDING_SIZE), len-(token_pos+TOKEN_SIZE));
 				}
 			}
 		}
 		// Write data from stream
-		if(conn->idx > (DEFAULT_READ_BUFFER_SIZE / 2)) {
+		if(conn->txidx > (DEFAULT_READ_BUFFER_SIZE / 2)) {
 			_phy.setNotifyReadable(sock, false);
 		}
 		lwipstack->_lock.lock();
-		conn->idx += wlen;
+		conn->txidx += wlen;
 		handle_write(conn);
 		lwipstack->_lock.unlock();
 	}
@@ -854,19 +853,19 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *tpcb, struct pbuf 
 	while(p != NULL) {
 		if(p->len <= 0)
 			break;
-		int avail = DEFAULT_READ_BUFFER_SIZE - l->conn->rcqidx;
+		int avail = DEFAULT_READ_BUFFER_SIZE - l->conn->rxidx;
 		int len = p->len;
 		if(avail < len) {
 			dwr(MSG_DEBUG," nc_recv(): not enough room (%d bytes) on RX buffer\n", avail);
 			exit(1);
 		}
-		memcpy(l->conn->rcq + (l->conn->rcqidx), p->payload, len);
-		l->conn->rcqidx += len;
+		memcpy(l->conn->rxbuf + (l->conn->rxidx), p->payload, len);
+		l->conn->rxidx += len;
 		l->tap->_phy.setNotifyWritable(l->conn->sock, true); // Signal that we're interested in knowing when we can write
 		p = p->next;
 		tot += len;
 	}
-	dwr(MSG_DEBUG," nc_recv(): wrote %d bytes to RX buffer for <%x> (idx = %d)\n", tot, l->conn->sock, l->conn->rcqidx);
+	dwr(MSG_DEBUG," nc_recv(): wrote %d bytes to RX buffer for <%x> (idx = %d)\n", tot, l->conn->sock, l->conn->rxidx);
 	l->tap->lwipstack->_pbuf_free(q);
 	return ERR_OK;
 }
@@ -985,7 +984,7 @@ err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *tpcb, u16_t len)
 {
 	Larg *l = (Larg*)arg;
 	if(len) {
-		if(l->conn->idx < DEFAULT_READ_BUFFER_SIZE / 2) {
+		if(l->conn->txidx < DEFAULT_READ_BUFFER_SIZE / 2) {
 			l->tap->_phy.setNotifyReadable(l->conn->sock, true);
 			l->tap->_phy.whack();
 		}
@@ -1340,7 +1339,7 @@ void NetconEthernetTap::handle_connect(PhySocket *sock, PhySocket *rpcsock, TcpC
  */
 void NetconEthernetTap::handle_write(TcpConnection *conn)
 {
-	dwr(MSG_DEBUG_EXTRA,"handle_write(): conn->idx = %d, conn->sock = %x\n", conn->idx, conn->sock);
+	dwr(MSG_DEBUG_EXTRA,"handle_write(): conn->txidx = %d, conn->sock = %x\n", conn->txidx, conn->sock);
 	if(!conn) {
 		dwr(MSG_ERROR," handle_write(): invalid connection\n");
 		return;
@@ -1358,22 +1357,22 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 		_phy.setNotifyReadable(conn->sock, false);
 		return;
 	}
-	if(conn->idx <= 0) {
-		dwr(MSG_DEBUG,"handle_write(): conn->idx <= 0, nothing in buffer to write\n");
+	if(conn->txidx <= 0) {
+		dwr(MSG_DEBUG,"handle_write(): conn->txidx <= 0, nothing in buffer to write\n");
 		return;
 	}
 	if(!conn->listening)
 		lwipstack->_tcp_output(conn->pcb);
 
 	if(conn->sock) {
-		r = conn->idx < sndbuf ? conn->idx : sndbuf;
+		r = conn->txidx < sndbuf ? conn->txidx : sndbuf;
 		dwr(MSG_DEBUG,"handle_write(): r = %d, sndbuf = %d\n", r, sndbuf);
 		/* Writes data pulled from the client's socket buffer to LWIP. This merely sends the
 		 * data to LWIP to be enqueued and eventually sent to the network. */
 		if(r > 0) {
 			// NOTE: this assumes that lwipstack->_lock is locked, either
 			// because we are in a callback or have locked it manually.
-			err = lwipstack->_tcp_write(conn->pcb, &conn->buf, r, TCP_WRITE_FLAG_COPY);
+			err = lwipstack->_tcp_write(conn->pcb, &conn->txbuf, r, TCP_WRITE_FLAG_COPY);
 			lwipstack->_tcp_output(conn->pcb);
 			if(err != ERR_OK) {
 				dwr(MSG_ERROR," handle_write(): error while writing to PCB, (err = %d)\n", err);
@@ -1382,10 +1381,10 @@ void NetconEthernetTap::handle_write(TcpConnection *conn)
 				return;
 			}
 			else {
-				sz = (conn->idx)-r;
+				sz = (conn->txidx)-r;
 				if(sz)
-					memmove(&conn->buf, (conn->buf+r), sz);
-				conn->idx -= r;
+					memmove(&conn->txbuf, (conn->txbuf+r), sz);
+				conn->txidx -= r;
 				return;
 			}
 		}
