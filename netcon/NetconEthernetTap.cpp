@@ -439,8 +439,8 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 		removeConnection(conn);
 	if(!conn->pcb)
 		return;
-	if(conn->pcb->state == SYN_SENT) {
-		dwr(MSG_DEBUG," closeConnection(): invalid PCB state (SYN_SENT) -- cannot close right now\n");
+	if(conn->pcb->state == SYN_SENT || conn->pcb->state == CLOSE_WAIT) {
+		dwr(MSG_DEBUG," closeConnection(): invalid PCB state for this operation. ignoring.\n");
 		return;
 	}	
 	dwr(MSG_DEBUG," closeConnection(): PCB->state = %d\n", conn->pcb->state);
@@ -488,7 +488,6 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 	} else {
 		perror("\n");
 		dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d\n", errno);
-		dwr(MSG_ERROR," phyOnUnixWritable(): no data written to stream <%x>\n", conn->sock);
 	}
 }
 
@@ -734,9 +733,8 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *PCB, struct pbuf *
 	if(p == NULL) {
 		if(l->conn && !l->conn->listening) {
 			dwr(MSG_INFO," nc_recved(): closing connection\n");
-			if(l->tap->lwipstack->_tcp_close(l->conn->pcb) != ERR_OK) {
-				dwr(MSG_ERROR," nc_recved(): error while calling tcp_close()\n");
-			}
+			//if(l->tap->lwipstack->_tcp_close(l->conn->pcb) != ERR_OK)
+			//	dwr(MSG_ERROR," nc_recved(): error while calling tcp_close()\n");
 			l->tap->closeConnection(l->conn->sock);
 			return ERR_ABRT;
 		}
@@ -758,7 +756,7 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *PCB, struct pbuf *
 		tot += len;
 	}
 	if(tot)
-		l->tap->_phy.setNotifyWritable(l->conn->sock, true); // Signal that we're interested in knowing when we can write
+		l->tap->_phy.setNotifyWritable(l->conn->sock, true);
 	l->tap->lwipstack->_pbuf_free(q);
 	return ERR_OK;
 }
@@ -913,7 +911,7 @@ void NetconEthernetTap::handleBind(PhySocket *sock, PhySocket *rpcSock, void **u
 			sendReturnValue(rpcSock, -1, EINVAL);
 		}
 	} else {
-		dwr(MSG_ERROR," handleBind(): can't locate connection for PCB\n");
+		dwr(MSG_ERROR," handleBind(): unable to locate TcpConnection.\n");
 		sendReturnValue(rpcSock, -1, EBADF);
 	}
 }
@@ -922,7 +920,7 @@ void NetconEthernetTap::handleListen(PhySocket *sock, PhySocket *rpcSock, void *
 {
 	TcpConnection *conn = getConnection(sock);
 	if(!conn){
-		dwr(MSG_ERROR," handleListen(): unable to locate connection object\n");
+		dwr(MSG_ERROR," handleListen(): unable to locate TcpConnection.\n");
 		sendReturnValue(rpcSock, -1, EBADF);
 		return;
 	}
@@ -1055,18 +1053,16 @@ void NetconEthernetTap::handleWrite(TcpConnection *conn)
 	}
 	// How much we are currently allowed to write to the connection
 	int err, sz, r, sndbuf = conn->pcb->snd_buf;
-	if(sndbuf == 0) {
-		/* PCB send buffer is full,turn off readability notifications for the
+	if(!sndbuf) {
+		/* PCB send buffer is full, turn off readability notifications for the
 		corresponding PhySocket until nc_sent() is called and confirms that there is
 		now space on the buffer */
 		dwr(MSG_DEBUG," handleWrite(): sndbuf == 0, LWIP stack is full\n");
 		_phy.setNotifyReadable(conn->sock, false);
 		return;
 	}
-	if(conn->txsz <= 0) {
-		dwr(MSG_DEBUG,"handleWrite(): conn->txsz <= 0, nothing in buffer to write\n");
-		return;
-	}
+	if(conn->txsz <= 0)
+		return; // Nothing to write
 	if(!conn->listening)
 		lwipstack->_tcp_output(conn->pcb);
 
@@ -1080,7 +1076,7 @@ void NetconEthernetTap::handleWrite(TcpConnection *conn)
 			if(err != ERR_OK) {
 				dwr(MSG_ERROR," handleWrite(): error while writing to PCB, (err = %d)\n", err);
 				if(err == -1) 
-					dwr(MSG_DEBUG," handleWrite(): possibly out of memory\n");
+					dwr(MSG_DEBUG," handleWrite(): out of memory\n");
 				return;
 			} else {
 				sz = (conn->txsz)-r;

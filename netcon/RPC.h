@@ -46,11 +46,8 @@ extern "C" {
 #endif
 
 int get_retval(int);
-
-//#ifdef NETCON_INTERCEPT
 int rpc_join(const char * sockname);
 int rpc_send_command(char *path, int cmd, int forfd, void *data, int len);
-//#endif
 
 int get_new_fd(int sock);
 ssize_t sock_fd_write(int sock, int fd);

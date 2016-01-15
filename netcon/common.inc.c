@@ -42,7 +42,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H  1
 
-#define DEBUG_LEVEL     0
+#define DEBUG_LEVEL     4
 
 #define MSG_TRANSFER    1 // RX/TX specific statements
 #define MSG_ERROR       2 // Errors
