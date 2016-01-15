@@ -1241,7 +1241,7 @@ enum ZT_ResultCode ZT_Node_processBackgroundTasks(ZT_Node *node,uint64_t now,vol
  * @param uptr An arbitrary pointer to associate with this network (default: NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr = (void *)0);
+enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr);
 
 /**
  * Leave a network
@@ -1258,7 +1258,7 @@ enum ZT_ResultCode ZT_Node_join(ZT_Node *node,uint64_t nwid,void *uptr = (void *
  * @param uptr Target pointer is set to uptr (if not NULL)
  * @return OK (0) or error code if a fatal error condition has occurred
  */
-enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr = (void **)0);
+enum ZT_ResultCode ZT_Node_leave(ZT_Node *node,uint64_t nwid,void **uptr);
 
 /**
  * Subscribe to an Ethernet multicast group
