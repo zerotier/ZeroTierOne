@@ -54,10 +54,10 @@
 #include "common.inc.c"
 #include "RPC.h"
 
-#define APPLICATION_POLL_FREQ 			50
-#define ZT_LWIP_TCP_TIMER_INTERVAL 		5
-#define STATUS_TMR_INTERVAL				1000 // How often we check connection statuses (in ms)
-#define DEFAULT_BUF_SZ   				1024 * 1024 * 2
+#define APPLICATION_POLL_FREQ           50
+#define ZT_LWIP_TCP_TIMER_INTERVAL      5
+#define STATUS_TMR_INTERVAL             1000 // How often we check connection statuses (in ms)
+#define DEFAULT_BUF_SZ                  1024 * 1024 * 2
 
 
 namespace ZeroTier {
@@ -445,7 +445,7 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 	}	
 	dwr(MSG_DEBUG," closeConnection(): PCB->state = %d\n", conn->pcb->state);
 	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
-		dwr(MSG_ERROR," closeConnection(): Error while calling tcp_close()\n");
+		dwr(MSG_ERROR," closeConnection(): error while calling tcp_close()\n");
 	}
 	if(!sock)
 		return;
@@ -487,8 +487,8 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 	  	}
 	} else {
 		perror("\n");
-		dwr(MSG_ERROR, "errno = %d\n", errno);
-		dwr(MSG_ERROR," phyOnUnixWritable(): No data written to stream <%x>\n", conn->sock);
+		dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d\n", errno);
+		dwr(MSG_ERROR," phyOnUnixWritable(): no data written to stream <%x>\n", conn->sock);
 	}
 }
 
@@ -544,11 +544,11 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 		// Grab token, next we'll use it to look up an RPC job
 		if(canary_pos > -1) {
 			memcpy(&CANARY_num, buf+canary_pos, CANARY_SZ);
-			if(CANARY_num != 0) { // TODO: Added to address CANARY_num==0 bug, last seeen 20160108
+			if(CANARY_num != 0) {
 				// Find job
 				sockdata = jobmap[CANARY_num];
-				if(!sockdata.first) { // Stream before RPC
-					dwr(MSG_DEBUG,"       <%x> unable to locate job entry for %llu\n", sock, CANARY_num);
+				if(!sockdata.first) {
+					dwr(MSG_DEBUG," <%x> unable to locate job entry for %llu\n", sock, CANARY_num);
 					return;
 				}  else
 					foundJob = true;
@@ -607,7 +607,7 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 		unloadRPC(buf, pid, tid, rpcCount, timestamp, CANARY, cmd, payload);
 		dwr(MSG_DEBUG," <%x> RPC: (pid=%d, tid=%d, rpcCount=%d, timestamp=%s, cmd=%d)\n", 
 			sock, pid, tid, rpcCount, timestamp, cmd);
-		
+
 		switch(cmd) {
 			case RPC_BIND:
 				dwr(MSG_DEBUG,"  <%x> RPC_BIND\n", sock);
@@ -712,12 +712,12 @@ err_t NetconEthernetTap::nc_accept(void *arg, struct tcp_pcb *newPCB, err_t err)
 	    tap->lwipstack->_tcp_poll(newPCB, nc_poll, 1);
 	    if(conn->pcb->state == LISTEN) {
 	    	dwr(MSG_DEBUG," nc_accept(): can't call tcp_accept() on LISTEN socket (pcb = %x)\n", conn->pcb);
-	    	return ERR_OK; // TODO: Verify this is correct
+	    	return ERR_OK;
 	    }
 	    tcp_accepted(conn->pcb); // Let lwIP know that it can queue additional incoming connections
 		return ERR_OK;
   	} else
-  		dwr(MSG_ERROR," nc_accept(%d): can't locate Connection object for PCB.\n", fd);
+  		dwr(MSG_ERROR," nc_accept(): can't locate Connection object for PCB.\n");
   	return -1;
 }
 

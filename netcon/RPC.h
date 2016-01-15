@@ -3,43 +3,43 @@
 
 #include <stdint.h>
 
-#define CANARY_SZ				sizeof(uint64_t)
-#define PADDING_SZ				12
-#define PADDING 				0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89
+#define CANARY_SZ               sizeof(uint64_t)
+#define PADDING_SZ              12
+#define PADDING                 0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89
 
-#define RPC_PHRASE 				"zerotier\0"
-#define RPC_PHRASE_SZ			9
-#define RPC_TIMESTAMP_SZ		20
+#define RPC_PHRASE              "zerotier\0"
+#define RPC_PHRASE_SZ           9
+#define RPC_TIMESTAMP_SZ        20
 // 1st RPC section (metdata)
-#define IDX_SIGNAL_PHRASE		0
-#define IDX_PID					IDX_SIGNAL_PHRASE + RPC_PHRASE_SZ
-#define IDX_TID					sizeof(pid_t) + IDX_PID
-#define IDX_COUNT				IDX_TID + sizeof(pid_t)
-#define IDX_TIME				IDX_COUNT + sizeof(int)
-#define IDX_PAYLOAD				IDX_TIME + RPC_TIMESTAMP_SZ
+#define IDX_SIGNAL_PHRASE       0
+#define IDX_PID                 IDX_SIGNAL_PHRASE + RPC_PHRASE_SZ
+#define IDX_TID                 sizeof(pid_t) + IDX_PID
+#define IDX_COUNT               IDX_TID + sizeof(pid_t)
+#define IDX_TIME                IDX_COUNT + sizeof(int)
+#define IDX_PAYLOAD             IDX_TIME + RPC_TIMESTAMP_SZ
 // 2nd RPC section (payload and canary)
-#define CMD_ID_IDX				0
-#define CANARY_IDX				1
-#define STRUCT_IDX				CANARY_IDX+CANARY_SZ
+#define CMD_ID_IDX              0
+#define CANARY_IDX              1
+#define STRUCT_IDX              CANARY_IDX+CANARY_SZ
 
-#define BUF_SZ          		512
+#define BUF_SZ                  512
 
-#define ERR_OK          		0
+#define ERR_OK                  0
 
 /* RPC codes */
-#define RPC_UNDEFINED			0
-#define RPC_CONNECT				1
-#define RPC_CONNECT_SOCKARG		2
-#define RPC_CLOSE				3
-#define RPC_READ				4
-#define RPC_WRITE				5
-#define RPC_BIND				6
-#define RPC_ACCEPT			 	7
-#define RPC_LISTEN			 	8
-#define RPC_SOCKET			 	9
-#define RPC_SHUTDOWN		 	10
-#define RPC_GETSOCKNAME			11
-#define RPC_RETVAL				22
+#define RPC_UNDEFINED           0
+#define RPC_CONNECT             1
+#define RPC_CONNECT_SOCKARG     2
+#define RPC_CLOSE               3
+#define RPC_READ                4
+#define RPC_WRITE               5
+#define RPC_BIND                6
+#define RPC_ACCEPT              7
+#define RPC_LISTEN              8
+#define RPC_SOCKET              9
+#define RPC_SHUTDOWN            10
+#define RPC_GETSOCKNAME         11
+#define RPC_RETVAL              12
 
 #ifdef __cplusplus
 extern "C" {
