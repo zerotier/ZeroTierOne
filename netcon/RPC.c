@@ -113,22 +113,22 @@ int rpc_join(const char * sockname)
 int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
 {
   pthread_mutex_lock(&lock);
-  char c, padding[] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
-  char cmdbuf[BUF_SZ], CANARY[TOKEN_SIZE], metabuf[BUF_SZ];
-  memcpy(CANARY+CANARY_SIZE, padding, sizeof(padding));
+  char c, padding[] = {PADDING};
+  char cmdbuf[BUF_SZ], CANARY[CANARY_SZ+PADDING_SZ], metabuf[BUF_SZ];
+  memcpy(CANARY+CANARY_SZ, padding, sizeof(padding));
   uint64_t canary_num;
   // ephemeral RPC socket used only for this command
   int rpc_sock = rpc_join(path);
   // Generate token
   int fdrand = open("/dev/urandom", O_RDONLY);
 
-  if(read(fdrand, &CANARY, CANARY_SIZE) < 0) {
+  if(read(fdrand, &CANARY, CANARY_SZ) < 0) {
      fprintf(stderr,"unable to read from /dev/urandom for RPC canary data\n");
      return -1;  
   }
-  memcpy(&canary_num, CANARY, CANARY_SIZE);  
+  memcpy(&canary_num, CANARY, CANARY_SZ);  
   cmdbuf[CMD_ID_IDX] = cmd;
-  memcpy(&cmdbuf[CANARY_IDX], &canary_num, CANARY_SIZE);
+  memcpy(&cmdbuf[CANARY_IDX], &canary_num, CANARY_SZ);
   memcpy(&cmdbuf[STRUCT_IDX], data, len);
 
 #ifdef VERBOSE
@@ -140,7 +140,7 @@ int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
   time_t timestamp;
   timestamp = time(NULL);
   strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
-  memcpy(metabuf, RPC_PHRASE, RPC_PHRASE_SIZE); // Write signal phrase
+  memcpy(metabuf, RPC_PHRASE, RPC_PHRASE_SZ); // Write signal phrase
   
   memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); /* pid       */
   memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); /* tid       */
@@ -148,7 +148,7 @@ int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
   memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); /* timestamp */
 #endif
   /* Combine command flag+payload with RPC metadata */
-  memcpy(&metabuf[IDX_PAYLOAD], cmdbuf, len + 1 + CANARY_SIZE);
+  memcpy(&metabuf[IDX_PAYLOAD], cmdbuf, len + 1 + CANARY_SZ);
   
   // Write RPC
   int n_write = write(rpc_sock, &metabuf, BUF_SZ);
@@ -162,7 +162,7 @@ int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
     return -1;
   }
   if(c == 'z' && n_write > 0 && forfd > -1){
-    if(send(forfd, &CANARY, TOKEN_SIZE, 0) < 0) {
+    if(send(forfd, &CANARY, CANARY_SZ+PADDING_SZ, 0) < 0) {
       fprintf(stderr,"unable to write canary to stream\n");
       return -1;
     }
