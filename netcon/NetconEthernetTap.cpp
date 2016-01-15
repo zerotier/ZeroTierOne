@@ -733,8 +733,8 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *PCB, struct pbuf *
 	if(p == NULL) {
 		if(l->conn && !l->conn->listening) {
 			dwr(MSG_INFO," nc_recved(): closing connection\n");
-			//if(l->tap->lwipstack->_tcp_close(l->conn->pcb) != ERR_OK)
-			//	dwr(MSG_ERROR," nc_recved(): error while calling tcp_close()\n");
+			if(l->tap->lwipstack->_tcp_close(l->conn->pcb) != ERR_OK)
+				dwr(MSG_ERROR," nc_recved(): error while calling tcp_close()\n");
 			l->tap->closeConnection(l->conn->sock);
 			return ERR_ABRT;
 		}
