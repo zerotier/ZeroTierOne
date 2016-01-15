@@ -174,7 +174,7 @@ private:
 	Mutex _multicastGroups_m;
 
 	std::vector<InetAddress> _ips;
-	Mutex _ips_m, _tcpconns_m;
+	Mutex _ips_m, _tcpconns_m, _rx_buf_m, _tx_buf_m;
 
 	unsigned int _mtu;
 	volatile bool _enabled;
