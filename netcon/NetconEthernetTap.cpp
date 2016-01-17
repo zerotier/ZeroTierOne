@@ -54,12 +54,6 @@
 #include "common.inc.c"
 #include "RPC.h"
 
-#define APPLICATION_POLL_FREQ           50
-#define ZT_LWIP_TCP_TIMER_INTERVAL      5
-#define STATUS_TMR_INTERVAL             1000 // How often we check connection statuses (in ms)
-#define DEFAULT_BUF_SZ                  1024 * 1024 * 2
-
-
 namespace ZeroTier {
 
 // ---------------------------------------------------------------------------
@@ -104,32 +98,6 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   return ERR_OK;
 }
 
-/*
- * TCP connection administered by service
- */
-class TcpConnection
-{
-public:
-  bool listening;
-  int pid, txsz, rxsz;
-  PhySocket *rpcSock, *sock;
-  struct tcp_pcb *pcb;
-  struct sockaddr_storage *addr;
-  unsigned char txbuf[DEFAULT_BUF_SZ];
-  unsigned char rxbuf[DEFAULT_BUF_SZ];
-};
-
-/*
- * A helper class for passing a reference to _phy to LWIP callbacks as a "state"
- */
-class Larg
-{
-public:
-  NetconEthernetTap *tap;
-  TcpConnection *conn;
-  Larg(NetconEthernetTap *_tap, TcpConnection *conn) : tap(_tap), conn(conn) {}
-};
-
 // ---------------------------------------------------------------------------
 
 NetconEthernetTap::NetconEthernetTap(
@@ -164,7 +132,7 @@ NetconEthernetTap::NetconEthernetTap(
 	lwipstack->lwip_init();
 
 	_unixListenSocket = _phy.unixListen(sockPath,(void *)this);
-	dwr(MSG_INFO," NetconEthernetTap initialized!\n", _phy.getDescriptor(_unixListenSocket));
+	fprintf(stderr," NetconEthernetTap initialized on: %s\n", sockPath);
 	if (!_unixListenSocket)
 		throw std::runtime_error(std::string("unable to bind to ")+sockPath);
 	_thread = Thread::start(this);
@@ -457,14 +425,6 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr) {
 	closeConnection(sock);
 }
 
-void NetconEthernetTap::phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable) {
-	// Currently unused since phyOnUnixData() handles everything now
-}
-
-void NetconEthernetTap::phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN) {
-	dwr(MSG_DEBUG,"\nphyOnUnixAccept(): new connection = %x\n", sockN);
-}
-
 void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
 {
 	TcpConnection *conn = getConnection(sock);
@@ -571,13 +531,13 @@ void NetconEthernetTap::phyOnUnixData(PhySocket *sock,void **uptr,void *data,uns
 					data_start = padding_pos+PADDING_SZ;
 					memcpy((&conn->txbuf)+conn->txsz, buf+data_start, wlen);
 				}
-				// [CANARY] + [TOKEN]
+				// [DATA] + [CANARY]
 				if(len > CANARY_SZ+PADDING_SZ && canary_pos > 0 && canary_pos == len - CANARY_SZ+PADDING_SZ) {
 					wlen = len - CANARY_SZ+PADDING_SZ;
 					data_start = 0;
 					memcpy((&conn->txbuf)+conn->txsz, buf+data_start, wlen);												
 				}
-				// [CANARY] + [TOKEN] + [DATA]
+				// [DATA] + [CANARY] + [DATA]
 				if(len > CANARY_SZ+PADDING_SZ && canary_pos > 0 && len > (canary_pos + CANARY_SZ+PADDING_SZ)) {
 					wlen = len - CANARY_SZ+PADDING_SZ;
 					data_start = 0;

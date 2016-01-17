@@ -1013,7 +1013,7 @@ public:
 								sws.uptr = (void *)0;
 								memcpy(&(sws.saddr),&ss,sizeof(struct sockaddr_storage));
 								try {
-									_handler->phyOnUnixAccept((PhySocket *)&(*s),(PhySocket *)&(_socks.back()),&(s->uptr),&(sws.uptr));
+									//_handler->phyOnUnixAccept((PhySocket *)&(*s),(PhySocket *)&(_socks.back()),&(s->uptr),&(sws.uptr));
 								} catch ( ... ) {}
 							}
 						}
@@ -1027,7 +1027,7 @@ public:
 					const bool writable = ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds)));
 					if ((readable)||(writable)) {
 						try {
-							_handler->phyOnFileDescriptorActivity((PhySocket *)&(*s),&(s->uptr),readable,writable);
+							//_handler->phyOnFileDescriptorActivity((PhySocket *)&(*s),&(s->uptr),readable,writable);
 						} catch ( ... ) {}
 					}
 				}	break;

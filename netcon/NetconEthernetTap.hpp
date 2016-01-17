@@ -56,15 +56,41 @@ struct connect_st;
 struct getsockname_st;
 struct accept_st;
 
+#define APPLICATION_POLL_FREQ           50
+#define ZT_LWIP_TCP_TIMER_INTERVAL      5
+#define STATUS_TMR_INTERVAL             1000 // How often we check connection statuses (in ms)
+#define DEFAULT_BUF_SZ                  1024 * 1024 * 2
 
 namespace ZeroTier {
 
 class NetconEthernetTap;
-class TcpConnection;
-class Larg;
 class LWIPStack;
 
-/**
+/*
+ * TCP connection administered by service
+ */
+struct TcpConnection
+{
+  bool listening;
+  int pid, txsz, rxsz;
+  PhySocket *rpcSock, *sock;
+  struct tcp_pcb *pcb;
+  struct sockaddr_storage *addr;
+  unsigned char txbuf[DEFAULT_BUF_SZ];
+  unsigned char rxbuf[DEFAULT_BUF_SZ];
+};
+
+/*
+ * A helper for passing a reference to _phy to LWIP callbacks as a "state"
+ */
+struct Larg
+{
+  NetconEthernetTap *tap;
+  TcpConnection *conn;
+  Larg(NetconEthernetTap *_tap, TcpConnection *conn) : tap(_tap), conn(conn) {}
+};
+
+/*
  * Network Containers instance -- emulates an Ethernet tap device as far as OneService knows
  */
 class NetconEthernetTap
@@ -366,11 +392,6 @@ private:
 	void phyOnTcpWritable(PhySocket *sock,void **uptr);
 
 	/*
- 	 * Add a new PhySocket for the client connections
- 	 */
-	void phyOnUnixAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN);
-
-	/*
  	 * Signals us to close the TcpConnection associated with this PhySocket
  	 */
 	void phyOnUnixClose(PhySocket *sock,void **uptr);
@@ -384,12 +405,6 @@ private:
  	 * Notifies us that we can write to an application's socket
  	 */
 	void phyOnUnixWritable(PhySocket *sock,void **uptr);
-	
-	/*
- 	 * Handles data on a application's data buffer. Data is sent to LWIP to be enqueued.
- 	 * TODO: This is a candidate for removal now that phyOnUnixData() is used for everything
- 	 */
-	void phyOnFileDescriptorActivity(PhySocket *sock,void **uptr,bool readable,bool writable);
 
 	/*
  	 * Returns a pointer to a TcpConnection associated with a given PhySocket
