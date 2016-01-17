@@ -420,6 +420,7 @@ void NetconEthernetTap::removeConnection(TcpConnection *conn)
 	for(size_t i=0;i<_TcpConnections.size();++i) {
 		if(_TcpConnections[i] == conn){
 			_TcpConnections.erase(_TcpConnections.begin() + i);
+			delete conn;
 			return;
 		}
 	}
@@ -435,18 +436,17 @@ void NetconEthernetTap::closeConnection(PhySocket *sock)
 	TcpConnection *conn = getConnection(sock);
 	if(!conn)
 		return;
-	else
-		removeConnection(conn);
-	if(!conn->pcb)
-		return;
-	if(conn->pcb->state == SYN_SENT || conn->pcb->state == CLOSE_WAIT) {
-		dwr(MSG_DEBUG," closeConnection(): invalid PCB state for this operation. ignoring.\n");
-		return;
-	}	
-	dwr(MSG_DEBUG," closeConnection(): PCB->state = %d\n", conn->pcb->state);
-	if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
-		dwr(MSG_ERROR," closeConnection(): error while calling tcp_close()\n");
+	if(conn->pcb) {
+		if(conn->pcb->state == SYN_SENT || conn->pcb->state == CLOSE_WAIT) {
+			dwr(MSG_DEBUG," closeConnection(): invalid PCB state for this operation. ignoring.\n");
+			return;
+		}	
+		dwr(MSG_DEBUG," closeConnection(): PCB->state = %d\n", conn->pcb->state);
+		if(lwipstack->_tcp_close(conn->pcb) != ERR_OK) {
+			dwr(MSG_ERROR," closeConnection(): error while calling tcp_close()\n");
+		}
 	}
+	removeConnection(conn);
 	if(!sock)
 		return;
 	close(_phy.getDescriptor(sock));
