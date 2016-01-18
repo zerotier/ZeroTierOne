@@ -804,7 +804,7 @@ err_t NetconEthernetTap::nc_poll(void* arg, struct tcp_pcb *PCB)
 err_t NetconEthernetTap::nc_sent(void* arg, struct tcp_pcb *PCB, u16_t len)
 {
 	Larg *l = (Larg*)arg;
-	if(len) {
+	if(l->conn && len) {
 		float max = (float)DEFAULT_BUF_SZ;
 		if(l->conn->txsz < max / 2) {
 			l->tap->_phy.setNotifyReadable(l->conn->sock, true);
