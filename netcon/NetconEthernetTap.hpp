@@ -60,6 +60,7 @@ struct accept_st;
 #define ZT_LWIP_TCP_TIMER_INTERVAL      5
 #define STATUS_TMR_INTERVAL             500 // How often we check connection statuses (in ms)
 #define DEFAULT_BUF_SZ                  1024 * 1024 * 2
+#define DEFAULT_BUF_SOFTMAX				DEFAULT_BUF_SZ / 2
 
 namespace ZeroTier {
 
@@ -71,7 +72,7 @@ class LWIPStack;
  */
 struct TcpConnection
 {
-  bool listening, closing;
+  bool listening, probation;
   int pid, txsz, rxsz;
   PhySocket *rpcSock, *sock;
   struct tcp_pcb *pcb;
