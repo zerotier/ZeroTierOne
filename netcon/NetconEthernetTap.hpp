@@ -56,9 +56,9 @@ struct connect_st;
 struct getsockname_st;
 struct accept_st;
 
-#define APPLICATION_POLL_FREQ           50
+#define APPLICATION_POLL_FREQ           2
 #define ZT_LWIP_TCP_TIMER_INTERVAL      5
-#define STATUS_TMR_INTERVAL             1000 // How often we check connection statuses (in ms)
+#define STATUS_TMR_INTERVAL             500 // How often we check connection statuses (in ms)
 #define DEFAULT_BUF_SZ                  1024 * 1024 * 2
 
 namespace ZeroTier {
@@ -71,7 +71,7 @@ class LWIPStack;
  */
 struct TcpConnection
 {
-  bool listening;
+  bool listening, closing;
   int pid, txsz, rxsz;
   PhySocket *rpcSock, *sock;
   struct tcp_pcb *pcb;
@@ -410,16 +410,6 @@ private:
  	 * Returns a pointer to a TcpConnection associated with a given PhySocket
  	 */
 	TcpConnection *getConnection(PhySocket *sock);
-	
-	/*
- 	 * Safely adds a new TcpConnection to _TcpConnections
- 	 */
-	TcpConnection *addConnection(TcpConnection *conn);
-	
-	/*
- 	 * Safely removes a TcpConnection from _TcpConnections
- 	 */
-	void removeConnection(TcpConnection *conn);
 
 	/*
  	 * Closes a TcpConnection, associated LWIP PCB strcuture, 
