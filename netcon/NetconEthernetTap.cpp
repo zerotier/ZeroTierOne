@@ -425,21 +425,20 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr,bool lwip_
 		_tcpconns_m.lock();
 		_rx_buf_m.lock();
 	}
-	TcpConnection *conn = getConnection(sock);
-	if(!conn->rxsz)
-		return;
-	int n = _phy.streamSend(conn->sock, conn->rxbuf, conn->rxsz);
-	if(n > 0) {
-		if(conn->rxsz-n > 0)
-			memcpy(conn->rxbuf, conn->rxbuf+n, conn->rxsz-n);
-	  	conn->rxsz -= n;
-	  	float max = (float)DEFAULT_BUF_SZ;
-		dwr(MSG_TRANSFER,"    <--- RX :: {TX: %.3f%%, RX: %.3f%%, sock=%x} :: %d bytes\n", 
-			(float)conn->txsz / max, (float)conn->rxsz / max, sock, n);
-	  	lwipstack->_tcp_recved(conn->pcb, n);
-	} else {
-		dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d, rxsz = %d\n", errno, conn->rxsz);
-		_phy.setNotifyWritable(conn->sock, false);
+	TcpConnection *conn = getConnection(sock);	
+	if(conn && conn->rxsz) {
+			dwr(MSG_DEBUG,"phyWritable(): conn->sock = %x, conn->rxbuf = %x, conn->rxsz = %d\n", conn->sock, conn->rxbuf, conn->rxsz);
+
+		int n = _phy.streamSend(conn->sock, conn->rxbuf, conn->rxsz);
+		if(n > 0) {
+			if(conn->rxsz-n > 0)
+				memcpy(conn->rxbuf, conn->rxbuf+n, conn->rxsz-n);
+		  	conn->rxsz -= n;
+		  	lwipstack->_tcp_recved(conn->pcb, n);
+		} else {
+			dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d, rxsz = %d\n", errno, conn->rxsz);
+			_phy.setNotifyWritable(conn->sock, false);
+		}
 	}
 	if(!lwip_invoked) {
 		_tcpconns_m.unlock();
