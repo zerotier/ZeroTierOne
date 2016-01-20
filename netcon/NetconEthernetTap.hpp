@@ -58,7 +58,7 @@ struct accept_st;
 
 #define APPLICATION_POLL_FREQ           2
 #define ZT_LWIP_TCP_TIMER_INTERVAL      5
-#define STATUS_TMR_INTERVAL             500 // How often we check connection statuses (in ms)
+#define STATUS_TMR_INTERVAL             250 // How often we check connection statuses (in ms)
 #define DEFAULT_BUF_SZ                  1024 * 1024 * 2
 #define DEFAULT_BUF_SOFTMAX				DEFAULT_BUF_SZ / 2
 
@@ -405,7 +405,7 @@ private:
 	/* 
  	 * Notifies us that we can write to an application's socket
  	 */
-	void phyOnUnixWritable(PhySocket *sock,void **uptr);
+	void phyOnUnixWritable(PhySocket *sock,void **uptr,bool lwip_invoked);
 
 	/*
  	 * Returns a pointer to a TcpConnection associated with a given PhySocket

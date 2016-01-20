@@ -33,6 +33,7 @@
 #include <utility>
 #include <string>
 #include <sys/resource.h>
+#include <sys/syscall.h>
 
 #include "NetconEthernetTap.hpp"
 
@@ -304,13 +305,14 @@ void NetconEthernetTap::threadMain()
 		// Connection prunning
 		if (since_status >= STATUS_TMR_INTERVAL) {
 			prev_status_time = now;
-
 			for(size_t i=0;i<_TcpConnections.size();++i) {
 				if(!_TcpConnections[i]->sock)
 					continue;
 				int fd = _phy.getDescriptor(_TcpConnections[i]->sock);
 				dwr(MSG_DEBUG," tap_thread(): tcp\\jobs = {%d, %d}\n", _TcpConnections.size(), jobmap.size());
-
+				// If there's anything on the RX buf, set to notify in case we stalled
+				if(_TcpConnections[i]->rxsz > 0)
+					_phy.setNotifyWritable(_TcpConnections[i]->sock, true);
 				fcntl(fd, F_SETFL, O_NONBLOCK);
 				unsigned char tmpbuf[BUF_SZ];
 				
@@ -417,30 +419,31 @@ void NetconEthernetTap::phyOnUnixClose(PhySocket *sock,void **uptr) {
 	closeConnection(sock);
 }
 
-void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr)
+void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr,bool lwip_invoked)
 {
-	Mutex::Lock _l(_tcpconns_m);
-	Mutex::Lock _l2(_rx_buf_m);
+	if(!lwip_invoked) {
+		_tcpconns_m.lock();
+		_rx_buf_m.lock();
+	}
 	TcpConnection *conn = getConnection(sock);
-	int len = conn->rxsz;
-	int n = _phy.streamSend(conn->sock, conn->rxbuf, len);
+	if(!conn->rxsz)
+		return;
+	int n = _phy.streamSend(conn->sock, conn->rxbuf, conn->rxsz);
 	if(n > 0) {
-		if(n < len) {
-		    dwr(MSG_ERROR,"\n phyOnUnixWritable(): unable to write entire \"block\" to stream\n");
-		}
-		if(len-n)
-			memcpy(conn->rxbuf, conn->rxbuf+n, len-n);
+		if(conn->rxsz-n > 0)
+			memcpy(conn->rxbuf, conn->rxbuf+n, conn->rxsz-n);
 	  	conn->rxsz -= n;
 	  	float max = (float)DEFAULT_BUF_SZ;
 		dwr(MSG_TRANSFER,"    <--- RX :: {TX: %.3f%%, RX: %.3f%%, sock=%x} :: %d bytes\n", 
 			(float)conn->txsz / max, (float)conn->rxsz / max, sock, n);
 	  	lwipstack->_tcp_recved(conn->pcb, n);
-	  	if(conn->rxsz == 0){
-	  		_phy.setNotifyWritable(conn->sock, false); // Nothing more to be notified about
-	  	}
 	} else {
-		perror("\n");
-		dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d\n", errno);
+		dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d, rxsz = %d\n", errno, conn->rxsz);
+		_phy.setNotifyWritable(conn->sock, false);
+	}
+	if(!lwip_invoked) {
+		_tcpconns_m.unlock();
+		_rx_buf_m.unlock();
 	}
 }
 
@@ -673,7 +676,6 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *PCB, struct pbuf *
 	Larg *l = (Larg*)arg;
 	int tot = 0;
   	struct pbuf* q = p;
-
 	Mutex::Lock _l(l->tap->_tcpconns_m);
 
 	if(!l->conn) {
@@ -702,8 +704,10 @@ err_t NetconEthernetTap::nc_recved(void *arg, struct tcp_pcb *PCB, struct pbuf *
 		p = p->next;
 		tot += len;
 	}
-	if(tot)
+	if(tot) {
+		l->tap->phyOnUnixWritable(l->conn->sock, NULL, true);
 		l->tap->_phy.setNotifyWritable(l->conn->sock, true);
+	}
 	l->tap->lwipstack->_pbuf_free(q);
 	return ERR_OK;
 }

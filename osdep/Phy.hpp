@@ -976,7 +976,7 @@ public:
 					ZT_PHY_SOCKFD_TYPE sock = s->sock; // if closed, s->sock becomes invalid as s is no longer dereferencable
 					if ((FD_ISSET(sock,&wfds))&&(FD_ISSET(sock,&_writefds))) {
 						try {
-							_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr));
+							_handler->phyOnUnixWritable((PhySocket *)&(*s),&(s->uptr),false);
 						} catch ( ... ) {}
 					}
 					if (FD_ISSET(sock,&rfds)) {
