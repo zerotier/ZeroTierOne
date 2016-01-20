@@ -427,8 +427,6 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr,bool lwip_
 	}
 	TcpConnection *conn = getConnection(sock);	
 	if(conn && conn->rxsz) {
-			dwr(MSG_DEBUG,"phyWritable(): conn->sock = %x, conn->rxbuf = %x, conn->rxsz = %d\n", conn->sock, conn->rxbuf, conn->rxsz);
-
 		int n = _phy.streamSend(conn->sock, conn->rxbuf, conn->rxsz);
 		if(n > 0) {
 			if(conn->rxsz-n > 0)
@@ -436,7 +434,7 @@ void NetconEthernetTap::phyOnUnixWritable(PhySocket *sock,void **uptr,bool lwip_
 		  	conn->rxsz -= n;
 		  	lwipstack->_tcp_recved(conn->pcb, n);
 		} else {
-			dwr(MSG_ERROR," phyOnUnixWritable(): errno = %d, rxsz = %d\n", errno, conn->rxsz);
+			dwr(MSG_DEBUG," phyOnUnixWritable(): errno = %d, rxsz = %d\n", errno, conn->rxsz);
 			_phy.setNotifyWritable(conn->sock, false);
 		}
 	}
