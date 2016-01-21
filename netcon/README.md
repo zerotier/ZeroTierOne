@@ -162,7 +162,7 @@ To run unit tests:
     cp -f ./netcon/liblwip.so /tmp/netcon_first
     ./zerotier-netcon-service -d -p8100 /tmp/netcon_first
     while [ ! -f /tmp/netcon_first/identity.secret ]; do
-      sleep 1
+      sleep 0.1
     done
     ./zerotier-cli -D/tmp/netcon_first join 8056c2e21c000001
     kill `cat /tmp/netcon_first/zerotier-one.pid`
