@@ -290,9 +290,6 @@
     <ClInclude Include="..\..\node\Address.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\AntiRecursion.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\node\Array.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>

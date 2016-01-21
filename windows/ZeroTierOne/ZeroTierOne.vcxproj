@@ -116,7 +116,6 @@
     <ClInclude Include="..\..\ext\miniupnpc\upnpreplyparse.h" />
     <ClInclude Include="..\..\include\ZeroTierOne.h" />
     <ClInclude Include="..\..\node\Address.hpp" />
-    <ClInclude Include="..\..\node\AntiRecursion.hpp" />
     <ClInclude Include="..\..\node\Array.hpp" />
     <ClInclude Include="..\..\node\AtomicCounter.hpp" />
     <ClInclude Include="..\..\node\BandwidthAccount.hpp" />
