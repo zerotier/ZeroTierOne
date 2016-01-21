@@ -5,9 +5,9 @@ ZeroTier Network Containers offers a microkernel-like networking paradigm for co
 
 Network Containers couples the ZeroTier core Ethernet virtualization engine with a user-space TCP/IP stack and a library that intercepts calls to the Posix network API. This allows servers and applications to be used without modification or recompilation. It can be used to run services on virtual networks without elevated privileges, special configuration of the physical host, kernel support, or any other application specific configuration. It's ideal for use with [Docker](http://http://www.docker.com), [LXC](https://linuxcontainers.org), or [Rkt](https://coreos.com/rkt/docs/latest/) to build containerized microservices that automatically connect to a virtual network when deployed. It can also be used on a plain un-containerized Linux system to run applications on virtual networks without elevated privileges or system modification.
 
-[More discussion can be found in our original blog announcement.](https://www.zerotier.com/blog/?p=490)
+More discussion can be found in our [original blog announcement](https://www.zerotier.com/blog/?p=490) and [the netcon product page](https://www.zerotier.com/product-netcon.shtml).
 
-Network Containers is currently in **beta** and is suitable for testing and experimentation. Only Linux is supported. Future updates will focus on compatibility, full stack support, and improved performance, and may also port to other OSes.
+Network Containers is currently in **BETA** and is suitable for testing and experimentation. Only Linux is supported. Future updates will focus on compatibility, full stack support, and improved performance, and may also port to other OSes.
 
 # Limitations and Compatibility
 
@@ -21,8 +21,8 @@ The virtual TCP/IP stack will respond to *incoming* ICMP ECHO requests, which me
 
 The following applications have been tested and confirmed to work for the beta release:
 
-Fedora 23: 
-    
+Fedora 23:
+
     httpstub.c
     nginx 1.8.0
     http 2.4.16, 2.4.17
@@ -44,7 +44,7 @@ CentOS 7:
     sshd
 
 Ubuntu 14.04.3:
-    
+
     httpstub.c
     nginx 1.4.6
     python 2.7.6 (python -m SimpleHTTPServer)
@@ -114,7 +114,7 @@ Now you can run an application inside your network container.
 Also note that the "pwd" in LD_PRELOAD assumes you are in the ZeroTier source root and have built netcon there. If not, substitute the full path to *libzerotierintercept.so*. If you want to remove those environment variables later, use "unset LD_PRELOAD" and "unset ZT_NC_NETWORK".
 
 If you don't have node.js installed, an alternative test using python would be:
-    
+
     python -m SimpleHTTPServer 80
 
 If you are running Python 3, use "-m http.server".
