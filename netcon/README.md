@@ -154,9 +154,11 @@ Results will be written to the *netcon/docker-test/_results/* directory which is
 
 To run unit tests:
 
-1) Set up your own network at [https://my.zerotier.com/](https://my.zerotier.com/). For our example we'll just use the Earth network (8056c2e21c000001). Use its network id as follows:
+1) Disable SELinux. This is so the containers can use a shared volume to exchange MD5 sums and address information. 
 
-2) Generate two pairs of identity keys. Each public/private pair will be used by the *netcon* and *monitor* containers:
+2) Set up your own network at [https://my.zerotier.com/](https://my.zerotier.com/). For our example we'll just use the Earth network (8056c2e21c000001). Use its network id as follows:
+
+3) Generate two pairs of identity keys. Each public/private pair will be used by the *netcon* and *monitor* containers:
 
     mkdir -p /tmp/netcon_first
     cp -f ./netcon/liblwip.so /tmp/netcon_first
@@ -176,7 +178,7 @@ To run unit tests:
     ./zerotier-cli -D/tmp/netcon_second join 8056c2e21c000001
     kill `cat /tmp/netcon_second/zerotier-one.pid`
 
-3) Copy the identity files to your *docker-test* directory. Names will be altered during copy step so the dockerfiles know which identities to use for each image/container:
+4) Copy the identity files to your *docker-test* directory. Names will be altered during copy step so the dockerfiles know which identities to use for each image/container:
 
     cp /tmp/netcon_first/identity.public ./netcon/docker-test/netcon_identity.public
     cp /tmp/netcon_first/identity.secret ./netcon/docker-test/netcon_identity.secret
@@ -185,7 +187,7 @@ To run unit tests:
     cp /tmp/netcon_second/identity.secret ./netcon/docker-test/monitor_identity.secret
 
 
-4) Place a blank network config file in the *netcon/docker-test* directory (e.g. "8056c2e21c000001.conf")
+5) Place a blank network config file in the *netcon/docker-test* directory (e.g. "8056c2e21c000001.conf")
  - This will be used to inform test-specific scripts what network to use for testing
 
 After you've created your network and placed its blank config file in *netcon/docker-test* run the following to perform unit tests for httpd:
