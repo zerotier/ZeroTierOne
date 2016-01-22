@@ -83,8 +83,11 @@ LinuxEthernetTap::LinuxEthernetTap(
 		throw std::runtime_error("max tap MTU is 2800");
 
 	_fd = ::open("/dev/net/tun",O_RDWR);
-	if (_fd <= 0)
-		throw std::runtime_error(std::string("could not open TUN/TAP device: ") + strerror(errno));
+	if (_fd <= 0) {
+		_fd = ::open("/dev/tun",O_RDWR);
+		if (_fd <= 0)
+			throw std::runtime_error(std::string("could not open TUN/TAP device: ") + strerror(errno));
+	}
 
 	struct ifreq ifr;
 	memset(&ifr,0,sizeof(ifr));
