@@ -70,6 +70,22 @@ The intercept library does nothing unless the *ZT\_NC\_NETWORK* environment vari
 
 Unlike *zerotier-one*, *zerotier-netcon-service* does not need to be run with root privileges and will not modify the host's network configuration in any way. It can be run alongside *zerotier-one* on the same host with no ill effect, though this can be confusing since you'll have to remember the difference between "real" host interfaces (tun/tap) and network containerized endpoints. The latter are completely unknown to the kernel and will not show up in *ifconfig*.
 
+# Linking into an application on Mac OSX
+
+Example:
+
+    gcc myapp.c -o myapp libzerotierintercept.so
+    export ZT_NC_NETWORK=/tmp/netcon-test-home/nc_8056c2e21c000001
+
+Start service
+
+    ./zerotier-netcon-service -d -p8000 /tmp/netcon-test-home
+
+Run application
+
+    ./myapp
+
+
 # Starting the Network Containers Service
 
 You don't need Docker or any other container engine to try Network Containers. A simple test can be performed in user space (no root) in your own home directory.
