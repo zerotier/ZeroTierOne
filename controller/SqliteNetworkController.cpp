@@ -555,7 +555,11 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					}
 
 					test->timestamp = OSUtils::now();
-					_circuitTests[test->testId] = test;
+
+					_CircuitTestEntry &te = _circuitTests[test->testId];
+					te.test = test;
+					te.jsonResults = "";
+
 					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
 
 					return 200;
@@ -1234,6 +1238,22 @@ unsigned int SqliteNetworkController::_doCPGet(
 						return 200;
 
 					}
+
+				} else if ((path[2] == "test")&&(path.size() >= 4)) {
+
+					std::map< uint64_t,_CircuitTestEntry >::iterator cte(_circuitTests.find(Utils::hexStrToU64(path[3].c_str())));
+					if (cte != _circuitTests.end()) {
+
+						responseBody = "[";
+						responseBody.append(cte->second.jsonResults);
+						responseBody.push_back(']');
+						responseContentType = "application/json";
+
+						_node->circuitTestEnd(cte->second.test);
+						::free((void *)cte->second.test);
+						_circuitTests.erase(cte);
+
+					} // else 404
 
 				} // else 404
 
@@ -1930,73 +1950,67 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
 {
-	static Mutex circuitTestWriteLock;
+	char tmp[65535];
+	SqliteNetworkController *const self = reinterpret_cast<SqliteNetworkController *>(test->ptr);
 
-	const uint64_t now = OSUtils::now();
+	if (!test)
+		return;
+	if (!report)
+		return;
 
-	SqliteNetworkController *const c = reinterpret_cast<SqliteNetworkController *>(test->ptr);
-	char tmp[128];
+	Mutex::Lock _l(self->_lock);
+	std::map< uint64_t,_CircuitTestEntry >::iterator cte(self->_circuitTests.find(test->testId));
 
-	std::string reportSavePath(c->_circuitTestPath);
-	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx",test->credentialNetworkId);
-	reportSavePath.append(tmp);
-	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.16llx",test->timestamp,test->testId);
-	reportSavePath.append(tmp);
-	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.10llx_%.10llx",now,report->upstream,report->current);
-	reportSavePath.append(tmp);
-
-	{
-		Mutex::Lock _l(circuitTestWriteLock);
-		FILE *f = fopen(reportSavePath.c_str(),"a");
-		if (!f)
-			return;
-		fseek(f,0,SEEK_END);
-		fprintf(f,"%s{\n"
-			"\t\"timestamp\": %llu,"ZT_EOL_S
-			"\t\"testId\": \"%.16llx\","ZT_EOL_S
-			"\t\"upstream\": \"%.10llx\","ZT_EOL_S
-			"\t\"current\": \"%.10llx\","ZT_EOL_S
-			"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
-			"\t\"remoteTimestamp\": %llu,"ZT_EOL_S
-			"\t\"sourcePacketId\": \"%.16llx\","ZT_EOL_S
-			"\t\"flags\": %llu,"ZT_EOL_S
-			"\t\"sourcePacketHopCount\": %u,"ZT_EOL_S
-			"\t\"errorCode\": %u,"ZT_EOL_S
-			"\t\"vendor\": %d,"ZT_EOL_S
-			"\t\"protocolVersion\": %u,"ZT_EOL_S
-			"\t\"majorVersion\": %u,"ZT_EOL_S
-			"\t\"minorVersion\": %u,"ZT_EOL_S
-			"\t\"revision\": %u,"ZT_EOL_S
-			"\t\"platform\": %d,"ZT_EOL_S
-			"\t\"architecture\": %d,"ZT_EOL_S
-			"\t\"receivedOnLocalAddress\": \"%s\","ZT_EOL_S
-			"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
-			"}",
-			((ftell(f) > 0) ? ",\n" : ""),
-			(unsigned long long)report->timestamp,
-			(unsigned long long)test->testId,
-			(unsigned long long)report->upstream,
-			(unsigned long long)report->current,
-			(unsigned long long)now,
-			(unsigned long long)report->remoteTimestamp,
-			(unsigned long long)report->sourcePacketId,
-			(unsigned long long)report->flags,
-			report->sourcePacketHopCount,
-			report->errorCode,
-			(int)report->vendor,
-			report->protocolVersion,
-			report->majorVersion,
-			report->minorVersion,
-			report->revision,
-			(int)report->platform,
-			(int)report->architecture,
-			reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
-			reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
-		fclose(f);
+	if (cte == self->_circuitTests.end()) { // sanity check: a circuit test we didn't launch?
+		self->_node->circuitTestEnd(test);
+		::free((void *)test);
+		return;
 	}
+
+	Utils::snprintf(tmp,sizeof(tmp),
+		"%s{\n"
+		"\t\"timestamp\": %llu,"ZT_EOL_S
+		"\t\"testId\": \"%.16llx\","ZT_EOL_S
+		"\t\"upstream\": \"%.10llx\","ZT_EOL_S
+		"\t\"current\": \"%.10llx\","ZT_EOL_S
+		"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
+		"\t\"remoteTimestamp\": %llu,"ZT_EOL_S
+		"\t\"sourcePacketId\": \"%.16llx\","ZT_EOL_S
+		"\t\"flags\": %llu,"ZT_EOL_S
+		"\t\"sourcePacketHopCount\": %u,"ZT_EOL_S
+		"\t\"errorCode\": %u,"ZT_EOL_S
+		"\t\"vendor\": %d,"ZT_EOL_S
+		"\t\"protocolVersion\": %u,"ZT_EOL_S
+		"\t\"majorVersion\": %u,"ZT_EOL_S
+		"\t\"minorVersion\": %u,"ZT_EOL_S
+		"\t\"revision\": %u,"ZT_EOL_S
+		"\t\"platform\": %d,"ZT_EOL_S
+		"\t\"architecture\": %d,"ZT_EOL_S
+		"\t\"receivedOnLocalAddress\": \"%s\","ZT_EOL_S
+		"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
+		"}",
+		((cte->second.jsonResults.length() > 0) ? ",\n" : ""),
+		(unsigned long long)report->timestamp,
+		(unsigned long long)test->testId,
+		(unsigned long long)report->upstream,
+		(unsigned long long)report->current,
+		(unsigned long long)OSUtils::now(),
+		(unsigned long long)report->remoteTimestamp,
+		(unsigned long long)report->sourcePacketId,
+		(unsigned long long)report->flags,
+		report->sourcePacketHopCount,
+		report->errorCode,
+		(int)report->vendor,
+		report->protocolVersion,
+		report->majorVersion,
+		report->minorVersion,
+		report->revision,
+		(int)report->platform,
+		(int)report->architecture,
+		reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
+		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
+
+	cte->second.jsonResults.append(tmp);
 }
 
 } // namespace ZeroTier

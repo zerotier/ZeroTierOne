@@ -3,7 +3,10 @@
 #include <sys/un.h>
 #include <pthread.h>
 #include <errno.h>
+
+#if defined(__linux__)
 #include <sys/syscall.h>
+#endif
 
 #include <fcntl.h>
 #include <dlfcn.h>
@@ -70,12 +73,12 @@ int get_retval(int rpc_sock)
 
 int load_symbols_rpc()
 {
-  #ifdef NETCON_INTERCEPT
+#ifdef NETCON_INTERCEPT
   realsocket = dlsym(RTLD_NEXT, "socket");
   realconnect = dlsym(RTLD_NEXT, "connect");
   if(!realconnect || !realsocket)
     return -1;
-  #endif
+#endif
   return 1;
 }
 
@@ -131,19 +134,22 @@ int rpc_send_command(char *path, int cmd, int forfd, void *data, int len)
   memcpy(&cmdbuf[CANARY_IDX], &canary_num, CANARY_SZ);
   memcpy(&cmdbuf[STRUCT_IDX], data, len);
 
-#ifdef VERBOSE
+#if defined(VERBOSE)
+  rpc_count++;
   memset(metabuf, 0, BUF_SZ);
+#if defined(__linux__)
   pid_t pid = syscall(SYS_getpid);
   pid_t tid = syscall(SYS_gettid);
-  rpc_count++;
+#endif
   char timestring[20];
   time_t timestamp;
   timestamp = time(NULL);
   strftime(timestring, sizeof(timestring), "%H:%M:%S", localtime(&timestamp));
   memcpy(metabuf, RPC_PHRASE, RPC_PHRASE_SZ); // Write signal phrase
-  
+#if defined(__linux__)
   memcpy(&metabuf[IDX_PID],     &pid,         sizeof(pid_t)      ); /* pid       */
   memcpy(&metabuf[IDX_TID],     &tid,         sizeof(pid_t)      ); /* tid       */
+#endif
   memcpy(&metabuf[IDX_COUNT],   &rpc_count,   sizeof(rpc_count)  ); /* rpc_count */
   memcpy(&metabuf[IDX_TIME],    &timestring,   20                ); /* timestamp */
 #endif

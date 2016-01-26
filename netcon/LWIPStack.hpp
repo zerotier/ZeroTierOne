@@ -132,7 +132,13 @@ public:
   LWIPStack(const char* path) :
     _libref(NULL)
   {
+    
+#if defined(__linux__)
     _libref = dlmopen(LM_ID_NEWLM, path, RTLD_NOW);
+#elif defined(__APPLE__)
+    _libref = dlopen(path, RTLD_NOW);
+#endif
+
     if(_libref == NULL)
       printf("dlerror(): %s\n", dlerror());
 
