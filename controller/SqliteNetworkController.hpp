@@ -123,7 +123,7 @@ private:
 	std::string _circuitTestPath;
 	std::string _instanceId;
 
-	// A circular buffer last log
+	// Recent request log by device address and network ID
 	struct _LLEntry
 	{
 		_LLEntry()
@@ -148,12 +148,15 @@ private:
 		// Total requests by this address / network ID pair (also serves mod IN_MEMORY_LOG_SIZE as circular buffer ptr)
 		uint64_t totalRequests;
 	};
-
-	// Last log entries by address and network ID pair
 	std::map< std::pair<Address,uint64_t>,_LLEntry > _lastLog;
 
 	// Circuit tests outstanding
-	std::map< uint64_t,ZT_CircuitTest * > _circuitTests;
+	struct _CircuitTestEntry
+	{
+		ZT_CircuitTest *test;
+		std::string jsonResults;
+	};
+	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
 
 	sqlite3 *_db;
 
