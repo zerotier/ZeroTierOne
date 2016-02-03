@@ -61,8 +61,8 @@
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 1
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "1"
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 2
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "2"
 
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
@@ -146,8 +146,31 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 		if (schemaVersion == -1234) {
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController schemaVersion not found in Config table (init failure?)");
+		} else if (schemaVersion == 1) {
+			// Create NodeHistory table to upgrade from version 1 to version 2
+			if (sqlite3_exec(_db,
+					"CREATE TABLE NodeHistory (\n"
+					"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"
+					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
+					"  networkVisitCounter INTEGER NOT NULL DEFAULT(0),\n"
+					"  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),\n"
+					"  requestTime INTEGER NOT NULL DEFAULT(0),\n"
+					"  networkRequestMetaData VARCHAR(1024),\n"
+					"  fromAddress VARCHAR(128)\n"
+					");\n"
+					"\n"
+					"CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);\n"
+					"CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);\n"
+					"CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);\n"
+					"\n"
+					"UPDATE \"Config\" SET \"v\" = 2 WHERE \"k\" = 'schemaVersion';\n"
+				,0,0,0) != SQLITE_OK) {
+				char err[1024];
+				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 2: %s",sqlite3_errmsg(_db));
+				sqlite3_close(_db);
+				throw std::runtime_error(err);
+			}
 		} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
-			// Note -- this will eventually run auto-upgrades so this isn't how it'll work going forward
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
 		}
@@ -1182,6 +1205,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 							responseBody.append("],\n\t\"recentLog\": [");
 
+							/*
 							{
 								std::map< std::pair<Address,uint64_t>,_LLEntry >::const_iterator lli(_lastLog.find(std::pair<Address,uint64_t>(Address(address),nwid)));
 								if (lli != _lastLog.end()) {
@@ -1212,6 +1236,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 									}
 								}
 							}
+							*/
 
 							responseBody.append("]\n}\n");
 
@@ -1561,12 +1586,15 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
-	// Check rate limit circuit breaker to prevent flooding
 	const uint64_t now = OSUtils::now();
+
+	// Check rate limit circuit breaker to prevent flooding
+	/*
 	_LLEntry &lastLogEntry = _lastLog[std::pair<Address,uint64_t>(identity.address(),nwid)];
 	if ((now - lastLogEntry.lastRequestTime) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
 		return NetworkController::NETCONF_QUERY_IGNORE;
 	lastLogEntry.lastRequestTime = now;
+	*/
 
 	NetworkRecord network;
 	memset(&network,0,sizeof(network));
@@ -1654,6 +1682,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 	// Add log entry to in-memory circular log
 
+	/*
 	{
 		const unsigned long ptr = (unsigned long)lastLogEntry.totalRequests % ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE;
 		lastLogEntry.l[ptr].ts = now;
@@ -1665,6 +1694,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		++lastLogEntry.totalRequests;
 		// TODO: push or save these somewhere
 	}
+	*/
 
 	// Check member authorization
 

@@ -35,6 +35,20 @@
 "  identity varchar(4096) NOT NULL\n"\
 ");\n"\
 "\n"\
+"CREATE TABLE NodeHistory (\n"\
+"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"\
+"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
+"  networkVisitCounter INTEGER NOT NULL DEFAULT(0),\n"\
+"  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),\n"\
+"  requestTime INTEGER NOT NULL DEFAULT(0),\n"\
+"  networkRequestMetaData VARCHAR(1024),\n"\
+"  fromAddress VARCHAR(128)\n"\
+");\n"\
+"\n"\
+"CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);\n"\
+"CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);\n"\
+"CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);\n"\
+"\n"\
 "CREATE TABLE Gateway (\n"\
 "  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"\
 "  ip blob(16) NOT NULL,\n"\
