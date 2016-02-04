@@ -131,6 +131,9 @@ private:
 	};
 	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
 
+	// Last request time by address, for rate limitation
+	std::map< Address,uint64_t > _lastRequestTime;
+
 	sqlite3 *_db;
 
 	sqlite3_stmt *_sGetNetworkById;
@@ -138,6 +141,11 @@ private:
 	sqlite3_stmt *_sCreateMember;
 	sqlite3_stmt *_sGetNodeIdentity;
 	sqlite3_stmt *_sCreateOrReplaceNode;
+	sqlite3_stmt *_sGetMaxNodeHistoryNetworkVisitCounter;
+	sqlite3_stmt *_sAddNodeHistoryEntry;
+	sqlite3_stmt *_sDeleteOldNodeHistoryEntries;
+	sqlite3_stmt *_sGetActiveNodesOnNetwork;
+	sqlite3_stmt *_sGetNodeHistory;
 	sqlite3_stmt *_sGetEtherTypesFromRuleTable;
 	sqlite3_stmt *_sGetActiveBridges;
 	sqlite3_stmt *_sGetIpAssignmentsForNode;
