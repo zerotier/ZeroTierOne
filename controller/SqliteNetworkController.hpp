@@ -132,7 +132,7 @@ private:
 	std::map< uint64_t,_CircuitTestEntry > _circuitTests;
 
 	// Last request time by address, for rate limitation
-	std::map< Address,uint64_t > _lastRequestTime;
+	std::map< std::pair<uint64_t,uint64_t>,uint64_t > _lastRequestTime;
 
 	sqlite3 *_db;
 

@@ -67,9 +67,8 @@
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
 
-// Drop requests for a given peer and network ID that occur more frequently
-// than this (ms).
-#define ZT_NETCONF_MIN_REQUEST_PERIOD 500
+// Min duration between requests for an address/nwid combo to prevent floods
+#define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
 // Delay between backups in milliseconds
 #define ZT_NETCONF_BACKUP_PERIOD 300000
@@ -216,7 +215,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"SELECT IFNULL(MAX(networkVisitCounter),0) FROM NodeHistory WHERE networkId = ? AND nodeId = ?",-1,&_sGetMaxNodeHistoryNetworkVisitCounter,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO NodeHistory (nodeId,networkId,networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress) VALUES (?,?,?,?,?,?,?,?,?,?)",-1,&_sAddNodeHistoryEntry,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM NodeHistory WHERE networkId = ? AND nodeId = ? AND networkVisitCounter <= ?",-1,&_sDeleteOldNodeHistoryEntries,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId,COUNT(nodeId),MAX(requestTime),MAX((((clientMajorVersion & 65535) << 32) | ((clientMinorVersion & 65535) << 16) | (clientRevision & 65535))) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? AND networkRequestAuthorized > 0 GROUP BY nodeId",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,MAX(requestTime),MAX((((clientMajorVersion & 65535) << 32) | ((clientMinorVersion & 65535) << 16) | (clientRevision & 65535))) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? AND networkRequestAuthorized > 0 GROUP BY nodeId",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress FROM NodeHistory WHERE networkId = ? AND nodeId = ? ORDER BY requestTime DESC",-1,&_sGetNodeHistory,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
@@ -1291,11 +1290,9 @@ unsigned int SqliteNetworkController::_doCPGet(
 						if (nid) {
 							responseBody.append(firstMember ? "\"" : ",\"");
 							responseBody.append(nid);
-							responseBody.append("\":{\"cnt\":");
+							responseBody.append("\":{\"lt\":");
 							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,1));
-							responseBody.append(",\"lt\":");
-							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,2));
-							if ((uint64_t)sqlite3_column_int64(_sGetActiveNodesOnNetwork,3) >= 0x0000000100010000ULL)
+							if ((uint64_t)sqlite3_column_int64(_sGetActiveNodesOnNetwork,2) >= 0x0000000100010000ULL)
 								responseBody.append(",\"cts\":true");
 							else responseBody.append(",\"cts\":false");
 							responseBody.push_back('}');
@@ -1633,7 +1630,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 	// Check rate limit circuit breaker to prevent flooding
 	{
-		uint64_t &lrt = _lastRequestTime[identity.address()];
+		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
 		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
 			return NetworkController::NETCONF_QUERY_IGNORE;
 		lrt = now;
