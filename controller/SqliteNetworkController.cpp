@@ -72,7 +72,7 @@
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 500
 
 // Delay between backups in milliseconds
-#define ZT_NETCONF_BACKUP_PERIOD 120000
+#define ZT_NETCONF_BACKUP_PERIOD 300000
 
 // Number of NodeHistory entries to maintain per node and network (can be changed)
 #define ZT_NETCONF_NODE_HISTORY_LENGTH 64
