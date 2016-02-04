@@ -140,6 +140,9 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 		throw std::runtime_error("SqliteNetworkController cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
 
+	sqlite3_exec(_db,"PRAGMA synchronous = OFF",0,0,0);
+	sqlite3_exec(_db,"PRAGMA journal_mode = MEMORY",0,0,0);
+
 	sqlite3_stmt *s = (sqlite3_stmt *)0;
 	if ((sqlite3_prepare_v2(_db,"SELECT v FROM Config WHERE k = 'schemaVersion';",-1,&s,(const char **)0) == SQLITE_OK)&&(s)) {
 		int schemaVersion = -1234;
