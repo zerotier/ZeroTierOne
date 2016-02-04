@@ -75,7 +75,10 @@
 #define ZT_NETCONF_BACKUP_PERIOD 120000
 
 // Number of NodeHistory entries to maintain per node and network (can be changed)
-#define ZT_NETCONF_NODE_HISTORY_LENGTH 16
+#define ZT_NETCONF_NODE_HISTORY_LENGTH 64
+
+// Nodes are considered active if they've queried in less than this long
+#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD (ZT_NETWORK_AUTOCONF_DELAY * 2)
 
 namespace ZeroTier {
 
@@ -207,7 +210,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"SELECT IFNULL(MAX(networkVisitCounter),0) FROM NodeHistory WHERE networkId = ? AND nodeId = ?",-1,&_sGetMaxNodeHistoryNetworkVisitCounter,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO NodeHistory (nodeId,networkId,networkVisitCounter,networkRequestAuthorized,requestTime,networkRequestMetaData,fromAddress) VALUES (?,?,?,?,?,?,?)",-1,&_sAddNodeHistoryEntry,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM NodeHistory WHERE networkId = ? AND nodeId = ? AND networkVisitCounter <= ?",-1,&_sDeleteOldNodeHistoryEntries,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT DISTINCT nodeId FROM NodeHistory WHERE networkId = ? AND requestTime >= ? AND networkRequestAuthorized != 0 ORDER BY nodeId ASC",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,COUNT(nodeId),MAX(requestTime) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? AND networkRequestAuthorized > 0 GROUP BY nodeId",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT networkVisitCounter,networkRequestAuthorized,requestTime,networkRequestMetaData,fromAddress FROM NodeHistory WHERE networkId = ? AND nodeId = ? ORDER BY requestTime DESC",-1,&_sGetNodeHistory,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
@@ -1254,7 +1257,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 						sqlite3_reset(_sListNetworkMembers);
 						sqlite3_bind_text(_sListNetworkMembers,1,nwids,16,SQLITE_STATIC);
-						responseBody.append("{");
+						responseBody.push_back('{');
 						bool firstMember = true;
 						while (sqlite3_step(_sListNetworkMembers) == SQLITE_ROW) {
 							responseBody.append(firstMember ? "\"" : ",\"");
@@ -1268,6 +1271,32 @@ unsigned int SqliteNetworkController::_doCPGet(
 						return 200;
 
 					}
+
+				} else if ((path[2] == "active")&&(path.size() == 3)) {
+
+					sqlite3_reset(_sGetActiveNodesOnNetwork);
+					sqlite3_bind_text(_sGetActiveNodesOnNetwork,1,nwids,16,SQLITE_STATIC);
+					sqlite3_bind_int64(_sGetActiveNodesOnNetwork,2,(int64_t)(OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD));
+
+					responseBody.push_back('{');
+					bool firstMember = true;
+					while (sqlite3_step(_sGetActiveNodesOnNetwork) == SQLITE_ROW) {
+						const char *nid = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,0);
+						if (nid) {
+							responseBody.append(firstMember ? "\"" : ",\"");
+							responseBody.append(nid);
+							responseBody.append("\":{\"count\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,1));
+							responseBody.append(",\"latestTime\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,2));
+							responseBody.push_back('}');
+							firstMember = false;
+						}
+					}
+					responseBody.push_back('}');
+
+					responseContentType = "application/json";
+					return 200;
 
 				} else if ((path[2] == "test")&&(path.size() >= 4)) {
 
@@ -1288,7 +1317,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 				} // else 404
 
 			} else {
-				// get network info
+
 				sqlite3_reset(_sGetNetworkById);
 				sqlite3_bind_text(_sGetNetworkById,1,nwids,16,SQLITE_STATIC);
 				if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
