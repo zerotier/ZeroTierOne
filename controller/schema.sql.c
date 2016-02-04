@@ -41,6 +41,9 @@
 "  networkVisitCounter INTEGER NOT NULL DEFAULT(0),\n"\
 "  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),\n"\
 "  requestTime INTEGER NOT NULL DEFAULT(0),\n"\
+"  clientMajorVersion INTEGER NOT NULL DEFAULT(0),\n"\
+"  clientMinorVersion INTEGER NOT NULL DEFAULT(0),\n"\
+"  clientRevision INTEGER NOT NULL DEFAULT(0),\n"\
 "  networkRequestMetaData VARCHAR(1024),\n"\
 "  fromAddress VARCHAR(128)\n"\
 ");\n"\

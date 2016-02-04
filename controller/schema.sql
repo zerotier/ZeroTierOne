@@ -40,6 +40,9 @@ CREATE TABLE NodeHistory (
   networkVisitCounter INTEGER NOT NULL DEFAULT(0),
   networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),
   requestTime INTEGER NOT NULL DEFAULT(0),
+  clientMajorVersion INTEGER NOT NULL DEFAULT(0),
+  clientMinorVersion INTEGER NOT NULL DEFAULT(0),
+  clientRevision INTEGER NOT NULL DEFAULT(0),
   networkRequestMetaData VARCHAR(1024),
   fromAddress VARCHAR(128)
 );
