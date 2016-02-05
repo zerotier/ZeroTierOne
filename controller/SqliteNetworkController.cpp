@@ -1312,7 +1312,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 				} else if ((path[2] == "test")&&(path.size() >= 4)) {
 
 					std::map< uint64_t,_CircuitTestEntry >::iterator cte(_circuitTests.find(Utils::hexStrToU64(path[3].c_str())));
-					if (cte != _circuitTests.end()) {
+					if ((cte != _circuitTests.end())&&(cte->second.test)) {
 
 						responseBody = "[";
 						responseBody.append(cte->second.jsonResults);
@@ -1322,6 +1322,8 @@ unsigned int SqliteNetworkController::_doCPGet(
 						_node->circuitTestEnd(cte->second.test);
 						::free((void *)cte->second.test);
 						_circuitTests.erase(cte);
+
+						return 200;
 
 					} // else 404
 
