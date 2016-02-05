@@ -608,6 +608,11 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 
 					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
 
+					char json[1024];
+					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
+					responseBody = json;
+					responseContentType = "application/json";
+
 					return 200;
 				} // else 404
 
