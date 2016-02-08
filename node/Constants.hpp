@@ -260,7 +260,12 @@
 /**
  * Timeout for overall peer activity (measured from last receive)
  */
-#define ZT_PEER_ACTIVITY_TIMEOUT ((ZT_PEER_DIRECT_PING_DELAY * 4) + ZT_PING_CHECK_INVERVAL)
+#define ZT_PEER_ACTIVITY_TIMEOUT 500000
+
+/**
+ * Timeout for path activity
+ */
+#define ZT_PATH_ACTIVITY_TIMEOUT ZT_PEER_ACTIVITY_TIMEOUT
 
 /**
  * No answer timeout to trigger dead path detection
