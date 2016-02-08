@@ -47,22 +47,22 @@
 /**
  * Desired period between doPeriodicTasks() in milliseconds
  */
-#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 50
+#define ZT_CLUSTER_PERIODIC_TASK_PERIOD 20
 
 /**
  * How often to flush outgoing message queues (maximum interval)
  */
-#define ZT_CLUSTER_FLUSH_PERIOD 100
+#define ZT_CLUSTER_FLUSH_PERIOD ZT_CLUSTER_PERIODIC_TASK_PERIOD
 
 /**
  * Maximum number of queued outgoing packets per sender address
  */
-#define ZT_CLUSTER_MAX_QUEUE_PER_SENDER 8
+#define ZT_CLUSTER_MAX_QUEUE_PER_SENDER 16
 
 /**
  * Expiration time for send queue entries
  */
-#define ZT_CLUSTER_QUEUE_EXPIRATION 5000
+#define ZT_CLUSTER_QUEUE_EXPIRATION 3000
 
 /**
  * Chunk size for allocating queue entries
@@ -85,11 +85,8 @@
 
 /**
  * Max data per queue entry
- *
- * If we ever support larger transport MTUs this must be increased. The plus
- * 16 is just a small margin and has no special meaning.
  */
-#define ZT_CLUSTER_SEND_QUEUE_DATA_MAX (ZT_UDP_DEFAULT_PAYLOAD_MTU + 16)
+#define ZT_CLUSTER_SEND_QUEUE_DATA_MAX 1500
 
 namespace ZeroTier {
 
