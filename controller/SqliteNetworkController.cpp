@@ -2034,7 +2034,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		}
 
 		if (network.isPrivate) {
-			CertificateOfMembership com(now,ZT_NETWORK_AUTOCONF_DELAY + (ZT_NETWORK_AUTOCONF_DELAY / 2),nwid,identity.address());
+			CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
 			if (com.sign(signingId)) // basically can't fail unless our identity is invalid
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			else {
