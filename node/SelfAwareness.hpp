@@ -56,6 +56,13 @@ public:
 	 */
 	void clean(uint64_t now);
 
+	/**
+	 * If we appear to be behind a symmetric NAT, get predictions for possible external endpoints
+	 *
+	 * @return Symmetric NAT predictions or empty vector if none
+	 */
+	std::vector<InetAddress> getSymmetricNatPredictions();
+
 private:
 	struct PhySurfaceKey
 	{

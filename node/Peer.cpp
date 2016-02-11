@@ -240,70 +240,83 @@ bool Peer::doPingAndKeepalive(uint64_t now,int inetAddressFamily)
 	return false;
 }
 
-void Peer::pushDirectPaths(Path *path,uint64_t now,bool force)
+bool Peer::pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force)
 {
 #ifdef ZT_ENABLE_CLUSTER
 	// Cluster mode disables normal PUSH_DIRECT_PATHS in favor of cluster-based peer redirection
 	if (RR->cluster)
-		return;
+		return false;
 #endif
 
-	if (((now - _lastDirectPathPushSent) >= ZT_DIRECT_PATH_PUSH_INTERVAL)||(force)) {
-		_lastDirectPathPushSent = now;
+	if (!force) {
+		if ((now - _lastDirectPathPushSent) < ZT_DIRECT_PATH_PUSH_INTERVAL)
+			return false;
+		else _lastDirectPathPushSent = now;
+	}
 
-		std::vector<InetAddress> dps(RR->node->directPaths());
-		if (dps.empty())
-			return;
-
-#ifdef ZT_TRACE
-		{
-			std::string ps;
-			for(std::vector<InetAddress>::const_iterator p(dps.begin());p!=dps.end();++p) {
-				if (ps.length() > 0)
-					ps.push_back(',');
-				ps.append(p->toString());
-			}
-			TRACE("pushing %u direct paths to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
-		}
-#endif
-
-		std::vector<InetAddress>::const_iterator p(dps.begin());
-		while (p != dps.end()) {
-			Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
-			outp.addSize(2); // leave room for count
-
-			unsigned int count = 0;
-			while ((p != dps.end())&&((outp.size() + 24) < ZT_PROTO_MAX_PACKET_LENGTH)) {
-				uint8_t addressType = 4;
-				switch(p->ss_family) {
-					case AF_INET:
-						break;
-					case AF_INET6:
-						addressType = 6;
-						break;
-					default: // we currently only push IP addresses
-						++p;
-						continue;
-				}
-
-				outp.append((uint8_t)0); // no flags
-				outp.append((uint16_t)0); // no extensions
-				outp.append(addressType);
-				outp.append((uint8_t)((addressType == 4) ? 6 : 18));
-				outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
-				outp.append((uint16_t)p->port());
-
-				++count;
-				++p;
-			}
-
-			if (count) {
-				outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
-				outp.armor(_key,true);
-				path->send(RR,outp.data(),outp.size(),now);
-			}
+	std::vector<InetAddress> dps(RR->node->directPaths());
+	std::vector<InetAddress> sym(RR->sa->getSymmetricNatPredictions());
+	for(unsigned long i=0,added=0;i<sym.size();++i) {
+		InetAddress tmp(sym[(unsigned long)RR->node->prng() % sym.size()]);
+		if (std::find(dps.begin(),dps.end(),tmp) == dps.end()) {
+			dps.push_back(tmp);
+			if (++added >= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY)
+				break;
 		}
 	}
+	if (dps.empty())
+		return false;
+
+#ifdef ZT_TRACE
+	{
+		std::string ps;
+		for(std::vector<InetAddress>::const_iterator p(dps.begin());p!=dps.end();++p) {
+			if (ps.length() > 0)
+				ps.push_back(',');
+			ps.append(p->toString());
+		}
+		TRACE("pushing %u direct paths to %s: %s",(unsigned int)dps.size(),_id.address().toString().c_str(),ps.c_str());
+	}
+#endif
+
+	std::vector<InetAddress>::const_iterator p(dps.begin());
+	while (p != dps.end()) {
+		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_PUSH_DIRECT_PATHS);
+		outp.addSize(2); // leave room for count
+
+		unsigned int count = 0;
+		while ((p != dps.end())&&((outp.size() + 24) < 1200)) {
+			uint8_t addressType = 4;
+			switch(p->ss_family) {
+				case AF_INET:
+					break;
+				case AF_INET6:
+					addressType = 6;
+					break;
+				default: // we currently only push IP addresses
+					++p;
+					continue;
+			}
+
+			outp.append((uint8_t)0); // no flags
+			outp.append((uint16_t)0); // no extensions
+			outp.append(addressType);
+			outp.append((uint8_t)((addressType == 4) ? 6 : 18));
+			outp.append(p->rawIpData(),((addressType == 4) ? 4 : 16));
+			outp.append((uint16_t)p->port());
+
+			++count;
+			++p;
+		}
+
+		if (count) {
+			outp.setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
+			outp.armor(_key,true);
+			RR->node->putPacket(localAddr,toAddress,outp.data(),outp.size(),0);
+		}
+	}
+
+	return true;
 }
 
 bool Peer::resetWithinScope(InetAddress::IpScope scope,uint64_t now)

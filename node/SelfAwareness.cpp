@@ -20,6 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <set>
+#include <vector>
+
 #include "Constants.hpp"
 #include "SelfAwareness.hpp"
 #include "RuntimeEnvironment.hpp"
@@ -68,30 +71,14 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
-	// This would be weird, e.g. a public IP talking to 10.0.0.1, so just ignore it.
-	// If your network is this weird it's probably not reliable information.
-	if (scope != reporterPhysicalAddress.ipScope())
+	if ((scope != reporterPhysicalAddress.ipScope())||(scope == InetAddress::IP_SCOPE_NONE)||(scope == InetAddress::IP_SCOPE_LOOPBACK)||(scope == InetAddress::IP_SCOPE_MULTICAST))
 		return;
-
-	// Some scopes we ignore, and global scope IPs are only used for this
-	// mechanism if they come from someone we trust (e.g. a root).
-	switch(scope) {
-		case InetAddress::IP_SCOPE_NONE:
-		case InetAddress::IP_SCOPE_LOOPBACK:
-		case InetAddress::IP_SCOPE_MULTICAST:
-			return;
-		case InetAddress::IP_SCOPE_GLOBAL:
-			if (!trusted)
-				return;
-			break;
-		default:
-			break;
-	}
 
 	Mutex::Lock _l(_phy_m);
 	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,reporterPhysicalAddress,scope)];
 
-	if ( ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
+	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
+		// Changes to external surface reported by trusted peers causes path reset in this scope
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 		TRACE("physical address %s for scope %u as seen from %s(%s) differs from %s, resetting paths in scope",myPhysicalAddress.toString().c_str(),(unsigned int)scope,reporter.toString().c_str(),reporterPhysicalAddress.toString().c_str(),entry.mySurface.toString().c_str());
@@ -123,6 +110,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 			}
 		}
 	} else {
+		// Otherwise just update DB to use to determine external surface info
 		entry.mySurface = myPhysicalAddress;
 		entry.ts = now;
 	}
@@ -138,6 +126,43 @@ void SelfAwareness::clean(uint64_t now)
 		if ((now - e->ts) >= ZT_SELFAWARENESS_ENTRY_TIMEOUT)
 			_phy.erase(*k);
 	}
+}
+
+std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
+{
+	std::set<InetAddress> surfaces;
+
+	// Ideas based on: https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
+
+	{
+		Mutex::Lock _l(_phy_m);
+		Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
+		PhySurfaceKey *k = (PhySurfaceKey *)0;
+		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
+		while (i.next(k,e)) {
+			if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+				surfaces.insert(e->mySurface);
+			}
+		}
+	}
+
+	if (surfaces.size() > 1) {
+		// More than one global IPv4 surface means this is a symmetric NAT
+		std::vector<InetAddress> r;
+		for(std::set<InetAddress>::iterator i(surfaces.begin());i!=surfaces.end();++i) {
+			InetAddress nextPort(*i);
+			unsigned int p = nextPort.port();
+			if (p >= 65535)
+				p = 1025;
+			else ++p;
+			nextPort.setPort(p);
+			if (surfaces.count(nextPort) == 0)
+				r.push_back(nextPort);
+		}
+		return r;
+	}
+
+	return std::vector<InetAddress>();
 }
 
 } // namespace ZeroTier
