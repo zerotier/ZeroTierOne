@@ -150,14 +150,24 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 		// More than one global IPv4 surface means this is a symmetric NAT
 		std::vector<InetAddress> r;
 		for(std::set<InetAddress>::iterator i(surfaces.begin());i!=surfaces.end();++i) {
-			InetAddress nextPort(*i);
-			unsigned int p = nextPort.port();
-			if (p >= 65535)
+			InetAddress ipp(*i);
+			unsigned int p = ipp.port();
+
+			// Try 1+ surface ports
+			if (p >= 0xffff)
 				p = 1025;
 			else ++p;
-			nextPort.setPort(p);
-			if (surfaces.count(nextPort) == 0)
-				r.push_back(nextPort);
+			ipp.setPort(p);
+			if ((surfaces.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end()))
+				r.push_back(ipp);
+
+			// Try 2+ surface ports
+			if (p >= 0xffff)
+				p = 1025;
+			else ++p;
+			ipp.setPort(p);
+			if ((surfaces.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end()))
+				r.push_back(ipp);
 		}
 		return r;
 	}
