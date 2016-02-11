@@ -490,10 +490,10 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 						// Strategies 1-3: try escalating ports for symmetric NATs that remap sequentially
 						InetAddress tmpaddr(qi->inaddr);
 						int p = (int)qi->inaddr.port() + qi->strategyIteration;
-						if (p < 0xffff) {
-							tmpaddr.setPort((unsigned int)p);
-							qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
-						} else qi->strategyIteration = 5;
+						if (p > 65535)
+							p -= 64511;
+						tmpaddr.setPort((unsigned int)p);
+						qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
 					} else {
 						// All strategies tried, expire entry
 						_contactQueue.erase(qi++);
