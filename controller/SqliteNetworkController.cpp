@@ -77,7 +77,7 @@
 #define ZT_NETCONF_NODE_HISTORY_LENGTH 64
 
 // Nodes are considered active if they've queried in less than this long
-#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD (ZT_NETWORK_AUTOCONF_DELAY * 2)
+#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD ((ZT_NETWORK_AUTOCONF_DELAY * 2) + 5000)
 
 namespace ZeroTier {
 
