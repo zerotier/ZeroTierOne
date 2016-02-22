@@ -1059,7 +1059,27 @@ void SqliteNetworkController::threadMain()
 	throw()
 {
 	uint64_t lastBackupTime = OSUtils::now();
+	uint64_t lastCleanupTime = OSUtils::now();
+
 	while (_backupThreadRun) {
+		if ((OSUtils::now() - lastCleanupTime) >= 5000) {
+			const uint64_t now = OSUtils::now();
+			lastCleanupTime = now;
+
+			Mutex::Lock _l(_lock);
+
+			// Clean out really old circuit tests to prevent memory build-up
+			for(std::map< uint64_t,_CircuitTestEntry >::iterator ct(_circuitTests.begin());ct!=_circuitTests.end();) {
+				if (!ct->second.test) {
+					_circuitTests.erase(ct++);
+				} else if ((now - ct->second.test->timestamp) >= ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT) {
+					_node->circuitTestEnd(ct->second.test);
+					::free((void *)ct->second.test);
+					_circuitTests.erase(ct++);
+				} else ++ct;
+			}
+		}
+
 		if ((OSUtils::now() - lastBackupTime) >= ZT_NETCONF_BACKUP_PERIOD) {
 			lastBackupTime = OSUtils::now();
 
@@ -1104,6 +1124,7 @@ void SqliteNetworkController::threadMain()
 			OSUtils::rm(backupPath2);
 			::rename(backupPath,backupPath2);
 		}
+
 		Thread::sleep(250);
 	}
 }
@@ -1318,10 +1339,6 @@ unsigned int SqliteNetworkController::_doCPGet(
 						responseBody.append(cte->second.jsonResults);
 						responseBody.push_back(']');
 						responseContentType = "application/json";
-
-						_node->circuitTestEnd(cte->second.test);
-						::free((void *)cte->second.test);
-						_circuitTests.erase(cte);
 
 						return 200;
 

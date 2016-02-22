@@ -44,8 +44,8 @@
 // Number of in-memory last log entries to maintain per user
 #define ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE 32
 
-// How long do circuit tests "live"? This is just to prevent buildup in memory.
-#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 300000
+// How long do circuit tests last before they're forgotten?
+#define ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT 60000
 
 namespace ZeroTier {
 
