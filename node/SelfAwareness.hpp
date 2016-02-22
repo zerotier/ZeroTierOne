@@ -42,12 +42,13 @@ public:
 	 * Called when a trusted remote peer informs us of our external network address
 	 *
 	 * @param reporter ZeroTier address of reporting peer
+	 * @param receivedOnLocalAddress Local address on which report was received
 	 * @param reporterPhysicalAddress Physical address that reporting peer seems to have
 	 * @param myPhysicalAddress Physical address that peer says we have
 	 * @param trusted True if this peer is trusted as an authority to inform us of external address changes
 	 * @param now Current time
 	 */
-	void iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
+	void iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now);
 
 	/**
 	 * Clean up database periodically
@@ -67,14 +68,15 @@ private:
 	struct PhySurfaceKey
 	{
 		Address reporter;
+		InetAddress receivedOnLocalAddress;
 		InetAddress reporterPhysicalAddress;
 		InetAddress::IpScope scope;
 
 		PhySurfaceKey() : reporter(),scope(InetAddress::IP_SCOPE_NONE) {}
-		PhySurfaceKey(const Address &r,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),reporterPhysicalAddress(ra),scope(s) {}
+		PhySurfaceKey(const Address &r,const InetAddress &rol,const InetAddress &ra,InetAddress::IpScope s) : reporter(r),receivedOnLocalAddress(rol),reporterPhysicalAddress(ra),scope(s) {}
 
 		inline unsigned long hashCode() const throw() { return ((unsigned long)reporter.toInt() + (unsigned long)scope); }
-		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
+		inline bool operator==(const PhySurfaceKey &k) const throw() { return ((reporter == k.reporter)&&(receivedOnLocalAddress == k.receivedOnLocalAddress)&&(reporterPhysicalAddress == k.reporterPhysicalAddress)&&(scope == k.scope)); }
 	};
 	struct PhySurfaceEntry
 	{

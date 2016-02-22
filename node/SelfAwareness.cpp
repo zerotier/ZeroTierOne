@@ -67,7 +67,7 @@ SelfAwareness::~SelfAwareness()
 {
 }
 
-void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
+void SelfAwareness::iam(const Address &reporter,const InetAddress &receivedOnLocalAddress,const InetAddress &reporterPhysicalAddress,const InetAddress &myPhysicalAddress,bool trusted,uint64_t now)
 {
 	const InetAddress::IpScope scope = myPhysicalAddress.ipScope();
 
@@ -75,7 +75,7 @@ void SelfAwareness::iam(const Address &reporter,const InetAddress &reporterPhysi
 		return;
 
 	Mutex::Lock _l(_phy_m);
-	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,reporterPhysicalAddress,scope)];
+	PhySurfaceEntry &entry = _phy[PhySurfaceKey(reporter,receivedOnLocalAddress,reporterPhysicalAddress,scope)];
 
 	if ( (trusted) && ((now - entry.ts) < ZT_SELFAWARENESS_ENTRY_TIMEOUT) && (!entry.mySurface.ipsEqual(myPhysicalAddress)) ) {
 		// Changes to external surface reported by trusted peers causes path reset in this scope
@@ -130,10 +130,22 @@ void SelfAwareness::clean(uint64_t now)
 
 std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 {
-	std::set<InetAddress> surfaces;
+	/* This is based on ideas and strategies found here:
+	 * https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
+	 *
+	 * In short: a great many symmetric NATs allocate ports sequentially.
+	 * This is common on enterprise and carrier grade NATs as well as consumer
+	 * devices. This code generates a list of "you might try this" addresses by
+	 * extrapolating likely port assignments from currently known external
+	 * global IPv4 surfaces. These can then be included in a PUSH_DIRECT_PATHS
+	 * message to another peer, causing it to possibly try these addresses and
+	 * bust our local symmetric NAT. It works often enough to be worth the
+	 * extra bit of code and does no harm in cases where it fails. */
 
-	// Ideas based on: https://tools.ietf.org/html/draft-takeda-symmetric-nat-traversal-00
-
+	// Gather unique surfaces indexed by local received-on address and flag
+	// us as behind a symmetric NAT if there is more than one.
+	std::map< InetAddress,std::set<InetAddress> > surfaces;
+	bool symmetric = false;
 	{
 		Mutex::Lock _l(_phy_m);
 		Hashtable< PhySurfaceKey,PhySurfaceEntry >::Iterator i(_phy);
@@ -141,33 +153,30 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 		PhySurfaceEntry *e = (PhySurfaceEntry *)0;
 		while (i.next(k,e)) {
 			if ((e->mySurface.ss_family == AF_INET)&&(e->mySurface.ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-				surfaces.insert(e->mySurface);
+				std::set<InetAddress> &s = surfaces[k->receivedOnLocalAddress];
+				s.insert(e->mySurface);
+				symmetric = symmetric||(s.size() > 1);
 			}
 		}
 	}
 
-	if (surfaces.size() > 1) {
-		// More than one global IPv4 surface means this is a symmetric NAT
+	// If we appear to be symmetrically NATed, generate and return extrapolations
+	// of those surfaces. Since PUSH_DIRECT_PATHS is sent multiple times, we
+	// probabilistically generate extrapolations of anywhere from +1 to +5 to
+	// increase the odds that it will work "eventually".
+	if (symmetric) {
 		std::vector<InetAddress> r;
-		for(std::set<InetAddress>::iterator i(surfaces.begin());i!=surfaces.end();++i) {
-			InetAddress ipp(*i);
-			unsigned int p = ipp.port();
-
-			// Try 1+ surface ports
-			if (p >= 0xffff)
-				p = 1025;
-			else ++p;
-			ipp.setPort(p);
-			if ((surfaces.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end()))
-				r.push_back(ipp);
-
-			// Try 2+ surface ports
-			if (p >= 0xffff)
-				p = 1025;
-			else ++p;
-			ipp.setPort(p);
-			if ((surfaces.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end()))
-				r.push_back(ipp);
+		for(std::map< InetAddress,std::set<InetAddress> >::iterator si(surfaces.begin());si!=surfaces.end();++si) {
+			for(std::set<InetAddress>::iterator i(si->second.begin());i!=si->second.end();++i) {
+				InetAddress ipp(*i);
+				unsigned int p = ipp.port() + 1 + ((unsigned int)RR->node->prng() % 5);
+				if (p >= 65535)
+					p -= 64510; // NATs seldom use ports <=1024 so wrap to 1025
+				ipp.setPort(p);
+				if ((si->second.count(ipp) == 0)&&(std::find(r.begin(),r.end(),ipp) == r.end())) {
+					r.push_back(ipp);
+				}
+			}
 		}
 		return r;
 	}
