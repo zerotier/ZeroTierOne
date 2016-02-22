@@ -934,7 +934,7 @@ public:
 		 * Circuit test hop report:
 		 *   <[8] 64-bit timestamp (from original test)>
 		 *   <[8] 64-bit test ID (from original test)>
-		 *   <[8] 64-bit reporter timestamp (reporter's clock, 0 if unspec)>
+		 *   <[8] 64-bit reserved field (set to 0, currently unused)>
 		 *   <[1] 8-bit vendor ID (set to 0, currently unused)>
 		 *   <[1] 8-bit reporter protocol version>
 		 *   <[1] 8-bit reporter major version>

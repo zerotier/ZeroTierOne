@@ -1078,7 +1078,7 @@ bool IncomingPacket::_doCIRCUIT_TEST(const RuntimeEnvironment *RR,const SharedPt
 			Packet outp(originatorAddress,RR->identity.address(),Packet::VERB_CIRCUIT_TEST_REPORT);
 			outp.append((uint64_t)timestamp);
 			outp.append((uint64_t)testId);
-			outp.append((uint64_t)now);
+			outp.append((uint64_t)0); // field reserved for future use
 			outp.append((uint8_t)ZT_VENDOR_ZEROTIER);
 			outp.append((uint8_t)ZT_PROTO_VERSION);
 			outp.append((uint8_t)ZEROTIER_ONE_VERSION_MAJOR);
