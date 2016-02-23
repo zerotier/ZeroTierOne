@@ -934,7 +934,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 			switch(addrType) {
 				case 4: {
 					InetAddress a(field(ptr,4),4,at<uint16_t>(ptr + 4));
-					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
+					if ( ((flags & 0x01) == 0) && (!peer->hasActivePathTo(now,a)) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
 						if (++countPerScope[(int)a.ipScope()][0] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 							peer->sendHELLO(_localAddress,a,now);
@@ -945,7 +945,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,const Sha
 				}	break;
 				case 6: {
 					InetAddress a(field(ptr,16),16,at<uint16_t>(ptr + 16));
-					if ( ((flags & 0x01) == 0) && (Path::isAddressValidForPath(a)) && (!peer->hasActivePathTo(now,a)) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
+					if ( ((flags & 0x01) == 0) && (!peer->hasActivePathTo(now,a)) && (RR->node->shouldUsePathForZeroTierTraffic(_localAddress,a)) ) {
 						if (++countPerScope[(int)a.ipScope()][1] <= ZT_PUSH_DIRECT_PATHS_MAX_PER_SCOPE_AND_FAMILY) {
 							TRACE("attempting to contact %s at pushed direct path %s",peer->address().toString().c_str(),a.toString().c_str());
 							peer->sendHELLO(_localAddress,a,now);
