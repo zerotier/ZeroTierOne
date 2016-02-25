@@ -59,7 +59,7 @@ fi
 echo "Erasing binary and support files..."
 if [ -d /var/lib/zerotier-one ]; then
 	cd /var/lib/zerotier-one
-	rm -rf zerotier-one *.persist identity.public *.log *.pid *.sh updates.d networks.d iddb.d root-topology
+	rm -rf zerotier-one *.persist identity.public *.log *.pid *.sh updates.d networks.d iddb.d root-topology ui
 fi
 
 echo "Erasing anything installed into system bin directories..."
