@@ -170,11 +170,13 @@ public:
 	/**
 	 * Push direct paths back to self if we haven't done so in the configured timeout
 	 *
-	 * @param path Remote path to use to send the push
+	 * @param localAddr Local address
+	 * @param toAddress Remote address to send push to (usually from path)
 	 * @param now Current time
 	 * @param force If true, push regardless of rate limit
+	 * @return True if something was actually sent
 	 */
-	void pushDirectPaths(Path *path,uint64_t now,bool force);
+	bool pushDirectPaths(const InetAddress &localAddr,const InetAddress &toAddress,uint64_t now,bool force);
 
 	/**
 	 * @return All known direct paths to this peer (active or inactive)

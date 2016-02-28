@@ -478,31 +478,31 @@ unsigned long Switch::doTimerTasks(uint64_t now)
 		Mutex::Lock _l(_contactQueue_m);
 		for(std::list<ContactQueueEntry>::iterator qi(_contactQueue.begin());qi!=_contactQueue.end();) {
 			if (now >= qi->fireAtTime) {
-				if (qi->peer->hasActiveDirectPath(now)) {
-					// Cancel if connection has succeeded
+				if (!qi->peer->pushDirectPaths(qi->localAddr,qi->inaddr,now,true))
+					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
+				_contactQueue.erase(qi++);
+				continue;
+				/* Old symmetric NAT buster code, obsoleted by port prediction alg in SelfAwareness but left around for now in case we revert
+				if (qi->strategyIteration == 0) {
+					// First strategy: send packet directly to destination
+					qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
+				} else if (qi->strategyIteration <= 3) {
+					// Strategies 1-3: try escalating ports for symmetric NATs that remap sequentially
+					InetAddress tmpaddr(qi->inaddr);
+					int p = (int)qi->inaddr.port() + qi->strategyIteration;
+					if (p > 65535)
+						p -= 64511;
+					tmpaddr.setPort((unsigned int)p);
+					qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
+				} else {
+					// All strategies tried, expire entry
 					_contactQueue.erase(qi++);
 					continue;
-				} else {
-					if (qi->strategyIteration == 0) {
-						// First strategy: send packet directly to destination
-						qi->peer->sendHELLO(qi->localAddr,qi->inaddr,now);
-					} else if (qi->strategyIteration <= 3) {
-						// Strategies 1-3: try escalating ports for symmetric NATs that remap sequentially
-						InetAddress tmpaddr(qi->inaddr);
-						int p = (int)qi->inaddr.port() + qi->strategyIteration;
-						if (p < 0xffff) {
-							tmpaddr.setPort((unsigned int)p);
-							qi->peer->sendHELLO(qi->localAddr,tmpaddr,now);
-						} else qi->strategyIteration = 5;
-					} else {
-						// All strategies tried, expire entry
-						_contactQueue.erase(qi++);
-						continue;
-					}
-					++qi->strategyIteration;
-					qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
-					nextDelay = std::min(nextDelay,(unsigned long)ZT_NAT_T_TACTICAL_ESCALATION_DELAY);
 				}
+				++qi->strategyIteration;
+				qi->fireAtTime = now + ZT_NAT_T_TACTICAL_ESCALATION_DELAY;
+				nextDelay = std::min(nextDelay,(unsigned long)ZT_NAT_T_TACTICAL_ESCALATION_DELAY);
+				*/
 			} else {
 				nextDelay = std::min(nextDelay,(unsigned long)(qi->fireAtTime - now));
 			}
@@ -813,12 +813,13 @@ bool Switch::_trySend(const Packet &packet,bool encrypt,uint64_t nwid)
 				relay = RR->topology->getBestRoot();
 
 			if (!(relay)||(!(viaPath = relay->getBestPath(now))))
-				return false; // no paths, no root servers?
+				return false; // no paths, no root servers?, no relays? :P~~~
 		}
 
 		if ((network)&&(relay)&&(network->isAllowed(peer))) {
 			// Push hints for direct connectivity to this peer if we are relaying
-			peer->pushDirectPaths(viaPath,now,false);
+			peer->pushDirectPaths(viaPath->localAddress(),viaPath->address(),now,false);
+			viaPath->sent(now);
 		}
 
 		Packet tmp(packet);

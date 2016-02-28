@@ -127,8 +127,10 @@ void InetAddress::set(const void *ipBytes,unsigned int ipLen,unsigned int port)
 {
 	memset(this,0,sizeof(InetAddress));
 	if (ipLen == 4) {
+		uint32_t ipb[1];
+		memcpy(ipb,ipBytes,4);
 		ss_family = AF_INET;
-		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = *(reinterpret_cast<const uint32_t *>(ipBytes));
+		reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr = ipb[0];
 		reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton((uint16_t)port);
 	} else if (ipLen == 16) {
 		ss_family = AF_INET6;

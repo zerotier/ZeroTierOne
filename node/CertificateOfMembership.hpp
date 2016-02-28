@@ -33,6 +33,16 @@
 #include "Identity.hpp"
 #include "Utils.hpp"
 
+/**
+ * Default window of time for certificate agreement
+ *
+ * Right now we use time for 'revision' so this is the maximum time divergence
+ * between two certs for them to agree. It comes out to five minutes, which
+ * gives a lot of margin for error if the controller hiccups or its clock
+ * drifts but causes de-authorized peers to fall off fast enough.
+ */
+#define ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA (ZT_NETWORK_AUTOCONF_DELAY * 5)
+
 namespace ZeroTier {
 
 /**

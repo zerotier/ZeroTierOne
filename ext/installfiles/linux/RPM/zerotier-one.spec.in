@@ -21,11 +21,11 @@ mkdir -p /var/lib/zerotier-one/updates.d
 
 %post
 chmod 0755 /var/lib/zerotier-one/updates.d/__INSTALLER__
-/var/lib/zerotier-one/updates.d/__INSTALLER__
+/var/lib/zerotier-one/updates.d/__INSTALLER__ >>/dev/null 2>&1
 
 %preun
 if [ "$1" -lt 1 ]; then
- /var/lib/zerotier-one/uninstall.sh
+ /var/lib/zerotier-one/uninstall.sh >>/dev/null 2>&1
 fi
 
 %clean

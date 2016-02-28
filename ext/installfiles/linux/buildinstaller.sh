@@ -91,14 +91,14 @@ case "$system" in
 			rm -f "${debfolder}/postinst" "${debfolder}/prerm"
 
 			echo '#!/bin/bash' >${debfolder}/postinst
-			echo "/var/lib/zerotier-one/updates.d/${targ}" >>${debfolder}/postinst
+			echo "/var/lib/zerotier-one/updates.d/${targ} >>/dev/null 2>&1" >>${debfolder}/postinst
 			echo "/bin/rm -f /var/lib/zerotier-one/updates.d/*" >>${debfolder}/postinst
 			chmod a+x ${debfolder}/postinst
 
 			echo '#!/bin/bash' >${debfolder}/prerm
 			echo 'export PATH=/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin' >>${debfolder}/prerm
 			echo 'if [ "$1" != "upgrade" ]; then' >>${debfolder}/prerm
-			echo '	/var/lib/zerotier-one/uninstall.sh' >>${debfolder}/prerm
+			echo '	/var/lib/zerotier-one/uninstall.sh >>/dev/null 2>&1' >>${debfolder}/prerm
 			echo 'fi' >>${debfolder}/prerm
 			chmod a+x ${debfolder}/prerm
 

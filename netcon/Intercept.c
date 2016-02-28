@@ -38,20 +38,25 @@
 #include <sys/time.h>
 #include <pwd.h>
 #include <errno.h>
-#include <linux/errno.h>
 #include <stdarg.h>
 #include <netdb.h>
 #include <string.h>
-#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
 #include <sys/resource.h>
-#include <linux/net.h> /* for NPROTO */
 
-#define SOCK_MAX (SOCK_PACKET + 1)
+#if defined(__linux__)
+  #include <linux/errno.h>
+  #include <sys/syscall.h>
+  #include <linux/net.h> /* for NPROTO */
+#endif
+
+#if defined(__linux__)
+  #define SOCK_MAX (SOCK_PACKET + 1)
+#endif
 #define SOCK_TYPE_MASK 0xf
 
 #include "Intercept.h"
@@ -92,6 +97,11 @@ static int connected_to_service(int sockfd)
 static int set_up_intercept()
 {
   if (!realconnect) {
+
+#if defined(__linux__)
+    realaccept4 = dlsym(RTLD_NEXT, "accept4");
+    realsyscall = dlsym(RTLD_NEXT, "syscall");
+#endif
     realconnect = dlsym(RTLD_NEXT, "connect");
     realbind = dlsym(RTLD_NEXT, "bind");
     realaccept = dlsym(RTLD_NEXT, "accept");
@@ -100,9 +110,7 @@ static int set_up_intercept()
     realbind = dlsym(RTLD_NEXT, "bind");
     realsetsockopt = dlsym(RTLD_NEXT, "setsockopt");
     realgetsockopt = dlsym(RTLD_NEXT, "getsockopt");
-    realaccept4 = dlsym(RTLD_NEXT, "accept4");
     realclose = dlsym(RTLD_NEXT, "close");
-    realsyscall = dlsym(RTLD_NEXT, "syscall");
     realgetsockname = dlsym(RTLD_NEXT, "getsockname");
   }
   if (!netpath) {
@@ -127,10 +135,12 @@ int setsockopt(SETSOCKOPT_SIG)
     return realsetsockopt(socket, level, option_name, option_value, option_len);
 
   dwr(MSG_DEBUG,"setsockopt(%d)\n", socket);
+#if defined(__linux__)
   if(level == SOL_IPV6 && option_name == IPV6_V6ONLY)
     return 0;
   if(level == SOL_IP && (option_name == IP_TTL || option_name == IP_TOS))
     return 0;
+#endif
   if(level == IPPROTO_TCP || (level == SOL_SOCKET && option_name == SO_KEEPALIVE))
     return 0;
   if(realsetsockopt(socket, level, option_name, option_value, option_len) < 0)
@@ -169,13 +179,16 @@ int socket(SOCKET_SIG)
 
   dwr(MSG_DEBUG,"socket():\n");
   /* Check that type makes sense */
+#if defined(__linux__)
   int flags = socket_type & ~SOCK_TYPE_MASK;
   if (flags & ~(SOCK_CLOEXEC | SOCK_NONBLOCK)) {
       errno = EINVAL;
       return -1;
   }
+#endif
   socket_type &= SOCK_TYPE_MASK;
   /* Check protocol is in range */
+#if defined(__linux__)
   if (socket_family < 0 || socket_family >= NPROTO){
     errno = EAFNOSUPPORT;
     return -1;
@@ -184,9 +197,12 @@ int socket(SOCKET_SIG)
     errno = EINVAL;
     return -1;
   }
+#endif
   /* TODO: detect ENFILE condition */
   if(socket_family == AF_LOCAL
+#if defined(__linux__)
     || socket_family == AF_NETLINK
+#endif
     || socket_family == AF_UNIX) {
       int err = realsocket(socket_family, socket_type, protocol);
       dwr(MSG_DEBUG,"realsocket() = %d\n", err);
@@ -244,24 +260,30 @@ int connect(CONNECT_SIG)
     errno = ENOTSOCK;
     return -1;
   }
+#if defined(__linux__)
   /* Check family */
   if (connaddr->sin_family < 0 || connaddr->sin_family >= NPROTO){
     errno = EAFNOSUPPORT;
     return -1;
   }
+#endif
   /* make sure we don't touch any standard outputs */
   if(__fd == STDIN_FILENO || __fd == STDOUT_FILENO || __fd == STDERR_FILENO)
     return(realconnect(__fd, __addr, __len));
 
   if(__addr != NULL && (connaddr->sin_family == AF_LOCAL
+#if defined(__linux__)
     || connaddr->sin_family == PF_NETLINK
     || connaddr->sin_family == AF_NETLINK
+#endif
     || connaddr->sin_family == AF_UNIX)) {
     return realconnect(__fd, __addr, __len);
   }
   /* Assemble and send RPC */
   struct connect_st rpc_st;
+#if defined(__linux__)
   rpc_st.__tid = syscall(SYS_gettid);
+#endif
   rpc_st.__fd = __fd;
   memcpy(&rpc_st.__addr, __addr, sizeof(struct sockaddr_storage));
   memcpy(&rpc_st.__len, &__len, sizeof(socklen_t));
@@ -300,7 +322,9 @@ int bind(BIND_SIG)
   connaddr = (struct sockaddr_in *)addr;
 
   if(connaddr->sin_family == AF_LOCAL
+#if defined(__linux__)
     || connaddr->sin_family == AF_NETLINK
+#endif
     || connaddr->sin_family == AF_UNIX) {
       int err = realbind(sockfd, addr, addrlen);
       dwr(MSG_DEBUG,"realbind, err = %d\n", err);
@@ -317,7 +341,9 @@ int bind(BIND_SIG)
   /* Assemble and send RPC */
   struct bind_st rpc_st;
   rpc_st.sockfd = sockfd;
+#if defined(__linux__)
   rpc_st.__tid = syscall(SYS_gettid);
+#endif
   memcpy(&rpc_st.addr, addr, sizeof(struct sockaddr_storage));
   memcpy(&rpc_st.addrlen, &addrlen, sizeof(socklen_t));
   return rpc_send_command(netpath, RPC_BIND, sockfd, &rpc_st, sizeof(struct bind_st));
@@ -328,6 +354,7 @@ int bind(BIND_SIG)
 ------------------------------------------------------------------------------*/
 
 /* int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags */
+#if defined(__linux__)
 int accept4(ACCEPT4_SIG)
 {
   dwr(MSG_DEBUG,"accept4(%d):\n", sockfd);
@@ -337,6 +364,7 @@ int accept4(ACCEPT4_SIG)
     fcntl(sockfd, F_SETFL, O_NONBLOCK);
   return accept(sockfd, addr, addrlen);
 }
+#endif
 
 /*------------------------------------------------------------------------------
 ----------------------------------- accept() -----------------------------------
@@ -442,7 +470,9 @@ int listen(LISTEN_SIG)
   struct listen_st rpc_st;
   rpc_st.sockfd = sockfd;
   rpc_st.backlog = backlog;
+#if defined(__linux__)
   rpc_st.__tid = syscall(SYS_gettid);
+#endif
   return rpc_send_command(netpath, RPC_LISTEN, sockfd, &rpc_st, sizeof(struct listen_st));
 }
 
@@ -502,6 +532,7 @@ int getsockname(GETSOCKNAME_SIG)
 ------------------------------------ syscall() ---------------------------------
 ------------------------------------------------------------------------------*/
 
+#if defined(__linux__)
 long syscall(SYSCALL_SIG)
 {
   va_list ap;
@@ -542,3 +573,4 @@ long syscall(SYSCALL_SIG)
 #endif
   return realsyscall(number,a,b,c,d,e,f);
 }
+#endif

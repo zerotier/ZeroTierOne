@@ -18,7 +18,7 @@ find . -mindepth 2 -maxdepth 2 -type d | while read testdir; do
 	continue    
     fi
 
-    echo "*** Building: '$testdir'..."
+    echo "\n\n\n*** Building: '$testdir'..."
     rm _results/*.tmp
 
     # Stage scripts

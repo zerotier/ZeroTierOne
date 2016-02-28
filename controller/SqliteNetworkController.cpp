@@ -61,18 +61,23 @@
 // Stored in database as schemaVersion key in Config.
 // If not present, database is assumed to be empty and at the current schema version
 // and this key/value is added automatically.
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 1
-#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "1"
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION 2
+#define ZT_NETCONF_SQLITE_SCHEMA_VERSION_STR "2"
 
 // API version reported via JSON control plane
 #define ZT_NETCONF_CONTROLLER_API_VERSION 1
 
-// Drop requests for a given peer and network ID that occur more frequently
-// than this (ms).
+// Min duration between requests for an address/nwid combo to prevent floods
 #define ZT_NETCONF_MIN_REQUEST_PERIOD 1000
 
 // Delay between backups in milliseconds
-#define ZT_NETCONF_BACKUP_PERIOD 120000
+#define ZT_NETCONF_BACKUP_PERIOD 300000
+
+// Number of NodeHistory entries to maintain per node and network (can be changed)
+#define ZT_NETCONF_NODE_HISTORY_LENGTH 64
+
+// Nodes are considered active if they've queried in less than this long
+#define ZT_NETCONF_NODE_ACTIVE_THRESHOLD ((ZT_NETWORK_AUTOCONF_DELAY * 2) + 5000)
 
 namespace ZeroTier {
 
@@ -134,6 +139,9 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 		throw std::runtime_error("SqliteNetworkController cannot open database file");
 	sqlite3_busy_timeout(_db,10000);
 
+	sqlite3_exec(_db,"PRAGMA synchronous = OFF",0,0,0);
+	sqlite3_exec(_db,"PRAGMA journal_mode = MEMORY",0,0,0);
+
 	sqlite3_stmt *s = (sqlite3_stmt *)0;
 	if ((sqlite3_prepare_v2(_db,"SELECT v FROM Config WHERE k = 'schemaVersion';",-1,&s,(const char **)0) == SQLITE_OK)&&(s)) {
 		int schemaVersion = -1234;
@@ -146,8 +154,34 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 		if (schemaVersion == -1234) {
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController schemaVersion not found in Config table (init failure?)");
+		} else if (schemaVersion == 1) {
+			// Create NodeHistory table to upgrade from version 1 to version 2
+			if (sqlite3_exec(_db,
+					"CREATE TABLE NodeHistory (\n"
+					"  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,\n"
+					"  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,\n"
+					"  networkVisitCounter INTEGER NOT NULL DEFAULT(0),\n"
+					"  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),\n"
+					"  requestTime INTEGER NOT NULL DEFAULT(0),\n"
+					"  clientMajorVersion INTEGER NOT NULL DEFAULT(0),\n"
+					"  clientMinorVersion INTEGER NOT NULL DEFAULT(0),\n"
+					"  clientRevision INTEGER NOT NULL DEFAULT(0),\n"
+					"  networkRequestMetaData VARCHAR(1024),\n"
+					"  fromAddress VARCHAR(128)\n"
+					");\n"
+					"\n"
+					"CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);\n"
+					"CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);\n"
+					"CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);\n"
+					"\n"
+					"UPDATE \"Config\" SET \"v\" = 2 WHERE \"k\" = 'schemaVersion';\n"
+				,0,0,0) != SQLITE_OK) {
+				char err[1024];
+				Utils::snprintf(err,sizeof(err),"SqliteNetworkController cannot upgrade the database to version 2: %s",sqlite3_errmsg(_db));
+				sqlite3_close(_db);
+				throw std::runtime_error(err);
+			}
 		} else if (schemaVersion != ZT_NETCONF_SQLITE_SCHEMA_VERSION) {
-			// Note -- this will eventually run auto-upgrades so this isn't how it'll work going forward
 			sqlite3_close(_db);
 			throw std::runtime_error("SqliteNetworkController database schema version mismatch");
 		}
@@ -176,6 +210,13 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			/* Node */
 			||(sqlite3_prepare_v2(_db,"SELECT identity FROM Node WHERE id = ?",-1,&_sGetNodeIdentity,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO Node (id,identity) VALUES (?,?)",-1,&_sCreateOrReplaceNode,(const char **)0) != SQLITE_OK)
+
+			/* NodeHistory */
+			||(sqlite3_prepare_v2(_db,"SELECT IFNULL(MAX(networkVisitCounter),0) FROM NodeHistory WHERE networkId = ? AND nodeId = ?",-1,&_sGetMaxNodeHistoryNetworkVisitCounter,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"INSERT INTO NodeHistory (nodeId,networkId,networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress) VALUES (?,?,?,?,?,?,?,?,?,?)",-1,&_sAddNodeHistoryEntry,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"DELETE FROM NodeHistory WHERE networkId = ? AND nodeId = ? AND networkVisitCounter <= ?",-1,&_sDeleteOldNodeHistoryEntries,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,MAX(requestTime),MAX((((clientMajorVersion & 65535) << 32) | ((clientMinorVersion & 65535) << 16) | (clientRevision & 65535))) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? AND networkRequestAuthorized > 0 GROUP BY nodeId",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress FROM NodeHistory WHERE networkId = ? AND nodeId = ? ORDER BY requestTime DESC",-1,&_sGetNodeHistory,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
 			||(sqlite3_prepare_v2(_db,"SELECT etherType FROM Rule WHERE networkId = ? AND \"action\" = 'accept'",-1,&_sGetEtherTypesFromRuleTable,(const char **)0) != SQLITE_OK)
@@ -224,9 +265,9 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"INSERT OR REPLACE INTO \"Config\" (\"k\",\"v\") VALUES (?,?)",-1,&_sSetConfig,(const char **)0) != SQLITE_OK)
 
 		 ) {
-		//printf("%s\n",sqlite3_errmsg(_db));
+		std::string err(std::string("SqliteNetworkController unable to initialize one or more prepared statements: ") + sqlite3_errmsg(_db));
 		sqlite3_close(_db);
-		throw std::runtime_error("SqliteNetworkController unable to initialize one or more prepared statements");
+		throw std::runtime_error(err);
 	}
 
 	/* Generate a 128-bit / 32-character "instance ID" if one isn't already
@@ -267,6 +308,11 @@ SqliteNetworkController::~SqliteNetworkController()
 		sqlite3_finalize(_sCreateMember);
 		sqlite3_finalize(_sGetNodeIdentity);
 		sqlite3_finalize(_sCreateOrReplaceNode);
+		sqlite3_finalize(_sGetMaxNodeHistoryNetworkVisitCounter);
+		sqlite3_finalize(_sAddNodeHistoryEntry);
+		sqlite3_finalize(_sDeleteOldNodeHistoryEntries);
+		sqlite3_finalize(_sGetActiveNodesOnNetwork);
+		sqlite3_finalize(_sGetNodeHistory);
 		sqlite3_finalize(_sGetEtherTypesFromRuleTable);
 		sqlite3_finalize(_sGetActiveBridges);
 		sqlite3_finalize(_sGetIpAssignmentsForNode);
@@ -555,8 +601,17 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpPOST(
 					}
 
 					test->timestamp = OSUtils::now();
-					_circuitTests[test->testId] = test;
+
+					_CircuitTestEntry &te = _circuitTests[test->testId];
+					te.test = test;
+					te.jsonResults = "";
+
 					_node->circuitTestBegin(test,&(SqliteNetworkController::_circuitTestCallback));
+
+					char json[1024];
+					Utils::snprintf(json,sizeof(json),"{\"testId\":\"%.16llx\"}",test->testId);
+					responseBody = json;
+					responseContentType = "application/json";
 
 					return 200;
 				} // else 404
@@ -1003,8 +1058,28 @@ unsigned int SqliteNetworkController::handleControlPlaneHttpDELETE(
 void SqliteNetworkController::threadMain()
 	throw()
 {
-	uint64_t lastBackupTime = 0;
+	uint64_t lastBackupTime = OSUtils::now();
+	uint64_t lastCleanupTime = OSUtils::now();
+
 	while (_backupThreadRun) {
+		if ((OSUtils::now() - lastCleanupTime) >= 5000) {
+			const uint64_t now = OSUtils::now();
+			lastCleanupTime = now;
+
+			Mutex::Lock _l(_lock);
+
+			// Clean out really old circuit tests to prevent memory build-up
+			for(std::map< uint64_t,_CircuitTestEntry >::iterator ct(_circuitTests.begin());ct!=_circuitTests.end();) {
+				if (!ct->second.test) {
+					_circuitTests.erase(ct++);
+				} else if ((now - ct->second.test->timestamp) >= ZT_SQLITENETWORKCONTROLLER_CIRCUIT_TEST_TIMEOUT) {
+					_node->circuitTestEnd(ct->second.test);
+					::free((void *)ct->second.test);
+					_circuitTests.erase(ct++);
+				} else ++ct;
+			}
+		}
+
 		if ((OSUtils::now() - lastBackupTime) >= ZT_NETCONF_BACKUP_PERIOD) {
 			lastBackupTime = OSUtils::now();
 
@@ -1049,6 +1124,7 @@ void SqliteNetworkController::threadMain()
 			OSUtils::rm(backupPath2);
 			::rename(backupPath,backupPath2);
 		}
+
 		Thread::sleep(250);
 	}
 }
@@ -1171,44 +1247,36 @@ unsigned int SqliteNetworkController::_doCPGet(
 									(unsigned int)sqlite3_column_int(_sGetIpAssignmentsForNode2,1)
 								);
 								responseBody.append(firstIp ? "\"" : ",\"");
-								firstIp = false;
 								responseBody.append(_jsonEscape(ip.toString()));
 								responseBody.push_back('"');
+								firstIp = false;
 							}
 
 							responseBody.append("],\n\t\"recentLog\": [");
 
-							{
-								std::map< std::pair<Address,uint64_t>,_LLEntry >::const_iterator lli(_lastLog.find(std::pair<Address,uint64_t>(Address(address),nwid)));
-								if (lli != _lastLog.end()) {
-									const _LLEntry &lastLogEntry = lli->second;
-									uint64_t eptr = lastLogEntry.totalRequests;
-									for(int k=0;k<ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE;++k) {
-										if (!eptr--)
-											break;
-										const unsigned long ptr = (unsigned long)eptr % ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE;
-
-										char tsbuf[64];
-										Utils::snprintf(tsbuf,sizeof(tsbuf),"%llu",(unsigned long long)lastLogEntry.l[ptr].ts);
-
-										responseBody.append((k == 0) ? "{" : ",{");
-										responseBody.append("\"ts\":");
-										responseBody.append(tsbuf);
-										responseBody.append(lastLogEntry.l[ptr].authorized ? ",\"authorized\":false,\"version\":" : ",\"authorized\":true,\"version\":");
-										if (lastLogEntry.l[ptr].version[0]) {
-											responseBody.push_back('"');
-											responseBody.append(_jsonEscape(lastLogEntry.l[ptr].version));
-											responseBody.append("\",\"fromAddr\":");
-										} else responseBody.append("null,\"fromAddr\":");
-										if (lastLogEntry.l[ptr].fromAddr) {
-											responseBody.push_back('"');
-											responseBody.append(_jsonEscape(lastLogEntry.l[ptr].fromAddr.toString()));
-											responseBody.append("\"}");
-										} else responseBody.append("null}");
-									}
-								}
+							sqlite3_reset(_sGetNodeHistory);
+							sqlite3_bind_text(_sGetNodeHistory,1,nwids,16,SQLITE_STATIC);
+							sqlite3_bind_text(_sGetNodeHistory,2,addrs,10,SQLITE_STATIC);
+							bool firstHistory = true;
+							while (sqlite3_step(_sGetNodeHistory) == SQLITE_ROW) {
+								responseBody.append(firstHistory ? "{" : ",{");
+								responseBody.append("\"ts\":");
+								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,2));
+								responseBody.append((sqlite3_column_int(_sGetNodeHistory,1) == 0) ? ",\"authorized\":false,\"clientMajorVersion\":" : ",\"authorized\":true,\"clientMajorVersion\":");
+								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,3));
+								responseBody.append(",\"clientMinorVersion\":");
+								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,4));
+								responseBody.append(",\"clientRevision\":");
+								responseBody.append((const char *)sqlite3_column_text(_sGetNodeHistory,5));
+								responseBody.append(",\"fromAddr\":");
+								const char *fa = (const char *)sqlite3_column_text(_sGetNodeHistory,7);
+								if (fa) {
+									responseBody.push_back('"');
+									responseBody.append(_jsonEscape(fa));
+									responseBody.append("\"}");
+								} else responseBody.append("null}");
+								firstHistory = false;
 							}
-
 							responseBody.append("]\n}\n");
 
 							responseContentType = "application/json";
@@ -1220,7 +1288,7 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 						sqlite3_reset(_sListNetworkMembers);
 						sqlite3_bind_text(_sListNetworkMembers,1,nwids,16,SQLITE_STATIC);
-						responseBody.append("{");
+						responseBody.push_back('{');
 						bool firstMember = true;
 						while (sqlite3_step(_sListNetworkMembers) == SQLITE_ROW) {
 							responseBody.append(firstMember ? "\"" : ",\"");
@@ -1235,10 +1303,51 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 					}
 
+				} else if ((path[2] == "active")&&(path.size() == 3)) {
+
+					sqlite3_reset(_sGetActiveNodesOnNetwork);
+					sqlite3_bind_text(_sGetActiveNodesOnNetwork,1,nwids,16,SQLITE_STATIC);
+					sqlite3_bind_int64(_sGetActiveNodesOnNetwork,2,(int64_t)(OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD));
+
+					responseBody.push_back('{');
+					bool firstMember = true;
+					while (sqlite3_step(_sGetActiveNodesOnNetwork) == SQLITE_ROW) {
+						const char *nid = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,0);
+						if (nid) {
+							responseBody.append(firstMember ? "\"" : ",\"");
+							responseBody.append(nid);
+							responseBody.append("\":{\"lt\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,1));
+							if ((uint64_t)sqlite3_column_int64(_sGetActiveNodesOnNetwork,2) >= 0x0000000100010000ULL)
+								responseBody.append(",\"cts\":true");
+							else responseBody.append(",\"cts\":false");
+							responseBody.push_back('}');
+							firstMember = false;
+						}
+					}
+					responseBody.push_back('}');
+
+					responseContentType = "application/json";
+					return 200;
+
+				} else if ((path[2] == "test")&&(path.size() >= 4)) {
+
+					std::map< uint64_t,_CircuitTestEntry >::iterator cte(_circuitTests.find(Utils::hexStrToU64(path[3].c_str())));
+					if ((cte != _circuitTests.end())&&(cte->second.test)) {
+
+						responseBody = "[";
+						responseBody.append(cte->second.jsonResults);
+						responseBody.push_back(']');
+						responseContentType = "application/json";
+
+						return 200;
+
+					} // else 404
+
 				} // else 404
 
 			} else {
-				// get network info
+
 				sqlite3_reset(_sGetNetworkById);
 				sqlite3_bind_text(_sGetNetworkById,1,nwids,16,SQLITE_STATIC);
 				if (sqlite3_step(_sGetNetworkById) == SQLITE_ROW) {
@@ -1541,12 +1650,15 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		return NetworkController::NETCONF_QUERY_INTERNAL_SERVER_ERROR;
 	}
 
-	// Check rate limit circuit breaker to prevent flooding
 	const uint64_t now = OSUtils::now();
-	_LLEntry &lastLogEntry = _lastLog[std::pair<Address,uint64_t>(identity.address(),nwid)];
-	if ((now - lastLogEntry.lastRequestTime) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
-		return NetworkController::NETCONF_QUERY_IGNORE;
-	lastLogEntry.lastRequestTime = now;
+
+	// Check rate limit circuit breaker to prevent flooding
+	{
+		uint64_t &lrt = _lastRequestTime[std::pair<uint64_t,uint64_t>(identity.address().toInt(),nwid)];
+		if ((now - lrt) <= ZT_NETCONF_MIN_REQUEST_PERIOD)
+			return NetworkController::NETCONF_QUERY_IGNORE;
+		lrt = now;
+	}
 
 	NetworkRecord network;
 	memset(&network,0,sizeof(network));
@@ -1632,18 +1744,47 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		sqlite3_step(_sIncrementMemberRevisionCounter);
 	}
 
-	// Add log entry to in-memory circular log
+	// Update NodeHistory with new log entry and delete expired entries
 
 	{
-		const unsigned long ptr = (unsigned long)lastLogEntry.totalRequests % ZT_SQLITENETWORKCONTROLLER_IN_MEMORY_LOG_SIZE;
-		lastLogEntry.l[ptr].ts = now;
-		lastLogEntry.l[ptr].fromAddr = fromAddr;
-		if ((clientMajorVersion > 0)||(clientMinorVersion > 0)||(clientRevision > 0))
-			Utils::snprintf(lastLogEntry.l[ptr].version,sizeof(lastLogEntry.l[ptr].version),"%u.%u.%u",clientMajorVersion,clientMinorVersion,clientRevision);
-		else lastLogEntry.l[ptr].version[0] = (char)0;
-		lastLogEntry.l[ptr].authorized = member.authorized;
-		++lastLogEntry.totalRequests;
-		// TODO: push or save these somewhere
+		int64_t nextVC = 1;
+		sqlite3_reset(_sGetMaxNodeHistoryNetworkVisitCounter);
+		sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,1,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_text(_sGetMaxNodeHistoryNetworkVisitCounter,2,member.nodeId,10,SQLITE_STATIC);
+		if (sqlite3_step(_sGetMaxNodeHistoryNetworkVisitCounter) == SQLITE_ROW) {
+			nextVC = (int64_t)sqlite3_column_int64(_sGetMaxNodeHistoryNetworkVisitCounter,0) + 1;
+		}
+
+		std::string mdstr(metaData.toString());
+		if (mdstr.length() > 1024)
+			mdstr = mdstr.substr(0,1024);
+		std::string fastr;
+		if (fromAddr)
+			fastr = fromAddr.toString();
+
+		sqlite3_reset(_sAddNodeHistoryEntry);
+		sqlite3_bind_text(_sAddNodeHistoryEntry,1,member.nodeId,10,SQLITE_STATIC);
+		sqlite3_bind_text(_sAddNodeHistoryEntry,2,network.id,16,SQLITE_STATIC);
+		sqlite3_bind_int64(_sAddNodeHistoryEntry,3,nextVC);
+		sqlite3_bind_int(_sAddNodeHistoryEntry,4,(member.authorized ? 1 : 0));
+		sqlite3_bind_int64(_sAddNodeHistoryEntry,5,(long long)now);
+		sqlite3_bind_int(_sAddNodeHistoryEntry,6,(int)clientMajorVersion);
+		sqlite3_bind_int(_sAddNodeHistoryEntry,7,(int)clientMinorVersion);
+		sqlite3_bind_int(_sAddNodeHistoryEntry,8,(int)clientRevision);
+		sqlite3_bind_text(_sAddNodeHistoryEntry,9,mdstr.c_str(),-1,SQLITE_STATIC);
+		if (fastr.length() > 0)
+			sqlite3_bind_text(_sAddNodeHistoryEntry,10,fastr.c_str(),-1,SQLITE_STATIC);
+		else sqlite3_bind_null(_sAddNodeHistoryEntry,10);
+		sqlite3_step(_sAddNodeHistoryEntry);
+
+		nextVC -= ZT_NETCONF_NODE_HISTORY_LENGTH;
+		if (nextVC >= 0) {
+			sqlite3_reset(_sDeleteOldNodeHistoryEntries);
+			sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,1,network.id,16,SQLITE_STATIC);
+			sqlite3_bind_text(_sDeleteOldNodeHistoryEntries,2,member.nodeId,10,SQLITE_STATIC);
+			sqlite3_bind_int64(_sDeleteOldNodeHistoryEntries,3,nextVC);
+			sqlite3_step(_sDeleteOldNodeHistoryEntries);
+		}
 	}
 
 	// Check member authorization
@@ -1910,7 +2051,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 		}
 
 		if (network.isPrivate) {
-			CertificateOfMembership com(now,ZT_NETWORK_AUTOCONF_DELAY + (ZT_NETWORK_AUTOCONF_DELAY / 2),nwid,identity.address());
+			CertificateOfMembership com(now,ZT_NETWORK_COM_DEFAULT_REVISION_MAX_DELTA,nwid,identity.address());
 			if (com.sign(signingId)) // basically can't fail unless our identity is invalid
 				netconf[ZT_NETWORKCONFIG_DICT_KEY_CERTIFICATE_OF_MEMBERSHIP] = com.toString();
 			else {
@@ -1930,73 +2071,67 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 void SqliteNetworkController::_circuitTestCallback(ZT_Node *node,ZT_CircuitTest *test,const ZT_CircuitTestReport *report)
 {
-	static Mutex circuitTestWriteLock;
+	char tmp[65535];
+	SqliteNetworkController *const self = reinterpret_cast<SqliteNetworkController *>(test->ptr);
 
-	const uint64_t now = OSUtils::now();
+	if (!test)
+		return;
+	if (!report)
+		return;
 
-	SqliteNetworkController *const c = reinterpret_cast<SqliteNetworkController *>(test->ptr);
-	char tmp[128];
+	Mutex::Lock _l(self->_lock);
+	std::map< uint64_t,_CircuitTestEntry >::iterator cte(self->_circuitTests.find(test->testId));
 
-	std::string reportSavePath(c->_circuitTestPath);
-	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx",test->credentialNetworkId);
-	reportSavePath.append(tmp);
-	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.16llx",test->timestamp,test->testId);
-	reportSavePath.append(tmp);
-	OSUtils::mkdir(reportSavePath);
-	Utils::snprintf(tmp,sizeof(tmp),ZT_PATH_SEPARATOR_S"%.16llx_%.10llx_%.10llx",now,report->upstream,report->current);
-	reportSavePath.append(tmp);
-
-	{
-		Mutex::Lock _l(circuitTestWriteLock);
-		FILE *f = fopen(reportSavePath.c_str(),"a");
-		if (!f)
-			return;
-		fseek(f,0,SEEK_END);
-		fprintf(f,"%s{\n"
-			"\t\"timestamp\": %llu,"ZT_EOL_S
-			"\t\"testId\": \"%.16llx\","ZT_EOL_S
-			"\t\"upstream\": \"%.10llx\","ZT_EOL_S
-			"\t\"current\": \"%.10llx\","ZT_EOL_S
-			"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
-			"\t\"remoteTimestamp\": %llu,"ZT_EOL_S
-			"\t\"sourcePacketId\": \"%.16llx\","ZT_EOL_S
-			"\t\"flags\": %llu,"ZT_EOL_S
-			"\t\"sourcePacketHopCount\": %u,"ZT_EOL_S
-			"\t\"errorCode\": %u,"ZT_EOL_S
-			"\t\"vendor\": %d,"ZT_EOL_S
-			"\t\"protocolVersion\": %u,"ZT_EOL_S
-			"\t\"majorVersion\": %u,"ZT_EOL_S
-			"\t\"minorVersion\": %u,"ZT_EOL_S
-			"\t\"revision\": %u,"ZT_EOL_S
-			"\t\"platform\": %d,"ZT_EOL_S
-			"\t\"architecture\": %d,"ZT_EOL_S
-			"\t\"receivedOnLocalAddress\": \"%s\","ZT_EOL_S
-			"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
-			"}",
-			((ftell(f) > 0) ? ",\n" : ""),
-			(unsigned long long)report->timestamp,
-			(unsigned long long)test->testId,
-			(unsigned long long)report->upstream,
-			(unsigned long long)report->current,
-			(unsigned long long)now,
-			(unsigned long long)report->remoteTimestamp,
-			(unsigned long long)report->sourcePacketId,
-			(unsigned long long)report->flags,
-			report->sourcePacketHopCount,
-			report->errorCode,
-			(int)report->vendor,
-			report->protocolVersion,
-			report->majorVersion,
-			report->minorVersion,
-			report->revision,
-			(int)report->platform,
-			(int)report->architecture,
-			reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
-			reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
-		fclose(f);
+	if (cte == self->_circuitTests.end()) { // sanity check: a circuit test we didn't launch?
+		self->_node->circuitTestEnd(test);
+		::free((void *)test);
+		return;
 	}
+
+	Utils::snprintf(tmp,sizeof(tmp),
+		"%s{\n"
+		"\t\"timestamp\": %llu,"ZT_EOL_S
+		"\t\"testId\": \"%.16llx\","ZT_EOL_S
+		"\t\"upstream\": \"%.10llx\","ZT_EOL_S
+		"\t\"current\": \"%.10llx\","ZT_EOL_S
+		"\t\"receivedTimestamp\": %llu,"ZT_EOL_S
+		"\t\"remoteTimestamp\": %llu,"ZT_EOL_S
+		"\t\"sourcePacketId\": \"%.16llx\","ZT_EOL_S
+		"\t\"flags\": %llu,"ZT_EOL_S
+		"\t\"sourcePacketHopCount\": %u,"ZT_EOL_S
+		"\t\"errorCode\": %u,"ZT_EOL_S
+		"\t\"vendor\": %d,"ZT_EOL_S
+		"\t\"protocolVersion\": %u,"ZT_EOL_S
+		"\t\"majorVersion\": %u,"ZT_EOL_S
+		"\t\"minorVersion\": %u,"ZT_EOL_S
+		"\t\"revision\": %u,"ZT_EOL_S
+		"\t\"platform\": %d,"ZT_EOL_S
+		"\t\"architecture\": %d,"ZT_EOL_S
+		"\t\"receivedOnLocalAddress\": \"%s\","ZT_EOL_S
+		"\t\"receivedFromRemoteAddress\": \"%s\""ZT_EOL_S
+		"}",
+		((cte->second.jsonResults.length() > 0) ? ",\n" : ""),
+		(unsigned long long)report->timestamp,
+		(unsigned long long)test->testId,
+		(unsigned long long)report->upstream,
+		(unsigned long long)report->current,
+		(unsigned long long)OSUtils::now(),
+		(unsigned long long)report->remoteTimestamp,
+		(unsigned long long)report->sourcePacketId,
+		(unsigned long long)report->flags,
+		report->sourcePacketHopCount,
+		report->errorCode,
+		(int)report->vendor,
+		report->protocolVersion,
+		report->majorVersion,
+		report->minorVersion,
+		report->revision,
+		(int)report->platform,
+		(int)report->architecture,
+		reinterpret_cast<const InetAddress *>(&(report->receivedOnLocalAddress))->toString().c_str(),
+		reinterpret_cast<const InetAddress *>(&(report->receivedFromRemoteAddress))->toString().c_str());
+
+	cte->second.jsonResults.append(tmp);
 }
 
 } // namespace ZeroTier

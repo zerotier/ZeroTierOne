@@ -670,6 +670,9 @@ std::string Node::dataStoreGet(const char *name)
 
 bool Node::shouldUsePathForZeroTierTraffic(const InetAddress &localAddress,const InetAddress &remoteAddress)
 {
+	if (!Path::isAddressValidForPath(remoteAddress))
+		return false;
+
 	{
 		Mutex::Lock _l(_networks_m);
 		for(std::vector< std::pair< uint64_t, SharedPtr<Network> > >::const_iterator i=_networks.begin();i!=_networks.end();++i) {

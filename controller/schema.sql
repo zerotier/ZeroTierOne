@@ -34,6 +34,23 @@ CREATE TABLE Node (
   identity varchar(4096) NOT NULL
 );
 
+CREATE TABLE NodeHistory (
+  nodeId char(10) NOT NULL REFERENCES Node(id) ON DELETE CASCADE,
+  networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
+  networkVisitCounter INTEGER NOT NULL DEFAULT(0),
+  networkRequestAuthorized INTEGER NOT NULL DEFAULT(0),
+  requestTime INTEGER NOT NULL DEFAULT(0),
+  clientMajorVersion INTEGER NOT NULL DEFAULT(0),
+  clientMinorVersion INTEGER NOT NULL DEFAULT(0),
+  clientRevision INTEGER NOT NULL DEFAULT(0),
+  networkRequestMetaData VARCHAR(1024),
+  fromAddress VARCHAR(128)
+);
+
+CREATE INDEX NodeHistory_nodeId ON NodeHistory (nodeId);
+CREATE INDEX NodeHistory_networkId ON NodeHistory (networkId);
+CREATE INDEX NodeHistory_requestTime ON NodeHistory (requestTime);
+
 CREATE TABLE Gateway (
   networkId char(16) NOT NULL REFERENCES Network(id) ON DELETE CASCADE,
   ip blob(16) NOT NULL,

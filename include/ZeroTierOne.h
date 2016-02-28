@@ -112,12 +112,12 @@ extern "C" {
  * This is more or less the max that can be fit in a given packet (with
  * fragmentation) and only one address per hop.
  */
-#define ZT_CIRCUIT_TEST_MAX_HOPS 512
+#define ZT_CIRCUIT_TEST_MAX_HOPS 256
 
 /**
  * Maximum number of addresses per hop in a circuit test
  */
-#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 256
+#define ZT_CIRCUIT_TEST_MAX_HOP_BREADTH 8
 
 /**
  * Maximum number of cluster members (and max member ID plus one)

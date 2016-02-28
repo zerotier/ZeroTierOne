@@ -7,5 +7,6 @@ Installed-Size: 1024
 Homepage: https://github.com/zerotier/ZeroTierOne
 Description: ZeroTier One network virtualization service
  ZeroTier One is a fast, secure, and easy to use peer to peer network
- virtualization engine. Visit https://www.zerotier.com/ for more
- information.
+ virtualization engine that provides global-scale software defined
+ networking to any device or application. Visit https://www.zerotier.com/
+ for more information.
