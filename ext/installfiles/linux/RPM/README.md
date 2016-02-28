@@ -4,7 +4,7 @@ This folder contains two spec files which enable building of various RPM package
 This file contains the information to build an RPM from the bash based binary installer of ZeroTier. The resulting RPM cannot be recompiled to different architecture.
 
 #zerotier.spec
-This spec file is a “standard” RPM spec file which enables building an SRPM package from the ZeroTier sources. This makes possible to compile the software on different architectures in a standard way. The spec file supports two packages: the standard zerotier and the zerotier-controller too. It supports some of the build options exposed in the original Linux makefile:
+This spec file is a “standard” RPM spec file. It fits to the common rpmbuild process, SRPM and differnt architectures are supported too. The spec file can be used to build two packages: the standard zerotier and the zerotier-controller. It supports some of the build options exposed in the original Linux makefile:
 
 > `rpmbuild -ba zerotier.spec` #builds the standard zerotier package, this is what you need in most of the cases
 
@@ -18,7 +18,7 @@ This spec file is a “standard” RPM spec file which enables building an SRPM 
 
 
 ####Build environment preparation
-As zerotier is not distributed in tar.gz format at the moment, the %prep section of the spec file takes care about this.
+As zerotier is not distributed in tar.gz format at the moment, the %prep section of the spec file takes care about the prepartion of an rpmbuild compatible tar.gz.
 
 
 
