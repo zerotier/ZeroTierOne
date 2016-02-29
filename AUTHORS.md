@@ -19,44 +19,51 @@
 
 ## Third-Party Code
 
- * LZ4 compression algorithm by Yann Collet (BSD license)<br>
+ * LZ4 compression algorithm by Yann Collet
 
    * Files: ext/lz4/*
    * Home page: http://code.google.com/p/lz4/
+   * License grant: BSD attribution
 
- * http-parser by many authors (MIT license)<br>
+ * http-parser by many authors
 
    * Files: ext/http-parser/*
    * Home page: https://github.com/joyent/http-parser/
+   * License grant: MIT/Expat
 
- * json-parser by James McLaughlin (BSD license)<br>
+ * json-parser by James McLaughlin
 
    * Files: ext/json-parser/*
    * Home page: https://github.com/udp/json-parser/
+   * License grant: BSD attribution
 
- * TunTapOSX by Mattias Nissler (BSD license)<br>
+ * TunTapOSX by Mattias Nissler
 
    * Files: ext/tap-mac/tuntap/*
    * Home page: http://tuntaposx.sourceforge.net/
+   * License grant: BSD attribution no-endorsement
 
- * tap-windows and tap-windows6 by the OpenVPN project (GPL)<br>
+ * tap-windows and tap-windows6 by the OpenVPN project
 
    * Files: windows/TapDriver6/*
    * Home page:
        https://github.com/OpenVPN/tap-windows/
        https://github.com/OpenVPN/tap-windows6/
+   * License grant: GNU GPL v2
 
  * Salsa20 stream cipher, Curve25519 elliptic curve cipher, Ed25519
    digital signature algorithm, and Poly1305 MAC algorithm, all by
-   Daniel J. Bernstein (public domain)<br>
+   Daniel J. Bernstein
 
    * Files:
        node/Salsa20.hpp
        node/C25519.hpp
        node/Poly1305.hpp
    * Home page: http://cr.yp.to/
+   * License grant: public domain
 
- * MiniUPNPC by Thomas Bernard [BSD]
+ * MiniUPNPC by Thomas Bernard
 
    * Files: ext/libnatpmp/*
    * Home page: http://miniupnp.free.fr/
+   * License grant: BSD attribution no-endorsement
