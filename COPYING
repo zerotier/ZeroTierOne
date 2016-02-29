@@ -1,3 +1,6 @@
+ZeroTier One, an endpoint server for the ZeroTier virtual network layer.
+Copyright © 2011–2016 ZeroTier, Inc.
+
 ZeroTier One is licensed under the terms of the GNU General Public License
 version 3, which are available here:
 
@@ -11,3 +14,10 @@ ZeroTier One may not be embedded into any closed-source application (e.g. via
 linking), nor may closed-source derivatives be created, without a separately
 negotiated license from ZeroTier Networks LLC. See the terms of the GPLv3 for
 details.
+
+..
+    Local variables:
+    coding: utf-8
+    mode: text
+    End:
+    vim: fileencoding=utf-8 filetype=text :
