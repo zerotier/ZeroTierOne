@@ -21,22 +21,27 @@
 
  * LZ4 compression algorithm by Yann Collet (BSD license)<br>
 
+   * Files: ext/lz4/*
    * Home page: http://code.google.com/p/lz4/
 
  * http-parser by many authors (MIT license)<br>
 
+   * Files: ext/http-parser/*
    * Home page: https://github.com/joyent/http-parser/
 
  * json-parser by James McLaughlin (BSD license)<br>
 
+   * Files: ext/json-parser/*
    * Home page: https://github.com/udp/json-parser/
 
  * TunTapOSX by Mattias Nissler (BSD license)<br>
 
+   * Files: ext/tap-mac/tuntap/*
    * Home page: http://tuntaposx.sourceforge.net/
 
  * tap-windows and tap-windows6 by the OpenVPN project (GPL)<br>
 
+   * Files: windows/TapDriver6/*
    * Home page:
        https://github.com/OpenVPN/tap-windows/
        https://github.com/OpenVPN/tap-windows6/
@@ -45,8 +50,13 @@
    digital signature algorithm, and Poly1305 MAC algorithm, all by
    Daniel J. Bernstein (public domain)<br>
 
+   * Files:
+       node/Salsa20.hpp
+       node/C25519.hpp
+       node/Poly1305.hpp
    * Home page: http://cr.yp.to/
 
  * MiniUPNPC by Thomas Bernard [BSD]
 
+   * Files: ext/libnatpmp/*
    * Home page: http://miniupnp.free.fr/
