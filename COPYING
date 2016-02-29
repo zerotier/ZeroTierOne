@@ -4,7 +4,8 @@ Copyright © 2011–2016 ZeroTier, Inc.
 ZeroTier One is licensed under the terms of the GNU General Public License
 version 3, which are available here:
 
-http://gplv3.fsf.org/
+See the file ‘LICENSE.GPL-3’ for the text of the GNU GPL version 3.
+If that file is not present, see <http://www.gnu.org/licenses/>.
 
 Modification and redistribution of ZeroTier One is permitted in source form.
 Binary distribution is permitted provided all copyright notices remain
