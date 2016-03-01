@@ -115,7 +115,7 @@ if [ -n "$SYSTEMDUNITDIR" -a -d "$SYSTEMDUNITDIR" ]; then
 	cp -f /tmp/systemd_zerotier-one.service "$SYSTEMDUNITDIR/zerotier-one.service"
 	chown 0 "$SYSTEMDUNITDIR/zerotier-one.service"
 	chgrp 0 "$SYSTEMDUNITDIR/zerotier-one.service"
-	chmod 0755 "$SYSTEMDUNITDIR/zerotier-one.service"
+	chmod 0644 "$SYSTEMDUNITDIR/zerotier-one.service"
 	rm -f /tmp/systemd_zerotier-one.service /tmp/init.d_zerotier-one
 
 	systemctl enable zerotier-one.service
