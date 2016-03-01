@@ -1,0 +1,91 @@
+============
+zerotier-one
+============
+
+---------------------------------------------------
+end-point server for ZeroTier virtual network layer
+---------------------------------------------------
+
+:Author: |author|
+:Date: 2016-03-04
+:Copyright:
+    Copyright © 2016 ZeroTier Inc.
+:Manual section: 8
+:Manual group: ZeroTier
+
+..  |command| replace:: **zerotier-one**
+..  |license| replace::
+    `GNU General Public License, version 3 or later
+    <https://www.gnu.org/licenses/#GPL>`__
+
+
+SYNOPSIS
+========
+
+| |command| [ `option` ... ] [ `HOMEDIR` ]
+| |command| **-h**
+| |command| **-v**
+
+
+DESCRIPTION
+===========
+
+**ZeroTier One** is the end-point server for the ZeroTier
+software-defined network layer.
+
+
+OPTIONS
+=======
+
+**-h**
+    Display concise help on command usage.
+
+**-v**
+    Display program version.
+
+**-U**
+    Run as unprivileged user (skip privilege check).
+
+**-p** `PORT`
+    Communicate on network port `PORT` (either TCP or UDP).
+
+**-d**
+    Become a conventional daemon process. Only available on Unix-like
+    operating systems.
+
+**-i**
+    Generate and manage identities.
+
+    This is equivalent to running the **zerotier-idtool** command.
+
+**-q**
+    Query the running ZeroTier One process.
+
+    This is equivalent to running the **zerotier-cli** command.
+
+
+HISTORY
+=======
+
+The |command| program is developed by ZeroTier Inc.
+
+This manual page was written by |author|. This is free software: you
+may copy, modify and/or distribute this work under the terms of the
+|license| as published by the Free Software Foundation. No warranty
+expressed or implied.
+
+..  |author| replace:: |authorname| |authoremail|
+..  |authorname| replace:: Ben Finney
+..  |authoremail| replace:: <ben+zerotier@benfinney.id.au>
+
+
+..
+    Local variables:
+    mode: rst
+    coding: utf-8
+    time-stamp-format: "%:y-%02m-%02d"
+    time-stamp-start: "^:Date:[         ]+"
+    time-stamp-end: "$"
+    time-stamp-line-limit: 20
+    End:
+    vim: filetype=rst fileencoding=utf-8 :
