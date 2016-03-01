@@ -17,6 +17,10 @@
  * Several others made smaller contributions, which GitHub tracks here:<br>
    https://github.com/zerotier/ZeroTierOne/graphs/contributors
 
+ * Documentation additions.
+ 
+   Ben Finney <ben+zerotier@benfinney.id.au>
+
 ## Third Party Code
 
  * LZ4 compression algorithm by Yann Collet (BSD license)<br>
