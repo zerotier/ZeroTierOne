@@ -1330,42 +1330,42 @@ public:
 				froms = _udp[0].v4s;
 
 #ifdef ZT_TCP_FALLBACK_RELAY
-				// TCP fallback tunnel support, currently IPv4 only
-				if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					// Engage TCP tunnel fallback if we haven't received anything valid from a global
-					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
-					// valid direct traffic we'll stop using it and close the socket after a while.
-					const uint64_t now = OSUtils::now();
-					if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
-						if (_tcpFallbackTunnel) {
-							Mutex::Lock _l(_tcpFallbackTunnel->writeBuf_m);
-							if (!_tcpFallbackTunnel->writeBuf.length())
-								_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
-							unsigned long mlen = len + 7;
-							_tcpFallbackTunnel->writeBuf.push_back((char)0x17);
-							_tcpFallbackTunnel->writeBuf.push_back((char)0x03);
-							_tcpFallbackTunnel->writeBuf.push_back((char)0x03); // fake TLS 1.2 header
-							_tcpFallbackTunnel->writeBuf.push_back((char)((mlen >> 8) & 0xff));
-							_tcpFallbackTunnel->writeBuf.push_back((char)(mlen & 0xff));
-							_tcpFallbackTunnel->writeBuf.push_back((char)4); // IPv4
-							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
-							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
-							_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
-						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
-							std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
-							if (tunnelIps.empty()) {
-								if (!_tcpFallbackResolver.running())
-									_tcpFallbackResolver.resolveNow();
-							} else {
-								bool connected = false;
-								InetAddress addr(tunnelIps[(unsigned long)now % tunnelIps.size()]);
-								addr.setPort(ZT_TCP_FALLBACK_RELAY_PORT);
-								_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
-							}
+			// TCP fallback tunnel support, currently IPv4 only
+			if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
+				// Engage TCP tunnel fallback if we haven't received anything valid from a global
+				// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
+				// valid direct traffic we'll stop using it and close the socket after a while.
+				const uint64_t now = OSUtils::now();
+				if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
+					if (_tcpFallbackTunnel) {
+						Mutex::Lock _l(_tcpFallbackTunnel->writeBuf_m);
+						if (!_tcpFallbackTunnel->writeBuf.length())
+							_phy.setNotifyWritable(_tcpFallbackTunnel->sock,true);
+						unsigned long mlen = len + 7;
+						_tcpFallbackTunnel->writeBuf.push_back((char)0x17);
+						_tcpFallbackTunnel->writeBuf.push_back((char)0x03);
+						_tcpFallbackTunnel->writeBuf.push_back((char)0x03); // fake TLS 1.2 header
+						_tcpFallbackTunnel->writeBuf.push_back((char)((mlen >> 8) & 0xff));
+						_tcpFallbackTunnel->writeBuf.push_back((char)(mlen & 0xff));
+						_tcpFallbackTunnel->writeBuf.push_back((char)4); // IPv4
+						_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
+						_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
+						_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
+					} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
+						std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
+						if (tunnelIps.empty()) {
+							if (!_tcpFallbackResolver.running())
+								_tcpFallbackResolver.resolveNow();
+						} else {
+							bool connected = false;
+							InetAddress addr(tunnelIps[(unsigned long)now % tunnelIps.size()]);
+							addr.setPort(ZT_TCP_FALLBACK_RELAY_PORT);
+							_phy.tcpConnect(reinterpret_cast<const struct sockaddr *>(&addr),connected);
 						}
 					}
-					_lastSendToGlobalV4 = now;
 				}
+				_lastSendToGlobalV4 = now;
+			}
 #endif // ZT_TCP_FALLBACK_RELAY
 		} else if (addr->ss_family == AF_INET6) {
 			if (reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port != 0) {
