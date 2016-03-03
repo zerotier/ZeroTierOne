@@ -104,7 +104,7 @@ mac-dist-pkg: FORCE
 
 # For internal use only
 official: FORCE
-	make clean
+	make ZT_OFFICIAL_RELEASE=1 clean
 	make -j 4 ZT_OFFICIAL_RELEASE=1
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
