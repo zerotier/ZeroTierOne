@@ -1318,7 +1318,7 @@ public:
 				froms = _udp[(++_udpPortPickerCounter & 0x4) >> 2].v4s;
 			} else {
 				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
-				for(int k=1;k<2;++k) {
+				for(int k=1;k<=2;++k) {
 					// Match fast on port only, since right now we always bind wildcard
 					if (reinterpret_cast<const struct sockaddr_in *>(&(_udp[k].v4a))->sin_port == reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port) {
 						froms = _udp[k].v4s;
@@ -1370,7 +1370,7 @@ public:
 		} else if (addr->ss_family == AF_INET6) {
 			if (reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port != 0) {
 				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
-				for(int k=1;k<2;++k) {
+				for(int k=1;k<=2;++k) {
 					// Match fast on port only, since right now we always bind wildcard
 					if (reinterpret_cast<const struct sockaddr_in6 *>(&(_udp[k].v6a))->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port) {
 						froms = _udp[k].v6s;
