@@ -25,7 +25,15 @@ var cache = require('levelup')(__dirname + '/cache.leveldb');
 
 function lookup(ip,callback)
 {
-	cache.get(ip,function(err,cachedEntryJson) {
+	if (!ip)
+		return callback(null,null);
+
+	var ipKey = ip;
+	if ((ipKey.indexOf(':') === 4)&&(ipKey.length > 19))
+		ipKey = ipKey.substr(0,19); // we key in the cache using only the first 64 bits of IPv6 addresses
+
+	cache.get(ipKey,function(err,cachedEntryJson) {
+
 		if ((!err)&&(cachedEntryJson)) {
 			try {
 				let cachedEntry = JSON.parse(cachedEntryJson.toString());
@@ -40,30 +48,27 @@ function lookup(ip,callback)
 			} catch (e) {}
 		}
 
-		cache.put(ip,JSON.stringify({
+		cache.put(ipKey,JSON.stringify({
 			ts: Date.now() - (CACHE_TTL - 30000), // set ts to expire in 30 seconds while the query is in progress
 			r: null
 		}),function(err) {
-
 			geo(ip,function(err,result) {
 				if (err) {
-					//console.error(err);
 					return callback(err,null);
 				}
 
 				if (!result)
 					result = null;
 
-				cache.put(ip,JSON.stringify({
+				cache.put(ipKey,JSON.stringify({
 					ts: Date.now(),
 					r: result
 				}),function(err) {
-					if (err)
-						console.error('Error saving to cache: '+err);
+					//if (err)
+					//	console.error('Error saving to cache: '+err);
 					return callback(null,result);
 				});
 			});
-
 		});
 
 	});

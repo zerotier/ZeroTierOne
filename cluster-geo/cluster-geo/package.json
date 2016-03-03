@@ -10,7 +10,7 @@
   "license": "GPL-3.0",
   "dependencies": {
     "geoip2ws": "^1.7.1",
-    "leveldown": "^1.4.2",
+    "leveldown": "^1.4.4",
     "levelup": "^1.3.0"
   }
 }

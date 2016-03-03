@@ -7,6 +7,8 @@ If a cluster-mode instance detects a file in the ZeroTier home folder called *cl
 
     IP,result code,latitude,longitude,x,y,z
 
+IPv6 IPs must be sent *without* compression / zero-removal.
+
 The first field is the IP echoed back. The second field is 0 if the result is pending and may be ready in the future or 1 if the result is ready now. If the second field is 0 the remaining fields should be 0. Otherwise the remaining fields contain the IP's latitude, longitude, and X/Y/Z coordinates.
 
 ZeroTier's cluster route optimization code only uses the X/Y/Z values. These are computed by this cluster-geo code as the spherical coordinates of the IP address using the Earth's center as the point of origin and using an approximation of the Earth as a sphere. This doesn't yield *exact* coordinates, but it's good enough for our purposes since the goal is to route clients to the geographically closest endpoint.
