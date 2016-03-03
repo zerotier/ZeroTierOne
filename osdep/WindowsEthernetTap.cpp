@@ -68,7 +68,6 @@ typedef BOOL (WINAPI *SetupDiSetClassInstallParamsA_t)(_In_ HDEVINFO DeviceInfoS
 typedef CONFIGRET (WINAPI *CM_Get_Device_ID_ExA_t)(_In_ DEVINST dnDevInst,_Out_writes_(BufferLen) PSTR Buffer,_In_ ULONG BufferLen,_In_ ULONG ulFlags,_In_opt_ HMACHINE hMachine);
 typedef BOOL (WINAPI *SetupDiGetDeviceInstanceIdA_t)(_In_ HDEVINFO DeviceInfoSet,_In_ PSP_DEVINFO_DATA DeviceInfoData,_Out_writes_opt_(DeviceInstanceIdSize) PSTR DeviceInstanceId,_In_ DWORD DeviceInstanceIdSize,_Out_opt_ PDWORD RequiredSize);
 
-
 namespace ZeroTier {
 
 namespace {
@@ -477,7 +476,7 @@ WindowsEthernetTap::WindowsEthernetTap(
 	std::string mySubkeyName;
 
 	if (mtu > 2800)
-		throw std::runtime_error("MTU too large for Windows tap");
+		throw std::runtime_error("MTU too large.");
 
 	// We "tag" registry entries with the network ID to identify persistent devices
 	Utils::snprintf(tag,sizeof(tag),"%.16llx",(unsigned long long)nwid);
@@ -869,18 +868,19 @@ void WindowsEthernetTap::threadMain()
 	try {
 		while (_run) {
 			// Because Windows
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
-			Sleep(500);
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
-			Sleep(500);
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),false);
-			Sleep(500);
+			Sleep(250);
 			setPersistentTapDeviceState(_deviceInstanceId.c_str(),true);
-			Sleep(500);
+			Sleep(250);
 
 			_tap = CreateFileA(tapPath,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_SYSTEM|FILE_FLAG_OVERLAPPED,NULL);
 			if (_tap == INVALID_HANDLE_VALUE) {
-				Sleep(1000);
+				Sleep(250);
 				continue;
 			}
 
@@ -948,7 +948,7 @@ void WindowsEthernetTap::threadMain()
 					ipnr.ReachabilityTime.LastUnreachable = 1;
 					DWORD result = CreateIpNetEntry2(&ipnr);
 					if (result != NO_ERROR)
-						Sleep(500);
+						Sleep(250);
 					else break;
 				}
 				for(int i=0;i<8;++i) {
@@ -963,7 +963,7 @@ void WindowsEthernetTap::threadMain()
 					nr.Protocol = MIB_IPPROTO_NETMGMT;
 					DWORD result = CreateIpForwardEntry2(&nr);
 					if (result != NO_ERROR)
-						Sleep(500);
+						Sleep(250);
 					else break;
 				}
 			}
@@ -1021,8 +1021,10 @@ void WindowsEthernetTap::threadMain()
 					}
 				}
 
-				if ((waitResult == WAIT_TIMEOUT)||(waitResult == WAIT_FAILED))
+				if ((waitResult == WAIT_TIMEOUT)||(waitResult == WAIT_FAILED)) {
+					Sleep(250); // guard against spinning under some conditions
 					continue;
+				}
 
 				if (HasOverlappedIoCompleted(&tapOvlRead)) {
 					DWORD bytesRead = 0;
