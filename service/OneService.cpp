@@ -149,6 +149,7 @@ public:
 	bool isValidSigningIdentity(const Identity &id)
 	{
 		return (
+			/* 0001 - 0004 : obsolete, used in old versions */
 		  /* 0005 */   (id == Identity("ba57ea350e:0:9d4be6d7f86c5660d5ee1951a3d759aa6e12a84fc0c0b74639500f1dbc1a8c566622e7d1c531967ebceb1e9d1761342f88324a8ba520c93c35f92f35080fa23f"))
 		  /* 0006 */ ||(id == Identity("5067b21b83:0:8af477730f5055c48135b84bed6720a35bca4c0e34be4060a4c636288b1ec22217eb22709d610c66ed464c643130c51411bbb0294eef12fbe8ecc1a1e2c63a7a"))
 		  /* 0007 */ ||(id == Identity("4f5e97a8f1:0:57880d056d7baeb04bbc057d6f16e6cb41388570e87f01492fce882485f65a798648595610a3ad49885604e7fb1db2dd3c2c534b75e42c3c0b110ad07b4bb138"))
@@ -453,6 +454,9 @@ struct TcpConnection
 #define ZT_UDP_DESIRED_BUF_SIZE 131072
 #endif
 
+// Used to pseudo-randomize local source port picking
+static volatile unsigned int _udpPortPickerCounter = 0;
+
 class OneServiceImpl : public OneService
 {
 public:
@@ -466,14 +470,15 @@ public:
 		,_node((Node *)0)
 		,_controlPlane((ControlPlane *)0)
 		,_lastDirectReceiveFromGlobal(0)
-		,_lastSendToGlobal(0)
+#ifdef ZT_TCP_FALLBACK_RELAY
+		,_lastSendToGlobalV4(0)
+#endif
 		,_lastRestart(0)
 		,_nextBackgroundTaskDeadline(0)
 		,_tcpFallbackTunnel((TcpConnection *)0)
 		,_termReason(ONE_STILL_RUNNING)
 		,_port(0)
 #ifdef ZT_USE_MINIUPNPC
-		,_v4UpnpUdpSocket((PhySocket *)0)
 		,_portMapper((PortMapper *)0)
 #endif
 #ifdef ZT_ENABLE_CLUSTER
@@ -484,6 +489,8 @@ public:
 #endif
 		,_run(true)
 	{
+		memset((void *)_udp,0,sizeof(_udp));
+
 		const int portTrials = (port == 0) ? 256 : 1; // if port is 0, pick random
 		for(int k=0;k<portTrials;++k) {
 			if (port == 0) {
@@ -492,20 +499,20 @@ public:
 				port = 40000 + (randp % 25500);
 			}
 
-			_v4LocalAddress = InetAddress((uint32_t)0,port);
-			_v4UdpSocket = _phy.udpBind((const struct sockaddr *)&_v4LocalAddress,reinterpret_cast<void *>(&_v4LocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
+			_udp[0].v4a = InetAddress((uint32_t)0,port);
+			_udp[0].v4s = _phy.udpBind((const struct sockaddr *)&(_udp[0].v4a),(void *)&(_udp[0].v4a),ZT_UDP_DESIRED_BUF_SIZE);
 
-			if (_v4UdpSocket) {
+			if (_udp[0].v4s) {
 				struct sockaddr_in in4;
 				memset(&in4,0,sizeof(in4));
 				in4.sin_family = AF_INET;
-				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @localhost
+				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
 				in4.sin_port = Utils::hton((uint16_t)port);
 				_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
 				if (_v4TcpListenSocket) {
-					_v6LocalAddress = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port);
-					_v6UdpSocket = _phy.udpBind((const struct sockaddr *)&_v6LocalAddress,reinterpret_cast<void *>(&_v6LocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
+					_udp[0].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port);
+					_udp[0].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[0].v6a),(void *)&(_udp[0].v6a),ZT_UDP_DESIRED_BUF_SIZE);
 
 					struct sockaddr_in6 in6;
 					memset((void *)&in6,0,sizeof(in6));
@@ -517,7 +524,7 @@ public:
 					_port = port;
 					break; // success!
 				} else {
-					_phy.close(_v4UdpSocket,false);
+					_phy.close(_udp[0].v4s,false);
 				}
 			}
 
@@ -534,15 +541,18 @@ public:
 
 	virtual ~OneServiceImpl()
 	{
-		_phy.close(_v4UdpSocket);
-		_phy.close(_v6UdpSocket);
+		for(int i=0;i<3;++i) {
+			if (_udp[i].v4s)
+				_phy.close(_udp[i].v4s);
+			if (_udp[i].v6s)
+				_phy.close(_udp[i].v6s);
+		}
 		_phy.close(_v4TcpListenSocket);
 		_phy.close(_v6TcpListenSocket);
 #ifdef ZT_ENABLE_CLUSTER
 		_phy.close(_clusterMessageSocket);
 #endif
 #ifdef ZT_USE_MINIUPNPC
-		_phy.close(_v4UpnpUdpSocket);
 		delete _portMapper;
 #endif
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
@@ -587,19 +597,37 @@ public:
 				SnodePathCheckFunction,
 				SnodeEventCallback);
 
-#ifdef ZT_USE_MINIUPNPC
-			// Bind a secondary port for use with uPnP, since some NAT routers
-			// (cough Ubiquity Edge cough) barf up a lung if you do both conventional
-			// NAT-t and uPnP from behind the same port. I think this is a bug, but
-			// everyone else's router bugs are our problem. :P
+			// Bind secondary randomized port. If this fails we continue anyway.
 			for(int k=0;k<512;++k) {
-				unsigned int mapperPort = 40000 + (((_port + 1) * (k + 1)) % 25500);
+				const unsigned int randomizedPort = 40000 + (((unsigned int)_node->address() + k) % 25500);
+				_udp[1].v4a = InetAddress(0,randomizedPort);
+				_udp[1].v4s = _phy.udpBind((const struct sockaddr *)&(_udp[1].v4a),(void *)&(_udp[1].v4a),ZT_UDP_DESIRED_BUF_SIZE);
+				if (_udp[1].v4s) {
+					_udp[1].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,randomizedPort);
+					_udp[1].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[1].v6a),(void *)&(_udp[1].v6a),ZT_UDP_DESIRED_BUF_SIZE);
+					if (_udp[1].v6s) {
+						break;
+					} else {
+						_phy.close(_udp[1].v4s);
+						_udp[1].v4s = (PhySocket *)0;
+					}
+				}
+			}
+
+#ifdef ZT_USE_MINIUPNPC
+			// Bind tertiary uPnP/NAT-PMP redirect port. If this succeeds start port mapper.
+			for(int k=0;k<512;++k) {
+				const unsigned int mapperPort = 40000 + (((_port + 1) * (k + 1)) % 25500);
 				char uniqueName[64];
-				_v4UpnpLocalAddress = InetAddress(0,mapperPort);
-				_v4UpnpUdpSocket = _phy.udpBind((const struct sockaddr *)&_v4UpnpLocalAddress,reinterpret_cast<void *>(&_v4UpnpLocalAddress),ZT_UDP_DESIRED_BUF_SIZE);
-				if (_v4UpnpUdpSocket) {
+				_udp[2].v4a = InetAddress(0,mapperPort);
+				_udp[2].v4s = _phy.udpBind((const struct sockaddr *)&(_udp[2].v4a),(void *)&(_udp[2].v4a),ZT_UDP_DESIRED_BUF_SIZE);
+				if (_udp[2].v4s) {
 					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
 					_portMapper = new PortMapper(mapperPort,uniqueName);
+
+					_udp[2].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,mapperPort);
+					_udp[2].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[2].v6a),(void *)&(_udp[2].v6a),ZT_UDP_DESIRED_BUF_SIZE); // okay if this fails, but it shouldn't
+
 					break;
 				}
 			}
@@ -915,9 +943,10 @@ public:
 
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = OSUtils::now();
-		ZT_ResultCode rc = _node->processWirePacket(
+
+		const ZT_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
-			reinterpret_cast<const struct sockaddr_storage *>(*uptr),
+			reinterpret_cast<const struct sockaddr_storage *>(*uptr), // *uptr points to InetAddress/sockaddr of local listen port
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
@@ -1064,9 +1093,9 @@ public:
 							}
 
 							if (from) {
-								ZT_ResultCode rc = _node->processWirePacket(
+								const ZT_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
-									&ZT_SOCKADDR_NULL,
+									reinterpret_cast<struct sockaddr_storage *>(&(_udp[0].v4a)), // TCP tunneled packets are "from" the default local port's address
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,
@@ -1281,48 +1310,30 @@ public:
 
 	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 	{
-#ifdef ZT_USE_MINIUPNPC
-		if ((localAddr->ss_family == AF_INET)&&(reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port == reinterpret_cast<const struct sockaddr_in *>(&_v4UpnpLocalAddress)->sin_port)) {
-#ifdef ZT_BREAK_UDP
-			if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
-#endif
-				if (addr->ss_family == AF_INET) {
-					if (ttl)
-						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,ttl);
-					const int result = ((_phy.udpSend(_v4UpnpUdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-					if (ttl)
-						_phy.setIp4UdpTtl(_v4UpnpUdpSocket,255);
-					return result;
-				} else {
-					return -1;
-				}
-#ifdef ZT_BREAK_UDP
-			}
-#endif
-		}
-#endif // ZT_USE_MINIUPNPC
+		PhySocket *froms = (PhySocket *)0;
 
-		int result = -1;
-		switch(addr->ss_family) {
-			case AF_INET:
-#ifdef ZT_BREAK_UDP
-				if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
-#endif
-					if (_v4UdpSocket) {
-						if (ttl)
-							_phy.setIp4UdpTtl(_v4UdpSocket,ttl);
-						result = ((_phy.udpSend(_v4UdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-						if (ttl)
-							_phy.setIp4UdpTtl(_v4UdpSocket,255);
+		if (addr->ss_family == AF_INET) {
+			if (reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port == 0) {
+				// If sender specifies any local address, use secondary port 1/4 times
+				froms = ((_udp[1].v4s) ? _udp[(++_udpPortPickerCounter & 0x4) >> 2].v4s : _udp[0].v4s);
+			} else {
+				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
+				for(int k=0;k<2;++k) {
+					// Match fast on port only, since right now we always bind wildcard
+					if (reinterpret_cast<const struct sockaddr_in *>(&(_udp[k].v4a))->sin_port == reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port) {
+						froms = _udp[k].v4s;
+						break;
 					}
-#ifdef ZT_BREAK_UDP
 				}
-#endif
+			}
+
+			if (!froms)
+				froms = _udp[0].v4s;
 
 #ifdef ZT_TCP_FALLBACK_RELAY
-				// TCP fallback tunnel support
+				// TCP fallback tunnel support, currently IPv4 only
 				if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					uint64_t now = OSUtils::now();
+					const uint64_t now = OSUtils::now();
 
 					// Engage TCP tunnel fallback if we haven't received anything valid from a global
 					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
@@ -1342,8 +1353,7 @@ public:
 							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_addr.s_addr))),4);
 							_tcpFallbackTunnel->writeBuf.append(reinterpret_cast<const char *>(reinterpret_cast<const void *>(&(reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port))),2);
 							_tcpFallbackTunnel->writeBuf.append((const char *)data,len);
-							result = 0;
-						} else if (((now - _lastSendToGlobal) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobal) > (ZT_PING_CHECK_INVERVAL / 2))) {
+						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
 							std::vector<InetAddress> tunnelIps(_tcpFallbackResolver.get());
 							if (tunnelIps.empty()) {
 								if (!_tcpFallbackResolver.running())
@@ -1356,27 +1366,36 @@ public:
 							}
 						}
 					}
-
-					_lastSendToGlobal = now;
+					_lastSendToGlobalV4 = now;
 				}
 #endif // ZT_TCP_FALLBACK_RELAY
-
-				break;
-
-			case AF_INET6:
-#ifdef ZT_BREAK_UDP
-				if (!OSUtils::fileExists("/tmp/ZT_BREAK_UDP")) {
-#endif
-				if (_v6UdpSocket)
-					result = ((_phy.udpSend(_v6UdpSocket,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1);
-#ifdef ZT_BREAK_UDP
+		} else if (addr->ss_family == AF_INET6) {
+			if (reinterpret_cast<const struct sockaddr_in6 *>(addr)->sin6_port != 0) {
+				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
+				for(int k=0;k<2;++k) {
+					// Match fast on port only, since right now we always bind wildcard
+					if (reinterpret_cast<const struct sockaddr_in6 *>(&(_udp[k].v4a))->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(addr)->sin6_port) {
+						froms = _udp[k].v4s;
+						break;
+					}
 				}
-#endif
-				break;
-
-			default:
-				return -1;
+			}
+			if (!froms)
+				froms = _udp[0].v6s;
+		} else {
+			return -1;
 		}
+
+#ifdef ZT_BREAK_UDP
+		if (OSUtils::fileExists("/tmp/ZT_BREAK_UDP"))
+			return 0; // silently break UDP
+#endif
+
+		if ((ttl)&&(addr->ss_family == AF_INET))
+			_phy.setIp4UdpTtl(froms,ttl);
+		int result = (_phy.udpSend(froms,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1;
+		if ((ttl)&&(addr->ss_family == AF_INET))
+			_phy.setIp4UdpTtl(froms,255);
 		return result;
 	}
 
@@ -1485,14 +1504,32 @@ public:
 #endif
 	Phy<OneServiceImpl *> _phy;
 	Node *_node;
-	InetAddress _v4LocalAddress,_v6LocalAddress;
-	PhySocket *_v4UdpSocket;
-	PhySocket *_v6UdpSocket;
+
+	/*
+	 * To properly handle NAT/gateway craziness we use three local UDP ports:
+	 *
+	 * [0] is the normal/default port, usually 9993
+	 * [1] is a port dervied from our ZeroTier address
+	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
+	 *
+	 * [2] exists because on some gateways trying to do regular NAT-t interferes
+	 * destructively with uPnP port mapping behavior in very weird buggy ways.
+	 * It's only used if uPnP/NAT-PMP is enabled in this build.
+	 */
+	struct {
+		InetAddress v4a,v6a;
+		PhySocket *v4s,*v6s;
+	} _udp[3];
+
 	PhySocket *_v4TcpListenSocket;
 	PhySocket *_v6TcpListenSocket;
+
 	ControlPlane *_controlPlane;
+
 	uint64_t _lastDirectReceiveFromGlobal;
-	uint64_t _lastSendToGlobal;
+#ifdef ZT_TCP_FALLBACK_RELAY
+	uint64_t _lastSendToGlobalV4;
+#endif
 	uint64_t _lastRestart;
 	volatile uint64_t _nextBackgroundTaskDeadline;
 
@@ -1510,8 +1547,6 @@ public:
 	unsigned int _port;
 
 #ifdef ZT_USE_MINIUPNPC
-	InetAddress _v4UpnpLocalAddress;
-	PhySocket *_v4UpnpUdpSocket;
 	PortMapper *_portMapper;
 #endif
 
