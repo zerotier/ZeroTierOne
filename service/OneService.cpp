@@ -1313,31 +1313,29 @@ public:
 		PhySocket *froms = (PhySocket *)0;
 
 		if (addr->ss_family == AF_INET) {
-			if (reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port == 0) {
+			if (reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port == 0) {
 				// If sender specifies any local address, use secondary port 1/4 times
-				froms = ((_udp[1].v4s) ? _udp[(++_udpPortPickerCounter & 0x4) >> 2].v4s : _udp[0].v4s);
+				froms = _udp[(++_udpPortPickerCounter & 0x4) >> 2].v4s;
 			} else {
 				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
-				for(int k=0;k<2;++k) {
+				for(int k=1;k<2;++k) {
 					// Match fast on port only, since right now we always bind wildcard
-					if (reinterpret_cast<const struct sockaddr_in *>(&(_udp[k].v4a))->sin_port == reinterpret_cast<const struct sockaddr_in *>(addr)->sin_port) {
+					if (reinterpret_cast<const struct sockaddr_in *>(&(_udp[k].v4a))->sin_port == reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port) {
 						froms = _udp[k].v4s;
 						break;
 					}
 				}
 			}
-
 			if (!froms)
 				froms = _udp[0].v4s;
 
 #ifdef ZT_TCP_FALLBACK_RELAY
 				// TCP fallback tunnel support, currently IPv4 only
 				if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(addr)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
-					const uint64_t now = OSUtils::now();
-
 					// Engage TCP tunnel fallback if we haven't received anything valid from a global
 					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
 					// valid direct traffic we'll stop using it and close the socket after a while.
+					const uint64_t now = OSUtils::now();
 					if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
 						if (_tcpFallbackTunnel) {
 							Mutex::Lock _l(_tcpFallbackTunnel->writeBuf_m);
@@ -1370,12 +1368,12 @@ public:
 				}
 #endif // ZT_TCP_FALLBACK_RELAY
 		} else if (addr->ss_family == AF_INET6) {
-			if (reinterpret_cast<const struct sockaddr_in6 *>(addr)->sin6_port != 0) {
+			if (reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port != 0) {
 				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
-				for(int k=0;k<2;++k) {
+				for(int k=1;k<2;++k) {
 					// Match fast on port only, since right now we always bind wildcard
-					if (reinterpret_cast<const struct sockaddr_in6 *>(&(_udp[k].v4a))->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(addr)->sin6_port) {
-						froms = _udp[k].v4s;
+					if (reinterpret_cast<const struct sockaddr_in6 *>(&(_udp[k].v6a))->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port) {
+						froms = _udp[k].v6s;
 						break;
 					}
 				}
@@ -1393,7 +1391,7 @@ public:
 
 		if ((ttl)&&(addr->ss_family == AF_INET))
 			_phy.setIp4UdpTtl(froms,ttl);
-		int result = (_phy.udpSend(froms,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1;
+		const int result = (_phy.udpSend(froms,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1;
 		if ((ttl)&&(addr->ss_family == AF_INET))
 			_phy.setIp4UdpTtl(froms,255);
 		return result;
