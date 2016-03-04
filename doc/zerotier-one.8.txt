@@ -22,7 +22,7 @@ end-point peer for ZeroTier virtual network layer
 SYNOPSIS
 ========
 
-| |command| [ `option` ... ] [ `HOMEDIR` ]
+| |command| [ **-U** ] [ **-p** `PORT` ] [ **-d** ] [ `HOMEDIR` ]
 | |command| **-i** [ `IDTOOL_ARG` ... ]
 | |command| **-q** [ `QUERY_ARG` ... ]
 | |command| **-h**
