@@ -70,6 +70,7 @@ using namespace ZeroTier;
 
 static OneService *volatile zt1Service = (OneService *)0;
 
+#define PROGRAM_NAME "ZeroTier One"
 #define COPYRIGHT_NOTICE "(c)2011-2015 ZeroTier, Inc."
 #define LICENSE_GRANT \
 	"Licensed under the GNU General Public License v3" ZT_EOL_S
@@ -80,7 +81,10 @@ static OneService *volatile zt1Service = (OneService *)0;
 
 static void cliPrintHelp(const char *pn,FILE *out)
 {
-	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+	fprintf(out,
+		"%s version %d.%d.%d" ZT_EOL_S,
+		PROGRAM_NAME,
+		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
@@ -556,7 +560,10 @@ static int cli(int argc,char **argv)
 
 static void idtoolPrintHelp(FILE *out,const char *pn)
 {
-	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+	fprintf(out,
+		"%s version %d.%d.%d" ZT_EOL_S,
+		PROGRAM_NAME,
+		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
@@ -899,7 +906,10 @@ static BOOL IsCurrentUserLocalAdministrator(void)
 
 static void printHelp(const char *cn,FILE *out)
 {
-	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+	fprintf(out,
+		"%s version %d.%d.%d" ZT_EOL_S,
+		PROGRAM_NAME,
+		ZEROTIER_ONE_VERSION_MAJOR, ZEROTIER_ONE_VERSION_MINOR, ZEROTIER_ONE_VERSION_REVISION);
 	fprintf(out,
 		COPYRIGHT_NOTICE ZT_EOL_S
 		LICENSE_GRANT ZT_EOL_S);
