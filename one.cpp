@@ -71,7 +71,7 @@ using namespace ZeroTier;
 static OneService *volatile zt1Service = (OneService *)0;
 
 #define PROGRAM_NAME "ZeroTier One"
-#define COPYRIGHT_NOTICE "(c)2011-2015 ZeroTier, Inc."
+#define COPYRIGHT_NOTICE "Copyright © 2011–2016 ZeroTier, Inc."
 #define LICENSE_GRANT \
 	"Licensed under the GNU General Public License v3" ZT_EOL_S
 
