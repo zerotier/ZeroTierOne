@@ -89,7 +89,7 @@ endif
 #LDFLAGS=
 #STRIP=echo
 
-all:	one
+all:	one doc
 
 one:	$(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(OBJS) service/OneService.o one.o osdep/LinuxEthernetTap.o $(LDLIBS)
