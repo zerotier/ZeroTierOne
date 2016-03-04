@@ -2,9 +2,9 @@
 zerotier-one
 ============
 
----------------------------------------------------
-end-point server for ZeroTier virtual network layer
----------------------------------------------------
+-------------------------------------------------
+end-point peer for ZeroTier virtual network layer
+-------------------------------------------------
 
 :Author: |author|
 :Date: 2016-03-04
@@ -30,8 +30,13 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-**ZeroTier One** is the end-point server for the ZeroTier
+**ZeroTier One** is the end-point peer for the ZeroTier
 software-defined network layer.
+
+*ZeroTier* is a peer-to-peer virtual network. Its “virtual layer 1”
+(VL1) is implemented in the communication between ZeroTier One peers.
+This provides the OSI layer 1 functionality on which to build further
+network services.
 
 
 OPTIONS
