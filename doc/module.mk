@@ -29,6 +29,10 @@ GENERATED_FILES += $(addprefix ${DOC_DIR}/,\
 RST2MAN = rst2man
 RST2MAN_OPTS =
 
+
+.PHONY: doc
+doc: manpages
+
 .PHONY: manpages
 manpages: ${manpage_paths}
 
