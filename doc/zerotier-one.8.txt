@@ -73,6 +73,13 @@ OPTIONS
     all the specified `QUERY_ARG` parameters.
 
 
+FILES
+=====
+
+The |command| process will store its state in files within the
+specified `HOMEDIR` directory (default: ``/var/lib/zerotier-one``).
+
+
 SEE ALSO
 ========
 
