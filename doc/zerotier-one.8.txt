@@ -23,6 +23,8 @@ SYNOPSIS
 ========
 
 | |command| [ `option` ... ] [ `HOMEDIR` ]
+| |command| **-i** [ `IDTOOL_ARG` ... ]
+| |command| **-q** [ `QUERY_ARG` ... ]
 | |command| **-h**
 | |command| **-v**
 
@@ -58,15 +60,17 @@ OPTIONS
     Become a conventional daemon process. Only available on Unix-like
     operating systems.
 
-**-i**
+**-i** [ `IDTOOL_ARG` ... ]
     Generate and manage identities.
 
-    This is equivalent to running the **zerotier-idtool** command.
+    This is equivalent to running the **zerotier-idtool** command with
+    all the specified `IDTOOL_ARG` parameters.
 
-**-q**
+**-q** [ `QUERY_ARG` ... ]
     Query the running ZeroTier One process.
 
-    This is equivalent to running the **zerotier-cli** command.
+    This is equivalent to running the **zerotier-cli** command with
+    all the specified `QUERY_ARG` parameters.
 
 
 SEE ALSO
