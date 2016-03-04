@@ -73,7 +73,10 @@ static OneService *volatile zt1Service = (OneService *)0;
 #define PROGRAM_NAME "ZeroTier One"
 #define COPYRIGHT_NOTICE "Copyright © 2011–2016 ZeroTier, Inc."
 #define LICENSE_GRANT \
-	"Licensed under the GNU General Public License v3" ZT_EOL_S
+	"This is free software: you may copy, modify, and/or distribute this" ZT_EOL_S \
+	"work under the terms of the GNU General Public License, version 3 or" ZT_EOL_S \
+	"later as published by the Free Software Foundation." ZT_EOL_S \
+	"No warranty expressed or implied." ZT_EOL_S
 
 /****************************************************************************/
 /* zerotier-cli personality                                                 */
