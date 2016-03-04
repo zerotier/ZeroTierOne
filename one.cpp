@@ -70,6 +70,9 @@ using namespace ZeroTier;
 
 static OneService *volatile zt1Service = (OneService *)0;
 
+#define LICENSE_GRANT \
+	"Licensed under the GNU General Public License v3" ZT_EOL_S
+
 /****************************************************************************/
 /* zerotier-cli personality                                                 */
 /****************************************************************************/
@@ -77,7 +80,8 @@ static OneService *volatile zt1Service = (OneService *)0;
 static void cliPrintHelp(const char *pn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
-	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	fprintf(out,
+		LICENSE_GRANT ZT_EOL_S);
 	fprintf(out,"Usage: %s [-switches] <command/path> [<args>]"ZT_EOL_S""ZT_EOL_S,pn);
 	fprintf(out,"Available switches:"ZT_EOL_S);
 	fprintf(out,"  -h                 - Display this help"ZT_EOL_S);
@@ -551,7 +555,8 @@ static int cli(int argc,char **argv)
 static void idtoolPrintHelp(FILE *out,const char *pn)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
-	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	fprintf(out,
+		LICENSE_GRANT ZT_EOL_S);
 	fprintf(out,"Usage: %s <command> [<args>]"ZT_EOL_S""ZT_EOL_S"Commands:"ZT_EOL_S,pn);
 	fprintf(out,"  generate [<identity.secret>] [<identity.public>]"ZT_EOL_S);
 	fprintf(out,"  validate <identity.secret/public>"ZT_EOL_S);
@@ -892,7 +897,8 @@ static BOOL IsCurrentUserLocalAdministrator(void)
 static void printHelp(const char *cn,FILE *out)
 {
 	fprintf(out,"ZeroTier One version %d.%d.%d"ZT_EOL_S"(c)2011-2015 ZeroTier, Inc."ZT_EOL_S,ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
-	fprintf(out,"Licensed under the GNU General Public License v3"ZT_EOL_S""ZT_EOL_S);
+	fprintf(out,
+		LICENSE_GRANT ZT_EOL_S);
 	std::string updateUrl(OneService::autoUpdateUrl());
 	if (updateUrl.length())
 		fprintf(out,"Automatic updates enabled:"ZT_EOL_S"  %s"ZT_EOL_S"  (all updates are securely authenticated by 256-bit ECDSA signature)"ZT_EOL_S""ZT_EOL_S,updateUrl.c_str());
