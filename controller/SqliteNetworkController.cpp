@@ -215,7 +215,7 @@ SqliteNetworkController::SqliteNetworkController(Node *node,const char *dbPath,c
 			||(sqlite3_prepare_v2(_db,"SELECT IFNULL(MAX(networkVisitCounter),0) FROM NodeHistory WHERE networkId = ? AND nodeId = ?",-1,&_sGetMaxNodeHistoryNetworkVisitCounter,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"INSERT INTO NodeHistory (nodeId,networkId,networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress) VALUES (?,?,?,?,?,?,?,?,?,?)",-1,&_sAddNodeHistoryEntry,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"DELETE FROM NodeHistory WHERE networkId = ? AND nodeId = ? AND networkVisitCounter <= ?",-1,&_sDeleteOldNodeHistoryEntries,(const char **)0) != SQLITE_OK)
-			||(sqlite3_prepare_v2(_db,"SELECT nodeId,MAX(requestTime),MAX((((clientMajorVersion & 65535) << 32) | ((clientMinorVersion & 65535) << 16) | (clientRevision & 65535))) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? AND networkRequestAuthorized > 0 GROUP BY nodeId",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
+			||(sqlite3_prepare_v2(_db,"SELECT nodeId,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,fromAddress,networkRequestAuthorized FROM NodeHistory WHERE networkId = ? AND requestTime IN (SELECT MAX(requestTime) FROM NodeHistory WHERE networkId = ? AND requestTime >= ? GROUP BY nodeId) ORDER BY nodeId ASC,requestTime DESC",-1,&_sGetActiveNodesOnNetwork,(const char **)0) != SQLITE_OK)
 			||(sqlite3_prepare_v2(_db,"SELECT networkVisitCounter,networkRequestAuthorized,requestTime,clientMajorVersion,clientMinorVersion,clientRevision,networkRequestMetaData,fromAddress FROM NodeHistory WHERE networkId = ? AND nodeId = ? ORDER BY requestTime DESC",-1,&_sGetNodeHistory,(const char **)0) != SQLITE_OK)
 
 			/* Rule */
@@ -1307,22 +1307,41 @@ unsigned int SqliteNetworkController::_doCPGet(
 
 					sqlite3_reset(_sGetActiveNodesOnNetwork);
 					sqlite3_bind_text(_sGetActiveNodesOnNetwork,1,nwids,16,SQLITE_STATIC);
-					sqlite3_bind_int64(_sGetActiveNodesOnNetwork,2,(int64_t)(OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD));
+					sqlite3_bind_text(_sGetActiveNodesOnNetwork,2,nwids,16,SQLITE_STATIC);
+					sqlite3_bind_int64(_sGetActiveNodesOnNetwork,3,(int64_t)(OSUtils::now() - ZT_NETCONF_NODE_ACTIVE_THRESHOLD));
 
 					responseBody.push_back('{');
 					bool firstMember = true;
+					uint64_t lastNodeId = 0;
 					while (sqlite3_step(_sGetActiveNodesOnNetwork) == SQLITE_ROW) {
-						const char *nid = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,0);
-						if (nid) {
+						const char *nodeId = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,0);
+						if (nodeId) {
+							const uint64_t nodeIdInt = Utils::hexStrToU64(nodeId);
+							if (nodeIdInt == lastNodeId) // technically that SQL query could (rarely) generate a duplicate for a given nodeId, in which case we want the first
+								continue;
+							lastNodeId = nodeIdInt;
+
 							responseBody.append(firstMember ? "\"" : ",\"");
-							responseBody.append(nid);
-							responseBody.append("\":{\"lt\":");
-							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,1));
-							if ((uint64_t)sqlite3_column_int64(_sGetActiveNodesOnNetwork,2) >= 0x0000000100010000ULL)
-								responseBody.append(",\"cts\":true");
-							else responseBody.append(",\"cts\":false");
-							responseBody.push_back('}');
 							firstMember = false;
+							responseBody.append(nodeId);
+							responseBody.append("\":{");
+							responseBody.append("\"ts\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,1));
+							responseBody.append((sqlite3_column_int(_sGetActiveNodesOnNetwork,6) > 0) ? ",\"authorized\":true" : ",\"authorized\":false");
+							responseBody.append(",\"clientMajorVersion\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,2));
+							responseBody.append(",\"clientMinorVersion\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,3));
+							responseBody.append(",\"clientRevision\":");
+							responseBody.append((const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,4));
+							const char *fromAddr = (const char *)sqlite3_column_text(_sGetActiveNodesOnNetwork,5);
+							if ((fromAddr)&&(fromAddr[0])) {
+								responseBody.append(",\"fromAddr\":\"");
+								responseBody.append(_jsonEscape(fromAddr));
+								responseBody.append("\"}");
+							} else {
+								responseBody.append(",\"fromAddr\":null}");
+							}
 						}
 					}
 					responseBody.push_back('}');
