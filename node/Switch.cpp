@@ -99,7 +99,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 				// Handle fragment ----------------------------------------------------
 
 				Packet::Fragment fragment(data,len);
-				Address destination(fragment.destination());
+				const Address destination(fragment.destination());
 
 				if (destination != RR->identity.address()) {
 					// Fragment is not for us, so try to relay it
@@ -110,12 +110,12 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 						// It wouldn't hurt anything, just redundant and unnecessary.
 						SharedPtr<Peer> relayTo = RR->topology->getPeer(destination);
 						if ((!relayTo)||(!relayTo->send(fragment.data(),fragment.size(),now))) {
-			#ifdef ZT_ENABLE_CLUSTER
+#ifdef ZT_ENABLE_CLUSTER
 							if (RR->cluster) {
 								RR->cluster->sendViaCluster(Address(),destination,fragment.data(),fragment.size(),false);
 								return;
 							}
-			#endif
+#endif
 
 							// Don't know peer or no direct path -- so relay via root server
 							relayTo = RR->topology->getBestRoot();
