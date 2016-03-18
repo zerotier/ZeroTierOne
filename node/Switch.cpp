@@ -215,7 +215,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								unite(source,destination);
 							}
 						} else {
-			#ifdef ZT_ENABLE_CLUSTER
+#ifdef ZT_ENABLE_CLUSTER
 							if (RR->cluster) {
 								bool shouldUnite;
 								{
@@ -228,7 +228,7 @@ void Switch::onRemotePacket(const InetAddress &localAddr,const InetAddress &from
 								RR->cluster->sendViaCluster(source,destination,packet.data(),packet.size(),shouldUnite);
 								return;
 							}
-			#endif
+#endif
 
 							relayTo = RR->topology->getBestRoot(&source,1,true);
 							if (relayTo)
