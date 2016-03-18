@@ -19,6 +19,8 @@
 #ifndef ZT_DEFERREDPACKETS_HPP
 #define ZT_DEFERREDPACKETS_HPP
 
+#include <list>
+
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Mutex.hpp"
@@ -28,7 +30,7 @@
 /**
  * Maximum number of deferred packets
  */
-#define ZT_DEFFEREDPACKETS_MAX 1024
+#define ZT_DEFFEREDPACKETS_MAX 256
 
 namespace ZeroTier {
 
@@ -53,11 +55,6 @@ public:
 	/**
 	 * Enqueue a packet
 	 *
-	 * Since packets enqueue themselves, they call it with 'this' and we wrap
-	 * them in a SharedPtr<>. This is safe as SharedPtr<> is introspective and
-	 * supports this. This should not be called from any other code outside
-	 * IncomingPacket.
-	 *
 	 * @param pkt Packet to process later (possibly in the background)
 	 * @return False if queue is full
 	 */
@@ -75,10 +72,8 @@ public:
 	int process();
 
 private:
-	SharedPtr<IncomingPacket> _q[ZT_DEFFEREDPACKETS_MAX];
+	std::list<IncomingPacket> _q;
 	const RuntimeEnvironment *const RR;
-	unsigned long _readPtr;
-	unsigned long _writePtr;
  	volatile int _waiting;
 	volatile bool _die;
 	Mutex _q_m;

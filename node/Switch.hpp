@@ -150,8 +150,6 @@ public:
 	unsigned long doTimerTasks(uint64_t now);
 
 private:
-	void _handleRemotePacketFragment(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
-	void _handleRemotePacketHead(const InetAddress &localAddr,const InetAddress &fromAddr,const void *data,unsigned int len);
 	Address _sendWhoisRequest(const Address &addr,const Address *peersAlreadyConsulted,unsigned int numPeersAlreadyConsulted);
 	bool _trySend(const Packet &packet,bool encrypt,uint64_t nwid);
 
@@ -169,22 +167,37 @@ private:
 	Hashtable< Address,WhoisRequest > _outstandingWhoisRequests;
 	Mutex _outstandingWhoisRequests_m;
 
-	// Packet defragmentation queue -- comes before RX queue in path
-	struct DefragQueueEntry
+	// Packets waiting for WHOIS replies or other decode info or missing fragments
+	struct RXQueueEntry
 	{
-		DefragQueueEntry() : creationTime(0),totalFragments(0),haveFragments(0) {}
-		uint64_t creationTime;
-		SharedPtr<IncomingPacket> frag0;
-		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1];
+		RXQueueEntry() : timestamp(0) {}
+		uint64_t timestamp; // 0 if entry is not in use
+		uint64_t packetId;
+		IncomingPacket frag0; // head of packet
+		Packet::Fragment frags[ZT_MAX_PACKET_FRAGMENTS - 1]; // later fragments (if any)
 		unsigned int totalFragments; // 0 if only frag0 received, waiting for frags
 		uint32_t haveFragments; // bit mask, LSB to MSB
+		bool complete; // if true, packet is complete
 	};
-	Hashtable< uint64_t,DefragQueueEntry > _defragQueue;
-	Mutex _defragQueue_m;
-
-	// ZeroTier-layer RX queue of incoming packets in the process of being decoded
-	std::list< SharedPtr<IncomingPacket> > _rxQueue;
+	RXQueueEntry _rxQueue[ZT_RX_QUEUE_SIZE];
 	Mutex _rxQueue_m;
+
+	/* Returns the matching or oldest entry. Caller must check timestamp and
+	 * packet ID to determine which. */
+	inline RXQueueEntry *_findRXQueueEntry(uint64_t packetId)
+	{
+		RXQueueEntry *rq;
+		RXQueueEntry *oldest = &(_rxQueue[ZT_RX_QUEUE_SIZE - 1]);
+		unsigned long i = ZT_RX_QUEUE_SIZE;
+		while (i) {
+			rq = &(_rxQueue[--i]);
+			if (rq->timestamp < oldest->timestamp)
+				oldest = rq;
+			if ((rq->packetId == packetId)&&(rq->timestamp))
+				return rq;
+		}
+		return oldest;
+	}
 
 	// ZeroTier-layer TX queue entry
 	struct TXQueueEntry

@@ -24,8 +24,6 @@
 #include "Packet.hpp"
 #include "InetAddress.hpp"
 #include "Utils.hpp"
-#include "SharedPtr.hpp"
-#include "AtomicCounter.hpp"
 #include "MulticastGroup.hpp"
 #include "Peer.hpp"
 
@@ -55,9 +53,21 @@ class Network;
  */
 class IncomingPacket : public Packet
 {
-	friend class SharedPtr<IncomingPacket>;
-
 public:
+	IncomingPacket() :
+		Packet(),
+		_receiveTime(0),
+		_localAddress(),
+		_remoteAddress()
+	{
+	}
+
+	IncomingPacket(const IncomingPacket &p)
+	{
+		// All fields including InetAddress are memcpy'able
+		memcpy(this,&p,sizeof(IncomingPacket));
+	}
+
 	/**
 	 * Create a new packet-in-decode
 	 *
@@ -72,9 +82,33 @@ public:
  		Packet(data,len),
  		_receiveTime(now),
  		_localAddress(localAddress),
- 		_remoteAddress(remoteAddress),
- 		__refCount()
+ 		_remoteAddress(remoteAddress)
 	{
+	}
+
+	inline IncomingPacket &operator=(const IncomingPacket &p)
+	{
+		// All fields including InetAddress are memcpy'able
+		memcpy(this,&p,sizeof(IncomingPacket));
+		return *this;
+	}
+
+	/**
+	 * Init packet-in-decode in place
+	 *
+	 * @param data Packet data
+	 * @param len Packet length
+	 * @param localAddress Local interface address
+	 * @param remoteAddress Address from which packet came
+	 * @param now Current time
+	 * @throws std::out_of_range Range error processing packet
+	 */
+	inline void init(const void *data,unsigned int len,const InetAddress &localAddress,const InetAddress &remoteAddress,uint64_t now)
+	{
+		copyFrom(data,len);
+		_receiveTime = now;
+		_localAddress = localAddress;
+		_remoteAddress = remoteAddress;
 	}
 
 	/**
@@ -154,7 +188,6 @@ private:
 	uint64_t _receiveTime;
 	InetAddress _localAddress;
 	InetAddress _remoteAddress;
-	AtomicCounter __refCount;
 };
 
 } // namespace ZeroTier

@@ -163,9 +163,12 @@
 #define ZT_MAX_PACKET_FRAGMENTS 4
 
 /**
- * Timeout for receipt of fragmented packets in ms
+ * Size of RX queue
+ *
+ * This is about 2mb, and can be decreased for small devices. A queue smaller
+ * than about 4 is probably going to cause a lot of lost packets.
  */
-#define ZT_FRAGMENTED_PACKET_RECEIVE_TIMEOUT 500
+#define ZT_RX_QUEUE_SIZE 64
 
 /**
  * Length of secret key in bytes -- 256-bit -- do not change
