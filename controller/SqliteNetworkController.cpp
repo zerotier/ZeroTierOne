@@ -1861,6 +1861,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 			netconf[ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT] = ml;
 		}
 
+		bool amActiveBridge = false;
 		{
 			std::string activeBridges;
 			sqlite3_reset(_sGetActiveBridges);
@@ -1871,6 +1872,8 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 					if (activeBridges.length())
 						activeBridges.push_back(',');
 					activeBridges.append(ab);
+					if (!strcmp(member.nodeId,ab))
+						amActiveBridge = true;
 				}
 				if (activeBridges.length() > 1024) // sanity check -- you can't have too many active bridges at the moment
 					break;
@@ -1992,7 +1995,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 				}
 			}
 
-			if (!haveStaticIpAssignment) {
+			if ((!haveStaticIpAssignment)&&(!amActiveBridge)) {
 				// Attempt to auto-assign an IPv4 address from an available routed pool
 				sqlite3_reset(_sGetIpAssignmentPools);
 				sqlite3_bind_text(_sGetIpAssignmentPools,1,network.id,16,SQLITE_STATIC);
