@@ -2009,7 +2009,7 @@ NetworkController::ResultCode SqliteNetworkController::_doNetworkConfigRequest(c
 
 					uint32_t ipRangeStart = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeStartB + 12)));
 					uint32_t ipRangeEnd = Utils::ntoh(*(reinterpret_cast<const uint32_t *>(ipRangeEndB + 12)));
-					if (ipRangeEnd < ipRangeStart)
+					if ((ipRangeEnd <= ipRangeStart)||(ipRangeStart == 0))
 						continue;
 					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
 
