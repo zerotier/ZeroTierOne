@@ -59,6 +59,7 @@
 #ifndef __BSD__
 #define __BSD__
 #endif
+#include <machine/endian.h>
 #endif
 
 // Defined this macro to disable "type punning" on a number of targets that
@@ -103,9 +104,8 @@
 #include <Windows.h>
 #endif
 
-// Assume these are little-endian. PPC is not supported for OSX, and ARM
-// runs in little-endian mode for these OS families.
-#if defined(__APPLE__) || defined(__WINDOWS__)
+// Assume little endian if not defined
+#if (defined(__APPLE__) || defined(__WINDOWS__)) && (!defined(__BYTE_ORDER))
 #undef __BYTE_ORDER
 #undef __LITTLE_ENDIAN
 #undef __BIG_ENDIAN
