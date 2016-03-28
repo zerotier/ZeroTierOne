@@ -51,8 +51,19 @@
 #include <endian.h>
 #endif
 
-// Disable type punning on ARM architecture -- some ARM chips throw SIGBUS on unaligned access
-#if defined(__arm__) || defined(__ARMEL__)
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#ifndef __UNIX_LIKE__
+#define __UNIX_LIKE__
+#endif
+#ifndef __BSD__
+#define __BSD__
+#endif
+#endif
+
+// Defined this macro to disable "type punning" on a number of targets that
+// have issues with unaligned memory access.
+#if defined(__arm__) || defined(__ARMEL__) || (defined(__APPLE__) && ( (defined(TARGET_OS_IPHONE) && (TARGET_OS_IPHONE != 0)) || (defined(TARGET_OS_WATCH) && (TARGET_OS_WATCH != 0)) || (defined(TARGET_IPHONE_SIMULATOR) && (TARGET_IPHONE_SIMULATOR != 0)) ) )
 #ifndef ZT_NO_TYPE_PUNNING
 #define ZT_NO_TYPE_PUNNING
 #endif
@@ -70,18 +81,6 @@
 #define __BYTE_ORDER _BYTE_ORDER
 #define __LITTLE_ENDIAN _LITTLE_ENDIAN
 #define __BIG_ENDIAN _BIG_ENDIAN
-#endif
-#endif
-
-// TODO: Android is what? Linux technically, but does it define it?
-
-#ifdef __APPLE__
-#include <TargetConditionals.h>
-#ifndef __UNIX_LIKE__
-#define __UNIX_LIKE__
-#endif
-#ifndef __BSD__
-#define __BSD__
 #endif
 #endif
 
