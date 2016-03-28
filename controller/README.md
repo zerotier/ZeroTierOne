@@ -5,7 +5,7 @@ This folder contains code implementing the node/NetworkController.hpp interface 
 
 ### Building
 
-By default this code is not built or included in the client. To build on Linux, BSD, or Mac add ZT_\ENABLE_\NETWORK_\CONTROLLER=1 to the make command line. You'll need the development headers for Sqlite3 installed. They ship as part of OSX and Xcode. On Linux or BSD you'll probably need to install a package.
+By default this code is not built or included in the client. To build on Linux, BSD, or Mac add `ZT_ENABLE_NETWORK_CONTROLLER=1` to the make command line. You'll need the development headers for Sqlite3 installed. They ship as part of OSX and Xcode. On Linux or BSD you'll probably need to install a package.
 
 ### Running
 
