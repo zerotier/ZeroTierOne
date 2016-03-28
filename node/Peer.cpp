@@ -386,7 +386,7 @@ bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const Certif
 
 	// Check signature, log and return if cert is invalid
 	if (com.signedBy() != Network::controllerFor(nwid)) {
-		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)_id,com.signedBy().toString().c_str());
+		TRACE("rejected network membership certificate for %.16llx signed by %s: signer not a controller of this network",(unsigned long long)nwid,com.signedBy().toString().c_str());
 		return false; // invalid signer
 	}
 
@@ -395,7 +395,7 @@ bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const Certif
 		// We are the controller: RR->identity.address() == controller() == cert.signedBy()
 		// So, verify that we signed th cert ourself
 		if (!com.verify(RR->identity)) {
-			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)_id,com.signedBy().toString().c_str());
+			TRACE("rejected network membership certificate for %.16llx self signed by %s: signature check failed",(unsigned long long)nwid,com.signedBy().toString().c_str());
 			return false; // invalid signature
 		}
 
@@ -411,7 +411,7 @@ bool Peer::validateAndSetNetworkMembershipCertificate(uint64_t nwid,const Certif
 		}
 
 		if (!com.verify(signer->identity())) {
-			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)_id,com.signedBy().toString().c_str());
+			TRACE("rejected network membership certificate for %.16llx signed by %s: signature check failed",(unsigned long long)nwid,com.signedBy().toString().c_str());
 			return false; // invalid signature
 		}
 	}

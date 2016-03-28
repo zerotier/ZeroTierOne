@@ -191,10 +191,10 @@ private:
 		unsigned long i = ZT_RX_QUEUE_SIZE;
 		while (i) {
 			rq = &(_rxQueue[--i]);
-			if (rq->timestamp < oldest->timestamp)
-				oldest = rq;
 			if ((rq->packetId == packetId)&&(rq->timestamp))
 				return rq;
+			if (rq->timestamp < oldest->timestamp)
+				oldest = rq;
 		}
 		return oldest;
 	}
