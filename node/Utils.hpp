@@ -51,9 +51,9 @@ public:
 	static inline bool secureEq(const void *a,const void *b,unsigned int len)
 		throw()
 	{
-		char diff = 0;
+		uint8_t diff = 0;
 		for(unsigned int i=0;i<len;++i)
-			diff |= ( (reinterpret_cast<const char *>(a))[i] ^ (reinterpret_cast<const char *>(b))[i] );
+			diff |= ( (reinterpret_cast<const uint8_t *>(a))[i] ^ (reinterpret_cast<const uint8_t *>(b))[i] );
 		return (diff == 0);
 	}
 
