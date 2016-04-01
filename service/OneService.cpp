@@ -115,7 +115,7 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_MAX_HTTP_CONNECTIONS 64
 
 // Interface metric for ZeroTier taps
-#define ZT_IF_METRIC 32768
+#define ZT_IF_METRIC 5000
 
 // How often to check for new multicast subscriptions on a tap device
 #define ZT_TAP_CHECK_MULTICAST_INTERVAL 5000
