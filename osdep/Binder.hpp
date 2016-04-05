@@ -136,11 +136,37 @@ public:
 
 #ifdef __WINDOWS__
 
+		char aabuf[32768];
+		ULONG aalen = sizeof(aabuf);
+		if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
+			PIP_ADAPTER_ADDRESSES a = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
+			while (a) {
+				PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
+				while (ua) {
+					InetAddress ip(ua->Address.lpSockaddr);
+					if (ifChecker.shouldBindInterface("",ip)) {
+						switch(ip.ipScope()) {
+							default: break;
+							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+							case InetAddress::IP_SCOPE_GLOBAL:
+							//case InetAddress::IP_SCOPE_LINK_LOCAL:
+							case InetAddress::IP_SCOPE_SHARED:
+							case InetAddress::IP_SCOPE_PRIVATE:
+								ip.setPort(port);
+								localIfAddrs.push_back(ip);
+								break;
+						}
+					}
+					ua = ua->Next;
+				}
+				a = a->Next;
+			}
+		}
+
 #else // not __WINDOWS__
 
 		struct ifaddrs *ifatbl = (struct ifaddrs *)0;
 		struct ifaddrs *ifa;
-
 		if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
 			ifa = ifatbl;
 			while (ifa) {
@@ -162,9 +188,8 @@ public:
 				}
 				ifa = ifa->ifa_next;
 			}
+			freeifaddrs(ifatbl);
 		}
-
-		freeifaddrs(ifatbl);
 
 #endif
 
@@ -272,6 +297,18 @@ public:
 			}
 			return result;
 		}
+	}
+
+	/**
+	 * @return All currently bound local interface addresses
+	 */
+	inline std::vector<InetAddress> allBoundLocalInterfaceAddresses()
+	{
+		Mutex::Lock _l(_lock);
+		std::vector<InetAddress> aa;
+		for(std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i)
+			aa.push_back(i->address);
+		return aa;
 	}
 
 private:

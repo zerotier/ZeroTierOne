@@ -877,78 +877,19 @@ public:
 				if ((now - lastLocalInterfaceAddressCheck) >= ZT_LOCAL_INTERFACE_CHECK_INTERVAL) {
 					lastLocalInterfaceAddressCheck = now;
 
-				_node->clearLocalInterfaceAddresses();
+					_node->clearLocalInterfaceAddresses();
+
 #ifdef ZT_USE_MINIUPNPC
-				if (_portMapper) {
-					std::vector<InetAddress> mappedAddresses(_portMapper->get());
-					for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
-						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
-				}
+					if (_portMapper) {
+						std::vector<InetAddress> mappedAddresses(_portMapper->get());
+						for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
+							_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+					}
 #endif
 
-#ifdef __UNIX_LIKE__
-					std::vector<std::string> ztDevices;
-					{
-						Mutex::Lock _l(_taps_m);
-						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
-							ztDevices.push_back(t->second->deviceName());
-					}
-					struct ifaddrs *ifatbl = (struct ifaddrs *)0;
-					if ((getifaddrs(&ifatbl) == 0)&&(ifatbl)) {
-						struct ifaddrs *ifa = ifatbl;
-						while (ifa) {
-							if ((ifa->ifa_name)&&(ifa->ifa_addr)&&(!isBlacklistedLocalInterfaceForZeroTierTraffic(ifa->ifa_name))) {
-								bool isZT = false;
-								for(std::vector<std::string>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
-									if (*d == ifa->ifa_name) {
-										isZT = true;
-										break;
-									}
-								}
-								if (!isZT) {
-									InetAddress ip(ifa->ifa_addr);
-									ip.setPort(_ports[0]);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
-								}
-							}
-							ifa = ifa->ifa_next;
-						}
-						freeifaddrs(ifatbl);
-					}
-#endif // __UNIX_LIKE__
-
-#ifdef __WINDOWS__
-					std::vector<NET_LUID> ztDevices;
-					{
-						Mutex::Lock _l(_taps_m);
-						for(std::map< uint64_t,EthernetTap *>::const_iterator t(_taps.begin());t!=_taps.end();++t)
-							ztDevices.push_back(t->second->luid());
-					}
-					char aabuf[16384];
-					ULONG aalen = sizeof(aabuf);
-					if (GetAdaptersAddresses(AF_UNSPEC,GAA_FLAG_SKIP_ANYCAST|GAA_FLAG_SKIP_MULTICAST|GAA_FLAG_SKIP_DNS_SERVER,(void *)0,reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),&aalen) == NO_ERROR) {
-						PIP_ADAPTER_ADDRESSES a = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
-						while (a) {
-							bool isZT = false;
-							for(std::vector<NET_LUID>::const_iterator d(ztDevices.begin());d!=ztDevices.end();++d) {
-								if (a->Luid.Value == d->Value) {
-									isZT = true;
-									break;
-								}
-							}
-							if (!isZT) {
-								PIP_ADAPTER_UNICAST_ADDRESS ua = a->FirstUnicastAddress;
-								while (ua) {
-									InetAddress ip(ua->Address.lpSockaddr);
-									ip.setPort(_port);
-									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
-									ua = ua->Next;
-								}
-							}
-							a = a->Next;
-						}
-					}
-#endif // __WINDOWS__
+					std::vector<InetAddress> boundAddrs(_bindings[0].allBoundLocalInterfaceAddresses());
+					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i)
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*i)));
 				}
 
 				const unsigned long delay = (dl > now) ? (unsigned long)(dl - now) : 100;
