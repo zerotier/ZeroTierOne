@@ -146,7 +146,7 @@ binder_hpp_interface_prefixes_dont_match:
 						default: break;
 						case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
 						case InetAddress::IP_SCOPE_GLOBAL:
-						case InetAddress::IP_SCOPE_LINK_LOCAL:
+						//case InetAddress::IP_SCOPE_LINK_LOCAL:
 						case InetAddress::IP_SCOPE_SHARED:
 						case InetAddress::IP_SCOPE_PRIVATE:
 							for(ii=ignoreInterfacesByAddress.begin();ii!=ignoreInterfacesByAddress.end();++ii) {
@@ -170,13 +170,13 @@ binder_hpp_ignore_interface:
 
 #endif
 
+		// Default to binding to wildcard if we can't enumerate addresses
 		if (localIfAddrs.size() == 0) {
 			localIfAddrs.push_back(InetAddress((uint32_t)0,_port));
 			localIfAddrs.push_back(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,_port));
-		} else {
-			std::sort(localIfAddrs.begin(),localIfAddrs.end());
 		}
 
+		// Close any bindings to anything that doesn't exist anymore
 		for(bi=_bindings.begin();bi!=_bindings.end();++bi) {
 			if (std::find(localIfAddrs.begin(),localIfAddrs.end(),bi->address) == localIfAddrs.end()) {
 				_phy.close(bi->udpSock,false);
@@ -185,6 +185,7 @@ binder_hpp_ignore_interface:
 		}
 
 		for(ii=localIfAddrs.begin();ii!=localIfAddrs.end();++ii) {
+			// Copy over bindings that still are valid
 			for(bi=_bindings.begin();bi!=_bindings.end();++bi) {
 				if (bi->address == *ii) {
 					newBindings.push_back(*bi);
@@ -192,6 +193,7 @@ binder_hpp_ignore_interface:
 				}
 			}
 
+			// Add new bindings
 			if (bi == _bindings.end()) {
 				udps = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0,131072);
 				if (udps) {
@@ -208,7 +210,50 @@ binder_hpp_ignore_interface:
 			}
 		}
 
+		// Swapping pointers and then letting the old one fall out of scope is faster than copying again
 		_bindings.swap(newBindings);
+	}
+
+	/**
+	 * Send a UDP packet from the specified local interface, or all
+	 *
+	 * Unfortunately even by examining the routing table there is no ultimately
+	 * robust way to tell where we might reach another host that works in all
+	 * environments. As a result, we send packets with null (wildcard) local
+	 * addresses from *every* bound interface.
+	 *
+	 * These are typically initial HELLOs, path probes, etc., since normal
+	 * conversations will have a local endpoint address. So the cost is low and
+	 * if the peer is not reachable via that route then the packet will go
+	 * nowhere and nothing will happen.
+	 *
+	 * It will of course only send via interface bindings of the same socket
+	 * family. No point in sending V4 via V6 or vice versa.
+	 *
+	 * In any case on most hosts there's only one or two interfaces that we
+	 * will use, so none of this is particularly costly.
+	 *
+	 * @param local Local interface address or null address for 'all'
+	 * @param remote Remote address
+	 * @param data Data to send
+	 * @param len Length of data
+	 */
+	inline bool udpSend(const InetAddress &local,const InetAddress &remote,const void *data,unsigned int len) const
+	{
+		if (local) {
+			for(std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
+				if (i->address == local)
+					return _phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
+			}
+			return false;
+		} else {
+			bool result = false;
+			for(std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
+				if (i->address.ss_family == remote.ss_family)
+					result |= _phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
+			}
+			return result;
+		}
 	}
 
 private:
