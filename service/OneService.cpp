@@ -46,6 +46,7 @@
 #include "../osdep/Http.hpp"
 #include "../osdep/BackgroundResolver.hpp"
 #include "../osdep/PortMapper.hpp"
+#include "../osdep/Binder.hpp"
 
 #include "OneService.hpp"
 #include "ControlPlane.hpp"
@@ -445,21 +446,93 @@ struct TcpConnection
 	Mutex writeBuf_m;
 };
 
-// Use a bigger buffer on AMD64 since these are likely to be bigger and
-// servers. Otherwise use a smaller buffer. This makes no difference
-// except under very high load.
-#if (defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__))
-#define ZT_UDP_DESIRED_BUF_SIZE 1048576
-#else
-#define ZT_UDP_DESIRED_BUF_SIZE 131072
-#endif
-
 // Used to pseudo-randomize local source port picking
 static volatile unsigned int _udpPortPickerCounter = 0;
 
 class OneServiceImpl : public OneService
 {
 public:
+	// begin member variables --------------------------------------------------
+
+	const std::string _homePath;
+	BackgroundResolver _tcpFallbackResolver;
+#ifdef ZT_ENABLE_NETWORK_CONTROLLER
+	SqliteNetworkController *_controller;
+#endif
+	Phy<OneServiceImpl *> _phy;
+	Node *_node;
+
+	/*
+	 * To properly handle NAT/gateway craziness we use three local UDP ports:
+	 *
+	 * [0] is the normal/default port, usually 9993
+	 * [1] is a port dervied from our ZeroTier address
+	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
+	 *
+	 * [2] exists because on some gateways trying to do regular NAT-t interferes
+	 * destructively with uPnP port mapping behavior in very weird buggy ways.
+	 * It's only used if uPnP/NAT-PMP is enabled in this build.
+	 */
+	struct {
+		InetAddress v4a,v6a;
+		PhySocket *v4s,*v6s;
+	} _udp[3];
+
+	// Sockets for JSON API -- bound only to V4 and V6 localhost
+	PhySocket *_v4TcpControlSocket;
+	PhySocket *_v6TcpControlSocket;
+
+	// JSON API handler
+	ControlPlane *_controlPlane;
+
+	// Time we last received a packet from a global address
+	uint64_t _lastDirectReceiveFromGlobal;
+#ifdef ZT_TCP_FALLBACK_RELAY
+	uint64_t _lastSendToGlobalV4;
+#endif
+
+	// Last potential sleep/wake event
+	uint64_t _lastRestart;
+
+	// Deadline for the next background task service function
+	volatile uint64_t _nextBackgroundTaskDeadline;
+
+	// Tap devices by network ID
+	std::map< uint64_t,EthernetTap * > _taps;
+	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
+	Mutex _taps_m;
+
+	// Active TCP/IP connections
+	std::set< TcpConnection * > _tcpConnections; // no mutex for this since it's done in the main loop thread only
+	TcpConnection *_tcpFallbackTunnel;
+
+	// Termination status information
+	ReasonForTermination _termReason;
+	std::string _fatalErrorMessage;
+	Mutex _termReason_m;
+
+	// The default/deterministic port we were told to use, normally 9993
+	unsigned int _port;
+
+	// uPnP/NAT-PMP port mapper if enabled
+#ifdef ZT_USE_MINIUPNPC
+	PortMapper *_portMapper;
+#endif
+
+	// Cluster management instance if enabled
+#ifdef ZT_ENABLE_CLUSTER
+	PhySocket *_clusterMessageSocket;
+	ClusterGeoIpService *_clusterGeoIpService;
+	ClusterDefinition *_clusterDefinition;
+	unsigned int _clusterMemberId;
+#endif
+
+	// Set to false to force service to stop
+	volatile bool _run;
+	Mutex _run_m;
+
+	// end member variables ----------------------------------------------------
+
 	OneServiceImpl(const char *hp,unsigned int port) :
 		_homePath((hp) ? hp : ".")
 		,_tcpFallbackResolver(ZT_TCP_FALLBACK_RELAY)
@@ -508,9 +581,9 @@ public:
 				in4.sin_family = AF_INET;
 				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
 				in4.sin_port = Utils::hton((uint16_t)port);
-				_v4TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+				_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
-				if (_v4TcpListenSocket) {
+				if (_v4TcpControlSocket) {
 					_udp[0].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port);
 					_udp[0].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[0].v6a),(void *)&(_udp[0].v6a),ZT_UDP_DESIRED_BUF_SIZE);
 
@@ -519,7 +592,7 @@ public:
 					in6.sin6_family = AF_INET6;
 					in6.sin6_port = in4.sin_port;
 					in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
-					_v6TcpListenSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
+					_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
 					_port = port;
 					break; // success!
@@ -547,8 +620,8 @@ public:
 			if (_udp[i].v6s)
 				_phy.close(_udp[i].v6s);
 		}
-		_phy.close(_v4TcpListenSocket);
-		_phy.close(_v6TcpListenSocket);
+		_phy.close(_v4TcpControlSocket);
+		_phy.close(_v6TcpControlSocket);
 #ifdef ZT_ENABLE_CLUSTER
 		_phy.close(_clusterMessageSocket);
 #endif
@@ -1494,69 +1567,6 @@ public:
 		}
 		return p;
 	}
-
-	const std::string _homePath;
-	BackgroundResolver _tcpFallbackResolver;
-#ifdef ZT_ENABLE_NETWORK_CONTROLLER
-	SqliteNetworkController *_controller;
-#endif
-	Phy<OneServiceImpl *> _phy;
-	Node *_node;
-
-	/*
-	 * To properly handle NAT/gateway craziness we use three local UDP ports:
-	 *
-	 * [0] is the normal/default port, usually 9993
-	 * [1] is a port dervied from our ZeroTier address
-	 * [2] is a port computed from the normal/default for use with uPnP/NAT-PMP mappings
-	 *
-	 * [2] exists because on some gateways trying to do regular NAT-t interferes
-	 * destructively with uPnP port mapping behavior in very weird buggy ways.
-	 * It's only used if uPnP/NAT-PMP is enabled in this build.
-	 */
-	struct {
-		InetAddress v4a,v6a;
-		PhySocket *v4s,*v6s;
-	} _udp[3];
-
-	PhySocket *_v4TcpListenSocket;
-	PhySocket *_v6TcpListenSocket;
-
-	ControlPlane *_controlPlane;
-
-	uint64_t _lastDirectReceiveFromGlobal;
-#ifdef ZT_TCP_FALLBACK_RELAY
-	uint64_t _lastSendToGlobalV4;
-#endif
-	uint64_t _lastRestart;
-	volatile uint64_t _nextBackgroundTaskDeadline;
-
-	std::map< uint64_t,EthernetTap * > _taps;
-	std::map< uint64_t,std::vector<InetAddress> > _tapAssignedIps; // ZeroTier assigned IPs, not user or dhcp assigned
-	Mutex _taps_m;
-
-	std::set< TcpConnection * > _tcpConnections; // no mutex for this since it's done in the main loop thread only
-	TcpConnection *_tcpFallbackTunnel;
-
-	ReasonForTermination _termReason;
-	std::string _fatalErrorMessage;
-	Mutex _termReason_m;
-
-	unsigned int _port;
-
-#ifdef ZT_USE_MINIUPNPC
-	PortMapper *_portMapper;
-#endif
-
-#ifdef ZT_ENABLE_CLUSTER
-	PhySocket *_clusterMessageSocket;
-	ClusterGeoIpService *_clusterGeoIpService;
-	ClusterDefinition *_clusterDefinition;
-	unsigned int _clusterMemberId;
-#endif
-
-	bool _run;
-	Mutex _run_m;
 };
 
 static int SnodeVirtualNetworkConfigFunction(ZT_Node *node,void *uptr,uint64_t nwid,void **nuptr,enum ZT_VirtualNetworkConfigOperation op,const ZT_VirtualNetworkConfig *nwconf)

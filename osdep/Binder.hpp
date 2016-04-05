@@ -53,7 +53,7 @@
 namespace ZeroTier {
 
 /**
- * Enumerates local devices and binds ports to all potential ZeroTier path endpoints
+ * Enumerates local devices and binds to all potential ZeroTier path endpoints
  *
  * This replaces binding to wildcard (0.0.0.0 and ::0) with explicit binding
  * as part of the path to default gateway support. Under the hood it uses
@@ -79,7 +79,7 @@ public:
 	 * @param phy Physical interface to use -- be sure not to delete phy before binder
 	 * @param port Port to bind to on all interfaces (TCP and UDP)
 	 */
-	Binder(typename Phy<PHY_HANDLER_TYPE> &phy,unsigned int port) :
+	Binder(Phy<PHY_HANDLER_TYPE> &phy,unsigned int port) :
 		_phy(phy),
 		_port(port)
 	{
@@ -90,6 +90,10 @@ public:
 	 */
 	~Binder()
 	{
+		for(typename std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
+			_phy.close(i->udpSock,false);
+			_phy.close(i->tcpListenSock,false);
+		}
 	}
 
 	/**
@@ -104,12 +108,13 @@ public:
 	 */
 	void refresh(const std::vector<std::string> &ignoreInterfacesByName,const std::vector<std::string> &ignoreInterfacesByNamePrefix,const std::vector<InetAddress> &ignoreInterfacesByAddress)
 	{
+		// We use goto's in this code and some C++ compilers don't allow inline variable defs in that case, so declare them all here
 		std::vector<InetAddress> localIfAddrs;
 		std::vector<_Binding> newBindings;
-		const char *na,*nb;
 		std::vector<std::string>::const_iterator si;
 		std::vector<InetAddress>::const_iterator ii;
-		std::vector<_Binding>::const_iterator bi;
+		typename std::vector<_Binding>::const_iterator bi;
+		const char *na,*nb;
 		PhySocket *udps,*tcps;
 		InetAddress ip;
 		Mutex::Lock _l(_lock);
@@ -155,7 +160,7 @@ binder_hpp_interface_prefixes_dont_match:
 							}
 
 							ip.setPort(_port);
-							localIfAddrs.push(ip);
+							localIfAddrs.push_back(ip);
 
 							break;
 					}
@@ -195,7 +200,7 @@ binder_hpp_ignore_interface:
 
 			// Add new bindings
 			if (bi == _bindings.end()) {
-				udps = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0,131072);
+				udps = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0,ZT_UDP_DESIRED_BUF_SIZE);
 				if (udps) {
 					tcps = _phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0);
 					if (tcps) {
@@ -241,14 +246,14 @@ binder_hpp_ignore_interface:
 	inline bool udpSend(const InetAddress &local,const InetAddress &remote,const void *data,unsigned int len) const
 	{
 		if (local) {
-			for(std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
+			for(typename std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
 				if (i->address == local)
 					return _phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
 			}
 			return false;
 		} else {
 			bool result = false;
-			for(std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
+			for(typename std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
 				if (i->address.ss_family == remote.ss_family)
 					result |= _phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
 			}
@@ -256,9 +261,14 @@ binder_hpp_ignore_interface:
 		}
 	}
 
+	/**
+	 * @return Local port we are handling bindings to
+	 */
+	inline unsigned int port() const { return _port; }
+
 private:
 	std::vector<_Binding> _bindings;
-	typename Phy<PHY_HANDLER_TYPE> &_phy;
+	Phy<PHY_HANDLER_TYPE> &_phy;
 	unsigned int _port;
 	Mutex _lock;
 };
