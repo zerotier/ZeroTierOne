@@ -89,7 +89,7 @@ typedef void PhySocket;
  *
  * For all platforms:
  *
- * phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+ * phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
  * phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
  * phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
  * phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -963,7 +963,7 @@ public:
 							long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
 							if (n > 0) {
 								try {
-									_handler->phyOnDatagram((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
+									_handler->phyOnDatagram((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&(s->saddr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
 								} catch ( ... ) {}
 							} else if (n < 0)
 								break;

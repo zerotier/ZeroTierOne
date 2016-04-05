@@ -45,10 +45,18 @@
 #include <algorithm>
 #include <utility>
 
+#include "../node/NonCopyable.hpp"
 #include "../node/InetAddress.hpp"
 #include "../node/Mutex.hpp"
 
 #include "Phy.hpp"
+
+/**
+ * Period between binder rescans/refreshes
+ *
+ * OneService also does this on detected restarts.
+ */
+#define ZT_BINDER_REFRESH_PERIOD 30000
 
 namespace ZeroTier {
 
@@ -63,36 +71,39 @@ namespace ZeroTier {
  * On OSes that do not support local port enumeration or where this is not
  * meaningful, this degrades to binding to wildcard.
  */
-template<typename PHY_HANDLER_TYPE>
-class Binder
+class Binder : NonCopyable
 {
 private:
 	struct _Binding
 	{
+		_Binding() :
+			udpSock((PhySocket *)0),
+			tcpListenSock((PhySocket *)0),
+			address() {}
+
 		PhySocket *udpSock;
 		PhySocket *tcpListenSock;
 		InetAddress address;
 	};
 
 public:
-	/**
-	 * @param phy Physical interface to use -- be sure not to delete phy before binder
-	 * @param port Port to bind to on all interfaces (TCP and UDP)
-	 */
-	Binder(Phy<PHY_HANDLER_TYPE> &phy,unsigned int port) :
-		_phy(phy),
-		_port(port)
-	{
-	}
+	Binder() {}
 
 	/**
-	 * Closes all bound ports -- but NOT accepted connections on those ports
+	 * Close all bound ports
+	 *
+	 * This should be called on shutdown. It closes listen sockets and UDP ports
+	 * but not TCP connections from any TCP listen sockets.
+	 *
+	 * @param phy Physical interface
 	 */
-	~Binder()
+	template<typename PHY_HANDLER_TYPE>
+	void closeAll(Phy<PHY_HANDLER_TYPE> &phy)
 	{
+		Mutex::Lock _l(_lock);
 		for(typename std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
-			_phy.close(i->udpSock,false);
-			_phy.close(i->tcpListenSock,false);
+			phy.close(i->udpSock,false);
+			phy.close(i->tcpListenSock,false);
 		}
 	}
 
@@ -102,20 +113,24 @@ public:
 	 * This should be called after wake from sleep, on detected network device
 	 * changes, on startup, or periodically (e.g. every 30-60s).
 	 *
+	 * @param phy Physical interface
+	 * @param port Port to bind to on all interfaces (TCP and UDP)
 	 * @param ignoreInterfacesByName Ignore these interfaces by name
 	 * @param ignoreInterfacesByNamePrefix Ignore these interfaces by name-prefix (starts-with, e.g. zt ignores zt*)
 	 * @param ignoreInterfacesByAddress Ignore these interfaces by address
+	 * @tparam PHY_HANDLER_TYPE Type for Phy<> template
+	 * @tparam INTERFACE_CHECKER Type for class containing shouldBindInterface() method
 	 */
-	void refresh(const std::vector<std::string> &ignoreInterfacesByName,const std::vector<std::string> &ignoreInterfacesByNamePrefix,const std::vector<InetAddress> &ignoreInterfacesByAddress)
+	template<typename PHY_HANDLER_TYPE,typename INTERFACE_CHECKER>
+	void refresh(Phy<PHY_HANDLER_TYPE> &phy,unsigned int port,INTERFACE_CHECKER &ifChecker)
 	{
-		// We use goto's in this code and some C++ compilers don't allow inline variable defs in that case, so declare them all here
 		std::vector<InetAddress> localIfAddrs;
 		std::vector<_Binding> newBindings;
 		std::vector<std::string>::const_iterator si;
 		std::vector<InetAddress>::const_iterator ii;
 		typename std::vector<_Binding>::const_iterator bi;
-		const char *na,*nb;
-		PhySocket *udps,*tcps;
+		PhySocket *udps;
+		//PhySocket *tcps;
 		InetAddress ip;
 		Mutex::Lock _l(_lock);
 
@@ -130,43 +145,21 @@ public:
 			ifa = ifatbl;
 			while (ifa) {
 				if ((ifa->ifa_name)&&(ifa->ifa_addr)) {
-					for(si=ignoreInterfacesByName.begin();si!=ignoreInterfacesByName.end();++si) {
-						if (*si == ifa->ifa_name)
-							goto binder_hpp_ignore_interface;
-					}
-
-					for(si=ignoreInterfacesByNamePrefix.begin();si!=ignoreInterfacesByNamePrefix.end();++si) {
-						na = si->c_str();
-						nb = ifa->ifa_name;
-						while (*nb) {
-							if (*(na++) != *(nb++))
-								goto binder_hpp_interface_prefixes_dont_match;
-						}
-						goto binder_hpp_ignore_interface;
-					}
-
-binder_hpp_interface_prefixes_dont_match:
 					ip = *(ifa->ifa_addr);
-					switch(ip.ipScope()) {
-						default: break;
-						case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
-						case InetAddress::IP_SCOPE_GLOBAL:
-						//case InetAddress::IP_SCOPE_LINK_LOCAL:
-						case InetAddress::IP_SCOPE_SHARED:
-						case InetAddress::IP_SCOPE_PRIVATE:
-							for(ii=ignoreInterfacesByAddress.begin();ii!=ignoreInterfacesByAddress.end();++ii) {
-								if (ip.ipsEqual(*ii))
-									goto binder_hpp_ignore_interface;
-							}
-
-							ip.setPort(_port);
-							localIfAddrs.push_back(ip);
-
-							break;
+					if (ifChecker.shouldBindInterface(ifa->ifa_name,ip)) {
+						switch(ip.ipScope()) {
+							default: break;
+							case InetAddress::IP_SCOPE_PSEUDOPRIVATE:
+							case InetAddress::IP_SCOPE_GLOBAL:
+							//case InetAddress::IP_SCOPE_LINK_LOCAL:
+							case InetAddress::IP_SCOPE_SHARED:
+							case InetAddress::IP_SCOPE_PRIVATE:
+								ip.setPort(port);
+								localIfAddrs.push_back(ip);
+								break;
+						}
 					}
 				}
-
-binder_hpp_ignore_interface:
 				ifa = ifa->ifa_next;
 			}
 		}
@@ -177,15 +170,15 @@ binder_hpp_ignore_interface:
 
 		// Default to binding to wildcard if we can't enumerate addresses
 		if (localIfAddrs.size() == 0) {
-			localIfAddrs.push_back(InetAddress((uint32_t)0,_port));
-			localIfAddrs.push_back(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,_port));
+			localIfAddrs.push_back(InetAddress((uint32_t)0,port));
+			localIfAddrs.push_back(InetAddress((const void *)"\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port));
 		}
 
-		// Close any bindings to anything that doesn't exist anymore
+		// Close any old bindings to anything that doesn't exist anymore
 		for(bi=_bindings.begin();bi!=_bindings.end();++bi) {
 			if (std::find(localIfAddrs.begin(),localIfAddrs.end(),bi->address) == localIfAddrs.end()) {
-				_phy.close(bi->udpSock,false);
-				_phy.close(bi->tcpListenSock,false);
+				phy.close(bi->udpSock,false);
+				phy.close(bi->tcpListenSock,false);
 			}
 		}
 
@@ -200,20 +193,26 @@ binder_hpp_ignore_interface:
 
 			// Add new bindings
 			if (bi == _bindings.end()) {
-				udps = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0,ZT_UDP_DESIRED_BUF_SIZE);
+				udps = phy.udpBind(reinterpret_cast<const struct sockaddr *>(&(*ii)),(void *)0,ZT_UDP_DESIRED_BUF_SIZE);
 				if (udps) {
-					tcps = _phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0);
-					if (tcps) {
+					//tcps = phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&ii),(void *)0);
+					//if (tcps) {
 						newBindings.push_back(_Binding());
 						newBindings.back().udpSock = udps;
-						newBindings.back().tcpListenSock = tcps;
+						//newBindings.back().tcpListenSock = tcps;
 						newBindings.back().address = *ii;
-					} else {
-						_phy.close(udps,false);
-					}
+					//} else {
+					//	phy.close(udps,false);
+					//}
 				}
 			}
 		}
+
+		/*
+		for(bi=newBindings.begin();bi!=newBindings.end();++bi) {
+			printf("Binder: bound to %s\n",bi->address.toString().c_str());
+		}
+		*/
 
 		// Swapping pointers and then letting the old one fall out of scope is faster than copying again
 		_bindings.swap(newBindings);
@@ -242,34 +241,41 @@ binder_hpp_ignore_interface:
 	 * @param remote Remote address
 	 * @param data Data to send
 	 * @param len Length of data
+	 * @param v4ttl If non-zero, send this packet with the specified IP TTL (IPv4 only)
 	 */
-	inline bool udpSend(const InetAddress &local,const InetAddress &remote,const void *data,unsigned int len) const
+	template<typename PHY_HANDLER_TYPE>
+	inline bool udpSend(Phy<PHY_HANDLER_TYPE> &phy,const InetAddress &local,const InetAddress &remote,const void *data,unsigned int len,unsigned int v4ttl = 0) const
 	{
+		Mutex::Lock _l(_lock);
 		if (local) {
 			for(typename std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
-				if (i->address == local)
-					return _phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
+				if (i->address == local) {
+					if ((v4ttl)&&(local.ss_family == AF_INET))
+						phy.setIp4UdpTtl(i->udpSock,v4ttl);
+					const bool result = phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
+					if ((v4ttl)&&(local.ss_family == AF_INET))
+						phy.setIp4UdpTtl(i->udpSock,255);
+					return result;
+				}
 			}
 			return false;
 		} else {
 			bool result = false;
 			for(typename std::vector<_Binding>::const_iterator i(_bindings.begin());i!=_bindings.end();++i) {
-				if (i->address.ss_family == remote.ss_family)
-					result |= _phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
+				if (i->address.ss_family == remote.ss_family) {
+					if ((v4ttl)&&(remote.ss_family == AF_INET))
+						phy.setIp4UdpTtl(i->udpSock,v4ttl);
+					result |= phy.udpSend(i->udpSock,reinterpret_cast<const struct sockaddr *>(&remote),data,len);
+					if ((v4ttl)&&(remote.ss_family == AF_INET))
+						phy.setIp4UdpTtl(i->udpSock,255);
+				}
 			}
 			return result;
 		}
 	}
 
-	/**
-	 * @return Local port we are handling bindings to
-	 */
-	inline unsigned int port() const { return _port; }
-
 private:
 	std::vector<_Binding> _bindings;
-	Phy<PHY_HANDLER_TYPE> &_phy;
-	unsigned int _port;
 	Mutex _lock;
 };
 

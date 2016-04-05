@@ -804,7 +804,7 @@ struct TestPhyHandlers;
 static Phy<TestPhyHandlers *> *testPhyInstance = (Phy<TestPhyHandlers *> *)0;
 struct TestPhyHandlers
 {
-	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
 		++phyTestUdpPacketCount;
 	}

@@ -115,7 +115,8 @@ namespace ZeroTier { typedef BSDEthernetTap EthernetTap; }
 #define ZT_MAX_HTTP_MESSAGE_SIZE (1024 * 1024 * 64)
 #define ZT_MAX_HTTP_CONNECTIONS 64
 
-// Interface metric for ZeroTier taps
+// Interface metric for ZeroTier taps -- this ensures that if we are on WiFi and also
+// bridged via ZeroTier to the same LAN traffic will (if the OS is sane) prefer WiFi.
 #define ZT_IF_METRIC 5000
 
 // How often to check for new multicast subscriptions on a tap device
@@ -473,10 +474,10 @@ public:
 	 * destructively with uPnP port mapping behavior in very weird buggy ways.
 	 * It's only used if uPnP/NAT-PMP is enabled in this build.
 	 */
-	struct {
-		InetAddress v4a,v6a;
-		PhySocket *v4s,*v6s;
-	} _udp[3];
+
+	Binder _bindings[3];
+	unsigned int _ports[3];
+	uint16_t _portsBE[3]; // ports in big-endian network byte order as in sockaddr
 
 	// Sockets for JSON API -- bound only to V4 and V6 localhost
 	PhySocket *_v4TcpControlSocket;
@@ -510,9 +511,6 @@ public:
 	ReasonForTermination _termReason;
 	std::string _fatalErrorMessage;
 	Mutex _termReason_m;
-
-	// The default/deterministic port we were told to use, normally 9993
-	unsigned int _port;
 
 	// uPnP/NAT-PMP port mapper if enabled
 #ifdef ZT_USE_MINIUPNPC
@@ -550,7 +548,6 @@ public:
 		,_nextBackgroundTaskDeadline(0)
 		,_tcpFallbackTunnel((TcpConnection *)0)
 		,_termReason(ONE_STILL_RUNNING)
-		,_port(0)
 #ifdef ZT_USE_MINIUPNPC
 		,_portMapper((PortMapper *)0)
 #endif
@@ -562,8 +559,13 @@ public:
 #endif
 		,_run(true)
 	{
-		memset((void *)_udp,0,sizeof(_udp));
+		_ports[0] = 0;
+		_ports[1] = 0;
+		_ports[2] = 0;
 
+		// The control socket is bound to the default/static port on localhost. If we
+		// can do this, we have successfully allocated a port. The binders will take
+		// care of binding non-local addresses for ZeroTier traffic.
 		const int portTrials = (port == 0) ? 256 : 1; // if port is 0, pick random
 		for(int k=0;k<portTrials;++k) {
 			if (port == 0) {
@@ -572,59 +574,54 @@ public:
 				port = 40000 + (randp % 25500);
 			}
 
-			_udp[0].v4a = InetAddress((uint32_t)0,port);
-			_udp[0].v4s = _phy.udpBind((const struct sockaddr *)&(_udp[0].v4a),(void *)&(_udp[0].v4a),ZT_UDP_DESIRED_BUF_SIZE);
+			struct sockaddr_in in4;
+			memset(&in4,0,sizeof(in4));
+			in4.sin_family = AF_INET;
+			in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
+			in4.sin_port = Utils::hton((uint16_t)port);
+			_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
 
-			if (_udp[0].v4s) {
-				struct sockaddr_in in4;
-				memset(&in4,0,sizeof(in4));
-				in4.sin_family = AF_INET;
-				in4.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001); // right now we just listen for TCP @127.0.0.1
-				in4.sin_port = Utils::hton((uint16_t)port);
-				_v4TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in4,this);
+			struct sockaddr_in6 in6;
+			memset((void *)&in6,0,sizeof(in6));
+			in6.sin6_family = AF_INET6;
+			in6.sin6_port = in4.sin_port;
+			in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
+			_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
 
-				if (_v4TcpControlSocket) {
-					_udp[0].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,port);
-					_udp[0].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[0].v6a),(void *)&(_udp[0].v6a),ZT_UDP_DESIRED_BUF_SIZE);
-
-					struct sockaddr_in6 in6;
-					memset((void *)&in6,0,sizeof(in6));
-					in6.sin6_family = AF_INET6;
-					in6.sin6_port = in4.sin_port;
-					in6.sin6_addr.s6_addr[15] = 1; // IPv6 localhost == ::1
-					_v6TcpControlSocket = _phy.tcpListen((const struct sockaddr *)&in6,this);
-
-					_port = port;
-					break; // success!
-				} else {
-					_phy.close(_udp[0].v4s,false);
-				}
+			// We must bind one of IPv4 or IPv6 -- support either failing to support hosts that
+			// have only IPv4 or only IPv6 stacks.
+			if (((_v4TcpControlSocket)||(_v6TcpControlSocket))&&(_trialBind(port))) {
+				_ports[0] = port;
+				break;
+			} else {
+				if (_v4TcpControlSocket)
+					_phy.close(_v4TcpControlSocket,false);
+				if (_v6TcpControlSocket)
+					_phy.close(_v6TcpControlSocket,false);
+				port = 0;
 			}
-
-			port = 0;
 		}
 
-		if (_port == 0)
-			throw std::runtime_error("cannot bind to port");
+		if (_ports[0] == 0)
+			throw std::runtime_error("cannot bind to local control interface port");
 
 		char portstr[64];
-		Utils::snprintf(portstr,sizeof(portstr),"%u",_port);
+		Utils::snprintf(portstr,sizeof(portstr),"%u",_ports[0]);
 		OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S + "zerotier-one.port").c_str(),std::string(portstr));
 	}
 
 	virtual ~OneServiceImpl()
 	{
-		for(int i=0;i<3;++i) {
-			if (_udp[i].v4s)
-				_phy.close(_udp[i].v4s);
-			if (_udp[i].v6s)
-				_phy.close(_udp[i].v6s);
-		}
+		for(int i=0;i<3;++i)
+			_bindings[i].closeAll(_phy);
+
 		_phy.close(_v4TcpControlSocket);
 		_phy.close(_v6TcpControlSocket);
+
 #ifdef ZT_ENABLE_CLUSTER
 		_phy.close(_clusterMessageSocket);
 #endif
+
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
 #endif
@@ -654,7 +651,9 @@ public:
 						_termReason = ONE_UNRECOVERABLE_ERROR;
 						_fatalErrorMessage = "authtoken.secret could not be written";
 						return _termReason;
-					} else OSUtils::lockDownFile(authTokenPath.c_str(),false);
+					} else {
+						OSUtils::lockDownFile(authTokenPath.c_str(),false);
+					}
 				}
 			}
 			authToken = _trimString(authToken);
@@ -670,41 +669,46 @@ public:
 				SnodePathCheckFunction,
 				SnodeEventCallback);
 
-			// Bind secondary randomized port. If this fails we continue anyway.
-			for(int k=0;k<512;++k) {
-				const unsigned int randomizedPort = 40000 + (((unsigned int)_node->address() + k) % 25500);
-				_udp[1].v4a = InetAddress(0,randomizedPort);
-				_udp[1].v4s = _phy.udpBind((const struct sockaddr *)&(_udp[1].v4a),(void *)&(_udp[1].v4a),ZT_UDP_DESIRED_BUF_SIZE);
-				if (_udp[1].v4s) {
-					_udp[1].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,randomizedPort);
-					_udp[1].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[1].v6a),(void *)&(_udp[1].v6a),ZT_UDP_DESIRED_BUF_SIZE);
-					if (_udp[1].v6s) {
-						break;
-					} else {
-						_phy.close(_udp[1].v4s);
-						_udp[1].v4s = (PhySocket *)0;
-					}
+			// Attempt to bind to a secondary port chosen from our ZeroTier address.
+			// This exists because there are buggy NATs out there that fail if more
+			// than one device behind the same NAT tries to use the same internal
+			// private address port number.
+			_ports[1] = 20000 + ((unsigned int)_node->address() % 45500);
+			for(int i=0;;++i) {
+				if (i > 256) {
+					_ports[1] = 0;
+					break;
+				} else if (++_ports[1] >= 65536) {
+					_ports[1] = 20000;
 				}
+				if (_trialBind(_ports[1]))
+					break;
 			}
 
 #ifdef ZT_USE_MINIUPNPC
-			// Bind tertiary uPnP/NAT-PMP redirect port. If this succeeds start port mapper.
-			for(int k=0;k<512;++k) {
-				const unsigned int mapperPort = 40000 + (((_port + 1) * (k + 1)) % 25500);
-				char uniqueName[64];
-				_udp[2].v4a = InetAddress(0,mapperPort);
-				_udp[2].v4s = _phy.udpBind((const struct sockaddr *)&(_udp[2].v4a),(void *)&(_udp[2].v4a),ZT_UDP_DESIRED_BUF_SIZE);
-				if (_udp[2].v4s) {
-					Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
-					_portMapper = new PortMapper(mapperPort,uniqueName);
-
-					_udp[2].v6a = InetAddress("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",16,mapperPort);
-					_udp[2].v6s = _phy.udpBind((const struct sockaddr *)&(_udp[2].v6a),(void *)&(_udp[2].v6a),ZT_UDP_DESIRED_BUF_SIZE); // okay if this fails, but it shouldn't
-
+			// If we're running uPnP/NAT-PMP, bind a *third* port for that. We can't
+			// use the other two ports for that because some NATs do really funky
+			// stuff with ports that are explicitly mapped that breaks things.
+			_ports[2] = _ports[1];
+			for(int i=0;;++i) {
+				if (i > 256) {
+					_ports[2] = 0;
 					break;
+				} else if (++_ports[2] >= 65536) {
+					_ports[2] = 20000;
 				}
+				if (_trialBind(_ports[2]))
+					break;
+			}
+			if (_ports[2]) {
+				char uniqueName[64];
+				Utils::snprintf(uniqueName,sizeof(uniqueName),"ZeroTier/%.10llx",_node->address());
+				_portMapper = new PortMapper(_ports[2],uniqueName);
 			}
 #endif
+
+			for(int i=0;i<3;++i)
+				_portsBE[i] = Utils::hton((uint16_t)_ports[i]);
 
 #ifdef ZT_ENABLE_NETWORK_CONTROLLER
 			_controller = new SqliteNetworkController(_node,(_homePath + ZT_PATH_SEPARATOR_S + ZT_CONTROLLER_DB_PATH).c_str(),(_homePath + ZT_PATH_SEPARATOR_S + "circuitTestResults.d").c_str());
@@ -800,6 +804,7 @@ public:
 			_lastRestart = clockShouldBe;
 			uint64_t lastTapMulticastGroupCheck = 0;
 			uint64_t lastTcpFallbackResolve = 0;
+			uint64_t lastBindRefresh = 0;
 			uint64_t lastLocalInterfaceAddressCheck = (OSUtils::now() - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 #ifdef ZT_AUTO_UPDATE
 			uint64_t lastSoftwareUpdateCheck = 0;
@@ -812,19 +817,34 @@ public:
 					_termReason = ONE_NORMAL_TERMINATION;
 					_termReason_m.unlock();
 					break;
-				} else _run_m.unlock();
+				} else {
+					_run_m.unlock();
+				}
 
-				uint64_t now = OSUtils::now();
+				const uint64_t now = OSUtils::now();
+
+				// Attempt to detect sleep/wake events by detecting delay overruns
+				bool restarted = false;
+				if ((now > clockShouldBe)&&((now - clockShouldBe) > 10000)) {
+					_lastRestart = now;
+					restarted = true;
+				}
+
+				// Refresh bindings in case device's interfaces have changed
+				if (((now - lastBindRefresh) >= ZT_BINDER_REFRESH_PERIOD)||(restarted)) {
+					lastBindRefresh = now;
+					for(int i=0;i<3;++i) {
+						if (_ports[i]) {
+							_bindings[i].refresh(_phy,_ports[i],*this);
+						}
+					}
+				}
 
 				uint64_t dl = _nextBackgroundTaskDeadline;
 				if (dl <= now) {
 					_node->processBackgroundTasks(now,&_nextBackgroundTaskDeadline);
 					dl = _nextBackgroundTaskDeadline;
 				}
-
-				// Attempt to detect sleep/wake events by detecting delay overruns
-				if ((now > clockShouldBe)&&((now - clockShouldBe) > 2000))
-					_lastRestart = now;
 
 #ifdef ZT_AUTO_UPDATE
 				if ((now - lastSoftwareUpdateCheck) >= ZT_AUTO_UPDATE_CHECK_PERIOD) {
@@ -859,9 +879,11 @@ public:
 
 				_node->clearLocalInterfaceAddresses();
 #ifdef ZT_USE_MINIUPNPC
-				std::vector<InetAddress> mappedAddresses(_portMapper->get());
-				for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
-					_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+				if (_portMapper) {
+					std::vector<InetAddress> mappedAddresses(_portMapper->get());
+					for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+				}
 #endif
 
 #ifdef __UNIX_LIKE__
@@ -885,7 +907,7 @@ public:
 								}
 								if (!isZT) {
 									InetAddress ip(ifa->ifa_addr);
-									ip.setPort(_port);
+									ip.setPort(_ports[0]);
 									_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&ip));
 								}
 							}
@@ -999,7 +1021,7 @@ public:
 
 	// Begin private implementation methods
 
-	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *from,void *data,unsigned long len)
+	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
 #ifdef ZT_ENABLE_CLUSTER
 		if (sock == _clusterMessageSocket) {
@@ -1019,7 +1041,7 @@ public:
 
 		const ZT_ResultCode rc = _node->processWirePacket(
 			OSUtils::now(),
-			reinterpret_cast<const struct sockaddr_storage *>(*uptr), // *uptr points to InetAddress/sockaddr of local listen port
+			reinterpret_cast<const struct sockaddr_storage *>(localAddr),
 			(const struct sockaddr_storage *)from, // Phy<> uses sockaddr_storage, so it'll always be that big
 			data,
 			len,
@@ -1072,28 +1094,32 @@ public:
 
 	inline void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
 	{
-		// Incoming TCP connections are HTTP JSON API requests.
-
-		TcpConnection *tc = new TcpConnection();
-		_tcpConnections.insert(tc);
-
-		tc->type = TcpConnection::TCP_HTTP_INCOMING;
-		tc->shouldKeepAlive = true;
-		tc->parent = this;
-		tc->sock = sockN;
-		tc->from = from;
-		http_parser_init(&(tc->parser),HTTP_REQUEST);
-		tc->parser.data = (void *)tc;
-		tc->messageSize = 0;
-		tc->lastActivity = OSUtils::now();
-		tc->currentHeaderField = "";
-		tc->currentHeaderValue = "";
-		tc->url = "";
-		tc->status = "";
-		tc->headers.clear();
-		tc->body = "";
-		tc->writeBuf = "";
-		*uptrN = (void *)tc;
+		if ((!from)||(reinterpret_cast<const InetAddress *>(from)->ipScope() != InetAddress::IP_SCOPE_LOOPBACK)) {
+			// Non-Loopback: deny (for now)
+			_phy.close(sockN,false);
+			return;
+		} else {
+			// Loopback == HTTP JSON API request
+			TcpConnection *tc = new TcpConnection();
+			_tcpConnections.insert(tc);
+			tc->type = TcpConnection::TCP_HTTP_INCOMING;
+			tc->shouldKeepAlive = true;
+			tc->parent = this;
+			tc->sock = sockN;
+			tc->from = from;
+			http_parser_init(&(tc->parser),HTTP_REQUEST);
+			tc->parser.data = (void *)tc;
+			tc->messageSize = 0;
+			tc->lastActivity = OSUtils::now();
+			tc->currentHeaderField = "";
+			tc->currentHeaderValue = "";
+			tc->url = "";
+			tc->status = "";
+			tc->headers.clear();
+			tc->body = "";
+			tc->writeBuf = "";
+			*uptrN = (void *)tc;
+		}
 	}
 
 	inline void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -1166,9 +1192,10 @@ public:
 							}
 
 							if (from) {
+								InetAddress fakeTcpLocalInterfaceAddress((uint32_t)0xffffffff,0xffff);
 								const ZT_ResultCode rc = _node->processWirePacket(
 									OSUtils::now(),
-									reinterpret_cast<struct sockaddr_storage *>(&(_udp[0].v4a)), // TCP tunneled packets are "from" the default local port's address
+									reinterpret_cast<struct sockaddr_storage *>(&fakeTcpLocalInterfaceAddress),
 									reinterpret_cast<struct sockaddr_storage *>(&from),
 									data,
 									plen,
@@ -1383,24 +1410,22 @@ public:
 
 	inline int nodeWirePacketSendFunction(const struct sockaddr_storage *localAddr,const struct sockaddr_storage *addr,const void *data,unsigned int len,unsigned int ttl)
 	{
-		PhySocket *froms = (PhySocket *)0;
+		unsigned int fromBindingNo = 0;
 
 		if (addr->ss_family == AF_INET) {
 			if (reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port == 0) {
-				// If sender specifies any local address, use secondary port 1/4 times
-				froms = _udp[(++_udpPortPickerCounter & 0x4) >> 2].v4s;
+				// If sender is sending from wildcard (null address), choose the secondary backup
+				// port 1/4 of the time. (but only for IPv4)
+				fromBindingNo = (++_udpPortPickerCounter & 0x4) >> 2;
+				if (!_ports[fromBindingNo])
+					fromBindingNo = 0;
 			} else {
-				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
-				for(int k=1;k<=2;++k) {
-					// Match fast on port only, since right now we always bind wildcard
-					if (reinterpret_cast<const struct sockaddr_in *>(&(_udp[k].v4a))->sin_port == reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port) {
-						froms = _udp[k].v4s;
-						break;
-					}
-				}
+				const uint16_t lp = reinterpret_cast<const struct sockaddr_in *>(localAddr)->sin_port;
+				if (lp == _portsBE[1])
+					fromBindingNo = 1;
+				else if (lp == _portsBE[2])
+					fromBindingNo = 2;
 			}
-			if (!froms)
-				froms = _udp[0].v4s;
 
 #ifdef ZT_TCP_FALLBACK_RELAY
 			// TCP fallback tunnel support, currently IPv4 only
@@ -1442,17 +1467,12 @@ public:
 #endif // ZT_TCP_FALLBACK_RELAY
 		} else if (addr->ss_family == AF_INET6) {
 			if (reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port != 0) {
-				// If sender specifies a local address, find it by just checking port since right now we always bind wildcard
-				for(int k=1;k<=2;++k) {
-					// Match fast on port only, since right now we always bind wildcard
-					if (reinterpret_cast<const struct sockaddr_in6 *>(&(_udp[k].v6a))->sin6_port == reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port) {
-						froms = _udp[k].v6s;
-						break;
-					}
-				}
+				const uint16_t lp = reinterpret_cast<const struct sockaddr_in6 *>(localAddr)->sin6_port;
+				if (lp == _portsBE[1])
+					fromBindingNo = 1;
+				else if (lp == _portsBE[2])
+					fromBindingNo = 2;
 			}
-			if (!froms)
-				froms = _udp[0].v6s;
 		} else {
 			return -1;
 		}
@@ -1462,12 +1482,7 @@ public:
 			return 0; // silently break UDP
 #endif
 
-		if ((ttl)&&(addr->ss_family == AF_INET))
-			_phy.setIp4UdpTtl(froms,ttl);
-		const int result = (_phy.udpSend(froms,(const struct sockaddr *)addr,data,len) != 0) ? 0 : -1;
-		if ((ttl)&&(addr->ss_family == AF_INET))
-			_phy.setIp4UdpTtl(froms,255);
-		return result;
+		return (_bindings[fromBindingNo].udpSend(_phy,*(reinterpret_cast<const InetAddress *>(localAddr)),*(reinterpret_cast<const InetAddress *>(addr)),data,len,ttl)) ? 0 : -1;
 	}
 
 	inline void nodeVirtualNetworkFrameFunction(uint64_t nwid,void **nuptr,uint64_t sourceMac,uint64_t destMac,unsigned int etherType,unsigned int vlanId,const void *data,unsigned int len)
@@ -1551,6 +1566,25 @@ public:
 			_phy.close(tc->sock); // will call close handler, which deletes from _tcpConnections
 	}
 
+	bool shouldBindInterface(const char *ifname,const InetAddress &ifaddr)
+	{
+		if (isBlacklistedLocalInterfaceForZeroTierTraffic(ifname))
+			return false;
+
+		Mutex::Lock _l(_taps_m);
+		for(std::map< uint64_t,EthernetTap * >::const_iterator t(_taps.begin());t!=_taps.end();++t) {
+			if (t->second) {
+				std::vector<InetAddress> ips(t->second->ips());
+				for(std::vector<InetAddress>::const_iterator i(ips.begin());i!=ips.end();++i) {
+					if (i->ipsEqual(ifaddr))
+						return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
 	std::string _dataStorePrepPath(const char *name) const
 	{
 		std::string p(_homePath);
@@ -1566,6 +1600,41 @@ public:
 			lastc = *n;
 		}
 		return p;
+	}
+
+	bool _trialBind(unsigned int port)
+	{
+		struct sockaddr_in in4;
+		struct sockaddr_in6 in6;
+		PhySocket *tb;
+
+		memset(&in4,0,sizeof(in4));
+		in4.sin_family = AF_INET;
+		in4.sin_port = Utils::hton((uint16_t)port);
+		tb = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&in4),(void *)0,0);
+		if (tb) {
+			_phy.close(tb,false);
+			tb = _phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&in4),(void *)0);
+			if (tb) {
+				_phy.close(tb,false);
+				return true;
+			}
+		}
+
+		memset(&in6,0,sizeof(in6));
+		in6.sin6_family = AF_INET6;
+		in6.sin6_port = Utils::hton((uint16_t)port);
+		tb = _phy.udpBind(reinterpret_cast<const struct sockaddr *>(&in6),(void *)0,0);
+		if (tb) {
+			_phy.close(tb,false);
+			tb = _phy.tcpListen(reinterpret_cast<const struct sockaddr *>(&in6),(void *)0);
+			if (tb) {
+				_phy.close(tb,false);
+				return true;
+			}
+		}
+
+		return false;
 	}
 };
 
