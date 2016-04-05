@@ -169,7 +169,7 @@ std::vector<InetAddress> SelfAwareness::getSymmetricNatPredictions()
 		for(std::map< InetAddress,std::set<InetAddress> >::iterator si(surfaces.begin());si!=surfaces.end();++si) {
 			for(std::set<InetAddress>::iterator i(si->second.begin());i!=si->second.end();++i) {
 				InetAddress ipp(*i);
-				unsigned int p = ipp.port() + 1 + ((unsigned int)RR->node->prng() % 5);
+				unsigned int p = ipp.port() + 1 + ((unsigned int)RR->node->prng() & 3);
 				if (p >= 65535)
 					p -= 64510; // NATs seldom use ports <=1024 so wrap to 1025
 				ipp.setPort(p);
